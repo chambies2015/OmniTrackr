@@ -6,16 +6,16 @@ from typing import List, Optional
 from datetime import datetime
 import json
 
-from fastapi import Depends, FastAPI, HTTPException, UploadFile, File
+from fastapi import Depends, FastAPI, HTTPException, UploadFile, File, status
+from fastapi.security import OAuth2PasswordBearer, OAuth2PasswordRequestForm
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse, FileResponse
 from fastapi.staticfiles import StaticFiles
 from sqlalchemy.orm import Session
 from sqlalchemy import inspect, text
 
-import crud
-import schemas
-from database import Base, SessionLocal, engine
+from . import crud, schemas, auth, models
+from .database import Base, SessionLocal, engine
 
 # Create the database tables
 Base.metadata.create_all(bind=engine)
@@ -148,6 +148,35 @@ def get_db():
         db.close()
 
 
+# OAuth2 scheme for token-based authentication
+oauth2_scheme = OAuth2PasswordBearer(tokenUrl="auth/login")
+
+
+async def get_current_user(
+    token: str = Depends(oauth2_scheme),
+    db: Session = Depends(get_db)
+) -> models.User:
+    """Dependency to get the current authenticated user from JWT token."""
+    credentials_exception = HTTPException(
+        status_code=status.HTTP_401_UNAUTHORIZED,
+        detail="Could not validate credentials",
+        headers={"WWW-Authenticate": "Bearer"},
+    )
+    
+    payload = auth.decode_access_token(token)
+    if payload is None:
+        raise credentials_exception
+    
+    username: str = payload.get("sub")
+    if username is None:
+        raise credentials_exception
+    
+    user = crud.get_user_by_username(db, username=username)
+    if user is None or not user.is_active:
+        raise credentials_exception
+    
+    return user
+
 @app.get("/", tags=["root"])
 async def read_root():
     # Serve the HTML UI file
@@ -157,7 +186,44 @@ async def read_root():
     return {"message": "StreamTracker API is running \U0001f680"}
 
 
+# ============================================================================
+# Authentication endpoints
+# ============================================================================
+
+@app.post("/auth/register", response_model=schemas.User, status_code=status.HTTP_201_CREATED, tags=["auth"])
+async def register(user: schemas.UserCreate, db: Session = Depends(get_db)):
+    """Register a new user."""
+    if crud.get_user_by_email(db, user.email):
+        raise HTTPException(status_code=400, detail="Email already registered")
+    if crud.get_user_by_username(db, user.username):
+        raise HTTPException(status_code=400, detail="Username already taken")
+    
+    hashed_password = auth.get_password_hash(user.password)
+    return crud.create_user(db, user, hashed_password)
+
+
+@app.post("/auth/login", response_model=schemas.Token, tags=["auth"])
+async def login(form_data: OAuth2PasswordRequestForm = Depends(), db: Session = Depends(get_db)):
+    """Login to get access token."""
+    user = crud.get_user_by_username(db, form_data.username)
+    if not user:
+        user = crud.get_user_by_email(db, form_data.username)
+    
+    if not user or not auth.verify_password(form_data.password, user.hashed_password):
+        raise HTTPException(
+            status_code=401,
+            detail="Incorrect username or password",
+            headers={"WWW-Authenticate": "Bearer"},
+        )
+    
+    access_token = auth.create_access_token(data={"sub": user.username})
+    return schemas.Token(access_token=access_token, token_type="bearer", user=user)
+
+
+# ============================================================================
 # Movie endpoints
+# ============================================================================
+
 @app.get("/movies/", response_model=List[schemas.Movie], tags=["movies"])
 async def list_movies(
         search: Optional[str] = None,
@@ -177,21 +243,21 @@ async def get_movie(movie_id: int, db: Session = Depends(get_db)):
 
 
 @app.post("/movies/", response_model=schemas.Movie, status_code=201, tags=["movies"])
-async def create_movie(movie: schemas.MovieCreate, db: Session = Depends(get_db)):
-    return crud.create_movie(db, movie)
+async def create_movie(movie: schemas.MovieCreate, current_user: models.User = Depends(get_current_user), db: Session = Depends(get_db)):
+    return crud.create_movie(db, current_user.id, movie)
 
 
 @app.put("/movies/{movie_id}", response_model=schemas.Movie, tags=["movies"])
-async def update_movie(movie_id: int, movie: schemas.MovieUpdate, db: Session = Depends(get_db)):
-    db_movie = crud.update_movie(db, movie_id, movie)
+async def update_movie(movie_id: int, movie: schemas.MovieUpdate, current_user: models.User = Depends(get_current_user), db: Session = Depends(get_db)):
+    db_movie = crud.update_movie(db, current_user.id, movie_id, movie)
     if db_movie is None:
         raise HTTPException(status_code=404, detail="Movie not found")
     return db_movie
 
 
 @app.delete("/movies/{movie_id}", response_model=schemas.Movie, tags=["movies"])
-async def delete_movie(movie_id: int, db: Session = Depends(get_db)):
-    db_movie = crud.delete_movie(db, movie_id)
+async def delete_movie(movie_id: int, current_user: models.User = Depends(get_current_user), db: Session = Depends(get_db)):
+    db_movie = crud.delete_movie(db, current_user.id, movie_id)
     if db_movie is None:
         raise HTTPException(status_code=404, detail="Movie not found")
     return db_movie
@@ -217,21 +283,21 @@ async def get_tv_show(tv_show_id: int, db: Session = Depends(get_db)):
 
 
 @app.post("/tv-shows/", response_model=schemas.TVShow, status_code=201, tags=["tv-shows"])
-async def create_tv_show(tv_show: schemas.TVShowCreate, db: Session = Depends(get_db)):
-    return crud.create_tv_show(db, tv_show)
+async def create_tv_show(tv_show: schemas.TVShowCreate, current_user: models.User = Depends(get_current_user), db: Session = Depends(get_db)):
+    return crud.create_tv_show(db, current_user.id, tv_show)
 
 
 @app.put("/tv-shows/{tv_show_id}", response_model=schemas.TVShow, tags=["tv-shows"])
-async def update_tv_show(tv_show_id: int, tv_show: schemas.TVShowUpdate, db: Session = Depends(get_db)):
-    db_tv_show = crud.update_tv_show(db, tv_show_id, tv_show)
+async def update_tv_show(tv_show_id: int, tv_show: schemas.TVShowUpdate, current_user: models.User = Depends(get_current_user), db: Session = Depends(get_db)):
+    db_tv_show = crud.update_tv_show(db, current_user.id, tv_show_id, tv_show)
     if db_tv_show is None:
         raise HTTPException(status_code=404, detail="TV Show not found")
     return db_tv_show
 
 
 @app.delete("/tv-shows/{tv_show_id}", response_model=schemas.TVShow, tags=["tv-shows"])
-async def delete_tv_show(tv_show_id: int, db: Session = Depends(get_db)):
-    db_tv_show = crud.delete_tv_show(db, tv_show_id)
+async def delete_tv_show(tv_show_id: int, current_user: models.User = Depends(get_current_user), db: Session = Depends(get_db)):
+    db_tv_show = crud.delete_tv_show(db, current_user.id, tv_show_id)
     if db_tv_show is None:
         raise HTTPException(status_code=404, detail="TV Show not found")
     return db_tv_show
@@ -382,3 +448,7 @@ if __name__ == "__main__":
 
     open_browser()
     uvicorn.run(app, host="127.0.0.1", port=8000)
+
+
+
+

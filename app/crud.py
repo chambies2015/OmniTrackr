@@ -6,17 +6,49 @@ and deleting movie and TV show entries.
 from typing import List, Optional
 from sqlalchemy.orm import Session
 from sqlalchemy import asc, desc, func
-import models
-import schemas
+from . import models
+from . import schemas
 
+
+# ============================================================================
+# User CRUD operations
+# ============================================================================
+
+def get_user_by_username(db: Session, username: str) -> Optional[models.User]:
+    """Get user by username."""
+    return db.query(models.User).filter(models.User.username == username).first()
+
+
+def get_user_by_email(db: Session, email: str) -> Optional[models.User]:
+    """Get user by email."""
+    return db.query(models.User).filter(models.User.email == email).first()
+
+
+def create_user(db: Session, user: schemas.UserCreate, hashed_password: str) -> models.User:
+    """Create a new user with hashed password."""
+    db_user = models.User(
+        email=user.email,
+        username=user.username,
+        hashed_password=hashed_password
+    )
+    db.add(db_user)
+    db.commit()
+    db.refresh(db_user)
+    return db_user
+
+
+# ============================================================================
+# Movie CRUD operations
+# ============================================================================
 
 def get_movies(
     db: Session,
+    user_id: int,
     search: Optional[str] = None,
     sort_by: Optional[str] = None,
     order: Optional[str] = None,
 ) -> List[models.Movie]:
-    query = db.query(models.Movie)
+    query = db.query(models.Movie).filter(models.Movie.user_id == user_id).filter(models.Movie.user_id == user_id)
     if search:
         like_pattern = f"%{search}%"
         query = query.filter(
@@ -33,20 +65,23 @@ def get_movies(
     return query.all()
 
 
-def get_movie_by_id(db: Session, movie_id: int) -> Optional[models.Movie]:
-    return db.query(models.Movie).filter(models.Movie.id == movie_id).first()
+def get_movie_by_id(db: Session, user_id: int, movie_id: int) -> Optional[models.Movie]:
+    return db.query(models.Movie).filter(models.Movie.user_id == user_id).filter(
+        models.Movie.id == movie_id,
+        models.Movie.user_id == user_id
+    ).first()
 
 
-def create_movie(db: Session, movie: schemas.MovieCreate) -> models.Movie:
-    db_movie = models.Movie(**movie.dict())
+def create_movie(db: Session, user_id: int, movie: schemas.MovieCreate) -> models.Movie:
+    db_movie = models.Movie(**movie.dict(), user_id=user_id)
     db.add(db_movie)
     db.commit()
     db.refresh(db_movie)
     return db_movie
 
 
-def update_movie(db: Session, movie_id: int, movie_update: schemas.MovieUpdate) -> Optional[models.Movie]:
-    db_movie = get_movie_by_id(db, movie_id)
+def update_movie(db: Session, user_id: int, movie_id: int, movie_update: schemas.MovieUpdate) -> Optional[models.Movie]:
+    db_movie = get_movie_by_id(db, user_id, movie_id)
     if db_movie is None:
         return None
     for field, value in movie_update.dict(exclude_unset=True).items():
@@ -56,8 +91,8 @@ def update_movie(db: Session, movie_id: int, movie_update: schemas.MovieUpdate) 
     return db_movie
 
 
-def delete_movie(db: Session, movie_id: int) -> Optional[models.Movie]:
-    db_movie = get_movie_by_id(db, movie_id)
+def delete_movie(db: Session, user_id: int, movie_id: int) -> Optional[models.Movie]:
+    db_movie = get_movie_by_id(db, user_id, movie_id)
     if db_movie is None:
         return None
     db.delete(db_movie)
@@ -65,14 +100,15 @@ def delete_movie(db: Session, movie_id: int) -> Optional[models.Movie]:
     return db_movie
 
 
-# TV Show CRUD operations
+#  TV Show CRUD operations
 def get_tv_shows(
     db: Session,
+    user_id: int,
     search: Optional[str] = None,
     sort_by: Optional[str] = None,
     order: Optional[str] = None,
 ) -> List[models.TVShow]:
-    query = db.query(models.TVShow)
+    query = db.query(models.TVShow).filter(models.TVShow.user_id == user_id).filter(models.TVShow.user_id == user_id)
     if search:
         like_pattern = f"%{search}%"
         query = query.filter(
@@ -88,20 +124,23 @@ def get_tv_shows(
     return query.all()
 
 
-def get_tv_show_by_id(db: Session, tv_show_id: int) -> Optional[models.TVShow]:
-    return db.query(models.TVShow).filter(models.TVShow.id == tv_show_id).first()
+def get_tv_show_by_id(db: Session, user_id: int, tv_show_id: int) -> Optional[models.TVShow]:
+    return db.query(models.TVShow).filter(models.TVShow.user_id == user_id).filter(
+        models.TVShow.id == tv_show_id,
+        models.TVShow.user_id == user_id
+    ).first()
 
 
-def create_tv_show(db: Session, tv_show: schemas.TVShowCreate) -> models.TVShow:
-    db_tv_show = models.TVShow(**tv_show.dict())
+def create_tv_show(db: Session, user_id: int, tv_show: schemas.TVShowCreate) -> models.TVShow:
+    db_tv_show = models.TVShow(**tv_show.dict(), user_id=user_id)
     db.add(db_tv_show)
     db.commit()
     db.refresh(db_tv_show)
     return db_tv_show
 
 
-def update_tv_show(db: Session, tv_show_id: int, tv_show_update: schemas.TVShowUpdate) -> Optional[models.TVShow]:
-    db_tv_show = get_tv_show_by_id(db, tv_show_id)
+def update_tv_show(db: Session, user_id: int, tv_show_id: int, tv_show_update: schemas.TVShowUpdate) -> Optional[models.TVShow]:
+    db_tv_show = get_tv_show_by_id(db, user_id, tv_show_id)
     if db_tv_show is None:
         return None
     for field, value in tv_show_update.dict(exclude_unset=True).items():
@@ -111,8 +150,8 @@ def update_tv_show(db: Session, tv_show_id: int, tv_show_update: schemas.TVShowU
     return db_tv_show
 
 
-def delete_tv_show(db: Session, tv_show_id: int) -> Optional[models.TVShow]:
-    db_tv_show = get_tv_show_by_id(db, tv_show_id)
+def delete_tv_show(db: Session, user_id: int, tv_show_id: int) -> Optional[models.TVShow]:
+    db_tv_show = get_tv_show_by_id(db, user_id, tv_show_id)
     if db_tv_show is None:
         return None
     db.delete(db_tv_show)
@@ -121,33 +160,35 @@ def delete_tv_show(db: Session, tv_show_id: int) -> Optional[models.TVShow]:
 
 
 # Export/Import functions
-def get_all_movies(db: Session) -> List[models.Movie]:
+def get_all_movies(db: Session, user_id: int) -> List[models.Movie]:
     """Get all movies for export"""
-    return db.query(models.Movie).all()
+    return db.query(models.Movie).filter(models.Movie.user_id == user_id).filter(models.Movie.user_id == user_id).all()
 
 
-def get_all_tv_shows(db: Session) -> List[models.TVShow]:
+def get_all_tv_shows(db: Session, user_id: int) -> List[models.TVShow]:
     """Get all TV shows for export"""
-    return db.query(models.TVShow).all()
+    return db.query(models.TVShow).filter(models.TVShow.user_id == user_id).filter(models.TVShow.user_id == user_id).all()
 
 
-def find_movie_by_title_and_director(db: Session, title: str, director: str) -> Optional[models.Movie]:
+def find_movie_by_title_and_director(db: Session, user_id: int, title: str, director: str) -> Optional[models.Movie]:
     """Find a movie by title and director for import conflict resolution"""
-    return db.query(models.Movie).filter(
+    return db.query(models.Movie).filter(models.Movie.user_id == user_id).filter(
+        models.Movie.user_id == user_id,
         models.Movie.title == title,
         models.Movie.director == director
     ).first()
 
 
-def find_tv_show_by_title_and_year(db: Session, title: str, year: int) -> Optional[models.TVShow]:
+def find_tv_show_by_title_and_year(db: Session, user_id: int, title: str, year: int) -> Optional[models.TVShow]:
     """Find a TV show by title and year for import conflict resolution"""
-    return db.query(models.TVShow).filter(
+    return db.query(models.TVShow).filter(models.TVShow.user_id == user_id).filter(
+        models.TVShow.user_id == user_id,
         models.TVShow.title == title,
         models.TVShow.year == year
     ).first()
 
 
-def import_movies(db: Session, movies: List[schemas.MovieCreate]) -> tuple[int, int, List[str]]:
+def import_movies(db: Session, user_id: int, movies: List[schemas.MovieCreate]) -> tuple[int, int, List[str]]:
     """Import movies, returning (created_count, updated_count, errors)"""
     created = 0
     updated = 0
@@ -157,7 +198,7 @@ def import_movies(db: Session, movies: List[schemas.MovieCreate]) -> tuple[int, 
         try:
             # Check if movie already exists
             existing_movie = find_movie_by_title_and_director(
-                db, movie_data.title, movie_data.director
+                db, user_id, movie_data.title, movie_data.director
             )
             
             if existing_movie:
@@ -167,7 +208,7 @@ def import_movies(db: Session, movies: List[schemas.MovieCreate]) -> tuple[int, 
                 updated += 1
             else:
                 # Create new movie
-                db_movie = models.Movie(**movie_data.dict())
+                db_movie = models.Movie(**movie_data.dict(), user_id=user_id)
                 db.add(db_movie)
                 created += 1
         except Exception as e:
@@ -183,7 +224,7 @@ def import_movies(db: Session, movies: List[schemas.MovieCreate]) -> tuple[int, 
     return created, updated, errors
 
 
-def import_tv_shows(db: Session, tv_shows: List[schemas.TVShowCreate]) -> tuple[int, int, List[str]]:
+def import_tv_shows(db: Session, user_id: int, tv_shows: List[schemas.TVShowCreate]) -> tuple[int, int, List[str]]:
     """Import TV shows, returning (created_count, updated_count, errors)"""
     created = 0
     updated = 0
@@ -193,7 +234,7 @@ def import_tv_shows(db: Session, tv_shows: List[schemas.TVShowCreate]) -> tuple[
         try:
             # Check if TV show already exists
             existing_tv_show = find_tv_show_by_title_and_year(
-                db, tv_show_data.title, tv_show_data.year
+                db, user_id, tv_show_data.title, tv_show_data.year
             )
             
             if existing_tv_show:
@@ -203,7 +244,7 @@ def import_tv_shows(db: Session, tv_shows: List[schemas.TVShowCreate]) -> tuple[
                 updated += 1
             else:
                 # Create new TV show
-                db_tv_show = models.TVShow(**tv_show_data.dict())
+                db_tv_show = models.TVShow(**tv_show_data.dict(), user_id=user_id)
                 db.add(db_tv_show)
                 created += 1
         except Exception as e:
@@ -220,12 +261,12 @@ def import_tv_shows(db: Session, tv_shows: List[schemas.TVShowCreate]) -> tuple[
 
 
 # Statistics functions
-def get_watch_statistics(db: Session) -> dict:
+def get_watch_statistics(db: Session, user_id: int) -> dict:
     """Get overall watch statistics"""
-    total_movies = db.query(models.Movie).count()
-    watched_movies = db.query(models.Movie).filter(models.Movie.watched == True).count()
-    total_tv_shows = db.query(models.TVShow).count()
-    watched_tv_shows = db.query(models.TVShow).filter(models.TVShow.watched == True).count()
+    total_movies = db.query(models.Movie).filter(models.Movie.user_id == user_id).count()
+    watched_movies = db.query(models.Movie).filter(models.Movie.user_id == user_id).filter(models.Movie.watched == True).count()
+    total_tv_shows = db.query(models.TVShow).filter(models.TVShow.user_id == user_id).count()
+    watched_tv_shows = db.query(models.TVShow).filter(models.TVShow.user_id == user_id).filter(models.TVShow.watched == True).count()
     
     total_items = total_movies + total_tv_shows
     watched_items = watched_movies + watched_tv_shows
@@ -244,7 +285,7 @@ def get_watch_statistics(db: Session) -> dict:
     }
 
 
-def get_rating_statistics(db: Session) -> dict:
+def get_rating_statistics(db: Session, user_id: int) -> dict:
     """Get rating distribution statistics"""
     # Movies rating stats
     movie_ratings = db.query(models.Movie.rating).filter(models.Movie.rating.isnot(None)).all()
@@ -280,8 +321,8 @@ def get_rating_statistics(db: Session) -> dict:
     lowest_rating = min(all_ratings)
     
     # Find items with highest rating
-    highest_movies = db.query(models.Movie).filter(models.Movie.rating == highest_rating).limit(5).all()
-    highest_tv = db.query(models.TVShow).filter(models.TVShow.rating == highest_rating).limit(5).all()
+    highest_movies = db.query(models.Movie).filter(models.Movie.user_id == user_id).filter(models.Movie.rating == highest_rating).limit(5).all()
+    highest_tv = db.query(models.TVShow).filter(models.TVShow.user_id == user_id).filter(models.TVShow.rating == highest_rating).limit(5).all()
     highest_rated = [
         {"title": m.title, "type": "Movie", "rating": m.rating} for m in highest_movies
     ] + [
@@ -289,8 +330,8 @@ def get_rating_statistics(db: Session) -> dict:
     ]
     
     # Find items with lowest rating
-    lowest_movies = db.query(models.Movie).filter(models.Movie.rating == lowest_rating).limit(5).all()
-    lowest_tv = db.query(models.TVShow).filter(models.TVShow.rating == lowest_rating).limit(5).all()
+    lowest_movies = db.query(models.Movie).filter(models.Movie.user_id == user_id).filter(models.Movie.rating == lowest_rating).limit(5).all()
+    lowest_tv = db.query(models.TVShow).filter(models.TVShow.user_id == user_id).filter(models.TVShow.rating == lowest_rating).limit(5).all()
     lowest_rated = [
         {"title": m.title, "type": "Movie", "rating": m.rating} for m in lowest_movies
     ] + [
@@ -306,7 +347,7 @@ def get_rating_statistics(db: Session) -> dict:
     }
 
 
-def get_year_statistics(db: Session) -> dict:
+def get_year_statistics(db: Session, user_id: int) -> dict:
     """Get statistics by year"""
     # Movies by year
     movie_years = db.query(models.Movie.year, func.count(models.Movie.id)).group_by(models.Movie.year).all()
@@ -340,7 +381,7 @@ def get_year_statistics(db: Session) -> dict:
     }
 
 
-def get_director_statistics(db: Session) -> dict:
+def get_director_statistics(db: Session, user_id: int) -> dict:
     """Get statistics by director/creator"""
     # Top directors
     director_counts = db.query(
@@ -367,3 +408,4 @@ def get_director_statistics(db: Session) -> dict:
             for d in director_ratings
         ]
     }
+
