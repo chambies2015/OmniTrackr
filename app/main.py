@@ -231,6 +231,7 @@ async def get_current_user(
     return user
 
 @app.get("/", tags=["root"])
+@app.head("/", tags=["root"])
 async def read_root():
     # Serve the HTML UI file
     html_file = os.path.join(os.path.dirname(__file__), "templates", "index.html")
