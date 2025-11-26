@@ -92,7 +92,7 @@ async def send_verification_email(email: str, username: str, token: str):
         username: User's username
         token: Verification token
     """
-    verification_url = f"{APP_URL}/verify-email?token={token}"
+    verification_url = f"{APP_URL}/?token={token}&email_verified=true"
     
     html = f"""
     <html>
@@ -167,7 +167,7 @@ async def send_password_reset_email(email: str, username: str, token: str):
         username: User's username
         token: Password reset token
     """
-    reset_url = f"{APP_URL}/reset-password?token={token}"
+    reset_url = f"{APP_URL}/?reset_token={token}"
     
     html = f"""
     <html>

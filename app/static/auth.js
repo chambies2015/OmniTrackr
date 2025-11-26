@@ -193,7 +193,7 @@ function showForgotPasswordForm() {
     document.getElementById('authSuccess').style.display = 'none';
 }
 
-function showResetPasswordForm() {
+function showResetPasswordForm(resetToken = null) {
     document.getElementById('loginForm').style.display = 'none';
     document.getElementById('registerForm').style.display = 'none';
     document.getElementById('forgotPasswordForm').style.display = 'none';
@@ -201,6 +201,11 @@ function showResetPasswordForm() {
     document.getElementById('authTitle').textContent = 'Reset Password';
     document.getElementById('authError').textContent = '';
     document.getElementById('authSuccess').style.display = 'none';
+    
+    // Store reset token if provided
+    if (resetToken) {
+        document.getElementById('resetPasswordFormElement').dataset.resetToken = resetToken;
+    }
 }
 
 function updateUserDisplay() {
@@ -377,9 +382,11 @@ function setupAuthHandlers() {
             return;
         }
 
-        // Get token from URL
+        // Get token from URL or dataset
         const urlParams = new URLSearchParams(window.location.search);
-        const token = urlParams.get('token');
+        const token = urlParams.get('reset_token') || 
+                     e.target.dataset.resetToken || 
+                     urlParams.get('token');
 
         if (!token) {
             displayAuthError('Invalid reset link');
@@ -423,18 +430,40 @@ function initAuth() {
     // Check URL parameters for email verification or password reset
     const urlParams = new URLSearchParams(window.location.search);
     const verifyToken = urlParams.get('token');
-    const action = urlParams.get('action');
+    const resetToken = urlParams.get('reset_token');
+    const emailVerified = urlParams.get('email_verified');
+    const passwordReset = urlParams.get('password_reset');
     
     // Handle email verification
-    if (verifyToken && window.location.pathname.includes('verify-email')) {
+    if (verifyToken && emailVerified === 'true') {
         handleEmailVerification(verifyToken);
         return;
     }
     
     // Handle password reset
-    if (verifyToken && window.location.pathname.includes('reset-password')) {
+    if (resetToken) {
         showAuthModal();
-        showResetPasswordForm();
+        showResetPasswordForm(resetToken);
+        return;
+    }
+    
+    // Handle successful verification redirect
+    if (emailVerified === 'true' && !verifyToken) {
+        showAuthModal();
+        displayAuthSuccess('✅ Email verified successfully! You can now log in.');
+        showLoginForm();
+        // Clean URL
+        window.history.replaceState({}, document.title, window.location.pathname);
+        return;
+    }
+    
+    // Handle successful password reset redirect
+    if (passwordReset === 'true') {
+        showAuthModal();
+        displayAuthSuccess('✅ Password reset successfully! You can now log in with your new password.');
+        showLoginForm();
+        // Clean URL
+        window.history.replaceState({}, document.title, window.location.pathname);
         return;
     }
 
