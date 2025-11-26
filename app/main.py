@@ -24,6 +24,35 @@ Base.metadata.create_all(bind=engine)
 try:
     inspector = inspect(engine)
 
+    # Check users table for new authentication columns
+    if inspector.has_table("users"):
+        user_columns = {col["name"] for col in inspector.get_columns("users")}
+        if "is_verified" not in user_columns:
+            with engine.connect() as conn:
+                conn.execute(text("ALTER TABLE users ADD COLUMN is_verified BOOLEAN DEFAULT FALSE"))
+                conn.commit()
+                print("Added is_verified column to users table")
+        if "verification_token" not in user_columns:
+            with engine.connect() as conn:
+                conn.execute(text("ALTER TABLE users ADD COLUMN verification_token VARCHAR"))
+                conn.commit()
+                print("Added verification_token column to users table")
+        if "reset_token" not in user_columns:
+            with engine.connect() as conn:
+                conn.execute(text("ALTER TABLE users ADD COLUMN reset_token VARCHAR"))
+                conn.commit()
+                print("Added reset_token column to users table")
+        if "reset_token_expires" not in user_columns:
+            with engine.connect() as conn:
+                conn.execute(text("ALTER TABLE users ADD COLUMN reset_token_expires TIMESTAMP"))
+                conn.commit()
+                print("Added reset_token_expires column to users table")
+        if "created_at" not in user_columns:
+            with engine.connect() as conn:
+                conn.execute(text("ALTER TABLE users ADD COLUMN created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP"))
+                conn.commit()
+                print("Added created_at column to users table")
+
     # Check movies table for review and poster_url columns
     existing_columns = {col["name"] for col in inspector.get_columns("movies")}
     if "review" not in existing_columns:
