@@ -1,5 +1,20 @@
-fastapi==0.117.1
-uvicorn==0.36.0
-sqlalchemy==2.0.43
-pydantic==2.11.9
+fastapi==0.115.0
+uvicorn[standard]==0.32.0
+sqlalchemy==2.0.36
+pydantic==2.10.3
 
+# PostgreSQL
+psycopg2-binary==2.9.10
+
+# Authentication
+python-jose==3.3.0
+cryptography==44.0.0
+bcrypt==4.2.1
+python-multipart==0.0.12
+
+# Environment variables
+python-dotenv==1.0.1
+
+# Email
+fastapi-mail==1.4.1
+itsdangerous==2.2.0

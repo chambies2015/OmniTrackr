@@ -1,46 +1,125 @@
-# StreamTracker
+# OmniTrackr
 
 ## Overview
 
-StreamTracker is an evolution of my original Movie Catalog project. It provides a clean FastAPI backend and UI for managing and tracking movies and TV shows you plan to watch or have already watched. The refactored code organizes the backend into a Python package, making it easy to integrate into larger applications.
+OmniTrackr is a full-featured, multi-user web application for managing and tracking movies and TV shows. Originally a local desktop app, it has evolved into a production-ready platform with user authentication, cloud database support, and a modern responsive UI.
+
+**Live Demo:** Deployed on Render with PostgreSQL database
+
+## Tech Stack
+
+**Backend:**
+- FastAPI (Python web framework)
+- SQLAlchemy (ORM)
+- PostgreSQL / SQLite (Database)
+- JWT (Authentication)
+- bcrypt (Password hashing)
+- python-jose (JWT tokens)
+- Pydantic (Data validation)
+
+**Frontend:**
+- Vanilla JavaScript (No framework dependencies)
+- Single-page application architecture
+- Responsive CSS with dark mode support
+
+**Deployment:**
+- Render (Web hosting & PostgreSQL)
+- Environment-based configuration
 
 ## Features
 
-- **Scalable package structure:** All backend code is organized with clear separation of models, schemas, CRUD functions, and the FastAPI entry point.
-- **CRUD API:** Endpoints to list, create, read, update, and delete movies and TV shows.
-- **SQLite persistence:** A lightweight database stores entertainment data locally.
-- **Search and sort:** Search by title or creator and sort results by rating or year.
-- **CORS enabled:** The API is configured to accept requests from your local UI or other clients.
-- **Modern UI:** A standalone HTML file (see `movie_tracker_ui.html`) lets you interact with the API. It supports light and dark modes and a sleek, responsive design.
-- **Poster caching:** Automatically fetches and caches movie/TV show posters to avoid API rate limits.
-- **Export/Import functionality:** Export all your data to JSON format or import data from JSON files with conflict resolution.
-- **Statistics Dashboard:** Comprehensive analytics showing watch progress, rating distributions, year analysis, and director statistics with beautiful visualizations.
+### Core Functionality
+- **Multi-user support:** User registration, login, and isolated data per user
+- **JWT Authentication:** Secure token-based authentication system
+- **Password Security:** bcrypt hashing for password storage
+- **CRUD API:** Full REST API for managing movies and TV shows
+- **PostgreSQL Database:** Production-ready database with SQLite fallback for local development
+- **Search and Sort:** Filter by title/director and sort by rating or year
+- **Modern UI:** Responsive single-page application with dark mode support
+- **Poster Integration:** Automatic poster fetching from OMDB API with caching
+- **Export/Import:** JSON export/import with smart conflict resolution
+- **Statistics Dashboard:** Comprehensive analytics with watch progress, rating distributions, year analysis, and director insights
 
-## Running the API
+## Local Development Setup
 
-1. Create a virtual environment and install dependencies:
+### Prerequisites
+- Python 3.12+
+- PostgreSQL (optional - uses SQLite by default for local development)
+
+### Installation
+
+1. **Clone the repository and navigate to the project directory**
+
+2. **Create a virtual environment and install dependencies:**
    ```bash
-   pip install fastapi uvicorn sqlalchemy pydantic
+   python -m venv venv
+   source venv/bin/activate  # On Windows: venv\Scripts\activate
+   pip install -r requirements.txt
    ```
 
-2. Start the server:
-   Run the start.bat to start the server and automatically open the UI file.
+3. **Configure environment variables:**
+   
+   Create a `.env` file in the project root:
+   ```env
+   # Database (optional - defaults to SQLite if not set)
+   DATABASE_URL=sqlite:///./movies.db
+   
+   # For PostgreSQL:
+   # DATABASE_URL=postgresql://user:password@localhost:5432/omnitrackr
+   
+   # Security (IMPORTANT: Change in production!)
+   SECRET_KEY=your-secret-key-here
+   
+   # Optional: OMDB API key for movie posters
+   OMDB_API_KEY=your-omdb-api-key
+   ```
 
-   If you want the movie posters for each entry, you'll need to obtain a OMDB api key and plug it into sampleCredentials.js then rename the file to just credentials.js
+4. **Start the server:**
+   ```bash
+   # Using the start script
+   ./start.bat  # Windows
+   
+   # Or manually
+   uvicorn app.main:app --reload --port 8000
+   ```
 
-   The API will be available at `http://127.0.0.1:8000`. Visit `http://127.0.0.1:8000/docs` for interactive Swagger documentation.
+5. **Access the application:**
+   - **Web UI:** `http://127.0.0.1:8000`
+   - **API Documentation:** `http://127.0.0.1:8000/docs`
+   - **Register** a new account and start tracking your media!
 
-   The UI will automatically open in default browswer 5 seconds after uvicorn server startup.
+## Production Deployment (Render)
+
+### Database Setup
+1. Create a PostgreSQL database on Render
+2. Copy the Internal Database URL
+
+### Web Service Setup
+1. Create a new Web Service on Render
+2. Connect your GitHub repository
+3. Configure:
+   - **Build Command:** `pip install -r requirements.txt`
+   - **Start Command:** `uvicorn app.main:app --host 0.0.0.0 --port $PORT`
+
+### Environment Variables
+Set these in your Render dashboard:
+```env
+DATABASE_URL=<your-postgresql-internal-url>
+SECRET_KEY=<generate-a-secure-random-string>
+OMDB_API_KEY=<your-omdb-api-key>
+```
+
+The application will automatically create database tables on first startup.
 
 ## Export/Import Functionality
 
-StreamTracker now includes powerful export/import capabilities:
+OmniTrackr now includes powerful export/import capabilities:
 
 ### Exporting Data
 - Click the **"Export Data"** button in either the Movies or TV Shows tab
 - Your entire collection will be downloaded as a JSON file with timestamp
 - The export includes all metadata: titles, directors, years, ratings, reviews, watched status, and poster URLs
-- Export files are named `streamtracker-export-YYYY-MM-DD.json`
+- Export files are named `omnitrackr-export-YYYY-MM-DD.json`
 
 ### Importing Data
 - Click the **"Import Data"** button in either tab to select a JSON file
@@ -57,7 +136,7 @@ The export/import functionality is also available via API:
 
 ## Statistics Dashboard
 
-StreamTracker includes a comprehensive statistics dashboard accessible via the **📊 Statistics** tab:
+OmniTrackr includes a comprehensive statistics dashboard accessible via the **📊 Statistics** tab:
 
 ### Watch Progress Analytics
 - **Total items** in your collection (movies + TV shows)
@@ -89,34 +168,101 @@ The statistics are also available via API:
 - `GET /statistics/years/` - Year-based statistics
 - `GET /statistics/directors/` - Director statistics
 
-## Using the UI
+## Authentication System
 
-The `movie_tracker_ui.html` file provides a modern front‑end for StreamTracker:
+OmniTrackr uses a secure JWT-based authentication system:
 
-- **Add movies & TV shows:** Enter details like title, director/creator, year, rating, and watched status.
-- **List & search:** View all entries, search by keyword, and sort by rating or year.
-- **Edit & delete:** Modify existing entries or remove them entirely.
-- **Night mode:** Toggle between light and dark themes.
-- **Poster caching:** Automatically fetches and caches movie/TV show posters for instant loading.
-- **Tabbed interface:** Switch between Movies, TV Shows, and Statistics with dedicated sections.
-- **Export/Import:** Export your entire collection to JSON or import data from JSON files with smart conflict resolution.
-- **Statistics Dashboard:** Comprehensive analytics with watch progress, rating distributions, year analysis, and director insights.
+### User Registration
+- Email validation
+- Username uniqueness check
+- Password hashing with bcrypt
+- Automatic login after registration
 
-# Preview:
+### Login/Logout
+- Supports login with username or email
+- JWT tokens stored in localStorage
+- 7-day token expiration
+- Secure logout with session clearing
+
+### API Security
+- All endpoints (except `/auth/register` and `/auth/login`) require authentication
+- JWT tokens sent in Authorization header
+- User data isolation - users can only access their own data
+- Automatic token validation and 401 handling
+
+## Using the Application
+
+### Getting Started
+1. **Register/Login:** Create an account or log in with existing credentials
+2. **Your Personal Collection:** All your data is private and isolated to your account
+
+### Features
+- **User Authentication:** Secure login with JWT tokens, logout functionality
+- **Add movies & TV shows:** Enter details like title, director/creator, year, rating, and watched status
+- **Automatic Posters:** Movie/TV posters are fetched automatically from OMDB and cached
+- **Search & Filter:** Search by title or director/creator and sort by rating or year
+- **Inline Editing:** Edit entries directly in the table with save/cancel options
+- **Delete:** Remove entries from your collection
+- **Night Mode:** Toggle between light and dark themes
+- **Tabbed Interface:** Switch between Movies, TV Shows, and Statistics
+- **Export/Import:** Backup your collection to JSON or import from JSON files
+- **Statistics Dashboard:** Comprehensive analytics showing your viewing habits and preferences
+
+### API Access
+Interactive API documentation is available at `/docs` with full Swagger UI for testing all endpoints.
+
+## API Endpoints Overview
+
+### Authentication
+- `POST /auth/register` - Register new user
+- `POST /auth/login` - Login and receive JWT token
+
+### Movies
+- `GET /movies/` - List all movies (with search & sort)
+- `POST /movies/` - Create new movie
+- `GET /movies/{id}` - Get specific movie
+- `PUT /movies/{id}` - Update movie
+- `DELETE /movies/{id}` - Delete movie
+
+### TV Shows
+- `GET /tv-shows/` - List all TV shows (with search & sort)
+- `POST /tv-shows/` - Create new TV show
+- `GET /tv-shows/{id}` - Get specific TV show
+- `PUT /tv-shows/{id}` - Update TV show
+- `DELETE /tv-shows/{id}` - Delete TV show
+
+### Data Management
+- `GET /export/` - Export all user data to JSON
+- `POST /import/` - Import from JSON payload
+- `POST /import/file/` - Import from uploaded JSON file
+
+### Statistics
+- `GET /statistics/` - Complete statistics dashboard
+- `GET /statistics/watch/` - Watch progress stats
+- `GET /statistics/ratings/` - Rating analysis
+- `GET /statistics/years/` - Year-based stats
+- `GET /statistics/directors/` - Director stats
+
+All endpoints (except authentication) require a valid JWT token in the Authorization header.
+
+## Screenshots
 <img width="2178" height="1936" alt="image" src="https://github.com/user-attachments/assets/89868584-9b5d-4c0a-a4ad-61046aa5a88b" />
 <img width="1918" height="1912" alt="image" src="https://github.com/user-attachments/assets/a0c52df2-e723-4e76-845c-6e49e5957f83" />
 
 
 
-# Future features:
+## Development Roadmap
 - [x] **Add notes/review section**
 - [x] **TV Shows compatibility**
 - [x] **Poster caching system**
 - [x] **Export/import functionality**
 - [x] **Statistics dashboard**
-- [ ] **Migrate to server/client setup**
-- [ ] **Account creation/login**
+- [x] **Migrate to server/client setup** - Deployed on Render with PostgreSQL
+- [x] **Account creation/login** - Full authentication system with JWT tokens
+- [x] **Security implementation** - JWT authentication, bcrypt password hashing, user isolation
 - [ ] **Add friends to check each other's lists**
-- [ ] **Security implementation**
 - [ ] **Enhanced search and filtering**
+- [ ] **Email verification**
+- [ ] **Password reset functionality**
+- [ ] **Social features (sharing lists, recommendations)**
 

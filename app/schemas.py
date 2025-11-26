@@ -5,6 +5,51 @@ These define the shape of data accepted/returned by the API.
 from typing import Optional, List
 from pydantic import BaseModel, Field
 
+# ============================================================================
+# Authentication & User Schemas
+# ============================================================================
+
+class UserBase(BaseModel):
+    """Base user schema with common fields."""
+    email: str = Field(..., description="User email address")
+    username: str = Field(..., min_length=3, max_length=50, description="Username")
+
+
+class UserCreate(UserBase):
+    """Schema for user registration."""
+    password: str = Field(..., min_length=6, description="User password (min 6 characters)")
+
+
+class UserLogin(BaseModel):
+    """Schema for user login."""
+    username: str = Field(..., description="Username or email")
+    password: str = Field(..., description="Password")
+
+
+class User(UserBase):
+    """Schema for user responses."""
+    id: int
+    is_active: bool
+    
+    class Config:
+        from_attributes = True
+
+
+class Token(BaseModel):
+    """JWT token response schema."""
+    access_token: str
+    token_type: str = "bearer"
+    user: User
+
+
+class TokenData(BaseModel):
+    """Schema for decoded token data."""
+    username: Optional[str] = None
+
+
+# ============================================================================
+# Movie & TV Show Schemas
+# ============================================================================
 
 class MovieBase(BaseModel):
     title: str = Field(..., description="Title of the movie or book")

@@ -1,0 +1,318 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="UTF-8">
+  <title>OmniTrackr</title>
+  <link rel="stylesheet" href="./styles.css">
+</head>
+
+<body>
+  <button id="toggleMode" class="toggle-btn">Night Mode</button>
+  <div id="userDisplay"></div>
+  <button id="logoutBtn">Logout</button>
+  <div class="container" id="mainContainer">
+    <div class="header">
+      <h1>OmniTrackr</h1>
+    </div>
+
+    <div class="tabs">
+      <button class="tab active" onclick="switchTab('movies')">🎬 Movies</button>
+      <button class="tab" onclick="switchTab('tv-shows')">📺 TV Shows</button>
+      <button class="tab" onclick="switchTab('statistics')">📊 Statistics</button>
+    </div>
+
+    <!-- Movies Tab Content -->
+    <div id="movies-tab" class="tab-content active">
+      <div class="card">
+        <h2>Add Movie</h2>
+        <form id="addMovieForm">
+          <div>
+            <input type="text" id="movieTitle" placeholder="Title" required>
+          </div>
+          <div>
+            <input type="text" id="movieDirector" placeholder="Director" required>
+          </div>
+          <div>
+            <input type="number" id="movieYear" placeholder="Year" required>
+          </div>
+          <div>
+            <input type="number" min="0" max="10" id="movieRating" placeholder="Rating (0-10)">
+          </div>
+          <div>
+            <label>Watched <input type="checkbox" id="movieWatched"></label>
+          </div>
+          <div>
+            <input type="text" id="movieReview" placeholder="Review (optional)">
+          </div>
+          <button type="submit" class="action-btn">Add Movie</button>
+        </form>
+      </div>
+      <div class="card">
+        <div style="display:flex; justify-content: space-between; align-items: center; margin-bottom: 10px;">
+          <h2 style="margin: 0;">Movies</h2>
+          <span id="movieCount" style="font-weight: bold;"></span>
+        </div>
+        <div style="display:flex; flex-wrap: wrap; gap: 10px; margin-bottom: 10px;">
+          <input type="text" id="movieSearch" placeholder="Search by title or director"
+            style="flex: 2; min-width: 200px;">
+          <select id="movieSort" style="flex: 1; min-width: 200px;">
+            <option value="">Sort by...</option>
+            <option value="rating-asc">Rating (Low → High)</option>
+            <option value="rating-desc">Rating (High → Low)</option>
+            <option value="year-asc">Year (Oldest → Newest)</option>
+            <option value="year-desc">Year (Newest → Oldest)</option>
+          </select>
+          <button id="loadMovies" class="action-btn" style="flex: 1; min-width: 120px;">Load Movies</button>
+          <button id="exportMovies" class="action-btn"
+            style="flex: 1; min-width: 120px; background-color: #4caf50;">Export Data</button>
+          <button id="importMovies" class="action-btn"
+            style="flex: 1; min-width: 120px; background-color: #ff9800;">Import Data</button>
+        </div>
+        <input type="file" id="importFile" accept=".json" style="display: none;">
+        <table id="movieTable">
+          <thead>
+            <tr>
+              <th>Poster</th>
+              <th>Title</th>
+              <th>Director</th>
+              <th>Year</th>
+              <th>Rating</th>
+              <th>Watched</th>
+              <th>Review</th>
+              <th>IMDb</th>
+              <th>Actions</th>
+            </tr>
+          </thead>
+          <tbody></tbody>
+        </table>
+      </div>
+    </div>
+
+    <!-- TV Shows Tab Content -->
+    <div id="tv-shows-tab" class="tab-content">
+      <div class="card">
+        <h2>Add TV Show</h2>
+        <form id="addTVShowForm">
+          <div>
+            <input type="text" id="tvTitle" placeholder="Title" required>
+          </div>
+          <div>
+            <input type="number" id="tvYear" placeholder="Year" required>
+          </div>
+          <div>
+            <input type="number" id="tvSeasons" placeholder="Seasons (optional)">
+          </div>
+          <div>
+            <input type="number" id="tvEpisodes" placeholder="Episodes (optional)">
+          </div>
+          <div>
+            <input type="number" min="0" max="10" id="tvRating" placeholder="Rating (0-10)">
+          </div>
+          <div>
+            <label>Watched <input type="checkbox" id="tvWatched"></label>
+          </div>
+          <div>
+            <input type="text" id="tvReview" placeholder="Review (optional)">
+          </div>
+          <button type="submit" class="action-btn">Add TV Show</button>
+        </form>
+      </div>
+      <div class="card">
+        <div style="display:flex; justify-content: space-between; align-items: center; margin-bottom: 10px;">
+          <h2 style="margin: 0;">TV Shows</h2>
+          <span id="tvShowCount" style="font-weight: bold;"></span>
+        </div>
+        <div style="display:flex; flex-wrap: wrap; gap: 10px; margin-bottom: 10px;">
+          <input type="text" id="tvSearch" placeholder="Search by title" style="flex: 2; min-width: 200px;">
+          <select id="tvSort" style="flex: 1; min-width: 200px;">
+            <option value="">Sort by...</option>
+            <option value="rating-asc">Rating (Low → High)</option>
+            <option value="rating-desc">Rating (High → Low)</option>
+            <option value="year-asc">Year (Oldest → Newest)</option>
+            <option value="year-desc">Year (Newest → Oldest)</option>
+          </select>
+          <button id="loadTVShows" class="action-btn" style="flex: 1; min-width: 120px;">Load TV Shows</button>
+          <button id="exportTVShows" class="action-btn"
+            style="flex: 1; min-width: 120px; background-color: #4caf50;">Export Data</button>
+          <button id="importTVShows" class="action-btn"
+            style="flex: 1; min-width: 120px; background-color: #ff9800;">Import Data</button>
+        </div>
+        <input type="file" id="importTVFile" accept=".json" style="display: none;">
+        <table id="tvShowTable">
+          <thead>
+            <tr>
+              <th>Poster</th>
+              <th>Title</th>
+              <th>Year</th>
+              <th>Seasons</th>
+              <th>Episodes</th>
+              <th>Rating</th>
+              <th>Watched</th>
+              <th>Review</th>
+              <th>IMDb</th>
+              <th>Actions</th>
+            </tr>
+          </thead>
+          <tbody></tbody>
+        </table>
+      </div>
+    </div>
+
+    <!-- Statistics Tab Content -->
+    <div id="statistics-tab" class="tab-content">
+      <div class="card">
+        <h2>📊 Statistics Dashboard</h2>
+        <div id="statsLoading" style="text-align: center; padding: 20px;">
+          <p>Loading statistics...</p>
+        </div>
+        <div id="statsContent" style="display: none;">
+          <!-- Watch Statistics -->
+          <div class="stats-section">
+            <h3>📈 Watch Progress</h3>
+            <div class="stats-grid">
+              <div class="stat-card">
+                <div class="stat-number" id="totalItems">0</div>
+                <div class="stat-label">Total Items</div>
+              </div>
+              <div class="stat-card">
+                <div class="stat-number" id="watchedItems">0</div>
+                <div class="stat-label">Watched</div>
+              </div>
+              <div class="stat-card">
+                <div class="stat-number" id="unwatchedItems">0</div>
+                <div class="stat-label">Unwatched</div>
+              </div>
+              <div class="stat-card">
+                <div class="stat-number" id="completionPercentage">0%</div>
+                <div class="stat-label">Completion</div>
+              </div>
+            </div>
+            <div class="progress-bar">
+              <div class="progress-fill" id="progressFill"></div>
+            </div>
+          </div>
+
+          <!-- Rating Statistics -->
+          <div class="stats-section">
+            <h3>⭐ Rating Analysis</h3>
+            <div class="stats-grid">
+              <div class="stat-card">
+                <div class="stat-number" id="averageRating">0.0</div>
+                <div class="stat-label">Average Rating</div>
+              </div>
+              <div class="stat-card">
+                <div class="stat-number" id="totalRatedItems">0</div>
+                <div class="stat-label">Rated Items</div>
+              </div>
+            </div>
+            <div class="rating-distribution">
+              <h4>Rating Distribution</h4>
+              <div id="ratingBars"></div>
+            </div>
+            <div class="top-rated">
+              <h4>🏆 Highest Rated</h4>
+              <div id="highestRatedList"></div>
+            </div>
+          </div>
+
+          <!-- Year Statistics -->
+          <div class="stats-section">
+            <h3>📅 Year Analysis</h3>
+            <div class="stats-grid">
+              <div class="stat-card">
+                <div class="stat-number" id="oldestYear">-</div>
+                <div class="stat-label">Oldest Year</div>
+              </div>
+              <div class="stat-card">
+                <div class="stat-number" id="newestYear">-</div>
+                <div class="stat-label">Newest Year</div>
+              </div>
+            </div>
+            <div class="decade-stats">
+              <h4>Decade Breakdown</h4>
+              <div id="decadeBars"></div>
+            </div>
+          </div>
+
+          <!-- Director Statistics -->
+          <div class="stats-section">
+            <h3>🎬 Director Analysis</h3>
+            <div class="director-stats">
+              <div class="director-column">
+                <h4>Most Prolific Directors</h4>
+                <div id="topDirectorsList"></div>
+              </div>
+              <div class="director-column">
+                <h4>Highest Rated Directors</h4>
+                <div id="highestRatedDirectorsList"></div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+  <!-- Authentication Modal -->
+  <div id="authModal">
+    <div class="auth-container">
+      <h2 id="authTitle">Login to OmniTrackr</h2>
+      <div id="authError"></div>
+      <div id="authSuccess" style="display: none;"></div>
+
+      <!-- Login Form -->
+      <div id="loginForm" class="auth-form">
+        <form id="loginFormElement">
+          <input type="text" id="loginUsername" placeholder="Username or Email" required>
+          <input type="password" id="loginPassword" placeholder="Password" required>
+          <button type="submit">Login</button>
+        </form>
+        <div class="auth-toggle">
+          Don't have an account? <a id="showRegister">Register</a><br>
+          <a id="showForgotPassword" style="font-size: 0.9em; margin-top: 5px; display: inline-block;">Forgot Password?</a>
+        </div>
+      </div>
+
+      <!-- Register Form -->
+      <div id="registerForm" class="auth-form" style="display: none;">
+        <form id="registerFormElement">
+          <input type="email" id="registerEmail" placeholder="Email" required>
+          <input type="text" id="registerUsername" placeholder="Username" required>
+          <input type="password" id="registerPassword" placeholder="Password" required>
+          <input type="password" id="registerConfirmPassword" placeholder="Confirm Password" required>
+          <button type="submit">Register</button>
+        </form>
+        <div class="auth-toggle">
+          Already have an account? <a id="showLogin">Back to Login</a>
+        </div>
+      </div>
+
+      <!-- Forgot Password Form -->
+      <div id="forgotPasswordForm" class="auth-form" style="display: none;">
+        <form id="forgotPasswordFormElement">
+          <p style="text-align: center; margin-bottom: 20px;">Enter your email address and we'll send you a link to reset your password.</p>
+          <input type="email" id="forgotPasswordEmail" placeholder="Email Address" required>
+          <button type="submit">Send Reset Link</button>
+        </form>
+        <div class="auth-toggle">
+          <a id="backToLogin">Back to Login</a>
+        </div>
+      </div>
+
+      <!-- Reset Password Form (shown when accessing reset link) -->
+      <div id="resetPasswordForm" class="auth-form" style="display: none;">
+        <form id="resetPasswordFormElement">
+          <p style="text-align: center; margin-bottom: 20px;">Enter your new password below.</p>
+          <input type="password" id="newPassword" placeholder="New Password" required minlength="6">
+          <input type="password" id="confirmNewPassword" placeholder="Confirm New Password" required minlength="6">
+          <button type="submit">Reset Password</button>
+        </form>
+      </div>
+    </div>
+  </div>
+  <script src="./credentials.js"></script>
+  <script src="./auth.js"></script>
+  <script src="./app.js"></script>
+</body>
+
+</html>
