@@ -281,6 +281,14 @@ async def login(form_data: OAuth2PasswordRequestForm = Depends(), db: Session = 
             headers={"WWW-Authenticate": "Bearer"},
         )
     
+    # Check if email is verified
+    if not user.is_verified:
+        raise HTTPException(
+            status_code=403,
+            detail="Please verify your email address before logging in. Check your inbox for the verification link.",
+            headers={"WWW-Authenticate": "Bearer"},
+        )
+    
     access_token = auth.create_access_token(data={"sub": user.username})
     return schemas.Token(access_token=access_token, token_type="bearer", user=user)
 
@@ -307,6 +315,34 @@ async def verify_email(token: str, db: Session = Depends(get_db)):
     db.refresh(user)
     
     return {"message": "Email verified successfully! You can now use all features."}
+
+
+@app.post("/auth/resend-verification", tags=["auth"])
+async def resend_verification_email(email: str, db: Session = Depends(get_db)):
+    """Resend verification email to user."""
+    user = crud.get_user_by_email(db, email)
+    
+    # Don't reveal if email exists for security (same behavior as password reset)
+    if not user:
+        return {"message": "If that email is registered and unverified, a verification email has been sent."}
+    
+    # If already verified, don't send another email
+    if user.is_verified:
+        return {"message": "Email is already verified. You can log in."}
+    
+    # Generate new verification token
+    verification_token = email_utils.generate_verification_token(user.email)
+    user.verification_token = verification_token
+    db.commit()
+    
+    # Send verification email (async, non-blocking)
+    try:
+        await email_utils.send_verification_email(user.email, user.username, verification_token)
+    except Exception as e:
+        # Log error but don't fail the request
+        print(f"Failed to send verification email: {e}")
+    
+    return {"message": "If that email is registered and unverified, a verification email has been sent."}
 
 
 @app.post("/auth/request-password-reset", tags=["auth"])

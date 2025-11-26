@@ -104,10 +104,18 @@ class TestAuthEndpoints:
         assert response.status_code == 400
         assert "username" in response.json()["detail"].lower()
     
-    def test_login_success(self, client, test_user_data):
+    def test_login_success(self, client, test_user_data, db_session):
         """Test successful login."""
         # Register user first
-        client.post("/auth/register", json=test_user_data)
+        register_response = client.post("/auth/register", json=test_user_data)
+        user_id = register_response.json()["id"]
+        
+        # Verify user email (bypass email verification for test)
+        from app import crud
+        user = crud.get_user_by_id(db_session, user_id)
+        user.is_verified = True
+        user.verification_token = None
+        db_session.commit()
         
         # Login
         response = client.post(
@@ -124,10 +132,18 @@ class TestAuthEndpoints:
         assert data["token_type"] == "bearer"
         assert "user" in data
     
-    def test_login_with_email(self, client, test_user_data):
+    def test_login_with_email(self, client, test_user_data, db_session):
         """Test login using email instead of username."""
         # Register user first
-        client.post("/auth/register", json=test_user_data)
+        register_response = client.post("/auth/register", json=test_user_data)
+        user_id = register_response.json()["id"]
+        
+        # Verify user email (bypass email verification for test)
+        from app import crud
+        user = crud.get_user_by_id(db_session, user_id)
+        user.is_verified = True
+        user.verification_token = None
+        db_session.commit()
         
         # Login with email
         response = client.post(
@@ -141,10 +157,35 @@ class TestAuthEndpoints:
         assert response.status_code == 200
         assert "access_token" in response.json()
     
-    def test_login_wrong_password(self, client, test_user_data):
+    def test_login_unverified_user(self, client, test_user_data):
+        """Test login with unverified email."""
+        # Register user first (not verified)
+        client.post("/auth/register", json=test_user_data)
+        
+        # Try to login without verifying email
+        response = client.post(
+            "/auth/login",
+            data={
+                "username": test_user_data["username"],
+                "password": test_user_data["password"]
+            }
+        )
+        
+        assert response.status_code == 403
+        assert "verify" in response.json()["detail"].lower()
+    
+    def test_login_wrong_password(self, client, test_user_data, db_session):
         """Test login with wrong password."""
         # Register user first
-        client.post("/auth/register", json=test_user_data)
+        register_response = client.post("/auth/register", json=test_user_data)
+        user_id = register_response.json()["id"]
+        
+        # Verify user email (bypass email verification for test)
+        from app import crud
+        user = crud.get_user_by_id(db_session, user_id)
+        user.is_verified = True
+        user.verification_token = None
+        db_session.commit()
         
         # Try to login with wrong password
         response = client.post(
@@ -230,11 +271,17 @@ class TestPasswordReset:
         register_response = client.post("/auth/register", json=test_user_data)
         user_id = register_response.json()["id"]
         
+        # Verify user email (bypass email verification for test)
+        user = crud.get_user_by_id(db_session, user_id)
+        user.is_verified = True
+        user.verification_token = None
+        db_session.commit()
+        
         # Request password reset
         client.post(f"/auth/request-password-reset?email={test_user_data['email']}")
         
         # Get reset token from database
-        user = crud.get_user_by_id(db_session, user_id)
+        db_session.refresh(user)
         assert user.reset_token is not None
         
         # Reset password
@@ -261,4 +308,45 @@ class TestPasswordReset:
         response = client.post("/auth/reset-password?token=invalid_token&new_password=newpass123")
         
         assert response.status_code == 400
+
+
+class TestResendVerification:
+    """Test resend verification email functionality."""
+    
+    def test_resend_verification_unverified_user(self, client, test_user_data):
+        """Test resending verification email to unverified user."""
+        # Register user first
+        client.post("/auth/register", json=test_user_data)
+        
+        # Resend verification email
+        response = client.post(f"/auth/resend-verification?email={test_user_data['email']}")
+        
+        assert response.status_code == 200
+        assert "sent" in response.json()["message"].lower()
+    
+    def test_resend_verification_verified_user(self, client, test_user_data, db_session):
+        """Test resending verification email to already verified user."""
+        # Register and verify user
+        register_response = client.post("/auth/register", json=test_user_data)
+        user_id = register_response.json()["id"]
+        
+        from app import crud
+        user = crud.get_user_by_id(db_session, user_id)
+        user.is_verified = True
+        user.verification_token = None
+        db_session.commit()
+        
+        # Try to resend verification email
+        response = client.post(f"/auth/resend-verification?email={test_user_data['email']}")
+        
+        assert response.status_code == 200
+        assert "already verified" in response.json()["message"].lower()
+    
+    def test_resend_verification_nonexistent_email(self, client):
+        """Test resending verification email to non-existent email (should not reveal if email exists)."""
+        response = client.post("/auth/resend-verification?email=nonexistent@example.com")
+        
+        # Should return same message for security (don't reveal if email exists)
+        assert response.status_code == 200
+        assert "sent" in response.json()["message"].lower()
 

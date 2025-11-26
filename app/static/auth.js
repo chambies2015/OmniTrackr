@@ -112,6 +112,10 @@ async function login(username, password) {
 
     if (!response.ok) {
         const error = await response.json();
+        // Check if it's an email verification error (403)
+        if (response.status === 403) {
+            throw new Error(error.detail || 'Please verify your email address before logging in.');
+        }
         throw new Error(error.detail || 'Invalid credentials');
     }
 
@@ -163,6 +167,7 @@ function showLoginForm() {
     document.getElementById('registerForm').style.display = 'none';
     document.getElementById('forgotPasswordForm').style.display = 'none';
     document.getElementById('resetPasswordForm').style.display = 'none';
+    document.getElementById('resendVerificationContainer').style.display = 'none';
     document.getElementById('authTitle').textContent = 'Login to OmniTrackr';
     document.getElementById('authError').textContent = '';
     document.getElementById('authSuccess').style.display = 'none';
@@ -231,8 +236,57 @@ function setupAuthHandlers() {
 
         try {
             await login(username, password);
+            // Hide resend button on successful login
+            document.getElementById('resendVerificationContainer').style.display = 'none';
         } catch (error) {
             displayAuthError(error.message);
+            // Show resend button if it's a verification error
+            if (error.message.toLowerCase().includes('verify')) {
+                document.getElementById('resendVerificationContainer').style.display = 'block';
+            } else {
+                document.getElementById('resendVerificationContainer').style.display = 'none';
+            }
+        }
+    });
+
+    // Resend verification email button
+    document.getElementById('resendVerificationBtn').addEventListener('click', async () => {
+        const usernameOrEmail = document.getElementById('loginUsername').value;
+        
+        // Extract email - if it contains @, use it; otherwise we'll need to prompt
+        let email = usernameOrEmail;
+        if (!email || !email.includes('@')) {
+            // If username was entered, prompt for email
+            email = prompt('Please enter your email address to resend the verification email:');
+            if (!email || !email.includes('@')) {
+                displayAuthError('Please enter a valid email address.');
+                return;
+            }
+        }
+
+        // Disable button while sending
+        const btn = document.getElementById('resendVerificationBtn');
+        btn.disabled = true;
+        btn.textContent = 'Sending...';
+
+        try {
+            const response = await fetch(`${API_BASE}/auth/resend-verification?email=${encodeURIComponent(email)}`, {
+                method: 'POST',
+            });
+
+            if (response.ok) {
+                displayAuthSuccess('Verification email sent! Please check your inbox (and spam folder).');
+                document.getElementById('resendVerificationContainer').style.display = 'none';
+            } else {
+                const error = await response.json();
+                displayAuthError(error.detail || 'Failed to resend verification email.');
+            }
+        } catch (error) {
+            displayAuthError('Failed to resend verification email. Please try again.');
+        } finally {
+            // Re-enable button
+            btn.disabled = false;
+            btn.textContent = 'Resend Verification Email';
         }
     });
 
