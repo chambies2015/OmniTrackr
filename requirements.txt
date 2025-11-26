@@ -7,7 +7,8 @@ pydantic==2.5.0
 psycopg2-binary==2.9.9
 
 # Authentication
-python-jose[cryptography]==3.3.0
+python-jose==3.3.0
+cryptography==41.0.7
 passlib[bcrypt]==1.7.4
 python-multipart==0.0.6
 
