@@ -110,15 +110,39 @@ if os.path.exists(static_dir):
 # Add individual file serving for assets
 @app.get("/credentials.js")
 async def get_credentials():
-    credentials_file = os.path.join(os.path.dirname(__file__), "credentials.js")
+    credentials_file = os.path.join(os.path.dirname(__file__), "static", "credentials.js")
     if os.path.exists(credentials_file):
         return FileResponse(credentials_file)
     raise HTTPException(status_code=404, detail="credentials.js not found")
 
 
+@app.get("/auth.js")
+async def get_auth():
+    auth_file = os.path.join(os.path.dirname(__file__), "static", "auth.js")
+    if os.path.exists(auth_file):
+        return FileResponse(auth_file)
+    raise HTTPException(status_code=404, detail="auth.js not found")
+
+
+@app.get("/app.js")
+async def get_app():
+    app_file = os.path.join(os.path.dirname(__file__), "static", "app.js")
+    if os.path.exists(app_file):
+        return FileResponse(app_file)
+    raise HTTPException(status_code=404, detail="app.js not found")
+
+
+@app.get("/styles.css")
+async def get_styles():
+    styles_file = os.path.join(os.path.dirname(__file__), "static", "styles.css")
+    if os.path.exists(styles_file):
+        return FileResponse(styles_file, media_type="text/css")
+    raise HTTPException(status_code=404, detail="styles.css not found")
+
+
 @app.get("/movie_theater_background.jpg")
 async def get_movie_theater_bg():
-    bg_file = os.path.join(os.path.dirname(__file__), "movie_theater_background.jpg")
+    bg_file = os.path.join(os.path.dirname(__file__), "static", "movie_theater_background.jpg")
     if os.path.exists(bg_file):
         return FileResponse(bg_file)
     raise HTTPException(status_code=404, detail="movie_theater_background.jpg not found")
@@ -126,7 +150,7 @@ async def get_movie_theater_bg():
 
 @app.get("/film_background.jpg")
 async def get_film_bg():
-    bg_file = os.path.join(os.path.dirname(__file__), "film_background.jpg")
+    bg_file = os.path.join(os.path.dirname(__file__), "static", "film_background.jpg")
     if os.path.exists(bg_file):
         return FileResponse(bg_file)
     raise HTTPException(status_code=404, detail="film_background.jpg not found")
@@ -134,7 +158,7 @@ async def get_film_bg():
 
 @app.get("/favicon.ico")
 async def get_favicon():
-    favicon_file = os.path.join(os.path.dirname(__file__), "favicon.ico")
+    favicon_file = os.path.join(os.path.dirname(__file__), "static", "favicon.ico")
     if os.path.exists(favicon_file):
         return FileResponse(favicon_file, media_type="image/x-icon")
     raise HTTPException(status_code=404, detail="favicon.ico not found")
@@ -180,7 +204,7 @@ async def get_current_user(
 @app.get("/", tags=["root"])
 async def read_root():
     # Serve the HTML UI file
-    html_file = os.path.join(os.path.dirname(__file__), "movie_tracker_ui.html")
+    html_file = os.path.join(os.path.dirname(__file__), "templates", "movie_tracker_ui.html")
     if os.path.exists(html_file):
         return FileResponse(html_file)
     return {"message": "StreamTracker API is running \U0001f680"}
@@ -228,15 +252,16 @@ async def login(form_data: OAuth2PasswordRequestForm = Depends(), db: Session = 
 async def list_movies(
         search: Optional[str] = None,
         sort_by: Optional[str] = None,
-        order: Optional[str] = None,  # new
+        order: Optional[str] = None,
+        current_user: models.User = Depends(get_current_user),
         db: Session = Depends(get_db),
 ):
-    return crud.get_movies(db, search=search, sort_by=sort_by, order=order)
+    return crud.get_movies(db, current_user.id, search=search, sort_by=sort_by, order=order)
 
 
 @app.get("/movies/{movie_id}", response_model=schemas.Movie, tags=["movies"])
-async def get_movie(movie_id: int, db: Session = Depends(get_db)):
-    db_movie = crud.get_movie_by_id(db, movie_id)
+async def get_movie(movie_id: int, current_user: models.User = Depends(get_current_user), db: Session = Depends(get_db)):
+    db_movie = crud.get_movie_by_id(db, current_user.id, movie_id)
     if db_movie is None:
         raise HTTPException(status_code=404, detail="Movie not found")
     return db_movie
@@ -269,14 +294,15 @@ async def list_tv_shows(
         search: Optional[str] = None,
         sort_by: Optional[str] = None,
         order: Optional[str] = None,
+        current_user: models.User = Depends(get_current_user),
         db: Session = Depends(get_db),
 ):
-    return crud.get_tv_shows(db, search=search, sort_by=sort_by, order=order)
+    return crud.get_tv_shows(db, current_user.id, search=search, sort_by=sort_by, order=order)
 
 
 @app.get("/tv-shows/{tv_show_id}", response_model=schemas.TVShow, tags=["tv-shows"])
-async def get_tv_show(tv_show_id: int, db: Session = Depends(get_db)):
-    db_tv_show = crud.get_tv_show_by_id(db, tv_show_id)
+async def get_tv_show(tv_show_id: int, current_user: models.User = Depends(get_current_user), db: Session = Depends(get_db)):
+    db_tv_show = crud.get_tv_show_by_id(db, current_user.id, tv_show_id)
     if db_tv_show is None:
         raise HTTPException(status_code=404, detail="TV Show not found")
     return db_tv_show
@@ -305,10 +331,10 @@ async def delete_tv_show(tv_show_id: int, current_user: models.User = Depends(ge
 
 # Export/Import endpoints
 @app.get("/export/", response_model=schemas.ExportData, tags=["export-import"])
-async def export_data(db: Session = Depends(get_db)):
+async def export_data(current_user: models.User = Depends(get_current_user), db: Session = Depends(get_db)):
     """Export all movies and TV shows as JSON"""
-    movies = crud.get_all_movies(db)
-    tv_shows = crud.get_all_tv_shows(db)
+    movies = crud.get_all_movies(db, current_user.id)
+    tv_shows = crud.get_all_tv_shows(db, current_user.id)
 
     export_metadata = {
         "export_timestamp": datetime.now().isoformat(),
@@ -325,10 +351,10 @@ async def export_data(db: Session = Depends(get_db)):
 
 
 @app.post("/import/", response_model=schemas.ImportResult, tags=["export-import"])
-async def import_data(import_data: schemas.ImportData, db: Session = Depends(get_db)):
+async def import_data(import_data: schemas.ImportData, current_user: models.User = Depends(get_current_user), db: Session = Depends(get_db)):
     """Import movies and TV shows from JSON data"""
-    movies_created, movies_updated, movie_errors = crud.import_movies(db, import_data.movies)
-    tv_shows_created, tv_shows_updated, tv_show_errors = crud.import_tv_shows(db, import_data.tv_shows)
+    movies_created, movies_updated, movie_errors = crud.import_movies(db, current_user.id, import_data.movies)
+    tv_shows_created, tv_shows_updated, tv_show_errors = crud.import_tv_shows(db, current_user.id, import_data.tv_shows)
 
     all_errors = movie_errors + tv_show_errors
 
@@ -342,7 +368,7 @@ async def import_data(import_data: schemas.ImportData, db: Session = Depends(get
 
 
 @app.post("/import/file/", response_model=schemas.ImportResult, tags=["export-import"])
-async def import_from_file(file: UploadFile = File(...), db: Session = Depends(get_db)):
+async def import_from_file(file: UploadFile = File(...), current_user: models.User = Depends(get_current_user), db: Session = Depends(get_db)):
     """Import data from a JSON file upload"""
     if not file.filename.endswith('.json'):
         raise HTTPException(status_code=400, detail="File must be a JSON file")
@@ -362,8 +388,8 @@ async def import_from_file(file: UploadFile = File(...), db: Session = Depends(g
         import_data = schemas.ImportData(movies=movies, tv_shows=tv_shows)
 
         # Import the data
-        movies_created, movies_updated, movie_errors = crud.import_movies(db, import_data.movies)
-        tv_shows_created, tv_shows_updated, tv_show_errors = crud.import_tv_shows(db, import_data.tv_shows)
+        movies_created, movies_updated, movie_errors = crud.import_movies(db, current_user.id, import_data.movies)
+        tv_shows_created, tv_shows_updated, tv_show_errors = crud.import_tv_shows(db, current_user.id, import_data.tv_shows)
 
         all_errors = movie_errors + tv_show_errors
 
@@ -383,12 +409,12 @@ async def import_from_file(file: UploadFile = File(...), db: Session = Depends(g
 
 # Statistics endpoints
 @app.get("/statistics/", response_model=schemas.StatisticsDashboard, tags=["statistics"])
-async def get_statistics_dashboard(db: Session = Depends(get_db)):
+async def get_statistics_dashboard(current_user: models.User = Depends(get_current_user), db: Session = Depends(get_db)):
     """Get comprehensive statistics dashboard"""
-    watch_stats = crud.get_watch_statistics(db)
-    rating_stats = crud.get_rating_statistics(db)
-    year_stats = crud.get_year_statistics(db)
-    director_stats = crud.get_director_statistics(db)
+    watch_stats = crud.get_watch_statistics(db, current_user.id)
+    rating_stats = crud.get_rating_statistics(db, current_user.id)
+    year_stats = crud.get_year_statistics(db, current_user.id)
+    director_stats = crud.get_director_statistics(db, current_user.id)
 
     return schemas.StatisticsDashboard(
         watch_stats=schemas.WatchStatistics(**watch_stats),
@@ -400,30 +426,30 @@ async def get_statistics_dashboard(db: Session = Depends(get_db)):
 
 
 @app.get("/statistics/watch/", response_model=schemas.WatchStatistics, tags=["statistics"])
-async def get_watch_statistics(db: Session = Depends(get_db)):
+async def get_watch_statistics(current_user: models.User = Depends(get_current_user), db: Session = Depends(get_db)):
     """Get watch statistics"""
-    stats = crud.get_watch_statistics(db)
+    stats = crud.get_watch_statistics(db, current_user.id)
     return schemas.WatchStatistics(**stats)
 
 
 @app.get("/statistics/ratings/", response_model=schemas.RatingStatistics, tags=["statistics"])
-async def get_rating_statistics(db: Session = Depends(get_db)):
+async def get_rating_statistics(current_user: models.User = Depends(get_current_user), db: Session = Depends(get_db)):
     """Get rating statistics"""
-    stats = crud.get_rating_statistics(db)
+    stats = crud.get_rating_statistics(db, current_user.id)
     return schemas.RatingStatistics(**stats)
 
 
 @app.get("/statistics/years/", response_model=schemas.YearStatistics, tags=["statistics"])
-async def get_year_statistics(db: Session = Depends(get_db)):
+async def get_year_statistics(current_user: models.User = Depends(get_current_user), db: Session = Depends(get_db)):
     """Get year-based statistics"""
-    stats = crud.get_year_statistics(db)
+    stats = crud.get_year_statistics(db, current_user.id)
     return schemas.YearStatistics(**stats)
 
 
 @app.get("/statistics/directors/", response_model=schemas.DirectorStatistics, tags=["statistics"])
-async def get_director_statistics(db: Session = Depends(get_db)):
+async def get_director_statistics(current_user: models.User = Depends(get_current_user), db: Session = Depends(get_db)):
     """Get director statistics"""
-    stats = crud.get_director_statistics(db)
+    stats = crud.get_director_statistics(db, current_user.id)
     return schemas.DirectorStatistics(**stats)
 
 
