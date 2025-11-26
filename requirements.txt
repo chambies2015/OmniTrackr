@@ -14,3 +14,7 @@ python-multipart==0.0.12
 
 # Environment variables
 python-dotenv==1.0.1
+
+# Email
+fastapi-mail==1.4.1
+itsdangerous==2.2.0

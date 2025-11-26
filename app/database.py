@@ -1,5 +1,5 @@
 """
-Database setup for the StreamTracker API.
+Database setup for the MediaNest API.
 
 Supports both SQLite (local development) and PostgreSQL (production).
 Database URL is configured via DATABASE_URL environment variable.

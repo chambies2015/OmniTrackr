@@ -3,7 +3,7 @@
 
 <head>
   <meta charset="UTF-8">
-  <title>StreamTracker</title>
+  <title>MediaNest</title>
   <link rel="stylesheet" href="./styles.css">
 </head>
 
@@ -13,7 +13,7 @@
   <button id="logoutBtn">Logout</button>
   <div class="container" id="mainContainer">
     <div class="header">
-      <h1>StreamTracker</h1>
+      <h1>MediaNest</h1>
     </div>
 
     <div class="tabs">
@@ -256,8 +256,9 @@
   <!-- Authentication Modal -->
   <div id="authModal">
     <div class="auth-container">
-      <h2 id="authTitle">Login to StreamTracker</h2>
+      <h2 id="authTitle">Login to MediaNest</h2>
       <div id="authError"></div>
+      <div id="authSuccess" style="display: none;"></div>
 
       <!-- Login Form -->
       <div id="loginForm" class="auth-form">
@@ -267,9 +268,11 @@
           <button type="submit">Login</button>
         </form>
         <div class="auth-toggle">
-          Don't have an account? <a id="showRegister">Register</a>
+          Don't have an account? <a id="showRegister">Register</a><br>
+          <a id="showForgotPassword" style="font-size: 0.9em; margin-top: 5px; display: inline-block;">Forgot Password?</a>
         </div>
       </div>
+
       <!-- Register Form -->
       <div id="registerForm" class="auth-form" style="display: none;">
         <form id="registerFormElement">
@@ -282,6 +285,28 @@
         <div class="auth-toggle">
           Already have an account? <a id="showLogin">Login</a>
         </div>
+      </div>
+
+      <!-- Forgot Password Form -->
+      <div id="forgotPasswordForm" class="auth-form" style="display: none;">
+        <form id="forgotPasswordFormElement">
+          <p style="text-align: center; margin-bottom: 20px;">Enter your email address and we'll send you a link to reset your password.</p>
+          <input type="email" id="forgotPasswordEmail" placeholder="Email Address" required>
+          <button type="submit">Send Reset Link</button>
+        </form>
+        <div class="auth-toggle">
+          <a id="backToLogin">Back to Login</a>
+        </div>
+      </div>
+
+      <!-- Reset Password Form (shown when accessing reset link) -->
+      <div id="resetPasswordForm" class="auth-form" style="display: none;">
+        <form id="resetPasswordFormElement">
+          <p style="text-align: center; margin-bottom: 20px;">Enter your new password below.</p>
+          <input type="password" id="newPassword" placeholder="New Password" required minlength="6">
+          <input type="password" id="confirmNewPassword" placeholder="Confirm New Password" required minlength="6">
+          <button type="submit">Reset Password</button>
+        </form>
       </div>
     </div>
   </div>

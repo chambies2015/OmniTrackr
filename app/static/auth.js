@@ -1,11 +1,11 @@
 /**
- * Authentication Module for StreamTracker
+ * Authentication Module for MediaNest
  * Handles JWT token management, login, registration, and authenticated API calls
  */
 
 // Constants
-const TOKEN_KEY = 'streamtracker_token';
-const USER_KEY = 'streamtracker_user';
+const TOKEN_KEY = 'medianest_token';
+const USER_KEY = 'medianest_user';
 
 // ============================================================================
 // Token Management
@@ -90,8 +90,14 @@ async function register(email, username, password) {
 
     const user = await response.json();
 
-    // Auto-login after successful registration
-    await login(username, password);
+    // Show success message about email verification
+    displayAuthSuccess('Registration successful! Please check your email to verify your account. You can login once verified.');
+    
+    // Clear form and show login after 3 seconds
+    document.getElementById('registerFormElement').reset();
+    setTimeout(() => {
+        showLoginForm();
+    }, 3000);
 }
 
 async function login(username, password) {
@@ -156,15 +162,41 @@ function showMainUI() {
 function showLoginForm() {
     document.getElementById('loginForm').style.display = 'block';
     document.getElementById('registerForm').style.display = 'none';
-    document.getElementById('authTitle').textContent = 'Login to StreamTracker';
+    document.getElementById('forgotPasswordForm').style.display = 'none';
+    document.getElementById('resetPasswordForm').style.display = 'none';
+    document.getElementById('authTitle').textContent = 'Login to MediaNest';
     document.getElementById('authError').textContent = '';
+    document.getElementById('authSuccess').style.display = 'none';
 }
 
 function showRegisterForm() {
     document.getElementById('loginForm').style.display = 'none';
     document.getElementById('registerForm').style.display = 'block';
-    document.getElementById('authTitle').textContent = 'Register for StreamTracker';
+    document.getElementById('forgotPasswordForm').style.display = 'none';
+    document.getElementById('resetPasswordForm').style.display = 'none';
+    document.getElementById('authTitle').textContent = 'Register for MediaNest';
     document.getElementById('authError').textContent = '';
+    document.getElementById('authSuccess').style.display = 'none';
+}
+
+function showForgotPasswordForm() {
+    document.getElementById('loginForm').style.display = 'none';
+    document.getElementById('registerForm').style.display = 'none';
+    document.getElementById('forgotPasswordForm').style.display = 'block';
+    document.getElementById('resetPasswordForm').style.display = 'none';
+    document.getElementById('authTitle').textContent = 'Reset Password';
+    document.getElementById('authError').textContent = '';
+    document.getElementById('authSuccess').style.display = 'none';
+}
+
+function showResetPasswordForm() {
+    document.getElementById('loginForm').style.display = 'none';
+    document.getElementById('registerForm').style.display = 'none';
+    document.getElementById('forgotPasswordForm').style.display = 'none';
+    document.getElementById('resetPasswordForm').style.display = 'block';
+    document.getElementById('authTitle').textContent = 'Reset Password';
+    document.getElementById('authError').textContent = '';
+    document.getElementById('authSuccess').style.display = 'none';
 }
 
 function updateUserDisplay() {
@@ -177,6 +209,14 @@ function updateUserDisplay() {
 
 function displayAuthError(message) {
     document.getElementById('authError').textContent = message;
+    document.getElementById('authSuccess').style.display = 'none';
+}
+
+function displayAuthSuccess(message) {
+    const successEl = document.getElementById('authSuccess');
+    successEl.textContent = message;
+    successEl.style.display = 'block';
+    document.getElementById('authError').textContent = '';
 }
 
 // ============================================================================
@@ -234,6 +274,88 @@ function setupAuthHandlers() {
         showLoginForm();
     });
 
+    // Show forgot password
+    document.getElementById('showForgotPassword').addEventListener('click', (e) => {
+        e.preventDefault();
+        showForgotPasswordForm();
+    });
+
+    // Back to login from forgot password
+    document.getElementById('backToLogin').addEventListener('click', (e) => {
+        e.preventDefault();
+        showLoginForm();
+    });
+
+    // Forgot password form submission
+    document.getElementById('forgotPasswordFormElement').addEventListener('submit', async (e) => {
+        e.preventDefault();
+        const email = document.getElementById('forgotPasswordEmail').value;
+
+        try {
+            const response = await fetch(`${API_BASE}/auth/request-password-reset?email=${encodeURIComponent(email)}`, {
+                method: 'POST',
+            });
+
+            if (response.ok) {
+                displayAuthSuccess('If that email is registered, you will receive a password reset link. Please check your email.');
+                document.getElementById('forgotPasswordFormElement').reset();
+            } else {
+                const error = await response.json();
+                displayAuthError(error.detail || 'Failed to send reset link');
+            }
+        } catch (error) {
+            displayAuthError('Failed to send reset link. Please try again.');
+        }
+    });
+
+    // Reset password form submission
+    document.getElementById('resetPasswordFormElement').addEventListener('submit', async (e) => {
+        e.preventDefault();
+        const newPassword = document.getElementById('newPassword').value;
+        const confirmPassword = document.getElementById('confirmNewPassword').value;
+
+        if (newPassword !== confirmPassword) {
+            displayAuthError('Passwords do not match');
+            return;
+        }
+
+        if (newPassword.length < 6) {
+            displayAuthError('Password must be at least 6 characters');
+            return;
+        }
+
+        // Get token from URL
+        const urlParams = new URLSearchParams(window.location.search);
+        const token = urlParams.get('token');
+
+        if (!token) {
+            displayAuthError('Invalid reset link');
+            return;
+        }
+
+        try {
+            const response = await fetch(`${API_BASE}/auth/reset-password?token=${encodeURIComponent(token)}&new_password=${encodeURIComponent(newPassword)}`, {
+                method: 'POST',
+            });
+
+            if (response.ok) {
+                const data = await response.json();
+                displayAuthSuccess(data.message);
+                
+                // Clear URL parameters and show login form after 2 seconds
+                setTimeout(() => {
+                    window.history.replaceState({}, document.title, window.location.pathname);
+                    showLoginForm();
+                }, 2000);
+            } else {
+                const error = await response.json();
+                displayAuthError(error.detail || 'Failed to reset password');
+            }
+        } catch (error) {
+            displayAuthError('Failed to reset password. Please try again.');
+        }
+    });
+
     // Logout button
     document.getElementById('logoutBtn').addEventListener('click', logout);
 }
@@ -244,12 +366,68 @@ function setupAuthHandlers() {
 
 function initAuth() {
     setupAuthHandlers();
+    
+    // Check URL parameters for email verification or password reset
+    const urlParams = new URLSearchParams(window.location.search);
+    const verifyToken = urlParams.get('token');
+    const action = urlParams.get('action');
+    
+    // Handle email verification
+    if (verifyToken && window.location.pathname.includes('verify-email')) {
+        handleEmailVerification(verifyToken);
+        return;
+    }
+    
+    // Handle password reset
+    if (verifyToken && window.location.pathname.includes('reset-password')) {
+        showAuthModal();
+        showResetPasswordForm();
+        return;
+    }
 
     if (!isAuthenticated()) {
         showAuthModal();
     } else {
         showMainUI();
         updateUserDisplay();
+    }
+}
+
+async function handleEmailVerification(token) {
+    showAuthModal();
+    document.getElementById('authTitle').textContent = 'Email Verification';
+    document.getElementById('loginForm').style.display = 'none';
+    document.getElementById('registerForm').style.display = 'none';
+    document.getElementById('forgotPasswordForm').style.display = 'none';
+    document.getElementById('resetPasswordForm').style.display = 'none';
+    
+    displayAuthSuccess('Verifying your email...');
+    
+    try {
+        const response = await fetch(`${API_BASE}/auth/verify-email?token=${encodeURIComponent(token)}`);
+        const data = await response.json();
+        
+        if (response.ok) {
+            displayAuthSuccess(data.message + ' Redirecting to login...');
+            
+            // Clear URL parameters and show login after 3 seconds
+            setTimeout(() => {
+                window.history.replaceState({}, document.title, window.location.pathname);
+                showLoginForm();
+            }, 3000);
+        } else {
+            displayAuthError(data.detail || 'Email verification failed');
+            setTimeout(() => {
+                window.history.replaceState({}, document.title, window.location.pathname);
+                showLoginForm();
+            }, 3000);
+        }
+    } catch (error) {
+        displayAuthError('Failed to verify email. Please try again.');
+        setTimeout(() => {
+            window.history.replaceState({}, document.title, window.location.pathname);
+            showLoginForm();
+        }, 3000);
     }
 }
 

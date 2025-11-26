@@ -1,9 +1,10 @@
 """
-SQLAlchemy models for the StreamTracker API.
+SQLAlchemy models for the MediaNest API.
 Defines the User, Movie and TV Show ORM models.
 """
-from sqlalchemy import Column, Integer, String, Boolean, Float, ForeignKey
+from sqlalchemy import Column, Integer, String, Boolean, Float, ForeignKey, DateTime
 from sqlalchemy.orm import relationship
+from datetime import datetime
 from .database import Base
 
 
@@ -16,6 +17,11 @@ class User(Base):
     username = Column(String, unique=True, index=True, nullable=False)
     hashed_password = Column(String, nullable=False)
     is_active = Column(Boolean, default=True)
+    is_verified = Column(Boolean, default=False)
+    verification_token = Column(String, nullable=True)
+    reset_token = Column(String, nullable=True)
+    reset_token_expires = Column(DateTime, nullable=True)
+    created_at = Column(DateTime, default=datetime.utcnow)
     
     # Relationships - cascade delete ensures user's data is deleted with them
     movies = relationship("Movie", back_populates="owner", cascade="all, delete-orphan")

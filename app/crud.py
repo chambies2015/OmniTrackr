@@ -1,5 +1,5 @@
 """
-CRUD utility functions for the StreamTracker API.
+CRUD utility functions for the MediaNest API.
 Encapsulates database operations for fetching, creating, updating,
 and deleting movie and TV show entries.
 """
@@ -24,12 +24,14 @@ def get_user_by_email(db: Session, email: str) -> Optional[models.User]:
     return db.query(models.User).filter(models.User.email == email).first()
 
 
-def create_user(db: Session, user: schemas.UserCreate, hashed_password: str) -> models.User:
+def create_user(db: Session, user: schemas.UserCreate, hashed_password: str, verification_token: str = None) -> models.User:
     """Create a new user with hashed password."""
     db_user = models.User(
         email=user.email,
         username=user.username,
-        hashed_password=hashed_password
+        hashed_password=hashed_password,
+        is_verified=False,
+        verification_token=verification_token
     )
     db.add(db_user)
     db.commit()

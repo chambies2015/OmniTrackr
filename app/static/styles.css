@@ -545,6 +545,16 @@ button.action-btn:disabled {
   min-height: 20px;
 }
 
+#authSuccess {
+  color: #4caf50;
+  text-align: center;
+  margin: 10px 0;
+  padding: 10px;
+  background-color: rgba(76, 175, 80, 0.1);
+  border-radius: 4px;
+  font-weight: bold;
+}
+
 #userDisplay {
   position: fixed;
   top: 60px;

@@ -1,5 +1,5 @@
 """
-Entry point for the StreamTracker API.
+Entry point for the MediaNest API.
 Provides CRUD endpoints for managing movies and TV shows.
 """
 from typing import List, Optional
@@ -14,7 +14,7 @@ from fastapi.staticfiles import StaticFiles
 from sqlalchemy.orm import Session
 from sqlalchemy import inspect, text
 
-from . import crud, schemas, auth, models
+from . import crud, schemas, auth, models, email as email_utils
 from .database import Base, SessionLocal, engine
 
 # Create the database tables
@@ -88,7 +88,7 @@ except Exception as e:
     pass
 
 # Initialize FastAPI
-app = FastAPI(title="StreamTracker API", description="Manage your movies and TV shows", version="0.1.0")
+app = FastAPI(title="MediaNest API", description="Manage your movies and TV shows", version="0.1.0")
 
 # Configure CORS to allow requests from any origin
 app.add_middleware(
@@ -204,10 +204,10 @@ async def get_current_user(
 @app.get("/", tags=["root"])
 async def read_root():
     # Serve the HTML UI file
-    html_file = os.path.join(os.path.dirname(__file__), "templates", "movie_tracker_ui.html")
+    html_file = os.path.join(os.path.dirname(__file__), "templates", "index.html")
     if os.path.exists(html_file):
         return FileResponse(html_file)
-    return {"message": "StreamTracker API is running \U0001f680"}
+    return {"message": "MediaNest API is running \U0001f680"}
 
 
 # ============================================================================
@@ -216,14 +216,26 @@ async def read_root():
 
 @app.post("/auth/register", response_model=schemas.User, status_code=status.HTTP_201_CREATED, tags=["auth"])
 async def register(user: schemas.UserCreate, db: Session = Depends(get_db)):
-    """Register a new user."""
+    """Register a new user and send verification email."""
     if crud.get_user_by_email(db, user.email):
         raise HTTPException(status_code=400, detail="Email already registered")
     if crud.get_user_by_username(db, user.username):
         raise HTTPException(status_code=400, detail="Username already taken")
     
+    # Generate verification token
+    verification_token = email_utils.generate_verification_token(user.email)
+    
     hashed_password = auth.get_password_hash(user.password)
-    return crud.create_user(db, user, hashed_password)
+    db_user = crud.create_user(db, user, hashed_password, verification_token)
+    
+    # Send verification email (async, non-blocking)
+    try:
+        await email_utils.send_verification_email(user.email, user.username, verification_token)
+    except Exception as e:
+        # Log error but don't fail registration
+        print(f"Failed to send verification email: {e}")
+    
+    return db_user
 
 
 @app.post("/auth/login", response_model=schemas.Token, tags=["auth"])
@@ -242,6 +254,87 @@ async def login(form_data: OAuth2PasswordRequestForm = Depends(), db: Session = 
     
     access_token = auth.create_access_token(data={"sub": user.username})
     return schemas.Token(access_token=access_token, token_type="bearer", user=user)
+
+
+@app.get("/auth/verify-email", tags=["auth"])
+async def verify_email(token: str, db: Session = Depends(get_db)):
+    """Verify user email with token."""
+    try:
+        email = email_utils.verify_token(token, max_age=3600)  # 1 hour expiration
+    except Exception:
+        raise HTTPException(status_code=400, detail="Invalid or expired verification token")
+    
+    user = crud.get_user_by_email(db, email)
+    if not user:
+        raise HTTPException(status_code=404, detail="User not found")
+    
+    if user.is_verified:
+        return {"message": "Email already verified"}
+    
+    # Mark user as verified
+    user.is_verified = True
+    user.verification_token = None
+    db.commit()
+    db.refresh(user)
+    
+    return {"message": "Email verified successfully! You can now use all features."}
+
+
+@app.post("/auth/request-password-reset", tags=["auth"])
+async def request_password_reset(email: str, db: Session = Depends(get_db)):
+    """Request a password reset email."""
+    user = crud.get_user_by_email(db, email)
+    if not user:
+        # Don't reveal if email exists - security best practice
+        return {"message": "If that email is registered, you will receive a password reset link."}
+    
+    # Generate reset token
+    reset_token = email_utils.generate_reset_token(email)
+    
+    # Store token in database with expiration
+    from datetime import datetime, timedelta
+    user.reset_token = reset_token
+    user.reset_token_expires = datetime.utcnow() + timedelta(hours=1)
+    db.commit()
+    
+    # Send reset email
+    try:
+        await email_utils.send_password_reset_email(email, user.username, reset_token)
+    except Exception as e:
+        print(f"Failed to send password reset email: {e}")
+    
+    return {"message": "If that email is registered, you will receive a password reset link."}
+
+
+@app.post("/auth/reset-password", tags=["auth"])
+async def reset_password(token: str, new_password: str, db: Session = Depends(get_db)):
+    """Reset password with valid token."""
+    try:
+        email = email_utils.verify_reset_token(token, max_age=3600)  # 1 hour expiration
+    except Exception:
+        raise HTTPException(status_code=400, detail="Invalid or expired reset token")
+    
+    user = crud.get_user_by_email(db, email)
+    if not user:
+        raise HTTPException(status_code=404, detail="User not found")
+    
+    # Verify token matches database
+    if user.reset_token != token:
+        raise HTTPException(status_code=400, detail="Invalid reset token")
+    
+    # Check if token expired
+    from datetime import datetime
+    if not user.reset_token_expires or user.reset_token_expires < datetime.utcnow():
+        raise HTTPException(status_code=400, detail="Reset token has expired")
+    
+    # Update password
+    user.hashed_password = auth.get_password_hash(new_password)
+    user.reset_token = None
+    user.reset_token_expires = None
+    db.commit()
+    db.refresh(user)
+    
+    return {"message": "Password reset successfully! You can now login with your new password."}
 
 
 # ============================================================================
@@ -455,7 +548,7 @@ async def get_director_statistics(current_user: models.User = Depends(get_curren
 
 # Auto-browser opening functionality
 def open_browser():
-    """Open the default web browser to the StreamTracker UI"""
+    """Open the default web browser to the MediaNest UI"""
     import webbrowser
     import time
     import threading

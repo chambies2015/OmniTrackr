@@ -1,5 +1,5 @@
 """
-Authentication utilities for the StreamTracker API.
+Authentication utilities for the MediaNest API.
 Handles password hashing, JWT token creation and validation.
 """
 from datetime import datetime, timedelta

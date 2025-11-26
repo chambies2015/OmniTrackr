@@ -411,7 +411,7 @@ async function exportData() {
 
     const a = document.createElement('a');
     a.href = url;
-    a.download = `streamtracker-export-${new Date().toISOString().split('T')[0]}.json`;
+    a.download = `medianest-export-${new Date().toISOString().split('T')[0]}.json`;
     document.body.appendChild(a);
     a.click();
     document.body.removeChild(a);
