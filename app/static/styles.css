@@ -52,10 +52,37 @@ body {
 }
 
 .header h1 {
-  font-size: 3rem;
-  color: #fff;
+  font-size: 3.5rem;
+  font-family: 'Poppins', 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+  font-weight: 800;
   margin: 0;
-  text-shadow: 0 2px 4px rgba(0, 0, 0, 0.5);
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 50%, #f093fb 100%);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+  letter-spacing: -0.02em;
+  position: relative;
+  animation: gradient-shift 4s ease infinite;
+  background-size: 200% 200%;
+  filter: drop-shadow(0 4px 8px rgba(102, 126, 234, 0.4)) drop-shadow(0 0 20px rgba(118, 75, 162, 0.3));
+  text-transform: uppercase;
+}
+
+@keyframes gradient-shift {
+  0%, 100% {
+    background-position: 0% 50%;
+  }
+  50% {
+    background-position: 100% 50%;
+  }
+}
+
+/* Fallback for browsers that don't support background-clip */
+@supports not (-webkit-background-clip: text) {
+  .header h1 {
+    color: #667eea;
+    text-shadow: 0 2px 8px rgba(102, 126, 234, 0.6), 0 0 25px rgba(118, 75, 162, 0.4);
+  }
 }
 
 .tabs {
