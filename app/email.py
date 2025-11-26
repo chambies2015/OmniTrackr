@@ -1,5 +1,5 @@
 """
-Email utilities for MediaNest.
+Email utilities for OmniTrackr.
 Handles sending verification and password reset emails.
 """
 import os
@@ -14,7 +14,7 @@ load_dotenv()
 conf = ConnectionConfig(
     MAIL_USERNAME=os.getenv("MAIL_USERNAME", ""),
     MAIL_PASSWORD=os.getenv("MAIL_PASSWORD", ""),
-    MAIL_FROM=os.getenv("MAIL_FROM", "noreply@medianest.com"),
+    MAIL_FROM=os.getenv("MAIL_FROM", "noreply@omnitrackr.com"),
     MAIL_PORT=int(os.getenv("MAIL_PORT", "587")),
     MAIL_SERVER=os.getenv("MAIL_SERVER", "smtp.gmail.com"),
     MAIL_STARTTLS=os.getenv("MAIL_STARTTLS", "True").lower() == "true",
@@ -98,11 +98,11 @@ async def send_verification_email(email: str, username: str, token: str):
     <html>
         <body style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
             <div style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); padding: 30px; text-align: center;">
-                <h1 style="color: white; margin: 0;">Welcome to MediaNest!</h1>
+                <h1 style="color: white; margin: 0;">Welcome to OmniTrackr!</h1>
             </div>
             <div style="padding: 30px; background-color: #f9f9f9;">
                 <h2>Hi {username},</h2>
-                <p>Thank you for registering with MediaNest! To complete your registration, please verify your email address by clicking the button below:</p>
+                <p>Thank you for registering with OmniTrackr! To complete your registration, please verify your email address by clicking the button below:</p>
                 <div style="text-align: center; margin: 30px 0;">
                     <a href="{verification_url}" 
                        style="background-color: #667eea; color: white; padding: 15px 30px; text-decoration: none; border-radius: 5px; display: inline-block; font-weight: bold;">
@@ -114,7 +114,7 @@ async def send_verification_email(email: str, username: str, token: str):
                 <p><strong>This link will expire in 1 hour.</strong></p>
                 <hr style="border: none; border-top: 1px solid #ddd; margin: 30px 0;">
                 <p style="color: #666; font-size: 12px;">
-                    If you didn't create an account with MediaNest, you can safely ignore this email.
+                    If you didn't create an account with OmniTrackr, you can safely ignore this email.
                 </p>
             </div>
         </body>
@@ -122,7 +122,7 @@ async def send_verification_email(email: str, username: str, token: str):
     """
     
     message = MessageSchema(
-        subject="Verify Your MediaNest Email",
+        subject="Verify Your OmniTrackr Email",
         recipients=[email],
         body=html,
         subtype=MessageType.html
@@ -162,7 +162,7 @@ async def send_password_reset_email(email: str, username: str, token: str):
             </div>
             <div style="padding: 30px; background-color: #f9f9f9;">
                 <h2>Hi {username},</h2>
-                <p>We received a request to reset your MediaNest password. Click the button below to create a new password:</p>
+                <p>We received a request to reset your OmniTrackr password. Click the button below to create a new password:</p>
                 <div style="text-align: center; margin: 30px 0;">
                     <a href="{reset_url}" 
                        style="background-color: #667eea; color: white; padding: 15px 30px; text-decoration: none; border-radius: 5px; display: inline-block; font-weight: bold;">
@@ -182,7 +182,7 @@ async def send_password_reset_email(email: str, username: str, token: str):
     """
     
     message = MessageSchema(
-        subject="Reset Your MediaNest Password",
+        subject="Reset Your OmniTrackr Password",
         recipients=[email],
         body=html,
         subtype=MessageType.html

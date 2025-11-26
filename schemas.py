@@ -1,5 +1,5 @@
 """
-Pydantic models (schemas) for the MediaNest API.
+Pydantic models (schemas) for the OmniTrackr API.
 These define the shape of data accepted/returned by the API.
 """
 from typing import Optional, List
@@ -74,7 +74,7 @@ class TVShow(TVShowBase):
 
 # Export/Import schemas
 class ExportData(BaseModel):
-    """Schema for exporting all data from MediaNest"""
+    """Schema for exporting all data from OmniTrackr"""
     movies: List[Movie] = Field(..., description="List of all movies")
     tv_shows: List[TVShow] = Field(..., description="List of all TV shows")
     export_metadata: dict = Field(..., description="Export metadata including timestamp and version")
@@ -84,7 +84,7 @@ class ExportData(BaseModel):
 
 
 class ImportData(BaseModel):
-    """Schema for importing data into MediaNest"""
+    """Schema for importing data into OmniTrackr"""
     movies: List[MovieCreate] = Field(default=[], description="Movies to import")
     tv_shows: List[TVShowCreate] = Field(default=[], description="TV shows to import")
     

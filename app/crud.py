@@ -1,5 +1,5 @@
 """
-CRUD utility functions for the MediaNest API.
+CRUD utility functions for the OmniTrackr API.
 Encapsulates database operations for fetching, creating, updating,
 and deleting movie and TV show entries.
 """

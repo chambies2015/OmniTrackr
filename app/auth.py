@@ -1,5 +1,5 @@
 """
-Authentication utilities for the MediaNest API.
+Authentication utilities for the OmniTrackr API.
 Handles password hashing, JWT token creation and validation.
 """
 from datetime import datetime, timedelta

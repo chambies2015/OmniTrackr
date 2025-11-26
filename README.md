@@ -1,8 +1,8 @@
-# MediaNest
+# OmniTrackr
 
 ## Overview
 
-MediaNest is a full-featured, multi-user web application for managing and tracking movies and TV shows. Originally a local desktop app, it has evolved into a production-ready platform with user authentication, cloud database support, and a modern responsive UI.
+OmniTrackr is a full-featured, multi-user web application for managing and tracking movies and TV shows. Originally a local desktop app, it has evolved into a production-ready platform with user authentication, cloud database support, and a modern responsive UI.
 
 **Live Demo:** Deployed on Render with PostgreSQL database
 
@@ -65,7 +65,7 @@ MediaNest is a full-featured, multi-user web application for managing and tracki
    DATABASE_URL=sqlite:///./movies.db
    
    # For PostgreSQL:
-   # DATABASE_URL=postgresql://user:password@localhost:5432/medianest
+   # DATABASE_URL=postgresql://user:password@localhost:5432/omnitrackr
    
    # Security (IMPORTANT: Change in production!)
    SECRET_KEY=your-secret-key-here
@@ -113,13 +113,13 @@ The application will automatically create database tables on first startup.
 
 ## Export/Import Functionality
 
-MediaNest now includes powerful export/import capabilities:
+OmniTrackr now includes powerful export/import capabilities:
 
 ### Exporting Data
 - Click the **"Export Data"** button in either the Movies or TV Shows tab
 - Your entire collection will be downloaded as a JSON file with timestamp
 - The export includes all metadata: titles, directors, years, ratings, reviews, watched status, and poster URLs
-- Export files are named `medianest-export-YYYY-MM-DD.json`
+- Export files are named `omnitrackr-export-YYYY-MM-DD.json`
 
 ### Importing Data
 - Click the **"Import Data"** button in either tab to select a JSON file
@@ -136,7 +136,7 @@ The export/import functionality is also available via API:
 
 ## Statistics Dashboard
 
-MediaNest includes a comprehensive statistics dashboard accessible via the **📊 Statistics** tab:
+OmniTrackr includes a comprehensive statistics dashboard accessible via the **📊 Statistics** tab:
 
 ### Watch Progress Analytics
 - **Total items** in your collection (movies + TV shows)
@@ -170,7 +170,7 @@ The statistics are also available via API:
 
 ## Authentication System
 
-MediaNest uses a secure JWT-based authentication system:
+OmniTrackr uses a secure JWT-based authentication system:
 
 ### User Registration
 - Email validation

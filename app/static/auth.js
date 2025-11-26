@@ -1,11 +1,11 @@
 /**
- * Authentication Module for MediaNest
+ * Authentication Module for OmniTrackr
  * Handles JWT token management, login, registration, and authenticated API calls
  */
 
 // Constants
-const TOKEN_KEY = 'medianest_token';
-const USER_KEY = 'medianest_user';
+const TOKEN_KEY = 'omnitrackr_token';
+const USER_KEY = 'omnitrackr_user';
 
 // ============================================================================
 // Token Management
@@ -93,11 +93,10 @@ async function register(email, username, password) {
     // Show success message about email verification
     displayAuthSuccess('Registration successful! Please check your email to verify your account. You can login once verified.');
     
-    // Clear form and show login after 3 seconds
+    // Clear form
     document.getElementById('registerFormElement').reset();
-    setTimeout(() => {
-        showLoginForm();
-    }, 3000);
+    
+    // Don't auto-redirect - let user read the message and click back to login manually
 }
 
 async function login(username, password) {
@@ -164,7 +163,7 @@ function showLoginForm() {
     document.getElementById('registerForm').style.display = 'none';
     document.getElementById('forgotPasswordForm').style.display = 'none';
     document.getElementById('resetPasswordForm').style.display = 'none';
-    document.getElementById('authTitle').textContent = 'Login to MediaNest';
+    document.getElementById('authTitle').textContent = 'Login to OmniTrackr';
     document.getElementById('authError').textContent = '';
     document.getElementById('authSuccess').style.display = 'none';
 }
@@ -174,7 +173,7 @@ function showRegisterForm() {
     document.getElementById('registerForm').style.display = 'block';
     document.getElementById('forgotPasswordForm').style.display = 'none';
     document.getElementById('resetPasswordForm').style.display = 'none';
-    document.getElementById('authTitle').textContent = 'Register for MediaNest';
+    document.getElementById('authTitle').textContent = 'Register for OmniTrackr';
     document.getElementById('authError').textContent = '';
     document.getElementById('authSuccess').style.display = 'none';
 }

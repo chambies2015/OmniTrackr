@@ -1,5 +1,5 @@
 """
-SQLAlchemy models for the MediaNest API.
+SQLAlchemy models for the OmniTrackr API.
 Defines the User, Movie and TV Show ORM models.
 """
 from sqlalchemy import Column, Integer, String, Boolean, Float, ForeignKey, DateTime

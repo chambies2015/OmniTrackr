@@ -15,6 +15,6 @@ for /r "%~dp0" %%f in (index.html) do (
 if defined UIFile (
   start "" "%UIFile%"
 ) else (
-  echo MediaNest UI file not found. Ensure it exists in the project directory.
+  echo OmniTrackr UI file not found. Ensure it exists in the project directory.
   pause
 )

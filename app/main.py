@@ -1,5 +1,5 @@
 """
-Entry point for the MediaNest API.
+Entry point for the OmniTrackr API.
 Provides CRUD endpoints for managing movies and TV shows.
 """
 from typing import List, Optional
@@ -117,7 +117,7 @@ except Exception as e:
     pass
 
 # Initialize FastAPI
-app = FastAPI(title="MediaNest API", description="Manage your movies and TV shows", version="0.1.0")
+app = FastAPI(title="OmniTrackr API", description="Manage your movies and TV shows", version="0.1.0")
 
 # Configure CORS to allow requests from any origin
 app.add_middleware(
@@ -236,7 +236,7 @@ async def read_root():
     html_file = os.path.join(os.path.dirname(__file__), "templates", "index.html")
     if os.path.exists(html_file):
         return FileResponse(html_file)
-    return {"message": "MediaNest API is running \U0001f680"}
+    return {"message": "OmniTrackr API is running \U0001f680"}
 
 
 # ============================================================================
@@ -577,7 +577,7 @@ async def get_director_statistics(current_user: models.User = Depends(get_curren
 
 # Auto-browser opening functionality
 def open_browser():
-    """Open the default web browser to the MediaNest UI"""
+    """Open the default web browser to the OmniTrackr UI"""
     import webbrowser
     import time
     import threading
