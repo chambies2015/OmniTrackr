@@ -4,7 +4,7 @@
 
 OmniTrackr is a full-featured, multi-user web application for managing and tracking movies and TV shows. Originally a local desktop app, it has evolved into a production-ready platform with user authentication, cloud database support, and a modern responsive UI.
 
-**Live Demo:** Deployed on Render with PostgreSQL database
+**Live Demo:** Deployed on Render with PostgreSQL database: https://www.omnitrackr.xyz/
 
 ## Tech Stack
 
