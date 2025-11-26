@@ -273,9 +273,9 @@ Interactive API documentation is available at `/docs` with full Swagger UI for t
 All endpoints (except authentication) require a valid JWT token in the Authorization header.
 
 ## Screenshots
-<img width="2178" height="1936" alt="image" src="https://github.com/user-attachments/assets/89868584-9b5d-4c0a-a4ad-61046aa5a88b" />
-<img width="1918" height="1912" alt="image" src="https://github.com/user-attachments/assets/a0c52df2-e723-4e76-845c-6e49e5957f83" />
-
+<img width="3834" height="1950" alt="image" src="https://github.com/user-attachments/assets/a0008c07-d865-4985-b442-91c105e713db" />
+<img width="3828" height="1942" alt="image" src="https://github.com/user-attachments/assets/7c5ff367-004a-4daa-a3bb-5ca9d686c13d" />
+<img width="3800" height="1928" alt="image" src="https://github.com/user-attachments/assets/70df1cdc-aeff-472c-b6f4-debbc8d72285" />
 
 
 ## Development Roadmap
