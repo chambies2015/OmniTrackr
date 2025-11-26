@@ -24,6 +24,11 @@ def get_user_by_email(db: Session, email: str) -> Optional[models.User]:
     return db.query(models.User).filter(models.User.email == email).first()
 
 
+def get_user_by_id(db: Session, user_id: int) -> Optional[models.User]:
+    """Get user by ID."""
+    return db.query(models.User).filter(models.User.id == user_id).first()
+
+
 def create_user(db: Session, user: schemas.UserCreate, hashed_password: str, verification_token: str = None) -> models.User:
     """Create a new user with hashed password."""
     db_user = models.User(

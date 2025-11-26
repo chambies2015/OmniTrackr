@@ -30,6 +30,7 @@ class User(UserBase):
     """Schema for user responses."""
     id: int
     is_active: bool
+    is_verified: bool = False
     
     class Config:
         from_attributes = True

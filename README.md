@@ -88,6 +88,33 @@ OmniTrackr is a full-featured, multi-user web application for managing and track
    - **API Documentation:** `http://127.0.0.1:8000/docs`
    - **Register** a new account and start tracking your media!
 
+## Testing
+
+OmniTrackr includes a comprehensive test suite to ensure functionality remains intact during development.
+
+### Running Tests
+
+```bash
+# Run all tests
+python -m pytest tests/ -v
+
+# Run with coverage report
+python -m pytest tests/ --cov=app --cov-report=html
+
+# Run specific test file
+python -m pytest tests/test_auth.py -v
+```
+
+### Test Coverage
+
+The test suite covers:
+- **Authentication:** User registration, login, password reset, email verification
+- **CRUD Operations:** Create, read, update, delete for movies, TV shows, and users
+- **API Endpoints:** All REST endpoints with authentication requirements
+- **Email Utilities:** Token generation and verification
+
+Tests use an in-memory SQLite database for fast, isolated execution.
+
 ## Production Deployment (Render)
 
 ### Database Setup
