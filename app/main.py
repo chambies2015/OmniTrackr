@@ -9,7 +9,7 @@ import json
 from fastapi import Depends, FastAPI, HTTPException, UploadFile, File, status
 from fastapi.security import OAuth2PasswordBearer, OAuth2PasswordRequestForm
 from fastapi.middleware.cors import CORSMiddleware
-from fastapi.responses import JSONResponse, FileResponse
+from fastapi.responses import JSONResponse, FileResponse, Response
 from fastapi.staticfiles import StaticFiles
 from sqlalchemy.orm import Session
 from sqlalchemy import inspect, text
@@ -110,10 +110,10 @@ if os.path.exists(static_dir):
 # Add individual file serving for assets
 @app.get("/credentials.js")
 async def get_credentials():
-    credentials_file = os.path.join(os.path.dirname(__file__), "static", "credentials.js")
-    if os.path.exists(credentials_file):
-        return FileResponse(credentials_file)
-    raise HTTPException(status_code=404, detail="credentials.js not found")
+    """Serve OMDB API key from environment variable."""
+    omdb_key = os.getenv("OMDB_API_KEY", "")
+    js_content = f"// OMDB API Key from environment\nconst OMDB_API_KEY = '{omdb_key}';\n"
+    return Response(content=js_content, media_type="application/javascript")
 
 
 @app.get("/auth.js")
