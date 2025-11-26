@@ -144,6 +144,10 @@ function showAuthModal() {
     document.getElementById('authModal').style.display = 'flex';
     document.getElementById('mainContainer').style.display = 'none';
     document.getElementById('authError').textContent = '';
+    
+    // Hide user display and logout button when showing auth modal
+    document.getElementById('userDisplay').style.display = 'none';
+    document.getElementById('logoutBtn').style.display = 'none';
 
     // Hide both forms initially
     document.getElementById('loginForm').style.display = 'none';
@@ -212,7 +216,12 @@ function updateUserDisplay() {
     const user = getUser();
     if (user) {
         document.getElementById('userDisplay').textContent = `👤 ${user.username}`;
+        document.getElementById('userDisplay').style.display = 'block';
         document.getElementById('logoutBtn').style.display = 'inline-block';
+    } else {
+        document.getElementById('userDisplay').textContent = '';
+        document.getElementById('userDisplay').style.display = 'none';
+        document.getElementById('logoutBtn').style.display = 'none';
     }
 }
 
