@@ -295,11 +295,15 @@ def get_watch_statistics(db: Session, user_id: int) -> dict:
 def get_rating_statistics(db: Session, user_id: int) -> dict:
     """Get rating distribution statistics"""
     # Movies rating stats
-    movie_ratings = db.query(models.Movie.rating).filter(models.Movie.rating.isnot(None)).all()
+    movie_ratings = db.query(models.Movie.rating).filter(
+        models.Movie.user_id == user_id
+    ).filter(models.Movie.rating.isnot(None)).all()
     movie_ratings = [r[0] for r in movie_ratings]
     
     # TV shows rating stats
-    tv_ratings = db.query(models.TVShow.rating).filter(models.TVShow.rating.isnot(None)).all()
+    tv_ratings = db.query(models.TVShow.rating).filter(
+        models.TVShow.user_id == user_id
+    ).filter(models.TVShow.rating.isnot(None)).all()
     tv_ratings = [r[0] for r in tv_ratings]
     
     all_ratings = movie_ratings + tv_ratings
@@ -357,11 +361,15 @@ def get_rating_statistics(db: Session, user_id: int) -> dict:
 def get_year_statistics(db: Session, user_id: int) -> dict:
     """Get statistics by year"""
     # Movies by year
-    movie_years = db.query(models.Movie.year, func.count(models.Movie.id)).group_by(models.Movie.year).all()
+    movie_years = db.query(models.Movie.year, func.count(models.Movie.id)).filter(
+        models.Movie.user_id == user_id
+    ).group_by(models.Movie.year).all()
     movie_data = {str(year): count for year, count in movie_years}
     
     # TV shows by year
-    tv_years = db.query(models.TVShow.year, func.count(models.TVShow.id)).group_by(models.TVShow.year).all()
+    tv_years = db.query(models.TVShow.year, func.count(models.TVShow.id)).filter(
+        models.TVShow.user_id == user_id
+    ).group_by(models.TVShow.year).all()
     tv_data = {str(year): count for year, count in tv_years}
     
     # Get all years
@@ -394,6 +402,8 @@ def get_director_statistics(db: Session, user_id: int) -> dict:
     director_counts = db.query(
         models.Movie.director, 
         func.count(models.Movie.id).label('count')
+    ).filter(
+        models.Movie.user_id == user_id
     ).group_by(models.Movie.director).order_by(func.count(models.Movie.id).desc()).limit(10).all()
     
     # Directors with highest average ratings
@@ -401,6 +411,8 @@ def get_director_statistics(db: Session, user_id: int) -> dict:
         models.Movie.director,
         func.avg(models.Movie.rating).label('avg_rating'),
         func.count(models.Movie.id).label('count')
+    ).filter(
+        models.Movie.user_id == user_id
     ).filter(
         models.Movie.rating.isnot(None)
     ).group_by(models.Movie.director).order_by(
