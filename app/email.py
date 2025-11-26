@@ -130,8 +130,23 @@ async def send_verification_email(email: str, username: str, token: str):
     
     # Only send if email credentials are configured
     if conf.MAIL_USERNAME and conf.MAIL_PASSWORD:
-        fm = FastMail(conf)
-        await fm.send_message(message)
+        try:
+            import asyncio
+            fm = FastMail(conf)
+            # Add timeout to prevent hanging (30 seconds)
+            await asyncio.wait_for(fm.send_message(message), timeout=30.0)
+        except asyncio.TimeoutError:
+            print(f"ERROR: Email sending timed out after 30 seconds")
+            print(f"Failed to send verification email to {email}")
+            print(f"Verification URL (fallback): {verification_url}")
+            raise Exception("Email sending timed out. Check your email service configuration.")
+        except Exception as e:
+            error_msg = str(e)
+            print(f"ERROR: Failed to send verification email to {email}")
+            print(f"Error: {error_msg}")
+            print(f"Verification URL (fallback): {verification_url}")
+            # Re-raise the exception so caller knows it failed
+            raise Exception(f"Failed to send email: {error_msg}. Check your email service configuration (SMTP server, credentials, network).")
     else:
         # Development mode - just print the verification URL
         print(f"\n{'='*60}")
@@ -190,8 +205,23 @@ async def send_password_reset_email(email: str, username: str, token: str):
     
     # Only send if email credentials are configured
     if conf.MAIL_USERNAME and conf.MAIL_PASSWORD:
-        fm = FastMail(conf)
-        await fm.send_message(message)
+        try:
+            import asyncio
+            fm = FastMail(conf)
+            # Add timeout to prevent hanging (30 seconds)
+            await asyncio.wait_for(fm.send_message(message), timeout=30.0)
+        except asyncio.TimeoutError:
+            print(f"ERROR: Email sending timed out after 30 seconds")
+            print(f"Failed to send password reset email to {email}")
+            print(f"Reset URL (fallback): {reset_url}")
+            raise Exception("Email sending timed out. Check your email service configuration.")
+        except Exception as e:
+            error_msg = str(e)
+            print(f"ERROR: Failed to send password reset email to {email}")
+            print(f"Error: {error_msg}")
+            print(f"Reset URL (fallback): {reset_url}")
+            # Re-raise the exception so caller knows it failed
+            raise Exception(f"Failed to send email: {error_msg}. Check your email service configuration (SMTP server, credentials, network).")
     else:
         # Development mode - just print the reset URL
         print(f"\n{'='*60}")
