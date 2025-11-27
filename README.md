@@ -1,4 +1,8 @@
-# OmniTrackr
+<p align="center">
+<img width="256" height="256" alt="omnitrackr_256x256" src="https://github.com/user-attachments/assets/baf5d9f6-bd5b-425a-be43-0ba675cb7a87" />
+</p>
+
+<h1 align="center">OmniTrackr</h1>
 
 ## Overview
 
