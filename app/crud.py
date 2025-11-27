@@ -55,7 +55,7 @@ def get_movies(
     sort_by: Optional[str] = None,
     order: Optional[str] = None,
 ) -> List[models.Movie]:
-    query = db.query(models.Movie).filter(models.Movie.user_id == user_id).filter(models.Movie.user_id == user_id)
+    query = db.query(models.Movie).filter(models.Movie.user_id == user_id)
     if search:
         like_pattern = f"%{search}%"
         query = query.filter(
@@ -73,7 +73,7 @@ def get_movies(
 
 
 def get_movie_by_id(db: Session, user_id: int, movie_id: int) -> Optional[models.Movie]:
-    return db.query(models.Movie).filter(models.Movie.user_id == user_id).filter(
+    return db.query(models.Movie).filter(
         models.Movie.id == movie_id,
         models.Movie.user_id == user_id
     ).first()
@@ -169,12 +169,12 @@ def delete_tv_show(db: Session, user_id: int, tv_show_id: int) -> Optional[model
 # Export/Import functions
 def get_all_movies(db: Session, user_id: int) -> List[models.Movie]:
     """Get all movies for export"""
-    return db.query(models.Movie).filter(models.Movie.user_id == user_id).filter(models.Movie.user_id == user_id).all()
+    return db.query(models.Movie).filter(models.Movie.user_id == user_id).all()
 
 
 def get_all_tv_shows(db: Session, user_id: int) -> List[models.TVShow]:
     """Get all TV shows for export"""
-    return db.query(models.TVShow).filter(models.TVShow.user_id == user_id).filter(models.TVShow.user_id == user_id).all()
+    return db.query(models.TVShow).filter(models.TVShow.user_id == user_id).all()
 
 
 def find_movie_by_title_and_director(db: Session, user_id: int, title: str, director: str) -> Optional[models.Movie]:

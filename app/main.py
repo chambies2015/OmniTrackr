@@ -6,11 +6,13 @@ from typing import List, Optional
 from datetime import datetime
 import json
 
-from fastapi import Depends, FastAPI, HTTPException, UploadFile, File, status
+from fastapi import Depends, FastAPI, HTTPException, UploadFile, File, status, Request
 from fastapi.security import OAuth2PasswordBearer, OAuth2PasswordRequestForm
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse, FileResponse, Response
 from fastapi.staticfiles import StaticFiles
+from starlette.middleware.base import BaseHTTPMiddleware
+from starlette.responses import Response as StarletteResponse
 from sqlalchemy.orm import Session
 from sqlalchemy import inspect, text
 
@@ -118,6 +120,78 @@ except Exception as e:
 
 # Initialize FastAPI
 app = FastAPI(title="OmniTrackr API", description="Manage your movies and TV shows", version="0.1.0")
+
+
+# Security Headers Middleware
+class SecurityHeadersMiddleware(BaseHTTPMiddleware):
+    """Add security headers to all responses."""
+    async def dispatch(self, request: Request, call_next):
+        response = await call_next(request)
+        
+        # Security headers
+        response.headers["X-Content-Type-Options"] = "nosniff"
+        response.headers["X-Frame-Options"] = "DENY"
+        response.headers["X-XSS-Protection"] = "1; mode=block"
+        response.headers["Referrer-Policy"] = "strict-origin-when-cross-origin"
+        response.headers["Permissions-Policy"] = "geolocation=(), microphone=(), camera=()"
+        
+        # Only add HSTS if using HTTPS (check if request is secure)
+        if request.url.scheme == "https":
+            response.headers["Strict-Transport-Security"] = "max-age=31536000; includeSubDomains"
+        
+        return response
+
+
+# Bot Detection Middleware
+class BotFilterMiddleware(BaseHTTPMiddleware):
+    """Filter out obvious bot/scanner requests."""
+    
+    # Suspicious paths that bots commonly scan
+    SUSPICIOUS_PATHS = [
+        "/.env", "/.env.bak", "/.env.backup", "/.env.local",
+        "/.git", "/.git/config", "/.git/logs/HEAD",
+        "/wp-admin", "/wp-login.php", "/wp-config.php",
+        "/admin", "/administrator", "/phpmyadmin",
+        "/.aws", "/aws-config.js", "/aws.config.js",
+        "/config.json", "/config.js", "/.gitlab-ci.yml",
+        "/backend/.env", "/core/.env", "/api/.env",
+        "/.htaccess", "/web.config", "/.well-known",
+    ]
+    
+    # Suspicious user agents (common scanners)
+    SUSPICIOUS_AGENTS = [
+        "sqlmap", "nikto", "nmap", "masscan", "zap",
+        "acunetix", "nessus", "openvas", "w3af",
+        "dirbuster", "gobuster", "dirb", "wfuzz",
+    ]
+    
+    async def dispatch(self, request: Request, call_next):
+        path = request.url.path.lower()
+        user_agent = request.headers.get("user-agent", "").lower()
+        
+        # Check for suspicious paths
+        if any(suspicious in path for suspicious in self.SUSPICIOUS_PATHS):
+            return StarletteResponse(
+                content="Not Found",
+                status_code=404,
+                headers={"X-Robots-Tag": "noindex, nofollow"}
+            )
+        
+        # Check for suspicious user agents (only block if path is also suspicious)
+        if any(agent in user_agent for agent in self.SUSPICIOUS_AGENTS):
+            if any(suspicious in path for suspicious in self.SUSPICIOUS_PATHS):
+                return StarletteResponse(
+                    content="Not Found",
+                    status_code=404,
+                    headers={"X-Robots-Tag": "noindex, nofollow"}
+                )
+        
+        return await call_next(request)
+
+
+# Add security middleware (order matters - add before CORS)
+app.add_middleware(SecurityHeadersMiddleware)
+app.add_middleware(BotFilterMiddleware)
 
 # Configure CORS to allow requests from any origin
 app.add_middleware(

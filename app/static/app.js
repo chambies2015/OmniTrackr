@@ -5,6 +5,10 @@ let editingRowId = null;
 let editingRowElement = null;
 let currentTab = 'movies';
 
+// Poster fetch deduplication - prevent multiple simultaneous OMDB API calls for same movie/show
+const posterFetchInProgress = new Set();
+const posterFetchQueue = new Map(); // title+year -> Promise
+
 // Tab switching functionality
 function switchTab(tabName) {
   // Update tab buttons
@@ -52,52 +56,65 @@ document.getElementById('toggleMode').addEventListener('click', () => {
 });
 
 // Movie functions
-async function loadMovies() {
-  const search = document.getElementById('movieSearch').value;
-  const sortVal = document.getElementById('movieSort').value;
-  let sortField = '';
-  let order = '';
-  if (sortVal) {
-    const parts = sortVal.split('-');
-    sortField = parts[0];
-    order = parts[1] || '';
-  }
-  let url = `${API_BASE}/movies/?`;
-  if (search) url += `search=${encodeURIComponent(search)}&`;
-  if (sortField) url += `sort_by=${encodeURIComponent(sortField)}&`;
-  if (order) url += `order=${encodeURIComponent(order)}`;
-  const res = await authenticatedFetch(url);
-  if (res.ok) {
-    const movies = await res.json();
-    const tbody = document.querySelector('#movieTable tbody');
-    tbody.innerHTML = '';
-    const countElem = document.getElementById('movieCount');
-    if (countElem) countElem.textContent = `${movies.length} Movies`;
-    movies.forEach((movie) => {
-      const tr = document.createElement('tr');
-      tr.innerHTML = `
-        <td id="movie-poster-${movie.id}"></td>
-        <td>${movie.title}</td>
-        <td>${movie.director}</td>
-        <td>${movie.year}</td>
-        <td>${movie.rating !== null && movie.rating !== undefined ? movie.rating + '/10' : ''}</td>
-        <td>${movie.watched}</td>
-        <td>${movie.review ? movie.review : ''}</td>
-        <td><a href="https://www.imdb.com/find?q=${encodeURIComponent(movie.title)}" target="_blank">Search</a></td>
-        <td>
-          <button class="action-btn" onclick="enableMovieEdit(this, ${movie.id}, '${encodeURIComponent(movie.title)}', '${encodeURIComponent(movie.director)}', ${movie.year}, ${movie.rating ?? 'null'}, ${movie.watched}, '${movie.review ? encodeURIComponent(movie.review) : ''}')">Edit</button>
-          <button class="action-btn" onclick="deleteMovie(${movie.id})">Delete</button>
-        </td>
-      `;
-      tbody.appendChild(tr);
+let isLoadingMovies = false;
 
-      // Display cached poster or fetch new one
-      if (movie.poster_url) {
-        displayMoviePoster(movie.id, movie.poster_url, movie.title);
-      } else if (OMDB_API_KEY) {
-        fetchMoviePoster(movie.id, movie.title, movie.year);
-      }
-    });
+async function loadMovies() {
+  // Prevent duplicate simultaneous loads
+  if (isLoadingMovies) {
+    return;
+  }
+  
+  isLoadingMovies = true;
+  
+  try {
+    const search = document.getElementById('movieSearch').value;
+    const sortVal = document.getElementById('movieSort').value;
+    let sortField = '';
+    let order = '';
+    if (sortVal) {
+      const parts = sortVal.split('-');
+      sortField = parts[0];
+      order = parts[1] || '';
+    }
+    let url = `${API_BASE}/movies/?`;
+    if (search) url += `search=${encodeURIComponent(search)}&`;
+    if (sortField) url += `sort_by=${encodeURIComponent(sortField)}&`;
+    if (order) url += `order=${encodeURIComponent(order)}`;
+    const res = await authenticatedFetch(url);
+    if (res.ok) {
+      const movies = await res.json();
+      const tbody = document.querySelector('#movieTable tbody');
+      tbody.innerHTML = '';
+      const countElem = document.getElementById('movieCount');
+      if (countElem) countElem.textContent = `${movies.length} Movies`;
+      movies.forEach((movie) => {
+        const tr = document.createElement('tr');
+        tr.innerHTML = `
+          <td id="movie-poster-${movie.id}"></td>
+          <td>${movie.title}</td>
+          <td>${movie.director}</td>
+          <td>${movie.year}</td>
+          <td>${movie.rating !== null && movie.rating !== undefined ? movie.rating + '/10' : ''}</td>
+          <td>${movie.watched}</td>
+          <td>${movie.review ? movie.review : ''}</td>
+          <td><a href="https://www.imdb.com/find?q=${encodeURIComponent(movie.title)}" target="_blank">Search</a></td>
+          <td>
+            <button class="action-btn" onclick="enableMovieEdit(this, ${movie.id}, '${encodeURIComponent(movie.title)}', '${encodeURIComponent(movie.director)}', ${movie.year}, ${movie.rating ?? 'null'}, ${movie.watched}, '${movie.review ? encodeURIComponent(movie.review) : ''}')">Edit</button>
+            <button class="action-btn" onclick="deleteMovie(${movie.id})">Delete</button>
+          </td>
+        `;
+        tbody.appendChild(tr);
+
+        // Display cached poster or fetch new one
+        if (movie.poster_url) {
+          displayMoviePoster(movie.id, movie.poster_url, movie.title);
+        } else if (OMDB_API_KEY) {
+          fetchMoviePoster(movie.id, movie.title, movie.year);
+        }
+      });
+    }
+  } finally {
+    isLoadingMovies = false;
   }
 }
 
@@ -118,19 +135,70 @@ function displayMoviePoster(id, posterUrl, title = null) {
 }
 
 async function fetchMoviePoster(id, title, year) {
+  // Create unique key for deduplication
+  const cacheKey = `movie-${title}-${year}`;
+  
+  // Check if already fetching this poster
+  if (posterFetchInProgress.has(cacheKey)) {
+    // Wait for existing fetch to complete
+    const existingPromise = posterFetchQueue.get(cacheKey);
+    if (existingPromise) {
+      try {
+        const posterUrl = await existingPromise;
+        if (posterUrl) {
+          displayMoviePoster(id, posterUrl, title);
+        }
+      } catch (err) {
+        // Ignore errors from other fetch
+      }
+    }
+    return;
+  }
+  
+  // Mark as in progress
+  posterFetchInProgress.add(cacheKey);
+  
   try {
     const url = `https://www.omdbapi.com/?t=${encodeURIComponent(title)}&y=${encodeURIComponent(year)}&apikey=${OMDB_API_KEY}`;
-    const res = await fetch(url); // Use regular fetch for external API
-    if (!res.ok) return;
+    const res = await fetch(url);
+    
+    if (!res.ok) {
+      // Handle rate limiting (429 Too Many Requests)
+      if (res.status === 429) {
+        console.warn('OMDB API rate limit reached. Posters will be fetched later.');
+        return;
+      }
+      return;
+    }
+    
     const data = await res.json();
+    
+    // Check for API errors
+    if (data.Error) {
+      console.warn(`OMDB API error for "${title}": ${data.Error}`);
+      return;
+    }
+    
     if (data && data.Poster && data.Poster !== 'N/A') {
       // Save the poster URL to the database
       await saveMoviePosterUrl(id, data.Poster);
-      // Display the poster (title will be extracted from row)
-      displayMoviePoster(id, data.Poster);
+      // Display the poster
+      displayMoviePoster(id, data.Poster, title);
+      
+      // Store result in queue for other waiting requests
+      posterFetchQueue.set(cacheKey, Promise.resolve(data.Poster));
+      return data.Poster;
     }
   } catch (err) {
     console.error('Error fetching movie poster:', err);
+    // Store failed promise to prevent retries
+    posterFetchQueue.set(cacheKey, Promise.resolve(null));
+  } finally {
+    // Remove from in-progress set after a delay to allow queued requests
+    setTimeout(() => {
+      posterFetchInProgress.delete(cacheKey);
+      posterFetchQueue.delete(cacheKey);
+    }, 1000);
   }
 }
 
@@ -207,53 +275,66 @@ window.cancelMovieEdit = function () {
 };
 
 // TV Show functions
-async function loadTVShows() {
-  const search = document.getElementById('tvSearch').value;
-  const sortVal = document.getElementById('tvSort').value;
-  let sortField = '';
-  let order = '';
-  if (sortVal) {
-    const parts = sortVal.split('-');
-    sortField = parts[0];
-    order = parts[1] || '';
-  }
-  let url = `${API_BASE}/tv-shows/?`;
-  if (search) url += `search=${encodeURIComponent(search)}&`;
-  if (sortField) url += `sort_by=${encodeURIComponent(sortField)}&`;
-  if (order) url += `order=${encodeURIComponent(order)}`;
-  const res = await authenticatedFetch(url);
-  if (res.ok) {
-    const tvShows = await res.json();
-    const tbody = document.querySelector('#tvShowTable tbody');
-    tbody.innerHTML = '';
-    const countElem = document.getElementById('tvShowCount');
-    if (countElem) countElem.textContent = `${tvShows.length} TV Shows`;
-    tvShows.forEach((tvShow) => {
-      const tr = document.createElement('tr');
-      tr.innerHTML = `
-        <td id="tv-poster-${tvShow.id}"></td>
-        <td>${tvShow.title}</td>
-        <td>${tvShow.year}</td>
-        <td>${tvShow.seasons ?? ''}</td>
-        <td>${tvShow.episodes ?? ''}</td>
-        <td>${tvShow.rating !== null && tvShow.rating !== undefined ? tvShow.rating + '/10' : ''}</td>
-        <td>${tvShow.watched}</td>
-        <td>${tvShow.review ? tvShow.review : ''}</td>
-        <td><a href="https://www.imdb.com/find?q=${encodeURIComponent(tvShow.title)}" target="_blank">Search</a></td>
-        <td>
-          <button class="action-btn" onclick="enableTVEdit(this, ${tvShow.id}, '${encodeURIComponent(tvShow.title)}', ${tvShow.year}, ${tvShow.seasons ?? 'null'}, ${tvShow.episodes ?? 'null'}, ${tvShow.rating ?? 'null'}, ${tvShow.watched}, '${tvShow.review ? encodeURIComponent(tvShow.review) : ''}')">Edit</button>
-          <button class="action-btn" onclick="deleteTVShow(${tvShow.id})">Delete</button>
-        </td>
-      `;
-      tbody.appendChild(tr);
+let isLoadingTVShows = false;
 
-      // Display cached poster or fetch new one
-      if (tvShow.poster_url) {
-        displayTVPoster(tvShow.id, tvShow.poster_url, tvShow.title);
-      } else if (OMDB_API_KEY) {
-        fetchTVPoster(tvShow.id, tvShow.title, tvShow.year);
-      }
-    });
+async function loadTVShows() {
+  // Prevent duplicate simultaneous loads
+  if (isLoadingTVShows) {
+    return;
+  }
+  
+  isLoadingTVShows = true;
+  
+  try {
+    const search = document.getElementById('tvSearch').value;
+    const sortVal = document.getElementById('tvSort').value;
+    let sortField = '';
+    let order = '';
+    if (sortVal) {
+      const parts = sortVal.split('-');
+      sortField = parts[0];
+      order = parts[1] || '';
+    }
+    let url = `${API_BASE}/tv-shows/?`;
+    if (search) url += `search=${encodeURIComponent(search)}&`;
+    if (sortField) url += `sort_by=${encodeURIComponent(sortField)}&`;
+    if (order) url += `order=${encodeURIComponent(order)}`;
+    const res = await authenticatedFetch(url);
+    if (res.ok) {
+      const tvShows = await res.json();
+      const tbody = document.querySelector('#tvShowTable tbody');
+      tbody.innerHTML = '';
+      const countElem = document.getElementById('tvShowCount');
+      if (countElem) countElem.textContent = `${tvShows.length} TV Shows`;
+      tvShows.forEach((tvShow) => {
+        const tr = document.createElement('tr');
+        tr.innerHTML = `
+          <td id="tv-poster-${tvShow.id}"></td>
+          <td>${tvShow.title}</td>
+          <td>${tvShow.year}</td>
+          <td>${tvShow.seasons ?? ''}</td>
+          <td>${tvShow.episodes ?? ''}</td>
+          <td>${tvShow.rating !== null && tvShow.rating !== undefined ? tvShow.rating + '/10' : ''}</td>
+          <td>${tvShow.watched}</td>
+          <td>${tvShow.review ? tvShow.review : ''}</td>
+          <td><a href="https://www.imdb.com/find?q=${encodeURIComponent(tvShow.title)}" target="_blank">Search</a></td>
+          <td>
+            <button class="action-btn" onclick="enableTVEdit(this, ${tvShow.id}, '${encodeURIComponent(tvShow.title)}', ${tvShow.year}, ${tvShow.seasons ?? 'null'}, ${tvShow.episodes ?? 'null'}, ${tvShow.rating ?? 'null'}, ${tvShow.watched}, '${tvShow.review ? encodeURIComponent(tvShow.review) : ''}')">Edit</button>
+            <button class="action-btn" onclick="deleteTVShow(${tvShow.id})">Delete</button>
+          </td>
+        `;
+        tbody.appendChild(tr);
+
+        // Display cached poster or fetch new one
+        if (tvShow.poster_url) {
+          displayTVPoster(tvShow.id, tvShow.poster_url, tvShow.title);
+        } else if (OMDB_API_KEY) {
+          fetchTVPoster(tvShow.id, tvShow.title, tvShow.year);
+        }
+      });
+    }
+  } finally {
+    isLoadingTVShows = false;
   }
 }
 
@@ -274,19 +355,70 @@ function displayTVPoster(id, posterUrl, title = null) {
 }
 
 async function fetchTVPoster(id, title, year) {
+  // Create unique key for deduplication
+  const cacheKey = `tv-${title}-${year}`;
+  
+  // Check if already fetching this poster
+  if (posterFetchInProgress.has(cacheKey)) {
+    // Wait for existing fetch to complete
+    const existingPromise = posterFetchQueue.get(cacheKey);
+    if (existingPromise) {
+      try {
+        const posterUrl = await existingPromise;
+        if (posterUrl) {
+          displayTVPoster(id, posterUrl, title);
+        }
+      } catch (err) {
+        // Ignore errors from other fetch
+      }
+    }
+    return;
+  }
+  
+  // Mark as in progress
+  posterFetchInProgress.add(cacheKey);
+  
   try {
     const url = `https://www.omdbapi.com/?t=${encodeURIComponent(title)}&y=${encodeURIComponent(year)}&apikey=${OMDB_API_KEY}`;
-    const res = await fetch(url); // Use regular fetch for external API
-    if (!res.ok) return;
+    const res = await fetch(url);
+    
+    if (!res.ok) {
+      // Handle rate limiting (429 Too Many Requests)
+      if (res.status === 429) {
+        console.warn('OMDB API rate limit reached. Posters will be fetched later.');
+        return;
+      }
+      return;
+    }
+    
     const data = await res.json();
+    
+    // Check for API errors
+    if (data.Error) {
+      console.warn(`OMDB API error for "${title}": ${data.Error}`);
+      return;
+    }
+    
     if (data && data.Poster && data.Poster !== 'N/A') {
       // Save the poster URL to the database
       await saveTVPosterUrl(id, data.Poster);
-      // Display the poster (title will be extracted from row)
-      displayTVPoster(id, data.Poster);
+      // Display the poster
+      displayTVPoster(id, data.Poster, title);
+      
+      // Store result in queue for other waiting requests
+      posterFetchQueue.set(cacheKey, Promise.resolve(data.Poster));
+      return data.Poster;
     }
   } catch (err) {
     console.error('Error fetching TV show poster:', err);
+    // Store failed promise to prevent retries
+    posterFetchQueue.set(cacheKey, Promise.resolve(null));
+  } finally {
+    // Remove from in-progress set after a delay to allow queued requests
+    setTimeout(() => {
+      posterFetchInProgress.delete(cacheKey);
+      posterFetchQueue.delete(cacheKey);
+    }, 1000);
   }
 }
 
