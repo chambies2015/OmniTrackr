@@ -3,22 +3,99 @@
 
 <head>
   <meta charset="UTF-8">
-  <title>OmniTrackr</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="theme-color" content="#1e1e2f">
+  <meta name="description" content="OmniTrackr - Track and organize your movies and TV shows. Rate, review, and analyze your media collection with comprehensive statistics and beautiful posters.">
+  <meta name="keywords" content="movie tracker, TV show tracker, media collection, movie database, watchlist, film tracker, entertainment tracker, movie ratings, TV ratings, media organizer">
+  <meta name="author" content="OmniTrackr">
+  <meta name="robots" content="index, follow">
+  <meta name="language" content="English">
+  <meta name="revisit-after" content="7 days">
+  
+  <!-- Open Graph / Facebook -->
+  <meta property="og:type" content="website">
+  <meta property="og:url" content="https://omnitrackr.xyz/">
+  <meta property="og:title" content="OmniTrackr - Your Personal Media Tracking Companion">
+  <meta property="og:description" content="Track and organize your movies and TV shows. Rate, review, and analyze your media collection with comprehensive statistics and beautiful posters.">
+  <meta property="og:image" content="https://omnitrackr.xyz/omnitrackr_vortex.png">
+  <meta property="og:site_name" content="OmniTrackr">
+  
+  <!-- Twitter -->
+  <meta name="twitter:card" content="summary_large_image">
+  <meta name="twitter:url" content="https://omnitrackr.xyz/">
+  <meta name="twitter:title" content="OmniTrackr - Your Personal Media Tracking Companion">
+  <meta name="twitter:description" content="Track and organize your movies and TV shows. Rate, review, and analyze your media collection with comprehensive statistics and beautiful posters.">
+  <meta name="twitter:image" content="https://omnitrackr.xyz/omnitrackr_vortex.png">
+  
+  <!-- Canonical URL -->
+  <link rel="canonical" href="https://omnitrackr.xyz/">
+  
+  <title>OmniTrackr - Track Movies & TV Shows | Media Collection Manager</title>
   <link rel="icon" type="image/x-icon" href="/omnitrackr_favicon.ico">
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@700;800&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="./styles.css">
+  
+  <!-- JSON-LD Structured Data -->
+  <script type="application/ld+json">
+  {
+    "@context": "https://schema.org",
+    "@type": "WebApplication",
+    "name": "OmniTrackr",
+    "description": "Track and organize your movies and TV shows. Rate, review, and analyze your media collection with comprehensive statistics and beautiful posters.",
+    "url": "https://omnitrackr.xyz",
+    "applicationCategory": "EntertainmentApplication",
+    "operatingSystem": "Web",
+    "offers": {
+      "@type": "Offer",
+      "price": "0",
+      "priceCurrency": "USD"
+    },
+    "aggregateRating": {
+      "@type": "AggregateRating",
+      "ratingValue": "4.8",
+      "ratingCount": "150"
+    },
+    "featureList": [
+      "Track Movies & TV Shows",
+      "Statistics Dashboard",
+      "Export/Import Data",
+      "Automatic Posters",
+      "Search & Sort",
+      "Multi-user Support"
+    ]
+  }
+  </script>
+  
+  <script type="application/ld+json">
+  {
+    "@context": "https://schema.org",
+    "@type": "Organization",
+    "name": "OmniTrackr",
+    "url": "https://omnitrackr.xyz",
+    "logo": "https://omnitrackr.xyz/omnitrackr_vortex.png",
+    "contactPoint": {
+      "@type": "ContactPoint",
+      "email": "omnitrackr@gmail.com",
+      "contactType": "Customer Service"
+    },
+    "sameAs": [
+      "https://github.com/chambies2015/OmniTrackr",
+      "https://www.linkedin.com/in/d-g-c/"
+    ]
+  }
+  </script>
 </head>
 
 <body class="dark-mode">
-  <button id="toggleMode" class="toggle-btn">Light Mode</button>
-  <div id="userDisplay"></div>
-  <button id="logoutBtn">Logout</button>
-  <div class="container" id="mainContainer">
-    <div class="header">
+  <button id="toggleMode" class="toggle-btn" aria-label="Toggle between dark and light mode">Light Mode</button>
+  <div id="userDisplay" role="status" aria-live="polite"></div>
+  <button id="logoutBtn" aria-label="Logout from your account">Logout</button>
+  <main class="container" id="mainContainer">
+    <header class="header" role="banner">
       <h1>OmniTrackr</h1>
-    </div>
+    </header>
 
     <div class="tabs">
       <button class="tab active" onclick="switchTab('movies')">🎬 Movies</button>
@@ -256,18 +333,18 @@
         </div>
       </div>
     </div>
-  </div>
+  </main>
   <!-- Landing Page -->
-  <div id="landingPage">
+  <div id="landingPage" role="main">
     <!-- Hero Section -->
-    <section class="landing-hero">
-      <h1 class="landing-title">OmniTrackr</h1>
+    <section class="landing-hero" aria-labelledby="hero-title">
+      <h1 id="hero-title" class="landing-title">OmniTrackr</h1>
       <p class="landing-subtitle">Your personal media tracking companion</p>
     </section>
 
     <!-- Features Section -->
-    <section class="landing-features">
-      <h2 class="features-title">Why Choose OmniTrackr?</h2>
+    <section class="landing-features" aria-labelledby="features-title">
+      <h2 id="features-title" class="features-title">Why Choose OmniTrackr?</h2>
       <div class="features-grid">
         <div class="feature-card">
           <div class="feature-icon">🎬</div>

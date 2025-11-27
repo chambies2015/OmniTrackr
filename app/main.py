@@ -249,6 +249,40 @@ async def read_root():
     return {"message": "OmniTrackr API is running \U0001f680"}
 
 
+@app.get("/sitemap.xml", tags=["seo"])
+async def get_sitemap():
+    """Generate and serve sitemap.xml for SEO."""
+    base_url = os.getenv("SITE_URL", "https://omnitrackr.xyz")
+    
+    sitemap = f"""<?xml version="1.0" encoding="UTF-8"?>
+<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
+  <url>
+    <loc>{base_url}/</loc>
+    <lastmod>{datetime.now().strftime('%Y-%m-%d')}</lastmod>
+    <changefreq>weekly</changefreq>
+    <priority>1.0</priority>
+  </url>
+</urlset>"""
+    
+    return Response(content=sitemap, media_type="application/xml")
+
+
+@app.get("/robots.txt", tags=["seo"])
+async def get_robots():
+    """Serve robots.txt for SEO."""
+    site_url = os.getenv("SITE_URL", "https://omnitrackr.xyz")
+    
+    robots = f"""User-agent: *
+Allow: /
+Disallow: /auth/
+Disallow: /api/
+Disallow: /static/credentials.js
+
+Sitemap: {site_url}/sitemap.xml"""
+    
+    return Response(content=robots, media_type="text/plain")
+
+
 # ============================================================================
 # Authentication endpoints
 # ============================================================================

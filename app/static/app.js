@@ -93,7 +93,7 @@ async function loadMovies() {
 
       // Display cached poster or fetch new one
       if (movie.poster_url) {
-        displayMoviePoster(movie.id, movie.poster_url);
+        displayMoviePoster(movie.id, movie.poster_url, movie.title);
       } else if (OMDB_API_KEY) {
         fetchMoviePoster(movie.id, movie.title, movie.year);
       }
@@ -101,10 +101,19 @@ async function loadMovies() {
   }
 }
 
-function displayMoviePoster(id, posterUrl) {
+function displayMoviePoster(id, posterUrl, title = null) {
   const cell = document.getElementById(`movie-poster-${id}`);
   if (cell && posterUrl) {
-    cell.innerHTML = `<img src="${posterUrl}" alt="Poster" style="width: 60px; max-height: 90px; object-fit: cover; border-radius: 4px;">`;
+    let altText = 'Movie poster';
+    if (title) {
+      altText = `${title} movie poster`;
+    } else {
+      const row = cell.closest('tr');
+      if (row && row.cells[1]) {
+        altText = `${row.cells[1].textContent} movie poster`;
+      }
+    }
+    cell.innerHTML = `<img src="${posterUrl}" alt="${altText}" style="width: 60px; max-height: 90px; object-fit: cover; border-radius: 4px;" loading="lazy">`;
   }
 }
 
@@ -117,7 +126,7 @@ async function fetchMoviePoster(id, title, year) {
     if (data && data.Poster && data.Poster !== 'N/A') {
       // Save the poster URL to the database
       await saveMoviePosterUrl(id, data.Poster);
-      // Display the poster
+      // Display the poster (title will be extracted from row)
       displayMoviePoster(id, data.Poster);
     }
   } catch (err) {
@@ -240,7 +249,7 @@ async function loadTVShows() {
 
       // Display cached poster or fetch new one
       if (tvShow.poster_url) {
-        displayTVPoster(tvShow.id, tvShow.poster_url);
+        displayTVPoster(tvShow.id, tvShow.poster_url, tvShow.title);
       } else if (OMDB_API_KEY) {
         fetchTVPoster(tvShow.id, tvShow.title, tvShow.year);
       }
@@ -248,10 +257,19 @@ async function loadTVShows() {
   }
 }
 
-function displayTVPoster(id, posterUrl) {
+function displayTVPoster(id, posterUrl, title = null) {
   const cell = document.getElementById(`tv-poster-${id}`);
   if (cell && posterUrl) {
-    cell.innerHTML = `<img src="${posterUrl}" alt="Poster" style="width: 60px; max-height: 90px; object-fit: cover; border-radius: 4px;">`;
+    let altText = 'TV show poster';
+    if (title) {
+      altText = `${title} TV show poster`;
+    } else {
+      const row = cell.closest('tr');
+      if (row && row.cells[1]) {
+        altText = `${row.cells[1].textContent} TV show poster`;
+      }
+    }
+    cell.innerHTML = `<img src="${posterUrl}" alt="${altText}" style="width: 60px; max-height: 90px; object-fit: cover; border-radius: 4px;" loading="lazy">`;
   }
 }
 
@@ -264,7 +282,7 @@ async function fetchTVPoster(id, title, year) {
     if (data && data.Poster && data.Poster !== 'N/A') {
       // Save the poster URL to the database
       await saveTVPosterUrl(id, data.Poster);
-      // Display the poster
+      // Display the poster (title will be extracted from row)
       displayTVPoster(id, data.Poster);
     }
   } catch (err) {
