@@ -335,8 +335,8 @@ body.dark-mode td {
 /* Center the watched column */
 #movieTable th:nth-child(6),
 #movieTable td:nth-child(6),
-#tvShowTable th:nth-child(6),
-#tvShowTable td:nth-child(6) {
+#tvShowTable th:nth-child(7),
+#tvShowTable td:nth-child(7) {
   text-align: center;
 }
 
