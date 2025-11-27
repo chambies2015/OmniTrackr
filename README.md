@@ -31,14 +31,17 @@ OmniTrackr is a full-featured, multi-user web application for managing and track
 ### Core Functionality
 - **Multi-user support:** User registration, login, and isolated data per user
 - **JWT Authentication:** Secure token-based authentication system
+- **Email Verification:** Required email verification before account access
+- **Password Reset:** Secure token-based password reset functionality
 - **Password Security:** bcrypt hashing for password storage
 - **CRUD API:** Full REST API for managing movies and TV shows
 - **PostgreSQL Database:** Production-ready database with SQLite fallback for local development
 - **Search and Sort:** Filter by title/director and sort by rating or year
-- **Modern UI:** Responsive single-page application with dark mode support
+- **Modern UI:** Responsive single-page application with dark mode support and landing page
 - **Poster Integration:** Automatic poster fetching from OMDB API with caching
 - **Export/Import:** JSON export/import with smart conflict resolution
 - **Statistics Dashboard:** Comprehensive analytics with watch progress, rating distributions, year analysis, and director insights
+- **Comprehensive Testing:** 83 unit tests covering all features and edge cases
 
 ## Local Development Setup
 
@@ -90,7 +93,7 @@ OmniTrackr is a full-featured, multi-user web application for managing and track
 
 ## Testing
 
-OmniTrackr includes a comprehensive test suite to ensure functionality remains intact during development.
+OmniTrackr includes a comprehensive test suite with **83 tests** covering all major functionality to ensure reliability and prevent regressions during development.
 
 ### Running Tests
 
@@ -103,17 +106,65 @@ python -m pytest tests/ --cov=app --cov-report=html
 
 # Run specific test file
 python -m pytest tests/test_auth.py -v
+
+# Run specific test category
+python -m pytest tests/ -k statistics -v
 ```
 
 ### Test Coverage
 
-The test suite covers:
-- **Authentication:** User registration, login, password reset, email verification
-- **CRUD Operations:** Create, read, update, delete for movies, TV shows, and users
-- **API Endpoints:** All REST endpoints with authentication requirements
-- **Email Utilities:** Token generation and verification
+The test suite provides comprehensive coverage across all features:
 
-Tests use an in-memory SQLite database for fast, isolated execution.
+#### Authentication (`test_auth.py` - 20 tests)
+- Password hashing and verification
+- JWT token creation and validation
+- User registration (including duplicate email/username checks)
+- Login with username or email
+- Email verification workflow
+- Password reset functionality
+- Resend verification email
+- Unverified user login prevention
+
+#### CRUD Operations (`test_crud.py` - 12 tests)
+- User CRUD operations
+- Movie CRUD operations (create, read, update, delete)
+- TV Show CRUD operations (create, read, update, delete)
+- Search and filtering functionality
+
+#### API Endpoints (`test_api.py` - 31 tests)
+- **Movie Endpoints:** Full CRUD with search and sorting
+- **TV Show Endpoints:** Full CRUD with search and sorting
+- **Error Handling:** 404 responses for non-existent resources
+- **Authentication Requirements:** All protected endpoints
+- **Export/Import:** JSON export and file upload import
+- **Data Isolation:** Users cannot access each other's data
+- **File Import:** Validation and error handling
+
+#### Statistics (`test_statistics.py` - 8 tests)
+- Statistics dashboard endpoint
+- Watch statistics
+- Rating statistics
+- Year-based statistics
+- Director statistics
+- Empty data handling
+- Authentication requirements
+- User data isolation for statistics
+
+#### Email Utilities (`test_email.py` - 6 tests)
+- Verification token generation and validation
+- Reset token generation and validation
+- Token expiration handling
+- Token type differentiation
+
+### Test Architecture
+
+- **In-memory SQLite database** for fast, isolated test execution
+- **Fixtures** for reusable test data and authenticated clients
+- **Comprehensive error case testing** including 404s, validation errors, and unauthorized access
+- **Data isolation verification** ensuring multi-user security
+- **Edge case coverage** including empty data, invalid inputs, and missing fields
+
+All tests are designed to run independently and can be executed in parallel for faster feedback during development.
 
 ## Production Deployment (Render)
 
@@ -200,19 +251,33 @@ The statistics are also available via API:
 OmniTrackr uses a secure JWT-based authentication system:
 
 ### User Registration
-- Email validation
+- Email validation and uniqueness check
 - Username uniqueness check
 - Password hashing with bcrypt
-- Automatic login after registration
+- Email verification required before login
+- Verification email sent upon registration
+
+### Email Verification
+- Secure token-based email verification
+- Verification link sent to registered email
+- Resend verification email functionality
+- Users must verify email before accessing the application
 
 ### Login/Logout
 - Supports login with username or email
+- Email verification required for login
 - JWT tokens stored in localStorage
 - 7-day token expiration
 - Secure logout with session clearing
 
+### Password Reset
+- Secure token-based password reset
+- Reset link sent to registered email
+- Token expiration for security
+- Users can reset forgotten passwords
+
 ### API Security
-- All endpoints (except `/auth/register` and `/auth/login`) require authentication
+- All endpoints (except `/auth/register`, `/auth/login`, `/auth/verify-email`, `/auth/request-password-reset`, and `/auth/reset-password`) require authentication
 - JWT tokens sent in Authorization header
 - User data isolation - users can only access their own data
 - Automatic token validation and 401 handling
@@ -243,6 +308,10 @@ Interactive API documentation is available at `/docs` with full Swagger UI for t
 ### Authentication
 - `POST /auth/register` - Register new user
 - `POST /auth/login` - Login and receive JWT token
+- `GET /auth/verify-email` - Verify email address with token
+- `POST /auth/resend-verification` - Resend verification email
+- `POST /auth/request-password-reset` - Request password reset email
+- `POST /auth/reset-password` - Reset password with token
 
 ### Movies
 - `GET /movies/` - List all movies (with search & sort)
@@ -287,9 +356,9 @@ All endpoints (except authentication) require a valid JWT token in the Authoriza
 - [x] **Migrate to server/client setup** - Deployed on Render with PostgreSQL
 - [x] **Account creation/login** - Full authentication system with JWT tokens
 - [x] **Security implementation** - JWT authentication, bcrypt password hashing, user isolation
+- [x] **Email verification**
+- [x] **Password reset functionality**
 - [ ] **Add friends to check each other's lists**
 - [ ] **Enhanced search and filtering**
-- [ ] **Email verification**
-- [ ] **Password reset functionality**
 - [ ] **Social features (sharing lists, recommendations)**
 
