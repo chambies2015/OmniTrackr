@@ -191,14 +191,23 @@ select:focus {
 
 body.dark-mode input,
 body.dark-mode select {
-  border-color: rgba(255, 255, 255, 0.2);
-  background-color: rgba(255, 255, 255, 0.05);
+  border-color: rgba(255, 255, 255, 0.3);
+  background-color: rgba(255, 255, 255, 0.1);
+  color: var(--fg);
 }
 
 body.dark-mode input:focus,
 body.dark-mode select:focus {
   border-color: var(--primary);
-  background-color: rgba(255, 255, 255, 0.08);
+  background-color: rgba(255, 255, 255, 0.15);
+  color: var(--fg);
+}
+
+/* Ensure dropdown options are visible in dark mode */
+body.dark-mode select option {
+  background-color: #1a1a2e;
+  color: var(--fg);
+  padding: 8px;
 }
 
 label {
