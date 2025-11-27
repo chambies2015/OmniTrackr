@@ -20,6 +20,35 @@ class TestMovieEndpoints:
         assert data["year"] == test_movie_data["year"]
         assert "id" in data
     
+    def test_create_movie_with_decimal_rating(self, authenticated_client):
+        """Test creating a movie with decimal rating via API."""
+        movie_data = {
+            "title": "Test Movie",
+            "director": "Test Director",
+            "year": 2020,
+            "rating": 8.5  # Decimal rating
+        }
+        response = authenticated_client.post("/movies/", json=movie_data)
+        
+        assert response.status_code == 201
+        data = response.json()
+        assert data["rating"] == 8.5
+        assert isinstance(data["rating"], (int, float))
+    
+    def test_update_movie_with_decimal_rating(self, authenticated_client, test_movie_data):
+        """Test updating a movie with decimal rating via API."""
+        # Create a movie first
+        create_response = authenticated_client.post("/movies/", json=test_movie_data)
+        movie_id = create_response.json()["id"]
+        
+        # Update with decimal rating
+        update_data = {"rating": 7.4}
+        response = authenticated_client.put(f"/movies/{movie_id}", json=update_data)
+        
+        assert response.status_code == 200
+        data = response.json()
+        assert data["rating"] == 7.4
+    
     def test_get_movies(self, authenticated_client, test_movie_data):
         """Test retrieving movies via API."""
         # Create a movie first
@@ -170,6 +199,34 @@ class TestTVShowEndpoints:
         data = response.json()
         assert data["rating"] == 10.0
         assert data["seasons"] == 6
+    
+    def test_create_tv_show_with_decimal_rating(self, authenticated_client):
+        """Test creating a TV show with decimal rating via API."""
+        tv_show_data = {
+            "title": "Test TV Show",
+            "year": 2020,
+            "rating": 9.2  # Decimal rating
+        }
+        response = authenticated_client.post("/tv-shows/", json=tv_show_data)
+        
+        assert response.status_code == 201
+        data = response.json()
+        assert data["rating"] == 9.2
+        assert isinstance(data["rating"], (int, float))
+    
+    def test_update_tv_show_with_decimal_rating(self, authenticated_client, test_tv_show_data):
+        """Test updating a TV show with decimal rating via API."""
+        # Create a TV show first
+        create_response = authenticated_client.post("/tv-shows/", json=test_tv_show_data)
+        tv_show_id = create_response.json()["id"]
+        
+        # Update with decimal rating
+        update_data = {"rating": 6.7}
+        response = authenticated_client.put(f"/tv-shows/{tv_show_id}", json=update_data)
+        
+        assert response.status_code == 200
+        data = response.json()
+        assert data["rating"] == 6.7
     
     def test_get_tv_show_by_id(self, authenticated_client, test_tv_show_data):
         """Test retrieving a specific TV show."""

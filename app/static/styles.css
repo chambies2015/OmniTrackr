@@ -319,6 +319,41 @@ body.dark-mode td {
   border-bottom-color: rgba(255, 255, 255, 0.08);
 }
 
+.watched-icon {
+  display: inline-block;
+  font-size: 1.5rem;
+  font-weight: bold;
+  width: 28px;
+  height: 28px;
+  line-height: 28px;
+  text-align: center;
+  border-radius: 50%;
+  transition: transform 0.2s ease, box-shadow 0.2s ease;
+}
+
+.watched-icon.watched {
+  color: #4caf50;
+  background-color: rgba(76, 175, 80, 0.1);
+}
+
+.watched-icon.unwatched {
+  color: #f44336;
+  background-color: rgba(244, 67, 54, 0.1);
+}
+
+.watched-icon:hover {
+  transform: scale(1.1);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.2);
+}
+
+body.dark-mode .watched-icon.watched {
+  background-color: rgba(76, 175, 80, 0.2);
+}
+
+body.dark-mode .watched-icon.unwatched {
+  background-color: rgba(244, 67, 54, 0.2);
+}
+
 /* Make review column wider and wrap nicely */
 #movieTable th:nth-child(7),
 #movieTable td:nth-child(7) {

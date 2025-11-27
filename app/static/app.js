@@ -95,7 +95,7 @@ async function loadMovies() {
           <td>${movie.director}</td>
           <td>${movie.year}</td>
           <td>${movie.rating !== null && movie.rating !== undefined ? parseFloat(movie.rating).toFixed(1) + '/10' : ''}</td>
-          <td>${movie.watched}</td>
+          <td><span class="watched-icon ${movie.watched ? 'watched' : 'unwatched'}">${movie.watched ? '✓' : '✗'}</span></td>
           <td>${movie.review ? movie.review : ''}</td>
           <td><a href="https://www.imdb.com/find?q=${encodeURIComponent(movie.title)}" target="_blank">Search</a></td>
           <td>
@@ -315,7 +315,7 @@ async function loadTVShows() {
           <td>${tvShow.seasons ?? ''}</td>
           <td>${tvShow.episodes ?? ''}</td>
           <td>${tvShow.rating !== null && tvShow.rating !== undefined ? parseFloat(tvShow.rating).toFixed(1) + '/10' : ''}</td>
-          <td>${tvShow.watched}</td>
+          <td><span class="watched-icon ${tvShow.watched ? 'watched' : 'unwatched'}">${tvShow.watched ? '✓' : '✗'}</span></td>
           <td>${tvShow.review ? tvShow.review : ''}</td>
           <td><a href="https://www.imdb.com/find?q=${encodeURIComponent(tvShow.title)}" target="_blank">Search</a></td>
           <td>

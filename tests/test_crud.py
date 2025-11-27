@@ -144,6 +144,67 @@ class TestMovieCRUD:
         assert updated_movie.watched is False
         assert updated_movie.title == test_movie_data["title"]  # Unchanged
     
+    def test_create_movie_with_decimal_rating(self, db_session):
+        """Test creating a movie with decimal rating."""
+        user_create = schemas.UserCreate(
+            email="decimaltest@example.com",
+            username="decimaltest",
+            password="password123"
+        )
+        user = crud.create_user(db_session, user_create, "hashed", "token")
+        
+        movie_data = {
+            "title": "Test Movie",
+            "director": "Test Director",
+            "year": 2020,
+            "rating": 8.5  # Decimal rating
+        }
+        movie_create = schemas.MovieCreate(**movie_data)
+        movie = crud.create_movie(db_session, user.id, movie_create)
+        
+        assert movie.rating == 8.5
+        assert isinstance(movie.rating, float)
+    
+    def test_update_movie_with_decimal_rating(self, db_session, test_movie_data):
+        """Test updating a movie with decimal rating."""
+        user_create = schemas.UserCreate(
+            email="decimalupdatetest@example.com",
+            username="decimalupdatetest",
+            password="password123"
+        )
+        user = crud.create_user(db_session, user_create, "hashed", "token")
+        
+        movie_create = schemas.MovieCreate(**test_movie_data)
+        movie = crud.create_movie(db_session, user.id, movie_create)
+        
+        # Update with decimal rating
+        movie_update = schemas.MovieUpdate(rating=7.4)
+        updated_movie = crud.update_movie(db_session, user.id, movie.id, movie_update)
+        
+        assert updated_movie.rating == 7.4
+        assert isinstance(updated_movie.rating, float)
+    
+    def test_rating_rounding(self, db_session):
+        """Test that ratings are rounded to one decimal place."""
+        user_create = schemas.UserCreate(
+            email="roundtest@example.com",
+            username="roundtest",
+            password="password123"
+        )
+        user = crud.create_user(db_session, user_create, "hashed", "token")
+        
+        # Test with rating that needs rounding
+        movie_data = {
+            "title": "Test Movie",
+            "director": "Test Director",
+            "year": 2020,
+            "rating": 8.456  # Should round to 8.5
+        }
+        movie_create = schemas.MovieCreate(**movie_data)
+        movie = crud.create_movie(db_session, user.id, movie_create)
+        
+        assert movie.rating == 8.5
+    
     def test_delete_movie(self, db_session, test_movie_data):
         """Test deleting a movie."""
         user_create = schemas.UserCreate(
@@ -223,6 +284,45 @@ class TestTVShowCRUD:
         assert updated_tv_show.rating == 10.0
         assert updated_tv_show.seasons == 6
         assert updated_tv_show.title == test_tv_show_data["title"]  # Unchanged
+    
+    def test_create_tv_show_with_decimal_rating(self, db_session):
+        """Test creating a TV show with decimal rating."""
+        user_create = schemas.UserCreate(
+            email="tvdecimaltest@example.com",
+            username="tvdecimaltest",
+            password="password123"
+        )
+        user = crud.create_user(db_session, user_create, "hashed", "token")
+        
+        tv_show_data = {
+            "title": "Test TV Show",
+            "year": 2020,
+            "rating": 9.2  # Decimal rating
+        }
+        tv_show_create = schemas.TVShowCreate(**tv_show_data)
+        tv_show = crud.create_tv_show(db_session, user.id, tv_show_create)
+        
+        assert tv_show.rating == 9.2
+        assert isinstance(tv_show.rating, float)
+    
+    def test_update_tv_show_with_decimal_rating(self, db_session, test_tv_show_data):
+        """Test updating a TV show with decimal rating."""
+        user_create = schemas.UserCreate(
+            email="tvdecimalupdatetest@example.com",
+            username="tvdecimalupdatetest",
+            password="password123"
+        )
+        user = crud.create_user(db_session, user_create, "hashed", "token")
+        
+        tv_show_create = schemas.TVShowCreate(**test_tv_show_data)
+        tv_show = crud.create_tv_show(db_session, user.id, tv_show_create)
+        
+        # Update with decimal rating
+        tv_show_update = schemas.TVShowUpdate(rating=6.7)
+        updated_tv_show = crud.update_tv_show(db_session, user.id, tv_show.id, tv_show_update)
+        
+        assert updated_tv_show.rating == 6.7
+        assert isinstance(updated_tv_show.rating, float)
     
     def test_delete_tv_show(self, db_session, test_tv_show_data):
         """Test deleting a TV show."""
