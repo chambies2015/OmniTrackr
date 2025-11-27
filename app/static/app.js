@@ -954,6 +954,27 @@ function displayHighestRatedDirectors(directors) {
 document.getElementById('loadMovies').addEventListener('click', loadMovies);
 document.getElementById('loadTVShows').addEventListener('click', loadTVShows);
 
+// Automatic sorting and search
+document.getElementById('movieSort').addEventListener('change', loadMovies);
+document.getElementById('tvSort').addEventListener('change', loadTVShows);
+
+// Automatic search with debounce
+let movieSearchTimeout;
+document.getElementById('movieSearch').addEventListener('input', (e) => {
+  clearTimeout(movieSearchTimeout);
+  movieSearchTimeout = setTimeout(() => {
+    loadMovies();
+  }, 300); // Wait 300ms after user stops typing
+});
+
+let tvSearchTimeout;
+document.getElementById('tvSearch').addEventListener('input', (e) => {
+  clearTimeout(tvSearchTimeout);
+  tvSearchTimeout = setTimeout(() => {
+    loadTVShows();
+  }, 300); // Wait 300ms after user stops typing
+});
+
 // Export/Import event listeners
 document.getElementById('exportMovies').addEventListener('click', exportData);
 document.getElementById('exportTVShows').addEventListener('click', exportData);
