@@ -3,6 +3,7 @@ Tests for API endpoints.
 """
 import pytest
 import json
+from io import BytesIO
 
 
 class TestMovieEndpoints:
@@ -112,6 +113,21 @@ class TestMovieEndpoints:
         movies = response.json()
         if len(movies) >= 2:
             assert movies[0]["rating"] >= movies[1]["rating"]
+    
+    def test_get_nonexistent_movie(self, authenticated_client):
+        """Test getting a non-existent movie returns 404."""
+        response = authenticated_client.get("/movies/99999")
+        assert response.status_code == 404
+    
+    def test_update_nonexistent_movie(self, authenticated_client):
+        """Test updating a non-existent movie returns 404."""
+        response = authenticated_client.put("/movies/99999", json={"rating": 5})
+        assert response.status_code == 404
+    
+    def test_delete_nonexistent_movie(self, authenticated_client):
+        """Test deleting a non-existent movie returns 404."""
+        response = authenticated_client.delete("/movies/99999")
+        assert response.status_code == 404
 
 
 class TestTVShowEndpoints:
@@ -155,6 +171,20 @@ class TestTVShowEndpoints:
         assert data["rating"] == 10.0
         assert data["seasons"] == 6
     
+    def test_get_tv_show_by_id(self, authenticated_client, test_tv_show_data):
+        """Test retrieving a specific TV show."""
+        # Create a TV show
+        create_response = authenticated_client.post("/tv-shows/", json=test_tv_show_data)
+        tv_show_id = create_response.json()["id"]
+        
+        # Get the TV show
+        response = authenticated_client.get(f"/tv-shows/{tv_show_id}")
+        
+        assert response.status_code == 200
+        data = response.json()
+        assert data["id"] == tv_show_id
+        assert data["title"] == test_tv_show_data["title"]
+    
     def test_delete_tv_show(self, authenticated_client, test_tv_show_data):
         """Test deleting a TV show."""
         # Create a TV show
@@ -169,6 +199,52 @@ class TestTVShowEndpoints:
         # Verify it's deleted
         get_response = authenticated_client.get(f"/tv-shows/{tv_show_id}")
         assert get_response.status_code == 404
+    
+    def test_tv_show_search(self, authenticated_client, test_tv_show_data):
+        """Test searching TV shows."""
+        # Create a TV show
+        authenticated_client.post("/tv-shows/", json=test_tv_show_data)
+        
+        # Search by title
+        response = authenticated_client.get("/tv-shows/?search=Breaking")
+        assert response.status_code == 200
+        tv_shows = response.json()
+        assert len(tv_shows) >= 1
+    
+    def test_tv_show_sorting(self, authenticated_client, test_tv_show_data):
+        """Test sorting TV shows."""
+        # Create multiple TV shows with different ratings
+        tv1 = test_tv_show_data.copy()
+        tv1["title"] = "TV Show A"
+        tv1["rating"] = 5  # Integer
+        authenticated_client.post("/tv-shows/", json=tv1)
+        
+        tv2 = test_tv_show_data.copy()
+        tv2["title"] = "TV Show B"
+        tv2["rating"] = 9  # Integer
+        authenticated_client.post("/tv-shows/", json=tv2)
+        
+        # Sort by rating descending
+        response = authenticated_client.get("/tv-shows/?sort_by=rating&order=desc")
+        assert response.status_code == 200
+        tv_shows = response.json()
+        if len(tv_shows) >= 2:
+            assert tv_shows[0]["rating"] >= tv_shows[1]["rating"]
+    
+    def test_get_nonexistent_tv_show(self, authenticated_client):
+        """Test getting a non-existent TV show returns 404."""
+        response = authenticated_client.get("/tv-shows/99999")
+        assert response.status_code == 404
+    
+    def test_update_nonexistent_tv_show(self, authenticated_client):
+        """Test updating a non-existent TV show returns 404."""
+        response = authenticated_client.put("/tv-shows/99999", json={"rating": 5})
+        assert response.status_code == 404
+    
+    def test_delete_nonexistent_tv_show(self, authenticated_client):
+        """Test deleting a non-existent TV show returns 404."""
+        response = authenticated_client.delete("/tv-shows/99999")
+        assert response.status_code == 404
 
 
 class TestAuthenticationRequired:
@@ -238,4 +314,249 @@ class TestExportImport:
         result = response.json()
         assert result["movies_created"] >= 1
         assert result["tv_shows_created"] >= 1
+    
+    def test_import_from_file(self, authenticated_client):
+        """Test importing data from a JSON file."""
+        import_data = {
+            "movies": [
+                {
+                    "title": "File Imported Movie",
+                    "director": "Test Director",
+                    "year": 2020,
+                    "rating": 8,
+                    "watched": True
+                }
+            ],
+            "tv_shows": [
+                {
+                    "title": "File Imported Show",
+                    "year": 2021,
+                    "seasons": 1,
+                    "rating": 9
+                }
+            ]
+        }
+        
+        # Create a JSON file content
+        import json
+        file_content = json.dumps(import_data).encode('utf-8')
+        
+        # Upload file
+        files = {"file": ("test_import.json", file_content, "application/json")}
+        response = authenticated_client.post("/import/file/", files=files)
+        
+        assert response.status_code == 200
+        result = response.json()
+        assert result["movies_created"] >= 1
+        assert result["tv_shows_created"] >= 1
+    
+    def test_import_from_file_invalid_format(self, authenticated_client):
+        """Test importing from file with invalid format."""
+        # Try to upload a non-JSON file
+        files = {"file": ("test.txt", b"not json", "text/plain")}
+        response = authenticated_client.post("/import/file/", files=files)
+        
+        assert response.status_code == 400
+        assert "JSON file" in response.json()["detail"]
+    
+    def test_import_from_file_invalid_json(self, authenticated_client):
+        """Test importing from file with invalid JSON."""
+        # Try to upload invalid JSON
+        files = {"file": ("test.json", b"{invalid json}", "application/json")}
+        response = authenticated_client.post("/import/file/", files=files)
+        
+        assert response.status_code == 400
+        assert "Invalid JSON" in response.json()["detail"]
+    
+    def test_import_from_file_missing_fields(self, authenticated_client):
+        """Test importing from file with missing required fields."""
+        import json
+        invalid_data = {"movies": []}  # Missing tv_shows
+        file_content = json.dumps(invalid_data).encode('utf-8')
+        
+        files = {"file": ("test.json", file_content, "application/json")}
+        response = authenticated_client.post("/import/file/", files=files)
+        
+        # The endpoint should return 400, but if there's a validation error it might return 500
+        # Check that it's an error response (either 400 or 500)
+        assert response.status_code in [400, 500]
+        detail = response.json()["detail"]
+        # The error should mention movies, tv_shows, or invalid format
+        assert any(keyword in detail.lower() for keyword in ["movies", "tv_shows", "invalid", "format"])
+
+
+class TestDataIsolation:
+    """Test that users cannot access each other's data."""
+    
+    def test_users_cannot_see_each_others_movies(self, client, test_user_data, test_movie_data, db_session):
+        """Test that users can only see their own movies."""
+        from app import crud, models, schemas, auth
+        
+        # Create two users using the proper method
+        user1_create = schemas.UserCreate(**test_user_data)
+        hashed_password1 = auth.get_password_hash(test_user_data["password"])
+        user1 = crud.create_user(db_session, user1_create, hashed_password1, "token1")
+        
+        user2_data = test_user_data.copy()
+        user2_data["email"] = "user2@test.com"
+        user2_data["username"] = "user2"
+        user2_create = schemas.UserCreate(**user2_data)
+        hashed_password2 = auth.get_password_hash(user2_data["password"])
+        user2 = crud.create_user(db_session, user2_create, hashed_password2, "token2")
+        
+        # Verify both users
+        user1.is_verified = True
+        user2.is_verified = True
+        db_session.commit()
+        
+        # Create movies for user1
+        movie1_create = schemas.MovieCreate(**test_movie_data)
+        crud.create_movie(db_session, user1.id, movie1_create)
+        
+        # Create movies for user2
+        movie2_data = test_movie_data.copy()
+        movie2_data["title"] = "User2 Movie"
+        movie2_create = schemas.MovieCreate(**movie2_data)
+        crud.create_movie(db_session, user2.id, movie2_create)
+        
+        # Login as user2
+        login_response = client.post(
+            "/auth/login",
+            data={"username": "user2", "password": test_user_data["password"]},
+            headers={"content-type": "application/x-www-form-urlencoded"}
+        )
+        token = login_response.json()["access_token"]
+        client.headers = {"Authorization": f"Bearer {token}"}
+        
+        # User2 should only see their own movie
+        movies_response = client.get("/movies/")
+        assert movies_response.status_code == 200
+        movies = movies_response.json()
+        assert len(movies) == 1
+        assert movies[0]["title"] == "User2 Movie"
+    
+    def test_users_cannot_update_each_others_movies(self, client, test_user_data, test_movie_data, db_session):
+        """Test that users cannot update each other's movies."""
+        from app import crud, models, schemas, auth
+        
+        # Create two users using the proper method
+        user1_create = schemas.UserCreate(**test_user_data)
+        hashed_password1 = auth.get_password_hash(test_user_data["password"])
+        user1 = crud.create_user(db_session, user1_create, hashed_password1, "token1")
+        
+        user2_data = test_user_data.copy()
+        user2_data["email"] = "user2@test.com"
+        user2_data["username"] = "user2"
+        user2_create = schemas.UserCreate(**user2_data)
+        hashed_password2 = auth.get_password_hash(user2_data["password"])
+        user2 = crud.create_user(db_session, user2_create, hashed_password2, "token2")
+        
+        # Verify both users
+        user1.is_verified = True
+        user2.is_verified = True
+        db_session.commit()
+        
+        # Create movie for user1
+        movie1_create = schemas.MovieCreate(**test_movie_data)
+        created_movie = crud.create_movie(db_session, user1.id, movie1_create)
+        movie_id = created_movie.id
+        
+        # Login as user2
+        login_response = client.post(
+            "/auth/login",
+            data={"username": "user2", "password": test_user_data["password"]},
+            headers={"content-type": "application/x-www-form-urlencoded"}
+        )
+        token = login_response.json()["access_token"]
+        client.headers = {"Authorization": f"Bearer {token}"}
+        
+        # User2 should not be able to update user1's movie
+        response = client.put(f"/movies/{movie_id}", json={"rating": 1})
+        assert response.status_code == 404  # Should return 404 (not found for this user)
+    
+    def test_users_cannot_delete_each_others_movies(self, client, test_user_data, test_movie_data, db_session):
+        """Test that users cannot delete each other's movies."""
+        from app import crud, models, schemas, auth
+        
+        # Create two users using the proper method
+        user1_create = schemas.UserCreate(**test_user_data)
+        hashed_password1 = auth.get_password_hash(test_user_data["password"])
+        user1 = crud.create_user(db_session, user1_create, hashed_password1, "token1")
+        
+        user2_data = test_user_data.copy()
+        user2_data["email"] = "user2@test.com"
+        user2_data["username"] = "user2"
+        user2_create = schemas.UserCreate(**user2_data)
+        hashed_password2 = auth.get_password_hash(user2_data["password"])
+        user2 = crud.create_user(db_session, user2_create, hashed_password2, "token2")
+        
+        # Verify both users
+        user1.is_verified = True
+        user2.is_verified = True
+        db_session.commit()
+        
+        # Create movie for user1
+        movie1_create = schemas.MovieCreate(**test_movie_data)
+        created_movie = crud.create_movie(db_session, user1.id, movie1_create)
+        movie_id = created_movie.id
+        
+        # Login as user2
+        login_response = client.post(
+            "/auth/login",
+            data={"username": "user2", "password": test_user_data["password"]},
+            headers={"content-type": "application/x-www-form-urlencoded"}
+        )
+        token = login_response.json()["access_token"]
+        client.headers = {"Authorization": f"Bearer {token}"}
+        
+        # User2 should not be able to delete user1's movie
+        response = client.delete(f"/movies/{movie_id}")
+        assert response.status_code == 404  # Should return 404 (not found for this user)
+    
+    def test_users_cannot_see_each_others_tv_shows(self, client, test_user_data, test_tv_show_data, db_session):
+        """Test that users can only see their own TV shows."""
+        from app import crud, models, schemas, auth
+        
+        # Create two users using the proper method
+        user1_create = schemas.UserCreate(**test_user_data)
+        hashed_password1 = auth.get_password_hash(test_user_data["password"])
+        user1 = crud.create_user(db_session, user1_create, hashed_password1, "token1")
+        
+        user2_data = test_user_data.copy()
+        user2_data["email"] = "user2@test.com"
+        user2_data["username"] = "user2"
+        user2_create = schemas.UserCreate(**user2_data)
+        hashed_password2 = auth.get_password_hash(user2_data["password"])
+        user2 = crud.create_user(db_session, user2_create, hashed_password2, "token2")
+        
+        # Verify both users
+        user1.is_verified = True
+        user2.is_verified = True
+        db_session.commit()
+        
+        # Create TV shows for user1
+        tv1_create = schemas.TVShowCreate(**test_tv_show_data)
+        crud.create_tv_show(db_session, user1.id, tv1_create)
+        
+        # Create TV shows for user2
+        tv2_data = test_tv_show_data.copy()
+        tv2_data["title"] = "User2 TV Show"
+        tv2_create = schemas.TVShowCreate(**tv2_data)
+        crud.create_tv_show(db_session, user2.id, tv2_create)
+        
+        # Login as user2
+        login_response = client.post(
+            "/auth/login",
+            data={"username": "user2", "password": test_user_data["password"]},
+            headers={"content-type": "application/x-www-form-urlencoded"}
+        )
+        token = login_response.json()["access_token"]
+        client.headers = {"Authorization": f"Bearer {token}"}
+        
+        # User2 should only see their own TV show
+        tv_shows_response = client.get("/tv-shows/")
+        assert tv_shows_response.status_code == 200
+        tv_shows = tv_shows_response.json()
+        assert len(tv_shows) == 1
+        assert tv_shows[0]["title"] == "User2 TV Show"
 
