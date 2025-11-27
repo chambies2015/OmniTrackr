@@ -169,12 +169,12 @@ async def get_styles():
     raise HTTPException(status_code=404, detail="styles.css not found")
 
 
-@app.get("/movie_theater_background.jpg")
-async def get_movie_theater_bg():
-    bg_file = os.path.join(os.path.dirname(__file__), "static", "movie_theater_background.jpg")
+@app.get("/omnitrackr_vortex.png")
+async def get_omnitrackr_vortex():
+    bg_file = os.path.join(os.path.dirname(__file__), "static", "omnitrackr_vortex.png")
     if os.path.exists(bg_file):
-        return FileResponse(bg_file)
-    raise HTTPException(status_code=404, detail="movie_theater_background.jpg not found")
+        return FileResponse(bg_file, media_type="image/png")
+    raise HTTPException(status_code=404, detail="omnitrackr_vortex.png not found")
 
 
 @app.get("/film_background.jpg")
