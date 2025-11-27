@@ -342,9 +342,11 @@ Interactive API documentation is available at `/docs` with full Swagger UI for t
 All endpoints (except authentication) require a valid JWT token in the Authorization header.
 
 ## Screenshots
-<img width="3834" height="1950" alt="image" src="https://github.com/user-attachments/assets/a0008c07-d865-4985-b442-91c105e713db" />
-<img width="3828" height="1942" alt="image" src="https://github.com/user-attachments/assets/7c5ff367-004a-4daa-a3bb-5ca9d686c13d" />
-<img width="3800" height="1928" alt="image" src="https://github.com/user-attachments/assets/70df1cdc-aeff-472c-b6f4-debbc8d72285" />
+<img width="3030" height="1896" alt="image" src="https://github.com/user-attachments/assets/1d4bde27-5cc4-413a-8013-0577fc901f8e" />
+<img width="2524" height="1930" alt="image" src="https://github.com/user-attachments/assets/a07fd724-ea6e-49c8-b0f2-195883f1694b" />
+<img width="2339" height="1910" alt="image" src="https://github.com/user-attachments/assets/2ac19a8f-2b03-4d13-9700-4b0a5e0506f2" />
+<img width="2334" height="1923" alt="image" src="https://github.com/user-attachments/assets/a6027a18-e488-4e9f-96e0-b6c95bf1e8d6" />
+<img width="2341" height="1789" alt="image" src="https://github.com/user-attachments/assets/1104c8c8-48c8-413d-811a-5b374a23e4af" />
 
 
 ## Development Roadmap
