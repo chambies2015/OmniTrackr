@@ -94,7 +94,7 @@ async function loadMovies() {
           <td>${movie.title}</td>
           <td>${movie.director}</td>
           <td>${movie.year}</td>
-          <td>${movie.rating !== null && movie.rating !== undefined ? movie.rating + '/10' : ''}</td>
+          <td>${movie.rating !== null && movie.rating !== undefined ? parseFloat(movie.rating).toFixed(1) + '/10' : ''}</td>
           <td>${movie.watched}</td>
           <td>${movie.review ? movie.review : ''}</td>
           <td><a href="https://www.imdb.com/find?q=${encodeURIComponent(movie.title)}" target="_blank">Search</a></td>
@@ -232,7 +232,7 @@ window.enableMovieEdit = function (btn, id, encTitle, encDirector, year, rating,
   row.cells[1].innerHTML = `<input type="text" id="edit-movie-title" value="${title}">`;
   row.cells[2].innerHTML = `<input type="text" id="edit-movie-director" value="${director}">`;
   row.cells[3].innerHTML = `<input type="number" id="edit-movie-year" value="${year}">`;
-  row.cells[4].innerHTML = `<input type="number" min="0" max="10" id="edit-movie-rating" value="${ratingVal}">`;
+  row.cells[4].innerHTML = `<input type="number" min="0" max="10" step="0.1" id="edit-movie-rating" value="${ratingVal}">`;
   row.cells[5].innerHTML = `<input type="checkbox" id="edit-movie-watched" ${watched ? 'checked' : ''}>`;
   row.cells[6].innerHTML = `<input type="text" id="edit-movie-review" value="${review}">`;
   row.cells[8].innerHTML = `
@@ -251,7 +251,7 @@ window.saveMovieEdit = async function (id) {
     watched: document.getElementById('edit-movie-watched').checked,
   };
   const ratingVal = document.getElementById('edit-movie-rating').value;
-  if (ratingVal) updated.rating = parseInt(ratingVal, 10);
+  if (ratingVal) updated.rating = parseFloat(ratingVal);
   const reviewVal = document.getElementById('edit-movie-review') ? document.getElementById('edit-movie-review').value : '';
   if (reviewVal !== undefined) updated.review = reviewVal;
   const res = await authenticatedFetch(`${API_BASE}/movies/${id}`, {
@@ -314,7 +314,7 @@ async function loadTVShows() {
           <td>${tvShow.year}</td>
           <td>${tvShow.seasons ?? ''}</td>
           <td>${tvShow.episodes ?? ''}</td>
-          <td>${tvShow.rating !== null && tvShow.rating !== undefined ? tvShow.rating + '/10' : ''}</td>
+          <td>${tvShow.rating !== null && tvShow.rating !== undefined ? parseFloat(tvShow.rating).toFixed(1) + '/10' : ''}</td>
           <td>${tvShow.watched}</td>
           <td>${tvShow.review ? tvShow.review : ''}</td>
           <td><a href="https://www.imdb.com/find?q=${encodeURIComponent(tvShow.title)}" target="_blank">Search</a></td>
@@ -452,7 +452,7 @@ window.enableTVEdit = function (btn, id, encTitle, year, seasons, episodes, rati
   row.cells[2].innerHTML = `<input type="number" id="edit-tv-year" value="${year}">`;
   row.cells[3].innerHTML = `<input type="number" id="edit-tv-seasons" value="${seasons !== 'null' ? seasons : ''}">`;
   row.cells[4].innerHTML = `<input type="number" id="edit-tv-episodes" value="${episodes !== 'null' ? episodes : ''}">`;
-  row.cells[5].innerHTML = `<input type="number" min="0" max="10" id="edit-tv-rating" value="${ratingVal}">`;
+  row.cells[5].innerHTML = `<input type="number" min="0" max="10" step="0.1" id="edit-tv-rating" value="${ratingVal}">`;
   row.cells[6].innerHTML = `<input type="checkbox" id="edit-tv-watched" ${watched ? 'checked' : ''}>`;
   row.cells[7].innerHTML = `<input type="text" id="edit-tv-review" value="${review}">`;
   row.cells[9].innerHTML = `
@@ -474,7 +474,7 @@ window.saveTVEdit = async function (id) {
   const episodesVal = document.getElementById('edit-tv-episodes').value;
   if (episodesVal) updated.episodes = parseInt(episodesVal, 10);
   const ratingVal = document.getElementById('edit-tv-rating').value;
-  if (ratingVal) updated.rating = parseInt(ratingVal, 10);
+  if (ratingVal) updated.rating = parseFloat(ratingVal);
   const reviewVal = document.getElementById('edit-tv-review') ? document.getElementById('edit-tv-review').value : '';
   if (reviewVal !== undefined) updated.review = reviewVal;
   const res = await authenticatedFetch(`${API_BASE}/tv-shows/${id}`, {
@@ -507,7 +507,7 @@ document.getElementById('addMovieForm').onsubmit = async function (e) {
     watched: document.getElementById('movieWatched').checked,
   };
   const ratingVal = document.getElementById('movieRating').value;
-  if (ratingVal) movie.rating = parseInt(ratingVal, 10);
+  if (ratingVal) movie.rating = parseFloat(ratingVal);
   const reviewVal = document.getElementById('movieReview').value;
   if (reviewVal) movie.review = reviewVal;
   const response = await authenticatedFetch(`${API_BASE}/movies/`, {
@@ -533,7 +533,7 @@ document.getElementById('addTVShowForm').onsubmit = async function (e) {
   const episodesVal = document.getElementById('tvEpisodes').value;
   if (episodesVal) tvShow.episodes = parseInt(episodesVal, 10);
   const ratingVal = document.getElementById('tvRating').value;
-  if (ratingVal) tvShow.rating = parseInt(ratingVal, 10);
+  if (ratingVal) tvShow.rating = parseFloat(ratingVal);
   const reviewVal = document.getElementById('tvReview').value;
   if (reviewVal) tvShow.review = reviewVal;
   const response = await authenticatedFetch(`${API_BASE}/tv-shows/`, {
@@ -757,12 +757,47 @@ function displayRatingDistribution(distribution) {
 
     const barDiv = document.createElement('div');
     barDiv.className = 'rating-bar';
-    barDiv.innerHTML = `
-      <div class="rating-bar-label">${rating}</div>
-      <div class="rating-bar-fill" style="width: ${percentage}%"></div>
-      <div class="rating-bar-count">${count}</div>
-    `;
+    barDiv.style.opacity = '0';
+    barDiv.style.transform = 'translateX(-20px)';
+    
+    const labelDiv = document.createElement('div');
+    labelDiv.className = 'rating-bar-label';
+    labelDiv.textContent = rating;
+    
+    // Create a wrapper for the fill bar to control its width properly
+    const fillWrapper = document.createElement('div');
+    fillWrapper.style.flex = '1';
+    fillWrapper.style.minWidth = '0';
+    fillWrapper.style.position = 'relative';
+    
+    const fillDiv = document.createElement('div');
+    fillDiv.className = 'rating-bar-fill';
+    fillDiv.style.width = '0%';
+    fillDiv.style.position = 'absolute';
+    fillDiv.style.left = '0';
+    fillDiv.style.top = '0';
+    fillDiv.style.bottom = '0';
+    
+    fillWrapper.appendChild(fillDiv);
+    
+    const countDiv = document.createElement('div');
+    countDiv.className = 'rating-bar-count';
+    countDiv.textContent = count;
+    
+    barDiv.appendChild(labelDiv);
+    barDiv.appendChild(fillWrapper);
+    barDiv.appendChild(countDiv);
     container.appendChild(barDiv);
+    
+    // Animate bar appearance
+    setTimeout(() => {
+      barDiv.style.transition = 'opacity 0.3s ease, transform 0.3s ease';
+      barDiv.style.opacity = '1';
+      barDiv.style.transform = 'translateX(0)';
+      setTimeout(() => {
+        fillDiv.style.width = percentage + '%';
+      }, 100);
+    }, rating * 50);
   }
 }
 
@@ -782,7 +817,7 @@ function displayHighestRated(items) {
     itemDiv.style.transform = 'translateY(10px)';
     itemDiv.innerHTML = `
       <div class="rated-item-title">${item.title} <span style="opacity: 0.6; font-size: 0.9em;">(${item.type})</span></div>
-      <div class="rated-item-rating">${item.rating}/10</div>
+      <div class="rated-item-rating">${parseFloat(item.rating).toFixed(1)}/10</div>
     `;
     container.appendChild(itemDiv);
     
@@ -815,11 +850,34 @@ function displayDecadeStats(decadeStats) {
     barDiv.className = 'decade-bar';
     barDiv.style.opacity = '0';
     barDiv.style.transform = 'translateX(-20px)';
-    barDiv.innerHTML = `
-      <div class="decade-bar-label">${decade}</div>
-      <div class="decade-bar-fill" style="width: 0%"></div>
-      <div class="decade-bar-count">${total}</div>
-    `;
+    
+    const labelDiv = document.createElement('div');
+    labelDiv.className = 'decade-bar-label';
+    labelDiv.textContent = decade;
+    
+    // Create a wrapper for the fill bar to control its width properly
+    const fillWrapper = document.createElement('div');
+    fillWrapper.style.flex = '1';
+    fillWrapper.style.minWidth = '0';
+    fillWrapper.style.position = 'relative';
+    
+    const fillDiv = document.createElement('div');
+    fillDiv.className = 'decade-bar-fill';
+    fillDiv.style.width = '0%';
+    fillDiv.style.position = 'absolute';
+    fillDiv.style.left = '0';
+    fillDiv.style.top = '0';
+    fillDiv.style.bottom = '0';
+    
+    fillWrapper.appendChild(fillDiv);
+    
+    const countDiv = document.createElement('div');
+    countDiv.className = 'decade-bar-count';
+    countDiv.textContent = total;
+    
+    barDiv.appendChild(labelDiv);
+    barDiv.appendChild(fillWrapper);
+    barDiv.appendChild(countDiv);
     container.appendChild(barDiv);
     
     // Animate bar appearance
@@ -827,9 +885,8 @@ function displayDecadeStats(decadeStats) {
       barDiv.style.transition = 'opacity 0.3s ease, transform 0.3s ease';
       barDiv.style.opacity = '1';
       barDiv.style.transform = 'translateX(0)';
-      const fill = barDiv.querySelector('.decade-bar-fill');
       setTimeout(() => {
-        fill.style.width = percentage + '%';
+        fillDiv.style.width = percentage + '%';
       }, 100);
     }, index * 80);
   });
