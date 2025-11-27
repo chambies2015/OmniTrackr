@@ -645,19 +645,21 @@ async function loadStatistics() {
 }
 
 function displayStatistics(stats) {
-  // Watch statistics
-  document.getElementById('totalItems').textContent = stats.watch_stats.total_items;
-  document.getElementById('watchedItems').textContent = stats.watch_stats.watched_items;
-  document.getElementById('unwatchedItems').textContent = stats.watch_stats.unwatched_items;
-  document.getElementById('completionPercentage').textContent = stats.watch_stats.completion_percentage + '%';
+  // Watch statistics with animation
+  animateValue('totalItems', 0, stats.watch_stats.total_items, 800);
+  animateValue('watchedItems', 0, stats.watch_stats.watched_items, 800);
+  animateValue('unwatchedItems', 0, stats.watch_stats.unwatched_items, 800);
+  animatePercentage('completionPercentage', 0, stats.watch_stats.completion_percentage, 1000);
 
-  // Progress bar
+  // Progress bar with animation
   const progressFill = document.getElementById('progressFill');
-  progressFill.style.width = stats.watch_stats.completion_percentage + '%';
+  setTimeout(() => {
+    progressFill.style.width = stats.watch_stats.completion_percentage + '%';
+  }, 100);
 
-  // Rating statistics
-  document.getElementById('averageRating').textContent = stats.rating_stats.average_rating;
-  document.getElementById('totalRatedItems').textContent = stats.rating_stats.total_rated_items;
+  // Rating statistics with animation
+  animateDecimal('averageRating', 0, parseFloat(stats.rating_stats.average_rating), 800);
+  animateValue('totalRatedItems', 0, stats.rating_stats.total_rated_items, 800);
 
   // Rating distribution
   displayRatingDistribution(stats.rating_stats.rating_distribution);
@@ -666,8 +668,18 @@ function displayStatistics(stats) {
   displayHighestRated(stats.rating_stats.highest_rated);
 
   // Year statistics
-  document.getElementById('oldestYear').textContent = stats.year_stats.oldest_year || '-';
-  document.getElementById('newestYear').textContent = stats.year_stats.newest_year || '-';
+  const oldestYear = stats.year_stats.oldest_year || '-';
+  const newestYear = stats.year_stats.newest_year || '-';
+  if (oldestYear !== '-') {
+    animateValue('oldestYear', parseInt(oldestYear) - 10, oldestYear, 600);
+  } else {
+    document.getElementById('oldestYear').textContent = '-';
+  }
+  if (newestYear !== '-') {
+    animateValue('newestYear', parseInt(newestYear) - 10, newestYear, 600);
+  } else {
+    document.getElementById('newestYear').textContent = '-';
+  }
 
   // Decade statistics
   displayDecadeStats(stats.year_stats.decade_stats);
@@ -675,6 +687,60 @@ function displayStatistics(stats) {
   // Director statistics
   displayTopDirectors(stats.director_stats.top_directors);
   displayHighestRatedDirectors(stats.director_stats.highest_rated_directors);
+}
+
+// Animation helper functions
+function animateValue(elementId, start, end, duration) {
+  const element = document.getElementById(elementId);
+  if (!element) return;
+  
+  const startTime = performance.now();
+  const isPercentage = elementId === 'completionPercentage';
+  
+  function update(currentTime) {
+    const elapsed = currentTime - startTime;
+    const progress = Math.min(elapsed / duration, 1);
+    const easeOut = 1 - Math.pow(1 - progress, 3);
+    const current = Math.floor(start + (end - start) * easeOut);
+    
+    element.textContent = isPercentage ? current + '%' : current;
+    
+    if (progress < 1) {
+      requestAnimationFrame(update);
+    } else {
+      element.textContent = isPercentage ? end + '%' : end;
+    }
+  }
+  
+  requestAnimationFrame(update);
+}
+
+function animatePercentage(elementId, start, end, duration) {
+  animateValue(elementId, start, end, duration);
+}
+
+function animateDecimal(elementId, start, end, duration) {
+  const element = document.getElementById(elementId);
+  if (!element) return;
+  
+  const startTime = performance.now();
+  
+  function update(currentTime) {
+    const elapsed = currentTime - startTime;
+    const progress = Math.min(elapsed / duration, 1);
+    const easeOut = 1 - Math.pow(1 - progress, 3);
+    const current = start + (end - start) * easeOut;
+    
+    element.textContent = current.toFixed(1);
+    
+    if (progress < 1) {
+      requestAnimationFrame(update);
+    } else {
+      element.textContent = end.toFixed(1);
+    }
+  }
+  
+  requestAnimationFrame(update);
 }
 
 function displayRatingDistribution(distribution) {
@@ -705,18 +771,27 @@ function displayHighestRated(items) {
   container.innerHTML = '';
 
   if (items.length === 0) {
-    container.innerHTML = '<p>No rated items found.</p>';
+    container.innerHTML = '<p style="text-align: center; color: var(--fg); opacity: 0.6; padding: 20px;">No rated items found.</p>';
     return;
   }
 
-  items.forEach(item => {
+  items.forEach((item, index) => {
     const itemDiv = document.createElement('div');
     itemDiv.className = 'rated-item';
+    itemDiv.style.opacity = '0';
+    itemDiv.style.transform = 'translateY(10px)';
     itemDiv.innerHTML = `
-      <div class="rated-item-title">${item.title} (${item.type})</div>
+      <div class="rated-item-title">${item.title} <span style="opacity: 0.6; font-size: 0.9em;">(${item.type})</span></div>
       <div class="rated-item-rating">${item.rating}/10</div>
     `;
     container.appendChild(itemDiv);
+    
+    // Animate item appearance
+    setTimeout(() => {
+      itemDiv.style.transition = 'opacity 0.3s ease, transform 0.3s ease';
+      itemDiv.style.opacity = '1';
+      itemDiv.style.transform = 'translateY(0)';
+    }, index * 100);
   });
 }
 
@@ -732,18 +807,31 @@ function displayDecadeStats(decadeStats) {
   );
   const maxCount = totals.length > 0 ? Math.max(...totals) : 1;
 
-  decades.forEach(decade => {
+  decades.forEach((decade, index) => {
     const total = (decadeStats[decade].movies || 0) + (decadeStats[decade].tv_shows || 0);
     const percentage = maxCount > 0 ? (total / maxCount) * 100 : 0;
 
     const barDiv = document.createElement('div');
     barDiv.className = 'decade-bar';
+    barDiv.style.opacity = '0';
+    barDiv.style.transform = 'translateX(-20px)';
     barDiv.innerHTML = `
       <div class="decade-bar-label">${decade}</div>
-      <div class="decade-bar-fill" style="width: ${percentage}%"></div>
+      <div class="decade-bar-fill" style="width: 0%"></div>
       <div class="decade-bar-count">${total}</div>
     `;
     container.appendChild(barDiv);
+    
+    // Animate bar appearance
+    setTimeout(() => {
+      barDiv.style.transition = 'opacity 0.3s ease, transform 0.3s ease';
+      barDiv.style.opacity = '1';
+      barDiv.style.transform = 'translateX(0)';
+      const fill = barDiv.querySelector('.decade-bar-fill');
+      setTimeout(() => {
+        fill.style.width = percentage + '%';
+      }, 100);
+    }, index * 80);
   });
 }
 
@@ -752,18 +840,27 @@ function displayTopDirectors(directors) {
   container.innerHTML = '';
 
   if (directors.length === 0) {
-    container.innerHTML = '<p>No directors found.</p>';
+    container.innerHTML = '<p style="text-align: center; color: var(--fg); opacity: 0.6; padding: 20px;">No directors found.</p>';
     return;
   }
 
-  directors.forEach(director => {
+  directors.forEach((director, index) => {
     const directorDiv = document.createElement('div');
     directorDiv.className = 'director-item';
+    directorDiv.style.opacity = '0';
+    directorDiv.style.transform = 'translateX(-10px)';
     directorDiv.innerHTML = `
       <div class="director-name">${director.director}</div>
-      <div class="director-rating">${director.count} movies</div>
+      <div class="director-rating">${director.count} ${director.count === 1 ? 'movie' : 'movies'}</div>
     `;
     container.appendChild(directorDiv);
+    
+    // Animate item appearance
+    setTimeout(() => {
+      directorDiv.style.transition = 'opacity 0.3s ease, transform 0.3s ease';
+      directorDiv.style.opacity = '1';
+      directorDiv.style.transform = 'translateX(0)';
+    }, index * 80);
   });
 }
 
@@ -772,18 +869,27 @@ function displayHighestRatedDirectors(directors) {
   container.innerHTML = '';
 
   if (directors.length === 0) {
-    container.innerHTML = '<p>No rated directors found.</p>';
+    container.innerHTML = '<p style="text-align: center; color: var(--fg); opacity: 0.6; padding: 20px;">No rated directors found.</p>';
     return;
   }
 
-  directors.forEach(director => {
+  directors.forEach((director, index) => {
     const directorDiv = document.createElement('div');
     directorDiv.className = 'director-item';
+    directorDiv.style.opacity = '0';
+    directorDiv.style.transform = 'translateX(-10px)';
     directorDiv.innerHTML = `
       <div class="director-name">${director.director}</div>
-      <div class="director-rating">${director.avg_rating}/10 (${director.count} movies)</div>
+      <div class="director-rating">${director.avg_rating.toFixed(1)}/10 <span style="opacity: 0.7; font-size: 0.9em;">(${director.count} ${director.count === 1 ? 'movie' : 'movies'})</span></div>
     `;
     container.appendChild(directorDiv);
+    
+    // Animate item appearance
+    setTimeout(() => {
+      directorDiv.style.transition = 'opacity 0.3s ease, transform 0.3s ease';
+      directorDiv.style.opacity = '1';
+      directorDiv.style.transform = 'translateX(0)';
+    }, index * 80);
   });
 }
 
