@@ -494,7 +494,109 @@ button.action-btn:disabled {
   }
 }
 
-/* Authentication Modal Styles */
+/* Landing Page Styles */
+#landingPage {
+  display: none;
+  min-height: 100vh;
+  background-color: var(--bg);
+  padding: 0;
+  margin: 0;
+}
+
+.landing-hero {
+  text-align: center;
+  padding: 80px 20px 60px;
+  background: linear-gradient(135deg, rgba(102, 126, 234, 0.1) 0%, rgba(118, 75, 162, 0.1) 100%);
+}
+
+.landing-title {
+  font-size: 4rem;
+  font-family: 'Poppins', 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+  font-weight: 800;
+  margin: 0 0 20px 0;
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 50%, #f093fb 100%);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+  letter-spacing: -0.02em;
+  animation: gradient-shift 4s ease infinite;
+  background-size: 200% 200%;
+  filter: drop-shadow(0 4px 8px rgba(102, 126, 234, 0.4)) drop-shadow(0 0 20px rgba(118, 75, 162, 0.3));
+  text-transform: uppercase;
+}
+
+.landing-subtitle {
+  font-size: 1.5rem;
+  color: var(--fg);
+  margin: 0;
+  font-weight: 400;
+  opacity: 0.8;
+}
+
+.landing-features {
+  padding: 60px 20px;
+  max-width: 1200px;
+  margin: 0 auto;
+}
+
+.features-title {
+  text-align: center;
+  font-size: 2.5rem;
+  color: var(--fg);
+  margin-bottom: 40px;
+  font-weight: 700;
+}
+
+.features-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+  gap: 30px;
+  margin-bottom: 40px;
+}
+
+.feature-card {
+  background-color: var(--card-bg);
+  padding: 30px;
+  border-radius: 12px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+  text-align: center;
+  transition: transform 0.3s ease, box-shadow 0.3s ease;
+}
+
+.feature-card:hover {
+  transform: translateY(-5px);
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.15);
+}
+
+.feature-icon {
+  font-size: 3rem;
+  margin-bottom: 15px;
+}
+
+.feature-card h3 {
+  font-size: 1.5rem;
+  color: var(--fg);
+  margin: 0 0 10px 0;
+  font-weight: 600;
+}
+
+.feature-card p {
+  color: var(--fg);
+  opacity: 0.8;
+  line-height: 1.6;
+  margin: 0;
+  font-size: 0.95rem;
+}
+
+.landing-auth {
+  padding: 60px 20px;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  min-height: 400px;
+}
+
+/* Authentication Modal Styles (now used within landing page) */
 #authModal {
   display: none;
   position: fixed;
@@ -515,6 +617,10 @@ button.action-btn:disabled {
   box-shadow: 0 4px 20px rgba(0, 0, 0, 0.3);
   max-width: 400px;
   width: 90%;
+}
+
+.landing-auth .auth-container {
+  box-shadow: 0 2px 12px rgba(0, 0, 0, 0.1);
 }
 
 .auth-container h2 {
@@ -605,7 +711,6 @@ button.action-btn:disabled {
   right: 20px;
   display: none; /* Hidden by default, shown when user is logged in */
   z-index: 10001; /* Above auth modal */
-  display: none;
   padding: 8px 16px;
   background-color: #f44336;
   color: white;
@@ -617,5 +722,83 @@ button.action-btn:disabled {
 
 #logoutBtn:hover {
   background-color: #d32f2f;
+}
+
+/* Landing Page Footer */
+.landing-footer {
+  background-color: var(--card-bg);
+  padding: 40px 20px;
+  margin-top: 60px;
+  border-top: 1px solid rgba(0, 0, 0, 0.1);
+  text-align: center;
+}
+
+body.dark-mode .landing-footer {
+  border-top-color: rgba(255, 255, 255, 0.1);
+}
+
+.footer-content {
+  max-width: 1200px;
+  margin: 0 auto;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 15px;
+}
+
+.footer-text {
+  color: var(--fg);
+  opacity: 0.7;
+  margin: 0;
+  font-size: 1rem;
+}
+
+.footer-links {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  gap: 30px;
+  flex-wrap: wrap;
+}
+
+.footer-link {
+  color: var(--primary);
+  text-decoration: none;
+  font-size: 1rem;
+  transition: opacity 0.3s ease;
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  white-space: nowrap;
+}
+
+.footer-link:hover {
+  opacity: 0.7;
+  text-decoration: underline;
+}
+
+/* Responsive adjustments for landing page */
+@media (max-width: 768px) {
+  .landing-title {
+    font-size: 2.5rem;
+  }
+  
+  .landing-subtitle {
+    font-size: 1.2rem;
+  }
+  
+  .features-grid {
+    grid-template-columns: 1fr;
+    gap: 20px;
+  }
+  
+  .features-title {
+    font-size: 2rem;
+  }
+  
+  .footer-links {
+    flex-direction: column;
+    gap: 15px;
+  }
 }
 

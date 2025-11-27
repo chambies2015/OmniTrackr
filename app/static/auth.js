@@ -141,11 +141,12 @@ function logout() {
 // ============================================================================
 
 function showAuthModal() {
-    document.getElementById('authModal').style.display = 'flex';
+    // Show landing page instead of modal
+    document.getElementById('landingPage').style.display = 'block';
     document.getElementById('mainContainer').style.display = 'none';
     document.getElementById('authError').textContent = '';
     
-    // Hide user display and logout button when showing auth modal
+    // Hide user display and logout button when showing landing page
     document.getElementById('userDisplay').style.display = 'none';
     document.getElementById('logoutBtn').style.display = 'none';
 
@@ -153,17 +154,18 @@ function showAuthModal() {
     document.getElementById('loginForm').style.display = 'none';
     document.getElementById('registerForm').style.display = 'none';
 
-    // Show login  form by default
+    // Show login form by default
     showLoginForm();
 }
 
 function hideAuthModal() {
-    document.getElementById('authModal').style.display = 'none';
+    // Hide landing page
+    document.getElementById('landingPage').style.display = 'none';
 }
 
 function showMainUI() {
     document.getElementById('mainContainer').style.display = 'block';
-    document.getElementById('authModal').style.display = 'none';
+    document.getElementById('landingPage').style.display = 'none';
 }
 
 function showLoginForm() {
@@ -175,6 +177,12 @@ function showLoginForm() {
     document.getElementById('authTitle').textContent = 'Login to OmniTrackr';
     document.getElementById('authError').textContent = '';
     document.getElementById('authSuccess').style.display = 'none';
+    // Scroll to auth section if on landing page
+    if (document.getElementById('landingPage').style.display === 'block') {
+        setTimeout(() => {
+            document.querySelector('.landing-auth').scrollIntoView({ behavior: 'smooth', block: 'center' });
+        }, 100);
+    }
 }
 
 function showRegisterForm() {
@@ -185,6 +193,12 @@ function showRegisterForm() {
     document.getElementById('authTitle').textContent = 'Register for OmniTrackr';
     document.getElementById('authError').textContent = '';
     document.getElementById('authSuccess').style.display = 'none';
+    // Scroll to auth section if on landing page
+    if (document.getElementById('landingPage').style.display === 'block') {
+        setTimeout(() => {
+            document.querySelector('.landing-auth').scrollIntoView({ behavior: 'smooth', block: 'center' });
+        }, 100);
+    }
 }
 
 function showForgotPasswordForm() {
@@ -195,6 +209,12 @@ function showForgotPasswordForm() {
     document.getElementById('authTitle').textContent = 'Reset Password';
     document.getElementById('authError').textContent = '';
     document.getElementById('authSuccess').style.display = 'none';
+    // Scroll to auth section if on landing page
+    if (document.getElementById('landingPage').style.display === 'block') {
+        setTimeout(() => {
+            document.querySelector('.landing-auth').scrollIntoView({ behavior: 'smooth', block: 'center' });
+        }, 100);
+    }
 }
 
 function showResetPasswordForm(resetToken = null) {
@@ -209,6 +229,13 @@ function showResetPasswordForm(resetToken = null) {
     // Store reset token if provided
     if (resetToken) {
         document.getElementById('resetPasswordFormElement').dataset.resetToken = resetToken;
+    }
+    
+    // Scroll to auth section if on landing page
+    if (document.getElementById('landingPage').style.display === 'block') {
+        setTimeout(() => {
+            document.querySelector('.landing-auth').scrollIntoView({ behavior: 'smooth', block: 'center' });
+        }, 100);
     }
 }
 
@@ -452,6 +479,10 @@ function initAuth() {
     // Handle password reset
     if (resetToken) {
         showAuthModal();
+        // Scroll to auth section
+        setTimeout(() => {
+            document.querySelector('.landing-auth').scrollIntoView({ behavior: 'smooth', block: 'center' });
+        }, 100);
         showResetPasswordForm(resetToken);
         return;
     }
@@ -459,6 +490,10 @@ function initAuth() {
     // Handle successful verification redirect
     if (emailVerified === 'true' && !verifyToken) {
         showAuthModal();
+        // Scroll to auth section
+        setTimeout(() => {
+            document.querySelector('.landing-auth').scrollIntoView({ behavior: 'smooth', block: 'center' });
+        }, 100);
         displayAuthSuccess('✅ Email verified successfully! You can now log in.');
         showLoginForm();
         // Clean URL
@@ -469,6 +504,10 @@ function initAuth() {
     // Handle successful password reset redirect
     if (passwordReset === 'true') {
         showAuthModal();
+        // Scroll to auth section
+        setTimeout(() => {
+            document.querySelector('.landing-auth').scrollIntoView({ behavior: 'smooth', block: 'center' });
+        }, 100);
         displayAuthSuccess('✅ Password reset successfully! You can now log in with your new password.');
         showLoginForm();
         // Clean URL
@@ -486,6 +525,8 @@ function initAuth() {
 
 async function handleEmailVerification(token) {
     showAuthModal();
+    // Scroll to auth section
+    document.querySelector('.landing-auth').scrollIntoView({ behavior: 'smooth', block: 'center' });
     document.getElementById('authTitle').textContent = 'Email Verification';
     document.getElementById('loginForm').style.display = 'none';
     document.getElementById('registerForm').style.display = 'none';

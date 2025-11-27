@@ -187,10 +187,19 @@ async def get_film_bg():
 
 @app.get("/favicon.ico")
 async def get_favicon():
-    favicon_file = os.path.join(os.path.dirname(__file__), "static", "favicon.ico")
+    favicon_file = os.path.join(os.path.dirname(__file__), "static", "omnitrackr_favicon.ico")
     if os.path.exists(favicon_file):
         return FileResponse(favicon_file, media_type="image/x-icon")
     raise HTTPException(status_code=404, detail="favicon.ico not found")
+
+
+@app.get("/omnitrackr_favicon.ico")
+async def get_omnitrackr_favicon():
+    """Serve the OmniTrackr favicon directly."""
+    favicon_file = os.path.join(os.path.dirname(__file__), "static", "omnitrackr_favicon.ico")
+    if os.path.exists(favicon_file):
+        return FileResponse(favicon_file, media_type="image/x-icon")
+    raise HTTPException(status_code=404, detail="omnitrackr_favicon.ico not found")
 
 
 def get_db():
