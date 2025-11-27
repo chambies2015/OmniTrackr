@@ -983,6 +983,27 @@ document.getElementById('importTVShows').addEventListener('click', () => documen
 document.getElementById('importFile').addEventListener('change', (e) => importData(e.target));
 document.getElementById('importTVFile').addEventListener('change', (e) => importData(e.target));
 
+// Collapsible form toggle function
+window.toggleCollapsible = function(formId) {
+  const content = document.getElementById(formId + 'Content');
+  const icon = document.getElementById(formId + 'Icon');
+  
+  if (content.style.display === 'none' || !content.classList.contains('expanded')) {
+    content.style.display = 'block';
+    content.classList.add('expanded');
+    icon.classList.add('rotated');
+  } else {
+    content.classList.remove('expanded');
+    icon.classList.remove('rotated');
+    // Wait for animation to complete before hiding
+    setTimeout(() => {
+      if (!content.classList.contains('expanded')) {
+        content.style.display = 'none';
+      }
+    }, 300);
+  }
+};
+
 // Load initial data
 loadMovies();
 

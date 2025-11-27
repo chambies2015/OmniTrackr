@@ -166,6 +166,52 @@ body {
   font-size: 1.5rem;
 }
 
+.collapsible-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  cursor: pointer;
+  user-select: none;
+  padding: 8px 0;
+  transition: opacity 0.2s ease;
+  margin-bottom: 0;
+}
+
+.collapsible-header:hover {
+  opacity: 0.8;
+}
+
+.collapsible-header h2 {
+  margin: 0;
+  margin-bottom: 0;
+}
+
+.collapsible-icon {
+  font-size: 0.9rem;
+  color: var(--primary);
+  transition: transform 0.3s ease;
+  display: inline-block;
+  margin-left: 12px;
+}
+
+.collapsible-icon.rotated {
+  transform: rotate(180deg);
+}
+
+.collapsible-content {
+  overflow: hidden;
+  transition: max-height 0.3s ease, opacity 0.3s ease, padding 0.3s ease;
+  max-height: 0;
+  opacity: 0;
+  padding-top: 0;
+}
+
+.collapsible-content.expanded {
+  max-height: 1000px;
+  opacity: 1;
+  padding-top: 20px;
+}
+
 input[type="text"],
 input[type="number"],
 select {

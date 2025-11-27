@@ -117,28 +117,33 @@
     <!-- Movies Tab Content -->
     <div id="movies-tab" class="tab-content active">
       <div class="card">
-        <h2>Add Movie</h2>
-        <form id="addMovieForm">
-          <div>
-            <input type="text" id="movieTitle" placeholder="Title" required>
-          </div>
-          <div>
-            <input type="text" id="movieDirector" placeholder="Director" required>
-          </div>
-          <div>
-            <input type="number" id="movieYear" placeholder="Year" required>
-          </div>
-          <div>
-            <input type="number" min="0" max="10" step="0.1" id="movieRating" placeholder="Rating (0-10.0)">
-          </div>
-          <div>
-            <label>Watched <input type="checkbox" id="movieWatched"></label>
-          </div>
-          <div>
-            <input type="text" id="movieReview" placeholder="Review (optional)">
-          </div>
-          <button type="submit" class="action-btn">Add Movie</button>
-        </form>
+        <div class="collapsible-header" onclick="toggleCollapsible('movieForm')">
+          <h2 style="margin: 0; display: inline-block;">Add Movie</h2>
+          <span class="collapsible-icon" id="movieFormIcon">▼</span>
+        </div>
+        <div class="collapsible-content" id="movieFormContent" style="display: none;">
+          <form id="addMovieForm">
+            <div>
+              <input type="text" id="movieTitle" placeholder="Title" required>
+            </div>
+            <div>
+              <input type="text" id="movieDirector" placeholder="Director" required>
+            </div>
+            <div>
+              <input type="number" id="movieYear" placeholder="Year" required>
+            </div>
+            <div>
+              <input type="number" min="0" max="10" step="0.1" id="movieRating" placeholder="Rating (0-10.0)">
+            </div>
+            <div>
+              <label>Watched <input type="checkbox" id="movieWatched"></label>
+            </div>
+            <div>
+              <input type="text" id="movieReview" placeholder="Review (optional)">
+            </div>
+            <button type="submit" class="action-btn">Add Movie</button>
+          </form>
+        </div>
       </div>
       <div class="card">
         <div style="display:flex; justify-content: space-between; align-items: center; margin-bottom: 10px;">
@@ -186,31 +191,36 @@
     <!-- TV Shows Tab Content -->
     <div id="tv-shows-tab" class="tab-content">
       <div class="card">
-        <h2>Add TV Show</h2>
-        <form id="addTVShowForm">
-          <div>
-            <input type="text" id="tvTitle" placeholder="Title" required>
-          </div>
-          <div>
-            <input type="number" id="tvYear" placeholder="Year" required>
-          </div>
-          <div>
-            <input type="number" id="tvSeasons" placeholder="Seasons (optional)">
-          </div>
-          <div>
-            <input type="number" id="tvEpisodes" placeholder="Episodes (optional)">
-          </div>
-          <div>
-            <input type="number" min="0" max="10" step="0.1" id="tvRating" placeholder="Rating (0-10.0)">
-          </div>
-          <div>
-            <label>Watched <input type="checkbox" id="tvWatched"></label>
-          </div>
-          <div>
-            <input type="text" id="tvReview" placeholder="Review (optional)">
-          </div>
-          <button type="submit" class="action-btn">Add TV Show</button>
-        </form>
+        <div class="collapsible-header" onclick="toggleCollapsible('tvForm')">
+          <h2 style="margin: 0; display: inline-block;">Add TV Show</h2>
+          <span class="collapsible-icon" id="tvFormIcon">▼</span>
+        </div>
+        <div class="collapsible-content" id="tvFormContent" style="display: none;">
+          <form id="addTVShowForm">
+            <div>
+              <input type="text" id="tvTitle" placeholder="Title" required>
+            </div>
+            <div>
+              <input type="number" id="tvYear" placeholder="Year" required>
+            </div>
+            <div>
+              <input type="number" id="tvSeasons" placeholder="Seasons (optional)">
+            </div>
+            <div>
+              <input type="number" id="tvEpisodes" placeholder="Episodes (optional)">
+            </div>
+            <div>
+              <input type="number" min="0" max="10" step="0.1" id="tvRating" placeholder="Rating (0-10.0)">
+            </div>
+            <div>
+              <label>Watched <input type="checkbox" id="tvWatched"></label>
+            </div>
+            <div>
+              <input type="text" id="tvReview" placeholder="Review (optional)">
+            </div>
+            <button type="submit" class="action-btn">Add TV Show</button>
+          </form>
+        </div>
       </div>
       <div class="card">
         <div style="display:flex; justify-content: space-between; align-items: center; margin-bottom: 10px;">
