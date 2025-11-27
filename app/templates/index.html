@@ -101,7 +101,7 @@
 
 <body class="dark-mode">
   <button id="toggleMode" class="toggle-btn" aria-label="Toggle between dark and light mode">Light Mode</button>
-  <div id="userDisplay" role="status" aria-live="polite"></div>
+  <button id="userDisplay" class="user-display-btn" role="button" aria-label="Open account settings"></button>
   <button id="logoutBtn" aria-label="Logout from your account">Logout</button>
   <main class="container" id="mainContainer">
     <header class="header" role="banner">
@@ -484,6 +484,105 @@
   <script src="./credentials.js"></script>
   <script src="./auth.js"></script>
   <script src="./app.js"></script>
+
+  <!-- Account Modal -->
+  <div id="accountModal" class="modal-overlay" style="display: none;">
+    <div class="modal-content account-modal">
+      <div class="modal-header">
+        <h2>Account Settings</h2>
+        <button class="modal-close" onclick="closeAccountModal()" aria-label="Close account settings">×</button>
+      </div>
+      
+      <div class="modal-body">
+        <!-- Account Info Section -->
+        <div class="account-section">
+          <h3>Account Information</h3>
+          <div class="account-info">
+            <div class="info-item">
+              <span class="info-label">Username:</span>
+              <span class="info-value" id="accountUsername">-</span>
+            </div>
+            <div class="info-item">
+              <span class="info-label">Email:</span>
+              <span class="info-value" id="accountEmail">-</span>
+            </div>
+            <div class="info-item">
+              <span class="info-label">Account Created:</span>
+              <span class="info-value" id="accountCreated">-</span>
+            </div>
+            <div class="info-item">
+              <span class="info-label">Email Verified:</span>
+              <span class="info-value" id="accountVerified">-</span>
+            </div>
+          </div>
+        </div>
+
+        <!-- Change Username Section -->
+        <div class="account-section">
+          <h3>Change Username</h3>
+          <form id="changeUsernameForm" onsubmit="changeUsername(event)">
+            <div>
+              <input type="text" id="newUsername" placeholder="New username" minlength="3" maxlength="50" required>
+            </div>
+            <div>
+              <input type="password" id="usernamePassword" placeholder="Current password" required>
+            </div>
+            <button type="submit" class="action-btn">Change Username</button>
+            <div id="usernameError" class="error-message"></div>
+            <div id="usernameSuccess" class="success-message"></div>
+          </form>
+        </div>
+
+        <!-- Change Email Section -->
+        <div class="account-section">
+          <h3>Change Email</h3>
+          <form id="changeEmailForm" onsubmit="changeEmail(event)">
+            <div>
+              <input type="email" id="newEmail" placeholder="New email address" required>
+            </div>
+            <div>
+              <input type="password" id="emailPassword" placeholder="Current password" required>
+            </div>
+            <button type="submit" class="action-btn">Change Email</button>
+            <div id="emailError" class="error-message"></div>
+            <div id="emailSuccess" class="success-message"></div>
+          </form>
+        </div>
+
+        <!-- Change Password Section -->
+        <div class="account-section">
+          <h3>Change Password</h3>
+          <form id="changePasswordForm" onsubmit="changePassword(event)">
+            <div>
+              <input type="password" id="currentPassword" placeholder="Current password" required>
+            </div>
+            <div>
+              <input type="password" id="newPassword" placeholder="New password (min 6 characters)" minlength="6" required>
+            </div>
+            <div>
+              <input type="password" id="confirmNewPassword" placeholder="Confirm new password" minlength="6" required>
+            </div>
+            <button type="submit" class="action-btn">Change Password</button>
+            <div id="passwordError" class="error-message"></div>
+            <div id="passwordSuccess" class="success-message"></div>
+          </form>
+        </div>
+
+        <!-- Account Deactivation Section -->
+        <div class="account-section danger-section">
+          <h3>Account Deactivation</h3>
+          <p class="warning-text">Deactivating your account will hide it from the system. You can reactivate within 90 days. After that, your account will be permanently deleted.</p>
+          <form id="deactivateAccountForm" onsubmit="deactivateAccount(event)">
+            <div>
+              <input type="password" id="deactivatePassword" placeholder="Enter your password to confirm" required>
+            </div>
+            <button type="submit" class="action-btn danger-btn">Deactivate Account</button>
+            <div id="deactivateError" class="error-message"></div>
+          </form>
+        </div>
+      </div>
+    </div>
+  </div>
 </body>
 
 </html>

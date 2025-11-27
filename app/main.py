@@ -54,6 +54,11 @@ try:
                 conn.execute(text("ALTER TABLE users ADD COLUMN created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP"))
                 conn.commit()
                 print("Added created_at column to users table")
+        if "deactivated_at" not in user_columns:
+            with engine.connect() as conn:
+                conn.execute(text("ALTER TABLE users ADD COLUMN deactivated_at TIMESTAMP"))
+                conn.commit()
+                print("Added deactivated_at column to users table")
 
     # Check movies table for review and poster_url columns
     if inspector.has_table("movies"):
@@ -452,6 +457,31 @@ async def login(form_data: OAuth2PasswordRequestForm = Depends(), db: Session = 
             headers={"WWW-Authenticate": "Bearer"},
         )
     
+    # Check if account is deactivated
+    if not user.is_active:
+        # Check if within 90-day reactivation window
+        if user.deactivated_at:
+            days_since_deactivation = (datetime.utcnow() - user.deactivated_at).days
+            if days_since_deactivation > 90:
+                raise HTTPException(
+                    status_code=403,
+                    detail="Account has been permanently deactivated. It cannot be reactivated after 90 days.",
+                    headers={"WWW-Authenticate": "Bearer"},
+                )
+            else:
+                # Account is deactivated but within 90-day window
+                raise HTTPException(
+                    status_code=403,
+                    detail=f"Account is deactivated. You can reactivate it within {90 - days_since_deactivation} days. Please use the reactivate endpoint.",
+                    headers={"WWW-Authenticate": "Bearer"},
+                )
+        else:
+            raise HTTPException(
+                status_code=403,
+                detail="Account is deactivated. Please reactivate your account.",
+                headers={"WWW-Authenticate": "Bearer"},
+            )
+    
     # Check if email is verified
     if not user.is_verified:
         raise HTTPException(
@@ -466,26 +496,59 @@ async def login(form_data: OAuth2PasswordRequestForm = Depends(), db: Session = 
 
 @app.get("/auth/verify-email", tags=["auth"])
 async def verify_email(token: str, db: Session = Depends(get_db)):
-    """Verify user email with token."""
+    """Verify user email with token (handles both initial verification and email change)."""
+    # Check if this is an email change token
     try:
-        email = email_utils.verify_token(token, max_age=3600)  # 1 hour expiration
+        old_email, new_email = email_utils.verify_email_change_token(token, max_age=3600)
+        # This is an email change verification
+        user = crud.get_user_by_email(db, old_email)
+        if not user:
+            raise HTTPException(status_code=404, detail="User not found")
+        
+        # Verify the token matches what's stored
+        if not user.verification_token or not user.verification_token.startswith("email_change:"):
+            raise HTTPException(status_code=400, detail="Invalid email change token")
+        
+        # Extract token and new email from stored value
+        parts = user.verification_token.split(":", 2)
+        if len(parts) != 3 or parts[1] != token or parts[2] != new_email:
+            raise HTTPException(status_code=400, detail="Invalid email change token")
+        
+        # Check if new email is already taken
+        existing_user = crud.get_user_by_email(db, new_email)
+        if existing_user and existing_user.id != user.id:
+            raise HTTPException(status_code=400, detail="New email is already registered")
+        
+        # Update email
+        user.email = new_email
+        user.verification_token = None
+        db.commit()
+        db.refresh(user)
+        
+        return {"message": "Email changed successfully! Your new email is now verified."}
+    except HTTPException:
+        raise
     except Exception:
-        raise HTTPException(status_code=400, detail="Invalid or expired verification token")
-    
-    user = crud.get_user_by_email(db, email)
-    if not user:
-        raise HTTPException(status_code=404, detail="User not found")
-    
-    if user.is_verified:
-        return {"message": "Email already verified"}
-    
-    # Mark user as verified
-    user.is_verified = True
-    user.verification_token = None
-    db.commit()
-    db.refresh(user)
-    
-    return {"message": "Email verified successfully! You can now use all features."}
+        # Not an email change token, try regular email verification
+        try:
+            email = email_utils.verify_token(token, max_age=3600)  # 1 hour expiration
+        except Exception:
+            raise HTTPException(status_code=400, detail="Invalid or expired verification token")
+        
+        user = crud.get_user_by_email(db, email)
+        if not user:
+            raise HTTPException(status_code=404, detail="User not found")
+        
+        if user.is_verified:
+            return {"message": "Email already verified"}
+        
+        # Mark user as verified
+        user.is_verified = True
+        user.verification_token = None
+        db.commit()
+        db.refresh(user)
+        
+        return {"message": "Email verified successfully! You can now use all features."}
 
 
 @app.post("/auth/resend-verification", tags=["auth"])
@@ -571,6 +634,193 @@ async def reset_password(token: str, new_password: str, db: Session = Depends(ge
     db.refresh(user)
     
     return {"message": "Password reset successfully! You can now login with your new password."}
+
+
+# ============================================================================
+# Account Management endpoints
+# ============================================================================
+
+@app.get("/account/me", response_model=schemas.User, tags=["account"])
+async def get_current_account(current_user: models.User = Depends(get_current_user)):
+    """Get current user's account information."""
+    return current_user
+
+
+@app.put("/account/username", response_model=schemas.User, tags=["account"])
+async def change_username(
+    username_change: schemas.UsernameChange,
+    current_user: models.User = Depends(get_current_user),
+    db: Session = Depends(get_db)
+):
+    """Change username (requires password confirmation)."""
+    # Verify password
+    if not auth.verify_password(username_change.password, current_user.hashed_password):
+        raise HTTPException(status_code=401, detail="Incorrect password")
+    
+    # Check if username is already taken
+    existing_user = crud.get_user_by_username(db, username_change.new_username)
+    if existing_user and existing_user.id != current_user.id:
+        raise HTTPException(status_code=400, detail="Username already taken")
+    
+    # Update username
+    try:
+        user_update = schemas.UserUpdate(username=username_change.new_username)
+        updated_user = crud.update_user(db, current_user.id, user_update)
+        if updated_user is None:
+            raise HTTPException(status_code=404, detail="User not found")
+        return updated_user
+    except ValueError as e:
+        raise HTTPException(status_code=400, detail=str(e))
+
+
+@app.put("/account/email", response_model=dict, tags=["account"])
+async def change_email(
+    email_change: schemas.EmailChange,
+    current_user: models.User = Depends(get_current_user),
+    db: Session = Depends(get_db)
+):
+    """Change email address (requires password + sends verification email to new address)."""
+    # Verify password
+    if not auth.verify_password(email_change.password, current_user.hashed_password):
+        raise HTTPException(status_code=401, detail="Incorrect password")
+    
+    # Check if email is already registered
+    existing_user = crud.get_user_by_email(db, email_change.new_email)
+    if existing_user and existing_user.id != current_user.id:
+        raise HTTPException(status_code=400, detail="Email already registered")
+    
+    # Generate email change verification token
+    email_change_token = email_utils.generate_email_change_token(current_user.email, email_change.new_email)
+    
+    # Store the new email and token temporarily (we'll update email after verification)
+    # For now, store in verification_token field with a special prefix
+    current_user.verification_token = f"email_change:{email_change_token}:{email_change.new_email}"
+    db.commit()
+    
+    # Send verification email to new address
+    try:
+        await email_utils.send_email_change_verification_email(
+            email_change.new_email,
+            current_user.username,
+            email_change_token
+        )
+    except Exception as e:
+        print(f"Failed to send email change verification email: {e}")
+        # Don't fail the request, but log the error
+    
+    return {
+        "message": "Verification email sent to new address. Please verify your new email to complete the change."
+    }
+
+
+@app.put("/account/password", response_model=dict, tags=["account"])
+async def change_password(
+    password_change: schemas.PasswordChange,
+    current_user: models.User = Depends(get_current_user),
+    db: Session = Depends(get_db)
+):
+    """Change password (requires current password)."""
+    # Verify current password
+    if not auth.verify_password(password_change.current_password, current_user.hashed_password):
+        raise HTTPException(status_code=401, detail="Incorrect current password")
+    
+    # Hash new password and update
+    hashed_new_password = auth.get_password_hash(password_change.new_password)
+    user_update = schemas.UserUpdate(password=hashed_new_password)
+    updated_user = crud.update_user(db, current_user.id, user_update)
+    
+    if updated_user is None:
+        raise HTTPException(status_code=404, detail="User not found")
+    
+    return {"message": "Password changed successfully"}
+
+
+@app.post("/account/deactivate", response_model=dict, tags=["account"])
+async def deactivate_account(
+    deactivate: schemas.AccountDeactivate,
+    current_user: models.User = Depends(get_current_user),
+    db: Session = Depends(get_db)
+):
+    """Deactivate account (soft delete, requires password confirmation)."""
+    # Verify password
+    if not auth.verify_password(deactivate.password, current_user.hashed_password):
+        raise HTTPException(status_code=401, detail="Incorrect password")
+    
+    # Deactivate account
+    deactivated_user = crud.deactivate_user(db, current_user.id)
+    if deactivated_user is None:
+        raise HTTPException(status_code=404, detail="User not found")
+    
+    return {
+        "message": "Account deactivated. You can reactivate within 90 days. After that, your account will be permanently deleted."
+    }
+
+
+@app.post("/auth/reactivate", response_model=schemas.User, tags=["auth"])
+async def reactivate_account_public(
+    reactivate: schemas.AccountReactivate,
+    db: Session = Depends(get_db)
+):
+    """Reactivate a deactivated account via public endpoint (within 90-day window)."""
+    # Find user by username or email
+    user = None
+    if reactivate.username:
+        user = crud.get_user_by_username(db, reactivate.username)
+        if not user:
+            user = crud.get_user_by_email(db, reactivate.username)
+    elif reactivate.email:
+        user = crud.get_user_by_email(db, reactivate.email)
+    else:
+        raise HTTPException(status_code=400, detail="Username or email is required")
+    
+    if not user:
+        # Don't reveal if account exists for security
+        raise HTTPException(
+            status_code=401,
+            detail="Invalid credentials or account not found"
+        )
+    
+    # Verify password
+    if not auth.verify_password(reactivate.password, user.hashed_password):
+        raise HTTPException(
+            status_code=401,
+            detail="Invalid credentials or account not found"
+        )
+    
+    # Check if account is already active
+    if user.is_active:
+        raise HTTPException(status_code=400, detail="Account is already active")
+    
+    # Check if account was deactivated
+    if not user.deactivated_at:
+        raise HTTPException(status_code=400, detail="Account was not deactivated")
+    
+    # Reactivate account
+    try:
+        reactivated_user = crud.reactivate_user(db, user.id)
+        if reactivated_user is None:
+            raise HTTPException(status_code=404, detail="User not found")
+        return reactivated_user
+    except ValueError as e:
+        raise HTTPException(status_code=400, detail=str(e))
+
+
+@app.post("/account/reactivate", response_model=schemas.User, tags=["account"])
+async def reactivate_account(
+    current_user: models.User = Depends(get_current_user),
+    db: Session = Depends(get_db)
+):
+    """Reactivate a deactivated account (within 90-day window). Requires authentication."""
+    if current_user.is_active:
+        raise HTTPException(status_code=400, detail="Account is already active")
+    
+    try:
+        reactivated_user = crud.reactivate_user(db, current_user.id)
+        if reactivated_user is None:
+            raise HTTPException(status_code=404, detail="User not found")
+        return reactivated_user
+    except ValueError as e:
+        raise HTTPException(status_code=400, detail=str(e))
 
 
 # ============================================================================

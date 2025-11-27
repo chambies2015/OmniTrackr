@@ -3,6 +3,7 @@ Pydantic models (schemas) for the OmniTrackr API.
 These define the shape of data accepted/returned by the API.
 """
 from typing import Optional, List
+from datetime import datetime
 from pydantic import BaseModel, Field
 
 # ============================================================================
@@ -31,9 +32,47 @@ class User(UserBase):
     id: int
     is_active: bool
     is_verified: bool = False
+    created_at: Optional[datetime] = None
     
     class Config:
         from_attributes = True
+
+
+class UserUpdate(BaseModel):
+    """Schema for updating user information."""
+    username: Optional[str] = Field(None, min_length=3, max_length=50)
+    email: Optional[str] = None
+    password: Optional[str] = Field(None, min_length=6)
+
+
+class PasswordChange(BaseModel):
+    """Schema for changing password."""
+    current_password: str = Field(..., description="Current password for verification")
+    new_password: str = Field(..., min_length=6, description="New password (min 6 characters)")
+
+
+class EmailChange(BaseModel):
+    """Schema for changing email address."""
+    new_email: str = Field(..., description="New email address")
+    password: str = Field(..., description="Current password for verification")
+
+
+class UsernameChange(BaseModel):
+    """Schema for changing username."""
+    new_username: str = Field(..., min_length=3, max_length=50, description="New username")
+    password: str = Field(..., description="Current password for verification")
+
+
+class AccountDeactivate(BaseModel):
+    """Schema for deactivating account."""
+    password: str = Field(..., description="Current password for confirmation")
+
+
+class AccountReactivate(BaseModel):
+    """Schema for reactivating account via public endpoint."""
+    username: Optional[str] = Field(None, description="Username or email")
+    email: Optional[str] = Field(None, description="Email address")
+    password: str = Field(..., description="Account password for verification")
 
 
 class Token(BaseModel):

@@ -53,6 +53,54 @@ class TestUserCRUD:
         
         assert found_user is not None
         assert found_user.id == user.id
+    
+    def test_update_user(self, db_session, test_user_data):
+        """Test updating user information."""
+        from app import auth
+        user_create = schemas.UserCreate(**test_user_data)
+        hashed_password = auth.get_password_hash(test_user_data["password"])
+        user = crud.create_user(db_session, user_create, hashed_password)
+        
+        # Update username
+        user_update = schemas.UserUpdate(username="updateduser")
+        updated_user = crud.update_user(db_session, user.id, user_update)
+        
+        assert updated_user is not None
+        assert updated_user.username == "updateduser"
+        assert updated_user.email == test_user_data["email"]
+    
+    def test_deactivate_user(self, db_session, test_user_data):
+        """Test deactivating a user."""
+        from app import auth
+        user_create = schemas.UserCreate(**test_user_data)
+        hashed_password = auth.get_password_hash(test_user_data["password"])
+        user = crud.create_user(db_session, user_create, hashed_password)
+        
+        assert user.is_active is True
+        
+        deactivated_user = crud.deactivate_user(db_session, user.id)
+        
+        assert deactivated_user is not None
+        assert deactivated_user.is_active is False
+        assert deactivated_user.deactivated_at is not None
+    
+    def test_reactivate_user(self, db_session, test_user_data):
+        """Test reactivating a deactivated user."""
+        from app import auth
+        user_create = schemas.UserCreate(**test_user_data)
+        hashed_password = auth.get_password_hash(test_user_data["password"])
+        user = crud.create_user(db_session, user_create, hashed_password)
+        
+        # Deactivate first
+        crud.deactivate_user(db_session, user.id)
+        db_session.refresh(user)
+        
+        # Reactivate
+        reactivated_user = crud.reactivate_user(db_session, user.id)
+        
+        assert reactivated_user is not None
+        assert reactivated_user.is_active is True
+        assert reactivated_user.deactivated_at is None
 
 
 class TestMovieCRUD:
