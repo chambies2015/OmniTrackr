@@ -244,6 +244,7 @@ async def get_styles():
 
 
 @app.get("/omnitrackr_vortex.png")
+@app.head("/omnitrackr_vortex.png")
 async def get_omnitrackr_vortex():
     bg_file = os.path.join(os.path.dirname(__file__), "static", "omnitrackr_vortex.png")
     if os.path.exists(bg_file):
@@ -252,6 +253,7 @@ async def get_omnitrackr_vortex():
 
 
 @app.get("/film_background.jpg")
+@app.head("/film_background.jpg")
 async def get_film_bg():
     bg_file = os.path.join(os.path.dirname(__file__), "static", "film_background.jpg")
     if os.path.exists(bg_file):
@@ -260,6 +262,7 @@ async def get_film_bg():
 
 
 @app.get("/favicon.ico")
+@app.head("/favicon.ico")
 async def get_favicon():
     favicon_file = os.path.join(os.path.dirname(__file__), "static", "omnitrackr_favicon.ico")
     if os.path.exists(favicon_file):
@@ -268,12 +271,23 @@ async def get_favicon():
 
 
 @app.get("/omnitrackr_favicon.ico")
+@app.head("/omnitrackr_favicon.ico")
 async def get_omnitrackr_favicon():
     """Serve the OmniTrackr favicon directly."""
     favicon_file = os.path.join(os.path.dirname(__file__), "static", "omnitrackr_favicon.ico")
     if os.path.exists(favicon_file):
         return FileResponse(favicon_file, media_type="image/x-icon")
     raise HTTPException(status_code=404, detail="omnitrackr_favicon.ico not found")
+
+
+@app.get("/favicon.png")
+@app.head("/favicon.png")
+async def get_favicon_png():
+    """Serve favicon as PNG (redirects to .ico version)."""
+    favicon_file = os.path.join(os.path.dirname(__file__), "static", "omnitrackr_favicon.ico")
+    if os.path.exists(favicon_file):
+        return FileResponse(favicon_file, media_type="image/x-icon")
+    raise HTTPException(status_code=404, detail="favicon.png not found")
 
 
 def get_db():
