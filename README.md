@@ -15,7 +15,7 @@ OmniTrackr is a full-featured, multi-user web application for managing and track
 **Backend:**
 - FastAPI (Python web framework)
 - SQLAlchemy (ORM)
-- PostgreSQL / SQLite (Database)
+- PostgreSQL (Database)
 - JWT (Authentication)
 - bcrypt (Password hashing)
 - python-jose (JWT tokens)
@@ -39,159 +39,16 @@ OmniTrackr is a full-featured, multi-user web application for managing and track
 - **Password Reset:** Secure token-based password reset functionality
 - **Password Security:** bcrypt hashing for password storage
 - **CRUD API:** Full REST API for managing movies and TV shows
-- **PostgreSQL Database:** Production-ready database with SQLite fallback for local development
+- **PostgreSQL Database:** Production-ready database
 - **Search and Sort:** Filter by title/director and sort by rating or year
-- **Modern UI:** Responsive single-page application with dark mode support and landing page
-- **Poster Integration:** Automatic poster fetching from OMDB API with caching
+- **Modern UI:** Responsive single-page application with dark mode by default, modern card-based design, and beautiful landing page
+- **Poster Integration:** Automatic poster fetching from OMDB API with intelligent caching to reduce API calls
+- **Decimal Ratings:** Support for precise ratings from 0-10.0 with one decimal place (e.g., 7.5, 8.4)
 - **Export/Import:** JSON export/import with smart conflict resolution
-- **Statistics Dashboard:** Comprehensive analytics with watch progress, rating distributions, year analysis, and director insights
-- **Comprehensive Testing:** 83 unit tests covering all features and edge cases
+- **Statistics Dashboard:** Comprehensive analytics with animated visualizations, watch progress, rating distributions, year analysis, and director insights
+- **SEO Optimized:** Meta tags, structured data, sitemap, and robots.txt for better search engine visibility
+- **Security:** Security headers, bot filtering, and comprehensive protection against common web vulnerabilities
 
-## Local Development Setup
-
-### Prerequisites
-- Python 3.12+
-- PostgreSQL (optional - uses SQLite by default for local development)
-
-### Installation
-
-1. **Clone the repository and navigate to the project directory**
-
-2. **Create a virtual environment and install dependencies:**
-   ```bash
-   python -m venv venv
-   source venv/bin/activate  # On Windows: venv\Scripts\activate
-   pip install -r requirements.txt
-   ```
-
-3. **Configure environment variables:**
-   
-   Create a `.env` file in the project root:
-   ```env
-   # Database (optional - defaults to SQLite if not set)
-   DATABASE_URL=sqlite:///./movies.db
-   
-   # For PostgreSQL:
-   # DATABASE_URL=postgresql://user:password@localhost:5432/omnitrackr
-   
-   # Security (IMPORTANT: Change in production!)
-   SECRET_KEY=your-secret-key-here
-   
-   # Optional: OMDB API key for movie posters
-   OMDB_API_KEY=your-omdb-api-key
-   ```
-
-4. **Start the server:**
-   ```bash
-   # Using the start script
-   ./start.bat  # Windows
-   
-   # Or manually
-   uvicorn app.main:app --reload --port 8000
-   ```
-
-5. **Access the application:**
-   - **Web UI:** `http://127.0.0.1:8000`
-   - **API Documentation:** `http://127.0.0.1:8000/docs`
-   - **Register** a new account and start tracking your media!
-
-## Testing
-
-OmniTrackr includes a comprehensive test suite with **83 tests** covering all major functionality to ensure reliability and prevent regressions during development.
-
-### Running Tests
-
-```bash
-# Run all tests
-python -m pytest tests/ -v
-
-# Run with coverage report
-python -m pytest tests/ --cov=app --cov-report=html
-
-# Run specific test file
-python -m pytest tests/test_auth.py -v
-
-# Run specific test category
-python -m pytest tests/ -k statistics -v
-```
-
-### Test Coverage
-
-The test suite provides comprehensive coverage across all features:
-
-#### Authentication (`test_auth.py` - 20 tests)
-- Password hashing and verification
-- JWT token creation and validation
-- User registration (including duplicate email/username checks)
-- Login with username or email
-- Email verification workflow
-- Password reset functionality
-- Resend verification email
-- Unverified user login prevention
-
-#### CRUD Operations (`test_crud.py` - 12 tests)
-- User CRUD operations
-- Movie CRUD operations (create, read, update, delete)
-- TV Show CRUD operations (create, read, update, delete)
-- Search and filtering functionality
-
-#### API Endpoints (`test_api.py` - 31 tests)
-- **Movie Endpoints:** Full CRUD with search and sorting
-- **TV Show Endpoints:** Full CRUD with search and sorting
-- **Error Handling:** 404 responses for non-existent resources
-- **Authentication Requirements:** All protected endpoints
-- **Export/Import:** JSON export and file upload import
-- **Data Isolation:** Users cannot access each other's data
-- **File Import:** Validation and error handling
-
-#### Statistics (`test_statistics.py` - 8 tests)
-- Statistics dashboard endpoint
-- Watch statistics
-- Rating statistics
-- Year-based statistics
-- Director statistics
-- Empty data handling
-- Authentication requirements
-- User data isolation for statistics
-
-#### Email Utilities (`test_email.py` - 6 tests)
-- Verification token generation and validation
-- Reset token generation and validation
-- Token expiration handling
-- Token type differentiation
-
-### Test Architecture
-
-- **In-memory SQLite database** for fast, isolated test execution
-- **Fixtures** for reusable test data and authenticated clients
-- **Comprehensive error case testing** including 404s, validation errors, and unauthorized access
-- **Data isolation verification** ensuring multi-user security
-- **Edge case coverage** including empty data, invalid inputs, and missing fields
-
-All tests are designed to run independently and can be executed in parallel for faster feedback during development.
-
-## Production Deployment (Render)
-
-### Database Setup
-1. Create a PostgreSQL database on Render
-2. Copy the Internal Database URL
-
-### Web Service Setup
-1. Create a new Web Service on Render
-2. Connect your GitHub repository
-3. Configure:
-   - **Build Command:** `pip install -r requirements.txt`
-   - **Start Command:** `uvicorn app.main:app --host 0.0.0.0 --port $PORT`
-
-### Environment Variables
-Set these in your Render dashboard:
-```env
-DATABASE_URL=<your-postgresql-internal-url>
-SECRET_KEY=<generate-a-secure-random-string>
-OMDB_API_KEY=<your-omdb-api-key>
-```
-
-The application will automatically create database tables on first startup.
 
 ## Export/Import Functionality
 
@@ -227,10 +84,10 @@ OmniTrackr includes a comprehensive statistics dashboard accessible via the **�
 - **Separate tracking** for movies and TV shows
 
 ### Rating Analysis
-- **Average rating** across all rated items
-- **Rating distribution** with interactive bar charts (1-10 scale)
-- **Highest rated items** showing your top-rated movies and TV shows
-- **Visual representation** of your rating patterns
+- **Average rating** across all rated items (supports decimal ratings 0-10.0)
+- **Rating distribution** with interactive animated bar charts (1-10 scale, rounded for visualization)
+- **Highest and lowest rated items** showing your top and bottom-rated movies and TV shows
+- **Visual representation** of your rating patterns with modern gradient designs
 
 ### Year Analysis
 - **Oldest and newest** years in your collection
@@ -299,10 +156,11 @@ OmniTrackr uses a secure JWT-based authentication system:
 - **Search & Filter:** Search by title or director/creator and sort by rating or year
 - **Inline Editing:** Edit entries directly in the table with save/cancel options
 - **Delete:** Remove entries from your collection
-- **Night Mode:** Toggle between light and dark themes
+- **Dark Mode:** Beautiful dark theme by default with light mode toggle
+- **Modern UI:** Card-based design with smooth animations and gradients
 - **Tabbed Interface:** Switch between Movies, TV Shows, and Statistics
 - **Export/Import:** Backup your collection to JSON or import from JSON files
-- **Statistics Dashboard:** Comprehensive analytics showing your viewing habits and preferences
+- **Statistics Dashboard:** Comprehensive analytics with animated visualizations showing your viewing habits and preferences
 
 ### API Access
 Interactive API documentation is available at `/docs` with full Swagger UI for testing all endpoints.
@@ -353,18 +211,12 @@ All endpoints (except authentication) require a valid JWT token in the Authoriza
 <img width="2341" height="1789" alt="image" src="https://github.com/user-attachments/assets/1104c8c8-48c8-413d-811a-5b374a23e4af" />
 
 
-## Development Roadmap
-- [x] **Add notes/review section**
-- [x] **TV Shows compatibility**
-- [x] **Poster caching system**
-- [x] **Export/import functionality**
-- [x] **Statistics dashboard**
-- [x] **Migrate to server/client setup** - Deployed on Render with PostgreSQL
-- [x] **Account creation/login** - Full authentication system with JWT tokens
-- [x] **Security implementation** - JWT authentication, bcrypt password hashing, user isolation
-- [x] **Email verification**
-- [x] **Password reset functionality**
-- [ ] **Add friends to check each other's lists**
-- [ ] **Enhanced search and filtering**
-- [ ] **Social features (sharing lists, recommendations)**
+## Recent Updates
+
+- ✅ **Decimal Ratings:** Support for precise ratings from 0-10.0 with one decimal place
+- ✅ **Modern UI Redesign:** Card-based layouts, smooth animations, and gradient designs
+- ✅ **Statistics Panel Enhancement:** Animated visualizations and improved readability
+- ✅ **SEO Optimization:** Meta tags, structured data, sitemap, and robots.txt
+- ✅ **Security Improvements:** Security headers, bot filtering, and enhanced protection
+- ✅ **Performance Optimizations:** Poster caching, deduplication, and loading state management
 
