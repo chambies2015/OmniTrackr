@@ -80,7 +80,11 @@ def get_movie_by_id(db: Session, user_id: int, movie_id: int) -> Optional[models
 
 
 def create_movie(db: Session, user_id: int, movie: schemas.MovieCreate) -> models.Movie:
-    db_movie = models.Movie(**movie.dict(), user_id=user_id)
+    movie_dict = movie.dict()
+    # Round rating to one decimal place if provided
+    if movie_dict.get('rating') is not None:
+        movie_dict['rating'] = round(float(movie_dict['rating']), 1)
+    db_movie = models.Movie(**movie_dict, user_id=user_id)
     db.add(db_movie)
     db.commit()
     db.refresh(db_movie)
@@ -91,7 +95,11 @@ def update_movie(db: Session, user_id: int, movie_id: int, movie_update: schemas
     db_movie = get_movie_by_id(db, user_id, movie_id)
     if db_movie is None:
         return None
-    for field, value in movie_update.dict(exclude_unset=True).items():
+    update_dict = movie_update.dict(exclude_unset=True)
+    # Round rating to one decimal place if provided
+    if 'rating' in update_dict and update_dict['rating'] is not None:
+        update_dict['rating'] = round(float(update_dict['rating']), 1)
+    for field, value in update_dict.items():
         setattr(db_movie, field, value)
     db.commit()
     db.refresh(db_movie)
@@ -139,7 +147,11 @@ def get_tv_show_by_id(db: Session, user_id: int, tv_show_id: int) -> Optional[mo
 
 
 def create_tv_show(db: Session, user_id: int, tv_show: schemas.TVShowCreate) -> models.TVShow:
-    db_tv_show = models.TVShow(**tv_show.dict(), user_id=user_id)
+    tv_show_dict = tv_show.dict()
+    # Round rating to one decimal place if provided
+    if tv_show_dict.get('rating') is not None:
+        tv_show_dict['rating'] = round(float(tv_show_dict['rating']), 1)
+    db_tv_show = models.TVShow(**tv_show_dict, user_id=user_id)
     db.add(db_tv_show)
     db.commit()
     db.refresh(db_tv_show)
@@ -150,7 +162,11 @@ def update_tv_show(db: Session, user_id: int, tv_show_id: int, tv_show_update: s
     db_tv_show = get_tv_show_by_id(db, user_id, tv_show_id)
     if db_tv_show is None:
         return None
-    for field, value in tv_show_update.dict(exclude_unset=True).items():
+    update_dict = tv_show_update.dict(exclude_unset=True)
+    # Round rating to one decimal place if provided
+    if 'rating' in update_dict and update_dict['rating'] is not None:
+        update_dict['rating'] = round(float(update_dict['rating']), 1)
+    for field, value in update_dict.items():
         setattr(db_tv_show, field, value)
     db.commit()
     db.refresh(db_tv_show)
@@ -320,10 +336,11 @@ def get_rating_statistics(db: Session, user_id: int) -> dict:
     # Calculate average
     avg_rating = round(sum(all_ratings) / len(all_ratings), 1)
     
-    # Rating distribution (1-10)
+    # Rating distribution (1-10) - round decimal ratings to nearest integer
     distribution = {}
     for i in range(1, 11):
-        count = sum(1 for rating in all_ratings if rating == i)
+        # Round ratings to nearest integer for distribution buckets
+        count = sum(1 for rating in all_ratings if round(rating) == i)
         if count > 0:
             distribution[str(i)] = count
     

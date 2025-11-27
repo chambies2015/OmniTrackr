@@ -16,7 +16,7 @@ from starlette.responses import Response as StarletteResponse
 from sqlalchemy.orm import Session
 from sqlalchemy import inspect, text
 
-from . import crud, schemas, auth, models, email as email_utils
+from . import crud, schemas, auth, models, email as email_utils, database
 from .database import Base, SessionLocal, engine
 
 # Create the database tables
@@ -56,15 +56,35 @@ try:
                 print("Added created_at column to users table")
 
     # Check movies table for review and poster_url columns
-    existing_columns = {col["name"] for col in inspector.get_columns("movies")}
-    if "review" not in existing_columns:
-        with engine.connect() as conn:
-            conn.execute(text("ALTER TABLE movies ADD COLUMN review VARCHAR"))
-            conn.commit()
-    if "poster_url" not in existing_columns:
-        with engine.connect() as conn:
-            conn.execute(text("ALTER TABLE movies ADD COLUMN poster_url VARCHAR"))
-            conn.commit()
+    if inspector.has_table("movies"):
+        existing_columns = {col["name"] for col in inspector.get_columns("movies")}
+        if "review" not in existing_columns:
+            with engine.connect() as conn:
+                conn.execute(text("ALTER TABLE movies ADD COLUMN review VARCHAR"))
+                conn.commit()
+        if "poster_url" not in existing_columns:
+            with engine.connect() as conn:
+                conn.execute(text("ALTER TABLE movies ADD COLUMN poster_url VARCHAR"))
+                conn.commit()
+        
+        # Check if rating column exists and ensure it's FLOAT type (for decimal ratings support)
+        # This handles edge cases where rating might have been created as INTEGER
+        rating_column = next((col for col in inspector.get_columns("movies") if col["name"] == "rating"), None)
+        if rating_column:
+            # For SQLite, we can't directly change column type, but INTEGER values work fine in FLOAT columns
+            # For PostgreSQL, we can alter the column type if needed
+            if database.DATABASE_URL.startswith("postgresql"):
+                # Check if it's not already a float/numeric type
+                col_type = str(rating_column.get("type", "")).upper()
+                if "INT" in col_type and "FLOAT" not in col_type and "NUMERIC" not in col_type and "REAL" not in col_type:
+                    try:
+                        with engine.connect() as conn:
+                            # PostgreSQL: Convert INTEGER to FLOAT
+                            conn.execute(text("ALTER TABLE movies ALTER COLUMN rating TYPE FLOAT USING rating::float"))
+                            conn.commit()
+                            print("Converted movies.rating column from INTEGER to FLOAT")
+                    except Exception as e:
+                        print(f"Note: Could not convert movies.rating column type (may already be correct): {e}")
 
     # Check tv_shows table for schema migration
     if inspector.has_table("tv_shows"):
@@ -112,6 +132,25 @@ try:
                 with engine.connect() as conn:
                     conn.execute(text("ALTER TABLE tv_shows ADD COLUMN poster_url VARCHAR"))
                     conn.commit()
+            
+            # Check if rating column exists and ensure it's FLOAT type (for decimal ratings support)
+            # This handles edge cases where rating might have been created as INTEGER
+            rating_column = next((col for col in inspector.get_columns("tv_shows") if col["name"] == "rating"), None)
+            if rating_column:
+                # For SQLite, we can't directly change column type, but INTEGER values work fine in FLOAT columns
+                # For PostgreSQL, we can alter the column type if needed
+                if database.DATABASE_URL.startswith("postgresql"):
+                    # Check if it's not already a float/numeric type
+                    col_type = str(rating_column.get("type", "")).upper()
+                    if "INT" in col_type and "FLOAT" not in col_type and "NUMERIC" not in col_type and "REAL" not in col_type:
+                        try:
+                            with engine.connect() as conn:
+                                # PostgreSQL: Convert INTEGER to FLOAT
+                                conn.execute(text("ALTER TABLE tv_shows ALTER COLUMN rating TYPE FLOAT USING rating::float"))
+                                conn.commit()
+                                print("Converted tv_shows.rating column from INTEGER to FLOAT")
+                        except Exception as e:
+                            print(f"Note: Could not convert tv_shows.rating column type (may already be correct): {e}")
 
 except Exception as e:
     # Best-effort migration; avoid crashing app startup if inspection fails

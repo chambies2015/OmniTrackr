@@ -94,7 +94,7 @@ async function loadMovies() {
           <td>${movie.title}</td>
           <td>${movie.director}</td>
           <td>${movie.year}</td>
-          <td>${movie.rating !== null && movie.rating !== undefined ? movie.rating + '/10' : ''}</td>
+          <td>${movie.rating !== null && movie.rating !== undefined ? parseFloat(movie.rating).toFixed(1) + '/10' : ''}</td>
           <td>${movie.watched}</td>
           <td>${movie.review ? movie.review : ''}</td>
           <td><a href="https://www.imdb.com/find?q=${encodeURIComponent(movie.title)}" target="_blank">Search</a></td>
@@ -232,7 +232,7 @@ window.enableMovieEdit = function (btn, id, encTitle, encDirector, year, rating,
   row.cells[1].innerHTML = `<input type="text" id="edit-movie-title" value="${title}">`;
   row.cells[2].innerHTML = `<input type="text" id="edit-movie-director" value="${director}">`;
   row.cells[3].innerHTML = `<input type="number" id="edit-movie-year" value="${year}">`;
-  row.cells[4].innerHTML = `<input type="number" min="0" max="10" id="edit-movie-rating" value="${ratingVal}">`;
+  row.cells[4].innerHTML = `<input type="number" min="0" max="10" step="0.1" id="edit-movie-rating" value="${ratingVal}">`;
   row.cells[5].innerHTML = `<input type="checkbox" id="edit-movie-watched" ${watched ? 'checked' : ''}>`;
   row.cells[6].innerHTML = `<input type="text" id="edit-movie-review" value="${review}">`;
   row.cells[8].innerHTML = `
@@ -251,7 +251,7 @@ window.saveMovieEdit = async function (id) {
     watched: document.getElementById('edit-movie-watched').checked,
   };
   const ratingVal = document.getElementById('edit-movie-rating').value;
-  if (ratingVal) updated.rating = parseInt(ratingVal, 10);
+  if (ratingVal) updated.rating = parseFloat(ratingVal);
   const reviewVal = document.getElementById('edit-movie-review') ? document.getElementById('edit-movie-review').value : '';
   if (reviewVal !== undefined) updated.review = reviewVal;
   const res = await authenticatedFetch(`${API_BASE}/movies/${id}`, {
@@ -314,7 +314,7 @@ async function loadTVShows() {
           <td>${tvShow.year}</td>
           <td>${tvShow.seasons ?? ''}</td>
           <td>${tvShow.episodes ?? ''}</td>
-          <td>${tvShow.rating !== null && tvShow.rating !== undefined ? tvShow.rating + '/10' : ''}</td>
+          <td>${tvShow.rating !== null && tvShow.rating !== undefined ? parseFloat(tvShow.rating).toFixed(1) + '/10' : ''}</td>
           <td>${tvShow.watched}</td>
           <td>${tvShow.review ? tvShow.review : ''}</td>
           <td><a href="https://www.imdb.com/find?q=${encodeURIComponent(tvShow.title)}" target="_blank">Search</a></td>
@@ -452,7 +452,7 @@ window.enableTVEdit = function (btn, id, encTitle, year, seasons, episodes, rati
   row.cells[2].innerHTML = `<input type="number" id="edit-tv-year" value="${year}">`;
   row.cells[3].innerHTML = `<input type="number" id="edit-tv-seasons" value="${seasons !== 'null' ? seasons : ''}">`;
   row.cells[4].innerHTML = `<input type="number" id="edit-tv-episodes" value="${episodes !== 'null' ? episodes : ''}">`;
-  row.cells[5].innerHTML = `<input type="number" min="0" max="10" id="edit-tv-rating" value="${ratingVal}">`;
+  row.cells[5].innerHTML = `<input type="number" min="0" max="10" step="0.1" id="edit-tv-rating" value="${ratingVal}">`;
   row.cells[6].innerHTML = `<input type="checkbox" id="edit-tv-watched" ${watched ? 'checked' : ''}>`;
   row.cells[7].innerHTML = `<input type="text" id="edit-tv-review" value="${review}">`;
   row.cells[9].innerHTML = `
@@ -474,7 +474,7 @@ window.saveTVEdit = async function (id) {
   const episodesVal = document.getElementById('edit-tv-episodes').value;
   if (episodesVal) updated.episodes = parseInt(episodesVal, 10);
   const ratingVal = document.getElementById('edit-tv-rating').value;
-  if (ratingVal) updated.rating = parseInt(ratingVal, 10);
+  if (ratingVal) updated.rating = parseFloat(ratingVal);
   const reviewVal = document.getElementById('edit-tv-review') ? document.getElementById('edit-tv-review').value : '';
   if (reviewVal !== undefined) updated.review = reviewVal;
   const res = await authenticatedFetch(`${API_BASE}/tv-shows/${id}`, {
@@ -507,7 +507,7 @@ document.getElementById('addMovieForm').onsubmit = async function (e) {
     watched: document.getElementById('movieWatched').checked,
   };
   const ratingVal = document.getElementById('movieRating').value;
-  if (ratingVal) movie.rating = parseInt(ratingVal, 10);
+  if (ratingVal) movie.rating = parseFloat(ratingVal);
   const reviewVal = document.getElementById('movieReview').value;
   if (reviewVal) movie.review = reviewVal;
   const response = await authenticatedFetch(`${API_BASE}/movies/`, {
@@ -533,7 +533,7 @@ document.getElementById('addTVShowForm').onsubmit = async function (e) {
   const episodesVal = document.getElementById('tvEpisodes').value;
   if (episodesVal) tvShow.episodes = parseInt(episodesVal, 10);
   const ratingVal = document.getElementById('tvRating').value;
-  if (ratingVal) tvShow.rating = parseInt(ratingVal, 10);
+  if (ratingVal) tvShow.rating = parseFloat(ratingVal);
   const reviewVal = document.getElementById('tvReview').value;
   if (reviewVal) tvShow.review = reviewVal;
   const response = await authenticatedFetch(`${API_BASE}/tv-shows/`, {
@@ -645,19 +645,21 @@ async function loadStatistics() {
 }
 
 function displayStatistics(stats) {
-  // Watch statistics
-  document.getElementById('totalItems').textContent = stats.watch_stats.total_items;
-  document.getElementById('watchedItems').textContent = stats.watch_stats.watched_items;
-  document.getElementById('unwatchedItems').textContent = stats.watch_stats.unwatched_items;
-  document.getElementById('completionPercentage').textContent = stats.watch_stats.completion_percentage + '%';
+  // Watch statistics with animation
+  animateValue('totalItems', 0, stats.watch_stats.total_items, 800);
+  animateValue('watchedItems', 0, stats.watch_stats.watched_items, 800);
+  animateValue('unwatchedItems', 0, stats.watch_stats.unwatched_items, 800);
+  animatePercentage('completionPercentage', 0, stats.watch_stats.completion_percentage, 1000);
 
-  // Progress bar
+  // Progress bar with animation
   const progressFill = document.getElementById('progressFill');
-  progressFill.style.width = stats.watch_stats.completion_percentage + '%';
+  setTimeout(() => {
+    progressFill.style.width = stats.watch_stats.completion_percentage + '%';
+  }, 100);
 
-  // Rating statistics
-  document.getElementById('averageRating').textContent = stats.rating_stats.average_rating;
-  document.getElementById('totalRatedItems').textContent = stats.rating_stats.total_rated_items;
+  // Rating statistics with animation
+  animateDecimal('averageRating', 0, parseFloat(stats.rating_stats.average_rating), 800);
+  animateValue('totalRatedItems', 0, stats.rating_stats.total_rated_items, 800);
 
   // Rating distribution
   displayRatingDistribution(stats.rating_stats.rating_distribution);
@@ -666,8 +668,18 @@ function displayStatistics(stats) {
   displayHighestRated(stats.rating_stats.highest_rated);
 
   // Year statistics
-  document.getElementById('oldestYear').textContent = stats.year_stats.oldest_year || '-';
-  document.getElementById('newestYear').textContent = stats.year_stats.newest_year || '-';
+  const oldestYear = stats.year_stats.oldest_year || '-';
+  const newestYear = stats.year_stats.newest_year || '-';
+  if (oldestYear !== '-') {
+    animateValue('oldestYear', parseInt(oldestYear) - 10, oldestYear, 600);
+  } else {
+    document.getElementById('oldestYear').textContent = '-';
+  }
+  if (newestYear !== '-') {
+    animateValue('newestYear', parseInt(newestYear) - 10, newestYear, 600);
+  } else {
+    document.getElementById('newestYear').textContent = '-';
+  }
 
   // Decade statistics
   displayDecadeStats(stats.year_stats.decade_stats);
@@ -675,6 +687,60 @@ function displayStatistics(stats) {
   // Director statistics
   displayTopDirectors(stats.director_stats.top_directors);
   displayHighestRatedDirectors(stats.director_stats.highest_rated_directors);
+}
+
+// Animation helper functions
+function animateValue(elementId, start, end, duration) {
+  const element = document.getElementById(elementId);
+  if (!element) return;
+  
+  const startTime = performance.now();
+  const isPercentage = elementId === 'completionPercentage';
+  
+  function update(currentTime) {
+    const elapsed = currentTime - startTime;
+    const progress = Math.min(elapsed / duration, 1);
+    const easeOut = 1 - Math.pow(1 - progress, 3);
+    const current = Math.floor(start + (end - start) * easeOut);
+    
+    element.textContent = isPercentage ? current + '%' : current;
+    
+    if (progress < 1) {
+      requestAnimationFrame(update);
+    } else {
+      element.textContent = isPercentage ? end + '%' : end;
+    }
+  }
+  
+  requestAnimationFrame(update);
+}
+
+function animatePercentage(elementId, start, end, duration) {
+  animateValue(elementId, start, end, duration);
+}
+
+function animateDecimal(elementId, start, end, duration) {
+  const element = document.getElementById(elementId);
+  if (!element) return;
+  
+  const startTime = performance.now();
+  
+  function update(currentTime) {
+    const elapsed = currentTime - startTime;
+    const progress = Math.min(elapsed / duration, 1);
+    const easeOut = 1 - Math.pow(1 - progress, 3);
+    const current = start + (end - start) * easeOut;
+    
+    element.textContent = current.toFixed(1);
+    
+    if (progress < 1) {
+      requestAnimationFrame(update);
+    } else {
+      element.textContent = end.toFixed(1);
+    }
+  }
+  
+  requestAnimationFrame(update);
 }
 
 function displayRatingDistribution(distribution) {
@@ -691,12 +757,47 @@ function displayRatingDistribution(distribution) {
 
     const barDiv = document.createElement('div');
     barDiv.className = 'rating-bar';
-    barDiv.innerHTML = `
-      <div class="rating-bar-label">${rating}</div>
-      <div class="rating-bar-fill" style="width: ${percentage}%"></div>
-      <div class="rating-bar-count">${count}</div>
-    `;
+    barDiv.style.opacity = '0';
+    barDiv.style.transform = 'translateX(-20px)';
+    
+    const labelDiv = document.createElement('div');
+    labelDiv.className = 'rating-bar-label';
+    labelDiv.textContent = rating;
+    
+    // Create a wrapper for the fill bar to control its width properly
+    const fillWrapper = document.createElement('div');
+    fillWrapper.style.flex = '1';
+    fillWrapper.style.minWidth = '0';
+    fillWrapper.style.position = 'relative';
+    
+    const fillDiv = document.createElement('div');
+    fillDiv.className = 'rating-bar-fill';
+    fillDiv.style.width = '0%';
+    fillDiv.style.position = 'absolute';
+    fillDiv.style.left = '0';
+    fillDiv.style.top = '0';
+    fillDiv.style.bottom = '0';
+    
+    fillWrapper.appendChild(fillDiv);
+    
+    const countDiv = document.createElement('div');
+    countDiv.className = 'rating-bar-count';
+    countDiv.textContent = count;
+    
+    barDiv.appendChild(labelDiv);
+    barDiv.appendChild(fillWrapper);
+    barDiv.appendChild(countDiv);
     container.appendChild(barDiv);
+    
+    // Animate bar appearance
+    setTimeout(() => {
+      barDiv.style.transition = 'opacity 0.3s ease, transform 0.3s ease';
+      barDiv.style.opacity = '1';
+      barDiv.style.transform = 'translateX(0)';
+      setTimeout(() => {
+        fillDiv.style.width = percentage + '%';
+      }, 100);
+    }, rating * 50);
   }
 }
 
@@ -705,18 +806,27 @@ function displayHighestRated(items) {
   container.innerHTML = '';
 
   if (items.length === 0) {
-    container.innerHTML = '<p>No rated items found.</p>';
+    container.innerHTML = '<p style="text-align: center; color: var(--fg); opacity: 0.6; padding: 20px;">No rated items found.</p>';
     return;
   }
 
-  items.forEach(item => {
+  items.forEach((item, index) => {
     const itemDiv = document.createElement('div');
     itemDiv.className = 'rated-item';
+    itemDiv.style.opacity = '0';
+    itemDiv.style.transform = 'translateY(10px)';
     itemDiv.innerHTML = `
-      <div class="rated-item-title">${item.title} (${item.type})</div>
-      <div class="rated-item-rating">${item.rating}/10</div>
+      <div class="rated-item-title">${item.title} <span style="opacity: 0.6; font-size: 0.9em;">(${item.type})</span></div>
+      <div class="rated-item-rating">${parseFloat(item.rating).toFixed(1)}/10</div>
     `;
     container.appendChild(itemDiv);
+    
+    // Animate item appearance
+    setTimeout(() => {
+      itemDiv.style.transition = 'opacity 0.3s ease, transform 0.3s ease';
+      itemDiv.style.opacity = '1';
+      itemDiv.style.transform = 'translateY(0)';
+    }, index * 100);
   });
 }
 
@@ -732,18 +842,53 @@ function displayDecadeStats(decadeStats) {
   );
   const maxCount = totals.length > 0 ? Math.max(...totals) : 1;
 
-  decades.forEach(decade => {
+  decades.forEach((decade, index) => {
     const total = (decadeStats[decade].movies || 0) + (decadeStats[decade].tv_shows || 0);
     const percentage = maxCount > 0 ? (total / maxCount) * 100 : 0;
 
     const barDiv = document.createElement('div');
     barDiv.className = 'decade-bar';
-    barDiv.innerHTML = `
-      <div class="decade-bar-label">${decade}</div>
-      <div class="decade-bar-fill" style="width: ${percentage}%"></div>
-      <div class="decade-bar-count">${total}</div>
-    `;
+    barDiv.style.opacity = '0';
+    barDiv.style.transform = 'translateX(-20px)';
+    
+    const labelDiv = document.createElement('div');
+    labelDiv.className = 'decade-bar-label';
+    labelDiv.textContent = decade;
+    
+    // Create a wrapper for the fill bar to control its width properly
+    const fillWrapper = document.createElement('div');
+    fillWrapper.style.flex = '1';
+    fillWrapper.style.minWidth = '0';
+    fillWrapper.style.position = 'relative';
+    
+    const fillDiv = document.createElement('div');
+    fillDiv.className = 'decade-bar-fill';
+    fillDiv.style.width = '0%';
+    fillDiv.style.position = 'absolute';
+    fillDiv.style.left = '0';
+    fillDiv.style.top = '0';
+    fillDiv.style.bottom = '0';
+    
+    fillWrapper.appendChild(fillDiv);
+    
+    const countDiv = document.createElement('div');
+    countDiv.className = 'decade-bar-count';
+    countDiv.textContent = total;
+    
+    barDiv.appendChild(labelDiv);
+    barDiv.appendChild(fillWrapper);
+    barDiv.appendChild(countDiv);
     container.appendChild(barDiv);
+    
+    // Animate bar appearance
+    setTimeout(() => {
+      barDiv.style.transition = 'opacity 0.3s ease, transform 0.3s ease';
+      barDiv.style.opacity = '1';
+      barDiv.style.transform = 'translateX(0)';
+      setTimeout(() => {
+        fillDiv.style.width = percentage + '%';
+      }, 100);
+    }, index * 80);
   });
 }
 
@@ -752,18 +897,27 @@ function displayTopDirectors(directors) {
   container.innerHTML = '';
 
   if (directors.length === 0) {
-    container.innerHTML = '<p>No directors found.</p>';
+    container.innerHTML = '<p style="text-align: center; color: var(--fg); opacity: 0.6; padding: 20px;">No directors found.</p>';
     return;
   }
 
-  directors.forEach(director => {
+  directors.forEach((director, index) => {
     const directorDiv = document.createElement('div');
     directorDiv.className = 'director-item';
+    directorDiv.style.opacity = '0';
+    directorDiv.style.transform = 'translateX(-10px)';
     directorDiv.innerHTML = `
       <div class="director-name">${director.director}</div>
-      <div class="director-rating">${director.count} movies</div>
+      <div class="director-rating">${director.count} ${director.count === 1 ? 'movie' : 'movies'}</div>
     `;
     container.appendChild(directorDiv);
+    
+    // Animate item appearance
+    setTimeout(() => {
+      directorDiv.style.transition = 'opacity 0.3s ease, transform 0.3s ease';
+      directorDiv.style.opacity = '1';
+      directorDiv.style.transform = 'translateX(0)';
+    }, index * 80);
   });
 }
 
@@ -772,18 +926,27 @@ function displayHighestRatedDirectors(directors) {
   container.innerHTML = '';
 
   if (directors.length === 0) {
-    container.innerHTML = '<p>No rated directors found.</p>';
+    container.innerHTML = '<p style="text-align: center; color: var(--fg); opacity: 0.6; padding: 20px;">No rated directors found.</p>';
     return;
   }
 
-  directors.forEach(director => {
+  directors.forEach((director, index) => {
     const directorDiv = document.createElement('div');
     directorDiv.className = 'director-item';
+    directorDiv.style.opacity = '0';
+    directorDiv.style.transform = 'translateX(-10px)';
     directorDiv.innerHTML = `
       <div class="director-name">${director.director}</div>
-      <div class="director-rating">${director.avg_rating}/10 (${director.count} movies)</div>
+      <div class="director-rating">${director.avg_rating.toFixed(1)}/10 <span style="opacity: 0.7; font-size: 0.9em;">(${director.count} ${director.count === 1 ? 'movie' : 'movies'})</span></div>
     `;
     container.appendChild(directorDiv);
+    
+    // Animate item appearance
+    setTimeout(() => {
+      directorDiv.style.transition = 'opacity 0.3s ease, transform 0.3s ease';
+      directorDiv.style.opacity = '1';
+      directorDiv.style.transform = 'translateX(0)';
+    }, index * 80);
   });
 }
 

@@ -56,8 +56,8 @@ class MovieBase(BaseModel):
     title: str = Field(..., description="Title of the movie or book")
     director: str = Field(..., description="Director or author")
     year: int = Field(..., ge=0, description="Year of release or publication")
-    rating: Optional[int] = Field(
-        None, ge=0, le=10, description="Rating out of 10 (0-10)"
+    rating: Optional[float] = Field(
+        None, ge=0, le=10, description="Rating out of 10 (0-10.0, one decimal place)"
     )  # rating is now optional
     watched: Optional[bool] = Field(False, description="Whether it has been watched/read")
     review: Optional[str] = Field(None, description="Optional review/notes for the entry")
@@ -72,7 +72,7 @@ class MovieUpdate(BaseModel):
     title: Optional[str] = None
     director: Optional[str] = None
     year: Optional[int] = Field(None, ge=0)
-    rating: Optional[int] = Field(None, ge=0, le=10)
+    rating: Optional[float] = Field(None, ge=0, le=10)
     watched: Optional[bool] = None
     review: Optional[str] = None
     poster_url: Optional[str] = None
@@ -90,7 +90,7 @@ class TVShowBase(BaseModel):
     year: int = Field(..., ge=0, description="Year of the TV show")
     seasons: Optional[int] = Field(None, ge=0, description="Number of seasons")
     episodes: Optional[int] = Field(None, ge=0, description="Total number of episodes")
-    rating: Optional[int] = Field(None, ge=0, le=10, description="Rating out of 10 (0-10)")
+    rating: Optional[float] = Field(None, ge=0, le=10, description="Rating out of 10 (0-10.0, one decimal place)")
     watched: Optional[bool] = Field(False, description="Whether it has been watched")
     review: Optional[str] = Field(None, description="Optional review/notes for the entry")
     poster_url: Optional[str] = Field(None, description="URL of the TV show poster")
@@ -105,7 +105,7 @@ class TVShowUpdate(BaseModel):
     year: Optional[int] = Field(None, ge=0)
     seasons: Optional[int] = Field(None, ge=0)
     episodes: Optional[int] = Field(None, ge=0)
-    rating: Optional[int] = Field(None, ge=0, le=10)
+    rating: Optional[float] = Field(None, ge=0, le=10)
     watched: Optional[bool] = None
     review: Optional[str] = None
     poster_url: Optional[str] = None
@@ -169,7 +169,7 @@ class RatingItem(BaseModel):
     """Schema for rated items in statistics"""
     title: str = Field(..., description="Title of the item")
     type: str = Field(..., description="Type (Movie or TV Show)")
-    rating: int = Field(..., description="Rating of the item")
+    rating: float = Field(..., description="Rating of the item")
 
 
 class RatingStatistics(BaseModel):
