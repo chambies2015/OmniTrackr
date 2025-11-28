@@ -374,7 +374,17 @@ function displayTVPoster(id, posterUrl, title = null) {
         altText = `${row.cells[1].textContent} TV show poster`;
       }
     }
-    cell.innerHTML = `<img src="${posterUrl}" alt="${altText}" style="width: 60px; max-height: 90px; object-fit: cover; border-radius: 4px;" loading="lazy">`;
+    // Construct image via DOM methods to avoid XSS
+    cell.innerHTML = '';
+    const img = document.createElement('img');
+    img.src = posterUrl;
+    img.alt = altText;
+    img.style.width = '60px';
+    img.style.maxHeight = '90px';
+    img.style.objectFit = 'cover';
+    img.style.borderRadius = '4px';
+    img.loading = 'lazy';
+    cell.appendChild(img);
   }
 }
 
