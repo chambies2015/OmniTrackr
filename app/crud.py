@@ -598,6 +598,14 @@ def accept_friend_request(db: Session, request_id: int, user_id: int) -> Optiona
         db.commit()
         raise ValueError("Friend request has expired")
     
+    # Delete the notification for the receiver (the one who received the friend request)
+    notification = db.query(models.Notification).filter(
+        models.Notification.friend_request_id == request_id,
+        models.Notification.user_id == user_id
+    ).first()
+    if notification:
+        db.delete(notification)
+    
     # Update request status
     friend_request.status = "accepted"
     db.commit()
@@ -635,6 +643,14 @@ def deny_friend_request(db: Session, request_id: int, user_id: int) -> Optional[
     
     if friend_request.status != "pending":
         raise ValueError("Friend request is not pending")
+    
+    # Delete the notification for the receiver (the one who received the friend request)
+    notification = db.query(models.Notification).filter(
+        models.Notification.friend_request_id == request_id,
+        models.Notification.user_id == user_id
+    ).first()
+    if notification:
+        db.delete(notification)
     
     # Update request status
     friend_request.status = "denied"
