@@ -70,12 +70,6 @@ OmniTrackr now includes powerful export/import capabilities:
 - Import results show how many items were created vs updated
 - Any errors during import are reported for easy troubleshooting
 
-### API Endpoints
-The export/import functionality is also available via API:
-- `GET /export/` - Export all data as JSON
-- `POST /import/` - Import data from JSON payload
-- `POST /import/file/` - Import data from uploaded JSON file
-
 ## Friends & Social Features
 
 OmniTrackr includes a complete social system for connecting with other users:
@@ -145,14 +139,6 @@ OmniTrackr includes a comprehensive statistics dashboard accessible via the **ðŸ
 - **Most prolific directors** (directors with the most movies in your collection)
 - **Highest rated directors** (directors with the best average ratings)
 - **Director insights** to discover your favorite filmmakers
-
-### API Endpoints
-The statistics are also available via API:
-- `GET /statistics/` - Complete statistics dashboard
-- `GET /statistics/watch/` - Watch progress statistics
-- `GET /statistics/ratings/` - Rating analysis
-- `GET /statistics/years/` - Year-based statistics
-- `GET /statistics/directors/` - Director statistics
 
 ## Authentication System
 
