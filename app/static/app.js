@@ -1085,8 +1085,16 @@ window.changeUsername = async function(event) {
       // Show success message and inform user to relogin
       alert('Username changed successfully! Please login again with your new username.');
       
-      // Logout user since JWT token contains old username and is now invalid
-      logout();
+      // Force logout without confirmation (JWT token contains old username and is now invalid)
+      // Use clearAuth from auth.js (available globally)
+      if (typeof clearAuth === 'function') {
+        clearAuth();
+      } else {
+        // Fallback: clear localStorage directly
+        localStorage.removeItem('omnitrackr_token');
+        localStorage.removeItem('omnitrackr_user');
+      }
+      location.reload();
     } else {
       const error = await response.json();
       errorEl.textContent = error.detail || 'Failed to change username';
