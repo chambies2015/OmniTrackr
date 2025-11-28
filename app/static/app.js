@@ -1566,6 +1566,18 @@ document.addEventListener('DOMContentLoaded', function() {
     }
   });
   
+  // Set up friends sidebar toggle
+  const toggleFriendsSidebarBtn = document.getElementById('toggleFriendsSidebar');
+  if (toggleFriendsSidebarBtn) {
+    toggleFriendsSidebarBtn.addEventListener('click', toggleFriendsSidebar);
+  }
+  
+  // Set up floating toggle button
+  const showFriendsSidebarBtn = document.getElementById('showFriendsSidebar');
+  if (showFriendsSidebarBtn) {
+    showFriendsSidebarBtn.addEventListener('click', showFriendsSidebar);
+  }
+  
   // Load friends list and notification count on page load (if logged in)
   if (isAuthenticated()) {
     loadFriendsList();
@@ -1577,10 +1589,87 @@ document.addEventListener('DOMContentLoaded', function() {
       friendsSidebar.style.display = 'block';
     }
     
+    // Restore sidebar state from localStorage
+    restoreSidebarState();
+    
     // Set up interval to refresh notification count every 30 seconds
     notificationCountInterval = setInterval(updateNotificationCount, 30000);
   }
 });
+
+// Toggle friends sidebar visibility
+window.toggleFriendsSidebar = function() {
+  const sidebar = document.getElementById('friendsSidebar');
+  const container = document.querySelector('.container');
+  const toggleBtn = document.getElementById('toggleFriendsSidebar');
+  const floatingToggleBtn = document.getElementById('showFriendsSidebar');
+  const footer = document.getElementById('mainFooter');
+  const notificationBell = document.getElementById('notificationBell');
+  
+  if (!sidebar || !container) return;
+  
+  const isHidden = sidebar.classList.contains('hidden');
+  
+  if (isHidden) {
+    // Show sidebar
+    sidebar.classList.remove('hidden');
+    container.classList.remove('sidebar-hidden');
+    if (toggleBtn) {
+      toggleBtn.textContent = '◀';
+      toggleBtn.title = 'Hide Friends Sidebar';
+    }
+    if (floatingToggleBtn) floatingToggleBtn.style.display = 'none';
+    if (footer) footer.classList.remove('sidebar-hidden');
+    if (notificationBell) notificationBell.style.left = '270px';
+  } else {
+    // Hide sidebar
+    sidebar.classList.add('hidden');
+    container.classList.add('sidebar-hidden');
+    if (toggleBtn) {
+      toggleBtn.textContent = '▶';
+      toggleBtn.title = 'Show Friends Sidebar';
+    }
+    if (floatingToggleBtn) floatingToggleBtn.style.display = 'flex';
+    if (footer) footer.classList.add('sidebar-hidden');
+    if (notificationBell) notificationBell.style.left = '20px';
+  }
+  
+  // Save preference to localStorage
+  localStorage.setItem('friendsSidebarHidden', !isHidden);
+};
+
+// Show sidebar from floating button
+window.showFriendsSidebar = function() {
+  toggleFriendsSidebar();
+};
+
+// Restore sidebar state from localStorage (called from main DOMContentLoaded)
+function restoreSidebarState() {
+  const sidebarHidden = localStorage.getItem('friendsSidebarHidden') === 'true';
+  if (sidebarHidden && isAuthenticated()) {
+    // Wait a bit for sidebar to be shown first, then hide it
+    setTimeout(() => {
+      const sidebar = document.getElementById('friendsSidebar');
+      const container = document.querySelector('.container');
+      const toggleBtn = document.getElementById('toggleFriendsSidebar');
+      const floatingToggleBtn = document.getElementById('showFriendsSidebar');
+      const footer = document.getElementById('mainFooter');
+      const notificationBell = document.getElementById('notificationBell');
+      
+      if (sidebar && container) {
+        sidebar.classList.add('hidden');
+        container.classList.add('sidebar-hidden');
+        if (toggleBtn) {
+          toggleBtn.textContent = '▶';
+          toggleBtn.title = 'Show Friends Sidebar';
+        }
+        if (floatingToggleBtn) floatingToggleBtn.style.display = 'flex';
+        if (footer) footer.classList.add('sidebar-hidden');
+        if (notificationBell) notificationBell.style.left = '20px';
+      }
+    }, 100);
+  }
+}
 
 // Load initial data
 loadMovies();

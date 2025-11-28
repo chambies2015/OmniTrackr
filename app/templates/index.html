@@ -155,13 +155,19 @@
   <!-- Friends Sidebar -->
   <aside id="friendsSidebar" class="friends-sidebar" style="display: none;">
     <div class="friends-sidebar-header">
-      <h2>Friends</h2>
+      <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px;">
+        <h2 style="margin: 0;">Friends</h2>
+        <button id="toggleFriendsSidebar" class="sidebar-toggle-btn" title="Hide Friends Sidebar" aria-label="Hide friends sidebar">◀</button>
+      </div>
       <button id="sendFriendRequestBtn" class="action-btn">+ Add Friend</button>
     </div>
     <div id="friendsList" class="friends-list">
       <p class="no-friends">No friends yet</p>
     </div>
   </aside>
+  
+  <!-- Floating Toggle Button (shown when sidebar is hidden) -->
+  <button id="showFriendsSidebar" class="sidebar-toggle-floating" title="Show Friends Sidebar" aria-label="Show friends sidebar" style="display: none;">▶</button>
   
   <main class="container" id="mainContainer">
     <header class="header" role="banner">

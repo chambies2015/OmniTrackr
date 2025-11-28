@@ -37,20 +37,32 @@ body {
 }
 
 .container {
-  max-width: 1200px;
+  max-width: 1400px;
   padding: 0 20px;
   box-sizing: border-box;
   /* Default: account for sidebar */
   margin-left: 250px;
   margin-right: auto;
+  transition: margin-left 0.3s ease, max-width 0.3s ease;
+}
+
+/* When sidebar is hidden */
+.container.sidebar-hidden {
+  margin-left: 0;
+  max-width: 1600px;
 }
 
 /* When viewport is wide enough (sidebar + container + some space), center the container */
-@media (min-width: 1470px) {
+@media (min-width: 1650px) {
   .container {
-    /* Center 1200px container: sidebar (250px) + half of remaining space */
-    margin-left: calc(250px + (100% - 250px - 1200px) / 2);
-    max-width: 1200px;
+    /* Center 1400px container: sidebar (250px) + half of remaining space */
+    margin-left: calc(250px + (100% - 250px - 1400px) / 2);
+    max-width: 1400px;
+  }
+  
+  .container.sidebar-hidden {
+    margin-left: calc((100% - 1600px) / 2);
+    max-width: 1600px;
   }
 }
 
@@ -1338,11 +1350,20 @@ body.dark-mode .user-display-btn {
 /* When logged in, footer should start after the sidebar */
 #mainContainer .landing-footer {
   left: 250px; /* Account for friends sidebar width */
+  transition: left 0.3s ease;
+}
+
+#mainContainer .landing-footer.sidebar-hidden {
+  left: 0;
 }
 
 @media (max-width: 768px) {
   #mainContainer .landing-footer {
     left: 200px; /* Account for smaller sidebar on mobile */
+  }
+  
+  #mainContainer .landing-footer.sidebar-hidden {
+    left: 0;
   }
 }
 
@@ -1708,6 +1729,19 @@ body.dark-mode .success-message {
   overflow-y: auto;
   z-index: 100;
   box-shadow: 2px 0 10px rgba(0, 0, 0, 0.1);
+  transition: transform 0.3s ease, width 0.3s ease;
+}
+
+.friends-sidebar.hidden {
+  transform: translateX(-100%);
+  width: 0;
+  padding: 0;
+  border-right: none;
+}
+
+.friends-sidebar.hidden .friends-sidebar-header,
+.friends-sidebar.hidden #friendsList {
+  display: none;
 }
 
 .friends-sidebar-header {
@@ -1726,6 +1760,56 @@ body.dark-mode .success-message {
   width: 100%;
   padding: 10px;
   font-size: 0.9rem;
+}
+
+.sidebar-toggle-btn {
+  background: var(--primary);
+  color: white;
+  border: none;
+  border-radius: 50%;
+  width: 30px;
+  height: 30px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 0.9rem;
+  transition: all 0.2s ease;
+  padding: 0;
+  flex-shrink: 0;
+}
+
+.sidebar-toggle-btn:hover {
+  background: var(--primary-hover);
+  transform: scale(1.1);
+}
+
+/* Floating toggle button is controlled by JavaScript, not CSS sibling selector */
+
+.sidebar-toggle-floating {
+  position: fixed;
+  left: 0;
+  top: 50%;
+  transform: translateY(-50%);
+  background: var(--primary);
+  color: white;
+  border: none;
+  border-radius: 0 8px 8px 0;
+  width: 40px;
+  height: 60px;
+  cursor: pointer;
+  display: none;
+  align-items: center;
+  justify-content: center;
+  font-size: 1.2rem;
+  z-index: 99;
+  box-shadow: 2px 0 8px rgba(0, 0, 0, 0.2);
+  transition: all 0.2s ease;
+}
+
+.sidebar-toggle-floating:hover {
+  background: var(--primary-hover);
+  width: 45px;
 }
 
 .friends-list {
