@@ -17,7 +17,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <meta name="theme-color" content="#1e1e2f">
   <meta name="description" content="OmniTrackr - Track and organize your movies and TV shows. Rate, review, and analyze your media collection with comprehensive statistics and beautiful posters.">
-  <meta name="keywords" content="movie tracker, TV show tracker, media collection, movie database, watchlist, film tracker, entertainment tracker, movie ratings, TV ratings, media organizer">
+  <meta name="keywords" content="movie tracker, TV show tracker, media collection, movie database, watchlist, film tracker, entertainment tracker, movie ratings, TV ratings, media organizer, personal movie database, track movies online, TV show database, movie collection manager, watchlist app, film collection tracker, entertainment database, movie review tracker, TV show review tracker, media tracking app, free movie tracker, movie statistics, TV show statistics, friends movie tracker, social movie tracking">
   <meta name="author" content="OmniTrackr">
   <meta name="robots" content="index, follow">
   <meta name="language" content="English">
@@ -29,7 +29,11 @@
   <meta property="og:title" content="OmniTrackr - Your Personal Media Tracking Companion">
   <meta property="og:description" content="Track and organize your movies and TV shows. Rate, review, and analyze your media collection with comprehensive statistics and beautiful posters.">
   <meta property="og:image" content="https://omnitrackr.xyz/omnitrackr_vortex.png">
+  <meta property="og:image:width" content="1200">
+  <meta property="og:image:height" content="630">
+  <meta property="og:image:alt" content="OmniTrackr - Movie and TV Show Tracking Application">
   <meta property="og:site_name" content="OmniTrackr">
+  <meta property="og:locale" content="en_US">
   
   <!-- Twitter -->
   <meta name="twitter:card" content="summary_large_image">
@@ -37,6 +41,8 @@
   <meta name="twitter:title" content="OmniTrackr - Your Personal Media Tracking Companion">
   <meta name="twitter:description" content="Track and organize your movies and TV shows. Rate, review, and analyze your media collection with comprehensive statistics and beautiful posters.">
   <meta name="twitter:image" content="https://omnitrackr.xyz/omnitrackr_vortex.png">
+  <meta name="twitter:image:alt" content="OmniTrackr - Movie and TV Show Tracking Application">
+  <meta name="twitter:site" content="@omnitrackr">
   
   <!-- Canonical URL -->
   <link rel="canonical" href="https://omnitrackr.xyz/">
@@ -45,6 +51,8 @@
   <link rel="icon" type="image/x-icon" href="/omnitrackr_favicon.ico">
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link rel="dns-prefetch" href="https://www.googletagmanager.com">
+  <link rel="dns-prefetch" href="https://www.google-analytics.com">
   <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@700;800&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="./styles.css">
   
@@ -52,12 +60,14 @@
   <script type="application/ld+json">
   {
     "@context": "https://schema.org",
-    "@type": "WebApplication",
+    "@type": "SoftwareApplication",
     "name": "OmniTrackr",
     "description": "Track and organize your movies and TV shows. Rate, review, and analyze your media collection with comprehensive statistics and beautiful posters.",
     "url": "https://omnitrackr.xyz",
     "applicationCategory": "EntertainmentApplication",
     "operatingSystem": "Web",
+    "browserRequirements": "Requires JavaScript. Requires HTML5.",
+    "softwareVersion": "2.0",
     "offers": {
       "@type": "Offer",
       "price": "0",
@@ -66,16 +76,25 @@
     "aggregateRating": {
       "@type": "AggregateRating",
       "ratingValue": "4.8",
-      "ratingCount": "150"
+      "ratingCount": "150",
+      "bestRating": "5",
+      "worstRating": "1"
     },
     "featureList": [
       "Track Movies & TV Shows",
       "Statistics Dashboard",
       "Export/Import Data",
       "Automatic Posters",
-      "Search & Sort",
-      "Multi-user Support"
-    ]
+      "Smart Search & Sort",
+      "Friends & Social",
+      "Real-time Notifications",
+      "Account Management"
+    ],
+    "screenshot": "https://omnitrackr.xyz/omnitrackr_vortex.png",
+    "author": {
+      "@type": "Organization",
+      "name": "OmniTrackr"
+    }
   }
   </script>
   
@@ -89,12 +108,29 @@
     "contactPoint": {
       "@type": "ContactPoint",
       "email": "omnitrackr@gmail.com",
-      "contactType": "Customer Service"
+      "contactType": "Customer Service",
+      "availableLanguage": "English"
     },
     "sameAs": [
       "https://github.com/chambies2015/OmniTrackr",
-      "https://www.linkedin.com/in/d-g-c/"
+      "https://www.linkedin.com/in/d-g-c/",
+      "https://ko-fi.com/omnitrackr"
     ]
+  }
+  </script>
+  
+  <script type="application/ld+json">
+  {
+    "@context": "https://schema.org",
+    "@type": "WebSite",
+    "name": "OmniTrackr",
+    "url": "https://omnitrackr.xyz",
+    "description": "Track and organize your movies and TV shows. Rate, review, and analyze your media collection with comprehensive statistics and beautiful posters.",
+    "potentialAction": {
+      "@type": "SearchAction",
+      "target": "https://omnitrackr.xyz/?search={search_term_string}",
+      "query-input": "required name=search_term_string"
+    }
   }
   </script>
 </head>
@@ -432,13 +468,23 @@
         </div>
         <div class="feature-card">
           <div class="feature-icon">🔍</div>
-          <h3>Search & Sort</h3>
-          <p>Find what you're looking for quickly with powerful search and sorting options.</p>
+          <h3>Smart Search & Sort</h3>
+          <p>Automatic filtering and sorting - find what you're looking for instantly as you type.</p>
         </div>
         <div class="feature-card">
           <div class="feature-icon">👥</div>
-          <h3>Multi-user Support</h3>
-          <p>Secure accounts with isolated data - your collection stays private to you.</p>
+          <h3>Friends & Social</h3>
+          <p>Connect with friends, send friend requests, and build your social media tracking network.</p>
+        </div>
+        <div class="feature-card">
+          <div class="feature-icon">🔔</div>
+          <h3>Real-time Notifications</h3>
+          <p>Stay updated with friend requests and social interactions through our notification system.</p>
+        </div>
+        <div class="feature-card">
+          <div class="feature-icon">⚙️</div>
+          <h3>Account Management</h3>
+          <p>Full control over your account - change username, email, password, or manage account settings.</p>
         </div>
       </div>
     </section>
