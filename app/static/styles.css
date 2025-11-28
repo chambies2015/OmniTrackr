@@ -36,7 +36,9 @@ body {
 
 .container {
   max-width: 1200px;
-  margin: 0 auto;
+  margin-left: 250px; /* Account for friends sidebar */
+  margin-right: auto;
+  padding: 0 20px; /* Add some padding on the sides */
 }
 
 .header {
@@ -1753,10 +1755,7 @@ body.dark-mode .success-message {
   font-style: italic;
 }
 
-/* Adjust main container to account for sidebar */
-.container {
-  margin-left: 250px;
-}
+/* Container margin is already set above to account for sidebar */
 
 /* ============================================================================
    Notification Bell & Dropdown
@@ -1942,15 +1941,8 @@ body.dark-mode .success-message {
   width: 90%;
 }
 
-/* Adjust user display button position to account for notification bell */
-.user-display-btn {
-  left: 330px;
-}
-
-/* Adjust logout button position */
-#logoutBtn {
-  left: 430px;
-}
+/* User display and logout buttons stay on the right side */
+/* They don't need adjustment - notification bell is on the left */
 
 /* Responsive adjustments */
 @media (max-width: 768px) {
