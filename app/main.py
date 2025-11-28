@@ -59,6 +59,21 @@ try:
                 conn.execute(text("ALTER TABLE users ADD COLUMN deactivated_at TIMESTAMP"))
                 conn.commit()
                 print("Added deactivated_at column to users table")
+        if "movies_private" not in user_columns:
+            with engine.connect() as conn:
+                conn.execute(text("ALTER TABLE users ADD COLUMN movies_private BOOLEAN DEFAULT FALSE"))
+                conn.commit()
+                print("Added movies_private column to users table")
+        if "tv_shows_private" not in user_columns:
+            with engine.connect() as conn:
+                conn.execute(text("ALTER TABLE users ADD COLUMN tv_shows_private BOOLEAN DEFAULT FALSE"))
+                conn.commit()
+                print("Added tv_shows_private column to users table")
+        if "statistics_private" not in user_columns:
+            with engine.connect() as conn:
+                conn.execute(text("ALTER TABLE users ADD COLUMN statistics_private BOOLEAN DEFAULT FALSE"))
+                conn.commit()
+                print("Added statistics_private column to users table")
 
     # Check movies table for review and poster_url columns
     if inspector.has_table("movies"):
@@ -914,6 +929,35 @@ async def change_password(
     return {"message": "Password changed successfully"}
 
 
+@app.put("/account/privacy", response_model=schemas.PrivacySettings, tags=["account"])
+async def update_privacy_settings(
+    privacy_update: schemas.PrivacySettingsUpdate,
+    current_user: models.User = Depends(get_current_user),
+    db: Session = Depends(get_db)
+):
+    """Update user's privacy settings."""
+    updated_user = crud.update_privacy_settings(db, current_user.id, privacy_update)
+    
+    if updated_user is None:
+        raise HTTPException(status_code=404, detail="User not found")
+    
+    return crud.get_privacy_settings(db, current_user.id)
+
+
+@app.get("/account/privacy", response_model=schemas.PrivacySettings, tags=["account"])
+async def get_privacy_settings(
+    current_user: models.User = Depends(get_current_user),
+    db: Session = Depends(get_db)
+):
+    """Get user's current privacy settings."""
+    privacy_settings = crud.get_privacy_settings(db, current_user.id)
+    
+    if privacy_settings is None:
+        raise HTTPException(status_code=404, detail="User not found")
+    
+    return privacy_settings
+
+
 @app.post("/account/deactivate", response_model=dict, tags=["account"])
 async def deactivate_account(
     deactivate: schemas.AccountDeactivate,
@@ -1136,6 +1180,97 @@ async def unfriend_user(
     if not success:
         raise HTTPException(status_code=404, detail="Friendship not found")
     return {"message": "Unfriended successfully"}
+
+
+@app.get("/friends/{friend_id}/profile", response_model=schemas.FriendProfileSummary, tags=["friends"])
+async def get_friend_profile(
+    friend_id: int,
+    current_user: models.User = Depends(get_current_user),
+    db: Session = Depends(get_db)
+):
+    """Get friend's profile summary (counts only, respects privacy)."""
+    # Verify friendship
+    if not crud.are_friends(db, current_user.id, friend_id):
+        raise HTTPException(status_code=403, detail="You are not friends with this user")
+    
+    profile = crud.get_friend_profile_summary(db, friend_id)
+    if profile is None:
+        raise HTTPException(status_code=404, detail="Friend not found")
+    
+    return profile
+
+
+@app.get("/friends/{friend_id}/movies", response_model=schemas.FriendMoviesResponse, tags=["friends"])
+async def get_friend_movies(
+    friend_id: int,
+    current_user: models.User = Depends(get_current_user),
+    db: Session = Depends(get_db)
+):
+    """Get friend's movies list (if not private, requires friendship)."""
+    # Verify friendship
+    if not crud.are_friends(db, current_user.id, friend_id):
+        raise HTTPException(status_code=403, detail="You are not friends with this user")
+    
+    movies = crud.get_friend_movies(db, friend_id)
+    if movies is None:
+        # Check if friend exists
+        friend = crud.get_user_by_id(db, friend_id)
+        if friend is None:
+            raise HTTPException(status_code=404, detail="Friend not found")
+        # Data is private
+        raise HTTPException(status_code=403, detail="This user has made their movies private")
+    
+    return schemas.FriendMoviesResponse(movies=movies, count=len(movies))
+
+
+@app.get("/friends/{friend_id}/tv-shows", response_model=schemas.FriendTVShowsResponse, tags=["friends"])
+async def get_friend_tv_shows(
+    friend_id: int,
+    current_user: models.User = Depends(get_current_user),
+    db: Session = Depends(get_db)
+):
+    """Get friend's TV shows list (if not private, requires friendship)."""
+    # Verify friendship
+    if not crud.are_friends(db, current_user.id, friend_id):
+        raise HTTPException(status_code=403, detail="You are not friends with this user")
+    
+    tv_shows = crud.get_friend_tv_shows(db, friend_id)
+    if tv_shows is None:
+        # Check if friend exists
+        friend = crud.get_user_by_id(db, friend_id)
+        if friend is None:
+            raise HTTPException(status_code=404, detail="Friend not found")
+        # Data is private
+        raise HTTPException(status_code=403, detail="This user has made their TV shows private")
+    
+    return schemas.FriendTVShowsResponse(tv_shows=tv_shows, count=len(tv_shows))
+
+
+@app.get("/friends/{friend_id}/statistics", response_model=schemas.FriendStatisticsResponse, tags=["friends"])
+async def get_friend_statistics(
+    friend_id: int,
+    current_user: models.User = Depends(get_current_user),
+    db: Session = Depends(get_db)
+):
+    """Get friend's statistics (if not private, requires friendship, compact format)."""
+    # Verify friendship
+    if not crud.are_friends(db, current_user.id, friend_id):
+        raise HTTPException(status_code=403, detail="You are not friends with this user")
+    
+    stats = crud.get_friend_statistics(db, friend_id)
+    if stats is None:
+        # Check if friend exists
+        friend = crud.get_user_by_id(db, friend_id)
+        if friend is None:
+            raise HTTPException(status_code=404, detail="Friend not found")
+        # Data is private
+        raise HTTPException(status_code=403, detail="This user has made their statistics private")
+    
+    return schemas.FriendStatisticsResponse(
+        watch_stats=schemas.WatchStatistics(**stats["watch_stats"]),
+        rating_stats=schemas.RatingStatistics(**stats["rating_stats"]),
+        generated_at=datetime.now().isoformat()
+    )
 
 
 @app.get("/notifications", response_model=List[schemas.NotificationResponse], tags=["notifications"])

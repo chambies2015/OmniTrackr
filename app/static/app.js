@@ -1248,6 +1248,74 @@ window.deactivateAccount = async function(event) {
   }
 }
 
+// Privacy Settings Functions
+window.loadPrivacySettings = async function() {
+  try {
+    const response = await authenticatedFetch(`${API_BASE}/account/privacy`);
+    if (response.ok) {
+      const privacy = await response.json();
+      document.getElementById('moviesPrivate').checked = privacy.movies_private;
+      document.getElementById('tvShowsPrivate').checked = privacy.tv_shows_private;
+      document.getElementById('statisticsPrivate').checked = privacy.statistics_private;
+    }
+  } catch (error) {
+    console.error('Failed to load privacy settings:', error);
+  }
+}
+
+window.updatePrivacySettings = async function(event) {
+  event.preventDefault();
+  
+  const moviesPrivate = document.getElementById('moviesPrivate').checked;
+  const tvShowsPrivate = document.getElementById('tvShowsPrivate').checked;
+  const statisticsPrivate = document.getElementById('statisticsPrivate').checked;
+  
+  const errorDiv = document.getElementById('privacyError');
+  const successDiv = document.getElementById('privacySuccess');
+  
+  errorDiv.textContent = '';
+  errorDiv.style.display = 'none';
+  successDiv.textContent = '';
+  successDiv.style.display = 'none';
+  
+  try {
+    const response = await authenticatedFetch(`${API_BASE}/account/privacy`, {
+      method: 'PUT',
+      headers: {
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify({
+        movies_private: moviesPrivate,
+        tv_shows_private: tvShowsPrivate,
+        statistics_private: statisticsPrivate
+      })
+    });
+    
+    if (response.ok) {
+      successDiv.textContent = 'Privacy settings updated successfully';
+      successDiv.style.display = 'block';
+      setTimeout(() => {
+        successDiv.style.display = 'none';
+      }, 3000);
+    } else {
+      const error = await response.json();
+      errorDiv.textContent = error.detail || 'Failed to update privacy settings';
+      errorDiv.style.display = 'block';
+    }
+  } catch (error) {
+    errorDiv.textContent = 'Failed to update privacy settings';
+    errorDiv.style.display = 'block';
+    console.error('Error updating privacy settings:', error);
+  }
+}
+
+// Update loadAccountInfo to also load privacy settings
+const originalLoadAccountInfo = window.loadAccountInfo;
+window.loadAccountInfo = async function() {
+  await originalLoadAccountInfo();
+  await loadPrivacySettings();
+}
+
 // Close modal when clicking outside
 document.addEventListener('click', (e) => {
   const modal = document.getElementById('accountModal');
@@ -1274,7 +1342,7 @@ async function loadFriendsList() {
       
       friendsList.innerHTML = friends.map(friend => `
         <div class="friend-item" data-friend-id="${friend.friend.id}">
-          <span class="friend-username">${escapeHtml(friend.friend.username)}</span>
+          <span class="friend-username clickable" onclick="openFriendProfile(${friend.friend.id})" title="View profile">${escapeHtml(friend.friend.username)}</span>
           <button class="unfriend-btn" onclick="unfriendUser(${friend.friend.id})" title="Unfriend">✕</button>
         </div>
       `).join('');
@@ -1413,6 +1481,260 @@ window.unfriendUser = async function(friendId) {
     alert('Failed to unfriend user. Please try again.');
   }
 }
+
+// ============================================================================
+// Friend Profile Functions
+// ============================================================================
+
+let currentFriendId = null;
+let accordionStates = {
+  movies: false,
+  tvShows: false,
+  statistics: false
+};
+
+window.openFriendProfile = async function(friendId) {
+  currentFriendId = friendId;
+  document.getElementById('friendProfileModal').style.display = 'flex';
+  await loadFriendProfile(friendId);
+}
+
+window.closeFriendProfile = function() {
+  document.getElementById('friendProfileModal').style.display = 'none';
+  currentFriendId = null;
+  accordionStates = {
+    movies: false,
+    tvShows: false,
+    statistics: false
+  };
+  // Reset accordion states
+  ['movies', 'tvShows', 'statistics'].forEach(section => {
+    const content = document.getElementById(`${section}Content`);
+    const icon = document.getElementById(`${section}Icon`);
+    if (content && icon) {
+      content.classList.remove('active');
+      icon.textContent = '▼';
+    }
+  });
+}
+
+window.loadFriendProfile = async function(friendId) {
+  try {
+    const response = await authenticatedFetch(`${API_BASE}/friends/${friendId}/profile`);
+    if (response.ok) {
+      const profile = await response.json();
+      document.getElementById('friendProfileUsername').textContent = profile.username;
+      
+      // Update summaries
+      updateMoviesSummary(profile);
+      updateTVShowsSummary(profile);
+      updateStatisticsSummary(profile);
+    } else {
+      const error = await response.json();
+      alert(error.detail || 'Failed to load friend profile');
+      closeFriendProfile();
+    }
+  } catch (error) {
+    console.error('Failed to load friend profile:', error);
+    alert('Failed to load friend profile');
+    closeFriendProfile();
+  }
+}
+
+function updateMoviesSummary(profile) {
+  const summaryDiv = document.getElementById('moviesSummary');
+  if (profile.movies_private) {
+    summaryDiv.innerHTML = '<p class="privacy-message">This user has made their movies private</p>';
+  } else {
+    const count = profile.movies_count || 0;
+    summaryDiv.innerHTML = `<p class="summary-text">${count} Movie${count !== 1 ? 's' : ''}</p>`;
+  }
+}
+
+function updateTVShowsSummary(profile) {
+  const summaryDiv = document.getElementById('tvShowsSummary');
+  if (profile.tv_shows_private) {
+    summaryDiv.innerHTML = '<p class="privacy-message">This user has made their TV shows private</p>';
+  } else {
+    const count = profile.tv_shows_count || 0;
+    summaryDiv.innerHTML = `<p class="summary-text">${count} TV Show${count !== 1 ? 's' : ''}</p>`;
+  }
+}
+
+function updateStatisticsSummary(profile) {
+  const summaryDiv = document.getElementById('statisticsSummary');
+  if (profile.statistics_private) {
+    summaryDiv.innerHTML = '<p class="privacy-message">This user has made their statistics private</p>';
+  } else {
+    summaryDiv.innerHTML = '<p class="summary-text">Statistics Available</p>';
+  }
+}
+
+window.toggleAccordion = async function(section) {
+  if (!currentFriendId) return;
+  
+  const content = document.getElementById(`${section}Content`);
+  const icon = document.getElementById(`${section}Icon`);
+  const isActive = accordionStates[section];
+  
+  if (!isActive) {
+    // Expand - load full content
+    accordionStates[section] = true;
+    content.classList.add('active');
+    icon.textContent = '▲';
+    
+    if (section === 'movies') {
+      await loadFriendMovies(currentFriendId);
+    } else if (section === 'tvShows') {
+      await loadFriendTVShows(currentFriendId);
+    } else if (section === 'statistics') {
+      await loadFriendStatistics(currentFriendId);
+    }
+  } else {
+    // Collapse
+    accordionStates[section] = false;
+    content.classList.remove('active');
+    icon.textContent = '▼';
+  }
+}
+
+window.loadFriendMovies = async function(friendId) {
+  try {
+    const response = await authenticatedFetch(`${API_BASE}/friends/${friendId}/movies`);
+    if (response.ok) {
+      const data = await response.json();
+      const listDiv = document.getElementById('moviesList');
+      
+      if (data.movies.length === 0) {
+        listDiv.innerHTML = '<p class="empty-message">No movies yet</p>';
+      } else {
+        listDiv.innerHTML = data.movies.map(movie => `
+          <div class="friend-item-card">
+            <div class="friend-item-header">
+              <h4>${escapeHtml(movie.title)}</h4>
+              ${movie.rating ? `<span class="rating-badge">${movie.rating.toFixed(1)}/10</span>` : ''}
+            </div>
+            <div class="friend-item-details">
+              <span>Director: ${escapeHtml(movie.director)}</span>
+              <span>Year: ${movie.year}</span>
+              ${movie.watched ? '<span class="watched-badge">Watched</span>' : '<span class="unwatched-badge">Not Watched</span>'}
+            </div>
+            ${movie.review ? `<p class="friend-review">${escapeHtml(movie.review)}</p>` : ''}
+          </div>
+        `).join('');
+      }
+      listDiv.style.display = 'block';
+    } else {
+      const error = await response.json();
+      document.getElementById('moviesList').innerHTML = `<p class="error-message">${error.detail || 'Failed to load movies'}</p>`;
+    }
+  } catch (error) {
+    console.error('Failed to load friend movies:', error);
+    document.getElementById('moviesList').innerHTML = '<p class="error-message">Failed to load movies</p>';
+  }
+}
+
+window.loadFriendTVShows = async function(friendId) {
+  try {
+    const response = await authenticatedFetch(`${API_BASE}/friends/${friendId}/tv-shows`);
+    if (response.ok) {
+      const data = await response.json();
+      const listDiv = document.getElementById('tvShowsList');
+      
+      if (data.tv_shows.length === 0) {
+        listDiv.innerHTML = '<p class="empty-message">No TV shows yet</p>';
+      } else {
+        listDiv.innerHTML = data.tv_shows.map(show => `
+          <div class="friend-item-card">
+            <div class="friend-item-header">
+              <h4>${escapeHtml(show.title)}</h4>
+              ${show.rating ? `<span class="rating-badge">${show.rating.toFixed(1)}/10</span>` : ''}
+            </div>
+            <div class="friend-item-details">
+              <span>Year: ${show.year}</span>
+              ${show.seasons ? `<span>Seasons: ${show.seasons}</span>` : ''}
+              ${show.episodes ? `<span>Episodes: ${show.episodes}</span>` : ''}
+              ${show.watched ? '<span class="watched-badge">Watched</span>' : '<span class="unwatched-badge">Not Watched</span>'}
+            </div>
+            ${show.review ? `<p class="friend-review">${escapeHtml(show.review)}</p>` : ''}
+          </div>
+        `).join('');
+      }
+      listDiv.style.display = 'block';
+    } else {
+      const error = await response.json();
+      document.getElementById('tvShowsList').innerHTML = `<p class="error-message">${error.detail || 'Failed to load TV shows'}</p>`;
+    }
+  } catch (error) {
+    console.error('Failed to load friend TV shows:', error);
+    document.getElementById('tvShowsList').innerHTML = '<p class="error-message">Failed to load TV shows</p>';
+  }
+}
+
+window.loadFriendStatistics = async function(friendId) {
+  try {
+    const response = await authenticatedFetch(`${API_BASE}/friends/${friendId}/statistics`);
+    if (response.ok) {
+      const stats = await response.json();
+      const statsDiv = document.getElementById('statisticsData');
+      
+      // Compact statistics display
+      statsDiv.innerHTML = `
+        <div class="friend-stats-compact">
+          <div class="stat-card">
+            <h4>Watch Statistics</h4>
+            <div class="stat-item">
+              <span>Total Movies:</span>
+              <span>${stats.watch_stats.total_movies}</span>
+            </div>
+            <div class="stat-item">
+              <span>Watched Movies:</span>
+              <span>${stats.watch_stats.watched_movies}</span>
+            </div>
+            <div class="stat-item">
+              <span>Total TV Shows:</span>
+              <span>${stats.watch_stats.total_tv_shows}</span>
+            </div>
+            <div class="stat-item">
+              <span>Watched TV Shows:</span>
+              <span>${stats.watch_stats.watched_tv_shows}</span>
+            </div>
+            <div class="stat-item">
+              <span>Completion:</span>
+              <span>${stats.watch_stats.completion_percentage.toFixed(1)}%</span>
+            </div>
+          </div>
+          <div class="stat-card">
+            <h4>Rating Statistics</h4>
+            <div class="stat-item">
+              <span>Average Rating:</span>
+              <span>${stats.rating_stats.average_rating.toFixed(1)}/10</span>
+            </div>
+            <div class="stat-item">
+              <span>Total Rated Items:</span>
+              <span>${stats.rating_stats.total_rated_items}</span>
+            </div>
+          </div>
+        </div>
+      `;
+      statsDiv.style.display = 'block';
+    } else {
+      const error = await response.json();
+      document.getElementById('statisticsData').innerHTML = `<p class="error-message">${error.detail || 'Failed to load statistics'}</p>`;
+    }
+  } catch (error) {
+    console.error('Failed to load friend statistics:', error);
+    document.getElementById('statisticsData').innerHTML = '<p class="error-message">Failed to load statistics</p>';
+  }
+}
+
+// Close friend profile modal when clicking outside
+document.addEventListener('click', (e) => {
+  const modal = document.getElementById('friendProfileModal');
+  if (e.target === modal) {
+    closeFriendProfile();
+  }
+});
 
 // ============================================================================
 // Notification Functions

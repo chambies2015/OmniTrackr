@@ -1713,6 +1713,339 @@ body.dark-mode .success-message {
   }
 }
 
+/* Privacy Settings */
+.privacy-toggle-item {
+  margin-bottom: 16px;
+}
+
+.toggle-label {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  cursor: pointer;
+  padding: 12px;
+  background-color: var(--bg);
+  border-radius: 8px;
+  transition: all 0.2s ease;
+}
+
+body.dark-mode .toggle-label {
+  background-color: rgba(255, 255, 255, 0.05);
+}
+
+.toggle-label:hover {
+  background-color: rgba(102, 126, 234, 0.1);
+}
+
+.toggle-label span:first-child {
+  font-weight: 500;
+  color: var(--fg);
+}
+
+.toggle-container {
+  position: relative;
+  width: 50px;
+  height: 26px;
+}
+
+.toggle-switch {
+  position: absolute;
+  width: 50px;
+  height: 26px;
+  appearance: none;
+  background-color: rgba(0, 0, 0, 0.2);
+  border-radius: 26px;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  margin: 0;
+  z-index: 1;
+}
+
+body.dark-mode .toggle-switch {
+  background-color: rgba(255, 255, 255, 0.2);
+}
+
+.toggle-switch:checked {
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+}
+
+.toggle-slider {
+  position: absolute;
+  top: 3px;
+  left: 3px;
+  width: 20px;
+  height: 20px;
+  background-color: white;
+  border-radius: 50%;
+  transition: all 0.3s ease;
+  pointer-events: none;
+  z-index: 2;
+}
+
+.toggle-switch:checked + .toggle-slider {
+  transform: translateX(24px);
+}
+
+.info-text {
+  color: var(--fg);
+  opacity: 0.8;
+  margin-bottom: 16px;
+  font-size: 0.9rem;
+  line-height: 1.5;
+}
+
+/* Friend Profile Modal */
+.friend-profile-modal {
+  background-color: var(--card-bg);
+  border-radius: 12px;
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3);
+  max-width: 800px;
+  width: 90%;
+  max-height: 90vh;
+  overflow-y: auto;
+  animation: slideUp 0.3s ease;
+}
+
+/* Accordion Sections */
+.accordion-section {
+  margin-bottom: 16px;
+  border: 1px solid rgba(0, 0, 0, 0.1);
+  border-radius: 8px;
+  overflow: hidden;
+  background-color: var(--bg);
+}
+
+body.dark-mode .accordion-section {
+  border-color: rgba(255, 255, 255, 0.1);
+}
+
+.accordion-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 16px 20px;
+  cursor: pointer;
+  background-color: var(--card-bg);
+  transition: all 0.2s ease;
+  user-select: none;
+}
+
+.accordion-header:hover {
+  background-color: rgba(102, 126, 234, 0.1);
+}
+
+.accordion-header h3 {
+  margin: 0;
+  color: var(--primary);
+  font-size: 1.1rem;
+}
+
+.accordion-icon {
+  color: var(--primary);
+  font-size: 0.9rem;
+  transition: transform 0.3s ease;
+}
+
+.accordion-content {
+  max-height: 0;
+  overflow: hidden;
+  transition: max-height 0.3s ease;
+}
+
+.accordion-content.active {
+  max-height: 2000px;
+}
+
+.accordion-summary {
+  padding: 16px 20px;
+  color: var(--fg);
+}
+
+.summary-text {
+  margin: 0;
+  font-size: 1rem;
+  color: var(--fg);
+  opacity: 0.9;
+}
+
+.privacy-message {
+  margin: 0;
+  padding: 12px;
+  background-color: rgba(244, 67, 54, 0.1);
+  color: #f44336;
+  border-radius: 6px;
+  font-size: 0.9rem;
+}
+
+body.dark-mode .privacy-message {
+  background-color: rgba(244, 67, 54, 0.2);
+}
+
+.accordion-full-content {
+  padding: 16px 20px;
+  border-top: 1px solid rgba(0, 0, 0, 0.1);
+}
+
+body.dark-mode .accordion-full-content {
+  border-top-color: rgba(255, 255, 255, 0.1);
+}
+
+/* Friend Item Cards */
+.friend-item-card {
+  background-color: var(--card-bg);
+  border: 1px solid rgba(0, 0, 0, 0.1);
+  border-radius: 8px;
+  padding: 16px;
+  margin-bottom: 12px;
+  transition: all 0.2s ease;
+}
+
+body.dark-mode .friend-item-card {
+  border-color: rgba(255, 255, 255, 0.1);
+}
+
+.friend-item-card:hover {
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+  transform: translateY(-2px);
+}
+
+.friend-item-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 12px;
+}
+
+.friend-item-header h4 {
+  margin: 0;
+  color: var(--fg);
+  font-size: 1.1rem;
+}
+
+.rating-badge {
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  color: white;
+  padding: 4px 12px;
+  border-radius: 12px;
+  font-size: 0.85rem;
+  font-weight: 600;
+}
+
+.friend-item-details {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+  margin-bottom: 8px;
+  font-size: 0.9rem;
+  color: var(--fg);
+  opacity: 0.8;
+}
+
+.watched-badge {
+  background-color: rgba(76, 175, 80, 0.2);
+  color: #4caf50;
+  padding: 4px 8px;
+  border-radius: 4px;
+  font-size: 0.8rem;
+  font-weight: 600;
+}
+
+.unwatched-badge {
+  background-color: rgba(244, 67, 54, 0.2);
+  color: #f44336;
+  padding: 4px 8px;
+  border-radius: 4px;
+  font-size: 0.8rem;
+  font-weight: 600;
+}
+
+.friend-review {
+  margin: 12px 0 0 0;
+  padding: 12px;
+  background-color: var(--bg);
+  border-radius: 6px;
+  color: var(--fg);
+  font-size: 0.9rem;
+  line-height: 1.5;
+  opacity: 0.9;
+}
+
+body.dark-mode .friend-review {
+  background-color: rgba(255, 255, 255, 0.05);
+}
+
+.empty-message {
+  text-align: center;
+  color: var(--fg);
+  opacity: 0.6;
+  padding: 20px;
+  margin: 0;
+}
+
+/* Compact Statistics */
+.friend-stats-compact {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+  gap: 16px;
+}
+
+.stat-card {
+  background-color: var(--card-bg);
+  border: 1px solid rgba(0, 0, 0, 0.1);
+  border-radius: 8px;
+  padding: 16px;
+}
+
+body.dark-mode .stat-card {
+  border-color: rgba(255, 255, 255, 0.1);
+}
+
+.stat-card h4 {
+  margin: 0 0 12px 0;
+  color: var(--primary);
+  font-size: 1rem;
+}
+
+.stat-item {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 8px 0;
+  border-bottom: 1px solid rgba(0, 0, 0, 0.05);
+}
+
+body.dark-mode .stat-item {
+  border-bottom-color: rgba(255, 255, 255, 0.05);
+}
+
+.stat-item:last-child {
+  border-bottom: none;
+}
+
+.stat-item span:first-child {
+  color: var(--fg);
+  opacity: 0.8;
+  font-size: 0.9rem;
+}
+
+.stat-item span:last-child {
+  color: var(--fg);
+  font-weight: 600;
+}
+
+/* Clickable friend username */
+.friend-username.clickable {
+  cursor: pointer;
+  transition: all 0.2s ease;
+  padding: 4px 8px;
+  border-radius: 4px;
+}
+
+.friend-username.clickable:hover {
+  background-color: rgba(102, 126, 234, 0.1);
+  color: var(--primary);
+}
+
 /* ============================================================================
    Friends Sidebar
    ============================================================================ */
