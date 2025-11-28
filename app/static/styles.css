@@ -1948,8 +1948,83 @@ body.dark-mode .success-message {
 
 /* Friend Request Modal */
 .friend-request-modal-content {
+  background-color: var(--card-bg);
+  border-radius: 12px;
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3);
   max-width: 400px;
   width: 90%;
+  padding: 24px;
+  position: relative;
+  animation: slideUp 0.3s ease;
+  border: 2px solid rgba(102, 126, 234, 0.3);
+}
+
+body.dark-mode .friend-request-modal-content {
+  background-color: rgba(30, 30, 47, 0.95);
+  border-color: rgba(102, 126, 234, 0.5);
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.5);
+}
+
+.friend-request-modal-content h2 {
+  margin: 0 0 20px 0;
+  color: var(--primary);
+  font-size: 1.5rem;
+  text-align: center;
+}
+
+.friend-request-modal-content form {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.friend-request-modal-content form input {
+  width: 100%;
+  padding: 12px;
+  border: 2px solid rgba(102, 126, 234, 0.3);
+  border-radius: 8px;
+  background-color: var(--bg);
+  color: var(--fg);
+  font-size: 1rem;
+  box-sizing: border-box;
+}
+
+.friend-request-modal-content form input:focus {
+  outline: none;
+  border-color: var(--primary);
+  box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
+}
+
+body.dark-mode .friend-request-modal-content form input {
+  background-color: rgba(255, 255, 255, 0.05);
+  border-color: rgba(102, 126, 234, 0.4);
+}
+
+.friend-request-modal-content .close-button {
+  position: absolute;
+  top: 12px;
+  right: 12px;
+  background: none;
+  border: none;
+  color: var(--fg);
+  font-size: 2rem;
+  cursor: pointer;
+  padding: 0;
+  width: 32px;
+  height: 32px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 50%;
+  transition: all 0.2s ease;
+  opacity: 0.7;
+}
+
+.friend-request-modal-content .close-button:hover {
+  opacity: 1;
+  background-color: rgba(244, 67, 54, 0.1);
+  color: #f44336;
+  transform: rotate(90deg);
 }
 
 /* User display and logout buttons stay on the right side */
