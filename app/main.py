@@ -358,6 +358,79 @@ class BotFilterMiddleware(BaseHTTPMiddleware):
         "/blog/", "/web/", "/wordpress/", "/website/", "/wp/", "/news/",
         "/2018/", "/2019/", "/shop/", "/wp1/", "/test/", "/media/",
         "/wp2/", "/site/", "/cms/", "/sito/",
+        # API gateway and config file scanners
+        "/api_gateway/", "/apis/", "/app-config", "/app.config",
+        "/app.py", "/app.toml", "/app.yaml", "/app.yml", "/app/.secrets",
+        "/app/config/", "/app/models/", "/app/sign.go",
+        "/application.ini", "/application/config/", "/application/configs/",
+        "/application/libraries/", "/appveyor.yml",
+        "/aws-example", "/aws-lambda", "/aws-notifications", "/aws-nuke",
+        "/aws-s3", "/aws-wrapper", "/aws.config", "/aws.ino", "/aws.md",
+        "/aws.properties", "/aws.service", "/aws.show", "/aws/",
+        "/awsApp", "/awsKEY", "/awsS3", "/aws_config", "/aws_cred",
+        "/aws_credentials", "/aws_ec2", "/awsconfig", "/aws.yml",
+        # Backend paths
+        "/backend/app.js", "/backend/aws/", "/backend/config/",
+        "/backend/constant", "/backend/controller", "/backend/helper",
+        "/backend/index.js", "/backend/mail.js", "/backend/mailer.js",
+        "/backend/mailserver.js", "/backend/node/", "/backend/server.js",
+        "/backend/utils.js",
+        # Config file scanners
+        "/base.yaml", "/be/config.js", "/circle.yml", "/compose.yaml",
+        "/conf.yaml", "/config.rb", "/config.ts", "/config.yaml", "/config.yml",
+        "/config/app.js", "/config/common.js", "/config/config.exs",
+        "/config/config.go", "/config/config.ino", "/config/constant.js",
+        "/config/constants.js", "/config/controller.js", "/config/dev/",
+        "/config/index.js", "/config/mail.js", "/config/mailer.js",
+        "/config/mailserver.js", "/config/model.properties", "/config/server.js",
+        "/config/sitemap.rb", "/config/storage.yml", "/config/template.js",
+        "/config/utils.js", "/configs/",
+        # Development/staging/production paths
+        "/dev/app.js", "/dev/config.js", "/dev/config/", "/dev/constant.js",
+        "/dev/constants.js", "/dev/controller.js", "/dev/helper.js",
+        "/dev/index.js", "/dev/mail.js", "/dev/mailer.js", "/dev/mailserver.js",
+        "/dev/server.js", "/dev/utils.js",
+        "/staging/config.js", "/staging/config/", "/staging/index.js",
+        "/prod/config.js", "/qa/config.js",
+        # Server paths
+        "/server/app.js", "/server/config.js", "/server/config/",
+        "/server/configs/", "/server/constant.js", "/server/constants.js",
+        "/server/controller.js", "/server/helper.js", "/server/helper/",
+        "/server/index.js", "/server/mail.js", "/server/mailer.js",
+        "/server/mailserver.js", "/server/main.go", "/server/server.js",
+        "/server/src/", "/server/utils.js",
+        # Source paths
+        "/src/FileUpload.js", "/src/Utils/", "/src/app.js", "/src/app/services/",
+        "/src/aws.ts", "/src/config.ts", "/src/config/", "/src/constant.js",
+        "/src/constants.js", "/src/constants.ts", "/src/controller.js",
+        "/src/helper.js", "/src/helpers/", "/src/index.js", "/src/lib/",
+        "/src/libs/", "/src/mail.js", "/src/mailer.js", "/src/mailserver.js",
+        "/src/main.py", "/src/main.rb", "/src/s3.ts", "/src/server.js",
+        "/src/src.js", "/src/utils.js",
+        # Web paths
+        "/web/app.js", "/web/config/", "/web/constant.js", "/web/constants.js",
+        "/web/controller.js", "/web/helper.js", "/web/index.js", "/web/mail.js",
+        "/web/mailer.js", "/web/mailserver.js", "/web/server.js", "/web/utils.js",
+        "/web/web.js", "/website/index.js",
+        # Helper/utils paths
+        "/helper.js", "/helper/", "/helpers/", "/utils.js", "/utils/",
+        # Mail paths
+        "/mail.js", "/mailer.js", "/mailserver.js",
+        # Common config files
+        "/constant.js", "/constants.ini", "/constants.js", "/constants.json",
+        "/constants.ts", "/constants.yml", "/controller.js", "/index.js",
+        "/index.md", "/index.ts", "/main.go", "/readme.md", "/server.js",
+        # Other paths
+        "/cron/", "/default.ts", "/elb.rb", "/libs/", "/minio.md",
+        "/model/", "/partner/", "/providers/", "/recipes/", "/scripts/",
+        "/shared/", "/user/",
+        # CI/CD and hidden files
+        "/.remote", "/.local", "/.production", "/.aws-secrets",
+        "/.cirrus.yml", "/.drone.yml", "/.git-secrets", "/.jaynes.yml",
+        "/.lakectl.yaml", "/.properties", "/.sync.yml", "/.travis.old.yml",
+        "/.travis.yml", "/.docker/",
+        # Connect paths
+        "/connect/",
     ]
     
     # Suspicious user agents (common scanners)
@@ -423,6 +496,16 @@ os.makedirs(PROFILE_PICTURES_BASE_DIR, exist_ok=True)
 # Using /profile-pictures/ path to avoid conflict with /static/ mount
 @app.get("/profile-pictures/{filename}")
 async def serve_profile_picture(filename: str):
+    """Serve profile pictures from persistent storage."""
+    return await _serve_profile_picture_internal(filename)
+
+# Backward compatibility: redirect old /static/profile_pictures/ URLs
+@app.get("/static/profile_pictures/{filename}")
+async def serve_profile_picture_old(filename: str):
+    """Backward compatibility endpoint for old profile picture URLs."""
+    return await _serve_profile_picture_internal(filename)
+
+async def _serve_profile_picture_internal(filename: str):
     """Serve profile pictures from persistent storage."""
     # Security: Sanitize filename to prevent path traversal attacks
     import re
