@@ -1661,3 +1661,322 @@ body.dark-mode .success-message {
   }
 }
 
+/* ============================================================================
+   Friends Sidebar
+   ============================================================================ */
+
+.friends-sidebar {
+  position: fixed;
+  left: 0;
+  top: 0;
+  width: 250px;
+  height: 100vh;
+  background: var(--bg);
+  border-right: 2px solid rgba(102, 126, 234, 0.2);
+  padding: 20px;
+  overflow-y: auto;
+  z-index: 100;
+  box-shadow: 2px 0 10px rgba(0, 0, 0, 0.1);
+}
+
+.friends-sidebar-header {
+  margin-bottom: 20px;
+  padding-bottom: 15px;
+  border-bottom: 2px solid rgba(102, 126, 234, 0.2);
+}
+
+.friends-sidebar-header h2 {
+  margin: 0 0 15px 0;
+  color: var(--primary);
+  font-size: 1.5rem;
+}
+
+.friends-sidebar-header .action-btn {
+  width: 100%;
+  padding: 10px;
+  font-size: 0.9rem;
+}
+
+.friends-list {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.friend-item {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 12px;
+  background: rgba(102, 126, 234, 0.1);
+  border-radius: 8px;
+  border: 1px solid rgba(102, 126, 234, 0.2);
+  transition: all 0.3s ease;
+}
+
+.friend-item:hover {
+  background: rgba(102, 126, 234, 0.15);
+  transform: translateX(4px);
+}
+
+.friend-username {
+  font-weight: 600;
+  color: var(--fg);
+  cursor: pointer;
+}
+
+.friend-username:hover {
+  color: var(--primary);
+}
+
+.unfriend-btn {
+  background: rgba(244, 67, 54, 0.1);
+  color: #f44336;
+  border: 1px solid rgba(244, 67, 54, 0.3);
+  border-radius: 4px;
+  padding: 4px 8px;
+  cursor: pointer;
+  font-size: 0.9rem;
+  transition: all 0.2s ease;
+}
+
+.unfriend-btn:hover {
+  background: rgba(244, 67, 54, 0.2);
+  transform: scale(1.1);
+}
+
+.no-friends {
+  text-align: center;
+  color: var(--fg);
+  opacity: 0.6;
+  padding: 20px;
+  font-style: italic;
+}
+
+/* Adjust main container to account for sidebar */
+.container {
+  margin-left: 250px;
+}
+
+/* ============================================================================
+   Notification Bell & Dropdown
+   ============================================================================ */
+
+.notification-bell {
+  position: fixed;
+  top: 20px;
+  left: 270px;
+  background: var(--bg);
+  border: 2px solid rgba(102, 126, 234, 0.3);
+  border-radius: 50%;
+  width: 50px;
+  height: 50px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  font-size: 1.5rem;
+  z-index: 200;
+  transition: all 0.3s ease;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+}
+
+.notification-bell:hover {
+  border-color: var(--primary);
+  box-shadow: 0 4px 12px rgba(102, 126, 234, 0.3);
+  transform: scale(1.05);
+}
+
+.notification-dot {
+  position: absolute;
+  top: -5px;
+  right: -5px;
+  background: #f44336;
+  color: white;
+  border-radius: 50%;
+  width: 20px;
+  height: 20px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 0.7rem;
+  font-weight: bold;
+  border: 2px solid var(--bg);
+}
+
+.notification-dropdown {
+  position: fixed;
+  top: 80px;
+  left: 270px;
+  width: 350px;
+  max-height: 500px;
+  background: var(--bg);
+  border: 2px solid rgba(102, 126, 234, 0.3);
+  border-radius: 12px;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.2);
+  z-index: 199;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+}
+
+.notification-header {
+  padding: 15px 20px;
+  border-bottom: 2px solid rgba(102, 126, 234, 0.2);
+  background: rgba(102, 126, 234, 0.05);
+}
+
+.notification-header h3 {
+  margin: 0;
+  color: var(--primary);
+  font-size: 1.2rem;
+}
+
+.notification-list {
+  overflow-y: auto;
+  max-height: 450px;
+}
+
+.notification-item {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  padding: 15px 20px;
+  border-bottom: 1px solid rgba(102, 126, 234, 0.1);
+  transition: background 0.2s ease;
+}
+
+.notification-item:hover {
+  background: rgba(102, 126, 234, 0.05);
+}
+
+.notification-item.unread {
+  background: rgba(102, 126, 234, 0.08);
+}
+
+.notification-item.read {
+  opacity: 0.7;
+}
+
+.notification-content {
+  flex: 1;
+  margin-right: 10px;
+}
+
+.notification-message {
+  margin: 0 0 5px 0;
+  color: var(--fg);
+  font-size: 0.95rem;
+  line-height: 1.4;
+}
+
+.notification-time {
+  font-size: 0.8rem;
+  color: var(--fg);
+  opacity: 0.6;
+}
+
+.notification-action-btn {
+  margin-top: 8px;
+  margin-right: 5px;
+  padding: 6px 12px;
+  border: none;
+  border-radius: 6px;
+  cursor: pointer;
+  font-size: 0.85rem;
+  font-weight: 600;
+  transition: all 0.2s ease;
+}
+
+.notification-action-btn.accept-btn {
+  background: #4caf50;
+  color: white;
+}
+
+.notification-action-btn.accept-btn:hover {
+  background: #45a049;
+  transform: scale(1.05);
+}
+
+.notification-action-btn.deny-btn {
+  background: rgba(244, 67, 54, 0.1);
+  color: #f44336;
+  border: 1px solid rgba(244, 67, 54, 0.3);
+}
+
+.notification-action-btn.deny-btn:hover {
+  background: rgba(244, 67, 54, 0.2);
+  transform: scale(1.05);
+}
+
+.notification-dismiss {
+  background: transparent;
+  border: none;
+  color: var(--fg);
+  opacity: 0.5;
+  cursor: pointer;
+  font-size: 1.2rem;
+  padding: 5px;
+  border-radius: 4px;
+  transition: all 0.2s ease;
+  flex-shrink: 0;
+}
+
+.notification-dismiss:hover {
+  opacity: 1;
+  background: rgba(244, 67, 54, 0.1);
+  color: #f44336;
+}
+
+.no-notifications {
+  text-align: center;
+  color: var(--fg);
+  opacity: 0.6;
+  padding: 30px 20px;
+  font-style: italic;
+}
+
+/* Friend Request Modal */
+.friend-request-modal-content {
+  max-width: 400px;
+  width: 90%;
+}
+
+/* Adjust user display button position to account for notification bell */
+.user-display-btn {
+  left: 330px;
+}
+
+/* Adjust logout button position */
+#logoutBtn {
+  left: 430px;
+}
+
+/* Responsive adjustments */
+@media (max-width: 768px) {
+  .friends-sidebar {
+    width: 200px;
+  }
+  
+  .container {
+    margin-left: 200px;
+  }
+  
+  .notification-bell {
+    left: 220px;
+  }
+  
+  .notification-dropdown {
+    left: 220px;
+    width: calc(100vw - 240px);
+  }
+  
+  .user-display-btn {
+    left: 280px;
+  }
+  
+  #logoutBtn {
+    left: 360px;
+  }
+}
+

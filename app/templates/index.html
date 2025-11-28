@@ -101,8 +101,32 @@
 
 <body class="dark-mode">
   <button id="toggleMode" class="toggle-btn" aria-label="Toggle between dark and light mode">Light Mode</button>
+  <button id="notificationBell" class="notification-bell" aria-label="View notifications">
+    🔔
+    <span id="notificationDot" class="notification-dot" style="display: none;"></span>
+  </button>
+  <div id="notificationDropdown" class="notification-dropdown" style="display: none;">
+    <div class="notification-header">
+      <h3>Notifications</h3>
+    </div>
+    <div id="notificationList" class="notification-list">
+      <p class="no-notifications">No notifications</p>
+    </div>
+  </div>
   <button id="userDisplay" class="user-display-btn" role="button" aria-label="Open account settings"></button>
   <button id="logoutBtn" aria-label="Logout from your account">Logout</button>
+  
+  <!-- Friends Sidebar -->
+  <aside id="friendsSidebar" class="friends-sidebar" style="display: none;">
+    <div class="friends-sidebar-header">
+      <h2>Friends</h2>
+      <button id="sendFriendRequestBtn" class="action-btn">+ Add Friend</button>
+    </div>
+    <div id="friendsList" class="friends-list">
+      <p class="no-friends">No friends yet</p>
+    </div>
+  </aside>
+  
   <main class="container" id="mainContainer">
     <header class="header" role="banner">
       <h1>OmniTrackr</h1>
@@ -594,6 +618,22 @@
           </form>
         </div>
       </div>
+    </div>
+  </div>
+
+  <!-- Friend Request Modal -->
+  <div id="friendRequestModal" class="modal-overlay" style="display: none;">
+    <div class="modal-content friend-request-modal-content">
+      <span class="close-button" onclick="closeFriendRequestModal()">&times;</span>
+      <h2>Send Friend Request</h2>
+      <div id="friendRequestMessage" class="success-message" style="display: none;"></div>
+      <div id="friendRequestError" class="error-message" style="display: none;"></div>
+      <form id="friendRequestForm" onsubmit="sendFriendRequest(event)">
+        <div>
+          <input type="text" id="friendRequestUsername" placeholder="Enter username" minlength="3" maxlength="50" required>
+        </div>
+        <button type="submit" class="action-btn">Send Request</button>
+      </form>
     </div>
   </div>
 </body>

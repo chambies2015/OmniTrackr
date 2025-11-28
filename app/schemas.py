@@ -68,6 +68,63 @@ class AccountDeactivate(BaseModel):
     password: str = Field(..., description="Current password for confirmation")
 
 
+# ============================================================================
+# Friends & Notifications Schemas
+# ============================================================================
+
+class FriendRequestCreate(BaseModel):
+    """Schema for creating a friend request."""
+    receiver_username: str = Field(..., min_length=3, max_length=50, description="Username of the user to send friend request to")
+
+
+class FriendRequestResponse(BaseModel):
+    """Schema for friend request responses."""
+    id: int
+    sender_id: int
+    receiver_id: int
+    sender: Optional[User] = None
+    receiver: Optional[User] = None
+    status: str
+    created_at: datetime
+    expires_at: datetime
+    
+    class Config:
+        from_attributes = True
+
+
+class FriendRequestAction(BaseModel):
+    """Schema for friend request actions (accept/deny)."""
+    action: str = Field(..., description="Action to take: 'accept' or 'deny'")
+
+
+class FriendshipResponse(BaseModel):
+    """Schema for friendship responses."""
+    id: int
+    friend: User
+    created_at: datetime
+    
+    class Config:
+        from_attributes = True
+
+
+class NotificationResponse(BaseModel):
+    """Schema for notification responses."""
+    id: int
+    type: str
+    message: str
+    friend_request_id: Optional[int] = None
+    created_at: datetime
+    read_at: Optional[datetime] = None
+    
+    class Config:
+        from_attributes = True
+
+
+class NotificationCount(BaseModel):
+    """Schema for notification count."""
+    count: int
+
+
 class AccountReactivate(BaseModel):
     """Schema for reactivating account via public endpoint."""
     username: Optional[str] = Field(None, description="Username or email")

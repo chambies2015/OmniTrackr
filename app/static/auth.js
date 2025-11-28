@@ -162,6 +162,18 @@ function showAuthModal() {
     document.getElementById('userDisplay').style.display = 'none';
     document.getElementById('logoutBtn').style.display = 'none';
     
+    // Hide notification bell
+    const notificationBell = document.getElementById('notificationBell');
+    if (notificationBell) {
+        notificationBell.style.display = 'none';
+    }
+    
+    // Hide friends sidebar
+    const friendsSidebar = document.getElementById('friendsSidebar');
+    if (friendsSidebar) {
+        friendsSidebar.style.display = 'none';
+    }
+    
     // Hide footer for logged-in view when showing landing page
     const mainFooter = document.getElementById('mainFooter');
     if (mainFooter) {
@@ -188,6 +200,16 @@ function showMainUI() {
     const mainFooter = document.getElementById('mainFooter');
     if (mainFooter) {
         mainFooter.style.display = 'block';
+    }
+    // Show notification bell
+    const notificationBell = document.getElementById('notificationBell');
+    if (notificationBell) {
+        notificationBell.style.display = 'flex';
+    }
+    // Show friends sidebar
+    const friendsSidebar = document.getElementById('friendsSidebar');
+    if (friendsSidebar) {
+        friendsSidebar.style.display = 'block';
     }
 }
 
