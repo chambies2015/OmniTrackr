@@ -713,12 +713,47 @@ async def resend_verification_email(email: str, db: Session = Depends(get_db)):
     user.verification_token = verification_token
     db.commit()
     
+    # Check if email credentials are configured before attempting to send
+    import os
+    mail_username = os.getenv("MAIL_USERNAME", "")
+    mail_password = os.getenv("MAIL_PASSWORD", "")
+    
+    if not mail_username or not mail_password:
+        print(f"WARNING: Email credentials not configured (MAIL_USERNAME or MAIL_PASSWORD missing).")
+        print(f"WARNING: Verification email will NOT be sent to {user.email}.")
+        print(f"WARNING: Email will only be printed to console in development mode.")
+        verification_url = f"{email_utils.APP_URL}/?token={verification_token}&email_verified=true"
+        print(f"INFO: Verification URL for {user.email}: {verification_url}")
+        # Still return success message for security (don't reveal email wasn't sent)
+        return {"message": "If that email is registered and unverified, a verification email has been sent."}
+    
     # Send verification email (async, non-blocking)
+    email_sent = False
     try:
         await email_utils.send_verification_email(user.email, user.username, verification_token)
+        email_sent = True
+        print(f"INFO: Verification email sent successfully to {user.email}")
     except Exception as e:
-        # Log error but don't fail the request
-        print(f"Failed to send verification email: {e}")
+        # Log detailed error for debugging
+        error_msg = str(e)
+        print(f"ERROR: Failed to send verification email to {user.email}")
+        print(f"ERROR Details: {error_msg}")
+        print(f"ERROR Type: {type(e).__name__}")
+        import traceback
+        print(f"ERROR Traceback: {traceback.format_exc()}")
+        # Check if it's a configuration issue
+        if "MAIL_USERNAME" in error_msg or "MAIL_PASSWORD" in error_msg or "credentials" in error_msg.lower() or "smtp" in error_msg.lower():
+            print(f"WARNING: Email credentials may be incorrect or SMTP server unreachable.")
+            print(f"WARNING: Check MAIL_USERNAME, MAIL_PASSWORD, MAIL_SERVER, and MAIL_PORT environment variables.")
+        verification_url = f"{email_utils.APP_URL}/?token={verification_token}&email_verified=true"
+        print(f"INFO: Fallback verification URL for {user.email}: {verification_url}")
+        email_sent = False
+    
+    # Return success message (don't reveal if email actually sent for security)
+    # But log the actual status for debugging
+    if not email_sent:
+        print(f"WARNING: Verification email was NOT sent to {user.email}, but user received success message.")
+        print(f"WARNING: Check server logs above for email sending errors.")
     
     return {"message": "If that email is registered and unverified, a verification email has been sent."}
 
