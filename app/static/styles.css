@@ -36,9 +36,20 @@ body {
 
 .container {
   max-width: 1200px;
-  margin-left: 250px; /* Account for friends sidebar */
+  padding: 0 20px;
+  box-sizing: border-box;
+  /* Default: account for sidebar */
+  margin-left: 250px;
   margin-right: auto;
-  padding: 0 20px; /* Add some padding on the sides */
+}
+
+/* When viewport is wide enough (sidebar + container + some space), center the container */
+@media (min-width: 1470px) {
+  .container {
+    /* Center 1200px container: sidebar (250px) + half of remaining space */
+    margin-left: calc(250px + (100% - 250px - 1200px) / 2);
+    max-width: 1200px;
+  }
 }
 
 .header {
