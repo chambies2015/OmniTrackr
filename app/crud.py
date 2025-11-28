@@ -772,7 +772,7 @@ def get_notifications(db: Session, user_id: int) -> List[models.Notification]:
     """Get all notifications for a user (newest first)."""
     return db.query(models.Notification).filter(
         models.Notification.user_id == user_id
-    ).order_by(desc(models.Notification.created_at)).all()
+    ).order_by(desc(models.Notification.created_at), desc(models.Notification.id)).all()
 
 
 def get_unread_notification_count(db: Session, user_id: int) -> int:

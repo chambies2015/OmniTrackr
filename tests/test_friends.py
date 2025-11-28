@@ -420,9 +420,12 @@ class TestNotificationCRUD:
         hashed_password = auth.get_password_hash(test_user_data["password"])
         user = crud.create_user(db_session, user_create, hashed_password)
         
-        # Create multiple notifications
+        # Create multiple notifications with small delays to ensure distinct timestamps
+        import time
         crud.create_notification(db_session, user.id, "type1", "Message 1")
+        time.sleep(0.01)  # Small delay to ensure distinct timestamps
         crud.create_notification(db_session, user.id, "type2", "Message 2")
+        time.sleep(0.01)  # Small delay to ensure distinct timestamps
         crud.create_notification(db_session, user.id, "type3", "Message 3")
         
         # Get notifications
@@ -430,8 +433,9 @@ class TestNotificationCRUD:
         
         assert len(notifications) == 3
         # Should be ordered newest first
-        assert notifications[0].message == "Message 3"
-        assert notifications[2].message == "Message 1"
+        assert notifications[0].message == "Message 3", f"Expected 'Message 3' first, got '{notifications[0].message}'. Order: {[n.message for n in notifications]}"
+        assert notifications[1].message == "Message 2", f"Expected 'Message 2' second, got '{notifications[1].message}'. Order: {[n.message for n in notifications]}"
+        assert notifications[2].message == "Message 1", f"Expected 'Message 1' third, got '{notifications[2].message}'. Order: {[n.message for n in notifications]}"
     
     def test_get_unread_notification_count(self, db_session, test_user_data):
         """Test getting unread notification count."""

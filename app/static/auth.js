@@ -211,6 +211,21 @@ function showMainUI() {
     if (friendsSidebar) {
         friendsSidebar.style.display = 'block';
     }
+    
+    // Load friends list and notification count
+    if (typeof loadFriendsList === 'function') {
+        loadFriendsList();
+    }
+    if (typeof updateNotificationCount === 'function') {
+        updateNotificationCount();
+        // Set up interval to refresh notification count every 30 seconds
+        if (typeof notificationCountInterval !== 'undefined' && notificationCountInterval) {
+            clearInterval(notificationCountInterval);
+        }
+        if (typeof setInterval !== 'undefined') {
+            notificationCountInterval = setInterval(updateNotificationCount, 30000);
+        }
+    }
 }
 
 function showLoginForm() {

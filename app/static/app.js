@@ -1466,12 +1466,21 @@ async function updateNotificationCount() {
       const data = await response.json();
       const notificationDot = document.getElementById('notificationDot');
       
+      if (!notificationDot) {
+        console.warn('Notification dot element not found');
+        return;
+      }
+      
       if (data.count > 0) {
-        notificationDot.style.display = 'block';
-        notificationDot.textContent = data.count > 99 ? '99+' : data.count;
+        notificationDot.style.display = 'flex'; // Use flex to center the number
+        notificationDot.textContent = data.count > 99 ? '99+' : data.count.toString();
+        console.log(`Notification count updated: ${data.count}`);
       } else {
         notificationDot.style.display = 'none';
+        console.log('No unread notifications');
       }
+    } else {
+      console.error('Failed to get notification count:', response.status, response.statusText);
     }
   } catch (error) {
     console.error('Failed to update notification count:', error);
