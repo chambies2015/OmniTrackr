@@ -10,6 +10,16 @@ let notificationCountInterval = null;
 const posterFetchInProgress = new Set();
 const posterFetchQueue = new Map(); // title+year -> Promise
 
+// Utility HTML escaping function
+function escapeHtml(str) {
+  return String(str)
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;")
+    .replace(/'/g, "&#39;");
+}
+
 // Tab switching functionality
 function switchTab(tabName) {
   // Update tab buttons
@@ -131,6 +141,7 @@ function displayMoviePoster(id, posterUrl, title = null) {
         altText = `${row.cells[1].textContent} movie poster`;
       }
     }
+    altText = escapeHtml(altText);
     cell.innerHTML = `<img src="${posterUrl}" alt="${altText}" style="width: 60px; max-height: 90px; object-fit: cover; border-radius: 4px;" loading="lazy">`;
   }
 }
