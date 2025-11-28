@@ -212,3 +212,7 @@ credentials.js
 .idea/
 movies.db
 Start Movie Tracker.lnk
+
+# Persistent data directory (profile pictures, etc.)
+# This directory persists between deployments but is not committed to git
+data/
