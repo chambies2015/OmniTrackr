@@ -308,8 +308,22 @@ function updateUserDisplay() {
     const user = getUser();
     if (user) {
         const userDisplay = document.getElementById('userDisplay');
-        userDisplay.innerHTML = `👤 ${user.username}`;
-        userDisplay.style.display = 'inline-block';
+        const userDisplayText = document.getElementById('userDisplayText');
+        const userProfilePicture = document.getElementById('userProfilePicture');
+        
+        if (userDisplayText) {
+            userDisplayText.textContent = user.username;
+        }
+        
+        if (userProfilePicture) {
+            if (user.profile_picture_url) {
+                userProfilePicture.src = user.profile_picture_url;
+            } else {
+                userProfilePicture.src = '/static/default-avatar.svg';
+            }
+        }
+        
+        userDisplay.style.display = 'inline-flex';
         userDisplay.onclick = openAccountModal;
         document.getElementById('logoutBtn').style.display = 'inline-block';
     } else {

@@ -33,6 +33,7 @@ class User(UserBase):
     is_active: bool
     is_verified: bool = False
     created_at: Optional[datetime] = None
+    profile_picture_url: Optional[str] = None
     
     class Config:
         from_attributes = True
@@ -66,6 +67,23 @@ class UsernameChange(BaseModel):
 class AccountDeactivate(BaseModel):
     """Schema for deactivating account."""
     password: str = Field(..., description="Current password for confirmation")
+
+
+class PrivacySettings(BaseModel):
+    """Schema for privacy settings."""
+    movies_private: bool = Field(False, description="Make movies private")
+    tv_shows_private: bool = Field(False, description="Make TV shows private")
+    statistics_private: bool = Field(False, description="Make statistics private")
+    
+    class Config:
+        from_attributes = True
+
+
+class PrivacySettingsUpdate(BaseModel):
+    """Schema for updating privacy settings."""
+    movies_private: Optional[bool] = None
+    tv_shows_private: Optional[bool] = None
+    statistics_private: Optional[bool] = None
 
 
 # ============================================================================
@@ -306,4 +324,38 @@ class StatisticsDashboard(BaseModel):
     rating_stats: RatingStatistics = Field(..., description="Rating statistics")
     year_stats: YearStatistics = Field(..., description="Year-based statistics")
     director_stats: DirectorStatistics = Field(..., description="Director statistics")
+    generated_at: str = Field(..., description="Timestamp when statistics were generated")
+
+
+# ============================================================================
+# Friend Profile Schemas
+# ============================================================================
+
+class FriendProfileSummary(BaseModel):
+    """Schema for friend profile summary (counts only)."""
+    username: str = Field(..., description="Friend's username")
+    movies_count: Optional[int] = Field(None, description="Number of movies (if not private)")
+    tv_shows_count: Optional[int] = Field(None, description="Number of TV shows (if not private)")
+    statistics_available: Optional[bool] = Field(None, description="Whether statistics are available (if not private)")
+    movies_private: bool = Field(..., description="Whether movies are private")
+    tv_shows_private: bool = Field(..., description="Whether TV shows are private")
+    statistics_private: bool = Field(..., description="Whether statistics are private")
+
+
+class FriendMoviesResponse(BaseModel):
+    """Schema for friend's movies list."""
+    movies: List[Movie] = Field(..., description="List of friend's movies")
+    count: int = Field(..., description="Total number of movies")
+
+
+class FriendTVShowsResponse(BaseModel):
+    """Schema for friend's TV shows list."""
+    tv_shows: List[TVShow] = Field(..., description="List of friend's TV shows")
+    count: int = Field(..., description="Total number of TV shows")
+
+
+class FriendStatisticsResponse(BaseModel):
+    """Schema for friend's statistics (compact version)."""
+    watch_stats: WatchStatistics = Field(..., description="Watch statistics")
+    rating_stats: RatingStatistics = Field(..., description="Rating statistics")
     generated_at: str = Field(..., description="Timestamp when statistics were generated")

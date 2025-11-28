@@ -110,6 +110,63 @@ def reactivate_user(db: Session, user_id: int) -> Optional[models.User]:
     return db_user
 
 
+def update_privacy_settings(db: Session, user_id: int, privacy_settings: schemas.PrivacySettingsUpdate) -> Optional[models.User]:
+    """Update user's privacy settings."""
+    db_user = get_user_by_id(db, user_id)
+    if db_user is None:
+        return None
+    
+    update_dict = privacy_settings.dict(exclude_unset=True)
+    
+    if 'movies_private' in update_dict:
+        db_user.movies_private = update_dict['movies_private']
+    if 'tv_shows_private' in update_dict:
+        db_user.tv_shows_private = update_dict['tv_shows_private']
+    if 'statistics_private' in update_dict:
+        db_user.statistics_private = update_dict['statistics_private']
+    
+    db.commit()
+    db.refresh(db_user)
+    return db_user
+
+
+def get_privacy_settings(db: Session, user_id: int) -> Optional[schemas.PrivacySettings]:
+    """Get user's privacy settings."""
+    db_user = get_user_by_id(db, user_id)
+    if db_user is None:
+        return None
+    
+    return schemas.PrivacySettings(
+        movies_private=db_user.movies_private,
+        tv_shows_private=db_user.tv_shows_private,
+        statistics_private=db_user.statistics_private
+    )
+
+
+def update_profile_picture(db: Session, user_id: int, profile_picture_url: str) -> Optional[models.User]:
+    """Update user's profile picture URL."""
+    db_user = get_user_by_id(db, user_id)
+    if db_user is None:
+        return None
+    
+    db_user.profile_picture_url = profile_picture_url
+    db.commit()
+    db.refresh(db_user)
+    return db_user
+
+
+def reset_profile_picture(db: Session, user_id: int) -> Optional[models.User]:
+    """Reset user's profile picture (set to None)."""
+    db_user = get_user_by_id(db, user_id)
+    if db_user is None:
+        return None
+    
+    db_user.profile_picture_url = None
+    db.commit()
+    db.refresh(db_user)
+    return db_user
+
+
 # ============================================================================
 # Movie CRUD operations
 # ============================================================================
@@ -830,4 +887,81 @@ def delete_notification(db: Session, notification_id: int, user_id: int) -> bool
     db.delete(notification)
     db.commit()
     return True
+
+
+# ============================================================================
+# Friend Profile CRUD operations
+# ============================================================================
+
+def get_friend_profile_summary(db: Session, friend_id: int) -> Optional[schemas.FriendProfileSummary]:
+    """Get friend's profile summary (counts only, respects privacy)."""
+    friend = get_user_by_id(db, friend_id)
+    if friend is None:
+        return None
+    
+    movies_count = None
+    tv_shows_count = None
+    statistics_available = None
+    
+    if not friend.movies_private:
+        movies_count = db.query(models.Movie).filter(models.Movie.user_id == friend_id).count()
+    
+    if not friend.tv_shows_private:
+        tv_shows_count = db.query(models.TVShow).filter(models.TVShow.user_id == friend_id).count()
+    
+    if not friend.statistics_private:
+        statistics_available = True
+    
+    return schemas.FriendProfileSummary(
+        username=friend.username,
+        movies_count=movies_count,
+        tv_shows_count=tv_shows_count,
+        statistics_available=statistics_available,
+        movies_private=friend.movies_private,
+        tv_shows_private=friend.tv_shows_private,
+        statistics_private=friend.statistics_private
+    )
+
+
+def get_friend_movies(db: Session, friend_id: int) -> Optional[List[models.Movie]]:
+    """Get friend's movies list (if not private)."""
+    friend = get_user_by_id(db, friend_id)
+    if friend is None:
+        return None
+    
+    if friend.movies_private:
+        return None  # Data is private
+    
+    return db.query(models.Movie).filter(models.Movie.user_id == friend_id).all()
+
+
+def get_friend_tv_shows(db: Session, friend_id: int) -> Optional[List[models.TVShow]]:
+    """Get friend's TV shows list (if not private)."""
+    friend = get_user_by_id(db, friend_id)
+    if friend is None:
+        return None
+    
+    if friend.tv_shows_private:
+        return None  # Data is private
+    
+    return db.query(models.TVShow).filter(models.TVShow.user_id == friend_id).all()
+
+
+def get_friend_statistics(db: Session, friend_id: int) -> Optional[dict]:
+    """Get friend's statistics (compact version, if not private)."""
+    friend = get_user_by_id(db, friend_id)
+    if friend is None:
+        return None
+    
+    if friend.statistics_private:
+        return None  # Data is private
+    
+    # Return compact statistics (watch and rating stats only)
+    watch_stats = get_watch_statistics(db, friend_id)
+    rating_stats = get_rating_statistics(db, friend_id)
+    
+    return {
+        "watch_stats": watch_stats,
+        "rating_stats": rating_stats
+    }
 

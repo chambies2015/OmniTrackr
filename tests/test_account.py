@@ -487,6 +487,8 @@ class TestAccountEndpoints:
             ("PUT", "/account/username"),
             ("PUT", "/account/email"),
             ("PUT", "/account/password"),
+            ("GET", "/account/privacy"),
+            ("PUT", "/account/privacy"),
             ("POST", "/account/deactivate"),
             ("POST", "/account/reactivate"),
         ]
