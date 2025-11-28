@@ -1078,18 +1078,15 @@ window.changeUsername = async function(event) {
     
     if (response.ok) {
       const updatedUser = await response.json();
-      successEl.textContent = 'Username changed successfully!';
-      successEl.style.display = 'block';
-      document.getElementById('changeUsernameForm').reset();
       
-      // Update user display and localStorage
-      const user = getUser();
-      user.username = updatedUser.username;
-      saveAuthData(getToken(), user);
-      updateUserDisplay();
+      // Close the modal first
+      closeAccountModal();
       
-      // Reload account info
-      await loadAccountInfo();
+      // Show success message and inform user to relogin
+      alert('Username changed successfully! Please login again with your new username.');
+      
+      // Logout user since JWT token contains old username and is now invalid
+      logout();
     } else {
       const error = await response.json();
       errorEl.textContent = error.detail || 'Failed to change username';
@@ -1139,8 +1136,8 @@ window.changeEmail = async function(event) {
 window.changePassword = async function(event) {
   event.preventDefault();
   const currentPassword = document.getElementById('currentPassword').value;
-  const newPassword = document.getElementById('newPassword').value;
-  const confirmPassword = document.getElementById('confirmNewPassword').value;
+  const newPassword = document.getElementById('accountNewPassword').value;
+  const confirmPassword = document.getElementById('accountConfirmNewPassword').value;
   const errorEl = document.getElementById('passwordError');
   const successEl = document.getElementById('passwordSuccess');
   

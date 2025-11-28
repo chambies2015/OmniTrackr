@@ -161,6 +161,12 @@ function showAuthModal() {
     // Hide user display and logout button when showing landing page
     document.getElementById('userDisplay').style.display = 'none';
     document.getElementById('logoutBtn').style.display = 'none';
+    
+    // Hide footer for logged-in view when showing landing page
+    const mainFooter = document.getElementById('mainFooter');
+    if (mainFooter) {
+        mainFooter.style.display = 'none';
+    }
 
     // Hide both forms initially
     document.getElementById('loginForm').style.display = 'none';
@@ -178,6 +184,11 @@ function hideAuthModal() {
 function showMainUI() {
     document.getElementById('mainContainer').style.display = 'block';
     document.getElementById('landingPage').style.display = 'none';
+    // Show footer for logged-in view
+    const mainFooter = document.getElementById('mainFooter');
+    if (mainFooter) {
+        mainFooter.style.display = 'block';
+    }
 }
 
 function showLoginForm() {

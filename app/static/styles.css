@@ -333,10 +333,31 @@ body.dark-mode td {
 }
 
 /* Center the watched column */
+/* Center watched column for movies */
 #movieTable th:nth-child(6),
-#movieTable td:nth-child(6),
+#movieTable td:nth-child(6) {
+  text-align: center;
+}
+
+/* Center all columns for TV shows except title (column 2) */
+#tvShowTable th:nth-child(1),
+#tvShowTable td:nth-child(1),
+#tvShowTable th:nth-child(3),
+#tvShowTable td:nth-child(3),
+#tvShowTable th:nth-child(4),
+#tvShowTable td:nth-child(4),
+#tvShowTable th:nth-child(5),
+#tvShowTable td:nth-child(5),
+#tvShowTable th:nth-child(6),
+#tvShowTable td:nth-child(6),
 #tvShowTable th:nth-child(7),
-#tvShowTable td:nth-child(7) {
+#tvShowTable td:nth-child(7),
+#tvShowTable th:nth-child(8),
+#tvShowTable td:nth-child(8),
+#tvShowTable th:nth-child(9),
+#tvShowTable td:nth-child(9),
+#tvShowTable th:nth-child(10),
+#tvShowTable td:nth-child(10) {
   text-align: center;
 }
 

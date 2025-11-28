@@ -195,11 +195,16 @@ class BotFilterMiddleware(BaseHTTPMiddleware):
         "/.env", "/.env.bak", "/.env.backup", "/.env.local",
         "/.git", "/.git/config", "/.git/logs/HEAD",
         "/wp-admin", "/wp-login.php", "/wp-config.php",
+        "/wp-includes", "/wp-content", "/xmlrpc.php", "/wlwmanifest.xml",
         "/admin", "/administrator", "/phpmyadmin",
         "/.aws", "/aws-config.js", "/aws.config.js",
         "/config.json", "/config.js", "/.gitlab-ci.yml",
         "/backend/.env", "/core/.env", "/api/.env",
         "/.htaccess", "/web.config", "/.well-known",
+        # WordPress common directory paths
+        "/blog/", "/web/", "/wordpress/", "/website/", "/wp/", "/news/",
+        "/2018/", "/2019/", "/shop/", "/wp1/", "/test/", "/media/",
+        "/wp2/", "/site/", "/cms/", "/sito/",
     ]
     
     # Suspicious user agents (common scanners)
@@ -497,44 +502,10 @@ async def login(form_data: OAuth2PasswordRequestForm = Depends(), db: Session = 
 @app.get("/auth/verify-email", tags=["auth"])
 async def verify_email(token: str, db: Session = Depends(get_db)):
     """Verify user email with token (handles both initial verification and email change)."""
-    # Check if this is an email change token
+    # First, try regular email verification (most common case)
     try:
-        old_email, new_email = email_utils.verify_email_change_token(token, max_age=3600)
-        # This is an email change verification
-        user = crud.get_user_by_email(db, old_email)
-        if not user:
-            raise HTTPException(status_code=404, detail="User not found")
-        
-        # Verify the token matches what's stored
-        if not user.verification_token or not user.verification_token.startswith("email_change:"):
-            raise HTTPException(status_code=400, detail="Invalid email change token")
-        
-        # Extract token and new email from stored value
-        parts = user.verification_token.split(":", 2)
-        if len(parts) != 3 or parts[1] != token or parts[2] != new_email:
-            raise HTTPException(status_code=400, detail="Invalid email change token")
-        
-        # Check if new email is already taken
-        existing_user = crud.get_user_by_email(db, new_email)
-        if existing_user and existing_user.id != user.id:
-            raise HTTPException(status_code=400, detail="New email is already registered")
-        
-        # Update email
-        user.email = new_email
-        user.verification_token = None
-        db.commit()
-        db.refresh(user)
-        
-        return {"message": "Email changed successfully! Your new email is now verified."}
-    except HTTPException:
-        raise
-    except Exception:
-        # Not an email change token, try regular email verification
-        try:
-            email = email_utils.verify_token(token, max_age=3600)  # 1 hour expiration
-        except Exception:
-            raise HTTPException(status_code=400, detail="Invalid or expired verification token")
-        
+        email = email_utils.verify_token(token, max_age=3600)  # 1 hour expiration
+        # This is a regular email verification token
         user = crud.get_user_by_email(db, email)
         if not user:
             raise HTTPException(status_code=404, detail="User not found")
@@ -549,6 +520,62 @@ async def verify_email(token: str, db: Session = Depends(get_db)):
         db.refresh(user)
         
         return {"message": "Email verified successfully! You can now use all features."}
+    except HTTPException:
+        raise
+    except Exception:
+        # Not a regular email verification token, try email change token
+        try:
+            old_email, new_email = email_utils.verify_email_change_token(token, max_age=3600)
+            # This is an email change verification
+            user = crud.get_user_by_email(db, old_email)
+            if not user:
+                raise HTTPException(status_code=404, detail="User not found")
+            
+            # Verify old_email matches the user's current email
+            if user.email != old_email:
+                raise HTTPException(status_code=400, detail="Email change token does not match current email")
+            
+            # Extract stored token and new email from stored value
+            if not user.verification_token or not user.verification_token.startswith("email_change:"):
+                raise HTTPException(status_code=400, detail="No pending email change found")
+            
+            parts = user.verification_token.split(":", 2)
+            if len(parts) != 3:
+                raise HTTPException(status_code=400, detail="Invalid email change token format")
+            
+            stored_token = parts[1]
+            stored_new_email = parts[2]
+            
+            # Verify the new email matches what's stored
+            if stored_new_email != new_email:
+                raise HTTPException(status_code=400, detail="Email mismatch in token")
+            
+            # Verify the token from URL matches the stored token
+            # Handle URL encoding - FastAPI should decode it, but we'll also try unquote as fallback
+            from urllib.parse import unquote
+            if stored_token != token:
+                # Try URL-decoded version
+                decoded_token = unquote(token)
+                if stored_token != decoded_token:
+                    raise HTTPException(status_code=400, detail="Invalid email change token")
+            
+            # Check if new email is already taken
+            existing_user = crud.get_user_by_email(db, new_email)
+            if existing_user and existing_user.id != user.id:
+                raise HTTPException(status_code=400, detail="New email is already registered")
+            
+            # Update email
+            user.email = new_email
+            user.verification_token = None
+            db.commit()
+            db.refresh(user)
+            
+            return {"message": "Email changed successfully! Your new email is now verified."}
+        except HTTPException:
+            raise
+        except Exception:
+            # Neither token type worked
+            raise HTTPException(status_code=400, detail="Invalid or expired verification token")
 
 
 @app.post("/auth/resend-verification", tags=["auth"])
