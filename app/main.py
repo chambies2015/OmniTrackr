@@ -414,6 +414,35 @@ static_dir = os.path.join(os.path.dirname(__file__), "static")
 if os.path.exists(static_dir):
     app.mount("/static", StaticFiles(directory=static_dir), name="static")
 
+# Profile pictures storage directory (persistent between deployments)
+# Use environment variable if set, otherwise use a data directory outside the app
+PROFILE_PICTURES_BASE_DIR = os.getenv(
+    "PROFILE_PICTURES_DIR",
+    os.path.join(os.path.dirname(os.path.dirname(__file__)), "data", "profile_pictures")
+)
+# Ensure the directory exists
+os.makedirs(PROFILE_PICTURES_BASE_DIR, exist_ok=True)
+
+# Mount profile pictures directory separately to serve from persistent storage
+# This allows profile pictures to persist between deployments
+@app.get("/static/profile_pictures/{filename}")
+async def serve_profile_picture(filename: str):
+    """Serve profile pictures from persistent storage."""
+    file_path = os.path.join(PROFILE_PICTURES_BASE_DIR, filename)
+    if os.path.exists(file_path):
+        # Determine content type from extension
+        ext = filename.split(".")[-1].lower()
+        media_types = {
+            "jpg": "image/jpeg",
+            "jpeg": "image/jpeg",
+            "png": "image/png",
+            "gif": "image/gif",
+            "webp": "image/webp"
+        }
+        media_type = media_types.get(ext, "image/jpeg")
+        return FileResponse(file_path, media_type=media_type)
+    raise HTTPException(status_code=404, detail="Profile picture not found")
+
 
 # Add individual file serving for assets
 @app.get("/credentials.js")
@@ -1071,8 +1100,8 @@ async def upload_profile_picture(
         if image.size[0] > max_size[0] or image.size[1] > max_size[1]:
             image.thumbnail(max_size, Image.Resampling.LANCZOS)
         
-        # Create profile_pictures directory if it doesn't exist
-        profile_pictures_dir = os.path.join(static_dir, "profile_pictures")
+        # Use persistent profile pictures directory
+        profile_pictures_dir = PROFILE_PICTURES_BASE_DIR
         os.makedirs(profile_pictures_dir, exist_ok=True)
         
         # Generate unique filename
@@ -1108,10 +1137,13 @@ async def upload_profile_picture(
         
         # Delete old profile picture if exists
         if current_user.profile_picture_url:
+            # Extract filename from URL (format: /static/profile_pictures/filename)
             old_url = current_user.profile_picture_url.lstrip("/")
-            if old_url.startswith("static/"):
-                old_url = old_url[7:]
-            old_file_path = os.path.join(static_dir, old_url)
+            if "profile_pictures/" in old_url:
+                old_filename = old_url.split("profile_pictures/")[-1]
+            else:
+                old_filename = old_url.split("/")[-1]
+            old_file_path = os.path.join(PROFILE_PICTURES_BASE_DIR, old_filename)
             if os.path.exists(old_file_path):
                 try:
                     os.remove(old_file_path)
@@ -1165,11 +1197,13 @@ async def reset_profile_picture(
     """Reset/remove profile picture."""
     # Delete file if exists
     if current_user.profile_picture_url:
-        # Remove /static/ prefix if present, then get relative path
+        # Extract filename from URL
         old_url = current_user.profile_picture_url.lstrip("/")
-        if old_url.startswith("static/"):
-            old_url = old_url[7:]  # Remove "static/" prefix to get "profile_pictures/filename"
-        file_path = os.path.join(static_dir, old_url)
+        if "profile_pictures/" in old_url:
+            old_filename = old_url.split("profile_pictures/")[-1]
+        else:
+            old_filename = old_url.split("/")[-1]
+        file_path = os.path.join(PROFILE_PICTURES_BASE_DIR, old_filename)
         if os.path.exists(file_path):
             try:
                 os.remove(file_path)
