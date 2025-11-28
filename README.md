@@ -70,12 +70,6 @@ OmniTrackr now includes powerful export/import capabilities:
 - Import results show how many items were created vs updated
 - Any errors during import are reported for easy troubleshooting
 
-### API Endpoints
-The export/import functionality is also available via API:
-- `GET /export/` - Export all data as JSON
-- `POST /import/` - Import data from JSON payload
-- `POST /import/file/` - Import data from uploaded JSON file
-
 ## Friends & Social Features
 
 OmniTrackr includes a complete social system for connecting with other users:
@@ -145,14 +139,6 @@ OmniTrackr includes a comprehensive statistics dashboard accessible via the **ðŸ
 - **Most prolific directors** (directors with the most movies in your collection)
 - **Highest rated directors** (directors with the best average ratings)
 - **Director insights** to discover your favorite filmmakers
-
-### API Endpoints
-The statistics are also available via API:
-- `GET /statistics/` - Complete statistics dashboard
-- `GET /statistics/watch/` - Watch progress statistics
-- `GET /statistics/ratings/` - Rating analysis
-- `GET /statistics/years/` - Year-based statistics
-- `GET /statistics/directors/` - Director statistics
 
 ## Authentication System
 
@@ -232,10 +218,12 @@ OmniTrackr uses a secure JWT-based authentication system:
 
 ## Screenshots
 <img width="3030" height="1896" alt="image" src="https://github.com/user-attachments/assets/1d4bde27-5cc4-413a-8013-0577fc901f8e" />
-<img width="2524" height="1930" alt="image" src="https://github.com/user-attachments/assets/a07fd724-ea6e-49c8-b0f2-195883f1694b" />
-<img width="2339" height="1910" alt="image" src="https://github.com/user-attachments/assets/2ac19a8f-2b03-4d13-9700-4b0a5e0506f2" />
-<img width="2334" height="1923" alt="image" src="https://github.com/user-attachments/assets/a6027a18-e488-4e9f-96e0-b6c95bf1e8d6" />
-<img width="2341" height="1789" alt="image" src="https://github.com/user-attachments/assets/1104c8c8-48c8-413d-811a-5b374a23e4af" />
+<img width="2548" height="1294" alt="image" src="https://github.com/user-attachments/assets/2f58377a-6ad3-4401-8e12-76e3e68f81d4" />
+<img width="1194" height="975" alt="image" src="https://github.com/user-attachments/assets/7a3ce219-5232-45af-aa4c-b057120f84ea" />
+<img width="1179" height="1265" alt="image" src="https://github.com/user-attachments/assets/cbc99333-535c-40cc-87ac-37dcf68fd510" />
+<img width="1177" height="942" alt="image" src="https://github.com/user-attachments/assets/82212659-4b8b-40a2-ae5c-1115f2b2f152" />
+<img width="1198" height="1142" alt="image" src="https://github.com/user-attachments/assets/c248a76b-95c2-445a-b53a-350fdc5ac3f3" />
+
 
 
 ## Recent Updates
