@@ -1,4 +1,4 @@
-fastapi==0.115.0
+fastapi==0.122.0
 uvicorn[standard]==0.32.0
 sqlalchemy==2.0.36
 pydantic==2.10.3
@@ -7,10 +7,10 @@ pydantic==2.10.3
 psycopg2-binary==2.9.10
 
 # Authentication
-python-jose==3.3.0
-cryptography==44.0.0
+python-jose==3.4.0
+cryptography==44.0.1
 bcrypt==4.2.1
-python-multipart==0.0.12
+python-multipart==0.0.18
 
 # Environment variables
 python-dotenv==1.0.1
@@ -30,5 +30,3 @@ Pillow==10.4.0
 
 # Rate limiting
 slowapi==0.1.9
-jose~=1.0.0
-starlette~=0.38.6
