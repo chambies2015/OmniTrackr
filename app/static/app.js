@@ -234,7 +234,19 @@ window.enableMovieEdit = function (btn, id, encTitle, encDirector, year, rating,
   row.cells[3].innerHTML = `<input type="number" id="edit-movie-year" value="${year}">`;
   row.cells[4].innerHTML = `<input type="number" min="0" max="10" step="0.1" id="edit-movie-rating" value="${ratingVal}">`;
   row.cells[5].innerHTML = `<input type="checkbox" id="edit-movie-watched" ${watched ? 'checked' : ''}>`;
-  row.cells[6].innerHTML = `<input type="text" id="edit-movie-review" value="${review}">`;
+  // Escape HTML for textarea content
+  const reviewEscaped = review.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;').replace(/'/g, '&#039;');
+  row.cells[6].innerHTML = `<textarea id="edit-movie-review" class="review-textarea">${reviewEscaped}</textarea>`;
+  // Auto-resize textarea to content
+  const movieReviewTextarea = document.getElementById('edit-movie-review');
+  if (movieReviewTextarea) {
+    movieReviewTextarea.style.height = 'auto';
+    movieReviewTextarea.style.height = Math.max(60, movieReviewTextarea.scrollHeight) + 'px';
+    movieReviewTextarea.addEventListener('input', function() {
+      this.style.height = 'auto';
+      this.style.height = Math.max(60, this.scrollHeight) + 'px';
+    });
+  }
   row.cells[8].innerHTML = `
     <button class="action-btn" onclick="saveMovieEdit(${id})">Save</button>
     <button class="action-btn" onclick="cancelMovieEdit()">Cancel</button>
@@ -454,7 +466,19 @@ window.enableTVEdit = function (btn, id, encTitle, year, seasons, episodes, rati
   row.cells[4].innerHTML = `<input type="number" id="edit-tv-episodes" value="${episodes !== 'null' ? episodes : ''}">`;
   row.cells[5].innerHTML = `<input type="number" min="0" max="10" step="0.1" id="edit-tv-rating" value="${ratingVal}">`;
   row.cells[6].innerHTML = `<input type="checkbox" id="edit-tv-watched" ${watched ? 'checked' : ''}>`;
-  row.cells[7].innerHTML = `<input type="text" id="edit-tv-review" value="${review}">`;
+  // Escape HTML for textarea content
+  const reviewEscaped = review.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;').replace(/'/g, '&#039;');
+  row.cells[7].innerHTML = `<textarea id="edit-tv-review" class="review-textarea">${reviewEscaped}</textarea>`;
+  // Auto-resize textarea to content
+  const tvReviewTextarea = document.getElementById('edit-tv-review');
+  if (tvReviewTextarea) {
+    tvReviewTextarea.style.height = 'auto';
+    tvReviewTextarea.style.height = Math.max(60, tvReviewTextarea.scrollHeight) + 'px';
+    tvReviewTextarea.addEventListener('input', function() {
+      this.style.height = 'auto';
+      this.style.height = Math.max(60, this.scrollHeight) + 'px';
+    });
+  }
   row.cells[9].innerHTML = `
     <button class="action-btn" onclick="saveTVEdit(${id})">Save</button>
     <button class="action-btn" onclick="cancelTVEdit()">Cancel</button>

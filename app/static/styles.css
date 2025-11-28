@@ -477,6 +477,41 @@ tbody tr:last-child td {
   border-bottom: none;
 }
 
+/* Review textarea - auto-expanding */
+.review-textarea {
+  width: 100%;
+  min-width: 200px;
+  min-height: 60px;
+  max-width: 100%;
+  padding: 8px 12px;
+  font-size: 14px;
+  font-family: inherit;
+  line-height: 1.5;
+  border: 2px solid rgba(102, 126, 234, 0.3);
+  border-radius: 8px;
+  background-color: var(--bg);
+  color: var(--fg);
+  resize: vertical;
+  overflow-y: auto;
+  transition: border-color 0.3s ease, box-shadow 0.3s ease;
+}
+
+.review-textarea:focus {
+  outline: none;
+  border-color: #667eea;
+  box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
+}
+
+body.dark-mode .review-textarea {
+  background-color: rgba(255, 255, 255, 0.05);
+  border-color: rgba(102, 126, 234, 0.4);
+}
+
+body.dark-mode .review-textarea:focus {
+  border-color: #667eea;
+  box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.2);
+}
+
 table input[type="text"],
 table input[type="number"] {
   margin: 0;
