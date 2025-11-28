@@ -410,10 +410,6 @@ app.add_middleware(
 # Mount static files for the UI
 import os
 
-static_dir = os.path.join(os.path.dirname(__file__), "static")
-if os.path.exists(static_dir):
-    app.mount("/static", StaticFiles(directory=static_dir), name="static")
-
 # Profile pictures storage directory (persistent between deployments)
 # Use environment variable if set, otherwise use a data directory outside the app
 PROFILE_PICTURES_BASE_DIR = os.getenv(
@@ -423,9 +419,9 @@ PROFILE_PICTURES_BASE_DIR = os.getenv(
 # Ensure the directory exists
 os.makedirs(PROFILE_PICTURES_BASE_DIR, exist_ok=True)
 
-# Mount profile pictures directory separately to serve from persistent storage
-# This allows profile pictures to persist between deployments
-@app.get("/static/profile_pictures/{filename}")
+# Serve profile pictures from persistent storage
+# Using /profile-pictures/ path to avoid conflict with /static/ mount
+@app.get("/profile-pictures/{filename}")
 async def serve_profile_picture(filename: str):
     """Serve profile pictures from persistent storage."""
     # Security: Sanitize filename to prevent path traversal attacks
@@ -459,6 +455,10 @@ async def serve_profile_picture(filename: str):
         media_type = media_types.get(ext, "image/jpeg")
         return FileResponse(file_path, media_type=media_type)
     raise HTTPException(status_code=404, detail="Profile picture not found")
+
+static_dir = os.path.join(os.path.dirname(__file__), "static")
+if os.path.exists(static_dir):
+    app.mount("/static", StaticFiles(directory=static_dir), name="static")
 
 
 # Add individual file serving for assets
@@ -1154,9 +1154,11 @@ async def upload_profile_picture(
         
         # Delete old profile picture if exists
         if current_user.profile_picture_url:
-            # Extract filename from URL (format: /static/profile_pictures/filename)
+            # Extract filename from URL (format: /profile-pictures/filename or /static/profile_pictures/filename for backward compatibility)
             old_url = current_user.profile_picture_url.lstrip("/")
-            if "profile_pictures/" in old_url:
+            if "profile-pictures/" in old_url:
+                old_filename = old_url.split("profile-pictures/")[-1]
+            elif "profile_pictures/" in old_url:
                 old_filename = old_url.split("profile_pictures/")[-1]
             else:
                 old_filename = old_url.split("/")[-1]
@@ -1188,7 +1190,7 @@ async def upload_profile_picture(
             f.write(output.getvalue())
         
         # Update database with relative URL
-        profile_picture_url = f"/static/profile_pictures/{unique_filename}"
+        profile_picture_url = f"/profile-pictures/{unique_filename}"
         updated_user = crud.update_profile_picture(db, current_user.id, profile_picture_url)
         
         if updated_user is None:
@@ -1214,9 +1216,11 @@ async def reset_profile_picture(
     """Reset/remove profile picture."""
     # Delete file if exists
     if current_user.profile_picture_url:
-        # Extract filename from URL
+        # Extract filename from URL (format: /profile-pictures/filename or /static/profile_pictures/filename for backward compatibility)
         old_url = current_user.profile_picture_url.lstrip("/")
-        if "profile_pictures/" in old_url:
+        if "profile-pictures/" in old_url:
+            old_filename = old_url.split("profile-pictures/")[-1]
+        elif "profile_pictures/" in old_url:
             old_filename = old_url.split("profile_pictures/")[-1]
         else:
             old_filename = old_url.split("/")[-1]
