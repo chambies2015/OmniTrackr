@@ -194,7 +194,7 @@ class BotFilterMiddleware(BaseHTTPMiddleware):
     SUSPICIOUS_PATHS = [
         "/.env", "/.env.bak", "/.env.backup", "/.env.local",
         "/.git", "/.git/config", "/.git/logs/HEAD",
-        "/wp-admin", "/wp-login.php", "/wp-config.php",
+        "/wp-admin", "/wp-login.php", "/wp-config.php", "/setup-config.php",
         "/wp-includes", "/wp-content", "/xmlrpc.php", "/wlwmanifest.xml",
         "/admin", "/administrator", "/phpmyadmin",
         "/.aws", "/aws-config.js", "/aws.config.js",
