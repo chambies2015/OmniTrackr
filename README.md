@@ -38,9 +38,12 @@ OmniTrackr is a full-featured, multi-user web application for managing and track
 - **Email Verification:** Required email verification before account access
 - **Password Reset:** Secure token-based password reset functionality
 - **Password Security:** bcrypt hashing for password storage
+- **Account Management:** Change username, email, password, and account deactivation/reactivation
+- **Friends System:** Add friends by username, send/accept/deny friend requests, manage friends list
+- **Notifications:** Real-time notification system with bell icon, friend request notifications, and auto-dismissal
 - **CRUD API:** Full REST API for managing movies and TV shows
 - **PostgreSQL Database:** Production-ready database
-- **Search and Sort:** Filter by title/director and sort by rating or year
+- **Search and Sort:** Automatic filtering by title/director and sorting by rating or year
 - **Modern UI:** Responsive single-page application with dark mode by default, modern card-based design, and beautiful landing page
 - **Poster Integration:** Automatic poster fetching from OMDB API with intelligent caching to reduce API calls
 - **Decimal Ratings:** Support for precise ratings from 0-10.0 with one decimal place (e.g., 7.5, 8.4)
@@ -72,6 +75,50 @@ The export/import functionality is also available via API:
 - `GET /export/` - Export all data as JSON
 - `POST /import/` - Import data from JSON payload
 - `POST /import/file/` - Import data from uploaded JSON file
+
+## Friends & Social Features
+
+OmniTrackr includes a complete social system for connecting with other users:
+
+### Friends List
+- **Friends Sidebar:** Always-visible sidebar showing your friends list
+- **Add Friends:** Send friend requests to other users by username
+- **Friend Management:** View friends, unfriend users, and manage your connections
+- **Future Expansion:** Foundation for viewing friends' collections and sharing recommendations
+
+### Friend Requests
+- **Send Requests:** Send friend requests to any user by entering their username
+- **Request Status:** Track sent and received friend requests
+- **Accept/Deny:** Accept or deny incoming friend requests with one click
+- **Cancel Requests:** Cancel sent friend requests before they're accepted
+- **Auto-expiration:** Friend requests automatically expire after 30 days
+
+### Notifications System
+- **Notification Bell:** Visual bell icon with red dot badge showing unread count
+- **Real-time Updates:** Notification count updates every 30 seconds automatically
+- **Notification Types:** Friend requests, friend acceptances, and system messages
+- **Auto-dismissal:** Notifications automatically removed when friend requests are accepted/denied
+- **Manual Dismissal:** Dismiss any notification with the X button
+- **Dropdown Menu:** Click the bell to view all notifications, newest first
+- **Action Buttons:** Accept/deny friend requests directly from notifications
+
+## Account Management
+
+OmniTrackr provides comprehensive account management features:
+
+### Account Settings
+- **View Account Info:** See your username, email, and account status
+- **Change Username:** Update your username with password confirmation (requires re-login)
+- **Change Email:** Update email address with verification sent to new email
+- **Change Password:** Update password with current password verification
+- **Account Deactivation:** Soft delete your account with 90-day reactivation window
+- **Account Reactivation:** Reactivate deactivated accounts within the 90-day window
+
+### Security Features
+- **Password Verification:** All sensitive changes require password confirmation
+- **Email Verification:** Email changes require verification via new email address
+- **Secure Tokens:** All account operations use secure, time-limited tokens
+- **Data Retention:** Deactivated accounts retain data for 90 days before permanent deletion
 
 ## Statistics Dashboard
 
@@ -137,8 +184,25 @@ OmniTrackr uses a secure JWT-based authentication system:
 - Token expiration for security
 - Users can reset forgotten passwords
 
+### Account Management
+- **Change Username:** Update your username with password confirmation
+- **Change Email:** Update email address with verification sent to new email
+- **Change Password:** Update password with current password verification
+- **Account Deactivation:** Soft delete account with 90-day reactivation window
+- **Account Reactivation:** Reactivate deactivated accounts within the 90-day window
+- **Email Change Verification:** Secure token-based email change verification
+
+### Friends & Social Features
+- **Friends List:** View your friends in a dedicated sidebar
+- **Friend Requests:** Send friend requests to other users by username
+- **Request Management:** Accept, deny, or cancel friend requests
+- **Auto-expiration:** Friend requests expire after 30 days
+- **Notifications:** Real-time notifications for friend requests and acceptances
+- **Notification Bell:** Visual indicator with unread count badge
+- **Auto-dismissal:** Notifications automatically removed when friend requests are accepted/denied
+
 ### API Security
-- All endpoints (except `/auth/register`, `/auth/login`, `/auth/verify-email`, `/auth/request-password-reset`, and `/auth/reset-password`) require authentication
+- All endpoints (except `/auth/register`, `/auth/login`, `/auth/verify-email`, `/auth/resend-verification`, `/auth/request-password-reset`, `/auth/reset-password`, and `/auth/reactivate`) require authentication
 - JWT tokens sent in Authorization header
 - User data isolation - users can only access their own data
 - Automatic token validation and 401 handling
@@ -151,57 +215,20 @@ OmniTrackr uses a secure JWT-based authentication system:
 
 ### Features
 - **User Authentication:** Secure login with JWT tokens, logout functionality
+- **Account Settings:** Manage your account - change username, email, password, or deactivate/reactivate
+- **Friends & Social:** Add friends, send/accept/deny friend requests, view friends list
+- **Notifications:** Real-time notifications with bell icon and unread count badge
 - **Add movies & TV shows:** Enter details like title, director/creator, year, rating, and watched status
 - **Automatic Posters:** Movie/TV posters are fetched automatically from OMDB and cached
-- **Search & Filter:** Search by title or director/creator and sort by rating or year
-- **Inline Editing:** Edit entries directly in the table with save/cancel options
+- **Search & Filter:** Automatic search by title or director/creator and sort by rating or year
+- **Inline Editing:** Edit entries directly in the table with save/cancel options, expandable review textareas
 - **Delete:** Remove entries from your collection
 - **Dark Mode:** Beautiful dark theme by default with light mode toggle
-- **Modern UI:** Card-based design with smooth animations and gradients
+- **Modern UI:** Card-based design with smooth animations, gradients, and collapsible forms
 - **Tabbed Interface:** Switch between Movies, TV Shows, and Statistics
 - **Export/Import:** Backup your collection to JSON or import from JSON files
 - **Statistics Dashboard:** Comprehensive analytics with animated visualizations showing your viewing habits and preferences
 
-### API Access
-Interactive API documentation is available at `/docs` with full Swagger UI for testing all endpoints.
-
-## API Endpoints Overview
-
-### Authentication
-- `POST /auth/register` - Register new user
-- `POST /auth/login` - Login and receive JWT token
-- `GET /auth/verify-email` - Verify email address with token
-- `POST /auth/resend-verification` - Resend verification email
-- `POST /auth/request-password-reset` - Request password reset email
-- `POST /auth/reset-password` - Reset password with token
-
-### Movies
-- `GET /movies/` - List all movies (with search & sort)
-- `POST /movies/` - Create new movie
-- `GET /movies/{id}` - Get specific movie
-- `PUT /movies/{id}` - Update movie
-- `DELETE /movies/{id}` - Delete movie
-
-### TV Shows
-- `GET /tv-shows/` - List all TV shows (with search & sort)
-- `POST /tv-shows/` - Create new TV show
-- `GET /tv-shows/{id}` - Get specific TV show
-- `PUT /tv-shows/{id}` - Update TV show
-- `DELETE /tv-shows/{id}` - Delete TV show
-
-### Data Management
-- `GET /export/` - Export all user data to JSON
-- `POST /import/` - Import from JSON payload
-- `POST /import/file/` - Import from uploaded JSON file
-
-### Statistics
-- `GET /statistics/` - Complete statistics dashboard
-- `GET /statistics/watch/` - Watch progress stats
-- `GET /statistics/ratings/` - Rating analysis
-- `GET /statistics/years/` - Year-based stats
-- `GET /statistics/directors/` - Director stats
-
-All endpoints (except authentication) require a valid JWT token in the Authorization header.
 
 ## Screenshots
 <img width="3030" height="1896" alt="image" src="https://github.com/user-attachments/assets/1d4bde27-5cc4-413a-8013-0577fc901f8e" />
@@ -213,10 +240,15 @@ All endpoints (except authentication) require a valid JWT token in the Authoriza
 
 ## Recent Updates
 
+- ✅ **Friends & Social Features:** Complete friends system with friend requests, friends list sidebar, and social interactions
+- ✅ **Notifications System:** Real-time notifications with bell icon, unread count badge, and auto-dismissal
+- ✅ **Account Management:** Full account settings - change username, email, password, and account deactivation/reactivation
 - ✅ **Decimal Ratings:** Support for precise ratings from 0-10.0 with one decimal place
-- ✅ **Modern UI Redesign:** Card-based layouts, smooth animations, and gradient designs
+- ✅ **Modern UI Redesign:** Card-based layouts, smooth animations, gradient designs, and collapsible forms
 - ✅ **Statistics Panel Enhancement:** Animated visualizations and improved readability
 - ✅ **SEO Optimization:** Meta tags, structured data, sitemap, and robots.txt
 - ✅ **Security Improvements:** Security headers, bot filtering, and enhanced protection
 - ✅ **Performance Optimizations:** Poster caching, deduplication, and loading state management
+- ✅ **Automatic Filtering:** Search and sort filters apply automatically without button press
+- ✅ **Enhanced Editing:** Expandable review textareas that auto-resize to content
 

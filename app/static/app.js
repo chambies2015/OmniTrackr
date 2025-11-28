@@ -4,6 +4,7 @@ const API_BASE = isLocal ? 'http://127.0.0.1:8000' : '';
 let editingRowId = null;
 let editingRowElement = null;
 let currentTab = 'movies';
+let notificationCountInterval = null;
 
 // Poster fetch deduplication - prevent multiple simultaneous OMDB API calls for same movie/show
 const posterFetchInProgress = new Set();
@@ -1252,6 +1253,332 @@ document.addEventListener('click', (e) => {
   const modal = document.getElementById('accountModal');
   if (e.target === modal) {
     closeAccountModal();
+  }
+});
+
+// ============================================================================
+// Friends Functions
+// ============================================================================
+
+async function loadFriendsList() {
+  try {
+    const response = await authenticatedFetch(`${API_BASE}/friends`);
+    if (response.ok) {
+      const friends = await response.json();
+      const friendsList = document.getElementById('friendsList');
+      
+      if (friends.length === 0) {
+        friendsList.innerHTML = '<p class="no-friends">No friends yet</p>';
+        return;
+      }
+      
+      friendsList.innerHTML = friends.map(friend => `
+        <div class="friend-item" data-friend-id="${friend.friend.id}">
+          <span class="friend-username">${escapeHtml(friend.friend.username)}</span>
+          <button class="unfriend-btn" onclick="unfriendUser(${friend.friend.id})" title="Unfriend">✕</button>
+        </div>
+      `).join('');
+    }
+  } catch (error) {
+    console.error('Failed to load friends list:', error);
+  }
+}
+
+window.openFriendRequestModal = function() {
+  document.getElementById('friendRequestModal').style.display = 'flex';
+}
+
+window.closeFriendRequestModal = function() {
+  document.getElementById('friendRequestModal').style.display = 'none';
+  document.getElementById('friendRequestForm').reset();
+  document.getElementById('friendRequestError').style.display = 'none';
+  document.getElementById('friendRequestMessage').style.display = 'none';
+}
+
+window.sendFriendRequest = async function(event) {
+  event.preventDefault();
+  const username = document.getElementById('friendRequestUsername').value.trim();
+  const errorEl = document.getElementById('friendRequestError');
+  const successEl = document.getElementById('friendRequestMessage');
+  
+  errorEl.textContent = '';
+  errorEl.style.display = 'none';
+  successEl.textContent = '';
+  successEl.style.display = 'none';
+  
+  if (!username) {
+    errorEl.textContent = 'Please enter a username';
+    errorEl.style.display = 'block';
+    return;
+  }
+  
+  try {
+    const response = await authenticatedFetch(`${API_BASE}/friends/request`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ receiver_username: username })
+    });
+    
+    if (response.ok) {
+      successEl.textContent = `Friend request sent to ${username}!`;
+      successEl.style.display = 'block';
+      document.getElementById('friendRequestForm').reset();
+      setTimeout(() => {
+        closeFriendRequestModal();
+        updateNotificationCount();
+      }, 1500);
+    } else {
+      const error = await response.json();
+      errorEl.textContent = error.detail || 'Failed to send friend request';
+      errorEl.style.display = 'block';
+    }
+  } catch (error) {
+    errorEl.textContent = 'Failed to send friend request. Please try again.';
+    errorEl.style.display = 'block';
+  }
+}
+
+window.acceptFriendRequest = async function(requestId) {
+  try {
+    const response = await authenticatedFetch(`${API_BASE}/friends/requests/${requestId}/accept`, {
+      method: 'POST'
+    });
+    
+    if (response.ok) {
+      loadFriendsList();
+      loadNotifications();
+      updateNotificationCount();
+    } else {
+      const error = await response.json();
+      alert(error.detail || 'Failed to accept friend request');
+    }
+  } catch (error) {
+    alert('Failed to accept friend request. Please try again.');
+  }
+}
+
+window.denyFriendRequest = async function(requestId) {
+  try {
+    const response = await authenticatedFetch(`${API_BASE}/friends/requests/${requestId}/deny`, {
+      method: 'POST'
+    });
+    
+    if (response.ok) {
+      loadNotifications();
+      updateNotificationCount();
+    } else {
+      const error = await response.json();
+      alert(error.detail || 'Failed to deny friend request');
+    }
+  } catch (error) {
+    alert('Failed to deny friend request. Please try again.');
+  }
+}
+
+window.cancelFriendRequest = async function(requestId) {
+  try {
+    const response = await authenticatedFetch(`${API_BASE}/friends/requests/${requestId}`, {
+      method: 'DELETE'
+    });
+    
+    if (response.ok) {
+      loadNotifications();
+      updateNotificationCount();
+    } else {
+      const error = await response.json();
+      alert(error.detail || 'Failed to cancel friend request');
+    }
+  } catch (error) {
+    alert('Failed to cancel friend request. Please try again.');
+  }
+}
+
+window.unfriendUser = async function(friendId) {
+  if (!confirm('Are you sure you want to unfriend this user?')) {
+    return;
+  }
+  
+  try {
+    const response = await authenticatedFetch(`${API_BASE}/friends/${friendId}`, {
+      method: 'DELETE'
+    });
+    
+    if (response.ok) {
+      loadFriendsList();
+    } else {
+      const error = await response.json();
+      alert(error.detail || 'Failed to unfriend user');
+    }
+  } catch (error) {
+    alert('Failed to unfriend user. Please try again.');
+  }
+}
+
+// ============================================================================
+// Notification Functions
+// ============================================================================
+
+async function loadNotifications() {
+  try {
+    const response = await authenticatedFetch(`${API_BASE}/notifications`);
+    if (response.ok) {
+      const notifications = await response.json();
+      const notificationList = document.getElementById('notificationList');
+      
+      if (notifications.length === 0) {
+        notificationList.innerHTML = '<p class="no-notifications">No notifications</p>';
+        return;
+      }
+      
+      notificationList.innerHTML = notifications.map(notif => {
+        const date = new Date(notif.created_at);
+        const timeAgo = getTimeAgo(date);
+        let actionButtons = '';
+        
+        if (notif.type === 'friend_request_received' && notif.friend_request_id) {
+          actionButtons = `
+            <button class="notification-action-btn accept-btn" onclick="acceptFriendRequest(${notif.friend_request_id})">Accept</button>
+            <button class="notification-action-btn deny-btn" onclick="denyFriendRequest(${notif.friend_request_id})">Deny</button>
+          `;
+        }
+        
+        return `
+          <div class="notification-item ${notif.read_at ? 'read' : 'unread'}" data-notification-id="${notif.id}">
+            <div class="notification-content">
+              <p class="notification-message">${escapeHtml(notif.message)}</p>
+              <span class="notification-time">${timeAgo}</span>
+              ${actionButtons}
+            </div>
+            <button class="notification-dismiss" onclick="dismissNotification(${notif.id})" title="Dismiss">✕</button>
+          </div>
+        `;
+      }).join('');
+    }
+  } catch (error) {
+    console.error('Failed to load notifications:', error);
+  }
+}
+
+async function updateNotificationCount() {
+  try {
+    const response = await authenticatedFetch(`${API_BASE}/notifications/count`);
+    if (response.ok) {
+      const data = await response.json();
+      const notificationDot = document.getElementById('notificationDot');
+      
+      if (!notificationDot) {
+        console.warn('Notification dot element not found');
+        return;
+      }
+      
+      if (data.count > 0) {
+        notificationDot.style.display = 'flex'; // Use flex to center the number
+        notificationDot.textContent = data.count > 99 ? '99+' : data.count.toString();
+        console.log(`Notification count updated: ${data.count}`);
+      } else {
+        notificationDot.style.display = 'none';
+        console.log('No unread notifications');
+      }
+    } else {
+      console.error('Failed to get notification count:', response.status, response.statusText);
+    }
+  } catch (error) {
+    console.error('Failed to update notification count:', error);
+  }
+}
+
+window.toggleNotificationDropdown = function() {
+  const dropdown = document.getElementById('notificationDropdown');
+  if (dropdown.style.display === 'none' || dropdown.style.display === '') {
+    dropdown.style.display = 'block';
+    loadNotifications();
+  } else {
+    dropdown.style.display = 'none';
+  }
+}
+
+window.dismissNotification = async function(notificationId) {
+  try {
+    const response = await authenticatedFetch(`${API_BASE}/notifications/${notificationId}`, {
+      method: 'DELETE'
+    });
+    
+    if (response.ok) {
+      loadNotifications();
+      updateNotificationCount();
+    } else {
+      alert('Failed to dismiss notification');
+    }
+  } catch (error) {
+    alert('Failed to dismiss notification. Please try again.');
+  }
+}
+
+function getTimeAgo(date) {
+  const seconds = Math.floor((new Date() - date) / 1000);
+  if (seconds < 60) return 'just now';
+  const minutes = Math.floor(seconds / 60);
+  if (minutes < 60) return `${minutes}m ago`;
+  const hours = Math.floor(minutes / 60);
+  if (hours < 24) return `${hours}h ago`;
+  const days = Math.floor(hours / 24);
+  if (days < 7) return `${days}d ago`;
+  const weeks = Math.floor(days / 7);
+  if (weeks < 4) return `${weeks}w ago`;
+  const months = Math.floor(days / 30);
+  return `${months}mo ago`;
+}
+
+function escapeHtml(text) {
+  const div = document.createElement('div');
+  div.textContent = text;
+  return div.innerHTML;
+}
+
+// Initialize friends and notifications
+document.addEventListener('DOMContentLoaded', function() {
+  // Set up notification bell click handler
+  const notificationBell = document.getElementById('notificationBell');
+  if (notificationBell) {
+    notificationBell.addEventListener('click', toggleNotificationDropdown);
+  }
+  
+  // Set up friend request button
+  const sendFriendRequestBtn = document.getElementById('sendFriendRequestBtn');
+  if (sendFriendRequestBtn) {
+    sendFriendRequestBtn.addEventListener('click', openFriendRequestModal);
+  }
+  
+  // Close notification dropdown when clicking outside
+  document.addEventListener('click', (e) => {
+    const dropdown = document.getElementById('notificationDropdown');
+    const bell = document.getElementById('notificationBell');
+    if (dropdown && bell && !dropdown.contains(e.target) && !bell.contains(e.target)) {
+      dropdown.style.display = 'none';
+    }
+  });
+  
+  // Close friend request modal when clicking outside
+  document.addEventListener('click', (e) => {
+    const modal = document.getElementById('friendRequestModal');
+    if (e.target === modal) {
+      closeFriendRequestModal();
+    }
+  });
+  
+  // Load friends list and notification count on page load (if logged in)
+  if (isAuthenticated()) {
+    loadFriendsList();
+    updateNotificationCount();
+    
+    // Show friends sidebar
+    const friendsSidebar = document.getElementById('friendsSidebar');
+    if (friendsSidebar) {
+      friendsSidebar.style.display = 'block';
+    }
+    
+    // Set up interval to refresh notification count every 30 seconds
+    notificationCountInterval = setInterval(updateNotificationCount, 30000);
   }
 });
 

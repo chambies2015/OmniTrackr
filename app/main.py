@@ -157,6 +157,109 @@ try:
                         except Exception as e:
                             print(f"Note: Could not convert tv_shows.rating column type (may already be correct): {e}")
 
+    # Check and create friend_requests table if it doesn't exist
+    if not inspector.has_table("friend_requests"):
+        with engine.connect() as conn:
+            if database.DATABASE_URL.startswith("postgresql"):
+                conn.execute(text("""
+                    CREATE TABLE friend_requests (
+                        id SERIAL PRIMARY KEY,
+                        sender_id INTEGER NOT NULL REFERENCES users(id),
+                        receiver_id INTEGER NOT NULL REFERENCES users(id),
+                        status VARCHAR DEFAULT 'pending',
+                        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                        expires_at TIMESTAMP NOT NULL
+                    )
+                """))
+                conn.execute(text("CREATE INDEX ix_friend_requests_sender_id ON friend_requests(sender_id)"))
+                conn.execute(text("CREATE INDEX ix_friend_requests_receiver_id ON friend_requests(receiver_id)"))
+                conn.execute(text("CREATE INDEX ix_friend_requests_status ON friend_requests(status)"))
+            else:
+                # SQLite
+                conn.execute(text("""
+                    CREATE TABLE friend_requests (
+                        id INTEGER PRIMARY KEY AUTOINCREMENT,
+                        sender_id INTEGER NOT NULL REFERENCES users(id),
+                        receiver_id INTEGER NOT NULL REFERENCES users(id),
+                        status VARCHAR DEFAULT 'pending',
+                        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                        expires_at TIMESTAMP NOT NULL
+                    )
+                """))
+                conn.execute(text("CREATE INDEX ix_friend_requests_sender_id ON friend_requests(sender_id)"))
+                conn.execute(text("CREATE INDEX ix_friend_requests_receiver_id ON friend_requests(receiver_id)"))
+                conn.execute(text("CREATE INDEX ix_friend_requests_status ON friend_requests(status)"))
+            conn.commit()
+            print("Created friend_requests table")
+
+    # Check and create friendships table if it doesn't exist
+    if not inspector.has_table("friendships"):
+        with engine.connect() as conn:
+            if database.DATABASE_URL.startswith("postgresql"):
+                conn.execute(text("""
+                    CREATE TABLE friendships (
+                        id SERIAL PRIMARY KEY,
+                        user1_id INTEGER NOT NULL REFERENCES users(id),
+                        user2_id INTEGER NOT NULL REFERENCES users(id),
+                        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                        CONSTRAINT _friendship_uc UNIQUE (user1_id, user2_id)
+                    )
+                """))
+                conn.execute(text("CREATE INDEX ix_friendships_user1_id ON friendships(user1_id)"))
+                conn.execute(text("CREATE INDEX ix_friendships_user2_id ON friendships(user2_id)"))
+            else:
+                # SQLite
+                conn.execute(text("""
+                    CREATE TABLE friendships (
+                        id INTEGER PRIMARY KEY AUTOINCREMENT,
+                        user1_id INTEGER NOT NULL REFERENCES users(id),
+                        user2_id INTEGER NOT NULL REFERENCES users(id),
+                        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                        UNIQUE(user1_id, user2_id)
+                    )
+                """))
+                conn.execute(text("CREATE INDEX ix_friendships_user1_id ON friendships(user1_id)"))
+                conn.execute(text("CREATE INDEX ix_friendships_user2_id ON friendships(user2_id)"))
+            conn.commit()
+            print("Created friendships table")
+
+    # Check and create notifications table if it doesn't exist
+    if not inspector.has_table("notifications"):
+        with engine.connect() as conn:
+            if database.DATABASE_URL.startswith("postgresql"):
+                conn.execute(text("""
+                    CREATE TABLE notifications (
+                        id SERIAL PRIMARY KEY,
+                        user_id INTEGER NOT NULL REFERENCES users(id),
+                        type VARCHAR NOT NULL,
+                        message VARCHAR NOT NULL,
+                        friend_request_id INTEGER REFERENCES friend_requests(id),
+                        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                        read_at TIMESTAMP
+                    )
+                """))
+                conn.execute(text("CREATE INDEX ix_notifications_user_id ON notifications(user_id)"))
+                conn.execute(text("CREATE INDEX ix_notifications_friend_request_id ON notifications(friend_request_id)"))
+                conn.execute(text("CREATE INDEX ix_notifications_created_at ON notifications(created_at)"))
+            else:
+                # SQLite
+                conn.execute(text("""
+                    CREATE TABLE notifications (
+                        id INTEGER PRIMARY KEY AUTOINCREMENT,
+                        user_id INTEGER NOT NULL REFERENCES users(id),
+                        type VARCHAR NOT NULL,
+                        message VARCHAR NOT NULL,
+                        friend_request_id INTEGER REFERENCES friend_requests(id),
+                        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                        read_at TIMESTAMP
+                    )
+                """))
+                conn.execute(text("CREATE INDEX ix_notifications_user_id ON notifications(user_id)"))
+                conn.execute(text("CREATE INDEX ix_notifications_friend_request_id ON notifications(friend_request_id)"))
+                conn.execute(text("CREATE INDEX ix_notifications_created_at ON notifications(created_at)"))
+            conn.commit()
+            print("Created notifications table")
+
 except Exception as e:
     # Best-effort migration; avoid crashing app startup if inspection fails
     print(f"Migration warning: {e}")
@@ -164,6 +267,20 @@ except Exception as e:
 
 # Initialize FastAPI
 app = FastAPI(title="OmniTrackr API", description="Manage your movies and TV shows", version="0.1.0")
+
+
+@app.on_event("startup")
+async def startup_event():
+    """Run tasks on application startup."""
+    # Expire old friend requests (30+ days old)
+    try:
+        db = SessionLocal()
+        expired_count = crud.expire_friend_requests(db)
+        if expired_count > 0:
+            print(f"Expired {expired_count} old friend requests on startup")
+        db.close()
+    except Exception as e:
+        print(f"Error expiring friend requests on startup: {e}")
 
 
 # Security Headers Middleware
@@ -596,12 +713,47 @@ async def resend_verification_email(email: str, db: Session = Depends(get_db)):
     user.verification_token = verification_token
     db.commit()
     
+    # Check if email credentials are configured before attempting to send
+    import os
+    mail_username = os.getenv("MAIL_USERNAME", "")
+    mail_password = os.getenv("MAIL_PASSWORD", "")
+    
+    if not mail_username or not mail_password:
+        print(f"WARNING: Email credentials not configured (MAIL_USERNAME or MAIL_PASSWORD missing).")
+        print(f"WARNING: Verification email will NOT be sent to {user.email}.")
+        print(f"WARNING: Email will only be printed to console in development mode.")
+        verification_url = f"{email_utils.APP_URL}/?token={verification_token}&email_verified=true"
+        print(f"INFO: Verification URL for {user.email}: {verification_url}")
+        # Still return success message for security (don't reveal email wasn't sent)
+        return {"message": "If that email is registered and unverified, a verification email has been sent."}
+    
     # Send verification email (async, non-blocking)
+    email_sent = False
     try:
         await email_utils.send_verification_email(user.email, user.username, verification_token)
+        email_sent = True
+        print(f"INFO: Verification email sent successfully to {user.email}")
     except Exception as e:
-        # Log error but don't fail the request
-        print(f"Failed to send verification email: {e}")
+        # Log detailed error for debugging
+        error_msg = str(e)
+        print(f"ERROR: Failed to send verification email to {user.email}")
+        print(f"ERROR Details: {error_msg}")
+        print(f"ERROR Type: {type(e).__name__}")
+        import traceback
+        print(f"ERROR Traceback: {traceback.format_exc()}")
+        # Check if it's a configuration issue
+        if "MAIL_USERNAME" in error_msg or "MAIL_PASSWORD" in error_msg or "credentials" in error_msg.lower() or "smtp" in error_msg.lower():
+            print(f"WARNING: Email credentials may be incorrect or SMTP server unreachable.")
+            print(f"WARNING: Check MAIL_USERNAME, MAIL_PASSWORD, MAIL_SERVER, and MAIL_PORT environment variables.")
+        verification_url = f"{email_utils.APP_URL}/?token={verification_token}&email_verified=true"
+        print(f"INFO: Fallback verification URL for {user.email}: {verification_url}")
+        email_sent = False
+    
+    # Return success message (don't reveal if email actually sent for security)
+    # But log the actual status for debugging
+    if not email_sent:
+        print(f"WARNING: Verification email was NOT sent to {user.email}, but user received success message.")
+        print(f"WARNING: Check server logs above for email sending errors.")
     
     return {"message": "If that email is registered and unverified, a verification email has been sent."}
 
@@ -847,7 +999,176 @@ async def reactivate_account(
             raise HTTPException(status_code=404, detail="User not found")
         return reactivated_user
     except ValueError as e:
+               raise HTTPException(status_code=400, detail=str(e))
+
+
+# ============================================================================
+# Friends & Notifications endpoints
+# ============================================================================
+
+@app.post("/friends/request", response_model=schemas.FriendRequestResponse, tags=["friends"])
+async def send_friend_request(
+    request_data: schemas.FriendRequestCreate,
+    current_user: models.User = Depends(get_current_user),
+    db: Session = Depends(get_db)
+):
+    """Send a friend request to another user by username."""
+    # Find the receiver by username
+    receiver = crud.get_user_by_username(db, request_data.receiver_username)
+    if not receiver:
+        raise HTTPException(status_code=404, detail="User not found")
+    
+    if receiver.id == current_user.id:
+        raise HTTPException(status_code=400, detail="Cannot send friend request to yourself")
+    
+    try:
+        friend_request = crud.create_friend_request(db, current_user.id, receiver.id)
+        # Refresh to load relationships
+        db.refresh(friend_request)
+        return friend_request
+    except ValueError as e:
         raise HTTPException(status_code=400, detail=str(e))
+
+
+@app.get("/friends/requests", response_model=dict, tags=["friends"])
+async def get_friend_requests(
+    current_user: models.User = Depends(get_current_user),
+    db: Session = Depends(get_db)
+):
+    """Get pending friend requests (sent and received)."""
+    sent, received = crud.get_friend_requests_by_user(db, current_user.id)
+    
+    return {
+        "sent": [schemas.FriendRequestResponse.model_validate(req) for req in sent],
+        "received": [schemas.FriendRequestResponse.model_validate(req) for req in received]
+    }
+
+
+@app.post("/friends/requests/{request_id}/accept", response_model=schemas.FriendRequestResponse, tags=["friends"])
+async def accept_friend_request(
+    request_id: int,
+    current_user: models.User = Depends(get_current_user),
+    db: Session = Depends(get_db)
+):
+    """Accept a friend request."""
+    try:
+        friend_request = crud.accept_friend_request(db, request_id, current_user.id)
+        if not friend_request:
+            raise HTTPException(status_code=404, detail="Friend request not found")
+        db.refresh(friend_request)
+        return friend_request
+    except ValueError as e:
+        raise HTTPException(status_code=400, detail=str(e))
+
+
+@app.post("/friends/requests/{request_id}/deny", response_model=schemas.FriendRequestResponse, tags=["friends"])
+async def deny_friend_request(
+    request_id: int,
+    current_user: models.User = Depends(get_current_user),
+    db: Session = Depends(get_db)
+):
+    """Deny a friend request."""
+    try:
+        friend_request = crud.deny_friend_request(db, request_id, current_user.id)
+        if not friend_request:
+            raise HTTPException(status_code=404, detail="Friend request not found")
+        db.refresh(friend_request)
+        return friend_request
+    except ValueError as e:
+        raise HTTPException(status_code=400, detail=str(e))
+
+
+@app.delete("/friends/requests/{request_id}", response_model=dict, tags=["friends"])
+async def cancel_friend_request(
+    request_id: int,
+    current_user: models.User = Depends(get_current_user),
+    db: Session = Depends(get_db)
+):
+    """Cancel a sent friend request."""
+    try:
+        friend_request = crud.cancel_friend_request(db, request_id, current_user.id)
+        if not friend_request:
+            raise HTTPException(status_code=404, detail="Friend request not found")
+        return {"message": "Friend request cancelled"}
+    except ValueError as e:
+        raise HTTPException(status_code=400, detail=str(e))
+
+
+@app.get("/friends", response_model=List[schemas.FriendshipResponse], tags=["friends"])
+async def get_friends(
+    current_user: models.User = Depends(get_current_user),
+    db: Session = Depends(get_db)
+):
+    """Get list of all friends."""
+    friends = crud.get_friends(db, current_user.id)
+    
+    # Convert to FriendshipResponse format
+    friendships = []
+    for friend in friends:
+        # Find the friendship record
+        user1_id = min(current_user.id, friend.id)
+        user2_id = max(current_user.id, friend.id)
+        from sqlalchemy import and_
+        friendship = db.query(models.Friendship).filter(
+            and_(
+                models.Friendship.user1_id == user1_id,
+                models.Friendship.user2_id == user2_id
+            )
+        ).first()
+        if friendship:
+            friendships.append(schemas.FriendshipResponse(
+                id=friendship.id,
+                friend=friend,
+                created_at=friendship.created_at
+            ))
+    
+    return friendships
+
+
+@app.delete("/friends/{friend_id}", response_model=dict, tags=["friends"])
+async def unfriend_user(
+    friend_id: int,
+    current_user: models.User = Depends(get_current_user),
+    db: Session = Depends(get_db)
+):
+    """Unfriend a user."""
+    success = crud.remove_friendship(db, current_user.id, friend_id)
+    if not success:
+        raise HTTPException(status_code=404, detail="Friendship not found")
+    return {"message": "Unfriended successfully"}
+
+
+@app.get("/notifications", response_model=List[schemas.NotificationResponse], tags=["notifications"])
+async def get_notifications(
+    current_user: models.User = Depends(get_current_user),
+    db: Session = Depends(get_db)
+):
+    """Get all notifications for the current user (newest first)."""
+    notifications = crud.get_notifications(db, current_user.id)
+    return [schemas.NotificationResponse.model_validate(notif) for notif in notifications]
+
+
+@app.get("/notifications/count", response_model=schemas.NotificationCount, tags=["notifications"])
+async def get_notification_count(
+    current_user: models.User = Depends(get_current_user),
+    db: Session = Depends(get_db)
+):
+    """Get unread notification count."""
+    count = crud.get_unread_notification_count(db, current_user.id)
+    return schemas.NotificationCount(count=count)
+
+
+@app.delete("/notifications/{notification_id}", response_model=dict, tags=["notifications"])
+async def dismiss_notification(
+    notification_id: int,
+    current_user: models.User = Depends(get_current_user),
+    db: Session = Depends(get_db)
+):
+    """Dismiss/delete a notification."""
+    success = crud.delete_notification(db, notification_id, current_user.id)
+    if not success:
+        raise HTTPException(status_code=404, detail="Notification not found")
+    return {"message": "Notification dismissed"}
 
 
 # ============================================================================
