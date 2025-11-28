@@ -1605,6 +1605,7 @@ window.toggleFriendsSidebar = function() {
   const floatingToggleBtn = document.getElementById('showFriendsSidebar');
   const footer = document.getElementById('mainFooter');
   const notificationBell = document.getElementById('notificationBell');
+  const notificationDropdown = document.getElementById('notificationDropdown');
   
   if (!sidebar || !container) return;
   
@@ -1621,6 +1622,7 @@ window.toggleFriendsSidebar = function() {
     if (floatingToggleBtn) floatingToggleBtn.style.display = 'none';
     if (footer) footer.classList.remove('sidebar-hidden');
     if (notificationBell) notificationBell.style.left = '270px';
+    if (notificationDropdown) notificationDropdown.classList.remove('sidebar-hidden');
   } else {
     // Hide sidebar
     sidebar.classList.add('hidden');
@@ -1632,6 +1634,7 @@ window.toggleFriendsSidebar = function() {
     if (floatingToggleBtn) floatingToggleBtn.style.display = 'flex';
     if (footer) footer.classList.add('sidebar-hidden');
     if (notificationBell) notificationBell.style.left = '20px';
+    if (notificationDropdown) notificationDropdown.classList.add('sidebar-hidden');
   }
   
   // Save preference to localStorage
@@ -1655,6 +1658,7 @@ function restoreSidebarState() {
       const floatingToggleBtn = document.getElementById('showFriendsSidebar');
       const footer = document.getElementById('mainFooter');
       const notificationBell = document.getElementById('notificationBell');
+      const notificationDropdown = document.getElementById('notificationDropdown');
       
       if (sidebar && container) {
         sidebar.classList.add('hidden');
@@ -1666,6 +1670,7 @@ function restoreSidebarState() {
         if (floatingToggleBtn) floatingToggleBtn.style.display = 'flex';
         if (footer) footer.classList.add('sidebar-hidden');
         if (notificationBell) notificationBell.style.left = '20px';
+        if (notificationDropdown) notificationDropdown.classList.add('sidebar-hidden');
       }
     }, 100);
   }

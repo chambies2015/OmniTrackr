@@ -1930,6 +1930,11 @@ body.dark-mode .success-message {
   overflow: hidden;
   display: flex;
   flex-direction: column;
+  transition: left 0.3s ease;
+}
+
+.notification-dropdown.sidebar-hidden {
+  left: 20px;
 }
 
 .notification-header {
