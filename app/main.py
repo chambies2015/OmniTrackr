@@ -428,8 +428,25 @@ os.makedirs(PROFILE_PICTURES_BASE_DIR, exist_ok=True)
 @app.get("/static/profile_pictures/{filename}")
 async def serve_profile_picture(filename: str):
     """Serve profile pictures from persistent storage."""
+    # Security: Sanitize filename to prevent path traversal attacks
+    import re
+    # Remove any path separators and dangerous characters
+    filename = os.path.basename(filename)  # Remove any directory components
+    # Only allow alphanumeric, dots, underscores, and hyphens
+    if not re.match(r'^[a-zA-Z0-9._-]+$', filename):
+        raise HTTPException(status_code=400, detail="Invalid filename")
+    
+    # Construct file path
     file_path = os.path.join(PROFILE_PICTURES_BASE_DIR, filename)
-    if os.path.exists(file_path):
+    
+    # Security: Normalize path and verify it's still within the base directory
+    file_path = os.path.normpath(file_path)
+    base_dir_normalized = os.path.normpath(PROFILE_PICTURES_BASE_DIR)
+    if not file_path.startswith(base_dir_normalized):
+        raise HTTPException(status_code=403, detail="Access denied")
+    
+    # Check if file exists
+    if os.path.exists(file_path) and os.path.isfile(file_path):
         # Determine content type from extension
         ext = filename.split(".")[-1].lower()
         media_types = {
