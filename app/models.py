@@ -29,6 +29,9 @@ class User(Base):
     tv_shows_private = Column(Boolean, default=False, nullable=False)
     statistics_private = Column(Boolean, default=False, nullable=False)
     
+    # Profile picture
+    profile_picture_url = Column(String, nullable=True)
+    
     # Relationships - cascade delete ensures user's data is deleted with them
     movies = relationship("Movie", back_populates="owner", cascade="all, delete-orphan")
     tv_shows = relationship("TVShow", back_populates="owner", cascade="all, delete-orphan")

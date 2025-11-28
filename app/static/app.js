@@ -1309,11 +1309,165 @@ window.updatePrivacySettings = async function(event) {
   }
 }
 
-// Update loadAccountInfo to also load privacy settings
+// Profile Picture Functions
+window.handleProfilePictureSelect = async function(event) {
+  const file = event.target.files[0];
+  if (!file) return;
+  
+  // Validate file type
+  const allowedTypes = ['image/jpeg', 'image/jpg', 'image/png', 'image/gif', 'image/webp'];
+  if (!allowedTypes.includes(file.type)) {
+    document.getElementById('profilePictureError').textContent = 'Invalid file type. Allowed: JPEG, PNG, GIF, WebP';
+    document.getElementById('profilePictureError').style.display = 'block';
+    return;
+  }
+  
+  // Validate file size (5MB)
+  if (file.size > 5 * 1024 * 1024) {
+    document.getElementById('profilePictureError').textContent = 'File size exceeds 5MB limit';
+    document.getElementById('profilePictureError').style.display = 'block';
+    return;
+  }
+  
+  // Preview image
+  const reader = new FileReader();
+  reader.onload = function(e) {
+    document.getElementById('profilePicturePreview').src = e.target.result;
+  };
+  reader.readAsDataURL(file);
+  
+  // Upload file
+  const formData = new FormData();
+  formData.append('file', file);
+  
+  const errorDiv = document.getElementById('profilePictureError');
+  const successDiv = document.getElementById('profilePictureSuccess');
+  
+  errorDiv.textContent = '';
+  errorDiv.style.display = 'none';
+  successDiv.textContent = '';
+  successDiv.style.display = 'none';
+  
+  try {
+    const response = await authenticatedFetch(`${API_BASE}/account/profile-picture`, {
+      method: 'POST',
+      body: formData
+    });
+    
+    if (response.ok) {
+      const updatedUser = await response.json();
+      // Update stored user data (getUser and saveAuthData are in auth.js)
+      if (typeof getUser !== 'undefined' && typeof saveAuthData !== 'undefined' && typeof getToken !== 'undefined') {
+        const user = getUser();
+        const token = getToken();
+        if (user && token) {
+          user.profile_picture_url = updatedUser.profile_picture_url;
+          saveAuthData(token, user);
+        }
+        
+        // Update display
+        if (typeof updateUserDisplay !== 'undefined') {
+          updateUserDisplay();
+        }
+      }
+      
+      successDiv.textContent = 'Profile picture updated successfully';
+      successDiv.style.display = 'block';
+      setTimeout(() => {
+        successDiv.style.display = 'none';
+      }, 3000);
+      
+      // Show reset button
+      document.getElementById('resetProfilePictureBtn').style.display = 'inline-block';
+    } else {
+      const error = await response.json();
+      errorDiv.textContent = error.detail || 'Failed to upload profile picture';
+      errorDiv.style.display = 'block';
+    }
+  } catch (error) {
+    errorDiv.textContent = 'Failed to upload profile picture';
+    errorDiv.style.display = 'block';
+    console.error('Error uploading profile picture:', error);
+  }
+}
+
+window.resetProfilePicture = async function() {
+  if (!confirm('Are you sure you want to remove your profile picture?')) {
+    return;
+  }
+  
+  const errorDiv = document.getElementById('profilePictureError');
+  const successDiv = document.getElementById('profilePictureSuccess');
+  
+  errorDiv.textContent = '';
+  errorDiv.style.display = 'none';
+  successDiv.textContent = '';
+  successDiv.style.display = 'none';
+  
+  try {
+    const response = await authenticatedFetch(`${API_BASE}/account/profile-picture`, {
+      method: 'DELETE'
+    });
+    
+    if (response.ok) {
+      const updatedUser = await response.json();
+      // Update stored user data (getUser and saveAuthData are in auth.js)
+      if (typeof getUser !== 'undefined' && typeof saveAuthData !== 'undefined' && typeof getToken !== 'undefined') {
+        const user = getUser();
+        const token = getToken();
+        if (user && token) {
+          user.profile_picture_url = null;
+          saveAuthData(token, user);
+        }
+        
+        // Update display
+        if (typeof updateUserDisplay !== 'undefined') {
+          updateUserDisplay();
+        }
+      }
+      
+      // Reset preview
+      document.getElementById('profilePicturePreview').src = '/static/default-avatar.svg';
+      document.getElementById('profilePictureInput').value = '';
+      document.getElementById('resetProfilePictureBtn').style.display = 'none';
+      
+      successDiv.textContent = 'Profile picture removed successfully';
+      successDiv.style.display = 'block';
+      setTimeout(() => {
+        successDiv.style.display = 'none';
+      }, 3000);
+    } else {
+      const error = await response.json();
+      errorDiv.textContent = error.detail || 'Failed to remove profile picture';
+      errorDiv.style.display = 'block';
+    }
+  } catch (error) {
+    errorDiv.textContent = 'Failed to remove profile picture';
+    errorDiv.style.display = 'block';
+    console.error('Error removing profile picture:', error);
+  }
+}
+
+// Update loadAccountInfo to also load privacy settings and profile picture
 const originalLoadAccountInfo = window.loadAccountInfo;
 window.loadAccountInfo = async function() {
   await originalLoadAccountInfo();
   await loadPrivacySettings();
+  
+  // Load profile picture preview
+  const user = getUser();
+  const previewImg = document.getElementById('profilePicturePreview');
+  const resetBtn = document.getElementById('resetProfilePictureBtn');
+  
+  if (previewImg) {
+    if (user && user.profile_picture_url) {
+      previewImg.src = user.profile_picture_url;
+      if (resetBtn) resetBtn.style.display = 'inline-block';
+    } else {
+        previewImg.src = '/static/default-avatar.svg';
+      if (resetBtn) resetBtn.style.display = 'none';
+    }
+  }
 }
 
 // Close modal when clicking outside
@@ -1342,7 +1496,10 @@ async function loadFriendsList() {
       
       friendsList.innerHTML = friends.map(friend => `
         <div class="friend-item" data-friend-id="${friend.friend.id}">
-          <span class="friend-username clickable" onclick="openFriendProfile(${friend.friend.id})" title="View profile">${escapeHtml(friend.friend.username)}</span>
+          <div class="friend-item-content">
+            <img class="friend-profile-picture" src="${friend.friend.profile_picture_url || '/static/default-avatar.svg'}" alt="${escapeHtml(friend.friend.username)}" onerror="this.src='/static/default-avatar.svg'">
+            <span class="friend-username clickable" onclick="openFriendProfile(${friend.friend.id})" title="View profile">${escapeHtml(friend.friend.username)}</span>
+          </div>
           <button class="unfriend-btn" onclick="unfriendUser(${friend.friend.id})" title="Unfriend">✕</button>
         </div>
       `).join('');
@@ -1492,6 +1649,8 @@ let accordionStates = {
   tvShows: false,
   statistics: false
 };
+let currentFriendMovies = [];
+let currentFriendTVShows = [];
 
 window.openFriendProfile = async function(friendId) {
   currentFriendId = friendId;
@@ -1502,6 +1661,8 @@ window.openFriendProfile = async function(friendId) {
 window.closeFriendProfile = function() {
   document.getElementById('friendProfileModal').style.display = 'none';
   currentFriendId = null;
+  currentFriendMovies = [];
+  currentFriendTVShows = [];
   accordionStates = {
     movies: false,
     tvShows: false,
@@ -1516,10 +1677,34 @@ window.closeFriendProfile = function() {
       icon.textContent = '▼';
     }
   });
+  // Clear search inputs
+  const moviesSearch = document.getElementById('friendMoviesSearch');
+  const tvShowsSearch = document.getElementById('friendTVShowsSearch');
+  if (moviesSearch) moviesSearch.value = '';
+  if (tvShowsSearch) tvShowsSearch.value = '';
 }
 
 window.loadFriendProfile = async function(friendId) {
   try {
+    // Get friend data from friends list to access profile picture
+    const friendsResponse = await authenticatedFetch(`${API_BASE}/friends`);
+    let friendProfilePictureUrl = '/static/default-avatar.svg';
+    
+    if (friendsResponse.ok) {
+      const friends = await friendsResponse.json();
+      const friend = friends.find(f => f.friend.id === friendId);
+      if (friend && friend.friend.profile_picture_url) {
+        friendProfilePictureUrl = friend.friend.profile_picture_url;
+      }
+    }
+    
+    // Update friend profile picture in modal header
+    const friendProfilePicture = document.getElementById('friendProfilePicture');
+    if (friendProfilePicture) {
+      friendProfilePicture.src = friendProfilePictureUrl;
+    }
+    
+    // Get profile summary
     const response = await authenticatedFetch(`${API_BASE}/friends/${friendId}/profile`);
     if (response.ok) {
       const profile = await response.json();
@@ -1598,6 +1783,30 @@ window.toggleAccordion = async function(section) {
   }
 }
 
+function renderFriendMovies(movies) {
+  const containerDiv = document.getElementById('friendMoviesListContainer');
+  
+  if (movies.length === 0) {
+    containerDiv.innerHTML = '<p class="empty-message">No movies found</p>';
+    return;
+  }
+  
+  containerDiv.innerHTML = movies.map(movie => `
+    <div class="friend-item-card">
+      <div class="friend-item-header">
+        <h4>${escapeHtml(movie.title)}</h4>
+        ${movie.rating ? `<span class="rating-badge">${movie.rating.toFixed(1)}/10</span>` : ''}
+      </div>
+      <div class="friend-item-details">
+        <span>Director: ${escapeHtml(movie.director)}</span>
+        <span>Year: ${movie.year}</span>
+        ${movie.watched ? '<span class="watched-badge">Watched</span>' : '<span class="unwatched-badge">Not Watched</span>'}
+      </div>
+      ${movie.review ? `<p class="friend-review">${escapeHtml(movie.review)}</p>` : ''}
+    </div>
+  `).join('');
+}
+
 window.loadFriendMovies = async function(friendId) {
   try {
     const response = await authenticatedFetch(`${API_BASE}/friends/${friendId}/movies`);
@@ -1605,25 +1814,14 @@ window.loadFriendMovies = async function(friendId) {
       const data = await response.json();
       const listDiv = document.getElementById('moviesList');
       
-      if (data.movies.length === 0) {
-        listDiv.innerHTML = '<p class="empty-message">No movies yet</p>';
+      // Store full data for filtering
+      currentFriendMovies = data.movies || [];
+      
+      if (currentFriendMovies.length === 0) {
+        document.getElementById('friendMoviesListContainer').innerHTML = '<p class="empty-message">No movies yet</p>';
       } else {
-        listDiv.innerHTML = data.movies.map(movie => `
-          <div class="friend-item-card">
-            <div class="friend-item-header">
-              <h4>${escapeHtml(movie.title)}</h4>
-              ${movie.rating ? `<span class="rating-badge">${movie.rating.toFixed(1)}/10</span>` : ''}
-            </div>
-            <div class="friend-item-details">
-              <span>Director: ${escapeHtml(movie.director)}</span>
-              <span>Year: ${movie.year}</span>
-              ${movie.watched ? '<span class="watched-badge">Watched</span>' : '<span class="unwatched-badge">Not Watched</span>'}
-            </div>
-            ${movie.review ? `<p class="friend-review">${escapeHtml(movie.review)}</p>` : ''}
-          </div>
-        `).join('');
+        renderFriendMovies(currentFriendMovies);
       }
-      listDiv.style.display = 'block';
     } else {
       const error = await response.json();
       document.getElementById('moviesList').innerHTML = `<p class="error-message">${error.detail || 'Failed to load movies'}</p>`;
@@ -1634,6 +1832,55 @@ window.loadFriendMovies = async function(friendId) {
   }
 }
 
+window.filterFriendMovies = function() {
+  const searchInput = document.getElementById('friendMoviesSearch');
+  const searchTerm = searchInput ? searchInput.value.toLowerCase().trim() : '';
+  
+  if (!searchTerm) {
+    renderFriendMovies(currentFriendMovies);
+    return;
+  }
+  
+  const filtered = currentFriendMovies.filter(movie => {
+    const title = (movie.title || '').toLowerCase();
+    const director = (movie.director || '').toLowerCase();
+    const year = String(movie.year || '');
+    const review = (movie.review || '').toLowerCase();
+    
+    return title.includes(searchTerm) || 
+           director.includes(searchTerm) || 
+           year.includes(searchTerm) ||
+           review.includes(searchTerm);
+  });
+  
+  renderFriendMovies(filtered);
+}
+
+function renderFriendTVShows(tvShows) {
+  const containerDiv = document.getElementById('friendTVShowsListContainer');
+  
+  if (tvShows.length === 0) {
+    containerDiv.innerHTML = '<p class="empty-message">No TV shows found</p>';
+    return;
+  }
+  
+  containerDiv.innerHTML = tvShows.map(show => `
+    <div class="friend-item-card">
+      <div class="friend-item-header">
+        <h4>${escapeHtml(show.title)}</h4>
+        ${show.rating ? `<span class="rating-badge">${show.rating.toFixed(1)}/10</span>` : ''}
+      </div>
+      <div class="friend-item-details">
+        <span>Year: ${show.year}</span>
+        ${show.seasons ? `<span>Seasons: ${show.seasons}</span>` : ''}
+        ${show.episodes ? `<span>Episodes: ${show.episodes}</span>` : ''}
+        ${show.watched ? '<span class="watched-badge">Watched</span>' : '<span class="unwatched-badge">Not Watched</span>'}
+      </div>
+      ${show.review ? `<p class="friend-review">${escapeHtml(show.review)}</p>` : ''}
+    </div>
+  `).join('');
+}
+
 window.loadFriendTVShows = async function(friendId) {
   try {
     const response = await authenticatedFetch(`${API_BASE}/friends/${friendId}/tv-shows`);
@@ -1641,26 +1888,14 @@ window.loadFriendTVShows = async function(friendId) {
       const data = await response.json();
       const listDiv = document.getElementById('tvShowsList');
       
-      if (data.tv_shows.length === 0) {
-        listDiv.innerHTML = '<p class="empty-message">No TV shows yet</p>';
+      // Store full data for filtering
+      currentFriendTVShows = data.tv_shows || [];
+      
+      if (currentFriendTVShows.length === 0) {
+        document.getElementById('friendTVShowsListContainer').innerHTML = '<p class="empty-message">No TV shows yet</p>';
       } else {
-        listDiv.innerHTML = data.tv_shows.map(show => `
-          <div class="friend-item-card">
-            <div class="friend-item-header">
-              <h4>${escapeHtml(show.title)}</h4>
-              ${show.rating ? `<span class="rating-badge">${show.rating.toFixed(1)}/10</span>` : ''}
-            </div>
-            <div class="friend-item-details">
-              <span>Year: ${show.year}</span>
-              ${show.seasons ? `<span>Seasons: ${show.seasons}</span>` : ''}
-              ${show.episodes ? `<span>Episodes: ${show.episodes}</span>` : ''}
-              ${show.watched ? '<span class="watched-badge">Watched</span>' : '<span class="unwatched-badge">Not Watched</span>'}
-            </div>
-            ${show.review ? `<p class="friend-review">${escapeHtml(show.review)}</p>` : ''}
-          </div>
-        `).join('');
+        renderFriendTVShows(currentFriendTVShows);
       }
-      listDiv.style.display = 'block';
     } else {
       const error = await response.json();
       document.getElementById('tvShowsList').innerHTML = `<p class="error-message">${error.detail || 'Failed to load TV shows'}</p>`;
@@ -1669,6 +1904,32 @@ window.loadFriendTVShows = async function(friendId) {
     console.error('Failed to load friend TV shows:', error);
     document.getElementById('tvShowsList').innerHTML = '<p class="error-message">Failed to load TV shows</p>';
   }
+}
+
+window.filterFriendTVShows = function() {
+  const searchInput = document.getElementById('friendTVShowsSearch');
+  const searchTerm = searchInput ? searchInput.value.toLowerCase().trim() : '';
+  
+  if (!searchTerm) {
+    renderFriendTVShows(currentFriendTVShows);
+    return;
+  }
+  
+  const filtered = currentFriendTVShows.filter(show => {
+    const title = (show.title || '').toLowerCase();
+    const year = String(show.year || '');
+    const review = (show.review || '').toLowerCase();
+    const seasons = String(show.seasons || '');
+    const episodes = String(show.episodes || '');
+    
+    return title.includes(searchTerm) || 
+           year.includes(searchTerm) ||
+           seasons.includes(searchTerm) ||
+           episodes.includes(searchTerm) ||
+           review.includes(searchTerm);
+  });
+  
+  renderFriendTVShows(filtered);
 }
 
 window.loadFriendStatistics = async function(friendId) {

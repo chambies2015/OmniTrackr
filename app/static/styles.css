@@ -1294,6 +1294,8 @@ body.dark-mode .card > div:nth-of-type(2) {
   transition: all 0.3s ease;
   font-size: 0.95rem;
   color: var(--fg);
+  align-items: center;
+  gap: 10px;
 }
 
 body.dark-mode #userDisplay,
@@ -1311,7 +1313,16 @@ body.dark-mode .user-display-btn {
 
 #userDisplay:not(:empty),
 .user-display-btn:not(:empty) {
-  display: inline-block; /* Show only when it has content */
+  display: inline-flex; /* Show only when it has content */
+}
+
+.user-profile-picture {
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  object-fit: cover;
+  border: 2px solid rgba(255, 255, 255, 0.3);
+  flex-shrink: 0;
 }
 
 #logoutBtn {
@@ -1502,6 +1513,21 @@ body.dark-mode .modal-header {
   font-size: 1.5rem;
 }
 
+.friend-profile-header-content {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+}
+
+.friend-profile-picture-large {
+  width: 60px;
+  height: 60px;
+  border-radius: 50%;
+  object-fit: cover;
+  border: 3px solid rgba(255, 255, 255, 0.3);
+  flex-shrink: 0;
+}
+
 .modal-close {
   background: none;
   border: none;
@@ -1577,6 +1603,21 @@ body.dark-mode .info-item {
 .info-value {
   font-weight: 500;
   color: var(--fg);
+}
+
+.profile-picture-preview {
+  display: flex;
+  justify-content: center;
+  margin-bottom: 16px;
+}
+
+.profile-picture-preview-img {
+  width: 120px;
+  height: 120px;
+  border-radius: 50%;
+  object-fit: cover;
+  border: 3px solid var(--primary);
+  box-shadow: 0 4px 12px rgba(102, 126, 234, 0.3);
 }
 
 .account-section form {
@@ -1890,6 +1931,44 @@ body.dark-mode .accordion-full-content {
   border-top-color: rgba(255, 255, 255, 0.1);
 }
 
+/* Friend Search Container */
+.friend-search-container {
+  margin-bottom: 16px;
+  padding-bottom: 12px;
+  border-bottom: 1px solid rgba(0, 0, 0, 0.1);
+}
+
+body.dark-mode .friend-search-container {
+  border-bottom-color: rgba(255, 255, 255, 0.1);
+}
+
+.friend-search-input {
+  width: 100%;
+  padding: 10px 16px;
+  border: 1px solid rgba(0, 0, 0, 0.2);
+  border-radius: 8px;
+  background-color: var(--bg);
+  color: var(--fg);
+  font-size: 0.95rem;
+  transition: all 0.2s ease;
+}
+
+body.dark-mode .friend-search-input {
+  border-color: rgba(255, 255, 255, 0.2);
+  background-color: rgba(255, 255, 255, 0.05);
+}
+
+.friend-search-input:focus {
+  outline: none;
+  border-color: var(--primary);
+  box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
+}
+
+.friend-search-input::placeholder {
+  color: var(--fg);
+  opacity: 0.5;
+}
+
 /* Friend Item Cards */
 .friend-item-card {
   background-color: var(--card-bg);
@@ -2165,6 +2244,22 @@ body.dark-mode .stat-item {
 .friend-item:hover {
   background: rgba(102, 126, 234, 0.15);
   transform: translateX(4px);
+}
+
+.friend-item-content {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  flex: 1;
+}
+
+.friend-profile-picture {
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  object-fit: cover;
+  border: 2px solid rgba(102, 126, 234, 0.3);
+  flex-shrink: 0;
 }
 
 .friend-username {

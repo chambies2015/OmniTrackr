@@ -33,6 +33,7 @@ class User(UserBase):
     is_active: bool
     is_verified: bool = False
     created_at: Optional[datetime] = None
+    profile_picture_url: Optional[str] = None
     
     class Config:
         from_attributes = True

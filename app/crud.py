@@ -143,6 +143,30 @@ def get_privacy_settings(db: Session, user_id: int) -> Optional[schemas.PrivacyS
     )
 
 
+def update_profile_picture(db: Session, user_id: int, profile_picture_url: str) -> Optional[models.User]:
+    """Update user's profile picture URL."""
+    db_user = get_user_by_id(db, user_id)
+    if db_user is None:
+        return None
+    
+    db_user.profile_picture_url = profile_picture_url
+    db.commit()
+    db.refresh(db_user)
+    return db_user
+
+
+def reset_profile_picture(db: Session, user_id: int) -> Optional[models.User]:
+    """Reset user's profile picture (set to None)."""
+    db_user = get_user_by_id(db, user_id)
+    if db_user is None:
+        return None
+    
+    db_user.profile_picture_url = None
+    db.commit()
+    db.refresh(db_user)
+    return db_user
+
+
 # ============================================================================
 # Movie CRUD operations
 # ============================================================================

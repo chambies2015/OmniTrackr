@@ -2,19 +2,30 @@
 Entry point for the OmniTrackr API.
 Provides CRUD endpoints for managing movies and TV shows.
 """
-from typing import List, Optional
-from datetime import datetime
 import json
+from datetime import datetime
+from typing import List, Optional
 
 from fastapi import Depends, FastAPI, HTTPException, UploadFile, File, status, Request
-from fastapi.security import OAuth2PasswordBearer, OAuth2PasswordRequestForm
 from fastapi.middleware.cors import CORSMiddleware
-from fastapi.responses import JSONResponse, FileResponse, Response
+from fastapi.responses import FileResponse, Response
+from fastapi.security import OAuth2PasswordBearer, OAuth2PasswordRequestForm
 from fastapi.staticfiles import StaticFiles
+from slowapi import Limiter, _rate_limit_exceeded_handler
+from slowapi.errors import RateLimitExceeded
+from slowapi.middleware import SlowAPIMiddleware
+from slowapi.util import get_remote_address
+from sqlalchemy import inspect, text
+from sqlalchemy.orm import Session
 from starlette.middleware.base import BaseHTTPMiddleware
 from starlette.responses import Response as StarletteResponse
-from sqlalchemy.orm import Session
-from sqlalchemy import inspect, text
+
+try:
+    from PIL import Image
+    PIL_AVAILABLE = True
+except ImportError:
+    PIL_AVAILABLE = False
+import io
 
 from . import crud, schemas, auth, models, email as email_utils, database
 from .database import Base, SessionLocal, engine
@@ -74,6 +85,11 @@ try:
                 conn.execute(text("ALTER TABLE users ADD COLUMN statistics_private BOOLEAN DEFAULT FALSE"))
                 conn.commit()
                 print("Added statistics_private column to users table")
+        if "profile_picture_url" not in user_columns:
+            with engine.connect() as conn:
+                conn.execute(text("ALTER TABLE users ADD COLUMN profile_picture_url VARCHAR"))
+                conn.commit()
+                print("Added profile_picture_url column to users table")
 
     # Check movies table for review and poster_url columns
     if inspector.has_table("movies"):
@@ -283,6 +299,11 @@ except Exception as e:
 # Initialize FastAPI
 app = FastAPI(title="OmniTrackr API", description="Manage your movies and TV shows", version="0.1.0")
 
+# Initialize rate limiter
+limiter = Limiter(key_func=get_remote_address)
+app.state.limiter = limiter
+app.add_exception_handler(RateLimitExceeded, _rate_limit_exceeded_handler)
+
 
 @app.on_event("startup")
 async def startup_event():
@@ -373,6 +394,9 @@ class BotFilterMiddleware(BaseHTTPMiddleware):
 # Add security middleware (order matters - add before CORS)
 app.add_middleware(SecurityHeadersMiddleware)
 app.add_middleware(BotFilterMiddleware)
+
+# Add rate limiting middleware (must be after other middleware)
+app.add_middleware(SlowAPIMiddleware)
 
 # Configure CORS to allow requests from any origin
 app.add_middleware(
@@ -956,6 +980,209 @@ async def get_privacy_settings(
         raise HTTPException(status_code=404, detail="User not found")
     
     return privacy_settings
+
+
+@app.post("/account/profile-picture", response_model=schemas.User, tags=["account"])
+@limiter.limit("10/minute")  # Rate limit: 10 uploads per minute per IP
+async def upload_profile_picture(
+    request: Request,
+    file: UploadFile = File(...),
+    current_user: models.User = Depends(get_current_user),
+    db: Session = Depends(get_db)
+):
+    """Upload a profile picture with content validation and image processing."""
+    # Validate file type
+    allowed_types = ["image/jpeg", "image/jpg", "image/png", "image/gif", "image/webp"]
+    if file.content_type not in allowed_types:
+        raise HTTPException(
+            status_code=400,
+            detail="Invalid file type. Allowed types: JPEG, PNG, GIF, WebP"
+        )
+    
+    # Validate file size (max 5MB)
+    file_content = await file.read()
+    if len(file_content) > 5 * 1024 * 1024:  # 5MB
+        raise HTTPException(status_code=400, detail="File size exceeds 5MB limit")
+    
+    # Content validation: Verify file is actually an image using magic bytes
+    try:
+        # Check magic bytes (file signature) to verify it's actually an image
+        image_signatures = {
+            b'\xff\xd8\xff': 'jpeg',  # JPEG
+            b'\x89PNG\r\n\x1a\n': 'png',  # PNG
+            b'GIF87a': 'gif',  # GIF87a
+            b'GIF89a': 'gif',  # GIF89a
+            b'RIFF': 'webp',  # WebP (starts with RIFF, but need more checks)
+        }
+        
+        file_signature = file_content[:12]  # Read first 12 bytes
+        detected_format = None
+        
+        # Check JPEG
+        if file_signature[:3] == b'\xff\xd8\xff':
+            detected_format = 'jpeg'
+        # Check PNG
+        elif file_signature[:8] == b'\x89PNG\r\n\x1a\n':
+            detected_format = 'png'
+        # Check GIF
+        elif file_signature[:6] in [b'GIF87a', b'GIF89a']:
+            detected_format = 'gif'
+        # Check WebP (RIFF...WEBP)
+        elif file_signature[:4] == b'RIFF' and b'WEBP' in file_content[:20]:
+            detected_format = 'webp'
+        
+        if not detected_format:
+            raise HTTPException(
+                status_code=400,
+                detail="File is not a valid image. Content validation failed."
+            )
+    except Exception as e:
+        if isinstance(e, HTTPException):
+            raise
+        raise HTTPException(
+            status_code=400,
+            detail="Failed to validate image content. Please ensure the file is a valid image."
+        )
+    
+    # Process and optimize image
+    if not PIL_AVAILABLE:
+        raise HTTPException(
+            status_code=500,
+            detail="Image processing is not available. Please install Pillow."
+        )
+    
+    try:
+        # Open image from bytes
+        image = Image.open(io.BytesIO(file_content))
+        
+        # Convert RGBA to RGB for JPEG (JPEG doesn't support transparency)
+        if detected_format == 'jpeg' and image.mode in ('RGBA', 'LA', 'P'):
+            # Create white background
+            background = Image.new('RGB', image.size, (255, 255, 255))
+            if image.mode == 'P':
+                image = image.convert('RGBA')
+            background.paste(image, mask=image.split()[-1] if image.mode == 'RGBA' else None)
+            image = background
+        elif image.mode not in ('RGB', 'RGBA', 'L', 'P'):
+            image = image.convert('RGB')
+        
+        # Resize if image is too large (max 800x800 for profile pictures)
+        max_size = (800, 800)
+        if image.size[0] > max_size[0] or image.size[1] > max_size[1]:
+            image.thumbnail(max_size, Image.Resampling.LANCZOS)
+        
+        # Create profile_pictures directory if it doesn't exist
+        profile_pictures_dir = os.path.join(static_dir, "profile_pictures")
+        os.makedirs(profile_pictures_dir, exist_ok=True)
+        
+        # Generate unique filename
+        import uuid
+        import re
+        # Use detected format or fallback to extension
+        if "." in file.filename:
+            file_extension = file.filename.split(".")[-1].lower()
+            file_extension = re.sub(r'[^a-z0-9]', '', file_extension)
+            if not file_extension:
+                file_extension = detected_format or "jpg"
+        else:
+            file_extension = detected_format or "jpg"
+        
+        # Ensure extension is in allowed list
+        allowed_extensions = ["jpg", "jpeg", "png", "gif", "webp"]
+        if file_extension not in allowed_extensions:
+            file_extension = detected_format if detected_format in allowed_extensions else "jpg"
+        
+        # Normalize jpeg/jpg
+        if file_extension == "jpeg":
+            file_extension = "jpg"
+        
+        # Generate unique filename with user ID and UUID
+        unique_filename = f"{current_user.id}_{uuid.uuid4().hex}.{file_extension}"
+        file_path = os.path.join(profile_pictures_dir, unique_filename)
+        
+        # Additional security: Ensure the resolved path is still within profile_pictures_dir
+        file_path = os.path.normpath(file_path)
+        profile_pictures_dir_normalized = os.path.normpath(profile_pictures_dir)
+        if not file_path.startswith(profile_pictures_dir_normalized):
+            raise HTTPException(status_code=400, detail="Invalid file path")
+        
+        # Delete old profile picture if exists
+        if current_user.profile_picture_url:
+            old_url = current_user.profile_picture_url.lstrip("/")
+            if old_url.startswith("static/"):
+                old_url = old_url[7:]
+            old_file_path = os.path.join(static_dir, old_url)
+            if os.path.exists(old_file_path):
+                try:
+                    os.remove(old_file_path)
+                except Exception as e:
+                    print(f"Warning: Could not delete old profile picture: {e}")
+        
+        # Save optimized image
+        output = io.BytesIO()
+        save_kwargs = {}
+        
+        # Optimize based on format
+        if file_extension in ['jpg', 'jpeg']:
+            image.save(output, format='JPEG', quality=85, optimize=True)
+        elif file_extension == 'png':
+            image.save(output, format='PNG', optimize=True)
+        elif file_extension == 'gif':
+            image.save(output, format='GIF', optimize=True)
+        elif file_extension == 'webp':
+            image.save(output, format='WEBP', quality=85, method=6)
+        else:
+            image.save(output, format='JPEG', quality=85, optimize=True)
+        
+        # Write to file
+        with open(file_path, "wb") as f:
+            f.write(output.getvalue())
+        
+        # Update database with relative URL
+        profile_picture_url = f"/static/profile_pictures/{unique_filename}"
+        updated_user = crud.update_profile_picture(db, current_user.id, profile_picture_url)
+        
+        if updated_user is None:
+            raise HTTPException(status_code=404, detail="User not found")
+        
+        return updated_user
+        
+    except HTTPException:
+        raise
+    except Exception as e:
+        print(f"Error processing image: {e}")
+        raise HTTPException(
+            status_code=400,
+            detail=f"Failed to process image: {str(e)}"
+        )
+
+
+@app.delete("/account/profile-picture", response_model=schemas.User, tags=["account"])
+async def reset_profile_picture(
+    current_user: models.User = Depends(get_current_user),
+    db: Session = Depends(get_db)
+):
+    """Reset/remove profile picture."""
+    # Delete file if exists
+    if current_user.profile_picture_url:
+        # Remove /static/ prefix if present, then get relative path
+        old_url = current_user.profile_picture_url.lstrip("/")
+        if old_url.startswith("static/"):
+            old_url = old_url[7:]  # Remove "static/" prefix to get "profile_pictures/filename"
+        file_path = os.path.join(static_dir, old_url)
+        if os.path.exists(file_path):
+            try:
+                os.remove(file_path)
+            except Exception as e:
+                print(f"Warning: Could not delete profile picture file: {e}")
+    
+    # Update database
+    updated_user = crud.reset_profile_picture(db, current_user.id)
+    
+    if updated_user is None:
+        raise HTTPException(status_code=404, detail="User not found")
+    
+    return updated_user
 
 
 @app.post("/account/deactivate", response_model=dict, tags=["account"])

@@ -149,7 +149,10 @@
       <p class="no-notifications">No notifications</p>
     </div>
   </div>
-  <button id="userDisplay" class="user-display-btn" role="button" aria-label="Open account settings"></button>
+  <button id="userDisplay" class="user-display-btn" role="button" aria-label="Open account settings">
+    <img id="userProfilePicture" class="user-profile-picture" src="/static/default-avatar.svg" alt="Profile" onerror="this.src='/static/default-avatar.svg'">
+    <span id="userDisplayText"></span>
+  </button>
   <button id="logoutBtn" aria-label="Logout from your account">Logout</button>
   
   <!-- Friends Sidebar -->
@@ -659,6 +662,24 @@
           </form>
         </div>
 
+        <!-- Profile Picture Section -->
+        <div class="account-section">
+          <h3>Profile Picture</h3>
+          <div class="profile-picture-preview">
+            <img id="profilePicturePreview" class="profile-picture-preview-img" src="/static/default-avatar.svg" alt="Profile Preview" onerror="this.src='/static/default-avatar.svg'">
+          </div>
+          <form id="profilePictureForm" enctype="multipart/form-data">
+            <div>
+              <input type="file" id="profilePictureInput" accept="image/jpeg,image/jpg,image/png,image/gif,image/webp" style="display: none;" onchange="handleProfilePictureSelect(event)">
+              <button type="button" class="action-btn" onclick="document.getElementById('profilePictureInput').click()">Choose Image</button>
+              <button type="button" class="action-btn danger-btn" onclick="resetProfilePicture()" id="resetProfilePictureBtn" style="display: none;">Remove Picture</button>
+            </div>
+            <div id="profilePictureError" class="error-message"></div>
+            <div id="profilePictureSuccess" class="success-message"></div>
+            <p class="info-text" style="margin-top: 8px; font-size: 0.85rem;">Max file size: 5MB. Allowed formats: JPEG, PNG, GIF, WebP</p>
+          </form>
+        </div>
+
         <!-- Privacy Settings Section -->
         <div class="account-section">
           <h3>Privacy Settings</h3>
@@ -733,7 +754,10 @@
   <div id="friendProfileModal" class="modal-overlay" style="display: none;">
     <div class="modal-content friend-profile-modal">
       <div class="modal-header">
-        <h2 id="friendProfileUsername">Friend's Profile</h2>
+        <div class="friend-profile-header-content">
+          <img id="friendProfilePicture" class="friend-profile-picture-large" src="/static/default-avatar.svg" alt="Friend Profile" onerror="this.src='/static/default-avatar.svg'">
+          <h2 id="friendProfileUsername">Friend's Profile</h2>
+        </div>
         <button class="modal-close" onclick="closeFriendProfile()" aria-label="Close friend profile">×</button>
       </div>
       
@@ -746,7 +770,12 @@
           </div>
           <div class="accordion-content" id="moviesContent">
             <div id="moviesSummary" class="accordion-summary"></div>
-            <div id="moviesList" class="accordion-full-content" style="display: none;"></div>
+            <div id="moviesList" class="accordion-full-content">
+              <div class="friend-search-container">
+                <input type="text" id="friendMoviesSearch" class="friend-search-input" placeholder="Search movies by title, director, or year..." oninput="filterFriendMovies()">
+              </div>
+              <div id="friendMoviesListContainer"></div>
+            </div>
           </div>
         </div>
 
@@ -758,7 +787,12 @@
           </div>
           <div class="accordion-content" id="tvShowsContent">
             <div id="tvShowsSummary" class="accordion-summary"></div>
-            <div id="tvShowsList" class="accordion-full-content" style="display: none;"></div>
+            <div id="tvShowsList" class="accordion-full-content">
+              <div class="friend-search-container">
+                <input type="text" id="friendTVShowsSearch" class="friend-search-input" placeholder="Search TV shows by title or year..." oninput="filterFriendTVShows()">
+              </div>
+              <div id="friendTVShowsListContainer"></div>
+            </div>
           </div>
         </div>
 
