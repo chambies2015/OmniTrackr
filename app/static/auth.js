@@ -114,7 +114,16 @@ async function login(username, password) {
         const error = await response.json();
         // Check if it's an email verification error (403)
         if (response.status === 403) {
-            throw new Error(error.detail || 'Please verify your email address before logging in.');
+            const errorMsg = error.detail || 'Please verify your email address before logging in.';
+            // Check if it's a deactivated account error
+            if (errorMsg.toLowerCase().includes('deactivated') || errorMsg.toLowerCase().includes('reactivate')) {
+                // Show reactivation option
+                displayAuthError(errorMsg + ' Click "Reactivate Account" below to reactivate.');
+                // Show reactivation button
+                showReactivateOption(username);
+                throw new Error(errorMsg);
+            }
+            throw new Error(errorMsg);
         }
         throw new Error(error.detail || 'Invalid credentials');
     }
@@ -136,6 +145,9 @@ function logout() {
     }
 }
 
+// Make logout globally accessible
+window.logout = logout;
+
 // ============================================================================
 // UI Functions
 // ============================================================================
@@ -149,6 +161,12 @@ function showAuthModal() {
     // Hide user display and logout button when showing landing page
     document.getElementById('userDisplay').style.display = 'none';
     document.getElementById('logoutBtn').style.display = 'none';
+    
+    // Hide footer for logged-in view when showing landing page
+    const mainFooter = document.getElementById('mainFooter');
+    if (mainFooter) {
+        mainFooter.style.display = 'none';
+    }
 
     // Hide both forms initially
     document.getElementById('loginForm').style.display = 'none';
@@ -166,6 +184,11 @@ function hideAuthModal() {
 function showMainUI() {
     document.getElementById('mainContainer').style.display = 'block';
     document.getElementById('landingPage').style.display = 'none';
+    // Show footer for logged-in view
+    const mainFooter = document.getElementById('mainFooter');
+    if (mainFooter) {
+        mainFooter.style.display = 'block';
+    }
 }
 
 function showLoginForm() {
@@ -177,6 +200,11 @@ function showLoginForm() {
     document.getElementById('authTitle').textContent = 'Login to OmniTrackr';
     document.getElementById('authError').textContent = '';
     document.getElementById('authSuccess').style.display = 'none';
+    // Hide reactivate container
+    const reactivateContainer = document.getElementById('reactivateContainer');
+    if (reactivateContainer) {
+        reactivateContainer.style.display = 'none';
+    }
     // Scroll to auth section if on landing page
     if (document.getElementById('landingPage').style.display === 'block') {
         setTimeout(() => {
@@ -242,11 +270,12 @@ function showResetPasswordForm(resetToken = null) {
 function updateUserDisplay() {
     const user = getUser();
     if (user) {
-        document.getElementById('userDisplay').textContent = `👤 ${user.username}`;
-        document.getElementById('userDisplay').style.display = 'block';
+        const userDisplay = document.getElementById('userDisplay');
+        userDisplay.innerHTML = `👤 ${user.username}`;
+        userDisplay.style.display = 'inline-block';
+        userDisplay.onclick = openAccountModal;
         document.getElementById('logoutBtn').style.display = 'inline-block';
     } else {
-        document.getElementById('userDisplay').textContent = '';
         document.getElementById('userDisplay').style.display = 'none';
         document.getElementById('logoutBtn').style.display = 'none';
     }
@@ -257,11 +286,139 @@ function displayAuthError(message) {
     document.getElementById('authSuccess').style.display = 'none';
 }
 
+function showReactivateOption(usernameOrEmail) {
+    // Create or show reactivate button
+    let reactivateContainer = document.getElementById('reactivateContainer');
+    if (!reactivateContainer) {
+        reactivateContainer = document.createElement('div');
+        reactivateContainer.id = 'reactivateContainer';
+        reactivateContainer.style.marginTop = '10px';
+        reactivateContainer.style.textAlign = 'center';
+        document.getElementById('loginForm').appendChild(reactivateContainer);
+    }
+    
+    reactivateContainer.innerHTML = `
+        <button type="button" id="reactivateBtn" class="action-btn" style="width: 100%; margin-top: 10px;">
+            Reactivate Account
+        </button>
+    `;
+    
+    document.getElementById('reactivateBtn').onclick = () => {
+        const password = document.getElementById('loginPassword').value;
+        if (!password) {
+            displayAuthError('Please enter your password to reactivate your account.');
+            return;
+        }
+        reactivateAccount(usernameOrEmail, password);
+    };
+    
+    reactivateContainer.style.display = 'block';
+}
+
+async function reactivateAccount(usernameOrEmail, password) {
+    const reactivateBtn = document.getElementById('reactivateBtn');
+    const originalText = reactivateBtn.textContent;
+    reactivateBtn.disabled = true;
+    reactivateBtn.textContent = 'Reactivating...';
+    
+    try {
+        const response = await fetch(`${API_BASE}/auth/reactivate`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+                username: usernameOrEmail,
+                password: password
+            })
+        });
+        
+        if (response.ok) {
+            const user = await response.json();
+            displayAuthSuccess('Account reactivated successfully! You can now log in.');
+            // Hide reactivate button
+            document.getElementById('reactivateContainer').style.display = 'none';
+            // Clear password field for security
+            document.getElementById('loginPassword').value = '';
+        } else {
+            const error = await response.json();
+            displayAuthError(error.detail || 'Failed to reactivate account. Please try again.');
+        }
+    } catch (error) {
+        displayAuthError('Failed to reactivate account. Please try again.');
+    } finally {
+        reactivateBtn.disabled = false;
+        reactivateBtn.textContent = originalText;
+    }
+}
+
 function displayAuthSuccess(message) {
     const successEl = document.getElementById('authSuccess');
     successEl.textContent = message;
     successEl.style.display = 'block';
     document.getElementById('authError').textContent = '';
+}
+
+function showReactivateOption(usernameOrEmail) {
+    // Create or show reactivate button
+    let reactivateContainer = document.getElementById('reactivateContainer');
+    if (!reactivateContainer) {
+        reactivateContainer = document.createElement('div');
+        reactivateContainer.id = 'reactivateContainer';
+        reactivateContainer.style.marginTop = '10px';
+        reactivateContainer.style.textAlign = 'center';
+        document.getElementById('loginForm').appendChild(reactivateContainer);
+    }
+    
+    reactivateContainer.innerHTML = `
+        <button type="button" id="reactivateBtn" class="action-btn" style="width: 100%; margin-top: 10px;">
+            Reactivate Account
+        </button>
+    `;
+    
+    document.getElementById('reactivateBtn').onclick = () => {
+        const password = document.getElementById('loginPassword').value;
+        if (!password) {
+            displayAuthError('Please enter your password to reactivate your account.');
+            return;
+        }
+        reactivateAccount(usernameOrEmail, password);
+    };
+    
+    reactivateContainer.style.display = 'block';
+}
+
+async function reactivateAccount(usernameOrEmail, password) {
+    const reactivateBtn = document.getElementById('reactivateBtn');
+    const originalText = reactivateBtn.textContent;
+    reactivateBtn.disabled = true;
+    reactivateBtn.textContent = 'Reactivating...';
+    
+    try {
+        const response = await fetch(`${API_BASE}/auth/reactivate`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+                username: usernameOrEmail,
+                password: password
+            })
+        });
+        
+        if (response.ok) {
+            const user = await response.json();
+            displayAuthSuccess('Account reactivated successfully! You can now log in.');
+            // Hide reactivate button
+            document.getElementById('reactivateContainer').style.display = 'none';
+            // Clear password field for security
+            document.getElementById('loginPassword').value = '';
+        } else {
+            const error = await response.json();
+            displayAuthError(error.detail || 'Failed to reactivate account. Please try again.');
+        }
+    } catch (error) {
+        displayAuthError('Failed to reactivate account. Please try again.');
+    } finally {
+        reactivateBtn.disabled = false;
+        reactivateBtn.textContent = originalText;
+    }
 }
 
 // ============================================================================
@@ -469,6 +626,14 @@ function initAuth() {
     const resetToken = urlParams.get('reset_token');
     const emailVerified = urlParams.get('email_verified');
     const passwordReset = urlParams.get('password_reset');
+    const emailChangeToken = urlParams.get('email_change_token');
+    const emailChange = urlParams.get('email_change');
+    
+    // Handle email change verification
+    if (emailChangeToken && emailChange === 'true') {
+        handleEmailChangeVerification(emailChangeToken);
+        return;
+    }
     
     // Handle email verification
     if (verifyToken && emailVerified === 'true') {
@@ -520,6 +685,42 @@ function initAuth() {
     } else {
         showMainUI();
         updateUserDisplay();
+    }
+}
+
+async function handleEmailChangeVerification(token) {
+    // If user is logged in, show success message and reload account info
+    if (isAuthenticated()) {
+        try {
+            const response = await authenticatedFetch(`${API_BASE}/auth/verify-email?token=${encodeURIComponent(token)}`);
+            const data = await response.json();
+            
+            if (response.ok) {
+                alert('✅ ' + (data.message || 'Email changed successfully!'));
+                // Reload account info if modal is open
+                if (typeof loadAccountInfo === 'function') {
+                    await loadAccountInfo();
+                }
+                // Update user display
+                updateUserDisplay();
+            } else {
+                alert('❌ ' + (data.detail || 'Email change verification failed'));
+            }
+        } catch (error) {
+            alert('❌ Failed to verify email change. Please try again.');
+        }
+        
+        // Clean URL
+        window.history.replaceState({}, document.title, window.location.pathname);
+    } else {
+        // User not logged in, show auth modal with success message
+        showAuthModal();
+        setTimeout(() => {
+            document.querySelector('.landing-auth').scrollIntoView({ behavior: 'smooth', block: 'center' });
+        }, 100);
+        displayAuthSuccess('✅ Email changed successfully! Please log in with your new email.');
+        showLoginForm();
+        window.history.replaceState({}, document.title, window.location.pathname);
     }
 }
 

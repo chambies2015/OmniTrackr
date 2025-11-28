@@ -83,6 +83,35 @@ def verify_reset_token(token: str, max_age: int = 3600) -> str:
         raise
 
 
+def generate_email_change_token(old_email: str, new_email: str) -> str:
+    """Generate a secure token for email change verification."""
+    # Store both emails in the token
+    data = f"{old_email}:{new_email}"
+    return serializer.dumps(data, salt="email-change")
+
+
+def verify_email_change_token(token: str, max_age: int = 3600) -> tuple:
+    """
+    Verify an email change token and return (old_email, new_email) if valid.
+    
+    Args:
+        token: The email change token to verify
+        max_age: Maximum age of the token in seconds (default 1 hour)
+    
+    Returns:
+        Tuple of (old_email, new_email) if token is valid
+    
+    Raises:
+        Exception if token is invalid or expired
+    """
+    try:
+        data = serializer.loads(token, salt="email-change", max_age=max_age)
+        old_email, new_email = data.split(":", 1)
+        return old_email, new_email
+    except Exception:
+        raise
+
+
 async def send_verification_email(email: str, username: str, token: str):
     """
     Send email verification email to user.
@@ -230,5 +259,78 @@ async def send_password_reset_email(email: str, username: str, token: str):
         print(f"To: {email}")
         print(f"Username: {username}")
         print(f"Reset URL: {reset_url}")
+        print(f"{'='*60}\n")
+
+
+async def send_email_change_verification_email(new_email: str, username: str, token: str):
+    """
+    Send email change verification email to new email address.
+    
+    Args:
+        new_email: New email address to verify
+        username: User's username
+        token: Email change verification token
+    """
+    verification_url = f"{APP_URL}/?email_change_token={token}&email_change=true"
+    
+    html = f"""
+    <html>
+        <body style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
+            <div style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); padding: 30px; text-align: center;">
+                <h1 style="color: white; margin: 0;">Email Change Request</h1>
+            </div>
+            <div style="padding: 30px; background-color: #f9f9f9;">
+                <h2>Hi {username},</h2>
+                <p>You requested to change your OmniTrackr email address to this address. Please verify your new email by clicking the button below:</p>
+                <div style="text-align: center; margin: 30px 0;">
+                    <a href="{verification_url}" 
+                       style="background-color: #667eea; color: white; padding: 15px 30px; text-decoration: none; border-radius: 5px; display: inline-block; font-weight: bold;">
+                        Verify New Email
+                    </a>
+                </div>
+                <p>Or copy and paste this link into your browser:</p>
+                <p style="word-break: break-all; color: #667eea;">{verification_url}</p>
+                <p><strong>This link will expire in 1 hour.</strong></p>
+                <hr style="border: none; border-top: 1px solid #ddd; margin: 30px 0;">
+                <p style="color: #666; font-size: 12px;">
+                    If you didn't request this email change, please contact support immediately.
+                </p>
+            </div>
+        </body>
+    </html>
+    """
+    
+    message = MessageSchema(
+        subject="Verify Your New OmniTrackr Email",
+        recipients=[new_email],
+        body=html,
+        subtype=MessageType.html
+    )
+    
+    # Only send if email credentials are configured
+    if conf.MAIL_USERNAME and conf.MAIL_PASSWORD:
+        try:
+            import asyncio
+            fm = FastMail(conf)
+            await asyncio.wait_for(fm.send_message(message), timeout=30.0)
+        except asyncio.TimeoutError:
+            print(f"ERROR: Email sending timed out after 30 seconds")
+            print(f"Failed to send email change verification email to {new_email}")
+            print(f"Verification URL (fallback): {verification_url}")
+            raise Exception("Email sending timed out. Check your email service configuration.")
+        except Exception as e:
+            error_msg = str(e)
+            print(f"ERROR: Failed to send email change verification email to {new_email}")
+            print(f"Error: {error_msg}")
+            print(f"Verification URL (fallback): {verification_url}")
+            raise Exception(f"Failed to send email: {error_msg}. Check your email service configuration.")
+    else:
+        # Development mode - just print the verification URL
+        print(f"\n{'='*60}")
+        print(f"Email Change Verification Required")
+        print(f"{'='*60}")
+        print(f"To: {new_email}")
+        print(f"Username: {username}")
+        print(f"Verification URL: {verification_url}")
         print(f"{'='*60}\n")
 

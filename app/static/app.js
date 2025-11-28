@@ -1004,6 +1004,233 @@ window.toggleCollapsible = function(formId) {
   }
 };
 
+// Account Management Functions
+window.openAccountModal = async function() {
+  const modal = document.getElementById('accountModal');
+  modal.style.display = 'flex';
+  await loadAccountInfo();
+}
+
+window.closeAccountModal = function() {
+  const modal = document.getElementById('accountModal');
+  modal.style.display = 'none';
+  // Clear all form errors and success messages
+  document.querySelectorAll('.error-message, .success-message').forEach(el => {
+    el.textContent = '';
+    el.style.display = 'none';
+  });
+  // Reset forms
+  document.getElementById('changeUsernameForm').reset();
+  document.getElementById('changeEmailForm').reset();
+  document.getElementById('changePasswordForm').reset();
+  document.getElementById('deactivateAccountForm').reset();
+}
+
+window.loadAccountInfo = async function() {
+  try {
+    const response = await authenticatedFetch(`${API_BASE}/account/me`);
+    if (response.ok) {
+      const user = await response.json();
+      document.getElementById('accountUsername').textContent = user.username;
+      document.getElementById('accountEmail').textContent = user.email;
+      
+      // Format created date
+      if (user.created_at) {
+        const createdDate = new Date(user.created_at);
+        document.getElementById('accountCreated').textContent = createdDate.toLocaleDateString('en-US', {
+          year: 'numeric',
+          month: 'long',
+          day: 'numeric'
+        });
+      } else {
+        document.getElementById('accountCreated').textContent = 'Unknown';
+      }
+      
+      // Email verification status
+      document.getElementById('accountVerified').textContent = user.is_verified ? '✓ Verified' : '✗ Not Verified';
+      document.getElementById('accountVerified').style.color = user.is_verified ? '#4caf50' : '#f44336';
+    } else {
+      console.error('Failed to load account info');
+    }
+  } catch (error) {
+    console.error('Error loading account info:', error);
+  }
+}
+
+window.changeUsername = async function(event) {
+  event.preventDefault();
+  const newUsername = document.getElementById('newUsername').value;
+  const password = document.getElementById('usernamePassword').value;
+  const errorEl = document.getElementById('usernameError');
+  const successEl = document.getElementById('usernameSuccess');
+  
+  errorEl.textContent = '';
+  errorEl.style.display = 'none';
+  successEl.textContent = '';
+  successEl.style.display = 'none';
+  
+  try {
+    const response = await authenticatedFetch(`${API_BASE}/account/username`, {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ new_username: newUsername, password: password })
+    });
+    
+    if (response.ok) {
+      const updatedUser = await response.json();
+      
+      // Close the modal first
+      closeAccountModal();
+      
+      // Show success message and inform user to relogin
+      alert('Username changed successfully! Please login again with your new username.');
+      
+      // Force logout without confirmation (JWT token contains old username and is now invalid)
+      // Use clearAuth from auth.js (available globally)
+      if (typeof clearAuth === 'function') {
+        clearAuth();
+      } else {
+        // Fallback: clear localStorage directly
+        localStorage.removeItem('omnitrackr_token');
+        localStorage.removeItem('omnitrackr_user');
+      }
+      location.reload();
+    } else {
+      const error = await response.json();
+      errorEl.textContent = error.detail || 'Failed to change username';
+      errorEl.style.display = 'block';
+    }
+  } catch (error) {
+    errorEl.textContent = 'Failed to change username. Please try again.';
+    errorEl.style.display = 'block';
+  }
+}
+
+window.changeEmail = async function(event) {
+  event.preventDefault();
+  const newEmail = document.getElementById('newEmail').value;
+  const password = document.getElementById('emailPassword').value;
+  const errorEl = document.getElementById('emailError');
+  const successEl = document.getElementById('emailSuccess');
+  
+  errorEl.textContent = '';
+  errorEl.style.display = 'none';
+  successEl.textContent = '';
+  successEl.style.display = 'none';
+  
+  try {
+    const response = await authenticatedFetch(`${API_BASE}/account/email`, {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ new_email: newEmail, password: password })
+    });
+    
+    if (response.ok) {
+      const data = await response.json();
+      successEl.textContent = data.message || 'Verification email sent to new address. Please check your email.';
+      successEl.style.display = 'block';
+      document.getElementById('changeEmailForm').reset();
+    } else {
+      const error = await response.json();
+      errorEl.textContent = error.detail || 'Failed to change email';
+      errorEl.style.display = 'block';
+    }
+  } catch (error) {
+    errorEl.textContent = 'Failed to change email. Please try again.';
+    errorEl.style.display = 'block';
+  }
+}
+
+window.changePassword = async function(event) {
+  event.preventDefault();
+  const currentPassword = document.getElementById('currentPassword').value;
+  const newPassword = document.getElementById('accountNewPassword').value;
+  const confirmPassword = document.getElementById('accountConfirmNewPassword').value;
+  const errorEl = document.getElementById('passwordError');
+  const successEl = document.getElementById('passwordSuccess');
+  
+  errorEl.textContent = '';
+  errorEl.style.display = 'none';
+  successEl.textContent = '';
+  successEl.style.display = 'none';
+  
+  if (newPassword !== confirmPassword) {
+    errorEl.textContent = 'New passwords do not match';
+    errorEl.style.display = 'block';
+    return;
+  }
+  
+  if (newPassword.length < 6) {
+    errorEl.textContent = 'Password must be at least 6 characters';
+    errorEl.style.display = 'block';
+    return;
+  }
+  
+  try {
+    const response = await authenticatedFetch(`${API_BASE}/account/password`, {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ current_password: currentPassword, new_password: newPassword })
+    });
+    
+    if (response.ok) {
+      const data = await response.json();
+      successEl.textContent = data.message || 'Password changed successfully!';
+      successEl.style.display = 'block';
+      document.getElementById('changePasswordForm').reset();
+    } else {
+      const error = await response.json();
+      errorEl.textContent = error.detail || 'Failed to change password';
+      errorEl.style.display = 'block';
+    }
+  } catch (error) {
+    errorEl.textContent = 'Failed to change password. Please try again.';
+    errorEl.style.display = 'block';
+  }
+}
+
+window.deactivateAccount = async function(event) {
+  event.preventDefault();
+  const password = document.getElementById('deactivatePassword').value;
+  const errorEl = document.getElementById('deactivateError');
+  
+  errorEl.textContent = '';
+  errorEl.style.display = 'none';
+  
+  if (!confirm('Are you sure you want to deactivate your account? You can reactivate within 90 days, but after that your account will be permanently deleted.')) {
+    return;
+  }
+  
+  try {
+    const response = await authenticatedFetch(`${API_BASE}/account/deactivate`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ password: password })
+    });
+    
+    if (response.ok) {
+      const data = await response.json();
+      alert(data.message || 'Account deactivated successfully. You will be logged out.');
+      logout();
+    } else {
+      const error = await response.json();
+      errorEl.textContent = error.detail || 'Failed to deactivate account';
+      errorEl.style.display = 'block';
+    }
+  } catch (error) {
+    errorEl.textContent = 'Failed to deactivate account. Please try again.';
+    errorEl.style.display = 'block';
+  }
+}
+
+// Close modal when clicking outside
+document.addEventListener('click', (e) => {
+  const modal = document.getElementById('accountModal');
+  if (e.target === modal) {
+    closeAccountModal();
+  }
+});
+
 // Load initial data
 loadMovies();
 

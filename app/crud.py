@@ -4,6 +4,7 @@ Encapsulates database operations for fetching, creating, updating,
 and deleting movie and TV show entries.
 """
 from typing import List, Optional
+from datetime import datetime, timedelta
 from sqlalchemy.orm import Session
 from sqlalchemy import asc, desc, func
 from . import models
@@ -39,6 +40,71 @@ def create_user(db: Session, user: schemas.UserCreate, hashed_password: str, ver
         verification_token=verification_token
     )
     db.add(db_user)
+    db.commit()
+    db.refresh(db_user)
+    return db_user
+
+
+def update_user(db: Session, user_id: int, user_update: schemas.UserUpdate) -> Optional[models.User]:
+    """Update user information."""
+    db_user = get_user_by_id(db, user_id)
+    if db_user is None:
+        return None
+    
+    update_dict = user_update.dict(exclude_unset=True)
+    
+    # Check for duplicate username if changing
+    if 'username' in update_dict and update_dict['username'] != db_user.username:
+        existing_user = get_user_by_username(db, update_dict['username'])
+        if existing_user:
+            raise ValueError("Username already taken")
+        db_user.username = update_dict['username']
+    
+    # Check for duplicate email if changing
+    if 'email' in update_dict and update_dict['email'] != db_user.email:
+        existing_user = get_user_by_email(db, update_dict['email'])
+        if existing_user:
+            raise ValueError("Email already registered")
+        db_user.email = update_dict['email']
+    
+    # Update password if provided (should be hashed before calling this)
+    if 'password' in update_dict:
+        db_user.hashed_password = update_dict['password']
+    
+    db.commit()
+    db.refresh(db_user)
+    return db_user
+
+
+def deactivate_user(db: Session, user_id: int) -> Optional[models.User]:
+    """Deactivate a user account (soft delete)."""
+    db_user = get_user_by_id(db, user_id)
+    if db_user is None:
+        return None
+    
+    db_user.is_active = False
+    db_user.deactivated_at = datetime.utcnow()
+    db.commit()
+    db.refresh(db_user)
+    return db_user
+
+
+def reactivate_user(db: Session, user_id: int) -> Optional[models.User]:
+    """Reactivate a deactivated user account (within 90-day window)."""
+    db_user = get_user_by_id(db, user_id)
+    if db_user is None:
+        return None
+    
+    # Check if account was deactivated and within 90-day window
+    if db_user.deactivated_at is None:
+        raise ValueError("Account was not deactivated")
+    
+    days_since_deactivation = (datetime.utcnow() - db_user.deactivated_at).days
+    if days_since_deactivation > 90:
+        raise ValueError("Account cannot be reactivated after 90 days")
+    
+    db_user.is_active = True
+    db_user.deactivated_at = None
     db.commit()
     db.refresh(db_user)
     return db_user

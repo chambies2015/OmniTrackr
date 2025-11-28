@@ -22,6 +22,7 @@ class User(Base):
     reset_token = Column(String, nullable=True)
     reset_token_expires = Column(DateTime, nullable=True)
     created_at = Column(DateTime, default=datetime.utcnow)
+    deactivated_at = Column(DateTime, nullable=True)
     
     # Relationships - cascade delete ensures user's data is deleted with them
     movies = relationship("Movie", back_populates="owner", cascade="all, delete-orphan")
