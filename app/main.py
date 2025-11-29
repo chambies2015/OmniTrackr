@@ -1,8 +1,6 @@
 """
 Entry point for the OmniTrackr API.
 Provides CRUD endpoints for managing movies and TV shows.
-
-Test commit for profile picture persistence verification.
 """
 import json
 from datetime import datetime
