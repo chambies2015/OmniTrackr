@@ -718,6 +718,17 @@ Sitemap: {site_url}/sitemap.xml"""
     return Response(content=robots, media_type="text/plain")
 
 
+@app.get("/ads.txt", tags=["seo"])
+async def get_ads_txt():
+    """Serve ads.txt for Google AdSense verification."""
+    # Get Publisher ID from environment variable, or use placeholder
+    publisher_id = os.getenv("ADSENSE_PUBLISHER_ID", "pub-XXXXXXXXXX")
+    
+    ads_txt = f"""google.com, {publisher_id}, DIRECT, f08c47fec0942fa0"""
+    
+    return Response(content=ads_txt, media_type="text/plain")
+
+
 # ============================================================================
 # Authentication endpoints
 # ============================================================================
