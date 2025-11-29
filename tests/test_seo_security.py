@@ -77,6 +77,28 @@ class TestSecurityMiddleware:
             assert "X-Robots-Tag" in response.headers
             assert "noindex, nofollow" in response.headers["X-Robots-Tag"]
     
+    def test_bot_filter_double_slash_wordpress_paths(self, client):
+        """Test that bot filter blocks double-slash WordPress scanner paths.
+        
+        Note: TestClient normalizes double slashes, so we test the normalized paths.
+        In production, the middleware handles both double-slash and normalized paths.
+        """
+        # Test normalized paths (what TestClient sends after normalization)
+        normalized_paths = [
+            "/blog/wp-includes/wlwmanifest.xml",
+            "/web/wp-includes/wlwmanifest.xml",
+            "/wordpress/wp-includes/wlwmanifest.xml",
+            "/wp-includes/wlwmanifest.xml",
+            "/xmlrpc.php",
+            "/wp-admin/setup-config.php",
+        ]
+        
+        for path in normalized_paths:
+            response = client.get(path)
+            assert response.status_code == 404, f"Path {path} should be blocked"
+            assert "X-Robots-Tag" in response.headers
+            assert "noindex, nofollow" in response.headers["X-Robots-Tag"]
+    
     def test_bot_filter_suspicious_user_agents(self, client):
         """Test that bot filter blocks suspicious user agents with suspicious paths."""
         suspicious_agents = [

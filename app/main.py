@@ -368,6 +368,7 @@ class BotFilterMiddleware(BaseHTTPMiddleware):
         "/.git", "/.git/config", "/.git/logs/HEAD",
         "/wp-admin", "/wp-login.php", "/wp-config.php", "/setup-config.php",
         "/wp-includes", "/wp-content", "/xmlrpc.php", "/wlwmanifest.xml",
+        "/wordpress/wp-admin/setup-config.php", "/2020/", "/2021/",
         "/admin", "/administrator", "/phpmyadmin",
         "/.aws", "/aws-config.js", "/aws.config.js",
         "/config.json", "/config.js", "/.gitlab-ci.yml",
@@ -463,8 +464,20 @@ class BotFilterMiddleware(BaseHTTPMiddleware):
         path = request.url.path.lower()
         user_agent = request.headers.get("user-agent", "").lower()
         
-        # Check for suspicious paths
-        if any(suspicious in path for suspicious in self.SUSPICIOUS_PATHS):
+        # Normalize double slashes (//) to single slash for matching
+        normalized_path = path.replace("//", "/")
+        
+        # Check for suspicious paths (check both original and normalized)
+        if any(suspicious in path for suspicious in self.SUSPICIOUS_PATHS) or \
+           any(suspicious in normalized_path for suspicious in self.SUSPICIOUS_PATHS):
+            return StarletteResponse(
+                content="Not Found",
+                status_code=404,
+                headers={"X-Robots-Tag": "noindex, nofollow"}
+            )
+        
+        # Check for double-slash WordPress paths specifically
+        if "//" in path and ("wp-includes" in path or "wp-admin" in path or "xmlrpc.php" in path):
             return StarletteResponse(
                 content="Not Found",
                 status_code=404,
