@@ -729,6 +729,31 @@ async def get_ads_txt():
     return Response(content=ads_txt, media_type="text/plain")
 
 
+@app.get("/sellers.json", tags=["seo"])
+async def get_sellers_json():
+    """Serve sellers.json for ad transparency and verification."""
+    # Get Publisher ID from environment variable, or use placeholder
+    publisher_id = os.getenv("ADSENSE_PUBLISHER_ID", "pub-7271682066779719")
+    site_domain = os.getenv("SITE_DOMAIN", "omnitrackr.xyz")
+    
+    sellers_data = {
+        "sellers": [
+            {
+                "seller_id": publisher_id,
+                "name": "OmniTrackr",
+                "domain": site_domain,
+                "seller_type": "PUBLISHER"
+            }
+        ],
+        "version": 1
+    }
+    
+    return Response(
+        content=json.dumps(sellers_data, indent=2),
+        media_type="application/json"
+    )
+
+
 # ============================================================================
 # Authentication endpoints
 # ============================================================================
