@@ -1709,7 +1709,25 @@ body.dark-mode .landing-footer {
   
   .footer-links {
     flex-direction: column;
-    gap: 15px;
+    gap: 8px;
+  }
+  
+  /* Make footer thinner on mobile */
+  .landing-footer {
+    padding: 8px 15px;
+  }
+  
+  .footer-content {
+    gap: 5px;
+  }
+  
+  .footer-text {
+    font-size: 0.85rem;
+  }
+  
+  .footer-link {
+    font-size: 0.85rem;
+    gap: 5px;
   }
 }
 
