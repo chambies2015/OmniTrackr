@@ -1319,6 +1319,24 @@ document.getElementById('importFile').addEventListener('change', (e) => importDa
 document.getElementById('importTVFile').addEventListener('change', (e) => importData(e.target));
 document.getElementById('importAnimeFile').addEventListener('change', (e) => importData(e.target));
 
+// Auto-resize textarea for movie review
+const movieReviewTextarea = document.getElementById('movieReview');
+if (movieReviewTextarea) {
+  movieReviewTextarea.addEventListener('input', function() {
+    this.style.height = 'auto';
+    this.style.height = Math.max(60, this.scrollHeight) + 'px';
+  });
+}
+
+// Auto-resize textarea for TV show review
+const tvReviewTextarea = document.getElementById('tvReview');
+if (tvReviewTextarea) {
+  tvReviewTextarea.addEventListener('input', function() {
+    this.style.height = 'auto';
+    this.style.height = Math.max(60, this.scrollHeight) + 'px';
+  });
+}
+
 // Auto-resize textarea for anime review
 const animeReviewTextarea = document.getElementById('animeReview');
 if (animeReviewTextarea) {
