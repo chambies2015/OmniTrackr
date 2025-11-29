@@ -1,6 +1,8 @@
 """
 Entry point for the OmniTrackr API.
 Provides CRUD endpoints for managing movies and TV shows.
+
+Test commit for profile picture persistence verification.
 """
 import json
 from datetime import datetime
@@ -90,6 +92,19 @@ try:
                 conn.execute(text("ALTER TABLE users ADD COLUMN profile_picture_url VARCHAR"))
                 conn.commit()
                 print("Added profile_picture_url column to users table")
+        if "profile_picture_data" not in user_columns:
+            with engine.connect() as conn:
+                if database.DATABASE_URL.startswith("postgresql"):
+                    conn.execute(text("ALTER TABLE users ADD COLUMN profile_picture_data BYTEA"))
+                else:
+                    conn.execute(text("ALTER TABLE users ADD COLUMN profile_picture_data BLOB"))
+                conn.commit()
+                print("Added profile_picture_data column to users table")
+        if "profile_picture_mime_type" not in user_columns:
+            with engine.connect() as conn:
+                conn.execute(text("ALTER TABLE users ADD COLUMN profile_picture_mime_type VARCHAR"))
+                conn.commit()
+                print("Added profile_picture_mime_type column to users table")
 
     # Check movies table for review and poster_url columns
     if inspector.has_table("movies"):
@@ -483,60 +498,41 @@ app.add_middleware(
 # Mount static files for the UI
 import os
 
-# Profile pictures storage directory (persistent between deployments)
-# Use environment variable if set, otherwise use a data directory outside the app
-PROFILE_PICTURES_BASE_DIR = os.getenv(
-    "PROFILE_PICTURES_DIR",
-    os.path.join(os.path.dirname(os.path.dirname(__file__)), "data", "profile_pictures")
-)
-# Ensure the directory exists
-os.makedirs(PROFILE_PICTURES_BASE_DIR, exist_ok=True)
+# Database dependency
+def get_db():
+    db = SessionLocal()
+    try:
+        yield db
+    finally:
+        db.close()
 
-# Serve profile pictures from persistent storage
+# Profile pictures are now stored in the database for persistence across deployments
+# Serve profile pictures from database
 # Using /profile-pictures/ path to avoid conflict with /static/ mount
-@app.get("/profile-pictures/{filename}")
-async def serve_profile_picture(filename: str):
-    """Serve profile pictures from persistent storage."""
-    return await _serve_profile_picture_internal(filename)
+@app.get("/profile-pictures/{user_id}")
+async def serve_profile_picture(user_id: int, db: Session = Depends(get_db)):
+    """Serve profile pictures from database."""
+    # Get user from database
+    user = crud.get_user_by_id(db, user_id)
+    if not user or not user.profile_picture_data:
+        raise HTTPException(status_code=404, detail="Profile picture not found")
+    
+    # Return image data with appropriate MIME type
+    mime_type = user.profile_picture_mime_type or "image/jpeg"
+    return Response(content=user.profile_picture_data, media_type=mime_type)
 
-# Backward compatibility: redirect old /static/profile_pictures/ URLs
+# Backward compatibility: support old filename-based URLs (for migration period)
 @app.get("/static/profile_pictures/{filename}")
 async def serve_profile_picture_old(filename: str):
     """Backward compatibility endpoint for old profile picture URLs."""
-    return await _serve_profile_picture_internal(filename)
-
-async def _serve_profile_picture_internal(filename: str):
-    """Serve profile pictures from persistent storage."""
-    # Security: Sanitize filename to prevent path traversal attacks
+    # Try to extract user_id from filename (format: {user_id}_{uuid}.{ext})
     import re
-    # Remove any path separators and dangerous characters
-    filename = os.path.basename(filename)  # Remove any directory components
-    # Only allow alphanumeric, dots, underscores, and hyphens
-    if not re.match(r'^[a-zA-Z0-9._-]+$', filename):
-        raise HTTPException(status_code=400, detail="Invalid filename")
-    
-    # Construct file path
-    file_path = os.path.join(PROFILE_PICTURES_BASE_DIR, filename)
-    
-    # Security: Normalize path and verify it's still within the base directory
-    file_path = os.path.normpath(file_path)
-    base_dir_normalized = os.path.normpath(PROFILE_PICTURES_BASE_DIR)
-    if not file_path.startswith(base_dir_normalized):
-        raise HTTPException(status_code=403, detail="Access denied")
-    
-    # Check if file exists
-    if os.path.exists(file_path) and os.path.isfile(file_path):
-        # Determine content type from extension
-        ext = filename.split(".")[-1].lower()
-        media_types = {
-            "jpg": "image/jpeg",
-            "jpeg": "image/jpeg",
-            "png": "image/png",
-            "gif": "image/gif",
-            "webp": "image/webp"
-        }
-        media_type = media_types.get(ext, "image/jpeg")
-        return FileResponse(file_path, media_type=media_type)
+    match = re.match(r'^(\d+)_', filename)
+    if match:
+        user_id = int(match.group(1))
+        # Redirect to new endpoint
+        from fastapi.responses import RedirectResponse
+        return RedirectResponse(url=f"/profile-pictures/{user_id}", status_code=301)
     raise HTTPException(status_code=404, detail="Profile picture not found")
 
 static_dir = os.path.join(os.path.dirname(__file__), "static")
@@ -1200,12 +1196,7 @@ async def upload_profile_picture(
         if image.size[0] > max_size[0] or image.size[1] > max_size[1]:
             image.thumbnail(max_size, Image.Resampling.LANCZOS)
         
-        # Use persistent profile pictures directory
-        profile_pictures_dir = PROFILE_PICTURES_BASE_DIR
-        os.makedirs(profile_pictures_dir, exist_ok=True)
-        
-        # Generate unique filename
-        import uuid
+        # Determine output format and MIME type
         import re
         # Use detected format or fallback to extension
         if "." in file.filename:
@@ -1225,36 +1216,18 @@ async def upload_profile_picture(
         if file_extension == "jpeg":
             file_extension = "jpg"
         
-        # Generate unique filename with user ID and UUID
-        unique_filename = f"{current_user.id}_{uuid.uuid4().hex}.{file_extension}"
-        file_path = os.path.join(profile_pictures_dir, unique_filename)
+        # Determine MIME type
+        mime_types = {
+            "jpg": "image/jpeg",
+            "jpeg": "image/jpeg",
+            "png": "image/png",
+            "gif": "image/gif",
+            "webp": "image/webp"
+        }
+        mime_type = mime_types.get(file_extension, "image/jpeg")
         
-        # Additional security: Ensure the resolved path is still within profile_pictures_dir
-        file_path = os.path.normpath(file_path)
-        profile_pictures_dir_normalized = os.path.normpath(profile_pictures_dir)
-        if not file_path.startswith(profile_pictures_dir_normalized):
-            raise HTTPException(status_code=400, detail="Invalid file path")
-        
-        # Delete old profile picture if exists
-        if current_user.profile_picture_url:
-            # Extract filename from URL (format: /profile-pictures/filename or /static/profile_pictures/filename for backward compatibility)
-            old_url = current_user.profile_picture_url.lstrip("/")
-            if "profile-pictures/" in old_url:
-                old_filename = old_url.split("profile-pictures/")[-1]
-            elif "profile_pictures/" in old_url:
-                old_filename = old_url.split("profile_pictures/")[-1]
-            else:
-                old_filename = old_url.split("/")[-1]
-            old_file_path = os.path.join(PROFILE_PICTURES_BASE_DIR, old_filename)
-            if os.path.exists(old_file_path):
-                try:
-                    os.remove(old_file_path)
-                except Exception as e:
-                    print(f"Warning: Could not delete old profile picture: {e}")
-        
-        # Save optimized image
+        # Save optimized image to memory
         output = io.BytesIO()
-        save_kwargs = {}
         
         # Optimize based on format
         if file_extension in ['jpg', 'jpeg']:
@@ -1268,13 +1241,18 @@ async def upload_profile_picture(
         else:
             image.save(output, format='JPEG', quality=85, optimize=True)
         
-        # Write to file
-        with open(file_path, "wb") as f:
-            f.write(output.getvalue())
+        # Get binary data
+        image_data = output.getvalue()
         
-        # Update database with relative URL
-        profile_picture_url = f"/profile-pictures/{unique_filename}"
-        updated_user = crud.update_profile_picture(db, current_user.id, profile_picture_url)
+        # Update database with image data, MIME type, and virtual URL
+        profile_picture_url = f"/profile-pictures/{current_user.id}"
+        updated_user = crud.update_profile_picture(
+            db, 
+            current_user.id, 
+            profile_picture_url=profile_picture_url,
+            profile_picture_data=image_data,
+            profile_picture_mime_type=mime_type
+        )
         
         if updated_user is None:
             raise HTTPException(status_code=404, detail="User not found")
@@ -1297,24 +1275,7 @@ async def reset_profile_picture(
     db: Session = Depends(get_db)
 ):
     """Reset/remove profile picture."""
-    # Delete file if exists
-    if current_user.profile_picture_url:
-        # Extract filename from URL (format: /profile-pictures/filename or /static/profile_pictures/filename for backward compatibility)
-        old_url = current_user.profile_picture_url.lstrip("/")
-        if "profile-pictures/" in old_url:
-            old_filename = old_url.split("profile-pictures/")[-1]
-        elif "profile_pictures/" in old_url:
-            old_filename = old_url.split("profile_pictures/")[-1]
-        else:
-            old_filename = old_url.split("/")[-1]
-        file_path = os.path.join(PROFILE_PICTURES_BASE_DIR, old_filename)
-        if os.path.exists(file_path):
-            try:
-                os.remove(file_path)
-            except Exception as e:
-                print(f"Warning: Could not delete profile picture file: {e}")
-    
-    # Update database
+    # Update database to clear profile picture data
     updated_user = crud.reset_profile_picture(db, current_user.id)
     
     if updated_user is None:
