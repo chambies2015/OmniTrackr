@@ -2182,6 +2182,35 @@ document.addEventListener('DOMContentLoaded', function() {
     showFriendsSidebarBtn.addEventListener('click', showFriendsSidebar);
   }
   
+  // Initialize FAQ accordion functionality
+  const faqQuestions = document.querySelectorAll('.faq-question');
+  faqQuestions.forEach(question => {
+    question.addEventListener('click', function() {
+      const isExpanded = this.getAttribute('aria-expanded') === 'true';
+      const answer = this.nextElementSibling;
+      
+      // Close all other FAQ items
+      faqQuestions.forEach(q => {
+        if (q !== this) {
+          q.setAttribute('aria-expanded', 'false');
+          q.nextElementSibling.style.maxHeight = '0';
+          q.nextElementSibling.style.padding = '0 24px';
+        }
+      });
+      
+      // Toggle current item
+      if (isExpanded) {
+        this.setAttribute('aria-expanded', 'false');
+        answer.style.maxHeight = '0';
+        answer.style.padding = '0 24px';
+      } else {
+        this.setAttribute('aria-expanded', 'true');
+        answer.style.maxHeight = answer.scrollHeight + 'px';
+        answer.style.padding = '0 24px 20px 24px';
+      }
+    });
+  });
+  
   // Load friends list and notification count on page load (if logged in)
   if (isAuthenticated()) {
     loadFriendsList();

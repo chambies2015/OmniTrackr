@@ -1,6 +1,9 @@
 """
 Pytest configuration and fixtures for OmniTrackr tests.
 """
+import os
+os.environ["TESTING"] = "true"  # Disable rate limiting in tests
+
 import pytest
 from fastapi.testclient import TestClient
 from sqlalchemy import create_engine

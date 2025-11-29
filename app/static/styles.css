@@ -1218,6 +1218,33 @@ body.dark-mode .card > div:nth-of-type(2) {
   .stat-number {
     font-size: 2.5rem;
   }
+  
+  /* FAQ Mobile Styles */
+  .landing-faq {
+    padding: 40px 15px;
+  }
+  
+  .faq-title {
+    font-size: 2rem;
+    margin-bottom: 30px;
+  }
+  
+  .faq-question {
+    padding: 16px 20px;
+    font-size: 1rem;
+  }
+  
+  .faq-answer {
+    padding: 0 20px;
+  }
+  
+  .faq-question[aria-expanded="true"] + .faq-answer {
+    padding: 0 20px 16px 20px;
+  }
+  
+  .faq-answer p {
+    font-size: 0.9rem;
+  }
 }
 
 /* Landing Page Styles */
@@ -1271,6 +1298,108 @@ body.dark-mode .card > div:nth-of-type(2) {
   color: var(--fg);
   margin-bottom: 40px;
   font-weight: 700;
+}
+
+/* FAQ Section Styles */
+.landing-faq {
+  padding: 60px 20px;
+  max-width: 900px;
+  margin: 0 auto;
+}
+
+.faq-title {
+  text-align: center;
+  font-size: 2.5rem;
+  color: var(--fg);
+  margin-bottom: 40px;
+  font-weight: 700;
+}
+
+.faq-container {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.faq-item {
+  background-color: var(--card-bg);
+  border-radius: 12px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+  overflow: hidden;
+  transition: box-shadow 0.3s ease;
+}
+
+.faq-item:hover {
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.15);
+}
+
+.faq-question {
+  width: 100%;
+  padding: 20px 24px;
+  background-color: transparent;
+  border: none;
+  text-align: left;
+  cursor: pointer;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  color: var(--fg);
+  font-size: 1.1rem;
+  font-weight: 600;
+  transition: background-color 0.2s ease;
+}
+
+.faq-question:hover {
+  background-color: rgba(102, 126, 234, 0.05);
+}
+
+.faq-question:focus {
+  outline: 2px solid var(--primary);
+  outline-offset: -2px;
+}
+
+.faq-icon {
+  font-size: 1.5rem;
+  font-weight: 300;
+  color: var(--primary);
+  transition: transform 0.3s ease;
+  flex-shrink: 0;
+  margin-left: 16px;
+}
+
+.faq-question[aria-expanded="true"] .faq-icon {
+  transform: rotate(45deg);
+}
+
+.faq-answer {
+  max-height: 0;
+  overflow: hidden;
+  transition: max-height 0.3s ease, padding 0.3s ease;
+  padding: 0 24px;
+}
+
+.faq-question[aria-expanded="true"] + .faq-answer {
+  max-height: 500px;
+  padding: 0 24px 20px 24px;
+}
+
+.faq-answer p {
+  color: var(--fg);
+  opacity: 0.85;
+  line-height: 1.7;
+  margin: 0;
+  font-size: 0.95rem;
+}
+
+.faq-answer a {
+  color: var(--primary);
+  text-decoration: none;
+  transition: opacity 0.2s ease;
+}
+
+.faq-answer a:hover {
+  opacity: 0.8;
+  text-decoration: underline;
 }
 
 .features-grid {
