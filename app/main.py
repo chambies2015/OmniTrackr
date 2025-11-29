@@ -81,6 +81,11 @@ try:
                 conn.execute(text("ALTER TABLE users ADD COLUMN tv_shows_private BOOLEAN DEFAULT FALSE"))
                 conn.commit()
                 print("Added tv_shows_private column to users table")
+        if "anime_private" not in user_columns:
+            with engine.connect() as conn:
+                conn.execute(text("ALTER TABLE users ADD COLUMN anime_private BOOLEAN DEFAULT FALSE"))
+                conn.commit()
+                print("Added anime_private column to users table")
         if "statistics_private" not in user_columns:
             with engine.connect() as conn:
                 conn.execute(text("ALTER TABLE users ADD COLUMN statistics_private BOOLEAN DEFAULT FALSE"))
@@ -201,6 +206,33 @@ try:
                                 print("Converted tv_shows.rating column from INTEGER to FLOAT")
                         except Exception as e:
                             print(f"Note: Could not convert tv_shows.rating column type (may already be correct): {e}")
+
+    # Check anime table for schema migration
+    if not inspector.has_table("anime"):
+        # Table doesn't exist, it will be created by Base.metadata.create_all
+        print("Anime table will be created by Base.metadata.create_all")
+    else:
+        # Table exists, check for poster_url column
+        anime_columns = {col["name"] for col in inspector.get_columns("anime")}
+        if "poster_url" not in anime_columns:
+            with engine.connect() as conn:
+                conn.execute(text("ALTER TABLE anime ADD COLUMN poster_url VARCHAR"))
+                conn.commit()
+                print("Added poster_url column to anime table")
+        
+        # Check if rating column exists and ensure it's FLOAT type
+        rating_column = next((col for col in inspector.get_columns("anime") if col["name"] == "rating"), None)
+        if rating_column:
+            if database.DATABASE_URL.startswith("postgresql"):
+                col_type = str(rating_column.get("type", "")).upper()
+                if "INT" in col_type and "FLOAT" not in col_type and "NUMERIC" not in col_type and "REAL" not in col_type:
+                    try:
+                        with engine.connect() as conn:
+                            conn.execute(text("ALTER TABLE anime ALTER COLUMN rating TYPE FLOAT USING rating::float"))
+                            conn.commit()
+                            print("Converted anime.rating column from INTEGER to FLOAT")
+                    except Exception as e:
+                        print(f"Note: Could not convert anime.rating column type (may already be correct): {e}")
 
     # Check and create friend_requests table if it doesn't exist
     if not inspector.has_table("friend_requests"):
@@ -1629,6 +1661,29 @@ async def get_friend_tv_shows(
     return schemas.FriendTVShowsResponse(tv_shows=tv_shows, count=len(tv_shows))
 
 
+@app.get("/friends/{friend_id}/anime", response_model=schemas.FriendAnimeResponse, tags=["friends"])
+async def get_friend_anime(
+    friend_id: int,
+    current_user: models.User = Depends(get_current_user),
+    db: Session = Depends(get_db)
+):
+    """Get friend's anime list (if not private, requires friendship)."""
+    # Verify friendship
+    if not crud.are_friends(db, current_user.id, friend_id):
+        raise HTTPException(status_code=403, detail="You are not friends with this user")
+    
+    anime = crud.get_friend_anime(db, friend_id)
+    if anime is None:
+        # Check if friend exists
+        friend = crud.get_user_by_id(db, friend_id)
+        if friend is None:
+            raise HTTPException(status_code=404, detail="Friend not found")
+        # Data is private
+        raise HTTPException(status_code=403, detail="This user has made their anime private")
+    
+    return schemas.FriendAnimeResponse(anime=anime, count=len(anime))
+
+
 @app.get("/friends/{friend_id}/statistics", response_model=schemas.FriendStatisticsResponse, tags=["friends"])
 async def get_friend_statistics(
     friend_id: int,
@@ -1774,40 +1829,87 @@ async def delete_tv_show(tv_show_id: int, current_user: models.User = Depends(ge
     return db_tv_show
 
 
+# Anime endpoints
+@app.get("/anime/", response_model=List[schemas.Anime], tags=["anime"])
+async def list_anime(
+        search: Optional[str] = None,
+        sort_by: Optional[str] = None,
+        order: Optional[str] = None,
+        current_user: models.User = Depends(get_current_user),
+        db: Session = Depends(get_db),
+):
+    return crud.get_anime(db, current_user.id, search=search, sort_by=sort_by, order=order)
+
+
+@app.get("/anime/{anime_id}", response_model=schemas.Anime, tags=["anime"])
+async def get_anime(anime_id: int, current_user: models.User = Depends(get_current_user), db: Session = Depends(get_db)):
+    db_anime = crud.get_anime_by_id(db, current_user.id, anime_id)
+    if db_anime is None:
+        raise HTTPException(status_code=404, detail="Anime not found")
+    return db_anime
+
+
+@app.post("/anime/", response_model=schemas.Anime, status_code=201, tags=["anime"])
+async def create_anime(anime: schemas.AnimeCreate, current_user: models.User = Depends(get_current_user), db: Session = Depends(get_db)):
+    return crud.create_anime(db, current_user.id, anime)
+
+
+@app.put("/anime/{anime_id}", response_model=schemas.Anime, tags=["anime"])
+async def update_anime(anime_id: int, anime: schemas.AnimeUpdate, current_user: models.User = Depends(get_current_user), db: Session = Depends(get_db)):
+    db_anime = crud.update_anime(db, current_user.id, anime_id, anime)
+    if db_anime is None:
+        raise HTTPException(status_code=404, detail="Anime not found")
+    return db_anime
+
+
+@app.delete("/anime/{anime_id}", response_model=schemas.Anime, tags=["anime"])
+async def delete_anime(anime_id: int, current_user: models.User = Depends(get_current_user), db: Session = Depends(get_db)):
+    db_anime = crud.delete_anime(db, current_user.id, anime_id)
+    if db_anime is None:
+        raise HTTPException(status_code=404, detail="Anime not found")
+    return db_anime
+
+
 # Export/Import endpoints
 @app.get("/export/", response_model=schemas.ExportData, tags=["export-import"])
 async def export_data(current_user: models.User = Depends(get_current_user), db: Session = Depends(get_db)):
-    """Export all movies and TV shows as JSON"""
+    """Export all movies, TV shows, and anime as JSON"""
     movies = crud.get_all_movies(db, current_user.id)
     tv_shows = crud.get_all_tv_shows(db, current_user.id)
+    anime = crud.get_all_anime(db, current_user.id)
 
     export_metadata = {
         "export_timestamp": datetime.now().isoformat(),
         "version": "1.0",
         "total_movies": len(movies),
-        "total_tv_shows": len(tv_shows)
+        "total_tv_shows": len(tv_shows),
+        "total_anime": len(anime)
     }
 
     return schemas.ExportData(
         movies=movies,
         tv_shows=tv_shows,
+        anime=anime,
         export_metadata=export_metadata
     )
 
 
 @app.post("/import/", response_model=schemas.ImportResult, tags=["export-import"])
 async def import_data(import_data: schemas.ImportData, current_user: models.User = Depends(get_current_user), db: Session = Depends(get_db)):
-    """Import movies and TV shows from JSON data"""
+    """Import movies, TV shows, and anime from JSON data"""
     movies_created, movies_updated, movie_errors = crud.import_movies(db, current_user.id, import_data.movies)
     tv_shows_created, tv_shows_updated, tv_show_errors = crud.import_tv_shows(db, current_user.id, import_data.tv_shows)
+    anime_created, anime_updated, anime_errors = crud.import_anime(db, current_user.id, import_data.anime)
 
-    all_errors = movie_errors + tv_show_errors
+    all_errors = movie_errors + tv_show_errors + anime_errors
 
     return schemas.ImportResult(
         movies_created=movies_created,
         movies_updated=movies_updated,
         tv_shows_created=tv_shows_created,
         tv_shows_updated=tv_shows_updated,
+        anime_created=anime_created,
+        anime_updated=anime_updated,
         errors=all_errors
     )
 
@@ -1823,26 +1925,31 @@ async def import_from_file(file: UploadFile = File(...), current_user: models.Us
         data = json.loads(content.decode('utf-8'))
 
         # Validate the imported data structure
+        # Note: 'anime' is optional for backward compatibility with old export files
         if 'movies' not in data or 'tv_shows' not in data:
-            raise HTTPException(status_code=400, detail="Invalid file format. Expected 'movies' and 'tv_shows' arrays.")
+            raise HTTPException(status_code=400, detail="Invalid file format. Expected 'movies' and 'tv_shows' arrays. 'anime' is optional for backward compatibility.")
 
         # Convert to Pydantic models
         movies = [schemas.MovieCreate(**movie) for movie in data.get('movies', [])]
         tv_shows = [schemas.TVShowCreate(**tv_show) for tv_show in data.get('tv_shows', [])]
+        anime = [schemas.AnimeCreate(**anime_item) for anime_item in data.get('anime', [])]
 
-        import_data = schemas.ImportData(movies=movies, tv_shows=tv_shows)
+        import_data = schemas.ImportData(movies=movies, tv_shows=tv_shows, anime=anime)
 
         # Import the data
         movies_created, movies_updated, movie_errors = crud.import_movies(db, current_user.id, import_data.movies)
         tv_shows_created, tv_shows_updated, tv_show_errors = crud.import_tv_shows(db, current_user.id, import_data.tv_shows)
+        anime_created, anime_updated, anime_errors = crud.import_anime(db, current_user.id, import_data.anime)
 
-        all_errors = movie_errors + tv_show_errors
+        all_errors = movie_errors + tv_show_errors + anime_errors
 
         return schemas.ImportResult(
             movies_created=movies_created,
             movies_updated=movies_updated,
             tv_shows_created=tv_shows_created,
             tv_shows_updated=tv_shows_updated,
+            anime_created=anime_created,
+            anime_updated=anime_updated,
             errors=all_errors
         )
 

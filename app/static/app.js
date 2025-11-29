@@ -37,6 +37,8 @@ function switchTab(tabName) {
     loadMovies();
   } else if (tabName === 'tv-shows') {
     loadTVShows();
+  } else if (tabName === 'anime') {
+    loadAnime();
   } else if (tabName === 'statistics') {
     loadStatistics();
   }
@@ -362,6 +364,96 @@ async function loadTVShows() {
   }
 }
 
+// Anime functions
+let isLoadingAnime = false;
+
+async function loadAnime() {
+  // Prevent duplicate simultaneous loads
+  if (isLoadingAnime) {
+    return;
+  }
+  
+  isLoadingAnime = true;
+  
+  try {
+    const search = document.getElementById('animeSearch').value;
+    const sortVal = document.getElementById('animeSort').value;
+    let sortField = '';
+    let order = '';
+    if (sortVal) {
+      const parts = sortVal.split('-');
+      sortField = parts[0];
+      order = parts[1] || '';
+    }
+    let url = `${API_BASE}/anime/?`;
+    if (search) url += `search=${encodeURIComponent(search)}&`;
+    if (sortField) url += `sort_by=${encodeURIComponent(sortField)}&`;
+    if (order) url += `order=${encodeURIComponent(order)}`;
+    const res = await authenticatedFetch(url);
+    if (res.ok) {
+      const anime = await res.json();
+      const tbody = document.querySelector('#animeTable tbody');
+      tbody.innerHTML = '';
+      const countElem = document.getElementById('animeCount');
+      if (countElem) countElem.textContent = `${anime.length} Anime`;
+      anime.forEach((animeItem) => {
+        const tr = document.createElement('tr');
+        tr.innerHTML = `
+          <td id="anime-poster-${animeItem.id}"></td>
+          <td>${animeItem.title}</td>
+          <td style="text-align: center;">${animeItem.year}</td>
+          <td style="text-align: center;">${animeItem.seasons ?? ''}</td>
+          <td style="text-align: center;">${animeItem.episodes ?? ''}</td>
+          <td style="text-align: center;">${animeItem.rating !== null && animeItem.rating !== undefined ? parseFloat(animeItem.rating).toFixed(1) + '/10' : ''}</td>
+          <td style="text-align: center;"><span class="watched-icon ${animeItem.watched ? 'watched' : 'unwatched'}">${animeItem.watched ? '✓' : '✗'}</span></td>
+          <td>${animeItem.review ? animeItem.review : ''}</td>
+          <td><a href="https://www.imdb.com/find?q=${encodeURIComponent(animeItem.title)}" target="_blank">Search</a></td>
+          <td>
+            <button class="action-btn" onclick="enableAnimeEdit(this, ${animeItem.id}, '${encodeURIComponent(animeItem.title)}', ${animeItem.year}, ${animeItem.seasons ?? 'null'}, ${animeItem.episodes ?? 'null'}, ${animeItem.rating ?? 'null'}, ${animeItem.watched}, '${animeItem.review ? encodeURIComponent(animeItem.review) : ''}')">Edit</button>
+            <button class="action-btn" onclick="deleteAnime(${animeItem.id})">Delete</button>
+          </td>
+        `;
+        tbody.appendChild(tr);
+
+        // Display cached poster or fetch new one
+        if (animeItem.poster_url) {
+          displayAnimePoster(animeItem.id, animeItem.poster_url, animeItem.title);
+        } else if (OMDB_API_KEY) {
+          fetchAnimePoster(animeItem.id, animeItem.title, animeItem.year);
+        }
+      });
+    }
+  } finally {
+    isLoadingAnime = false;
+  }
+}
+
+function displayAnimePoster(id, posterUrl, title = null) {
+  const cell = document.getElementById(`anime-poster-${id}`);
+  if (cell && posterUrl) {
+    let altText = 'Anime poster';
+    if (title) {
+      altText = `${title} anime poster`;
+    } else {
+      const row = cell.closest('tr');
+      if (row && row.cells[1]) {
+        altText = `${row.cells[1].textContent} anime poster`;
+      }
+    }
+    // Construct image via DOM methods to avoid XSS
+    cell.innerHTML = '';
+    const img = document.createElement('img');
+    img.src = posterUrl;
+    img.alt = altText;
+    img.style.width = '60px';
+    img.style.maxHeight = '90px';
+    img.style.objectFit = 'cover';
+    img.style.borderRadius = '4px';
+    img.loading = 'lazy';
+    cell.appendChild(img);
+  }
+}
+
 function displayTVPoster(id, posterUrl, title = null) {
   const cell = document.getElementById(`tv-poster-${id}`);
   if (cell && posterUrl) {
@@ -467,6 +559,161 @@ async function saveTVPosterUrl(id, posterUrl) {
     console.error('Error saving TV show poster URL:', err);
   }
 }
+
+async function fetchAnimePoster(id, title, year) {
+  // Create unique key for deduplication
+  const cacheKey = `anime-${title}-${year}`;
+  
+  // Check if already fetching this poster
+  if (posterFetchInProgress.has(cacheKey)) {
+    // Wait for existing fetch to complete
+    const existingPromise = posterFetchQueue.get(cacheKey);
+    if (existingPromise) {
+      try {
+        const posterUrl = await existingPromise;
+        if (posterUrl) {
+          displayAnimePoster(id, posterUrl, title);
+        }
+      } catch (err) {
+        // Ignore errors from other fetch
+      }
+    }
+    return;
+  }
+  
+  // Mark as in progress
+  posterFetchInProgress.add(cacheKey);
+  
+  try {
+    const url = `https://www.omdbapi.com/?t=${encodeURIComponent(title)}&y=${encodeURIComponent(year)}&apikey=${OMDB_API_KEY}`;
+    const res = await fetch(url);
+    
+    if (!res.ok) {
+      // Handle rate limiting (429 Too Many Requests)
+      if (res.status === 429) {
+        console.warn('OMDB API rate limit reached. Posters will be fetched later.');
+        return;
+      }
+      return;
+    }
+    
+    const data = await res.json();
+    
+    // Check for API errors
+    if (data.Error) {
+      console.warn(`OMDB API error for "${title}": ${data.Error}`);
+      return;
+    }
+    
+    if (data && data.Poster && data.Poster !== 'N/A') {
+      // Save the poster URL to the database
+      await saveAnimePosterUrl(id, data.Poster);
+      // Display the poster
+      displayAnimePoster(id, data.Poster, title);
+      
+      // Store result in queue for other waiting requests
+      posterFetchQueue.set(cacheKey, Promise.resolve(data.Poster));
+      return data.Poster;
+    }
+  } catch (err) {
+    console.error('Error fetching anime poster:', err);
+    // Store failed promise to prevent retries
+    posterFetchQueue.set(cacheKey, Promise.resolve(null));
+  } finally {
+    // Remove from in-progress set after a delay to allow queued requests
+    setTimeout(() => {
+      posterFetchInProgress.delete(cacheKey);
+      posterFetchQueue.delete(cacheKey);
+    }, 1000);
+  }
+}
+
+async function saveAnimePosterUrl(id, posterUrl) {
+  try {
+    await authenticatedFetch(`${API_BASE}/anime/${id}`, {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ poster_url: posterUrl }),
+    });
+  } catch (err) {
+    console.error('Error saving anime poster URL:', err);
+  }
+}
+
+async function deleteAnime(id) {
+  if (!confirm('Are you sure you want to delete this anime?')) return;
+  const res = await authenticatedFetch(`${API_BASE}/anime/${id}`, { method: 'DELETE' });
+  if (res.ok) loadAnime();
+}
+
+window.enableAnimeEdit = function (btn, id, encTitle, year, seasons, episodes, rating, watched, encReview) {
+  if (editingRowId !== null) return;
+  editingRowId = id;
+  const row = btn.closest('tr');
+  editingRowElement = row;
+  const title = decodeURIComponent(encTitle);
+  const ratingVal = (rating !== null && rating !== 'null') ? rating : '';
+  const review = encReview ? decodeURIComponent(encReview) : '';
+  row.cells[1].innerHTML = `<input type="text" id="edit-anime-title" value="${title}">`;
+  row.cells[2].innerHTML = `<input type="number" id="edit-anime-year" value="${year}">`;
+  row.cells[3].innerHTML = `<input type="number" id="edit-anime-seasons" value="${seasons !== 'null' ? seasons : ''}">`;
+  row.cells[4].innerHTML = `<input type="number" id="edit-anime-episodes" value="${episodes !== 'null' ? episodes : ''}">`;
+  row.cells[5].innerHTML = `<input type="number" min="0" max="10" step="0.1" id="edit-anime-rating" value="${ratingVal}">`;
+  row.cells[6].innerHTML = `<input type="checkbox" id="edit-anime-watched" ${watched ? 'checked' : ''}>`;
+  // Escape HTML for textarea content
+  const reviewEscaped = review.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;').replace(/'/g, '&#039;');
+  row.cells[7].innerHTML = `<textarea id="edit-anime-review" class="review-textarea">${reviewEscaped}</textarea>`;
+  // Auto-resize textarea to content
+  const animeReviewTextarea = document.getElementById('edit-anime-review');
+  if (animeReviewTextarea) {
+    animeReviewTextarea.style.height = 'auto';
+    animeReviewTextarea.style.height = Math.max(60, animeReviewTextarea.scrollHeight) + 'px';
+    animeReviewTextarea.addEventListener('input', function() {
+      this.style.height = 'auto';
+      this.style.height = Math.max(60, this.scrollHeight) + 'px';
+    });
+  }
+  row.cells[9].innerHTML = `
+    <button class="action-btn" onclick="saveAnimeEdit(${id})">Save</button>
+    <button class="action-btn" onclick="cancelAnimeEdit()">Cancel</button>
+  `;
+  disableOtherRowButtons(row, 'animeTable');
+};
+
+window.saveAnimeEdit = async function (id) {
+  if (editingRowId !== id) return;
+  const updated = {
+    title: document.getElementById('edit-anime-title').value,
+    year: parseInt(document.getElementById('edit-anime-year').value, 10),
+    watched: document.getElementById('edit-anime-watched').checked,
+  };
+  const seasonsVal = document.getElementById('edit-anime-seasons').value;
+  if (seasonsVal) updated.seasons = parseInt(seasonsVal, 10);
+  const episodesVal = document.getElementById('edit-anime-episodes').value;
+  if (episodesVal) updated.episodes = parseInt(episodesVal, 10);
+  const ratingVal = document.getElementById('edit-anime-rating').value;
+  if (ratingVal) updated.rating = parseFloat(ratingVal);
+  const reviewVal = document.getElementById('edit-anime-review') ? document.getElementById('edit-anime-review').value : '';
+  if (reviewVal !== undefined) updated.review = reviewVal;
+  const res = await authenticatedFetch(`${API_BASE}/anime/${id}`, {
+    method: 'PUT',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(updated),
+  });
+  if (res.ok) {
+    editingRowId = null;
+    editingRowElement = null;
+    enableAllRowButtons('animeTable');
+    loadAnime();
+  }
+};
+
+window.cancelAnimeEdit = function () {
+  editingRowId = null;
+  editingRowElement = null;
+  enableAllRowButtons('animeTable');
+  loadAnime();
+};
 
 async function deleteTVShow(id) {
   if (!confirm('Are you sure you want to delete this TV show?')) return;
@@ -593,6 +840,33 @@ document.getElementById('addTVShowForm').onsubmit = async function (e) {
   }
 };
 
+document.getElementById('addAnimeForm').onsubmit = async function (e) {
+  e.preventDefault();
+  const anime = {
+    title: document.getElementById('animeTitle').value,
+    year: parseInt(document.getElementById('animeYear').value, 10),
+    watched: document.getElementById('animeWatched').checked,
+  };
+  const seasonsVal = document.getElementById('animeSeasons').value;
+  if (seasonsVal) anime.seasons = parseInt(seasonsVal, 10);
+  const episodesVal = document.getElementById('animeEpisodes').value;
+  if (episodesVal) anime.episodes = parseInt(episodesVal, 10);
+  const ratingVal = document.getElementById('animeRating').value;
+  if (ratingVal) anime.rating = parseFloat(ratingVal);
+  const reviewVal = document.getElementById('animeReview').value;
+  if (reviewVal) anime.review = reviewVal;
+  const response = await authenticatedFetch(`${API_BASE}/anime/`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(anime),
+  });
+  if (response.ok) {
+    document.getElementById('addAnimeForm').reset();
+    toggleCollapsible('animeForm');
+    loadAnime();
+  }
+};
+
 // Export/Import functions
 async function exportData() {
   try {
@@ -613,7 +887,7 @@ async function exportData() {
     document.body.removeChild(a);
     URL.revokeObjectURL(url);
 
-    alert(`Export successful! Exported ${data.export_metadata.total_movies} movies and ${data.export_metadata.total_tv_shows} TV shows.`);
+    alert(`Export successful! Exported ${data.export_metadata.total_movies} movies, ${data.export_metadata.total_tv_shows} TV shows, and ${data.export_metadata.total_anime || 0} anime.`);
   } catch (error) {
     alert('Export failed: ' + error.message);
   }
@@ -645,7 +919,8 @@ async function importData(fileInput) {
     const result = await response.json();
     let message = `Import completed!\n`;
     message += `Movies: ${result.movies_created} created, ${result.movies_updated} updated\n`;
-    message += `TV Shows: ${result.tv_shows_created} created, ${result.tv_shows_updated} updated`;
+    message += `TV Shows: ${result.tv_shows_created} created, ${result.tv_shows_updated} updated\n`;
+    message += `Anime: ${result.anime_created || 0} created, ${result.anime_updated || 0} updated`;
 
     if (result.errors.length > 0) {
       message += `\n\nErrors:\n${result.errors.join('\n')}`;
@@ -658,6 +933,8 @@ async function importData(fileInput) {
       loadMovies();
     } else if (currentTab === 'tv-shows') {
       loadTVShows();
+    } else if (currentTab === 'anime') {
+      loadAnime();
     }
 
     // Clear the file input
@@ -884,12 +1161,12 @@ function displayDecadeStats(decadeStats) {
 
   // Calculate totals for each decade and find the maximum
   const totals = decades.map(decade =>
-    (decadeStats[decade].movies || 0) + (decadeStats[decade].tv_shows || 0)
+    (decadeStats[decade].movies || 0) + (decadeStats[decade].tv_shows || 0) + (decadeStats[decade].anime || 0)
   );
   const maxCount = totals.length > 0 ? Math.max(...totals) : 1;
 
   decades.forEach((decade, index) => {
-    const total = (decadeStats[decade].movies || 0) + (decadeStats[decade].tv_shows || 0);
+    const total = (decadeStats[decade].movies || 0) + (decadeStats[decade].tv_shows || 0) + (decadeStats[decade].anime || 0);
     const percentage = maxCount > 0 ? (total / maxCount) * 100 : 0;
 
     const barDiv = document.createElement('div');
@@ -999,10 +1276,12 @@ function displayHighestRatedDirectors(directors) {
 // Event listeners
 document.getElementById('loadMovies').addEventListener('click', loadMovies);
 document.getElementById('loadTVShows').addEventListener('click', loadTVShows);
+document.getElementById('loadAnime').addEventListener('click', loadAnime);
 
 // Automatic sorting and search
 document.getElementById('movieSort').addEventListener('change', loadMovies);
 document.getElementById('tvSort').addEventListener('change', loadTVShows);
+document.getElementById('animeSort').addEventListener('change', loadAnime);
 
 // Automatic search with debounce
 let movieSearchTimeout;
@@ -1021,13 +1300,33 @@ document.getElementById('tvSearch').addEventListener('input', (e) => {
   }, 300); // Wait 300ms after user stops typing
 });
 
+let animeSearchTimeout;
+document.getElementById('animeSearch').addEventListener('input', (e) => {
+  clearTimeout(animeSearchTimeout);
+  animeSearchTimeout = setTimeout(() => {
+    loadAnime();
+  }, 300); // Wait 300ms after user stops typing
+});
+
 // Export/Import event listeners
 document.getElementById('exportMovies').addEventListener('click', exportData);
 document.getElementById('exportTVShows').addEventListener('click', exportData);
+document.getElementById('exportAnime').addEventListener('click', exportData);
 document.getElementById('importMovies').addEventListener('click', () => document.getElementById('importFile').click());
 document.getElementById('importTVShows').addEventListener('click', () => document.getElementById('importTVFile').click());
+document.getElementById('importAnime').addEventListener('click', () => document.getElementById('importAnimeFile').click());
 document.getElementById('importFile').addEventListener('change', (e) => importData(e.target));
 document.getElementById('importTVFile').addEventListener('change', (e) => importData(e.target));
+document.getElementById('importAnimeFile').addEventListener('change', (e) => importData(e.target));
+
+// Auto-resize textarea for anime review
+const animeReviewTextarea = document.getElementById('animeReview');
+if (animeReviewTextarea) {
+  animeReviewTextarea.addEventListener('input', function() {
+    this.style.height = 'auto';
+    this.style.height = Math.max(60, this.scrollHeight) + 'px';
+  });
+}
 
 // Collapsible form toggle function
 window.toggleCollapsible = function(formId) {
@@ -1277,6 +1576,7 @@ window.loadPrivacySettings = async function() {
       const privacy = await response.json();
       document.getElementById('moviesPrivate').checked = privacy.movies_private;
       document.getElementById('tvShowsPrivate').checked = privacy.tv_shows_private;
+      document.getElementById('animePrivate').checked = privacy.anime_private;
       document.getElementById('statisticsPrivate').checked = privacy.statistics_private;
     }
   } catch (error) {
@@ -1289,6 +1589,7 @@ window.updatePrivacySettings = async function(event) {
   
   const moviesPrivate = document.getElementById('moviesPrivate').checked;
   const tvShowsPrivate = document.getElementById('tvShowsPrivate').checked;
+  const animePrivate = document.getElementById('animePrivate').checked;
   const statisticsPrivate = document.getElementById('statisticsPrivate').checked;
   
   const errorDiv = document.getElementById('privacyError');
@@ -1308,6 +1609,7 @@ window.updatePrivacySettings = async function(event) {
       body: JSON.stringify({
         movies_private: moviesPrivate,
         tv_shows_private: tvShowsPrivate,
+        anime_private: animePrivate,
         statistics_private: statisticsPrivate
       })
     });
@@ -1668,10 +1970,12 @@ let currentFriendId = null;
 let accordionStates = {
   movies: false,
   tvShows: false,
+  anime: false,
   statistics: false
 };
 let currentFriendMovies = [];
 let currentFriendTVShows = [];
+let currentFriendAnime = [];
 
 window.openFriendProfile = async function(friendId) {
   currentFriendId = friendId;
@@ -1684,13 +1988,15 @@ window.closeFriendProfile = function() {
   currentFriendId = null;
   currentFriendMovies = [];
   currentFriendTVShows = [];
+  currentFriendAnime = [];
   accordionStates = {
     movies: false,
     tvShows: false,
+    anime: false,
     statistics: false
   };
   // Reset accordion states
-  ['movies', 'tvShows', 'statistics'].forEach(section => {
+  ['movies', 'tvShows', 'anime', 'statistics'].forEach(section => {
     const content = document.getElementById(`${section}Content`);
     const icon = document.getElementById(`${section}Icon`);
     if (content && icon) {
@@ -1701,8 +2007,10 @@ window.closeFriendProfile = function() {
   // Clear search inputs
   const moviesSearch = document.getElementById('friendMoviesSearch');
   const tvShowsSearch = document.getElementById('friendTVShowsSearch');
+  const animeSearch = document.getElementById('friendAnimeSearch');
   if (moviesSearch) moviesSearch.value = '';
   if (tvShowsSearch) tvShowsSearch.value = '';
+  if (animeSearch) animeSearch.value = '';
 }
 
 window.loadFriendProfile = async function(friendId) {
@@ -1734,6 +2042,7 @@ window.loadFriendProfile = async function(friendId) {
       // Update summaries
       updateMoviesSummary(profile);
       updateTVShowsSummary(profile);
+      updateAnimeSummary(profile);
       updateStatisticsSummary(profile);
     } else {
       const error = await response.json();
@@ -1767,6 +2076,16 @@ function updateTVShowsSummary(profile) {
   }
 }
 
+function updateAnimeSummary(profile) {
+  const summaryDiv = document.getElementById('animeSummary');
+  if (profile.anime_private) {
+    summaryDiv.innerHTML = '<p class="privacy-message">This user has made their anime private</p>';
+  } else {
+    const count = profile.anime_count || 0;
+    summaryDiv.innerHTML = `<p class="summary-text">${count} Anime</p>`;
+  }
+}
+
 function updateStatisticsSummary(profile) {
   const summaryDiv = document.getElementById('statisticsSummary');
   if (profile.statistics_private) {
@@ -1793,6 +2112,8 @@ window.toggleAccordion = async function(section) {
       await loadFriendMovies(currentFriendId);
     } else if (section === 'tvShows') {
       await loadFriendTVShows(currentFriendId);
+    } else if (section === 'anime') {
+      await loadFriendAnime(currentFriendId);
     } else if (section === 'statistics') {
       await loadFriendStatistics(currentFriendId);
     }
@@ -1953,6 +2274,83 @@ window.filterFriendTVShows = function() {
   renderFriendTVShows(filtered);
 }
 
+window.loadFriendAnime = async function(friendId) {
+  try {
+    const response = await authenticatedFetch(`${API_BASE}/friends/${friendId}/anime`);
+    if (response.ok) {
+      const data = await response.json();
+      const listDiv = document.getElementById('animeList');
+      
+      // Store full data for filtering
+      currentFriendAnime = data.anime || [];
+      
+      if (currentFriendAnime.length === 0) {
+        document.getElementById('friendAnimeListContainer').innerHTML = '<p class="empty-message">No anime yet</p>';
+      } else {
+        renderFriendAnime(currentFriendAnime);
+      }
+    } else {
+      const error = await response.json();
+      document.getElementById('animeList').innerHTML = `<p class="error-message">${error.detail || 'Failed to load anime'}</p>`;
+    }
+  } catch (error) {
+    console.error('Failed to load friend anime:', error);
+    document.getElementById('animeList').innerHTML = '<p class="error-message">Failed to load anime</p>';
+  }
+}
+
+window.renderFriendAnime = function(anime) {
+  const container = document.getElementById('friendAnimeListContainer');
+  if (!container) return;
+  
+  if (anime.length === 0) {
+    container.innerHTML = '<p class="empty-message">No anime found</p>';
+    return;
+  }
+  
+  container.innerHTML = anime.map(animeItem => `
+    <div class="friend-item-card">
+      <div class="friend-item-header">
+        <h4>${escapeHtml(animeItem.title)}</h4>
+        <span class="friend-item-year">${animeItem.year}</span>
+      </div>
+      <div class="friend-item-details">
+        ${animeItem.seasons ? `<span>Seasons: ${animeItem.seasons}</span>` : ''}
+        ${animeItem.episodes ? `<span>Episodes: ${animeItem.episodes}</span>` : ''}
+        ${animeItem.rating !== null && animeItem.rating !== undefined ? `<span>Rating: ${parseFloat(animeItem.rating).toFixed(1)}/10</span>` : ''}
+        <span class="watched-badge ${animeItem.watched ? 'watched' : 'unwatched'}">${animeItem.watched ? 'Watched' : 'Not Watched'}</span>
+      </div>
+      ${animeItem.review ? `<p class="friend-item-review">${escapeHtml(animeItem.review)}</p>` : ''}
+    </div>
+  `).join('');
+}
+
+window.filterFriendAnime = function() {
+  const searchInput = document.getElementById('friendAnimeSearch');
+  const searchTerm = searchInput ? searchInput.value.toLowerCase().trim() : '';
+  
+  if (!searchTerm) {
+    renderFriendAnime(currentFriendAnime);
+    return;
+  }
+  
+  const filtered = currentFriendAnime.filter(animeItem => {
+    const title = (animeItem.title || '').toLowerCase();
+    const year = String(animeItem.year || '');
+    const review = (animeItem.review || '').toLowerCase();
+    const seasons = String(animeItem.seasons || '');
+    const episodes = String(animeItem.episodes || '');
+    
+    return title.includes(searchTerm) || 
+           year.includes(searchTerm) ||
+           seasons.includes(searchTerm) ||
+           episodes.includes(searchTerm) ||
+           review.includes(searchTerm);
+  });
+  
+  renderFriendAnime(filtered);
+}
+
 window.loadFriendStatistics = async function(friendId) {
   try {
     const response = await authenticatedFetch(`${API_BASE}/friends/${friendId}/statistics`);
@@ -1980,6 +2378,14 @@ window.loadFriendStatistics = async function(friendId) {
             <div class="stat-item">
               <span>Watched TV Shows:</span>
               <span>${stats.watch_stats.watched_tv_shows}</span>
+            </div>
+            <div class="stat-item">
+              <span>Total Anime:</span>
+              <span>${stats.watch_stats.total_anime || 0}</span>
+            </div>
+            <div class="stat-item">
+              <span>Watched Anime:</span>
+              <span>${stats.watch_stats.watched_anime || 0}</span>
             </div>
             <div class="stat-item">
               <span>Completion:</span>

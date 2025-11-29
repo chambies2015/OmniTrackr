@@ -21,6 +21,7 @@ class TestPrivacySettingsCRUD:
         assert privacy is not None
         assert privacy.movies_private is False
         assert privacy.tv_shows_private is False
+        assert privacy.anime_private is False
         assert privacy.statistics_private is False
     
     def test_update_privacy_settings_movies(self, db_session, test_user_data):
@@ -37,6 +38,7 @@ class TestPrivacySettingsCRUD:
         assert updated_user is not None
         assert updated_user.movies_private is True
         assert updated_user.tv_shows_private is False
+        assert updated_user.anime_private is False
         assert updated_user.statistics_private is False
     
     def test_update_privacy_settings_all(self, db_session, test_user_data):
@@ -50,6 +52,7 @@ class TestPrivacySettingsCRUD:
         privacy_update = schemas.PrivacySettingsUpdate(
             movies_private=True,
             tv_shows_private=True,
+            anime_private=True,
             statistics_private=True
         )
         updated_user = crud.update_privacy_settings(db_session, user.id, privacy_update)
@@ -57,6 +60,7 @@ class TestPrivacySettingsCRUD:
         assert updated_user is not None
         assert updated_user.movies_private is True
         assert updated_user.tv_shows_private is True
+        assert updated_user.anime_private is True
         assert updated_user.statistics_private is True
     
     def test_update_privacy_settings_partial(self, db_session, test_user_data):
@@ -76,6 +80,7 @@ class TestPrivacySettingsCRUD:
         
         assert updated_user.movies_private is True  # Should remain True
         assert updated_user.tv_shows_private is True  # Should be True
+        assert updated_user.anime_private is False  # Should remain False
         assert updated_user.statistics_private is False  # Should remain False
     
     def test_get_privacy_settings_nonexistent_user(self, db_session):
@@ -103,9 +108,11 @@ class TestPrivacySettingsEndpoints:
         data = response.json()
         assert "movies_private" in data
         assert "tv_shows_private" in data
+        assert "anime_private" in data
         assert "statistics_private" in data
         assert data["movies_private"] is False
         assert data["tv_shows_private"] is False
+        assert data["anime_private"] is False
         assert data["statistics_private"] is False
     
     def test_get_privacy_settings_unauthenticated(self, client):
@@ -121,6 +128,7 @@ class TestPrivacySettingsEndpoints:
             json={
                 "movies_private": True,
                 "tv_shows_private": False,
+                "anime_private": True,
                 "statistics_private": True
             }
         )
@@ -129,6 +137,7 @@ class TestPrivacySettingsEndpoints:
         data = response.json()
         assert data["movies_private"] is True
         assert data["tv_shows_private"] is False
+        assert data["anime_private"] is True
         assert data["statistics_private"] is True
     
     def test_update_privacy_settings_partial(self, authenticated_client):
@@ -139,6 +148,7 @@ class TestPrivacySettingsEndpoints:
             json={
                 "movies_private": True,
                 "tv_shows_private": True,
+                "anime_private": True,
                 "statistics_private": True
             }
         )
@@ -155,6 +165,7 @@ class TestPrivacySettingsEndpoints:
         data = response.json()
         assert data["movies_private"] is False
         assert data["tv_shows_private"] is True  # Should remain True
+        assert data["anime_private"] is True  # Should remain True
         assert data["statistics_private"] is True  # Should remain True
     
     def test_update_privacy_settings_unauthenticated(self, client):

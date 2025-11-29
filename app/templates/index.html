@@ -18,8 +18,8 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=5.0, user-scalable=yes">
   <meta name="theme-color" content="#1e1e2f">
-  <meta name="description" content="OmniTrackr - Track and organize your movies and TV shows. Rate, review, and analyze your media collection with comprehensive statistics and beautiful posters.">
-  <meta name="keywords" content="movie tracker, TV show tracker, media collection, movie database, watchlist, film tracker, entertainment tracker, movie ratings, TV ratings, media organizer, personal movie database, track movies online, TV show database, movie collection manager, watchlist app, film collection tracker, entertainment database, movie review tracker, TV show review tracker, media tracking app, free movie tracker, movie statistics, TV show statistics, friends movie tracker, social movie tracking">
+  <meta name="description" content="OmniTrackr - Track and organize your movies, TV shows, and anime. Rate, review, and analyze your media collection with comprehensive statistics and beautiful posters.">
+  <meta name="keywords" content="movie tracker, TV show tracker, anime tracker, media collection, movie database, watchlist, film tracker, entertainment tracker, movie ratings, TV ratings, anime ratings, media organizer, personal movie database, track movies online, TV show database, anime database, movie collection manager, watchlist app, film collection tracker, entertainment database, movie review tracker, TV show review tracker, anime review tracker, media tracking app, free movie tracker, movie statistics, TV show statistics, anime statistics, friends movie tracker, social movie tracking">
   <meta name="author" content="OmniTrackr">
   <meta name="robots" content="index, follow">
   <meta name="language" content="English">
@@ -29,11 +29,11 @@
   <meta property="og:type" content="website">
   <meta property="og:url" content="https://omnitrackr.xyz/">
   <meta property="og:title" content="OmniTrackr - Your Personal Media Tracking Companion">
-  <meta property="og:description" content="Track and organize your movies and TV shows. Rate, review, and analyze your media collection with comprehensive statistics and beautiful posters.">
+  <meta property="og:description" content="Track and organize your movies, TV shows, and anime. Rate, review, and analyze your media collection with comprehensive statistics and beautiful posters.">
   <meta property="og:image" content="https://omnitrackr.xyz/omnitrackr_vortex.png">
   <meta property="og:image:width" content="1200">
   <meta property="og:image:height" content="630">
-  <meta property="og:image:alt" content="OmniTrackr - Movie and TV Show Tracking Application">
+  <meta property="og:image:alt" content="OmniTrackr - Movie, TV Show, and Anime Tracking Application">
   <meta property="og:site_name" content="OmniTrackr">
   <meta property="og:locale" content="en_US">
   
@@ -41,15 +41,15 @@
   <meta name="twitter:card" content="summary_large_image">
   <meta name="twitter:url" content="https://omnitrackr.xyz/">
   <meta name="twitter:title" content="OmniTrackr - Your Personal Media Tracking Companion">
-  <meta name="twitter:description" content="Track and organize your movies and TV shows. Rate, review, and analyze your media collection with comprehensive statistics and beautiful posters.">
+  <meta name="twitter:description" content="Track and organize your movies, TV shows, and anime. Rate, review, and analyze your media collection with comprehensive statistics and beautiful posters.">
   <meta name="twitter:image" content="https://omnitrackr.xyz/omnitrackr_vortex.png">
-  <meta name="twitter:image:alt" content="OmniTrackr - Movie and TV Show Tracking Application">
+  <meta name="twitter:image:alt" content="OmniTrackr - Movie, TV Show, and Anime Tracking Application">
   <meta name="twitter:site" content="@omnitrackr">
   
   <!-- Canonical URL -->
   <link rel="canonical" href="https://omnitrackr.xyz/">
   
-  <title>OmniTrackr - Track Movies & TV Shows | Media Collection Manager</title>
+  <title>OmniTrackr - Track Movies, TV Shows & Anime | Media Collection Manager</title>
   <link rel="icon" type="image/x-icon" href="/omnitrackr_favicon.ico">
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -64,7 +64,7 @@
     "@context": "https://schema.org",
     "@type": "SoftwareApplication",
     "name": "OmniTrackr",
-    "description": "Track and organize your movies and TV shows. Rate, review, and analyze your media collection with comprehensive statistics and beautiful posters.",
+    "description": "Track and organize your movies, TV shows, and anime. Rate, review, and analyze your media collection with comprehensive statistics and beautiful posters.",
     "url": "https://omnitrackr.xyz",
     "applicationCategory": "EntertainmentApplication",
     "operatingSystem": "Web",
@@ -83,7 +83,7 @@
       "worstRating": "1"
     },
     "featureList": [
-      "Track Movies & TV Shows",
+      "Track Movies, TV Shows & Anime",
       "Statistics Dashboard",
       "Export/Import Data",
       "Automatic Posters",
@@ -127,7 +127,7 @@
     "@type": "WebSite",
     "name": "OmniTrackr",
     "url": "https://omnitrackr.xyz",
-    "description": "Track and organize your movies and TV shows. Rate, review, and analyze your media collection with comprehensive statistics and beautiful posters.",
+    "description": "Track and organize your movies, TV shows, and anime. Rate, review, and analyze your media collection with comprehensive statistics and beautiful posters.",
     "potentialAction": {
       "@type": "SearchAction",
       "target": "https://omnitrackr.xyz/?search={search_term_string}",
@@ -182,6 +182,7 @@
     <div class="tabs">
       <button class="tab active" onclick="switchTab('movies')">🎬 Movies</button>
       <button class="tab" onclick="switchTab('tv-shows')">📺 TV Shows</button>
+      <button class="tab" onclick="switchTab('anime')">🎌 Anime</button>
       <button class="tab" onclick="switchTab('statistics')">📊 Statistics</button>
     </div>
 
@@ -336,6 +337,83 @@
       </div>
     </div>
 
+    <!-- Anime Tab Content -->
+    <div id="anime-tab" class="tab-content">
+      <div class="card">
+        <div class="collapsible-header" onclick="toggleCollapsible('animeForm')">
+          <h2 style="margin: 0; display: inline-block;">Add Anime</h2>
+          <span class="collapsible-icon" id="animeFormIcon">▼</span>
+        </div>
+        <div class="collapsible-content" id="animeFormContent" style="display: none;">
+          <form id="addAnimeForm">
+            <div>
+              <input type="text" id="animeTitle" placeholder="Title" required>
+            </div>
+            <div>
+              <input type="number" id="animeYear" placeholder="Year" required>
+            </div>
+            <div>
+              <input type="number" id="animeSeasons" placeholder="Seasons (optional)">
+            </div>
+            <div>
+              <input type="number" id="animeEpisodes" placeholder="Episodes (optional)">
+            </div>
+            <div>
+              <input type="number" min="0" max="10" step="0.1" id="animeRating" placeholder="Rating (0-10.0)">
+            </div>
+            <div>
+              <label>Watched <input type="checkbox" id="animeWatched"></label>
+            </div>
+            <div>
+              <textarea id="animeReview" placeholder="Review (optional)" rows="1"></textarea>
+            </div>
+            <button type="submit" class="action-btn">Add Anime</button>
+          </form>
+        </div>
+      </div>
+      <div class="card">
+        <div style="display:flex; justify-content: space-between; align-items: center; margin-bottom: 10px;">
+          <h2 style="margin: 0;">Anime</h2>
+          <span id="animeCount" style="font-weight: bold;"></span>
+        </div>
+        <div style="display:flex; flex-wrap: wrap; gap: 10px; margin-bottom: 10px;">
+          <input type="text" id="animeSearch" placeholder="Search by title" style="flex: 2; min-width: 200px;">
+          <select id="animeSort" style="flex: 1; min-width: 200px;">
+            <option value="">Sort by...</option>
+            <option value="rating-asc">Rating (Low → High)</option>
+            <option value="rating-desc">Rating (High → Low)</option>
+            <option value="year-asc">Year (Oldest → Newest)</option>
+            <option value="year-desc">Year (Newest → Oldest)</option>
+          </select>
+          <button id="loadAnime" class="action-btn" style="flex: 1; min-width: 120px;">Refresh</button>
+          <button id="exportAnime" class="action-btn"
+            style="flex: 1; min-width: 120px; background-color: #4caf50;">Export Data</button>
+          <button id="importAnime" class="action-btn"
+            style="flex: 1; min-width: 120px; background-color: #ff9800;">Import Data</button>
+        </div>
+        <input type="file" id="importAnimeFile" accept=".json" style="display: none;">
+        <div class="table-container">
+          <table id="animeTable">
+          <thead>
+            <tr>
+              <th>Poster</th>
+              <th>Title</th>
+              <th style="text-align: center;">Year</th>
+              <th style="text-align: center;">Seasons</th>
+              <th style="text-align: center;">Episodes</th>
+              <th style="text-align: center;">Rating</th>
+              <th style="text-align: center;">Watched</th>
+              <th>Review</th>
+              <th>IMDb</th>
+              <th>Actions</th>
+            </tr>
+          </thead>
+          <tbody>          </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+
     <!-- Statistics Tab Content -->
     <div id="statistics-tab" class="tab-content">
       <div class="card">
@@ -459,8 +537,8 @@
       <div class="features-grid">
         <div class="feature-card">
           <div class="feature-icon">🎬</div>
-          <h3>Track Movies & TV Shows</h3>
-          <p>Organize your entire media collection in one place with ratings, reviews, and watch status.</p>
+          <h3>Track Movies, TV Shows & Anime</h3>
+          <p>Organize your entire media collection in one place with ratings, reviews, and watch status for movies, TV shows, and anime.</p>
         </div>
         <div class="feature-card">
           <div class="feature-icon">📊</div>
@@ -475,7 +553,7 @@
         <div class="feature-card">
           <div class="feature-icon">🖼️</div>
           <h3>Automatic Posters</h3>
-          <p>Beautiful movie and TV show posters fetched automatically from OMDB API.</p>
+          <p>Beautiful movie, TV show, and anime posters fetched automatically from OMDB API.</p>
         </div>
         <div class="feature-card">
           <div class="feature-icon">🔍</div>
@@ -500,7 +578,7 @@
         <div class="feature-card">
           <div class="feature-icon">🔒</div>
           <h3>Privacy Controls</h3>
-          <p>Granular privacy settings for your movies, TV shows, and statistics - control what friends can see.</p>
+          <p>Granular privacy settings for your movies, TV shows, anime, and statistics - control what friends can see.</p>
         </div>
       </div>
     </section>
@@ -579,7 +657,7 @@
             <span class="faq-icon">+</span>
           </button>
           <div class="faq-answer" id="faq-answer-1">
-            <p>OmniTrackr is a free, web-based application that helps you track and organize your movie and TV show collection. You can rate, review, and analyze your media with comprehensive statistics, beautiful posters, and social features to share with friends.</p>
+            <p>OmniTrackr is a free, web-based application that helps you track and organize your movie, TV show, and anime collection. You can rate, review, and analyze your media with comprehensive statistics, beautiful posters, and social features to share with friends.</p>
           </div>
         </div>
 
@@ -595,11 +673,11 @@
 
         <div class="faq-item">
           <button class="faq-question" aria-expanded="false" aria-controls="faq-answer-3">
-            <span>How do I add movies and TV shows?</span>
+            <span>How do I add movies, TV shows, and anime?</span>
             <span class="faq-icon">+</span>
           </button>
           <div class="faq-answer" id="faq-answer-3">
-            <p>Simply use the "Add Movie" or "Add TV Show" forms in your dashboard. Enter the title, year, and other details. The app will automatically fetch beautiful posters from the OMDB API. You can also import your collection from JSON files.</p>
+            <p>Simply use the "Add Movie", "Add TV Show", or "Add Anime" forms in your dashboard. Enter the title, year, and other details. The app will automatically fetch beautiful posters from the OMDB API. You can also import your collection from JSON files.</p>
           </div>
         </div>
 
@@ -609,7 +687,7 @@
             <span class="faq-icon">+</span>
           </button>
           <div class="faq-answer" id="faq-answer-4">
-            <p>Yes! You can export your entire collection (movies and TV shows) as a JSON file at any time. This allows you to backup your data or import it into another account. You can also import JSON files to quickly add multiple entries.</p>
+            <p>Yes! You can export your entire collection (movies, TV shows, and anime) as a JSON file at any time. This allows you to backup your data or import it into another account. You can also import JSON files to quickly add multiple entries.</p>
           </div>
         </div>
 
@@ -629,7 +707,7 @@
             <span class="faq-icon">+</span>
           </button>
           <div class="faq-answer" id="faq-answer-6">
-            <p>Privacy settings allow you to control what friends can see. You can make your movies, TV shows, or statistics private. When enabled, even your friends won't be able to see that data - it's completely private to you. You can change these settings anytime in your account settings.</p>
+            <p>Privacy settings allow you to control what friends can see. You can make your movies, TV shows, anime, or statistics private. When enabled, even your friends won't be able to see that data - it's completely private to you. You can change these settings anytime in your account settings.</p>
           </div>
         </div>
 
@@ -655,11 +733,11 @@
 
         <div class="faq-item">
           <button class="faq-question" aria-expanded="false" aria-controls="faq-answer-9">
-            <span>Can I rate movies and TV shows with decimals?</span>
+            <span>Can I rate movies, TV shows, and anime with decimals?</span>
             <span class="faq-icon">+</span>
           </button>
           <div class="faq-answer" id="faq-answer-9">
-            <p>Yes! You can rate any movie or TV show from 0 to 10.0 with one decimal place precision (e.g., 7.5, 8.4, 9.2). The statistics dashboard will calculate averages and other metrics using these decimal ratings.</p>
+            <p>Yes! You can rate any movie, TV show, or anime from 0 to 10.0 with one decimal place precision (e.g., 7.5, 8.4, 9.2). The statistics dashboard will calculate averages and other metrics using these decimal ratings.</p>
           </div>
         </div>
 
@@ -817,6 +895,15 @@
               </label>
             </div>
             <div class="privacy-toggle-item">
+              <label for="animePrivate" class="toggle-label">
+                <span>Make Anime Private</span>
+                <div class="toggle-container">
+                  <input type="checkbox" id="animePrivate" class="toggle-switch">
+                  <span class="toggle-slider"></span>
+                </div>
+              </label>
+            </div>
+            <div class="privacy-toggle-item">
               <label for="statisticsPrivate" class="toggle-label">
                 <span>Make Statistics Private</span>
                 <div class="toggle-container">
@@ -905,6 +992,23 @@
                 <input type="text" id="friendTVShowsSearch" class="friend-search-input" placeholder="Search TV shows by title or year..." oninput="filterFriendTVShows()">
               </div>
               <div id="friendTVShowsListContainer"></div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Anime Accordion Section -->
+        <div class="accordion-section">
+          <div class="accordion-header" onclick="toggleAccordion('anime')">
+            <h3>Anime</h3>
+            <span class="accordion-icon" id="animeIcon">▼</span>
+          </div>
+          <div class="accordion-content" id="animeContent">
+            <div id="animeSummary" class="accordion-summary"></div>
+            <div id="animeList" class="accordion-full-content">
+              <div class="friend-search-container">
+                <input type="text" id="friendAnimeSearch" class="friend-search-input" placeholder="Search anime by title or year..." oninput="filterFriendAnime()">
+              </div>
+              <div id="friendAnimeListContainer"></div>
             </div>
           </div>
         </div>

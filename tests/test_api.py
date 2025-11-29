@@ -304,6 +304,156 @@ class TestTVShowEndpoints:
         assert response.status_code == 404
 
 
+class TestAnimeEndpoints:
+    """Test anime API endpoints."""
+    
+    def test_create_anime(self, authenticated_client, test_anime_data):
+        """Test creating an anime via API."""
+        response = authenticated_client.post("/anime/", json=test_anime_data)
+        
+        assert response.status_code == 201
+        data = response.json()
+        assert data["title"] == test_anime_data["title"]
+        assert data["year"] == test_anime_data["year"]
+        assert "id" in data
+    
+    def test_get_anime(self, authenticated_client, test_anime_data):
+        """Test retrieving anime via API."""
+        # Create an anime first
+        authenticated_client.post("/anime/", json=test_anime_data)
+        
+        # Get all anime
+        response = authenticated_client.get("/anime/")
+        
+        assert response.status_code == 200
+        anime = response.json()
+        assert len(anime) >= 1
+        assert any(a["title"] == test_anime_data["title"] for a in anime)
+    
+    def test_update_anime(self, authenticated_client, test_anime_data):
+        """Test updating an anime."""
+        # Create an anime
+        create_response = authenticated_client.post("/anime/", json=test_anime_data)
+        anime_id = create_response.json()["id"]
+        
+        # Update the anime
+        update_data = {"rating": 10, "seasons": 5}  # Integer rating
+        response = authenticated_client.put(f"/anime/{anime_id}", json=update_data)
+        
+        assert response.status_code == 200
+        data = response.json()
+        assert data["rating"] == 10.0
+        assert data["seasons"] == 5
+    
+    def test_create_anime_with_decimal_rating(self, authenticated_client):
+        """Test creating an anime with decimal rating via API."""
+        anime_data = {
+            "title": "Test Anime",
+            "year": 2020,
+            "rating": 8.7  # Decimal rating
+        }
+        response = authenticated_client.post("/anime/", json=anime_data)
+        
+        assert response.status_code == 201
+        data = response.json()
+        assert data["rating"] == 8.7
+        assert isinstance(data["rating"], (int, float))
+    
+    def test_update_anime_with_decimal_rating(self, authenticated_client, test_anime_data):
+        """Test updating an anime with decimal rating via API."""
+        # Create an anime first
+        create_response = authenticated_client.post("/anime/", json=test_anime_data)
+        anime_id = create_response.json()["id"]
+        
+        # Update with decimal rating
+        update_data = {"rating": 7.3}
+        response = authenticated_client.put(f"/anime/{anime_id}", json=update_data)
+        
+        assert response.status_code == 200
+        data = response.json()
+        assert data["rating"] == 7.3
+    
+    def test_get_anime_by_id(self, authenticated_client, test_anime_data):
+        """Test retrieving a specific anime."""
+        # Create an anime
+        create_response = authenticated_client.post("/anime/", json=test_anime_data)
+        anime_id = create_response.json()["id"]
+        
+        # Get the anime
+        response = authenticated_client.get(f"/anime/{anime_id}")
+        
+        assert response.status_code == 200
+        data = response.json()
+        assert data["id"] == anime_id
+        assert data["title"] == test_anime_data["title"]
+    
+    def test_delete_anime(self, authenticated_client, test_anime_data):
+        """Test deleting an anime."""
+        # Create an anime
+        create_response = authenticated_client.post("/anime/", json=test_anime_data)
+        anime_id = create_response.json()["id"]
+        
+        # Delete the anime
+        response = authenticated_client.delete(f"/anime/{anime_id}")
+        
+        assert response.status_code == 200
+        
+        # Verify it's deleted
+        get_response = authenticated_client.get(f"/anime/{anime_id}")
+        assert get_response.status_code == 404
+    
+    def test_anime_search(self, authenticated_client, test_anime_data):
+        """Test searching anime."""
+        # Create an anime
+        authenticated_client.post("/anime/", json=test_anime_data)
+        
+        # Search by title
+        response = authenticated_client.get("/anime/?search=Attack")
+        assert response.status_code == 200
+        anime = response.json()
+        assert len(anime) >= 1
+    
+    def test_anime_sorting(self, authenticated_client, test_anime_data):
+        """Test sorting anime."""
+        # Create multiple anime with different ratings
+        anime1 = test_anime_data.copy()
+        anime1["title"] = "Anime A"
+        anime1["rating"] = 5  # Integer
+        authenticated_client.post("/anime/", json=anime1)
+        
+        anime2 = test_anime_data.copy()
+        anime2["title"] = "Anime B"
+        anime2["rating"] = 9  # Integer
+        authenticated_client.post("/anime/", json=anime2)
+        
+        # Sort by rating descending
+        response = authenticated_client.get("/anime/?sort_by=rating&order=desc")
+        assert response.status_code == 200
+        anime = response.json()
+        if len(anime) >= 2:
+            assert anime[0]["rating"] >= anime[1]["rating"]
+    
+    def test_get_nonexistent_anime(self, authenticated_client):
+        """Test getting a non-existent anime returns 404."""
+        response = authenticated_client.get("/anime/99999")
+        assert response.status_code == 404
+    
+    def test_update_nonexistent_anime(self, authenticated_client):
+        """Test updating a non-existent anime returns 404."""
+        response = authenticated_client.put("/anime/99999", json={"rating": 5})
+        assert response.status_code == 404
+    
+    def test_delete_nonexistent_anime(self, authenticated_client):
+        """Test deleting a non-existent anime returns 404."""
+        response = authenticated_client.delete("/anime/99999")
+        assert response.status_code == 404
+    
+    def test_anime_endpoint_requires_auth(self, client):
+        """Test that anime endpoint requires authentication."""
+        response = client.get("/anime/")
+        assert response.status_code == 401
+
+
 class TestAuthenticationRequired:
     """Test that protected endpoints require authentication."""
     
@@ -339,6 +489,7 @@ class TestExportImport:
         data = response.json()
         assert "movies" in data
         assert "tv_shows" in data
+        assert "anime" in data
         assert "export_metadata" in data
         assert len(data["movies"]) >= 1
         assert len(data["tv_shows"]) >= 1
@@ -362,7 +513,8 @@ class TestExportImport:
                     "seasons": 1,
                     "rating": 9  # Integer rating
                 }
-            ]
+            ],
+            "anime": []
         }
         
         response = authenticated_client.post("/import/", json=import_data)
@@ -371,6 +523,10 @@ class TestExportImport:
         result = response.json()
         assert result["movies_created"] >= 1
         assert result["tv_shows_created"] >= 1
+        assert "anime_created" in result
+        assert "anime_updated" in result
+        assert "anime_created" in result
+        assert "anime_updated" in result
     
     def test_import_from_file(self, authenticated_client):
         """Test importing data from a JSON file."""
@@ -391,7 +547,8 @@ class TestExportImport:
                     "seasons": 1,
                     "rating": 9
                 }
-            ]
+            ],
+            "anime": []
         }
         
         # Create a JSON file content
@@ -406,6 +563,8 @@ class TestExportImport:
         result = response.json()
         assert result["movies_created"] >= 1
         assert result["tv_shows_created"] >= 1
+        assert "anime_created" in result
+        assert "anime_updated" in result
     
     def test_import_from_file_invalid_format(self, authenticated_client):
         """Test importing from file with invalid format."""
@@ -428,7 +587,7 @@ class TestExportImport:
     def test_import_from_file_missing_fields(self, authenticated_client):
         """Test importing from file with missing required fields."""
         import json
-        invalid_data = {"movies": []}  # Missing tv_shows
+        invalid_data = {"movies": []}  # Missing tv_shows (anime is optional for backward compatibility)
         file_content = json.dumps(invalid_data).encode('utf-8')
         
         files = {"file": ("test.json", file_content, "application/json")}
@@ -438,8 +597,45 @@ class TestExportImport:
         # Check that it's an error response (either 400 or 500)
         assert response.status_code in [400, 500]
         detail = response.json()["detail"]
-        # The error should mention movies, tv_shows, or invalid format
+        # The error should mention movies, tv_shows, or invalid format (anime is optional)
         assert any(keyword in detail.lower() for keyword in ["movies", "tv_shows", "invalid", "format"])
+    
+    def test_import_from_file_backward_compatibility_no_anime(self, authenticated_client):
+        """Test importing old export files without anime field (backward compatibility)."""
+        import json
+        # Simulate old export format without anime field
+        old_format_data = {
+            "movies": [
+                {
+                    "title": "Old Movie",
+                    "director": "Old Director",
+                    "year": 2020,
+                    "rating": 8,
+                    "watched": True
+                }
+            ],
+            "tv_shows": [
+                {
+                    "title": "Old Show",
+                    "year": 2021,
+                    "seasons": 1,
+                    "rating": 9
+                }
+            ]
+            # No 'anime' field - this should work for backward compatibility
+        }
+        
+        file_content = json.dumps(old_format_data).encode('utf-8')
+        files = {"file": ("old_export.json", file_content, "application/json")}
+        response = authenticated_client.post("/import/file/", files=files)
+        
+        # Should succeed even without anime field
+        assert response.status_code == 200
+        result = response.json()
+        assert result["movies_created"] >= 1
+        assert result["tv_shows_created"] >= 1
+        assert result["anime_created"] == 0  # No anime imported
+        assert result["anime_updated"] == 0
 
 
 class TestDataIsolation:

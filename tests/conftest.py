@@ -121,3 +121,17 @@ def test_tv_show_data():
         "review": "One of the best TV shows ever"
     }
 
+
+@pytest.fixture
+def test_anime_data():
+    """Sample anime data for testing."""
+    return {
+        "title": "Attack on Titan",
+        "year": 2013,
+        "seasons": 4,
+        "episodes": 75,
+        "rating": 9.0,
+        "watched": True,
+        "review": "Amazing anime"
+    }
+

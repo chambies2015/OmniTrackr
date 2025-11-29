@@ -122,6 +122,8 @@ def update_privacy_settings(db: Session, user_id: int, privacy_settings: schemas
         db_user.movies_private = update_dict['movies_private']
     if 'tv_shows_private' in update_dict:
         db_user.tv_shows_private = update_dict['tv_shows_private']
+    if 'anime_private' in update_dict:
+        db_user.anime_private = update_dict['anime_private']
     if 'statistics_private' in update_dict:
         db_user.statistics_private = update_dict['statistics_private']
     
@@ -139,6 +141,7 @@ def get_privacy_settings(db: Session, user_id: int) -> Optional[schemas.PrivacyS
     return schemas.PrivacySettings(
         movies_private=db_user.movies_private,
         tv_shows_private=db_user.tv_shows_private,
+        anime_private=db_user.anime_private,
         statistics_private=db_user.statistics_private
     )
 
@@ -317,6 +320,73 @@ def delete_tv_show(db: Session, user_id: int, tv_show_id: int) -> Optional[model
     return db_tv_show
 
 
+# Anime functions
+def get_anime(
+    db: Session,
+    user_id: int,
+    search: Optional[str] = None,
+    sort_by: Optional[str] = None,
+    order: Optional[str] = None,
+) -> List[models.Anime]:
+    query = db.query(models.Anime).filter(models.Anime.user_id == user_id).filter(models.Anime.user_id == user_id)
+    if search:
+        like_pattern = f"%{search}%"
+        query = query.filter(
+            models.Anime.title.ilike(like_pattern)
+        )
+    sort_order = asc  # default
+    if order and order.lower() == "desc":
+        sort_order = desc
+    if sort_by == "rating":
+        query = query.order_by(sort_order(models.Anime.rating))
+    elif sort_by == "year":
+        query = query.order_by(sort_order(models.Anime.year))
+    return query.all()
+
+
+def get_anime_by_id(db: Session, user_id: int, anime_id: int) -> Optional[models.Anime]:
+    return db.query(models.Anime).filter(models.Anime.user_id == user_id).filter(
+        models.Anime.id == anime_id,
+        models.Anime.user_id == user_id
+    ).first()
+
+
+def create_anime(db: Session, user_id: int, anime: schemas.AnimeCreate) -> models.Anime:
+    anime_dict = anime.dict()
+    # Round rating to one decimal place if provided
+    if anime_dict.get('rating') is not None:
+        anime_dict['rating'] = round(float(anime_dict['rating']), 1)
+    db_anime = models.Anime(**anime_dict, user_id=user_id)
+    db.add(db_anime)
+    db.commit()
+    db.refresh(db_anime)
+    return db_anime
+
+
+def update_anime(db: Session, user_id: int, anime_id: int, anime_update: schemas.AnimeUpdate) -> Optional[models.Anime]:
+    db_anime = get_anime_by_id(db, user_id, anime_id)
+    if db_anime is None:
+        return None
+    update_dict = anime_update.dict(exclude_unset=True)
+    # Round rating to one decimal place if provided
+    if 'rating' in update_dict and update_dict['rating'] is not None:
+        update_dict['rating'] = round(float(update_dict['rating']), 1)
+    for field, value in update_dict.items():
+        setattr(db_anime, field, value)
+    db.commit()
+    db.refresh(db_anime)
+    return db_anime
+
+
+def delete_anime(db: Session, user_id: int, anime_id: int) -> Optional[models.Anime]:
+    db_anime = get_anime_by_id(db, user_id, anime_id)
+    if db_anime is None:
+        return None
+    db.delete(db_anime)
+    db.commit()
+    return db_anime
+
+
 # Export/Import functions
 def get_all_movies(db: Session, user_id: int) -> List[models.Movie]:
     """Get all movies for export"""
@@ -326,6 +396,11 @@ def get_all_movies(db: Session, user_id: int) -> List[models.Movie]:
 def get_all_tv_shows(db: Session, user_id: int) -> List[models.TVShow]:
     """Get all TV shows for export"""
     return db.query(models.TVShow).filter(models.TVShow.user_id == user_id).all()
+
+
+def get_all_anime(db: Session, user_id: int) -> List[models.Anime]:
+    """Get all anime for export"""
+    return db.query(models.Anime).filter(models.Anime.user_id == user_id).all()
 
 
 def find_movie_by_title_and_director(db: Session, user_id: int, title: str, director: str) -> Optional[models.Movie]:
@@ -343,6 +418,15 @@ def find_tv_show_by_title_and_year(db: Session, user_id: int, title: str, year: 
         models.TVShow.user_id == user_id,
         models.TVShow.title == title,
         models.TVShow.year == year
+    ).first()
+
+
+def find_anime_by_title_and_year(db: Session, user_id: int, title: str, year: int) -> Optional[models.Anime]:
+    """Find an anime by title and year for import conflict resolution"""
+    return db.query(models.Anime).filter(models.Anime.user_id == user_id).filter(
+        models.Anime.user_id == user_id,
+        models.Anime.title == title,
+        models.Anime.year == year
     ).first()
 
 
@@ -418,6 +502,42 @@ def import_tv_shows(db: Session, user_id: int, tv_shows: List[schemas.TVShowCrea
     return created, updated, errors
 
 
+def import_anime(db: Session, user_id: int, anime: List[schemas.AnimeCreate]) -> tuple[int, int, List[str]]:
+    """Import anime, returning (created_count, updated_count, errors)"""
+    created = 0
+    updated = 0
+    errors = []
+    
+    for anime_data in anime:
+        try:
+            # Check if anime already exists
+            existing_anime = find_anime_by_title_and_year(
+                db, user_id, anime_data.title, anime_data.year
+            )
+            
+            if existing_anime:
+                # Update existing anime
+                for field, value in anime_data.dict(exclude_unset=True).items():
+                    setattr(existing_anime, field, value)
+                updated += 1
+            else:
+                # Create new anime
+                db_anime = models.Anime(**anime_data.dict(), user_id=user_id)
+                db.add(db_anime)
+                created += 1
+        except Exception as e:
+            errors.append(f"Error importing anime '{anime_data.title}': {str(e)}")
+    
+    try:
+        db.commit()
+    except Exception as e:
+        db.rollback()
+        errors.append(f"Database error during anime import: {str(e)}")
+        return 0, 0, errors
+    
+    return created, updated, errors
+
+
 # Statistics functions
 def get_watch_statistics(db: Session, user_id: int) -> dict:
     """Get overall watch statistics"""
@@ -425,9 +545,11 @@ def get_watch_statistics(db: Session, user_id: int) -> dict:
     watched_movies = db.query(models.Movie).filter(models.Movie.user_id == user_id).filter(models.Movie.watched == True).count()
     total_tv_shows = db.query(models.TVShow).filter(models.TVShow.user_id == user_id).count()
     watched_tv_shows = db.query(models.TVShow).filter(models.TVShow.user_id == user_id).filter(models.TVShow.watched == True).count()
+    total_anime = db.query(models.Anime).filter(models.Anime.user_id == user_id).count()
+    watched_anime = db.query(models.Anime).filter(models.Anime.user_id == user_id).filter(models.Anime.watched == True).count()
     
-    total_items = total_movies + total_tv_shows
-    watched_items = watched_movies + watched_tv_shows
+    total_items = total_movies + total_tv_shows + total_anime
+    watched_items = watched_movies + watched_tv_shows + watched_anime
     
     return {
         "total_movies": total_movies,
@@ -436,6 +558,9 @@ def get_watch_statistics(db: Session, user_id: int) -> dict:
         "total_tv_shows": total_tv_shows,
         "watched_tv_shows": watched_tv_shows,
         "unwatched_tv_shows": total_tv_shows - watched_tv_shows,
+        "total_anime": total_anime,
+        "watched_anime": watched_anime,
+        "unwatched_anime": total_anime - watched_anime,
         "total_items": total_items,
         "watched_items": watched_items,
         "unwatched_items": total_items - watched_items,
@@ -457,7 +582,13 @@ def get_rating_statistics(db: Session, user_id: int) -> dict:
     ).filter(models.TVShow.rating.isnot(None)).all()
     tv_ratings = [r[0] for r in tv_ratings]
     
-    all_ratings = movie_ratings + tv_ratings
+    # Anime rating stats
+    anime_ratings = db.query(models.Anime.rating).filter(
+        models.Anime.user_id == user_id
+    ).filter(models.Anime.rating.isnot(None)).all()
+    anime_ratings = [r[0] for r in anime_ratings]
+    
+    all_ratings = movie_ratings + tv_ratings + anime_ratings
     
     if not all_ratings:
         return {
@@ -486,19 +617,25 @@ def get_rating_statistics(db: Session, user_id: int) -> dict:
     # Find items with highest rating
     highest_movies = db.query(models.Movie).filter(models.Movie.user_id == user_id).filter(models.Movie.rating == highest_rating).limit(5).all()
     highest_tv = db.query(models.TVShow).filter(models.TVShow.user_id == user_id).filter(models.TVShow.rating == highest_rating).limit(5).all()
+    highest_anime = db.query(models.Anime).filter(models.Anime.user_id == user_id).filter(models.Anime.rating == highest_rating).limit(5).all()
     highest_rated = [
         {"title": m.title, "type": "Movie", "rating": m.rating} for m in highest_movies
     ] + [
         {"title": t.title, "type": "TV Show", "rating": t.rating} for t in highest_tv
+    ] + [
+        {"title": a.title, "type": "Anime", "rating": a.rating} for a in highest_anime
     ]
     
     # Find items with lowest rating
     lowest_movies = db.query(models.Movie).filter(models.Movie.user_id == user_id).filter(models.Movie.rating == lowest_rating).limit(5).all()
     lowest_tv = db.query(models.TVShow).filter(models.TVShow.user_id == user_id).filter(models.TVShow.rating == lowest_rating).limit(5).all()
+    lowest_anime = db.query(models.Anime).filter(models.Anime.user_id == user_id).filter(models.Anime.rating == lowest_rating).limit(5).all()
     lowest_rated = [
         {"title": m.title, "type": "Movie", "rating": m.rating} for m in lowest_movies
     ] + [
         {"title": t.title, "type": "TV Show", "rating": t.rating} for t in lowest_tv
+    ] + [
+        {"title": a.title, "type": "Anime", "rating": a.rating} for a in lowest_anime
     ]
     
     return {
@@ -524,8 +661,14 @@ def get_year_statistics(db: Session, user_id: int) -> dict:
     ).group_by(models.TVShow.year).all()
     tv_data = {str(year): count for year, count in tv_years}
     
+    # Anime by year
+    anime_years = db.query(models.Anime.year, func.count(models.Anime.id)).filter(
+        models.Anime.user_id == user_id
+    ).group_by(models.Anime.year).all()
+    anime_data = {str(year): count for year, count in anime_years}
+    
     # Get all years
-    all_years = set(movie_data.keys()) | set(tv_data.keys())
+    all_years = set(movie_data.keys()) | set(tv_data.keys()) | set(anime_data.keys())
     all_years = sorted([int(year) for year in all_years])
     
     # Decade analysis
@@ -534,13 +677,15 @@ def get_year_statistics(db: Session, user_id: int) -> dict:
         decade = (year // 10) * 10
         decade_key = f"{decade}s"
         if decade_key not in decade_stats:
-            decade_stats[decade_key] = {"movies": 0, "tv_shows": 0}
+            decade_stats[decade_key] = {"movies": 0, "tv_shows": 0, "anime": 0}
         decade_stats[decade_key]["movies"] += movie_data.get(str(year), 0)
         decade_stats[decade_key]["tv_shows"] += tv_data.get(str(year), 0)
+        decade_stats[decade_key]["anime"] += anime_data.get(str(year), 0)
     
     return {
         "movies_by_year": movie_data,
         "tv_shows_by_year": tv_data,
+        "anime_by_year": anime_data,
         "all_years": all_years,
         "decade_stats": decade_stats,
         "oldest_year": min(all_years) if all_years else None,
@@ -913,6 +1058,7 @@ def get_friend_profile_summary(db: Session, friend_id: int) -> Optional[schemas.
     
     movies_count = None
     tv_shows_count = None
+    anime_count = None
     statistics_available = None
     
     if not friend.movies_private:
@@ -921,6 +1067,9 @@ def get_friend_profile_summary(db: Session, friend_id: int) -> Optional[schemas.
     if not friend.tv_shows_private:
         tv_shows_count = db.query(models.TVShow).filter(models.TVShow.user_id == friend_id).count()
     
+    if not friend.anime_private:
+        anime_count = db.query(models.Anime).filter(models.Anime.user_id == friend_id).count()
+    
     if not friend.statistics_private:
         statistics_available = True
     
@@ -928,9 +1077,11 @@ def get_friend_profile_summary(db: Session, friend_id: int) -> Optional[schemas.
         username=friend.username,
         movies_count=movies_count,
         tv_shows_count=tv_shows_count,
+        anime_count=anime_count,
         statistics_available=statistics_available,
         movies_private=friend.movies_private,
         tv_shows_private=friend.tv_shows_private,
+        anime_private=friend.anime_private,
         statistics_private=friend.statistics_private
     )
 
@@ -957,6 +1108,18 @@ def get_friend_tv_shows(db: Session, friend_id: int) -> Optional[List[models.TVS
         return None  # Data is private
     
     return db.query(models.TVShow).filter(models.TVShow.user_id == friend_id).all()
+
+
+def get_friend_anime(db: Session, friend_id: int) -> Optional[List[models.Anime]]:
+    """Get friend's anime list (if not private)."""
+    friend = get_user_by_id(db, friend_id)
+    if friend is None:
+        return None
+    
+    if friend.anime_private:
+        return None  # Data is private
+    
+    return db.query(models.Anime).filter(models.Anime.user_id == friend_id).all()
 
 
 def get_friend_statistics(db: Session, friend_id: int) -> Optional[dict]:
