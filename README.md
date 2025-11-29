@@ -39,7 +39,10 @@ OmniTrackr is a full-featured, multi-user web application for managing and track
 - **Password Reset:** Secure token-based password reset functionality
 - **Password Security:** bcrypt hashing for password storage
 - **Account Management:** Change username, email, password, and account deactivation/reactivation
+- **Profile Pictures:** Upload, change, and reset profile pictures with automatic optimization and validation
+- **Privacy Settings:** Control visibility of your movies, TV shows, and statistics (private or visible to friends)
 - **Friends System:** Add friends by username, send/accept/deny friend requests, manage friends list
+- **Friend Profiles:** View friends' movie/TV collections and statistics with privacy-aware access
 - **Notifications:** Real-time notification system with bell icon, friend request notifications, and auto-dismissal
 - **CRUD API:** Full REST API for managing movies and TV shows
 - **PostgreSQL Database:** Production-ready database
@@ -50,7 +53,8 @@ OmniTrackr is a full-featured, multi-user web application for managing and track
 - **Export/Import:** JSON export/import with smart conflict resolution
 - **Statistics Dashboard:** Comprehensive analytics with animated visualizations, watch progress, rating distributions, year analysis, and director insights
 - **SEO Optimized:** Meta tags, structured data, sitemap, and robots.txt for better search engine visibility
-- **Security:** Security headers, bot filtering, and comprehensive protection against common web vulnerabilities
+- **Security:** Security headers, bot filtering, content validation, image processing, rate limiting, and comprehensive protection against common web vulnerabilities
+- **Persistent Storage:** Profile pictures stored in persistent directory that survives code updates and deployments
 
 
 ## Export/Import Functionality
@@ -75,10 +79,15 @@ OmniTrackr now includes powerful export/import capabilities:
 OmniTrackr includes a complete social system for connecting with other users:
 
 ### Friends List
-- **Friends Sidebar:** Always-visible sidebar showing your friends list
+- **Friends Sidebar:** Toggleable sidebar showing your friends list (can be hidden/shown)
 - **Add Friends:** Send friend requests to other users by username
 - **Friend Management:** View friends, unfriend users, and manage your connections
-- **Future Expansion:** Foundation for viewing friends' collections and sharing recommendations
+- **Friend Profiles:** Click on any friend's name to view their profile
+  - View friends' movie collections with search/filter functionality
+  - View friends' TV show collections with search/filter functionality
+  - View friends' statistics dashboard (if privacy allows)
+  - Privacy-aware: Only shows data that friends have made visible
+  - Accordion-style modal with collapsible sections for easy navigation
 
 ### Friend Requests
 - **Send Requests:** Send friend requests to any user by entering their username
@@ -105,6 +114,15 @@ OmniTrackr provides comprehensive account management features:
 - **Change Username:** Update your username with password confirmation (requires re-login)
 - **Change Email:** Update email address with verification sent to new email
 - **Change Password:** Update password with current password verification
+- **Profile Pictures:** Upload, change, or remove profile pictures (max 5MB, JPEG/PNG/GIF/WebP)
+  - Automatic image optimization and resizing (max 800x800px)
+  - Content validation to ensure uploaded files are valid images
+  - Profile pictures displayed in user display, friends list, and friend profiles
+- **Privacy Settings:** Control who can see your data
+  - Movies privacy toggle (private or visible to friends)
+  - TV shows privacy toggle (private or visible to friends)
+  - Statistics privacy toggle (private or visible to friends)
+  - When privacy is enabled, data is fully private (not visible to friends)
 - **Account Deactivation:** Soft delete your account with 90-day reactivation window
 - **Account Reactivation:** Reactivate deactivated accounts within the 90-day window
 
@@ -113,6 +131,14 @@ OmniTrackr provides comprehensive account management features:
 - **Email Verification:** Email changes require verification via new email address
 - **Secure Tokens:** All account operations use secure, time-limited tokens
 - **Data Retention:** Deactivated accounts retain data for 90 days before permanent deletion
+- **File Upload Security:** 
+  - Content validation using magic bytes to verify uploaded files are actual images
+  - File type validation (JPEG, PNG, GIF, WebP only)
+  - File size limits (5MB maximum)
+  - Path traversal protection
+  - Automatic image optimization and resizing
+- **Rate Limiting:** Profile picture uploads limited to 10 per minute per IP address
+- **Enhanced Bot Filtering:** Comprehensive filtering of scanner bots and malicious requests
 
 ## Statistics Dashboard
 
@@ -201,8 +227,11 @@ OmniTrackr uses a secure JWT-based authentication system:
 
 ### Features
 - **User Authentication:** Secure login with JWT tokens, logout functionality
-- **Account Settings:** Manage your account - change username, email, password, or deactivate/reactivate
-- **Friends & Social:** Add friends, send/accept/deny friend requests, view friends list
+- **Account Settings:** Manage your account - change username, email, password, profile picture, privacy settings, or deactivate/reactivate
+- **Profile Pictures:** Upload and manage your profile picture, visible in user display, friends list, and friend profiles
+- **Privacy Controls:** Set privacy settings for movies, TV shows, and statistics
+- **Friends & Social:** Add friends, send/accept/deny friend requests, view friends list, and explore friends' collections
+- **Friend Profiles:** View friends' movies, TV shows, and statistics with search/filter capabilities
 - **Notifications:** Real-time notifications with bell icon and unread count badge
 - **Add movies & TV shows:** Enter details like title, director/creator, year, rating, and watched status
 - **Automatic Posters:** Movie/TV posters are fetched automatically from OMDB and cached
@@ -228,7 +257,12 @@ OmniTrackr uses a secure JWT-based authentication system:
 
 ## Recent Updates
 
-- ✅ **Friends & Social Features:** Complete friends system with friend requests, friends list sidebar, and social interactions
+- ✅ **Profile Pictures:** Upload, change, and reset profile pictures with automatic optimization, content validation, and persistent storage
+- ✅ **Privacy Settings:** Granular privacy controls for movies, TV shows, and statistics with friend-aware visibility
+- ✅ **Friend Profile Viewing:** View friends' collections and statistics with search/filter capabilities and privacy-aware access
+- ✅ **Enhanced Security:** Content validation (magic bytes), image processing, rate limiting, and comprehensive bot filtering
+- ✅ **Persistent Storage:** Profile pictures stored in persistent directory that survives code updates and deployments
+- ✅ **Friends & Social Features:** Complete friends system with friend requests, toggleable friends list sidebar, and social interactions
 - ✅ **Notifications System:** Real-time notifications with bell icon, unread count badge, and auto-dismissal
 - ✅ **Account Management:** Full account settings - change username, email, password, and account deactivation/reactivation
 - ✅ **Decimal Ratings:** Support for precise ratings from 0-10.0 with one decimal place
