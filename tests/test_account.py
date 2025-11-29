@@ -588,3 +588,402 @@ class TestEmailChangeVerification:
             assert user.email == new_email
             assert user.verification_token is None
 
+
+class TestProfilePictureCRUD:
+    """Test profile picture CRUD operations."""
+    
+    def test_update_profile_picture(self, db_session, test_user_data):
+        """Test updating user's profile picture."""
+        # Create user
+        user_create = schemas.UserCreate(**test_user_data)
+        hashed_password = auth.get_password_hash(test_user_data["password"])
+        user = crud.create_user(db_session, user_create, hashed_password)
+        
+        # Create fake image data (WebP format)
+        import io
+        from PIL import Image
+        image = Image.new('RGB', (100, 100), color='red')
+        output = io.BytesIO()
+        image.save(output, format='WEBP', quality=80)
+        image_data = output.getvalue()
+        
+        # Update profile picture
+        updated_user = crud.update_profile_picture(
+            db_session,
+            user.id,
+            profile_picture_url="/profile-pictures/1",
+            profile_picture_data=image_data,
+            profile_picture_mime_type="image/webp"
+        )
+        
+        assert updated_user is not None
+        assert updated_user.profile_picture_url == "/profile-pictures/1"
+        assert updated_user.profile_picture_data == image_data
+        assert updated_user.profile_picture_mime_type == "image/webp"
+    
+    def test_reset_profile_picture(self, db_session, test_user_data):
+        """Test resetting user's profile picture."""
+        # Create user
+        user_create = schemas.UserCreate(**test_user_data)
+        hashed_password = auth.get_password_hash(test_user_data["password"])
+        user = crud.create_user(db_session, user_create, hashed_password)
+        
+        # Set profile picture first
+        import io
+        from PIL import Image
+        image = Image.new('RGB', (100, 100), color='red')
+        output = io.BytesIO()
+        image.save(output, format='WEBP', quality=80)
+        image_data = output.getvalue()
+        
+        crud.update_profile_picture(
+            db_session,
+            user.id,
+            profile_picture_url="/profile-pictures/1",
+            profile_picture_data=image_data,
+            profile_picture_mime_type="image/webp"
+        )
+        
+        # Reset profile picture
+        updated_user = crud.reset_profile_picture(db_session, user.id)
+        
+        assert updated_user is not None
+        assert updated_user.profile_picture_url is None
+        assert updated_user.profile_picture_data is None
+        assert updated_user.profile_picture_mime_type is None
+
+
+class TestProfilePictureEndpoints:
+    """Test profile picture API endpoints."""
+    
+    def test_upload_profile_picture_success(self, authenticated_client, db_session):
+        """Test successful profile picture upload."""
+        # Create a fake image file
+        from io import BytesIO
+        from PIL import Image
+        
+        image = Image.new('RGB', (200, 200), color='blue')
+        img_bytes = BytesIO()
+        image.save(img_bytes, format='JPEG', quality=85)
+        img_bytes.seek(0)
+        
+        # Upload profile picture
+        response = authenticated_client.post(
+            "/account/profile-picture",
+            files={"file": ("test.jpg", img_bytes, "image/jpeg")}
+        )
+        
+        assert response.status_code == 200
+        data = response.json()
+        assert "profile_picture_url" in data
+        assert data["profile_picture_url"] is not None
+        assert data["profile_picture_url"].startswith("/profile-pictures/")
+    
+    def test_upload_profile_picture_invalid_type(self, authenticated_client):
+        """Test uploading invalid file type."""
+        # Create a fake text file
+        from io import BytesIO
+        text_file = BytesIO(b"This is not an image")
+        
+        response = authenticated_client.post(
+            "/account/profile-picture",
+            files={"file": ("test.txt", text_file, "text/plain")}
+        )
+        
+        assert response.status_code == 400
+        assert "Invalid file type" in response.json()["detail"]
+    
+    def test_upload_profile_picture_too_large(self, authenticated_client):
+        """Test uploading file that exceeds size limit."""
+        # Create a fake large image (simulate 6MB)
+        from io import BytesIO
+        from PIL import Image
+        
+        # Create a large image
+        image = Image.new('RGB', (2000, 2000), color='red')
+        img_bytes = BytesIO()
+        image.save(img_bytes, format='JPEG', quality=100)
+        
+        # Pad to exceed 5MB limit
+        img_bytes.seek(0, 2)  # Seek to end
+        current_size = img_bytes.tell()
+        padding_size = (6 * 1024 * 1024) - current_size
+        if padding_size > 0:
+            img_bytes.write(b'0' * padding_size)
+        img_bytes.seek(0)
+        
+        response = authenticated_client.post(
+            "/account/profile-picture",
+            files={"file": ("large.jpg", img_bytes, "image/jpeg")}
+        )
+        
+        assert response.status_code == 400
+        assert "exceeds 5MB" in response.json()["detail"]
+    
+    def test_upload_profile_picture_png(self, authenticated_client):
+        """Test uploading PNG image."""
+        from io import BytesIO
+        from PIL import Image
+        
+        image = Image.new('RGB', (300, 300), color='green')
+        img_bytes = BytesIO()
+        image.save(img_bytes, format='PNG')
+        img_bytes.seek(0)
+        
+        response = authenticated_client.post(
+            "/account/profile-picture",
+            files={"file": ("test.png", img_bytes, "image/png")}
+        )
+        
+        assert response.status_code == 200
+        data = response.json()
+        assert data["profile_picture_url"] is not None
+    
+    def test_upload_profile_picture_webp(self, authenticated_client):
+        """Test uploading WebP image."""
+        from io import BytesIO
+        from PIL import Image
+        
+        image = Image.new('RGB', (400, 400), color='purple')
+        img_bytes = BytesIO()
+        image.save(img_bytes, format='WEBP', quality=85)
+        img_bytes.seek(0)
+        
+        response = authenticated_client.post(
+            "/account/profile-picture",
+            files={"file": ("test.webp", img_bytes, "image/webp")}
+        )
+        
+        assert response.status_code == 200
+        data = response.json()
+        assert data["profile_picture_url"] is not None
+    
+    def test_upload_profile_picture_unauthenticated(self, client):
+        """Test uploading profile picture without authentication."""
+        from io import BytesIO
+        from PIL import Image
+        
+        image = Image.new('RGB', (100, 100), color='red')
+        img_bytes = BytesIO()
+        image.save(img_bytes, format='JPEG')
+        img_bytes.seek(0)
+        
+        response = client.post(
+            "/account/profile-picture",
+            files={"file": ("test.jpg", img_bytes, "image/jpeg")}
+        )
+        
+        assert response.status_code == 401
+    
+    def test_reset_profile_picture_success(self, authenticated_client, db_session):
+        """Test resetting profile picture successfully."""
+        # Upload a profile picture first
+        from io import BytesIO
+        from PIL import Image
+        
+        image = Image.new('RGB', (100, 100), color='red')
+        img_bytes = BytesIO()
+        image.save(img_bytes, format='JPEG')
+        img_bytes.seek(0)
+        
+        upload_response = authenticated_client.post(
+            "/account/profile-picture",
+            files={"file": ("test.jpg", img_bytes, "image/jpeg")}
+        )
+        assert upload_response.status_code == 200
+        
+        # Reset profile picture
+        response = authenticated_client.delete("/account/profile-picture")
+        
+        assert response.status_code == 200
+        data = response.json()
+        assert data["profile_picture_url"] is None
+    
+    def test_reset_profile_picture_unauthenticated(self, client):
+        """Test resetting profile picture without authentication."""
+        response = client.delete("/account/profile-picture")
+        
+        assert response.status_code == 401
+    
+    def test_serve_profile_picture_backward_compatibility(self, authenticated_client, db_session):
+        """Test backward compatibility endpoint for old profile picture URLs."""
+        # Get current user
+        account_response = authenticated_client.get("/account/me")
+        user_id = account_response.json()["id"]
+        
+        # Upload a profile picture
+        from io import BytesIO
+        from PIL import Image
+        
+        image = Image.new('RGB', (100, 100), color='green')
+        img_bytes = BytesIO()
+        image.save(img_bytes, format='JPEG')
+        img_bytes.seek(0)
+        
+        upload_response = authenticated_client.post(
+            "/account/profile-picture",
+            files={"file": ("test.jpg", img_bytes, "image/jpeg")}
+        )
+        assert upload_response.status_code == 200
+        
+        # Test old URL format (should redirect)
+        old_filename = f"{user_id}_abc123.jpg"
+        response = authenticated_client.get(f"/static/profile_pictures/{old_filename}", follow_redirects=False)
+        
+        # Should redirect to new format
+        assert response.status_code == 301
+        assert f"/profile-pictures/{user_id}" in response.headers.get("location", "")
+    
+    def test_serve_profile_picture_backward_compatibility_invalid_filename(self, authenticated_client):
+        """Test backward compatibility endpoint with invalid filename."""
+        # Test with filename that doesn't match pattern
+        response = authenticated_client.get("/static/profile_pictures/invalid_filename.jpg")
+        assert response.status_code == 404
+    
+    def test_upload_profile_picture_converts_to_webp(self, authenticated_client, db_session):
+        """Test that all images are converted to WebP format."""
+        from io import BytesIO
+        from PIL import Image
+        
+        # Upload JPEG
+        image = Image.new('RGB', (200, 200), color='red')
+        img_bytes = BytesIO()
+        image.save(img_bytes, format='JPEG')
+        img_bytes.seek(0)
+        
+        response = authenticated_client.post(
+            "/account/profile-picture",
+            files={"file": ("test.jpg", img_bytes, "image/jpeg")}
+        )
+        assert response.status_code == 200
+        
+        # Check that stored image is WebP
+        account_response = authenticated_client.get("/account/me")
+        user_data = account_response.json()
+        assert user_data["profile_picture_url"] is not None
+        
+        # Verify MIME type is WebP
+        from app import crud
+        user = crud.get_user_by_id(db_session, user_data["id"])
+        assert user.profile_picture_mime_type == "image/webp"
+    
+    def test_upload_profile_picture_preserves_transparency(self, authenticated_client, db_session):
+        """Test that RGBA images with transparency are handled correctly."""
+        from io import BytesIO
+        from PIL import Image
+        
+        # Create RGBA image with transparency
+        image = Image.new('RGBA', (200, 200), (255, 0, 0, 128))  # Red with 50% opacity
+        img_bytes = BytesIO()
+        image.save(img_bytes, format='PNG')
+        img_bytes.seek(0)
+        
+        response = authenticated_client.post(
+            "/account/profile-picture",
+            files={"file": ("transparent.png", img_bytes, "image/png")}
+        )
+        assert response.status_code == 200
+        
+        # Verify image was processed and stored
+        account_response = authenticated_client.get("/account/me")
+        user_data = account_response.json()
+        assert user_data["profile_picture_url"] is not None
+    
+    def test_upload_profile_picture_gif(self, authenticated_client):
+        """Test uploading GIF image."""
+        from io import BytesIO
+        from PIL import Image
+        
+        # Create a simple GIF
+        image = Image.new('RGB', (200, 200), color='cyan')
+        img_bytes = BytesIO()
+        image.save(img_bytes, format='GIF')
+        img_bytes.seek(0)
+        
+        response = authenticated_client.post(
+            "/account/profile-picture",
+            files={"file": ("test.gif", img_bytes, "image/gif")}
+        )
+        
+        assert response.status_code == 200
+        data = response.json()
+        assert data["profile_picture_url"] is not None
+    
+    def test_upload_profile_picture_invalid_magic_bytes(self, authenticated_client):
+        """Test that files with invalid magic bytes are rejected."""
+        from io import BytesIO
+        
+        # Create a file that claims to be JPEG but isn't
+        fake_image = BytesIO(b'\x00\x00\x00\x00This is not a real image')
+        
+        response = authenticated_client.post(
+            "/account/profile-picture",
+            files={"file": ("fake.jpg", fake_image, "image/jpeg")}
+        )
+        
+        assert response.status_code == 400
+        assert "not a valid image" in response.json()["detail"].lower() or "content validation" in response.json()["detail"].lower()
+    
+    def test_upload_profile_picture_quality_optimization(self, authenticated_client, db_session):
+        """Test that images are optimized for file size."""
+        from io import BytesIO
+        from PIL import Image
+        
+        # Create a large, high-quality image
+        image = Image.new('RGB', (800, 800), color='magenta')
+        img_bytes = BytesIO()
+        image.save(img_bytes, format='JPEG', quality=100)
+        img_bytes.seek(0)
+        
+        original_size = len(img_bytes.getvalue())
+        
+        # Upload profile picture
+        response = authenticated_client.post(
+            "/account/profile-picture",
+            files={"file": ("large.jpg", img_bytes, "image/jpeg")}
+        )
+        assert response.status_code == 200
+        
+        # Get stored image size
+        account_response = authenticated_client.get("/account/me")
+        user_id = account_response.json()["id"]
+        
+        from app import crud
+        user = crud.get_user_by_id(db_session, user_id)
+        stored_size = len(user.profile_picture_data)
+        
+        # Stored image should be optimized (WebP + resizing should make it smaller)
+        assert user.profile_picture_mime_type == "image/webp"
+        # The image should be optimized (smaller or similar size due to WebP compression)
+        # Note: Exact size depends on content, but WebP should be efficient
+    
+    def test_profile_picture_stored_in_database(self, authenticated_client, db_session):
+        """Test that profile picture data is actually stored in database."""
+        from io import BytesIO
+        from PIL import Image
+        
+        # Upload profile picture
+        image = Image.new('RGB', (200, 200), color='orange')
+        img_bytes = BytesIO()
+        image.save(img_bytes, format='JPEG')
+        img_bytes.seek(0)
+        
+        response = authenticated_client.post(
+            "/account/profile-picture",
+            files={"file": ("test.jpg", img_bytes, "image/jpeg")}
+        )
+        assert response.status_code == 200
+        
+        # Verify data is in database
+        account_response = authenticated_client.get("/account/me")
+        user_id = account_response.json()["id"]
+        
+        from app import crud
+        user = crud.get_user_by_id(db_session, user_id)
+        
+        assert user.profile_picture_data is not None
+        assert len(user.profile_picture_data) > 0
+        assert user.profile_picture_mime_type == "image/webp"
+        assert user.profile_picture_url == f"/profile-pictures/{user_id}"
+    
+

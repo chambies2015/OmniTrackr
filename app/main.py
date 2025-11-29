@@ -3,6 +3,7 @@ Entry point for the OmniTrackr API.
 Provides CRUD endpoints for managing movies and TV shows.
 """
 import json
+import os
 from datetime import datetime
 from typing import List, Optional
 
@@ -313,7 +314,12 @@ except Exception as e:
 app = FastAPI(title="OmniTrackr API", description="Manage your movies and TV shows", version="0.1.0")
 
 # Initialize rate limiter
-limiter = Limiter(key_func=get_remote_address)
+# Disable rate limiting in test environment
+if os.getenv("TESTING", "").lower() == "true":
+    # Use a no-op limiter for testing
+    limiter = Limiter(key_func=lambda: "test", enabled=False)
+else:
+    limiter = Limiter(key_func=get_remote_address)
 app.state.limiter = limiter
 app.add_exception_handler(RateLimitExceeded, _rate_limit_exceeded_handler)
 
@@ -1178,69 +1184,73 @@ async def upload_profile_picture(
         # Open image from bytes
         image = Image.open(io.BytesIO(file_content))
         
-        # Convert RGBA to RGB for JPEG (JPEG doesn't support transparency)
-        if detected_format == 'jpeg' and image.mode in ('RGBA', 'LA', 'P'):
-            # Create white background
-            background = Image.new('RGB', image.size, (255, 255, 255))
-            if image.mode == 'P':
-                image = image.convert('RGBA')
-            background.paste(image, mask=image.split()[-1] if image.mode == 'RGBA' else None)
-            image = background
-        elif image.mode not in ('RGB', 'RGBA', 'L', 'P'):
+        # Strip EXIF and other metadata to reduce file size
+        # Pillow automatically strips metadata when we convert/process the image
+        # We'll ensure clean data by processing through a new image
+        
+        # Convert to RGB/RGBA for processing
+        # WebP supports transparency, so preserve RGBA if present
+        if image.mode == 'RGBA':
+            # Keep RGBA for WebP (supports transparency)
+            pass
+        elif image.mode in ('LA', 'P'):
+            # Convert palette/grayscale with alpha to RGBA
+            image = image.convert('RGBA')
+        elif image.mode == 'L':
+            # Grayscale to RGB
+            image = image.convert('RGB')
+        elif image.mode not in ('RGB', 'RGBA'):
+            # Convert other modes to RGB
             image = image.convert('RGB')
         
-        # Resize if image is too large (max 800x800 for profile pictures)
-        max_size = (800, 800)
+        # Resize if image is too large (max 512x512 for profile pictures - optimized size)
+        max_size = (512, 512)
         if image.size[0] > max_size[0] or image.size[1] > max_size[1]:
             image.thumbnail(max_size, Image.Resampling.LANCZOS)
         
-        # Determine output format and MIME type
-        import re
-        # Use detected format or fallback to extension
-        if "." in file.filename:
-            file_extension = file.filename.split(".")[-1].lower()
-            file_extension = re.sub(r'[^a-z0-9]', '', file_extension)
-            if not file_extension:
-                file_extension = detected_format or "jpg"
-        else:
-            file_extension = detected_format or "jpg"
+        # Always convert to WebP for best compression (typically 25-35% smaller than JPEG)
+        # WebP provides excellent quality at smaller file sizes
+        mime_type = "image/webp"
         
-        # Ensure extension is in allowed list
-        allowed_extensions = ["jpg", "jpeg", "png", "gif", "webp"]
-        if file_extension not in allowed_extensions:
-            file_extension = detected_format if detected_format in allowed_extensions else "jpg"
+        # Save optimized image to memory with adaptive quality
+        # Start with quality 80, reduce if file is still too large
+        max_target_size = 200 * 1024  # Target: 200KB max
+        quality = 80
+        image_data = None
         
-        # Normalize jpeg/jpg
-        if file_extension == "jpeg":
-            file_extension = "jpg"
+        for attempt in range(3):  # Try up to 3 quality levels
+            output = io.BytesIO()
+            
+            # Save as WebP with current quality
+            save_kwargs = {
+                'format': 'WEBP',
+                'quality': quality,
+                'method': 6,  # Best compression method (slower but smaller)
+                'lossless': False
+            }
+            
+            # If image has transparency, ensure we preserve it
+            if image.mode == 'RGBA':
+                # WebP supports transparency natively
+                image.save(output, **save_kwargs)
+            else:
+                # RGB image
+                image.save(output, **save_kwargs)
+            
+            image_data = output.getvalue()
+            
+            # If file size is acceptable or we've tried enough, break
+            if len(image_data) <= max_target_size or attempt >= 2:
+                break
+            
+            # Reduce quality for next attempt
+            quality = max(60, quality - 10)  # Don't go below 60
         
-        # Determine MIME type
-        mime_types = {
-            "jpg": "image/jpeg",
-            "jpeg": "image/jpeg",
-            "png": "image/png",
-            "gif": "image/gif",
-            "webp": "image/webp"
-        }
-        mime_type = mime_types.get(file_extension, "image/jpeg")
-        
-        # Save optimized image to memory
-        output = io.BytesIO()
-        
-        # Optimize based on format
-        if file_extension in ['jpg', 'jpeg']:
-            image.save(output, format='JPEG', quality=85, optimize=True)
-        elif file_extension == 'png':
-            image.save(output, format='PNG', optimize=True)
-        elif file_extension == 'gif':
-            image.save(output, format='GIF', optimize=True)
-        elif file_extension == 'webp':
-            image.save(output, format='WEBP', quality=85, method=6)
-        else:
-            image.save(output, format='JPEG', quality=85, optimize=True)
-        
-        # Get binary data
-        image_data = output.getvalue()
+        # If still too large after optimization, use more aggressive compression
+        if len(image_data) > 300 * 1024:  # Still over 300KB
+            output = io.BytesIO()
+            image.save(output, format='WEBP', quality=70, method=6, lossless=False)
+            image_data = output.getvalue()
         
         # Update database with image data, MIME type, and virtual URL
         profile_picture_url = f"/profile-pictures/{current_user.id}"
