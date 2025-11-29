@@ -2,7 +2,7 @@
 SQLAlchemy models for the OmniTrackr API.
 Defines the User, Movie and TV Show ORM models.
 """
-from sqlalchemy import Column, Integer, String, Boolean, Float, ForeignKey, DateTime, UniqueConstraint
+from sqlalchemy import Column, Integer, String, Boolean, Float, ForeignKey, DateTime, UniqueConstraint, LargeBinary
 from sqlalchemy.orm import relationship
 from datetime import datetime, timedelta
 from .database import Base
@@ -30,7 +30,9 @@ class User(Base):
     statistics_private = Column(Boolean, default=False, nullable=False)
     
     # Profile picture
-    profile_picture_url = Column(String, nullable=True)
+    profile_picture_url = Column(String, nullable=True)  # Kept for backward compatibility, now stores virtual URL like /profile-pictures/{user_id}
+    profile_picture_data = Column(LargeBinary, nullable=True)  # Binary image data stored in database
+    profile_picture_mime_type = Column(String, nullable=True)  # MIME type (image/jpeg, image/png, etc.)
     
     # Relationships - cascade delete ensures user's data is deleted with them
     movies = relationship("Movie", back_populates="owner", cascade="all, delete-orphan")
