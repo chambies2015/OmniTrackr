@@ -73,6 +73,7 @@ class PrivacySettings(BaseModel):
     """Schema for privacy settings."""
     movies_private: bool = Field(False, description="Make movies private")
     tv_shows_private: bool = Field(False, description="Make TV shows private")
+    anime_private: bool = Field(False, description="Make anime private")
     statistics_private: bool = Field(False, description="Make statistics private")
     
     class Config:
@@ -83,6 +84,7 @@ class PrivacySettingsUpdate(BaseModel):
     """Schema for updating privacy settings."""
     movies_private: Optional[bool] = None
     tv_shows_private: Optional[bool] = None
+    anime_private: Optional[bool] = None
     statistics_private: Optional[bool] = None
 
 
@@ -232,11 +234,45 @@ class TVShow(TVShowBase):
         from_attributes = True
 
 
+class AnimeBase(BaseModel):
+    title: str = Field(..., description="Title of the anime")
+    year: int = Field(..., ge=0, description="Year of the anime")
+    seasons: Optional[int] = Field(None, ge=0, description="Number of seasons")
+    episodes: Optional[int] = Field(None, ge=0, description="Total number of episodes")
+    rating: Optional[float] = Field(None, ge=0, le=10, description="Rating out of 10 (0-10.0, one decimal place)")
+    watched: Optional[bool] = Field(False, description="Whether it has been watched")
+    review: Optional[str] = Field(None, description="Optional review/notes for the entry")
+    poster_url: Optional[str] = Field(None, description="URL of the anime poster")
+
+
+class AnimeCreate(AnimeBase):
+    pass
+
+
+class AnimeUpdate(BaseModel):
+    title: Optional[str] = None
+    year: Optional[int] = Field(None, ge=0)
+    seasons: Optional[int] = Field(None, ge=0)
+    episodes: Optional[int] = Field(None, ge=0)
+    rating: Optional[float] = Field(None, ge=0, le=10)
+    watched: Optional[bool] = None
+    review: Optional[str] = None
+    poster_url: Optional[str] = None
+
+
+class Anime(AnimeBase):
+    id: int
+
+    class Config:
+        from_attributes = True
+
+
 # Export/Import schemas
 class ExportData(BaseModel):
     """Schema for exporting all data from OmniTrackr"""
     movies: List[Movie] = Field(..., description="List of all movies")
     tv_shows: List[TVShow] = Field(..., description="List of all TV shows")
+    anime: List[Anime] = Field(..., description="List of all anime")
     export_metadata: dict = Field(..., description="Export metadata including timestamp and version")
     
     class Config:
@@ -247,6 +283,7 @@ class ImportData(BaseModel):
     """Schema for importing data into OmniTrackr"""
     movies: List[MovieCreate] = Field(default=[], description="Movies to import")
     tv_shows: List[TVShowCreate] = Field(default=[], description="TV shows to import")
+    anime: List[AnimeCreate] = Field(default=[], description="Anime to import")
     
     class Config:
         from_attributes = True
@@ -258,6 +295,8 @@ class ImportResult(BaseModel):
     movies_updated: int = Field(..., description="Number of movies updated")
     tv_shows_created: int = Field(..., description="Number of TV shows created")
     tv_shows_updated: int = Field(..., description="Number of TV shows updated")
+    anime_created: int = Field(..., description="Number of anime created")
+    anime_updated: int = Field(..., description="Number of anime updated")
     errors: List[str] = Field(default=[], description="List of errors encountered during import")
     
     class Config:
@@ -273,6 +312,9 @@ class WatchStatistics(BaseModel):
     total_tv_shows: int = Field(..., description="Total number of TV shows")
     watched_tv_shows: int = Field(..., description="Number of watched TV shows")
     unwatched_tv_shows: int = Field(..., description="Number of unwatched TV shows")
+    total_anime: int = Field(..., description="Total number of anime")
+    watched_anime: int = Field(..., description="Number of watched anime")
+    unwatched_anime: int = Field(..., description="Number of unwatched anime")
     total_items: int = Field(..., description="Total number of items")
     watched_items: int = Field(..., description="Number of watched items")
     unwatched_items: int = Field(..., description="Number of unwatched items")
@@ -299,6 +341,7 @@ class YearStatistics(BaseModel):
     """Schema for year-based statistics"""
     movies_by_year: dict = Field(..., description="Movies count by year")
     tv_shows_by_year: dict = Field(..., description="TV shows count by year")
+    anime_by_year: dict = Field(..., description="Anime count by year")
     all_years: List[int] = Field(..., description="All years in the collection")
     decade_stats: dict = Field(..., description="Statistics by decade")
     oldest_year: Optional[int] = Field(None, description="Oldest year in collection")
@@ -336,9 +379,11 @@ class FriendProfileSummary(BaseModel):
     username: str = Field(..., description="Friend's username")
     movies_count: Optional[int] = Field(None, description="Number of movies (if not private)")
     tv_shows_count: Optional[int] = Field(None, description="Number of TV shows (if not private)")
+    anime_count: Optional[int] = Field(None, description="Number of anime (if not private)")
     statistics_available: Optional[bool] = Field(None, description="Whether statistics are available (if not private)")
     movies_private: bool = Field(..., description="Whether movies are private")
     tv_shows_private: bool = Field(..., description="Whether TV shows are private")
+    anime_private: bool = Field(..., description="Whether anime are private")
     statistics_private: bool = Field(..., description="Whether statistics are private")
 
 
@@ -352,6 +397,12 @@ class FriendTVShowsResponse(BaseModel):
     """Schema for friend's TV shows list."""
     tv_shows: List[TVShow] = Field(..., description="List of friend's TV shows")
     count: int = Field(..., description="Total number of TV shows")
+
+
+class FriendAnimeResponse(BaseModel):
+    """Schema for friend's anime list."""
+    anime: List[Anime] = Field(..., description="List of friend's anime")
+    count: int = Field(..., description="Total number of anime")
 
 
 class FriendStatisticsResponse(BaseModel):

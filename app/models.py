@@ -1,6 +1,6 @@
 """
 SQLAlchemy models for the OmniTrackr API.
-Defines the User, Movie and TV Show ORM models.
+Defines the User, Movie, TV Show, and Anime ORM models.
 """
 from sqlalchemy import Column, Integer, String, Boolean, Float, ForeignKey, DateTime, UniqueConstraint, LargeBinary
 from sqlalchemy.orm import relationship
@@ -27,6 +27,7 @@ class User(Base):
     # Privacy settings
     movies_private = Column(Boolean, default=False, nullable=False)
     tv_shows_private = Column(Boolean, default=False, nullable=False)
+    anime_private = Column(Boolean, default=False, nullable=False)
     statistics_private = Column(Boolean, default=False, nullable=False)
     
     # Profile picture
@@ -37,6 +38,7 @@ class User(Base):
     # Relationships - cascade delete ensures user's data is deleted with them
     movies = relationship("Movie", back_populates="owner", cascade="all, delete-orphan")
     tv_shows = relationship("TVShow", back_populates="owner", cascade="all, delete-orphan")
+    anime = relationship("Anime", back_populates="owner", cascade="all, delete-orphan")
     # Friends relationships
     sent_friend_requests = relationship("FriendRequest", foreign_keys="FriendRequest.sender_id", back_populates="sender", cascade="all, delete-orphan")
     received_friend_requests = relationship("FriendRequest", foreign_keys="FriendRequest.receiver_id", back_populates="receiver", cascade="all, delete-orphan")
@@ -80,6 +82,25 @@ class TVShow(Base):
     # User relationship
     user_id = Column(Integer, ForeignKey("users.id"), nullable=False, index=True)
     owner = relationship("User", back_populates="tv_shows")
+
+
+class Anime(Base):
+    """Anime model with user ownership."""
+    __tablename__ = "anime"
+    
+    id = Column(Integer, primary_key=True, index=True)
+    title = Column(String, index=True)
+    year = Column(Integer)
+    seasons = Column(Integer, nullable=True)
+    episodes = Column(Integer, nullable=True)
+    rating = Column(Float, nullable=True)
+    watched = Column(Boolean, default=False)
+    review = Column(String, nullable=True)
+    poster_url = Column(String, nullable=True)
+    
+    # User relationship
+    user_id = Column(Integer, ForeignKey("users.id"), nullable=False, index=True)
+    owner = relationship("User", back_populates="anime")
 
 
 class FriendRequest(Base):

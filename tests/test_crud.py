@@ -393,3 +393,183 @@ class TestTVShowCRUD:
         found_tv_show = crud.get_tv_show_by_id(db_session, user.id, tv_show.id)
         assert found_tv_show is None
 
+
+class TestAnimeCRUD:
+    """Test anime CRUD operations."""
+    
+    def test_create_anime(self, db_session, test_anime_data):
+        """Test creating an anime."""
+        user_create = schemas.UserCreate(
+            email="animetest@example.com",
+            username="animetest",
+            password="password123"
+        )
+        user = crud.create_user(db_session, user_create, "hashed", "token")
+        
+        anime_create = schemas.AnimeCreate(**test_anime_data)
+        anime = crud.create_anime(db_session, user.id, anime_create)
+        
+        assert anime is not None
+        assert anime.title == test_anime_data["title"]
+        assert anime.year == test_anime_data["year"]
+        assert anime.seasons == test_anime_data["seasons"]
+        assert anime.user_id == user.id
+    
+    def test_get_anime(self, db_session, test_anime_data):
+        """Test retrieving anime for a user."""
+        user_create = schemas.UserCreate(
+            email="animetest2@example.com",
+            username="animetest2",
+            password="password123"
+        )
+        user = crud.create_user(db_session, user_create, "hashed", "token")
+        
+        anime_create = schemas.AnimeCreate(**test_anime_data)
+        crud.create_anime(db_session, user.id, anime_create)
+        
+        anime = crud.get_anime(db_session, user.id)
+        
+        assert len(anime) == 1
+        assert anime[0].title == test_anime_data["title"]
+    
+    def test_update_anime(self, db_session, test_anime_data):
+        """Test updating an anime."""
+        user_create = schemas.UserCreate(
+            email="animeupdatetest@example.com",
+            username="animeupdatetest",
+            password="password123"
+        )
+        user = crud.create_user(db_session, user_create, "hashed", "token")
+        
+        anime_create = schemas.AnimeCreate(**test_anime_data)
+        anime = crud.create_anime(db_session, user.id, anime_create)
+        
+        # Update the anime
+        anime_update = schemas.AnimeUpdate(rating=10, seasons=6)  # Integer rating
+        updated_anime = crud.update_anime(db_session, user.id, anime.id, anime_update)
+        
+        assert updated_anime.rating == 10.0
+        assert updated_anime.seasons == 6
+    
+    def test_create_anime_with_decimal_rating(self, db_session):
+        """Test creating an anime with decimal rating."""
+        user_create = schemas.UserCreate(
+            email="animedecimaltest@example.com",
+            username="animedecimaltest",
+            password="password123"
+        )
+        user = crud.create_user(db_session, user_create, "hashed", "token")
+        
+        anime_data = {
+            "title": "Test Anime",
+            "year": 2020,
+            "rating": 8.7  # Decimal rating
+        }
+        anime_create = schemas.AnimeCreate(**anime_data)
+        anime = crud.create_anime(db_session, user.id, anime_create)
+        
+        assert anime.rating == 8.7
+        assert isinstance(anime.rating, float)
+    
+    def test_update_anime_with_decimal_rating(self, db_session, test_anime_data):
+        """Test updating an anime with decimal rating."""
+        user_create = schemas.UserCreate(
+            email="animedecimalupdatetest@example.com",
+            username="animedecimalupdatetest",
+            password="password123"
+        )
+        user = crud.create_user(db_session, user_create, "hashed", "token")
+        
+        anime_create = schemas.AnimeCreate(**test_anime_data)
+        anime = crud.create_anime(db_session, user.id, anime_create)
+        
+        # Update with decimal rating
+        anime_update = schemas.AnimeUpdate(rating=7.3)
+        updated_anime = crud.update_anime(db_session, user.id, anime.id, anime_update)
+        
+        assert updated_anime.rating == 7.3
+        assert isinstance(updated_anime.rating, float)
+    
+    def test_delete_anime(self, db_session, test_anime_data):
+        """Test deleting an anime."""
+        user_create = schemas.UserCreate(
+            email="animedeletetest@example.com",
+            username="animedeletetest",
+            password="password123"
+        )
+        user = crud.create_user(db_session, user_create, "hashed", "token")
+        
+        anime_create = schemas.AnimeCreate(**test_anime_data)
+        anime = crud.create_anime(db_session, user.id, anime_create)
+        
+        deleted_anime = crud.delete_anime(db_session, user.id, anime.id)
+        
+        assert deleted_anime is not None
+        assert deleted_anime.id == anime.id
+        
+        # Verify it's deleted
+        found_anime = crud.get_anime_by_id(db_session, user.id, anime.id)
+        assert found_anime is None
+    
+    def test_get_anime_by_id(self, db_session, test_anime_data):
+        """Test retrieving a specific anime by ID."""
+        user_create = schemas.UserCreate(
+            email="animegetbyidtest@example.com",
+            username="animegetbyidtest",
+            password="password123"
+        )
+        user = crud.create_user(db_session, user_create, "hashed", "token")
+        
+        anime_create = schemas.AnimeCreate(**test_anime_data)
+        anime = crud.create_anime(db_session, user.id, anime_create)
+        
+        found_anime = crud.get_anime_by_id(db_session, user.id, anime.id)
+        
+        assert found_anime is not None
+        assert found_anime.id == anime.id
+        assert found_anime.title == test_anime_data["title"]
+    
+    def test_anime_search(self, db_session, test_anime_data):
+        """Test searching anime."""
+        user_create = schemas.UserCreate(
+            email="animesearchtest@example.com",
+            username="animesearchtest",
+            password="password123"
+        )
+        user = crud.create_user(db_session, user_create, "hashed", "token")
+        
+        anime_create = schemas.AnimeCreate(**test_anime_data)
+        crud.create_anime(db_session, user.id, anime_create)
+        
+        # Search by title
+        anime = crud.get_anime(db_session, user.id, search="Attack")
+        
+        assert len(anime) == 1
+        assert "Attack" in anime[0].title
+    
+    def test_anime_sorting(self, db_session, test_anime_data):
+        """Test sorting anime."""
+        user_create = schemas.UserCreate(
+            email="animesorttest@example.com",
+            username="animesorttest",
+            password="password123"
+        )
+        user = crud.create_user(db_session, user_create, "hashed", "token")
+        
+        # Create multiple anime with different ratings
+        anime1_data = test_anime_data.copy()
+        anime1_data["title"] = "Anime A"
+        anime1_data["rating"] = 5
+        anime1 = crud.create_anime(db_session, user.id, schemas.AnimeCreate(**anime1_data))
+        
+        anime2_data = test_anime_data.copy()
+        anime2_data["title"] = "Anime B"
+        anime2_data["rating"] = 9
+        anime2 = crud.create_anime(db_session, user.id, schemas.AnimeCreate(**anime2_data))
+        
+        # Sort by rating descending
+        anime = crud.get_anime(db_session, user.id, sort_by="rating", order="desc")
+        
+        assert len(anime) >= 2
+        assert anime[0].rating >= anime[1].rating
+
