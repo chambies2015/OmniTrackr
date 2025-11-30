@@ -739,8 +739,10 @@ async def get_robots():
     """Serve robots.txt for SEO."""
     site_url = os.getenv("SITE_URL", "https://omnitrackr.xyz")
     
-    robots = f"""User-agent: *
+    robots = f"""User-agent: Mediapartners-Google
 Allow: /
+
+User-agent: *
 Disallow: /auth/
 Disallow: /api/
 Disallow: /static/credentials.js
