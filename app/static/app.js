@@ -76,9 +76,9 @@ async function loadMovies() {
   if (isLoadingMovies) {
     return;
   }
-  
+
   isLoadingMovies = true;
-  
+
   try {
     const search = document.getElementById('movieSearch').value;
     const sortVal = document.getElementById('movieSort').value;
@@ -112,8 +112,8 @@ async function loadMovies() {
           <td>${movie.review ? movie.review : ''}</td>
           <td><a href="https://www.imdb.com/find?q=${encodeURIComponent(movie.title)}" target="_blank">Search</a></td>
           <td>
-            <button class="action-btn" onclick="enableMovieEdit(this, ${movie.id}, '${encodeURIComponent(movie.title)}', '${encodeURIComponent(movie.director)}', ${movie.year}, ${movie.rating ?? 'null'}, ${movie.watched}, '${movie.review ? encodeURIComponent(movie.review) : ''}')">Edit</button>
-            <button class="action-btn" onclick="deleteMovie(${movie.id})">Delete</button>
+            <button class="action-btn edit-movie-btn" data-movie-id="${movie.id}" data-movie-title="${escapeHtml(movie.title)}" data-movie-director="${escapeHtml(movie.director)}" data-movie-year="${movie.year}" data-movie-rating="${movie.rating ?? ''}" data-movie-watched="${movie.watched}" data-movie-review="${escapeHtml(movie.review || '')}">Edit</button>
+            <button class="action-btn delete-movie-btn" data-movie-id="${movie.id}">Delete</button>
           </td>
         `;
         tbody.appendChild(tr);
@@ -151,7 +151,7 @@ function displayMoviePoster(id, posterUrl, title = null) {
 async function fetchMoviePoster(id, title, year) {
   // Create unique key for deduplication
   const cacheKey = `movie-${title}-${year}`;
-  
+
   // Check if already fetching this poster
   if (posterFetchInProgress.has(cacheKey)) {
     // Wait for existing fetch to complete
@@ -168,14 +168,14 @@ async function fetchMoviePoster(id, title, year) {
     }
     return;
   }
-  
+
   // Mark as in progress
   posterFetchInProgress.add(cacheKey);
-  
+
   try {
     const url = `https://www.omdbapi.com/?t=${encodeURIComponent(title)}&y=${encodeURIComponent(year)}&apikey=${OMDB_API_KEY}`;
     const res = await fetch(url);
-    
+
     if (!res.ok) {
       // Handle rate limiting (429 Too Many Requests)
       if (res.status === 429) {
@@ -184,21 +184,21 @@ async function fetchMoviePoster(id, title, year) {
       }
       return;
     }
-    
+
     const data = await res.json();
-    
+
     // Check for API errors
     if (data.Error) {
       console.warn(`OMDB API error for "${title}": ${data.Error}`);
       return;
     }
-    
+
     if (data && data.Poster && data.Poster !== 'N/A') {
       // Save the poster URL to the database
       await saveMoviePosterUrl(id, data.Poster);
       // Display the poster
       displayMoviePoster(id, data.Poster, title);
-      
+
       // Store result in queue for other waiting requests
       posterFetchQueue.set(cacheKey, Promise.resolve(data.Poster));
       return data.Poster;
@@ -234,15 +234,19 @@ async function deleteMovie(id) {
   if (res.ok) loadMovies();
 }
 
-window.enableMovieEdit = function (btn, id, encTitle, encDirector, year, rating, watched, encReview) {
+window.enableMovieEdit = function (btn) {
   if (editingRowId !== null) return;
+  const id = parseInt(btn.dataset.movieId, 10);
   editingRowId = id;
   const row = btn.closest('tr');
   editingRowElement = row;
-  const title = decodeURIComponent(encTitle);
-  const director = decodeURIComponent(encDirector);
-  const ratingVal = (rating !== null && rating !== 'null') ? rating : '';
-  const review = encReview ? decodeURIComponent(encReview) : '';
+  // Read data from dataset (browsers handle this securely)
+  const title = btn.dataset.movieTitle || '';
+  const director = btn.dataset.movieDirector || '';
+  const year = parseInt(btn.dataset.movieYear, 10);
+  const ratingVal = btn.dataset.movieRating || '';
+  const watched = btn.dataset.movieWatched === 'true';
+  const review = btn.dataset.movieReview || '';
   row.cells[1].innerHTML = `<input type="text" id="edit-movie-title" value="${escapeHtml(title)}">`;
   row.cells[2].innerHTML = `<input type="text" id="edit-movie-director" value="${escapeHtml(director)}">`;
   row.cells[3].innerHTML = `<input type="number" id="edit-movie-year" value="${escapeHtml(year)}">`;
@@ -255,19 +259,20 @@ window.enableMovieEdit = function (btn, id, encTitle, encDirector, year, rating,
   if (movieReviewTextarea) {
     movieReviewTextarea.style.height = 'auto';
     movieReviewTextarea.style.height = Math.max(60, movieReviewTextarea.scrollHeight) + 'px';
-    movieReviewTextarea.addEventListener('input', function() {
+    movieReviewTextarea.addEventListener('input', function () {
       this.style.height = 'auto';
       this.style.height = Math.max(60, this.scrollHeight) + 'px';
     });
   }
   row.cells[8].innerHTML = `
-    <button class="action-btn" onclick="saveMovieEdit(${id})">Save</button>
-    <button class="action-btn" onclick="cancelMovieEdit()">Cancel</button>
+    <button class="action-btn save-movie-btn" data-movie-id="${id}">Save</button>
+    <button class="action-btn cancel-movie-btn">Cancel</button>
   `;
   disableOtherRowButtons(row, 'movieTable');
 };
 
-window.saveMovieEdit = async function (id) {
+window.saveMovieEdit = async function (btn) {
+  const id = parseInt(btn.dataset.movieId, 10);
   if (editingRowId !== id) return;
   const updated = {
     title: document.getElementById('edit-movie-title').value,
@@ -307,9 +312,9 @@ async function loadTVShows() {
   if (isLoadingTVShows) {
     return;
   }
-  
+
   isLoadingTVShows = true;
-  
+
   try {
     const search = document.getElementById('tvSearch').value;
     const sortVal = document.getElementById('tvSort').value;
@@ -344,8 +349,8 @@ async function loadTVShows() {
           <td>${tvShow.review ? tvShow.review : ''}</td>
           <td><a href="https://www.imdb.com/find?q=${encodeURIComponent(tvShow.title)}" target="_blank">Search</a></td>
           <td>
-            <button class="action-btn" onclick="enableTVEdit(this, ${tvShow.id}, '${encodeURIComponent(tvShow.title)}', ${tvShow.year}, ${tvShow.seasons ?? 'null'}, ${tvShow.episodes ?? 'null'}, ${tvShow.rating ?? 'null'}, ${tvShow.watched}, '${tvShow.review ? encodeURIComponent(tvShow.review) : ''}')">Edit</button>
-            <button class="action-btn" onclick="deleteTVShow(${tvShow.id})">Delete</button>
+            <button class="action-btn edit-tv-btn" data-tv-id="${tvShow.id}" data-tv-title="${escapeHtml(tvShow.title)}" data-tv-year="${tvShow.year}" data-tv-seasons="${tvShow.seasons ?? ''}" data-tv-episodes="${tvShow.episodes ?? ''}" data-tv-rating="${tvShow.rating ?? ''}" data-tv-watched="${tvShow.watched}" data-tv-review="${escapeHtml(tvShow.review || '')}">Edit</button>
+            <button class="action-btn delete-tv-btn" data-tv-id="${tvShow.id}">Delete</button>
           </td>
         `;
         tbody.appendChild(tr);
@@ -371,9 +376,9 @@ async function loadAnime() {
   if (isLoadingAnime) {
     return;
   }
-  
+
   isLoadingAnime = true;
-  
+
   try {
     const search = document.getElementById('animeSearch').value;
     const sortVal = document.getElementById('animeSort').value;
@@ -408,8 +413,8 @@ async function loadAnime() {
           <td>${animeItem.review ? animeItem.review : ''}</td>
           <td><a href="https://www.imdb.com/find?q=${encodeURIComponent(animeItem.title)}" target="_blank">Search</a></td>
           <td>
-            <button class="action-btn" onclick="enableAnimeEdit(this, ${animeItem.id}, '${encodeURIComponent(animeItem.title)}', ${animeItem.year}, ${animeItem.seasons ?? 'null'}, ${animeItem.episodes ?? 'null'}, ${animeItem.rating ?? 'null'}, ${animeItem.watched}, '${animeItem.review ? encodeURIComponent(animeItem.review) : ''}')">Edit</button>
-            <button class="action-btn" onclick="deleteAnime(${animeItem.id})">Delete</button>
+            <button class="action-btn edit-anime-btn" data-anime-id="${animeItem.id}" data-anime-title="${escapeHtml(animeItem.title)}" data-anime-year="${animeItem.year}" data-anime-seasons="${animeItem.seasons ?? ''}" data-anime-episodes="${animeItem.episodes ?? ''}" data-anime-rating="${animeItem.rating ?? ''}" data-anime-watched="${animeItem.watched}" data-anime-review="${escapeHtml(animeItem.review || '')}">Edit</button>
+            <button class="action-btn delete-anime-btn" data-anime-id="${animeItem.id}">Delete</button>
           </td>
         `;
         tbody.appendChild(tr);
@@ -482,7 +487,7 @@ function displayTVPoster(id, posterUrl, title = null) {
 async function fetchTVPoster(id, title, year) {
   // Create unique key for deduplication
   const cacheKey = `tv-${title}-${year}`;
-  
+
   // Check if already fetching this poster
   if (posterFetchInProgress.has(cacheKey)) {
     // Wait for existing fetch to complete
@@ -499,14 +504,14 @@ async function fetchTVPoster(id, title, year) {
     }
     return;
   }
-  
+
   // Mark as in progress
   posterFetchInProgress.add(cacheKey);
-  
+
   try {
     const url = `https://www.omdbapi.com/?t=${encodeURIComponent(title)}&y=${encodeURIComponent(year)}&apikey=${OMDB_API_KEY}`;
     const res = await fetch(url);
-    
+
     if (!res.ok) {
       // Handle rate limiting (429 Too Many Requests)
       if (res.status === 429) {
@@ -515,21 +520,21 @@ async function fetchTVPoster(id, title, year) {
       }
       return;
     }
-    
+
     const data = await res.json();
-    
+
     // Check for API errors
     if (data.Error) {
       console.warn(`OMDB API error for "${title}": ${data.Error}`);
       return;
     }
-    
+
     if (data && data.Poster && data.Poster !== 'N/A') {
       // Save the poster URL to the database
       await saveTVPosterUrl(id, data.Poster);
       // Display the poster
       displayTVPoster(id, data.Poster, title);
-      
+
       // Store result in queue for other waiting requests
       posterFetchQueue.set(cacheKey, Promise.resolve(data.Poster));
       return data.Poster;
@@ -562,7 +567,7 @@ async function saveTVPosterUrl(id, posterUrl) {
 async function fetchAnimePoster(id, title, year) {
   // Create unique key for deduplication
   const cacheKey = `anime-${title}-${year}`;
-  
+
   // Check if already fetching this poster
   if (posterFetchInProgress.has(cacheKey)) {
     // Wait for existing fetch to complete
@@ -579,14 +584,14 @@ async function fetchAnimePoster(id, title, year) {
     }
     return;
   }
-  
+
   // Mark as in progress
   posterFetchInProgress.add(cacheKey);
-  
+
   try {
     const url = `https://www.omdbapi.com/?t=${encodeURIComponent(title)}&y=${encodeURIComponent(year)}&apikey=${OMDB_API_KEY}`;
     const res = await fetch(url);
-    
+
     if (!res.ok) {
       // Handle rate limiting (429 Too Many Requests)
       if (res.status === 429) {
@@ -595,21 +600,21 @@ async function fetchAnimePoster(id, title, year) {
       }
       return;
     }
-    
+
     const data = await res.json();
-    
+
     // Check for API errors
     if (data.Error) {
       console.warn(`OMDB API error for "${title}": ${data.Error}`);
       return;
     }
-    
+
     if (data && data.Poster && data.Poster !== 'N/A') {
       // Save the poster URL to the database
       await saveAnimePosterUrl(id, data.Poster);
       // Display the poster
       displayAnimePoster(id, data.Poster, title);
-      
+
       // Store result in queue for other waiting requests
       posterFetchQueue.set(cacheKey, Promise.resolve(data.Poster));
       return data.Poster;
@@ -645,18 +650,24 @@ async function deleteAnime(id) {
   if (res.ok) loadAnime();
 }
 
-window.enableAnimeEdit = function (btn, id, encTitle, year, seasons, episodes, rating, watched, encReview) {
+window.enableAnimeEdit = function (btn) {
   if (editingRowId !== null) return;
+  const id = parseInt(btn.dataset.animeId, 10);
   editingRowId = id;
   const row = btn.closest('tr');
   editingRowElement = row;
-  const title = decodeURIComponent(encTitle);
-  const ratingVal = (rating !== null && rating !== 'null') ? rating : '';
-  const review = encReview ? decodeURIComponent(encReview) : '';
+  // Read data from dataset (browsers handle this securely)
+  const title = btn.dataset.animeTitle || '';
+  const year = parseInt(btn.dataset.animeYear, 10);
+  const seasons = btn.dataset.animeSeasons || '';
+  const episodes = btn.dataset.animeEpisodes || '';
+  const ratingVal = btn.dataset.animeRating || '';
+  const watched = btn.dataset.animeWatched === 'true';
+  const review = btn.dataset.animeReview || '';
   row.cells[1].innerHTML = `<input type="text" id="edit-anime-title" value="${escapeHtml(title)}">`;
   row.cells[2].innerHTML = `<input type="number" id="edit-anime-year" value="${escapeHtml(year)}">`;
-  row.cells[3].innerHTML = `<input type="number" id="edit-anime-seasons" value="${escapeHtml(seasons !== 'null' ? seasons : '')}">`;
-  row.cells[4].innerHTML = `<input type="number" id="edit-anime-episodes" value="${escapeHtml(episodes !== 'null' ? episodes : '')}">`;
+  row.cells[3].innerHTML = `<input type="number" id="edit-anime-seasons" value="${escapeHtml(seasons)}">`;
+  row.cells[4].innerHTML = `<input type="number" id="edit-anime-episodes" value="${escapeHtml(episodes)}">`;
   row.cells[5].innerHTML = `<input type="number" min="0" max="10" step="0.1" id="edit-anime-rating" value="${escapeHtml(ratingVal)}">`;
   row.cells[6].innerHTML = `<input type="checkbox" id="edit-anime-watched" ${watched ? 'checked' : ''}>`;
   // Escape HTML for textarea content
@@ -666,19 +677,20 @@ window.enableAnimeEdit = function (btn, id, encTitle, year, seasons, episodes, r
   if (animeReviewTextarea) {
     animeReviewTextarea.style.height = 'auto';
     animeReviewTextarea.style.height = Math.max(60, animeReviewTextarea.scrollHeight) + 'px';
-    animeReviewTextarea.addEventListener('input', function() {
+    animeReviewTextarea.addEventListener('input', function () {
       this.style.height = 'auto';
       this.style.height = Math.max(60, this.scrollHeight) + 'px';
     });
   }
   row.cells[9].innerHTML = `
-    <button class="action-btn" onclick="saveAnimeEdit(${id})">Save</button>
-    <button class="action-btn" onclick="cancelAnimeEdit()">Cancel</button>
+    <button class="action-btn save-anime-btn" data-anime-id="${id}">Save</button>
+    <button class="action-btn cancel-anime-btn">Cancel</button>
   `;
   disableOtherRowButtons(row, 'animeTable');
 };
 
-window.saveAnimeEdit = async function (id) {
+window.saveAnimeEdit = async function (btn) {
+  const id = parseInt(btn.dataset.animeId, 10);
   if (editingRowId !== id) return;
   const updated = {
     title: document.getElementById('edit-anime-title').value,
@@ -719,18 +731,24 @@ async function deleteTVShow(id) {
   if (res.ok) loadTVShows();
 }
 
-window.enableTVEdit = function (btn, id, encTitle, year, seasons, episodes, rating, watched, encReview) {
+window.enableTVEdit = function (btn) {
   if (editingRowId !== null) return;
+  const id = parseInt(btn.dataset.tvId, 10);
   editingRowId = id;
   const row = btn.closest('tr');
   editingRowElement = row;
-  const title = decodeURIComponent(encTitle);
-  const ratingVal = (rating !== null && rating !== 'null') ? rating : '';
-  const review = encReview ? decodeURIComponent(encReview) : '';
+  // Read data from dataset (browsers handle this securely)
+  const title = btn.dataset.tvTitle || '';
+  const year = parseInt(btn.dataset.tvYear, 10);
+  const seasons = btn.dataset.tvSeasons || '';
+  const episodes = btn.dataset.tvEpisodes || '';
+  const ratingVal = btn.dataset.tvRating || '';
+  const watched = btn.dataset.tvWatched === 'true';
+  const review = btn.dataset.tvReview || '';
   row.cells[1].innerHTML = `<input type="text" id="edit-tv-title" value="${escapeHtml(title)}">`;
   row.cells[2].innerHTML = `<input type="number" id="edit-tv-year" value="${escapeHtml(year)}">`;
-  row.cells[3].innerHTML = `<input type="number" id="edit-tv-seasons" value="${escapeHtml(seasons !== 'null' ? seasons : '')}">`;
-  row.cells[4].innerHTML = `<input type="number" id="edit-tv-episodes" value="${escapeHtml(episodes !== 'null' ? episodes : '')}">`;
+  row.cells[3].innerHTML = `<input type="number" id="edit-tv-seasons" value="${escapeHtml(seasons)}">`;
+  row.cells[4].innerHTML = `<input type="number" id="edit-tv-episodes" value="${escapeHtml(episodes)}">`;
   row.cells[5].innerHTML = `<input type="number" min="0" max="10" step="0.1" id="edit-tv-rating" value="${escapeHtml(ratingVal)}">`;
   row.cells[6].innerHTML = `<input type="checkbox" id="edit-tv-watched" ${watched ? 'checked' : ''}>`;
   // Escape HTML for textarea content
@@ -740,19 +758,20 @@ window.enableTVEdit = function (btn, id, encTitle, year, seasons, episodes, rati
   if (tvReviewTextarea) {
     tvReviewTextarea.style.height = 'auto';
     tvReviewTextarea.style.height = Math.max(60, tvReviewTextarea.scrollHeight) + 'px';
-    tvReviewTextarea.addEventListener('input', function() {
+    tvReviewTextarea.addEventListener('input', function () {
       this.style.height = 'auto';
       this.style.height = Math.max(60, this.scrollHeight) + 'px';
     });
   }
   row.cells[9].innerHTML = `
-    <button class="action-btn" onclick="saveTVEdit(${id})">Save</button>
-    <button class="action-btn" onclick="cancelTVEdit()">Cancel</button>
+    <button class="action-btn save-tv-btn" data-tv-id="${id}">Save</button>
+    <button class="action-btn cancel-tv-btn">Cancel</button>
   `;
   disableOtherRowButtons(row, 'tvShowTable');
 };
 
-window.saveTVEdit = async function (id) {
+window.saveTVEdit = async function (btn) {
+  const id = parseInt(btn.dataset.tvId, 10);
   if (editingRowId !== id) return;
   const updated = {
     title: document.getElementById('edit-tv-title').value,
@@ -1013,25 +1032,25 @@ function displayStatistics(stats) {
 function animateValue(elementId, start, end, duration) {
   const element = document.getElementById(elementId);
   if (!element) return;
-  
+
   const startTime = performance.now();
   const isPercentage = elementId === 'completionPercentage';
-  
+
   function update(currentTime) {
     const elapsed = currentTime - startTime;
     const progress = Math.min(elapsed / duration, 1);
     const easeOut = 1 - Math.pow(1 - progress, 3);
     const current = Math.floor(start + (end - start) * easeOut);
-    
+
     element.textContent = isPercentage ? current + '%' : current;
-    
+
     if (progress < 1) {
       requestAnimationFrame(update);
     } else {
       element.textContent = isPercentage ? end + '%' : end;
     }
   }
-  
+
   requestAnimationFrame(update);
 }
 
@@ -1042,24 +1061,24 @@ function animatePercentage(elementId, start, end, duration) {
 function animateDecimal(elementId, start, end, duration) {
   const element = document.getElementById(elementId);
   if (!element) return;
-  
+
   const startTime = performance.now();
-  
+
   function update(currentTime) {
     const elapsed = currentTime - startTime;
     const progress = Math.min(elapsed / duration, 1);
     const easeOut = 1 - Math.pow(1 - progress, 3);
     const current = start + (end - start) * easeOut;
-    
+
     element.textContent = current.toFixed(1);
-    
+
     if (progress < 1) {
       requestAnimationFrame(update);
     } else {
       element.textContent = end.toFixed(1);
     }
   }
-  
+
   requestAnimationFrame(update);
 }
 
@@ -1079,17 +1098,17 @@ function displayRatingDistribution(distribution) {
     barDiv.className = 'rating-bar';
     barDiv.style.opacity = '0';
     barDiv.style.transform = 'translateX(-20px)';
-    
+
     const labelDiv = document.createElement('div');
     labelDiv.className = 'rating-bar-label';
     labelDiv.textContent = rating;
-    
+
     // Create a wrapper for the fill bar to control its width properly
     const fillWrapper = document.createElement('div');
     fillWrapper.style.flex = '1';
     fillWrapper.style.minWidth = '0';
     fillWrapper.style.position = 'relative';
-    
+
     const fillDiv = document.createElement('div');
     fillDiv.className = 'rating-bar-fill';
     fillDiv.style.width = '0%';
@@ -1097,18 +1116,18 @@ function displayRatingDistribution(distribution) {
     fillDiv.style.left = '0';
     fillDiv.style.top = '0';
     fillDiv.style.bottom = '0';
-    
+
     fillWrapper.appendChild(fillDiv);
-    
+
     const countDiv = document.createElement('div');
     countDiv.className = 'rating-bar-count';
     countDiv.textContent = count;
-    
+
     barDiv.appendChild(labelDiv);
     barDiv.appendChild(fillWrapper);
     barDiv.appendChild(countDiv);
     container.appendChild(barDiv);
-    
+
     // Animate bar appearance
     setTimeout(() => {
       barDiv.style.transition = 'opacity 0.3s ease, transform 0.3s ease';
@@ -1140,7 +1159,7 @@ function displayHighestRated(items) {
       <div class="rated-item-rating">${parseFloat(item.rating).toFixed(1)}/10</div>
     `;
     container.appendChild(itemDiv);
-    
+
     // Animate item appearance
     setTimeout(() => {
       itemDiv.style.transition = 'opacity 0.3s ease, transform 0.3s ease';
@@ -1170,17 +1189,17 @@ function displayDecadeStats(decadeStats) {
     barDiv.className = 'decade-bar';
     barDiv.style.opacity = '0';
     barDiv.style.transform = 'translateX(-20px)';
-    
+
     const labelDiv = document.createElement('div');
     labelDiv.className = 'decade-bar-label';
     labelDiv.textContent = decade;
-    
+
     // Create a wrapper for the fill bar to control its width properly
     const fillWrapper = document.createElement('div');
     fillWrapper.style.flex = '1';
     fillWrapper.style.minWidth = '0';
     fillWrapper.style.position = 'relative';
-    
+
     const fillDiv = document.createElement('div');
     fillDiv.className = 'decade-bar-fill';
     fillDiv.style.width = '0%';
@@ -1188,18 +1207,18 @@ function displayDecadeStats(decadeStats) {
     fillDiv.style.left = '0';
     fillDiv.style.top = '0';
     fillDiv.style.bottom = '0';
-    
+
     fillWrapper.appendChild(fillDiv);
-    
+
     const countDiv = document.createElement('div');
     countDiv.className = 'decade-bar-count';
     countDiv.textContent = total;
-    
+
     barDiv.appendChild(labelDiv);
     barDiv.appendChild(fillWrapper);
     barDiv.appendChild(countDiv);
     container.appendChild(barDiv);
-    
+
     // Animate bar appearance
     setTimeout(() => {
       barDiv.style.transition = 'opacity 0.3s ease, transform 0.3s ease';
@@ -1231,7 +1250,7 @@ function displayTopDirectors(directors) {
       <div class="director-rating">${director.count} ${director.count === 1 ? 'movie' : 'movies'}</div>
     `;
     container.appendChild(directorDiv);
-    
+
     // Animate item appearance
     setTimeout(() => {
       directorDiv.style.transition = 'opacity 0.3s ease, transform 0.3s ease';
@@ -1260,7 +1279,7 @@ function displayHighestRatedDirectors(directors) {
       <div class="director-rating">${director.avg_rating.toFixed(1)}/10 <span style="opacity: 0.7; font-size: 0.9em;">(${director.count} ${director.count === 1 ? 'movie' : 'movies'})</span></div>
     `;
     container.appendChild(directorDiv);
-    
+
     // Animate item appearance
     setTimeout(() => {
       directorDiv.style.transition = 'opacity 0.3s ease, transform 0.3s ease';
@@ -1319,7 +1338,7 @@ document.getElementById('importAnimeFile').addEventListener('change', (e) => imp
 // Auto-resize textarea for movie review
 const movieReviewTextarea = document.getElementById('movieReview');
 if (movieReviewTextarea) {
-  movieReviewTextarea.addEventListener('input', function() {
+  movieReviewTextarea.addEventListener('input', function () {
     this.style.height = 'auto';
     this.style.height = Math.max(60, this.scrollHeight) + 'px';
   });
@@ -1328,7 +1347,7 @@ if (movieReviewTextarea) {
 // Auto-resize textarea for TV show review
 const tvReviewTextarea = document.getElementById('tvReview');
 if (tvReviewTextarea) {
-  tvReviewTextarea.addEventListener('input', function() {
+  tvReviewTextarea.addEventListener('input', function () {
     this.style.height = 'auto';
     this.style.height = Math.max(60, this.scrollHeight) + 'px';
   });
@@ -1337,17 +1356,17 @@ if (tvReviewTextarea) {
 // Auto-resize textarea for anime review
 const animeReviewTextarea = document.getElementById('animeReview');
 if (animeReviewTextarea) {
-  animeReviewTextarea.addEventListener('input', function() {
+  animeReviewTextarea.addEventListener('input', function () {
     this.style.height = 'auto';
     this.style.height = Math.max(60, this.scrollHeight) + 'px';
   });
 }
 
 // Collapsible form toggle function
-window.toggleCollapsible = function(formId) {
+window.toggleCollapsible = function (formId) {
   const content = document.getElementById(formId + 'Content');
   const icon = document.getElementById(formId + 'Icon');
-  
+
   if (content.style.display === 'none' || !content.classList.contains('expanded')) {
     content.style.display = 'block';
     content.classList.add('expanded');
@@ -1365,13 +1384,13 @@ window.toggleCollapsible = function(formId) {
 };
 
 // Account Management Functions
-window.openAccountModal = async function() {
+window.openAccountModal = async function () {
   const modal = document.getElementById('accountModal');
   modal.style.display = 'flex';
   await loadAccountInfo();
 }
 
-window.closeAccountModal = function() {
+window.closeAccountModal = function () {
   const modal = document.getElementById('accountModal');
   modal.style.display = 'none';
   // Clear all form errors and success messages
@@ -1386,14 +1405,14 @@ window.closeAccountModal = function() {
   document.getElementById('deactivateAccountForm').reset();
 }
 
-window.loadAccountInfo = async function() {
+window.loadAccountInfo = async function () {
   try {
     const response = await authenticatedFetch(`${API_BASE}/account/me`);
     if (response.ok) {
       const user = await response.json();
       document.getElementById('accountUsername').textContent = user.username;
       document.getElementById('accountEmail').textContent = user.email;
-      
+
       // Format created date
       if (user.created_at) {
         const createdDate = new Date(user.created_at);
@@ -1405,7 +1424,7 @@ window.loadAccountInfo = async function() {
       } else {
         document.getElementById('accountCreated').textContent = 'Unknown';
       }
-      
+
       // Email verification status
       document.getElementById('accountVerified').textContent = user.is_verified ? '✓ Verified' : '✗ Not Verified';
       document.getElementById('accountVerified').style.color = user.is_verified ? '#4caf50' : '#f44336';
@@ -1417,34 +1436,34 @@ window.loadAccountInfo = async function() {
   }
 }
 
-window.changeUsername = async function(event) {
+window.changeUsername = async function (event) {
   event.preventDefault();
   const newUsername = document.getElementById('newUsername').value;
   const password = document.getElementById('usernamePassword').value;
   const errorEl = document.getElementById('usernameError');
   const successEl = document.getElementById('usernameSuccess');
-  
+
   errorEl.textContent = '';
   errorEl.style.display = 'none';
   successEl.textContent = '';
   successEl.style.display = 'none';
-  
+
   try {
     const response = await authenticatedFetch(`${API_BASE}/account/username`, {
       method: 'PUT',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ new_username: newUsername, password: password })
     });
-    
+
     if (response.ok) {
       const updatedUser = await response.json();
-      
+
       // Close the modal first
       closeAccountModal();
-      
+
       // Show success message and inform user to relogin
       alert('Username changed successfully! Please login again with your new username.');
-      
+
       // Force logout without confirmation (JWT token contains old username and is now invalid)
       // Use clearAuth from auth.js (available globally)
       if (typeof clearAuth === 'function') {
@@ -1466,25 +1485,25 @@ window.changeUsername = async function(event) {
   }
 }
 
-window.changeEmail = async function(event) {
+window.changeEmail = async function (event) {
   event.preventDefault();
   const newEmail = document.getElementById('newEmail').value;
   const password = document.getElementById('emailPassword').value;
   const errorEl = document.getElementById('emailError');
   const successEl = document.getElementById('emailSuccess');
-  
+
   errorEl.textContent = '';
   errorEl.style.display = 'none';
   successEl.textContent = '';
   successEl.style.display = 'none';
-  
+
   try {
     const response = await authenticatedFetch(`${API_BASE}/account/email`, {
       method: 'PUT',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ new_email: newEmail, password: password })
     });
-    
+
     if (response.ok) {
       const data = await response.json();
       successEl.textContent = data.message || 'Verification email sent to new address. Please check your email.';
@@ -1501,38 +1520,38 @@ window.changeEmail = async function(event) {
   }
 }
 
-window.changePassword = async function(event) {
+window.changePassword = async function (event) {
   event.preventDefault();
   const currentPassword = document.getElementById('currentPassword').value;
   const newPassword = document.getElementById('accountNewPassword').value;
   const confirmPassword = document.getElementById('accountConfirmNewPassword').value;
   const errorEl = document.getElementById('passwordError');
   const successEl = document.getElementById('passwordSuccess');
-  
+
   errorEl.textContent = '';
   errorEl.style.display = 'none';
   successEl.textContent = '';
   successEl.style.display = 'none';
-  
+
   if (newPassword !== confirmPassword) {
     errorEl.textContent = 'New passwords do not match';
     errorEl.style.display = 'block';
     return;
   }
-  
+
   if (newPassword.length < 6) {
     errorEl.textContent = 'Password must be at least 6 characters';
     errorEl.style.display = 'block';
     return;
   }
-  
+
   try {
     const response = await authenticatedFetch(`${API_BASE}/account/password`, {
       method: 'PUT',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ current_password: currentPassword, new_password: newPassword })
     });
-    
+
     if (response.ok) {
       const data = await response.json();
       successEl.textContent = data.message || 'Password changed successfully!';
@@ -1549,25 +1568,25 @@ window.changePassword = async function(event) {
   }
 }
 
-window.deactivateAccount = async function(event) {
+window.deactivateAccount = async function (event) {
   event.preventDefault();
   const password = document.getElementById('deactivatePassword').value;
   const errorEl = document.getElementById('deactivateError');
-  
+
   errorEl.textContent = '';
   errorEl.style.display = 'none';
-  
+
   if (!confirm('Are you sure you want to deactivate your account? You can reactivate within 90 days, but after that your account will be permanently deleted.')) {
     return;
   }
-  
+
   try {
     const response = await authenticatedFetch(`${API_BASE}/account/deactivate`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ password: password })
     });
-    
+
     if (response.ok) {
       const data = await response.json();
       alert(data.message || 'Account deactivated successfully. You will be logged out.');
@@ -1584,7 +1603,7 @@ window.deactivateAccount = async function(event) {
 }
 
 // Privacy Settings Functions
-window.loadPrivacySettings = async function() {
+window.loadPrivacySettings = async function () {
   try {
     const response = await authenticatedFetch(`${API_BASE}/account/privacy`);
     if (response.ok) {
@@ -1599,22 +1618,22 @@ window.loadPrivacySettings = async function() {
   }
 }
 
-window.updatePrivacySettings = async function(event) {
+window.updatePrivacySettings = async function (event) {
   event.preventDefault();
-  
+
   const moviesPrivate = document.getElementById('moviesPrivate').checked;
   const tvShowsPrivate = document.getElementById('tvShowsPrivate').checked;
   const animePrivate = document.getElementById('animePrivate').checked;
   const statisticsPrivate = document.getElementById('statisticsPrivate').checked;
-  
+
   const errorDiv = document.getElementById('privacyError');
   const successDiv = document.getElementById('privacySuccess');
-  
+
   errorDiv.textContent = '';
   errorDiv.style.display = 'none';
   successDiv.textContent = '';
   successDiv.style.display = 'none';
-  
+
   try {
     const response = await authenticatedFetch(`${API_BASE}/account/privacy`, {
       method: 'PUT',
@@ -1628,7 +1647,7 @@ window.updatePrivacySettings = async function(event) {
         statistics_private: statisticsPrivate
       })
     });
-    
+
     if (response.ok) {
       successDiv.textContent = 'Privacy settings updated successfully';
       successDiv.style.display = 'block';
@@ -1648,10 +1667,10 @@ window.updatePrivacySettings = async function(event) {
 }
 
 // Profile Picture Functions
-window.handleProfilePictureSelect = async function(event) {
+window.handleProfilePictureSelect = async function (event) {
   const file = event.target.files[0];
   if (!file) return;
-  
+
   // Validate file type
   const allowedTypes = ['image/jpeg', 'image/jpg', 'image/png', 'image/gif', 'image/webp'];
   if (!allowedTypes.includes(file.type)) {
@@ -1659,39 +1678,39 @@ window.handleProfilePictureSelect = async function(event) {
     document.getElementById('profilePictureError').style.display = 'block';
     return;
   }
-  
+
   // Validate file size (5MB)
   if (file.size > 5 * 1024 * 1024) {
     document.getElementById('profilePictureError').textContent = 'File size exceeds 5MB limit';
     document.getElementById('profilePictureError').style.display = 'block';
     return;
   }
-  
+
   // Preview image
   const reader = new FileReader();
-  reader.onload = function(e) {
+  reader.onload = function (e) {
     document.getElementById('profilePicturePreview').src = e.target.result;
   };
   reader.readAsDataURL(file);
-  
+
   // Upload file
   const formData = new FormData();
   formData.append('file', file);
-  
+
   const errorDiv = document.getElementById('profilePictureError');
   const successDiv = document.getElementById('profilePictureSuccess');
-  
+
   errorDiv.textContent = '';
   errorDiv.style.display = 'none';
   successDiv.textContent = '';
   successDiv.style.display = 'none';
-  
+
   try {
     const response = await authenticatedFetch(`${API_BASE}/account/profile-picture`, {
       method: 'POST',
       body: formData
     });
-    
+
     if (response.ok) {
       const updatedUser = await response.json();
       // Update stored user data (getUser and saveAuthData are in auth.js)
@@ -1702,19 +1721,19 @@ window.handleProfilePictureSelect = async function(event) {
           user.profile_picture_url = updatedUser.profile_picture_url;
           saveAuthData(token, user);
         }
-        
+
         // Update display
         if (typeof updateUserDisplay !== 'undefined') {
           updateUserDisplay();
         }
       }
-      
+
       successDiv.textContent = 'Profile picture updated successfully';
       successDiv.style.display = 'block';
       setTimeout(() => {
         successDiv.style.display = 'none';
       }, 3000);
-      
+
       // Show reset button
       document.getElementById('resetProfilePictureBtn').style.display = 'inline-block';
     } else {
@@ -1729,24 +1748,24 @@ window.handleProfilePictureSelect = async function(event) {
   }
 }
 
-window.resetProfilePicture = async function() {
+window.resetProfilePicture = async function () {
   if (!confirm('Are you sure you want to remove your profile picture?')) {
     return;
   }
-  
+
   const errorDiv = document.getElementById('profilePictureError');
   const successDiv = document.getElementById('profilePictureSuccess');
-  
+
   errorDiv.textContent = '';
   errorDiv.style.display = 'none';
   successDiv.textContent = '';
   successDiv.style.display = 'none';
-  
+
   try {
     const response = await authenticatedFetch(`${API_BASE}/account/profile-picture`, {
       method: 'DELETE'
     });
-    
+
     if (response.ok) {
       const updatedUser = await response.json();
       // Update stored user data (getUser and saveAuthData are in auth.js)
@@ -1757,18 +1776,18 @@ window.resetProfilePicture = async function() {
           user.profile_picture_url = null;
           saveAuthData(token, user);
         }
-        
+
         // Update display
         if (typeof updateUserDisplay !== 'undefined') {
           updateUserDisplay();
         }
       }
-      
+
       // Reset preview
       document.getElementById('profilePicturePreview').src = '/static/default-avatar.svg';
       document.getElementById('profilePictureInput').value = '';
       document.getElementById('resetProfilePictureBtn').style.display = 'none';
-      
+
       successDiv.textContent = 'Profile picture removed successfully';
       successDiv.style.display = 'block';
       setTimeout(() => {
@@ -1788,21 +1807,21 @@ window.resetProfilePicture = async function() {
 
 // Update loadAccountInfo to also load privacy settings and profile picture
 const originalLoadAccountInfo = window.loadAccountInfo;
-window.loadAccountInfo = async function() {
+window.loadAccountInfo = async function () {
   await originalLoadAccountInfo();
   await loadPrivacySettings();
-  
+
   // Load profile picture preview
   const user = getUser();
   const previewImg = document.getElementById('profilePicturePreview');
   const resetBtn = document.getElementById('resetProfilePictureBtn');
-  
+
   if (previewImg) {
     if (user && user.profile_picture_url) {
       previewImg.src = user.profile_picture_url;
       if (resetBtn) resetBtn.style.display = 'inline-block';
     } else {
-        previewImg.src = '/static/default-avatar.svg';
+      previewImg.src = '/static/default-avatar.svg';
       if (resetBtn) resetBtn.style.display = 'none';
     }
   }
@@ -1826,12 +1845,12 @@ async function loadFriendsList() {
     if (response.ok) {
       const friends = await response.json();
       const friendsList = document.getElementById('friendsList');
-      
+
       if (friends.length === 0) {
         friendsList.innerHTML = '<p class="no-friends">No friends yet</p>';
         return;
       }
-      
+
       friendsList.innerHTML = friends.map(friend => `
         <div class="friend-item" data-friend-id="${friend.friend.id}">
           <div class="friend-item-content">
@@ -1847,41 +1866,41 @@ async function loadFriendsList() {
   }
 }
 
-window.openFriendRequestModal = function() {
+window.openFriendRequestModal = function () {
   document.getElementById('friendRequestModal').style.display = 'flex';
 }
 
-window.closeFriendRequestModal = function() {
+window.closeFriendRequestModal = function () {
   document.getElementById('friendRequestModal').style.display = 'none';
   document.getElementById('friendRequestForm').reset();
   document.getElementById('friendRequestError').style.display = 'none';
   document.getElementById('friendRequestMessage').style.display = 'none';
 }
 
-window.sendFriendRequest = async function(event) {
+window.sendFriendRequest = async function (event) {
   event.preventDefault();
   const username = document.getElementById('friendRequestUsername').value.trim();
   const errorEl = document.getElementById('friendRequestError');
   const successEl = document.getElementById('friendRequestMessage');
-  
+
   errorEl.textContent = '';
   errorEl.style.display = 'none';
   successEl.textContent = '';
   successEl.style.display = 'none';
-  
+
   if (!username) {
     errorEl.textContent = 'Please enter a username';
     errorEl.style.display = 'block';
     return;
   }
-  
+
   try {
     const response = await authenticatedFetch(`${API_BASE}/friends/request`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ receiver_username: username })
     });
-    
+
     if (response.ok) {
       successEl.textContent = `Friend request sent to ${username}!`;
       successEl.style.display = 'block';
@@ -1901,12 +1920,12 @@ window.sendFriendRequest = async function(event) {
   }
 }
 
-window.acceptFriendRequest = async function(requestId) {
+window.acceptFriendRequest = async function (requestId) {
   try {
     const response = await authenticatedFetch(`${API_BASE}/friends/requests/${requestId}/accept`, {
       method: 'POST'
     });
-    
+
     if (response.ok) {
       loadFriendsList();
       loadNotifications();
@@ -1920,12 +1939,12 @@ window.acceptFriendRequest = async function(requestId) {
   }
 }
 
-window.denyFriendRequest = async function(requestId) {
+window.denyFriendRequest = async function (requestId) {
   try {
     const response = await authenticatedFetch(`${API_BASE}/friends/requests/${requestId}/deny`, {
       method: 'POST'
     });
-    
+
     if (response.ok) {
       loadNotifications();
       updateNotificationCount();
@@ -1938,12 +1957,12 @@ window.denyFriendRequest = async function(requestId) {
   }
 }
 
-window.cancelFriendRequest = async function(requestId) {
+window.cancelFriendRequest = async function (requestId) {
   try {
     const response = await authenticatedFetch(`${API_BASE}/friends/requests/${requestId}`, {
       method: 'DELETE'
     });
-    
+
     if (response.ok) {
       loadNotifications();
       updateNotificationCount();
@@ -1956,16 +1975,16 @@ window.cancelFriendRequest = async function(requestId) {
   }
 }
 
-window.unfriendUser = async function(friendId) {
+window.unfriendUser = async function (friendId) {
   if (!confirm('Are you sure you want to unfriend this user?')) {
     return;
   }
-  
+
   try {
     const response = await authenticatedFetch(`${API_BASE}/friends/${friendId}`, {
       method: 'DELETE'
     });
-    
+
     if (response.ok) {
       loadFriendsList();
     } else {
@@ -1992,13 +2011,13 @@ let currentFriendMovies = [];
 let currentFriendTVShows = [];
 let currentFriendAnime = [];
 
-window.openFriendProfile = async function(friendId) {
+window.openFriendProfile = async function (friendId) {
   currentFriendId = friendId;
   document.getElementById('friendProfileModal').style.display = 'flex';
   await loadFriendProfile(friendId);
 }
 
-window.closeFriendProfile = function() {
+window.closeFriendProfile = function () {
   document.getElementById('friendProfileModal').style.display = 'none';
   currentFriendId = null;
   currentFriendMovies = [];
@@ -2028,12 +2047,12 @@ window.closeFriendProfile = function() {
   if (animeSearch) animeSearch.value = '';
 }
 
-window.loadFriendProfile = async function(friendId) {
+window.loadFriendProfile = async function (friendId) {
   try {
     // Get friend data from friends list to access profile picture
     const friendsResponse = await authenticatedFetch(`${API_BASE}/friends`);
     let friendProfilePictureUrl = '/static/default-avatar.svg';
-    
+
     if (friendsResponse.ok) {
       const friends = await friendsResponse.json();
       const friend = friends.find(f => f.friend.id === friendId);
@@ -2041,19 +2060,19 @@ window.loadFriendProfile = async function(friendId) {
         friendProfilePictureUrl = friend.friend.profile_picture_url;
       }
     }
-    
+
     // Update friend profile picture in modal header
     const friendProfilePicture = document.getElementById('friendProfilePicture');
     if (friendProfilePicture) {
       friendProfilePicture.src = friendProfilePictureUrl;
     }
-    
+
     // Get profile summary
     const response = await authenticatedFetch(`${API_BASE}/friends/${friendId}/profile`);
     if (response.ok) {
       const profile = await response.json();
       document.getElementById('friendProfileUsername').textContent = profile.username;
-      
+
       // Update summaries
       updateMoviesSummary(profile);
       updateTVShowsSummary(profile);
@@ -2110,19 +2129,19 @@ function updateStatisticsSummary(profile) {
   }
 }
 
-window.toggleAccordion = async function(section) {
+window.toggleAccordion = async function (section) {
   if (!currentFriendId) return;
-  
+
   const content = document.getElementById(`${section}Content`);
   const icon = document.getElementById(`${section}Icon`);
   const isActive = accordionStates[section];
-  
+
   if (!isActive) {
     // Expand - load full content
     accordionStates[section] = true;
     content.classList.add('active');
     icon.textContent = '▲';
-    
+
     if (section === 'movies') {
       await loadFriendMovies(currentFriendId);
     } else if (section === 'tvShows') {
@@ -2142,12 +2161,12 @@ window.toggleAccordion = async function(section) {
 
 function renderFriendMovies(movies) {
   const containerDiv = document.getElementById('friendMoviesListContainer');
-  
+
   if (movies.length === 0) {
     containerDiv.innerHTML = '<p class="empty-message">No movies found</p>';
     return;
   }
-  
+
   containerDiv.innerHTML = movies.map(movie => `
     <div class="friend-item-card">
       <div class="friend-item-header">
@@ -2164,16 +2183,16 @@ function renderFriendMovies(movies) {
   `).join('');
 }
 
-window.loadFriendMovies = async function(friendId) {
+window.loadFriendMovies = async function (friendId) {
   try {
     const response = await authenticatedFetch(`${API_BASE}/friends/${friendId}/movies`);
     if (response.ok) {
       const data = await response.json();
       const listDiv = document.getElementById('moviesList');
-      
+
       // Store full data for filtering
       currentFriendMovies = data.movies || [];
-      
+
       if (currentFriendMovies.length === 0) {
         document.getElementById('friendMoviesListContainer').innerHTML = '<p class="empty-message">No movies yet</p>';
       } else {
@@ -2189,38 +2208,38 @@ window.loadFriendMovies = async function(friendId) {
   }
 }
 
-window.filterFriendMovies = function() {
+window.filterFriendMovies = function () {
   const searchInput = document.getElementById('friendMoviesSearch');
   const searchTerm = searchInput ? searchInput.value.toLowerCase().trim() : '';
-  
+
   if (!searchTerm) {
     renderFriendMovies(currentFriendMovies);
     return;
   }
-  
+
   const filtered = currentFriendMovies.filter(movie => {
     const title = (movie.title || '').toLowerCase();
     const director = (movie.director || '').toLowerCase();
     const year = String(movie.year || '');
     const review = (movie.review || '').toLowerCase();
-    
-    return title.includes(searchTerm) || 
-           director.includes(searchTerm) || 
-           year.includes(searchTerm) ||
-           review.includes(searchTerm);
+
+    return title.includes(searchTerm) ||
+      director.includes(searchTerm) ||
+      year.includes(searchTerm) ||
+      review.includes(searchTerm);
   });
-  
+
   renderFriendMovies(filtered);
 }
 
 function renderFriendTVShows(tvShows) {
   const containerDiv = document.getElementById('friendTVShowsListContainer');
-  
+
   if (tvShows.length === 0) {
     containerDiv.innerHTML = '<p class="empty-message">No TV shows found</p>';
     return;
   }
-  
+
   containerDiv.innerHTML = tvShows.map(show => `
     <div class="friend-item-card">
       <div class="friend-item-header">
@@ -2238,16 +2257,16 @@ function renderFriendTVShows(tvShows) {
   `).join('');
 }
 
-window.loadFriendTVShows = async function(friendId) {
+window.loadFriendTVShows = async function (friendId) {
   try {
     const response = await authenticatedFetch(`${API_BASE}/friends/${friendId}/tv-shows`);
     if (response.ok) {
       const data = await response.json();
       const listDiv = document.getElementById('tvShowsList');
-      
+
       // Store full data for filtering
       currentFriendTVShows = data.tv_shows || [];
-      
+
       if (currentFriendTVShows.length === 0) {
         document.getElementById('friendTVShowsListContainer').innerHTML = '<p class="empty-message">No TV shows yet</p>';
       } else {
@@ -2263,42 +2282,42 @@ window.loadFriendTVShows = async function(friendId) {
   }
 }
 
-window.filterFriendTVShows = function() {
+window.filterFriendTVShows = function () {
   const searchInput = document.getElementById('friendTVShowsSearch');
   const searchTerm = searchInput ? searchInput.value.toLowerCase().trim() : '';
-  
+
   if (!searchTerm) {
     renderFriendTVShows(currentFriendTVShows);
     return;
   }
-  
+
   const filtered = currentFriendTVShows.filter(show => {
     const title = (show.title || '').toLowerCase();
     const year = String(show.year || '');
     const review = (show.review || '').toLowerCase();
     const seasons = String(show.seasons || '');
     const episodes = String(show.episodes || '');
-    
-    return title.includes(searchTerm) || 
-           year.includes(searchTerm) ||
-           seasons.includes(searchTerm) ||
-           episodes.includes(searchTerm) ||
-           review.includes(searchTerm);
+
+    return title.includes(searchTerm) ||
+      year.includes(searchTerm) ||
+      seasons.includes(searchTerm) ||
+      episodes.includes(searchTerm) ||
+      review.includes(searchTerm);
   });
-  
+
   renderFriendTVShows(filtered);
 }
 
-window.loadFriendAnime = async function(friendId) {
+window.loadFriendAnime = async function (friendId) {
   try {
     const response = await authenticatedFetch(`${API_BASE}/friends/${friendId}/anime`);
     if (response.ok) {
       const data = await response.json();
       const listDiv = document.getElementById('animeList');
-      
+
       // Store full data for filtering
       currentFriendAnime = data.anime || [];
-      
+
       if (currentFriendAnime.length === 0) {
         document.getElementById('friendAnimeListContainer').innerHTML = '<p class="empty-message">No anime yet</p>';
       } else {
@@ -2314,15 +2333,15 @@ window.loadFriendAnime = async function(friendId) {
   }
 }
 
-window.renderFriendAnime = function(anime) {
+window.renderFriendAnime = function (anime) {
   const container = document.getElementById('friendAnimeListContainer');
   if (!container) return;
-  
+
   if (anime.length === 0) {
     container.innerHTML = '<p class="empty-message">No anime found</p>';
     return;
   }
-  
+
   container.innerHTML = anime.map(animeItem => `
     <div class="friend-item-card">
       <div class="friend-item-header">
@@ -2340,39 +2359,39 @@ window.renderFriendAnime = function(anime) {
   `).join('');
 }
 
-window.filterFriendAnime = function() {
+window.filterFriendAnime = function () {
   const searchInput = document.getElementById('friendAnimeSearch');
   const searchTerm = searchInput ? searchInput.value.toLowerCase().trim() : '';
-  
+
   if (!searchTerm) {
     renderFriendAnime(currentFriendAnime);
     return;
   }
-  
+
   const filtered = currentFriendAnime.filter(animeItem => {
     const title = (animeItem.title || '').toLowerCase();
     const year = String(animeItem.year || '');
     const review = (animeItem.review || '').toLowerCase();
     const seasons = String(animeItem.seasons || '');
     const episodes = String(animeItem.episodes || '');
-    
-    return title.includes(searchTerm) || 
-           year.includes(searchTerm) ||
-           seasons.includes(searchTerm) ||
-           episodes.includes(searchTerm) ||
-           review.includes(searchTerm);
+
+    return title.includes(searchTerm) ||
+      year.includes(searchTerm) ||
+      seasons.includes(searchTerm) ||
+      episodes.includes(searchTerm) ||
+      review.includes(searchTerm);
   });
-  
+
   renderFriendAnime(filtered);
 }
 
-window.loadFriendStatistics = async function(friendId) {
+window.loadFriendStatistics = async function (friendId) {
   try {
     const response = await authenticatedFetch(`${API_BASE}/friends/${friendId}/statistics`);
     if (response.ok) {
       const stats = await response.json();
       const statsDiv = document.getElementById('statisticsData');
-      
+
       // Compact statistics display
       statsDiv.innerHTML = `
         <div class="friend-stats-compact">
@@ -2449,24 +2468,24 @@ async function loadNotifications() {
     if (response.ok) {
       const notifications = await response.json();
       const notificationList = document.getElementById('notificationList');
-      
+
       if (notifications.length === 0) {
         notificationList.innerHTML = '<p class="no-notifications">No notifications</p>';
         return;
       }
-      
+
       notificationList.innerHTML = notifications.map(notif => {
         const date = new Date(notif.created_at);
         const timeAgo = getTimeAgo(date);
         let actionButtons = '';
-        
+
         if (notif.type === 'friend_request_received' && notif.friend_request_id) {
           actionButtons = `
             <button class="notification-action-btn accept-btn" onclick="acceptFriendRequest(${notif.friend_request_id})">Accept</button>
             <button class="notification-action-btn deny-btn" onclick="denyFriendRequest(${notif.friend_request_id})">Deny</button>
           `;
         }
-        
+
         return `
           <div class="notification-item ${notif.read_at ? 'read' : 'unread'}" data-notification-id="${notif.id}">
             <div class="notification-content">
@@ -2490,12 +2509,12 @@ async function updateNotificationCount() {
     if (response.ok) {
       const data = await response.json();
       const notificationDot = document.getElementById('notificationDot');
-      
+
       if (!notificationDot) {
         console.warn('Notification dot element not found');
         return;
       }
-      
+
       if (data.count > 0) {
         notificationDot.style.display = 'flex'; // Use flex to center the number
         notificationDot.textContent = data.count > 99 ? '99+' : data.count.toString();
@@ -2512,7 +2531,7 @@ async function updateNotificationCount() {
   }
 }
 
-window.toggleNotificationDropdown = function() {
+window.toggleNotificationDropdown = function () {
   const dropdown = document.getElementById('notificationDropdown');
   if (dropdown.style.display === 'none' || dropdown.style.display === '') {
     dropdown.style.display = 'block';
@@ -2522,12 +2541,12 @@ window.toggleNotificationDropdown = function() {
   }
 }
 
-window.dismissNotification = async function(notificationId) {
+window.dismissNotification = async function (notificationId) {
   try {
     const response = await authenticatedFetch(`${API_BASE}/notifications/${notificationId}`, {
       method: 'DELETE'
     });
-    
+
     if (response.ok) {
       loadNotifications();
       updateNotificationCount();
@@ -2555,19 +2574,74 @@ function getTimeAgo(date) {
 }
 
 // Initialize friends and notifications
-document.addEventListener('DOMContentLoaded', function() {
+document.addEventListener('DOMContentLoaded', function () {
+  // Event delegation for edit/delete/save/cancel buttons (prevents XSS from inline handlers)
+  // Movies table
+  document.addEventListener('click', function (e) {
+    if (e.target.classList.contains('edit-movie-btn')) {
+      e.preventDefault();
+      enableMovieEdit(e.target);
+    } else if (e.target.classList.contains('delete-movie-btn')) {
+      e.preventDefault();
+      const id = parseInt(e.target.dataset.movieId, 10);
+      deleteMovie(id);
+    } else if (e.target.classList.contains('save-movie-btn')) {
+      e.preventDefault();
+      saveMovieEdit(e.target);
+    } else if (e.target.classList.contains('cancel-movie-btn')) {
+      e.preventDefault();
+      cancelMovieEdit();
+    }
+  });
+
+  // TV Shows table
+  document.addEventListener('click', function (e) {
+    if (e.target.classList.contains('edit-tv-btn')) {
+      e.preventDefault();
+      enableTVEdit(e.target);
+    } else if (e.target.classList.contains('delete-tv-btn')) {
+      e.preventDefault();
+      const id = parseInt(e.target.dataset.tvId, 10);
+      deleteTVShow(id);
+    } else if (e.target.classList.contains('save-tv-btn')) {
+      e.preventDefault();
+      saveTVEdit(e.target);
+    } else if (e.target.classList.contains('cancel-tv-btn')) {
+      e.preventDefault();
+      cancelTVEdit();
+    }
+  });
+
+  // Anime table
+  document.addEventListener('click', function (e) {
+    if (e.target.classList.contains('edit-anime-btn')) {
+      e.preventDefault();
+      enableAnimeEdit(e.target);
+    } else if (e.target.classList.contains('delete-anime-btn')) {
+      e.preventDefault();
+      const id = parseInt(e.target.dataset.animeId, 10);
+      deleteAnime(id);
+    } else if (e.target.classList.contains('save-anime-btn')) {
+      e.preventDefault();
+      saveAnimeEdit(e.target);
+    } else if (e.target.classList.contains('cancel-anime-btn')) {
+      e.preventDefault();
+      cancelAnimeEdit();
+    }
+  });
+
   // Set up notification bell click handler
   const notificationBell = document.getElementById('notificationBell');
   if (notificationBell) {
     notificationBell.addEventListener('click', toggleNotificationDropdown);
   }
-  
+
   // Set up friend request button
   const sendFriendRequestBtn = document.getElementById('sendFriendRequestBtn');
   if (sendFriendRequestBtn) {
     sendFriendRequestBtn.addEventListener('click', openFriendRequestModal);
   }
-  
+
   // Close notification dropdown when clicking outside
   document.addEventListener('click', (e) => {
     const dropdown = document.getElementById('notificationDropdown');
@@ -2576,7 +2650,7 @@ document.addEventListener('DOMContentLoaded', function() {
       dropdown.style.display = 'none';
     }
   });
-  
+
   // Close friend request modal when clicking outside
   document.addEventListener('click', (e) => {
     const modal = document.getElementById('friendRequestModal');
@@ -2584,26 +2658,26 @@ document.addEventListener('DOMContentLoaded', function() {
       closeFriendRequestModal();
     }
   });
-  
+
   // Set up friends sidebar toggle
   const toggleFriendsSidebarBtn = document.getElementById('toggleFriendsSidebar');
   if (toggleFriendsSidebarBtn) {
     toggleFriendsSidebarBtn.addEventListener('click', toggleFriendsSidebar);
   }
-  
+
   // Set up floating toggle button
   const showFriendsSidebarBtn = document.getElementById('showFriendsSidebar');
   if (showFriendsSidebarBtn) {
     showFriendsSidebarBtn.addEventListener('click', showFriendsSidebar);
   }
-  
+
   // Initialize FAQ accordion functionality
   const faqQuestions = document.querySelectorAll('.faq-question');
   faqQuestions.forEach(question => {
-    question.addEventListener('click', function() {
+    question.addEventListener('click', function () {
       const isExpanded = this.getAttribute('aria-expanded') === 'true';
       const answer = this.nextElementSibling;
-      
+
       // Close all other FAQ items
       faqQuestions.forEach(q => {
         if (q !== this) {
@@ -2612,7 +2686,7 @@ document.addEventListener('DOMContentLoaded', function() {
           q.nextElementSibling.style.padding = '0 24px';
         }
       });
-      
+
       // Toggle current item
       if (isExpanded) {
         this.setAttribute('aria-expanded', 'false');
@@ -2625,28 +2699,28 @@ document.addEventListener('DOMContentLoaded', function() {
       }
     });
   });
-  
+
   // Load friends list and notification count on page load (if logged in)
   if (isAuthenticated()) {
     loadFriendsList();
     updateNotificationCount();
-    
+
     // Show friends sidebar
     const friendsSidebar = document.getElementById('friendsSidebar');
     if (friendsSidebar) {
       friendsSidebar.style.display = 'block';
     }
-    
+
     // Restore sidebar state from localStorage
     restoreSidebarState();
-    
+
     // Set up interval to refresh notification count every 30 seconds
     notificationCountInterval = setInterval(updateNotificationCount, 30000);
   }
 });
 
 // Toggle friends sidebar visibility
-window.toggleFriendsSidebar = function() {
+window.toggleFriendsSidebar = function () {
   const sidebar = document.getElementById('friendsSidebar');
   const container = document.querySelector('.container');
   const toggleBtn = document.getElementById('toggleFriendsSidebar');
@@ -2654,11 +2728,11 @@ window.toggleFriendsSidebar = function() {
   const footer = document.getElementById('mainFooter');
   const notificationBell = document.getElementById('notificationBell');
   const notificationDropdown = document.getElementById('notificationDropdown');
-  
+
   if (!sidebar || !container) return;
-  
+
   const isHidden = sidebar.classList.contains('hidden');
-  
+
   if (isHidden) {
     // Show sidebar
     sidebar.classList.remove('hidden');
@@ -2684,13 +2758,13 @@ window.toggleFriendsSidebar = function() {
     if (notificationBell) notificationBell.style.left = '20px';
     if (notificationDropdown) notificationDropdown.classList.add('sidebar-hidden');
   }
-  
+
   // Save preference to localStorage
   localStorage.setItem('friendsSidebarHidden', !isHidden);
 };
 
 // Show sidebar from floating button
-window.showFriendsSidebar = function() {
+window.showFriendsSidebar = function () {
   toggleFriendsSidebar();
 };
 
@@ -2707,7 +2781,7 @@ function restoreSidebarState() {
       const footer = document.getElementById('mainFooter');
       const notificationBell = document.getElementById('notificationBell');
       const notificationDropdown = document.getElementById('notificationDropdown');
-      
+
       if (sidebar && container) {
         sidebar.classList.add('hidden');
         container.classList.add('sidebar-hidden');
