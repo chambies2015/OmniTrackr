@@ -243,14 +243,13 @@ window.enableMovieEdit = function (btn, id, encTitle, encDirector, year, rating,
   const director = decodeURIComponent(encDirector);
   const ratingVal = (rating !== null && rating !== 'null') ? rating : '';
   const review = encReview ? decodeURIComponent(encReview) : '';
-  row.cells[1].innerHTML = `<input type="text" id="edit-movie-title" value="${title}">`;
-  row.cells[2].innerHTML = `<input type="text" id="edit-movie-director" value="${director}">`;
-  row.cells[3].innerHTML = `<input type="number" id="edit-movie-year" value="${year}">`;
-  row.cells[4].innerHTML = `<input type="number" min="0" max="10" step="0.1" id="edit-movie-rating" value="${ratingVal}">`;
+  row.cells[1].innerHTML = `<input type="text" id="edit-movie-title" value="${escapeHtml(title)}">`;
+  row.cells[2].innerHTML = `<input type="text" id="edit-movie-director" value="${escapeHtml(director)}">`;
+  row.cells[3].innerHTML = `<input type="number" id="edit-movie-year" value="${escapeHtml(year)}">`;
+  row.cells[4].innerHTML = `<input type="number" min="0" max="10" step="0.1" id="edit-movie-rating" value="${escapeHtml(ratingVal)}">`;
   row.cells[5].innerHTML = `<input type="checkbox" id="edit-movie-watched" ${watched ? 'checked' : ''}>`;
   // Escape HTML for textarea content
-  const reviewEscaped = review.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;').replace(/'/g, '&#039;');
-  row.cells[6].innerHTML = `<textarea id="edit-movie-review" class="review-textarea">${reviewEscaped}</textarea>`;
+  row.cells[6].innerHTML = `<textarea id="edit-movie-review" class="review-textarea">${escapeHtml(review)}</textarea>`;
   // Auto-resize textarea to content
   const movieReviewTextarea = document.getElementById('edit-movie-review');
   if (movieReviewTextarea) {
@@ -654,15 +653,14 @@ window.enableAnimeEdit = function (btn, id, encTitle, year, seasons, episodes, r
   const title = decodeURIComponent(encTitle);
   const ratingVal = (rating !== null && rating !== 'null') ? rating : '';
   const review = encReview ? decodeURIComponent(encReview) : '';
-  row.cells[1].innerHTML = `<input type="text" id="edit-anime-title" value="${title}">`;
-  row.cells[2].innerHTML = `<input type="number" id="edit-anime-year" value="${year}">`;
-  row.cells[3].innerHTML = `<input type="number" id="edit-anime-seasons" value="${seasons !== 'null' ? seasons : ''}">`;
-  row.cells[4].innerHTML = `<input type="number" id="edit-anime-episodes" value="${episodes !== 'null' ? episodes : ''}">`;
-  row.cells[5].innerHTML = `<input type="number" min="0" max="10" step="0.1" id="edit-anime-rating" value="${ratingVal}">`;
+  row.cells[1].innerHTML = `<input type="text" id="edit-anime-title" value="${escapeHtml(title)}">`;
+  row.cells[2].innerHTML = `<input type="number" id="edit-anime-year" value="${escapeHtml(year)}">`;
+  row.cells[3].innerHTML = `<input type="number" id="edit-anime-seasons" value="${escapeHtml(seasons !== 'null' ? seasons : '')}">`;
+  row.cells[4].innerHTML = `<input type="number" id="edit-anime-episodes" value="${escapeHtml(episodes !== 'null' ? episodes : '')}">`;
+  row.cells[5].innerHTML = `<input type="number" min="0" max="10" step="0.1" id="edit-anime-rating" value="${escapeHtml(ratingVal)}">`;
   row.cells[6].innerHTML = `<input type="checkbox" id="edit-anime-watched" ${watched ? 'checked' : ''}>`;
   // Escape HTML for textarea content
-  const reviewEscaped = review.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;').replace(/'/g, '&#039;');
-  row.cells[7].innerHTML = `<textarea id="edit-anime-review" class="review-textarea">${reviewEscaped}</textarea>`;
+  row.cells[7].innerHTML = `<textarea id="edit-anime-review" class="review-textarea">${escapeHtml(review)}</textarea>`;
   // Auto-resize textarea to content
   const animeReviewTextarea = document.getElementById('edit-anime-review');
   if (animeReviewTextarea) {
@@ -729,15 +727,14 @@ window.enableTVEdit = function (btn, id, encTitle, year, seasons, episodes, rati
   const title = decodeURIComponent(encTitle);
   const ratingVal = (rating !== null && rating !== 'null') ? rating : '';
   const review = encReview ? decodeURIComponent(encReview) : '';
-  row.cells[1].innerHTML = `<input type="text" id="edit-tv-title" value="${title}">`;
-  row.cells[2].innerHTML = `<input type="number" id="edit-tv-year" value="${year}">`;
-  row.cells[3].innerHTML = `<input type="number" id="edit-tv-seasons" value="${seasons !== 'null' ? seasons : ''}">`;
-  row.cells[4].innerHTML = `<input type="number" id="edit-tv-episodes" value="${episodes !== 'null' ? episodes : ''}">`;
-  row.cells[5].innerHTML = `<input type="number" min="0" max="10" step="0.1" id="edit-tv-rating" value="${ratingVal}">`;
+  row.cells[1].innerHTML = `<input type="text" id="edit-tv-title" value="${escapeHtml(title)}">`;
+  row.cells[2].innerHTML = `<input type="number" id="edit-tv-year" value="${escapeHtml(year)}">`;
+  row.cells[3].innerHTML = `<input type="number" id="edit-tv-seasons" value="${escapeHtml(seasons !== 'null' ? seasons : '')}">`;
+  row.cells[4].innerHTML = `<input type="number" id="edit-tv-episodes" value="${escapeHtml(episodes !== 'null' ? episodes : '')}">`;
+  row.cells[5].innerHTML = `<input type="number" min="0" max="10" step="0.1" id="edit-tv-rating" value="${escapeHtml(ratingVal)}">`;
   row.cells[6].innerHTML = `<input type="checkbox" id="edit-tv-watched" ${watched ? 'checked' : ''}>`;
   // Escape HTML for textarea content
-  const reviewEscaped = review.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;').replace(/'/g, '&#039;');
-  row.cells[7].innerHTML = `<textarea id="edit-tv-review" class="review-textarea">${reviewEscaped}</textarea>`;
+  row.cells[7].innerHTML = `<textarea id="edit-tv-review" class="review-textarea">${escapeHtml(review)}</textarea>`;
   // Auto-resize textarea to content
   const tvReviewTextarea = document.getElementById('edit-tv-review');
   if (tvReviewTextarea) {
@@ -2555,12 +2552,6 @@ function getTimeAgo(date) {
   if (weeks < 4) return `${weeks}w ago`;
   const months = Math.floor(days / 30);
   return `${months}mo ago`;
-}
-
-function escapeHtml(text) {
-  const div = document.createElement('div');
-  div.textContent = text;
-  return div.innerHTML;
 }
 
 // Initialize friends and notifications
