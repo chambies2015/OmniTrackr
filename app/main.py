@@ -818,10 +818,9 @@ async def register(user: schemas.UserCreate, db: Session = Depends(get_db)):
 
 @app.post("/auth/login", response_model=schemas.Token, tags=["auth"])
 async def login(form_data: OAuth2PasswordRequestForm = Depends(), db: Session = Depends(get_db)):
-    """Login to get access token."""
-    user = crud.get_user_by_username(db, form_data.username)
-    if not user:
-        user = crud.get_user_by_email(db, form_data.username)
+    """Login to get access token. Users can log in using either their username or email."""
+    # Try to find user by username or email (single optimized query)
+    user = crud.get_user_by_username_or_email(db, form_data.username)
     
     if not user or not auth.verify_password(form_data.password, user.hashed_password):
         raise HTTPException(

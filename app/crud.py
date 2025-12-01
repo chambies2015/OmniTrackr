@@ -25,6 +25,16 @@ def get_user_by_email(db: Session, email: str) -> Optional[models.User]:
     return db.query(models.User).filter(models.User.email == email).first()
 
 
+def get_user_by_username_or_email(db: Session, username_or_email: str) -> Optional[models.User]:
+    """Get user by username or email (optimized single query)."""
+    return db.query(models.User).filter(
+        or_(
+            models.User.username == username_or_email,
+            models.User.email == username_or_email
+        )
+    ).first()
+
+
 def get_user_by_id(db: Session, user_id: int) -> Optional[models.User]:
     """Get user by ID."""
     return db.query(models.User).filter(models.User.id == user_id).first()
