@@ -712,6 +712,15 @@ async def get_film_bg():
     raise HTTPException(status_code=404, detail="film_background.jpg not found")
 
 
+@app.get("/vortex.gif")
+@app.head("/vortex.gif")
+async def get_vortex_gif():
+    bg_file = os.path.join(os.path.dirname(__file__), "static", "vortex.gif")
+    if os.path.exists(bg_file):
+        return FileResponse(bg_file, media_type="image/gif")
+    raise HTTPException(status_code=404, detail="vortex.gif not found")
+
+
 @app.get("/favicon.ico")
 @app.head("/favicon.ico")
 async def get_favicon():

@@ -1311,7 +1311,7 @@ body.dark-mode .card > div:nth-of-type(2) {
 .landing-hero {
   text-align: center;
   padding: 80px 20px 60px;
-  background-image: url('./vortex.gif');
+  background-image: url('/vortex.gif');
   background-size: cover;
   background-position: center;
   background-repeat: no-repeat;
