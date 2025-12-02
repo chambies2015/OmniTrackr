@@ -20,6 +20,10 @@ body.dark-mode {
   --table-row-alt: #252538;
 }
 
+html {
+  height: 100%;
+}
+
 body {
   background-image: url('./omnitrackr_vortex.png');
   background-size: cover;
@@ -33,6 +37,8 @@ body {
   padding: 20px 20px 0 20px; /* Remove bottom padding to eliminate gap before footer */
   transition: background-color 0.3s, color 0.3s;
   min-height: 100vh;
+  display: flex;
+  flex-direction: column;
 }
 
 /* Mobile: Remove fixed background attachment for better performance */
@@ -51,6 +57,7 @@ body {
   margin-left: 250px;
   margin-right: auto;
   transition: margin-left 0.3s ease, max-width 0.3s ease;
+  flex: 1; /* Allow container to grow and push footer down */
 }
 
 /* When sidebar is hidden */
