@@ -1311,7 +1311,27 @@ body.dark-mode .card > div:nth-of-type(2) {
 .landing-hero {
   text-align: center;
   padding: 80px 20px 60px;
+  background-image: url('./vortex.gif');
+  background-size: cover;
+  background-position: center;
+  background-repeat: no-repeat;
+  position: relative;
+}
+
+.landing-hero::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
   background: linear-gradient(135deg, rgba(102, 126, 234, 0.1) 0%, rgba(118, 75, 162, 0.1) 100%);
+  z-index: 0;
+}
+
+.landing-hero > * {
+  position: relative;
+  z-index: 1;
 }
 
 .landing-title {
@@ -1497,6 +1517,8 @@ body.dark-mode .card > div:nth-of-type(2) {
   transition: transform 0.3s ease, box-shadow 0.3s ease;
   border-left: 4px solid transparent;
   position: relative;
+  display: flex;
+  flex-direction: column;
 }
 
 .feature-card:hover {
@@ -1595,8 +1617,9 @@ body.dark-mode .card > div:nth-of-type(2) {
   opacity: 0.6;
   font-size: 0.85rem;
   font-style: italic;
-  margin-top: 12px;
+  margin-top: auto;
   margin-bottom: 0;
+  padding-top: 16px;
   font-weight: 300;
 }
 
