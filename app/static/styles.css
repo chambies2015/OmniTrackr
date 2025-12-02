@@ -31,7 +31,6 @@ body {
   line-height: 1.6;
   margin: 0;
   padding: 20px;
-  padding-bottom: 80px; /* Add padding at bottom to account for fixed footer */
   transition: background-color 0.3s, color 0.3s;
   min-height: 100vh;
 }
@@ -1659,36 +1658,14 @@ body.dark-mode .user-display-btn {
 
 /* Landing Page Footer */
 .landing-footer {
-  position: fixed;
-  bottom: 0;
-  left: 0;
-  right: 0;
+  position: relative;
+  width: 100%;
   background-color: var(--card-bg);
   padding: 15px 20px;
   border-top: 1px solid rgba(0, 0, 0, 0.1);
   text-align: center;
-  z-index: 50;
   box-shadow: 0 -2px 10px rgba(0, 0, 0, 0.1);
-}
-
-/* When logged in, footer should start after the sidebar */
-#mainContainer .landing-footer {
-  left: 250px; /* Account for friends sidebar width */
-  transition: left 0.3s ease;
-}
-
-#mainContainer .landing-footer.sidebar-hidden {
-  left: 0;
-}
-
-@media (max-width: 768px) {
-  #mainContainer .landing-footer {
-    left: 200px; /* Account for smaller sidebar on mobile */
-  }
-  
-  #mainContainer .landing-footer.sidebar-hidden {
-    left: 0;
-  }
+  margin-top: auto; /* Push footer to bottom when using flexbox */
 }
 
 body.dark-mode .landing-footer {
