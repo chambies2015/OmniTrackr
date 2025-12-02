@@ -704,6 +704,7 @@ async function loadVideoGames() {
           <td><span class="watched-icon ${game.played ? 'watched' : 'unwatched'}">${game.played ? '✓' : '✗'}</span></td>
           <td>${game.rating !== null && game.rating !== undefined ? parseFloat(game.rating).toFixed(1) + '/10' : ''}</td>
           <td>${game.rawg_link ? `<a href="${game.rawg_link}" target="_blank">View on RAWG</a>` : ''}</td>
+          <td>${game.review ? escapeHtml(game.review) : ''}</td>
           <td>
             <button class="action-btn edit-video-game-btn" data-game-id="${game.id}" data-game-title="${escapeHtml(game.title)}" data-game-release-date="${game.release_date ? game.release_date.split('T')[0] : ''}" data-game-genres="${escapeHtml(game.genres || '')}" data-game-rating="${game.rating ?? ''}" data-game-played="${game.played}" data-game-review="${escapeHtml(game.review || '')}">Edit</button>
             <button class="action-btn delete-video-game-btn" data-game-id="${game.id}">Delete</button>
@@ -886,21 +887,17 @@ window.enableVideoGameEdit = function (btn) {
   row.cells[4].innerHTML = `<input type="checkbox" id="edit-video-game-played" ${played ? 'checked' : ''}>`;
   row.cells[5].innerHTML = `<input type="number" min="0" max="10" step="0.1" id="edit-video-game-rating" value="${ratingVal}">`;
   // Keep RAWG link as is (preserve HTML to maintain clickable link - don't modify this cell)
-  // Insert review textarea cell before Actions cell (cell 7)
-  if (row.cells.length === 8) {
-    // Insert new cell for review at index 7, pushing Actions to index 8
-    const reviewCell = row.insertCell(7);
-    reviewCell.innerHTML = `<textarea id="edit-video-game-review" class="review-textarea">${escapeHtml(review)}</textarea>`;
-    // Auto-resize textarea to content
-    const videoGameReviewTextarea = document.getElementById('edit-video-game-review');
-    if (videoGameReviewTextarea) {
-      videoGameReviewTextarea.style.height = 'auto';
-      videoGameReviewTextarea.style.height = Math.max(60, videoGameReviewTextarea.scrollHeight) + 'px';
-      videoGameReviewTextarea.addEventListener('input', function () {
-        this.style.height = 'auto';
-        this.style.height = Math.max(60, this.scrollHeight) + 'px';
-      });
-    }
+  // Review cell is at index 7, replace it with textarea for editing
+  row.cells[7].innerHTML = `<textarea id="edit-video-game-review" class="review-textarea">${escapeHtml(review)}</textarea>`;
+  // Auto-resize textarea to content
+  const videoGameReviewTextarea = document.getElementById('edit-video-game-review');
+  if (videoGameReviewTextarea) {
+    videoGameReviewTextarea.style.height = 'auto';
+    videoGameReviewTextarea.style.height = Math.max(60, videoGameReviewTextarea.scrollHeight) + 'px';
+    videoGameReviewTextarea.addEventListener('input', function () {
+      this.style.height = 'auto';
+      this.style.height = Math.max(60, this.scrollHeight) + 'px';
+    });
   }
   // Actions cell is always the last cell, so use length - 1 to get the correct index
   const actionsCellIndex = row.cells.length - 1;
