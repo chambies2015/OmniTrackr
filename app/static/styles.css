@@ -30,7 +30,7 @@ body {
   font-family: Arial, sans-serif;
   line-height: 1.6;
   margin: 0;
-  padding: 20px;
+  padding: 20px 20px 0 20px; /* Remove bottom padding to eliminate gap before footer */
   transition: background-color 0.3s, color 0.3s;
   min-height: 100vh;
 }
@@ -39,8 +39,7 @@ body {
 @media (max-width: 768px) {
   body {
     background-attachment: scroll;
-    padding: 10px;
-    padding-bottom: 70px;
+    padding: 10px 10px 0 10px; /* Remove bottom padding to eliminate gap before footer */
   }
 }
 
@@ -1659,7 +1658,10 @@ body.dark-mode .user-display-btn {
 /* Landing Page Footer */
 .landing-footer {
   position: relative;
-  width: 100%;
+  width: calc(100% + 40px); /* Extend beyond body padding (20px on each side) */
+  margin-left: -20px; /* Compensate for body left padding */
+  margin-right: -20px; /* Compensate for body right padding */
+  margin-bottom: 0; /* Ensure no gap at bottom */
   background-color: var(--card-bg);
   padding: 15px 20px;
   border-top: 1px solid rgba(0, 0, 0, 0.1);
@@ -1739,6 +1741,9 @@ body.dark-mode .landing-footer {
   /* Make footer thinner on mobile */
   .landing-footer {
     padding: 8px 15px;
+    width: calc(100% + 20px); /* Extend beyond body padding (10px on each side) */
+    margin-left: -10px; /* Compensate for body left padding on mobile */
+    margin-right: -10px; /* Compensate for body right padding on mobile */
   }
   
   .footer-content {
