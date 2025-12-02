@@ -742,6 +742,32 @@ function displayVideoGamePoster(id, posterUrl, title = null) {
   }
 }
 
+function updateVideoGameRowMetadata(id, genres, rawgLink, releaseDate) {
+  // Find the row for this video game
+  const row = document.querySelector(`#video-game-poster-${id}`)?.closest('tr');
+  if (!row) return;
+
+  // Update release date (cell index 2)
+  if (releaseDate && row.cells[2]) {
+    const date = new Date(releaseDate);
+    row.cells[2].textContent = date.toLocaleDateString();
+  }
+
+  // Update genres (cell index 3)
+  if (row.cells[3]) {
+    row.cells[3].textContent = genres ? escapeHtml(genres) : '';
+  }
+
+  // Update RAWG link (cell index 6)
+  if (row.cells[6]) {
+    if (rawgLink) {
+      row.cells[6].innerHTML = `<a href="${rawgLink}" target="_blank">View on RAWG</a>`;
+    } else {
+      row.cells[6].textContent = '';
+    }
+  }
+}
+
 async function fetchVideoGameMetadata(id, title) {
   // Create unique key for deduplication
   const cacheKey = `video-game-${title}`;
@@ -756,6 +782,7 @@ async function fetchVideoGameMetadata(id, title) {
         if (result && result.cover_art_url) {
           displayVideoGamePoster(id, result.cover_art_url, title);
           await saveVideoGameMetadata(id, result.cover_art_url, result.genres, result.rawg_link, result.release_date);
+          updateVideoGameRowMetadata(id, result.genres, result.rawg_link, result.release_date);
         }
       } catch (err) {
         // Ignore errors from other fetch
@@ -802,6 +829,8 @@ async function fetchVideoGameMetadata(id, title) {
           await saveVideoGameMetadata(id, coverArtUrl, genres, rawgLink, releaseDate);
           // Display the cover art
           displayVideoGamePoster(id, coverArtUrl, title);
+          // Update the table row with metadata
+          updateVideoGameRowMetadata(id, genres, rawgLink, releaseDate);
 
           return { cover_art_url: coverArtUrl, genres: genres, rawg_link: rawgLink, release_date: releaseDate };
         }
@@ -823,6 +852,7 @@ async function fetchVideoGameMetadata(id, title) {
       if (result && result.cover_art_url) {
         displayVideoGamePoster(id, result.cover_art_url, title);
         await saveVideoGameMetadata(id, result.cover_art_url, result.genres, result.rawg_link, result.release_date);
+        updateVideoGameRowMetadata(id, result.genres, result.rawg_link, result.release_date);
       }
     } catch (err) {
       // Ignore errors from other fetch
