@@ -500,6 +500,12 @@ body.dark-mode td {
   text-align: center;
 }
 
+/* Center all columns for video games table */
+#videoGameTable th,
+#videoGameTable td {
+  text-align: center;
+}
+
 /* Make review column wider and wrap nicely for all tables */
 #movieTable th:nth-child(7),
 #movieTable td:nth-child(7),
