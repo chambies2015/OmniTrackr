@@ -20,6 +20,38 @@ function escapeHtml(str) {
     .replace(/'/g, "&#39;");
 }
 
+// Image popup functions
+function showImagePopup(imageUrl, altText) {
+  const modal = document.getElementById('imagePopupModal');
+  const img = document.getElementById('popupImage');
+  if (modal && img) {
+    img.src = imageUrl;
+    img.alt = altText || 'Enlarged image';
+    modal.style.display = 'flex';
+    // Prevent body scroll when modal is open
+    document.body.style.overflow = 'hidden';
+  }
+}
+
+function closeImagePopup() {
+  const modal = document.getElementById('imagePopupModal');
+  if (modal) {
+    modal.style.display = 'none';
+    // Restore body scroll
+    document.body.style.overflow = '';
+  }
+}
+
+// Close image popup on Escape key
+document.addEventListener('keydown', function(event) {
+  if (event.key === 'Escape') {
+    const modal = document.getElementById('imagePopupModal');
+    if (modal && modal.style.display !== 'none') {
+      closeImagePopup();
+    }
+  }
+});
+
 // Tab switching functionality
 function switchTab(tabName) {
   // Check if tab is visible (only for media tabs, statistics is always visible)
@@ -161,7 +193,17 @@ function displayMoviePoster(id, posterUrl, title = null) {
       }
     }
     altText = escapeHtml(altText);
-    cell.innerHTML = `<img src="${posterUrl}" alt="${altText}" style="width: 60px; max-height: 90px; object-fit: cover; border-radius: 4px;" loading="lazy">`;
+    const img = document.createElement('img');
+    img.src = posterUrl;
+    img.alt = altText;
+    img.style.width = '60px';
+    img.style.maxHeight = '90px';
+    img.style.objectFit = 'cover';
+    img.style.borderRadius = '4px';
+    img.loading = 'lazy';
+    img.onclick = () => showImagePopup(posterUrl, altText);
+    cell.innerHTML = '';
+    cell.appendChild(img);
   }
 }
 
@@ -471,6 +513,7 @@ function displayAnimePoster(id, posterUrl, title = null) {
     img.style.objectFit = 'cover';
     img.style.borderRadius = '4px';
     img.loading = 'lazy';
+    img.onclick = () => showImagePopup(posterUrl, altText);
     cell.appendChild(img);
   }
 }
@@ -497,6 +540,7 @@ function displayTVPoster(id, posterUrl, title = null) {
     img.style.objectFit = 'cover';
     img.style.borderRadius = '4px';
     img.loading = 'lazy';
+    img.onclick = () => showImagePopup(posterUrl, altText);
     cell.appendChild(img);
   }
 }
@@ -738,7 +782,17 @@ function displayVideoGamePoster(id, posterUrl, title = null) {
       }
     }
     altText = escapeHtml(altText);
-    cell.innerHTML = `<img src="${posterUrl}" alt="${altText}" style="width: 60px; max-height: 90px; object-fit: cover; border-radius: 4px;" loading="lazy">`;
+    const img = document.createElement('img');
+    img.src = posterUrl;
+    img.alt = altText;
+    img.style.width = '60px';
+    img.style.maxHeight = '90px';
+    img.style.objectFit = 'cover';
+    img.style.borderRadius = '4px';
+    img.loading = 'lazy';
+    img.onclick = () => showImagePopup(posterUrl, altText);
+    cell.innerHTML = '';
+    cell.appendChild(img);
   }
 }
 
