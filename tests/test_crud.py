@@ -573,3 +573,264 @@ class TestAnimeCRUD:
         assert len(anime) >= 2
         assert anime[0].rating >= anime[1].rating
 
+
+class TestVideoGameCRUD:
+    """Test video game CRUD operations."""
+    
+    def test_create_video_game(self, db_session, test_video_game_data):
+        """Test creating a video game."""
+        from datetime import datetime
+        user_create = schemas.UserCreate(
+            email="vgtest@example.com",
+            username="vgtest",
+            password="password123"
+        )
+        user = crud.create_user(db_session, user_create, "hashed", "token")
+        
+        # Parse release_date string to datetime
+        game_data = test_video_game_data.copy()
+        if isinstance(game_data["release_date"], str):
+            game_data["release_date"] = datetime.fromisoformat(game_data["release_date"])
+        
+        video_game_create = schemas.VideoGameCreate(**game_data)
+        video_game = crud.create_video_game(db_session, user.id, video_game_create)
+        
+        assert video_game is not None
+        assert video_game.title == test_video_game_data["title"]
+        assert video_game.genres == test_video_game_data["genres"]
+        assert video_game.rating == test_video_game_data["rating"]
+        assert video_game.played == test_video_game_data["played"]
+        assert video_game.user_id == user.id
+    
+    def test_get_video_games(self, db_session, test_video_game_data):
+        """Test retrieving video games for a user."""
+        from datetime import datetime
+        user_create = schemas.UserCreate(
+            email="vgtest2@example.com",
+            username="vgtest2",
+            password="password123"
+        )
+        user = crud.create_user(db_session, user_create, "hashed", "token")
+        
+        # Parse release_date string to datetime
+        game_data = test_video_game_data.copy()
+        if isinstance(game_data["release_date"], str):
+            game_data["release_date"] = datetime.fromisoformat(game_data["release_date"])
+        
+        video_game_create = schemas.VideoGameCreate(**game_data)
+        crud.create_video_game(db_session, user.id, video_game_create)
+        
+        video_games = crud.get_video_games(db_session, user.id)
+        
+        assert len(video_games) == 1
+        assert video_games[0].title == test_video_game_data["title"]
+    
+    def test_update_video_game(self, db_session, test_video_game_data):
+        """Test updating a video game."""
+        from datetime import datetime
+        user_create = schemas.UserCreate(
+            email="vgupdatetest@example.com",
+            username="vgupdatetest",
+            password="password123"
+        )
+        user = crud.create_user(db_session, user_create, "hashed", "token")
+        
+        # Parse release_date string to datetime
+        game_data = test_video_game_data.copy()
+        if isinstance(game_data["release_date"], str):
+            game_data["release_date"] = datetime.fromisoformat(game_data["release_date"])
+        
+        video_game_create = schemas.VideoGameCreate(**game_data)
+        video_game = crud.create_video_game(db_session, user.id, video_game_create)
+        
+        # Update video game
+        video_game_update = schemas.VideoGameUpdate(rating=10.0, played=False)
+        updated_video_game = crud.update_video_game(db_session, user.id, video_game.id, video_game_update)
+        
+        assert updated_video_game.rating == 10.0
+        assert updated_video_game.played is False
+        assert updated_video_game.title == test_video_game_data["title"]  # Unchanged
+    
+    def test_create_video_game_with_decimal_rating(self, db_session):
+        """Test creating a video game with decimal rating."""
+        from datetime import datetime
+        user_create = schemas.UserCreate(
+            email="vgdecimaltest@example.com",
+            username="vgdecimaltest",
+            password="password123"
+        )
+        user = crud.create_user(db_session, user_create, "hashed", "token")
+        
+        video_game_data = {
+            "title": "Test Game",
+            "release_date": datetime(2020, 1, 1),
+            "rating": 8.7  # Decimal rating
+        }
+        video_game_create = schemas.VideoGameCreate(**video_game_data)
+        video_game = crud.create_video_game(db_session, user.id, video_game_create)
+        
+        assert video_game.rating == 8.7
+        assert isinstance(video_game.rating, float)
+    
+    def test_update_video_game_with_decimal_rating(self, db_session, test_video_game_data):
+        """Test updating a video game with decimal rating."""
+        from datetime import datetime
+        user_create = schemas.UserCreate(
+            email="vgdecimalupdatetest@example.com",
+            username="vgdecimalupdatetest",
+            password="password123"
+        )
+        user = crud.create_user(db_session, user_create, "hashed", "token")
+        
+        # Parse release_date string to datetime
+        game_data = test_video_game_data.copy()
+        if isinstance(game_data["release_date"], str):
+            game_data["release_date"] = datetime.fromisoformat(game_data["release_date"])
+        
+        video_game_create = schemas.VideoGameCreate(**game_data)
+        video_game = crud.create_video_game(db_session, user.id, video_game_create)
+        
+        # Update with decimal rating
+        video_game_update = schemas.VideoGameUpdate(rating=7.3)
+        updated_video_game = crud.update_video_game(db_session, user.id, video_game.id, video_game_update)
+        
+        assert updated_video_game.rating == 7.3
+        assert isinstance(updated_video_game.rating, float)
+    
+    def test_rating_rounding(self, db_session):
+        """Test that ratings are rounded to one decimal place."""
+        from datetime import datetime
+        user_create = schemas.UserCreate(
+            email="vgroundtest@example.com",
+            username="vgroundtest",
+            password="password123"
+        )
+        user = crud.create_user(db_session, user_create, "hashed", "token")
+        
+        # Test with rating that needs rounding
+        video_game_data = {
+            "title": "Test Game",
+            "release_date": datetime(2020, 1, 1),
+            "rating": 8.456  # Should round to 8.5
+        }
+        video_game_create = schemas.VideoGameCreate(**video_game_data)
+        video_game = crud.create_video_game(db_session, user.id, video_game_create)
+        
+        assert video_game.rating == 8.5
+    
+    def test_delete_video_game(self, db_session, test_video_game_data):
+        """Test deleting a video game."""
+        from datetime import datetime
+        user_create = schemas.UserCreate(
+            email="vgdeletetest@example.com",
+            username="vgdeletetest",
+            password="password123"
+        )
+        user = crud.create_user(db_session, user_create, "hashed", "token")
+        
+        # Parse release_date string to datetime
+        game_data = test_video_game_data.copy()
+        if isinstance(game_data["release_date"], str):
+            game_data["release_date"] = datetime.fromisoformat(game_data["release_date"])
+        
+        video_game_create = schemas.VideoGameCreate(**game_data)
+        video_game = crud.create_video_game(db_session, user.id, video_game_create)
+        
+        deleted_video_game = crud.delete_video_game(db_session, user.id, video_game.id)
+        
+        assert deleted_video_game is not None
+        assert deleted_video_game.id == video_game.id
+        
+        # Verify it's deleted
+        found_video_game = crud.get_video_game_by_id(db_session, user.id, video_game.id)
+        assert found_video_game is None
+    
+    def test_get_video_game_by_id(self, db_session, test_video_game_data):
+        """Test retrieving a specific video game by ID."""
+        from datetime import datetime
+        user_create = schemas.UserCreate(
+            email="vggetbyidtest@example.com",
+            username="vggetbyidtest",
+            password="password123"
+        )
+        user = crud.create_user(db_session, user_create, "hashed", "token")
+        
+        # Parse release_date string to datetime
+        game_data = test_video_game_data.copy()
+        if isinstance(game_data["release_date"], str):
+            game_data["release_date"] = datetime.fromisoformat(game_data["release_date"])
+        
+        video_game_create = schemas.VideoGameCreate(**game_data)
+        video_game = crud.create_video_game(db_session, user.id, video_game_create)
+        
+        found_video_game = crud.get_video_game_by_id(db_session, user.id, video_game.id)
+        
+        assert found_video_game is not None
+        assert found_video_game.id == video_game.id
+        assert found_video_game.title == test_video_game_data["title"]
+    
+    def test_video_game_search(self, db_session, test_video_game_data):
+        """Test searching video games."""
+        from datetime import datetime
+        user_create = schemas.UserCreate(
+            email="vgsearchtest@example.com",
+            username="vgsearchtest",
+            password="password123"
+        )
+        user = crud.create_user(db_session, user_create, "hashed", "token")
+        
+        # Parse release_date string to datetime
+        game_data = test_video_game_data.copy()
+        if isinstance(game_data["release_date"], str):
+            game_data["release_date"] = datetime.fromisoformat(game_data["release_date"])
+        
+        video_game_create = schemas.VideoGameCreate(**game_data)
+        crud.create_video_game(db_session, user.id, video_game_create)
+        
+        # Search by title
+        video_games = crud.get_video_games(db_session, user.id, search="Zelda")
+        
+        assert len(video_games) == 1
+        assert "Zelda" in video_games[0].title
+        
+        # Search by genre
+        video_games = crud.get_video_games(db_session, user.id, search="Action")
+        
+        assert len(video_games) == 1
+        assert "Action" in video_games[0].genres
+    
+    def test_video_game_sorting(self, db_session, test_video_game_data):
+        """Test sorting video games."""
+        from datetime import datetime
+        user_create = schemas.UserCreate(
+            email="vgsorttest@example.com",
+            username="vgsorttest",
+            password="password123"
+        )
+        user = crud.create_user(db_session, user_create, "hashed", "token")
+        
+        # Create multiple video games with different ratings
+        game1_data = test_video_game_data.copy()
+        game1_data["title"] = "Game A"
+        if isinstance(game1_data["release_date"], str):
+            game1_data["release_date"] = datetime.fromisoformat(game1_data["release_date"])
+        game1_data["rating"] = 5.0
+        game1 = crud.create_video_game(db_session, user.id, schemas.VideoGameCreate(**game1_data))
+        
+        game2_data = test_video_game_data.copy()
+        game2_data["title"] = "Game B"
+        if isinstance(game2_data["release_date"], str):
+            game2_data["release_date"] = datetime.fromisoformat(game2_data["release_date"])
+        game2_data["rating"] = 9.0
+        game2 = crud.create_video_game(db_session, user.id, schemas.VideoGameCreate(**game2_data))
+        
+        # Sort by rating descending
+        video_games = crud.get_video_games(db_session, user.id, sort_by="rating", order="desc")
+        
+        assert len(video_games) >= 2
+        assert video_games[0].rating >= video_games[1].rating
+        
+        # Sort by release_date ascending
+        video_games = crud.get_video_games(db_session, user.id, sort_by="release_date", order="asc")
+        
+        assert len(video_games) >= 2

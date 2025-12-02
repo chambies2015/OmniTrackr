@@ -135,3 +135,18 @@ def test_anime_data():
         "review": "Amazing anime"
     }
 
+
+@pytest.fixture
+def test_video_game_data():
+    """Sample video game data for testing."""
+    from datetime import datetime
+    return {
+        "title": "The Legend of Zelda: Breath of the Wild",
+        "release_date": datetime(2017, 3, 3).isoformat(),
+        "genres": "Action, Adventure, RPG",
+        "rating": 9.5,
+        "played": True,
+        "review": "An amazing open-world adventure",
+        "cover_art_url": "https://example.com/zelda.jpg",
+        "rawg_link": "https://rawg.io/games/the-legend-of-zelda-breath-of-the-wild"
+    }

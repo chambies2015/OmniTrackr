@@ -183,6 +183,7 @@
       <button class="tab active" onclick="switchTab('movies')">🎬 Movies</button>
       <button class="tab" onclick="switchTab('tv-shows')">📺 TV Shows</button>
       <button class="tab" onclick="switchTab('anime')">🎌 Anime</button>
+      <button class="tab" onclick="switchTab('video-games')">🎮 Video Games</button>
       <button class="tab" onclick="switchTab('statistics')">📊 Statistics</button>
     </div>
 
@@ -405,6 +406,78 @@
               <th>Watched</th>
               <th>Review</th>
               <th>IMDb</th>
+              <th>Actions</th>
+            </tr>
+          </thead>
+          <tbody>          </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+
+    <!-- Video Games Tab Content -->
+    <div id="video-games-tab" class="tab-content">
+      <div class="card">
+        <div class="collapsible-header" onclick="toggleCollapsible('videoGameForm')">
+          <h2 style="margin: 0; display: inline-block;">Add Video Game</h2>
+          <span class="collapsible-icon" id="videoGameFormIcon">▼</span>
+        </div>
+        <div class="collapsible-content" id="videoGameFormContent" style="display: none;">
+          <form id="addVideoGameForm">
+            <div>
+              <input type="text" id="videoGameTitle" placeholder="Title" required>
+            </div>
+            <div>
+              <input type="date" id="videoGameReleaseDate" placeholder="Release Date">
+            </div>
+            <div>
+              <input type="text" id="videoGameGenres" placeholder="Genres (comma-separated)">
+            </div>
+            <div>
+              <input type="number" min="0" max="10" step="0.1" id="videoGameRating" placeholder="Rating (0-10.0)">
+            </div>
+            <div>
+              <label>Played <input type="checkbox" id="videoGamePlayed"></label>
+            </div>
+            <div>
+              <textarea id="videoGameReview" placeholder="Review (optional)" rows="1"></textarea>
+            </div>
+            <button type="submit" class="action-btn">Add Video Game</button>
+          </form>
+        </div>
+      </div>
+      <div class="card">
+        <div style="display:flex; justify-content: space-between; align-items: center; margin-bottom: 10px;">
+          <h2 style="margin: 0;">Video Games</h2>
+          <span id="videoGameCount" style="font-weight: bold;"></span>
+        </div>
+        <div style="display:flex; flex-wrap: wrap; gap: 10px; margin-bottom: 10px;">
+          <input type="text" id="videoGameSearch" placeholder="Search by title or genres" style="flex: 2; min-width: 200px;">
+          <select id="videoGameSort" style="flex: 1; min-width: 200px;">
+            <option value="">Sort by...</option>
+            <option value="rating-asc">Rating (Low → High)</option>
+            <option value="rating-desc">Rating (High → Low)</option>
+            <option value="release_date-asc">Release Date (Oldest → Newest)</option>
+            <option value="release_date-desc">Release Date (Newest → Oldest)</option>
+          </select>
+          <button id="loadVideoGames" class="action-btn" style="flex: 1; min-width: 120px;">Refresh</button>
+          <button id="exportVideoGames" class="action-btn"
+            style="flex: 1; min-width: 120px; background-color: #4caf50;">Export Data</button>
+          <button id="importVideoGames" class="action-btn"
+            style="flex: 1; min-width: 120px; background-color: #ff9800;">Import Data</button>
+        </div>
+        <input type="file" id="importVideoGameFile" accept=".json" style="display: none;">
+        <div class="table-container">
+          <table id="videoGameTable">
+          <thead>
+            <tr>
+              <th>Cover Art</th>
+              <th>Name</th>
+              <th>Release Date</th>
+              <th>Genres</th>
+              <th>Played</th>
+              <th>Rating</th>
+              <th>RAWG Link</th>
               <th>Actions</th>
             </tr>
           </thead>
@@ -904,6 +977,15 @@
               </label>
             </div>
             <div class="privacy-toggle-item">
+              <label for="videoGamesPrivate" class="toggle-label">
+                <span>Make Video Games Private</span>
+                <div class="toggle-container">
+                  <input type="checkbox" id="videoGamesPrivate" class="toggle-switch">
+                  <span class="toggle-slider"></span>
+                </div>
+              </label>
+            </div>
+            <div class="privacy-toggle-item">
               <label for="statisticsPrivate" class="toggle-label">
                 <span>Make Statistics Private</span>
                 <div class="toggle-container">
@@ -915,6 +997,53 @@
             <button type="submit" class="action-btn">Save Privacy Settings</button>
             <div id="privacyError" class="error-message"></div>
             <div id="privacySuccess" class="success-message"></div>
+          </form>
+        </div>
+
+        <!-- Tab Visibility Settings Section -->
+        <div class="account-section">
+          <h3>Tab Visibility</h3>
+          <p class="info-text">Customize which tabs you want to see in the main interface. Hidden tabs won't appear in your navigation, but your data will still be saved.</p>
+          <form id="tabVisibilityForm" onsubmit="updateTabVisibility(event)">
+            <div class="privacy-toggle-item">
+              <label for="moviesVisible" class="toggle-label">
+                <span>Show Movies Tab</span>
+                <div class="toggle-container">
+                  <input type="checkbox" id="moviesVisible" class="toggle-switch">
+                  <span class="toggle-slider"></span>
+                </div>
+              </label>
+            </div>
+            <div class="privacy-toggle-item">
+              <label for="tvShowsVisible" class="toggle-label">
+                <span>Show TV Shows Tab</span>
+                <div class="toggle-container">
+                  <input type="checkbox" id="tvShowsVisible" class="toggle-switch">
+                  <span class="toggle-slider"></span>
+                </div>
+              </label>
+            </div>
+            <div class="privacy-toggle-item">
+              <label for="animeVisible" class="toggle-label">
+                <span>Show Anime Tab</span>
+                <div class="toggle-container">
+                  <input type="checkbox" id="animeVisible" class="toggle-switch">
+                  <span class="toggle-slider"></span>
+                </div>
+              </label>
+            </div>
+            <div class="privacy-toggle-item">
+              <label for="videoGamesVisible" class="toggle-label">
+                <span>Show Video Games Tab</span>
+                <div class="toggle-container">
+                  <input type="checkbox" id="videoGamesVisible" class="toggle-switch">
+                  <span class="toggle-slider"></span>
+                </div>
+              </label>
+            </div>
+            <button type="submit" class="action-btn">Save Tab Visibility</button>
+            <div id="tabVisibilityError" class="error-message"></div>
+            <div id="tabVisibilitySuccess" class="success-message"></div>
           </form>
         </div>
 
@@ -1009,6 +1138,23 @@
                 <input type="text" id="friendAnimeSearch" class="friend-search-input" placeholder="Search anime by title or year..." oninput="filterFriendAnime()">
               </div>
               <div id="friendAnimeListContainer"></div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Video Games Accordion Section -->
+        <div class="accordion-section">
+          <div class="accordion-header" onclick="toggleAccordion('videoGames')">
+            <h3>Video Games</h3>
+            <span class="accordion-icon" id="videoGamesIcon">▼</span>
+          </div>
+          <div class="accordion-content" id="videoGamesContent">
+            <div id="videoGamesSummary" class="accordion-summary"></div>
+            <div id="videoGamesList" class="accordion-full-content">
+              <div class="friend-search-container">
+                <input type="text" id="friendVideoGamesSearch" class="friend-search-input" placeholder="Search video games by title, genres, or release date..." oninput="filterFriendVideoGames()">
+              </div>
+              <div id="friendVideoGamesListContainer"></div>
             </div>
           </div>
         </div>

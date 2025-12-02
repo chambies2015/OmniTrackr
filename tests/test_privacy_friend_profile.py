@@ -22,6 +22,7 @@ class TestPrivacySettingsCRUD:
         assert privacy.movies_private is False
         assert privacy.tv_shows_private is False
         assert privacy.anime_private is False
+        assert privacy.video_games_private is False
         assert privacy.statistics_private is False
     
     def test_update_privacy_settings_movies(self, db_session, test_user_data):
@@ -39,6 +40,7 @@ class TestPrivacySettingsCRUD:
         assert updated_user.movies_private is True
         assert updated_user.tv_shows_private is False
         assert updated_user.anime_private is False
+        assert updated_user.video_games_private is False
         assert updated_user.statistics_private is False
     
     def test_update_privacy_settings_all(self, db_session, test_user_data):
@@ -53,6 +55,7 @@ class TestPrivacySettingsCRUD:
             movies_private=True,
             tv_shows_private=True,
             anime_private=True,
+            video_games_private=True,
             statistics_private=True
         )
         updated_user = crud.update_privacy_settings(db_session, user.id, privacy_update)
@@ -61,6 +64,7 @@ class TestPrivacySettingsCRUD:
         assert updated_user.movies_private is True
         assert updated_user.tv_shows_private is True
         assert updated_user.anime_private is True
+        assert updated_user.video_games_private is True
         assert updated_user.statistics_private is True
     
     def test_update_privacy_settings_partial(self, db_session, test_user_data):
@@ -81,6 +85,7 @@ class TestPrivacySettingsCRUD:
         assert updated_user.movies_private is True  # Should remain True
         assert updated_user.tv_shows_private is True  # Should be True
         assert updated_user.anime_private is False  # Should remain False
+        assert updated_user.video_games_private is False  # Should remain False
         assert updated_user.statistics_private is False  # Should remain False
     
     def test_get_privacy_settings_nonexistent_user(self, db_session):
@@ -109,10 +114,12 @@ class TestPrivacySettingsEndpoints:
         assert "movies_private" in data
         assert "tv_shows_private" in data
         assert "anime_private" in data
+        assert "video_games_private" in data
         assert "statistics_private" in data
         assert data["movies_private"] is False
         assert data["tv_shows_private"] is False
         assert data["anime_private"] is False
+        assert data["video_games_private"] is False
         assert data["statistics_private"] is False
     
     def test_get_privacy_settings_unauthenticated(self, client):
@@ -129,6 +136,7 @@ class TestPrivacySettingsEndpoints:
                 "movies_private": True,
                 "tv_shows_private": False,
                 "anime_private": True,
+                "video_games_private": True,
                 "statistics_private": True
             }
         )
@@ -138,6 +146,7 @@ class TestPrivacySettingsEndpoints:
         assert data["movies_private"] is True
         assert data["tv_shows_private"] is False
         assert data["anime_private"] is True
+        assert data["video_games_private"] is True
         assert data["statistics_private"] is True
     
     def test_update_privacy_settings_partial(self, authenticated_client):
@@ -149,6 +158,7 @@ class TestPrivacySettingsEndpoints:
                 "movies_private": True,
                 "tv_shows_private": True,
                 "anime_private": True,
+                "video_games_private": True,
                 "statistics_private": True
             }
         )
@@ -166,6 +176,7 @@ class TestPrivacySettingsEndpoints:
         assert data["movies_private"] is False
         assert data["tv_shows_private"] is True  # Should remain True
         assert data["anime_private"] is True  # Should remain True
+        assert data["video_games_private"] is True  # Should remain True
         assert data["statistics_private"] is True  # Should remain True
     
     def test_update_privacy_settings_unauthenticated(self, client):
@@ -225,6 +236,7 @@ class TestFriendProfileCRUD:
         assert profile.statistics_available is True
         assert profile.movies_private is False
         assert profile.tv_shows_private is False
+        assert profile.video_games_private is False
         assert profile.statistics_private is False
     
     def test_get_friend_profile_summary_private_movies(self, db_session, test_user_data):
@@ -384,6 +396,77 @@ class TestFriendProfileCRUD:
         
         assert tv_shows is None
     
+    def test_get_friend_video_games_public(self, db_session, test_user_data):
+        """Test getting friend's video games when public."""
+        from datetime import datetime
+        # Create two users
+        user1_create = schemas.UserCreate(**test_user_data)
+        hashed_password = auth.get_password_hash(test_user_data["password"])
+        user1 = crud.create_user(db_session, user1_create, hashed_password)
+        
+        user_data2 = test_user_data.copy()
+        user_data2["email"] = "user2@example.com"
+        user_data2["username"] = "user2"
+        user2_create = schemas.UserCreate(**user_data2)
+        user2 = crud.create_user(db_session, user2_create, hashed_password)
+        
+        # Create friendship
+        crud.create_friendship(db_session, user1.id, user2.id)
+        
+        # Add video games to user2
+        video_game1 = models.VideoGame(
+            title="Game 1",
+            release_date=datetime(2020, 1, 1),
+            genres="Action, Adventure",
+            rating=8.5,
+            played=True,
+            user_id=user2.id
+        )
+        video_game2 = models.VideoGame(
+            title="Game 2",
+            release_date=datetime(2021, 1, 1),
+            genres="RPG",
+            rating=9.0,
+            played=False,
+            user_id=user2.id
+        )
+        db_session.add(video_game1)
+        db_session.add(video_game2)
+        db_session.commit()
+        
+        # Get friend video games
+        video_games = crud.get_friend_video_games(db_session, user2.id)
+        
+        assert video_games is not None
+        assert len(video_games) == 2
+        assert video_games[0].title in ["Game 1", "Game 2"]
+        assert video_games[1].title in ["Game 1", "Game 2"]
+    
+    def test_get_friend_video_games_private(self, db_session, test_user_data):
+        """Test getting friend's video games when private (should return None)."""
+        # Create two users
+        user1_create = schemas.UserCreate(**test_user_data)
+        hashed_password = auth.get_password_hash(test_user_data["password"])
+        user1 = crud.create_user(db_session, user1_create, hashed_password)
+        
+        user_data2 = test_user_data.copy()
+        user_data2["email"] = "user2@example.com"
+        user_data2["username"] = "user2"
+        user2_create = schemas.UserCreate(**user_data2)
+        user2 = crud.create_user(db_session, user2_create, hashed_password)
+        
+        # Set video games to private
+        privacy_update = schemas.PrivacySettingsUpdate(video_games_private=True)
+        crud.update_privacy_settings(db_session, user2.id, privacy_update)
+        
+        # Create friendship
+        crud.create_friendship(db_session, user1.id, user2.id)
+        
+        # Get friend video games (should return None when private)
+        video_games = crud.get_friend_video_games(db_session, user2.id)
+        
+        assert video_games is None
+    
     def test_get_friend_statistics_public(self, db_session, test_user_data):
         """Test getting friend's statistics when public."""
         # Create two users
@@ -495,6 +578,7 @@ class TestFriendProfileEndpoints:
         assert data["username"] == "friend"
         assert "movies_count" in data
         assert "tv_shows_count" in data
+        assert "video_games_count" in data
         assert "statistics_available" in data
     
     def test_get_friend_profile_not_friends(self, authenticated_client, db_session, test_user_data):
@@ -730,6 +814,80 @@ class TestFriendProfileEndpoints:
         assert response.status_code == 403
         assert "private" in response.json()["detail"].lower()
     
+    def test_get_friend_video_games_success(self, authenticated_client, db_session, test_user_data):
+        """Test getting friend's video games successfully."""
+        from datetime import datetime
+        # Create friend user
+        user_data2 = {
+            "email": "friend@example.com",
+            "username": "friend",
+            "password": "password123"
+        }
+        from app import crud, schemas, auth, models
+        user2_create = schemas.UserCreate(**user_data2)
+        hashed_password = auth.get_password_hash(user_data2["password"])
+        user2 = crud.create_user(db_session, user2_create, hashed_password)
+        
+        # Get current user ID
+        account_response = authenticated_client.get("/account/me")
+        user1_id = account_response.json()["id"]
+        
+        # Create friendship
+        crud.create_friendship(db_session, user1_id, user2.id)
+        
+        # Add video games to friend
+        video_game = models.VideoGame(
+            title="Friend Game",
+            release_date=datetime(2020, 1, 1),
+            genres="Action, Adventure",
+            rating=8.5,
+            played=True,
+            user_id=user2.id
+        )
+        db_session.add(video_game)
+        db_session.commit()
+        
+        # Get friend video games
+        response = authenticated_client.get(f"/friends/{user2.id}/video-games")
+        
+        assert response.status_code == 200
+        data = response.json()
+        assert "video_games" in data
+        assert "count" in data
+        assert data["count"] == 1
+        assert len(data["video_games"]) == 1
+        assert data["video_games"][0]["title"] == "Friend Game"
+    
+    def test_get_friend_video_games_private(self, authenticated_client, db_session, test_user_data):
+        """Test getting friend's video games when private."""
+        # Create friend user
+        user_data2 = {
+            "email": "friend@example.com",
+            "username": "friend",
+            "password": "password123"
+        }
+        from app import crud, schemas, auth
+        user2_create = schemas.UserCreate(**user_data2)
+        hashed_password = auth.get_password_hash(user_data2["password"])
+        user2 = crud.create_user(db_session, user2_create, hashed_password)
+        
+        # Get current user ID
+        account_response = authenticated_client.get("/account/me")
+        user1_id = account_response.json()["id"]
+        
+        # Create friendship
+        crud.create_friendship(db_session, user1_id, user2.id)
+        
+        # Set video games to private
+        privacy_update = schemas.PrivacySettingsUpdate(video_games_private=True)
+        crud.update_privacy_settings(db_session, user2.id, privacy_update)
+        
+        # Try to get friend video games (should fail - private)
+        response = authenticated_client.get(f"/friends/{user2.id}/video-games")
+        
+        assert response.status_code == 403
+        assert "private" in response.json()["detail"].lower()
+    
     def test_get_friend_profile_nonexistent(self, authenticated_client):
         """Test getting friend profile for non-existent user."""
         # Non-existent user is also not a friend, so returns 403
@@ -744,6 +902,7 @@ class TestFriendProfileEndpoints:
             ("GET", "/friends/1/profile"),
             ("GET", "/friends/1/movies"),
             ("GET", "/friends/1/tv-shows"),
+            ("GET", "/friends/1/video-games"),
             ("GET", "/friends/1/statistics"),
         ]
         

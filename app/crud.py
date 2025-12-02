@@ -134,6 +134,8 @@ def update_privacy_settings(db: Session, user_id: int, privacy_settings: schemas
         db_user.tv_shows_private = update_dict['tv_shows_private']
     if 'anime_private' in update_dict:
         db_user.anime_private = update_dict['anime_private']
+    if 'video_games_private' in update_dict:
+        db_user.video_games_private = update_dict['video_games_private']
     if 'statistics_private' in update_dict:
         db_user.statistics_private = update_dict['statistics_private']
     
@@ -152,7 +154,44 @@ def get_privacy_settings(db: Session, user_id: int) -> Optional[schemas.PrivacyS
         movies_private=db_user.movies_private,
         tv_shows_private=db_user.tv_shows_private,
         anime_private=db_user.anime_private,
+        video_games_private=db_user.video_games_private,
         statistics_private=db_user.statistics_private
+    )
+
+
+def update_tab_visibility(db: Session, user_id: int, tab_visibility: schemas.TabVisibilityUpdate) -> Optional[models.User]:
+    """Update user's tab visibility settings."""
+    db_user = get_user_by_id(db, user_id)
+    if db_user is None:
+        return None
+    
+    update_dict = tab_visibility.dict(exclude_unset=True)
+    
+    if 'movies_visible' in update_dict:
+        db_user.movies_visible = update_dict['movies_visible']
+    if 'tv_shows_visible' in update_dict:
+        db_user.tv_shows_visible = update_dict['tv_shows_visible']
+    if 'anime_visible' in update_dict:
+        db_user.anime_visible = update_dict['anime_visible']
+    if 'video_games_visible' in update_dict:
+        db_user.video_games_visible = update_dict['video_games_visible']
+    
+    db.commit()
+    db.refresh(db_user)
+    return db_user
+
+
+def get_tab_visibility(db: Session, user_id: int) -> Optional[schemas.TabVisibility]:
+    """Get user's tab visibility settings."""
+    db_user = get_user_by_id(db, user_id)
+    if db_user is None:
+        return None
+    
+    return schemas.TabVisibility(
+        movies_visible=db_user.movies_visible,
+        tv_shows_visible=db_user.tv_shows_visible,
+        anime_visible=db_user.anime_visible,
+        video_games_visible=db_user.video_games_visible
     )
 
 
@@ -397,6 +436,74 @@ def delete_anime(db: Session, user_id: int, anime_id: int) -> Optional[models.An
     return db_anime
 
 
+# Video Game functions
+def get_video_games(
+    db: Session,
+    user_id: int,
+    search: Optional[str] = None,
+    sort_by: Optional[str] = None,
+    order: Optional[str] = None,
+) -> List[models.VideoGame]:
+    query = db.query(models.VideoGame).filter(models.VideoGame.user_id == user_id)
+    if search:
+        like_pattern = f"%{search}%"
+        query = query.filter(
+            models.VideoGame.title.ilike(like_pattern) |
+            models.VideoGame.genres.ilike(like_pattern)
+        )
+    sort_order = asc  # default
+    if order and order.lower() == "desc":
+        sort_order = desc
+    if sort_by == "rating":
+        query = query.order_by(sort_order(models.VideoGame.rating))
+    elif sort_by == "release_date" or sort_by == "year":
+        query = query.order_by(sort_order(models.VideoGame.release_date))
+    return query.all()
+
+
+def get_video_game_by_id(db: Session, user_id: int, game_id: int) -> Optional[models.VideoGame]:
+    return db.query(models.VideoGame).filter(
+        models.VideoGame.id == game_id,
+        models.VideoGame.user_id == user_id
+    ).first()
+
+
+def create_video_game(db: Session, user_id: int, video_game: schemas.VideoGameCreate) -> models.VideoGame:
+    video_game_dict = video_game.dict()
+    # Round rating to one decimal place if provided
+    if video_game_dict.get('rating') is not None:
+        video_game_dict['rating'] = round(float(video_game_dict['rating']), 1)
+    db_video_game = models.VideoGame(**video_game_dict, user_id=user_id)
+    db.add(db_video_game)
+    db.commit()
+    db.refresh(db_video_game)
+    return db_video_game
+
+
+def update_video_game(db: Session, user_id: int, game_id: int, video_game_update: schemas.VideoGameUpdate) -> Optional[models.VideoGame]:
+    db_video_game = get_video_game_by_id(db, user_id, game_id)
+    if db_video_game is None:
+        return None
+    update_dict = video_game_update.dict(exclude_unset=True)
+    # Round rating to one decimal place if provided
+    if 'rating' in update_dict and update_dict['rating'] is not None:
+        update_dict['rating'] = round(float(update_dict['rating']), 1)
+    for field, value in update_dict.items():
+        setattr(db_video_game, field, value)
+    db.commit()
+    db.refresh(db_video_game)
+    return db_video_game
+
+
+def delete_video_game(db: Session, user_id: int, game_id: int) -> Optional[models.VideoGame]:
+    db_video_game = get_video_game_by_id(db, user_id, game_id)
+    if db_video_game is None:
+        return None
+    db.delete(db_video_game)
+    db.commit()
+    return db_video_game
+
+
 # Export/Import functions
 def get_all_movies(db: Session, user_id: int) -> List[models.Movie]:
     """Get all movies for export"""
@@ -411,6 +518,11 @@ def get_all_tv_shows(db: Session, user_id: int) -> List[models.TVShow]:
 def get_all_anime(db: Session, user_id: int) -> List[models.Anime]:
     """Get all anime for export"""
     return db.query(models.Anime).filter(models.Anime.user_id == user_id).all()
+
+
+def get_all_video_games(db: Session, user_id: int) -> List[models.VideoGame]:
+    """Get all video games for export"""
+    return db.query(models.VideoGame).filter(models.VideoGame.user_id == user_id).all()
 
 
 def find_movie_by_title_and_director(db: Session, user_id: int, title: str, director: str) -> Optional[models.Movie]:
@@ -438,6 +550,19 @@ def find_anime_by_title_and_year(db: Session, user_id: int, title: str, year: in
         models.Anime.title == title,
         models.Anime.year == year
     ).first()
+
+
+def find_video_game_by_title_and_release_date(db: Session, user_id: int, title: str, release_date: Optional[datetime]) -> Optional[models.VideoGame]:
+    """Find a video game by title and release date for import conflict resolution"""
+    query = db.query(models.VideoGame).filter(
+        models.VideoGame.user_id == user_id,
+        models.VideoGame.title == title
+    )
+    if release_date is not None:
+        query = query.filter(models.VideoGame.release_date == release_date)
+    else:
+        query = query.filter(models.VideoGame.release_date.is_(None))
+    return query.first()
 
 
 def import_movies(db: Session, user_id: int, movies: List[schemas.MovieCreate]) -> tuple[int, int, List[str]]:
@@ -548,6 +673,50 @@ def import_anime(db: Session, user_id: int, anime: List[schemas.AnimeCreate]) ->
     return created, updated, errors
 
 
+def import_video_games(db: Session, user_id: int, video_games: List[schemas.VideoGameCreate]) -> tuple[int, int, List[str]]:
+    """Import video games, returning (created_count, updated_count, errors)"""
+    created = 0
+    updated = 0
+    errors = []
+    
+    for video_game_data in video_games:
+        try:
+            # Check if video game already exists
+            existing_video_game = find_video_game_by_title_and_release_date(
+                db, user_id, video_game_data.title, video_game_data.release_date
+            )
+            
+            if existing_video_game:
+                # Update existing video game
+                update_dict = video_game_data.dict(exclude_unset=True)
+                # Round rating to one decimal place if provided (consistent with update_video_game)
+                if 'rating' in update_dict and update_dict['rating'] is not None:
+                    update_dict['rating'] = round(float(update_dict['rating']), 1)
+                for field, value in update_dict.items():
+                    setattr(existing_video_game, field, value)
+                updated += 1
+            else:
+                # Create new video game
+                video_game_dict = video_game_data.dict()
+                # Round rating to one decimal place if provided (consistent with create_video_game)
+                if video_game_dict.get('rating') is not None:
+                    video_game_dict['rating'] = round(float(video_game_dict['rating']), 1)
+                db_video_game = models.VideoGame(**video_game_dict, user_id=user_id)
+                db.add(db_video_game)
+                created += 1
+        except Exception as e:
+            errors.append(f"Error importing video game '{video_game_data.title}': {str(e)}")
+    
+    try:
+        db.commit()
+    except Exception as e:
+        db.rollback()
+        errors.append(f"Database error during video game import: {str(e)}")
+        return 0, 0, errors
+    
+    return created, updated, errors
+
+
 # Statistics functions
 def get_watch_statistics(db: Session, user_id: int) -> dict:
     """Get overall watch statistics"""
@@ -557,9 +726,11 @@ def get_watch_statistics(db: Session, user_id: int) -> dict:
     watched_tv_shows = db.query(models.TVShow).filter(models.TVShow.user_id == user_id).filter(models.TVShow.watched == True).count()
     total_anime = db.query(models.Anime).filter(models.Anime.user_id == user_id).count()
     watched_anime = db.query(models.Anime).filter(models.Anime.user_id == user_id).filter(models.Anime.watched == True).count()
+    total_video_games = db.query(models.VideoGame).filter(models.VideoGame.user_id == user_id).count()
+    played_video_games = db.query(models.VideoGame).filter(models.VideoGame.user_id == user_id).filter(models.VideoGame.played == True).count()
     
-    total_items = total_movies + total_tv_shows + total_anime
-    watched_items = watched_movies + watched_tv_shows + watched_anime
+    total_items = total_movies + total_tv_shows + total_anime + total_video_games
+    watched_items = watched_movies + watched_tv_shows + watched_anime + played_video_games
     
     return {
         "total_movies": total_movies,
@@ -571,6 +742,9 @@ def get_watch_statistics(db: Session, user_id: int) -> dict:
         "total_anime": total_anime,
         "watched_anime": watched_anime,
         "unwatched_anime": total_anime - watched_anime,
+        "total_video_games": total_video_games,
+        "played_video_games": played_video_games,
+        "unplayed_video_games": total_video_games - played_video_games,
         "total_items": total_items,
         "watched_items": watched_items,
         "unwatched_items": total_items - watched_items,
@@ -598,7 +772,13 @@ def get_rating_statistics(db: Session, user_id: int) -> dict:
     ).filter(models.Anime.rating.isnot(None)).all()
     anime_ratings = [r[0] for r in anime_ratings]
     
-    all_ratings = movie_ratings + tv_ratings + anime_ratings
+    # Video games rating stats
+    video_game_ratings = db.query(models.VideoGame.rating).filter(
+        models.VideoGame.user_id == user_id
+    ).filter(models.VideoGame.rating.isnot(None)).all()
+    video_game_ratings = [r[0] for r in video_game_ratings]
+    
+    all_ratings = movie_ratings + tv_ratings + anime_ratings + video_game_ratings
     
     if not all_ratings:
         return {
@@ -628,24 +808,30 @@ def get_rating_statistics(db: Session, user_id: int) -> dict:
     highest_movies = db.query(models.Movie).filter(models.Movie.user_id == user_id).filter(models.Movie.rating == highest_rating).limit(5).all()
     highest_tv = db.query(models.TVShow).filter(models.TVShow.user_id == user_id).filter(models.TVShow.rating == highest_rating).limit(5).all()
     highest_anime = db.query(models.Anime).filter(models.Anime.user_id == user_id).filter(models.Anime.rating == highest_rating).limit(5).all()
+    highest_video_games = db.query(models.VideoGame).filter(models.VideoGame.user_id == user_id).filter(models.VideoGame.rating == highest_rating).limit(5).all()
     highest_rated = [
         {"title": m.title, "type": "Movie", "rating": m.rating} for m in highest_movies
     ] + [
         {"title": t.title, "type": "TV Show", "rating": t.rating} for t in highest_tv
     ] + [
         {"title": a.title, "type": "Anime", "rating": a.rating} for a in highest_anime
+    ] + [
+        {"title": v.title, "type": "Video Game", "rating": v.rating} for v in highest_video_games
     ]
     
     # Find items with lowest rating
     lowest_movies = db.query(models.Movie).filter(models.Movie.user_id == user_id).filter(models.Movie.rating == lowest_rating).limit(5).all()
     lowest_tv = db.query(models.TVShow).filter(models.TVShow.user_id == user_id).filter(models.TVShow.rating == lowest_rating).limit(5).all()
     lowest_anime = db.query(models.Anime).filter(models.Anime.user_id == user_id).filter(models.Anime.rating == lowest_rating).limit(5).all()
+    lowest_video_games = db.query(models.VideoGame).filter(models.VideoGame.user_id == user_id).filter(models.VideoGame.rating == lowest_rating).limit(5).all()
     lowest_rated = [
         {"title": m.title, "type": "Movie", "rating": m.rating} for m in lowest_movies
     ] + [
         {"title": t.title, "type": "TV Show", "rating": t.rating} for t in lowest_tv
     ] + [
         {"title": a.title, "type": "Anime", "rating": a.rating} for a in lowest_anime
+    ] + [
+        {"title": v.title, "type": "Video Game", "rating": v.rating} for v in lowest_video_games
     ]
     
     return {
@@ -677,8 +863,20 @@ def get_year_statistics(db: Session, user_id: int) -> dict:
     ).group_by(models.Anime.year).all()
     anime_data = {str(year): count for year, count in anime_years}
     
+    # Video games by year (extract year from release_date)
+    video_games = db.query(models.VideoGame).filter(
+        models.VideoGame.user_id == user_id,
+        models.VideoGame.release_date.isnot(None)
+    ).all()
+    video_game_data = {}
+    for vg in video_games:
+        if vg.release_date:
+            year = vg.release_date.year
+            year_str = str(year)
+            video_game_data[year_str] = video_game_data.get(year_str, 0) + 1
+    
     # Get all years
-    all_years = set(movie_data.keys()) | set(tv_data.keys()) | set(anime_data.keys())
+    all_years = set(movie_data.keys()) | set(tv_data.keys()) | set(anime_data.keys()) | set(video_game_data.keys())
     all_years = sorted([int(year) for year in all_years])
     
     # Decade analysis
@@ -687,15 +885,17 @@ def get_year_statistics(db: Session, user_id: int) -> dict:
         decade = (year // 10) * 10
         decade_key = f"{decade}s"
         if decade_key not in decade_stats:
-            decade_stats[decade_key] = {"movies": 0, "tv_shows": 0, "anime": 0}
+            decade_stats[decade_key] = {"movies": 0, "tv_shows": 0, "anime": 0, "video_games": 0}
         decade_stats[decade_key]["movies"] += movie_data.get(str(year), 0)
         decade_stats[decade_key]["tv_shows"] += tv_data.get(str(year), 0)
         decade_stats[decade_key]["anime"] += anime_data.get(str(year), 0)
+        decade_stats[decade_key]["video_games"] += video_game_data.get(str(year), 0)
     
     return {
         "movies_by_year": movie_data,
         "tv_shows_by_year": tv_data,
         "anime_by_year": anime_data,
+        "video_games_by_year": video_game_data,
         "all_years": all_years,
         "decade_stats": decade_stats,
         "oldest_year": min(all_years) if all_years else None,
@@ -1069,6 +1269,7 @@ def get_friend_profile_summary(db: Session, friend_id: int) -> Optional[schemas.
     movies_count = None
     tv_shows_count = None
     anime_count = None
+    video_games_count = None
     statistics_available = None
     
     if not friend.movies_private:
@@ -1080,6 +1281,9 @@ def get_friend_profile_summary(db: Session, friend_id: int) -> Optional[schemas.
     if not friend.anime_private:
         anime_count = db.query(models.Anime).filter(models.Anime.user_id == friend_id).count()
     
+    if not friend.video_games_private:
+        video_games_count = db.query(models.VideoGame).filter(models.VideoGame.user_id == friend_id).count()
+    
     if not friend.statistics_private:
         statistics_available = True
     
@@ -1088,10 +1292,12 @@ def get_friend_profile_summary(db: Session, friend_id: int) -> Optional[schemas.
         movies_count=movies_count,
         tv_shows_count=tv_shows_count,
         anime_count=anime_count,
+        video_games_count=video_games_count,
         statistics_available=statistics_available,
         movies_private=friend.movies_private,
         tv_shows_private=friend.tv_shows_private,
         anime_private=friend.anime_private,
+        video_games_private=friend.video_games_private,
         statistics_private=friend.statistics_private
     )
 
@@ -1130,6 +1336,18 @@ def get_friend_anime(db: Session, friend_id: int) -> Optional[List[models.Anime]
         return None  # Data is private
     
     return db.query(models.Anime).filter(models.Anime.user_id == friend_id).all()
+
+
+def get_friend_video_games(db: Session, friend_id: int) -> Optional[List[models.VideoGame]]:
+    """Get friend's video games list (if not private)."""
+    friend = get_user_by_id(db, friend_id)
+    if friend is None:
+        return None
+    
+    if friend.video_games_private:
+        return None  # Data is private
+    
+    return db.query(models.VideoGame).filter(models.VideoGame.user_id == friend_id).all()
 
 
 def get_friend_statistics(db: Session, friend_id: int) -> Optional[dict]:

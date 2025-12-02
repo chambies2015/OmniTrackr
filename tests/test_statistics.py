@@ -7,12 +7,13 @@ import pytest
 class TestStatisticsEndpoints:
     """Test statistics API endpoints."""
     
-    def test_get_statistics_dashboard(self, authenticated_client, test_movie_data, test_tv_show_data, test_anime_data):
+    def test_get_statistics_dashboard(self, authenticated_client, test_movie_data, test_tv_show_data, test_anime_data, test_video_game_data):
         """Test getting comprehensive statistics dashboard."""
         # Create some data
         authenticated_client.post("/movies/", json=test_movie_data)
         authenticated_client.post("/tv-shows/", json=test_tv_show_data)
         authenticated_client.post("/anime/", json=test_anime_data)
+        authenticated_client.post("/video-games/", json=test_video_game_data)
         
         # Get statistics dashboard
         response = authenticated_client.get("/statistics/")
@@ -32,9 +33,11 @@ class TestStatisticsEndpoints:
         assert "total_movies" in watch_stats
         assert "total_tv_shows" in watch_stats
         assert "total_anime" in watch_stats
+        assert "total_video_games" in watch_stats
         assert "watched_movies" in watch_stats
         assert "watched_tv_shows" in watch_stats
         assert "watched_anime" in watch_stats
+        assert "played_video_games" in watch_stats
         
         # Check rating stats structure
         rating_stats = data["rating_stats"]
@@ -47,13 +50,14 @@ class TestStatisticsEndpoints:
         assert "movies_by_year" in year_stats
         assert "tv_shows_by_year" in year_stats
         assert "anime_by_year" in year_stats
+        assert "video_games_by_year" in year_stats
         
         # Check director stats structure
         director_stats = data["director_stats"]
         assert "top_directors" in director_stats
         assert "highest_rated_directors" in director_stats
     
-    def test_get_watch_statistics(self, authenticated_client, test_movie_data, test_tv_show_data, test_anime_data):
+    def test_get_watch_statistics(self, authenticated_client, test_movie_data, test_tv_show_data, test_anime_data, test_video_game_data):
         """Test getting watch statistics."""
         # Create watched and unwatched items
         movie_data = test_movie_data.copy()
@@ -68,6 +72,10 @@ class TestStatisticsEndpoints:
         anime_data["watched"] = True
         authenticated_client.post("/anime/", json=anime_data)
         
+        video_game_data = test_video_game_data.copy()
+        video_game_data["played"] = True
+        authenticated_client.post("/video-games/", json=video_game_data)
+        
         # Get watch statistics
         response = authenticated_client.get("/statistics/watch/")
         
@@ -77,14 +85,18 @@ class TestStatisticsEndpoints:
         assert "total_movies" in data
         assert "total_tv_shows" in data
         assert "total_anime" in data
+        assert "total_video_games" in data
         assert "watched_movies" in data
         assert "watched_tv_shows" in data
         assert "watched_anime" in data
+        assert "played_video_games" in data
+        assert "unplayed_video_games" in data
         assert data["total_movies"] >= 1
         assert data["total_tv_shows"] >= 1
         assert data["total_anime"] >= 1
+        assert data["total_video_games"] >= 1
     
-    def test_get_rating_statistics(self, authenticated_client, test_movie_data, test_tv_show_data, test_anime_data):
+    def test_get_rating_statistics(self, authenticated_client, test_movie_data, test_tv_show_data, test_anime_data, test_video_game_data):
         """Test getting rating statistics."""
         # Create items with ratings
         movie_data = test_movie_data.copy()
@@ -99,6 +111,10 @@ class TestStatisticsEndpoints:
         anime_data["rating"] = 9.5
         authenticated_client.post("/anime/", json=anime_data)
         
+        video_game_data = test_video_game_data.copy()
+        video_game_data["rating"] = 9.5
+        authenticated_client.post("/video-games/", json=video_game_data)
+        
         # Get rating statistics
         response = authenticated_client.get("/statistics/ratings/")
         
@@ -110,11 +126,12 @@ class TestStatisticsEndpoints:
         assert "rating_distribution" in data
         assert "highest_rated" in data
         assert "lowest_rated" in data
-        assert data["total_rated_items"] >= 3
+        assert data["total_rated_items"] >= 4
         assert isinstance(data["average_rating"], (int, float))
     
-    def test_get_year_statistics(self, authenticated_client, test_movie_data, test_tv_show_data, test_anime_data):
+    def test_get_year_statistics(self, authenticated_client, test_movie_data, test_tv_show_data, test_anime_data, test_video_game_data):
         """Test getting year-based statistics."""
+        from datetime import datetime
         # Create items with specific years
         movie_data = test_movie_data.copy()
         movie_data["year"] = 1999
@@ -128,6 +145,10 @@ class TestStatisticsEndpoints:
         anime_data["year"] = 2013
         authenticated_client.post("/anime/", json=anime_data)
         
+        video_game_data = test_video_game_data.copy()
+        video_game_data["release_date"] = datetime(2017, 3, 3).isoformat()
+        authenticated_client.post("/video-games/", json=video_game_data)
+        
         # Get year statistics
         response = authenticated_client.get("/statistics/years/")
         
@@ -137,6 +158,7 @@ class TestStatisticsEndpoints:
         assert "movies_by_year" in data
         assert "tv_shows_by_year" in data
         assert "anime_by_year" in data
+        assert "video_games_by_year" in data
         assert "all_years" in data
         assert "decade_stats" in data
         assert isinstance(data["all_years"], list)
@@ -188,6 +210,7 @@ class TestStatisticsEndpoints:
         assert data["watch_stats"]["total_movies"] == 0
         assert data["watch_stats"]["total_tv_shows"] == 0
         assert data["watch_stats"]["total_anime"] == 0
+        assert data["watch_stats"]["total_video_games"] == 0
     
     def test_statistics_requires_auth(self, client):
         """Test that statistics endpoints require authentication."""

@@ -454,6 +454,174 @@ class TestAnimeEndpoints:
         assert response.status_code == 401
 
 
+class TestVideoGameEndpoints:
+    """Test video game API endpoints."""
+    
+    def test_create_video_game(self, authenticated_client, test_video_game_data):
+        """Test creating a video game via API."""
+        response = authenticated_client.post("/video-games/", json=test_video_game_data)
+        
+        assert response.status_code == 201
+        data = response.json()
+        assert data["title"] == test_video_game_data["title"]
+        assert data["genres"] == test_video_game_data["genres"]
+        assert "id" in data
+    
+    def test_get_video_games(self, authenticated_client, test_video_game_data):
+        """Test retrieving video games via API."""
+        # Create a video game first
+        authenticated_client.post("/video-games/", json=test_video_game_data)
+        
+        # Get all video games
+        response = authenticated_client.get("/video-games/")
+        
+        assert response.status_code == 200
+        video_games = response.json()
+        assert len(video_games) >= 1
+        assert any(vg["title"] == test_video_game_data["title"] for vg in video_games)
+    
+    def test_update_video_game(self, authenticated_client, test_video_game_data):
+        """Test updating a video game."""
+        # Create a video game
+        create_response = authenticated_client.post("/video-games/", json=test_video_game_data)
+        game_id = create_response.json()["id"]
+        
+        # Update the video game
+        update_data = {"rating": 10.0, "played": False}
+        response = authenticated_client.put(f"/video-games/{game_id}", json=update_data)
+        
+        assert response.status_code == 200
+        data = response.json()
+        assert data["rating"] == 10.0
+        assert data["played"] is False
+    
+    def test_create_video_game_with_decimal_rating(self, authenticated_client):
+        """Test creating a video game with decimal rating via API."""
+        from datetime import datetime
+        video_game_data = {
+            "title": "Test Game",
+            "release_date": datetime(2020, 1, 1).isoformat(),
+            "rating": 8.7  # Decimal rating
+        }
+        response = authenticated_client.post("/video-games/", json=video_game_data)
+        
+        assert response.status_code == 201
+        data = response.json()
+        assert data["rating"] == 8.7
+        assert isinstance(data["rating"], (int, float))
+    
+    def test_update_video_game_with_decimal_rating(self, authenticated_client, test_video_game_data):
+        """Test updating a video game with decimal rating via API."""
+        # Create a video game first
+        create_response = authenticated_client.post("/video-games/", json=test_video_game_data)
+        game_id = create_response.json()["id"]
+        
+        # Update with decimal rating
+        update_data = {"rating": 7.3}
+        response = authenticated_client.put(f"/video-games/{game_id}", json=update_data)
+        
+        assert response.status_code == 200
+        data = response.json()
+        assert data["rating"] == 7.3
+    
+    def test_get_video_game_by_id(self, authenticated_client, test_video_game_data):
+        """Test retrieving a specific video game."""
+        # Create a video game
+        create_response = authenticated_client.post("/video-games/", json=test_video_game_data)
+        game_id = create_response.json()["id"]
+        
+        # Get the video game
+        response = authenticated_client.get(f"/video-games/{game_id}")
+        
+        assert response.status_code == 200
+        data = response.json()
+        assert data["id"] == game_id
+        assert data["title"] == test_video_game_data["title"]
+    
+    def test_delete_video_game(self, authenticated_client, test_video_game_data):
+        """Test deleting a video game."""
+        # Create a video game
+        create_response = authenticated_client.post("/video-games/", json=test_video_game_data)
+        game_id = create_response.json()["id"]
+        
+        # Delete the video game
+        response = authenticated_client.delete(f"/video-games/{game_id}")
+        
+        assert response.status_code == 200
+        
+        # Verify it's deleted
+        get_response = authenticated_client.get(f"/video-games/{game_id}")
+        assert get_response.status_code == 404
+    
+    def test_video_game_search(self, authenticated_client, test_video_game_data):
+        """Test searching video games."""
+        # Create a video game
+        authenticated_client.post("/video-games/", json=test_video_game_data)
+        
+        # Search by title
+        response = authenticated_client.get("/video-games/?search=Zelda")
+        assert response.status_code == 200
+        video_games = response.json()
+        assert len(video_games) >= 1
+        
+        # Search by genre
+        response = authenticated_client.get("/video-games/?search=Action")
+        assert response.status_code == 200
+        video_games = response.json()
+        assert len(video_games) >= 1
+    
+    def test_video_game_sorting(self, authenticated_client, test_video_game_data):
+        """Test sorting video games."""
+        from datetime import datetime
+        # Create multiple video games with different ratings
+        game1 = test_video_game_data.copy()
+        game1["title"] = "Game A"
+        game1["rating"] = 5.0
+        authenticated_client.post("/video-games/", json=game1)
+        
+        game2 = test_video_game_data.copy()
+        game2["title"] = "Game B"
+        game2["rating"] = 9.0
+        authenticated_client.post("/video-games/", json=game2)
+        
+        # Sort by rating descending
+        response = authenticated_client.get("/video-games/?sort_by=rating&order=desc")
+        assert response.status_code == 200
+        video_games = response.json()
+        if len(video_games) >= 2:
+            assert video_games[0]["rating"] >= video_games[1]["rating"]
+        
+        # Sort by release_date ascending
+        response = authenticated_client.get("/video-games/?sort_by=release_date&order=asc")
+        assert response.status_code == 200
+        video_games = response.json()
+        if len(video_games) >= 2:
+            # Check that dates are in ascending order
+            dates = [vg.get("release_date") for vg in video_games if vg.get("release_date")]
+            if len(dates) >= 2:
+                assert dates[0] <= dates[1]
+    
+    def test_get_nonexistent_video_game(self, authenticated_client):
+        """Test getting a non-existent video game returns 404."""
+        response = authenticated_client.get("/video-games/99999")
+        assert response.status_code == 404
+    
+    def test_update_nonexistent_video_game(self, authenticated_client):
+        """Test updating a non-existent video game returns 404."""
+        response = authenticated_client.put("/video-games/99999", json={"rating": 5})
+        assert response.status_code == 404
+    
+    def test_delete_nonexistent_video_game(self, authenticated_client):
+        """Test deleting a non-existent video game returns 404."""
+        response = authenticated_client.delete("/video-games/99999")
+        assert response.status_code == 404
+    
+    def test_video_game_endpoint_requires_auth(self, client):
+        """Test that video game endpoint requires authentication."""
+        response = client.get("/video-games/")
+        assert response.status_code == 401
+
+
 class TestAuthenticationRequired:
     """Test that protected endpoints require authentication."""
     
@@ -476,11 +644,12 @@ class TestAuthenticationRequired:
 class TestExportImport:
     """Test export/import functionality."""
     
-    def test_export_data(self, authenticated_client, test_movie_data, test_tv_show_data):
+    def test_export_data(self, authenticated_client, test_movie_data, test_tv_show_data, test_video_game_data):
         """Test exporting data."""
         # Create some data
         authenticated_client.post("/movies/", json=test_movie_data)
         authenticated_client.post("/tv-shows/", json=test_tv_show_data)
+        authenticated_client.post("/video-games/", json=test_video_game_data)
         
         # Export data
         response = authenticated_client.get("/export/")
@@ -490,12 +659,15 @@ class TestExportImport:
         assert "movies" in data
         assert "tv_shows" in data
         assert "anime" in data
+        assert "video_games" in data
         assert "export_metadata" in data
         assert len(data["movies"]) >= 1
         assert len(data["tv_shows"]) >= 1
+        assert len(data["video_games"]) >= 1
     
     def test_import_data(self, authenticated_client):
         """Test importing data."""
+        from datetime import datetime
         import_data = {
             "movies": [
                 {
@@ -514,7 +686,16 @@ class TestExportImport:
                     "rating": 9  # Integer rating
                 }
             ],
-            "anime": []
+            "anime": [],
+            "video_games": [
+                {
+                    "title": "Imported Game",
+                    "release_date": datetime(2020, 1, 1).isoformat(),
+                    "genres": "Action, Adventure",
+                    "rating": 8.5,
+                    "played": True
+                }
+            ]
         }
         
         response = authenticated_client.post("/import/", json=import_data)
@@ -525,11 +706,13 @@ class TestExportImport:
         assert result["tv_shows_created"] >= 1
         assert "anime_created" in result
         assert "anime_updated" in result
-        assert "anime_created" in result
-        assert "anime_updated" in result
+        assert "video_games_created" in result
+        assert "video_games_updated" in result
+        assert result["video_games_created"] >= 1
     
     def test_import_from_file(self, authenticated_client):
         """Test importing data from a JSON file."""
+        from datetime import datetime
         import_data = {
             "movies": [
                 {
@@ -548,7 +731,16 @@ class TestExportImport:
                     "rating": 9
                 }
             ],
-            "anime": []
+            "anime": [],
+            "video_games": [
+                {
+                    "title": "File Imported Game",
+                    "release_date": datetime(2020, 1, 1).isoformat(),
+                    "genres": "Action",
+                    "rating": 8.0,
+                    "played": True
+                }
+            ]
         }
         
         # Create a JSON file content
@@ -565,6 +757,9 @@ class TestExportImport:
         assert result["tv_shows_created"] >= 1
         assert "anime_created" in result
         assert "anime_updated" in result
+        assert "video_games_created" in result
+        assert "video_games_updated" in result
+        assert result["video_games_created"] >= 1
     
     def test_import_from_file_invalid_format(self, authenticated_client):
         """Test importing from file with invalid format."""

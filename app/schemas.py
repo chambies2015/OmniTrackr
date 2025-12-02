@@ -74,6 +74,7 @@ class PrivacySettings(BaseModel):
     movies_private: bool = Field(False, description="Make movies private")
     tv_shows_private: bool = Field(False, description="Make TV shows private")
     anime_private: bool = Field(False, description="Make anime private")
+    video_games_private: bool = Field(False, description="Make video games private")
     statistics_private: bool = Field(False, description="Make statistics private")
     
     class Config:
@@ -85,7 +86,27 @@ class PrivacySettingsUpdate(BaseModel):
     movies_private: Optional[bool] = None
     tv_shows_private: Optional[bool] = None
     anime_private: Optional[bool] = None
+    video_games_private: Optional[bool] = None
     statistics_private: Optional[bool] = None
+
+
+class TabVisibility(BaseModel):
+    """Schema for tab visibility settings."""
+    movies_visible: bool = Field(True, description="Show Movies tab")
+    tv_shows_visible: bool = Field(True, description="Show TV Shows tab")
+    anime_visible: bool = Field(True, description="Show Anime tab")
+    video_games_visible: bool = Field(True, description="Show Video Games tab")
+    
+    class Config:
+        from_attributes = True
+
+
+class TabVisibilityUpdate(BaseModel):
+    """Schema for updating tab visibility settings."""
+    movies_visible: Optional[bool] = None
+    tv_shows_visible: Optional[bool] = None
+    anime_visible: Optional[bool] = None
+    video_games_visible: Optional[bool] = None
 
 
 # ============================================================================
@@ -267,12 +288,46 @@ class Anime(AnimeBase):
         from_attributes = True
 
 
+class VideoGameBase(BaseModel):
+    title: str = Field(..., description="Title of the video game")
+    release_date: Optional[datetime] = Field(None, description="Release date of the video game (YYYY-MM-DD)")
+    genres: Optional[str] = Field(None, description="Comma-separated genre names")
+    rating: Optional[float] = Field(None, ge=0, le=10, description="Rating out of 10 (0-10.0, one decimal place)")
+    played: Optional[bool] = Field(False, description="Whether it has been played")
+    review: Optional[str] = Field(None, description="Optional review/notes for the entry")
+    cover_art_url: Optional[str] = Field(None, description="URL of the video game cover art")
+    rawg_link: Optional[str] = Field(None, description="RAWG game page URL")
+
+
+class VideoGameCreate(VideoGameBase):
+    pass
+
+
+class VideoGameUpdate(BaseModel):
+    title: Optional[str] = None
+    release_date: Optional[datetime] = None
+    genres: Optional[str] = None
+    rating: Optional[float] = Field(None, ge=0, le=10)
+    played: Optional[bool] = None
+    review: Optional[str] = None
+    cover_art_url: Optional[str] = None
+    rawg_link: Optional[str] = None
+
+
+class VideoGame(VideoGameBase):
+    id: int
+
+    class Config:
+        from_attributes = True
+
+
 # Export/Import schemas
 class ExportData(BaseModel):
     """Schema for exporting all data from OmniTrackr"""
     movies: List[Movie] = Field(..., description="List of all movies")
     tv_shows: List[TVShow] = Field(..., description="List of all TV shows")
     anime: List[Anime] = Field(..., description="List of all anime")
+    video_games: List[VideoGame] = Field(..., description="List of all video games")
     export_metadata: dict = Field(..., description="Export metadata including timestamp and version")
     
     class Config:
@@ -284,6 +339,7 @@ class ImportData(BaseModel):
     movies: List[MovieCreate] = Field(default=[], description="Movies to import")
     tv_shows: List[TVShowCreate] = Field(default=[], description="TV shows to import")
     anime: List[AnimeCreate] = Field(default=[], description="Anime to import")
+    video_games: List[VideoGameCreate] = Field(default=[], description="Video games to import")
     
     class Config:
         from_attributes = True
@@ -297,6 +353,8 @@ class ImportResult(BaseModel):
     tv_shows_updated: int = Field(..., description="Number of TV shows updated")
     anime_created: int = Field(..., description="Number of anime created")
     anime_updated: int = Field(..., description="Number of anime updated")
+    video_games_created: int = Field(..., description="Number of video games created")
+    video_games_updated: int = Field(..., description="Number of video games updated")
     errors: List[str] = Field(default=[], description="List of errors encountered during import")
     
     class Config:
@@ -315,10 +373,13 @@ class WatchStatistics(BaseModel):
     total_anime: int = Field(..., description="Total number of anime")
     watched_anime: int = Field(..., description="Number of watched anime")
     unwatched_anime: int = Field(..., description="Number of unwatched anime")
+    total_video_games: int = Field(..., description="Total number of video games")
+    played_video_games: int = Field(..., description="Number of played video games")
+    unplayed_video_games: int = Field(..., description="Number of unplayed video games")
     total_items: int = Field(..., description="Total number of items")
-    watched_items: int = Field(..., description="Number of watched items")
-    unwatched_items: int = Field(..., description="Number of unwatched items")
-    completion_percentage: float = Field(..., description="Percentage of items watched")
+    watched_items: int = Field(..., description="Number of watched/played items")
+    unwatched_items: int = Field(..., description="Number of unwatched/unplayed items")
+    completion_percentage: float = Field(..., description="Percentage of items watched/played")
 
 
 class RatingItem(BaseModel):
@@ -342,6 +403,7 @@ class YearStatistics(BaseModel):
     movies_by_year: dict = Field(..., description="Movies count by year")
     tv_shows_by_year: dict = Field(..., description="TV shows count by year")
     anime_by_year: dict = Field(..., description="Anime count by year")
+    video_games_by_year: dict = Field(..., description="Video games count by year")
     all_years: List[int] = Field(..., description="All years in the collection")
     decade_stats: dict = Field(..., description="Statistics by decade")
     oldest_year: Optional[int] = Field(None, description="Oldest year in collection")
@@ -380,10 +442,12 @@ class FriendProfileSummary(BaseModel):
     movies_count: Optional[int] = Field(None, description="Number of movies (if not private)")
     tv_shows_count: Optional[int] = Field(None, description="Number of TV shows (if not private)")
     anime_count: Optional[int] = Field(None, description="Number of anime (if not private)")
+    video_games_count: Optional[int] = Field(None, description="Number of video games (if not private)")
     statistics_available: Optional[bool] = Field(None, description="Whether statistics are available (if not private)")
     movies_private: bool = Field(..., description="Whether movies are private")
     tv_shows_private: bool = Field(..., description="Whether TV shows are private")
     anime_private: bool = Field(..., description="Whether anime are private")
+    video_games_private: bool = Field(..., description="Whether video games are private")
     statistics_private: bool = Field(..., description="Whether statistics are private")
 
 
@@ -403,6 +467,12 @@ class FriendAnimeResponse(BaseModel):
     """Schema for friend's anime list."""
     anime: List[Anime] = Field(..., description="List of friend's anime")
     count: int = Field(..., description="Total number of anime")
+
+
+class FriendVideoGamesResponse(BaseModel):
+    """Schema for friend's video games list."""
+    video_games: List[VideoGame] = Field(..., description="List of friend's video games")
+    count: int = Field(..., description="Total number of video games")
 
 
 class FriendStatisticsResponse(BaseModel):
