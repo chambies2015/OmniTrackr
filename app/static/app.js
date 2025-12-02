@@ -754,7 +754,7 @@ async function fetchVideoGameMetadata(id, title) {
         const result = await existingPromise;
         if (result && result.cover_art_url) {
           displayVideoGamePoster(id, result.cover_art_url, title);
-          await saveVideoGameMetadata(id, result.cover_art_url, result.genres, result.rawg_link);
+          await saveVideoGameMetadata(id, result.cover_art_url, result.genres, result.rawg_link, result.release_date);
         }
       } catch (err) {
         // Ignore errors from other fetch
@@ -794,14 +794,15 @@ async function fetchVideoGameMetadata(id, title) {
         const coverArtUrl = game.background_image || null;
         const genres = game.genres ? game.genres.map(g => g.name).join(', ') : null;
         const rawgLink = game.slug ? `https://rawg.io/games/${game.slug}` : null;
+        const releaseDate = game.released || null; // RAWG API returns date as "YYYY-MM-DD" string
 
         if (coverArtUrl) {
           // Save the metadata to the database
-          await saveVideoGameMetadata(id, coverArtUrl, genres, rawgLink);
+          await saveVideoGameMetadata(id, coverArtUrl, genres, rawgLink, releaseDate);
           // Display the cover art
           displayVideoGamePoster(id, coverArtUrl, title);
 
-          return { cover_art_url: coverArtUrl, genres: genres, rawg_link: rawgLink };
+          return { cover_art_url: coverArtUrl, genres: genres, rawg_link: rawgLink, release_date: releaseDate };
         }
       }
       return null;
@@ -820,7 +821,7 @@ async function fetchVideoGameMetadata(id, title) {
       const result = await existingPromise;
       if (result && result.cover_art_url) {
         displayVideoGamePoster(id, result.cover_art_url, title);
-        await saveVideoGameMetadata(id, result.cover_art_url, result.genres, result.rawg_link);
+        await saveVideoGameMetadata(id, result.cover_art_url, result.genres, result.rawg_link, result.release_date);
       }
     } catch (err) {
       // Ignore errors from other fetch
@@ -845,11 +846,12 @@ async function fetchVideoGameMetadata(id, title) {
   }
 }
 
-async function saveVideoGameMetadata(id, coverArtUrl, genres, rawgLink) {
+async function saveVideoGameMetadata(id, coverArtUrl, genres, rawgLink, releaseDate) {
   try {
     const updateData = { cover_art_url: coverArtUrl };
     if (genres) updateData.genres = genres;
     if (rawgLink) updateData.rawg_link = rawgLink;
+    if (releaseDate) updateData.release_date = releaseDate;
     await authenticatedFetch(`${API_BASE}/video-games/${id}`, {
       method: 'PUT',
       headers: { 'Content-Type': 'application/json' },
@@ -1191,8 +1193,7 @@ document.getElementById('addVideoGameForm').onsubmit = async function (e) {
     title: document.getElementById('videoGameTitle').value,
     played: document.getElementById('videoGamePlayed').checked,
   };
-  const releaseDateVal = document.getElementById('videoGameReleaseDate').value;
-  if (releaseDateVal) videoGame.release_date = releaseDateVal;
+  // Release date will be fetched from RAWG API metadata, not user input
   const genresVal = document.getElementById('videoGameGenres').value;
   if (genresVal) videoGame.genres = genresVal;
   const ratingVal = document.getElementById('videoGameRating').value;
@@ -1264,7 +1265,8 @@ async function importData(fileInput) {
     let message = `Import completed!\n`;
     message += `Movies: ${result.movies_created} created, ${result.movies_updated} updated\n`;
     message += `TV Shows: ${result.tv_shows_created} created, ${result.tv_shows_updated} updated\n`;
-    message += `Anime: ${result.anime_created || 0} created, ${result.anime_updated || 0} updated`;
+    message += `Anime: ${result.anime_created || 0} created, ${result.anime_updated || 0} updated\n`;
+    message += `Video Games: ${result.video_games_created || 0} created, ${result.video_games_updated || 0} updated`;
 
     if (result.errors.length > 0) {
       message += `\n\nErrors:\n${result.errors.join('\n')}`;
@@ -1279,6 +1281,8 @@ async function importData(fileInput) {
       loadTVShows();
     } else if (currentTab === 'anime') {
       loadAnime();
+    } else if (currentTab === 'video-games') {
+      loadVideoGames();
     }
 
     // Clear the file input
@@ -2121,7 +2125,7 @@ function updateTabVisibilityUI(tabVisibility) {
     // Find first visible tab
     const allTabs = document.querySelectorAll('.tab');
     for (const tab of allTabs) {
-      if (tab.style.display !== 'none' && tab.onclick) {
+      if (tab.style.display !== 'none') {
         const onclickStr = tab.getAttribute('onclick');
         if (onclickStr) {
           const match = onclickStr.match(/switchTab\('([^']+)'\)/);
