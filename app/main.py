@@ -859,6 +859,18 @@ async def get_sellers_json():
     )
 
 
+@app.get("/api/user-count", response_model=schemas.UserCount, tags=["public"])
+@limiter.limit("30/minute")  # Rate limit: 30 requests per minute per IP
+async def get_user_count(db: Session = Depends(get_db)):
+    """Get total number of active user accounts. Public endpoint for landing page."""
+    try:
+        count = db.query(models.User).filter(models.User.is_active == True).count()
+        return schemas.UserCount(count=count)
+    except Exception:
+        # Graceful degradation: return 0 on error rather than exposing errors
+        return schemas.UserCount(count=0)
+
+
 # ============================================================================
 # Authentication endpoints
 # ============================================================================

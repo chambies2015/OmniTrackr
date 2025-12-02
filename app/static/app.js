@@ -3474,3 +3474,111 @@ function restoreSidebarState() {
 // Load initial data
 loadMovies();
 
+// ============================================================================
+// Landing Page Enhancements: Scroll Animations and User Count
+// ============================================================================
+
+// Intersection Observer for fade-in on scroll animations
+let scrollObserver = null;
+
+function initScrollAnimations() {
+  // Only initialize if landing page is visible
+  const landingPage = document.getElementById('landingPage');
+  if (!landingPage || landingPage.style.display !== 'block') {
+    return;
+  }
+
+  // Clean up existing observer if any
+  if (scrollObserver) {
+    scrollObserver.disconnect();
+  }
+
+  // Create Intersection Observer
+  scrollObserver = new IntersectionObserver((entries) => {
+    entries.forEach(entry => {
+      if (entry.isIntersecting) {
+        entry.target.classList.add('visible');
+        // Unobserve after animation to improve performance
+        scrollObserver.unobserve(entry.target);
+      }
+    });
+  }, {
+    threshold: 0.1,
+    rootMargin: '0px 0px -50px 0px'
+  });
+
+  // Observe all elements with fade-in-on-scroll class
+  const fadeElements = document.querySelectorAll('.fade-in-on-scroll');
+  fadeElements.forEach(el => {
+    scrollObserver.observe(el);
+  });
+}
+
+// Fetch and display user count
+async function fetchUserCount() {
+  const userCountDisplay = document.getElementById('userCountDisplay');
+  if (!userCountDisplay) return;
+
+  // Only fetch if landing page is visible
+  const landingPage = document.getElementById('landingPage');
+  if (!landingPage || landingPage.style.display !== 'block') {
+    userCountDisplay.style.display = 'none';
+    return;
+  }
+
+  try {
+    const response = await fetch(`${API_BASE}/api/user-count`);
+    if (!response.ok) {
+      throw new Error('Failed to fetch user count');
+    }
+    const data = await response.json();
+    const count = data.count || 0;
+    userCountDisplay.textContent = `${count} users tracking their media already`;
+    userCountDisplay.style.display = 'block';
+  } catch (error) {
+    // Graceful degradation: hide the element on error
+    userCountDisplay.style.display = 'none';
+    console.error('Error fetching user count:', error);
+  }
+}
+
+// Initialize landing page enhancements when DOM is ready
+function initLandingPageEnhancements() {
+  const landingPage = document.getElementById('landingPage');
+  if (!landingPage) return;
+
+  // Add fade-in-on-scroll class to feature cards and FAQ items
+  const featureCards = document.querySelectorAll('.feature-card');
+  featureCards.forEach(card => {
+    card.classList.add('fade-in-on-scroll');
+  });
+
+  const faqItems = document.querySelectorAll('.faq-item');
+  faqItems.forEach(item => {
+    item.classList.add('fade-in-on-scroll');
+  });
+
+  // Initialize scroll animations
+  initScrollAnimations();
+
+  // Fetch user count
+  fetchUserCount();
+}
+
+// Call on DOMContentLoaded
+document.addEventListener('DOMContentLoaded', function() {
+  initLandingPageEnhancements();
+});
+
+// Also call when landing page becomes visible (after login/logout)
+// This will be called from auth.js when showing/hiding landing page
+window.initLandingPageEnhancements = initLandingPageEnhancements;
+
+// Cleanup observer on page unload
+window.addEventListener('beforeunload', function() {
+  if (scrollObserver) {
+    scrollObserver.disconnect();
+    scrollObserver = null;
+  }
+});
+

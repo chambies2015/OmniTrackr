@@ -161,6 +161,11 @@ class NotificationResponse(BaseModel):
         from_attributes = True
 
 
+class UserCount(BaseModel):
+    """Schema for user count response."""
+    count: int = Field(..., description="Total number of active users")
+
+
 class NotificationCount(BaseModel):
     """Schema for notification count."""
     count: int
