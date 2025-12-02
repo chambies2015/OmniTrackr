@@ -46,7 +46,7 @@ body {
 }
 
 .container {
-  max-width: 1400px;
+  max-width: 1600px;
   padding: 0 20px;
   box-sizing: border-box;
   /* Default: account for sidebar */
@@ -58,20 +58,20 @@ body {
 /* When sidebar is hidden */
 .container.sidebar-hidden {
   margin-left: 0;
-  max-width: 1600px;
+  max-width: 1800px;
 }
 
 /* When viewport is wide enough (sidebar + container + some space), center the container */
-@media (min-width: 1650px) {
+@media (min-width: 1850px) {
   .container {
-    /* Center 1400px container: sidebar (250px) + half of remaining space */
-    margin-left: calc(250px + (100% - 250px - 1400px) / 2);
-    max-width: 1400px;
+    /* Center 1600px container: sidebar (250px) + half of remaining space */
+    margin-left: calc(250px + (100% - 250px - 1600px) / 2);
+    max-width: 1600px;
   }
   
   .container.sidebar-hidden {
-    margin-left: calc((100% - 1600px) / 2);
-    max-width: 1600px;
+    margin-left: calc((100% - 1800px) / 2);
+    max-width: 1800px;
   }
 }
 
@@ -449,54 +449,15 @@ body.dark-mode td {
   margin: 0 auto;
 }
 
-/* Center the watched column */
-/* Center watched column for movies */
-#movieTable th:nth-child(6),
-#movieTable td:nth-child(6) {
-  text-align: center;
-}
-
-/* Center all columns for TV shows except title (column 2) */
-#tvShowTable th:nth-child(1),
-#tvShowTable td:nth-child(1),
-#tvShowTable th:nth-child(3),
-#tvShowTable td:nth-child(3),
-#tvShowTable th:nth-child(4),
-#tvShowTable td:nth-child(4),
-#tvShowTable th:nth-child(5),
-#tvShowTable td:nth-child(5),
-#tvShowTable th:nth-child(6),
-#tvShowTable td:nth-child(6),
-#tvShowTable th:nth-child(7),
-#tvShowTable td:nth-child(7),
-#tvShowTable th:nth-child(8),
-#tvShowTable td:nth-child(8),
-#tvShowTable th:nth-child(9),
-#tvShowTable td:nth-child(9),
-#tvShowTable th:nth-child(10),
-#tvShowTable td:nth-child(10) {
-  text-align: center;
-}
-
-/* Center all columns for anime except title (column 2) */
-#animeTable th:nth-child(1),
-#animeTable td:nth-child(1),
-#animeTable th:nth-child(3),
-#animeTable td:nth-child(3),
-#animeTable th:nth-child(4),
-#animeTable td:nth-child(4),
-#animeTable th:nth-child(5),
-#animeTable td:nth-child(5),
-#animeTable th:nth-child(6),
-#animeTable td:nth-child(6),
-#animeTable th:nth-child(7),
-#animeTable td:nth-child(7),
-#animeTable th:nth-child(8),
-#animeTable td:nth-child(8),
-#animeTable th:nth-child(9),
-#animeTable td:nth-child(9),
-#animeTable th:nth-child(10),
-#animeTable td:nth-child(10) {
+/* Center all columns for all tables to make them uniform */
+#movieTable th,
+#movieTable td,
+#tvShowTable th,
+#tvShowTable td,
+#animeTable th,
+#animeTable td,
+#videoGameTable th,
+#videoGameTable td {
   text-align: center;
 }
 
@@ -1917,6 +1878,73 @@ body.dark-mode .modal-header {
 .modal-close:hover {
   background-color: rgba(255, 255, 255, 0.2);
   transform: rotate(90deg);
+}
+
+/* Image Popup Modal Styles */
+.image-popup-overlay {
+  background-color: rgba(0, 0, 0, 0.9);
+  cursor: pointer;
+  z-index: 10001;
+}
+
+.image-popup-content {
+  position: relative;
+  max-width: 90vw;
+  max-height: 90vh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: default;
+}
+
+.popup-image {
+  max-width: 100%;
+  max-height: 90vh;
+  object-fit: contain;
+  border-radius: 8px;
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.5);
+}
+
+.image-popup-close {
+  position: absolute;
+  top: -40px;
+  right: 0;
+  background: rgba(255, 255, 255, 0.2);
+  border: none;
+  color: white;
+  font-size: 2.5rem;
+  cursor: pointer;
+  padding: 0;
+  width: 40px;
+  height: 40px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 50%;
+  transition: all 0.2s ease;
+  z-index: 10002;
+}
+
+.image-popup-close:hover {
+  background-color: rgba(255, 255, 255, 0.3);
+  transform: rotate(90deg);
+}
+
+/* Make poster images clickable */
+#movieTable img,
+#tvShowTable img,
+#animeTable img,
+#videoGameTable img {
+  cursor: pointer;
+  transition: transform 0.2s ease, box-shadow 0.2s ease;
+}
+
+#movieTable img:hover,
+#tvShowTable img:hover,
+#animeTable img:hover,
+#videoGameTable img:hover {
+  transform: scale(1.05);
+  box-shadow: 0 4px 12px rgba(102, 126, 234, 0.4);
 }
 
 .modal-body {

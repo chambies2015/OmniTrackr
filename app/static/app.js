@@ -20,15 +20,62 @@ function escapeHtml(str) {
     .replace(/'/g, "&#39;");
 }
 
+// Image popup functions
+function showImagePopup(imageUrl, altText) {
+  const modal = document.getElementById('imagePopupModal');
+  const img = document.getElementById('popupImage');
+  if (modal && img) {
+    img.src = imageUrl;
+    img.alt = altText || 'Enlarged image';
+    modal.style.display = 'flex';
+    // Prevent body scroll when modal is open
+    document.body.style.overflow = 'hidden';
+  }
+}
+
+function closeImagePopup() {
+  const modal = document.getElementById('imagePopupModal');
+  if (modal) {
+    modal.style.display = 'none';
+    // Restore body scroll
+    document.body.style.overflow = '';
+  }
+}
+
+// Close image popup on Escape key
+document.addEventListener('keydown', function(event) {
+  if (event.key === 'Escape') {
+    const modal = document.getElementById('imagePopupModal');
+    if (modal && modal.style.display !== 'none') {
+      closeImagePopup();
+    }
+  }
+});
+
 // Tab switching functionality
 function switchTab(tabName) {
+  // Check if tab is visible (only for media tabs, statistics is always visible)
+  if (tabName !== 'statistics') {
+    const tabButton = document.querySelector(`[onclick="switchTab('${tabName}')"]`);
+    if (tabButton && tabButton.style.display === 'none') {
+      // Tab is hidden, don't switch to it
+      return;
+    }
+  }
+
   // Update tab buttons
   document.querySelectorAll('.tab').forEach(tab => tab.classList.remove('active'));
-  document.querySelector(`[onclick="switchTab('${tabName}')"]`).classList.add('active');
+  const targetTab = document.querySelector(`[onclick="switchTab('${tabName}')"]`);
+  if (targetTab) {
+    targetTab.classList.add('active');
+  }
 
   // Update tab content
   document.querySelectorAll('.tab-content').forEach(content => content.classList.remove('active'));
-  document.getElementById(`${tabName}-tab`).classList.add('active');
+  const tabContent = document.getElementById(`${tabName}-tab`);
+  if (tabContent) {
+    tabContent.classList.add('active');
+  }
 
   currentTab = tabName;
 
@@ -39,6 +86,8 @@ function switchTab(tabName) {
     loadTVShows();
   } else if (tabName === 'anime') {
     loadAnime();
+  } else if (tabName === 'video-games') {
+    loadVideoGames();
   } else if (tabName === 'statistics') {
     loadStatistics();
   }
@@ -144,7 +193,17 @@ function displayMoviePoster(id, posterUrl, title = null) {
       }
     }
     altText = escapeHtml(altText);
-    cell.innerHTML = `<img src="${posterUrl}" alt="${altText}" style="width: 60px; max-height: 90px; object-fit: cover; border-radius: 4px;" loading="lazy">`;
+    const img = document.createElement('img');
+    img.src = posterUrl;
+    img.alt = altText;
+    img.style.width = '60px';
+    img.style.maxHeight = '90px';
+    img.style.objectFit = 'cover';
+    img.style.borderRadius = '4px';
+    img.loading = 'lazy';
+    img.onclick = () => showImagePopup(posterUrl, altText);
+    cell.innerHTML = '';
+    cell.appendChild(img);
   }
 }
 
@@ -454,6 +513,7 @@ function displayAnimePoster(id, posterUrl, title = null) {
     img.style.objectFit = 'cover';
     img.style.borderRadius = '4px';
     img.loading = 'lazy';
+    img.onclick = () => showImagePopup(posterUrl, altText);
     cell.appendChild(img);
   }
 }
@@ -480,6 +540,7 @@ function displayTVPoster(id, posterUrl, title = null) {
     img.style.objectFit = 'cover';
     img.style.borderRadius = '4px';
     img.loading = 'lazy';
+    img.onclick = () => showImagePopup(posterUrl, altText);
     cell.appendChild(img);
   }
 }
@@ -643,6 +704,330 @@ async function saveAnimePosterUrl(id, posterUrl) {
     console.error('Error saving anime poster URL:', err);
   }
 }
+
+// Video Game functions
+let isLoadingVideoGames = false;
+
+async function loadVideoGames() {
+  // Prevent duplicate simultaneous loads
+  if (isLoadingVideoGames) {
+    return;
+  }
+
+  isLoadingVideoGames = true;
+
+  try {
+    const search = document.getElementById('videoGameSearch').value;
+    const sortVal = document.getElementById('videoGameSort').value;
+    let sortField = '';
+    let order = '';
+    if (sortVal) {
+      const parts = sortVal.split('-');
+      sortField = parts[0];
+      order = parts[1] || '';
+    }
+    let url = `${API_BASE}/video-games/?`;
+    if (search) url += `search=${encodeURIComponent(search)}&`;
+    if (sortField) url += `sort_by=${encodeURIComponent(sortField)}&`;
+    if (order) url += `order=${encodeURIComponent(order)}`;
+    const res = await authenticatedFetch(url);
+    if (res.ok) {
+      const videoGames = await res.json();
+      const tbody = document.querySelector('#videoGameTable tbody');
+      tbody.innerHTML = '';
+      const countElem = document.getElementById('videoGameCount');
+      if (countElem) countElem.textContent = `${videoGames.length} Video Games`;
+      videoGames.forEach((game) => {
+        const tr = document.createElement('tr');
+        const releaseDateStr = game.release_date ? new Date(game.release_date).toLocaleDateString() : '';
+        tr.innerHTML = `
+          <td id="video-game-poster-${game.id}"></td>
+          <td>${escapeHtml(game.title)}</td>
+          <td>${releaseDateStr}</td>
+          <td>${game.genres ? escapeHtml(game.genres) : ''}</td>
+          <td><span class="watched-icon ${game.played ? 'watched' : 'unwatched'}">${game.played ? '✓' : '✗'}</span></td>
+          <td>${game.rating !== null && game.rating !== undefined ? parseFloat(game.rating).toFixed(1) + '/10' : ''}</td>
+          <td>${game.rawg_link ? `<a href="${game.rawg_link}" target="_blank">View on RAWG</a>` : ''}</td>
+          <td>${game.review ? escapeHtml(game.review) : ''}</td>
+          <td>
+            <button class="action-btn edit-video-game-btn" data-game-id="${game.id}" data-game-title="${escapeHtml(game.title)}" data-game-release-date="${game.release_date ? game.release_date.split('T')[0] : ''}" data-game-genres="${escapeHtml(game.genres || '')}" data-game-rating="${game.rating ?? ''}" data-game-played="${game.played}" data-game-review="${escapeHtml(game.review || '')}">Edit</button>
+            <button class="action-btn delete-video-game-btn" data-game-id="${game.id}">Delete</button>
+          </td>
+        `;
+        tbody.appendChild(tr);
+
+        // Display cached cover art or fetch new one
+        if (game.cover_art_url) {
+          displayVideoGamePoster(game.id, game.cover_art_url, game.title);
+        } else if (RAWG_API_KEY) {
+          fetchVideoGameMetadata(game.id, game.title);
+        }
+      });
+    }
+  } finally {
+    isLoadingVideoGames = false;
+  }
+}
+
+function displayVideoGamePoster(id, posterUrl, title = null) {
+  const cell = document.getElementById(`video-game-poster-${id}`);
+  if (cell && posterUrl) {
+    let altText = 'Video game cover art';
+    if (title) {
+      altText = `${title} video game cover art`;
+    } else {
+      const row = cell.closest('tr');
+      if (row && row.cells[1]) {
+        altText = `${row.cells[1].textContent} video game cover art`;
+      }
+    }
+    altText = escapeHtml(altText);
+    const img = document.createElement('img');
+    img.src = posterUrl;
+    img.alt = altText;
+    img.style.width = '60px';
+    img.style.maxHeight = '90px';
+    img.style.objectFit = 'cover';
+    img.style.borderRadius = '4px';
+    img.loading = 'lazy';
+    img.onclick = () => showImagePopup(posterUrl, altText);
+    cell.innerHTML = '';
+    cell.appendChild(img);
+  }
+}
+
+function updateVideoGameRowMetadata(id, genres, rawgLink, releaseDate) {
+  // Find the row for this video game
+  const row = document.querySelector(`#video-game-poster-${id}`)?.closest('tr');
+  if (!row) return;
+
+  // Update release date (cell index 2)
+  if (releaseDate && row.cells[2]) {
+    const date = new Date(releaseDate);
+    row.cells[2].textContent = date.toLocaleDateString();
+  }
+
+  // Update genres (cell index 3)
+  if (row.cells[3]) {
+    row.cells[3].textContent = genres ? escapeHtml(genres) : '';
+  }
+
+  // Update RAWG link (cell index 6)
+  if (row.cells[6]) {
+    if (rawgLink) {
+      row.cells[6].innerHTML = `<a href="${rawgLink}" target="_blank">View on RAWG</a>`;
+    } else {
+      row.cells[6].textContent = '';
+    }
+  }
+}
+
+async function fetchVideoGameMetadata(id, title) {
+  // Create unique key for deduplication
+  const cacheKey = `video-game-${title}`;
+
+  // Check if already fetching this metadata
+  if (posterFetchInProgress.has(cacheKey)) {
+    // Wait for existing fetch to complete
+    const existingPromise = posterFetchQueue.get(cacheKey);
+    if (existingPromise) {
+      try {
+        const result = await existingPromise;
+        if (result && result.cover_art_url) {
+          displayVideoGamePoster(id, result.cover_art_url, title);
+          await saveVideoGameMetadata(id, result.cover_art_url, result.genres, result.rawg_link, result.release_date);
+          updateVideoGameRowMetadata(id, result.genres, result.rawg_link, result.release_date);
+        }
+      } catch (err) {
+        // Ignore errors from other fetch
+      }
+    }
+    return;
+  }
+
+  // Create the fetch promise first and add it to the queue BEFORE marking as in progress
+  // This prevents race conditions where concurrent requests might not find the promise
+  // Double-check pattern: verify it's still not in progress after creating promise
+  const fetchPromise = (async () => {
+    try {
+      const url = `https://api.rawg.io/api/games?search=${encodeURIComponent(title)}&key=${RAWG_API_KEY}`;
+      const res = await fetch(url);
+
+      if (!res.ok) {
+        // Handle rate limiting (429 Too Many Requests)
+        if (res.status === 429) {
+          console.warn('RAWG API rate limit reached. Metadata will be fetched later.');
+          return null;
+        }
+        return null;
+      }
+
+      const data = await res.json();
+
+      // Check for API errors
+      if (data.error) {
+        console.warn(`RAWG API error for "${title}": ${data.error}`);
+        return null;
+      }
+
+      // Get first result
+      if (data && data.results && data.results.length > 0) {
+        const game = data.results[0];
+        const coverArtUrl = game.background_image || null;
+        const genres = game.genres ? game.genres.map(g => g.name).join(', ') : null;
+        const rawgLink = game.slug ? `https://rawg.io/games/${game.slug}` : null;
+        const releaseDate = game.released || null; // RAWG API returns date as "YYYY-MM-DD" string
+
+        if (coverArtUrl) {
+          // Save the metadata to the database
+          await saveVideoGameMetadata(id, coverArtUrl, genres, rawgLink, releaseDate);
+          // Display the cover art
+          displayVideoGamePoster(id, coverArtUrl, title);
+          // Update the table row with metadata
+          updateVideoGameRowMetadata(id, genres, rawgLink, releaseDate);
+
+          return { cover_art_url: coverArtUrl, genres: genres, rawg_link: rawgLink, release_date: releaseDate };
+        }
+      }
+      return null;
+    } catch (err) {
+      console.error('Error fetching video game metadata:', err);
+      return null;
+    }
+  })();
+
+  // Add promise to queue BEFORE marking as in progress to prevent race conditions
+  // Double-check: if another request added it while we were creating the promise, use that one
+  const existingPromise = posterFetchQueue.get(cacheKey);
+  if (existingPromise) {
+    // Another request beat us to it, use their promise
+    try {
+      const result = await existingPromise;
+      if (result && result.cover_art_url) {
+        displayVideoGamePoster(id, result.cover_art_url, title);
+        await saveVideoGameMetadata(id, result.cover_art_url, result.genres, result.rawg_link, result.release_date);
+        updateVideoGameRowMetadata(id, result.genres, result.rawg_link, result.release_date);
+      }
+    } catch (err) {
+      // Ignore errors from other fetch
+    }
+    return;
+  }
+  
+  // Add our promise to the queue
+  posterFetchQueue.set(cacheKey, fetchPromise);
+  // Mark as in progress AFTER adding to queue
+  posterFetchInProgress.add(cacheKey);
+
+  try {
+    const result = await fetchPromise;
+    return result;
+  } finally {
+    // Remove from in-progress set after a delay to allow queued requests
+    setTimeout(() => {
+      posterFetchInProgress.delete(cacheKey);
+      posterFetchQueue.delete(cacheKey);
+    }, 1000);
+  }
+}
+
+async function saveVideoGameMetadata(id, coverArtUrl, genres, rawgLink, releaseDate) {
+  try {
+    const updateData = { cover_art_url: coverArtUrl };
+    if (genres) updateData.genres = genres;
+    if (rawgLink) updateData.rawg_link = rawgLink;
+    if (releaseDate) updateData.release_date = releaseDate;
+    await authenticatedFetch(`${API_BASE}/video-games/${id}`, {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(updateData),
+    });
+  } catch (err) {
+    console.error('Error saving video game metadata:', err);
+  }
+}
+
+async function deleteVideoGame(id) {
+  if (!confirm('Are you sure you want to delete this video game?')) return;
+  const res = await authenticatedFetch(`${API_BASE}/video-games/${id}`, { method: 'DELETE' });
+  if (res.ok) loadVideoGames();
+}
+
+window.enableVideoGameEdit = function (btn) {
+  if (editingRowId !== null) return;
+  const id = parseInt(btn.dataset.gameId, 10);
+  editingRowId = id;
+  const row = btn.closest('tr');
+  editingRowElement = row;
+  const title = btn.dataset.gameTitle || '';
+  const releaseDate = btn.dataset.gameReleaseDate || '';
+  const genres = btn.dataset.gameGenres || '';
+  const ratingVal = btn.dataset.gameRating || '';
+  const played = btn.dataset.gamePlayed === 'true';
+  const review = btn.dataset.gameReview || '';
+  row.cells[1].innerHTML = `<input type="text" id="edit-video-game-title" value="${escapeHtml(title)}">`;
+  row.cells[2].innerHTML = `<input type="date" id="edit-video-game-release-date" value="${releaseDate}">`;
+  row.cells[3].innerHTML = `<input type="text" id="edit-video-game-genres" value="${escapeHtml(genres)}">`;
+  row.cells[4].innerHTML = `<input type="checkbox" id="edit-video-game-played" ${played ? 'checked' : ''}>`;
+  row.cells[5].innerHTML = `<input type="number" min="0" max="10" step="0.1" id="edit-video-game-rating" value="${ratingVal}">`;
+  // Keep RAWG link as is (preserve HTML to maintain clickable link - don't modify this cell)
+  // Review cell is at index 7, replace it with textarea for editing
+  row.cells[7].innerHTML = `<textarea id="edit-video-game-review" class="review-textarea">${escapeHtml(review)}</textarea>`;
+  // Auto-resize textarea to content
+  const videoGameReviewTextarea = document.getElementById('edit-video-game-review');
+  if (videoGameReviewTextarea) {
+    videoGameReviewTextarea.style.height = 'auto';
+    videoGameReviewTextarea.style.height = Math.max(60, videoGameReviewTextarea.scrollHeight) + 'px';
+    videoGameReviewTextarea.addEventListener('input', function () {
+      this.style.height = 'auto';
+      this.style.height = Math.max(60, this.scrollHeight) + 'px';
+    });
+  }
+  // Actions cell is always the last cell, so use length - 1 to get the correct index
+  const actionsCellIndex = row.cells.length - 1;
+  row.cells[actionsCellIndex].innerHTML = `
+    <button class="action-btn save-video-game-btn" data-game-id="${id}">Save</button>
+    <button class="action-btn cancel-video-game-btn">Cancel</button>
+  `;
+  disableOtherRowButtons(row, 'videoGameTable');
+};
+
+window.saveVideoGameEdit = async function (btn) {
+  const id = parseInt(btn.dataset.gameId, 10);
+  const title = document.getElementById('edit-video-game-title').value;
+  const releaseDate = document.getElementById('edit-video-game-release-date').value;
+  const genres = document.getElementById('edit-video-game-genres').value;
+  const played = document.getElementById('edit-video-game-played').checked;
+  const ratingVal = document.getElementById('edit-video-game-rating').value;
+  const reviewVal = document.getElementById('edit-video-game-review') ? document.getElementById('edit-video-game-review').value : '';
+
+  const updateData = { title };
+  if (releaseDate) updateData.release_date = releaseDate;
+  if (genres) updateData.genres = genres;
+  updateData.played = played;
+  if (ratingVal) updateData.rating = parseFloat(ratingVal);
+  if (reviewVal !== undefined) updateData.review = reviewVal;
+
+  const res = await authenticatedFetch(`${API_BASE}/video-games/${id}`, {
+    method: 'PUT',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(updateData),
+  });
+
+  if (res.ok) {
+    editingRowId = null;
+    editingRowElement = null;
+    enableAllRowButtons('videoGameTable');
+    loadVideoGames();
+  }
+};
+
+window.cancelVideoGameEdit = function () {
+  editingRowId = null;
+  editingRowElement = null;
+  enableAllRowButtons('videoGameTable');
+  loadVideoGames();
+};
 
 async function deleteAnime(id) {
   if (!confirm('Are you sure you want to delete this anime?')) return;
@@ -883,6 +1268,31 @@ document.getElementById('addAnimeForm').onsubmit = async function (e) {
   }
 };
 
+document.getElementById('addVideoGameForm').onsubmit = async function (e) {
+  e.preventDefault();
+  const videoGame = {
+    title: document.getElementById('videoGameTitle').value,
+    played: document.getElementById('videoGamePlayed').checked,
+  };
+  // Release date will be fetched from RAWG API metadata, not user input
+  const genresVal = document.getElementById('videoGameGenres').value;
+  if (genresVal) videoGame.genres = genresVal;
+  const ratingVal = document.getElementById('videoGameRating').value;
+  if (ratingVal) videoGame.rating = parseFloat(ratingVal);
+  const reviewVal = document.getElementById('videoGameReview').value;
+  if (reviewVal) videoGame.review = reviewVal;
+  const response = await authenticatedFetch(`${API_BASE}/video-games/`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(videoGame),
+  });
+  if (response.ok) {
+    document.getElementById('addVideoGameForm').reset();
+    toggleCollapsible('videoGameForm');
+    loadVideoGames();
+  }
+};
+
 // Export/Import functions
 async function exportData() {
   try {
@@ -903,7 +1313,7 @@ async function exportData() {
     document.body.removeChild(a);
     URL.revokeObjectURL(url);
 
-    alert(`Export successful! Exported ${data.export_metadata.total_movies} movies, ${data.export_metadata.total_tv_shows} TV shows, and ${data.export_metadata.total_anime || 0} anime.`);
+    alert(`Export successful! Exported ${data.export_metadata.total_movies} movies, ${data.export_metadata.total_tv_shows} TV shows, ${data.export_metadata.total_anime || 0} anime, and ${data.export_metadata.total_video_games || 0} video games.`);
   } catch (error) {
     alert('Export failed: ' + error.message);
   }
@@ -936,7 +1346,8 @@ async function importData(fileInput) {
     let message = `Import completed!\n`;
     message += `Movies: ${result.movies_created} created, ${result.movies_updated} updated\n`;
     message += `TV Shows: ${result.tv_shows_created} created, ${result.tv_shows_updated} updated\n`;
-    message += `Anime: ${result.anime_created || 0} created, ${result.anime_updated || 0} updated`;
+    message += `Anime: ${result.anime_created || 0} created, ${result.anime_updated || 0} updated\n`;
+    message += `Video Games: ${result.video_games_created || 0} created, ${result.video_games_updated || 0} updated`;
 
     if (result.errors.length > 0) {
       message += `\n\nErrors:\n${result.errors.join('\n')}`;
@@ -951,6 +1362,8 @@ async function importData(fileInput) {
       loadTVShows();
     } else if (currentTab === 'anime') {
       loadAnime();
+    } else if (currentTab === 'video-games') {
+      loadVideoGames();
     }
 
     // Clear the file input
@@ -1293,11 +1706,13 @@ function displayHighestRatedDirectors(directors) {
 document.getElementById('loadMovies').addEventListener('click', loadMovies);
 document.getElementById('loadTVShows').addEventListener('click', loadTVShows);
 document.getElementById('loadAnime').addEventListener('click', loadAnime);
+document.getElementById('loadVideoGames').addEventListener('click', loadVideoGames);
 
 // Automatic sorting and search
 document.getElementById('movieSort').addEventListener('change', loadMovies);
 document.getElementById('tvSort').addEventListener('change', loadTVShows);
 document.getElementById('animeSort').addEventListener('change', loadAnime);
+document.getElementById('videoGameSort').addEventListener('change', loadVideoGames);
 
 // Automatic search with debounce
 let movieSearchTimeout;
@@ -1324,16 +1739,27 @@ document.getElementById('animeSearch').addEventListener('input', (e) => {
   }, 300); // Wait 300ms after user stops typing
 });
 
+let videoGameSearchTimeout;
+document.getElementById('videoGameSearch').addEventListener('input', (e) => {
+  clearTimeout(videoGameSearchTimeout);
+  videoGameSearchTimeout = setTimeout(() => {
+    loadVideoGames();
+  }, 300); // Wait 300ms after user stops typing
+});
+
 // Export/Import event listeners
 document.getElementById('exportMovies').addEventListener('click', exportData);
 document.getElementById('exportTVShows').addEventListener('click', exportData);
 document.getElementById('exportAnime').addEventListener('click', exportData);
+document.getElementById('exportVideoGames').addEventListener('click', exportData);
 document.getElementById('importMovies').addEventListener('click', () => document.getElementById('importFile').click());
 document.getElementById('importTVShows').addEventListener('click', () => document.getElementById('importTVFile').click());
 document.getElementById('importAnime').addEventListener('click', () => document.getElementById('importAnimeFile').click());
+document.getElementById('importVideoGames').addEventListener('click', () => document.getElementById('importVideoGameFile').click());
 document.getElementById('importFile').addEventListener('change', (e) => importData(e.target));
 document.getElementById('importTVFile').addEventListener('change', (e) => importData(e.target));
 document.getElementById('importAnimeFile').addEventListener('change', (e) => importData(e.target));
+document.getElementById('importVideoGameFile').addEventListener('change', (e) => importData(e.target));
 
 // Auto-resize textarea for movie review
 const movieReviewTextarea = document.getElementById('movieReview');
@@ -1357,6 +1783,15 @@ if (tvReviewTextarea) {
 const animeReviewTextarea = document.getElementById('animeReview');
 if (animeReviewTextarea) {
   animeReviewTextarea.addEventListener('input', function () {
+    this.style.height = 'auto';
+    this.style.height = Math.max(60, this.scrollHeight) + 'px';
+  });
+}
+
+// Auto-resize textarea for video game review
+const videoGameReviewTextarea = document.getElementById('videoGameReview');
+if (videoGameReviewTextarea) {
+  videoGameReviewTextarea.addEventListener('input', function () {
     this.style.height = 'auto';
     this.style.height = Math.max(60, this.scrollHeight) + 'px';
   });
@@ -1611,6 +2046,7 @@ window.loadPrivacySettings = async function () {
       document.getElementById('moviesPrivate').checked = privacy.movies_private;
       document.getElementById('tvShowsPrivate').checked = privacy.tv_shows_private;
       document.getElementById('animePrivate').checked = privacy.anime_private;
+      document.getElementById('videoGamesPrivate').checked = privacy.video_games_private;
       document.getElementById('statisticsPrivate').checked = privacy.statistics_private;
     }
   } catch (error) {
@@ -1624,6 +2060,7 @@ window.updatePrivacySettings = async function (event) {
   const moviesPrivate = document.getElementById('moviesPrivate').checked;
   const tvShowsPrivate = document.getElementById('tvShowsPrivate').checked;
   const animePrivate = document.getElementById('animePrivate').checked;
+  const videoGamesPrivate = document.getElementById('videoGamesPrivate').checked;
   const statisticsPrivate = document.getElementById('statisticsPrivate').checked;
 
   const errorDiv = document.getElementById('privacyError');
@@ -1644,6 +2081,7 @@ window.updatePrivacySettings = async function (event) {
         movies_private: moviesPrivate,
         tv_shows_private: tvShowsPrivate,
         anime_private: animePrivate,
+        video_games_private: videoGamesPrivate,
         statistics_private: statisticsPrivate
       })
     });
@@ -1663,6 +2101,122 @@ window.updatePrivacySettings = async function (event) {
     errorDiv.textContent = 'Failed to update privacy settings';
     errorDiv.style.display = 'block';
     console.error('Error updating privacy settings:', error);
+  }
+}
+
+window.loadTabVisibility = async function () {
+  try {
+    const response = await authenticatedFetch(`${API_BASE}/account/tab-visibility`);
+    if (response.ok) {
+      const tabVisibility = await response.json();
+      document.getElementById('moviesVisible').checked = tabVisibility.movies_visible;
+      document.getElementById('tvShowsVisible').checked = tabVisibility.tv_shows_visible;
+      document.getElementById('animeVisible').checked = tabVisibility.anime_visible;
+      document.getElementById('videoGamesVisible').checked = tabVisibility.video_games_visible;
+      // Update tab visibility in UI
+      updateTabVisibilityUI(tabVisibility);
+    }
+  } catch (error) {
+    console.error('Failed to load tab visibility settings:', error);
+    // Default to all visible if loading fails
+    updateTabVisibilityUI({
+      movies_visible: true,
+      tv_shows_visible: true,
+      anime_visible: true,
+      video_games_visible: true
+    });
+  }
+}
+
+window.updateTabVisibility = async function (event) {
+  event.preventDefault();
+
+  const moviesVisible = document.getElementById('moviesVisible').checked;
+  const tvShowsVisible = document.getElementById('tvShowsVisible').checked;
+  const animeVisible = document.getElementById('animeVisible').checked;
+  const videoGamesVisible = document.getElementById('videoGamesVisible').checked;
+
+  const errorDiv = document.getElementById('tabVisibilityError');
+  const successDiv = document.getElementById('tabVisibilitySuccess');
+
+  errorDiv.textContent = '';
+  errorDiv.style.display = 'none';
+  successDiv.textContent = '';
+  successDiv.style.display = 'none';
+
+  try {
+    const response = await authenticatedFetch(`${API_BASE}/account/tab-visibility`, {
+      method: 'PUT',
+      headers: {
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify({
+        movies_visible: moviesVisible,
+        tv_shows_visible: tvShowsVisible,
+        anime_visible: animeVisible,
+        video_games_visible: videoGamesVisible
+      })
+    });
+
+    if (response.ok) {
+      const tabVisibility = await response.json();
+      // Update UI immediately
+      updateTabVisibilityUI(tabVisibility);
+      
+      successDiv.textContent = 'Tab visibility updated successfully';
+      successDiv.style.display = 'block';
+      setTimeout(() => {
+        successDiv.style.display = 'none';
+      }, 3000);
+    } else {
+      const error = await response.json();
+      errorDiv.textContent = error.detail || 'Failed to update tab visibility';
+      errorDiv.style.display = 'block';
+    }
+  } catch (error) {
+    errorDiv.textContent = 'Failed to update tab visibility';
+    errorDiv.style.display = 'block';
+    console.error('Error updating tab visibility:', error);
+  }
+}
+
+function updateTabVisibilityUI(tabVisibility) {
+  // Update tab buttons visibility
+  const moviesTab = document.querySelector('[onclick="switchTab(\'movies\')"]');
+  const tvShowsTab = document.querySelector('[onclick="switchTab(\'tv-shows\')"]');
+  const animeTab = document.querySelector('[onclick="switchTab(\'anime\')"]');
+  const videoGamesTab = document.querySelector('[onclick="switchTab(\'video-games\')"]');
+  
+  if (moviesTab) {
+    moviesTab.style.display = tabVisibility.movies_visible ? '' : 'none';
+  }
+  if (tvShowsTab) {
+    tvShowsTab.style.display = tabVisibility.tv_shows_visible ? '' : 'none';
+  }
+  if (animeTab) {
+    animeTab.style.display = tabVisibility.anime_visible ? '' : 'none';
+  }
+  if (videoGamesTab) {
+    videoGamesTab.style.display = tabVisibility.video_games_visible ? '' : 'none';
+  }
+  
+  // If current tab is hidden, switch to first visible tab
+  const currentTabElement = document.querySelector('.tab.active');
+  if (currentTabElement && currentTabElement.style.display === 'none') {
+    // Find first visible tab
+    const allTabs = document.querySelectorAll('.tab');
+    for (const tab of allTabs) {
+      if (tab.style.display !== 'none') {
+        const onclickStr = tab.getAttribute('onclick');
+        if (onclickStr) {
+          const match = onclickStr.match(/switchTab\('([^']+)'\)/);
+          if (match) {
+            switchTab(match[1]);
+            break;
+          }
+        }
+      }
+    }
   }
 }
 
@@ -1805,11 +2359,12 @@ window.resetProfilePicture = async function () {
   }
 }
 
-// Update loadAccountInfo to also load privacy settings and profile picture
+// Update loadAccountInfo to also load privacy settings, tab visibility, and profile picture
 const originalLoadAccountInfo = window.loadAccountInfo;
 window.loadAccountInfo = async function () {
   await originalLoadAccountInfo();
   await loadPrivacySettings();
+  await loadTabVisibility();
 
   // Load profile picture preview
   const user = getUser();
@@ -2005,11 +2560,13 @@ let accordionStates = {
   movies: false,
   tvShows: false,
   anime: false,
+  videoGames: false,
   statistics: false
 };
 let currentFriendMovies = [];
 let currentFriendTVShows = [];
 let currentFriendAnime = [];
+let currentFriendVideoGames = [];
 
 window.openFriendProfile = async function (friendId) {
   currentFriendId = friendId;
@@ -2023,14 +2580,16 @@ window.closeFriendProfile = function () {
   currentFriendMovies = [];
   currentFriendTVShows = [];
   currentFriendAnime = [];
+  currentFriendVideoGames = [];
   accordionStates = {
     movies: false,
     tvShows: false,
     anime: false,
+    videoGames: false,
     statistics: false
   };
   // Reset accordion states
-  ['movies', 'tvShows', 'anime', 'statistics'].forEach(section => {
+  ['movies', 'tvShows', 'anime', 'videoGames', 'statistics'].forEach(section => {
     const content = document.getElementById(`${section}Content`);
     const icon = document.getElementById(`${section}Icon`);
     if (content && icon) {
@@ -2042,9 +2601,11 @@ window.closeFriendProfile = function () {
   const moviesSearch = document.getElementById('friendMoviesSearch');
   const tvShowsSearch = document.getElementById('friendTVShowsSearch');
   const animeSearch = document.getElementById('friendAnimeSearch');
+  const videoGamesSearch = document.getElementById('friendVideoGamesSearch');
   if (moviesSearch) moviesSearch.value = '';
   if (tvShowsSearch) tvShowsSearch.value = '';
   if (animeSearch) animeSearch.value = '';
+  if (videoGamesSearch) videoGamesSearch.value = '';
 }
 
 window.loadFriendProfile = async function (friendId) {
@@ -2077,6 +2638,7 @@ window.loadFriendProfile = async function (friendId) {
       updateMoviesSummary(profile);
       updateTVShowsSummary(profile);
       updateAnimeSummary(profile);
+      updateVideoGamesSummary(profile);
       updateStatisticsSummary(profile);
     } else {
       const error = await response.json();
@@ -2120,6 +2682,16 @@ function updateAnimeSummary(profile) {
   }
 }
 
+function updateVideoGamesSummary(profile) {
+  const summaryDiv = document.getElementById('videoGamesSummary');
+  if (profile.video_games_private) {
+    summaryDiv.innerHTML = '<p class="privacy-message">This user has made their video games private</p>';
+  } else {
+    const count = profile.video_games_count || 0;
+    summaryDiv.innerHTML = `<p class="summary-text">${count} Video Game${count !== 1 ? 's' : ''}</p>`;
+  }
+}
+
 function updateStatisticsSummary(profile) {
   const summaryDiv = document.getElementById('statisticsSummary');
   if (profile.statistics_private) {
@@ -2148,6 +2720,8 @@ window.toggleAccordion = async function (section) {
       await loadFriendTVShows(currentFriendId);
     } else if (section === 'anime') {
       await loadFriendAnime(currentFriendId);
+    } else if (section === 'videoGames') {
+      await loadFriendVideoGames(currentFriendId);
     } else if (section === 'statistics') {
       await loadFriendStatistics(currentFriendId);
     }
@@ -2383,6 +2957,84 @@ window.filterFriendAnime = function () {
   });
 
   renderFriendAnime(filtered);
+}
+
+window.loadFriendVideoGames = async function (friendId) {
+  try {
+    const response = await authenticatedFetch(`${API_BASE}/friends/${friendId}/video-games`);
+    if (response.ok) {
+      const data = await response.json();
+      const listDiv = document.getElementById('videoGamesList');
+
+      // Store full data for filtering
+      currentFriendVideoGames = data.video_games || [];
+
+      if (currentFriendVideoGames.length === 0) {
+        document.getElementById('friendVideoGamesListContainer').innerHTML = '<p class="empty-message">No video games yet</p>';
+      } else {
+        renderFriendVideoGames(currentFriendVideoGames);
+      }
+    } else {
+      const error = await response.json();
+      document.getElementById('videoGamesList').innerHTML = `<p class="error-message">${error.detail || 'Failed to load video games'}</p>`;
+    }
+  } catch (error) {
+    console.error('Failed to load friend video games:', error);
+    document.getElementById('videoGamesList').innerHTML = '<p class="error-message">Failed to load video games</p>';
+  }
+}
+
+window.renderFriendVideoGames = function (videoGames) {
+  const container = document.getElementById('friendVideoGamesListContainer');
+  if (!container) return;
+
+  if (videoGames.length === 0) {
+    container.innerHTML = '<p class="empty-message">No video games found</p>';
+    return;
+  }
+
+  container.innerHTML = videoGames.map(game => {
+    const releaseDateStr = game.release_date ? new Date(game.release_date).toLocaleDateString() : '';
+    return `
+    <div class="friend-item-card">
+      <div class="friend-item-header">
+        <h4>${escapeHtml(game.title)}</h4>
+        ${game.rating !== null && game.rating !== undefined ? `<span class="rating-badge">${parseFloat(game.rating).toFixed(1)}/10</span>` : ''}
+      </div>
+      <div class="friend-item-details">
+        ${releaseDateStr ? `<span>Release Date: ${releaseDateStr}</span>` : ''}
+        ${game.genres ? `<span>Genres: ${escapeHtml(game.genres)}</span>` : ''}
+        <span class="watched-badge ${game.played ? 'watched' : 'unwatched'}">${game.played ? 'Played' : 'Not Played'}</span>
+        ${game.rawg_link ? `<a href="${game.rawg_link}" target="_blank" class="rawg-link">View on RAWG</a>` : ''}
+      </div>
+      ${game.review ? `<p class="friend-item-review">${escapeHtml(game.review)}</p>` : ''}
+    </div>
+    `;
+  }).join('');
+}
+
+window.filterFriendVideoGames = function () {
+  const searchInput = document.getElementById('friendVideoGamesSearch');
+  const searchTerm = searchInput ? searchInput.value.toLowerCase().trim() : '';
+
+  if (!searchTerm) {
+    renderFriendVideoGames(currentFriendVideoGames);
+    return;
+  }
+
+  const filtered = currentFriendVideoGames.filter(game => {
+    const title = (game.title || '').toLowerCase();
+    const genres = (game.genres || '').toLowerCase();
+    const releaseDate = game.release_date ? new Date(game.release_date).toLocaleDateString().toLowerCase() : '';
+    const review = (game.review || '').toLowerCase();
+
+    return title.includes(searchTerm) ||
+      genres.includes(searchTerm) ||
+      releaseDate.includes(searchTerm) ||
+      review.includes(searchTerm);
+  });
+
+  renderFriendVideoGames(filtered);
 }
 
 window.loadFriendStatistics = async function (friendId) {
@@ -2630,6 +3282,24 @@ document.addEventListener('DOMContentLoaded', function () {
     }
   });
 
+  // Video Games table
+  document.addEventListener('click', function (e) {
+    if (e.target.classList.contains('edit-video-game-btn')) {
+      e.preventDefault();
+      enableVideoGameEdit(e.target);
+    } else if (e.target.classList.contains('delete-video-game-btn')) {
+      e.preventDefault();
+      const id = parseInt(e.target.dataset.gameId, 10);
+      deleteVideoGame(id);
+    } else if (e.target.classList.contains('save-video-game-btn')) {
+      e.preventDefault();
+      saveVideoGameEdit(e.target);
+    } else if (e.target.classList.contains('cancel-video-game-btn')) {
+      e.preventDefault();
+      cancelVideoGameEdit();
+    }
+  });
+
   // Set up notification bell click handler
   const notificationBell = document.getElementById('notificationBell');
   if (notificationBell) {
@@ -2704,6 +3374,9 @@ document.addEventListener('DOMContentLoaded', function () {
   if (isAuthenticated()) {
     loadFriendsList();
     updateNotificationCount();
+    
+    // Load tab visibility settings
+    loadTabVisibility();
 
     // Show friends sidebar
     const friendsSidebar = document.getElementById('friendsSidebar');

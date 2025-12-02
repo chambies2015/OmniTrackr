@@ -1,6 +1,6 @@
 """
 SQLAlchemy models for the OmniTrackr API.
-Defines the User, Movie, TV Show, and Anime ORM models.
+Defines the User, Movie, TV Show, Anime, and Video Game ORM models.
 """
 from sqlalchemy import Column, Integer, String, Boolean, Float, ForeignKey, DateTime, UniqueConstraint, LargeBinary
 from sqlalchemy.orm import relationship
@@ -28,7 +28,14 @@ class User(Base):
     movies_private = Column(Boolean, default=False, nullable=False)
     tv_shows_private = Column(Boolean, default=False, nullable=False)
     anime_private = Column(Boolean, default=False, nullable=False)
+    video_games_private = Column(Boolean, default=False, nullable=False)
     statistics_private = Column(Boolean, default=False, nullable=False)
+    
+    # Tab visibility settings (default to True - all tabs visible)
+    movies_visible = Column(Boolean, default=True, nullable=False)
+    tv_shows_visible = Column(Boolean, default=True, nullable=False)
+    anime_visible = Column(Boolean, default=True, nullable=False)
+    video_games_visible = Column(Boolean, default=True, nullable=False)
     
     # Profile picture
     profile_picture_url = Column(String, nullable=True)  # Kept for backward compatibility, now stores virtual URL like /profile-pictures/{user_id}
@@ -39,6 +46,7 @@ class User(Base):
     movies = relationship("Movie", back_populates="owner", cascade="all, delete-orphan")
     tv_shows = relationship("TVShow", back_populates="owner", cascade="all, delete-orphan")
     anime = relationship("Anime", back_populates="owner", cascade="all, delete-orphan")
+    video_games = relationship("VideoGame", back_populates="owner", cascade="all, delete-orphan")
     # Friends relationships
     sent_friend_requests = relationship("FriendRequest", foreign_keys="FriendRequest.sender_id", back_populates="sender", cascade="all, delete-orphan")
     received_friend_requests = relationship("FriendRequest", foreign_keys="FriendRequest.receiver_id", back_populates="receiver", cascade="all, delete-orphan")
@@ -101,6 +109,25 @@ class Anime(Base):
     # User relationship
     user_id = Column(Integer, ForeignKey("users.id"), nullable=False, index=True)
     owner = relationship("User", back_populates="anime")
+
+
+class VideoGame(Base):
+    """Video Game model with user ownership."""
+    __tablename__ = "video_games"
+    
+    id = Column(Integer, primary_key=True, index=True)
+    title = Column(String, index=True)
+    release_date = Column(DateTime, nullable=True)  # Full date format YYYY-MM-DD
+    genres = Column(String, nullable=True)  # Comma-separated genre names
+    rating = Column(Float, nullable=True)
+    played = Column(Boolean, default=False)
+    review = Column(String, nullable=True)
+    cover_art_url = Column(String, nullable=True)  # Equivalent to poster_url
+    rawg_link = Column(String, nullable=True)  # RAWG game page URL
+    
+    # User relationship
+    user_id = Column(Integer, ForeignKey("users.id"), nullable=False, index=True)
+    owner = relationship("User", back_populates="video_games")
 
 
 class FriendRequest(Base):

@@ -86,11 +86,37 @@ try:
                 conn.execute(text("ALTER TABLE users ADD COLUMN anime_private BOOLEAN DEFAULT FALSE"))
                 conn.commit()
                 print("Added anime_private column to users table")
+        if "video_games_private" not in user_columns:
+            with engine.connect() as conn:
+                conn.execute(text("ALTER TABLE users ADD COLUMN video_games_private BOOLEAN DEFAULT FALSE"))
+                conn.commit()
+                print("Added video_games_private column to users table")
         if "statistics_private" not in user_columns:
             with engine.connect() as conn:
                 conn.execute(text("ALTER TABLE users ADD COLUMN statistics_private BOOLEAN DEFAULT FALSE"))
                 conn.commit()
                 print("Added statistics_private column to users table")
+        # Tab visibility settings (default to True - all tabs visible)
+        if "movies_visible" not in user_columns:
+            with engine.connect() as conn:
+                conn.execute(text("ALTER TABLE users ADD COLUMN movies_visible BOOLEAN DEFAULT TRUE"))
+                conn.commit()
+                print("Added movies_visible column to users table")
+        if "tv_shows_visible" not in user_columns:
+            with engine.connect() as conn:
+                conn.execute(text("ALTER TABLE users ADD COLUMN tv_shows_visible BOOLEAN DEFAULT TRUE"))
+                conn.commit()
+                print("Added tv_shows_visible column to users table")
+        if "anime_visible" not in user_columns:
+            with engine.connect() as conn:
+                conn.execute(text("ALTER TABLE users ADD COLUMN anime_visible BOOLEAN DEFAULT TRUE"))
+                conn.commit()
+                print("Added anime_visible column to users table")
+        if "video_games_visible" not in user_columns:
+            with engine.connect() as conn:
+                conn.execute(text("ALTER TABLE users ADD COLUMN video_games_visible BOOLEAN DEFAULT TRUE"))
+                conn.commit()
+                print("Added video_games_visible column to users table")
         if "profile_picture_url" not in user_columns:
             with engine.connect() as conn:
                 conn.execute(text("ALTER TABLE users ADD COLUMN profile_picture_url VARCHAR"))
@@ -233,6 +259,47 @@ try:
                             print("Converted anime.rating column from INTEGER to FLOAT")
                     except Exception as e:
                         print(f"Note: Could not convert anime.rating column type (may already be correct): {e}")
+
+    # Check video_games table for schema migration
+    if not inspector.has_table("video_games"):
+        # Table doesn't exist, it will be created by Base.metadata.create_all
+        print("Video games table will be created by Base.metadata.create_all")
+    else:
+        # Table exists, check for required columns
+        video_game_columns = {col["name"] for col in inspector.get_columns("video_games")}
+        if "cover_art_url" not in video_game_columns:
+            with engine.connect() as conn:
+                conn.execute(text("ALTER TABLE video_games ADD COLUMN cover_art_url VARCHAR"))
+                conn.commit()
+                print("Added cover_art_url column to video_games table")
+        if "rawg_link" not in video_game_columns:
+            with engine.connect() as conn:
+                conn.execute(text("ALTER TABLE video_games ADD COLUMN rawg_link VARCHAR"))
+                conn.commit()
+                print("Added rawg_link column to video_games table")
+        if "genres" not in video_game_columns:
+            with engine.connect() as conn:
+                conn.execute(text("ALTER TABLE video_games ADD COLUMN genres VARCHAR"))
+                conn.commit()
+                print("Added genres column to video_games table")
+        if "release_date" not in video_game_columns:
+            with engine.connect() as conn:
+                conn.execute(text("ALTER TABLE video_games ADD COLUMN release_date TIMESTAMP"))
+                conn.commit()
+                print("Added release_date column to video_games table")
+        # Check if rating column exists and ensure it's FLOAT type
+        rating_column = next((col for col in inspector.get_columns("video_games") if col["name"] == "rating"), None)
+        if rating_column:
+            if database.DATABASE_URL.startswith("postgresql"):
+                col_type = str(rating_column.get("type", "")).upper()
+                if "INT" in col_type and "FLOAT" not in col_type and "NUMERIC" not in col_type and "REAL" not in col_type:
+                    try:
+                        with engine.connect() as conn:
+                            conn.execute(text("ALTER TABLE video_games ALTER COLUMN rating TYPE FLOAT USING rating::float"))
+                            conn.commit()
+                            print("Converted video_games.rating column from INTEGER to FLOAT")
+                    except Exception as e:
+                        print(f"Note: Could not convert video_games.rating column type (may already be correct): {e}")
 
     # Check and create friend_requests table if it doesn't exist
     if not inspector.has_table("friend_requests"):
@@ -592,9 +659,13 @@ if os.path.exists(static_dir):
 # Add individual file serving for assets
 @app.get("/credentials.js")
 async def get_credentials():
-    """Serve OMDB API key from environment variable."""
+    """Serve OMDB and RAWG API keys from environment variables."""
     omdb_key = os.getenv("OMDB_API_KEY", "")
-    js_content = f"// OMDB API Key from environment\nconst OMDB_API_KEY = '{omdb_key}';\n"
+    rawg_key = os.getenv("RAWG_API_KEY", "")
+    # Use JSON encoding to safely escape API keys and prevent JavaScript injection
+    omdb_key_escaped = json.dumps(omdb_key)
+    rawg_key_escaped = json.dumps(rawg_key)
+    js_content = f"// API Keys from environment\nconst OMDB_API_KEY = {omdb_key_escaped};\nconst RAWG_API_KEY = {rawg_key_escaped};\n"
     return Response(content=js_content, media_type="application/javascript")
 
 
@@ -1193,6 +1264,35 @@ async def get_privacy_settings(
     return privacy_settings
 
 
+@app.put("/account/tab-visibility", response_model=schemas.TabVisibility, tags=["account"])
+async def update_tab_visibility(
+    tab_visibility_update: schemas.TabVisibilityUpdate,
+    current_user: models.User = Depends(get_current_user),
+    db: Session = Depends(get_db)
+):
+    """Update user's tab visibility settings."""
+    updated_user = crud.update_tab_visibility(db, current_user.id, tab_visibility_update)
+    
+    if updated_user is None:
+        raise HTTPException(status_code=404, detail="User not found")
+    
+    return crud.get_tab_visibility(db, current_user.id)
+
+
+@app.get("/account/tab-visibility", response_model=schemas.TabVisibility, tags=["account"])
+async def get_tab_visibility(
+    current_user: models.User = Depends(get_current_user),
+    db: Session = Depends(get_db)
+):
+    """Get user's current tab visibility settings."""
+    tab_visibility = crud.get_tab_visibility(db, current_user.id)
+    
+    if tab_visibility is None:
+        raise HTTPException(status_code=404, detail="User not found")
+    
+    return tab_visibility
+
+
 @app.post("/account/profile-picture", response_model=schemas.User, tags=["account"])
 @limiter.limit("10/minute")  # Rate limit: 10 uploads per minute per IP
 async def upload_profile_picture(
@@ -1685,6 +1785,29 @@ async def get_friend_anime(
     return schemas.FriendAnimeResponse(anime=anime, count=len(anime))
 
 
+@app.get("/friends/{friend_id}/video-games", response_model=schemas.FriendVideoGamesResponse, tags=["friends"])
+async def get_friend_video_games(
+    friend_id: int,
+    current_user: models.User = Depends(get_current_user),
+    db: Session = Depends(get_db)
+):
+    """Get friend's video games list (if not private, requires friendship)."""
+    # Verify friendship
+    if not crud.are_friends(db, current_user.id, friend_id):
+        raise HTTPException(status_code=403, detail="You are not friends with this user")
+    
+    video_games = crud.get_friend_video_games(db, friend_id)
+    if video_games is None:
+        # Check if friend exists
+        friend = crud.get_user_by_id(db, friend_id)
+        if friend is None:
+            raise HTTPException(status_code=404, detail="Friend not found")
+        # Data is private
+        raise HTTPException(status_code=403, detail="This user has made their video games private")
+    
+    return schemas.FriendVideoGamesResponse(video_games=video_games, count=len(video_games))
+
+
 @app.get("/friends/{friend_id}/statistics", response_model=schemas.FriendStatisticsResponse, tags=["friends"])
 async def get_friend_statistics(
     friend_id: int,
@@ -1871,38 +1994,83 @@ async def delete_anime(anime_id: int, current_user: models.User = Depends(get_cu
     return db_anime
 
 
+# Video Game endpoints
+@app.get("/video-games/", response_model=List[schemas.VideoGame], tags=["video-games"])
+async def list_video_games(
+        search: Optional[str] = None,
+        sort_by: Optional[str] = None,
+        order: Optional[str] = None,
+        current_user: models.User = Depends(get_current_user),
+        db: Session = Depends(get_db),
+):
+    return crud.get_video_games(db, current_user.id, search=search, sort_by=sort_by, order=order)
+
+
+@app.get("/video-games/{game_id}", response_model=schemas.VideoGame, tags=["video-games"])
+async def get_video_game(game_id: int, current_user: models.User = Depends(get_current_user), db: Session = Depends(get_db)):
+    db_video_game = crud.get_video_game_by_id(db, current_user.id, game_id)
+    if db_video_game is None:
+        raise HTTPException(status_code=404, detail="Video game not found")
+    return db_video_game
+
+
+@app.post("/video-games/", response_model=schemas.VideoGame, status_code=201, tags=["video-games"])
+async def create_video_game(video_game: schemas.VideoGameCreate, current_user: models.User = Depends(get_current_user), db: Session = Depends(get_db)):
+    return crud.create_video_game(db, current_user.id, video_game)
+
+
+@app.put("/video-games/{game_id}", response_model=schemas.VideoGame, tags=["video-games"])
+async def update_video_game(game_id: int, video_game: schemas.VideoGameUpdate, current_user: models.User = Depends(get_current_user), db: Session = Depends(get_db)):
+    db_video_game = crud.update_video_game(db, current_user.id, game_id, video_game)
+    if db_video_game is None:
+        raise HTTPException(status_code=404, detail="Video game not found")
+    return db_video_game
+
+
+@app.delete("/video-games/{game_id}", response_model=schemas.VideoGame, tags=["video-games"])
+async def delete_video_game(game_id: int, current_user: models.User = Depends(get_current_user), db: Session = Depends(get_db)):
+    db_video_game = crud.delete_video_game(db, current_user.id, game_id)
+    if db_video_game is None:
+        raise HTTPException(status_code=404, detail="Video game not found")
+    return db_video_game
+
+
 # Export/Import endpoints
 @app.get("/export/", response_model=schemas.ExportData, tags=["export-import"])
 async def export_data(current_user: models.User = Depends(get_current_user), db: Session = Depends(get_db)):
-    """Export all movies, TV shows, and anime as JSON"""
+    """Export all movies, TV shows, anime, and video games as JSON"""
     movies = crud.get_all_movies(db, current_user.id)
     tv_shows = crud.get_all_tv_shows(db, current_user.id)
     anime = crud.get_all_anime(db, current_user.id)
+    video_games = crud.get_all_video_games(db, current_user.id)
 
     export_metadata = {
         "export_timestamp": datetime.now().isoformat(),
         "version": "1.0",
         "total_movies": len(movies),
         "total_tv_shows": len(tv_shows),
-        "total_anime": len(anime)
+        "total_anime": len(anime),
+        "total_video_games": len(video_games)
     }
 
     return schemas.ExportData(
         movies=movies,
         tv_shows=tv_shows,
         anime=anime,
+        video_games=video_games,
         export_metadata=export_metadata
     )
 
 
 @app.post("/import/", response_model=schemas.ImportResult, tags=["export-import"])
 async def import_data(import_data: schemas.ImportData, current_user: models.User = Depends(get_current_user), db: Session = Depends(get_db)):
-    """Import movies, TV shows, and anime from JSON data"""
+    """Import movies, TV shows, anime, and video games from JSON data"""
     movies_created, movies_updated, movie_errors = crud.import_movies(db, current_user.id, import_data.movies)
     tv_shows_created, tv_shows_updated, tv_show_errors = crud.import_tv_shows(db, current_user.id, import_data.tv_shows)
     anime_created, anime_updated, anime_errors = crud.import_anime(db, current_user.id, import_data.anime)
+    video_games_created, video_games_updated, video_game_errors = crud.import_video_games(db, current_user.id, import_data.video_games)
 
-    all_errors = movie_errors + tv_show_errors + anime_errors
+    all_errors = movie_errors + tv_show_errors + anime_errors + video_game_errors
 
     return schemas.ImportResult(
         movies_created=movies_created,
@@ -1911,6 +2079,8 @@ async def import_data(import_data: schemas.ImportData, current_user: models.User
         tv_shows_updated=tv_shows_updated,
         anime_created=anime_created,
         anime_updated=anime_updated,
+        video_games_created=video_games_created,
+        video_games_updated=video_games_updated,
         errors=all_errors
     )
 
@@ -1926,23 +2096,25 @@ async def import_from_file(file: UploadFile = File(...), current_user: models.Us
         data = json.loads(content.decode('utf-8'))
 
         # Validate the imported data structure
-        # Note: 'anime' is optional for backward compatibility with old export files
+        # Note: 'anime' and 'video_games' are optional for backward compatibility with old export files
         if 'movies' not in data or 'tv_shows' not in data:
-            raise HTTPException(status_code=400, detail="Invalid file format. Expected 'movies' and 'tv_shows' arrays. 'anime' is optional for backward compatibility.")
+            raise HTTPException(status_code=400, detail="Invalid file format. Expected 'movies' and 'tv_shows' arrays. 'anime' and 'video_games' are optional for backward compatibility.")
 
         # Convert to Pydantic models
         movies = [schemas.MovieCreate(**movie) for movie in data.get('movies', [])]
         tv_shows = [schemas.TVShowCreate(**tv_show) for tv_show in data.get('tv_shows', [])]
         anime = [schemas.AnimeCreate(**anime_item) for anime_item in data.get('anime', [])]
+        video_games = [schemas.VideoGameCreate(**video_game) for video_game in data.get('video_games', [])]
 
-        import_data = schemas.ImportData(movies=movies, tv_shows=tv_shows, anime=anime)
+        import_data = schemas.ImportData(movies=movies, tv_shows=tv_shows, anime=anime, video_games=video_games)
 
         # Import the data
         movies_created, movies_updated, movie_errors = crud.import_movies(db, current_user.id, import_data.movies)
         tv_shows_created, tv_shows_updated, tv_show_errors = crud.import_tv_shows(db, current_user.id, import_data.tv_shows)
         anime_created, anime_updated, anime_errors = crud.import_anime(db, current_user.id, import_data.anime)
+        video_games_created, video_games_updated, video_game_errors = crud.import_video_games(db, current_user.id, import_data.video_games)
 
-        all_errors = movie_errors + tv_show_errors + anime_errors
+        all_errors = movie_errors + tv_show_errors + anime_errors + video_game_errors
 
         return schemas.ImportResult(
             movies_created=movies_created,
@@ -1951,6 +2123,8 @@ async def import_from_file(file: UploadFile = File(...), current_user: models.Us
             tv_shows_updated=tv_shows_updated,
             anime_created=anime_created,
             anime_updated=anime_updated,
+            video_games_created=video_games_created,
+            video_games_updated=video_games_updated,
             errors=all_errors
         )
 
