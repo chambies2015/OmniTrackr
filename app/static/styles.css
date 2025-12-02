@@ -193,10 +193,16 @@ body {
 
 .tab-content {
   display: none;
+  width: 100%;
+  max-width: 100%;
+  box-sizing: border-box;
 }
 
 .tab-content.active {
   display: block;
+  width: 100%;
+  max-width: 100%;
+  box-sizing: border-box;
 }
 
 .toggle-btn {
@@ -224,6 +230,9 @@ body {
   box-shadow: 0 2px 12px rgba(0, 0, 0, 0.08);
   margin-bottom: 24px;
   transition: transform 0.2s ease, box-shadow 0.2s ease;
+  width: 100%;
+  max-width: 100%;
+  box-sizing: border-box;
 }
 
 .card:hover {
@@ -416,13 +425,16 @@ button.action-btn:active {
   border-radius: 12px;
   background-color: var(--card-bg);
   box-shadow: 0 2px 12px rgba(0, 0, 0, 0.1);
+  width: 100%;
+  max-width: 100%;
+  box-sizing: border-box;
 }
 
 table {
   width: 100%;
   border-collapse: separate;
   border-spacing: 0;
-  table-layout: auto;
+  table-layout: fixed;
   background-color: transparent;
 }
 
@@ -472,7 +484,9 @@ body.dark-mode td {
 #tvShowTable th:nth-child(8),
 #tvShowTable td:nth-child(8),
 #animeTable th:nth-child(8),
-#animeTable td:nth-child(8) {
+#animeTable td:nth-child(8),
+#videoGameTable th:nth-child(8),
+#videoGameTable td:nth-child(8) {
   width: 28%;
   white-space: normal;
   overflow-wrap: anywhere;
@@ -509,44 +523,110 @@ body.dark-mode .watched-icon.unwatched {
   overflow-wrap: anywhere;
 }
 
-/* Set practical widths for other columns */
+/* Set practical widths for other columns - apply to all tables for consistency */
 #movieTable th:nth-child(1),
-#movieTable td:nth-child(1) {
+#movieTable td:nth-child(1),
+#tvShowTable th:nth-child(1),
+#tvShowTable td:nth-child(1),
+#animeTable th:nth-child(1),
+#animeTable td:nth-child(1),
+#videoGameTable th:nth-child(1),
+#videoGameTable td:nth-child(1) {
   width: 80px;
 }
 
 #movieTable th:nth-child(2),
-#movieTable td:nth-child(2) {
+#movieTable td:nth-child(2),
+#tvShowTable th:nth-child(2),
+#tvShowTable td:nth-child(2),
+#animeTable th:nth-child(2),
+#animeTable td:nth-child(2),
+#videoGameTable th:nth-child(2),
+#videoGameTable td:nth-child(2) {
   width: 18%;
 }
 
 #movieTable th:nth-child(3),
-#movieTable td:nth-child(3) {
+#movieTable td:nth-child(3),
+#tvShowTable th:nth-child(3),
+#tvShowTable td:nth-child(3),
+#animeTable th:nth-child(3),
+#animeTable td:nth-child(3),
+#videoGameTable th:nth-child(3),
+#videoGameTable td:nth-child(3) {
   width: 14%;
 }
 
 #movieTable th:nth-child(4),
-#movieTable td:nth-child(4) {
+#movieTable td:nth-child(4),
+#tvShowTable th:nth-child(4),
+#tvShowTable td:nth-child(4),
+#animeTable th:nth-child(4),
+#animeTable td:nth-child(4),
+#videoGameTable th:nth-child(4),
+#videoGameTable td:nth-child(4) {
   width: 8%;
 }
 
 #movieTable th:nth-child(5),
-#movieTable td:nth-child(5) {
+#movieTable td:nth-child(5),
+#tvShowTable th:nth-child(5),
+#tvShowTable td:nth-child(5),
+#animeTable th:nth-child(5),
+#animeTable td:nth-child(5),
+#videoGameTable th:nth-child(5),
+#videoGameTable td:nth-child(5) {
   width: 8%;
 }
 
 #movieTable th:nth-child(6),
-#movieTable td:nth-child(6) {
+#movieTable td:nth-child(6),
+#tvShowTable th:nth-child(6),
+#tvShowTable td:nth-child(6),
+#animeTable th:nth-child(6),
+#animeTable td:nth-child(6),
+#videoGameTable th:nth-child(6),
+#videoGameTable td:nth-child(6) {
+  width: 8%;
+}
+
+#movieTable th:nth-child(7),
+#movieTable td:nth-child(7),
+#tvShowTable th:nth-child(7),
+#tvShowTable td:nth-child(7),
+#animeTable th:nth-child(7),
+#animeTable td:nth-child(7),
+#videoGameTable th:nth-child(7),
+#videoGameTable td:nth-child(7) {
   width: 8%;
 }
 
 #movieTable th:nth-child(8),
-#movieTable td:nth-child(8) {
+#movieTable td:nth-child(8),
+#tvShowTable th:nth-child(8),
+#tvShowTable td:nth-child(8),
+#animeTable th:nth-child(8),
+#animeTable td:nth-child(8),
+#videoGameTable th:nth-child(8),
+#videoGameTable td:nth-child(8) {
   width: 8%;
 }
 
 #movieTable th:nth-child(9),
-#movieTable td:nth-child(9) {
+#movieTable td:nth-child(9),
+#tvShowTable th:nth-child(9),
+#tvShowTable td:nth-child(9),
+#animeTable th:nth-child(9),
+#animeTable td:nth-child(9),
+#videoGameTable th:nth-child(9),
+#videoGameTable td:nth-child(9) {
+  width: 8%;
+}
+
+#tvShowTable th:nth-child(10),
+#tvShowTable td:nth-child(10),
+#animeTable th:nth-child(10),
+#animeTable td:nth-child(10) {
   width: 8%;
 }
 
