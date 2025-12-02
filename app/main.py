@@ -8,6 +8,7 @@ from datetime import datetime
 from typing import List, Optional
 
 from fastapi import Depends, FastAPI, HTTPException, UploadFile, File, status, Request
+from starlette.requests import Request
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import FileResponse, Response
 from fastapi.security import OAuth2PasswordBearer, OAuth2PasswordRequestForm
@@ -861,7 +862,7 @@ async def get_sellers_json():
 
 @app.get("/api/user-count", response_model=schemas.UserCount, tags=["public"])
 @limiter.limit("30/minute")  # Rate limit: 30 requests per minute per IP
-async def get_user_count(db: Session = Depends(get_db)):
+async def get_user_count(request: Request, db: Session = Depends(get_db)):
     """Get total number of active user accounts. Public endpoint for landing page."""
     try:
         count = db.query(models.User).filter(models.User.is_active == True).count()
