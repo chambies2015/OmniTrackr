@@ -955,6 +955,13 @@ body.dark-mode .card > div:nth-of-type(2) {
   }
 }
 
+/* Ensure statistics tab card matches container width */
+#statistics-tab .card {
+  width: 100%;
+  max-width: 100%;
+  box-sizing: border-box;
+}
+
 /* Statistics Dashboard Styles */
 .stats-section {
   margin-bottom: 40px;
