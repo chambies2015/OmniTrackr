@@ -8,9 +8,9 @@ from datetime import datetime
 from typing import List, Optional
 
 import httpx
-from fastapi import Depends, FastAPI, HTTPException, UploadFile, File, status, Request, Query
-from starlette.requests import Request
+from fastapi import Depends, FastAPI, HTTPException, UploadFile, File, Query, status
 from fastapi.middleware.cors import CORSMiddleware
+from starlette.requests import Request
 from fastapi.responses import FileResponse, Response
 from fastapi.security import OAuth2PasswordBearer, OAuth2PasswordRequestForm
 from fastapi.staticfiles import StaticFiles
@@ -33,14 +33,11 @@ import io
 from . import crud, schemas, auth, models, email as email_utils, database
 from .database import Base, SessionLocal, engine
 
-# Create the database tables
 Base.metadata.create_all(bind=engine)
 
-# Lightweight migration: add missing columns if upgrading an existing DB
 try:
     inspector = inspect(engine)
 
-    # Check users table for new authentication columns
     if inspector.has_table("users"):
         user_columns = {col["name"] for col in inspector.get_columns("users")}
         if "is_verified" not in user_columns:
@@ -65,7 +62,11 @@ try:
                 print("Added reset_token_expires column to users table")
         if "created_at" not in user_columns:
             with engine.connect() as conn:
-                conn.execute(text("ALTER TABLE users ADD COLUMN created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP"))
+                if database.DATABASE_URL.startswith("sqlite"):
+                    conn.execute(text("ALTER TABLE users ADD COLUMN created_at TIMESTAMP"))
+                    conn.execute(text("UPDATE users SET created_at = CURRENT_TIMESTAMP WHERE created_at IS NULL"))
+                else:
+                    conn.execute(text("ALTER TABLE users ADD COLUMN created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP"))
                 conn.commit()
                 print("Added created_at column to users table")
         if "deactivated_at" not in user_columns:
@@ -98,7 +99,6 @@ try:
                 conn.execute(text("ALTER TABLE users ADD COLUMN statistics_private BOOLEAN DEFAULT FALSE"))
                 conn.commit()
                 print("Added statistics_private column to users table")
-        # Tab visibility settings (default to True - all tabs visible)
         if "movies_visible" not in user_columns:
             with engine.connect() as conn:
                 conn.execute(text("ALTER TABLE users ADD COLUMN movies_visible BOOLEAN DEFAULT TRUE"))
@@ -138,7 +138,6 @@ try:
                 conn.commit()
                 print("Added profile_picture_mime_type column to users table")
 
-    # Check movies table for review and poster_url columns
     if inspector.has_table("movies"):
         existing_columns = {col["name"] for col in inspector.get_columns("movies")}
         if "review" not in existing_columns:
@@ -150,39 +149,28 @@ try:
                 conn.execute(text("ALTER TABLE movies ADD COLUMN poster_url VARCHAR"))
                 conn.commit()
         
-        # Check if rating column exists and ensure it's FLOAT type (for decimal ratings support)
-        # This handles edge cases where rating might have been created as INTEGER
         rating_column = next((col for col in inspector.get_columns("movies") if col["name"] == "rating"), None)
         if rating_column:
-            # For SQLite, we can't directly change column type, but INTEGER values work fine in FLOAT columns
-            # For PostgreSQL, we can alter the column type if needed
             if database.DATABASE_URL.startswith("postgresql"):
-                # Check if it's not already a float/numeric type
                 col_type = str(rating_column.get("type", "")).upper()
                 if "INT" in col_type and "FLOAT" not in col_type and "NUMERIC" not in col_type and "REAL" not in col_type:
                     try:
                         with engine.connect() as conn:
-                            # PostgreSQL: Convert INTEGER to FLOAT
                             conn.execute(text("ALTER TABLE movies ALTER COLUMN rating TYPE FLOAT USING rating::float"))
                             conn.commit()
                             print("Converted movies.rating column from INTEGER to FLOAT")
                     except Exception as e:
                         print(f"Note: Could not convert movies.rating column type (may already be correct): {e}")
 
-    # Check tv_shows table for schema migration
     if inspector.has_table("tv_shows"):
         tv_columns = {col["name"] for col in inspector.get_columns("tv_shows")}
 
-        # If we have the old schema (creator, year_started, year_ended), migrate to new schema
         if "creator" in tv_columns and "year_started" in tv_columns:
             with engine.connect() as conn:
-                # Create a backup table with old data
                 conn.execute(text("CREATE TABLE tv_shows_backup AS SELECT * FROM tv_shows"))
 
-                # Drop the old table
                 conn.execute(text("DROP TABLE tv_shows"))
 
-                # Recreate the table with new schema
                 conn.execute(text("""
                     CREATE TABLE tv_shows (
                         id INTEGER PRIMARY KEY,
@@ -197,50 +185,38 @@ try:
                     )
                 """))
 
-                # Migrate data from backup (use year_started as the year)
                 conn.execute(text("""
                     INSERT INTO tv_shows (id, title, year, seasons, episodes, rating, watched, review, poster_url)
                     SELECT id, title, year_started, seasons, episodes, rating, watched, review, NULL
                     FROM tv_shows_backup
                 """))
 
-                # Drop the backup table
                 conn.execute(text("DROP TABLE tv_shows_backup"))
 
                 conn.commit()
                 print("Successfully migrated tv_shows table to new schema")
         else:
-            # If table exists but doesn't have poster_url column, add it
             if "poster_url" not in tv_columns:
                 with engine.connect() as conn:
                     conn.execute(text("ALTER TABLE tv_shows ADD COLUMN poster_url VARCHAR"))
                     conn.commit()
             
-            # Check if rating column exists and ensure it's FLOAT type (for decimal ratings support)
-            # This handles edge cases where rating might have been created as INTEGER
             rating_column = next((col for col in inspector.get_columns("tv_shows") if col["name"] == "rating"), None)
             if rating_column:
-                # For SQLite, we can't directly change column type, but INTEGER values work fine in FLOAT columns
-                # For PostgreSQL, we can alter the column type if needed
                 if database.DATABASE_URL.startswith("postgresql"):
-                    # Check if it's not already a float/numeric type
                     col_type = str(rating_column.get("type", "")).upper()
                     if "INT" in col_type and "FLOAT" not in col_type and "NUMERIC" not in col_type and "REAL" not in col_type:
                         try:
                             with engine.connect() as conn:
-                                # PostgreSQL: Convert INTEGER to FLOAT
                                 conn.execute(text("ALTER TABLE tv_shows ALTER COLUMN rating TYPE FLOAT USING rating::float"))
                                 conn.commit()
                                 print("Converted tv_shows.rating column from INTEGER to FLOAT")
                         except Exception as e:
                             print(f"Note: Could not convert tv_shows.rating column type (may already be correct): {e}")
 
-    # Check anime table for schema migration
     if not inspector.has_table("anime"):
-        # Table doesn't exist, it will be created by Base.metadata.create_all
         print("Anime table will be created by Base.metadata.create_all")
     else:
-        # Table exists, check for poster_url column
         anime_columns = {col["name"] for col in inspector.get_columns("anime")}
         if "poster_url" not in anime_columns:
             with engine.connect() as conn:
@@ -248,7 +224,6 @@ try:
                 conn.commit()
                 print("Added poster_url column to anime table")
         
-        # Check if rating column exists and ensure it's FLOAT type
         rating_column = next((col for col in inspector.get_columns("anime") if col["name"] == "rating"), None)
         if rating_column:
             if database.DATABASE_URL.startswith("postgresql"):
@@ -262,12 +237,9 @@ try:
                     except Exception as e:
                         print(f"Note: Could not convert anime.rating column type (may already be correct): {e}")
 
-    # Check video_games table for schema migration
     if not inspector.has_table("video_games"):
-        # Table doesn't exist, it will be created by Base.metadata.create_all
         print("Video games table will be created by Base.metadata.create_all")
     else:
-        # Table exists, check for required columns
         video_game_columns = {col["name"] for col in inspector.get_columns("video_games")}
         if "cover_art_url" not in video_game_columns:
             with engine.connect() as conn:
@@ -289,7 +261,6 @@ try:
                 conn.execute(text("ALTER TABLE video_games ADD COLUMN release_date TIMESTAMP"))
                 conn.commit()
                 print("Added release_date column to video_games table")
-        # Check if rating column exists and ensure it's FLOAT type
         rating_column = next((col for col in inspector.get_columns("video_games") if col["name"] == "rating"), None)
         if rating_column:
             if database.DATABASE_URL.startswith("postgresql"):
@@ -303,7 +274,6 @@ try:
                     except Exception as e:
                         print(f"Note: Could not convert video_games.rating column type (may already be correct): {e}")
 
-    # Check and create friend_requests table if it doesn't exist
     if not inspector.has_table("friend_requests"):
         with engine.connect() as conn:
             if database.DATABASE_URL.startswith("postgresql"):
@@ -321,7 +291,6 @@ try:
                 conn.execute(text("CREATE INDEX ix_friend_requests_receiver_id ON friend_requests(receiver_id)"))
                 conn.execute(text("CREATE INDEX ix_friend_requests_status ON friend_requests(status)"))
             else:
-                # SQLite
                 conn.execute(text("""
                     CREATE TABLE friend_requests (
                         id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -338,7 +307,6 @@ try:
             conn.commit()
             print("Created friend_requests table")
 
-    # Check and create friendships table if it doesn't exist
     if not inspector.has_table("friendships"):
         with engine.connect() as conn:
             if database.DATABASE_URL.startswith("postgresql"):
@@ -354,7 +322,6 @@ try:
                 conn.execute(text("CREATE INDEX ix_friendships_user1_id ON friendships(user1_id)"))
                 conn.execute(text("CREATE INDEX ix_friendships_user2_id ON friendships(user2_id)"))
             else:
-                # SQLite
                 conn.execute(text("""
                     CREATE TABLE friendships (
                         id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -369,7 +336,6 @@ try:
             conn.commit()
             print("Created friendships table")
 
-    # Check and create notifications table if it doesn't exist
     if not inspector.has_table("notifications"):
         with engine.connect() as conn:
             if database.DATABASE_URL.startswith("postgresql"):
@@ -388,7 +354,6 @@ try:
                 conn.execute(text("CREATE INDEX ix_notifications_friend_request_id ON notifications(friend_request_id)"))
                 conn.execute(text("CREATE INDEX ix_notifications_created_at ON notifications(created_at)"))
             else:
-                # SQLite
                 conn.execute(text("""
                     CREATE TABLE notifications (
                         id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -407,17 +372,13 @@ try:
             print("Created notifications table")
 
 except Exception as e:
-    # Best-effort migration; avoid crashing app startup if inspection fails
     print(f"Migration warning: {e}")
     pass
 
 # Initialize FastAPI
 app = FastAPI(title="OmniTrackr API", description="Manage your movies and TV shows", version="0.1.0")
 
-# Initialize rate limiter
-# Disable rate limiting in test environment
 if os.getenv("TESTING", "").lower() == "true":
-    # Use a no-op limiter for testing
     limiter = Limiter(key_func=lambda: "test", enabled=False)
 else:
     limiter = Limiter(key_func=get_remote_address)
@@ -428,7 +389,6 @@ app.add_exception_handler(RateLimitExceeded, _rate_limit_exceeded_handler)
 @app.on_event("startup")
 async def startup_event():
     """Run tasks on application startup."""
-    # Expire old friend requests (30+ days old)
     try:
         db = SessionLocal()
         expired_count = crud.expire_friend_requests(db)
@@ -445,14 +405,12 @@ class SecurityHeadersMiddleware(BaseHTTPMiddleware):
     async def dispatch(self, request: Request, call_next):
         response = await call_next(request)
         
-        # Security headers
         response.headers["X-Content-Type-Options"] = "nosniff"
         response.headers["X-Frame-Options"] = "DENY"
         response.headers["X-XSS-Protection"] = "1; mode=block"
         response.headers["Referrer-Policy"] = "strict-origin-when-cross-origin"
         response.headers["Permissions-Policy"] = "geolocation=(), microphone=(), camera=()"
         
-        # Only add HSTS if using HTTPS (check if request is secure)
         if request.url.scheme == "https":
             response.headers["Strict-Transport-Security"] = "max-age=31536000; includeSubDomains"
         
@@ -565,10 +523,8 @@ class BotFilterMiddleware(BaseHTTPMiddleware):
         path = request.url.path.lower()
         user_agent = request.headers.get("user-agent", "").lower()
         
-        # Normalize double slashes (//) to single slash for matching
         normalized_path = path.replace("//", "/")
         
-        # Check for suspicious paths (check both original and normalized)
         if any(suspicious in path for suspicious in self.SUSPICIOUS_PATHS) or \
            any(suspicious in normalized_path for suspicious in self.SUSPICIOUS_PATHS):
             return StarletteResponse(
@@ -577,7 +533,6 @@ class BotFilterMiddleware(BaseHTTPMiddleware):
                 headers={"X-Robots-Tag": "noindex, nofollow"}
             )
         
-        # Check for double-slash WordPress paths specifically
         if "//" in path and ("wp-includes" in path or "wp-admin" in path or "xmlrpc.php" in path):
             return StarletteResponse(
                 content="Not Found",
@@ -585,7 +540,6 @@ class BotFilterMiddleware(BaseHTTPMiddleware):
                 headers={"X-Robots-Tag": "noindex, nofollow"}
             )
         
-        # Check for suspicious user agents (only block if path is also suspicious)
         if any(agent in user_agent for agent in self.SUSPICIOUS_AGENTS):
             if any(suspicious in path for suspicious in self.SUSPICIOUS_PATHS):
                 return StarletteResponse(
@@ -597,14 +551,11 @@ class BotFilterMiddleware(BaseHTTPMiddleware):
         return await call_next(request)
 
 
-# Add security middleware (order matters - add before CORS)
 app.add_middleware(SecurityHeadersMiddleware)
 app.add_middleware(BotFilterMiddleware)
 
-# Add rate limiting middleware (must be after other middleware)
 app.add_middleware(SlowAPIMiddleware)
 
-# Configure CORS to allow requests from any origin
 app.add_middleware(
     CORSMiddleware,
     allow_origins=["*"],
@@ -722,14 +673,10 @@ async def proxy_rawg_api(
         raise HTTPException(status_code=500, detail=f"Error fetching from RAWG API: {str(e)}")
 
 
-# Add individual file serving for assets
 @app.get("/credentials.js")
 async def get_credentials():
     """Return empty credentials.js - API keys are now proxied through backend."""
-    # Return empty keys to prevent frontend from making direct API calls
-    # Use empty strings instead of null to prevent undefined variable errors
     js_content = "// API Keys are now proxied through backend endpoints\n// Do not use these variables - use /api/proxy/omdb and /api/proxy/rawg instead\nconst OMDB_API_KEY = '';\nconst RAWG_API_KEY = '';\n"
-    # Add cache control headers to prevent caching of old credentials
     return Response(
         content=js_content, 
         media_type="application/javascript",
@@ -983,7 +930,6 @@ async def register(user: schemas.UserCreate, db: Session = Depends(get_db)):
 @app.post("/auth/login", response_model=schemas.Token, tags=["auth"])
 async def login(form_data: OAuth2PasswordRequestForm = Depends(), db: Session = Depends(get_db)):
     """Login to get access token. Users can log in using either their username or email."""
-    # Try to find user by username or email (single optimized query)
     user = crud.get_user_by_username_or_email(db, form_data.username)
     
     if not user or not auth.verify_password(form_data.password, user.hashed_password):
@@ -993,9 +939,7 @@ async def login(form_data: OAuth2PasswordRequestForm = Depends(), db: Session = 
             headers={"WWW-Authenticate": "Bearer"},
         )
     
-    # Check if account is deactivated
     if not user.is_active:
-        # Check if within 90-day reactivation window
         if user.deactivated_at:
             days_since_deactivation = (datetime.utcnow() - user.deactivated_at).days
             if days_since_deactivation > 90:
@@ -1018,7 +962,6 @@ async def login(form_data: OAuth2PasswordRequestForm = Depends(), db: Session = 
                 headers={"WWW-Authenticate": "Bearer"},
             )
     
-    # Check if email is verified
     if not user.is_verified:
         raise HTTPException(
             status_code=403,
@@ -1066,7 +1009,6 @@ async def verify_email(token: str, db: Session = Depends(get_db)):
             if user.email != old_email:
                 raise HTTPException(status_code=400, detail="Email change token does not match current email")
             
-            # Extract stored token and new email from stored value
             if not user.verification_token or not user.verification_token.startswith("email_change:"):
                 raise HTTPException(status_code=400, detail="No pending email change found")
             
@@ -1077,12 +1019,9 @@ async def verify_email(token: str, db: Session = Depends(get_db)):
             stored_token = parts[1]
             stored_new_email = parts[2]
             
-            # Verify the new email matches what's stored
             if stored_new_email != new_email:
                 raise HTTPException(status_code=400, detail="Email mismatch in token")
             
-            # Verify the token from URL matches the stored token
-            # Handle URL encoding - FastAPI should decode it, but we'll also try unquote as fallback
             from urllib.parse import unquote
             if stored_token != token:
                 # Try URL-decoded version
@@ -1090,12 +1029,10 @@ async def verify_email(token: str, db: Session = Depends(get_db)):
                 if stored_token != decoded_token:
                     raise HTTPException(status_code=400, detail="Invalid email change token")
             
-            # Check if new email is already taken
             existing_user = crud.get_user_by_email(db, new_email)
             if existing_user and existing_user.id != user.id:
                 raise HTTPException(status_code=400, detail="New email is already registered")
             
-            # Update email
             user.email = new_email
             user.verification_token = None
             db.commit()
@@ -1148,7 +1085,6 @@ async def resend_verification_email(email: str, db: Session = Depends(get_db)):
         email_sent = True
         print(f"INFO: Verification email sent successfully to {user.email}")
     except Exception as e:
-        # Log detailed error for debugging
         error_msg = str(e)
         print(f"ERROR: Failed to send verification email to {user.email}")
         print(f"ERROR Details: {error_msg}")
@@ -1163,8 +1099,6 @@ async def resend_verification_email(email: str, db: Session = Depends(get_db)):
         print(f"INFO: Fallback verification URL for {user.email}: {verification_url}")
         email_sent = False
     
-    # Return success message (don't reveal if email actually sent for security)
-    # But log the actual status for debugging
     if not email_sent:
         print(f"WARNING: Verification email was NOT sent to {user.email}, but user received success message.")
         print(f"WARNING: Check server logs above for email sending errors.")

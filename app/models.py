@@ -31,18 +31,16 @@ class User(Base):
     video_games_private = Column(Boolean, default=False, nullable=False)
     statistics_private = Column(Boolean, default=False, nullable=False)
     
-    # Tab visibility settings (default to True - all tabs visible)
     movies_visible = Column(Boolean, default=True, nullable=False)
     tv_shows_visible = Column(Boolean, default=True, nullable=False)
     anime_visible = Column(Boolean, default=True, nullable=False)
     video_games_visible = Column(Boolean, default=True, nullable=False)
     
     # Profile picture
-    profile_picture_url = Column(String, nullable=True)  # Kept for backward compatibility, now stores virtual URL like /profile-pictures/{user_id}
-    profile_picture_data = Column(LargeBinary, nullable=True)  # Binary image data stored in database
-    profile_picture_mime_type = Column(String, nullable=True)  # MIME type (image/jpeg, image/png, etc.)
+    profile_picture_url = Column(String, nullable=True)
+    profile_picture_data = Column(LargeBinary, nullable=True)
+    profile_picture_mime_type = Column(String, nullable=True)
     
-    # Relationships - cascade delete ensures user's data is deleted with them
     movies = relationship("Movie", back_populates="owner", cascade="all, delete-orphan")
     tv_shows = relationship("TVShow", back_populates="owner", cascade="all, delete-orphan")
     anime = relationship("Anime", back_populates="owner", cascade="all, delete-orphan")
@@ -117,13 +115,13 @@ class VideoGame(Base):
     
     id = Column(Integer, primary_key=True, index=True)
     title = Column(String, index=True)
-    release_date = Column(DateTime, nullable=True)  # Full date format YYYY-MM-DD
-    genres = Column(String, nullable=True)  # Comma-separated genre names
+    release_date = Column(DateTime, nullable=True)
+    genres = Column(String, nullable=True)
     rating = Column(Float, nullable=True)
     played = Column(Boolean, default=False)
     review = Column(String, nullable=True)
-    cover_art_url = Column(String, nullable=True)  # Equivalent to poster_url
-    rawg_link = Column(String, nullable=True)  # RAWG game page URL
+    cover_art_url = Column(String, nullable=True)
+    rawg_link = Column(String, nullable=True)
     
     # User relationship
     user_id = Column(Integer, ForeignKey("users.id"), nullable=False, index=True)
@@ -137,7 +135,7 @@ class FriendRequest(Base):
     id = Column(Integer, primary_key=True, index=True)
     sender_id = Column(Integer, ForeignKey("users.id"), nullable=False, index=True)
     receiver_id = Column(Integer, ForeignKey("users.id"), nullable=False, index=True)
-    status = Column(String, default="pending", index=True)  # pending, accepted, denied, expired, cancelled
+    status = Column(String, default="pending", index=True)
     created_at = Column(DateTime, default=datetime.utcnow)
     expires_at = Column(DateTime, nullable=False)
     
@@ -157,15 +155,14 @@ class Friendship(Base):
     __tablename__ = "friendships"
     
     id = Column(Integer, primary_key=True, index=True)
-    user1_id = Column(Integer, ForeignKey("users.id"), nullable=False, index=True)  # Smaller ID
-    user2_id = Column(Integer, ForeignKey("users.id"), nullable=False, index=True)  # Larger ID
+    user1_id = Column(Integer, ForeignKey("users.id"), nullable=False, index=True)
+    user2_id = Column(Integer, ForeignKey("users.id"), nullable=False, index=True)
     created_at = Column(DateTime, default=datetime.utcnow)
     
     # Relationships
     user1 = relationship("User", foreign_keys=[user1_id], back_populates="friendships_as_user1")
     user2 = relationship("User", foreign_keys=[user2_id], back_populates="friendships_as_user2")
     
-    # Unique constraint to prevent duplicate friendships
     __table_args__ = (UniqueConstraint('user1_id', 'user2_id', name='_friendship_uc'),)
 
 
@@ -175,7 +172,7 @@ class Notification(Base):
     
     id = Column(Integer, primary_key=True, index=True)
     user_id = Column(Integer, ForeignKey("users.id"), nullable=False, index=True)
-    type = Column(String, nullable=False)  # friend_request_received, friend_request_accepted, etc.
+    type = Column(String, nullable=False)
     message = Column(String, nullable=False)
     friend_request_id = Column(Integer, ForeignKey("friend_requests.id"), nullable=True, index=True)
     created_at = Column(DateTime, default=datetime.utcnow, index=True)

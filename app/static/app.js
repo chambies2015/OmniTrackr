@@ -6,11 +6,9 @@ let editingRowElement = null;
 let currentTab = 'movies';
 let notificationCountInterval = null;
 
-// Poster fetch deduplication - prevent multiple simultaneous OMDB API calls for same movie/show
 const posterFetchInProgress = new Set();
-const posterFetchQueue = new Map(); // title+year -> Promise
+const posterFetchQueue = new Map();
 
-// Utility HTML escaping function
 function escapeHtml(str) {
   return String(str)
     .replace(/&/g, "&amp;")
@@ -20,7 +18,6 @@ function escapeHtml(str) {
     .replace(/'/g, "&#39;");
 }
 
-// Image popup functions
 function showImagePopup(imageUrl, altText) {
   const modal = document.getElementById('imagePopupModal');
   const img = document.getElementById('popupImage');
@@ -28,7 +25,6 @@ function showImagePopup(imageUrl, altText) {
     img.src = imageUrl;
     img.alt = altText || 'Enlarged image';
     modal.style.display = 'flex';
-    // Prevent body scroll when modal is open
     document.body.style.overflow = 'hidden';
   }
 }
@@ -37,12 +33,10 @@ function closeImagePopup() {
   const modal = document.getElementById('imagePopupModal');
   if (modal) {
     modal.style.display = 'none';
-    // Restore body scroll
     document.body.style.overflow = '';
   }
 }
 
-// Close image popup on Escape key
 document.addEventListener('keydown', function(event) {
   if (event.key === 'Escape') {
     const modal = document.getElementById('imagePopupModal');
@@ -52,36 +46,29 @@ document.addEventListener('keydown', function(event) {
   }
 });
 
-// Tab switching functionality
 function switchTab(tabName) {
-  // Check if tab is visible (only for media tabs, statistics is always visible)
   if (tabName !== 'statistics') {
     const tabButton = document.querySelector(`[onclick="switchTab('${tabName}')"]`);
     if (tabButton && tabButton.style.display === 'none') {
-      // Tab is hidden, don't switch to it
       return;
     }
   }
 
-  // Update tab buttons
   document.querySelectorAll('.tab').forEach(tab => tab.classList.remove('active'));
   const targetTab = document.querySelector(`[onclick="switchTab('${tabName}')"]`);
   if (targetTab) {
     targetTab.classList.add('active');
   }
 
-  // Update tab content
   document.querySelectorAll('.tab-content').forEach(content => content.classList.remove('active'));
   const tabContent = document.getElementById(`${tabName}-tab`);
   if (tabContent) {
     tabContent.classList.add('active');
   }
 
-  // Hide statsContent when switching away from statistics tab
   const statsContent = document.getElementById('statsContent');
   if (statsContent) {
     if (tabName === 'statistics') {
-      // Will be shown by loadStatistics() if needed
     } else {
       statsContent.style.display = 'none';
     }
@@ -89,7 +76,6 @@ function switchTab(tabName) {
 
   currentTab = tabName;
 
-  // Load data for the active tab
   if (tabName === 'movies') {
     loadMovies();
   } else if (tabName === 'tv-shows') {
