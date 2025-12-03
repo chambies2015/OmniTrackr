@@ -229,12 +229,31 @@ async function fetchMoviePoster(id, title, year) {
   posterFetchInProgress.add(cacheKey);
 
   try {
-    // Use backend proxy endpoint to keep API key secure
     const proxyUrl = `${API_BASE}/api/proxy/omdb?title=${encodeURIComponent(title)}&year=${encodeURIComponent(year)}`;
-    const res = await fetch(proxyUrl);
+    
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), 30000);
+    
+    let res;
+    try {
+      res = await fetch(proxyUrl, { 
+        signal: controller.signal,
+        headers: {
+          'Accept': 'application/json'
+        }
+      });
+      clearTimeout(timeoutId);
+    } catch (fetchError) {
+      clearTimeout(timeoutId);
+      if (fetchError.name === 'AbortError') {
+        console.warn(`OMDB API request timeout for "${title}". This may be due to network issues or VPN blocking.`);
+      } else {
+        console.warn(`Network error fetching poster for "${title}":`, fetchError.message);
+      }
+      return;
+    }
 
     if (!res.ok) {
-      // Handle rate limiting (429 Too Many Requests)
       if (res.status === 429) {
         console.warn('OMDB API rate limit reached. Posters will be fetched later.');
         return;
@@ -243,19 +262,31 @@ async function fetchMoviePoster(id, title, year) {
         console.warn('OMDB API not configured on server.');
         return;
       }
+      if (res.status === 504) {
+        console.warn(`OMDB API timeout for "${title}". This may be due to network issues or VPN blocking.`);
+        return;
+      }
+      if (res.status >= 500) {
+        console.warn(`OMDB API server error (${res.status}) for "${title}". This may be due to network issues.`);
+        return;
+      }
       return;
     }
 
-    const data = await res.json();
+    let data;
+    try {
+      data = await res.json();
+    } catch (jsonError) {
+      console.warn(`Failed to parse OMDB API response for "${title}":`, jsonError);
+      return;
+    }
 
-    // Check for API errors
     if (data.Error) {
       console.warn(`OMDB API error for "${title}": ${data.Error}`);
       return;
     }
 
     if (data && data.Poster && data.Poster !== 'N/A') {
-      // Save the poster URL to the database
       await saveMoviePosterUrl(id, data.Poster);
       // Display the poster
       displayMoviePoster(id, data.Poster, title);
@@ -570,32 +601,67 @@ async function fetchTVPoster(id, title, year) {
     return;
   }
 
-  // Mark as in progress
   posterFetchInProgress.add(cacheKey);
 
   try {
-    const url = `https://www.omdbapi.com/?t=${encodeURIComponent(title)}&y=${encodeURIComponent(year)}&apikey=${OMDB_API_KEY}`;
-    const res = await fetch(url);
+    const proxyUrl = `${API_BASE}/api/proxy/omdb?title=${encodeURIComponent(title)}&year=${encodeURIComponent(year)}`;
+    
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), 30000);
+    
+    let res;
+    try {
+      res = await fetch(proxyUrl, { 
+        signal: controller.signal,
+        headers: {
+          'Accept': 'application/json'
+        }
+      });
+      clearTimeout(timeoutId);
+    } catch (fetchError) {
+      clearTimeout(timeoutId);
+      if (fetchError.name === 'AbortError') {
+        console.warn(`OMDB API request timeout for "${title}". This may be due to network issues or VPN blocking.`);
+      } else {
+        console.warn(`Network error fetching poster for "${title}":`, fetchError.message);
+      }
+      return;
+    }
 
     if (!res.ok) {
-      // Handle rate limiting (429 Too Many Requests)
       if (res.status === 429) {
         console.warn('OMDB API rate limit reached. Posters will be fetched later.');
+        return;
+      }
+      if (res.status === 503) {
+        console.warn('OMDB API not configured on server.');
+        return;
+      }
+      if (res.status === 504) {
+        console.warn(`OMDB API timeout for "${title}". This may be due to network issues or VPN blocking.`);
+        return;
+      }
+      if (res.status >= 500) {
+        console.warn(`OMDB API server error (${res.status}) for "${title}". This may be due to network issues.`);
         return;
       }
       return;
     }
 
-    const data = await res.json();
+    let data;
+    try {
+      data = await res.json();
+    } catch (jsonError) {
+      console.warn(`Failed to parse OMDB API response for "${title}":`, jsonError);
+      return;
+    }
 
-    // Check for API errors
     if (data.Error) {
       console.warn(`OMDB API error for "${title}": ${data.Error}`);
       return;
     }
 
     if (data && data.Poster && data.Poster !== 'N/A') {
-      // Save the poster URL to the database
       await saveTVPosterUrl(id, data.Poster);
       // Display the poster
       displayTVPoster(id, data.Poster, title);
@@ -650,32 +716,67 @@ async function fetchAnimePoster(id, title, year) {
     return;
   }
 
-  // Mark as in progress
   posterFetchInProgress.add(cacheKey);
 
   try {
-    const url = `https://www.omdbapi.com/?t=${encodeURIComponent(title)}&y=${encodeURIComponent(year)}&apikey=${OMDB_API_KEY}`;
-    const res = await fetch(url);
+    const proxyUrl = `${API_BASE}/api/proxy/omdb?title=${encodeURIComponent(title)}&year=${encodeURIComponent(year)}`;
+    
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), 30000);
+    
+    let res;
+    try {
+      res = await fetch(proxyUrl, { 
+        signal: controller.signal,
+        headers: {
+          'Accept': 'application/json'
+        }
+      });
+      clearTimeout(timeoutId);
+    } catch (fetchError) {
+      clearTimeout(timeoutId);
+      if (fetchError.name === 'AbortError') {
+        console.warn(`OMDB API request timeout for "${title}". This may be due to network issues or VPN blocking.`);
+      } else {
+        console.warn(`Network error fetching poster for "${title}":`, fetchError.message);
+      }
+      return;
+    }
 
     if (!res.ok) {
-      // Handle rate limiting (429 Too Many Requests)
       if (res.status === 429) {
         console.warn('OMDB API rate limit reached. Posters will be fetched later.');
+        return;
+      }
+      if (res.status === 503) {
+        console.warn('OMDB API not configured on server.');
+        return;
+      }
+      if (res.status === 504) {
+        console.warn(`OMDB API timeout for "${title}". This may be due to network issues or VPN blocking.`);
+        return;
+      }
+      if (res.status >= 500) {
+        console.warn(`OMDB API server error (${res.status}) for "${title}". This may be due to network issues.`);
         return;
       }
       return;
     }
 
-    const data = await res.json();
+    let data;
+    try {
+      data = await res.json();
+    } catch (jsonError) {
+      console.warn(`Failed to parse OMDB API response for "${title}":`, jsonError);
+      return;
+    }
 
-    // Check for API errors
     if (data.Error) {
       console.warn(`OMDB API error for "${title}": ${data.Error}`);
       return;
     }
 
     if (data && data.Poster && data.Poster !== 'N/A') {
-      // Save the poster URL to the database
       await saveAnimePosterUrl(id, data.Poster);
       // Display the poster
       displayAnimePoster(id, data.Poster, title);
@@ -855,12 +956,31 @@ async function fetchVideoGameMetadata(id, title) {
   // Double-check pattern: verify it's still not in progress after creating promise
   const fetchPromise = (async () => {
     try {
-      // Use backend proxy endpoint to keep API key secure
       const proxyUrl = `${API_BASE}/api/proxy/rawg?search=${encodeURIComponent(title)}`;
-      const res = await fetch(proxyUrl);
+      
+      const controller = new AbortController();
+      const timeoutId = setTimeout(() => controller.abort(), 30000);
+      
+      let res;
+      try {
+        res = await fetch(proxyUrl, { 
+          signal: controller.signal,
+          headers: {
+            'Accept': 'application/json'
+          }
+        });
+        clearTimeout(timeoutId);
+      } catch (fetchError) {
+        clearTimeout(timeoutId);
+        if (fetchError.name === 'AbortError') {
+          console.warn(`RAWG API request timeout for "${title}". This may be due to network issues or VPN blocking.`);
+        } else {
+          console.warn(`Network error fetching metadata for "${title}":`, fetchError.message);
+        }
+        return null;
+      }
 
       if (!res.ok) {
-        // Handle rate limiting (429 Too Many Requests)
         if (res.status === 429) {
           console.warn('RAWG API rate limit reached. Metadata will be fetched later.');
           return null;
@@ -869,18 +989,29 @@ async function fetchVideoGameMetadata(id, title) {
           console.warn('RAWG API not configured on server.');
           return null;
         }
+        if (res.status === 504) {
+          console.warn(`RAWG API timeout for "${title}". This may be due to network issues or VPN blocking.`);
+          return null;
+        }
+        if (res.status >= 500) {
+          console.warn(`RAWG API server error (${res.status}) for "${title}". This may be due to network issues.`);
+          return null;
+        }
         return null;
       }
 
-      const data = await res.json();
+      let data;
+      try {
+        data = await res.json();
+      } catch (jsonError) {
+        console.warn(`Failed to parse RAWG API response for "${title}":`, jsonError);
+        return null;
+      }
 
-      // Check for API errors
       if (data.error) {
         console.warn(`RAWG API error for "${title}": ${data.error}`);
         return null;
       }
-
-      // Get first result
       if (data && data.results && data.results.length > 0) {
         const game = data.results[0];
         const coverArtUrl = game.background_image || null;
