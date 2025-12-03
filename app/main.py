@@ -727,8 +727,18 @@ async def proxy_rawg_api(
 async def get_credentials():
     """Return empty credentials.js - API keys are now proxied through backend."""
     # Return empty keys to prevent frontend from making direct API calls
-    js_content = "// API Keys are now proxied through backend endpoints\nconst OMDB_API_KEY = null;\nconst RAWG_API_KEY = null;\n"
-    return Response(content=js_content, media_type="application/javascript")
+    # Use empty strings instead of null to prevent undefined variable errors
+    js_content = "// API Keys are now proxied through backend endpoints\n// Do not use these variables - use /api/proxy/omdb and /api/proxy/rawg instead\nconst OMDB_API_KEY = '';\nconst RAWG_API_KEY = '';\n"
+    # Add cache control headers to prevent caching of old credentials
+    return Response(
+        content=js_content, 
+        media_type="application/javascript",
+        headers={
+            "Cache-Control": "no-store, no-cache, must-revalidate, max-age=0",
+            "Pragma": "no-cache",
+            "Expires": "0"
+        }
+    )
 
 
 @app.get("/auth.js")
