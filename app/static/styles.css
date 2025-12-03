@@ -3401,13 +3401,44 @@ body.dark-mode .friend-request-modal-content form input {
   }
 }
 
-/* Force statistics tab to full width */
-#statistics-tab,
-#statistics-tab .card,
+/* Force statistics tab to full width - match other tabs */
+#statistics-tab {
+  width: 100% !important;
+  max-width: 100% !important;
+  box-sizing: border-box !important;
+}
+
+#statistics-tab .card {
+  width: 100% !important;
+  max-width: 100% !important;
+  box-sizing: border-box !important;
+  margin-left: 0 !important;
+  margin-right: 0 !important;
+}
+
+#statistics-tab #statsContent,
+#statistics-tab #statsLoading {
+  width: 100% !important;
+  max-width: 100% !important;
+  box-sizing: border-box !important;
+}
+
 #statistics-tab .stats-section {
   width: 100% !important;
   max-width: 100% !important;
+  box-sizing: border-box !important;
   margin-left: 0 !important;
   margin-right: 0 !important;
+}
+
+#statistics-tab .stats-grid,
+#statistics-tab .rating-distribution,
+#statistics-tab .decade-stats,
+#statistics-tab .director-stats,
+#statistics-tab .director-column,
+#statistics-tab .top-rated {
+  width: 100% !important;
+  max-width: 100% !important;
+  box-sizing: border-box !important;
 }
 
