@@ -1,0 +1,222 @@
+"""
+Statistics CRUD operations for the OmniTrackr API.
+"""
+from sqlalchemy.orm import Session
+from sqlalchemy import func
+
+from .. import models
+
+
+def get_watch_statistics(db: Session, user_id: int) -> dict:
+    """Get overall watch statistics"""
+    total_movies = db.query(models.Movie).filter(models.Movie.user_id == user_id).count()
+    watched_movies = db.query(models.Movie).filter(models.Movie.user_id == user_id).filter(models.Movie.watched == True).count()
+    total_tv_shows = db.query(models.TVShow).filter(models.TVShow.user_id == user_id).count()
+    watched_tv_shows = db.query(models.TVShow).filter(models.TVShow.user_id == user_id).filter(models.TVShow.watched == True).count()
+    total_anime = db.query(models.Anime).filter(models.Anime.user_id == user_id).count()
+    watched_anime = db.query(models.Anime).filter(models.Anime.user_id == user_id).filter(models.Anime.watched == True).count()
+    total_video_games = db.query(models.VideoGame).filter(models.VideoGame.user_id == user_id).count()
+    played_video_games = db.query(models.VideoGame).filter(models.VideoGame.user_id == user_id).filter(models.VideoGame.played == True).count()
+    
+    total_items = total_movies + total_tv_shows + total_anime + total_video_games
+    watched_items = watched_movies + watched_tv_shows + watched_anime + played_video_games
+    
+    return {
+        "total_movies": total_movies,
+        "watched_movies": watched_movies,
+        "unwatched_movies": total_movies - watched_movies,
+        "total_tv_shows": total_tv_shows,
+        "watched_tv_shows": watched_tv_shows,
+        "unwatched_tv_shows": total_tv_shows - watched_tv_shows,
+        "total_anime": total_anime,
+        "watched_anime": watched_anime,
+        "unwatched_anime": total_anime - watched_anime,
+        "total_video_games": total_video_games,
+        "played_video_games": played_video_games,
+        "unplayed_video_games": total_video_games - played_video_games,
+        "total_items": total_items,
+        "watched_items": watched_items,
+        "unwatched_items": total_items - watched_items,
+        "completion_percentage": round((watched_items / total_items * 100) if total_items > 0 else 0, 1)
+    }
+
+
+def get_rating_statistics(db: Session, user_id: int) -> dict:
+    """Get rating distribution statistics"""
+    # Movies rating stats
+    movie_ratings = db.query(models.Movie.rating).filter(
+        models.Movie.user_id == user_id
+    ).filter(models.Movie.rating.isnot(None)).all()
+    movie_ratings = [r[0] for r in movie_ratings]
+    
+    # TV shows rating stats
+    tv_ratings = db.query(models.TVShow.rating).filter(
+        models.TVShow.user_id == user_id
+    ).filter(models.TVShow.rating.isnot(None)).all()
+    tv_ratings = [r[0] for r in tv_ratings]
+    
+    # Anime rating stats
+    anime_ratings = db.query(models.Anime.rating).filter(
+        models.Anime.user_id == user_id
+    ).filter(models.Anime.rating.isnot(None)).all()
+    anime_ratings = [r[0] for r in anime_ratings]
+    
+    # Video games rating stats
+    video_game_ratings = db.query(models.VideoGame.rating).filter(
+        models.VideoGame.user_id == user_id
+    ).filter(models.VideoGame.rating.isnot(None)).all()
+    video_game_ratings = [r[0] for r in video_game_ratings]
+    
+    all_ratings = movie_ratings + tv_ratings + anime_ratings + video_game_ratings
+    
+    if not all_ratings:
+        return {
+            "average_rating": 0,
+            "total_rated_items": 0,
+            "rating_distribution": {},
+            "highest_rated": [],
+            "lowest_rated": []
+        }
+    
+    # Calculate average
+    avg_rating = round(sum(all_ratings) / len(all_ratings), 1)
+    
+    distribution = {}
+    for i in range(1, 11):
+        count = sum(1 for rating in all_ratings if round(rating) == i)
+        if count > 0:
+            distribution[str(i)] = count
+    
+    highest_rating = max(all_ratings)
+    lowest_rating = min(all_ratings)
+    
+    # Find items with highest rating
+    highest_movies = db.query(models.Movie).filter(models.Movie.user_id == user_id).filter(models.Movie.rating == highest_rating).limit(5).all()
+    highest_tv = db.query(models.TVShow).filter(models.TVShow.user_id == user_id).filter(models.TVShow.rating == highest_rating).limit(5).all()
+    highest_anime = db.query(models.Anime).filter(models.Anime.user_id == user_id).filter(models.Anime.rating == highest_rating).limit(5).all()
+    highest_video_games = db.query(models.VideoGame).filter(models.VideoGame.user_id == user_id).filter(models.VideoGame.rating == highest_rating).limit(5).all()
+    highest_rated = [
+        {"title": m.title, "type": "Movie", "rating": m.rating} for m in highest_movies
+    ] + [
+        {"title": t.title, "type": "TV Show", "rating": t.rating} for t in highest_tv
+    ] + [
+        {"title": a.title, "type": "Anime", "rating": a.rating} for a in highest_anime
+    ] + [
+        {"title": v.title, "type": "Video Game", "rating": v.rating} for v in highest_video_games
+    ]
+    
+    # Find items with lowest rating
+    lowest_movies = db.query(models.Movie).filter(models.Movie.user_id == user_id).filter(models.Movie.rating == lowest_rating).limit(5).all()
+    lowest_tv = db.query(models.TVShow).filter(models.TVShow.user_id == user_id).filter(models.TVShow.rating == lowest_rating).limit(5).all()
+    lowest_anime = db.query(models.Anime).filter(models.Anime.user_id == user_id).filter(models.Anime.rating == lowest_rating).limit(5).all()
+    lowest_video_games = db.query(models.VideoGame).filter(models.VideoGame.user_id == user_id).filter(models.VideoGame.rating == lowest_rating).limit(5).all()
+    lowest_rated = [
+        {"title": m.title, "type": "Movie", "rating": m.rating} for m in lowest_movies
+    ] + [
+        {"title": t.title, "type": "TV Show", "rating": t.rating} for t in lowest_tv
+    ] + [
+        {"title": a.title, "type": "Anime", "rating": a.rating} for a in lowest_anime
+    ] + [
+        {"title": v.title, "type": "Video Game", "rating": v.rating} for v in lowest_video_games
+    ]
+    
+    return {
+        "average_rating": avg_rating,
+        "total_rated_items": len(all_ratings),
+        "rating_distribution": distribution,
+        "highest_rated": highest_rated[:5],
+        "lowest_rated": lowest_rated[:5]
+    }
+
+
+def get_year_statistics(db: Session, user_id: int) -> dict:
+    """Get statistics by year"""
+    # Movies by year
+    movie_years = db.query(models.Movie.year, func.count(models.Movie.id)).filter(
+        models.Movie.user_id == user_id
+    ).group_by(models.Movie.year).all()
+    movie_data = {str(year): count for year, count in movie_years}
+    
+    # TV shows by year
+    tv_years = db.query(models.TVShow.year, func.count(models.TVShow.id)).filter(
+        models.TVShow.user_id == user_id
+    ).group_by(models.TVShow.year).all()
+    tv_data = {str(year): count for year, count in tv_years}
+    
+    # Anime by year
+    anime_years = db.query(models.Anime.year, func.count(models.Anime.id)).filter(
+        models.Anime.user_id == user_id
+    ).group_by(models.Anime.year).all()
+    anime_data = {str(year): count for year, count in anime_years}
+    
+    # Video games by year (extract year from release_date)
+    video_games = db.query(models.VideoGame).filter(
+        models.VideoGame.user_id == user_id,
+        models.VideoGame.release_date.isnot(None)
+    ).all()
+    video_game_data = {}
+    for vg in video_games:
+        if vg.release_date:
+            year = vg.release_date.year
+            year_str = str(year)
+            video_game_data[year_str] = video_game_data.get(year_str, 0) + 1
+    
+    all_years = set(movie_data.keys()) | set(tv_data.keys()) | set(anime_data.keys()) | set(video_game_data.keys())
+    all_years = sorted([int(year) for year in all_years])
+    
+    # Decade analysis
+    decade_stats = {}
+    for year in all_years:
+        decade = (year // 10) * 10
+        decade_key = f"{decade}s"
+        if decade_key not in decade_stats:
+            decade_stats[decade_key] = {"movies": 0, "tv_shows": 0, "anime": 0, "video_games": 0}
+        decade_stats[decade_key]["movies"] += movie_data.get(str(year), 0)
+        decade_stats[decade_key]["tv_shows"] += tv_data.get(str(year), 0)
+        decade_stats[decade_key]["anime"] += anime_data.get(str(year), 0)
+        decade_stats[decade_key]["video_games"] += video_game_data.get(str(year), 0)
+    
+    return {
+        "movies_by_year": movie_data,
+        "tv_shows_by_year": tv_data,
+        "anime_by_year": anime_data,
+        "video_games_by_year": video_game_data,
+        "all_years": all_years,
+        "decade_stats": decade_stats,
+        "oldest_year": min(all_years) if all_years else None,
+        "newest_year": max(all_years) if all_years else None
+    }
+
+
+def get_director_statistics(db: Session, user_id: int) -> dict:
+    """Get statistics by director/creator"""
+    # Top directors
+    director_counts = db.query(
+        models.Movie.director, 
+        func.count(models.Movie.id).label('count')
+    ).filter(
+        models.Movie.user_id == user_id
+    ).group_by(models.Movie.director).order_by(func.count(models.Movie.id).desc()).limit(10).all()
+    
+    # Directors with highest average ratings
+    director_ratings = db.query(
+        models.Movie.director,
+        func.avg(models.Movie.rating).label('avg_rating'),
+        func.count(models.Movie.id).label('count')
+    ).filter(
+        models.Movie.user_id == user_id
+    ).filter(
+        models.Movie.rating.isnot(None)
+    ).group_by(models.Movie.director).order_by(
+        func.avg(models.Movie.rating).desc(),
+        func.count(models.Movie.id).desc()  # Secondary sort by movie count for ties
+    ).limit(10).all()
+    
+    return {
+        "top_directors": [{"director": d[0], "count": d[1]} for d in director_counts],
+        "highest_rated_directors": [
+            {"director": d[0], "avg_rating": round(d[1], 1), "count": d[2]} 
+            for d in director_ratings
+        ]
+    }
+
