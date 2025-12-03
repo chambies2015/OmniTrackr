@@ -77,6 +77,16 @@ function switchTab(tabName) {
     tabContent.classList.add('active');
   }
 
+  // Hide statsContent when switching away from statistics tab
+  const statsContent = document.getElementById('statsContent');
+  if (statsContent) {
+    if (tabName === 'statistics') {
+      // Will be shown by loadStatistics() if needed
+    } else {
+      statsContent.style.display = 'none';
+    }
+  }
+
   currentTab = tabName;
 
   // Load data for the active tab

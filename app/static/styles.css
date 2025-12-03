@@ -3475,7 +3475,7 @@ body.dark-mode .friend-request-modal-content form input {
   margin-right: 0 !important;
 }
 
-#statistics-tab > * {
+#statistics-tab > .card {
   display: block !important;
   width: 100% !important;
   max-width: 100% !important;
@@ -3485,7 +3485,17 @@ body.dark-mode .friend-request-modal-content form input {
   margin-right: 0 !important;
 }
 
-#statistics-tab #statsContent {
+/* statsContent should respect its inline display style */
+#statistics-tab #statsContent[style*="display: none"] {
+  display: none !important;
+}
+
+#statistics-tab.active #statsContent[style*="display: block"] {
+  display: block !important;
+}
+
+/* Only apply these styles when statsContent is visible */
+#statistics-tab.active #statsContent {
   display: block !important;
   width: 100% !important;
   max-width: 100% !important;
@@ -3506,6 +3516,11 @@ body.dark-mode .friend-request-modal-content form input {
   position: relative !important;
   left: 0 !important;
   right: 0 !important;
+}
+
+/* Hide statsContent when statistics tab is not active */
+#statistics-tab:not(.active) #statsContent {
+  display: none !important;
 }
 
 #statistics-tab #statsLoading {
