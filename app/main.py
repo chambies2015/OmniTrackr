@@ -7,7 +7,8 @@ import os
 from datetime import datetime
 from typing import List, Optional
 
-from fastapi import Depends, FastAPI, HTTPException, UploadFile, File, status, Request
+import httpx
+from fastapi import Depends, FastAPI, HTTPException, UploadFile, File, status, Request, Query
 from starlette.requests import Request
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import FileResponse, Response
@@ -657,16 +658,76 @@ if os.path.exists(static_dir):
     app.mount("/static", StaticFiles(directory=static_dir), name="static")
 
 
+# ============================================================================
+# External API Proxy Endpoints (Secure - API keys stay on server)
+# ============================================================================
+
+@app.get("/api/proxy/omdb", tags=["proxy"])
+@limiter.limit("60/minute")  # Rate limit: 60 requests per minute per IP
+async def proxy_omdb_api(
+    request: Request,
+    title: str = Query(..., description="Movie/TV show title"),
+    year: Optional[str] = Query(None, description="Release year")
+):
+    """Proxy endpoint for OMDB API. Keeps API key secure on server."""
+    omdb_key = os.getenv("OMDB_API_KEY", "")
+    if not omdb_key:
+        raise HTTPException(status_code=503, detail="OMDB API key not configured")
+    
+    try:
+        url = f"https://www.omdbapi.com/?t={title}"
+        if year:
+            url += f"&y={year}"
+        url += f"&apikey={omdb_key}"
+        
+        async with httpx.AsyncClient(timeout=10.0) as client:
+            response = await client.get(url)
+            if response.status_code == 429:
+                raise HTTPException(status_code=429, detail="OMDB API rate limit reached")
+            response.raise_for_status()
+            return response.json()
+    except httpx.HTTPStatusError as e:
+        raise HTTPException(status_code=e.response.status_code, detail=f"OMDB API error: {e.response.text}")
+    except httpx.TimeoutException:
+        raise HTTPException(status_code=504, detail="OMDB API request timeout")
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Error fetching from OMDB API: {str(e)}")
+
+
+@app.get("/api/proxy/rawg", tags=["proxy"])
+@limiter.limit("60/minute")  # Rate limit: 60 requests per minute per IP
+async def proxy_rawg_api(
+    request: Request,
+    search: str = Query(..., description="Game title to search")
+):
+    """Proxy endpoint for RAWG API. Keeps API key secure on server."""
+    rawg_key = os.getenv("RAWG_API_KEY", "")
+    if not rawg_key:
+        raise HTTPException(status_code=503, detail="RAWG API key not configured")
+    
+    try:
+        url = f"https://api.rawg.io/api/games?search={search}&key={rawg_key}"
+        
+        async with httpx.AsyncClient(timeout=10.0) as client:
+            response = await client.get(url)
+            if response.status_code == 429:
+                raise HTTPException(status_code=429, detail="RAWG API rate limit reached")
+            response.raise_for_status()
+            return response.json()
+    except httpx.HTTPStatusError as e:
+        raise HTTPException(status_code=e.response.status_code, detail=f"RAWG API error: {e.response.text}")
+    except httpx.TimeoutException:
+        raise HTTPException(status_code=504, detail="RAWG API request timeout")
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Error fetching from RAWG API: {str(e)}")
+
+
 # Add individual file serving for assets
 @app.get("/credentials.js")
 async def get_credentials():
-    """Serve OMDB and RAWG API keys from environment variables."""
-    omdb_key = os.getenv("OMDB_API_KEY", "")
-    rawg_key = os.getenv("RAWG_API_KEY", "")
-    # Use JSON encoding to safely escape API keys and prevent JavaScript injection
-    omdb_key_escaped = json.dumps(omdb_key)
-    rawg_key_escaped = json.dumps(rawg_key)
-    js_content = f"// API Keys from environment\nconst OMDB_API_KEY = {omdb_key_escaped};\nconst RAWG_API_KEY = {rawg_key_escaped};\n"
+    """Return empty credentials.js - API keys are now proxied through backend."""
+    # Return empty keys to prevent frontend from making direct API calls
+    js_content = "// API Keys are now proxied through backend endpoints\nconst OMDB_API_KEY = null;\nconst RAWG_API_KEY = null;\n"
     return Response(content=js_content, media_type="application/javascript")
 
 

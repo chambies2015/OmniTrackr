@@ -3452,8 +3452,11 @@ body.dark-mode .friend-request-modal-content form input {
   box-sizing: border-box !important;
   margin-left: 0 !important;
   margin-right: 0 !important;
+  padding-left: 24px !important;
+  padding-right: 24px !important;
+  padding-top: 24px !important;
+  padding-bottom: 24px !important;
   background-color: var(--card-bg) !important;
-  padding: 24px !important;
   border-radius: 12px !important;
   box-shadow: 0 2px 12px rgba(0, 0, 0, 0.08) !important;
   margin-bottom: 24px !important;

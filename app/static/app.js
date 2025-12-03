@@ -170,7 +170,8 @@ async function loadMovies() {
         // Display cached poster or fetch new one
         if (movie.poster_url) {
           displayMoviePoster(movie.id, movie.poster_url, movie.title);
-        } else if (OMDB_API_KEY) {
+        } else {
+          // API keys are now proxied through backend
           fetchMoviePoster(movie.id, movie.title, movie.year);
         }
       });
@@ -232,13 +233,18 @@ async function fetchMoviePoster(id, title, year) {
   posterFetchInProgress.add(cacheKey);
 
   try {
-    const url = `https://www.omdbapi.com/?t=${encodeURIComponent(title)}&y=${encodeURIComponent(year)}&apikey=${OMDB_API_KEY}`;
-    const res = await fetch(url);
+    // Use backend proxy endpoint to keep API key secure
+    const proxyUrl = `${API_BASE}/api/proxy/omdb?title=${encodeURIComponent(title)}&year=${encodeURIComponent(year)}`;
+    const res = await fetch(proxyUrl);
 
     if (!res.ok) {
       // Handle rate limiting (429 Too Many Requests)
       if (res.status === 429) {
         console.warn('OMDB API rate limit reached. Posters will be fetched later.');
+        return;
+      }
+      if (res.status === 503) {
+        console.warn('OMDB API not configured on server.');
         return;
       }
       return;
@@ -417,7 +423,8 @@ async function loadTVShows() {
         // Display cached poster or fetch new one
         if (tvShow.poster_url) {
           displayTVPoster(tvShow.id, tvShow.poster_url, tvShow.title);
-        } else if (OMDB_API_KEY) {
+        } else {
+          // API keys are now proxied through backend
           fetchTVPoster(tvShow.id, tvShow.title, tvShow.year);
         }
       });
@@ -481,7 +488,8 @@ async function loadAnime() {
         // Display cached poster or fetch new one
         if (animeItem.poster_url) {
           displayAnimePoster(animeItem.id, animeItem.poster_url, animeItem.title);
-        } else if (OMDB_API_KEY) {
+        } else {
+          // API keys are now proxied through backend
           fetchAnimePoster(animeItem.id, animeItem.title, animeItem.year);
         }
       });
@@ -759,7 +767,8 @@ async function loadVideoGames() {
         // Display cached cover art or fetch new one
         if (game.cover_art_url) {
           displayVideoGamePoster(game.id, game.cover_art_url, game.title);
-        } else if (RAWG_API_KEY) {
+        } else {
+          // API keys are now proxied through backend
           fetchVideoGameMetadata(game.id, game.title);
         }
       });
@@ -850,13 +859,18 @@ async function fetchVideoGameMetadata(id, title) {
   // Double-check pattern: verify it's still not in progress after creating promise
   const fetchPromise = (async () => {
     try {
-      const url = `https://api.rawg.io/api/games?search=${encodeURIComponent(title)}&key=${RAWG_API_KEY}`;
-      const res = await fetch(url);
+      // Use backend proxy endpoint to keep API key secure
+      const proxyUrl = `${API_BASE}/api/proxy/rawg?search=${encodeURIComponent(title)}`;
+      const res = await fetch(proxyUrl);
 
       if (!res.ok) {
         // Handle rate limiting (429 Too Many Requests)
         if (res.status === 429) {
           console.warn('RAWG API rate limit reached. Metadata will be fetched later.');
+          return null;
+        }
+        if (res.status === 503) {
+          console.warn('RAWG API not configured on server.');
           return null;
         }
         return null;
