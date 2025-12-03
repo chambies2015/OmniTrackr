@@ -155,6 +155,10 @@ window.logout = logout;
 function showAuthModal() {
     // Show landing page instead of modal
     document.getElementById('landingPage').style.display = 'block';
+    // Initialize landing page enhancements
+    if (window.initLandingPageEnhancements) {
+      window.initLandingPageEnhancements();
+    }
     document.getElementById('mainContainer').style.display = 'none';
     document.getElementById('authError').textContent = '';
     

@@ -161,6 +161,11 @@ class NotificationResponse(BaseModel):
         from_attributes = True
 
 
+class UserCount(BaseModel):
+    """Schema for user count response."""
+    count: int = Field(..., description="Total number of active users")
+
+
 class NotificationCount(BaseModel):
     """Schema for notification count."""
     count: int
@@ -195,7 +200,7 @@ class MovieBase(BaseModel):
     year: int = Field(..., ge=0, description="Year of release or publication")
     rating: Optional[float] = Field(
         None, ge=0, le=10, description="Rating out of 10 (0-10.0, one decimal place)"
-    )  # rating is now optional
+    )
     watched: Optional[bool] = Field(False, description="Whether it has been watched/read")
     review: Optional[str] = Field(None, description="Optional review/notes for the entry")
     poster_url: Optional[str] = Field(None, description="URL of the movie poster")

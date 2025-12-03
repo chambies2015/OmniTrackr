@@ -26,7 +26,7 @@ class TestMovieEndpoints:
             "title": "Test Movie",
             "director": "Test Director",
             "year": 2020,
-            "rating": 8.5  # Decimal rating
+            "rating": 8.5
         }
         response = authenticated_client.post("/movies/", json=movie_data)
         
@@ -37,11 +37,9 @@ class TestMovieEndpoints:
     
     def test_update_movie_with_decimal_rating(self, authenticated_client, test_movie_data):
         """Test updating a movie with decimal rating via API."""
-        # Create a movie first
         create_response = authenticated_client.post("/movies/", json=test_movie_data)
         movie_id = create_response.json()["id"]
         
-        # Update with decimal rating
         update_data = {"rating": 7.4}
         response = authenticated_client.put(f"/movies/{movie_id}", json=update_data)
         
@@ -54,7 +52,6 @@ class TestMovieEndpoints:
         # Create a movie first
         authenticated_client.post("/movies/", json=test_movie_data)
         
-        # Get all movies
         response = authenticated_client.get("/movies/")
         
         assert response.status_code == 200
@@ -64,11 +61,9 @@ class TestMovieEndpoints:
     
     def test_get_movie_by_id(self, authenticated_client, test_movie_data):
         """Test retrieving a specific movie."""
-        # Create a movie
         create_response = authenticated_client.post("/movies/", json=test_movie_data)
         movie_id = create_response.json()["id"]
         
-        # Get the movie
         response = authenticated_client.get(f"/movies/{movie_id}")
         
         assert response.status_code == 200
@@ -78,12 +73,10 @@ class TestMovieEndpoints:
     
     def test_update_movie(self, authenticated_client, test_movie_data):
         """Test updating a movie."""
-        # Create a movie
         create_response = authenticated_client.post("/movies/", json=test_movie_data)
         movie_id = create_response.json()["id"]
         
-        # Update the movie
-        update_data = {"rating": 10, "watched": False}  # Integer rating
+        update_data = {"rating": 10, "watched": False}
         response = authenticated_client.put(f"/movies/{movie_id}", json=update_data)
         
         assert response.status_code == 200
@@ -93,31 +86,25 @@ class TestMovieEndpoints:
     
     def test_delete_movie(self, authenticated_client, test_movie_data):
         """Test deleting a movie."""
-        # Create a movie
         create_response = authenticated_client.post("/movies/", json=test_movie_data)
         movie_id = create_response.json()["id"]
         
-        # Delete the movie
         response = authenticated_client.delete(f"/movies/{movie_id}")
         
         assert response.status_code == 200
         
-        # Verify it's deleted
         get_response = authenticated_client.get(f"/movies/{movie_id}")
         assert get_response.status_code == 404
     
     def test_movie_search(self, authenticated_client, test_movie_data):
         """Test searching movies."""
-        # Create a movie
         authenticated_client.post("/movies/", json=test_movie_data)
         
-        # Search by title
         response = authenticated_client.get("/movies/?search=Matrix")
         assert response.status_code == 200
         movies = response.json()
         assert len(movies) >= 1
         
-        # Search by director
         response = authenticated_client.get("/movies/?search=Wachowski")
         assert response.status_code == 200
         movies = response.json()
@@ -125,18 +112,16 @@ class TestMovieEndpoints:
     
     def test_movie_sorting(self, authenticated_client, test_movie_data):
         """Test sorting movies."""
-        # Create multiple movies with different ratings
         movie1 = test_movie_data.copy()
         movie1["title"] = "Movie A"
-        movie1["rating"] = 5  # Integer
+        movie1["rating"] = 5
         authenticated_client.post("/movies/", json=movie1)
         
         movie2 = test_movie_data.copy()
         movie2["title"] = "Movie B"
-        movie2["rating"] = 9  # Integer
+        movie2["rating"] = 9
         authenticated_client.post("/movies/", json=movie2)
         
-        # Sort by rating descending
         response = authenticated_client.get("/movies/?sort_by=rating&order=desc")
         assert response.status_code == 200
         movies = response.json()
@@ -174,10 +159,8 @@ class TestTVShowEndpoints:
     
     def test_get_tv_shows(self, authenticated_client, test_tv_show_data):
         """Test retrieving TV shows via API."""
-        # Create a TV show first
         authenticated_client.post("/tv-shows/", json=test_tv_show_data)
         
-        # Get all TV shows
         response = authenticated_client.get("/tv-shows/")
         
         assert response.status_code == 200
@@ -187,12 +170,10 @@ class TestTVShowEndpoints:
     
     def test_update_tv_show(self, authenticated_client, test_tv_show_data):
         """Test updating a TV show."""
-        # Create a TV show
         create_response = authenticated_client.post("/tv-shows/", json=test_tv_show_data)
         tv_show_id = create_response.json()["id"]
         
-        # Update the TV show
-        update_data = {"rating": 10, "seasons": 6}  # Integer rating
+        update_data = {"rating": 10, "seasons": 6}
         response = authenticated_client.put(f"/tv-shows/{tv_show_id}", json=update_data)
         
         assert response.status_code == 200
@@ -205,7 +186,7 @@ class TestTVShowEndpoints:
         tv_show_data = {
             "title": "Test TV Show",
             "year": 2020,
-            "rating": 9.2  # Decimal rating
+            "rating": 9.2
         }
         response = authenticated_client.post("/tv-shows/", json=tv_show_data)
         
@@ -216,7 +197,6 @@ class TestTVShowEndpoints:
     
     def test_update_tv_show_with_decimal_rating(self, authenticated_client, test_tv_show_data):
         """Test updating a TV show with decimal rating via API."""
-        # Create a TV show first
         create_response = authenticated_client.post("/tv-shows/", json=test_tv_show_data)
         tv_show_id = create_response.json()["id"]
         
@@ -230,11 +210,9 @@ class TestTVShowEndpoints:
     
     def test_get_tv_show_by_id(self, authenticated_client, test_tv_show_data):
         """Test retrieving a specific TV show."""
-        # Create a TV show
         create_response = authenticated_client.post("/tv-shows/", json=test_tv_show_data)
         tv_show_id = create_response.json()["id"]
         
-        # Get the TV show
         response = authenticated_client.get(f"/tv-shows/{tv_show_id}")
         
         assert response.status_code == 200
@@ -244,11 +222,9 @@ class TestTVShowEndpoints:
     
     def test_delete_tv_show(self, authenticated_client, test_tv_show_data):
         """Test deleting a TV show."""
-        # Create a TV show
         create_response = authenticated_client.post("/tv-shows/", json=test_tv_show_data)
         tv_show_id = create_response.json()["id"]
         
-        # Delete the TV show
         response = authenticated_client.delete(f"/tv-shows/{tv_show_id}")
         
         assert response.status_code == 200
@@ -259,10 +235,8 @@ class TestTVShowEndpoints:
     
     def test_tv_show_search(self, authenticated_client, test_tv_show_data):
         """Test searching TV shows."""
-        # Create a TV show
         authenticated_client.post("/tv-shows/", json=test_tv_show_data)
         
-        # Search by title
         response = authenticated_client.get("/tv-shows/?search=Breaking")
         assert response.status_code == 200
         tv_shows = response.json()
@@ -270,15 +244,14 @@ class TestTVShowEndpoints:
     
     def test_tv_show_sorting(self, authenticated_client, test_tv_show_data):
         """Test sorting TV shows."""
-        # Create multiple TV shows with different ratings
         tv1 = test_tv_show_data.copy()
         tv1["title"] = "TV Show A"
-        tv1["rating"] = 5  # Integer
+        tv1["rating"] = 5
         authenticated_client.post("/tv-shows/", json=tv1)
         
         tv2 = test_tv_show_data.copy()
         tv2["title"] = "TV Show B"
-        tv2["rating"] = 9  # Integer
+        tv2["rating"] = 9
         authenticated_client.post("/tv-shows/", json=tv2)
         
         # Sort by rating descending
@@ -322,7 +295,6 @@ class TestAnimeEndpoints:
         # Create an anime first
         authenticated_client.post("/anime/", json=test_anime_data)
         
-        # Get all anime
         response = authenticated_client.get("/anime/")
         
         assert response.status_code == 200
@@ -332,12 +304,10 @@ class TestAnimeEndpoints:
     
     def test_update_anime(self, authenticated_client, test_anime_data):
         """Test updating an anime."""
-        # Create an anime
         create_response = authenticated_client.post("/anime/", json=test_anime_data)
         anime_id = create_response.json()["id"]
         
-        # Update the anime
-        update_data = {"rating": 10, "seasons": 5}  # Integer rating
+        update_data = {"rating": 10, "seasons": 5}
         response = authenticated_client.put(f"/anime/{anime_id}", json=update_data)
         
         assert response.status_code == 200
@@ -361,7 +331,6 @@ class TestAnimeEndpoints:
     
     def test_update_anime_with_decimal_rating(self, authenticated_client, test_anime_data):
         """Test updating an anime with decimal rating via API."""
-        # Create an anime first
         create_response = authenticated_client.post("/anime/", json=test_anime_data)
         anime_id = create_response.json()["id"]
         
@@ -375,11 +344,9 @@ class TestAnimeEndpoints:
     
     def test_get_anime_by_id(self, authenticated_client, test_anime_data):
         """Test retrieving a specific anime."""
-        # Create an anime
         create_response = authenticated_client.post("/anime/", json=test_anime_data)
         anime_id = create_response.json()["id"]
         
-        # Get the anime
         response = authenticated_client.get(f"/anime/{anime_id}")
         
         assert response.status_code == 200
@@ -389,25 +356,20 @@ class TestAnimeEndpoints:
     
     def test_delete_anime(self, authenticated_client, test_anime_data):
         """Test deleting an anime."""
-        # Create an anime
         create_response = authenticated_client.post("/anime/", json=test_anime_data)
         anime_id = create_response.json()["id"]
         
-        # Delete the anime
         response = authenticated_client.delete(f"/anime/{anime_id}")
         
         assert response.status_code == 200
         
-        # Verify it's deleted
         get_response = authenticated_client.get(f"/anime/{anime_id}")
         assert get_response.status_code == 404
     
     def test_anime_search(self, authenticated_client, test_anime_data):
         """Test searching anime."""
-        # Create an anime
         authenticated_client.post("/anime/", json=test_anime_data)
         
-        # Search by title
         response = authenticated_client.get("/anime/?search=Attack")
         assert response.status_code == 200
         anime = response.json()
@@ -415,15 +377,14 @@ class TestAnimeEndpoints:
     
     def test_anime_sorting(self, authenticated_client, test_anime_data):
         """Test sorting anime."""
-        # Create multiple anime with different ratings
         anime1 = test_anime_data.copy()
         anime1["title"] = "Anime A"
-        anime1["rating"] = 5  # Integer
+        anime1["rating"] = 5
         authenticated_client.post("/anime/", json=anime1)
         
         anime2 = test_anime_data.copy()
         anime2["title"] = "Anime B"
-        anime2["rating"] = 9  # Integer
+        anime2["rating"] = 9
         authenticated_client.post("/anime/", json=anime2)
         
         # Sort by rating descending
@@ -469,10 +430,8 @@ class TestVideoGameEndpoints:
     
     def test_get_video_games(self, authenticated_client, test_video_game_data):
         """Test retrieving video games via API."""
-        # Create a video game first
         authenticated_client.post("/video-games/", json=test_video_game_data)
         
-        # Get all video games
         response = authenticated_client.get("/video-games/")
         
         assert response.status_code == 200
@@ -482,11 +441,9 @@ class TestVideoGameEndpoints:
     
     def test_update_video_game(self, authenticated_client, test_video_game_data):
         """Test updating a video game."""
-        # Create a video game
         create_response = authenticated_client.post("/video-games/", json=test_video_game_data)
         game_id = create_response.json()["id"]
         
-        # Update the video game
         update_data = {"rating": 10.0, "played": False}
         response = authenticated_client.put(f"/video-games/{game_id}", json=update_data)
         
@@ -512,11 +469,9 @@ class TestVideoGameEndpoints:
     
     def test_update_video_game_with_decimal_rating(self, authenticated_client, test_video_game_data):
         """Test updating a video game with decimal rating via API."""
-        # Create a video game first
         create_response = authenticated_client.post("/video-games/", json=test_video_game_data)
         game_id = create_response.json()["id"]
         
-        # Update with decimal rating
         update_data = {"rating": 7.3}
         response = authenticated_client.put(f"/video-games/{game_id}", json=update_data)
         
@@ -526,11 +481,9 @@ class TestVideoGameEndpoints:
     
     def test_get_video_game_by_id(self, authenticated_client, test_video_game_data):
         """Test retrieving a specific video game."""
-        # Create a video game
         create_response = authenticated_client.post("/video-games/", json=test_video_game_data)
         game_id = create_response.json()["id"]
         
-        # Get the video game
         response = authenticated_client.get(f"/video-games/{game_id}")
         
         assert response.status_code == 200
@@ -540,31 +493,25 @@ class TestVideoGameEndpoints:
     
     def test_delete_video_game(self, authenticated_client, test_video_game_data):
         """Test deleting a video game."""
-        # Create a video game
         create_response = authenticated_client.post("/video-games/", json=test_video_game_data)
         game_id = create_response.json()["id"]
         
-        # Delete the video game
         response = authenticated_client.delete(f"/video-games/{game_id}")
         
         assert response.status_code == 200
         
-        # Verify it's deleted
         get_response = authenticated_client.get(f"/video-games/{game_id}")
         assert get_response.status_code == 404
     
     def test_video_game_search(self, authenticated_client, test_video_game_data):
         """Test searching video games."""
-        # Create a video game
         authenticated_client.post("/video-games/", json=test_video_game_data)
         
-        # Search by title
         response = authenticated_client.get("/video-games/?search=Zelda")
         assert response.status_code == 200
         video_games = response.json()
         assert len(video_games) >= 1
         
-        # Search by genre
         response = authenticated_client.get("/video-games/?search=Action")
         assert response.status_code == 200
         video_games = response.json()
@@ -573,7 +520,6 @@ class TestVideoGameEndpoints:
     def test_video_game_sorting(self, authenticated_client, test_video_game_data):
         """Test sorting video games."""
         from datetime import datetime
-        # Create multiple video games with different ratings
         game1 = test_video_game_data.copy()
         game1["title"] = "Game A"
         game1["rating"] = 5.0
@@ -591,12 +537,10 @@ class TestVideoGameEndpoints:
         if len(video_games) >= 2:
             assert video_games[0]["rating"] >= video_games[1]["rating"]
         
-        # Sort by release_date ascending
         response = authenticated_client.get("/video-games/?sort_by=release_date&order=asc")
         assert response.status_code == 200
         video_games = response.json()
         if len(video_games) >= 2:
-            # Check that dates are in ascending order
             dates = [vg.get("release_date") for vg in video_games if vg.get("release_date")]
             if len(dates) >= 2:
                 assert dates[0] <= dates[1]
@@ -646,12 +590,10 @@ class TestExportImport:
     
     def test_export_data(self, authenticated_client, test_movie_data, test_tv_show_data, test_video_game_data):
         """Test exporting data."""
-        # Create some data
         authenticated_client.post("/movies/", json=test_movie_data)
         authenticated_client.post("/tv-shows/", json=test_tv_show_data)
         authenticated_client.post("/video-games/", json=test_video_game_data)
         
-        # Export data
         response = authenticated_client.get("/export/")
         
         assert response.status_code == 200
@@ -674,7 +616,7 @@ class TestExportImport:
                     "title": "Imported Movie",
                     "director": "Test Director",
                     "year": 2020,
-                    "rating": 8,  # Integer rating
+                    "rating": 8,
                     "watched": True
                 }
             ],
@@ -683,7 +625,7 @@ class TestExportImport:
                     "title": "Imported Show",
                     "year": 2021,
                     "seasons": 1,
-                    "rating": 9  # Integer rating
+                    "rating": 9
                 }
             ],
             "anime": [],
@@ -743,11 +685,9 @@ class TestExportImport:
             ]
         }
         
-        # Create a JSON file content
         import json
         file_content = json.dumps(import_data).encode('utf-8')
         
-        # Upload file
         files = {"file": ("test_import.json", file_content, "application/json")}
         response = authenticated_client.post("/import/file/", files=files)
         
@@ -788,17 +728,13 @@ class TestExportImport:
         files = {"file": ("test.json", file_content, "application/json")}
         response = authenticated_client.post("/import/file/", files=files)
         
-        # The endpoint should return 400, but if there's a validation error it might return 500
-        # Check that it's an error response (either 400 or 500)
         assert response.status_code in [400, 500]
         detail = response.json()["detail"]
-        # The error should mention movies, tv_shows, or invalid format (anime is optional)
         assert any(keyword in detail.lower() for keyword in ["movies", "tv_shows", "invalid", "format"])
     
     def test_import_from_file_backward_compatibility_no_anime(self, authenticated_client):
         """Test importing old export files without anime field (backward compatibility)."""
         import json
-        # Simulate old export format without anime field
         old_format_data = {
             "movies": [
                 {
@@ -817,19 +753,17 @@ class TestExportImport:
                     "rating": 9
                 }
             ]
-            # No 'anime' field - this should work for backward compatibility
         }
         
         file_content = json.dumps(old_format_data).encode('utf-8')
         files = {"file": ("old_export.json", file_content, "application/json")}
         response = authenticated_client.post("/import/file/", files=files)
         
-        # Should succeed even without anime field
         assert response.status_code == 200
         result = response.json()
         assert result["movies_created"] >= 1
         assert result["tv_shows_created"] >= 1
-        assert result["anime_created"] == 0  # No anime imported
+        assert result["anime_created"] == 0
         assert result["anime_updated"] == 0
 
 
@@ -840,7 +774,6 @@ class TestDataIsolation:
         """Test that users can only see their own movies."""
         from app import crud, models, schemas, auth
         
-        # Create two users using the proper method
         user1_create = schemas.UserCreate(**test_user_data)
         hashed_password1 = auth.get_password_hash(test_user_data["password"])
         user1 = crud.create_user(db_session, user1_create, hashed_password1, "token1")
@@ -852,22 +785,18 @@ class TestDataIsolation:
         hashed_password2 = auth.get_password_hash(user2_data["password"])
         user2 = crud.create_user(db_session, user2_create, hashed_password2, "token2")
         
-        # Verify both users
         user1.is_verified = True
         user2.is_verified = True
         db_session.commit()
         
-        # Create movies for user1
         movie1_create = schemas.MovieCreate(**test_movie_data)
         crud.create_movie(db_session, user1.id, movie1_create)
         
-        # Create movies for user2
         movie2_data = test_movie_data.copy()
         movie2_data["title"] = "User2 Movie"
         movie2_create = schemas.MovieCreate(**movie2_data)
         crud.create_movie(db_session, user2.id, movie2_create)
         
-        # Login as user2
         login_response = client.post(
             "/auth/login",
             data={"username": "user2", "password": test_user_data["password"]},
@@ -876,7 +805,6 @@ class TestDataIsolation:
         token = login_response.json()["access_token"]
         client.headers = {"Authorization": f"Bearer {token}"}
         
-        # User2 should only see their own movie
         movies_response = client.get("/movies/")
         assert movies_response.status_code == 200
         movies = movies_response.json()
@@ -887,7 +815,6 @@ class TestDataIsolation:
         """Test that users cannot update each other's movies."""
         from app import crud, models, schemas, auth
         
-        # Create two users using the proper method
         user1_create = schemas.UserCreate(**test_user_data)
         hashed_password1 = auth.get_password_hash(test_user_data["password"])
         user1 = crud.create_user(db_session, user1_create, hashed_password1, "token1")
@@ -899,7 +826,6 @@ class TestDataIsolation:
         hashed_password2 = auth.get_password_hash(user2_data["password"])
         user2 = crud.create_user(db_session, user2_create, hashed_password2, "token2")
         
-        # Verify both users
         user1.is_verified = True
         user2.is_verified = True
         db_session.commit()
@@ -909,7 +835,6 @@ class TestDataIsolation:
         created_movie = crud.create_movie(db_session, user1.id, movie1_create)
         movie_id = created_movie.id
         
-        # Login as user2
         login_response = client.post(
             "/auth/login",
             data={"username": "user2", "password": test_user_data["password"]},
@@ -918,15 +843,13 @@ class TestDataIsolation:
         token = login_response.json()["access_token"]
         client.headers = {"Authorization": f"Bearer {token}"}
         
-        # User2 should not be able to update user1's movie
         response = client.put(f"/movies/{movie_id}", json={"rating": 1})
-        assert response.status_code == 404  # Should return 404 (not found for this user)
+        assert response.status_code == 404
     
     def test_users_cannot_delete_each_others_movies(self, client, test_user_data, test_movie_data, db_session):
         """Test that users cannot delete each other's movies."""
         from app import crud, models, schemas, auth
         
-        # Create two users using the proper method
         user1_create = schemas.UserCreate(**test_user_data)
         hashed_password1 = auth.get_password_hash(test_user_data["password"])
         user1 = crud.create_user(db_session, user1_create, hashed_password1, "token1")
@@ -938,7 +861,6 @@ class TestDataIsolation:
         hashed_password2 = auth.get_password_hash(user2_data["password"])
         user2 = crud.create_user(db_session, user2_create, hashed_password2, "token2")
         
-        # Verify both users
         user1.is_verified = True
         user2.is_verified = True
         db_session.commit()
@@ -948,7 +870,6 @@ class TestDataIsolation:
         created_movie = crud.create_movie(db_session, user1.id, movie1_create)
         movie_id = created_movie.id
         
-        # Login as user2
         login_response = client.post(
             "/auth/login",
             data={"username": "user2", "password": test_user_data["password"]},
@@ -957,15 +878,13 @@ class TestDataIsolation:
         token = login_response.json()["access_token"]
         client.headers = {"Authorization": f"Bearer {token}"}
         
-        # User2 should not be able to delete user1's movie
         response = client.delete(f"/movies/{movie_id}")
-        assert response.status_code == 404  # Should return 404 (not found for this user)
+        assert response.status_code == 404
     
     def test_users_cannot_see_each_others_tv_shows(self, client, test_user_data, test_tv_show_data, db_session):
         """Test that users can only see their own TV shows."""
         from app import crud, models, schemas, auth
         
-        # Create two users using the proper method
         user1_create = schemas.UserCreate(**test_user_data)
         hashed_password1 = auth.get_password_hash(test_user_data["password"])
         user1 = crud.create_user(db_session, user1_create, hashed_password1, "token1")
@@ -977,22 +896,18 @@ class TestDataIsolation:
         hashed_password2 = auth.get_password_hash(user2_data["password"])
         user2 = crud.create_user(db_session, user2_create, hashed_password2, "token2")
         
-        # Verify both users
         user1.is_verified = True
         user2.is_verified = True
         db_session.commit()
         
-        # Create TV shows for user1
         tv1_create = schemas.TVShowCreate(**test_tv_show_data)
         crud.create_tv_show(db_session, user1.id, tv1_create)
         
-        # Create TV shows for user2
         tv2_data = test_tv_show_data.copy()
         tv2_data["title"] = "User2 TV Show"
         tv2_create = schemas.TVShowCreate(**tv2_data)
         crud.create_tv_show(db_session, user2.id, tv2_create)
         
-        # Login as user2
         login_response = client.post(
             "/auth/login",
             data={"username": "user2", "password": test_user_data["password"]},
@@ -1001,7 +916,6 @@ class TestDataIsolation:
         token = login_response.json()["access_token"]
         client.headers = {"Authorization": f"Bearer {token}"}
         
-        # User2 should only see their own TV show
         tv_shows_response = client.get("/tv-shows/")
         assert tv_shows_response.status_code == 200
         tv_shows = tv_shows_response.json()

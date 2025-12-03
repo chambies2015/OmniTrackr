@@ -63,21 +63,18 @@ def update_user(db: Session, user_id: int, user_update: schemas.UserUpdate) -> O
     
     update_dict = user_update.dict(exclude_unset=True)
     
-    # Check for duplicate username if changing
     if 'username' in update_dict and update_dict['username'] != db_user.username:
         existing_user = get_user_by_username(db, update_dict['username'])
         if existing_user:
             raise ValueError("Username already taken")
         db_user.username = update_dict['username']
     
-    # Check for duplicate email if changing
     if 'email' in update_dict and update_dict['email'] != db_user.email:
         existing_user = get_user_by_email(db, update_dict['email'])
         if existing_user:
             raise ValueError("Email already registered")
         db_user.email = update_dict['email']
     
-    # Update password if provided (should be hashed before calling this)
     if 'password' in update_dict:
         db_user.hashed_password = update_dict['password']
     
@@ -105,7 +102,6 @@ def reactivate_user(db: Session, user_id: int) -> Optional[models.User]:
     if db_user is None:
         return None
     
-    # Check if account was deactivated and within 90-day window
     if db_user.deactivated_at is None:
         raise ValueError("Account was not deactivated")
     
@@ -268,7 +264,6 @@ def get_movie_by_id(db: Session, user_id: int, movie_id: int) -> Optional[models
 
 def create_movie(db: Session, user_id: int, movie: schemas.MovieCreate) -> models.Movie:
     movie_dict = movie.dict()
-    # Round rating to one decimal place if provided
     if movie_dict.get('rating') is not None:
         movie_dict['rating'] = round(float(movie_dict['rating']), 1)
     db_movie = models.Movie(**movie_dict, user_id=user_id)
@@ -283,7 +278,6 @@ def update_movie(db: Session, user_id: int, movie_id: int, movie_update: schemas
     if db_movie is None:
         return None
     update_dict = movie_update.dict(exclude_unset=True)
-    # Round rating to one decimal place if provided
     if 'rating' in update_dict and update_dict['rating'] is not None:
         update_dict['rating'] = round(float(update_dict['rating']), 1)
     for field, value in update_dict.items():
@@ -316,7 +310,7 @@ def get_tv_shows(
         query = query.filter(
             models.TVShow.title.ilike(like_pattern)
         )
-    sort_order = asc  # default
+    sort_order = asc
     if order and order.lower() == "desc":
         sort_order = desc
     if sort_by == "rating":
@@ -335,7 +329,6 @@ def get_tv_show_by_id(db: Session, user_id: int, tv_show_id: int) -> Optional[mo
 
 def create_tv_show(db: Session, user_id: int, tv_show: schemas.TVShowCreate) -> models.TVShow:
     tv_show_dict = tv_show.dict()
-    # Round rating to one decimal place if provided
     if tv_show_dict.get('rating') is not None:
         tv_show_dict['rating'] = round(float(tv_show_dict['rating']), 1)
     db_tv_show = models.TVShow(**tv_show_dict, user_id=user_id)
@@ -350,7 +343,6 @@ def update_tv_show(db: Session, user_id: int, tv_show_id: int, tv_show_update: s
     if db_tv_show is None:
         return None
     update_dict = tv_show_update.dict(exclude_unset=True)
-    # Round rating to one decimal place if provided
     if 'rating' in update_dict and update_dict['rating'] is not None:
         update_dict['rating'] = round(float(update_dict['rating']), 1)
     for field, value in update_dict.items():
@@ -383,7 +375,7 @@ def get_anime(
         query = query.filter(
             models.Anime.title.ilike(like_pattern)
         )
-    sort_order = asc  # default
+    sort_order = asc
     if order and order.lower() == "desc":
         sort_order = desc
     if sort_by == "rating":
@@ -402,7 +394,6 @@ def get_anime_by_id(db: Session, user_id: int, anime_id: int) -> Optional[models
 
 def create_anime(db: Session, user_id: int, anime: schemas.AnimeCreate) -> models.Anime:
     anime_dict = anime.dict()
-    # Round rating to one decimal place if provided
     if anime_dict.get('rating') is not None:
         anime_dict['rating'] = round(float(anime_dict['rating']), 1)
     db_anime = models.Anime(**anime_dict, user_id=user_id)
@@ -417,7 +408,6 @@ def update_anime(db: Session, user_id: int, anime_id: int, anime_update: schemas
     if db_anime is None:
         return None
     update_dict = anime_update.dict(exclude_unset=True)
-    # Round rating to one decimal place if provided
     if 'rating' in update_dict and update_dict['rating'] is not None:
         update_dict['rating'] = round(float(update_dict['rating']), 1)
     for field, value in update_dict.items():
@@ -451,7 +441,7 @@ def get_video_games(
             models.VideoGame.title.ilike(like_pattern) |
             models.VideoGame.genres.ilike(like_pattern)
         )
-    sort_order = asc  # default
+    sort_order = asc
     if order and order.lower() == "desc":
         sort_order = desc
     if sort_by == "rating":
@@ -470,7 +460,6 @@ def get_video_game_by_id(db: Session, user_id: int, game_id: int) -> Optional[mo
 
 def create_video_game(db: Session, user_id: int, video_game: schemas.VideoGameCreate) -> models.VideoGame:
     video_game_dict = video_game.dict()
-    # Round rating to one decimal place if provided
     if video_game_dict.get('rating') is not None:
         video_game_dict['rating'] = round(float(video_game_dict['rating']), 1)
     db_video_game = models.VideoGame(**video_game_dict, user_id=user_id)
@@ -485,7 +474,6 @@ def update_video_game(db: Session, user_id: int, game_id: int, video_game_update
     if db_video_game is None:
         return None
     update_dict = video_game_update.dict(exclude_unset=True)
-    # Round rating to one decimal place if provided
     if 'rating' in update_dict and update_dict['rating'] is not None:
         update_dict['rating'] = round(float(update_dict['rating']), 1)
     for field, value in update_dict.items():
@@ -573,18 +561,15 @@ def import_movies(db: Session, user_id: int, movies: List[schemas.MovieCreate]) 
     
     for movie_data in movies:
         try:
-            # Check if movie already exists
             existing_movie = find_movie_by_title_and_director(
                 db, user_id, movie_data.title, movie_data.director
             )
             
             if existing_movie:
-                # Update existing movie
                 for field, value in movie_data.dict(exclude_unset=True).items():
                     setattr(existing_movie, field, value)
                 updated += 1
             else:
-                # Create new movie
                 db_movie = models.Movie(**movie_data.dict(), user_id=user_id)
                 db.add(db_movie)
                 created += 1
@@ -609,18 +594,15 @@ def import_tv_shows(db: Session, user_id: int, tv_shows: List[schemas.TVShowCrea
     
     for tv_show_data in tv_shows:
         try:
-            # Check if TV show already exists
             existing_tv_show = find_tv_show_by_title_and_year(
                 db, user_id, tv_show_data.title, tv_show_data.year
             )
             
             if existing_tv_show:
-                # Update existing TV show
                 for field, value in tv_show_data.dict(exclude_unset=True).items():
                     setattr(existing_tv_show, field, value)
                 updated += 1
             else:
-                # Create new TV show
                 db_tv_show = models.TVShow(**tv_show_data.dict(), user_id=user_id)
                 db.add(db_tv_show)
                 created += 1
@@ -645,18 +627,15 @@ def import_anime(db: Session, user_id: int, anime: List[schemas.AnimeCreate]) ->
     
     for anime_data in anime:
         try:
-            # Check if anime already exists
             existing_anime = find_anime_by_title_and_year(
                 db, user_id, anime_data.title, anime_data.year
             )
             
             if existing_anime:
-                # Update existing anime
                 for field, value in anime_data.dict(exclude_unset=True).items():
                     setattr(existing_anime, field, value)
                 updated += 1
             else:
-                # Create new anime
                 db_anime = models.Anime(**anime_data.dict(), user_id=user_id)
                 db.add(db_anime)
                 created += 1
@@ -681,24 +660,19 @@ def import_video_games(db: Session, user_id: int, video_games: List[schemas.Vide
     
     for video_game_data in video_games:
         try:
-            # Check if video game already exists
             existing_video_game = find_video_game_by_title_and_release_date(
                 db, user_id, video_game_data.title, video_game_data.release_date
             )
             
             if existing_video_game:
-                # Update existing video game
                 update_dict = video_game_data.dict(exclude_unset=True)
-                # Round rating to one decimal place if provided (consistent with update_video_game)
                 if 'rating' in update_dict and update_dict['rating'] is not None:
                     update_dict['rating'] = round(float(update_dict['rating']), 1)
                 for field, value in update_dict.items():
                     setattr(existing_video_game, field, value)
                 updated += 1
             else:
-                # Create new video game
                 video_game_dict = video_game_data.dict()
-                # Round rating to one decimal place if provided (consistent with create_video_game)
                 if video_game_dict.get('rating') is not None:
                     video_game_dict['rating'] = round(float(video_game_dict['rating']), 1)
                 db_video_game = models.VideoGame(**video_game_dict, user_id=user_id)
@@ -792,15 +766,12 @@ def get_rating_statistics(db: Session, user_id: int) -> dict:
     # Calculate average
     avg_rating = round(sum(all_ratings) / len(all_ratings), 1)
     
-    # Rating distribution (1-10) - round decimal ratings to nearest integer
     distribution = {}
     for i in range(1, 11):
-        # Round ratings to nearest integer for distribution buckets
         count = sum(1 for rating in all_ratings if round(rating) == i)
         if count > 0:
             distribution[str(i)] = count
     
-    # Get highest and lowest rated items
     highest_rating = max(all_ratings)
     lowest_rating = min(all_ratings)
     
@@ -875,7 +846,6 @@ def get_year_statistics(db: Session, user_id: int) -> dict:
             year_str = str(year)
             video_game_data[year_str] = video_game_data.get(year_str, 0) + 1
     
-    # Get all years
     all_years = set(movie_data.keys()) | set(tv_data.keys()) | set(anime_data.keys()) | set(video_game_data.keys())
     all_years = sorted([int(year) for year in all_years])
     
@@ -942,11 +912,9 @@ def get_director_statistics(db: Session, user_id: int) -> dict:
 
 def create_friend_request(db: Session, sender_id: int, receiver_id: int) -> Optional[models.FriendRequest]:
     """Create a new friend request."""
-    # Check if users are already friends
     if are_friends(db, sender_id, receiver_id):
         raise ValueError("Users are already friends")
     
-    # Check if there's already a pending request
     existing = db.query(models.FriendRequest).filter(
         or_(
             and_(models.FriendRequest.sender_id == sender_id, models.FriendRequest.receiver_id == receiver_id),
@@ -958,7 +926,6 @@ def create_friend_request(db: Session, sender_id: int, receiver_id: int) -> Opti
     if existing:
         raise ValueError("Friend request already exists")
     
-    # Create the request
     friend_request = models.FriendRequest(
         sender_id=sender_id,
         receiver_id=receiver_id,
@@ -969,7 +936,6 @@ def create_friend_request(db: Session, sender_id: int, receiver_id: int) -> Opti
     db.commit()
     db.refresh(friend_request)
     
-    # Create notification for receiver
     receiver = get_user_by_id(db, receiver_id)
     if receiver:
         create_notification(
@@ -1016,13 +982,11 @@ def accept_friend_request(db: Session, request_id: int, user_id: int) -> Optiona
     if friend_request.status != "pending":
         raise ValueError("Friend request is not pending")
     
-    # Check if request is expired
     if friend_request.expires_at < datetime.utcnow():
         friend_request.status = "expired"
         db.commit()
         raise ValueError("Friend request has expired")
     
-    # Delete the notification for the receiver (the one who received the friend request)
     notification = db.query(models.Notification).filter(
         models.Notification.friend_request_id == request_id,
         models.Notification.user_id == user_id
@@ -1030,16 +994,13 @@ def accept_friend_request(db: Session, request_id: int, user_id: int) -> Optiona
     if notification:
         db.delete(notification)
     
-    # Update request status
     friend_request.status = "accepted"
     db.commit()
     
-    # Create friendship (ensure user1_id < user2_id)
     user1_id = min(friend_request.sender_id, friend_request.receiver_id)
     user2_id = max(friend_request.sender_id, friend_request.receiver_id)
     create_friendship(db, user1_id, user2_id)
     
-    # Create notifications
     sender = get_user_by_id(db, friend_request.sender_id)
     receiver = get_user_by_id(db, friend_request.receiver_id)
     
@@ -1061,14 +1022,12 @@ def deny_friend_request(db: Session, request_id: int, user_id: int) -> Optional[
     if not friend_request:
         return None
     
-    # Verify user is the receiver
     if friend_request.receiver_id != user_id:
         raise ValueError("You can only deny friend requests sent to you")
     
     if friend_request.status != "pending":
         raise ValueError("Friend request is not pending")
     
-    # Delete the notification for the receiver (the one who received the friend request)
     notification = db.query(models.Notification).filter(
         models.Notification.friend_request_id == request_id,
         models.Notification.user_id == user_id
@@ -1076,7 +1035,6 @@ def deny_friend_request(db: Session, request_id: int, user_id: int) -> Optional[
     if notification:
         db.delete(notification)
     
-    # Update request status
     friend_request.status = "denied"
     db.commit()
     
@@ -1089,14 +1047,12 @@ def cancel_friend_request(db: Session, request_id: int, user_id: int) -> Optiona
     if not friend_request:
         return None
     
-    # Verify user is the sender
     if friend_request.sender_id != user_id:
         raise ValueError("You can only cancel friend requests you sent")
     
     if friend_request.status != "pending":
         raise ValueError("Friend request is not pending")
     
-    # Update request status
     friend_request.status = "cancelled"
     db.commit()
     
@@ -1119,7 +1075,6 @@ def expire_friend_requests(db: Session) -> int:
 
 def create_friendship(db: Session, user1_id: int, user2_id: int) -> models.Friendship:
     """Create a friendship between two users (user1_id must be < user2_id)."""
-    # Check if friendship already exists
     existing = db.query(models.Friendship).filter(
         models.Friendship.user1_id == user1_id,
         models.Friendship.user2_id == user2_id

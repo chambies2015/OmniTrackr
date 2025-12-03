@@ -6,11 +6,9 @@ let editingRowElement = null;
 let currentTab = 'movies';
 let notificationCountInterval = null;
 
-// Poster fetch deduplication - prevent multiple simultaneous OMDB API calls for same movie/show
 const posterFetchInProgress = new Set();
-const posterFetchQueue = new Map(); // title+year -> Promise
+const posterFetchQueue = new Map();
 
-// Utility HTML escaping function
 function escapeHtml(str) {
   return String(str)
     .replace(/&/g, "&amp;")
@@ -20,7 +18,6 @@ function escapeHtml(str) {
     .replace(/'/g, "&#39;");
 }
 
-// Image popup functions
 function showImagePopup(imageUrl, altText) {
   const modal = document.getElementById('imagePopupModal');
   const img = document.getElementById('popupImage');
@@ -28,7 +25,6 @@ function showImagePopup(imageUrl, altText) {
     img.src = imageUrl;
     img.alt = altText || 'Enlarged image';
     modal.style.display = 'flex';
-    // Prevent body scroll when modal is open
     document.body.style.overflow = 'hidden';
   }
 }
@@ -37,12 +33,10 @@ function closeImagePopup() {
   const modal = document.getElementById('imagePopupModal');
   if (modal) {
     modal.style.display = 'none';
-    // Restore body scroll
     document.body.style.overflow = '';
   }
 }
 
-// Close image popup on Escape key
 document.addEventListener('keydown', function(event) {
   if (event.key === 'Escape') {
     const modal = document.getElementById('imagePopupModal');
@@ -52,34 +46,36 @@ document.addEventListener('keydown', function(event) {
   }
 });
 
-// Tab switching functionality
 function switchTab(tabName) {
-  // Check if tab is visible (only for media tabs, statistics is always visible)
   if (tabName !== 'statistics') {
     const tabButton = document.querySelector(`[onclick="switchTab('${tabName}')"]`);
     if (tabButton && tabButton.style.display === 'none') {
-      // Tab is hidden, don't switch to it
       return;
     }
   }
 
-  // Update tab buttons
   document.querySelectorAll('.tab').forEach(tab => tab.classList.remove('active'));
   const targetTab = document.querySelector(`[onclick="switchTab('${tabName}')"]`);
   if (targetTab) {
     targetTab.classList.add('active');
   }
 
-  // Update tab content
   document.querySelectorAll('.tab-content').forEach(content => content.classList.remove('active'));
   const tabContent = document.getElementById(`${tabName}-tab`);
   if (tabContent) {
     tabContent.classList.add('active');
   }
 
+  const statsContent = document.getElementById('statsContent');
+  if (statsContent) {
+    if (tabName === 'statistics') {
+    } else {
+      statsContent.style.display = 'none';
+    }
+  }
+
   currentTab = tabName;
 
-  // Load data for the active tab
   if (tabName === 'movies') {
     loadMovies();
   } else if (tabName === 'tv-shows') {
@@ -170,7 +166,8 @@ async function loadMovies() {
         // Display cached poster or fetch new one
         if (movie.poster_url) {
           displayMoviePoster(movie.id, movie.poster_url, movie.title);
-        } else if (OMDB_API_KEY) {
+        } else {
+          // API keys are now proxied through backend
           fetchMoviePoster(movie.id, movie.title, movie.year);
         }
       });
@@ -232,28 +229,64 @@ async function fetchMoviePoster(id, title, year) {
   posterFetchInProgress.add(cacheKey);
 
   try {
-    const url = `https://www.omdbapi.com/?t=${encodeURIComponent(title)}&y=${encodeURIComponent(year)}&apikey=${OMDB_API_KEY}`;
-    const res = await fetch(url);
+    const proxyUrl = `${API_BASE}/api/proxy/omdb?title=${encodeURIComponent(title)}&year=${encodeURIComponent(year)}`;
+    
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), 30000);
+    
+    let res;
+    try {
+      res = await fetch(proxyUrl, { 
+        signal: controller.signal,
+        headers: {
+          'Accept': 'application/json'
+        }
+      });
+      clearTimeout(timeoutId);
+    } catch (fetchError) {
+      clearTimeout(timeoutId);
+      if (fetchError.name === 'AbortError') {
+        console.warn(`OMDB API request timeout for "${title}". This may be due to network issues or VPN blocking.`);
+      } else {
+        console.warn(`Network error fetching poster for "${title}":`, fetchError.message);
+      }
+      return;
+    }
 
     if (!res.ok) {
-      // Handle rate limiting (429 Too Many Requests)
       if (res.status === 429) {
         console.warn('OMDB API rate limit reached. Posters will be fetched later.');
+        return;
+      }
+      if (res.status === 503) {
+        console.warn('OMDB API not configured on server.');
+        return;
+      }
+      if (res.status === 504) {
+        console.warn(`OMDB API timeout for "${title}". This may be due to network issues or VPN blocking.`);
+        return;
+      }
+      if (res.status >= 500) {
+        console.warn(`OMDB API server error (${res.status}) for "${title}". This may be due to network issues.`);
         return;
       }
       return;
     }
 
-    const data = await res.json();
+    let data;
+    try {
+      data = await res.json();
+    } catch (jsonError) {
+      console.warn(`Failed to parse OMDB API response for "${title}":`, jsonError);
+      return;
+    }
 
-    // Check for API errors
     if (data.Error) {
       console.warn(`OMDB API error for "${title}": ${data.Error}`);
       return;
     }
 
     if (data && data.Poster && data.Poster !== 'N/A') {
-      // Save the poster URL to the database
       await saveMoviePosterUrl(id, data.Poster);
       // Display the poster
       displayMoviePoster(id, data.Poster, title);
@@ -417,7 +450,8 @@ async function loadTVShows() {
         // Display cached poster or fetch new one
         if (tvShow.poster_url) {
           displayTVPoster(tvShow.id, tvShow.poster_url, tvShow.title);
-        } else if (OMDB_API_KEY) {
+        } else {
+          // API keys are now proxied through backend
           fetchTVPoster(tvShow.id, tvShow.title, tvShow.year);
         }
       });
@@ -481,7 +515,8 @@ async function loadAnime() {
         // Display cached poster or fetch new one
         if (animeItem.poster_url) {
           displayAnimePoster(animeItem.id, animeItem.poster_url, animeItem.title);
-        } else if (OMDB_API_KEY) {
+        } else {
+          // API keys are now proxied through backend
           fetchAnimePoster(animeItem.id, animeItem.title, animeItem.year);
         }
       });
@@ -566,32 +601,67 @@ async function fetchTVPoster(id, title, year) {
     return;
   }
 
-  // Mark as in progress
   posterFetchInProgress.add(cacheKey);
 
   try {
-    const url = `https://www.omdbapi.com/?t=${encodeURIComponent(title)}&y=${encodeURIComponent(year)}&apikey=${OMDB_API_KEY}`;
-    const res = await fetch(url);
+    const proxyUrl = `${API_BASE}/api/proxy/omdb?title=${encodeURIComponent(title)}&year=${encodeURIComponent(year)}`;
+    
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), 30000);
+    
+    let res;
+    try {
+      res = await fetch(proxyUrl, { 
+        signal: controller.signal,
+        headers: {
+          'Accept': 'application/json'
+        }
+      });
+      clearTimeout(timeoutId);
+    } catch (fetchError) {
+      clearTimeout(timeoutId);
+      if (fetchError.name === 'AbortError') {
+        console.warn(`OMDB API request timeout for "${title}". This may be due to network issues or VPN blocking.`);
+      } else {
+        console.warn(`Network error fetching poster for "${title}":`, fetchError.message);
+      }
+      return;
+    }
 
     if (!res.ok) {
-      // Handle rate limiting (429 Too Many Requests)
       if (res.status === 429) {
         console.warn('OMDB API rate limit reached. Posters will be fetched later.');
+        return;
+      }
+      if (res.status === 503) {
+        console.warn('OMDB API not configured on server.');
+        return;
+      }
+      if (res.status === 504) {
+        console.warn(`OMDB API timeout for "${title}". This may be due to network issues or VPN blocking.`);
+        return;
+      }
+      if (res.status >= 500) {
+        console.warn(`OMDB API server error (${res.status}) for "${title}". This may be due to network issues.`);
         return;
       }
       return;
     }
 
-    const data = await res.json();
+    let data;
+    try {
+      data = await res.json();
+    } catch (jsonError) {
+      console.warn(`Failed to parse OMDB API response for "${title}":`, jsonError);
+      return;
+    }
 
-    // Check for API errors
     if (data.Error) {
       console.warn(`OMDB API error for "${title}": ${data.Error}`);
       return;
     }
 
     if (data && data.Poster && data.Poster !== 'N/A') {
-      // Save the poster URL to the database
       await saveTVPosterUrl(id, data.Poster);
       // Display the poster
       displayTVPoster(id, data.Poster, title);
@@ -646,32 +716,67 @@ async function fetchAnimePoster(id, title, year) {
     return;
   }
 
-  // Mark as in progress
   posterFetchInProgress.add(cacheKey);
 
   try {
-    const url = `https://www.omdbapi.com/?t=${encodeURIComponent(title)}&y=${encodeURIComponent(year)}&apikey=${OMDB_API_KEY}`;
-    const res = await fetch(url);
+    const proxyUrl = `${API_BASE}/api/proxy/omdb?title=${encodeURIComponent(title)}&year=${encodeURIComponent(year)}`;
+    
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), 30000);
+    
+    let res;
+    try {
+      res = await fetch(proxyUrl, { 
+        signal: controller.signal,
+        headers: {
+          'Accept': 'application/json'
+        }
+      });
+      clearTimeout(timeoutId);
+    } catch (fetchError) {
+      clearTimeout(timeoutId);
+      if (fetchError.name === 'AbortError') {
+        console.warn(`OMDB API request timeout for "${title}". This may be due to network issues or VPN blocking.`);
+      } else {
+        console.warn(`Network error fetching poster for "${title}":`, fetchError.message);
+      }
+      return;
+    }
 
     if (!res.ok) {
-      // Handle rate limiting (429 Too Many Requests)
       if (res.status === 429) {
         console.warn('OMDB API rate limit reached. Posters will be fetched later.');
+        return;
+      }
+      if (res.status === 503) {
+        console.warn('OMDB API not configured on server.');
+        return;
+      }
+      if (res.status === 504) {
+        console.warn(`OMDB API timeout for "${title}". This may be due to network issues or VPN blocking.`);
+        return;
+      }
+      if (res.status >= 500) {
+        console.warn(`OMDB API server error (${res.status}) for "${title}". This may be due to network issues.`);
         return;
       }
       return;
     }
 
-    const data = await res.json();
+    let data;
+    try {
+      data = await res.json();
+    } catch (jsonError) {
+      console.warn(`Failed to parse OMDB API response for "${title}":`, jsonError);
+      return;
+    }
 
-    // Check for API errors
     if (data.Error) {
       console.warn(`OMDB API error for "${title}": ${data.Error}`);
       return;
     }
 
     if (data && data.Poster && data.Poster !== 'N/A') {
-      // Save the poster URL to the database
       await saveAnimePosterUrl(id, data.Poster);
       // Display the poster
       displayAnimePoster(id, data.Poster, title);
@@ -759,7 +864,8 @@ async function loadVideoGames() {
         // Display cached cover art or fetch new one
         if (game.cover_art_url) {
           displayVideoGamePoster(game.id, game.cover_art_url, game.title);
-        } else if (RAWG_API_KEY) {
+        } else {
+          // API keys are now proxied through backend
           fetchVideoGameMetadata(game.id, game.title);
         }
       });
@@ -850,27 +956,62 @@ async function fetchVideoGameMetadata(id, title) {
   // Double-check pattern: verify it's still not in progress after creating promise
   const fetchPromise = (async () => {
     try {
-      const url = `https://api.rawg.io/api/games?search=${encodeURIComponent(title)}&key=${RAWG_API_KEY}`;
-      const res = await fetch(url);
+      const proxyUrl = `${API_BASE}/api/proxy/rawg?search=${encodeURIComponent(title)}`;
+      
+      const controller = new AbortController();
+      const timeoutId = setTimeout(() => controller.abort(), 30000);
+      
+      let res;
+      try {
+        res = await fetch(proxyUrl, { 
+          signal: controller.signal,
+          headers: {
+            'Accept': 'application/json'
+          }
+        });
+        clearTimeout(timeoutId);
+      } catch (fetchError) {
+        clearTimeout(timeoutId);
+        if (fetchError.name === 'AbortError') {
+          console.warn(`RAWG API request timeout for "${title}". This may be due to network issues or VPN blocking.`);
+        } else {
+          console.warn(`Network error fetching metadata for "${title}":`, fetchError.message);
+        }
+        return null;
+      }
 
       if (!res.ok) {
-        // Handle rate limiting (429 Too Many Requests)
         if (res.status === 429) {
           console.warn('RAWG API rate limit reached. Metadata will be fetched later.');
+          return null;
+        }
+        if (res.status === 503) {
+          console.warn('RAWG API not configured on server.');
+          return null;
+        }
+        if (res.status === 504) {
+          console.warn(`RAWG API timeout for "${title}". This may be due to network issues or VPN blocking.`);
+          return null;
+        }
+        if (res.status >= 500) {
+          console.warn(`RAWG API server error (${res.status}) for "${title}". This may be due to network issues.`);
           return null;
         }
         return null;
       }
 
-      const data = await res.json();
+      let data;
+      try {
+        data = await res.json();
+      } catch (jsonError) {
+        console.warn(`Failed to parse RAWG API response for "${title}":`, jsonError);
+        return null;
+      }
 
-      // Check for API errors
       if (data.error) {
         console.warn(`RAWG API error for "${title}": ${data.error}`);
         return null;
       }
-
-      // Get first result
       if (data && data.results && data.results.length > 0) {
         const game = data.results[0];
         const coverArtUrl = game.background_image || null;
@@ -3473,4 +3614,112 @@ function restoreSidebarState() {
 
 // Load initial data
 loadMovies();
+
+// ============================================================================
+// Landing Page Enhancements: Scroll Animations and User Count
+// ============================================================================
+
+// Intersection Observer for fade-in on scroll animations
+let scrollObserver = null;
+
+function initScrollAnimations() {
+  // Only initialize if landing page is visible
+  const landingPage = document.getElementById('landingPage');
+  if (!landingPage || landingPage.style.display !== 'block') {
+    return;
+  }
+
+  // Clean up existing observer if any
+  if (scrollObserver) {
+    scrollObserver.disconnect();
+  }
+
+  // Create Intersection Observer
+  scrollObserver = new IntersectionObserver((entries) => {
+    entries.forEach(entry => {
+      if (entry.isIntersecting) {
+        entry.target.classList.add('visible');
+        // Unobserve after animation to improve performance
+        scrollObserver.unobserve(entry.target);
+      }
+    });
+  }, {
+    threshold: 0.1,
+    rootMargin: '0px 0px -50px 0px'
+  });
+
+  // Observe all elements with fade-in-on-scroll class
+  const fadeElements = document.querySelectorAll('.fade-in-on-scroll');
+  fadeElements.forEach(el => {
+    scrollObserver.observe(el);
+  });
+}
+
+// Fetch and display user count
+async function fetchUserCount() {
+  const userCountDisplay = document.getElementById('userCountDisplay');
+  if (!userCountDisplay) return;
+
+  // Only fetch if landing page is visible
+  const landingPage = document.getElementById('landingPage');
+  if (!landingPage || landingPage.style.display !== 'block') {
+    userCountDisplay.style.display = 'none';
+    return;
+  }
+
+  try {
+    const response = await fetch(`${API_BASE}/api/user-count`);
+    if (!response.ok) {
+      throw new Error('Failed to fetch user count');
+    }
+    const data = await response.json();
+    const count = data.count || 0;
+    userCountDisplay.textContent = `${count} users tracking their media already`;
+    userCountDisplay.style.display = 'block';
+  } catch (error) {
+    // Graceful degradation: hide the element on error
+    userCountDisplay.style.display = 'none';
+    console.error('Error fetching user count:', error);
+  }
+}
+
+// Initialize landing page enhancements when DOM is ready
+function initLandingPageEnhancements() {
+  const landingPage = document.getElementById('landingPage');
+  if (!landingPage) return;
+
+  // Add fade-in-on-scroll class to feature cards and FAQ items
+  const featureCards = document.querySelectorAll('.feature-card');
+  featureCards.forEach(card => {
+    card.classList.add('fade-in-on-scroll');
+  });
+
+  const faqItems = document.querySelectorAll('.faq-item');
+  faqItems.forEach(item => {
+    item.classList.add('fade-in-on-scroll');
+  });
+
+  // Initialize scroll animations
+  initScrollAnimations();
+
+  // Fetch user count
+  fetchUserCount();
+}
+
+// Call on DOMContentLoaded
+document.addEventListener('DOMContentLoaded', function() {
+  initLandingPageEnhancements();
+});
+
+// Also call when landing page becomes visible (after login/logout)
+// This will be called from auth.js when showing/hiding landing page
+window.initLandingPageEnhancements = initLandingPageEnhancements;
+
+// Cleanup observer on page unload
+window.addEventListener('beforeunload', function() {
+  if (scrollObserver) {
+    scrollObserver.disconnect();
+    scrollObserver = null;
+  }
+});
 
