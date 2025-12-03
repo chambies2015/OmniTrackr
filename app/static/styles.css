@@ -3454,7 +3454,12 @@ body.dark-mode .friend-request-modal-content form input {
 }
 
 /* Statistics tab specific - ensure all nested elements use full width */
-#statistics-tab {
+/* Only show statistics tab when it's active */
+#statistics-tab:not(.active) {
+  display: none !important;
+}
+
+#statistics-tab.active {
   display: block !important;
   width: 100% !important;
   max-width: 100% !important;
