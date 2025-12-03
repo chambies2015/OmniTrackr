@@ -3401,14 +3401,14 @@ body.dark-mode .friend-request-modal-content form input {
   }
 }
 
-/* Force statistics tab to full width - match other tabs */
-#statistics-tab {
+/* Ensure all tab content uses consistent width - including statistics */
+.tab-content {
   width: 100% !important;
   max-width: 100% !important;
   box-sizing: border-box !important;
 }
 
-#statistics-tab .card {
+.tab-content .card {
   width: 100% !important;
   max-width: 100% !important;
   box-sizing: border-box !important;
@@ -3416,11 +3416,14 @@ body.dark-mode .friend-request-modal-content form input {
   margin-right: 0 !important;
 }
 
+/* Statistics tab specific - ensure all nested elements use full width */
 #statistics-tab #statsContent,
 #statistics-tab #statsLoading {
   width: 100% !important;
   max-width: 100% !important;
   box-sizing: border-box !important;
+  margin-left: 0 !important;
+  margin-right: 0 !important;
 }
 
 #statistics-tab .stats-section {
