@@ -6,7 +6,7 @@
 
 ## Overview
 
-OmniTrackr is a full-featured, multi-user web application for managing and tracking movies, TV shows, and anime. Originally a local desktop app, it has evolved into a production-ready platform with user authentication, cloud database support, and a modern responsive UI.
+OmniTrackr is a full-featured, multi-user web application for managing and tracking movies, TV shows, anime, and video games. Originally a local desktop app, it has evolved into a production-ready platform with user authentication, cloud database support, and a modern responsive UI.
 
 **Live Demo:** Deployed on Render with PostgreSQL database: https://www.omnitrackr.xyz/
 
@@ -40,21 +40,21 @@ OmniTrackr is a full-featured, multi-user web application for managing and track
 - **Password Security:** bcrypt hashing for password storage
 - **Account Management:** Change username, email, password, and account deactivation/reactivation
 - **Profile Pictures:** Upload, change, and reset profile pictures with automatic optimization and validation
-- **Privacy Settings:** Control visibility of your movies, TV shows, anime, and statistics (private or visible to friends)
+- **Privacy Settings:** Control visibility of your movies, TV shows, anime, video games, and statistics (private or visible to friends)
 - **Friends System:** Add friends by username, send/accept/deny friend requests, manage friends list
-- **Friend Profiles:** View friends' movie, TV show, and anime collections and statistics with privacy-aware access
+- **Friend Profiles:** View friends' movie, TV show, anime, and video game collections and statistics with privacy-aware access
 - **Notifications:** Real-time notification system with bell icon, friend request notifications, and auto-dismissal
-- **CRUD API:** Full REST API for managing movies, TV shows, and anime
+- **CRUD API:** Full REST API for managing movies, TV shows, anime, and video games
 - **PostgreSQL Database:** Production-ready database
 - **Search and Sort:** Automatic filtering by title/director and sorting by rating or year
 - **Modern UI:** Responsive single-page application with dark mode by default, modern card-based design, and beautiful landing page
-- **Poster Integration:** Automatic poster fetching from OMDB API with intelligent caching to reduce API calls
+- **Poster Integration:** Automatic poster fetching from OMDB API (movies/TV shows/anime) and RAWG API (video games) with intelligent caching to reduce API calls
 - **Decimal Ratings:** Support for precise ratings from 0-10.0 with one decimal place (e.g., 7.5, 8.4)
-- **Export/Import:** JSON export/import with smart conflict resolution for movies, TV shows, and anime
-- **Statistics Dashboard:** Comprehensive analytics with animated visualizations, watch progress, rating distributions, year analysis, and director insights (includes anime statistics)
+- **Export/Import:** JSON export/import with smart conflict resolution for movies, TV shows, anime, and video games
+- **Statistics Dashboard:** Comprehensive analytics with animated visualizations, watch progress, rating distributions, year analysis, and director insights across all media types
 - **SEO Optimized:** Meta tags, structured data, sitemap, and robots.txt for better search engine visibility
 - **Security:** Security headers, bot filtering, content validation, image processing, rate limiting, and comprehensive protection against common web vulnerabilities
-- **Persistent Storage:** Profile pictures stored in persistent directory that survives code updates and deployments
+- **Persistent Storage:** Profile pictures stored in database for persistence across deployments
 
 
 ## Export/Import Functionality
@@ -62,16 +62,16 @@ OmniTrackr is a full-featured, multi-user web application for managing and track
 OmniTrackr now includes powerful export/import capabilities:
 
 ### Exporting Data
-- Click the **"Export Data"** button in the Movies, TV Shows, or Anime tab
+- Click the **"Export Data"** button in any media tab (Movies, TV Shows, Anime, or Video Games)
 - Your entire collection will be downloaded as a JSON file with timestamp
-- The export includes all metadata: titles, directors/creators, years, ratings, reviews, watched status, and poster URLs
+- The export includes all metadata: titles, directors/creators/developers, years, ratings, reviews, watched status, and poster URLs
 - Export files are named `omnitrackr-export-YYYY-MM-DD.json`
 
 ### Importing Data
 - Click the **"Import Data"** button in any tab to select a JSON file
-- The system will automatically detect and import movies, TV shows, and anime
-- **Smart conflict resolution**: Existing entries (matched by title + director for movies, title + year for TV shows and anime) will be updated rather than duplicated
-- **Backward compatibility**: Old export files without anime data can still be imported
+- The system will automatically detect and import movies, TV shows, anime, and video games
+- **Smart conflict resolution**: Existing entries (matched by title + director/creator/developer + year) will be updated rather than duplicated
+- **Backward compatibility**: Old export files without newer media types can still be imported
 - Import results show how many items were created vs updated
 - Any errors during import are reported for easy troubleshooting
 
@@ -84,9 +84,7 @@ OmniTrackr includes a complete social system for connecting with other users:
 - **Add Friends:** Send friend requests to other users by username
 - **Friend Management:** View friends, unfriend users, and manage your connections
 - **Friend Profiles:** Click on any friend's name to view their profile
-  - View friends' movie collections with search/filter functionality
-  - View friends' TV show collections with search/filter functionality
-  - View friends' anime collections with search/filter functionality
+  - View friends' movie, TV show, anime, and video game collections with search/filter functionality
   - View friends' statistics dashboard (if privacy allows)
   - Privacy-aware: Only shows data that friends have made visible
   - Accordion-style modal with collapsible sections for easy navigation
@@ -121,9 +119,7 @@ OmniTrackr provides comprehensive account management features:
   - Content validation to ensure uploaded files are valid images
   - Profile pictures displayed in user display, friends list, and friend profiles
 - **Privacy Settings:** Control who can see your data
-  - Movies privacy toggle (private or visible to friends)
-  - TV shows privacy toggle (private or visible to friends)
-  - Anime privacy toggle (private or visible to friends)
+  - Movies, TV shows, anime, and video games privacy toggles (private or visible to friends)
   - Statistics privacy toggle (private or visible to friends)
   - When privacy is enabled, data is fully private (not visible to friends)
 - **Account Deactivation:** Soft delete your account with 90-day reactivation window
@@ -148,15 +144,15 @@ OmniTrackr provides comprehensive account management features:
 OmniTrackr includes a comprehensive statistics dashboard accessible via the **📊 Statistics** tab:
 
 ### Watch Progress Analytics
-- **Total items** in your collection (movies + TV shows + anime)
+- **Total items** in your collection (movies + TV shows + anime + video games)
 - **Watched vs. unwatched** counts and percentages
 - **Visual progress bar** showing completion status
-- **Separate tracking** for movies, TV shows, and anime
+- **Separate tracking** for movies, TV shows, anime, and video games
 
 ### Rating Analysis
 - **Average rating** across all rated items (supports decimal ratings 0-10.0)
 - **Rating distribution** with interactive animated bar charts (1-10 scale, rounded for visualization)
-- **Highest and lowest rated items** showing your top and bottom-rated movies, TV shows, and anime
+- **Highest and lowest rated items** showing your top and bottom-rated movies, TV shows, anime, and video games
 - **Visual representation** of your rating patterns with modern gradient designs
 
 ### Year Analysis
@@ -232,20 +228,20 @@ OmniTrackr uses a secure JWT-based authentication system:
 - **User Authentication:** Secure login with JWT tokens, logout functionality
 - **Account Settings:** Manage your account - change username, email, password, profile picture, privacy settings, or deactivate/reactivate
 - **Profile Pictures:** Upload and manage your profile picture, visible in user display, friends list, and friend profiles
-- **Privacy Controls:** Set privacy settings for movies, TV shows, anime, and statistics
+- **Privacy Controls:** Set privacy settings for movies, TV shows, anime, video games, and statistics
 - **Friends & Social:** Add friends, send/accept/deny friend requests, view friends list, and explore friends' collections
-- **Friend Profiles:** View friends' movies, TV shows, anime, and statistics with search/filter capabilities
+- **Friend Profiles:** View friends' movies, TV shows, anime, video games, and statistics with search/filter capabilities
 - **Notifications:** Real-time notifications with bell icon and unread count badge
-- **Add movies, TV shows & anime:** Enter details like title, director/creator, year, rating, and watched status
-- **Automatic Posters:** Movie, TV show, and anime posters are fetched automatically from OMDB and cached
-- **Search & Filter:** Automatic search by title or director/creator and sort by rating or year
+- **Add media:** Enter details like title, director/creator/developer, year, rating, and watched/played status for movies, TV shows, anime, and video games
+- **Automatic Posters:** Posters are fetched automatically from OMDB API (movies/TV shows/anime) and RAWG API (video games) with intelligent caching
+- **Search & Filter:** Automatic search by title or director/creator/developer and sort by rating or year
 - **Inline Editing:** Edit entries directly in the table with save/cancel options, expandable review textareas
 - **Delete:** Remove entries from your collection
 - **Dark Mode:** Beautiful dark theme by default with light mode toggle
 - **Modern UI:** Card-based design with smooth animations, gradients, and collapsible forms
-- **Tabbed Interface:** Switch between Movies, TV Shows, Anime, and Statistics
-- **Export/Import:** Backup your collection to JSON or import from JSON files (supports movies, TV shows, and anime)
-- **Statistics Dashboard:** Comprehensive analytics with animated visualizations showing your viewing habits and preferences (includes anime statistics)
+- **Tabbed Interface:** Switch between Movies, TV Shows, Anime, Video Games, and Statistics
+- **Export/Import:** Backup your collection to JSON or import from JSON files (supports all media types)
+- **Statistics Dashboard:** Comprehensive analytics with animated visualizations showing your viewing and gaming habits across all media types
 
 
 ## Screenshots
@@ -260,18 +256,18 @@ OmniTrackr uses a secure JWT-based authentication system:
 
 ## Recent Updates
 
+- ✅ **Video Game Support:** Full CRUD operations, privacy settings, friend viewing, and statistics integration for video game tracking
 - ✅ **Anime Support:** Full CRUD operations, privacy settings, friend viewing, and statistics integration for anime tracking
-- ✅ **Profile Pictures:** Upload, change, and reset profile pictures with automatic optimization, content validation, and persistent storage
-- ✅ **Privacy Settings:** Granular privacy controls for movies, TV shows, anime, and statistics with friend-aware visibility
+- ✅ **Profile Pictures:** Upload, change, and reset profile pictures with automatic optimization, content validation, and database storage
+- ✅ **Privacy Settings:** Granular privacy controls for movies, TV shows, anime, video games, and statistics with friend-aware visibility
 - ✅ **Friend Profile Viewing:** View friends' collections and statistics with search/filter capabilities and privacy-aware access
 - ✅ **Enhanced Security:** Content validation (magic bytes), image processing, rate limiting, and comprehensive bot filtering
-- ✅ **Persistent Storage:** Profile pictures stored in persistent directory that survives code updates and deployments
 - ✅ **Friends & Social Features:** Complete friends system with friend requests, toggleable friends list sidebar, and social interactions
 - ✅ **Notifications System:** Real-time notifications with bell icon, unread count badge, and auto-dismissal
 - ✅ **Account Management:** Full account settings - change username, email, password, and account deactivation/reactivation
 - ✅ **Decimal Ratings:** Support for precise ratings from 0-10.0 with one decimal place
 - ✅ **Modern UI Redesign:** Card-based layouts, smooth animations, gradient designs, and collapsible forms
-- ✅ **Statistics Panel Enhancement:** Animated visualizations and improved readability
+- ✅ **Statistics Panel Enhancement:** Animated visualizations and improved readability across all media types
 - ✅ **SEO Optimization:** Meta tags, structured data, sitemap, and robots.txt
 - ✅ **Security Improvements:** Security headers, bot filtering, and enhanced protection
 - ✅ **Performance Optimizations:** Poster caching, deduplication, and loading state management

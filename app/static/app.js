@@ -1580,6 +1580,9 @@ function displayStatistics(stats) {
   // Director statistics
   displayTopDirectors(stats.director_stats.top_directors);
   displayHighestRatedDirectors(stats.director_stats.highest_rated_directors);
+
+  // Video game statistics
+  displayVideoGameStatistics(stats);
 }
 
 // Animation helper functions
@@ -1842,6 +1845,113 @@ function displayHighestRatedDirectors(directors) {
     }, index * 80);
   });
 }
+
+function toggleVideoGameStats() {
+  const content = document.getElementById('videoGameStatsContent');
+  const icon = document.getElementById('videoGameStatsIcon');
+  
+  if (content.style.display === 'none') {
+    content.style.display = 'block';
+    icon.textContent = '▲';
+  } else {
+    content.style.display = 'none';
+    icon.textContent = '▼';
+  }
+}
+
+function displayVideoGameStatistics(stats) {
+  const watchStats = stats.watch_stats;
+  const ratingStats = stats.rating_stats;
+  const yearStats = stats.year_stats;
+
+  // Video game watch statistics
+  animateValue('totalVideoGames', 0, watchStats.total_video_games, 800);
+  animateValue('playedVideoGames', 0, watchStats.played_video_games, 800);
+  animateValue('unplayedVideoGames', 0, watchStats.unplayed_video_games, 800);
+  
+  const videoGameCompletion = watchStats.total_video_games > 0 
+    ? Math.round((watchStats.played_video_games / watchStats.total_video_games) * 100 * 10) / 10
+    : 0;
+  animatePercentage('videoGameCompletionPercentage', 0, videoGameCompletion, 1000);
+
+  // Highest rated video games
+  const highestRatedVideoGames = ratingStats.highest_rated.filter(item => item.type === 'Video Game');
+  displayHighestRatedVideoGames(highestRatedVideoGames);
+
+  // Video games by year
+  displayVideoGamesByYear(yearStats.video_games_by_year);
+}
+
+function displayHighestRatedVideoGames(games) {
+  const container = document.getElementById('highestRatedVideoGamesList');
+  container.innerHTML = '';
+
+  if (games.length === 0) {
+    container.innerHTML = '<p style="text-align: center; color: var(--fg); opacity: 0.6; padding: 20px;">No rated games found.</p>';
+    return;
+  }
+
+  games.slice(0, 10).forEach((game, index) => {
+    const gameDiv = document.createElement('div');
+    gameDiv.className = 'director-item';
+    gameDiv.style.opacity = '0';
+    gameDiv.style.transform = 'translateX(-10px)';
+    gameDiv.innerHTML = `
+      <div class="director-name">${game.title}</div>
+      <div class="director-rating">${game.rating.toFixed(1)}/10</div>
+    `;
+    container.appendChild(gameDiv);
+
+    // Animate item appearance
+    setTimeout(() => {
+      gameDiv.style.transition = 'opacity 0.3s ease, transform 0.3s ease';
+      gameDiv.style.opacity = '1';
+      gameDiv.style.transform = 'translateX(0)';
+    }, index * 80);
+  });
+}
+
+function displayVideoGamesByYear(videoGamesByYear) {
+  const container = document.getElementById('videoGamesByYearList');
+  container.innerHTML = '';
+
+  if (!videoGamesByYear || Object.keys(videoGamesByYear).length === 0) {
+    container.innerHTML = '<p style="text-align: center; color: var(--fg); opacity: 0.6; padding: 20px;">No games with release dates found.</p>';
+    return;
+  }
+
+  // Sort years in descending order
+  const sortedYears = Object.keys(videoGamesByYear)
+    .map(year => parseInt(year))
+    .sort((a, b) => b - a)
+    .slice(0, 10); // Show top 10 years
+
+  if (sortedYears.length === 0) {
+    container.innerHTML = '<p style="text-align: center; color: var(--fg); opacity: 0.6; padding: 20px;">No games with release dates found.</p>';
+    return;
+  }
+
+  sortedYears.forEach((year, index) => {
+    const count = videoGamesByYear[year.toString()];
+    const yearDiv = document.createElement('div');
+    yearDiv.className = 'director-item';
+    yearDiv.style.opacity = '0';
+    yearDiv.style.transform = 'translateX(-10px)';
+    yearDiv.innerHTML = `
+      <div class="director-name">${year}</div>
+      <div class="director-rating">${count} ${count === 1 ? 'game' : 'games'}</div>
+    `;
+    container.appendChild(yearDiv);
+
+    // Animate item appearance
+    setTimeout(() => {
+      yearDiv.style.transition = 'opacity 0.3s ease, transform 0.3s ease';
+      yearDiv.style.opacity = '1';
+      yearDiv.style.transform = 'translateX(0)';
+    }, index * 80);
+  });
+}
+
 
 // Event listeners
 document.getElementById('loadMovies').addEventListener('click', loadMovies);

@@ -1259,7 +1259,8 @@ body.dark-mode .card>div:nth-of-type(2) {
 }
 
 .top-rated,
-.director-stats {
+.director-stats,
+.video-game-stats-details {
   margin: 28px 0;
   width: 100%;
   max-width: 100%;
@@ -1311,7 +1312,8 @@ body.dark-mode .card>div:nth-of-type(2) {
   -webkit-text-fill-color: var(--primary);
 }
 
-.director-stats {
+.director-stats,
+.video-game-stats-details {
   display: grid;
   grid-template-columns: 1fr 1fr;
   gap: 24px;
@@ -1321,7 +1323,8 @@ body.dark-mode .card>div:nth-of-type(2) {
   box-sizing: border-box;
 }
 
-.director-column {
+.director-column,
+.video-game-column {
   padding: 20px;
   background-color: var(--card-bg);
   border-radius: 12px;
@@ -1404,7 +1407,8 @@ body.dark-mode .card>div:nth-of-type(2) {
     gap: 16px;
   }
 
-  .director-stats {
+  .director-stats,
+  .video-game-stats-details {
     grid-template-columns: 1fr;
   }
 
@@ -3549,7 +3553,9 @@ body.dark-mode .friend-request-modal-content form input {
 #statistics-tab .decade-stats,
 #statistics-tab .director-stats,
 #statistics-tab .director-column,
-#statistics-tab .top-rated {
+#statistics-tab .top-rated,
+#statistics-tab .video-game-stats-details,
+#statistics-tab .video-game-column {
   width: 100% !important;
   max-width: 100% !important;
   box-sizing: border-box !important;
