@@ -978,9 +978,9 @@ body.dark-mode .card>div:nth-of-type(2) {
 .stats-section {
   margin-bottom: 24px;
   padding: 24px;
-  background: linear-gradient(135deg, var(--card-bg) 0%, rgba(102, 126, 234, 0.03) 100%);
+  background-color: var(--card-bg);
   border-radius: 12px;
-  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.08);
+  box-shadow: 0 2px 12px rgba(0, 0, 0, 0.08);
   border: 1px solid rgba(102, 126, 234, 0.1);
   transition: transform 0.2s ease, box-shadow 0.2s ease;
   width: 100%;
@@ -1183,7 +1183,7 @@ body.dark-mode .card>div:nth-of-type(2) {
 .decade-stats {
   margin: 28px 0;
   padding: 20px;
-  background: linear-gradient(135deg, rgba(102, 126, 234, 0.03) 0%, rgba(118, 75, 162, 0.03) 100%);
+  background-color: var(--card-bg);
   border-radius: 12px;
   border: 1px solid rgba(102, 126, 234, 0.1);
   width: 100%;
@@ -1315,7 +1315,7 @@ body.dark-mode .card>div:nth-of-type(2) {
 
 .director-column {
   padding: 20px;
-  background: linear-gradient(135deg, rgba(102, 126, 234, 0.03) 0%, rgba(118, 75, 162, 0.03) 100%);
+  background-color: var(--card-bg);
   border-radius: 12px;
   border: 1px solid rgba(102, 126, 234, 0.1);
   width: 100%;
@@ -1344,10 +1344,16 @@ body.dark-mode .card>div:nth-of-type(2) {
   box-sizing: border-box;
 }
 
+/* Fix statsContent width and styling - make it match .card styling */
 #statsContent {
   width: 100%;
   max-width: 100%;
   box-sizing: border-box;
+  background-color: var(--card-bg);
+  padding: 24px;
+  border-radius: 12px;
+  box-shadow: 0 2px 12px rgba(0, 0, 0, 0.08);
+  margin-bottom: 24px;
 }
 
 #statsLoading p {
@@ -3417,7 +3423,19 @@ body.dark-mode .friend-request-modal-content form input {
 }
 
 /* Statistics tab specific - ensure all nested elements use full width */
-#statistics-tab #statsContent,
+#statistics-tab #statsContent {
+  width: 100% !important;
+  max-width: 100% !important;
+  box-sizing: border-box !important;
+  margin-left: 0 !important;
+  margin-right: 0 !important;
+  background-color: var(--card-bg) !important;
+  padding: 24px !important;
+  border-radius: 12px !important;
+  box-shadow: 0 2px 12px rgba(0, 0, 0, 0.08) !important;
+  margin-bottom: 24px !important;
+}
+
 #statistics-tab #statsLoading {
   width: 100% !important;
   max-width: 100% !important;
