@@ -1,0 +1,122 @@
+"""
+Export/Import endpoints for the OmniTrackr API.
+"""
+import json
+from datetime import datetime
+from fastapi import APIRouter, Depends, HTTPException, UploadFile, File
+from sqlalchemy.orm import Session
+
+from .. import crud, schemas, models
+from ..dependencies import get_db, get_current_user
+
+router = APIRouter(prefix="", tags=["export-import"])
+
+
+@router.get("/export/", response_model=schemas.ExportData)
+async def export_data(
+    current_user: models.User = Depends(get_current_user),
+    db: Session = Depends(get_db)
+):
+    """Export all movies, TV shows, anime, and video games as JSON"""
+    movies = crud.get_all_movies(db, current_user.id)
+    tv_shows = crud.get_all_tv_shows(db, current_user.id)
+    anime = crud.get_all_anime(db, current_user.id)
+    video_games = crud.get_all_video_games(db, current_user.id)
+
+    export_metadata = {
+        "export_timestamp": datetime.now().isoformat(),
+        "version": "1.0",
+        "total_movies": len(movies),
+        "total_tv_shows": len(tv_shows),
+        "total_anime": len(anime),
+        "total_video_games": len(video_games)
+    }
+
+    return schemas.ExportData(
+        movies=movies,
+        tv_shows=tv_shows,
+        anime=anime,
+        video_games=video_games,
+        export_metadata=export_metadata
+    )
+
+
+@router.post("/import/", response_model=schemas.ImportResult)
+async def import_data(
+    import_data: schemas.ImportData,
+    current_user: models.User = Depends(get_current_user),
+    db: Session = Depends(get_db)
+):
+    """Import movies, TV shows, anime, and video games from JSON data"""
+    movies_created, movies_updated, movie_errors = crud.import_movies(db, current_user.id, import_data.movies)
+    tv_shows_created, tv_shows_updated, tv_show_errors = crud.import_tv_shows(db, current_user.id, import_data.tv_shows)
+    anime_created, anime_updated, anime_errors = crud.import_anime(db, current_user.id, import_data.anime)
+    video_games_created, video_games_updated, video_game_errors = crud.import_video_games(db, current_user.id, import_data.video_games)
+
+    all_errors = movie_errors + tv_show_errors + anime_errors + video_game_errors
+
+    return schemas.ImportResult(
+        movies_created=movies_created,
+        movies_updated=movies_updated,
+        tv_shows_created=tv_shows_created,
+        tv_shows_updated=tv_shows_updated,
+        anime_created=anime_created,
+        anime_updated=anime_updated,
+        video_games_created=video_games_created,
+        video_games_updated=video_games_updated,
+        errors=all_errors
+    )
+
+
+@router.post("/import/file/", response_model=schemas.ImportResult)
+async def import_from_file(
+    file: UploadFile = File(...),
+    current_user: models.User = Depends(get_current_user),
+    db: Session = Depends(get_db)
+):
+    """Import data from a JSON file upload"""
+    if not file.filename.endswith('.json'):
+        raise HTTPException(status_code=400, detail="File must be a JSON file")
+
+    try:
+        content = await file.read()
+        data = json.loads(content.decode('utf-8'))
+
+        # Validate the imported data structure
+        # Note: 'anime' and 'video_games' are optional for backward compatibility with old export files
+        if 'movies' not in data or 'tv_shows' not in data:
+            raise HTTPException(status_code=400, detail="Invalid file format. Expected 'movies' and 'tv_shows' arrays. 'anime' and 'video_games' are optional for backward compatibility.")
+
+        # Convert to Pydantic models
+        movies = [schemas.MovieCreate(**movie) for movie in data.get('movies', [])]
+        tv_shows = [schemas.TVShowCreate(**tv_show) for tv_show in data.get('tv_shows', [])]
+        anime = [schemas.AnimeCreate(**anime_item) for anime_item in data.get('anime', [])]
+        video_games = [schemas.VideoGameCreate(**video_game) for video_game in data.get('video_games', [])]
+
+        import_data = schemas.ImportData(movies=movies, tv_shows=tv_shows, anime=anime, video_games=video_games)
+
+        # Import the data
+        movies_created, movies_updated, movie_errors = crud.import_movies(db, current_user.id, import_data.movies)
+        tv_shows_created, tv_shows_updated, tv_show_errors = crud.import_tv_shows(db, current_user.id, import_data.tv_shows)
+        anime_created, anime_updated, anime_errors = crud.import_anime(db, current_user.id, import_data.anime)
+        video_games_created, video_games_updated, video_game_errors = crud.import_video_games(db, current_user.id, import_data.video_games)
+
+        all_errors = movie_errors + tv_show_errors + anime_errors + video_game_errors
+
+        return schemas.ImportResult(
+            movies_created=movies_created,
+            movies_updated=movies_updated,
+            tv_shows_created=tv_shows_created,
+            tv_shows_updated=tv_shows_updated,
+            anime_created=anime_created,
+            anime_updated=anime_updated,
+            video_games_created=video_games_created,
+            video_games_updated=video_games_updated,
+            errors=all_errors
+        )
+
+    except json.JSONDecodeError:
+        raise HTTPException(status_code=400, detail="Invalid JSON file")
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Error processing file: {str(e)}")
+
