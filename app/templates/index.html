@@ -2,62 +2,67 @@
 <html lang="en">
 
 <head>
-  
+
   <!-- Google tag (gtag.js) -->
   <script async src="https://www.googletagmanager.com/gtag/js?id=G-7EJ4ZGHNV1"></script>
   <script>
     window.dataLayer = window.dataLayer || [];
-    function gtag(){dataLayer.push(arguments);}
+    function gtag() { dataLayer.push(arguments); }
     gtag('js', new Date());
 
     gtag('config', 'G-7EJ4ZGHNV1');
   </script>
   <script async src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-7271682066779719"
-  crossorigin="anonymous"></script>
+    crossorigin="anonymous"></script>
 
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=5.0, user-scalable=yes">
   <meta name="theme-color" content="#1e1e2f">
-  <meta name="description" content="OmniTrackr - Track and organize your movies, TV shows, and anime. Rate, review, and analyze your media collection with comprehensive statistics and beautiful posters.">
-  <meta name="keywords" content="movie tracker, TV show tracker, anime tracker, media collection, movie database, watchlist, film tracker, entertainment tracker, movie ratings, TV ratings, anime ratings, media organizer, personal movie database, track movies online, TV show database, anime database, movie collection manager, watchlist app, film collection tracker, entertainment database, movie review tracker, TV show review tracker, anime review tracker, media tracking app, free movie tracker, movie statistics, TV show statistics, anime statistics, friends movie tracker, social movie tracking">
+  <meta name="description"
+    content="OmniTrackr - Track and organize your movies, TV shows, and anime. Rate, review, and analyze your media collection with comprehensive statistics and beautiful posters.">
+  <meta name="keywords"
+    content="movie tracker, TV show tracker, anime tracker, media collection, movie database, watchlist, film tracker, entertainment tracker, movie ratings, TV ratings, anime ratings, media organizer, personal movie database, track movies online, TV show database, anime database, movie collection manager, watchlist app, film collection tracker, entertainment database, movie review tracker, TV show review tracker, anime review tracker, media tracking app, free movie tracker, movie statistics, TV show statistics, anime statistics, friends movie tracker, social movie tracking">
   <meta name="author" content="OmniTrackr">
   <meta name="robots" content="index, follow">
   <meta name="language" content="English">
   <meta name="revisit-after" content="7 days">
-  
+
   <!-- Open Graph / Facebook -->
   <meta property="og:type" content="website">
   <meta property="og:url" content="https://omnitrackr.xyz/">
   <meta property="og:title" content="OmniTrackr - Your Personal Media Tracking Companion">
-  <meta property="og:description" content="Track and organize your movies, TV shows, and anime. Rate, review, and analyze your media collection with comprehensive statistics and beautiful posters.">
+  <meta property="og:description"
+    content="Track and organize your movies, TV shows, and anime. Rate, review, and analyze your media collection with comprehensive statistics and beautiful posters.">
   <meta property="og:image" content="https://omnitrackr.xyz/omnitrackr_vortex.png">
   <meta property="og:image:width" content="1200">
   <meta property="og:image:height" content="630">
   <meta property="og:image:alt" content="OmniTrackr - Movie, TV Show, and Anime Tracking Application">
   <meta property="og:site_name" content="OmniTrackr">
   <meta property="og:locale" content="en_US">
-  
+
   <!-- Twitter -->
   <meta name="twitter:card" content="summary_large_image">
   <meta name="twitter:url" content="https://omnitrackr.xyz/">
   <meta name="twitter:title" content="OmniTrackr - Your Personal Media Tracking Companion">
-  <meta name="twitter:description" content="Track and organize your movies, TV shows, and anime. Rate, review, and analyze your media collection with comprehensive statistics and beautiful posters.">
+  <meta name="twitter:description"
+    content="Track and organize your movies, TV shows, and anime. Rate, review, and analyze your media collection with comprehensive statistics and beautiful posters.">
   <meta name="twitter:image" content="https://omnitrackr.xyz/omnitrackr_vortex.png">
   <meta name="twitter:image:alt" content="OmniTrackr - Movie, TV Show, and Anime Tracking Application">
   <meta name="twitter:site" content="@omnitrackr">
-  
+
   <!-- Canonical URL -->
   <link rel="canonical" href="https://omnitrackr.xyz/">
-  
+
   <title>OmniTrackr - Track Movies, TV Shows & Anime | Media Collection Manager</title>
   <link rel="icon" type="image/x-icon" href="/omnitrackr_favicon.ico">
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link rel="dns-prefetch" href="https://www.googletagmanager.com">
   <link rel="dns-prefetch" href="https://www.google-analytics.com">
-  <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@700;800&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@700;800&family=Inter:wght@400;500;600&display=swap"
+    rel="stylesheet">
   <link rel="stylesheet" href="./styles.css">
-  
+
   <!-- JSON-LD Structured Data -->
   <script type="application/ld+json">
   {
@@ -99,7 +104,7 @@
     }
   }
   </script>
-  
+
   <script type="application/ld+json">
   {
     "@context": "https://schema.org",
@@ -120,7 +125,7 @@
     ]
   }
   </script>
-  
+
   <script type="application/ld+json">
   {
     "@context": "https://schema.org",
@@ -152,17 +157,19 @@
     </div>
   </div>
   <button id="userDisplay" class="user-display-btn" role="button" aria-label="Open account settings">
-    <img id="userProfilePicture" class="user-profile-picture" src="/static/default-avatar.svg" alt="Profile" onerror="this.src='/static/default-avatar.svg'">
+    <img id="userProfilePicture" class="user-profile-picture" src="/static/default-avatar.svg" alt="Profile"
+      onerror="this.src='/static/default-avatar.svg'">
     <span id="userDisplayText"></span>
   </button>
   <button id="logoutBtn" aria-label="Logout from your account">Logout</button>
-  
+
   <!-- Friends Sidebar -->
   <aside id="friendsSidebar" class="friends-sidebar" style="display: none;">
     <div class="friends-sidebar-header">
       <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px;">
         <h2 style="margin: 0;">Friends</h2>
-        <button id="toggleFriendsSidebar" class="sidebar-toggle-btn" title="Hide Friends Sidebar" aria-label="Hide friends sidebar">◀</button>
+        <button id="toggleFriendsSidebar" class="sidebar-toggle-btn" title="Hide Friends Sidebar"
+          aria-label="Hide friends sidebar">◀</button>
       </div>
       <button id="sendFriendRequestBtn" class="action-btn">+ Add Friend</button>
     </div>
@@ -170,10 +177,11 @@
       <p class="no-friends">No friends yet</p>
     </div>
   </aside>
-  
+
   <!-- Floating Toggle Button (shown when sidebar is hidden) -->
-  <button id="showFriendsSidebar" class="sidebar-toggle-floating" title="Show Friends Sidebar" aria-label="Show friends sidebar" style="display: none;">▶</button>
-  
+  <button id="showFriendsSidebar" class="sidebar-toggle-floating" title="Show Friends Sidebar"
+    aria-label="Show friends sidebar" style="display: none;">▶</button>
+
   <main class="container" id="mainContainer">
     <header class="header" role="banner">
       <h1>OmniTrackr</h1>
@@ -242,20 +250,20 @@
         <input type="file" id="importFile" accept=".json" style="display: none;">
         <div class="table-container">
           <table id="movieTable">
-          <thead>
-            <tr>
-              <th>Poster</th>
-              <th>Title</th>
-              <th>Director</th>
-              <th>Year</th>
-              <th>Rating</th>
-              <th>Watched</th>
-              <th>Review</th>
-              <th>IMDb</th>
-              <th>Actions</th>
-            </tr>
-          </thead>
-          <tbody></tbody>
+            <thead>
+              <tr>
+                <th>Poster</th>
+                <th>Title</th>
+                <th>Director</th>
+                <th>Year</th>
+                <th>Rating</th>
+                <th>Watched</th>
+                <th>Review</th>
+                <th>IMDb</th>
+                <th>Actions</th>
+              </tr>
+            </thead>
+            <tbody></tbody>
           </table>
         </div>
       </div>
@@ -318,21 +326,21 @@
         <input type="file" id="importTVFile" accept=".json" style="display: none;">
         <div class="table-container">
           <table id="tvShowTable">
-          <thead>
-            <tr>
-              <th>Poster</th>
-              <th>Title</th>
-              <th>Year</th>
-              <th>Seasons</th>
-              <th>Episodes</th>
-              <th>Rating</th>
-              <th>Watched</th>
-              <th>Review</th>
-              <th>IMDb</th>
-              <th>Actions</th>
-            </tr>
-          </thead>
-          <tbody>          </tbody>
+            <thead>
+              <tr>
+                <th>Poster</th>
+                <th>Title</th>
+                <th>Year</th>
+                <th>Seasons</th>
+                <th>Episodes</th>
+                <th>Rating</th>
+                <th>Watched</th>
+                <th>Review</th>
+                <th>IMDb</th>
+                <th>Actions</th>
+              </tr>
+            </thead>
+            <tbody> </tbody>
           </table>
         </div>
       </div>
@@ -395,21 +403,21 @@
         <input type="file" id="importAnimeFile" accept=".json" style="display: none;">
         <div class="table-container">
           <table id="animeTable">
-          <thead>
-            <tr>
-              <th>Poster</th>
-              <th>Title</th>
-              <th>Year</th>
-              <th>Seasons</th>
-              <th>Episodes</th>
-              <th>Rating</th>
-              <th>Watched</th>
-              <th>Review</th>
-              <th>IMDb</th>
-              <th>Actions</th>
-            </tr>
-          </thead>
-          <tbody>          </tbody>
+            <thead>
+              <tr>
+                <th>Poster</th>
+                <th>Title</th>
+                <th>Year</th>
+                <th>Seasons</th>
+                <th>Episodes</th>
+                <th>Rating</th>
+                <th>Watched</th>
+                <th>Review</th>
+                <th>IMDb</th>
+                <th>Actions</th>
+              </tr>
+            </thead>
+            <tbody> </tbody>
           </table>
         </div>
       </div>
@@ -449,7 +457,8 @@
           <span id="videoGameCount" style="font-weight: bold;"></span>
         </div>
         <div style="display:flex; flex-wrap: wrap; gap: 10px; margin-bottom: 10px;">
-          <input type="text" id="videoGameSearch" placeholder="Search by title or genres" style="flex: 2; min-width: 200px;">
+          <input type="text" id="videoGameSearch" placeholder="Search by title or genres"
+            style="flex: 2; min-width: 200px;">
           <select id="videoGameSort" style="flex: 1; min-width: 200px;">
             <option value="">Sort by...</option>
             <option value="rating-asc">Rating (Low → High)</option>
@@ -466,20 +475,20 @@
         <input type="file" id="importVideoGameFile" accept=".json" style="display: none;">
         <div class="table-container">
           <table id="videoGameTable">
-          <thead>
-            <tr>
-              <th>Cover Art</th>
-              <th>Name</th>
-              <th>Release Date</th>
-              <th>Genres</th>
-              <th>Played</th>
-              <th>Rating</th>
-              <th>RAWG Link</th>
-              <th>Review</th>
-              <th>Actions</th>
-            </tr>
-          </thead>
-          <tbody>          </tbody>
+            <thead>
+              <tr>
+                <th>Cover Art</th>
+                <th>Name</th>
+                <th>Release Date</th>
+                <th>Genres</th>
+                <th>Played</th>
+                <th>Rating</th>
+                <th>RAWG Link</th>
+                <th>Review</th>
+                <th>Actions</th>
+              </tr>
+            </thead>
+            <tbody> </tbody>
           </table>
         </div>
       </div>
@@ -488,96 +497,102 @@
     <!-- Statistics Tab Content -->
     <div id="statistics-tab" class="tab-content">
       <div class="card">
-        <h2 style="background: linear-gradient(135deg, #667eea 0%, #764ba2 50%, #f093fb 100%); -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text; margin-bottom: 24px;">📊 Statistics Dashboard</h2>
+        <h2
+          style="background: linear-gradient(135deg, #667eea 0%, #764ba2 50%, #f093fb 100%); -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text; margin-bottom: 24px;">
+          📊 Statistics Dashboard</h2>
         <div id="statsLoading" style="text-align: center; padding: 40px;">
-          <div style="display: inline-block; width: 40px; height: 40px; border: 4px solid rgba(102, 126, 234, 0.2); border-top-color: var(--primary); border-radius: 50%; animation: spin 1s linear infinite;"></div>
+          <div
+            style="display: inline-block; width: 40px; height: 40px; border: 4px solid rgba(102, 126, 234, 0.2); border-top-color: var(--primary); border-radius: 50%; animation: spin 1s linear infinite;">
+          </div>
           <p style="margin-top: 16px; color: var(--fg); font-size: 1.1rem;">Loading statistics...</p>
         </div>
-        <div id="statsContent" style="display: none;">
-          <!-- Watch Statistics -->
-          <div class="stats-section">
-            <h3>📈 Watch Progress</h3>
-            <div class="stats-grid">
-              <div class="stat-card">
-                <div class="stat-number" id="totalItems">0</div>
-                <div class="stat-label">Total Items</div>
-              </div>
-              <div class="stat-card">
-                <div class="stat-number" id="watchedItems">0</div>
-                <div class="stat-label">Watched</div>
-              </div>
-              <div class="stat-card">
-                <div class="stat-number" id="unwatchedItems">0</div>
-                <div class="stat-label">Unwatched</div>
-              </div>
-              <div class="stat-card">
-                <div class="stat-number" id="completionPercentage">0%</div>
-                <div class="stat-label">Completion</div>
-              </div>
-            </div>
-            <div class="progress-bar">
-              <div class="progress-fill" id="progressFill"></div>
-            </div>
+      </div>
+    </div>
+    <div id="statsContent" style="display: none;">
+      <!-- Watch Statistics -->
+      <div class="stats-section">
+        <h3>📈 Watch Progress</h3>
+        <div class="stats-grid">
+          <div class="stat-card">
+            <div class="stat-number" id="totalItems">0</div>
+            <div class="stat-label">Total Items</div>
           </div>
-
-          <!-- Rating Statistics -->
-          <div class="stats-section">
-            <h3>⭐ Rating Analysis</h3>
-            <div class="stats-grid">
-              <div class="stat-card">
-                <div class="stat-number" id="averageRating">0.0</div>
-                <div class="stat-label">Average Rating</div>
-              </div>
-              <div class="stat-card">
-                <div class="stat-number" id="totalRatedItems">0</div>
-                <div class="stat-label">Rated Items</div>
-              </div>
-            </div>
-            <div class="rating-distribution">
-              <h4>Rating Distribution</h4>
-              <div id="ratingBars"></div>
-            </div>
-            <div class="top-rated">
-              <h4>🏆 Highest Rated</h4>
-              <div id="highestRatedList"></div>
-            </div>
+          <div class="stat-card">
+            <div class="stat-number" id="watchedItems">0</div>
+            <div class="stat-label">Watched</div>
           </div>
-
-          <!-- Year Statistics -->
-          <div class="stats-section">
-            <h3>📅 Year Analysis</h3>
-            <div class="stats-grid">
-              <div class="stat-card">
-                <div class="stat-number" id="oldestYear">-</div>
-                <div class="stat-label">Oldest Year</div>
-              </div>
-              <div class="stat-card">
-                <div class="stat-number" id="newestYear">-</div>
-                <div class="stat-label">Newest Year</div>
-              </div>
-            </div>
-            <div class="decade-stats">
-              <h4>Decade Breakdown</h4>
-              <div id="decadeBars"></div>
-            </div>
+          <div class="stat-card">
+            <div class="stat-number" id="unwatchedItems">0</div>
+            <div class="stat-label">Unwatched</div>
           </div>
+          <div class="stat-card">
+            <div class="stat-number" id="completionPercentage">0%</div>
+            <div class="stat-label">Completion</div>
+          </div>
+        </div>
+        <div class="progress-bar">
+          <div class="progress-fill" id="progressFill"></div>
+        </div>
+      </div>
 
-          <!-- Director Statistics -->
-          <div class="stats-section">
-            <h3>🎬 Director Analysis</h3>
-            <div class="director-stats">
-              <div class="director-column">
-                <h4>Most Prolific Directors</h4>
-                <div id="topDirectorsList"></div>
-              </div>
-              <div class="director-column">
-                <h4>Highest Rated Directors</h4>
-                <div id="highestRatedDirectorsList"></div>
-              </div>
-            </div>
+      <!-- Rating Statistics -->
+      <div class="stats-section">
+        <h3>⭐ Rating Analysis</h3>
+        <div class="stats-grid">
+          <div class="stat-card">
+            <div class="stat-number" id="averageRating">0.0</div>
+            <div class="stat-label">Average Rating</div>
+          </div>
+          <div class="stat-card">
+            <div class="stat-number" id="totalRatedItems">0</div>
+            <div class="stat-label">Rated Items</div>
+          </div>
+        </div>
+        <div class="rating-distribution">
+          <h4>Rating Distribution</h4>
+          <div id="ratingBars"></div>
+        </div>
+        <div class="top-rated">
+          <h4>🏆 Highest Rated</h4>
+          <div id="highestRatedList"></div>
+        </div>
+      </div>
+
+      <!-- Year Statistics -->
+      <div class="stats-section">
+        <h3>📅 Year Analysis</h3>
+        <div class="stats-grid">
+          <div class="stat-card">
+            <div class="stat-number" id="oldestYear">-</div>
+            <div class="stat-label">Oldest Year</div>
+          </div>
+          <div class="stat-card">
+            <div class="stat-number" id="newestYear">-</div>
+            <div class="stat-label">Newest Year</div>
+          </div>
+        </div>
+        <div class="decade-stats">
+          <h4>Decade Breakdown</h4>
+          <div id="decadeBars"></div>
+        </div>
+      </div>
+
+      <!-- Director Statistics -->
+      <div class="stats-section">
+        <h3>🎬 Director Analysis</h3>
+        <div class="director-stats">
+          <div class="director-column">
+            <h4>Most Prolific Directors</h4>
+            <div id="topDirectorsList"></div>
+          </div>
+          <div class="director-column">
+            <h4>Highest Rated Directors</h4>
+            <div id="highestRatedDirectorsList"></div>
           </div>
         </div>
       </div>
+    </div>
+
     </div>
   </main>
 
@@ -587,8 +602,10 @@
       <p class="footer-text">Connect with us</p>
       <div class="footer-links">
         <a href="mailto:omnitrackr@gmail.com" class="footer-link">📧 omnitrackr@gmail.com</a>
-        <a href="https://github.com/chambies2015/OmniTrackr" target="_blank" rel="noopener noreferrer" class="footer-link">🐙 GitHub</a>
-        <a href="https://www.linkedin.com/in/d-g-c/" target="_blank" rel="noopener noreferrer" class="footer-link">💼 LinkedIn</a>
+        <a href="https://github.com/chambies2015/OmniTrackr" target="_blank" rel="noopener noreferrer"
+          class="footer-link">🐙 GitHub</a>
+        <a href="https://www.linkedin.com/in/d-g-c/" target="_blank" rel="noopener noreferrer" class="footer-link">💼
+          LinkedIn</a>
         <a href="https://ko-fi.com/omnitrackr" target="_blank" rel="noopener noreferrer" class="footer-link">☕ Ko-fi</a>
       </div>
     </div>
@@ -610,7 +627,8 @@
         <div class="feature-card">
           <div class="feature-icon">🎬</div>
           <h3>Track Movies, TV Shows, Anime & Video Games</h3>
-          <p>Organize your entire media collection in one place with ratings, reviews, and watch status for movies, TV shows, anime, and video games.</p>
+          <p>Organize your entire media collection in one place with ratings, reviews, and watch status for movies, TV
+            shows, anime, and video games.</p>
           <p class="feature-microcopy">Track everything you watch, play, read — effortlessly.</p>
         </div>
         <div class="feature-card">
@@ -640,7 +658,8 @@
         <div class="feature-card">
           <div class="feature-icon">👥</div>
           <h3>Friends & Social</h3>
-          <p>Connect with friends, send friend requests, and explore friends' collections and statistics with privacy controls.</p>
+          <p>Connect with friends, send friend requests, and explore friends' collections and statistics with privacy
+            controls.</p>
           <p class="feature-microcopy">Share the love, keep the privacy</p>
         </div>
         <div class="feature-card">
@@ -652,13 +671,15 @@
         <div class="feature-card">
           <div class="feature-icon">⚙️</div>
           <h3>Account Management</h3>
-          <p>Full control over your account - change username, email, password, upload profile pictures, and manage privacy settings.</p>
+          <p>Full control over your account - change username, email, password, upload profile pictures, and manage
+            privacy settings.</p>
           <p class="feature-microcopy">Your watchlist, your rules</p>
         </div>
         <div class="feature-card">
           <div class="feature-icon">🔒</div>
           <h3>Privacy Controls</h3>
-          <p>Granular privacy settings for your movies, TV shows, anime, video games, and statistics - control what friends can see.</p>
+          <p>Granular privacy settings for your movies, TV shows, anime, video games, and statistics - control what
+            friends can see.</p>
           <p class="feature-microcopy">Privacy that actually works</p>
         </div>
       </div>
@@ -680,13 +701,15 @@
           </form>
           <div id="resendVerificationContainer" style="display: none; margin-top: 15px; text-align: center;">
             <p style="margin-bottom: 10px; color: #666; font-size: 14px;">Didn't receive the verification email?</p>
-            <button type="button" id="resendVerificationBtn" class="action-btn" style="background-color: #667eea; width: 100%;">
+            <button type="button" id="resendVerificationBtn" class="action-btn"
+              style="background-color: #667eea; width: 100%;">
               Resend Verification Email
             </button>
           </div>
           <div class="auth-toggle">
             Don't have an account? <a id="showRegister">Register</a><br>
-            <a id="showForgotPassword" style="font-size: 0.9em; margin-top: 5px; display: inline-block;">Forgot Password?</a>
+            <a id="showForgotPassword" style="font-size: 0.9em; margin-top: 5px; display: inline-block;">Forgot
+              Password?</a>
           </div>
         </div>
 
@@ -707,7 +730,8 @@
         <!-- Forgot Password Form -->
         <div id="forgotPasswordForm" class="auth-form" style="display: none;">
           <form id="forgotPasswordFormElement">
-            <p style="text-align: center; margin-bottom: 20px;">Enter your email address and we'll send you a link to reset your password.</p>
+            <p style="text-align: center; margin-bottom: 20px;">Enter your email address and we'll send you a link to
+              reset your password.</p>
             <input type="email" id="forgotPasswordEmail" placeholder="Email Address" required>
             <button type="submit">Send Reset Link</button>
           </form>
@@ -738,7 +762,9 @@
             <span class="faq-icon">+</span>
           </button>
           <div class="faq-answer" id="faq-answer-1">
-            <p>OmniTrackr is a free, web-based application that helps you track and organize your movie, TV show, and anime collection. You can rate, review, and analyze your media with comprehensive statistics, beautiful posters, and social features to share with friends.</p>
+            <p>OmniTrackr is a free, web-based application that helps you track and organize your movie, TV show, and
+              anime collection. You can rate, review, and analyze your media with comprehensive statistics, beautiful
+              posters, and social features to share with friends.</p>
           </div>
         </div>
 
@@ -748,7 +774,8 @@
             <span class="faq-icon">+</span>
           </button>
           <div class="faq-answer" id="faq-answer-2">
-            <p>Yes! OmniTrackr is completely free to use. There are no subscription fees, premium tiers, or hidden costs. Just create an account and start tracking your media collection.</p>
+            <p>Yes! OmniTrackr is completely free to use. There are no subscription fees, premium tiers, or hidden
+              costs. Just create an account and start tracking your media collection.</p>
           </div>
         </div>
 
@@ -758,7 +785,9 @@
             <span class="faq-icon">+</span>
           </button>
           <div class="faq-answer" id="faq-answer-3">
-            <p>Simply use the "Add Movie", "Add TV Show", "Add Anime", or "Add Video Game" forms in your dashboard. Enter the title, year, and other details. The app will automatically fetch beautiful posters from the OMDB and RAWG APIs. You can also import your collection from JSON files.</p>
+            <p>Simply use the "Add Movie", "Add TV Show", "Add Anime", or "Add Video Game" forms in your dashboard.
+              Enter the title, year, and other details. The app will automatically fetch beautiful posters from the OMDB
+              and RAWG APIs. You can also import your collection from JSON files.</p>
           </div>
         </div>
 
@@ -768,7 +797,9 @@
             <span class="faq-icon">+</span>
           </button>
           <div class="faq-answer" id="faq-answer-4">
-            <p>Yes! You can export your entire collection (movies, TV shows, and anime) as a JSON file at any time. This allows you to backup your data or import it into another account. You can also import JSON files to quickly add multiple entries.</p>
+            <p>Yes! You can export your entire collection (movies, TV shows, and anime) as a JSON file at any time. This
+              allows you to backup your data or import it into another account. You can also import JSON files to
+              quickly add multiple entries.</p>
           </div>
         </div>
 
@@ -778,7 +809,10 @@
             <span class="faq-icon">+</span>
           </button>
           <div class="faq-answer" id="faq-answer-5">
-            <p>You can send friend requests to other users by their username. When someone sends you a request, you'll receive a notification. You can accept or deny requests. Once accepted, you can view each other's collections and statistics (respecting privacy settings). Friend requests expire after 30 days if not responded to.</p>
+            <p>You can send friend requests to other users by their username. When someone sends you a request, you'll
+              receive a notification. You can accept or deny requests. Once accepted, you can view each other's
+              collections and statistics (respecting privacy settings). Friend requests expire after 30 days if not
+              responded to.</p>
           </div>
         </div>
 
@@ -788,7 +822,9 @@
             <span class="faq-icon">+</span>
           </button>
           <div class="faq-answer" id="faq-answer-6">
-            <p>Privacy settings allow you to control what friends can see. You can make your movies, TV shows, anime, or statistics private. When enabled, even your friends won't be able to see that data - it's completely private to you. You can change these settings anytime in your account settings.</p>
+            <p>Privacy settings allow you to control what friends can see. You can make your movies, TV shows, anime, or
+              statistics private. When enabled, even your friends won't be able to see that data - it's completely
+              private to you. You can change these settings anytime in your account settings.</p>
           </div>
         </div>
 
@@ -798,7 +834,9 @@
             <span class="faq-icon">+</span>
           </button>
           <div class="faq-answer" id="faq-answer-7">
-            <p>Click on your username in the top right corner to open the account settings modal. From there, you can change your username, email, password, upload a profile picture, and manage your privacy settings. Email changes require verification via email.</p>
+            <p>Click on your username in the top right corner to open the account settings modal. From there, you can
+              change your username, email, password, upload a profile picture, and manage your privacy settings. Email
+              changes require verification via email.</p>
           </div>
         </div>
 
@@ -808,7 +846,9 @@
             <span class="faq-icon">+</span>
           </button>
           <div class="faq-answer" id="faq-answer-8">
-            <p>Click "Forgot Password?" on the login page. Enter your email address, and we'll send you a password reset link. Click the link in the email to set a new password. Make sure to check your spam folder if you don't see the email.</p>
+            <p>Click "Forgot Password?" on the login page. Enter your email address, and we'll send you a password reset
+              link. Click the link in the email to set a new password. Make sure to check your spam folder if you don't
+              see the email.</p>
           </div>
         </div>
 
@@ -818,7 +858,9 @@
             <span class="faq-icon">+</span>
           </button>
           <div class="faq-answer" id="faq-answer-9">
-            <p>Yes! You can rate any movie, TV show, or anime from 0 to 10.0 with one decimal place precision (e.g., 7.5, 8.4, 9.2). The statistics dashboard will calculate averages and other metrics using these decimal ratings.</p>
+            <p>Yes! You can rate any movie, TV show, or anime from 0 to 10.0 with one decimal place precision (e.g.,
+              7.5, 8.4, 9.2). The statistics dashboard will calculate averages and other metrics using these decimal
+              ratings.</p>
           </div>
         </div>
 
@@ -828,7 +870,12 @@
             <span class="faq-icon">+</span>
           </button>
           <div class="faq-answer" id="faq-answer-10">
-            <p>You can reach us via email at <a href="mailto:omnitrackr@gmail.com" style="color: var(--primary);">omnitrackr@gmail.com</a>. You can also find us on <a href="https://github.com/chambies2015/OmniTrackr" target="_blank" rel="noopener noreferrer" style="color: var(--primary);">GitHub</a> or <a href="https://www.linkedin.com/in/d-g-c/" target="_blank" rel="noopener noreferrer" style="color: var(--primary);">LinkedIn</a>. We're happy to help!</p>
+            <p>You can reach us via email at <a href="mailto:omnitrackr@gmail.com"
+                style="color: var(--primary);">omnitrackr@gmail.com</a>. You can also find us on <a
+                href="https://github.com/chambies2015/OmniTrackr" target="_blank" rel="noopener noreferrer"
+                style="color: var(--primary);">GitHub</a> or <a href="https://www.linkedin.com/in/d-g-c/"
+                target="_blank" rel="noopener noreferrer" style="color: var(--primary);">LinkedIn</a>. We're happy to
+              help!</p>
           </div>
         </div>
       </div>
@@ -840,9 +887,12 @@
         <p class="footer-text">Connect with us</p>
         <div class="footer-links">
           <a href="mailto:omnitrackr@gmail.com" class="footer-link">📧 omnitrackr@gmail.com</a>
-          <a href="https://github.com/chambies2015/OmniTrackr" target="_blank" rel="noopener noreferrer" class="footer-link">🐙 GitHub</a>
-          <a href="https://www.linkedin.com/in/d-g-c/" target="_blank" rel="noopener noreferrer" class="footer-link">💼 LinkedIn</a>
-          <a href="https://ko-fi.com/omnitrackr" target="_blank" rel="noopener noreferrer" class="footer-link">☕ Ko-fi</a>
+          <a href="https://github.com/chambies2015/OmniTrackr" target="_blank" rel="noopener noreferrer"
+            class="footer-link">🐙 GitHub</a>
+          <a href="https://www.linkedin.com/in/d-g-c/" target="_blank" rel="noopener noreferrer" class="footer-link">💼
+            LinkedIn</a>
+          <a href="https://ko-fi.com/omnitrackr" target="_blank" rel="noopener noreferrer" class="footer-link">☕
+            Ko-fi</a>
         </div>
       </div>
     </footer>
@@ -858,7 +908,7 @@
         <h2>Account Settings</h2>
         <button class="modal-close" onclick="closeAccountModal()" aria-label="Close account settings">×</button>
       </div>
-      
+
       <div class="modal-body">
         <!-- Account Info Section -->
         <div class="account-section">
@@ -923,10 +973,12 @@
               <input type="password" id="currentPassword" placeholder="Current password" required>
             </div>
             <div>
-              <input type="password" id="accountNewPassword" placeholder="New password (min 6 characters)" minlength="6" required>
+              <input type="password" id="accountNewPassword" placeholder="New password (min 6 characters)" minlength="6"
+                required>
             </div>
             <div>
-              <input type="password" id="accountConfirmNewPassword" placeholder="Confirm new password" minlength="6" required>
+              <input type="password" id="accountConfirmNewPassword" placeholder="Confirm new password" minlength="6"
+                required>
             </div>
             <button type="submit" class="action-btn">Change Password</button>
             <div id="passwordError" class="error-message"></div>
@@ -938,24 +990,30 @@
         <div class="account-section">
           <h3>Profile Picture</h3>
           <div class="profile-picture-preview">
-            <img id="profilePicturePreview" class="profile-picture-preview-img" src="/static/default-avatar.svg" alt="Profile Preview" onerror="this.src='/static/default-avatar.svg'">
+            <img id="profilePicturePreview" class="profile-picture-preview-img" src="/static/default-avatar.svg"
+              alt="Profile Preview" onerror="this.src='/static/default-avatar.svg'">
           </div>
           <form id="profilePictureForm" enctype="multipart/form-data">
             <div>
-              <input type="file" id="profilePictureInput" accept="image/jpeg,image/jpg,image/png,image/gif,image/webp" style="display: none;" onchange="handleProfilePictureSelect(event)">
-              <button type="button" class="action-btn" onclick="document.getElementById('profilePictureInput').click()">Choose Image</button>
-              <button type="button" class="action-btn danger-btn" onclick="resetProfilePicture()" id="resetProfilePictureBtn" style="display: none;">Remove Picture</button>
+              <input type="file" id="profilePictureInput" accept="image/jpeg,image/jpg,image/png,image/gif,image/webp"
+                style="display: none;" onchange="handleProfilePictureSelect(event)">
+              <button type="button" class="action-btn"
+                onclick="document.getElementById('profilePictureInput').click()">Choose Image</button>
+              <button type="button" class="action-btn danger-btn" onclick="resetProfilePicture()"
+                id="resetProfilePictureBtn" style="display: none;">Remove Picture</button>
             </div>
             <div id="profilePictureError" class="error-message"></div>
             <div id="profilePictureSuccess" class="success-message"></div>
-            <p class="info-text" style="margin-top: 8px; font-size: 0.85rem;">Max file size: 5MB. Allowed formats: JPEG, PNG, GIF, WebP</p>
+            <p class="info-text" style="margin-top: 8px; font-size: 0.85rem;">Max file size: 5MB. Allowed formats: JPEG,
+              PNG, GIF, WebP</p>
           </form>
         </div>
 
         <!-- Privacy Settings Section -->
         <div class="account-section">
           <h3>Privacy Settings</h3>
-          <p class="info-text">Control who can see your data. When enabled, your data is fully private and not visible to anyone, including friends.</p>
+          <p class="info-text">Control who can see your data. When enabled, your data is fully private and not visible
+            to anyone, including friends.</p>
           <form id="privacySettingsForm" onsubmit="updatePrivacySettings(event)">
             <div class="privacy-toggle-item">
               <label for="moviesPrivate" class="toggle-label">
@@ -1011,7 +1069,8 @@
         <!-- Tab Visibility Settings Section -->
         <div class="account-section">
           <h3>Tab Visibility</h3>
-          <p class="info-text">Customize which tabs you want to see in the main interface. Hidden tabs won't appear in your navigation, but your data will still be saved.</p>
+          <p class="info-text">Customize which tabs you want to see in the main interface. Hidden tabs won't appear in
+            your navigation, but your data will still be saved.</p>
           <form id="tabVisibilityForm" onsubmit="updateTabVisibility(event)">
             <div class="privacy-toggle-item">
               <label for="moviesVisible" class="toggle-label">
@@ -1058,7 +1117,8 @@
         <!-- Account Deactivation Section -->
         <div class="account-section danger-section">
           <h3>Account Deactivation</h3>
-          <p class="warning-text">Deactivating your account will hide it from the system. You can reactivate within 90 days. After that, your account will be permanently deleted.</p>
+          <p class="warning-text">Deactivating your account will hide it from the system. You can reactivate within 90
+            days. After that, your account will be permanently deleted.</p>
           <form id="deactivateAccountForm" onsubmit="deactivateAccount(event)">
             <div>
               <input type="password" id="deactivatePassword" placeholder="Enter your password to confirm" required>
@@ -1080,7 +1140,8 @@
       <div id="friendRequestError" class="error-message" style="display: none;"></div>
       <form id="friendRequestForm" onsubmit="sendFriendRequest(event)">
         <div>
-          <input type="text" id="friendRequestUsername" placeholder="Enter username" minlength="3" maxlength="50" required>
+          <input type="text" id="friendRequestUsername" placeholder="Enter username" minlength="3" maxlength="50"
+            required>
         </div>
         <button type="submit" class="action-btn">Send Request</button>
       </form>
@@ -1088,7 +1149,8 @@
   </div>
 
   <!-- Image Popup Modal -->
-  <div id="imagePopupModal" class="modal-overlay image-popup-overlay" style="display: none;" onclick="closeImagePopup()">
+  <div id="imagePopupModal" class="modal-overlay image-popup-overlay" style="display: none;"
+    onclick="closeImagePopup()">
     <div class="image-popup-content" onclick="event.stopPropagation()">
       <button class="image-popup-close" onclick="closeImagePopup()" aria-label="Close image popup">×</button>
       <img id="popupImage" src="" alt="Enlarged image" class="popup-image">
@@ -1100,12 +1162,13 @@
     <div class="modal-content friend-profile-modal">
       <div class="modal-header">
         <div class="friend-profile-header-content">
-          <img id="friendProfilePicture" class="friend-profile-picture-large" src="/static/default-avatar.svg" alt="Friend Profile" onerror="this.src='/static/default-avatar.svg'">
+          <img id="friendProfilePicture" class="friend-profile-picture-large" src="/static/default-avatar.svg"
+            alt="Friend Profile" onerror="this.src='/static/default-avatar.svg'">
           <h2 id="friendProfileUsername">Friend's Profile</h2>
         </div>
         <button class="modal-close" onclick="closeFriendProfile()" aria-label="Close friend profile">×</button>
       </div>
-      
+
       <div class="modal-body">
         <!-- Movies Accordion Section -->
         <div class="accordion-section">
@@ -1117,7 +1180,8 @@
             <div id="moviesSummary" class="accordion-summary"></div>
             <div id="moviesList" class="accordion-full-content">
               <div class="friend-search-container">
-                <input type="text" id="friendMoviesSearch" class="friend-search-input" placeholder="Search movies by title, director, or year..." oninput="filterFriendMovies()">
+                <input type="text" id="friendMoviesSearch" class="friend-search-input"
+                  placeholder="Search movies by title, director, or year..." oninput="filterFriendMovies()">
               </div>
               <div id="friendMoviesListContainer"></div>
             </div>
@@ -1134,7 +1198,8 @@
             <div id="tvShowsSummary" class="accordion-summary"></div>
             <div id="tvShowsList" class="accordion-full-content">
               <div class="friend-search-container">
-                <input type="text" id="friendTVShowsSearch" class="friend-search-input" placeholder="Search TV shows by title or year..." oninput="filterFriendTVShows()">
+                <input type="text" id="friendTVShowsSearch" class="friend-search-input"
+                  placeholder="Search TV shows by title or year..." oninput="filterFriendTVShows()">
               </div>
               <div id="friendTVShowsListContainer"></div>
             </div>
@@ -1151,7 +1216,8 @@
             <div id="animeSummary" class="accordion-summary"></div>
             <div id="animeList" class="accordion-full-content">
               <div class="friend-search-container">
-                <input type="text" id="friendAnimeSearch" class="friend-search-input" placeholder="Search anime by title or year..." oninput="filterFriendAnime()">
+                <input type="text" id="friendAnimeSearch" class="friend-search-input"
+                  placeholder="Search anime by title or year..." oninput="filterFriendAnime()">
               </div>
               <div id="friendAnimeListContainer"></div>
             </div>
@@ -1168,7 +1234,9 @@
             <div id="videoGamesSummary" class="accordion-summary"></div>
             <div id="videoGamesList" class="accordion-full-content">
               <div class="friend-search-container">
-                <input type="text" id="friendVideoGamesSearch" class="friend-search-input" placeholder="Search video games by title, genres, or release date..." oninput="filterFriendVideoGames()">
+                <input type="text" id="friendVideoGamesSearch" class="friend-search-input"
+                  placeholder="Search video games by title, genres, or release date..."
+                  oninput="filterFriendVideoGames()">
               </div>
               <div id="friendVideoGamesListContainer"></div>
             </div>
