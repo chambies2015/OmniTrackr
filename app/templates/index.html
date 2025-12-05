@@ -591,6 +591,44 @@
             </div>
           </div>
         </div>
+
+        <!-- Video Game Statistics -->
+        <div class="stats-section">
+          <div class="collapsible-header" onclick="toggleVideoGameStats()" style="cursor: pointer; display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px;">
+            <h3 style="margin: 0;">🎮 Video Game Statistics</h3>
+            <span class="collapsible-icon" id="videoGameStatsIcon">▼</span>
+          </div>
+          <div class="collapsible-content" id="videoGameStatsContent" style="display: none;">
+            <div class="stats-grid">
+              <div class="stat-card">
+                <div class="stat-number" id="totalVideoGames">0</div>
+                <div class="stat-label">Total Games</div>
+              </div>
+              <div class="stat-card">
+                <div class="stat-number" id="playedVideoGames">0</div>
+                <div class="stat-label">Played</div>
+              </div>
+              <div class="stat-card">
+                <div class="stat-number" id="unplayedVideoGames">0</div>
+                <div class="stat-label">Unplayed</div>
+              </div>
+              <div class="stat-card">
+                <div class="stat-number" id="videoGameCompletionPercentage">0%</div>
+                <div class="stat-label">Completion</div>
+              </div>
+            </div>
+            <div class="video-game-stats-details">
+              <div class="video-game-column">
+                <h4>🏆 Highest Rated Games</h4>
+                <div id="highestRatedVideoGamesList"></div>
+              </div>
+              <div class="video-game-column">
+                <h4>📅 Games by Year</h4>
+                <div id="videoGamesByYearList"></div>
+              </div>
+            </div>
+          </div>
+        </div>
       </div>
 
     </div>
