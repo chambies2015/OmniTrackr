@@ -1845,13 +1845,27 @@ function displayHighestRatedDirectors(directors) {
 
 const categoryStatsCache = {};
 
+function categoryToId(category) {
+  const idMap = {
+    'movies': 'movies',
+    'tv-shows': 'tvShows',
+    'anime': 'anime',
+    'video-games': 'videoGames'
+  };
+  return idMap[category] || category;
+}
+
 function toggleCategoryAccordion(category) {
-  const contentId = `${category}StatsContent`;
-  const iconId = `${category}StatsIcon`;
+  const idPrefix = categoryToId(category);
+  const contentId = `${idPrefix}StatsContent`;
+  const iconId = `${idPrefix}StatsIcon`;
   const content = document.getElementById(contentId);
   const icon = document.getElementById(iconId);
   
-  if (!content || !icon) return;
+  if (!content || !icon) {
+    console.error(`Could not find elements for category ${category}: contentId=${contentId}, iconId=${iconId}`);
+    return;
+  }
   
   const isExpanded = content.style.display !== 'none';
   
@@ -1871,12 +1885,16 @@ function toggleCategoryAccordion(category) {
 }
 
 async function loadCategoryStatistics(category) {
-  const loadingId = `${category}StatsLoading`;
-  const dataId = `${category}StatsData`;
+  const idPrefix = categoryToId(category);
+  const loadingId = `${idPrefix}StatsLoading`;
+  const dataId = `${idPrefix}StatsData`;
   const loading = document.getElementById(loadingId);
   const dataContainer = document.getElementById(dataId);
   
-  if (!loading || !dataContainer) return;
+  if (!loading || !dataContainer) {
+    console.error(`Could not find elements for loading stats: loadingId=${loadingId}, dataId=${dataId}`);
+    return;
+  }
   
   try {
     loading.style.display = 'block';
@@ -1910,8 +1928,12 @@ async function loadCategoryStatistics(category) {
 }
 
 function displayCategoryStatistics(stats, category) {
-  const dataContainer = document.getElementById(`${category}StatsData`);
-  if (!dataContainer) return;
+  const idPrefix = categoryToId(category);
+  const dataContainer = document.getElementById(`${idPrefix}StatsData`);
+  if (!dataContainer) {
+    console.error(`Could not find data container for category ${category}: ${idPrefix}StatsData`);
+    return;
+  }
   
   let html = '';
   
@@ -1932,8 +1954,8 @@ function displayCategoryStatistics(stats, category) {
   html += `<div class="stat-card"><div class="stat-number">${stats.rating_stats.average_rating.toFixed(1)}</div><div class="stat-label">Average Rating</div></div>`;
   html += `<div class="stat-card"><div class="stat-number">${stats.rating_stats.total_rated_items}</div><div class="stat-label">Rated Items</div></div>`;
   html += '</div>';
-  html += '<div class="rating-distribution"><h5>Rating Distribution</h5><div id="ratingBars' + category + '"></div></div>';
-  html += '<div class="top-rated"><h5>🏆 Highest Rated</h5><div id="highestRatedList' + category + '"></div></div>';
+  html += '<div class="rating-distribution"><h5>Rating Distribution</h5><div id="ratingBars' + idPrefix + '"></div></div>';
+  html += '<div class="top-rated"><h5>🏆 Highest Rated</h5><div id="highestRatedList' + idPrefix + '"></div></div>';
   html += '</div>';
   
   html += '<div class="stats-subsection">';
@@ -1942,15 +1964,15 @@ function displayCategoryStatistics(stats, category) {
   html += `<div class="stat-card"><div class="stat-number">${stats.year_stats.oldest_year || '-'}</div><div class="stat-label">Oldest Year</div></div>`;
   html += `<div class="stat-card"><div class="stat-number">${stats.year_stats.newest_year || '-'}</div><div class="stat-label">Newest Year</div></div>`;
   html += '</div>';
-  html += '<div class="decade-stats"><h5>Decade Breakdown</h5><div id="decadeBars' + category + '"></div></div>';
+  html += '<div class="decade-stats"><h5>Decade Breakdown</h5><div id="decadeBars' + idPrefix + '"></div></div>';
   html += '</div>';
   
   if (category === 'movies' && stats.director_stats) {
     html += '<div class="stats-subsection">';
     html += '<h4>🎬 Director Analysis</h4>';
     html += '<div class="director-stats">';
-    html += '<div class="director-column"><h5>Most Prolific Directors</h5><div id="topDirectorsList' + category + '"></div></div>';
-    html += '<div class="director-column"><h5>Highest Rated Directors</h5><div id="highestRatedDirectorsList' + category + '"></div></div>';
+    html += '<div class="director-column"><h5>Most Prolific Directors</h5><div id="topDirectorsList' + idPrefix + '"></div></div>';
+    html += '<div class="director-column"><h5>Highest Rated Directors</h5><div id="highestRatedDirectorsList' + idPrefix + '"></div></div>';
     html += '</div>';
     html += '</div>';
   }
@@ -1965,8 +1987,8 @@ function displayCategoryStatistics(stats, category) {
     html += `<div class="stat-card"><div class="stat-number">${stats.seasons_episodes_stats.average_episodes.toFixed(1)}</div><div class="stat-label">Avg Episodes</div></div>`;
     html += '</div>';
     html += '<div style="display: grid; grid-template-columns: 1fr 1fr; gap: 20px; margin-top: 20px;">';
-    html += '<div><h5>Most Seasons</h5><div id="mostSeasonsList' + category + '"></div></div>';
-    html += '<div><h5>Most Episodes</h5><div id="mostEpisodesList' + category + '"></div></div>';
+    html += '<div><h5>Most Seasons</h5><div id="mostSeasonsList' + idPrefix + '"></div></div>';
+    html += '<div><h5>Most Episodes</h5><div id="mostEpisodesList' + idPrefix + '"></div></div>';
     html += '</div>';
     html += '</div>';
   }
@@ -1974,36 +1996,36 @@ function displayCategoryStatistics(stats, category) {
   if (category === 'video-games' && stats.genre_stats) {
     html += '<div class="stats-subsection">';
     html += '<h4>🎮 Genre Analysis</h4>';
-    html += '<div class="genre-stats"><h5>Genre Distribution</h5><div id="genreBars' + category + '"></div></div>';
+    html += '<div class="genre-stats"><h5>Genre Distribution</h5><div id="genreBars' + idPrefix + '"></div></div>';
     html += '<div style="display: grid; grid-template-columns: 1fr 1fr; gap: 20px; margin-top: 20px;">';
-    html += '<div><h5>Top Genres</h5><div id="topGenresList' + category + '"></div></div>';
-    html += '<div><h5>Most Played Genres</h5><div id="mostPlayedGenresList' + category + '"></div></div>';
+    html += '<div><h5>Top Genres</h5><div id="topGenresList' + idPrefix + '"></div></div>';
+    html += '<div><h5>Most Played Genres</h5><div id="mostPlayedGenresList' + idPrefix + '"></div></div>';
     html += '</div>';
     html += '</div>';
   }
   
   dataContainer.innerHTML = html;
   
-  displayCategoryRatingDistribution(stats.rating_stats.rating_distribution, category);
-  displayCategoryHighestRated(stats.rating_stats.highest_rated, category);
-  displayCategoryDecadeStats(stats.year_stats.decade_stats, category);
+  displayCategoryRatingDistribution(stats.rating_stats.rating_distribution, idPrefix);
+  displayCategoryHighestRated(stats.rating_stats.highest_rated, idPrefix);
+  displayCategoryDecadeStats(stats.year_stats.decade_stats, idPrefix);
   
   if (category === 'movies' && stats.director_stats) {
-    displayCategoryTopDirectors(stats.director_stats.top_directors, category);
-    displayCategoryHighestRatedDirectors(stats.director_stats.highest_rated_directors, category);
+    displayCategoryTopDirectors(stats.director_stats.top_directors, idPrefix);
+    displayCategoryHighestRatedDirectors(stats.director_stats.highest_rated_directors, idPrefix);
   }
   
   if ((category === 'tv-shows' || category === 'anime') && stats.seasons_episodes_stats) {
-    displaySeasonsEpisodesStats(stats.seasons_episodes_stats, category);
+    displaySeasonsEpisodesStats(stats.seasons_episodes_stats, idPrefix);
   }
   
   if (category === 'video-games' && stats.genre_stats) {
-    displayGenreStats(stats.genre_stats, category);
+    displayGenreStats(stats.genre_stats, idPrefix);
   }
 }
 
-function displayCategoryRatingDistribution(distribution, category) {
-  const container = document.getElementById(`ratingBars${category}`);
+function displayCategoryRatingDistribution(distribution, idPrefix) {
+  const container = document.getElementById(`ratingBars${idPrefix}`);
   if (!container) return;
   container.innerHTML = '';
   
@@ -2027,8 +2049,8 @@ function displayCategoryRatingDistribution(distribution, category) {
   }
 }
 
-function displayCategoryHighestRated(items, category) {
-  const container = document.getElementById(`highestRatedList${category}`);
+function displayCategoryHighestRated(items, idPrefix) {
+  const container = document.getElementById(`highestRatedList${idPrefix}`);
   if (!container) return;
   container.innerHTML = '';
   
@@ -2048,8 +2070,8 @@ function displayCategoryHighestRated(items, category) {
   });
 }
 
-function displayCategoryDecadeStats(decadeStats, category) {
-  const container = document.getElementById(`decadeBars${category}`);
+function displayCategoryDecadeStats(decadeStats, idPrefix) {
+  const container = document.getElementById(`decadeBars${idPrefix}`);
   if (!container) return;
   container.innerHTML = '';
   
@@ -2078,8 +2100,8 @@ function displayCategoryDecadeStats(decadeStats, category) {
   });
 }
 
-function displayCategoryTopDirectors(directors, category) {
-  const container = document.getElementById(`topDirectorsList${category}`);
+function displayCategoryTopDirectors(directors, idPrefix) {
+  const container = document.getElementById(`topDirectorsList${idPrefix}`);
   if (!container) return;
   container.innerHTML = '';
   
@@ -2099,8 +2121,8 @@ function displayCategoryTopDirectors(directors, category) {
   });
 }
 
-function displayCategoryHighestRatedDirectors(directors, category) {
-  const container = document.getElementById(`highestRatedDirectorsList${category}`);
+function displayCategoryHighestRatedDirectors(directors, idPrefix) {
+  const container = document.getElementById(`highestRatedDirectorsList${idPrefix}`);
   if (!container) return;
   container.innerHTML = '';
   
@@ -2120,9 +2142,9 @@ function displayCategoryHighestRatedDirectors(directors, category) {
   });
 }
 
-function displaySeasonsEpisodesStats(stats, category) {
-  const mostSeasonsContainer = document.getElementById(`mostSeasonsList${category}`);
-  const mostEpisodesContainer = document.getElementById(`mostEpisodesList${category}`);
+function displaySeasonsEpisodesStats(stats, idPrefix) {
+  const mostSeasonsContainer = document.getElementById(`mostSeasonsList${idPrefix}`);
+  const mostEpisodesContainer = document.getElementById(`mostEpisodesList${idPrefix}`);
   
   if (mostSeasonsContainer) {
     mostSeasonsContainer.innerHTML = '';
@@ -2159,10 +2181,10 @@ function displaySeasonsEpisodesStats(stats, category) {
   }
 }
 
-function displayGenreStats(stats, category) {
-  const genreBarsContainer = document.getElementById(`genreBars${category}`);
-  const topGenresContainer = document.getElementById(`topGenresList${category}`);
-  const mostPlayedContainer = document.getElementById(`mostPlayedGenresList${category}`);
+function displayGenreStats(stats, idPrefix) {
+  const genreBarsContainer = document.getElementById(`genreBars${idPrefix}`);
+  const topGenresContainer = document.getElementById(`topGenresList${idPrefix}`);
+  const mostPlayedContainer = document.getElementById(`mostPlayedGenresList${idPrefix}`);
   
   if (genreBarsContainer) {
     genreBarsContainer.innerHTML = '';
