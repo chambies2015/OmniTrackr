@@ -4157,6 +4157,49 @@ document.addEventListener('DOMContentLoaded', function() {
 // This will be called from auth.js when showing/hiding landing page
 window.initLandingPageEnhancements = initLandingPageEnhancements;
 
+// Screenshot Lightbox Functions
+function openScreenshotModal(imageSrc, caption) {
+  const modal = document.getElementById('screenshotModal');
+  const modalImage = document.getElementById('screenshotModalImage');
+  const modalCaption = document.getElementById('screenshotModalCaption');
+  
+  if (modal && modalImage && modalCaption) {
+    modalImage.src = imageSrc;
+    modalImage.alt = caption;
+    modalCaption.textContent = caption;
+    modal.classList.add('show');
+    document.body.style.overflow = 'hidden';
+  }
+}
+
+function closeScreenshotModal(event) {
+  const modal = document.getElementById('screenshotModal');
+  if (!modal) return;
+  
+  if (event) {
+    event.stopPropagation();
+    if (event.target === modal || event.target.classList.contains('screenshot-modal-close')) {
+      modal.classList.remove('show');
+      document.body.style.overflow = '';
+    }
+  } else {
+    modal.classList.remove('show');
+    document.body.style.overflow = '';
+  }
+}
+
+window.openScreenshotModal = openScreenshotModal;
+window.closeScreenshotModal = closeScreenshotModal;
+
+document.addEventListener('keydown', function(event) {
+  if (event.key === 'Escape') {
+    const modal = document.getElementById('screenshotModal');
+    if (modal && modal.classList.contains('show')) {
+      closeScreenshotModal();
+    }
+  }
+});
+
 // Cleanup observer on page unload
 window.addEventListener('beforeunload', function() {
   if (scrollObserver) {

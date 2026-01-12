@@ -944,45 +944,61 @@
     <!-- Screenshots Section -->
     <section class="landing-screenshots" aria-labelledby="screenshots-title">
       <h2 id="screenshots-title" class="screenshots-title">See OmniTrackr in Action</h2>
-      <p class="screenshots-subtitle">Take a look at what you'll get when you sign up</p>
+      <p class="screenshots-subtitle">Click any screenshot to enlarge • Take a look at what you'll get when you sign up</p>
       <div class="screenshots-grid">
-        <div class="screenshot-item">
+        <div class="screenshot-item" onclick="openScreenshotModal('https://github.com/user-attachments/assets/3ebb53c7-5cc3-4225-a028-2b3eb5dfbdb7', 'Main Dashboard - Track all your media in one place')">
           <img src="https://github.com/user-attachments/assets/3ebb53c7-5cc3-4225-a028-2b3eb5dfbdb7" 
                alt="OmniTrackr Dashboard - Movies, TV Shows, Anime, and Video Games" 
                loading="lazy"
                class="screenshot-image">
           <p class="screenshot-caption">Main Dashboard - Track all your media in one place</p>
+          <div class="screenshot-overlay">
+            <span class="screenshot-zoom-icon">🔍</span>
+            <span class="screenshot-zoom-text">Click to enlarge</span>
+          </div>
         </div>
-        <div class="screenshot-item">
+        <div class="screenshot-item" onclick="openScreenshotModal('https://github.com/user-attachments/assets/fd49c269-5402-46d8-a5c2-921fa48520f9', 'Statistics Dashboard - Comprehensive analytics')">
           <img src="https://github.com/user-attachments/assets/fd49c269-5402-46d8-a5c2-921fa48520f9" 
                alt="OmniTrackr Statistics Dashboard" 
                loading="lazy"
                class="screenshot-image">
           <p class="screenshot-caption">Statistics Dashboard - Comprehensive analytics</p>
+          <div class="screenshot-overlay">
+            <span class="screenshot-zoom-icon">🔍</span>
+            <span class="screenshot-zoom-text">Click to enlarge</span>
+          </div>
         </div>
-        <div class="screenshot-item">
+        <div class="screenshot-item" onclick="openScreenshotModal('https://github.com/user-attachments/assets/f2debd1d-23bc-4c15-baac-f457c562d72a', 'Privacy Settings - Control who can see your data')">
           <img src="https://github.com/user-attachments/assets/f2debd1d-23bc-4c15-baac-f457c562d72a" 
                alt="OmniTrackr Privacy Settings" 
                loading="lazy"
                class="screenshot-image">
           <p class="screenshot-caption">Privacy Settings - Control who can see your data</p>
+          <div class="screenshot-overlay">
+            <span class="screenshot-zoom-icon">🔍</span>
+            <span class="screenshot-zoom-text">Click to enlarge</span>
+          </div>
         </div>
-        <div class="screenshot-item">
-          <img src="https://github.com/user-attachments/assets/cbc99333-535c-40cc-87ac-37dcf68fd510" 
-               alt="OmniTrackr TV Shows and Anime" 
-               loading="lazy"
-               class="screenshot-image">
-          <p class="screenshot-caption">TV Shows & Anime - Track your favorite series</p>
-        </div>
-        <div class="screenshot-item">
+        <div class="screenshot-item" onclick="openScreenshotModal('https://github.com/user-attachments/assets/8abbd7a1-c81e-48aa-878b-624e3042ca22', 'Friends & Social - Connect and share with friends')">
           <img src="https://github.com/user-attachments/assets/8abbd7a1-c81e-48aa-878b-624e3042ca22" 
                alt="OmniTrackr Friends and Social Features" 
                loading="lazy"
                class="screenshot-image">
           <p class="screenshot-caption">Friends & Social - Connect and share with friends</p>
+          <div class="screenshot-overlay">
+            <span class="screenshot-zoom-icon">🔍</span>
+            <span class="screenshot-zoom-text">Click to enlarge</span>
+          </div>
         </div>
       </div>
     </section>
+
+    <!-- Screenshot Lightbox Modal -->
+    <div id="screenshotModal" class="screenshot-modal" onclick="closeScreenshotModal(event)">
+      <span class="screenshot-modal-close" onclick="closeScreenshotModal(event)">&times;</span>
+      <img id="screenshotModalImage" class="screenshot-modal-content" src="" alt="Enlarged screenshot">
+      <div id="screenshotModalCaption" class="screenshot-modal-caption"></div>
+    </div>
 
     <!-- Footer Section -->
     <footer class="landing-footer">
