@@ -730,12 +730,9 @@ function updateTVRowMetadata(id, normalizedTitle) {
 }
 
 async function fetchAnimePoster(id, title, year) {
-  // Create unique key for deduplication
   const cacheKey = `anime-${title}-${year}`;
 
-  // Check if already fetching this poster
   if (posterFetchInProgress.has(cacheKey)) {
-    // Wait for existing fetch to complete
     const existingPromise = posterFetchQueue.get(cacheKey);
     if (existingPromise) {
       try {
@@ -756,7 +753,7 @@ async function fetchAnimePoster(id, title, year) {
   posterFetchInProgress.add(cacheKey);
 
   try {
-    const proxyUrl = `${API_BASE}/api/proxy/omdb?title=${encodeURIComponent(title)}&year=${encodeURIComponent(year)}`;
+    const proxyUrl = `${API_BASE}/api/proxy/jikan?query=${encodeURIComponent(title)}`;
     
     const controller = new AbortController();
     const timeoutId = setTimeout(() => controller.abort(), 30000);
@@ -773,7 +770,7 @@ async function fetchAnimePoster(id, title, year) {
     } catch (fetchError) {
       clearTimeout(timeoutId);
       if (fetchError.name === 'AbortError') {
-        console.warn(`OMDB API request timeout for "${title}". This may be due to network issues or VPN blocking.`);
+        console.warn(`Jikan API request timeout for "${title}". This may be due to network issues or VPN blocking.`);
       } else {
         console.warn(`Network error fetching poster for "${title}":`, fetchError.message);
       }
@@ -782,19 +779,15 @@ async function fetchAnimePoster(id, title, year) {
 
     if (!res.ok) {
       if (res.status === 429) {
-        console.warn('OMDB API rate limit reached. Posters will be fetched later.');
-        return;
-      }
-      if (res.status === 503) {
-        console.warn('OMDB API not configured on server.');
+        console.warn('Jikan API rate limit reached. Posters will be fetched later.');
         return;
       }
       if (res.status === 504) {
-        console.warn(`OMDB API timeout for "${title}". This may be due to network issues or VPN blocking.`);
+        console.warn(`Jikan API timeout for "${title}". This may be due to network issues or VPN blocking.`);
         return;
       }
       if (res.status >= 500) {
-        console.warn(`OMDB API server error (${res.status}) for "${title}". This may be due to network issues.`);
+        console.warn(`Jikan API server error (${res.status}) for "${title}". This may be due to network issues.`);
         return;
       }
       return;
@@ -804,33 +797,31 @@ async function fetchAnimePoster(id, title, year) {
     try {
       data = await res.json();
     } catch (jsonError) {
-      console.warn(`Failed to parse OMDB API response for "${title}":`, jsonError);
+      console.warn(`Failed to parse Jikan API response for "${title}":`, jsonError);
       return;
     }
 
-    if (data.Error) {
-      console.warn(`OMDB API error for "${title}": ${data.Error}`);
-      return;
-    }
+    if (data && data.data && data.data.length > 0) {
+      const anime = data.data[0];
+      const posterUrl = anime.images?.jpg?.large_image_url || anime.images?.jpg?.image_url || null;
+      const normalizedTitle = anime.title_english || anime.title || null;
 
-    if (data && data.Poster && data.Poster !== 'N/A') {
-      const normalizedTitle = data.Title && data.Title !== 'N/A' ? data.Title : null;
-      await saveAnimePosterUrl(id, data.Poster, normalizedTitle);
-      displayAnimePoster(id, data.Poster, normalizedTitle || title);
-      if (normalizedTitle) {
-        updateAnimeRowMetadata(id, normalizedTitle);
+      if (posterUrl) {
+        await saveAnimePosterUrl(id, posterUrl, normalizedTitle);
+        displayAnimePoster(id, posterUrl, normalizedTitle || title);
+        if (normalizedTitle) {
+          updateAnimeRowMetadata(id, normalizedTitle);
+        }
+
+        const result = { posterUrl: posterUrl, normalizedTitle: normalizedTitle };
+        posterFetchQueue.set(cacheKey, Promise.resolve(result));
+        return result;
       }
-
-      const result = { posterUrl: data.Poster, normalizedTitle: normalizedTitle };
-      posterFetchQueue.set(cacheKey, Promise.resolve(result));
-      return result;
     }
   } catch (err) {
     console.error('Error fetching anime poster:', err);
-    // Store failed promise to prevent retries
     posterFetchQueue.set(cacheKey, Promise.resolve(null));
   } finally {
-    // Remove from in-progress set after a delay to allow queued requests
     setTimeout(() => {
       posterFetchInProgress.delete(cacheKey);
       posterFetchQueue.delete(cacheKey);

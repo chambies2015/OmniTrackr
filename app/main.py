@@ -137,11 +137,12 @@ app.include_router(export_import.router)
 
 # Include proxy router and apply rate limiting
 # We need to wrap the endpoints with rate limiting decorators
-from .routers.proxy import proxy_omdb_api, proxy_rawg_api
+from .routers.proxy import proxy_omdb_api, proxy_rawg_api, proxy_jikan_api
 
 # Create rate-limited versions
 rate_limited_omdb = limiter.limit("60/minute")(proxy_omdb_api)
 rate_limited_rawg = limiter.limit("60/minute")(proxy_rawg_api)
+rate_limited_jikan = limiter.limit("60/minute")(proxy_jikan_api)
 
 # Replace the endpoints in the router before including it
 for route in proxy.router.routes:
@@ -149,6 +150,8 @@ for route in proxy.router.routes:
         route.endpoint = rate_limited_omdb
     elif hasattr(route, 'path') and route.path == "/api/proxy/rawg":
         route.endpoint = rate_limited_rawg
+    elif hasattr(route, 'path') and route.path == "/api/proxy/jikan":
+        route.endpoint = rate_limited_jikan
 
 app.include_router(proxy.router)
 

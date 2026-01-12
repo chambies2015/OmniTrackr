@@ -81,3 +81,29 @@ async def proxy_rawg_api(
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Error fetching from RAWG API: {str(e)}")
 
+
+@router.get("/api/proxy/jikan")
+async def proxy_jikan_api(
+    request: Request,
+    query: str = Query(..., description="Anime title to search")
+):
+    """Proxy endpoint for Jikan API (MyAnimeList). No API key required."""
+    try:
+        url = f"https://api.jikan.moe/v4/anime?q={query}&limit=1"
+        
+        async with httpx.AsyncClient(timeout=30.0, follow_redirects=True) as client:
+            response = await client.get(url)
+            if response.status_code == 429:
+                raise HTTPException(status_code=429, detail="Jikan API rate limit reached")
+            response.raise_for_status()
+            return response.json()
+    except httpx.HTTPStatusError as e:
+        if e.response.status_code >= 500:
+            raise HTTPException(status_code=504, detail="Jikan API server error - may be due to network issues or VPN blocking")
+        raise HTTPException(status_code=e.response.status_code, detail=f"Jikan API error: {e.response.text}")
+    except httpx.TimeoutException:
+        raise HTTPException(status_code=504, detail="Jikan API request timeout - may be due to network issues or VPN blocking")
+    except httpx.ConnectError:
+        raise HTTPException(status_code=504, detail="Jikan API connection error - may be due to network issues or VPN blocking")
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Error fetching from Jikan API: {str(e)}")
