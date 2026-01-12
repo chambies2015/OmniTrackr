@@ -6,7 +6,7 @@
 
 ## Overview
 
-OmniTrackr is a full-featured, multi-user web application for managing and tracking movies, TV shows, and anime. Originally a local desktop app, it has evolved into a production-ready platform with user authentication, cloud database support, and a modern responsive UI.
+OmniTrackr is a full-featured, multi-user web application for managing and tracking movies, TV shows, anime, and video games. Originally a local desktop app, it has evolved into a production-ready platform with user authentication, cloud database support, and a modern responsive UI.
 
 **Live Demo:** Deployed on Render with PostgreSQL database: https://www.omnitrackr.xyz/
 
@@ -44,14 +44,15 @@ OmniTrackr is a full-featured, multi-user web application for managing and track
 - **Friends System:** Add friends by username, send/accept/deny friend requests, manage friends list
 - **Friend Profiles:** View friends' movie, TV show, and anime collections and statistics with privacy-aware access
 - **Notifications:** Real-time notification system with bell icon, friend request notifications, and auto-dismissal
-- **CRUD API:** Full REST API for managing movies, TV shows, and anime
+- **CRUD API:** Full REST API for managing movies, TV shows, anime, and video games
 - **PostgreSQL Database:** Production-ready database
-- **Search and Sort:** Automatic filtering by title/director and sorting by rating or year
+- **Search and Sort:** Automatic filtering by title/director/genres and sorting by rating or year
 - **Modern UI:** Responsive single-page application with dark mode by default, modern card-based design, and beautiful landing page
-- **Poster Integration:** Automatic poster fetching from OMDB API with intelligent caching to reduce API calls
+- **Poster Integration:** Automatic poster fetching from OMDB API (movies/TV shows), Jikan API (anime), and RAWG API (video games) with intelligent caching to reduce API calls
+- **Title Normalization:** Automatic title normalization - user-entered titles are automatically normalized to official titles from APIs (e.g., "skyrim" → "The Elder Scrolls V: Skyrim", "inception" → "Inception")
 - **Decimal Ratings:** Support for precise ratings from 0-10.0 with one decimal place (e.g., 7.5, 8.4)
 - **Export/Import:** JSON export/import with smart conflict resolution for movies, TV shows, and anime
-- **Statistics Dashboard:** Comprehensive analytics with animated visualizations, watch progress, rating distributions, year analysis, and director insights (includes anime statistics)
+- **Statistics Dashboard:** Comprehensive analytics with animated visualizations, watch progress, rating distributions, year analysis, director insights, and genre statistics (includes anime and video game statistics)
 - **SEO Optimized:** Meta tags, structured data, sitemap, and robots.txt for better search engine visibility
 - **Security:** Security headers, bot filtering, content validation, image processing, rate limiting, and comprehensive protection against common web vulnerabilities
 - **Persistent Storage:** Profile pictures stored in persistent directory that survives code updates and deployments
@@ -62,16 +63,16 @@ OmniTrackr is a full-featured, multi-user web application for managing and track
 OmniTrackr now includes powerful export/import capabilities:
 
 ### Exporting Data
-- Click the **"Export Data"** button in the Movies, TV Shows, or Anime tab
+- Click the **"Export Data"** button in the Movies, TV Shows, Anime, or Video Games tab
 - Your entire collection will be downloaded as a JSON file with timestamp
-- The export includes all metadata: titles, directors/creators, years, ratings, reviews, watched status, and poster URLs
+- The export includes all metadata: titles, directors/creators, years, ratings, reviews, watched/played status, poster URLs, and genres
 - Export files are named `omnitrackr-export-YYYY-MM-DD.json`
 
 ### Importing Data
 - Click the **"Import Data"** button in any tab to select a JSON file
-- The system will automatically detect and import movies, TV shows, and anime
-- **Smart conflict resolution**: Existing entries (matched by title + director for movies, title + year for TV shows and anime) will be updated rather than duplicated
-- **Backward compatibility**: Old export files without anime data can still be imported
+- The system will automatically detect and import movies, TV shows, anime, and video games
+- **Smart conflict resolution**: Existing entries (matched by title + director for movies, title + year for TV shows/anime, title for video games) will be updated rather than duplicated
+- **Backward compatibility**: Old export files without anime or video game data can still be imported
 - Import results show how many items were created vs updated
 - Any errors during import are reported for easy troubleshooting
 
@@ -148,21 +149,26 @@ OmniTrackr provides comprehensive account management features:
 OmniTrackr includes a comprehensive statistics dashboard accessible via the **📊 Statistics** tab:
 
 ### Watch Progress Analytics
-- **Total items** in your collection (movies + TV shows + anime)
+- **Total items** in your collection (movies + TV shows + anime + video games)
 - **Watched vs. unwatched** counts and percentages
 - **Visual progress bar** showing completion status
-- **Separate tracking** for movies, TV shows, and anime
+- **Separate tracking** for movies, TV shows, anime, and video games
 
 ### Rating Analysis
 - **Average rating** across all rated items (supports decimal ratings 0-10.0)
 - **Rating distribution** with interactive animated bar charts (1-10 scale, rounded for visualization)
-- **Highest and lowest rated items** showing your top and bottom-rated movies, TV shows, and anime
+- **Highest and lowest rated items** showing your top and bottom-rated movies, TV shows, anime, and video games
 - **Visual representation** of your rating patterns with modern gradient designs
 
 ### Year Analysis
 - **Oldest and newest** years in your collection
 - **Decade breakdown** with bar charts showing distribution across decades
-- **Year-based insights** to understand your viewing preferences over time
+- **Year-based insights** to understand your viewing and gaming preferences over time
+
+### Genre Statistics (Video Games)
+- **Genre distribution** showing which genres you play most
+- **Top genres** by count and play status
+- **Most played genres** to discover your gaming preferences
 
 ### Director Statistics
 - **Most prolific directors** (directors with the most movies in your collection)
@@ -236,16 +242,18 @@ OmniTrackr uses a secure JWT-based authentication system:
 - **Friends & Social:** Add friends, send/accept/deny friend requests, view friends list, and explore friends' collections
 - **Friend Profiles:** View friends' movies, TV shows, anime, and statistics with search/filter capabilities
 - **Notifications:** Real-time notifications with bell icon and unread count badge
-- **Add movies, TV shows & anime:** Enter details like title, director/creator, year, rating, and watched status
-- **Automatic Posters:** Movie, TV show, and anime posters are fetched automatically from OMDB and cached
+- **Add movies, TV shows, anime & video games:** Enter details like title, director/creator, year, rating, and watched/played status. Titles are automatically normalized to official names when posters are fetched
+- **Automatic Posters:** Movie and TV show posters are fetched automatically from OMDB API, anime posters from Jikan API (MyAnimeList), and video game cover art from RAWG API - all with intelligent caching
+- **Title Normalization:** Titles are automatically normalized to official names from APIs when posters are fetched (e.g., "skyrim" becomes "The Elder Scrolls V: Skyrim")
 - **Search & Filter:** Automatic search by title or director/creator and sort by rating or year
 - **Inline Editing:** Edit entries directly in the table with save/cancel options, expandable review textareas
 - **Delete:** Remove entries from your collection
 - **Dark Mode:** Beautiful dark theme by default with light mode toggle
 - **Modern UI:** Card-based design with smooth animations, gradients, and collapsible forms
 - **Tabbed Interface:** Switch between Movies, TV Shows, Anime, and Statistics
-- **Export/Import:** Backup your collection to JSON or import from JSON files (supports movies, TV shows, and anime)
-- **Statistics Dashboard:** Comprehensive analytics with animated visualizations showing your viewing habits and preferences (includes anime statistics)
+- **Export/Import:** Backup your collection to JSON or import from JSON files (supports movies, TV shows, anime, and video games)
+- **Statistics Dashboard:** Comprehensive analytics with animated visualizations showing your viewing and gaming habits and preferences (includes anime and video game statistics)
+- **Title Normalization:** All titles are automatically normalized to official names from APIs - just enter "skyrim" and it becomes "The Elder Scrolls V: Skyrim"
 
 
 ## Screenshots
@@ -260,9 +268,12 @@ OmniTrackr uses a secure JWT-based authentication system:
 
 ## Recent Updates
 
+- ✅ **Title Normalization:** Automatic title normalization for all media types - user-entered titles are automatically updated to official titles from APIs (e.g., "skyrim" → "The Elder Scrolls V: Skyrim")
+- ✅ **Jikan API Integration:** Anime posters now use Jikan API (MyAnimeList) instead of OMDB for better anime coverage and accurate titles
+- ✅ **Video Game Support:** Full CRUD operations, privacy settings, friend viewing, and statistics integration for video game tracking
 - ✅ **Anime Support:** Full CRUD operations, privacy settings, friend viewing, and statistics integration for anime tracking
 - ✅ **Profile Pictures:** Upload, change, and reset profile pictures with automatic optimization, content validation, and persistent storage
-- ✅ **Privacy Settings:** Granular privacy controls for movies, TV shows, anime, and statistics with friend-aware visibility
+- ✅ **Privacy Settings:** Granular privacy controls for movies, TV shows, anime, video games, and statistics with friend-aware visibility
 - ✅ **Friend Profile Viewing:** View friends' collections and statistics with search/filter capabilities and privacy-aware access
 - ✅ **Enhanced Security:** Content validation (magic bytes), image processing, rate limiting, and comprehensive bot filtering
 - ✅ **Persistent Storage:** Profile pictures stored in persistent directory that survives code updates and deployments
@@ -278,3 +289,48 @@ OmniTrackr uses a secure JWT-based authentication system:
 - ✅ **Automatic Filtering:** Search and sort filters apply automatically without button press
 - ✅ **Enhanced Editing:** Expandable review textareas that auto-resize to content
 
+## Frequently Asked Questions
+
+### General Questions
+
+**Q: What is OmniTrackr?**  
+A: OmniTrackr is a free, web-based application that helps you track and organize your movie, TV show, anime, and video game collection. You can rate, review, and analyze your media with comprehensive statistics, beautiful posters, and social features to share with friends.
+
+**Q: Is OmniTrackr free to use?**  
+A: Yes! OmniTrackr is completely free to use. There are no subscription fees, premium tiers, or hidden costs. Just create an account and start tracking your media collection.
+
+**Q: How do I add movies, TV shows, anime, and video games?**  
+A: Simply use the "Add Movie", "Add TV Show", "Add Anime", or "Add Video Game" forms in your dashboard. Enter the title, year, and other details. The app will automatically fetch beautiful posters from the OMDB API (movies/TV shows), Jikan API (anime), and RAWG API (video games). You can also import your collection from JSON files.
+
+**Q: Why are my titles being changed automatically?**  
+A: OmniTrackr automatically normalizes titles to their official names from APIs when posters are fetched. For example, if you enter "skyrim", it will be normalized to "The Elder Scrolls V: Skyrim" when the RAWG API returns the game data. This ensures consistency and accuracy in your collection. The normalization only happens when metadata is successfully fetched from the APIs.
+
+**Q: Can I track video games?**  
+A: Yes! OmniTrackr supports video game tracking with full CRUD operations, ratings, reviews, played status, genres, release dates, and automatic cover art fetching from RAWG API. Video games are included in your statistics dashboard with genre analysis.
+
+**Q: Which APIs are used for posters?**  
+A: 
+- **Movies & TV Shows:** OMDB API
+- **Anime:** Jikan API (MyAnimeList) - provides better coverage for anime titles
+- **Video Games:** RAWG API
+
+**Q: Can I export my data?**  
+A: Yes! You can export your entire collection (movies, TV shows, anime, and video games) as a JSON file at any time. This allows you to backup your data or import it into another account. You can also import JSON files to quickly add multiple entries.
+
+**Q: How do friend requests work?**  
+A: You can send friend requests to other users by their username. When someone sends you a request, you'll receive a notification. You can accept or deny requests. Once accepted, you can view each other's collections and statistics (respecting privacy settings). Friend requests expire after 30 days if not responded to.
+
+**Q: What are privacy settings?**  
+A: Privacy settings allow you to control what friends can see. You can make your movies, TV shows, anime, video games, or statistics private. When enabled, even your friends won't be able to see that data - it's completely private to you. You can change these settings anytime in your account settings.
+
+**Q: How do I change my password or email?**  
+A: Click on your username in the top right corner to open the account settings modal. From there, you can change your username, email, password, upload a profile picture, and manage your privacy settings. Email changes require verification via email.
+
+**Q: What if I forget my password?**  
+A: Click "Forgot Password?" on the login page. Enter your email address, and we'll send you a password reset link. Click the link in the email to set a new password. Make sure to check your spam folder if you don't see the email.
+
+**Q: Can I rate movies, TV shows, anime, and video games with decimals?**  
+A: Yes! You can rate any item from 0 to 10.0 with one decimal place precision (e.g., 7.5, 8.4, 9.2). The statistics dashboard will calculate averages and other metrics using these decimal ratings.
+
+**Q: How do I contact support?**  
+A: You can reach us via email at omnitrackr@gmail.com. You can also find us on [GitHub](https://github.com/chambies2015/OmniTrackr) or [LinkedIn](https://www.linkedin.com/in/d-g-c/). We're happy to help!
