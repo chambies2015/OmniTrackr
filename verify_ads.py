@@ -1,6 +1,7 @@
 from fastapi.testclient import TestClient
 from app.main import app
 import os
+import re
 
 client = TestClient(app)
 
@@ -10,8 +11,14 @@ def test_ads_txt():
     
     if response.status_code == 200:
         print("✅ SUCCESS: Status Code is 200")
-        if "google.com" in response.text:
-            print("✅ SUCCESS: Content contains 'google.com'")
+        lines = response.text.split('\n')
+        found_google = False
+        for line in lines:
+            if re.search(r'(^|[\s,])google\.com([\s,]|$)', line):
+                found_google = True
+                break
+        if found_google:
+            print("✅ SUCCESS: Content contains 'google.com' as a valid domain")
             print("Response text content snippet:", response.text[:50])
         else:
              print("❌ FAILURE: Content does NOT contain 'google.com'")
