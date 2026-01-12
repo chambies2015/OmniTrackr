@@ -509,86 +509,147 @@
       </div>
 
       <div id="statsContent" style="display: none;">
-        <!-- Watch Statistics -->
+        <!-- Overall Statistics Section (Always Expanded) -->
         <div class="stats-section">
-          <h3>📈 Watch Progress</h3>
-          <div class="stats-grid">
-            <div class="stat-card">
-              <div class="stat-number" id="totalItems">0</div>
-              <div class="stat-label">Total Items</div>
+          <h3>📊 Overall Statistics</h3>
+          
+          <!-- Watch Statistics -->
+          <div class="stats-subsection">
+            <h4>📈 Watch Progress</h4>
+            <div class="stats-grid">
+              <div class="stat-card">
+                <div class="stat-number" id="totalItems">0</div>
+                <div class="stat-label">Total Items</div>
+              </div>
+              <div class="stat-card">
+                <div class="stat-number" id="watchedItems">0</div>
+                <div class="stat-label">Watched</div>
+              </div>
+              <div class="stat-card">
+                <div class="stat-number" id="unwatchedItems">0</div>
+                <div class="stat-label">Unwatched</div>
+              </div>
+              <div class="stat-card">
+                <div class="stat-number" id="completionPercentage">0%</div>
+                <div class="stat-label">Completion</div>
+              </div>
             </div>
-            <div class="stat-card">
-              <div class="stat-number" id="watchedItems">0</div>
-              <div class="stat-label">Watched</div>
-            </div>
-            <div class="stat-card">
-              <div class="stat-number" id="unwatchedItems">0</div>
-              <div class="stat-label">Unwatched</div>
-            </div>
-            <div class="stat-card">
-              <div class="stat-number" id="completionPercentage">0%</div>
-              <div class="stat-label">Completion</div>
+            <div class="progress-bar">
+              <div class="progress-fill" id="progressFill"></div>
             </div>
           </div>
-          <div class="progress-bar">
-            <div class="progress-fill" id="progressFill"></div>
+
+          <!-- Rating Statistics -->
+          <div class="stats-subsection">
+            <h4>⭐ Rating Analysis</h4>
+            <div class="stats-grid">
+              <div class="stat-card">
+                <div class="stat-number" id="averageRating">0.0</div>
+                <div class="stat-label">Average Rating</div>
+              </div>
+              <div class="stat-card">
+                <div class="stat-number" id="totalRatedItems">0</div>
+                <div class="stat-label">Rated Items</div>
+              </div>
+            </div>
+            <div class="rating-distribution">
+              <h5>Rating Distribution</h5>
+              <div id="ratingBars"></div>
+            </div>
+            <div class="top-rated">
+              <h5>🏆 Highest Rated</h5>
+              <div id="highestRatedList"></div>
+            </div>
+          </div>
+
+          <!-- Year Statistics -->
+          <div class="stats-subsection">
+            <h4>📅 Year Analysis</h4>
+            <div class="stats-grid">
+              <div class="stat-card">
+                <div class="stat-number" id="oldestYear">-</div>
+                <div class="stat-label">Oldest Year</div>
+              </div>
+              <div class="stat-card">
+                <div class="stat-number" id="newestYear">-</div>
+                <div class="stat-label">Newest Year</div>
+              </div>
+            </div>
+            <div class="decade-stats">
+              <h5>Decade Breakdown</h5>
+              <div id="decadeBars"></div>
+            </div>
+          </div>
+
+          <!-- Director Statistics -->
+          <div class="stats-subsection">
+            <h4>🎬 Director Analysis</h4>
+            <div class="director-stats">
+              <div class="director-column">
+                <h5>Most Prolific Directors</h5>
+                <div id="topDirectorsList"></div>
+              </div>
+              <div class="director-column">
+                <h5>Highest Rated Directors</h5>
+                <div id="highestRatedDirectorsList"></div>
+              </div>
+            </div>
           </div>
         </div>
 
-        <!-- Rating Statistics -->
-        <div class="stats-section">
-          <h3>⭐ Rating Analysis</h3>
-          <div class="stats-grid">
-            <div class="stat-card">
-              <div class="stat-number" id="averageRating">0.0</div>
-              <div class="stat-label">Average Rating</div>
-            </div>
-            <div class="stat-card">
-              <div class="stat-number" id="totalRatedItems">0</div>
-              <div class="stat-label">Rated Items</div>
-            </div>
+        <!-- Movies Accordion Section -->
+        <div class="accordion-section">
+          <div class="accordion-header" onclick="toggleCategoryAccordion('movies')">
+            <h3>🎬 Movies</h3>
+            <span class="accordion-icon" id="moviesStatsIcon">▶</span>
           </div>
-          <div class="rating-distribution">
-            <h4>Rating Distribution</h4>
-            <div id="ratingBars"></div>
-          </div>
-          <div class="top-rated">
-            <h4>🏆 Highest Rated</h4>
-            <div id="highestRatedList"></div>
+          <div class="accordion-content" id="moviesStatsContent" style="display: none;">
+            <div id="moviesStatsLoading" style="text-align: center; padding: 20px; display: none;">
+              <div style="display: inline-block; width: 30px; height: 30px; border: 3px solid rgba(102, 126, 234, 0.2); border-top-color: var(--primary); border-radius: 50%; animation: spin 1s linear infinite;"></div>
+            </div>
+            <div id="moviesStatsData"></div>
           </div>
         </div>
 
-        <!-- Year Statistics -->
-        <div class="stats-section">
-          <h3>📅 Year Analysis</h3>
-          <div class="stats-grid">
-            <div class="stat-card">
-              <div class="stat-number" id="oldestYear">-</div>
-              <div class="stat-label">Oldest Year</div>
-            </div>
-            <div class="stat-card">
-              <div class="stat-number" id="newestYear">-</div>
-              <div class="stat-label">Newest Year</div>
-            </div>
+        <!-- TV Shows Accordion Section -->
+        <div class="accordion-section">
+          <div class="accordion-header" onclick="toggleCategoryAccordion('tv-shows')">
+            <h3>📺 TV Shows</h3>
+            <span class="accordion-icon" id="tvShowsStatsIcon">▶</span>
           </div>
-          <div class="decade-stats">
-            <h4>Decade Breakdown</h4>
-            <div id="decadeBars"></div>
+          <div class="accordion-content" id="tvShowsStatsContent" style="display: none;">
+            <div id="tvShowsStatsLoading" style="text-align: center; padding: 20px; display: none;">
+              <div style="display: inline-block; width: 30px; height: 30px; border: 3px solid rgba(102, 126, 234, 0.2); border-top-color: var(--primary); border-radius: 50%; animation: spin 1s linear infinite;"></div>
+            </div>
+            <div id="tvShowsStatsData"></div>
           </div>
         </div>
 
-        <!-- Director Statistics -->
-        <div class="stats-section">
-          <h3>🎬 Director Analysis</h3>
-          <div class="director-stats">
-            <div class="director-column">
-              <h4>Most Prolific Directors</h4>
-              <div id="topDirectorsList"></div>
+        <!-- Anime Accordion Section -->
+        <div class="accordion-section">
+          <div class="accordion-header" onclick="toggleCategoryAccordion('anime')">
+            <h3>🎌 Anime</h3>
+            <span class="accordion-icon" id="animeStatsIcon">▶</span>
+          </div>
+          <div class="accordion-content" id="animeStatsContent" style="display: none;">
+            <div id="animeStatsLoading" style="text-align: center; padding: 20px; display: none;">
+              <div style="display: inline-block; width: 30px; height: 30px; border: 3px solid rgba(102, 126, 234, 0.2); border-top-color: var(--primary); border-radius: 50%; animation: spin 1s linear infinite;"></div>
             </div>
-            <div class="director-column">
-              <h4>Highest Rated Directors</h4>
-              <div id="highestRatedDirectorsList"></div>
+            <div id="animeStatsData"></div>
+          </div>
+        </div>
+
+        <!-- Video Games Accordion Section -->
+        <div class="accordion-section">
+          <div class="accordion-header" onclick="toggleCategoryAccordion('video-games')">
+            <h3>🎮 Video Games</h3>
+            <span class="accordion-icon" id="videoGamesStatsIcon">▶</span>
+          </div>
+          <div class="accordion-content" id="videoGamesStatsContent" style="display: none;">
+            <div id="videoGamesStatsLoading" style="text-align: center; padding: 20px; display: none;">
+              <div style="display: inline-block; width: 30px; height: 30px; border: 3px solid rgba(102, 126, 234, 0.2); border-top-color: var(--primary); border-radius: 50%; animation: spin 1s linear infinite;"></div>
             </div>
+            <div id="videoGamesStatsData"></div>
           </div>
         </div>
       </div>

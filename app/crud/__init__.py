@@ -78,6 +78,10 @@ from .statistics import (
     get_rating_statistics,
     get_year_statistics,
     get_director_statistics,
+    get_movie_statistics,
+    get_tv_show_statistics,
+    get_anime_statistics,
+    get_video_game_statistics,
 )
 
 # Friends, Friend Requests, Notifications, and Friend Profile operations
@@ -164,6 +168,10 @@ __all__ = [
     "get_rating_statistics",
     "get_year_statistics",
     "get_director_statistics",
+    "get_movie_statistics",
+    "get_tv_show_statistics",
+    "get_anime_statistics",
+    "get_video_game_statistics",
     # Friends operations
     "create_friend_request",
     "get_friend_request",

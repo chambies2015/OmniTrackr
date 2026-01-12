@@ -3555,3 +3555,70 @@ body.dark-mode .friend-request-modal-content form input {
   box-sizing: border-box !important;
 }
 
+.stats-subsection {
+  margin-bottom: 32px;
+  padding-bottom: 24px;
+  border-bottom: 1px solid rgba(102, 126, 234, 0.1);
+}
+
+.stats-subsection:last-child {
+  border-bottom: none;
+  margin-bottom: 0;
+  padding-bottom: 0;
+}
+
+.stats-subsection h4 {
+  font-size: 1.3rem;
+  font-weight: 600;
+  color: var(--primary);
+  margin: 0 0 16px 0;
+}
+
+.stats-subsection h5 {
+  font-size: 1.1rem;
+  font-weight: 600;
+  color: var(--fg);
+  margin: 16px 0 12px 0;
+  opacity: 0.9;
+}
+
+#statistics-tab .accordion-section {
+  margin-bottom: 16px;
+  background-color: var(--card-bg);
+  border-radius: 12px;
+  box-shadow: 0 2px 12px rgba(0, 0, 0, 0.08);
+  overflow: hidden;
+}
+
+#statistics-tab .accordion-header {
+  padding: 20px 24px;
+  margin: 0;
+  border-radius: 0;
+}
+
+#statistics-tab .accordion-header h3 {
+  margin: 0;
+  font-size: 1.4rem;
+}
+
+#statistics-tab .accordion-content {
+  padding: 24px;
+  max-height: none;
+  transition: none;
+}
+
+#statistics-tab .accordion-content[style*="display: none"] {
+  display: none !important;
+}
+
+#statistics-tab .accordion-content[style*="display: block"] {
+  display: block !important;
+}
+
+.genre-stats {
+  margin-top: 20px;
+}
+
+.genre-stats h5 {
+  margin-bottom: 16px;
+}
