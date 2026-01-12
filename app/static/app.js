@@ -902,23 +902,23 @@ function displayVideoGamePoster(id, posterUrl, title = null) {
   }
 }
 
-function updateVideoGameRowMetadata(id, genres, rawgLink, releaseDate) {
-  // Find the row for this video game
+function updateVideoGameRowMetadata(id, genres, rawgLink, releaseDate, normalizedTitle) {
   const row = document.querySelector(`#video-game-poster-${id}`)?.closest('tr');
   if (!row) return;
 
-  // Update release date (cell index 2)
+  if (normalizedTitle && row.cells[1]) {
+    row.cells[1].textContent = escapeHtml(normalizedTitle);
+  }
+
   if (releaseDate && row.cells[2]) {
     const date = new Date(releaseDate);
     row.cells[2].textContent = date.toLocaleDateString();
   }
 
-  // Update genres (cell index 3)
   if (row.cells[3]) {
     row.cells[3].textContent = genres ? escapeHtml(genres) : '';
   }
 
-  // Update RAWG link (cell index 6)
   if (row.cells[6]) {
     if (rawgLink) {
       row.cells[6].innerHTML = `<a href="${rawgLink}" target="_blank">View on RAWG</a>`;
@@ -940,9 +940,9 @@ async function fetchVideoGameMetadata(id, title) {
       try {
         const result = await existingPromise;
         if (result && result.cover_art_url) {
-          displayVideoGamePoster(id, result.cover_art_url, title);
-          await saveVideoGameMetadata(id, result.cover_art_url, result.genres, result.rawg_link, result.release_date);
-          updateVideoGameRowMetadata(id, result.genres, result.rawg_link, result.release_date);
+          displayVideoGamePoster(id, result.cover_art_url, result.normalized_title || title);
+          await saveVideoGameMetadata(id, result.cover_art_url, result.genres, result.rawg_link, result.release_date, result.normalized_title);
+          updateVideoGameRowMetadata(id, result.genres, result.rawg_link, result.release_date, result.normalized_title);
         }
       } catch (err) {
         // Ignore errors from other fetch
@@ -1017,17 +1017,15 @@ async function fetchVideoGameMetadata(id, title) {
         const coverArtUrl = game.background_image || null;
         const genres = game.genres ? game.genres.map(g => g.name).join(', ') : null;
         const rawgLink = game.slug ? `https://rawg.io/games/${game.slug}` : null;
-        const releaseDate = game.released || null; // RAWG API returns date as "YYYY-MM-DD" string
+        const releaseDate = game.released || null;
+        const normalizedTitle = game.name || null;
 
         if (coverArtUrl) {
-          // Save the metadata to the database
-          await saveVideoGameMetadata(id, coverArtUrl, genres, rawgLink, releaseDate);
-          // Display the cover art
-          displayVideoGamePoster(id, coverArtUrl, title);
-          // Update the table row with metadata
-          updateVideoGameRowMetadata(id, genres, rawgLink, releaseDate);
+          await saveVideoGameMetadata(id, coverArtUrl, genres, rawgLink, releaseDate, normalizedTitle);
+          displayVideoGamePoster(id, coverArtUrl, normalizedTitle || title);
+          updateVideoGameRowMetadata(id, genres, rawgLink, releaseDate, normalizedTitle);
 
-          return { cover_art_url: coverArtUrl, genres: genres, rawg_link: rawgLink, release_date: releaseDate };
+          return { cover_art_url: coverArtUrl, genres: genres, rawg_link: rawgLink, release_date: releaseDate, normalized_title: normalizedTitle };
         }
       }
       return null;
@@ -1045,9 +1043,9 @@ async function fetchVideoGameMetadata(id, title) {
     try {
       const result = await existingPromise;
       if (result && result.cover_art_url) {
-        displayVideoGamePoster(id, result.cover_art_url, title);
-        await saveVideoGameMetadata(id, result.cover_art_url, result.genres, result.rawg_link, result.release_date);
-        updateVideoGameRowMetadata(id, result.genres, result.rawg_link, result.release_date);
+        displayVideoGamePoster(id, result.cover_art_url, result.normalized_title || title);
+        await saveVideoGameMetadata(id, result.cover_art_url, result.genres, result.rawg_link, result.release_date, result.normalized_title);
+        updateVideoGameRowMetadata(id, result.genres, result.rawg_link, result.release_date, result.normalized_title);
       }
     } catch (err) {
       // Ignore errors from other fetch
@@ -1072,12 +1070,13 @@ async function fetchVideoGameMetadata(id, title) {
   }
 }
 
-async function saveVideoGameMetadata(id, coverArtUrl, genres, rawgLink, releaseDate) {
+async function saveVideoGameMetadata(id, coverArtUrl, genres, rawgLink, releaseDate, normalizedTitle) {
   try {
     const updateData = { cover_art_url: coverArtUrl };
     if (genres) updateData.genres = genres;
     if (rawgLink) updateData.rawg_link = rawgLink;
     if (releaseDate) updateData.release_date = releaseDate;
+    if (normalizedTitle) updateData.title = normalizedTitle;
     await authenticatedFetch(`${API_BASE}/video-games/${id}`, {
       method: 'PUT',
       headers: { 'Content-Type': 'application/json' },
