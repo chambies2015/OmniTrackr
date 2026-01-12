@@ -70,3 +70,62 @@ async def get_director_statistics(
     stats = crud.get_director_statistics(db, current_user.id)
     return schemas.DirectorStatistics(**stats)
 
+
+@router.get("/movies/", response_model=schemas.MovieStatistics)
+async def get_movie_statistics(
+    current_user: models.User = Depends(get_current_user),
+    db: Session = Depends(get_db)
+):
+    """Get movie-specific statistics"""
+    stats = crud.get_movie_statistics(db, current_user.id)
+    return schemas.MovieStatistics(
+        watch_stats=schemas.CategoryWatchStatistics(**stats["watch_stats"]),
+        rating_stats=schemas.CategoryRatingStatistics(**stats["rating_stats"]),
+        year_stats=schemas.CategoryYearStatistics(**stats["year_stats"]),
+        director_stats=schemas.DirectorStatistics(**stats["director_stats"])
+    )
+
+
+@router.get("/tv-shows/", response_model=schemas.TVShowStatistics)
+async def get_tv_show_statistics(
+    current_user: models.User = Depends(get_current_user),
+    db: Session = Depends(get_db)
+):
+    """Get TV show-specific statistics"""
+    stats = crud.get_tv_show_statistics(db, current_user.id)
+    return schemas.TVShowStatistics(
+        watch_stats=schemas.CategoryWatchStatistics(**stats["watch_stats"]),
+        rating_stats=schemas.CategoryRatingStatistics(**stats["rating_stats"]),
+        year_stats=schemas.CategoryYearStatistics(**stats["year_stats"]),
+        seasons_episodes_stats=schemas.SeasonsEpisodesStatistics(**stats["seasons_episodes_stats"])
+    )
+
+
+@router.get("/anime/", response_model=schemas.AnimeStatistics)
+async def get_anime_statistics(
+    current_user: models.User = Depends(get_current_user),
+    db: Session = Depends(get_db)
+):
+    """Get anime-specific statistics"""
+    stats = crud.get_anime_statistics(db, current_user.id)
+    return schemas.AnimeStatistics(
+        watch_stats=schemas.CategoryWatchStatistics(**stats["watch_stats"]),
+        rating_stats=schemas.CategoryRatingStatistics(**stats["rating_stats"]),
+        year_stats=schemas.CategoryYearStatistics(**stats["year_stats"]),
+        seasons_episodes_stats=schemas.SeasonsEpisodesStatistics(**stats["seasons_episodes_stats"])
+    )
+
+
+@router.get("/video-games/", response_model=schemas.VideoGameStatistics)
+async def get_video_game_statistics(
+    current_user: models.User = Depends(get_current_user),
+    db: Session = Depends(get_db)
+):
+    """Get video game-specific statistics"""
+    stats = crud.get_video_game_statistics(db, current_user.id)
+    return schemas.VideoGameStatistics(
+        watch_stats=schemas.CategoryWatchStatistics(**stats["watch_stats"]),
+        rating_stats=schemas.CategoryRatingStatistics(**stats["rating_stats"]),
+        year_stats=schemas.CategoryYearStatistics(**stats["year_stats"]),
+        genre_stats=schemas.GenreStatistics(**stats["genre_stats"])
+    )

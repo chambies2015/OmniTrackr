@@ -214,9 +214,12 @@ async function fetchMoviePoster(id, title, year) {
     const existingPromise = posterFetchQueue.get(cacheKey);
     if (existingPromise) {
       try {
-        const posterUrl = await existingPromise;
-        if (posterUrl) {
-          displayMoviePoster(id, posterUrl, title);
+        const result = await existingPromise;
+        if (result && result.posterUrl) {
+          displayMoviePoster(id, result.posterUrl, result.normalizedTitle || title);
+          if (result.normalizedTitle) {
+            updateMovieRowMetadata(id, result.normalizedTitle);
+          }
         }
       } catch (err) {
         // Ignore errors from other fetch
@@ -287,13 +290,16 @@ async function fetchMoviePoster(id, title, year) {
     }
 
     if (data && data.Poster && data.Poster !== 'N/A') {
-      await saveMoviePosterUrl(id, data.Poster);
-      // Display the poster
-      displayMoviePoster(id, data.Poster, title);
+      const normalizedTitle = data.Title && data.Title !== 'N/A' ? data.Title : null;
+      await saveMoviePosterUrl(id, data.Poster, normalizedTitle);
+      displayMoviePoster(id, data.Poster, normalizedTitle || title);
+      if (normalizedTitle) {
+        updateMovieRowMetadata(id, normalizedTitle);
+      }
 
-      // Store result in queue for other waiting requests
-      posterFetchQueue.set(cacheKey, Promise.resolve(data.Poster));
-      return data.Poster;
+      const result = { posterUrl: data.Poster, normalizedTitle: normalizedTitle };
+      posterFetchQueue.set(cacheKey, Promise.resolve(result));
+      return result;
     }
   } catch (err) {
     console.error('Error fetching movie poster:', err);
@@ -308,15 +314,26 @@ async function fetchMoviePoster(id, title, year) {
   }
 }
 
-async function saveMoviePosterUrl(id, posterUrl) {
+async function saveMoviePosterUrl(id, posterUrl, normalizedTitle) {
   try {
+    const updateData = { poster_url: posterUrl };
+    if (normalizedTitle) updateData.title = normalizedTitle;
     await authenticatedFetch(`${API_BASE}/movies/${id}`, {
       method: 'PUT',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ poster_url: posterUrl }),
+      body: JSON.stringify(updateData),
     });
   } catch (err) {
     console.error('Error saving poster URL:', err);
+  }
+}
+
+function updateMovieRowMetadata(id, normalizedTitle) {
+  const row = document.querySelector(`#movie-poster-${id}`)?.closest('tr');
+  if (!row) return;
+
+  if (normalizedTitle && row.cells[1]) {
+    row.cells[1].textContent = escapeHtml(normalizedTitle);
   }
 }
 
@@ -590,9 +607,12 @@ async function fetchTVPoster(id, title, year) {
     const existingPromise = posterFetchQueue.get(cacheKey);
     if (existingPromise) {
       try {
-        const posterUrl = await existingPromise;
-        if (posterUrl) {
-          displayTVPoster(id, posterUrl, title);
+        const result = await existingPromise;
+        if (result && result.posterUrl) {
+          displayTVPoster(id, result.posterUrl, result.normalizedTitle || title);
+          if (result.normalizedTitle) {
+            updateTVRowMetadata(id, result.normalizedTitle);
+          }
         }
       } catch (err) {
         // Ignore errors from other fetch
@@ -662,13 +682,16 @@ async function fetchTVPoster(id, title, year) {
     }
 
     if (data && data.Poster && data.Poster !== 'N/A') {
-      await saveTVPosterUrl(id, data.Poster);
-      // Display the poster
-      displayTVPoster(id, data.Poster, title);
+      const normalizedTitle = data.Title && data.Title !== 'N/A' ? data.Title : null;
+      await saveTVPosterUrl(id, data.Poster, normalizedTitle);
+      displayTVPoster(id, data.Poster, normalizedTitle || title);
+      if (normalizedTitle) {
+        updateTVRowMetadata(id, normalizedTitle);
+      }
 
-      // Store result in queue for other waiting requests
-      posterFetchQueue.set(cacheKey, Promise.resolve(data.Poster));
-      return data.Poster;
+      const result = { posterUrl: data.Poster, normalizedTitle: normalizedTitle };
+      posterFetchQueue.set(cacheKey, Promise.resolve(result));
+      return result;
     }
   } catch (err) {
     console.error('Error fetching TV show poster:', err);
@@ -683,31 +706,42 @@ async function fetchTVPoster(id, title, year) {
   }
 }
 
-async function saveTVPosterUrl(id, posterUrl) {
+async function saveTVPosterUrl(id, posterUrl, normalizedTitle) {
   try {
+    const updateData = { poster_url: posterUrl };
+    if (normalizedTitle) updateData.title = normalizedTitle;
     await authenticatedFetch(`${API_BASE}/tv-shows/${id}`, {
       method: 'PUT',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ poster_url: posterUrl }),
+      body: JSON.stringify(updateData),
     });
   } catch (err) {
     console.error('Error saving TV show poster URL:', err);
   }
 }
 
+function updateTVRowMetadata(id, normalizedTitle) {
+  const row = document.querySelector(`#tv-poster-${id}`)?.closest('tr');
+  if (!row) return;
+
+  if (normalizedTitle && row.cells[1]) {
+    row.cells[1].textContent = escapeHtml(normalizedTitle);
+  }
+}
+
 async function fetchAnimePoster(id, title, year) {
-  // Create unique key for deduplication
   const cacheKey = `anime-${title}-${year}`;
 
-  // Check if already fetching this poster
   if (posterFetchInProgress.has(cacheKey)) {
-    // Wait for existing fetch to complete
     const existingPromise = posterFetchQueue.get(cacheKey);
     if (existingPromise) {
       try {
-        const posterUrl = await existingPromise;
-        if (posterUrl) {
-          displayAnimePoster(id, posterUrl, title);
+        const result = await existingPromise;
+        if (result && result.posterUrl) {
+          displayAnimePoster(id, result.posterUrl, result.normalizedTitle || title);
+          if (result.normalizedTitle) {
+            updateAnimeRowMetadata(id, result.normalizedTitle);
+          }
         }
       } catch (err) {
         // Ignore errors from other fetch
@@ -719,7 +753,7 @@ async function fetchAnimePoster(id, title, year) {
   posterFetchInProgress.add(cacheKey);
 
   try {
-    const proxyUrl = `${API_BASE}/api/proxy/omdb?title=${encodeURIComponent(title)}&year=${encodeURIComponent(year)}`;
+    const proxyUrl = `${API_BASE}/api/proxy/jikan?query=${encodeURIComponent(title)}`;
     
     const controller = new AbortController();
     const timeoutId = setTimeout(() => controller.abort(), 30000);
@@ -736,7 +770,7 @@ async function fetchAnimePoster(id, title, year) {
     } catch (fetchError) {
       clearTimeout(timeoutId);
       if (fetchError.name === 'AbortError') {
-        console.warn(`OMDB API request timeout for "${title}". This may be due to network issues or VPN blocking.`);
+        console.warn(`Jikan API request timeout for "${title}". This may be due to network issues or VPN blocking.`);
       } else {
         console.warn(`Network error fetching poster for "${title}":`, fetchError.message);
       }
@@ -745,19 +779,15 @@ async function fetchAnimePoster(id, title, year) {
 
     if (!res.ok) {
       if (res.status === 429) {
-        console.warn('OMDB API rate limit reached. Posters will be fetched later.');
-        return;
-      }
-      if (res.status === 503) {
-        console.warn('OMDB API not configured on server.');
+        console.warn('Jikan API rate limit reached. Posters will be fetched later.');
         return;
       }
       if (res.status === 504) {
-        console.warn(`OMDB API timeout for "${title}". This may be due to network issues or VPN blocking.`);
+        console.warn(`Jikan API timeout for "${title}". This may be due to network issues or VPN blocking.`);
         return;
       }
       if (res.status >= 500) {
-        console.warn(`OMDB API server error (${res.status}) for "${title}". This may be due to network issues.`);
+        console.warn(`Jikan API server error (${res.status}) for "${title}". This may be due to network issues.`);
         return;
       }
       return;
@@ -767,30 +797,31 @@ async function fetchAnimePoster(id, title, year) {
     try {
       data = await res.json();
     } catch (jsonError) {
-      console.warn(`Failed to parse OMDB API response for "${title}":`, jsonError);
+      console.warn(`Failed to parse Jikan API response for "${title}":`, jsonError);
       return;
     }
 
-    if (data.Error) {
-      console.warn(`OMDB API error for "${title}": ${data.Error}`);
-      return;
-    }
+    if (data && data.data && data.data.length > 0) {
+      const anime = data.data[0];
+      const posterUrl = anime.images?.jpg?.large_image_url || anime.images?.jpg?.image_url || null;
+      const normalizedTitle = anime.title_english || anime.title || null;
 
-    if (data && data.Poster && data.Poster !== 'N/A') {
-      await saveAnimePosterUrl(id, data.Poster);
-      // Display the poster
-      displayAnimePoster(id, data.Poster, title);
+      if (posterUrl) {
+        await saveAnimePosterUrl(id, posterUrl, normalizedTitle);
+        displayAnimePoster(id, posterUrl, normalizedTitle || title);
+        if (normalizedTitle) {
+          updateAnimeRowMetadata(id, normalizedTitle);
+        }
 
-      // Store result in queue for other waiting requests
-      posterFetchQueue.set(cacheKey, Promise.resolve(data.Poster));
-      return data.Poster;
+        const result = { posterUrl: posterUrl, normalizedTitle: normalizedTitle };
+        posterFetchQueue.set(cacheKey, Promise.resolve(result));
+        return result;
+      }
     }
   } catch (err) {
     console.error('Error fetching anime poster:', err);
-    // Store failed promise to prevent retries
     posterFetchQueue.set(cacheKey, Promise.resolve(null));
   } finally {
-    // Remove from in-progress set after a delay to allow queued requests
     setTimeout(() => {
       posterFetchInProgress.delete(cacheKey);
       posterFetchQueue.delete(cacheKey);
@@ -798,15 +829,26 @@ async function fetchAnimePoster(id, title, year) {
   }
 }
 
-async function saveAnimePosterUrl(id, posterUrl) {
+async function saveAnimePosterUrl(id, posterUrl, normalizedTitle) {
   try {
+    const updateData = { poster_url: posterUrl };
+    if (normalizedTitle) updateData.title = normalizedTitle;
     await authenticatedFetch(`${API_BASE}/anime/${id}`, {
       method: 'PUT',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ poster_url: posterUrl }),
+      body: JSON.stringify(updateData),
     });
   } catch (err) {
     console.error('Error saving anime poster URL:', err);
+  }
+}
+
+function updateAnimeRowMetadata(id, normalizedTitle) {
+  const row = document.querySelector(`#anime-poster-${id}`)?.closest('tr');
+  if (!row) return;
+
+  if (normalizedTitle && row.cells[1]) {
+    row.cells[1].textContent = escapeHtml(normalizedTitle);
   }
 }
 
@@ -902,23 +944,23 @@ function displayVideoGamePoster(id, posterUrl, title = null) {
   }
 }
 
-function updateVideoGameRowMetadata(id, genres, rawgLink, releaseDate) {
-  // Find the row for this video game
+function updateVideoGameRowMetadata(id, genres, rawgLink, releaseDate, normalizedTitle) {
   const row = document.querySelector(`#video-game-poster-${id}`)?.closest('tr');
   if (!row) return;
 
-  // Update release date (cell index 2)
+  if (normalizedTitle && row.cells[1]) {
+    row.cells[1].textContent = escapeHtml(normalizedTitle);
+  }
+
   if (releaseDate && row.cells[2]) {
     const date = new Date(releaseDate);
     row.cells[2].textContent = date.toLocaleDateString();
   }
 
-  // Update genres (cell index 3)
   if (row.cells[3]) {
     row.cells[3].textContent = genres ? escapeHtml(genres) : '';
   }
 
-  // Update RAWG link (cell index 6)
   if (row.cells[6]) {
     if (rawgLink) {
       row.cells[6].innerHTML = `<a href="${rawgLink}" target="_blank">View on RAWG</a>`;
@@ -940,9 +982,9 @@ async function fetchVideoGameMetadata(id, title) {
       try {
         const result = await existingPromise;
         if (result && result.cover_art_url) {
-          displayVideoGamePoster(id, result.cover_art_url, title);
-          await saveVideoGameMetadata(id, result.cover_art_url, result.genres, result.rawg_link, result.release_date);
-          updateVideoGameRowMetadata(id, result.genres, result.rawg_link, result.release_date);
+          displayVideoGamePoster(id, result.cover_art_url, result.normalized_title || title);
+          await saveVideoGameMetadata(id, result.cover_art_url, result.genres, result.rawg_link, result.release_date, result.normalized_title);
+          updateVideoGameRowMetadata(id, result.genres, result.rawg_link, result.release_date, result.normalized_title);
         }
       } catch (err) {
         // Ignore errors from other fetch
@@ -1017,17 +1059,15 @@ async function fetchVideoGameMetadata(id, title) {
         const coverArtUrl = game.background_image || null;
         const genres = game.genres ? game.genres.map(g => g.name).join(', ') : null;
         const rawgLink = game.slug ? `https://rawg.io/games/${game.slug}` : null;
-        const releaseDate = game.released || null; // RAWG API returns date as "YYYY-MM-DD" string
+        const releaseDate = game.released || null;
+        const normalizedTitle = game.name || null;
 
         if (coverArtUrl) {
-          // Save the metadata to the database
-          await saveVideoGameMetadata(id, coverArtUrl, genres, rawgLink, releaseDate);
-          // Display the cover art
-          displayVideoGamePoster(id, coverArtUrl, title);
-          // Update the table row with metadata
-          updateVideoGameRowMetadata(id, genres, rawgLink, releaseDate);
+          await saveVideoGameMetadata(id, coverArtUrl, genres, rawgLink, releaseDate, normalizedTitle);
+          displayVideoGamePoster(id, coverArtUrl, normalizedTitle || title);
+          updateVideoGameRowMetadata(id, genres, rawgLink, releaseDate, normalizedTitle);
 
-          return { cover_art_url: coverArtUrl, genres: genres, rawg_link: rawgLink, release_date: releaseDate };
+          return { cover_art_url: coverArtUrl, genres: genres, rawg_link: rawgLink, release_date: releaseDate, normalized_title: normalizedTitle };
         }
       }
       return null;
@@ -1045,9 +1085,9 @@ async function fetchVideoGameMetadata(id, title) {
     try {
       const result = await existingPromise;
       if (result && result.cover_art_url) {
-        displayVideoGamePoster(id, result.cover_art_url, title);
-        await saveVideoGameMetadata(id, result.cover_art_url, result.genres, result.rawg_link, result.release_date);
-        updateVideoGameRowMetadata(id, result.genres, result.rawg_link, result.release_date);
+        displayVideoGamePoster(id, result.cover_art_url, result.normalized_title || title);
+        await saveVideoGameMetadata(id, result.cover_art_url, result.genres, result.rawg_link, result.release_date, result.normalized_title);
+        updateVideoGameRowMetadata(id, result.genres, result.rawg_link, result.release_date, result.normalized_title);
       }
     } catch (err) {
       // Ignore errors from other fetch
@@ -1072,12 +1112,13 @@ async function fetchVideoGameMetadata(id, title) {
   }
 }
 
-async function saveVideoGameMetadata(id, coverArtUrl, genres, rawgLink, releaseDate) {
+async function saveVideoGameMetadata(id, coverArtUrl, genres, rawgLink, releaseDate, normalizedTitle) {
   try {
     const updateData = { cover_art_url: coverArtUrl };
     if (genres) updateData.genres = genres;
     if (rawgLink) updateData.rawg_link = rawgLink;
     if (releaseDate) updateData.release_date = releaseDate;
+    if (normalizedTitle) updateData.title = normalizedTitle;
     await authenticatedFetch(`${API_BASE}/video-games/${id}`, {
       method: 'PUT',
       headers: { 'Content-Type': 'application/json' },
@@ -1731,12 +1772,12 @@ function displayDecadeStats(decadeStats) {
 
   // Calculate totals for each decade and find the maximum
   const totals = decades.map(decade =>
-    (decadeStats[decade].movies || 0) + (decadeStats[decade].tv_shows || 0) + (decadeStats[decade].anime || 0)
+    (decadeStats[decade].movies || 0) + (decadeStats[decade].tv_shows || 0) + (decadeStats[decade].anime || 0) + (decadeStats[decade].video_games || 0)
   );
   const maxCount = totals.length > 0 ? Math.max(...totals) : 1;
 
   decades.forEach((decade, index) => {
-    const total = (decadeStats[decade].movies || 0) + (decadeStats[decade].tv_shows || 0) + (decadeStats[decade].anime || 0);
+    const total = (decadeStats[decade].movies || 0) + (decadeStats[decade].tv_shows || 0) + (decadeStats[decade].anime || 0) + (decadeStats[decade].video_games || 0);
     const percentage = maxCount > 0 ? (total / maxCount) * 100 : 0;
 
     const barDiv = document.createElement('div');
@@ -1841,6 +1882,407 @@ function displayHighestRatedDirectors(directors) {
       directorDiv.style.transform = 'translateX(0)';
     }, index * 80);
   });
+}
+
+const categoryStatsCache = {};
+
+function categoryToId(category) {
+  const idMap = {
+    'movies': 'movies',
+    'tv-shows': 'tvShows',
+    'anime': 'anime',
+    'video-games': 'videoGames'
+  };
+  return idMap[category] || category;
+}
+
+function toggleCategoryAccordion(category) {
+  const idPrefix = categoryToId(category);
+  const contentId = `${idPrefix}StatsContent`;
+  const iconId = `${idPrefix}StatsIcon`;
+  const content = document.getElementById(contentId);
+  const icon = document.getElementById(iconId);
+  
+  if (!content || !icon) {
+    console.error(`Could not find elements for category ${category}: contentId=${contentId}, iconId=${iconId}`);
+    return;
+  }
+  
+  const isExpanded = content.style.display !== 'none';
+  
+  if (isExpanded) {
+    content.style.display = 'none';
+    icon.textContent = '▶';
+  } else {
+    content.style.display = 'block';
+    icon.textContent = '▼';
+    
+    if (!categoryStatsCache[category]) {
+      loadCategoryStatistics(category);
+    } else {
+      displayCategoryStatistics(categoryStatsCache[category], category);
+    }
+  }
+}
+
+async function loadCategoryStatistics(category) {
+  const idPrefix = categoryToId(category);
+  const loadingId = `${idPrefix}StatsLoading`;
+  const dataId = `${idPrefix}StatsData`;
+  const loading = document.getElementById(loadingId);
+  const dataContainer = document.getElementById(dataId);
+  
+  if (!loading || !dataContainer) {
+    console.error(`Could not find elements for loading stats: loadingId=${loadingId}, dataId=${dataId}`);
+    return;
+  }
+  
+  try {
+    loading.style.display = 'block';
+    dataContainer.innerHTML = '';
+    
+    const categoryMap = {
+      'movies': 'movies',
+      'tv-shows': 'tv-shows',
+      'anime': 'anime',
+      'video-games': 'video-games'
+    };
+    
+    const endpoint = categoryMap[category];
+    if (!endpoint) return;
+    
+    const response = await authenticatedFetch(`${API_BASE}/statistics/${endpoint}/`);
+    if (!response.ok) {
+      throw new Error('Failed to load category statistics');
+    }
+    
+    const stats = await response.json();
+    categoryStatsCache[category] = stats;
+    displayCategoryStatistics(stats, category);
+    
+    loading.style.display = 'none';
+  } catch (error) {
+    console.error(`Error loading ${category} statistics:`, error);
+    loading.style.display = 'none';
+    dataContainer.innerHTML = `<p style="color: red; text-align: center; padding: 20px;">Error loading statistics: ${error.message}</p>`;
+  }
+}
+
+function displayCategoryStatistics(stats, category) {
+  const idPrefix = categoryToId(category);
+  const dataContainer = document.getElementById(`${idPrefix}StatsData`);
+  if (!dataContainer) {
+    console.error(`Could not find data container for category ${category}: ${idPrefix}StatsData`);
+    return;
+  }
+  
+  let html = '';
+  
+  html += '<div class="stats-subsection">';
+  html += '<h4>📈 Watch Progress</h4>';
+  html += '<div class="stats-grid">';
+  html += `<div class="stat-card"><div class="stat-number">${stats.watch_stats.total_items}</div><div class="stat-label">Total Items</div></div>`;
+  html += `<div class="stat-card"><div class="stat-number">${stats.watch_stats.watched_items}</div><div class="stat-label">${category === 'video-games' ? 'Played' : 'Watched'}</div></div>`;
+  html += `<div class="stat-card"><div class="stat-number">${stats.watch_stats.unwatched_items}</div><div class="stat-label">${category === 'video-games' ? 'Unplayed' : 'Unwatched'}</div></div>`;
+  html += `<div class="stat-card"><div class="stat-number">${stats.watch_stats.completion_percentage.toFixed(1)}%</div><div class="stat-label">Completion</div></div>`;
+  html += '</div>';
+  html += '<div class="progress-bar"><div class="progress-fill" style="width: ' + stats.watch_stats.completion_percentage + '%"></div></div>';
+  html += '</div>';
+  
+  html += '<div class="stats-subsection">';
+  html += '<h4>⭐ Rating Analysis</h4>';
+  html += '<div class="stats-grid">';
+  html += `<div class="stat-card"><div class="stat-number">${stats.rating_stats.average_rating.toFixed(1)}</div><div class="stat-label">Average Rating</div></div>`;
+  html += `<div class="stat-card"><div class="stat-number">${stats.rating_stats.total_rated_items}</div><div class="stat-label">Rated Items</div></div>`;
+  html += '</div>';
+  html += '<div class="rating-distribution"><h5>Rating Distribution</h5><div id="ratingBars' + idPrefix + '"></div></div>';
+  html += '<div class="top-rated"><h5>🏆 Highest Rated</h5><div id="highestRatedList' + idPrefix + '"></div></div>';
+  html += '</div>';
+  
+  html += '<div class="stats-subsection">';
+  html += '<h4>📅 Year Analysis</h4>';
+  html += '<div class="stats-grid">';
+  html += `<div class="stat-card"><div class="stat-number">${stats.year_stats.oldest_year || '-'}</div><div class="stat-label">Oldest Year</div></div>`;
+  html += `<div class="stat-card"><div class="stat-number">${stats.year_stats.newest_year || '-'}</div><div class="stat-label">Newest Year</div></div>`;
+  html += '</div>';
+  html += '<div class="decade-stats"><h5>Decade Breakdown</h5><div id="decadeBars' + idPrefix + '"></div></div>';
+  html += '</div>';
+  
+  if (category === 'movies' && stats.director_stats) {
+    html += '<div class="stats-subsection">';
+    html += '<h4>🎬 Director Analysis</h4>';
+    html += '<div class="director-stats">';
+    html += '<div class="director-column"><h5>Most Prolific Directors</h5><div id="topDirectorsList' + idPrefix + '"></div></div>';
+    html += '<div class="director-column"><h5>Highest Rated Directors</h5><div id="highestRatedDirectorsList' + idPrefix + '"></div></div>';
+    html += '</div>';
+    html += '</div>';
+  }
+  
+  if ((category === 'tv-shows' || category === 'anime') && stats.seasons_episodes_stats) {
+    html += '<div class="stats-subsection">';
+    html += '<h4>📺 Seasons & Episodes</h4>';
+    html += '<div class="stats-grid">';
+    html += `<div class="stat-card"><div class="stat-number">${stats.seasons_episodes_stats.total_seasons}</div><div class="stat-label">Total Seasons</div></div>`;
+    html += `<div class="stat-card"><div class="stat-number">${stats.seasons_episodes_stats.total_episodes}</div><div class="stat-label">Total Episodes</div></div>`;
+    html += `<div class="stat-card"><div class="stat-number">${stats.seasons_episodes_stats.average_seasons.toFixed(1)}</div><div class="stat-label">Avg Seasons</div></div>`;
+    html += `<div class="stat-card"><div class="stat-number">${stats.seasons_episodes_stats.average_episodes.toFixed(1)}</div><div class="stat-label">Avg Episodes</div></div>`;
+    html += '</div>';
+    html += '<div style="display: grid; grid-template-columns: 1fr 1fr; gap: 20px; margin-top: 20px;">';
+    html += '<div><h5>Most Seasons</h5><div id="mostSeasonsList' + idPrefix + '"></div></div>';
+    html += '<div><h5>Most Episodes</h5><div id="mostEpisodesList' + idPrefix + '"></div></div>';
+    html += '</div>';
+    html += '</div>';
+  }
+  
+  if (category === 'video-games' && stats.genre_stats) {
+    html += '<div class="stats-subsection">';
+    html += '<h4>🎮 Genre Analysis</h4>';
+    html += '<div class="genre-stats"><h5>Genre Distribution</h5><div id="genreBars' + idPrefix + '"></div></div>';
+    html += '<div style="display: grid; grid-template-columns: 1fr 1fr; gap: 20px; margin-top: 20px;">';
+    html += '<div><h5>Top Genres</h5><div id="topGenresList' + idPrefix + '"></div></div>';
+    html += '<div><h5>Most Played Genres</h5><div id="mostPlayedGenresList' + idPrefix + '"></div></div>';
+    html += '</div>';
+    html += '</div>';
+  }
+  
+  dataContainer.innerHTML = html;
+  
+  displayCategoryRatingDistribution(stats.rating_stats.rating_distribution, idPrefix);
+  displayCategoryHighestRated(stats.rating_stats.highest_rated, idPrefix);
+  displayCategoryDecadeStats(stats.year_stats.decade_stats, idPrefix);
+  
+  if (category === 'movies' && stats.director_stats) {
+    displayCategoryTopDirectors(stats.director_stats.top_directors, idPrefix);
+    displayCategoryHighestRatedDirectors(stats.director_stats.highest_rated_directors, idPrefix);
+  }
+  
+  if ((category === 'tv-shows' || category === 'anime') && stats.seasons_episodes_stats) {
+    displaySeasonsEpisodesStats(stats.seasons_episodes_stats, idPrefix);
+  }
+  
+  if (category === 'video-games' && stats.genre_stats) {
+    displayGenreStats(stats.genre_stats, idPrefix);
+  }
+}
+
+function displayCategoryRatingDistribution(distribution, idPrefix) {
+  const container = document.getElementById(`ratingBars${idPrefix}`);
+  if (!container) return;
+  container.innerHTML = '';
+  
+  const counts = Object.values(distribution).map(Number);
+  const maxCount = counts.length > 0 ? Math.max(...counts) : 1;
+  
+  for (let rating = 1; rating <= 10; rating++) {
+    const count = distribution[rating.toString()] || 0;
+    const percentage = maxCount > 0 ? (count / maxCount) * 100 : 0;
+    
+    const barDiv = document.createElement('div');
+    barDiv.className = 'rating-bar';
+    barDiv.innerHTML = `
+      <div class="rating-bar-label">${rating}</div>
+      <div style="flex: 1; min-width: 0; position: relative;">
+        <div class="rating-bar-fill" style="width: ${percentage}%; position: absolute; left: 0; top: 0; bottom: 0;"></div>
+      </div>
+      <div class="rating-bar-count">${count}</div>
+    `;
+    container.appendChild(barDiv);
+  }
+}
+
+function displayCategoryHighestRated(items, idPrefix) {
+  const container = document.getElementById(`highestRatedList${idPrefix}`);
+  if (!container) return;
+  container.innerHTML = '';
+  
+  if (items.length === 0) {
+    container.innerHTML = '<p style="text-align: center; color: var(--fg); opacity: 0.6; padding: 20px;">No rated items found.</p>';
+    return;
+  }
+  
+  items.forEach((item) => {
+    const itemDiv = document.createElement('div');
+    itemDiv.className = 'rated-item';
+    itemDiv.innerHTML = `
+      <div class="rated-item-title">${item.title}</div>
+      <div class="rated-item-rating">${parseFloat(item.rating).toFixed(1)}/10</div>
+    `;
+    container.appendChild(itemDiv);
+  });
+}
+
+function displayCategoryDecadeStats(decadeStats, idPrefix) {
+  const container = document.getElementById(`decadeBars${idPrefix}`);
+  if (!container) return;
+  container.innerHTML = '';
+  
+  const decades = Object.keys(decadeStats).sort();
+  const totals = decades.map(decade => {
+    const val = decadeStats[decade];
+    return typeof val === 'number' ? val : (val.movies || 0) + (val.tv_shows || 0) + (val.anime || 0) + (val.video_games || 0);
+  });
+  const maxCount = totals.length > 0 ? Math.max(...totals) : 1;
+  
+  decades.forEach((decade) => {
+    const val = decadeStats[decade];
+    const total = typeof val === 'number' ? val : (val.movies || 0) + (val.tv_shows || 0) + (val.anime || 0) + (val.video_games || 0);
+    const percentage = maxCount > 0 ? (total / maxCount) * 100 : 0;
+    
+    const barDiv = document.createElement('div');
+    barDiv.className = 'decade-bar';
+    barDiv.innerHTML = `
+      <div class="decade-bar-label">${decade}</div>
+      <div style="flex: 1; min-width: 0; position: relative;">
+        <div class="decade-bar-fill" style="width: ${percentage}%; position: absolute; left: 0; top: 0; bottom: 0;"></div>
+      </div>
+      <div class="decade-bar-count">${total}</div>
+    `;
+    container.appendChild(barDiv);
+  });
+}
+
+function displayCategoryTopDirectors(directors, idPrefix) {
+  const container = document.getElementById(`topDirectorsList${idPrefix}`);
+  if (!container) return;
+  container.innerHTML = '';
+  
+  if (directors.length === 0) {
+    container.innerHTML = '<p style="text-align: center; color: var(--fg); opacity: 0.6; padding: 20px;">No directors found.</p>';
+    return;
+  }
+  
+  directors.forEach((director) => {
+    const directorDiv = document.createElement('div');
+    directorDiv.className = 'director-item';
+    directorDiv.innerHTML = `
+      <div class="director-name">${director.director}</div>
+      <div class="director-rating">${director.count} ${director.count === 1 ? 'movie' : 'movies'}</div>
+    `;
+    container.appendChild(directorDiv);
+  });
+}
+
+function displayCategoryHighestRatedDirectors(directors, idPrefix) {
+  const container = document.getElementById(`highestRatedDirectorsList${idPrefix}`);
+  if (!container) return;
+  container.innerHTML = '';
+  
+  if (directors.length === 0) {
+    container.innerHTML = '<p style="text-align: center; color: var(--fg); opacity: 0.6; padding: 20px;">No rated directors found.</p>';
+    return;
+  }
+  
+  directors.forEach((director) => {
+    const directorDiv = document.createElement('div');
+    directorDiv.className = 'director-item';
+    directorDiv.innerHTML = `
+      <div class="director-name">${director.director}</div>
+      <div class="director-rating">${director.avg_rating.toFixed(1)}/10 <span style="opacity: 0.7; font-size: 0.9em;">(${director.count} ${director.count === 1 ? 'movie' : 'movies'})</span></div>
+    `;
+    container.appendChild(directorDiv);
+  });
+}
+
+function displaySeasonsEpisodesStats(stats, idPrefix) {
+  const mostSeasonsContainer = document.getElementById(`mostSeasonsList${idPrefix}`);
+  const mostEpisodesContainer = document.getElementById(`mostEpisodesList${idPrefix}`);
+  
+  if (mostSeasonsContainer) {
+    mostSeasonsContainer.innerHTML = '';
+    if (stats.shows_with_most_seasons.length === 0) {
+      mostSeasonsContainer.innerHTML = '<p style="text-align: center; color: var(--fg); opacity: 0.6; padding: 10px;">No data available.</p>';
+    } else {
+      stats.shows_with_most_seasons.forEach((show) => {
+        const showDiv = document.createElement('div');
+        showDiv.className = 'rated-item';
+        showDiv.innerHTML = `
+          <div class="rated-item-title">${show.title}</div>
+          <div class="rated-item-rating">${show.seasons} ${show.seasons === 1 ? 'season' : 'seasons'}</div>
+        `;
+        mostSeasonsContainer.appendChild(showDiv);
+      });
+    }
+  }
+  
+  if (mostEpisodesContainer) {
+    mostEpisodesContainer.innerHTML = '';
+    if (stats.shows_with_most_episodes.length === 0) {
+      mostEpisodesContainer.innerHTML = '<p style="text-align: center; color: var(--fg); opacity: 0.6; padding: 10px;">No data available.</p>';
+    } else {
+      stats.shows_with_most_episodes.forEach((show) => {
+        const showDiv = document.createElement('div');
+        showDiv.className = 'rated-item';
+        showDiv.innerHTML = `
+          <div class="rated-item-title">${show.title}</div>
+          <div class="rated-item-rating">${show.episodes} ${show.episodes === 1 ? 'episode' : 'episodes'}</div>
+        `;
+        mostEpisodesContainer.appendChild(showDiv);
+      });
+    }
+  }
+}
+
+function displayGenreStats(stats, idPrefix) {
+  const genreBarsContainer = document.getElementById(`genreBars${idPrefix}`);
+  const topGenresContainer = document.getElementById(`topGenresList${idPrefix}`);
+  const mostPlayedContainer = document.getElementById(`mostPlayedGenresList${idPrefix}`);
+  
+  if (genreBarsContainer) {
+    genreBarsContainer.innerHTML = '';
+    const genres = Object.keys(stats.genre_distribution);
+    const counts = Object.values(stats.genre_distribution).map(Number);
+    const maxCount = counts.length > 0 ? Math.max(...counts) : 1;
+    
+    genres.sort((a, b) => stats.genre_distribution[b] - stats.genre_distribution[a]).slice(0, 10).forEach((genre) => {
+      const count = stats.genre_distribution[genre];
+      const percentage = maxCount > 0 ? (count / maxCount) * 100 : 0;
+      
+      const barDiv = document.createElement('div');
+      barDiv.className = 'rating-bar';
+      barDiv.innerHTML = `
+        <div class="rating-bar-label">${genre}</div>
+        <div style="flex: 1; min-width: 0; position: relative;">
+          <div class="rating-bar-fill" style="width: ${percentage}%; position: absolute; left: 0; top: 0; bottom: 0;"></div>
+        </div>
+        <div class="rating-bar-count">${count}</div>
+      `;
+      genreBarsContainer.appendChild(barDiv);
+    });
+  }
+  
+  if (topGenresContainer) {
+    topGenresContainer.innerHTML = '';
+    if (stats.top_genres.length === 0) {
+      topGenresContainer.innerHTML = '<p style="text-align: center; color: var(--fg); opacity: 0.6; padding: 10px;">No genres found.</p>';
+    } else {
+      stats.top_genres.forEach((genre) => {
+        const genreDiv = document.createElement('div');
+        genreDiv.className = 'rated-item';
+        genreDiv.innerHTML = `
+          <div class="rated-item-title">${genre.genre}</div>
+          <div class="rated-item-rating">${genre.count} ${genre.count === 1 ? 'game' : 'games'}</div>
+        `;
+        topGenresContainer.appendChild(genreDiv);
+      });
+    }
+  }
+  
+  if (mostPlayedContainer) {
+    mostPlayedContainer.innerHTML = '';
+    if (stats.most_played_genres.length === 0) {
+      mostPlayedContainer.innerHTML = '<p style="text-align: center; color: var(--fg); opacity: 0.6; padding: 10px;">No played genres found.</p>';
+    } else {
+      stats.most_played_genres.forEach((genre) => {
+        const genreDiv = document.createElement('div');
+        genreDiv.className = 'rated-item';
+        genreDiv.innerHTML = `
+          <div class="rated-item-title">${genre.genre}</div>
+          <div class="rated-item-rating">${genre.count} ${genre.count === 1 ? 'game' : 'games'}</div>
+        `;
+        mostPlayedContainer.appendChild(genreDiv);
+      });
+    }
+  }
 }
 
 // Event listeners

@@ -509,86 +509,147 @@
       </div>
 
       <div id="statsContent" style="display: none;">
-        <!-- Watch Statistics -->
+        <!-- Overall Statistics Section (Always Expanded) -->
         <div class="stats-section">
-          <h3>📈 Watch Progress</h3>
-          <div class="stats-grid">
-            <div class="stat-card">
-              <div class="stat-number" id="totalItems">0</div>
-              <div class="stat-label">Total Items</div>
+          <h3>📊 Overall Statistics</h3>
+          
+          <!-- Watch Statistics -->
+          <div class="stats-subsection">
+            <h4>📈 Watch Progress</h4>
+            <div class="stats-grid">
+              <div class="stat-card">
+                <div class="stat-number" id="totalItems">0</div>
+                <div class="stat-label">Total Items</div>
+              </div>
+              <div class="stat-card">
+                <div class="stat-number" id="watchedItems">0</div>
+                <div class="stat-label">Watched</div>
+              </div>
+              <div class="stat-card">
+                <div class="stat-number" id="unwatchedItems">0</div>
+                <div class="stat-label">Unwatched</div>
+              </div>
+              <div class="stat-card">
+                <div class="stat-number" id="completionPercentage">0%</div>
+                <div class="stat-label">Completion</div>
+              </div>
             </div>
-            <div class="stat-card">
-              <div class="stat-number" id="watchedItems">0</div>
-              <div class="stat-label">Watched</div>
-            </div>
-            <div class="stat-card">
-              <div class="stat-number" id="unwatchedItems">0</div>
-              <div class="stat-label">Unwatched</div>
-            </div>
-            <div class="stat-card">
-              <div class="stat-number" id="completionPercentage">0%</div>
-              <div class="stat-label">Completion</div>
+            <div class="progress-bar">
+              <div class="progress-fill" id="progressFill"></div>
             </div>
           </div>
-          <div class="progress-bar">
-            <div class="progress-fill" id="progressFill"></div>
+
+          <!-- Rating Statistics -->
+          <div class="stats-subsection">
+            <h4>⭐ Rating Analysis</h4>
+            <div class="stats-grid">
+              <div class="stat-card">
+                <div class="stat-number" id="averageRating">0.0</div>
+                <div class="stat-label">Average Rating</div>
+              </div>
+              <div class="stat-card">
+                <div class="stat-number" id="totalRatedItems">0</div>
+                <div class="stat-label">Rated Items</div>
+              </div>
+            </div>
+            <div class="rating-distribution">
+              <h5>Rating Distribution</h5>
+              <div id="ratingBars"></div>
+            </div>
+            <div class="top-rated">
+              <h5>🏆 Highest Rated</h5>
+              <div id="highestRatedList"></div>
+            </div>
+          </div>
+
+          <!-- Year Statistics -->
+          <div class="stats-subsection">
+            <h4>📅 Year Analysis</h4>
+            <div class="stats-grid">
+              <div class="stat-card">
+                <div class="stat-number" id="oldestYear">-</div>
+                <div class="stat-label">Oldest Year</div>
+              </div>
+              <div class="stat-card">
+                <div class="stat-number" id="newestYear">-</div>
+                <div class="stat-label">Newest Year</div>
+              </div>
+            </div>
+            <div class="decade-stats">
+              <h5>Decade Breakdown</h5>
+              <div id="decadeBars"></div>
+            </div>
+          </div>
+
+          <!-- Director Statistics -->
+          <div class="stats-subsection">
+            <h4>🎬 Director Analysis</h4>
+            <div class="director-stats">
+              <div class="director-column">
+                <h5>Most Prolific Directors</h5>
+                <div id="topDirectorsList"></div>
+              </div>
+              <div class="director-column">
+                <h5>Highest Rated Directors</h5>
+                <div id="highestRatedDirectorsList"></div>
+              </div>
+            </div>
           </div>
         </div>
 
-        <!-- Rating Statistics -->
-        <div class="stats-section">
-          <h3>⭐ Rating Analysis</h3>
-          <div class="stats-grid">
-            <div class="stat-card">
-              <div class="stat-number" id="averageRating">0.0</div>
-              <div class="stat-label">Average Rating</div>
-            </div>
-            <div class="stat-card">
-              <div class="stat-number" id="totalRatedItems">0</div>
-              <div class="stat-label">Rated Items</div>
-            </div>
+        <!-- Movies Accordion Section -->
+        <div class="accordion-section">
+          <div class="accordion-header" onclick="toggleCategoryAccordion('movies')">
+            <h3>🎬 Movies</h3>
+            <span class="accordion-icon" id="moviesStatsIcon">▶</span>
           </div>
-          <div class="rating-distribution">
-            <h4>Rating Distribution</h4>
-            <div id="ratingBars"></div>
-          </div>
-          <div class="top-rated">
-            <h4>🏆 Highest Rated</h4>
-            <div id="highestRatedList"></div>
+          <div class="accordion-content" id="moviesStatsContent" style="display: none;">
+            <div id="moviesStatsLoading" style="text-align: center; padding: 20px; display: none;">
+              <div style="display: inline-block; width: 30px; height: 30px; border: 3px solid rgba(102, 126, 234, 0.2); border-top-color: var(--primary); border-radius: 50%; animation: spin 1s linear infinite;"></div>
+            </div>
+            <div id="moviesStatsData"></div>
           </div>
         </div>
 
-        <!-- Year Statistics -->
-        <div class="stats-section">
-          <h3>📅 Year Analysis</h3>
-          <div class="stats-grid">
-            <div class="stat-card">
-              <div class="stat-number" id="oldestYear">-</div>
-              <div class="stat-label">Oldest Year</div>
-            </div>
-            <div class="stat-card">
-              <div class="stat-number" id="newestYear">-</div>
-              <div class="stat-label">Newest Year</div>
-            </div>
+        <!-- TV Shows Accordion Section -->
+        <div class="accordion-section">
+          <div class="accordion-header" onclick="toggleCategoryAccordion('tv-shows')">
+            <h3>📺 TV Shows</h3>
+            <span class="accordion-icon" id="tvShowsStatsIcon">▶</span>
           </div>
-          <div class="decade-stats">
-            <h4>Decade Breakdown</h4>
-            <div id="decadeBars"></div>
+          <div class="accordion-content" id="tvShowsStatsContent" style="display: none;">
+            <div id="tvShowsStatsLoading" style="text-align: center; padding: 20px; display: none;">
+              <div style="display: inline-block; width: 30px; height: 30px; border: 3px solid rgba(102, 126, 234, 0.2); border-top-color: var(--primary); border-radius: 50%; animation: spin 1s linear infinite;"></div>
+            </div>
+            <div id="tvShowsStatsData"></div>
           </div>
         </div>
 
-        <!-- Director Statistics -->
-        <div class="stats-section">
-          <h3>🎬 Director Analysis</h3>
-          <div class="director-stats">
-            <div class="director-column">
-              <h4>Most Prolific Directors</h4>
-              <div id="topDirectorsList"></div>
+        <!-- Anime Accordion Section -->
+        <div class="accordion-section">
+          <div class="accordion-header" onclick="toggleCategoryAccordion('anime')">
+            <h3>🎌 Anime</h3>
+            <span class="accordion-icon" id="animeStatsIcon">▶</span>
+          </div>
+          <div class="accordion-content" id="animeStatsContent" style="display: none;">
+            <div id="animeStatsLoading" style="text-align: center; padding: 20px; display: none;">
+              <div style="display: inline-block; width: 30px; height: 30px; border: 3px solid rgba(102, 126, 234, 0.2); border-top-color: var(--primary); border-radius: 50%; animation: spin 1s linear infinite;"></div>
             </div>
-            <div class="director-column">
-              <h4>Highest Rated Directors</h4>
-              <div id="highestRatedDirectorsList"></div>
+            <div id="animeStatsData"></div>
+          </div>
+        </div>
+
+        <!-- Video Games Accordion Section -->
+        <div class="accordion-section">
+          <div class="accordion-header" onclick="toggleCategoryAccordion('video-games')">
+            <h3>🎮 Video Games</h3>
+            <span class="accordion-icon" id="videoGamesStatsIcon">▶</span>
+          </div>
+          <div class="accordion-content" id="videoGamesStatsContent" style="display: none;">
+            <div id="videoGamesStatsLoading" style="text-align: center; padding: 20px; display: none;">
+              <div style="display: inline-block; width: 30px; height: 30px; border: 3px solid rgba(102, 126, 234, 0.2); border-top-color: var(--primary); border-radius: 50%; animation: spin 1s linear infinite;"></div>
             </div>
+            <div id="videoGamesStatsData"></div>
           </div>
         </div>
       </div>
@@ -646,7 +707,7 @@
         <div class="feature-card">
           <div class="feature-icon">🖼️</div>
           <h3>Automatic Posters</h3>
-          <p>Beautiful movie, TV show, anime, and video game posters fetched automatically from OMDB and RAWG APIs.</p>
+          <p>Beautiful movie, TV show, anime, and video game posters fetched automatically from OMDB (movies/TV shows), Jikan (anime), and RAWG (video games) APIs. Titles are automatically normalized to official names.</p>
           <p class="feature-microcopy">Because visuals make everything better</p>
         </div>
         <div class="feature-card">
@@ -786,8 +847,7 @@
           </button>
           <div class="faq-answer" id="faq-answer-3">
             <p>Simply use the "Add Movie", "Add TV Show", "Add Anime", or "Add Video Game" forms in your dashboard.
-              Enter the title, year, and other details. The app will automatically fetch beautiful posters from the OMDB
-              and RAWG APIs. You can also import your collection from JSON files.</p>
+              Enter the title, year, and other details. The app will automatically fetch beautiful posters from the OMDB API (movies/TV shows), Jikan API (anime), and RAWG API (video games). Titles are automatically normalized to official names when posters are fetched. You can also import your collection from JSON files.</p>
           </div>
         </div>
 
@@ -877,6 +937,49 @@
                 target="_blank" rel="noopener noreferrer" style="color: var(--primary);">LinkedIn</a>. We're happy to
               help!</p>
           </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- Screenshots Section -->
+    <section class="landing-screenshots" aria-labelledby="screenshots-title">
+      <h2 id="screenshots-title" class="screenshots-title">See OmniTrackr in Action</h2>
+      <p class="screenshots-subtitle">Take a look at what you'll get when you sign up</p>
+      <div class="screenshots-grid">
+        <div class="screenshot-item">
+          <img src="https://github.com/user-attachments/assets/1d4bde27-5cc4-413a-8013-0577fc901f8e" 
+               alt="OmniTrackr Dashboard - Movies, TV Shows, Anime, and Video Games" 
+               loading="lazy"
+               class="screenshot-image">
+          <p class="screenshot-caption">Main Dashboard - Track all your media in one place</p>
+        </div>
+        <div class="screenshot-item">
+          <img src="https://github.com/user-attachments/assets/2f58377a-6ad3-4401-8e12-76e3e68f81d4" 
+               alt="OmniTrackr Statistics Dashboard" 
+               loading="lazy"
+               class="screenshot-image">
+          <p class="screenshot-caption">Statistics Dashboard - Comprehensive analytics</p>
+        </div>
+        <div class="screenshot-item">
+          <img src="https://github.com/user-attachments/assets/7a3ce219-5232-45af-aa4c-b057120f84ea" 
+               alt="OmniTrackr Movie Collection" 
+               loading="lazy"
+               class="screenshot-image">
+          <p class="screenshot-caption">Movie Collection - Beautiful posters and ratings</p>
+        </div>
+        <div class="screenshot-item">
+          <img src="https://github.com/user-attachments/assets/cbc99333-535c-40cc-87ac-37dcf68fd510" 
+               alt="OmniTrackr TV Shows and Anime" 
+               loading="lazy"
+               class="screenshot-image">
+          <p class="screenshot-caption">TV Shows & Anime - Track your favorite series</p>
+        </div>
+        <div class="screenshot-item">
+          <img src="https://github.com/user-attachments/assets/82212659-4b8b-40a2-ae5c-1115f2b2f152" 
+               alt="OmniTrackr Friends and Social Features" 
+               loading="lazy"
+               class="screenshot-image">
+          <p class="screenshot-caption">Friends & Social - Connect and share with friends</p>
         </div>
       </div>
     </section>

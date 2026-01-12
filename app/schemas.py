@@ -437,6 +437,94 @@ class StatisticsDashboard(BaseModel):
     generated_at: str = Field(..., description="Timestamp when statistics were generated")
 
 
+class CategoryWatchStatistics(BaseModel):
+    """Schema for category-specific watch statistics"""
+    total_items: int = Field(..., description="Total number of items")
+    watched_items: int = Field(..., description="Number of watched/played items")
+    unwatched_items: int = Field(..., description="Number of unwatched/unplayed items")
+    completion_percentage: float = Field(..., description="Percentage of items watched/played")
+
+
+class CategoryRatingStatistics(BaseModel):
+    """Schema for category-specific rating statistics"""
+    average_rating: float = Field(..., description="Average rating")
+    total_rated_items: int = Field(..., description="Total number of rated items")
+    rating_distribution: dict = Field(..., description="Distribution of ratings 1-10")
+    highest_rated: List[RatingItem] = Field(..., description="Highest rated items")
+    lowest_rated: List[RatingItem] = Field(..., description="Lowest rated items")
+
+
+class CategoryYearStatistics(BaseModel):
+    """Schema for category-specific year statistics"""
+    items_by_year: dict = Field(..., description="Items count by year")
+    all_years: List[int] = Field(..., description="All years in the collection")
+    decade_stats: dict = Field(..., description="Statistics by decade")
+    oldest_year: Optional[int] = Field(None, description="Oldest year in collection")
+    newest_year: Optional[int] = Field(None, description="Newest year in collection")
+
+
+class SeasonsEpisodesItem(BaseModel):
+    """Schema for show with seasons/episodes"""
+    title: str = Field(..., description="Title of the show")
+    seasons: Optional[int] = Field(None, description="Number of seasons")
+    episodes: Optional[int] = Field(None, description="Number of episodes")
+
+
+class SeasonsEpisodesStatistics(BaseModel):
+    """Schema for seasons/episodes statistics"""
+    total_seasons: int = Field(..., description="Total seasons across all shows")
+    total_episodes: int = Field(..., description="Total episodes across all shows")
+    average_seasons: float = Field(..., description="Average seasons per show")
+    average_episodes: float = Field(..., description="Average episodes per show")
+    shows_with_most_seasons: List[SeasonsEpisodesItem] = Field(..., description="Shows with most seasons")
+    shows_with_most_episodes: List[SeasonsEpisodesItem] = Field(..., description="Shows with most episodes")
+
+
+class GenreItem(BaseModel):
+    """Schema for genre statistics"""
+    genre: str = Field(..., description="Genre name")
+    count: int = Field(..., description="Number of games with this genre")
+
+
+class GenreStatistics(BaseModel):
+    """Schema for genre statistics"""
+    genre_distribution: dict = Field(..., description="Distribution of genres (genre: count)")
+    top_genres: List[GenreItem] = Field(..., description="Top genres by count")
+    most_played_genres: List[GenreItem] = Field(..., description="Most played genres")
+
+
+class MovieStatistics(BaseModel):
+    """Schema for movie-specific statistics"""
+    watch_stats: CategoryWatchStatistics = Field(..., description="Watch statistics")
+    rating_stats: CategoryRatingStatistics = Field(..., description="Rating statistics")
+    year_stats: CategoryYearStatistics = Field(..., description="Year-based statistics")
+    director_stats: DirectorStatistics = Field(..., description="Director statistics")
+
+
+class TVShowStatistics(BaseModel):
+    """Schema for TV show-specific statistics"""
+    watch_stats: CategoryWatchStatistics = Field(..., description="Watch statistics")
+    rating_stats: CategoryRatingStatistics = Field(..., description="Rating statistics")
+    year_stats: CategoryYearStatistics = Field(..., description="Year-based statistics")
+    seasons_episodes_stats: SeasonsEpisodesStatistics = Field(..., description="Seasons/episodes statistics")
+
+
+class AnimeStatistics(BaseModel):
+    """Schema for anime-specific statistics"""
+    watch_stats: CategoryWatchStatistics = Field(..., description="Watch statistics")
+    rating_stats: CategoryRatingStatistics = Field(..., description="Rating statistics")
+    year_stats: CategoryYearStatistics = Field(..., description="Year-based statistics")
+    seasons_episodes_stats: SeasonsEpisodesStatistics = Field(..., description="Seasons/episodes statistics")
+
+
+class VideoGameStatistics(BaseModel):
+    """Schema for video game-specific statistics"""
+    watch_stats: CategoryWatchStatistics = Field(..., description="Watch statistics")
+    rating_stats: CategoryRatingStatistics = Field(..., description="Rating statistics")
+    year_stats: CategoryYearStatistics = Field(..., description="Year-based statistics")
+    genre_stats: GenreStatistics = Field(..., description="Genre statistics")
+
+
 # ============================================================================
 # Friend Profile Schemas
 # ============================================================================
