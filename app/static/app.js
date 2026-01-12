@@ -214,9 +214,12 @@ async function fetchMoviePoster(id, title, year) {
     const existingPromise = posterFetchQueue.get(cacheKey);
     if (existingPromise) {
       try {
-        const posterUrl = await existingPromise;
-        if (posterUrl) {
-          displayMoviePoster(id, posterUrl, title);
+        const result = await existingPromise;
+        if (result && result.posterUrl) {
+          displayMoviePoster(id, result.posterUrl, result.normalizedTitle || title);
+          if (result.normalizedTitle) {
+            updateMovieRowMetadata(id, result.normalizedTitle);
+          }
         }
       } catch (err) {
         // Ignore errors from other fetch
@@ -287,13 +290,16 @@ async function fetchMoviePoster(id, title, year) {
     }
 
     if (data && data.Poster && data.Poster !== 'N/A') {
-      await saveMoviePosterUrl(id, data.Poster);
-      // Display the poster
-      displayMoviePoster(id, data.Poster, title);
+      const normalizedTitle = data.Title && data.Title !== 'N/A' ? data.Title : null;
+      await saveMoviePosterUrl(id, data.Poster, normalizedTitle);
+      displayMoviePoster(id, data.Poster, normalizedTitle || title);
+      if (normalizedTitle) {
+        updateMovieRowMetadata(id, normalizedTitle);
+      }
 
-      // Store result in queue for other waiting requests
-      posterFetchQueue.set(cacheKey, Promise.resolve(data.Poster));
-      return data.Poster;
+      const result = { posterUrl: data.Poster, normalizedTitle: normalizedTitle };
+      posterFetchQueue.set(cacheKey, Promise.resolve(result));
+      return result;
     }
   } catch (err) {
     console.error('Error fetching movie poster:', err);
@@ -308,15 +314,26 @@ async function fetchMoviePoster(id, title, year) {
   }
 }
 
-async function saveMoviePosterUrl(id, posterUrl) {
+async function saveMoviePosterUrl(id, posterUrl, normalizedTitle) {
   try {
+    const updateData = { poster_url: posterUrl };
+    if (normalizedTitle) updateData.title = normalizedTitle;
     await authenticatedFetch(`${API_BASE}/movies/${id}`, {
       method: 'PUT',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ poster_url: posterUrl }),
+      body: JSON.stringify(updateData),
     });
   } catch (err) {
     console.error('Error saving poster URL:', err);
+  }
+}
+
+function updateMovieRowMetadata(id, normalizedTitle) {
+  const row = document.querySelector(`#movie-poster-${id}`)?.closest('tr');
+  if (!row) return;
+
+  if (normalizedTitle && row.cells[1]) {
+    row.cells[1].textContent = escapeHtml(normalizedTitle);
   }
 }
 
@@ -590,9 +607,12 @@ async function fetchTVPoster(id, title, year) {
     const existingPromise = posterFetchQueue.get(cacheKey);
     if (existingPromise) {
       try {
-        const posterUrl = await existingPromise;
-        if (posterUrl) {
-          displayTVPoster(id, posterUrl, title);
+        const result = await existingPromise;
+        if (result && result.posterUrl) {
+          displayTVPoster(id, result.posterUrl, result.normalizedTitle || title);
+          if (result.normalizedTitle) {
+            updateTVRowMetadata(id, result.normalizedTitle);
+          }
         }
       } catch (err) {
         // Ignore errors from other fetch
@@ -662,13 +682,16 @@ async function fetchTVPoster(id, title, year) {
     }
 
     if (data && data.Poster && data.Poster !== 'N/A') {
-      await saveTVPosterUrl(id, data.Poster);
-      // Display the poster
-      displayTVPoster(id, data.Poster, title);
+      const normalizedTitle = data.Title && data.Title !== 'N/A' ? data.Title : null;
+      await saveTVPosterUrl(id, data.Poster, normalizedTitle);
+      displayTVPoster(id, data.Poster, normalizedTitle || title);
+      if (normalizedTitle) {
+        updateTVRowMetadata(id, normalizedTitle);
+      }
 
-      // Store result in queue for other waiting requests
-      posterFetchQueue.set(cacheKey, Promise.resolve(data.Poster));
-      return data.Poster;
+      const result = { posterUrl: data.Poster, normalizedTitle: normalizedTitle };
+      posterFetchQueue.set(cacheKey, Promise.resolve(result));
+      return result;
     }
   } catch (err) {
     console.error('Error fetching TV show poster:', err);
@@ -683,15 +706,26 @@ async function fetchTVPoster(id, title, year) {
   }
 }
 
-async function saveTVPosterUrl(id, posterUrl) {
+async function saveTVPosterUrl(id, posterUrl, normalizedTitle) {
   try {
+    const updateData = { poster_url: posterUrl };
+    if (normalizedTitle) updateData.title = normalizedTitle;
     await authenticatedFetch(`${API_BASE}/tv-shows/${id}`, {
       method: 'PUT',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ poster_url: posterUrl }),
+      body: JSON.stringify(updateData),
     });
   } catch (err) {
     console.error('Error saving TV show poster URL:', err);
+  }
+}
+
+function updateTVRowMetadata(id, normalizedTitle) {
+  const row = document.querySelector(`#tv-poster-${id}`)?.closest('tr');
+  if (!row) return;
+
+  if (normalizedTitle && row.cells[1]) {
+    row.cells[1].textContent = escapeHtml(normalizedTitle);
   }
 }
 
@@ -705,9 +739,12 @@ async function fetchAnimePoster(id, title, year) {
     const existingPromise = posterFetchQueue.get(cacheKey);
     if (existingPromise) {
       try {
-        const posterUrl = await existingPromise;
-        if (posterUrl) {
-          displayAnimePoster(id, posterUrl, title);
+        const result = await existingPromise;
+        if (result && result.posterUrl) {
+          displayAnimePoster(id, result.posterUrl, result.normalizedTitle || title);
+          if (result.normalizedTitle) {
+            updateAnimeRowMetadata(id, result.normalizedTitle);
+          }
         }
       } catch (err) {
         // Ignore errors from other fetch
@@ -777,13 +814,16 @@ async function fetchAnimePoster(id, title, year) {
     }
 
     if (data && data.Poster && data.Poster !== 'N/A') {
-      await saveAnimePosterUrl(id, data.Poster);
-      // Display the poster
-      displayAnimePoster(id, data.Poster, title);
+      const normalizedTitle = data.Title && data.Title !== 'N/A' ? data.Title : null;
+      await saveAnimePosterUrl(id, data.Poster, normalizedTitle);
+      displayAnimePoster(id, data.Poster, normalizedTitle || title);
+      if (normalizedTitle) {
+        updateAnimeRowMetadata(id, normalizedTitle);
+      }
 
-      // Store result in queue for other waiting requests
-      posterFetchQueue.set(cacheKey, Promise.resolve(data.Poster));
-      return data.Poster;
+      const result = { posterUrl: data.Poster, normalizedTitle: normalizedTitle };
+      posterFetchQueue.set(cacheKey, Promise.resolve(result));
+      return result;
     }
   } catch (err) {
     console.error('Error fetching anime poster:', err);
@@ -798,15 +838,26 @@ async function fetchAnimePoster(id, title, year) {
   }
 }
 
-async function saveAnimePosterUrl(id, posterUrl) {
+async function saveAnimePosterUrl(id, posterUrl, normalizedTitle) {
   try {
+    const updateData = { poster_url: posterUrl };
+    if (normalizedTitle) updateData.title = normalizedTitle;
     await authenticatedFetch(`${API_BASE}/anime/${id}`, {
       method: 'PUT',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ poster_url: posterUrl }),
+      body: JSON.stringify(updateData),
     });
   } catch (err) {
     console.error('Error saving anime poster URL:', err);
+  }
+}
+
+function updateAnimeRowMetadata(id, normalizedTitle) {
+  const row = document.querySelector(`#anime-poster-${id}`)?.closest('tr');
+  if (!row) return;
+
+  if (normalizedTitle && row.cells[1]) {
+    row.cells[1].textContent = escapeHtml(normalizedTitle);
   }
 }
 
