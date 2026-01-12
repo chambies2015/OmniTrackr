@@ -257,12 +257,10 @@ OmniTrackr uses a secure JWT-based authentication system:
 
 
 ## Screenshots
-<img width="3030" height="1896" alt="image" src="https://github.com/user-attachments/assets/1d4bde27-5cc4-413a-8013-0577fc901f8e" />
-<img width="2548" height="1294" alt="image" src="https://github.com/user-attachments/assets/2f58377a-6ad3-4401-8e12-76e3e68f81d4" />
-<img width="1194" height="975" alt="image" src="https://github.com/user-attachments/assets/7a3ce219-5232-45af-aa4c-b057120f84ea" />
-<img width="1179" height="1265" alt="image" src="https://github.com/user-attachments/assets/cbc99333-535c-40cc-87ac-37dcf68fd510" />
-<img width="1177" height="942" alt="image" src="https://github.com/user-attachments/assets/82212659-4b8b-40a2-ae5c-1115f2b2f152" />
-<img width="1198" height="1142" alt="image" src="https://github.com/user-attachments/assets/c248a76b-95c2-445a-b53a-350fdc5ac3f3" />
+<img width="1909" height="971" alt="Screenshot 2026-01-12 171411" src="https://github.com/user-attachments/assets/3ebb53c7-5cc3-4225-a028-2b3eb5dfbdb7" />
+<img width="1909" height="968" alt="Screenshot 2026-01-12 171207" src="https://github.com/user-attachments/assets/f2debd1d-23bc-4c15-baac-f457c562d72a" />
+<img width="1913" height="973" alt="Screenshot 2026-01-12 171303" src="https://github.com/user-attachments/assets/fd49c269-5402-46d8-a5c2-921fa48520f9" />
+<img width="1913" height="973" alt="Screenshot 2026-01-12 171330" src="https://github.com/user-attachments/assets/8abbd7a1-c81e-48aa-878b-624e3042ca22" />
 
 
 
