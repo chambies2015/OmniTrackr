@@ -140,6 +140,95 @@
     }
   }
   </script>
+
+  <script type="application/ld+json">
+  {
+    "@context": "https://schema.org",
+    "@type": "FAQPage",
+    "mainEntity": [
+      {
+        "@type": "Question",
+        "name": "What is OmniTrackr?",
+        "acceptedAnswer": {
+          "@type": "Answer",
+          "text": "OmniTrackr is a free, web-based application that helps you track and organize your movie, TV show, anime, and video game collection. You can rate, review, and analyze your media with comprehensive statistics, beautiful posters, and social features to share with friends."
+        }
+      },
+      {
+        "@type": "Question",
+        "name": "Is OmniTrackr free to use?",
+        "acceptedAnswer": {
+          "@type": "Answer",
+          "text": "Yes! OmniTrackr is completely free to use. There are no subscription fees, premium tiers, or hidden costs. Just create an account and start tracking your media collection."
+        }
+      },
+      {
+        "@type": "Question",
+        "name": "How do I add movies, TV shows, anime, and video games?",
+        "acceptedAnswer": {
+          "@type": "Answer",
+          "text": "Simply use the Add Movie, Add TV Show, Add Anime, or Add Video Game forms in your dashboard. Enter the title, year, and other details. The app will automatically fetch beautiful posters from the OMDB API (movies/TV shows), Jikan API (anime), and RAWG API (video games). Titles are automatically normalized to official names when posters are fetched. You can also import your collection from JSON files."
+        }
+      },
+      {
+        "@type": "Question",
+        "name": "Can I export my data?",
+        "acceptedAnswer": {
+          "@type": "Answer",
+          "text": "Yes! You can export your entire collection (movies, TV shows, anime, and video games) as a JSON file at any time. This allows you to backup your data or import it into another account. You can also import JSON files to quickly add multiple entries."
+        }
+      },
+      {
+        "@type": "Question",
+        "name": "How do friend requests work?",
+        "acceptedAnswer": {
+          "@type": "Answer",
+          "text": "You can send friend requests to other users by their username. When someone sends you a request, you'll receive a notification. You can accept or deny requests. Once accepted, you can view each other's collections and statistics (respecting privacy settings). Friend requests expire after 30 days if not responded to."
+        }
+      },
+      {
+        "@type": "Question",
+        "name": "What are privacy settings?",
+        "acceptedAnswer": {
+          "@type": "Answer",
+          "text": "Privacy settings allow you to control what friends can see. You can make your movies, TV shows, anime, video games, or statistics private. When enabled, even your friends won't be able to see that data - it's completely private to you. You can change these settings anytime in your account settings."
+        }
+      },
+      {
+        "@type": "Question",
+        "name": "How do I change my password or email?",
+        "acceptedAnswer": {
+          "@type": "Answer",
+          "text": "Click on your username in the top right corner to open the account settings modal. From there, you can change your username, email, password, upload a profile picture, and manage your privacy settings. Email changes require verification via email."
+        }
+      },
+      {
+        "@type": "Question",
+        "name": "What if I forget my password?",
+        "acceptedAnswer": {
+          "@type": "Answer",
+          "text": "Click Forgot Password? on the login page. Enter your email address, and we'll send you a password reset link. Click the link in the email to set a new password. Make sure to check your spam folder if you don't see the email."
+        }
+      },
+      {
+        "@type": "Question",
+        "name": "Can I rate movies, TV shows, anime, and video games with decimals?",
+        "acceptedAnswer": {
+          "@type": "Answer",
+          "text": "Yes! You can rate any item from 0 to 10.0 with one decimal place precision (e.g., 7.5, 8.4, 9.2). The statistics dashboard will calculate averages and other metrics using these decimal ratings."
+        }
+      },
+      {
+        "@type": "Question",
+        "name": "How do I contact support?",
+        "acceptedAnswer": {
+          "@type": "Answer",
+          "text": "You can reach us via email at omnitrackr@gmail.com. You can also find us on GitHub or LinkedIn. We're happy to help!"
+        }
+      }
+    ]
+  }
+  </script>
 </head>
 
 <body class="dark-mode">
@@ -809,6 +898,133 @@
           <p>Granular privacy settings for your movies, TV shows, anime, video games, and statistics - control what
             friends can see.</p>
           <p class="feature-microcopy">Privacy that actually works</p>
+        </div>
+      </div>
+    </section>
+
+    <!-- How It Works Section -->
+    <section class="landing-how-it-works" aria-labelledby="how-it-works-title" style="padding: 80px 20px; background: var(--bg-secondary);">
+      <div style="max-width: 1200px; margin: 0 auto;">
+        <h2 id="how-it-works-title" class="features-title" style="text-align: center; margin-bottom: 50px;">How OmniTrackr Works</h2>
+        <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 30px; margin-bottom: 50px;">
+          <div style="background: var(--card-bg); padding: 30px; border-radius: 12px; box-shadow: 0 4px 6px rgba(0,0,0,0.1);">
+            <div style="font-size: 3rem; margin-bottom: 20px; text-align: center;">1️⃣</div>
+            <h3 style="margin-bottom: 15px; color: var(--primary);">Create Your Account</h3>
+            <p style="line-height: 1.6; color: var(--fg-secondary);">Getting started is simple and free. Register with your email address, verify your account through the confirmation email we send, and you're ready to begin tracking your media collection. No credit card required, no hidden fees - just pure media tracking functionality.</p>
+          </div>
+          <div style="background: var(--card-bg); padding: 30px; border-radius: 12px; box-shadow: 0 4px 6px rgba(0,0,0,0.1);">
+            <div style="font-size: 3rem; margin-bottom: 20px; text-align: center;">2️⃣</div>
+            <h3 style="margin-bottom: 15px; color: var(--primary);">Add Your Media</h3>
+            <p style="line-height: 1.6; color: var(--fg-secondary);">Start building your collection by adding movies, TV shows, anime, or video games. Simply enter the title and year, and OmniTrackr automatically fetches beautiful posters, cover art, and official titles from trusted APIs like OMDB, Jikan, and RAWG. Your entries are automatically normalized to official names for consistency.</p>
+          </div>
+          <div style="background: var(--card-bg); padding: 30px; border-radius: 12px; box-shadow: 0 4px 6px rgba(0,0,0,0.1);">
+            <div style="font-size: 3rem; margin-bottom: 20px; text-align: center;">3️⃣</div>
+            <h3 style="margin-bottom: 15px; color: var(--primary);">Rate and Review</h3>
+            <p style="line-height: 1.6; color: var(--fg-secondary);">Rate each item on a scale of 0-10.0 with decimal precision (e.g., 8.5, 9.2) and add personal reviews to remember what you loved or didn't love about each piece of media. Mark items as watched or played to track your progress through your collection.</p>
+          </div>
+          <div style="background: var(--card-bg); padding: 30px; border-radius: 12px; box-shadow: 0 4px 6px rgba(0,0,0,0.1);">
+            <div style="font-size: 3rem; margin-bottom: 20px; text-align: center;">4️⃣</div>
+            <h3 style="margin-bottom: 15px; color: var(--primary);">Explore Statistics</h3>
+            <p style="line-height: 1.6; color: var(--fg-secondary);">Dive deep into your viewing and gaming habits with our comprehensive statistics dashboard. Discover your favorite directors, most-watched decades, rating distributions, genre preferences, and completion percentages. Visual charts and graphs make it easy to understand your media consumption patterns.</p>
+          </div>
+          <div style="background: var(--card-bg); padding: 30px; border-radius: 12px; box-shadow: 0 4px 6px rgba(0,0,0,0.1);">
+            <div style="font-size: 3rem; margin-bottom: 20px; text-align: center;">5️⃣</div>
+            <h3 style="margin-bottom: 15px; color: var(--primary);">Connect with Friends</h3>
+            <p style="line-height: 1.6; color: var(--fg-secondary);">Build your social network by sending friend requests to other OmniTrackr users. Once connected, explore each other's collections, compare statistics, and discover new movies, shows, anime, and games through your friends' recommendations. Privacy controls let you decide what to share.</p>
+          </div>
+          <div style="background: var(--card-bg); padding: 30px; border-radius: 12px; box-shadow: 0 4px 6px rgba(0,0,0,0.1);">
+            <div style="font-size: 3rem; margin-bottom: 20px; text-align: center;">6️⃣</div>
+            <h3 style="margin-bottom: 15px; color: var(--primary);">Export and Backup</h3>
+            <p style="line-height: 1.6; color: var(--fg-secondary);">Your data is yours. Export your entire collection as a JSON file anytime for backup or to import into another account. Our smart import system handles conflicts intelligently, updating existing entries rather than creating duplicates. Your media collection is always portable and under your control.</p>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- Getting Started Guide Section -->
+    <section class="landing-guide" aria-labelledby="guide-title" style="padding: 80px 20px;">
+      <div style="max-width: 1000px; margin: 0 auto;">
+        <h2 id="guide-title" class="features-title" style="text-align: center; margin-bottom: 50px;">Getting Started Guide</h2>
+        
+        <div style="background: var(--card-bg); padding: 40px; border-radius: 12px; box-shadow: 0 4px 6px rgba(0,0,0,0.1); margin-bottom: 30px;">
+          <h3 style="color: var(--primary); margin-bottom: 20px; font-size: 1.5rem;">Step-by-Step: Building Your First Collection</h3>
+          <ol style="line-height: 2; color: var(--fg-secondary); padding-left: 20px;">
+            <li style="margin-bottom: 15px;"><strong style="color: var(--fg);">Register and Verify:</strong> Create your free account using your email address. Check your inbox for the verification email and click the confirmation link to activate your account. This step ensures account security and prevents spam.</li>
+            <li style="margin-bottom: 15px;"><strong style="color: var(--fg);">Login to Your Dashboard:</strong> Once verified, log in to access your personal dashboard. You'll see tabs for Movies, TV Shows, Anime, Video Games, and Statistics. Each tab is fully customizable - hide tabs you don't use in your account settings.</li>
+            <li style="margin-bottom: 15px;"><strong style="color: var(--fg);">Add Your First Entry:</strong> Click on any tab (e.g., Movies) and expand the "Add Movie" form. Enter the movie title and year. OmniTrackr will automatically search for the official title and fetch the poster from OMDB API. Add a rating (0-10.0), mark if you've watched it, and optionally write a review.</li>
+            <li style="margin-bottom: 15px;"><strong style="color: var(--fg);">Organize Your Collection:</strong> Use the search bar to filter by title, director, or genres. Sort by rating, year, or other criteria. Edit entries inline by clicking the edit button, or delete items you no longer want to track.</li>
+            <li style="margin-bottom: 15px;"><strong style="color: var(--fg);">Explore Statistics:</strong> Visit the Statistics tab to see comprehensive analytics about your collection. View your watch progress, rating distributions, favorite directors, decade breakdowns, and genre preferences. All statistics update in real-time as you add more items.</li>
+            <li style="margin-bottom: 15px;"><strong style="color: var(--fg);">Connect with Friends:</strong> Use the Friends sidebar to send friend requests by username. Accept incoming requests through the notification bell. View friends' collections and statistics (respecting their privacy settings) to discover new media recommendations.</li>
+            <li style="margin-bottom: 15px;"><strong style="color: var(--fg);">Backup Your Data:</strong> Regularly export your collection using the "Export Data" button. This creates a JSON file with all your movies, TV shows, anime, and video games. You can import this file later or use it to migrate to another account.</li>
+          </ol>
+        </div>
+
+        <div style="background: var(--card-bg); padding: 40px; border-radius: 12px; box-shadow: 0 4px 6px rgba(0,0,0,0.1); margin-bottom: 30px;">
+          <h3 style="color: var(--primary); margin-bottom: 20px; font-size: 1.5rem;">Understanding Title Normalization</h3>
+          <p style="line-height: 1.8; color: var(--fg-secondary); margin-bottom: 15px;">OmniTrackr automatically normalizes titles to their official names when fetching metadata from APIs. This ensures consistency and accuracy in your collection. For example:</p>
+          <ul style="line-height: 2; color: var(--fg-secondary); padding-left: 20px; margin-bottom: 15px;">
+            <li>Entering "skyrim" becomes "The Elder Scrolls V: Skyrim" (RAWG API)</li>
+            <li>Entering "inception" becomes "Inception" (OMDB API)</li>
+            <li>Entering "naruto" becomes "Naruto" with proper formatting (Jikan API)</li>
+          </ul>
+          <p style="line-height: 1.8; color: var(--fg-secondary);">This normalization only occurs when metadata is successfully fetched. If an API doesn't return results, your original title is preserved. This feature helps maintain a professional, organized collection with consistent naming conventions.</p>
+        </div>
+
+        <div style="background: var(--card-bg); padding: 40px; border-radius: 12px; box-shadow: 0 4px 6px rgba(0,0,0,0.1);">
+          <h3 style="color: var(--primary); margin-bottom: 20px; font-size: 1.5rem;">Making the Most of Your Statistics</h3>
+          <p style="line-height: 1.8; color: var(--fg-secondary); margin-bottom: 15px;">The Statistics dashboard provides powerful insights into your media consumption habits:</p>
+          <ul style="line-height: 2; color: var(--fg-secondary); padding-left: 20px;">
+            <li><strong style="color: var(--fg);">Watch Progress:</strong> Track how many items you've completed versus your total collection size. The visual progress bar shows your completion percentage at a glance.</li>
+            <li><strong style="color: var(--fg);">Rating Analysis:</strong> See your average rating across all rated items and view rating distributions. Discover your highest and lowest rated media to understand your preferences.</li>
+            <li><strong style="color: var(--fg);">Year Analysis:</strong> Explore which decades you watch most. The decade breakdown bar chart visualizes your viewing habits across different eras of cinema and television.</li>
+            <li><strong style="color: var(--fg);">Director Insights:</strong> For movies, see which directors appear most frequently in your collection and which directors you rate highest on average. Discover your favorite filmmakers.</li>
+            <li><strong style="color: var(--fg);">Genre Statistics:</strong> For video games, analyze which genres you play most and identify your gaming preferences through comprehensive genre breakdowns.</li>
+          </ul>
+        </div>
+      </div>
+    </section>
+
+    <!-- Tips & Best Practices Section -->
+    <section class="landing-tips" aria-labelledby="tips-title" style="padding: 80px 20px; background: var(--bg-secondary);">
+      <div style="max-width: 1000px; margin: 0 auto;">
+        <h2 id="tips-title" class="features-title" style="text-align: center; margin-bottom: 50px;">Tips & Best Practices</h2>
+        
+        <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 30px;">
+          <div style="background: var(--card-bg); padding: 30px; border-radius: 12px; box-shadow: 0 4px 6px rgba(0,0,0,0.1);">
+            <h3 style="color: var(--primary); margin-bottom: 15px;">📝 Organizing Your Collection</h3>
+            <p style="line-height: 1.8; color: var(--fg-secondary); margin-bottom: 15px;">Start by adding items you've already watched or played to build a solid foundation. Then, add items to your watchlist by leaving the "Watched" checkbox unchecked. Use the search and sort features to quickly find specific items or organize by rating, year, or director.</p>
+            <p style="line-height: 1.8; color: var(--fg-secondary);">Write brief reviews as you add items - even a sentence or two helps you remember why you rated something the way you did months later. Reviews are searchable, so you can find items by keywords in your reviews.</p>
+          </div>
+
+          <div style="background: var(--card-bg); padding: 30px; border-radius: 12px; box-shadow: 0 4px 6px rgba(0,0,0,0.1);">
+            <h3 style="color: var(--primary); margin-bottom: 15px;">⭐ Rating Consistency</h3>
+            <p style="line-height: 1.8; color: var(--fg-secondary); margin-bottom: 15px;">Develop a consistent rating system that works for you. Many users find it helpful to use a scale where 5.0 is average, 7.0+ is good, 8.5+ is great, and 9.5+ is exceptional. Use decimal ratings (e.g., 7.5, 8.2) to capture nuanced opinions.</p>
+            <p style="line-height: 1.8; color: var(--fg-secondary);">Your statistics dashboard will show rating distributions, helping you understand if you tend to rate items high or low. This self-awareness can help you maintain consistency over time.</p>
+          </div>
+
+          <div style="background: var(--card-bg); padding: 30px; border-radius: 12px; box-shadow: 0 4px 6px rgba(0,0,0,0.1);">
+            <h3 style="color: var(--primary); margin-bottom: 15px;">👥 Social Features</h3>
+            <p style="line-height: 1.8; color: var(--fg-secondary); margin-bottom: 15px;">Use the friends system to discover new media through recommendations. When viewing a friend's collection, use the search functionality to find specific items or filter by rating to see their highest-rated content.</p>
+            <p style="line-height: 1.8; color: var(--fg-secondary);">Respect privacy settings - if a friend has made certain data private, that's their choice. Use privacy settings yourself to control what friends can see about your collection and statistics.</p>
+          </div>
+
+          <div style="background: var(--card-bg); padding: 30px; border-radius: 12px; box-shadow: 0 4px 6px rgba(0,0,0,0.1);">
+            <h3 style="color: var(--primary); margin-bottom: 15px;">💾 Data Management</h3>
+            <p style="line-height: 1.8; color: var(--fg-secondary); margin-bottom: 15px;">Regularly export your collection as a backup. JSON export files include all metadata: titles, ratings, reviews, watched status, poster URLs, and more. Keep these backups safe - they're your insurance against data loss.</p>
+            <p style="line-height: 1.8; color: var(--fg-secondary);">When importing data, OmniTrackr's smart conflict resolution updates existing entries rather than creating duplicates. This makes it safe to import the same file multiple times or merge collections from different accounts.</p>
+          </div>
+
+          <div style="background: var(--card-bg); padding: 30px; border-radius: 12px; box-shadow: 0 4px 6px rgba(0,0,0,0.1);">
+            <h3 style="color: var(--primary); margin-bottom: 15px;">🔒 Privacy & Security</h3>
+            <p style="line-height: 1.8; color: var(--fg-secondary); margin-bottom: 15px;">Take advantage of granular privacy controls. You can make movies, TV shows, anime, video games, or statistics private individually. Private data is completely hidden from friends, giving you full control over what you share.</p>
+            <p style="line-height: 1.8; color: var(--fg-secondary);">Keep your account secure by using a strong, unique password. Enable email verification and use the password reset feature if you forget your password. All sensitive operations require password confirmation for added security.</p>
+          </div>
+
+          <div style="background: var(--card-bg); padding: 30px; border-radius: 12px; box-shadow: 0 4px 6px rgba(0,0,0,0.1);">
+            <h3 style="color: var(--primary); margin-bottom: 15px;">📊 Using Statistics Effectively</h3>
+            <p style="line-height: 1.8; color: var(--fg-secondary); margin-bottom: 15px;">Check your statistics regularly to understand your viewing patterns. Are you watching mostly recent releases or exploring older classics? Which directors do you rate highest? Use these insights to discover new content that matches your preferences.</p>
+            <p style="line-height: 1.8; color: var(--fg-secondary);">The statistics dashboard updates in real-time as you add items. Watch your completion percentage grow as you mark items as watched, and see your average rating evolve as you rate more content.</p>
+          </div>
         </div>
       </div>
     </section>
