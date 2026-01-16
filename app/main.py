@@ -170,6 +170,16 @@ async def read_root():
     return {"message": "OmniTrackr API is running 🚀"}
 
 
+# Privacy Policy endpoint
+@app.get("/privacy", tags=["public"])
+async def privacy_policy():
+    """Serve the privacy policy page."""
+    html_file = os.path.join(os.path.dirname(__file__), "templates", "privacy.html")
+    if os.path.exists(html_file):
+        return FileResponse(html_file)
+    raise HTTPException(status_code=404, detail="Privacy policy not found")
+
+
 # Public endpoint for user count
 @app.get("/api/user-count", response_model=schemas.UserCount, tags=["public"])
 @limiter.limit("30/minute")  # Rate limit: 30 requests per minute per IP
