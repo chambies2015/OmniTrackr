@@ -103,12 +103,4 @@ async def get_favicon_png():
     raise HTTPException(status_code=404, detail="favicon.png not found")
 
 
-@router.get("/ads.txt")
-@router.head("/ads.txt")
-async def get_ads_txt():
-    """Serve ads.txt for Google AdSense verification."""
-    ads_file = os.path.join(os.path.dirname(__file__), "..", "..", "ads.txt")
-    if os.path.exists(ads_file):
-        return FileResponse(ads_file, media_type="text/plain")
-    raise HTTPException(status_code=404, detail="ads.txt not found")
 
