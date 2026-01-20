@@ -4210,10 +4210,11 @@ window.addEventListener('beforeunload', function() {
 
 let customTabs = [];
 let customTabFieldCounter = 0;
+const getAuthTokenValue = () => (typeof getToken === 'function' ? getToken() : localStorage.getItem('omnitrackr_token'));
 
 async function loadCustomTabs() {
   try {
-    const token = localStorage.getItem('token');
+    const token = getAuthTokenValue();
     if (!token) return;
     
     const response = await fetch(`${API_BASE}/custom-tabs`, {
@@ -4236,7 +4237,10 @@ async function loadCustomTabs() {
 function renderCustomTabs() {
   const container = document.getElementById('customTabsContainer');
   if (!container) return;
-  
+  const mainContainer = document.getElementById('mainContainer');
+  if (mainContainer) {
+    mainContainer.querySelectorAll('.tab-content[id^="custom-"]').forEach(el => el.remove());
+  }
   container.innerHTML = '';
   
   customTabs.forEach(tab => {
@@ -4362,7 +4366,7 @@ function generateCustomTabFormFields(tab) {
 
 async function handleAddCustomTabItem(tab) {
   try {
-    const token = localStorage.getItem('token');
+    const token = getAuthTokenValue();
     if (!token) {
       alert('You must be logged in to add items');
       return;
@@ -4493,7 +4497,7 @@ async function handleAddCustomTabItem(tab) {
 
 async function fetchMetadataForCustomTab(tab, title, fieldValues, posterUrl) {
   try {
-    const token = localStorage.getItem('token');
+    const token = getAuthTokenValue();
     let metadataFetched = false;
     
     if (tab.source_type === 'omdb') {
@@ -4653,7 +4657,7 @@ async function createCustomTabItemAfterMetadata(tab, title, fieldValues, posterU
 
 async function uploadCustomTabPoster(tabId, itemId, file) {
   try {
-    const token = localStorage.getItem('token');
+    const token = getAuthTokenValue();
     if (!token) return;
     
     if (file.size > 5 * 1024 * 1024) {
@@ -4683,7 +4687,7 @@ async function uploadCustomTabPoster(tabId, itemId, file) {
 
 async function loadCustomTabItems(tab) {
   try {
-    const token = localStorage.getItem('token');
+    const token = getAuthTokenValue();
     if (!token) return;
     
     const tableBody = document.getElementById(`customTab${tab.id}TableBody`);
@@ -4820,7 +4824,7 @@ async function deleteCustomTabItem(tabId, itemId) {
   if (!confirm('Are you sure you want to delete this item? This action cannot be undone.')) return;
   
   try {
-    const token = localStorage.getItem('token');
+    const token = getAuthTokenValue();
     if (!token) {
       alert('You must be logged in to delete items');
       return;
@@ -4848,7 +4852,7 @@ async function deleteCustomTabItem(tabId, itemId) {
 
 async function editCustomTabItem(tabId, itemId) {
   try {
-    const token = localStorage.getItem('token');
+    const token = getAuthTokenValue();
     if (!token) {
       alert('You must be logged in to edit items');
       return;
@@ -4953,7 +4957,7 @@ async function editCustomTabItem(tabId, itemId) {
 
 async function handleUpdateCustomTabItem(tab, itemId) {
   try {
-    const token = localStorage.getItem('token');
+    const token = getAuthTokenValue();
     if (!token) return;
     
     const titleInput = document.getElementById(`customTab${tab.id}Title`);
@@ -5076,11 +5080,12 @@ function showCustomTabManager() {
 
 function closeCustomTabManager() {
   document.getElementById('customTabManagerModal').style.display = 'none';
+  resetCustomTabFormState();
 }
 
 async function loadCustomTabsList() {
   try {
-    const token = localStorage.getItem('token');
+    const token = getAuthTokenValue();
     if (!token) return;
     
     const listContainer = document.getElementById('customTabsList');
@@ -5108,6 +5113,7 @@ async function loadCustomTabsList() {
                   </div>
                 </div>
                 <div>
+                  <button class="action-btn" onclick="openEditCustomTab(${tab.id})" title="Edit tab">Edit</button>
                   <button class="action-btn" onclick="deleteCustomTab(${tab.id})" style="background-color: #f44336;" title="Delete tab">Delete</button>
                 </div>
               </div>
@@ -5133,14 +5139,21 @@ function showCreateCustomTabForm() {
   document.getElementById('createCustomTabForm').style.display = 'block';
   document.getElementById('customTabFieldsList').innerHTML = '';
   customTabFieldCounter = 0;
+  const form = document.getElementById('newCustomTabForm');
+  if (form) {
+    delete form.dataset.editingTabId;
+  }
+  const submitBtn = form?.querySelector('button[type="submit"]');
+  if (submitBtn) submitBtn.textContent = 'Create Tab';
 }
 
 function cancelCreateCustomTab() {
   document.getElementById('createCustomTabForm').style.display = 'none';
   document.getElementById('newCustomTabForm').reset();
+  resetCustomTabFormState();
 }
 
-function addCustomTabField() {
+function addCustomTabField(fieldData = null) {
   const container = document.getElementById('customTabFieldsList');
   if (!container) return;
   
@@ -5183,6 +5196,15 @@ function addCustomTabField() {
   container.appendChild(fieldDiv);
   
   const keyInput = fieldDiv.querySelector(`#fieldKey${fieldId}`);
+  const labelInput = fieldDiv.querySelector(`#fieldLabel${fieldId}`);
+  const typeSelect = fieldDiv.querySelector(`#fieldType${fieldId}`);
+  const requiredInput = fieldDiv.querySelector(`#fieldRequired${fieldId}`);
+  if (fieldData) {
+    if (keyInput) keyInput.value = fieldData.key || '';
+    if (labelInput) labelInput.value = fieldData.label || '';
+    if (typeSelect) typeSelect.value = fieldData.field_type || 'text';
+    if (requiredInput) requiredInput.checked = !!fieldData.required;
+  }
   if (keyInput) {
     keyInput.addEventListener('input', () => validateFieldKey(keyInput, container));
   }
@@ -5215,7 +5237,7 @@ document.getElementById('newCustomTabForm')?.addEventListener('submit', async (e
   e.preventDefault();
   
   try {
-    const token = localStorage.getItem('token');
+    const token = getAuthTokenValue();
     if (!token) {
       alert('You must be logged in to create custom tabs');
       return;
@@ -5225,7 +5247,7 @@ document.getElementById('newCustomTabForm')?.addEventListener('submit', async (e
     const originalBtnText = submitBtn?.textContent;
     if (submitBtn) {
       submitBtn.disabled = true;
-      submitBtn.textContent = 'Creating...';
+      submitBtn.textContent = e.target.dataset.editingTabId ? 'Updating...' : 'Creating...';
     }
     
     const name = document.getElementById('customTabName').value.trim();
@@ -5247,8 +5269,9 @@ document.getElementById('newCustomTabForm')?.addEventListener('submit', async (e
       return;
     }
     
+    const editingTabId = e.target.dataset.editingTabId;
     const existingTabsCount = customTabs.length;
-    if (existingTabsCount >= 20) {
+    if (!editingTabId && existingTabsCount >= 20) {
       alert('Maximum of 20 custom tabs allowed per user');
       if (submitBtn) {
         submitBtn.disabled = false;
@@ -5306,8 +5329,8 @@ document.getElementById('newCustomTabForm')?.addEventListener('submit', async (e
       return;
     }
     
-    const response = await fetch(`${API_BASE}/custom-tabs`, {
-      method: 'POST',
+    const response = await fetch(`${API_BASE}/custom-tabs${editingTabId ? `/${editingTabId}` : ''}`, {
+      method: editingTabId ? 'PUT' : 'POST',
       headers: {
         'Authorization': `Bearer ${token}`,
         'Content-Type': 'application/json'
@@ -5321,22 +5344,22 @@ document.getElementById('newCustomTabForm')?.addEventListener('submit', async (e
     });
     
     if (response.ok) {
-      cancelCreateCustomTab();
+      resetCustomTabFormState();
       await loadCustomTabs();
       loadCustomTabsList();
-      alert('Custom tab created successfully!');
+      alert(editingTabId ? 'Custom tab updated successfully!' : 'Custom tab created successfully!');
     } else {
-      const errorData = await response.json().catch(() => ({ detail: 'Failed to create custom tab' }));
-      alert(errorData.detail || 'Failed to create custom tab');
+      const errorData = await response.json().catch(() => ({ detail: editingTabId ? 'Failed to update custom tab' : 'Failed to create custom tab' }));
+      alert(errorData.detail || (editingTabId ? 'Failed to update custom tab' : 'Failed to create custom tab'));
     }
   } catch (error) {
-    console.error('Error creating custom tab:', error);
-    alert('Failed to create custom tab. Please try again.');
+    console.error('Error saving custom tab:', error);
+    alert('Failed to save custom tab. Please try again.');
   } finally {
     const submitBtn = e.target.querySelector('button[type="submit"]');
     if (submitBtn) {
       submitBtn.disabled = false;
-      submitBtn.textContent = 'Create Tab';
+      submitBtn.textContent = e.target.dataset.editingTabId ? 'Update Tab' : 'Create Tab';
     }
   }
 });
@@ -5348,7 +5371,7 @@ async function deleteCustomTab(tabId) {
   if (!confirm(`Are you sure you want to delete "${tabName}"? All items in this tab will be permanently deleted. This action cannot be undone.`)) return;
   
   try {
-    const token = localStorage.getItem('token');
+    const token = getAuthTokenValue();
     if (!token) {
       alert('You must be logged in to delete custom tabs');
       return;
@@ -5378,6 +5401,63 @@ async function deleteCustomTab(tabId) {
   } catch (error) {
     console.error('Error deleting custom tab:', error);
     alert('Failed to delete custom tab. Please try again.');
+  }
+}
+
+function resetCustomTabFormState() {
+  const form = document.getElementById('newCustomTabForm');
+  if (form) {
+    delete form.dataset.editingTabId;
+    form.reset();
+  }
+  const fieldsList = document.getElementById('customTabFieldsList');
+  if (fieldsList) {
+    fieldsList.innerHTML = '';
+  }
+  const formWrapper = document.getElementById('createCustomTabForm');
+  if (formWrapper) {
+    formWrapper.style.display = 'none';
+  }
+  customTabFieldCounter = 0;
+  const submitBtn = form?.querySelector('button[type="submit"]');
+  if (submitBtn) submitBtn.textContent = 'Create Tab';
+}
+
+async function openEditCustomTab(tabId) {
+  try {
+    const token = getAuthTokenValue();
+    if (!token) {
+      alert('You must be logged in to edit custom tabs');
+      return;
+    }
+    const response = await fetch(`${API_BASE}/custom-tabs/${tabId}`, {
+      headers: { 'Authorization': `Bearer ${token}` }
+    });
+    if (!response.ok) {
+      const errorData = await response.json().catch(() => ({ detail: 'Failed to load custom tab' }));
+      alert(errorData.detail || 'Failed to load custom tab');
+      return;
+    }
+    const tab = await response.json();
+    const formWrapper = document.getElementById('createCustomTabForm');
+    if (formWrapper) formWrapper.style.display = 'block';
+    const form = document.getElementById('newCustomTabForm');
+    if (form) form.dataset.editingTabId = tab.id;
+    const nameInput = document.getElementById('customTabName');
+    const sourceSelect = document.getElementById('customTabSourceType');
+    const allowUploads = document.getElementById('customTabAllowUploads');
+    if (nameInput) nameInput.value = tab.name || '';
+    if (sourceSelect) sourceSelect.value = tab.source_type || 'none';
+    if (allowUploads) allowUploads.checked = !!tab.allow_uploads;
+    const fieldsList = document.getElementById('customTabFieldsList');
+    if (fieldsList) fieldsList.innerHTML = '';
+    customTabFieldCounter = 0;
+    (tab.fields || []).forEach(field => addCustomTabField(field));
+    const submitBtn = form?.querySelector('button[type="submit"]');
+    if (submitBtn) submitBtn.textContent = 'Update Tab';
+  } catch (error) {
+    console.error('Error loading custom tab for edit:', error);
+    alert('Failed to load custom tab. Please try again.');
   }
 }
 
@@ -5412,7 +5492,7 @@ function setupCustomTabSwitching() {
 
 document.addEventListener('DOMContentLoaded', () => {
   setupCustomTabSwitching();
-  const token = localStorage.getItem('token');
+  const token = getAuthTokenValue();
   if (token) {
     loadCustomTabs();
   }
