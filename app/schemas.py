@@ -573,3 +573,71 @@ class FriendStatisticsResponse(BaseModel):
     watch_stats: WatchStatistics = Field(..., description="Watch statistics")
     rating_stats: RatingStatistics = Field(..., description="Rating statistics")
     generated_at: str = Field(..., description="Timestamp when statistics were generated")
+
+
+class CustomTabFieldCreate(BaseModel):
+    key: str = Field(..., min_length=1, max_length=50, description="Field key (e.g., 'year', 'director')")
+    label: str = Field(..., min_length=1, max_length=100, description="Field label for display")
+    field_type: str = Field(..., description="Field type: text, number, date, boolean, rating, review, status")
+    required: bool = Field(False, description="Whether field is required")
+    order: int = Field(0, ge=0, description="Display order")
+
+
+class CustomTabField(CustomTabFieldCreate):
+    id: int
+    tab_id: int
+    
+    class Config:
+        from_attributes = True
+
+
+class CustomTabCreate(BaseModel):
+    name: str = Field(..., min_length=1, max_length=100, description="Tab name")
+    source_type: str = Field("none", description="Metadata source: omdb, jikan, rawg, or none")
+    allow_uploads: bool = Field(True, description="Allow poster uploads")
+    fields: List[CustomTabFieldCreate] = Field(default=[], max_items=30, description="Field definitions")
+
+
+class CustomTabUpdate(BaseModel):
+    name: Optional[str] = Field(None, min_length=1, max_length=100)
+    source_type: Optional[str] = None
+    allow_uploads: Optional[bool] = None
+    fields: Optional[List[CustomTabFieldCreate]] = None
+
+
+class CustomTab(BaseModel):
+    id: int
+    user_id: int
+    name: str
+    slug: str
+    source_type: str
+    allow_uploads: bool
+    created_at: Optional[datetime] = None
+    fields: List[CustomTabField] = Field(default=[])
+    
+    class Config:
+        from_attributes = True
+
+
+class CustomTabItemCreate(BaseModel):
+    title: str = Field(..., min_length=1, max_length=500, description="Item title")
+    field_values: dict = Field(default={}, description="Field values as key-value pairs")
+    poster_url: Optional[str] = Field(None, max_length=2000, description="Poster image URL")
+
+
+class CustomTabItemUpdate(BaseModel):
+    title: Optional[str] = Field(None, min_length=1, max_length=500)
+    field_values: Optional[dict] = None
+    poster_url: Optional[str] = Field(None, max_length=2000)
+
+
+class CustomTabItem(BaseModel):
+    id: int
+    tab_id: int
+    title: str
+    field_values: Optional[dict] = None
+    poster_url: Optional[str] = None
+    created_at: Optional[datetime] = None
+    
+    class Config:
+        from_attributes = True

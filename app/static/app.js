@@ -4208,3 +4208,1212 @@ window.addEventListener('beforeunload', function() {
   }
 });
 
+let customTabs = [];
+let customTabFieldCounter = 0;
+
+async function loadCustomTabs() {
+  try {
+    const token = localStorage.getItem('token');
+    if (!token) return;
+    
+    const response = await fetch(`${API_BASE}/custom-tabs`, {
+      headers: { 'Authorization': `Bearer ${token}` }
+    });
+    
+    if (response.ok) {
+      customTabs = await response.json();
+      renderCustomTabs();
+    } else if (response.status === 401) {
+      console.error('Unauthorized - token may be expired');
+    } else {
+      console.error('Failed to load custom tabs:', response.status);
+    }
+  } catch (error) {
+    console.error('Error loading custom tabs:', error);
+  }
+}
+
+function renderCustomTabs() {
+  const container = document.getElementById('customTabsContainer');
+  if (!container) return;
+  
+  container.innerHTML = '';
+  
+  customTabs.forEach(tab => {
+    const tabButton = document.createElement('button');
+    tabButton.className = 'tab';
+    tabButton.textContent = tab.name;
+    tabButton.onclick = () => switchTab(`custom-${tab.id}`);
+    container.appendChild(tabButton);
+    
+    createCustomTabContent(tab);
+  });
+}
+
+function createCustomTabContent(tab) {
+  const mainContainer = document.getElementById('mainContainer');
+  if (!mainContainer) return;
+  
+  const tabContent = document.createElement('div');
+  tabContent.id = `custom-${tab.id}-tab`;
+  tabContent.className = 'tab-content';
+  
+  tabContent.innerHTML = `
+    <div class="card">
+      <div class="collapsible-header" onclick="toggleCollapsible('customTab${tab.id}Form')">
+        <h2 style="margin: 0; display: inline-block;">Add ${escapeHtml(tab.name)}</h2>
+        <span class="collapsible-icon" id="customTab${tab.id}FormIcon">▼</span>
+      </div>
+      <div class="collapsible-content" id="customTab${tab.id}FormContent" style="display: none;">
+        <form id="addCustomTab${tab.id}Form">
+          <div>
+            <input type="text" id="customTab${tab.id}Title" placeholder="Title" required>
+          </div>
+          ${generateCustomTabFormFields(tab)}
+          ${tab.allow_uploads ? `
+            <div>
+              <label>Poster URL <input type="text" id="customTab${tab.id}PosterUrl" placeholder="Optional poster URL"></label>
+            </div>
+            <div>
+              <label>Or Upload Poster <input type="file" id="customTab${tab.id}PosterFile" accept="image/*"></label>
+            </div>
+          ` : ''}
+          <button type="submit" class="action-btn">Add ${escapeHtml(tab.name)}</button>
+        </form>
+      </div>
+    </div>
+    <div class="card">
+      <div style="display:flex; justify-content: space-between; align-items: center; margin-bottom: 10px;">
+        <h2 style="margin: 0;">${escapeHtml(tab.name)}</h2>
+        <span id="customTab${tab.id}Count" style="font-weight: bold;"></span>
+      </div>
+      <div style="display:flex; flex-wrap: wrap; gap: 10px; margin-bottom: 10px;">
+        <input type="text" id="customTab${tab.id}Search" placeholder="Search" style="flex: 2; min-width: 200px;">
+        <button id="loadCustomTab${tab.id}" class="action-btn" style="flex: 1; min-width: 120px;">Refresh</button>
+      </div>
+      <div class="table-container">
+        <table id="customTab${tab.id}Table">
+          <thead id="customTab${tab.id}TableHead"></thead>
+          <tbody id="customTab${tab.id}TableBody"></tbody>
+        </table>
+      </div>
+    </div>
+  `;
+  
+  mainContainer.appendChild(tabContent);
+  
+  const form = document.getElementById(`addCustomTab${tab.id}Form`);
+  if (form) {
+    form.addEventListener('submit', (e) => {
+      e.preventDefault();
+      if (form.dataset.editingItemId) {
+        handleUpdateCustomTabItem(tab, parseInt(form.dataset.editingItemId));
+      } else {
+        handleAddCustomTabItem(tab);
+      }
+    });
+  }
+  
+  document.getElementById(`loadCustomTab${tab.id}`).addEventListener('click', () => {
+    loadCustomTabItems(tab);
+  });
+  
+  document.getElementById(`customTab${tab.id}Search`).addEventListener('input', (e) => {
+    filterCustomTabItems(tab, e.target.value);
+  });
+  
+  loadCustomTabItems(tab);
+}
+
+function generateCustomTabFormFields(tab) {
+  return tab.fields.map(field => {
+    const required = field.required ? 'required' : '';
+    let input = '';
+    
+    switch (field.field_type) {
+      case 'text':
+        input = `<input type="text" id="customTab${tab.id}Field${field.key}" placeholder="${escapeHtml(field.label)}" ${required}>`;
+        break;
+      case 'number':
+        input = `<input type="number" id="customTab${tab.id}Field${field.key}" placeholder="${escapeHtml(field.label)}" ${required}>`;
+        break;
+      case 'date':
+        input = `<input type="date" id="customTab${tab.id}Field${field.key}" placeholder="${escapeHtml(field.label)}" ${required}>`;
+        break;
+      case 'boolean':
+        input = `<label>${escapeHtml(field.label)} <input type="checkbox" id="customTab${tab.id}Field${field.key}"></label>`;
+        break;
+      case 'rating':
+        input = `<input type="number" min="0" max="10" step="0.1" id="customTab${tab.id}Field${field.key}" placeholder="${escapeHtml(field.label)} (0-10.0)" ${required}>`;
+        break;
+      case 'review':
+        input = `<textarea id="customTab${tab.id}Field${field.key}" placeholder="${escapeHtml(field.label)}" rows="1" ${required}></textarea>`;
+        break;
+      case 'status':
+        input = `<label>${escapeHtml(field.label)} <input type="checkbox" id="customTab${tab.id}Field${field.key}"></label>`;
+        break;
+      default:
+        input = `<input type="text" id="customTab${tab.id}Field${field.key}" placeholder="${escapeHtml(field.label)}" ${required}>`;
+    }
+    
+    return `<div>${input}</div>`;
+  }).join('');
+}
+
+async function handleAddCustomTabItem(tab) {
+  try {
+    const token = localStorage.getItem('token');
+    if (!token) {
+      alert('You must be logged in to add items');
+      return;
+    }
+    
+    const titleInput = document.getElementById(`customTab${tab.id}Title`);
+    const submitBtn = titleInput?.closest('form')?.querySelector('button[type="submit"]');
+    const originalBtnText = submitBtn?.textContent;
+    
+    if (submitBtn) {
+      submitBtn.disabled = true;
+      submitBtn.textContent = 'Adding...';
+    }
+    
+    const title = titleInput.value.trim();
+    
+    if (!title) {
+      alert('Title is required');
+      if (submitBtn) {
+        submitBtn.disabled = false;
+        submitBtn.textContent = originalBtnText;
+      }
+      return;
+    }
+    
+    if (title.length > 500) {
+      alert('Title is too long (max 500 characters)');
+      if (submitBtn) {
+        submitBtn.disabled = false;
+        submitBtn.textContent = originalBtnText;
+      }
+      return;
+    }
+    
+    const fieldValues = {};
+    tab.fields.forEach(field => {
+      const input = document.getElementById(`customTab${tab.id}Field${field.key}`);
+      if (input) {
+        if (field.field_type === 'boolean' || field.field_type === 'status') {
+          fieldValues[field.key] = input.checked;
+        } else {
+          const value = input.value.trim();
+          if (value) {
+            if (field.field_type === 'number' || field.field_type === 'rating') {
+              fieldValues[field.key] = parseFloat(value);
+            } else {
+              fieldValues[field.key] = value;
+            }
+          }
+        }
+      }
+    });
+    
+    let posterUrl = null;
+    if (tab.allow_uploads) {
+      const posterUrlInput = document.getElementById(`customTab${tab.id}PosterUrl`);
+      const posterFileInput = document.getElementById(`customTab${tab.id}PosterFile`);
+      
+      if (posterUrlInput && posterUrlInput.value.trim()) {
+        posterUrl = posterUrlInput.value.trim();
+      } else if (posterFileInput && posterFileInput.files.length > 0) {
+        posterUrl = 'pending_upload';
+      }
+    }
+    
+    if (tab.source_type !== 'none' && title) {
+      await fetchMetadataForCustomTab(tab, title, fieldValues, posterUrl);
+      return;
+    }
+    
+    const response = await fetch(`${API_BASE}/custom-tabs/${tab.id}/items`, {
+      method: 'POST',
+      headers: {
+        'Authorization': `Bearer ${token}`,
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify({
+        title,
+        field_values: fieldValues,
+        poster_url: posterUrl
+      })
+    });
+    
+    if (response.ok) {
+      const item = await response.json();
+      titleInput.value = '';
+      tab.fields.forEach(field => {
+        const input = document.getElementById(`customTab${tab.id}Field${field.key}`);
+        if (input) {
+          if (input.type === 'checkbox') {
+            input.checked = false;
+          } else {
+            input.value = '';
+          }
+        }
+      });
+      if (tab.allow_uploads) {
+        const posterUrlInput = document.getElementById(`customTab${tab.id}PosterUrl`);
+        const posterFileInput = document.getElementById(`customTab${tab.id}PosterFile`);
+        if (posterUrlInput) posterUrlInput.value = '';
+        if (posterFileInput) posterFileInput.value = '';
+      }
+      
+      if (posterUrl === 'pending_upload' && posterFileInput && posterFileInput.files.length > 0) {
+        await uploadCustomTabPoster(tab.id, item.id, posterFileInput.files[0]);
+      }
+      
+      loadCustomTabItems(tab);
+    } else {
+      const errorData = await response.json().catch(() => ({ detail: 'Failed to add item' }));
+      alert(errorData.detail || 'Failed to add item');
+    }
+  } catch (error) {
+    if (error.message === 'Validation failed') {
+      return;
+    }
+    console.error('Error adding custom tab item:', error);
+    alert('Failed to add item. Please try again.');
+  } finally {
+    const titleInput = document.getElementById(`customTab${tab.id}Title`);
+    const submitBtn = titleInput?.closest('form')?.querySelector('button[type="submit"]');
+    if (submitBtn) {
+      submitBtn.disabled = false;
+      submitBtn.textContent = `Add ${escapeHtml(tab.name)}`;
+    }
+  }
+}
+
+async function fetchMetadataForCustomTab(tab, title, fieldValues, posterUrl) {
+  try {
+    const token = localStorage.getItem('token');
+    let metadataFetched = false;
+    
+    if (tab.source_type === 'omdb') {
+      try {
+        const year = fieldValues.year || '';
+        const controller = new AbortController();
+        const timeoutId = setTimeout(() => controller.abort(), 10000);
+        const response = await fetch(`${API_BASE}/api/proxy/omdb?title=${encodeURIComponent(title)}${year ? '&year=' + encodeURIComponent(year) : ''}`, {
+          signal: controller.signal
+        });
+        clearTimeout(timeoutId);
+        if (response.ok) {
+          const data = await response.json();
+          if (data.Response === 'True' && data.Poster && data.Poster !== 'N/A') {
+            posterUrl = data.Poster;
+            if (data.Title) fieldValues.title = data.Title;
+            if (data.Year) fieldValues.year = parseInt(data.Year);
+            if (data.Director && data.Director !== 'N/A') fieldValues.director = data.Director;
+            metadataFetched = true;
+          }
+        }
+      } catch (fetchError) {
+        if (fetchError.name !== 'AbortError') {
+          console.warn('OMDB API fetch failed:', fetchError);
+        }
+      }
+    } else if (tab.source_type === 'jikan') {
+      try {
+        const controller = new AbortController();
+        const timeoutId = setTimeout(() => controller.abort(), 10000);
+        const response = await fetch(`${API_BASE}/api/proxy/jikan?query=${encodeURIComponent(title)}`, {
+          signal: controller.signal
+        });
+        clearTimeout(timeoutId);
+        if (response.ok) {
+          const data = await response.json();
+          if (data.data && data.data.length > 0) {
+            const anime = data.data[0];
+            const posterUrlFromApi = anime.images?.jpg?.large_image_url || anime.images?.jpg?.image_url;
+            if (posterUrlFromApi) {
+              posterUrl = posterUrlFromApi;
+              if (anime.title) fieldValues.title = anime.title;
+              if (anime.year) fieldValues.year = anime.year;
+              if (anime.seasons) fieldValues.seasons = anime.seasons;
+              if (anime.episodes) fieldValues.episodes = anime.episodes;
+              metadataFetched = true;
+            }
+          }
+        }
+      } catch (fetchError) {
+        if (fetchError.name !== 'AbortError') {
+          console.warn('Jikan API fetch failed:', fetchError);
+        }
+      }
+    } else if (tab.source_type === 'rawg') {
+      try {
+        const controller = new AbortController();
+        const timeoutId = setTimeout(() => controller.abort(), 10000);
+        const response = await fetch(`${API_BASE}/api/proxy/rawg?search=${encodeURIComponent(title)}`, {
+          signal: controller.signal
+        });
+        clearTimeout(timeoutId);
+        if (response.ok) {
+          const data = await response.json();
+          if (data.results && data.results.length > 0) {
+            const game = data.results[0];
+            if (game.background_image) {
+              posterUrl = game.background_image;
+              if (game.name) fieldValues.title = game.name;
+              if (game.released) fieldValues.release_date = game.released;
+              if (game.genres && game.genres.length > 0) {
+                fieldValues.genres = game.genres.map(g => g.name).join(', ');
+              }
+              if (game.slug) {
+                fieldValues.rawg_link = `https://rawg.io/games/${game.slug}`;
+              }
+              metadataFetched = true;
+            }
+          }
+        }
+      } catch (fetchError) {
+        if (fetchError.name !== 'AbortError') {
+          console.warn('RAWG API fetch failed:', fetchError);
+        }
+      }
+    }
+    
+    const finalTitle = fieldValues.title || title;
+    delete fieldValues.title;
+    
+    await createCustomTabItemAfterMetadata(tab, finalTitle, fieldValues, posterUrl, token);
+  } catch (error) {
+    console.error('Error fetching metadata:', error);
+    if (error.name === 'AbortError') {
+      console.warn('Metadata fetch timed out. Adding item without metadata.');
+    } else {
+      console.warn('Failed to fetch metadata. Adding item without metadata.');
+    }
+    
+    const finalTitle = fieldValues.title || title;
+    delete fieldValues.title;
+    
+    await createCustomTabItemAfterMetadata(tab, finalTitle, fieldValues, posterUrl, token);
+  }
+}
+
+async function createCustomTabItemAfterMetadata(tab, title, fieldValues, posterUrl, token) {
+  try {
+    const response = await fetch(`${API_BASE}/custom-tabs/${tab.id}/items`, {
+      method: 'POST',
+      headers: {
+        'Authorization': `Bearer ${token}`,
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify({
+        title,
+        field_values: fieldValues,
+        poster_url: posterUrl
+      })
+    });
+    
+    if (response.ok) {
+      const item = await response.json();
+      document.getElementById(`customTab${tab.id}Title`).value = '';
+      tab.fields.forEach(field => {
+        const input = document.getElementById(`customTab${tab.id}Field${field.key}`);
+        if (input) {
+          if (input.type === 'checkbox') {
+            input.checked = false;
+          } else {
+            input.value = '';
+          }
+        }
+      });
+      if (tab.allow_uploads) {
+        const posterUrlInput = document.getElementById(`customTab${tab.id}PosterUrl`);
+        const posterFileInput = document.getElementById(`customTab${tab.id}PosterFile`);
+        if (posterUrlInput) posterUrlInput.value = '';
+        if (posterFileInput) posterFileInput.value = '';
+      }
+      
+      const posterFileInput = document.getElementById(`customTab${tab.id}PosterFile`);
+      if (posterFileInput && posterFileInput.files.length > 0 && !posterUrl) {
+        await uploadCustomTabPoster(tab.id, item.id, posterFileInput.files[0]);
+      }
+      
+      loadCustomTabItems(tab);
+    } else {
+      const errorData = await response.json().catch(() => ({ detail: 'Failed to add item' }));
+      alert(errorData.detail || 'Failed to add item');
+    }
+  } catch (createError) {
+    console.error('Error creating item:', createError);
+    alert('Failed to add item. Please try again.');
+  }
+}
+
+async function uploadCustomTabPoster(tabId, itemId, file) {
+  try {
+    const token = localStorage.getItem('token');
+    if (!token) return;
+    
+    if (file.size > 5 * 1024 * 1024) {
+      console.error('File size exceeds 5MB limit');
+      return;
+    }
+    
+    const formData = new FormData();
+    formData.append('file', file);
+    
+    const response = await fetch(`${API_BASE}/custom-tabs/${tabId}/items/${itemId}/poster`, {
+      method: 'POST',
+      headers: {
+        'Authorization': `Bearer ${token}`
+      },
+      body: formData
+    });
+    
+    if (!response.ok) {
+      const errorData = await response.json().catch(() => ({ detail: 'Failed to upload poster' }));
+      console.error('Failed to upload poster:', errorData.detail);
+    }
+  } catch (error) {
+    console.error('Error uploading poster:', error);
+  }
+}
+
+async function loadCustomTabItems(tab) {
+  try {
+    const token = localStorage.getItem('token');
+    if (!token) return;
+    
+    const tableBody = document.getElementById(`customTab${tab.id}TableBody`);
+    if (tableBody) {
+      tableBody.innerHTML = '<tr><td colspan="100%" style="text-align: center; padding: 20px;">Loading...</td></tr>';
+    }
+    
+    const response = await fetch(`${API_BASE}/custom-tabs/${tab.id}/items`, {
+      headers: { 'Authorization': `Bearer ${token}` }
+    });
+    
+    if (response.ok) {
+      const items = await response.json();
+      renderCustomTabItems(tab, items);
+    } else if (response.status === 404) {
+      if (tableBody) {
+        tableBody.innerHTML = '<tr><td colspan="100%" style="text-align: center; padding: 20px;">Tab not found</td></tr>';
+      }
+    } else {
+      if (tableBody) {
+        tableBody.innerHTML = '<tr><td colspan="100%" style="text-align: center; padding: 20px; color: #f44336;">Failed to load items</td></tr>';
+      }
+    }
+  } catch (error) {
+    console.error('Error loading custom tab items:', error);
+    const tableBody = document.getElementById(`customTab${tab.id}TableBody`);
+    if (tableBody) {
+      tableBody.innerHTML = '<tr><td colspan="100%" style="text-align: center; padding: 20px; color: #f44336;">Error loading items</td></tr>';
+    }
+  }
+}
+
+function renderCustomTabItems(tab, items) {
+  const tableHead = document.getElementById(`customTab${tab.id}TableHead`);
+  const tableBody = document.getElementById(`customTab${tab.id}TableBody`);
+  const countSpan = document.getElementById(`customTab${tab.id}Count`);
+  
+  if (!tableHead || !tableBody) return;
+  
+  countSpan.textContent = `${items.length} ${items.length === 1 ? 'item' : 'items'}`;
+  
+  if (items.length === 0) {
+    tableHead.innerHTML = '';
+    tableBody.innerHTML = '<tr><td colspan="100%" style="text-align: center; padding: 20px; color: var(--fg-secondary);">No items yet. Add your first item above!</td></tr>';
+    return;
+  }
+  
+  const headers = ['Poster', 'Title'];
+  tab.fields.forEach(field => {
+    headers.push(field.label);
+  });
+  headers.push('Actions');
+  
+  tableHead.innerHTML = `<tr>${headers.map(h => `<th>${escapeHtml(h)}</th>`).join('')}</tr>`;
+  
+  tableBody.innerHTML = items.map(item => {
+    const cells = [
+      `<td id="custom-poster-${item.id}"></td>`,
+      `<td>${escapeHtml(item.title)}</td>`
+    ];
+    
+    tab.fields.forEach(field => {
+      const value = item.field_values?.[field.key];
+      let displayValue = '';
+      if (value !== undefined && value !== null && value !== '') {
+        if (field.field_type === 'boolean' || field.field_type === 'status') {
+          displayValue = value ? '✓' : '✗';
+        } else if (field.field_type === 'date' && value) {
+          displayValue = escapeHtml(String(value));
+        } else if (field.field_type === 'rating' && value !== null) {
+          displayValue = escapeHtml(parseFloat(value).toFixed(1));
+        } else {
+          displayValue = escapeHtml(String(value));
+        }
+      }
+      cells.push(`<td>${displayValue}</td>`);
+    });
+    
+    cells.push(`
+      <td>
+        <button class="action-btn" onclick="editCustomTabItem(${tab.id}, ${item.id})" title="Edit item">Edit</button>
+        <button class="action-btn" onclick="deleteCustomTabItem(${tab.id}, ${item.id})" style="background-color: #f44336;" title="Delete item">Delete</button>
+      </td>
+    `);
+    
+    return `<tr>${cells.join('')}</tr>`;
+  }).join('');
+  
+  items.forEach(item => {
+    if (item.poster_url) {
+      setTimeout(() => displayCustomTabPoster(item.id, item.poster_url, item.title), 0);
+    }
+  });
+}
+
+function displayCustomTabPoster(id, posterUrl, title) {
+  const cell = document.getElementById(`custom-poster-${id}`);
+  if (cell && posterUrl) {
+    if (cell.querySelector('img')) return;
+    
+    const img = document.createElement('img');
+    img.src = posterUrl;
+    img.alt = `${title} poster`;
+    img.style.width = '50px';
+    img.style.height = '75px';
+    img.style.objectFit = 'cover';
+    img.style.cursor = 'pointer';
+    img.style.borderRadius = '4px';
+    img.onclick = () => showImagePopup(posterUrl, `${title} poster`);
+    img.onerror = () => {
+      img.style.display = 'none';
+      cell.innerHTML = '<span style="color: var(--fg-secondary); font-size: 0.8em;">No image</span>';
+    };
+    cell.appendChild(img);
+  }
+}
+
+function filterCustomTabItems(tab, searchTerm) {
+  const tableBody = document.getElementById(`customTab${tab.id}TableBody`);
+  if (!tableBody) return;
+  
+  const rows = tableBody.querySelectorAll('tr');
+  rows.forEach(row => {
+    const text = row.textContent.toLowerCase();
+    if (text.includes(searchTerm.toLowerCase())) {
+      row.style.display = '';
+    } else {
+      row.style.display = 'none';
+    }
+  });
+}
+
+async function deleteCustomTabItem(tabId, itemId) {
+  if (!confirm('Are you sure you want to delete this item? This action cannot be undone.')) return;
+  
+  try {
+    const token = localStorage.getItem('token');
+    if (!token) {
+      alert('You must be logged in to delete items');
+      return;
+    }
+    
+    const response = await fetch(`${API_BASE}/custom-tabs/${tabId}/items/${itemId}`, {
+      method: 'DELETE',
+      headers: { 'Authorization': `Bearer ${token}` }
+    });
+    
+    if (response.ok) {
+      const tab = customTabs.find(t => t.id === tabId);
+      if (tab) {
+        loadCustomTabItems(tab);
+      }
+    } else {
+      const errorData = await response.json().catch(() => ({ detail: 'Failed to delete item' }));
+      alert(errorData.detail || 'Failed to delete item');
+    }
+  } catch (error) {
+    console.error('Error deleting item:', error);
+    alert('Failed to delete item. Please try again.');
+  }
+}
+
+async function editCustomTabItem(tabId, itemId) {
+  try {
+    const token = localStorage.getItem('token');
+    if (!token) {
+      alert('You must be logged in to edit items');
+      return;
+    }
+    
+    const tab = customTabs.find(t => t.id === tabId);
+    if (!tab) {
+      alert('Tab not found');
+      return;
+    }
+    
+    const response = await fetch(`${API_BASE}/custom-tabs/${tabId}/items/${itemId}`, {
+      headers: { 'Authorization': `Bearer ${token}` }
+    });
+    
+    if (!response.ok) {
+      alert('Failed to load item for editing');
+      return;
+    }
+    
+    const item = await response.json();
+    
+    const titleInput = document.getElementById(`customTab${tabId}Title`);
+    if (titleInput) {
+      titleInput.value = item.title;
+      titleInput.scrollIntoView({ behavior: 'smooth', block: 'center' });
+      
+      const formContent = document.getElementById(`customTab${tabId}FormContent`);
+      if (formContent && formContent.style.display === 'none') {
+        toggleCollapsible(`customTab${tabId}Form`);
+      }
+      
+      tab.fields.forEach(field => {
+        const input = document.getElementById(`customTab${tabId}Field${field.key}`);
+        if (input && item.field_values && item.field_values[field.key] !== undefined) {
+          const value = item.field_values[field.key];
+          if (input.type === 'checkbox') {
+            input.checked = Boolean(value);
+          } else {
+            input.value = value;
+          }
+        }
+      });
+      
+      if (tab.allow_uploads && item.poster_url) {
+        const posterUrlInput = document.getElementById(`customTab${tabId}PosterUrl`);
+        if (posterUrlInput) {
+          posterUrlInput.value = item.poster_url;
+        }
+      }
+      
+      const form = document.getElementById(`addCustomTab${tabId}Form`);
+      if (form) {
+        form.dataset.editingItemId = itemId;
+        const submitBtn = form.querySelector('button[type="submit"]');
+        if (submitBtn) {
+          const originalText = submitBtn.textContent;
+          submitBtn.textContent = `Update ${escapeHtml(tab.name)}`;
+          submitBtn.onclick = async (e) => {
+            e.preventDefault();
+            await handleUpdateCustomTabItem(tab, itemId);
+          };
+          
+          const cancelBtn = document.createElement('button');
+          cancelBtn.type = 'button';
+          cancelBtn.className = 'action-btn';
+          cancelBtn.style.marginLeft = '10px';
+          cancelBtn.style.backgroundColor = '#666';
+          cancelBtn.textContent = 'Cancel';
+          cancelBtn.onclick = () => {
+            form.dataset.editingItemId = '';
+            titleInput.value = '';
+            tab.fields.forEach(field => {
+              const input = document.getElementById(`customTab${tabId}Field${field.key}`);
+              if (input) {
+                if (input.type === 'checkbox') {
+                  input.checked = false;
+                } else {
+                  input.value = '';
+                }
+              }
+            });
+            if (tab.allow_uploads) {
+              const posterUrlInput = document.getElementById(`customTab${tabId}PosterUrl`);
+              const posterFileInput = document.getElementById(`customTab${tabId}PosterFile`);
+              if (posterUrlInput) posterUrlInput.value = '';
+              if (posterFileInput) posterFileInput.value = '';
+            }
+            submitBtn.textContent = originalText;
+            submitBtn.onclick = null;
+            cancelBtn.remove();
+          };
+          submitBtn.parentElement.appendChild(cancelBtn);
+        }
+      }
+    }
+  } catch (error) {
+    console.error('Error loading item for editing:', error);
+    alert('Failed to load item for editing');
+  }
+}
+
+async function handleUpdateCustomTabItem(tab, itemId) {
+  try {
+    const token = localStorage.getItem('token');
+    if (!token) return;
+    
+    const titleInput = document.getElementById(`customTab${tab.id}Title`);
+    const submitBtn = titleInput?.closest('form')?.querySelector('button[type="submit"]');
+    const originalBtnText = submitBtn?.textContent;
+    
+    if (submitBtn) {
+      submitBtn.disabled = true;
+      submitBtn.textContent = 'Updating...';
+    }
+    
+    const title = titleInput.value.trim();
+    
+    if (!title) {
+      alert('Title is required');
+      if (submitBtn) {
+        submitBtn.disabled = false;
+        submitBtn.textContent = originalBtnText;
+      }
+      return;
+    }
+    
+    const fieldValues = {};
+    tab.fields.forEach(field => {
+      const input = document.getElementById(`customTab${tab.id}Field${field.key}`);
+      if (input) {
+        if (field.field_type === 'boolean' || field.field_type === 'status') {
+          fieldValues[field.key] = input.checked;
+        } else {
+          const value = input.value.trim();
+          if (value) {
+            if (field.field_type === 'number' || field.field_type === 'rating') {
+              fieldValues[field.key] = parseFloat(value);
+            } else {
+              fieldValues[field.key] = value;
+            }
+          }
+        }
+      }
+    });
+    
+    let posterUrl = null;
+    if (tab.allow_uploads) {
+      const posterUrlInput = document.getElementById(`customTab${tab.id}PosterUrl`);
+      if (posterUrlInput && posterUrlInput.value.trim()) {
+        posterUrl = posterUrlInput.value.trim();
+      }
+    }
+    
+    const response = await fetch(`${API_BASE}/custom-tabs/${tab.id}/items/${itemId}`, {
+      method: 'PUT',
+      headers: {
+        'Authorization': `Bearer ${token}`,
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify({
+        title,
+        field_values: fieldValues,
+        poster_url: posterUrl
+      })
+    });
+    
+    if (response.ok) {
+      const form = document.getElementById(`addCustomTab${tab.id}Form`);
+      if (form) {
+        delete form.dataset.editingItemId;
+        titleInput.value = '';
+        tab.fields.forEach(field => {
+          const input = document.getElementById(`customTab${tab.id}Field${field.key}`);
+          if (input) {
+            if (input.type === 'checkbox') {
+              input.checked = false;
+            } else {
+              input.value = '';
+            }
+          }
+        });
+        if (tab.allow_uploads) {
+          const posterUrlInput = document.getElementById(`customTab${tab.id}PosterUrl`);
+          const posterFileInput = document.getElementById(`customTab${tab.id}PosterFile`);
+          if (posterUrlInput) posterUrlInput.value = '';
+          if (posterFileInput) posterFileInput.value = '';
+        }
+        if (submitBtn) {
+          submitBtn.textContent = `Add ${escapeHtml(tab.name)}`;
+          submitBtn.onclick = null;
+          const cancelBtn = submitBtn.parentElement.querySelector('button[type="button"].action-btn');
+          if (cancelBtn && cancelBtn.textContent === 'Cancel') {
+            cancelBtn.remove();
+          }
+        }
+      }
+      loadCustomTabItems(tab);
+    } else {
+      const errorData = await response.json().catch(() => ({ detail: 'Failed to update item' }));
+      alert(errorData.detail || 'Failed to update item');
+    }
+  } catch (error) {
+    if (error.message === 'Validation failed') {
+      return;
+    }
+    console.error('Error updating custom tab item:', error);
+    alert('Failed to update item. Please try again.');
+  } finally {
+    const titleInput = document.getElementById(`customTab${tab.id}Title`);
+    const submitBtn = titleInput?.closest('form')?.querySelector('button[type="submit"]');
+    if (submitBtn) {
+      submitBtn.disabled = false;
+      if (!submitBtn.onclick) {
+        submitBtn.textContent = `Add ${escapeHtml(tab.name)}`;
+      }
+    }
+  }
+}
+
+function showCustomTabManager() {
+  document.getElementById('customTabManagerModal').style.display = 'flex';
+  loadCustomTabsList();
+}
+
+function closeCustomTabManager() {
+  document.getElementById('customTabManagerModal').style.display = 'none';
+}
+
+async function loadCustomTabsList() {
+  try {
+    const token = localStorage.getItem('token');
+    if (!token) return;
+    
+    const listContainer = document.getElementById('customTabsList');
+    if (listContainer) {
+      listContainer.innerHTML = '<div style="text-align: center; padding: 20px;">Loading...</div>';
+    }
+    
+    const response = await fetch(`${API_BASE}/custom-tabs`, {
+      headers: { 'Authorization': `Bearer ${token}` }
+    });
+    
+    if (response.ok) {
+      const tabs = await response.json();
+      if (listContainer) {
+        if (tabs.length === 0) {
+          listContainer.innerHTML = '<div style="text-align: center; padding: 20px; color: var(--fg-secondary);">No custom tabs yet. Create your first one above!</div>';
+        } else {
+          listContainer.innerHTML = tabs.map(tab => {
+            return `
+              <div style="padding: 15px; border: 1px solid var(--border); border-radius: 8px; margin-bottom: 10px; display: flex; justify-content: space-between; align-items: center;">
+                <div>
+                  <strong>${escapeHtml(tab.name)}</strong>
+                  <div style="font-size: 0.9em; color: var(--fg-secondary); margin-top: 5px;">
+                    Source: ${tab.source_type} | Fields: ${tab.fields?.length || 0}
+                  </div>
+                </div>
+                <div>
+                  <button class="action-btn" onclick="deleteCustomTab(${tab.id})" style="background-color: #f44336;" title="Delete tab">Delete</button>
+                </div>
+              </div>
+            `;
+          }).join('');
+        }
+      }
+    } else {
+      if (listContainer) {
+        listContainer.innerHTML = '<div style="text-align: center; padding: 20px; color: #f44336;">Failed to load custom tabs</div>';
+      }
+    }
+  } catch (error) {
+    console.error('Error loading custom tabs list:', error);
+    const listContainer = document.getElementById('customTabsList');
+    if (listContainer) {
+      listContainer.innerHTML = '<div style="text-align: center; padding: 20px; color: #f44336;">Error loading custom tabs</div>';
+    }
+  }
+}
+
+function showCreateCustomTabForm() {
+  document.getElementById('createCustomTabForm').style.display = 'block';
+  document.getElementById('customTabFieldsList').innerHTML = '';
+  customTabFieldCounter = 0;
+}
+
+function cancelCreateCustomTab() {
+  document.getElementById('createCustomTabForm').style.display = 'none';
+  document.getElementById('newCustomTabForm').reset();
+}
+
+function addCustomTabField() {
+  const container = document.getElementById('customTabFieldsList');
+  if (!container) return;
+  
+  const existingFields = Array.from(container.children).length;
+  if (existingFields >= 30) {
+    alert('Maximum of 30 fields allowed per tab');
+    return;
+  }
+  
+  const fieldId = customTabFieldCounter++;
+  
+  const fieldDiv = document.createElement('div');
+  fieldDiv.className = `custom-tab-field-${fieldId}`;
+  fieldDiv.style.marginBottom = '10px';
+  fieldDiv.style.padding = '10px';
+  fieldDiv.style.border = '1px solid var(--border)';
+  fieldDiv.style.borderRadius = '4px';
+  fieldDiv.innerHTML = `
+    <div style="display: grid; grid-template-columns: 2fr 2fr 2fr 1fr 1fr; gap: 10px; align-items: center;">
+      <input type="text" placeholder="Field Key (e.g., year)" id="fieldKey${fieldId}" required maxlength="50" pattern="^[a-zA-Z_][a-zA-Z0-9_]*$" title="Must start with letter/underscore, alphanumeric only">
+      <input type="text" placeholder="Field Label (e.g., Year)" id="fieldLabel${fieldId}" required maxlength="100">
+      <select id="fieldType${fieldId}" required>
+        <option value="text">Text</option>
+        <option value="number">Number</option>
+        <option value="date">Date</option>
+        <option value="boolean">Boolean</option>
+        <option value="rating">Rating</option>
+        <option value="review">Review</option>
+        <option value="status">Status</option>
+      </select>
+      <label style="display: flex; align-items: center; gap: 5px;">
+        <input type="checkbox" id="fieldRequired${fieldId}">
+        Required
+      </label>
+      <button type="button" class="action-btn" onclick="this.closest('.custom-tab-field-${fieldId}').remove()" style="background-color: #f44336;">Remove</button>
+    </div>
+  `;
+  
+  container.appendChild(fieldDiv);
+  
+  const keyInput = fieldDiv.querySelector(`#fieldKey${fieldId}`);
+  if (keyInput) {
+    keyInput.addEventListener('input', () => validateFieldKey(keyInput, container));
+  }
+}
+
+function validateFieldKey(input, container) {
+  const value = input.value.trim();
+  if (!value) return;
+  
+  if (!/^[a-zA-Z_][a-zA-Z0-9_]*$/.test(value)) {
+    input.setCustomValidity('Must start with letter/underscore, alphanumeric only');
+  } else {
+    const fieldDivs = Array.from(container.children);
+    const duplicates = fieldDivs.filter(div => {
+      const fieldId = div.className.match(/custom-tab-field-(\d+)/)?.[1];
+      if (!fieldId) return false;
+      const otherKeyInput = div.querySelector(`#fieldKey${fieldId}`);
+      return otherKeyInput && otherKeyInput !== input && otherKeyInput.value.trim() === value;
+    });
+    
+    if (duplicates.length > 0) {
+      input.setCustomValidity('Field key must be unique');
+    } else {
+      input.setCustomValidity('');
+    }
+  }
+}
+
+document.getElementById('newCustomTabForm')?.addEventListener('submit', async (e) => {
+  e.preventDefault();
+  
+  try {
+    const token = localStorage.getItem('token');
+    if (!token) {
+      alert('You must be logged in to create custom tabs');
+      return;
+    }
+    
+    const submitBtn = e.target.querySelector('button[type="submit"]');
+    const originalBtnText = submitBtn?.textContent;
+    if (submitBtn) {
+      submitBtn.disabled = true;
+      submitBtn.textContent = 'Creating...';
+    }
+    
+    const name = document.getElementById('customTabName').value.trim();
+    if (!name) {
+      alert('Tab name is required');
+      if (submitBtn) {
+        submitBtn.disabled = false;
+        submitBtn.textContent = originalBtnText;
+      }
+      return;
+    }
+    
+    if (name.length > 100) {
+      alert('Tab name is too long (max 100 characters)');
+      if (submitBtn) {
+        submitBtn.disabled = false;
+        submitBtn.textContent = originalBtnText;
+      }
+      return;
+    }
+    
+    const existingTabsCount = customTabs.length;
+    if (existingTabsCount >= 20) {
+      alert('Maximum of 20 custom tabs allowed per user');
+      if (submitBtn) {
+        submitBtn.disabled = false;
+        submitBtn.textContent = originalBtnText;
+      }
+      return;
+    }
+    
+    const sourceType = document.getElementById('customTabSourceType').value;
+    const allowUploads = document.getElementById('customTabAllowUploads').checked;
+    
+    const fields = [];
+    const fieldKeys = new Set();
+    const fieldDivs = Array.from(document.getElementById('customTabFieldsList').children);
+    
+    for (const div of fieldDivs) {
+      const fieldId = div.className.match(/custom-tab-field-(\d+)/)?.[1];
+      if (!fieldId) continue;
+      
+      const key = div.querySelector(`#fieldKey${fieldId}`)?.value.trim();
+      const label = div.querySelector(`#fieldLabel${fieldId}`)?.value.trim();
+      const fieldType = div.querySelector(`#fieldType${fieldId}`)?.value;
+      const required = div.querySelector(`#fieldRequired${fieldId}`)?.checked;
+      
+      if (!key || !label || !fieldType) continue;
+      
+      if (!/^[a-zA-Z_][a-zA-Z0-9_]*$/.test(key)) {
+        alert(`Field key "${key}" is invalid. Must start with a letter or underscore and contain only alphanumeric characters and underscores.`);
+        if (submitBtn) {
+          submitBtn.disabled = false;
+          submitBtn.textContent = originalBtnText;
+        }
+        return;
+      }
+      
+      if (fieldKeys.has(key)) {
+        alert(`Duplicate field key: "${key}". Each field key must be unique.`);
+        if (submitBtn) {
+          submitBtn.disabled = false;
+          submitBtn.textContent = originalBtnText;
+        }
+        return;
+      }
+      
+      fieldKeys.add(key);
+      fields.push({ key, label, field_type: fieldType, required });
+    }
+    
+    if (fields.length > 30) {
+      alert('Maximum of 30 fields allowed per tab');
+      if (submitBtn) {
+        submitBtn.disabled = false;
+        submitBtn.textContent = originalBtnText;
+      }
+      return;
+    }
+    
+    const response = await fetch(`${API_BASE}/custom-tabs`, {
+      method: 'POST',
+      headers: {
+        'Authorization': `Bearer ${token}`,
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify({
+        name,
+        source_type: sourceType,
+        allow_uploads: allowUploads,
+        fields
+      })
+    });
+    
+    if (response.ok) {
+      cancelCreateCustomTab();
+      await loadCustomTabs();
+      loadCustomTabsList();
+      alert('Custom tab created successfully!');
+    } else {
+      const errorData = await response.json().catch(() => ({ detail: 'Failed to create custom tab' }));
+      alert(errorData.detail || 'Failed to create custom tab');
+    }
+  } catch (error) {
+    console.error('Error creating custom tab:', error);
+    alert('Failed to create custom tab. Please try again.');
+  } finally {
+    const submitBtn = e.target.querySelector('button[type="submit"]');
+    if (submitBtn) {
+      submitBtn.disabled = false;
+      submitBtn.textContent = 'Create Tab';
+    }
+  }
+});
+
+async function deleteCustomTab(tabId) {
+  const tab = customTabs.find(t => t.id === tabId);
+  const tabName = tab ? tab.name : 'this tab';
+  
+  if (!confirm(`Are you sure you want to delete "${tabName}"? All items in this tab will be permanently deleted. This action cannot be undone.`)) return;
+  
+  try {
+    const token = localStorage.getItem('token');
+    if (!token) {
+      alert('You must be logged in to delete custom tabs');
+      return;
+    }
+    
+    const response = await fetch(`${API_BASE}/custom-tabs/${tabId}`, {
+      method: 'DELETE',
+      headers: { 'Authorization': `Bearer ${token}` }
+    });
+    
+    if (response.ok) {
+      await loadCustomTabs();
+      loadCustomTabsList();
+      
+      const tabContent = document.getElementById(`custom-${tabId}-tab`);
+      if (tabContent) {
+        tabContent.remove();
+      }
+      
+      if (currentTab === `custom-${tabId}`) {
+        switchTab('movies');
+      }
+    } else {
+      const errorData = await response.json().catch(() => ({ detail: 'Failed to delete custom tab' }));
+      alert(errorData.detail || 'Failed to delete custom tab');
+    }
+  } catch (error) {
+    console.error('Error deleting custom tab:', error);
+    alert('Failed to delete custom tab. Please try again.');
+  }
+}
+
+function setupCustomTabSwitching() {
+  if (typeof window.switchTab === 'function') {
+    const originalSwitchTab = window.switchTab;
+    window.switchTab = function(tabName) {
+      if (tabName && tabName.startsWith('custom-')) {
+        const tabId = parseInt(tabName.replace('custom-', ''));
+        const tab = customTabs.find(t => t.id === tabId);
+        if (tab) {
+          document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+          const tabButton = Array.from(document.querySelectorAll('.tab')).find(btn => 
+            btn.textContent === tab.name || btn.onclick?.toString().includes(`custom-${tabId}`)
+          );
+          if (tabButton) tabButton.classList.add('active');
+          
+          document.querySelectorAll('.tab-content').forEach(c => c.classList.remove('active'));
+          const content = document.getElementById(`custom-${tabId}-tab`);
+          if (content) {
+            content.classList.add('active');
+            currentTab = tabName;
+            loadCustomTabItems(tab);
+            return;
+          }
+        }
+      }
+      return originalSwitchTab.call(this, tabName);
+    };
+  }
+}
+
+document.addEventListener('DOMContentLoaded', () => {
+  setupCustomTabSwitching();
+  const token = localStorage.getItem('token');
+  if (token) {
+    loadCustomTabs();
+  }
+});
+

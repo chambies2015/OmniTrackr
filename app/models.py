@@ -2,7 +2,7 @@
 SQLAlchemy models for the OmniTrackr API.
 Defines the User, Movie, TV Show, Anime, and Video Game ORM models.
 """
-from sqlalchemy import Column, Integer, String, Boolean, Float, ForeignKey, DateTime, UniqueConstraint, LargeBinary
+from sqlalchemy import Column, Integer, String, Boolean, Float, ForeignKey, DateTime, UniqueConstraint, LargeBinary, Text
 from sqlalchemy.orm import relationship
 from datetime import datetime, timedelta
 from .database import Base
@@ -51,6 +51,7 @@ class User(Base):
     friendships_as_user1 = relationship("Friendship", foreign_keys="Friendship.user1_id", back_populates="user1", cascade="all, delete-orphan")
     friendships_as_user2 = relationship("Friendship", foreign_keys="Friendship.user2_id", back_populates="user2", cascade="all, delete-orphan")
     notifications = relationship("Notification", back_populates="user", cascade="all, delete-orphan")
+    custom_tabs = relationship("CustomTab", back_populates="owner", cascade="all, delete-orphan")
 
 
 class Movie(Base):
@@ -181,3 +182,48 @@ class Notification(Base):
     # Relationships
     user = relationship("User", back_populates="notifications")
     friend_request = relationship("FriendRequest", back_populates="notifications")
+
+
+class CustomTab(Base):
+    __tablename__ = "custom_tabs"
+    
+    id = Column(Integer, primary_key=True, index=True)
+    user_id = Column(Integer, ForeignKey("users.id"), nullable=False, index=True)
+    name = Column(String, nullable=False)
+    slug = Column(String, nullable=False, index=True)
+    source_type = Column(String, nullable=False, default="none")
+    allow_uploads = Column(Boolean, default=True, nullable=False)
+    created_at = Column(DateTime, default=datetime.utcnow)
+    
+    owner = relationship("User", back_populates="custom_tabs")
+    fields = relationship("CustomTabField", back_populates="tab", cascade="all, delete-orphan", order_by="CustomTabField.order")
+    items = relationship("CustomTabItem", back_populates="tab", cascade="all, delete-orphan")
+
+
+class CustomTabField(Base):
+    __tablename__ = "custom_tab_fields"
+    
+    id = Column(Integer, primary_key=True, index=True)
+    tab_id = Column(Integer, ForeignKey("custom_tabs.id"), nullable=False, index=True)
+    key = Column(String, nullable=False)
+    label = Column(String, nullable=False)
+    field_type = Column(String, nullable=False)
+    required = Column(Boolean, default=False, nullable=False)
+    order = Column(Integer, nullable=False, default=0)
+    
+    tab = relationship("CustomTab", back_populates="fields")
+
+
+class CustomTabItem(Base):
+    __tablename__ = "custom_tab_items"
+    
+    id = Column(Integer, primary_key=True, index=True)
+    tab_id = Column(Integer, ForeignKey("custom_tabs.id"), nullable=False, index=True)
+    title = Column(String, nullable=False, index=True)
+    field_values = Column(Text, nullable=True)
+    poster_url = Column(String, nullable=True)
+    poster_data = Column(LargeBinary, nullable=True)
+    poster_mime_type = Column(String, nullable=True)
+    created_at = Column(DateTime, default=datetime.utcnow)
+    
+    tab = relationship("CustomTab", back_populates="items")
