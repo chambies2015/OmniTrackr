@@ -47,6 +47,7 @@ Sitemap: {site_url}/sitemap.xml"""
 
 
 @router.get("/ads.txt")
+@router.head("/ads.txt")
 async def get_ads_txt():
     """Serve ads.txt for Google AdSense verification."""
     publisher_id = os.getenv("ADSENSE_PUBLISHER_ID", "pub-7271682066779719")
