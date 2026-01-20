@@ -1598,8 +1598,8 @@
   </div>
 
   <!-- Custom Tab Manager Modal -->
-  <div id="customTabManagerModal" class="modal-overlay" style="display: none;">
-    <div class="modal-content" style="max-width: 800px; max-height: 90vh; overflow-y: auto;">
+  <div id="customTabManagerModal" class="modal-overlay" style="display: none;" onclick="if(event.target === this) closeCustomTabManager()">
+    <div class="modal-content" onclick="event.stopPropagation()">
       <div class="modal-header">
         <h2>Manage Custom Tabs</h2>
         <button class="modal-close" onclick="closeCustomTabManager()" aria-label="Close custom tab manager">×</button>
@@ -1609,16 +1609,16 @@
           <button class="action-btn" onclick="showCreateCustomTabForm()">+ Create New Tab</button>
         </div>
         <div id="customTabsList"></div>
-        <div id="createCustomTabForm" style="display: none; margin-top: 20px; padding: 20px; border: 1px solid var(--border); border-radius: 8px;">
-          <h3>Create Custom Tab</h3>
+        <div id="createCustomTabForm" style="display: none; margin-top: 20px; padding: 20px; border: 1px solid var(--border); border-radius: 8px; background-color: var(--bg);">
+          <h3 style="margin-top: 0; color: var(--fg);">Create Custom Tab</h3>
           <form id="newCustomTabForm">
             <div style="margin-bottom: 15px;">
-              <label style="display: block; margin-bottom: 5px;">Tab Name</label>
-              <input type="text" id="customTabName" placeholder="e.g., Books, Comics" required style="width: 100%; padding: 8px;">
+              <label style="display: block; margin-bottom: 5px; color: var(--fg); font-weight: 500;">Tab Name</label>
+              <input type="text" id="customTabName" placeholder="e.g., Books, Comics" required style="width: 100%; padding: 10px; border: 1px solid var(--border); border-radius: 6px; background-color: var(--bg); color: var(--fg); font-size: 1rem; box-sizing: border-box;">
             </div>
             <div style="margin-bottom: 15px;">
-              <label style="display: block; margin-bottom: 5px;">Metadata Source (optional)</label>
-              <select id="customTabSourceType" style="width: 100%; padding: 8px;">
+              <label style="display: block; margin-bottom: 5px; color: var(--fg); font-weight: 500;">Metadata Source (optional)</label>
+              <select id="customTabSourceType" style="width: 100%; padding: 10px; border: 1px solid var(--border); border-radius: 6px; background-color: var(--bg); color: var(--fg); font-size: 1rem; box-sizing: border-box;">
                 <option value="none">None - Manual entry only</option>
                 <option value="omdb">OMDB (Movies/TV Shows)</option>
                 <option value="jikan">Jikan (Anime)</option>
@@ -1632,7 +1632,7 @@
               </label>
             </div>
             <div style="margin-bottom: 15px;">
-              <h4>Fields</h4>
+              <h4 style="color: var(--fg); margin-bottom: 12px;">Fields</h4>
               <div id="customTabFieldsList"></div>
               <button type="button" class="action-btn" onclick="addCustomTabField()" style="margin-top: 10px;">+ Add Field</button>
             </div>

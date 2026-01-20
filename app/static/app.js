@@ -5155,14 +5155,15 @@ function addCustomTabField() {
   const fieldDiv = document.createElement('div');
   fieldDiv.className = `custom-tab-field-${fieldId}`;
   fieldDiv.style.marginBottom = '10px';
-  fieldDiv.style.padding = '10px';
+  fieldDiv.style.padding = '12px';
   fieldDiv.style.border = '1px solid var(--border)';
-  fieldDiv.style.borderRadius = '4px';
+  fieldDiv.style.borderRadius = '6px';
+  fieldDiv.style.backgroundColor = 'var(--bg)';
   fieldDiv.innerHTML = `
     <div style="display: grid; grid-template-columns: 2fr 2fr 2fr 1fr 1fr; gap: 10px; align-items: center;">
-      <input type="text" placeholder="Field Key (e.g., year)" id="fieldKey${fieldId}" required maxlength="50" pattern="^[a-zA-Z_][a-zA-Z0-9_]*$" title="Must start with letter/underscore, alphanumeric only">
-      <input type="text" placeholder="Field Label (e.g., Year)" id="fieldLabel${fieldId}" required maxlength="100">
-      <select id="fieldType${fieldId}" required>
+      <input type="text" placeholder="Field Key (e.g., year)" id="fieldKey${fieldId}" required maxlength="50" pattern="^[a-zA-Z_][a-zA-Z0-9_]*$" title="Must start with letter/underscore, alphanumeric only" style="padding: 8px; border: 1px solid var(--border); border-radius: 6px; background-color: var(--bg); color: var(--fg); font-size: 0.9rem; box-sizing: border-box;">
+      <input type="text" placeholder="Field Label (e.g., Year)" id="fieldLabel${fieldId}" required maxlength="100" style="padding: 8px; border: 1px solid var(--border); border-radius: 6px; background-color: var(--bg); color: var(--fg); font-size: 0.9rem; box-sizing: border-box;">
+      <select id="fieldType${fieldId}" required style="padding: 8px; border: 1px solid var(--border); border-radius: 6px; background-color: var(--bg); color: var(--fg); font-size: 0.9rem; box-sizing: border-box;">
         <option value="text">Text</option>
         <option value="number">Number</option>
         <option value="date">Date</option>
@@ -5171,11 +5172,11 @@ function addCustomTabField() {
         <option value="review">Review</option>
         <option value="status">Status</option>
       </select>
-      <label style="display: flex; align-items: center; gap: 5px;">
+      <label style="display: flex; align-items: center; gap: 5px; color: var(--fg); font-size: 0.9rem;">
         <input type="checkbox" id="fieldRequired${fieldId}">
         Required
       </label>
-      <button type="button" class="action-btn" onclick="this.closest('.custom-tab-field-${fieldId}').remove()" style="background-color: #f44336;">Remove</button>
+      <button type="button" class="action-btn" onclick="this.closest('.custom-tab-field-${fieldId}').remove()" style="background-color: #f44336; padding: 8px 12px; font-size: 0.85rem;">Remove</button>
     </div>
   `;
   
