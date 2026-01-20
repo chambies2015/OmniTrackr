@@ -5233,73 +5233,30 @@ function validateFieldKey(input, container) {
   }
 }
 
-document.getElementById('newCustomTabForm')?.addEventListener('submit', async (e) => {
-  e.preventDefault();
-  
-  try {
-    const token = getAuthTokenValue();
-    if (!token) {
-      alert('You must be logged in to create custom tabs');
-      return;
-    }
+function bindCustomTabForm() {
+  const form = document.getElementById('newCustomTabForm');
+  if (!form || form.dataset.bound === 'true') return;
+  form.dataset.bound = 'true';
+  form.addEventListener('submit', async (e) => {
+    e.preventDefault();
     
-    const submitBtn = e.target.querySelector('button[type="submit"]');
-    const originalBtnText = submitBtn?.textContent;
-    if (submitBtn) {
-      submitBtn.disabled = true;
-      submitBtn.textContent = e.target.dataset.editingTabId ? 'Updating...' : 'Creating...';
-    }
-    
-    const name = document.getElementById('customTabName').value.trim();
-    if (!name) {
-      alert('Tab name is required');
-      if (submitBtn) {
-        submitBtn.disabled = false;
-        submitBtn.textContent = originalBtnText;
+    try {
+      const token = getAuthTokenValue();
+      if (!token) {
+        alert('You must be logged in to create custom tabs');
+        return;
       }
-      return;
-    }
-    
-    if (name.length > 100) {
-      alert('Tab name is too long (max 100 characters)');
+      
+      const submitBtn = e.target.querySelector('button[type="submit"]');
+      const originalBtnText = submitBtn?.textContent;
       if (submitBtn) {
-        submitBtn.disabled = false;
-        submitBtn.textContent = originalBtnText;
+        submitBtn.disabled = true;
+        submitBtn.textContent = e.target.dataset.editingTabId ? 'Updating...' : 'Creating...';
       }
-      return;
-    }
-    
-    const editingTabId = e.target.dataset.editingTabId;
-    const existingTabsCount = customTabs.length;
-    if (!editingTabId && existingTabsCount >= 20) {
-      alert('Maximum of 20 custom tabs allowed per user');
-      if (submitBtn) {
-        submitBtn.disabled = false;
-        submitBtn.textContent = originalBtnText;
-      }
-      return;
-    }
-    
-    const sourceType = document.getElementById('customTabSourceType').value;
-    const allowUploads = document.getElementById('customTabAllowUploads').checked;
-    
-    const fields = [];
-    const fieldKeys = new Set();
-    const fieldDivs = Array.from(document.getElementById('customTabFieldsList').children);
-    
-    for (const div of fieldDivs) {
-      const fieldId = div.className.match(/custom-tab-field-(\d+)/)?.[1];
-      if (!fieldId) continue;
       
-      const key = div.querySelector(`#fieldKey${fieldId}`)?.value.trim();
-      const label = div.querySelector(`#fieldLabel${fieldId}`)?.value.trim();
-      const fieldType = div.querySelector(`#fieldType${fieldId}`)?.value;
-      const required = div.querySelector(`#fieldRequired${fieldId}`)?.checked;
-      
-      if (!key || !label || !fieldType) continue;
-      
-      if (!/^[a-zA-Z_][a-zA-Z0-9_]*$/.test(key)) {
-        alert(`Field key "${key}" is invalid. Must start with a letter or underscore and contain only alphanumeric characters and underscores.`);
+      const name = document.getElementById('customTabName').value.trim();
+      if (!name) {
+        alert('Tab name is required');
         if (submitBtn) {
           submitBtn.disabled = false;
           submitBtn.textContent = originalBtnText;
@@ -5307,8 +5264,8 @@ document.getElementById('newCustomTabForm')?.addEventListener('submit', async (e
         return;
       }
       
-      if (fieldKeys.has(key)) {
-        alert(`Duplicate field key: "${key}". Each field key must be unique.`);
+      if (name.length > 100) {
+        alert('Tab name is too long (max 100 characters)');
         if (submitBtn) {
           submitBtn.disabled = false;
           submitBtn.textContent = originalBtnText;
@@ -5316,53 +5273,101 @@ document.getElementById('newCustomTabForm')?.addEventListener('submit', async (e
         return;
       }
       
-      fieldKeys.add(key);
-      fields.push({ key, label, field_type: fieldType, required });
-    }
-    
-    if (fields.length > 30) {
-      alert('Maximum of 30 fields allowed per tab');
+      const editingTabId = e.target.dataset.editingTabId;
+      const existingTabsCount = customTabs.length;
+      if (!editingTabId && existingTabsCount >= 20) {
+        alert('Maximum of 20 custom tabs allowed per user');
+        if (submitBtn) {
+          submitBtn.disabled = false;
+          submitBtn.textContent = originalBtnText;
+        }
+        return;
+      }
+      
+      const sourceType = document.getElementById('customTabSourceType').value;
+      const allowUploads = document.getElementById('customTabAllowUploads').checked;
+      
+      const fields = [];
+      const fieldKeys = new Set();
+      const fieldDivs = Array.from(document.getElementById('customTabFieldsList').children);
+      
+      for (const div of fieldDivs) {
+        const fieldId = div.className.match(/custom-tab-field-(\d+)/)?.[1];
+        if (!fieldId) continue;
+        
+        const key = div.querySelector(`#fieldKey${fieldId}`)?.value.trim();
+        const label = div.querySelector(`#fieldLabel${fieldId}`)?.value.trim();
+        const fieldType = div.querySelector(`#fieldType${fieldId}`)?.value;
+        const required = div.querySelector(`#fieldRequired${fieldId}`)?.checked;
+        
+        if (!key || !label || !fieldType) continue;
+        
+        if (!/^[a-zA-Z_][a-zA-Z0-9_]*$/.test(key)) {
+          alert(`Field key "${key}" is invalid. Must start with a letter or underscore and contain only alphanumeric characters and underscores.`);
+          if (submitBtn) {
+            submitBtn.disabled = false;
+            submitBtn.textContent = originalBtnText;
+          }
+          return;
+        }
+        
+        if (fieldKeys.has(key)) {
+          alert(`Duplicate field key: "${key}". Each field key must be unique.`);
+          if (submitBtn) {
+            submitBtn.disabled = false;
+            submitBtn.textContent = originalBtnText;
+          }
+          return;
+        }
+        
+        fieldKeys.add(key);
+        fields.push({ key, label, field_type: fieldType, required });
+      }
+      
+      if (fields.length > 30) {
+        alert('Maximum of 30 fields allowed per tab');
+        if (submitBtn) {
+          submitBtn.disabled = false;
+          submitBtn.textContent = originalBtnText;
+        }
+        return;
+      }
+      
+      const response = await fetch(`${API_BASE}/custom-tabs${editingTabId ? `/${editingTabId}` : ''}`, {
+        method: editingTabId ? 'PUT' : 'POST',
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({
+          name,
+          source_type: sourceType,
+          allow_uploads: allowUploads,
+          fields
+        })
+      });
+      
+      if (response.ok) {
+        resetCustomTabFormState();
+        await loadCustomTabs();
+        loadCustomTabsList();
+        alert(editingTabId ? 'Custom tab updated successfully!' : 'Custom tab created successfully!');
+      } else {
+        const errorData = await response.json().catch(() => ({ detail: editingTabId ? 'Failed to update custom tab' : 'Failed to create custom tab' }));
+        alert(errorData.detail || (editingTabId ? 'Failed to update custom tab' : 'Failed to create custom tab'));
+      }
+    } catch (error) {
+      console.error('Error saving custom tab:', error);
+      alert('Failed to save custom tab. Please try again.');
+    } finally {
+      const submitBtn = e.target.querySelector('button[type="submit"]');
       if (submitBtn) {
         submitBtn.disabled = false;
-        submitBtn.textContent = originalBtnText;
+        submitBtn.textContent = e.target.dataset.editingTabId ? 'Update Tab' : 'Create Tab';
       }
-      return;
     }
-    
-    const response = await fetch(`${API_BASE}/custom-tabs${editingTabId ? `/${editingTabId}` : ''}`, {
-      method: editingTabId ? 'PUT' : 'POST',
-      headers: {
-        'Authorization': `Bearer ${token}`,
-        'Content-Type': 'application/json'
-      },
-      body: JSON.stringify({
-        name,
-        source_type: sourceType,
-        allow_uploads: allowUploads,
-        fields
-      })
-    });
-    
-    if (response.ok) {
-      resetCustomTabFormState();
-      await loadCustomTabs();
-      loadCustomTabsList();
-      alert(editingTabId ? 'Custom tab updated successfully!' : 'Custom tab created successfully!');
-    } else {
-      const errorData = await response.json().catch(() => ({ detail: editingTabId ? 'Failed to update custom tab' : 'Failed to create custom tab' }));
-      alert(errorData.detail || (editingTabId ? 'Failed to update custom tab' : 'Failed to create custom tab'));
-    }
-  } catch (error) {
-    console.error('Error saving custom tab:', error);
-    alert('Failed to save custom tab. Please try again.');
-  } finally {
-    const submitBtn = e.target.querySelector('button[type="submit"]');
-    if (submitBtn) {
-      submitBtn.disabled = false;
-      submitBtn.textContent = e.target.dataset.editingTabId ? 'Update Tab' : 'Create Tab';
-    }
-  }
-});
+  });
+}
 
 async function deleteCustomTab(tabId) {
   const tab = customTabs.find(t => t.id === tabId);
@@ -5492,6 +5497,7 @@ function setupCustomTabSwitching() {
 
 document.addEventListener('DOMContentLoaded', () => {
   setupCustomTabSwitching();
+  bindCustomTabForm();
   const token = getAuthTokenValue();
   if (token) {
     loadCustomTabs();
