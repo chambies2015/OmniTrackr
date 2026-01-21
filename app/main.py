@@ -33,6 +33,7 @@ from .routers import (
     proxy,
     seo,
     static,
+    custom_tabs,
 )
 
 # Create database tables
@@ -94,6 +95,18 @@ async def serve_profile_picture(user_id: int, db: Session = Depends(get_db)):
     return Response(content=user.profile_picture_data, media_type=mime_type)
 
 
+@app.get("/custom-tab-posters/{item_id}")
+async def serve_custom_tab_poster(item_id: int, db: Session = Depends(get_db)):
+    """Serve custom tab item posters from database."""
+    from . import models
+    item = db.query(models.CustomTabItem).filter(models.CustomTabItem.id == item_id).first()
+    if not item or not item.poster_data:
+        raise HTTPException(status_code=404, detail="Poster not found")
+    
+    mime_type = item.poster_mime_type or "image/jpeg"
+    return Response(content=item.poster_data, media_type=mime_type)
+
+
 # Backward compatibility: support old filename-based URLs (for migration period)
 # This must be registered BEFORE the static mount to take precedence
 @app.get("/static/profile_pictures/{filename}")
@@ -134,6 +147,7 @@ app.include_router(anime.router)
 app.include_router(video_games.router)
 app.include_router(statistics.router)
 app.include_router(export_import.router)
+app.include_router(custom_tabs.router)
 
 # Include proxy router and apply rate limiting
 # We need to wrap the endpoints with rate limiting decorators

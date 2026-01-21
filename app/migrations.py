@@ -346,6 +346,105 @@ def run_migrations():
                 conn.commit()
                 print("Created notifications table")
 
+        if not inspector.has_table("custom_tabs"):
+            with engine.connect() as conn:
+                if database.DATABASE_URL.startswith("postgresql"):
+                    conn.execute(text("""
+                        CREATE TABLE custom_tabs (
+                            id SERIAL PRIMARY KEY,
+                            user_id INTEGER NOT NULL REFERENCES users(id),
+                            name VARCHAR NOT NULL,
+                            slug VARCHAR NOT NULL,
+                            source_type VARCHAR NOT NULL DEFAULT 'none',
+                            allow_uploads BOOLEAN DEFAULT TRUE NOT NULL,
+                            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+                        )
+                    """))
+                    conn.execute(text("CREATE INDEX ix_custom_tabs_user_id ON custom_tabs(user_id)"))
+                    conn.execute(text("CREATE INDEX ix_custom_tabs_slug ON custom_tabs(slug)"))
+                else:
+                    conn.execute(text("""
+                        CREATE TABLE custom_tabs (
+                            id INTEGER PRIMARY KEY AUTOINCREMENT,
+                            user_id INTEGER NOT NULL REFERENCES users(id),
+                            name VARCHAR NOT NULL,
+                            slug VARCHAR NOT NULL,
+                            source_type VARCHAR NOT NULL DEFAULT 'none',
+                            allow_uploads BOOLEAN DEFAULT 1 NOT NULL,
+                            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+                        )
+                    """))
+                    conn.execute(text("CREATE INDEX ix_custom_tabs_user_id ON custom_tabs(user_id)"))
+                    conn.execute(text("CREATE INDEX ix_custom_tabs_slug ON custom_tabs(slug)"))
+                conn.commit()
+                print("Created custom_tabs table")
+
+        if not inspector.has_table("custom_tab_fields"):
+            with engine.connect() as conn:
+                if database.DATABASE_URL.startswith("postgresql"):
+                    conn.execute(text("""
+                        CREATE TABLE custom_tab_fields (
+                            id SERIAL PRIMARY KEY,
+                            tab_id INTEGER NOT NULL REFERENCES custom_tabs(id),
+                            key VARCHAR NOT NULL,
+                            label VARCHAR NOT NULL,
+                            field_type VARCHAR NOT NULL,
+                            required BOOLEAN DEFAULT FALSE NOT NULL,
+                            "order" INTEGER NOT NULL DEFAULT 0
+                        )
+                    """))
+                    conn.execute(text("CREATE INDEX ix_custom_tab_fields_tab_id ON custom_tab_fields(tab_id)"))
+                else:
+                    conn.execute(text("""
+                        CREATE TABLE custom_tab_fields (
+                            id INTEGER PRIMARY KEY AUTOINCREMENT,
+                            tab_id INTEGER NOT NULL REFERENCES custom_tabs(id),
+                            key VARCHAR NOT NULL,
+                            label VARCHAR NOT NULL,
+                            field_type VARCHAR NOT NULL,
+                            required BOOLEAN DEFAULT 0 NOT NULL,
+                            "order" INTEGER NOT NULL DEFAULT 0
+                        )
+                    """))
+                    conn.execute(text("CREATE INDEX ix_custom_tab_fields_tab_id ON custom_tab_fields(tab_id)"))
+                conn.commit()
+                print("Created custom_tab_fields table")
+
+        if not inspector.has_table("custom_tab_items"):
+            with engine.connect() as conn:
+                if database.DATABASE_URL.startswith("postgresql"):
+                    conn.execute(text("""
+                        CREATE TABLE custom_tab_items (
+                            id SERIAL PRIMARY KEY,
+                            tab_id INTEGER NOT NULL REFERENCES custom_tabs(id),
+                            title VARCHAR NOT NULL,
+                            field_values TEXT,
+                            poster_url VARCHAR,
+                            poster_data BYTEA,
+                            poster_mime_type VARCHAR,
+                            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+                        )
+                    """))
+                    conn.execute(text("CREATE INDEX ix_custom_tab_items_tab_id ON custom_tab_items(tab_id)"))
+                    conn.execute(text("CREATE INDEX ix_custom_tab_items_title ON custom_tab_items(title)"))
+                else:
+                    conn.execute(text("""
+                        CREATE TABLE custom_tab_items (
+                            id INTEGER PRIMARY KEY AUTOINCREMENT,
+                            tab_id INTEGER NOT NULL REFERENCES custom_tabs(id),
+                            title VARCHAR NOT NULL,
+                            field_values TEXT,
+                            poster_url VARCHAR,
+                            poster_data BLOB,
+                            poster_mime_type VARCHAR,
+                            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+                        )
+                    """))
+                    conn.execute(text("CREATE INDEX ix_custom_tab_items_tab_id ON custom_tab_items(tab_id)"))
+                    conn.execute(text("CREATE INDEX ix_custom_tab_items_title ON custom_tab_items(title)"))
+                conn.commit()
+                print("Created custom_tab_items table")
+
     except Exception as e:
         print(f"Migration warning: {e}")
         pass

@@ -110,6 +110,22 @@ from .friends import (
     get_friend_statistics,
 )
 
+# Custom Tab operations
+from .custom_tabs import (
+    get_custom_tabs,
+    get_custom_tab_by_id,
+    get_custom_tab_by_slug,
+    create_custom_tab,
+    update_custom_tab,
+    delete_custom_tab,
+    get_custom_tab_items,
+    get_custom_tab_item_by_id,
+    create_custom_tab_item,
+    update_custom_tab_item,
+    delete_custom_tab_item,
+    update_custom_tab_item_poster,
+)
+
 __all__ = [
     # User operations
     "get_user_by_username",
@@ -197,5 +213,18 @@ __all__ = [
     "get_friend_anime",
     "get_friend_video_games",
     "get_friend_statistics",
+    # Custom Tab operations
+    "get_custom_tabs",
+    "get_custom_tab_by_id",
+    "get_custom_tab_by_slug",
+    "create_custom_tab",
+    "update_custom_tab",
+    "delete_custom_tab",
+    "get_custom_tab_items",
+    "get_custom_tab_item_by_id",
+    "create_custom_tab_item",
+    "update_custom_tab_item",
+    "delete_custom_tab_item",
+    "update_custom_tab_item_poster",
 ]
 

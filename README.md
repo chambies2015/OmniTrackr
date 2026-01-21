@@ -20,6 +20,9 @@ OmniTrackr is a full-featured, multi-user web application for managing and track
 - bcrypt (Password hashing)
 - python-jose (JWT tokens)
 - Pydantic (Data validation)
+- FastAPI-Mail (Email services)
+- Pillow (Image processing)
+- SlowAPI (Rate limiting)
 
 **Frontend:**
 - Vanilla JavaScript (No framework dependencies)
@@ -40,22 +43,23 @@ OmniTrackr is a full-featured, multi-user web application for managing and track
 - **Password Security:** bcrypt hashing for password storage
 - **Account Management:** Change username, email, password, and account deactivation/reactivation
 - **Profile Pictures:** Upload, change, and reset profile pictures with automatic optimization and validation
-- **Privacy Settings:** Control visibility of your movies, TV shows, anime, and statistics (private or visible to friends)
+- **Privacy Settings:** Control visibility of your movies, TV shows, anime, video games, and statistics (private or visible to friends)
 - **Friends System:** Add friends by username, send/accept/deny friend requests, manage friends list
 - **Friend Profiles:** View friends' movie, TV show, and anime collections and statistics with privacy-aware access
 - **Notifications:** Real-time notification system with bell icon, friend request notifications, and auto-dismissal
 - **CRUD API:** Full REST API for managing movies, TV shows, anime, and video games
+- **Custom Tabs:** Create personalized tracking tabs with custom fields for any collection type (books, comics, board games, etc.)
 - **PostgreSQL Database:** Production-ready database
 - **Search and Sort:** Automatic filtering by title/director/genres and sorting by rating or year
 - **Modern UI:** Responsive single-page application with dark mode by default, modern card-based design, and beautiful landing page
 - **Poster Integration:** Automatic poster fetching from OMDB API (movies/TV shows), Jikan API (anime), and RAWG API (video games) with intelligent caching to reduce API calls
 - **Title Normalization:** Automatic title normalization - user-entered titles are automatically normalized to official titles from APIs (e.g., "skyrim" → "The Elder Scrolls V: Skyrim", "inception" → "Inception")
 - **Decimal Ratings:** Support for precise ratings from 0-10.0 with one decimal place (e.g., 7.5, 8.4)
-- **Export/Import:** JSON export/import with smart conflict resolution for movies, TV shows, and anime
+- **Export/Import:** JSON export/import with smart conflict resolution for movies, TV shows, anime, and video games
 - **Statistics Dashboard:** Comprehensive analytics with animated visualizations, watch progress, rating distributions, year analysis, director insights, and genre statistics (includes anime and video game statistics)
 - **SEO Optimized:** Meta tags, structured data, sitemap, and robots.txt for better search engine visibility
 - **Security:** Security headers, bot filtering, content validation, image processing, rate limiting, and comprehensive protection against common web vulnerabilities
-- **Persistent Storage:** Profile pictures stored in persistent directory that survives code updates and deployments
+- **Persistent Storage:** Profile pictures and custom tab posters stored in database for persistence across deployments
 
 
 ## Export/Import Functionality
@@ -125,8 +129,13 @@ OmniTrackr provides comprehensive account management features:
   - Movies privacy toggle (private or visible to friends)
   - TV shows privacy toggle (private or visible to friends)
   - Anime privacy toggle (private or visible to friends)
+  - Video games privacy toggle (private or visible to friends)
   - Statistics privacy toggle (private or visible to friends)
   - When privacy is enabled, data is fully private (not visible to friends)
+- **Tab Visibility:** Customize which tabs appear in your navigation
+  - Show/hide Movies, TV Shows, Anime, and Video Games tabs
+  - Simplify your interface by hiding tabs you don't use
+  - Only affects your own view, not friends' access
 - **Account Deactivation:** Soft delete your account with 90-day reactivation window
 - **Account Reactivation:** Reactivate deactivated accounts within the 90-day window
 
@@ -174,6 +183,48 @@ OmniTrackr includes a comprehensive statistics dashboard accessible via the **�
 - **Most prolific directors** (directors with the most movies in your collection)
 - **Highest rated directors** (directors with the best average ratings)
 - **Director insights** to discover your favorite filmmakers
+
+## Custom Tabs
+
+OmniTrackr allows you to create custom tracking tabs for any type of collection beyond the built-in movies, TV shows, anime, and video games:
+
+### What are Custom Tabs?
+- **Flexible Collections:** Create tabs to track books, comics, board games, podcasts, or any other media
+- **Custom Fields:** Define your own fields (text, number, date, boolean, rating) for each tab
+- **Source Types:** Choose to fetch data automatically from APIs (movies, TV shows, anime, video games) or manually enter all data
+- **Manual Entry:** Create fully custom tabs without API integration for tracking any collection type
+- **Poster Support:** Upload custom posters/cover art for your items
+- **Full CRUD:** Add, edit, delete, and manage items in your custom tabs
+- **Privacy-Aware:** Custom tabs respect your privacy settings and can be shared with friends
+
+### Creating a Custom Tab
+1. Navigate to the **Custom Tabs** section
+2. Click **"Create New Tab"**
+3. Enter a tab name (e.g., "Books", "Comics", "Podcasts")
+4. Choose a source type:
+   - **None (Manual Entry):** Enter all data manually
+   - **Movies/TV Shows/Anime/Video Games:** Auto-fetch data from APIs
+5. Define custom fields:
+   - Field label (what users see)
+   - Field type (text, number, date, boolean, rating)
+   - Required or optional
+6. Toggle **"Allow Uploads"** to enable/disable poster uploads
+7. Click **"Create Tab"**
+
+### Using Custom Tabs
+- Your new tab appears in the navigation bar
+- Add items using the form at the top
+- Items are displayed in a grid with posters (if uploaded)
+- Search and filter items by title
+- Edit or delete items as needed
+- Export/import custom tab data (JSON format)
+
+### Example Use Cases
+- **Book Collection:** Track title, author, pages, reading status, rating
+- **Comic Books:** Track title, issue number, publisher, series, condition
+- **Board Games:** Track name, players, duration, complexity, owned status
+- **Podcasts:** Track name, host, episodes listened, subscription status
+- **Music Albums:** Track album, artist, year, genre, format
 
 ## Authentication System
 
@@ -238,11 +289,12 @@ OmniTrackr uses a secure JWT-based authentication system:
 - **User Authentication:** Secure login with JWT tokens, logout functionality
 - **Account Settings:** Manage your account - change username, email, password, profile picture, privacy settings, or deactivate/reactivate
 - **Profile Pictures:** Upload and manage your profile picture, visible in user display, friends list, and friend profiles
-- **Privacy Controls:** Set privacy settings for movies, TV shows, anime, and statistics
+- **Privacy Controls:** Set privacy settings for movies, TV shows, anime, video games, and statistics
 - **Friends & Social:** Add friends, send/accept/deny friend requests, view friends list, and explore friends' collections
 - **Friend Profiles:** View friends' movies, TV shows, anime, and statistics with search/filter capabilities
 - **Notifications:** Real-time notifications with bell icon and unread count badge
 - **Add movies, TV shows, anime & video games:** Enter details like title, director/creator, year, rating, and watched/played status. Titles are automatically normalized to official names when posters are fetched
+- **Custom Tabs:** Create personalized tracking tabs with custom fields for any collection (books, comics, board games, podcasts, etc.)
 - **Automatic Posters:** Movie and TV show posters are fetched automatically from OMDB API, anime posters from Jikan API (MyAnimeList), and video game cover art from RAWG API - all with intelligent caching
 - **Title Normalization:** Titles are automatically normalized to official names from APIs when posters are fetched (e.g., "skyrim" becomes "The Elder Scrolls V: Skyrim")
 - **Search & Filter:** Automatic search by title or director/creator and sort by rating or year
@@ -250,10 +302,9 @@ OmniTrackr uses a secure JWT-based authentication system:
 - **Delete:** Remove entries from your collection
 - **Dark Mode:** Beautiful dark theme by default with light mode toggle
 - **Modern UI:** Card-based design with smooth animations, gradients, and collapsible forms
-- **Tabbed Interface:** Switch between Movies, TV Shows, Anime, and Statistics
-- **Export/Import:** Backup your collection to JSON or import from JSON files (supports movies, TV shows, anime, and video games)
+- **Tabbed Interface:** Switch between Movies, TV Shows, Anime, Video Games, Custom Tabs, and Statistics
+- **Export/Import:** Backup your collection to JSON or import from JSON files (supports movies, TV shows, anime, video games, and custom tabs)
 - **Statistics Dashboard:** Comprehensive analytics with animated visualizations showing your viewing and gaming habits and preferences (includes anime and video game statistics)
-- **Title Normalization:** All titles are automatically normalized to official names from APIs - just enter "skyrim" and it becomes "The Elder Scrolls V: Skyrim"
 
 
 ## Screenshots
@@ -266,6 +317,7 @@ OmniTrackr uses a secure JWT-based authentication system:
 
 ## Recent Updates
 
+- ✅ **Custom Tabs:** Create personalized tracking tabs with custom fields for any collection type (books, comics, board games, etc.) with manual entry or API integration
 - ✅ **Title Normalization:** Automatic title normalization for all media types - user-entered titles are automatically updated to official titles from APIs (e.g., "skyrim" → "The Elder Scrolls V: Skyrim")
 - ✅ **Jikan API Integration:** Anime posters now use Jikan API (MyAnimeList) instead of OMDB for better anime coverage and accurate titles
 - ✅ **Video Game Support:** Full CRUD operations, privacy settings, friend viewing, and statistics integration for video game tracking
@@ -305,6 +357,9 @@ A: OmniTrackr automatically normalizes titles to their official names from APIs 
 
 **Q: Can I track video games?**  
 A: Yes! OmniTrackr supports video game tracking with full CRUD operations, ratings, reviews, played status, genres, release dates, and automatic cover art fetching from RAWG API. Video games are included in your statistics dashboard with genre analysis.
+
+**Q: Can I track other types of media like books or comics?**  
+A: Absolutely! Use the **Custom Tabs** feature to create personalized tracking tabs for any collection type. You can define custom fields (text, number, date, boolean, rating), upload posters, and manage your collection just like the built-in media types. Perfect for tracking books, comics, board games, podcasts, music albums, or anything else you want to catalog.
 
 **Q: Which APIs are used for posters?**  
 A: 

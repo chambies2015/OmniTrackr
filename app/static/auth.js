@@ -135,6 +135,9 @@ async function login(username, password) {
 
     // Load initial data
     loadMovies();
+    if (typeof loadCustomTabs === 'function') {
+        loadCustomTabs();
+    }
     updateUserDisplay();
 }
 
