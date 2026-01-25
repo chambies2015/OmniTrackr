@@ -28,6 +28,44 @@ def get_all_video_games(db: Session, user_id: int) -> List[models.VideoGame]:
     return db.query(models.VideoGame).filter(models.VideoGame.user_id == user_id).all()
 
 
+def get_all_custom_tabs_with_items(db: Session, user_id: int) -> List[dict]:
+    """Get all custom tabs with their items for export"""
+    import json
+    from ..crud import custom_tabs
+    
+    tabs = custom_tabs.get_custom_tabs(db, user_id)
+    result = []
+    
+    for tab in tabs:
+        items = custom_tabs.get_custom_tab_items(db, user_id, tab.id)
+        tab_dict = {
+            "name": tab.name,
+            "source_type": tab.source_type,
+            "allow_uploads": tab.allow_uploads,
+            "fields": [
+                {
+                    "key": field.key,
+                    "label": field.label,
+                    "field_type": field.field_type,
+                    "required": field.required,
+                    "order": field.order
+                }
+                for field in tab.fields
+            ],
+            "items": [
+                {
+                    "title": item.title,
+                    "field_values": json.loads(item.field_values) if item.field_values else {},
+                    "poster_url": item.poster_url
+                }
+                for item in items
+            ]
+        }
+        result.append(tab_dict)
+    
+    return result
+
+
 def find_movie_by_title_and_director(db: Session, user_id: int, title: str, director: str) -> Optional[models.Movie]:
     """Find a movie by title and director for import conflict resolution"""
     return db.query(models.Movie).filter(models.Movie.user_id == user_id).filter(
@@ -202,6 +240,72 @@ def import_video_games(db: Session, user_id: int, video_games: List[schemas.Vide
         db.rollback()
         errors.append(f"Database error during video game import: {str(e)}")
         return 0, 0, errors
+    
+    return created, updated, errors
+
+
+def import_custom_tabs(db: Session, user_id: int, custom_tabs_data: List[dict]) -> tuple[int, int, List[str]]:
+    """Import custom tabs with their items, returning (created_count, updated_count, errors)"""
+    from ..crud import custom_tabs
+    from .. import schemas
+    
+    created = 0
+    updated = 0
+    errors = []
+    
+    for tab_data in custom_tabs_data:
+        try:
+            if "name" not in tab_data:
+                errors.append("Custom tab missing 'name' field")
+                continue
+            
+            existing_tabs = custom_tabs.get_custom_tabs(db, user_id)
+            existing_tab = next((t for t in existing_tabs if t.name == tab_data["name"]), None)
+            
+            tab_create_data = {
+                "name": tab_data["name"],
+                "source_type": tab_data.get("source_type", "none"),
+                "allow_uploads": tab_data.get("allow_uploads", True),
+                "fields": tab_data.get("fields", [])
+            }
+            
+            tab_create = schemas.CustomTabCreate(**tab_create_data)
+            
+            if existing_tab:
+                tab_update = schemas.CustomTabUpdate(
+                    name=tab_create.name,
+                    source_type=tab_create.source_type,
+                    allow_uploads=tab_create.allow_uploads,
+                    fields=tab_create.fields
+                )
+                updated_tab = custom_tabs.update_custom_tab(db, user_id, existing_tab.id, tab_update)
+                if updated_tab:
+                    tab_id = updated_tab.id
+                    updated += 1
+                else:
+                    errors.append(f"Failed to update custom tab '{tab_data['name']}'")
+                    continue
+            else:
+                new_tab = custom_tabs.create_custom_tab(db, user_id, tab_create)
+                tab_id = new_tab.id
+                created += 1
+            
+            items = tab_data.get("items", [])
+            for item_data in items:
+                try:
+                    item_create = schemas.CustomTabItemCreate(
+                        title=item_data["title"],
+                        field_values=item_data.get("field_values", {}),
+                        poster_url=item_data.get("poster_url")
+                    )
+                    item_result, error_msg = custom_tabs.create_custom_tab_item(db, user_id, tab_id, item_create)
+                    if error_msg:
+                        errors.append(f"Error importing item '{item_data.get('title', 'unknown')}' in tab '{tab_data['name']}': {error_msg}")
+                except Exception as e:
+                    errors.append(f"Error importing item '{item_data.get('title', 'unknown')}' in tab '{tab_data['name']}': {str(e)}")
+            
+        except Exception as e:
+            errors.append(f"Error importing custom tab '{tab_data.get('name', 'unknown')}': {str(e)}")
     
     return created, updated, errors
 

@@ -17,11 +17,12 @@ async def export_data(
     current_user: models.User = Depends(get_current_user),
     db: Session = Depends(get_db)
 ):
-    """Export all movies, TV shows, anime, and video games as JSON"""
+    """Export all movies, TV shows, anime, video games, and custom tabs as JSON"""
     movies = crud.get_all_movies(db, current_user.id)
     tv_shows = crud.get_all_tv_shows(db, current_user.id)
     anime = crud.get_all_anime(db, current_user.id)
     video_games = crud.get_all_video_games(db, current_user.id)
+    custom_tabs = crud.get_all_custom_tabs_with_items(db, current_user.id)
 
     export_metadata = {
         "export_timestamp": datetime.now().isoformat(),
@@ -29,7 +30,8 @@ async def export_data(
         "total_movies": len(movies),
         "total_tv_shows": len(tv_shows),
         "total_anime": len(anime),
-        "total_video_games": len(video_games)
+        "total_video_games": len(video_games),
+        "total_custom_tabs": len(custom_tabs)
     }
 
     return schemas.ExportData(
@@ -37,6 +39,7 @@ async def export_data(
         tv_shows=tv_shows,
         anime=anime,
         video_games=video_games,
+        custom_tabs=custom_tabs,
         export_metadata=export_metadata
     )
 
@@ -47,13 +50,14 @@ async def import_data(
     current_user: models.User = Depends(get_current_user),
     db: Session = Depends(get_db)
 ):
-    """Import movies, TV shows, anime, and video games from JSON data"""
+    """Import movies, TV shows, anime, video games, and custom tabs from JSON data"""
     movies_created, movies_updated, movie_errors = crud.import_movies(db, current_user.id, import_data.movies)
     tv_shows_created, tv_shows_updated, tv_show_errors = crud.import_tv_shows(db, current_user.id, import_data.tv_shows)
     anime_created, anime_updated, anime_errors = crud.import_anime(db, current_user.id, import_data.anime)
     video_games_created, video_games_updated, video_game_errors = crud.import_video_games(db, current_user.id, import_data.video_games)
+    custom_tabs_created, custom_tabs_updated, custom_tab_errors = crud.import_custom_tabs(db, current_user.id, import_data.custom_tabs)
 
-    all_errors = movie_errors + tv_show_errors + anime_errors + video_game_errors
+    all_errors = movie_errors + tv_show_errors + anime_errors + video_game_errors + custom_tab_errors
 
     return schemas.ImportResult(
         movies_created=movies_created,
@@ -64,6 +68,8 @@ async def import_data(
         anime_updated=anime_updated,
         video_games_created=video_games_created,
         video_games_updated=video_games_updated,
+        custom_tabs_created=custom_tabs_created,
+        custom_tabs_updated=custom_tabs_updated,
         errors=all_errors
     )
 
@@ -92,16 +98,18 @@ async def import_from_file(
         tv_shows = [schemas.TVShowCreate(**tv_show) for tv_show in data.get('tv_shows', [])]
         anime = [schemas.AnimeCreate(**anime_item) for anime_item in data.get('anime', [])]
         video_games = [schemas.VideoGameCreate(**video_game) for video_game in data.get('video_games', [])]
+        custom_tabs = data.get('custom_tabs', [])
 
-        import_data = schemas.ImportData(movies=movies, tv_shows=tv_shows, anime=anime, video_games=video_games)
+        import_data = schemas.ImportData(movies=movies, tv_shows=tv_shows, anime=anime, video_games=video_games, custom_tabs=custom_tabs)
 
         # Import the data
         movies_created, movies_updated, movie_errors = crud.import_movies(db, current_user.id, import_data.movies)
         tv_shows_created, tv_shows_updated, tv_show_errors = crud.import_tv_shows(db, current_user.id, import_data.tv_shows)
         anime_created, anime_updated, anime_errors = crud.import_anime(db, current_user.id, import_data.anime)
         video_games_created, video_games_updated, video_game_errors = crud.import_video_games(db, current_user.id, import_data.video_games)
+        custom_tabs_created, custom_tabs_updated, custom_tab_errors = crud.import_custom_tabs(db, current_user.id, import_data.custom_tabs)
 
-        all_errors = movie_errors + tv_show_errors + anime_errors + video_game_errors
+        all_errors = movie_errors + tv_show_errors + anime_errors + video_game_errors + custom_tab_errors
 
         return schemas.ImportResult(
             movies_created=movies_created,
@@ -112,6 +120,8 @@ async def import_from_file(
             anime_updated=anime_updated,
             video_games_created=video_games_created,
             video_games_updated=video_games_updated,
+            custom_tabs_created=custom_tabs_created,
+            custom_tabs_updated=custom_tabs_updated,
             errors=all_errors
         )
 

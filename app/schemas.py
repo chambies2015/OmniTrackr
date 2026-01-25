@@ -333,6 +333,7 @@ class ExportData(BaseModel):
     tv_shows: List[TVShow] = Field(..., description="List of all TV shows")
     anime: List[Anime] = Field(..., description="List of all anime")
     video_games: List[VideoGame] = Field(..., description="List of all video games")
+    custom_tabs: List[dict] = Field(default=[], description="List of all custom tabs with their items")
     export_metadata: dict = Field(..., description="Export metadata including timestamp and version")
     
     class Config:
@@ -345,6 +346,7 @@ class ImportData(BaseModel):
     tv_shows: List[TVShowCreate] = Field(default=[], description="TV shows to import")
     anime: List[AnimeCreate] = Field(default=[], description="Anime to import")
     video_games: List[VideoGameCreate] = Field(default=[], description="Video games to import")
+    custom_tabs: List[dict] = Field(default=[], description="Custom tabs to import (optional for backward compatibility)")
     
     class Config:
         from_attributes = True
@@ -360,6 +362,8 @@ class ImportResult(BaseModel):
     anime_updated: int = Field(..., description="Number of anime updated")
     video_games_created: int = Field(..., description="Number of video games created")
     video_games_updated: int = Field(..., description="Number of video games updated")
+    custom_tabs_created: int = Field(default=0, description="Number of custom tabs created")
+    custom_tabs_updated: int = Field(default=0, description="Number of custom tabs updated")
     errors: List[str] = Field(default=[], description="List of errors encountered during import")
     
     class Config:

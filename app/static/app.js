@@ -1495,7 +1495,7 @@ async function exportData() {
     document.body.removeChild(a);
     URL.revokeObjectURL(url);
 
-    alert(`Export successful! Exported ${data.export_metadata.total_movies} movies, ${data.export_metadata.total_tv_shows} TV shows, ${data.export_metadata.total_anime || 0} anime, and ${data.export_metadata.total_video_games || 0} video games.`);
+    alert(`Export successful! Exported ${data.export_metadata.total_movies} movies, ${data.export_metadata.total_tv_shows} TV shows, ${data.export_metadata.total_anime || 0} anime, ${data.export_metadata.total_video_games || 0} video games, and ${data.export_metadata.total_custom_tabs || 0} custom tabs.`);
   } catch (error) {
     alert('Export failed: ' + error.message);
   }
@@ -1529,7 +1529,8 @@ async function importData(fileInput) {
     message += `Movies: ${result.movies_created} created, ${result.movies_updated} updated\n`;
     message += `TV Shows: ${result.tv_shows_created} created, ${result.tv_shows_updated} updated\n`;
     message += `Anime: ${result.anime_created || 0} created, ${result.anime_updated || 0} updated\n`;
-    message += `Video Games: ${result.video_games_created || 0} created, ${result.video_games_updated || 0} updated`;
+    message += `Video Games: ${result.video_games_created || 0} created, ${result.video_games_updated || 0} updated\n`;
+    message += `Custom Tabs: ${result.custom_tabs_created || 0} created, ${result.custom_tabs_updated || 0} updated`;
 
     if (result.errors.length > 0) {
       message += `\n\nErrors:\n${result.errors.join('\n')}`;
@@ -1546,6 +1547,16 @@ async function importData(fileInput) {
       loadAnime();
     } else if (currentTab === 'video-games') {
       loadVideoGames();
+    } else if (currentTab && currentTab.startsWith('custom-')) {
+      const tabId = parseInt(currentTab.replace('custom-', ''));
+      const tab = customTabs.find(t => t.id === tabId);
+      if (tab) {
+        loadCustomTabItems(tab);
+      }
+    }
+    
+    if ((result.custom_tabs_created || 0) > 0 || (result.custom_tabs_updated || 0) > 0) {
+      loadCustomTabs();
     }
 
     // Clear the file input

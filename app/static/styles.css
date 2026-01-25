@@ -505,6 +505,12 @@ body.dark-mode td {
   text-align: center;
 }
 
+/* Center all columns for custom tab tables */
+table[id^="customTab"][id$="Table"] th,
+table[id^="customTab"][id$="Table"] td {
+  text-align: center;
+}
+
 /* Make review column wider and wrap nicely for all tables */
 #movieTable th:nth-child(7),
 #movieTable td:nth-child(7),

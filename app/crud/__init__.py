@@ -63,6 +63,7 @@ from .export_import import (
     get_all_tv_shows,
     get_all_anime,
     get_all_video_games,
+    get_all_custom_tabs_with_items,
     find_movie_by_title_and_director,
     find_tv_show_by_title_and_year,
     find_anime_by_title_and_year,
@@ -71,6 +72,7 @@ from .export_import import (
     import_tv_shows,
     import_anime,
     import_video_games,
+    import_custom_tabs,
 )
 
 # Statistics operations
@@ -173,6 +175,7 @@ __all__ = [
     "get_all_tv_shows",
     "get_all_anime",
     "get_all_video_games",
+    "get_all_custom_tabs_with_items",
     "find_movie_by_title_and_director",
     "find_tv_show_by_title_and_year",
     "find_anime_by_title_and_year",
@@ -181,6 +184,7 @@ __all__ = [
     "import_tv_shows",
     "import_anime",
     "import_video_games",
+    "import_custom_tabs",
     # Statistics operations
     "get_watch_statistics",
     "get_rating_statistics",
