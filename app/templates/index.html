@@ -773,6 +773,19 @@
       <p class="user-count" id="userCountDisplay">Loading...</p>
     </section>
 
+    <!-- Value Proposition Section -->
+    <section class="landing-value-prop" aria-labelledby="value-prop-title" style="padding: 60px 20px; background: var(--bg); max-width: 1200px; margin: 0 auto;">
+      <div style="text-align: center; margin-bottom: 40px;">
+        <h2 id="value-prop-title" style="font-size: 2.5rem; margin-bottom: 20px; color: var(--fg);">Why OmniTrackr Stands Out</h2>
+        <p style="font-size: 1.2rem; line-height: 1.8; color: var(--fg-secondary); max-width: 900px; margin: 0 auto;">
+          OmniTrackr isn't just another media tracker—it's a comprehensive platform designed for serious media enthusiasts who want to organize, analyze, and share their entertainment journey. Whether you're a cinephile tracking every film you've watched, a TV show binge-watcher managing multiple series, an anime fan cataloging your favorite series, or a gamer documenting your gaming adventures, OmniTrackr provides the tools you need to transform your media consumption into meaningful insights.
+        </p>
+        <p style="font-size: 1.1rem; line-height: 1.8; color: var(--fg-secondary); max-width: 900px; margin: 20px auto 0;">
+          Our platform combines powerful analytics with intuitive design, allowing you to discover patterns in your viewing habits, identify your favorite directors and genres, and connect with friends who share your passion for entertainment. With automatic poster fetching, comprehensive statistics, and robust privacy controls, OmniTrackr empowers you to take control of your media collection while maintaining complete ownership of your data.
+        </p>
+      </div>
+    </section>
+
     <!-- Authentication Section -->
     <section class="landing-auth">
       <div class="auth-container">
@@ -1160,6 +1173,36 @@
       </div>
     </section>
 
+    <!-- Editorial Reviews Section -->
+    <section class="landing-editorial-reviews" aria-labelledby="editorial-reviews-title" style="padding: 80px 20px; background: var(--bg-secondary);">
+      <div style="max-width: 1200px; margin: 0 auto;">
+        <h2 id="editorial-reviews-title" class="features-title" style="text-align: center; margin-bottom: 50px;">Featured Reviews & Insights</h2>
+        <p style="text-align: center; font-size: 1.1rem; color: var(--fg-secondary); margin-bottom: 40px; max-width: 800px; margin-left: auto; margin-right: auto;">
+          Discover thoughtful reviews and insights from the OmniTrackr community. Our platform encourages detailed, original reviews that help you remember what made each piece of media special and discover new favorites through the experiences of fellow enthusiasts.
+        </p>
+        <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 30px; margin-bottom: 40px;">
+          <div style="background: var(--card-bg); padding: 30px; border-radius: 12px; box-shadow: 0 4px 6px rgba(0,0,0,0.1);">
+            <h3 style="color: var(--primary); margin-bottom: 15px; font-size: 1.3rem;">The Power of Detailed Reviews</h3>
+            <p style="line-height: 1.8; color: var(--fg-secondary); margin-bottom: 15px;">Writing comprehensive reviews on OmniTrackr transforms your media tracking from a simple list into a meaningful journal of your entertainment journey. Whether you're analyzing cinematography, character development, narrative structure, or emotional impact, detailed reviews help you articulate what makes each piece of media memorable.</p>
+            <p style="line-height: 1.8; color: var(--fg-secondary);">These reviews become valuable resources for future reference, helping you recall why you rated something the way you did months or years later. They also serve as recommendations for friends who trust your taste, creating a community of shared discovery and thoughtful discussion about the media we love.</p>
+          </div>
+          <div style="background: var(--card-bg); padding: 30px; border-radius: 12px; box-shadow: 0 4px 6px rgba(0,0,0,0.1);">
+            <h3 style="color: var(--primary); margin-bottom: 15px; font-size: 1.3rem;">Building Your Media Legacy</h3>
+            <p style="line-height: 1.8; color: var(--fg-secondary); margin-bottom: 15px;">Every review you write on OmniTrackr contributes to building a comprehensive record of your media consumption. Over time, your collection and reviews create a personal archive that reflects your evolving tastes, interests, and perspectives. This historical record becomes increasingly valuable as your collection grows.</p>
+            <p style="line-height: 1.8; color: var(--fg-secondary);">The combination of ratings, reviews, and statistics provides a multi-dimensional view of your entertainment preferences. You can identify patterns, track how your tastes change over time, and discover connections between different pieces of media that you might not have noticed otherwise.</p>
+          </div>
+          <div style="background: var(--card-bg); padding: 30px; border-radius: 12px; box-shadow: 0 4px 6px rgba(0,0,0,0.1);">
+            <h3 style="color: var(--primary); margin-bottom: 15px; font-size: 1.3rem;">Community-Driven Discovery</h3>
+            <p style="line-height: 1.8; color: var(--fg-secondary); margin-bottom: 15px;">OmniTrackr's review system fosters a community where thoughtful analysis and personal insights are valued. By reading reviews from friends and other users, you can discover hidden gems, understand different perspectives on familiar content, and find recommendations that align with your specific interests.</p>
+            <p style="line-height: 1.8; color: var(--fg-secondary);">The platform's search and filter capabilities make it easy to find reviews for specific genres, directors, or time periods, helping you make informed decisions about what to watch or play next. This community-driven approach to media discovery creates a richer, more engaging experience than simple rating systems alone.</p>
+          </div>
+        </div>
+        <div style="text-align: center; margin-top: 30px;">
+          <a href="/reviews" style="display: inline-block; padding: 15px 30px; background: var(--primary); color: white; text-decoration: none; border-radius: 8px; font-weight: 600; transition: background 0.3s;">Explore Public Reviews →</a>
+        </div>
+      </div>
+    </section>
+
     <!-- Screenshots Section -->
     <section class="landing-screenshots" aria-labelledby="screenshots-title">
       <h2 id="screenshots-title" class="screenshots-title">See OmniTrackr in Action</h2>
@@ -1171,6 +1214,9 @@
                loading="lazy"
                class="screenshot-image">
           <p class="screenshot-caption">Main Dashboard - Track all your media in one place</p>
+          <div style="padding: 15px; background: var(--card-bg); border-radius: 8px; margin-top: 10px;">
+            <p style="line-height: 1.7; color: var(--fg-secondary); font-size: 0.95rem;">The OmniTrackr dashboard provides a unified interface for managing your entire media collection. With dedicated tabs for movies, TV shows, anime, and video games, you can easily add entries, rate content, write reviews, and track your viewing progress. The intuitive search and sort functionality makes it effortless to find specific items, while automatic poster fetching from trusted APIs ensures your collection looks professional and visually appealing. Each entry supports detailed metadata including ratings, watch status, and personal reviews, giving you complete control over how you organize and remember your media experiences.</p>
+          </div>
           <div class="screenshot-overlay">
             <span class="screenshot-zoom-icon">🔍</span>
             <span class="screenshot-zoom-text">Click to enlarge</span>
@@ -1182,6 +1228,9 @@
                loading="lazy"
                class="screenshot-image">
           <p class="screenshot-caption">Statistics Dashboard - Comprehensive analytics</p>
+          <div style="padding: 15px; background: var(--card-bg); border-radius: 8px; margin-top: 10px;">
+            <p style="line-height: 1.7; color: var(--fg-secondary); font-size: 0.95rem;">Dive deep into your media consumption patterns with OmniTrackr's powerful statistics dashboard. Track your watch progress with visual completion percentages, analyze your rating habits through distribution charts, and discover your favorite directors and genres. The dashboard provides insights into your viewing trends across different decades, helping you understand your media preferences over time. With category-specific statistics for movies, TV shows, anime, and video games, you can explore detailed metrics including average ratings, highest-rated content, and genre preferences. These analytics transform raw data into meaningful insights about your entertainment journey.</p>
+          </div>
           <div class="screenshot-overlay">
             <span class="screenshot-zoom-icon">🔍</span>
             <span class="screenshot-zoom-text">Click to enlarge</span>
@@ -1193,6 +1242,9 @@
                loading="lazy"
                class="screenshot-image">
           <p class="screenshot-caption">Privacy Settings - Control who can see your data</p>
+          <div style="padding: 15px; background: var(--card-bg); border-radius: 8px; margin-top: 10px;">
+            <p style="line-height: 1.7; color: var(--fg-secondary); font-size: 0.95rem;">Privacy is fundamental to OmniTrackr's design philosophy. Our granular privacy controls allow you to make individual categories—movies, TV shows, anime, video games, or statistics—completely private, even from your friends. This means you can share your favorite TV shows while keeping your movie collection private, or showcase your statistics while hiding specific content types. The privacy settings are easy to toggle and take effect immediately, giving you complete control over what information is visible to others. Combined with secure account management features including email verification, password protection, and account deactivation options, OmniTrackr ensures your data remains yours.</p>
+          </div>
           <div class="screenshot-overlay">
             <span class="screenshot-zoom-icon">🔍</span>
             <span class="screenshot-zoom-text">Click to enlarge</span>
@@ -1204,6 +1256,9 @@
                loading="lazy"
                class="screenshot-image">
           <p class="screenshot-caption">Friends & Social - Connect and share with friends</p>
+          <div style="padding: 15px; background: var(--card-bg); border-radius: 8px; margin-top: 10px;">
+            <p style="line-height: 1.7; color: var(--fg-secondary); font-size: 0.95rem;">Build your media community by connecting with friends on OmniTrackr. Send friend requests to other users and explore each other's collections to discover new movies, shows, anime, and games. The friends system includes real-time notifications for friend requests, making it easy to stay connected. When viewing a friend's profile, you can browse their collections with full search and filter capabilities, compare statistics, and get recommendations based on their highest-rated content. The social features respect privacy settings, so you only see what your friends have chosen to share. This creates a collaborative environment where you can discover new entertainment while maintaining control over your own data visibility.</p>
+          </div>
           <div class="screenshot-overlay">
             <span class="screenshot-zoom-icon">🔍</span>
             <span class="screenshot-zoom-text">Click to enlarge</span>

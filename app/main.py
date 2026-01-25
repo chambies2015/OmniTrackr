@@ -34,6 +34,7 @@ from .routers import (
     seo,
     static,
     custom_tabs,
+    reviews,
 )
 
 # Create database tables
@@ -171,6 +172,7 @@ app.include_router(proxy.router)
 
 app.include_router(seo.router)
 app.include_router(static.router)
+app.include_router(reviews.router)
 
 
 # Root endpoint

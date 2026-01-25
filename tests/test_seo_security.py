@@ -18,6 +18,28 @@ class TestSEOEndpoints:
         assert "<urlset" in content
         assert "omnitrackr.xyz" in content or "sitemap" in content.lower()
     
+    def test_sitemap_includes_privacy_page(self, client):
+        """Test that sitemap includes the privacy page."""
+        response = client.get("/sitemap.xml")
+        assert response.status_code == 200
+        content = response.text
+        assert "/privacy" in content
+    
+    def test_sitemap_includes_reviews_page(self, client):
+        """Test that sitemap includes the reviews page."""
+        response = client.get("/sitemap.xml")
+        assert response.status_code == 200
+        content = response.text
+        assert "/reviews" in content
+    
+    def test_sitemap_includes_homepage(self, client):
+        """Test that sitemap includes the homepage."""
+        response = client.get("/sitemap.xml")
+        assert response.status_code == 200
+        content = response.text
+        assert "<loc>" in content
+        assert "</loc>" in content
+    
     def test_get_robots_txt(self, client):
         """Test robots.txt endpoint."""
         response = client.get("/robots.txt")

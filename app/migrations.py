@@ -455,6 +455,122 @@ def run_migrations():
                 conn.commit()
                 print("Created custom_tab_items table")
 
+        if inspector.has_table("movies"):
+            movie_columns = {col["name"]: col["type"] for col in inspector.get_columns("movies")}
+            if "review" in movie_columns and "TEXT" not in str(movie_columns["review"]).upper():
+                with engine.connect() as conn:
+                    if database.DATABASE_URL.startswith("sqlite"):
+                        conn.execute(text("ALTER TABLE movies RENAME TO movies_old"))
+                        conn.execute(text("""
+                            CREATE TABLE movies (
+                                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                                title VARCHAR,
+                                director VARCHAR,
+                                year INTEGER,
+                                rating FLOAT,
+                                watched BOOLEAN DEFAULT 0,
+                                review TEXT,
+                                poster_url VARCHAR,
+                                user_id INTEGER NOT NULL REFERENCES users(id)
+                            )
+                        """))
+                        conn.execute(text("CREATE INDEX ix_movies_user_id ON movies(user_id)"))
+                        conn.execute(text("CREATE INDEX ix_movies_title ON movies(title)"))
+                        conn.execute(text("CREATE INDEX ix_movies_director ON movies(director)"))
+                        conn.execute(text("INSERT INTO movies SELECT * FROM movies_old"))
+                        conn.execute(text("DROP TABLE movies_old"))
+                    else:
+                        conn.execute(text("ALTER TABLE movies ALTER COLUMN review TYPE TEXT"))
+                    conn.commit()
+                    print("Migrated movies.review to TEXT")
+
+        if inspector.has_table("tv_shows"):
+            tv_columns = {col["name"]: col["type"] for col in inspector.get_columns("tv_shows")}
+            if "review" in tv_columns and "TEXT" not in str(tv_columns["review"]).upper():
+                with engine.connect() as conn:
+                    if database.DATABASE_URL.startswith("sqlite"):
+                        conn.execute(text("ALTER TABLE tv_shows RENAME TO tv_shows_old"))
+                        conn.execute(text("""
+                            CREATE TABLE tv_shows (
+                                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                                title VARCHAR,
+                                year INTEGER,
+                                seasons INTEGER,
+                                episodes INTEGER,
+                                rating FLOAT,
+                                watched BOOLEAN DEFAULT 0,
+                                review TEXT,
+                                poster_url VARCHAR,
+                                user_id INTEGER NOT NULL REFERENCES users(id)
+                            )
+                        """))
+                        conn.execute(text("CREATE INDEX ix_tv_shows_user_id ON tv_shows(user_id)"))
+                        conn.execute(text("CREATE INDEX ix_tv_shows_title ON tv_shows(title)"))
+                        conn.execute(text("INSERT INTO tv_shows SELECT * FROM tv_shows_old"))
+                        conn.execute(text("DROP TABLE tv_shows_old"))
+                    else:
+                        conn.execute(text("ALTER TABLE tv_shows ALTER COLUMN review TYPE TEXT"))
+                    conn.commit()
+                    print("Migrated tv_shows.review to TEXT")
+
+        if inspector.has_table("anime"):
+            anime_columns = {col["name"]: col["type"] for col in inspector.get_columns("anime")}
+            if "review" in anime_columns and "TEXT" not in str(anime_columns["review"]).upper():
+                with engine.connect() as conn:
+                    if database.DATABASE_URL.startswith("sqlite"):
+                        conn.execute(text("ALTER TABLE anime RENAME TO anime_old"))
+                        conn.execute(text("""
+                            CREATE TABLE anime (
+                                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                                title VARCHAR,
+                                year INTEGER,
+                                seasons INTEGER,
+                                episodes INTEGER,
+                                rating FLOAT,
+                                watched BOOLEAN DEFAULT 0,
+                                review TEXT,
+                                poster_url VARCHAR,
+                                user_id INTEGER NOT NULL REFERENCES users(id)
+                            )
+                        """))
+                        conn.execute(text("CREATE INDEX ix_anime_user_id ON anime(user_id)"))
+                        conn.execute(text("CREATE INDEX ix_anime_title ON anime(title)"))
+                        conn.execute(text("INSERT INTO anime SELECT * FROM anime_old"))
+                        conn.execute(text("DROP TABLE anime_old"))
+                    else:
+                        conn.execute(text("ALTER TABLE anime ALTER COLUMN review TYPE TEXT"))
+                    conn.commit()
+                    print("Migrated anime.review to TEXT")
+
+        if inspector.has_table("video_games"):
+            vg_columns = {col["name"]: col["type"] for col in inspector.get_columns("video_games")}
+            if "review" in vg_columns and "TEXT" not in str(vg_columns["review"]).upper():
+                with engine.connect() as conn:
+                    if database.DATABASE_URL.startswith("sqlite"):
+                        conn.execute(text("ALTER TABLE video_games RENAME TO video_games_old"))
+                        conn.execute(text("""
+                            CREATE TABLE video_games (
+                                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                                title VARCHAR,
+                                release_date TIMESTAMP,
+                                genres VARCHAR,
+                                rating FLOAT,
+                                played BOOLEAN DEFAULT 0,
+                                review TEXT,
+                                cover_art_url VARCHAR,
+                                rawg_link VARCHAR,
+                                user_id INTEGER NOT NULL REFERENCES users(id)
+                            )
+                        """))
+                        conn.execute(text("CREATE INDEX ix_video_games_user_id ON video_games(user_id)"))
+                        conn.execute(text("CREATE INDEX ix_video_games_title ON video_games(title)"))
+                        conn.execute(text("INSERT INTO video_games SELECT * FROM video_games_old"))
+                        conn.execute(text("DROP TABLE video_games_old"))
+                    else:
+                        conn.execute(text("ALTER TABLE video_games ALTER COLUMN review TYPE TEXT"))
+                    conn.commit()
+                    print("Migrated video_games.review to TEXT")
+
     except Exception as e:
         print(f"Migration warning: {e}")
         pass

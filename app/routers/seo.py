@@ -14,14 +14,27 @@ router = APIRouter(tags=["seo"])
 async def get_sitemap():
     """Generate and serve sitemap.xml for SEO."""
     base_url = os.getenv("SITE_URL", "https://omnitrackr.xyz")
+    today = datetime.now().strftime('%Y-%m-%d')
     
     sitemap = f"""<?xml version="1.0" encoding="UTF-8"?>
 <urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
   <url>
     <loc>{base_url}/</loc>
-    <lastmod>{datetime.now().strftime('%Y-%m-%d')}</lastmod>
+    <lastmod>{today}</lastmod>
     <changefreq>weekly</changefreq>
     <priority>1.0</priority>
+  </url>
+  <url>
+    <loc>{base_url}/privacy</loc>
+    <lastmod>{today}</lastmod>
+    <changefreq>monthly</changefreq>
+    <priority>0.5</priority>
+  </url>
+  <url>
+    <loc>{base_url}/reviews</loc>
+    <lastmod>{today}</lastmod>
+    <changefreq>daily</changefreq>
+    <priority>0.8</priority>
   </url>
 </urlset>"""
     

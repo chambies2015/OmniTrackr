@@ -64,7 +64,7 @@ class Movie(Base):
     year = Column(Integer)
     rating = Column(Float, nullable=True)
     watched = Column(Boolean, default=False)
-    review = Column(String, nullable=True)
+    review = Column(Text, nullable=True)
     poster_url = Column(String, nullable=True)
     
     # User relationship
@@ -83,7 +83,7 @@ class TVShow(Base):
     episodes = Column(Integer, nullable=True)
     rating = Column(Float, nullable=True)
     watched = Column(Boolean, default=False)
-    review = Column(String, nullable=True)
+    review = Column(Text, nullable=True)
     poster_url = Column(String, nullable=True)
     
     # User relationship
@@ -102,7 +102,7 @@ class Anime(Base):
     episodes = Column(Integer, nullable=True)
     rating = Column(Float, nullable=True)
     watched = Column(Boolean, default=False)
-    review = Column(String, nullable=True)
+    review = Column(Text, nullable=True)
     poster_url = Column(String, nullable=True)
     
     # User relationship
