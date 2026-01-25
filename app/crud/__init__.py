@@ -5,6 +5,7 @@ Re-exports all CRUD functions for backward compatibility.
 # User CRUD operations
 from .users import (
     get_user_by_username,
+    get_user_by_username_auth,
     get_user_by_email,
     get_user_by_username_or_email,
     get_user_by_id,
@@ -129,6 +130,7 @@ from .custom_tabs import (
 __all__ = [
     # User operations
     "get_user_by_username",
+    "get_user_by_username_auth",
     "get_user_by_email",
     "get_user_by_username_or_email",
     "get_user_by_id",

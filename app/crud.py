@@ -1172,10 +1172,10 @@ def get_notifications(db: Session, user_id: int) -> List[models.Notification]:
 
 def get_unread_notification_count(db: Session, user_id: int) -> int:
     """Get count of unread notifications for a user."""
-    return db.query(models.Notification).filter(
+    return db.query(func.count(models.Notification.id)).filter(
         models.Notification.user_id == user_id,
         models.Notification.read_at.is_(None)
-    ).count()
+    ).scalar() or 0
 
 
 def mark_notification_read(db: Session, notification_id: int, user_id: int) -> Optional[models.Notification]:

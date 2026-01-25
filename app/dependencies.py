@@ -41,7 +41,7 @@ async def get_current_user(
     if username is None:
         raise credentials_exception
     
-    user = crud.get_user_by_username(db, username=username)
+    user = crud.get_user_by_username_auth(db, username=username)
     if user is None or not user.is_active:
         raise credentials_exception
     

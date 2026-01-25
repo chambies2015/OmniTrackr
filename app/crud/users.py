@@ -3,7 +3,7 @@ User CRUD operations for the OmniTrackr API.
 """
 from typing import Optional
 from datetime import datetime
-from sqlalchemy.orm import Session
+from sqlalchemy.orm import Session, load_only
 from sqlalchemy import or_
 
 from .. import models, schemas
@@ -12,6 +12,23 @@ from .. import models, schemas
 def get_user_by_username(db: Session, username: str) -> Optional[models.User]:
     """Get user by username."""
     return db.query(models.User).filter(models.User.username == username).first()
+
+
+def get_user_by_username_auth(db: Session, username: str) -> Optional[models.User]:
+    """Get user by username with minimal columns for auth."""
+    return db.query(models.User).options(
+        load_only(
+            models.User.id,
+            models.User.email,
+            models.User.username,
+            models.User.hashed_password,
+            models.User.is_active,
+            models.User.is_verified,
+            models.User.verification_token,
+            models.User.created_at,
+            models.User.profile_picture_url,
+        )
+    ).filter(models.User.username == username).first()
 
 
 def get_user_by_email(db: Session, email: str) -> Optional[models.User]:

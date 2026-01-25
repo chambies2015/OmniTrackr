@@ -4,7 +4,7 @@ Friends, Friend Requests, Notifications, and Friend Profile CRUD operations for 
 from typing import List, Optional, Tuple
 from datetime import datetime, timedelta
 from sqlalchemy.orm import Session
-from sqlalchemy import or_, and_, desc
+from sqlalchemy import or_, and_, desc, func
 
 from .. import models, schemas
 from .users import get_user_by_id
@@ -277,10 +277,10 @@ def get_notifications(db: Session, user_id: int) -> List[models.Notification]:
 
 def get_unread_notification_count(db: Session, user_id: int) -> int:
     """Get count of unread notifications for a user."""
-    return db.query(models.Notification).filter(
+    return db.query(func.count(models.Notification.id)).filter(
         models.Notification.user_id == user_id,
         models.Notification.read_at.is_(None)
-    ).count()
+    ).scalar() or 0
 
 
 def mark_notification_read(db: Session, notification_id: int, user_id: int) -> Optional[models.Notification]:

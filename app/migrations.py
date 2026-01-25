@@ -112,6 +112,10 @@ def run_migrations():
                     conn.execute(text("ALTER TABLE users ADD COLUMN profile_picture_mime_type VARCHAR"))
                     conn.commit()
                     print("Added profile_picture_mime_type column to users table")
+            if database.DATABASE_URL.startswith("postgresql"):
+                with engine.connect() as conn:
+                    conn.execute(text("CREATE INDEX IF NOT EXISTS ix_users_username ON users(username)"))
+                    conn.commit()
 
         if inspector.has_table("movies"):
             existing_columns = {col["name"] for col in inspector.get_columns("movies")}
@@ -328,6 +332,7 @@ def run_migrations():
                     conn.execute(text("CREATE INDEX ix_notifications_user_id ON notifications(user_id)"))
                     conn.execute(text("CREATE INDEX ix_notifications_friend_request_id ON notifications(friend_request_id)"))
                     conn.execute(text("CREATE INDEX ix_notifications_created_at ON notifications(created_at)"))
+                    conn.execute(text("CREATE INDEX ix_notifications_user_id_unread ON notifications(user_id) WHERE read_at IS NULL"))
                 else:
                     conn.execute(text("""
                         CREATE TABLE notifications (
@@ -345,6 +350,11 @@ def run_migrations():
                     conn.execute(text("CREATE INDEX ix_notifications_created_at ON notifications(created_at)"))
                 conn.commit()
                 print("Created notifications table")
+
+        if inspector.has_table("notifications") and database.DATABASE_URL.startswith("postgresql"):
+            with engine.connect() as conn:
+                conn.execute(text("CREATE INDEX IF NOT EXISTS ix_notifications_user_id_unread ON notifications(user_id) WHERE read_at IS NULL"))
+                conn.commit()
 
         if not inspector.has_table("custom_tabs"):
             with engine.connect() as conn:
