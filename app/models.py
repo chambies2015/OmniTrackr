@@ -30,6 +30,7 @@ class User(Base):
     anime_private = Column(Boolean, default=False, nullable=False)
     video_games_private = Column(Boolean, default=False, nullable=False)
     statistics_private = Column(Boolean, default=False, nullable=False)
+    reviews_public = Column(Boolean, default=False, nullable=False)
     
     movies_visible = Column(Boolean, default=True, nullable=False)
     tv_shows_visible = Column(Boolean, default=True, nullable=False)
@@ -64,7 +65,7 @@ class Movie(Base):
     year = Column(Integer)
     rating = Column(Float, nullable=True)
     watched = Column(Boolean, default=False)
-    review = Column(String, nullable=True)
+    review = Column(Text, nullable=True)
     poster_url = Column(String, nullable=True)
     
     # User relationship
@@ -83,7 +84,7 @@ class TVShow(Base):
     episodes = Column(Integer, nullable=True)
     rating = Column(Float, nullable=True)
     watched = Column(Boolean, default=False)
-    review = Column(String, nullable=True)
+    review = Column(Text, nullable=True)
     poster_url = Column(String, nullable=True)
     
     # User relationship
@@ -102,7 +103,7 @@ class Anime(Base):
     episodes = Column(Integer, nullable=True)
     rating = Column(Float, nullable=True)
     watched = Column(Boolean, default=False)
-    review = Column(String, nullable=True)
+    review = Column(Text, nullable=True)
     poster_url = Column(String, nullable=True)
     
     # User relationship

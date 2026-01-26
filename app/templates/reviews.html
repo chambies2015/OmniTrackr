@@ -1,0 +1,312 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="description" content="OmniTrackr Public Reviews - Discover thoughtful reviews and insights from the OmniTrackr community.">
+  <title>Public Reviews - OmniTrackr</title>
+  <link rel="icon" type="image/x-icon" href="/omnitrackr_favicon.ico">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@700;800&family=Inter:wght@400;500;600&display=swap"
+    rel="stylesheet">
+  <link rel="stylesheet" href="/styles.css">
+  <style>
+    body {
+      min-height: 100vh;
+      padding: 20px;
+    }
+
+    .reviews-wrapper {
+      max-width: 1200px;
+      margin: 0 auto;
+    }
+
+    .reviews-header {
+      text-align: center;
+      margin-bottom: 40px;
+      padding-bottom: 20px;
+      border-bottom: 2px solid var(--border);
+    }
+
+    .reviews-header h1 {
+      font-size: 2.5rem;
+      margin-bottom: 15px;
+      color: var(--fg);
+    }
+
+    .reviews-header p {
+      font-size: 1.1rem;
+      color: var(--fg-secondary);
+      max-width: 700px;
+      margin: 0 auto;
+    }
+
+    .filter-section {
+      background: var(--card-bg);
+      padding: 20px;
+      border-radius: 12px;
+      margin-bottom: 30px;
+      display: flex;
+      gap: 15px;
+      flex-wrap: wrap;
+      align-items: center;
+    }
+
+    .filter-section select,
+    .filter-section button {
+      padding: 10px 20px;
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      background: var(--bg);
+      color: var(--fg);
+      font-size: 1rem;
+      cursor: pointer;
+    }
+
+    .filter-section button {
+      background: var(--primary);
+      color: white;
+      border: none;
+    }
+
+    .reviews-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(350px, 1fr));
+      gap: 25px;
+      margin-bottom: 40px;
+    }
+
+    .review-card {
+      background: var(--card-bg);
+      border-radius: 12px;
+      padding: 25px;
+      box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+      border: 1px solid var(--border);
+      transition: transform 0.2s, box-shadow 0.2s;
+      cursor: pointer;
+    }
+
+    .review-card:hover {
+      transform: translateY(-5px);
+      box-shadow: 0 8px 16px rgba(0, 0, 0, 0.2);
+    }
+
+    .review-card-header {
+      display: flex;
+      align-items: center;
+      gap: 15px;
+      margin-bottom: 15px;
+    }
+
+    .review-poster {
+      width: 60px;
+      height: 90px;
+      object-fit: cover;
+      border-radius: 6px;
+    }
+
+    .review-card-title {
+      flex: 1;
+    }
+
+    .review-card-title h3 {
+      margin: 0 0 5px 0;
+      font-size: 1.2rem;
+      color: var(--fg);
+    }
+
+    .review-card-title p {
+      margin: 0;
+      font-size: 0.9rem;
+      color: var(--fg-secondary);
+    }
+
+    .review-preview {
+      color: var(--fg-secondary);
+      line-height: 1.6;
+      margin-bottom: 15px;
+      display: -webkit-box;
+      -webkit-line-clamp: 4;
+      -webkit-box-orient: vertical;
+      overflow: hidden;
+    }
+
+    .review-meta {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      font-size: 0.9rem;
+      color: var(--fg-secondary);
+    }
+
+    .review-rating {
+      font-weight: 600;
+      color: var(--primary);
+    }
+
+    .review-category {
+      display: inline-block;
+      padding: 4px 12px;
+      background: var(--primary);
+      color: white;
+      border-radius: 12px;
+      font-size: 0.8rem;
+      margin-bottom: 10px;
+    }
+
+    .loading {
+      text-align: center;
+      padding: 40px;
+      color: var(--fg-secondary);
+    }
+
+    .no-reviews {
+      text-align: center;
+      padding: 60px 20px;
+      color: var(--fg-secondary);
+    }
+
+    .back-link {
+      display: inline-block;
+      margin-bottom: 20px;
+      color: var(--primary);
+      text-decoration: none;
+      font-weight: 500;
+    }
+
+    .back-link:hover {
+      text-decoration: underline;
+    }
+  </style>
+</head>
+
+<body class="dark-mode">
+  <div class="reviews-wrapper">
+    <a href="/" class="back-link">← Back to Home</a>
+    
+    <div class="reviews-header">
+      <h1>Public Reviews</h1>
+      <p>Discover thoughtful reviews and insights from the OmniTrackr community. Explore reviews for movies, TV shows, anime, and video games shared by our users.</p>
+    </div>
+
+    <div class="filter-section">
+      <select id="categoryFilter">
+        <option value="">All Categories</option>
+        <option value="movie">Movies</option>
+        <option value="tv_show">TV Shows</option>
+        <option value="anime">Anime</option>
+        <option value="video_game">Video Games</option>
+      </select>
+      <button onclick="loadReviews()">Filter</button>
+      <button onclick="loadMoreReviews()" id="loadMoreBtn" style="display: none;">Load More</button>
+    </div>
+
+    <div id="reviewsContainer" class="reviews-grid">
+      <div class="loading">Loading reviews...</div>
+    </div>
+  </div>
+
+  <script>
+    let currentOffset = 0;
+    let currentCategory = '';
+    let hasMore = true;
+
+    async function loadReviews(reset = true) {
+      if (reset) {
+        currentOffset = 0;
+        hasMore = true;
+        document.getElementById('reviewsContainer').innerHTML = '<div class="loading">Loading reviews...</div>';
+      }
+
+      const category = document.getElementById('categoryFilter').value;
+      currentCategory = category;
+      
+      const url = `/api/public/reviews?category=${category || ''}&limit=20&offset=${currentOffset}`;
+      
+      try {
+        const response = await fetch(url);
+        const reviews = await response.json();
+        
+        if (reset) {
+          document.getElementById('reviewsContainer').innerHTML = '';
+        }
+        
+        if (reviews.length === 0 && currentOffset === 0) {
+          document.getElementById('reviewsContainer').innerHTML = '<div class="no-reviews">No reviews found. Check back later for new reviews!</div>';
+          document.getElementById('loadMoreBtn').style.display = 'none';
+          return;
+        }
+        
+        if (reviews.length < 20) {
+          hasMore = false;
+          document.getElementById('loadMoreBtn').style.display = 'none';
+        } else {
+          document.getElementById('loadMoreBtn').style.display = 'inline-block';
+        }
+        
+        reviews.forEach(review => {
+          const card = createReviewCard(review);
+          document.getElementById('reviewsContainer').appendChild(card);
+        });
+        
+        currentOffset += reviews.length;
+      } catch (error) {
+        console.error('Error loading reviews:', error);
+        document.getElementById('reviewsContainer').innerHTML = '<div class="no-reviews">Error loading reviews. Please try again later.</div>';
+      }
+    }
+
+    function createReviewCard(review) {
+      const card = document.createElement('div');
+      card.className = 'review-card';
+      card.onclick = () => {
+        window.location.href = `/reviews/${review.id}?category=${review.category}`;
+      };
+      
+      const posterUrl = review.poster_url || review.cover_art_url || '/static/default-avatar.svg';
+      const categoryLabel = review.category === 'tv_show' ? 'TV Show' : 
+                           review.category === 'video_game' ? 'Video Game' :
+                           review.category.charAt(0).toUpperCase() + review.category.slice(1);
+      
+      const metaInfo = review.category === 'movie' ? 
+        `${review.director || 'Unknown'} • ${review.year || 'N/A'}` :
+        review.category === 'video_game' ?
+        `${review.genres || 'Various'} • ${review.release_date ? new Date(review.release_date).getFullYear() : 'N/A'}` :
+        `${review.year || 'N/A'}${review.seasons ? ` • ${review.seasons} season${review.seasons > 1 ? 's' : ''}` : ''}`;
+      
+      card.innerHTML = `
+        <span class="review-category">${categoryLabel}</span>
+        <div class="review-card-header">
+          <img src="${posterUrl}" alt="${review.title}" class="review-poster" onerror="this.src='/static/default-avatar.svg'">
+          <div class="review-card-title">
+            <h3>${escapeHtml(review.title)}</h3>
+            <p>${escapeHtml(metaInfo)}</p>
+          </div>
+        </div>
+        <div class="review-preview">${escapeHtml(review.review)}</div>
+        <div class="review-meta">
+          <span>By ${escapeHtml(review.username)}</span>
+          ${review.rating ? `<span class="review-rating">⭐ ${review.rating}/10</span>` : ''}
+        </div>
+      `;
+      
+      return card;
+    }
+
+    function loadMoreReviews() {
+      loadReviews(false);
+    }
+
+    function escapeHtml(text) {
+      const div = document.createElement('div');
+      div.textContent = text;
+      return div.innerHTML;
+    }
+
+    loadReviews();
+  </script>
+</body>
+
+</html>

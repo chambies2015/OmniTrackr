@@ -76,6 +76,7 @@ class PrivacySettings(BaseModel):
     anime_private: bool = Field(False, description="Make anime private")
     video_games_private: bool = Field(False, description="Make video games private")
     statistics_private: bool = Field(False, description="Make statistics private")
+    reviews_public: bool = Field(False, description="Allow reviews to appear on public reviews page")
     
     class Config:
         from_attributes = True
@@ -88,6 +89,7 @@ class PrivacySettingsUpdate(BaseModel):
     anime_private: Optional[bool] = None
     video_games_private: Optional[bool] = None
     statistics_private: Optional[bool] = None
+    reviews_public: Optional[bool] = None
 
 
 class TabVisibility(BaseModel):

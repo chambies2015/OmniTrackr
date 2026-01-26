@@ -1373,19 +1373,468 @@ window.cancelTVEdit = function () {
   loadTVShows();
 };
 
-// Form submissions
+async function searchMovieMetadata() {
+  const titleInput = document.getElementById('movieTitle');
+  const title = titleInput.value.trim();
+  
+  if (!title) {
+    alert('Please enter a movie title to search.');
+    return;
+  }
+  
+  const searchBtn = document.getElementById('searchMovieBtn');
+  const originalText = searchBtn.textContent;
+  searchBtn.disabled = true;
+  searchBtn.textContent = 'Searching...';
+  
+  try {
+    const proxyUrl = `${API_BASE}/api/proxy/omdb?title=${encodeURIComponent(title)}`;
+    
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), 30000);
+    
+    let res;
+    try {
+      res = await fetch(proxyUrl, {
+        signal: controller.signal,
+        headers: {
+          'Accept': 'application/json'
+        }
+      });
+      clearTimeout(timeoutId);
+    } catch (fetchError) {
+      clearTimeout(timeoutId);
+      if (fetchError.name === 'AbortError') {
+        alert('Search request timed out. Please try again.');
+      } else {
+        alert('Network error: ' + fetchError.message);
+      }
+      searchBtn.disabled = false;
+      searchBtn.textContent = originalText;
+      return;
+    }
+    
+    if (!res.ok) {
+      if (res.status === 429) {
+        alert('OMDB API rate limit reached. Please try again later.');
+      } else if (res.status === 503) {
+        alert('OMDB API not configured on server.');
+      } else if (res.status === 504) {
+        alert('Search request timed out. Please try again.');
+      } else {
+        alert('Failed to search for movie. Please try again.');
+      }
+      searchBtn.disabled = false;
+      searchBtn.textContent = originalText;
+      return;
+    }
+    
+    const data = await res.json();
+    
+    if (data.Error) {
+      alert(`Movie not found: ${data.Error}`);
+      searchBtn.disabled = false;
+      searchBtn.textContent = originalText;
+      return;
+    }
+    
+    if (data && data.Title) {
+      titleInput.value = data.Title;
+      
+      if (data.Director && data.Director !== 'N/A') {
+        document.getElementById('movieDirector').value = data.Director;
+      }
+      
+      if (data.Year && data.Year !== 'N/A') {
+        const year = parseInt(data.Year.split('-')[0], 10);
+        if (!isNaN(year)) {
+          document.getElementById('movieYear').value = year;
+        }
+      }
+      
+      if (data.Poster && data.Poster !== 'N/A') {
+        titleInput.dataset.posterUrl = data.Poster;
+      }
+      
+      alert('Movie information loaded successfully!');
+    } else {
+      alert('No movie information found.');
+    }
+  } catch (err) {
+    console.error('Error searching for movie:', err);
+    alert('Failed to search for movie. Please try again.');
+  } finally {
+    searchBtn.disabled = false;
+    searchBtn.textContent = originalText;
+  }
+}
+
+document.getElementById('searchMovieBtn').onclick = searchMovieMetadata;
+
+document.getElementById('movieTitle').addEventListener('keypress', function(e) {
+  if (e.key === 'Enter') {
+    e.preventDefault();
+    searchMovieMetadata();
+  }
+});
+
+async function searchTVShowMetadata() {
+  const titleInput = document.getElementById('tvTitle');
+  const title = titleInput.value.trim();
+  
+  if (!title) {
+    alert('Please enter a TV show title to search.');
+    return;
+  }
+  
+  const searchBtn = document.getElementById('searchTVShowBtn');
+  const originalText = searchBtn.textContent;
+  searchBtn.disabled = true;
+  searchBtn.textContent = 'Searching...';
+  
+  try {
+    const proxyUrl = `${API_BASE}/api/proxy/omdb?title=${encodeURIComponent(title)}&type=series`;
+    
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), 30000);
+    
+    let res;
+    try {
+      res = await fetch(proxyUrl, {
+        signal: controller.signal,
+        headers: {
+          'Accept': 'application/json'
+        }
+      });
+      clearTimeout(timeoutId);
+    } catch (fetchError) {
+      clearTimeout(timeoutId);
+      if (fetchError.name === 'AbortError') {
+        alert('Search request timed out. Please try again.');
+      } else {
+        alert('Network error: ' + fetchError.message);
+      }
+      searchBtn.disabled = false;
+      searchBtn.textContent = originalText;
+      return;
+    }
+    
+    if (!res.ok) {
+      if (res.status === 429) {
+        alert('OMDB API rate limit reached. Please try again later.');
+      } else if (res.status === 503) {
+        alert('OMDB API not configured on server.');
+      } else if (res.status === 504) {
+        alert('Search request timed out. Please try again.');
+      } else {
+        alert('Failed to search for TV show. Please try again.');
+      }
+      searchBtn.disabled = false;
+      searchBtn.textContent = originalText;
+      return;
+    }
+    
+    const data = await res.json();
+    
+    if (data.Error) {
+      alert(`TV show not found: ${data.Error}`);
+      searchBtn.disabled = false;
+      searchBtn.textContent = originalText;
+      return;
+    }
+    
+    if (data && data.Title) {
+      titleInput.value = data.Title;
+      
+      if (data.Year && data.Year !== 'N/A') {
+        const year = parseInt(data.Year.split('-')[0], 10);
+        if (!isNaN(year)) {
+          document.getElementById('tvYear').value = year;
+        }
+      }
+      
+      if (data.totalSeasons && data.totalSeasons !== 'N/A') {
+        const seasons = parseInt(data.totalSeasons, 10);
+        if (!isNaN(seasons)) {
+          document.getElementById('tvSeasons').value = seasons;
+        }
+      }
+      
+      if (data.Poster && data.Poster !== 'N/A') {
+        titleInput.dataset.posterUrl = data.Poster;
+      }
+      
+      alert('TV show information loaded successfully!');
+    } else {
+      alert('No TV show information found.');
+    }
+  } catch (err) {
+    console.error('Error searching for TV show:', err);
+    alert('Failed to search for TV show. Please try again.');
+  } finally {
+    searchBtn.disabled = false;
+    searchBtn.textContent = originalText;
+  }
+}
+
+async function searchAnimeMetadata() {
+  const titleInput = document.getElementById('animeTitle');
+  const title = titleInput.value.trim();
+  
+  if (!title) {
+    alert('Please enter an anime title to search.');
+    return;
+  }
+  
+  const searchBtn = document.getElementById('searchAnimeBtn');
+  const originalText = searchBtn.textContent;
+  searchBtn.disabled = true;
+  searchBtn.textContent = 'Searching...';
+  
+  try {
+    const proxyUrl = `${API_BASE}/api/proxy/jikan?query=${encodeURIComponent(title)}`;
+    
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), 30000);
+    
+    let res;
+    try {
+      res = await fetch(proxyUrl, {
+        signal: controller.signal,
+        headers: {
+          'Accept': 'application/json'
+        }
+      });
+      clearTimeout(timeoutId);
+    } catch (fetchError) {
+      clearTimeout(timeoutId);
+      if (fetchError.name === 'AbortError') {
+        alert('Search request timed out. Please try again.');
+      } else {
+        alert('Network error: ' + fetchError.message);
+      }
+      searchBtn.disabled = false;
+      searchBtn.textContent = originalText;
+      return;
+    }
+    
+    if (!res.ok) {
+      if (res.status === 429) {
+        alert('Jikan API rate limit reached. Please try again later.');
+      } else if (res.status === 504) {
+        alert('Search request timed out. Please try again.');
+      } else {
+        alert('Failed to search for anime. Please try again.');
+      }
+      searchBtn.disabled = false;
+      searchBtn.textContent = originalText;
+      return;
+    }
+    
+    const data = await res.json();
+    
+    if (data && data.data && data.data.length > 0) {
+      const anime = data.data[0];
+      
+      if (anime.title_english || anime.title) {
+        titleInput.value = anime.title_english || anime.title;
+      }
+      
+      if (anime.year) {
+        document.getElementById('animeYear').value = anime.year;
+      }
+      
+      if (anime.seasons) {
+        document.getElementById('animeSeasons').value = anime.seasons;
+      }
+      
+      if (anime.episodes) {
+        document.getElementById('animeEpisodes').value = anime.episodes;
+      }
+      
+      const posterUrl = anime.images?.jpg?.large_image_url || anime.images?.jpg?.image_url;
+      if (posterUrl) {
+        titleInput.dataset.posterUrl = posterUrl;
+      }
+      
+      alert('Anime information loaded successfully!');
+    } else {
+      alert('No anime information found.');
+    }
+  } catch (err) {
+    console.error('Error searching for anime:', err);
+    alert('Failed to search for anime. Please try again.');
+  } finally {
+    searchBtn.disabled = false;
+    searchBtn.textContent = originalText;
+  }
+}
+
+async function searchVideoGameMetadata() {
+  const titleInput = document.getElementById('videoGameTitle');
+  const title = titleInput.value.trim();
+  
+  if (!title) {
+    alert('Please enter a video game title to search.');
+    return;
+  }
+  
+  const searchBtn = document.getElementById('searchVideoGameBtn');
+  const originalText = searchBtn.textContent;
+  searchBtn.disabled = true;
+  searchBtn.textContent = 'Searching...';
+  
+  try {
+    const proxyUrl = `${API_BASE}/api/proxy/rawg?search=${encodeURIComponent(title)}`;
+    
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), 30000);
+    
+    let res;
+    try {
+      res = await fetch(proxyUrl, {
+        signal: controller.signal,
+        headers: {
+          'Accept': 'application/json'
+        }
+      });
+      clearTimeout(timeoutId);
+    } catch (fetchError) {
+      clearTimeout(timeoutId);
+      if (fetchError.name === 'AbortError') {
+        alert('Search request timed out. Please try again.');
+      } else {
+        alert('Network error: ' + fetchError.message);
+      }
+      searchBtn.disabled = false;
+      searchBtn.textContent = originalText;
+      return;
+    }
+    
+    if (!res.ok) {
+      if (res.status === 429) {
+        alert('RAWG API rate limit reached. Please try again later.');
+      } else if (res.status === 503) {
+        alert('RAWG API not configured on server.');
+      } else if (res.status === 504) {
+        alert('Search request timed out. Please try again.');
+      } else {
+        alert('Failed to search for video game. Please try again.');
+      }
+      searchBtn.disabled = false;
+      searchBtn.textContent = originalText;
+      return;
+    }
+    
+    const data = await res.json();
+    
+    if (data && data.results && data.results.length > 0) {
+      const game = data.results[0];
+      
+      if (game.name) {
+        titleInput.value = game.name;
+      }
+      
+      if (game.genres && game.genres.length > 0) {
+        document.getElementById('videoGameGenres').value = game.genres.map(g => g.name).join(', ');
+      }
+      
+      if (game.released) {
+        titleInput.dataset.releaseDate = game.released;
+      }
+      
+      if (game.background_image) {
+        titleInput.dataset.coverArtUrl = game.background_image;
+      }
+      
+      if (game.slug) {
+        titleInput.dataset.rawgLink = `https://rawg.io/games/${game.slug}`;
+      }
+      
+      alert('Video game information loaded successfully!');
+    } else {
+      alert('No video game information found.');
+    }
+  } catch (err) {
+    console.error('Error searching for video game:', err);
+    alert('Failed to search for video game. Please try again.');
+  } finally {
+    searchBtn.disabled = false;
+    searchBtn.textContent = originalText;
+  }
+}
+
+document.getElementById('searchTVShowBtn').onclick = searchTVShowMetadata;
+document.getElementById('searchAnimeBtn').onclick = searchAnimeMetadata;
+document.getElementById('searchVideoGameBtn').onclick = searchVideoGameMetadata;
+
+document.getElementById('tvTitle').addEventListener('keypress', function(e) {
+  if (e.key === 'Enter') {
+    e.preventDefault();
+    searchTVShowMetadata();
+  }
+});
+
+document.getElementById('animeTitle').addEventListener('keypress', function(e) {
+  if (e.key === 'Enter') {
+    e.preventDefault();
+    searchAnimeMetadata();
+  }
+});
+
+document.getElementById('videoGameTitle').addEventListener('keypress', function(e) {
+  if (e.key === 'Enter') {
+    e.preventDefault();
+    searchVideoGameMetadata();
+  }
+});
+
 document.getElementById('addMovieForm').onsubmit = async function (e) {
   e.preventDefault();
+  const titleInput = document.getElementById('movieTitle');
+  const directorInput = document.getElementById('movieDirector');
+  const yearInput = document.getElementById('movieYear');
+  
+  const title = titleInput.value.trim();
+  if (!title) {
+    alert('Please enter a movie title.');
+    return;
+  }
+  
+  const director = directorInput.value.trim();
+  if (!director) {
+    alert('Please enter a director or click "Search" to auto-fill movie information.');
+    return;
+  }
+  
+  const yearVal = yearInput.value.trim();
+  if (!yearVal) {
+    alert('Please enter a year or click "Search" to auto-fill movie information.');
+    return;
+  }
+  
+  const year = parseInt(yearVal, 10);
+  if (isNaN(year) || year < 0) {
+    alert('Please enter a valid year.');
+    return;
+  }
+  
   const movie = {
-    title: document.getElementById('movieTitle').value,
-    director: document.getElementById('movieDirector').value,
-    year: parseInt(document.getElementById('movieYear').value, 10),
+    title: title,
+    director: director,
+    year: year,
     watched: document.getElementById('movieWatched').checked,
   };
+  
   const ratingVal = document.getElementById('movieRating').value;
   if (ratingVal) movie.rating = parseFloat(ratingVal);
   const reviewVal = document.getElementById('movieReview').value;
   if (reviewVal) movie.review = reviewVal;
+  
+  if (titleInput.dataset.posterUrl) {
+    movie.poster_url = titleInput.dataset.posterUrl;
+  }
+  
   const response = await authenticatedFetch(`${API_BASE}/movies/`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
@@ -1393,17 +1842,45 @@ document.getElementById('addMovieForm').onsubmit = async function (e) {
   });
   if (response.ok) {
     document.getElementById('addMovieForm').reset();
+    if (titleInput.dataset.posterUrl) {
+      delete titleInput.dataset.posterUrl;
+    }
     loadMovies();
+  } else {
+    const errorData = await response.json().catch(() => ({ detail: 'Failed to add movie' }));
+    alert(errorData.detail || 'Failed to add movie');
   }
 };
 
 document.getElementById('addTVShowForm').onsubmit = async function (e) {
   e.preventDefault();
+  const titleInput = document.getElementById('tvTitle');
+  const yearInput = document.getElementById('tvYear');
+  
+  const title = titleInput.value.trim();
+  if (!title) {
+    alert('Please enter a TV show title.');
+    return;
+  }
+  
+  const yearVal = yearInput.value.trim();
+  if (!yearVal) {
+    alert('Please enter a year or click "Search" to auto-fill TV show information.');
+    return;
+  }
+  
+  const year = parseInt(yearVal, 10);
+  if (isNaN(year) || year < 0) {
+    alert('Please enter a valid year.');
+    return;
+  }
+  
   const tvShow = {
-    title: document.getElementById('tvTitle').value,
-    year: parseInt(document.getElementById('tvYear').value, 10),
+    title: title,
+    year: year,
     watched: document.getElementById('tvWatched').checked,
   };
+  
   const seasonsVal = document.getElementById('tvSeasons').value;
   if (seasonsVal) tvShow.seasons = parseInt(seasonsVal, 10);
   const episodesVal = document.getElementById('tvEpisodes').value;
@@ -1412,6 +1889,11 @@ document.getElementById('addTVShowForm').onsubmit = async function (e) {
   if (ratingVal) tvShow.rating = parseFloat(ratingVal);
   const reviewVal = document.getElementById('tvReview').value;
   if (reviewVal) tvShow.review = reviewVal;
+  
+  if (titleInput.dataset.posterUrl) {
+    tvShow.poster_url = titleInput.dataset.posterUrl;
+  }
+  
   const response = await authenticatedFetch(`${API_BASE}/tv-shows/`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
@@ -1419,17 +1901,45 @@ document.getElementById('addTVShowForm').onsubmit = async function (e) {
   });
   if (response.ok) {
     document.getElementById('addTVShowForm').reset();
+    if (titleInput.dataset.posterUrl) {
+      delete titleInput.dataset.posterUrl;
+    }
     loadTVShows();
+  } else {
+    const errorData = await response.json().catch(() => ({ detail: 'Failed to add TV show' }));
+    alert(errorData.detail || 'Failed to add TV show');
   }
 };
 
 document.getElementById('addAnimeForm').onsubmit = async function (e) {
   e.preventDefault();
+  const titleInput = document.getElementById('animeTitle');
+  const yearInput = document.getElementById('animeYear');
+  
+  const title = titleInput.value.trim();
+  if (!title) {
+    alert('Please enter an anime title.');
+    return;
+  }
+  
+  const yearVal = yearInput.value.trim();
+  if (!yearVal) {
+    alert('Please enter a year or click "Search" to auto-fill anime information.');
+    return;
+  }
+  
+  const year = parseInt(yearVal, 10);
+  if (isNaN(year) || year < 0) {
+    alert('Please enter a valid year.');
+    return;
+  }
+  
   const anime = {
-    title: document.getElementById('animeTitle').value,
-    year: parseInt(document.getElementById('animeYear').value, 10),
+    title: title,
+    year: year,
     watched: document.getElementById('animeWatched').checked,
   };
+  
   const seasonsVal = document.getElementById('animeSeasons').value;
   if (seasonsVal) anime.seasons = parseInt(seasonsVal, 10);
   const episodesVal = document.getElementById('animeEpisodes').value;
@@ -1438,6 +1948,11 @@ document.getElementById('addAnimeForm').onsubmit = async function (e) {
   if (ratingVal) anime.rating = parseFloat(ratingVal);
   const reviewVal = document.getElementById('animeReview').value;
   if (reviewVal) anime.review = reviewVal;
+  
+  if (titleInput.dataset.posterUrl) {
+    anime.poster_url = titleInput.dataset.posterUrl;
+  }
+  
   const response = await authenticatedFetch(`${API_BASE}/anime/`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
@@ -1445,24 +1960,49 @@ document.getElementById('addAnimeForm').onsubmit = async function (e) {
   });
   if (response.ok) {
     document.getElementById('addAnimeForm').reset();
+    if (titleInput.dataset.posterUrl) {
+      delete titleInput.dataset.posterUrl;
+    }
     toggleCollapsible('animeForm');
     loadAnime();
+  } else {
+    const errorData = await response.json().catch(() => ({ detail: 'Failed to add anime' }));
+    alert(errorData.detail || 'Failed to add anime');
   }
 };
 
 document.getElementById('addVideoGameForm').onsubmit = async function (e) {
   e.preventDefault();
+  const titleInput = document.getElementById('videoGameTitle');
+  
+  const title = titleInput.value.trim();
+  if (!title) {
+    alert('Please enter a video game title.');
+    return;
+  }
+  
   const videoGame = {
-    title: document.getElementById('videoGameTitle').value,
+    title: title,
     played: document.getElementById('videoGamePlayed').checked,
   };
-  // Release date will be fetched from RAWG API metadata, not user input
+  
   const genresVal = document.getElementById('videoGameGenres').value;
   if (genresVal) videoGame.genres = genresVal;
   const ratingVal = document.getElementById('videoGameRating').value;
   if (ratingVal) videoGame.rating = parseFloat(ratingVal);
   const reviewVal = document.getElementById('videoGameReview').value;
   if (reviewVal) videoGame.review = reviewVal;
+  
+  if (titleInput.dataset.releaseDate) {
+    videoGame.release_date = titleInput.dataset.releaseDate;
+  }
+  if (titleInput.dataset.coverArtUrl) {
+    videoGame.cover_art_url = titleInput.dataset.coverArtUrl;
+  }
+  if (titleInput.dataset.rawgLink) {
+    videoGame.rawg_link = titleInput.dataset.rawgLink;
+  }
+  
   const response = await authenticatedFetch(`${API_BASE}/video-games/`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
@@ -1470,8 +2010,20 @@ document.getElementById('addVideoGameForm').onsubmit = async function (e) {
   });
   if (response.ok) {
     document.getElementById('addVideoGameForm').reset();
+    if (titleInput.dataset.releaseDate) {
+      delete titleInput.dataset.releaseDate;
+    }
+    if (titleInput.dataset.coverArtUrl) {
+      delete titleInput.dataset.coverArtUrl;
+    }
+    if (titleInput.dataset.rawgLink) {
+      delete titleInput.dataset.rawgLink;
+    }
     toggleCollapsible('videoGameForm');
     loadVideoGames();
+  } else {
+    const errorData = await response.json().catch(() => ({ detail: 'Failed to add video game' }));
+    alert(errorData.detail || 'Failed to add video game');
   }
 };
 
@@ -2642,6 +3194,7 @@ window.loadPrivacySettings = async function () {
       document.getElementById('animePrivate').checked = privacy.anime_private;
       document.getElementById('videoGamesPrivate').checked = privacy.video_games_private;
       document.getElementById('statisticsPrivate').checked = privacy.statistics_private;
+      document.getElementById('reviewsPublic').checked = privacy.reviews_public || false;
     }
   } catch (error) {
     console.error('Failed to load privacy settings:', error);
@@ -2656,6 +3209,7 @@ window.updatePrivacySettings = async function (event) {
   const animePrivate = document.getElementById('animePrivate').checked;
   const videoGamesPrivate = document.getElementById('videoGamesPrivate').checked;
   const statisticsPrivate = document.getElementById('statisticsPrivate').checked;
+  const reviewsPublic = document.getElementById('reviewsPublic').checked;
 
   const errorDiv = document.getElementById('privacyError');
   const successDiv = document.getElementById('privacySuccess');
@@ -2676,7 +3230,8 @@ window.updatePrivacySettings = async function (event) {
         tv_shows_private: tvShowsPrivate,
         anime_private: animePrivate,
         video_games_private: videoGamesPrivate,
-        statistics_private: statisticsPrivate
+        statistics_private: statisticsPrivate,
+        reviews_public: reviewsPublic
       })
     });
 

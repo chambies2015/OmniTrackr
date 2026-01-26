@@ -20,7 +20,8 @@ def get_limiter(request: Request) -> Limiter:
 async def proxy_omdb_api(
     request: Request,
     title: str = Query(..., description="Movie/TV show title"),
-    year: Optional[str] = Query(None, description="Release year")
+    year: Optional[str] = Query(None, description="Release year"),
+    type: Optional[str] = Query(None, description="Type: movie, series, or episode")
 ):
     """Proxy endpoint for OMDB API. Keeps API key secure on server."""
     omdb_key = os.getenv("OMDB_API_KEY", "")
@@ -31,6 +32,8 @@ async def proxy_omdb_api(
         url = f"https://www.omdbapi.com/?t={title}"
         if year:
             url += f"&y={year}"
+        if type:
+            url += f"&type={type}"
         url += f"&apikey={omdb_key}"
         
         async with httpx.AsyncClient(timeout=30.0, follow_redirects=True) as client:
