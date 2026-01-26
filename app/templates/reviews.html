@@ -290,7 +290,6 @@
         
         updateItemListJsonLd(reviews);
         updatePageMetadata(category);
-        
         currentOffset += reviews.length;
       } catch (error) {
         console.error('Error loading reviews:', error);
@@ -437,7 +436,6 @@
         twitterUrl.setAttribute('content', canonicalUrl);
       }
     }
-
     function escapeHtml(text) {
       const div = document.createElement('div');
       div.textContent = text;
