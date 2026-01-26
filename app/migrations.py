@@ -74,6 +74,11 @@ def run_migrations():
                     conn.execute(text("ALTER TABLE users ADD COLUMN statistics_private BOOLEAN DEFAULT FALSE"))
                     conn.commit()
                     print("Added statistics_private column to users table")
+            if "reviews_public" not in user_columns:
+                with engine.connect() as conn:
+                    conn.execute(text("ALTER TABLE users ADD COLUMN reviews_public BOOLEAN DEFAULT FALSE"))
+                    conn.commit()
+                    print("Added reviews_public column to users table")
             if "movies_visible" not in user_columns:
                 with engine.connect() as conn:
                     conn.execute(text("ALTER TABLE users ADD COLUMN movies_visible BOOLEAN DEFAULT TRUE"))

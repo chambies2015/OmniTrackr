@@ -50,7 +50,12 @@ async def get_public_reviews(
                 models.Movie.review.isnot(None),
                 models.Movie.review != "",
                 models.Movie.user_id.in_(
-                    db.query(models.User.id).filter(models.User.is_active == True)
+                    db.query(models.User.id).filter(
+                        and_(
+                            models.User.is_active == True,
+                            models.User.reviews_public == True
+                        )
+                    )
                 )
             )
         ).offset(offset).limit(limit).all()))
@@ -60,7 +65,12 @@ async def get_public_reviews(
                 models.TVShow.review.isnot(None),
                 models.TVShow.review != "",
                 models.TVShow.user_id.in_(
-                    db.query(models.User.id).filter(models.User.is_active == True)
+                    db.query(models.User.id).filter(
+                        and_(
+                            models.User.is_active == True,
+                            models.User.reviews_public == True
+                        )
+                    )
                 )
             )
         ).offset(offset).limit(limit).all()))
@@ -70,7 +80,12 @@ async def get_public_reviews(
                 models.Anime.review.isnot(None),
                 models.Anime.review != "",
                 models.Anime.user_id.in_(
-                    db.query(models.User.id).filter(models.User.is_active == True)
+                    db.query(models.User.id).filter(
+                        and_(
+                            models.User.is_active == True,
+                            models.User.reviews_public == True
+                        )
+                    )
                 )
             )
         ).offset(offset).limit(limit).all()))
@@ -80,7 +95,12 @@ async def get_public_reviews(
                 models.VideoGame.review.isnot(None),
                 models.VideoGame.review != "",
                 models.VideoGame.user_id.in_(
-                    db.query(models.User.id).filter(models.User.is_active == True)
+                    db.query(models.User.id).filter(
+                        and_(
+                            models.User.is_active == True,
+                            models.User.reviews_public == True
+                        )
+                    )
                 )
             )
         ).offset(offset).limit(limit).all()))
@@ -90,7 +110,12 @@ async def get_public_reviews(
                 models.Movie.review.isnot(None),
                 models.Movie.review != "",
                 models.Movie.user_id.in_(
-                    db.query(models.User.id).filter(models.User.is_active == True)
+                    db.query(models.User.id).filter(
+                        and_(
+                            models.User.is_active == True,
+                            models.User.reviews_public == True
+                        )
+                    )
                 )
             )
         ).limit(limit // 4 + 1).all()
@@ -100,7 +125,12 @@ async def get_public_reviews(
                 models.TVShow.review.isnot(None),
                 models.TVShow.review != "",
                 models.TVShow.user_id.in_(
-                    db.query(models.User.id).filter(models.User.is_active == True)
+                    db.query(models.User.id).filter(
+                        and_(
+                            models.User.is_active == True,
+                            models.User.reviews_public == True
+                        )
+                    )
                 )
             )
         ).limit(limit // 4 + 1).all()
@@ -110,7 +140,12 @@ async def get_public_reviews(
                 models.Anime.review.isnot(None),
                 models.Anime.review != "",
                 models.Anime.user_id.in_(
-                    db.query(models.User.id).filter(models.User.is_active == True)
+                    db.query(models.User.id).filter(
+                        and_(
+                            models.User.is_active == True,
+                            models.User.reviews_public == True
+                        )
+                    )
                 )
             )
         ).limit(limit // 4 + 1).all()
@@ -120,7 +155,12 @@ async def get_public_reviews(
                 models.VideoGame.review.isnot(None),
                 models.VideoGame.review != "",
                 models.VideoGame.user_id.in_(
-                    db.query(models.User.id).filter(models.User.is_active == True)
+                    db.query(models.User.id).filter(
+                        and_(
+                            models.User.is_active == True,
+                            models.User.reviews_public == True
+                        )
+                    )
                 )
             )
         ).limit(limit // 4 + 1).all()
@@ -180,7 +220,12 @@ async def get_public_review(
     db: Session = Depends(get_db)
 ):
     """Get a specific public review by ID and category."""
-    user_query = db.query(models.User.id).filter(models.User.is_active == True)
+    user_query = db.query(models.User.id).filter(
+        and_(
+            models.User.is_active == True,
+            models.User.reviews_public == True
+        )
+    )
     
     if category == "movie":
         item = db.query(models.Movie).filter(

@@ -30,6 +30,7 @@ class User(Base):
     anime_private = Column(Boolean, default=False, nullable=False)
     video_games_private = Column(Boolean, default=False, nullable=False)
     statistics_private = Column(Boolean, default=False, nullable=False)
+    reviews_public = Column(Boolean, default=False, nullable=False)
     
     movies_visible = Column(Boolean, default=True, nullable=False)
     tv_shows_visible = Column(Boolean, default=True, nullable=False)

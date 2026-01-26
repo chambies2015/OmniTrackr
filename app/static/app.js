@@ -2642,6 +2642,7 @@ window.loadPrivacySettings = async function () {
       document.getElementById('animePrivate').checked = privacy.anime_private;
       document.getElementById('videoGamesPrivate').checked = privacy.video_games_private;
       document.getElementById('statisticsPrivate').checked = privacy.statistics_private;
+      document.getElementById('reviewsPublic').checked = privacy.reviews_public || false;
     }
   } catch (error) {
     console.error('Failed to load privacy settings:', error);
@@ -2656,6 +2657,7 @@ window.updatePrivacySettings = async function (event) {
   const animePrivate = document.getElementById('animePrivate').checked;
   const videoGamesPrivate = document.getElementById('videoGamesPrivate').checked;
   const statisticsPrivate = document.getElementById('statisticsPrivate').checked;
+  const reviewsPublic = document.getElementById('reviewsPublic').checked;
 
   const errorDiv = document.getElementById('privacyError');
   const successDiv = document.getElementById('privacySuccess');
@@ -2676,7 +2678,8 @@ window.updatePrivacySettings = async function (event) {
         tv_shows_private: tvShowsPrivate,
         anime_private: animePrivate,
         video_games_private: videoGamesPrivate,
-        statistics_private: statisticsPrivate
+        statistics_private: statisticsPrivate,
+        reviews_public: reviewsPublic
       })
     });
 

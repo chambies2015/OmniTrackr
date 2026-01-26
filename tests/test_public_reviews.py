@@ -25,6 +25,8 @@ class TestPublicReviews:
         
         user = db_session.query(models.User).filter(models.User.username == test_user_data["username"]).first()
         assert user is not None
+        user.reviews_public = True
+        db_session.commit()
         
         movie_data = {
             "title": "Test Movie",
@@ -57,6 +59,8 @@ class TestPublicReviews:
         from app import crud
         
         user = db_session.query(models.User).filter(models.User.username == test_user_data["username"]).first()
+        user.reviews_public = True
+        db_session.commit()
         
         movie_with_review = crud.create_movie(
             db_session, 
@@ -111,7 +115,8 @@ class TestPublicReviews:
             username="activeuser",
             hashed_password="hashed",
             is_active=True,
-            is_verified=True
+            is_verified=True,
+            reviews_public=True
         )
         db_session.add(active_user)
         
@@ -120,7 +125,8 @@ class TestPublicReviews:
             username="inactiveuser",
             hashed_password="hashed",
             is_active=False,
-            is_verified=True
+            is_verified=True,
+            reviews_public=True
         )
         db_session.add(inactive_user)
         db_session.commit()
@@ -157,11 +163,69 @@ class TestPublicReviews:
         assert active_movie.id in review_ids
         assert inactive_movie.id not in review_ids
     
+    def test_get_public_reviews_excludes_users_with_reviews_private(self, client, db_session, authenticated_client, test_user_data):
+        """Test that reviews from users who haven't opted in are not included."""
+        from app import crud
+        
+        user = db_session.query(models.User).filter(models.User.username == test_user_data["username"]).first()
+        user.reviews_public = False
+        db_session.commit()
+        
+        movie = crud.create_movie(
+            db_session,
+            user.id,
+            MovieCreate(
+                title="Private Review Movie",
+                director="Director",
+                year=2020,
+                review="This review should not appear publicly"
+            )
+        )
+        
+        db_session.commit()
+        
+        response = client.get("/api/public/reviews")
+        
+        assert response.status_code == 200
+        data = response.json()
+        review_ids = [r["id"] for r in data]
+        assert movie.id not in review_ids
+    
+    def test_get_public_reviews_includes_users_with_reviews_public(self, client, db_session, authenticated_client, test_user_data):
+        """Test that reviews from users who opted in are included."""
+        from app import crud
+        
+        user = db_session.query(models.User).filter(models.User.username == test_user_data["username"]).first()
+        user.reviews_public = True
+        db_session.commit()
+        
+        movie = crud.create_movie(
+            db_session,
+            user.id,
+            MovieCreate(
+                title="Public Review Movie",
+                director="Director",
+                year=2020,
+                review="This review should appear publicly"
+            )
+        )
+        
+        db_session.commit()
+        
+        response = client.get("/api/public/reviews")
+        
+        assert response.status_code == 200
+        data = response.json()
+        review_ids = [r["id"] for r in data]
+        assert movie.id in review_ids
+    
     def test_get_public_reviews_filter_by_category_movie(self, client, db_session, authenticated_client, test_user_data):
         """Test filtering public reviews by movie category."""
         from app import crud
         
         user = db_session.query(models.User).filter(models.User.username == test_user_data["username"]).first()
+        user.reviews_public = True
+        db_session.commit()
         
         movie = crud.create_movie(
             db_session,
@@ -206,6 +270,8 @@ class TestPublicReviews:
         from app import crud
         
         user = db_session.query(models.User).filter(models.User.username == test_user_data["username"]).first()
+        user.reviews_public = True
+        db_session.commit()
         
         tv_show = crud.create_tv_show(
             db_session,
@@ -229,6 +295,8 @@ class TestPublicReviews:
         from app import crud
         
         user = db_session.query(models.User).filter(models.User.username == test_user_data["username"]).first()
+        user.reviews_public = True
+        db_session.commit()
         
         anime = crud.create_anime(
             db_session,
@@ -252,6 +320,8 @@ class TestPublicReviews:
         from app import crud
         
         user = db_session.query(models.User).filter(models.User.username == test_user_data["username"]).first()
+        user.reviews_public = True
+        db_session.commit()
         
         video_game = crud.create_video_game(
             db_session,
@@ -276,6 +346,8 @@ class TestPublicReviews:
         from app import crud
         
         user = db_session.query(models.User).filter(models.User.username == test_user_data["username"]).first()
+        user.reviews_public = True
+        db_session.commit()
         
         for i in range(5):
             crud.create_movie(
@@ -317,6 +389,8 @@ class TestPublicReviews:
         from app import crud
         
         user = db_session.query(models.User).filter(models.User.username == test_user_data["username"]).first()
+        user.reviews_public = True
+        db_session.commit()
         
         movie = crud.create_movie(
             db_session,
@@ -351,6 +425,8 @@ class TestPublicReviews:
         from app import crud
         
         user = db_session.query(models.User).filter(models.User.username == test_user_data["username"]).first()
+        user.reviews_public = True
+        db_session.commit()
         
         tv_show = crud.create_tv_show(
             db_session,
@@ -397,6 +473,8 @@ class TestPublicReviews:
         from app import crud
         
         user = db_session.query(models.User).filter(models.User.username == test_user_data["username"]).first()
+        user.reviews_public = True
+        db_session.commit()
         
         movie = crud.create_movie(
             db_session,
@@ -419,6 +497,8 @@ class TestPublicReviews:
         from app import crud
         
         user = db_session.query(models.User).filter(models.User.username == test_user_data["username"]).first()
+        user.reviews_public = True
+        db_session.commit()
         
         long_review = "This is a very long review. " * 100
         movie = crud.create_movie(
@@ -446,6 +526,8 @@ class TestPublicReviews:
         from app import crud
         
         user = db_session.query(models.User).filter(models.User.username == test_user_data["username"]).first()
+        user.reviews_public = True
+        db_session.commit()
         
         movie = crud.create_movie(
             db_session,
