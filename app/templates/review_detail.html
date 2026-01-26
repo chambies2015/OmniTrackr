@@ -5,8 +5,24 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <meta name="description" content="OmniTrackr Review Detail - Read detailed reviews from the OmniTrackr community.">
+  <meta name="robots" content="index, follow">
   <title>Review Detail - OmniTrackr</title>
+  <link rel="canonical" href="https://omnitrackr.xyz/reviews">
   <link rel="icon" type="image/x-icon" href="/omnitrackr_favicon.ico">
+  
+  <meta property="og:type" content="article">
+  <meta property="og:url" content="https://omnitrackr.xyz/reviews">
+  <meta property="og:title" content="Review Detail - OmniTrackr">
+  <meta property="og:description" content="Read detailed reviews from the OmniTrackr community.">
+  <meta property="og:image" content="https://omnitrackr.xyz/omnitrackr_vortex.png">
+  <meta property="og:site_name" content="OmniTrackr">
+  <meta property="og:locale" content="en_US">
+  
+  <meta name="twitter:card" content="summary_large_image">
+  <meta name="twitter:url" content="https://omnitrackr.xyz/reviews">
+  <meta name="twitter:title" content="Review Detail - OmniTrackr">
+  <meta name="twitter:description" content="Read detailed reviews from the OmniTrackr community.">
+  <meta name="twitter:image" content="https://omnitrackr.xyz/omnitrackr_vortex.png">
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@700;800&family=Inter:wght@400;500;600&display=swap"
@@ -173,7 +189,144 @@
       }
     }
 
+    function updateMetadata(review) {
+      const posterUrl = review.poster_url || review.cover_art_url || 'https://omnitrackr.xyz/omnitrackr_vortex.png';
+      const fullPosterUrl = posterUrl.startsWith('http') ? posterUrl : `https://omnitrackr.xyz${posterUrl}`;
+      const reviewUrl = `https://omnitrackr.xyz/reviews/${review.id}?category=${review.category}`;
+      const reviewTitle = `${escapeHtml(review.title)} Review - OmniTrackr`;
+      const reviewDescription = review.review ? escapeHtml(review.review.substring(0, 160)) + (review.review.length > 160 ? '...' : '') : `Read a review of ${escapeHtml(review.title)} by ${escapeHtml(review.username)} on OmniTrackr.`;
+      
+      document.title = reviewTitle;
+      
+      let metaDesc = document.querySelector('meta[name="description"]');
+      if (!metaDesc) {
+        metaDesc = document.createElement('meta');
+        metaDesc.setAttribute('name', 'description');
+        document.head.appendChild(metaDesc);
+      }
+      metaDesc.setAttribute('content', reviewDescription);
+      
+      let canonical = document.querySelector('link[rel="canonical"]');
+      if (!canonical) {
+        canonical = document.createElement('link');
+        canonical.setAttribute('rel', 'canonical');
+        document.head.appendChild(canonical);
+      }
+      canonical.setAttribute('href', reviewUrl);
+      
+      const ogTags = {
+        'og:url': reviewUrl,
+        'og:title': reviewTitle,
+        'og:description': reviewDescription,
+        'og:image': fullPosterUrl
+      };
+      
+      Object.keys(ogTags).forEach(prop => {
+        let tag = document.querySelector(`meta[property="${prop}"]`);
+        if (!tag) {
+          tag = document.createElement('meta');
+          tag.setAttribute('property', prop);
+          document.head.appendChild(tag);
+        }
+        tag.setAttribute('content', ogTags[prop]);
+      });
+      
+      const twitterTags = {
+        'twitter:url': reviewUrl,
+        'twitter:title': reviewTitle,
+        'twitter:description': reviewDescription,
+        'twitter:image': fullPosterUrl
+      };
+      
+      Object.keys(twitterTags).forEach(name => {
+        let tag = document.querySelector(`meta[name="${name}"]`);
+        if (!tag) {
+          tag = document.createElement('meta');
+          tag.setAttribute('name', name);
+          document.head.appendChild(tag);
+        }
+        tag.setAttribute('content', twitterTags[name]);
+      });
+      
+      let existingJsonLd = document.getElementById('review-jsonld');
+      if (existingJsonLd) {
+        existingJsonLd.remove();
+      }
+      
+      const categoryLabel = review.category === 'tv_show' ? 'TV Show' : 
+                           review.category === 'video_game' ? 'Video Game' :
+                           review.category.charAt(0).toUpperCase() + review.category.slice(1);
+      
+      let itemReviewed = {};
+      if (review.category === 'movie') {
+        itemReviewed = {
+          "@type": "Movie",
+          "name": review.title,
+          "director": review.director ? { "@type": "Person", "name": review.director } : undefined,
+          "datePublished": review.year ? `${review.year}-01-01` : undefined
+        };
+      } else if (review.category === 'tv_show') {
+        itemReviewed = {
+          "@type": "TVSeries",
+          "name": review.title,
+          "startDate": review.year ? `${review.year}-01-01` : undefined,
+          "numberOfSeasons": review.seasons || undefined,
+          "numberOfEpisodes": review.episodes || undefined
+        };
+      } else if (review.category === 'anime') {
+        itemReviewed = {
+          "@type": "TVSeries",
+          "name": review.title,
+          "startDate": review.year ? `${review.year}-01-01` : undefined,
+          "numberOfSeasons": review.seasons || undefined,
+          "numberOfEpisodes": review.episodes || undefined
+        };
+      } else if (review.category === 'video_game') {
+        itemReviewed = {
+          "@type": "VideoGame",
+          "name": review.title,
+          "genre": review.genres ? review.genres.split(',').map(g => g.trim()) : undefined,
+          "releaseDate": review.release_date || undefined
+        };
+      }
+      
+      Object.keys(itemReviewed).forEach(key => {
+        if (itemReviewed[key] === undefined) {
+          delete itemReviewed[key];
+        }
+      });
+      
+      const jsonLd = {
+        "@context": "https://schema.org",
+        "@type": "Review",
+        "itemReviewed": itemReviewed,
+        "reviewBody": review.review,
+        "author": {
+          "@type": "Person",
+          "name": review.username
+        },
+        "reviewRating": review.rating ? {
+          "@type": "Rating",
+          "ratingValue": review.rating,
+          "bestRating": 10,
+          "worstRating": 1
+        } : undefined
+      };
+      
+      if (!jsonLd.reviewRating) {
+        delete jsonLd.reviewRating;
+      }
+      
+      const script = document.createElement('script');
+      script.id = 'review-jsonld';
+      script.type = 'application/ld+json';
+      script.textContent = JSON.stringify(jsonLd);
+      document.head.appendChild(script);
+    }
+
     function displayReview(review) {
+      updateMetadata(review);
+      
       const posterUrl = review.poster_url || review.cover_art_url || '/static/default-avatar.svg';
       const categoryLabel = review.category === 'tv_show' ? 'TV Show' : 
                            review.category === 'video_game' ? 'Video Game' :
