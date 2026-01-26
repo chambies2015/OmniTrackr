@@ -370,11 +370,12 @@
         </div>
         <div class="collapsible-content" id="tvFormContent" style="display: none;">
           <form id="addTVShowForm">
-            <div>
-              <input type="text" id="tvTitle" placeholder="Title" required>
+            <div style="display: flex; gap: 10px;">
+              <input type="text" id="tvTitle" placeholder="Title" required style="flex: 1;">
+              <button type="button" id="searchTVShowBtn" class="action-btn" style="white-space: nowrap;">Search</button>
             </div>
             <div>
-              <input type="number" id="tvYear" placeholder="Year" required>
+              <input type="number" id="tvYear" placeholder="Year (auto-filled from search)">
             </div>
             <div>
               <input type="number" id="tvSeasons" placeholder="Seasons (optional)">
@@ -447,11 +448,12 @@
         </div>
         <div class="collapsible-content" id="animeFormContent" style="display: none;">
           <form id="addAnimeForm">
-            <div>
-              <input type="text" id="animeTitle" placeholder="Title" required>
+            <div style="display: flex; gap: 10px;">
+              <input type="text" id="animeTitle" placeholder="Title" required style="flex: 1;">
+              <button type="button" id="searchAnimeBtn" class="action-btn" style="white-space: nowrap;">Search</button>
             </div>
             <div>
-              <input type="number" id="animeYear" placeholder="Year" required>
+              <input type="number" id="animeYear" placeholder="Year (auto-filled from search)">
             </div>
             <div>
               <input type="number" id="animeSeasons" placeholder="Seasons (optional)">
@@ -524,8 +526,9 @@
         </div>
         <div class="collapsible-content" id="videoGameFormContent" style="display: none;">
           <form id="addVideoGameForm">
-            <div>
-              <input type="text" id="videoGameTitle" placeholder="Title" required>
+            <div style="display: flex; gap: 10px;">
+              <input type="text" id="videoGameTitle" placeholder="Title" required style="flex: 1;">
+              <button type="button" id="searchVideoGameBtn" class="action-btn" style="white-space: nowrap;">Search</button>
             </div>
             <div>
               <input type="text" id="videoGameGenres" placeholder="Genres (comma-separated)">
