@@ -338,10 +338,6 @@
       loadReviews(false);
     }
 
-    function sanitizeCategory(category) {
-      return category.replace(/[^a-zA-Z0-9_-]/g, '');
-    }
-
     function updateItemListJsonLd(reviews) {
       let existingJsonLd = document.getElementById('reviews-itemlist-jsonld');
       if (existingJsonLd) {
@@ -424,8 +420,7 @@
         twitterDesc.setAttribute('content', description);
       }
       
-      const safeCategory = category ? encodeURIComponent(sanitizeCategory(category)) : '';
-      const canonicalUrl = `https://omnitrackr.xyz/reviews${safeCategory ? `?category=${safeCategory}` : ''}`;
+      const canonicalUrl = `https://omnitrackr.xyz/reviews${category ? `?category=${encodeURIComponent(category)}` : ''}`;
       let canonical = document.querySelector('link[rel="canonical"]');
       if (canonical) {
         canonical.setAttribute('href', canonicalUrl);
