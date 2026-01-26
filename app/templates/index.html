@@ -295,14 +295,15 @@
         </div>
         <div class="collapsible-content" id="movieFormContent" style="display: none;">
           <form id="addMovieForm">
-            <div>
-              <input type="text" id="movieTitle" placeholder="Title" required>
+            <div style="display: flex; gap: 10px;">
+              <input type="text" id="movieTitle" placeholder="Title" required style="flex: 1;">
+              <button type="button" id="searchMovieBtn" class="action-btn" style="white-space: nowrap;">Search</button>
             </div>
             <div>
-              <input type="text" id="movieDirector" placeholder="Director" required>
+              <input type="text" id="movieDirector" placeholder="Director (auto-filled from search)">
             </div>
             <div>
-              <input type="number" id="movieYear" placeholder="Year" required>
+              <input type="number" id="movieYear" placeholder="Year (auto-filled from search)">
             </div>
             <div>
               <input type="number" min="0" max="10" step="0.1" id="movieRating" placeholder="Rating (0-10.0)">

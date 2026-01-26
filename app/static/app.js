@@ -1373,19 +1373,157 @@ window.cancelTVEdit = function () {
   loadTVShows();
 };
 
-// Form submissions
+async function searchMovieMetadata() {
+  const titleInput = document.getElementById('movieTitle');
+  const title = titleInput.value.trim();
+  
+  if (!title) {
+    alert('Please enter a movie title to search.');
+    return;
+  }
+  
+  const searchBtn = document.getElementById('searchMovieBtn');
+  const originalText = searchBtn.textContent;
+  searchBtn.disabled = true;
+  searchBtn.textContent = 'Searching...';
+  
+  try {
+    const proxyUrl = `${API_BASE}/api/proxy/omdb?title=${encodeURIComponent(title)}`;
+    
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), 30000);
+    
+    let res;
+    try {
+      res = await fetch(proxyUrl, {
+        signal: controller.signal,
+        headers: {
+          'Accept': 'application/json'
+        }
+      });
+      clearTimeout(timeoutId);
+    } catch (fetchError) {
+      clearTimeout(timeoutId);
+      if (fetchError.name === 'AbortError') {
+        alert('Search request timed out. Please try again.');
+      } else {
+        alert('Network error: ' + fetchError.message);
+      }
+      searchBtn.disabled = false;
+      searchBtn.textContent = originalText;
+      return;
+    }
+    
+    if (!res.ok) {
+      if (res.status === 429) {
+        alert('OMDB API rate limit reached. Please try again later.');
+      } else if (res.status === 503) {
+        alert('OMDB API not configured on server.');
+      } else if (res.status === 504) {
+        alert('Search request timed out. Please try again.');
+      } else {
+        alert('Failed to search for movie. Please try again.');
+      }
+      searchBtn.disabled = false;
+      searchBtn.textContent = originalText;
+      return;
+    }
+    
+    const data = await res.json();
+    
+    if (data.Error) {
+      alert(`Movie not found: ${data.Error}`);
+      searchBtn.disabled = false;
+      searchBtn.textContent = originalText;
+      return;
+    }
+    
+    if (data && data.Title) {
+      titleInput.value = data.Title;
+      
+      if (data.Director && data.Director !== 'N/A') {
+        document.getElementById('movieDirector').value = data.Director;
+      }
+      
+      if (data.Year && data.Year !== 'N/A') {
+        const year = parseInt(data.Year.split('-')[0], 10);
+        if (!isNaN(year)) {
+          document.getElementById('movieYear').value = year;
+        }
+      }
+      
+      if (data.Poster && data.Poster !== 'N/A') {
+        titleInput.dataset.posterUrl = data.Poster;
+      }
+      
+      alert('Movie information loaded successfully!');
+    } else {
+      alert('No movie information found.');
+    }
+  } catch (err) {
+    console.error('Error searching for movie:', err);
+    alert('Failed to search for movie. Please try again.');
+  } finally {
+    searchBtn.disabled = false;
+    searchBtn.textContent = originalText;
+  }
+}
+
+document.getElementById('searchMovieBtn').onclick = searchMovieMetadata;
+
+document.getElementById('movieTitle').addEventListener('keypress', function(e) {
+  if (e.key === 'Enter') {
+    e.preventDefault();
+    searchMovieMetadata();
+  }
+});
+
 document.getElementById('addMovieForm').onsubmit = async function (e) {
   e.preventDefault();
+  const titleInput = document.getElementById('movieTitle');
+  const directorInput = document.getElementById('movieDirector');
+  const yearInput = document.getElementById('movieYear');
+  
+  const title = titleInput.value.trim();
+  if (!title) {
+    alert('Please enter a movie title.');
+    return;
+  }
+  
+  const director = directorInput.value.trim();
+  if (!director) {
+    alert('Please enter a director or click "Search" to auto-fill movie information.');
+    return;
+  }
+  
+  const yearVal = yearInput.value.trim();
+  if (!yearVal) {
+    alert('Please enter a year or click "Search" to auto-fill movie information.');
+    return;
+  }
+  
+  const year = parseInt(yearVal, 10);
+  if (isNaN(year) || year < 0) {
+    alert('Please enter a valid year.');
+    return;
+  }
+  
   const movie = {
-    title: document.getElementById('movieTitle').value,
-    director: document.getElementById('movieDirector').value,
-    year: parseInt(document.getElementById('movieYear').value, 10),
+    title: title,
+    director: director,
+    year: year,
     watched: document.getElementById('movieWatched').checked,
   };
+  
   const ratingVal = document.getElementById('movieRating').value;
   if (ratingVal) movie.rating = parseFloat(ratingVal);
   const reviewVal = document.getElementById('movieReview').value;
   if (reviewVal) movie.review = reviewVal;
+  
+  if (titleInput.dataset.posterUrl) {
+    movie.poster_url = titleInput.dataset.posterUrl;
+  }
+  
   const response = await authenticatedFetch(`${API_BASE}/movies/`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
@@ -1393,7 +1531,13 @@ document.getElementById('addMovieForm').onsubmit = async function (e) {
   });
   if (response.ok) {
     document.getElementById('addMovieForm').reset();
+    if (titleInput.dataset.posterUrl) {
+      delete titleInput.dataset.posterUrl;
+    }
     loadMovies();
+  } else {
+    const errorData = await response.json().catch(() => ({ detail: 'Failed to add movie' }));
+    alert(errorData.detail || 'Failed to add movie');
   }
 };
 
