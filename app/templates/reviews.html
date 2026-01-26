@@ -5,8 +5,25 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <meta name="description" content="OmniTrackr Public Reviews - Discover thoughtful reviews and insights from the OmniTrackr community.">
+  <meta name="robots" content="index, follow">
+  <meta name="author" content="OmniTrackr">
   <title>Public Reviews - OmniTrackr</title>
+  <link rel="canonical" href="https://omnitrackr.xyz/reviews">
   <link rel="icon" type="image/x-icon" href="/omnitrackr_favicon.ico">
+  
+  <meta property="og:type" content="website">
+  <meta property="og:url" content="https://omnitrackr.xyz/reviews">
+  <meta property="og:title" content="Public Reviews - OmniTrackr">
+  <meta property="og:description" content="Discover thoughtful reviews and insights from the OmniTrackr community. Explore reviews for movies, TV shows, anime, and video games shared by our users.">
+  <meta property="og:image" content="https://omnitrackr.xyz/omnitrackr_vortex.png">
+  <meta property="og:site_name" content="OmniTrackr">
+  <meta property="og:locale" content="en_US">
+  
+  <meta name="twitter:card" content="summary_large_image">
+  <meta name="twitter:url" content="https://omnitrackr.xyz/reviews">
+  <meta name="twitter:title" content="Public Reviews - OmniTrackr">
+  <meta name="twitter:description" content="Discover thoughtful reviews and insights from the OmniTrackr community. Explore reviews for movies, TV shows, anime, and video games shared by our users.">
+  <meta name="twitter:image" content="https://omnitrackr.xyz/omnitrackr_vortex.png">
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@700;800&family=Inter:wght@400;500;600&display=swap"
@@ -180,6 +197,26 @@
       text-decoration: underline;
     }
   </style>
+  
+  <script type="application/ld+json">
+  {
+    "@context": "https://schema.org",
+    "@type": "CollectionPage",
+    "name": "Public Reviews - OmniTrackr",
+    "description": "Discover thoughtful reviews and insights from the OmniTrackr community. Explore reviews for movies, TV shows, anime, and video games shared by our users.",
+    "url": "https://omnitrackr.xyz/reviews",
+    "inLanguage": "en-US",
+    "isPartOf": {
+      "@type": "WebSite",
+      "name": "OmniTrackr",
+      "url": "https://omnitrackr.xyz"
+    },
+    "mainEntity": {
+      "@type": "ItemList",
+      "itemListElement": []
+    }
+  }
+  </script>
 </head>
 
 <body class="dark-mode">
@@ -251,6 +288,9 @@
           document.getElementById('reviewsContainer').appendChild(card);
         });
         
+        updateItemListJsonLd(reviews);
+        updatePageMetadata(category);
+        
         currentOffset += reviews.length;
       } catch (error) {
         console.error('Error loading reviews:', error);
@@ -297,6 +337,105 @@
 
     function loadMoreReviews() {
       loadReviews(false);
+    }
+
+    function updateItemListJsonLd(reviews) {
+      let existingJsonLd = document.getElementById('reviews-itemlist-jsonld');
+      if (existingJsonLd) {
+        existingJsonLd.remove();
+      }
+      
+      const itemListElement = reviews.map((review, index) => ({
+        "@type": "ListItem",
+        "position": currentOffset - reviews.length + index + 1,
+        "item": {
+          "@type": "Review",
+          "name": review.title,
+          "url": `https://omnitrackr.xyz/reviews/${review.id}?category=${review.category}`,
+          "author": {
+            "@type": "Person",
+            "name": review.username
+          },
+          "reviewRating": review.rating ? {
+            "@type": "Rating",
+            "ratingValue": review.rating,
+            "bestRating": 10
+          } : undefined
+        }
+      }));
+      
+      const collectionPage = document.querySelector('script[type="application/ld+json"]');
+      if (collectionPage) {
+        try {
+          const data = JSON.parse(collectionPage.textContent);
+          if (data.mainEntity && data.mainEntity.itemListElement) {
+            data.mainEntity.itemListElement = data.mainEntity.itemListElement.concat(itemListElement);
+          } else if (data.mainEntity) {
+            data.mainEntity.itemListElement = itemListElement;
+          }
+          collectionPage.textContent = JSON.stringify(data);
+        } catch (e) {
+          console.error('Error updating JSON-LD:', e);
+        }
+      }
+    }
+
+    function updatePageMetadata(category) {
+      if (!category) return;
+      
+      const categoryLabels = {
+        'movie': 'Movies',
+        'tv_show': 'TV Shows',
+        'anime': 'Anime',
+        'video_game': 'Video Games'
+      };
+      
+      const categoryLabel = categoryLabels[category] || category;
+      const title = `${categoryLabel} Reviews - OmniTrackr`;
+      const description = `Discover thoughtful ${categoryLabel.toLowerCase()} reviews and insights from the OmniTrackr community.`;
+      
+      document.title = title;
+      
+      let metaDesc = document.querySelector('meta[name="description"]');
+      if (metaDesc) {
+        metaDesc.setAttribute('content', description);
+      }
+      
+      let ogTitle = document.querySelector('meta[property="og:title"]');
+      if (ogTitle) {
+        ogTitle.setAttribute('content', title);
+      }
+      
+      let ogDesc = document.querySelector('meta[property="og:description"]');
+      if (ogDesc) {
+        ogDesc.setAttribute('content', description);
+      }
+      
+      let twitterTitle = document.querySelector('meta[name="twitter:title"]');
+      if (twitterTitle) {
+        twitterTitle.setAttribute('content', title);
+      }
+      
+      let twitterDesc = document.querySelector('meta[name="twitter:description"]');
+      if (twitterDesc) {
+        twitterDesc.setAttribute('content', description);
+      }
+      
+      const canonicalUrl = `https://omnitrackr.xyz/reviews${category ? `?category=${category}` : ''}`;
+      let canonical = document.querySelector('link[rel="canonical"]');
+      if (canonical) {
+        canonical.setAttribute('href', canonicalUrl);
+      }
+      
+      let ogUrl = document.querySelector('meta[property="og:url"]');
+      if (ogUrl) {
+        ogUrl.setAttribute('content', canonicalUrl);
+      }
+      
+      let twitterUrl = document.querySelector('meta[name="twitter:url"]');
+      if (twitterUrl) {
+        twitterUrl.setAttribute('content', canonicalUrl);
+      }
     }
 
     function escapeHtml(text) {

@@ -117,6 +117,16 @@ def run_migrations():
                     conn.execute(text("ALTER TABLE users ADD COLUMN profile_picture_mime_type VARCHAR"))
                     conn.commit()
                     print("Added profile_picture_mime_type column to users table")
+            if "failed_login_attempts" not in user_columns:
+                with engine.connect() as conn:
+                    conn.execute(text("ALTER TABLE users ADD COLUMN failed_login_attempts INTEGER DEFAULT 0"))
+                    conn.commit()
+                    print("Added failed_login_attempts column to users table")
+            if "locked_until" not in user_columns:
+                with engine.connect() as conn:
+                    conn.execute(text("ALTER TABLE users ADD COLUMN locked_until TIMESTAMP"))
+                    conn.commit()
+                    print("Added locked_until column to users table")
             if database.DATABASE_URL.startswith("postgresql"):
                 with engine.connect() as conn:
                     conn.execute(text("CREATE INDEX IF NOT EXISTS ix_users_username ON users(username)"))

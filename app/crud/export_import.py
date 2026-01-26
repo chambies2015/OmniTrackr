@@ -119,8 +119,13 @@ def import_movies(db: Session, user_id: int, movies: List[schemas.MovieCreate]) 
             )
             
             if existing_movie:
-                for field, value in movie_data.dict(exclude_unset=True).items():
-                    setattr(existing_movie, field, value)
+                update_dict = movie_data.dict(exclude_unset=True)
+                allowed_fields = {'title', 'director', 'year', 'rating', 'watched', 'review', 'poster_url'}
+                for field, value in update_dict.items():
+                    if field in allowed_fields:
+                        if field == 'rating' and value is not None:
+                            value = round(float(value), 1)
+                        setattr(existing_movie, field, value)
                 updated += 1
             else:
                 db_movie = models.Movie(**movie_data.dict(), user_id=user_id)
@@ -152,8 +157,13 @@ def import_tv_shows(db: Session, user_id: int, tv_shows: List[schemas.TVShowCrea
             )
             
             if existing_tv_show:
-                for field, value in tv_show_data.dict(exclude_unset=True).items():
-                    setattr(existing_tv_show, field, value)
+                update_dict = tv_show_data.dict(exclude_unset=True)
+                allowed_fields = {'title', 'year', 'seasons', 'episodes', 'rating', 'watched', 'review', 'poster_url'}
+                for field, value in update_dict.items():
+                    if field in allowed_fields:
+                        if field == 'rating' and value is not None:
+                            value = round(float(value), 1)
+                        setattr(existing_tv_show, field, value)
                 updated += 1
             else:
                 db_tv_show = models.TVShow(**tv_show_data.dict(), user_id=user_id)
@@ -185,8 +195,13 @@ def import_anime(db: Session, user_id: int, anime: List[schemas.AnimeCreate]) ->
             )
             
             if existing_anime:
-                for field, value in anime_data.dict(exclude_unset=True).items():
-                    setattr(existing_anime, field, value)
+                update_dict = anime_data.dict(exclude_unset=True)
+                allowed_fields = {'title', 'year', 'seasons', 'episodes', 'rating', 'watched', 'review', 'poster_url'}
+                for field, value in update_dict.items():
+                    if field in allowed_fields:
+                        if field == 'rating' and value is not None:
+                            value = round(float(value), 1)
+                        setattr(existing_anime, field, value)
                 updated += 1
             else:
                 db_anime = models.Anime(**anime_data.dict(), user_id=user_id)
@@ -219,10 +234,12 @@ def import_video_games(db: Session, user_id: int, video_games: List[schemas.Vide
             
             if existing_video_game:
                 update_dict = video_game_data.dict(exclude_unset=True)
-                if 'rating' in update_dict and update_dict['rating'] is not None:
-                    update_dict['rating'] = round(float(update_dict['rating']), 1)
+                allowed_fields = {'title', 'release_date', 'genres', 'rating', 'played', 'review', 'cover_art_url', 'rawg_link'}
                 for field, value in update_dict.items():
-                    setattr(existing_video_game, field, value)
+                    if field in allowed_fields:
+                        if field == 'rating' and value is not None:
+                            value = round(float(value), 1)
+                        setattr(existing_video_game, field, value)
                 updated += 1
             else:
                 video_game_dict = video_game_data.dict()

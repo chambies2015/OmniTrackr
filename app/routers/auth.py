@@ -2,9 +2,12 @@
 Authentication endpoints for the OmniTrackr API.
 """
 import os
-from datetime import datetime, timedelta
-from fastapi import APIRouter, Depends, HTTPException, status
+import secrets
+from datetime import datetime, timedelta, timezone
+from fastapi import APIRouter, Depends, HTTPException, status, Request
 from fastapi.security import OAuth2PasswordRequestForm
+from fastapi.encoders import jsonable_encoder
+from fastapi.responses import JSONResponse
 from sqlalchemy.orm import Session
 
 from .. import crud, schemas, models, auth, email as email_utils
@@ -13,45 +16,86 @@ from ..dependencies import get_db
 router = APIRouter(prefix="/auth", tags=["auth"])
 
 
+
+
 @router.post("/register", response_model=schemas.User, status_code=status.HTTP_201_CREATED)
-async def register(user: schemas.UserCreate, db: Session = Depends(get_db)):
+async def register(
+    user: schemas.UserCreate,
+    request: Request,
+    db: Session = Depends(get_db)
+):
     """Register a new user and send verification email."""
+    
+    is_valid, error_msg = auth.validate_password_strength(user.password)
+    if not is_valid:
+        raise HTTPException(status_code=400, detail=error_msg)
+    
     if crud.get_user_by_email(db, user.email):
         raise HTTPException(status_code=400, detail="Email already registered")
     if crud.get_user_by_username(db, user.username):
         raise HTTPException(status_code=400, detail="Username already taken")
     
-    # Generate verification token
     verification_token = email_utils.generate_verification_token(user.email)
     
     hashed_password = auth.get_password_hash(user.password)
     db_user = crud.create_user(db, user, hashed_password, verification_token)
     
-    # Send verification email (async, non-blocking)
     try:
         await email_utils.send_verification_email(user.email, user.username, verification_token)
     except Exception as e:
-        # Log error but don't fail registration
         print(f"Failed to send verification email: {e}")
     
     return db_user
 
 
 @router.post("/login", response_model=schemas.Token)
-async def login(form_data: OAuth2PasswordRequestForm = Depends(), db: Session = Depends(get_db)):
+async def login(
+    form_data: OAuth2PasswordRequestForm = Depends(),
+    request: Request = None,
+    db: Session = Depends(get_db)
+):
     """Login to get access token. Users can log in using either their username or email."""
+    
     user = crud.get_user_by_username_or_email(db, form_data.username)
     
+    if user and user.locked_until and user.locked_until > datetime.now(timezone.utc):
+        remaining_minutes = int((user.locked_until - datetime.now(timezone.utc)).total_seconds() / 60)
+        raise HTTPException(
+            status_code=423,
+            detail=f"Account is locked due to too many failed login attempts. Try again in {remaining_minutes} minutes.",
+            headers={"WWW-Authenticate": "Bearer"},
+        )
+    
+    if user and user.locked_until and user.locked_until <= datetime.now(timezone.utc):
+        user.locked_until = None
+        user.failed_login_attempts = 0
+        db.commit()
+    
     if not user or not auth.verify_password(form_data.password, user.hashed_password):
+        client_ip = request.client.host if request.client else "unknown"
+        if user:
+            user.failed_login_attempts = (user.failed_login_attempts or 0) + 1
+            if user.failed_login_attempts >= 5:
+                user.locked_until = datetime.now(timezone.utc) + timedelta(minutes=15)
+                print(f"SECURITY: Account locked - Username: {form_data.username}, IP: {client_ip}, Failed attempts: {user.failed_login_attempts}")
+            else:
+                print(f"SECURITY: Failed login attempt - Username: {form_data.username}, IP: {client_ip}, Attempts: {user.failed_login_attempts}")
+            db.commit()
+        else:
+            print(f"SECURITY: Failed login attempt - Username: {form_data.username} (not found), IP: {client_ip}")
         raise HTTPException(
             status_code=401,
             detail="Incorrect username or password",
             headers={"WWW-Authenticate": "Bearer"},
         )
     
+    user.failed_login_attempts = 0
+    user.locked_until = None
+    db.commit()
+    
     if not user.is_active:
         if user.deactivated_at:
-            days_since_deactivation = (datetime.utcnow() - user.deactivated_at).days
+            days_since_deactivation = (datetime.now(timezone.utc) - user.deactivated_at.replace(tzinfo=timezone.utc)).days
             if days_since_deactivation > 90:
                 raise HTTPException(
                     status_code=403,
@@ -80,7 +124,15 @@ async def login(form_data: OAuth2PasswordRequestForm = Depends(), db: Session = 
         )
     
     access_token = auth.create_access_token(data={"sub": user.username})
-    return schemas.Token(access_token=access_token, token_type="bearer", user=user)
+    token_response = schemas.Token(access_token=access_token, token_type="bearer", user=user)
+    return JSONResponse(
+        content=jsonable_encoder(token_response),
+        headers={
+            "Cache-Control": "no-store, no-cache, must-revalidate, max-age=0",
+            "Pragma": "no-cache",
+            "Expires": "0"
+        }
+    )
 
 
 @router.get("/verify-email")
@@ -157,8 +209,13 @@ async def verify_email(token: str, db: Session = Depends(get_db)):
 
 
 @router.post("/resend-verification")
-async def resend_verification_email(email: str, db: Session = Depends(get_db)):
+async def resend_verification_email(
+    email: str,
+    request: Request,
+    db: Session = Depends(get_db)
+):
     """Resend verification email to user."""
+    
     user = crud.get_user_by_email(db, email)
     
     # Don't reveal if email exists for security (same behavior as password reset)
@@ -216,22 +273,23 @@ async def resend_verification_email(email: str, db: Session = Depends(get_db)):
 
 
 @router.post("/request-password-reset")
-async def request_password_reset(email: str, db: Session = Depends(get_db)):
+async def request_password_reset(
+    email: str,
+    request: Request,
+    db: Session = Depends(get_db)
+):
     """Request a password reset email."""
+    
     user = crud.get_user_by_email(db, email)
     if not user:
-        # Don't reveal if email exists - security best practice
         return {"message": "If that email is registered, you will receive a password reset link."}
     
-    # Generate reset token
     reset_token = email_utils.generate_reset_token(email)
     
-    # Store token in database with expiration
-    user.reset_token = reset_token
-    user.reset_token_expires = datetime.utcnow() + timedelta(hours=1)
+    user.reset_token = auth.hash_token(reset_token)
+    user.reset_token_expires = datetime.now(timezone.utc) + timedelta(hours=1)
     db.commit()
     
-    # Send reset email
     try:
         await email_utils.send_password_reset_email(email, user.username, reset_token)
     except Exception as e:
@@ -243,24 +301,42 @@ async def request_password_reset(email: str, db: Session = Depends(get_db)):
 @router.post("/reset-password")
 async def reset_password(token: str, new_password: str, db: Session = Depends(get_db)):
     """Reset password with valid token."""
-    try:
-        email = email_utils.verify_reset_token(token, max_age=3600)  # 1 hour expiration
-    except Exception:
-        raise HTTPException(status_code=400, detail="Invalid or expired reset token")
+    user = None
+    if token.startswith("$2"):
+        user = db.query(models.User).filter(models.User.reset_token == token).first()
+        if not user:
+            raise HTTPException(status_code=400, detail="Invalid or expired reset token")
+    else:
+        try:
+            email = email_utils.verify_reset_token(token, max_age=3600)
+        except Exception:
+            raise HTTPException(status_code=400, detail="Invalid or expired reset token")
+        
+        user = crud.get_user_by_email(db, email)
+        if not user:
+            raise HTTPException(status_code=404, detail="User not found")
     
-    user = crud.get_user_by_email(db, email)
-    if not user:
-        raise HTTPException(status_code=404, detail="User not found")
-    
-    # Verify token matches database
-    if user.reset_token != token:
-        raise HTTPException(status_code=400, detail="Invalid reset token")
-    
-    # Check if token expired
-    if not user.reset_token_expires or user.reset_token_expires < datetime.utcnow():
+    if not user.reset_token_expires or user.reset_token_expires.replace(tzinfo=timezone.utc) < datetime.now(timezone.utc):
         raise HTTPException(status_code=400, detail="Reset token has expired")
     
-    # Update password
+    if not user.reset_token:
+        raise HTTPException(status_code=400, detail="Invalid reset token")
+    
+    if user.reset_token.startswith("$2"):
+        if token.startswith("$2"):
+            if not secrets.compare_digest(user.reset_token, token):
+                raise HTTPException(status_code=400, detail="Invalid reset token")
+        else:
+            if not auth.verify_token_hash(token, user.reset_token):
+                raise HTTPException(status_code=400, detail="Invalid reset token")
+    else:
+        if not secrets.compare_digest(user.reset_token, token):
+            raise HTTPException(status_code=400, detail="Invalid reset token")
+    
+    is_valid, error_msg = auth.validate_password_strength(new_password)
+    if not is_valid:
+        raise HTTPException(status_code=400, detail=error_msg)
+    
     user.hashed_password = auth.get_password_hash(new_password)
     user.reset_token = None
     user.reset_token_expires = None

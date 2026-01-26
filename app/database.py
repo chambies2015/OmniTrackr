@@ -12,11 +12,15 @@ from dotenv import load_dotenv
 # Load environment variables from .env file
 load_dotenv()
 
-# Support both SQLite and PostgreSQL
-DATABASE_URL = os.getenv(
-    "DATABASE_URL",
-    "sqlite:///./movies.db"
-)
+ENVIRONMENT = os.getenv("ENVIRONMENT", "development").lower()
+
+DATABASE_URL = os.getenv("DATABASE_URL")
+if not DATABASE_URL:
+    if ENVIRONMENT == "production":
+        raise ValueError("DATABASE_URL must be set in production environment")
+    DATABASE_URL = "sqlite:///./movies.db"
+    import warnings
+    warnings.warn("Using SQLite database - not for production!")
 
 # Fix for Render/Heroku PostgreSQL URL format (postgres:// -> postgresql://)
 if DATABASE_URL.startswith("postgres://"):

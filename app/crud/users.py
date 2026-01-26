@@ -2,7 +2,7 @@
 User CRUD operations for the OmniTrackr API.
 """
 from typing import Optional
-from datetime import datetime
+from datetime import datetime, timezone
 from sqlalchemy.orm import Session, load_only
 from sqlalchemy import or_
 
@@ -101,7 +101,7 @@ def deactivate_user(db: Session, user_id: int) -> Optional[models.User]:
         return None
     
     db_user.is_active = False
-    db_user.deactivated_at = datetime.utcnow()
+    db_user.deactivated_at = datetime.now(timezone.utc)
     db.commit()
     db.refresh(db_user)
     return db_user
@@ -116,7 +116,7 @@ def reactivate_user(db: Session, user_id: int) -> Optional[models.User]:
     if db_user.deactivated_at is None:
         raise ValueError("Account was not deactivated")
     
-    days_since_deactivation = (datetime.utcnow() - db_user.deactivated_at).days
+    days_since_deactivation = (datetime.now(timezone.utc) - db_user.deactivated_at.replace(tzinfo=timezone.utc)).days
     if days_since_deactivation > 90:
         raise ValueError("Account cannot be reactivated after 90 days")
     

@@ -24,7 +24,14 @@ conf = ConnectionConfig(
 )
 
 # Token serializer for generating secure tokens
-SECRET_KEY = os.getenv("SECRET_KEY", "dev-secret-key-change-in-production")
+ENVIRONMENT = os.getenv("ENVIRONMENT", "development").lower()
+SECRET_KEY = os.getenv("SECRET_KEY")
+if not SECRET_KEY:
+    if ENVIRONMENT == "production":
+        raise ValueError("SECRET_KEY must be set in production environment")
+    SECRET_KEY = "dev-secret-key-change-in-production"
+    import warnings
+    warnings.warn("Using default SECRET_KEY - not for production!")
 serializer = URLSafeTimedSerializer(SECRET_KEY)
 
 # Base URL for the application
