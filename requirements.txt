@@ -10,7 +10,7 @@ psycopg2-binary==2.9.10
 python-jose==3.4.0
 cryptography==44.0.1
 bcrypt==4.2.1
-python-multipart==0.0.18
+python-multipart==0.0.22
 
 # Environment variables
 python-dotenv==1.0.1
