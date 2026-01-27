@@ -17,9 +17,31 @@ class SecurityHeadersMiddleware(BaseHTTPMiddleware):
         response.headers["X-XSS-Protection"] = "1; mode=block"
         response.headers["Referrer-Policy"] = "strict-origin-when-cross-origin"
         response.headers["Permissions-Policy"] = "geolocation=(), microphone=(), camera=()"
+        response.headers["X-Permitted-Cross-Domain-Policies"] = "none"
+        
+        csp_policy = (
+            "default-src 'self'; "
+            "script-src 'self' 'unsafe-inline' 'unsafe-eval' https://www.googletagmanager.com https://www.google-analytics.com https://pagead2.googlesyndication.com; "
+            "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; "
+            "font-src 'self' https://fonts.gstatic.com; "
+            "img-src 'self' data: https: http:; "
+            "connect-src 'self' https://www.google-analytics.com https://www.googletagmanager.com; "
+            "frame-src https://www.google.com; "
+            "object-src 'none'; "
+            "base-uri 'self'; "
+            "form-action 'self'; "
+            "frame-ancestors 'none'; "
+            "upgrade-insecure-requests;"
+        )
+        response.headers["Content-Security-Policy"] = csp_policy
         
         if request.url.scheme == "https":
             response.headers["Strict-Transport-Security"] = "max-age=31536000; includeSubDomains"
+        
+        if request.url.path.startswith("/auth/"):
+            response.headers["Cache-Control"] = "no-store, no-cache, must-revalidate, max-age=0"
+            response.headers["Pragma"] = "no-cache"
+            response.headers["Expires"] = "0"
         
         return response
 
@@ -128,31 +150,34 @@ class BotFilterMiddleware(BaseHTTPMiddleware):
     async def dispatch(self, request: Request, call_next):
         path = request.url.path.lower()
         user_agent = request.headers.get("user-agent", "").lower()
+        client_ip = request.client.host if request.client else "unknown"
         
         normalized_path = path.replace("//", "/")
         
+        blocked = False
+        reason = ""
+        
         if any(suspicious in path for suspicious in self.SUSPICIOUS_PATHS) or \
            any(suspicious in normalized_path for suspicious in self.SUSPICIOUS_PATHS):
-            return StarletteResponse(
-                content="Not Found",
-                status_code=404,
-                headers={"X-Robots-Tag": "noindex, nofollow"}
-            )
+            blocked = True
+            reason = "suspicious_path"
         
         if "//" in path and ("wp-includes" in path or "wp-admin" in path or "xmlrpc.php" in path):
-            return StarletteResponse(
-                content="Not Found",
-                status_code=404,
-                headers={"X-Robots-Tag": "noindex, nofollow"}
-            )
+            blocked = True
+            reason = "wordpress_scan"
         
         if any(agent in user_agent for agent in self.SUSPICIOUS_AGENTS):
             if any(suspicious in path for suspicious in self.SUSPICIOUS_PATHS):
-                return StarletteResponse(
-                    content="Not Found",
-                    status_code=404,
-                    headers={"X-Robots-Tag": "noindex, nofollow"}
-                )
+                blocked = True
+                reason = "suspicious_agent_and_path"
+        
+        if blocked:
+            print(f"SECURITY: Bot request blocked - IP: {client_ip}, Path: {path}, User-Agent: {user_agent[:100]}, Reason: {reason}")
+            return StarletteResponse(
+                content="Not Found",
+                status_code=404,
+                headers={"X-Robots-Tag": "noindex, nofollow"}
+            )
         
         return await call_next(request)
 

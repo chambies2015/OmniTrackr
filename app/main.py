@@ -72,9 +72,20 @@ async def startup_event():
 app.add_middleware(SecurityHeadersMiddleware)
 app.add_middleware(BotFilterMiddleware)
 app.add_middleware(SlowAPIMiddleware)
+
+ENVIRONMENT = os.getenv("ENVIRONMENT", "development").lower()
+allowed_origins_str = os.getenv("ALLOWED_ORIGINS", "")
+if allowed_origins_str:
+    allowed_origins = [origin.strip() for origin in allowed_origins_str.split(",") if origin.strip()]
+else:
+    allowed_origins = ["*"]
+
+if ENVIRONMENT == "production" and "*" in allowed_origins:
+    raise ValueError("CORS allow_origins cannot be '*' in production. Set ALLOWED_ORIGINS environment variable.")
+
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],
+    allow_origins=allowed_origins,
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
@@ -131,6 +142,18 @@ if os.path.exists(static_dir):
 
 # Include routers
 app.include_router(auth.router)
+
+# Apply rate limiting to auth endpoints
+for route in auth.router.routes:
+    if hasattr(route, 'path') and hasattr(route, 'methods') and hasattr(route, 'endpoint'):
+        if route.path == "/auth/register" and 'POST' in route.methods:
+            route.endpoint = limiter.limit("5/minute")(route.endpoint)
+        elif route.path == "/auth/login" and 'POST' in route.methods:
+            route.endpoint = limiter.limit("5/minute")(route.endpoint)
+        elif route.path == "/auth/request-password-reset" and 'POST' in route.methods:
+            route.endpoint = limiter.limit("3/hour")(route.endpoint)
+        elif route.path == "/auth/resend-verification" and 'POST' in route.methods:
+            route.endpoint = limiter.limit("3/hour")(route.endpoint)
 
 # Include account router and apply rate limiting to profile picture upload
 from .routers.account import upload_profile_picture

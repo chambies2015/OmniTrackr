@@ -18,7 +18,7 @@ class UserBase(BaseModel):
 
 class UserCreate(UserBase):
     """Schema for user registration."""
-    password: str = Field(..., min_length=6, description="User password (min 6 characters)")
+    password: str = Field(..., min_length=6, max_length=128, description="User password (min 6 characters)")
 
 
 class UserLogin(BaseModel):
@@ -43,13 +43,13 @@ class UserUpdate(BaseModel):
     """Schema for updating user information."""
     username: Optional[str] = Field(None, min_length=3, max_length=50)
     email: Optional[str] = None
-    password: Optional[str] = Field(None, min_length=6)
+    password: Optional[str] = Field(None, min_length=6, max_length=128)
 
 
 class PasswordChange(BaseModel):
     """Schema for changing password."""
     current_password: str = Field(..., description="Current password for verification")
-    new_password: str = Field(..., min_length=6, description="New password (min 6 characters)")
+    new_password: str = Field(..., min_length=6, max_length=128, description="New password (min 6 characters)")
 
 
 class EmailChange(BaseModel):

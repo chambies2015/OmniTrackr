@@ -54,9 +54,13 @@ def update_anime(db: Session, user_id: int, anime_id: int, anime_update: schemas
     if db_anime is None:
         return None
     update_dict = anime_update.dict(exclude_unset=True)
-    if 'rating' in update_dict and update_dict['rating'] is not None:
-        update_dict['rating'] = round(float(update_dict['rating']), 1)
+    
+    allowed_fields = {'title', 'year', 'seasons', 'episodes', 'rating', 'watched', 'review', 'poster_url'}
     for field, value in update_dict.items():
+        if field not in allowed_fields:
+            continue
+        if field == 'rating' and value is not None:
+            value = round(float(value), 1)
         setattr(db_anime, field, value)
     db.commit()
     db.refresh(db_anime)

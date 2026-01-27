@@ -397,8 +397,10 @@ def update_custom_tab_item(
             return None, error_msg
         update_dict["field_values"] = json.dumps(update_dict["field_values"]) if update_dict["field_values"] else None
     
+    allowed_fields = {'title', 'field_values', 'poster_url', 'poster_data', 'poster_mime_type'}
     for field, value in update_dict.items():
-        setattr(db_item, field, value)
+        if field in allowed_fields:
+            setattr(db_item, field, value)
     
     db.commit()
     db.refresh(db_item)

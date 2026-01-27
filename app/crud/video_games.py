@@ -55,9 +55,13 @@ def update_video_game(db: Session, user_id: int, game_id: int, video_game_update
     if db_video_game is None:
         return None
     update_dict = video_game_update.dict(exclude_unset=True)
-    if 'rating' in update_dict and update_dict['rating'] is not None:
-        update_dict['rating'] = round(float(update_dict['rating']), 1)
+    
+    allowed_fields = {'title', 'release_date', 'genres', 'rating', 'played', 'review', 'cover_art_url', 'rawg_link'}
     for field, value in update_dict.items():
+        if field not in allowed_fields:
+            continue
+        if field == 'rating' and value is not None:
+            value = round(float(value), 1)
         setattr(db_video_game, field, value)
     db.commit()
     db.refresh(db_video_game)

@@ -3,12 +3,19 @@ External API proxy endpoints for the OmniTrackr API.
 """
 import os
 from typing import Optional
+from urllib.parse import quote
 from fastapi import APIRouter, HTTPException, Query, Request
 from slowapi import Limiter
 from slowapi.util import get_remote_address
 import httpx
 
 router = APIRouter(tags=["proxy"])
+
+ALLOWED_DOMAINS = {
+    "omdb": ["www.omdbapi.com", "omdbapi.com"],
+    "rawg": ["api.rawg.io"],
+    "jikan": ["api.jikan.moe"]
+}
 
 
 def get_limiter(request: Request) -> Limiter:
@@ -19,25 +26,31 @@ def get_limiter(request: Request) -> Limiter:
 @router.get("/api/proxy/omdb")
 async def proxy_omdb_api(
     request: Request,
-    title: str = Query(..., description="Movie/TV show title"),
-    year: Optional[str] = Query(None, description="Release year"),
-    type: Optional[str] = Query(None, description="Type: movie, series, or episode")
+    title: str = Query(..., description="Movie/TV show title", max_length=200),
+    year: Optional[str] = Query(None, description="Release year", max_length=4),
+    type: Optional[str] = Query(None, description="Type: movie, series, or episode", max_length=20)
 ):
     """Proxy endpoint for OMDB API. Keeps API key secure on server."""
     omdb_key = os.getenv("OMDB_API_KEY", "")
     if not omdb_key:
         raise HTTPException(status_code=503, detail="OMDB API key not configured")
     
+    if len(title) > 200:
+        raise HTTPException(status_code=400, detail="Title too long")
+    
     try:
-        url = f"https://www.omdbapi.com/?t={title}"
-        if year:
-            url += f"&y={year}"
-        if type:
-            url += f"&type={type}"
-        url += f"&apikey={omdb_key}"
+        base_url = "https://www.omdbapi.com/"
+        params = {
+            "t": title[:200],
+            "apikey": omdb_key
+        }
+        if year and len(year) <= 4:
+            params["y"] = year
+        if type and type in ["movie", "series", "episode"]:
+            params["type"] = type
         
         async with httpx.AsyncClient(timeout=30.0, follow_redirects=True) as client:
-            response = await client.get(url)
+            response = await client.get(base_url, params=params)
             if response.status_code == 429:
                 raise HTTPException(status_code=429, detail="OMDB API rate limit reached")
             response.raise_for_status()
@@ -57,18 +70,25 @@ async def proxy_omdb_api(
 @router.get("/api/proxy/rawg")
 async def proxy_rawg_api(
     request: Request,
-    search: str = Query(..., description="Game title to search")
+    search: str = Query(..., description="Game title to search", max_length=200)
 ):
     """Proxy endpoint for RAWG API. Keeps API key secure on server."""
     rawg_key = os.getenv("RAWG_API_KEY", "")
     if not rawg_key:
         raise HTTPException(status_code=503, detail="RAWG API key not configured")
     
+    if len(search) > 200:
+        raise HTTPException(status_code=400, detail="Search term too long")
+    
     try:
-        url = f"https://api.rawg.io/api/games?search={search}&key={rawg_key}"
+        base_url = "https://api.rawg.io/api/games"
+        params = {
+            "search": search[:200],
+            "key": rawg_key
+        }
         
         async with httpx.AsyncClient(timeout=30.0, follow_redirects=True) as client:
-            response = await client.get(url)
+            response = await client.get(base_url, params=params)
             if response.status_code == 429:
                 raise HTTPException(status_code=429, detail="RAWG API rate limit reached")
             response.raise_for_status()
@@ -88,14 +108,21 @@ async def proxy_rawg_api(
 @router.get("/api/proxy/jikan")
 async def proxy_jikan_api(
     request: Request,
-    query: str = Query(..., description="Anime title to search")
+    query: str = Query(..., description="Anime title to search", max_length=200)
 ):
     """Proxy endpoint for Jikan API (MyAnimeList). No API key required."""
+    if len(query) > 200:
+        raise HTTPException(status_code=400, detail="Search query too long")
+    
     try:
-        url = f"https://api.jikan.moe/v4/anime?q={query}&limit=1"
+        base_url = "https://api.jikan.moe/v4/anime"
+        params = {
+            "q": query[:200],
+            "limit": 1
+        }
         
         async with httpx.AsyncClient(timeout=30.0, follow_redirects=True) as client:
-            response = await client.get(url)
+            response = await client.get(base_url, params=params)
             if response.status_code == 429:
                 raise HTTPException(status_code=429, detail="Jikan API rate limit reached")
             response.raise_for_status()
