@@ -421,7 +421,7 @@
       }
       
       const canonicalUrl = `https://omnitrackr.xyz/reviews${category ? `?category=${encodeURIComponent(category)}` : ''}`;
-      let canonical = document.querySelector('link[rel="canonical"]');
+      let canonical = document.querySelector('link[rel="canonical"]'); 
       if (canonical) {
         canonical.setAttribute('href', canonicalUrl);
       }
