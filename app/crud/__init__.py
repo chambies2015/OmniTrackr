@@ -109,6 +109,8 @@ from .statistics import (
     get_tv_show_statistics,
     get_anime_statistics,
     get_video_game_statistics,
+    get_music_statistics,
+    get_books_statistics,
 )
 
 # Friends, Friend Requests, Notifications, and Friend Profile operations
@@ -238,6 +240,8 @@ __all__ = [
     "get_tv_show_statistics",
     "get_anime_statistics",
     "get_video_game_statistics",
+    "get_music_statistics",
+    "get_books_statistics",
     # Friends operations
     "create_friend_request",
     "get_friend_request",

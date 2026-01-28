@@ -621,6 +621,20 @@ class VideoGameStatistics(BaseModel):
     genre_stats: GenreStatistics = Field(..., description="Genre statistics")
 
 
+class MusicStatistics(BaseModel):
+    """Schema for music-specific statistics"""
+    watch_stats: CategoryWatchStatistics = Field(..., description="Watch statistics")
+    rating_stats: CategoryRatingStatistics = Field(..., description="Rating statistics")
+    year_stats: CategoryYearStatistics = Field(..., description="Year-based statistics")
+
+
+class BookStatistics(BaseModel):
+    """Schema for book-specific statistics"""
+    watch_stats: CategoryWatchStatistics = Field(..., description="Watch statistics")
+    rating_stats: CategoryRatingStatistics = Field(..., description="Rating statistics")
+    year_stats: CategoryYearStatistics = Field(..., description="Year-based statistics")
+
+
 # ============================================================================
 # Friend Profile Schemas
 # ============================================================================

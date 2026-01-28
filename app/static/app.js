@@ -3595,7 +3595,9 @@ function categoryToId(category) {
     'movies': 'movies',
     'tv-shows': 'tvShows',
     'anime': 'anime',
-    'video-games': 'videoGames'
+    'video-games': 'videoGames',
+    'music': 'music',
+    'books': 'books'
   };
   return idMap[category] || category;
 }
@@ -3649,7 +3651,9 @@ async function loadCategoryStatistics(category) {
       'movies': 'movies',
       'tv-shows': 'tv-shows',
       'anime': 'anime',
-      'video-games': 'video-games'
+      'video-games': 'video-games',
+      'music': 'music',
+      'books': 'books'
     };
     
     const endpoint = categoryMap[category];
@@ -3683,11 +3687,24 @@ function displayCategoryStatistics(stats, category) {
   let html = '';
   
   html += '<div class="stats-subsection">';
-  html += '<h4>📈 Watch Progress</h4>';
+  const progressLabel = category === 'video-games' ? 'Play Progress' : category === 'music' ? 'Listen Progress' : category === 'books' ? 'Read Progress' : 'Watch Progress';
+  html += `<h4>📈 ${progressLabel}</h4>`;
   html += '<div class="stats-grid">';
   html += `<div class="stat-card"><div class="stat-number">${stats.watch_stats.total_items}</div><div class="stat-label">Total Items</div></div>`;
-  html += `<div class="stat-card"><div class="stat-number">${stats.watch_stats.watched_items}</div><div class="stat-label">${category === 'video-games' ? 'Played' : 'Watched'}</div></div>`;
-  html += `<div class="stat-card"><div class="stat-number">${stats.watch_stats.unwatched_items}</div><div class="stat-label">${category === 'video-games' ? 'Unplayed' : 'Unwatched'}</div></div>`;
+  let watchedLabel = 'Watched';
+  let unwatchedLabel = 'Unwatched';
+  if (category === 'video-games') {
+    watchedLabel = 'Played';
+    unwatchedLabel = 'Unplayed';
+  } else if (category === 'music') {
+    watchedLabel = 'Listened';
+    unwatchedLabel = 'Unlistened';
+  } else if (category === 'books') {
+    watchedLabel = 'Read';
+    unwatchedLabel = 'Unread';
+  }
+  html += `<div class="stat-card"><div class="stat-number">${stats.watch_stats.watched_items}</div><div class="stat-label">${watchedLabel}</div></div>`;
+  html += `<div class="stat-card"><div class="stat-number">${stats.watch_stats.unwatched_items}</div><div class="stat-label">${unwatchedLabel}</div></div>`;
   html += `<div class="stat-card"><div class="stat-number">${stats.watch_stats.completion_percentage.toFixed(1)}%</div><div class="stat-label">Completion</div></div>`;
   html += '</div>';
   html += '<div class="progress-bar"><div class="progress-fill" style="width: ' + stats.watch_stats.completion_percentage + '%"></div></div>';

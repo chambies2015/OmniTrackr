@@ -907,6 +907,34 @@
             <div id="videoGamesStatsData"></div>
           </div>
         </div>
+
+        <!-- Music Accordion Section -->
+        <div class="accordion-section">
+          <div class="accordion-header" onclick="toggleCategoryAccordion('music')">
+            <h3>🎵 Music</h3>
+            <span class="accordion-icon" id="musicStatsIcon">▶</span>
+          </div>
+          <div class="accordion-content" id="musicStatsContent" style="display: none;">
+            <div id="musicStatsLoading" style="text-align: center; padding: 20px; display: none;">
+              <div style="display: inline-block; width: 30px; height: 30px; border: 3px solid rgba(102, 126, 234, 0.2); border-top-color: var(--primary); border-radius: 50%; animation: spin 1s linear infinite;"></div>
+            </div>
+            <div id="musicStatsData"></div>
+          </div>
+        </div>
+
+        <!-- Books Accordion Section -->
+        <div class="accordion-section">
+          <div class="accordion-header" onclick="toggleCategoryAccordion('books')">
+            <h3>📚 Books</h3>
+            <span class="accordion-icon" id="booksStatsIcon">▶</span>
+          </div>
+          <div class="accordion-content" id="booksStatsContent" style="display: none;">
+            <div id="booksStatsLoading" style="text-align: center; padding: 20px; display: none;">
+              <div style="display: inline-block; width: 30px; height: 30px; border: 3px solid rgba(102, 126, 234, 0.2); border-top-color: var(--primary); border-radius: 50%; animation: spin 1s linear infinite;"></div>
+            </div>
+            <div id="booksStatsData"></div>
+          </div>
+        </div>
       </div>
 
     </div>
