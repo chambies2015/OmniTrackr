@@ -2758,36 +2758,20 @@ async function searchMusicMetadata() {
     
     const data = await res.json();
     
-    if (data && data.results && data.results.length > 0) {
-      const album = data.results[0];
-      const coverArtUrl = album.artworkUrl100 || album.artworkUrl60 || null;
-      const albumTitle = album.collectionName || album.trackName || title;
-      const albumArtist = album.artistName || '';
-      const albumYear = album.releaseDate ? parseInt(album.releaseDate.split('-')[0]) : null;
-      const albumGenre = album.primaryGenreName || '';
-      
-      if (coverArtUrl) {
-        document.getElementById('musicTitle').value = albumTitle;
-        if (document.getElementById('musicArtist')) {
-          document.getElementById('musicArtist').value = albumArtist;
-        }
-        if (albumYear && document.getElementById('musicYear')) {
-          document.getElementById('musicYear').value = albumYear;
-        }
-        if (albumGenre && document.getElementById('musicGenre')) {
-          document.getElementById('musicGenre').value = albumGenre;
-        }
-        
-        const previewImg = document.getElementById('musicPreview');
-        if (previewImg) {
-          previewImg.src = coverArtUrl;
-          previewImg.style.display = 'block';
-        }
-      } else {
-        alert('No album cover found for this search.');
-      }
-    } else {
+    if (!data || !data.results || data.results.length === 0) {
       alert('No results found. Please try a different search term.');
+      searchBtn.disabled = false;
+      searchBtn.textContent = originalText;
+      return;
+    }
+    
+    const results = data.results;
+    
+    if (results.length === 1) {
+      const album = results[0];
+      selectMusicResult(album);
+    } else {
+      openMusicSearchModal(results);
     }
     
     searchBtn.disabled = false;
@@ -2797,6 +2781,80 @@ async function searchMusicMetadata() {
     alert('An error occurred while searching. Please try again.');
     searchBtn.disabled = false;
     searchBtn.textContent = originalText;
+  }
+}
+
+function openMusicSearchModal(results) {
+  const modal = document.getElementById('musicSearchModal');
+  const resultsContainer = document.getElementById('musicSearchResults');
+  
+  if (!modal || !resultsContainer) return;
+  
+  resultsContainer.innerHTML = '';
+  
+  results.forEach((album) => {
+    const coverArtUrl = album.artworkUrl100 || album.artworkUrl60 || null;
+    const albumTitle = album.collectionName || album.trackName || 'Unknown Album';
+    const albumArtist = album.artistName || 'Unknown Artist';
+    const albumYear = album.releaseDate ? parseInt(album.releaseDate.split('-')[0]) : null;
+    const albumGenre = album.primaryGenreName || '';
+    
+    const item = document.createElement('div');
+    item.className = 'search-result-item';
+    item.onclick = () => {
+      selectMusicResult(album);
+      closeMusicSearchModal();
+    };
+    
+    item.innerHTML = `
+      ${coverArtUrl ? `<img src="${coverArtUrl}" alt="${escapeHtml(albumTitle)}" onerror="this.style.display='none'">` : '<div style="height: 200px; background: var(--card-bg); border-radius: 8px; display: flex; align-items: center; justify-content: center; color: var(--fg-secondary);">No Cover</div>'}
+      <h4>${escapeHtml(albumTitle)}</h4>
+      <p>${escapeHtml(albumArtist)}</p>
+      ${albumYear ? `<p style="font-size: 0.85rem;">${albumYear}</p>` : ''}
+      ${albumGenre ? `<p style="font-size: 0.85rem; color: var(--primary);">${escapeHtml(albumGenre)}</p>` : ''}
+    `;
+    
+    resultsContainer.appendChild(item);
+  });
+  
+  modal.style.display = 'flex';
+  
+  modal.onclick = (e) => {
+    if (e.target === modal) {
+      closeMusicSearchModal();
+    }
+  };
+}
+
+function closeMusicSearchModal() {
+  const modal = document.getElementById('musicSearchModal');
+  if (modal) {
+    modal.style.display = 'none';
+  }
+}
+
+function selectMusicResult(album) {
+  const coverArtUrl = album.artworkUrl100 || album.artworkUrl60 || null;
+  const albumTitle = album.collectionName || album.trackName || '';
+  const albumArtist = album.artistName || '';
+  const albumYear = album.releaseDate ? parseInt(album.releaseDate.split('-')[0]) : null;
+  const albumGenre = album.primaryGenreName || '';
+  
+  document.getElementById('musicTitle').value = albumTitle;
+  if (document.getElementById('musicArtist')) {
+    document.getElementById('musicArtist').value = albumArtist;
+  }
+  if (albumYear && document.getElementById('musicYear')) {
+    document.getElementById('musicYear').value = albumYear;
+  }
+  if (albumGenre && document.getElementById('musicGenre')) {
+    document.getElementById('musicGenre').value = albumGenre;
+  }
+  
+  const previewImg = document.getElementById('musicPreview');
+  if (previewImg && coverArtUrl) {
+    previewImg.src = coverArtUrl;
+    previewImg.style.display = 'block';
   }
 }
 
@@ -2931,24 +2989,101 @@ async function searchBookMetadata() {
     
     const data = await res.json();
     
-    if (data && data.docs && data.docs.length > 0) {
-      const book = data.docs[0];
-      titleInput.value = book.title || title;
-      document.getElementById('bookAuthor').value = book.author_name && book.author_name.length > 0 ? book.author_name[0] : '';
-      document.getElementById('bookYear').value = book.first_publish_year || book.publish_year?.[0] || '';
-      document.getElementById('bookGenre').value = book.subject ? book.subject.slice(0, 3).join(', ') : '';
-      const coverId = book.cover_i || book.isbn?.[0] || null;
-      if (coverId) {
-        titleInput.dataset.coverArtUrl = `https://covers.openlibrary.org/b/id/${coverId}-L.jpg`;
-      }
-    } else {
-      alert('Book not found. Please enter details manually.');
+    if (!data || !data.docs || data.docs.length === 0) {
+      alert('No results found. Please try a different search term.');
+      searchBtn.disabled = false;
+      searchBtn.textContent = originalText;
+      return;
     }
-  } catch (error) {
-    alert('Error searching for book: ' + error.message);
-  } finally {
+    
+    const results = data.docs;
+    
+    if (results.length === 1) {
+      const book = results[0];
+      selectBookResult(book);
+    } else {
+      openBookSearchModal(results);
+    }
     searchBtn.disabled = false;
     searchBtn.textContent = originalText;
+  } catch (error) {
+    console.error('Error searching for book:', error);
+    alert('Error searching for book: ' + error.message);
+    searchBtn.disabled = false;
+    searchBtn.textContent = originalText;
+  }
+}
+
+function openBookSearchModal(results) {
+  const modal = document.getElementById('bookSearchModal');
+  const resultsContainer = document.getElementById('bookSearchResults');
+  
+  if (!modal || !resultsContainer) return;
+  
+  resultsContainer.innerHTML = '';
+  
+  results.forEach((book) => {
+    const bookTitle = book.title || 'Unknown Title';
+    const bookAuthor = book.author_name && book.author_name.length > 0 ? book.author_name[0] : 'Unknown Author';
+    const bookYear = book.first_publish_year || (book.publish_year && book.publish_year.length > 0 ? book.publish_year[0] : null);
+    const bookGenre = book.subject ? book.subject.slice(0, 2).join(', ') : '';
+    const coverId = book.cover_i || (book.isbn && book.isbn.length > 0 ? book.isbn[0] : null);
+    const coverArtUrl = coverId ? `https://covers.openlibrary.org/b/id/${coverId}-L.jpg` : null;
+    
+    const item = document.createElement('div');
+    item.className = 'search-result-item';
+    item.onclick = () => {
+      selectBookResult(book);
+      closeBookSearchModal();
+    };
+    
+    item.innerHTML = `
+      ${coverArtUrl ? `<img src="${coverArtUrl}" alt="${escapeHtml(bookTitle)}" onerror="this.style.display='none'">` : '<div style="height: 200px; background: var(--card-bg); border-radius: 8px; display: flex; align-items: center; justify-content: center; color: var(--fg-secondary);">No Cover</div>'}
+      <h4>${escapeHtml(bookTitle)}</h4>
+      <p>${escapeHtml(bookAuthor)}</p>
+      ${bookYear ? `<p style="font-size: 0.85rem;">${bookYear}</p>` : ''}
+      ${bookGenre ? `<p style="font-size: 0.85rem; color: var(--primary);">${escapeHtml(bookGenre)}</p>` : ''}
+    `;
+    
+    resultsContainer.appendChild(item);
+  });
+  
+  modal.style.display = 'flex';
+  
+  modal.onclick = (e) => {
+    if (e.target === modal) {
+      closeBookSearchModal();
+    }
+  };
+}
+
+function closeBookSearchModal() {
+  const modal = document.getElementById('bookSearchModal');
+  if (modal) {
+    modal.style.display = 'none';
+  }
+}
+
+function selectBookResult(book) {
+  const titleInput = document.getElementById('bookTitle');
+  const bookTitle = book.title || '';
+  const bookAuthor = book.author_name && book.author_name.length > 0 ? book.author_name[0] : '';
+  const bookYear = book.first_publish_year || (book.publish_year && book.publish_year.length > 0 ? book.publish_year[0] : '');
+  const bookGenre = book.subject ? book.subject.slice(0, 3).join(', ') : '';
+  const coverId = book.cover_i || (book.isbn && book.isbn.length > 0 ? book.isbn[0] : null);
+  
+  titleInput.value = bookTitle;
+  if (document.getElementById('bookAuthor')) {
+    document.getElementById('bookAuthor').value = bookAuthor;
+  }
+  if (bookYear && document.getElementById('bookYear')) {
+    document.getElementById('bookYear').value = bookYear;
+  }
+  if (bookGenre && document.getElementById('bookGenre')) {
+    document.getElementById('bookGenre').value = bookGenre;
+  }
+  if (coverId) {
+    titleInput.dataset.coverArtUrl = `https://covers.openlibrary.org/b/id/${coverId}-L.jpg`;
   }
 }
 

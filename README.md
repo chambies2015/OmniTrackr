@@ -376,7 +376,7 @@ A: Simply use the "Add Movie", "Add TV Show", "Add Anime", or "Add Video Game" f
 A: OmniTrackr automatically normalizes titles to their official names from APIs when posters are fetched. For example, if you enter "skyrim", it will be normalized to "The Elder Scrolls V: Skyrim" when the RAWG API returns the game data. This ensures consistency and accuracy in your collection. The normalization only happens when metadata is successfully fetched from the APIs.
 
 **Q: Can I track video games, music, or books?**  
-A: Yes! OmniTrackr supports video game tracking with full CRUD operations, ratings, reviews, played status, genres, release dates, and automatic cover art fetching from RAWG API. Music tracking includes album/track information with iTunes Search API integration for cover art and metadata (free, no API key required). Books tracking includes author, genre, and publication year with Open Library API integration for cover art and metadata (free, no API key required). All are included in your statistics dashboard.
+A: Yes! OmniTrackr supports video game tracking with full CRUD operations, ratings, reviews, played status, genres, release dates, and automatic cover art fetching from RAWG API. Music tracking includes album/track information with iTunes Search API integration for cover art and metadata. Books tracking includes author, genre, and publication year with Open Library API integration for cover art and metadata. All are included in your statistics dashboard.
 
 **Q: Can I track other types of media like books or comics?**  
 A: Absolutely! Use the **Custom Tabs** feature to create personalized tracking tabs for any collection type. You can define custom fields (text, number, date, boolean, rating), upload posters, and manage your collection just like the built-in media types. Perfect for tracking books, comics, board games, podcasts, music albums, or anything else you want to catalog.
@@ -386,7 +386,7 @@ A:
 - **Movies & TV Shows:** OMDB API
 - **Anime:** Jikan API (MyAnimeList) - provides better coverage for anime titles
 - **Video Games:** RAWG API
-- **Music:** iTunes Search API (free, no API key required)
+- **Music:** iTunes Search API
 - **Books:** Open Library API
 
 **Q: Can I export my data?**  
@@ -407,8 +407,6 @@ A: Click "Forgot Password?" on the login page. Enter your email address, and we'
 **Q: Can I rate movies, TV shows, anime, video games, music, and books with decimals?**  
 A: Yes! You can rate any item from 0 to 10.0 with one decimal place precision (e.g., 7.5, 8.4, 9.2). The statistics dashboard will calculate averages and other metrics using these decimal ratings.
 
-**Q: How do I set up iTunes API for music?**  
-A: No setup required! The iTunes Search API is completely free and requires no API key or registration. The app will automatically fetch album covers and metadata when you search for music. Just start using the Music tab - it works out of the box!
 
 **Q: How do I contact support?**  
 A: You can reach us via email at omnitrackr@gmail.com. You can also find us on [GitHub](https://github.com/chambies2015/OmniTrackr) or [LinkedIn](https://www.linkedin.com/in/d-g-c/). We're happy to help!

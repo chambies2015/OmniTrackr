@@ -159,7 +159,7 @@ async def proxy_itunes_api(
         params = {
             "term": query[:200],
             "entity": entity,
-            "limit": 1,
+            "limit": 10,
             "media": "music"
         }
         
@@ -199,7 +199,7 @@ async def proxy_openlibrary_api(
             base_url = "https://openlibrary.org/search.json"
             params = {
                 "q": query[:200],
-                "limit": 1
+                "limit": 10
             }
         
         async with httpx.AsyncClient(timeout=30.0, follow_redirects=True) as client:

@@ -404,7 +404,8 @@
           <span id="tvShowCount" style="font-weight: bold;"></span>
         </div>
         <div style="display:flex; flex-wrap: wrap; gap: 10px; margin-bottom: 10px;">
-          <input type="text" id="tvSearch" placeholder="Search by title" style="flex: 2; min-width: 200px;">
+          <input type="text" id="tvSearch" placeholder="Search by title"
+            style="flex: 2; min-width: 200px;">
           <select id="tvSort" style="flex: 1; min-width: 200px;">
             <option value="">Sort by...</option>
             <option value="rating-asc">Rating (Low → High)</option>
@@ -482,7 +483,8 @@
           <span id="animeCount" style="font-weight: bold;"></span>
         </div>
         <div style="display:flex; flex-wrap: wrap; gap: 10px; margin-bottom: 10px;">
-          <input type="text" id="animeSearch" placeholder="Search by title" style="flex: 2; min-width: 200px;">
+          <input type="text" id="animeSearch" placeholder="Search by title"
+            style="flex: 2; min-width: 200px;">
           <select id="animeSort" style="flex: 1; min-width: 200px;">
             <option value="">Sort by...</option>
             <option value="rating-asc">Rating (Low → High)</option>
@@ -1858,6 +1860,32 @@
             </div>
           </form>
         </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Music Search Results Modal -->
+  <div id="musicSearchModal" class="modal-overlay" style="display: none;">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h2>Select Album</h2>
+        <button class="modal-close" onclick="closeMusicSearchModal()" aria-label="Close music search">×</button>
+      </div>
+      <div class="modal-body">
+        <div id="musicSearchResults" class="search-results-grid"></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Book Search Results Modal -->
+  <div id="bookSearchModal" class="modal-overlay" style="display: none;">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h2>Select Book</h2>
+        <button class="modal-close" onclick="closeBookSearchModal()" aria-label="Close book search">×</button>
+      </div>
+      <div class="modal-body">
+        <div id="bookSearchResults" class="search-results-grid"></div>
       </div>
     </div>
   </div>
