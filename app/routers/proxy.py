@@ -14,7 +14,9 @@ router = APIRouter(tags=["proxy"])
 ALLOWED_DOMAINS = {
     "omdb": ["www.omdbapi.com", "omdbapi.com"],
     "rawg": ["api.rawg.io"],
-    "jikan": ["api.jikan.moe"]
+    "jikan": ["api.jikan.moe"],
+    "itunes": ["itunes.apple.com"],
+    "openlibrary": ["openlibrary.org", "covers.openlibrary.org"]
 }
 
 
@@ -137,3 +139,82 @@ async def proxy_jikan_api(
         raise HTTPException(status_code=504, detail="Jikan API connection error - may be due to network issues or VPN blocking")
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Error fetching from Jikan API: {str(e)}")
+
+
+@router.get("/api/proxy/itunes")
+async def proxy_itunes_api(
+    request: Request,
+    query: str = Query(..., description="Music title/artist to search", max_length=200),
+    entity: str = Query("album", description="Search entity: album, song, or musicArtist", max_length=20)
+):
+    """Proxy endpoint for iTunes Search API. Free, no API key required."""
+    if len(query) > 200:
+        raise HTTPException(status_code=400, detail="Search query too long")
+    
+    if entity not in ["album", "song", "musicArtist"]:
+        raise HTTPException(status_code=400, detail="Entity must be album, song, or musicArtist")
+    
+    try:
+        base_url = "https://itunes.apple.com/search"
+        params = {
+            "term": query[:200],
+            "entity": entity,
+            "limit": 1,
+            "media": "music"
+        }
+        
+        async with httpx.AsyncClient(timeout=30.0, follow_redirects=True) as client:
+            response = await client.get(base_url, params=params)
+            if response.status_code == 429:
+                raise HTTPException(status_code=429, detail="iTunes API rate limit reached")
+            response.raise_for_status()
+            return response.json()
+    except httpx.HTTPStatusError as e:
+        if e.response.status_code >= 500:
+            raise HTTPException(status_code=504, detail="iTunes API server error - may be due to network issues or VPN blocking")
+        raise HTTPException(status_code=e.response.status_code, detail=f"iTunes API error: {e.response.text}")
+    except httpx.TimeoutException:
+        raise HTTPException(status_code=504, detail="iTunes API request timeout - may be due to network issues or VPN blocking")
+    except httpx.ConnectError:
+        raise HTTPException(status_code=504, detail="iTunes API connection error - may be due to network issues or VPN blocking")
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Error fetching from iTunes API: {str(e)}")
+
+
+@router.get("/api/proxy/openlibrary")
+async def proxy_openlibrary_api(
+    request: Request,
+    query: str = Query(..., description="Book title/author to search", max_length=200),
+    isbn: Optional[str] = Query(None, description="ISBN to search by", max_length=20)
+):
+    """Proxy endpoint for Open Library API. No API key required."""
+    if len(query) > 200:
+        raise HTTPException(status_code=400, detail="Search query too long")
+    
+    try:
+        if isbn:
+            base_url = f"https://openlibrary.org/isbn/{isbn[:20]}.json"
+            params = {}
+        else:
+            base_url = "https://openlibrary.org/search.json"
+            params = {
+                "q": query[:200],
+                "limit": 1
+            }
+        
+        async with httpx.AsyncClient(timeout=30.0, follow_redirects=True) as client:
+            response = await client.get(base_url, params=params)
+            if response.status_code == 429:
+                raise HTTPException(status_code=429, detail="Open Library API rate limit reached")
+            response.raise_for_status()
+            return response.json()
+    except httpx.HTTPStatusError as e:
+        if e.response.status_code >= 500:
+            raise HTTPException(status_code=504, detail="Open Library API server error - may be due to network issues or VPN blocking")
+        raise HTTPException(status_code=e.response.status_code, detail=f"Open Library API error: {e.response.text}")
+    except httpx.TimeoutException:
+        raise HTTPException(status_code=504, detail="Open Library API request timeout - may be due to network issues or VPN blocking")
+    except httpx.ConnectError:
+        raise HTTPException(status_code=504, detail="Open Library API connection error - may be due to network issues or VPN blocking")
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Error fetching from Open Library API: {str(e)}")

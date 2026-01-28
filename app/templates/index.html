@@ -19,7 +19,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=5.0, user-scalable=yes">
   <meta name="theme-color" content="#1e1e2f">
   <meta name="description"
-    content="OmniTrackr - Track and organize your movies, TV shows, video games,and anime. Rate, review, and analyze your media collection with comprehensive statistics and beautiful posters.">
+    content="OmniTrackr - Track and organize your movies, TV shows, anime, video games, music, and books. Rate, review, and analyze your media collection with comprehensive statistics and beautiful posters.">
   <meta name="keywords"
     content="movie tracker, TV show tracker, anime tracker, media collection, movie database, watchlist, film tracker, entertainment tracker, movie ratings, TV ratings, anime ratings, media organizer, personal movie database, track movies online, TV show database, anime database, movie collection manager, watchlist app, film collection tracker, entertainment database, movie review tracker, TV show review tracker, anime review tracker, media tracking app, free movie tracker, movie statistics, TV show statistics, anime statistics, friends movie tracker, social movie tracking, video game tracker, video game collection, video game database, video game collection manager, video game review tracker, video game statistics, video game ratings">
   <meta name="author" content="OmniTrackr">
@@ -32,7 +32,7 @@
   <meta property="og:url" content="https://omnitrackr.xyz/">
   <meta property="og:title" content="OmniTrackr - Your Personal Media Tracking Companion">
   <meta property="og:description"
-    content="Track and organize your movies, TV shows, video games, and anime. Rate, review, and analyze your media collection with comprehensive statistics and beautiful posters.">
+    content="Track and organize your movies, TV shows, anime, video games, music, and books. Rate, review, and analyze your media collection with comprehensive statistics and beautiful posters.">
   <meta property="og:image" content="https://omnitrackr.xyz/omnitrackr_vortex.png">
   <meta property="og:image:width" content="1200">
   <meta property="og:image:height" content="630">
@@ -45,7 +45,7 @@
   <meta name="twitter:url" content="https://omnitrackr.xyz/">
   <meta name="twitter:title" content="OmniTrackr - Your Personal Media Tracking Companion">
   <meta name="twitter:description"
-    content="Track and organize your movies, TV shows, video games,and anime. Rate, review, and analyze your media collection with comprehensive statistics and beautiful posters.">
+    content="Track and organize your movies, TV shows, anime, video games, music, and books. Rate, review, and analyze your media collection with comprehensive statistics and beautiful posters.">
   <meta name="twitter:image" content="https://omnitrackr.xyz/omnitrackr_vortex.png">
   <meta name="twitter:image:alt" content="OmniTrackr - Movie, TV Show, and Anime Tracking Application">
   <meta name="twitter:site" content="@omnitrackr">
@@ -53,7 +53,7 @@
   <!-- Canonical URL -->
   <link rel="canonical" href="https://omnitrackr.xyz/">
 
-  <title>OmniTrackr - Track Movies, TV Shows, Video Games, and Anime | Media Collection Manager</title>
+  <title>OmniTrackr - Track Movies, TV Shows, Anime, Video Games, Music & Books | Media Collection Manager</title>
   <link rel="icon" type="image/x-icon" href="/omnitrackr_favicon.ico">
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -88,7 +88,7 @@
       "worstRating": "1"
     },
     "featureList": [
-      "Track Movies, TV Shows & Anime",
+      "Track Movies, TV Shows, Anime, Video Games, Music & Books",
       "Statistics Dashboard",
       "Export/Import Data",
       "Automatic Posters",
@@ -164,10 +164,10 @@
       },
       {
         "@type": "Question",
-        "name": "How do I add movies, TV shows, anime, and video games?",
+        "name": "How do I add movies, TV shows, anime, video games, music, and books?",
         "acceptedAnswer": {
           "@type": "Answer",
-          "text": "Simply use the Add Movie, Add TV Show, Add Anime, or Add Video Game forms in your dashboard. Enter the title, year, and other details. The app will automatically fetch beautiful posters from the OMDB API (movies/TV shows), Jikan API (anime), and RAWG API (video games). Titles are automatically normalized to official names when posters are fetched. You can also import your collection from JSON files."
+          "text": "Simply use the Add Movie, Add TV Show, Add Anime, Add Video Game, Add Music, or Add Book forms in your dashboard. Enter the title, year, and other details. The app will automatically fetch beautiful posters and cover art from the OMDB API (movies/TV shows), Jikan API (anime), RAWG API (video games), iTunes Search API (music), and Open Library API (books). Titles are automatically normalized to official names when metadata is fetched. You can also import your collection from JSON files."
         }
       },
       {
@@ -175,7 +175,7 @@
         "name": "Can I export my data?",
         "acceptedAnswer": {
           "@type": "Answer",
-          "text": "Yes! You can export your entire collection (movies, TV shows, anime, and video games) as a JSON file at any time. This allows you to backup your data or import it into another account. You can also import JSON files to quickly add multiple entries."
+          "text": "Yes! You can export your entire collection (movies, TV shows, anime, video games, music, and books) as a JSON file at any time. This allows you to backup your data or import it into another account. You can also import JSON files to quickly add multiple entries."
         }
       },
       {
@@ -191,7 +191,7 @@
         "name": "What are privacy settings?",
         "acceptedAnswer": {
           "@type": "Answer",
-          "text": "Privacy settings allow you to control what friends can see. You can make your movies, TV shows, anime, video games, or statistics private. When enabled, even your friends won't be able to see that data - it's completely private to you. You can change these settings anytime in your account settings."
+          "text": "Privacy settings allow you to control what friends can see. You can make your movies, TV shows, anime, video games, music, books, or statistics private. When enabled, even your friends won't be able to see that data - it's completely private to you. You can change these settings anytime in your account settings."
         }
       },
       {
@@ -281,6 +281,8 @@
       <button class="tab" onclick="switchTab('tv-shows')">📺 TV Shows</button>
       <button class="tab" onclick="switchTab('anime')">🎌 Anime</button>
       <button class="tab" onclick="switchTab('video-games')">🎮 Video Games</button>
+      <button class="tab" onclick="switchTab('music')">🎵 Music</button>
+      <button class="tab" onclick="switchTab('books')">📚 Books</button>
       <button class="tab" onclick="switchTab('statistics')">📊 Statistics</button>
       <div id="customTabsContainer"></div>
       <button class="tab" id="manageCustomTabsBtn" onclick="showCustomTabManager()" style="background-color: #6366f1; margin-left: auto;">⚙️ Manage Custom Tabs</button>
@@ -512,6 +514,162 @@
               </tr>
             </thead>
             <tbody> </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+
+    <!-- Music Tab Content -->
+    <div id="music-tab" class="tab-content">
+      <div class="card">
+        <div class="collapsible-header" onclick="toggleCollapsible('musicForm')">
+          <h2 style="margin: 0; display: inline-block;">Add Music</h2>
+          <span class="collapsible-icon" id="musicFormIcon">▼</span>
+        </div>
+        <div class="collapsible-content" id="musicFormContent" style="display: none;">
+          <form id="addMusicForm">
+            <div style="display: flex; gap: 10px;">
+              <input type="text" id="musicTitle" placeholder="Title" required style="flex: 1;">
+              <button type="button" id="searchMusicBtn" class="action-btn" style="white-space: nowrap;">Search</button>
+            </div>
+            <div>
+              <input type="text" id="musicArtist" placeholder="Artist (auto-filled from search)">
+            </div>
+            <div>
+              <input type="number" id="musicYear" placeholder="Year (auto-filled from search)">
+            </div>
+            <div>
+              <input type="text" id="musicGenre" placeholder="Genre">
+            </div>
+            <div>
+              <input type="number" min="0" max="10" step="0.1" id="musicRating" placeholder="Rating (0-10.0)">
+            </div>
+            <div>
+              <label>Listened <input type="checkbox" id="musicListened"></label>
+            </div>
+            <div>
+              <textarea id="musicReview" placeholder="Review (optional)" rows="1"></textarea>
+            </div>
+            <button type="submit" class="action-btn">Add Music</button>
+          </form>
+        </div>
+      </div>
+      <div class="card">
+        <div style="display:flex; justify-content: space-between; align-items: center; margin-bottom: 10px;">
+          <h2 style="margin: 0;">Music</h2>
+          <span id="musicCount" style="font-weight: bold;"></span>
+        </div>
+        <div style="display:flex; flex-wrap: wrap; gap: 10px; margin-bottom: 10px;">
+          <input type="text" id="musicSearch" placeholder="Search by title, artist, or genre"
+            style="flex: 2; min-width: 200px;">
+          <select id="musicSort" style="flex: 1; min-width: 200px;">
+            <option value="">Sort by...</option>
+            <option value="rating-asc">Rating (Low → High)</option>
+            <option value="rating-desc">Rating (High → Low)</option>
+            <option value="year-asc">Year (Oldest → Newest)</option>
+            <option value="year-desc">Year (Newest → Oldest)</option>
+          </select>
+          <button id="loadMusic" class="action-btn" style="flex: 1; min-width: 120px;">Refresh</button>
+          <button id="exportMusic" class="action-btn"
+            style="flex: 1; min-width: 120px; background-color: #4caf50;">Export Data</button>
+          <button id="importMusic" class="action-btn"
+            style="flex: 1; min-width: 120px; background-color: #ff9800;">Import Data</button>
+        </div>
+        <input type="file" id="importMusicFile" accept=".json" style="display: none;">
+        <div class="table-container">
+          <table id="musicTable">
+            <thead>
+              <tr>
+                <th>Cover Art</th>
+                <th>Title</th>
+                <th>Artist</th>
+                <th>Year</th>
+                <th>Genre</th>
+                <th>Rating</th>
+                <th>Listened</th>
+                <th>Review</th>
+                <th>Actions</th>
+              </tr>
+            </thead>
+            <tbody></tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+
+    <!-- Books Tab Content -->
+    <div id="books-tab" class="tab-content">
+      <div class="card">
+        <div class="collapsible-header" onclick="toggleCollapsible('bookForm')">
+          <h2 style="margin: 0; display: inline-block;">Add Book</h2>
+          <span class="collapsible-icon" id="bookFormIcon">▼</span>
+        </div>
+        <div class="collapsible-content" id="bookFormContent" style="display: none;">
+          <form id="addBookForm">
+            <div style="display: flex; gap: 10px;">
+              <input type="text" id="bookTitle" placeholder="Title" required style="flex: 1;">
+              <button type="button" id="searchBookBtn" class="action-btn" style="white-space: nowrap;">Search</button>
+            </div>
+            <div>
+              <input type="text" id="bookAuthor" placeholder="Author (auto-filled from search)">
+            </div>
+            <div>
+              <input type="number" id="bookYear" placeholder="Year (auto-filled from search)">
+            </div>
+            <div>
+              <input type="text" id="bookGenre" placeholder="Genre">
+            </div>
+            <div>
+              <input type="number" min="0" max="10" step="0.1" id="bookRating" placeholder="Rating (0-10.0)">
+            </div>
+            <div>
+              <label>Read <input type="checkbox" id="bookRead"></label>
+            </div>
+            <div>
+              <textarea id="bookReview" placeholder="Review (optional)" rows="1"></textarea>
+            </div>
+            <button type="submit" class="action-btn">Add Book</button>
+          </form>
+        </div>
+      </div>
+      <div class="card">
+        <div style="display:flex; justify-content: space-between; align-items: center; margin-bottom: 10px;">
+          <h2 style="margin: 0;">Books</h2>
+          <span id="bookCount" style="font-weight: bold;"></span>
+        </div>
+        <div style="display:flex; flex-wrap: wrap; gap: 10px; margin-bottom: 10px;">
+          <input type="text" id="bookSearch" placeholder="Search by title, author, or genre"
+            style="flex: 2; min-width: 200px;">
+          <select id="bookSort" style="flex: 1; min-width: 200px;">
+            <option value="">Sort by...</option>
+            <option value="rating-asc">Rating (Low → High)</option>
+            <option value="rating-desc">Rating (High → Low)</option>
+            <option value="year-asc">Year (Oldest → Newest)</option>
+            <option value="year-desc">Year (Newest → Oldest)</option>
+          </select>
+          <button id="loadBooks" class="action-btn" style="flex: 1; min-width: 120px;">Refresh</button>
+          <button id="exportBooks" class="action-btn"
+            style="flex: 1; min-width: 120px; background-color: #4caf50;">Export Data</button>
+          <button id="importBooks" class="action-btn"
+            style="flex: 1; min-width: 120px; background-color: #ff9800;">Import Data</button>
+        </div>
+        <input type="file" id="importBookFile" accept=".json" style="display: none;">
+        <div class="table-container">
+          <table id="bookTable">
+            <thead>
+              <tr>
+                <th>Cover Art</th>
+                <th>Title</th>
+                <th>Author</th>
+                <th>Year</th>
+                <th>Genre</th>
+                <th>Rating</th>
+                <th>Read</th>
+                <th>Review</th>
+                <th>Actions</th>
+              </tr>
+            </thead>
+            <tbody></tbody>
           </table>
         </div>
       </div>
@@ -782,7 +940,7 @@
       <div style="text-align: center; margin-bottom: 40px;">
         <h2 id="value-prop-title" style="font-size: 2.5rem; margin-bottom: 20px; color: var(--fg);">Why OmniTrackr Stands Out</h2>
         <p style="font-size: 1.2rem; line-height: 1.8; color: var(--fg-secondary); max-width: 900px; margin: 0 auto;">
-          OmniTrackr isn't just another media tracker—it's a comprehensive platform designed for serious media enthusiasts who want to organize, analyze, and share their entertainment journey. Whether you're a cinephile tracking every film you've watched, a TV show binge-watcher managing multiple series, an anime fan cataloging your favorite series, or a gamer documenting your gaming adventures, OmniTrackr provides the tools you need to transform your media consumption into meaningful insights.
+          OmniTrackr isn't just another media tracker—it's a comprehensive platform designed for serious media enthusiasts who want to organize, analyze, and share their entertainment journey. Whether you're a cinephile tracking every film you've watched, a TV show binge-watcher managing multiple series, an anime fan cataloging your favorite series, a gamer documenting your gaming adventures, a music lover organizing your album collection, or a bookworm tracking your reading journey, OmniTrackr provides the tools you need to transform your media consumption into meaningful insights.
         </p>
         <p style="font-size: 1.1rem; line-height: 1.8; color: var(--fg-secondary); max-width: 900px; margin: 20px auto 0;">
           Our platform combines powerful analytics with intuitive design, allowing you to discover patterns in your viewing habits, identify your favorite directors and genres, and connect with friends who share your passion for entertainment. With automatic poster fetching, comprehensive statistics, and robust privacy controls, OmniTrackr empowers you to take control of your media collection while maintaining complete ownership of your data.
@@ -863,10 +1021,9 @@
       <div class="features-grid">
         <div class="feature-card">
           <div class="feature-icon">🎬</div>
-          <h3>Track Movies, TV Shows, Anime & Video Games</h3>
-          <p>Organize your entire media collection in one place with ratings, reviews, and watch status for movies, TV
-            shows, anime, and video games.</p>
-          <p class="feature-microcopy">Track everything you watch, play, read — effortlessly.</p>
+          <h3>Track Movies, TV Shows, Anime, Video Games, Music & Books</h3>
+          <p>Organize your entire media collection in one place with ratings, reviews, and status tracking for movies, TV shows, anime, video games, music albums, and books.</p>
+          <p class="feature-microcopy">Track everything you watch, play, listen to, and read — effortlessly.</p>
         </div>
         <div class="feature-card">
           <div class="feature-icon">📊</div>
@@ -882,8 +1039,8 @@
         </div>
         <div class="feature-card">
           <div class="feature-icon">🖼️</div>
-          <h3>Automatic Posters</h3>
-          <p>Beautiful movie, TV show, anime, and video game posters fetched automatically from OMDB (movies/TV shows), Jikan (anime), and RAWG (video games) APIs. Titles are automatically normalized to official names.</p>
+          <h3>Automatic Posters & Cover Art</h3>
+          <p>Beautiful posters and cover art fetched automatically from OMDB (movies/TV shows), Jikan (anime), RAWG (video games), iTunes Search (music), and Open Library (books) APIs. Titles are automatically normalized to official names.</p>
           <p class="feature-microcopy">Because visuals make everything better</p>
         </div>
         <div class="feature-card">
@@ -915,8 +1072,7 @@
         <div class="feature-card">
           <div class="feature-icon">🔒</div>
           <h3>Privacy Controls</h3>
-          <p>Granular privacy settings for your movies, TV shows, anime, video games, and statistics - control what
-            friends can see.</p>
+          <p>Granular privacy settings for your movies, TV shows, anime, video games, music, books, and statistics - control what friends can see.</p>
           <p class="feature-microcopy">Privacy that actually works</p>
         </div>
       </div>
@@ -935,7 +1091,7 @@
           <div style="background: var(--card-bg); padding: 30px; border-radius: 12px; box-shadow: 0 4px 6px rgba(0,0,0,0.1);">
             <div style="font-size: 3rem; margin-bottom: 20px; text-align: center;">2️⃣</div>
             <h3 style="margin-bottom: 15px; color: var(--primary);">Add Your Media</h3>
-            <p style="line-height: 1.6; color: var(--fg-secondary);">Start building your collection by adding movies, TV shows, anime, or video games. Simply enter the title and year, and OmniTrackr automatically fetches beautiful posters, cover art, and official titles from trusted APIs like OMDB, Jikan, and RAWG. Your entries are automatically normalized to official names for consistency.</p>
+            <p style="line-height: 1.6; color: var(--fg-secondary);">Start building your collection by adding movies, TV shows, anime, video games, music albums, or books. Simply enter the title and year, and OmniTrackr automatically fetches beautiful posters, cover art, and official titles from trusted APIs like OMDB, Jikan, RAWG, iTunes Search, and Open Library. Your entries are automatically normalized to official names for consistency.</p>
           </div>
           <div style="background: var(--card-bg); padding: 30px; border-radius: 12px; box-shadow: 0 4px 6px rgba(0,0,0,0.1);">
             <div style="font-size: 3rem; margin-bottom: 20px; text-align: center;">3️⃣</div>
@@ -950,7 +1106,7 @@
           <div style="background: var(--card-bg); padding: 30px; border-radius: 12px; box-shadow: 0 4px 6px rgba(0,0,0,0.1);">
             <div style="font-size: 3rem; margin-bottom: 20px; text-align: center;">5️⃣</div>
             <h3 style="margin-bottom: 15px; color: var(--primary);">Connect with Friends</h3>
-            <p style="line-height: 1.6; color: var(--fg-secondary);">Build your social network by sending friend requests to other OmniTrackr users. Once connected, explore each other's collections, compare statistics, and discover new movies, shows, anime, and games through your friends' recommendations. Privacy controls let you decide what to share.</p>
+            <p style="line-height: 1.6; color: var(--fg-secondary);">Build your social network by sending friend requests to other OmniTrackr users. Once connected, explore each other's collections, compare statistics, and discover new movies, shows, anime, games, music, and books through your friends' recommendations. Privacy controls let you decide what to share.</p>
           </div>
           <div style="background: var(--card-bg); padding: 30px; border-radius: 12px; box-shadow: 0 4px 6px rgba(0,0,0,0.1);">
             <div style="font-size: 3rem; margin-bottom: 20px; text-align: center;">6️⃣</div>
@@ -970,12 +1126,12 @@
           <h3 style="color: var(--primary); margin-bottom: 20px; font-size: 1.5rem;">Step-by-Step: Building Your First Collection</h3>
           <ol style="line-height: 2; color: var(--fg-secondary); padding-left: 20px;">
             <li style="margin-bottom: 15px;"><strong style="color: var(--fg);">Register and Verify:</strong> Create your free account using your email address. Check your inbox for the verification email and click the confirmation link to activate your account. This step ensures account security and prevents spam.</li>
-            <li style="margin-bottom: 15px;"><strong style="color: var(--fg);">Login to Your Dashboard:</strong> Once verified, log in to access your personal dashboard. You'll see tabs for Movies, TV Shows, Anime, Video Games, and Statistics. Each tab is fully customizable - hide tabs you don't use in your account settings.</li>
+            <li style="margin-bottom: 15px;"><strong style="color: var(--fg);">Login to Your Dashboard:</strong> Once verified, log in to access your personal dashboard. You'll see tabs for Movies, TV Shows, Anime, Video Games, Music, Books, and Statistics. Each tab is fully customizable - hide tabs you don't use in your account settings.</li>
             <li style="margin-bottom: 15px;"><strong style="color: var(--fg);">Add Your First Entry:</strong> Click on any tab (e.g., Movies) and expand the "Add Movie" form. Enter the movie title and year. OmniTrackr will automatically search for the official title and fetch the poster from OMDB API. Add a rating (0-10.0), mark if you've watched it, and optionally write a review.</li>
             <li style="margin-bottom: 15px;"><strong style="color: var(--fg);">Organize Your Collection:</strong> Use the search bar to filter by title, director, or genres. Sort by rating, year, or other criteria. Edit entries inline by clicking the edit button, or delete items you no longer want to track.</li>
             <li style="margin-bottom: 15px;"><strong style="color: var(--fg);">Explore Statistics:</strong> Visit the Statistics tab to see comprehensive analytics about your collection. View your watch progress, rating distributions, favorite directors, decade breakdowns, and genre preferences. All statistics update in real-time as you add more items.</li>
             <li style="margin-bottom: 15px;"><strong style="color: var(--fg);">Connect with Friends:</strong> Use the Friends sidebar to send friend requests by username. Accept incoming requests through the notification bell. View friends' collections and statistics (respecting their privacy settings) to discover new media recommendations.</li>
-            <li style="margin-bottom: 15px;"><strong style="color: var(--fg);">Backup Your Data:</strong> Regularly export your collection using the "Export Data" button. This creates a JSON file with all your movies, TV shows, anime, and video games. You can import this file later or use it to migrate to another account.</li>
+            <li style="margin-bottom: 15px;"><strong style="color: var(--fg);">Backup Your Data:</strong> Regularly export your collection using the "Export Data" button. This creates a JSON file with all your movies, TV shows, anime, video games, music, and books. You can import this file later or use it to migrate to another account.</li>
           </ol>
         </div>
 
@@ -1036,7 +1192,7 @@
 
           <div style="background: var(--card-bg); padding: 30px; border-radius: 12px; box-shadow: 0 4px 6px rgba(0,0,0,0.1);">
             <h3 style="color: var(--primary); margin-bottom: 15px;">🔒 Privacy & Security</h3>
-            <p style="line-height: 1.8; color: var(--fg-secondary); margin-bottom: 15px;">Take advantage of granular privacy controls. You can make movies, TV shows, anime, video games, or statistics private individually. Private data is completely hidden from friends, giving you full control over what you share.</p>
+            <p style="line-height: 1.8; color: var(--fg-secondary); margin-bottom: 15px;">Take advantage of granular privacy controls. You can make movies, TV shows, anime, video games, music, books, or statistics private individually. Private data is completely hidden from friends, giving you full control over what you share.</p>
             <p style="line-height: 1.8; color: var(--fg-secondary);">Keep your account secure by using a strong, unique password. Enable email verification and use the password reset feature if you forget your password. All sensitive operations require password confirmation for added security.</p>
           </div>
 
@@ -1059,9 +1215,7 @@
             <span class="faq-icon">+</span>
           </button>
           <div class="faq-answer" id="faq-answer-1">
-            <p>OmniTrackr is a free, web-based application that helps you track and organize your movie, TV show, and
-              anime collection. You can rate, review, and analyze your media with comprehensive statistics, beautiful
-              posters, and social features to share with friends.</p>
+            <p>OmniTrackr is a free, web-based application that helps you track and organize your movie, TV show, anime, video game, music, and book collection. You can rate, review, and analyze your media with comprehensive statistics, beautiful posters and cover art, and social features to share with friends.</p>
           </div>
         </div>
 
@@ -1078,12 +1232,11 @@
 
         <div class="faq-item">
           <button class="faq-question" aria-expanded="false" aria-controls="faq-answer-3">
-            <span>How do I add movies, TV shows, anime, and video games?</span>
+            <span>How do I add movies, TV shows, anime, video games, music, and books?</span>
             <span class="faq-icon">+</span>
           </button>
           <div class="faq-answer" id="faq-answer-3">
-            <p>Simply use the "Add Movie", "Add TV Show", "Add Anime", or "Add Video Game" forms in your dashboard.
-              Enter the title, year, and other details. The app will automatically fetch beautiful posters from the OMDB API (movies/TV shows), Jikan API (anime), and RAWG API (video games). Titles are automatically normalized to official names when posters are fetched. You can also import your collection from JSON files.</p>
+            <p>Simply use the "Add Movie", "Add TV Show", "Add Anime", "Add Video Game", "Add Music", or "Add Book" forms in your dashboard. Enter the title, year, and other details. The app will automatically fetch beautiful posters and cover art from the OMDB API (movies/TV shows), Jikan API (anime), RAWG API (video games), iTunes Search API (music), and Open Library API (books). Titles are automatically normalized to official names when metadata is fetched. You can also import your collection from JSON files.</p>
           </div>
         </div>
 
@@ -1093,9 +1246,7 @@
             <span class="faq-icon">+</span>
           </button>
           <div class="faq-answer" id="faq-answer-4">
-            <p>Yes! You can export your entire collection (movies, TV shows, and anime) as a JSON file at any time. This
-              allows you to backup your data or import it into another account. You can also import JSON files to
-              quickly add multiple entries.</p>
+            <p>Yes! You can export your entire collection (movies, TV shows, anime, video games, music, and books) as a JSON file at any time. This allows you to backup your data or import it into another account. You can also import JSON files to quickly add multiple entries.</p>
           </div>
         </div>
 
@@ -1118,9 +1269,7 @@
             <span class="faq-icon">+</span>
           </button>
           <div class="faq-answer" id="faq-answer-6">
-            <p>Privacy settings allow you to control what friends can see. You can make your movies, TV shows, anime, or
-              statistics private. When enabled, even your friends won't be able to see that data - it's completely
-              private to you. You can change these settings anytime in your account settings.</p>
+            <p>Privacy settings allow you to control what friends can see. You can make your movies, TV shows, anime, video games, music, books, or statistics private. When enabled, even your friends won't be able to see that data - it's completely private to you. You can change these settings anytime in your account settings.</p>
           </div>
         </div>
 
@@ -1150,13 +1299,11 @@
 
         <div class="faq-item">
           <button class="faq-question" aria-expanded="false" aria-controls="faq-answer-9">
-            <span>Can I rate movies, TV shows, and anime with decimals?</span>
+            <span>Can I rate movies, TV shows, anime, video games, music, and books with decimals?</span>
             <span class="faq-icon">+</span>
           </button>
           <div class="faq-answer" id="faq-answer-9">
-            <p>Yes! You can rate any movie, TV show, or anime from 0 to 10.0 with one decimal place precision (e.g.,
-              7.5, 8.4, 9.2). The statistics dashboard will calculate averages and other metrics using these decimal
-              ratings.</p>
+            <p>Yes! You can rate any item from 0 to 10.0 with one decimal place precision (e.g., 7.5, 8.4, 9.2). The statistics dashboard will calculate averages and other metrics using these decimal ratings.</p>
           </div>
         </div>
 
@@ -1219,7 +1366,7 @@
                class="screenshot-image">
           <p class="screenshot-caption">Main Dashboard - Track all your media in one place</p>
           <div style="padding: 15px; background: var(--card-bg); border-radius: 8px; margin-top: 10px;">
-            <p style="line-height: 1.7; color: var(--fg-secondary); font-size: 0.95rem;">The OmniTrackr dashboard provides a unified interface for managing your entire media collection. With dedicated tabs for movies, TV shows, anime, and video games, you can easily add entries, rate content, write reviews, and track your viewing progress. The intuitive search and sort functionality makes it effortless to find specific items, while automatic poster fetching from trusted APIs ensures your collection looks professional and visually appealing. Each entry supports detailed metadata including ratings, watch status, and personal reviews, giving you complete control over how you organize and remember your media experiences.</p>
+            <p style="line-height: 1.7; color: var(--fg-secondary); font-size: 0.95rem;">The OmniTrackr dashboard provides a unified interface for managing your entire media collection. With dedicated tabs for movies, TV shows, anime, video games, music, and books, you can easily add entries, rate content, write reviews, and track your viewing/listening/reading progress. The intuitive search and sort functionality makes it effortless to find specific items, while automatic poster and cover art fetching from trusted APIs ensures your collection looks professional and visually appealing. Each entry supports detailed metadata including ratings, status tracking, and personal reviews, giving you complete control over how you organize and remember your media experiences.</p>
           </div>
           <div class="screenshot-overlay">
             <span class="screenshot-zoom-icon">🔍</span>
@@ -1233,7 +1380,7 @@
                class="screenshot-image">
           <p class="screenshot-caption">Statistics Dashboard - Comprehensive analytics</p>
           <div style="padding: 15px; background: var(--card-bg); border-radius: 8px; margin-top: 10px;">
-            <p style="line-height: 1.7; color: var(--fg-secondary); font-size: 0.95rem;">Dive deep into your media consumption patterns with OmniTrackr's powerful statistics dashboard. Track your watch progress with visual completion percentages, analyze your rating habits through distribution charts, and discover your favorite directors and genres. The dashboard provides insights into your viewing trends across different decades, helping you understand your media preferences over time. With category-specific statistics for movies, TV shows, anime, and video games, you can explore detailed metrics including average ratings, highest-rated content, and genre preferences. These analytics transform raw data into meaningful insights about your entertainment journey.</p>
+            <p style="line-height: 1.7; color: var(--fg-secondary); font-size: 0.95rem;">Dive deep into your media consumption patterns with OmniTrackr's powerful statistics dashboard. Track your watch/listen/read progress with visual completion percentages, analyze your rating habits through distribution charts, and discover your favorite directors, artists, authors, and genres. The dashboard provides insights into your media trends across different decades, helping you understand your preferences over time. With category-specific statistics for movies, TV shows, anime, video games, music, and books, you can explore detailed metrics including average ratings, highest-rated content, and genre preferences. These analytics transform raw data into meaningful insights about your entertainment journey.</p>
           </div>
           <div class="screenshot-overlay">
             <span class="screenshot-zoom-icon">🔍</span>
@@ -1247,7 +1394,7 @@
                class="screenshot-image">
           <p class="screenshot-caption">Privacy Settings - Control who can see your data</p>
           <div style="padding: 15px; background: var(--card-bg); border-radius: 8px; margin-top: 10px;">
-            <p style="line-height: 1.7; color: var(--fg-secondary); font-size: 0.95rem;">Privacy is fundamental to OmniTrackr's design philosophy. Our granular privacy controls allow you to make individual categories—movies, TV shows, anime, video games, or statistics—completely private, even from your friends. This means you can share your favorite TV shows while keeping your movie collection private, or showcase your statistics while hiding specific content types. The privacy settings are easy to toggle and take effect immediately, giving you complete control over what information is visible to others. Combined with secure account management features including email verification, password protection, and account deactivation options, OmniTrackr ensures your data remains yours.</p>
+            <p style="line-height: 1.7; color: var(--fg-secondary); font-size: 0.95rem;">Privacy is fundamental to OmniTrackr's design philosophy. Our granular privacy controls allow you to make individual categories—movies, TV shows, anime, video games, music, books, or statistics—completely private, even from your friends. This means you can share your favorite TV shows while keeping your movie collection private, or showcase your statistics while hiding specific content types. The privacy settings are easy to toggle and take effect immediately, giving you complete control over what information is visible to others. Combined with secure account management features including email verification, password protection, and account deactivation options, OmniTrackr ensures your data remains yours.</p>
           </div>
           <div class="screenshot-overlay">
             <span class="screenshot-zoom-icon">🔍</span>
@@ -1261,7 +1408,7 @@
                class="screenshot-image">
           <p class="screenshot-caption">Friends & Social - Connect and share with friends</p>
           <div style="padding: 15px; background: var(--card-bg); border-radius: 8px; margin-top: 10px;">
-            <p style="line-height: 1.7; color: var(--fg-secondary); font-size: 0.95rem;">Build your media community by connecting with friends on OmniTrackr. Send friend requests to other users and explore each other's collections to discover new movies, shows, anime, and games. The friends system includes real-time notifications for friend requests, making it easy to stay connected. When viewing a friend's profile, you can browse their collections with full search and filter capabilities, compare statistics, and get recommendations based on their highest-rated content. The social features respect privacy settings, so you only see what your friends have chosen to share. This creates a collaborative environment where you can discover new entertainment while maintaining control over your own data visibility.</p>
+            <p style="line-height: 1.7; color: var(--fg-secondary); font-size: 0.95rem;">Build your media community by connecting with friends on OmniTrackr. Send friend requests to other users and explore each other's collections to discover new movies, shows, anime, games, music, and books. The friends system includes real-time notifications for friend requests, making it easy to stay connected. When viewing a friend's profile, you can browse their collections with full search and filter capabilities, compare statistics, and get recommendations based on their highest-rated content. The social features respect privacy settings, so you only see what your friends have chosen to share. This creates a collaborative environment where you can discover new entertainment while maintaining control over your own data visibility.</p>
           </div>
           <div class="screenshot-overlay">
             <span class="screenshot-zoom-icon">🔍</span>

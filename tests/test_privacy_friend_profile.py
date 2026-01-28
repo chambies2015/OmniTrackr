@@ -23,6 +23,8 @@ class TestPrivacySettingsCRUD:
         assert privacy.tv_shows_private is False
         assert privacy.anime_private is False
         assert privacy.video_games_private is False
+        assert privacy.music_private is False
+        assert privacy.books_private is False
         assert privacy.statistics_private is False
     
     def test_update_privacy_settings_movies(self, db_session, test_user_data):
@@ -41,6 +43,8 @@ class TestPrivacySettingsCRUD:
         assert updated_user.tv_shows_private is False
         assert updated_user.anime_private is False
         assert updated_user.video_games_private is False
+        assert updated_user.music_private is False
+        assert updated_user.books_private is False
         assert updated_user.statistics_private is False
     
     def test_update_privacy_settings_all(self, db_session, test_user_data):

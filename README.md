@@ -6,7 +6,7 @@
 
 ## Overview
 
-OmniTrackr is a full-featured, multi-user web application for managing and tracking movies, TV shows, anime, and video games. Originally a local desktop app, it has evolved into a production-ready platform with user authentication, cloud database support, and a modern responsive UI.
+OmniTrackr is a full-featured, multi-user web application for managing and tracking movies, TV shows, anime, video games, music, and books. Originally a local desktop app, it has evolved into a production-ready platform with user authentication, cloud database support, and a modern responsive UI.
 
 **Live Demo:** Deployed on Render with PostgreSQL database: https://www.omnitrackr.xyz/
 
@@ -43,11 +43,11 @@ OmniTrackr is a full-featured, multi-user web application for managing and track
 - **Password Security:** bcrypt hashing for password storage
 - **Account Management:** Change username, email, password, and account deactivation/reactivation
 - **Profile Pictures:** Upload, change, and reset profile pictures with automatic optimization and validation
-- **Privacy Settings:** Control visibility of your movies, TV shows, anime, video games, and statistics (private or visible to friends)
+- **Privacy Settings:** Control visibility of your movies, TV shows, anime, video games, music, books, and statistics (private or visible to friends)
 - **Friends System:** Add friends by username, send/accept/deny friend requests, manage friends list
 - **Friend Profiles:** View friends' movie, TV show, and anime collections and statistics with privacy-aware access
 - **Notifications:** Real-time notification system with bell icon, friend request notifications, and auto-dismissal
-- **CRUD API:** Full REST API for managing movies, TV shows, anime, and video games
+- **CRUD API:** Full REST API for managing movies, TV shows, anime, video games, music, and books
 - **Custom Tabs:** Create personalized tracking tabs with custom fields for any collection type (books, comics, board games, etc.)
 - **PostgreSQL Database:** Production-ready database
 - **Search and Sort:** Automatic filtering by title/director/genres and sorting by rating or year
@@ -133,7 +133,7 @@ OmniTrackr provides comprehensive account management features:
   - Statistics privacy toggle (private or visible to friends)
   - When privacy is enabled, data is fully private (not visible to friends)
 - **Tab Visibility:** Customize which tabs appear in your navigation
-  - Show/hide Movies, TV Shows, Anime, and Video Games tabs
+  - Show/hide Movies, TV Shows, Anime, Video Games, Music, and Books tabs
   - Simplify your interface by hiding tabs you don't use
   - Only affects your own view, not friends' access
 - **Account Deactivation:** Soft delete your account with 90-day reactivation window
@@ -279,6 +279,26 @@ OmniTrackr uses a secure JWT-based authentication system:
 - User data isolation - users can only access their own data
 - Automatic token validation and 401 handling
 
+## API Setup
+
+To enable automatic poster/cover art fetching, you'll need to configure API keys:
+
+### Required APIs (for full functionality)
+- **OMDB API:** Get a free API key from https://www.omdbapi.com/apikey.aspx
+- **RAWG API:** Get a free API key from https://rawg.io/apidocs
+- **iTunes Search API:** No API key required (free and open)
+- **Open Library API:** No API key required (free and open)
+
+### Environment Variables
+Add these to your `.env` file (all optional):
+```bash
+OMDB_API_KEY=your-omdb-api-key
+RAWG_API_KEY=your-rawg-api-key
+# iTunes Search API and Open Library API require no configuration
+```
+
+Note: The application will work without these API keys, but automatic poster/cover art fetching will be disabled for the respective media types.
+
 ## Using the Application
 
 ### Getting Started
@@ -293,17 +313,17 @@ OmniTrackr uses a secure JWT-based authentication system:
 - **Friends & Social:** Add friends, send/accept/deny friend requests, view friends list, and explore friends' collections
 - **Friend Profiles:** View friends' movies, TV shows, anime, and statistics with search/filter capabilities
 - **Notifications:** Real-time notifications with bell icon and unread count badge
-- **Add movies, TV shows, anime & video games:** Enter details like title, director/creator, year, rating, and watched/played status. Titles are automatically normalized to official names when posters are fetched
+- **Add movies, TV shows, anime, video games, music & books:** Enter details like title, director/creator/artist/author, year, rating, and watched/played/listened/read status. Titles are automatically normalized to official names when posters are fetched
 - **Custom Tabs:** Create personalized tracking tabs with custom fields for any collection (books, comics, board games, podcasts, etc.)
-- **Automatic Posters:** Movie and TV show posters are fetched automatically from OMDB API, anime posters from Jikan API (MyAnimeList), and video game cover art from RAWG API - all with intelligent caching
+- **Automatic Posters:** Movie and TV show posters are fetched automatically from OMDB API, anime posters from Jikan API (MyAnimeList), video game cover art from RAWG API, music album covers from iTunes Search API, and book covers from Open Library API - all with intelligent caching
 - **Title Normalization:** Titles are automatically normalized to official names from APIs when posters are fetched (e.g., "skyrim" becomes "The Elder Scrolls V: Skyrim")
 - **Search & Filter:** Automatic search by title or director/creator and sort by rating or year
 - **Inline Editing:** Edit entries directly in the table with save/cancel options, expandable review textareas
 - **Delete:** Remove entries from your collection
 - **Dark Mode:** Beautiful dark theme by default with light mode toggle
 - **Modern UI:** Card-based design with smooth animations, gradients, and collapsible forms
-- **Tabbed Interface:** Switch between Movies, TV Shows, Anime, Video Games, Custom Tabs, and Statistics
-- **Export/Import:** Backup your collection to JSON or import from JSON files (supports movies, TV shows, anime, video games, and custom tabs)
+- **Tabbed Interface:** Switch between Movies, TV Shows, Anime, Video Games, Music, Books, Custom Tabs, and Statistics
+- **Export/Import:** Backup your collection to JSON or import from JSON files (supports movies, TV shows, anime, video games, music, books, and custom tabs)
 - **Statistics Dashboard:** Comprehensive analytics with animated visualizations showing your viewing and gaming habits and preferences (includes anime and video game statistics)
 
 
@@ -355,8 +375,8 @@ A: Simply use the "Add Movie", "Add TV Show", "Add Anime", or "Add Video Game" f
 **Q: Why are my titles being changed automatically?**  
 A: OmniTrackr automatically normalizes titles to their official names from APIs when posters are fetched. For example, if you enter "skyrim", it will be normalized to "The Elder Scrolls V: Skyrim" when the RAWG API returns the game data. This ensures consistency and accuracy in your collection. The normalization only happens when metadata is successfully fetched from the APIs.
 
-**Q: Can I track video games?**  
-A: Yes! OmniTrackr supports video game tracking with full CRUD operations, ratings, reviews, played status, genres, release dates, and automatic cover art fetching from RAWG API. Video games are included in your statistics dashboard with genre analysis.
+**Q: Can I track video games, music, or books?**  
+A: Yes! OmniTrackr supports video game tracking with full CRUD operations, ratings, reviews, played status, genres, release dates, and automatic cover art fetching from RAWG API. Music tracking includes album/track information with iTunes Search API integration for cover art and metadata (free, no API key required). Books tracking includes author, genre, and publication year with Open Library API integration for cover art and metadata (free, no API key required). All are included in your statistics dashboard.
 
 **Q: Can I track other types of media like books or comics?**  
 A: Absolutely! Use the **Custom Tabs** feature to create personalized tracking tabs for any collection type. You can define custom fields (text, number, date, boolean, rating), upload posters, and manage your collection just like the built-in media types. Perfect for tracking books, comics, board games, podcasts, music albums, or anything else you want to catalog.
@@ -366,6 +386,8 @@ A:
 - **Movies & TV Shows:** OMDB API
 - **Anime:** Jikan API (MyAnimeList) - provides better coverage for anime titles
 - **Video Games:** RAWG API
+- **Music:** iTunes Search API (free, no API key required)
+- **Books:** Open Library API
 
 **Q: Can I export my data?**  
 A: Yes! You can export your entire collection (movies, TV shows, anime, and video games) as a JSON file at any time. This allows you to backup your data or import it into another account. You can also import JSON files to quickly add multiple entries.
@@ -382,8 +404,11 @@ A: Click on your username in the top right corner to open the account settings m
 **Q: What if I forget my password?**  
 A: Click "Forgot Password?" on the login page. Enter your email address, and we'll send you a password reset link. Click the link in the email to set a new password. Make sure to check your spam folder if you don't see the email.
 
-**Q: Can I rate movies, TV shows, anime, and video games with decimals?**  
+**Q: Can I rate movies, TV shows, anime, video games, music, and books with decimals?**  
 A: Yes! You can rate any item from 0 to 10.0 with one decimal place precision (e.g., 7.5, 8.4, 9.2). The statistics dashboard will calculate averages and other metrics using these decimal ratings.
+
+**Q: How do I set up iTunes API for music?**  
+A: No setup required! The iTunes Search API is completely free and requires no API key or registration. The app will automatically fetch album covers and metadata when you search for music. Just start using the Music tab - it works out of the box!
 
 **Q: How do I contact support?**  
 A: You can reach us via email at omnitrackr@gmail.com. You can also find us on [GitHub](https://github.com/chambies2015/OmniTrackr) or [LinkedIn](https://www.linkedin.com/in/d-g-c/). We're happy to help!

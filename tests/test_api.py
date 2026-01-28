@@ -566,6 +566,306 @@ class TestVideoGameEndpoints:
         assert response.status_code == 401
 
 
+class TestMusicEndpoints:
+    """Test music API endpoints."""
+    
+    def test_create_music(self, authenticated_client, test_music_data):
+        """Test creating music via API."""
+        response = authenticated_client.post("/music/", json=test_music_data)
+        
+        assert response.status_code == 201
+        data = response.json()
+        assert data["title"] == test_music_data["title"]
+        assert data["artist"] == test_music_data["artist"]
+        assert data["year"] == test_music_data["year"]
+        assert "id" in data
+    
+    def test_get_music(self, authenticated_client, test_music_data):
+        """Test retrieving music via API."""
+        authenticated_client.post("/music/", json=test_music_data)
+        
+        response = authenticated_client.get("/music/")
+        
+        assert response.status_code == 200
+        music = response.json()
+        assert len(music) >= 1
+        assert any(m["title"] == test_music_data["title"] for m in music)
+    
+    def test_update_music(self, authenticated_client, test_music_data):
+        """Test updating music."""
+        create_response = authenticated_client.post("/music/", json=test_music_data)
+        music_id = create_response.json()["id"]
+        
+        update_data = {"rating": 10.0, "listened": False}
+        response = authenticated_client.put(f"/music/{music_id}", json=update_data)
+        
+        assert response.status_code == 200
+        data = response.json()
+        assert data["rating"] == 10.0
+        assert data["listened"] is False
+    
+    def test_create_music_with_decimal_rating(self, authenticated_client):
+        """Test creating music with decimal rating via API."""
+        music_data = {
+            "title": "Test Album",
+            "artist": "Test Artist",
+            "year": 2020,
+            "rating": 8.7
+        }
+        response = authenticated_client.post("/music/", json=music_data)
+        
+        assert response.status_code == 201
+        data = response.json()
+        assert data["rating"] == 8.7
+        assert isinstance(data["rating"], (int, float))
+    
+    def test_update_music_with_decimal_rating(self, authenticated_client, test_music_data):
+        """Test updating music with decimal rating via API."""
+        create_response = authenticated_client.post("/music/", json=test_music_data)
+        music_id = create_response.json()["id"]
+        
+        update_data = {"rating": 7.3}
+        response = authenticated_client.put(f"/music/{music_id}", json=update_data)
+        
+        assert response.status_code == 200
+        data = response.json()
+        assert data["rating"] == 7.3
+    
+    def test_get_music_by_id(self, authenticated_client, test_music_data):
+        """Test retrieving a specific music item."""
+        create_response = authenticated_client.post("/music/", json=test_music_data)
+        music_id = create_response.json()["id"]
+        
+        response = authenticated_client.get(f"/music/{music_id}")
+        
+        assert response.status_code == 200
+        data = response.json()
+        assert data["id"] == music_id
+        assert data["title"] == test_music_data["title"]
+    
+    def test_delete_music(self, authenticated_client, test_music_data):
+        """Test deleting music."""
+        create_response = authenticated_client.post("/music/", json=test_music_data)
+        music_id = create_response.json()["id"]
+        
+        response = authenticated_client.delete(f"/music/{music_id}")
+        
+        assert response.status_code == 200
+        
+        get_response = authenticated_client.get(f"/music/{music_id}")
+        assert get_response.status_code == 404
+    
+    def test_music_search(self, authenticated_client, test_music_data):
+        """Test searching music."""
+        authenticated_client.post("/music/", json=test_music_data)
+        
+        response = authenticated_client.get("/music/?search=Beatles")
+        assert response.status_code == 200
+        music = response.json()
+        assert len(music) >= 1
+        
+        response = authenticated_client.get("/music/?search=Rock")
+        assert response.status_code == 200
+        music = response.json()
+        assert len(music) >= 1
+    
+    def test_music_sorting(self, authenticated_client, test_music_data):
+        """Test sorting music."""
+        music1 = test_music_data.copy()
+        music1["title"] = "Album A"
+        music1["rating"] = 5.0
+        authenticated_client.post("/music/", json=music1)
+        
+        music2 = test_music_data.copy()
+        music2["title"] = "Album B"
+        music2["rating"] = 9.0
+        authenticated_client.post("/music/", json=music2)
+        
+        response = authenticated_client.get("/music/?sort_by=rating&order=desc")
+        assert response.status_code == 200
+        music = response.json()
+        if len(music) >= 2:
+            assert music[0]["rating"] >= music[1]["rating"]
+        
+        response = authenticated_client.get("/music/?sort_by=year&order=asc")
+        assert response.status_code == 200
+        music = response.json()
+        if len(music) >= 2:
+            years = [m.get("year") for m in music if m.get("year")]
+            if len(years) >= 2:
+                assert years[0] <= years[1]
+    
+    def test_get_nonexistent_music(self, authenticated_client):
+        """Test getting a non-existent music item returns 404."""
+        response = authenticated_client.get("/music/99999")
+        assert response.status_code == 404
+    
+    def test_update_nonexistent_music(self, authenticated_client):
+        """Test updating a non-existent music item returns 404."""
+        response = authenticated_client.put("/music/99999", json={"rating": 5})
+        assert response.status_code == 404
+    
+    def test_delete_nonexistent_music(self, authenticated_client):
+        """Test deleting a non-existent music item returns 404."""
+        response = authenticated_client.delete("/music/99999")
+        assert response.status_code == 404
+    
+    def test_music_endpoint_requires_auth(self, client):
+        """Test that music endpoint requires authentication."""
+        response = client.get("/music/")
+        assert response.status_code == 401
+
+
+class TestBookEndpoints:
+    """Test book API endpoints."""
+    
+    def test_create_book(self, authenticated_client, test_book_data):
+        """Test creating a book via API."""
+        response = authenticated_client.post("/books/", json=test_book_data)
+        
+        assert response.status_code == 201
+        data = response.json()
+        assert data["title"] == test_book_data["title"]
+        assert data["author"] == test_book_data["author"]
+        assert data["year"] == test_book_data["year"]
+        assert "id" in data
+    
+    def test_get_books(self, authenticated_client, test_book_data):
+        """Test retrieving books via API."""
+        authenticated_client.post("/books/", json=test_book_data)
+        
+        response = authenticated_client.get("/books/")
+        
+        assert response.status_code == 200
+        books = response.json()
+        assert len(books) >= 1
+        assert any(b["title"] == test_book_data["title"] for b in books)
+    
+    def test_update_book(self, authenticated_client, test_book_data):
+        """Test updating a book."""
+        create_response = authenticated_client.post("/books/", json=test_book_data)
+        book_id = create_response.json()["id"]
+        
+        update_data = {"rating": 10.0, "read": False}
+        response = authenticated_client.put(f"/books/{book_id}", json=update_data)
+        
+        assert response.status_code == 200
+        data = response.json()
+        assert data["rating"] == 10.0
+        assert data["read"] is False
+    
+    def test_create_book_with_decimal_rating(self, authenticated_client):
+        """Test creating a book with decimal rating via API."""
+        book_data = {
+            "title": "Test Book",
+            "author": "Test Author",
+            "year": 2020,
+            "rating": 8.7
+        }
+        response = authenticated_client.post("/books/", json=book_data)
+        
+        assert response.status_code == 201
+        data = response.json()
+        assert data["rating"] == 8.7
+        assert isinstance(data["rating"], (int, float))
+    
+    def test_update_book_with_decimal_rating(self, authenticated_client, test_book_data):
+        """Test updating a book with decimal rating via API."""
+        create_response = authenticated_client.post("/books/", json=test_book_data)
+        book_id = create_response.json()["id"]
+        
+        update_data = {"rating": 7.3}
+        response = authenticated_client.put(f"/books/{book_id}", json=update_data)
+        
+        assert response.status_code == 200
+        data = response.json()
+        assert data["rating"] == 7.3
+    
+    def test_get_book_by_id(self, authenticated_client, test_book_data):
+        """Test retrieving a specific book."""
+        create_response = authenticated_client.post("/books/", json=test_book_data)
+        book_id = create_response.json()["id"]
+        
+        response = authenticated_client.get(f"/books/{book_id}")
+        
+        assert response.status_code == 200
+        data = response.json()
+        assert data["id"] == book_id
+        assert data["title"] == test_book_data["title"]
+    
+    def test_delete_book(self, authenticated_client, test_book_data):
+        """Test deleting a book."""
+        create_response = authenticated_client.post("/books/", json=test_book_data)
+        book_id = create_response.json()["id"]
+        
+        response = authenticated_client.delete(f"/books/{book_id}")
+        
+        assert response.status_code == 200
+        
+        get_response = authenticated_client.get(f"/books/{book_id}")
+        assert get_response.status_code == 404
+    
+    def test_book_search(self, authenticated_client, test_book_data):
+        """Test searching books."""
+        authenticated_client.post("/books/", json=test_book_data)
+        
+        response = authenticated_client.get("/books/?search=Orwell")
+        assert response.status_code == 200
+        books = response.json()
+        assert len(books) >= 1
+        
+        response = authenticated_client.get("/books/?search=Fiction")
+        assert response.status_code == 200
+        books = response.json()
+        assert len(books) >= 1
+    
+    def test_book_sorting(self, authenticated_client, test_book_data):
+        """Test sorting books."""
+        book1 = test_book_data.copy()
+        book1["title"] = "Book A"
+        book1["rating"] = 5.0
+        authenticated_client.post("/books/", json=book1)
+        
+        book2 = test_book_data.copy()
+        book2["title"] = "Book B"
+        book2["rating"] = 9.0
+        authenticated_client.post("/books/", json=book2)
+        
+        response = authenticated_client.get("/books/?sort_by=rating&order=desc")
+        assert response.status_code == 200
+        books = response.json()
+        if len(books) >= 2:
+            assert books[0]["rating"] >= books[1]["rating"]
+        
+        response = authenticated_client.get("/books/?sort_by=year&order=asc")
+        assert response.status_code == 200
+        books = response.json()
+        if len(books) >= 2:
+            years = [b.get("year") for b in books if b.get("year")]
+            if len(years) >= 2:
+                assert years[0] <= years[1]
+    
+    def test_get_nonexistent_book(self, authenticated_client):
+        """Test getting a non-existent book returns 404."""
+        response = authenticated_client.get("/books/99999")
+        assert response.status_code == 404
+    
+    def test_update_nonexistent_book(self, authenticated_client):
+        """Test updating a non-existent book returns 404."""
+        response = authenticated_client.put("/books/99999", json={"rating": 5})
+        assert response.status_code == 404
+    
+    def test_delete_nonexistent_book(self, authenticated_client):
+        """Test deleting a non-existent book returns 404."""
+        response = authenticated_client.delete("/books/99999")
+        assert response.status_code == 404
+    
+    def test_book_endpoint_requires_auth(self, client):
+        """Test that book endpoint requires authentication."""
+        response = client.get("/books/")
+        assert response.status_code == 401
+
+
 class TestAuthenticationRequired:
     """Test that protected endpoints require authentication."""
     
@@ -588,11 +888,13 @@ class TestAuthenticationRequired:
 class TestExportImport:
     """Test export/import functionality."""
     
-    def test_export_data(self, authenticated_client, test_movie_data, test_tv_show_data, test_video_game_data):
+    def test_export_data(self, authenticated_client, test_movie_data, test_tv_show_data, test_video_game_data, test_music_data, test_book_data):
         """Test exporting data."""
         authenticated_client.post("/movies/", json=test_movie_data)
         authenticated_client.post("/tv-shows/", json=test_tv_show_data)
         authenticated_client.post("/video-games/", json=test_video_game_data)
+        authenticated_client.post("/music/", json=test_music_data)
+        authenticated_client.post("/books/", json=test_book_data)
         
         response = authenticated_client.get("/export/")
         
@@ -602,10 +904,14 @@ class TestExportImport:
         assert "tv_shows" in data
         assert "anime" in data
         assert "video_games" in data
+        assert "music" in data
+        assert "books" in data
         assert "export_metadata" in data
         assert len(data["movies"]) >= 1
         assert len(data["tv_shows"]) >= 1
         assert len(data["video_games"]) >= 1
+        assert len(data["music"]) >= 1
+        assert len(data["books"]) >= 1
     
     def test_import_data(self, authenticated_client):
         """Test importing data."""
@@ -637,6 +943,24 @@ class TestExportImport:
                     "rating": 8.5,
                     "played": True
                 }
+            ],
+            "music": [
+                {
+                    "title": "Imported Album",
+                    "artist": "Test Artist",
+                    "year": 2020,
+                    "rating": 8.5,
+                    "listened": True
+                }
+            ],
+            "books": [
+                {
+                    "title": "Imported Book",
+                    "author": "Test Author",
+                    "year": 2020,
+                    "rating": 8.5,
+                    "read": True
+                }
             ]
         }
         
@@ -650,7 +974,13 @@ class TestExportImport:
         assert "anime_updated" in result
         assert "video_games_created" in result
         assert "video_games_updated" in result
+        assert "music_created" in result
+        assert "music_updated" in result
+        assert "books_created" in result
+        assert "books_updated" in result
         assert result["video_games_created"] >= 1
+        assert result["music_created"] >= 1
+        assert result["books_created"] >= 1
     
     def test_import_from_file(self, authenticated_client):
         """Test importing data from a JSON file."""
@@ -921,4 +1251,222 @@ class TestDataIsolation:
         tv_shows = tv_shows_response.json()
         assert len(tv_shows) == 1
         assert tv_shows[0]["title"] == "User2 TV Show"
+    
+    def test_users_cannot_see_each_others_music(self, client, test_user_data, test_music_data, db_session):
+        """Test that users can only see their own music."""
+        from app import crud, models, schemas, auth
+        
+        user1_create = schemas.UserCreate(**test_user_data)
+        hashed_password1 = auth.get_password_hash(test_user_data["password"])
+        user1 = crud.create_user(db_session, user1_create, hashed_password1, "token1")
+        
+        user2_data = test_user_data.copy()
+        user2_data["email"] = "user2music@test.com"
+        user2_data["username"] = "user2music"
+        user2_create = schemas.UserCreate(**user2_data)
+        hashed_password2 = auth.get_password_hash(user2_data["password"])
+        user2 = crud.create_user(db_session, user2_create, hashed_password2, "token2")
+        
+        user1.is_verified = True
+        user2.is_verified = True
+        db_session.commit()
+        
+        music1_create = schemas.MusicCreate(**test_music_data)
+        crud.create_music(db_session, user1.id, music1_create)
+        
+        music2_data = test_music_data.copy()
+        music2_data["title"] = "User2 Album"
+        music2_create = schemas.MusicCreate(**music2_data)
+        crud.create_music(db_session, user2.id, music2_create)
+        
+        login_response = client.post(
+            "/auth/login",
+            data={"username": "user2music", "password": test_user_data["password"]},
+            headers={"content-type": "application/x-www-form-urlencoded"}
+        )
+        token = login_response.json()["access_token"]
+        client.headers = {"Authorization": f"Bearer {token}"}
+        
+        music_response = client.get("/music/")
+        assert music_response.status_code == 200
+        music = music_response.json()
+        assert len(music) == 1
+        assert music[0]["title"] == "User2 Album"
+    
+    def test_users_cannot_update_each_others_music(self, client, test_user_data, test_music_data, db_session):
+        """Test that users cannot update each other's music."""
+        from app import crud, models, schemas, auth
+        
+        user1_create = schemas.UserCreate(**test_user_data)
+        hashed_password1 = auth.get_password_hash(test_user_data["password"])
+        user1 = crud.create_user(db_session, user1_create, hashed_password1, "token1")
+        
+        user2_data = test_user_data.copy()
+        user2_data["email"] = "user2musicup@test.com"
+        user2_data["username"] = "user2musicup"
+        user2_create = schemas.UserCreate(**user2_data)
+        hashed_password2 = auth.get_password_hash(user2_data["password"])
+        user2 = crud.create_user(db_session, user2_create, hashed_password2, "token2")
+        
+        user1.is_verified = True
+        user2.is_verified = True
+        db_session.commit()
+        
+        music1_create = schemas.MusicCreate(**test_music_data)
+        created_music = crud.create_music(db_session, user1.id, music1_create)
+        music_id = created_music.id
+        
+        login_response = client.post(
+            "/auth/login",
+            data={"username": "user2musicup", "password": test_user_data["password"]},
+            headers={"content-type": "application/x-www-form-urlencoded"}
+        )
+        token = login_response.json()["access_token"]
+        client.headers = {"Authorization": f"Bearer {token}"}
+        
+        response = client.put(f"/music/{music_id}", json={"rating": 1})
+        assert response.status_code == 404
+    
+    def test_users_cannot_delete_each_others_music(self, client, test_user_data, test_music_data, db_session):
+        """Test that users cannot delete each other's music."""
+        from app import crud, models, schemas, auth
+        
+        user1_create = schemas.UserCreate(**test_user_data)
+        hashed_password1 = auth.get_password_hash(test_user_data["password"])
+        user1 = crud.create_user(db_session, user1_create, hashed_password1, "token1")
+        
+        user2_data = test_user_data.copy()
+        user2_data["email"] = "user2musicdel@test.com"
+        user2_data["username"] = "user2musicdel"
+        user2_create = schemas.UserCreate(**user2_data)
+        hashed_password2 = auth.get_password_hash(user2_data["password"])
+        user2 = crud.create_user(db_session, user2_create, hashed_password2, "token2")
+        
+        user1.is_verified = True
+        user2.is_verified = True
+        db_session.commit()
+        
+        music1_create = schemas.MusicCreate(**test_music_data)
+        created_music = crud.create_music(db_session, user1.id, music1_create)
+        music_id = created_music.id
+        
+        login_response = client.post(
+            "/auth/login",
+            data={"username": "user2musicdel", "password": test_user_data["password"]},
+            headers={"content-type": "application/x-www-form-urlencoded"}
+        )
+        token = login_response.json()["access_token"]
+        client.headers = {"Authorization": f"Bearer {token}"}
+        
+        response = client.delete(f"/music/{music_id}")
+        assert response.status_code == 404
+    
+    def test_users_cannot_see_each_others_books(self, client, test_user_data, test_book_data, db_session):
+        """Test that users can only see their own books."""
+        from app import crud, models, schemas, auth
+        
+        user1_create = schemas.UserCreate(**test_user_data)
+        hashed_password1 = auth.get_password_hash(test_user_data["password"])
+        user1 = crud.create_user(db_session, user1_create, hashed_password1, "token1")
+        
+        user2_data = test_user_data.copy()
+        user2_data["email"] = "user2book@test.com"
+        user2_data["username"] = "user2book"
+        user2_create = schemas.UserCreate(**user2_data)
+        hashed_password2 = auth.get_password_hash(user2_data["password"])
+        user2 = crud.create_user(db_session, user2_create, hashed_password2, "token2")
+        
+        user1.is_verified = True
+        user2.is_verified = True
+        db_session.commit()
+        
+        book1_create = schemas.BookCreate(**test_book_data)
+        crud.create_book(db_session, user1.id, book1_create)
+        
+        book2_data = test_book_data.copy()
+        book2_data["title"] = "User2 Book"
+        book2_create = schemas.BookCreate(**book2_data)
+        crud.create_book(db_session, user2.id, book2_create)
+        
+        login_response = client.post(
+            "/auth/login",
+            data={"username": "user2book", "password": test_user_data["password"]},
+            headers={"content-type": "application/x-www-form-urlencoded"}
+        )
+        token = login_response.json()["access_token"]
+        client.headers = {"Authorization": f"Bearer {token}"}
+        
+        books_response = client.get("/books/")
+        assert books_response.status_code == 200
+        books = books_response.json()
+        assert len(books) == 1
+        assert books[0]["title"] == "User2 Book"
+    
+    def test_users_cannot_update_each_others_books(self, client, test_user_data, test_book_data, db_session):
+        """Test that users cannot update each other's books."""
+        from app import crud, models, schemas, auth
+        
+        user1_create = schemas.UserCreate(**test_user_data)
+        hashed_password1 = auth.get_password_hash(test_user_data["password"])
+        user1 = crud.create_user(db_session, user1_create, hashed_password1, "token1")
+        
+        user2_data = test_user_data.copy()
+        user2_data["email"] = "user2bookup@test.com"
+        user2_data["username"] = "user2bookup"
+        user2_create = schemas.UserCreate(**user2_data)
+        hashed_password2 = auth.get_password_hash(user2_data["password"])
+        user2 = crud.create_user(db_session, user2_create, hashed_password2, "token2")
+        
+        user1.is_verified = True
+        user2.is_verified = True
+        db_session.commit()
+        
+        book1_create = schemas.BookCreate(**test_book_data)
+        created_book = crud.create_book(db_session, user1.id, book1_create)
+        book_id = created_book.id
+        
+        login_response = client.post(
+            "/auth/login",
+            data={"username": "user2bookup", "password": test_user_data["password"]},
+            headers={"content-type": "application/x-www-form-urlencoded"}
+        )
+        token = login_response.json()["access_token"]
+        client.headers = {"Authorization": f"Bearer {token}"}
+        
+        response = client.put(f"/books/{book_id}", json={"rating": 1})
+        assert response.status_code == 404
+    
+    def test_users_cannot_delete_each_others_books(self, client, test_user_data, test_book_data, db_session):
+        """Test that users cannot delete each other's books."""
+        from app import crud, models, schemas, auth
+        
+        user1_create = schemas.UserCreate(**test_user_data)
+        hashed_password1 = auth.get_password_hash(test_user_data["password"])
+        user1 = crud.create_user(db_session, user1_create, hashed_password1, "token1")
+        
+        user2_data = test_user_data.copy()
+        user2_data["email"] = "user2bookdel@test.com"
+        user2_data["username"] = "user2bookdel"
+        user2_create = schemas.UserCreate(**user2_data)
+        hashed_password2 = auth.get_password_hash(user2_data["password"])
+        user2 = crud.create_user(db_session, user2_create, hashed_password2, "token2")
+        
+        user1.is_verified = True
+        user2.is_verified = True
+        db_session.commit()
+        
+        book1_create = schemas.BookCreate(**test_book_data)
+        created_book = crud.create_book(db_session, user1.id, book1_create)
+        book_id = created_book.id
+        
+        login_response = client.post(
+            "/auth/login",
+            data={"username": "user2bookdel", "password": test_user_data["password"]},
+            headers={"content-type": "application/x-www-form-urlencoded"}
+        )
+        token = login_response.json()["access_token"]
+        client.headers = {"Authorization": f"Bearer {token}"}
+        
+        response = client.delete(f"/books/{book_id}")
+        assert response.status_code == 404
 

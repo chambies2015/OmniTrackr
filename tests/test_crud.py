@@ -834,3 +834,397 @@ class TestVideoGameCRUD:
         video_games = crud.get_video_games(db_session, user.id, sort_by="release_date", order="asc")
         
         assert len(video_games) >= 2
+
+
+class TestMusicCRUD:
+    """Test music CRUD operations."""
+    
+    def test_create_music(self, db_session, test_music_data):
+        """Test creating music."""
+        user_create = schemas.UserCreate(
+            email="musictest@example.com",
+            username="musictest",
+            password="password123"
+        )
+        user = crud.create_user(db_session, user_create, "hashed", "token")
+        
+        music_create = schemas.MusicCreate(**test_music_data)
+        music = crud.create_music(db_session, user.id, music_create)
+        
+        assert music is not None
+        assert music.title == test_music_data["title"]
+        assert music.artist == test_music_data["artist"]
+        assert music.year == test_music_data["year"]
+        assert music.user_id == user.id
+    
+    def test_get_music(self, db_session, test_music_data):
+        """Test retrieving music."""
+        user_create = schemas.UserCreate(
+            email="musicget@example.com",
+            username="musicget",
+            password="password123"
+        )
+        user = crud.create_user(db_session, user_create, "hashed", "token")
+        
+        music_create = schemas.MusicCreate(**test_music_data)
+        crud.create_music(db_session, user.id, music_create)
+        
+        music_list = crud.get_music(db_session, user.id)
+        
+        assert len(music_list) >= 1
+        assert any(m.title == test_music_data["title"] for m in music_list)
+    
+    def test_get_music_with_search(self, db_session, test_music_data):
+        """Test searching music."""
+        user_create = schemas.UserCreate(
+            email="musicsearch@example.com",
+            username="musicsearch",
+            password="password123"
+        )
+        user = crud.create_user(db_session, user_create, "hashed", "token")
+        
+        music_create = schemas.MusicCreate(**test_music_data)
+        crud.create_music(db_session, user.id, music_create)
+        
+        music_list = crud.get_music(db_session, user.id, search="Beatles")
+        
+        assert len(music_list) >= 1
+        assert any("Beatles" in m.artist for m in music_list)
+    
+    def test_update_music(self, db_session, test_music_data):
+        """Test updating music."""
+        user_create = schemas.UserCreate(
+            email="musicupdate@example.com",
+            username="musicupdate",
+            password="password123"
+        )
+        user = crud.create_user(db_session, user_create, "hashed", "token")
+        
+        music_create = schemas.MusicCreate(**test_music_data)
+        music = crud.create_music(db_session, user.id, music_create)
+        
+        update_data = schemas.MusicUpdate(rating=10.0, listened=False)
+        updated_music = crud.update_music(db_session, user.id, music.id, update_data)
+        
+        assert updated_music is not None
+        assert updated_music.rating == 10.0
+        assert updated_music.listened is False
+    
+    def test_create_music_with_decimal_rating(self, db_session):
+        """Test creating music with decimal rating."""
+        user_create = schemas.UserCreate(
+            email="musicdecimal@example.com",
+            username="musicdecimal",
+            password="password123"
+        )
+        user = crud.create_user(db_session, user_create, "hashed", "token")
+        
+        music_data = {
+            "title": "Test Album",
+            "artist": "Test Artist",
+            "year": 2020,
+            "rating": 8.7
+        }
+        music_create = schemas.MusicCreate(**music_data)
+        music = crud.create_music(db_session, user.id, music_create)
+        
+        assert music.rating == 8.7
+        assert isinstance(music.rating, (int, float))
+    
+    def test_update_music_with_decimal_rating(self, db_session, test_music_data):
+        """Test updating music with decimal rating."""
+        user_create = schemas.UserCreate(
+            email="musicupdecimal@example.com",
+            username="musicupdecimal",
+            password="password123"
+        )
+        user = crud.create_user(db_session, user_create, "hashed", "token")
+        
+        music_create = schemas.MusicCreate(**test_music_data)
+        music = crud.create_music(db_session, user.id, music_create)
+        
+        update_data = schemas.MusicUpdate(rating=7.3)
+        updated_music = crud.update_music(db_session, user.id, music.id, update_data)
+        
+        assert updated_music.rating == 7.3
+    
+    def test_delete_music(self, db_session, test_music_data):
+        """Test deleting music."""
+        user_create = schemas.UserCreate(
+            email="musicdelete@example.com",
+            username="musicdelete",
+            password="password123"
+        )
+        user = crud.create_user(db_session, user_create, "hashed", "token")
+        
+        music_create = schemas.MusicCreate(**test_music_data)
+        music = crud.create_music(db_session, user.id, music_create)
+        music_id = music.id
+        
+        deleted_music = crud.delete_music(db_session, user.id, music_id)
+        
+        assert deleted_music is not None
+        assert deleted_music.id == music_id
+        
+        retrieved_music = crud.get_music_by_id(db_session, user.id, music_id)
+        assert retrieved_music is None
+    
+    def test_get_music_by_id(self, db_session, test_music_data):
+        """Test retrieving music by ID."""
+        user_create = schemas.UserCreate(
+            email="musicbyid@example.com",
+            username="musicbyid",
+            password="password123"
+        )
+        user = crud.create_user(db_session, user_create, "hashed", "token")
+        
+        music_create = schemas.MusicCreate(**test_music_data)
+        music = crud.create_music(db_session, user.id, music_create)
+        
+        retrieved_music = crud.get_music_by_id(db_session, user.id, music.id)
+        
+        assert retrieved_music is not None
+        assert retrieved_music.id == music.id
+        assert retrieved_music.title == test_music_data["title"]
+    
+    def test_music_search(self, db_session, test_music_data):
+        """Test searching music by title, artist, or genre."""
+        user_create = schemas.UserCreate(
+            email="musicsearch2@example.com",
+            username="musicsearch2",
+            password="password123"
+        )
+        user = crud.create_user(db_session, user_create, "hashed", "token")
+        
+        music_create = schemas.MusicCreate(**test_music_data)
+        crud.create_music(db_session, user.id, music_create)
+        
+        music_list = crud.get_music(db_session, user.id, search="Abbey")
+        assert len(music_list) >= 1
+        
+        music_list = crud.get_music(db_session, user.id, search="Beatles")
+        assert len(music_list) >= 1
+        
+        music_list = crud.get_music(db_session, user.id, search="Rock")
+        assert len(music_list) >= 1
+    
+    def test_music_sorting(self, db_session, test_music_data):
+        """Test sorting music."""
+        user_create = schemas.UserCreate(
+            email="musicsort@example.com",
+            username="musicsort",
+            password="password123"
+        )
+        user = crud.create_user(db_session, user_create, "hashed", "token")
+        
+        music1_data = test_music_data.copy()
+        music1_data["title"] = "Album A"
+        music1_data["rating"] = 5.0
+        music1 = crud.create_music(db_session, user.id, schemas.MusicCreate(**music1_data))
+        
+        music2_data = test_music_data.copy()
+        music2_data["title"] = "Album B"
+        music2_data["rating"] = 9.0
+        music2 = crud.create_music(db_session, user.id, schemas.MusicCreate(**music2_data))
+        
+        music_list = crud.get_music(db_session, user.id, sort_by="rating", order="desc")
+        
+        assert len(music_list) >= 2
+        assert music_list[0].rating >= music_list[1].rating
+
+
+class TestBookCRUD:
+    """Test book CRUD operations."""
+    
+    def test_create_book(self, db_session, test_book_data):
+        """Test creating a book."""
+        user_create = schemas.UserCreate(
+            email="booktest@example.com",
+            username="booktest",
+            password="password123"
+        )
+        user = crud.create_user(db_session, user_create, "hashed", "token")
+        
+        book_create = schemas.BookCreate(**test_book_data)
+        book = crud.create_book(db_session, user.id, book_create)
+        
+        assert book is not None
+        assert book.title == test_book_data["title"]
+        assert book.author == test_book_data["author"]
+        assert book.year == test_book_data["year"]
+        assert book.user_id == user.id
+    
+    def test_get_books(self, db_session, test_book_data):
+        """Test retrieving books."""
+        user_create = schemas.UserCreate(
+            email="bookget@example.com",
+            username="bookget",
+            password="password123"
+        )
+        user = crud.create_user(db_session, user_create, "hashed", "token")
+        
+        book_create = schemas.BookCreate(**test_book_data)
+        crud.create_book(db_session, user.id, book_create)
+        
+        books_list = crud.get_books(db_session, user.id)
+        
+        assert len(books_list) >= 1
+        assert any(b.title == test_book_data["title"] for b in books_list)
+    
+    def test_get_books_with_search(self, db_session, test_book_data):
+        """Test searching books."""
+        user_create = schemas.UserCreate(
+            email="booksearch@example.com",
+            username="booksearch",
+            password="password123"
+        )
+        user = crud.create_user(db_session, user_create, "hashed", "token")
+        
+        book_create = schemas.BookCreate(**test_book_data)
+        crud.create_book(db_session, user.id, book_create)
+        
+        books_list = crud.get_books(db_session, user.id, search="Orwell")
+        
+        assert len(books_list) >= 1
+        assert any("Orwell" in b.author for b in books_list)
+    
+    def test_update_book(self, db_session, test_book_data):
+        """Test updating a book."""
+        user_create = schemas.UserCreate(
+            email="bookupdate@example.com",
+            username="bookupdate",
+            password="password123"
+        )
+        user = crud.create_user(db_session, user_create, "hashed", "token")
+        
+        book_create = schemas.BookCreate(**test_book_data)
+        book = crud.create_book(db_session, user.id, book_create)
+        
+        update_data = schemas.BookUpdate(rating=10.0, read=False)
+        updated_book = crud.update_book(db_session, user.id, book.id, update_data)
+        
+        assert updated_book is not None
+        assert updated_book.rating == 10.0
+        assert updated_book.read is False
+    
+    def test_create_book_with_decimal_rating(self, db_session):
+        """Test creating a book with decimal rating."""
+        user_create = schemas.UserCreate(
+            email="bookdecimal@example.com",
+            username="bookdecimal",
+            password="password123"
+        )
+        user = crud.create_user(db_session, user_create, "hashed", "token")
+        
+        book_data = {
+            "title": "Test Book",
+            "author": "Test Author",
+            "year": 2020,
+            "rating": 8.7
+        }
+        book_create = schemas.BookCreate(**book_data)
+        book = crud.create_book(db_session, user.id, book_create)
+        
+        assert book.rating == 8.7
+        assert isinstance(book.rating, (int, float))
+    
+    def test_update_book_with_decimal_rating(self, db_session, test_book_data):
+        """Test updating a book with decimal rating."""
+        user_create = schemas.UserCreate(
+            email="bookupdecimal@example.com",
+            username="bookupdecimal",
+            password="password123"
+        )
+        user = crud.create_user(db_session, user_create, "hashed", "token")
+        
+        book_create = schemas.BookCreate(**test_book_data)
+        book = crud.create_book(db_session, user.id, book_create)
+        
+        update_data = schemas.BookUpdate(rating=7.3)
+        updated_book = crud.update_book(db_session, user.id, book.id, update_data)
+        
+        assert updated_book.rating == 7.3
+    
+    def test_delete_book(self, db_session, test_book_data):
+        """Test deleting a book."""
+        user_create = schemas.UserCreate(
+            email="bookdelete@example.com",
+            username="bookdelete",
+            password="password123"
+        )
+        user = crud.create_user(db_session, user_create, "hashed", "token")
+        
+        book_create = schemas.BookCreate(**test_book_data)
+        book = crud.create_book(db_session, user.id, book_create)
+        book_id = book.id
+        
+        deleted_book = crud.delete_book(db_session, user.id, book_id)
+        
+        assert deleted_book is not None
+        assert deleted_book.id == book_id
+        
+        retrieved_book = crud.get_book_by_id(db_session, user.id, book_id)
+        assert retrieved_book is None
+    
+    def test_get_book_by_id(self, db_session, test_book_data):
+        """Test retrieving a book by ID."""
+        user_create = schemas.UserCreate(
+            email="bookbyid@example.com",
+            username="bookbyid",
+            password="password123"
+        )
+        user = crud.create_user(db_session, user_create, "hashed", "token")
+        
+        book_create = schemas.BookCreate(**test_book_data)
+        book = crud.create_book(db_session, user.id, book_create)
+        
+        retrieved_book = crud.get_book_by_id(db_session, user.id, book.id)
+        
+        assert retrieved_book is not None
+        assert retrieved_book.id == book.id
+        assert retrieved_book.title == test_book_data["title"]
+    
+    def test_book_search(self, db_session, test_book_data):
+        """Test searching books by title, author, or genre."""
+        user_create = schemas.UserCreate(
+            email="booksearch2@example.com",
+            username="booksearch2",
+            password="password123"
+        )
+        user = crud.create_user(db_session, user_create, "hashed", "token")
+        
+        book_create = schemas.BookCreate(**test_book_data)
+        crud.create_book(db_session, user.id, book_create)
+        
+        books_list = crud.get_books(db_session, user.id, search="1984")
+        assert len(books_list) >= 1
+        
+        books_list = crud.get_books(db_session, user.id, search="Orwell")
+        assert len(books_list) >= 1
+        
+        books_list = crud.get_books(db_session, user.id, search="Fiction")
+        assert len(books_list) >= 1
+    
+    def test_book_sorting(self, db_session, test_book_data):
+        """Test sorting books."""
+        user_create = schemas.UserCreate(
+            email="booksort@example.com",
+            username="booksort",
+            password="password123"
+        )
+        user = crud.create_user(db_session, user_create, "hashed", "token")
+        
+        book1_data = test_book_data.copy()
+        book1_data["title"] = "Book A"
+        book1_data["rating"] = 5.0
+        book1 = crud.create_book(db_session, user.id, schemas.BookCreate(**book1_data))
+        
+        book2_data = test_book_data.copy()
+        book2_data["title"] = "Book B"
+        book2_data["rating"] = 9.0
+        book2 = crud.create_book(db_session, user.id, schemas.BookCreate(**book2_data))
+        
+        books_list = crud.get_books(db_session, user.id, sort_by="rating", order="desc")
+        
+        assert len(books_list) >= 2
+        assert books_list[0].rating >= books_list[1].rating
