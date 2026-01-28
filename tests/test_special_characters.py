@@ -288,6 +288,94 @@ class TestSpecialCharactersAnime:
         assert "\n" in data["title"]
 
 
+class TestMusicSpecialCharacters:
+    """Test music with special characters."""
+    
+    def test_create_music_with_apostrophe(self, authenticated_client):
+        """Test creating music with apostrophe in title."""
+        music_data = {
+            "title": "Don't Stop Believin'",
+            "artist": "Journey",
+            "year": 1981,
+            "rating": 9
+        }
+        response = authenticated_client.post("/music/", json=music_data)
+        
+        assert response.status_code == 201
+        data = response.json()
+        assert data["title"] == "Don't Stop Believin'"
+    
+    def test_create_music_with_quotes(self, authenticated_client):
+        """Test creating music with quotes in artist name."""
+        music_data = {
+            "title": "Album Title",
+            "artist": "The \"Beatles\"",
+            "year": 1969,
+            "rating": 10
+        }
+        response = authenticated_client.post("/music/", json=music_data)
+        
+        assert response.status_code == 201
+        data = response.json()
+        assert "Beatles" in data["artist"]
+    
+    def test_update_music_with_apostrophe(self, authenticated_client, test_music_data):
+        """Test updating music with apostrophe."""
+        create_response = authenticated_client.post("/music/", json=test_music_data)
+        music_id = create_response.json()["id"]
+        
+        update_data = {"title": "It's a Great Album"}
+        response = authenticated_client.put(f"/music/{music_id}", json=update_data)
+        
+        assert response.status_code == 200
+        data = response.json()
+        assert data["title"] == "It's a Great Album"
+
+
+class TestBookSpecialCharacters:
+    """Test books with special characters."""
+    
+    def test_create_book_with_apostrophe(self, authenticated_client):
+        """Test creating book with apostrophe in title."""
+        book_data = {
+            "title": "It's a Great Book",
+            "author": "John O'Connor",
+            "year": 2020,
+            "rating": 9
+        }
+        response = authenticated_client.post("/books/", json=book_data)
+        
+        assert response.status_code == 201
+        data = response.json()
+        assert data["title"] == "It's a Great Book"
+    
+    def test_create_book_with_quotes(self, authenticated_client):
+        """Test creating book with quotes in author name."""
+        book_data = {
+            "title": "Book Title",
+            "author": "Author \"Name\"",
+            "year": 2020,
+            "rating": 8
+        }
+        response = authenticated_client.post("/books/", json=book_data)
+        
+        assert response.status_code == 201
+        data = response.json()
+        assert "Name" in data["author"]
+    
+    def test_update_book_with_apostrophe(self, authenticated_client, test_book_data):
+        """Test updating book with apostrophe."""
+        create_response = authenticated_client.post("/books/", json=test_book_data)
+        book_id = create_response.json()["id"]
+        
+        update_data = {"title": "It's a Great Book"}
+        response = authenticated_client.put(f"/books/{book_id}", json=update_data)
+        
+        assert response.status_code == 200
+        data = response.json()
+        assert data["title"] == "It's a Great Book"
+
+
 class TestSpecialCharactersEdgeCases:
     """Test edge cases with special characters."""
     

@@ -501,7 +501,11 @@ body.dark-mode td {
 #animeTable th,
 #animeTable td,
 #videoGameTable th,
-#videoGameTable td {
+#videoGameTable td,
+#musicTable th,
+#musicTable td,
+#bookTable th,
+#bookTable td {
   text-align: center;
 }
 
@@ -519,7 +523,11 @@ table[id^="customTab"][id$="Table"] td {
 #animeTable th:nth-child(8),
 #animeTable td:nth-child(8),
 #videoGameTable th:nth-child(8),
-#videoGameTable td:nth-child(8) {
+#videoGameTable td:nth-child(8),
+#musicTable th:nth-child(8),
+#musicTable td:nth-child(8),
+#bookTable th:nth-child(8),
+#bookTable td:nth-child(8) {
   width: 28%;
   white-space: normal;
   overflow-wrap: anywhere;
@@ -564,7 +572,11 @@ body.dark-mode .watched-icon.unwatched {
 #animeTable th:nth-child(1),
 #animeTable td:nth-child(1),
 #videoGameTable th:nth-child(1),
-#videoGameTable td:nth-child(1) {
+#videoGameTable td:nth-child(1),
+#musicTable th:nth-child(1),
+#musicTable td:nth-child(1),
+#bookTable th:nth-child(1),
+#bookTable td:nth-child(1) {
   width: 80px;
 }
 
@@ -575,7 +587,11 @@ body.dark-mode .watched-icon.unwatched {
 #animeTable th:nth-child(2),
 #animeTable td:nth-child(2),
 #videoGameTable th:nth-child(2),
-#videoGameTable td:nth-child(2) {
+#videoGameTable td:nth-child(2),
+#musicTable th:nth-child(2),
+#musicTable td:nth-child(2),
+#bookTable th:nth-child(2),
+#bookTable td:nth-child(2) {
   width: 18%;
 }
 
@@ -586,7 +602,11 @@ body.dark-mode .watched-icon.unwatched {
 #animeTable th:nth-child(3),
 #animeTable td:nth-child(3),
 #videoGameTable th:nth-child(3),
-#videoGameTable td:nth-child(3) {
+#videoGameTable td:nth-child(3),
+#musicTable th:nth-child(3),
+#musicTable td:nth-child(3),
+#bookTable th:nth-child(3),
+#bookTable td:nth-child(3) {
   width: 14%;
 }
 
@@ -597,7 +617,11 @@ body.dark-mode .watched-icon.unwatched {
 #animeTable th:nth-child(4),
 #animeTable td:nth-child(4),
 #videoGameTable th:nth-child(4),
-#videoGameTable td:nth-child(4) {
+#videoGameTable td:nth-child(4),
+#musicTable th:nth-child(4),
+#musicTable td:nth-child(4),
+#bookTable th:nth-child(4),
+#bookTable td:nth-child(4) {
   width: 8%;
 }
 
@@ -608,7 +632,11 @@ body.dark-mode .watched-icon.unwatched {
 #animeTable th:nth-child(5),
 #animeTable td:nth-child(5),
 #videoGameTable th:nth-child(5),
-#videoGameTable td:nth-child(5) {
+#videoGameTable td:nth-child(5),
+#musicTable th:nth-child(5),
+#musicTable td:nth-child(5),
+#bookTable th:nth-child(5),
+#bookTable td:nth-child(5) {
   width: 8%;
 }
 
@@ -619,7 +647,11 @@ body.dark-mode .watched-icon.unwatched {
 #animeTable th:nth-child(6),
 #animeTable td:nth-child(6),
 #videoGameTable th:nth-child(6),
-#videoGameTable td:nth-child(6) {
+#videoGameTable td:nth-child(6),
+#musicTable th:nth-child(6),
+#musicTable td:nth-child(6),
+#bookTable th:nth-child(6),
+#bookTable td:nth-child(6) {
   width: 8%;
 }
 
@@ -630,7 +662,11 @@ body.dark-mode .watched-icon.unwatched {
 #animeTable th:nth-child(7),
 #animeTable td:nth-child(7),
 #videoGameTable th:nth-child(7),
-#videoGameTable td:nth-child(7) {
+#videoGameTable td:nth-child(7),
+#musicTable th:nth-child(7),
+#musicTable td:nth-child(7),
+#bookTable th:nth-child(7),
+#bookTable td:nth-child(7) {
   width: 8%;
 }
 
@@ -641,7 +677,11 @@ body.dark-mode .watched-icon.unwatched {
 #animeTable th:nth-child(8),
 #animeTable td:nth-child(8),
 #videoGameTable th:nth-child(8),
-#videoGameTable td:nth-child(8) {
+#videoGameTable td:nth-child(8),
+#musicTable th:nth-child(8),
+#musicTable td:nth-child(8),
+#bookTable th:nth-child(8),
+#bookTable td:nth-child(8) {
   width: 8%;
 }
 
@@ -652,7 +692,11 @@ body.dark-mode .watched-icon.unwatched {
 #animeTable th:nth-child(9),
 #animeTable td:nth-child(9),
 #videoGameTable th:nth-child(9),
-#videoGameTable td:nth-child(9) {
+#videoGameTable td:nth-child(9),
+#musicTable th:nth-child(9),
+#musicTable td:nth-child(9),
+#bookTable th:nth-child(9),
+#bookTable td:nth-child(9) {
   width: 8%;
 }
 
@@ -3951,4 +3995,70 @@ body.dark-mode .friend-request-modal-content form input {
 
 .genre-stats h5 {
   margin-bottom: 16px;
+}
+
+.search-results-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+  gap: 20px;
+  max-height: 60vh;
+  overflow-y: auto;
+  padding: 20px;
+}
+
+.search-result-item {
+  cursor: pointer;
+  border: 2px solid transparent;
+  border-radius: 12px;
+  padding: 15px;
+  transition: all 0.3s ease;
+  background: var(--card-bg);
+  text-align: center;
+}
+
+.search-result-item:hover {
+  border-color: var(--primary);
+  transform: translateY(-5px);
+  box-shadow: 0 8px 16px rgba(0,0,0,0.2);
+}
+
+body.dark-mode .search-result-item:hover {
+  box-shadow: 0 8px 16px rgba(0,0,0,0.5);
+}
+
+.search-result-item img {
+  width: 100%;
+  height: auto;
+  border-radius: 8px;
+  margin-bottom: 10px;
+  max-width: 200px;
+}
+
+.search-result-item h4 {
+  margin: 10px 0 5px 0;
+  font-size: 1rem;
+  color: var(--fg);
+  font-weight: 600;
+}
+
+.search-result-item p {
+  margin: 5px 0;
+  font-size: 0.9rem;
+  color: var(--fg-secondary);
+}
+
+@media (max-width: 768px) {
+  .search-results-grid {
+    grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
+    gap: 15px;
+    padding: 15px;
+  }
+  
+  .search-result-item {
+    padding: 10px;
+  }
+  
+  .search-result-item img {
+    max-width: 150px;
+  }
 }

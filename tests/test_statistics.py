@@ -7,13 +7,15 @@ import pytest
 class TestStatisticsEndpoints:
     """Test statistics API endpoints."""
     
-    def test_get_statistics_dashboard(self, authenticated_client, test_movie_data, test_tv_show_data, test_anime_data, test_video_game_data):
+    def test_get_statistics_dashboard(self, authenticated_client, test_movie_data, test_tv_show_data, test_anime_data, test_video_game_data, test_music_data, test_book_data):
         """Test getting comprehensive statistics dashboard."""
         # Create some data
         authenticated_client.post("/movies/", json=test_movie_data)
         authenticated_client.post("/tv-shows/", json=test_tv_show_data)
         authenticated_client.post("/anime/", json=test_anime_data)
         authenticated_client.post("/video-games/", json=test_video_game_data)
+        authenticated_client.post("/music/", json=test_music_data)
+        authenticated_client.post("/books/", json=test_book_data)
         
         # Get statistics dashboard
         response = authenticated_client.get("/statistics/")
@@ -34,10 +36,14 @@ class TestStatisticsEndpoints:
         assert "total_tv_shows" in watch_stats
         assert "total_anime" in watch_stats
         assert "total_video_games" in watch_stats
+        assert "total_music" in watch_stats
+        assert "total_books" in watch_stats
         assert "watched_movies" in watch_stats
         assert "watched_tv_shows" in watch_stats
         assert "watched_anime" in watch_stats
         assert "played_video_games" in watch_stats
+        assert "listened_music" in watch_stats
+        assert "read_books" in watch_stats
         
         # Check rating stats structure
         rating_stats = data["rating_stats"]
@@ -51,13 +57,15 @@ class TestStatisticsEndpoints:
         assert "tv_shows_by_year" in year_stats
         assert "anime_by_year" in year_stats
         assert "video_games_by_year" in year_stats
+        assert "music_by_year" in year_stats
+        assert "books_by_year" in year_stats
         
         # Check director stats structure
         director_stats = data["director_stats"]
         assert "top_directors" in director_stats
         assert "highest_rated_directors" in director_stats
     
-    def test_get_watch_statistics(self, authenticated_client, test_movie_data, test_tv_show_data, test_anime_data, test_video_game_data):
+    def test_get_watch_statistics(self, authenticated_client, test_movie_data, test_tv_show_data, test_anime_data, test_video_game_data, test_music_data, test_book_data):
         """Test getting watch statistics."""
         # Create watched and unwatched items
         movie_data = test_movie_data.copy()
@@ -76,6 +84,14 @@ class TestStatisticsEndpoints:
         video_game_data["played"] = True
         authenticated_client.post("/video-games/", json=video_game_data)
         
+        music_data = test_music_data.copy()
+        music_data["listened"] = True
+        authenticated_client.post("/music/", json=music_data)
+        
+        book_data = test_book_data.copy()
+        book_data["read"] = True
+        authenticated_client.post("/books/", json=book_data)
+        
         # Get watch statistics
         response = authenticated_client.get("/statistics/watch/")
         
@@ -86,17 +102,25 @@ class TestStatisticsEndpoints:
         assert "total_tv_shows" in data
         assert "total_anime" in data
         assert "total_video_games" in data
+        assert "total_music" in data
+        assert "total_books" in data
         assert "watched_movies" in data
         assert "watched_tv_shows" in data
         assert "watched_anime" in data
         assert "played_video_games" in data
         assert "unplayed_video_games" in data
+        assert "listened_music" in data
+        assert "unlistened_music" in data
+        assert "read_books" in data
+        assert "unread_books" in data
         assert data["total_movies"] >= 1
         assert data["total_tv_shows"] >= 1
         assert data["total_anime"] >= 1
         assert data["total_video_games"] >= 1
+        assert data["total_music"] >= 1
+        assert data["total_books"] >= 1
     
-    def test_get_rating_statistics(self, authenticated_client, test_movie_data, test_tv_show_data, test_anime_data, test_video_game_data):
+    def test_get_rating_statistics(self, authenticated_client, test_movie_data, test_tv_show_data, test_anime_data, test_video_game_data, test_music_data, test_book_data):
         """Test getting rating statistics."""
         # Create items with ratings
         movie_data = test_movie_data.copy()
@@ -115,6 +139,14 @@ class TestStatisticsEndpoints:
         video_game_data["rating"] = 9.5
         authenticated_client.post("/video-games/", json=video_game_data)
         
+        music_data = test_music_data.copy()
+        music_data["rating"] = 9.8
+        authenticated_client.post("/music/", json=music_data)
+        
+        book_data = test_book_data.copy()
+        book_data["rating"] = 9.5
+        authenticated_client.post("/books/", json=book_data)
+        
         # Get rating statistics
         response = authenticated_client.get("/statistics/ratings/")
         
@@ -126,10 +158,10 @@ class TestStatisticsEndpoints:
         assert "rating_distribution" in data
         assert "highest_rated" in data
         assert "lowest_rated" in data
-        assert data["total_rated_items"] >= 4
+        assert data["total_rated_items"] >= 6
         assert isinstance(data["average_rating"], (int, float))
     
-    def test_get_year_statistics(self, authenticated_client, test_movie_data, test_tv_show_data, test_anime_data, test_video_game_data):
+    def test_get_year_statistics(self, authenticated_client, test_movie_data, test_tv_show_data, test_anime_data, test_video_game_data, test_music_data, test_book_data):
         """Test getting year-based statistics."""
         from datetime import datetime
         # Create items with specific years
@@ -149,6 +181,14 @@ class TestStatisticsEndpoints:
         video_game_data["release_date"] = datetime(2017, 3, 3).isoformat()
         authenticated_client.post("/video-games/", json=video_game_data)
         
+        music_data = test_music_data.copy()
+        music_data["year"] = 1969
+        authenticated_client.post("/music/", json=music_data)
+        
+        book_data = test_book_data.copy()
+        book_data["year"] = 1949
+        authenticated_client.post("/books/", json=book_data)
+        
         # Get year statistics
         response = authenticated_client.get("/statistics/years/")
         
@@ -159,6 +199,8 @@ class TestStatisticsEndpoints:
         assert "tv_shows_by_year" in data
         assert "anime_by_year" in data
         assert "video_games_by_year" in data
+        assert "music_by_year" in data
+        assert "books_by_year" in data
         assert "all_years" in data
         assert "decade_stats" in data
         assert isinstance(data["all_years"], list)
@@ -472,7 +514,7 @@ class TestStatisticsEndpoints:
     
     def test_category_statistics_empty_data(self, authenticated_client):
         """Test category statistics endpoints with no data."""
-        categories = ["movies", "tv-shows", "anime", "video-games"]
+        categories = ["movies", "tv-shows", "anime", "video-games", "music", "books"]
         
         for category in categories:
             response = authenticated_client.get(f"/statistics/{category}/")
@@ -501,7 +543,9 @@ class TestStatisticsEndpoints:
             "/statistics/movies/",
             "/statistics/tv-shows/",
             "/statistics/anime/",
-            "/statistics/video-games/"
+            "/statistics/video-games/",
+            "/statistics/music/",
+            "/statistics/books/"
         ]
         
         for endpoint in endpoints:
@@ -657,4 +701,102 @@ class TestStatisticsEndpoints:
         assert "Action" in most_played
         # Adventure should be in most played (appears in game1 which is played)
         assert "Adventure" in most_played
+    
+    def test_get_music_statistics(self, authenticated_client, test_music_data):
+        """Test getting music-specific statistics."""
+        # Create music with various data
+        music1 = test_music_data.copy()
+        music1["listened"] = True
+        music1["rating"] = 9.0
+        music1["year"] = 1969
+        authenticated_client.post("/music/", json=music1)
+        
+        music2 = test_music_data.copy()
+        music2["title"] = "Album 2"
+        music2["artist"] = "Artist 2"
+        music2["listened"] = False
+        music2["rating"] = 8.5
+        music2["year"] = 1970
+        authenticated_client.post("/music/", json=music2)
+        
+        # Get music statistics
+        response = authenticated_client.get("/statistics/music/")
+        
+        assert response.status_code == 200
+        data = response.json()
+        
+        # Check structure
+        assert "watch_stats" in data
+        assert "rating_stats" in data
+        assert "year_stats" in data
+        
+        # Check watch stats (should use "listened" terminology)
+        watch_stats = data["watch_stats"]
+        assert watch_stats["total_items"] == 2
+        assert watch_stats["watched_items"] == 1
+        assert watch_stats["unwatched_items"] == 1
+        assert watch_stats["completion_percentage"] == 50.0
+        
+        # Check rating stats
+        rating_stats = data["rating_stats"]
+        assert rating_stats["total_rated_items"] == 2
+        assert abs(rating_stats["average_rating"] - 8.75) < 0.1
+        assert "rating_distribution" in rating_stats
+        assert len(rating_stats["highest_rated"]) > 0
+        
+        # Check year stats
+        year_stats = data["year_stats"]
+        assert "items_by_year" in year_stats
+        assert year_stats["oldest_year"] == 1969
+        assert year_stats["newest_year"] == 1970
+        assert "decade_stats" in year_stats
+    
+    def test_get_books_statistics(self, authenticated_client, test_book_data):
+        """Test getting book-specific statistics."""
+        # Create books with various data
+        book1 = test_book_data.copy()
+        book1["read"] = True
+        book1["rating"] = 9.5
+        book1["year"] = 1949
+        authenticated_client.post("/books/", json=book1)
+        
+        book2 = test_book_data.copy()
+        book2["title"] = "Book 2"
+        book2["author"] = "Author 2"
+        book2["read"] = False
+        book2["rating"] = 8.0
+        book2["year"] = 1950
+        authenticated_client.post("/books/", json=book2)
+        
+        # Get book statistics
+        response = authenticated_client.get("/statistics/books/")
+        
+        assert response.status_code == 200
+        data = response.json()
+        
+        # Check structure
+        assert "watch_stats" in data
+        assert "rating_stats" in data
+        assert "year_stats" in data
+        
+        # Check watch stats (should use "read" terminology)
+        watch_stats = data["watch_stats"]
+        assert watch_stats["total_items"] == 2
+        assert watch_stats["watched_items"] == 1
+        assert watch_stats["unwatched_items"] == 1
+        assert watch_stats["completion_percentage"] == 50.0
+        
+        # Check rating stats
+        rating_stats = data["rating_stats"]
+        assert rating_stats["total_rated_items"] == 2
+        assert abs(rating_stats["average_rating"] - 8.75) < 0.1
+        assert "rating_distribution" in rating_stats
+        assert len(rating_stats["highest_rated"]) > 0
+        
+        # Check year stats
+        year_stats = data["year_stats"]
+        assert "items_by_year" in year_stats
+        assert year_stats["oldest_year"] == 1949
+        assert year_stats["newest_year"] == 1950
+        assert "decade_stats" in year_stats
 

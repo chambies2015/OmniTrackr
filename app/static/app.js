@@ -84,6 +84,10 @@ function switchTab(tabName) {
     loadAnime();
   } else if (tabName === 'video-games') {
     loadVideoGames();
+  } else if (tabName === 'music') {
+    loadMusic();
+  } else if (tabName === 'books') {
+    loadBooks();
   } else if (tabName === 'statistics') {
     loadStatistics();
   }
@@ -1211,6 +1215,675 @@ window.cancelVideoGameEdit = function () {
   loadVideoGames();
 };
 
+let isLoadingMusic = false;
+
+async function loadMusic() {
+  if (isLoadingMusic) {
+    return;
+  }
+
+  isLoadingMusic = true;
+
+  try {
+    const search = document.getElementById('musicSearch').value;
+    const sortVal = document.getElementById('musicSort').value;
+    let sortField = '';
+    let order = '';
+    if (sortVal) {
+      const parts = sortVal.split('-');
+      sortField = parts[0];
+      order = parts[1] || '';
+    }
+    let url = `${API_BASE}/music/?`;
+    if (search) url += `search=${encodeURIComponent(search)}&`;
+    if (sortField) url += `sort_by=${encodeURIComponent(sortField)}&`;
+    if (order) url += `order=${encodeURIComponent(order)}`;
+    const res = await authenticatedFetch(url);
+    if (res.ok) {
+      const music = await res.json();
+      const tbody = document.querySelector('#musicTable tbody');
+      tbody.innerHTML = '';
+      const countElem = document.getElementById('musicCount');
+      if (countElem) countElem.textContent = `${music.length} Music`;
+      music.forEach((item) => {
+        const tr = document.createElement('tr');
+        tr.innerHTML = `
+          <td id="music-poster-${item.id}"></td>
+          <td>${escapeHtml(item.title)}</td>
+          <td>${escapeHtml(item.artist)}</td>
+          <td>${item.year}</td>
+          <td>${item.genre ? escapeHtml(item.genre) : ''}</td>
+          <td>${item.rating !== null && item.rating !== undefined ? parseFloat(item.rating).toFixed(1) + '/10' : ''}</td>
+          <td><span class="watched-icon ${item.listened ? 'watched' : 'unwatched'}">${item.listened ? '✓' : '✗'}</span></td>
+          <td>${item.review ? escapeHtml(item.review) : ''}</td>
+          <td>
+            <button class="action-btn edit-music-btn" data-music-id="${item.id}" data-music-title="${escapeHtml(item.title)}" data-music-artist="${escapeHtml(item.artist)}" data-music-year="${item.year}" data-music-genre="${escapeHtml(item.genre || '')}" data-music-rating="${item.rating ?? ''}" data-music-listened="${item.listened}" data-music-review="${escapeHtml(item.review || '')}">Edit</button>
+            <button class="action-btn delete-music-btn" data-music-id="${item.id}">Delete</button>
+          </td>
+        `;
+        tbody.appendChild(tr);
+
+        if (item.cover_art_url) {
+          displayMusicPoster(item.id, item.cover_art_url, item.title);
+        } else {
+          fetchMusicMetadata(item.id, item.title, item.artist);
+        }
+      });
+    }
+  } finally {
+    isLoadingMusic = false;
+  }
+}
+
+function displayMusicPoster(id, posterUrl, title = null) {
+  const cell = document.getElementById(`music-poster-${id}`);
+  if (cell && posterUrl) {
+    let altText = 'Music cover art';
+    if (title) {
+      altText = `${title} music cover art`;
+    } else {
+      const row = cell.closest('tr');
+      if (row && row.cells[1]) {
+        altText = `${row.cells[1].textContent} music cover art`;
+      }
+    }
+    altText = escapeHtml(altText);
+    const img = document.createElement('img');
+    img.src = posterUrl;
+    img.alt = altText;
+    img.style.width = '60px';
+    img.style.maxHeight = '90px';
+    img.style.objectFit = 'cover';
+    img.style.borderRadius = '4px';
+    img.loading = 'lazy';
+    img.onclick = () => showImagePopup(posterUrl, altText);
+    cell.innerHTML = '';
+    cell.appendChild(img);
+  }
+}
+
+async function fetchMusicMetadata(id, title, artist) {
+  const cacheKey = `music-${title}-${artist}`;
+
+  if (posterFetchInProgress.has(cacheKey)) {
+    const existingPromise = posterFetchQueue.get(cacheKey);
+    if (existingPromise) {
+      try {
+        const result = await existingPromise;
+        if (result && result.cover_art_url) {
+          displayMusicPoster(id, result.cover_art_url, result.normalized_title || title);
+          await saveMusicMetadata(id, result.cover_art_url, result.artist, result.year, result.genre, result.normalized_title);
+          updateMusicRowMetadata(id, result.artist, result.year, result.genre, result.normalized_title);
+        }
+      } catch (err) {
+      }
+    }
+    return;
+  }
+
+  const fetchPromise = (async () => {
+    try {
+      const searchQuery = artist ? `${title} ${artist}` : title;
+      const proxyUrl = `${API_BASE}/api/proxy/itunes?query=${encodeURIComponent(searchQuery)}&entity=album`;
+      
+      const controller = new AbortController();
+      const timeoutId = setTimeout(() => controller.abort(), 30000);
+      
+      let res;
+      try {
+        res = await fetch(proxyUrl, { 
+          signal: controller.signal,
+          headers: {
+            'Accept': 'application/json'
+          }
+        });
+        clearTimeout(timeoutId);
+      } catch (fetchError) {
+        clearTimeout(timeoutId);
+        if (fetchError.name === 'AbortError') {
+          console.warn(`iTunes API request timeout for "${title}". This may be due to network issues or VPN blocking.`);
+        } else {
+          console.warn(`Network error fetching metadata for "${title}":`, fetchError.message);
+        }
+        return null;
+      }
+
+      if (!res.ok) {
+        if (res.status === 429) {
+          console.warn('iTunes API rate limit reached. Metadata will be fetched later.');
+          return null;
+        }
+        if (res.status === 503) {
+          console.warn('iTunes API not available.');
+          return null;
+        }
+        if (res.status === 504) {
+          console.warn(`iTunes API timeout for "${title}". This may be due to network issues or VPN blocking.`);
+          return null;
+        }
+        if (res.status >= 500) {
+          console.warn(`iTunes API server error (${res.status}) for "${title}". This may be due to network issues.`);
+          return null;
+        }
+        return null;
+      }
+
+      let data;
+      try {
+        data = await res.json();
+      } catch (jsonError) {
+        console.warn(`Failed to parse iTunes API response for "${title}":`, jsonError);
+        return null;
+      }
+
+      if (data.errorMessage) {
+        console.warn(`iTunes API error for "${title}": ${data.errorMessage}`);
+        return null;
+      }
+      if (data && data.results && data.results.length > 0) {
+        const album = data.results[0];
+        const coverArtUrl = album.artworkUrl100 || album.artworkUrl60 || null;
+        const normalizedTitle = album.collectionName || album.trackName || null;
+        const albumArtist = album.artistName || null;
+        const albumYear = album.releaseDate ? parseInt(album.releaseDate.split('-')[0]) : null;
+        const albumGenres = album.primaryGenreName || null;
+
+        if (coverArtUrl) {
+          await saveMusicMetadata(id, coverArtUrl, albumArtist, albumYear, albumGenres, normalizedTitle);
+          displayMusicPoster(id, coverArtUrl, normalizedTitle || title);
+          updateMusicRowMetadata(id, albumArtist, albumYear, albumGenres, normalizedTitle);
+
+          return { cover_art_url: coverArtUrl, artist: albumArtist, year: albumYear, genre: albumGenres, normalized_title: normalizedTitle };
+        }
+      }
+      return null;
+    } catch (err) {
+      console.error('Error fetching music metadata:', err);
+      return null;
+    }
+  })();
+
+  const existingPromise = posterFetchQueue.get(cacheKey);
+  if (existingPromise) {
+    try {
+      const result = await existingPromise;
+      if (result && result.cover_art_url) {
+        displayMusicPoster(id, result.cover_art_url, result.normalized_title || title);
+        await saveMusicMetadata(id, result.cover_art_url, result.artist, result.year, result.genre, result.normalized_title);
+        updateMusicRowMetadata(id, result.artist, result.year, result.genre, result.normalized_title);
+      }
+    } catch (err) {
+    }
+    return;
+  }
+  
+  posterFetchQueue.set(cacheKey, fetchPromise);
+  posterFetchInProgress.add(cacheKey);
+
+  try {
+    const result = await fetchPromise;
+    if (result && result.cover_art_url) {
+      displayMusicPoster(id, result.cover_art_url, result.normalized_title || title);
+      await saveMusicMetadata(id, result.cover_art_url, result.artist, result.year, result.genre, result.normalized_title);
+      updateMusicRowMetadata(id, result.artist, result.year, result.genre, result.normalized_title);
+    }
+  } catch (err) {
+    console.error('Error fetching music metadata:', err);
+  } finally {
+    posterFetchInProgress.delete(cacheKey);
+    posterFetchQueue.delete(cacheKey);
+  }
+}
+
+function updateMusicRowMetadata(id, artist, year, genre, normalizedTitle) {
+  const row = document.querySelector(`#music-poster-${id}`)?.closest('tr');
+  if (!row) return;
+
+  if (normalizedTitle && row.cells[1]) {
+    row.cells[1].textContent = escapeHtml(normalizedTitle);
+  }
+
+  if (artist && row.cells[2]) {
+    row.cells[2].textContent = escapeHtml(artist);
+  }
+
+  if (year && row.cells[3]) {
+    row.cells[3].textContent = year;
+  }
+
+  if (genre && row.cells[4]) {
+    row.cells[4].textContent = escapeHtml(genre);
+  }
+}
+
+async function saveMusicMetadata(id, coverArtUrl, artist, year, genre, normalizedTitle) {
+  try {
+    const updateData = { cover_art_url: coverArtUrl };
+    if (artist) updateData.artist = artist;
+    if (year) updateData.year = year;
+    if (genre) updateData.genre = genre;
+    if (normalizedTitle) updateData.title = normalizedTitle;
+    await authenticatedFetch(`${API_BASE}/music/${id}`, {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(updateData),
+    });
+  } catch (err) {
+    console.error('Error saving music metadata:', err);
+  }
+}
+
+async function deleteMusic(id) {
+  if (!confirm('Are you sure you want to delete this music?')) return;
+  const res = await authenticatedFetch(`${API_BASE}/music/${id}`, { method: 'DELETE' });
+  if (res.ok) loadMusic();
+}
+
+window.enableMusicEdit = function (btn) {
+  if (editingRowId !== null) return;
+  const id = parseInt(btn.dataset.musicId, 10);
+  editingRowId = id;
+  const row = btn.closest('tr');
+  editingRowElement = row;
+  const title = btn.dataset.musicTitle || '';
+  const artist = btn.dataset.musicArtist || '';
+  const year = parseInt(btn.dataset.musicYear, 10);
+  const genre = btn.dataset.musicGenre || '';
+  const ratingVal = btn.dataset.musicRating || '';
+  const listened = btn.dataset.musicListened === 'true';
+  const review = btn.dataset.musicReview || '';
+  row.cells[1].innerHTML = `<input type="text" id="edit-music-title" value="${escapeHtml(title)}">`;
+  row.cells[2].innerHTML = `<input type="text" id="edit-music-artist" value="${escapeHtml(artist)}">`;
+  row.cells[3].innerHTML = `<input type="number" id="edit-music-year" value="${year}">`;
+  row.cells[4].innerHTML = `<input type="text" id="edit-music-genre" value="${escapeHtml(genre)}">`;
+  row.cells[5].innerHTML = `<input type="number" min="0" max="10" step="0.1" id="edit-music-rating" value="${ratingVal}">`;
+  row.cells[6].innerHTML = `<input type="checkbox" id="edit-music-listened" ${listened ? 'checked' : ''}>`;
+  row.cells[7].innerHTML = `<textarea id="edit-music-review" class="review-textarea">${escapeHtml(review)}</textarea>`;
+  const musicReviewTextarea = document.getElementById('edit-music-review');
+  if (musicReviewTextarea) {
+    musicReviewTextarea.style.height = 'auto';
+    musicReviewTextarea.style.height = Math.max(60, musicReviewTextarea.scrollHeight) + 'px';
+    musicReviewTextarea.addEventListener('input', function () {
+      this.style.height = 'auto';
+      this.style.height = Math.max(60, this.scrollHeight) + 'px';
+    });
+  }
+  const actionsCellIndex = row.cells.length - 1;
+  row.cells[actionsCellIndex].innerHTML = `
+    <button class="action-btn save-music-btn" data-music-id="${id}">Save</button>
+    <button class="action-btn cancel-music-btn">Cancel</button>
+  `;
+  disableOtherRowButtons(row, 'musicTable');
+};
+
+window.saveMusicEdit = async function (btn) {
+  const id = parseInt(btn.dataset.musicId, 10);
+  const title = document.getElementById('edit-music-title').value;
+  const artist = document.getElementById('edit-music-artist').value;
+  const year = parseInt(document.getElementById('edit-music-year').value, 10);
+  const genre = document.getElementById('edit-music-genre').value;
+  const listened = document.getElementById('edit-music-listened').checked;
+  const ratingVal = document.getElementById('edit-music-rating').value;
+  const reviewVal = document.getElementById('edit-music-review') ? document.getElementById('edit-music-review').value : '';
+
+  const updateData = { title, artist, year };
+  if (genre) updateData.genre = genre;
+  updateData.listened = listened;
+  if (ratingVal) updateData.rating = parseFloat(ratingVal);
+  if (reviewVal !== undefined) updateData.review = reviewVal;
+
+  const res = await authenticatedFetch(`${API_BASE}/music/${id}`, {
+    method: 'PUT',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(updateData),
+  });
+
+  if (res.ok) {
+    editingRowId = null;
+    editingRowElement = null;
+    enableAllRowButtons('musicTable');
+    loadMusic();
+  }
+};
+
+window.cancelMusicEdit = function () {
+  editingRowId = null;
+  editingRowElement = null;
+  enableAllRowButtons('musicTable');
+  loadMusic();
+};
+
+let isLoadingBooks = false;
+
+async function loadBooks() {
+  if (isLoadingBooks) {
+    return;
+  }
+
+  isLoadingBooks = true;
+
+  try {
+    const search = document.getElementById('bookSearch').value;
+    const sortVal = document.getElementById('bookSort').value;
+    let sortField = '';
+    let order = '';
+    if (sortVal) {
+      const parts = sortVal.split('-');
+      sortField = parts[0];
+      order = parts[1] || '';
+    }
+    let url = `${API_BASE}/books/?`;
+    if (search) url += `search=${encodeURIComponent(search)}&`;
+    if (sortField) url += `sort_by=${encodeURIComponent(sortField)}&`;
+    if (order) url += `order=${encodeURIComponent(order)}`;
+    const res = await authenticatedFetch(url);
+    if (res.ok) {
+      const books = await res.json();
+      const tbody = document.querySelector('#bookTable tbody');
+      tbody.innerHTML = '';
+      const countElem = document.getElementById('bookCount');
+      if (countElem) countElem.textContent = `${books.length} Books`;
+      books.forEach((book) => {
+        const tr = document.createElement('tr');
+        tr.innerHTML = `
+          <td id="book-poster-${book.id}"></td>
+          <td>${escapeHtml(book.title)}</td>
+          <td>${escapeHtml(book.author)}</td>
+          <td>${book.year}</td>
+          <td>${book.genre ? escapeHtml(book.genre) : ''}</td>
+          <td>${book.rating !== null && book.rating !== undefined ? parseFloat(book.rating).toFixed(1) + '/10' : ''}</td>
+          <td><span class="watched-icon ${book.read ? 'watched' : 'unwatched'}">${book.read ? '✓' : '✗'}</span></td>
+          <td>${book.review ? escapeHtml(book.review) : ''}</td>
+          <td>
+            <button class="action-btn edit-book-btn" data-book-id="${book.id}" data-book-title="${escapeHtml(book.title)}" data-book-author="${escapeHtml(book.author)}" data-book-year="${book.year}" data-book-genre="${escapeHtml(book.genre || '')}" data-book-rating="${book.rating ?? ''}" data-book-read="${book.read}" data-book-review="${escapeHtml(book.review || '')}">Edit</button>
+            <button class="action-btn delete-book-btn" data-book-id="${book.id}">Delete</button>
+          </td>
+        `;
+        tbody.appendChild(tr);
+
+        if (book.cover_art_url) {
+          displayBookPoster(book.id, book.cover_art_url, book.title);
+        } else {
+          fetchBookMetadata(book.id, book.title, book.author);
+        }
+      });
+    }
+  } finally {
+    isLoadingBooks = false;
+  }
+}
+
+function displayBookPoster(id, posterUrl, title = null) {
+  const cell = document.getElementById(`book-poster-${id}`);
+  if (cell && posterUrl) {
+    let altText = 'Book cover art';
+    if (title) {
+      altText = `${title} book cover art`;
+    } else {
+      const row = cell.closest('tr');
+      if (row && row.cells[1]) {
+        altText = `${row.cells[1].textContent} book cover art`;
+      }
+    }
+    altText = escapeHtml(altText);
+    const img = document.createElement('img');
+    img.src = posterUrl;
+    img.alt = altText;
+    img.style.width = '60px';
+    img.style.maxHeight = '90px';
+    img.style.objectFit = 'cover';
+    img.style.borderRadius = '4px';
+    img.loading = 'lazy';
+    img.onclick = () => showImagePopup(posterUrl, altText);
+    cell.innerHTML = '';
+    cell.appendChild(img);
+  }
+}
+
+async function fetchBookMetadata(id, title, author) {
+  const cacheKey = `book-${title}-${author}`;
+
+  if (posterFetchInProgress.has(cacheKey)) {
+    const existingPromise = posterFetchQueue.get(cacheKey);
+    if (existingPromise) {
+      try {
+        const result = await existingPromise;
+        if (result && result.cover_art_url) {
+          displayBookPoster(id, result.cover_art_url, result.normalized_title || title);
+          await saveBookMetadata(id, result.cover_art_url, result.author, result.year, result.genre, result.normalized_title);
+          updateBookRowMetadata(id, result.author, result.year, result.genre, result.normalized_title);
+        }
+      } catch (err) {
+      }
+    }
+    return;
+  }
+
+  const fetchPromise = (async () => {
+    try {
+      const searchQuery = author ? `${title} ${author}` : title;
+      const proxyUrl = `${API_BASE}/api/proxy/openlibrary?query=${encodeURIComponent(searchQuery)}`;
+      
+      const controller = new AbortController();
+      const timeoutId = setTimeout(() => controller.abort(), 30000);
+      
+      let res;
+      try {
+        res = await fetch(proxyUrl, { 
+          signal: controller.signal,
+          headers: {
+            'Accept': 'application/json'
+          }
+        });
+        clearTimeout(timeoutId);
+      } catch (fetchError) {
+        clearTimeout(timeoutId);
+        if (fetchError.name === 'AbortError') {
+          console.warn(`Open Library API request timeout for "${title}". This may be due to network issues or VPN blocking.`);
+        } else {
+          console.warn(`Network error fetching metadata for "${title}":`, fetchError.message);
+        }
+        return null;
+      }
+
+      if (!res.ok) {
+        if (res.status === 429) {
+          console.warn('Open Library API rate limit reached. Metadata will be fetched later.');
+          return null;
+        }
+        if (res.status === 504) {
+          console.warn(`Open Library API timeout for "${title}". This may be due to network issues or VPN blocking.`);
+          return null;
+        }
+        if (res.status >= 500) {
+          console.warn(`Open Library API server error (${res.status}) for "${title}". This may be due to network issues.`);
+          return null;
+        }
+        return null;
+      }
+
+      let data;
+      try {
+        data = await res.json();
+      } catch (jsonError) {
+        console.warn(`Failed to parse Open Library API response for "${title}":`, jsonError);
+        return null;
+      }
+
+      if (data && data.docs && data.docs.length > 0) {
+        const book = data.docs[0];
+        const coverId = book.cover_i || book.isbn?.[0] || null;
+        const coverArtUrl = coverId ? `https://covers.openlibrary.org/b/id/${coverId}-L.jpg` : null;
+        const normalizedTitle = book.title || null;
+        const bookAuthor = book.author_name && book.author_name.length > 0 ? book.author_name[0] : null;
+        const bookYear = book.first_publish_year || book.publish_year?.[0] || null;
+        const bookGenres = book.subject ? book.subject.slice(0, 3).join(', ') : null;
+
+        if (coverArtUrl) {
+          await saveBookMetadata(id, coverArtUrl, bookAuthor, bookYear, bookGenres, normalizedTitle);
+          displayBookPoster(id, coverArtUrl, normalizedTitle || title);
+          updateBookRowMetadata(id, bookAuthor, bookYear, bookGenres, normalizedTitle);
+
+          return { cover_art_url: coverArtUrl, author: bookAuthor, year: bookYear, genre: bookGenres, normalized_title: normalizedTitle };
+        }
+      }
+      return null;
+    } catch (err) {
+      console.error('Error fetching book metadata:', err);
+      return null;
+    }
+  })();
+
+  const existingPromise = posterFetchQueue.get(cacheKey);
+  if (existingPromise) {
+    try {
+      const result = await existingPromise;
+      if (result && result.cover_art_url) {
+        displayBookPoster(id, result.cover_art_url, result.normalized_title || title);
+        await saveBookMetadata(id, result.cover_art_url, result.author, result.year, result.genre, result.normalized_title);
+        updateBookRowMetadata(id, result.author, result.year, result.genre, result.normalized_title);
+      }
+    } catch (err) {
+    }
+    return;
+  }
+  
+  posterFetchQueue.set(cacheKey, fetchPromise);
+  posterFetchInProgress.add(cacheKey);
+
+  try {
+    const result = await fetchPromise;
+    if (result && result.cover_art_url) {
+      displayBookPoster(id, result.cover_art_url, result.normalized_title || title);
+      await saveBookMetadata(id, result.cover_art_url, result.author, result.year, result.genre, result.normalized_title);
+      updateBookRowMetadata(id, result.author, result.year, result.genre, result.normalized_title);
+    }
+  } catch (err) {
+    console.error('Error fetching book metadata:', err);
+  } finally {
+    posterFetchInProgress.delete(cacheKey);
+    posterFetchQueue.delete(cacheKey);
+  }
+}
+
+function updateBookRowMetadata(id, author, year, genre, normalizedTitle) {
+  const row = document.querySelector(`#book-poster-${id}`)?.closest('tr');
+  if (!row) return;
+
+  if (normalizedTitle && row.cells[1]) {
+    row.cells[1].textContent = escapeHtml(normalizedTitle);
+  }
+
+  if (author && row.cells[2]) {
+    row.cells[2].textContent = escapeHtml(author);
+  }
+
+  if (year && row.cells[3]) {
+    row.cells[3].textContent = year;
+  }
+
+  if (genre && row.cells[4]) {
+    row.cells[4].textContent = escapeHtml(genre);
+  }
+}
+
+async function saveBookMetadata(id, coverArtUrl, author, year, genre, normalizedTitle) {
+  try {
+    const updateData = { cover_art_url: coverArtUrl };
+    if (author) updateData.author = author;
+    if (year) updateData.year = year;
+    if (genre) updateData.genre = genre;
+    if (normalizedTitle) updateData.title = normalizedTitle;
+    await authenticatedFetch(`${API_BASE}/books/${id}`, {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(updateData),
+    });
+  } catch (err) {
+    console.error('Error saving book metadata:', err);
+  }
+}
+
+async function deleteBook(id) {
+  if (!confirm('Are you sure you want to delete this book?')) return;
+  const res = await authenticatedFetch(`${API_BASE}/books/${id}`, { method: 'DELETE' });
+  if (res.ok) loadBooks();
+}
+
+window.enableBookEdit = function (btn) {
+  if (editingRowId !== null) return;
+  const id = parseInt(btn.dataset.bookId, 10);
+  editingRowId = id;
+  const row = btn.closest('tr');
+  editingRowElement = row;
+  const title = btn.dataset.bookTitle || '';
+  const author = btn.dataset.bookAuthor || '';
+  const year = parseInt(btn.dataset.bookYear, 10);
+  const genre = btn.dataset.bookGenre || '';
+  const ratingVal = btn.dataset.bookRating || '';
+  const read = btn.dataset.bookRead === 'true';
+  const review = btn.dataset.bookReview || '';
+  row.cells[1].innerHTML = `<input type="text" id="edit-book-title" value="${escapeHtml(title)}">`;
+  row.cells[2].innerHTML = `<input type="text" id="edit-book-author" value="${escapeHtml(author)}">`;
+  row.cells[3].innerHTML = `<input type="number" id="edit-book-year" value="${year}">`;
+  row.cells[4].innerHTML = `<input type="text" id="edit-book-genre" value="${escapeHtml(genre)}">`;
+  row.cells[5].innerHTML = `<input type="number" min="0" max="10" step="0.1" id="edit-book-rating" value="${ratingVal}">`;
+  row.cells[6].innerHTML = `<input type="checkbox" id="edit-book-read" ${read ? 'checked' : ''}>`;
+  row.cells[7].innerHTML = `<textarea id="edit-book-review" class="review-textarea">${escapeHtml(review)}</textarea>`;
+  const bookReviewTextarea = document.getElementById('edit-book-review');
+  if (bookReviewTextarea) {
+    bookReviewTextarea.style.height = 'auto';
+    bookReviewTextarea.style.height = Math.max(60, bookReviewTextarea.scrollHeight) + 'px';
+    bookReviewTextarea.addEventListener('input', function () {
+      this.style.height = 'auto';
+      this.style.height = Math.max(60, this.scrollHeight) + 'px';
+    });
+  }
+  const actionsCellIndex = row.cells.length - 1;
+  row.cells[actionsCellIndex].innerHTML = `
+    <button class="action-btn save-book-btn" data-book-id="${id}">Save</button>
+    <button class="action-btn cancel-book-btn">Cancel</button>
+  `;
+  disableOtherRowButtons(row, 'bookTable');
+};
+
+window.saveBookEdit = async function (btn) {
+  const id = parseInt(btn.dataset.bookId, 10);
+  const title = document.getElementById('edit-book-title').value;
+  const author = document.getElementById('edit-book-author').value;
+  const year = parseInt(document.getElementById('edit-book-year').value, 10);
+  const genre = document.getElementById('edit-book-genre').value;
+  const read = document.getElementById('edit-book-read').checked;
+  const ratingVal = document.getElementById('edit-book-rating').value;
+  const reviewVal = document.getElementById('edit-book-review') ? document.getElementById('edit-book-review').value : '';
+
+  const updateData = { title, author, year };
+  if (genre) updateData.genre = genre;
+  updateData.read = read;
+  if (ratingVal) updateData.rating = parseFloat(ratingVal);
+  if (reviewVal !== undefined) updateData.review = reviewVal;
+
+  const res = await authenticatedFetch(`${API_BASE}/books/${id}`, {
+    method: 'PUT',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(updateData),
+  });
+
+  if (res.ok) {
+    editingRowId = null;
+    editingRowElement = null;
+    enableAllRowButtons('bookTable');
+    loadBooks();
+  }
+};
+
+window.cancelBookEdit = function () {
+  editingRowId = null;
+  editingRowElement = null;
+  enableAllRowButtons('bookTable');
+  loadBooks();
+};
+
 async function deleteAnime(id) {
   if (!confirm('Are you sure you want to delete this anime?')) return;
   const res = await authenticatedFetch(`${API_BASE}/anime/${id}`, { method: 'DELETE' });
@@ -2027,6 +2700,468 @@ document.getElementById('addVideoGameForm').onsubmit = async function (e) {
   }
 };
 
+async function searchMusicMetadata() {
+  const titleInput = document.getElementById('musicTitle');
+  const title = titleInput.value.trim();
+  
+  if (!title) {
+    alert('Please enter a music title to search.');
+    return;
+  }
+  
+  const searchBtn = document.getElementById('searchMusicBtn');
+  const originalText = searchBtn.textContent;
+  searchBtn.disabled = true;
+  searchBtn.textContent = 'Searching...';
+  
+  try {
+    const proxyUrl = `${API_BASE}/api/proxy/itunes?query=${encodeURIComponent(title)}&entity=album`;
+    
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), 30000);
+    
+    let res;
+    try {
+      res = await fetch(proxyUrl, {
+        signal: controller.signal,
+        headers: {
+          'Accept': 'application/json'
+        }
+      });
+      clearTimeout(timeoutId);
+    } catch (fetchError) {
+      clearTimeout(timeoutId);
+      if (fetchError.name === 'AbortError') {
+        alert('Search request timed out. Please try again.');
+      } else {
+        alert('Network error: ' + fetchError.message);
+      }
+      searchBtn.disabled = false;
+      searchBtn.textContent = originalText;
+      return;
+    }
+    
+    if (!res.ok) {
+      if (res.status === 429) {
+        alert('iTunes API rate limit reached. Please try again later.');
+      } else if (res.status === 503) {
+        alert('iTunes API not available.');
+      } else if (res.status === 504) {
+        alert('Search request timed out. Please try again.');
+      } else {
+        alert('Failed to search for music. Please try again.');
+      }
+      searchBtn.disabled = false;
+      searchBtn.textContent = originalText;
+      return;
+    }
+    
+    const data = await res.json();
+    
+    if (!data || !data.results || data.results.length === 0) {
+      alert('No results found. Please try a different search term.');
+      searchBtn.disabled = false;
+      searchBtn.textContent = originalText;
+      return;
+    }
+    
+    const results = data.results;
+    
+    if (results.length === 1) {
+      const album = results[0];
+      selectMusicResult(album);
+    } else {
+      openMusicSearchModal(results);
+    }
+    
+    searchBtn.disabled = false;
+    searchBtn.textContent = originalText;
+  } catch (err) {
+    console.error('Error searching music metadata:', err);
+    alert('An error occurred while searching. Please try again.');
+    searchBtn.disabled = false;
+    searchBtn.textContent = originalText;
+  }
+}
+
+function openMusicSearchModal(results) {
+  const modal = document.getElementById('musicSearchModal');
+  const resultsContainer = document.getElementById('musicSearchResults');
+  
+  if (!modal || !resultsContainer) return;
+  
+  resultsContainer.innerHTML = '';
+  
+  results.forEach((album) => {
+    const coverArtUrl = album.artworkUrl100 || album.artworkUrl60 || null;
+    const albumTitle = album.collectionName || album.trackName || 'Unknown Album';
+    const albumArtist = album.artistName || 'Unknown Artist';
+    const albumYear = album.releaseDate ? parseInt(album.releaseDate.split('-')[0]) : null;
+    const albumGenre = album.primaryGenreName || '';
+    
+    const item = document.createElement('div');
+    item.className = 'search-result-item';
+    item.onclick = () => {
+      selectMusicResult(album);
+      closeMusicSearchModal();
+    };
+    
+    item.innerHTML = `
+      ${coverArtUrl ? `<img src="${coverArtUrl}" alt="${escapeHtml(albumTitle)}" onerror="this.style.display='none'">` : '<div style="height: 200px; background: var(--card-bg); border-radius: 8px; display: flex; align-items: center; justify-content: center; color: var(--fg-secondary);">No Cover</div>'}
+      <h4>${escapeHtml(albumTitle)}</h4>
+      <p>${escapeHtml(albumArtist)}</p>
+      ${albumYear ? `<p style="font-size: 0.85rem;">${albumYear}</p>` : ''}
+      ${albumGenre ? `<p style="font-size: 0.85rem; color: var(--primary);">${escapeHtml(albumGenre)}</p>` : ''}
+    `;
+    
+    resultsContainer.appendChild(item);
+  });
+  
+  modal.style.display = 'flex';
+  
+  modal.onclick = (e) => {
+    if (e.target === modal) {
+      closeMusicSearchModal();
+    }
+  };
+}
+
+function closeMusicSearchModal() {
+  const modal = document.getElementById('musicSearchModal');
+  if (modal) {
+    modal.style.display = 'none';
+  }
+}
+
+function selectMusicResult(album) {
+  const coverArtUrl = album.artworkUrl100 || album.artworkUrl60 || null;
+  const albumTitle = album.collectionName || album.trackName || '';
+  const albumArtist = album.artistName || '';
+  const albumYear = album.releaseDate ? parseInt(album.releaseDate.split('-')[0]) : null;
+  const albumGenre = album.primaryGenreName || '';
+  
+  document.getElementById('musicTitle').value = albumTitle;
+  if (document.getElementById('musicArtist')) {
+    document.getElementById('musicArtist').value = albumArtist;
+  }
+  if (albumYear && document.getElementById('musicYear')) {
+    document.getElementById('musicYear').value = albumYear;
+  }
+  if (albumGenre && document.getElementById('musicGenre')) {
+    document.getElementById('musicGenre').value = albumGenre;
+  }
+  
+  const previewImg = document.getElementById('musicPreview');
+  if (previewImg && coverArtUrl) {
+    previewImg.src = coverArtUrl;
+    previewImg.style.display = 'block';
+  }
+}
+
+document.getElementById('searchMusicBtn').onclick = searchMusicMetadata;
+
+document.getElementById('musicTitle').addEventListener('keypress', function(e) {
+  if (e.key === 'Enter') {
+    e.preventDefault();
+    searchMusicMetadata();
+  }
+});
+
+document.getElementById('addMusicForm').onsubmit = async function (e) {
+  e.preventDefault();
+  const titleInput = document.getElementById('musicTitle');
+  const artistInput = document.getElementById('musicArtist');
+  const yearInput = document.getElementById('musicYear');
+  
+  const title = titleInput.value.trim();
+  if (!title) {
+    alert('Please enter a music title.');
+    return;
+  }
+  
+  const artist = artistInput.value.trim();
+  if (!artist) {
+    alert('Please enter an artist or click "Search" to auto-fill music information.');
+    return;
+  }
+  
+  const yearVal = yearInput.value.trim();
+  if (!yearVal) {
+    alert('Please enter a year or click "Search" to auto-fill music information.');
+    return;
+  }
+  
+  const year = parseInt(yearVal, 10);
+  if (isNaN(year) || year < 0) {
+    alert('Please enter a valid year.');
+    return;
+  }
+  
+  const music = {
+    title: title,
+    artist: artist,
+    year: year,
+    listened: document.getElementById('musicListened').checked,
+  };
+  
+  const genreVal = document.getElementById('musicGenre').value;
+  if (genreVal) music.genre = genreVal;
+  const ratingVal = document.getElementById('musicRating').value;
+  if (ratingVal) music.rating = parseFloat(ratingVal);
+  const reviewVal = document.getElementById('musicReview').value;
+  if (reviewVal) music.review = reviewVal;
+  
+  if (titleInput.dataset.coverArtUrl) {
+    music.cover_art_url = titleInput.dataset.coverArtUrl;
+  }
+  
+  const response = await authenticatedFetch(`${API_BASE}/music/`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(music),
+  });
+  if (response.ok) {
+    document.getElementById('addMusicForm').reset();
+    if (titleInput.dataset.coverArtUrl) {
+      delete titleInput.dataset.coverArtUrl;
+    }
+    toggleCollapsible('musicForm');
+    loadMusic();
+  } else {
+    const errorData = await response.json().catch(() => ({ detail: 'Failed to add music' }));
+    alert(errorData.detail || 'Failed to add music');
+  }
+};
+
+async function searchBookMetadata() {
+  const titleInput = document.getElementById('bookTitle');
+  const title = titleInput.value.trim();
+  
+  if (!title) {
+    alert('Please enter a book title to search.');
+    return;
+  }
+  
+  const searchBtn = document.getElementById('searchBookBtn');
+  const originalText = searchBtn.textContent;
+  searchBtn.disabled = true;
+  searchBtn.textContent = 'Searching...';
+  
+  try {
+    const proxyUrl = `${API_BASE}/api/proxy/openlibrary?query=${encodeURIComponent(title)}`;
+    
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), 30000);
+    
+    let res;
+    try {
+      res = await fetch(proxyUrl, {
+        signal: controller.signal,
+        headers: {
+          'Accept': 'application/json'
+        }
+      });
+      clearTimeout(timeoutId);
+    } catch (fetchError) {
+      clearTimeout(timeoutId);
+      if (fetchError.name === 'AbortError') {
+        alert('Search request timed out. Please try again.');
+      } else {
+        alert('Network error: ' + fetchError.message);
+      }
+      searchBtn.disabled = false;
+      searchBtn.textContent = originalText;
+      return;
+    }
+    
+    if (!res.ok) {
+      if (res.status === 429) {
+        alert('Open Library API rate limit reached. Please try again later.');
+      } else if (res.status === 504) {
+        alert('Search request timed out. Please try again.');
+      } else {
+        alert('Failed to search for book. Please try again.');
+      }
+      searchBtn.disabled = false;
+      searchBtn.textContent = originalText;
+      return;
+    }
+    
+    const data = await res.json();
+    
+    if (!data || !data.docs || data.docs.length === 0) {
+      alert('No results found. Please try a different search term.');
+      searchBtn.disabled = false;
+      searchBtn.textContent = originalText;
+      return;
+    }
+    
+    const results = data.docs;
+    
+    if (results.length === 1) {
+      const book = results[0];
+      selectBookResult(book);
+    } else {
+      openBookSearchModal(results);
+    }
+    searchBtn.disabled = false;
+    searchBtn.textContent = originalText;
+  } catch (error) {
+    console.error('Error searching for book:', error);
+    alert('Error searching for book: ' + error.message);
+    searchBtn.disabled = false;
+    searchBtn.textContent = originalText;
+  }
+}
+
+function openBookSearchModal(results) {
+  const modal = document.getElementById('bookSearchModal');
+  const resultsContainer = document.getElementById('bookSearchResults');
+  
+  if (!modal || !resultsContainer) return;
+  
+  resultsContainer.innerHTML = '';
+  
+  results.forEach((book) => {
+    const bookTitle = book.title || 'Unknown Title';
+    const bookAuthor = book.author_name && book.author_name.length > 0 ? book.author_name[0] : 'Unknown Author';
+    const bookYear = book.first_publish_year || (book.publish_year && book.publish_year.length > 0 ? book.publish_year[0] : null);
+    const bookGenre = book.subject ? book.subject.slice(0, 2).join(', ') : '';
+    const coverId = book.cover_i || (book.isbn && book.isbn.length > 0 ? book.isbn[0] : null);
+    const coverArtUrl = coverId ? `https://covers.openlibrary.org/b/id/${coverId}-L.jpg` : null;
+    
+    const item = document.createElement('div');
+    item.className = 'search-result-item';
+    item.onclick = () => {
+      selectBookResult(book);
+      closeBookSearchModal();
+    };
+    
+    item.innerHTML = `
+      ${coverArtUrl ? `<img src="${coverArtUrl}" alt="${escapeHtml(bookTitle)}" onerror="this.style.display='none'">` : '<div style="height: 200px; background: var(--card-bg); border-radius: 8px; display: flex; align-items: center; justify-content: center; color: var(--fg-secondary);">No Cover</div>'}
+      <h4>${escapeHtml(bookTitle)}</h4>
+      <p>${escapeHtml(bookAuthor)}</p>
+      ${bookYear ? `<p style="font-size: 0.85rem;">${bookYear}</p>` : ''}
+      ${bookGenre ? `<p style="font-size: 0.85rem; color: var(--primary);">${escapeHtml(bookGenre)}</p>` : ''}
+    `;
+    
+    resultsContainer.appendChild(item);
+  });
+  
+  modal.style.display = 'flex';
+  
+  modal.onclick = (e) => {
+    if (e.target === modal) {
+      closeBookSearchModal();
+    }
+  };
+}
+
+function closeBookSearchModal() {
+  const modal = document.getElementById('bookSearchModal');
+  if (modal) {
+    modal.style.display = 'none';
+  }
+}
+
+function selectBookResult(book) {
+  const titleInput = document.getElementById('bookTitle');
+  const bookTitle = book.title || '';
+  const bookAuthor = book.author_name && book.author_name.length > 0 ? book.author_name[0] : '';
+  const bookYear = book.first_publish_year || (book.publish_year && book.publish_year.length > 0 ? book.publish_year[0] : '');
+  const bookGenre = book.subject ? book.subject.slice(0, 3).join(', ') : '';
+  const coverId = book.cover_i || (book.isbn && book.isbn.length > 0 ? book.isbn[0] : null);
+  
+  titleInput.value = bookTitle;
+  if (document.getElementById('bookAuthor')) {
+    document.getElementById('bookAuthor').value = bookAuthor;
+  }
+  if (bookYear && document.getElementById('bookYear')) {
+    document.getElementById('bookYear').value = bookYear;
+  }
+  if (bookGenre && document.getElementById('bookGenre')) {
+    document.getElementById('bookGenre').value = bookGenre;
+  }
+  if (coverId) {
+    titleInput.dataset.coverArtUrl = `https://covers.openlibrary.org/b/id/${coverId}-L.jpg`;
+  }
+}
+
+document.getElementById('searchBookBtn').onclick = searchBookMetadata;
+
+document.getElementById('bookTitle').addEventListener('keypress', function(e) {
+  if (e.key === 'Enter') {
+    e.preventDefault();
+    searchBookMetadata();
+  }
+});
+
+document.getElementById('addBookForm').onsubmit = async function (e) {
+  e.preventDefault();
+  const titleInput = document.getElementById('bookTitle');
+  const authorInput = document.getElementById('bookAuthor');
+  const yearInput = document.getElementById('bookYear');
+  
+  const title = titleInput.value.trim();
+  if (!title) {
+    alert('Please enter a book title.');
+    return;
+  }
+  
+  const author = authorInput.value.trim();
+  if (!author) {
+    alert('Please enter an author or click "Search" to auto-fill book information.');
+    return;
+  }
+  
+  const yearVal = yearInput.value.trim();
+  if (!yearVal) {
+    alert('Please enter a year or click "Search" to auto-fill book information.');
+    return;
+  }
+  
+  const year = parseInt(yearVal, 10);
+  if (isNaN(year) || year < 0) {
+    alert('Please enter a valid year.');
+    return;
+  }
+  
+  const book = {
+    title: title,
+    author: author,
+    year: year,
+    read: document.getElementById('bookRead').checked,
+  };
+  
+  const genreVal = document.getElementById('bookGenre').value;
+  if (genreVal) book.genre = genreVal;
+  const ratingVal = document.getElementById('bookRating').value;
+  if (ratingVal) book.rating = parseFloat(ratingVal);
+  const reviewVal = document.getElementById('bookReview').value;
+  if (reviewVal) book.review = reviewVal;
+  
+  if (titleInput.dataset.coverArtUrl) {
+    book.cover_art_url = titleInput.dataset.coverArtUrl;
+  }
+  
+  const response = await authenticatedFetch(`${API_BASE}/books/`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(book),
+  });
+  if (response.ok) {
+    document.getElementById('addBookForm').reset();
+    if (titleInput.dataset.coverArtUrl) {
+      delete titleInput.dataset.coverArtUrl;
+    }
+    toggleCollapsible('bookForm');
+    loadBooks();
+  } else {
+    const errorData = await response.json().catch(() => ({ detail: 'Failed to add book' }));
+    alert(errorData.detail || 'Failed to add book');
+  }
+};
+
 // Export/Import functions
 async function exportData() {
   try {
@@ -2047,7 +3182,7 @@ async function exportData() {
     document.body.removeChild(a);
     URL.revokeObjectURL(url);
 
-    alert(`Export successful! Exported ${data.export_metadata.total_movies} movies, ${data.export_metadata.total_tv_shows} TV shows, ${data.export_metadata.total_anime || 0} anime, ${data.export_metadata.total_video_games || 0} video games, and ${data.export_metadata.total_custom_tabs || 0} custom tabs.`);
+    alert(`Export successful! Exported ${data.export_metadata.total_movies} movies, ${data.export_metadata.total_tv_shows} TV shows, ${data.export_metadata.total_anime || 0} anime, ${data.export_metadata.total_video_games || 0} video games, ${data.export_metadata.total_music || 0} music, ${data.export_metadata.total_books || 0} books, and ${data.export_metadata.total_custom_tabs || 0} custom tabs.`);
   } catch (error) {
     alert('Export failed: ' + error.message);
   }
@@ -2082,6 +3217,8 @@ async function importData(fileInput) {
     message += `TV Shows: ${result.tv_shows_created} created, ${result.tv_shows_updated} updated\n`;
     message += `Anime: ${result.anime_created || 0} created, ${result.anime_updated || 0} updated\n`;
     message += `Video Games: ${result.video_games_created || 0} created, ${result.video_games_updated || 0} updated\n`;
+    message += `Music: ${result.music_created || 0} created, ${result.music_updated || 0} updated\n`;
+    message += `Books: ${result.books_created || 0} created, ${result.books_updated || 0} updated\n`;
     message += `Custom Tabs: ${result.custom_tabs_created || 0} created, ${result.custom_tabs_updated || 0} updated`;
 
     if (result.errors.length > 0) {
@@ -2099,6 +3236,10 @@ async function importData(fileInput) {
       loadAnime();
     } else if (currentTab === 'video-games') {
       loadVideoGames();
+    } else if (currentTab === 'music') {
+      loadMusic();
+    } else if (currentTab === 'books') {
+      loadBooks();
     } else if (currentTab && currentTab.startsWith('custom-')) {
       const tabId = parseInt(currentTab.replace('custom-', ''));
       const tab = customTabs.find(t => t.id === tabId);
@@ -2454,7 +3595,9 @@ function categoryToId(category) {
     'movies': 'movies',
     'tv-shows': 'tvShows',
     'anime': 'anime',
-    'video-games': 'videoGames'
+    'video-games': 'videoGames',
+    'music': 'music',
+    'books': 'books'
   };
   return idMap[category] || category;
 }
@@ -2508,7 +3651,9 @@ async function loadCategoryStatistics(category) {
       'movies': 'movies',
       'tv-shows': 'tv-shows',
       'anime': 'anime',
-      'video-games': 'video-games'
+      'video-games': 'video-games',
+      'music': 'music',
+      'books': 'books'
     };
     
     const endpoint = categoryMap[category];
@@ -2542,11 +3687,24 @@ function displayCategoryStatistics(stats, category) {
   let html = '';
   
   html += '<div class="stats-subsection">';
-  html += '<h4>📈 Watch Progress</h4>';
+  const progressLabel = category === 'video-games' ? 'Play Progress' : category === 'music' ? 'Listen Progress' : category === 'books' ? 'Read Progress' : 'Watch Progress';
+  html += `<h4>📈 ${progressLabel}</h4>`;
   html += '<div class="stats-grid">';
   html += `<div class="stat-card"><div class="stat-number">${stats.watch_stats.total_items}</div><div class="stat-label">Total Items</div></div>`;
-  html += `<div class="stat-card"><div class="stat-number">${stats.watch_stats.watched_items}</div><div class="stat-label">${category === 'video-games' ? 'Played' : 'Watched'}</div></div>`;
-  html += `<div class="stat-card"><div class="stat-number">${stats.watch_stats.unwatched_items}</div><div class="stat-label">${category === 'video-games' ? 'Unplayed' : 'Unwatched'}</div></div>`;
+  let watchedLabel = 'Watched';
+  let unwatchedLabel = 'Unwatched';
+  if (category === 'video-games') {
+    watchedLabel = 'Played';
+    unwatchedLabel = 'Unplayed';
+  } else if (category === 'music') {
+    watchedLabel = 'Listened';
+    unwatchedLabel = 'Unlistened';
+  } else if (category === 'books') {
+    watchedLabel = 'Read';
+    unwatchedLabel = 'Unread';
+  }
+  html += `<div class="stat-card"><div class="stat-number">${stats.watch_stats.watched_items}</div><div class="stat-label">${watchedLabel}</div></div>`;
+  html += `<div class="stat-card"><div class="stat-number">${stats.watch_stats.unwatched_items}</div><div class="stat-label">${unwatchedLabel}</div></div>`;
   html += `<div class="stat-card"><div class="stat-number">${stats.watch_stats.completion_percentage.toFixed(1)}%</div><div class="stat-label">Completion</div></div>`;
   html += '</div>';
   html += '<div class="progress-bar"><div class="progress-fill" style="width: ' + stats.watch_stats.completion_percentage + '%"></div></div>';
@@ -2853,12 +4011,16 @@ document.getElementById('loadMovies').addEventListener('click', loadMovies);
 document.getElementById('loadTVShows').addEventListener('click', loadTVShows);
 document.getElementById('loadAnime').addEventListener('click', loadAnime);
 document.getElementById('loadVideoGames').addEventListener('click', loadVideoGames);
+document.getElementById('loadMusic').addEventListener('click', loadMusic);
+document.getElementById('loadBooks').addEventListener('click', loadBooks);
 
 // Automatic sorting and search
 document.getElementById('movieSort').addEventListener('change', loadMovies);
 document.getElementById('tvSort').addEventListener('change', loadTVShows);
 document.getElementById('animeSort').addEventListener('change', loadAnime);
 document.getElementById('videoGameSort').addEventListener('change', loadVideoGames);
+document.getElementById('musicSort').addEventListener('change', loadMusic);
+document.getElementById('bookSort').addEventListener('change', loadBooks);
 
 // Automatic search with debounce
 let movieSearchTimeout;
@@ -2893,19 +4055,41 @@ document.getElementById('videoGameSearch').addEventListener('input', (e) => {
   }, 300); // Wait 300ms after user stops typing
 });
 
+let musicSearchTimeout;
+document.getElementById('musicSearch').addEventListener('input', (e) => {
+  clearTimeout(musicSearchTimeout);
+  musicSearchTimeout = setTimeout(() => {
+    loadMusic();
+  }, 300);
+});
+
+let bookSearchTimeout;
+document.getElementById('bookSearch').addEventListener('input', (e) => {
+  clearTimeout(bookSearchTimeout);
+  bookSearchTimeout = setTimeout(() => {
+    loadBooks();
+  }, 300);
+});
+
 // Export/Import event listeners
 document.getElementById('exportMovies').addEventListener('click', exportData);
 document.getElementById('exportTVShows').addEventListener('click', exportData);
 document.getElementById('exportAnime').addEventListener('click', exportData);
 document.getElementById('exportVideoGames').addEventListener('click', exportData);
+document.getElementById('exportMusic').addEventListener('click', exportData);
+document.getElementById('exportBooks').addEventListener('click', exportData);
 document.getElementById('importMovies').addEventListener('click', () => document.getElementById('importFile').click());
 document.getElementById('importTVShows').addEventListener('click', () => document.getElementById('importTVFile').click());
 document.getElementById('importAnime').addEventListener('click', () => document.getElementById('importAnimeFile').click());
 document.getElementById('importVideoGames').addEventListener('click', () => document.getElementById('importVideoGameFile').click());
+document.getElementById('importMusic').addEventListener('click', () => document.getElementById('importMusicFile').click());
+document.getElementById('importBooks').addEventListener('click', () => document.getElementById('importBookFile').click());
 document.getElementById('importFile').addEventListener('change', (e) => importData(e.target));
 document.getElementById('importTVFile').addEventListener('change', (e) => importData(e.target));
 document.getElementById('importAnimeFile').addEventListener('change', (e) => importData(e.target));
 document.getElementById('importVideoGameFile').addEventListener('change', (e) => importData(e.target));
+document.getElementById('importMusicFile').addEventListener('change', (e) => importData(e.target));
+document.getElementById('importBookFile').addEventListener('change', (e) => importData(e.target));
 
 // Auto-resize textarea for movie review
 const movieReviewTextarea = document.getElementById('movieReview');
@@ -3335,6 +4519,8 @@ function updateTabVisibilityUI(tabVisibility) {
   const tvShowsTab = document.querySelector('[onclick="switchTab(\'tv-shows\')"]');
   const animeTab = document.querySelector('[onclick="switchTab(\'anime\')"]');
   const videoGamesTab = document.querySelector('[onclick="switchTab(\'video-games\')"]');
+  const musicTab = document.querySelector('[onclick="switchTab(\'music\')"]');
+  const booksTab = document.querySelector('[onclick="switchTab(\'books\')"]');
   
   if (moviesTab) {
     moviesTab.style.display = tabVisibility.movies_visible ? '' : 'none';
@@ -3347,6 +4533,12 @@ function updateTabVisibilityUI(tabVisibility) {
   }
   if (videoGamesTab) {
     videoGamesTab.style.display = tabVisibility.video_games_visible ? '' : 'none';
+  }
+  if (musicTab) {
+    musicTab.style.display = tabVisibility.music_visible ? '' : 'none';
+  }
+  if (booksTab) {
+    booksTab.style.display = tabVisibility.books_visible ? '' : 'none';
   }
   
   // If current tab is hidden, switch to first visible tab
@@ -4446,6 +5638,32 @@ document.addEventListener('DOMContentLoaded', function () {
     } else if (e.target.classList.contains('cancel-video-game-btn')) {
       e.preventDefault();
       cancelVideoGameEdit();
+    } else if (e.target.classList.contains('delete-music-btn')) {
+      e.preventDefault();
+      const id = parseInt(e.target.dataset.musicId, 10);
+      deleteMusic(id);
+    } else if (e.target.classList.contains('edit-music-btn')) {
+      e.preventDefault();
+      enableMusicEdit(e.target);
+    } else if (e.target.classList.contains('save-music-btn')) {
+      e.preventDefault();
+      saveMusicEdit(e.target);
+    } else if (e.target.classList.contains('cancel-music-btn')) {
+      e.preventDefault();
+      cancelMusicEdit();
+    } else if (e.target.classList.contains('delete-book-btn')) {
+      e.preventDefault();
+      const id = parseInt(e.target.dataset.bookId, 10);
+      deleteBook(id);
+    } else if (e.target.classList.contains('edit-book-btn')) {
+      e.preventDefault();
+      enableBookEdit(e.target);
+    } else if (e.target.classList.contains('save-book-btn')) {
+      e.preventDefault();
+      saveBookEdit(e.target);
+    } else if (e.target.classList.contains('cancel-book-btn')) {
+      e.preventDefault();
+      cancelBookEdit();
     }
   });
 

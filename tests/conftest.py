@@ -151,3 +151,31 @@ def test_video_game_data():
         "cover_art_url": "https://example.com/zelda.jpg",
         "rawg_link": "https://rawg.io/games/the-legend-of-zelda-breath-of-the-wild"
     }
+
+
+@pytest.fixture
+def test_music_data():
+    """Sample music data for testing."""
+    return {
+        "title": "Abbey Road",
+        "artist": "The Beatles",
+        "year": 1969,
+        "genre": "Rock",
+        "rating": 9.8,
+        "listened": True,
+        "review": "A masterpiece album"
+    }
+
+
+@pytest.fixture
+def test_book_data():
+    """Sample book data for testing."""
+    return {
+        "title": "1984",
+        "author": "George Orwell",
+        "year": 1949,
+        "genre": "Dystopian Fiction",
+        "rating": 9.5,
+        "read": True,
+        "review": "A classic dystopian novel"
+    }
