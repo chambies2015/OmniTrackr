@@ -129,3 +129,31 @@ async def get_video_game_statistics(
         year_stats=schemas.CategoryYearStatistics(**stats["year_stats"]),
         genre_stats=schemas.GenreStatistics(**stats["genre_stats"])
     )
+
+
+@router.get("/music/", response_model=schemas.MusicStatistics)
+async def get_music_statistics(
+    current_user: models.User = Depends(get_current_user),
+    db: Session = Depends(get_db)
+):
+    """Get music-specific statistics"""
+    stats = crud.get_music_statistics(db, current_user.id)
+    return schemas.MusicStatistics(
+        watch_stats=schemas.CategoryWatchStatistics(**stats["watch_stats"]),
+        rating_stats=schemas.CategoryRatingStatistics(**stats["rating_stats"]),
+        year_stats=schemas.CategoryYearStatistics(**stats["year_stats"])
+    )
+
+
+@router.get("/books/", response_model=schemas.BookStatistics)
+async def get_books_statistics(
+    current_user: models.User = Depends(get_current_user),
+    db: Session = Depends(get_db)
+):
+    """Get book-specific statistics"""
+    stats = crud.get_books_statistics(db, current_user.id)
+    return schemas.BookStatistics(
+        watch_stats=schemas.CategoryWatchStatistics(**stats["watch_stats"]),
+        rating_stats=schemas.CategoryRatingStatistics(**stats["rating_stats"]),
+        year_stats=schemas.CategoryYearStatistics(**stats["year_stats"])
+    )

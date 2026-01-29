@@ -330,6 +330,8 @@ def get_friend_profile_summary(db: Session, friend_id: int) -> Optional[schemas.
     tv_shows_count = None
     anime_count = None
     video_games_count = None
+    music_count = None
+    books_count = None
     statistics_available = None
     
     if not friend.movies_private:
@@ -344,6 +346,12 @@ def get_friend_profile_summary(db: Session, friend_id: int) -> Optional[schemas.
     if not friend.video_games_private:
         video_games_count = db.query(models.VideoGame).filter(models.VideoGame.user_id == friend_id).count()
     
+    if not friend.music_private:
+        music_count = db.query(models.Music).filter(models.Music.user_id == friend_id).count()
+    
+    if not friend.books_private:
+        books_count = db.query(models.Book).filter(models.Book.user_id == friend_id).count()
+    
     if not friend.statistics_private:
         statistics_available = True
     
@@ -353,11 +361,15 @@ def get_friend_profile_summary(db: Session, friend_id: int) -> Optional[schemas.
         tv_shows_count=tv_shows_count,
         anime_count=anime_count,
         video_games_count=video_games_count,
+        music_count=music_count,
+        books_count=books_count,
         statistics_available=statistics_available,
         movies_private=friend.movies_private,
         tv_shows_private=friend.tv_shows_private,
         anime_private=friend.anime_private,
         video_games_private=friend.video_games_private,
+        music_private=friend.music_private,
+        books_private=friend.books_private,
         statistics_private=friend.statistics_private
     )
 
@@ -408,6 +420,30 @@ def get_friend_video_games(db: Session, friend_id: int) -> Optional[List[models.
         return None  # Data is private
     
     return db.query(models.VideoGame).filter(models.VideoGame.user_id == friend_id).all()
+
+
+def get_friend_music(db: Session, friend_id: int) -> Optional[List[models.Music]]:
+    """Get friend's music list (if not private)."""
+    friend = get_user_by_id(db, friend_id)
+    if friend is None:
+        return None
+    
+    if friend.music_private:
+        return None  # Data is private
+    
+    return db.query(models.Music).filter(models.Music.user_id == friend_id).all()
+
+
+def get_friend_books(db: Session, friend_id: int) -> Optional[List[models.Book]]:
+    """Get friend's books list (if not private)."""
+    friend = get_user_by_id(db, friend_id)
+    if friend is None:
+        return None
+    
+    if friend.books_private:
+        return None  # Data is private
+    
+    return db.query(models.Book).filter(models.Book.user_id == friend_id).all()
 
 
 def get_friend_statistics(db: Session, friend_id: int) -> Optional[dict]:

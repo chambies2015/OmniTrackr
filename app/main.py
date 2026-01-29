@@ -28,6 +28,8 @@ from .routers import (
     tv_shows,
     anime,
     video_games,
+    music,
+    books,
     statistics,
     export_import,
     proxy,
@@ -44,7 +46,7 @@ Base.metadata.create_all(bind=engine)
 run_migrations()
 
 # Initialize FastAPI
-app = FastAPI(title="OmniTrackr API", description="Manage your movies and TV shows", version="0.1.0")
+app = FastAPI(title="OmniTrackr API", description="Manage your movies, TV shows, anime, video games, music, and books", version="0.1.0")
 
 # Initialize rate limiter
 if os.getenv("TESTING", "").lower() == "true":
@@ -169,18 +171,22 @@ app.include_router(movies.router)
 app.include_router(tv_shows.router)
 app.include_router(anime.router)
 app.include_router(video_games.router)
+app.include_router(music.router)
+app.include_router(books.router)
 app.include_router(statistics.router)
 app.include_router(export_import.router)
 app.include_router(custom_tabs.router)
 
 # Include proxy router and apply rate limiting
 # We need to wrap the endpoints with rate limiting decorators
-from .routers.proxy import proxy_omdb_api, proxy_rawg_api, proxy_jikan_api
+from .routers.proxy import proxy_omdb_api, proxy_rawg_api, proxy_jikan_api, proxy_itunes_api, proxy_openlibrary_api
 
 # Create rate-limited versions
 rate_limited_omdb = limiter.limit("60/minute")(proxy_omdb_api)
 rate_limited_rawg = limiter.limit("60/minute")(proxy_rawg_api)
 rate_limited_jikan = limiter.limit("60/minute")(proxy_jikan_api)
+rate_limited_itunes = limiter.limit("60/minute")(proxy_itunes_api)
+rate_limited_openlibrary = limiter.limit("60/minute")(proxy_openlibrary_api)
 
 # Replace the endpoints in the router before including it
 for route in proxy.router.routes:
@@ -190,6 +196,10 @@ for route in proxy.router.routes:
         route.endpoint = rate_limited_rawg
     elif hasattr(route, 'path') and route.path == "/api/proxy/jikan":
         route.endpoint = rate_limited_jikan
+    elif hasattr(route, 'path') and route.path == "/api/proxy/itunes":
+        route.endpoint = rate_limited_itunes
+    elif hasattr(route, 'path') and route.path == "/api/proxy/openlibrary":
+        route.endpoint = rate_limited_openlibrary
 
 app.include_router(proxy.router)
 
