@@ -21,7 +21,7 @@
   <meta name="description"
     content="OmniTrackr - Track and organize your movies, TV shows, anime, video games, music, and books. Rate, review, and analyze your media collection with comprehensive statistics and beautiful posters.">
   <meta name="keywords"
-    content="movie tracker, TV show tracker, anime tracker, media collection, movie database, watchlist, film tracker, entertainment tracker, movie ratings, TV ratings, anime ratings, media organizer, personal movie database, track movies online, TV show database, anime database, movie collection manager, watchlist app, film collection tracker, entertainment database, movie review tracker, TV show review tracker, anime review tracker, media tracking app, free movie tracker, movie statistics, TV show statistics, anime statistics, friends movie tracker, social movie tracking, video game tracker, video game collection, video game database, video game collection manager, video game review tracker, video game statistics, video game ratings">
+    content="movie tracker, TV show tracker, anime tracker, video game tracker, music tracker, book tracker, free media tracker, watchlist app, media collection manager, track movies online, entertainment database, media statistics, personal movie database">
   <meta name="author" content="OmniTrackr">
   <meta name="robots" content="index, follow">
   <meta name="language" content="English">
@@ -69,7 +69,7 @@
     "@context": "https://schema.org",
     "@type": "SoftwareApplication",
     "name": "OmniTrackr",
-    "description": "Track and organize your movies, TV shows, video games, and anime. Rate, review, and analyze your media collection with comprehensive statistics and beautiful posters.",
+    "description": "Track and organize your movies, TV shows, anime, video games, music, and books. Rate, review, and analyze your media collection with comprehensive statistics and beautiful posters.",
     "url": "https://omnitrackr.xyz",
     "applicationCategory": "EntertainmentApplication",
     "operatingSystem": "Web",
@@ -132,7 +132,7 @@
     "@type": "WebSite",
     "name": "OmniTrackr",
     "url": "https://omnitrackr.xyz",
-    "description": "Track and organize your movies, TV shows, video games, and anime. Rate, review, and analyze your media collection with comprehensive statistics and beautiful posters.",
+    "description": "Track and organize your movies, TV shows, anime, video games, music, and books. Rate, review, and analyze your media collection with comprehensive statistics and beautiful posters.",
     "potentialAction": {
       "@type": "SearchAction",
       "target": "https://omnitrackr.xyz/?search={search_term_string}",
@@ -151,7 +151,7 @@
         "name": "What is OmniTrackr?",
         "acceptedAnswer": {
           "@type": "Answer",
-          "text": "OmniTrackr is a free, web-based application that helps you track and organize your movie, TV show, anime, and video game collection. You can rate, review, and analyze your media with comprehensive statistics, beautiful posters, and social features to share with friends."
+          "text": "OmniTrackr is a free, web-based application that helps you track and organize your movie, TV show, anime, video game, music, and book collection. You can rate, review, and analyze your media with comprehensive statistics, beautiful posters, and social features to share with friends."
         }
       },
       {
@@ -212,7 +212,7 @@
       },
       {
         "@type": "Question",
-        "name": "Can I rate movies, TV shows, anime, and video games with decimals?",
+        "name": "Can I rate movies, TV shows, anime, video games, music, and books with decimals?",
         "acceptedAnswer": {
           "@type": "Answer",
           "text": "Yes! You can rate any item from 0 to 10.0 with one decimal place precision (e.g., 7.5, 8.4, 9.2). The statistics dashboard will calculate averages and other metrics using these decimal ratings."
@@ -225,6 +225,65 @@
           "@type": "Answer",
           "text": "You can reach us via email at omnitrackr@gmail.com. You can also find us on GitHub or LinkedIn. We're happy to help!"
         }
+      }
+    ]
+  }
+  </script>
+
+  <script type="application/ld+json">
+  {
+    "@context": "https://schema.org",
+    "@type": "BreadcrumbList",
+    "itemListElement": [{
+      "@type": "ListItem",
+      "position": 1,
+      "name": "Home",
+      "item": "https://omnitrackr.xyz/"
+    }]
+  }
+  </script>
+
+  <script type="application/ld+json">
+  {
+    "@context": "https://schema.org",
+    "@type": "HowTo",
+    "name": "How to Get Started with OmniTrackr",
+    "description": "Step-by-step guide to tracking your media collection",
+    "step": [
+      {
+        "@type": "HowToStep",
+        "name": "Register and Verify",
+        "text": "Create your account with email, then click the verification link in your inbox."
+      },
+      {
+        "@type": "HowToStep",
+        "name": "Login to Your Dashboard",
+        "text": "Access tabs for Movies, TV Shows, Anime, Video Games, Music, Books, and Statistics. Hide tabs you don't use in settings."
+      },
+      {
+        "@type": "HowToStep",
+        "name": "Add Your First Entry",
+        "text": "Enter a title and year. We'll fetch the poster and official title. Add a rating, mark as watched, and write a review."
+      },
+      {
+        "@type": "HowToStep",
+        "name": "Organize Your Collection",
+        "text": "Search by title, director, or genre. Sort by rating or year. Edit or delete entries anytime."
+      },
+      {
+        "@type": "HowToStep",
+        "name": "Explore Statistics",
+        "text": "View watch progress, rating distributions, favorite directors, and genre preferences. Updates in real-time."
+      },
+      {
+        "@type": "HowToStep",
+        "name": "Connect with Friends",
+        "text": "Send requests by username. Accept via the notification bell. Browse friends' collections and discover new media."
+      },
+      {
+        "@type": "HowToStep",
+        "name": "Backup Your Data",
+        "text": "Export your collection as JSON. Import it later or migrate to another account."
       }
     ]
   }
@@ -968,9 +1027,9 @@
     <!-- Value Proposition Section -->
     <section class="landing-value-prop" aria-labelledby="value-prop-title" style="padding: 60px 20px; background: var(--bg); max-width: 1200px; margin: 0 auto;">
       <div style="text-align: center; margin-bottom: 40px;">
-        <h2 id="value-prop-title" style="font-size: 2.5rem; margin-bottom: 20px; color: var(--fg);">Why OmniTrackr Stands Out</h2>
+        <h2 id="value-prop-title" style="font-size: 2.5rem; margin-bottom: 20px; color: var(--fg);">Why Choose OmniTrackr for Media Tracking</h2>
         <p style="font-size: 1.2rem; line-height: 1.8; color: var(--fg-secondary); max-width: 900px; margin: 0 auto;">
-          Track movies, TV shows, anime, video games, music, and books in one place. Analyze your habits with powerful statistics, connect with friends, and keep your data private. All free, no ads, no hidden fees.
+          Track movies, TV shows, anime, video games, music, and books in one place. Analyze your habits with our <a href="#screenshots-title" style="color: var(--primary); text-decoration: underline;">comprehensive statistics dashboard</a>, connect with friends, and keep your data private. All free, no ads, no hidden fees.
         </p>
       </div>
     </section>
@@ -1055,7 +1114,7 @@
         <div class="feature-card">
           <div class="feature-icon">📊</div>
           <h3>Statistics Dashboard</h3>
-          <p>Comprehensive analytics showing your viewing habits, ratings, and favorite directors.</p>
+          <p>Comprehensive analytics showing your viewing habits, ratings, and favorite directors. <a href="#screenshots-title" style="color: var(--primary); text-decoration: underline;">See it in action</a>.</p>
           <p class="feature-microcopy">Numbers don't lie, but they tell great stories</p>
         </div>
         <div class="feature-card">
@@ -1141,6 +1200,7 @@
             <p style="line-height: 1.6; color: var(--fg-secondary);">Export your collection as JSON anytime. Smart imports update existing entries instead of creating duplicates. Your data stays portable.</p>
           </div>
         </div>
+        <p style="text-align: center; margin-top: 20px;"><a href="#faq-title" style="color: var(--primary); text-decoration: underline;">Frequently asked questions</a></p>
       </div>
     </section>
 
@@ -1337,23 +1397,20 @@
       <div style="max-width: 1200px; margin: 0 auto;">
         <h2 id="editorial-reviews-title" class="features-title" style="text-align: center; margin-bottom: 50px;">Featured Reviews & Insights</h2>
         <p style="text-align: center; font-size: 1.1rem; color: var(--fg-secondary); margin-bottom: 40px; max-width: 800px; margin-left: auto; margin-right: auto;">
-          Discover thoughtful reviews and insights from the OmniTrackr community. Our platform encourages detailed, original reviews that help you remember what made each piece of media special and discover new favorites through the experiences of fellow enthusiasts.
+          Write detailed reviews to remember what made media special and discover new favorites through the community.
         </p>
         <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 30px; margin-bottom: 40px;">
           <div style="background: var(--card-bg); padding: 30px; border-radius: 12px; box-shadow: 0 4px 6px rgba(0,0,0,0.1);">
             <h3 style="color: var(--primary); margin-bottom: 15px; font-size: 1.3rem;">The Power of Detailed Reviews</h3>
-            <p style="line-height: 1.8; color: var(--fg-secondary); margin-bottom: 15px;">Writing comprehensive reviews on OmniTrackr transforms your media tracking from a simple list into a meaningful journal of your entertainment journey. Whether you're analyzing cinematography, character development, narrative structure, or emotional impact, detailed reviews help you articulate what makes each piece of media memorable.</p>
-            <p style="line-height: 1.8; color: var(--fg-secondary);">These reviews become valuable resources for future reference, helping you recall why you rated something the way you did months or years later. They also serve as recommendations for friends who trust your taste, creating a community of shared discovery and thoughtful discussion about the media we love.</p>
+            <p style="line-height: 1.8; color: var(--fg-secondary);">Transform your media tracking into a meaningful journal. Articulate what makes content memorable, recall your ratings later, and share recommendations with friends.</p>
           </div>
           <div style="background: var(--card-bg); padding: 30px; border-radius: 12px; box-shadow: 0 4px 6px rgba(0,0,0,0.1);">
             <h3 style="color: var(--primary); margin-bottom: 15px; font-size: 1.3rem;">Building Your Media Legacy</h3>
-            <p style="line-height: 1.8; color: var(--fg-secondary); margin-bottom: 15px;">Every review you write on OmniTrackr contributes to building a comprehensive record of your media consumption. Over time, your collection and reviews create a personal archive that reflects your evolving tastes, interests, and perspectives. This historical record becomes increasingly valuable as your collection grows.</p>
-            <p style="line-height: 1.8; color: var(--fg-secondary);">The combination of ratings, reviews, and statistics provides a multi-dimensional view of your entertainment preferences. You can identify patterns, track how your tastes change over time, and discover connections between different pieces of media that you might not have noticed otherwise.</p>
+            <p style="line-height: 1.8; color: var(--fg-secondary);">Build a personal archive of your media journey. Track evolving tastes, identify patterns, and discover connections across your collection over time.</p>
           </div>
           <div style="background: var(--card-bg); padding: 30px; border-radius: 12px; box-shadow: 0 4px 6px rgba(0,0,0,0.1);">
             <h3 style="color: var(--primary); margin-bottom: 15px; font-size: 1.3rem;">Community-Driven Discovery</h3>
-            <p style="line-height: 1.8; color: var(--fg-secondary); margin-bottom: 15px;">OmniTrackr's review system fosters a community where thoughtful analysis and personal insights are valued. By reading reviews from friends and other users, you can discover hidden gems, understand different perspectives on familiar content, and find recommendations that align with your specific interests.</p>
-            <p style="line-height: 1.8; color: var(--fg-secondary);">The platform's search and filter capabilities make it easy to find reviews for specific genres, directors, or time periods, helping you make informed decisions about what to watch or play next. This community-driven approach to media discovery creates a richer, more engaging experience than simple rating systems alone.</p>
+            <p style="line-height: 1.8; color: var(--fg-secondary);">Discover hidden gems through community reviews. Search by genre, director, or time period to find recommendations that match your interests.</p>
           </div>
         </div>
         <div style="text-align: center; margin-top: 30px;">
@@ -1369,7 +1426,7 @@
       <div class="screenshots-grid">
         <div class="screenshot-item" onclick="openScreenshotModal('https://github.com/user-attachments/assets/3ebb53c7-5cc3-4225-a028-2b3eb5dfbdb7', 'Main Dashboard - Track all your media in one place')">
           <img src="https://github.com/user-attachments/assets/3ebb53c7-5cc3-4225-a028-2b3eb5dfbdb7" 
-               alt="OmniTrackr Dashboard - Movies, TV Shows, Anime, and Video Games" 
+               alt="OmniTrackr dashboard showing movie collection with ratings, posters, and search functionality" 
                loading="lazy"
                class="screenshot-image">
           <p class="screenshot-caption">Main Dashboard - Track all your media in one place</p>
@@ -1383,7 +1440,7 @@
         </div>
         <div class="screenshot-item" onclick="openScreenshotModal('https://github.com/user-attachments/assets/fd49c269-5402-46d8-a5c2-921fa48520f9', 'Statistics Dashboard - Comprehensive analytics')">
           <img src="https://github.com/user-attachments/assets/fd49c269-5402-46d8-a5c2-921fa48520f9" 
-               alt="OmniTrackr Statistics Dashboard" 
+               alt="Media tracking statistics showing completion rates, rating distributions, and favorite directors" 
                loading="lazy"
                class="screenshot-image">
           <p class="screenshot-caption">Statistics Dashboard - Comprehensive analytics</p>
@@ -1397,7 +1454,7 @@
         </div>
         <div class="screenshot-item" onclick="openScreenshotModal('https://github.com/user-attachments/assets/f2debd1d-23bc-4c15-baac-f457c562d72a', 'Privacy Settings - Control who can see your data')">
           <img src="https://github.com/user-attachments/assets/f2debd1d-23bc-4c15-baac-f457c562d72a" 
-               alt="OmniTrackr Privacy Settings" 
+               alt="Granular privacy controls for movies, TV shows, anime, video games, music, and books" 
                loading="lazy"
                class="screenshot-image">
           <p class="screenshot-caption">Privacy Settings - Control who can see your data</p>
@@ -1411,7 +1468,7 @@
         </div>
         <div class="screenshot-item" onclick="openScreenshotModal('https://github.com/user-attachments/assets/8abbd7a1-c81e-48aa-878b-624e3042ca22', 'Friends & Social - Connect and share with friends')">
           <img src="https://github.com/user-attachments/assets/8abbd7a1-c81e-48aa-878b-624e3042ca22" 
-               alt="OmniTrackr Friends and Social Features" 
+               alt="Friends list and social features for sharing media collections and discovering recommendations" 
                loading="lazy"
                class="screenshot-image">
           <p class="screenshot-caption">Friends & Social - Connect and share with friends</p>
