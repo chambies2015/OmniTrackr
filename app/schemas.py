@@ -75,6 +75,8 @@ class PrivacySettings(BaseModel):
     tv_shows_private: bool = Field(False, description="Make TV shows private")
     anime_private: bool = Field(False, description="Make anime private")
     video_games_private: bool = Field(False, description="Make video games private")
+    music_private: bool = Field(False, description="Make music private")
+    books_private: bool = Field(False, description="Make books private")
     statistics_private: bool = Field(False, description="Make statistics private")
     reviews_public: bool = Field(False, description="Allow reviews to appear on public reviews page")
     
@@ -88,6 +90,8 @@ class PrivacySettingsUpdate(BaseModel):
     tv_shows_private: Optional[bool] = None
     anime_private: Optional[bool] = None
     video_games_private: Optional[bool] = None
+    music_private: Optional[bool] = None
+    books_private: Optional[bool] = None
     statistics_private: Optional[bool] = None
     reviews_public: Optional[bool] = None
 
@@ -98,6 +102,8 @@ class TabVisibility(BaseModel):
     tv_shows_visible: bool = Field(True, description="Show TV Shows tab")
     anime_visible: bool = Field(True, description="Show Anime tab")
     video_games_visible: bool = Field(True, description="Show Video Games tab")
+    music_visible: bool = Field(True, description="Show Music tab")
+    books_visible: bool = Field(True, description="Show Books tab")
     
     class Config:
         from_attributes = True
@@ -109,6 +115,8 @@ class TabVisibilityUpdate(BaseModel):
     tv_shows_visible: Optional[bool] = None
     anime_visible: Optional[bool] = None
     video_games_visible: Optional[bool] = None
+    music_visible: Optional[bool] = None
+    books_visible: Optional[bool] = None
 
 
 # ============================================================================
@@ -328,6 +336,72 @@ class VideoGame(VideoGameBase):
         from_attributes = True
 
 
+class MusicBase(BaseModel):
+    title: str = Field(..., description="Title of the album or track")
+    artist: str = Field(..., description="Artist name")
+    year: int = Field(..., ge=0, description="Year of release")
+    genre: Optional[str] = Field(None, description="Music genre")
+    rating: Optional[float] = Field(None, ge=0, le=10, description="Rating out of 10 (0-10.0, one decimal place)")
+    listened: Optional[bool] = Field(False, description="Whether it has been listened to")
+    review: Optional[str] = Field(None, description="Optional review/notes for the entry")
+    cover_art_url: Optional[str] = Field(None, description="URL of the album cover art")
+
+
+class MusicCreate(MusicBase):
+    pass
+
+
+class MusicUpdate(BaseModel):
+    title: Optional[str] = None
+    artist: Optional[str] = None
+    year: Optional[int] = Field(None, ge=0)
+    genre: Optional[str] = None
+    rating: Optional[float] = Field(None, ge=0, le=10)
+    listened: Optional[bool] = None
+    review: Optional[str] = None
+    cover_art_url: Optional[str] = None
+
+
+class Music(MusicBase):
+    id: int
+
+    class Config:
+        from_attributes = True
+
+
+class BookBase(BaseModel):
+    title: str = Field(..., description="Title of the book")
+    author: str = Field(..., description="Author name")
+    year: int = Field(..., ge=0, description="Year of publication")
+    genre: Optional[str] = Field(None, description="Book genre")
+    rating: Optional[float] = Field(None, ge=0, le=10, description="Rating out of 10 (0-10.0, one decimal place)")
+    read: Optional[bool] = Field(False, description="Whether it has been read")
+    review: Optional[str] = Field(None, description="Optional review/notes for the entry")
+    cover_art_url: Optional[str] = Field(None, description="URL of the book cover art")
+
+
+class BookCreate(BookBase):
+    pass
+
+
+class BookUpdate(BaseModel):
+    title: Optional[str] = None
+    author: Optional[str] = None
+    year: Optional[int] = Field(None, ge=0)
+    genre: Optional[str] = None
+    rating: Optional[float] = Field(None, ge=0, le=10)
+    read: Optional[bool] = None
+    review: Optional[str] = None
+    cover_art_url: Optional[str] = None
+
+
+class Book(BookBase):
+    id: int
+
+    class Config:
+        from_attributes = True
+
+
 # Export/Import schemas
 class ExportData(BaseModel):
     """Schema for exporting all data from OmniTrackr"""
@@ -335,6 +409,8 @@ class ExportData(BaseModel):
     tv_shows: List[TVShow] = Field(..., description="List of all TV shows")
     anime: List[Anime] = Field(..., description="List of all anime")
     video_games: List[VideoGame] = Field(..., description="List of all video games")
+    music: List[Music] = Field(..., description="List of all music")
+    books: List[Book] = Field(..., description="List of all books")
     custom_tabs: List[dict] = Field(default=[], description="List of all custom tabs with their items")
     export_metadata: dict = Field(..., description="Export metadata including timestamp and version")
     
@@ -348,6 +424,8 @@ class ImportData(BaseModel):
     tv_shows: List[TVShowCreate] = Field(default=[], description="TV shows to import")
     anime: List[AnimeCreate] = Field(default=[], description="Anime to import")
     video_games: List[VideoGameCreate] = Field(default=[], description="Video games to import")
+    music: List[MusicCreate] = Field(default=[], description="Music to import")
+    books: List[BookCreate] = Field(default=[], description="Books to import")
     custom_tabs: List[dict] = Field(default=[], description="Custom tabs to import (optional for backward compatibility)")
     
     class Config:
@@ -364,6 +442,10 @@ class ImportResult(BaseModel):
     anime_updated: int = Field(..., description="Number of anime updated")
     video_games_created: int = Field(..., description="Number of video games created")
     video_games_updated: int = Field(..., description="Number of video games updated")
+    music_created: int = Field(..., description="Number of music created")
+    music_updated: int = Field(..., description="Number of music updated")
+    books_created: int = Field(..., description="Number of books created")
+    books_updated: int = Field(..., description="Number of books updated")
     custom_tabs_created: int = Field(default=0, description="Number of custom tabs created")
     custom_tabs_updated: int = Field(default=0, description="Number of custom tabs updated")
     errors: List[str] = Field(default=[], description="List of errors encountered during import")
@@ -387,10 +469,16 @@ class WatchStatistics(BaseModel):
     total_video_games: int = Field(..., description="Total number of video games")
     played_video_games: int = Field(..., description="Number of played video games")
     unplayed_video_games: int = Field(..., description="Number of unplayed video games")
+    total_music: int = Field(..., description="Total number of music")
+    listened_music: int = Field(..., description="Number of listened music")
+    unlistened_music: int = Field(..., description="Number of unlistened music")
+    total_books: int = Field(..., description="Total number of books")
+    read_books: int = Field(..., description="Number of read books")
+    unread_books: int = Field(..., description="Number of unread books")
     total_items: int = Field(..., description="Total number of items")
-    watched_items: int = Field(..., description="Number of watched/played items")
-    unwatched_items: int = Field(..., description="Number of unwatched/unplayed items")
-    completion_percentage: float = Field(..., description="Percentage of items watched/played")
+    watched_items: int = Field(..., description="Number of watched/played/listened/read items")
+    unwatched_items: int = Field(..., description="Number of unwatched/unplayed/unlistened/unread items")
+    completion_percentage: float = Field(..., description="Percentage of items watched/played/listened/read")
 
 
 class RatingItem(BaseModel):
@@ -415,6 +503,8 @@ class YearStatistics(BaseModel):
     tv_shows_by_year: dict = Field(..., description="TV shows count by year")
     anime_by_year: dict = Field(..., description="Anime count by year")
     video_games_by_year: dict = Field(..., description="Video games count by year")
+    music_by_year: dict = Field(..., description="Music count by year")
+    books_by_year: dict = Field(..., description="Books count by year")
     all_years: List[int] = Field(..., description="All years in the collection")
     decade_stats: dict = Field(..., description="Statistics by decade")
     oldest_year: Optional[int] = Field(None, description="Oldest year in collection")
@@ -531,6 +621,20 @@ class VideoGameStatistics(BaseModel):
     genre_stats: GenreStatistics = Field(..., description="Genre statistics")
 
 
+class MusicStatistics(BaseModel):
+    """Schema for music-specific statistics"""
+    watch_stats: CategoryWatchStatistics = Field(..., description="Watch statistics")
+    rating_stats: CategoryRatingStatistics = Field(..., description="Rating statistics")
+    year_stats: CategoryYearStatistics = Field(..., description="Year-based statistics")
+
+
+class BookStatistics(BaseModel):
+    """Schema for book-specific statistics"""
+    watch_stats: CategoryWatchStatistics = Field(..., description="Watch statistics")
+    rating_stats: CategoryRatingStatistics = Field(..., description="Rating statistics")
+    year_stats: CategoryYearStatistics = Field(..., description="Year-based statistics")
+
+
 # ============================================================================
 # Friend Profile Schemas
 # ============================================================================
@@ -542,11 +646,15 @@ class FriendProfileSummary(BaseModel):
     tv_shows_count: Optional[int] = Field(None, description="Number of TV shows (if not private)")
     anime_count: Optional[int] = Field(None, description="Number of anime (if not private)")
     video_games_count: Optional[int] = Field(None, description="Number of video games (if not private)")
+    music_count: Optional[int] = Field(None, description="Number of music (if not private)")
+    books_count: Optional[int] = Field(None, description="Number of books (if not private)")
     statistics_available: Optional[bool] = Field(None, description="Whether statistics are available (if not private)")
     movies_private: bool = Field(..., description="Whether movies are private")
     tv_shows_private: bool = Field(..., description="Whether TV shows are private")
     anime_private: bool = Field(..., description="Whether anime are private")
     video_games_private: bool = Field(..., description="Whether video games are private")
+    music_private: bool = Field(..., description="Whether music are private")
+    books_private: bool = Field(..., description="Whether books are private")
     statistics_private: bool = Field(..., description="Whether statistics are private")
 
 
@@ -572,6 +680,18 @@ class FriendVideoGamesResponse(BaseModel):
     """Schema for friend's video games list."""
     video_games: List[VideoGame] = Field(..., description="List of friend's video games")
     count: int = Field(..., description="Total number of video games")
+
+
+class FriendMusicResponse(BaseModel):
+    """Schema for friend's music list."""
+    music: List[Music] = Field(..., description="List of friend's music")
+    count: int = Field(..., description="Total number of music")
+
+
+class FriendBooksResponse(BaseModel):
+    """Schema for friend's books list."""
+    books: List[Book] = Field(..., description="List of friend's books")
+    count: int = Field(..., description="Total number of books")
 
 
 class FriendStatisticsResponse(BaseModel):

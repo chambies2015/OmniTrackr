@@ -186,7 +186,7 @@ async def get_llms_txt():
     llms_content = f"""# OmniTrackr - Media Collection Tracker
 
 ## About
-OmniTrackr is a free web application for tracking and organizing movies, TV shows, anime, and video games. Users can rate, review, and analyze their media collection with comprehensive statistics, beautiful posters, and social features.
+OmniTrackr is a free web application for tracking and organizing movies, TV shows, anime, video games, music, and books. Users can rate, review, and analyze their media collection with comprehensive statistics, beautiful posters and cover art, and social features.
 
 ## Key Pages
 - Home: {base_url}/
@@ -194,7 +194,7 @@ OmniTrackr is a free web application for tracking and organizing movies, TV show
 - Public Reviews: {base_url}/reviews
 
 ## Features
-- Track movies, TV shows, anime, and video games
+- Track movies, TV shows, anime, video games, music, and books
 - Rate and review media with detailed reviews
 - Statistics dashboard with comprehensive analytics
 - Export/import data in JSON format

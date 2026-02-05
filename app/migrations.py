@@ -99,6 +99,26 @@ def run_migrations():
                     conn.execute(text("ALTER TABLE users ADD COLUMN video_games_visible BOOLEAN DEFAULT TRUE"))
                     conn.commit()
                     print("Added video_games_visible column to users table")
+            if "music_private" not in user_columns:
+                with engine.connect() as conn:
+                    conn.execute(text("ALTER TABLE users ADD COLUMN music_private BOOLEAN DEFAULT FALSE"))
+                    conn.commit()
+                    print("Added music_private column to users table")
+            if "books_private" not in user_columns:
+                with engine.connect() as conn:
+                    conn.execute(text("ALTER TABLE users ADD COLUMN books_private BOOLEAN DEFAULT FALSE"))
+                    conn.commit()
+                    print("Added books_private column to users table")
+            if "music_visible" not in user_columns:
+                with engine.connect() as conn:
+                    conn.execute(text("ALTER TABLE users ADD COLUMN music_visible BOOLEAN DEFAULT TRUE"))
+                    conn.commit()
+                    print("Added music_visible column to users table")
+            if "books_visible" not in user_columns:
+                with engine.connect() as conn:
+                    conn.execute(text("ALTER TABLE users ADD COLUMN books_visible BOOLEAN DEFAULT TRUE"))
+                    conn.commit()
+                    print("Added books_visible column to users table")
             if "profile_picture_url" not in user_columns:
                 with engine.connect() as conn:
                     conn.execute(text("ALTER TABLE users ADD COLUMN profile_picture_url VARCHAR"))
@@ -267,6 +287,50 @@ def run_migrations():
                                 print("Converted video_games.rating column from INTEGER to FLOAT")
                         except Exception as e:
                             print(f"Note: Could not convert video_games.rating column type (may already be correct): {e}")
+
+        if not inspector.has_table("music"):
+            print("Music table will be created by Base.metadata.create_all")
+        else:
+            music_columns = {col["name"] for col in inspector.get_columns("music")}
+            if "cover_art_url" not in music_columns:
+                with engine.connect() as conn:
+                    conn.execute(text("ALTER TABLE music ADD COLUMN cover_art_url VARCHAR"))
+                    conn.commit()
+                    print("Added cover_art_url column to music table")
+            rating_column = next((col for col in inspector.get_columns("music") if col["name"] == "rating"), None)
+            if rating_column:
+                if database.DATABASE_URL.startswith("postgresql"):
+                    col_type = str(rating_column.get("type", "")).upper()
+                    if "INT" in col_type and "FLOAT" not in col_type and "NUMERIC" not in col_type and "REAL" not in col_type:
+                        try:
+                            with engine.connect() as conn:
+                                conn.execute(text("ALTER TABLE music ALTER COLUMN rating TYPE FLOAT USING rating::float"))
+                                conn.commit()
+                                print("Converted music.rating column from INTEGER to FLOAT")
+                        except Exception as e:
+                            print(f"Note: Could not convert music.rating column type (may already be correct): {e}")
+
+        if not inspector.has_table("books"):
+            print("Books table will be created by Base.metadata.create_all")
+        else:
+            book_columns = {col["name"] for col in inspector.get_columns("books")}
+            if "cover_art_url" not in book_columns:
+                with engine.connect() as conn:
+                    conn.execute(text("ALTER TABLE books ADD COLUMN cover_art_url VARCHAR"))
+                    conn.commit()
+                    print("Added cover_art_url column to books table")
+            rating_column = next((col for col in inspector.get_columns("books") if col["name"] == "rating"), None)
+            if rating_column:
+                if database.DATABASE_URL.startswith("postgresql"):
+                    col_type = str(rating_column.get("type", "")).upper()
+                    if "INT" in col_type and "FLOAT" not in col_type and "NUMERIC" not in col_type and "REAL" not in col_type:
+                        try:
+                            with engine.connect() as conn:
+                                conn.execute(text("ALTER TABLE books ALTER COLUMN rating TYPE FLOAT USING rating::float"))
+                                conn.commit()
+                                print("Converted books.rating column from INTEGER to FLOAT")
+                        except Exception as e:
+                            print(f"Note: Could not convert books.rating column type (may already be correct): {e}")
 
         if not inspector.has_table("friend_requests"):
             with engine.connect() as conn:

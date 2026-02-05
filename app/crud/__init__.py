@@ -57,21 +57,45 @@ from .video_games import (
     delete_video_game,
 )
 
+# Music CRUD operations
+from .music import (
+    get_music,
+    get_music_by_id,
+    create_music,
+    update_music,
+    delete_music,
+)
+
+# Book CRUD operations
+from .books import (
+    get_books,
+    get_book_by_id,
+    create_book,
+    update_book,
+    delete_book,
+)
+
 # Export/Import operations
 from .export_import import (
     get_all_movies,
     get_all_tv_shows,
     get_all_anime,
     get_all_video_games,
+    get_all_music,
+    get_all_books,
     get_all_custom_tabs_with_items,
     find_movie_by_title_and_director,
     find_tv_show_by_title_and_year,
     find_anime_by_title_and_year,
     find_video_game_by_title_and_release_date,
+    find_music_by_title_and_artist,
+    find_book_by_title_and_author,
     import_movies,
     import_tv_shows,
     import_anime,
     import_video_games,
+    import_music,
+    import_books,
     import_custom_tabs,
 )
 
@@ -85,6 +109,8 @@ from .statistics import (
     get_tv_show_statistics,
     get_anime_statistics,
     get_video_game_statistics,
+    get_music_statistics,
+    get_books_statistics,
 )
 
 # Friends, Friend Requests, Notifications, and Friend Profile operations
@@ -110,6 +136,8 @@ from .friends import (
     get_friend_tv_shows,
     get_friend_anime,
     get_friend_video_games,
+    get_friend_music,
+    get_friend_books,
     get_friend_statistics,
 )
 
@@ -170,20 +198,38 @@ __all__ = [
     "create_video_game",
     "update_video_game",
     "delete_video_game",
+    # Music operations
+    "get_music",
+    "get_music_by_id",
+    "create_music",
+    "update_music",
+    "delete_music",
+    # Book operations
+    "get_books",
+    "get_book_by_id",
+    "create_book",
+    "update_book",
+    "delete_book",
     # Export/Import operations
     "get_all_movies",
     "get_all_tv_shows",
     "get_all_anime",
     "get_all_video_games",
+    "get_all_music",
+    "get_all_books",
     "get_all_custom_tabs_with_items",
     "find_movie_by_title_and_director",
     "find_tv_show_by_title_and_year",
     "find_anime_by_title_and_year",
     "find_video_game_by_title_and_release_date",
+    "find_music_by_title_and_artist",
+    "find_book_by_title_and_author",
     "import_movies",
     "import_tv_shows",
     "import_anime",
     "import_video_games",
+    "import_music",
+    "import_books",
     "import_custom_tabs",
     # Statistics operations
     "get_watch_statistics",
@@ -194,6 +240,8 @@ __all__ = [
     "get_tv_show_statistics",
     "get_anime_statistics",
     "get_video_game_statistics",
+    "get_music_statistics",
+    "get_books_statistics",
     # Friends operations
     "create_friend_request",
     "get_friend_request",
@@ -218,6 +266,8 @@ __all__ = [
     "get_friend_tv_shows",
     "get_friend_anime",
     "get_friend_video_games",
+    "get_friend_music",
+    "get_friend_books",
     "get_friend_statistics",
     # Custom Tab operations
     "get_custom_tabs",

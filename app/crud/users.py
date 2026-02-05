@@ -143,6 +143,10 @@ def update_privacy_settings(db: Session, user_id: int, privacy_settings: schemas
         db_user.anime_private = update_dict['anime_private']
     if 'video_games_private' in update_dict:
         db_user.video_games_private = update_dict['video_games_private']
+    if 'music_private' in update_dict:
+        db_user.music_private = update_dict['music_private']
+    if 'books_private' in update_dict:
+        db_user.books_private = update_dict['books_private']
     if 'statistics_private' in update_dict:
         db_user.statistics_private = update_dict['statistics_private']
     if 'reviews_public' in update_dict:
@@ -164,6 +168,8 @@ def get_privacy_settings(db: Session, user_id: int) -> Optional[schemas.PrivacyS
         tv_shows_private=db_user.tv_shows_private,
         anime_private=db_user.anime_private,
         video_games_private=db_user.video_games_private,
+        music_private=db_user.music_private,
+        books_private=db_user.books_private,
         statistics_private=db_user.statistics_private,
         reviews_public=db_user.reviews_public
     )
@@ -185,6 +191,10 @@ def update_tab_visibility(db: Session, user_id: int, tab_visibility: schemas.Tab
         db_user.anime_visible = update_dict['anime_visible']
     if 'video_games_visible' in update_dict:
         db_user.video_games_visible = update_dict['video_games_visible']
+    if 'music_visible' in update_dict:
+        db_user.music_visible = update_dict['music_visible']
+    if 'books_visible' in update_dict:
+        db_user.books_visible = update_dict['books_visible']
     
     db.commit()
     db.refresh(db_user)
@@ -201,7 +211,9 @@ def get_tab_visibility(db: Session, user_id: int) -> Optional[schemas.TabVisibil
         movies_visible=db_user.movies_visible,
         tv_shows_visible=db_user.tv_shows_visible,
         anime_visible=db_user.anime_visible,
-        video_games_visible=db_user.video_games_visible
+        video_games_visible=db_user.video_games_visible,
+        music_visible=db_user.music_visible,
+        books_visible=db_user.books_visible
     )
 
 

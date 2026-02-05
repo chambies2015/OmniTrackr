@@ -28,6 +28,16 @@ def get_all_video_games(db: Session, user_id: int) -> List[models.VideoGame]:
     return db.query(models.VideoGame).filter(models.VideoGame.user_id == user_id).all()
 
 
+def get_all_music(db: Session, user_id: int) -> List[models.Music]:
+    """Get all music for export"""
+    return db.query(models.Music).filter(models.Music.user_id == user_id).all()
+
+
+def get_all_books(db: Session, user_id: int) -> List[models.Book]:
+    """Get all books for export"""
+    return db.query(models.Book).filter(models.Book.user_id == user_id).all()
+
+
 def get_all_custom_tabs_with_items(db: Session, user_id: int) -> List[dict]:
     """Get all custom tabs with their items for export"""
     import json
@@ -256,6 +266,106 @@ def import_video_games(db: Session, user_id: int, video_games: List[schemas.Vide
     except Exception as e:
         db.rollback()
         errors.append(f"Database error during video game import: {str(e)}")
+        return 0, 0, errors
+    
+    return created, updated, errors
+
+
+def find_music_by_title_and_artist(db: Session, user_id: int, title: str, artist: str) -> Optional[models.Music]:
+    """Find music by title and artist for import conflict resolution"""
+    return db.query(models.Music).filter(
+        models.Music.user_id == user_id,
+        models.Music.title == title,
+        models.Music.artist == artist
+    ).first()
+
+
+def import_music(db: Session, user_id: int, music: List[schemas.MusicCreate]) -> tuple[int, int, List[str]]:
+    """Import music, returning (created_count, updated_count, errors)"""
+    created = 0
+    updated = 0
+    errors = []
+    
+    for music_data in music:
+        try:
+            existing_music = find_music_by_title_and_artist(
+                db, user_id, music_data.title, music_data.artist
+            )
+            
+            if existing_music:
+                update_dict = music_data.dict(exclude_unset=True)
+                allowed_fields = {'title', 'artist', 'year', 'genre', 'rating', 'listened', 'review', 'cover_art_url'}
+                for field, value in update_dict.items():
+                    if field in allowed_fields:
+                        if field == 'rating' and value is not None:
+                            value = round(float(value), 1)
+                        setattr(existing_music, field, value)
+                updated += 1
+            else:
+                music_dict = music_data.dict()
+                if music_dict.get('rating') is not None:
+                    music_dict['rating'] = round(float(music_dict['rating']), 1)
+                db_music = models.Music(**music_dict, user_id=user_id)
+                db.add(db_music)
+                created += 1
+        except Exception as e:
+            errors.append(f"Error importing music '{music_data.title}': {str(e)}")
+    
+    try:
+        db.commit()
+    except Exception as e:
+        db.rollback()
+        errors.append(f"Database error during music import: {str(e)}")
+        return 0, 0, errors
+    
+    return created, updated, errors
+
+
+def find_book_by_title_and_author(db: Session, user_id: int, title: str, author: str) -> Optional[models.Book]:
+    """Find book by title and author for import conflict resolution"""
+    return db.query(models.Book).filter(
+        models.Book.user_id == user_id,
+        models.Book.title == title,
+        models.Book.author == author
+    ).first()
+
+
+def import_books(db: Session, user_id: int, books: List[schemas.BookCreate]) -> tuple[int, int, List[str]]:
+    """Import books, returning (created_count, updated_count, errors)"""
+    created = 0
+    updated = 0
+    errors = []
+    
+    for book_data in books:
+        try:
+            existing_book = find_book_by_title_and_author(
+                db, user_id, book_data.title, book_data.author
+            )
+            
+            if existing_book:
+                update_dict = book_data.dict(exclude_unset=True)
+                allowed_fields = {'title', 'author', 'year', 'genre', 'rating', 'read', 'review', 'cover_art_url'}
+                for field, value in update_dict.items():
+                    if field in allowed_fields:
+                        if field == 'rating' and value is not None:
+                            value = round(float(value), 1)
+                        setattr(existing_book, field, value)
+                updated += 1
+            else:
+                book_dict = book_data.dict()
+                if book_dict.get('rating') is not None:
+                    book_dict['rating'] = round(float(book_dict['rating']), 1)
+                db_book = models.Book(**book_dict, user_id=user_id)
+                db.add(db_book)
+                created += 1
+        except Exception as e:
+            errors.append(f"Error importing book '{book_data.title}': {str(e)}")
+    
+    try:
+        db.commit()
+    except Exception as e:
+        db.rollback()
+        errors.append(f"Database error during book import: {str(e)}")
         return 0, 0, errors
     
     return created, updated, errors
