@@ -62,6 +62,16 @@
   <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@700;800&family=Inter:wght@400;500;600&display=swap"
     rel="stylesheet">
   <link rel="stylesheet" href="./styles.css">
+  <script>
+    if(localStorage.getItem('omnitrackr_token')){
+      document.documentElement.classList.add('authenticated');
+    }
+  </script>
+  <style>
+    html.authenticated #landingPage{display:none}
+    html.authenticated #mainContainer,
+    html.authenticated #mainFooter{display:block}
+  </style>
 
   <!-- JSON-LD Structured Data -->
   <script type="application/ld+json">
@@ -1010,6 +1020,10 @@
         <a href="https://www.linkedin.com/in/d-g-c/" target="_blank" rel="noopener noreferrer" class="footer-link">💼
           LinkedIn</a>
         <a href="https://ko-fi.com/omnitrackr" target="_blank" rel="noopener noreferrer" class="footer-link">☕ Ko-fi</a>
+        <a href="/about" class="footer-link">About</a>
+        <a href="/guides" class="footer-link">Guides</a>
+        <a href="/terms" class="footer-link">Terms</a>
+        <a href="/contact" class="footer-link">Contact</a>
         <a href="/privacy" class="footer-link">🔒 Privacy Policy</a>
       </div>
     </div>
@@ -1502,6 +1516,10 @@
             LinkedIn</a>
           <a href="https://ko-fi.com/omnitrackr" target="_blank" rel="noopener noreferrer" class="footer-link">☕
             Ko-fi</a>
+          <a href="/about" class="footer-link">About</a>
+          <a href="/guides" class="footer-link">Guides</a>
+          <a href="/terms" class="footer-link">Terms</a>
+          <a href="/contact" class="footer-link">Contact</a>
           <a href="/privacy" class="footer-link">🔒 Privacy Policy</a>
         </div>
       </div>

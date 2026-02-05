@@ -229,6 +229,38 @@ async def privacy_policy():
     raise HTTPException(status_code=404, detail="Privacy policy not found")
 
 
+@app.get("/about", tags=["public"])
+async def about_page():
+    html_file = os.path.join(os.path.dirname(__file__), "templates", "about.html")
+    if os.path.exists(html_file):
+        return FileResponse(html_file)
+    raise HTTPException(status_code=404, detail="Page not found")
+
+
+@app.get("/guides", tags=["public"])
+async def guides_page():
+    html_file = os.path.join(os.path.dirname(__file__), "templates", "guides.html")
+    if os.path.exists(html_file):
+        return FileResponse(html_file)
+    raise HTTPException(status_code=404, detail="Page not found")
+
+
+@app.get("/terms", tags=["public"])
+async def terms_page():
+    html_file = os.path.join(os.path.dirname(__file__), "templates", "terms.html")
+    if os.path.exists(html_file):
+        return FileResponse(html_file)
+    raise HTTPException(status_code=404, detail="Page not found")
+
+
+@app.get("/contact", tags=["public"])
+async def contact_page():
+    html_file = os.path.join(os.path.dirname(__file__), "templates", "contact.html")
+    if os.path.exists(html_file):
+        return FileResponse(html_file)
+    raise HTTPException(status_code=404, detail="Page not found")
+
+
 # Public endpoint for user count
 @app.get("/api/user-count", response_model=schemas.UserCount, tags=["public"])
 @limiter.limit("30/minute")  # Rate limit: 30 requests per minute per IP

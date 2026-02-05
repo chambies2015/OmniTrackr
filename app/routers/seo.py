@@ -36,6 +36,30 @@ async def get_sitemap(db: Session = Depends(get_db)):
     <priority>0.5</priority>
   </url>
   <url>
+    <loc>{base_url}/about</loc>
+    <lastmod>{today}</lastmod>
+    <changefreq>monthly</changefreq>
+    <priority>0.7</priority>
+  </url>
+  <url>
+    <loc>{base_url}/guides</loc>
+    <lastmod>{today}</lastmod>
+    <changefreq>monthly</changefreq>
+    <priority>0.7</priority>
+  </url>
+  <url>
+    <loc>{base_url}/terms</loc>
+    <lastmod>{today}</lastmod>
+    <changefreq>monthly</changefreq>
+    <priority>0.5</priority>
+  </url>
+  <url>
+    <loc>{base_url}/contact</loc>
+    <lastmod>{today}</lastmod>
+    <changefreq>monthly</changefreq>
+    <priority>0.6</priority>
+  </url>
+  <url>
     <loc>{base_url}/reviews</loc>
     <lastmod>{today}</lastmod>
     <changefreq>daily</changefreq>
@@ -190,6 +214,10 @@ OmniTrackr is a free web application for tracking and organizing movies, TV show
 
 ## Key Pages
 - Home: {base_url}/
+- About: {base_url}/about
+- Guides: {base_url}/guides
+- Terms: {base_url}/terms
+- Contact: {base_url}/contact
 - Privacy Policy: {base_url}/privacy
 - Public Reviews: {base_url}/reviews
 

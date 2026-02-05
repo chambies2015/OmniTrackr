@@ -1558,9 +1558,17 @@ body.dark-mode .card>div:nth-of-type(2) {
   }
 }
 
+/* Hide logged-in UI by default so crawlers see the landing page.
+   JS flips visibility in showAuthModal() and showMainUI(). */
+#mainContainer,
+#mainFooter,
+.notification-bell {
+  display: none;
+}
+
 /* Landing Page Styles */
 #landingPage {
-  display: none;
+  display: block;
   min-height: 100vh;
   background-color: var(--bg);
   padding: 0;
