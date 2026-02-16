@@ -57,7 +57,7 @@ def update_book(db: Session, user_id: int, book_id: int, book_update: schemas.Bo
         return None
     update_dict = book_update.dict(exclude_unset=True)
     
-    allowed_fields = {'title', 'author', 'year', 'genre', 'rating', 'read', 'review', 'cover_art_url'}
+    allowed_fields = {'title', 'author', 'year', 'genre', 'rating', 'read', 'review', 'review_public', 'cover_art_url'}
     for field, value in update_dict.items():
         if field not in allowed_fields:
             continue

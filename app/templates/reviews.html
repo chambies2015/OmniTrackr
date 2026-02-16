@@ -235,6 +235,8 @@
         <option value="tv_show">TV Shows</option>
         <option value="anime">Anime</option>
         <option value="video_game">Video Games</option>
+        <option value="music">Music</option>
+        <option value="book">Books</option>
       </select>
       <button onclick="loadReviews()">Filter</button>
       <button onclick="loadMoreReviews()" id="loadMoreBtn" style="display: none;">Load More</button>
@@ -309,11 +311,18 @@
                            review.category === 'video_game' ? 'Video Game' :
                            review.category.charAt(0).toUpperCase() + review.category.slice(1);
       
-      const metaInfo = review.category === 'movie' ? 
-        `${review.director || 'Unknown'} • ${review.year || 'N/A'}` :
-        review.category === 'video_game' ?
-        `${review.genres || 'Various'} • ${review.release_date ? new Date(review.release_date).getFullYear() : 'N/A'}` :
-        `${review.year || 'N/A'}${review.seasons ? ` • ${review.seasons} season${review.seasons > 1 ? 's' : ''}` : ''}`;
+      let metaInfo = review.year || 'N/A';
+      if (review.category === 'movie') {
+        metaInfo = `${review.director || 'Unknown'} • ${review.year || 'N/A'}`;
+      } else if (review.category === 'video_game') {
+        metaInfo = `${review.genres || 'Various'} • ${review.release_date ? new Date(review.release_date).getFullYear() : 'N/A'}`;
+      } else if (review.category === 'music') {
+        metaInfo = `${review.artist || 'Unknown'} • ${review.year || 'N/A'}`;
+      } else if (review.category === 'book') {
+        metaInfo = `${review.author || 'Unknown'} • ${review.year || 'N/A'}`;
+      } else if (review.seasons) {
+        metaInfo += ` • ${review.seasons} season${review.seasons > 1 ? 's' : ''}`;
+      }
       
       card.innerHTML = `
         <span class="review-category">${categoryLabel}</span>
@@ -386,7 +395,9 @@
         'movie': 'Movies',
         'tv_show': 'TV Shows',
         'anime': 'Anime',
-        'video_game': 'Video Games'
+        'video_game': 'Video Games',
+        'music': 'Music',
+        'book': 'Books'
       };
       
       const categoryLabel = categoryLabels[category] || category;

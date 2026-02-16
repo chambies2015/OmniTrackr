@@ -57,7 +57,7 @@ def update_music(db: Session, user_id: int, music_id: int, music_update: schemas
         return None
     update_dict = music_update.dict(exclude_unset=True)
     
-    allowed_fields = {'title', 'artist', 'year', 'genre', 'rating', 'listened', 'review', 'cover_art_url'}
+    allowed_fields = {'title', 'artist', 'year', 'genre', 'rating', 'listened', 'review', 'review_public', 'cover_art_url'}
     for field, value in update_dict.items():
         if field not in allowed_fields:
             continue

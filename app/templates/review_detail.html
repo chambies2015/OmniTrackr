@@ -288,6 +288,20 @@
           "genre": review.genres ? review.genres.split(',').map(g => g.trim()) : undefined,
           "releaseDate": review.release_date || undefined
         };
+      } else if (review.category === 'music') {
+        itemReviewed = {
+          "@type": "MusicRecording",
+          "name": review.title,
+          "byArtist": review.artist ? { "@type": "Person", "name": review.artist } : undefined,
+          "datePublished": review.year ? `${review.year}-01-01` : undefined
+        };
+      } else if (review.category === 'book') {
+        itemReviewed = {
+          "@type": "Book",
+          "name": review.title,
+          "author": review.author ? { "@type": "Person", "name": review.author } : undefined,
+          "datePublished": review.year ? `${review.year}-01-01` : undefined
+        };
       }
       
       Object.keys(itemReviewed).forEach(key => {
@@ -339,6 +353,12 @@
       } else if (review.category === 'video_game') {
         metaInfo = `<p><strong>Genres:</strong> ${escapeHtml(review.genres || 'Various')}</p>
                     <p><strong>Release Date:</strong> ${review.release_date ? new Date(review.release_date).toLocaleDateString() : 'N/A'}</p>`;
+      } else if (review.category === 'music') {
+        metaInfo = `<p><strong>Artist:</strong> ${escapeHtml(review.artist || 'Unknown')}</p>
+                    <p><strong>Year:</strong> ${review.year || 'N/A'}</p>`;
+      } else if (review.category === 'book') {
+        metaInfo = `<p><strong>Author:</strong> ${escapeHtml(review.author || 'Unknown')}</p>
+                    <p><strong>Year:</strong> ${review.year || 'N/A'}</p>`;
       } else {
         metaInfo = `<p><strong>Year:</strong> ${review.year || 'N/A'}</p>`;
         if (review.seasons) {

@@ -149,8 +149,6 @@ def update_privacy_settings(db: Session, user_id: int, privacy_settings: schemas
         db_user.books_private = update_dict['books_private']
     if 'statistics_private' in update_dict:
         db_user.statistics_private = update_dict['statistics_private']
-    if 'reviews_public' in update_dict:
-        db_user.reviews_public = update_dict['reviews_public']
     
     db.commit()
     db.refresh(db_user)
@@ -170,8 +168,7 @@ def get_privacy_settings(db: Session, user_id: int) -> Optional[schemas.PrivacyS
         video_games_private=db_user.video_games_private,
         music_private=db_user.music_private,
         books_private=db_user.books_private,
-        statistics_private=db_user.statistics_private,
-        reviews_public=db_user.reviews_public
+        statistics_private=db_user.statistics_private
     )
 
 

@@ -160,8 +160,9 @@ async function loadMovies() {
           <td><span class="watched-icon ${movie.watched ? 'watched' : 'unwatched'}">${movie.watched ? '✓' : '✗'}</span></td>
           <td>${movie.review ? movie.review : ''}</td>
           <td><a href="https://www.imdb.com/find?q=${encodeURIComponent(movie.title)}" target="_blank">Search</a></td>
+          <td><span class="watched-icon ${movie.review_public ? 'watched' : 'unwatched'}">${movie.review_public ? '✓' : '✗'}</span></td>
           <td>
-            <button class="action-btn edit-movie-btn" data-movie-id="${movie.id}" data-movie-title="${escapeHtml(movie.title)}" data-movie-director="${escapeHtml(movie.director)}" data-movie-year="${movie.year}" data-movie-rating="${movie.rating ?? ''}" data-movie-watched="${movie.watched}" data-movie-review="${escapeHtml(movie.review || '')}">Edit</button>
+            <button class="action-btn edit-movie-btn" data-movie-id="${movie.id}" data-movie-title="${escapeHtml(movie.title)}" data-movie-director="${escapeHtml(movie.director)}" data-movie-year="${movie.year}" data-movie-rating="${movie.rating ?? ''}" data-movie-watched="${movie.watched}" data-movie-review="${escapeHtml(movie.review || '')}" data-movie-review-public="${movie.review_public || false}">Edit</button>
             <button class="action-btn delete-movie-btn" data-movie-id="${movie.id}">Delete</button>
           </td>
         `;
@@ -360,14 +361,13 @@ window.enableMovieEdit = function (btn) {
   const ratingVal = btn.dataset.movieRating || '';
   const watched = btn.dataset.movieWatched === 'true';
   const review = btn.dataset.movieReview || '';
+  const reviewPublic = btn.dataset.movieReviewPublic === 'true';
   row.cells[1].innerHTML = `<input type="text" id="edit-movie-title" value="${escapeHtml(title)}">`;
   row.cells[2].innerHTML = `<input type="text" id="edit-movie-director" value="${escapeHtml(director)}">`;
   row.cells[3].innerHTML = `<input type="number" id="edit-movie-year" value="${escapeHtml(year)}">`;
   row.cells[4].innerHTML = `<input type="number" min="0" max="10" step="0.1" id="edit-movie-rating" value="${escapeHtml(ratingVal)}">`;
   row.cells[5].innerHTML = `<input type="checkbox" id="edit-movie-watched" ${watched ? 'checked' : ''}>`;
-  // Escape HTML for textarea content
   row.cells[6].innerHTML = `<textarea id="edit-movie-review" class="review-textarea">${escapeHtml(review)}</textarea>`;
-  // Auto-resize textarea to content
   const movieReviewTextarea = document.getElementById('edit-movie-review');
   if (movieReviewTextarea) {
     movieReviewTextarea.style.height = 'auto';
@@ -377,7 +377,8 @@ window.enableMovieEdit = function (btn) {
       this.style.height = Math.max(60, this.scrollHeight) + 'px';
     });
   }
-  row.cells[8].innerHTML = `
+  row.cells[8].innerHTML = `<input type="checkbox" id="edit-movie-review-public" ${reviewPublic ? 'checked' : ''}>`;
+  row.cells[9].innerHTML = `
     <button class="action-btn save-movie-btn" data-movie-id="${id}">Save</button>
     <button class="action-btn cancel-movie-btn">Cancel</button>
   `;
@@ -397,6 +398,8 @@ window.saveMovieEdit = async function (btn) {
   if (ratingVal) updated.rating = parseFloat(ratingVal);
   const reviewVal = document.getElementById('edit-movie-review') ? document.getElementById('edit-movie-review').value : '';
   if (reviewVal !== undefined) updated.review = reviewVal;
+  const reviewPublicEl = document.getElementById('edit-movie-review-public');
+  if (reviewPublicEl) updated.review_public = reviewPublicEl.checked;
   const res = await authenticatedFetch(`${API_BASE}/movies/${id}`, {
     method: 'PUT',
     headers: { 'Content-Type': 'application/json' },
@@ -461,8 +464,9 @@ async function loadTVShows() {
           <td><span class="watched-icon ${tvShow.watched ? 'watched' : 'unwatched'}">${tvShow.watched ? '✓' : '✗'}</span></td>
           <td>${tvShow.review ? tvShow.review : ''}</td>
           <td><a href="https://www.imdb.com/find?q=${encodeURIComponent(tvShow.title)}" target="_blank">Search</a></td>
+          <td><span class="watched-icon ${tvShow.review_public ? 'watched' : 'unwatched'}">${tvShow.review_public ? '✓' : '✗'}</span></td>
           <td>
-            <button class="action-btn edit-tv-btn" data-tv-id="${tvShow.id}" data-tv-title="${escapeHtml(tvShow.title)}" data-tv-year="${tvShow.year}" data-tv-seasons="${tvShow.seasons ?? ''}" data-tv-episodes="${tvShow.episodes ?? ''}" data-tv-rating="${tvShow.rating ?? ''}" data-tv-watched="${tvShow.watched}" data-tv-review="${escapeHtml(tvShow.review || '')}">Edit</button>
+            <button class="action-btn edit-tv-btn" data-tv-id="${tvShow.id}" data-tv-title="${escapeHtml(tvShow.title)}" data-tv-year="${tvShow.year}" data-tv-seasons="${tvShow.seasons ?? ''}" data-tv-episodes="${tvShow.episodes ?? ''}" data-tv-rating="${tvShow.rating ?? ''}" data-tv-watched="${tvShow.watched}" data-tv-review="${escapeHtml(tvShow.review || '')}" data-tv-review-public="${tvShow.review_public || false}">Edit</button>
             <button class="action-btn delete-tv-btn" data-tv-id="${tvShow.id}">Delete</button>
           </td>
         `;
@@ -526,8 +530,9 @@ async function loadAnime() {
           <td style="text-align: center;"><span class="watched-icon ${animeItem.watched ? 'watched' : 'unwatched'}">${animeItem.watched ? '✓' : '✗'}</span></td>
           <td>${animeItem.review ? animeItem.review : ''}</td>
           <td><a href="https://www.imdb.com/find?q=${encodeURIComponent(animeItem.title)}" target="_blank">Search</a></td>
+          <td><span class="watched-icon ${animeItem.review_public ? 'watched' : 'unwatched'}">${animeItem.review_public ? '✓' : '✗'}</span></td>
           <td>
-            <button class="action-btn edit-anime-btn" data-anime-id="${animeItem.id}" data-anime-title="${escapeHtml(animeItem.title)}" data-anime-year="${animeItem.year}" data-anime-seasons="${animeItem.seasons ?? ''}" data-anime-episodes="${animeItem.episodes ?? ''}" data-anime-rating="${animeItem.rating ?? ''}" data-anime-watched="${animeItem.watched}" data-anime-review="${escapeHtml(animeItem.review || '')}">Edit</button>
+            <button class="action-btn edit-anime-btn" data-anime-id="${animeItem.id}" data-anime-title="${escapeHtml(animeItem.title)}" data-anime-year="${animeItem.year}" data-anime-seasons="${animeItem.seasons ?? ''}" data-anime-episodes="${animeItem.episodes ?? ''}" data-anime-rating="${animeItem.rating ?? ''}" data-anime-watched="${animeItem.watched}" data-anime-review="${escapeHtml(animeItem.review || '')}" data-anime-review-public="${animeItem.review_public || false}">Edit</button>
             <button class="action-btn delete-anime-btn" data-anime-id="${animeItem.id}">Delete</button>
           </td>
         `;
@@ -900,14 +905,14 @@ async function loadVideoGames() {
           <td>${game.rating !== null && game.rating !== undefined ? parseFloat(game.rating).toFixed(1) + '/10' : ''}</td>
           <td>${game.rawg_link ? `<a href="${game.rawg_link}" target="_blank">View on RAWG</a>` : ''}</td>
           <td>${game.review ? escapeHtml(game.review) : ''}</td>
+          <td><span class="watched-icon ${game.review_public ? 'watched' : 'unwatched'}">${game.review_public ? '✓' : '✗'}</span></td>
           <td>
-            <button class="action-btn edit-video-game-btn" data-game-id="${game.id}" data-game-title="${escapeHtml(game.title)}" data-game-release-date="${game.release_date ? game.release_date.split('T')[0] : ''}" data-game-genres="${escapeHtml(game.genres || '')}" data-game-rating="${game.rating ?? ''}" data-game-played="${game.played}" data-game-review="${escapeHtml(game.review || '')}">Edit</button>
+            <button class="action-btn edit-video-game-btn" data-game-id="${game.id}" data-game-title="${escapeHtml(game.title)}" data-game-release-date="${game.release_date ? game.release_date.split('T')[0] : ''}" data-game-genres="${escapeHtml(game.genres || '')}" data-game-rating="${game.rating ?? ''}" data-game-played="${game.played}" data-game-review="${escapeHtml(game.review || '')}" data-game-review-public="${game.review_public || false}">Edit</button>
             <button class="action-btn delete-video-game-btn" data-game-id="${game.id}">Delete</button>
           </td>
         `;
         tbody.appendChild(tr);
 
-        // Display cached cover art or fetch new one
         if (game.cover_art_url) {
           displayVideoGamePoster(game.id, game.cover_art_url, game.title);
         } else {
@@ -1151,15 +1156,13 @@ window.enableVideoGameEdit = function (btn) {
   const ratingVal = btn.dataset.gameRating || '';
   const played = btn.dataset.gamePlayed === 'true';
   const review = btn.dataset.gameReview || '';
+  const reviewPublic = btn.dataset.gameReviewPublic === 'true';
   row.cells[1].innerHTML = `<input type="text" id="edit-video-game-title" value="${escapeHtml(title)}">`;
   row.cells[2].innerHTML = `<input type="date" id="edit-video-game-release-date" value="${releaseDate}">`;
   row.cells[3].innerHTML = `<input type="text" id="edit-video-game-genres" value="${escapeHtml(genres)}">`;
   row.cells[4].innerHTML = `<input type="checkbox" id="edit-video-game-played" ${played ? 'checked' : ''}>`;
   row.cells[5].innerHTML = `<input type="number" min="0" max="10" step="0.1" id="edit-video-game-rating" value="${ratingVal}">`;
-  // Keep RAWG link as is (preserve HTML to maintain clickable link - don't modify this cell)
-  // Review cell is at index 7, replace it with textarea for editing
   row.cells[7].innerHTML = `<textarea id="edit-video-game-review" class="review-textarea">${escapeHtml(review)}</textarea>`;
-  // Auto-resize textarea to content
   const videoGameReviewTextarea = document.getElementById('edit-video-game-review');
   if (videoGameReviewTextarea) {
     videoGameReviewTextarea.style.height = 'auto';
@@ -1169,9 +1172,8 @@ window.enableVideoGameEdit = function (btn) {
       this.style.height = Math.max(60, this.scrollHeight) + 'px';
     });
   }
-  // Actions cell is always the last cell, so use length - 1 to get the correct index
-  const actionsCellIndex = row.cells.length - 1;
-  row.cells[actionsCellIndex].innerHTML = `
+  row.cells[8].innerHTML = `<input type="checkbox" id="edit-video-game-review-public" ${reviewPublic ? 'checked' : ''}>`;
+  row.cells[9].innerHTML = `
     <button class="action-btn save-video-game-btn" data-game-id="${id}">Save</button>
     <button class="action-btn cancel-video-game-btn">Cancel</button>
   `;
@@ -1193,6 +1195,8 @@ window.saveVideoGameEdit = async function (btn) {
   updateData.played = played;
   if (ratingVal) updateData.rating = parseFloat(ratingVal);
   if (reviewVal !== undefined) updateData.review = reviewVal;
+  const reviewPublicEl = document.getElementById('edit-video-game-review-public');
+  if (reviewPublicEl) updateData.review_public = reviewPublicEl.checked;
 
   const res = await authenticatedFetch(`${API_BASE}/video-games/${id}`, {
     method: 'PUT',
@@ -1256,8 +1260,9 @@ async function loadMusic() {
           <td>${item.rating !== null && item.rating !== undefined ? parseFloat(item.rating).toFixed(1) + '/10' : ''}</td>
           <td><span class="watched-icon ${item.listened ? 'watched' : 'unwatched'}">${item.listened ? '✓' : '✗'}</span></td>
           <td>${item.review ? escapeHtml(item.review) : ''}</td>
+          <td><span class="watched-icon ${item.review_public ? 'watched' : 'unwatched'}">${item.review_public ? '✓' : '✗'}</span></td>
           <td>
-            <button class="action-btn edit-music-btn" data-music-id="${item.id}" data-music-title="${escapeHtml(item.title)}" data-music-artist="${escapeHtml(item.artist)}" data-music-year="${item.year}" data-music-genre="${escapeHtml(item.genre || '')}" data-music-rating="${item.rating ?? ''}" data-music-listened="${item.listened}" data-music-review="${escapeHtml(item.review || '')}">Edit</button>
+            <button class="action-btn edit-music-btn" data-music-id="${item.id}" data-music-title="${escapeHtml(item.title)}" data-music-artist="${escapeHtml(item.artist)}" data-music-year="${item.year}" data-music-genre="${escapeHtml(item.genre || '')}" data-music-rating="${item.rating ?? ''}" data-music-listened="${item.listened}" data-music-review="${escapeHtml(item.review || '')}" data-music-review-public="${item.review_public || false}">Edit</button>
             <button class="action-btn delete-music-btn" data-music-id="${item.id}">Delete</button>
           </td>
         `;
@@ -1492,6 +1497,7 @@ window.enableMusicEdit = function (btn) {
   const ratingVal = btn.dataset.musicRating || '';
   const listened = btn.dataset.musicListened === 'true';
   const review = btn.dataset.musicReview || '';
+  const reviewPublic = btn.dataset.musicReviewPublic === 'true';
   row.cells[1].innerHTML = `<input type="text" id="edit-music-title" value="${escapeHtml(title)}">`;
   row.cells[2].innerHTML = `<input type="text" id="edit-music-artist" value="${escapeHtml(artist)}">`;
   row.cells[3].innerHTML = `<input type="number" id="edit-music-year" value="${year}">`;
@@ -1508,8 +1514,8 @@ window.enableMusicEdit = function (btn) {
       this.style.height = Math.max(60, this.scrollHeight) + 'px';
     });
   }
-  const actionsCellIndex = row.cells.length - 1;
-  row.cells[actionsCellIndex].innerHTML = `
+  row.cells[8].innerHTML = `<input type="checkbox" id="edit-music-review-public" ${reviewPublic ? 'checked' : ''}>`;
+  row.cells[9].innerHTML = `
     <button class="action-btn save-music-btn" data-music-id="${id}">Save</button>
     <button class="action-btn cancel-music-btn">Cancel</button>
   `;
@@ -1531,6 +1537,8 @@ window.saveMusicEdit = async function (btn) {
   updateData.listened = listened;
   if (ratingVal) updateData.rating = parseFloat(ratingVal);
   if (reviewVal !== undefined) updateData.review = reviewVal;
+  const reviewPublicEl = document.getElementById('edit-music-review-public');
+  if (reviewPublicEl) updateData.review_public = reviewPublicEl.checked;
 
   const res = await authenticatedFetch(`${API_BASE}/music/${id}`, {
     method: 'PUT',
@@ -1594,8 +1602,9 @@ async function loadBooks() {
           <td>${book.rating !== null && book.rating !== undefined ? parseFloat(book.rating).toFixed(1) + '/10' : ''}</td>
           <td><span class="watched-icon ${book.read ? 'watched' : 'unwatched'}">${book.read ? '✓' : '✗'}</span></td>
           <td>${book.review ? escapeHtml(book.review) : ''}</td>
+          <td><span class="watched-icon ${book.review_public ? 'watched' : 'unwatched'}">${book.review_public ? '✓' : '✗'}</span></td>
           <td>
-            <button class="action-btn edit-book-btn" data-book-id="${book.id}" data-book-title="${escapeHtml(book.title)}" data-book-author="${escapeHtml(book.author)}" data-book-year="${book.year}" data-book-genre="${escapeHtml(book.genre || '')}" data-book-rating="${book.rating ?? ''}" data-book-read="${book.read}" data-book-review="${escapeHtml(book.review || '')}">Edit</button>
+            <button class="action-btn edit-book-btn" data-book-id="${book.id}" data-book-title="${escapeHtml(book.title)}" data-book-author="${escapeHtml(book.author)}" data-book-year="${book.year}" data-book-genre="${escapeHtml(book.genre || '')}" data-book-rating="${book.rating ?? ''}" data-book-read="${book.read}" data-book-review="${escapeHtml(book.review || '')}" data-book-review-public="${book.review_public || false}">Edit</button>
             <button class="action-btn delete-book-btn" data-book-id="${book.id}">Delete</button>
           </td>
         `;
@@ -1823,6 +1832,7 @@ window.enableBookEdit = function (btn) {
   const ratingVal = btn.dataset.bookRating || '';
   const read = btn.dataset.bookRead === 'true';
   const review = btn.dataset.bookReview || '';
+  const reviewPublic = btn.dataset.bookReviewPublic === 'true';
   row.cells[1].innerHTML = `<input type="text" id="edit-book-title" value="${escapeHtml(title)}">`;
   row.cells[2].innerHTML = `<input type="text" id="edit-book-author" value="${escapeHtml(author)}">`;
   row.cells[3].innerHTML = `<input type="number" id="edit-book-year" value="${year}">`;
@@ -1839,8 +1849,8 @@ window.enableBookEdit = function (btn) {
       this.style.height = Math.max(60, this.scrollHeight) + 'px';
     });
   }
-  const actionsCellIndex = row.cells.length - 1;
-  row.cells[actionsCellIndex].innerHTML = `
+  row.cells[8].innerHTML = `<input type="checkbox" id="edit-book-review-public" ${reviewPublic ? 'checked' : ''}>`;
+  row.cells[9].innerHTML = `
     <button class="action-btn save-book-btn" data-book-id="${id}">Save</button>
     <button class="action-btn cancel-book-btn">Cancel</button>
   `;
@@ -1862,6 +1872,8 @@ window.saveBookEdit = async function (btn) {
   updateData.read = read;
   if (ratingVal) updateData.rating = parseFloat(ratingVal);
   if (reviewVal !== undefined) updateData.review = reviewVal;
+  const reviewPublicEl = document.getElementById('edit-book-review-public');
+  if (reviewPublicEl) updateData.review_public = reviewPublicEl.checked;
 
   const res = await authenticatedFetch(`${API_BASE}/books/${id}`, {
     method: 'PUT',
@@ -1904,15 +1916,14 @@ window.enableAnimeEdit = function (btn) {
   const ratingVal = btn.dataset.animeRating || '';
   const watched = btn.dataset.animeWatched === 'true';
   const review = btn.dataset.animeReview || '';
+  const reviewPublic = btn.dataset.animeReviewPublic === 'true';
   row.cells[1].innerHTML = `<input type="text" id="edit-anime-title" value="${escapeHtml(title)}">`;
   row.cells[2].innerHTML = `<input type="number" id="edit-anime-year" value="${escapeHtml(year)}">`;
   row.cells[3].innerHTML = `<input type="number" id="edit-anime-seasons" value="${escapeHtml(seasons)}">`;
   row.cells[4].innerHTML = `<input type="number" id="edit-anime-episodes" value="${escapeHtml(episodes)}">`;
   row.cells[5].innerHTML = `<input type="number" min="0" max="10" step="0.1" id="edit-anime-rating" value="${escapeHtml(ratingVal)}">`;
   row.cells[6].innerHTML = `<input type="checkbox" id="edit-anime-watched" ${watched ? 'checked' : ''}>`;
-  // Escape HTML for textarea content
   row.cells[7].innerHTML = `<textarea id="edit-anime-review" class="review-textarea">${escapeHtml(review)}</textarea>`;
-  // Auto-resize textarea to content
   const animeReviewTextarea = document.getElementById('edit-anime-review');
   if (animeReviewTextarea) {
     animeReviewTextarea.style.height = 'auto';
@@ -1922,6 +1933,7 @@ window.enableAnimeEdit = function (btn) {
       this.style.height = Math.max(60, this.scrollHeight) + 'px';
     });
   }
+  row.cells[8].innerHTML = `<input type="checkbox" id="edit-anime-review-public" ${reviewPublic ? 'checked' : ''}>`;
   row.cells[9].innerHTML = `
     <button class="action-btn save-anime-btn" data-anime-id="${id}">Save</button>
     <button class="action-btn cancel-anime-btn">Cancel</button>
@@ -1945,6 +1957,8 @@ window.saveAnimeEdit = async function (btn) {
   if (ratingVal) updated.rating = parseFloat(ratingVal);
   const reviewVal = document.getElementById('edit-anime-review') ? document.getElementById('edit-anime-review').value : '';
   if (reviewVal !== undefined) updated.review = reviewVal;
+  const reviewPublicEl = document.getElementById('edit-anime-review-public');
+  if (reviewPublicEl) updated.review_public = reviewPublicEl.checked;
   const res = await authenticatedFetch(`${API_BASE}/anime/${id}`, {
     method: 'PUT',
     headers: { 'Content-Type': 'application/json' },
@@ -1985,15 +1999,14 @@ window.enableTVEdit = function (btn) {
   const ratingVal = btn.dataset.tvRating || '';
   const watched = btn.dataset.tvWatched === 'true';
   const review = btn.dataset.tvReview || '';
+  const reviewPublic = btn.dataset.tvReviewPublic === 'true';
   row.cells[1].innerHTML = `<input type="text" id="edit-tv-title" value="${escapeHtml(title)}">`;
   row.cells[2].innerHTML = `<input type="number" id="edit-tv-year" value="${escapeHtml(year)}">`;
   row.cells[3].innerHTML = `<input type="number" id="edit-tv-seasons" value="${escapeHtml(seasons)}">`;
   row.cells[4].innerHTML = `<input type="number" id="edit-tv-episodes" value="${escapeHtml(episodes)}">`;
   row.cells[5].innerHTML = `<input type="number" min="0" max="10" step="0.1" id="edit-tv-rating" value="${escapeHtml(ratingVal)}">`;
   row.cells[6].innerHTML = `<input type="checkbox" id="edit-tv-watched" ${watched ? 'checked' : ''}>`;
-  // Escape HTML for textarea content
   row.cells[7].innerHTML = `<textarea id="edit-tv-review" class="review-textarea">${escapeHtml(review)}</textarea>`;
-  // Auto-resize textarea to content
   const tvReviewTextarea = document.getElementById('edit-tv-review');
   if (tvReviewTextarea) {
     tvReviewTextarea.style.height = 'auto';
@@ -2003,6 +2016,7 @@ window.enableTVEdit = function (btn) {
       this.style.height = Math.max(60, this.scrollHeight) + 'px';
     });
   }
+  row.cells[8].innerHTML = `<input type="checkbox" id="edit-tv-review-public" ${reviewPublic ? 'checked' : ''}>`;
   row.cells[9].innerHTML = `
     <button class="action-btn save-tv-btn" data-tv-id="${id}">Save</button>
     <button class="action-btn cancel-tv-btn">Cancel</button>
@@ -2026,6 +2040,8 @@ window.saveTVEdit = async function (btn) {
   if (ratingVal) updated.rating = parseFloat(ratingVal);
   const reviewVal = document.getElementById('edit-tv-review') ? document.getElementById('edit-tv-review').value : '';
   if (reviewVal !== undefined) updated.review = reviewVal;
+  const reviewPublicEl = document.getElementById('edit-tv-review-public');
+  if (reviewPublicEl) updated.review_public = reviewPublicEl.checked;
   const res = await authenticatedFetch(`${API_BASE}/tv-shows/${id}`, {
     method: 'PUT',
     headers: { 'Content-Type': 'application/json' },
@@ -2497,6 +2513,7 @@ document.getElementById('addMovieForm').onsubmit = async function (e) {
     director: director,
     year: year,
     watched: document.getElementById('movieWatched').checked,
+    review_public: document.getElementById('movieReviewPublic').checked,
   };
   
   const ratingVal = document.getElementById('movieRating').value;
@@ -2552,6 +2569,7 @@ document.getElementById('addTVShowForm').onsubmit = async function (e) {
     title: title,
     year: year,
     watched: document.getElementById('tvWatched').checked,
+    review_public: document.getElementById('tvReviewPublic').checked,
   };
   
   const seasonsVal = document.getElementById('tvSeasons').value;
@@ -2611,6 +2629,7 @@ document.getElementById('addAnimeForm').onsubmit = async function (e) {
     title: title,
     year: year,
     watched: document.getElementById('animeWatched').checked,
+    review_public: document.getElementById('animeReviewPublic').checked,
   };
   
   const seasonsVal = document.getElementById('animeSeasons').value;
@@ -2657,6 +2676,7 @@ document.getElementById('addVideoGameForm').onsubmit = async function (e) {
   const videoGame = {
     title: title,
     played: document.getElementById('videoGamePlayed').checked,
+    review_public: document.getElementById('videoGameReviewPublic').checked,
   };
   
   const genresVal = document.getElementById('videoGameGenres').value;
@@ -2902,6 +2922,7 @@ document.getElementById('addMusicForm').onsubmit = async function (e) {
     artist: artist,
     year: year,
     listened: document.getElementById('musicListened').checked,
+    review_public: document.getElementById('musicReviewPublic').checked,
   };
   
   const genreVal = document.getElementById('musicGenre').value;
@@ -3131,6 +3152,7 @@ document.getElementById('addBookForm').onsubmit = async function (e) {
     author: author,
     year: year,
     read: document.getElementById('bookRead').checked,
+    review_public: document.getElementById('bookReviewPublic').checked,
   };
   
   const genreVal = document.getElementById('bookGenre').value;
@@ -4378,7 +4400,6 @@ window.loadPrivacySettings = async function () {
       document.getElementById('animePrivate').checked = privacy.anime_private;
       document.getElementById('videoGamesPrivate').checked = privacy.video_games_private;
       document.getElementById('statisticsPrivate').checked = privacy.statistics_private;
-      document.getElementById('reviewsPublic').checked = privacy.reviews_public || false;
     }
   } catch (error) {
     console.error('Failed to load privacy settings:', error);
@@ -4393,7 +4414,6 @@ window.updatePrivacySettings = async function (event) {
   const animePrivate = document.getElementById('animePrivate').checked;
   const videoGamesPrivate = document.getElementById('videoGamesPrivate').checked;
   const statisticsPrivate = document.getElementById('statisticsPrivate').checked;
-  const reviewsPublic = document.getElementById('reviewsPublic').checked;
 
   const errorDiv = document.getElementById('privacyError');
   const successDiv = document.getElementById('privacySuccess');
@@ -4414,8 +4434,7 @@ window.updatePrivacySettings = async function (event) {
         tv_shows_private: tvShowsPrivate,
         anime_private: animePrivate,
         video_games_private: videoGamesPrivate,
-        statistics_private: statisticsPrivate,
-        reviews_public: reviewsPublic
+        statistics_private: statisticsPrivate
       })
     });
 
