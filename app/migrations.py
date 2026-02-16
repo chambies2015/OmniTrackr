@@ -152,6 +152,8 @@ def run_migrations():
                     conn.execute(text("CREATE INDEX IF NOT EXISTS ix_users_username ON users(username)"))
                     conn.commit()
 
+        review_public_columns_added = False
+
         if inspector.has_table("movies"):
             existing_columns = {col["name"] for col in inspector.get_columns("movies")}
             if "review" not in existing_columns:
@@ -166,13 +168,8 @@ def run_migrations():
                 with engine.connect() as conn:
                     conn.execute(text("ALTER TABLE movies ADD COLUMN review_public BOOLEAN DEFAULT FALSE"))
                     conn.commit()
-                    conn.execute(text("""
-                        UPDATE movies SET review_public = 1 WHERE user_id IN
-                        (SELECT id FROM users WHERE reviews_public = 1)
-                        AND review IS NOT NULL AND review != ''
-                    """))
-                    conn.commit()
-                    print("Added review_public column to movies table and backfilled")
+                    print("Added review_public column to movies table")
+                review_public_columns_added = True
             
             rating_column = next((col for col in inspector.get_columns("movies") if col["name"] == "rating"), None)
             if rating_column:
@@ -229,13 +226,8 @@ def run_migrations():
                     with engine.connect() as conn:
                         conn.execute(text("ALTER TABLE tv_shows ADD COLUMN review_public BOOLEAN DEFAULT FALSE"))
                         conn.commit()
-                        conn.execute(text("""
-                            UPDATE tv_shows SET review_public = 1 WHERE user_id IN
-                            (SELECT id FROM users WHERE reviews_public = 1)
-                            AND review IS NOT NULL AND review != ''
-                        """))
-                        conn.commit()
-                        print("Added review_public column to tv_shows table and backfilled")
+                        print("Added review_public column to tv_shows table")
+                    review_public_columns_added = True
                 
                 rating_column = next((col for col in inspector.get_columns("tv_shows") if col["name"] == "rating"), None)
                 if rating_column:
@@ -263,13 +255,8 @@ def run_migrations():
                 with engine.connect() as conn:
                     conn.execute(text("ALTER TABLE anime ADD COLUMN review_public BOOLEAN DEFAULT FALSE"))
                     conn.commit()
-                    conn.execute(text("""
-                        UPDATE anime SET review_public = 1 WHERE user_id IN
-                        (SELECT id FROM users WHERE reviews_public = 1)
-                        AND review IS NOT NULL AND review != ''
-                    """))
-                    conn.commit()
-                    print("Added review_public column to anime table and backfilled")
+                    print("Added review_public column to anime table")
+                review_public_columns_added = True
             
             rating_column = next((col for col in inspector.get_columns("anime") if col["name"] == "rating"), None)
             if rating_column:
@@ -312,13 +299,8 @@ def run_migrations():
                 with engine.connect() as conn:
                     conn.execute(text("ALTER TABLE video_games ADD COLUMN review_public BOOLEAN DEFAULT FALSE"))
                     conn.commit()
-                    conn.execute(text("""
-                        UPDATE video_games SET review_public = 1 WHERE user_id IN
-                        (SELECT id FROM users WHERE reviews_public = 1)
-                        AND review IS NOT NULL AND review != ''
-                    """))
-                    conn.commit()
-                    print("Added review_public column to video_games table and backfilled")
+                    print("Added review_public column to video_games table")
+                review_public_columns_added = True
             rating_column = next((col for col in inspector.get_columns("video_games") if col["name"] == "rating"), None)
             if rating_column:
                 if database.DATABASE_URL.startswith("postgresql"):
@@ -345,13 +327,8 @@ def run_migrations():
                 with engine.connect() as conn:
                     conn.execute(text("ALTER TABLE music ADD COLUMN review_public BOOLEAN DEFAULT FALSE"))
                     conn.commit()
-                    conn.execute(text("""
-                        UPDATE music SET review_public = 1 WHERE user_id IN
-                        (SELECT id FROM users WHERE reviews_public = 1)
-                        AND review IS NOT NULL AND review != ''
-                    """))
-                    conn.commit()
-                    print("Added review_public column to music table and backfilled")
+                    print("Added review_public column to music table")
+                review_public_columns_added = True
             rating_column = next((col for col in inspector.get_columns("music") if col["name"] == "rating"), None)
             if rating_column:
                 if database.DATABASE_URL.startswith("postgresql"):
@@ -378,13 +355,8 @@ def run_migrations():
                 with engine.connect() as conn:
                     conn.execute(text("ALTER TABLE books ADD COLUMN review_public BOOLEAN DEFAULT FALSE"))
                     conn.commit()
-                    conn.execute(text("""
-                        UPDATE books SET review_public = 1 WHERE user_id IN
-                        (SELECT id FROM users WHERE reviews_public = 1)
-                        AND review IS NOT NULL AND review != ''
-                    """))
-                    conn.commit()
-                    print("Added review_public column to books table and backfilled")
+                    print("Added review_public column to books table")
+                review_public_columns_added = True
             rating_column = next((col for col in inspector.get_columns("books") if col["name"] == "rating"), None)
             if rating_column:
                 if database.DATABASE_URL.startswith("postgresql"):
@@ -397,6 +369,44 @@ def run_migrations():
                                 print("Converted books.rating column from INTEGER to FLOAT")
                         except Exception as e:
                             print(f"Note: Could not convert books.rating column type (may already be correct): {e}")
+
+        if review_public_columns_added and inspector.has_table("users"):
+            try:
+                with engine.connect() as conn:
+                    conn.execute(text("""
+                        UPDATE movies SET review_public = TRUE WHERE user_id IN
+                        (SELECT id FROM users WHERE reviews_public = TRUE)
+                        AND review IS NOT NULL AND review != ''
+                    """))
+                    conn.execute(text("""
+                        UPDATE tv_shows SET review_public = TRUE WHERE user_id IN
+                        (SELECT id FROM users WHERE reviews_public = TRUE)
+                        AND review IS NOT NULL AND review != ''
+                    """))
+                    conn.execute(text("""
+                        UPDATE anime SET review_public = TRUE WHERE user_id IN
+                        (SELECT id FROM users WHERE reviews_public = TRUE)
+                        AND review IS NOT NULL AND review != ''
+                    """))
+                    conn.execute(text("""
+                        UPDATE video_games SET review_public = TRUE WHERE user_id IN
+                        (SELECT id FROM users WHERE reviews_public = TRUE)
+                        AND review IS NOT NULL AND review != ''
+                    """))
+                    conn.execute(text("""
+                        UPDATE music SET review_public = TRUE WHERE user_id IN
+                        (SELECT id FROM users WHERE reviews_public = TRUE)
+                        AND review IS NOT NULL AND review != ''
+                    """))
+                    conn.execute(text("""
+                        UPDATE books SET review_public = TRUE WHERE user_id IN
+                        (SELECT id FROM users WHERE reviews_public = TRUE)
+                        AND review IS NOT NULL AND review != ''
+                    """))
+                    conn.commit()
+                    print("Backfilled review_public for legacy public reviews")
+            except Exception as e:
+                print(f"Note: Could not backfill review_public values: {e}")
 
         if not inspector.has_table("friend_requests"):
             with engine.connect() as conn:
