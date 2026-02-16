@@ -191,8 +191,8 @@ function showAuthModal() {
     document.getElementById('loginForm').style.display = 'none';
     document.getElementById('registerForm').style.display = 'none';
 
-    // Show login form by default
-    showLoginForm();
+    // Show login form by default (no scroll on initial load)
+    showLoginForm(false);
 }
 
 function hideAuthModal() {
@@ -235,7 +235,7 @@ function showMainUI() {
     }
 }
 
-function showLoginForm() {
+function showLoginForm(scroll = true) {
     document.getElementById('loginForm').style.display = 'block';
     document.getElementById('registerForm').style.display = 'none';
     document.getElementById('forgotPasswordForm').style.display = 'none';
@@ -244,20 +244,18 @@ function showLoginForm() {
     document.getElementById('authTitle').textContent = 'Login to OmniTrackr';
     document.getElementById('authError').textContent = '';
     document.getElementById('authSuccess').style.display = 'none';
-    // Hide reactivate container
     const reactivateContainer = document.getElementById('reactivateContainer');
     if (reactivateContainer) {
         reactivateContainer.style.display = 'none';
     }
-    // Scroll to auth section if on landing page
-    if (document.getElementById('landingPage').style.display === 'block') {
+    if (scroll && document.getElementById('landingPage').style.display === 'block') {
         setTimeout(() => {
             document.querySelector('.landing-auth').scrollIntoView({ behavior: 'smooth', block: 'center' });
         }, 100);
     }
 }
 
-function showRegisterForm() {
+function showRegisterForm(scroll = true) {
     document.getElementById('loginForm').style.display = 'none';
     document.getElementById('registerForm').style.display = 'block';
     document.getElementById('forgotPasswordForm').style.display = 'none';
@@ -265,15 +263,14 @@ function showRegisterForm() {
     document.getElementById('authTitle').textContent = 'Register for OmniTrackr';
     document.getElementById('authError').textContent = '';
     document.getElementById('authSuccess').style.display = 'none';
-    // Scroll to auth section if on landing page
-    if (document.getElementById('landingPage').style.display === 'block') {
+    if (scroll && document.getElementById('landingPage').style.display === 'block') {
         setTimeout(() => {
             document.querySelector('.landing-auth').scrollIntoView({ behavior: 'smooth', block: 'center' });
         }, 100);
     }
 }
 
-function showForgotPasswordForm() {
+function showForgotPasswordForm(scroll = true) {
     document.getElementById('loginForm').style.display = 'none';
     document.getElementById('registerForm').style.display = 'none';
     document.getElementById('forgotPasswordForm').style.display = 'block';
@@ -281,15 +278,14 @@ function showForgotPasswordForm() {
     document.getElementById('authTitle').textContent = 'Reset Password';
     document.getElementById('authError').textContent = '';
     document.getElementById('authSuccess').style.display = 'none';
-    // Scroll to auth section if on landing page
-    if (document.getElementById('landingPage').style.display === 'block') {
+    if (scroll && document.getElementById('landingPage').style.display === 'block') {
         setTimeout(() => {
             document.querySelector('.landing-auth').scrollIntoView({ behavior: 'smooth', block: 'center' });
         }, 100);
     }
 }
 
-function showResetPasswordForm(resetToken = null) {
+function showResetPasswordForm(resetToken = null, scroll = true) {
     document.getElementById('loginForm').style.display = 'none';
     document.getElementById('registerForm').style.display = 'none';
     document.getElementById('forgotPasswordForm').style.display = 'none';
@@ -297,14 +293,10 @@ function showResetPasswordForm(resetToken = null) {
     document.getElementById('authTitle').textContent = 'Reset Password';
     document.getElementById('authError').textContent = '';
     document.getElementById('authSuccess').style.display = 'none';
-    
-    // Store reset token if provided
     if (resetToken) {
         document.getElementById('resetPasswordFormElement').dataset.resetToken = resetToken;
     }
-    
-    // Scroll to auth section if on landing page
-    if (document.getElementById('landingPage').style.display === 'block') {
+    if (scroll && document.getElementById('landingPage').style.display === 'block') {
         setTimeout(() => {
             document.querySelector('.landing-auth').scrollIntoView({ behavior: 'smooth', block: 'center' });
         }, 100);
