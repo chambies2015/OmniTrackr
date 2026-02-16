@@ -36,6 +36,30 @@ async def get_sitemap(db: Session = Depends(get_db)):
     <priority>0.5</priority>
   </url>
   <url>
+    <loc>{base_url}/about</loc>
+    <lastmod>{today}</lastmod>
+    <changefreq>monthly</changefreq>
+    <priority>0.7</priority>
+  </url>
+  <url>
+    <loc>{base_url}/guides</loc>
+    <lastmod>{today}</lastmod>
+    <changefreq>monthly</changefreq>
+    <priority>0.7</priority>
+  </url>
+  <url>
+    <loc>{base_url}/terms</loc>
+    <lastmod>{today}</lastmod>
+    <changefreq>monthly</changefreq>
+    <priority>0.5</priority>
+  </url>
+  <url>
+    <loc>{base_url}/contact</loc>
+    <lastmod>{today}</lastmod>
+    <changefreq>monthly</changefreq>
+    <priority>0.6</priority>
+  </url>
+  <url>
     <loc>{base_url}/reviews</loc>
     <lastmod>{today}</lastmod>
     <changefreq>daily</changefreq>
@@ -126,10 +150,15 @@ async def get_sitemap(db: Session = Depends(get_db)):
 
 @router.get("/robots.txt")
 async def get_robots():
-    """Serve robots.txt for SEO."""
     site_url = os.getenv("SITE_URL", "https://omnitrackr.xyz")
     
     robots = f"""User-agent: Mediapartners-Google
+Allow: /
+
+User-agent: AdsBot-Google
+Allow: /
+
+User-agent: AdsBot-Google-Mobile
 Allow: /
 
 User-agent: *
@@ -137,7 +166,8 @@ Disallow: /auth/
 Disallow: /api/
 Disallow: /static/credentials.js
 
-Sitemap: {site_url}/sitemap.xml"""
+Sitemap: {site_url}/sitemap.xml
+"""
     
     return Response(content=robots, media_type="text/plain")
 
@@ -145,12 +175,16 @@ Sitemap: {site_url}/sitemap.xml"""
 @router.get("/ads.txt")
 @router.head("/ads.txt")
 async def get_ads_txt():
-    """Serve ads.txt for Google AdSense verification."""
     publisher_id = os.getenv("ADSENSE_PUBLISHER_ID", "pub-7271682066779719")
-    
-    ads_txt = f"""google.com, {publisher_id}, DIRECT, f08c47fec0942fa0"""
-    
-    return Response(content=ads_txt, media_type="text/plain")
+    ads_txt = f"google.com, {publisher_id}, DIRECT, f08c47fec0942fa0\n"
+    return Response(
+        content=ads_txt,
+        media_type="text/plain",
+        headers={
+            "Cache-Control": "public, max-age=86400",
+            "X-Robots-Tag": "noindex",
+        },
+    )
 
 
 @router.get("/sellers.json")
@@ -190,6 +224,10 @@ OmniTrackr is a free web application for tracking and organizing movies, TV show
 
 ## Key Pages
 - Home: {base_url}/
+- About: {base_url}/about
+- Guides: {base_url}/guides
+- Terms: {base_url}/terms
+- Contact: {base_url}/contact
 - Privacy Policy: {base_url}/privacy
 - Public Reviews: {base_url}/reviews
 
