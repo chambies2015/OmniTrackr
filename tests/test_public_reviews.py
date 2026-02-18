@@ -4,7 +4,7 @@ Tests for public review endpoints.
 import pytest
 from datetime import datetime
 from app import models, crud
-from app.schemas import MovieCreate, TVShowCreate, AnimeCreate, VideoGameCreate
+from app.schemas import MovieCreate, TVShowCreate, AnimeCreate, VideoGameCreate, MusicCreate, BookCreate
 
 
 class TestPublicReviews:
@@ -33,7 +33,8 @@ class TestPublicReviews:
             "director": "Test Director",
             "year": 2020,
             "rating": 8.5,
-            "review": "This is a detailed review of the movie with substantial content."
+            "review": "This is a detailed review of the movie with substantial content.",
+            "review_public": True,
         }
         
         movie = crud.create_movie(db_session, user.id, MovieCreate(**movie_data))
@@ -69,7 +70,8 @@ class TestPublicReviews:
                 title="Movie With Review",
                 director="Director",
                 year=2020,
-                review="This has a review"
+                review="This has a review",
+                review_public=True
             )
         )
         
@@ -80,7 +82,8 @@ class TestPublicReviews:
                 title="Movie Without Review",
                 director="Director",
                 year=2020,
-                review=None
+                review=None,
+                review_public=True
             )
         )
         
@@ -91,7 +94,8 @@ class TestPublicReviews:
                 title="Movie With Empty Review",
                 director="Director",
                 year=2020,
-                review=""
+                review="",
+                review_public=True
             )
         )
         
@@ -138,7 +142,8 @@ class TestPublicReviews:
                 title="Active User Movie",
                 director="Director",
                 year=2020,
-                review="Review from active user"
+                review="Review from active user",
+                review_public=True
             )
         )
         
@@ -149,7 +154,8 @@ class TestPublicReviews:
                 title="Inactive User Movie",
                 director="Director",
                 year=2020,
-                review="Review from inactive user"
+                review="Review from inactive user",
+                review_public=True
             )
         )
         
@@ -163,8 +169,8 @@ class TestPublicReviews:
         assert active_movie.id in review_ids
         assert inactive_movie.id not in review_ids
     
-    def test_get_public_reviews_excludes_users_with_reviews_private(self, client, db_session, authenticated_client, test_user_data):
-        """Test that reviews from users who haven't opted in are not included."""
+    def test_get_public_reviews_excludes_entries_not_marked_public(self, client, db_session, authenticated_client, test_user_data):
+        """Test that entries not marked as public are not included."""
         from app import crud
         
         user = db_session.query(models.User).filter(models.User.username == test_user_data["username"]).first()
@@ -178,7 +184,8 @@ class TestPublicReviews:
                 title="Private Review Movie",
                 director="Director",
                 year=2020,
-                review="This review should not appear publicly"
+                review="This review should not appear publicly",
+                review_public=False
             )
         )
         
@@ -191,8 +198,8 @@ class TestPublicReviews:
         review_ids = [r["id"] for r in data]
         assert movie.id not in review_ids
     
-    def test_get_public_reviews_includes_users_with_reviews_public(self, client, db_session, authenticated_client, test_user_data):
-        """Test that reviews from users who opted in are included."""
+    def test_get_public_reviews_includes_entries_marked_public(self, client, db_session, authenticated_client, test_user_data):
+        """Test that entries marked as public are included."""
         from app import crud
         
         user = db_session.query(models.User).filter(models.User.username == test_user_data["username"]).first()
@@ -206,7 +213,8 @@ class TestPublicReviews:
                 title="Public Review Movie",
                 director="Director",
                 year=2020,
-                review="This review should appear publicly"
+                review="This review should appear publicly",
+                review_public=True
             )
         )
         
@@ -234,7 +242,8 @@ class TestPublicReviews:
                 title="Test Movie Filter Unique",
                 director="Director",
                 year=2020,
-                review="Movie review for filter test unique"
+                review="Movie review for filter test unique",
+                review_public=True
             )
         )
         
@@ -244,7 +253,8 @@ class TestPublicReviews:
             TVShowCreate(
                 title="Test TV Show Filter Unique",
                 year=2020,
-                review="TV show review for filter test unique"
+                review="TV show review for filter test unique",
+                review_public=True
             )
         )
         
@@ -279,7 +289,8 @@ class TestPublicReviews:
             TVShowCreate(
                 title="Test TV Show",
                 year=2020,
-                review="TV show review"
+                review="TV show review",
+                review_public=True
             )
         )
         
@@ -304,7 +315,8 @@ class TestPublicReviews:
             AnimeCreate(
                 title="Test Anime",
                 year=2020,
-                review="Anime review"
+                review="Anime review",
+                review_public=True
             )
         )
         
@@ -330,7 +342,8 @@ class TestPublicReviews:
                 title="Test Game",
                 release_date=datetime(2020, 1, 1),
                 genres="Action, Adventure",
-                review="Game review"
+                review="Game review",
+                review_public=True
             )
         )
         
@@ -357,7 +370,8 @@ class TestPublicReviews:
                     title=f"Movie {i}",
                     director="Director",
                     year=2020,
-                    review=f"Review {i}"
+                    review=f"Review {i}",
+                    review_public=True
                 )
             )
         
@@ -400,7 +414,8 @@ class TestPublicReviews:
                 director="Director",
                 year=2020,
                 rating=9.0,
-                review="This is a specific movie review"
+                review="This is a specific movie review",
+                review_public=True
             )
         )
         
@@ -436,7 +451,8 @@ class TestPublicReviews:
                 year=2020,
                 seasons=3,
                 episodes=30,
-                review="This is a specific TV show review"
+                review="This is a specific TV show review",
+                review_public=True
             )
         )
         
@@ -483,7 +499,8 @@ class TestPublicReviews:
                 title="No Review Movie",
                 director="Director",
                 year=2020,
-                review=None
+                review=None,
+                review_public=True
             )
         )
         
@@ -508,7 +525,8 @@ class TestPublicReviews:
                 title="Long Review Movie",
                 director="Director",
                 year=2020,
-                review=long_review
+                review=long_review,
+                review_public=True
             )
         )
         
@@ -532,19 +550,19 @@ class TestPublicReviews:
         movie = crud.create_movie(
             db_session,
             user.id,
-            MovieCreate(title="Movie", director="D", year=2020, review="Movie review")
+            MovieCreate(title="Movie", director="D", year=2020, review="Movie review", review_public=True)
         )
         
         tv_show = crud.create_tv_show(
             db_session,
             user.id,
-            TVShowCreate(title="TV Show", year=2020, review="TV review")
+            TVShowCreate(title="TV Show", year=2020, review="TV review", review_public=True)
         )
         
         anime = crud.create_anime(
             db_session,
             user.id,
-            AnimeCreate(title="Anime", year=2020, review="Anime review")
+            AnimeCreate(title="Anime", year=2020, review="Anime review", review_public=True)
         )
         
         video_game = crud.create_video_game(
@@ -554,7 +572,8 @@ class TestPublicReviews:
                 title="Game",
                 release_date=datetime(2020, 1, 1),
                 genres="Action",
-                review="Game review"
+                review="Game review",
+                review_public=True
             )
         )
         
@@ -569,6 +588,113 @@ class TestPublicReviews:
         assert "tv_show" in categories or any(r["id"] == tv_show.id for r in data)
         assert "anime" in categories or any(r["id"] == anime.id for r in data)
         assert "video_game" in categories or any(r["id"] == video_game.id for r in data)
+
+    def test_get_public_reviews_all_categories_includes_newest_movie_reviews(self, client, db_session, authenticated_client, test_user_data):
+        """All categories should include newest public movie reviews."""
+        user = db_session.query(models.User).filter(models.User.username == test_user_data["username"]).first()
+        newest_movie = None
+        for i in range(8):
+            newest_movie = crud.create_movie(
+                db_session,
+                user.id,
+                MovieCreate(
+                    title=f"Newest Inclusion Movie {i}",
+                    director="Director",
+                    year=2020,
+                    review=f"Review {i}",
+                    review_public=True,
+                )
+            )
+        db_session.commit()
+
+        response = client.get("/api/public/reviews?limit=20&offset=0")
+        assert response.status_code == 200
+        data = response.json()
+        movie_ids = [r["id"] for r in data if r["category"] == "movie"]
+        assert newest_movie is not None
+        assert newest_movie.id in movie_ids
+
+    def test_get_public_reviews_filter_by_category_music(self, client, db_session, authenticated_client, test_user_data):
+        """Test filtering public reviews by music category."""
+        user = db_session.query(models.User).filter(models.User.username == test_user_data["username"]).first()
+
+        music = crud.create_music(
+            db_session,
+            user.id,
+            MusicCreate(
+                title="Test Album",
+                artist="Artist",
+                year=2020,
+                review="Music review",
+                review_public=True,
+            )
+        )
+        db_session.commit()
+
+        response = client.get("/api/public/reviews?category=music")
+        assert response.status_code == 200
+        data = response.json()
+        assert all(r["category"] == "music" for r in data)
+        assert any(r["id"] == music.id for r in data)
+
+    def test_get_public_reviews_filter_by_category_book(self, client, db_session, authenticated_client, test_user_data):
+        """Test filtering public reviews by book category."""
+        user = db_session.query(models.User).filter(models.User.username == test_user_data["username"]).first()
+
+        book = crud.create_book(
+            db_session,
+            user.id,
+            BookCreate(
+                title="Test Book",
+                author="Author",
+                year=2020,
+                review="Book review",
+                review_public=True,
+            )
+        )
+        db_session.commit()
+
+        response = client.get("/api/public/reviews?category=book")
+        assert response.status_code == 200
+        data = response.json()
+        assert all(r["category"] == "book" for r in data)
+        assert any(r["id"] == book.id for r in data)
+
+    def test_get_public_reviews_ignores_profile_reviews_public_flag(self, client, db_session, authenticated_client, test_user_data):
+        """Test that per-entry public flag controls visibility, not profile-level reviews_public."""
+        user = db_session.query(models.User).filter(models.User.username == test_user_data["username"]).first()
+        user.reviews_public = True
+        db_session.commit()
+
+        private_entry = crud.create_movie(
+            db_session,
+            user.id,
+            MovieCreate(
+                title="Legacy Public User Private Entry",
+                director="Director",
+                year=2020,
+                review="Should not be public",
+                review_public=False,
+            )
+        )
+        public_entry = crud.create_movie(
+            db_session,
+            user.id,
+            MovieCreate(
+                title="Legacy Public User Public Entry",
+                director="Director",
+                year=2020,
+                review="Should be public",
+                review_public=True,
+            )
+        )
+        db_session.commit()
+
+        response = client.get("/api/public/reviews?category=movie&limit=100")
+        assert response.status_code == 200
+        ids = [r["id"] for r in response.json()]
+        assert public_entry.id in ids
+        assert private_entry.id not in ids
     
     def test_reviews_page_accessible(self, client):
         """Test that the reviews index page is accessible."""

@@ -56,7 +56,7 @@ def update_movie(db: Session, user_id: int, movie_id: int, movie_update: schemas
         return None
     update_dict = movie_update.dict(exclude_unset=True)
     
-    allowed_fields = {'title', 'director', 'year', 'rating', 'watched', 'review', 'poster_url'}
+    allowed_fields = {'title', 'director', 'year', 'rating', 'watched', 'review', 'review_public', 'poster_url'}
     for field, value in update_dict.items():
         if field not in allowed_fields:
             continue

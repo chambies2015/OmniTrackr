@@ -8,7 +8,7 @@ psycopg2-binary==2.9.10
 
 # Authentication
 python-jose==3.4.0
-cryptography==44.0.1
+cryptography==46.0.5
 bcrypt==4.2.1
 python-multipart==0.0.22
 
@@ -26,7 +26,7 @@ httpx==0.27.2
 pytest-cov==6.0.0
 
 # Image processing
-Pillow==10.4.0
+Pillow==12.1.1
 
 # Rate limiting
 slowapi==0.1.9

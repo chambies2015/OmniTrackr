@@ -385,6 +385,9 @@
             <div>
               <textarea id="movieReview" placeholder="Review (optional)" rows="1"></textarea>
             </div>
+            <div>
+              <label>Public Review <input type="checkbox" id="movieReviewPublic"></label>
+            </div>
             <button type="submit" class="action-btn">Add Movie</button>
           </form>
         </div>
@@ -423,6 +426,7 @@
                 <th>Watched</th>
                 <th>Review</th>
                 <th>IMDb</th>
+                <th>Public</th>
                 <th>Actions</th>
               </tr>
             </thead>
@@ -463,6 +467,9 @@
             <div>
               <textarea id="tvReview" placeholder="Review (optional)" rows="1"></textarea>
             </div>
+            <div>
+              <label>Public Review <input type="checkbox" id="tvReviewPublic"></label>
+            </div>
             <button type="submit" class="action-btn">Add TV Show</button>
           </form>
         </div>
@@ -502,6 +509,7 @@
                 <th>Watched</th>
                 <th>Review</th>
                 <th>IMDb</th>
+                <th>Public</th>
                 <th>Actions</th>
               </tr>
             </thead>
@@ -542,6 +550,9 @@
             <div>
               <textarea id="animeReview" placeholder="Review (optional)" rows="1"></textarea>
             </div>
+            <div>
+              <label>Public Review <input type="checkbox" id="animeReviewPublic"></label>
+            </div>
             <button type="submit" class="action-btn">Add Anime</button>
           </form>
         </div>
@@ -581,6 +592,7 @@
                 <th>Watched</th>
                 <th>Review</th>
                 <th>IMDb</th>
+                <th>Public</th>
                 <th>Actions</th>
               </tr>
             </thead>
@@ -621,6 +633,9 @@
             <div>
               <textarea id="musicReview" placeholder="Review (optional)" rows="1"></textarea>
             </div>
+            <div>
+              <label>Public Review <input type="checkbox" id="musicReviewPublic"></label>
+            </div>
             <button type="submit" class="action-btn">Add Music</button>
           </form>
         </div>
@@ -659,6 +674,7 @@
                 <th>Rating</th>
                 <th>Listened</th>
                 <th>Review</th>
+                <th>Public</th>
                 <th>Actions</th>
               </tr>
             </thead>
@@ -699,6 +715,9 @@
             <div>
               <textarea id="bookReview" placeholder="Review (optional)" rows="1"></textarea>
             </div>
+            <div>
+              <label>Public Review <input type="checkbox" id="bookReviewPublic"></label>
+            </div>
             <button type="submit" class="action-btn">Add Book</button>
           </form>
         </div>
@@ -737,6 +756,7 @@
                 <th>Rating</th>
                 <th>Read</th>
                 <th>Review</th>
+                <th>Public</th>
                 <th>Actions</th>
               </tr>
             </thead>
@@ -770,6 +790,9 @@
             </div>
             <div>
               <textarea id="videoGameReview" placeholder="Review (optional)" rows="1"></textarea>
+            </div>
+            <div>
+              <label>Public Review <input type="checkbox" id="videoGameReviewPublic"></label>
             </div>
             <button type="submit" class="action-btn">Add Video Game</button>
           </form>
@@ -809,6 +832,7 @@
                 <th>Rating</th>
                 <th>RAWG Link</th>
                 <th>Review</th>
+                <th>Public</th>
                 <th>Actions</th>
               </tr>
             </thead>
@@ -1687,16 +1711,6 @@
                   <span class="toggle-slider"></span>
                 </div>
               </label>
-            </div>
-            <div class="privacy-toggle-item">
-              <label for="reviewsPublic" class="toggle-label">
-                <span>Allow Reviews on Public Page</span>
-                <div class="toggle-container">
-                  <input type="checkbox" id="reviewsPublic" class="toggle-switch">
-                  <span class="toggle-slider"></span>
-                </div>
-              </label>
-              <p class="info-text" style="margin-top: 5px; font-size: 0.85rem; color: var(--fg-secondary);">When enabled, your reviews (with your username) will appear on the public reviews page. When disabled, your reviews remain private and only visible to you.</p>
             </div>
             <button type="submit" class="action-btn">Save Privacy Settings</button>
             <div id="privacyError" class="error-message"></div>
