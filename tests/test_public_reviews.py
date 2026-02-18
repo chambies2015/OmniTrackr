@@ -589,6 +589,31 @@ class TestPublicReviews:
         assert "anime" in categories or any(r["id"] == anime.id for r in data)
         assert "video_game" in categories or any(r["id"] == video_game.id for r in data)
 
+    def test_get_public_reviews_all_categories_includes_newest_movie_reviews(self, client, db_session, authenticated_client, test_user_data):
+        """All categories should include newest public movie reviews."""
+        user = db_session.query(models.User).filter(models.User.username == test_user_data["username"]).first()
+        newest_movie = None
+        for i in range(8):
+            newest_movie = crud.create_movie(
+                db_session,
+                user.id,
+                MovieCreate(
+                    title=f"Newest Inclusion Movie {i}",
+                    director="Director",
+                    year=2020,
+                    review=f"Review {i}",
+                    review_public=True,
+                )
+            )
+        db_session.commit()
+
+        response = client.get("/api/public/reviews?limit=20&offset=0")
+        assert response.status_code == 200
+        data = response.json()
+        movie_ids = [r["id"] for r in data if r["category"] == "movie"]
+        assert newest_movie is not None
+        assert newest_movie.id in movie_ids
+
     def test_get_public_reviews_filter_by_category_music(self, client, db_session, authenticated_client, test_user_data):
         """Test filtering public reviews by music category."""
         user = db_session.query(models.User).filter(models.User.username == test_user_data["username"]).first()

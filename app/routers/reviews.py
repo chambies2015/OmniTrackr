@@ -56,26 +56,26 @@ async def get_public_reviews(
         )
 
     if category == "movie":
-        query_conditions = [("movie", db.query(models.Movie).filter(base_filter(models.Movie)).offset(offset).limit(limit).all())]
+        query_conditions = [("movie", db.query(models.Movie).filter(base_filter(models.Movie)).order_by(models.Movie.id.desc()).offset(offset).limit(limit).all())]
     elif category == "tv_show":
-        query_conditions = [("tv_show", db.query(models.TVShow).filter(base_filter(models.TVShow)).offset(offset).limit(limit).all())]
+        query_conditions = [("tv_show", db.query(models.TVShow).filter(base_filter(models.TVShow)).order_by(models.TVShow.id.desc()).offset(offset).limit(limit).all())]
     elif category == "anime":
-        query_conditions = [("anime", db.query(models.Anime).filter(base_filter(models.Anime)).offset(offset).limit(limit).all())]
+        query_conditions = [("anime", db.query(models.Anime).filter(base_filter(models.Anime)).order_by(models.Anime.id.desc()).offset(offset).limit(limit).all())]
     elif category == "video_game":
-        query_conditions = [("video_game", db.query(models.VideoGame).filter(base_filter(models.VideoGame)).offset(offset).limit(limit).all())]
+        query_conditions = [("video_game", db.query(models.VideoGame).filter(base_filter(models.VideoGame)).order_by(models.VideoGame.id.desc()).offset(offset).limit(limit).all())]
     elif category == "music":
-        query_conditions = [("music", db.query(models.Music).filter(base_filter(models.Music)).offset(offset).limit(limit).all())]
+        query_conditions = [("music", db.query(models.Music).filter(base_filter(models.Music)).order_by(models.Music.id.desc()).offset(offset).limit(limit).all())]
     elif category == "book":
-        query_conditions = [("book", db.query(models.Book).filter(base_filter(models.Book)).offset(offset).limit(limit).all())]
+        query_conditions = [("book", db.query(models.Book).filter(base_filter(models.Book)).order_by(models.Book.id.desc()).offset(offset).limit(limit).all())]
     else:
-        per_cat = limit // 6 + 1
+        per_cat = (offset + limit) // 6 + 2
         query_conditions = [
-            ("movie", db.query(models.Movie).filter(base_filter(models.Movie)).limit(per_cat).all()),
-            ("tv_show", db.query(models.TVShow).filter(base_filter(models.TVShow)).limit(per_cat).all()),
-            ("anime", db.query(models.Anime).filter(base_filter(models.Anime)).limit(per_cat).all()),
-            ("video_game", db.query(models.VideoGame).filter(base_filter(models.VideoGame)).limit(per_cat).all()),
-            ("music", db.query(models.Music).filter(base_filter(models.Music)).limit(per_cat).all()),
-            ("book", db.query(models.Book).filter(base_filter(models.Book)).limit(per_cat).all()),
+            ("movie", db.query(models.Movie).filter(base_filter(models.Movie)).order_by(models.Movie.id.desc()).limit(per_cat).all()),
+            ("tv_show", db.query(models.TVShow).filter(base_filter(models.TVShow)).order_by(models.TVShow.id.desc()).limit(per_cat).all()),
+            ("anime", db.query(models.Anime).filter(base_filter(models.Anime)).order_by(models.Anime.id.desc()).limit(per_cat).all()),
+            ("video_game", db.query(models.VideoGame).filter(base_filter(models.VideoGame)).order_by(models.VideoGame.id.desc()).limit(per_cat).all()),
+            ("music", db.query(models.Music).filter(base_filter(models.Music)).order_by(models.Music.id.desc()).limit(per_cat).all()),
+            ("book", db.query(models.Book).filter(base_filter(models.Book)).order_by(models.Book.id.desc()).limit(per_cat).all()),
         ]
 
     for cat, items in query_conditions:
@@ -128,6 +128,9 @@ async def get_public_reviews(
 
             reviews.append(review_data)
 
+    if not category:
+        reviews.sort(key=lambda item: item["id"], reverse=True)
+        return reviews[offset:offset + limit]
     return reviews[:limit]
 
 
