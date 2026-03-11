@@ -68,11 +68,65 @@ function closeImagePopup() {
   }
 }
 
+const REVIEW_PREVIEW_LEN = 60;
+
+function getReviewCellContent(review, title, subtitle) {
+  if (!review || !String(review).trim()) return '';
+  const safeTitle = escapeHtml(title);
+  const safeSubtitle = escapeHtml(subtitle || '');
+  const preview = String(review).length > REVIEW_PREVIEW_LEN ? String(review).slice(0, REVIEW_PREVIEW_LEN).trim() + '\u2026' : String(review);
+  const safePreview = escapeHtml(preview);
+  const safeReview = escapeHtml(review);
+  return `<span class="review-cell-preview" title="${safePreview}">${safePreview}</span><button type="button" class="action-btn review-view-btn" onclick="openReviewModal(this)">View review</button><span class="review-cell-full" style="display:none" data-review="${safeReview}" data-title="${safeTitle}" data-subtitle="${safeSubtitle}"></span>`;
+}
+
+function openReviewModal(btn) {
+  const cell = btn.closest('td');
+  if (!cell) return;
+  const fullEl = cell.querySelector('.review-cell-full');
+  const title = fullEl ? fullEl.getAttribute('data-title') || '' : '';
+  const subtitle = fullEl ? fullEl.getAttribute('data-subtitle') || '' : '';
+  const reviewRaw = fullEl ? fullEl.getAttribute('data-review') || '' : '';
+  const decodeAttr = (s) => {
+    const d = document.createElement('div');
+    d.innerHTML = s;
+    return d.textContent || '';
+  };
+  const review = document.createElement('div');
+  review.textContent = decodeAttr(reviewRaw);
+  const modal = document.getElementById('reviewModal');
+  const titleEl = document.getElementById('reviewModalTitle');
+  const subtitleEl = document.getElementById('reviewModalSubtitle');
+  const bodyEl = document.getElementById('reviewModalBody');
+  if (modal && titleEl && subtitleEl && bodyEl) {
+    titleEl.textContent = decodeAttr(title);
+    subtitleEl.textContent = decodeAttr(subtitle);
+    subtitleEl.style.display = subtitle ? '' : 'none';
+    bodyEl.innerHTML = '';
+    bodyEl.appendChild(review);
+    modal.style.display = 'flex';
+    document.body.style.overflow = 'hidden';
+  }
+}
+
+function closeReviewModal() {
+  const modal = document.getElementById('reviewModal');
+  if (modal) {
+    modal.style.display = 'none';
+    document.body.style.overflow = '';
+  }
+}
+
 document.addEventListener('keydown', function(event) {
   if (event.key === 'Escape') {
-    const modal = document.getElementById('imagePopupModal');
-    if (modal && modal.style.display !== 'none') {
+    const imageModal = document.getElementById('imagePopupModal');
+    if (imageModal && imageModal.style.display !== 'none') {
       closeImagePopup();
+      return;
+    }
+    const reviewModal = document.getElementById('reviewModal');
+    if (reviewModal && reviewModal.style.display !== 'none') {
+      closeReviewModal();
     }
   }
 });
@@ -189,7 +243,7 @@ async function loadMovies() {
           <td>${movie.year}</td>
           <td>${movie.rating !== null && movie.rating !== undefined ? parseFloat(movie.rating).toFixed(1) + '/10' : ''}</td>
           <td><span class="watched-icon ${movie.watched ? 'watched' : 'unwatched'}">${movie.watched ? '✓' : '✗'}</span></td>
-          <td>${movie.review ? movie.review : ''}</td>
+          <td class="review-cell">${getReviewCellContent(movie.review, movie.title, [movie.director, movie.year].filter(Boolean).join(' \u2022 '))}</td>
           <td><a href="https://www.imdb.com/find?q=${encodeURIComponent(movie.title)}" target="_blank">Search</a></td>
           <td><span class="watched-icon ${movie.review_public ? 'watched' : 'unwatched'}">${movie.review_public ? '✓' : '✗'}</span></td>
           <td>
@@ -492,7 +546,7 @@ async function loadTVShows() {
           <td>${tvShow.episodes ?? ''}</td>
           <td>${tvShow.rating !== null && tvShow.rating !== undefined ? parseFloat(tvShow.rating).toFixed(1) + '/10' : ''}</td>
           <td><span class="watched-icon ${tvShow.watched ? 'watched' : 'unwatched'}">${tvShow.watched ? '✓' : '✗'}</span></td>
-          <td>${tvShow.review ? tvShow.review : ''}</td>
+          <td class="review-cell">${getReviewCellContent(tvShow.review, tvShow.title, tvShow.year ? String(tvShow.year) : '')}</td>
           <td><a href="https://www.imdb.com/find?q=${encodeURIComponent(tvShow.title)}" target="_blank">Search</a></td>
           <td><span class="watched-icon ${tvShow.review_public ? 'watched' : 'unwatched'}">${tvShow.review_public ? '✓' : '✗'}</span></td>
           <td>
@@ -558,7 +612,7 @@ async function loadAnime() {
           <td style="text-align: center;">${animeItem.episodes ?? ''}</td>
           <td style="text-align: center;">${animeItem.rating !== null && animeItem.rating !== undefined ? parseFloat(animeItem.rating).toFixed(1) + '/10' : ''}</td>
           <td style="text-align: center;"><span class="watched-icon ${animeItem.watched ? 'watched' : 'unwatched'}">${animeItem.watched ? '✓' : '✗'}</span></td>
-          <td>${animeItem.review ? animeItem.review : ''}</td>
+          <td class="review-cell">${getReviewCellContent(animeItem.review, animeItem.title, animeItem.year ? String(animeItem.year) : '')}</td>
           <td><a href="https://www.imdb.com/find?q=${encodeURIComponent(animeItem.title)}" target="_blank">Search</a></td>
           <td><span class="watched-icon ${animeItem.review_public ? 'watched' : 'unwatched'}">${animeItem.review_public ? '✓' : '✗'}</span></td>
           <td>
@@ -936,7 +990,7 @@ async function loadVideoGames() {
           <td><span class="watched-icon ${game.played ? 'watched' : 'unwatched'}">${game.played ? '✓' : '✗'}</span></td>
           <td>${game.rating !== null && game.rating !== undefined ? parseFloat(game.rating).toFixed(1) + '/10' : ''}</td>
           <td>${game.rawg_link ? `<a href="${game.rawg_link}" target="_blank">View on RAWG</a>` : ''}</td>
-          <td>${game.review ? escapeHtml(game.review) : ''}</td>
+          <td class="review-cell">${getReviewCellContent(game.review, game.title, game.release_date ? new Date(game.release_date).toLocaleDateString() : (game.genres || ''))}</td>
           <td><span class="watched-icon ${game.review_public ? 'watched' : 'unwatched'}">${game.review_public ? '✓' : '✗'}</span></td>
           <td>
             <button class="action-btn edit-video-game-btn" data-game-id="${game.id}" data-game-title="${escapeHtml(game.title)}" data-game-release-date="${game.release_date ? game.release_date.split('T')[0] : ''}" data-game-genres="${escapeHtml(game.genres || '')}" data-game-rating="${game.rating ?? ''}" data-game-played="${game.played}" data-game-review="${escapeHtml(game.review || '')}" data-game-review-public="${game.review_public || false}">Edit</button>
@@ -1290,7 +1344,7 @@ async function loadMusic() {
           <td>${item.genre ? escapeHtml(item.genre) : ''}</td>
           <td>${item.rating !== null && item.rating !== undefined ? parseFloat(item.rating).toFixed(1) + '/10' : ''}</td>
           <td><span class="watched-icon ${item.listened ? 'watched' : 'unwatched'}">${item.listened ? '✓' : '✗'}</span></td>
-          <td>${item.review ? escapeHtml(item.review) : ''}</td>
+          <td class="review-cell">${getReviewCellContent(item.review, item.title, item.artist || '')}</td>
           <td><span class="watched-icon ${item.review_public ? 'watched' : 'unwatched'}">${item.review_public ? '✓' : '✗'}</span></td>
           <td>
             <button class="action-btn edit-music-btn" data-music-id="${item.id}" data-music-title="${escapeHtml(item.title)}" data-music-artist="${escapeHtml(item.artist)}" data-music-year="${item.year}" data-music-genre="${escapeHtml(item.genre || '')}" data-music-rating="${item.rating ?? ''}" data-music-listened="${item.listened}" data-music-review="${escapeHtml(item.review || '')}" data-music-review-public="${item.review_public || false}">Edit</button>
@@ -1634,7 +1688,7 @@ async function loadBooks() {
           <td>${book.genre ? escapeHtml(book.genre) : ''}</td>
           <td>${book.rating !== null && book.rating !== undefined ? parseFloat(book.rating).toFixed(1) + '/10' : ''}</td>
           <td><span class="watched-icon ${book.read ? 'watched' : 'unwatched'}">${book.read ? '✓' : '✗'}</span></td>
-          <td>${book.review ? escapeHtml(book.review) : ''}</td>
+          <td class="review-cell">${getReviewCellContent(book.review, book.title, book.author || '')}</td>
           <td><span class="watched-icon ${book.review_public ? 'watched' : 'unwatched'}">${book.review_public ? '✓' : '✗'}</span></td>
           <td>
             <button class="action-btn edit-book-btn" data-book-id="${book.id}" data-book-title="${escapeHtml(book.title)}" data-book-author="${escapeHtml(book.author)}" data-book-year="${book.year}" data-book-genre="${escapeHtml(book.genre || '')}" data-book-rating="${book.rating ?? ''}" data-book-read="${book.read}" data-book-review="${escapeHtml(book.review || '')}" data-book-review-public="${book.review_public || false}">Edit</button>

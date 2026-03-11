@@ -1811,6 +1811,19 @@
     </div>
   </div>
 
+  <div id="reviewModal" class="modal-overlay" style="display: none;" onclick="if(event.target === this) closeReviewModal()">
+    <div class="modal-content review-modal" onclick="event.stopPropagation()">
+      <div class="modal-header">
+        <h2 id="reviewModalTitle"></h2>
+        <button class="modal-close" onclick="closeReviewModal()" aria-label="Close review">×</button>
+      </div>
+      <div class="modal-body">
+        <p id="reviewModalSubtitle" class="review-modal-subtitle"></p>
+        <div id="reviewModalBody" class="review-modal-body"></div>
+      </div>
+    </div>
+  </div>
+
   <!-- Friend Profile Modal -->
   <div id="friendProfileModal" class="modal-overlay" style="display: none;">
     <div class="modal-content friend-profile-modal">
