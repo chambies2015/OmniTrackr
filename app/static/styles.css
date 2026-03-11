@@ -461,7 +461,7 @@ table {
   width: 100%;
   border-collapse: separate;
   border-spacing: 0;
-  table-layout: fixed;
+  table-layout: auto;
   background-color: transparent;
 }
 
@@ -729,6 +729,36 @@ th:last-child {
   border-top-right-radius: 12px;
 }
 
+th:last-child,
+td:last-child {
+  position: sticky;
+  right: 0;
+  z-index: 5;
+  white-space: nowrap;
+}
+
+th:last-child {
+  z-index: 11;
+  box-shadow: -4px 2px 4px rgba(0, 0, 0, 0.1);
+}
+
+td:last-child {
+  background-color: var(--card-bg);
+  box-shadow: -4px 0 4px rgba(0, 0, 0, 0.06);
+}
+
+tbody tr:nth-child(even) td:last-child {
+  background-color: var(--table-row-alt);
+}
+
+tbody tr:hover td:last-child {
+  background-color: rgba(102, 126, 234, 0.05);
+}
+
+body.dark-mode tbody tr:hover td:last-child {
+  background-color: rgba(102, 126, 234, 0.1);
+}
+
 tbody tr {
   transition: all 0.2s ease;
   background-color: var(--card-bg);
@@ -785,6 +815,49 @@ body.dark-mode .review-textarea {
 body.dark-mode .review-textarea:focus {
   border-color: #667eea;
   box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.2);
+}
+
+.review-cell {
+  max-width: 200px;
+  vertical-align: middle;
+}
+
+.review-cell-preview {
+  display: block;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  max-width: 100%;
+  margin-bottom: 6px;
+  line-height: 1.4;
+}
+
+.review-view-btn {
+  white-space: nowrap;
+  padding: 6px 12px;
+  font-size: 0.85rem;
+  min-height: 32px;
+}
+
+.review-modal .modal-content {
+  max-width: 520px;
+}
+
+.review-modal-subtitle {
+  margin: 0 0 12px 0;
+  color: var(--fg);
+  opacity: 0.8;
+  font-size: 0.95rem;
+}
+
+.review-modal-body {
+  color: var(--fg);
+  line-height: 1.6;
+  white-space: pre-wrap;
+  word-wrap: break-word;
+  max-height: 60vh;
+  overflow-y: auto;
+  padding: 4px 0;
 }
 
 table input[type="text"],
@@ -918,6 +991,12 @@ body.dark-mode .card>div:nth-of-type(2) {
   td,
   tr {
     display: block;
+  }
+
+  th:last-child,
+  td:last-child {
+    position: static;
+    box-shadow: none;
   }
 
   thead tr {

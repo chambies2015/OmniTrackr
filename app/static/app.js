@@ -68,11 +68,65 @@ function closeImagePopup() {
   }
 }
 
+const REVIEW_PREVIEW_LEN = 60;
+
+function getReviewCellContent(review, title, subtitle) {
+  if (!review || !String(review).trim()) return '';
+  const safeTitle = escapeHtml(title);
+  const safeSubtitle = escapeHtml(subtitle || '');
+  const preview = String(review).length > REVIEW_PREVIEW_LEN ? String(review).slice(0, REVIEW_PREVIEW_LEN).trim() + '\u2026' : String(review);
+  const safePreview = escapeHtml(preview);
+  const safeReview = escapeHtml(review);
+  return `<span class="review-cell-preview" title="${safePreview}">${safePreview}</span><button type="button" class="action-btn review-view-btn" onclick="openReviewModal(this)">View review</button><span class="review-cell-full" style="display:none" data-review="${safeReview}" data-title="${safeTitle}" data-subtitle="${safeSubtitle}"></span>`;
+}
+
+function openReviewModal(btn) {
+  const cell = btn.closest('td');
+  if (!cell) return;
+  const fullEl = cell.querySelector('.review-cell-full');
+  const title = fullEl ? fullEl.getAttribute('data-title') || '' : '';
+  const subtitle = fullEl ? fullEl.getAttribute('data-subtitle') || '' : '';
+  const reviewRaw = fullEl ? fullEl.getAttribute('data-review') || '' : '';
+  const decodeAttr = (s) => {
+    const d = document.createElement('div');
+    d.innerHTML = s;
+    return d.textContent || '';
+  };
+  const review = document.createElement('div');
+  review.textContent = decodeAttr(reviewRaw);
+  const modal = document.getElementById('reviewModal');
+  const titleEl = document.getElementById('reviewModalTitle');
+  const subtitleEl = document.getElementById('reviewModalSubtitle');
+  const bodyEl = document.getElementById('reviewModalBody');
+  if (modal && titleEl && subtitleEl && bodyEl) {
+    titleEl.textContent = decodeAttr(title);
+    subtitleEl.textContent = decodeAttr(subtitle);
+    subtitleEl.style.display = subtitle ? '' : 'none';
+    bodyEl.innerHTML = '';
+    bodyEl.appendChild(review);
+    modal.style.display = 'flex';
+    document.body.style.overflow = 'hidden';
+  }
+}
+
+function closeReviewModal() {
+  const modal = document.getElementById('reviewModal');
+  if (modal) {
+    modal.style.display = 'none';
+    document.body.style.overflow = '';
+  }
+}
+
 document.addEventListener('keydown', function(event) {
   if (event.key === 'Escape') {
-    const modal = document.getElementById('imagePopupModal');
-    if (modal && modal.style.display !== 'none') {
+    const imageModal = document.getElementById('imagePopupModal');
+    if (imageModal && imageModal.style.display !== 'none') {
       closeImagePopup();
+      return;
+    }
+    const reviewModal = document.getElementById('reviewModal');
+    if (reviewModal && reviewModal.style.display !== 'none') {
+      closeReviewModal();
     }
   }
 });
@@ -189,7 +243,7 @@ async function loadMovies() {
           <td>${movie.year}</td>
           <td>${movie.rating !== null && movie.rating !== undefined ? parseFloat(movie.rating).toFixed(1) + '/10' : ''}</td>
           <td><span class="watched-icon ${movie.watched ? 'watched' : 'unwatched'}">${movie.watched ? '✓' : '✗'}</span></td>
-          <td>${movie.review ? movie.review : ''}</td>
+          <td class="review-cell">${getReviewCellContent(movie.review, movie.title, [movie.director, movie.year].filter(Boolean).join(' \u2022 '))}</td>
           <td><a href="https://www.imdb.com/find?q=${encodeURIComponent(movie.title)}" target="_blank">Search</a></td>
           <td><span class="watched-icon ${movie.review_public ? 'watched' : 'unwatched'}">${movie.review_public ? '✓' : '✗'}</span></td>
           <td>
@@ -492,7 +546,7 @@ async function loadTVShows() {
           <td>${tvShow.episodes ?? ''}</td>
           <td>${tvShow.rating !== null && tvShow.rating !== undefined ? parseFloat(tvShow.rating).toFixed(1) + '/10' : ''}</td>
           <td><span class="watched-icon ${tvShow.watched ? 'watched' : 'unwatched'}">${tvShow.watched ? '✓' : '✗'}</span></td>
-          <td>${tvShow.review ? tvShow.review : ''}</td>
+          <td class="review-cell">${getReviewCellContent(tvShow.review, tvShow.title, tvShow.year ? String(tvShow.year) : '')}</td>
           <td><a href="https://www.imdb.com/find?q=${encodeURIComponent(tvShow.title)}" target="_blank">Search</a></td>
           <td><span class="watched-icon ${tvShow.review_public ? 'watched' : 'unwatched'}">${tvShow.review_public ? '✓' : '✗'}</span></td>
           <td>
@@ -558,7 +612,7 @@ async function loadAnime() {
           <td style="text-align: center;">${animeItem.episodes ?? ''}</td>
           <td style="text-align: center;">${animeItem.rating !== null && animeItem.rating !== undefined ? parseFloat(animeItem.rating).toFixed(1) + '/10' : ''}</td>
           <td style="text-align: center;"><span class="watched-icon ${animeItem.watched ? 'watched' : 'unwatched'}">${animeItem.watched ? '✓' : '✗'}</span></td>
-          <td>${animeItem.review ? animeItem.review : ''}</td>
+          <td class="review-cell">${getReviewCellContent(animeItem.review, animeItem.title, animeItem.year ? String(animeItem.year) : '')}</td>
           <td><a href="https://www.imdb.com/find?q=${encodeURIComponent(animeItem.title)}" target="_blank">Search</a></td>
           <td><span class="watched-icon ${animeItem.review_public ? 'watched' : 'unwatched'}">${animeItem.review_public ? '✓' : '✗'}</span></td>
           <td>
@@ -936,7 +990,7 @@ async function loadVideoGames() {
           <td><span class="watched-icon ${game.played ? 'watched' : 'unwatched'}">${game.played ? '✓' : '✗'}</span></td>
           <td>${game.rating !== null && game.rating !== undefined ? parseFloat(game.rating).toFixed(1) + '/10' : ''}</td>
           <td>${game.rawg_link ? `<a href="${game.rawg_link}" target="_blank">View on RAWG</a>` : ''}</td>
-          <td>${game.review ? escapeHtml(game.review) : ''}</td>
+          <td class="review-cell">${getReviewCellContent(game.review, game.title, game.release_date ? new Date(game.release_date).toLocaleDateString() : (game.genres || ''))}</td>
           <td><span class="watched-icon ${game.review_public ? 'watched' : 'unwatched'}">${game.review_public ? '✓' : '✗'}</span></td>
           <td>
             <button class="action-btn edit-video-game-btn" data-game-id="${game.id}" data-game-title="${escapeHtml(game.title)}" data-game-release-date="${game.release_date ? game.release_date.split('T')[0] : ''}" data-game-genres="${escapeHtml(game.genres || '')}" data-game-rating="${game.rating ?? ''}" data-game-played="${game.played}" data-game-review="${escapeHtml(game.review || '')}" data-game-review-public="${game.review_public || false}">Edit</button>
@@ -1290,7 +1344,7 @@ async function loadMusic() {
           <td>${item.genre ? escapeHtml(item.genre) : ''}</td>
           <td>${item.rating !== null && item.rating !== undefined ? parseFloat(item.rating).toFixed(1) + '/10' : ''}</td>
           <td><span class="watched-icon ${item.listened ? 'watched' : 'unwatched'}">${item.listened ? '✓' : '✗'}</span></td>
-          <td>${item.review ? escapeHtml(item.review) : ''}</td>
+          <td class="review-cell">${getReviewCellContent(item.review, item.title, item.artist || '')}</td>
           <td><span class="watched-icon ${item.review_public ? 'watched' : 'unwatched'}">${item.review_public ? '✓' : '✗'}</span></td>
           <td>
             <button class="action-btn edit-music-btn" data-music-id="${item.id}" data-music-title="${escapeHtml(item.title)}" data-music-artist="${escapeHtml(item.artist)}" data-music-year="${item.year}" data-music-genre="${escapeHtml(item.genre || '')}" data-music-rating="${item.rating ?? ''}" data-music-listened="${item.listened}" data-music-review="${escapeHtml(item.review || '')}" data-music-review-public="${item.review_public || false}">Edit</button>
@@ -1634,7 +1688,7 @@ async function loadBooks() {
           <td>${book.genre ? escapeHtml(book.genre) : ''}</td>
           <td>${book.rating !== null && book.rating !== undefined ? parseFloat(book.rating).toFixed(1) + '/10' : ''}</td>
           <td><span class="watched-icon ${book.read ? 'watched' : 'unwatched'}">${book.read ? '✓' : '✗'}</span></td>
-          <td>${book.review ? escapeHtml(book.review) : ''}</td>
+          <td class="review-cell">${getReviewCellContent(book.review, book.title, book.author || '')}</td>
           <td><span class="watched-icon ${book.review_public ? 'watched' : 'unwatched'}">${book.review_public ? '✓' : '✗'}</span></td>
           <td>
             <button class="action-btn edit-book-btn" data-book-id="${book.id}" data-book-title="${escapeHtml(book.title)}" data-book-author="${escapeHtml(book.author)}" data-book-year="${book.year}" data-book-genre="${escapeHtml(book.genre || '')}" data-book-rating="${book.rating ?? ''}" data-book-read="${book.read}" data-book-review="${escapeHtml(book.review || '')}" data-book-review-public="${book.review_public || false}">Edit</button>
@@ -3318,331 +3372,9 @@ async function importData(fileInput) {
 }
 
 // Statistics functions
-async function loadStatistics() {
-  try {
-    document.getElementById('statsLoading').style.display = 'block';
-    document.getElementById('statsContent').style.display = 'none';
-
-    const response = await authenticatedFetch(`${API_BASE}/statistics/`);
-    if (!response.ok) {
-      throw new Error('Failed to load statistics');
-    }
-
-    const stats = await response.json();
-    displayStatistics(stats);
-
-    document.getElementById('statsLoading').style.display = 'none';
-    document.getElementById('statsContent').style.display = 'block';
-  } catch (error) {
-    console.error('Error loading statistics:', error);
-    document.getElementById('statsLoading').innerHTML = '<p style="color: red;">Error loading statistics: ' + error.message + '</p>';
-  }
-}
-
-function displayStatistics(stats) {
-  // Watch statistics with animation
-  animateValue('totalItems', 0, stats.watch_stats.total_items, 800);
-  animateValue('watchedItems', 0, stats.watch_stats.watched_items, 800);
-  animateValue('unwatchedItems', 0, stats.watch_stats.unwatched_items, 800);
-  animatePercentage('completionPercentage', 0, stats.watch_stats.completion_percentage, 1000);
-
-  // Progress bar with animation
-  const progressFill = document.getElementById('progressFill');
-  setTimeout(() => {
-    progressFill.style.width = stats.watch_stats.completion_percentage + '%';
-  }, 100);
-
-  // Rating statistics with animation
-  animateDecimal('averageRating', 0, parseFloat(stats.rating_stats.average_rating), 800);
-  animateValue('totalRatedItems', 0, stats.rating_stats.total_rated_items, 800);
-
-  // Rating distribution
-  displayRatingDistribution(stats.rating_stats.rating_distribution);
-
-  // Highest rated items
-  displayHighestRated(stats.rating_stats.highest_rated);
-
-  // Year statistics
-  const oldestYear = stats.year_stats.oldest_year || '-';
-  const newestYear = stats.year_stats.newest_year || '-';
-  if (oldestYear !== '-') {
-    animateValue('oldestYear', parseInt(oldestYear) - 10, oldestYear, 600);
-  } else {
-    document.getElementById('oldestYear').textContent = '-';
-  }
-  if (newestYear !== '-') {
-    animateValue('newestYear', parseInt(newestYear) - 10, newestYear, 600);
-  } else {
-    document.getElementById('newestYear').textContent = '-';
-  }
-
-  // Decade statistics
-  displayDecadeStats(stats.year_stats.decade_stats);
-
-  // Director statistics
-  displayTopDirectors(stats.director_stats.top_directors);
-  displayHighestRatedDirectors(stats.director_stats.highest_rated_directors);
-}
-
-// Animation helper functions
-function animateValue(elementId, start, end, duration) {
-  const element = document.getElementById(elementId);
-  if (!element) return;
-
-  const startTime = performance.now();
-  const isPercentage = elementId === 'completionPercentage';
-
-  function update(currentTime) {
-    const elapsed = currentTime - startTime;
-    const progress = Math.min(elapsed / duration, 1);
-    const easeOut = 1 - Math.pow(1 - progress, 3);
-    const current = Math.floor(start + (end - start) * easeOut);
-
-    element.textContent = isPercentage ? current + '%' : current;
-
-    if (progress < 1) {
-      requestAnimationFrame(update);
-    } else {
-      element.textContent = isPercentage ? end + '%' : end;
-    }
-  }
-
-  requestAnimationFrame(update);
-}
-
-function animatePercentage(elementId, start, end, duration) {
-  animateValue(elementId, start, end, duration);
-}
-
-function animateDecimal(elementId, start, end, duration) {
-  const element = document.getElementById(elementId);
-  if (!element) return;
-
-  const startTime = performance.now();
-
-  function update(currentTime) {
-    const elapsed = currentTime - startTime;
-    const progress = Math.min(elapsed / duration, 1);
-    const easeOut = 1 - Math.pow(1 - progress, 3);
-    const current = start + (end - start) * easeOut;
-
-    element.textContent = current.toFixed(1);
-
-    if (progress < 1) {
-      requestAnimationFrame(update);
-    } else {
-      element.textContent = end.toFixed(1);
-    }
-  }
-
-  requestAnimationFrame(update);
-}
-
-function displayRatingDistribution(distribution) {
-  const container = document.getElementById('ratingBars');
-  container.innerHTML = '';
-
-  // Get all counts and find the maximum
-  const counts = Object.values(distribution).map(Number);
-  const maxCount = counts.length > 0 ? Math.max(...counts) : 1;
-
-  for (let rating = 1; rating <= 10; rating++) {
-    const count = distribution[rating.toString()] || 0;
-    const percentage = maxCount > 0 ? (count / maxCount) * 100 : 0;
-
-    const barDiv = document.createElement('div');
-    barDiv.className = 'rating-bar';
-    barDiv.style.opacity = '0';
-    barDiv.style.transform = 'translateX(-20px)';
-
-    const labelDiv = document.createElement('div');
-    labelDiv.className = 'rating-bar-label';
-    labelDiv.textContent = rating;
-
-    // Create a wrapper for the fill bar to control its width properly
-    const fillWrapper = document.createElement('div');
-    fillWrapper.style.flex = '1';
-    fillWrapper.style.minWidth = '0';
-    fillWrapper.style.position = 'relative';
-
-    const fillDiv = document.createElement('div');
-    fillDiv.className = 'rating-bar-fill';
-    fillDiv.style.width = '0%';
-    fillDiv.style.position = 'absolute';
-    fillDiv.style.left = '0';
-    fillDiv.style.top = '0';
-    fillDiv.style.bottom = '0';
-
-    fillWrapper.appendChild(fillDiv);
-
-    const countDiv = document.createElement('div');
-    countDiv.className = 'rating-bar-count';
-    countDiv.textContent = count;
-
-    barDiv.appendChild(labelDiv);
-    barDiv.appendChild(fillWrapper);
-    barDiv.appendChild(countDiv);
-    container.appendChild(barDiv);
-
-    // Animate bar appearance
-    setTimeout(() => {
-      barDiv.style.transition = 'opacity 0.3s ease, transform 0.3s ease';
-      barDiv.style.opacity = '1';
-      barDiv.style.transform = 'translateX(0)';
-      setTimeout(() => {
-        fillDiv.style.width = percentage + '%';
-      }, 100);
-    }, rating * 50);
-  }
-}
-
-function displayHighestRated(items) {
-  const container = document.getElementById('highestRatedList');
-  container.innerHTML = '';
-
-  if (items.length === 0) {
-    container.innerHTML = '<p style="text-align: center; color: var(--fg); opacity: 0.6; padding: 20px;">No rated items found.</p>';
-    return;
-  }
-
-  items.forEach((item, index) => {
-    const itemDiv = document.createElement('div');
-    itemDiv.className = 'rated-item';
-    itemDiv.style.opacity = '0';
-    itemDiv.style.transform = 'translateY(10px)';
-    itemDiv.innerHTML = `
-      <div class="rated-item-title">${item.title} <span style="opacity: 0.6; font-size: 0.9em;">(${item.type})</span></div>
-      <div class="rated-item-rating">${parseFloat(item.rating).toFixed(1)}/10</div>
-    `;
-    container.appendChild(itemDiv);
-
-    // Animate item appearance
-    setTimeout(() => {
-      itemDiv.style.transition = 'opacity 0.3s ease, transform 0.3s ease';
-      itemDiv.style.opacity = '1';
-      itemDiv.style.transform = 'translateY(0)';
-    }, index * 100);
-  });
-}
-
-function displayDecadeStats(decadeStats) {
-  const container = document.getElementById('decadeBars');
-  container.innerHTML = '';
-
-  const decades = Object.keys(decadeStats).sort();
-
-  // Calculate totals for each decade and find the maximum
-  const totals = decades.map(decade =>
-    (decadeStats[decade].movies || 0) + (decadeStats[decade].tv_shows || 0) + (decadeStats[decade].anime || 0) + (decadeStats[decade].video_games || 0)
-  );
-  const maxCount = totals.length > 0 ? Math.max(...totals) : 1;
-
-  decades.forEach((decade, index) => {
-    const total = (decadeStats[decade].movies || 0) + (decadeStats[decade].tv_shows || 0) + (decadeStats[decade].anime || 0) + (decadeStats[decade].video_games || 0);
-    const percentage = maxCount > 0 ? (total / maxCount) * 100 : 0;
-
-    const barDiv = document.createElement('div');
-    barDiv.className = 'decade-bar';
-    barDiv.style.opacity = '0';
-    barDiv.style.transform = 'translateX(-20px)';
-
-    const labelDiv = document.createElement('div');
-    labelDiv.className = 'decade-bar-label';
-    labelDiv.textContent = decade;
-
-    // Create a wrapper for the fill bar to control its width properly
-    const fillWrapper = document.createElement('div');
-    fillWrapper.style.flex = '1';
-    fillWrapper.style.minWidth = '0';
-    fillWrapper.style.position = 'relative';
-
-    const fillDiv = document.createElement('div');
-    fillDiv.className = 'decade-bar-fill';
-    fillDiv.style.width = '0%';
-    fillDiv.style.position = 'absolute';
-    fillDiv.style.left = '0';
-    fillDiv.style.top = '0';
-    fillDiv.style.bottom = '0';
-
-    fillWrapper.appendChild(fillDiv);
-
-    const countDiv = document.createElement('div');
-    countDiv.className = 'decade-bar-count';
-    countDiv.textContent = total;
-
-    barDiv.appendChild(labelDiv);
-    barDiv.appendChild(fillWrapper);
-    barDiv.appendChild(countDiv);
-    container.appendChild(barDiv);
-
-    // Animate bar appearance
-    setTimeout(() => {
-      barDiv.style.transition = 'opacity 0.3s ease, transform 0.3s ease';
-      barDiv.style.opacity = '1';
-      barDiv.style.transform = 'translateX(0)';
-      setTimeout(() => {
-        fillDiv.style.width = percentage + '%';
-      }, 100);
-    }, index * 80);
-  });
-}
-
-function displayTopDirectors(directors) {
-  const container = document.getElementById('topDirectorsList');
-  container.innerHTML = '';
-
-  if (directors.length === 0) {
-    container.innerHTML = '<p style="text-align: center; color: var(--fg); opacity: 0.6; padding: 20px;">No directors found.</p>';
-    return;
-  }
-
-  directors.forEach((director, index) => {
-    const directorDiv = document.createElement('div');
-    directorDiv.className = 'director-item';
-    directorDiv.style.opacity = '0';
-    directorDiv.style.transform = 'translateX(-10px)';
-    directorDiv.innerHTML = `
-      <div class="director-name">${director.director}</div>
-      <div class="director-rating">${director.count} ${director.count === 1 ? 'movie' : 'movies'}</div>
-    `;
-    container.appendChild(directorDiv);
-
-    // Animate item appearance
-    setTimeout(() => {
-      directorDiv.style.transition = 'opacity 0.3s ease, transform 0.3s ease';
-      directorDiv.style.opacity = '1';
-      directorDiv.style.transform = 'translateX(0)';
-    }, index * 80);
-  });
-}
-
-function displayHighestRatedDirectors(directors) {
-  const container = document.getElementById('highestRatedDirectorsList');
-  container.innerHTML = '';
-
-  if (directors.length === 0) {
-    container.innerHTML = '<p style="text-align: center; color: var(--fg); opacity: 0.6; padding: 20px;">No rated directors found.</p>';
-    return;
-  }
-
-  directors.forEach((director, index) => {
-    const directorDiv = document.createElement('div');
-    directorDiv.className = 'director-item';
-    directorDiv.style.opacity = '0';
-    directorDiv.style.transform = 'translateX(-10px)';
-    directorDiv.innerHTML = `
-      <div class="director-name">${director.director}</div>
-      <div class="director-rating">${director.avg_rating.toFixed(1)}/10 <span style="opacity: 0.7; font-size: 0.9em;">(${director.count} ${director.count === 1 ? 'movie' : 'movies'})</span></div>
-    `;
-    container.appendChild(directorDiv);
-
-    // Animate item appearance
-    setTimeout(() => {
-      directorDiv.style.transition = 'opacity 0.3s ease, transform 0.3s ease';
-      directorDiv.style.opacity = '1';
-      directorDiv.style.transform = 'translateX(0)';
-    }, index * 80);
-  });
+function loadStatistics() {
+  document.getElementById('statsLoading').style.display = 'none';
+  document.getElementById('statsContent').style.display = 'block';
 }
 
 const categoryStatsCache = {};
