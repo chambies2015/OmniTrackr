@@ -32,152 +32,58 @@ async def review_detail(review_id: int):
     raise HTTPException(status_code=404, detail="Review detail page not found")
 
 
+def _active_user_ids_query(db: Session):
+    return db.query(models.User.id).filter(models.User.is_active == True)
+
+
 @router.get("/api/public/reviews", response_model=List[dict], tags=["public"])
 async def get_public_reviews(
     db: Session = Depends(get_db),
-    category: Optional[str] = Query(None, description="Filter by category: movie, tv_show, anime, video_game"),
+    category: Optional[str] = Query(None, description="Filter by category: movie, tv_show, anime, video_game, music, book"),
     limit: int = Query(20, ge=1, le=100, description="Maximum number of reviews to return"),
     offset: int = Query(0, ge=0, description="Number of reviews to skip")
 ):
-    """Get public reviews from all users. Only returns entries with non-empty review text."""
+    """Get public reviews from all users. Only returns entries with non-empty review text and review_public=True."""
     reviews = []
-    
-    query_conditions = []
-    
+    user_ids = _active_user_ids_query(db)
+
+    def base_filter(model_cls):
+        return and_(
+            model_cls.review.isnot(None),
+            model_cls.review != "",
+            model_cls.review_public == True,
+            model_cls.user_id.in_(user_ids)
+        )
+
     if category == "movie":
-        query_conditions.append(("movie", db.query(models.Movie).filter(
-            and_(
-                models.Movie.review.isnot(None),
-                models.Movie.review != "",
-                models.Movie.user_id.in_(
-                    db.query(models.User.id).filter(
-                        and_(
-                            models.User.is_active == True,
-                            models.User.reviews_public == True
-                        )
-                    )
-                )
-            )
-        ).offset(offset).limit(limit).all()))
+        query_conditions = [("movie", db.query(models.Movie).filter(base_filter(models.Movie)).order_by(models.Movie.id.desc()).offset(offset).limit(limit).all())]
     elif category == "tv_show":
-        query_conditions.append(("tv_show", db.query(models.TVShow).filter(
-            and_(
-                models.TVShow.review.isnot(None),
-                models.TVShow.review != "",
-                models.TVShow.user_id.in_(
-                    db.query(models.User.id).filter(
-                        and_(
-                            models.User.is_active == True,
-                            models.User.reviews_public == True
-                        )
-                    )
-                )
-            )
-        ).offset(offset).limit(limit).all()))
+        query_conditions = [("tv_show", db.query(models.TVShow).filter(base_filter(models.TVShow)).order_by(models.TVShow.id.desc()).offset(offset).limit(limit).all())]
     elif category == "anime":
-        query_conditions.append(("anime", db.query(models.Anime).filter(
-            and_(
-                models.Anime.review.isnot(None),
-                models.Anime.review != "",
-                models.Anime.user_id.in_(
-                    db.query(models.User.id).filter(
-                        and_(
-                            models.User.is_active == True,
-                            models.User.reviews_public == True
-                        )
-                    )
-                )
-            )
-        ).offset(offset).limit(limit).all()))
+        query_conditions = [("anime", db.query(models.Anime).filter(base_filter(models.Anime)).order_by(models.Anime.id.desc()).offset(offset).limit(limit).all())]
     elif category == "video_game":
-        query_conditions.append(("video_game", db.query(models.VideoGame).filter(
-            and_(
-                models.VideoGame.review.isnot(None),
-                models.VideoGame.review != "",
-                models.VideoGame.user_id.in_(
-                    db.query(models.User.id).filter(
-                        and_(
-                            models.User.is_active == True,
-                            models.User.reviews_public == True
-                        )
-                    )
-                )
-            )
-        ).offset(offset).limit(limit).all()))
+        query_conditions = [("video_game", db.query(models.VideoGame).filter(base_filter(models.VideoGame)).order_by(models.VideoGame.id.desc()).offset(offset).limit(limit).all())]
+    elif category == "music":
+        query_conditions = [("music", db.query(models.Music).filter(base_filter(models.Music)).order_by(models.Music.id.desc()).offset(offset).limit(limit).all())]
+    elif category == "book":
+        query_conditions = [("book", db.query(models.Book).filter(base_filter(models.Book)).order_by(models.Book.id.desc()).offset(offset).limit(limit).all())]
     else:
-        movie_reviews = db.query(models.Movie).filter(
-            and_(
-                models.Movie.review.isnot(None),
-                models.Movie.review != "",
-                models.Movie.user_id.in_(
-                    db.query(models.User.id).filter(
-                        and_(
-                            models.User.is_active == True,
-                            models.User.reviews_public == True
-                        )
-                    )
-                )
-            )
-        ).limit(limit // 4 + 1).all()
-        
-        tv_reviews = db.query(models.TVShow).filter(
-            and_(
-                models.TVShow.review.isnot(None),
-                models.TVShow.review != "",
-                models.TVShow.user_id.in_(
-                    db.query(models.User.id).filter(
-                        and_(
-                            models.User.is_active == True,
-                            models.User.reviews_public == True
-                        )
-                    )
-                )
-            )
-        ).limit(limit // 4 + 1).all()
-        
-        anime_reviews = db.query(models.Anime).filter(
-            and_(
-                models.Anime.review.isnot(None),
-                models.Anime.review != "",
-                models.Anime.user_id.in_(
-                    db.query(models.User.id).filter(
-                        and_(
-                            models.User.is_active == True,
-                            models.User.reviews_public == True
-                        )
-                    )
-                )
-            )
-        ).limit(limit // 4 + 1).all()
-        
-        vg_reviews = db.query(models.VideoGame).filter(
-            and_(
-                models.VideoGame.review.isnot(None),
-                models.VideoGame.review != "",
-                models.VideoGame.user_id.in_(
-                    db.query(models.User.id).filter(
-                        and_(
-                            models.User.is_active == True,
-                            models.User.reviews_public == True
-                        )
-                    )
-                )
-            )
-        ).limit(limit // 4 + 1).all()
-        
+        per_cat = (offset + limit) // 6 + 2
         query_conditions = [
-            ("movie", movie_reviews),
-            ("tv_show", tv_reviews),
-            ("anime", anime_reviews),
-            ("video_game", vg_reviews)
+            ("movie", db.query(models.Movie).filter(base_filter(models.Movie)).order_by(models.Movie.id.desc()).limit(per_cat).all()),
+            ("tv_show", db.query(models.TVShow).filter(base_filter(models.TVShow)).order_by(models.TVShow.id.desc()).limit(per_cat).all()),
+            ("anime", db.query(models.Anime).filter(base_filter(models.Anime)).order_by(models.Anime.id.desc()).limit(per_cat).all()),
+            ("video_game", db.query(models.VideoGame).filter(base_filter(models.VideoGame)).order_by(models.VideoGame.id.desc()).limit(per_cat).all()),
+            ("music", db.query(models.Music).filter(base_filter(models.Music)).order_by(models.Music.id.desc()).limit(per_cat).all()),
+            ("book", db.query(models.Book).filter(base_filter(models.Book)).order_by(models.Book.id.desc()).limit(per_cat).all()),
         ]
-    
+
     for cat, items in query_conditions:
         for item in items:
             user = db.query(models.User).filter(models.User.id == item.user_id).first()
             if not user or not user.is_active:
                 continue
-                
+
             review_data = {
                 "id": item.id,
                 "category": cat,
@@ -187,7 +93,7 @@ async def get_public_reviews(
                 "username": user.username,
                 "user_id": user.id,
             }
-            
+
             if cat == "movie":
                 review_data.update({
                     "director": item.director,
@@ -207,72 +113,68 @@ async def get_public_reviews(
                     "genres": item.genres,
                     "cover_art_url": item.cover_art_url,
                 })
-            
+            elif cat == "music":
+                review_data.update({
+                    "artist": item.artist,
+                    "year": item.year,
+                    "cover_art_url": item.cover_art_url,
+                })
+            elif cat == "book":
+                review_data.update({
+                    "author": item.author,
+                    "year": item.year,
+                    "cover_art_url": item.cover_art_url,
+                })
+
             reviews.append(review_data)
-    
+
+    if not category:
+        reviews.sort(key=lambda item: item["id"], reverse=True)
+        return reviews[offset:offset + limit]
     return reviews[:limit]
 
 
 @router.get("/api/public/reviews/{review_id}", response_model=dict, tags=["public"])
 async def get_public_review(
     review_id: int,
-    category: str = Query(..., description="Category: movie, tv_show, anime, or video_game"),
+    category: str = Query(..., description="Category: movie, tv_show, anime, video_game, music, or book"),
     db: Session = Depends(get_db)
 ):
     """Get a specific public review by ID and category."""
-    user_query = db.query(models.User.id).filter(
-        and_(
-            models.User.is_active == True,
-            models.User.reviews_public == True
+    user_ids = _active_user_ids_query(db)
+
+    def base_filter(model_cls):
+        return and_(
+            model_cls.id == review_id,
+            model_cls.review.isnot(None),
+            model_cls.review != "",
+            model_cls.review_public == True,
+            model_cls.user_id.in_(user_ids)
         )
-    )
-    
+
+    item = None
     if category == "movie":
-        item = db.query(models.Movie).filter(
-            and_(
-                models.Movie.id == review_id,
-                models.Movie.review.isnot(None),
-                models.Movie.review != "",
-                models.Movie.user_id.in_(user_query)
-            )
-        ).first()
+        item = db.query(models.Movie).filter(base_filter(models.Movie)).first()
     elif category == "tv_show":
-        item = db.query(models.TVShow).filter(
-            and_(
-                models.TVShow.id == review_id,
-                models.TVShow.review.isnot(None),
-                models.TVShow.review != "",
-                models.TVShow.user_id.in_(user_query)
-            )
-        ).first()
+        item = db.query(models.TVShow).filter(base_filter(models.TVShow)).first()
     elif category == "anime":
-        item = db.query(models.Anime).filter(
-            and_(
-                models.Anime.id == review_id,
-                models.Anime.review.isnot(None),
-                models.Anime.review != "",
-                models.Anime.user_id.in_(user_query)
-            )
-        ).first()
+        item = db.query(models.Anime).filter(base_filter(models.Anime)).first()
     elif category == "video_game":
-        item = db.query(models.VideoGame).filter(
-            and_(
-                models.VideoGame.id == review_id,
-                models.VideoGame.review.isnot(None),
-                models.VideoGame.review != "",
-                models.VideoGame.user_id.in_(user_query)
-            )
-        ).first()
+        item = db.query(models.VideoGame).filter(base_filter(models.VideoGame)).first()
+    elif category == "music":
+        item = db.query(models.Music).filter(base_filter(models.Music)).first()
+    elif category == "book":
+        item = db.query(models.Book).filter(base_filter(models.Book)).first()
     else:
         raise HTTPException(status_code=400, detail="Invalid category")
-    
+
     if not item:
         raise HTTPException(status_code=404, detail="Review not found")
-    
+
     user = db.query(models.User).filter(models.User.id == item.user_id).first()
     if not user or not user.is_active:
         raise HTTPException(status_code=404, detail="Review not found")
-    
+
     review_data = {
         "id": item.id,
         "category": category,
@@ -282,7 +184,7 @@ async def get_public_review(
         "username": user.username,
         "user_id": user.id,
     }
-    
+
     if category == "movie":
         review_data.update({
             "director": item.director,
@@ -302,5 +204,17 @@ async def get_public_review(
             "genres": item.genres,
             "cover_art_url": item.cover_art_url,
         })
-    
+    elif category == "music":
+        review_data.update({
+            "artist": item.artist,
+            "year": item.year,
+            "cover_art_url": item.cover_art_url,
+        })
+    elif category == "book":
+        review_data.update({
+            "author": item.author,
+            "year": item.year,
+            "cover_art_url": item.cover_art_url,
+        })
+
     return review_data

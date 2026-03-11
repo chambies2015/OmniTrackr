@@ -78,7 +78,6 @@ class PrivacySettings(BaseModel):
     music_private: bool = Field(False, description="Make music private")
     books_private: bool = Field(False, description="Make books private")
     statistics_private: bool = Field(False, description="Make statistics private")
-    reviews_public: bool = Field(False, description="Allow reviews to appear on public reviews page")
     
     class Config:
         from_attributes = True
@@ -93,7 +92,6 @@ class PrivacySettingsUpdate(BaseModel):
     music_private: Optional[bool] = None
     books_private: Optional[bool] = None
     statistics_private: Optional[bool] = None
-    reviews_public: Optional[bool] = None
 
 
 class TabVisibility(BaseModel):
@@ -213,6 +211,7 @@ class MovieBase(BaseModel):
     )
     watched: Optional[bool] = Field(False, description="Whether it has been watched/read")
     review: Optional[str] = Field(None, description="Optional review/notes for the entry")
+    review_public: Optional[bool] = Field(False, description="Show this review on the public reviews page")
     poster_url: Optional[str] = Field(None, description="URL of the movie poster")
 
 
@@ -227,6 +226,7 @@ class MovieUpdate(BaseModel):
     rating: Optional[float] = Field(None, ge=0, le=10)
     watched: Optional[bool] = None
     review: Optional[str] = None
+    review_public: Optional[bool] = None
     poster_url: Optional[str] = None
 
 
@@ -245,6 +245,7 @@ class TVShowBase(BaseModel):
     rating: Optional[float] = Field(None, ge=0, le=10, description="Rating out of 10 (0-10.0, one decimal place)")
     watched: Optional[bool] = Field(False, description="Whether it has been watched")
     review: Optional[str] = Field(None, description="Optional review/notes for the entry")
+    review_public: Optional[bool] = Field(False, description="Show this review on the public reviews page")
     poster_url: Optional[str] = Field(None, description="URL of the TV show poster")
 
 
@@ -260,6 +261,7 @@ class TVShowUpdate(BaseModel):
     rating: Optional[float] = Field(None, ge=0, le=10)
     watched: Optional[bool] = None
     review: Optional[str] = None
+    review_public: Optional[bool] = None
     poster_url: Optional[str] = None
 
 
@@ -278,6 +280,7 @@ class AnimeBase(BaseModel):
     rating: Optional[float] = Field(None, ge=0, le=10, description="Rating out of 10 (0-10.0, one decimal place)")
     watched: Optional[bool] = Field(False, description="Whether it has been watched")
     review: Optional[str] = Field(None, description="Optional review/notes for the entry")
+    review_public: Optional[bool] = Field(False, description="Show this review on the public reviews page")
     poster_url: Optional[str] = Field(None, description="URL of the anime poster")
 
 
@@ -293,6 +296,7 @@ class AnimeUpdate(BaseModel):
     rating: Optional[float] = Field(None, ge=0, le=10)
     watched: Optional[bool] = None
     review: Optional[str] = None
+    review_public: Optional[bool] = None
     poster_url: Optional[str] = None
 
 
@@ -310,6 +314,7 @@ class VideoGameBase(BaseModel):
     rating: Optional[float] = Field(None, ge=0, le=10, description="Rating out of 10 (0-10.0, one decimal place)")
     played: Optional[bool] = Field(False, description="Whether it has been played")
     review: Optional[str] = Field(None, description="Optional review/notes for the entry")
+    review_public: Optional[bool] = Field(False, description="Show this review on the public reviews page")
     cover_art_url: Optional[str] = Field(None, description="URL of the video game cover art")
     rawg_link: Optional[str] = Field(None, description="RAWG game page URL")
 
@@ -325,6 +330,7 @@ class VideoGameUpdate(BaseModel):
     rating: Optional[float] = Field(None, ge=0, le=10)
     played: Optional[bool] = None
     review: Optional[str] = None
+    review_public: Optional[bool] = None
     cover_art_url: Optional[str] = None
     rawg_link: Optional[str] = None
 
@@ -344,6 +350,7 @@ class MusicBase(BaseModel):
     rating: Optional[float] = Field(None, ge=0, le=10, description="Rating out of 10 (0-10.0, one decimal place)")
     listened: Optional[bool] = Field(False, description="Whether it has been listened to")
     review: Optional[str] = Field(None, description="Optional review/notes for the entry")
+    review_public: Optional[bool] = Field(False, description="Show this review on the public reviews page")
     cover_art_url: Optional[str] = Field(None, description="URL of the album cover art")
 
 
@@ -359,6 +366,7 @@ class MusicUpdate(BaseModel):
     rating: Optional[float] = Field(None, ge=0, le=10)
     listened: Optional[bool] = None
     review: Optional[str] = None
+    review_public: Optional[bool] = None
     cover_art_url: Optional[str] = None
 
 
@@ -377,6 +385,7 @@ class BookBase(BaseModel):
     rating: Optional[float] = Field(None, ge=0, le=10, description="Rating out of 10 (0-10.0, one decimal place)")
     read: Optional[bool] = Field(False, description="Whether it has been read")
     review: Optional[str] = Field(None, description="Optional review/notes for the entry")
+    review_public: Optional[bool] = Field(False, description="Show this review on the public reviews page")
     cover_art_url: Optional[str] = Field(None, description="URL of the book cover art")
 
 
@@ -392,6 +401,7 @@ class BookUpdate(BaseModel):
     rating: Optional[float] = Field(None, ge=0, le=10)
     read: Optional[bool] = None
     review: Optional[str] = None
+    review_public: Optional[bool] = None
     cover_art_url: Optional[str] = None
 
 

@@ -23,11 +23,15 @@ async def get_credentials():
     )
 
 
+CACHE_JS_CSS = {"Cache-Control": "public, max-age=86400"}
+CACHE_IMAGES = {"Cache-Control": "public, max-age=2592000"}
+
+
 @router.get("/auth.js")
 async def get_auth():
     auth_file = os.path.join(os.path.dirname(__file__), "..", "static", "auth.js")
     if os.path.exists(auth_file):
-        return FileResponse(auth_file)
+        return FileResponse(auth_file, headers=CACHE_JS_CSS)
     raise HTTPException(status_code=404, detail="auth.js not found")
 
 
@@ -35,7 +39,7 @@ async def get_auth():
 async def get_app():
     app_file = os.path.join(os.path.dirname(__file__), "..", "static", "app.js")
     if os.path.exists(app_file):
-        return FileResponse(app_file)
+        return FileResponse(app_file, headers=CACHE_JS_CSS)
     raise HTTPException(status_code=404, detail="app.js not found")
 
 
@@ -43,7 +47,7 @@ async def get_app():
 async def get_styles():
     styles_file = os.path.join(os.path.dirname(__file__), "..", "static", "styles.css")
     if os.path.exists(styles_file):
-        return FileResponse(styles_file, media_type="text/css")
+        return FileResponse(styles_file, media_type="text/css", headers=CACHE_JS_CSS)
     raise HTTPException(status_code=404, detail="styles.css not found")
 
 
@@ -52,7 +56,7 @@ async def get_styles():
 async def get_omnitrackr_vortex():
     bg_file = os.path.join(os.path.dirname(__file__), "..", "static", "omnitrackr_vortex.png")
     if os.path.exists(bg_file):
-        return FileResponse(bg_file, media_type="image/png")
+        return FileResponse(bg_file, media_type="image/png", headers=CACHE_IMAGES)
     raise HTTPException(status_code=404, detail="omnitrackr_vortex.png not found")
 
 
@@ -61,7 +65,7 @@ async def get_omnitrackr_vortex():
 async def get_film_bg():
     bg_file = os.path.join(os.path.dirname(__file__), "..", "static", "film_background.jpg")
     if os.path.exists(bg_file):
-        return FileResponse(bg_file)
+        return FileResponse(bg_file, headers=CACHE_IMAGES)
     raise HTTPException(status_code=404, detail="film_background.jpg not found")
 
 
@@ -70,7 +74,7 @@ async def get_film_bg():
 async def get_vortex_gif():
     bg_file = os.path.join(os.path.dirname(__file__), "..", "static", "vortex.gif")
     if os.path.exists(bg_file):
-        return FileResponse(bg_file, media_type="image/gif")
+        return FileResponse(bg_file, media_type="image/gif", headers=CACHE_IMAGES)
     raise HTTPException(status_code=404, detail="vortex.gif not found")
 
 
@@ -79,36 +83,33 @@ async def get_vortex_gif():
 async def get_favicon():
     favicon_file = os.path.join(os.path.dirname(__file__), "..", "static", "omnitrackr_favicon.ico")
     if os.path.exists(favicon_file):
-        return FileResponse(favicon_file, media_type="image/x-icon")
+        return FileResponse(favicon_file, media_type="image/x-icon", headers=CACHE_IMAGES)
     raise HTTPException(status_code=404, detail="favicon.ico not found")
 
 
 @router.get("/omnitrackr_favicon.ico")
 @router.head("/omnitrackr_favicon.ico")
 async def get_omnitrackr_favicon():
-    """Serve the OmniTrackr favicon directly."""
     favicon_file = os.path.join(os.path.dirname(__file__), "..", "static", "omnitrackr_favicon.ico")
     if os.path.exists(favicon_file):
-        return FileResponse(favicon_file, media_type="image/x-icon")
+        return FileResponse(favicon_file, media_type="image/x-icon", headers=CACHE_IMAGES)
     raise HTTPException(status_code=404, detail="omnitrackr_favicon.ico not found")
 
 
 @router.get("/favicon.png")
 @router.head("/favicon.png")
 async def get_favicon_png():
-    """Serve favicon as PNG (redirects to .ico version)."""
     favicon_file = os.path.join(os.path.dirname(__file__), "..", "static", "omnitrackr_favicon.ico")
     if os.path.exists(favicon_file):
-        return FileResponse(favicon_file, media_type="image/x-icon")
+        return FileResponse(favicon_file, media_type="image/x-icon", headers=CACHE_IMAGES)
     raise HTTPException(status_code=404, detail="favicon.png not found")
 
 
 @router.get("/sellers.json")
 async def get_sellers_json():
-    """Serve sellers.json file for programmatic advertising transparency."""
     sellers_file = os.path.join(os.path.dirname(__file__), "..", "..", "sellers.json")
     if os.path.exists(sellers_file):
-        return FileResponse(sellers_file, media_type="application/json")
+        return FileResponse(sellers_file, media_type="application/json", headers=CACHE_JS_CSS)
     raise HTTPException(status_code=404, detail="sellers.json not found")
 
 

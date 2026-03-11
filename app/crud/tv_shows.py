@@ -55,7 +55,7 @@ def update_tv_show(db: Session, user_id: int, tv_show_id: int, tv_show_update: s
         return None
     update_dict = tv_show_update.dict(exclude_unset=True)
     
-    allowed_fields = {'title', 'year', 'seasons', 'episodes', 'rating', 'watched', 'review', 'poster_url'}
+    allowed_fields = {'title', 'year', 'seasons', 'episodes', 'rating', 'watched', 'review', 'review_public', 'poster_url'}
     for field, value in update_dict.items():
         if field not in allowed_fields:
             continue

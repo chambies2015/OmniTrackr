@@ -56,7 +56,7 @@ def update_video_game(db: Session, user_id: int, game_id: int, video_game_update
         return None
     update_dict = video_game_update.dict(exclude_unset=True)
     
-    allowed_fields = {'title', 'release_date', 'genres', 'rating', 'played', 'review', 'cover_art_url', 'rawg_link'}
+    allowed_fields = {'title', 'release_date', 'genres', 'rating', 'played', 'review', 'review_public', 'cover_art_url', 'rawg_link'}
     for field, value in update_dict.items():
         if field not in allowed_fields:
             continue

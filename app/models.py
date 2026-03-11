@@ -74,6 +74,7 @@ class Movie(Base):
     rating = Column(Float, nullable=True)
     watched = Column(Boolean, default=False)
     review = Column(Text, nullable=True)
+    review_public = Column(Boolean, default=False, nullable=False)
     poster_url = Column(String, nullable=True)
     
     # User relationship
@@ -93,6 +94,7 @@ class TVShow(Base):
     rating = Column(Float, nullable=True)
     watched = Column(Boolean, default=False)
     review = Column(Text, nullable=True)
+    review_public = Column(Boolean, default=False, nullable=False)
     poster_url = Column(String, nullable=True)
     
     # User relationship
@@ -112,6 +114,7 @@ class Anime(Base):
     rating = Column(Float, nullable=True)
     watched = Column(Boolean, default=False)
     review = Column(Text, nullable=True)
+    review_public = Column(Boolean, default=False, nullable=False)
     poster_url = Column(String, nullable=True)
     
     # User relationship
@@ -130,6 +133,7 @@ class VideoGame(Base):
     rating = Column(Float, nullable=True)
     played = Column(Boolean, default=False)
     review = Column(String, nullable=True)
+    review_public = Column(Boolean, default=False, nullable=False)
     cover_art_url = Column(String, nullable=True)
     rawg_link = Column(String, nullable=True)
     
@@ -150,6 +154,7 @@ class Music(Base):
     rating = Column(Float, nullable=True)
     listened = Column(Boolean, default=False)
     review = Column(Text, nullable=True)
+    review_public = Column(Boolean, default=False, nullable=False)
     cover_art_url = Column(String, nullable=True)
     
     # User relationship
@@ -169,6 +174,7 @@ class Book(Base):
     rating = Column(Float, nullable=True)
     read = Column(Boolean, default=False)
     review = Column(Text, nullable=True)
+    review_public = Column(Boolean, default=False, nullable=False)
     cover_art_url = Column(String, nullable=True)
     
     # User relationship
