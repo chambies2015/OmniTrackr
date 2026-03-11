@@ -9,6 +9,37 @@ let notificationCountInterval = null;
 const posterFetchInProgress = new Set();
 const posterFetchQueue = new Map();
 
+function getPosterConcurrencyLimit() {
+  const conn = navigator.connection || navigator.mozConnection || navigator.webkitConnection;
+  if (!conn) return Infinity;
+  if (conn.saveData) return 1;
+  const et = conn.effectiveType;
+  if (et === 'slow-2g' || et === '2g') return 2;
+  return Infinity;
+}
+
+let posterSlotsInUse = 0;
+let posterSlotLimit = getPosterConcurrencyLimit();
+const posterSlotWaiters = [];
+
+function waitForPosterSlot() {
+  if (posterSlotsInUse < posterSlotLimit) {
+    posterSlotsInUse++;
+    return Promise.resolve();
+  }
+  return new Promise(function (resolve) {
+    posterSlotWaiters.push(resolve);
+  });
+}
+
+function releasePosterSlot() {
+  posterSlotsInUse--;
+  if (posterSlotWaiters.length > 0) {
+    posterSlotsInUse++;
+    posterSlotWaiters.shift()();
+  }
+}
+
 function escapeHtml(str) {
   return String(str)
     .replace(/&/g, "&amp;")
@@ -233,7 +264,7 @@ async function fetchMoviePoster(id, title, year) {
     return;
   }
 
-  // Mark as in progress
+  await waitForPosterSlot();
   posterFetchInProgress.add(cacheKey);
 
   try {
@@ -308,10 +339,9 @@ async function fetchMoviePoster(id, title, year) {
     }
   } catch (err) {
     console.error('Error fetching movie poster:', err);
-    // Store failed promise to prevent retries
     posterFetchQueue.set(cacheKey, Promise.resolve(null));
   } finally {
-    // Remove from in-progress set after a delay to allow queued requests
+    releasePosterSlot();
     setTimeout(() => {
       posterFetchInProgress.delete(cacheKey);
       posterFetchQueue.delete(cacheKey);
@@ -630,6 +660,7 @@ async function fetchTVPoster(id, title, year) {
     return;
   }
 
+  await waitForPosterSlot();
   posterFetchInProgress.add(cacheKey);
 
   try {
@@ -704,10 +735,9 @@ async function fetchTVPoster(id, title, year) {
     }
   } catch (err) {
     console.error('Error fetching TV show poster:', err);
-    // Store failed promise to prevent retries
     posterFetchQueue.set(cacheKey, Promise.resolve(null));
   } finally {
-    // Remove from in-progress set after a delay to allow queued requests
+    releasePosterSlot();
     setTimeout(() => {
       posterFetchInProgress.delete(cacheKey);
       posterFetchQueue.delete(cacheKey);
@@ -759,6 +789,7 @@ async function fetchAnimePoster(id, title, year) {
     return;
   }
 
+  await waitForPosterSlot();
   posterFetchInProgress.add(cacheKey);
 
   try {
@@ -831,6 +862,7 @@ async function fetchAnimePoster(id, title, year) {
     console.error('Error fetching anime poster:', err);
     posterFetchQueue.set(cacheKey, Promise.resolve(null));
   } finally {
+    releasePosterSlot();
     setTimeout(() => {
       posterFetchInProgress.delete(cacheKey);
       posterFetchQueue.delete(cacheKey);
@@ -1104,16 +1136,15 @@ async function fetchVideoGameMetadata(id, title) {
     return;
   }
   
-  // Add our promise to the queue
+  await waitForPosterSlot();
   posterFetchQueue.set(cacheKey, fetchPromise);
-  // Mark as in progress AFTER adding to queue
   posterFetchInProgress.add(cacheKey);
 
   try {
     const result = await fetchPromise;
     return result;
   } finally {
-    // Remove from in-progress set after a delay to allow queued requests
+    releasePosterSlot();
     setTimeout(() => {
       posterFetchInProgress.delete(cacheKey);
       posterFetchQueue.delete(cacheKey);
@@ -1421,7 +1452,8 @@ async function fetchMusicMetadata(id, title, artist) {
     }
     return;
   }
-  
+
+  await waitForPosterSlot();
   posterFetchQueue.set(cacheKey, fetchPromise);
   posterFetchInProgress.add(cacheKey);
 
@@ -1435,6 +1467,7 @@ async function fetchMusicMetadata(id, title, artist) {
   } catch (err) {
     console.error('Error fetching music metadata:', err);
   } finally {
+    releasePosterSlot();
     posterFetchInProgress.delete(cacheKey);
     posterFetchQueue.delete(cacheKey);
   }
@@ -1756,7 +1789,8 @@ async function fetchBookMetadata(id, title, author) {
     }
     return;
   }
-  
+
+  await waitForPosterSlot();
   posterFetchQueue.set(cacheKey, fetchPromise);
   posterFetchInProgress.add(cacheKey);
 
@@ -1770,6 +1804,7 @@ async function fetchBookMetadata(id, title, author) {
   } catch (err) {
     console.error('Error fetching book metadata:', err);
   } finally {
+    releasePosterSlot();
     posterFetchInProgress.delete(cacheKey);
     posterFetchQueue.delete(cacheKey);
   }

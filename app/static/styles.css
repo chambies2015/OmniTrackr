@@ -45,9 +45,9 @@ body {
 /* Mobile: Remove fixed background attachment for better performance */
 @media (max-width: 768px) {
   body {
+    background-image: none;
     background-attachment: scroll;
     padding: 10px 10px 0 10px;
-    /* Remove bottom padding to eliminate gap before footer */
   }
 }
 
@@ -2324,6 +2324,11 @@ body.dark-mode .landing-footer {
 
 /* Responsive adjustments for landing page */
 @media (max-width: 768px) {
+  .landing-hero {
+    background-image: none;
+    background: linear-gradient(135deg, #1e1e2f 0%, #2d1b4e 50%, #1e1e2f 100%);
+  }
+
   .landing-title {
     font-size: 3rem;
   }
