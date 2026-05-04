@@ -216,3 +216,12 @@ Start Movie Tracker.lnk
 # Persistent data directory (profile pictures, etc.)
 # This directory persists between deployments but is not committed to git
 data/
+
+# Local/generated project notes and logs
+API_SETUP_GUIDE.md
+EMAIL_SETUP.md
+FRONTEND_UPDATES.md
+SEO_GUIDE.md
+SEO_RECOMMENDATIONS.md
+TESTING.md
+logs.txt
