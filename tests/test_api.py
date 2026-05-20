@@ -19,6 +19,15 @@ class TestMovieEndpoints:
         assert data["director"] == test_movie_data["director"]
         assert data["year"] == test_movie_data["year"]
         assert "id" in data
+
+    def test_create_movie_rejects_unsafe_poster_url(self, authenticated_client, test_movie_data):
+        """Test unsafe poster URL schemes are rejected."""
+        movie_data = test_movie_data.copy()
+        movie_data["poster_url"] = "javascript:alert(1)"
+
+        response = authenticated_client.post("/movies/", json=movie_data)
+
+        assert response.status_code == 422
     
     def test_create_movie_with_decimal_rating(self, authenticated_client):
         """Test creating a movie with decimal rating via API."""
@@ -427,6 +436,15 @@ class TestVideoGameEndpoints:
         assert data["title"] == test_video_game_data["title"]
         assert data["genres"] == test_video_game_data["genres"]
         assert "id" in data
+
+    def test_create_video_game_rejects_unsafe_cover_url(self, authenticated_client, test_video_game_data):
+        """Test unsafe cover art URL schemes are rejected."""
+        video_game_data = test_video_game_data.copy()
+        video_game_data["cover_art_url"] = "data:text/html,<script>alert(1)</script>"
+
+        response = authenticated_client.post("/video-games/", json=video_game_data)
+
+        assert response.status_code == 422
     
     def test_get_video_games(self, authenticated_client, test_video_game_data):
         """Test retrieving video games via API."""

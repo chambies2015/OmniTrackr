@@ -2,7 +2,9 @@
 Dependencies for the OmniTrackr API.
 Contains database session and authentication dependencies.
 """
-from fastapi import Depends, HTTPException, status
+from typing import Optional
+
+from fastapi import Depends, HTTPException, Request, status
 from fastapi.security import OAuth2PasswordBearer
 from sqlalchemy.orm import Session
 
@@ -10,7 +12,7 @@ from . import auth, crud, models
 from .database import SessionLocal
 
 # OAuth2 scheme for token-based authentication
-oauth2_scheme = OAuth2PasswordBearer(tokenUrl="auth/login")
+oauth2_scheme = OAuth2PasswordBearer(tokenUrl="auth/login", auto_error=False)
 
 
 def get_db():
@@ -23,7 +25,8 @@ def get_db():
 
 
 async def get_current_user(
-    token: str = Depends(oauth2_scheme),
+    request: Request,
+    token: Optional[str] = Depends(oauth2_scheme),
     db: Session = Depends(get_db)
 ) -> models.User:
     """Dependency to get the current authenticated user from JWT token."""
@@ -33,7 +36,11 @@ async def get_current_user(
         headers={"WWW-Authenticate": "Bearer"},
     )
     
-    payload = auth.decode_access_token(token)
+    token_value = token or request.cookies.get(auth.AUTH_COOKIE_NAME)
+    if not token_value:
+        raise credentials_exception
+    
+    payload = auth.decode_access_token(token_value)
     if payload is None:
         raise credentials_exception
     

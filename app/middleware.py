@@ -6,6 +6,8 @@ from starlette.middleware.base import BaseHTTPMiddleware
 from starlette.requests import Request
 from starlette.responses import Response as StarletteResponse
 
+from .csp import build_csp
+
 
 class SecurityHeadersMiddleware(BaseHTTPMiddleware):
     """Add security headers to all responses."""
@@ -19,21 +21,8 @@ class SecurityHeadersMiddleware(BaseHTTPMiddleware):
         response.headers["Permissions-Policy"] = "geolocation=(), microphone=(), camera=()"
         response.headers["X-Permitted-Cross-Domain-Policies"] = "none"
         
-        csp_policy = (
-            "default-src 'self'; "
-            "script-src 'self' 'unsafe-inline' 'unsafe-eval' https://www.googletagmanager.com https://www.google-analytics.com https://pagead2.googlesyndication.com; "
-            "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; "
-            "font-src 'self' https://fonts.gstatic.com; "
-            "img-src 'self' data: https: http:; "
-            "connect-src 'self' https://www.google-analytics.com https://www.googletagmanager.com; "
-            "frame-src https://www.google.com; "
-            "object-src 'none'; "
-            "base-uri 'self'; "
-            "form-action 'self'; "
-            "frame-ancestors 'none'; "
-            "upgrade-insecure-requests;"
-        )
-        response.headers["Content-Security-Policy"] = csp_policy
+        if "Content-Security-Policy" not in response.headers:
+            response.headers["Content-Security-Policy"] = build_csp()
         
         if request.url.scheme == "https":
             response.headers["Strict-Transport-Security"] = "max-age=31536000; includeSubDomains"

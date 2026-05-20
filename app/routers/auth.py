@@ -125,7 +125,7 @@ async def login(
     
     access_token = auth.create_access_token(data={"sub": user.username})
     token_response = schemas.Token(access_token=access_token, token_type="bearer", user=user)
-    return JSONResponse(
+    response = JSONResponse(
         content=jsonable_encoder(token_response),
         headers={
             "Cache-Control": "no-store, no-cache, must-revalidate, max-age=0",
@@ -133,6 +133,37 @@ async def login(
             "Expires": "0"
         }
     )
+    response.set_cookie(
+        key=auth.AUTH_COOKIE_NAME,
+        value=access_token,
+        max_age=auth.AUTH_COOKIE_MAX_AGE_SECONDS,
+        httponly=True,
+        secure=auth.ENVIRONMENT == "production",
+        samesite="lax",
+        path="/",
+    )
+    return response
+
+
+@router.post("/logout", response_model=dict)
+async def logout():
+    """Clear the HttpOnly authentication cookie."""
+    response = JSONResponse(
+        content={"message": "Logged out successfully"},
+        headers={
+            "Cache-Control": "no-store, no-cache, must-revalidate, max-age=0",
+            "Pragma": "no-cache",
+            "Expires": "0"
+        }
+    )
+    response.delete_cookie(
+        key=auth.AUTH_COOKIE_NAME,
+        path="/",
+        samesite="lax",
+        secure=auth.ENVIRONMENT == "production",
+        httponly=True,
+    )
+    return response
 
 
 @router.get("/verify-email")

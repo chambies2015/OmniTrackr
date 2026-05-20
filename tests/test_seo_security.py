@@ -4,6 +4,8 @@ Tests for SEO endpoints and security middleware.
 import pytest
 from fastapi.testclient import TestClient
 
+from app.csp import add_nonce_to_inline_tags, extract_inline_styles
+
 
 class TestSEOEndpoints:
     """Test SEO-related endpoints."""
@@ -47,6 +49,7 @@ class TestSEOEndpoints:
         assert "text/plain" in response.headers["content-type"]
         content = response.text
         assert "User-agent: *" in content
+        assert "Allow: /reviews" in content
         assert "Sitemap:" in content
     
     def test_head_sitemap(self, client):
@@ -80,6 +83,77 @@ class TestSecurityMiddleware:
         assert "X-XSS-Protection" in response.headers
         assert "Referrer-Policy" in response.headers
         assert "Permissions-Policy" in response.headers
+
+    def test_public_content_pages_use_nonce_csp_without_unsafe_inline(self, client):
+        """Public SEO/content pages should not need unsafe-inline in CSP."""
+        for path in ["/about", "/privacy", "/guides", "/terms", "/contact", "/reviews"]:
+            response = client.get(path)
+            assert response.status_code == 200
+            csp = response.headers["Content-Security-Policy"]
+            assert "'unsafe-inline'" not in csp
+            assert "'nonce-" in csp
+            assert ' nonce="' in response.text
+            assert ' style="' not in response.text
+
+    def test_root_script_csp_uses_nonce_without_unsafe_inline(self, client):
+        """The dashboard should not need unsafe-inline in CSP."""
+        response = client.get("/")
+        assert response.status_code == 200
+        csp = response.headers["Content-Security-Policy"]
+        script_src = next(
+            directive for directive in csp.split(";") if directive.strip().startswith("script-src")
+        )
+        assert "'unsafe-inline'" not in csp
+        assert "'unsafe-inline'" not in script_src
+        assert "'nonce-" in script_src
+        assert ' nonce="' in response.text
+        assert ' style="' not in response.text
+        assert "aggregateRating" not in response.text
+        assert "SearchAction" not in response.text
+        assert "BreadcrumbList" in response.text
+
+    def test_public_pages_have_click_focused_metadata(self, client):
+        """Public pages should provide unique titles and descriptions for search snippets."""
+        pages = {
+            "/": "Free Media Tracker",
+            "/about": "Free Media Tracking App",
+            "/guides": "Track Media, Reviews, Stats",
+            "/reviews": "Public Media Reviews",
+        }
+
+        for path, title_fragment in pages.items():
+            response = client.get(path)
+            assert response.status_code == 200
+            assert title_fragment in response.text
+            assert '<meta name="description"' in response.text
+            assert "og:description" in response.text
+
+    def test_nonce_injection_handles_uppercase_inline_tags(self):
+        """Nonce injection should cover uppercase or mixed-case inline tags."""
+        html = (
+            "<HTML><HEAD><STYLE>.x { color: red; }</STYLE></HEAD>"
+            "<BODY><SCRIPT>window.ok = true;</SCRIPT>"
+            "<ScRiPt type=\"application/ld+json\">{}</ScRiPt>"
+            "<SCRIPT SRC=\"/static/app.js\"></SCRIPT></BODY></HTML>"
+        )
+
+        processed = add_nonce_to_inline_tags(html, "test-nonce")
+
+        assert '<style nonce="test-nonce">' in processed
+        assert '<script nonce="test-nonce">' in processed
+        assert '<script type="application/ld+json" nonce="test-nonce">' in processed
+        assert '<script src="/static/app.js"></script>' in processed
+        assert '<script src="/static/app.js" nonce=' not in processed
+
+    def test_inline_style_extraction_drops_unsafe_css_breakouts(self):
+        """Style extraction should not allow values to break out of the nonce style block."""
+        html = '<html><head></head><body><a style="color:red}</style><script>alert(1)</script>">x</a></body></html>'
+
+        processed = extract_inline_styles(html, "test-nonce")
+
+        assert "alert(1)" not in processed
+        assert "csp-style-" not in processed
+        assert 'style="' not in processed
     
     def test_bot_filter_suspicious_paths(self, client):
         """Test that bot filter blocks suspicious paths."""
