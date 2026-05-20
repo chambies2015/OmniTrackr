@@ -960,27 +960,50 @@
   <div id="landingPage" role="main">
     <!-- Hero Section -->
     <section class="landing-hero" aria-labelledby="hero-title">
-      <h1 id="hero-title" class="landing-title">OmniTrackr</h1>
-      <p class="landing-subtitle">Your personal media tracking companion</p>
-      <p class="user-count" id="userCountDisplay">Loading...</p>
+      <div class="landing-hero-inner">
+        <div class="landing-hero-copy">
+          <p class="landing-eyebrow">One private library for every kind of media</p>
+          <h1 id="hero-title" class="landing-title">OmniTrackr</h1>
+          <p class="landing-subtitle">Track movies, shows, anime, games, music, and books in one clean dashboard.</p>
+          <p class="landing-intro">
+            Build a media journal with ratings, reviews, posters, statistics, privacy controls, friend discovery, and
+            JSON export whenever you want your data back.
+          </p>
+          <div class="landing-cta-row">
+            <button type="button" class="landing-cta primary" data-action="show-register-form">Create free account</button>
+            <button type="button" class="landing-cta secondary" data-action="show-login-form">Log in</button>
+            <a class="landing-cta link" href="/reviews">Explore public reviews</a>
+          </div>
+          <p class="user-count" id="userCountDisplay">Loading...</p>
+        </div>
+        <button type="button"
+          class="landing-product-preview"
+          data-screenshot-src="https://github.com/user-attachments/assets/3ebb53c7-5cc3-4225-a028-2b3eb5dfbdb7"
+          data-screenshot-alt="OmniTrackr dashboard preview">
+          <img src="https://github.com/user-attachments/assets/3ebb53c7-5cc3-4225-a028-2b3eb5dfbdb7"
+            alt="OmniTrackr dashboard showing a media collection with posters, ratings, and search"
+            class="landing-preview-image">
+          <span class="landing-preview-caption">Dashboard preview</span>
+        </button>
+      </div>
     </section>
 
-    <!-- Value Proposition Section -->
-    <section class="landing-value-prop" aria-labelledby="value-prop-title" style="padding: 60px 20px; background: var(--bg); max-width: 1200px; margin: 0 auto;">
-      <div style="text-align: center; margin-bottom: 40px;">
-        <h2 id="value-prop-title" style="font-size: 2.5rem; margin-bottom: 20px; color: var(--fg);">Why Choose OmniTrackr for Media Tracking</h2>
-        <p style="font-size: 1.2rem; line-height: 1.8; color: var(--fg-secondary); max-width: 900px; margin: 0 auto;">
-          Track movies, TV shows, anime, video games, music, and books in one place. Analyze your habits with our <a href="#screenshots-title" style="color: var(--primary); text-decoration: underline;">comprehensive statistics dashboard</a>, connect with friends, and keep your data private. All free, no ads, no hidden fees.
-        </p>
+    <section class="landing-proof" aria-label="OmniTrackr highlights">
+      <div class="landing-proof-grid">
+        <div><strong>170+</strong><span>users tracking media</span></div>
+        <div><strong>6</strong><span>media categories</span></div>
+        <div><strong>Free</strong><span>no credit card needed</span></div>
+        <div><strong>Private</strong><span>share only what you choose</span></div>
       </div>
     </section>
 
     <!-- Authentication Section -->
-    <section class="landing-auth">
+    <section class="landing-auth" id="landing-auth" aria-labelledby="authTitle">
       <div class="auth-container">
         <h2 id="authTitle">Login to OmniTrackr</h2>
+        <p class="auth-context">Create a free account, or sign in to continue building your collection.</p>
         <div id="authError"></div>
-        <div id="authSuccess" style="display: none;"></div>
+        <div id="authSuccess"></div>
 
         <!-- Login Form -->
         <div id="loginForm" class="auth-form">
@@ -989,22 +1012,21 @@
             <input type="password" id="loginPassword" placeholder="Password" required>
             <button type="submit">Login</button>
           </form>
-          <div id="resendVerificationContainer" style="display: none; margin-top: 15px; text-align: center;">
-            <p style="margin-bottom: 10px; color: #666; font-size: 14px;">Didn't receive the verification email?</p>
-            <button type="button" id="resendVerificationBtn" class="action-btn"
-              style="background-color: #667eea; width: 100%;">
+          <div id="resendVerificationContainer">
+            <p>Didn't receive the verification email?</p>
+            <button type="button" id="resendVerificationBtn" class="action-btn auth-full-button">
               Resend Verification Email
             </button>
           </div>
           <div class="auth-toggle">
             Don't have an account? <a id="showRegister">Register</a><br>
-            <a id="showForgotPassword" style="font-size: 0.9em; margin-top: 5px; display: inline-block;">Forgot
+            <a id="showForgotPassword" class="auth-secondary-link">Forgot
               Password?</a>
           </div>
         </div>
 
         <!-- Register Form -->
-        <div id="registerForm" class="auth-form" style="display: none;">
+        <div id="registerForm" class="auth-form">
           <form id="registerFormElement">
             <input type="email" id="registerEmail" placeholder="Email" required>
             <input type="text" id="registerUsername" placeholder="Username" required>
@@ -1018,9 +1040,9 @@
         </div>
 
         <!-- Forgot Password Form -->
-        <div id="forgotPasswordForm" class="auth-form" style="display: none;">
+        <div id="forgotPasswordForm" class="auth-form">
           <form id="forgotPasswordFormElement">
-            <p style="text-align: center; margin-bottom: 20px;">Enter your email address and we'll send you a link to
+            <p class="auth-helper-text">Enter your email address and we'll send you a link to
               reset your password.</p>
             <input type="email" id="forgotPasswordEmail" placeholder="Email Address" required>
             <button type="submit">Send Reset Link</button>
@@ -1031,9 +1053,9 @@
         </div>
 
         <!-- Reset Password Form (shown when accessing reset link) -->
-        <div id="resetPasswordForm" class="auth-form" style="display: none;">
+        <div id="resetPasswordForm" class="auth-form">
           <form id="resetPasswordFormElement">
-            <p style="text-align: center; margin-bottom: 20px;">Enter your new password below.</p>
+            <p class="auth-helper-text">Enter your new password below.</p>
             <input type="password" id="newPassword" placeholder="New Password" required minlength="6">
             <input type="password" id="confirmNewPassword" placeholder="Confirm New Password" required minlength="6">
             <button type="submit">Reset Password</button>
@@ -1044,8 +1066,12 @@
 
     <!-- Features Section -->
     <section class="landing-features" aria-labelledby="features-title">
-      <h2 id="features-title" class="features-title">Why Choose OmniTrackr?</h2>
-      <div class="features-grid">
+      <div class="landing-section-heading">
+        <p class="landing-eyebrow">Why people use it</p>
+        <h2 id="features-title" class="features-title">A calmer way to remember what you love</h2>
+        <p>OmniTrackr keeps your collection organized without forcing movies, books, games, and music into separate apps.</p>
+      </div>
+      <div class="features-grid compact">
         <div class="feature-card">
           <div class="feature-icon">🎬</div>
           <h3>Track Movies, TV Shows, Anime, Video Games, Music & Books</h3>

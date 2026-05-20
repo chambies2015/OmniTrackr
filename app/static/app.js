@@ -207,7 +207,9 @@ function handleDelegatedClick(event) {
     'cancel-create-custom-tab': cancelCreateCustomTab,
     'close-music-search-modal': closeMusicSearchModal,
     'close-book-search-modal': closeBookSearchModal,
-    'close-screenshot-modal': () => closeScreenshotModal(event)
+    'close-screenshot-modal': () => closeScreenshotModal(event),
+    'show-register-form': () => showRegisterForm(),
+    'show-login-form': () => showLoginForm()
   };
   actionHandlers[target.dataset.action]?.();
 }
