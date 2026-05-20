@@ -4,6 +4,8 @@ Tests for SEO endpoints and security middleware.
 import pytest
 from fastapi.testclient import TestClient
 
+from app.csp import add_nonce_to_inline_tags, extract_inline_styles
+
 
 class TestSEOEndpoints:
     """Test SEO-related endpoints."""
@@ -105,6 +107,33 @@ class TestSecurityMiddleware:
         assert "'nonce-" in script_src
         assert ' nonce="' in response.text
         assert ' style="' not in response.text
+
+    def test_nonce_injection_handles_uppercase_inline_tags(self):
+        """Nonce injection should cover uppercase or mixed-case inline tags."""
+        html = (
+            "<HTML><HEAD><STYLE>.x { color: red; }</STYLE></HEAD>"
+            "<BODY><SCRIPT>window.ok = true;</SCRIPT>"
+            "<ScRiPt type=\"application/ld+json\">{}</ScRiPt>"
+            "<SCRIPT SRC=\"/static/app.js\"></SCRIPT></BODY></HTML>"
+        )
+
+        processed = add_nonce_to_inline_tags(html, "test-nonce")
+
+        assert '<style nonce="test-nonce">' in processed
+        assert '<script nonce="test-nonce">' in processed
+        assert '<script type="application/ld+json" nonce="test-nonce">' in processed
+        assert '<script src="/static/app.js"></script>' in processed
+        assert '<script src="/static/app.js" nonce=' not in processed
+
+    def test_inline_style_extraction_drops_unsafe_css_breakouts(self):
+        """Style extraction should not allow values to break out of the nonce style block."""
+        html = '<html><head></head><body><a style="color:red}</style><script>alert(1)</script>">x</a></body></html>'
+
+        processed = extract_inline_styles(html, "test-nonce")
+
+        assert "alert(1)" not in processed
+        assert "csp-style-" not in processed
+        assert 'style="' not in processed
     
     def test_bot_filter_suspicious_paths(self, client):
         """Test that bot filter blocks suspicious paths."""
