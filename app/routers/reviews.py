@@ -128,13 +128,16 @@ def _not_found_review_html() -> str:
 
 
 def _review_detail_html(review: dict) -> str:
-    title = f"{review.get('title')} Review - OmniTrackr"
-    description = (review.get("review") or "").strip().replace("\n", " ")
-    if len(description) > 160:
-        description = f"{description[:157].rstrip()}..."
+    category_label = CATEGORY_LABELS.get(review.get("category"), "Media")
+    title = f"{review.get('title')} {category_label} Review by {review.get('username')} - OmniTrackr"
+    review_excerpt = (review.get("review") or "").strip().replace("\n", " ")
+    rating = review.get("rating")
+    rating_text = f"{rating}/10 " if rating is not None else ""
+    description = f"Read {review.get('username')}'s {rating_text}review of {review.get('title')} on OmniTrackr: {review_excerpt}"
+    if len(description) > 158:
+        description = f"{description[:155].rstrip()}..."
     canonical_url = f"{SITE_URL}/reviews/{review['id']}?category={review['category']}"
     image_url = _absolute_url(_review_image(review))
-    rating = review.get("rating")
     rating_html = f'<div class="review-rating-large">Rating: {_escape(rating)}/10</div>' if rating is not None else ""
 
     detail_rows = []
@@ -174,13 +177,23 @@ def _review_detail_html(review: dict) -> str:
     if rating is not None:
         json_ld["reviewRating"] = {"@type": "Rating", "ratingValue": rating, "bestRating": 10, "worstRating": 1}
 
+    breadcrumb_json_ld = {
+        "@context": "https://schema.org",
+        "@type": "BreadcrumbList",
+        "itemListElement": [
+            {"@type": "ListItem", "position": 1, "name": "Home", "item": f"{SITE_URL}/"},
+            {"@type": "ListItem", "position": 2, "name": "Public Reviews", "item": f"{SITE_URL}/reviews"},
+            {"@type": "ListItem", "position": 3, "name": f"{review.get('title')} Review", "item": canonical_url},
+        ],
+    }
+
     return f"""<!DOCTYPE html>
 <html lang="en">
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <meta name="description" content="{_escape(description)}">
-  <meta name="robots" content="index, follow">
+  <meta name="robots" content="index, follow, max-image-preview:large">
   <title>{_escape(title)}</title>
   <link rel="canonical" href="{_escape(canonical_url)}">
   <link rel="icon" type="image/x-icon" href="/omnitrackr_favicon.ico">
@@ -189,10 +202,13 @@ def _review_detail_html(review: dict) -> str:
   <meta property="og:title" content="{_escape(title)}">
   <meta property="og:description" content="{_escape(description)}">
   <meta property="og:image" content="{_escape(image_url)}">
+  <meta property="og:image:alt" content="{_escape(review.get("title"))} review artwork">
+  <meta property="article:author" content="{_escape(review.get("username"))}">
   <meta name="twitter:card" content="summary_large_image">
   <meta name="twitter:title" content="{_escape(title)}">
   <meta name="twitter:description" content="{_escape(description)}">
   <meta name="twitter:image" content="{_escape(image_url)}">
+  <meta name="twitter:image:alt" content="{_escape(review.get("title"))} review artwork">
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@700;800&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
@@ -219,6 +235,7 @@ def _review_detail_html(review: dict) -> str:
     }}
   </style>
   <script type="application/ld+json">{_safe_json_ld(json_ld)}</script>
+  <script type="application/ld+json">{_safe_json_ld(breadcrumb_json_ld)}</script>
 </head>
 <body class="dark-mode">
   <main class="review-wrapper">

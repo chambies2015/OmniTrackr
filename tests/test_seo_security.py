@@ -49,6 +49,7 @@ class TestSEOEndpoints:
         assert "text/plain" in response.headers["content-type"]
         content = response.text
         assert "User-agent: *" in content
+        assert "Allow: /reviews" in content
         assert "Sitemap:" in content
     
     def test_head_sitemap(self, client):
@@ -107,6 +108,25 @@ class TestSecurityMiddleware:
         assert "'nonce-" in script_src
         assert ' nonce="' in response.text
         assert ' style="' not in response.text
+        assert "aggregateRating" not in response.text
+        assert "SearchAction" not in response.text
+        assert "BreadcrumbList" in response.text
+
+    def test_public_pages_have_click_focused_metadata(self, client):
+        """Public pages should provide unique titles and descriptions for search snippets."""
+        pages = {
+            "/": "Free Media Tracker",
+            "/about": "Free Media Tracking App",
+            "/guides": "Track Media, Reviews, Stats",
+            "/reviews": "Public Media Reviews",
+        }
+
+        for path, title_fragment in pages.items():
+            response = client.get(path)
+            assert response.status_code == 200
+            assert title_fragment in response.text
+            assert '<meta name="description"' in response.text
+            assert "og:description" in response.text
 
     def test_nonce_injection_handles_uppercase_inline_tags(self):
         """Nonce injection should cover uppercase or mixed-case inline tags."""

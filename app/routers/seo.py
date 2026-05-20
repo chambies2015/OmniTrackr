@@ -173,8 +173,14 @@ User-agent: AdsBot-Google-Mobile
 Allow: /
 
 User-agent: *
+Allow: /
+Allow: /reviews
+Allow: /about
+Allow: /guides
 Disallow: /auth/
 Disallow: /api/
+Disallow: /account/
+Disallow: /notifications/
 Disallow: /static/credentials.js
 
 Sitemap: {site_url}/sitemap.xml
@@ -257,6 +263,8 @@ OmniTrackr is a free web application for tracking and organizing movies, TV show
 - TV Shows: Reviews and ratings for television series
 - Anime: Reviews and ratings for anime series
 - Video Games: Reviews and ratings for video games
+- Music: Reviews and ratings for albums and artists
+- Books: Reviews and ratings for books
 
 ## Public Content
 Public reviews are available at {base_url}/reviews and individual review pages at {base_url}/reviews/[id]?category=[category]
