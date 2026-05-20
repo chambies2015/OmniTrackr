@@ -131,6 +131,7 @@ class TestAuthEndpoints:
         assert "access_token" in data
         assert data["token_type"] == "bearer"
         assert "user" in data
+        assert "omnitrackr_session=" in response.headers.get("set-cookie", "")
     
     def test_login_with_email(self, client, test_user_data, db_session):
         """Test login using email instead of username."""
@@ -156,6 +157,39 @@ class TestAuthEndpoints:
         
         assert response.status_code == 200
         assert "access_token" in response.json()
+
+    def test_cookie_authentication_after_login(self, client, test_user_data, db_session):
+        """Test that the HttpOnly session cookie can authenticate API requests."""
+        register_response = client.post("/auth/register", json=test_user_data)
+        user_id = register_response.json()["id"]
+
+        from app import crud
+        user = crud.get_user_by_id(db_session, user_id)
+        user.is_verified = True
+        user.verification_token = None
+        db_session.commit()
+
+        login_response = client.post(
+            "/auth/login",
+            data={
+                "username": test_user_data["username"],
+                "password": test_user_data["password"]
+            }
+        )
+
+        assert login_response.status_code == 200
+        response = client.get("/account/me")
+        assert response.status_code == 200
+        assert response.json()["username"] == test_user_data["username"]
+
+    def test_logout_clears_session_cookie(self, client):
+        """Test logout returns a cookie-clearing response."""
+        response = client.post("/auth/logout")
+
+        assert response.status_code == 200
+        set_cookie = response.headers.get("set-cookie", "")
+        assert "omnitrackr_session=" in set_cookie
+        assert "Max-Age=0" in set_cookie or "max-age=0" in set_cookie.lower()
     
     def test_login_unverified_user(self, client, test_user_data):
         """Test login with unverified email."""

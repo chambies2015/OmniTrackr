@@ -17,6 +17,7 @@ from sqlalchemy.orm import Session
 
 from . import crud, schemas, models
 from .database import Base, SessionLocal, engine
+from .csp import nonce_html_response, strict_html_response
 from .migrations import run_migrations
 from .middleware import SecurityHeadersMiddleware, BotFilterMiddleware
 from .dependencies import get_db
@@ -78,6 +79,14 @@ app.add_middleware(BotFilterMiddleware)
 app.add_middleware(SlowAPIMiddleware)
 
 ENVIRONMENT = os.getenv("ENVIRONMENT", "development").lower()
+
+
+def strict_template_response(template_name: str):
+    html_file = os.path.join(os.path.dirname(__file__), "templates", template_name)
+    if os.path.exists(html_file):
+        with open(html_file, "r", encoding="utf-8") as file:
+            return strict_html_response(file.read())
+    return None
 allowed_origins_str = os.getenv("ALLOWED_ORIGINS", "")
 if allowed_origins_str:
     allowed_origins = [origin.strip() for origin in allowed_origins_str.split(",") if origin.strip()]
@@ -217,7 +226,8 @@ async def read_root():
     # Serve the HTML UI file
     html_file = os.path.join(os.path.dirname(__file__), "templates", "index.html")
     if os.path.exists(html_file):
-        return FileResponse(html_file)
+        with open(html_file, "r", encoding="utf-8") as file:
+            return nonce_html_response(file.read())
     return {"message": "OmniTrackr API is running 🚀"}
 
 
@@ -225,41 +235,41 @@ async def read_root():
 @app.get("/privacy", tags=["public"])
 async def privacy_policy():
     """Serve the privacy policy page."""
-    html_file = os.path.join(os.path.dirname(__file__), "templates", "privacy.html")
-    if os.path.exists(html_file):
-        return FileResponse(html_file)
+    response = strict_template_response("privacy.html")
+    if response:
+        return response
     raise HTTPException(status_code=404, detail="Privacy policy not found")
 
 
 @app.get("/about", tags=["public"])
 async def about_page():
-    html_file = os.path.join(os.path.dirname(__file__), "templates", "about.html")
-    if os.path.exists(html_file):
-        return FileResponse(html_file)
+    response = strict_template_response("about.html")
+    if response:
+        return response
     raise HTTPException(status_code=404, detail="Page not found")
 
 
 @app.get("/guides", tags=["public"])
 async def guides_page():
-    html_file = os.path.join(os.path.dirname(__file__), "templates", "guides.html")
-    if os.path.exists(html_file):
-        return FileResponse(html_file)
+    response = strict_template_response("guides.html")
+    if response:
+        return response
     raise HTTPException(status_code=404, detail="Page not found")
 
 
 @app.get("/terms", tags=["public"])
 async def terms_page():
-    html_file = os.path.join(os.path.dirname(__file__), "templates", "terms.html")
-    if os.path.exists(html_file):
-        return FileResponse(html_file)
+    response = strict_template_response("terms.html")
+    if response:
+        return response
     raise HTTPException(status_code=404, detail="Page not found")
 
 
 @app.get("/contact", tags=["public"])
 async def contact_page():
-    html_file = os.path.join(os.path.dirname(__file__), "templates", "contact.html")
-    if os.path.exists(html_file):
-        return FileResponse(html_file)
+    response = strict_template_response("contact.html")
+    if response:
+        return response
     raise HTTPException(status_code=404, detail="Page not found")
 
 

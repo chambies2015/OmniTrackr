@@ -24,6 +24,8 @@ if not SECRET_KEY:
 
 ALGORITHM = "HS256"
 ACCESS_TOKEN_EXPIRE_MINUTES = 60 * 24
+AUTH_COOKIE_NAME = "omnitrackr_session"
+AUTH_COOKIE_MAX_AGE_SECONDS = ACCESS_TOKEN_EXPIRE_MINUTES * 60
 
 
 def verify_password(plain_password: str, hashed_password: str) -> bool:

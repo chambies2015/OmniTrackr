@@ -80,6 +80,31 @@ class TestSecurityMiddleware:
         assert "X-XSS-Protection" in response.headers
         assert "Referrer-Policy" in response.headers
         assert "Permissions-Policy" in response.headers
+
+    def test_public_content_pages_use_nonce_csp_without_unsafe_inline(self, client):
+        """Public SEO/content pages should not need unsafe-inline in CSP."""
+        for path in ["/about", "/privacy", "/guides", "/terms", "/contact", "/reviews"]:
+            response = client.get(path)
+            assert response.status_code == 200
+            csp = response.headers["Content-Security-Policy"]
+            assert "'unsafe-inline'" not in csp
+            assert "'nonce-" in csp
+            assert ' nonce="' in response.text
+            assert ' style="' not in response.text
+
+    def test_root_script_csp_uses_nonce_without_unsafe_inline(self, client):
+        """The dashboard should not need unsafe-inline in CSP."""
+        response = client.get("/")
+        assert response.status_code == 200
+        csp = response.headers["Content-Security-Policy"]
+        script_src = next(
+            directive for directive in csp.split(";") if directive.strip().startswith("script-src")
+        )
+        assert "'unsafe-inline'" not in csp
+        assert "'unsafe-inline'" not in script_src
+        assert "'nonce-" in script_src
+        assert ' nonce="' in response.text
+        assert ' style="' not in response.text
     
     def test_bot_filter_suspicious_paths(self, client):
         """Test that bot filter blocks suspicious paths."""

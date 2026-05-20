@@ -12,7 +12,7 @@ const USER_KEY = 'omnitrackr_user';
 // ============================================================================
 
 function saveAuthData(token, user) {
-    localStorage.setItem(TOKEN_KEY, token);
+    localStorage.removeItem(TOKEN_KEY);
     localStorage.setItem(USER_KEY, JSON.stringify(user));
 }
 
@@ -31,7 +31,7 @@ function clearAuth() {
 }
 
 function isAuthenticated() {
-    return !!getToken();
+    return !!getUser() || !!getToken();
 }
 
 //  ============================================================================
@@ -41,16 +41,19 @@ function isAuthenticated() {
 async function authenticatedFetch(url, options = {}) {
     const token = getToken();
 
-    if (!token) {
+    if (!isAuthenticated()) {
         showAuthModal();
         throw new Error('Not authenticated');
     }
 
-    // Add Authorization header
+    // Include the HttpOnly session cookie. Keep Authorization only for legacy sessions.
     options.headers = {
-        ...options.headers,
-        'Authorization': `Bearer ${token}`
+        ...options.headers
     };
+    if (token) {
+        options.headers.Authorization = `Bearer ${token}`;
+    }
+    options.credentials = options.credentials || 'same-origin';
 
     try {
         const response = await fetch(url, options);
@@ -107,6 +110,7 @@ async function login(username, password) {
     const response = await fetch(`${API_BASE}/auth/login`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+        credentials: 'same-origin',
         body: formData
     });
 
@@ -141,8 +145,16 @@ async function login(username, password) {
     updateUserDisplay();
 }
 
-function logout() {
+async function logout() {
     if (confirm('Are you sure you want to logout?')) {
+        try {
+            await fetch(`${API_BASE}/auth/logout`, {
+                method: 'POST',
+                credentials: 'same-origin'
+            });
+        } catch (error) {
+            console.error('Logout request failed:', error);
+        }
         clearAuth();
         location.reload();
     }
@@ -342,13 +354,12 @@ function showReactivateOption(usernameOrEmail) {
     if (!reactivateContainer) {
         reactivateContainer = document.createElement('div');
         reactivateContainer.id = 'reactivateContainer';
-        reactivateContainer.style.marginTop = '10px';
-        reactivateContainer.style.textAlign = 'center';
+        reactivateContainer.className = 'reactivate-container';
         document.getElementById('loginForm').appendChild(reactivateContainer);
     }
     
     reactivateContainer.innerHTML = `
-        <button type="button" id="reactivateBtn" class="action-btn" style="width: 100%; margin-top: 10px;">
+        <button type="button" id="reactivateBtn" class="action-btn action-btn-full">
             Reactivate Account
         </button>
     `;
@@ -413,13 +424,12 @@ function showReactivateOption(usernameOrEmail) {
     if (!reactivateContainer) {
         reactivateContainer = document.createElement('div');
         reactivateContainer.id = 'reactivateContainer';
-        reactivateContainer.style.marginTop = '10px';
-        reactivateContainer.style.textAlign = 'center';
+        reactivateContainer.className = 'reactivate-container';
         document.getElementById('loginForm').appendChild(reactivateContainer);
     }
     
     reactivateContainer.innerHTML = `
-        <button type="button" id="reactivateBtn" class="action-btn" style="width: 100%; margin-top: 10px;">
+        <button type="button" id="reactivateBtn" class="action-btn action-btn-full">
             Reactivate Account
         </button>
     `;

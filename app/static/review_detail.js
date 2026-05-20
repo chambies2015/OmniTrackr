@@ -1,0 +1,240 @@
+const urlParams = new URLSearchParams(window.location.search);
+const category = urlParams.get('category');
+const reviewId = window.location.pathname.split('/').pop();
+
+async function loadReview() {
+  const reviewContainer = document.getElementById('reviewContainer');
+  if (!reviewContainer) return;
+
+  if (!category || !reviewId) {
+    reviewContainer.innerHTML = '<div class="error">Invalid review link. Please return to the reviews page.</div>';
+    return;
+  }
+
+  try {
+    const response = await fetch(`/api/public/reviews/${encodeURIComponent(reviewId)}?category=${encodeURIComponent(category)}`);
+
+    if (!response.ok) {
+      throw new Error('Review not found');
+    }
+
+    const review = await response.json();
+    displayReview(review);
+  } catch (error) {
+    console.error('Error loading review:', error);
+    reviewContainer.innerHTML = '<div class="error">Review not found or no longer available.</div>';
+  }
+}
+
+function updateMetadata(review) {
+  const posterUrl = review.poster_url || review.cover_art_url || 'https://omnitrackr.xyz/omnitrackr_vortex.png';
+  const fullPosterUrl = posterUrl.startsWith('http') ? posterUrl : `https://omnitrackr.xyz${posterUrl}`;
+  const reviewUrl = `https://omnitrackr.xyz/reviews/${review.id}?category=${review.category}`;
+  const reviewTitle = `${escapeHtml(review.title)} Review - OmniTrackr`;
+  const reviewDescription = review.review ? escapeHtml(review.review.substring(0, 160)) + (review.review.length > 160 ? '...' : '') : `Read a review of ${escapeHtml(review.title)} by ${escapeHtml(review.username)} on OmniTrackr.`;
+
+  document.title = reviewTitle;
+
+  let metaDesc = document.querySelector('meta[name="description"]');
+  if (!metaDesc) {
+    metaDesc = document.createElement('meta');
+    metaDesc.setAttribute('name', 'description');
+    document.head.appendChild(metaDesc);
+  }
+  metaDesc.setAttribute('content', reviewDescription);
+
+  let canonical = document.querySelector('link[rel="canonical"]');
+  if (!canonical) {
+    canonical = document.createElement('link');
+    canonical.setAttribute('rel', 'canonical');
+    document.head.appendChild(canonical);
+  }
+  canonical.setAttribute('href', reviewUrl);
+
+  const ogTags = {
+    'og:url': reviewUrl,
+    'og:title': reviewTitle,
+    'og:description': reviewDescription,
+    'og:image': fullPosterUrl
+  };
+
+  Object.keys(ogTags).forEach((prop) => {
+    let tag = document.querySelector(`meta[property="${prop}"]`);
+    if (!tag) {
+      tag = document.createElement('meta');
+      tag.setAttribute('property', prop);
+      document.head.appendChild(tag);
+    }
+    tag.setAttribute('content', ogTags[prop]);
+  });
+
+  const twitterTags = {
+    'twitter:url': reviewUrl,
+    'twitter:title': reviewTitle,
+    'twitter:description': reviewDescription,
+    'twitter:image': fullPosterUrl
+  };
+
+  Object.keys(twitterTags).forEach((name) => {
+    let tag = document.querySelector(`meta[name="${name}"]`);
+    if (!tag) {
+      tag = document.createElement('meta');
+      tag.setAttribute('name', name);
+      document.head.appendChild(tag);
+    }
+    tag.setAttribute('content', twitterTags[name]);
+  });
+
+  const existingJsonLd = document.getElementById('review-jsonld');
+  if (existingJsonLd) {
+    existingJsonLd.remove();
+  }
+
+  let itemReviewed = {};
+  if (review.category === 'movie') {
+    itemReviewed = {
+      "@type": "Movie",
+      "name": review.title,
+      "director": review.director ? { "@type": "Person", "name": review.director } : undefined,
+      "datePublished": review.year ? `${review.year}-01-01` : undefined
+    };
+  } else if (review.category === 'tv_show') {
+    itemReviewed = {
+      "@type": "TVSeries",
+      "name": review.title,
+      "startDate": review.year ? `${review.year}-01-01` : undefined,
+      "numberOfSeasons": review.seasons || undefined,
+      "numberOfEpisodes": review.episodes || undefined
+    };
+  } else if (review.category === 'anime') {
+    itemReviewed = {
+      "@type": "TVSeries",
+      "name": review.title,
+      "startDate": review.year ? `${review.year}-01-01` : undefined,
+      "numberOfSeasons": review.seasons || undefined,
+      "numberOfEpisodes": review.episodes || undefined
+    };
+  } else if (review.category === 'video_game') {
+    itemReviewed = {
+      "@type": "VideoGame",
+      "name": review.title,
+      "genre": review.genres ? review.genres.split(',').map((genre) => genre.trim()) : undefined,
+      "releaseDate": review.release_date || undefined
+    };
+  } else if (review.category === 'music') {
+    itemReviewed = {
+      "@type": "MusicRecording",
+      "name": review.title,
+      "byArtist": review.artist ? { "@type": "Person", "name": review.artist } : undefined,
+      "datePublished": review.year ? `${review.year}-01-01` : undefined
+    };
+  } else if (review.category === 'book') {
+    itemReviewed = {
+      "@type": "Book",
+      "name": review.title,
+      "author": review.author ? { "@type": "Person", "name": review.author } : undefined,
+      "datePublished": review.year ? `${review.year}-01-01` : undefined
+    };
+  }
+
+  Object.keys(itemReviewed).forEach((key) => {
+    if (itemReviewed[key] === undefined) {
+      delete itemReviewed[key];
+    }
+  });
+
+  const jsonLd = {
+    "@context": "https://schema.org",
+    "@type": "Review",
+    "itemReviewed": itemReviewed,
+    "reviewBody": review.review,
+    "author": {
+      "@type": "Person",
+      "name": review.username
+    },
+    "reviewRating": review.rating ? {
+      "@type": "Rating",
+      "ratingValue": review.rating,
+      "bestRating": 10,
+      "worstRating": 1
+    } : undefined
+  };
+
+  if (!jsonLd.reviewRating) {
+    delete jsonLd.reviewRating;
+  }
+
+  const script = document.createElement('script');
+  script.id = 'review-jsonld';
+  script.type = 'application/ld+json';
+  script.textContent = JSON.stringify(jsonLd);
+  document.head.appendChild(script);
+}
+
+function displayReview(review) {
+  updateMetadata(review);
+
+  const posterUrl = review.poster_url || review.cover_art_url || '/static/default-avatar.svg';
+  const categoryLabel = review.category === 'tv_show' ? 'TV Show' :
+                       review.category === 'video_game' ? 'Video Game' :
+                       review.category.charAt(0).toUpperCase() + review.category.slice(1);
+
+  let metaInfo = '';
+  if (review.category === 'movie') {
+    metaInfo = `<p><strong>Director:</strong> ${escapeHtml(review.director || 'Unknown')}</p>
+                <p><strong>Year:</strong> ${review.year || 'N/A'}</p>`;
+  } else if (review.category === 'video_game') {
+    metaInfo = `<p><strong>Genres:</strong> ${escapeHtml(review.genres || 'Various')}</p>
+                <p><strong>Release Date:</strong> ${review.release_date ? new Date(review.release_date).toLocaleDateString() : 'N/A'}</p>`;
+  } else if (review.category === 'music') {
+    metaInfo = `<p><strong>Artist:</strong> ${escapeHtml(review.artist || 'Unknown')}</p>
+                <p><strong>Year:</strong> ${review.year || 'N/A'}</p>`;
+  } else if (review.category === 'book') {
+    metaInfo = `<p><strong>Author:</strong> ${escapeHtml(review.author || 'Unknown')}</p>
+                <p><strong>Year:</strong> ${review.year || 'N/A'}</p>`;
+  } else {
+    metaInfo = `<p><strong>Year:</strong> ${review.year || 'N/A'}</p>`;
+    if (review.seasons) {
+      metaInfo += `<p><strong>Seasons:</strong> ${review.seasons}</p>`;
+    }
+    if (review.episodes) {
+      metaInfo += `<p><strong>Episodes:</strong> ${review.episodes}</p>`;
+    }
+  }
+
+  const reviewContainer = document.getElementById('reviewContainer');
+  if (!reviewContainer) return;
+
+  reviewContainer.innerHTML = `
+    <div class="review-header">
+      <img src="${escapeHtml(posterUrl)}" alt="${escapeHtml(review.title)}" class="review-poster-large" data-fallback-src="/static/default-avatar.svg">
+      <div class="review-header-info">
+        <span class="review-category-badge">${escapeHtml(categoryLabel)}</span>
+        <h1>${escapeHtml(review.title)}</h1>
+        ${review.rating ? `<div class="review-rating-large">Rating: ${review.rating}/10</div>` : ''}
+        <div class="review-meta-info">
+          ${metaInfo}
+        </div>
+      </div>
+    </div>
+    <div class="review-content">${escapeHtml(review.review)}</div>
+    <div class="review-author">
+      <p><strong>Review by:</strong> ${escapeHtml(review.username)}</p>
+    </div>
+  `;
+}
+
+function escapeHtml(text) {
+  const div = document.createElement('div');
+  div.textContent = text || '';
+  return div.innerHTML;
+}
+
+document.addEventListener('error', (event) => {
+  const image = event.target;
+  if (!(image instanceof HTMLImageElement) || !image.dataset.fallbackSrc) return;
+  if (image.src.endsWith(image.dataset.fallbackSrc)) return;
+  image.src = image.dataset.fallbackSrc;
+}, true);
+
+document.addEventListener('DOMContentLoaded', loadReview);

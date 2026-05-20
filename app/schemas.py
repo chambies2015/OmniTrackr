@@ -4,7 +4,20 @@ These define the shape of data accepted/returned by the API.
 """
 from typing import Optional, List
 from datetime import datetime
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, field_validator
+
+
+def validate_public_url(value: Optional[str]) -> Optional[str]:
+    """Allow only http(s) URLs or same-origin absolute paths for image/link fields."""
+    if value is None:
+        return value
+    stripped = value.strip()
+    if stripped == "":
+        return None
+    lowered = stripped.lower()
+    if lowered.startswith(("http://", "https://", "/")) and not lowered.startswith("//"):
+        return stripped
+    raise ValueError("URL must start with http://, https://, or /")
 
 # ============================================================================
 # Authentication & User Schemas
@@ -214,6 +227,8 @@ class MovieBase(BaseModel):
     review_public: Optional[bool] = Field(False, description="Show this review on the public reviews page")
     poster_url: Optional[str] = Field(None, description="URL of the movie poster")
 
+    _validate_poster_url = field_validator("poster_url")(validate_public_url)
+
 
 class MovieCreate(MovieBase):
     pass
@@ -228,6 +243,8 @@ class MovieUpdate(BaseModel):
     review: Optional[str] = None
     review_public: Optional[bool] = None
     poster_url: Optional[str] = None
+
+    _validate_poster_url = field_validator("poster_url")(validate_public_url)
 
 
 class Movie(MovieBase):
@@ -248,6 +265,8 @@ class TVShowBase(BaseModel):
     review_public: Optional[bool] = Field(False, description="Show this review on the public reviews page")
     poster_url: Optional[str] = Field(None, description="URL of the TV show poster")
 
+    _validate_poster_url = field_validator("poster_url")(validate_public_url)
+
 
 class TVShowCreate(TVShowBase):
     pass
@@ -263,6 +282,8 @@ class TVShowUpdate(BaseModel):
     review: Optional[str] = None
     review_public: Optional[bool] = None
     poster_url: Optional[str] = None
+
+    _validate_poster_url = field_validator("poster_url")(validate_public_url)
 
 
 class TVShow(TVShowBase):
@@ -283,6 +304,8 @@ class AnimeBase(BaseModel):
     review_public: Optional[bool] = Field(False, description="Show this review on the public reviews page")
     poster_url: Optional[str] = Field(None, description="URL of the anime poster")
 
+    _validate_poster_url = field_validator("poster_url")(validate_public_url)
+
 
 class AnimeCreate(AnimeBase):
     pass
@@ -298,6 +321,8 @@ class AnimeUpdate(BaseModel):
     review: Optional[str] = None
     review_public: Optional[bool] = None
     poster_url: Optional[str] = None
+
+    _validate_poster_url = field_validator("poster_url")(validate_public_url)
 
 
 class Anime(AnimeBase):
@@ -318,6 +343,9 @@ class VideoGameBase(BaseModel):
     cover_art_url: Optional[str] = Field(None, description="URL of the video game cover art")
     rawg_link: Optional[str] = Field(None, description="RAWG game page URL")
 
+    _validate_cover_art_url = field_validator("cover_art_url")(validate_public_url)
+    _validate_rawg_link = field_validator("rawg_link")(validate_public_url)
+
 
 class VideoGameCreate(VideoGameBase):
     pass
@@ -333,6 +361,9 @@ class VideoGameUpdate(BaseModel):
     review_public: Optional[bool] = None
     cover_art_url: Optional[str] = None
     rawg_link: Optional[str] = None
+
+    _validate_cover_art_url = field_validator("cover_art_url")(validate_public_url)
+    _validate_rawg_link = field_validator("rawg_link")(validate_public_url)
 
 
 class VideoGame(VideoGameBase):
@@ -353,6 +384,8 @@ class MusicBase(BaseModel):
     review_public: Optional[bool] = Field(False, description="Show this review on the public reviews page")
     cover_art_url: Optional[str] = Field(None, description="URL of the album cover art")
 
+    _validate_cover_art_url = field_validator("cover_art_url")(validate_public_url)
+
 
 class MusicCreate(MusicBase):
     pass
@@ -368,6 +401,8 @@ class MusicUpdate(BaseModel):
     review: Optional[str] = None
     review_public: Optional[bool] = None
     cover_art_url: Optional[str] = None
+
+    _validate_cover_art_url = field_validator("cover_art_url")(validate_public_url)
 
 
 class Music(MusicBase):
@@ -388,6 +423,8 @@ class BookBase(BaseModel):
     review_public: Optional[bool] = Field(False, description="Show this review on the public reviews page")
     cover_art_url: Optional[str] = Field(None, description="URL of the book cover art")
 
+    _validate_cover_art_url = field_validator("cover_art_url")(validate_public_url)
+
 
 class BookCreate(BookBase):
     pass
@@ -403,6 +440,8 @@ class BookUpdate(BaseModel):
     review: Optional[str] = None
     review_public: Optional[bool] = None
     cover_art_url: Optional[str] = None
+
+    _validate_cover_art_url = field_validator("cover_art_url")(validate_public_url)
 
 
 class Book(BookBase):
@@ -760,11 +799,15 @@ class CustomTabItemCreate(BaseModel):
     field_values: dict = Field(default={}, description="Field values as key-value pairs")
     poster_url: Optional[str] = Field(None, max_length=2000, description="Poster image URL")
 
+    _validate_poster_url = field_validator("poster_url")(validate_public_url)
+
 
 class CustomTabItemUpdate(BaseModel):
     title: Optional[str] = Field(None, min_length=1, max_length=500)
     field_values: Optional[dict] = None
     poster_url: Optional[str] = Field(None, max_length=2000)
+
+    _validate_poster_url = field_validator("poster_url")(validate_public_url)
 
 
 class CustomTabItem(BaseModel):

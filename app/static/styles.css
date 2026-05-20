@@ -20,6 +20,265 @@ body.dark-mode {
   --table-row-alt: #252538;
 }
 
+[hidden],
+.is-hidden {
+  display: none !important;
+}
+
+.text-center {
+  text-align: center;
+}
+
+.text-primary {
+  color: var(--primary);
+}
+
+.text-fg {
+  color: var(--fg);
+}
+
+.text-secondary {
+  color: var(--fg-secondary);
+}
+
+.text-danger {
+  color: #f44336;
+}
+
+.content-muted {
+  color: var(--fg);
+  opacity: 0.6;
+  padding: 20px;
+  text-align: center;
+}
+
+.content-muted-compact {
+  color: var(--fg);
+  opacity: 0.6;
+  padding: 10px;
+  text-align: center;
+}
+
+.content-error {
+  color: #f44336;
+  padding: 20px;
+  text-align: center;
+}
+
+.action-btn-full {
+  margin-top: 10px;
+  width: 100%;
+}
+
+.reactivate-container {
+  margin-top: 10px;
+  text-align: center;
+}
+
+.btn-danger {
+  background-color: #f44336 !important;
+}
+
+.btn-cancel {
+  background-color: #666 !important;
+}
+
+.btn-export {
+  background-color: #4caf50 !important;
+}
+
+.btn-import {
+  background-color: #ff9800 !important;
+}
+
+.btn-nowrap {
+  white-space: nowrap;
+}
+
+.table-cell-center {
+  text-align: center;
+}
+
+.search-result-no-cover {
+  align-items: center;
+  background: var(--card-bg);
+  border-radius: 8px;
+  color: var(--fg-secondary);
+  display: flex;
+  height: 200px;
+  justify-content: center;
+}
+
+.search-result-meta-small {
+  font-size: 0.85rem;
+}
+
+.search-result-meta-primary {
+  color: var(--primary);
+  font-size: 0.85rem;
+}
+
+.stats-grid-two {
+  display: grid;
+  gap: 20px;
+  grid-template-columns: 1fr 1fr;
+  margin-top: 20px;
+}
+
+.bar-track-flex {
+  flex: 1;
+  min-width: 0;
+  position: relative;
+}
+
+.bar-fill-absolute {
+  bottom: 0;
+  left: 0;
+  position: absolute;
+  top: 0;
+}
+
+.director-count-muted {
+  font-size: 0.9em;
+  opacity: 0.7;
+}
+
+.custom-tab-header-title {
+  display: inline-block;
+  margin: 0;
+}
+
+.custom-tab-list-header,
+.custom-tab-toolbar,
+.custom-tab-field-grid,
+.custom-tab-action-row {
+  display: flex;
+  gap: 10px;
+}
+
+.custom-tab-list-header {
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 10px;
+}
+
+.custom-tab-list-title {
+  margin: 0;
+}
+
+.custom-tab-count {
+  font-weight: bold;
+}
+
+.custom-tab-toolbar {
+  flex-wrap: wrap;
+  margin-bottom: 10px;
+}
+
+.custom-tab-toolbar-input {
+  flex: 2;
+  min-width: 200px;
+}
+
+.custom-tab-toolbar-button {
+  flex: 1;
+  min-width: 120px;
+}
+
+.custom-tab-list-status {
+  padding: 20px;
+  text-align: center;
+}
+
+.custom-tab-list-status-muted {
+  color: var(--fg-secondary);
+}
+
+.custom-tab-list-status-danger {
+  color: #f44336;
+}
+
+.custom-tab-list-item {
+  align-items: center;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  display: flex;
+  justify-content: space-between;
+  margin-bottom: 10px;
+  padding: 15px;
+}
+
+.custom-tab-list-meta {
+  color: var(--fg-secondary);
+  font-size: 0.9em;
+  margin-top: 5px;
+}
+
+.custom-tab-field-grid {
+  align-items: center;
+  display: grid;
+  grid-template-columns: 2fr 2fr 2fr 1fr 1fr;
+  margin-bottom: 10px;
+}
+
+.custom-tab-field-input {
+  background-color: var(--bg);
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  box-sizing: border-box;
+  color: var(--fg);
+  font-size: 0.9rem;
+  padding: 8px;
+}
+
+.custom-tab-field-label {
+  align-items: center;
+  color: var(--fg);
+  display: flex;
+  font-size: 0.9rem;
+  gap: 5px;
+}
+
+.custom-tab-field-remove {
+  font-size: 0.85rem;
+  padding: 8px 12px;
+}
+
+.custom-tab-form-wrapper {
+  background-color: var(--bg);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  margin-top: 20px;
+  padding: 20px;
+}
+
+.custom-tab-form-heading {
+  color: var(--fg);
+  margin-top: 0;
+}
+
+.form-field-spaced {
+  margin-bottom: 15px;
+}
+
+.form-label-block {
+  color: var(--fg);
+  display: block;
+  font-weight: 500;
+  margin-bottom: 5px;
+}
+
+.form-control-full {
+  background-color: var(--bg);
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  box-sizing: border-box;
+  color: var(--fg);
+  font-size: 1rem;
+  padding: 10px;
+  width: 100%;
+}
+
 html {
   height: 100%;
 }

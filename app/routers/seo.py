@@ -7,12 +7,13 @@ from datetime import datetime
 from fastapi import APIRouter, Depends
 from fastapi.responses import Response
 from sqlalchemy.orm import Session
-from sqlalchemy import and_
+from sqlalchemy import and_, func
 
 from .. import models
 from ..dependencies import get_db
 
 router = APIRouter(tags=["seo"])
+PUBLIC_REVIEW_MIN_CHARS = int(os.getenv("PUBLIC_REVIEW_MIN_CHARS", "80"))
 
 
 @router.get("/sitemap.xml")
@@ -67,46 +68,40 @@ async def get_sitemap(db: Session = Depends(get_db)):
   </url>""".format(base_url=base_url, today=today)]
     
     try:
-        user_query = db.query(models.User.id).filter(
-            and_(
-                models.User.is_active == True,
-                models.User.reviews_public == True
-            )
+        user_query = db.query(models.User.id).filter(models.User.is_active == True)
+        public_review_filter = lambda model_cls: and_(
+            model_cls.review.isnot(None),
+            model_cls.review != "",
+            model_cls.review_public == True,
+            func.length(func.trim(model_cls.review)) >= PUBLIC_REVIEW_MIN_CHARS,
+            model_cls.user_id.in_(user_query)
         )
         
-        review_limit = 500
+        review_limit = 600
         
         movie_reviews = db.query(models.Movie).filter(
-            and_(
-                models.Movie.review.isnot(None),
-                models.Movie.review != "",
-                models.Movie.user_id.in_(user_query)
-            )
-        ).limit(review_limit // 4).all()
+            public_review_filter(models.Movie)
+        ).limit(review_limit // 6).all()
         
         tv_reviews = db.query(models.TVShow).filter(
-            and_(
-                models.TVShow.review.isnot(None),
-                models.TVShow.review != "",
-                models.TVShow.user_id.in_(user_query)
-            )
-        ).limit(review_limit // 4).all()
+            public_review_filter(models.TVShow)
+        ).limit(review_limit // 6).all()
         
         anime_reviews = db.query(models.Anime).filter(
-            and_(
-                models.Anime.review.isnot(None),
-                models.Anime.review != "",
-                models.Anime.user_id.in_(user_query)
-            )
-        ).limit(review_limit // 4).all()
+            public_review_filter(models.Anime)
+        ).limit(review_limit // 6).all()
         
         vg_reviews = db.query(models.VideoGame).filter(
-            and_(
-                models.VideoGame.review.isnot(None),
-                models.VideoGame.review != "",
-                models.VideoGame.user_id.in_(user_query)
-            )
-        ).limit(review_limit // 4).all()
+            public_review_filter(models.VideoGame)
+        ).limit(review_limit // 6).all()
+
+        music_reviews = db.query(models.Music).filter(
+            public_review_filter(models.Music)
+        ).limit(review_limit // 6).all()
+
+        book_reviews = db.query(models.Book).filter(
+            public_review_filter(models.Book)
+        ).limit(review_limit // 6).all()
         
         for review in movie_reviews:
             sitemap_parts.append(f"""  <url>
@@ -135,6 +130,22 @@ async def get_sitemap(db: Session = Depends(get_db)):
         for review in vg_reviews:
             sitemap_parts.append(f"""  <url>
     <loc>{base_url}/reviews/{review.id}?category=video_game</loc>
+    <lastmod>{today}</lastmod>
+    <changefreq>monthly</changefreq>
+    <priority>0.6</priority>
+  </url>""")
+
+        for review in music_reviews:
+            sitemap_parts.append(f"""  <url>
+    <loc>{base_url}/reviews/{review.id}?category=music</loc>
+    <lastmod>{today}</lastmod>
+    <changefreq>monthly</changefreq>
+    <priority>0.6</priority>
+  </url>""")
+
+        for review in book_reviews:
+            sitemap_parts.append(f"""  <url>
+    <loc>{base_url}/reviews/{review.id}?category=book</loc>
     <lastmod>{today}</lastmod>
     <changefreq>monthly</changefreq>
     <priority>0.6</priority>

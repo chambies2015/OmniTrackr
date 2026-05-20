@@ -5,13 +5,7 @@
   <meta name="google-adsense-account" content="ca-pub-7271682066779719">
   <!-- Google tag (gtag.js) -->
   <script async src="https://www.googletagmanager.com/gtag/js?id=G-7EJ4ZGHNV1"></script>
-  <script>
-    window.dataLayer = window.dataLayer || [];
-    function gtag() { dataLayer.push(arguments); }
-    gtag('js', new Date());
-
-    gtag('config', 'G-7EJ4ZGHNV1');
-  </script>
+  <script src="./analytics.js" defer></script>
   <script async src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-7271682066779719"
   crossorigin="anonymous"></script>
 
@@ -61,14 +55,9 @@
   <link rel="dns-prefetch" href="https://www.google-analytics.com">
   <link rel="preload" href="./styles.css" as="style">
   <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@700;800&family=Inter:wght@400;500;600&display=swap"
-    rel="stylesheet" media="print" onload="this.media='all'">
-  <noscript><link href="https://fonts.googleapis.com/css2?family=Poppins:wght@700;800&family=Inter:wght@400;500;600&display=swap" rel="stylesheet"></noscript>
+    rel="stylesheet">
   <link rel="stylesheet" href="./styles.css">
-  <script>
-    if(localStorage.getItem('omnitrackr_token')){
-      document.documentElement.classList.add('authenticated');
-    }
-  </script>
+  <script src="./preauth.js"></script>
   <style>
     html.authenticated #landingPage{display:none}
     html.authenticated #mainContainer,
@@ -318,7 +307,7 @@
   </div>
   <button id="userDisplay" class="user-display-btn" role="button" aria-label="Open account settings">
     <img id="userProfilePicture" class="user-profile-picture" src="/static/default-avatar.svg" alt="Profile"
-      onerror="this.src='/static/default-avatar.svg'">
+      data-fallback-src="/static/default-avatar.svg">
     <span id="userDisplayText"></span>
   </button>
   <button id="logoutBtn" aria-label="Logout from your account">Logout</button>
@@ -348,21 +337,21 @@
     </header>
 
     <div class="tabs">
-      <button class="tab active" onclick="switchTab('movies')">🎬 Movies</button>
-      <button class="tab" onclick="switchTab('tv-shows')">📺 TV Shows</button>
-      <button class="tab" onclick="switchTab('anime')">🎌 Anime</button>
-      <button class="tab" onclick="switchTab('video-games')">🎮 Video Games</button>
-      <button class="tab" onclick="switchTab('music')">🎵 Music</button>
-      <button class="tab" onclick="switchTab('books')">📚 Books</button>
-      <button class="tab" onclick="switchTab('statistics')">📊 Statistics</button>
+      <button class="tab active" data-switch-tab="movies">🎬 Movies</button>
+      <button class="tab" data-switch-tab="tv-shows">📺 TV Shows</button>
+      <button class="tab" data-switch-tab="anime">🎌 Anime</button>
+      <button class="tab" data-switch-tab="video-games">🎮 Video Games</button>
+      <button class="tab" data-switch-tab="music">🎵 Music</button>
+      <button class="tab" data-switch-tab="books">📚 Books</button>
+      <button class="tab" data-switch-tab="statistics">📊 Statistics</button>
       <div id="customTabsContainer"></div>
-      <button class="tab" id="manageCustomTabsBtn" onclick="showCustomTabManager()" style="background-color: #6366f1; margin-left: auto;">⚙️ Manage Custom Tabs</button>
+      <button class="tab" id="manageCustomTabsBtn" data-action="show-custom-tab-manager" style="background-color: #6366f1; margin-left: auto;">⚙️ Manage Custom Tabs</button>
     </div>
 
     <!-- Movies Tab Content -->
     <div id="movies-tab" class="tab-content active">
       <div class="card">
-        <div class="collapsible-header" onclick="toggleCollapsible('movieForm')">
+        <div class="collapsible-header" data-toggle-collapsible="movieForm">
           <h2 style="margin: 0; display: inline-block;">Add Movie</h2>
           <span class="collapsible-icon" id="movieFormIcon">▼</span>
         </div>
@@ -441,7 +430,7 @@
     <!-- TV Shows Tab Content -->
     <div id="tv-shows-tab" class="tab-content">
       <div class="card">
-        <div class="collapsible-header" onclick="toggleCollapsible('tvForm')">
+        <div class="collapsible-header" data-toggle-collapsible="tvForm">
           <h2 style="margin: 0; display: inline-block;">Add TV Show</h2>
           <span class="collapsible-icon" id="tvFormIcon">▼</span>
         </div>
@@ -524,7 +513,7 @@
     <!-- Anime Tab Content -->
     <div id="anime-tab" class="tab-content">
       <div class="card">
-        <div class="collapsible-header" onclick="toggleCollapsible('animeForm')">
+        <div class="collapsible-header" data-toggle-collapsible="animeForm">
           <h2 style="margin: 0; display: inline-block;">Add Anime</h2>
           <span class="collapsible-icon" id="animeFormIcon">▼</span>
         </div>
@@ -607,7 +596,7 @@
     <!-- Music Tab Content -->
     <div id="music-tab" class="tab-content">
       <div class="card">
-        <div class="collapsible-header" onclick="toggleCollapsible('musicForm')">
+        <div class="collapsible-header" data-toggle-collapsible="musicForm">
           <h2 style="margin: 0; display: inline-block;">Add Music</h2>
           <span class="collapsible-icon" id="musicFormIcon">▼</span>
         </div>
@@ -689,7 +678,7 @@
     <!-- Books Tab Content -->
     <div id="books-tab" class="tab-content">
       <div class="card">
-        <div class="collapsible-header" onclick="toggleCollapsible('bookForm')">
+        <div class="collapsible-header" data-toggle-collapsible="bookForm">
           <h2 style="margin: 0; display: inline-block;">Add Book</h2>
           <span class="collapsible-icon" id="bookFormIcon">▼</span>
         </div>
@@ -771,7 +760,7 @@
     <!-- Video Games Tab Content -->
     <div id="video-games-tab" class="tab-content">
       <div class="card">
-        <div class="collapsible-header" onclick="toggleCollapsible('videoGameForm')">
+        <div class="collapsible-header" data-toggle-collapsible="videoGameForm">
           <h2 style="margin: 0; display: inline-block;">Add Video Game</h2>
           <span class="collapsible-icon" id="videoGameFormIcon">▼</span>
         </div>
@@ -861,7 +850,7 @@
       <div id="statsContent" style="display: none;">
         <!-- Movies Accordion Section -->
         <div class="accordion-section">
-          <div class="accordion-header" onclick="toggleCategoryAccordion('movies')">
+          <div class="accordion-header" data-toggle-category-accordion="movies">
             <h3>🎬 Movies</h3>
             <span class="accordion-icon" id="moviesStatsIcon">▶</span>
           </div>
@@ -875,7 +864,7 @@
 
         <!-- TV Shows Accordion Section -->
         <div class="accordion-section">
-          <div class="accordion-header" onclick="toggleCategoryAccordion('tv-shows')">
+          <div class="accordion-header" data-toggle-category-accordion="tv-shows">
             <h3>📺 TV Shows</h3>
             <span class="accordion-icon" id="tvShowsStatsIcon">▶</span>
           </div>
@@ -889,7 +878,7 @@
 
         <!-- Anime Accordion Section -->
         <div class="accordion-section">
-          <div class="accordion-header" onclick="toggleCategoryAccordion('anime')">
+          <div class="accordion-header" data-toggle-category-accordion="anime">
             <h3>🎌 Anime</h3>
             <span class="accordion-icon" id="animeStatsIcon">▶</span>
           </div>
@@ -903,7 +892,7 @@
 
         <!-- Video Games Accordion Section -->
         <div class="accordion-section">
-          <div class="accordion-header" onclick="toggleCategoryAccordion('video-games')">
+          <div class="accordion-header" data-toggle-category-accordion="video-games">
             <h3>🎮 Video Games</h3>
             <span class="accordion-icon" id="videoGamesStatsIcon">▶</span>
           </div>
@@ -917,7 +906,7 @@
 
         <!-- Music Accordion Section -->
         <div class="accordion-section">
-          <div class="accordion-header" onclick="toggleCategoryAccordion('music')">
+          <div class="accordion-header" data-toggle-category-accordion="music">
             <h3>🎵 Music</h3>
             <span class="accordion-icon" id="musicStatsIcon">▶</span>
           </div>
@@ -931,7 +920,7 @@
 
         <!-- Books Accordion Section -->
         <div class="accordion-section">
-          <div class="accordion-header" onclick="toggleCategoryAccordion('books')">
+          <div class="accordion-header" data-toggle-category-accordion="books">
             <h3>📚 Books</h3>
             <span class="accordion-icon" id="booksStatsIcon">▶</span>
           </div>
@@ -1376,7 +1365,7 @@
       <h2 id="screenshots-title" class="screenshots-title">See OmniTrackr in Action</h2>
       <p class="screenshots-subtitle">Click any screenshot to enlarge • Take a look at what you'll get when you sign up</p>
       <div class="screenshots-grid">
-        <div class="screenshot-item" onclick="openScreenshotModal('https://github.com/user-attachments/assets/3ebb53c7-5cc3-4225-a028-2b3eb5dfbdb7', 'Main Dashboard - Track all your media in one place')">
+        <div class="screenshot-item" data-screenshot-src="https://github.com/user-attachments/assets/3ebb53c7-5cc3-4225-a028-2b3eb5dfbdb7" data-screenshot-alt="Main Dashboard - Track all your media in one place">
           <img src="https://github.com/user-attachments/assets/3ebb53c7-5cc3-4225-a028-2b3eb5dfbdb7" 
                alt="OmniTrackr dashboard showing movie collection with ratings, posters, and search functionality" 
                loading="lazy"
@@ -1390,7 +1379,7 @@
             <span class="screenshot-zoom-text">Click to enlarge</span>
           </div>
         </div>
-        <div class="screenshot-item" onclick="openScreenshotModal('https://github.com/user-attachments/assets/fd49c269-5402-46d8-a5c2-921fa48520f9', 'Statistics Dashboard - Comprehensive analytics')">
+        <div class="screenshot-item" data-screenshot-src="https://github.com/user-attachments/assets/fd49c269-5402-46d8-a5c2-921fa48520f9" data-screenshot-alt="Statistics Dashboard - Comprehensive analytics">
           <img src="https://github.com/user-attachments/assets/fd49c269-5402-46d8-a5c2-921fa48520f9" 
                alt="Media tracking statistics showing completion rates, rating distributions, and favorite directors" 
                loading="lazy"
@@ -1404,7 +1393,7 @@
             <span class="screenshot-zoom-text">Click to enlarge</span>
           </div>
         </div>
-        <div class="screenshot-item" onclick="openScreenshotModal('https://github.com/user-attachments/assets/f2debd1d-23bc-4c15-baac-f457c562d72a', 'Privacy Settings - Control who can see your data')">
+        <div class="screenshot-item" data-screenshot-src="https://github.com/user-attachments/assets/f2debd1d-23bc-4c15-baac-f457c562d72a" data-screenshot-alt="Privacy Settings - Control who can see your data">
           <img src="https://github.com/user-attachments/assets/f2debd1d-23bc-4c15-baac-f457c562d72a" 
                alt="Granular privacy controls for movies, TV shows, anime, video games, music, and books" 
                loading="lazy"
@@ -1418,7 +1407,7 @@
             <span class="screenshot-zoom-text">Click to enlarge</span>
           </div>
         </div>
-        <div class="screenshot-item" onclick="openScreenshotModal('https://github.com/user-attachments/assets/8abbd7a1-c81e-48aa-878b-624e3042ca22', 'Friends & Social - Connect and share with friends')">
+        <div class="screenshot-item" data-screenshot-src="https://github.com/user-attachments/assets/8abbd7a1-c81e-48aa-878b-624e3042ca22" data-screenshot-alt="Friends & Social - Connect and share with friends">
           <img src="https://github.com/user-attachments/assets/8abbd7a1-c81e-48aa-878b-624e3042ca22" 
                alt="Friends list and social features for sharing media collections and discovering recommendations" 
                loading="lazy"
@@ -1436,8 +1425,8 @@
     </section>
 
     <!-- Screenshot Lightbox Modal -->
-    <div id="screenshotModal" class="screenshot-modal" onclick="closeScreenshotModal(event)">
-      <span class="screenshot-modal-close" onclick="closeScreenshotModal(event)">&times;</span>
+    <div id="screenshotModal" class="screenshot-modal" data-close-on-backdrop="screenshot">
+      <span class="screenshot-modal-close" data-action="close-screenshot-modal">&times;</span>
       <img id="screenshotModalImage" class="screenshot-modal-content" src="" alt="Enlarged screenshot">
       <div id="screenshotModalCaption" class="screenshot-modal-caption"></div>
     </div>
@@ -1472,7 +1461,7 @@
     <div class="modal-content account-modal">
       <div class="modal-header">
         <h2>Account Settings</h2>
-        <button class="modal-close" onclick="closeAccountModal()" aria-label="Close account settings">×</button>
+        <button class="modal-close" data-action="close-account-modal" aria-label="Close account settings">×</button>
       </div>
 
       <div class="modal-body">
@@ -1502,7 +1491,7 @@
         <!-- Change Username Section -->
         <div class="account-section">
           <h3>Change Username</h3>
-          <form id="changeUsernameForm" onsubmit="changeUsername(event)">
+          <form id="changeUsernameForm" data-submit-action="change-username">
             <div>
               <input type="text" id="newUsername" placeholder="New username" minlength="3" maxlength="50" required>
             </div>
@@ -1518,7 +1507,7 @@
         <!-- Change Email Section -->
         <div class="account-section">
           <h3>Change Email</h3>
-          <form id="changeEmailForm" onsubmit="changeEmail(event)">
+          <form id="changeEmailForm" data-submit-action="change-email">
             <div>
               <input type="email" id="newEmail" placeholder="New email address" required>
             </div>
@@ -1534,7 +1523,7 @@
         <!-- Change Password Section -->
         <div class="account-section">
           <h3>Change Password</h3>
-          <form id="changePasswordForm" onsubmit="changePassword(event)">
+          <form id="changePasswordForm" data-submit-action="change-password">
             <div>
               <input type="password" id="currentPassword" placeholder="Current password" required>
             </div>
@@ -1557,15 +1546,15 @@
           <h3>Profile Picture</h3>
           <div class="profile-picture-preview">
             <img id="profilePicturePreview" class="profile-picture-preview-img" src="/static/default-avatar.svg"
-              alt="Profile Preview" onerror="this.src='/static/default-avatar.svg'">
+              alt="Profile Preview" data-fallback-src="/static/default-avatar.svg">
           </div>
           <form id="profilePictureForm" enctype="multipart/form-data">
             <div>
               <input type="file" id="profilePictureInput" accept="image/jpeg,image/jpg,image/png,image/gif,image/webp"
-                style="display: none;" onchange="handleProfilePictureSelect(event)">
+                style="display: none;" data-change-action="profile-picture-select">
               <button type="button" class="action-btn"
-                onclick="document.getElementById('profilePictureInput').click()">Choose Image</button>
-              <button type="button" class="action-btn danger-btn" onclick="resetProfilePicture()"
+                data-click-target="profilePictureInput">Choose Image</button>
+              <button type="button" class="action-btn danger-btn" data-action="reset-profile-picture"
                 id="resetProfilePictureBtn" style="display: none;">Remove Picture</button>
             </div>
             <div id="profilePictureError" class="error-message"></div>
@@ -1580,7 +1569,7 @@
           <h3>Privacy Settings</h3>
           <p class="info-text">Control who can see your data. When enabled, your data is fully private and not visible
             to anyone, including friends.</p>
-          <form id="privacySettingsForm" onsubmit="updatePrivacySettings(event)">
+          <form id="privacySettingsForm" data-submit-action="update-privacy-settings">
             <div class="privacy-toggle-item">
               <label for="moviesPrivate" class="toggle-label">
                 <span>Make Movies Private</span>
@@ -1637,7 +1626,7 @@
           <h3>Tab Visibility</h3>
           <p class="info-text">Customize which tabs you want to see in the main interface. Hidden tabs won't appear in
             your navigation, but your data will still be saved.</p>
-          <form id="tabVisibilityForm" onsubmit="updateTabVisibility(event)">
+          <form id="tabVisibilityForm" data-submit-action="update-tab-visibility">
             <div class="privacy-toggle-item">
               <label for="moviesVisible" class="toggle-label">
                 <span>Show Movies Tab</span>
@@ -1685,7 +1674,7 @@
           <h3>Account Deactivation</h3>
           <p class="warning-text">Deactivating your account will hide it from the system. You can reactivate within 90
             days. After that, your account will be permanently deleted.</p>
-          <form id="deactivateAccountForm" onsubmit="deactivateAccount(event)">
+          <form id="deactivateAccountForm" data-submit-action="deactivate-account">
             <div>
               <input type="password" id="deactivatePassword" placeholder="Enter your password to confirm" required>
             </div>
@@ -1700,11 +1689,11 @@
   <!-- Friend Request Modal -->
   <div id="friendRequestModal" class="modal-overlay" style="display: none;">
     <div class="modal-content friend-request-modal-content">
-      <span class="close-button" onclick="closeFriendRequestModal()">&times;</span>
+      <span class="close-button" data-action="close-friend-request-modal">&times;</span>
       <h2>Send Friend Request</h2>
       <div id="friendRequestMessage" class="success-message" style="display: none;"></div>
       <div id="friendRequestError" class="error-message" style="display: none;"></div>
-      <form id="friendRequestForm" onsubmit="sendFriendRequest(event)">
+      <form id="friendRequestForm" data-submit-action="send-friend-request">
         <div>
           <input type="text" id="friendRequestUsername" placeholder="Enter username" minlength="3" maxlength="50"
             required>
@@ -1716,18 +1705,18 @@
 
   <!-- Image Popup Modal -->
   <div id="imagePopupModal" class="modal-overlay image-popup-overlay" style="display: none;"
-    onclick="closeImagePopup()">
-    <div class="image-popup-content" onclick="event.stopPropagation()">
-      <button class="image-popup-close" onclick="closeImagePopup()" aria-label="Close image popup">×</button>
+    data-action="close-image-popup">
+    <div class="image-popup-content" data-stop-propagation>
+      <button class="image-popup-close" data-action="close-image-popup" aria-label="Close image popup">×</button>
       <img id="popupImage" src="" alt="Enlarged image" class="popup-image">
     </div>
   </div>
 
-  <div id="reviewModal" class="modal-overlay" style="display: none;" onclick="if(event.target === this) closeReviewModal()">
-    <div class="modal-content review-modal" onclick="event.stopPropagation()">
+  <div id="reviewModal" class="modal-overlay" style="display: none;" data-close-on-backdrop="review">
+    <div class="modal-content review-modal" data-stop-propagation>
       <div class="modal-header">
         <h2 id="reviewModalTitle"></h2>
-        <button class="modal-close" onclick="closeReviewModal()" aria-label="Close review">×</button>
+        <button class="modal-close" data-action="close-review-modal" aria-label="Close review">×</button>
       </div>
       <div class="modal-body">
         <p id="reviewModalSubtitle" class="review-modal-subtitle"></p>
@@ -1742,16 +1731,16 @@
       <div class="modal-header">
         <div class="friend-profile-header-content">
           <img id="friendProfilePicture" class="friend-profile-picture-large" src="/static/default-avatar.svg"
-            alt="Friend Profile" onerror="this.src='/static/default-avatar.svg'">
+            alt="Friend Profile" data-fallback-src="/static/default-avatar.svg">
           <h2 id="friendProfileUsername">Friend's Profile</h2>
         </div>
-        <button class="modal-close" onclick="closeFriendProfile()" aria-label="Close friend profile">×</button>
+        <button class="modal-close" data-action="close-friend-profile" aria-label="Close friend profile">×</button>
       </div>
 
       <div class="modal-body">
         <!-- Movies Accordion Section -->
         <div class="accordion-section">
-          <div class="accordion-header" onclick="toggleAccordion('movies')">
+          <div class="accordion-header" data-toggle-accordion="movies">
             <h3>Movies</h3>
             <span class="accordion-icon" id="moviesIcon">▼</span>
           </div>
@@ -1769,7 +1758,7 @@
 
         <!-- TV Shows Accordion Section -->
         <div class="accordion-section">
-          <div class="accordion-header" onclick="toggleAccordion('tvShows')">
+          <div class="accordion-header" data-toggle-accordion="tvShows">
             <h3>TV Shows</h3>
             <span class="accordion-icon" id="tvShowsIcon">▼</span>
           </div>
@@ -1787,7 +1776,7 @@
 
         <!-- Anime Accordion Section -->
         <div class="accordion-section">
-          <div class="accordion-header" onclick="toggleAccordion('anime')">
+          <div class="accordion-header" data-toggle-accordion="anime">
             <h3>Anime</h3>
             <span class="accordion-icon" id="animeIcon">▼</span>
           </div>
@@ -1805,7 +1794,7 @@
 
         <!-- Video Games Accordion Section -->
         <div class="accordion-section">
-          <div class="accordion-header" onclick="toggleAccordion('videoGames')">
+          <div class="accordion-header" data-toggle-accordion="videoGames">
             <h3>Video Games</h3>
             <span class="accordion-icon" id="videoGamesIcon">▼</span>
           </div>
@@ -1824,7 +1813,7 @@
 
         <!-- Statistics Accordion Section -->
         <div class="accordion-section">
-          <div class="accordion-header" onclick="toggleAccordion('statistics')">
+          <div class="accordion-header" data-toggle-accordion="statistics">
             <h3>Statistics</h3>
             <span class="accordion-icon" id="statisticsIcon">▼</span>
           </div>
@@ -1838,15 +1827,15 @@
   </div>
 
   <!-- Custom Tab Manager Modal -->
-  <div id="customTabManagerModal" class="modal-overlay" style="display: none;" onclick="if(event.target === this) closeCustomTabManager()">
-    <div class="modal-content" onclick="event.stopPropagation()">
+  <div id="customTabManagerModal" class="modal-overlay" style="display: none;" data-close-on-backdrop="custom-tab-manager">
+    <div class="modal-content" data-stop-propagation>
       <div class="modal-header">
         <h2>Manage Custom Tabs</h2>
-        <button class="modal-close" onclick="closeCustomTabManager()" aria-label="Close custom tab manager">×</button>
+        <button class="modal-close" data-action="close-custom-tab-manager" aria-label="Close custom tab manager">×</button>
       </div>
       <div class="modal-body">
         <div style="margin-bottom: 20px;">
-          <button class="action-btn" onclick="showCreateCustomTabForm()">+ Create New Tab</button>
+          <button class="action-btn" data-action="show-create-custom-tab-form">+ Create New Tab</button>
         </div>
         <div id="customTabsList"></div>
         <div id="createCustomTabForm" style="display: none; margin-top: 20px; padding: 20px; border: 1px solid var(--border); border-radius: 8px; background-color: var(--bg);">
@@ -1874,11 +1863,11 @@
             <div style="margin-bottom: 15px;">
               <h4 style="color: var(--fg); margin-bottom: 12px;">Fields</h4>
               <div id="customTabFieldsList"></div>
-              <button type="button" class="action-btn" onclick="addCustomTabField()" style="margin-top: 10px;">+ Add Field</button>
+              <button type="button" class="action-btn" data-action="add-custom-tab-field" style="margin-top: 10px;">+ Add Field</button>
             </div>
             <div style="display: flex; gap: 10px;">
               <button type="submit" class="action-btn">Create Tab</button>
-              <button type="button" class="action-btn" onclick="cancelCreateCustomTab()" style="background-color: #666;">Cancel</button>
+              <button type="button" class="action-btn" data-action="cancel-create-custom-tab" style="background-color: #666;">Cancel</button>
             </div>
           </form>
         </div>
@@ -1891,7 +1880,7 @@
     <div class="modal-content">
       <div class="modal-header">
         <h2>Select Album</h2>
-        <button class="modal-close" onclick="closeMusicSearchModal()" aria-label="Close music search">×</button>
+        <button class="modal-close" data-action="close-music-search-modal" aria-label="Close music search">×</button>
       </div>
       <div class="modal-body">
         <div id="musicSearchResults" class="search-results-grid"></div>
@@ -1904,7 +1893,7 @@
     <div class="modal-content">
       <div class="modal-header">
         <h2>Select Book</h2>
-        <button class="modal-close" onclick="closeBookSearchModal()" aria-label="Close book search">×</button>
+        <button class="modal-close" data-action="close-book-search-modal" aria-label="Close book search">×</button>
       </div>
       <div class="modal-body">
         <div id="bookSearchResults" class="search-results-grid"></div>

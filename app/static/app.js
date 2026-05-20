@@ -77,7 +77,7 @@ function getReviewCellContent(review, title, subtitle) {
   const preview = String(review).length > REVIEW_PREVIEW_LEN ? String(review).slice(0, REVIEW_PREVIEW_LEN).trim() + '\u2026' : String(review);
   const safePreview = escapeHtml(preview);
   const safeReview = escapeHtml(review);
-  return `<span class="review-cell-preview" title="${safePreview}">${safePreview}</span><button type="button" class="action-btn review-view-btn" onclick="openReviewModal(this)">View review</button><span class="review-cell-full" style="display:none" data-review="${safeReview}" data-title="${safeTitle}" data-subtitle="${safeSubtitle}"></span>`;
+  return `<span class="review-cell-preview" title="${safePreview}">${safePreview}</span><button type="button" class="action-btn review-view-btn" data-action="open-review-modal">View review</button><span class="review-cell-full" hidden data-review="${safeReview}" data-title="${safeTitle}" data-subtitle="${safeSubtitle}"></span>`;
 }
 
 function openReviewModal(btn) {
@@ -117,6 +117,140 @@ function closeReviewModal() {
   }
 }
 
+function getTabButton(tabName) {
+  return Array.from(document.querySelectorAll('.tab')).find((tab) => tab.dataset.switchTab === tabName);
+}
+
+function handleImageFallback(event) {
+  const image = event.target;
+  if (!(image instanceof HTMLImageElement)) return;
+  if (image.dataset.hideOnError === 'true') {
+    image.style.display = 'none';
+    return;
+  }
+  if (!image.dataset.fallbackSrc) return;
+  if (image.src.endsWith(image.dataset.fallbackSrc)) return;
+  image.src = image.dataset.fallbackSrc;
+}
+
+function handleDelegatedClick(event) {
+  const stopTarget = event.target.closest('[data-stop-propagation]');
+  if (stopTarget) {
+    event.stopPropagation();
+  }
+
+  const target = event.target.closest('[data-click-target], [data-switch-tab], [data-toggle-collapsible], [data-toggle-category-accordion], [data-toggle-accordion], [data-screenshot-src], [data-action], [data-close-on-backdrop]');
+  if (!target) return;
+
+  if (target.dataset.closeOnBackdrop && event.target === target) {
+    const closeHandlers = {
+      screenshot: () => closeScreenshotModal(event),
+      review: closeReviewModal,
+      'custom-tab-manager': closeCustomTabManager
+    };
+    closeHandlers[target.dataset.closeOnBackdrop]?.();
+    return;
+  }
+
+  if (target.dataset.clickTarget) {
+    document.getElementById(target.dataset.clickTarget)?.click();
+    return;
+  }
+
+  if (target.dataset.switchTab) {
+    switchTab(target.dataset.switchTab);
+    return;
+  }
+
+  if (target.dataset.toggleCollapsible) {
+    toggleCollapsible(target.dataset.toggleCollapsible);
+    return;
+  }
+
+  if (target.dataset.toggleCategoryAccordion) {
+    toggleCategoryAccordion(target.dataset.toggleCategoryAccordion);
+    return;
+  }
+
+  if (target.dataset.toggleAccordion) {
+    toggleAccordion(target.dataset.toggleAccordion);
+    return;
+  }
+
+  if (target.dataset.screenshotSrc) {
+    openScreenshotModal(target.dataset.screenshotSrc, target.dataset.screenshotAlt || '');
+    return;
+  }
+
+  const actionHandlers = {
+    'open-review-modal': () => openReviewModal(target),
+    'open-friend-profile': () => openFriendProfile(Number(target.dataset.friendId)),
+    'unfriend-user': () => unfriendUser(Number(target.dataset.friendId)),
+    'accept-friend-request': () => acceptFriendRequest(Number(target.dataset.requestId)),
+    'deny-friend-request': () => denyFriendRequest(Number(target.dataset.requestId)),
+    'dismiss-notification': () => dismissNotification(Number(target.dataset.notificationId)),
+    'edit-custom-tab-item': () => editCustomTabItem(Number(target.dataset.tabId), Number(target.dataset.itemId)),
+    'delete-custom-tab-item': () => deleteCustomTabItem(Number(target.dataset.tabId), Number(target.dataset.itemId)),
+    'edit-custom-tab': () => openEditCustomTab(Number(target.dataset.tabId)),
+    'delete-custom-tab': () => deleteCustomTab(Number(target.dataset.tabId)),
+    'remove-custom-tab-field': () => target.closest(`.custom-tab-field-${target.dataset.fieldId}`)?.remove(),
+    'show-custom-tab-manager': showCustomTabManager,
+    'close-account-modal': closeAccountModal,
+    'reset-profile-picture': resetProfilePicture,
+    'close-friend-request-modal': closeFriendRequestModal,
+    'close-image-popup': closeImagePopup,
+    'close-review-modal': closeReviewModal,
+    'close-friend-profile': closeFriendProfile,
+    'close-custom-tab-manager': closeCustomTabManager,
+    'show-create-custom-tab-form': showCreateCustomTabForm,
+    'add-custom-tab-field': () => addCustomTabField(),
+    'cancel-create-custom-tab': cancelCreateCustomTab,
+    'close-music-search-modal': closeMusicSearchModal,
+    'close-book-search-modal': closeBookSearchModal,
+    'close-screenshot-modal': () => closeScreenshotModal(event)
+  };
+  actionHandlers[target.dataset.action]?.();
+}
+
+function handleDelegatedSubmit(event) {
+  const form = event.target.closest('[data-submit-action]');
+  if (!form) return;
+
+  const submitHandlers = {
+    'change-username': changeUsername,
+    'change-email': changeEmail,
+    'change-password': changePassword,
+    'update-privacy-settings': updatePrivacySettings,
+    'update-tab-visibility': updateTabVisibility,
+    'deactivate-account': deactivateAccount,
+    'send-friend-request': sendFriendRequest
+  };
+  submitHandlers[form.dataset.submitAction]?.(event);
+}
+
+function handleDelegatedChange(event) {
+  const target = event.target.closest('[data-change-action]');
+  if (!target) return;
+
+  const changeHandlers = {
+    'profile-picture-select': handleProfilePictureSelect
+  };
+  changeHandlers[target.dataset.changeAction]?.(event);
+}
+
+document.addEventListener('click', handleDelegatedClick);
+document.addEventListener('submit', handleDelegatedSubmit);
+document.addEventListener('change', handleDelegatedChange);
+document.addEventListener('error', handleImageFallback, true);
+
+function applyDataFillWidths(root = document) {
+  root.querySelectorAll('[data-fill-width]').forEach((element) => {
+    const rawValue = Number(element.dataset.fillWidth);
+    const width = Number.isFinite(rawValue) ? Math.max(0, Math.min(100, rawValue)) : 0;
+    element.style.width = `${width}%`;
+  });
+}
+
 document.addEventListener('keydown', function(event) {
   if (event.key === 'Escape') {
     const imageModal = document.getElementById('imagePopupModal');
@@ -133,14 +267,14 @@ document.addEventListener('keydown', function(event) {
 
 function switchTab(tabName) {
   if (tabName !== 'statistics') {
-    const tabButton = document.querySelector(`[onclick="switchTab('${tabName}')"]`);
+    const tabButton = getTabButton(tabName);
     if (tabButton && tabButton.style.display === 'none') {
       return;
     }
   }
 
   document.querySelectorAll('.tab').forEach(tab => tab.classList.remove('active'));
-  const targetTab = document.querySelector(`[onclick="switchTab('${tabName}')"]`);
+  const targetTab = getTabButton(tabName);
   if (targetTab) {
     targetTab.classList.add('active');
   }
@@ -607,11 +741,11 @@ async function loadAnime() {
         tr.innerHTML = `
           <td id="anime-poster-${animeItem.id}"></td>
           <td>${animeItem.title}</td>
-          <td style="text-align: center;">${animeItem.year}</td>
-          <td style="text-align: center;">${animeItem.seasons ?? ''}</td>
-          <td style="text-align: center;">${animeItem.episodes ?? ''}</td>
-          <td style="text-align: center;">${animeItem.rating !== null && animeItem.rating !== undefined ? parseFloat(animeItem.rating).toFixed(1) + '/10' : ''}</td>
-          <td style="text-align: center;"><span class="watched-icon ${animeItem.watched ? 'watched' : 'unwatched'}">${animeItem.watched ? '✓' : '✗'}</span></td>
+          <td class="table-cell-center">${animeItem.year}</td>
+          <td class="table-cell-center">${animeItem.seasons ?? ''}</td>
+          <td class="table-cell-center">${animeItem.episodes ?? ''}</td>
+          <td class="table-cell-center">${animeItem.rating !== null && animeItem.rating !== undefined ? parseFloat(animeItem.rating).toFixed(1) + '/10' : ''}</td>
+          <td class="table-cell-center"><span class="watched-icon ${animeItem.watched ? 'watched' : 'unwatched'}">${animeItem.watched ? '✓' : '✗'}</span></td>
           <td class="review-cell">${getReviewCellContent(animeItem.review, animeItem.title, animeItem.year ? String(animeItem.year) : '')}</td>
           <td><a href="https://www.imdb.com/find?q=${encodeURIComponent(animeItem.title)}" target="_blank">Search</a></td>
           <td><span class="watched-icon ${animeItem.review_public ? 'watched' : 'unwatched'}">${animeItem.review_public ? '✓' : '✗'}</span></td>
@@ -2916,11 +3050,11 @@ function openMusicSearchModal(results) {
     };
     
     item.innerHTML = `
-      ${coverArtUrl ? `<img src="${coverArtUrl}" alt="${escapeHtml(albumTitle)}" onerror="this.style.display='none'">` : '<div style="height: 200px; background: var(--card-bg); border-radius: 8px; display: flex; align-items: center; justify-content: center; color: var(--fg-secondary);">No Cover</div>'}
+      ${coverArtUrl ? `<img src="${coverArtUrl}" alt="${escapeHtml(albumTitle)}" data-hide-on-error="true">` : '<div class="search-result-no-cover">No Cover</div>'}
       <h4>${escapeHtml(albumTitle)}</h4>
       <p>${escapeHtml(albumArtist)}</p>
-      ${albumYear ? `<p style="font-size: 0.85rem;">${albumYear}</p>` : ''}
-      ${albumGenre ? `<p style="font-size: 0.85rem; color: var(--primary);">${escapeHtml(albumGenre)}</p>` : ''}
+      ${albumYear ? `<p class="search-result-meta-small">${albumYear}</p>` : ''}
+      ${albumGenre ? `<p class="search-result-meta-primary">${escapeHtml(albumGenre)}</p>` : ''}
     `;
     
     resultsContainer.appendChild(item);
@@ -3148,11 +3282,11 @@ function openBookSearchModal(results) {
     };
     
     item.innerHTML = `
-      ${coverArtUrl ? `<img src="${coverArtUrl}" alt="${escapeHtml(bookTitle)}" onerror="this.style.display='none'">` : '<div style="height: 200px; background: var(--card-bg); border-radius: 8px; display: flex; align-items: center; justify-content: center; color: var(--fg-secondary);">No Cover</div>'}
+      ${coverArtUrl ? `<img src="${coverArtUrl}" alt="${escapeHtml(bookTitle)}" data-hide-on-error="true">` : '<div class="search-result-no-cover">No Cover</div>'}
       <h4>${escapeHtml(bookTitle)}</h4>
       <p>${escapeHtml(bookAuthor)}</p>
-      ${bookYear ? `<p style="font-size: 0.85rem;">${bookYear}</p>` : ''}
-      ${bookGenre ? `<p style="font-size: 0.85rem; color: var(--primary);">${escapeHtml(bookGenre)}</p>` : ''}
+      ${bookYear ? `<p class="search-result-meta-small">${bookYear}</p>` : ''}
+      ${bookGenre ? `<p class="search-result-meta-primary">${escapeHtml(bookGenre)}</p>` : ''}
     `;
     
     resultsContainer.appendChild(item);
@@ -3461,7 +3595,7 @@ async function loadCategoryStatistics(category) {
   } catch (error) {
     console.error(`Error loading ${category} statistics:`, error);
     loading.style.display = 'none';
-    dataContainer.innerHTML = `<p style="color: red; text-align: center; padding: 20px;">Error loading statistics: ${error.message}</p>`;
+    dataContainer.innerHTML = `<p class="content-error">Error loading statistics: ${escapeHtml(error.message)}</p>`;
   }
 }
 
@@ -3496,7 +3630,7 @@ function displayCategoryStatistics(stats, category) {
   html += `<div class="stat-card"><div class="stat-number">${stats.watch_stats.unwatched_items}</div><div class="stat-label">${unwatchedLabel}</div></div>`;
   html += `<div class="stat-card"><div class="stat-number">${stats.watch_stats.completion_percentage.toFixed(1)}%</div><div class="stat-label">Completion</div></div>`;
   html += '</div>';
-  html += '<div class="progress-bar"><div class="progress-fill" style="width: ' + stats.watch_stats.completion_percentage + '%"></div></div>';
+  html += `<div class="progress-bar"><div class="progress-fill" data-fill-width="${stats.watch_stats.completion_percentage}"></div></div>`;
   html += '</div>';
   
   html += '<div class="stats-subsection">';
@@ -3537,7 +3671,7 @@ function displayCategoryStatistics(stats, category) {
     html += `<div class="stat-card"><div class="stat-number">${stats.seasons_episodes_stats.average_seasons.toFixed(1)}</div><div class="stat-label">Avg Seasons</div></div>`;
     html += `<div class="stat-card"><div class="stat-number">${stats.seasons_episodes_stats.average_episodes.toFixed(1)}</div><div class="stat-label">Avg Episodes</div></div>`;
     html += '</div>';
-    html += '<div style="display: grid; grid-template-columns: 1fr 1fr; gap: 20px; margin-top: 20px;">';
+    html += '<div class="stats-grid-two">';
     html += '<div><h5>Most Seasons</h5><div id="mostSeasonsList' + idPrefix + '"></div></div>';
     html += '<div><h5>Most Episodes</h5><div id="mostEpisodesList' + idPrefix + '"></div></div>';
     html += '</div>';
@@ -3548,7 +3682,7 @@ function displayCategoryStatistics(stats, category) {
     html += '<div class="stats-subsection">';
     html += '<h4>🎮 Genre Analysis</h4>';
     html += '<div class="genre-stats"><h5>Genre Distribution</h5><div id="genreBars' + idPrefix + '"></div></div>';
-    html += '<div style="display: grid; grid-template-columns: 1fr 1fr; gap: 20px; margin-top: 20px;">';
+    html += '<div class="stats-grid-two">';
     html += '<div><h5>Top Genres</h5><div id="topGenresList' + idPrefix + '"></div></div>';
     html += '<div><h5>Most Played Genres</h5><div id="mostPlayedGenresList' + idPrefix + '"></div></div>';
     html += '</div>';
@@ -3556,6 +3690,7 @@ function displayCategoryStatistics(stats, category) {
   }
   
   dataContainer.innerHTML = html;
+  applyDataFillWidths(dataContainer);
   
   displayCategoryRatingDistribution(stats.rating_stats.rating_distribution, idPrefix);
   displayCategoryHighestRated(stats.rating_stats.highest_rated, idPrefix);
@@ -3591,11 +3726,12 @@ function displayCategoryRatingDistribution(distribution, idPrefix) {
     barDiv.className = 'rating-bar';
     barDiv.innerHTML = `
       <div class="rating-bar-label">${rating}</div>
-      <div style="flex: 1; min-width: 0; position: relative;">
-        <div class="rating-bar-fill" style="width: ${percentage}%; position: absolute; left: 0; top: 0; bottom: 0;"></div>
+      <div class="bar-track-flex">
+        <div class="rating-bar-fill bar-fill-absolute" data-fill-width="${percentage}"></div>
       </div>
       <div class="rating-bar-count">${count}</div>
     `;
+    applyDataFillWidths(barDiv);
     container.appendChild(barDiv);
   }
 }
@@ -3606,7 +3742,7 @@ function displayCategoryHighestRated(items, idPrefix) {
   container.innerHTML = '';
   
   if (items.length === 0) {
-    container.innerHTML = '<p style="text-align: center; color: var(--fg); opacity: 0.6; padding: 20px;">No rated items found.</p>';
+    container.innerHTML = '<p class="content-muted">No rated items found.</p>';
     return;
   }
   
@@ -3642,11 +3778,12 @@ function displayCategoryDecadeStats(decadeStats, idPrefix) {
     barDiv.className = 'decade-bar';
     barDiv.innerHTML = `
       <div class="decade-bar-label">${decade}</div>
-      <div style="flex: 1; min-width: 0; position: relative;">
-        <div class="decade-bar-fill" style="width: ${percentage}%; position: absolute; left: 0; top: 0; bottom: 0;"></div>
+      <div class="bar-track-flex">
+        <div class="decade-bar-fill bar-fill-absolute" data-fill-width="${percentage}"></div>
       </div>
       <div class="decade-bar-count">${total}</div>
     `;
+    applyDataFillWidths(barDiv);
     container.appendChild(barDiv);
   });
 }
@@ -3657,7 +3794,7 @@ function displayCategoryTopDirectors(directors, idPrefix) {
   container.innerHTML = '';
   
   if (directors.length === 0) {
-    container.innerHTML = '<p style="text-align: center; color: var(--fg); opacity: 0.6; padding: 20px;">No directors found.</p>';
+    container.innerHTML = '<p class="content-muted">No directors found.</p>';
     return;
   }
   
@@ -3678,7 +3815,7 @@ function displayCategoryHighestRatedDirectors(directors, idPrefix) {
   container.innerHTML = '';
   
   if (directors.length === 0) {
-    container.innerHTML = '<p style="text-align: center; color: var(--fg); opacity: 0.6; padding: 20px;">No rated directors found.</p>';
+    container.innerHTML = '<p class="content-muted">No rated directors found.</p>';
     return;
   }
   
@@ -3687,7 +3824,7 @@ function displayCategoryHighestRatedDirectors(directors, idPrefix) {
     directorDiv.className = 'director-item';
     directorDiv.innerHTML = `
       <div class="director-name">${director.director}</div>
-      <div class="director-rating">${director.avg_rating.toFixed(1)}/10 <span style="opacity: 0.7; font-size: 0.9em;">(${director.count} ${director.count === 1 ? 'movie' : 'movies'})</span></div>
+      <div class="director-rating">${director.avg_rating.toFixed(1)}/10 <span class="director-count-muted">(${director.count} ${director.count === 1 ? 'movie' : 'movies'})</span></div>
     `;
     container.appendChild(directorDiv);
   });
@@ -3700,7 +3837,7 @@ function displaySeasonsEpisodesStats(stats, idPrefix) {
   if (mostSeasonsContainer) {
     mostSeasonsContainer.innerHTML = '';
     if (stats.shows_with_most_seasons.length === 0) {
-      mostSeasonsContainer.innerHTML = '<p style="text-align: center; color: var(--fg); opacity: 0.6; padding: 10px;">No data available.</p>';
+      mostSeasonsContainer.innerHTML = '<p class="content-muted-compact">No data available.</p>';
     } else {
       stats.shows_with_most_seasons.forEach((show) => {
         const showDiv = document.createElement('div');
@@ -3717,7 +3854,7 @@ function displaySeasonsEpisodesStats(stats, idPrefix) {
   if (mostEpisodesContainer) {
     mostEpisodesContainer.innerHTML = '';
     if (stats.shows_with_most_episodes.length === 0) {
-      mostEpisodesContainer.innerHTML = '<p style="text-align: center; color: var(--fg); opacity: 0.6; padding: 10px;">No data available.</p>';
+      mostEpisodesContainer.innerHTML = '<p class="content-muted-compact">No data available.</p>';
     } else {
       stats.shows_with_most_episodes.forEach((show) => {
         const showDiv = document.createElement('div');
@@ -3751,11 +3888,12 @@ function displayGenreStats(stats, idPrefix) {
       barDiv.className = 'rating-bar';
       barDiv.innerHTML = `
         <div class="rating-bar-label">${genre}</div>
-        <div style="flex: 1; min-width: 0; position: relative;">
-          <div class="rating-bar-fill" style="width: ${percentage}%; position: absolute; left: 0; top: 0; bottom: 0;"></div>
+        <div class="bar-track-flex">
+          <div class="rating-bar-fill bar-fill-absolute" data-fill-width="${percentage}"></div>
         </div>
         <div class="rating-bar-count">${count}</div>
       `;
+      applyDataFillWidths(barDiv);
       genreBarsContainer.appendChild(barDiv);
     });
   }
@@ -3763,7 +3901,7 @@ function displayGenreStats(stats, idPrefix) {
   if (topGenresContainer) {
     topGenresContainer.innerHTML = '';
     if (stats.top_genres.length === 0) {
-      topGenresContainer.innerHTML = '<p style="text-align: center; color: var(--fg); opacity: 0.6; padding: 10px;">No genres found.</p>';
+      topGenresContainer.innerHTML = '<p class="content-muted-compact">No genres found.</p>';
     } else {
       stats.top_genres.forEach((genre) => {
         const genreDiv = document.createElement('div');
@@ -3780,7 +3918,7 @@ function displayGenreStats(stats, idPrefix) {
   if (mostPlayedContainer) {
     mostPlayedContainer.innerHTML = '';
     if (stats.most_played_genres.length === 0) {
-      mostPlayedContainer.innerHTML = '<p style="text-align: center; color: var(--fg); opacity: 0.6; padding: 10px;">No played genres found.</p>';
+      mostPlayedContainer.innerHTML = '<p class="content-muted-compact">No played genres found.</p>';
     } else {
       stats.most_played_genres.forEach((genre) => {
         const genreDiv = document.createElement('div');
@@ -3921,7 +4059,8 @@ window.toggleCollapsible = function (formId) {
   const content = document.getElementById(formId + 'Content');
   const icon = document.getElementById(formId + 'Icon');
 
-  if (content.style.display === 'none' || !content.classList.contains('expanded')) {
+  if (content.hidden || !content.classList.contains('expanded')) {
+    content.hidden = false;
     content.style.display = 'block';
     content.classList.add('expanded');
     icon.classList.add('rotated');
@@ -3931,6 +4070,7 @@ window.toggleCollapsible = function (formId) {
     // Wait for animation to complete before hiding
     setTimeout(() => {
       if (!content.classList.contains('expanded')) {
+        content.hidden = true;
         content.style.display = 'none';
       }
     }, 300);
@@ -4301,12 +4441,12 @@ window.updateTabVisibility = async function (event) {
 
 function updateTabVisibilityUI(tabVisibility) {
   // Update tab buttons visibility
-  const moviesTab = document.querySelector('[onclick="switchTab(\'movies\')"]');
-  const tvShowsTab = document.querySelector('[onclick="switchTab(\'tv-shows\')"]');
-  const animeTab = document.querySelector('[onclick="switchTab(\'anime\')"]');
-  const videoGamesTab = document.querySelector('[onclick="switchTab(\'video-games\')"]');
-  const musicTab = document.querySelector('[onclick="switchTab(\'music\')"]');
-  const booksTab = document.querySelector('[onclick="switchTab(\'books\')"]');
+  const moviesTab = getTabButton('movies');
+  const tvShowsTab = getTabButton('tv-shows');
+  const animeTab = getTabButton('anime');
+  const videoGamesTab = getTabButton('video-games');
+  const musicTab = getTabButton('music');
+  const booksTab = getTabButton('books');
   
   if (moviesTab) {
     moviesTab.style.display = tabVisibility.movies_visible ? '' : 'none';
@@ -4334,13 +4474,10 @@ function updateTabVisibilityUI(tabVisibility) {
     const allTabs = document.querySelectorAll('.tab');
     for (const tab of allTabs) {
       if (tab.style.display !== 'none') {
-        const onclickStr = tab.getAttribute('onclick');
-        if (onclickStr) {
-          const match = onclickStr.match(/switchTab\('([^']+)'\)/);
-          if (match) {
-            switchTab(match[1]);
-            break;
-          }
+        const tabName = tab.dataset.switchTab;
+        if (tabName) {
+          switchTab(tabName);
+          break;
         }
       }
     }
@@ -4395,12 +4532,11 @@ window.handleProfilePictureSelect = async function (event) {
     if (response.ok) {
       const updatedUser = await response.json();
       // Update stored user data (getUser and saveAuthData are in auth.js)
-      if (typeof getUser !== 'undefined' && typeof saveAuthData !== 'undefined' && typeof getToken !== 'undefined') {
+      if (typeof getUser !== 'undefined' && typeof saveAuthData !== 'undefined') {
         const user = getUser();
-        const token = getToken();
-        if (user && token) {
+        if (user) {
           user.profile_picture_url = updatedUser.profile_picture_url;
-          saveAuthData(token, user);
+          saveAuthData(null, user);
         }
 
         // Update display
@@ -4450,12 +4586,11 @@ window.resetProfilePicture = async function () {
     if (response.ok) {
       const updatedUser = await response.json();
       // Update stored user data (getUser and saveAuthData are in auth.js)
-      if (typeof getUser !== 'undefined' && typeof saveAuthData !== 'undefined' && typeof getToken !== 'undefined') {
+      if (typeof getUser !== 'undefined' && typeof saveAuthData !== 'undefined') {
         const user = getUser();
-        const token = getToken();
-        if (user && token) {
+        if (user) {
           user.profile_picture_url = null;
-          saveAuthData(token, user);
+          saveAuthData(null, user);
         }
 
         // Update display
@@ -4536,10 +4671,10 @@ async function loadFriendsList() {
       friendsList.innerHTML = friends.map(friend => `
         <div class="friend-item" data-friend-id="${friend.friend.id}">
           <div class="friend-item-content">
-            <img class="friend-profile-picture" src="${friend.friend.profile_picture_url || '/static/default-avatar.svg'}" alt="${escapeHtml(friend.friend.username)}" onerror="this.src='/static/default-avatar.svg'">
-            <span class="friend-username clickable" onclick="openFriendProfile(${friend.friend.id})" title="View profile">${escapeHtml(friend.friend.username)}</span>
+            <img class="friend-profile-picture" src="${friend.friend.profile_picture_url || '/static/default-avatar.svg'}" alt="${escapeHtml(friend.friend.username)}" data-fallback-src="/static/default-avatar.svg">
+            <span class="friend-username clickable" data-action="open-friend-profile" data-friend-id="${friend.friend.id}" title="View profile">${escapeHtml(friend.friend.username)}</span>
           </div>
-          <button class="unfriend-btn" onclick="unfriendUser(${friend.friend.id})" title="Unfriend">✕</button>
+          <button class="unfriend-btn" data-action="unfriend-user" data-friend-id="${friend.friend.id}" title="Unfriend">✕</button>
         </div>
       `).join('');
     }
@@ -5260,8 +5395,8 @@ async function loadNotifications() {
 
         if (notif.type === 'friend_request_received' && notif.friend_request_id) {
           actionButtons = `
-            <button class="notification-action-btn accept-btn" onclick="acceptFriendRequest(${notif.friend_request_id})">Accept</button>
-            <button class="notification-action-btn deny-btn" onclick="denyFriendRequest(${notif.friend_request_id})">Deny</button>
+            <button class="notification-action-btn accept-btn" data-action="accept-friend-request" data-request-id="${notif.friend_request_id}">Accept</button>
+            <button class="notification-action-btn deny-btn" data-action="deny-friend-request" data-request-id="${notif.friend_request_id}">Deny</button>
           `;
         }
 
@@ -5272,7 +5407,7 @@ async function loadNotifications() {
               <span class="notification-time">${timeAgo}</span>
               ${actionButtons}
             </div>
-            <button class="notification-dismiss" onclick="dismissNotification(${notif.id})" title="Dismiss">✕</button>
+            <button class="notification-dismiss" data-action="dismiss-notification" data-notification-id="${notif.id}" title="Dismiss">✕</button>
           </div>
         `;
       }).join('');
@@ -5781,15 +5916,25 @@ window.addEventListener('beforeunload', function() {
 let customTabs = [];
 let customTabFieldCounter = 0;
 const getAuthTokenValue = () => (typeof getToken === 'function' ? getToken() : localStorage.getItem('omnitrackr_token'));
+const hasStoredAuth = () => (typeof isAuthenticated === 'function' ? isAuthenticated() : !!getAuthTokenValue() || !!localStorage.getItem('omnitrackr_user'));
+const authFetchOptions = (options = {}) => {
+  const token = getAuthTokenValue();
+  const headers = { ...(options.headers || {}) };
+  if (token) {
+    headers.Authorization = `Bearer ${token}`;
+  }
+  return {
+    ...options,
+    credentials: options.credentials || 'same-origin',
+    headers
+  };
+};
 
 async function loadCustomTabs() {
   try {
-    const token = getAuthTokenValue();
-    if (!token) return;
+    if (!hasStoredAuth()) return;
     
-    const response = await fetch(`${API_BASE}/custom-tabs`, {
-      headers: { 'Authorization': `Bearer ${token}` }
-    });
+    const response = await fetch(`${API_BASE}/custom-tabs`, authFetchOptions());
     
     if (response.ok) {
       customTabs = await response.json();
@@ -5817,7 +5962,7 @@ function renderCustomTabs() {
     const tabButton = document.createElement('button');
     tabButton.className = 'tab';
     tabButton.textContent = tab.name;
-    tabButton.onclick = () => switchTab(`custom-${tab.id}`);
+    tabButton.dataset.switchTab = `custom-${tab.id}`;
     container.appendChild(tabButton);
     
     createCustomTabContent(tab);
@@ -5834,11 +5979,11 @@ function createCustomTabContent(tab) {
   
   tabContent.innerHTML = `
     <div class="card">
-      <div class="collapsible-header" onclick="toggleCollapsible('customTab${tab.id}Form')">
-        <h2 style="margin: 0; display: inline-block;">Add ${escapeHtml(tab.name)}</h2>
+      <div class="collapsible-header" data-toggle-collapsible="customTab${tab.id}Form">
+        <h2 class="custom-tab-header-title">Add ${escapeHtml(tab.name)}</h2>
         <span class="collapsible-icon" id="customTab${tab.id}FormIcon">▼</span>
       </div>
-      <div class="collapsible-content" id="customTab${tab.id}FormContent" style="display: none;">
+      <div class="collapsible-content" id="customTab${tab.id}FormContent" hidden>
         <form id="addCustomTab${tab.id}Form">
           <div>
             <input type="text" id="customTab${tab.id}Title" placeholder="Title" required>
@@ -5857,13 +6002,13 @@ function createCustomTabContent(tab) {
       </div>
     </div>
     <div class="card">
-      <div style="display:flex; justify-content: space-between; align-items: center; margin-bottom: 10px;">
-        <h2 style="margin: 0;">${escapeHtml(tab.name)}</h2>
-        <span id="customTab${tab.id}Count" style="font-weight: bold;"></span>
+      <div class="custom-tab-list-header">
+        <h2 class="custom-tab-list-title">${escapeHtml(tab.name)}</h2>
+        <span id="customTab${tab.id}Count" class="custom-tab-count"></span>
       </div>
-      <div style="display:flex; flex-wrap: wrap; gap: 10px; margin-bottom: 10px;">
-        <input type="text" id="customTab${tab.id}Search" placeholder="Search" style="flex: 2; min-width: 200px;">
-        <button id="loadCustomTab${tab.id}" class="action-btn" style="flex: 1; min-width: 120px;">Refresh</button>
+      <div class="custom-tab-toolbar">
+        <input type="text" id="customTab${tab.id}Search" placeholder="Search" class="custom-tab-toolbar-input">
+        <button id="loadCustomTab${tab.id}" class="action-btn custom-tab-toolbar-button">Refresh</button>
       </div>
       <div class="table-container">
         <table id="customTab${tab.id}Table">
@@ -5936,8 +6081,7 @@ function generateCustomTabFormFields(tab) {
 
 async function handleAddCustomTabItem(tab) {
   try {
-    const token = getAuthTokenValue();
-    if (!token) {
+    if (!hasStoredAuth()) {
       alert('You must be logged in to add items');
       return;
     }
@@ -6009,10 +6153,7 @@ async function handleAddCustomTabItem(tab) {
     
     const response = await fetch(`${API_BASE}/custom-tabs/${tab.id}/items`, {
       method: 'POST',
-      headers: {
-        'Authorization': `Bearer ${token}`,
-        'Content-Type': 'application/json'
-      },
+      ...authFetchOptions({ headers: { 'Content-Type': 'application/json' } }),
       body: JSON.stringify({
         title,
         field_values: fieldValues,
@@ -6067,7 +6208,6 @@ async function handleAddCustomTabItem(tab) {
 
 async function fetchMetadataForCustomTab(tab, title, fieldValues, posterUrl) {
   try {
-    const token = getAuthTokenValue();
     let metadataFetched = false;
     
     if (tab.source_type === 'omdb') {
@@ -6178,10 +6318,7 @@ async function createCustomTabItemAfterMetadata(tab, title, fieldValues, posterU
   try {
     const response = await fetch(`${API_BASE}/custom-tabs/${tab.id}/items`, {
       method: 'POST',
-      headers: {
-        'Authorization': `Bearer ${token}`,
-        'Content-Type': 'application/json'
-      },
+      ...authFetchOptions({ headers: { 'Content-Type': 'application/json' } }),
       body: JSON.stringify({
         title,
         field_values: fieldValues,
@@ -6227,8 +6364,7 @@ async function createCustomTabItemAfterMetadata(tab, title, fieldValues, posterU
 
 async function uploadCustomTabPoster(tabId, itemId, file) {
   try {
-    const token = getAuthTokenValue();
-    if (!token) return;
+    if (!hasStoredAuth()) return;
     
     if (file.size > 5 * 1024 * 1024) {
       console.error('File size exceeds 5MB limit');
@@ -6240,9 +6376,7 @@ async function uploadCustomTabPoster(tabId, itemId, file) {
     
     const response = await fetch(`${API_BASE}/custom-tabs/${tabId}/items/${itemId}/poster`, {
       method: 'POST',
-      headers: {
-        'Authorization': `Bearer ${token}`
-      },
+      ...authFetchOptions(),
       body: formData
     });
     
@@ -6257,35 +6391,32 @@ async function uploadCustomTabPoster(tabId, itemId, file) {
 
 async function loadCustomTabItems(tab) {
   try {
-    const token = getAuthTokenValue();
-    if (!token) return;
+    if (!hasStoredAuth()) return;
     
     const tableBody = document.getElementById(`customTab${tab.id}TableBody`);
     if (tableBody) {
-      tableBody.innerHTML = '<tr><td colspan="100%" style="text-align: center; padding: 20px;">Loading...</td></tr>';
+      tableBody.innerHTML = '<tr><td colspan="100%" class="custom-tab-list-status">Loading...</td></tr>';
     }
     
-    const response = await fetch(`${API_BASE}/custom-tabs/${tab.id}/items`, {
-      headers: { 'Authorization': `Bearer ${token}` }
-    });
+    const response = await fetch(`${API_BASE}/custom-tabs/${tab.id}/items`, authFetchOptions());
     
     if (response.ok) {
       const items = await response.json();
       renderCustomTabItems(tab, items);
     } else if (response.status === 404) {
       if (tableBody) {
-        tableBody.innerHTML = '<tr><td colspan="100%" style="text-align: center; padding: 20px;">Tab not found</td></tr>';
+        tableBody.innerHTML = '<tr><td colspan="100%" class="custom-tab-list-status">Tab not found</td></tr>';
       }
     } else {
       if (tableBody) {
-        tableBody.innerHTML = '<tr><td colspan="100%" style="text-align: center; padding: 20px; color: #f44336;">Failed to load items</td></tr>';
+        tableBody.innerHTML = '<tr><td colspan="100%" class="custom-tab-list-status custom-tab-list-status-danger">Failed to load items</td></tr>';
       }
     }
   } catch (error) {
     console.error('Error loading custom tab items:', error);
     const tableBody = document.getElementById(`customTab${tab.id}TableBody`);
     if (tableBody) {
-      tableBody.innerHTML = '<tr><td colspan="100%" style="text-align: center; padding: 20px; color: #f44336;">Error loading items</td></tr>';
+      tableBody.innerHTML = '<tr><td colspan="100%" class="custom-tab-list-status custom-tab-list-status-danger">Error loading items</td></tr>';
     }
   }
 }
@@ -6301,7 +6432,7 @@ function renderCustomTabItems(tab, items) {
   
   if (items.length === 0) {
     tableHead.innerHTML = '';
-    tableBody.innerHTML = '<tr><td colspan="100%" style="text-align: center; padding: 20px; color: var(--fg-secondary);">No items yet. Add your first item above!</td></tr>';
+    tableBody.innerHTML = '<tr><td colspan="100%" class="custom-tab-list-status custom-tab-list-status-muted">No items yet. Add your first item above!</td></tr>';
     return;
   }
   
@@ -6338,8 +6469,8 @@ function renderCustomTabItems(tab, items) {
     
     cells.push(`
       <td>
-        <button class="action-btn" onclick="editCustomTabItem(${tab.id}, ${item.id})" title="Edit item">Edit</button>
-        <button class="action-btn" onclick="deleteCustomTabItem(${tab.id}, ${item.id})" style="background-color: #f44336;" title="Delete item">Delete</button>
+        <button class="action-btn" data-action="edit-custom-tab-item" data-tab-id="${tab.id}" data-item-id="${item.id}" title="Edit item">Edit</button>
+        <button class="action-btn btn-danger" data-action="delete-custom-tab-item" data-tab-id="${tab.id}" data-item-id="${item.id}" title="Delete item">Delete</button>
       </td>
     `);
     
@@ -6369,7 +6500,7 @@ function displayCustomTabPoster(id, posterUrl, title) {
     img.onclick = () => showImagePopup(posterUrl, `${title} poster`);
     img.onerror = () => {
       img.style.display = 'none';
-      cell.innerHTML = '<span style="color: var(--fg-secondary); font-size: 0.8em;">No image</span>';
+      cell.innerHTML = '<span class="search-result-meta-small text-secondary">No image</span>';
     };
     cell.appendChild(img);
   }
@@ -6394,15 +6525,14 @@ async function deleteCustomTabItem(tabId, itemId) {
   if (!confirm('Are you sure you want to delete this item? This action cannot be undone.')) return;
   
   try {
-    const token = getAuthTokenValue();
-    if (!token) {
+    if (!hasStoredAuth()) {
       alert('You must be logged in to delete items');
       return;
     }
     
     const response = await fetch(`${API_BASE}/custom-tabs/${tabId}/items/${itemId}`, {
       method: 'DELETE',
-      headers: { 'Authorization': `Bearer ${token}` }
+      ...authFetchOptions()
     });
     
     if (response.ok) {
@@ -6422,8 +6552,7 @@ async function deleteCustomTabItem(tabId, itemId) {
 
 async function editCustomTabItem(tabId, itemId) {
   try {
-    const token = getAuthTokenValue();
-    if (!token) {
+    if (!hasStoredAuth()) {
       alert('You must be logged in to edit items');
       return;
     }
@@ -6434,9 +6563,7 @@ async function editCustomTabItem(tabId, itemId) {
       return;
     }
     
-    const response = await fetch(`${API_BASE}/custom-tabs/${tabId}/items/${itemId}`, {
-      headers: { 'Authorization': `Bearer ${token}` }
-    });
+    const response = await fetch(`${API_BASE}/custom-tabs/${tabId}/items/${itemId}`, authFetchOptions());
     
     if (!response.ok) {
       alert('Failed to load item for editing');
@@ -6527,8 +6654,7 @@ async function editCustomTabItem(tabId, itemId) {
 
 async function handleUpdateCustomTabItem(tab, itemId) {
   try {
-    const token = getAuthTokenValue();
-    if (!token) return;
+    if (!hasStoredAuth()) return;
     
     const titleInput = document.getElementById(`customTab${tab.id}Title`);
     const submitBtn = titleInput?.closest('form')?.querySelector('button[type="submit"]');
@@ -6579,10 +6705,7 @@ async function handleUpdateCustomTabItem(tab, itemId) {
     
     const response = await fetch(`${API_BASE}/custom-tabs/${tab.id}/items/${itemId}`, {
       method: 'PUT',
-      headers: {
-        'Authorization': `Bearer ${token}`,
-        'Content-Type': 'application/json'
-      },
+      ...authFetchOptions({ headers: { 'Content-Type': 'application/json' } }),
       body: JSON.stringify({
         title,
         field_values: fieldValues,
@@ -6655,36 +6778,33 @@ function closeCustomTabManager() {
 
 async function loadCustomTabsList() {
   try {
-    const token = getAuthTokenValue();
-    if (!token) return;
+    if (!hasStoredAuth()) return;
     
     const listContainer = document.getElementById('customTabsList');
     if (listContainer) {
-      listContainer.innerHTML = '<div style="text-align: center; padding: 20px;">Loading...</div>';
+      listContainer.innerHTML = '<div class="custom-tab-list-status">Loading...</div>';
     }
     
-    const response = await fetch(`${API_BASE}/custom-tabs`, {
-      headers: { 'Authorization': `Bearer ${token}` }
-    });
+    const response = await fetch(`${API_BASE}/custom-tabs`, authFetchOptions());
     
     if (response.ok) {
       const tabs = await response.json();
       if (listContainer) {
         if (tabs.length === 0) {
-          listContainer.innerHTML = '<div style="text-align: center; padding: 20px; color: var(--fg-secondary);">No custom tabs yet. Create your first one above!</div>';
+          listContainer.innerHTML = '<div class="custom-tab-list-status custom-tab-list-status-muted">No custom tabs yet. Create your first one above!</div>';
         } else {
           listContainer.innerHTML = tabs.map(tab => {
             return `
-              <div style="padding: 15px; border: 1px solid var(--border); border-radius: 8px; margin-bottom: 10px; display: flex; justify-content: space-between; align-items: center;">
+              <div class="custom-tab-list-item">
                 <div>
                   <strong>${escapeHtml(tab.name)}</strong>
-                  <div style="font-size: 0.9em; color: var(--fg-secondary); margin-top: 5px;">
+                  <div class="custom-tab-list-meta">
                     Source: ${tab.source_type} | Fields: ${tab.fields?.length || 0}
                   </div>
                 </div>
                 <div>
-                  <button class="action-btn" onclick="openEditCustomTab(${tab.id})" title="Edit tab">Edit</button>
-                  <button class="action-btn" onclick="deleteCustomTab(${tab.id})" style="background-color: #f44336;" title="Delete tab">Delete</button>
+                  <button class="action-btn" data-action="edit-custom-tab" data-tab-id="${tab.id}" title="Edit tab">Edit</button>
+                  <button class="action-btn btn-danger" data-action="delete-custom-tab" data-tab-id="${tab.id}" title="Delete tab">Delete</button>
                 </div>
               </div>
             `;
@@ -6693,14 +6813,14 @@ async function loadCustomTabsList() {
       }
     } else {
       if (listContainer) {
-        listContainer.innerHTML = '<div style="text-align: center; padding: 20px; color: #f44336;">Failed to load custom tabs</div>';
+        listContainer.innerHTML = '<div class="custom-tab-list-status custom-tab-list-status-danger">Failed to load custom tabs</div>';
       }
     }
   } catch (error) {
     console.error('Error loading custom tabs list:', error);
     const listContainer = document.getElementById('customTabsList');
     if (listContainer) {
-      listContainer.innerHTML = '<div style="text-align: center; padding: 20px; color: #f44336;">Error loading custom tabs</div>';
+      listContainer.innerHTML = '<div class="custom-tab-list-status custom-tab-list-status-danger">Error loading custom tabs</div>';
     }
   }
 }
@@ -6743,10 +6863,10 @@ function addCustomTabField(fieldData = null) {
   fieldDiv.style.borderRadius = '6px';
   fieldDiv.style.backgroundColor = 'var(--bg)';
   fieldDiv.innerHTML = `
-    <div style="display: grid; grid-template-columns: 2fr 2fr 2fr 1fr 1fr; gap: 10px; align-items: center;">
-      <input type="text" placeholder="Field Key (e.g., year)" id="fieldKey${fieldId}" required maxlength="50" pattern="^[a-zA-Z_][a-zA-Z0-9_]*$" title="Must start with letter/underscore, alphanumeric only" style="padding: 8px; border: 1px solid var(--border); border-radius: 6px; background-color: var(--bg); color: var(--fg); font-size: 0.9rem; box-sizing: border-box;">
-      <input type="text" placeholder="Field Label (e.g., Year)" id="fieldLabel${fieldId}" required maxlength="100" style="padding: 8px; border: 1px solid var(--border); border-radius: 6px; background-color: var(--bg); color: var(--fg); font-size: 0.9rem; box-sizing: border-box;">
-      <select id="fieldType${fieldId}" required style="padding: 8px; border: 1px solid var(--border); border-radius: 6px; background-color: var(--bg); color: var(--fg); font-size: 0.9rem; box-sizing: border-box;">
+    <div class="custom-tab-field-grid">
+      <input type="text" placeholder="Field Key (e.g., year)" id="fieldKey${fieldId}" required maxlength="50" pattern="^[a-zA-Z_][a-zA-Z0-9_]*$" title="Must start with letter/underscore, alphanumeric only" class="custom-tab-field-input">
+      <input type="text" placeholder="Field Label (e.g., Year)" id="fieldLabel${fieldId}" required maxlength="100" class="custom-tab-field-input">
+      <select id="fieldType${fieldId}" required class="custom-tab-field-input">
         <option value="text">Text</option>
         <option value="number">Number</option>
         <option value="date">Date</option>
@@ -6755,11 +6875,11 @@ function addCustomTabField(fieldData = null) {
         <option value="review">Review</option>
         <option value="status">Status</option>
       </select>
-      <label style="display: flex; align-items: center; gap: 5px; color: var(--fg); font-size: 0.9rem;">
+      <label class="custom-tab-field-label">
         <input type="checkbox" id="fieldRequired${fieldId}">
         Required
       </label>
-      <button type="button" class="action-btn" onclick="this.closest('.custom-tab-field-${fieldId}').remove()" style="background-color: #f44336; padding: 8px 12px; font-size: 0.85rem;">Remove</button>
+      <button type="button" class="action-btn btn-danger custom-tab-field-remove" data-action="remove-custom-tab-field" data-field-id="${fieldId}">Remove</button>
     </div>
   `;
   
@@ -6811,8 +6931,7 @@ function bindCustomTabForm() {
     e.preventDefault();
     
     try {
-      const token = getAuthTokenValue();
-      if (!token) {
+      if (!hasStoredAuth()) {
         alert('You must be logged in to create custom tabs');
         return;
       }
@@ -6905,10 +7024,7 @@ function bindCustomTabForm() {
       
       const response = await fetch(`${API_BASE}/custom-tabs${editingTabId ? `/${editingTabId}` : ''}`, {
         method: editingTabId ? 'PUT' : 'POST',
-        headers: {
-          'Authorization': `Bearer ${token}`,
-          'Content-Type': 'application/json'
-        },
+        ...authFetchOptions({ headers: { 'Content-Type': 'application/json' } }),
         body: JSON.stringify({
           name,
           source_type: sourceType,
@@ -6946,15 +7062,14 @@ async function deleteCustomTab(tabId) {
   if (!confirm(`Are you sure you want to delete "${tabName}"? All items in this tab will be permanently deleted. This action cannot be undone.`)) return;
   
   try {
-    const token = getAuthTokenValue();
-    if (!token) {
+    if (!hasStoredAuth()) {
       alert('You must be logged in to delete custom tabs');
       return;
     }
     
     const response = await fetch(`${API_BASE}/custom-tabs/${tabId}`, {
       method: 'DELETE',
-      headers: { 'Authorization': `Bearer ${token}` }
+      ...authFetchOptions()
     });
     
     if (response.ok) {
@@ -7000,14 +7115,11 @@ function resetCustomTabFormState() {
 
 async function openEditCustomTab(tabId) {
   try {
-    const token = getAuthTokenValue();
-    if (!token) {
+    if (!hasStoredAuth()) {
       alert('You must be logged in to edit custom tabs');
       return;
     }
-    const response = await fetch(`${API_BASE}/custom-tabs/${tabId}`, {
-      headers: { 'Authorization': `Bearer ${token}` }
-    });
+    const response = await fetch(`${API_BASE}/custom-tabs/${tabId}`, authFetchOptions());
     if (!response.ok) {
       const errorData = await response.json().catch(() => ({ detail: 'Failed to load custom tab' }));
       alert(errorData.detail || 'Failed to load custom tab');
@@ -7046,7 +7158,7 @@ function setupCustomTabSwitching() {
         if (tab) {
           document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
           const tabButton = Array.from(document.querySelectorAll('.tab')).find(btn => 
-            btn.textContent === tab.name || btn.onclick?.toString().includes(`custom-${tabId}`)
+            btn.textContent === tab.name || btn.dataset.switchTab === `custom-${tabId}`
           );
           if (tabButton) tabButton.classList.add('active');
           
@@ -7068,8 +7180,7 @@ function setupCustomTabSwitching() {
 document.addEventListener('DOMContentLoaded', () => {
   setupCustomTabSwitching();
   bindCustomTabForm();
-  const token = getAuthTokenValue();
-  if (token) {
+  if (hasStoredAuth()) {
     loadCustomTabs();
   }
 });

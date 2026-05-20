@@ -138,6 +138,18 @@ class TestCustomTabItemEndpoints:
         assert data["field_values"]["year"] == 2020
         assert data["field_values"]["rating"] == 8.5
         assert "id" in data
+
+    def test_create_custom_tab_item_rejects_unsafe_poster_url(self, authenticated_client, custom_tab):
+        """Test unsafe custom poster URL schemes are rejected."""
+        item_data = {
+            "title": "Bad Poster",
+            "field_values": {},
+            "poster_url": "javascript:alert(1)"
+        }
+
+        response = authenticated_client.post(f"/custom-tabs/{custom_tab['id']}/items", json=item_data)
+
+        assert response.status_code == 422
     
     def test_list_custom_tab_items(self, authenticated_client, custom_tab):
         """Test listing custom tab items."""
