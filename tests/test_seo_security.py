@@ -66,6 +66,9 @@ class TestSEOEndpoints:
         assert "/changelog" in content
         assert "/tv-show-tracker" in content
         assert "/game-tracker" in content
+        assert "/demo" in content
+        assert "/media-tracking" in content
+        assert "/roadmap" in content
     
     def test_sitemap_includes_homepage(self, client):
         """Test that sitemap includes the homepage."""
@@ -88,6 +91,9 @@ class TestSEOEndpoints:
         assert "Allow: /changelog" in content
         assert "Allow: /tv-show-tracker" in content
         assert "Allow: /game-tracker" in content
+        assert "Allow: /demo" in content
+        assert "Allow: /media-tracking" in content
+        assert "Allow: /roadmap" in content
         assert "Sitemap:" in content
     
     def test_head_sitemap(self, client):
@@ -133,6 +139,9 @@ class TestSecurityMiddleware:
             "/changelog",
             "/tv-show-tracker",
             "/game-tracker",
+            "/demo",
+            "/media-tracking",
+            "/roadmap",
             "/terms",
             "/contact",
             "/reviews",
@@ -173,6 +182,9 @@ class TestSecurityMiddleware:
             "/changelog": "OmniTrackr Changelog",
             "/tv-show-tracker": "TV Show Tracker",
             "/game-tracker": "Game Tracker",
+            "/demo": "OmniTrackr Demo",
+            "/media-tracking": "Media Tracking Hub",
+            "/roadmap": "OmniTrackr Roadmap",
             "/reviews": "Public Media Reviews",
         }
 

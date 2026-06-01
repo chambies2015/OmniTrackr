@@ -297,6 +297,30 @@ async def game_tracker_page():
     raise HTTPException(status_code=404, detail="Page not found")
 
 
+@app.get("/demo", tags=["public"])
+async def demo_page():
+    response = strict_template_response("demo.html")
+    if response:
+        return response
+    raise HTTPException(status_code=404, detail="Page not found")
+
+
+@app.get("/media-tracking", tags=["public"])
+async def media_tracking_page():
+    response = strict_template_response("media_tracking.html")
+    if response:
+        return response
+    raise HTTPException(status_code=404, detail="Page not found")
+
+
+@app.get("/roadmap", tags=["public"])
+async def roadmap_page():
+    response = strict_template_response("roadmap.html")
+    if response:
+        return response
+    raise HTTPException(status_code=404, detail="Page not found")
+
+
 @app.get("/terms", tags=["public"])
 async def terms_page():
     response = strict_template_response("terms.html")

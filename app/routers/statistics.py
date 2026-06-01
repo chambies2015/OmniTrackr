@@ -4,11 +4,36 @@ Statistics endpoints for the OmniTrackr API.
 from datetime import datetime
 from fastapi import APIRouter, Depends
 from sqlalchemy.orm import Session
+from sqlalchemy import func
 
 from .. import crud, schemas, models
 from ..dependencies import get_db, get_current_user
 
 router = APIRouter(prefix="/statistics", tags=["statistics"])
+
+
+def _count_public_reviews(db: Session, model, user_id: int) -> int:
+    return db.query(model).filter(
+        model.user_id == user_id,
+        model.review_public == True,
+        model.review.isnot(None),
+        func.length(func.trim(model.review)) > 0
+    ).count()
+
+
+def _count_reviewed_items(db: Session, model, user_id: int) -> int:
+    return db.query(model).filter(
+        model.user_id == user_id,
+        model.review.isnot(None),
+        func.length(func.trim(model.review)) > 0
+    ).count()
+
+
+def _count_rated_items(db: Session, model, user_id: int) -> int:
+    return db.query(model).filter(
+        model.user_id == user_id,
+        model.rating.isnot(None)
+    ).count()
 
 
 @router.get("/", response_model=schemas.StatisticsDashboard)
@@ -29,6 +54,112 @@ async def get_statistics_dashboard(
         director_stats=schemas.DirectorStatistics(**director_stats),
         generated_at=datetime.now().isoformat()
     )
+
+
+@router.get("/insights/", response_model=dict)
+async def get_library_insights(
+    current_user: models.User = Depends(get_current_user),
+    db: Session = Depends(get_db)
+):
+    """Get high-level library insights for the dashboard."""
+    user_id = current_user.id
+    categories = [
+        {
+            "key": "movies",
+            "label": "Movies",
+            "model": models.Movie,
+            "done_field": models.Movie.watched,
+        },
+        {
+            "key": "tv_shows",
+            "label": "TV Shows",
+            "model": models.TVShow,
+            "done_field": models.TVShow.watched,
+        },
+        {
+            "key": "anime",
+            "label": "Anime",
+            "model": models.Anime,
+            "done_field": models.Anime.watched,
+        },
+        {
+            "key": "video_games",
+            "label": "Video Games",
+            "model": models.VideoGame,
+            "done_field": models.VideoGame.played,
+        },
+        {
+            "key": "music",
+            "label": "Music",
+            "model": models.Music,
+            "done_field": models.Music.listened,
+        },
+        {
+            "key": "books",
+            "label": "Books",
+            "model": models.Book,
+            "done_field": models.Book.read,
+        },
+    ]
+
+    category_summaries = []
+    total_items = 0
+    completed_items = 0
+    rated_items = 0
+    reviewed_items = 0
+    public_reviews = 0
+
+    for category in categories:
+        model = category["model"]
+        count = db.query(model).filter(model.user_id == user_id).count()
+        completed = db.query(model).filter(
+            model.user_id == user_id,
+            category["done_field"] == True
+        ).count()
+        rated = _count_rated_items(db, model, user_id)
+        reviewed = _count_reviewed_items(db, model, user_id)
+        public_review_count = _count_public_reviews(db, model, user_id)
+
+        total_items += count
+        completed_items += completed
+        rated_items += rated
+        reviewed_items += reviewed
+        public_reviews += public_review_count
+
+        category_summaries.append({
+            "key": category["key"],
+            "label": category["label"],
+            "total": count,
+            "completed": completed,
+            "backlog": max(count - completed, 0),
+            "rated": rated,
+            "reviewed": reviewed,
+            "public_reviews": public_review_count,
+            "completion_percentage": round((completed / count * 100) if count else 0, 1),
+        })
+
+    top_category = max(category_summaries, key=lambda item: item["total"], default=None)
+    most_complete_category = max(
+        category_summaries,
+        key=lambda item: (item["completion_percentage"], item["completed"]),
+        default=None
+    )
+
+    return {
+        "total_items": total_items,
+        "completed_items": completed_items,
+        "backlog_items": max(total_items - completed_items, 0),
+        "rated_items": rated_items,
+        "reviewed_items": reviewed_items,
+        "public_reviews": public_reviews,
+        "completion_percentage": round((completed_items / total_items * 100) if total_items else 0, 1),
+        "rating_coverage_percentage": round((rated_items / total_items * 100) if total_items else 0, 1),
+        "review_coverage_percentage": round((reviewed_items / total_items * 100) if total_items else 0, 1),
+        "top_category": top_category,
+        "most_complete_category": most_complete_category,
+        "categories": category_summaries,
+        "generated_at": datetime.now().isoformat()
+    }
 
 
 @router.get("/watch/", response_model=schemas.WatchStatistics)

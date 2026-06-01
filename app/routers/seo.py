@@ -79,6 +79,24 @@ async def get_sitemap(db: Session = Depends(get_db)):
     <priority>0.75</priority>
   </url>
   <url>
+    <loc>{base_url}/demo</loc>
+    <lastmod>{today}</lastmod>
+    <changefreq>monthly</changefreq>
+    <priority>0.8</priority>
+  </url>
+  <url>
+    <loc>{base_url}/media-tracking</loc>
+    <lastmod>{today}</lastmod>
+    <changefreq>monthly</changefreq>
+    <priority>0.8</priority>
+  </url>
+  <url>
+    <loc>{base_url}/roadmap</loc>
+    <lastmod>{today}</lastmod>
+    <changefreq>monthly</changefreq>
+    <priority>0.65</priority>
+  </url>
+  <url>
     <loc>{base_url}/terms</loc>
     <lastmod>{today}</lastmod>
     <changefreq>monthly</changefreq>
@@ -212,6 +230,9 @@ Allow: /use-cases
 Allow: /changelog
 Allow: /tv-show-tracker
 Allow: /game-tracker
+Allow: /demo
+Allow: /media-tracking
+Allow: /roadmap
 Disallow: /auth/
 Disallow: /api/
 Disallow: /account/
@@ -283,6 +304,9 @@ OmniTrackr is a free web application for tracking and organizing movies, TV show
 - Changelog: {base_url}/changelog
 - TV show tracker guide: {base_url}/tv-show-tracker
 - Game tracker guide: {base_url}/game-tracker
+- Demo library: {base_url}/demo
+- Media tracking hub: {base_url}/media-tracking
+- Roadmap: {base_url}/roadmap
 - Terms: {base_url}/terms
 - Contact: {base_url}/contact
 - Privacy Policy: {base_url}/privacy
@@ -307,7 +331,7 @@ OmniTrackr is a free web application for tracking and organizing movies, TV show
 - Books: Reviews and ratings for books
 
 ## Public Content
-Public reviews are available at {base_url}/reviews and individual review pages at {base_url}/reviews/[id]?category=[category]. OmniTrackr also publishes evergreen guidance at {base_url}/guides, {base_url}/compare, {base_url}/use-cases, {base_url}/tv-show-tracker, and {base_url}/game-tracker, plus product updates at {base_url}/changelog.
+Public reviews are available at {base_url}/reviews and individual review pages at {base_url}/reviews/[id]?category=[category]. OmniTrackr also publishes evergreen guidance at {base_url}/guides, {base_url}/media-tracking, {base_url}/compare, {base_url}/use-cases, {base_url}/tv-show-tracker, and {base_url}/game-tracker, a sample library at {base_url}/demo, plus product updates at {base_url}/changelog and {base_url}/roadmap.
 
 ## Contact
 Email: omnitrackr@gmail.com

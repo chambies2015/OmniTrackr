@@ -853,6 +853,19 @@
       </div>
 
       <div id="statsContent" style="display: none;">
+        <div class="accordion-section">
+          <div class="accordion-header" data-toggle-category-accordion="library-insights">
+            <h3>Library Insights</h3>
+            <span class="accordion-icon" id="libraryInsightsStatsIcon">â–¶</span>
+          </div>
+          <div class="accordion-content" id="libraryInsightsStatsContent" style="display: none;">
+            <div id="libraryInsightsStatsLoading" style="text-align: center; padding: 20px; display: none;">
+              <div style="display: inline-block; width: 30px; height: 30px; border: 3px solid rgba(102, 126, 234, 0.2); border-top-color: var(--primary); border-radius: 50%; animation: spin 1s linear infinite;"></div>
+            </div>
+            <div id="libraryInsightsStatsData"></div>
+          </div>
+        </div>
+
         <!-- Movies Accordion Section -->
         <div class="accordion-section">
           <div class="accordion-header" data-toggle-category-accordion="movies">
@@ -953,12 +966,15 @@
           LinkedIn</a>
         <a href="https://ko-fi.com/omnitrackr" target="_blank" rel="noopener noreferrer" class="footer-link">☕ Ko-fi</a>
         <a href="/about" class="footer-link">About</a>
+        <a href="/demo" class="footer-link">Demo</a>
+        <a href="/media-tracking" class="footer-link">Tracking Hub</a>
         <a href="/guides" class="footer-link">Guides</a>
         <a href="/compare" class="footer-link">Compare</a>
         <a href="/use-cases" class="footer-link">Use Cases</a>
         <a href="/tv-show-tracker" class="footer-link">TV Tracker</a>
         <a href="/game-tracker" class="footer-link">Game Tracker</a>
         <a href="/changelog" class="footer-link">Changelog</a>
+        <a href="/roadmap" class="footer-link">Roadmap</a>
         <a href="/terms" class="footer-link">Terms</a>
         <a href="/contact" class="footer-link">Contact</a>
         <a href="/privacy" class="footer-link">🔒 Privacy Policy</a>
@@ -1480,12 +1496,15 @@
           <a href="https://ko-fi.com/omnitrackr" target="_blank" rel="noopener noreferrer" class="footer-link">☕
             Ko-fi</a>
           <a href="/about" class="footer-link">About</a>
+          <a href="/demo" class="footer-link">Demo</a>
+          <a href="/media-tracking" class="footer-link">Tracking Hub</a>
           <a href="/guides" class="footer-link">Guides</a>
           <a href="/compare" class="footer-link">Compare</a>
           <a href="/use-cases" class="footer-link">Use Cases</a>
           <a href="/tv-show-tracker" class="footer-link">TV Tracker</a>
           <a href="/game-tracker" class="footer-link">Game Tracker</a>
           <a href="/changelog" class="footer-link">Changelog</a>
+          <a href="/roadmap" class="footer-link">Roadmap</a>
           <a href="/terms" class="footer-link">Terms</a>
           <a href="/contact" class="footer-link">Contact</a>
           <a href="/privacy" class="footer-link">🔒 Privacy Policy</a>
@@ -1648,6 +1667,24 @@
               </label>
             </div>
             <div class="privacy-toggle-item">
+              <label for="musicPrivate" class="toggle-label">
+                <span>Make Music Private</span>
+                <div class="toggle-container">
+                  <input type="checkbox" id="musicPrivate" class="toggle-switch">
+                  <span class="toggle-slider"></span>
+                </div>
+              </label>
+            </div>
+            <div class="privacy-toggle-item">
+              <label for="booksPrivate" class="toggle-label">
+                <span>Make Books Private</span>
+                <div class="toggle-container">
+                  <input type="checkbox" id="booksPrivate" class="toggle-switch">
+                  <span class="toggle-slider"></span>
+                </div>
+              </label>
+            </div>
+            <div class="privacy-toggle-item">
               <label for="statisticsPrivate" class="toggle-label">
                 <span>Make Statistics Private</span>
                 <div class="toggle-container">
@@ -1660,6 +1697,35 @@
             <div id="privacyError" class="error-message"></div>
             <div id="privacySuccess" class="success-message"></div>
           </form>
+        </div>
+
+        <!-- Data & Privacy Dashboard Section -->
+        <div class="account-section">
+          <h3>Your Data & Privacy Dashboard</h3>
+          <p class="info-text">A quick summary of backup, privacy, public review, and policy controls for your account.</p>
+          <div class="account-info">
+            <div class="info-item">
+              <span class="info-label">Data Backup:</span>
+              <span class="info-value" id="dataDashboardBackup">Export available anytime</span>
+            </div>
+            <div class="info-item">
+              <span class="info-label">Private Categories:</span>
+              <span class="info-value" id="dataDashboardPrivateCount">-</span>
+            </div>
+            <div class="info-item">
+              <span class="info-label">Public Reviews:</span>
+              <span class="info-value" id="dataDashboardPublicReviews">Controlled per item</span>
+            </div>
+            <div class="info-item">
+              <span class="info-label">Account Removal:</span>
+              <span class="info-value">Deactivate below; permanent deletion by request</span>
+            </div>
+          </div>
+          <div style="display: flex; flex-wrap: wrap; gap: 10px; margin-top: 14px;">
+            <button type="button" class="action-btn" data-action="export-data-dashboard">Export Data</button>
+            <a class="action-btn" href="/privacy" target="_blank" rel="noopener noreferrer">Privacy Policy</a>
+            <a class="action-btn" href="/reviews" target="_blank" rel="noopener noreferrer">Public Reviews</a>
+          </div>
         </div>
 
         <!-- Tab Visibility Settings Section -->
@@ -1700,6 +1766,24 @@
                 <span>Show Video Games Tab</span>
                 <div class="toggle-container">
                   <input type="checkbox" id="videoGamesVisible" class="toggle-switch">
+                  <span class="toggle-slider"></span>
+                </div>
+              </label>
+            </div>
+            <div class="privacy-toggle-item">
+              <label for="musicVisible" class="toggle-label">
+                <span>Show Music Tab</span>
+                <div class="toggle-container">
+                  <input type="checkbox" id="musicVisible" class="toggle-switch">
+                  <span class="toggle-slider"></span>
+                </div>
+              </label>
+            </div>
+            <div class="privacy-toggle-item">
+              <label for="booksVisible" class="toggle-label">
+                <span>Show Books Tab</span>
+                <div class="toggle-container">
+                  <input type="checkbox" id="booksVisible" class="toggle-switch">
                   <span class="toggle-slider"></span>
                 </div>
               </label>

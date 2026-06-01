@@ -64,6 +64,42 @@ class TestStatisticsEndpoints:
         director_stats = data["director_stats"]
         assert "top_directors" in director_stats
         assert "highest_rated_directors" in director_stats
+
+    def test_get_library_insights(self, authenticated_client, test_movie_data, test_tv_show_data, test_video_game_data):
+        """Test getting high-level library insights."""
+        movie_data = test_movie_data.copy()
+        movie_data["watched"] = True
+        movie_data["rating"] = 9
+        movie_data["review"] = "A thoughtful movie review."
+        movie_data["review_public"] = True
+        authenticated_client.post("/movies/", json=movie_data)
+
+        tv_data = test_tv_show_data.copy()
+        tv_data["watched"] = False
+        tv_data["rating"] = 7
+        authenticated_client.post("/tv-shows/", json=tv_data)
+
+        game_data = test_video_game_data.copy()
+        game_data["played"] = True
+        game_data["rating"] = 8
+        authenticated_client.post("/video-games/", json=game_data)
+
+        response = authenticated_client.get("/statistics/insights/")
+
+        assert response.status_code == 200
+        data = response.json()
+        assert data["total_items"] >= 3
+        assert data["completed_items"] >= 2
+        assert data["backlog_items"] >= 1
+        assert data["rated_items"] >= 3
+        assert data["reviewed_items"] >= 1
+        assert data["public_reviews"] >= 1
+        assert "completion_percentage" in data
+        assert "rating_coverage_percentage" in data
+        assert "review_coverage_percentage" in data
+        assert "top_category" in data
+        assert "most_complete_category" in data
+        assert len(data["categories"]) == 6
     
     def test_get_watch_statistics(self, authenticated_client, test_movie_data, test_tv_show_data, test_anime_data, test_video_game_data, test_music_data, test_book_data):
         """Test getting watch statistics."""
