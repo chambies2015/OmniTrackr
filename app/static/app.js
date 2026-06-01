@@ -87,23 +87,17 @@ function openReviewModal(btn) {
   const title = fullEl ? fullEl.getAttribute('data-title') || '' : '';
   const subtitle = fullEl ? fullEl.getAttribute('data-subtitle') || '' : '';
   const reviewRaw = fullEl ? fullEl.getAttribute('data-review') || '' : '';
-  const decodeAttr = (s) => {
-    const d = document.createElement('div');
-    d.innerHTML = s;
-    return d.textContent || '';
-  };
   const review = document.createElement('div');
-  review.textContent = decodeAttr(reviewRaw);
+  review.textContent = reviewRaw;
   const modal = document.getElementById('reviewModal');
   const titleEl = document.getElementById('reviewModalTitle');
   const subtitleEl = document.getElementById('reviewModalSubtitle');
   const bodyEl = document.getElementById('reviewModalBody');
   if (modal && titleEl && subtitleEl && bodyEl) {
-    titleEl.textContent = decodeAttr(title);
-    subtitleEl.textContent = decodeAttr(subtitle);
+    titleEl.textContent = title;
+    subtitleEl.textContent = subtitle;
     subtitleEl.style.display = subtitle ? '' : 'none';
-    bodyEl.innerHTML = '';
-    bodyEl.appendChild(review);
+    bodyEl.replaceChildren(review);
     modal.style.display = 'flex';
     document.body.style.overflow = 'hidden';
   }
