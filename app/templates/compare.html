@@ -45,9 +45,27 @@
     .privacy-section p { margin-bottom: 15px; color: var(--fg-secondary); }
     .privacy-section ul, .privacy-section ol { margin-left: 20px; margin-bottom: 15px; color: var(--fg-secondary); }
     .privacy-section li { margin-bottom: 8px; }
-    .comparison-table { width: 100%; border-collapse: collapse; margin: 18px 0; color: var(--fg-secondary); }
-    .comparison-table th, .comparison-table td { border: 1px solid var(--border); padding: 12px; text-align: left; vertical-align: top; }
-    .comparison-table th { color: var(--fg); background: rgba(255, 255, 255, 0.04); }
+    .comparison-table-wrap { width: 100%; max-width: 100%; overflow-x: auto; margin: 18px 0; border: 1px solid var(--border); border-radius: 12px; }
+    .comparison-table { width: 100%; min-width: 760px; border-collapse: collapse; table-layout: fixed; margin: 0; color: var(--fg-secondary); background: transparent; }
+    .comparison-table th, .comparison-table td { position: static !important; right: auto !important; z-index: auto !important; border: 1px solid var(--border); border-width: 0 1px 1px 0; padding: 14px; text-align: left; vertical-align: top; white-space: normal !important; overflow-wrap: anywhere; box-shadow: none !important; background: transparent; }
+    .comparison-table th { color: var(--fg); background: rgba(255, 255, 255, 0.04); letter-spacing: 0; top: auto; text-transform: none; }
+    .comparison-table th:last-child, .comparison-table td:last-child { border-right: 0; }
+    .comparison-table tbody tr:last-child td { border-bottom: 0; }
+    .comparison-table tbody tr { background: transparent; transform: none; box-shadow: none; }
+    .comparison-table tbody tr:nth-child(even) { background: rgba(102, 126, 234, 0.06); }
+    .comparison-table tbody tr:hover { transform: none; box-shadow: none; background: rgba(102, 126, 234, 0.1); }
+    .comparison-table tbody tr:hover td:last-child, .comparison-table tbody tr:nth-child(even) td:last-child { background: transparent; }
+    @media (max-width: 600px) {
+      .comparison-table { display: table; }
+      .comparison-table thead { display: table-header-group; }
+      .comparison-table tbody { display: table-row-group; }
+      .comparison-table tr { display: table-row; }
+      .comparison-table th, .comparison-table td { display: table-cell; }
+      .comparison-table thead tr { position: static; top: auto; left: auto; }
+      .comparison-table tr { margin-bottom: 0; }
+      .comparison-table td { padding-left: 14px; }
+      .comparison-table td::before { content: none; display: none; }
+    }
     .back-link { display: inline-block; margin-bottom: 30px; color: var(--primary); text-decoration: none; font-weight: 500; transition: color 0.3s ease; }
     .back-link:hover { color: var(--secondary); }
   </style>
@@ -96,48 +114,56 @@
 
       <section class="privacy-section" aria-labelledby="table-heading">
         <h2 id="table-heading">Quick Comparison</h2>
-        <table class="comparison-table">
-          <thead>
-            <tr>
-              <th>Option</th>
-              <th>Best For</th>
-              <th>Tradeoff</th>
-              <th>Where OmniTrackr Helps</th>
-            </tr>
-          </thead>
-          <tbody>
-            <tr>
-              <td>Spreadsheet</td>
-              <td>Custom columns, formulas, and offline backups.</td>
-              <td>Manual entry becomes slow, mobile use can be clumsy, and posters or category-specific fields take extra work.</td>
-              <td>OmniTrackr gives each media type a focused form, visual library, account sync, and export without maintaining a sheet layout.</td>
-            </tr>
-            <tr>
-              <td>IMDb or Letterboxd</td>
-              <td>Movie discovery, public film reviews, and film-focused lists.</td>
-              <td>They are centered on movies and film discussion rather than your full media life.</td>
-              <td>OmniTrackr keeps movies alongside TV, anime, games, music, and books so your overall taste history is easier to review.</td>
-            </tr>
-            <tr>
-              <td>Trakt or TV trackers</td>
-              <td>Episode progress, watch history, and TV automation.</td>
-              <td>TV tracking is the main strength; other categories usually require another app.</td>
-              <td>OmniTrackr works well as a broader personal library when you want TV history next to everything else you consume.</td>
-            </tr>
-            <tr>
-              <td>Goodreads or book shelves</td>
-              <td>Book lists, reading goals, and book community activity.</td>
-              <td>Books are isolated from the rest of your entertainment and review history.</td>
-              <td>OmniTrackr lets books share the same rating habits, review style, privacy controls, and export flow as other categories.</td>
-            </tr>
-            <tr>
-              <td>Game backlog app</td>
-              <td>Game completion status and backlog management.</td>
-              <td>Game-focused tools rarely help with movies, albums, shows, or books.</td>
-              <td>OmniTrackr is useful when games are one part of a wider collection rather than a separate island.</td>
-            </tr>
-          </tbody>
-        </table>
+        <div class="comparison-table-wrap">
+          <table class="comparison-table">
+            <colgroup>
+              <col style="width: 14%;">
+              <col style="width: 20%;">
+              <col style="width: 25%;">
+              <col style="width: 41%;">
+            </colgroup>
+            <thead>
+              <tr>
+                <th>Option</th>
+                <th>Best For</th>
+                <th>Tradeoff</th>
+                <th>Where OmniTrackr Helps</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr>
+                <td>Spreadsheet</td>
+                <td>Custom columns, formulas, and offline backups.</td>
+                <td>Manual entry becomes slow, mobile use can be clumsy, and posters or category-specific fields take extra work.</td>
+                <td>OmniTrackr gives each media type a focused form, visual library, account sync, and export without maintaining a sheet layout.</td>
+              </tr>
+              <tr>
+                <td>IMDb or Letterboxd</td>
+                <td>Movie discovery, public film reviews, and film-focused lists.</td>
+                <td>They are centered on movies and film discussion rather than your full media life.</td>
+                <td>OmniTrackr keeps movies alongside TV, anime, games, music, and books so your overall taste history is easier to review.</td>
+              </tr>
+              <tr>
+                <td>Trakt or TV trackers</td>
+                <td>Episode progress, watch history, and TV automation.</td>
+                <td>TV tracking is the main strength; other categories usually require another app.</td>
+                <td>OmniTrackr works well as a broader personal library when you want TV history next to everything else you consume.</td>
+              </tr>
+              <tr>
+                <td>Goodreads or book shelves</td>
+                <td>Book lists, reading goals, and book community activity.</td>
+                <td>Books are isolated from the rest of your entertainment and review history.</td>
+                <td>OmniTrackr lets books share the same rating habits, review style, privacy controls, and export flow as other categories.</td>
+              </tr>
+              <tr>
+                <td>Game backlog app</td>
+                <td>Game completion status and backlog management.</td>
+                <td>Game-focused tools rarely help with movies, albums, shows, or books.</td>
+                <td>OmniTrackr is useful when games are one part of a wider collection rather than a separate island.</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
       </section>
 
       <section class="privacy-section" aria-labelledby="decision-heading">

@@ -195,6 +195,17 @@ class TestSecurityMiddleware:
             assert '<meta name="description"' in response.text
             assert "og:description" in response.text
 
+    def test_compare_table_uses_scoped_responsive_wrapper(self, client):
+        """Compare table should not inherit sticky dashboard table behavior."""
+        response = client.get("/compare")
+
+        assert response.status_code == 200
+        content = response.text
+        assert "comparison-table-wrap" in content
+        assert "table-layout: fixed" in content
+        assert "position: static !important" in content
+        assert "transform: none" in content
+
     def test_privacy_policy_discloses_google_ads_data_use(self, client):
         """Privacy policy should include required Google ads/cookie disclosures."""
         response = client.get("/privacy")
