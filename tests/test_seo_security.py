@@ -1,10 +1,31 @@
 """
 Tests for SEO endpoints and security middleware.
 """
+from html.parser import HTMLParser
+
 import pytest
 from fastapi.testclient import TestClient
 
 from app.csp import add_nonce_to_inline_tags, extract_inline_styles
+
+
+class LinkHrefParser(HTMLParser):
+    def __init__(self):
+        super().__init__()
+        self.hrefs = set()
+
+    def handle_starttag(self, tag, attrs):
+        if tag != "a":
+            return
+        for name, value in attrs:
+            if name == "href" and value:
+                self.hrefs.add(value)
+
+
+def extract_hrefs(html):
+    parser = LinkHrefParser()
+    parser.feed(html)
+    return parser.hrefs
 
 
 class TestSEOEndpoints:
@@ -168,8 +189,9 @@ class TestSecurityMiddleware:
         content = response.text
         assert "Google Ads and Advertising Cookies" in content
         assert "cookies, web beacons, IP addresses" in content
-        assert "https://policies.google.com/technologies/partner-sites" in content
-        assert "https://adssettings.google.com/" in content
+        hrefs = extract_hrefs(content)
+        assert "https://policies.google.com/technologies/partner-sites" in hrefs
+        assert "https://adssettings.google.com/" in hrefs
 
     def test_nonce_injection_handles_uppercase_inline_tags(self):
         """Nonce injection should cover uppercase or mixed-case inline tags."""
