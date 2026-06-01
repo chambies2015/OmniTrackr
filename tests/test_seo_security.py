@@ -206,6 +206,18 @@ class TestSecurityMiddleware:
         assert "position: static !important" in content
         assert "transform: none" in content
 
+    def test_guides_page_header_has_visible_h1(self, client):
+        """Guides page should not hide the H1 with transparent gradient text."""
+        response = client.get("/guides")
+
+        assert response.status_code == 200
+        content = response.text
+        assert "<h1>How-To Guides</h1>" in content
+        assert ".privacy-header h1" in content
+        guides_h1_rule = content.split(".privacy-header h1", 1)[1].split("}", 1)[0]
+        assert "color: var(--primary)" in guides_h1_rule
+        assert "-webkit-text-fill-color: transparent" not in guides_h1_rule
+
     def test_privacy_policy_discloses_google_ads_data_use(self, client):
         """Privacy policy should include required Google ads/cookie disclosures."""
         response = client.get("/privacy")
