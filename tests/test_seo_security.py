@@ -218,6 +218,33 @@ class TestSecurityMiddleware:
         assert "color: var(--primary)" in guides_h1_rule
         assert "-webkit-text-fill-color: transparent" not in guides_h1_rule
 
+    def test_home_footer_uses_clean_emoji_link_set(self, client):
+        """Home footers should avoid old social links and use emoji labels."""
+        response = client.get("/")
+
+        assert response.status_code == 200
+        content = response.text
+        assert "🐙 GitHub" not in content
+        assert "LinkedIn" not in content
+        for label in (
+            "📧 omnitrackr@gmail.com",
+            "☕ Ko-fi",
+            "ℹ️ About",
+            "👀 Demo",
+            "🧭 Tracking Hub",
+            "📘 Guides",
+            "⚖️ Compare",
+            "💡 Use Cases",
+            "📺 TV Tracker",
+            "🎮 Game Tracker",
+            "📝 Changelog",
+            "🗺️ Roadmap",
+            "📜 Terms",
+            "✉️ Contact",
+            "🔒 Privacy Policy",
+        ):
+            assert label in content
+
     def test_privacy_policy_discloses_google_ads_data_use(self, client):
         """Privacy policy should include required Google ads/cookie disclosures."""
         response = client.get("/privacy")
