@@ -33,6 +33,17 @@ class TestSEOEndpoints:
         assert response.status_code == 200
         content = response.text
         assert "/reviews" in content
+
+    def test_sitemap_includes_public_value_pages(self, client):
+        """Test that sitemap includes public editorial pages for crawlers."""
+        response = client.get("/sitemap.xml")
+        assert response.status_code == 200
+        content = response.text
+        assert "/compare" in content
+        assert "/use-cases" in content
+        assert "/changelog" in content
+        assert "/tv-show-tracker" in content
+        assert "/game-tracker" in content
     
     def test_sitemap_includes_homepage(self, client):
         """Test that sitemap includes the homepage."""
@@ -50,6 +61,11 @@ class TestSEOEndpoints:
         content = response.text
         assert "User-agent: *" in content
         assert "Allow: /reviews" in content
+        assert "Allow: /compare" in content
+        assert "Allow: /use-cases" in content
+        assert "Allow: /changelog" in content
+        assert "Allow: /tv-show-tracker" in content
+        assert "Allow: /game-tracker" in content
         assert "Sitemap:" in content
     
     def test_head_sitemap(self, client):
@@ -86,7 +102,19 @@ class TestSecurityMiddleware:
 
     def test_public_content_pages_use_nonce_csp_without_unsafe_inline(self, client):
         """Public SEO/content pages should not need unsafe-inline in CSP."""
-        for path in ["/about", "/privacy", "/guides", "/terms", "/contact", "/reviews"]:
+        for path in [
+            "/about",
+            "/privacy",
+            "/guides",
+            "/compare",
+            "/use-cases",
+            "/changelog",
+            "/tv-show-tracker",
+            "/game-tracker",
+            "/terms",
+            "/contact",
+            "/reviews",
+        ]:
             response = client.get(path)
             assert response.status_code == 200
             csp = response.headers["Content-Security-Policy"]
@@ -118,6 +146,11 @@ class TestSecurityMiddleware:
             "/": "Free Media Tracker",
             "/about": "Free Media Tracking App",
             "/guides": "Track Media, Reviews, Stats",
+            "/compare": "OmniTrackr vs Spreadsheets",
+            "/use-cases": "Media Tracking Use Cases",
+            "/changelog": "OmniTrackr Changelog",
+            "/tv-show-tracker": "TV Show Tracker",
+            "/game-tracker": "Game Tracker",
             "/reviews": "Public Media Reviews",
         }
 
@@ -127,6 +160,16 @@ class TestSecurityMiddleware:
             assert title_fragment in response.text
             assert '<meta name="description"' in response.text
             assert "og:description" in response.text
+
+    def test_privacy_policy_discloses_google_ads_data_use(self, client):
+        """Privacy policy should include required Google ads/cookie disclosures."""
+        response = client.get("/privacy")
+        assert response.status_code == 200
+        content = response.text
+        assert "Google Ads and Advertising Cookies" in content
+        assert "cookies, web beacons, IP addresses" in content
+        assert "https://policies.google.com/technologies/partner-sites" in content
+        assert "https://adssettings.google.com/" in content
 
     def test_nonce_injection_handles_uppercase_inline_tags(self):
         """Nonce injection should cover uppercase or mixed-case inline tags."""

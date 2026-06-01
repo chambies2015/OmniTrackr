@@ -49,6 +49,36 @@ async def get_sitemap(db: Session = Depends(get_db)):
     <priority>0.7</priority>
   </url>
   <url>
+    <loc>{base_url}/compare</loc>
+    <lastmod>{today}</lastmod>
+    <changefreq>monthly</changefreq>
+    <priority>0.75</priority>
+  </url>
+  <url>
+    <loc>{base_url}/use-cases</loc>
+    <lastmod>{today}</lastmod>
+    <changefreq>monthly</changefreq>
+    <priority>0.75</priority>
+  </url>
+  <url>
+    <loc>{base_url}/changelog</loc>
+    <lastmod>{today}</lastmod>
+    <changefreq>monthly</changefreq>
+    <priority>0.65</priority>
+  </url>
+  <url>
+    <loc>{base_url}/tv-show-tracker</loc>
+    <lastmod>{today}</lastmod>
+    <changefreq>monthly</changefreq>
+    <priority>0.75</priority>
+  </url>
+  <url>
+    <loc>{base_url}/game-tracker</loc>
+    <lastmod>{today}</lastmod>
+    <changefreq>monthly</changefreq>
+    <priority>0.75</priority>
+  </url>
+  <url>
     <loc>{base_url}/terms</loc>
     <lastmod>{today}</lastmod>
     <changefreq>monthly</changefreq>
@@ -177,6 +207,11 @@ Allow: /
 Allow: /reviews
 Allow: /about
 Allow: /guides
+Allow: /compare
+Allow: /use-cases
+Allow: /changelog
+Allow: /tv-show-tracker
+Allow: /game-tracker
 Disallow: /auth/
 Disallow: /api/
 Disallow: /account/
@@ -243,6 +278,11 @@ OmniTrackr is a free web application for tracking and organizing movies, TV show
 - Home: {base_url}/
 - About: {base_url}/about
 - Guides: {base_url}/guides
+- Compare media trackers: {base_url}/compare
+- Media tracking use cases: {base_url}/use-cases
+- Changelog: {base_url}/changelog
+- TV show tracker guide: {base_url}/tv-show-tracker
+- Game tracker guide: {base_url}/game-tracker
 - Terms: {base_url}/terms
 - Contact: {base_url}/contact
 - Privacy Policy: {base_url}/privacy
@@ -267,7 +307,7 @@ OmniTrackr is a free web application for tracking and organizing movies, TV show
 - Books: Reviews and ratings for books
 
 ## Public Content
-Public reviews are available at {base_url}/reviews and individual review pages at {base_url}/reviews/[id]?category=[category]
+Public reviews are available at {base_url}/reviews and individual review pages at {base_url}/reviews/[id]?category=[category]. OmniTrackr also publishes evergreen guidance at {base_url}/guides, {base_url}/compare, {base_url}/use-cases, {base_url}/tv-show-tracker, and {base_url}/game-tracker, plus product updates at {base_url}/changelog.
 
 ## Contact
 Email: omnitrackr@gmail.com

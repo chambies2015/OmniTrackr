@@ -257,6 +257,46 @@ async def guides_page():
     raise HTTPException(status_code=404, detail="Page not found")
 
 
+@app.get("/compare", tags=["public"])
+async def compare_page():
+    response = strict_template_response("compare.html")
+    if response:
+        return response
+    raise HTTPException(status_code=404, detail="Page not found")
+
+
+@app.get("/use-cases", tags=["public"])
+async def use_cases_page():
+    response = strict_template_response("use_cases.html")
+    if response:
+        return response
+    raise HTTPException(status_code=404, detail="Page not found")
+
+
+@app.get("/changelog", tags=["public"])
+async def changelog_page():
+    response = strict_template_response("changelog.html")
+    if response:
+        return response
+    raise HTTPException(status_code=404, detail="Page not found")
+
+
+@app.get("/tv-show-tracker", tags=["public"])
+async def tv_show_tracker_page():
+    response = strict_template_response("tv_show_tracker.html")
+    if response:
+        return response
+    raise HTTPException(status_code=404, detail="Page not found")
+
+
+@app.get("/game-tracker", tags=["public"])
+async def game_tracker_page():
+    response = strict_template_response("game_tracker.html")
+    if response:
+        return response
+    raise HTTPException(status_code=404, detail="Page not found")
+
+
 @app.get("/terms", tags=["public"])
 async def terms_page():
     response = strict_template_response("terms.html")
