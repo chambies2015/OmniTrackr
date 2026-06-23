@@ -8,9 +8,9 @@ psycopg2-binary==2.9.10
 
 # Authentication
 python-jose==3.4.0
-cryptography==46.0.7
+cryptography==48.0.1
 bcrypt==4.2.1
-python-multipart==0.0.27
+python-multipart==0.0.31
 
 # Environment variables
 python-dotenv==1.2.2
