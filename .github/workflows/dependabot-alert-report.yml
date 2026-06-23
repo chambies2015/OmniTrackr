@@ -1,0 +1,176 @@
+name: Dependabot Alert Report
+
+on:
+  workflow_dispatch:
+  schedule:
+    - cron: "45 14 * * *"
+
+permissions:
+  contents: read
+  issues: write
+  vulnerability-alerts: read
+
+jobs:
+  sync-alert-issue:
+    name: Sync alert issue
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Update Dependabot alert issue
+        env:
+          GH_TOKEN: ${{ github.token }}
+          GITHUB_REPOSITORY: ${{ github.repository }}
+        run: |
+          python - <<'PY'
+          import datetime as dt
+          import json
+          import os
+          import re
+          import sys
+          import urllib.error
+          import urllib.parse
+          import urllib.request
+
+          token = os.environ["GH_TOKEN"]
+          repo = os.environ["GITHUB_REPOSITORY"]
+          owner, name = repo.split("/", 1)
+          api = "https://api.github.com"
+          title = "Dependabot vulnerability alerts"
+          marker = "<!-- codex-dependabot-alert-report -->"
+
+          headers = {
+              "Accept": "application/vnd.github+json",
+              "Authorization": f"Bearer {token}",
+              "X-GitHub-Api-Version": "2022-11-28",
+              "User-Agent": "omnitrackr-dependabot-alert-report",
+          }
+
+          def request(method, path, body=None):
+              data = None
+              if body is not None:
+                  data = json.dumps(body).encode("utf-8")
+              req = urllib.request.Request(
+                  f"{api}{path}",
+                  data=data,
+                  method=method,
+                  headers=headers | ({"Content-Type": "application/json"} if body is not None else {}),
+              )
+              try:
+                  with urllib.request.urlopen(req) as res:
+                      payload = res.read().decode("utf-8")
+                      parsed = json.loads(payload) if payload else None
+                      return parsed, res.headers
+              except urllib.error.HTTPError as exc:
+                  detail = exc.read().decode("utf-8", errors="replace")
+                  print(f"{method} {path} failed: {exc.code} {detail}", file=sys.stderr)
+                  raise
+
+          def paged(path):
+              results = []
+              next_path = path
+              while next_path:
+                  page, response_headers = request("GET", next_path)
+                  results.extend(page)
+                  next_path = None
+                  link = response_headers.get("Link", "")
+                  for part in link.split(","):
+                      match = re.search(r'<https://api\.github\.com([^>]+)>;\s*rel="next"', part)
+                      if match:
+                          next_path = match.group(1)
+                          break
+              return results
+
+          alerts = paged(
+              f"/repos/{owner}/{name}/dependabot/alerts?"
+              + urllib.parse.urlencode({"state": "open", "per_page": 100})
+          )
+
+          checked_at = dt.datetime.now(dt.timezone.utc).replace(microsecond=0).isoformat()
+          rows = []
+          machine_alerts = []
+          for alert in alerts:
+              dependency = alert.get("dependency") or {}
+              advisory = alert.get("security_advisory") or {}
+              vulnerability = alert.get("security_vulnerability") or {}
+              package = dependency.get("package") or {}
+              first_patched = vulnerability.get("first_patched_version") or {}
+              vulnerable_requirements = dependency.get("manifest_path") or ""
+              patched_version = first_patched.get("identifier") or "No patched version listed"
+              package_name = package.get("name") or "unknown"
+              ecosystem = package.get("ecosystem") or "unknown"
+              manifest = dependency.get("manifest_path") or "unknown"
+              severity = advisory.get("severity") or vulnerability.get("severity") or "unknown"
+              url = alert.get("html_url") or ""
+              summary = advisory.get("summary") or ""
+              ghsa_id = advisory.get("ghsa_id") or ""
+              cves = ", ".join(cve.get("value", "") for cve in advisory.get("cves", []) if cve.get("value"))
+              advisory_id = cves or ghsa_id or f"alert {alert.get('number')}"
+              rows.append(
+                  "| {number} | {severity} | `{package}` | {ecosystem} | `{manifest}` | {patched} | {advisory} |".format(
+                      number=alert.get("number"),
+                      severity=severity,
+                      package=package_name,
+                      ecosystem=ecosystem,
+                      manifest=manifest,
+                      patched=patched_version,
+                      advisory=f"[{advisory_id}]({url})" if url else advisory_id,
+                  )
+              )
+              machine_alerts.append(
+                  {
+                      "number": alert.get("number"),
+                      "severity": severity,
+                      "package": package_name,
+                      "ecosystem": ecosystem,
+                      "manifest": manifest,
+                      "scope": dependency.get("scope"),
+                      "patched_version": patched_version,
+                      "vulnerable_requirements": vulnerable_requirements,
+                      "advisory": advisory_id,
+                      "summary": summary,
+                      "url": url,
+                  }
+              )
+
+          if alerts:
+              table = "\n".join(
+                  [
+                      "| Alert | Severity | Package | Ecosystem | Manifest | First patched version | Advisory |",
+                      "| --- | --- | --- | --- | --- | --- | --- |",
+                      *rows,
+                  ]
+              )
+              state = "open"
+          else:
+              table = "No open Dependabot alerts were returned by the GitHub API."
+              state = "closed"
+
+          body = f"""{marker}
+          Last checked: {checked_at}
+
+          Open Dependabot alerts: {len(alerts)}
+
+          {table}
+
+          ```json
+          {json.dumps(machine_alerts, indent=2)}
+          ```
+          """
+
+          issue = None
+          for candidate in paged(f"/repos/{owner}/{name}/issues?state=all&per_page=100"):
+              if candidate.get("pull_request"):
+                  continue
+              if candidate.get("title") == title and marker in (candidate.get("body") or ""):
+                  issue = candidate
+                  break
+
+          if issue:
+              request("PATCH", f"/repos/{owner}/{name}/issues/{issue['number']}", {"body": body, "state": state})
+              print(f"Updated issue #{issue['number']} with {len(alerts)} open alert(s).")
+          else:
+              created, _ = request("POST", f"/repos/{owner}/{name}/issues", {"title": title, "body": body})
+              if state == "closed":
+                  request("PATCH", f"/repos/{owner}/{name}/issues/{created['number']}", {"state": "closed"})
+              print(f"Created issue #{created['number']} with {len(alerts)} open alert(s).")
+          PY
