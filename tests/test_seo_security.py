@@ -1,10 +1,32 @@
 """
 Tests for SEO endpoints and security middleware.
 """
+from html.parser import HTMLParser
+from urllib.parse import urlparse
+
 import pytest
 from fastapi.testclient import TestClient
 
 from app.csp import add_nonce_to_inline_tags, extract_inline_styles
+
+
+class LinkHrefParser(HTMLParser):
+    def __init__(self):
+        super().__init__()
+        self.hrefs = set()
+
+    def handle_starttag(self, tag, attrs):
+        if tag != "a":
+            return
+        for name, value in attrs:
+            if name == "href" and value:
+                self.hrefs.add(value)
+
+
+def extract_hrefs(html):
+    parser = LinkHrefParser()
+    parser.feed(html)
+    return parser.hrefs
 
 
 class TestSEOEndpoints:
@@ -33,6 +55,26 @@ class TestSEOEndpoints:
         assert response.status_code == 200
         content = response.text
         assert "/reviews" in content
+
+    def test_sitemap_includes_public_value_pages(self, client):
+        """Test that sitemap includes public editorial pages for crawlers."""
+        response = client.get("/sitemap.xml")
+        assert response.status_code == 200
+        content = response.text
+        assert "/compare" in content
+        assert "/use-cases" in content
+        assert "/changelog" in content
+        assert "/tv-show-tracker" in content
+        assert "/game-tracker" in content
+        assert "/movie-tracker" in content
+        assert "/anime-tracker" in content
+        assert "/book-tracker" in content
+        assert "/music-tracker" in content
+        assert "/media-statistics" in content
+        assert "/export-import-guide" in content
+        assert "/demo" in content
+        assert "/media-tracking" in content
+        assert "/roadmap" in content
     
     def test_sitemap_includes_homepage(self, client):
         """Test that sitemap includes the homepage."""
@@ -50,6 +92,20 @@ class TestSEOEndpoints:
         content = response.text
         assert "User-agent: *" in content
         assert "Allow: /reviews" in content
+        assert "Allow: /compare" in content
+        assert "Allow: /use-cases" in content
+        assert "Allow: /changelog" in content
+        assert "Allow: /tv-show-tracker" in content
+        assert "Allow: /game-tracker" in content
+        assert "Allow: /movie-tracker" in content
+        assert "Allow: /anime-tracker" in content
+        assert "Allow: /book-tracker" in content
+        assert "Allow: /music-tracker" in content
+        assert "Allow: /media-statistics" in content
+        assert "Allow: /export-import-guide" in content
+        assert "Allow: /demo" in content
+        assert "Allow: /media-tracking" in content
+        assert "Allow: /roadmap" in content
         assert "Sitemap:" in content
     
     def test_head_sitemap(self, client):
@@ -86,7 +142,28 @@ class TestSecurityMiddleware:
 
     def test_public_content_pages_use_nonce_csp_without_unsafe_inline(self, client):
         """Public SEO/content pages should not need unsafe-inline in CSP."""
-        for path in ["/about", "/privacy", "/guides", "/terms", "/contact", "/reviews"]:
+        for path in [
+            "/about",
+            "/privacy",
+            "/guides",
+            "/compare",
+            "/use-cases",
+            "/changelog",
+            "/tv-show-tracker",
+            "/game-tracker",
+            "/movie-tracker",
+            "/anime-tracker",
+            "/book-tracker",
+            "/music-tracker",
+            "/media-statistics",
+            "/export-import-guide",
+            "/demo",
+            "/media-tracking",
+            "/roadmap",
+            "/terms",
+            "/contact",
+            "/reviews",
+        ]:
             response = client.get(path)
             assert response.status_code == 200
             csp = response.headers["Content-Security-Policy"]
@@ -118,6 +195,20 @@ class TestSecurityMiddleware:
             "/": "Free Media Tracker",
             "/about": "Free Media Tracking App",
             "/guides": "Track Media, Reviews, Stats",
+            "/compare": "OmniTrackr vs Spreadsheets",
+            "/use-cases": "Media Tracking Use Cases",
+            "/changelog": "OmniTrackr Changelog",
+            "/tv-show-tracker": "TV Show Tracker",
+            "/game-tracker": "Game Tracker",
+            "/movie-tracker": "Movie Tracker",
+            "/anime-tracker": "Anime Tracker",
+            "/book-tracker": "Book Tracker",
+            "/music-tracker": "Music Tracker",
+            "/media-statistics": "Media Statistics",
+            "/export-import-guide": "Export & Import Guide",
+            "/demo": "OmniTrackr Demo",
+            "/media-tracking": "Media Tracking Hub",
+            "/roadmap": "OmniTrackr Roadmap",
             "/reviews": "Public Media Reviews",
         }
 
@@ -127,6 +218,89 @@ class TestSecurityMiddleware:
             assert title_fragment in response.text
             assert '<meta name="description"' in response.text
             assert "og:description" in response.text
+
+    def test_media_tracking_hub_links_to_category_guides(self, client):
+        """The media hub should expose the deeper public guide pages."""
+        response = client.get("/media-tracking")
+
+        assert response.status_code == 200
+        hrefs = extract_hrefs(response.text)
+        for path in (
+            "/movie-tracker",
+            "/tv-show-tracker",
+            "/anime-tracker",
+            "/game-tracker",
+            "/music-tracker",
+            "/book-tracker",
+            "/media-statistics",
+            "/export-import-guide",
+        ):
+            assert path in hrefs
+
+    def test_compare_table_uses_scoped_responsive_wrapper(self, client):
+        """Compare table should not inherit sticky dashboard table behavior."""
+        response = client.get("/compare")
+
+        assert response.status_code == 200
+        content = response.text
+        assert "comparison-table-wrap" in content
+        assert "table-layout: fixed" in content
+        assert "position: static !important" in content
+        assert "transform: none" in content
+
+    def test_guides_page_header_has_visible_h1(self, client):
+        """Guides page should not hide the H1 with transparent gradient text."""
+        response = client.get("/guides")
+
+        assert response.status_code == 200
+        content = response.text
+        assert "<h1>How-To Guides</h1>" in content
+        assert ".privacy-header h1" in content
+        guides_h1_rule = content.split(".privacy-header h1", 1)[1].split("}", 1)[0]
+        assert "color: var(--primary)" in guides_h1_rule
+        assert "-webkit-text-fill-color: transparent" not in guides_h1_rule
+
+    def test_home_footer_uses_clean_emoji_link_set(self, client):
+        """Home footers should avoid old social links and use emoji labels."""
+        response = client.get("/")
+
+        assert response.status_code == 200
+        content = response.text
+        assert "🐙 GitHub" not in content
+        assert "LinkedIn" not in content
+        for label in (
+            "📧 omnitrackr@gmail.com",
+            "☕ Ko-fi",
+            "ℹ️ About",
+            "👀 Demo",
+            "🧭 Tracking Hub",
+            "📘 Guides",
+            "⚖️ Compare",
+            "💡 Use Cases",
+            "📺 TV Tracker",
+            "🎮 Game Tracker",
+            "📝 Changelog",
+            "🗺️ Roadmap",
+            "📜 Terms",
+            "✉️ Contact",
+            "🔒 Privacy Policy",
+        ):
+            assert label in content
+
+    def test_privacy_policy_discloses_google_ads_data_use(self, client):
+        """Privacy policy should include required Google ads/cookie disclosures."""
+        response = client.get("/privacy")
+        assert response.status_code == 200
+        content = response.text
+        assert "Google Ads and Advertising Cookies" in content
+        assert "cookies, web beacons, IP addresses" in content
+        hrefs = extract_hrefs(content)
+        href_parts = {
+            (parsed.scheme, parsed.netloc, parsed.path)
+            for parsed in (urlparse(href) for href in hrefs)
+        }
+        assert ("https", "policies.google.com", "/technologies/partner-sites") in href_parts
+        assert ("https", "adssettings.google.com", "/") in href_parts
 
     def test_nonce_injection_handles_uppercase_inline_tags(self):
         """Nonce injection should cover uppercase or mixed-case inline tags."""

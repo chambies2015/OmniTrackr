@@ -1,0 +1,101 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="description" content="Learn how OmniTrackr export and import help keep movie, show, anime, game, music, book, and custom tab data portable with JSON backups.">
+  <meta name="robots" content="index, follow, max-image-preview:large">
+  <meta name="author" content="OmniTrackr">
+  <title>Export & Import Guide - Back Up and Move Your Media Library</title>
+  <link rel="canonical" href="https://omnitrackr.xyz/export-import-guide">
+  <link rel="icon" type="image/x-icon" href="/omnitrackr_favicon.ico">
+  <meta property="og:type" content="article">
+  <meta property="og:url" content="https://omnitrackr.xyz/export-import-guide">
+  <meta property="og:title" content="Export & Import Guide - Back Up and Move Your Media Library">
+  <meta property="og:description" content="A practical guide to OmniTrackr JSON exports, imports, backups, portability, and smart duplicate handling.">
+  <meta property="og:image" content="https://omnitrackr.xyz/omnitrackr_vortex.png">
+  <meta property="og:image:alt" content="OmniTrackr export and import guide">
+  <meta property="og:site_name" content="OmniTrackr">
+  <meta name="twitter:card" content="summary">
+  <meta name="twitter:title" content="Export & Import Guide">
+  <meta name="twitter:description" content="Back up and move your media library with OmniTrackr JSON export and import.">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@700;800&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="/styles.css">
+  <style>
+    body { min-height: 100vh; padding: 20px; }
+    .content-wrapper { max-width: 1040px; margin: 0 auto; }
+    .content-container { background: var(--card-bg); border-radius: 16px; padding: 50px 40px; margin: 20px 0; box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3); border: 1px solid var(--border); color: var(--fg); line-height: 1.8; }
+    @media (max-width: 768px) { .content-container { padding: 30px 20px; margin: 10px 0; } }
+    .content-header { text-align: center; margin-bottom: 40px; padding-bottom: 20px; border-bottom: 2px solid var(--border); }
+    .content-header h1 { font-family: 'Poppins', sans-serif; font-size: 2.35rem; margin-bottom: 10px; color: var(--fg); }
+    .content-header p, .content-section p, .content-section li { color: var(--fg-secondary); }
+    .content-section { margin-bottom: 38px; }
+    .content-section h2 { font-family: 'Poppins', sans-serif; font-size: 1.75rem; margin-bottom: 15px; color: var(--primary); }
+    .content-section ul, .content-section ol { margin-left: 20px; margin-bottom: 15px; }
+    .content-section li { margin-bottom: 8px; }
+    .back-link { display: inline-block; margin-bottom: 30px; color: var(--primary); text-decoration: none; font-weight: 500; }
+  </style>
+  <script type="application/ld+json">
+  {
+    "@context": "https://schema.org",
+    "@type": "Article",
+    "headline": "Export and Import Guide for Portable Media Library Backups",
+    "description": "A guide to OmniTrackr JSON exports, imports, backups, portability and smart duplicate handling.",
+    "dateModified": "2026-06-23",
+    "author": { "@type": "Organization", "name": "OmniTrackr" },
+    "publisher": { "@type": "Organization", "name": "OmniTrackr", "url": "https://omnitrackr.xyz" },
+    "mainEntityOfPage": "https://omnitrackr.xyz/export-import-guide",
+    "inLanguage": "en-US"
+  }
+  </script>
+</head>
+
+<body>
+  <div class="content-wrapper">
+    <div class="content-container">
+      <a href="/media-tracking" class="back-link">Back to Media Tracking Hub</a>
+      <header class="content-header">
+        <h1>Export &amp; Import Guide</h1>
+        <p>Keep your movie, show, anime, game, music, book, and custom tab data portable with JSON backups.</p>
+      </header>
+
+      <section class="content-section" aria-labelledby="why-heading">
+        <h2 id="why-heading">Why Data Portability Matters</h2>
+        <p>A personal media library becomes more valuable over time. Ratings, reviews, recommendations, status choices, and cover art represent many small decisions. If that data is trapped in one account with no export path, the tracker becomes risky to rely on.</p>
+        <p>OmniTrackr includes JSON export and import so users can keep a copy of their own library. That fits the app's privacy model: the collection belongs to the user, and the app should make it practical to back up or move that data.</p>
+      </section>
+
+      <section class="content-section" aria-labelledby="export-heading">
+        <h2 id="export-heading">What an Export Includes</h2>
+        <p>Exports include metadata about the export itself and lists for movies, TV shows, anime, video games, music, books, and custom tabs. Entries preserve fields such as titles, creators, years, ratings, status values, reviews, public-review choices, poster or cover URLs, and category-specific metadata.</p>
+        <p>A regular export is useful before major account changes, after large import sessions, or any time a user wants an offline backup of their media history.</p>
+      </section>
+
+      <section class="content-section" aria-labelledby="import-heading">
+        <h2 id="import-heading">How Import Helps</h2>
+        <p>Import lets users restore or move data without retyping every entry. OmniTrackr handles built-in categories and custom tabs, and older files can still work when they lack newer categories. The import flow is designed to update matching records where possible rather than blindly creating duplicates.</p>
+      </section>
+
+      <section class="content-section" aria-labelledby="habits-heading">
+        <h2 id="habits-heading">A Good Backup Habit</h2>
+        <ol>
+          <li>Export after adding a large batch of media.</li>
+          <li>Export before testing a major import file.</li>
+          <li>Keep dated copies so you can return to an older state if needed.</li>
+          <li>Store backups somewhere separate from the browser or device you use every day.</li>
+          <li>Review imports before assuming every record matched exactly as expected.</li>
+        </ol>
+      </section>
+
+      <section class="content-section" aria-labelledby="related-heading">
+        <h2 id="related-heading">Related Pages</h2>
+        <p>For more context, visit the <a href="/media-tracking">media tracking hub</a>, read the <a href="/guides">how-to guides</a>, or review OmniTrackr's <a href="/privacy">privacy policy</a>.</p>
+      </section>
+    </div>
+  </div>
+</body>
+
+</html>

@@ -87,23 +87,17 @@ function openReviewModal(btn) {
   const title = fullEl ? fullEl.getAttribute('data-title') || '' : '';
   const subtitle = fullEl ? fullEl.getAttribute('data-subtitle') || '' : '';
   const reviewRaw = fullEl ? fullEl.getAttribute('data-review') || '' : '';
-  const decodeAttr = (s) => {
-    const d = document.createElement('div');
-    d.innerHTML = s;
-    return d.textContent || '';
-  };
   const review = document.createElement('div');
-  review.textContent = decodeAttr(reviewRaw);
+  review.textContent = reviewRaw;
   const modal = document.getElementById('reviewModal');
   const titleEl = document.getElementById('reviewModalTitle');
   const subtitleEl = document.getElementById('reviewModalSubtitle');
   const bodyEl = document.getElementById('reviewModalBody');
   if (modal && titleEl && subtitleEl && bodyEl) {
-    titleEl.textContent = decodeAttr(title);
-    subtitleEl.textContent = decodeAttr(subtitle);
+    titleEl.textContent = title;
+    subtitleEl.textContent = subtitle;
     subtitleEl.style.display = subtitle ? '' : 'none';
-    bodyEl.innerHTML = '';
-    bodyEl.appendChild(review);
+    bodyEl.replaceChildren(review);
     modal.style.display = 'flex';
     document.body.style.overflow = 'hidden';
   }
@@ -208,6 +202,7 @@ function handleDelegatedClick(event) {
     'close-music-search-modal': closeMusicSearchModal,
     'close-book-search-modal': closeBookSearchModal,
     'close-screenshot-modal': () => closeScreenshotModal(event),
+    'export-data-dashboard': exportData,
     'show-register-form': () => showRegisterForm(),
     'show-login-form': () => showLoginForm()
   };
@@ -3511,6 +3506,9 @@ async function importData(fileInput) {
 function loadStatistics() {
   document.getElementById('statsLoading').style.display = 'none';
   document.getElementById('statsContent').style.display = 'block';
+  if (!categoryStatsCache['library-insights']) {
+    toggleCategoryAccordion('library-insights');
+  }
 }
 
 const categoryStatsCache = {};
@@ -3521,6 +3519,7 @@ function categoryToId(category) {
     'tv-shows': 'tvShows',
     'anime': 'anime',
     'video-games': 'videoGames',
+    'library-insights': 'libraryInsights',
     'music': 'music',
     'books': 'books'
   };
@@ -3577,6 +3576,7 @@ async function loadCategoryStatistics(category) {
       'tv-shows': 'tv-shows',
       'anime': 'anime',
       'video-games': 'video-games',
+      'library-insights': 'insights',
       'music': 'music',
       'books': 'books'
     };
@@ -3602,6 +3602,11 @@ async function loadCategoryStatistics(category) {
 }
 
 function displayCategoryStatistics(stats, category) {
+  if (category === 'library-insights') {
+    displayLibraryInsights(stats);
+    return;
+  }
+
   const idPrefix = categoryToId(category);
   const dataContainer = document.getElementById(`${idPrefix}StatsData`);
   if (!dataContainer) {
@@ -3710,6 +3715,49 @@ function displayCategoryStatistics(stats, category) {
   if (category === 'video-games' && stats.genre_stats) {
     displayGenreStats(stats.genre_stats, idPrefix);
   }
+}
+
+function displayLibraryInsights(stats) {
+  const container = document.getElementById('libraryInsightsStatsData');
+  if (!container) return;
+
+  const topCategory = stats.top_category?.label || 'None yet';
+  const mostComplete = stats.most_complete_category?.label || 'None yet';
+  const publicReviewText = stats.public_reviews === 1 ? '1 public review' : `${stats.public_reviews} public reviews`;
+  const categoryRows = (stats.categories || []).map((category) => `
+    <div class="rated-item">
+      <div class="rated-item-title">${escapeHtml(category.label)}</div>
+      <div class="rated-item-rating">${category.completed}/${category.total} complete (${Number(category.completion_percentage).toFixed(1)}%)</div>
+    </div>
+  `).join('');
+
+  container.innerHTML = `
+    <div class="stats-subsection">
+      <h4>Library Snapshot</h4>
+      <div class="stats-grid">
+        <div class="stat-card"><div class="stat-number">${stats.total_items}</div><div class="stat-label">Total Items</div></div>
+        <div class="stat-card"><div class="stat-number">${stats.backlog_items}</div><div class="stat-label">Backlog Items</div></div>
+        <div class="stat-card"><div class="stat-number">${Number(stats.completion_percentage).toFixed(1)}%</div><div class="stat-label">Complete</div></div>
+        <div class="stat-card"><div class="stat-number">${Number(stats.rating_coverage_percentage).toFixed(1)}%</div><div class="stat-label">Rated</div></div>
+      </div>
+      <div class="progress-bar"><div class="progress-fill" data-fill-width="${stats.completion_percentage}"></div></div>
+    </div>
+    <div class="stats-subsection">
+      <h4>Quality Signals</h4>
+      <div class="stats-grid">
+        <div class="stat-card"><div class="stat-number">${stats.reviewed_items}</div><div class="stat-label">Written Reviews</div></div>
+        <div class="stat-card"><div class="stat-number">${stats.public_reviews}</div><div class="stat-label">Public Reviews</div></div>
+        <div class="stat-card"><div class="stat-number">${Number(stats.review_coverage_percentage).toFixed(1)}%</div><div class="stat-label">Review Coverage</div></div>
+        <div class="stat-card"><div class="stat-number">${stats.rated_items}</div><div class="stat-label">Rated Items</div></div>
+      </div>
+      <p class="content-muted">Your largest category is ${escapeHtml(topCategory)}. Your most complete category is ${escapeHtml(mostComplete)}. You currently have ${escapeHtml(publicReviewText)}.</p>
+    </div>
+    <div class="stats-subsection">
+      <h4>Category Progress</h4>
+      <div>${categoryRows || '<p class="content-muted">Add items to start building category insights.</p>'}</div>
+    </div>
+  `;
+  applyDataFillWidths(container);
 }
 
 function displayCategoryRatingDistribution(distribution, idPrefix) {
@@ -4308,10 +4356,39 @@ window.loadPrivacySettings = async function () {
       document.getElementById('tvShowsPrivate').checked = privacy.tv_shows_private;
       document.getElementById('animePrivate').checked = privacy.anime_private;
       document.getElementById('videoGamesPrivate').checked = privacy.video_games_private;
+      document.getElementById('musicPrivate').checked = privacy.music_private;
+      document.getElementById('booksPrivate').checked = privacy.books_private;
       document.getElementById('statisticsPrivate').checked = privacy.statistics_private;
+      updateDataPrivacyDashboard(privacy);
     }
   } catch (error) {
     console.error('Failed to load privacy settings:', error);
+  }
+}
+
+function updateDataPrivacyDashboard(privacy) {
+  const privateCountEl = document.getElementById('dataDashboardPrivateCount');
+  const publicReviewsEl = document.getElementById('dataDashboardPublicReviews');
+  if (!privateCountEl && !publicReviewsEl) return;
+
+  const privateCategories = [
+    ['Movies', privacy.movies_private],
+    ['TV Shows', privacy.tv_shows_private],
+    ['Anime', privacy.anime_private],
+    ['Video Games', privacy.video_games_private],
+    ['Music', privacy.music_private],
+    ['Books', privacy.books_private],
+    ['Statistics', privacy.statistics_private],
+  ].filter((entry) => entry[1]).map((entry) => entry[0]);
+
+  if (privateCountEl) {
+    privateCountEl.textContent = privateCategories.length
+      ? `${privateCategories.length} private (${privateCategories.join(', ')})`
+      : 'No major categories private';
+  }
+
+  if (publicReviewsEl) {
+    publicReviewsEl.textContent = 'Controlled per item before appearing on public review pages';
   }
 }
 
@@ -4322,6 +4399,8 @@ window.updatePrivacySettings = async function (event) {
   const tvShowsPrivate = document.getElementById('tvShowsPrivate').checked;
   const animePrivate = document.getElementById('animePrivate').checked;
   const videoGamesPrivate = document.getElementById('videoGamesPrivate').checked;
+  const musicPrivate = document.getElementById('musicPrivate').checked;
+  const booksPrivate = document.getElementById('booksPrivate').checked;
   const statisticsPrivate = document.getElementById('statisticsPrivate').checked;
 
   const errorDiv = document.getElementById('privacyError');
@@ -4343,11 +4422,15 @@ window.updatePrivacySettings = async function (event) {
         tv_shows_private: tvShowsPrivate,
         anime_private: animePrivate,
         video_games_private: videoGamesPrivate,
+        music_private: musicPrivate,
+        books_private: booksPrivate,
         statistics_private: statisticsPrivate
       })
     });
 
     if (response.ok) {
+      const privacy = await response.json();
+      updateDataPrivacyDashboard(privacy);
       successDiv.textContent = 'Privacy settings updated successfully';
       successDiv.style.display = 'block';
       setTimeout(() => {
@@ -4374,6 +4457,8 @@ window.loadTabVisibility = async function () {
       document.getElementById('tvShowsVisible').checked = tabVisibility.tv_shows_visible;
       document.getElementById('animeVisible').checked = tabVisibility.anime_visible;
       document.getElementById('videoGamesVisible').checked = tabVisibility.video_games_visible;
+      document.getElementById('musicVisible').checked = tabVisibility.music_visible;
+      document.getElementById('booksVisible').checked = tabVisibility.books_visible;
       // Update tab visibility in UI
       updateTabVisibilityUI(tabVisibility);
     }
@@ -4384,7 +4469,9 @@ window.loadTabVisibility = async function () {
       movies_visible: true,
       tv_shows_visible: true,
       anime_visible: true,
-      video_games_visible: true
+      video_games_visible: true,
+      music_visible: true,
+      books_visible: true
     });
   }
 }
@@ -4396,6 +4483,8 @@ window.updateTabVisibility = async function (event) {
   const tvShowsVisible = document.getElementById('tvShowsVisible').checked;
   const animeVisible = document.getElementById('animeVisible').checked;
   const videoGamesVisible = document.getElementById('videoGamesVisible').checked;
+  const musicVisible = document.getElementById('musicVisible').checked;
+  const booksVisible = document.getElementById('booksVisible').checked;
 
   const errorDiv = document.getElementById('tabVisibilityError');
   const successDiv = document.getElementById('tabVisibilitySuccess');
@@ -4415,7 +4504,9 @@ window.updateTabVisibility = async function (event) {
         movies_visible: moviesVisible,
         tv_shows_visible: tvShowsVisible,
         anime_visible: animeVisible,
-        video_games_visible: videoGamesVisible
+        video_games_visible: videoGamesVisible,
+        music_visible: musicVisible,
+        books_visible: booksVisible
       })
     });
 

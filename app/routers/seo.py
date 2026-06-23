@@ -49,6 +49,90 @@ async def get_sitemap(db: Session = Depends(get_db)):
     <priority>0.7</priority>
   </url>
   <url>
+    <loc>{base_url}/compare</loc>
+    <lastmod>{today}</lastmod>
+    <changefreq>monthly</changefreq>
+    <priority>0.75</priority>
+  </url>
+  <url>
+    <loc>{base_url}/use-cases</loc>
+    <lastmod>{today}</lastmod>
+    <changefreq>monthly</changefreq>
+    <priority>0.75</priority>
+  </url>
+  <url>
+    <loc>{base_url}/changelog</loc>
+    <lastmod>{today}</lastmod>
+    <changefreq>monthly</changefreq>
+    <priority>0.65</priority>
+  </url>
+  <url>
+    <loc>{base_url}/tv-show-tracker</loc>
+    <lastmod>{today}</lastmod>
+    <changefreq>monthly</changefreq>
+    <priority>0.75</priority>
+  </url>
+  <url>
+    <loc>{base_url}/game-tracker</loc>
+    <lastmod>{today}</lastmod>
+    <changefreq>monthly</changefreq>
+    <priority>0.75</priority>
+  </url>
+  <url>
+    <loc>{base_url}/movie-tracker</loc>
+    <lastmod>{today}</lastmod>
+    <changefreq>monthly</changefreq>
+    <priority>0.75</priority>
+  </url>
+  <url>
+    <loc>{base_url}/anime-tracker</loc>
+    <lastmod>{today}</lastmod>
+    <changefreq>monthly</changefreq>
+    <priority>0.75</priority>
+  </url>
+  <url>
+    <loc>{base_url}/book-tracker</loc>
+    <lastmod>{today}</lastmod>
+    <changefreq>monthly</changefreq>
+    <priority>0.75</priority>
+  </url>
+  <url>
+    <loc>{base_url}/music-tracker</loc>
+    <lastmod>{today}</lastmod>
+    <changefreq>monthly</changefreq>
+    <priority>0.75</priority>
+  </url>
+  <url>
+    <loc>{base_url}/media-statistics</loc>
+    <lastmod>{today}</lastmod>
+    <changefreq>monthly</changefreq>
+    <priority>0.75</priority>
+  </url>
+  <url>
+    <loc>{base_url}/export-import-guide</loc>
+    <lastmod>{today}</lastmod>
+    <changefreq>monthly</changefreq>
+    <priority>0.75</priority>
+  </url>
+  <url>
+    <loc>{base_url}/demo</loc>
+    <lastmod>{today}</lastmod>
+    <changefreq>monthly</changefreq>
+    <priority>0.8</priority>
+  </url>
+  <url>
+    <loc>{base_url}/media-tracking</loc>
+    <lastmod>{today}</lastmod>
+    <changefreq>monthly</changefreq>
+    <priority>0.8</priority>
+  </url>
+  <url>
+    <loc>{base_url}/roadmap</loc>
+    <lastmod>{today}</lastmod>
+    <changefreq>monthly</changefreq>
+    <priority>0.65</priority>
+  </url>
+  <url>
     <loc>{base_url}/terms</loc>
     <lastmod>{today}</lastmod>
     <changefreq>monthly</changefreq>
@@ -177,6 +261,20 @@ Allow: /
 Allow: /reviews
 Allow: /about
 Allow: /guides
+Allow: /compare
+Allow: /use-cases
+Allow: /changelog
+Allow: /tv-show-tracker
+Allow: /game-tracker
+Allow: /movie-tracker
+Allow: /anime-tracker
+Allow: /book-tracker
+Allow: /music-tracker
+Allow: /media-statistics
+Allow: /export-import-guide
+Allow: /demo
+Allow: /media-tracking
+Allow: /roadmap
 Disallow: /auth/
 Disallow: /api/
 Disallow: /account/
@@ -243,6 +341,20 @@ OmniTrackr is a free web application for tracking and organizing movies, TV show
 - Home: {base_url}/
 - About: {base_url}/about
 - Guides: {base_url}/guides
+- Compare media trackers: {base_url}/compare
+- Media tracking use cases: {base_url}/use-cases
+- Changelog: {base_url}/changelog
+- TV show tracker guide: {base_url}/tv-show-tracker
+- Game tracker guide: {base_url}/game-tracker
+- Movie tracker guide: {base_url}/movie-tracker
+- Anime tracker guide: {base_url}/anime-tracker
+- Book tracker guide: {base_url}/book-tracker
+- Music tracker guide: {base_url}/music-tracker
+- Media statistics guide: {base_url}/media-statistics
+- Export and import guide: {base_url}/export-import-guide
+- Demo library: {base_url}/demo
+- Media tracking hub: {base_url}/media-tracking
+- Roadmap: {base_url}/roadmap
 - Terms: {base_url}/terms
 - Contact: {base_url}/contact
 - Privacy Policy: {base_url}/privacy
@@ -267,7 +379,7 @@ OmniTrackr is a free web application for tracking and organizing movies, TV show
 - Books: Reviews and ratings for books
 
 ## Public Content
-Public reviews are available at {base_url}/reviews and individual review pages at {base_url}/reviews/[id]?category=[category]
+Public reviews are available at {base_url}/reviews and individual review pages at {base_url}/reviews/[id]?category=[category]. OmniTrackr also publishes evergreen guidance at {base_url}/guides, {base_url}/media-tracking, {base_url}/compare, {base_url}/use-cases, {base_url}/movie-tracker, {base_url}/tv-show-tracker, {base_url}/anime-tracker, {base_url}/game-tracker, {base_url}/music-tracker, {base_url}/book-tracker, {base_url}/media-statistics, and {base_url}/export-import-guide, a sample library at {base_url}/demo, plus product updates at {base_url}/changelog and {base_url}/roadmap.
 
 ## Contact
 Email: omnitrackr@gmail.com

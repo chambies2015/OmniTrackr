@@ -92,6 +92,41 @@
       align-items: center;
     }
 
+    .reviews-guide {
+      background: var(--card-bg);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      padding: 24px;
+      margin-bottom: 30px;
+      color: var(--fg-secondary);
+      line-height: 1.7;
+    }
+
+    .reviews-guide h2,
+    .reviews-guide h3 {
+      color: var(--fg);
+      margin-bottom: 10px;
+    }
+
+    .review-category-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(210px, 1fr));
+      gap: 14px;
+      margin-top: 18px;
+    }
+
+    .review-category-card {
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      padding: 16px;
+      background: rgba(255, 255, 255, 0.04);
+    }
+
+    .review-category-card h3 {
+      font-size: 1rem;
+      margin-bottom: 6px;
+    }
+
     .filter-section select,
     .filter-section button {
       padding: 10px 20px;
@@ -259,6 +294,17 @@
       <p>Discover thoughtful reviews and insights from the OmniTrackr community. Explore reviews for movies, TV shows, anime, video games, music, and books shared by our users.</p>
     </div>
 
+    <section class="reviews-guide" aria-labelledby="reviews-guide-heading">
+      <h2 id="reviews-guide-heading">What Makes These Reviews Useful?</h2>
+      <p>OmniTrackr public reviews are written by users who choose to share individual ratings and notes from their personal media libraries. The strongest reviews explain more than a score: they describe pacing, mood, replay value, characters, genre fit, comfort-watch potential, or why an item belongs in a backlog.</p>
+      <div class="review-category-grid">
+        <div class="review-category-card"><h3>Movies</h3><p>Look for notes about direction, performances, pacing, tone, and rewatch value.</p></div>
+        <div class="review-category-card"><h3>TV Shows</h3><p>Helpful TV reviews mention season consistency, episode count, arcs, and whether a show works weekly or as a binge.</p></div>
+        <div class="review-category-card"><h3>Games</h3><p>Game reviews often focus on mechanics, difficulty, performance, story, replay value, and backlog fit.</p></div>
+        <div class="review-category-card"><h3>Books, Music, and Anime</h3><p>These reviews help preserve slower-form impressions, album moods, reading context, and seasonal anime recommendations.</p></div>
+      </div>
+    </section>
+
     <div class="filter-section">
       <select id="categoryFilter">
         <option value="">All Categories</option>
@@ -276,6 +322,12 @@
       <div class="loading">Loading reviews...</div>
     </div>
     <div id="scrollSentinel" class="scroll-status"></div>
+
+    <section class="reviews-guide" aria-labelledby="review-tips-heading">
+      <h2 id="review-tips-heading">Review Writing Tips</h2>
+      <p>A useful public review does not have to be long, but it should be specific. Mention who the item is for, what stood out, what did not work, and whether you would recommend it. Reviews with clear context are easier for other people to trust and easier for OmniTrackr to showcase.</p>
+      <p>For broader tracking workflows, visit the <a href="/media-tracking">media tracking hub</a>, preview the <a href="/demo">demo library</a>, or read the <a href="/use-cases">use cases guide</a>.</p>
+    </section>
   </div>
 
   <script src="/static/reviews.js" defer></script>
