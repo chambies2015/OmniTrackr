@@ -297,6 +297,54 @@ async def game_tracker_page():
     raise HTTPException(status_code=404, detail="Page not found")
 
 
+@app.get("/movie-tracker", tags=["public"])
+async def movie_tracker_page():
+    response = strict_template_response("movie_tracker.html")
+    if response:
+        return response
+    raise HTTPException(status_code=404, detail="Page not found")
+
+
+@app.get("/anime-tracker", tags=["public"])
+async def anime_tracker_page():
+    response = strict_template_response("anime_tracker.html")
+    if response:
+        return response
+    raise HTTPException(status_code=404, detail="Page not found")
+
+
+@app.get("/book-tracker", tags=["public"])
+async def book_tracker_page():
+    response = strict_template_response("book_tracker.html")
+    if response:
+        return response
+    raise HTTPException(status_code=404, detail="Page not found")
+
+
+@app.get("/music-tracker", tags=["public"])
+async def music_tracker_page():
+    response = strict_template_response("music_tracker.html")
+    if response:
+        return response
+    raise HTTPException(status_code=404, detail="Page not found")
+
+
+@app.get("/media-statistics", tags=["public"])
+async def media_statistics_page():
+    response = strict_template_response("media_statistics.html")
+    if response:
+        return response
+    raise HTTPException(status_code=404, detail="Page not found")
+
+
+@app.get("/export-import-guide", tags=["public"])
+async def export_import_guide_page():
+    response = strict_template_response("export_import_guide.html")
+    if response:
+        return response
+    raise HTTPException(status_code=404, detail="Page not found")
+
+
 @app.get("/demo", tags=["public"])
 async def demo_page():
     response = strict_template_response("demo.html")

@@ -66,6 +66,12 @@ class TestSEOEndpoints:
         assert "/changelog" in content
         assert "/tv-show-tracker" in content
         assert "/game-tracker" in content
+        assert "/movie-tracker" in content
+        assert "/anime-tracker" in content
+        assert "/book-tracker" in content
+        assert "/music-tracker" in content
+        assert "/media-statistics" in content
+        assert "/export-import-guide" in content
         assert "/demo" in content
         assert "/media-tracking" in content
         assert "/roadmap" in content
@@ -91,6 +97,12 @@ class TestSEOEndpoints:
         assert "Allow: /changelog" in content
         assert "Allow: /tv-show-tracker" in content
         assert "Allow: /game-tracker" in content
+        assert "Allow: /movie-tracker" in content
+        assert "Allow: /anime-tracker" in content
+        assert "Allow: /book-tracker" in content
+        assert "Allow: /music-tracker" in content
+        assert "Allow: /media-statistics" in content
+        assert "Allow: /export-import-guide" in content
         assert "Allow: /demo" in content
         assert "Allow: /media-tracking" in content
         assert "Allow: /roadmap" in content
@@ -139,6 +151,12 @@ class TestSecurityMiddleware:
             "/changelog",
             "/tv-show-tracker",
             "/game-tracker",
+            "/movie-tracker",
+            "/anime-tracker",
+            "/book-tracker",
+            "/music-tracker",
+            "/media-statistics",
+            "/export-import-guide",
             "/demo",
             "/media-tracking",
             "/roadmap",
@@ -182,6 +200,12 @@ class TestSecurityMiddleware:
             "/changelog": "OmniTrackr Changelog",
             "/tv-show-tracker": "TV Show Tracker",
             "/game-tracker": "Game Tracker",
+            "/movie-tracker": "Movie Tracker",
+            "/anime-tracker": "Anime Tracker",
+            "/book-tracker": "Book Tracker",
+            "/music-tracker": "Music Tracker",
+            "/media-statistics": "Media Statistics",
+            "/export-import-guide": "Export & Import Guide",
             "/demo": "OmniTrackr Demo",
             "/media-tracking": "Media Tracking Hub",
             "/roadmap": "OmniTrackr Roadmap",
@@ -194,6 +218,24 @@ class TestSecurityMiddleware:
             assert title_fragment in response.text
             assert '<meta name="description"' in response.text
             assert "og:description" in response.text
+
+    def test_media_tracking_hub_links_to_category_guides(self, client):
+        """The media hub should expose the deeper public guide pages."""
+        response = client.get("/media-tracking")
+
+        assert response.status_code == 200
+        hrefs = extract_hrefs(response.text)
+        for path in (
+            "/movie-tracker",
+            "/tv-show-tracker",
+            "/anime-tracker",
+            "/game-tracker",
+            "/music-tracker",
+            "/book-tracker",
+            "/media-statistics",
+            "/export-import-guide",
+        ):
+            assert path in hrefs
 
     def test_compare_table_uses_scoped_responsive_wrapper(self, client):
         """Compare table should not inherit sticky dashboard table behavior."""
