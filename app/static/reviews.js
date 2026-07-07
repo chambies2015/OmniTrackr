@@ -2,6 +2,7 @@ let currentOffset = 0;
 let hasMore = true;
 let isLoading = false;
 const pageSize = 20;
+const PUBLIC_REVIEW_DETAIL_MIN_CHARS = 240;
 let infiniteObserver = null;
 
 function updateScrollStatus(message) {
@@ -41,7 +42,7 @@ async function loadReviews(reset = true) {
 
   const categoryFilter = document.getElementById('categoryFilter');
   const category = categoryFilter ? categoryFilter.value : '';
-  const url = `/api/public/reviews?category=${encodeURIComponent(category)}&limit=${pageSize}&offset=${currentOffset}`;
+  const url = `/api/public/reviews?category=${encodeURIComponent(category)}&limit=${pageSize}&offset=${currentOffset}&min_chars=80`;
 
   try {
     isLoading = true;
@@ -85,17 +86,23 @@ async function loadReviews(reset = true) {
 function createReviewCard(review) {
   const card = document.createElement('div');
   card.className = 'review-card';
-  card.tabIndex = 0;
-  card.setAttribute('role', 'link');
-  card.addEventListener('click', () => {
-    window.location.href = `/reviews/${encodeURIComponent(review.id)}?category=${encodeURIComponent(review.category)}`;
-  });
-  card.addEventListener('keydown', (event) => {
-    if (event.key === 'Enter' || event.key === ' ') {
-      event.preventDefault();
-      card.click();
-    }
-  });
+  const reviewUrl = `/reviews/${encodeURIComponent(review.id)}?category=${encodeURIComponent(review.category)}`;
+  const isStandalone = isStandaloneReview(review);
+  if (isStandalone) {
+    card.tabIndex = 0;
+    card.setAttribute('role', 'link');
+    card.addEventListener('click', () => {
+      window.location.href = reviewUrl;
+    });
+    card.addEventListener('keydown', (event) => {
+      if (event.key === 'Enter' || event.key === ' ') {
+        event.preventDefault();
+        card.click();
+      }
+    });
+  } else {
+    card.classList.add('review-card--summary');
+  }
 
   const posterUrl = review.poster_url || review.cover_art_url || '/static/default-avatar.svg';
   const categoryLabel = review.category === 'tv_show' ? 'TV Show' :
@@ -134,14 +141,17 @@ function createReviewCard(review) {
   return card;
 }
 
+function isStandaloneReview(review) {
+  return (review.review || '').trim().length >= PUBLIC_REVIEW_DETAIL_MIN_CHARS;
+}
+
 function updateItemListJsonLd(reviews) {
-  const itemListElement = reviews.map((review, index) => ({
-    "@type": "ListItem",
-    "position": currentOffset - reviews.length + index + 1,
-    "item": {
+  const itemListElement = reviews.map((review, index) => {
+    const isStandalone = isStandaloneReview(review);
+    const reviewUrl = `https://omnitrackr.xyz/reviews/${review.id}?category=${review.category}`;
+    const item = {
       "@type": "Review",
       "name": review.title,
-      "url": `https://omnitrackr.xyz/reviews/${review.id}?category=${review.category}`,
       "author": {
         "@type": "Person",
         "name": review.username
@@ -151,8 +161,18 @@ function updateItemListJsonLd(reviews) {
         "ratingValue": review.rating,
         "bestRating": 10
       } : undefined
+    };
+    const listItem = {
+      "@type": "ListItem",
+      "position": currentOffset - reviews.length + index + 1,
+      "item": item
+    };
+    if (isStandalone) {
+      listItem.url = reviewUrl;
+      item.url = reviewUrl;
     }
-  }));
+    return listItem;
+  });
 
   const collectionPage = document.querySelector('script[type="application/ld+json"]');
   if (collectionPage) {

@@ -4,19 +4,26 @@ Public review endpoints for the OmniTrackr API.
 import html
 import json
 import os
+import re
+from datetime import datetime
 from typing import List, Optional
-from fastapi import APIRouter, Depends, HTTPException, Query
+from fastapi import APIRouter, Depends, HTTPException, Query, Request
 from sqlalchemy.orm import Session
-from sqlalchemy import and_
+from sqlalchemy import and_, func
 
 from .. import models, schemas
+from ..auth import AUTH_COOKIE_NAME
 from ..csp import strict_html_response
 from ..dependencies import get_db
+from ..review_quality import is_public_review_safe
 
 router = APIRouter(tags=["reviews"])
 
 SITE_URL = os.getenv("SITE_URL", "https://omnitrackr.xyz").rstrip("/")
 PUBLIC_REVIEW_MIN_CHARS = int(os.getenv("PUBLIC_REVIEW_MIN_CHARS", "80"))
+PUBLIC_REVIEW_DETAIL_MIN_CHARS = int(os.getenv("PUBLIC_REVIEW_DETAIL_MIN_CHARS", "240"))
+ADSENSE_PUBLISHER_ID = os.getenv("ADSENSE_PUBLISHER_ID", "pub-7271682066779719")
+ADSENSE_ACCOUNT = ADSENSE_PUBLISHER_ID if ADSENSE_PUBLISHER_ID.startswith("ca-") else f"ca-{ADSENSE_PUBLISHER_ID}"
 
 CATEGORY_LABELS = {
     "movie": "Movie",
@@ -25,6 +32,45 @@ CATEGORY_LABELS = {
     "video_game": "Video Game",
     "music": "Music",
     "book": "Book",
+}
+
+CATEGORY_REVIEW_CONTEXT = {
+    "movie": {
+        "plural": "Movie",
+        "title": "Movie Reviews - OmniTrackr",
+        "description": "Read public OmniTrackr movie reviews with ratings, director and year context, pacing notes, rewatch value, and personal recommendations.",
+        "intro": "Browse public movie reviews from OmniTrackr users, including ratings, director details, release year context, pacing notes, rewatch value, and personal recommendations.",
+    },
+    "tv_show": {
+        "plural": "TV Show",
+        "title": "TV Show Reviews - OmniTrackr",
+        "description": "Read public OmniTrackr TV show reviews with ratings, season context, episode notes, binge value, pacing, and viewer recommendations.",
+        "intro": "Browse public TV show reviews from OmniTrackr users, including season context, episode notes, binge value, pacing, and viewer recommendations.",
+    },
+    "anime": {
+        "plural": "Anime",
+        "title": "Anime Reviews - OmniTrackr",
+        "description": "Read public OmniTrackr anime reviews with ratings, season context, episode notes, tone, pacing, and personal recommendations.",
+        "intro": "Browse public anime reviews from OmniTrackr users, including season context, episode notes, tone, pacing, and personal recommendations.",
+    },
+    "video_game": {
+        "plural": "Video Game",
+        "title": "Video Game Reviews - OmniTrackr",
+        "description": "Read public OmniTrackr video game reviews with ratings, genre context, backlog fit, mechanics, difficulty, replay value, and recommendations.",
+        "intro": "Browse public video game reviews from OmniTrackr users, including genre context, backlog fit, mechanics, difficulty, replay value, and recommendations.",
+    },
+    "music": {
+        "plural": "Music",
+        "title": "Music Reviews - OmniTrackr",
+        "description": "Read public OmniTrackr music reviews with ratings, artist and year context, album moods, relisten value, and listener recommendations.",
+        "intro": "Browse public music reviews from OmniTrackr users, including artist and year context, album moods, relisten value, and listener recommendations.",
+    },
+    "book": {
+        "plural": "Book",
+        "title": "Book Reviews - OmniTrackr",
+        "description": "Read public OmniTrackr book reviews with ratings, author and year context, reading pace, audience fit, reread value, and recommendations.",
+        "intro": "Browse public book reviews from OmniTrackr users, including author and year context, reading pace, audience fit, reread value, and recommendations.",
+    },
 }
 
 
@@ -36,8 +82,122 @@ def _safe_json_ld(data: dict) -> str:
     return json.dumps(data, ensure_ascii=False).replace("</", "<\\/")
 
 
+def _json_number(value):
+    if value is None:
+        return None
+    if isinstance(value, (int, float)):
+        return value
+    try:
+        converted = float(value)
+        return int(converted) if converted.is_integer() else converted
+    except (TypeError, ValueError, AttributeError):
+        return str(value)
+
+
+def _normalized_category(category: Optional[str]) -> Optional[str]:
+    return category if category in CATEGORY_REVIEW_CONTEXT else None
+
+
+def _not_found_reviews_category_html() -> str:
+    return """<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="robots" content="noindex, follow">
+  <title>Review Category Not Found - OmniTrackr</title>
+  <link rel="stylesheet" href="/styles.css">
+  <style>
+    body { min-height: 100vh; padding: 20px; }
+    .review-wrapper { max-width: 900px; margin: 0 auto; }
+    .review-container { background: var(--card-bg); border: 1px solid var(--border); border-radius: 16px; color: var(--fg); margin: 20px 0; padding: 40px; }
+    .back-link { color: var(--primary); display: inline-block; font-weight: 500; margin-bottom: 20px; text-decoration: none; }
+  </style>
+</head>
+<body class="dark-mode">
+  <main class="review-wrapper">
+    <a href="/reviews" class="back-link">Back to Reviews</a>
+    <section class="review-container">
+      <h1>Review category not found</h1>
+      <p>This review category is unavailable. Browse the public reviews directory to find movies, TV shows, anime, games, music, and books with substantial public review text.</p>
+    </section>
+  </main>
+</body>
+</html>"""
+
+
+def _apply_category_review_context(page: str, category: Optional[str]) -> str:
+    category = _normalized_category(category)
+    if not category:
+        return page
+
+    context = CATEGORY_REVIEW_CONTEXT[category]
+    category_url = f"{SITE_URL}/reviews?category={category}"
+    page = page.replace(
+        "<title>Public Media Reviews for Movies, Shows, Games, Music & Books - OmniTrackr</title>",
+        f"<title>{_escape(context['title'])}</title>",
+    )
+    page = page.replace(
+        '<meta name="description" content="Read public OmniTrackr reviews for movies, TV shows, anime, video games, music, and books. Discover ratings and recommendations from media fans.">',
+        f'<meta name="description" content="{_escape(context["description"])}">',
+    )
+    page = page.replace(
+        '<link rel="canonical" href="https://omnitrackr.xyz/reviews">',
+        f'<link rel="canonical" href="{_escape(category_url)}">',
+        1,
+    )
+    page = page.replace(
+        '<meta property="og:url" content="https://omnitrackr.xyz/reviews">',
+        f'<meta property="og:url" content="{_escape(category_url)}">',
+        1,
+    )
+    page = page.replace(
+        '<meta property="og:title" content="Public Media Reviews - OmniTrackr">',
+        f'<meta property="og:title" content="{_escape(context["title"])}">',
+    )
+    page = page.replace(
+        '<meta property="og:description" content="Read public reviews and ratings for movies, TV shows, anime, video games, music, and books from the OmniTrackr community.">',
+        f'<meta property="og:description" content="{_escape(context["description"])}">',
+    )
+    page = page.replace(
+        '<meta name="twitter:url" content="https://omnitrackr.xyz/reviews">',
+        f'<meta name="twitter:url" content="{_escape(category_url)}">',
+        1,
+    )
+    page = page.replace(
+        '<meta name="twitter:title" content="Public Media Reviews - OmniTrackr">',
+        f'<meta name="twitter:title" content="{_escape(context["title"])}">',
+    )
+    page = page.replace(
+        '<meta name="twitter:description" content="Read public reviews and ratings for movies, shows, anime, games, music, and books.">',
+        f'<meta name="twitter:description" content="{_escape(context["description"])}">',
+    )
+    page = page.replace(
+        '<h1>Public Reviews</h1>',
+        f"<h1>{_escape(context['plural'])} Reviews</h1>",
+        1,
+    )
+    page = page.replace(
+        "Discover thoughtful reviews and insights from the OmniTrackr community. Explore reviews for movies, TV shows, anime, video games, music, and books shared by our users.",
+        _escape(context["intro"]),
+        1,
+    )
+    page = page.replace(f'<option value="{category}">', f'<option value="{category}" selected>', 1)
+    return page
+
+
 def _review_is_substantial(review: dict) -> bool:
-    return len((review.get("review") or "").strip()) >= PUBLIC_REVIEW_MIN_CHARS
+    review_text = (review.get("review") or "").strip()
+    return len(review_text) >= PUBLIC_REVIEW_MIN_CHARS and is_public_review_safe(review_text)
+
+
+def _review_is_standalone(review: dict) -> bool:
+    review_text = (review.get("review") or "").strip()
+    return len(review_text) >= PUBLIC_REVIEW_DETAIL_MIN_CHARS and is_public_review_safe(review_text)
+
+
+def _review_detail_url(review: dict) -> str:
+    return f"/reviews/{review['id']}?category={review['category']}"
 
 
 def _review_image(review: dict) -> str:
@@ -55,33 +215,36 @@ def _absolute_url(path_or_url: str) -> str:
 def _review_meta(review: dict) -> str:
     category = review.get("category")
     if category == "movie":
-        return f"{review.get('director') or 'Unknown director'} · {review.get('year') or 'Unknown year'}"
+        return f"{review.get('director') or 'Unknown director'} - {review.get('year') or 'Unknown year'}"
     if category == "video_game":
         release_year = review.get("release_date", "")[:4] if review.get("release_date") else "Unknown year"
-        return f"{review.get('genres') or 'Various genres'} · {release_year}"
+        return f"{review.get('genres') or 'Various genres'} - {release_year}"
     if category == "music":
-        return f"{review.get('artist') or 'Unknown artist'} · {review.get('year') or 'Unknown year'}"
+        return f"{review.get('artist') or 'Unknown artist'} - {review.get('year') or 'Unknown year'}"
     if category == "book":
-        return f"{review.get('author') or 'Unknown author'} · {review.get('year') or 'Unknown year'}"
+        return f"{review.get('author') or 'Unknown author'} - {review.get('year') or 'Unknown year'}"
     if category in {"tv_show", "anime"}:
         details = [str(review.get("year") or "Unknown year")]
         if review.get("seasons"):
             details.append(f"{review['seasons']} season{'s' if review['seasons'] != 1 else ''}")
         if review.get("episodes"):
             details.append(f"{review['episodes']} episode{'s' if review['episodes'] != 1 else ''}")
-        return " · ".join(details)
+        return " - ".join(details)
     return ""
 
 
 def _review_card_html(review: dict) -> str:
-    review_url = f"/reviews/{review['id']}?category={review['category']}"
+    standalone = _review_is_standalone(review)
+    review_url = _review_detail_url(review)
     preview = (review.get("review") or "").strip()
     if len(preview) > 260:
         preview = f"{preview[:257].rstrip()}..."
     rating = review.get("rating")
     rating_html = f'<span class="review-rating">Rating: {_escape(rating)}/10</span>' if rating is not None else ""
+    tag_open = f'<a class="review-card" href="{_escape(review_url)}">' if standalone else '<article class="review-card review-card--summary">'
+    tag_close = "</a>" if standalone else "</article>"
     return f"""
-      <a class="review-card" href="{_escape(review_url)}">
+      {tag_open}
         <span class="review-category">{_escape(CATEGORY_LABELS.get(review["category"], review["category"]))}</span>
         <div class="review-card-header">
           <img src="{_escape(_review_image(review))}" alt="{_escape(review.get("title"))} poster" class="review-poster">
@@ -95,8 +258,143 @@ def _review_card_html(review: dict) -> str:
           <span>By {_escape(review.get("username"))}</span>
           {rating_html}
         </div>
-      </a>
+      {tag_close}
     """
+
+
+def _review_item_reviewed_json_ld(review: dict) -> dict:
+    category = review.get("category")
+    title = review.get("title")
+    if category == "movie":
+        item = {"@type": "Movie", "name": title}
+        if review.get("director"):
+            item["director"] = {"@type": "Person", "name": review["director"]}
+        if review.get("year"):
+            item["datePublished"] = str(review["year"])
+        return item
+    if category == "video_game":
+        item = {"@type": "VideoGame", "name": title}
+        if review.get("release_date"):
+            item["datePublished"] = review["release_date"]
+        if review.get("genres"):
+            item["genre"] = review["genres"]
+        return item
+    if category == "music":
+        item = {"@type": "MusicRecording", "name": title}
+        if review.get("artist"):
+            item["byArtist"] = {"@type": "MusicGroup", "name": review["artist"]}
+        if review.get("year"):
+            item["datePublished"] = str(review["year"])
+        return item
+    if category == "book":
+        item = {"@type": "Book", "name": title}
+        if review.get("author"):
+            item["author"] = {"@type": "Person", "name": review["author"]}
+        if review.get("year"):
+            item["datePublished"] = str(review["year"])
+        return item
+    item = {"@type": "TVSeries", "name": title}
+    if review.get("year"):
+        item["datePublished"] = str(review["year"])
+    if review.get("episodes"):
+        item["numberOfEpisodes"] = review["episodes"]
+    if review.get("seasons"):
+        item["numberOfSeasons"] = review["seasons"]
+    return item
+
+
+def _reviews_item_list_json_ld(reviews: list[dict], category: Optional[str] = None) -> dict:
+    normalized_category = _normalized_category(category)
+    context = CATEGORY_REVIEW_CONTEXT.get(normalized_category or "")
+    page_url = f"{SITE_URL}/reviews"
+    if normalized_category:
+        page_url = f"{page_url}?category={normalized_category}"
+    name = context["title"] if context else "Public Media Reviews - OmniTrackr"
+    description = context["description"] if context else "Public user reviews for movies, TV shows, anime, video games, music, and books."
+
+    item_list = []
+    for position, review in enumerate(reviews, start=1):
+        standalone = _review_is_standalone(review)
+        review_url = f"{SITE_URL}{_review_detail_url(review)}"
+        review_item = {
+            "@type": "ListItem",
+            "position": position,
+            "item": {
+                "@type": "Review",
+                "name": f"{review.get('title')} {CATEGORY_LABELS.get(review.get('category'), 'Media')} Review",
+                "author": {"@type": "Person", "name": review.get("username")},
+                "reviewBody": review.get("review"),
+                "itemReviewed": _review_item_reviewed_json_ld(review),
+            },
+        }
+        if standalone:
+            review_item["url"] = review_url
+            review_item["item"]["url"] = review_url
+        if review.get("rating") is not None:
+            review_item["item"]["reviewRating"] = {
+                "@type": "Rating",
+                "ratingValue": _json_number(review["rating"]),
+                "bestRating": 10,
+                "worstRating": 1,
+            }
+        item_list.append(review_item)
+
+    return {
+        "@context": "https://schema.org",
+        "@type": "CollectionPage",
+        "name": name,
+        "description": description,
+        "url": page_url,
+        "dateModified": datetime.utcnow().strftime("%Y-%m-%d"),
+        "inLanguage": "en-US",
+        "isPartOf": {"@type": "WebSite", "name": "OmniTrackr", "url": SITE_URL},
+        "mainEntity": {
+            "@type": "ItemList",
+            "numberOfItems": len(item_list),
+            "itemListElement": item_list,
+        },
+    }
+
+
+def _inject_reviews_item_list_json_ld(page: str, reviews: list[dict], category: Optional[str] = None) -> str:
+    json_ld = _safe_json_ld(_reviews_item_list_json_ld(reviews, category))
+    script = f'<script type="application/ld+json" id="server-review-item-list">{json_ld}</script>'
+    pattern = (
+        r'\s*<script type="application/ld\+json">\s*\{\s*"@context": "https://schema\.org",\s*'
+        r'"@type": "CollectionPage",\s*"name": "Public Reviews - OmniTrackr".*?'
+        r'"itemListElement": \[\]\s*\}\s*\}\s*</script>'
+    )
+    updated_page, count = re.subn(pattern, f"\n  {script}", page, count=1, flags=re.DOTALL)
+    if count:
+        return updated_page
+    return page.replace("</head>", f"  {script}\n</head>", 1)
+
+
+def _remove_ad_loader_for_authenticated_request(page: str, request: Request) -> str:
+    if request.cookies.get(AUTH_COOKIE_NAME):
+        return page.replace('  <script src="/static/ad-loader.js" defer></script>\n', "")
+    return page
+
+
+def _remove_public_ad_loader(page: str) -> str:
+    return page.replace('  <script src="/static/ad-loader.js" defer></script>\n', "")
+
+
+def _noindex_empty_review_category(page: str) -> str:
+    page = page.replace(
+        '<meta name="robots" content="index, follow, max-image-preview:large">',
+        '<meta name="robots" content="noindex, follow">',
+        1,
+    )
+    return _remove_public_ad_loader(page)
+
+
+def _inject_ad_loader_for_review_detail(page: str, request: Request) -> str:
+    if request.cookies.get(AUTH_COOKIE_NAME):
+        return page
+    if "/static/ad-loader.js" in page or "</head>" not in page:
+        return page
+    return page.replace("</head>", '  <script src="/static/ad-loader.js" defer></script>\n</head>', 1)
 
 
 def _not_found_review_html() -> str:
@@ -192,6 +490,7 @@ def _review_detail_html(review: dict) -> str:
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="google-adsense-account" content="{_escape(ADSENSE_ACCOUNT)}">
   <meta name="description" content="{_escape(description)}">
   <meta name="robots" content="index, follow, max-image-preview:large">
   <title>{_escape(title)}</title>
@@ -262,16 +561,27 @@ def _review_detail_html(review: dict) -> str:
 
 @router.get("/reviews")
 async def reviews_index(
+    request: Request,
     db: Session = Depends(get_db),
     category: Optional[str] = Query(None, description="Filter by category")
 ):
     """Serve the public reviews index page."""
+    if category is not None and not _normalized_category(category):
+        return strict_html_response(_not_found_reviews_category_html(), status_code=404)
+
     html_file = os.path.join(os.path.dirname(__file__), "..", "templates", "reviews.html")
     if os.path.exists(html_file):
         with open(html_file, "r", encoding="utf-8") as file:
             page = file.read()
+        substantial_reviews = []
         try:
-            reviews = await get_public_reviews(db=db, category=category, limit=100, offset=0)
+            reviews = await get_public_reviews(
+                db=db,
+                category=category,
+                limit=100,
+                offset=0,
+                min_chars=PUBLIC_REVIEW_MIN_CHARS,
+            )
             substantial_reviews = [review for review in reviews if _review_is_substantial(review)][:20]
             if substantial_reviews:
                 server_reviews_html = "\n".join(_review_card_html(review) for review in substantial_reviews)
@@ -282,18 +592,26 @@ async def reviews_index(
         <p>OmniTrackr publishes user reviews that include enough context to help other readers decide what to watch, play, hear, or read next. Check back as more detailed public reviews are shared.</p>
       </section>
                 """
-            page = page.replace(
-                '<div id="reviewsContainer" class="reviews-grid">\n      <div class="loading">Loading reviews...</div>\n    </div>',
-                f'<div id="reviewsContainer" class="reviews-grid">\n{server_reviews_html}\n    </div>'
+            page = re.sub(
+                r'<div id="reviewsContainer" class="reviews-grid">\s*<div class="loading">Loading reviews\.\.\.</div>\s*</div>',
+                f'<div id="reviewsContainer" class="reviews-grid">\n{server_reviews_html}\n    </div>',
+                page,
+                count=1,
             )
+            page = _inject_reviews_item_list_json_ld(page, substantial_reviews, category)
         except Exception:
             pass
+        page = _apply_category_review_context(page, category)
+        if _normalized_category(category) and not substantial_reviews:
+            page = _noindex_empty_review_category(page)
+        page = _remove_ad_loader_for_authenticated_request(page, request)
         return strict_html_response(page)
     raise HTTPException(status_code=404, detail="Reviews page not found")
 
 
 @router.get("/reviews/{review_id}")
 async def review_detail(
+    request: Request,
     review_id: int,
     category: Optional[str] = Query(None, description="Category: movie, tv_show, anime, video_game, music, or book"),
     db: Session = Depends(get_db)
@@ -302,9 +620,9 @@ async def review_detail(
     if category:
         try:
             review = await get_public_review(review_id=review_id, category=category, db=db)
-            if not _review_is_substantial(review):
+            if not _review_is_standalone(review):
                 return strict_html_response(_not_found_review_html(), status_code=404)
-            return strict_html_response(_review_detail_html(review))
+            return strict_html_response(_inject_ad_loader_for_review_detail(_review_detail_html(review), request))
         except HTTPException:
             return strict_html_response(_not_found_review_html(), status_code=404)
 
@@ -324,9 +642,10 @@ async def get_public_reviews(
     db: Session = Depends(get_db),
     category: Optional[str] = Query(None, description="Filter by category: movie, tv_show, anime, video_game, music, book"),
     limit: int = Query(20, ge=1, le=100, description="Maximum number of reviews to return"),
-    offset: int = Query(0, ge=0, description="Number of reviews to skip")
+    offset: int = Query(0, ge=0, description="Number of reviews to skip"),
+    min_chars: int = Query(PUBLIC_REVIEW_MIN_CHARS, ge=1, le=2000, description="Minimum trimmed review length")
 ):
-    """Get public reviews from all users. Only returns entries with non-empty review text and review_public=True."""
+    """Get public reviews from all users. Defaults to substantial review text for public discovery quality."""
     reviews = []
     user_ids = _active_user_ids_query(db)
 
@@ -335,6 +654,7 @@ async def get_public_reviews(
             model_cls.review.isnot(None),
             model_cls.review != "",
             model_cls.review_public == True,
+            func.length(func.trim(model_cls.review)) >= min_chars,
             model_cls.user_id.in_(user_ids)
         )
 
@@ -376,6 +696,9 @@ async def get_public_reviews(
                 "username": user.username,
                 "user_id": user.id,
             }
+
+            if not is_public_review_safe(review_data["review"]):
+                continue
 
             if cat == "movie":
                 review_data.update({
@@ -452,6 +775,8 @@ async def get_public_review(
         raise HTTPException(status_code=400, detail="Invalid category")
 
     if not item:
+        raise HTTPException(status_code=404, detail="Review not found")
+    if not is_public_review_safe(item.review):
         raise HTTPException(status_code=404, detail="Review not found")
 
     user = db.query(models.User).filter(models.User.id == item.user_id).first()

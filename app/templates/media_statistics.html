@@ -4,7 +4,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <meta name="description" content="Learn how OmniTrackr media statistics help analyze ratings, completion progress, review coverage, years, directors, genres, seasons, and library insights.">
+  <meta name="description" content="Learn how OmniTrackr media statistics help analyze ratings, completion progress, review coverage, backlogs, years, directors, genres, seasons, category habits, and library insights.">
   <meta name="robots" content="index, follow, max-image-preview:large">
   <meta name="author" content="OmniTrackr">
   <title>Media Statistics - Analyze Ratings, Backlogs, Reviews & Progress</title>
@@ -13,13 +13,13 @@
   <meta property="og:type" content="article">
   <meta property="og:url" content="https://omnitrackr.xyz/media-statistics">
   <meta property="og:title" content="Media Statistics - Analyze Ratings, Backlogs, Reviews & Progress">
-  <meta property="og:description" content="A guide to using OmniTrackr statistics for ratings, completion progress, review coverage, years, directors, genres, seasons, and library insights.">
+  <meta property="og:description" content="A guide to using OmniTrackr statistics for ratings, completion progress, review coverage, backlogs, category habits, years, directors, genres, seasons, and library insights.">
   <meta property="og:image" content="https://omnitrackr.xyz/omnitrackr_vortex.png">
   <meta property="og:image:alt" content="OmniTrackr media statistics guide">
   <meta property="og:site_name" content="OmniTrackr">
   <meta name="twitter:card" content="summary">
   <meta name="twitter:title" content="Media Statistics">
-  <meta name="twitter:description" content="Analyze ratings, backlogs, reviews, progress, years, directors, genres, seasons, and library insights with OmniTrackr.">
+  <meta name="twitter:description" content="Analyze ratings, backlogs, review coverage, progress, years, directors, genres, seasons, category habits, and library insights with OmniTrackr.">
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@700;800&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
@@ -43,8 +43,8 @@
     "@context": "https://schema.org",
     "@type": "Article",
     "headline": "Media Statistics for Ratings, Backlogs, Reviews and Progress",
-    "description": "A guide to using OmniTrackr statistics for ratings, completion progress, review coverage, years, directors, genres, seasons and library insights.",
-    "dateModified": "2026-06-23",
+    "description": "A guide to using OmniTrackr statistics for ratings, completion progress, review coverage, backlogs, category habits, years, directors, genres, seasons and library insights.",
+    "dateModified": "2026-07-05",
     "author": { "@type": "Organization", "name": "OmniTrackr" },
     "publisher": { "@type": "Organization", "name": "OmniTrackr", "url": "https://omnitrackr.xyz" },
     "mainEntityOfPage": "https://omnitrackr.xyz/media-statistics",
@@ -56,6 +56,24 @@
 <body>
   <div class="content-wrapper">
     <div class="content-container">
+      <nav class="public-site-nav" aria-label="Public site navigation">
+        <a class="public-site-nav__brand" href="/">OmniTrackr</a>
+        <div class="public-site-nav__links">
+          <a href="/demo">Demo</a>
+          <a href="/media-tracking">Tracking Hub</a>
+          <a href="/guides">Guides</a>
+          <a href="/site-map">Site Map</a>
+          <a href="/sample-library">Sample Library</a>
+          <a href="/compare">Compare</a>
+          <a href="/use-cases">Use Cases</a>
+          <a href="/reviews">Reviews</a>
+          <a href="/faq">FAQ</a>
+          <a href="/content-quality">Content Quality</a>
+          <a href="/advertising">Advertising</a>
+          <a href="/privacy">Privacy</a>
+          <a class="public-site-nav__cta" href="/#landing-auth">Start tracking</a>
+        </div>
+      </nav>
       <a href="/media-tracking" class="back-link">Back to Media Tracking Hub</a>
       <header class="content-header">
         <h1>Media Statistics</h1>
@@ -66,6 +84,7 @@
         <h2 id="why-heading">Why Statistics Matter in a Media Tracker</h2>
         <p>A tracker becomes more useful when it can answer questions memory cannot. What category do you finish most often? Which media type gets your highest ratings? Are you adding more to the backlog than you complete? Which years, directors, genres, or formats dominate your taste history?</p>
         <p>OmniTrackr statistics turn saved entries into patterns. Instead of only storing a list, the dashboard summarizes completion, rating coverage, review coverage, category size, top-rated items, year trends, and category-specific details.</p>
+        <p>Those patterns help the app feel alive after the first few entries. A media library can otherwise become a pile of titles. Statistics show whether you are actually finishing what you add, whether ratings are meaningful enough to compare, and where your reviews are strongest or thinnest.</p>
       </section>
 
       <section class="content-section" aria-labelledby="signals-heading">
@@ -84,6 +103,19 @@
       <section class="content-section" aria-labelledby="category-heading">
         <h2 id="category-heading">Category-Specific Insights</h2>
         <p>Movies can benefit from director analysis and decade breakdowns. TV shows and anime benefit from season and episode context. Video games benefit from genre analysis and played status. Music and books add slower-form media to the same statistics dashboard, so ratings and reviews are not split across unrelated tools.</p>
+        <ul>
+          <li><strong>Movies:</strong> spot favorite directors, year ranges, average ratings, watched status, and which films deserve a better review.</li>
+          <li><strong>TV and anime:</strong> compare seasons, episodes, completed series, stalled shows, and longer viewing commitments.</li>
+          <li><strong>Games:</strong> review genre patterns, played status, backlog weight, replay favorites, and whether highly rated games are actually finished.</li>
+          <li><strong>Music:</strong> keep albums and artists visible beside other categories so listening history does not disappear from your broader taste record.</li>
+          <li><strong>Books:</strong> track reading progress, authors, review coverage, and how slower-form media compares with films, shows, games, and music.</li>
+        </ul>
+      </section>
+
+      <section class="content-section" aria-labelledby="review-coverage-heading">
+        <h2 id="review-coverage-heading">Using Review Coverage</h2>
+        <p>Review coverage is one of the most useful statistics because it shows how much context you are preserving. A high rating is helpful, but a short note explaining why something worked is easier to trust later. If your top-rated items have no reviews, that is a good place to start writing.</p>
+        <p>Public review counts are separate from private notes. You can use private reviews as messy memory aids and publish only the reviews that are polished enough for other people. This makes the statistics dashboard useful without pressuring every note to become public content.</p>
       </section>
 
       <section class="content-section" aria-labelledby="action-heading">
@@ -95,11 +127,25 @@
           <li>Use year and genre patterns to choose something outside your usual habits.</li>
           <li>Export periodically so the data behind the statistics stays portable.</li>
         </ol>
+        <p>A practical monthly cleanup might be simple: check your biggest backlog category, mark anything you no longer care about, add reviews to your five highest-rated items without notes, and export a backup after the cleanup. That turns statistics into a maintenance habit instead of a dashboard you only glance at.</p>
+      </section>
+
+      <section class="content-section" aria-labelledby="interpret-heading">
+        <h2 id="interpret-heading">How to Interpret Statistics Without Overfitting</h2>
+        <p>Statistics are most helpful when they start a question rather than end it. A low average rating in one category might mean you are choosing poorly, but it might also mean you are more critical of that format. A high backlog count might mean excitement, or it might mean a category needs cleanup.</p>
+        <p>Use the numbers as prompts for better decisions. If a genre dominates your unfinished games, pause before buying another similar title. If your favorite movies have no reviews, write the context while you still remember it. If books have lower completion but higher ratings, that may reflect slower pacing rather than weaker interest.</p>
+        <p>Because OmniTrackr keeps each category in the same account, those comparisons can stay practical without pretending every media type works the same way.</p>
+      </section>
+
+      <section class="content-section" aria-labelledby="privacy-heading">
+        <h2 id="privacy-heading">Privacy and Sharing</h2>
+        <p>Statistics are part of your account experience. Users can keep categories and statistics private, share selected information with friends where privacy settings allow it, and choose which reviews are public. The goal is to make patterns useful without forcing the whole library into public view.</p>
+        <p>This distinction matters for new users: OmniTrackr can help you understand your entertainment habits while still letting you decide what remains private, what friends can see, and which reviews are polished enough to publish.</p>
       </section>
 
       <section class="content-section" aria-labelledby="related-heading">
         <h2 id="related-heading">Related Pages</h2>
-        <p>See the <a href="/demo">demo library</a>, learn about <a href="/export-import-guide">export and import</a>, or visit the <a href="/media-tracking">media tracking hub</a>.</p>
+        <p>See the <a href="/demo">demo library</a>, learn about <a href="/export-import-guide">export and import</a>, visit the <a href="/media-tracking">media tracking hub</a>, read the <a href="/review-guidelines">review guidelines</a>, or compare OmniTrackr with other tracking options on the <a href="/compare">comparison page</a>.</p>
       </section>
     </div>
   </div>

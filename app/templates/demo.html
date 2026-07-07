@@ -4,7 +4,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <meta name="description" content="Explore a sample OmniTrackr media library with movies, TV shows, anime, games, music, books, ratings, reviews, and statistics before signing up.">
+  <meta name="description" content="Explore a sample OmniTrackr media library with movies, TV shows, anime, games, music, books, ratings, reviews, statistics, privacy controls, and export workflows before signing up.">
   <meta name="robots" content="index, follow, max-image-preview:large">
   <meta name="author" content="OmniTrackr">
   <title>OmniTrackr Demo - Sample Media Library, Reviews & Stats</title>
@@ -13,13 +13,13 @@
   <meta property="og:type" content="website">
   <meta property="og:url" content="https://omnitrackr.xyz/demo">
   <meta property="og:title" content="OmniTrackr Demo - Sample Media Library, Reviews & Stats">
-  <meta property="og:description" content="Preview how OmniTrackr organizes movies, shows, anime, games, music, books, ratings, reviews, and statistics.">
+  <meta property="og:description" content="Preview how OmniTrackr organizes movies, shows, anime, games, music, books, ratings, reviews, privacy, export, and statistics.">
   <meta property="og:image" content="https://omnitrackr.xyz/omnitrackr_vortex.png">
   <meta property="og:image:alt" content="OmniTrackr demo media library">
   <meta property="og:site_name" content="OmniTrackr">
   <meta name="twitter:card" content="summary_large_image">
   <meta name="twitter:title" content="OmniTrackr Demo">
-  <meta name="twitter:description" content="Preview a sample OmniTrackr media library with ratings, reviews, and stats.">
+  <meta name="twitter:description" content="Preview a sample OmniTrackr media library with ratings, reviews, privacy, export, and stats.">
   <meta name="twitter:image" content="https://omnitrackr.xyz/omnitrackr_vortex.png">
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -32,9 +32,10 @@
     @media (max-width: 768px) { .public-container { padding: 30px 20px; margin: 10px 0; } }
     .public-header { text-align: center; margin-bottom: 40px; padding-bottom: 20px; border-bottom: 2px solid var(--border); }
     .public-header h1 { font-family: 'Poppins', sans-serif; font-size: 2.35rem; margin-bottom: 10px; color: var(--fg); }
-    .public-header p, .public-section p { color: var(--fg-secondary); }
+    .public-header p, .public-section p, .public-section li { color: var(--fg-secondary); }
     .public-section { margin-bottom: 38px; }
     .public-section h2 { font-family: 'Poppins', sans-serif; font-size: 1.65rem; margin-bottom: 15px; color: var(--primary); }
+    .public-section ul { margin-left: 20px; }
     .demo-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(230px, 1fr)); gap: 16px; margin: 20px 0; }
     .demo-card { border: 1px solid var(--border); border-radius: 10px; padding: 18px; background: rgba(255, 255, 255, 0.04); }
     .demo-card h3 { margin-bottom: 8px; color: var(--fg); font-size: 1.05rem; }
@@ -50,7 +51,7 @@
     "@context": "https://schema.org",
     "@type": "WebPage",
     "name": "OmniTrackr Demo",
-    "description": "A sample media library showing how OmniTrackr tracks movies, shows, anime, games, music, books, reviews, ratings, and statistics.",
+    "description": "A sample media library showing how OmniTrackr tracks movies, shows, anime, games, music, books, reviews, ratings, privacy controls, export workflows, and statistics.",
     "url": "https://omnitrackr.xyz/demo",
     "dateModified": "2026-06-01",
     "inLanguage": "en-US",
@@ -62,6 +63,24 @@
 <body>
   <div class="public-wrapper">
     <div class="public-container">
+      <nav class="public-site-nav" aria-label="Public site navigation">
+        <a class="public-site-nav__brand" href="/">OmniTrackr</a>
+        <div class="public-site-nav__links">
+          <a href="/demo">Demo</a>
+          <a href="/media-tracking">Tracking Hub</a>
+          <a href="/guides">Guides</a>
+          <a href="/site-map">Site Map</a>
+          <a href="/sample-library">Sample Library</a>
+          <a href="/compare">Compare</a>
+          <a href="/use-cases">Use Cases</a>
+          <a href="/reviews">Reviews</a>
+          <a href="/faq">FAQ</a>
+          <a href="/content-quality">Content Quality</a>
+          <a href="/advertising">Advertising</a>
+          <a href="/privacy">Privacy</a>
+          <a class="public-site-nav__cta" href="/#landing-auth">Start tracking</a>
+        </div>
+      </nav>
       <a href="/" class="back-link">Back to OmniTrackr</a>
       <header class="public-header">
         <h1>OmniTrackr Demo Library</h1>
@@ -70,6 +89,7 @@
 
       <section class="public-section" aria-labelledby="sample-library-heading">
         <h2 id="sample-library-heading">Sample Collection</h2>
+        <p>This fictional library shows the kind of mixed media history OmniTrackr is built for. A real account can contain a movie watched last night, a TV series in progress, a seasonal anime, a game backlog item, an album worth revisiting, and a book recommendation in the same place. The point is not to replace every specialist community; it is to keep your personal record consistent across categories.</p>
         <div class="demo-grid">
           <article class="demo-card"><span class="demo-pill">Movie</span><h3>Arrival</h3><p>Rating: 9.2/10 | Watched</p><p>A quiet science-fiction favorite with a review about pacing, emotion, and rewatch value.</p></article>
           <article class="demo-card"><span class="demo-pill">TV Show</span><h3>Severance</h3><p>Rating: 9.0/10 | In progress</p><p>Tracked by season with notes about tone, mystery structure, and friend recommendations.</p></article>
@@ -78,6 +98,7 @@
           <article class="demo-card"><span class="demo-pill">Music</span><h3>Kind of Blue</h3><p>Rating: 9.8/10 | Listened</p><p>Albums can sit beside movies and books so taste history is not split across apps.</p></article>
           <article class="demo-card"><span class="demo-pill">Book</span><h3>Project Hail Mary</h3><p>Rating: 8.7/10 | Read</p><p>Book notes preserve why a recommendation worked instead of only saving the title.</p></article>
         </div>
+        <p>Each sample card represents a normal entry: title, category, status, rating, metadata, and a note or review. Posters and cover art make scanning easier, while the written note preserves why the item mattered. That is especially helpful months later when a rating alone no longer explains your taste.</p>
       </section>
 
       <section class="public-section" aria-labelledby="demo-stats-heading">
@@ -89,12 +110,31 @@
           <div class="demo-stat"><strong>34</strong><span>Written reviews</span></div>
         </div>
         <p>Logged-in users get category breakdowns, rating distributions, top-rated items, genre analysis for games, season and episode analysis for shows, and exportable collection data.</p>
+        <p>The statistics are designed for personal reflection rather than public pressure. You can see whether most of your backlog is games, which categories you rate highest, how many items have reviews, and where your collection is thin. That makes OmniTrackr useful for annual wrap-ups, recommendation lists, backlog cleanup, and deciding what to watch, play, read, or hear next.</p>
+      </section>
+
+      <section class="public-section" aria-labelledby="workflow-heading">
+        <h2 id="workflow-heading">Example Tracking Workflow</h2>
+        <p>A typical OmniTrackr session is intentionally simple. Add the item, choose the right category, mark the current status, add a rating when you have one, and write a note only if it helps future-you. The same rhythm works across categories, so switching from a film to an album or book does not require learning a different app.</p>
+        <ul>
+          <li><strong>Before starting:</strong> save items as plan-to-watch, plan-to-play, plan-to-read, or similar backlog states.</li>
+          <li><strong>While in progress:</strong> track TV seasons, anime episodes, games being played, books being read, and music you are actively revisiting.</li>
+          <li><strong>After finishing:</strong> add a rating and a review that explains tone, pacing, difficulty, mood, replay value, reread value, or who might enjoy it.</li>
+          <li><strong>When sharing:</strong> keep private notes private and make only polished reviews public when they are useful to other visitors.</li>
+        </ul>
+      </section>
+
+      <section class="public-section" aria-labelledby="comparison-heading">
+        <h2 id="comparison-heading">What the Demo Helps You Decide</h2>
+        <p>The demo is useful if you are comparing OmniTrackr with spreadsheets, movie-only apps, book shelves, TV trackers, or game backlog tools. Spreadsheets are flexible but require maintenance. Single-category apps can be excellent, but they split your entertainment history into separate places. OmniTrackr is strongest when you want one private library with optional public reviews, friend visibility controls, stats, and exports.</p>
+        <p>If your tracking habits are simple, the sample collection shows that OmniTrackr can stay lightweight. If your library is larger, the sample statistics and cross-category layout show how the app scales without forcing everything into one generic list.</p>
       </section>
 
       <section class="public-section" aria-labelledby="privacy-heading">
         <h2 id="privacy-heading">What This Demo Shows</h2>
         <p>The demo is meant to answer a simple question: what does OmniTrackr actually do after signup? It shows the app's core value without requiring visitors or AdSense reviewers to create an account. Real accounts can keep categories private, choose which reviews are public, export data, and decide what friends can see.</p>
-        <p>For deeper details, read the <a href="/media-tracking">media tracking hub</a>, browse <a href="/reviews">public reviews</a>, or review the <a href="/privacy">Privacy Policy</a>.</p>
+        <p>The sample data on this page is fictional and does not expose real user libraries. Public reviews elsewhere on OmniTrackr appear only when users mark an individual review public. Account data, private notes, friend visibility settings, and export files remain controlled by the user.</p>
+        <p>For deeper details, read the <a href="/media-tracking">media tracking hub</a>, browse <a href="/reviews">public reviews</a>, check the <a href="/faq">FAQ</a>, compare tracking options on the <a href="/compare">comparison page</a>, or review the <a href="/privacy">Privacy Policy</a>.</p>
       </section>
     </div>
   </div>

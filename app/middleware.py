@@ -9,6 +9,31 @@ from starlette.responses import Response as StarletteResponse
 from .csp import build_csp
 
 
+NOINDEX_PATHS = {"/docs", "/redoc", "/openapi.json"}
+NOINDEX_PREFIXES = (
+    "/account/",
+    "/anime/",
+    "/api/",
+    "/auth/",
+    "/books/",
+    "/custom-tab-posters/",
+    "/custom-tabs/",
+    "/docs/",
+    "/export/",
+    "/friends",
+    "/import/",
+    "/movies/",
+    "/music/",
+    "/notifications/",
+    "/profile-pictures/",
+    "/static/profile_pictures/",
+    "/statistics/",
+    "/tv-shows/",
+    "/video-games/",
+)
+PUBLIC_WELL_KNOWN_PATHS = {"/.well-known/ai.txt"}
+
+
 class SecurityHeadersMiddleware(BaseHTTPMiddleware):
     """Add security headers to all responses."""
     async def dispatch(self, request: Request, call_next):
@@ -31,7 +56,10 @@ class SecurityHeadersMiddleware(BaseHTTPMiddleware):
             response.headers["Cache-Control"] = "no-store, no-cache, must-revalidate, max-age=0"
             response.headers["Pragma"] = "no-cache"
             response.headers["Expires"] = "0"
-        
+
+        if request.url.path in NOINDEX_PATHS or request.url.path.startswith(NOINDEX_PREFIXES):
+            response.headers["X-Robots-Tag"] = "noindex, nofollow"
+
         return response
 
 
@@ -146,6 +174,9 @@ class BotFilterMiddleware(BaseHTTPMiddleware):
         blocked = False
         reason = ""
         
+        if path in PUBLIC_WELL_KNOWN_PATHS:
+            return await call_next(request)
+
         if any(suspicious in path for suspicious in self.SUSPICIOUS_PATHS) or \
            any(suspicious in normalized_path for suspicious in self.SUSPICIOUS_PATHS):
             blocked = True

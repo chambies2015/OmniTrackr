@@ -11,9 +11,19 @@ from sqlalchemy import and_, func
 
 from .. import models
 from ..dependencies import get_db
+from ..review_quality import is_public_review_safe
 
 router = APIRouter(tags=["seo"])
 PUBLIC_REVIEW_MIN_CHARS = int(os.getenv("PUBLIC_REVIEW_MIN_CHARS", "80"))
+PUBLIC_REVIEW_DETAIL_MIN_CHARS = int(os.getenv("PUBLIC_REVIEW_DETAIL_MIN_CHARS", "240"))
+REVIEW_CATEGORY_MODELS = (
+    ("movie", models.Movie),
+    ("tv_show", models.TVShow),
+    ("anime", models.Anime),
+    ("video_game", models.VideoGame),
+    ("music", models.Music),
+    ("book", models.Book),
+)
 
 
 @router.get("/sitemap.xml")
@@ -37,7 +47,31 @@ async def get_sitemap(db: Session = Depends(get_db)):
     <priority>0.5</priority>
   </url>
   <url>
+    <loc>{base_url}/advertising</loc>
+    <lastmod>{today}</lastmod>
+    <changefreq>monthly</changefreq>
+    <priority>0.55</priority>
+  </url>
+  <url>
+    <loc>{base_url}/content-quality</loc>
+    <lastmod>{today}</lastmod>
+    <changefreq>monthly</changefreq>
+    <priority>0.6</priority>
+  </url>
+  <url>
+    <loc>{base_url}/site-map</loc>
+    <lastmod>{today}</lastmod>
+    <changefreq>monthly</changefreq>
+    <priority>0.65</priority>
+  </url>
+  <url>
     <loc>{base_url}/about</loc>
+    <lastmod>{today}</lastmod>
+    <changefreq>monthly</changefreq>
+    <priority>0.7</priority>
+  </url>
+  <url>
+    <loc>{base_url}/faq</loc>
     <lastmod>{today}</lastmod>
     <changefreq>monthly</changefreq>
     <priority>0.7</priority>
@@ -115,6 +149,30 @@ async def get_sitemap(db: Session = Depends(get_db)):
     <priority>0.75</priority>
   </url>
   <url>
+    <loc>{base_url}/media-tracker-checklist</loc>
+    <lastmod>{today}</lastmod>
+    <changefreq>monthly</changefreq>
+    <priority>0.75</priority>
+  </url>
+  <url>
+    <loc>{base_url}/tracking-templates</loc>
+    <lastmod>{today}</lastmod>
+    <changefreq>monthly</changefreq>
+    <priority>0.75</priority>
+  </url>
+  <url>
+    <loc>{base_url}/review-guidelines</loc>
+    <lastmod>{today}</lastmod>
+    <changefreq>monthly</changefreq>
+    <priority>0.75</priority>
+  </url>
+  <url>
+    <loc>{base_url}/sample-library</loc>
+    <lastmod>{today}</lastmod>
+    <changefreq>monthly</changefreq>
+    <priority>0.8</priority>
+  </url>
+  <url>
     <loc>{base_url}/demo</loc>
     <lastmod>{today}</lastmod>
     <changefreq>monthly</changefreq>
@@ -153,39 +211,64 @@ async def get_sitemap(db: Session = Depends(get_db)):
     
     try:
         user_query = db.query(models.User.id).filter(models.User.is_active == True)
-        public_review_filter = lambda model_cls: and_(
+        public_category_review_filter = lambda model_cls: and_(
             model_cls.review.isnot(None),
             model_cls.review != "",
             model_cls.review_public == True,
             func.length(func.trim(model_cls.review)) >= PUBLIC_REVIEW_MIN_CHARS,
             model_cls.user_id.in_(user_query)
         )
+        public_detail_review_filter = lambda model_cls: and_(
+            model_cls.review.isnot(None),
+            model_cls.review != "",
+            model_cls.review_public == True,
+            func.length(func.trim(model_cls.review)) >= PUBLIC_REVIEW_DETAIL_MIN_CHARS,
+            model_cls.user_id.in_(user_query)
+        )
+
+        for category, model_cls in REVIEW_CATEGORY_MODELS:
+            category_candidates = db.query(model_cls).filter(
+                public_category_review_filter(model_cls)
+            ).limit(200).all()
+            if any(is_public_review_safe(item.review) for item in category_candidates):
+                sitemap_parts.append(f"""  <url>
+    <loc>{base_url}/reviews?category={category}</loc>
+    <lastmod>{today}</lastmod>
+    <changefreq>daily</changefreq>
+    <priority>0.72</priority>
+  </url>""")
         
         review_limit = 600
         
         movie_reviews = db.query(models.Movie).filter(
-            public_review_filter(models.Movie)
+            public_detail_review_filter(models.Movie)
         ).limit(review_limit // 6).all()
+        movie_reviews = [review for review in movie_reviews if is_public_review_safe(review.review)]
         
         tv_reviews = db.query(models.TVShow).filter(
-            public_review_filter(models.TVShow)
+            public_detail_review_filter(models.TVShow)
         ).limit(review_limit // 6).all()
+        tv_reviews = [review for review in tv_reviews if is_public_review_safe(review.review)]
         
         anime_reviews = db.query(models.Anime).filter(
-            public_review_filter(models.Anime)
+            public_detail_review_filter(models.Anime)
         ).limit(review_limit // 6).all()
+        anime_reviews = [review for review in anime_reviews if is_public_review_safe(review.review)]
         
         vg_reviews = db.query(models.VideoGame).filter(
-            public_review_filter(models.VideoGame)
+            public_detail_review_filter(models.VideoGame)
         ).limit(review_limit // 6).all()
+        vg_reviews = [review for review in vg_reviews if is_public_review_safe(review.review)]
 
         music_reviews = db.query(models.Music).filter(
-            public_review_filter(models.Music)
+            public_detail_review_filter(models.Music)
         ).limit(review_limit // 6).all()
+        music_reviews = [review for review in music_reviews if is_public_review_safe(review.review)]
 
         book_reviews = db.query(models.Book).filter(
-            public_review_filter(models.Book)
+            public_detail_review_filter(models.Book)
         ).limit(review_limit // 6).all()
+        book_reviews = [review for review in book_reviews if is_public_review_safe(review.review)]
         
         for review in movie_reviews:
             sitemap_parts.append(f"""  <url>
@@ -258,8 +341,14 @@ Allow: /
 
 User-agent: *
 Allow: /
+Allow: /ads.txt
+Allow: /sellers.json
 Allow: /reviews
 Allow: /about
+Allow: /faq
+Allow: /advertising
+Allow: /content-quality
+Allow: /site-map
 Allow: /guides
 Allow: /compare
 Allow: /use-cases
@@ -272,13 +361,35 @@ Allow: /book-tracker
 Allow: /music-tracker
 Allow: /media-statistics
 Allow: /export-import-guide
+Allow: /media-tracker-checklist
+Allow: /tracking-templates
+Allow: /review-guidelines
+Allow: /sample-library
 Allow: /demo
 Allow: /media-tracking
 Allow: /roadmap
 Disallow: /auth/
 Disallow: /api/
 Disallow: /account/
+Disallow: /friends
+Disallow: /movies/
+Disallow: /tv-shows/
+Disallow: /anime/
+Disallow: /video-games/
+Disallow: /music/
+Disallow: /books/
+Disallow: /statistics/
+Disallow: /custom-tabs/
+Disallow: /export/
+Disallow: /import/
 Disallow: /notifications/
+Disallow: /profile-pictures/
+Disallow: /custom-tab-posters/
+Disallow: /static/profile_pictures/
+Disallow: /docs
+Disallow: /redoc
+Disallow: /openapi.json
+Disallow: /credentials.js
 Disallow: /static/credentials.js
 
 Sitemap: {site_url}/sitemap.xml
@@ -322,7 +433,8 @@ async def get_sellers_json():
     
     return Response(
         content=json.dumps(sellers_data, indent=2),
-        media_type="application/json"
+        media_type="application/json",
+        headers={"X-Robots-Tag": "noindex"},
     )
 
 
@@ -340,6 +452,7 @@ OmniTrackr is a free web application for tracking and organizing movies, TV show
 ## Key Pages
 - Home: {base_url}/
 - About: {base_url}/about
+- FAQ: {base_url}/faq
 - Guides: {base_url}/guides
 - Compare media trackers: {base_url}/compare
 - Media tracking use cases: {base_url}/use-cases
@@ -352,12 +465,19 @@ OmniTrackr is a free web application for tracking and organizing movies, TV show
 - Music tracker guide: {base_url}/music-tracker
 - Media statistics guide: {base_url}/media-statistics
 - Export and import guide: {base_url}/export-import-guide
+- Media tracker setup checklist: {base_url}/media-tracker-checklist
+- Media tracking templates: {base_url}/tracking-templates
+- Media review guidelines: {base_url}/review-guidelines
+- Sample library: {base_url}/sample-library
 - Demo library: {base_url}/demo
 - Media tracking hub: {base_url}/media-tracking
 - Roadmap: {base_url}/roadmap
 - Terms: {base_url}/terms
 - Contact: {base_url}/contact
 - Privacy Policy: {base_url}/privacy
+- Advertising Policy: {base_url}/advertising
+- Content Quality Policy: {base_url}/content-quality
+- HTML Site Map: {base_url}/site-map
 - Public Reviews: {base_url}/reviews
 
 ## Features
@@ -379,12 +499,23 @@ OmniTrackr is a free web application for tracking and organizing movies, TV show
 - Books: Reviews and ratings for books
 
 ## Public Content
-Public reviews are available at {base_url}/reviews and individual review pages at {base_url}/reviews/[id]?category=[category]. OmniTrackr also publishes evergreen guidance at {base_url}/guides, {base_url}/media-tracking, {base_url}/compare, {base_url}/use-cases, {base_url}/movie-tracker, {base_url}/tv-show-tracker, {base_url}/anime-tracker, {base_url}/game-tracker, {base_url}/music-tracker, {base_url}/book-tracker, {base_url}/media-statistics, and {base_url}/export-import-guide, a sample library at {base_url}/demo, plus product updates at {base_url}/changelog and {base_url}/roadmap.
+Public reviews are available at {base_url}/reviews and individual review pages at {base_url}/reviews/[id]?category=[category]. OmniTrackr also publishes evergreen guidance at {base_url}/faq, {base_url}/guides, {base_url}/media-tracking, {base_url}/compare, {base_url}/use-cases, {base_url}/movie-tracker, {base_url}/tv-show-tracker, {base_url}/anime-tracker, {base_url}/game-tracker, {base_url}/music-tracker, {base_url}/book-tracker, {base_url}/media-statistics, {base_url}/export-import-guide, {base_url}/media-tracker-checklist, {base_url}/tracking-templates, and {base_url}/review-guidelines, a demo library at {base_url}/demo, a sample media library at {base_url}/sample-library, a human-readable site map at {base_url}/site-map, product updates at {base_url}/changelog and {base_url}/roadmap, ad transparency at {base_url}/advertising, and content quality standards at {base_url}/content-quality.
+
+## Quality and Advertising Boundaries
+- Public ad-eligible pages are intended to be original, useful, and readable before signup.
+- The private authenticated app shell, account settings, editing forms, import/export controls, password flows, and private user libraries are not ad placement surfaces.
+- Public review directory pages default to substantial opt-in reviews; standalone review detail pages require longer review text before they are indexed, added to the sitemap, or treated as ad-eligible.
+- Empty API documentation, private account routes, generated docs, and utility endpoints are kept out of public search inventory.
+- Advertising, content quality, privacy, and site-map pages explain how OmniTrackr separates public informational content from private account data.
 
 ## Contact
 Email: omnitrackr@gmail.com
 Website: {base_url}
 """
     
-    return Response(content=llms_content, media_type="text/plain")
+    return Response(
+        content=llms_content,
+        media_type="text/plain",
+        headers={"X-Robots-Tag": "noindex"},
+    )
 

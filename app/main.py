@@ -18,6 +18,7 @@ from sqlalchemy.orm import Session
 from . import crud, schemas, models
 from .database import Base, SessionLocal, engine
 from .csp import nonce_html_response, strict_html_response
+from .auth import AUTH_COOKIE_NAME
 from .migrations import run_migrations
 from .middleware import SecurityHeadersMiddleware, BotFilterMiddleware
 from .dependencies import get_db
@@ -80,12 +81,58 @@ app.add_middleware(SlowAPIMiddleware)
 
 ENVIRONMENT = os.getenv("ENVIRONMENT", "development").lower()
 
+AD_ELIGIBLE_TEMPLATES = {
+    "about.html",
+    "faq.html",
+    "guides.html",
+    "compare.html",
+    "use_cases.html",
+    "changelog.html",
+    "tv_show_tracker.html",
+    "game_tracker.html",
+    "movie_tracker.html",
+    "anime_tracker.html",
+    "book_tracker.html",
+    "music_tracker.html",
+    "media_statistics.html",
+    "export_import_guide.html",
+    "media_tracker_checklist.html",
+    "tracking_templates.html",
+    "review_guidelines.html",
+    "sample_library.html",
+    "demo.html",
+    "media_tracking.html",
+    "roadmap.html",
+    "reviews.html",
+}
 
-def strict_template_response(template_name: str):
+
+def inject_adsense_account_meta(html: str) -> str:
+    publisher_id = os.getenv("ADSENSE_PUBLISHER_ID", "pub-7271682066779719")
+    account = publisher_id if publisher_id.startswith("ca-") else f"ca-{publisher_id}"
+    if "google-adsense-account" in html or "</head>" not in html:
+        return html
+    meta = f'  <meta name="google-adsense-account" content="{account}">\n'
+    return html.replace("</head>", f"{meta}</head>", 1)
+
+
+def inject_public_ad_loader(html: str, template_name: str, request: Request | None = None) -> str:
+    if template_name not in AD_ELIGIBLE_TEMPLATES:
+        return html
+    if request and request.cookies.get(AUTH_COOKIE_NAME):
+        return html
+    if "/static/ad-loader.js" in html or "</head>" not in html:
+        return html
+    loader = '  <script src="/static/ad-loader.js" defer></script>\n'
+    return html.replace("</head>", f"{loader}</head>", 1)
+
+
+def strict_template_response(template_name: str, request: Request | None = None):
     html_file = os.path.join(os.path.dirname(__file__), "templates", template_name)
     if os.path.exists(html_file):
         with open(html_file, "r", encoding="utf-8") as file:
-            return strict_html_response(file.read())
+            html = inject_adsense_account_meta(file.read())
+            return strict_html_response(inject_public_ad_loader(html, template_name, request))
     return None
 allowed_origins_str = os.getenv("ALLOWED_ORIGINS", "")
 if allowed_origins_str:
@@ -233,153 +280,217 @@ async def read_root():
 
 # Privacy Policy endpoint
 @app.get("/privacy", tags=["public"])
-async def privacy_policy():
+async def privacy_policy(request: Request):
     """Serve the privacy policy page."""
-    response = strict_template_response("privacy.html")
+    response = strict_template_response("privacy.html", request)
     if response:
         return response
     raise HTTPException(status_code=404, detail="Privacy policy not found")
 
 
+@app.get("/advertising", tags=["public"])
+async def advertising_page(request: Request):
+    response = strict_template_response("advertising.html", request)
+    if response:
+        return response
+    raise HTTPException(status_code=404, detail="Page not found")
+
+
+@app.get("/content-quality", tags=["public"])
+async def content_quality_page(request: Request):
+    response = strict_template_response("content_quality.html", request)
+    if response:
+        return response
+    raise HTTPException(status_code=404, detail="Page not found")
+
+
+@app.get("/site-map", tags=["public"])
+async def site_map_page(request: Request):
+    response = strict_template_response("site_map.html", request)
+    if response:
+        return response
+    raise HTTPException(status_code=404, detail="Page not found")
+
+
 @app.get("/about", tags=["public"])
-async def about_page():
-    response = strict_template_response("about.html")
+async def about_page(request: Request):
+    response = strict_template_response("about.html", request)
+    if response:
+        return response
+    raise HTTPException(status_code=404, detail="Page not found")
+
+
+@app.get("/faq", tags=["public"])
+async def faq_page(request: Request):
+    response = strict_template_response("faq.html", request)
     if response:
         return response
     raise HTTPException(status_code=404, detail="Page not found")
 
 
 @app.get("/guides", tags=["public"])
-async def guides_page():
-    response = strict_template_response("guides.html")
+async def guides_page(request: Request):
+    response = strict_template_response("guides.html", request)
     if response:
         return response
     raise HTTPException(status_code=404, detail="Page not found")
 
 
 @app.get("/compare", tags=["public"])
-async def compare_page():
-    response = strict_template_response("compare.html")
+async def compare_page(request: Request):
+    response = strict_template_response("compare.html", request)
     if response:
         return response
     raise HTTPException(status_code=404, detail="Page not found")
 
 
 @app.get("/use-cases", tags=["public"])
-async def use_cases_page():
-    response = strict_template_response("use_cases.html")
+async def use_cases_page(request: Request):
+    response = strict_template_response("use_cases.html", request)
     if response:
         return response
     raise HTTPException(status_code=404, detail="Page not found")
 
 
 @app.get("/changelog", tags=["public"])
-async def changelog_page():
-    response = strict_template_response("changelog.html")
+async def changelog_page(request: Request):
+    response = strict_template_response("changelog.html", request)
     if response:
         return response
     raise HTTPException(status_code=404, detail="Page not found")
 
 
 @app.get("/tv-show-tracker", tags=["public"])
-async def tv_show_tracker_page():
-    response = strict_template_response("tv_show_tracker.html")
+async def tv_show_tracker_page(request: Request):
+    response = strict_template_response("tv_show_tracker.html", request)
     if response:
         return response
     raise HTTPException(status_code=404, detail="Page not found")
 
 
 @app.get("/game-tracker", tags=["public"])
-async def game_tracker_page():
-    response = strict_template_response("game_tracker.html")
+async def game_tracker_page(request: Request):
+    response = strict_template_response("game_tracker.html", request)
     if response:
         return response
     raise HTTPException(status_code=404, detail="Page not found")
 
 
 @app.get("/movie-tracker", tags=["public"])
-async def movie_tracker_page():
-    response = strict_template_response("movie_tracker.html")
+async def movie_tracker_page(request: Request):
+    response = strict_template_response("movie_tracker.html", request)
     if response:
         return response
     raise HTTPException(status_code=404, detail="Page not found")
 
 
 @app.get("/anime-tracker", tags=["public"])
-async def anime_tracker_page():
-    response = strict_template_response("anime_tracker.html")
+async def anime_tracker_page(request: Request):
+    response = strict_template_response("anime_tracker.html", request)
     if response:
         return response
     raise HTTPException(status_code=404, detail="Page not found")
 
 
 @app.get("/book-tracker", tags=["public"])
-async def book_tracker_page():
-    response = strict_template_response("book_tracker.html")
+async def book_tracker_page(request: Request):
+    response = strict_template_response("book_tracker.html", request)
     if response:
         return response
     raise HTTPException(status_code=404, detail="Page not found")
 
 
 @app.get("/music-tracker", tags=["public"])
-async def music_tracker_page():
-    response = strict_template_response("music_tracker.html")
+async def music_tracker_page(request: Request):
+    response = strict_template_response("music_tracker.html", request)
     if response:
         return response
     raise HTTPException(status_code=404, detail="Page not found")
 
 
 @app.get("/media-statistics", tags=["public"])
-async def media_statistics_page():
-    response = strict_template_response("media_statistics.html")
+async def media_statistics_page(request: Request):
+    response = strict_template_response("media_statistics.html", request)
     if response:
         return response
     raise HTTPException(status_code=404, detail="Page not found")
 
 
 @app.get("/export-import-guide", tags=["public"])
-async def export_import_guide_page():
-    response = strict_template_response("export_import_guide.html")
+async def export_import_guide_page(request: Request):
+    response = strict_template_response("export_import_guide.html", request)
+    if response:
+        return response
+    raise HTTPException(status_code=404, detail="Page not found")
+
+
+@app.get("/media-tracker-checklist", tags=["public"])
+async def media_tracker_checklist_page(request: Request):
+    response = strict_template_response("media_tracker_checklist.html", request)
+    if response:
+        return response
+    raise HTTPException(status_code=404, detail="Page not found")
+
+
+@app.get("/tracking-templates", tags=["public"])
+async def tracking_templates_page(request: Request):
+    response = strict_template_response("tracking_templates.html", request)
+    if response:
+        return response
+    raise HTTPException(status_code=404, detail="Page not found")
+
+
+@app.get("/review-guidelines", tags=["public"])
+async def review_guidelines_page(request: Request):
+    response = strict_template_response("review_guidelines.html", request)
+    if response:
+        return response
+    raise HTTPException(status_code=404, detail="Page not found")
+
+
+@app.get("/sample-library", tags=["public"])
+async def sample_library_page(request: Request):
+    response = strict_template_response("sample_library.html", request)
     if response:
         return response
     raise HTTPException(status_code=404, detail="Page not found")
 
 
 @app.get("/demo", tags=["public"])
-async def demo_page():
-    response = strict_template_response("demo.html")
+async def demo_page(request: Request):
+    response = strict_template_response("demo.html", request)
     if response:
         return response
     raise HTTPException(status_code=404, detail="Page not found")
 
 
 @app.get("/media-tracking", tags=["public"])
-async def media_tracking_page():
-    response = strict_template_response("media_tracking.html")
+async def media_tracking_page(request: Request):
+    response = strict_template_response("media_tracking.html", request)
     if response:
         return response
     raise HTTPException(status_code=404, detail="Page not found")
 
 
 @app.get("/roadmap", tags=["public"])
-async def roadmap_page():
-    response = strict_template_response("roadmap.html")
+async def roadmap_page(request: Request):
+    response = strict_template_response("roadmap.html", request)
     if response:
         return response
     raise HTTPException(status_code=404, detail="Page not found")
 
 
 @app.get("/terms", tags=["public"])
-async def terms_page():
-    response = strict_template_response("terms.html")
+async def terms_page(request: Request):
+    response = strict_template_response("terms.html", request)
     if response:
         return response
     raise HTTPException(status_code=404, detail="Page not found")
 
 
 @app.get("/contact", tags=["public"])
-async def contact_page():
-    response = strict_template_response("contact.html")
+async def contact_page(request: Request):
+    response = strict_template_response("contact.html", request)
     if response:
         return response
     raise HTTPException(status_code=404, detail="Page not found")

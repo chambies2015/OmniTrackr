@@ -56,7 +56,7 @@
     "name": "OmniTrackr Changelog",
     "description": "Product, security, privacy, SEO, and content updates for OmniTrackr.",
     "url": "https://omnitrackr.xyz/changelog",
-    "dateModified": "2026-06-01",
+    "dateModified": "2026-07-05",
     "inLanguage": "en-US",
     "isPartOf": { "@type": "WebSite", "name": "OmniTrackr", "url": "https://omnitrackr.xyz" },
     "publisher": { "@type": "Organization", "name": "OmniTrackr", "url": "https://omnitrackr.xyz" }
@@ -67,6 +67,24 @@
 <body>
   <div class="privacy-wrapper">
     <div class="privacy-container">
+      <nav class="public-site-nav" aria-label="Public site navigation">
+        <a class="public-site-nav__brand" href="/">OmniTrackr</a>
+        <div class="public-site-nav__links">
+          <a href="/demo">Demo</a>
+          <a href="/media-tracking">Tracking Hub</a>
+          <a href="/guides">Guides</a>
+          <a href="/site-map">Site Map</a>
+          <a href="/sample-library">Sample Library</a>
+          <a href="/compare">Compare</a>
+          <a href="/use-cases">Use Cases</a>
+          <a href="/reviews">Reviews</a>
+          <a href="/faq">FAQ</a>
+          <a href="/content-quality">Content Quality</a>
+          <a href="/advertising">Advertising</a>
+          <a href="/privacy">Privacy</a>
+          <a class="public-site-nav__cta" href="/#landing-auth">Start tracking</a>
+        </div>
+      </nav>
       <a href="/" class="back-link">Back to OmniTrackr</a>
 
       <header class="privacy-header">
@@ -79,8 +97,24 @@
         <p>OmniTrackr is a live media tracking app, not a static demo. Publishing a changelog gives users and reviewers a clear place to see that the site is actively maintained, that security work is taken seriously, and that public content is being improved over time. It also helps new users understand which parts of the app are mature, which areas recently changed, and what the product is trying to become.</p>
       </section>
 
+      <section class="privacy-section" aria-labelledby="july-2026-heading">
+        <h2 id="july-2026-heading">July 2026: Review Quality, Freshness, and Public Discovery</h2>
+        <p>The July update continues the AdSense-readiness work by making the public website easier to evaluate, easier to browse, and less dependent on thin user-generated snippets. The goal is not to create more pages for their own sake; it is to make the existing media tracker clearer and more useful before someone signs up.</p>
+        <ul>
+          <li>Added a landing-page "Recently improved" section that points new visitors and policy reviewers to the sample library, content quality policy, site map, and advertising transparency page.</li>
+          <li>Changed the public reviews API default to favor substantial reviews using the same review-length threshold used by the crawlable reviews page and XML sitemap.</li>
+          <li>Separated directory-quality reviews from standalone review detail pages so indexed review URLs require more complete review text before receiving sitemap or ad eligibility.</li>
+          <li>Raised the automated public ad-page content floor so eligible public pages must keep at least 750 crawlable words, structured data, one H1, multiple content sections, and canonical metadata.</li>
+          <li>Kept explicit broad review access available through <code>min_chars=1</code> so existing public API callers can still request short opt-in notes without deleting or rewriting user content.</li>
+          <li>Documented public review quality expectations more clearly across the reviews page, review guidelines, content quality policy, and automated tests.</li>
+          <li>Verified that these changes do not modify account records, private libraries, ratings, friendships, imports, exports, or authenticated dashboard behavior.</li>
+        </ul>
+        <p>This update is intentionally conservative. It improves what visitors and crawlers see on public pages while leaving the user-owned data model intact. It does not modify account records, private libraries, ratings, friendships, imports, exports, or dashboard workflows. Short personal notes still belong in private libraries; public discovery now defaults toward reviews that include enough context to help another person.</p>
+      </section>
+
       <section class="privacy-section" aria-labelledby="june-2026-heading">
         <h2 id="june-2026-heading">June 2026: Public Content, Privacy, and Ad Readiness</h2>
+        <p>The June update focused on making OmniTrackr clearer to first-time visitors while protecting the existing app experience for signed-in users. The largest theme was turning the public website into a useful resource library instead of a thin shell around the login page.</p>
         <ul>
           <li>Added new public guides for comparing media trackers and planning cross-media tracking workflows.</li>
           <li>Added dedicated pages for TV show tracking and game tracking to give visitors useful information before signing up.</li>
@@ -88,25 +122,34 @@
           <li>Improved sitemap, robots.txt, and public metadata so search engines can discover the new evergreen content pages.</li>
           <li>Kept public pages behind the hardened Content Security Policy without relying on unsafe inline scripts.</li>
         </ul>
+        <p>These changes do not alter existing user libraries, accounts, ratings, reviews, friendships, or privacy settings. They add public routes, templates, metadata, and tests around the edges of the app so the logged-in tracker can keep behaving the same way.</p>
       </section>
 
       <section class="privacy-section" aria-labelledby="security-heading">
         <h2 id="security-heading">Recent Security and Quality Improvements</h2>
         <p>OmniTrackr recently received several hardening updates focused on safer rendering and dependency hygiene. The app removed the need for CSP unsafe-inline, improved nonce handling for public pages, replaced risky HTML rewriting patterns with parser-based handling, and upgraded dependency versions flagged by security scanning. These updates are important because a media tracker stores user-created libraries, reviews, account settings, and privacy preferences.</p>
+        <p>Security scanning feedback also led to more focused regression tests. The test suite now checks that public content pages use nonce-based scripts, that generated API documentation is noindexed, that the AdSense loader is limited to eligible public pages, and that review text is not reinterpreted as HTML in the browser.</p>
       </section>
 
       <section class="privacy-section" aria-labelledby="content-heading">
         <h2 id="content-heading">Recent Content Improvements</h2>
         <p>The public side of OmniTrackr now includes more than a sign-in page. Visitors can read guides, compare tracking methods, learn how TV and game tracking workflows work, review privacy practices, and browse public reviews when users choose to share them. That public content helps people decide whether OmniTrackr fits their habits before they create an account.</p>
+        <p>Category guides were expanded around real decisions: movies need ratings and review context, TV shows need season and episode memory, anime often needs seasonal backlog notes, games need platform and completion tracking, music needs album and relisten context, and books need reading status plus author notes. This gives each page a reason to exist beyond repeating the same feature list.</p>
+      </section>
+
+      <section class="privacy-section" aria-labelledby="testing-heading">
+        <h2 id="testing-heading">Release Verification</h2>
+        <p>Public-page changes are covered by automated tests for sitemap entries, robots.txt rules, page metadata, navigation links, content markers, CSP behavior, ad-loader behavior, public review filtering, and frontend safety checks. The purpose is simple: search and policy improvements should not break account registration, login, media CRUD operations, import/export, statistics, privacy controls, or friend features.</p>
+        <p>That verification matters because OmniTrackr is already live. A content update is only successful if it improves the public site while leaving user-created media collections and account data untouched.</p>
       </section>
 
       <section class="privacy-section" aria-labelledby="what-next-heading">
         <h2 id="what-next-heading">What Is Next?</h2>
-        <p>Planned improvements include more category-specific guides, clearer onboarding for new accounts, stronger public review quality controls, and continued dependency/security maintenance. The goal is to keep OmniTrackr useful for active users while making the public website easier for new visitors, search engines, and policy reviewers to understand.</p>
+        <p>Planned improvements include more category-specific guides, clearer onboarding for new accounts, richer sample workflows, and continued dependency/security maintenance. The goal is to keep OmniTrackr useful for active users while making the public website easier for new visitors, search engines, and policy reviewers to understand.</p>
       </section>
 
       <nav class="privacy-section" aria-label="Related pages">
-        <p><a href="/">Home</a> | <a href="/guides">Guides</a> | <a href="/compare">Compare</a> | <a href="/use-cases">Use Cases</a> | <a href="/tv-show-tracker">TV Show Tracker</a> | <a href="/game-tracker">Game Tracker</a> | <a href="/privacy">Privacy Policy</a></p>
+        <p><a href="/">Home</a> | <a href="/guides">Guides</a> | <a href="/sample-library">Sample Library</a> | <a href="/content-quality">Content Quality</a> | <a href="/review-guidelines">Review Guidelines</a> | <a href="/compare">Compare</a> | <a href="/use-cases">Use Cases</a> | <a href="/tv-show-tracker">TV Show Tracker</a> | <a href="/game-tracker">Game Tracker</a> | <a href="/privacy">Privacy Policy</a></p>
       </nav>
     </div>
   </div>

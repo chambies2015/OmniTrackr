@@ -4,21 +4,21 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <meta name="description" content="View the OmniTrackr roadmap for planned media tracking improvements, public content, statistics, privacy, import/export, and review quality features.">
+  <meta name="description" content="View the OmniTrackr release roadmap with recently shipped media tracking improvements, current priorities, and planned updates for reviews, stats, privacy, and imports.">
   <meta name="robots" content="index, follow, max-image-preview:large">
   <meta name="author" content="OmniTrackr">
-  <title>OmniTrackr Roadmap - Planned Media Tracking Improvements</title>
+  <title>OmniTrackr Roadmap - Recently Shipped and Planned Media Tracking Improvements</title>
   <link rel="canonical" href="https://omnitrackr.xyz/roadmap">
   <link rel="icon" type="image/x-icon" href="/omnitrackr_favicon.ico">
   <meta property="og:type" content="website">
   <meta property="og:url" content="https://omnitrackr.xyz/roadmap">
   <meta property="og:title" content="OmniTrackr Roadmap">
-  <meta property="og:description" content="Planned updates for media tracking, reviews, statistics, privacy, public content, and imports.">
+  <meta property="og:description" content="Recently shipped improvements and planned updates for media tracking, reviews, statistics, privacy, public content, and imports.">
   <meta property="og:image" content="https://omnitrackr.xyz/omnitrackr_vortex.png">
   <meta property="og:site_name" content="OmniTrackr">
   <meta name="twitter:card" content="summary">
   <meta name="twitter:title" content="OmniTrackr Roadmap">
-  <meta name="twitter:description" content="Planned updates for media tracking, reviews, stats, privacy, and imports.">
+  <meta name="twitter:description" content="Recently shipped improvements and planned updates for media tracking, reviews, stats, privacy, and imports.">
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@700;800&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
@@ -34,6 +34,10 @@
     .public-section { margin-bottom: 38px; }
     .public-section h2 { font-family: 'Poppins', sans-serif; font-size: 1.65rem; margin-bottom: 15px; color: var(--primary); }
     .public-section ul { margin-left: 20px; }
+    .roadmap-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(230px, 1fr)); gap: 16px; margin-top: 18px; }
+    .roadmap-card { border: 1px solid var(--border); border-radius: 10px; padding: 18px; background: rgba(255, 255, 255, 0.04); }
+    .roadmap-card h3 { color: var(--fg); font-size: 1.05rem; margin-bottom: 8px; }
+    .roadmap-card p { margin: 0; }
     .back-link { display: inline-block; margin-bottom: 30px; color: var(--primary); text-decoration: none; font-weight: 500; }
   </style>
   <script type="application/ld+json">
@@ -41,9 +45,9 @@
     "@context": "https://schema.org",
     "@type": "WebPage",
     "name": "OmniTrackr Roadmap",
-    "description": "Planned OmniTrackr improvements for media tracking, reviews, statistics, privacy, public content, and imports.",
+    "description": "Recently shipped and planned OmniTrackr improvements for media tracking, reviews, statistics, privacy, public content, and imports.",
     "url": "https://omnitrackr.xyz/roadmap",
-    "dateModified": "2026-06-01",
+    "dateModified": "2026-07-05",
     "inLanguage": "en-US",
     "isPartOf": { "@type": "WebSite", "name": "OmniTrackr", "url": "https://omnitrackr.xyz" }
   }
@@ -53,43 +57,93 @@
 <body>
   <div class="public-wrapper">
     <div class="public-container">
+      <nav class="public-site-nav" aria-label="Public site navigation">
+        <a class="public-site-nav__brand" href="/">OmniTrackr</a>
+        <div class="public-site-nav__links">
+          <a href="/demo">Demo</a>
+          <a href="/media-tracking">Tracking Hub</a>
+          <a href="/guides">Guides</a>
+          <a href="/site-map">Site Map</a>
+          <a href="/sample-library">Sample Library</a>
+          <a href="/compare">Compare</a>
+          <a href="/use-cases">Use Cases</a>
+          <a href="/reviews">Reviews</a>
+          <a href="/faq">FAQ</a>
+          <a href="/content-quality">Content Quality</a>
+          <a href="/advertising">Advertising</a>
+          <a href="/privacy">Privacy</a>
+          <a class="public-site-nav__cta" href="/#landing-auth">Start tracking</a>
+        </div>
+      </nav>
       <a href="/" class="back-link">Back to OmniTrackr</a>
       <header class="public-header">
         <h1>OmniTrackr Roadmap</h1>
-        <p>A public view of planned improvements for the media tracker. Priorities may shift, but this is the direction.</p>
+        <p>A public view of what recently improved, what is being refined now, and what is planned next for the media tracker.</p>
       </header>
+
+      <section class="public-section" aria-labelledby="shipped-heading">
+        <h2 id="shipped-heading">Recently Shipped</h2>
+        <p>OmniTrackr has moved beyond a simple private list. The latest release work focuses on making the public side useful before signup while keeping the logged-in tracker safe, fast, and familiar for existing users. Visitors can now read practical guides, compare tracking options, preview a sample library, understand privacy controls, and browse public reviews that users intentionally share.</p>
+        <div class="roadmap-grid">
+          <div class="roadmap-card"><h3>Public Guide Library</h3><p>Guides now explain movie, TV, anime, game, music, book, statistics, export, template, and review workflows in crawlable pages.</p></div>
+          <div class="roadmap-card"><h3>Review Quality Tools</h3><p>Public reviews are supported by clearer category filters, review guidelines, quality prompts, and minimum-content safeguards.</p></div>
+          <div class="roadmap-card"><h3>Ad and Privacy Transparency</h3><p>Advertising and privacy pages explain where ads may appear, how Google ads use cookies, and why private account areas stay separate.</p></div>
+          <div class="roadmap-card"><h3>Security and SEO Cleanup</h3><p>Recent work tightened CSP handling, removed unsafe inline requirements, improved metadata, and kept generated API docs out of search results.</p></div>
+        </div>
+      </section>
 
       <section class="public-section" aria-labelledby="now-heading">
         <h2 id="now-heading">Now</h2>
+        <p>Current priorities are deliberately practical. The goal is to make OmniTrackr easier to understand for a first-time visitor while preserving the workflows existing users already rely on.</p>
         <ul>
-          <li>Improve public content quality with demo pages, guide hubs, and category-specific tracking pages.</li>
+          <li>Improve public content quality with richer demo examples, guide hubs, and category-specific tracking pages.</li>
           <li>Strengthen public reviews with better filtering, clearer category explanations, and review writing guidance.</li>
           <li>Improve account trust surfaces with clearer data, privacy, export, and public review controls.</li>
+          <li>Keep ads limited to public informational pages so the private tracking dashboard does not become cluttered.</li>
         </ul>
+        <p>Current work also emphasizes content quality. Public pages should answer real tracking questions instead of acting as empty search pages. Category guides, review guidance, comparison pages, and demo content are being expanded so visitors can learn something useful even before they decide to register.</p>
       </section>
 
       <section class="public-section" aria-labelledby="next-heading">
         <h2 id="next-heading">Next</h2>
+        <p>The next set of improvements is aimed at reducing setup friction. A media tracker is most useful when people can bring in existing lists, clean up old backlogs, and see progress without rebuilding everything by hand.</p>
         <ul>
           <li>Add CSV import templates for movies, TV shows, games, books, music, and custom lists.</li>
           <li>Improve statistics with trends, rating coverage, backlog progress, and clearer category comparisons.</li>
-          <li>Add more category guides for movies, books, anime, and music tracking workflows.</li>
+          <li>Add more category examples for movies, books, anime, and music tracking workflows.</li>
+          <li>Explore better public review discovery without exposing private notes or personal libraries by default.</li>
         </ul>
       </section>
 
       <section class="public-section" aria-labelledby="later-heading">
         <h2 id="later-heading">Later</h2>
+        <p>Longer-term ideas stay focused on portability, control, and useful context. OmniTrackr should help users remember why something mattered, not just store a title and rating.</p>
         <ul>
           <li>More flexible recommendation notes, including who recommended an item and why it was added.</li>
           <li>More public profile controls for people who want to share selected lists safely.</li>
           <li>Optional richer metadata for custom tabs while preserving exportability and privacy.</li>
+          <li>More ways to summarize a year of watching, reading, playing, and listening across all categories.</li>
         </ul>
+      </section>
+
+      <section class="public-section" aria-labelledby="stability-heading">
+        <h2 id="stability-heading">Stability and Release Guardrails</h2>
+        <p>Because OmniTrackr is already live, roadmap work has to protect existing accounts and media libraries. Public-content updates should not require destructive migrations, reset user settings, remove saved entries, or change private/public review decisions without the user's intent.</p>
+        <p>Recent verification covers account flows, authentication, CRUD endpoints for each media category, import/export, friend and privacy behavior, statistics, public reviews, SEO routes, static security checks, and content-security-policy behavior. That testing focus keeps growth work tied to the real product instead of only the marketing pages.</p>
+      </section>
+
+      <section class="public-section" aria-labelledby="quality-review-heading">
+        <h2 id="quality-review-heading">How Roadmap Items Are Chosen</h2>
+        <p>Roadmap ideas are evaluated against two questions: will this make everyday tracking easier, and can it ship without putting existing user data at risk? A feature that looks impressive but complicates privacy, exports, or account stability is less valuable than a smaller improvement that users can trust immediately.</p>
+        <p>Public-page work follows the same rule. A new guide should answer a real tracking question, link to related resources, and stay useful even if the visitor never creates an account. That keeps the site from becoming a collection of empty search pages and gives returning users a clearer place to find product changes.</p>
+        <p>For the current release, that means prioritizing review quality, stronger public examples, clearer privacy and advertising disclosures, and regression tests that protect the live tracker while the public content surface grows.</p>
       </section>
 
       <section class="public-section" aria-labelledby="why-heading">
         <h2 id="why-heading">Why Publish This?</h2>
-        <p>A roadmap helps users see that OmniTrackr is maintained and gives new visitors a reason to come back. It also explains the product direction: a practical, privacy-aware tracker for many kinds of media rather than a thin single-purpose list.</p>
-        <p>See what has already changed in the <a href="/changelog">changelog</a>, or start with the <a href="/demo">demo library</a>.</p>
+        <p>A roadmap helps users see that OmniTrackr is maintained and gives new visitors a reason to come back. It also explains the product direction: a practical, privacy-aware tracker for many kinds of media rather than a thin single-purpose list. That matters for people deciding whether to trust a new tracker with their history, ratings, reviews, and private notes.</p>
+        <p>The roadmap is not a promise that every idea will ship in exactly this order. It is a transparent product note about what the app is optimizing for: useful public resources, portable user data, safer sharing, stronger review quality, and a calmer advertising approach.</p>
+        <p>See what has already changed in the <a href="/changelog">changelog</a>, preview the <a href="/demo">demo library</a>, or compare OmniTrackr with other tracking methods on the <a href="/compare">comparison page</a>.</p>
       </section>
     </div>
   </div>

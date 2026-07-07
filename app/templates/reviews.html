@@ -4,6 +4,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="google-adsense-account" content="ca-pub-7271682066779719">
   <meta name="description" content="Read public OmniTrackr reviews for movies, TV shows, anime, video games, music, and books. Discover ratings and recommendations from media fans.">
   <meta name="robots" content="index, follow, max-image-preview:large">
   <meta name="author" content="OmniTrackr">
@@ -127,6 +128,30 @@
       margin-bottom: 6px;
     }
 
+    .review-example-grid {
+      display: grid;
+      gap: 16px;
+      grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+      margin-top: 18px;
+    }
+
+    .review-example-card {
+      background: rgba(255, 255, 255, 0.04);
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      padding: 18px;
+    }
+
+    .review-example-card h3 {
+      color: var(--fg);
+      font-size: 1rem;
+      margin-bottom: 8px;
+    }
+
+    .review-example-card p {
+      margin-bottom: 10px;
+    }
+
     .filter-section select,
     .filter-section button {
       padding: 10px 20px;
@@ -164,9 +189,13 @@
       cursor: pointer;
     }
 
-    .review-card:hover {
+    a.review-card:hover {
       transform: translateY(-5px);
       box-shadow: 0 8px 16px rgba(0, 0, 0, 0.2);
+    }
+
+    .review-card--summary {
+      cursor: default;
     }
 
     .review-card-header {
@@ -283,10 +312,29 @@
     }
   }
   </script>
+  <script src="/static/ad-loader.js" defer></script>
 </head>
 
 <body class="dark-mode">
   <div class="reviews-wrapper">
+    <nav class="public-site-nav" aria-label="Public site navigation">
+      <a class="public-site-nav__brand" href="/">OmniTrackr</a>
+      <div class="public-site-nav__links">
+        <a href="/demo">Demo</a>
+        <a href="/media-tracking">Tracking Hub</a>
+        <a href="/guides">Guides</a>
+        <a href="/site-map">Site Map</a>
+          <a href="/sample-library">Sample Library</a>
+          <a href="/compare">Compare</a>
+        <a href="/use-cases">Use Cases</a>
+        <a href="/reviews">Reviews</a>
+          <a href="/faq">FAQ</a>
+          <a href="/content-quality">Content Quality</a>
+          <a href="/advertising">Advertising</a>
+        <a href="/privacy">Privacy</a>
+        <a class="public-site-nav__cta" href="/#landing-auth">Start tracking</a>
+      </div>
+    </nav>
     <a href="/" class="back-link">Back to Home</a>
     
     <div class="reviews-header">
@@ -297,6 +345,8 @@
     <section class="reviews-guide" aria-labelledby="reviews-guide-heading">
       <h2 id="reviews-guide-heading">What Makes These Reviews Useful?</h2>
       <p>OmniTrackr public reviews are written by users who choose to share individual ratings and notes from their personal media libraries. The strongest reviews explain more than a score: they describe pacing, mood, replay value, characters, genre fit, comfort-watch potential, or why an item belongs in a backlog.</p>
+      <p>The public reviews directory favors substantial notes over quick one-line reactions. Short private notes can still be useful inside an account, but shared reviews should give another visitor enough context to decide whether a movie, show, anime, game, album, or book fits their taste. That quality bar keeps the page useful even when the newest reviews come from different categories.</p>
+      <p>Because OmniTrackr covers several media types, the reviews page is meant to help with discovery across formats. A visitor might arrive looking for a movie opinion and leave with a book, game, album, or series recommendation that matches the same mood. The category filter keeps browsing focused when one format matters more than the others.</p>
       <div class="review-category-grid">
         <div class="review-category-card"><h3>Movies</h3><p>Look for notes about direction, performances, pacing, tone, and rewatch value.</p></div>
         <div class="review-category-card"><h3>TV Shows</h3><p>Helpful TV reviews mention season consistency, episode count, arcs, and whether a show works weekly or as a binge.</p></div>
@@ -318,6 +368,36 @@
       <button id="filterReviewsButton" type="button">Filter</button>
     </div>
 
+    <section class="reviews-guide" aria-labelledby="browse-heading">
+      <h2 id="browse-heading">How to Browse Public Reviews</h2>
+      <p>Use All Categories when you want a mixed view of the latest substantial public reviews. Use a specific category when you are comparing one type of media, such as movies, TV shows, anime, video games, music, or books. The page keeps the original user review text visible, but trims card previews so browsing stays readable on mobile and desktop.</p>
+      <p>If a review opens into a detail page, that page is meant to preserve the full review with category-specific metadata like director, year, seasons, episodes, genres, artist, or author when available. Generic review helper links without a category are intentionally not indexed because they do not contain enough standalone review content.</p>
+      <p class="crawlable-review-links">Browse crawlable category views for <a href="/reviews?category=movie">movie reviews</a>, <a href="/reviews?category=tv_show">TV show reviews</a>, <a href="/reviews?category=anime">anime reviews</a>, <a href="/reviews?category=video_game">video game reviews</a>, <a href="/reviews?category=music">music reviews</a>, or <a href="/reviews?category=book">book reviews</a>.</p>
+    </section>
+
+    <section class="reviews-guide" aria-labelledby="review-examples-heading">
+      <h2 id="review-examples-heading">Editorial Review Examples</h2>
+      <p>These examples are first-party guidance, not user submissions. They show the level of detail OmniTrackr encourages before a note is useful as public content: personal context, category-specific details, and a clear recommendation. A public review can be shorter than these examples, but it should still explain why the rating exists.</p>
+      <div class="review-example-grid">
+        <article class="review-example-card">
+          <h3>Movie example</h3>
+          <p><strong>Useful angle:</strong> mention the mood, pacing, and rewatch value instead of repeating the plot summary.</p>
+          <p>A strong movie note might say that a thriller works best for viewers who like slow tension, practical performances, and a final act that rewards patience. It can also explain why the same movie may not fit someone looking for constant action or easy background watching.</p>
+        </article>
+        <article class="review-example-card">
+          <h3>Game example</h3>
+          <p><strong>Useful angle:</strong> connect mechanics, difficulty, platform, and completion goals.</p>
+          <p>A helpful game review might compare a short campaign with a long backlog entry, call out whether side quests feel essential or optional, and explain if the controls still feel good after several sessions. That context is more useful than a score alone.</p>
+        </article>
+        <article class="review-example-card">
+          <h3>Book, album, or show example</h3>
+          <p><strong>Useful angle:</strong> describe when the recommendation fits.</p>
+          <p>For a book, album, anime season, or TV series, a quality review can explain whether it rewards close attention, works in short sessions, improves after the opening chapters or episodes, or belongs in a comfort-media list for repeat visits.</p>
+        </article>
+      </div>
+      <p>For a deeper checklist, read the <a href="/review-guidelines">review guidelines</a> and the <a href="/media-tracker-checklist">media tracker setup checklist</a>. Both pages explain how private notes, public reviews, ratings, and privacy controls work together.</p>
+    </section>
+
     <div id="reviewsContainer" class="reviews-grid">
       <div class="loading">Loading reviews...</div>
     </div>
@@ -326,7 +406,10 @@
     <section class="reviews-guide" aria-labelledby="review-tips-heading">
       <h2 id="review-tips-heading">Review Writing Tips</h2>
       <p>A useful public review does not have to be long, but it should be specific. Mention who the item is for, what stood out, what did not work, and whether you would recommend it. Reviews with clear context are easier for other people to trust and easier for OmniTrackr to showcase.</p>
-      <p>For broader tracking workflows, visit the <a href="/media-tracking">media tracking hub</a>, preview the <a href="/demo">demo library</a>, or read the <a href="/use-cases">use cases guide</a>.</p>
+      <p>Good reviews often answer three simple questions: what kind of experience was it, who would enjoy it, and what should someone know before starting? For games, that might mean difficulty, mechanics, performance, and replay value. For shows, it might mean pacing, episode length, and whether the ending pays off. For books and music, it might mean mood, density, reread or relisten value, and when the recommendation fits best.</p>
+      <p>Users control which reviews are public. Private notes stay useful for personal memory, while public reviews are better when they are polished enough for someone outside the account to read.</p>
+      <p>Public review quality also protects the site experience. A directory full of copied summaries or one-word reactions would not help visitors decide what to watch, play, read, or hear. OmniTrackr encourages personal context, clear recommendations, and privacy-aware sharing so public reviews add value beyond a title and a score.</p>
+      <p>For broader tracking workflows, visit the <a href="/media-tracking">media tracking hub</a>, preview the <a href="/demo">demo library</a>, read the <a href="/review-guidelines">review guidelines</a>, or use the <a href="/use-cases">use cases guide</a>.</p>
     </section>
   </div>
 

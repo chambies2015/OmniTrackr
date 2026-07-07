@@ -18,7 +18,8 @@ async def get_credentials():
         headers={
             "Cache-Control": "no-store, no-cache, must-revalidate, max-age=0",
             "Pragma": "no-cache",
-            "Expires": "0"
+            "Expires": "0",
+            "X-Robots-Tag": "noindex, nofollow",
         }
     )
 
@@ -103,14 +104,5 @@ async def get_favicon_png():
     if os.path.exists(favicon_file):
         return FileResponse(favicon_file, media_type="image/x-icon", headers=CACHE_IMAGES)
     raise HTTPException(status_code=404, detail="favicon.png not found")
-
-
-@router.get("/sellers.json")
-async def get_sellers_json():
-    sellers_file = os.path.join(os.path.dirname(__file__), "..", "..", "sellers.json")
-    if os.path.exists(sellers_file):
-        return FileResponse(sellers_file, media_type="application/json", headers=CACHE_JS_CSS)
-    raise HTTPException(status_code=404, detail="sellers.json not found")
-
 
 

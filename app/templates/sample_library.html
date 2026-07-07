@@ -1,0 +1,193 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="description" content="Explore a fictional OmniTrackr sample media library with movies, TV, anime, games, music, books, ratings, reviews, privacy choices, and cleanup workflows.">
+  <meta name="robots" content="index, follow, max-image-preview:large">
+  <meta name="author" content="OmniTrackr">
+  <title>Sample Media Library - OmniTrackr Example Tracking Workflow</title>
+  <link rel="canonical" href="https://omnitrackr.xyz/sample-library">
+  <link rel="icon" type="image/x-icon" href="/omnitrackr_favicon.ico">
+
+  <meta property="og:type" content="website">
+  <meta property="og:url" content="https://omnitrackr.xyz/sample-library">
+  <meta property="og:title" content="Sample Media Library - OmniTrackr">
+  <meta property="og:description" content="A fictional sample library showing how OmniTrackr can organize watchlists, backlogs, ratings, reviews, privacy settings, and statistics.">
+  <meta property="og:image" content="https://omnitrackr.xyz/omnitrackr_vortex.png">
+  <meta property="og:image:alt" content="OmniTrackr sample media library">
+  <meta property="og:site_name" content="OmniTrackr">
+  <meta property="og:locale" content="en_US">
+
+  <meta name="twitter:card" content="summary">
+  <meta name="twitter:url" content="https://omnitrackr.xyz/sample-library">
+  <meta name="twitter:title" content="Sample Media Library - OmniTrackr">
+  <meta name="twitter:description" content="See a fictional OmniTrackr library with example media records, reviews, statuses, and privacy decisions.">
+  <meta name="twitter:image" content="https://omnitrackr.xyz/omnitrackr_vortex.png">
+  <meta name="twitter:image:alt" content="OmniTrackr sample media library">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@700;800&family=Inter:wght@400;500;600&display=swap"
+    rel="stylesheet">
+  <link rel="stylesheet" href="/styles.css">
+  <style>
+    body { min-height: 100vh; padding: 20px; }
+    .privacy-wrapper { max-width: 1080px; margin: 0 auto; }
+    .privacy-container { background: var(--card-bg); border-radius: 16px; padding: 50px 40px; margin: 20px 0; box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3); border: 1px solid var(--border); color: var(--fg); line-height: 1.8; }
+    @media (max-width: 768px) { .privacy-container { padding: 30px 20px; margin: 10px 0; } }
+    .privacy-header { text-align: center; margin-bottom: 40px; padding-bottom: 20px; border-bottom: 2px solid var(--border); }
+    .privacy-header h1 { font-family: 'Poppins', sans-serif; font-size: 2.5rem; margin-bottom: 10px; color: var(--primary); line-height: 1.15; }
+    .privacy-header p { color: var(--fg-secondary); font-size: 0.95rem; }
+    .privacy-section { margin-bottom: 40px; }
+    .privacy-section h2 { font-family: 'Poppins', sans-serif; font-size: 1.8rem; margin-bottom: 15px; color: var(--primary); }
+    .privacy-section h3 { font-family: 'Inter', sans-serif; font-size: 1.15rem; margin-top: 0; margin-bottom: 8px; color: var(--fg); font-weight: 700; }
+    .privacy-section p { margin-bottom: 15px; color: var(--fg-secondary); }
+    .privacy-section ul, .privacy-section ol { margin-left: 20px; margin-bottom: 15px; color: var(--fg-secondary); }
+    .privacy-section li { margin-bottom: 8px; }
+    .privacy-section strong { color: var(--fg); }
+    .back-link { display: inline-block; margin-bottom: 30px; color: var(--primary); text-decoration: none; font-weight: 500; transition: color 0.3s ease; }
+    .back-link:hover { color: var(--secondary); }
+    .sample-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(245px, 1fr)); gap: 16px; margin-top: 20px; }
+    .sample-card { border: 1px solid var(--border); border-radius: 10px; padding: 18px; background: rgba(255, 255, 255, 0.04); }
+    .sample-card p { margin-bottom: 8px; }
+    .sample-label { color: var(--primary); font-size: 0.85rem; font-weight: 800; text-transform: uppercase; }
+  </style>
+
+  <script type="application/ld+json">
+  {
+    "@context": "https://schema.org",
+    "@type": "Article",
+    "headline": "Sample Media Library",
+    "description": "A fictional OmniTrackr sample media library showing tracking decisions across movies, TV, anime, games, music, and books.",
+    "url": "https://omnitrackr.xyz/sample-library",
+    "author": { "@type": "Organization", "name": "OmniTrackr" },
+    "publisher": { "@type": "Organization", "name": "OmniTrackr", "url": "https://omnitrackr.xyz" },
+    "mainEntityOfPage": "https://omnitrackr.xyz/sample-library",
+    "inLanguage": "en-US"
+  }
+  </script>
+  <script type="application/ld+json">
+  {
+    "@context": "https://schema.org",
+    "@type": "ItemList",
+    "name": "Fictional OmniTrackr Sample Records",
+    "itemListElement": [
+      { "@type": "ListItem", "position": 1, "name": "Movie sample record" },
+      { "@type": "ListItem", "position": 2, "name": "TV show sample record" },
+      { "@type": "ListItem", "position": 3, "name": "Anime sample record" },
+      { "@type": "ListItem", "position": 4, "name": "Game sample record" },
+      { "@type": "ListItem", "position": 5, "name": "Music sample record" },
+      { "@type": "ListItem", "position": 6, "name": "Book sample record" }
+    ]
+  }
+  </script>
+</head>
+
+<body>
+  <div class="privacy-wrapper">
+    <div class="privacy-container">
+      <nav class="public-site-nav" aria-label="Public site navigation">
+        <a class="public-site-nav__brand" href="/">OmniTrackr</a>
+        <div class="public-site-nav__links">
+          <a href="/demo">Demo</a>
+          <a href="/media-tracking">Tracking Hub</a>
+          <a href="/guides">Guides</a>
+          <a href="/site-map">Site Map</a>
+          <a href="/sample-library">Sample Library</a>
+          <a href="/compare">Compare</a>
+          <a href="/use-cases">Use Cases</a>
+          <a href="/reviews">Reviews</a>
+          <a href="/faq">FAQ</a>
+          <a href="/content-quality">Content Quality</a>
+          <a href="/advertising">Advertising</a>
+          <a href="/privacy">Privacy</a>
+          <a class="public-site-nav__cta" href="/#landing-auth">Start tracking</a>
+        </div>
+      </nav>
+      <a href="/" class="back-link">Back to OmniTrackr</a>
+
+      <header class="privacy-header">
+        <h1>Sample Media Library</h1>
+        <p>A fictional, crawlable example of how an OmniTrackr library can stay organized.</p>
+      </header>
+
+      <section class="privacy-section" aria-labelledby="why-sample-heading">
+        <h2 id="why-sample-heading">Why a Sample Library Helps</h2>
+        <p>This page is a first-party example, not a copy of a user account and not a live feed of private data. It shows how someone might use OmniTrackr to organize a mixed media life across movies, TV shows, anime, video games, music, and books. New visitors can inspect the kind of records OmniTrackr supports before signing up, and search or ad reviewers can evaluate useful public content without needing access to a password-protected dashboard.</p>
+        <p>The fictional library below favors practical decisions over perfect cataloging. A useful tracker should answer ordinary questions: what am I watching now, what did I finish, what do I want to revisit, which notes are private, and which reviews are polished enough to share? Those details are what separate a living media library from a thin list of titles.</p>
+      </section>
+
+      <section class="privacy-section" aria-labelledby="records-heading">
+        <h2 id="records-heading">Example Records</h2>
+        <div class="sample-grid">
+          <article class="sample-card">
+            <p class="sample-label">Movie</p>
+            <h3>Signal Harbor</h3>
+            <p><strong>Status:</strong> Watched. <strong>Rating:</strong> 8.5/10. <strong>Review choice:</strong> Public.</p>
+            <p>The public review focuses on pacing, character payoff, and whether the ending feels earned. Private notes keep spoiler-heavy thoughts separate from the public version.</p>
+          </article>
+          <article class="sample-card">
+            <p class="sample-label">TV Show</p>
+            <h3>Northline Dispatch</h3>
+            <p><strong>Status:</strong> In progress. <strong>Progress:</strong> Season 2, episode 4. <strong>Review choice:</strong> Private until finished.</p>
+            <p>The record keeps episode progress visible without forcing a final rating too early. A note reminds the viewer which subplot was paused before a long break.</p>
+          </article>
+          <article class="sample-card">
+            <p class="sample-label">Anime</p>
+            <h3>Glass Circuit</h3>
+            <p><strong>Status:</strong> Planned. <strong>Season:</strong> Winter backlog. <strong>Review choice:</strong> Not reviewed yet.</p>
+            <p>The entry is useful even before watching because it records why it was added: strong animation recommendations and a short episode count that fits a weekend queue.</p>
+          </article>
+          <article class="sample-card">
+            <p class="sample-label">Game</p>
+            <h3>Lantern Vale</h3>
+            <p><strong>Status:</strong> Playing. <strong>Platform:</strong> PC. <strong>Review choice:</strong> Private notes now, public review later.</p>
+            <p>The note tracks combat feel, accessibility settings, and whether the side quests still feel fresh after ten hours. Completion status can be updated when the credits roll.</p>
+          </article>
+          <article class="sample-card">
+            <p class="sample-label">Music</p>
+            <h3>Late Map Atlas</h3>
+            <p><strong>Status:</strong> Listened. <strong>Format:</strong> Album. <strong>Review choice:</strong> Public short review.</p>
+            <p>The review mentions favorite tracks, the mood it fits, and whether the album works best as a full listen or as individual songs in a playlist.</p>
+          </article>
+          <article class="sample-card">
+            <p class="sample-label">Book</p>
+            <h3>The Orchard Index</h3>
+            <p><strong>Status:</strong> Reading. <strong>Format:</strong> Ebook. <strong>Review choice:</strong> Private note.</p>
+            <p>The note captures chapter progress, a few themes to revisit, and whether the book belongs in a later recommendation list for friends.</p>
+          </article>
+        </div>
+      </section>
+
+      <section class="privacy-section" aria-labelledby="workflow-heading">
+        <h2 id="workflow-heading">A Weekly Cleanup Workflow</h2>
+        <p>A sample library is most valuable when it shows maintenance, not just data entry. Once a week, this fictional user reviews items marked in progress, updates statuses, and trims the planned list. Movies that were added from a recommendation but no longer sound interesting can be removed. Shows that stalled for more than a month can move to paused. Games can be tagged by platform or play style so the backlog does not become one long undifferentiated pile.</p>
+        <p>The cleanup also checks review quality. Short private notes are fine for memory, but public reviews should contain enough context to help someone else. Instead of posting "good" or "boring," the user expands public notes with what worked, what audience might enjoy it, and whether the rating reflects craft, personal mood, or rewatch value. That makes the public review feed more useful for visitors and keeps the private library honest for the account owner.</p>
+      </section>
+
+      <section class="privacy-section" aria-labelledby="privacy-heading">
+        <h2 id="privacy-heading">Privacy Choices in the Sample</h2>
+        <p>Not every entry needs to be public. In this sample, finished movie and album reviews are shared because they are polished and spoiler-safe. The TV, game, and book notes stay private because they contain unfinished thoughts or progress reminders. OmniTrackr's value is not only in publishing reviews; it is also in letting people keep a personal record without turning every note into public content.</p>
+        <p>Friend visibility can be adjusted separately from public review visibility. A user might let friends see finished movies while hiding books, music, or custom categories. That separation matters for a media tracker because entertainment history can be personal, messy, seasonal, and full of half-finished experiments. A good default gives the user control first.</p>
+      </section>
+
+      <section class="privacy-section" aria-labelledby="stats-heading">
+        <h2 id="stats-heading">What Statistics Would Show</h2>
+        <p>With the sample records above, the statistics view would show a small but balanced library: one watched movie, one active TV show, one planned anime, one playing game, one listened album, and one book in progress. As the library grows, those counts become more interesting. Ratings reveal whether the user is generous or selective. Completion data shows whether the backlog is shrinking or drifting. Review coverage shows whether finished items have meaningful notes or only numeric ratings.</p>
+        <p>This is why OmniTrackr keeps media types together. A spreadsheet can count entries, but a focused app can make the routine easier: add the item, update the status, write a note, decide whether it is public, and let the dashboard summarize the pattern over time.</p>
+      </section>
+
+      <section class="privacy-section" aria-labelledby="next-heading">
+        <h2 id="next-heading">What to Try Next</h2>
+        <p>If this example matches the kind of library you want to build, start with the <a href="/demo">demo</a>, then read the <a href="/tracking-templates">tracking templates</a> for rating scales and cleanup prompts. The <a href="/review-guidelines">review guidelines</a> explain how to turn quick notes into useful public reviews, while the <a href="/media-tracking">tracking hub</a> links to category-specific guides for movies, TV, anime, games, music, books, statistics, and export.</p>
+      </section>
+
+      <nav class="privacy-section" aria-label="Related pages">
+        <p><a href="/">Home</a> | <a href="/demo">Demo</a> | <a href="/media-tracking">Tracking Hub</a> | <a href="/guides">Guides</a> | <a href="/compare">Compare</a> | <a href="/use-cases">Use Cases</a> | <a href="/reviews">Reviews</a> | <a href="/faq">FAQ</a> | <a href="/advertising">Advertising</a> | <a href="/privacy">Privacy</a></p>
+      </nav>
+    </div>
+  </div>
+</body>
+
+</html>

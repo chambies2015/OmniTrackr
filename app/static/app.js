@@ -69,6 +69,7 @@ function closeImagePopup() {
 }
 
 const REVIEW_PREVIEW_LEN = 60;
+const PUBLIC_REVIEW_MIN_CHARS = 80;
 
 function getReviewCellContent(review, title, subtitle) {
   if (!review || !String(review).trim()) return '';
@@ -109,6 +110,35 @@ function closeReviewModal() {
     modal.style.display = 'none';
     document.body.style.overflow = '';
   }
+}
+
+function getReviewQualityMessage(length) {
+  if (length >= PUBLIC_REVIEW_MIN_CHARS) {
+    return `${length}/${PUBLIC_REVIEW_MIN_CHARS} characters - public-ready context`;
+  }
+  return `${length}/${PUBLIC_REVIEW_MIN_CHARS} characters - add more context for public reviews`;
+}
+
+function reviewQualityHintHtml(inputId) {
+  return `<p class="review-quality-hint"><span class="review-quality-count" data-review-counter-for="${escapeHtml(inputId)}">0/${PUBLIC_REVIEW_MIN_CHARS} characters - add more context for public reviews</span>. Public reviews show best with personal context and audience fit. <a href="/review-guidelines" target="_blank" rel="noopener noreferrer">Review guide</a></p>`;
+}
+
+function setupReviewQualityCounter(textarea) {
+  if (!textarea || !textarea.id || textarea.dataset.reviewCounterBound === 'true') return;
+  textarea.dataset.reviewCounterBound = 'true';
+  const updateCounter = () => {
+    const counter = document.querySelector(`[data-review-counter-for="${textarea.id}"]`);
+    if (!counter) return;
+    const length = textarea.value.trim().length;
+    counter.textContent = getReviewQualityMessage(length);
+    counter.classList.toggle('is-ready', length >= PUBLIC_REVIEW_MIN_CHARS);
+  };
+  textarea.addEventListener('input', updateCounter);
+  updateCounter();
+}
+
+function setupReviewQualityCounters(root = document) {
+  root.querySelectorAll('[data-review-quality-input]').forEach(setupReviewQualityCounter);
 }
 
 function getTabButton(tabName) {
@@ -582,7 +612,7 @@ window.enableMovieEdit = function (btn) {
   row.cells[3].innerHTML = `<input type="number" id="edit-movie-year" value="${escapeHtml(year)}">`;
   row.cells[4].innerHTML = `<input type="number" min="0" max="10" step="0.1" id="edit-movie-rating" value="${escapeHtml(ratingVal)}">`;
   row.cells[5].innerHTML = `<input type="checkbox" id="edit-movie-watched" ${watched ? 'checked' : ''}>`;
-  row.cells[6].innerHTML = `<textarea id="edit-movie-review" class="review-textarea">${escapeHtml(review)}</textarea>`;
+  row.cells[6].innerHTML = `<textarea id="edit-movie-review" class="review-textarea" data-review-quality-input>${escapeHtml(review)}</textarea>${reviewQualityHintHtml('edit-movie-review')}`;
   const movieReviewTextarea = document.getElementById('edit-movie-review');
   if (movieReviewTextarea) {
     movieReviewTextarea.style.height = 'auto';
@@ -591,6 +621,7 @@ window.enableMovieEdit = function (btn) {
       this.style.height = 'auto';
       this.style.height = Math.max(60, this.scrollHeight) + 'px';
     });
+    setupReviewQualityCounter(movieReviewTextarea);
   }
   row.cells[8].innerHTML = `<input type="checkbox" id="edit-movie-review-public" ${reviewPublic ? 'checked' : ''}>`;
   row.cells[9].innerHTML = `
@@ -1378,7 +1409,7 @@ window.enableVideoGameEdit = function (btn) {
   row.cells[3].innerHTML = `<input type="text" id="edit-video-game-genres" value="${escapeHtml(genres)}">`;
   row.cells[4].innerHTML = `<input type="checkbox" id="edit-video-game-played" ${played ? 'checked' : ''}>`;
   row.cells[5].innerHTML = `<input type="number" min="0" max="10" step="0.1" id="edit-video-game-rating" value="${ratingVal}">`;
-  row.cells[7].innerHTML = `<textarea id="edit-video-game-review" class="review-textarea">${escapeHtml(review)}</textarea>`;
+  row.cells[7].innerHTML = `<textarea id="edit-video-game-review" class="review-textarea" data-review-quality-input>${escapeHtml(review)}</textarea>${reviewQualityHintHtml('edit-video-game-review')}`;
   const videoGameReviewTextarea = document.getElementById('edit-video-game-review');
   if (videoGameReviewTextarea) {
     videoGameReviewTextarea.style.height = 'auto';
@@ -1387,6 +1418,7 @@ window.enableVideoGameEdit = function (btn) {
       this.style.height = 'auto';
       this.style.height = Math.max(60, this.scrollHeight) + 'px';
     });
+    setupReviewQualityCounter(videoGameReviewTextarea);
   }
   row.cells[8].innerHTML = `<input type="checkbox" id="edit-video-game-review-public" ${reviewPublic ? 'checked' : ''}>`;
   row.cells[9].innerHTML = `
@@ -1722,7 +1754,7 @@ window.enableMusicEdit = function (btn) {
   row.cells[4].innerHTML = `<input type="text" id="edit-music-genre" value="${escapeHtml(genre)}">`;
   row.cells[5].innerHTML = `<input type="number" min="0" max="10" step="0.1" id="edit-music-rating" value="${ratingVal}">`;
   row.cells[6].innerHTML = `<input type="checkbox" id="edit-music-listened" ${listened ? 'checked' : ''}>`;
-  row.cells[7].innerHTML = `<textarea id="edit-music-review" class="review-textarea">${escapeHtml(review)}</textarea>`;
+  row.cells[7].innerHTML = `<textarea id="edit-music-review" class="review-textarea" data-review-quality-input>${escapeHtml(review)}</textarea>${reviewQualityHintHtml('edit-music-review')}`;
   const musicReviewTextarea = document.getElementById('edit-music-review');
   if (musicReviewTextarea) {
     musicReviewTextarea.style.height = 'auto';
@@ -1731,6 +1763,7 @@ window.enableMusicEdit = function (btn) {
       this.style.height = 'auto';
       this.style.height = Math.max(60, this.scrollHeight) + 'px';
     });
+    setupReviewQualityCounter(musicReviewTextarea);
   }
   row.cells[8].innerHTML = `<input type="checkbox" id="edit-music-review-public" ${reviewPublic ? 'checked' : ''}>`;
   row.cells[9].innerHTML = `
@@ -2059,7 +2092,7 @@ window.enableBookEdit = function (btn) {
   row.cells[4].innerHTML = `<input type="text" id="edit-book-genre" value="${escapeHtml(genre)}">`;
   row.cells[5].innerHTML = `<input type="number" min="0" max="10" step="0.1" id="edit-book-rating" value="${ratingVal}">`;
   row.cells[6].innerHTML = `<input type="checkbox" id="edit-book-read" ${read ? 'checked' : ''}>`;
-  row.cells[7].innerHTML = `<textarea id="edit-book-review" class="review-textarea">${escapeHtml(review)}</textarea>`;
+  row.cells[7].innerHTML = `<textarea id="edit-book-review" class="review-textarea" data-review-quality-input>${escapeHtml(review)}</textarea>${reviewQualityHintHtml('edit-book-review')}`;
   const bookReviewTextarea = document.getElementById('edit-book-review');
   if (bookReviewTextarea) {
     bookReviewTextarea.style.height = 'auto';
@@ -2068,6 +2101,7 @@ window.enableBookEdit = function (btn) {
       this.style.height = 'auto';
       this.style.height = Math.max(60, this.scrollHeight) + 'px';
     });
+    setupReviewQualityCounter(bookReviewTextarea);
   }
   row.cells[8].innerHTML = `<input type="checkbox" id="edit-book-review-public" ${reviewPublic ? 'checked' : ''}>`;
   row.cells[9].innerHTML = `
@@ -2143,7 +2177,7 @@ window.enableAnimeEdit = function (btn) {
   row.cells[4].innerHTML = `<input type="number" id="edit-anime-episodes" value="${escapeHtml(episodes)}">`;
   row.cells[5].innerHTML = `<input type="number" min="0" max="10" step="0.1" id="edit-anime-rating" value="${escapeHtml(ratingVal)}">`;
   row.cells[6].innerHTML = `<input type="checkbox" id="edit-anime-watched" ${watched ? 'checked' : ''}>`;
-  row.cells[7].innerHTML = `<textarea id="edit-anime-review" class="review-textarea">${escapeHtml(review)}</textarea>`;
+  row.cells[7].innerHTML = `<textarea id="edit-anime-review" class="review-textarea" data-review-quality-input>${escapeHtml(review)}</textarea>${reviewQualityHintHtml('edit-anime-review')}`;
   const animeReviewTextarea = document.getElementById('edit-anime-review');
   if (animeReviewTextarea) {
     animeReviewTextarea.style.height = 'auto';
@@ -2152,6 +2186,7 @@ window.enableAnimeEdit = function (btn) {
       this.style.height = 'auto';
       this.style.height = Math.max(60, this.scrollHeight) + 'px';
     });
+    setupReviewQualityCounter(animeReviewTextarea);
   }
   row.cells[8].innerHTML = `<input type="checkbox" id="edit-anime-review-public" ${reviewPublic ? 'checked' : ''}>`;
   row.cells[9].innerHTML = `
@@ -2226,7 +2261,7 @@ window.enableTVEdit = function (btn) {
   row.cells[4].innerHTML = `<input type="number" id="edit-tv-episodes" value="${escapeHtml(episodes)}">`;
   row.cells[5].innerHTML = `<input type="number" min="0" max="10" step="0.1" id="edit-tv-rating" value="${escapeHtml(ratingVal)}">`;
   row.cells[6].innerHTML = `<input type="checkbox" id="edit-tv-watched" ${watched ? 'checked' : ''}>`;
-  row.cells[7].innerHTML = `<textarea id="edit-tv-review" class="review-textarea">${escapeHtml(review)}</textarea>`;
+  row.cells[7].innerHTML = `<textarea id="edit-tv-review" class="review-textarea" data-review-quality-input>${escapeHtml(review)}</textarea>${reviewQualityHintHtml('edit-tv-review')}`;
   const tvReviewTextarea = document.getElementById('edit-tv-review');
   if (tvReviewTextarea) {
     tvReviewTextarea.style.height = 'auto';
@@ -2235,6 +2270,7 @@ window.enableTVEdit = function (btn) {
       this.style.height = 'auto';
       this.style.height = Math.max(60, this.scrollHeight) + 'px';
     });
+    setupReviewQualityCounter(tvReviewTextarea);
   }
   row.cells[8].innerHTML = `<input type="checkbox" id="edit-tv-review-public" ${reviewPublic ? 'checked' : ''}>`;
   row.cells[9].innerHTML = `
@@ -7271,6 +7307,7 @@ function setupCustomTabSwitching() {
 }
 
 document.addEventListener('DOMContentLoaded', () => {
+  setupReviewQualityCounters();
   setupCustomTabSwitching();
   bindCustomTabForm();
   if (hasStoredAuth()) {
