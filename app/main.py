@@ -40,6 +40,7 @@ from .routers import (
     static,
     custom_tabs,
     reviews,
+    next_up,
 )
 
 # Create database tables
@@ -270,6 +271,7 @@ app.include_router(video_games.router)
 app.include_router(music.router)
 app.include_router(books.router)
 app.include_router(statistics.router)
+app.include_router(next_up.router)
 app.include_router(export_import.router)
 app.include_router(custom_tabs.router)
 

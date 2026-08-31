@@ -362,9 +362,21 @@
         <button type="button" class="library-pulse__insights" data-action="launchpad-open-insights">View full insights</button>
       </div>
       <div class="library-pulse__columns">
+        <section aria-labelledby="libraryPulseNextUpTitle"><h3 id="libraryPulseNextUpTitle">Your Next Up</h3><div id="libraryPulseNextUp" class="library-pulse__list"></div></section>
         <section aria-labelledby="libraryPulseContinueTitle"><h3 id="libraryPulseContinueTitle">Pick up next</h3><div id="libraryPulseContinue" class="library-pulse__list"></div></section>
         <section aria-labelledby="libraryPulseReflectTitle"><h3 id="libraryPulseReflectTitle">Make it memorable</h3><div id="libraryPulseReflect" class="library-pulse__list"></div></section>
       </div>
+    </section>
+
+    <section id="nextUpQueue" class="next-up-queue" aria-labelledby="nextUpQueueTitle" hidden>
+      <div class="next-up-queue__header">
+        <div>
+          <p class="next-up-queue__eyebrow">Intentional queue</p>
+          <h2 id="nextUpQueueTitle">Next Up</h2>
+        </div>
+        <p class="next-up-queue__hint">Choose any saved item from its library list. Your queue stays private and never changes the item itself.</p>
+      </div>
+      <div id="nextUpQueueItems" class="next-up-queue__items" aria-live="polite"></div>
     </section>
 
     <div class="tabs">

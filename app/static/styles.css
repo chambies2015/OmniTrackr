@@ -154,7 +154,7 @@ body.dark-mode {
 .library-pulse h3 { color: var(--fg); font-size: .95rem; margin: 0 0 10px; }
 .library-pulse__insights { background: transparent; border: 0; color: var(--primary); cursor: pointer; font-weight: 700; padding: 6px 0; }
 .library-pulse__insights:hover { text-decoration: underline; }
-.library-pulse__columns { display: grid; gap: 20px; grid-template-columns: repeat(2, minmax(0, 1fr)); }
+.library-pulse__columns { display: grid; gap: 20px; grid-template-columns: repeat(3, minmax(0, 1fr)); }
 .library-pulse__list { display: grid; gap: 9px; }
 .library-pulse__item { align-items: center; background: var(--bg); border: 1px solid var(--border); border-radius: 9px; display: flex; gap: 11px; justify-content: space-between; padding: 12px; text-align: left; width: 100%; }
 .library-pulse__item:hover { border-color: var(--primary); }
@@ -164,6 +164,37 @@ body.dark-mode {
 .library-pulse__item-action { color: var(--primary); flex: 0 0 auto; font-size: .78rem; font-weight: 700; }
 .library-pulse__empty { color: var(--fg); font-size: .88rem; line-height: 1.55; margin: 0; opacity: .65; padding: 10px 0; }
 @media (max-width: 680px) { .library-pulse { padding: 20px; } .library-pulse__header { align-items: flex-start; flex-direction: column; } .library-pulse__columns { grid-template-columns: 1fr; } }
+
+.next-up-queue {
+  background: linear-gradient(120deg, rgba(20, 184, 166, 0.10), var(--card-bg));
+  border: 1px solid rgba(20, 184, 166, 0.34);
+  border-radius: 14px;
+  margin: 0 0 22px;
+  padding: 23px 25px;
+}
+.next-up-queue__header { align-items: flex-start; display: flex; gap: 22px; justify-content: space-between; margin-bottom: 16px; }
+.next-up-queue__eyebrow { color: #14b8a6; font-size: .75rem; font-weight: 800; letter-spacing: .08em; margin: 0 0 5px; text-transform: uppercase; }
+.next-up-queue h2 { color: var(--fg); font-family: 'Poppins', sans-serif; font-size: 1.32rem; margin: 0; }
+.next-up-queue__hint { color: var(--fg); font-size: .86rem; line-height: 1.5; margin: 0; max-width: 410px; opacity: .72; text-align: right; }
+.next-up-queue__items { display: grid; gap: 9px; }
+.next-up-queue__item { align-items: center; background: rgba(255, 255, 255, .34); border: 1px solid var(--border); border-radius: 10px; display: grid; gap: 12px; grid-template-columns: 32px minmax(0, 1fr) auto; padding: 10px 12px; }
+body.dark-mode .next-up-queue__item { background: rgba(0, 0, 0, .12); }
+.next-up-queue__item.is-unavailable { opacity: .62; }
+.next-up-queue__order { align-items: center; background: #14b8a6; border-radius: 50%; color: #06211f; display: inline-flex; font-size: .8rem; font-weight: 800; height: 26px; justify-content: center; width: 26px; }
+.next-up-queue__copy { min-width: 0; }
+.next-up-queue__copy strong { color: var(--fg); display: block; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.next-up-queue__copy span { color: var(--fg); display: block; font-size: .78rem; margin-top: 2px; opacity: .66; }
+.next-up-queue__controls { align-items: center; display: flex; gap: 6px; }
+.next-up-queue__controls button { cursor: pointer; font: inherit; }
+.next-up-queue__open, .next-up-queue__remove, .next-up-queue__icon-button { background: transparent; border: 1px solid var(--border); border-radius: 6px; color: var(--fg); font-size: .78rem; padding: 5px 8px; }
+.next-up-queue__open { border-color: rgba(20, 184, 166, .5); color: #0f766e; font-weight: 700; }
+body.dark-mode .next-up-queue__open { color: #5eead4; }
+.next-up-queue__remove { color: #dc2626; }
+.next-up-queue__icon-button { font-size: 1rem; line-height: 1; padding: 4px 7px; }
+.next-up-queue__controls button:hover:not(:disabled) { border-color: var(--primary); }
+.next-up-queue__controls button:disabled { cursor: default; opacity: .35; }
+.next-up-queue__empty { color: var(--fg); line-height: 1.55; margin: 2px 0; opacity: .7; }
+@media (max-width: 680px) { .next-up-queue { padding: 20px; } .next-up-queue__header { flex-direction: column; gap: 8px; } .next-up-queue__hint { text-align: left; } .next-up-queue__item { align-items: start; grid-template-columns: 28px minmax(0, 1fr); } .next-up-queue__controls { grid-column: 2; flex-wrap: wrap; } }
 
 .public-site-nav {
   align-items: center;

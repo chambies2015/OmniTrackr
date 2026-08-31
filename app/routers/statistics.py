@@ -48,6 +48,15 @@ def _pulse_item(item, category: dict, prompts: list[str]) -> dict:
     }
 
 
+def _next_up_pulse_item(queue_item, category: dict, db: Session, user_id: int) -> dict | None:
+    """Resolve a queue reference for the compact dashboard pulse."""
+    model = category["model"]
+    item = db.query(model).filter(model.id == queue_item.item_id, model.user_id == user_id).first()
+    if not item:
+        return None
+    return _pulse_item(item, category, [])
+
+
 @router.get("/", response_model=schemas.StatisticsDashboard)
 async def get_statistics_dashboard(
     current_user: models.User = Depends(get_current_user),
@@ -220,9 +229,20 @@ async def get_library_pulse(
                 prompts.append("Leave a note")
             reflection_items.append(_pulse_item(item, category, prompts))
 
+    category_by_key = {category["key"]: category for category in categories}
+    queued_items = db.query(models.NextUpItem).filter(
+        models.NextUpItem.user_id == current_user.id,
+    ).order_by(models.NextUpItem.position, models.NextUpItem.id).limit(3).all()
+    next_up_items = [
+        item for queue_item in queued_items
+        if (category := category_by_key.get(queue_item.category))
+        and (item := _next_up_pulse_item(queue_item, category, db, current_user.id))
+    ]
+
     return {
         "continue_items": continue_items[:6],
         "reflection_items": reflection_items[:6],
+        "next_up_items": next_up_items,
         "generated_at": datetime.now().isoformat(),
     }
 

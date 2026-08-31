@@ -61,6 +61,7 @@ class User(Base):
     friendships_as_user2 = relationship("Friendship", foreign_keys="Friendship.user2_id", back_populates="user2", cascade="all, delete-orphan")
     notifications = relationship("Notification", back_populates="user", cascade="all, delete-orphan")
     custom_tabs = relationship("CustomTab", back_populates="owner", cascade="all, delete-orphan")
+    next_up_items = relationship("NextUpItem", back_populates="owner", cascade="all, delete-orphan")
 
 
 class Movie(Base):
@@ -180,6 +181,29 @@ class Book(Base):
     # User relationship
     user_id = Column(Integer, ForeignKey("users.id"), nullable=False, index=True)
     owner = relationship("User", back_populates="books")
+
+
+class NextUpItem(Base):
+    """A user's ordered, private queue of existing library records.
+
+    ``category`` plus ``item_id`` deliberately form a polymorphic reference: media
+    records retain their existing tables and a queue entry never owns the media it
+    points to. This makes the feature additive and safe for established libraries.
+    """
+    __tablename__ = "next_up_items"
+
+    id = Column(Integer, primary_key=True, index=True)
+    user_id = Column(Integer, ForeignKey("users.id"), nullable=False, index=True)
+    category = Column(String, nullable=False)
+    item_id = Column(Integer, nullable=False)
+    position = Column(Integer, nullable=False, default=0)
+    created_at = Column(DateTime, default=datetime.utcnow)
+
+    owner = relationship("User", back_populates="next_up_items")
+
+    __table_args__ = (
+        UniqueConstraint("user_id", "category", "item_id", name="uq_next_up_item"),
+    )
 
 
 class FriendRequest(Base):

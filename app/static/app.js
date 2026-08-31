@@ -237,6 +237,9 @@ function handleDelegatedClick(event) {
     'launchpad-open-insights': openLaunchpadInsights,
     'launchpad-dismiss': dismissLibraryLaunchpad,
     'pulse-open-item': () => switchTab(target.dataset.pulseTab),
+    'add-next-up': () => addToNextUp(target.dataset.nextUpCategory, Number(target.dataset.nextUpItemId)),
+    'move-next-up': () => moveNextUp(Number(target.dataset.nextUpId), Number(target.dataset.nextUpPosition)),
+    'remove-next-up': () => removeNextUp(Number(target.dataset.nextUpId)),
     'show-register-form': () => showRegisterForm(),
     'show-login-form': () => showLoginForm()
   };
@@ -413,6 +416,7 @@ async function loadMovies() {
           <td><span class="watched-icon ${movie.review_public ? 'watched' : 'unwatched'}">${movie.review_public ? '✓' : '✗'}</span></td>
           <td>
             <button class="action-btn edit-movie-btn" data-movie-id="${movie.id}" data-movie-title="${escapeHtml(movie.title)}" data-movie-director="${escapeHtml(movie.director)}" data-movie-year="${movie.year}" data-movie-rating="${movie.rating ?? ''}" data-movie-watched="${movie.watched}" data-movie-review="${escapeHtml(movie.review || '')}" data-movie-review-public="${movie.review_public || false}">Edit</button>
+            <button type="button" class="action-btn" data-action="add-next-up" data-next-up-category="movies" data-next-up-item-id="${movie.id}">Next up</button>
             <button class="action-btn delete-movie-btn" data-movie-id="${movie.id}">Delete</button>
           </td>
         `;
@@ -717,6 +721,7 @@ async function loadTVShows() {
           <td><span class="watched-icon ${tvShow.review_public ? 'watched' : 'unwatched'}">${tvShow.review_public ? '✓' : '✗'}</span></td>
           <td>
             <button class="action-btn edit-tv-btn" data-tv-id="${tvShow.id}" data-tv-title="${escapeHtml(tvShow.title)}" data-tv-year="${tvShow.year}" data-tv-seasons="${tvShow.seasons ?? ''}" data-tv-episodes="${tvShow.episodes ?? ''}" data-tv-rating="${tvShow.rating ?? ''}" data-tv-watched="${tvShow.watched}" data-tv-review="${escapeHtml(tvShow.review || '')}" data-tv-review-public="${tvShow.review_public || false}">Edit</button>
+            <button type="button" class="action-btn" data-action="add-next-up" data-next-up-category="tv-shows" data-next-up-item-id="${tvShow.id}">Next up</button>
             <button class="action-btn delete-tv-btn" data-tv-id="${tvShow.id}">Delete</button>
           </td>
         `;
@@ -783,6 +788,7 @@ async function loadAnime() {
           <td><span class="watched-icon ${animeItem.review_public ? 'watched' : 'unwatched'}">${animeItem.review_public ? '✓' : '✗'}</span></td>
           <td>
             <button class="action-btn edit-anime-btn" data-anime-id="${animeItem.id}" data-anime-title="${escapeHtml(animeItem.title)}" data-anime-year="${animeItem.year}" data-anime-seasons="${animeItem.seasons ?? ''}" data-anime-episodes="${animeItem.episodes ?? ''}" data-anime-rating="${animeItem.rating ?? ''}" data-anime-watched="${animeItem.watched}" data-anime-review="${escapeHtml(animeItem.review || '')}" data-anime-review-public="${animeItem.review_public || false}">Edit</button>
+            <button type="button" class="action-btn" data-action="add-next-up" data-next-up-category="anime" data-next-up-item-id="${animeItem.id}">Next up</button>
             <button class="action-btn delete-anime-btn" data-anime-id="${animeItem.id}">Delete</button>
           </td>
         `;
@@ -1160,6 +1166,7 @@ async function loadVideoGames() {
           <td><span class="watched-icon ${game.review_public ? 'watched' : 'unwatched'}">${game.review_public ? '✓' : '✗'}</span></td>
           <td>
             <button class="action-btn edit-video-game-btn" data-game-id="${game.id}" data-game-title="${escapeHtml(game.title)}" data-game-release-date="${game.release_date ? game.release_date.split('T')[0] : ''}" data-game-genres="${escapeHtml(game.genres || '')}" data-game-rating="${game.rating ?? ''}" data-game-played="${game.played}" data-game-review="${escapeHtml(game.review || '')}" data-game-review-public="${game.review_public || false}">Edit</button>
+            <button type="button" class="action-btn" data-action="add-next-up" data-next-up-category="video-games" data-next-up-item-id="${game.id}">Next up</button>
             <button class="action-btn delete-video-game-btn" data-game-id="${game.id}">Delete</button>
           </td>
         `;
@@ -1515,6 +1522,7 @@ async function loadMusic() {
           <td><span class="watched-icon ${item.review_public ? 'watched' : 'unwatched'}">${item.review_public ? '✓' : '✗'}</span></td>
           <td>
             <button class="action-btn edit-music-btn" data-music-id="${item.id}" data-music-title="${escapeHtml(item.title)}" data-music-artist="${escapeHtml(item.artist)}" data-music-year="${item.year}" data-music-genre="${escapeHtml(item.genre || '')}" data-music-rating="${item.rating ?? ''}" data-music-listened="${item.listened}" data-music-review="${escapeHtml(item.review || '')}" data-music-review-public="${item.review_public || false}">Edit</button>
+            <button type="button" class="action-btn" data-action="add-next-up" data-next-up-category="music" data-next-up-item-id="${item.id}">Next up</button>
             <button class="action-btn delete-music-btn" data-music-id="${item.id}">Delete</button>
           </td>
         `;
@@ -1860,6 +1868,7 @@ async function loadBooks() {
           <td><span class="watched-icon ${book.review_public ? 'watched' : 'unwatched'}">${book.review_public ? '✓' : '✗'}</span></td>
           <td>
             <button class="action-btn edit-book-btn" data-book-id="${book.id}" data-book-title="${escapeHtml(book.title)}" data-book-author="${escapeHtml(book.author)}" data-book-year="${book.year}" data-book-genre="${escapeHtml(book.genre || '')}" data-book-rating="${book.rating ?? ''}" data-book-read="${book.read}" data-book-review="${escapeHtml(book.review || '')}" data-book-review-public="${book.review_public || false}">Edit</button>
+            <button type="button" class="action-btn" data-action="add-next-up" data-next-up-category="books" data-next-up-item-id="${book.id}">Next up</button>
             <button class="action-btn delete-book-btn" data-book-id="${book.id}">Delete</button>
           </td>
         `;
@@ -6012,10 +6021,16 @@ function renderLibraryPulse(pulse) {
   if (!pulseElement) return;
   const continueItems = Array.isArray(pulse?.continue_items) ? pulse.continue_items : [];
   const reflectionItems = Array.isArray(pulse?.reflection_items) ? pulse.reflection_items : [];
-  if (!continueItems.length && !reflectionItems.length) {
+  const nextUpItems = Array.isArray(pulse?.next_up_items) ? pulse.next_up_items : [];
+  if (!continueItems.length && !reflectionItems.length && !nextUpItems.length) {
     pulseElement.setAttribute('hidden', '');
     return;
   }
+  renderLibraryPulseList(
+    document.getElementById('libraryPulseNextUp'),
+    nextUpItems,
+    'No queue yet. Use “Next up” on any item you want to make time for.'
+  );
   renderLibraryPulseList(
     document.getElementById('libraryPulseContinue'),
     continueItems,
@@ -6027,6 +6042,129 @@ function renderLibraryPulse(pulse) {
     'Your saved items already have ratings and notes. Nice work keeping the story behind your library.'
   );
   pulseElement.removeAttribute('hidden');
+}
+
+function renderNextUpQueue(items) {
+  const queueElement = document.getElementById('nextUpQueue');
+  const container = document.getElementById('nextUpQueueItems');
+  if (!queueElement || !container) return;
+
+  container.replaceChildren();
+  if (!items.length) {
+    const empty = document.createElement('p');
+    empty.className = 'next-up-queue__empty';
+    empty.textContent = 'Nothing is waiting in the wings. Add a title from any media list whenever you want to turn “someday” into a plan.';
+    container.appendChild(empty);
+  } else {
+    items.forEach((item, index) => {
+      const row = document.createElement('div');
+      row.className = `next-up-queue__item${item.available ? '' : ' is-unavailable'}`;
+      const order = document.createElement('span');
+      order.className = 'next-up-queue__order';
+      order.textContent = String(index + 1);
+      const copy = document.createElement('div');
+      copy.className = 'next-up-queue__copy';
+      const title = document.createElement('strong');
+      title.textContent = item.title;
+      const meta = document.createElement('span');
+      meta.textContent = item.available ? item.category_label : 'This library item was deleted';
+      copy.append(title, meta);
+      const controls = document.createElement('div');
+      controls.className = 'next-up-queue__controls';
+      if (item.available) {
+        const open = document.createElement('button');
+        open.type = 'button';
+        open.className = 'next-up-queue__open';
+        open.dataset.action = 'pulse-open-item';
+        open.dataset.pulseTab = item.category;
+        open.textContent = 'Open';
+        controls.appendChild(open);
+      }
+      const up = document.createElement('button');
+      up.type = 'button';
+      up.className = 'next-up-queue__icon-button';
+      up.dataset.action = 'move-next-up';
+      up.dataset.nextUpId = item.id;
+      up.dataset.nextUpPosition = Math.max(index - 1, 0);
+      up.disabled = index === 0;
+      up.setAttribute('aria-label', `Move ${item.title} up`);
+      up.textContent = '↑';
+      const down = document.createElement('button');
+      down.type = 'button';
+      down.className = 'next-up-queue__icon-button';
+      down.dataset.action = 'move-next-up';
+      down.dataset.nextUpId = item.id;
+      down.dataset.nextUpPosition = index + 1;
+      down.disabled = index === items.length - 1;
+      down.setAttribute('aria-label', `Move ${item.title} down`);
+      down.textContent = '↓';
+      const remove = document.createElement('button');
+      remove.type = 'button';
+      remove.className = 'next-up-queue__remove';
+      remove.dataset.action = 'remove-next-up';
+      remove.dataset.nextUpId = item.id;
+      remove.setAttribute('aria-label', `Remove ${item.title} from Next Up`);
+      remove.textContent = 'Remove';
+      controls.append(up, down, remove);
+      row.append(order, copy, controls);
+      container.appendChild(row);
+    });
+  }
+  queueElement.removeAttribute('hidden');
+}
+
+async function refreshNextUpQueue() {
+  if (!hasStoredAuth()) return;
+  try {
+    const response = await authenticatedFetch(`${API_BASE}/next-up/`);
+    if (response.ok) renderNextUpQueue(await response.json());
+  } catch (error) {
+    // The queue is supplementary; never interrupt the tracker if it is unavailable.
+  }
+}
+
+async function addToNextUp(category, itemId) {
+  if (!category || !Number.isInteger(itemId) || itemId < 1) return;
+  try {
+    const response = await authenticatedFetch(`${API_BASE}/next-up/`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ category, item_id: itemId }),
+    });
+    if (response.status === 409) {
+      alert('That item is already in your Next Up queue.');
+      return;
+    }
+    if (!response.ok) throw new Error('Unable to add queue item');
+    await Promise.all([refreshNextUpQueue(), refreshLibraryPulse()]);
+  } catch (error) {
+    alert('Could not add that item to Next Up. Please try again.');
+  }
+}
+
+async function moveNextUp(queueId, position) {
+  try {
+    const response = await authenticatedFetch(`${API_BASE}/next-up/${queueId}/position`, {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ position }),
+    });
+    if (!response.ok) throw new Error('Unable to move queue item');
+    renderNextUpQueue(await response.json());
+    refreshLibraryPulse();
+  } catch (error) {
+    alert('Could not reorder Next Up. Please try again.');
+  }
+}
+
+async function removeNextUp(queueId) {
+  try {
+    const response = await authenticatedFetch(`${API_BASE}/next-up/${queueId}`, { method: 'DELETE' });
+    if (!response.ok) throw new Error('Unable to remove queue item');
+    await Promise.all([refreshNextUpQueue(), refreshLibraryPulse()]);
+  } catch (error) {
+    alert('Could not remove that item from Next Up. Please try again.');
+  }
 }
 
 async function refreshLibraryLaunchpad() {
@@ -6054,6 +6192,7 @@ function scheduleLibraryLaunchpadRefresh() {
   launchpadRefreshTimer = window.setTimeout(() => {
     refreshLibraryLaunchpad();
     refreshLibraryPulse();
+    refreshNextUpQueue();
   }, 250);
 }
 

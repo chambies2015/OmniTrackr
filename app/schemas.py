@@ -820,3 +820,37 @@ class CustomTabItem(BaseModel):
     
     class Config:
         from_attributes = True
+
+
+# ============================================================================
+# Next Up Queue Schemas
+# ============================================================================
+
+NEXT_UP_CATEGORIES = {"movies", "tv-shows", "anime", "video-games", "music", "books"}
+
+
+class NextUpItemCreate(BaseModel):
+    category: str = Field(..., description="Library category for the queued item")
+    item_id: int = Field(..., ge=1, description="ID of the existing library item")
+
+    @field_validator("category")
+    @classmethod
+    def validate_category(cls, value: str) -> str:
+        normalized = value.strip().lower()
+        if normalized not in NEXT_UP_CATEGORIES:
+            raise ValueError("Category must be a supported library category")
+        return normalized
+
+
+class NextUpItemMove(BaseModel):
+    position: int = Field(..., ge=0, description="Zero-based queue position")
+
+
+class NextUpItem(BaseModel):
+    id: int
+    category: str
+    item_id: int
+    title: str
+    category_label: str
+    position: int
+    available: bool = True
