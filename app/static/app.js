@@ -236,6 +236,7 @@ function handleDelegatedClick(event) {
     'launchpad-add-item': openLaunchpadAddItem,
     'launchpad-open-insights': openLaunchpadInsights,
     'launchpad-dismiss': dismissLibraryLaunchpad,
+    'pulse-open-item': () => switchTab(target.dataset.pulseTab),
     'show-register-form': () => showRegisterForm(),
     'show-login-form': () => showLoginForm()
   };
@@ -5971,6 +5972,63 @@ function renderLibraryLaunchpad(insights) {
   launchpad.removeAttribute('hidden');
 }
 
+function renderLibraryPulseList(container, items, emptyMessage) {
+  if (!container) return;
+  container.replaceChildren();
+  if (!items.length) {
+    const empty = document.createElement('p');
+    empty.className = 'library-pulse__empty';
+    empty.textContent = emptyMessage;
+    container.appendChild(empty);
+    return;
+  }
+
+  items.forEach((item) => {
+    const button = document.createElement('button');
+    button.type = 'button';
+    button.className = 'library-pulse__item';
+    button.dataset.action = 'pulse-open-item';
+    button.dataset.pulseTab = item.category;
+    const copy = document.createElement('span');
+    copy.className = 'library-pulse__item-copy';
+    const title = document.createElement('span');
+    title.className = 'library-pulse__item-title';
+    title.textContent = item.title;
+    const meta = document.createElement('span');
+    meta.className = 'library-pulse__item-meta';
+    const prompts = Array.isArray(item.prompts) && item.prompts.length ? item.prompts.join(' · ') : item.status_label;
+    meta.textContent = `${item.category_label} · ${prompts}`;
+    copy.append(title, meta);
+    const action = document.createElement('span');
+    action.className = 'library-pulse__item-action';
+    action.textContent = 'Open →';
+    button.append(copy, action);
+    container.appendChild(button);
+  });
+}
+
+function renderLibraryPulse(pulse) {
+  const pulseElement = document.getElementById('libraryPulse');
+  if (!pulseElement) return;
+  const continueItems = Array.isArray(pulse?.continue_items) ? pulse.continue_items : [];
+  const reflectionItems = Array.isArray(pulse?.reflection_items) ? pulse.reflection_items : [];
+  if (!continueItems.length && !reflectionItems.length) {
+    pulseElement.setAttribute('hidden', '');
+    return;
+  }
+  renderLibraryPulseList(
+    document.getElementById('libraryPulseContinue'),
+    continueItems,
+    'Nothing unfinished right now. Add a future watch, read, listen, or play when inspiration strikes.'
+  );
+  renderLibraryPulseList(
+    document.getElementById('libraryPulseReflect'),
+    reflectionItems,
+    'Your saved items already have ratings and notes. Nice work keeping the story behind your library.'
+  );
+  pulseElement.removeAttribute('hidden');
+}
+
 async function refreshLibraryLaunchpad() {
   if (isLibraryLaunchpadDismissed() || !hasStoredAuth()) return;
   try {
@@ -5981,9 +6039,22 @@ async function refreshLibraryLaunchpad() {
   }
 }
 
+async function refreshLibraryPulse() {
+  if (!hasStoredAuth()) return;
+  try {
+    const response = await authenticatedFetch(`${API_BASE}/statistics/pulse/`);
+    if (response.ok) renderLibraryPulse(await response.json());
+  } catch (error) {
+    // Pulse is optional and should never interrupt the tracker.
+  }
+}
+
 function scheduleLibraryLaunchpadRefresh() {
   window.clearTimeout(launchpadRefreshTimer);
-  launchpadRefreshTimer = window.setTimeout(refreshLibraryLaunchpad, 250);
+  launchpadRefreshTimer = window.setTimeout(() => {
+    refreshLibraryLaunchpad();
+    refreshLibraryPulse();
+  }, 250);
 }
 
 const loadMovieLibrary = loadMovies;

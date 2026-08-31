@@ -100,6 +100,25 @@ class TestStatisticsEndpoints:
         assert "top_category" in data
         assert "most_complete_category" in data
         assert len(data["categories"]) == 6
+
+    def test_get_library_pulse_returns_current_user_actions(self, authenticated_client, test_movie_data, test_tv_show_data):
+        """Pulse should return unfinished and missing-context items without mutating records."""
+        movie_data = test_movie_data.copy()
+        movie_data.update({"watched": False, "rating": None, "review": ""})
+        movie_response = authenticated_client.post("/movies/", json=movie_data)
+        assert movie_response.status_code == 201
+
+        tv_data = test_tv_show_data.copy()
+        tv_data.update({"watched": True, "rating": 8, "review": "Finished and memorable."})
+        assert authenticated_client.post("/tv-shows/", json=tv_data).status_code == 201
+
+        response = authenticated_client.get("/statistics/pulse/")
+        assert response.status_code == 200
+        data = response.json()
+        assert any(item["title"] == movie_data["title"] for item in data["continue_items"])
+        reflection_item = next(item for item in data["reflection_items"] if item["title"] == movie_data["title"])
+        assert reflection_item["category"] == "movies"
+        assert set(reflection_item["prompts"]) == {"Add a rating", "Leave a note"}
     
     def test_get_watch_statistics(self, authenticated_client, test_movie_data, test_tv_show_data, test_anime_data, test_video_game_data, test_music_data, test_book_data):
         """Test getting watch statistics."""

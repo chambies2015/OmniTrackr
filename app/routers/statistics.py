@@ -4,7 +4,7 @@ Statistics endpoints for the OmniTrackr API.
 from datetime import datetime
 from fastapi import APIRouter, Depends
 from sqlalchemy.orm import Session
-from sqlalchemy import func
+from sqlalchemy import func, or_
 
 from .. import crud, schemas, models
 from ..dependencies import get_db, get_current_user
@@ -34,6 +34,18 @@ def _count_rated_items(db: Session, model, user_id: int) -> int:
         model.user_id == user_id,
         model.rating.isnot(None)
     ).count()
+
+
+def _pulse_item(item, category: dict, prompts: list[str]) -> dict:
+    """Serialize only the small, current-user fields needed by the dashboard pulse."""
+    return {
+        "id": item.id,
+        "title": item.title,
+        "category": category["key"],
+        "category_label": category["label"],
+        "status_label": category["status_label"],
+        "prompts": prompts,
+    }
 
 
 @router.get("/", response_model=schemas.StatisticsDashboard)
@@ -159,6 +171,59 @@ async def get_library_insights(
         "most_complete_category": most_complete_category,
         "categories": category_summaries,
         "generated_at": datetime.now().isoformat()
+    }
+
+
+@router.get("/pulse/", response_model=dict)
+async def get_library_pulse(
+    current_user: models.User = Depends(get_current_user),
+    db: Session = Depends(get_db)
+):
+    """Return a small, action-oriented slice of the current user's library.
+
+    This intentionally avoids creating a new persistence model. It is a read-only
+    dashboard helper that surfaces records that are unfinished or still missing the
+    personal context that makes a library useful later.
+    """
+    categories = [
+        {"key": "movies", "label": "Movie", "model": models.Movie, "done": models.Movie.watched, "status_label": "Not watched"},
+        {"key": "tv-shows", "label": "TV show", "model": models.TVShow, "done": models.TVShow.watched, "status_label": "In progress"},
+        {"key": "anime", "label": "Anime", "model": models.Anime, "done": models.Anime.watched, "status_label": "In progress"},
+        {"key": "video-games", "label": "Game", "model": models.VideoGame, "done": models.VideoGame.played, "status_label": "Not played"},
+        {"key": "music", "label": "Album", "model": models.Music, "done": models.Music.listened, "status_label": "Not listened"},
+        {"key": "books", "label": "Book", "model": models.Book, "done": models.Book.read, "status_label": "Not read"},
+    ]
+    continue_items = []
+    reflection_items = []
+
+    for category in categories:
+        model = category["model"]
+        unfinished = db.query(model).filter(
+            model.user_id == current_user.id,
+            category["done"] == False,
+        ).order_by(model.id.desc()).limit(2).all()
+        continue_items.extend(_pulse_item(item, category, []) for item in unfinished)
+
+        needs_context = db.query(model).filter(
+            model.user_id == current_user.id,
+            or_(
+                model.rating.is_(None),
+                model.review.is_(None),
+                func.length(func.trim(model.review)) == 0,
+            ),
+        ).order_by(model.id.desc()).limit(2).all()
+        for item in needs_context:
+            prompts = []
+            if item.rating is None:
+                prompts.append("Add a rating")
+            if not (item.review or "").strip():
+                prompts.append("Leave a note")
+            reflection_items.append(_pulse_item(item, category, prompts))
+
+    return {
+        "continue_items": continue_items[:6],
+        "reflection_items": reflection_items[:6],
+        "generated_at": datetime.now().isoformat(),
     }
 
 
