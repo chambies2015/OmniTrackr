@@ -297,7 +297,8 @@ class TestStatisticsEndpoints:
             "/statistics/watch/",
             "/statistics/ratings/",
             "/statistics/years/",
-            "/statistics/directors/"
+            "/statistics/directors/",
+            "/statistics/insights/"
         ]
         
         for endpoint in endpoints:

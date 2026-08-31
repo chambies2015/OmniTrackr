@@ -65,6 +65,81 @@ body.dark-mode {
   text-align: center;
 }
 
+.library-launchpad {
+  align-items: center;
+  background:
+    radial-gradient(circle at 94% 14%, rgba(20, 184, 166, 0.2), transparent 34%),
+    linear-gradient(120deg, rgba(102, 126, 234, 0.22), rgba(118, 75, 162, 0.14));
+  border: 1px solid rgba(102, 126, 234, 0.36);
+  border-radius: 14px;
+  display: grid;
+  gap: 22px;
+  grid-template-columns: minmax(230px, 1.3fr) minmax(260px, 1fr) auto;
+  margin: 0 0 22px;
+  padding: 25px;
+}
+
+.library-launchpad__eyebrow {
+  color: #14b8a6;
+  font-size: 0.75rem;
+  font-weight: 800;
+  letter-spacing: 0.08em;
+  margin: 0 0 7px;
+  text-transform: uppercase;
+}
+
+.library-launchpad h2 {
+  color: var(--fg);
+  font-family: 'Poppins', sans-serif;
+  font-size: 1.35rem;
+  line-height: 1.25;
+  margin: 0 0 7px;
+}
+
+.library-launchpad__copy > p:last-child {
+  color: var(--fg);
+  line-height: 1.55;
+  margin: 0;
+  opacity: 0.8;
+}
+
+.library-launchpad__steps {
+  display: grid;
+  gap: 8px;
+}
+
+.library-launchpad__step {
+  align-items: center;
+  color: var(--fg);
+  display: flex;
+  font-size: 0.88rem;
+  gap: 9px;
+  opacity: 0.72;
+}
+
+.library-launchpad__step.is-complete { opacity: 1; }
+.library-launchpad__step-icon { color: #14b8a6; font-weight: 800; width: 18px; }
+.library-launchpad__step:not(.is-complete) .library-launchpad__step-icon { color: var(--fg); opacity: 0.45; }
+
+.library-launchpad__actions {
+  align-items: stretch;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  min-width: 132px;
+}
+
+.library-launchpad__primary { background: #14b8a6; color: #06211f; }
+.library-launchpad__primary:hover { background: #2dd4bf; }
+.library-launchpad__secondary { background: transparent; border: 1px solid rgba(102, 126, 234, 0.6); color: var(--fg); }
+.library-launchpad__dismiss { background: transparent; border: 0; color: var(--fg); cursor: pointer; font-size: 0.8rem; opacity: 0.62; padding: 4px; }
+.library-launchpad__dismiss:hover { opacity: 1; text-decoration: underline; }
+
+@media (max-width: 880px) {
+  .library-launchpad { grid-template-columns: 1fr; }
+  .library-launchpad__actions { align-items: center; flex-direction: row; flex-wrap: wrap; }
+}
+
 .public-site-nav {
   align-items: center;
   border-bottom: 1px solid var(--border, rgba(102, 126, 234, 0.24));

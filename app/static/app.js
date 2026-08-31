@@ -233,6 +233,9 @@ function handleDelegatedClick(event) {
     'close-book-search-modal': closeBookSearchModal,
     'close-screenshot-modal': () => closeScreenshotModal(event),
     'export-data-dashboard': exportData,
+    'launchpad-add-item': openLaunchpadAddItem,
+    'launchpad-open-insights': openLaunchpadInsights,
+    'launchpad-dismiss': dismissLibraryLaunchpad,
     'show-register-form': () => showRegisterForm(),
     'show-login-form': () => showLoginForm()
   };
@@ -5888,8 +5891,146 @@ function restoreSidebarState() {
   }
 }
 
+// ============================================================================
+// First-library guidance
+// ============================================================================
+
+const LAUNCHPAD_DISMISS_KEY = 'omnitrackr_library_launchpad_dismissed';
+let launchpadRefreshTimer = null;
+
+function isLibraryLaunchpadDismissed() {
+  try {
+    return localStorage.getItem(LAUNCHPAD_DISMISS_KEY) === 'true';
+  } catch (error) {
+    return false;
+  }
+}
+
+function dismissLibraryLaunchpad() {
+  try {
+    localStorage.setItem(LAUNCHPAD_DISMISS_KEY, 'true');
+  } catch (error) {
+    // The launchpad remains functional when browser storage is unavailable.
+  }
+  document.getElementById('libraryLaunchpad')?.setAttribute('hidden', '');
+}
+
+function openLaunchpadAddItem() {
+  switchTab('movies');
+  const formContent = document.getElementById('movieFormContent');
+  if (formContent?.style.display === 'none') {
+    toggleCollapsible('movieForm');
+  }
+  window.setTimeout(() => document.getElementById('movieTitle')?.focus(), 0);
+}
+
+function openLaunchpadInsights() {
+  switchTab('statistics');
+  const insights = document.getElementById('libraryInsightsStatsContent');
+  if (insights?.style.display === 'none') {
+    toggleCategoryAccordion('library-insights');
+  }
+}
+
+function renderLibraryLaunchpad(insights) {
+  const launchpad = document.getElementById('libraryLaunchpad');
+  const summary = document.getElementById('libraryLaunchpadSummary');
+  const steps = document.getElementById('libraryLaunchpadSteps');
+  if (!launchpad || !summary || !steps || isLibraryLaunchpadDismissed()) return;
+
+  const total = Number(insights?.total_items || 0);
+  const rated = Number(insights?.rated_items || 0);
+  const reviewed = Number(insights?.reviewed_items || 0);
+  const completed = Number(insights?.completed_items || 0);
+  const launchpadSteps = [
+    { complete: total > 0, label: total ? `${total} item${total === 1 ? '' : 's'} saved` : 'Save your first title' },
+    { complete: rated > 0, label: rated ? `${rated} item${rated === 1 ? '' : 's'} rated` : 'Give one item a rating' },
+    { complete: reviewed > 0, label: reviewed ? `${reviewed} note${reviewed === 1 ? '' : 's'} written` : 'Leave a note for future you' },
+  ];
+
+  if (!total) {
+    summary.textContent = 'Start with one title you already love. A small library is easier to make personal than a giant backlog.';
+  } else if (completed) {
+    summary.textContent = `${completed} finished so far. Add a rating or note when you want your library to tell a clearer story.`;
+  } else {
+    summary.textContent = 'Your library is taking shape. Mark progress, add a rating, or leave a note when a detail is worth remembering.';
+  }
+
+  steps.replaceChildren();
+  launchpadSteps.forEach((step) => {
+    const item = document.createElement('div');
+    item.className = `library-launchpad__step${step.complete ? ' is-complete' : ''}`;
+    const icon = document.createElement('span');
+    icon.className = 'library-launchpad__step-icon';
+    icon.textContent = step.complete ? '✓' : '○';
+    const label = document.createElement('span');
+    label.textContent = step.label;
+    item.append(icon, label);
+    steps.appendChild(item);
+  });
+  launchpad.removeAttribute('hidden');
+}
+
+async function refreshLibraryLaunchpad() {
+  if (isLibraryLaunchpadDismissed() || !hasStoredAuth()) return;
+  try {
+    const response = await authenticatedFetch(`${API_BASE}/statistics/insights/`);
+    if (response.ok) renderLibraryLaunchpad(await response.json());
+  } catch (error) {
+    // Guidance is optional; it should never interrupt the main tracker.
+  }
+}
+
+function scheduleLibraryLaunchpadRefresh() {
+  window.clearTimeout(launchpadRefreshTimer);
+  launchpadRefreshTimer = window.setTimeout(refreshLibraryLaunchpad, 250);
+}
+
+const loadMovieLibrary = loadMovies;
+loadMovies = async function (...args) {
+  const result = await loadMovieLibrary(...args);
+  scheduleLibraryLaunchpadRefresh();
+  return result;
+};
+
+const loadTVShowLibrary = loadTVShows;
+loadTVShows = async function (...args) {
+  const result = await loadTVShowLibrary(...args);
+  scheduleLibraryLaunchpadRefresh();
+  return result;
+};
+
+const loadAnimeLibrary = loadAnime;
+loadAnime = async function (...args) {
+  const result = await loadAnimeLibrary(...args);
+  scheduleLibraryLaunchpadRefresh();
+  return result;
+};
+
+const loadVideoGameLibrary = loadVideoGames;
+loadVideoGames = async function (...args) {
+  const result = await loadVideoGameLibrary(...args);
+  scheduleLibraryLaunchpadRefresh();
+  return result;
+};
+
+const loadMusicLibrary = loadMusic;
+loadMusic = async function (...args) {
+  const result = await loadMusicLibrary(...args);
+  scheduleLibraryLaunchpadRefresh();
+  return result;
+};
+
+const loadBookLibrary = loadBooks;
+loadBooks = async function (...args) {
+  const result = await loadBookLibrary(...args);
+  scheduleLibraryLaunchpadRefresh();
+  return result;
+};
+
 // Load initial data
 loadMovies();
+scheduleLibraryLaunchpadRefresh();
 
 // ============================================================================
 // Landing Page Enhancements: Scroll Animations and User Count

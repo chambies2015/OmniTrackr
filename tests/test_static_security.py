@@ -174,3 +174,20 @@ def test_app_review_forms_prompt_for_substantial_public_reviews():
     assert "getReviewQualityMessage(length)" in source
     assert "public-ready context" in source
     assert source.count("${reviewQualityHintHtml('edit-") == 6
+
+
+def test_library_launchpad_is_client_side_and_uses_existing_insights():
+    """First-use guidance should be optional and must not mutate library records."""
+    source = APP_JS.read_text(encoding="utf-8")
+    template = INDEX_HTML.read_text(encoding="utf-8")
+
+    assert 'id="libraryLaunchpad"' in template
+    assert 'data-action="launchpad-add-item"' in template
+    assert 'data-action="launchpad-open-insights"' in template
+    assert 'data-action="launchpad-dismiss"' in template
+    assert "const LAUNCHPAD_DISMISS_KEY" in source
+    assert "function renderLibraryLaunchpad(insights)" in source
+    assert "`${API_BASE}/statistics/insights/`" in source
+    assert "localStorage.setItem(LAUNCHPAD_DISMISS_KEY, 'true')" in source
+    assert "openLaunchpadAddItem" in source
+    assert "openLaunchpadInsights" in source

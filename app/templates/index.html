@@ -339,6 +339,20 @@
       <p class="app-title" role="heading" aria-level="1">OmniTrackr</p>
     </header>
 
+    <section id="libraryLaunchpad" class="library-launchpad" aria-labelledby="libraryLaunchpadTitle" hidden>
+      <div class="library-launchpad__copy">
+        <p class="library-launchpad__eyebrow">Your library, your pace</p>
+        <h2 id="libraryLaunchpadTitle">Build a library you’ll want to revisit.</h2>
+        <p id="libraryLaunchpadSummary">Loading your library progress…</p>
+      </div>
+      <div id="libraryLaunchpadSteps" class="library-launchpad__steps" aria-live="polite"></div>
+      <div class="library-launchpad__actions">
+        <button type="button" class="action-btn library-launchpad__primary" data-action="launchpad-add-item">Add something</button>
+        <button type="button" class="action-btn library-launchpad__secondary" data-action="launchpad-open-insights">See insights</button>
+        <button type="button" class="library-launchpad__dismiss" data-action="launchpad-dismiss" aria-label="Dismiss library launchpad">Not now</button>
+      </div>
+    </section>
+
     <div class="tabs">
       <button class="tab active" data-switch-tab="movies">🎬 Movies</button>
       <button class="tab" data-switch-tab="tv-shows">📺 TV Shows</button>
