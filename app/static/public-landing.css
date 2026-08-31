@@ -1,0 +1,25 @@
+.public-site-nav--focused { max-width: 1180px; }
+.landing-hero--focused { min-height: 66vh; }
+.landing-quiet-proof { color: rgba(255,255,255,.7); font-size: .9rem; margin: 18px 0 0; }
+.landing-workflow { max-width: 1120px; margin: 0 auto; padding: 84px 20px; }
+.workflow-steps { counter-reset: workflow; display: grid; gap: 16px; list-style: none; margin: 38px 0 0; padding: 0; }
+.workflow-steps li { align-items: flex-start; background: var(--card-bg); border: 1px solid var(--border); border-radius: 14px; display: flex; gap: 22px; padding: 25px; }
+.workflow-steps span { color: #14b8a6; font-size: .82rem; font-weight: 800; letter-spacing: .08em; padding-top: 4px; }
+.workflow-steps h3 { color: var(--fg); font-size: 1.16rem; margin: 0 0 7px; }
+.workflow-steps p, .landing-discovery p { color: var(--fg-secondary); line-height: 1.7; margin: 0; }
+.landing-features--focused { margin-bottom: 34px; padding-bottom: 40px; }
+.landing-features--focused .feature-card { text-align: left; }
+.landing-features--focused .feature-icon { font-size: 2.4rem; }
+.landing-discovery { align-items: center; background: linear-gradient(125deg, #0f766e, #155e75); border-radius: 16px; color: #fff; display: grid; gap: 36px; grid-template-columns: minmax(0, 1.35fr) minmax(260px, .65fr); margin: 52px auto 72px; max-width: 1080px; padding: 48px; }
+.landing-discovery .landing-eyebrow { color: #ccfbf1; }
+.landing-discovery h2 { font-family: Poppins, sans-serif; font-size: 2rem; line-height: 1.2; margin: 0 0 16px; }
+.landing-discovery p { color: rgba(255,255,255,.82); margin-bottom: 24px; }
+.landing-discovery .secondary { background: #fff; border-color: #fff; color: #0f3d43; }
+.discovery-aside { border-left: 1px solid rgba(255,255,255,.28); padding-left: 28px; }
+.discovery-aside strong { font-family: Poppins, sans-serif; font-size: 1.1rem; }
+.discovery-aside p { font-size: .95rem; margin-top: 10px; }
+.landing-faq--focused { margin-bottom: 22px; }
+.landing-eyebrow--dark { color: var(--primary); text-align: center; }
+.landing-footer--public { box-sizing: border-box; margin: 0; width: 100%; }
+.sr-only { height: 1px; margin: -1px; overflow: hidden; padding: 0; position: absolute; width: 1px; clip: rect(0, 0, 0, 0); white-space: nowrap; }
+@media (max-width: 760px) { .landing-hero--focused { min-height: auto; } .landing-workflow { padding-block: 58px; } .workflow-steps li { gap: 14px; padding: 20px; } .landing-discovery { border-radius: 0; grid-template-columns: 1fr; margin: 25px 0 58px; padding: 34px 22px; } .discovery-aside { border-left: 0; border-top: 1px solid rgba(255,255,255,.28); padding: 22px 0 0; } }

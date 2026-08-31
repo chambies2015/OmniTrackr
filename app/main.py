@@ -134,6 +134,44 @@ def strict_template_response(template_name: str, request: Request | None = None)
             html = inject_adsense_account_meta(file.read())
             return strict_html_response(inject_public_ad_loader(html, template_name, request))
     return None
+
+
+def public_root_html(html: str) -> str:
+    """Return the standalone public landing experience without the private app shell.
+
+    The dashboard and its empty tables used to be sent to every anonymous visitor and
+    hidden only with CSS. A dedicated public template is clearer for visitors and
+    crawlers, while signed-in visitors still receive the complete dashboard unchanged.
+    The previous extraction path remains as a safe fallback for incomplete deployments.
+    """
+    public_template = os.path.join(os.path.dirname(__file__), "templates", "public_landing.html")
+    if os.path.exists(public_template):
+        with open(public_template, "r", encoding="utf-8") as file:
+            return file.read()
+
+    landing_marker = "  <!-- Landing Page -->"
+    scripts_marker = '  <script src="./credentials.js"></script>'
+    body_match = re.search(r"<body[^>]*>", html, flags=re.IGNORECASE)
+    landing_start = html.find(landing_marker)
+    scripts_start = html.rfind(scripts_marker)
+
+    # Keep the original page usable if a future template edit moves a marker.
+    if not body_match or landing_start == -1 or scripts_start == -1 or landing_start >= scripts_start:
+        return html
+
+    public_head = html[:body_match.end()]
+    public_head = public_head.replace(
+        '<html lang="en">',
+        '<html lang="en" data-public-shell="true">',
+        1,
+    )
+    public_head = public_head.replace('  <script src="./preauth.js"></script>\n', "", 1)
+    public_tail = html[scripts_start:].replace(
+        '  <script src="./app.js"></script>',
+        '  <script src="/static/public-landing.js" defer></script>',
+        1,
+    )
+    return f"{public_head}\n{html[landing_start:scripts_start]}{public_tail}"
 allowed_origins_str = os.getenv("ALLOWED_ORIGINS", "")
 if allowed_origins_str:
     allowed_origins = [origin.strip() for origin in allowed_origins_str.split(",") if origin.strip()]
@@ -269,12 +307,15 @@ app.include_router(reviews.router)
 # Root endpoint
 @app.get("/", tags=["root"])
 @app.head("/", tags=["root"])
-async def read_root():
+async def read_root(request: Request):
     # Serve the HTML UI file
     html_file = os.path.join(os.path.dirname(__file__), "templates", "index.html")
     if os.path.exists(html_file):
         with open(html_file, "r", encoding="utf-8") as file:
-            return nonce_html_response(file.read())
+            html = file.read()
+            if not request.cookies.get(AUTH_COOKIE_NAME):
+                html = public_root_html(html)
+            return nonce_html_response(html)
     return {"message": "OmniTrackr API is running 🚀"}
 
 

@@ -134,15 +134,9 @@ async function login(username, password) {
 
     const data = await response.json();
     saveAuthData(data.access_token, data.user);
-    hideAuthModal();
-    showMainUI();
-
-    // Load initial data
-    loadMovies();
-    if (typeof loadCustomTabs === 'function') {
-        loadCustomTabs();
-    }
-    updateUserDisplay();
+    // The anonymous page deliberately does not include private dashboard markup.
+    // Reload after the session cookie is set so the server can return the full app.
+    window.location.assign('/');
 }
 
 async function logout() {
@@ -174,12 +168,17 @@ function showAuthModal() {
     if (window.initLandingPageEnhancements) {
       window.initLandingPageEnhancements();
     }
-    document.getElementById('mainContainer').style.display = 'none';
+    const mainContainer = document.getElementById('mainContainer');
+    if (mainContainer) {
+        mainContainer.style.display = 'none';
+    }
     document.getElementById('authError').textContent = '';
     
     // Hide user display and logout button when showing landing page
-    document.getElementById('userDisplay').style.display = 'none';
-    document.getElementById('logoutBtn').style.display = 'none';
+    const userDisplay = document.getElementById('userDisplay');
+    const logoutBtn = document.getElementById('logoutBtn');
+    if (userDisplay) userDisplay.style.display = 'none';
+    if (logoutBtn) logoutBtn.style.display = 'none';
     
     // Hide notification bell
     const notificationBell = document.getElementById('notificationBell');
@@ -213,6 +212,12 @@ function hideAuthModal() {
 }
 
 function showMainUI() {
+    // Public responses intentionally omit private controls. A successful login sets
+    // the HttpOnly cookie and then reloads into the complete dashboard response.
+    if (!document.getElementById('mainContainer')) {
+        window.location.assign('/');
+        return;
+    }
     document.getElementById('mainContainer').style.display = 'block';
     document.getElementById('landingPage').style.display = 'none';
     // Show footer for logged-in view
@@ -670,7 +675,10 @@ function setupAuthHandlers() {
     });
 
     // Logout button
-    document.getElementById('logoutBtn').addEventListener('click', logout);
+    const logoutBtn = document.getElementById('logoutBtn');
+    if (logoutBtn) {
+        logoutBtn.addEventListener('click', logout);
+    }
 }
 
 // ============================================================================
@@ -679,6 +687,13 @@ function setupAuthHandlers() {
 
 function initAuth() {
     setupAuthHandlers();
+
+    // Do not trust legacy localStorage alone to decide that this response is an
+    // authenticated dashboard. The server decides that from the session cookie.
+    if (document.documentElement.dataset.publicShell === 'true') {
+        showAuthModal();
+        return;
+    }
     
     // Check URL parameters for email verification or password reset
     const urlParams = new URLSearchParams(window.location.search);
