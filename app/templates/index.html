@@ -6,8 +6,6 @@
   <!-- Google tag (gtag.js) -->
   <script async src="https://www.googletagmanager.com/gtag/js?id=G-7EJ4ZGHNV1"></script>
   <script src="./analytics.js" defer></script>
-  <script async src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-7271682066779719"
-  crossorigin="anonymous"></script>
 
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=5.0, user-scalable=yes">
@@ -338,7 +336,7 @@
 
   <main class="container" id="mainContainer">
     <header class="header" role="banner">
-      <h1>OmniTrackr</h1>
+      <p class="app-title" role="heading" aria-level="1">OmniTrackr</p>
     </header>
 
     <div class="tabs">
@@ -379,7 +377,8 @@
               <label>Watched <input type="checkbox" id="movieWatched"></label>
             </div>
             <div>
-              <textarea id="movieReview" placeholder="Review (optional)" rows="1"></textarea>
+              <textarea id="movieReview" class="review-textarea" data-review-quality-input placeholder="Review (optional)" rows="1"></textarea>
+              <p class="review-quality-hint"><span class="review-quality-count" data-review-counter-for="movieReview">0/80 characters - add more context for public reviews</span>. Public reviews show best with personal context, audience fit, and what stood out. <a href="/review-guidelines" target="_blank" rel="noopener noreferrer">Review guide</a></p>
             </div>
             <div>
               <label>Public Review <input type="checkbox" id="movieReviewPublic"></label>
@@ -461,7 +460,8 @@
               <label>Watched <input type="checkbox" id="tvWatched"></label>
             </div>
             <div>
-              <textarea id="tvReview" placeholder="Review (optional)" rows="1"></textarea>
+              <textarea id="tvReview" class="review-textarea" data-review-quality-input placeholder="Review (optional)" rows="1"></textarea>
+              <p class="review-quality-hint"><span class="review-quality-count" data-review-counter-for="tvReview">0/80 characters - add more context for public reviews</span>. Public reviews show best with personal context, audience fit, and what stood out. <a href="/review-guidelines" target="_blank" rel="noopener noreferrer">Review guide</a></p>
             </div>
             <div>
               <label>Public Review <input type="checkbox" id="tvReviewPublic"></label>
@@ -544,7 +544,8 @@
               <label>Watched <input type="checkbox" id="animeWatched"></label>
             </div>
             <div>
-              <textarea id="animeReview" placeholder="Review (optional)" rows="1"></textarea>
+              <textarea id="animeReview" class="review-textarea" data-review-quality-input placeholder="Review (optional)" rows="1"></textarea>
+              <p class="review-quality-hint"><span class="review-quality-count" data-review-counter-for="animeReview">0/80 characters - add more context for public reviews</span>. Public reviews show best with personal context, audience fit, and what stood out. <a href="/review-guidelines" target="_blank" rel="noopener noreferrer">Review guide</a></p>
             </div>
             <div>
               <label>Public Review <input type="checkbox" id="animeReviewPublic"></label>
@@ -627,7 +628,8 @@
               <label>Listened <input type="checkbox" id="musicListened"></label>
             </div>
             <div>
-              <textarea id="musicReview" placeholder="Review (optional)" rows="1"></textarea>
+              <textarea id="musicReview" class="review-textarea" data-review-quality-input placeholder="Review (optional)" rows="1"></textarea>
+              <p class="review-quality-hint"><span class="review-quality-count" data-review-counter-for="musicReview">0/80 characters - add more context for public reviews</span>. Public reviews show best with personal context, audience fit, and what stood out. <a href="/review-guidelines" target="_blank" rel="noopener noreferrer">Review guide</a></p>
             </div>
             <div>
               <label>Public Review <input type="checkbox" id="musicReviewPublic"></label>
@@ -709,7 +711,8 @@
               <label>Read <input type="checkbox" id="bookRead"></label>
             </div>
             <div>
-              <textarea id="bookReview" placeholder="Review (optional)" rows="1"></textarea>
+              <textarea id="bookReview" class="review-textarea" data-review-quality-input placeholder="Review (optional)" rows="1"></textarea>
+              <p class="review-quality-hint"><span class="review-quality-count" data-review-counter-for="bookReview">0/80 characters - add more context for public reviews</span>. Public reviews show best with personal context, audience fit, and what stood out. <a href="/review-guidelines" target="_blank" rel="noopener noreferrer">Review guide</a></p>
             </div>
             <div>
               <label>Public Review <input type="checkbox" id="bookReviewPublic"></label>
@@ -785,7 +788,8 @@
               <label>Played <input type="checkbox" id="videoGamePlayed"></label>
             </div>
             <div>
-              <textarea id="videoGameReview" placeholder="Review (optional)" rows="1"></textarea>
+              <textarea id="videoGameReview" class="review-textarea" data-review-quality-input placeholder="Review (optional)" rows="1"></textarea>
+              <p class="review-quality-hint"><span class="review-quality-count" data-review-counter-for="videoGameReview">0/80 characters - add more context for public reviews</span>. Public reviews show best with personal context, audience fit, and what stood out. <a href="/review-guidelines" target="_blank" rel="noopener noreferrer">Review guide</a></p>
             </div>
             <div>
               <label>Public Review <input type="checkbox" id="videoGameReviewPublic"></label>
@@ -856,7 +860,7 @@
         <div class="accordion-section">
           <div class="accordion-header" data-toggle-category-accordion="library-insights">
             <h3>Library Insights</h3>
-            <span class="accordion-icon" id="libraryInsightsStatsIcon">â–¶</span>
+            <span class="accordion-icon" id="libraryInsightsStatsIcon">&#9654;</span>
           </div>
           <div class="accordion-content" id="libraryInsightsStatsContent" style="display: none;">
             <div id="libraryInsightsStatsLoading" style="text-align: center; padding: 20px; display: none;">
@@ -962,9 +966,13 @@
         <a href="mailto:omnitrackr@gmail.com" class="footer-link">📧 omnitrackr@gmail.com</a>
         <a href="https://ko-fi.com/omnitrackr" target="_blank" rel="noopener noreferrer" class="footer-link">☕ Ko-fi</a>
         <a href="/about" class="footer-link">ℹ️ About</a>
+        <a href="/faq" class="footer-link">❓ FAQ</a>
         <a href="/demo" class="footer-link">👀 Demo</a>
         <a href="/media-tracking" class="footer-link">🧭 Tracking Hub</a>
         <a href="/guides" class="footer-link">📘 Guides</a>
+        <a href="/media-tracker-checklist" class="footer-link">✅ Setup Checklist</a>
+        <a href="/tracking-templates" class="footer-link">🧩 Templates</a>
+        <a href="/review-guidelines" class="footer-link">✍️ Review Guide</a>
         <a href="/compare" class="footer-link">⚖️ Compare</a>
         <a href="/use-cases" class="footer-link">💡 Use Cases</a>
         <a href="/tv-show-tracker" class="footer-link">📺 TV Tracker</a>
@@ -973,6 +981,7 @@
         <a href="/roadmap" class="footer-link">🗺️ Roadmap</a>
         <a href="/terms" class="footer-link">📜 Terms</a>
         <a href="/contact" class="footer-link">✉️ Contact</a>
+        <a href="/advertising" class="footer-link">📣 Advertising</a>
         <a href="/privacy" class="footer-link">🔒 Privacy Policy</a>
       </div>
     </div>
@@ -980,6 +989,26 @@
 
   <!-- Landing Page -->
   <div id="landingPage" role="main">
+    <div class="landing-public-nav">
+      <nav class="public-site-nav" aria-label="Public site navigation">
+        <a class="public-site-nav__brand" href="/">OmniTrackr</a>
+        <div class="public-site-nav__links">
+          <a href="/demo">Demo</a>
+          <a href="/media-tracking">Tracking Hub</a>
+          <a href="/guides">Guides</a>
+          <a href="/site-map">Site Map</a>
+          <a href="/sample-library">Sample Library</a>
+          <a href="/compare">Compare</a>
+          <a href="/use-cases">Use Cases</a>
+          <a href="/reviews">Reviews</a>
+          <a href="/faq">FAQ</a>
+          <a href="/content-quality">Content Quality</a>
+          <a href="/advertising">Advertising</a>
+          <a href="/privacy">Privacy</a>
+          <a class="public-site-nav__cta" href="/#landing-auth">Start tracking</a>
+        </div>
+      </nav>
+    </div>
     <!-- Hero Section -->
     <section class="landing-hero" aria-labelledby="hero-title">
       <div class="landing-hero-inner">
@@ -1016,6 +1045,39 @@
         <div><strong>6</strong><span>media categories</span></div>
         <div><strong>Free</strong><span>no credit card needed</span></div>
         <div><strong>Private</strong><span>share only what you choose</span></div>
+      </div>
+    </section>
+
+    <section class="landing-release-highlights" aria-labelledby="release-highlights-title">
+      <div class="landing-section-heading">
+        <p class="landing-eyebrow">Recently improved</p>
+        <h2 id="release-highlights-title" class="features-title">Fresh resources for new visitors and reviewers</h2>
+        <p>
+          OmniTrackr now includes a clearer public content library, transparent advertising standards, and practical
+          guides that explain how the tracker works before anyone creates an account.
+        </p>
+      </div>
+      <div class="landing-release-grid">
+        <a class="landing-release-card" href="/media-tracker-checklist">
+          <span>Setup Checklist</span>
+          <p>Plan categories, ratings, reviews, privacy, exports, and first-week cleanup before your library grows.</p>
+        </a>
+        <a class="landing-release-card" href="/sample-library">
+          <span>Sample Media Library</span>
+          <p>Browse example movies, shows, games, albums, and books with realistic notes and tracking context.</p>
+        </a>
+        <a class="landing-release-card" href="/content-quality">
+          <span>Content Quality Policy</span>
+          <p>Read how public pages, reviews, and guides are maintained to avoid thin or duplicate content.</p>
+        </a>
+        <a class="landing-release-card" href="/site-map">
+          <span>Human-Readable Site Map</span>
+          <p>Find every public guide, tracker page, policy, and support resource in one organized directory.</p>
+        </a>
+        <a class="landing-release-card" href="/advertising">
+          <span>Advertising Transparency</span>
+          <p>Review where ads may appear, where they are intentionally excluded, and how privacy controls work.</p>
+        </a>
       </div>
     </section>
 
@@ -1485,9 +1547,13 @@
           <a href="https://ko-fi.com/omnitrackr" target="_blank" rel="noopener noreferrer" class="footer-link">☕
             Ko-fi</a>
           <a href="/about" class="footer-link">ℹ️ About</a>
+          <a href="/faq" class="footer-link">❓ FAQ</a>
           <a href="/demo" class="footer-link">👀 Demo</a>
           <a href="/media-tracking" class="footer-link">🧭 Tracking Hub</a>
           <a href="/guides" class="footer-link">📘 Guides</a>
+          <a href="/media-tracker-checklist" class="footer-link">✅ Setup Checklist</a>
+          <a href="/tracking-templates" class="footer-link">🧩 Templates</a>
+          <a href="/review-guidelines" class="footer-link">✍️ Review Guide</a>
           <a href="/compare" class="footer-link">⚖️ Compare</a>
           <a href="/use-cases" class="footer-link">💡 Use Cases</a>
           <a href="/tv-show-tracker" class="footer-link">📺 TV Tracker</a>
@@ -1496,6 +1562,7 @@
           <a href="/roadmap" class="footer-link">🗺️ Roadmap</a>
           <a href="/terms" class="footer-link">📜 Terms</a>
           <a href="/contact" class="footer-link">✉️ Contact</a>
+          <a href="/advertising" class="footer-link">📣 Advertising</a>
           <a href="/privacy" class="footer-link">🔒 Privacy Policy</a>
         </div>
       </div>

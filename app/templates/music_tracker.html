@@ -4,7 +4,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <meta name="description" content="Learn how to use OmniTrackr as a music tracker for albums, artists, genres, listened status, ratings, reviews, cover art, privacy, and statistics.">
+  <meta name="description" content="Learn how to use OmniTrackr as a music tracker for albums, artists, genres, listened status, ratings, reviews, relisten notes, cover art, privacy, and statistics.">
   <meta name="robots" content="index, follow, max-image-preview:large">
   <meta name="author" content="OmniTrackr">
   <title>Music Tracker - Track Albums, Artists, Ratings, Reviews & Stats</title>
@@ -13,13 +13,13 @@
   <meta property="og:type" content="article">
   <meta property="og:url" content="https://omnitrackr.xyz/music-tracker">
   <meta property="og:title" content="Music Tracker - Track Albums, Artists, Ratings, Reviews & Stats">
-  <meta property="og:description" content="A practical guide to tracking albums, artists, genres, ratings, reviews, privacy, and music statistics.">
+  <meta property="og:description" content="A practical guide to tracking albums, artists, genres, ratings, reviews, relisten habits, privacy, and music statistics.">
   <meta property="og:image" content="https://omnitrackr.xyz/omnitrackr_vortex.png">
   <meta property="og:image:alt" content="OmniTrackr music tracker guide">
   <meta property="og:site_name" content="OmniTrackr">
   <meta name="twitter:card" content="summary">
   <meta name="twitter:title" content="Music Tracker">
-  <meta name="twitter:description" content="Track albums, artists, genres, ratings, reviews, privacy, and music statistics with OmniTrackr.">
+  <meta name="twitter:description" content="Track albums, artists, genres, ratings, reviews, relisten habits, privacy, and music statistics with OmniTrackr.">
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@700;800&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
@@ -43,7 +43,7 @@
     "@context": "https://schema.org",
     "@type": "Article",
     "headline": "Music Tracker for Albums, Artists, Reviews and Statistics",
-    "description": "A guide to tracking music with OmniTrackr, including albums, artists, genres, ratings, reviews, privacy and statistics.",
+    "description": "A guide to tracking music with OmniTrackr, including albums, artists, genres, ratings, reviews, relisten habits, privacy and statistics.",
     "dateModified": "2026-06-23",
     "author": { "@type": "Organization", "name": "OmniTrackr" },
     "publisher": { "@type": "Organization", "name": "OmniTrackr", "url": "https://omnitrackr.xyz" },
@@ -56,6 +56,24 @@
 <body>
   <div class="content-wrapper">
     <div class="content-container">
+      <nav class="public-site-nav" aria-label="Public site navigation">
+        <a class="public-site-nav__brand" href="/">OmniTrackr</a>
+        <div class="public-site-nav__links">
+          <a href="/demo">Demo</a>
+          <a href="/media-tracking">Tracking Hub</a>
+          <a href="/guides">Guides</a>
+          <a href="/site-map">Site Map</a>
+          <a href="/sample-library">Sample Library</a>
+          <a href="/compare">Compare</a>
+          <a href="/use-cases">Use Cases</a>
+          <a href="/reviews">Reviews</a>
+          <a href="/faq">FAQ</a>
+          <a href="/content-quality">Content Quality</a>
+          <a href="/advertising">Advertising</a>
+          <a href="/privacy">Privacy</a>
+          <a class="public-site-nav__cta" href="/#landing-auth">Start tracking</a>
+        </div>
+      </nav>
       <a href="/media-tracking" class="back-link">Back to Media Tracking Hub</a>
       <header class="content-header">
         <h1>Music Tracker</h1>
@@ -66,6 +84,7 @@
         <h2 id="why-heading">Why Track Music in a Media Library?</h2>
         <p>Music listening is often scattered across streaming services, playlists, recommendations, purchases, and memory. A streaming app can show recent listening, but it does not always preserve why an album mattered, what you thought after repeat listens, or how your music taste connects to movies, games, books, and shows.</p>
         <p>OmniTrackr gives music a simple, durable place in your larger media collection. You can track title, artist, year, genre, listened status, rating, review, and cover art. That makes it easier to remember albums that shaped a season of life, recommendations from friends, and records worth revisiting.</p>
+        <p>Keeping music beside other media also makes taste patterns easier to notice. A favorite album might share a mood with a favorite film, a game soundtrack, or a book you read during the same month. OmniTrackr helps preserve that context without requiring a separate journal.</p>
       </section>
 
       <section class="content-section" aria-labelledby="workflow-heading">
@@ -80,20 +99,40 @@
         <p>Music reviews do not need to be formal criticism. Even a few sentences about when an album works best can be enough to make the record easier to remember and recommend.</p>
       </section>
 
+      <section class="content-section" aria-labelledby="album-heading">
+        <h2 id="album-heading">Albums, Artists, and Relisten Notes</h2>
+        <p>OmniTrackr works especially well for album-level tracking because albums have enough shape to rate, review, and revisit. You can use entries for studio albums, EPs, live records, soundtracks, compilations, or any release that deserves a place in your personal history.</p>
+        <p>Relisten notes are useful when an opinion changes. Some albums click immediately; others need the right mood, speakers, season, or context. A short review can record whether the album improved after repeat listens, whether a standout track carried the score, or whether the full release is stronger than its singles.</p>
+        <ul>
+          <li>Use artist and year fields to find older favorites quickly.</li>
+          <li>Use genres loosely when a record crosses styles or moods.</li>
+          <li>Use ratings after a few listens when first-impression excitement has settled.</li>
+          <li>Use reviews to remember favorite tracks, production details, lyrics, pacing, and replay value.</li>
+        </ul>
+      </section>
+
       <section class="content-section" aria-labelledby="review-heading">
         <h2 id="review-heading">Writing Music Reviews That Help Later</h2>
         <p>Useful music notes often capture feel better than plot. Mention whether an album is energetic, quiet, dense, immediate, nostalgic, difficult, background-friendly, or built for focused listening. If your opinion changed after multiple listens, that change is worth recording.</p>
         <p>For public reviews, context matters. A review that explains "best for late-night listening" or "great production but uneven pacing" gives other listeners more useful guidance than a score alone.</p>
+        <p>Private music notes can stay messy and personal. Public music reviews should be more polished: explain the type of listener who might enjoy the release, whether the album works front-to-back, and what someone should know before pressing play.</p>
       </section>
 
       <section class="content-section" aria-labelledby="stats-heading">
         <h2 id="stats-heading">Music Statistics and Taste Patterns</h2>
         <p>Music statistics can reveal whether your library leans toward certain genres, years, or artists. When music sits beside your other media, you can also see broader taste patterns: maybe your favorite games and favorite albums share a mood, or your highest-rated books and records cluster around the same period.</p>
+        <p>Statistics are also useful for cleanup. If you have many saved albums with no rating, that may be a relisten queue. If your highest-rated albums have no reviews, those are good candidates for better notes. If one artist dominates the library, the pattern may point toward adjacent artists, genres, or eras worth exploring next.</p>
+      </section>
+
+      <section class="content-section" aria-labelledby="privacy-heading">
+        <h2 id="privacy-heading">Privacy, Sharing, and Recommendations</h2>
+        <p>Music taste can feel personal, so OmniTrackr lets users decide what stays private and which reviews become public. You can keep a messy listening log for yourself, share selected impressions with friends, or publish a polished review when it would help another listener.</p>
+        <p>This makes music tracking useful for both quiet personal memory and lightweight recommendations. A friend does not need your whole library to know why one album is worth hearing; a clear public review or shared note can carry the useful part.</p>
       </section>
 
       <section class="content-section" aria-labelledby="related-heading">
         <h2 id="related-heading">Related Pages</h2>
-        <p>For broader workflows, visit the <a href="/media-tracking">media tracking hub</a>, learn about <a href="/media-statistics">media statistics</a>, or browse <a href="/reviews">public reviews</a>.</p>
+        <p>For broader workflows, visit the <a href="/media-tracking">media tracking hub</a>, learn about <a href="/media-statistics">media statistics</a>, read the <a href="/review-guidelines">review guidelines</a>, try the <a href="/demo">demo library</a>, or browse <a href="/reviews">public reviews</a>.</p>
       </section>
     </div>
   </div>

@@ -48,6 +48,11 @@
     .privacy-section strong { color: var(--fg); }
     .back-link { display: inline-block; margin-bottom: 30px; color: var(--primary); text-decoration: none; font-weight: 500; transition: color 0.3s ease; }
     .back-link:hover { color: var(--secondary); }
+    .guide-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 16px; margin-top: 20px; }
+    .guide-card { display: block; border: 1px solid var(--border); border-radius: 10px; padding: 18px; background: rgba(255, 255, 255, 0.04); color: inherit; text-decoration: none; }
+    .guide-card h3 { font-size: 1.05rem; margin: 0 0 8px; color: var(--fg); }
+    .guide-card p { margin: 0; }
+    .guide-card:hover { border-color: var(--primary); }
   </style>
 
   <script type="application/ld+json">
@@ -69,17 +74,81 @@
     "isPartOf": { "@type": "WebSite", "name": "OmniTrackr", "url": "https://omnitrackr.xyz" }
   }
   </script>
+  <script type="application/ld+json">
+  {
+    "@context": "https://schema.org",
+    "@type": "ItemList",
+    "name": "OmniTrackr Guide Library",
+    "description": "A directory of OmniTrackr guides for tracking movies, TV shows, anime, games, music, books, reviews, statistics, privacy, and data portability.",
+    "url": "https://omnitrackr.xyz/guides",
+    "itemListElement": [
+      { "@type": "ListItem", "position": 1, "name": "FAQ", "url": "https://omnitrackr.xyz/faq" },
+      { "@type": "ListItem", "position": 2, "name": "Media Tracking Hub", "url": "https://omnitrackr.xyz/media-tracking" },
+      { "@type": "ListItem", "position": 3, "name": "Movie Tracker", "url": "https://omnitrackr.xyz/movie-tracker" },
+      { "@type": "ListItem", "position": 4, "name": "TV Show Tracker", "url": "https://omnitrackr.xyz/tv-show-tracker" },
+      { "@type": "ListItem", "position": 5, "name": "Anime Tracker", "url": "https://omnitrackr.xyz/anime-tracker" },
+      { "@type": "ListItem", "position": 6, "name": "Game Tracker", "url": "https://omnitrackr.xyz/game-tracker" },
+      { "@type": "ListItem", "position": 7, "name": "Music Tracker", "url": "https://omnitrackr.xyz/music-tracker" },
+      { "@type": "ListItem", "position": 8, "name": "Book Tracker", "url": "https://omnitrackr.xyz/book-tracker" },
+      { "@type": "ListItem", "position": 9, "name": "Media Statistics", "url": "https://omnitrackr.xyz/media-statistics" },
+      { "@type": "ListItem", "position": 10, "name": "Export and Import Guide", "url": "https://omnitrackr.xyz/export-import-guide" },
+      { "@type": "ListItem", "position": 11, "name": "Media Tracker Setup Checklist", "url": "https://omnitrackr.xyz/media-tracker-checklist" },
+      { "@type": "ListItem", "position": 12, "name": "Media Tracking Templates", "url": "https://omnitrackr.xyz/tracking-templates" },
+      { "@type": "ListItem", "position": 13, "name": "Media Review Guidelines", "url": "https://omnitrackr.xyz/review-guidelines" },
+      { "@type": "ListItem", "position": 14, "name": "Sample Media Library", "url": "https://omnitrackr.xyz/sample-library" }
+    ]
+  }
+  </script>
 </head>
 
 <body>
   <div class="privacy-wrapper">
     <div class="privacy-container">
-      <a href="/" class="back-link">← Back to OmniTrackr</a>
+      <nav class="public-site-nav" aria-label="Public site navigation">
+        <a class="public-site-nav__brand" href="/">OmniTrackr</a>
+        <div class="public-site-nav__links">
+          <a href="/demo">Demo</a>
+          <a href="/media-tracking">Tracking Hub</a>
+          <a href="/guides">Guides</a>
+          <a href="/site-map">Site Map</a>
+          <a href="/sample-library">Sample Library</a>
+          <a href="/compare">Compare</a>
+          <a href="/use-cases">Use Cases</a>
+          <a href="/reviews">Reviews</a>
+          <a href="/faq">FAQ</a>
+          <a href="/content-quality">Content Quality</a>
+          <a href="/advertising">Advertising</a>
+          <a href="/privacy">Privacy</a>
+          <a class="public-site-nav__cta" href="/#landing-auth">Start tracking</a>
+        </div>
+      </nav>
+      <a href="/" class="back-link">Back to OmniTrackr</a>
 
       <header class="privacy-header">
         <h1>How-To Guides</h1>
         <p>Learn how to use OmniTrackr step by step</p>
       </header>
+
+      <section class="privacy-section" aria-labelledby="guide-library-heading">
+        <h2 id="guide-library-heading">Guide Library</h2>
+        <p>Use this directory to jump to the public guide that matches what you are trying to organize. Each guide explains a specific tracking workflow so new visitors can evaluate OmniTrackr before creating an account.</p>
+        <div class="guide-grid">
+          <a class="guide-card" href="/media-tracking"><h3>Media Tracking Hub</h3><p>Start here for a map of watchlists, backlogs, reviews, privacy, exports, and statistics.</p></a>
+          <a class="guide-card" href="/faq"><h3>FAQ</h3><p>Get answers about media tracking, privacy, reviews, exports, friend visibility, and ads.</p></a>
+          <a class="guide-card" href="/movie-tracker"><h3>Movie Tracker</h3><p>Track watchlists, watched status, ratings, reviews, posters, and movie stats.</p></a>
+          <a class="guide-card" href="/tv-show-tracker"><h3>TV Show Tracker</h3><p>Organize shows, seasons, episode progress, watch history, and TV reviews.</p></a>
+          <a class="guide-card" href="/anime-tracker"><h3>Anime Tracker</h3><p>Manage seasonal anime, watched status, episode progress, ratings, and notes.</p></a>
+          <a class="guide-card" href="/game-tracker"><h3>Game Tracker</h3><p>Keep a useful game backlog with played status, genres, ratings, and reviews.</p></a>
+          <a class="guide-card" href="/music-tracker"><h3>Music Tracker</h3><p>Save albums, artists, listened status, genres, ratings, and review notes.</p></a>
+          <a class="guide-card" href="/book-tracker"><h3>Book Tracker</h3><p>Build reading lists with authors, read status, ratings, and book notes.</p></a>
+          <a class="guide-card" href="/media-statistics"><h3>Media Statistics</h3><p>Understand completion, rating distribution, review coverage, and category patterns.</p></a>
+          <a class="guide-card" href="/export-import-guide"><h3>Export and Import</h3><p>Back up your library, move data safely, and keep your media history portable.</p></a>
+          <a class="guide-card" href="/media-tracker-checklist"><h3>Setup Checklist</h3><p>Plan categories, ratings, reviews, privacy, exports, and first-week cleanup before your library grows.</p></a>
+          <a class="guide-card" href="/tracking-templates"><h3>Tracking Templates</h3><p>Use rating scales, review prompts, backlog cleanup steps, and category field templates.</p></a>
+          <a class="guide-card" href="/review-guidelines"><h3>Review Guidelines</h3><p>Write useful public reviews with prompts, examples, privacy tips, and quality checks.</p></a>
+          <a class="guide-card" href="/sample-library"><h3>Sample Library</h3><p>See a fictional library with example records, statuses, review notes, and privacy choices.</p></a>
+        </div>
+      </section>
 
       <section class="privacy-section" aria-labelledby="getting-started-heading">
         <h2 id="getting-started-heading">Getting Started</h2>
@@ -125,7 +194,7 @@
       </section>
 
       <nav class="privacy-section" aria-label="Related pages">
-        <p><a href="/">Home</a> · <a href="/about">About</a> · <a href="/compare">Compare</a> · <a href="/use-cases">Use Cases</a> · <a href="/tv-show-tracker">TV Tracker</a> · <a href="/game-tracker">Game Tracker</a> · <a href="/changelog">Changelog</a> · <a href="/contact">Contact</a> · <a href="/privacy">Privacy Policy</a> · <a href="/terms">Terms</a></p>
+        <p><a href="/">Home</a> | <a href="/about">About</a> | <a href="/faq">FAQ</a> | <a href="/compare">Compare</a> | <a href="/use-cases">Use Cases</a> | <a href="/media-tracker-checklist">Setup Checklist</a> | <a href="/tracking-templates">Templates</a> | <a href="/review-guidelines">Review Guidelines</a> | <a href="/tv-show-tracker">TV Tracker</a> | <a href="/game-tracker">Game Tracker</a> | <a href="/changelog">Changelog</a> | <a href="/contact">Contact</a> | <a href="/privacy">Privacy Policy</a> | <a href="/terms">Terms</a></p>
       </nav>
     </div>
   </div>

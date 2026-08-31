@@ -1,0 +1,199 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="description" content="OmniTrackr FAQ covering media tracking, public reviews, privacy, exports, friends, ads, account safety, and how movies, TV, anime, games, music, and books fit together.">
+  <meta name="robots" content="index, follow, max-image-preview:large">
+  <meta name="author" content="OmniTrackr">
+  <title>OmniTrackr FAQ - Media Tracking, Privacy, Reviews & Exports</title>
+  <link rel="canonical" href="https://omnitrackr.xyz/faq">
+  <link rel="icon" type="image/x-icon" href="/omnitrackr_favicon.ico">
+
+  <meta property="og:type" content="article">
+  <meta property="og:url" content="https://omnitrackr.xyz/faq">
+  <meta property="og:title" content="OmniTrackr FAQ - Media Tracking, Privacy, Reviews & Exports">
+  <meta property="og:description" content="Answers to common OmniTrackr questions about media categories, reviews, privacy controls, friends, exports, public pages, and advertising.">
+  <meta property="og:image" content="https://omnitrackr.xyz/omnitrackr_vortex.png">
+  <meta property="og:image:alt" content="OmniTrackr FAQ">
+  <meta property="og:site_name" content="OmniTrackr">
+  <meta property="og:locale" content="en_US">
+
+  <meta name="twitter:card" content="summary_large_image">
+  <meta name="twitter:url" content="https://omnitrackr.xyz/faq">
+  <meta name="twitter:title" content="OmniTrackr FAQ">
+  <meta name="twitter:description" content="Answers about media tracking, privacy, reviews, exports, friends, accounts, and ads.">
+  <meta name="twitter:image" content="https://omnitrackr.xyz/omnitrackr_vortex.png">
+  <meta name="twitter:image:alt" content="OmniTrackr FAQ">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@700;800&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="/styles.css">
+  <style>
+    body { min-height: 100vh; padding: 20px; }
+    .public-wrapper { max-width: 1080px; margin: 0 auto; }
+    .public-container { background: var(--card-bg); border-radius: 16px; padding: 50px 40px; margin: 20px 0; box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3); border: 1px solid var(--border); color: var(--fg); line-height: 1.75; }
+    @media (max-width: 768px) { .public-container { padding: 30px 20px; } }
+    .public-header { text-align: center; margin-bottom: 40px; padding-bottom: 20px; border-bottom: 2px solid var(--border); }
+    .public-header h1 { font-family: 'Poppins', sans-serif; font-size: 2.35rem; margin-bottom: 10px; color: var(--fg); line-height: 1.15; }
+    .public-header p, .faq-answer, .faq-intro { color: var(--fg-secondary); }
+    .faq-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); gap: 16px; margin: 22px 0 38px; }
+    .faq-topic { border: 1px solid var(--border); border-radius: 10px; padding: 18px; background: rgba(255, 255, 255, 0.04); }
+    .faq-topic h2 { font-family: 'Poppins', sans-serif; font-size: 1.25rem; color: var(--primary); margin: 0 0 10px; }
+    .faq-list { display: grid; gap: 18px; }
+    .faq-item { border: 1px solid var(--border); border-radius: 10px; padding: 20px; background: rgba(255, 255, 255, 0.035); }
+    .faq-item h2 { font-family: 'Inter', sans-serif; font-size: 1.15rem; margin: 0 0 10px; color: var(--fg); }
+    .faq-answer p { margin-bottom: 10px; }
+    .back-link { display: inline-block; margin-bottom: 30px; color: var(--primary); text-decoration: none; font-weight: 500; }
+  </style>
+  <script type="application/ld+json">
+  {
+    "@context": "https://schema.org",
+    "@type": "FAQPage",
+    "name": "OmniTrackr Frequently Asked Questions",
+    "url": "https://omnitrackr.xyz/faq",
+    "dateModified": "2026-07-05",
+    "inLanguage": "en-US",
+    "isPartOf": { "@type": "WebSite", "name": "OmniTrackr", "url": "https://omnitrackr.xyz" },
+    "mainEntity": [
+      { "@type": "Question", "name": "What is OmniTrackr?", "acceptedAnswer": { "@type": "Answer", "text": "OmniTrackr is a personal media tracker for movies, TV shows, anime, video games, music, and books. It helps users save lists, statuses, ratings, reviews, posters, statistics, friends, privacy settings, and exports in one account." } },
+      { "@type": "Question", "name": "Can I use OmniTrackr before making an account?", "acceptedAnswer": { "@type": "Answer", "text": "Visitors can read public guides, templates, comparison pages, use cases, the demo library, and public reviews before signing up. Personal tracking requires an account so private data can sync across devices." } },
+      { "@type": "Question", "name": "Are my reviews public by default?", "acceptedAnswer": { "@type": "Answer", "text": "No. Reviews stay private unless a user chooses to mark eligible reviews public. Public reviews are intended for polished recommendations that help other visitors." } },
+      { "@type": "Question", "name": "Can I export my media library?", "acceptedAnswer": { "@type": "Answer", "text": "Yes. OmniTrackr supports JSON export and import workflows so users can back up or move their library without relying on a single browser session." } },
+      { "@type": "Question", "name": "What should I add first?", "acceptedAnswer": { "@type": "Answer", "text": "Start with a small set of favorites, unfinished items, and next-up choices. That gives enough data to test categories, statuses, ratings, and reviews before importing a full history." } },
+      { "@type": "Question", "name": "Where can ads appear?", "acceptedAnswer": { "@type": "Answer", "text": "OmniTrackr intends to keep ads on public content pages such as guides, templates, comparisons, public reviews, and informational resources. Ads should not be placed inside private account forms, editing controls, or account settings." } }
+    ]
+  }
+  </script>
+</head>
+
+<body>
+  <div class="public-wrapper">
+    <div class="public-container">
+      <nav class="public-site-nav" aria-label="Public site navigation">
+        <a class="public-site-nav__brand" href="/">OmniTrackr</a>
+        <div class="public-site-nav__links">
+          <a href="/demo">Demo</a>
+          <a href="/media-tracking">Tracking Hub</a>
+          <a href="/guides">Guides</a>
+          <a href="/site-map">Site Map</a>
+          <a href="/sample-library">Sample Library</a>
+          <a href="/compare">Compare</a>
+          <a href="/use-cases">Use Cases</a>
+          <a href="/reviews">Reviews</a>
+          <a href="/faq">FAQ</a>
+          <a href="/content-quality">Content Quality</a>
+          <a href="/advertising">Advertising</a>
+          <a href="/privacy">Privacy</a>
+          <a class="public-site-nav__cta" href="/#landing-auth">Start tracking</a>
+        </div>
+      </nav>
+      <a href="/" class="back-link">Back to OmniTrackr</a>
+      <header class="public-header">
+        <h1>OmniTrackr FAQ</h1>
+        <p>Answers for new visitors, returning users, and reviewers evaluating how OmniTrackr handles media tracking, privacy, public content, exports, and ads.</p>
+      </header>
+
+      <p class="faq-intro">OmniTrackr is designed around one simple idea: your media life is larger than one watchlist. These answers explain how the app keeps movies, shows, anime, games, albums, and books organized without forcing every note or review to be public.</p>
+
+      <section class="faq-grid" aria-label="FAQ topics">
+        <div class="faq-topic"><h2>Tracking</h2><p>How categories, statuses, ratings, posters, and statistics work together.</p></div>
+        <div class="faq-topic"><h2>Privacy</h2><p>What stays private, what can be shared, and how public reviews are handled.</p></div>
+        <div class="faq-topic"><h2>Portability</h2><p>How exports, imports, and templates help keep a library under your control.</p></div>
+      </section>
+
+      <section class="faq-list" aria-label="Frequently asked questions">
+        <article class="faq-item">
+          <h2>What is OmniTrackr?</h2>
+          <div class="faq-answer">
+            <p>OmniTrackr is a personal media tracker for movies, TV shows, anime, video games, music, and books. It gives each category a focused place for status, ratings, reviews, posters or cover art, and statistics.</p>
+            <p>The value is cross-media context. A movie app may be good for films and a spreadsheet may be flexible, but OmniTrackr keeps your broader entertainment history in one account.</p>
+          </div>
+        </article>
+
+        <article class="faq-item">
+          <h2>Can I evaluate OmniTrackr before signing up?</h2>
+          <div class="faq-answer">
+            <p>Yes. Start with the <a href="/demo">demo library</a>, the <a href="/media-tracking">media tracking hub</a>, the <a href="/tracking-templates">tracking templates</a>, and the <a href="/compare">comparison page</a>. Those pages explain the workflow without requiring an account.</p>
+            <p>Creating an account is only needed when you want to save a private library, sync across devices, use friend features, or export your own data.</p>
+          </div>
+        </article>
+
+        <article class="faq-item">
+          <h2>Which media categories does OmniTrackr support?</h2>
+          <div class="faq-answer">
+            <p>OmniTrackr supports movies, TV shows, anime, video games, music, and books. Each category has fields that fit that media type, so a TV show can focus on progress while a game can focus on backlog and played status.</p>
+            <p>The category guides explain the details: <a href="/movie-tracker">movies</a>, <a href="/tv-show-tracker">TV shows</a>, <a href="/anime-tracker">anime</a>, <a href="/game-tracker">games</a>, <a href="/music-tracker">music</a>, and <a href="/book-tracker">books</a>.</p>
+          </div>
+        </article>
+
+        <article class="faq-item">
+          <h2>Are reviews public by default?</h2>
+          <div class="faq-answer">
+            <p>No. Reviews are private unless you choose to make eligible reviews public. Public reviews are intended for thoughtful recommendations that help other visitors decide what to watch, play, read, or hear next. The <a href="/review-guidelines">review guidelines</a> explain what makes a review useful.</p>
+            <p>This makes it comfortable to keep messy personal notes while still allowing polished public recommendations when you want to share them.</p>
+          </div>
+        </article>
+
+        <article class="faq-item">
+          <h2>How do friend and privacy controls work?</h2>
+          <div class="faq-answer">
+            <p>You can add friends and control which parts of your library are visible. Category visibility and public review choices are separate concerns, so sharing one area does not need to expose everything.</p>
+            <p>For sensitive or incomplete notes, keep them private. For polished recommendations, public reviews can help other users discover media with more context than a score alone.</p>
+          </div>
+        </article>
+
+        <article class="faq-item">
+          <h2>Can I export or import my library?</h2>
+          <div class="faq-answer">
+            <p>Yes. OmniTrackr supports JSON export and import workflows. Exporting gives you a backup, and importing helps you move data into a new account or restore a previous library snapshot.</p>
+            <p>The <a href="/export-import-guide">export and import guide</a> explains safer habits for backups, imports, and checking data after a move.</p>
+          </div>
+        </article>
+
+        <article class="faq-item">
+          <h2>How should I choose a rating scale?</h2>
+          <div class="faq-answer">
+            <p>Pick one scale and use it consistently. A rating is most useful when the same score means roughly the same thing across categories. If a 7 means "good but not a favorite" for movies, try to keep that meaning for games, books, and albums too.</p>
+            <p>The <a href="/tracking-templates">tracking templates</a> page includes a practical rating scale and review prompt structure.</p>
+          </div>
+        </article>
+
+        <article class="faq-item">
+          <h2>What should I add first?</h2>
+          <div class="faq-answer">
+            <p>Start with a small, realistic sample: a few favorites, a few unfinished items, and a few things you might choose next. That gives you enough data to test statuses, ratings, categories, and review notes without turning setup into a giant import project.</p>
+            <p>After that, expand by category. Add movies when you finish them, update shows when progress changes, mark games when they move out of the backlog, and write reviews for items that deserve more context than a score.</p>
+          </div>
+        </article>
+
+        <article class="faq-item">
+          <h2>Why not just use a spreadsheet?</h2>
+          <div class="faq-answer">
+            <p>Spreadsheets are flexible, but they require manual structure, mobile upkeep, and careful backups. OmniTrackr gives each media type a focused form, visual library, account sync, reviews, privacy controls, and statistics without maintaining sheet formulas.</p>
+            <p>The <a href="/compare">comparison page</a> explains where OmniTrackr helps and where a spreadsheet may still be enough.</p>
+          </div>
+        </article>
+
+        <article class="faq-item">
+          <h2>Where can ads appear?</h2>
+          <div class="faq-answer">
+            <p>OmniTrackr intends to keep ads on public informational pages such as guides, templates, comparisons, public reviews, the demo library, and other resources visitors can read without signing in.</p>
+            <p>Ads should not be placed inside private account forms, password reset flows, collection editing controls, import/export controls, friend controls, or account settings. The <a href="/advertising">Advertising Policy</a> explains this in more detail.</p>
+          </div>
+        </article>
+
+        <article class="faq-item">
+          <h2>Is OmniTrackr only for serious collectors?</h2>
+          <div class="faq-answer">
+            <p>No. It works for casual watchlists, long backlogs, comfort media, seasonal anime, album logs, reading lists, and people who simply want to remember what they finished.</p>
+            <p>The best setup is the one you will actually maintain. Start small, add details when they help, and use statistics only after your library has enough entries to reveal patterns.</p>
+          </div>
+        </article>
+      </section>
+    </div>
+  </div>
+</body>
+
+</html>

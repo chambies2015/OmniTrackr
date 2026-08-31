@@ -1,6 +1,8 @@
 """
 Tests for public review endpoints.
 """
+import json
+import re
 import pytest
 from datetime import datetime
 from app import models, crud
@@ -33,7 +35,10 @@ class TestPublicReviews:
             "director": "Test Director",
             "year": 2020,
             "rating": 8.5,
-            "review": "This is a detailed review of the movie with substantial content.",
+            "review": (
+                "This is a detailed review of the movie with substantial content, "
+                "including pacing, audience fit, and why the rating is useful."
+            ),
             "review_public": True,
         }
         
@@ -54,6 +59,142 @@ class TestPublicReviews:
         assert movie_review["year"] == movie_data["year"]
         assert "username" in movie_review
         assert "user_id" in movie_review
+
+    def test_get_public_reviews_min_chars_filters_short_notes(self, client, db_session, authenticated_client, test_user_data):
+        """Public review feeds can request substantial reviews for crawlable pages."""
+        user = db_session.query(models.User).filter(models.User.username == test_user_data["username"]).first()
+        assert user is not None
+        user.reviews_public = True
+        db_session.commit()
+
+        short_movie = crud.create_movie(
+            db_session,
+            user.id,
+            MovieCreate(
+                title="Short Public Note",
+                director="Director",
+                year=2026,
+                review="Good movie.",
+                review_public=True,
+            ),
+        )
+        substantial_movie = crud.create_movie(
+            db_session,
+            user.id,
+            MovieCreate(
+                title="Substantial Public Review",
+                director="Director",
+                year=2026,
+                review=(
+                    "This public review gives enough context about pacing, tone, "
+                    "audience fit, and rewatch value to be useful for another reader."
+                ),
+                review_public=True,
+            ),
+        )
+        db_session.commit()
+
+        default_response = client.get("/api/public/reviews?category=movie&limit=100")
+        legacy_response = client.get("/api/public/reviews?category=movie&limit=100&min_chars=1")
+        quality_response = client.get("/api/public/reviews?category=movie&limit=100&min_chars=80")
+
+        assert default_response.status_code == 200
+        assert legacy_response.status_code == 200
+        assert quality_response.status_code == 200
+        default_ids = [review["id"] for review in default_response.json()]
+        legacy_ids = [review["id"] for review in legacy_response.json()]
+        quality_ids = [review["id"] for review in quality_response.json()]
+        assert short_movie.id not in default_ids
+        assert substantial_movie.id in default_ids
+        assert short_movie.id in legacy_ids
+        assert substantial_movie.id in legacy_ids
+        assert short_movie.id not in quality_ids
+        assert substantial_movie.id in quality_ids
+
+    def test_public_reviews_exclude_promotional_or_contact_text(self, client, db_session, authenticated_client, test_user_data):
+        """Public discovery should filter obvious promotional UGC without deleting saved reviews."""
+        user = db_session.query(models.User).filter(models.User.username == test_user_data["username"]).first()
+        assert user is not None
+        user.reviews_public = True
+        db_session.commit()
+
+        spammy_movie = crud.create_movie(
+            db_session,
+            user.id,
+            MovieCreate(
+                title="Promotional Review Movie",
+                director="Spam Director",
+                year=2026,
+                review=(
+                    "This review has enough words to pass a length check, but it tells readers to visit "
+                    "https://spam.example for a free download and contact me at spam@example.com instead "
+                    "of offering useful media criticism or personal context."
+                ),
+                review_public=True,
+            ),
+        )
+        safe_movie = crud.create_movie(
+            db_session,
+            user.id,
+            MovieCreate(
+                title="Safe Public Review Movie",
+                director="Safe Director",
+                year=2026,
+                review=(
+                    "This public review explains the movie's pacing, tone, audience fit, strongest scene, "
+                    "and why the rating would help another visitor decide whether to add it to a watchlist."
+                ),
+                review_public=True,
+            ),
+        )
+        db_session.commit()
+
+        api_response = client.get("/api/public/reviews?category=movie&limit=100&min_chars=1")
+        category_response = client.get("/reviews?category=movie")
+        spam_detail_response = client.get(f"/reviews/{spammy_movie.id}?category=movie")
+
+        assert api_response.status_code == 200
+        ids = [review["id"] for review in api_response.json()]
+        assert spammy_movie.id not in ids
+        assert safe_movie.id in ids
+        assert db_session.query(models.Movie).filter(models.Movie.id == spammy_movie.id).first() is not None
+        assert "Promotional Review Movie" not in category_response.text
+        assert "Safe Public Review Movie" in category_response.text
+        assert spam_detail_response.status_code == 404
+        assert '<meta name="robots" content="noindex, follow">' in spam_detail_response.text
+
+    def test_reviews_index_renders_clean_server_metadata(self, client, db_session, authenticated_client, test_user_data):
+        """Server-rendered public review cards should avoid mojibake separators."""
+        user = db_session.query(models.User).filter(models.User.username == test_user_data["username"]).first()
+        assert user is not None
+        user.reviews_public = True
+        db_session.commit()
+
+        movie = crud.create_movie(
+            db_session,
+            user.id,
+            MovieCreate(
+                title="Server Rendered Review",
+                director="Clean Director",
+                year=2026,
+                rating=9,
+                review=(
+                    "This review has enough detail for the server-rendered public review index to include it as "
+                    "useful public content for visitors. It explains why the rating is high, what kind of pacing and "
+                    "tone the movie offers, who would probably enjoy it, and why the recommendation still makes sense "
+                    "outside the private library. That makes it suitable for a standalone detail page too."
+                ),
+                review_public=True,
+            ),
+        )
+        db_session.commit()
+
+        response = client.get("/reviews")
+
+        assert response.status_code == 200
+        assert f"/reviews/{movie.id}?category=movie" in response.text
+        assert "Clean Director - 2026" in response.text
+        assert "\u00c2\u00b7" not in response.text
     
     def test_get_public_reviews_excludes_empty_reviews(self, client, db_session, authenticated_client, test_user_data):
         """Test that reviews without text are not included."""
@@ -101,7 +242,7 @@ class TestPublicReviews:
         
         db_session.commit()
         
-        response = client.get("/api/public/reviews")
+        response = client.get("/api/public/reviews?min_chars=1")
         
         assert response.status_code == 200
         data = response.json()
@@ -161,7 +302,7 @@ class TestPublicReviews:
         
         db_session.commit()
         
-        response = client.get("/api/public/reviews")
+        response = client.get("/api/public/reviews?min_chars=1")
         
         assert response.status_code == 200
         data = response.json()
@@ -191,7 +332,7 @@ class TestPublicReviews:
         
         db_session.commit()
         
-        response = client.get("/api/public/reviews")
+        response = client.get("/api/public/reviews?min_chars=1")
         
         assert response.status_code == 200
         data = response.json()
@@ -220,7 +361,7 @@ class TestPublicReviews:
         
         db_session.commit()
         
-        response = client.get("/api/public/reviews")
+        response = client.get("/api/public/reviews?min_chars=1")
         
         assert response.status_code == 200
         data = response.json()
@@ -262,7 +403,7 @@ class TestPublicReviews:
         db_session.refresh(movie)
         db_session.refresh(tv_show)
         
-        response = client.get("/api/public/reviews?category=movie&limit=100")
+        response = client.get("/api/public/reviews?category=movie&limit=100&min_chars=1")
         
         assert response.status_code == 200
         data = response.json()
@@ -294,7 +435,7 @@ class TestPublicReviews:
             )
         )
         
-        response = client.get("/api/public/reviews?category=tv_show")
+        response = client.get("/api/public/reviews?category=tv_show&min_chars=1")
         
         assert response.status_code == 200
         data = response.json()
@@ -320,7 +461,7 @@ class TestPublicReviews:
             )
         )
         
-        response = client.get("/api/public/reviews?category=anime")
+        response = client.get("/api/public/reviews?category=anime&min_chars=1")
         
         assert response.status_code == 200
         data = response.json()
@@ -347,7 +488,7 @@ class TestPublicReviews:
             )
         )
         
-        response = client.get("/api/public/reviews?category=video_game")
+        response = client.get("/api/public/reviews?category=video_game&min_chars=1")
         
         assert response.status_code == 200
         data = response.json()
@@ -377,12 +518,12 @@ class TestPublicReviews:
         
         db_session.commit()
         
-        response1 = client.get("/api/public/reviews?limit=2&offset=0")
+        response1 = client.get("/api/public/reviews?limit=2&offset=0&min_chars=1")
         assert response1.status_code == 200
         data1 = response1.json()
         assert len(data1) <= 2
         
-        response2 = client.get("/api/public/reviews?limit=2&offset=2")
+        response2 = client.get("/api/public/reviews?limit=2&offset=2&min_chars=1")
         assert response2.status_code == 200
         data2 = response2.json()
         assert len(data2) <= 2
@@ -579,7 +720,7 @@ class TestPublicReviews:
         
         db_session.commit()
         
-        response = client.get("/api/public/reviews")
+        response = client.get("/api/public/reviews?min_chars=1")
         
         assert response.status_code == 200
         data = response.json()
@@ -607,7 +748,7 @@ class TestPublicReviews:
             )
         db_session.commit()
 
-        response = client.get("/api/public/reviews?limit=20&offset=0")
+        response = client.get("/api/public/reviews?limit=20&offset=0&min_chars=1")
         assert response.status_code == 200
         data = response.json()
         movie_ids = [r["id"] for r in data if r["category"] == "movie"]
@@ -631,7 +772,7 @@ class TestPublicReviews:
         )
         db_session.commit()
 
-        response = client.get("/api/public/reviews?category=music")
+        response = client.get("/api/public/reviews?category=music&min_chars=1")
         assert response.status_code == 200
         data = response.json()
         assert all(r["category"] == "music" for r in data)
@@ -654,7 +795,7 @@ class TestPublicReviews:
         )
         db_session.commit()
 
-        response = client.get("/api/public/reviews?category=book")
+        response = client.get("/api/public/reviews?category=book&min_chars=1")
         assert response.status_code == 200
         data = response.json()
         assert all(r["category"] == "book" for r in data)
@@ -690,7 +831,7 @@ class TestPublicReviews:
         )
         db_session.commit()
 
-        response = client.get("/api/public/reviews?category=movie&limit=100")
+        response = client.get("/api/public/reviews?category=movie&limit=100&min_chars=1")
         assert response.status_code == 200
         ids = [r["id"] for r in response.json()]
         assert public_entry.id in ids
@@ -701,9 +842,208 @@ class TestPublicReviews:
         response = client.get("/reviews")
         assert response.status_code == 200
         assert "text/html" in response.headers["content-type"]
+        assert "What Makes These Reviews Useful?" in response.text
+        assert "How to Browse Public Reviews" in response.text
+        assert "Editorial Review Examples" in response.text
+        assert "Review Writing Tips" in response.text
+        assert "first-party guidance, not user submissions" in response.text
+        assert "Movie example" in response.text
+        assert "Game example" in response.text
+        assert "Book, album, or show example" in response.text
+        assert 'href="/review-guidelines"' in response.text
+        assert 'href="/media-tracker-checklist"' in response.text
+        assert "Generic review helper links without a category are intentionally not indexed" in response.text
+        assert "Public review quality also protects the site experience" in response.text
+        assert 'href="/reviews?category=movie"' in response.text
+        assert 'href="/reviews?category=video_game"' in response.text
+
+    def test_empty_review_category_page_is_noindexed_and_ad_free(self, client):
+        """Empty user-generated category pages should not look like ad inventory."""
+        response = client.get("/reviews?category=music")
+
+        assert response.status_code == 200
+        assert "<title>Music Reviews - OmniTrackr</title>" in response.text
+        assert '<meta name="robots" content="noindex, follow">' in response.text
+        assert "/static/ad-loader.js" not in response.text
+        assert "Community reviews are being curated" in response.text
+
+    def test_invalid_review_category_page_is_noindexed_404(self, client):
+        """Unsupported category queries should not duplicate the indexable reviews page."""
+        response = client.get("/reviews?category=unknown")
+
+        assert response.status_code == 404
+        assert '<meta name="robots" content="noindex, follow">' in response.text
+        assert "Review category not found" in response.text
+
+    def test_reviews_category_page_renders_crawlable_server_content(self, client, db_session, authenticated_client, test_user_data):
+        """Category review views should be crawlable without relying on client-side filtering."""
+        user = db_session.query(models.User).filter(models.User.username == test_user_data["username"]).first()
+        assert user is not None
+        user.reviews_public = True
+        db_session.commit()
+
+        movie = crud.create_movie(
+            db_session,
+            user.id,
+            MovieCreate(
+                title="Crawlable Category Movie",
+                director="Category Director",
+                year=2026,
+                rating=8,
+                review=(
+                    "This category-specific review has enough detail to appear in server-rendered movie review "
+                    "inventory for search and AdSense review. It explains pacing, tone, audience fit, the reason "
+                    "behind the rating, and whether another visitor should add it to a watchlist. Because it is long "
+                    "enough to stand alone, the category page can safely link to a dedicated review detail URL."
+                ),
+                review_public=True,
+            ),
+        )
+        book = crud.create_book(
+            db_session,
+            user.id,
+            BookCreate(
+                title="Hidden From Movie Category",
+                author="Category Author",
+                year=2025,
+                rating=7,
+                review=(
+                    "This book review is also substantial, but it should not render "
+                    "inside the movie category review page."
+                ),
+                review_public=True,
+            ),
+        )
+        db_session.commit()
+
+        response = client.get("/reviews?category=movie")
+
+        assert response.status_code == 200
+        assert "<title>Movie Reviews - OmniTrackr</title>" in response.text
+        assert '<link rel="canonical" href="https://omnitrackr.xyz/reviews?category=movie">' in response.text
+        assert '<meta name="robots" content="index, follow, max-image-preview:large">' in response.text
+        assert "<h1>Movie Reviews</h1>" in response.text
+        assert '<option value="movie" selected>' in response.text
+        assert f"/reviews/{movie.id}?category=movie" in response.text
+        assert "Crawlable Category Movie" in response.text
+        assert "Category Director - 2026" in response.text
+        assert f"/reviews/{book.id}?category=book" not in response.text
+        assert "Hidden From Movie Category" not in response.text
+        match = re.search(
+            r'<script type="application/ld\+json" id="server-review-item-list"[^>]*>(.*?)</script>',
+            response.text,
+        )
+        assert match is not None
+        structured_data = json.loads(match.group(1))
+        assert structured_data["@type"] == "CollectionPage"
+        assert structured_data["name"] == "Movie Reviews - OmniTrackr"
+        assert structured_data["url"] == "https://omnitrackr.xyz/reviews?category=movie"
+        assert structured_data["dateModified"] == datetime.utcnow().strftime("%Y-%m-%d")
+        assert structured_data["mainEntity"]["numberOfItems"] == 1
+        items = structured_data["mainEntity"]["itemListElement"]
+        assert items[0]["item"]["name"] == "Crawlable Category Movie Movie Review"
+        assert items[0]["item"]["itemReviewed"]["@type"] == "Movie"
+        assert items[0]["item"]["itemReviewed"]["director"]["name"] == "Category Director"
+        assert f"https://omnitrackr.xyz/reviews/{movie.id}?category=movie" == items[0]["item"]["url"]
+        assert "Hidden From Movie Category" not in json.dumps(structured_data)
     
     def test_review_detail_page_accessible(self, client):
         """Test that the review detail page is accessible."""
         response = client.get("/reviews/1")
         assert response.status_code == 200
         assert "text/html" in response.headers["content-type"]
+        assert '<meta name="robots" content="noindex, follow">' in response.text
+        assert "Review Link Helper - OmniTrackr" in response.text
+
+    def test_review_detail_page_includes_adsense_publisher_signal(self, client, db_session, test_user_data):
+        """Indexable server-rendered review details should expose the AdSense publisher meta."""
+        user = models.User(
+            email=test_user_data["email"],
+            username=test_user_data["username"],
+            hashed_password="hashed-password",
+            is_active=True,
+            is_verified=True,
+            reviews_public=True,
+        )
+        db_session.add(user)
+        db_session.commit()
+        db_session.refresh(user)
+        user.reviews_public = True
+        db_session.commit()
+
+        movie = crud.create_movie(
+            db_session,
+            user.id,
+            MovieCreate(
+                title="Publisher Signal Detail",
+                director="Signal Director",
+                year=2026,
+                rating=9,
+                review=(
+                    "This public review is substantial enough for the generated detail page because it explains the "
+                    "movie's tone, pacing, audience fit, standout scenes, and rewatch value in a way that can help "
+                    "another reader decide whether it belongs on their own watchlist. It is intentionally longer than "
+                    "a quick note so the standalone page has useful context for search visitors."
+                ),
+                review_public=True,
+            ),
+        )
+        db_session.commit()
+
+        response = client.get(f"/reviews/{movie.id}?category=movie")
+
+        assert response.status_code == 200
+        assert '<meta name="robots" content="index, follow, max-image-preview:large">' in response.text
+        assert '<meta name="google-adsense-account" content="ca-pub-7271682066779719">' in response.text
+        assert "/static/ad-loader.js" in response.text
+        assert "pagead2.googlesyndication.com/pagead/js/adsbygoogle.js" not in response.text
+        assert "Publisher Signal Detail Movie Review" in response.text
+
+        client.cookies.set("omnitrackr_session", "test-session")
+        authenticated_response = client.get(f"/reviews/{movie.id}?category=movie")
+        assert authenticated_response.status_code == 200
+        assert "/static/ad-loader.js" not in authenticated_response.text
+
+    def test_review_detail_requires_standalone_review_text(self, client, db_session, authenticated_client, test_user_data):
+        """Directory-quality reviews should not become thin indexed ad pages."""
+        user = db_session.query(models.User).filter(models.User.username == test_user_data["username"]).first()
+        assert user is not None
+        user.reviews_public = True
+        db_session.commit()
+
+        movie = crud.create_movie(
+            db_session,
+            user.id,
+            MovieCreate(
+                title="Directory Quality Only",
+                director="Helpful Director",
+                year=2026,
+                rating=8,
+                review=(
+                    "This public review has enough context for a directory preview, with notes about pacing, tone, "
+                    "and audience fit, but it is not long enough to stand alone as a full search landing page."
+                ),
+                review_public=True,
+            ),
+        )
+        db_session.commit()
+
+        category_response = client.get("/reviews?category=movie")
+        detail_response = client.get(f"/reviews/{movie.id}?category=movie")
+
+        assert category_response.status_code == 200
+        assert "Directory Quality Only" in category_response.text
+        assert 'class="review-card review-card--summary"' in category_response.text
+        assert f"/reviews/{movie.id}?category=movie" not in category_response.text
+        match = re.search(
+            r'<script type="application/ld\+json" id="server-review-item-list"[^>]*>(.*?)</script>',
+            category_response.text,
+        )
+        assert match is not None
+        structured_data = json.loads(match.group(1))
+        structured_json = json.dumps(structured_data)
+        assert "Directory Quality Only Movie Review" in structured_json
+        assert f"https://omnitrackr.xyz/reviews/{movie.id}?category=movie" not in structured_json
+        assert detail_response.status_code == 404
+        assert '<meta name="robots" content="noindex, follow">' in detail_response.text
+        assert "/static/ad-loader.js" not in detail_response.text

@@ -49,6 +49,7 @@
     "name": "Media Tracking Hub",
     "description": "OmniTrackr guides for tracking watchlists, backlogs, category-specific media, reviews, privacy, exports, and statistics.",
     "url": "https://omnitrackr.xyz/media-tracking",
+    "dateModified": "2026-07-05",
     "inLanguage": "en-US",
     "isPartOf": { "@type": "WebSite", "name": "OmniTrackr", "url": "https://omnitrackr.xyz" }
   }
@@ -58,6 +59,24 @@
 <body>
   <div class="public-wrapper">
     <div class="public-container">
+      <nav class="public-site-nav" aria-label="Public site navigation">
+        <a class="public-site-nav__brand" href="/">OmniTrackr</a>
+        <div class="public-site-nav__links">
+          <a href="/demo">Demo</a>
+          <a href="/media-tracking">Tracking Hub</a>
+          <a href="/guides">Guides</a>
+          <a href="/site-map">Site Map</a>
+          <a href="/sample-library">Sample Library</a>
+          <a href="/compare">Compare</a>
+          <a href="/use-cases">Use Cases</a>
+          <a href="/reviews">Reviews</a>
+          <a href="/faq">FAQ</a>
+          <a href="/content-quality">Content Quality</a>
+          <a href="/advertising">Advertising</a>
+          <a href="/privacy">Privacy</a>
+          <a class="public-site-nav__cta" href="/#landing-auth">Start tracking</a>
+        </div>
+      </nav>
       <a href="/" class="back-link">Back to OmniTrackr</a>
       <header class="public-header">
         <h1>Media Tracking Hub</h1>
@@ -68,6 +87,7 @@
         <h2 id="hub-heading">Start Here</h2>
         <div class="hub-grid">
           <a class="hub-card" href="/demo"><h3>Demo Library</h3><p>See a sample cross-media library before creating an account.</p></a>
+          <a class="hub-card" href="/faq"><h3>FAQ</h3><p>Get answers about categories, privacy, public reviews, exports, friend visibility, and ads.</p></a>
           <a class="hub-card" href="/use-cases"><h3>Use Cases</h3><p>Workflows for watchlists, backlogs, reviews, stats, and friend sharing.</p></a>
           <a class="hub-card" href="/compare"><h3>Compare Trackers</h3><p>Understand when to use OmniTrackr instead of a spreadsheet or single-category app.</p></a>
           <a class="hub-card" href="/movie-tracker"><h3>Movie Tracker</h3><p>Build watchlists, save ratings, write reviews, and analyze movie history.</p></a>
@@ -78,6 +98,8 @@
           <a class="hub-card" href="/book-tracker"><h3>Book Tracker</h3><p>Manage reading lists, authors, genres, read status, ratings, and book notes.</p></a>
           <a class="hub-card" href="/media-statistics"><h3>Media Statistics</h3><p>Use ratings, completion, review coverage, years, genres, and category insights.</p></a>
           <a class="hub-card" href="/export-import-guide"><h3>Export &amp; Import</h3><p>Keep your media library portable with JSON backups and import workflows.</p></a>
+          <a class="hub-card" href="/tracking-templates"><h3>Tracking Templates</h3><p>Use field templates, rating scales, review prompts, and backlog cleanup steps.</p></a>
+          <a class="hub-card" href="/review-guidelines"><h3>Review Guidelines</h3><p>Write useful public reviews with prompts, examples, privacy tips, and quality checks.</p></a>
           <a class="hub-card" href="/guides"><h3>How-To Guides</h3><p>Learn account setup, tracking, reviews, privacy, friends, imports, and exports.</p></a>
         </div>
       </section>
@@ -86,6 +108,7 @@
         <h2 id="why-heading">Why a Hub Helps</h2>
         <p>Media tracking is not one problem. A person tracking movies may care about ratings and directors, while a TV viewer cares about seasons, and a gamer cares about backlog status. The hub keeps those workflows connected so visitors can find the guide that matches their habits without guessing where to start.</p>
         <p>It also gives public reviewers and search engines a clearer map of OmniTrackr's content. Instead of disconnected pages, the site now has a focused information architecture around personal media organization.</p>
+        <p>A connected hub also prevents category pages from becoming isolated sign-up prompts. Each guide has a practical reason to exist: deciding what to watch next, cleaning up a backlog, writing a review with enough context, checking whether a tracker respects privacy, or confirming that data can be exported later.</p>
       </section>
 
       <section class="public-section" aria-labelledby="choose-heading">
@@ -95,10 +118,29 @@
         <h3>Use the statistics and export guides when the library is already growing</h3>
         <p>Once a library has enough entries, the next questions are about patterns and portability. The statistics guide explains how to interpret completion, rating, and review coverage. The export and import guide explains how to keep a backup instead of trusting memory or a single browser session.</p>
         <ul class="hub-list">
-          <li>For new visitors: start with the demo library and use cases.</li>
+          <li>For new visitors: start with the demo library, FAQ, and use cases.</li>
           <li>For people comparing tools: read the tracker comparison page.</li>
           <li>For active users: use the category guides, statistics guide, and export guide.</li>
         </ul>
+      </section>
+
+      <section class="public-section" aria-labelledby="audit-heading">
+        <h2 id="audit-heading">A Monthly Media Library Audit</h2>
+        <p>When a personal library grows, the best next step is often a small audit rather than a new feature. Start by checking which items have no status, which finished items have no rating, and which favorites deserve a review while the memory is still fresh. Then remove or mark items you no longer intend to finish.</p>
+        <p>OmniTrackr's categories make this easier because each media type can keep the fields that matter while still living in one account. A movie watchlist, an anime seasonal backlog, a game backlog, and a reading list can all be reviewed together without forcing them into the same spreadsheet shape.</p>
+      </section>
+
+      <section class="public-section" aria-labelledby="starter-plan-heading">
+        <h2 id="starter-plan-heading">A Starter Plan for New Libraries</h2>
+        <p>If you are moving from scattered notes, start small instead of importing every memory at once. Add ten favorites, ten unfinished items, and ten things you might start next. That sample is enough to test statuses, ratings, reviews, and category filters without turning setup into a weekend project.</p>
+        <p>After the first batch, add detail where it changes a decision. A director, author, artist, genre, season count, or release year is useful when it helps you compare items later. A private note is useful when it explains why something is waiting, why you stopped, or who recommended it.</p>
+        <p>This kind of gradual setup also protects review quality. Short notes can stay private until they become useful, while public reviews should explain the experience well enough for another person to understand the recommendation.</p>
+      </section>
+
+      <section class="public-section" aria-labelledby="quality-heading">
+        <h2 id="quality-heading">What Good Tracking Content Includes</h2>
+        <p>Useful tracking is more than a title list. A strong entry usually answers three questions: what is it, what is its status, and why does it matter to you? Ratings, reviews, categories, cover art, privacy settings, and export support all serve those questions.</p>
+        <p>For public pages and public reviews, OmniTrackr favors original context over copied descriptions. The goal is to help visitors understand real tracking decisions before creating an account, and to help users publish reviews that add their own experience instead of repeating a plot summary.</p>
       </section>
     </div>
   </div>
