@@ -170,7 +170,8 @@ function handleDelegatedClick(event) {
     const closeHandlers = {
       screenshot: () => closeScreenshotModal(event),
       review: closeReviewModal,
-      'custom-tab-manager': closeCustomTabManager
+      'custom-tab-manager': closeCustomTabManager,
+      'completion-ritual': closeCompletionRitual
     };
     closeHandlers[target.dataset.closeOnBackdrop]?.();
     return;
@@ -240,6 +241,9 @@ function handleDelegatedClick(event) {
     'add-next-up': () => addToNextUp(target.dataset.nextUpCategory, Number(target.dataset.nextUpItemId)),
     'move-next-up': () => moveNextUp(Number(target.dataset.nextUpId), Number(target.dataset.nextUpPosition)),
     'remove-next-up': () => removeNextUp(Number(target.dataset.nextUpId)),
+    'begin-completion-ritual': () => openCompletionMoment(target.dataset.completionCategory, Number(target.dataset.completionItemId)),
+    'close-completion-ritual': closeCompletionRitual,
+    'save-completion-ritual': saveCompletionRitual,
     'show-register-form': () => showRegisterForm(),
     'show-login-form': () => showLoginForm()
   };
@@ -417,6 +421,7 @@ async function loadMovies() {
           <td>
             <button class="action-btn edit-movie-btn" data-movie-id="${movie.id}" data-movie-title="${escapeHtml(movie.title)}" data-movie-director="${escapeHtml(movie.director)}" data-movie-year="${movie.year}" data-movie-rating="${movie.rating ?? ''}" data-movie-watched="${movie.watched}" data-movie-review="${escapeHtml(movie.review || '')}" data-movie-review-public="${movie.review_public || false}">Edit</button>
             <button type="button" class="action-btn" data-action="add-next-up" data-next-up-category="movies" data-next-up-item-id="${movie.id}">Next up</button>
+            ${movie.watched ? `<button type="button" class="action-btn" data-action="begin-completion-ritual" data-completion-category="movies" data-completion-item-id="${movie.id}">Reflect</button>` : ''}
             <button class="action-btn delete-movie-btn" data-movie-id="${movie.id}">Delete</button>
           </td>
         `;
@@ -633,7 +638,7 @@ window.enableMovieEdit = function (btn) {
   }
   row.cells[8].innerHTML = `<input type="checkbox" id="edit-movie-review-public" ${reviewPublic ? 'checked' : ''}>`;
   row.cells[9].innerHTML = `
-    <button class="action-btn save-movie-btn" data-movie-id="${id}">Save</button>
+    <button class="action-btn save-movie-btn" data-movie-id="${id}" data-was-complete="${watched}" data-completion-category="movies">Save</button>
     <button class="action-btn cancel-movie-btn">Cancel</button>
   `;
   disableOtherRowButtons(row, 'movieTable');
@@ -660,6 +665,7 @@ window.saveMovieEdit = async function (btn) {
     body: JSON.stringify(updated),
   });
   if (res.ok) {
+    if (btn.dataset.wasComplete !== 'true' && updated.watched) openCompletionMoment('movies', id);
     editingRowId = null;
     editingRowElement = null;
     enableAllRowButtons('movieTable');
@@ -722,6 +728,7 @@ async function loadTVShows() {
           <td>
             <button class="action-btn edit-tv-btn" data-tv-id="${tvShow.id}" data-tv-title="${escapeHtml(tvShow.title)}" data-tv-year="${tvShow.year}" data-tv-seasons="${tvShow.seasons ?? ''}" data-tv-episodes="${tvShow.episodes ?? ''}" data-tv-rating="${tvShow.rating ?? ''}" data-tv-watched="${tvShow.watched}" data-tv-review="${escapeHtml(tvShow.review || '')}" data-tv-review-public="${tvShow.review_public || false}">Edit</button>
             <button type="button" class="action-btn" data-action="add-next-up" data-next-up-category="tv-shows" data-next-up-item-id="${tvShow.id}">Next up</button>
+            ${tvShow.watched ? `<button type="button" class="action-btn" data-action="begin-completion-ritual" data-completion-category="tv-shows" data-completion-item-id="${tvShow.id}">Reflect</button>` : ''}
             <button class="action-btn delete-tv-btn" data-tv-id="${tvShow.id}">Delete</button>
           </td>
         `;
@@ -789,6 +796,7 @@ async function loadAnime() {
           <td>
             <button class="action-btn edit-anime-btn" data-anime-id="${animeItem.id}" data-anime-title="${escapeHtml(animeItem.title)}" data-anime-year="${animeItem.year}" data-anime-seasons="${animeItem.seasons ?? ''}" data-anime-episodes="${animeItem.episodes ?? ''}" data-anime-rating="${animeItem.rating ?? ''}" data-anime-watched="${animeItem.watched}" data-anime-review="${escapeHtml(animeItem.review || '')}" data-anime-review-public="${animeItem.review_public || false}">Edit</button>
             <button type="button" class="action-btn" data-action="add-next-up" data-next-up-category="anime" data-next-up-item-id="${animeItem.id}">Next up</button>
+            ${animeItem.watched ? `<button type="button" class="action-btn" data-action="begin-completion-ritual" data-completion-category="anime" data-completion-item-id="${animeItem.id}">Reflect</button>` : ''}
             <button class="action-btn delete-anime-btn" data-anime-id="${animeItem.id}">Delete</button>
           </td>
         `;
@@ -1167,6 +1175,7 @@ async function loadVideoGames() {
           <td>
             <button class="action-btn edit-video-game-btn" data-game-id="${game.id}" data-game-title="${escapeHtml(game.title)}" data-game-release-date="${game.release_date ? game.release_date.split('T')[0] : ''}" data-game-genres="${escapeHtml(game.genres || '')}" data-game-rating="${game.rating ?? ''}" data-game-played="${game.played}" data-game-review="${escapeHtml(game.review || '')}" data-game-review-public="${game.review_public || false}">Edit</button>
             <button type="button" class="action-btn" data-action="add-next-up" data-next-up-category="video-games" data-next-up-item-id="${game.id}">Next up</button>
+            ${game.played ? `<button type="button" class="action-btn" data-action="begin-completion-ritual" data-completion-category="video-games" data-completion-item-id="${game.id}">Reflect</button>` : ''}
             <button class="action-btn delete-video-game-btn" data-game-id="${game.id}">Delete</button>
           </td>
         `;
@@ -1433,7 +1442,7 @@ window.enableVideoGameEdit = function (btn) {
   }
   row.cells[8].innerHTML = `<input type="checkbox" id="edit-video-game-review-public" ${reviewPublic ? 'checked' : ''}>`;
   row.cells[9].innerHTML = `
-    <button class="action-btn save-video-game-btn" data-game-id="${id}">Save</button>
+    <button class="action-btn save-video-game-btn" data-game-id="${id}" data-was-complete="${played}" data-completion-category="video-games">Save</button>
     <button class="action-btn cancel-video-game-btn">Cancel</button>
   `;
   disableOtherRowButtons(row, 'videoGameTable');
@@ -1464,6 +1473,7 @@ window.saveVideoGameEdit = async function (btn) {
   });
 
   if (res.ok) {
+    if (btn.dataset.wasComplete !== 'true' && played) openCompletionMoment('video-games', id);
     editingRowId = null;
     editingRowElement = null;
     enableAllRowButtons('videoGameTable');
@@ -1523,6 +1533,7 @@ async function loadMusic() {
           <td>
             <button class="action-btn edit-music-btn" data-music-id="${item.id}" data-music-title="${escapeHtml(item.title)}" data-music-artist="${escapeHtml(item.artist)}" data-music-year="${item.year}" data-music-genre="${escapeHtml(item.genre || '')}" data-music-rating="${item.rating ?? ''}" data-music-listened="${item.listened}" data-music-review="${escapeHtml(item.review || '')}" data-music-review-public="${item.review_public || false}">Edit</button>
             <button type="button" class="action-btn" data-action="add-next-up" data-next-up-category="music" data-next-up-item-id="${item.id}">Next up</button>
+            ${item.listened ? `<button type="button" class="action-btn" data-action="begin-completion-ritual" data-completion-category="music" data-completion-item-id="${item.id}">Reflect</button>` : ''}
             <button class="action-btn delete-music-btn" data-music-id="${item.id}">Delete</button>
           </td>
         `;
@@ -1779,7 +1790,7 @@ window.enableMusicEdit = function (btn) {
   }
   row.cells[8].innerHTML = `<input type="checkbox" id="edit-music-review-public" ${reviewPublic ? 'checked' : ''}>`;
   row.cells[9].innerHTML = `
-    <button class="action-btn save-music-btn" data-music-id="${id}">Save</button>
+    <button class="action-btn save-music-btn" data-music-id="${id}" data-was-complete="${listened}" data-completion-category="music">Save</button>
     <button class="action-btn cancel-music-btn">Cancel</button>
   `;
   disableOtherRowButtons(row, 'musicTable');
@@ -1810,6 +1821,7 @@ window.saveMusicEdit = async function (btn) {
   });
 
   if (res.ok) {
+    if (btn.dataset.wasComplete !== 'true' && listened) openCompletionMoment('music', id);
     editingRowId = null;
     editingRowElement = null;
     enableAllRowButtons('musicTable');
@@ -1869,6 +1881,7 @@ async function loadBooks() {
           <td>
             <button class="action-btn edit-book-btn" data-book-id="${book.id}" data-book-title="${escapeHtml(book.title)}" data-book-author="${escapeHtml(book.author)}" data-book-year="${book.year}" data-book-genre="${escapeHtml(book.genre || '')}" data-book-rating="${book.rating ?? ''}" data-book-read="${book.read}" data-book-review="${escapeHtml(book.review || '')}" data-book-review-public="${book.review_public || false}">Edit</button>
             <button type="button" class="action-btn" data-action="add-next-up" data-next-up-category="books" data-next-up-item-id="${book.id}">Next up</button>
+            ${book.read ? `<button type="button" class="action-btn" data-action="begin-completion-ritual" data-completion-category="books" data-completion-item-id="${book.id}">Reflect</button>` : ''}
             <button class="action-btn delete-book-btn" data-book-id="${book.id}">Delete</button>
           </td>
         `;
@@ -2118,7 +2131,7 @@ window.enableBookEdit = function (btn) {
   }
   row.cells[8].innerHTML = `<input type="checkbox" id="edit-book-review-public" ${reviewPublic ? 'checked' : ''}>`;
   row.cells[9].innerHTML = `
-    <button class="action-btn save-book-btn" data-book-id="${id}">Save</button>
+    <button class="action-btn save-book-btn" data-book-id="${id}" data-was-complete="${read}" data-completion-category="books">Save</button>
     <button class="action-btn cancel-book-btn">Cancel</button>
   `;
   disableOtherRowButtons(row, 'bookTable');
@@ -2149,6 +2162,7 @@ window.saveBookEdit = async function (btn) {
   });
 
   if (res.ok) {
+    if (btn.dataset.wasComplete !== 'true' && read) openCompletionMoment('books', id);
     editingRowId = null;
     editingRowElement = null;
     enableAllRowButtons('bookTable');
@@ -2203,7 +2217,7 @@ window.enableAnimeEdit = function (btn) {
   }
   row.cells[8].innerHTML = `<input type="checkbox" id="edit-anime-review-public" ${reviewPublic ? 'checked' : ''}>`;
   row.cells[9].innerHTML = `
-    <button class="action-btn save-anime-btn" data-anime-id="${id}">Save</button>
+    <button class="action-btn save-anime-btn" data-anime-id="${id}" data-was-complete="${watched}" data-completion-category="anime">Save</button>
     <button class="action-btn cancel-anime-btn">Cancel</button>
   `;
   disableOtherRowButtons(row, 'animeTable');
@@ -2233,6 +2247,7 @@ window.saveAnimeEdit = async function (btn) {
     body: JSON.stringify(updated),
   });
   if (res.ok) {
+    if (btn.dataset.wasComplete !== 'true' && updated.watched) openCompletionMoment('anime', id);
     editingRowId = null;
     editingRowElement = null;
     enableAllRowButtons('animeTable');
@@ -2287,7 +2302,7 @@ window.enableTVEdit = function (btn) {
   }
   row.cells[8].innerHTML = `<input type="checkbox" id="edit-tv-review-public" ${reviewPublic ? 'checked' : ''}>`;
   row.cells[9].innerHTML = `
-    <button class="action-btn save-tv-btn" data-tv-id="${id}">Save</button>
+    <button class="action-btn save-tv-btn" data-tv-id="${id}" data-was-complete="${watched}" data-completion-category="tv-shows">Save</button>
     <button class="action-btn cancel-tv-btn">Cancel</button>
   `;
   disableOtherRowButtons(row, 'tvShowTable');
@@ -2317,6 +2332,7 @@ window.saveTVEdit = async function (btn) {
     body: JSON.stringify(updated),
   });
   if (res.ok) {
+    if (btn.dataset.wasComplete !== 'true' && updated.watched) openCompletionMoment('tv-shows', id);
     editingRowId = null;
     editingRowElement = null;
     enableAllRowButtons('tvShowTable');
@@ -3555,6 +3571,7 @@ async function importData(fileInput) {
 function loadStatistics() {
   document.getElementById('statsLoading').style.display = 'none';
   document.getElementById('statsContent').style.display = 'block';
+  loadMonthlyReplay();
   if (!categoryStatsCache['library-insights']) {
     toggleCategoryAccordion('library-insights');
   }
@@ -5898,6 +5915,121 @@ function restoreSidebarState() {
         if (notificationDropdown) notificationDropdown.classList.add('sidebar-hidden');
       }
     }, 100);
+  }
+}
+
+let activeCompletionMomentId = null;
+
+async function openCompletionMoment(category, itemId) {
+  if (!category || !Number.isInteger(itemId) || itemId < 1) return;
+  try {
+    const response = await authenticatedFetch(`${API_BASE}/completion-moments/`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ category, item_id: itemId }),
+    });
+    if (response.status === 409) {
+      alert('Mark this item finished before adding a reflection.');
+      return;
+    }
+    if (!response.ok) throw new Error('Unable to start reflection');
+    const moment = await response.json();
+    activeCompletionMomentId = moment.id;
+    document.getElementById('completionRitualTitle').textContent = moment.title;
+    document.getElementById('completionRitualTakeaway').value = moment.takeaway || '';
+    document.getElementById('completionRitualFavorite').checked = Boolean(moment.favorite);
+    document.getElementById('completionRitualModal').style.display = 'flex';
+  } catch (error) {
+    alert('Could not open the finish ritual. Please try again.');
+  }
+}
+
+function closeCompletionRitual() {
+  const modal = document.getElementById('completionRitualModal');
+  if (modal) modal.style.display = 'none';
+  activeCompletionMomentId = null;
+}
+
+async function saveCompletionRitual() {
+  if (!activeCompletionMomentId) return;
+  const takeaway = document.getElementById('completionRitualTakeaway').value;
+  const favorite = document.getElementById('completionRitualFavorite').checked;
+  try {
+    const response = await authenticatedFetch(`${API_BASE}/completion-moments/${activeCompletionMomentId}`, {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ takeaway, favorite }),
+    });
+    if (!response.ok) throw new Error('Unable to save reflection');
+    closeCompletionRitual();
+    loadMonthlyReplay();
+  } catch (error) {
+    alert('Could not save your reflection. Please try again.');
+  }
+}
+
+function renderMonthlyReplay(replay) {
+  const section = document.getElementById('monthlyReplay');
+  const period = document.getElementById('monthlyReplayPeriod');
+  const content = document.getElementById('monthlyReplayContent');
+  if (!section || !period || !content) return;
+  period.textContent = replay.month_label || 'This month';
+  content.replaceChildren();
+
+  const stats = document.createElement('div');
+  stats.className = 'monthly-replay__stats';
+  [
+    [replay.completed_count || 0, 'finished'],
+    [replay.reflection_count || 0, 'reflections'],
+    [replay.favorite_count || 0, 'favorites'],
+  ].forEach(([value, label]) => {
+    const stat = document.createElement('div');
+    stat.className = 'monthly-replay__stat';
+    const number = document.createElement('strong');
+    number.textContent = String(value);
+    const caption = document.createElement('span');
+    caption.textContent = label;
+    stat.append(number, caption);
+    stats.appendChild(stat);
+  });
+  content.appendChild(stats);
+
+  const highlights = Array.isArray(replay.highlights) ? replay.highlights : [];
+  if (!highlights.length) {
+    const empty = document.createElement('p');
+    empty.className = 'monthly-replay__empty';
+    empty.textContent = 'Finish something and add a private reflection to start this month’s time capsule.';
+    content.appendChild(empty);
+  } else {
+    const list = document.createElement('div');
+    list.className = 'monthly-replay__highlights';
+    highlights.forEach((item) => {
+      const card = document.createElement('div');
+      card.className = 'monthly-replay__highlight';
+      const title = document.createElement('strong');
+      title.textContent = `${item.favorite ? '★ ' : ''}${item.title}`;
+      const meta = document.createElement('span');
+      meta.textContent = [item.category_label, item.rating != null ? `${Number(item.rating).toFixed(1)}/10` : 'Unrated'].join(' · ');
+      card.append(title, meta);
+      if (item.takeaway) {
+        const takeaway = document.createElement('p');
+        takeaway.textContent = item.takeaway;
+        card.appendChild(takeaway);
+      }
+      list.appendChild(card);
+    });
+    content.appendChild(list);
+  }
+  section.removeAttribute('hidden');
+}
+
+async function loadMonthlyReplay() {
+  if (!hasStoredAuth()) return;
+  try {
+    const response = await authenticatedFetch(`${API_BASE}/completion-moments/replay/`);
+    if (response.ok) renderMonthlyReplay(await response.json());
+  } catch (error) {
+    // Monthly Replay is supplemental and should never block the statistics dashboard.
   }
 }
 

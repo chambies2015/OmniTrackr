@@ -62,6 +62,7 @@ class User(Base):
     notifications = relationship("Notification", back_populates="user", cascade="all, delete-orphan")
     custom_tabs = relationship("CustomTab", back_populates="owner", cascade="all, delete-orphan")
     next_up_items = relationship("NextUpItem", back_populates="owner", cascade="all, delete-orphan")
+    completion_moments = relationship("CompletionMoment", back_populates="owner", cascade="all, delete-orphan")
 
 
 class Movie(Base):
@@ -203,6 +204,32 @@ class NextUpItem(Base):
 
     __table_args__ = (
         UniqueConstraint("user_id", "category", "item_id", name="uq_next_up_item"),
+    )
+
+
+class CompletionMoment(Base):
+    """A private snapshot of when a user completed a library item.
+
+    Media tables intentionally remain unchanged. The snapshot preserves the title
+    and rating at the moment of completion so monthly replays stay meaningful even
+    when the item is edited later.
+    """
+    __tablename__ = "completion_moments"
+
+    id = Column(Integer, primary_key=True, index=True)
+    user_id = Column(Integer, ForeignKey("users.id"), nullable=False, index=True)
+    category = Column(String, nullable=False)
+    item_id = Column(Integer, nullable=False)
+    title = Column(String, nullable=False)
+    rating = Column(Float, nullable=True)
+    takeaway = Column(Text, nullable=True)
+    favorite = Column(Boolean, nullable=False, default=False)
+    completed_at = Column(DateTime, nullable=False, default=datetime.utcnow, index=True)
+
+    owner = relationship("User", back_populates="completion_moments")
+
+    __table_args__ = (
+        UniqueConstraint("user_id", "category", "item_id", name="uq_completion_moment_item"),
     )
 
 

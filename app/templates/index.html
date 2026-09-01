@@ -897,6 +897,16 @@
       </div>
 
       <div id="statsContent" style="display: none;">
+        <section id="monthlyReplay" class="monthly-replay" aria-labelledby="monthlyReplayTitle" hidden>
+          <div class="monthly-replay__header">
+            <div>
+              <p class="monthly-replay__eyebrow">Private time capsule</p>
+              <h3 id="monthlyReplayTitle">Monthly Replay</h3>
+            </div>
+            <span id="monthlyReplayPeriod" class="monthly-replay__period"></span>
+          </div>
+          <div id="monthlyReplayContent"></div>
+        </section>
         <div class="accordion-section">
           <div class="accordion-header" data-toggle-category-accordion="library-insights">
             <h3>Library Insights</h3>
@@ -2118,6 +2128,27 @@
       </div>
       <div class="modal-body">
         <div id="bookSearchResults" class="search-results-grid"></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Finish Ritual Modal -->
+  <div id="completionRitualModal" class="modal-overlay" style="display: none;" data-close-on-backdrop="completion-ritual">
+    <div class="modal-content completion-ritual-modal" data-stop-propagation>
+      <div class="modal-header">
+        <h2>One small reflection</h2>
+        <button class="modal-close" data-action="close-completion-ritual" aria-label="Close finish ritual">×</button>
+      </div>
+      <div class="modal-body">
+        <p class="completion-ritual-modal__eyebrow">Finished</p>
+        <h3 id="completionRitualTitle" class="completion-ritual-modal__title"></h3>
+        <p class="completion-ritual-modal__copy">What is one thing you want future you to remember? This stays private.</p>
+        <textarea id="completionRitualTakeaway" class="review-textarea" maxlength="500" rows="3" placeholder="A moment, feeling, or reason it stood out…"></textarea>
+        <label class="completion-ritual-modal__favorite"><input type="checkbox" id="completionRitualFavorite"> This is a personal favorite</label>
+        <div class="completion-ritual-modal__actions">
+          <button type="button" class="action-btn" data-action="save-completion-ritual">Save reflection</button>
+          <button type="button" class="completion-ritual-modal__skip" data-action="close-completion-ritual">Not now</button>
+        </div>
       </div>
     </div>
   </div>

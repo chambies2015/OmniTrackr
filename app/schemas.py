@@ -854,3 +854,35 @@ class NextUpItem(BaseModel):
     category_label: str
     position: int
     available: bool = True
+
+
+# ============================================================================
+# Completion Moment Schemas
+# ============================================================================
+
+class CompletionMomentCreate(NextUpItemCreate):
+    """Reference an already-finished library item for a private reflection."""
+
+
+class CompletionMomentUpdate(BaseModel):
+    takeaway: Optional[str] = Field(None, max_length=500, description="A short private takeaway")
+    favorite: Optional[bool] = Field(None, description="Whether this was a personal favorite")
+
+    @field_validator("takeaway")
+    @classmethod
+    def normalize_takeaway(cls, value: Optional[str]) -> Optional[str]:
+        if value is None:
+            return None
+        return value.strip() or None
+
+
+class CompletionMoment(BaseModel):
+    id: int
+    category: str
+    category_label: str
+    item_id: int
+    title: str
+    rating: Optional[float] = None
+    takeaway: Optional[str] = None
+    favorite: bool = False
+    completed_at: datetime
