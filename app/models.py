@@ -63,6 +63,7 @@ class User(Base):
     custom_tabs = relationship("CustomTab", back_populates="owner", cascade="all, delete-orphan")
     next_up_items = relationship("NextUpItem", back_populates="owner", cascade="all, delete-orphan")
     completion_moments = relationship("CompletionMoment", back_populates="owner", cascade="all, delete-orphan")
+    collections = relationship("Collection", back_populates="owner", cascade="all, delete-orphan")
 
 
 class Movie(Base):
@@ -230,6 +231,38 @@ class CompletionMoment(Base):
 
     __table_args__ = (
         UniqueConstraint("user_id", "category", "item_id", name="uq_completion_moment_item"),
+    )
+
+
+class Collection(Base):
+    """A private, cross-media shelf owned by one user."""
+    __tablename__ = "collections"
+
+    id = Column(Integer, primary_key=True, index=True)
+    user_id = Column(Integer, ForeignKey("users.id"), nullable=False, index=True)
+    name = Column(String, nullable=False)
+    description = Column(Text, nullable=True)
+    created_at = Column(DateTime, nullable=False, default=datetime.utcnow)
+
+    owner = relationship("User", back_populates="collections")
+    items = relationship("CollectionItem", back_populates="collection", cascade="all, delete-orphan", order_by="CollectionItem.position")
+
+
+class CollectionItem(Base):
+    """An ordered polymorphic reference to an existing library item."""
+    __tablename__ = "collection_items"
+
+    id = Column(Integer, primary_key=True, index=True)
+    collection_id = Column(Integer, ForeignKey("collections.id"), nullable=False, index=True)
+    category = Column(String, nullable=False)
+    item_id = Column(Integer, nullable=False)
+    position = Column(Integer, nullable=False, default=0)
+    created_at = Column(DateTime, nullable=False, default=datetime.utcnow)
+
+    collection = relationship("Collection", back_populates="items")
+
+    __table_args__ = (
+        UniqueConstraint("collection_id", "category", "item_id", name="uq_collection_item"),
     )
 
 

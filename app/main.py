@@ -42,6 +42,7 @@ from .routers import (
     reviews,
     next_up,
     completion_moments,
+    collections,
 )
 
 # Create database tables
@@ -274,6 +275,7 @@ app.include_router(books.router)
 app.include_router(statistics.router)
 app.include_router(next_up.router)
 app.include_router(completion_moments.router)
+app.include_router(collections.router)
 app.include_router(export_import.router)
 app.include_router(custom_tabs.router)
 

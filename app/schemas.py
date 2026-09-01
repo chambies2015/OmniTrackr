@@ -886,3 +886,56 @@ class CompletionMoment(BaseModel):
     takeaway: Optional[str] = None
     favorite: bool = False
     completed_at: datetime
+
+
+# ============================================================================
+# Cross-media Collection Schemas
+# ============================================================================
+
+class CollectionCreate(BaseModel):
+    name: str = Field(..., min_length=1, max_length=80, description="Collection name")
+    description: Optional[str] = Field(None, max_length=500, description="Optional private collection note")
+
+    @field_validator("name")
+    @classmethod
+    def normalize_name(cls, value: str) -> str:
+        normalized = value.strip()
+        if not normalized:
+            raise ValueError("Collection name cannot be blank")
+        return normalized
+
+    @field_validator("description")
+    @classmethod
+    def normalize_description(cls, value: Optional[str]) -> Optional[str]:
+        return value.strip() or None if value else None
+
+
+class CollectionUpdate(BaseModel):
+    name: Optional[str] = Field(None, min_length=1, max_length=80)
+    description: Optional[str] = Field(None, max_length=500)
+
+
+class CollectionItemCreate(NextUpItemCreate):
+    """Add one existing media record to a collection."""
+
+
+class CollectionItemMove(BaseModel):
+    position: int = Field(..., ge=0)
+
+
+class CollectionItem(BaseModel):
+    id: int
+    category: str
+    category_label: str
+    item_id: int
+    title: str
+    position: int
+    available: bool = True
+
+
+class Collection(BaseModel):
+    id: int
+    name: str
+    description: Optional[str] = None
+    created_at: datetime
+    items: List[CollectionItem] = Field(default=[])

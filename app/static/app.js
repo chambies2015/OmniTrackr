@@ -171,7 +171,8 @@ function handleDelegatedClick(event) {
       screenshot: () => closeScreenshotModal(event),
       review: closeReviewModal,
       'custom-tab-manager': closeCustomTabManager,
-      'completion-ritual': closeCompletionRitual
+      'completion-ritual': closeCompletionRitual,
+      'collection-picker': closeCollectionPicker
     };
     closeHandlers[target.dataset.closeOnBackdrop]?.();
     return;
@@ -244,6 +245,12 @@ function handleDelegatedClick(event) {
     'begin-completion-ritual': () => openCompletionMoment(target.dataset.completionCategory, Number(target.dataset.completionItemId)),
     'close-completion-ritual': closeCompletionRitual,
     'save-completion-ritual': saveCompletionRitual,
+    'open-collection-picker': () => openCollectionPicker(target.dataset.collectionCategory, Number(target.dataset.collectionItemId), target.dataset.collectionItemTitle),
+    'close-collection-picker': closeCollectionPicker,
+    'add-to-collection': () => addToCollection(Number(target.dataset.collectionId)),
+    'move-collection-item': () => moveCollectionItem(Number(target.dataset.collectionId), Number(target.dataset.collectionItemId), Number(target.dataset.collectionPosition)),
+    'remove-collection-item': () => removeCollectionItem(Number(target.dataset.collectionId), Number(target.dataset.collectionItemId)),
+    'delete-collection': () => deleteCollection(Number(target.dataset.collectionId)),
     'show-register-form': () => showRegisterForm(),
     'show-login-form': () => showLoginForm()
   };
@@ -261,7 +268,8 @@ function handleDelegatedSubmit(event) {
     'update-privacy-settings': updatePrivacySettings,
     'update-tab-visibility': updateTabVisibility,
     'deactivate-account': deactivateAccount,
-    'send-friend-request': sendFriendRequest
+    'send-friend-request': sendFriendRequest,
+    'create-collection': createCollection
   };
   submitHandlers[form.dataset.submitAction]?.(event);
 }
@@ -345,6 +353,8 @@ function switchTab(tabName) {
     loadMusic();
   } else if (tabName === 'books') {
     loadBooks();
+  } else if (tabName === 'collections') {
+    loadCollections();
   } else if (tabName === 'statistics') {
     loadStatistics();
   }
@@ -421,6 +431,7 @@ async function loadMovies() {
           <td>
             <button class="action-btn edit-movie-btn" data-movie-id="${movie.id}" data-movie-title="${escapeHtml(movie.title)}" data-movie-director="${escapeHtml(movie.director)}" data-movie-year="${movie.year}" data-movie-rating="${movie.rating ?? ''}" data-movie-watched="${movie.watched}" data-movie-review="${escapeHtml(movie.review || '')}" data-movie-review-public="${movie.review_public || false}">Edit</button>
             <button type="button" class="action-btn" data-action="add-next-up" data-next-up-category="movies" data-next-up-item-id="${movie.id}">Next up</button>
+            <button type="button" class="action-btn" data-action="open-collection-picker" data-collection-category="movies" data-collection-item-id="${movie.id}" data-collection-item-title="${escapeHtml(movie.title)}">Collect</button>
             ${movie.watched ? `<button type="button" class="action-btn" data-action="begin-completion-ritual" data-completion-category="movies" data-completion-item-id="${movie.id}">Reflect</button>` : ''}
             <button class="action-btn delete-movie-btn" data-movie-id="${movie.id}">Delete</button>
           </td>
@@ -728,6 +739,7 @@ async function loadTVShows() {
           <td>
             <button class="action-btn edit-tv-btn" data-tv-id="${tvShow.id}" data-tv-title="${escapeHtml(tvShow.title)}" data-tv-year="${tvShow.year}" data-tv-seasons="${tvShow.seasons ?? ''}" data-tv-episodes="${tvShow.episodes ?? ''}" data-tv-rating="${tvShow.rating ?? ''}" data-tv-watched="${tvShow.watched}" data-tv-review="${escapeHtml(tvShow.review || '')}" data-tv-review-public="${tvShow.review_public || false}">Edit</button>
             <button type="button" class="action-btn" data-action="add-next-up" data-next-up-category="tv-shows" data-next-up-item-id="${tvShow.id}">Next up</button>
+            <button type="button" class="action-btn" data-action="open-collection-picker" data-collection-category="tv-shows" data-collection-item-id="${tvShow.id}" data-collection-item-title="${escapeHtml(tvShow.title)}">Collect</button>
             ${tvShow.watched ? `<button type="button" class="action-btn" data-action="begin-completion-ritual" data-completion-category="tv-shows" data-completion-item-id="${tvShow.id}">Reflect</button>` : ''}
             <button class="action-btn delete-tv-btn" data-tv-id="${tvShow.id}">Delete</button>
           </td>
@@ -796,6 +808,7 @@ async function loadAnime() {
           <td>
             <button class="action-btn edit-anime-btn" data-anime-id="${animeItem.id}" data-anime-title="${escapeHtml(animeItem.title)}" data-anime-year="${animeItem.year}" data-anime-seasons="${animeItem.seasons ?? ''}" data-anime-episodes="${animeItem.episodes ?? ''}" data-anime-rating="${animeItem.rating ?? ''}" data-anime-watched="${animeItem.watched}" data-anime-review="${escapeHtml(animeItem.review || '')}" data-anime-review-public="${animeItem.review_public || false}">Edit</button>
             <button type="button" class="action-btn" data-action="add-next-up" data-next-up-category="anime" data-next-up-item-id="${animeItem.id}">Next up</button>
+            <button type="button" class="action-btn" data-action="open-collection-picker" data-collection-category="anime" data-collection-item-id="${animeItem.id}" data-collection-item-title="${escapeHtml(animeItem.title)}">Collect</button>
             ${animeItem.watched ? `<button type="button" class="action-btn" data-action="begin-completion-ritual" data-completion-category="anime" data-completion-item-id="${animeItem.id}">Reflect</button>` : ''}
             <button class="action-btn delete-anime-btn" data-anime-id="${animeItem.id}">Delete</button>
           </td>
@@ -1175,6 +1188,7 @@ async function loadVideoGames() {
           <td>
             <button class="action-btn edit-video-game-btn" data-game-id="${game.id}" data-game-title="${escapeHtml(game.title)}" data-game-release-date="${game.release_date ? game.release_date.split('T')[0] : ''}" data-game-genres="${escapeHtml(game.genres || '')}" data-game-rating="${game.rating ?? ''}" data-game-played="${game.played}" data-game-review="${escapeHtml(game.review || '')}" data-game-review-public="${game.review_public || false}">Edit</button>
             <button type="button" class="action-btn" data-action="add-next-up" data-next-up-category="video-games" data-next-up-item-id="${game.id}">Next up</button>
+            <button type="button" class="action-btn" data-action="open-collection-picker" data-collection-category="video-games" data-collection-item-id="${game.id}" data-collection-item-title="${escapeHtml(game.title)}">Collect</button>
             ${game.played ? `<button type="button" class="action-btn" data-action="begin-completion-ritual" data-completion-category="video-games" data-completion-item-id="${game.id}">Reflect</button>` : ''}
             <button class="action-btn delete-video-game-btn" data-game-id="${game.id}">Delete</button>
           </td>
@@ -1533,6 +1547,7 @@ async function loadMusic() {
           <td>
             <button class="action-btn edit-music-btn" data-music-id="${item.id}" data-music-title="${escapeHtml(item.title)}" data-music-artist="${escapeHtml(item.artist)}" data-music-year="${item.year}" data-music-genre="${escapeHtml(item.genre || '')}" data-music-rating="${item.rating ?? ''}" data-music-listened="${item.listened}" data-music-review="${escapeHtml(item.review || '')}" data-music-review-public="${item.review_public || false}">Edit</button>
             <button type="button" class="action-btn" data-action="add-next-up" data-next-up-category="music" data-next-up-item-id="${item.id}">Next up</button>
+            <button type="button" class="action-btn" data-action="open-collection-picker" data-collection-category="music" data-collection-item-id="${item.id}" data-collection-item-title="${escapeHtml(item.title)}">Collect</button>
             ${item.listened ? `<button type="button" class="action-btn" data-action="begin-completion-ritual" data-completion-category="music" data-completion-item-id="${item.id}">Reflect</button>` : ''}
             <button class="action-btn delete-music-btn" data-music-id="${item.id}">Delete</button>
           </td>
@@ -1881,6 +1896,7 @@ async function loadBooks() {
           <td>
             <button class="action-btn edit-book-btn" data-book-id="${book.id}" data-book-title="${escapeHtml(book.title)}" data-book-author="${escapeHtml(book.author)}" data-book-year="${book.year}" data-book-genre="${escapeHtml(book.genre || '')}" data-book-rating="${book.rating ?? ''}" data-book-read="${book.read}" data-book-review="${escapeHtml(book.review || '')}" data-book-review-public="${book.review_public || false}">Edit</button>
             <button type="button" class="action-btn" data-action="add-next-up" data-next-up-category="books" data-next-up-item-id="${book.id}">Next up</button>
+            <button type="button" class="action-btn" data-action="open-collection-picker" data-collection-category="books" data-collection-item-id="${book.id}" data-collection-item-title="${escapeHtml(book.title)}">Collect</button>
             ${book.read ? `<button type="button" class="action-btn" data-action="begin-completion-ritual" data-completion-category="books" data-completion-item-id="${book.id}">Reflect</button>` : ''}
             <button class="action-btn delete-book-btn" data-book-id="${book.id}">Delete</button>
           </td>
@@ -6031,6 +6047,204 @@ async function loadMonthlyReplay() {
   } catch (error) {
     // Monthly Replay is supplemental and should never block the statistics dashboard.
   }
+}
+
+let collectionsCache = [];
+let collectionPickerTarget = null;
+
+async function loadCollections() {
+  if (!hasStoredAuth()) return;
+  try {
+    const response = await authenticatedFetch(`${API_BASE}/collections/`);
+    if (!response.ok) throw new Error('Unable to load collections');
+    collectionsCache = await response.json();
+    renderCollections(collectionsCache);
+  } catch (error) {
+    const container = document.getElementById('collectionsList');
+    if (container) container.textContent = 'Could not load collections. Please try again.';
+  }
+}
+
+function renderCollections(collections) {
+  const container = document.getElementById('collectionsList');
+  if (!container) return;
+  container.replaceChildren();
+  if (!collections.length) {
+    const empty = document.createElement('p');
+    empty.className = 'collections-empty';
+    empty.textContent = 'Start with a feeling, a theme, or a future plan. Then add anything from your library — including anime.';
+    container.appendChild(empty);
+    return;
+  }
+  collections.forEach((collection) => {
+    const card = document.createElement('article');
+    card.className = 'collection-card';
+    const header = document.createElement('div');
+    header.className = 'collection-card__header';
+    const copy = document.createElement('div');
+    const name = document.createElement('h3');
+    name.textContent = collection.name;
+    const count = document.createElement('span');
+    count.className = 'collection-card__count';
+    count.textContent = `${collection.items.length} item${collection.items.length === 1 ? '' : 's'}`;
+    copy.append(name, count);
+    const remove = document.createElement('button');
+    remove.type = 'button';
+    remove.className = 'collection-card__delete';
+    remove.dataset.action = 'delete-collection';
+    remove.dataset.collectionId = collection.id;
+    remove.textContent = 'Delete';
+    header.append(copy, remove);
+    card.appendChild(header);
+    if (collection.description) {
+      const description = document.createElement('p');
+      description.className = 'collection-card__description';
+      description.textContent = collection.description;
+      card.appendChild(description);
+    }
+    const itemList = document.createElement('div');
+    itemList.className = 'collection-card__items';
+    if (!collection.items.length) {
+      const empty = document.createElement('p');
+      empty.className = 'collection-card__empty';
+      empty.textContent = 'Open any media tab and choose Collect to add the first item.';
+      itemList.appendChild(empty);
+    } else {
+      collection.items.forEach((item, index) => {
+        const row = document.createElement('div');
+        row.className = `collection-card__item${item.available ? '' : ' is-unavailable'}`;
+        const itemCopy = document.createElement('div');
+        const title = document.createElement('strong');
+        title.textContent = item.title;
+        const meta = document.createElement('span');
+        meta.textContent = item.available ? item.category_label : 'Deleted library item';
+        itemCopy.append(title, meta);
+        const controls = document.createElement('div');
+        controls.className = 'collection-card__item-controls';
+        const up = document.createElement('button');
+        up.type = 'button';
+        up.dataset.action = 'move-collection-item';
+        up.dataset.collectionId = collection.id;
+        up.dataset.collectionItemId = item.id;
+        up.dataset.collectionPosition = Math.max(index - 1, 0);
+        up.disabled = index === 0;
+        up.setAttribute('aria-label', `Move ${item.title} up`);
+        up.textContent = '↑';
+        const down = document.createElement('button');
+        down.type = 'button';
+        down.dataset.action = 'move-collection-item';
+        down.dataset.collectionId = collection.id;
+        down.dataset.collectionItemId = item.id;
+        down.dataset.collectionPosition = index + 1;
+        down.disabled = index === collection.items.length - 1;
+        down.setAttribute('aria-label', `Move ${item.title} down`);
+        down.textContent = '↓';
+        const removeItem = document.createElement('button');
+        removeItem.type = 'button';
+        removeItem.dataset.action = 'remove-collection-item';
+        removeItem.dataset.collectionId = collection.id;
+        removeItem.dataset.collectionItemId = item.id;
+        removeItem.textContent = 'Remove';
+        controls.append(up, down, removeItem);
+        row.append(itemCopy, controls);
+        itemList.appendChild(row);
+      });
+    }
+    card.appendChild(itemList);
+    container.appendChild(card);
+  });
+}
+
+async function createCollection(event) {
+  event.preventDefault();
+  const name = document.getElementById('collectionName').value;
+  const description = document.getElementById('collectionDescription').value;
+  try {
+    const response = await authenticatedFetch(`${API_BASE}/collections/`, {
+      method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ name, description }),
+    });
+    if (!response.ok) throw new Error('Unable to create collection');
+    event.target.reset();
+    await loadCollections();
+  } catch (error) {
+    alert('Could not create that collection. Please try again.');
+  }
+}
+
+async function openCollectionPicker(category, itemId, itemTitle) {
+  if (!category || !Number.isInteger(itemId) || itemId < 1) return;
+  collectionPickerTarget = { category, itemId, itemTitle: itemTitle || 'this item' };
+  await loadCollections();
+  const options = document.getElementById('collectionPickerOptions');
+  const title = document.getElementById('collectionPickerItemTitle');
+  if (!options || !title) return;
+  title.textContent = `Choose a collection for ${collectionPickerTarget.itemTitle}.`;
+  options.replaceChildren();
+  if (!collectionsCache.length) {
+    const empty = document.createElement('p');
+    empty.textContent = 'Create your first collection in the Collections tab, then come back to add this item.';
+    options.appendChild(empty);
+  } else {
+    collectionsCache.forEach((collection) => {
+      const button = document.createElement('button');
+      button.type = 'button';
+      button.className = 'collection-picker-modal__option';
+      button.dataset.action = 'add-to-collection';
+      button.dataset.collectionId = collection.id;
+      button.textContent = collection.name;
+      options.appendChild(button);
+    });
+  }
+  document.getElementById('collectionPickerModal').style.display = 'flex';
+}
+
+function closeCollectionPicker() {
+  const modal = document.getElementById('collectionPickerModal');
+  if (modal) modal.style.display = 'none';
+  collectionPickerTarget = null;
+}
+
+async function addToCollection(collectionId) {
+  if (!collectionPickerTarget || !collectionId) return;
+  try {
+    const response = await authenticatedFetch(`${API_BASE}/collections/${collectionId}/items`, {
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ category: collectionPickerTarget.category, item_id: collectionPickerTarget.itemId }),
+    });
+    if (response.status === 409) { alert('That item is already in this collection.'); return; }
+    if (!response.ok) throw new Error('Unable to add item');
+    closeCollectionPicker();
+    loadCollections();
+  } catch (error) {
+    alert('Could not add that item to the collection. Please try again.');
+  }
+}
+
+async function moveCollectionItem(collectionId, itemId, position) {
+  try {
+    const response = await authenticatedFetch(`${API_BASE}/collections/${collectionId}/items/${itemId}/position`, {
+      method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ position }),
+    });
+    if (!response.ok) throw new Error('Unable to move item');
+    loadCollections();
+  } catch (error) { alert('Could not reorder this collection. Please try again.'); }
+}
+
+async function removeCollectionItem(collectionId, itemId) {
+  try {
+    const response = await authenticatedFetch(`${API_BASE}/collections/${collectionId}/items/${itemId}`, { method: 'DELETE' });
+    if (!response.ok) throw new Error('Unable to remove item');
+    loadCollections();
+  } catch (error) { alert('Could not remove that item. Please try again.'); }
+}
+
+async function deleteCollection(collectionId) {
+  if (!confirm('Delete this collection? Its media entries will stay in your library.')) return;
+  try {
+    const response = await authenticatedFetch(`${API_BASE}/collections/${collectionId}`, { method: 'DELETE' });
+    if (!response.ok) throw new Error('Unable to delete collection');
+    loadCollections();
+  } catch (error) { alert('Could not delete that collection. Please try again.'); }
 }
 
 // ============================================================================

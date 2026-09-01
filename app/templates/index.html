@@ -386,6 +386,7 @@
       <button class="tab" data-switch-tab="video-games">🎮 Video Games</button>
       <button class="tab" data-switch-tab="music">🎵 Music</button>
       <button class="tab" data-switch-tab="books">📚 Books</button>
+      <button class="tab" data-switch-tab="collections">🗂 Collections</button>
       <button class="tab" data-switch-tab="statistics">📊 Statistics</button>
       <div id="customTabsContainer"></div>
       <button class="tab" id="manageCustomTabsBtn" data-action="show-custom-tab-manager" style="background-color: #6366f1; margin-left: auto;">⚙️ Manage Custom Tabs</button>
@@ -880,6 +881,24 @@
           </table>
         </div>
       </div>
+    </div>
+
+    <!-- Collections Tab Content -->
+    <div id="collections-tab" class="tab-content">
+      <section class="collections-hero">
+        <p class="collections-hero__eyebrow">Private cross-media shelves</p>
+        <h2>Collections</h2>
+        <p>Bring together movies, TV shows, anime, games, music, and books around any idea that matters to you.</p>
+      </section>
+      <section class="card collections-create">
+        <h3>Create a collection</h3>
+        <form id="createCollectionForm" data-submit-action="create-collection">
+          <input id="collectionName" type="text" maxlength="80" required placeholder="e.g. Rainy Sunday escapes">
+          <textarea id="collectionDescription" maxlength="500" rows="2" placeholder="What belongs here? (private, optional)"></textarea>
+          <button type="submit" class="action-btn">Create collection</button>
+        </form>
+      </section>
+      <div id="collectionsList" class="collections-list" aria-live="polite"></div>
     </div>
 
     <!-- Statistics Tab Content -->
@@ -2149,6 +2168,20 @@
           <button type="button" class="action-btn" data-action="save-completion-ritual">Save reflection</button>
           <button type="button" class="completion-ritual-modal__skip" data-action="close-completion-ritual">Not now</button>
         </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Collection Picker Modal -->
+  <div id="collectionPickerModal" class="modal-overlay" style="display: none;" data-close-on-backdrop="collection-picker">
+    <div class="modal-content collection-picker-modal" data-stop-propagation>
+      <div class="modal-header">
+        <h2>Add to collection</h2>
+        <button class="modal-close" data-action="close-collection-picker" aria-label="Close collection picker">×</button>
+      </div>
+      <div class="modal-body">
+        <p id="collectionPickerItemTitle" class="collection-picker-modal__item"></p>
+        <div id="collectionPickerOptions" class="collection-picker-modal__options"></div>
       </div>
     </div>
   </div>
