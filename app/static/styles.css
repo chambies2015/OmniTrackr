@@ -103,6 +103,32 @@ body.dark-mode {
   opacity: 0.8;
 }
 
+.library-launchpad__categories {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 7px;
+  margin-top: 14px;
+}
+
+.library-launchpad__category {
+  background: rgba(255, 255, 255, .06);
+  border: 1px solid rgba(102, 126, 234, .42);
+  border-radius: 999px;
+  color: var(--fg);
+  cursor: pointer;
+  font: inherit;
+  font-size: .78rem;
+  font-weight: 700;
+  padding: 7px 10px;
+}
+
+.library-launchpad__category:hover,
+.library-launchpad__category:focus-visible {
+  background: rgba(102, 126, 234, .17);
+  border-color: #14b8a6;
+  color: #5eead4;
+}
+
 .library-launchpad__steps {
   display: grid;
   gap: 8px;

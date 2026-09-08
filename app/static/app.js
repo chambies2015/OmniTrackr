@@ -236,6 +236,7 @@ function handleDelegatedClick(event) {
     'close-screenshot-modal': () => closeScreenshotModal(event),
     'export-data-dashboard': exportData,
     'launchpad-add-item': openLaunchpadAddItem,
+    'launchpad-choose-category': () => openLaunchpadAddItem(target.dataset.launchpadCategory),
     'launchpad-open-insights': openLaunchpadInsights,
     'launchpad-dismiss': dismissLibraryLaunchpad,
     'pulse-open-item': () => switchTab(target.dataset.pulseTab),
@@ -6271,13 +6272,22 @@ function dismissLibraryLaunchpad() {
   document.getElementById('libraryLaunchpad')?.setAttribute('hidden', '');
 }
 
-function openLaunchpadAddItem() {
-  switchTab('movies');
-  const formContent = document.getElementById('movieFormContent');
+function openLaunchpadAddItem(category = 'movies') {
+  const destinations = {
+    movies: { form: 'movieForm', input: 'movieTitle' },
+    'tv-shows': { form: 'tvForm', input: 'tvTitle' },
+    anime: { form: 'animeForm', input: 'animeTitle' },
+    'video-games': { form: 'videoGameForm', input: 'videoGameTitle' },
+    music: { form: 'musicForm', input: 'musicTitle' },
+    books: { form: 'bookForm', input: 'bookTitle' },
+  };
+  const destination = destinations[category] || destinations.movies;
+  switchTab(category in destinations ? category : 'movies');
+  const formContent = document.getElementById(`${destination.form}Content`);
   if (formContent?.style.display === 'none') {
-    toggleCollapsible('movieForm');
+    toggleCollapsible(destination.form);
   }
-  window.setTimeout(() => document.getElementById('movieTitle')?.focus(), 0);
+  window.setTimeout(() => document.getElementById(destination.input)?.focus(), 0);
 }
 
 function openLaunchpadInsights() {
@@ -6292,7 +6302,8 @@ function renderLibraryLaunchpad(insights) {
   const launchpad = document.getElementById('libraryLaunchpad');
   const summary = document.getElementById('libraryLaunchpadSummary');
   const steps = document.getElementById('libraryLaunchpadSteps');
-  if (!launchpad || !summary || !steps || isLibraryLaunchpadDismissed()) return;
+  const categories = document.getElementById('libraryLaunchpadCategories');
+  if (!launchpad || !summary || !steps || !categories || isLibraryLaunchpadDismissed()) return;
 
   const total = Number(insights?.total_items || 0);
   const rated = Number(insights?.rated_items || 0);
@@ -6310,6 +6321,24 @@ function renderLibraryLaunchpad(insights) {
     summary.textContent = `${completed} finished so far. Add a rating or note when you want your library to tell a clearer story.`;
   } else {
     summary.textContent = 'Your library is taking shape. Mark progress, add a rating, or leave a note when a detail is worth remembering.';
+  }
+
+  categories.replaceChildren();
+  categories.hidden = total > 0;
+  if (!total) {
+    const choices = [
+      ['movies', 'Movie'], ['tv-shows', 'TV show'], ['anime', 'Anime'],
+      ['video-games', 'Game'], ['music', 'Album'], ['books', 'Book'],
+    ];
+    choices.forEach(([category, label]) => {
+      const button = document.createElement('button');
+      button.type = 'button';
+      button.className = 'library-launchpad__category';
+      button.dataset.action = 'launchpad-choose-category';
+      button.dataset.launchpadCategory = category;
+      button.textContent = `Add a ${label}`;
+      categories.appendChild(button);
+    });
   }
 
   steps.replaceChildren();

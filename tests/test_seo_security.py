@@ -883,7 +883,10 @@ class TestSecurityMiddleware:
         assert "Choose a Workflow" in content
         assert "A Monthly Media Library Audit" in content
         assert "What Good Tracking Content Includes" in content
+        assert "A Visual Tour of the Tracker" in content
+        assert "Make Your First Ten Minutes Count" in content
         assert "original context over copied descriptions" in content
+        assert content.count('loading="lazy" decoding="async"') >= 4
         hrefs = extract_hrefs(content)
         for path in (
             "/movie-tracker",
