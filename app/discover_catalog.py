@@ -209,3 +209,45 @@ TRAILS = {
         ],
     },
 }
+
+
+# One carefully authored issue at a time. New editions are added here rather
+# than generated at request time, so every recommendation has an accountable
+# reason, caveat, and source before it is published.
+MONTHLY_EDITIONS = {
+    "september-2026": {
+        "name": "September 2026: Begin small", "tag": "THE MONTHLY EDITION",
+        "published": "September 2026",
+        "intro": "A six-part reset for the part of the year when plans start multiplying. These picks are interested in routine, repair, and the modest gestures that make a life feel inhabitable again.",
+        "essay_title": "A reset does not need to be a reinvention",
+        "essay": "September can make every unfinished plan feel urgent. This edition takes the opposite view: choose one thing, give it your full attention, and let the scale stay human. The works here are not all comforting, but each finds meaning in an ordinary practice: cleaning, singing with friends, learning a craft, arranging a room, listening closely, or putting a true memory into words.",
+        "guide": "Pick the format that gives you the least resistance tonight. Perfect Days is the complete film session; Somebody Somewhere is the warm episodic option; Barakamon and Unpacking are active but unhurried; For Emma, Forever Ago and The Comfort Book reward slower, private attention.",
+        "prompt": "What is one small practice you could return to this month without turning it into a performance?",
+        "items": [
+            {"key": "perfect-days", "category": "movies", "title": "Perfect Days", "meta": {"director": "Wim Wenders", "year": 2023},
+             "why": "Hirayama's days are structured around work, cassette tapes, books, and looking closely at trees. The film is not telling you that routine solves everything; it asks what can become visible when a person gives ordinary life sustained attention. Choose it when you want a quiet, complete movie with room to breathe afterward.",
+             "caveat": "A patient, minimally plotted drama with some mature material and melancholy beneath its calm surface. Its pace is intentionally unhurried.",
+             "source": "https://www.neonrated.com/film/perfect-days"},
+            {"key": "somebody-somewhere", "category": "tv-shows", "title": "Somebody Somewhere", "meta": {"year": 2022},
+             "why": "This series treats friendship as a practice rather than a sudden revelation. Its characters make room for grief, embarrassment, talent, and the slow realization that they can be known by one another. Watch an episode when you want tenderness that still feels adult and specific.",
+             "caveat": "Contains grief, sexuality, strong language, and emotionally difficult family dynamics, even though its overall spirit is warm.",
+             "source": "https://www.hulu.com/series/somebody-somewhere-30fbe6f5-bd17-414a-ba74-03cb51c0d7b7"},
+            {"key": "barakamon", "category": "anime", "title": "Barakamon", "meta": {"year": 2014},
+             "why": "A perfectionist calligrapher is sent to an island after an outburst, where local children and neighbors keep interrupting his ideas about what serious work should look like. It belongs in this edition because improvement arrives through contact, play, and the willingness to make imperfect marks.",
+             "caveat": "A gentle comedy with occasional slapstick and a premise that begins with the protagonist's anger. It is more episodic than plot-driven.",
+             "source": "https://www.vap.co.jp/barakamon/"},
+            {"key": "unpacking", "category": "video-games", "title": "Unpacking", "meta": {},
+             "why": "Moving through a person's life one box at a time turns tidying into a form of close reading. The game never asks you to master a big system; it asks you to notice what is kept, what changes, and where a belonging might fit. It is a beautiful argument for paying attention to the things that make a home.",
+             "caveat": "A short, mostly wordless puzzle game with a few emotionally tender life changes. Players who want action or open-ended challenge may find it too slight.",
+             "source": "https://www.unpackinggame.com/"},
+            {"key": "for-emma", "category": "music", "title": "For Emma, Forever Ago", "meta": {"artist": "Bon Iver", "year": 2007},
+             "why": "The record's close-miked vocals and spare arrangements make it feel like a private room rather than a grand statement. Give it one uninterrupted listen, then notice how it makes space for uncertainty without trying to resolve every feeling into a lesson.",
+             "caveat": "A restrained, emotionally heavy indie-folk album about loss and isolation. It is better suited to reflective listening than background energy.",
+             "source": "https://boniver.org/audio/for-emma-forever-ago/"},
+            {"key": "comfort-book", "category": "books", "title": "The Comfort Book", "meta": {"author": "Matt Haig", "year": 2021},
+             "why": "This is a book to open in small pieces, not race through for a prescription. Its short reflections are useful here as prompts: keep the sentence that changes your perspective, leave the rest, and return to your own life rather than making self-improvement another project.",
+             "caveat": "A collection of brief reflections about mental health and difficult periods, not a substitute for professional care or a conventional narrative book.",
+             "source": "https://www.matthaig.com/books/the-comfort-book/"},
+        ],
+    },
+}

@@ -320,8 +320,12 @@ async def get_sitemap(db: Session = Depends(get_db)):
     except Exception:
         pass
     
-    from ..discover_catalog import TRAILS
-    for path in ["/discover", *[f"/discover/{slug}" for slug in TRAILS]]:
+    from ..discover_catalog import MONTHLY_EDITIONS, TRAILS
+    for path in [
+        "/discover",
+        *[f"/discover/{slug}" for slug in TRAILS],
+        *[f"/discover/monthly/{slug}" for slug in MONTHLY_EDITIONS],
+    ]:
         sitemap_parts.append(f"<url><loc>{base_url}{path}</loc></url>")
     sitemap_parts.append("</urlset>")
     sitemap = "\n".join(sitemap_parts)
