@@ -6,6 +6,18 @@ let editingRowElement = null;
 let currentTab = 'movies';
 let notificationCountInterval = null;
 
+const LIBRARY_SEARCH_SOURCES = [
+  { endpoint: '/movies/', tab: 'movies', label: 'Movie', input: 'movieSearch', status: item => item.watched ? 'Watched' : 'Not watched' },
+  { endpoint: '/tv-shows/', tab: 'tv-shows', label: 'TV show', input: 'tvSearch', status: item => item.watched ? 'Watched' : 'In progress' },
+  { endpoint: '/anime/', tab: 'anime', label: 'Anime', input: 'animeSearch', status: item => item.watched ? 'Watched' : 'In progress' },
+  { endpoint: '/video-games/', tab: 'video-games', label: 'Game', input: 'videoGameSearch', status: item => item.played ? 'Played' : 'Not played' },
+  { endpoint: '/music/', tab: 'music', label: 'Album', input: 'musicSearch', status: item => item.listened ? 'Listened' : 'Not listened' },
+  { endpoint: '/books/', tab: 'books', label: 'Book', input: 'bookSearch', status: item => item.read ? 'Read' : 'Not read' },
+];
+let librarySearchIndex = [];
+let librarySearchIndexReady = false;
+let librarySearchIndexPromise = null;
+
 const posterFetchInProgress = new Set();
 const posterFetchQueue = new Map();
 
@@ -47,6 +59,150 @@ function escapeHtml(str) {
     .replace(/>/g, "&gt;")
     .replace(/"/g, "&quot;")
     .replace(/'/g, "&#39;");
+}
+
+function normalizeLibrarySearchText(value) {
+  return String(value ?? '').trim().toLocaleLowerCase();
+}
+
+function invalidateLibrarySearchIndex() {
+  librarySearchIndexReady = false;
+}
+
+async function refreshLibrarySearchIndex() {
+  if (librarySearchIndexReady) return librarySearchIndex;
+  if (librarySearchIndexPromise) return librarySearchIndexPromise;
+  librarySearchIndexPromise = Promise.all(LIBRARY_SEARCH_SOURCES.map(async source => {
+    const response = await authenticatedFetch(`${API_BASE}${source.endpoint}`);
+    if (!response.ok) return [];
+    const items = await response.json();
+    return items.map(item => ({
+      id: item.id,
+      tab: source.tab,
+      label: source.label,
+      title: String(item.title || 'Untitled'),
+      status: source.status(item),
+      haystack: normalizeLibrarySearchText([item.title, item.director, item.author, item.artist, item.genre, item.genres, item.year, item.review].filter(Boolean).join(' ')),
+    }));
+  })).then(groups => {
+    librarySearchIndex = groups.flat();
+    librarySearchIndexReady = true;
+    return librarySearchIndex;
+  }).catch(() => {
+    librarySearchIndex = [];
+    return librarySearchIndex;
+  }).finally(() => {
+    librarySearchIndexPromise = null;
+  });
+  return librarySearchIndexPromise;
+}
+
+function closeLibrarySearch() {
+  const input = document.getElementById('librarySearchInput');
+  const results = document.getElementById('librarySearchResults');
+  if (results) results.setAttribute('hidden', '');
+  input?.setAttribute('aria-expanded', 'false');
+}
+
+function renderLibrarySearch(query) {
+  const input = document.getElementById('librarySearchInput');
+  const results = document.getElementById('librarySearchResults');
+  if (!input || !results) return;
+  const needle = normalizeLibrarySearchText(query);
+  results.replaceChildren();
+  if (!needle) {
+    closeLibrarySearch();
+    return;
+  }
+  const matches = librarySearchIndex.map(item => {
+    const title = normalizeLibrarySearchText(item.title);
+    if (!item.haystack.includes(needle)) return null;
+    return { item, score: title === needle ? 0 : title.startsWith(needle) ? 1 : title.includes(needle) ? 2 : 3 };
+  }).filter(Boolean).sort((a, b) => a.score - b.score || a.item.title.localeCompare(b.item.title)).slice(0, 8);
+  if (!matches.length) {
+    const message = document.createElement('p');
+    message.className = 'library-search__message';
+    message.textContent = 'No matches in your private library yet.';
+    results.appendChild(message);
+  } else {
+    matches.forEach(({ item }) => {
+      const button = document.createElement('button');
+      button.type = 'button';
+      button.className = 'library-search__result';
+      button.dataset.action = 'open-library-search-result';
+      button.dataset.searchTab = item.tab;
+      button.dataset.searchTitle = item.title;
+      button.setAttribute('role', 'option');
+      const copy = document.createElement('span');
+      copy.className = 'library-search__result-copy';
+      const title = document.createElement('strong');
+      title.textContent = item.title;
+      const meta = document.createElement('span');
+      meta.textContent = `${item.label} · ${item.status}`;
+      copy.append(title, meta);
+      const action = document.createElement('span');
+      action.className = 'library-search__result-action';
+      action.textContent = 'Open →';
+      button.append(copy, action);
+      results.appendChild(button);
+    });
+  }
+  results.removeAttribute('hidden');
+  input.setAttribute('aria-expanded', 'true');
+}
+
+async function handleLibrarySearchInput() {
+  const input = document.getElementById('librarySearchInput');
+  if (!input || !input.value.trim()) {
+    closeLibrarySearch();
+    return;
+  }
+  const query = input.value;
+  const results = document.getElementById('librarySearchResults');
+  results.textContent = 'Searching your private library…';
+  results.removeAttribute('hidden');
+  input.setAttribute('aria-expanded', 'true');
+  await refreshLibrarySearchIndex();
+  if (input.value === query) renderLibrarySearch(query);
+}
+
+function openLibrarySearchResult(tab, title) {
+  const source = LIBRARY_SEARCH_SOURCES.find(item => item.tab === tab);
+  if (!source) return;
+  closeLibrarySearch();
+  const globalInput = document.getElementById('librarySearchInput');
+  if (globalInput) globalInput.value = '';
+  switchTab(tab);
+  const categoryInput = document.getElementById(source.input);
+  if (!categoryInput) return;
+  categoryInput.value = title;
+  categoryInput.dispatchEvent(new Event('input', { bubbles: true }));
+  window.setTimeout(() => categoryInput.focus(), 0);
+}
+
+function setupLibrarySearch() {
+  const input = document.getElementById('librarySearchInput');
+  if (!input) return;
+  input.addEventListener('input', handleLibrarySearchInput);
+  input.addEventListener('focus', () => {
+    if (input.value.trim()) handleLibrarySearchInput();
+  });
+  input.addEventListener('keydown', event => {
+    if (event.key === 'Escape') {
+      input.value = '';
+      closeLibrarySearch();
+    }
+  });
+  document.addEventListener('keydown', event => {
+    if ((event.ctrlKey || event.metaKey) && event.key.toLowerCase() === 'k') {
+      event.preventDefault();
+      input.focus();
+    }
+    if (event.key === 'Escape' && document.activeElement !== input) closeLibrarySearch();
+  });
+  document.addEventListener('click', event => {
+    if (!event.target.closest('.library-search')) closeLibrarySearch();
+  });
 }
 
 function showImagePopup(imageUrl, altText) {
@@ -170,7 +326,10 @@ function handleDelegatedClick(event) {
     const closeHandlers = {
       screenshot: () => closeScreenshotModal(event),
       review: closeReviewModal,
-      'custom-tab-manager': closeCustomTabManager
+      'custom-tab-manager': closeCustomTabManager,
+      'completion-ritual': closeCompletionRitual,
+      'collection-picker': closeCollectionPicker,
+      'collection-studio': closeCollectionStudio
     };
     closeHandlers[target.dataset.closeOnBackdrop]?.();
     return;
@@ -233,6 +392,27 @@ function handleDelegatedClick(event) {
     'close-book-search-modal': closeBookSearchModal,
     'close-screenshot-modal': () => closeScreenshotModal(event),
     'export-data-dashboard': exportData,
+    'launchpad-add-item': openLaunchpadAddItem,
+    'launchpad-choose-category': () => openLaunchpadAddItem(target.dataset.launchpadCategory),
+    'launchpad-open-insights': openLaunchpadInsights,
+    'launchpad-dismiss': dismissLibraryLaunchpad,
+    'pulse-open-item': () => switchTab(target.dataset.pulseTab),
+    'open-library-search-result': () => openLibrarySearchResult(target.dataset.searchTab, target.dataset.searchTitle),
+    'try-another-pick': tryAnotherPick,
+    'add-next-up': () => addToNextUp(target.dataset.nextUpCategory, Number(target.dataset.nextUpItemId)),
+    'move-next-up': () => moveNextUp(Number(target.dataset.nextUpId), Number(target.dataset.nextUpPosition)),
+    'remove-next-up': () => removeNextUp(Number(target.dataset.nextUpId)),
+    'begin-completion-ritual': () => openCompletionMoment(target.dataset.completionCategory, Number(target.dataset.completionItemId)),
+    'close-completion-ritual': closeCompletionRitual,
+    'save-completion-ritual': saveCompletionRitual,
+    'open-collection-picker': () => openCollectionPicker(target.dataset.collectionCategory, Number(target.dataset.collectionItemId), target.dataset.collectionItemTitle),
+    'close-collection-picker': closeCollectionPicker,
+    'open-collection-studio': () => openCollectionStudio(Number(target.dataset.collectionId)),
+    'close-collection-studio': closeCollectionStudio,
+    'add-to-collection': () => addToCollection(Number(target.dataset.collectionId)),
+    'move-collection-item': () => moveCollectionItem(Number(target.dataset.collectionId), Number(target.dataset.collectionItemId), Number(target.dataset.collectionPosition)),
+    'remove-collection-item': () => removeCollectionItem(Number(target.dataset.collectionId), Number(target.dataset.collectionItemId)),
+    'delete-collection': () => deleteCollection(Number(target.dataset.collectionId)),
     'show-register-form': () => showRegisterForm(),
     'show-login-form': () => showLoginForm()
   };
@@ -250,7 +430,9 @@ function handleDelegatedSubmit(event) {
     'update-privacy-settings': updatePrivacySettings,
     'update-tab-visibility': updateTabVisibility,
     'deactivate-account': deactivateAccount,
-    'send-friend-request': sendFriendRequest
+    'send-friend-request': sendFriendRequest,
+    'create-collection': createCollection,
+    'save-collection-studio': saveCollectionStudio
   };
   submitHandlers[form.dataset.submitAction]?.(event);
 }
@@ -334,6 +516,8 @@ function switchTab(tabName) {
     loadMusic();
   } else if (tabName === 'books') {
     loadBooks();
+  } else if (tabName === 'collections') {
+    loadCollections();
   } else if (tabName === 'statistics') {
     loadStatistics();
   }
@@ -409,6 +593,9 @@ async function loadMovies() {
           <td><span class="watched-icon ${movie.review_public ? 'watched' : 'unwatched'}">${movie.review_public ? '✓' : '✗'}</span></td>
           <td>
             <button class="action-btn edit-movie-btn" data-movie-id="${movie.id}" data-movie-title="${escapeHtml(movie.title)}" data-movie-director="${escapeHtml(movie.director)}" data-movie-year="${movie.year}" data-movie-rating="${movie.rating ?? ''}" data-movie-watched="${movie.watched}" data-movie-review="${escapeHtml(movie.review || '')}" data-movie-review-public="${movie.review_public || false}">Edit</button>
+            <button type="button" class="action-btn" data-action="add-next-up" data-next-up-category="movies" data-next-up-item-id="${movie.id}">Next up</button>
+            <button type="button" class="action-btn" data-action="open-collection-picker" data-collection-category="movies" data-collection-item-id="${movie.id}" data-collection-item-title="${escapeHtml(movie.title)}">Collect</button>
+            ${movie.watched ? `<button type="button" class="action-btn" data-action="begin-completion-ritual" data-completion-category="movies" data-completion-item-id="${movie.id}">Reflect</button>` : ''}
             <button class="action-btn delete-movie-btn" data-movie-id="${movie.id}">Delete</button>
           </td>
         `;
@@ -625,7 +812,7 @@ window.enableMovieEdit = function (btn) {
   }
   row.cells[8].innerHTML = `<input type="checkbox" id="edit-movie-review-public" ${reviewPublic ? 'checked' : ''}>`;
   row.cells[9].innerHTML = `
-    <button class="action-btn save-movie-btn" data-movie-id="${id}">Save</button>
+    <button class="action-btn save-movie-btn" data-movie-id="${id}" data-was-complete="${watched}" data-completion-category="movies">Save</button>
     <button class="action-btn cancel-movie-btn">Cancel</button>
   `;
   disableOtherRowButtons(row, 'movieTable');
@@ -652,6 +839,7 @@ window.saveMovieEdit = async function (btn) {
     body: JSON.stringify(updated),
   });
   if (res.ok) {
+    if (btn.dataset.wasComplete !== 'true' && updated.watched) openCompletionMoment('movies', id);
     editingRowId = null;
     editingRowElement = null;
     enableAllRowButtons('movieTable');
@@ -713,6 +901,9 @@ async function loadTVShows() {
           <td><span class="watched-icon ${tvShow.review_public ? 'watched' : 'unwatched'}">${tvShow.review_public ? '✓' : '✗'}</span></td>
           <td>
             <button class="action-btn edit-tv-btn" data-tv-id="${tvShow.id}" data-tv-title="${escapeHtml(tvShow.title)}" data-tv-year="${tvShow.year}" data-tv-seasons="${tvShow.seasons ?? ''}" data-tv-episodes="${tvShow.episodes ?? ''}" data-tv-rating="${tvShow.rating ?? ''}" data-tv-watched="${tvShow.watched}" data-tv-review="${escapeHtml(tvShow.review || '')}" data-tv-review-public="${tvShow.review_public || false}">Edit</button>
+            <button type="button" class="action-btn" data-action="add-next-up" data-next-up-category="tv-shows" data-next-up-item-id="${tvShow.id}">Next up</button>
+            <button type="button" class="action-btn" data-action="open-collection-picker" data-collection-category="tv-shows" data-collection-item-id="${tvShow.id}" data-collection-item-title="${escapeHtml(tvShow.title)}">Collect</button>
+            ${tvShow.watched ? `<button type="button" class="action-btn" data-action="begin-completion-ritual" data-completion-category="tv-shows" data-completion-item-id="${tvShow.id}">Reflect</button>` : ''}
             <button class="action-btn delete-tv-btn" data-tv-id="${tvShow.id}">Delete</button>
           </td>
         `;
@@ -779,6 +970,9 @@ async function loadAnime() {
           <td><span class="watched-icon ${animeItem.review_public ? 'watched' : 'unwatched'}">${animeItem.review_public ? '✓' : '✗'}</span></td>
           <td>
             <button class="action-btn edit-anime-btn" data-anime-id="${animeItem.id}" data-anime-title="${escapeHtml(animeItem.title)}" data-anime-year="${animeItem.year}" data-anime-seasons="${animeItem.seasons ?? ''}" data-anime-episodes="${animeItem.episodes ?? ''}" data-anime-rating="${animeItem.rating ?? ''}" data-anime-watched="${animeItem.watched}" data-anime-review="${escapeHtml(animeItem.review || '')}" data-anime-review-public="${animeItem.review_public || false}">Edit</button>
+            <button type="button" class="action-btn" data-action="add-next-up" data-next-up-category="anime" data-next-up-item-id="${animeItem.id}">Next up</button>
+            <button type="button" class="action-btn" data-action="open-collection-picker" data-collection-category="anime" data-collection-item-id="${animeItem.id}" data-collection-item-title="${escapeHtml(animeItem.title)}">Collect</button>
+            ${animeItem.watched ? `<button type="button" class="action-btn" data-action="begin-completion-ritual" data-completion-category="anime" data-completion-item-id="${animeItem.id}">Reflect</button>` : ''}
             <button class="action-btn delete-anime-btn" data-anime-id="${animeItem.id}">Delete</button>
           </td>
         `;
@@ -1156,6 +1350,9 @@ async function loadVideoGames() {
           <td><span class="watched-icon ${game.review_public ? 'watched' : 'unwatched'}">${game.review_public ? '✓' : '✗'}</span></td>
           <td>
             <button class="action-btn edit-video-game-btn" data-game-id="${game.id}" data-game-title="${escapeHtml(game.title)}" data-game-release-date="${game.release_date ? game.release_date.split('T')[0] : ''}" data-game-genres="${escapeHtml(game.genres || '')}" data-game-rating="${game.rating ?? ''}" data-game-played="${game.played}" data-game-review="${escapeHtml(game.review || '')}" data-game-review-public="${game.review_public || false}">Edit</button>
+            <button type="button" class="action-btn" data-action="add-next-up" data-next-up-category="video-games" data-next-up-item-id="${game.id}">Next up</button>
+            <button type="button" class="action-btn" data-action="open-collection-picker" data-collection-category="video-games" data-collection-item-id="${game.id}" data-collection-item-title="${escapeHtml(game.title)}">Collect</button>
+            ${game.played ? `<button type="button" class="action-btn" data-action="begin-completion-ritual" data-completion-category="video-games" data-completion-item-id="${game.id}">Reflect</button>` : ''}
             <button class="action-btn delete-video-game-btn" data-game-id="${game.id}">Delete</button>
           </td>
         `;
@@ -1422,7 +1619,7 @@ window.enableVideoGameEdit = function (btn) {
   }
   row.cells[8].innerHTML = `<input type="checkbox" id="edit-video-game-review-public" ${reviewPublic ? 'checked' : ''}>`;
   row.cells[9].innerHTML = `
-    <button class="action-btn save-video-game-btn" data-game-id="${id}">Save</button>
+    <button class="action-btn save-video-game-btn" data-game-id="${id}" data-was-complete="${played}" data-completion-category="video-games">Save</button>
     <button class="action-btn cancel-video-game-btn">Cancel</button>
   `;
   disableOtherRowButtons(row, 'videoGameTable');
@@ -1453,6 +1650,7 @@ window.saveVideoGameEdit = async function (btn) {
   });
 
   if (res.ok) {
+    if (btn.dataset.wasComplete !== 'true' && played) openCompletionMoment('video-games', id);
     editingRowId = null;
     editingRowElement = null;
     enableAllRowButtons('videoGameTable');
@@ -1511,6 +1709,9 @@ async function loadMusic() {
           <td><span class="watched-icon ${item.review_public ? 'watched' : 'unwatched'}">${item.review_public ? '✓' : '✗'}</span></td>
           <td>
             <button class="action-btn edit-music-btn" data-music-id="${item.id}" data-music-title="${escapeHtml(item.title)}" data-music-artist="${escapeHtml(item.artist)}" data-music-year="${item.year}" data-music-genre="${escapeHtml(item.genre || '')}" data-music-rating="${item.rating ?? ''}" data-music-listened="${item.listened}" data-music-review="${escapeHtml(item.review || '')}" data-music-review-public="${item.review_public || false}">Edit</button>
+            <button type="button" class="action-btn" data-action="add-next-up" data-next-up-category="music" data-next-up-item-id="${item.id}">Next up</button>
+            <button type="button" class="action-btn" data-action="open-collection-picker" data-collection-category="music" data-collection-item-id="${item.id}" data-collection-item-title="${escapeHtml(item.title)}">Collect</button>
+            ${item.listened ? `<button type="button" class="action-btn" data-action="begin-completion-ritual" data-completion-category="music" data-completion-item-id="${item.id}">Reflect</button>` : ''}
             <button class="action-btn delete-music-btn" data-music-id="${item.id}">Delete</button>
           </td>
         `;
@@ -1767,7 +1968,7 @@ window.enableMusicEdit = function (btn) {
   }
   row.cells[8].innerHTML = `<input type="checkbox" id="edit-music-review-public" ${reviewPublic ? 'checked' : ''}>`;
   row.cells[9].innerHTML = `
-    <button class="action-btn save-music-btn" data-music-id="${id}">Save</button>
+    <button class="action-btn save-music-btn" data-music-id="${id}" data-was-complete="${listened}" data-completion-category="music">Save</button>
     <button class="action-btn cancel-music-btn">Cancel</button>
   `;
   disableOtherRowButtons(row, 'musicTable');
@@ -1798,6 +1999,7 @@ window.saveMusicEdit = async function (btn) {
   });
 
   if (res.ok) {
+    if (btn.dataset.wasComplete !== 'true' && listened) openCompletionMoment('music', id);
     editingRowId = null;
     editingRowElement = null;
     enableAllRowButtons('musicTable');
@@ -1856,6 +2058,9 @@ async function loadBooks() {
           <td><span class="watched-icon ${book.review_public ? 'watched' : 'unwatched'}">${book.review_public ? '✓' : '✗'}</span></td>
           <td>
             <button class="action-btn edit-book-btn" data-book-id="${book.id}" data-book-title="${escapeHtml(book.title)}" data-book-author="${escapeHtml(book.author)}" data-book-year="${book.year}" data-book-genre="${escapeHtml(book.genre || '')}" data-book-rating="${book.rating ?? ''}" data-book-read="${book.read}" data-book-review="${escapeHtml(book.review || '')}" data-book-review-public="${book.review_public || false}">Edit</button>
+            <button type="button" class="action-btn" data-action="add-next-up" data-next-up-category="books" data-next-up-item-id="${book.id}">Next up</button>
+            <button type="button" class="action-btn" data-action="open-collection-picker" data-collection-category="books" data-collection-item-id="${book.id}" data-collection-item-title="${escapeHtml(book.title)}">Collect</button>
+            ${book.read ? `<button type="button" class="action-btn" data-action="begin-completion-ritual" data-completion-category="books" data-completion-item-id="${book.id}">Reflect</button>` : ''}
             <button class="action-btn delete-book-btn" data-book-id="${book.id}">Delete</button>
           </td>
         `;
@@ -2105,7 +2310,7 @@ window.enableBookEdit = function (btn) {
   }
   row.cells[8].innerHTML = `<input type="checkbox" id="edit-book-review-public" ${reviewPublic ? 'checked' : ''}>`;
   row.cells[9].innerHTML = `
-    <button class="action-btn save-book-btn" data-book-id="${id}">Save</button>
+    <button class="action-btn save-book-btn" data-book-id="${id}" data-was-complete="${read}" data-completion-category="books">Save</button>
     <button class="action-btn cancel-book-btn">Cancel</button>
   `;
   disableOtherRowButtons(row, 'bookTable');
@@ -2136,6 +2341,7 @@ window.saveBookEdit = async function (btn) {
   });
 
   if (res.ok) {
+    if (btn.dataset.wasComplete !== 'true' && read) openCompletionMoment('books', id);
     editingRowId = null;
     editingRowElement = null;
     enableAllRowButtons('bookTable');
@@ -2190,7 +2396,7 @@ window.enableAnimeEdit = function (btn) {
   }
   row.cells[8].innerHTML = `<input type="checkbox" id="edit-anime-review-public" ${reviewPublic ? 'checked' : ''}>`;
   row.cells[9].innerHTML = `
-    <button class="action-btn save-anime-btn" data-anime-id="${id}">Save</button>
+    <button class="action-btn save-anime-btn" data-anime-id="${id}" data-was-complete="${watched}" data-completion-category="anime">Save</button>
     <button class="action-btn cancel-anime-btn">Cancel</button>
   `;
   disableOtherRowButtons(row, 'animeTable');
@@ -2220,6 +2426,7 @@ window.saveAnimeEdit = async function (btn) {
     body: JSON.stringify(updated),
   });
   if (res.ok) {
+    if (btn.dataset.wasComplete !== 'true' && updated.watched) openCompletionMoment('anime', id);
     editingRowId = null;
     editingRowElement = null;
     enableAllRowButtons('animeTable');
@@ -2274,7 +2481,7 @@ window.enableTVEdit = function (btn) {
   }
   row.cells[8].innerHTML = `<input type="checkbox" id="edit-tv-review-public" ${reviewPublic ? 'checked' : ''}>`;
   row.cells[9].innerHTML = `
-    <button class="action-btn save-tv-btn" data-tv-id="${id}">Save</button>
+    <button class="action-btn save-tv-btn" data-tv-id="${id}" data-was-complete="${watched}" data-completion-category="tv-shows">Save</button>
     <button class="action-btn cancel-tv-btn">Cancel</button>
   `;
   disableOtherRowButtons(row, 'tvShowTable');
@@ -2304,6 +2511,7 @@ window.saveTVEdit = async function (btn) {
     body: JSON.stringify(updated),
   });
   if (res.ok) {
+    if (btn.dataset.wasComplete !== 'true' && updated.watched) openCompletionMoment('tv-shows', id);
     editingRowId = null;
     editingRowElement = null;
     enableAllRowButtons('tvShowTable');
@@ -3542,6 +3750,7 @@ async function importData(fileInput) {
 function loadStatistics() {
   document.getElementById('statsLoading').style.display = 'none';
   document.getElementById('statsContent').style.display = 'block';
+  loadMonthlyReplay();
   if (!categoryStatsCache['library-insights']) {
     toggleCategoryAccordion('library-insights');
   }
@@ -5888,8 +6097,796 @@ function restoreSidebarState() {
   }
 }
 
+let activeCompletionMomentId = null;
+
+async function openCompletionMoment(category, itemId) {
+  if (!category || !Number.isInteger(itemId) || itemId < 1) return;
+  try {
+    const response = await authenticatedFetch(`${API_BASE}/completion-moments/`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ category, item_id: itemId }),
+    });
+    if (response.status === 409) {
+      alert('Mark this item finished before adding a reflection.');
+      return;
+    }
+    if (!response.ok) throw new Error('Unable to start reflection');
+    const moment = await response.json();
+    activeCompletionMomentId = moment.id;
+    document.getElementById('completionRitualTitle').textContent = moment.title;
+    document.getElementById('completionRitualTakeaway').value = moment.takeaway || '';
+    document.getElementById('completionRitualFavorite').checked = Boolean(moment.favorite);
+    document.getElementById('completionRitualModal').style.display = 'flex';
+  } catch (error) {
+    alert('Could not open the finish ritual. Please try again.');
+  }
+}
+
+function closeCompletionRitual() {
+  const modal = document.getElementById('completionRitualModal');
+  if (modal) modal.style.display = 'none';
+  activeCompletionMomentId = null;
+}
+
+async function saveCompletionRitual() {
+  if (!activeCompletionMomentId) return;
+  const takeaway = document.getElementById('completionRitualTakeaway').value;
+  const favorite = document.getElementById('completionRitualFavorite').checked;
+  try {
+    const response = await authenticatedFetch(`${API_BASE}/completion-moments/${activeCompletionMomentId}`, {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ takeaway, favorite }),
+    });
+    if (!response.ok) throw new Error('Unable to save reflection');
+    closeCompletionRitual();
+    loadMonthlyReplay();
+  } catch (error) {
+    alert('Could not save your reflection. Please try again.');
+  }
+}
+
+function renderMonthlyReplay(replay) {
+  const section = document.getElementById('monthlyReplay');
+  const period = document.getElementById('monthlyReplayPeriod');
+  const content = document.getElementById('monthlyReplayContent');
+  if (!section || !period || !content) return;
+  period.textContent = replay.month_label || 'This month';
+  content.replaceChildren();
+
+  const stats = document.createElement('div');
+  stats.className = 'monthly-replay__stats';
+  [
+    [replay.completed_count || 0, 'finished'],
+    [replay.reflection_count || 0, 'reflections'],
+    [replay.favorite_count || 0, 'favorites'],
+  ].forEach(([value, label]) => {
+    const stat = document.createElement('div');
+    stat.className = 'monthly-replay__stat';
+    const number = document.createElement('strong');
+    number.textContent = String(value);
+    const caption = document.createElement('span');
+    caption.textContent = label;
+    stat.append(number, caption);
+    stats.appendChild(stat);
+  });
+  content.appendChild(stats);
+
+  const highlights = Array.isArray(replay.highlights) ? replay.highlights : [];
+  if (!highlights.length) {
+    const empty = document.createElement('p');
+    empty.className = 'monthly-replay__empty';
+    empty.textContent = 'Finish something and add a private reflection to start this month’s time capsule.';
+    content.appendChild(empty);
+  } else {
+    const list = document.createElement('div');
+    list.className = 'monthly-replay__highlights';
+    highlights.forEach((item) => {
+      const card = document.createElement('div');
+      card.className = 'monthly-replay__highlight';
+      const title = document.createElement('strong');
+      title.textContent = `${item.favorite ? '★ ' : ''}${item.title}`;
+      const meta = document.createElement('span');
+      meta.textContent = [item.category_label, item.rating != null ? `${Number(item.rating).toFixed(1)}/10` : 'Unrated'].join(' · ');
+      card.append(title, meta);
+      if (item.takeaway) {
+        const takeaway = document.createElement('p');
+        takeaway.textContent = item.takeaway;
+        card.appendChild(takeaway);
+      }
+      list.appendChild(card);
+    });
+    content.appendChild(list);
+  }
+  section.removeAttribute('hidden');
+}
+
+async function loadMonthlyReplay() {
+  if (!hasStoredAuth()) return;
+  try {
+    const response = await authenticatedFetch(`${API_BASE}/completion-moments/replay/`);
+    if (response.ok) renderMonthlyReplay(await response.json());
+  } catch (error) {
+    // Monthly Replay is supplemental and should never block the statistics dashboard.
+  }
+}
+
+let collectionsCache = [];
+let collectionPickerTarget = null;
+
+async function loadCollections() {
+  if (!hasStoredAuth()) return;
+  try {
+    const response = await authenticatedFetch(`${API_BASE}/collections/`);
+    if (!response.ok) throw new Error('Unable to load collections');
+    collectionsCache = await response.json();
+    renderCollections(collectionsCache);
+  } catch (error) {
+    const container = document.getElementById('collectionsList');
+    if (container) container.textContent = 'Could not load collections. Please try again.';
+  }
+}
+
+function renderCollections(collections) {
+  const container = document.getElementById('collectionsList');
+  if (!container) return;
+  container.replaceChildren();
+  if (!collections.length) {
+    const empty = document.createElement('p');
+    empty.className = 'collections-empty';
+    empty.textContent = 'Start with a feeling, a theme, or a future plan. Then add anything from your library — including anime.';
+    container.appendChild(empty);
+    return;
+  }
+  collections.forEach((collection) => {
+    const card = document.createElement('article');
+    card.className = 'collection-card';
+    const header = document.createElement('div');
+    header.className = 'collection-card__header';
+    const copy = document.createElement('div');
+    const name = document.createElement('h3');
+    name.textContent = collection.name;
+    const count = document.createElement('span');
+    count.className = 'collection-card__count';
+    count.textContent = `${collection.items.length} item${collection.items.length === 1 ? '' : 's'}`;
+    copy.append(name, count);
+    const actions = document.createElement('div');
+    actions.className = 'collection-card__actions';
+    const status = document.createElement('span');
+    status.className = `collection-card__status${collection.is_public ? ' is-public' : ''}`;
+    status.textContent = collection.is_public ? 'Public' : 'Private';
+    const edit = document.createElement('button');
+    edit.type = 'button';
+    edit.className = 'collection-card__edit';
+    edit.dataset.action = 'open-collection-studio';
+    edit.dataset.collectionId = collection.id;
+    edit.textContent = 'Edit & share';
+    actions.append(status, edit);
+    if (collection.is_public && collection.public_url) {
+      const publicLink = document.createElement('a');
+      publicLink.className = 'collection-card__public-link';
+      publicLink.href = collection.public_url;
+      publicLink.target = '_blank';
+      publicLink.rel = 'noopener noreferrer';
+      publicLink.textContent = 'View public page ↗';
+      actions.appendChild(publicLink);
+    }
+    const remove = document.createElement('button');
+    remove.type = 'button';
+    remove.className = 'collection-card__delete';
+    remove.dataset.action = 'delete-collection';
+    remove.dataset.collectionId = collection.id;
+    remove.textContent = 'Delete';
+    actions.appendChild(remove);
+    header.append(copy, actions);
+    card.appendChild(header);
+    if (collection.description) {
+      const description = document.createElement('p');
+      description.className = 'collection-card__description';
+      description.textContent = collection.description;
+      card.appendChild(description);
+    }
+    const itemList = document.createElement('div');
+    itemList.className = 'collection-card__items';
+    if (!collection.items.length) {
+      const empty = document.createElement('p');
+      empty.className = 'collection-card__empty';
+      empty.textContent = 'Open any media tab and choose Collect to add the first item.';
+      itemList.appendChild(empty);
+    } else {
+      collection.items.forEach((item, index) => {
+        const row = document.createElement('div');
+        row.className = `collection-card__item${item.available ? '' : ' is-unavailable'}`;
+        const itemCopy = document.createElement('div');
+        const title = document.createElement('strong');
+        title.textContent = item.title;
+        const meta = document.createElement('span');
+        meta.textContent = item.available ? item.category_label : 'Deleted library item';
+        itemCopy.append(title, meta);
+        const controls = document.createElement('div');
+        controls.className = 'collection-card__item-controls';
+        const up = document.createElement('button');
+        up.type = 'button';
+        up.dataset.action = 'move-collection-item';
+        up.dataset.collectionId = collection.id;
+        up.dataset.collectionItemId = item.id;
+        up.dataset.collectionPosition = Math.max(index - 1, 0);
+        up.disabled = index === 0;
+        up.setAttribute('aria-label', `Move ${item.title} up`);
+        up.textContent = '↑';
+        const down = document.createElement('button');
+        down.type = 'button';
+        down.dataset.action = 'move-collection-item';
+        down.dataset.collectionId = collection.id;
+        down.dataset.collectionItemId = item.id;
+        down.dataset.collectionPosition = index + 1;
+        down.disabled = index === collection.items.length - 1;
+        down.setAttribute('aria-label', `Move ${item.title} down`);
+        down.textContent = '↓';
+        const removeItem = document.createElement('button');
+        removeItem.type = 'button';
+        removeItem.dataset.action = 'remove-collection-item';
+        removeItem.dataset.collectionId = collection.id;
+        removeItem.dataset.collectionItemId = item.id;
+        removeItem.textContent = 'Remove';
+        controls.append(up, down, removeItem);
+        row.append(itemCopy, controls);
+        itemList.appendChild(row);
+      });
+    }
+    card.appendChild(itemList);
+    container.appendChild(card);
+  });
+}
+
+async function createCollection(event) {
+  event.preventDefault();
+  const name = document.getElementById('collectionName').value;
+  const description = document.getElementById('collectionDescription').value;
+  try {
+    const response = await authenticatedFetch(`${API_BASE}/collections/`, {
+      method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ name, description }),
+    });
+    if (!response.ok) throw new Error('Unable to create collection');
+    event.target.reset();
+    await loadCollections();
+  } catch (error) {
+    alert('Could not create that collection. Please try again.');
+  }
+}
+
+function openCollectionStudio(collectionId) {
+  const collection = collectionsCache.find(item => item.id === collectionId);
+  if (!collection) return;
+  document.getElementById('collectionStudioId').value = String(collection.id);
+  document.getElementById('collectionStudioName').value = collection.name || '';
+  document.getElementById('collectionStudioDescription').value = collection.description || '';
+  document.getElementById('collectionStudioPublic').checked = Boolean(collection.is_public);
+  const error = document.getElementById('collectionStudioError');
+  error.textContent = '';
+  error.hidden = true;
+  document.getElementById('collectionStudioModal').style.display = 'flex';
+}
+
+function closeCollectionStudio() {
+  const modal = document.getElementById('collectionStudioModal');
+  if (modal) modal.style.display = 'none';
+}
+
+async function saveCollectionStudio(event) {
+  event.preventDefault();
+  const collectionId = Number(document.getElementById('collectionStudioId').value);
+  if (!Number.isInteger(collectionId) || collectionId < 1) return;
+  const error = document.getElementById('collectionStudioError');
+  const payload = {
+    name: document.getElementById('collectionStudioName').value,
+    description: document.getElementById('collectionStudioDescription').value,
+    is_public: document.getElementById('collectionStudioPublic').checked,
+  };
+  error.hidden = true;
+  try {
+    const response = await authenticatedFetch(`${API_BASE}/collections/${collectionId}`, {
+      method: 'PATCH', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload),
+    });
+    if (!response.ok) {
+      const body = await response.json().catch(() => ({}));
+      error.textContent = body.detail || 'Could not save this collection. Please try again.';
+      error.hidden = false;
+      return;
+    }
+    closeCollectionStudio();
+    await loadCollections();
+  } catch (requestError) {
+    error.textContent = 'Could not save this collection. Please try again.';
+    error.hidden = false;
+  }
+}
+
+async function openCollectionPicker(category, itemId, itemTitle) {
+  if (!category || !Number.isInteger(itemId) || itemId < 1) return;
+  collectionPickerTarget = { category, itemId, itemTitle: itemTitle || 'this item' };
+  await loadCollections();
+  const options = document.getElementById('collectionPickerOptions');
+  const title = document.getElementById('collectionPickerItemTitle');
+  if (!options || !title) return;
+  title.textContent = `Choose a collection for ${collectionPickerTarget.itemTitle}.`;
+  options.replaceChildren();
+  if (!collectionsCache.length) {
+    const empty = document.createElement('p');
+    empty.textContent = 'Create your first collection in the Collections tab, then come back to add this item.';
+    options.appendChild(empty);
+  } else {
+    collectionsCache.forEach((collection) => {
+      const button = document.createElement('button');
+      button.type = 'button';
+      button.className = 'collection-picker-modal__option';
+      button.dataset.action = 'add-to-collection';
+      button.dataset.collectionId = collection.id;
+      button.textContent = collection.name;
+      options.appendChild(button);
+    });
+  }
+  document.getElementById('collectionPickerModal').style.display = 'flex';
+}
+
+function closeCollectionPicker() {
+  const modal = document.getElementById('collectionPickerModal');
+  if (modal) modal.style.display = 'none';
+  collectionPickerTarget = null;
+}
+
+async function addToCollection(collectionId) {
+  if (!collectionPickerTarget || !collectionId) return;
+  try {
+    const response = await authenticatedFetch(`${API_BASE}/collections/${collectionId}/items`, {
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ category: collectionPickerTarget.category, item_id: collectionPickerTarget.itemId }),
+    });
+    if (response.status === 409) { alert('That item is already in this collection.'); return; }
+    if (!response.ok) throw new Error('Unable to add item');
+    closeCollectionPicker();
+    loadCollections();
+  } catch (error) {
+    alert('Could not add that item to the collection. Please try again.');
+  }
+}
+
+async function moveCollectionItem(collectionId, itemId, position) {
+  try {
+    const response = await authenticatedFetch(`${API_BASE}/collections/${collectionId}/items/${itemId}/position`, {
+      method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ position }),
+    });
+    if (!response.ok) throw new Error('Unable to move item');
+    loadCollections();
+  } catch (error) { alert('Could not reorder this collection. Please try again.'); }
+}
+
+async function removeCollectionItem(collectionId, itemId) {
+  try {
+    const response = await authenticatedFetch(`${API_BASE}/collections/${collectionId}/items/${itemId}`, { method: 'DELETE' });
+    if (!response.ok) throw new Error('Unable to remove item');
+    loadCollections();
+  } catch (error) { alert('Could not remove that item. Please try again.'); }
+}
+
+async function deleteCollection(collectionId) {
+  if (!confirm('Delete this collection? Its media entries will stay in your library.')) return;
+  try {
+    const response = await authenticatedFetch(`${API_BASE}/collections/${collectionId}`, { method: 'DELETE' });
+    if (!response.ok) throw new Error('Unable to delete collection');
+    loadCollections();
+  } catch (error) { alert('Could not delete that collection. Please try again.'); }
+}
+
+// ============================================================================
+// First-library guidance
+// ============================================================================
+
+const LAUNCHPAD_DISMISS_KEY = 'omnitrackr_library_launchpad_dismissed';
+let launchpadRefreshTimer = null;
+let todaysPickOffset = 0;
+
+function isLibraryLaunchpadDismissed() {
+  try {
+    return localStorage.getItem(LAUNCHPAD_DISMISS_KEY) === 'true';
+  } catch (error) {
+    return false;
+  }
+}
+
+function dismissLibraryLaunchpad() {
+  try {
+    localStorage.setItem(LAUNCHPAD_DISMISS_KEY, 'true');
+  } catch (error) {
+    // The launchpad remains functional when browser storage is unavailable.
+  }
+  document.getElementById('libraryLaunchpad')?.setAttribute('hidden', '');
+}
+
+function openLaunchpadAddItem(category = 'movies') {
+  const destinations = {
+    movies: { form: 'movieForm', input: 'movieTitle' },
+    'tv-shows': { form: 'tvForm', input: 'tvTitle' },
+    anime: { form: 'animeForm', input: 'animeTitle' },
+    'video-games': { form: 'videoGameForm', input: 'videoGameTitle' },
+    music: { form: 'musicForm', input: 'musicTitle' },
+    books: { form: 'bookForm', input: 'bookTitle' },
+  };
+  const destination = destinations[category] || destinations.movies;
+  switchTab(category in destinations ? category : 'movies');
+  const formContent = document.getElementById(`${destination.form}Content`);
+  if (formContent?.style.display === 'none') {
+    toggleCollapsible(destination.form);
+  }
+  window.setTimeout(() => document.getElementById(destination.input)?.focus(), 0);
+}
+
+function openLaunchpadInsights() {
+  switchTab('statistics');
+  const insights = document.getElementById('libraryInsightsStatsContent');
+  if (insights?.style.display === 'none') {
+    toggleCategoryAccordion('library-insights');
+  }
+}
+
+function renderLibraryLaunchpad(insights) {
+  const launchpad = document.getElementById('libraryLaunchpad');
+  const summary = document.getElementById('libraryLaunchpadSummary');
+  const steps = document.getElementById('libraryLaunchpadSteps');
+  const categories = document.getElementById('libraryLaunchpadCategories');
+  if (!launchpad || !summary || !steps || !categories || isLibraryLaunchpadDismissed()) return;
+
+  const total = Number(insights?.total_items || 0);
+  const rated = Number(insights?.rated_items || 0);
+  const reviewed = Number(insights?.reviewed_items || 0);
+  const completed = Number(insights?.completed_items || 0);
+  const launchpadSteps = [
+    { complete: total > 0, label: total ? `${total} item${total === 1 ? '' : 's'} saved` : 'Save your first title' },
+    { complete: rated > 0, label: rated ? `${rated} item${rated === 1 ? '' : 's'} rated` : 'Give one item a rating' },
+    { complete: reviewed > 0, label: reviewed ? `${reviewed} note${reviewed === 1 ? '' : 's'} written` : 'Leave a note for future you' },
+  ];
+
+  if (!total) {
+    summary.textContent = 'Start with one title you already love. A small library is easier to make personal than a giant backlog.';
+  } else if (completed) {
+    summary.textContent = `${completed} finished so far. Add a rating or note when you want your library to tell a clearer story.`;
+  } else {
+    summary.textContent = 'Your library is taking shape. Mark progress, add a rating, or leave a note when a detail is worth remembering.';
+  }
+
+  categories.replaceChildren();
+  categories.hidden = total > 0;
+  if (!total) {
+    const choices = [
+      ['movies', 'Movie'], ['tv-shows', 'TV show'], ['anime', 'Anime'],
+      ['video-games', 'Game'], ['music', 'Album'], ['books', 'Book'],
+    ];
+    choices.forEach(([category, label]) => {
+      const button = document.createElement('button');
+      button.type = 'button';
+      button.className = 'library-launchpad__category';
+      button.dataset.action = 'launchpad-choose-category';
+      button.dataset.launchpadCategory = category;
+      button.textContent = `Add a ${label}`;
+      categories.appendChild(button);
+    });
+  }
+
+  steps.replaceChildren();
+  launchpadSteps.forEach((step) => {
+    const item = document.createElement('div');
+    item.className = `library-launchpad__step${step.complete ? ' is-complete' : ''}`;
+    const icon = document.createElement('span');
+    icon.className = 'library-launchpad__step-icon';
+    icon.textContent = step.complete ? '✓' : '○';
+    const label = document.createElement('span');
+    label.textContent = step.label;
+    item.append(icon, label);
+    steps.appendChild(item);
+  });
+  launchpad.removeAttribute('hidden');
+}
+
+function renderLibraryPulseList(container, items, emptyMessage) {
+  if (!container) return;
+  container.replaceChildren();
+  if (!items.length) {
+    const empty = document.createElement('p');
+    empty.className = 'library-pulse__empty';
+    empty.textContent = emptyMessage;
+    container.appendChild(empty);
+    return;
+  }
+
+  items.forEach((item) => {
+    const button = document.createElement('button');
+    button.type = 'button';
+    button.className = 'library-pulse__item';
+    button.dataset.action = 'pulse-open-item';
+    button.dataset.pulseTab = item.category;
+    const copy = document.createElement('span');
+    copy.className = 'library-pulse__item-copy';
+    const title = document.createElement('span');
+    title.className = 'library-pulse__item-title';
+    title.textContent = item.title;
+    const meta = document.createElement('span');
+    meta.className = 'library-pulse__item-meta';
+    const prompts = Array.isArray(item.prompts) && item.prompts.length ? item.prompts.join(' · ') : item.status_label;
+    meta.textContent = `${item.category_label} · ${prompts}`;
+    copy.append(title, meta);
+    const action = document.createElement('span');
+    action.className = 'library-pulse__item-action';
+    action.textContent = 'Open →';
+    button.append(copy, action);
+    container.appendChild(button);
+  });
+}
+
+function renderLibraryPulse(pulse) {
+  const pulseElement = document.getElementById('libraryPulse');
+  if (!pulseElement) return;
+  const continueItems = Array.isArray(pulse?.continue_items) ? pulse.continue_items : [];
+  const reflectionItems = Array.isArray(pulse?.reflection_items) ? pulse.reflection_items : [];
+  const nextUpItems = Array.isArray(pulse?.next_up_items) ? pulse.next_up_items : [];
+  if (!continueItems.length && !reflectionItems.length && !nextUpItems.length) {
+    pulseElement.setAttribute('hidden', '');
+    return;
+  }
+  renderLibraryPulseList(
+    document.getElementById('libraryPulseNextUp'),
+    nextUpItems,
+    'No queue yet. Use “Next up” on any item you want to make time for.'
+  );
+  renderLibraryPulseList(
+    document.getElementById('libraryPulseContinue'),
+    continueItems,
+    'Nothing unfinished right now. Add a future watch, read, listen, or play when inspiration strikes.'
+  );
+  renderLibraryPulseList(
+    document.getElementById('libraryPulseReflect'),
+    reflectionItems,
+    'Your saved items already have ratings and notes. Nice work keeping the story behind your library.'
+  );
+  pulseElement.removeAttribute('hidden');
+}
+
+function renderTodaysPick(payload) {
+  const section = document.getElementById('todaysPick');
+  const pick = payload?.pick;
+  if (!section || !pick) {
+    section?.setAttribute('hidden', '');
+    return;
+  }
+  document.getElementById('todaysPickName').textContent = pick.title;
+  document.getElementById('todaysPickCategory').textContent = pick.category_label;
+  document.getElementById('todaysPickReason').textContent = pick.reason;
+  document.getElementById('todaysPickOpen').dataset.pulseTab = pick.category;
+  document.getElementById('todaysPickAnother').hidden = Number(payload.candidate_count) < 2;
+  section.removeAttribute('hidden');
+}
+
+async function refreshTodaysPick() {
+  if (!hasStoredAuth()) return;
+  try {
+    const response = await authenticatedFetch(`${API_BASE}/statistics/today/?offset=${todaysPickOffset}`);
+    if (response.ok) renderTodaysPick(await response.json());
+  } catch (error) {
+    // This optional prompt must never interrupt the tracker.
+  }
+}
+
+function tryAnotherPick() {
+  todaysPickOffset += 1;
+  refreshTodaysPick();
+}
+
+function renderNextUpQueue(items) {
+  const queueElement = document.getElementById('nextUpQueue');
+  const container = document.getElementById('nextUpQueueItems');
+  if (!queueElement || !container) return;
+
+  container.replaceChildren();
+  if (!items.length) {
+    const empty = document.createElement('p');
+    empty.className = 'next-up-queue__empty';
+    empty.textContent = 'Nothing is waiting in the wings. Add a title from any media list whenever you want to turn “someday” into a plan.';
+    container.appendChild(empty);
+  } else {
+    items.forEach((item, index) => {
+      const row = document.createElement('div');
+      row.className = `next-up-queue__item${item.available ? '' : ' is-unavailable'}`;
+      const order = document.createElement('span');
+      order.className = 'next-up-queue__order';
+      order.textContent = String(index + 1);
+      const copy = document.createElement('div');
+      copy.className = 'next-up-queue__copy';
+      const title = document.createElement('strong');
+      title.textContent = item.title;
+      const meta = document.createElement('span');
+      meta.textContent = item.available ? item.category_label : 'This library item was deleted';
+      copy.append(title, meta);
+      const controls = document.createElement('div');
+      controls.className = 'next-up-queue__controls';
+      if (item.available) {
+        const open = document.createElement('button');
+        open.type = 'button';
+        open.className = 'next-up-queue__open';
+        open.dataset.action = 'pulse-open-item';
+        open.dataset.pulseTab = item.category;
+        open.textContent = 'Open';
+        controls.appendChild(open);
+      }
+      const up = document.createElement('button');
+      up.type = 'button';
+      up.className = 'next-up-queue__icon-button';
+      up.dataset.action = 'move-next-up';
+      up.dataset.nextUpId = item.id;
+      up.dataset.nextUpPosition = Math.max(index - 1, 0);
+      up.disabled = index === 0;
+      up.setAttribute('aria-label', `Move ${item.title} up`);
+      up.textContent = '↑';
+      const down = document.createElement('button');
+      down.type = 'button';
+      down.className = 'next-up-queue__icon-button';
+      down.dataset.action = 'move-next-up';
+      down.dataset.nextUpId = item.id;
+      down.dataset.nextUpPosition = index + 1;
+      down.disabled = index === items.length - 1;
+      down.setAttribute('aria-label', `Move ${item.title} down`);
+      down.textContent = '↓';
+      const remove = document.createElement('button');
+      remove.type = 'button';
+      remove.className = 'next-up-queue__remove';
+      remove.dataset.action = 'remove-next-up';
+      remove.dataset.nextUpId = item.id;
+      remove.setAttribute('aria-label', `Remove ${item.title} from Next Up`);
+      remove.textContent = 'Remove';
+      controls.append(up, down, remove);
+      row.append(order, copy, controls);
+      container.appendChild(row);
+    });
+  }
+  queueElement.removeAttribute('hidden');
+}
+
+async function refreshNextUpQueue() {
+  if (!hasStoredAuth()) return;
+  try {
+    const response = await authenticatedFetch(`${API_BASE}/next-up/`);
+    if (response.ok) renderNextUpQueue(await response.json());
+  } catch (error) {
+    // The queue is supplementary; never interrupt the tracker if it is unavailable.
+  }
+}
+
+async function addToNextUp(category, itemId) {
+  if (!category || !Number.isInteger(itemId) || itemId < 1) return;
+  try {
+    const response = await authenticatedFetch(`${API_BASE}/next-up/`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ category, item_id: itemId }),
+    });
+    if (response.status === 409) {
+      alert('That item is already in your Next Up queue.');
+      return;
+    }
+    if (!response.ok) throw new Error('Unable to add queue item');
+    await Promise.all([refreshNextUpQueue(), refreshLibraryPulse(), refreshTodaysPick()]);
+  } catch (error) {
+    alert('Could not add that item to Next Up. Please try again.');
+  }
+}
+
+async function moveNextUp(queueId, position) {
+  try {
+    const response = await authenticatedFetch(`${API_BASE}/next-up/${queueId}/position`, {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ position }),
+    });
+    if (!response.ok) throw new Error('Unable to move queue item');
+    renderNextUpQueue(await response.json());
+    refreshLibraryPulse();
+    refreshTodaysPick();
+  } catch (error) {
+    alert('Could not reorder Next Up. Please try again.');
+  }
+}
+
+async function removeNextUp(queueId) {
+  try {
+    const response = await authenticatedFetch(`${API_BASE}/next-up/${queueId}`, { method: 'DELETE' });
+    if (!response.ok) throw new Error('Unable to remove queue item');
+    await Promise.all([refreshNextUpQueue(), refreshLibraryPulse(), refreshTodaysPick()]);
+  } catch (error) {
+    alert('Could not remove that item from Next Up. Please try again.');
+  }
+}
+
+async function refreshLibraryLaunchpad() {
+  if (isLibraryLaunchpadDismissed() || !hasStoredAuth()) return;
+  try {
+    const response = await authenticatedFetch(`${API_BASE}/statistics/insights/`);
+    if (response.ok) renderLibraryLaunchpad(await response.json());
+  } catch (error) {
+    // Guidance is optional; it should never interrupt the main tracker.
+  }
+}
+
+async function refreshLibraryPulse() {
+  if (!hasStoredAuth()) return;
+  try {
+    const response = await authenticatedFetch(`${API_BASE}/statistics/pulse/`);
+    if (response.ok) renderLibraryPulse(await response.json());
+  } catch (error) {
+    // Pulse is optional and should never interrupt the tracker.
+  }
+}
+
+function scheduleLibraryLaunchpadRefresh() {
+  window.clearTimeout(launchpadRefreshTimer);
+  launchpadRefreshTimer = window.setTimeout(() => {
+    refreshLibraryLaunchpad();
+    refreshLibraryPulse();
+    refreshNextUpQueue();
+    refreshTodaysPick();
+  }, 250);
+}
+
+const loadMovieLibrary = loadMovies;
+loadMovies = async function (...args) {
+  const result = await loadMovieLibrary(...args);
+  invalidateLibrarySearchIndex();
+  scheduleLibraryLaunchpadRefresh();
+  return result;
+};
+
+const loadTVShowLibrary = loadTVShows;
+loadTVShows = async function (...args) {
+  const result = await loadTVShowLibrary(...args);
+  invalidateLibrarySearchIndex();
+  scheduleLibraryLaunchpadRefresh();
+  return result;
+};
+
+const loadAnimeLibrary = loadAnime;
+loadAnime = async function (...args) {
+  const result = await loadAnimeLibrary(...args);
+  invalidateLibrarySearchIndex();
+  scheduleLibraryLaunchpadRefresh();
+  return result;
+};
+
+const loadVideoGameLibrary = loadVideoGames;
+loadVideoGames = async function (...args) {
+  const result = await loadVideoGameLibrary(...args);
+  invalidateLibrarySearchIndex();
+  scheduleLibraryLaunchpadRefresh();
+  return result;
+};
+
+const loadMusicLibrary = loadMusic;
+loadMusic = async function (...args) {
+  const result = await loadMusicLibrary(...args);
+  invalidateLibrarySearchIndex();
+  scheduleLibraryLaunchpadRefresh();
+  return result;
+};
+
+const loadBookLibrary = loadBooks;
+loadBooks = async function (...args) {
+  const result = await loadBookLibrary(...args);
+  invalidateLibrarySearchIndex();
+  scheduleLibraryLaunchpadRefresh();
+  return result;
+};
+
 // Load initial data
+setupLibrarySearch();
 loadMovies();
+scheduleLibraryLaunchpadRefresh();
 
 // ============================================================================
 // Landing Page Enhancements: Scroll Animations and User Count

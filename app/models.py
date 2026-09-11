@@ -61,6 +61,9 @@ class User(Base):
     friendships_as_user2 = relationship("Friendship", foreign_keys="Friendship.user2_id", back_populates="user2", cascade="all, delete-orphan")
     notifications = relationship("Notification", back_populates="user", cascade="all, delete-orphan")
     custom_tabs = relationship("CustomTab", back_populates="owner", cascade="all, delete-orphan")
+    next_up_items = relationship("NextUpItem", back_populates="owner", cascade="all, delete-orphan")
+    completion_moments = relationship("CompletionMoment", back_populates="owner", cascade="all, delete-orphan")
+    collections = relationship("Collection", back_populates="owner", cascade="all, delete-orphan")
 
 
 class Movie(Base):
@@ -180,6 +183,89 @@ class Book(Base):
     # User relationship
     user_id = Column(Integer, ForeignKey("users.id"), nullable=False, index=True)
     owner = relationship("User", back_populates="books")
+
+
+class NextUpItem(Base):
+    """A user's ordered, private queue of existing library records.
+
+    ``category`` plus ``item_id`` deliberately form a polymorphic reference: media
+    records retain their existing tables and a queue entry never owns the media it
+    points to. This makes the feature additive and safe for established libraries.
+    """
+    __tablename__ = "next_up_items"
+
+    id = Column(Integer, primary_key=True, index=True)
+    user_id = Column(Integer, ForeignKey("users.id"), nullable=False, index=True)
+    category = Column(String, nullable=False)
+    item_id = Column(Integer, nullable=False)
+    position = Column(Integer, nullable=False, default=0)
+    created_at = Column(DateTime, default=datetime.utcnow)
+
+    owner = relationship("User", back_populates="next_up_items")
+
+    __table_args__ = (
+        UniqueConstraint("user_id", "category", "item_id", name="uq_next_up_item"),
+    )
+
+
+class CompletionMoment(Base):
+    """A private snapshot of when a user completed a library item.
+
+    Media tables intentionally remain unchanged. The snapshot preserves the title
+    and rating at the moment of completion so monthly replays stay meaningful even
+    when the item is edited later.
+    """
+    __tablename__ = "completion_moments"
+
+    id = Column(Integer, primary_key=True, index=True)
+    user_id = Column(Integer, ForeignKey("users.id"), nullable=False, index=True)
+    category = Column(String, nullable=False)
+    item_id = Column(Integer, nullable=False)
+    title = Column(String, nullable=False)
+    rating = Column(Float, nullable=True)
+    takeaway = Column(Text, nullable=True)
+    favorite = Column(Boolean, nullable=False, default=False)
+    completed_at = Column(DateTime, nullable=False, default=datetime.utcnow, index=True)
+
+    owner = relationship("User", back_populates="completion_moments")
+
+    __table_args__ = (
+        UniqueConstraint("user_id", "category", "item_id", name="uq_completion_moment_item"),
+    )
+
+
+class Collection(Base):
+    """A private-by-default, cross-media shelf owned by one user."""
+    __tablename__ = "collections"
+
+    id = Column(Integer, primary_key=True, index=True)
+    user_id = Column(Integer, ForeignKey("users.id"), nullable=False, index=True)
+    name = Column(String, nullable=False)
+    description = Column(Text, nullable=True)
+    is_public = Column(Boolean, nullable=False, default=False, index=True)
+    published_at = Column(DateTime, nullable=True)
+    created_at = Column(DateTime, nullable=False, default=datetime.utcnow)
+
+    owner = relationship("User", back_populates="collections")
+    items = relationship("CollectionItem", back_populates="collection", cascade="all, delete-orphan", order_by="CollectionItem.position")
+
+
+class CollectionItem(Base):
+    """An ordered polymorphic reference to an existing library item."""
+    __tablename__ = "collection_items"
+
+    id = Column(Integer, primary_key=True, index=True)
+    collection_id = Column(Integer, ForeignKey("collections.id"), nullable=False, index=True)
+    category = Column(String, nullable=False)
+    item_id = Column(Integer, nullable=False)
+    position = Column(Integer, nullable=False, default=0)
+    created_at = Column(DateTime, nullable=False, default=datetime.utcnow)
+
+    collection = relationship("Collection", back_populates="items")
+
+    __table_args__ = (
+        UniqueConstraint("collection_id", "category", "item_id", name="uq_collection_item"),
+    )
 
 
 class FriendRequest(Base):

@@ -816,7 +816,11 @@ class TestSecurityMiddleware:
             assert response.status_code == 200
             assert 'aria-label="Public site navigation"' in response.text
             hrefs = extract_hrefs(response.text)
-            assert expected_hrefs.issubset(hrefs)
+            if path == "/":
+                # The landing page intentionally keeps a small, task-focused nav.
+                assert {"/", "/guides", "/reviews", "/faq", "/privacy", "/#landing-auth"}.issubset(hrefs)
+            else:
+                assert expected_hrefs.issubset(hrefs)
             assert 'class="public-site-nav__cta" href="/#landing-auth"' in response.text
 
     def test_public_pages_do_not_render_mojibake_text(self, client):
@@ -879,7 +883,10 @@ class TestSecurityMiddleware:
         assert "Choose a Workflow" in content
         assert "A Monthly Media Library Audit" in content
         assert "What Good Tracking Content Includes" in content
+        assert "A Visual Tour of the Tracker" in content
+        assert "Make Your First Ten Minutes Count" in content
         assert "original context over copied descriptions" in content
+        assert content.count('loading="lazy" decoding="async"') >= 4
         hrefs = extract_hrefs(content)
         for path in (
             "/movie-tracker",
@@ -1274,57 +1281,37 @@ class TestSecurityMiddleware:
         assert "color: var(--primary)" in guides_h1_rule
         assert "-webkit-text-fill-color: transparent" not in guides_h1_rule
 
-    def test_home_footer_uses_clean_emoji_link_set(self, client):
-        """Home footers should avoid old social links and use emoji labels."""
+    def test_home_public_navigation_keeps_key_resources_discoverable(self, client):
+        """The anonymous homepage should prioritize public resources over app controls."""
         response = client.get("/")
 
         assert response.status_code == 200
         content = response.text
+        assert 'data-public-shell="true"' in content
         assert "🐙 GitHub" not in content
         assert "LinkedIn" not in content
-        assert "/media-tracker-checklist" in extract_hrefs(content)
-        assert "/tracking-templates" in extract_hrefs(content)
         assert "/faq" in extract_hrefs(content)
-        assert "/review-guidelines" in extract_hrefs(content)
-        for label in (
-            "📧 omnitrackr@gmail.com",
-            "☕ Ko-fi",
-            "ℹ️ About",
-            "👀 Demo",
-            "🧭 Tracking Hub",
-            "📘 Guides",
-            "⚖️ Compare",
-            "💡 Use Cases",
-            "📺 TV Tracker",
-            "🎮 Game Tracker",
-            "📝 Changelog",
-            "🗺️ Roadmap",
-            "📜 Terms",
-            "✉️ Contact",
-            "🔒 Privacy Policy",
-        ):
-            assert label in content
+        assert "/guides" in extract_hrefs(content)
+        assert "/reviews" in extract_hrefs(content)
+        assert "OmniTrackr" in content
+        assert "Start tracking" in content
+        assert "Public reviews" in content
 
-    def test_homepage_highlights_recent_public_quality_updates(self, client):
-        """Landing page should surface recent public resources for visitors and reviewers."""
+    def test_homepage_prioritizes_product_workflow_over_internal_content_inventory(self, client):
+        """Landing page should explain the product before sending people into guides."""
         response = client.get("/")
 
         assert response.status_code == 200
         content = response.text
-        assert "Recently improved" in content
-        assert "Fresh resources for new visitors and reviewers" in content
-        assert "Setup Checklist" in content
-        assert "Sample Media Library" in content
-        assert "Content Quality Policy" in content
-        assert "Human-Readable Site Map" in content
-        assert "Advertising Transparency" in content
-        assert "avoid thin or duplicate content" in content
+        assert "Your media history, in one place" in content
+        assert "Remember more than the title." in content
+        assert "From recommendation to a memory you can revisit" in content
+        assert "Public reviews are optional. Useful context isn’t." in content
+        assert "A few honest answers" in content
         hrefs = extract_hrefs(content)
-        assert "/media-tracker-checklist" in hrefs
-        assert "/sample-library" in hrefs
-        assert "/content-quality" in hrefs
-        assert "/site-map" in hrefs
-        assert "/advertising" in hrefs
+        assert "/guides" in hrefs
+        assert "/reviews" in hrefs
+        assert "/privacy" in hrefs
 
     def test_privacy_policy_discloses_google_ads_data_use(self, client):
         """Privacy policy should include required Google ads/cookie disclosures."""
@@ -1565,15 +1552,29 @@ class TestRootEndpoint:
     """Test root endpoint."""
     
     def test_get_root(self, client):
-        """Test GET request to root."""
+        """Anonymous users receive a focused public page, not empty private tables."""
         response = client.get("/")
         assert response.status_code == 200
         quality = parse_page_quality(response.text)
         assert quality.h1_count == 1
-        assert '<p class="app-title" role="heading" aria-level="1">OmniTrackr</p>' in response.text
+        assert 'data-public-shell="true"' in response.text
+        assert 'id="mainContainer"' not in response.text
+        assert 'id="logoutBtn"' not in response.text
+        assert 'src="/static/public-landing.js"' in response.text
+        assert 'src="./app.js"' not in response.text
     
     def test_head_root(self, client):
         """Test HEAD request to root."""
         response = client.head("/")
         assert response.status_code == 200
+
+    def test_authenticated_root_keeps_the_full_dashboard(self, authenticated_client):
+        """A signed-in session must keep the existing dashboard and application bundle."""
+        response = authenticated_client.get("/")
+
+        assert response.status_code == 200
+        assert 'data-public-shell="true"' not in response.text
+        assert 'id="mainContainer"' in response.text
+        assert 'id="logoutBtn"' in response.text
+        assert 'src="./app.js"' in response.text
 

@@ -1,10 +1,10 @@
 """
 Statistics endpoints for the OmniTrackr API.
 """
-from datetime import datetime
-from fastapi import APIRouter, Depends
+from datetime import date, datetime
+from fastapi import APIRouter, Depends, Query, Response
 from sqlalchemy.orm import Session
-from sqlalchemy import func
+from sqlalchemy import func, or_
 
 from .. import crud, schemas, models
 from ..dependencies import get_db, get_current_user
@@ -34,6 +34,88 @@ def _count_rated_items(db: Session, model, user_id: int) -> int:
         model.user_id == user_id,
         model.rating.isnot(None)
     ).count()
+
+
+def _pulse_item(item, category: dict, prompts: list[str]) -> dict:
+    """Serialize only the small, current-user fields needed by the dashboard pulse."""
+    return {
+        "id": item.id,
+        "title": item.title,
+        "category": category["key"],
+        "category_label": category["label"],
+        "status_label": category["status_label"],
+        "prompts": prompts,
+    }
+
+
+def _next_up_pulse_item(queue_item, category: dict, db: Session, user_id: int) -> dict | None:
+    """Resolve a queue reference for the compact dashboard pulse."""
+    model = category["model"]
+    item = db.query(model).filter(model.id == queue_item.item_id, model.user_id == user_id).first()
+    if not item:
+        return None
+    return _pulse_item(item, category, [])
+
+
+@router.get("/today/", response_model=dict)
+async def get_todays_pick(
+    response: Response,
+    offset: int = Query(0, ge=0, le=24),
+    current_user: models.User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+):
+    """Choose one private, unfinished title without modifying the library.
+
+    The choice is stable for the day, while ``offset`` lets the interface offer
+    another option. A deliberately ordered Next Up queue takes priority over the
+    wider unfinished library so the user remains in control of the suggestion.
+    """
+    response.headers["Cache-Control"] = "private, no-store"
+    categories = [
+        {"key": "movies", "label": "Movie", "model": models.Movie, "done": models.Movie.watched, "status_label": "Not watched"},
+        {"key": "tv-shows", "label": "TV show", "model": models.TVShow, "done": models.TVShow.watched, "status_label": "In progress"},
+        {"key": "anime", "label": "Anime", "model": models.Anime, "done": models.Anime.watched, "status_label": "In progress"},
+        {"key": "video-games", "label": "Game", "model": models.VideoGame, "done": models.VideoGame.played, "status_label": "Not played"},
+        {"key": "music", "label": "Album", "model": models.Music, "done": models.Music.listened, "status_label": "Not listened"},
+        {"key": "books", "label": "Book", "model": models.Book, "done": models.Book.read, "status_label": "Not read"},
+    ]
+    by_key = {category["key"]: category for category in categories}
+    queued = []
+    for entry in db.query(models.NextUpItem).filter(
+        models.NextUpItem.user_id == current_user.id,
+    ).order_by(models.NextUpItem.position, models.NextUpItem.id).limit(25):
+        category = by_key.get(entry.category)
+        if not category:
+            continue
+        item = db.query(category["model"]).filter(
+            category["model"].id == entry.item_id,
+            category["model"].user_id == current_user.id,
+            category["done"] == False,
+        ).first()
+        if item:
+            queued.append(_pulse_item(item, category, []))
+
+    if queued:
+        choice = queued[offset % len(queued)]
+        choice["reason"] = f"#{(offset % len(queued)) + 1} in your private Next Up queue"
+        choice["source"] = "next_up"
+        return {"pick": choice, "candidate_count": len(queued)}
+
+    candidates = []
+    for category in categories:
+        items = db.query(category["model"]).filter(
+            category["model"].user_id == current_user.id,
+            category["done"] == False,
+        ).order_by(category["model"].id.desc()).limit(12).all()
+        candidates.extend(_pulse_item(item, category, []) for item in items)
+
+    if not candidates:
+        return {"pick": None, "candidate_count": 0}
+
+    choice = candidates[(date.today().toordinal() + current_user.id + offset) % len(candidates)]
+    choice["reason"] = "A small, unfinished choice from your private library"
+    choice["source"] = "library"
+    return {"pick": choice, "candidate_count": len(candidates)}
 
 
 @router.get("/", response_model=schemas.StatisticsDashboard)
@@ -159,6 +241,70 @@ async def get_library_insights(
         "most_complete_category": most_complete_category,
         "categories": category_summaries,
         "generated_at": datetime.now().isoformat()
+    }
+
+
+@router.get("/pulse/", response_model=dict)
+async def get_library_pulse(
+    current_user: models.User = Depends(get_current_user),
+    db: Session = Depends(get_db)
+):
+    """Return a small, action-oriented slice of the current user's library.
+
+    This intentionally avoids creating a new persistence model. It is a read-only
+    dashboard helper that surfaces records that are unfinished or still missing the
+    personal context that makes a library useful later.
+    """
+    categories = [
+        {"key": "movies", "label": "Movie", "model": models.Movie, "done": models.Movie.watched, "status_label": "Not watched"},
+        {"key": "tv-shows", "label": "TV show", "model": models.TVShow, "done": models.TVShow.watched, "status_label": "In progress"},
+        {"key": "anime", "label": "Anime", "model": models.Anime, "done": models.Anime.watched, "status_label": "In progress"},
+        {"key": "video-games", "label": "Game", "model": models.VideoGame, "done": models.VideoGame.played, "status_label": "Not played"},
+        {"key": "music", "label": "Album", "model": models.Music, "done": models.Music.listened, "status_label": "Not listened"},
+        {"key": "books", "label": "Book", "model": models.Book, "done": models.Book.read, "status_label": "Not read"},
+    ]
+    continue_items = []
+    reflection_items = []
+
+    for category in categories:
+        model = category["model"]
+        unfinished = db.query(model).filter(
+            model.user_id == current_user.id,
+            category["done"] == False,
+        ).order_by(model.id.desc()).limit(2).all()
+        continue_items.extend(_pulse_item(item, category, []) for item in unfinished)
+
+        needs_context = db.query(model).filter(
+            model.user_id == current_user.id,
+            or_(
+                model.rating.is_(None),
+                model.review.is_(None),
+                func.length(func.trim(model.review)) == 0,
+            ),
+        ).order_by(model.id.desc()).limit(2).all()
+        for item in needs_context:
+            prompts = []
+            if item.rating is None:
+                prompts.append("Add a rating")
+            if not (item.review or "").strip():
+                prompts.append("Leave a note")
+            reflection_items.append(_pulse_item(item, category, prompts))
+
+    category_by_key = {category["key"]: category for category in categories}
+    queued_items = db.query(models.NextUpItem).filter(
+        models.NextUpItem.user_id == current_user.id,
+    ).order_by(models.NextUpItem.position, models.NextUpItem.id).limit(3).all()
+    next_up_items = [
+        item for queue_item in queued_items
+        if (category := category_by_key.get(queue_item.category))
+        and (item := _next_up_pulse_item(queue_item, category, db, current_user.id))
+    ]
+
+    return {
+        "continue_items": continue_items[:6],
+        "reflection_items": reflection_items[:6],
+        "next_up_items": next_up_items,
+        "generated_at": datetime.now().isoformat(),
     }
 
 

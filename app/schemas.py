@@ -820,3 +820,125 @@ class CustomTabItem(BaseModel):
     
     class Config:
         from_attributes = True
+
+
+# ============================================================================
+# Next Up Queue Schemas
+# ============================================================================
+
+NEXT_UP_CATEGORIES = {"movies", "tv-shows", "anime", "video-games", "music", "books"}
+
+
+class NextUpItemCreate(BaseModel):
+    category: str = Field(..., description="Library category for the queued item")
+    item_id: int = Field(..., ge=1, description="ID of the existing library item")
+
+    @field_validator("category")
+    @classmethod
+    def validate_category(cls, value: str) -> str:
+        normalized = value.strip().lower()
+        if normalized not in NEXT_UP_CATEGORIES:
+            raise ValueError("Category must be a supported library category")
+        return normalized
+
+
+class NextUpItemMove(BaseModel):
+    position: int = Field(..., ge=0, description="Zero-based queue position")
+
+
+class NextUpItem(BaseModel):
+    id: int
+    category: str
+    item_id: int
+    title: str
+    category_label: str
+    position: int
+    available: bool = True
+
+
+# ============================================================================
+# Completion Moment Schemas
+# ============================================================================
+
+class CompletionMomentCreate(NextUpItemCreate):
+    """Reference an already-finished library item for a private reflection."""
+
+
+class CompletionMomentUpdate(BaseModel):
+    takeaway: Optional[str] = Field(None, max_length=500, description="A short private takeaway")
+    favorite: Optional[bool] = Field(None, description="Whether this was a personal favorite")
+
+    @field_validator("takeaway")
+    @classmethod
+    def normalize_takeaway(cls, value: Optional[str]) -> Optional[str]:
+        if value is None:
+            return None
+        return value.strip() or None
+
+
+class CompletionMoment(BaseModel):
+    id: int
+    category: str
+    category_label: str
+    item_id: int
+    title: str
+    rating: Optional[float] = None
+    takeaway: Optional[str] = None
+    favorite: bool = False
+    completed_at: datetime
+
+
+# ============================================================================
+# Cross-media Collection Schemas
+# ============================================================================
+
+class CollectionCreate(BaseModel):
+    name: str = Field(..., min_length=1, max_length=80, description="Collection name")
+    description: Optional[str] = Field(None, max_length=500, description="Optional private collection note")
+
+    @field_validator("name")
+    @classmethod
+    def normalize_name(cls, value: str) -> str:
+        normalized = value.strip()
+        if not normalized:
+            raise ValueError("Collection name cannot be blank")
+        return normalized
+
+    @field_validator("description")
+    @classmethod
+    def normalize_description(cls, value: Optional[str]) -> Optional[str]:
+        return value.strip() or None if value else None
+
+
+class CollectionUpdate(BaseModel):
+    name: Optional[str] = Field(None, min_length=1, max_length=80)
+    description: Optional[str] = Field(None, max_length=500)
+    is_public: Optional[bool] = None
+
+
+class CollectionItemCreate(NextUpItemCreate):
+    """Add one existing media record to a collection."""
+
+
+class CollectionItemMove(BaseModel):
+    position: int = Field(..., ge=0)
+
+
+class CollectionItem(BaseModel):
+    id: int
+    category: str
+    category_label: str
+    item_id: int
+    title: str
+    position: int
+    available: bool = True
+
+
+class Collection(BaseModel):
+    id: int
+    name: str
+    description: Optional[str] = None
+    is_public: bool = False
+    public_url: Optional[str] = None
+    created_at: datetime
+    items: List[CollectionItem] = Field(default=[])

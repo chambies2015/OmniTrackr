@@ -41,6 +41,16 @@
     .hub-list { margin-left: 20px; color: var(--fg-secondary); }
     .hub-list li { margin-bottom: 8px; }
     .back-link { display: inline-block; margin-bottom: 30px; color: var(--primary); text-decoration: none; font-weight: 500; }
+    .visual-walkthrough { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 18px; }
+    .visual-card { background: rgba(255, 255, 255, 0.035); border: 1px solid var(--border); border-radius: 12px; margin: 0; overflow: hidden; }
+    .visual-card img { display: block; width: 100%; aspect-ratio: 16 / 10; object-fit: cover; object-position: top; }
+    .visual-card figcaption { padding: 17px 18px 19px; }
+    .visual-card h3 { margin: 0 0 8px; }
+    .visual-card p { margin: 0; }
+    .first-session { background: rgba(102, 126, 234, 0.1); border-left: 3px solid var(--primary); border-radius: 0 10px 10px 0; padding: 19px 21px; }
+    .first-session ol { color: var(--fg-secondary); margin: 12px 0 0 20px; }
+    .first-session li { margin-bottom: 8px; }
+    @media (max-width: 680px) { .visual-walkthrough { grid-template-columns: 1fr; } }
   </style>
   <script type="application/ld+json">
   {
@@ -49,7 +59,7 @@
     "name": "Media Tracking Hub",
     "description": "OmniTrackr guides for tracking watchlists, backlogs, category-specific media, reviews, privacy, exports, and statistics.",
     "url": "https://omnitrackr.xyz/media-tracking",
-    "dateModified": "2026-07-05",
+    "dateModified": "2026-09-08",
     "inLanguage": "en-US",
     "isPartOf": { "@type": "WebSite", "name": "OmniTrackr", "url": "https://omnitrackr.xyz" }
   }
@@ -82,6 +92,47 @@
         <h1>Media Tracking Hub</h1>
         <p>Guides for building a useful personal library across movie watchlists, TV progress, seasonal anime, game backlogs, albums, books, reviews, privacy, exports, and statistics.</p>
       </header>
+
+      <section class="public-section" aria-labelledby="visual-tour-heading">
+        <h2 id="visual-tour-heading">A Visual Tour of the Tracker</h2>
+        <p>These product captures show the actual decisions a media tracker should support: keeping a cross-media library readable, learning from its history, choosing what is visible, and sharing only when it helps. They use interface examples rather than a real member's library.</p>
+        <div class="visual-walkthrough">
+          <figure class="visual-card">
+            <img src="https://github.com/user-attachments/assets/3ebb53c7-5cc3-4225-a028-2b3eb5dfbdb7" alt="OmniTrackr dashboard showing a media form, library table, category navigation, search, and sorting controls" loading="lazy" decoding="async">
+            <figcaption><h3>1. Keep the record together</h3><p>Start with a title and the few fields that make it useful later. Categories keep their own details while search, sorting, status, ratings, and notes stay in one library.</p></figcaption>
+          </figure>
+          <figure class="visual-card">
+            <img src="https://github.com/user-attachments/assets/fd49c269-5402-46d8-a5c2-921fa48520f9" alt="OmniTrackr statistics dashboard showing completion, ratings, and category insights" loading="lazy" decoding="async">
+            <figcaption><h3>2. Find a pattern, not just a count</h3><p>Statistics become useful once a small library is established: check completion, rating coverage, repeat favorites, and the categories that need attention.</p></figcaption>
+          </figure>
+          <figure class="visual-card">
+            <img src="https://github.com/user-attachments/assets/f2debd1d-23bc-4c15-baac-f457c562d72a" alt="OmniTrackr privacy controls for selecting visibility across media categories" loading="lazy" decoding="async">
+            <figcaption><h3>3. Decide the audience deliberately</h3><p>A media history can be personal. Keep categories private, share a finished review only when it is useful, and avoid mistaking a tracking habit for a public performance.</p></figcaption>
+          </figure>
+          <figure class="visual-card">
+            <img src="https://github.com/user-attachments/assets/8abbd7a1-c81e-48aa-878b-624e3042ca22" alt="OmniTrackr friends interface for optional media recommendations and shared collections" loading="lazy" decoding="async">
+            <figcaption><h3>4. Add people only when they add context</h3><p>Friends and public reviews are optional layers. They can make a recommendation easier to remember, while the library and private notes remain the core record.</p></figcaption>
+          </figure>
+        </div>
+      </section>
+
+      <section class="public-section first-session" aria-labelledby="first-session-heading">
+        <h2 id="first-session-heading">Make Your First Ten Minutes Count</h2>
+        <p>A useful library starts with a deliberate sample, not a giant import. Use the new-library prompt to choose the media type you care about most, then make three records that test the workflow.</p>
+        <ol>
+          <li>Add one favorite and write a sentence about why it stayed with you.</li>
+          <li>Add one unfinished title and give it an honest status instead of letting it disappear into a vague backlog.</li>
+          <li>Add one likely next pick, then use a rating, note, or private collection after you finish it.</li>
+        </ol>
+        <p><a href="/#landing-auth">Create a free library</a> when you are ready, or visit the <a href="/demo">fictional demo library</a> to see a cross-media example first.</p>
+      </section>
+
+      <section class="public-section" aria-labelledby="decision-heading">
+        <h2 id="decision-heading">Choose Without Making It a Project</h2>
+        <p>A good media library should reduce decisions, not create a larger menu to manage. Keep a short Next Up queue for the titles that matter most, then let a private daily pick surface one unfinished option when you simply want to start something.</p>
+        <p>The distinction is intentional. Your queue is the plan you make for yourself; the daily pick is a gentle tie-breaker when several options sound fine. It never changes a title's status, rating, note, or visibility. Open the suggestion if it fits, try another if it does not, or ignore it entirely.</p>
+        <p>This works especially well across media types. A movie can be the right choice for one evening, while a book, album, or game may fit a quieter hour. One library gives you a place to compare those possibilities without opening six separate apps.</p>
+      </section>
 
       <section class="public-section" aria-labelledby="hub-heading">
         <h2 id="hub-heading">Start Here</h2>

@@ -2,6 +2,7 @@
 Tests for statistics endpoints.
 """
 import pytest
+from app import models
 
 
 class TestStatisticsEndpoints:
@@ -100,6 +101,47 @@ class TestStatisticsEndpoints:
         assert "top_category" in data
         assert "most_complete_category" in data
         assert len(data["categories"]) == 6
+
+    def test_get_library_pulse_returns_current_user_actions(self, authenticated_client, test_movie_data, test_tv_show_data):
+        """Pulse should return unfinished and missing-context items without mutating records."""
+        movie_data = test_movie_data.copy()
+        movie_data.update({"watched": False, "rating": None, "review": ""})
+        movie_response = authenticated_client.post("/movies/", json=movie_data)
+        assert movie_response.status_code == 201
+
+        tv_data = test_tv_show_data.copy()
+        tv_data.update({"watched": True, "rating": 8, "review": "Finished and memorable."})
+        assert authenticated_client.post("/tv-shows/", json=tv_data).status_code == 201
+
+        response = authenticated_client.get("/statistics/pulse/")
+        assert response.status_code == 200
+        data = response.json()
+        assert any(item["title"] == movie_data["title"] for item in data["continue_items"])
+        reflection_item = next(item for item in data["reflection_items"] if item["title"] == movie_data["title"])
+        assert reflection_item["category"] == "movies"
+        assert set(reflection_item["prompts"]) == {"Add a rating", "Leave a note"}
+
+    def test_todays_pick_is_private_read_only_and_respects_next_up(self, authenticated_client, db_session, test_movie_data, test_book_data):
+        movie = authenticated_client.post("/movies/", json={**test_movie_data, "watched": False}).json()
+        book = authenticated_client.post("/books/", json={**test_book_data, "read": False}).json()
+
+        empty_user_pick = authenticated_client.get("/statistics/today/?offset=0")
+        assert empty_user_pick.status_code == 200
+        assert empty_user_pick.headers["Cache-Control"] == "private, no-store"
+        assert empty_user_pick.json()["pick"]["title"] in {movie["title"], book["title"]}
+        assert empty_user_pick.json()["pick"]["source"] == "library"
+
+        queue = authenticated_client.post("/next-up/", json={"category": "books", "item_id": book["id"]})
+        assert queue.status_code == 201
+        queued_pick = authenticated_client.get("/statistics/today/?offset=0").json()
+        assert queued_pick["pick"]["title"] == book["title"]
+        assert queued_pick["pick"]["source"] == "next_up"
+        assert db_session.query(models.NextUpItem).count() == 1
+        assert db_session.query(models.Movie).filter_by(id=movie["id"], watched=False).count() == 1
+        assert db_session.query(models.Book).filter_by(id=book["id"], read=False).count() == 1
+
+    def test_todays_pick_requires_authentication(self, client):
+        assert client.get("/statistics/today/").status_code == 401
     
     def test_get_watch_statistics(self, authenticated_client, test_movie_data, test_tv_show_data, test_anime_data, test_video_game_data, test_music_data, test_book_data):
         """Test getting watch statistics."""
@@ -297,7 +339,8 @@ class TestStatisticsEndpoints:
             "/statistics/watch/",
             "/statistics/ratings/",
             "/statistics/years/",
-            "/statistics/directors/"
+            "/statistics/directors/",
+            "/statistics/insights/"
         ]
         
         for endpoint in endpoints:

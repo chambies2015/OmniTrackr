@@ -320,6 +320,28 @@ async def get_sitemap(db: Session = Depends(get_db)):
     except Exception:
         pass
     
+    from ..discover_catalog import MONTHLY_EDITIONS, TRAILS
+    for path in [
+        "/discover",
+        *[f"/discover/{slug}" for slug in TRAILS],
+        *[f"/discover/monthly/{slug}" for slug in MONTHLY_EDITIONS],
+    ]:
+        sitemap_parts.append(f"<url><loc>{base_url}{path}</loc></url>")
+    public_collections = db.query(models.Collection).filter(
+        models.Collection.is_public == True,
+    ).all()
+    from .collections import CATEGORIES as COLLECTION_CATEGORIES
+    for collection in public_collections:
+        available_items = sum(
+            db.query(COLLECTION_CATEGORIES[item.category][0]).filter(
+                COLLECTION_CATEGORIES[item.category][0].id == item.item_id,
+                COLLECTION_CATEGORIES[item.category][0].user_id == collection.user_id,
+            ).count()
+            for item in collection.items
+            if item.category in COLLECTION_CATEGORIES
+        )
+        if len((collection.description or "").strip()) >= 300 and available_items >= 3:
+            sitemap_parts.append(f"<url><loc>{base_url}/collections/public/{collection.id}</loc></url>")
     sitemap_parts.append("</urlset>")
     sitemap = "\n".join(sitemap_parts)
     
@@ -350,6 +372,8 @@ Allow: /advertising
 Allow: /content-quality
 Allow: /site-map
 Allow: /guides
+Allow: /discover
+Allow: /collections/public/
 Allow: /compare
 Allow: /use-cases
 Allow: /changelog

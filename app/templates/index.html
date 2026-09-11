@@ -337,15 +337,83 @@
   <main class="container" id="mainContainer">
     <header class="header" role="banner">
       <p class="app-title" role="heading" aria-level="1">OmniTrackr</p>
+      <div class="library-search" role="search">
+        <label class="sr-only" for="librarySearchInput">Find anything in your library</label>
+        <div class="library-search__field">
+          <span aria-hidden="true">⌕</span>
+          <input id="librarySearchInput" type="search" autocomplete="off" placeholder="Find anything in your library…" aria-controls="librarySearchResults" aria-expanded="false">
+          <kbd aria-hidden="true">Ctrl K</kbd>
+        </div>
+        <div id="librarySearchResults" class="library-search__results" role="listbox" aria-label="Library search results" aria-live="polite" hidden></div>
+      </div>
     </header>
 
+    <section id="libraryLaunchpad" class="library-launchpad" aria-labelledby="libraryLaunchpadTitle" hidden>
+      <div class="library-launchpad__copy">
+        <p class="library-launchpad__eyebrow">Your library, your pace</p>
+        <h2 id="libraryLaunchpadTitle">Build a library you’ll want to revisit.</h2>
+        <p id="libraryLaunchpadSummary">Loading your library progress…</p>
+        <div id="libraryLaunchpadCategories" class="library-launchpad__categories" aria-label="Choose the first kind of media to track" hidden></div>
+      </div>
+      <div id="libraryLaunchpadSteps" class="library-launchpad__steps" aria-live="polite"></div>
+      <div class="library-launchpad__actions">
+        <button type="button" class="action-btn library-launchpad__primary" data-action="launchpad-add-item">Add something</button>
+        <button type="button" class="action-btn library-launchpad__secondary" data-action="launchpad-open-insights">See insights</button>
+        <button type="button" class="library-launchpad__dismiss" data-action="launchpad-dismiss" aria-label="Dismiss library launchpad">Not now</button>
+      </div>
+    </section>
+
+    <section id="todaysPick" class="todays-pick" aria-labelledby="todaysPickTitle" hidden>
+      <div class="todays-pick__copy">
+        <p class="todays-pick__eyebrow">Today’s pick</p>
+        <h2 id="todaysPickTitle">Just pick one.</h2>
+        <p id="todaysPickReason" class="todays-pick__reason"></p>
+      </div>
+      <div class="todays-pick__choice">
+        <span id="todaysPickCategory" class="todays-pick__category"></span>
+        <strong id="todaysPickName"></strong>
+      </div>
+      <div class="todays-pick__actions">
+        <button id="todaysPickOpen" type="button" class="action-btn todays-pick__open" data-action="pulse-open-item">Open it</button>
+        <button id="todaysPickAnother" type="button" class="todays-pick__another" data-action="try-another-pick">Try another</button>
+      </div>
+    </section>
+
+    <section id="libraryPulse" class="library-pulse" aria-labelledby="libraryPulseTitle" hidden>
+      <div class="library-pulse__header">
+        <div>
+          <p class="library-pulse__eyebrow">Library pulse</p>
+          <h2 id="libraryPulseTitle">A few good next moves</h2>
+        </div>
+        <button type="button" class="library-pulse__insights" data-action="launchpad-open-insights">View full insights</button>
+      </div>
+      <div class="library-pulse__columns">
+        <section aria-labelledby="libraryPulseNextUpTitle"><h3 id="libraryPulseNextUpTitle">Your Next Up</h3><div id="libraryPulseNextUp" class="library-pulse__list"></div></section>
+        <section aria-labelledby="libraryPulseContinueTitle"><h3 id="libraryPulseContinueTitle">Pick up next</h3><div id="libraryPulseContinue" class="library-pulse__list"></div></section>
+        <section aria-labelledby="libraryPulseReflectTitle"><h3 id="libraryPulseReflectTitle">Make it memorable</h3><div id="libraryPulseReflect" class="library-pulse__list"></div></section>
+      </div>
+    </section>
+
+    <section id="nextUpQueue" class="next-up-queue" aria-labelledby="nextUpQueueTitle" hidden>
+      <div class="next-up-queue__header">
+        <div>
+          <p class="next-up-queue__eyebrow">Intentional queue</p>
+          <h2 id="nextUpQueueTitle">Next Up</h2>
+        </div>
+        <p class="next-up-queue__hint">Choose any saved item from its library list. Your queue stays private and never changes the item itself.</p>
+      </div>
+      <div id="nextUpQueueItems" class="next-up-queue__items" aria-live="polite"></div>
+    </section>
+
     <div class="tabs">
+      <a class="tab" href="/discover">Discover ↗</a>
       <button class="tab active" data-switch-tab="movies">🎬 Movies</button>
       <button class="tab" data-switch-tab="tv-shows">📺 TV Shows</button>
       <button class="tab" data-switch-tab="anime">🎌 Anime</button>
       <button class="tab" data-switch-tab="video-games">🎮 Video Games</button>
       <button class="tab" data-switch-tab="music">🎵 Music</button>
       <button class="tab" data-switch-tab="books">📚 Books</button>
+      <button class="tab" data-switch-tab="collections">🗂 Collections</button>
       <button class="tab" data-switch-tab="statistics">📊 Statistics</button>
       <div id="customTabsContainer"></div>
       <button class="tab" id="manageCustomTabsBtn" data-action="show-custom-tab-manager" style="background-color: #6366f1; margin-left: auto;">⚙️ Manage Custom Tabs</button>
@@ -842,6 +910,24 @@
       </div>
     </div>
 
+    <!-- Collections Tab Content -->
+    <div id="collections-tab" class="tab-content">
+      <section class="collections-hero">
+        <p class="collections-hero__eyebrow">Private by default · share only by choice</p>
+        <h2>Collections</h2>
+        <p>Bring together movies, TV shows, anime, games, music, and books around any idea that matters to you. When a shelf is ready to share, add your point of view and publish it deliberately.</p>
+      </section>
+      <section class="card collections-create">
+        <h3>Create a collection</h3>
+        <form id="createCollectionForm" data-submit-action="create-collection">
+          <input id="collectionName" type="text" maxlength="80" required placeholder="e.g. Rainy Sunday escapes">
+          <textarea id="collectionDescription" maxlength="500" rows="2" placeholder="What belongs here? Private until you choose to publish."></textarea>
+          <button type="submit" class="action-btn">Create collection</button>
+        </form>
+      </section>
+      <div id="collectionsList" class="collections-list" aria-live="polite"></div>
+    </div>
+
     <!-- Statistics Tab Content -->
     <div id="statistics-tab" class="tab-content">
       <div class="card">
@@ -857,6 +943,16 @@
       </div>
 
       <div id="statsContent" style="display: none;">
+        <section id="monthlyReplay" class="monthly-replay" aria-labelledby="monthlyReplayTitle" hidden>
+          <div class="monthly-replay__header">
+            <div>
+              <p class="monthly-replay__eyebrow">Private time capsule</p>
+              <h3 id="monthlyReplayTitle">Monthly Replay</h3>
+            </div>
+            <span id="monthlyReplayPeriod" class="monthly-replay__period"></span>
+          </div>
+          <div id="monthlyReplayContent"></div>
+        </section>
         <div class="accordion-section">
           <div class="accordion-header" data-toggle-category-accordion="library-insights">
             <h3>Library Insights</h3>
@@ -2078,6 +2174,67 @@
       </div>
       <div class="modal-body">
         <div id="bookSearchResults" class="search-results-grid"></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Finish Ritual Modal -->
+  <div id="completionRitualModal" class="modal-overlay" style="display: none;" data-close-on-backdrop="completion-ritual">
+    <div class="modal-content completion-ritual-modal" data-stop-propagation>
+      <div class="modal-header">
+        <h2>One small reflection</h2>
+        <button class="modal-close" data-action="close-completion-ritual" aria-label="Close finish ritual">×</button>
+      </div>
+      <div class="modal-body">
+        <p class="completion-ritual-modal__eyebrow">Finished</p>
+        <h3 id="completionRitualTitle" class="completion-ritual-modal__title"></h3>
+        <p class="completion-ritual-modal__copy">What is one thing you want future you to remember? This stays private.</p>
+        <textarea id="completionRitualTakeaway" class="review-textarea" maxlength="500" rows="3" placeholder="A moment, feeling, or reason it stood out…"></textarea>
+        <label class="completion-ritual-modal__favorite"><input type="checkbox" id="completionRitualFavorite"> This is a personal favorite</label>
+        <div class="completion-ritual-modal__actions">
+          <button type="button" class="action-btn" data-action="save-completion-ritual">Save reflection</button>
+          <button type="button" class="completion-ritual-modal__skip" data-action="close-completion-ritual">Not now</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Collection Picker Modal -->
+  <div id="collectionPickerModal" class="modal-overlay" style="display: none;" data-close-on-backdrop="collection-picker">
+    <div class="modal-content collection-picker-modal" data-stop-propagation>
+      <div class="modal-header">
+        <h2>Add to collection</h2>
+        <button class="modal-close" data-action="close-collection-picker" aria-label="Close collection picker">×</button>
+      </div>
+      <div class="modal-body">
+        <p id="collectionPickerItemTitle" class="collection-picker-modal__item"></p>
+        <div id="collectionPickerOptions" class="collection-picker-modal__options"></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Collection Studio Modal -->
+  <div id="collectionStudioModal" class="modal-overlay" style="display: none;" data-close-on-backdrop="collection-studio">
+    <div class="modal-content collection-studio-modal" data-stop-propagation>
+      <div class="modal-header">
+        <h2>Edit &amp; share collection</h2>
+        <button class="modal-close" data-action="close-collection-studio" aria-label="Close collection studio">×</button>
+      </div>
+      <div class="modal-body">
+        <form id="collectionStudioForm" data-submit-action="save-collection-studio">
+          <input id="collectionStudioId" type="hidden">
+          <label for="collectionStudioName">Collection title</label>
+          <input id="collectionStudioName" type="text" maxlength="80" required>
+          <label for="collectionStudioDescription">Your introduction</label>
+          <textarea id="collectionStudioDescription" maxlength="500" rows="7" required aria-describedby="collectionStudioHint"></textarea>
+          <p id="collectionStudioHint" class="collection-studio-modal__hint">Private is the default. To publish, write at least 300 characters of original context and choose at least three titles. Public pages show only these selected titles and categories—not your profile, ratings, progress, or reviews.</p>
+          <label class="collection-studio-modal__publish"><input id="collectionStudioPublic" type="checkbox"> Publish this collection publicly</label>
+          <p id="collectionStudioError" class="collection-studio-modal__error" role="alert" hidden></p>
+          <div class="collection-studio-modal__actions">
+            <button type="submit" class="action-btn">Save collection</button>
+            <button type="button" class="completion-ritual-modal__skip" data-action="close-collection-studio">Cancel</button>
+          </div>
+        </form>
       </div>
     </div>
   </div>

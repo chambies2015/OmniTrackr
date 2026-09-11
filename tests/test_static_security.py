@@ -174,3 +174,39 @@ def test_app_review_forms_prompt_for_substantial_public_reviews():
     assert "getReviewQualityMessage(length)" in source
     assert "public-ready context" in source
     assert source.count("${reviewQualityHintHtml('edit-") == 6
+
+
+def test_library_launchpad_is_client_side_and_uses_existing_insights():
+    """First-use guidance should be optional and must not mutate library records."""
+    source = APP_JS.read_text(encoding="utf-8")
+    template = INDEX_HTML.read_text(encoding="utf-8")
+
+    assert 'id="libraryLaunchpad"' in template
+    assert 'id="libraryLaunchpadCategories"' in template
+    assert 'data-action="launchpad-add-item"' in template
+    assert 'data-action="launchpad-open-insights"' in template
+    assert 'data-action="launchpad-dismiss"' in template
+    assert "const LAUNCHPAD_DISMISS_KEY" in source
+    assert "function renderLibraryLaunchpad(insights)" in source
+    assert "function openLaunchpadAddItem(category = 'movies')" in source
+    assert "'launchpad-choose-category': () => openLaunchpadAddItem(target.dataset.launchpadCategory)" in source
+    assert "button.dataset.launchpadCategory = category" in source
+    assert "`${API_BASE}/statistics/insights/`" in source
+    assert "localStorage.setItem(LAUNCHPAD_DISMISS_KEY, 'true')" in source
+    assert "openLaunchpadAddItem" in source
+    assert "openLaunchpadInsights" in source
+
+
+def test_library_pulse_uses_safe_dom_rendering_and_existing_tabs():
+    """Pulse cards should not interpolate library titles into HTML or create new records."""
+    source = APP_JS.read_text(encoding="utf-8")
+    template = INDEX_HTML.read_text(encoding="utf-8")
+
+    assert 'id="libraryPulse"' in template
+    assert 'id="libraryPulseContinue"' in template
+    assert 'id="libraryPulseReflect"' in template
+    assert "function renderLibraryPulseList" in source
+    assert "`${API_BASE}/statistics/pulse/`" in source
+    assert "title.textContent = item.title" in source
+    assert "button.dataset.pulseTab = item.category" in source
+    assert "'pulse-open-item': () => switchTab(target.dataset.pulseTab)" in source
