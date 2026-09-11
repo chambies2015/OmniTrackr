@@ -913,15 +913,15 @@
     <!-- Collections Tab Content -->
     <div id="collections-tab" class="tab-content">
       <section class="collections-hero">
-        <p class="collections-hero__eyebrow">Private cross-media shelves</p>
+        <p class="collections-hero__eyebrow">Private by default · share only by choice</p>
         <h2>Collections</h2>
-        <p>Bring together movies, TV shows, anime, games, music, and books around any idea that matters to you.</p>
+        <p>Bring together movies, TV shows, anime, games, music, and books around any idea that matters to you. When a shelf is ready to share, add your point of view and publish it deliberately.</p>
       </section>
       <section class="card collections-create">
         <h3>Create a collection</h3>
         <form id="createCollectionForm" data-submit-action="create-collection">
           <input id="collectionName" type="text" maxlength="80" required placeholder="e.g. Rainy Sunday escapes">
-          <textarea id="collectionDescription" maxlength="500" rows="2" placeholder="What belongs here? (private, optional)"></textarea>
+          <textarea id="collectionDescription" maxlength="500" rows="2" placeholder="What belongs here? Private until you choose to publish."></textarea>
           <button type="submit" class="action-btn">Create collection</button>
         </form>
       </section>
@@ -2209,6 +2209,32 @@
       <div class="modal-body">
         <p id="collectionPickerItemTitle" class="collection-picker-modal__item"></p>
         <div id="collectionPickerOptions" class="collection-picker-modal__options"></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Collection Studio Modal -->
+  <div id="collectionStudioModal" class="modal-overlay" style="display: none;" data-close-on-backdrop="collection-studio">
+    <div class="modal-content collection-studio-modal" data-stop-propagation>
+      <div class="modal-header">
+        <h2>Edit &amp; share collection</h2>
+        <button class="modal-close" data-action="close-collection-studio" aria-label="Close collection studio">×</button>
+      </div>
+      <div class="modal-body">
+        <form id="collectionStudioForm" data-submit-action="save-collection-studio">
+          <input id="collectionStudioId" type="hidden">
+          <label for="collectionStudioName">Collection title</label>
+          <input id="collectionStudioName" type="text" maxlength="80" required>
+          <label for="collectionStudioDescription">Your introduction</label>
+          <textarea id="collectionStudioDescription" maxlength="500" rows="7" required aria-describedby="collectionStudioHint"></textarea>
+          <p id="collectionStudioHint" class="collection-studio-modal__hint">Private is the default. To publish, write at least 300 characters of original context and choose at least three titles. Public pages show only these selected titles and categories—not your profile, ratings, progress, or reviews.</p>
+          <label class="collection-studio-modal__publish"><input id="collectionStudioPublic" type="checkbox"> Publish this collection publicly</label>
+          <p id="collectionStudioError" class="collection-studio-modal__error" role="alert" hidden></p>
+          <div class="collection-studio-modal__actions">
+            <button type="submit" class="action-btn">Save collection</button>
+            <button type="button" class="completion-ritual-modal__skip" data-action="close-collection-studio">Cancel</button>
+          </div>
+        </form>
       </div>
     </div>
   </div>

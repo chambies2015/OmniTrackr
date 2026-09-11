@@ -235,13 +235,15 @@ class CompletionMoment(Base):
 
 
 class Collection(Base):
-    """A private, cross-media shelf owned by one user."""
+    """A private-by-default, cross-media shelf owned by one user."""
     __tablename__ = "collections"
 
     id = Column(Integer, primary_key=True, index=True)
     user_id = Column(Integer, ForeignKey("users.id"), nullable=False, index=True)
     name = Column(String, nullable=False)
     description = Column(Text, nullable=True)
+    is_public = Column(Boolean, nullable=False, default=False, index=True)
+    published_at = Column(DateTime, nullable=True)
     created_at = Column(DateTime, nullable=False, default=datetime.utcnow)
 
     owner = relationship("User", back_populates="collections")

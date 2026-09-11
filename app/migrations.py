@@ -152,6 +152,23 @@ def run_migrations():
                     conn.execute(text("CREATE INDEX IF NOT EXISTS ix_users_username ON users(username)"))
                     conn.commit()
 
+        if inspector.has_table("collections"):
+            collection_columns = {col["name"] for col in inspector.get_columns("collections")}
+            if "is_public" not in collection_columns:
+                with engine.connect() as conn:
+                    conn.execute(text("ALTER TABLE collections ADD COLUMN is_public BOOLEAN DEFAULT FALSE"))
+                    conn.execute(text("UPDATE collections SET is_public = FALSE WHERE is_public IS NULL"))
+                    conn.commit()
+                    print("Added is_public column to collections table")
+            if "published_at" not in collection_columns:
+                with engine.connect() as conn:
+                    conn.execute(text("ALTER TABLE collections ADD COLUMN published_at TIMESTAMP"))
+                    conn.commit()
+                    print("Added published_at column to collections table")
+            with engine.connect() as conn:
+                conn.execute(text("CREATE INDEX IF NOT EXISTS ix_collections_is_public ON collections(is_public)"))
+                conn.commit()
+
         review_public_columns_added = False
 
         if inspector.has_table("movies"):

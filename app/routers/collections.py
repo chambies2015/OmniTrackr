@@ -1,4 +1,7 @@
-"""Private cross-media collection endpoints."""
+"""Private-by-default cross-media collection endpoints and explicit public shares."""
+from datetime import datetime
+from html import escape
+from pathlib import Path
 from typing import Dict, List, Tuple, Type
 
 from fastapi import APIRouter, Depends, HTTPException, status
@@ -7,6 +10,7 @@ from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
 
 from .. import models, schemas
+from ..csp import strict_html_response
 from ..dependencies import get_current_user, get_db
 
 router = APIRouter(prefix="/collections", tags=["collections"])
@@ -20,6 +24,8 @@ CATEGORIES: Dict[str, CategoryDetails] = {
     "music": (models.Music, "Album"),
     "books": (models.Book, "Book"),
 }
+PUBLIC_COLLECTION_MIN_DESCRIPTION_CHARS = 300
+PUBLIC_COLLECTION_MIN_ITEMS = 3
 
 
 def _get_collection(db: Session, user_id: int, collection_id: int) -> models.Collection:
@@ -56,9 +62,31 @@ def _serialize_collection(collection: models.Collection, db: Session, user_id: i
         "id": collection.id,
         "name": collection.name,
         "description": collection.description,
+        "is_public": collection.is_public,
+        "public_url": f"/collections/public/{collection.id}" if collection.is_public else None,
         "created_at": collection.created_at,
         "items": [_serialize_item(item, db, user_id) for item in items],
     }
+
+
+def _available_items(collection: models.Collection, db: Session, user_id: int) -> list[dict]:
+    return [
+        serialized for item in sorted(collection.items, key=lambda entry: (entry.position, entry.id))
+        if (serialized := _serialize_item(item, db, user_id))["available"]
+    ]
+
+
+def _require_public_ready(collection: models.Collection, description: str | None, db: Session) -> None:
+    if len((description or "").strip()) < PUBLIC_COLLECTION_MIN_DESCRIPTION_CHARS:
+        raise HTTPException(
+            status_code=422,
+            detail=f"Add at least {PUBLIC_COLLECTION_MIN_DESCRIPTION_CHARS} characters of original context before publishing.",
+        )
+    if len(_available_items(collection, db, collection.user_id)) < PUBLIC_COLLECTION_MIN_ITEMS:
+        raise HTTPException(
+            status_code=422,
+            detail=f"Add at least {PUBLIC_COLLECTION_MIN_ITEMS} available titles before publishing.",
+        )
 
 
 @router.get("/", response_model=List[schemas.Collection])
@@ -93,7 +121,11 @@ async def update_collection(
     db: Session = Depends(get_db),
 ):
     collection = _get_collection(db, current_user.id, collection_id)
-    updates = payload.model_dump(exclude_unset=True)
+    updates = payload.model_dump(exclude_unset=True, exclude_none=True)
+    proposed_description = updates.get("description", collection.description)
+    proposed_public = updates.get("is_public", collection.is_public)
+    if proposed_public:
+        _require_public_ready(collection, proposed_description, db)
     if "name" in updates:
         normalized = updates["name"].strip()
         if not normalized:
@@ -101,9 +133,50 @@ async def update_collection(
         collection.name = normalized
     if "description" in updates:
         collection.description = updates["description"].strip() or None if updates["description"] else None
+    if "is_public" in updates:
+        was_public = collection.is_public
+        collection.is_public = updates["is_public"]
+        if collection.is_public and not was_public:
+            collection.published_at = datetime.utcnow()
+        elif not collection.is_public:
+            collection.published_at = None
     db.commit()
     db.refresh(collection)
     return _serialize_collection(collection, db, current_user.id)
+
+
+@router.get("/public/{collection_id}")
+async def public_collection(collection_id: int, db: Session = Depends(get_db)):
+    """Render the deliberately limited public view of an explicitly shared shelf."""
+    collection = db.query(models.Collection).filter(
+        models.Collection.id == collection_id,
+        models.Collection.is_public == True,
+    ).first()
+    if not collection:
+        raise HTTPException(status_code=404, detail="Shared collection not found")
+    items = _available_items(collection, db, collection.user_id)
+    if (
+        len((collection.description or "").strip()) < PUBLIC_COLLECTION_MIN_DESCRIPTION_CHARS
+        or len(items) < PUBLIC_COLLECTION_MIN_ITEMS
+    ):
+        raise HTTPException(status_code=404, detail="Shared collection not available")
+    template = (Path(__file__).parents[1] / "templates" / "public_collection.html").read_text(encoding="utf-8")
+    item_cards = "".join(
+        f'<li class="collection-entry"><span class="collection-entry__number">{position:02d}</span><div><p>{escape(item["category_label"])}</p><h2>{escape(item["title"])}</h2></div></li>'
+        for position, item in enumerate(items, 1)
+    )
+    description = (collection.description or "").strip()
+    values = {
+        "TITLE": escape(collection.name),
+        "DESCRIPTION": escape(description[:160], quote=True),
+        "PATH": f"/collections/public/{collection.id}",
+        "INTRO": escape(description),
+        "ITEMS": item_cards,
+        "COUNT": str(len(items)),
+    }
+    for key, value in values.items():
+        template = template.replace("{{" + key + "}}", value)
+    return strict_html_response(template)
 
 
 @router.delete("/{collection_id}", status_code=status.HTTP_204_NO_CONTENT)

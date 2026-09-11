@@ -328,7 +328,8 @@ function handleDelegatedClick(event) {
       review: closeReviewModal,
       'custom-tab-manager': closeCustomTabManager,
       'completion-ritual': closeCompletionRitual,
-      'collection-picker': closeCollectionPicker
+      'collection-picker': closeCollectionPicker,
+      'collection-studio': closeCollectionStudio
     };
     closeHandlers[target.dataset.closeOnBackdrop]?.();
     return;
@@ -406,6 +407,8 @@ function handleDelegatedClick(event) {
     'save-completion-ritual': saveCompletionRitual,
     'open-collection-picker': () => openCollectionPicker(target.dataset.collectionCategory, Number(target.dataset.collectionItemId), target.dataset.collectionItemTitle),
     'close-collection-picker': closeCollectionPicker,
+    'open-collection-studio': () => openCollectionStudio(Number(target.dataset.collectionId)),
+    'close-collection-studio': closeCollectionStudio,
     'add-to-collection': () => addToCollection(Number(target.dataset.collectionId)),
     'move-collection-item': () => moveCollectionItem(Number(target.dataset.collectionId), Number(target.dataset.collectionItemId), Number(target.dataset.collectionPosition)),
     'remove-collection-item': () => removeCollectionItem(Number(target.dataset.collectionId), Number(target.dataset.collectionItemId)),
@@ -428,7 +431,8 @@ function handleDelegatedSubmit(event) {
     'update-tab-visibility': updateTabVisibility,
     'deactivate-account': deactivateAccount,
     'send-friend-request': sendFriendRequest,
-    'create-collection': createCollection
+    'create-collection': createCollection,
+    'save-collection-studio': saveCollectionStudio
   };
   submitHandlers[form.dataset.submitAction]?.(event);
 }
@@ -6247,13 +6251,35 @@ function renderCollections(collections) {
     count.className = 'collection-card__count';
     count.textContent = `${collection.items.length} item${collection.items.length === 1 ? '' : 's'}`;
     copy.append(name, count);
+    const actions = document.createElement('div');
+    actions.className = 'collection-card__actions';
+    const status = document.createElement('span');
+    status.className = `collection-card__status${collection.is_public ? ' is-public' : ''}`;
+    status.textContent = collection.is_public ? 'Public' : 'Private';
+    const edit = document.createElement('button');
+    edit.type = 'button';
+    edit.className = 'collection-card__edit';
+    edit.dataset.action = 'open-collection-studio';
+    edit.dataset.collectionId = collection.id;
+    edit.textContent = 'Edit & share';
+    actions.append(status, edit);
+    if (collection.is_public && collection.public_url) {
+      const publicLink = document.createElement('a');
+      publicLink.className = 'collection-card__public-link';
+      publicLink.href = collection.public_url;
+      publicLink.target = '_blank';
+      publicLink.rel = 'noopener noreferrer';
+      publicLink.textContent = 'View public page ↗';
+      actions.appendChild(publicLink);
+    }
     const remove = document.createElement('button');
     remove.type = 'button';
     remove.className = 'collection-card__delete';
     remove.dataset.action = 'delete-collection';
     remove.dataset.collectionId = collection.id;
     remove.textContent = 'Delete';
-    header.append(copy, remove);
+    actions.appendChild(remove);
+    header.append(copy, actions);
     card.appendChild(header);
     if (collection.description) {
       const description = document.createElement('p');
@@ -6327,6 +6353,53 @@ async function createCollection(event) {
     await loadCollections();
   } catch (error) {
     alert('Could not create that collection. Please try again.');
+  }
+}
+
+function openCollectionStudio(collectionId) {
+  const collection = collectionsCache.find(item => item.id === collectionId);
+  if (!collection) return;
+  document.getElementById('collectionStudioId').value = String(collection.id);
+  document.getElementById('collectionStudioName').value = collection.name || '';
+  document.getElementById('collectionStudioDescription').value = collection.description || '';
+  document.getElementById('collectionStudioPublic').checked = Boolean(collection.is_public);
+  const error = document.getElementById('collectionStudioError');
+  error.textContent = '';
+  error.hidden = true;
+  document.getElementById('collectionStudioModal').style.display = 'flex';
+}
+
+function closeCollectionStudio() {
+  const modal = document.getElementById('collectionStudioModal');
+  if (modal) modal.style.display = 'none';
+}
+
+async function saveCollectionStudio(event) {
+  event.preventDefault();
+  const collectionId = Number(document.getElementById('collectionStudioId').value);
+  if (!Number.isInteger(collectionId) || collectionId < 1) return;
+  const error = document.getElementById('collectionStudioError');
+  const payload = {
+    name: document.getElementById('collectionStudioName').value,
+    description: document.getElementById('collectionStudioDescription').value,
+    is_public: document.getElementById('collectionStudioPublic').checked,
+  };
+  error.hidden = true;
+  try {
+    const response = await authenticatedFetch(`${API_BASE}/collections/${collectionId}`, {
+      method: 'PATCH', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload),
+    });
+    if (!response.ok) {
+      const body = await response.json().catch(() => ({}));
+      error.textContent = body.detail || 'Could not save this collection. Please try again.';
+      error.hidden = false;
+      return;
+    }
+    closeCollectionStudio();
+    await loadCollections();
+  } catch (requestError) {
+    error.textContent = 'Could not save this collection. Please try again.';
+    error.hidden = false;
   }
 }
 

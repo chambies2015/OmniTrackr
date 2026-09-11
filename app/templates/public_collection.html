@@ -1,0 +1,62 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="description" content="{{DESCRIPTION}}">
+  <meta name="robots" content="index, follow, max-image-preview:large">
+  <meta name="author" content="OmniTrackr member">
+  <title>{{TITLE}} | OmniTrackr Collection</title>
+  <link rel="canonical" href="https://omnitrackr.xyz{{PATH}}">
+  <link rel="icon" type="image/x-icon" href="/omnitrackr_favicon.ico">
+  <meta property="og:type" content="website">
+  <meta property="og:title" content="{{TITLE}} | OmniTrackr Collection">
+  <meta property="og:description" content="{{DESCRIPTION}}">
+  <meta property="og:url" content="https://omnitrackr.xyz{{PATH}}">
+  <meta property="og:site_name" content="OmniTrackr">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@700;800&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="/styles.css">
+  <style>
+    body { min-height: 100vh; padding: 20px; }
+    .share-wrap { margin: 0 auto; max-width: 980px; }
+    .share-card { background: var(--card-bg); border: 1px solid var(--border); border-radius: 16px; box-shadow: 0 8px 32px rgba(0,0,0,.25); color: var(--fg); margin: 20px 0; padding: 46px 40px; }
+    .share-card header { border-bottom: 1px solid var(--border); margin-bottom: 30px; padding-bottom: 26px; }
+    .share-eyebrow { color: #14b8a6; font-size: .78rem; font-weight: 800; letter-spacing: .09em; margin: 0 0 10px; text-transform: uppercase; }
+    h1, .collection-entry h2 { font-family: Poppins, sans-serif; } h1 { color: var(--primary); font-size: clamp(2rem, 5vw, 3.2rem); line-height: 1.12; margin: 0 0 15px; }
+    .share-intro { color: var(--fg-secondary); font-size: 1.05rem; line-height: 1.75; margin: 0; max-width: 760px; white-space: pre-line; }
+    .share-note { color: var(--fg-secondary); font-size: .9rem; line-height: 1.6; margin: 0 0 18px; }
+    .collection-list { display: grid; gap: 10px; list-style: none; margin: 0; padding: 0; }
+    .collection-entry { align-items: center; background: var(--bg); border: 1px solid var(--border); border-radius: 10px; display: grid; gap: 16px; grid-template-columns: 38px 1fr; padding: 15px; }
+    .collection-entry__number { align-items: center; background: rgba(20,184,166,.16); border-radius: 50%; color: #0f766e; display: inline-flex; font-size: .78rem; font-weight: 800; height: 32px; justify-content: center; width: 32px; }
+    .collection-entry p { color: var(--fg-secondary); font-size: .77rem; font-weight: 700; letter-spacing: .07em; margin: 0 0 3px; text-transform: uppercase; }
+    .collection-entry h2 { color: var(--fg); font-size: 1.05rem; margin: 0; }
+    .share-footer { border-top: 1px solid var(--border); color: var(--fg-secondary); font-size: .88rem; line-height: 1.6; margin-top: 30px; padding-top: 22px; }
+    .share-footer a, .back-link { color: var(--primary); font-weight: 700; text-decoration: none; } .share-footer a:hover, .back-link:hover { text-decoration: underline; }
+    .back-link { display: inline-block; margin-bottom: 12px; }
+    @media (max-width: 700px) { body { padding: 10px; } .share-card { padding: 30px 20px; } }
+  </style>
+</head>
+<body>
+  <main class="share-wrap">
+    <div class="share-card">
+      <nav class="public-site-nav" aria-label="Public site navigation">
+        <a class="public-site-nav__brand" href="/">OmniTrackr</a>
+        <div class="public-site-nav__links"><a href="/discover">Discover</a><a href="/guides">Guides</a><a href="/reviews">Reviews</a><a class="public-site-nav__cta" href="/#landing-auth">Start tracking</a></div>
+      </nav>
+      <a class="back-link" href="/">Back to OmniTrackr</a>
+      <header>
+        <p class="share-eyebrow">Shared collection · {{COUNT}} titles</p>
+        <h1>{{TITLE}}</h1>
+        <p class="share-intro">{{INTRO}}</p>
+      </header>
+      <section aria-labelledby="collection-items-title">
+        <p class="share-note" id="collection-items-title">This is a member-curated list. It shares only the titles deliberately selected for this collection, not personal ratings, progress, reviews, or profile details.</p>
+        <ol class="collection-list">{{ITEMS}}</ol>
+      </section>
+      <footer class="share-footer">Enjoyed this point of view? <a href="/#landing-auth">Create a private library</a> and make a collection of your own.</footer>
+    </div>
+  </main>
+</body>
+</html>

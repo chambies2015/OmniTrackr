@@ -913,6 +913,7 @@ class CollectionCreate(BaseModel):
 class CollectionUpdate(BaseModel):
     name: Optional[str] = Field(None, min_length=1, max_length=80)
     description: Optional[str] = Field(None, max_length=500)
+    is_public: Optional[bool] = None
 
 
 class CollectionItemCreate(NextUpItemCreate):
@@ -937,5 +938,7 @@ class Collection(BaseModel):
     id: int
     name: str
     description: Optional[str] = None
+    is_public: bool = False
+    public_url: Optional[str] = None
     created_at: datetime
     items: List[CollectionItem] = Field(default=[])
