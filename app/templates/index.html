@@ -337,6 +337,15 @@
   <main class="container" id="mainContainer">
     <header class="header" role="banner">
       <p class="app-title" role="heading" aria-level="1">OmniTrackr</p>
+      <div class="library-search" role="search">
+        <label class="sr-only" for="librarySearchInput">Find anything in your library</label>
+        <div class="library-search__field">
+          <span aria-hidden="true">⌕</span>
+          <input id="librarySearchInput" type="search" autocomplete="off" placeholder="Find anything in your library…" aria-controls="librarySearchResults" aria-expanded="false">
+          <kbd aria-hidden="true">Ctrl K</kbd>
+        </div>
+        <div id="librarySearchResults" class="library-search__results" role="listbox" aria-label="Library search results" aria-live="polite" hidden></div>
+      </div>
     </header>
 
     <section id="libraryLaunchpad" class="library-launchpad" aria-labelledby="libraryLaunchpadTitle" hidden>
