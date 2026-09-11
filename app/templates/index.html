@@ -354,6 +354,22 @@
       </div>
     </section>
 
+    <section id="todaysPick" class="todays-pick" aria-labelledby="todaysPickTitle" hidden>
+      <div class="todays-pick__copy">
+        <p class="todays-pick__eyebrow">Today’s pick</p>
+        <h2 id="todaysPickTitle">Just pick one.</h2>
+        <p id="todaysPickReason" class="todays-pick__reason"></p>
+      </div>
+      <div class="todays-pick__choice">
+        <span id="todaysPickCategory" class="todays-pick__category"></span>
+        <strong id="todaysPickName"></strong>
+      </div>
+      <div class="todays-pick__actions">
+        <button id="todaysPickOpen" type="button" class="action-btn todays-pick__open" data-action="pulse-open-item">Open it</button>
+        <button id="todaysPickAnother" type="button" class="todays-pick__another" data-action="try-another-pick">Try another</button>
+      </div>
+    </section>
+
     <section id="libraryPulse" class="library-pulse" aria-labelledby="libraryPulseTitle" hidden>
       <div class="library-pulse__header">
         <div>

@@ -240,6 +240,7 @@ function handleDelegatedClick(event) {
     'launchpad-open-insights': openLaunchpadInsights,
     'launchpad-dismiss': dismissLibraryLaunchpad,
     'pulse-open-item': () => switchTab(target.dataset.pulseTab),
+    'try-another-pick': tryAnotherPick,
     'add-next-up': () => addToNextUp(target.dataset.nextUpCategory, Number(target.dataset.nextUpItemId)),
     'move-next-up': () => moveNextUp(Number(target.dataset.nextUpId), Number(target.dataset.nextUpPosition)),
     'remove-next-up': () => removeNextUp(Number(target.dataset.nextUpId)),
@@ -6254,6 +6255,7 @@ async function deleteCollection(collectionId) {
 
 const LAUNCHPAD_DISMISS_KEY = 'omnitrackr_library_launchpad_dismissed';
 let launchpadRefreshTimer = null;
+let todaysPickOffset = 0;
 
 function isLibraryLaunchpadDismissed() {
   try {
@@ -6419,6 +6421,36 @@ function renderLibraryPulse(pulse) {
   pulseElement.removeAttribute('hidden');
 }
 
+function renderTodaysPick(payload) {
+  const section = document.getElementById('todaysPick');
+  const pick = payload?.pick;
+  if (!section || !pick) {
+    section?.setAttribute('hidden', '');
+    return;
+  }
+  document.getElementById('todaysPickName').textContent = pick.title;
+  document.getElementById('todaysPickCategory').textContent = pick.category_label;
+  document.getElementById('todaysPickReason').textContent = pick.reason;
+  document.getElementById('todaysPickOpen').dataset.pulseTab = pick.category;
+  document.getElementById('todaysPickAnother').hidden = Number(payload.candidate_count) < 2;
+  section.removeAttribute('hidden');
+}
+
+async function refreshTodaysPick() {
+  if (!hasStoredAuth()) return;
+  try {
+    const response = await authenticatedFetch(`${API_BASE}/statistics/today/?offset=${todaysPickOffset}`);
+    if (response.ok) renderTodaysPick(await response.json());
+  } catch (error) {
+    // This optional prompt must never interrupt the tracker.
+  }
+}
+
+function tryAnotherPick() {
+  todaysPickOffset += 1;
+  refreshTodaysPick();
+}
+
 function renderNextUpQueue(items) {
   const queueElement = document.getElementById('nextUpQueue');
   const container = document.getElementById('nextUpQueueItems');
@@ -6511,7 +6543,7 @@ async function addToNextUp(category, itemId) {
       return;
     }
     if (!response.ok) throw new Error('Unable to add queue item');
-    await Promise.all([refreshNextUpQueue(), refreshLibraryPulse()]);
+    await Promise.all([refreshNextUpQueue(), refreshLibraryPulse(), refreshTodaysPick()]);
   } catch (error) {
     alert('Could not add that item to Next Up. Please try again.');
   }
@@ -6527,6 +6559,7 @@ async function moveNextUp(queueId, position) {
     if (!response.ok) throw new Error('Unable to move queue item');
     renderNextUpQueue(await response.json());
     refreshLibraryPulse();
+    refreshTodaysPick();
   } catch (error) {
     alert('Could not reorder Next Up. Please try again.');
   }
@@ -6536,7 +6569,7 @@ async function removeNextUp(queueId) {
   try {
     const response = await authenticatedFetch(`${API_BASE}/next-up/${queueId}`, { method: 'DELETE' });
     if (!response.ok) throw new Error('Unable to remove queue item');
-    await Promise.all([refreshNextUpQueue(), refreshLibraryPulse()]);
+    await Promise.all([refreshNextUpQueue(), refreshLibraryPulse(), refreshTodaysPick()]);
   } catch (error) {
     alert('Could not remove that item from Next Up. Please try again.');
   }
@@ -6568,6 +6601,7 @@ function scheduleLibraryLaunchpadRefresh() {
     refreshLibraryLaunchpad();
     refreshLibraryPulse();
     refreshNextUpQueue();
+    refreshTodaysPick();
   }, 250);
 }
 

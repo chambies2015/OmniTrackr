@@ -1,8 +1,8 @@
 """
 Statistics endpoints for the OmniTrackr API.
 """
-from datetime import datetime
-from fastapi import APIRouter, Depends
+from datetime import date, datetime
+from fastapi import APIRouter, Depends, Query, Response
 from sqlalchemy.orm import Session
 from sqlalchemy import func, or_
 
@@ -55,6 +55,67 @@ def _next_up_pulse_item(queue_item, category: dict, db: Session, user_id: int) -
     if not item:
         return None
     return _pulse_item(item, category, [])
+
+
+@router.get("/today/", response_model=dict)
+async def get_todays_pick(
+    response: Response,
+    offset: int = Query(0, ge=0, le=24),
+    current_user: models.User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+):
+    """Choose one private, unfinished title without modifying the library.
+
+    The choice is stable for the day, while ``offset`` lets the interface offer
+    another option. A deliberately ordered Next Up queue takes priority over the
+    wider unfinished library so the user remains in control of the suggestion.
+    """
+    response.headers["Cache-Control"] = "private, no-store"
+    categories = [
+        {"key": "movies", "label": "Movie", "model": models.Movie, "done": models.Movie.watched, "status_label": "Not watched"},
+        {"key": "tv-shows", "label": "TV show", "model": models.TVShow, "done": models.TVShow.watched, "status_label": "In progress"},
+        {"key": "anime", "label": "Anime", "model": models.Anime, "done": models.Anime.watched, "status_label": "In progress"},
+        {"key": "video-games", "label": "Game", "model": models.VideoGame, "done": models.VideoGame.played, "status_label": "Not played"},
+        {"key": "music", "label": "Album", "model": models.Music, "done": models.Music.listened, "status_label": "Not listened"},
+        {"key": "books", "label": "Book", "model": models.Book, "done": models.Book.read, "status_label": "Not read"},
+    ]
+    by_key = {category["key"]: category for category in categories}
+    queued = []
+    for entry in db.query(models.NextUpItem).filter(
+        models.NextUpItem.user_id == current_user.id,
+    ).order_by(models.NextUpItem.position, models.NextUpItem.id).limit(25):
+        category = by_key.get(entry.category)
+        if not category:
+            continue
+        item = db.query(category["model"]).filter(
+            category["model"].id == entry.item_id,
+            category["model"].user_id == current_user.id,
+            category["done"] == False,
+        ).first()
+        if item:
+            queued.append(_pulse_item(item, category, []))
+
+    if queued:
+        choice = queued[offset % len(queued)]
+        choice["reason"] = f"#{(offset % len(queued)) + 1} in your private Next Up queue"
+        choice["source"] = "next_up"
+        return {"pick": choice, "candidate_count": len(queued)}
+
+    candidates = []
+    for category in categories:
+        items = db.query(category["model"]).filter(
+            category["model"].user_id == current_user.id,
+            category["done"] == False,
+        ).order_by(category["model"].id.desc()).limit(12).all()
+        candidates.extend(_pulse_item(item, category, []) for item in items)
+
+    if not candidates:
+        return {"pick": None, "candidate_count": 0}
+
+    choice = candidates[(date.today().toordinal() + current_user.id + offset) % len(candidates)]
+    choice["reason"] = "A small, unfinished choice from your private library"
+    choice["source"] = "library"
+    return {"pick": choice, "candidate_count": len(candidates)}
 
 
 @router.get("/", response_model=schemas.StatisticsDashboard)
