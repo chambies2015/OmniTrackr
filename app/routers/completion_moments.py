@@ -7,6 +7,7 @@ from sqlalchemy.orm import Session
 
 from .. import models, schemas
 from ..dependencies import get_current_user, get_db
+from .activity import record_completion_activity
 
 router = APIRouter(prefix="/completion-moments", tags=["completion-moments"])
 
@@ -75,6 +76,7 @@ async def create_completion_moment(
             rating=item.rating,
         )
         db.add(moment)
+        record_completion_activity(db, current_user.id, payload.category, item)
         db.commit()
         db.refresh(moment)
     return _serialize(moment)

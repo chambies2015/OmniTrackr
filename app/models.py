@@ -63,6 +63,7 @@ class User(Base):
     custom_tabs = relationship("CustomTab", back_populates="owner", cascade="all, delete-orphan")
     next_up_items = relationship("NextUpItem", back_populates="owner", cascade="all, delete-orphan")
     completion_moments = relationship("CompletionMoment", back_populates="owner", cascade="all, delete-orphan")
+    activity_entries = relationship("ActivityEntry", back_populates="owner", cascade="all, delete-orphan")
     collections = relationship("Collection", back_populates="owner", cascade="all, delete-orphan")
 
 
@@ -232,6 +233,30 @@ class CompletionMoment(Base):
     __table_args__ = (
         UniqueConstraint("user_id", "category", "item_id", name="uq_completion_moment_item"),
     )
+
+
+class ActivityEntry(Base):
+    """A private, append-only snapshot in a user's cross-media journal.
+
+    The polymorphic media reference is deliberately not a foreign key. Journal
+    history keeps its title snapshot even when the underlying library item is
+    renamed or removed, and existing media tables do not need to change.
+    """
+    __tablename__ = "activity_entries"
+
+    id = Column(Integer, primary_key=True, index=True)
+    user_id = Column(Integer, ForeignKey("users.id"), nullable=False, index=True)
+    category = Column(String, nullable=False, index=True)
+    item_id = Column(Integer, nullable=True)
+    title = Column(String, nullable=False)
+    action = Column(String, nullable=False, index=True)
+    note = Column(Text, nullable=True)
+    rating = Column(Float, nullable=True)
+    source = Column(String, nullable=False, default="manual")
+    occurred_at = Column(DateTime, nullable=False, default=datetime.utcnow, index=True)
+    created_at = Column(DateTime, nullable=False, default=datetime.utcnow)
+
+    owner = relationship("User", back_populates="activity_entries")
 
 
 class Collection(Base):

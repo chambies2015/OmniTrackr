@@ -451,6 +451,92 @@ class Book(BookBase):
         from_attributes = True
 
 
+# ============================================================================
+# Private Activity Journal Schemas
+# ============================================================================
+
+ACTIVITY_CATEGORIES = {"movies", "tv-shows", "anime", "video-games", "music", "books"}
+ACTIVITY_ACTIONS = {"started", "progressed", "completed", "revisited", "noted"}
+
+
+class ActivityEntryCreate(BaseModel):
+    category: str
+    item_id: int = Field(..., ge=1)
+    action: str = "noted"
+    note: Optional[str] = Field(None, max_length=500)
+    occurred_at: Optional[datetime] = None
+
+    @field_validator("category")
+    @classmethod
+    def validate_activity_category(cls, value: str) -> str:
+        normalized = value.strip().lower()
+        if normalized not in ACTIVITY_CATEGORIES:
+            raise ValueError("Category must be a supported library category")
+        return normalized
+
+    @field_validator("action")
+    @classmethod
+    def validate_activity_action(cls, value: str) -> str:
+        normalized = value.strip().lower()
+        if normalized not in ACTIVITY_ACTIONS:
+            raise ValueError("Action must be started, progressed, completed, revisited, or noted")
+        return normalized
+
+    @field_validator("note")
+    @classmethod
+    def normalize_activity_note(cls, value: Optional[str]) -> Optional[str]:
+        return value.strip() or None if value else None
+
+
+class ActivityEntryUpdate(BaseModel):
+    action: Optional[str] = None
+    note: Optional[str] = Field(None, max_length=500)
+    occurred_at: Optional[datetime] = None
+
+    @field_validator("action")
+    @classmethod
+    def validate_activity_update_action(cls, value: Optional[str]) -> Optional[str]:
+        if value is None:
+            return None
+        normalized = value.strip().lower()
+        if normalized not in ACTIVITY_ACTIONS:
+            raise ValueError("Action must be started, progressed, completed, revisited, or noted")
+        return normalized
+
+    @field_validator("note")
+    @classmethod
+    def normalize_activity_update_note(cls, value: Optional[str]) -> Optional[str]:
+        return value.strip() or None if value else None
+
+
+class ActivityEntry(BaseModel):
+    id: int
+    category: str
+    category_label: str
+    item_id: Optional[int] = None
+    title: str
+    action: str
+    action_label: str
+    note: Optional[str] = None
+    rating: Optional[float] = None
+    source: str
+    occurred_at: datetime
+
+
+class ActivityEntryImport(BaseModel):
+    category: str
+    item_id: Optional[int] = Field(None, ge=1)
+    title: str = Field(..., min_length=1, max_length=500)
+    action: str
+    note: Optional[str] = Field(None, max_length=500)
+    rating: Optional[float] = Field(None, ge=0, le=10)
+    occurred_at: datetime
+
+    _validate_category = field_validator("category")(ActivityEntryCreate.validate_activity_category.__func__)
+    _validate_action = field_validator("action")(ActivityEntryCreate.validate_activity_action.__func__)
+    _normalize_note = field_validator("note")(ActivityEntryCreate.normalize_activity_note.__func__)
+
+
 # Export/Import schemas
 class ExportData(BaseModel):
     """Schema for exporting all data from OmniTrackr"""
@@ -461,6 +547,7 @@ class ExportData(BaseModel):
     music: List[Music] = Field(..., description="List of all music")
     books: List[Book] = Field(..., description="List of all books")
     custom_tabs: List[dict] = Field(default=[], description="List of all custom tabs with their items")
+    activities: List[ActivityEntry] = Field(default=[], description="Private activity journal entries")
     export_metadata: dict = Field(..., description="Export metadata including timestamp and version")
     
     class Config:
@@ -476,6 +563,7 @@ class ImportData(BaseModel):
     music: List[MusicCreate] = Field(default=[], description="Music to import")
     books: List[BookCreate] = Field(default=[], description="Books to import")
     custom_tabs: List[dict] = Field(default=[], description="Custom tabs to import (optional for backward compatibility)")
+    activities: List[ActivityEntryImport] = Field(default=[], description="Activity journal entries (optional for backward compatibility)")
     
     class Config:
         from_attributes = True
@@ -497,6 +585,8 @@ class ImportResult(BaseModel):
     books_updated: int = Field(..., description="Number of books updated")
     custom_tabs_created: int = Field(default=0, description="Number of custom tabs created")
     custom_tabs_updated: int = Field(default=0, description="Number of custom tabs updated")
+    activities_created: int = Field(default=0, description="Number of journal entries created")
+    activities_skipped: int = Field(default=0, description="Number of duplicate journal entries skipped")
     errors: List[str] = Field(default=[], description="List of errors encountered during import")
     
     class Config:

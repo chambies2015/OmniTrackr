@@ -392,6 +392,8 @@ function handleDelegatedClick(event) {
     'close-book-search-modal': closeBookSearchModal,
     'close-screenshot-modal': () => closeScreenshotModal(event),
     'export-data-dashboard': exportData,
+    'apply-library-import': applyLibraryImport,
+    'download-import-template': downloadImportTemplate,
     'launchpad-add-item': openLaunchpadAddItem,
     'launchpad-choose-category': () => openLaunchpadAddItem(target.dataset.launchpadCategory),
     'launchpad-open-insights': openLaunchpadInsights,
@@ -405,6 +407,10 @@ function handleDelegatedClick(event) {
     'begin-completion-ritual': () => openCompletionMoment(target.dataset.completionCategory, Number(target.dataset.completionItemId)),
     'close-completion-ritual': closeCompletionRitual,
     'save-completion-ritual': saveCompletionRitual,
+    'activity-older-week': () => changeActivityWeek(1),
+    'activity-newer-week': () => changeActivityWeek(-1),
+    'activity-load-more': () => loadActivityTimeline(false),
+    'delete-activity': () => deleteActivityEntry(Number(target.dataset.activityId)),
     'open-collection-picker': () => openCollectionPicker(target.dataset.collectionCategory, Number(target.dataset.collectionItemId), target.dataset.collectionItemTitle),
     'close-collection-picker': closeCollectionPicker,
     'open-collection-studio': () => openCollectionStudio(Number(target.dataset.collectionId)),
@@ -432,7 +438,9 @@ function handleDelegatedSubmit(event) {
     'deactivate-account': deactivateAccount,
     'send-friend-request': sendFriendRequest,
     'create-collection': createCollection,
-    'save-collection-studio': saveCollectionStudio
+    'save-collection-studio': saveCollectionStudio,
+    'create-activity': createActivityEntry,
+    'preview-library-import': previewLibraryImport
   };
   submitHandlers[form.dataset.submitAction]?.(event);
 }
@@ -442,7 +450,11 @@ function handleDelegatedChange(event) {
   if (!target) return;
 
   const changeHandlers = {
-    'profile-picture-select': handleProfilePictureSelect
+    'profile-picture-select': handleProfilePictureSelect,
+    'activity-category': populateActivityItems,
+    'activity-filter': () => loadActivityTimeline(true),
+    'import-studio-file': inspectImportStudioFile,
+    'import-studio-options': resetImportStudioPreview
   };
   changeHandlers[target.dataset.changeAction]?.(event);
 }
@@ -516,6 +528,8 @@ function switchTab(tabName) {
     loadMusic();
   } else if (tabName === 'books') {
     loadBooks();
+  } else if (tabName === 'activity') {
+    loadActivityJournal();
   } else if (tabName === 'collections') {
     loadCollections();
   } else if (tabName === 'statistics') {
@@ -3668,7 +3682,7 @@ async function exportData() {
     document.body.removeChild(a);
     URL.revokeObjectURL(url);
 
-    alert(`Export successful! Exported ${data.export_metadata.total_movies} movies, ${data.export_metadata.total_tv_shows} TV shows, ${data.export_metadata.total_anime || 0} anime, ${data.export_metadata.total_video_games || 0} video games, ${data.export_metadata.total_music || 0} music, ${data.export_metadata.total_books || 0} books, and ${data.export_metadata.total_custom_tabs || 0} custom tabs.`);
+    alert(`Export successful! Exported ${data.export_metadata.total_movies} movies, ${data.export_metadata.total_tv_shows} TV shows, ${data.export_metadata.total_anime || 0} anime, ${data.export_metadata.total_video_games || 0} video games, ${data.export_metadata.total_music || 0} music, ${data.export_metadata.total_books || 0} books, ${data.export_metadata.total_custom_tabs || 0} custom tabs, and ${data.export_metadata.total_activities || 0} journal entries.`);
   } catch (error) {
     alert('Export failed: ' + error.message);
   }
@@ -3743,6 +3757,255 @@ async function importData(fileInput) {
   } catch (error) {
     alert('Import failed: ' + error.message);
     fileInput.value = '';
+  }
+}
+
+// Preview-first CSV Import Studio. This stays separate from JSON backup restore,
+// because migration imports skip matches instead of updating existing records.
+let importStudioPreview = null;
+
+const importStudioMappingFields = [
+  ['title', 'Title'], ['category', 'Category'], ['year', 'Year'], ['creator', 'Director / author / artist'],
+  ['rating', 'Rating (0–10)'], ['status', 'Completed status'], ['review', 'Private review / note'],
+  ['genre', 'Genre'], ['seasons', 'Seasons'], ['episodes', 'Episodes'], ['release_date', 'Release date']
+];
+
+function parseDelimitedHeader(text) {
+  const firstLine = text.split(/\r?\n/, 1)[0] || '';
+  const delimiters = [',', '\t', ';'];
+  const delimiter = delimiters.reduce((best, candidate) =>
+    firstLine.split(candidate).length > firstLine.split(best).length ? candidate : best, ',');
+  const fields = [];
+  let current = '';
+  let quoted = false;
+  for (let index = 0; index < firstLine.length; index += 1) {
+    const character = firstLine[index];
+    if (character === '"') {
+      if (quoted && firstLine[index + 1] === '"') {
+        current += '"';
+        index += 1;
+      } else {
+        quoted = !quoted;
+      }
+    } else if (character === delimiter && !quoted) {
+      fields.push(current.trim());
+      current = '';
+    } else {
+      current += character;
+    }
+  }
+  fields.push(current.trim());
+  return fields.filter(Boolean).slice(0, 100);
+}
+
+function resetImportStudioPreview() {
+  importStudioPreview = null;
+  const applyButton = document.getElementById('importStudioApplyButton');
+  const results = document.getElementById('importStudioResults');
+  if (applyButton) applyButton.disabled = true;
+  if (results) {
+    results.hidden = true;
+    results.replaceChildren();
+  }
+}
+
+async function inspectImportStudioFile() {
+  resetImportStudioPreview();
+  const input = document.getElementById('importStudioFile');
+  const mapping = document.getElementById('importStudioMapping');
+  const file = input?.files?.[0];
+  if (!mapping) return;
+  mapping.replaceChildren();
+  if (!file) {
+    const message = document.createElement('p');
+    message.className = 'info-text';
+    message.textContent = 'Choose a file to inspect its columns.';
+    mapping.appendChild(message);
+    return;
+  }
+  try {
+    const headers = parseDelimitedHeader(await file.text());
+    importStudioMappingFields.forEach(([target, labelText]) => {
+      const label = document.createElement('label');
+      const text = document.createElement('span');
+      text.textContent = labelText;
+      const select = document.createElement('select');
+      select.dataset.importMapTarget = target;
+      const empty = document.createElement('option');
+      empty.value = '';
+      empty.textContent = 'Automatic / not included';
+      select.appendChild(empty);
+      headers.forEach(header => {
+        const option = document.createElement('option');
+        option.value = header;
+        option.textContent = header;
+        if (header.trim().toLowerCase().replace(/[^a-z0-9]+/g, '_').replace(/^_|_$/g, '') === target) {
+          option.selected = true;
+        }
+        select.appendChild(option);
+      });
+      select.addEventListener('change', resetImportStudioPreview);
+      label.append(text, select);
+      mapping.appendChild(label);
+    });
+  } catch (error) {
+    const message = document.createElement('p');
+    message.className = 'info-text';
+    message.textContent = 'These columns could not be inspected in the browser. The server can still attempt a preview.';
+    mapping.appendChild(message);
+  }
+}
+
+function getImportStudioMapping() {
+  const mapping = {};
+  document.querySelectorAll('[data-import-map-target]').forEach(select => {
+    if (select.value) mapping[select.dataset.importMapTarget] = select.value;
+  });
+  return mapping;
+}
+
+function buildImportStudioFormData(includeConfirmation = false) {
+  const file = document.getElementById('importStudioFile')?.files?.[0];
+  if (!file) throw new Error('Choose a CSV or TSV file first.');
+  const formData = new FormData();
+  formData.append('file', file);
+  formData.append('source', document.getElementById('importStudioSource')?.value || 'auto');
+  formData.append('category', document.getElementById('importStudioCategory')?.value || '');
+  formData.append('mapping_json', JSON.stringify(getImportStudioMapping()));
+  if (includeConfirmation) formData.append('fingerprint_confirmation', importStudioPreview?.fingerprint || '');
+  return formData;
+}
+
+function importStudioMetric(value, label) {
+  const metric = document.createElement('div');
+  metric.className = 'import-studio__metric';
+  const count = document.createElement('strong');
+  count.textContent = String(value);
+  const text = document.createElement('span');
+  text.textContent = label;
+  metric.append(count, text);
+  return metric;
+}
+
+function renderImportStudioPreview(data) {
+  const results = document.getElementById('importStudioResults');
+  if (!results) return;
+  results.replaceChildren();
+  results.hidden = false;
+
+  const summary = document.createElement('div');
+  summary.className = 'import-studio__summary';
+  summary.append(
+    importStudioMetric(data.total_rows, 'Rows read'),
+    importStudioMetric(data.ready_count, 'Ready to import'),
+    importStudioMetric(data.duplicate_count, 'Duplicates skipped'),
+    importStudioMetric(data.invalid_count, 'Rows needing attention')
+  );
+  results.appendChild(summary);
+
+  const breakdown = Object.entries(data.by_category || {}).filter(([, count]) => count > 0);
+  if (breakdown.length) {
+    const line = document.createElement('p');
+    line.className = 'info-text';
+    line.textContent = breakdown.map(([category, count]) => `${category.replace('-', ' ')}: ${count}`).join(' · ');
+    results.appendChild(line);
+  }
+
+  const wrap = document.createElement('div');
+  wrap.className = 'import-studio__table-wrap';
+  const table = document.createElement('table');
+  table.className = 'import-studio__table';
+  const head = document.createElement('thead');
+  const headRow = document.createElement('tr');
+  ['CSV row', 'Title', 'Category', 'Outcome', 'Reason'].forEach(label => {
+    const th = document.createElement('th');
+    th.textContent = label;
+    headRow.appendChild(th);
+  });
+  head.appendChild(headRow);
+  table.appendChild(head);
+  const body = document.createElement('tbody');
+  (data.preview || []).forEach(item => {
+    const row = document.createElement('tr');
+    [item.row, item.title, item.category ? item.category.replace('-', ' ') : '—', item.status, item.reason || 'Will be added'].forEach((value, index) => {
+      const cell = document.createElement('td');
+      cell.textContent = String(value);
+      if (index === 3) cell.className = `import-studio__row-status import-studio__row-status--${item.status}`;
+      row.appendChild(cell);
+    });
+    body.appendChild(row);
+  });
+  table.appendChild(body);
+  wrap.appendChild(table);
+  results.appendChild(wrap);
+  if (data.preview_truncated) {
+    const note = document.createElement('p');
+    note.className = 'info-text';
+    note.textContent = 'Showing the first 100 rows. All rows will follow the same validation rules.';
+    results.appendChild(note);
+  }
+}
+
+async function previewLibraryImport(event) {
+  event.preventDefault();
+  const status = document.getElementById('importStudioStatus');
+  const previewButton = document.getElementById('importStudioPreviewButton');
+  resetImportStudioPreview();
+  try {
+    status.textContent = 'Reading and comparing your file…';
+    previewButton.disabled = true;
+    const response = await authenticatedFetch(`${API_BASE}/import-studio/preview/`, { method: 'POST', body: buildImportStudioFormData() });
+    const data = await response.json().catch(() => ({}));
+    if (!response.ok) throw new Error(data.detail || 'The file could not be previewed.');
+    importStudioPreview = data;
+    renderImportStudioPreview(data);
+    status.textContent = `Detected ${data.detected_source}. Preview complete—nothing has been saved.`;
+    document.getElementById('importStudioApplyButton').disabled = data.ready_count === 0;
+  } catch (error) {
+    status.textContent = error.message;
+  } finally {
+    previewButton.disabled = false;
+  }
+}
+
+async function applyLibraryImport() {
+  if (!importStudioPreview?.fingerprint || importStudioPreview.ready_count < 1) return;
+  const status = document.getElementById('importStudioStatus');
+  const applyButton = document.getElementById('importStudioApplyButton');
+  if (!confirm(`Import ${importStudioPreview.ready_count} new item${importStudioPreview.ready_count === 1 ? '' : 's'}? Existing library records will be skipped.`)) return;
+  try {
+    applyButton.disabled = true;
+    status.textContent = 'Saving the new rows as one batch…';
+    const response = await authenticatedFetch(`${API_BASE}/import-studio/apply/`, { method: 'POST', body: buildImportStudioFormData(true) });
+    const data = await response.json().catch(() => ({}));
+    if (!response.ok) throw new Error(data.detail || 'The import could not be completed.');
+    status.textContent = `Import complete: ${data.created_count} added, ${data.duplicate_count} duplicates skipped, ${data.invalid_count} rows left unchanged.`;
+    importStudioPreview = null;
+    document.getElementById('importStudioFile').value = '';
+    document.getElementById('importStudioResults').hidden = true;
+    await inspectImportStudioFile();
+  } catch (error) {
+    status.textContent = error.message;
+    applyButton.disabled = false;
+  }
+}
+
+async function downloadImportTemplate() {
+  const category = document.getElementById('importStudioTemplateCategory')?.value || 'movies';
+  const status = document.getElementById('importStudioStatus');
+  try {
+    const response = await authenticatedFetch(`${API_BASE}/import-studio/template/${encodeURIComponent(category)}/`);
+    if (!response.ok) throw new Error('The template could not be downloaded.');
+    const url = URL.createObjectURL(await response.blob());
+    const link = document.createElement('a');
+    link.href = url;
+    link.download = `omnitrackr-${category}-template.csv`;
+    document.body.appendChild(link);
+    link.click();
+    link.remove();
+    URL.revokeObjectURL(url);
+  } catch (error) {
+    if (status) status.textContent = error.message;
   }
 }
 
@@ -6210,6 +6473,229 @@ async function loadMonthlyReplay() {
   } catch (error) {
     // Monthly Replay is supplemental and should never block the statistics dashboard.
   }
+}
+
+// ============================================================================
+// Private cross-media activity journal
+// ============================================================================
+
+const ACTIVITY_PAGE_SIZE = 30;
+let activityTimelineOffset = 0;
+let activityWeekOffset = 0;
+
+function localDateTimeValue(date = new Date()) {
+  const shifted = new Date(date.getTime() - date.getTimezoneOffset() * 60000);
+  return shifted.toISOString().slice(0, 16);
+}
+
+function setupActivityJournal() {
+  const input = document.getElementById('activityOccurredAt');
+  if (input && !input.value) input.value = localDateTimeValue();
+}
+
+async function populateActivityItems() {
+  const category = document.getElementById('activityCategory')?.value;
+  const select = document.getElementById('activityItem');
+  if (!category || !select) return;
+  select.disabled = true;
+  select.replaceChildren(new Option('Loading your library…', ''));
+  await refreshLibrarySearchIndex();
+  const items = librarySearchIndex
+    .filter(item => item.tab === category)
+    .sort((a, b) => a.title.localeCompare(b.title));
+  select.replaceChildren(new Option(items.length ? 'Choose a library item' : 'No items in this category yet', ''));
+  items.forEach(item => select.appendChild(new Option(item.title, String(item.id))));
+  select.disabled = !items.length;
+}
+
+function activityQuery(reset) {
+  if (reset) activityTimelineOffset = 0;
+  const params = new URLSearchParams({ limit: String(ACTIVITY_PAGE_SIZE), offset: String(activityTimelineOffset) });
+  const category = document.getElementById('activityFilterCategory')?.value;
+  const action = document.getElementById('activityFilterAction')?.value;
+  if (category) params.set('category', category);
+  if (action) params.set('action', action);
+  return params;
+}
+
+function formatActivityDate(value) {
+  const date = new Date(value.endsWith('Z') ? value : `${value}Z`);
+  if (Number.isNaN(date.getTime())) return '';
+  return new Intl.DateTimeFormat(undefined, {
+    month: 'short', day: 'numeric', year: date.getFullYear() === new Date().getFullYear() ? undefined : 'numeric',
+    hour: 'numeric', minute: '2-digit'
+  }).format(date);
+}
+
+function activityIcon(category) {
+  return { movies: '🎬', 'tv-shows': '📺', anime: '🎌', 'video-games': '🎮', music: '🎵', books: '📚' }[category] || '•';
+}
+
+function buildActivityCard(entry) {
+  const article = document.createElement('article');
+  article.className = 'activity-entry';
+  const marker = document.createElement('span');
+  marker.className = 'activity-entry__marker';
+  marker.textContent = activityIcon(entry.category);
+  const copy = document.createElement('div');
+  copy.className = 'activity-entry__copy';
+  const top = document.createElement('div');
+  top.className = 'activity-entry__top';
+  const heading = document.createElement('h4');
+  heading.textContent = entry.title;
+  const date = document.createElement('time');
+  date.dateTime = entry.occurred_at;
+  date.textContent = formatActivityDate(entry.occurred_at);
+  top.append(heading, date);
+  const meta = document.createElement('p');
+  meta.className = 'activity-entry__meta';
+  meta.textContent = `${entry.action_label} · ${entry.category_label}${entry.rating != null ? ` · ${Number(entry.rating).toFixed(1)}/10 snapshot` : ''}`;
+  copy.append(top, meta);
+  if (entry.note) {
+    const note = document.createElement('p');
+    note.className = 'activity-entry__note';
+    note.textContent = entry.note;
+    copy.appendChild(note);
+  }
+  const actions = document.createElement('div');
+  actions.className = 'activity-entry__actions';
+  const open = document.createElement('button');
+  open.type = 'button';
+  open.className = 'activity-entry__open';
+  open.dataset.action = 'pulse-open-item';
+  open.dataset.pulseTab = entry.category;
+  open.textContent = 'Open library';
+  const remove = document.createElement('button');
+  remove.type = 'button';
+  remove.className = 'activity-entry__delete';
+  remove.dataset.action = 'delete-activity';
+  remove.dataset.activityId = entry.id;
+  remove.textContent = 'Remove entry';
+  actions.append(open, remove);
+  article.append(marker, copy, actions);
+  return article;
+}
+
+async function loadActivityTimeline(reset = true) {
+  if (!hasStoredAuth()) return;
+  const container = document.getElementById('activityTimeline');
+  const more = document.getElementById('activityLoadMore');
+  if (!container || !more) return;
+  if (reset) container.textContent = 'Loading your private history…';
+  try {
+    const response = await authenticatedFetch(`${API_BASE}/activity/?${activityQuery(reset)}`);
+    if (!response.ok) throw new Error('Unable to load journal');
+    const entries = await response.json();
+    if (reset) container.replaceChildren();
+    entries.forEach(entry => container.appendChild(buildActivityCard(entry)));
+    if (reset && !entries.length) {
+      const empty = document.createElement('div');
+      empty.className = 'activity-empty';
+      empty.innerHTML = '<strong>Your journal starts with the next moment.</strong><span>Log something you begin, revisit, or want to remember. Existing library history has not been guessed or backfilled.</span>';
+      container.appendChild(empty);
+    }
+    activityTimelineOffset += entries.length;
+    more.hidden = entries.length < ACTIVITY_PAGE_SIZE;
+  } catch (error) {
+    if (reset) container.textContent = 'Could not load your journal. Please try again.';
+    more.hidden = true;
+  }
+}
+
+function renderActivityRecap(recap) {
+  const period = document.getElementById('activityRecapPeriod');
+  const content = document.getElementById('activityRecapContent');
+  const newer = document.getElementById('activityNewerWeek');
+  if (!period || !content || !newer) return;
+  period.textContent = recap.period_label;
+  newer.disabled = activityWeekOffset === 0;
+  content.replaceChildren();
+  const stats = document.createElement('div');
+  stats.className = 'activity-recap__stats';
+  [[recap.entry_count, 'moments'], [recap.completed_count, 'finished'], [recap.reflection_count, 'with notes']].forEach(([value, label]) => {
+    const stat = document.createElement('div');
+    stat.className = 'activity-recap__stat';
+    const number = document.createElement('strong'); number.textContent = String(value || 0);
+    const caption = document.createElement('span'); caption.textContent = label;
+    stat.append(number, caption); stats.appendChild(stat);
+  });
+  content.appendChild(stats);
+  const categories = Array.isArray(recap.category_counts) ? recap.category_counts : [];
+  if (categories.length) {
+    const mix = document.createElement('p');
+    mix.className = 'activity-recap__mix';
+    mix.textContent = categories.map(item => `${activityIcon(item.category)} ${item.label} ${item.count}`).join('   ·   ');
+    content.appendChild(mix);
+  } else {
+    const empty = document.createElement('p');
+    empty.className = 'activity-recap__empty';
+    empty.textContent = activityWeekOffset ? 'No moments were logged this week.' : 'Your week is unwritten. Log one media moment whenever it feels worth remembering.';
+    content.appendChild(empty);
+  }
+}
+
+async function loadActivityRecap() {
+  if (!hasStoredAuth()) return;
+  try {
+    const timezoneOffset = new Date().getTimezoneOffset();
+    const response = await authenticatedFetch(`${API_BASE}/activity/weekly/?offset=${activityWeekOffset}&tz_offset_minutes=${timezoneOffset}`);
+    if (response.ok) renderActivityRecap(await response.json());
+  } catch (error) {
+    const content = document.getElementById('activityRecapContent');
+    if (content) content.textContent = 'Could not load this week right now.';
+  }
+}
+
+function changeActivityWeek(delta) {
+  activityWeekOffset = Math.max(0, Math.min(52, activityWeekOffset + delta));
+  loadActivityRecap();
+}
+
+async function createActivityEntry(event) {
+  event.preventDefault();
+  const status = document.getElementById('activityFormStatus');
+  const localWhen = document.getElementById('activityOccurredAt').value;
+  const payload = {
+    category: document.getElementById('activityCategory').value,
+    item_id: Number(document.getElementById('activityItem').value),
+    action: document.getElementById('activityAction').value,
+    note: document.getElementById('activityNote').value,
+    occurred_at: localWhen ? new Date(localWhen).toISOString() : new Date().toISOString(),
+  };
+  if (!payload.item_id) { status.textContent = 'Choose something from your library first.'; return; }
+  status.textContent = 'Saving…';
+  try {
+    const response = await authenticatedFetch(`${API_BASE}/activity/`, {
+      method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload),
+    });
+    if (!response.ok) {
+      const body = await response.json().catch(() => ({}));
+      throw new Error(body.detail || 'Could not save this moment');
+    }
+    document.getElementById('activityNote').value = '';
+    document.getElementById('activityOccurredAt').value = localDateTimeValue();
+    status.textContent = 'Moment saved.';
+    await Promise.all([loadActivityTimeline(true), loadActivityRecap()]);
+  } catch (error) {
+    status.textContent = error.message || 'Could not save this moment. Please try again.';
+  }
+}
+
+async function deleteActivityEntry(entryId) {
+  if (!Number.isInteger(entryId) || entryId < 1) return;
+  if (!confirm('Remove this journal entry? The media item will stay in your library.')) return;
+  try {
+    const response = await authenticatedFetch(`${API_BASE}/activity/${entryId}`, { method: 'DELETE' });
+    if (!response.ok) throw new Error('Unable to remove journal entry');
+    await Promise.all([loadActivityTimeline(true), loadActivityRecap()]);
+  } catch (error) {
+    alert('Could not remove that journal entry. Please try again.');
+  }
+}
+
+async function loadActivityJournal() {
+  setupActivityJournal();
+  await Promise.all([populateActivityItems(), loadActivityTimeline(true), loadActivityRecap()]);
 }
 
 let collectionsCache = [];

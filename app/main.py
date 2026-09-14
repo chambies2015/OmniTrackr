@@ -42,8 +42,10 @@ from .routers import (
     reviews,
     next_up,
     completion_moments,
+    activity,
     collections,
     discover,
+    import_studio,
 )
 
 # Create database tables
@@ -85,28 +87,27 @@ app.add_middleware(SlowAPIMiddleware)
 
 ENVIRONMENT = os.getenv("ENVIRONMENT", "development").lower()
 
-AD_ELIGIBLE_TEMPLATES = {
+INDEXABLE_PUBLIC_TEMPLATES = {
     "about.html",
+    "demo.html",
+    "export_import_guide.html",
     "faq.html",
     "guides.html",
-    "compare.html",
-    "use_cases.html",
-    "changelog.html",
-    "tv_show_tracker.html",
-    "game_tracker.html",
-    "movie_tracker.html",
-    "anime_tracker.html",
-    "book_tracker.html",
-    "music_tracker.html",
-    "media_statistics.html",
-    "export_import_guide.html",
-    "media_tracker_checklist.html",
-    "tracking_templates.html",
+    "media_tracking.html",
     "review_guidelines.html",
     "sample_library.html",
+    "reviews.html",
+}
+
+# Ads are limited to the small set of pages that provide a complete experience
+# without an account.  Directory, policy, release-note, and overlapping guide
+# pages remain useful and linked, but are not treated as advertising inventory.
+AD_ELIGIBLE_TEMPLATES = {
     "demo.html",
+    "export_import_guide.html",
     "media_tracking.html",
-    "roadmap.html",
+    "review_guidelines.html",
+    "sample_library.html",
     "reviews.html",
 }
 
@@ -131,12 +132,31 @@ def inject_public_ad_loader(html: str, template_name: str, request: Request | No
     return html.replace("</head>", f"{loader}</head>", 1)
 
 
+def apply_public_search_policy(html: str, template_name: str) -> tuple[str, bool]:
+    """Keep useful supporting pages accessible without diluting search inventory."""
+    indexable = template_name in INDEXABLE_PUBLIC_TEMPLATES
+    if indexable:
+        return html, True
+
+    noindex_meta = '<meta name="robots" content="noindex, follow">'
+    robots_pattern = r'<meta\s+name=["\']robots["\']\s+content=["\'][^"\']*["\']\s*/?>'
+    if re.search(robots_pattern, html, flags=re.IGNORECASE):
+        html = re.sub(robots_pattern, noindex_meta, html, count=1, flags=re.IGNORECASE)
+    elif "</head>" in html:
+        html = html.replace("</head>", f"  {noindex_meta}\n</head>", 1)
+    return html, False
+
+
 def strict_template_response(template_name: str, request: Request | None = None):
     html_file = os.path.join(os.path.dirname(__file__), "templates", template_name)
     if os.path.exists(html_file):
         with open(html_file, "r", encoding="utf-8") as file:
-            html = inject_adsense_account_meta(file.read())
-            return strict_html_response(inject_public_ad_loader(html, template_name, request))
+            html, indexable = apply_public_search_policy(file.read(), template_name)
+            html = inject_adsense_account_meta(html)
+            response = strict_html_response(inject_public_ad_loader(html, template_name, request))
+            if not indexable:
+                response.headers["X-Robots-Tag"] = "noindex, follow"
+            return response
     return None
 
 
@@ -276,6 +296,8 @@ app.include_router(books.router)
 app.include_router(statistics.router)
 app.include_router(next_up.router)
 app.include_router(completion_moments.router)
+app.include_router(activity.router)
+app.include_router(import_studio.router)
 app.include_router(collections.router)
 app.include_router(discover.router)
 app.include_router(export_import.router)

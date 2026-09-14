@@ -8,6 +8,7 @@ from sqlalchemy.orm import Session
 
 from .. import crud, schemas, models
 from ..dependencies import get_db, get_current_user
+from .activity import _serialize as serialize_activity, import_activity_entries
 
 router = APIRouter(prefix="", tags=["export-import"])
 
@@ -25,17 +26,21 @@ async def export_data(
     music = crud.get_all_music(db, current_user.id)
     books = crud.get_all_books(db, current_user.id)
     custom_tabs = crud.get_all_custom_tabs_with_items(db, current_user.id)
+    activities = db.query(models.ActivityEntry).filter(
+        models.ActivityEntry.user_id == current_user.id
+    ).order_by(models.ActivityEntry.occurred_at.desc(), models.ActivityEntry.id.desc()).all()
 
     export_metadata = {
         "export_timestamp": datetime.now().isoformat(),
-        "version": "1.0",
+        "version": "1.1",
         "total_movies": len(movies),
         "total_tv_shows": len(tv_shows),
         "total_anime": len(anime),
         "total_video_games": len(video_games),
         "total_music": len(music),
         "total_books": len(books),
-        "total_custom_tabs": len(custom_tabs)
+        "total_custom_tabs": len(custom_tabs),
+        "total_activities": len(activities),
     }
 
     return schemas.ExportData(
@@ -46,6 +51,7 @@ async def export_data(
         music=music,
         books=books,
         custom_tabs=custom_tabs,
+        activities=[serialize_activity(entry) for entry in activities],
         export_metadata=export_metadata
     )
 
@@ -64,6 +70,7 @@ async def import_data(
     music_created, music_updated, music_errors = crud.import_music(db, current_user.id, import_data.music)
     books_created, books_updated, book_errors = crud.import_books(db, current_user.id, import_data.books)
     custom_tabs_created, custom_tabs_updated, custom_tab_errors = crud.import_custom_tabs(db, current_user.id, import_data.custom_tabs)
+    activities_created, activities_skipped = import_activity_entries(db, current_user.id, import_data.activities)
 
     all_errors = movie_errors + tv_show_errors + anime_errors + video_game_errors + music_errors + book_errors + custom_tab_errors
 
@@ -82,6 +89,8 @@ async def import_data(
         books_updated=books_updated,
         custom_tabs_created=custom_tabs_created,
         custom_tabs_updated=custom_tabs_updated,
+        activities_created=activities_created,
+        activities_skipped=activities_skipped,
         errors=all_errors
     )
 
@@ -113,8 +122,9 @@ async def import_from_file(
         music = [schemas.MusicCreate(**music_item) for music_item in data.get('music', [])]
         books = [schemas.BookCreate(**book) for book in data.get('books', [])]
         custom_tabs = data.get('custom_tabs', [])
+        activities = [schemas.ActivityEntryImport(**entry) for entry in data.get('activities', [])]
 
-        import_data = schemas.ImportData(movies=movies, tv_shows=tv_shows, anime=anime, video_games=video_games, music=music, books=books, custom_tabs=custom_tabs)
+        import_data = schemas.ImportData(movies=movies, tv_shows=tv_shows, anime=anime, video_games=video_games, music=music, books=books, custom_tabs=custom_tabs, activities=activities)
 
         # Import the data
         movies_created, movies_updated, movie_errors = crud.import_movies(db, current_user.id, import_data.movies)
@@ -124,6 +134,7 @@ async def import_from_file(
         music_created, music_updated, music_errors = crud.import_music(db, current_user.id, import_data.music)
         books_created, books_updated, book_errors = crud.import_books(db, current_user.id, import_data.books)
         custom_tabs_created, custom_tabs_updated, custom_tab_errors = crud.import_custom_tabs(db, current_user.id, import_data.custom_tabs)
+        activities_created, activities_skipped = import_activity_entries(db, current_user.id, import_data.activities)
 
         all_errors = movie_errors + tv_show_errors + anime_errors + video_game_errors + music_errors + book_errors + custom_tab_errors
 
@@ -142,6 +153,8 @@ async def import_from_file(
             books_updated=books_updated,
             custom_tabs_created=custom_tabs_created,
             custom_tabs_updated=custom_tabs_updated,
+            activities_created=activities_created,
+            activities_skipped=activities_skipped,
             errors=all_errors
         )
 

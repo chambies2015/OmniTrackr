@@ -4,7 +4,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <meta name="description" content="Learn how OmniTrackr export and import help keep movie, show, anime, game, music, book, review, rating, privacy, and custom tab data portable with JSON backups.">
+  <meta name="description" content="Move Letterboxd, Goodreads, MyAnimeList, spreadsheet, and OmniTrackr data safely with preview-first CSV migration, duplicate protection, and portable JSON backups.">
   <meta name="robots" content="index, follow, max-image-preview:large">
   <meta name="author" content="OmniTrackr">
   <title>Export & Import Guide - Back Up and Move Your Media Library</title>
@@ -13,7 +13,7 @@
   <meta property="og:type" content="article">
   <meta property="og:url" content="https://omnitrackr.xyz/export-import-guide">
   <meta property="og:title" content="Export & Import Guide - Back Up and Move Your Media Library">
-  <meta property="og:description" content="A practical guide to OmniTrackr JSON exports, imports, backups, portability, review data, privacy fields, and smart duplicate handling.">
+  <meta property="og:description" content="A practical guide to previewing Letterboxd, Goodreads, MyAnimeList, and spreadsheet migrations, plus OmniTrackr JSON backups and restores.">
   <meta property="og:image" content="https://omnitrackr.xyz/omnitrackr_vortex.png">
   <meta property="og:image:alt" content="OmniTrackr export and import guide">
   <meta property="og:site_name" content="OmniTrackr">
@@ -43,8 +43,8 @@
     "@context": "https://schema.org",
     "@type": "Article",
     "headline": "Export and Import Guide for Portable Media Library Backups",
-    "description": "A guide to OmniTrackr JSON exports, imports, backups, portability, privacy fields, reviews, ratings, and smart duplicate handling.",
-    "dateModified": "2026-06-23",
+    "description": "A guide to preview-first CSV migration from Letterboxd, Goodreads, MyAnimeList, and spreadsheets, plus OmniTrackr JSON backups and restores.",
+    "dateModified": "2026-09-14",
     "author": { "@type": "Organization", "name": "OmniTrackr" },
     "publisher": { "@type": "Organization", "name": "OmniTrackr", "url": "https://omnitrackr.xyz" },
     "mainEntityOfPage": "https://omnitrackr.xyz/export-import-guide",
@@ -77,7 +77,7 @@
       <a href="/media-tracking" class="back-link">Back to Media Tracking Hub</a>
       <header class="content-header">
         <h1>Export &amp; Import Guide</h1>
-        <p>Keep your movie, show, anime, game, music, book, and custom tab data portable with JSON backups.</p>
+        <p>Bring an existing media history into OmniTrackr without surrendering control of the library you already built.</p>
       </header>
 
       <section class="content-section" aria-labelledby="why-heading">
@@ -101,10 +101,34 @@
       </section>
 
       <section class="content-section" aria-labelledby="import-heading">
-        <h2 id="import-heading">How Import Helps</h2>
-        <p>Import lets users restore or move data without retyping every entry. OmniTrackr handles built-in categories and custom tabs, and older files can still work when they lack newer categories. The import flow is designed to update matching records where possible rather than blindly creating duplicates.</p>
-        <p>That makes import useful for several everyday cases: moving data into a fresh account, restoring a known-good backup after cleanup, testing a batch of entries, or bringing older OmniTrackr exports forward after new media categories have been added.</p>
-        <p>After importing, review a few sample records in each category. Check ratings, statuses, review text, public-review choices, and category-specific fields such as seasons, episodes, authors, artists, genres, or release dates. A quick check is much easier than discovering a mismatch months later.</p>
+        <h2 id="import-heading">How Import Helps: Two Paths with Different Jobs</h2>
+        <p>OmniTrackr keeps migration separate from backup restoration. The Import Studio accepts CSV or TSV files from another tracker or spreadsheet and only creates records that are not already in your library. JSON restore accepts an OmniTrackr backup and can update matching records because the backup already uses OmniTrackr's own field structure.</p>
+        <p>That distinction is intentional. A third-party CSV may omit a director, publication year, or release date, so it should never be trusted to replace a richer record you already maintain. The studio classifies matches as duplicates and leaves the existing version untouched.</p>
+      </section>
+
+      <section class="content-section" aria-labelledby="sources-heading">
+        <h2 id="sources-heading">What the Import Studio Understands</h2>
+        <ul>
+          <li><strong>Letterboxd:</strong> watched, diary, ratings, and watchlist-style CSV columns become movie records. Letterboxd's five-point rating is converted to OmniTrackr's ten-point scale. Watchlist rows remain unwatched.</li>
+          <li><strong>Goodreads:</strong> title, author, publication year, shelf status, rating, date read, and review fields become private book records. Goodreads ratings are also converted from five points to ten.</li>
+          <li><strong>MyAnimeList:</strong> series title, episode total, score, status, start year, and comments become anime records.</li>
+          <li><strong>Generic spreadsheets:</strong> choose one of OmniTrackr's six categories or include a category column. Familiar headings such as title, creator, year, rating, status, review, genre, seasons, episodes, and release date are recognized automatically.</li>
+        </ul>
+        <p>When a spreadsheet uses personal headings such as “Thing,” “Maker,” or “My verdict,” open the optional mapping panel and pair those columns with OmniTrackr fields before previewing. Downloadable templates are available for every built-in category if you would rather copy data into a known layout.</p>
+      </section>
+
+      <section class="content-section" aria-labelledby="preview-heading">
+        <h2 id="preview-heading">Preview First, Then Decide</h2>
+        <ol>
+          <li>Open Account Settings and find the Import Studio.</li>
+          <li>Select the original service or let OmniTrackr detect it from the headers.</li>
+          <li>Choose the file and map unusual columns if necessary.</li>
+          <li>Preview the batch. No database writes happen during this step.</li>
+          <li>Review ready, duplicate, and invalid totals along with the row-level explanation.</li>
+          <li>Confirm only when the preview looks right. The exact file and mapping must still match the preview.</li>
+        </ol>
+        <p>The confirmed batch is atomic: all ready rows are created together, or none are created if saving fails. Duplicate and invalid rows remain unchanged. Imported review text is private by default, and the studio does not call external artwork services while processing the file.</p>
+        <p>Imports are limited to 5 MB and 5,000 rows per batch. This keeps the preview understandable and prevents one accidental export from overwhelming an account. Larger histories can be split into dated or category-specific files.</p>
       </section>
 
       <section class="content-section" aria-labelledby="habits-heading">

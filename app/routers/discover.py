@@ -26,11 +26,15 @@ def monthly_for(slug):
     return MONTHLY_EDITIONS[slug]
 
 
-def page(title, description, path, content):
+def page(title, description, path, content, *, indexable=True):
     html = (Path(__file__).parents[1] / "templates" / "discover.html").read_text(encoding="utf-8")
-    for key, value in {"TITLE": escape(title), "DESCRIPTION": escape(description, quote=True), "PATH": path, "CONTENT": content}.items():
+    robots = "index, follow, max-image-preview:large" if indexable else "noindex, follow"
+    for key, value in {"TITLE": escape(title), "DESCRIPTION": escape(description, quote=True), "PATH": path, "ROBOTS": robots, "CONTENT": content}.items():
         html = html.replace("{{" + key + "}}", value)
-    return strict_html_response(html)
+    response = strict_html_response(html)
+    if not indexable:
+        response.headers["X-Robots-Tag"] = "noindex, follow"
+    return response
 
 
 @router.get("/discover")
@@ -58,7 +62,13 @@ def monthly_detail(slug: str):
 @router.get("/discover/{slug}")
 def discover_detail(slug: str):
     t = trail_for(slug)
-    return page(t["name"] + " | Discover", t["intro"], "/discover/" + slug, detail_content(t, "/discover", "All trails", slug, "September 8, 2026"))
+    return page(
+        t["name"] + " | Discover",
+        t["intro"],
+        "/discover/" + slug,
+        detail_content(t, "/discover", "All trails", slug, "September 8, 2026"),
+        indexable=False,
+    )
 
 
 def match(db, user_id, item):

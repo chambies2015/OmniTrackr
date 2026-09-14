@@ -48,7 +48,10 @@ def test_public_content_and_auth(client, db_session):
     assert db_session.query(models.Collection).count() == 0
     sitemap = client.get('/sitemap.xml').text
     for slug in TRAILS:
-        assert f'/discover/{slug}' in sitemap
+        trail_page = client.get(f'/discover/{slug}')
+        assert trail_page.headers['x-robots-tag'] == 'noindex, follow'
+        assert '<meta name="robots" content="noindex, follow">' in trail_page.text
+        assert f'/discover/{slug}' not in sitemap
     for slug in MONTHLY_EDITIONS:
         assert f'/discover/monthly/{slug}' in sitemap
 

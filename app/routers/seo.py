@@ -25,189 +25,34 @@ REVIEW_CATEGORY_MODELS = (
     ("book", models.Book),
 )
 
+# A sitemap is a recommendation, not an inventory dump. Supporting pages remain
+# reachable through navigation, while this list concentrates crawling on the
+# public experiences with a distinct purpose and a complete answer of their own.
+CORE_SITEMAP_PATHS = (
+    ("/", "weekly", "1.0"),
+    ("/about", "monthly", "0.7"),
+    ("/faq", "monthly", "0.7"),
+    ("/guides", "monthly", "0.75"),
+    ("/demo", "monthly", "0.8"),
+    ("/media-tracking", "monthly", "0.85"),
+    ("/export-import-guide", "monthly", "0.75"),
+    ("/review-guidelines", "monthly", "0.75"),
+    ("/sample-library", "monthly", "0.8"),
+    ("/reviews", "daily", "0.8"),
+)
+
 
 @router.get("/sitemap.xml")
 async def get_sitemap(db: Session = Depends(get_db)):
     """Generate and serve sitemap.xml for SEO."""
     base_url = os.getenv("SITE_URL", "https://omnitrackr.xyz")
     today = datetime.now().strftime('%Y-%m-%d')
-    
-    sitemap_parts = ["""<?xml version="1.0" encoding="UTF-8"?>
-<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
-  <url>
-    <loc>{base_url}/</loc>
-    <lastmod>{today}</lastmod>
-    <changefreq>weekly</changefreq>
-    <priority>1.0</priority>
-  </url>
-  <url>
-    <loc>{base_url}/privacy</loc>
-    <lastmod>{today}</lastmod>
-    <changefreq>monthly</changefreq>
-    <priority>0.5</priority>
-  </url>
-  <url>
-    <loc>{base_url}/advertising</loc>
-    <lastmod>{today}</lastmod>
-    <changefreq>monthly</changefreq>
-    <priority>0.55</priority>
-  </url>
-  <url>
-    <loc>{base_url}/content-quality</loc>
-    <lastmod>{today}</lastmod>
-    <changefreq>monthly</changefreq>
-    <priority>0.6</priority>
-  </url>
-  <url>
-    <loc>{base_url}/site-map</loc>
-    <lastmod>{today}</lastmod>
-    <changefreq>monthly</changefreq>
-    <priority>0.65</priority>
-  </url>
-  <url>
-    <loc>{base_url}/about</loc>
-    <lastmod>{today}</lastmod>
-    <changefreq>monthly</changefreq>
-    <priority>0.7</priority>
-  </url>
-  <url>
-    <loc>{base_url}/faq</loc>
-    <lastmod>{today}</lastmod>
-    <changefreq>monthly</changefreq>
-    <priority>0.7</priority>
-  </url>
-  <url>
-    <loc>{base_url}/guides</loc>
-    <lastmod>{today}</lastmod>
-    <changefreq>monthly</changefreq>
-    <priority>0.7</priority>
-  </url>
-  <url>
-    <loc>{base_url}/compare</loc>
-    <lastmod>{today}</lastmod>
-    <changefreq>monthly</changefreq>
-    <priority>0.75</priority>
-  </url>
-  <url>
-    <loc>{base_url}/use-cases</loc>
-    <lastmod>{today}</lastmod>
-    <changefreq>monthly</changefreq>
-    <priority>0.75</priority>
-  </url>
-  <url>
-    <loc>{base_url}/changelog</loc>
-    <lastmod>{today}</lastmod>
-    <changefreq>monthly</changefreq>
-    <priority>0.65</priority>
-  </url>
-  <url>
-    <loc>{base_url}/tv-show-tracker</loc>
-    <lastmod>{today}</lastmod>
-    <changefreq>monthly</changefreq>
-    <priority>0.75</priority>
-  </url>
-  <url>
-    <loc>{base_url}/game-tracker</loc>
-    <lastmod>{today}</lastmod>
-    <changefreq>monthly</changefreq>
-    <priority>0.75</priority>
-  </url>
-  <url>
-    <loc>{base_url}/movie-tracker</loc>
-    <lastmod>{today}</lastmod>
-    <changefreq>monthly</changefreq>
-    <priority>0.75</priority>
-  </url>
-  <url>
-    <loc>{base_url}/anime-tracker</loc>
-    <lastmod>{today}</lastmod>
-    <changefreq>monthly</changefreq>
-    <priority>0.75</priority>
-  </url>
-  <url>
-    <loc>{base_url}/book-tracker</loc>
-    <lastmod>{today}</lastmod>
-    <changefreq>monthly</changefreq>
-    <priority>0.75</priority>
-  </url>
-  <url>
-    <loc>{base_url}/music-tracker</loc>
-    <lastmod>{today}</lastmod>
-    <changefreq>monthly</changefreq>
-    <priority>0.75</priority>
-  </url>
-  <url>
-    <loc>{base_url}/media-statistics</loc>
-    <lastmod>{today}</lastmod>
-    <changefreq>monthly</changefreq>
-    <priority>0.75</priority>
-  </url>
-  <url>
-    <loc>{base_url}/export-import-guide</loc>
-    <lastmod>{today}</lastmod>
-    <changefreq>monthly</changefreq>
-    <priority>0.75</priority>
-  </url>
-  <url>
-    <loc>{base_url}/media-tracker-checklist</loc>
-    <lastmod>{today}</lastmod>
-    <changefreq>monthly</changefreq>
-    <priority>0.75</priority>
-  </url>
-  <url>
-    <loc>{base_url}/tracking-templates</loc>
-    <lastmod>{today}</lastmod>
-    <changefreq>monthly</changefreq>
-    <priority>0.75</priority>
-  </url>
-  <url>
-    <loc>{base_url}/review-guidelines</loc>
-    <lastmod>{today}</lastmod>
-    <changefreq>monthly</changefreq>
-    <priority>0.75</priority>
-  </url>
-  <url>
-    <loc>{base_url}/sample-library</loc>
-    <lastmod>{today}</lastmod>
-    <changefreq>monthly</changefreq>
-    <priority>0.8</priority>
-  </url>
-  <url>
-    <loc>{base_url}/demo</loc>
-    <lastmod>{today}</lastmod>
-    <changefreq>monthly</changefreq>
-    <priority>0.8</priority>
-  </url>
-  <url>
-    <loc>{base_url}/media-tracking</loc>
-    <lastmod>{today}</lastmod>
-    <changefreq>monthly</changefreq>
-    <priority>0.8</priority>
-  </url>
-  <url>
-    <loc>{base_url}/roadmap</loc>
-    <lastmod>{today}</lastmod>
-    <changefreq>monthly</changefreq>
-    <priority>0.65</priority>
-  </url>
-  <url>
-    <loc>{base_url}/terms</loc>
-    <lastmod>{today}</lastmod>
-    <changefreq>monthly</changefreq>
-    <priority>0.5</priority>
-  </url>
-  <url>
-    <loc>{base_url}/contact</loc>
-    <lastmod>{today}</lastmod>
-    <changefreq>monthly</changefreq>
-    <priority>0.6</priority>
-  </url>
-  <url>
-    <loc>{base_url}/reviews</loc>
-    <lastmod>{today}</lastmod>
-    <changefreq>daily</changefreq>
-    <priority>0.8</priority>
-  </url>""".format(base_url=base_url, today=today)]
+    sitemap_parts = ['<?xml version="1.0" encoding="UTF-8"?>', '<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">']
+    for path, changefreq, priority in CORE_SITEMAP_PATHS:
+        sitemap_parts.append(
+            f"  <url><loc>{base_url}{path}</loc><changefreq>{changefreq}</changefreq>"
+            f"<priority>{priority}</priority></url>"
+        )
     
     try:
         user_query = db.query(models.User.id).filter(models.User.is_active == True)
@@ -320,28 +165,12 @@ async def get_sitemap(db: Session = Depends(get_db)):
     except Exception:
         pass
     
-    from ..discover_catalog import MONTHLY_EDITIONS, TRAILS
+    from ..discover_catalog import MONTHLY_EDITIONS
     for path in [
         "/discover",
-        *[f"/discover/{slug}" for slug in TRAILS],
         *[f"/discover/monthly/{slug}" for slug in MONTHLY_EDITIONS],
     ]:
         sitemap_parts.append(f"<url><loc>{base_url}{path}</loc></url>")
-    public_collections = db.query(models.Collection).filter(
-        models.Collection.is_public == True,
-    ).all()
-    from .collections import CATEGORIES as COLLECTION_CATEGORIES
-    for collection in public_collections:
-        available_items = sum(
-            db.query(COLLECTION_CATEGORIES[item.category][0]).filter(
-                COLLECTION_CATEGORIES[item.category][0].id == item.item_id,
-                COLLECTION_CATEGORIES[item.category][0].user_id == collection.user_id,
-            ).count()
-            for item in collection.items
-            if item.category in COLLECTION_CATEGORIES
-        )
-        if len((collection.description or "").strip()) >= 300 and available_items >= 3:
-            sitemap_parts.append(f"<url><loc>{base_url}/collections/public/{collection.id}</loc></url>")
     sitemap_parts.append("</urlset>")
     sitemap = "\n".join(sitemap_parts)
     
@@ -365,33 +194,6 @@ User-agent: *
 Allow: /
 Allow: /ads.txt
 Allow: /sellers.json
-Allow: /reviews
-Allow: /about
-Allow: /faq
-Allow: /advertising
-Allow: /content-quality
-Allow: /site-map
-Allow: /guides
-Allow: /discover
-Allow: /collections/public/
-Allow: /compare
-Allow: /use-cases
-Allow: /changelog
-Allow: /tv-show-tracker
-Allow: /game-tracker
-Allow: /movie-tracker
-Allow: /anime-tracker
-Allow: /book-tracker
-Allow: /music-tracker
-Allow: /media-statistics
-Allow: /export-import-guide
-Allow: /media-tracker-checklist
-Allow: /tracking-templates
-Allow: /review-guidelines
-Allow: /sample-library
-Allow: /demo
-Allow: /media-tracking
-Allow: /roadmap
 Disallow: /auth/
 Disallow: /api/
 Disallow: /account/

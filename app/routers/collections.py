@@ -176,7 +176,11 @@ async def public_collection(collection_id: int, db: Session = Depends(get_db)):
     }
     for key, value in values.items():
         template = template.replace("{{" + key + "}}", value)
-    return strict_html_response(template)
+    response = strict_html_response(template)
+    # Shared shelves are useful direct links, but remain outside search inventory
+    # until OmniTrackr has a moderation workflow for user-authored public pages.
+    response.headers["X-Robots-Tag"] = "noindex, follow"
+    return response
 
 
 @router.delete("/{collection_id}", status_code=status.HTTP_204_NO_CONTENT)

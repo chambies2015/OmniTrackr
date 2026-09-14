@@ -179,7 +179,7 @@
         "name": "Can I export my data?",
         "acceptedAnswer": {
           "@type": "Answer",
-          "text": "Yes! You can export your entire collection (movies, TV shows, anime, video games, music, and books) as a JSON file at any time. This allows you to backup your data or import it into another account. You can also import JSON files to quickly add multiple entries."
+          "text": "Yes. Export your movies, TV shows, anime, video games, music, books, collections, and private journal as a JSON backup. The Import Studio can also preview Letterboxd, Goodreads, MyAnimeList, and generic CSV migrations without overwriting existing library records."
         }
       },
       {
@@ -413,6 +413,7 @@
       <button class="tab" data-switch-tab="video-games">🎮 Video Games</button>
       <button class="tab" data-switch-tab="music">🎵 Music</button>
       <button class="tab" data-switch-tab="books">📚 Books</button>
+      <button class="tab" data-switch-tab="activity">📝 Journal</button>
       <button class="tab" data-switch-tab="collections">🗂 Collections</button>
       <button class="tab" data-switch-tab="statistics">📊 Statistics</button>
       <div id="customTabsContainer"></div>
@@ -908,6 +909,84 @@
           </table>
         </div>
       </div>
+    </div>
+
+    <!-- Private Activity Journal Tab Content -->
+    <div id="activity-tab" class="tab-content">
+      <section class="activity-hero">
+        <div>
+          <p class="activity-hero__eyebrow">Private across every media type</p>
+          <h2>Your Activity Journal</h2>
+          <p>Remember what you started, where you made progress, and what stayed with you. Entries are visible only inside your account.</p>
+        </div>
+        <span class="activity-hero__privacy">No public profile · No ads</span>
+      </section>
+
+      <section class="activity-recap" aria-labelledby="activityRecapTitle">
+        <div class="activity-recap__header">
+          <div>
+            <p class="activity-recap__eyebrow">Weekly playback</p>
+            <h3 id="activityRecapTitle">This week in media</h3>
+            <p id="activityRecapPeriod"></p>
+          </div>
+          <div class="activity-recap__controls">
+            <button type="button" class="action-btn secondary" data-action="activity-older-week">← Older</button>
+            <button type="button" class="action-btn secondary" id="activityNewerWeek" data-action="activity-newer-week">Newer →</button>
+          </div>
+        </div>
+        <div id="activityRecapContent" aria-live="polite"><p>Loading your week…</p></div>
+      </section>
+
+      <section class="card activity-create" aria-labelledby="activityCreateTitle">
+        <div class="activity-create__intro">
+          <div><p class="activity-create__eyebrow">Quick log</p><h3 id="activityCreateTitle">Add a moment</h3></div>
+          <p>Choose something already in your library. Logging a moment never changes its rating, status, or review.</p>
+        </div>
+        <form id="activityForm" class="activity-form" data-submit-action="create-activity">
+          <label>Media type
+            <select id="activityCategory" required data-change-action="activity-category">
+              <option value="movies">Movie</option><option value="tv-shows">TV show</option>
+              <option value="anime">Anime</option><option value="video-games">Game</option>
+              <option value="music">Album</option><option value="books">Book</option>
+            </select>
+          </label>
+          <label>Library item
+            <select id="activityItem" required><option value="">Loading your library…</option></select>
+          </label>
+          <label>Moment
+            <select id="activityAction" required>
+              <option value="started">Started</option><option value="progressed">Made progress</option>
+              <option value="completed">Finished</option><option value="revisited">Revisited</option>
+              <option value="noted">Added a note</option>
+            </select>
+          </label>
+          <label>When
+            <input id="activityOccurredAt" type="datetime-local" required>
+          </label>
+          <label class="activity-form__note">Private note
+            <textarea id="activityNote" rows="2" maxlength="500" placeholder="What do you want future-you to remember?"></textarea>
+          </label>
+          <div class="activity-form__submit"><button type="submit" class="action-btn">Log this moment</button><span id="activityFormStatus" role="status"></span></div>
+        </form>
+      </section>
+
+      <section class="activity-timeline" aria-labelledby="activityTimelineTitle">
+        <div class="activity-timeline__header">
+          <div><p class="activity-timeline__eyebrow">Your private history</p><h3 id="activityTimelineTitle">Recent moments</h3></div>
+          <div class="activity-timeline__filters">
+            <select id="activityFilterCategory" data-change-action="activity-filter" aria-label="Filter journal by media type">
+              <option value="">All media</option><option value="movies">Movies</option><option value="tv-shows">TV shows</option>
+              <option value="anime">Anime</option><option value="video-games">Games</option><option value="music">Albums</option><option value="books">Books</option>
+            </select>
+            <select id="activityFilterAction" data-change-action="activity-filter" aria-label="Filter journal by moment">
+              <option value="">All moments</option><option value="started">Started</option><option value="progressed">Progress</option>
+              <option value="completed">Finished</option><option value="revisited">Revisited</option><option value="noted">Notes</option>
+            </select>
+          </div>
+        </div>
+        <div id="activityTimeline" class="activity-timeline__list" aria-live="polite"></div>
+        <button id="activityLoadMore" type="button" class="action-btn secondary activity-load-more" data-action="activity-load-more" hidden>Load earlier moments</button>
+      </section>
     </div>
 
     <!-- Collections Tab Content -->
@@ -1461,7 +1540,7 @@
             <span class="faq-icon">+</span>
           </button>
           <div class="faq-answer" id="faq-answer-4">
-            <p>Yes! You can export your entire collection (movies, TV shows, anime, video games, music, and books) as a JSON file at any time. This allows you to backup your data or import it into another account. You can also import JSON files to quickly add multiple entries.</p>
+            <p>Yes. Export your complete library and private journal as a JSON backup. To bring an existing history into OmniTrackr, use the preview-first Import Studio for Letterboxd, Goodreads, MyAnimeList, or generic CSV files; matching records are skipped instead of overwritten.</p>
           </div>
         </div>
 
@@ -1878,6 +1957,72 @@
             <a class="action-btn" href="/privacy" target="_blank" rel="noopener noreferrer">Privacy Policy</a>
             <a class="action-btn" href="/reviews" target="_blank" rel="noopener noreferrer">Public Reviews</a>
           </div>
+        </div>
+
+        <!-- Preview-first migration studio -->
+        <div class="account-section import-studio" id="importStudio">
+          <div class="import-studio__eyebrow">Bring your history with you</div>
+          <h3>Import Studio</h3>
+          <p class="info-text">Preview a Letterboxd, Goodreads, MyAnimeList, or generic CSV before anything is saved. Existing records are never overwritten: matches and repeated rows are skipped.</p>
+          <form id="importStudioForm" data-submit-action="preview-library-import">
+            <div class="import-studio__controls">
+              <label>
+                <span>Export format</span>
+                <select id="importStudioSource" data-change-action="import-studio-options">
+                  <option value="auto">Detect automatically</option>
+                  <option value="letterboxd">Letterboxd CSV</option>
+                  <option value="goodreads">Goodreads CSV</option>
+                  <option value="myanimelist">MyAnimeList CSV</option>
+                  <option value="generic">Generic CSV / spreadsheet</option>
+                </select>
+              </label>
+              <label>
+                <span>Generic CSV category</span>
+                <select id="importStudioCategory" data-change-action="import-studio-options">
+                  <option value="">Use the category column</option>
+                  <option value="movies">Movies</option>
+                  <option value="tv-shows">TV Shows</option>
+                  <option value="anime">Anime</option>
+                  <option value="video-games">Video Games</option>
+                  <option value="music">Music</option>
+                  <option value="books">Books</option>
+                </select>
+              </label>
+              <label class="import-studio__file-label">
+                <span>CSV or TSV file · up to 5 MB / 5,000 rows</span>
+                <input id="importStudioFile" type="file" accept=".csv,.tsv,text/csv,text/tab-separated-values" required data-change-action="import-studio-file">
+              </label>
+            </div>
+
+            <details class="import-studio__mapping" id="importStudioMappingPanel">
+              <summary>Map unusual spreadsheet columns</summary>
+              <p class="info-text">Optional. Match OmniTrackr fields to your file's headers. Choose at least Title when your spreadsheet uses a different name.</p>
+              <div id="importStudioMapping" class="import-studio__mapping-grid">
+                <p class="info-text">Choose a file to inspect its columns.</p>
+              </div>
+            </details>
+
+            <div class="import-studio__actions">
+              <button type="submit" class="action-btn" id="importStudioPreviewButton">Preview import</button>
+              <button type="button" class="action-btn import-studio__apply" id="importStudioApplyButton" data-action="apply-library-import" disabled>Import ready rows</button>
+              <label class="import-studio__template-select">
+                <span class="sr-only">Template category</span>
+                <select id="importStudioTemplateCategory">
+                  <option value="movies">Movie template</option>
+                  <option value="tv-shows">TV show template</option>
+                  <option value="anime">Anime template</option>
+                  <option value="video-games">Game template</option>
+                  <option value="music">Music template</option>
+                  <option value="books">Book template</option>
+                </select>
+              </label>
+              <button type="button" class="action-btn" data-action="download-import-template">Download template</button>
+              <a class="action-btn" href="/export-import-guide" target="_blank" rel="noopener noreferrer">Migration guide</a>
+            </div>
+          </form>
+          <div id="importStudioStatus" class="import-studio__status" role="status" aria-live="polite"></div>
+          <div id="importStudioResults" hidden></div>
+          <p class="import-studio__safety"><strong>Safety promise:</strong> preview performs no writes, imports are additive and atomic, imported reviews stay private, and artwork lookups are deferred until you visit the relevant library tab.</p>
         </div>
 
         <!-- Tab Visibility Settings Section -->

@@ -161,12 +161,14 @@ class TestSEOEndpoints:
         assert "<urlset" in content
         assert "omnitrackr.xyz" in content or "sitemap" in content.lower()
     
-    def test_sitemap_includes_privacy_page(self, client):
-        """Test that sitemap includes the privacy page."""
+    def test_sitemap_excludes_supporting_policy_pages(self, client):
+        """Trust pages stay accessible without inflating the submitted search inventory."""
         response = client.get("/sitemap.xml")
         assert response.status_code == 200
         content = response.text
-        assert "/privacy" in content
+        assert "/privacy" not in content
+        assert "/advertising" not in content
+        assert "/content-quality" not in content
     
     def test_sitemap_includes_reviews_page(self, client):
         """Test that sitemap includes the reviews page."""
@@ -281,33 +283,24 @@ class TestSEOEndpoints:
         assert f"/reviews/{directory_quality_review.id}?category=movie" not in content
         assert f"/reviews/{standalone_review.id}?category=movie" in content
 
-    def test_sitemap_includes_public_value_pages(self, client):
-        """Test that sitemap includes public editorial pages for crawlers."""
+    def test_sitemap_concentrates_on_distinct_public_value_pages(self, client):
+        """The sitemap should favor complete experiences over overlapping support pages."""
         response = client.get("/sitemap.xml")
         assert response.status_code == 200
         content = response.text
-        assert "/compare" in content
-        assert "/use-cases" in content
-        assert "/changelog" in content
-        assert "/advertising" in content
-        assert "/content-quality" in content
-        assert "/site-map" in content
-        assert "/faq" in content
-        assert "/tv-show-tracker" in content
-        assert "/game-tracker" in content
-        assert "/movie-tracker" in content
-        assert "/anime-tracker" in content
-        assert "/book-tracker" in content
-        assert "/music-tracker" in content
-        assert "/media-statistics" in content
-        assert "/export-import-guide" in content
-        assert "/media-tracker-checklist" in content
-        assert "/tracking-templates" in content
-        assert "/review-guidelines" in content
-        assert "/sample-library" in content
-        assert "/demo" in content
-        assert "/media-tracking" in content
-        assert "/roadmap" in content
+        for path in (
+            "/about", "/faq", "/guides", "/export-import-guide",
+            "/review-guidelines", "/sample-library", "/demo", "/media-tracking",
+        ):
+            assert path in content
+        for path in (
+            "/compare", "/use-cases", "/changelog", "/site-map",
+            "/tv-show-tracker", "/game-tracker", "/movie-tracker",
+            "/anime-tracker", "/book-tracker", "/music-tracker",
+            "/media-statistics", "/media-tracker-checklist",
+            "/tracking-templates", "/roadmap",
+        ):
+            assert path not in content
     
     def test_sitemap_includes_homepage(self, client):
         """Test that sitemap includes the homepage."""
@@ -357,31 +350,9 @@ class TestSEOEndpoints:
         assert "text/plain" in response.headers["content-type"]
         content = response.text
         assert "User-agent: *" in content
+        assert "Allow: /" in content
         assert "Allow: /ads.txt" in content
         assert "Allow: /sellers.json" in content
-        assert "Allow: /reviews" in content
-        assert "Allow: /compare" in content
-        assert "Allow: /use-cases" in content
-        assert "Allow: /changelog" in content
-        assert "Allow: /advertising" in content
-        assert "Allow: /content-quality" in content
-        assert "Allow: /site-map" in content
-        assert "Allow: /faq" in content
-        assert "Allow: /tv-show-tracker" in content
-        assert "Allow: /game-tracker" in content
-        assert "Allow: /movie-tracker" in content
-        assert "Allow: /anime-tracker" in content
-        assert "Allow: /book-tracker" in content
-        assert "Allow: /music-tracker" in content
-        assert "Allow: /media-statistics" in content
-        assert "Allow: /export-import-guide" in content
-        assert "Allow: /media-tracker-checklist" in content
-        assert "Allow: /tracking-templates" in content
-        assert "Allow: /review-guidelines" in content
-        assert "Allow: /sample-library" in content
-        assert "Allow: /demo" in content
-        assert "Allow: /media-tracking" in content
-        assert "Allow: /roadmap" in content
         assert "Disallow: /docs" in content
         assert "Disallow: /redoc" in content
         assert "Disallow: /openapi.json" in content
@@ -587,30 +558,19 @@ class TestSecurityMiddleware:
     def test_adsense_loader_is_limited_to_public_content_pages(self, client):
         """AdSense should not load on the mixed landing/dashboard shell or legal pages."""
         eligible_paths = [
-            "/about",
-            "/faq",
-            "/guides",
-            "/compare",
-            "/use-cases",
-            "/changelog",
-            "/tv-show-tracker",
-            "/game-tracker",
-            "/movie-tracker",
-            "/anime-tracker",
-            "/book-tracker",
-            "/music-tracker",
-            "/media-statistics",
             "/export-import-guide",
-            "/media-tracker-checklist",
-            "/tracking-templates",
             "/review-guidelines",
             "/sample-library",
             "/demo",
             "/media-tracking",
-            "/roadmap",
             "/reviews",
         ]
-        excluded_paths = ["/", "/privacy", "/advertising", "/content-quality", "/site-map", "/terms", "/contact"]
+        excluded_paths = [
+            "/", "/about", "/faq", "/guides", "/compare", "/use-cases",
+            "/changelog", "/movie-tracker", "/anime-tracker", "/media-statistics",
+            "/media-tracker-checklist", "/tracking-templates", "/roadmap",
+            "/privacy", "/advertising", "/content-quality", "/site-map", "/terms", "/contact",
+        ]
 
         for path in eligible_paths:
             response = client.get(path)
@@ -673,7 +633,7 @@ class TestSecurityMiddleware:
 
     def test_adsense_loader_is_suppressed_for_authenticated_public_requests(self, authenticated_client):
         """Logged-in users should not receive the public ad-loader on guide/review pages."""
-        for path in ("/about", "/reviews", "/media-tracking"):
+        for path in ("/demo", "/reviews", "/media-tracking"):
             response = authenticated_client.get(path)
             assert response.status_code == 200
             assert "/static/ad-loader.js" not in response.text
@@ -682,27 +642,11 @@ class TestSecurityMiddleware:
     def test_ad_eligible_public_pages_have_substantial_original_inventory(self, client):
         """Every ad-eligible public page should render as substantial content inventory."""
         eligible_paths = [
-            "/about",
-            "/faq",
-            "/guides",
-            "/compare",
-            "/use-cases",
-            "/changelog",
-            "/tv-show-tracker",
-            "/game-tracker",
-            "/movie-tracker",
-            "/anime-tracker",
-            "/book-tracker",
-            "/music-tracker",
-            "/media-statistics",
             "/export-import-guide",
-            "/media-tracker-checklist",
-            "/tracking-templates",
             "/review-guidelines",
             "/sample-library",
             "/demo",
             "/media-tracking",
-            "/roadmap",
             "/reviews",
         ]
 
@@ -717,8 +661,8 @@ class TestSecurityMiddleware:
             assert quality.canonical_count == 1, f"{path} should have one canonical URL"
             assert quality.json_ld_count >= 1, f"{path} should include structured data"
 
-    def test_indexable_public_utility_pages_are_not_thin_placeholders(self, client):
-        """Legal, support, and ad-disclosure pages should also provide useful trust content."""
+    def test_supporting_public_utility_pages_are_useful_but_noindexed(self, client):
+        """Legal and support pages remain useful without becoming search inventory."""
         utility_paths = [
             "/privacy",
             "/advertising",
@@ -738,6 +682,37 @@ class TestSecurityMiddleware:
             assert quality.description_count == 1, f"{path} should have one meta description"
             assert quality.canonical_count == 1, f"{path} should have one canonical URL"
             assert quality.json_ld_count >= 1, f"{path} should include structured data"
+            assert "noindex" in " ".join(quality.robots_contents).lower()
+            assert response.headers["x-robots-tag"] == "noindex, follow"
+            assert "/static/ad-loader.js" not in response.text
+
+    def test_overlapping_guides_remain_accessible_but_outside_search_inventory(self, client):
+        """Consolidated guides should keep working for visitors and internal links."""
+        supporting_paths = [
+            "/compare",
+            "/use-cases",
+            "/changelog",
+            "/tv-show-tracker",
+            "/game-tracker",
+            "/movie-tracker",
+            "/anime-tracker",
+            "/book-tracker",
+            "/music-tracker",
+            "/media-statistics",
+            "/media-tracker-checklist",
+            "/tracking-templates",
+            "/roadmap",
+        ]
+        sitemap = client.get("/sitemap.xml").text
+
+        for path in supporting_paths:
+            response = client.get(path)
+            quality = parse_page_quality(response.text)
+
+            assert response.status_code == 200
+            assert response.headers["x-robots-tag"] == "noindex, follow"
+            assert "noindex" in " ".join(quality.robots_contents).lower()
+            assert path not in sitemap
             assert "/static/ad-loader.js" not in response.text
 
     def test_public_pages_have_click_focused_metadata(self, client):

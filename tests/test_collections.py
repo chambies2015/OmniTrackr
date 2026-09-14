@@ -81,7 +81,9 @@ class TestCollections:
         assert movie["title"] in public_page.text
         assert "Private draft." not in public_page.text
         assert test_movie_data["review"] not in public_page.text
-        assert public_url in authenticated_client.get("/sitemap.xml").text
+        assert public_page.headers["x-robots-tag"] == "noindex, follow"
+        assert '<meta name="robots" content="noindex, follow">' in public_page.text
+        assert public_url not in authenticated_client.get("/sitemap.xml").text
 
         unpublished = authenticated_client.patch(f"/collections/{collection_id}", json={"is_public": False})
         assert unpublished.status_code == 200
