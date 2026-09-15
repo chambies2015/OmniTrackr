@@ -205,6 +205,331 @@ function setupLibrarySearch() {
   });
 }
 
+// ============================================================================
+// Universal quick capture
+// ============================================================================
+
+const QUICK_CAPTURE_CATEGORY_ORDER = ['movies', 'tv-shows', 'anime', 'video-games', 'music', 'books'];
+const QUICK_CAPTURE_CATEGORIES = {
+  movies: { label: 'Movies', icon: '🎬', endpoint: query => `/api/proxy/omdb?title=${encodeURIComponent(query)}&type=movie` },
+  'tv-shows': { label: 'TV shows', icon: '📺', endpoint: query => `/api/proxy/omdb?title=${encodeURIComponent(query)}&type=series` },
+  anime: { label: 'Anime', icon: '🎌', endpoint: query => `/api/proxy/jikan?query=${encodeURIComponent(query)}` },
+  'video-games': { label: 'Video games', icon: '🎮', endpoint: query => `/api/proxy/rawg?search=${encodeURIComponent(query)}` },
+  music: { label: 'Music', icon: '🎵', endpoint: query => `/api/proxy/itunes?query=${encodeURIComponent(query)}&entity=album` },
+  books: { label: 'Books', icon: '📚', endpoint: query => `/api/proxy/openlibrary?query=${encodeURIComponent(query)}` },
+};
+let quickCaptureCategory = 'all';
+let quickCaptureResults = [];
+let quickCaptureController = null;
+let quickCaptureReturnFocus = null;
+
+function openQuickCapture() {
+  const modal = document.getElementById('quickCaptureModal');
+  const query = document.getElementById('quickCaptureQuery');
+  if (!modal || !query) return;
+  quickCaptureReturnFocus = document.activeElement;
+  closeLibrarySearch();
+  modal.style.display = 'flex';
+  document.body.style.overflow = 'hidden';
+  window.setTimeout(() => {
+    query.focus();
+    query.select();
+  }, 0);
+}
+
+function closeQuickCapture() {
+  const modal = document.getElementById('quickCaptureModal');
+  if (!modal) return;
+  quickCaptureController?.abort();
+  quickCaptureController = null;
+  modal.style.display = 'none';
+  document.body.style.overflow = '';
+  if (quickCaptureReturnFocus instanceof HTMLElement) quickCaptureReturnFocus.focus();
+}
+
+function selectQuickCaptureCategory(category) {
+  if (category !== 'all' && !QUICK_CAPTURE_CATEGORIES[category]) return;
+  quickCaptureCategory = category;
+  document.querySelectorAll('[data-quick-category]').forEach(button => {
+    const selected = button.dataset.quickCategory === category;
+    button.classList.toggle('active', selected);
+    button.setAttribute('aria-pressed', String(selected));
+  });
+  const status = document.getElementById('quickCaptureStatus');
+  if (status && !document.getElementById('quickCaptureQuery')?.value.trim()) {
+    status.textContent = category === 'all'
+      ? 'Search across every media type, or choose one shelf for a faster result.'
+      : `Searching ${QUICK_CAPTURE_CATEGORIES[category].label.toLowerCase()} only.`;
+  }
+}
+
+function quickCaptureImage(url, alt) {
+  const frame = document.createElement('span');
+  frame.className = 'quick-capture-result__image';
+  if (url) {
+    const image = document.createElement('img');
+    image.src = url;
+    image.alt = '';
+    image.loading = 'lazy';
+    image.referrerPolicy = 'no-referrer';
+    image.dataset.hideOnError = 'true';
+    frame.appendChild(image);
+  } else {
+    frame.textContent = String(alt || '?').slice(0, 1).toUpperCase();
+  }
+  return frame;
+}
+
+function normalizeQuickCapturePayload(category, payload) {
+  const result = (title, meta, image, raw) => ({ category, title, meta, image, raw });
+  if (category === 'movies' || category === 'tv-shows') {
+    if (!payload?.Title || payload.Error) return [];
+    return [result(payload.Title, [payload.Year, payload.Genre].filter(value => value && value !== 'N/A').join(' · '), payload.Poster !== 'N/A' ? payload.Poster : '', payload)];
+  }
+  if (category === 'anime') {
+    return (payload?.data || []).slice(0, 4).map(item => result(
+      item.title_english || item.title,
+      [item.year, item.type, item.episodes ? `${item.episodes} episodes` : ''].filter(Boolean).join(' · '),
+      item.images?.jpg?.large_image_url || item.images?.jpg?.image_url || '',
+      item
+    ));
+  }
+  if (category === 'video-games') {
+    return (payload?.results || []).slice(0, 4).map(item => result(
+      item.name,
+      [item.released?.slice(0, 4), (item.genres || []).slice(0, 2).map(genre => genre.name).join(', ')].filter(Boolean).join(' · '),
+      item.background_image || '',
+      item
+    ));
+  }
+  if (category === 'music') {
+    return (payload?.results || []).slice(0, 4).map(item => result(
+      item.collectionName || item.trackName,
+      [item.artistName, item.releaseDate?.slice(0, 4), item.primaryGenreName].filter(Boolean).join(' · '),
+      item.artworkUrl100 || item.artworkUrl60 || '',
+      item
+    ));
+  }
+  if (category === 'books') {
+    return (payload?.docs || []).slice(0, 4).map(item => {
+      const coverId = item.cover_i || item.isbn?.[0];
+      return result(
+        item.title,
+        [item.author_name?.[0], item.first_publish_year].filter(Boolean).join(' · '),
+        coverId ? `https://covers.openlibrary.org/b/id/${coverId}-M.jpg` : '',
+        item
+      );
+    });
+  }
+  return [];
+}
+
+async function fetchQuickCaptureCategory(category, query, signal) {
+  const source = QUICK_CAPTURE_CATEGORIES[category];
+  try {
+    const response = await fetch(`${API_BASE}${source.endpoint(query)}`, { signal, headers: { Accept: 'application/json' } });
+    if (!response.ok) return { category, results: [], unavailable: true };
+    const payload = await response.json();
+    return { category, results: normalizeQuickCapturePayload(category, payload), unavailable: false };
+  } catch (error) {
+    if (error.name === 'AbortError') throw error;
+    return { category, results: [], unavailable: true };
+  }
+}
+
+function renderQuickCaptureResults(groups, query) {
+  const container = document.getElementById('quickCaptureResults');
+  const status = document.getElementById('quickCaptureStatus');
+  if (!container || !status) return;
+  container.replaceChildren();
+  quickCaptureResults = [];
+  let unavailableCount = 0;
+
+  groups.forEach(group => {
+    if (group.unavailable) unavailableCount += 1;
+    if (!group.results.length) return;
+    const section = document.createElement('section');
+    section.className = 'quick-capture-group';
+    const heading = document.createElement('h3');
+    heading.textContent = `${QUICK_CAPTURE_CATEGORIES[group.category].icon} ${QUICK_CAPTURE_CATEGORIES[group.category].label}`;
+    section.appendChild(heading);
+    const grid = document.createElement('div');
+    grid.className = 'quick-capture-result-grid';
+    group.results.forEach(item => {
+      const index = quickCaptureResults.push(item) - 1;
+      const button = document.createElement('button');
+      button.type = 'button';
+      button.className = 'quick-capture-result';
+      button.dataset.action = 'choose-quick-capture-result';
+      button.dataset.quickResultIndex = String(index);
+      button.appendChild(quickCaptureImage(item.image, item.title));
+      const copy = document.createElement('span');
+      copy.className = 'quick-capture-result__copy';
+      const title = document.createElement('strong');
+      title.textContent = item.title || 'Untitled';
+      const meta = document.createElement('small');
+      meta.textContent = item.meta || QUICK_CAPTURE_CATEGORIES[item.category].label;
+      copy.append(title, meta);
+      const action = document.createElement('span');
+      action.className = 'quick-capture-result__action';
+      action.textContent = 'Use →';
+      button.append(copy, action);
+      grid.appendChild(button);
+    });
+    section.appendChild(grid);
+    container.appendChild(section);
+  });
+
+  if (quickCaptureResults.length) {
+    status.textContent = `${quickCaptureResults.length} match${quickCaptureResults.length === 1 ? '' : 'es'} for “${query}”. Choose one to review before saving.${unavailableCount ? ` ${unavailableCount} source${unavailableCount === 1 ? ' is' : 's are'} temporarily unavailable.` : ''}`;
+  } else {
+    status.textContent = unavailableCount === groups.length
+      ? 'Metadata search is temporarily unavailable. Choose a media type and continue manually.'
+      : `No close matches for “${query}”. Try another phrase or use manual entry.`;
+  }
+}
+
+async function searchQuickCapture(event) {
+  event.preventDefault();
+  const queryInput = document.getElementById('quickCaptureQuery');
+  const results = document.getElementById('quickCaptureResults');
+  const status = document.getElementById('quickCaptureStatus');
+  const submit = event.target.querySelector('button[type="submit"]');
+  const query = queryInput?.value.trim();
+  if (!query || query.length < 2 || !results || !status || !submit) return;
+
+  quickCaptureController?.abort();
+  const controller = new AbortController();
+  quickCaptureController = controller;
+  const categories = quickCaptureCategory === 'all' ? QUICK_CAPTURE_CATEGORY_ORDER : [quickCaptureCategory];
+  results.replaceChildren();
+  status.textContent = `Searching ${categories.length === 1 ? QUICK_CAPTURE_CATEGORIES[categories[0]].label.toLowerCase() : 'every shelf'}…`;
+  submit.disabled = true;
+  submit.textContent = 'Searching…';
+  const timeout = window.setTimeout(() => controller.abort(), 20000);
+  try {
+    const groups = await Promise.all(categories.map(category => fetchQuickCaptureCategory(category, query, controller.signal)));
+    renderQuickCaptureResults(groups, query);
+  } catch (error) {
+    if (error.name === 'AbortError' && quickCaptureController === controller && document.getElementById('quickCaptureModal')?.style.display !== 'none') {
+      status.textContent = 'Search took too long. Try one media type, or continue manually.';
+    }
+  } finally {
+    window.clearTimeout(timeout);
+    if (quickCaptureController === controller) quickCaptureController = null;
+    if (!quickCaptureController) {
+      submit.disabled = false;
+      submit.textContent = 'Search';
+    }
+  }
+}
+
+function setQuickCaptureField(id, value) {
+  const input = document.getElementById(id);
+  if (input) input.value = value ?? '';
+}
+
+function prepareQuickCaptureDestination(category, title) {
+  const destinations = {
+    movies: { form: 'movieForm', title: 'movieTitle', completed: 'movieWatched' },
+    'tv-shows': { form: 'tvForm', title: 'tvTitle', completed: 'tvWatched' },
+    anime: { form: 'animeForm', title: 'animeTitle', completed: 'animeWatched' },
+    'video-games': { form: 'videoGameForm', title: 'videoGameTitle', completed: 'videoGamePlayed' },
+    music: { form: 'musicForm', title: 'musicTitle', completed: 'musicListened' },
+    books: { form: 'bookForm', title: 'bookTitle', completed: 'bookRead' },
+  };
+  const destination = destinations[category];
+  if (!destination) return null;
+  const form = document.getElementById({
+    movies: 'addMovieForm',
+    'tv-shows': 'addTVShowForm',
+    anime: 'addAnimeForm',
+    'video-games': 'addVideoGameForm',
+    music: 'addMusicForm',
+    books: 'addBookForm',
+  }[category]);
+  const hasDraft = form && Array.from(form.elements).some(field => {
+    if (field.type === 'submit' || field.type === 'button') return false;
+    if (field.type === 'checkbox' || field.type === 'radio') return field.checked;
+    return String(field.value || '').trim().length > 0;
+  });
+  if (hasDraft && !window.confirm('Replace the unsaved entry currently in this form?')) return null;
+  form?.reset();
+  const tabButton = getTabButton(category);
+  const tabWasHidden = tabButton?.style.display === 'none';
+  if (tabWasHidden) tabButton.style.display = '';
+  openLaunchpadAddItem(category);
+  if (tabWasHidden) tabButton.style.display = 'none';
+  const titleInput = document.getElementById(destination.title);
+  if (!titleInput) return null;
+  titleInput.value = title || '';
+  ['posterUrl', 'coverArtUrl', 'releaseDate', 'rawgLink'].forEach(key => delete titleInput.dataset[key]);
+  const completed = document.getElementById(destination.completed);
+  const intent = document.getElementById('quickCaptureIntent')?.value || 'saved';
+  if (completed) completed.checked = intent === 'completed';
+  return { ...destination, titleInput };
+}
+
+function applyQuickCaptureResult(index) {
+  const item = quickCaptureResults[index];
+  if (!item) return;
+  const destination = prepareQuickCaptureDestination(item.category, item.title);
+  if (!destination) return;
+  const data = item.raw || {};
+
+  if (item.category === 'movies') {
+    setQuickCaptureField('movieDirector', data.Director !== 'N/A' ? data.Director : '');
+    setQuickCaptureField('movieYear', parseInt(String(data.Year || '').split('-')[0], 10) || '');
+    if (data.Poster && data.Poster !== 'N/A') destination.titleInput.dataset.posterUrl = data.Poster;
+  } else if (item.category === 'tv-shows') {
+    setQuickCaptureField('tvYear', parseInt(String(data.Year || '').split('-')[0], 10) || '');
+    setQuickCaptureField('tvSeasons', parseInt(data.totalSeasons, 10) || '');
+    if (data.Poster && data.Poster !== 'N/A') destination.titleInput.dataset.posterUrl = data.Poster;
+  } else if (item.category === 'anime') {
+    setQuickCaptureField('animeYear', data.year || '');
+    setQuickCaptureField('animeSeasons', data.seasons || '');
+    setQuickCaptureField('animeEpisodes', data.episodes || '');
+    const poster = data.images?.jpg?.large_image_url || data.images?.jpg?.image_url;
+    if (poster) destination.titleInput.dataset.posterUrl = poster;
+  } else if (item.category === 'video-games') {
+    setQuickCaptureField('videoGameGenres', (data.genres || []).map(genre => genre.name).join(', '));
+    if (data.released) destination.titleInput.dataset.releaseDate = data.released;
+    if (data.background_image) destination.titleInput.dataset.coverArtUrl = data.background_image;
+    if (data.slug) destination.titleInput.dataset.rawgLink = `https://rawg.io/games/${data.slug}`;
+  } else if (item.category === 'music') {
+    setQuickCaptureField('musicArtist', data.artistName || '');
+    setQuickCaptureField('musicYear', parseInt(String(data.releaseDate || '').slice(0, 4), 10) || '');
+    setQuickCaptureField('musicGenre', data.primaryGenreName || '');
+    const cover = data.artworkUrl100 || data.artworkUrl60;
+    if (cover) destination.titleInput.dataset.coverArtUrl = cover;
+  } else if (item.category === 'books') {
+    setQuickCaptureField('bookAuthor', data.author_name?.[0] || '');
+    setQuickCaptureField('bookYear', data.first_publish_year || data.publish_year?.[0] || '');
+    setQuickCaptureField('bookGenre', (data.subject || []).slice(0, 3).join(', '));
+    const coverId = data.cover_i || data.isbn?.[0];
+    if (coverId) destination.titleInput.dataset.coverArtUrl = `https://covers.openlibrary.org/b/id/${coverId}-L.jpg`;
+  }
+
+  closeQuickCapture();
+  const formContent = document.getElementById(`${destination.form}Content`);
+  formContent?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+  window.setTimeout(() => destination.titleInput.focus(), 250);
+}
+
+function openQuickCaptureManual() {
+  const status = document.getElementById('quickCaptureStatus');
+  if (quickCaptureCategory === 'all') {
+    if (status) status.textContent = 'Choose Movies, TV, Anime, Games, Music, or Books before continuing manually.';
+    return;
+  }
+  const query = document.getElementById('quickCaptureQuery')?.value.trim() || '';
+  const destination = prepareQuickCaptureDestination(quickCaptureCategory, query);
+  if (!destination) return;
+  closeQuickCapture();
+  document.getElementById(`${destination.form}Content`)?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+  window.setTimeout(() => destination.titleInput.focus(), 250);
+}
+
 function showImagePopup(imageUrl, altText) {
   const modal = document.getElementById('imagePopupModal');
   const img = document.getElementById('popupImage');
@@ -326,6 +651,7 @@ function handleDelegatedClick(event) {
     const closeHandlers = {
       screenshot: () => closeScreenshotModal(event),
       review: closeReviewModal,
+      'quick-capture': closeQuickCapture,
       'custom-tab-manager': closeCustomTabManager,
       'completion-ritual': closeCompletionRitual,
       'collection-picker': closeCollectionPicker,
@@ -367,6 +693,11 @@ function handleDelegatedClick(event) {
 
   const actionHandlers = {
     'open-review-modal': () => openReviewModal(target),
+    'open-quick-capture': openQuickCapture,
+    'close-quick-capture': closeQuickCapture,
+    'select-quick-capture-category': () => selectQuickCaptureCategory(target.dataset.quickCategory),
+    'choose-quick-capture-result': () => applyQuickCaptureResult(Number(target.dataset.quickResultIndex)),
+    'quick-capture-manual': openQuickCaptureManual,
     'open-friend-profile': () => openFriendProfile(Number(target.dataset.friendId)),
     'unfriend-user': () => unfriendUser(Number(target.dataset.friendId)),
     'accept-friend-request': () => acceptFriendRequest(Number(target.dataset.requestId)),
@@ -438,6 +769,7 @@ function handleDelegatedSubmit(event) {
   if (!form) return;
 
   const submitHandlers = {
+    'search-quick-capture': searchQuickCapture,
     'change-username': changeUsername,
     'change-email': changeEmail,
     'change-password': changePassword,
@@ -486,7 +818,19 @@ function applyDataFillWidths(root = document) {
 }
 
 document.addEventListener('keydown', function(event) {
+  const active = document.activeElement;
+  const isTyping = active && (active.matches('input, textarea, select') || active.isContentEditable);
+  if (event.key === '/' && !event.ctrlKey && !event.metaKey && !event.altKey && !isTyping) {
+    event.preventDefault();
+    openQuickCapture();
+    return;
+  }
   if (event.key === 'Escape') {
+    const quickCapture = document.getElementById('quickCaptureModal');
+    if (quickCapture && quickCapture.style.display !== 'none') {
+      closeQuickCapture();
+      return;
+    }
     const imageModal = document.getElementById('imagePopupModal');
     if (imageModal && imageModal.style.display !== 'none') {
       closeImagePopup();
@@ -3590,6 +3934,8 @@ function selectMusicResult(album) {
   const albumGenre = album.primaryGenreName || '';
   
   document.getElementById('musicTitle').value = albumTitle;
+  const titleInput = document.getElementById('musicTitle');
+  if (coverArtUrl) titleInput.dataset.coverArtUrl = coverArtUrl;
   if (document.getElementById('musicArtist')) {
     document.getElementById('musicArtist').value = albumArtist;
   }

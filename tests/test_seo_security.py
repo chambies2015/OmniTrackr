@@ -1565,5 +1565,5 @@ class TestRootEndpoint:
         assert 'data-public-shell="true"' not in response.text
         assert 'id="mainContainer"' in response.text
         assert 'id="logoutBtn"' in response.text
-        assert 'src="./app.js"' in response.text
+        assert 'src="./app.js?v=20260915-quick-capture"' in response.text
 

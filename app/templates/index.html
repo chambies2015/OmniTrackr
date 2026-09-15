@@ -52,10 +52,10 @@
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link rel="dns-prefetch" href="https://www.googletagmanager.com">
   <link rel="dns-prefetch" href="https://www.google-analytics.com">
-  <link rel="preload" href="./styles.css" as="style">
+  <link rel="preload" href="./styles.css?v=20260915-quick-capture" as="style">
   <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@700;800&family=Inter:wght@400;500;600&display=swap"
     rel="stylesheet">
-  <link rel="stylesheet" href="./styles.css">
+  <link rel="stylesheet" href="./styles.css?v=20260915-quick-capture">
   <script src="./preauth.js"></script>
   <style>
     html.authenticated #landingPage{display:none}
@@ -346,6 +346,9 @@
         </div>
         <div id="librarySearchResults" class="library-search__results" role="listbox" aria-label="Library search results" aria-live="polite" hidden></div>
       </div>
+      <button type="button" id="quickCaptureButton" class="quick-capture-trigger" data-action="open-quick-capture" aria-haspopup="dialog" aria-controls="quickCaptureModal">
+        <span aria-hidden="true">＋</span> Add anything <kbd aria-hidden="true">/</kbd>
+      </button>
     </header>
 
     <section id="libraryLaunchpad" class="library-launchpad" aria-labelledby="libraryLaunchpadTitle" hidden>
@@ -1833,7 +1836,7 @@
   </div>
   <script src="./credentials.js"></script>
   <script src="./auth.js?v=20260915-api-base"></script>
-  <script src="./app.js"></script>
+  <script src="./app.js?v=20260915-quick-capture"></script>
 
   <!-- Account Modal -->
   <div id="accountModal" class="modal-overlay" style="display: none;">
@@ -2407,6 +2410,48 @@
       </div>
       <div class="modal-body">
         <div id="bookSearchResults" class="search-results-grid"></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Universal Quick Capture Modal -->
+  <div id="quickCaptureModal" class="modal-overlay quick-capture-overlay" style="display: none;" data-close-on-backdrop="quick-capture" role="dialog" aria-modal="true" aria-labelledby="quickCaptureTitle">
+    <div class="modal-content quick-capture-modal" data-stop-propagation>
+      <div class="quick-capture-header">
+        <div>
+          <p class="quick-capture-eyebrow">One search · every shelf</p>
+          <h2 id="quickCaptureTitle">Add anything</h2>
+          <p>Search movies, shows, anime, games, albums, and books together.</p>
+        </div>
+        <button type="button" class="modal-close" data-action="close-quick-capture" aria-label="Close quick capture">×</button>
+      </div>
+      <div class="quick-capture-body">
+        <form id="quickCaptureSearchForm" class="quick-capture-search" data-submit-action="search-quick-capture">
+          <label class="sr-only" for="quickCaptureQuery">Title, artist, author, or game</label>
+          <div class="quick-capture-search-field">
+            <span aria-hidden="true">⌕</span>
+            <input id="quickCaptureQuery" name="query" type="search" minlength="2" maxlength="200" autocomplete="off" placeholder="Try Dune, Frieren, Hades, or an artist…" required>
+            <button type="submit" class="action-btn">Search</button>
+          </div>
+          <div class="quick-capture-controls">
+            <div id="quickCaptureCategories" class="quick-capture-categories" aria-label="Limit search by media type">
+              <button type="button" class="active" data-action="select-quick-capture-category" data-quick-category="all" aria-pressed="true">All</button>
+              <button type="button" data-action="select-quick-capture-category" data-quick-category="movies" aria-pressed="false">🎬 Movies</button>
+              <button type="button" data-action="select-quick-capture-category" data-quick-category="tv-shows" aria-pressed="false">📺 TV</button>
+              <button type="button" data-action="select-quick-capture-category" data-quick-category="anime" aria-pressed="false">🎌 Anime</button>
+              <button type="button" data-action="select-quick-capture-category" data-quick-category="video-games" aria-pressed="false">🎮 Games</button>
+              <button type="button" data-action="select-quick-capture-category" data-quick-category="music" aria-pressed="false">🎵 Music</button>
+              <button type="button" data-action="select-quick-capture-category" data-quick-category="books" aria-pressed="false">📚 Books</button>
+            </div>
+            <label class="quick-capture-intent" for="quickCaptureIntent"><span>Add as</span><select id="quickCaptureIntent"><option value="saved">Not completed / save for later</option><option value="completed">Completed</option></select></label>
+          </div>
+        </form>
+        <div id="quickCaptureStatus" class="quick-capture-status" role="status" aria-live="polite">Search across every media type, or choose one shelf for a faster result.</div>
+        <div id="quickCaptureResults" class="quick-capture-results" aria-label="Metadata search results"></div>
+        <div class="quick-capture-manual">
+          <div><strong>Can’t find it?</strong><span>Choose a media type above and continue with manual entry.</span></div>
+          <button type="button" data-action="quick-capture-manual">Enter manually →</button>
+        </div>
       </div>
     </div>
   </div>

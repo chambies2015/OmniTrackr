@@ -228,3 +228,25 @@ def test_library_pulse_uses_safe_dom_rendering_and_existing_tabs():
     assert "title.textContent = item.title" in source
     assert "button.dataset.pulseTab = item.category" in source
     assert "'pulse-open-item': () => switchTab(target.dataset.pulseTab)" in source
+
+
+def test_quick_capture_searches_every_core_type_without_writing_directly():
+    """Quick capture should prefill proven forms and leave the final save to the user."""
+    source = APP_JS.read_text(encoding="utf-8")
+    template = INDEX_HTML.read_text(encoding="utf-8")
+    quick_capture = source[source.index("// Universal quick capture"):source.index("function showImagePopup")]
+
+    assert 'id="quickCaptureButton"' in template
+    assert 'id="quickCaptureModal"' in template
+    assert 'data-submit-action="search-quick-capture"' in template
+    assert template.count('data-action="select-quick-capture-category"') == 7
+    assert "const QUICK_CAPTURE_CATEGORY_ORDER = ['movies', 'tv-shows', 'anime', 'video-games', 'music', 'books']" in quick_capture
+    for provider in ("omdb", "jikan", "rawg", "itunes", "openlibrary"):
+        assert f"/api/proxy/{provider}" in quick_capture
+    assert "function applyQuickCaptureResult" in quick_capture
+    assert "prepareQuickCaptureDestination" in quick_capture
+    assert "openLaunchpadAddItem(category)" in quick_capture
+    assert "Replace the unsaved entry currently in this form?" in quick_capture
+    assert "method: 'POST'" not in quick_capture
+    assert "title.textContent = item.title" in quick_capture
+    assert "quickCaptureController?.abort()" in quick_capture
