@@ -4,6 +4,7 @@ Export/Import endpoints for the OmniTrackr API.
 import json
 from datetime import datetime
 from fastapi import APIRouter, Depends, HTTPException, UploadFile, File
+from pydantic import ValidationError
 from sqlalchemy.orm import Session
 
 from .. import crud, schemas, models
@@ -158,8 +159,13 @@ async def import_from_file(
             errors=all_errors
         )
 
-    except json.JSONDecodeError:
+    except HTTPException:
+        # Preserve intentional client errors instead of masking them as a 500.
+        raise
+    except (json.JSONDecodeError, UnicodeDecodeError):
         raise HTTPException(status_code=400, detail="Invalid JSON file")
+    except (ValidationError, TypeError, AttributeError) as e:
+        raise HTTPException(status_code=400, detail=f"Invalid import data: {str(e)}")
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Error processing file: {str(e)}")
 

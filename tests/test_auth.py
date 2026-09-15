@@ -231,6 +231,28 @@ class TestAuthEndpoints:
         )
         
         assert response.status_code == 401
+
+    def test_repeated_failed_logins_lock_account_without_server_error(self, client, test_user_data, db_session):
+        """A persisted lock timestamp must remain comparable after a database round trip."""
+        register_response = client.post("/auth/register", json=test_user_data)
+        user = crud.get_user_by_id(db_session, register_response.json()["id"])
+        user.is_verified = True
+        user.verification_token = None
+        db_session.commit()
+
+        for _ in range(5):
+            response = client.post(
+                "/auth/login",
+                data={"username": test_user_data["username"], "password": "wrongpassword"},
+            )
+            assert response.status_code == 401
+
+        locked = client.post(
+            "/auth/login",
+            data={"username": test_user_data["username"], "password": test_user_data["password"]},
+        )
+        assert locked.status_code == 423
+        assert "locked" in locked.json()["detail"].lower()
     
     def test_login_nonexistent_user(self, client):
         """Test login with non-existent user."""

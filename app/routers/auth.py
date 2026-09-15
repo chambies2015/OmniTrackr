@@ -57,16 +57,20 @@ async def login(
     """Login to get access token. Users can log in using either their username or email."""
     
     user = crud.get_user_by_username_or_email(db, form_data.username)
+    # SQLAlchemy DateTime columns are stored without timezone information. Keep
+    # lockout comparisons in naive UTC so a value survives a database round trip
+    # without causing an aware-vs-naive TypeError on the next login attempt.
+    now_utc = datetime.now(timezone.utc).replace(tzinfo=None)
     
-    if user and user.locked_until and user.locked_until > datetime.now(timezone.utc):
-        remaining_minutes = int((user.locked_until - datetime.now(timezone.utc)).total_seconds() / 60)
+    if user and user.locked_until and user.locked_until > now_utc:
+        remaining_minutes = max(1, int((user.locked_until - now_utc).total_seconds() / 60) + 1)
         raise HTTPException(
             status_code=423,
             detail=f"Account is locked due to too many failed login attempts. Try again in {remaining_minutes} minutes.",
             headers={"WWW-Authenticate": "Bearer"},
         )
     
-    if user and user.locked_until and user.locked_until <= datetime.now(timezone.utc):
+    if user and user.locked_until and user.locked_until <= now_utc:
         user.locked_until = None
         user.failed_login_attempts = 0
         db.commit()
@@ -76,7 +80,7 @@ async def login(
         if user:
             user.failed_login_attempts = (user.failed_login_attempts or 0) + 1
             if user.failed_login_attempts >= 5:
-                user.locked_until = datetime.now(timezone.utc) + timedelta(minutes=15)
+                user.locked_until = now_utc + timedelta(minutes=15)
                 print(f"SECURITY: Account locked - Username: {form_data.username}, IP: {client_ip}, Failed attempts: {user.failed_login_attempts}")
             else:
                 print(f"SECURITY: Failed login attempt - Username: {form_data.username}, IP: {client_ip}, Attempts: {user.failed_login_attempts}")
