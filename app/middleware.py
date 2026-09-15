@@ -59,7 +59,7 @@ class SecurityHeadersMiddleware(BaseHTTPMiddleware):
             response.headers["Pragma"] = "no-cache"
             response.headers["Expires"] = "0"
 
-        if request.url.path.startswith(("/activity/", "/import-studio/")):
+        if request.url.path.startswith(("/activity/", "/import-studio/", "/statistics/")):
             response.headers["Cache-Control"] = "private, no-store"
 
         if request.url.path in NOINDEX_PATHS or request.url.path.startswith(NOINDEX_PREFIXES):

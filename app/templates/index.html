@@ -1032,6 +1032,36 @@
           </div>
           <div id="monthlyReplayContent"></div>
         </section>
+        <section id="tasteprint" class="tasteprint" aria-labelledby="tasteprintTitle">
+          <div class="tasteprint__header">
+            <div>
+              <p class="tasteprint__eyebrow">Your library, reflected back</p>
+              <h3 id="tasteprintTitle">OmniTrackr Tasteprint</h3>
+              <p>See the patterns across your media history, then choose what belongs on a shareable card.</p>
+            </div>
+            <span class="tasteprint__privacy">Private calculation · No public profile</span>
+          </div>
+          <div id="tasteprintCategoryControls" class="tasteprint__categories" aria-label="Tasteprint categories"></div>
+          <div class="tasteprint__toolbar">
+            <button type="button" class="action-btn" data-action="tasteprint-refresh">Refresh Tasteprint</button>
+            <label class="tasteprint__name-choice"><input id="tasteprintIncludeName" type="checkbox" data-change-action="tasteprint-display"> Put my username on the card</label>
+            <button type="button" class="action-btn" id="tasteprintDownload" data-action="tasteprint-download" disabled>Download PNG</button>
+            <button type="button" class="action-btn" id="tasteprintCopy" data-action="tasteprint-copy" disabled>Copy text</button>
+          </div>
+          <div id="tasteprintStatus" class="tasteprint__status" role="status" aria-live="polite">Reading your private aggregates…</div>
+          <div id="tasteprintProgress" class="tasteprint__progress"></div>
+          <article id="tasteprintCard" class="tasteprint-card" hidden aria-label="Tasteprint card preview">
+            <div class="tasteprint-card__brand"><strong>OmniTrackr</strong><span>MEDIA TASTEPRINT</span></div>
+            <div class="tasteprint-card__intro">
+              <p id="tasteprintCardKicker">A private media portrait</p>
+              <h4 id="tasteprintCardName">My Tasteprint</h4>
+              <span id="tasteprintCardScope"></span>
+            </div>
+            <div id="tasteprintInsights" class="tasteprint-card__insights"></div>
+            <footer><span>Built from patterns, not recommendations</span><strong>omnitrackr.xyz</strong></footer>
+          </article>
+          <p class="tasteprint__note">Only checked insights are drawn into the PNG or copied summary. The image is rendered on this device and is not uploaded to OmniTrackr.</p>
+        </section>
         <div class="accordion-section">
           <div class="accordion-header" data-toggle-category-accordion="library-insights">
             <h3>Library Insights</h3>

@@ -2,14 +2,30 @@
 Statistics endpoints for the OmniTrackr API.
 """
 from datetime import date, datetime
-from fastapi import APIRouter, Depends, Query, Response
+from fastapi import APIRouter, Depends, HTTPException, Query, Response
 from sqlalchemy.orm import Session
 from sqlalchemy import func, or_
 
 from .. import crud, schemas, models
 from ..dependencies import get_db, get_current_user
+from ..tasteprint import build_tasteprint
 
 router = APIRouter(prefix="/statistics", tags=["statistics"])
+
+
+@router.get("/tasteprint/", response_model=dict)
+async def get_tasteprint(
+    response: Response,
+    categories: str | None = Query(None, max_length=120),
+    current_user: models.User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+):
+    """Build a private aggregate portrait from explicitly selected categories."""
+    response.headers["Cache-Control"] = "private, no-store"
+    try:
+        return build_tasteprint(db, current_user, categories)
+    except ValueError as exc:
+        raise HTTPException(status_code=400, detail=str(exc)) from exc
 
 
 def _count_public_reviews(db: Session, model, user_id: int) -> int:

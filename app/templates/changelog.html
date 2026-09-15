@@ -139,6 +139,19 @@
         <p>The migration API is authenticated, private-cache protected, and excluded from search indexing. No schema changes or existing-data migrations are required for this release.</p>
       </section>
 
+      <section class="privacy-section" aria-labelledby="tasteprint-2026-heading">
+        <h2 id="tasteprint-2026-heading">September 2026: OmniTrackr Tasteprint</h2>
+        <p>Tasteprint turns an established library into a concise portrait of how someone watches, plays, listens, and reads. It uses aggregate evidence from selected categories and the private activity journal without exposing media titles or review text through the Tasteprint API.</p>
+        <ul>
+          <li>Added evidence-backed observations for media range, library anchor, completion style, rating personality, home decade, recurring creators, and recent journal rhythm.</li>
+          <li>Added a deliberate minimum-data threshold so new accounts see honest progress instead of invented conclusions.</li>
+          <li>Excluded hidden and private categories by default while allowing the account owner to opt them into a specific calculation.</li>
+          <li>Added per-insight controls, an optional username, a copied text summary, and a branded PNG rendered entirely in the browser.</li>
+          <li>Kept Tasteprint private, unindexed, uncached, ad-free, and separate from friend profiles.</li>
+        </ul>
+        <p>No new public profile, database table, or stored share-card record is created. Downloading a card does not publish it; the user remains responsible for whether and where it is shared.</p>
+      </section>
+
       <section class="privacy-section" aria-labelledby="july-2026-heading">
         <h2 id="july-2026-heading">July 2026: Review Quality, Freshness, and Public Discovery</h2>
         <p>The July update continues the AdSense-readiness work by making the public website easier to evaluate, easier to browse, and less dependent on thin user-generated snippets. The goal is not to create more pages for their own sake; it is to make the existing media tracker clearer and more useful before someone signs up.</p>
