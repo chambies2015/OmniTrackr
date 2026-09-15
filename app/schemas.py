@@ -2,7 +2,7 @@
 Pydantic models (schemas) for the OmniTrackr API.
 These define the shape of data accepted/returned by the API.
 """
-from typing import Optional, List
+from typing import Optional, List, Literal
 from datetime import datetime
 from pydantic import BaseModel, Field, field_validator
 
@@ -944,6 +944,72 @@ class NextUpItem(BaseModel):
     category_label: str
     position: int
     available: bool = True
+
+
+# ============================================================================
+# Recommendation Postcard Schemas
+# ============================================================================
+
+RECOMMENDATION_CATEGORIES = {"movies", "tv-shows", "anime", "video-games", "music", "books"}
+
+
+class RecommendationRequestCreate(BaseModel):
+    prompt: str = Field(..., min_length=10, max_length=280)
+    categories: List[str] = Field(..., min_length=1, max_length=6)
+    expires_in_days: int = Field(7, ge=1, le=30)
+    max_responses: int = Field(10, ge=3, le=20)
+
+    @field_validator("prompt")
+    @classmethod
+    def clean_prompt(cls, value: str) -> str:
+        return " ".join(value.split())
+
+    @field_validator("categories")
+    @classmethod
+    def validate_categories(cls, value: List[str]) -> List[str]:
+        normalized = list(dict.fromkeys(category.strip().lower() for category in value))
+        if any(category not in RECOMMENDATION_CATEGORIES for category in normalized):
+            raise ValueError("Categories must use built-in media types")
+        return normalized
+
+
+class RecommendationSubmissionCreate(BaseModel):
+    guest_name: str = Field(..., min_length=1, max_length=50)
+    category: str
+    title: str = Field(..., min_length=1, max_length=200)
+    reason: str = Field(..., min_length=20, max_length=500)
+    website: Optional[str] = Field(None, max_length=200, description="Spam-trap field; leave blank")
+
+    @field_validator("guest_name", "title", "reason")
+    @classmethod
+    def clean_text(cls, value: str) -> str:
+        return " ".join(value.split())
+
+    @field_validator("category")
+    @classmethod
+    def validate_category(cls, value: str) -> str:
+        normalized = value.strip().lower()
+        if normalized not in RECOMMENDATION_CATEGORIES:
+            raise ValueError("Category must be a supported media type")
+        return normalized
+
+
+class RecommendationFriendSubmissionCreate(BaseModel):
+    category: str
+    title: str = Field(..., min_length=1, max_length=200)
+    reason: str = Field(..., min_length=20, max_length=500)
+
+    _clean_title = field_validator("title")(RecommendationSubmissionCreate.clean_text.__func__)
+    _clean_reason = field_validator("reason")(RecommendationSubmissionCreate.clean_text.__func__)
+    _validate_category = field_validator("category")(RecommendationSubmissionCreate.validate_category.__func__)
+
+
+class RecommendationInviteCreate(BaseModel):
+    friend_id: int = Field(..., ge=1)
+
+
+class RecommendationTriage(BaseModel):
+    action: Literal["save", "library", "next-up", "dismiss"]
 
 
 # ============================================================================

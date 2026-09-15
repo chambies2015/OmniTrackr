@@ -414,6 +414,7 @@
       <button class="tab" data-switch-tab="music">🎵 Music</button>
       <button class="tab" data-switch-tab="books">📚 Books</button>
       <button class="tab" data-switch-tab="activity">📝 Journal</button>
+      <button class="tab" data-switch-tab="recommendations">💌 Postcards</button>
       <button class="tab" data-switch-tab="collections">🗂 Collections</button>
       <button class="tab" data-switch-tab="statistics">📊 Statistics</button>
       <div id="customTabsContainer"></div>
@@ -986,6 +987,63 @@
         </div>
         <div id="activityTimeline" class="activity-timeline__list" aria-live="polite"></div>
         <button id="activityLoadMore" type="button" class="action-btn secondary activity-load-more" data-action="activity-load-more" hidden>Load earlier moments</button>
+      </section>
+    </div>
+
+    <!-- Recommendation Postcards Tab Content -->
+    <div id="recommendations-tab" class="tab-content">
+      <section class="postcards-hero">
+        <div>
+          <p class="postcards-eyebrow">Ask one good question</p>
+          <h2>Recommendation Postcards</h2>
+          <p>Invite a few thoughtful picks from friends or anyone with your expiring link. Every reply waits here until you decide to save, add, queue, or dismiss it.</p>
+        </div>
+        <span class="postcards-privacy">Private inbox · No automatic library changes</span>
+      </section>
+
+      <section class="card postcards-create" aria-labelledby="postcardCreateTitle">
+        <div class="postcards-section-heading">
+          <div><p class="postcards-eyebrow">New postcard</p><h3 id="postcardCreateTitle">What are you in the mood for?</h3></div>
+          <p>Links are unlisted, expire automatically, and stop at your response limit.</p>
+        </div>
+        <form id="recommendationRequestForm" class="postcards-create-form" data-submit-action="create-recommendation-request">
+          <label class="postcards-prompt">Your question
+            <textarea id="recommendationPrompt" rows="2" minlength="10" maxlength="280" required placeholder="What should I try when I want a clever mystery that isn't relentlessly bleak?"></textarea>
+          </label>
+          <fieldset>
+            <legend>Invite recommendations from</legend>
+            <div class="postcards-category-grid">
+              <label><input type="checkbox" name="recommendationCategory" value="movies" checked> Movies</label>
+              <label><input type="checkbox" name="recommendationCategory" value="tv-shows" checked> TV shows</label>
+              <label><input type="checkbox" name="recommendationCategory" value="anime" checked> Anime</label>
+              <label><input type="checkbox" name="recommendationCategory" value="video-games" checked> Games</label>
+              <label><input type="checkbox" name="recommendationCategory" value="music" checked> Albums</label>
+              <label><input type="checkbox" name="recommendationCategory" value="books" checked> Books</label>
+            </div>
+          </fieldset>
+          <label>Reply window
+            <select id="recommendationExpiry"><option value="3">3 days</option><option value="7" selected>7 days</option><option value="14">14 days</option><option value="30">30 days</option></select>
+          </label>
+          <label>Response limit
+            <select id="recommendationMaxResponses"><option value="5">5 replies</option><option value="10" selected>10 replies</option><option value="15">15 replies</option><option value="20">20 replies</option></select>
+          </label>
+          <div class="postcards-form-submit"><button type="submit" class="action-btn">Create postcard</button><span id="recommendationCreateStatus" role="status"></span></div>
+        </form>
+      </section>
+
+      <section class="postcards-panel" aria-labelledby="postcardActiveTitle">
+        <div class="postcards-section-heading"><div><p class="postcards-eyebrow">Outgoing</p><h3 id="postcardActiveTitle">Your postcards</h3></div><p>Copy a guest link or invite an OmniTrackr friend directly.</p></div>
+        <div id="recommendationRequests" class="postcards-grid" aria-live="polite"><p>Loading postcards…</p></div>
+      </section>
+
+      <section class="postcards-panel" aria-labelledby="postcardInboxTitle">
+        <div class="postcards-section-heading"><div><p class="postcards-eyebrow">Incoming</p><h3 id="postcardInboxTitle">Recommendation inbox</h3></div><p>Nothing enters your library without an action from you.</p></div>
+        <div id="recommendationInbox" class="postcards-inbox" aria-live="polite"><p>Loading replies…</p></div>
+      </section>
+
+      <section class="postcards-panel" aria-labelledby="postcardInvitesTitle">
+        <div class="postcards-section-heading"><div><p class="postcards-eyebrow">From friends</p><h3 id="postcardInvitesTitle">Postcards waiting for you</h3></div><p>Answer with one title and the reason it fits.</p></div>
+        <div id="recommendationInvitations" class="postcards-inbox" aria-live="polite"><p>Loading invitations…</p></div>
       </section>
     </div>
 

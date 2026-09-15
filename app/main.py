@@ -46,6 +46,7 @@ from .routers import (
     collections,
     discover,
     import_studio,
+    recommendations,
 )
 
 # Create database tables
@@ -111,6 +112,8 @@ AD_ELIGIBLE_TEMPLATES = {
     "reviews.html",
 }
 
+NOFOLLOW_PUBLIC_TEMPLATES = {"recommendation_postcard.html"}
+
 
 def inject_adsense_account_meta(html: str) -> str:
     publisher_id = os.getenv("ADSENSE_PUBLISHER_ID", "pub-7271682066779719")
@@ -138,7 +141,8 @@ def apply_public_search_policy(html: str, template_name: str) -> tuple[str, bool
     if indexable:
         return html, True
 
-    noindex_meta = '<meta name="robots" content="noindex, follow">'
+    directive = "noindex, nofollow" if template_name in NOFOLLOW_PUBLIC_TEMPLATES else "noindex, follow"
+    noindex_meta = f'<meta name="robots" content="{directive}">'
     robots_pattern = r'<meta\s+name=["\']robots["\']\s+content=["\'][^"\']*["\']\s*/?>'
     if re.search(robots_pattern, html, flags=re.IGNORECASE):
         html = re.sub(robots_pattern, noindex_meta, html, count=1, flags=re.IGNORECASE)
@@ -155,7 +159,9 @@ def strict_template_response(template_name: str, request: Request | None = None)
             html = inject_adsense_account_meta(html)
             response = strict_html_response(inject_public_ad_loader(html, template_name, request))
             if not indexable:
-                response.headers["X-Robots-Tag"] = "noindex, follow"
+                response.headers["X-Robots-Tag"] = (
+                    "noindex, nofollow" if template_name in NOFOLLOW_PUBLIC_TEMPLATES else "noindex, follow"
+                )
             return response
     return None
 
@@ -298,6 +304,17 @@ app.include_router(next_up.router)
 app.include_router(completion_moments.router)
 app.include_router(activity.router)
 app.include_router(import_studio.router)
+from .routers.recommendations import submit_public_recommendation
+rate_limited_recommendation = limiter.limit("5/hour")(submit_public_recommendation)
+for route in recommendations.router.routes:
+    if (
+        hasattr(route, "path")
+        and route.path == "/recommendations/public/{token}"
+        and hasattr(route, "methods")
+        and "POST" in route.methods
+    ):
+        route.endpoint = rate_limited_recommendation
+app.include_router(recommendations.router)
 app.include_router(collections.router)
 app.include_router(discover.router)
 app.include_router(export_import.router)
@@ -347,6 +364,16 @@ async def read_root(request: Request):
                 html = public_root_html(html)
             return nonce_html_response(html)
     return {"message": "OmniTrackr API is running 🚀"}
+
+
+@app.get("/recommend/{token}", tags=["public"])
+async def recommendation_postcard_page(request: Request, token: str):
+    """Serve an unindexed guest response page; the token is read by client JS."""
+    response = strict_template_response("recommendation_postcard.html", request)
+    if response:
+        response.headers["Cache-Control"] = "no-store"
+        return response
+    raise HTTPException(status_code=404, detail="Recommendation Postcard page not found")
 
 
 # Privacy Policy endpoint

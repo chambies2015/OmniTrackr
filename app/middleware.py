@@ -28,6 +28,8 @@ NOINDEX_PREFIXES = (
     "/music/",
     "/notifications/",
     "/profile-pictures/",
+    "/recommend/",
+    "/recommendations/",
     "/static/profile_pictures/",
     "/statistics/",
     "/tv-shows/",
@@ -59,7 +61,7 @@ class SecurityHeadersMiddleware(BaseHTTPMiddleware):
             response.headers["Pragma"] = "no-cache"
             response.headers["Expires"] = "0"
 
-        if request.url.path.startswith(("/activity/", "/import-studio/", "/statistics/")):
+        if request.url.path.startswith(("/activity/", "/import-studio/", "/recommend/", "/recommendations/", "/statistics/")):
             response.headers["Cache-Control"] = "private, no-store"
 
         if request.url.path in NOINDEX_PATHS or request.url.path.startswith(NOINDEX_PREFIXES):

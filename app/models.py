@@ -65,6 +65,8 @@ class User(Base):
     completion_moments = relationship("CompletionMoment", back_populates="owner", cascade="all, delete-orphan")
     activity_entries = relationship("ActivityEntry", back_populates="owner", cascade="all, delete-orphan")
     collections = relationship("Collection", back_populates="owner", cascade="all, delete-orphan")
+    recommendation_requests = relationship("RecommendationRequest", back_populates="owner", cascade="all, delete-orphan")
+    recommendation_invitations = relationship("RecommendationInvitation", back_populates="recipient", cascade="all, delete-orphan")
 
 
 class Movie(Base):
@@ -346,6 +348,60 @@ class Notification(Base):
     # Relationships
     user = relationship("User", back_populates="notifications")
     friend_request = relationship("FriendRequest", back_populates="notifications")
+
+
+class RecommendationRequest(Base):
+    """An owner's expiring prompt for tightly scoped media recommendations."""
+    __tablename__ = "recommendation_requests"
+
+    id = Column(Integer, primary_key=True, index=True)
+    owner_id = Column(Integer, ForeignKey("users.id"), nullable=False, index=True)
+    public_token = Column(String, unique=True, nullable=False, index=True)
+    prompt = Column(String, nullable=False)
+    allowed_categories = Column(String, nullable=False)
+    max_responses = Column(Integer, nullable=False, default=10)
+    status = Column(String, nullable=False, default="open", index=True)
+    expires_at = Column(DateTime, nullable=False, index=True)
+    created_at = Column(DateTime, nullable=False, default=datetime.utcnow)
+
+    owner = relationship("User", back_populates="recommendation_requests")
+    submissions = relationship("RecommendationSubmission", back_populates="request", cascade="all, delete-orphan")
+    invitations = relationship("RecommendationInvitation", back_populates="request", cascade="all, delete-orphan")
+
+
+class RecommendationSubmission(Base):
+    """A suggestion awaiting an explicit owner decision."""
+    __tablename__ = "recommendation_submissions"
+
+    id = Column(Integer, primary_key=True, index=True)
+    request_id = Column(Integer, ForeignKey("recommendation_requests.id"), nullable=False, index=True)
+    recommender_user_id = Column(Integer, ForeignKey("users.id", ondelete="SET NULL"), nullable=True, index=True)
+    guest_name = Column(String, nullable=False)
+    category = Column(String, nullable=False)
+    title = Column(String, nullable=False)
+    reason = Column(String, nullable=False)
+    status = Column(String, nullable=False, default="pending", index=True)
+    accepted_item_id = Column(Integer, nullable=True)
+    created_at = Column(DateTime, nullable=False, default=datetime.utcnow, index=True)
+
+    request = relationship("RecommendationRequest", back_populates="submissions")
+
+
+class RecommendationInvitation(Base):
+    """Private delivery of a postcard prompt to an existing friend."""
+    __tablename__ = "recommendation_invitations"
+
+    id = Column(Integer, primary_key=True, index=True)
+    request_id = Column(Integer, ForeignKey("recommendation_requests.id"), nullable=False, index=True)
+    recipient_id = Column(Integer, ForeignKey("users.id"), nullable=False, index=True)
+    created_at = Column(DateTime, nullable=False, default=datetime.utcnow)
+
+    request = relationship("RecommendationRequest", back_populates="invitations")
+    recipient = relationship("User", back_populates="recommendation_invitations")
+
+    __table_args__ = (
+        UniqueConstraint("request_id", "recipient_id", name="uq_recommendation_invitation"),
+    )
 
 
 class CustomTab(Base):
