@@ -39,7 +39,7 @@ def get_anime_by_id(db: Session, user_id: int, anime_id: int) -> Optional[models
 
 
 def create_anime(db: Session, user_id: int, anime: schemas.AnimeCreate) -> models.Anime:
-    anime_dict = anime.dict()
+    anime_dict = anime.model_dump()
     if anime_dict.get('rating') is not None:
         anime_dict['rating'] = round(float(anime_dict['rating']), 1)
     db_anime = models.Anime(**anime_dict, user_id=user_id)
@@ -53,7 +53,7 @@ def update_anime(db: Session, user_id: int, anime_id: int, anime_update: schemas
     db_anime = get_anime_by_id(db, user_id, anime_id)
     if db_anime is None:
         return None
-    update_dict = anime_update.dict(exclude_unset=True)
+    update_dict = anime_update.model_dump(exclude_unset=True)
     
     allowed_fields = {'title', 'year', 'seasons', 'episodes', 'rating', 'watched', 'review', 'review_public', 'poster_url'}
     for field, value in update_dict.items():

@@ -16,6 +16,9 @@ from ..dependencies import get_db, get_current_user
 
 router = APIRouter(prefix="/account", tags=["account"])
 
+MAX_IMAGE_UPLOAD_BYTES = 5 * 1024 * 1024
+MAX_IMAGE_PIXELS = 20_000_000
+
 
 @router.get("/me", response_model=schemas.User)
 async def get_current_account(current_user: models.User = Depends(get_current_user)):
@@ -187,8 +190,8 @@ async def upload_profile_picture(
         )
     
     # Validate file size (max 5MB)
-    file_content = await file.read()
-    if len(file_content) > 5 * 1024 * 1024:  # 5MB
+    file_content = await file.read(MAX_IMAGE_UPLOAD_BYTES + 1)
+    if len(file_content) > MAX_IMAGE_UPLOAD_BYTES:
         raise HTTPException(status_code=400, detail="File size exceeds 5MB limit")
     
     # Content validation: Verify file is actually an image using magic bytes
@@ -232,6 +235,11 @@ async def upload_profile_picture(
     
     try:
         # Open image from bytes
+        image = Image.open(io.BytesIO(file_content))
+        width, height = image.size
+        if width <= 0 or height <= 0 or width * height > MAX_IMAGE_PIXELS:
+            raise HTTPException(status_code=400, detail="Image dimensions are too large")
+        image.verify()
         image = Image.open(io.BytesIO(file_content))
         
         # Convert to RGB/RGBA for processing
@@ -319,7 +327,7 @@ async def upload_profile_picture(
         print(f"Error processing image: {e}")
         raise HTTPException(
             status_code=400,
-            detail=f"Failed to process image: {str(e)}"
+            detail="Failed to process image. Please choose a valid JPEG, PNG, GIF, or WebP file."
         )
 
 

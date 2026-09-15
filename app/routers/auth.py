@@ -62,7 +62,9 @@ async def login(
     # without causing an aware-vs-naive TypeError on the next login attempt.
     now_utc = datetime.now(timezone.utc).replace(tzinfo=None)
     
-    if user and user.locked_until and user.locked_until > now_utc:
+    password_valid = bool(user and auth.verify_password(form_data.password, user.hashed_password))
+
+    if user and user.locked_until and user.locked_until > now_utc and not password_valid:
         remaining_minutes = max(1, int((user.locked_until - now_utc).total_seconds() / 60) + 1)
         raise HTTPException(
             status_code=423,
@@ -75,7 +77,7 @@ async def login(
         user.failed_login_attempts = 0
         db.commit()
     
-    if not user or not auth.verify_password(form_data.password, user.hashed_password):
+    if not password_valid:
         client_ip = request.client.host if request.client else "unknown"
         if user:
             user.failed_login_attempts = (user.failed_login_attempts or 0) + 1
@@ -334,22 +336,20 @@ async def request_password_reset(
 
 
 @router.post("/reset-password")
-async def reset_password(token: str, new_password: str, db: Session = Depends(get_db)):
+async def reset_password(payload: schemas.PasswordReset, db: Session = Depends(get_db)):
     """Reset password with valid token."""
-    user = None
-    if token.startswith("$2"):
-        user = db.query(models.User).filter(models.User.reset_token == token).first()
-        if not user:
-            raise HTTPException(status_code=400, detail="Invalid or expired reset token")
-    else:
-        try:
-            email = email_utils.verify_reset_token(token, max_age=3600)
-        except Exception:
-            raise HTTPException(status_code=400, detail="Invalid or expired reset token")
-        
-        user = crud.get_user_by_email(db, email)
-        if not user:
-            raise HTTPException(status_code=404, detail="User not found")
+    token = payload.token
+    new_password = payload.new_password
+    # Only the emailed, signed token is a credential. The bcrypt value persisted
+    # in the database is a verifier and must never be accepted as a bearer token.
+    try:
+        email = email_utils.verify_reset_token(token, max_age=3600)
+    except Exception:
+        raise HTTPException(status_code=400, detail="Invalid or expired reset token")
+
+    user = crud.get_user_by_email(db, email)
+    if not user:
+        raise HTTPException(status_code=400, detail="Invalid or expired reset token")
     
     if not user.reset_token_expires or user.reset_token_expires.replace(tzinfo=timezone.utc) < datetime.now(timezone.utc):
         raise HTTPException(status_code=400, detail="Reset token has expired")
@@ -358,12 +358,8 @@ async def reset_password(token: str, new_password: str, db: Session = Depends(ge
         raise HTTPException(status_code=400, detail="Invalid reset token")
     
     if user.reset_token.startswith("$2"):
-        if token.startswith("$2"):
-            if not secrets.compare_digest(user.reset_token, token):
-                raise HTTPException(status_code=400, detail="Invalid reset token")
-        else:
-            if not auth.verify_token_hash(token, user.reset_token):
-                raise HTTPException(status_code=400, detail="Invalid reset token")
+        if not auth.verify_token_hash(token, user.reset_token):
+            raise HTTPException(status_code=400, detail="Invalid reset token")
     else:
         if not secrets.compare_digest(user.reset_token, token):
             raise HTTPException(status_code=400, detail="Invalid reset token")

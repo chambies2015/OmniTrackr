@@ -26,8 +26,10 @@ def test_standalone_public_auth_has_its_own_api_base():
     assert "`${API_BASE}/auth/" not in source
 
     public_template = (INDEX_HTML.parent / "public_landing.html").read_text(encoding="utf-8")
-    assert 'src="/auth.js?v=20260915-api-base"' in public_template
-    assert 'src="./auth.js?v=20260915-api-base"' in INDEX_HTML.read_text(encoding="utf-8")
+    assert 'src="/auth.js?v=20260915-security-sweep"' in public_template
+    assert 'src="./auth.js?v=20260915-security-sweep"' in INDEX_HTML.read_text(encoding="utf-8")
+    assert "/auth/reset-password?" not in source
+    assert "JSON.stringify({ token, new_password: newPassword })" in source
 
 
 def test_review_modal_does_not_decode_attributes_with_inner_html():

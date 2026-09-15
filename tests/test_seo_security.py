@@ -491,6 +491,12 @@ class TestSecurityMiddleware:
         assert "Referrer-Policy" in response.headers
         assert "Permissions-Policy" in response.headers
 
+    def test_private_cookie_authenticated_responses_are_not_shared_cacheable(self, authenticated_client):
+        for path in ("/movies/", "/friends", "/notifications/"):
+            response = authenticated_client.get(path)
+            assert response.status_code == 200
+            assert response.headers["cache-control"] == "private, no-store"
+
     def test_public_content_pages_use_nonce_csp_without_unsafe_inline(self, client):
         """Public SEO/content pages should not need unsafe-inline in CSP."""
         for path in [
@@ -1551,6 +1557,8 @@ class TestRootEndpoint:
         assert 'id="logoutBtn"' not in response.text
         assert 'src="/static/public-landing.js"' in response.text
         assert 'src="./app.js"' not in response.text
+        assert response.headers["cache-control"] == "no-cache"
+        assert "Cookie" in response.headers["vary"]
     
     def test_head_root(self, client):
         """Test HEAD request to root."""
@@ -1566,4 +1574,6 @@ class TestRootEndpoint:
         assert 'id="mainContainer"' in response.text
         assert 'id="logoutBtn"' in response.text
         assert 'src="./app.js?v=20260915-quick-capture"' in response.text
+        assert response.headers["cache-control"] == "private, no-store"
+        assert "Cookie" in response.headers["vary"]
 

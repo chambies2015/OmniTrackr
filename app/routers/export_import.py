@@ -13,6 +13,8 @@ from .activity import _serialize as serialize_activity, import_activity_entries
 
 router = APIRouter(prefix="", tags=["export-import"])
 
+MAX_JSON_IMPORT_BYTES = 25 * 1024 * 1024
+
 
 @router.get("/export/", response_model=schemas.ExportData)
 async def export_data(
@@ -107,7 +109,9 @@ async def import_from_file(
         raise HTTPException(status_code=400, detail="File must be a JSON file")
 
     try:
-        content = await file.read()
+        content = await file.read(MAX_JSON_IMPORT_BYTES + 1)
+        if len(content) > MAX_JSON_IMPORT_BYTES:
+            raise HTTPException(status_code=413, detail="JSON import exceeds the 25MB limit")
         data = json.loads(content.decode('utf-8'))
 
         # Validate the imported data structure
@@ -166,6 +170,6 @@ async def import_from_file(
         raise HTTPException(status_code=400, detail="Invalid JSON file")
     except (ValidationError, TypeError, AttributeError) as e:
         raise HTTPException(status_code=400, detail=f"Invalid import data: {str(e)}")
-    except Exception as e:
-        raise HTTPException(status_code=500, detail=f"Error processing file: {str(e)}")
+    except Exception:
+        raise HTTPException(status_code=500, detail="Error processing import file")
 

@@ -19,6 +19,9 @@ from ..dependencies import get_db, get_current_user
 
 router = APIRouter(prefix="/custom-tabs", tags=["custom-tabs"])
 
+MAX_IMAGE_UPLOAD_BYTES = 5 * 1024 * 1024
+MAX_IMAGE_PIXELS = 20_000_000
+
 
 def _parse_item_field_values(item) -> dict:
     """Helper function to parse field_values from JSON string."""
@@ -72,8 +75,8 @@ async def create_custom_tab(
         return crud.create_custom_tab(db, current_user.id, tab)
     except ValueError as e:
         raise HTTPException(status_code=400, detail=str(e))
-    except Exception as e:
-        raise HTTPException(status_code=500, detail=f"Failed to create custom tab: {str(e)}")
+    except Exception:
+        raise HTTPException(status_code=500, detail="Failed to create custom tab")
 
 
 @router.put("/{tab_id}", response_model=schemas.CustomTab)
@@ -90,8 +93,8 @@ async def update_custom_tab(
         return db_tab
     except ValueError as e:
         raise HTTPException(status_code=400, detail=str(e))
-    except Exception as e:
-        raise HTTPException(status_code=500, detail=f"Failed to update custom tab: {str(e)}")
+    except Exception:
+        raise HTTPException(status_code=500, detail="Failed to update custom tab")
 
 
 @router.delete("/{tab_id}", response_model=schemas.CustomTab)
@@ -207,8 +210,8 @@ async def upload_custom_tab_item_poster(
             detail="Invalid file type. Allowed types: JPEG, PNG, GIF, WebP"
         )
     
-    file_content = await file.read()
-    if len(file_content) > 5 * 1024 * 1024:
+    file_content = await file.read(MAX_IMAGE_UPLOAD_BYTES + 1)
+    if len(file_content) > MAX_IMAGE_UPLOAD_BYTES:
         raise HTTPException(status_code=400, detail="File size exceeds 5MB limit")
     
     try:
@@ -244,6 +247,11 @@ async def upload_custom_tab_item_poster(
         )
     
     try:
+        image = Image.open(io.BytesIO(file_content))
+        width, height = image.size
+        if width <= 0 or height <= 0 or width * height > MAX_IMAGE_PIXELS:
+            raise HTTPException(status_code=400, detail="Image dimensions are too large")
+        image.verify()
         image = Image.open(io.BytesIO(file_content))
         
         if image.mode == 'RGBA':
@@ -314,5 +322,5 @@ async def upload_custom_tab_item_poster(
         print(f"Error processing image: {e}")
         raise HTTPException(
             status_code=400,
-            detail=f"Failed to process image: {str(e)}"
+            detail="Failed to process image. Please choose a valid JPEG, PNG, GIF, or WebP file."
         )

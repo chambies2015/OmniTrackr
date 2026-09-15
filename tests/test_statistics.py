@@ -2,6 +2,7 @@
 Tests for statistics endpoints.
 """
 import pytest
+from sqlalchemy import event
 from app import models
 
 
@@ -101,6 +102,23 @@ class TestStatisticsEndpoints:
         assert "top_category" in data
         assert "most_complete_category" in data
         assert len(data["categories"]) == 6
+
+    def test_library_insights_uses_one_aggregate_query_per_category(self, authenticated_client, db_session):
+        statements = []
+
+        def record_statement(conn, cursor, statement, parameters, context, executemany):
+            if statement.lstrip().upper().startswith("SELECT"):
+                statements.append(statement)
+
+        event.listen(db_session.bind, "before_cursor_execute", record_statement)
+        try:
+            response = authenticated_client.get("/statistics/insights/")
+        finally:
+            event.remove(db_session.bind, "before_cursor_execute", record_statement)
+
+        assert response.status_code == 200
+        # One current-user lookup plus one aggregate for each of six categories.
+        assert len(statements) <= 7
 
     def test_get_library_pulse_returns_current_user_actions(self, authenticated_client, test_movie_data, test_tv_show_data):
         """Pulse should return unfinished and missing-context items without mutating records."""

@@ -4,7 +4,7 @@ These define the shape of data accepted/returned by the API.
 """
 from typing import Optional, List, Literal
 from datetime import datetime
-from pydantic import BaseModel, Field, field_validator
+from pydantic import BaseModel, ConfigDict, Field, field_validator
 
 
 def validate_public_url(value: Optional[str]) -> Optional[str]:
@@ -42,16 +42,14 @@ class UserLogin(BaseModel):
 
 class User(UserBase):
     """Schema for user responses."""
+    model_config = ConfigDict(from_attributes=True)
+
     id: int
     is_active: bool
     is_verified: bool = False
     created_at: Optional[datetime] = None
     profile_picture_url: Optional[str] = None
     
-    class Config:
-        from_attributes = True
-
-
 class UserUpdate(BaseModel):
     """Schema for updating user information."""
     username: Optional[str] = Field(None, min_length=3, max_length=50)
@@ -63,6 +61,12 @@ class PasswordChange(BaseModel):
     """Schema for changing password."""
     current_password: str = Field(..., description="Current password for verification")
     new_password: str = Field(..., min_length=6, max_length=128, description="New password (min 6 characters)")
+
+
+class PasswordReset(BaseModel):
+    """One-time reset credential and replacement password, carried in the request body."""
+    token: str = Field(..., min_length=1, max_length=2048)
+    new_password: str = Field(..., min_length=6, max_length=128)
 
 
 class EmailChange(BaseModel):
@@ -84,6 +88,8 @@ class AccountDeactivate(BaseModel):
 
 class PrivacySettings(BaseModel):
     """Schema for privacy settings."""
+    model_config = ConfigDict(from_attributes=True)
+
     movies_private: bool = Field(False, description="Make movies private")
     tv_shows_private: bool = Field(False, description="Make TV shows private")
     anime_private: bool = Field(False, description="Make anime private")
@@ -92,10 +98,6 @@ class PrivacySettings(BaseModel):
     books_private: bool = Field(False, description="Make books private")
     statistics_private: bool = Field(False, description="Make statistics private")
     
-    class Config:
-        from_attributes = True
-
-
 class PrivacySettingsUpdate(BaseModel):
     """Schema for updating privacy settings."""
     movies_private: Optional[bool] = None
@@ -109,6 +111,8 @@ class PrivacySettingsUpdate(BaseModel):
 
 class TabVisibility(BaseModel):
     """Schema for tab visibility settings."""
+    model_config = ConfigDict(from_attributes=True)
+
     movies_visible: bool = Field(True, description="Show Movies tab")
     tv_shows_visible: bool = Field(True, description="Show TV Shows tab")
     anime_visible: bool = Field(True, description="Show Anime tab")
@@ -116,10 +120,6 @@ class TabVisibility(BaseModel):
     music_visible: bool = Field(True, description="Show Music tab")
     books_visible: bool = Field(True, description="Show Books tab")
     
-    class Config:
-        from_attributes = True
-
-
 class TabVisibilityUpdate(BaseModel):
     """Schema for updating tab visibility settings."""
     movies_visible: Optional[bool] = None
@@ -141,6 +141,8 @@ class FriendRequestCreate(BaseModel):
 
 class FriendRequestResponse(BaseModel):
     """Schema for friend request responses."""
+    model_config = ConfigDict(from_attributes=True)
+
     id: int
     sender_id: int
     receiver_id: int
@@ -150,10 +152,6 @@ class FriendRequestResponse(BaseModel):
     created_at: datetime
     expires_at: datetime
     
-    class Config:
-        from_attributes = True
-
-
 class FriendRequestAction(BaseModel):
     """Schema for friend request actions (accept/deny)."""
     action: str = Field(..., description="Action to take: 'accept' or 'deny'")
@@ -161,16 +159,16 @@ class FriendRequestAction(BaseModel):
 
 class FriendshipResponse(BaseModel):
     """Schema for friendship responses."""
+    model_config = ConfigDict(from_attributes=True)
+
     id: int
     friend: User
     created_at: datetime
     
-    class Config:
-        from_attributes = True
-
-
 class NotificationResponse(BaseModel):
     """Schema for notification responses."""
+    model_config = ConfigDict(from_attributes=True)
+
     id: int
     type: str
     message: str
@@ -178,10 +176,6 @@ class NotificationResponse(BaseModel):
     created_at: datetime
     read_at: Optional[datetime] = None
     
-    class Config:
-        from_attributes = True
-
-
 class UserCount(BaseModel):
     """Schema for user count response."""
     count: int = Field(..., description="Total number of active users")
@@ -248,10 +242,9 @@ class MovieUpdate(BaseModel):
 
 
 class Movie(MovieBase):
-    id: int
+    model_config = ConfigDict(from_attributes=True)
 
-    class Config:
-        from_attributes = True
+    id: int
 
 
 class TVShowBase(BaseModel):
@@ -287,10 +280,9 @@ class TVShowUpdate(BaseModel):
 
 
 class TVShow(TVShowBase):
-    id: int
+    model_config = ConfigDict(from_attributes=True)
 
-    class Config:
-        from_attributes = True
+    id: int
 
 
 class AnimeBase(BaseModel):
@@ -326,10 +318,9 @@ class AnimeUpdate(BaseModel):
 
 
 class Anime(AnimeBase):
-    id: int
+    model_config = ConfigDict(from_attributes=True)
 
-    class Config:
-        from_attributes = True
+    id: int
 
 
 class VideoGameBase(BaseModel):
@@ -367,10 +358,9 @@ class VideoGameUpdate(BaseModel):
 
 
 class VideoGame(VideoGameBase):
-    id: int
+    model_config = ConfigDict(from_attributes=True)
 
-    class Config:
-        from_attributes = True
+    id: int
 
 
 class MusicBase(BaseModel):
@@ -406,10 +396,9 @@ class MusicUpdate(BaseModel):
 
 
 class Music(MusicBase):
-    id: int
+    model_config = ConfigDict(from_attributes=True)
 
-    class Config:
-        from_attributes = True
+    id: int
 
 
 class BookBase(BaseModel):
@@ -445,10 +434,9 @@ class BookUpdate(BaseModel):
 
 
 class Book(BookBase):
-    id: int
+    model_config = ConfigDict(from_attributes=True)
 
-    class Config:
-        from_attributes = True
+    id: int
 
 
 # ============================================================================
@@ -540,6 +528,8 @@ class ActivityEntryImport(BaseModel):
 # Export/Import schemas
 class ExportData(BaseModel):
     """Schema for exporting all data from OmniTrackr"""
+    model_config = ConfigDict(from_attributes=True)
+
     movies: List[Movie] = Field(..., description="List of all movies")
     tv_shows: List[TVShow] = Field(..., description="List of all TV shows")
     anime: List[Anime] = Field(..., description="List of all anime")
@@ -550,12 +540,10 @@ class ExportData(BaseModel):
     activities: List[ActivityEntry] = Field(default=[], description="Private activity journal entries")
     export_metadata: dict = Field(..., description="Export metadata including timestamp and version")
     
-    class Config:
-        from_attributes = True
-
-
 class ImportData(BaseModel):
     """Schema for importing data into OmniTrackr"""
+    model_config = ConfigDict(from_attributes=True)
+
     movies: List[MovieCreate] = Field(default=[], description="Movies to import")
     tv_shows: List[TVShowCreate] = Field(default=[], description="TV shows to import")
     anime: List[AnimeCreate] = Field(default=[], description="Anime to import")
@@ -565,12 +553,10 @@ class ImportData(BaseModel):
     custom_tabs: List[dict] = Field(default=[], description="Custom tabs to import (optional for backward compatibility)")
     activities: List[ActivityEntryImport] = Field(default=[], description="Activity journal entries (optional for backward compatibility)")
     
-    class Config:
-        from_attributes = True
-
-
 class ImportResult(BaseModel):
     """Schema for import operation results"""
+    model_config = ConfigDict(from_attributes=True)
+
     movies_created: int = Field(..., description="Number of movies created")
     movies_updated: int = Field(..., description="Number of movies updated")
     tv_shows_created: int = Field(..., description="Number of TV shows created")
@@ -589,10 +575,6 @@ class ImportResult(BaseModel):
     activities_skipped: int = Field(default=0, description="Number of duplicate journal entries skipped")
     errors: List[str] = Field(default=[], description="List of errors encountered during import")
     
-    class Config:
-        from_attributes = True
-
-
 # Statistics schemas
 class WatchStatistics(BaseModel):
     """Schema for watch statistics"""
@@ -849,18 +831,17 @@ class CustomTabFieldCreate(BaseModel):
 
 
 class CustomTabField(CustomTabFieldCreate):
+    model_config = ConfigDict(from_attributes=True)
+
     id: int
     tab_id: int
-    
-    class Config:
-        from_attributes = True
 
 
 class CustomTabCreate(BaseModel):
     name: str = Field(..., min_length=1, max_length=100, description="Tab name")
     source_type: str = Field("none", description="Metadata source: omdb, jikan, rawg, or none")
     allow_uploads: bool = Field(True, description="Allow poster uploads")
-    fields: List[CustomTabFieldCreate] = Field(default=[], max_items=30, description="Field definitions")
+    fields: List[CustomTabFieldCreate] = Field(default=[], max_length=30, description="Field definitions")
 
 
 class CustomTabUpdate(BaseModel):
@@ -871,6 +852,8 @@ class CustomTabUpdate(BaseModel):
 
 
 class CustomTab(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+
     id: int
     user_id: int
     name: str
@@ -880,10 +863,6 @@ class CustomTab(BaseModel):
     created_at: Optional[datetime] = None
     fields: List[CustomTabField] = Field(default=[])
     
-    class Config:
-        from_attributes = True
-
-
 class CustomTabItemCreate(BaseModel):
     title: str = Field(..., min_length=1, max_length=500, description="Item title")
     field_values: dict = Field(default={}, description="Field values as key-value pairs")
@@ -901,6 +880,8 @@ class CustomTabItemUpdate(BaseModel):
 
 
 class CustomTabItem(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+
     id: int
     tab_id: int
     title: str
@@ -908,10 +889,6 @@ class CustomTabItem(BaseModel):
     poster_url: Optional[str] = None
     created_at: Optional[datetime] = None
     
-    class Config:
-        from_attributes = True
-
-
 # ============================================================================
 # Next Up Queue Schemas
 # ============================================================================

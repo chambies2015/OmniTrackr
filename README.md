@@ -31,7 +31,7 @@ Backend:
 - SQLAlchemy
 - Pydantic
 - PostgreSQL in production, SQLite for local development
-- python-jose JWT utilities
+- PyJWT token utilities
 - bcrypt password hashing
 - FastAPI-Mail and itsdangerous for email workflows
 - Pillow for image validation and optimization

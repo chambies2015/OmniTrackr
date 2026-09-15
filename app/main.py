@@ -4,6 +4,8 @@ Provides CRUD endpoints for managing movies and TV shows.
 """
 import os
 import re
+import httpx
+from contextlib import asynccontextmanager
 from fastapi import FastAPI, Depends, HTTPException, Request
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import FileResponse, Response, RedirectResponse
@@ -21,7 +23,7 @@ from .csp import nonce_html_response, strict_html_response
 from .auth import AUTH_COOKIE_NAME
 from .migrations import run_migrations
 from .middleware import SecurityHeadersMiddleware, BotFilterMiddleware
-from .dependencies import get_db
+from .dependencies import get_db, get_current_user
 from .routers import (
     auth,
     account,
@@ -55,8 +57,38 @@ Base.metadata.create_all(bind=engine)
 # Run migrations
 run_migrations()
 
+@asynccontextmanager
+async def lifespan(application: FastAPI):
+    """Own pooled network resources and lightweight startup maintenance."""
+    application.state.external_api_client = httpx.AsyncClient(
+        timeout=httpx.Timeout(12.0, connect=5.0),
+        limits=httpx.Limits(max_connections=20, max_keepalive_connections=10),
+        follow_redirects=False,
+    )
+    try:
+        db = SessionLocal()
+        try:
+            expired_count = crud.expire_friend_requests(db)
+            if expired_count > 0:
+                print(f"Expired {expired_count} old friend requests on startup")
+        finally:
+            db.close()
+    except Exception as e:
+        print(f"Error expiring friend requests on startup: {e}")
+
+    try:
+        yield
+    finally:
+        await application.state.external_api_client.aclose()
+
+
 # Initialize FastAPI
-app = FastAPI(title="OmniTrackr API", description="Manage your movies, TV shows, anime, video games, music, and books", version="0.1.0")
+app = FastAPI(
+    title="OmniTrackr API",
+    description="Manage your movies, TV shows, anime, video games, music, and books",
+    version="0.1.0",
+    lifespan=lifespan,
+)
 
 # Initialize rate limiter
 if os.getenv("TESTING", "").lower() == "true":
@@ -65,19 +97,6 @@ else:
     limiter = Limiter(key_func=get_remote_address)
 app.state.limiter = limiter
 app.add_exception_handler(RateLimitExceeded, _rate_limit_exceeded_handler)
-
-
-@app.on_event("startup")
-async def startup_event():
-    """Run tasks on application startup."""
-    try:
-        db = SessionLocal()
-        expired_count = crud.expire_friend_requests(db)
-        if expired_count > 0:
-            print(f"Expired {expired_count} old friend requests on startup")
-        db.close()
-    except Exception as e:
-        print(f"Error expiring friend requests on startup: {e}")
 
 
 # Add middleware
@@ -158,6 +177,7 @@ def strict_template_response(template_name: str, request: Request | None = None)
             html, indexable = apply_public_search_policy(file.read(), template_name)
             html = inject_adsense_account_meta(html)
             response = strict_html_response(inject_public_ad_loader(html, template_name, request))
+            response.headers["Vary"] = "Cookie"
             if not indexable:
                 response.headers["X-Robots-Tag"] = (
                     "noindex, nofollow" if template_name in NOFOLLOW_PUBLIC_TEMPLATES else "noindex, follow"
@@ -236,10 +256,21 @@ async def serve_profile_picture(user_id: int, db: Session = Depends(get_db)):
 
 
 @app.get("/custom-tab-posters/{item_id}")
-async def serve_custom_tab_poster(item_id: int, db: Session = Depends(get_db)):
-    """Serve custom tab item posters from database."""
-    from . import models
-    item = db.query(models.CustomTabItem).filter(models.CustomTabItem.id == item_id).first()
+async def serve_custom_tab_poster(
+    item_id: int,
+    current_user: models.User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+):
+    """Serve a custom-tab poster only to the owner of that private tab."""
+    item = (
+        db.query(models.CustomTabItem)
+        .join(models.CustomTab, models.CustomTabItem.tab_id == models.CustomTab.id)
+        .filter(
+            models.CustomTabItem.id == item_id,
+            models.CustomTab.user_id == current_user.id,
+        )
+        .first()
+    )
     if not item or not item.poster_data:
         raise HTTPException(status_code=404, detail="Poster not found")
     
@@ -360,9 +391,13 @@ async def read_root(request: Request):
     if os.path.exists(html_file):
         with open(html_file, "r", encoding="utf-8") as file:
             html = file.read()
-            if not request.cookies.get(AUTH_COOKIE_NAME):
+            authenticated_shell = bool(request.cookies.get(AUTH_COOKIE_NAME))
+            if not authenticated_shell:
                 html = public_root_html(html)
-            return nonce_html_response(html)
+            response = nonce_html_response(html)
+            response.headers["Cache-Control"] = "private, no-store" if authenticated_shell else "no-cache"
+            response.headers["Vary"] = "Cookie"
+            return response
     return {"message": "OmniTrackr API is running 🚀"}
 
 

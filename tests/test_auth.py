@@ -2,7 +2,9 @@
 Tests for authentication endpoints and utilities.
 """
 import pytest
-from app import auth, crud, models
+from datetime import datetime, timedelta, timezone
+
+from app import auth, crud, email as email_utils, models
 from app.database import SessionLocal
 
 
@@ -31,6 +33,13 @@ class TestPasswordHashing:
         hashed = auth.get_password_hash(password)
         
         assert auth.verify_password("wrongpassword", hashed) is False
+
+    def test_verify_password_preserves_legacy_bcrypt_truncation(self):
+        """Existing pre-limit accounts remain usable after the input hardening."""
+        legacy_prefix = "x" * 72
+        hashed = auth.get_password_hash(legacy_prefix)
+
+        assert auth.verify_password(legacy_prefix + "legacy-suffix", hashed) is True
 
 
 class TestJWTTokens:
@@ -247,12 +256,12 @@ class TestAuthEndpoints:
             )
             assert response.status_code == 401
 
-        locked = client.post(
+        recovered = client.post(
             "/auth/login",
             data={"username": test_user_data["username"], "password": test_user_data["password"]},
         )
-        assert locked.status_code == 423
-        assert "locked" in locked.json()["detail"].lower()
+        assert recovered.status_code == 200
+        assert "access_token" in recovered.json()
     
     def test_login_nonexistent_user(self, client):
         """Test login with non-existent user."""
@@ -265,6 +274,24 @@ class TestAuthEndpoints:
         )
         
         assert response.status_code == 401
+
+    def test_overlong_login_password_is_rejected_without_server_error(self, client, test_user_data):
+        client.post("/auth/register", json=test_user_data)
+
+        response = client.post(
+            "/auth/login",
+            data={"username": test_user_data["username"], "password": "x" * 10_000},
+        )
+
+        assert response.status_code == 401
+
+    def test_password_over_bcrypt_byte_limit_is_rejected(self, client, test_user_data):
+        payload = {**test_user_data, "password": "é" * 40}
+
+        response = client.post("/auth/register", json=payload)
+
+        assert response.status_code == 400
+        assert "72 UTF-8 bytes" in response.json()["detail"]
 
 
 class TestEmailVerification:
@@ -333,17 +360,18 @@ class TestPasswordReset:
         user.verification_token = None
         db_session.commit()
         
-        # Request password reset
-        client.post(f"/auth/request-password-reset?email={test_user_data['email']}")
-        
-        # Get reset token from database
-        db_session.refresh(user)
-        assert user.reset_token is not None
+        # Store the same verifier shape used by the real reset request while
+        # retaining the raw emailed token needed to exercise the endpoint.
+        raw_token = email_utils.generate_reset_token(test_user_data["email"])
+        user.reset_token = auth.hash_token(raw_token)
+        user.reset_token_expires = datetime.now(timezone.utc) + timedelta(hours=1)
+        db_session.commit()
         
         # Reset password
         new_password = "newpassword123"
         response = client.post(
-            f"/auth/reset-password?token={user.reset_token}&new_password={new_password}"
+            "/auth/reset-password",
+            json={"token": raw_token, "new_password": new_password},
         )
         
         assert response.status_code == 200
@@ -361,8 +389,26 @@ class TestPasswordReset:
     
     def test_reset_password_invalid_token(self, client):
         """Test password reset with invalid token."""
-        response = client.post("/auth/reset-password?token=invalid_token&new_password=newpass123")
+        response = client.post(
+            "/auth/reset-password",
+            json={"token": "invalid_token", "new_password": "newpass123"},
+        )
         
+        assert response.status_code == 400
+
+    def test_reset_password_rejects_stored_verifier_as_bearer_token(self, client, test_user_data, db_session):
+        client.post("/auth/register", json=test_user_data)
+        user = crud.get_user_by_email(db_session, test_user_data["email"])
+        raw_token = email_utils.generate_reset_token(test_user_data["email"])
+        user.reset_token = auth.hash_token(raw_token)
+        user.reset_token_expires = datetime.now(timezone.utc) + timedelta(hours=1)
+        db_session.commit()
+
+        response = client.post(
+            "/auth/reset-password",
+            json={"token": user.reset_token, "new_password": "newpassword123"},
+        )
+
         assert response.status_code == 400
 
 

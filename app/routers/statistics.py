@@ -4,7 +4,7 @@ Statistics endpoints for the OmniTrackr API.
 from datetime import date, datetime
 from fastapi import APIRouter, Depends, HTTPException, Query, Response
 from sqlalchemy.orm import Session
-from sqlalchemy import func, or_
+from sqlalchemy import and_, case, func, or_
 
 from .. import crud, schemas, models
 from ..dependencies import get_db, get_current_user
@@ -209,14 +209,21 @@ async def get_library_insights(
 
     for category in categories:
         model = category["model"]
-        count = db.query(model).filter(model.user_id == user_id).count()
-        completed = db.query(model).filter(
-            model.user_id == user_id,
-            category["done_field"] == True
-        ).count()
-        rated = _count_rated_items(db, model, user_id)
-        reviewed = _count_reviewed_items(db, model, user_id)
-        public_review_count = _count_public_reviews(db, model, user_id)
+        has_review = and_(
+            model.review.isnot(None),
+            func.length(func.trim(model.review)) > 0,
+        )
+        count, completed, rated, reviewed, public_review_count = db.query(
+            func.count(model.id),
+            func.sum(case((category["done_field"] == True, 1), else_=0)),
+            func.sum(case((model.rating.isnot(None), 1), else_=0)),
+            func.sum(case((has_review, 1), else_=0)),
+            func.sum(case((and_(has_review, model.review_public == True), 1), else_=0)),
+        ).filter(model.user_id == user_id).one()
+        completed = int(completed or 0)
+        rated = int(rated or 0)
+        reviewed = int(reviewed or 0)
+        public_review_count = int(public_review_count or 0)
 
         total_items += count
         completed_items += completed

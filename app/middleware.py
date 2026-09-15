@@ -61,7 +61,27 @@ class SecurityHeadersMiddleware(BaseHTTPMiddleware):
             response.headers["Pragma"] = "no-cache"
             response.headers["Expires"] = "0"
 
-        if request.url.path.startswith(("/activity/", "/import-studio/", "/recommend/", "/recommendations/", "/statistics/")):
+        if request.url.path.startswith((
+            "/account/",
+            "/activity/",
+            "/anime/",
+            "/books/",
+            "/custom-tab-posters/",
+            "/custom-tabs/",
+            "/export/",
+            "/friends",
+            "/import/",
+            "/import-studio/",
+            "/movies/",
+            "/music/",
+            "/next-up/",
+            "/notifications",
+            "/recommend/",
+            "/recommendations/",
+            "/statistics/",
+            "/tv-shows/",
+            "/video-games/",
+        )):
             response.headers["Cache-Control"] = "private, no-store"
 
         if request.url.path in NOINDEX_PATHS or request.url.path.startswith(NOINDEX_PREFIXES):

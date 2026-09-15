@@ -1066,6 +1066,16 @@ class TestExportImport:
         
         assert response.status_code == 400
         assert "Invalid JSON" in response.json()["detail"]
+
+    def test_import_from_file_rejects_oversized_upload(self, authenticated_client, monkeypatch):
+        from app.routers import export_import
+
+        monkeypatch.setattr(export_import, "MAX_JSON_IMPORT_BYTES", 32)
+        files = {"file": ("large.json", b"{" + b" " * 64 + b"}", "application/json")}
+
+        response = authenticated_client.post("/import/file/", files=files)
+
+        assert response.status_code == 413
     
     def test_import_from_file_missing_fields(self, authenticated_client):
         """Test importing from file with missing required fields."""

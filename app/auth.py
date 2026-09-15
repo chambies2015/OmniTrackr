@@ -4,7 +4,8 @@ Handles password hashing, JWT token creation and validation.
 """
 from datetime import datetime, timedelta, timezone
 from typing import Optional
-from jose import JWTError, jwt
+import jwt
+from jwt import InvalidTokenError
 import bcrypt
 import re
 import os
@@ -30,7 +31,16 @@ AUTH_COOKIE_MAX_AGE_SECONDS = ACCESS_TOKEN_EXPIRE_MINUTES * 60
 
 def verify_password(plain_password: str, hashed_password: str) -> bool:
     """Verify a plain password against a hashed password."""
-    return bcrypt.checkpw(plain_password.encode('utf-8'), hashed_password.encode('utf-8'))
+    try:
+        password_bytes = plain_password.encode("utf-8")
+        if len(password_bytes) > 72:
+            # Existing bcrypt hashes may have been created when the library
+            # silently truncated inputs. Keep those accounts usable; all new
+            # and changed passwords are limited by validate_password_strength.
+            password_bytes = password_bytes[:72]
+        return bcrypt.checkpw(password_bytes, hashed_password.encode("utf-8"))
+    except (TypeError, ValueError):
+        return False
 
 
 def validate_password_strength(password: str) -> tuple[bool, str]:
@@ -40,6 +50,8 @@ def validate_password_strength(password: str) -> tuple[bool, str]:
     Returns:
         (is_valid, error_message)
     """
+    if len(password.encode("utf-8")) > 72:
+        return False, "Password must be no more than 72 UTF-8 bytes long"
     if ENVIRONMENT != "production":
         return True, ""
     if len(password) < 8:
@@ -112,5 +124,5 @@ def decode_access_token(token: str) -> Optional[dict]:
     try:
         payload = jwt.decode(token, SECRET_KEY, algorithms=[ALGORITHM])
         return payload
-    except JWTError:
+    except InvalidTokenError:
         return None
