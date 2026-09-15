@@ -6,6 +6,10 @@
 // Constants
 const TOKEN_KEY = 'omnitrackr_token';
 const USER_KEY = 'omnitrackr_user';
+// Authentication is also used by the standalone public landing page, which
+// intentionally does not load the much larger private dashboard bundle.
+const AUTH_IS_LOCAL = (location.protocol === 'file:' || location.origin === 'null' || location.origin === '');
+const AUTH_API_BASE = AUTH_IS_LOCAL ? 'http://127.0.0.1:8000' : '';
 
 // ============================================================================
 // Token Management
@@ -80,7 +84,7 @@ async function authenticatedFetch(url, options = {}) {
 // ============================================================================
 
 async function register(email, username, password) {
-    const response = await fetch(`${API_BASE}/auth/register`, {
+    const response = await fetch(`${AUTH_API_BASE}/auth/register`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ email, username, password })
@@ -107,7 +111,7 @@ async function login(username, password) {
     formData.append('username', username);
     formData.append('password', password);
 
-    const response = await fetch(`${API_BASE}/auth/login`, {
+    const response = await fetch(`${AUTH_API_BASE}/auth/login`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
         credentials: 'same-origin',
@@ -142,7 +146,7 @@ async function login(username, password) {
 async function logout() {
     if (confirm('Are you sure you want to logout?')) {
         try {
-            await fetch(`${API_BASE}/auth/logout`, {
+            await fetch(`${AUTH_API_BASE}/auth/logout`, {
                 method: 'POST',
                 credentials: 'same-origin'
             });
@@ -388,7 +392,7 @@ async function reactivateAccount(usernameOrEmail, password) {
     reactivateBtn.textContent = 'Reactivating...';
     
     try {
-        const response = await fetch(`${API_BASE}/auth/reactivate`, {
+        const response = await fetch(`${AUTH_API_BASE}/auth/reactivate`, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({
@@ -458,7 +462,7 @@ async function reactivateAccount(usernameOrEmail, password) {
     reactivateBtn.textContent = 'Reactivating...';
     
     try {
-        const response = await fetch(`${API_BASE}/auth/reactivate`, {
+        const response = await fetch(`${AUTH_API_BASE}/auth/reactivate`, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({
@@ -533,7 +537,7 @@ function setupAuthHandlers() {
         btn.textContent = 'Sending...';
 
         try {
-            const response = await fetch(`${API_BASE}/auth/resend-verification?email=${encodeURIComponent(email)}`, {
+            const response = await fetch(`${AUTH_API_BASE}/auth/resend-verification?email=${encodeURIComponent(email)}`, {
                 method: 'POST',
             });
 
@@ -608,7 +612,7 @@ function setupAuthHandlers() {
         const email = document.getElementById('forgotPasswordEmail').value;
 
         try {
-            const response = await fetch(`${API_BASE}/auth/request-password-reset?email=${encodeURIComponent(email)}`, {
+            const response = await fetch(`${AUTH_API_BASE}/auth/request-password-reset?email=${encodeURIComponent(email)}`, {
                 method: 'POST',
             });
 
@@ -652,7 +656,7 @@ function setupAuthHandlers() {
         }
 
         try {
-            const response = await fetch(`${API_BASE}/auth/reset-password?token=${encodeURIComponent(token)}&new_password=${encodeURIComponent(newPassword)}`, {
+            const response = await fetch(`${AUTH_API_BASE}/auth/reset-password?token=${encodeURIComponent(token)}&new_password=${encodeURIComponent(newPassword)}`, {
                 method: 'POST',
             });
 
@@ -767,7 +771,7 @@ async function handleEmailChangeVerification(token) {
     // If user is logged in, show success message and reload account info
     if (isAuthenticated()) {
         try {
-            const response = await authenticatedFetch(`${API_BASE}/auth/verify-email?token=${encodeURIComponent(token)}`);
+            const response = await authenticatedFetch(`${AUTH_API_BASE}/auth/verify-email?token=${encodeURIComponent(token)}`);
             const data = await response.json();
             
             if (response.ok) {
@@ -812,7 +816,7 @@ async function handleEmailVerification(token) {
     displayAuthSuccess('Verifying your email...');
     
     try {
-        const response = await fetch(`${API_BASE}/auth/verify-email?token=${encodeURIComponent(token)}`);
+        const response = await fetch(`${AUTH_API_BASE}/auth/verify-email?token=${encodeURIComponent(token)}`);
         const data = await response.json();
         
         if (response.ok) {

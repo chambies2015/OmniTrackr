@@ -7,12 +7,27 @@ MAIN_PY = Path(__file__).resolve().parents[1] / "app" / "main.py"
 INDEX_HTML = Path(__file__).resolve().parents[1] / "app" / "templates" / "index.html"
 AD_LOADER_JS = Path(__file__).resolve().parents[1] / "app" / "static" / "ad-loader.js"
 REVIEWS_JS = Path(__file__).resolve().parents[1] / "app" / "static" / "reviews.js"
+AUTH_JS = Path(__file__).resolve().parents[1] / "app" / "static" / "auth.js"
 
 
 def template_name_to_public_path(template_name):
     if template_name == "reviews.html":
         return "/reviews"
     return "/" + template_name.removesuffix(".html").replace("_", "-")
+
+
+def test_standalone_public_auth_has_its_own_api_base():
+    """Login must not depend on the private dashboard bundle being present."""
+    source = AUTH_JS.read_text(encoding="utf-8")
+
+    assert "const AUTH_API_BASE" in source
+    assert "`${AUTH_API_BASE}/auth/login`" in source
+    assert "`${AUTH_API_BASE}/auth/register`" in source
+    assert "`${API_BASE}/auth/" not in source
+
+    public_template = (INDEX_HTML.parent / "public_landing.html").read_text(encoding="utf-8")
+    assert 'src="/auth.js?v=20260915-api-base"' in public_template
+    assert 'src="./auth.js?v=20260915-api-base"' in INDEX_HTML.read_text(encoding="utf-8")
 
 
 def test_review_modal_does_not_decode_attributes_with_inner_html():
