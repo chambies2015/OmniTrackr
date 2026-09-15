@@ -1288,6 +1288,20 @@ class TestSecurityMiddleware:
         assert "/reviews" in hrefs
         assert "/privacy" in hrefs
 
+    def test_homepage_hero_demonstrates_tracking_without_remote_screenshot(self, client):
+        """The first viewport should show an adaptable product story, not a stale UI capture."""
+        response = client.get("/")
+
+        assert response.status_code == 200
+        content = response.text
+        assert "landing-library-showcase" in content
+        assert "In progress" in content
+        assert "18 of 28 episodes" in content
+        assert "32 hours played" in content
+        assert "media moments" in content
+        assert "Your most active week this month" in content
+        assert "github.com/user-attachments" not in content
+
     def test_privacy_policy_discloses_google_ads_data_use(self, client):
         """Privacy policy should include required Google ads/cookie disclosures."""
         response = client.get("/privacy")
