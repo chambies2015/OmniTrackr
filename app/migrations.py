@@ -165,9 +165,39 @@ def run_migrations():
                     conn.execute(text("ALTER TABLE collections ADD COLUMN published_at TIMESTAMP"))
                     conn.commit()
                     print("Added published_at column to collections table")
+            collection_additions = {
+                "cover_url": "VARCHAR",
+                "moderation_status": "VARCHAR DEFAULT 'pending'",
+                "approved_at": "TIMESTAMP",
+                "approved_content_hash": "VARCHAR",
+                "view_count": "INTEGER DEFAULT 0",
+                "helpful_count": "INTEGER DEFAULT 0",
+                "report_count": "INTEGER DEFAULT 0",
+            }
+            for column_name, column_type in collection_additions.items():
+                if column_name not in collection_columns:
+                    with engine.connect() as conn:
+                        conn.execute(text(f"ALTER TABLE collections ADD COLUMN {column_name} {column_type}"))
+                        conn.commit()
+                        print(f"Added {column_name} column to collections table")
+            with engine.connect() as conn:
+                conn.execute(text("UPDATE collections SET moderation_status = 'pending' WHERE moderation_status IS NULL"))
+                conn.execute(text("UPDATE collections SET view_count = 0 WHERE view_count IS NULL"))
+                conn.execute(text("UPDATE collections SET helpful_count = 0 WHERE helpful_count IS NULL"))
+                conn.execute(text("UPDATE collections SET report_count = 0 WHERE report_count IS NULL"))
+                conn.commit()
             with engine.connect() as conn:
                 conn.execute(text("CREATE INDEX IF NOT EXISTS ix_collections_is_public ON collections(is_public)"))
+                conn.execute(text("CREATE INDEX IF NOT EXISTS ix_collections_moderation_status ON collections(moderation_status)"))
                 conn.commit()
+
+        if inspector.has_table("collection_items"):
+            collection_item_columns = {col["name"] for col in inspector.get_columns("collection_items")}
+            if "curator_note" not in collection_item_columns:
+                with engine.connect() as conn:
+                    conn.execute(text("ALTER TABLE collection_items ADD COLUMN curator_note TEXT"))
+                    conn.commit()
+                    print("Added curator_note column to collection_items table")
 
         review_public_columns_added = False
 

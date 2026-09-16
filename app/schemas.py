@@ -538,6 +538,7 @@ class ExportData(BaseModel):
     books: List[Book] = Field(..., description="List of all books")
     custom_tabs: List[dict] = Field(default=[], description="List of all custom tabs with their items")
     activities: List[ActivityEntry] = Field(default=[], description="Private activity journal entries")
+    collections: List[dict] = Field(default=[], description="Private cross-media collections and curator notes")
     export_metadata: dict = Field(..., description="Export metadata including timestamp and version")
     
 class ImportData(BaseModel):
@@ -552,6 +553,7 @@ class ImportData(BaseModel):
     books: List[BookCreate] = Field(default=[], description="Books to import")
     custom_tabs: List[dict] = Field(default=[], description="Custom tabs to import (optional for backward compatibility)")
     activities: List[ActivityEntryImport] = Field(default=[], description="Activity journal entries (optional for backward compatibility)")
+    collections: List[dict] = Field(default=[], description="Collections to restore privately (optional for backward compatibility)")
     
 class ImportResult(BaseModel):
     """Schema for import operation results"""
@@ -573,6 +575,8 @@ class ImportResult(BaseModel):
     custom_tabs_updated: int = Field(default=0, description="Number of custom tabs updated")
     activities_created: int = Field(default=0, description="Number of journal entries created")
     activities_skipped: int = Field(default=0, description="Number of duplicate journal entries skipped")
+    collections_created: int = Field(default=0, description="Number of private collections restored")
+    collections_skipped: int = Field(default=0, description="Number of existing or invalid collections skipped")
     errors: List[str] = Field(default=[], description="List of errors encountered during import")
     
 # Statistics schemas
@@ -1028,6 +1032,7 @@ class CompletionMoment(BaseModel):
 class CollectionCreate(BaseModel):
     name: str = Field(..., min_length=1, max_length=80, description="Collection name")
     description: Optional[str] = Field(None, max_length=500, description="Optional private collection note")
+    cover_url: Optional[str] = Field(None, max_length=1000, description="Optional public collection artwork URL")
 
     @field_validator("name")
     @classmethod
@@ -1042,11 +1047,16 @@ class CollectionCreate(BaseModel):
     def normalize_description(cls, value: Optional[str]) -> Optional[str]:
         return value.strip() or None if value else None
 
+    _validate_cover_url = field_validator("cover_url")(validate_public_url)
+
 
 class CollectionUpdate(BaseModel):
     name: Optional[str] = Field(None, min_length=1, max_length=80)
     description: Optional[str] = Field(None, max_length=500)
+    cover_url: Optional[str] = Field(None, max_length=1000)
     is_public: Optional[bool] = None
+
+    _validate_cover_url = field_validator("cover_url")(validate_public_url)
 
 
 class CollectionItemCreate(NextUpItemCreate):
@@ -1057,6 +1067,24 @@ class CollectionItemMove(BaseModel):
     position: int = Field(..., ge=0)
 
 
+class CollectionItemUpdate(BaseModel):
+    curator_note: Optional[str] = Field(None, max_length=500)
+
+    @field_validator("curator_note")
+    @classmethod
+    def normalize_curator_note(cls, value: Optional[str]) -> Optional[str]:
+        return value.strip() or None if value else None
+
+
+class CollectionModerationUpdate(BaseModel):
+    status: str = Field(..., pattern="^(pending|approved|rejected)$")
+
+
+class CollectionReportCreate(BaseModel):
+    reason: str = Field(..., pattern="^(spam|harassment|copyright|unsafe|other)$")
+    details: Optional[str] = Field(None, max_length=500)
+
+
 class CollectionItem(BaseModel):
     id: int
     category: str
@@ -1065,13 +1093,20 @@ class CollectionItem(BaseModel):
     title: str
     position: int
     available: bool = True
+    curator_note: Optional[str] = None
+    artwork_url: Optional[str] = None
 
 
 class Collection(BaseModel):
     id: int
     name: str
     description: Optional[str] = None
+    cover_url: Optional[str] = None
     is_public: bool = False
+    moderation_status: str = "pending"
     public_url: Optional[str] = None
+    view_count: int = 0
+    helpful_count: int = 0
+    report_count: int = 0
     created_at: datetime
     items: List[CollectionItem] = Field(default=[])

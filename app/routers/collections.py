@@ -1,15 +1,21 @@
-"""Private-by-default cross-media collection endpoints and explicit public shares."""
+"""Private-by-default cross-media collections and moderated public discovery."""
 from datetime import datetime
+import hashlib
+import hmac
 from html import escape
+import json
+import os
 from pathlib import Path
+import secrets
 from typing import Dict, List, Tuple, Type
 
-from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi import APIRouter, Depends, HTTPException, Request, status
+from fastapi.responses import JSONResponse
 from sqlalchemy import func
 from sqlalchemy.exc import IntegrityError
-from sqlalchemy.orm import Session
+from sqlalchemy.orm import Session, selectinload
 
-from .. import models, schemas
+from .. import auth, models, schemas
 from ..csp import strict_html_response
 from ..dependencies import get_current_user, get_db
 
@@ -26,6 +32,79 @@ CATEGORIES: Dict[str, CategoryDetails] = {
 }
 PUBLIC_COLLECTION_MIN_DESCRIPTION_CHARS = 300
 PUBLIC_COLLECTION_MIN_ITEMS = 3
+PUBLIC_COLLECTION_MAX_ITEMS = 50
+PUBLIC_COLLECTION_GALLERY_MIN = 3
+VISITOR_COOKIE = "omnitrackr_collection_visitor"
+ARTWORK_FIELDS = {
+    "movies": "poster_url",
+    "tv-shows": "poster_url",
+    "anime": "poster_url",
+    "video-games": "cover_art_url",
+    "music": "cover_art_url",
+    "books": "cover_art_url",
+}
+
+COPY_FIELDS = {
+    "movies": ("title", "director", "year", "poster_url"),
+    "tv-shows": ("title", "year", "seasons", "episodes", "poster_url"),
+    "anime": ("title", "year", "seasons", "episodes", "poster_url"),
+    "video-games": ("title", "release_date", "genres", "cover_art_url", "rawg_link"),
+    "music": ("title", "artist", "year", "genre", "cover_art_url"),
+    "books": ("title", "author", "year", "genre", "cover_art_url"),
+}
+
+
+def _sign_visitor_token(payload: str) -> str:
+    signature = hmac.new(auth.SECRET_KEY.encode("utf-8"), payload.encode("utf-8"), hashlib.sha256).hexdigest()
+    return f"{payload}.{signature}"
+
+
+def _visitor_identity(request: Request) -> tuple[str, str | None, bool]:
+    """Return a signed pseudonymous identity and whether the browser retained it."""
+    token = request.cookies.get(VISITOR_COOKIE, "")
+    trusted_existing = False
+    if 80 <= len(token) <= 160 and "." in token:
+        payload, supplied_signature = token.rsplit(".", 1)
+        expected = hmac.new(
+            auth.SECRET_KEY.encode("utf-8"), payload.encode("utf-8"), hashlib.sha256
+        ).hexdigest()
+        trusted_existing = bool(payload) and hmac.compare_digest(supplied_signature, expected)
+    if not trusted_existing:
+        token = _sign_visitor_token(secrets.token_urlsafe(32))
+    digest = hashlib.sha256(f"{auth.SECRET_KEY}:{token}".encode("utf-8")).hexdigest()
+    return digest, None if trusted_existing else token, trusted_existing
+
+
+def _set_visitor_cookie(response, token: str | None) -> None:
+    if token:
+        response.set_cookie(
+            VISITOR_COOKIE,
+            token,
+            max_age=60 * 60 * 24 * 365,
+            httponly=True,
+            secure=os.getenv("ENVIRONMENT", "development").lower() == "production",
+            samesite="lax",
+        )
+
+
+def _moderator_usernames() -> set[str]:
+    return {
+        username.strip().lower()
+        for username in os.getenv("COLLECTION_MODERATOR_USERNAMES", "").split(",")
+        if username.strip()
+    }
+
+
+def _require_moderator(current_user: models.User) -> None:
+    if current_user.username.lower() not in _moderator_usernames():
+        raise HTTPException(status_code=403, detail="Collection moderator access required")
+
+
+def _return_to_review(collection: models.Collection) -> None:
+    if collection.moderation_status in {"approved", "rejected"}:
+        collection.moderation_status = "pending"
+        collection.approved_at = None
+        collection.approved_content_hash = None
 
 
 def _get_collection(db: Session, user_id: int, collection_id: int) -> models.Collection:
@@ -43,8 +122,37 @@ def _get_media_item(db: Session, user_id: int, category: str, item_id: int):
     return db.query(model).filter(model.id == item_id, model.user_id == user_id).first()
 
 
-def _serialize_item(item: models.CollectionItem, db: Session, user_id: int) -> dict:
-    media = _get_media_item(db, user_id, item.category, item.item_id)
+def _media_lookup_for_collections(db: Session, collections: list[models.Collection]) -> dict:
+    """Resolve polymorphic collection items in at most six media queries."""
+    references: dict[str, set[tuple[int, int]]] = {category: set() for category in CATEGORIES}
+    for collection in collections:
+        for item in collection.items:
+            if item.category in references:
+                references[item.category].add((collection.user_id, item.item_id))
+    lookup = {}
+    for category, pairs in references.items():
+        if not pairs:
+            continue
+        model, _ = CATEGORIES[category]
+        owner_ids = {owner_id for owner_id, _ in pairs}
+        item_ids = {item_id for _, item_id in pairs}
+        for media in db.query(model).filter(model.user_id.in_(owner_ids), model.id.in_(item_ids)).all():
+            lookup[(media.user_id, category, media.id)] = media
+    return lookup
+
+
+def _serialize_item(
+    item: models.CollectionItem,
+    db: Session,
+    user_id: int,
+    media_lookup: dict | None = None,
+) -> dict:
+    media = (
+        media_lookup.get((user_id, item.category, item.item_id))
+        if media_lookup is not None
+        else _get_media_item(db, user_id, item.category, item.item_id)
+    )
+    artwork_field = ARTWORK_FIELDS[item.category]
     return {
         "id": item.id,
         "category": item.category,
@@ -53,27 +161,100 @@ def _serialize_item(item: models.CollectionItem, db: Session, user_id: int) -> d
         "title": media.title if media else "Deleted library item",
         "position": item.position,
         "available": media is not None,
+        "curator_note": item.curator_note,
+        "artwork_url": getattr(media, artwork_field, None) if media else None,
     }
 
 
-def _serialize_collection(collection: models.Collection, db: Session, user_id: int) -> dict:
+def _serialize_collection(
+    collection: models.Collection,
+    db: Session,
+    user_id: int,
+    media_lookup: dict | None = None,
+) -> dict:
     items = sorted(collection.items, key=lambda item: (item.position, item.id))
+    moderation_status = collection.moderation_status
+    if moderation_status == "approved" and not _approval_is_current(collection, db, media_lookup):
+        moderation_status = "pending"
     return {
         "id": collection.id,
         "name": collection.name,
         "description": collection.description,
+        "cover_url": collection.cover_url,
         "is_public": collection.is_public,
+        "moderation_status": moderation_status,
         "public_url": f"/collections/public/{collection.id}" if collection.is_public else None,
+        "view_count": collection.view_count or 0,
+        "helpful_count": collection.helpful_count or 0,
+        "report_count": collection.report_count or 0,
         "created_at": collection.created_at,
-        "items": [_serialize_item(item, db, user_id) for item in items],
+        "items": [_serialize_item(item, db, user_id, media_lookup) for item in items],
     }
 
 
-def _available_items(collection: models.Collection, db: Session, user_id: int) -> list[dict]:
+def _available_items(
+    collection: models.Collection,
+    db: Session,
+    user_id: int,
+    media_lookup: dict | None = None,
+) -> list[dict]:
     return [
         serialized for item in sorted(collection.items, key=lambda entry: (entry.position, entry.id))
-        if (serialized := _serialize_item(item, db, user_id))["available"]
+        if (serialized := _serialize_item(item, db, user_id, media_lookup))["available"]
     ]
+
+
+def _media_identity_key(media, category: str) -> tuple:
+    """Return the fields that distinguish same-titled editions for reuse/copy."""
+    identity_fields = {
+        "movies": ("year", "director"),
+        "tv-shows": ("year",),
+        "anime": ("year",),
+        "video-games": ("release_date",),
+        "music": ("year", "artist"),
+        "books": ("year", "author"),
+    }[category]
+    values = [media.title.strip().casefold()]
+    for field in identity_fields:
+        value = getattr(media, field, None)
+        values.append(value.strip().casefold() if isinstance(value, str) else value)
+    return tuple(values)
+
+
+def _approval_content_hash(
+    collection: models.Collection,
+    db: Session,
+    media_lookup: dict | None = None,
+) -> str:
+    items = _available_items(collection, db, collection.user_id, media_lookup)
+    payload = {
+        "name": collection.name,
+        "description": collection.description,
+        "cover_url": collection.cover_url,
+        "items": [
+            {
+                "category": item["category"],
+                "title": item["title"],
+                "position": item["position"],
+                "curator_note": item["curator_note"],
+                "artwork_url": item["artwork_url"],
+            }
+            for item in items
+        ],
+    }
+    encoded = json.dumps(payload, sort_keys=True, ensure_ascii=True, separators=(",", ":"))
+    return hashlib.sha256(encoded.encode("utf-8")).hexdigest()
+
+
+def _approval_is_current(
+    collection: models.Collection,
+    db: Session,
+    media_lookup: dict | None = None,
+) -> bool:
+    if collection.moderation_status != "approved" or not collection.approved_content_hash:
+        return False
+    current_hash = _approval_content_hash(collection, db, media_lookup)
+    return hmac.compare_digest(collection.approved_content_hash, current_hash)
 
 
 def _require_public_ready(collection: models.Collection, description: str | None, db: Session) -> None:
@@ -89,15 +270,56 @@ def _require_public_ready(collection: models.Collection, description: str | None
         )
 
 
+def _copy_media_for_user(
+    db: Session,
+    source,
+    category: str,
+    user_id: int,
+    existing_lookup: dict | None = None,
+):
+    """Reuse a matching title or create a clean, private library record."""
+    model, _ = CATEGORIES[category]
+    key = (category, _media_identity_key(source, category))
+    existing = existing_lookup.get(key) if existing_lookup is not None else None
+    if existing_lookup is None:
+        # Keep the SQL comparison aligned with the database's LOWER() behavior;
+        # the stricter in-memory identity comparison below still uses casefold().
+        title = source.title.strip().lower()
+        candidates = db.query(model).filter(
+            model.user_id == user_id,
+            func.lower(model.title) == title,
+        ).all()
+        existing = next(
+            (candidate for candidate in candidates if _media_identity_key(candidate, category) == key[1]),
+            None,
+        )
+    if existing:
+        return existing
+    values = {field: getattr(source, field, None) for field in COPY_FIELDS[category]}
+    values.update({"user_id": user_id, "rating": None, "review": None, "review_public": False})
+    completion_field = {
+        "movies": "watched", "tv-shows": "watched", "anime": "watched",
+        "video-games": "played", "music": "listened", "books": "read",
+    }[category]
+    values[completion_field] = False
+    copied = model(**values)
+    db.add(copied)
+    db.flush()
+    if existing_lookup is not None:
+        existing_lookup[key] = copied
+    return copied
+
+
 @router.get("/", response_model=List[schemas.Collection])
 async def list_collections(
     current_user: models.User = Depends(get_current_user),
     db: Session = Depends(get_db),
 ):
-    collections = db.query(models.Collection).filter(
+    collections = db.query(models.Collection).options(selectinload(models.Collection.items)).filter(
         models.Collection.user_id == current_user.id,
     ).order_by(models.Collection.created_at.desc(), models.Collection.id.desc()).all()
-    return [_serialize_collection(collection, db, current_user.id) for collection in collections]
+    media_lookup = _media_lookup_for_collections(db, collections)
+    return [_serialize_collection(collection, db, current_user.id, media_lookup) for collection in collections]
 
 
 @router.post("/", response_model=schemas.Collection, status_code=status.HTTP_201_CREATED)
@@ -106,7 +328,12 @@ async def create_collection(
     current_user: models.User = Depends(get_current_user),
     db: Session = Depends(get_db),
 ):
-    collection = models.Collection(user_id=current_user.id, name=payload.name, description=payload.description)
+    collection = models.Collection(
+        user_id=current_user.id,
+        name=payload.name,
+        description=payload.description,
+        cover_url=payload.cover_url,
+    )
     db.add(collection)
     db.commit()
     db.refresh(collection)
@@ -121,18 +348,27 @@ async def update_collection(
     db: Session = Depends(get_db),
 ):
     collection = _get_collection(db, current_user.id, collection_id)
-    updates = payload.model_dump(exclude_unset=True, exclude_none=True)
+    updates = payload.model_dump(exclude_unset=True)
     proposed_description = updates.get("description", collection.description)
     proposed_public = updates.get("is_public", collection.is_public)
     if proposed_public:
         _require_public_ready(collection, proposed_description, db)
-    if "name" in updates:
+    content_changed = False
+    if "name" in updates and updates["name"] is not None:
         normalized = updates["name"].strip()
         if not normalized:
             raise HTTPException(status_code=422, detail="Collection name cannot be blank")
+        content_changed = content_changed or normalized != collection.name
         collection.name = normalized
     if "description" in updates:
-        collection.description = updates["description"].strip() or None if updates["description"] else None
+        normalized_description = (updates["description"] or "").strip() or None
+        content_changed = content_changed or normalized_description != collection.description
+        collection.description = normalized_description
+    if "cover_url" in updates:
+        content_changed = content_changed or updates["cover_url"] != collection.cover_url
+        collection.cover_url = updates["cover_url"]
+    if content_changed:
+        _return_to_review(collection)
     if "is_public" in updates:
         was_public = collection.is_public
         collection.is_public = updates["is_public"]
@@ -140,32 +376,276 @@ async def update_collection(
             collection.published_at = datetime.utcnow()
         elif not collection.is_public:
             collection.published_at = None
+            collection.moderation_status = "pending"
+            collection.approved_at = None
+            collection.approved_content_hash = None
     db.commit()
     db.refresh(collection)
     return _serialize_collection(collection, db, current_user.id)
 
 
-@router.get("/public/{collection_id}")
-async def public_collection(collection_id: int, db: Session = Depends(get_db)):
-    """Render the deliberately limited public view of an explicitly shared shelf."""
-    collection = db.query(models.Collection).filter(
+@router.get("/moderation/queue")
+async def collection_moderation_queue(
+    current_user: models.User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+):
+    _require_moderator(current_user)
+    collections = db.query(models.Collection).options(selectinload(models.Collection.items)).filter(
+        models.Collection.is_public == True,
+        models.Collection.moderation_status.in_(("pending", "approved")),
+    ).order_by(models.Collection.report_count.desc(), models.Collection.published_at.asc()).limit(100).all()
+    media_lookup = _media_lookup_for_collections(db, collections)
+    return [_serialize_collection(collection, db, collection.user_id, media_lookup) for collection in collections]
+
+
+@router.patch("/{collection_id}/moderation", response_model=schemas.Collection)
+async def moderate_collection(
+    collection_id: int,
+    payload: schemas.CollectionModerationUpdate,
+    current_user: models.User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+):
+    _require_moderator(current_user)
+    collection = db.query(models.Collection).filter(models.Collection.id == collection_id).first()
+    if not collection:
+        raise HTTPException(status_code=404, detail="Collection not found")
+    if payload.status == "approved":
+        if not collection.is_public:
+            raise HTTPException(status_code=422, detail="Only a published collection can be approved")
+        _require_public_ready(collection, collection.description, db)
+        collection.approved_at = datetime.utcnow()
+        collection.approved_content_hash = _approval_content_hash(collection, db)
+    else:
+        collection.approved_at = None
+        collection.approved_content_hash = None
+    collection.moderation_status = payload.status
+    db.commit()
+    db.refresh(collection)
+    return _serialize_collection(collection, db, collection.user_id)
+
+
+@router.get("/{collection_id}/moderation/reports")
+async def collection_moderation_reports(
+    collection_id: int,
+    current_user: models.User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+):
+    _require_moderator(current_user)
+    if not db.query(models.Collection.id).filter(models.Collection.id == collection_id).first():
+        raise HTTPException(status_code=404, detail="Collection not found")
+    reports = db.query(models.CollectionReport).filter(
+        models.CollectionReport.collection_id == collection_id,
+    ).order_by(models.CollectionReport.created_at.desc()).all()
+    return [
+        {"id": report.id, "reason": report.reason, "details": report.details, "created_at": report.created_at}
+        for report in reports
+    ]
+
+
+@router.post("/public/{collection_id}/copy", response_model=schemas.Collection, status_code=status.HTTP_201_CREATED)
+async def copy_public_collection(
+    collection_id: int,
+    current_user: models.User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+):
+    source_collection = _public_collection_or_404(db, collection_id)
+    source_items = sorted(source_collection.items, key=lambda item: (item.position, item.id))[:PUBLIC_COLLECTION_MAX_ITEMS]
+    source_lookup = _media_lookup_for_collections(db, [source_collection])
+    titles_by_category: dict[str, set[str]] = {category: set() for category in CATEGORIES}
+    for source_item in source_items:
+        source_media = source_lookup.get((source_collection.user_id, source_item.category, source_item.item_id))
+        if source_media:
+            titles_by_category[source_item.category].add(source_media.title.strip().lower())
+    existing_lookup = {}
+    for category, titles in titles_by_category.items():
+        if not titles:
+            continue
+        model, _ = CATEGORIES[category]
+        for media in db.query(model).filter(
+            model.user_id == current_user.id,
+            func.lower(model.title).in_(titles),
+        ).all():
+            existing_lookup[(category, _media_identity_key(media, category))] = media
+    copy = models.Collection(
+        user_id=current_user.id,
+        name=f"{source_collection.name} — saved"[:80],
+        description=source_collection.description,
+        cover_url=source_collection.cover_url,
+        is_public=False,
+        moderation_status="pending",
+    )
+    db.add(copy)
+    db.flush()
+    copied_position = 0
+    for source_item in source_items:
+        source_media = source_lookup.get((source_collection.user_id, source_item.category, source_item.item_id))
+        if not source_media:
+            continue
+        media = _copy_media_for_user(
+            db, source_media, source_item.category, current_user.id, existing_lookup
+        )
+        db.add(models.CollectionItem(
+            collection_id=copy.id,
+            category=source_item.category,
+            item_id=media.id,
+            position=copied_position,
+            curator_note=source_item.curator_note,
+        ))
+        copied_position += 1
+    db.commit()
+    db.refresh(copy)
+    return _serialize_collection(copy, db, current_user.id)
+
+
+def _public_collection_or_404(db: Session, collection_id: int) -> models.Collection:
+    collection = db.query(models.Collection).options(selectinload(models.Collection.items)).join(
+        models.User, models.Collection.user_id == models.User.id
+    ).filter(
         models.Collection.id == collection_id,
         models.Collection.is_public == True,
+        models.Collection.moderation_status != "rejected",
+        models.User.is_active == True,
     ).first()
     if not collection:
         raise HTTPException(status_code=404, detail="Shared collection not found")
-    items = _available_items(collection, db, collection.user_id)
+    media_lookup = _media_lookup_for_collections(db, [collection])
+    items = _available_items(collection, db, collection.user_id, media_lookup)
     if (
         len((collection.description or "").strip()) < PUBLIC_COLLECTION_MIN_DESCRIPTION_CHARS
         or len(items) < PUBLIC_COLLECTION_MIN_ITEMS
     ):
         raise HTTPException(status_code=404, detail="Shared collection not available")
+    return collection
+
+
+@router.get("/explore")
+async def explore_collections(
+    request: Request,
+    q: str = "",
+    category: str = "",
+    db: Session = Depends(get_db),
+):
+    """Render the quality-gated, moderator-approved public collection directory."""
+    query = db.query(models.Collection).options(selectinload(models.Collection.items)).join(
+        models.User, models.Collection.user_id == models.User.id
+    ).filter(
+        models.Collection.is_public == True,
+        models.Collection.moderation_status == "approved",
+        models.User.is_active == True,
+    )
+    normalized_query = q.strip()[:80]
+    if normalized_query:
+        search = f"%{normalized_query}%"
+        query = query.filter(
+            (models.Collection.name.ilike(search)) | (models.Collection.description.ilike(search))
+        )
+    if category in CATEGORIES:
+        query = query.filter(models.Collection.items.any(models.CollectionItem.category == category))
+    collections = query.order_by(
+        models.Collection.helpful_count.desc(),
+        models.Collection.published_at.desc(),
+    ).limit(500).all()
+    media_lookup = _media_lookup_for_collections(db, collections)
+    cards = []
+    for collection in collections:
+        if not _approval_is_current(collection, db, media_lookup):
+            continue
+        items = _available_items(collection, db, collection.user_id, media_lookup)
+        if len(items) < PUBLIC_COLLECTION_MIN_ITEMS:
+            continue
+        cover = collection.cover_url or next((item["artwork_url"] for item in items if item["artwork_url"]), "")
+        image = (
+            f'<img src="{escape(cover, quote=True)}" alt="" loading="lazy" referrerpolicy="no-referrer">'
+            if cover else '<span class="collection-tile__placeholder" aria-hidden="true">✦</span>'
+        )
+        categories = " · ".join(dict.fromkeys(item["category_label"] for item in items))
+        cards.append(
+            '<article class="collection-tile">'
+            f'<a class="collection-tile__art" href="/collections/public/{collection.id}">{image}</a>'
+            '<div class="collection-tile__copy">'
+            f'<p>{escape(categories)}</p><h2><a href="/collections/public/{collection.id}">{escape(collection.name)}</a></h2>'
+            f'<span>{len(items)} picks · {collection.helpful_count or 0} helpful</span>'
+            f'<p class="collection-tile__intro">{escape((collection.description or "")[:180])}</p>'
+            '</div></article>'
+        )
+        if len(cards) >= 48:
+            break
+    template = (Path(__file__).parents[1] / "templates" / "collection_gallery.html").read_text(encoding="utf-8")
+    if cards:
+        gallery_content = "".join(cards)
+    elif normalized_query or category:
+        gallery_content = '<div class="collection-gallery__empty"><h2>No collections found</h2><p>Try a different search or media type.</p></div>'
+    else:
+        gallery_content = (
+            '<div class="collection-gallery__empty"><h2>The gallery is opening soon</h2>'
+            '<p>The first reviewed member collections will appear here. '
+            '<a href="/#landing-auth">Create your library</a> and start shaping one.</p></div>'
+        )
+    values = {
+        "COLLECTIONS": gallery_content,
+        "QUERY": escape(normalized_query, quote=True),
+        "CATEGORY": escape(category, quote=True),
+        "COUNT": str(len(cards)),
+        "SELECT_ALL": "selected" if not category else "",
+        "SELECT_MOVIES": "selected" if category == "movies" else "",
+        "SELECT_TV_SHOWS": "selected" if category == "tv-shows" else "",
+        "SELECT_ANIME": "selected" if category == "anime" else "",
+        "SELECT_VIDEO_GAMES": "selected" if category == "video-games" else "",
+        "SELECT_MUSIC": "selected" if category == "music" else "",
+        "SELECT_BOOKS": "selected" if category == "books" else "",
+    }
+    for key, value in values.items():
+        template = template.replace("{{" + key + "}}", value)
+    gallery_is_indexable = not normalized_query and not category and len(cards) >= PUBLIC_COLLECTION_GALLERY_MIN
+    if not gallery_is_indexable:
+        template = template.replace(
+            '<meta name="robots" content="index, follow">',
+            '<meta name="robots" content="noindex, follow">',
+        )
+    response = strict_html_response(template)
+    response.headers["Cache-Control"] = "public, max-age=120"
+    if not gallery_is_indexable:
+        response.headers["X-Robots-Tag"] = "noindex, follow"
+    return response
+
+
+@router.get("/public/{collection_id}")
+async def public_collection(collection_id: int, request: Request, db: Session = Depends(get_db)):
+    """Render the deliberately limited public view of an explicitly shared shelf."""
+    collection = _public_collection_or_404(db, collection_id)
     template = (Path(__file__).parents[1] / "templates" / "public_collection.html").read_text(encoding="utf-8")
+    visitor_hash, visitor_token, trusted_visitor = _visitor_identity(request)
+    if trusted_visitor:
+        existing_view = db.query(models.CollectionView.id).filter(
+            models.CollectionView.collection_id == collection.id,
+            models.CollectionView.visitor_hash == visitor_hash,
+        ).first()
+        if not existing_view:
+            db.add(models.CollectionView(collection_id=collection.id, visitor_hash=visitor_hash))
+            try:
+                db.flush()
+                db.query(models.Collection).filter(models.Collection.id == collection.id).update(
+                    {models.Collection.view_count: models.Collection.view_count + 1},
+                    synchronize_session=False,
+                )
+                db.commit()
+                db.refresh(collection)
+            except IntegrityError:
+                db.rollback()
+    media_lookup = _media_lookup_for_collections(db, [collection])
+    items = _available_items(collection, db, collection.user_id, media_lookup)
     item_cards = "".join(
-        f'<li class="collection-entry"><span class="collection-entry__number">{position:02d}</span><div><p>{escape(item["category_label"])}</p><h2>{escape(item["title"])}</h2></div></li>'
+        '<li class="collection-entry">'
+        f'<span class="collection-entry__number">{position:02d}</span>'
+        + (f'<img src="{escape(item["artwork_url"], quote=True)}" alt="" loading="lazy" referrerpolicy="no-referrer">' if item["artwork_url"] else '')
+        + f'<div><p>{escape(item["category_label"])}</p><h2>{escape(item["title"])}</h2>'
+        + (f'<div class="collection-entry__note">{escape(item["curator_note"])}</div>' if item["curator_note"] else '')
+        + '</div></li>'
         for position, item in enumerate(items, 1)
     )
     description = (collection.description or "").strip()
+    approved = _approval_is_current(collection, db, media_lookup)
+    cover = collection.cover_url or next((item["artwork_url"] for item in items if item["artwork_url"]), "")
     values = {
         "TITLE": escape(collection.name),
         "DESCRIPTION": escape(description[:160], quote=True),
@@ -173,13 +653,97 @@ async def public_collection(collection_id: int, db: Session = Depends(get_db)):
         "INTRO": escape(description),
         "ITEMS": item_cards,
         "COUNT": str(len(items)),
+        "VIEWS": str(collection.view_count or 0),
+        "HELPFUL": str(collection.helpful_count or 0),
+        "COLLECTION_ID": str(collection.id),
+        "ROBOTS": "index, follow" if approved else "noindex, follow",
+        "COVER": (
+            f'<img class="share-cover" src="{escape(cover, quote=True)}" alt="" referrerpolicy="no-referrer">'
+            if cover else ""
+        ),
+        "OG_IMAGE": (
+            f'<meta property="og:image" content="{escape(cover, quote=True)}">' if cover else ""
+        ),
+        "STRUCTURED_DATA": json.dumps({
+            "@context": "https://schema.org",
+            "@type": "ItemList",
+            "name": collection.name,
+            "description": description,
+            "numberOfItems": len(items),
+            "itemListElement": [
+                {"@type": "ListItem", "position": position, "item": {"@type": "CreativeWork", "name": item["title"]}}
+                for position, item in enumerate(items, 1)
+            ],
+        }, ensure_ascii=True).replace("<", "\\u003c"),
     }
     for key, value in values.items():
         template = template.replace("{{" + key + "}}", value)
     response = strict_html_response(template)
-    # Shared shelves are useful direct links, but remain outside search inventory
-    # until OmniTrackr has a moderation workflow for user-authored public pages.
-    response.headers["X-Robots-Tag"] = "noindex, follow"
+    response.headers["X-Robots-Tag"] = "index, follow" if approved else "noindex, follow"
+    response.headers["Cache-Control"] = "private, no-cache, must-revalidate"
+    _set_visitor_cookie(response, visitor_token)
+    return response
+
+
+@router.post("/public/{collection_id}/helpful")
+async def mark_collection_helpful(collection_id: int, request: Request, db: Session = Depends(get_db)):
+    collection = _public_collection_or_404(db, collection_id)
+    visitor_hash, visitor_token, _ = _visitor_identity(request)
+    existing = db.query(models.CollectionReaction.id).filter(
+        models.CollectionReaction.collection_id == collection.id,
+        models.CollectionReaction.visitor_hash == visitor_hash,
+    ).first()
+    if not existing:
+        db.add(models.CollectionReaction(collection_id=collection.id, visitor_hash=visitor_hash))
+        try:
+            db.flush()
+            db.query(models.Collection).filter(models.Collection.id == collection.id).update(
+                {models.Collection.helpful_count: models.Collection.helpful_count + 1},
+                synchronize_session=False,
+            )
+            db.commit()
+            db.refresh(collection)
+        except IntegrityError:
+            db.rollback()
+            db.refresh(collection)
+    response = JSONResponse({"helpful": True, "count": collection.helpful_count or 0})
+    response.headers["Cache-Control"] = "no-store"
+    _set_visitor_cookie(response, visitor_token)
+    return response
+
+
+@router.post("/public/{collection_id}/report", status_code=status.HTTP_201_CREATED)
+async def report_collection(
+    collection_id: int,
+    payload: schemas.CollectionReportCreate,
+    request: Request,
+    db: Session = Depends(get_db),
+):
+    collection = _public_collection_or_404(db, collection_id)
+    visitor_hash, visitor_token, _ = _visitor_identity(request)
+    existing = db.query(models.CollectionReport.id).filter(
+        models.CollectionReport.collection_id == collection.id,
+        models.CollectionReport.visitor_hash == visitor_hash,
+    ).first()
+    if not existing:
+        db.add(models.CollectionReport(
+            collection_id=collection.id,
+            visitor_hash=visitor_hash,
+            reason=payload.reason,
+            details=payload.details.strip() if payload.details else None,
+        ))
+        try:
+            db.flush()
+            db.query(models.Collection).filter(models.Collection.id == collection.id).update(
+                {models.Collection.report_count: models.Collection.report_count + 1},
+                synchronize_session=False,
+            )
+            db.commit()
+        except IntegrityError:
+            db.rollback()
+    response = JSONResponse({"reported": True}, status_code=201)
+    response.headers["Cache-Control"] = "no-store"
+    _set_visitor_cookie(response, visitor_token)
     return response
 
 
@@ -201,7 +765,12 @@ async def add_collection_item(
     current_user: models.User = Depends(get_current_user),
     db: Session = Depends(get_db),
 ):
-    _get_collection(db, current_user.id, collection_id)
+    collection = _get_collection(db, current_user.id, collection_id)
+    if len(collection.items) >= PUBLIC_COLLECTION_MAX_ITEMS:
+        raise HTTPException(
+            status_code=422,
+            detail=f"Collections can contain up to {PUBLIC_COLLECTION_MAX_ITEMS} titles",
+        )
     if not _get_media_item(db, current_user.id, payload.category, payload.item_id):
         raise HTTPException(status_code=404, detail="Library item not found")
     duplicate = db.query(models.CollectionItem).filter(
@@ -221,11 +790,34 @@ async def add_collection_item(
         position=(highest_position if highest_position is not None else -1) + 1,
     )
     db.add(item)
+    _return_to_review(collection)
     try:
         db.commit()
     except IntegrityError:
         db.rollback()
         raise HTTPException(status_code=409, detail="That item is already in this collection")
+    db.refresh(item)
+    return _serialize_item(item, db, current_user.id)
+
+
+@router.patch("/{collection_id}/items/{item_id}", response_model=schemas.CollectionItem)
+async def update_collection_item(
+    collection_id: int,
+    item_id: int,
+    payload: schemas.CollectionItemUpdate,
+    current_user: models.User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+):
+    collection = _get_collection(db, current_user.id, collection_id)
+    item = db.query(models.CollectionItem).filter(
+        models.CollectionItem.id == item_id,
+        models.CollectionItem.collection_id == collection_id,
+    ).first()
+    if not item:
+        raise HTTPException(status_code=404, detail="Collection item not found")
+    item.curator_note = payload.curator_note
+    _return_to_review(collection)
+    db.commit()
     db.refresh(item)
     return _serialize_item(item, db, current_user.id)
 
@@ -238,7 +830,7 @@ async def move_collection_item(
     current_user: models.User = Depends(get_current_user),
     db: Session = Depends(get_db),
 ):
-    _get_collection(db, current_user.id, collection_id)
+    collection = _get_collection(db, current_user.id, collection_id)
     items = db.query(models.CollectionItem).filter(
         models.CollectionItem.collection_id == collection_id,
     ).order_by(models.CollectionItem.position, models.CollectionItem.id).all()
@@ -249,6 +841,7 @@ async def move_collection_item(
     items.insert(min(payload.position, len(items)), target)
     for position, item in enumerate(items):
         item.position = position
+    _return_to_review(collection)
     db.commit()
     return [_serialize_item(item, db, current_user.id) for item in items]
 
@@ -260,7 +853,7 @@ async def remove_collection_item(
     current_user: models.User = Depends(get_current_user),
     db: Session = Depends(get_db),
 ):
-    _get_collection(db, current_user.id, collection_id)
+    collection = _get_collection(db, current_user.id, collection_id)
     item = db.query(models.CollectionItem).filter(
         models.CollectionItem.id == item_id,
         models.CollectionItem.collection_id == collection_id,
@@ -268,4 +861,5 @@ async def remove_collection_item(
     if not item:
         raise HTTPException(status_code=404, detail="Collection item not found")
     db.delete(item)
+    _return_to_review(collection)
     db.commit()

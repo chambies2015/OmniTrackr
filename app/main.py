@@ -99,6 +99,13 @@ app.state.limiter = limiter
 app.add_exception_handler(RateLimitExceeded, _rate_limit_exceeded_handler)
 
 
+def bind_rate_limited_endpoint(route, endpoint) -> None:
+    """Replace both the visible endpoint and FastAPI's captured request callable."""
+    route.endpoint = endpoint
+    if hasattr(route, "dependant"):
+        route.dependant.call = endpoint
+
+
 # Add middleware
 app.add_middleware(GZipMiddleware, minimum_size=500)
 app.add_middleware(SecurityHeadersMiddleware)
@@ -299,27 +306,29 @@ if os.path.exists(static_dir):
     app.mount("/static", StaticFiles(directory=static_dir), name="static")
 
 
-# Include routers
-app.include_router(auth.router)
-
-# Apply rate limiting to auth endpoints
+# Apply rate limiting to auth endpoints before including the router. FastAPI
+# copies APIRoute objects during include_router(), so changing the source router
+# afterward would leave the application's registered handlers unprotected.
 for route in auth.router.routes:
     if hasattr(route, 'path') and hasattr(route, 'methods') and hasattr(route, 'endpoint'):
         if route.path == "/auth/register" and 'POST' in route.methods:
-            route.endpoint = limiter.limit("5/minute")(route.endpoint)
+            bind_rate_limited_endpoint(route, limiter.limit("5/minute")(route.endpoint))
         elif route.path == "/auth/login" and 'POST' in route.methods:
-            route.endpoint = limiter.limit("5/minute")(route.endpoint)
+            bind_rate_limited_endpoint(route, limiter.limit("5/minute")(route.endpoint))
         elif route.path == "/auth/request-password-reset" and 'POST' in route.methods:
-            route.endpoint = limiter.limit("3/hour")(route.endpoint)
+            bind_rate_limited_endpoint(route, limiter.limit("3/hour")(route.endpoint))
         elif route.path == "/auth/resend-verification" and 'POST' in route.methods:
-            route.endpoint = limiter.limit("3/hour")(route.endpoint)
+            bind_rate_limited_endpoint(route, limiter.limit("3/hour")(route.endpoint))
+
+# Include routers
+app.include_router(auth.router)
 
 # Include account router and apply rate limiting to profile picture upload
 from .routers.account import upload_profile_picture
 rate_limited_profile_picture = limiter.limit("10/minute")(upload_profile_picture)
 for route in account.router.routes:
     if hasattr(route, 'path') and route.path == "/account/profile-picture" and hasattr(route, 'methods') and 'POST' in route.methods:
-        route.endpoint = rate_limited_profile_picture
+        bind_rate_limited_endpoint(route, rate_limited_profile_picture)
 
 app.include_router(account.router)
 app.include_router(friends.router)
@@ -344,8 +353,20 @@ for route in recommendations.router.routes:
         and hasattr(route, "methods")
         and "POST" in route.methods
     ):
-        route.endpoint = rate_limited_recommendation
+        bind_rate_limited_endpoint(route, rate_limited_recommendation)
 app.include_router(recommendations.router)
+rate_limited_collection_view = limiter.limit("60/minute")(collections.public_collection)
+rate_limited_collection_helpful = limiter.limit("20/hour")(collections.mark_collection_helpful)
+rate_limited_collection_report = limiter.limit("5/hour")(collections.report_collection)
+for route in collections.router.routes:
+    if not hasattr(route, "path") or not hasattr(route, "methods"):
+        continue
+    if route.path == "/collections/public/{collection_id}" and "GET" in route.methods:
+        bind_rate_limited_endpoint(route, rate_limited_collection_view)
+    elif route.path == "/collections/public/{collection_id}/helpful" and "POST" in route.methods:
+        bind_rate_limited_endpoint(route, rate_limited_collection_helpful)
+    elif route.path == "/collections/public/{collection_id}/report" and "POST" in route.methods:
+        bind_rate_limited_endpoint(route, rate_limited_collection_report)
 app.include_router(collections.router)
 app.include_router(discover.router)
 app.include_router(export_import.router)
@@ -365,15 +386,15 @@ rate_limited_openlibrary = limiter.limit("60/minute")(proxy_openlibrary_api)
 # Replace the endpoints in the router before including it
 for route in proxy.router.routes:
     if hasattr(route, 'path') and route.path == "/api/proxy/omdb":
-        route.endpoint = rate_limited_omdb
+        bind_rate_limited_endpoint(route, rate_limited_omdb)
     elif hasattr(route, 'path') and route.path == "/api/proxy/rawg":
-        route.endpoint = rate_limited_rawg
+        bind_rate_limited_endpoint(route, rate_limited_rawg)
     elif hasattr(route, 'path') and route.path == "/api/proxy/jikan":
-        route.endpoint = rate_limited_jikan
+        bind_rate_limited_endpoint(route, rate_limited_jikan)
     elif hasattr(route, 'path') and route.path == "/api/proxy/itunes":
-        route.endpoint = rate_limited_itunes
+        bind_rate_limited_endpoint(route, rate_limited_itunes)
     elif hasattr(route, 'path') and route.path == "/api/proxy/openlibrary":
-        route.endpoint = rate_limited_openlibrary
+        bind_rate_limited_endpoint(route, rate_limited_openlibrary)
 
 app.include_router(proxy.router)
 

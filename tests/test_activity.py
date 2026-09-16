@@ -128,7 +128,7 @@ class TestActivityJournal:
         exported = authenticated_client.get("/export/")
         assert exported.status_code == 200
         payload = exported.json()
-        assert payload["export_metadata"]["version"] == "1.1"
+        assert payload["export_metadata"]["version"] == "1.2"
         assert payload["export_metadata"]["total_activities"] == 1
         assert payload["activities"][0]["title"] == movie["title"]
 

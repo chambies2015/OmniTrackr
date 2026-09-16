@@ -6,12 +6,13 @@ import json
 from datetime import datetime
 from fastapi import APIRouter, Depends
 from fastapi.responses import Response
-from sqlalchemy.orm import Session
+from sqlalchemy.orm import Session, selectinload
 from sqlalchemy import and_, func
 
 from .. import models
 from ..dependencies import get_db
 from ..review_quality import is_public_review_safe
+from .collections import _approval_is_current, _media_lookup_for_collections
 
 router = APIRouter(tags=["seo"])
 PUBLIC_REVIEW_MIN_CHARS = int(os.getenv("PUBLIC_REVIEW_MIN_CHARS", "80"))
@@ -24,7 +25,6 @@ REVIEW_CATEGORY_MODELS = (
     ("music", models.Music),
     ("book", models.Book),
 )
-
 # A sitemap is a recommendation, not an inventory dump. Supporting pages remain
 # reachable through navigation, while this list concentrates crawling on the
 # public experiences with a distinct purpose and a complete answer of their own.
@@ -162,6 +162,34 @@ async def get_sitemap(db: Session = Depends(get_db)):
     <changefreq>monthly</changefreq>
     <priority>0.6</priority>
   </url>""")
+
+        approved_collections = db.query(models.Collection).options(selectinload(models.Collection.items)).join(
+            models.User, models.Collection.user_id == models.User.id
+        ).filter(
+            models.Collection.is_public == True,
+            models.Collection.moderation_status == "approved",
+            models.User.is_active == True,
+            func.length(func.trim(models.Collection.description)) >= 300,
+        ).order_by(models.Collection.approved_at.desc()).limit(500).all()
+        collection_media = _media_lookup_for_collections(db, approved_collections)
+        eligible_collection_count = 0
+        for collection in approved_collections:
+            if not _approval_is_current(collection, db, collection_media):
+                continue
+            available_count = sum(
+                1 for item in collection.items
+                if (collection.user_id, item.category, item.item_id) in collection_media
+            )
+            if available_count >= 3:
+                eligible_collection_count += 1
+                sitemap_parts.append(
+                    f"  <url><loc>{base_url}/collections/public/{collection.id}</loc>"
+                    f"<lastmod>{today}</lastmod><changefreq>monthly</changefreq><priority>0.65</priority></url>"
+                )
+        if eligible_collection_count >= 3:
+            sitemap_parts.append(
+                f"  <url><loc>{base_url}/collections/explore</loc><changefreq>daily</changefreq><priority>0.8</priority></url>"
+            )
     except Exception:
         pass
     
@@ -305,6 +333,7 @@ OmniTrackr is a free web application for tracking and organizing movies, TV show
 - Content Quality Policy: {base_url}/content-quality
 - HTML Site Map: {base_url}/site-map
 - Public Reviews: {base_url}/reviews
+- Community Collections: {base_url}/collections/explore
 
 ## Features
 - Track movies, TV shows, anime, video games, music, and books
@@ -326,6 +355,7 @@ OmniTrackr is a free web application for tracking and organizing movies, TV show
 
 ## Public Content
 Public reviews are available at {base_url}/reviews and individual review pages at {base_url}/reviews/[id]?category=[category]. OmniTrackr also publishes evergreen guidance at {base_url}/faq, {base_url}/guides, {base_url}/media-tracking, {base_url}/compare, {base_url}/use-cases, {base_url}/movie-tracker, {base_url}/tv-show-tracker, {base_url}/anime-tracker, {base_url}/game-tracker, {base_url}/music-tracker, {base_url}/book-tracker, {base_url}/media-statistics, {base_url}/export-import-guide, {base_url}/media-tracker-checklist, {base_url}/tracking-templates, and {base_url}/review-guidelines, a demo library at {base_url}/demo, a sample media library at {base_url}/sample-library, a human-readable site map at {base_url}/site-map, product updates at {base_url}/changelog and {base_url}/roadmap, ad transparency at {base_url}/advertising, and content quality standards at {base_url}/content-quality.
+Moderator-approved member collections are browsable at {base_url}/collections/explore. Pending and edited collections remain available only by direct link and stay outside the search index until reviewed.
 
 ## Quality and Advertising Boundaries
 - Public ad-eligible pages are intended to be original, useful, and readable before signup.

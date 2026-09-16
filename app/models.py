@@ -269,12 +269,22 @@ class Collection(Base):
     user_id = Column(Integer, ForeignKey("users.id"), nullable=False, index=True)
     name = Column(String, nullable=False)
     description = Column(Text, nullable=True)
+    cover_url = Column(String, nullable=True)
     is_public = Column(Boolean, nullable=False, default=False, index=True)
+    moderation_status = Column(String, nullable=False, default="pending", index=True)
+    approved_at = Column(DateTime, nullable=True)
+    approved_content_hash = Column(String, nullable=True)
     published_at = Column(DateTime, nullable=True)
+    view_count = Column(Integer, nullable=False, default=0)
+    helpful_count = Column(Integer, nullable=False, default=0)
+    report_count = Column(Integer, nullable=False, default=0)
     created_at = Column(DateTime, nullable=False, default=datetime.utcnow)
 
     owner = relationship("User", back_populates="collections")
     items = relationship("CollectionItem", back_populates="collection", cascade="all, delete-orphan", order_by="CollectionItem.position")
+    reactions = relationship("CollectionReaction", cascade="all, delete-orphan")
+    reports = relationship("CollectionReport", cascade="all, delete-orphan")
+    views = relationship("CollectionView", cascade="all, delete-orphan")
 
 
 class CollectionItem(Base):
@@ -286,12 +296,57 @@ class CollectionItem(Base):
     category = Column(String, nullable=False)
     item_id = Column(Integer, nullable=False)
     position = Column(Integer, nullable=False, default=0)
+    curator_note = Column(Text, nullable=True)
     created_at = Column(DateTime, nullable=False, default=datetime.utcnow)
 
     collection = relationship("Collection", back_populates="items")
 
     __table_args__ = (
         UniqueConstraint("collection_id", "category", "item_id", name="uq_collection_item"),
+    )
+
+
+class CollectionReaction(Base):
+    """Privacy-preserving, one-per-browser helpful feedback."""
+    __tablename__ = "collection_reactions"
+
+    id = Column(Integer, primary_key=True, index=True)
+    collection_id = Column(Integer, ForeignKey("collections.id"), nullable=False, index=True)
+    visitor_hash = Column(String, nullable=False)
+    created_at = Column(DateTime, nullable=False, default=datetime.utcnow)
+
+    __table_args__ = (
+        UniqueConstraint("collection_id", "visitor_hash", name="uq_collection_reaction_visitor"),
+    )
+
+
+class CollectionView(Base):
+    """Deduplicated public collection view without storing an IP address."""
+    __tablename__ = "collection_views"
+
+    id = Column(Integer, primary_key=True, index=True)
+    collection_id = Column(Integer, ForeignKey("collections.id"), nullable=False, index=True)
+    visitor_hash = Column(String, nullable=False)
+    created_at = Column(DateTime, nullable=False, default=datetime.utcnow)
+
+    __table_args__ = (
+        UniqueConstraint("collection_id", "visitor_hash", name="uq_collection_view_visitor"),
+    )
+
+
+class CollectionReport(Base):
+    """A bounded abuse report for a deliberately public collection."""
+    __tablename__ = "collection_reports"
+
+    id = Column(Integer, primary_key=True, index=True)
+    collection_id = Column(Integer, ForeignKey("collections.id"), nullable=False, index=True)
+    visitor_hash = Column(String, nullable=False)
+    reason = Column(String, nullable=False)
+    details = Column(Text, nullable=True)
+    created_at = Column(DateTime, nullable=False, default=datetime.utcnow)
+
+    __table_args__ = (
+        UniqueConstraint("collection_id", "visitor_hash", name="uq_collection_report_visitor"),
     )
 
 

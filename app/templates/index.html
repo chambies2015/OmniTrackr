@@ -52,10 +52,10 @@
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link rel="dns-prefetch" href="https://www.googletagmanager.com">
   <link rel="dns-prefetch" href="https://www.google-analytics.com">
-  <link rel="preload" href="./styles.css?v=20260915-quick-capture" as="style">
+  <link rel="preload" href="./styles.css?v=20260915-collections-v2" as="style">
   <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@700;800&family=Inter:wght@400;500;600&display=swap"
     rel="stylesheet">
-  <link rel="stylesheet" href="./styles.css?v=20260915-quick-capture">
+  <link rel="stylesheet" href="./styles.css?v=20260915-collections-v2">
   <script src="./preauth.js"></script>
   <style>
     html.authenticated #landingPage{display:none}
@@ -1065,6 +1065,11 @@
           <button type="submit" class="action-btn">Create collection</button>
         </form>
       </section>
+      <section id="collectionModerationPanel" class="card collection-moderation" hidden>
+        <div class="collection-moderation__heading"><div><p class="collections-hero__eyebrow">Moderator tools</p><h3>Collection review queue</h3></div><span id="collectionModerationCount"></span></div>
+        <p>Approve only substantial, original collections that are safe to feature publicly. Any later content edit automatically returns an approved collection to this queue.</p>
+        <div id="collectionModerationList" class="collection-moderation__list"></div>
+      </section>
       <div id="collectionsList" class="collections-list" aria-live="polite"></div>
     </div>
 
@@ -1267,6 +1272,7 @@
           <a href="/compare">Compare</a>
           <a href="/use-cases">Use Cases</a>
           <a href="/reviews">Reviews</a>
+          <a href="/collections/explore">Collections</a>
           <a href="/faq">FAQ</a>
           <a href="/content-quality">Content Quality</a>
           <a href="/advertising">Advertising</a>
@@ -1836,7 +1842,7 @@
   </div>
   <script src="./credentials.js"></script>
   <script src="./auth.js?v=20260915-security-sweep"></script>
-  <script src="./app.js?v=20260915-quick-capture"></script>
+  <script src="./app.js?v=20260915-collections-v2"></script>
 
   <!-- Account Modal -->
   <div id="accountModal" class="modal-overlay" style="display: none;">
@@ -2505,7 +2511,9 @@
           <input id="collectionStudioName" type="text" maxlength="80" required>
           <label for="collectionStudioDescription">Your introduction</label>
           <textarea id="collectionStudioDescription" maxlength="500" rows="7" required aria-describedby="collectionStudioHint"></textarea>
-          <p id="collectionStudioHint" class="collection-studio-modal__hint">Private is the default. To publish, write at least 300 characters of original context and choose at least three titles. Public pages show only these selected titles and categories—not your profile, ratings, progress, or reviews.</p>
+          <label for="collectionStudioCover">Collection artwork URL <span class="content-muted">(optional)</span></label>
+          <input id="collectionStudioCover" type="url" maxlength="1000" placeholder="https://…">
+          <p id="collectionStudioHint" class="collection-studio-modal__hint">Private is the default. To publish, write at least 300 characters of original context and choose at least three titles. New and edited public collections remain shareable by direct link while awaiting review; only approved collections enter public discovery and search.</p>
           <label class="collection-studio-modal__publish"><input id="collectionStudioPublic" type="checkbox"> Publish this collection publicly</label>
           <p id="collectionStudioError" class="collection-studio-modal__error" role="alert" hidden></p>
           <div class="collection-studio-modal__actions">

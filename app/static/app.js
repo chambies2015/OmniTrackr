@@ -757,6 +757,8 @@ function handleDelegatedClick(event) {
     'add-to-collection': () => addToCollection(Number(target.dataset.collectionId)),
     'move-collection-item': () => moveCollectionItem(Number(target.dataset.collectionId), Number(target.dataset.collectionItemId), Number(target.dataset.collectionPosition)),
     'remove-collection-item': () => removeCollectionItem(Number(target.dataset.collectionId), Number(target.dataset.collectionItemId)),
+    'edit-collection-note': () => editCollectionItemNote(Number(target.dataset.collectionId), Number(target.dataset.collectionItemId)),
+    'moderate-collection': () => moderateCollection(Number(target.dataset.collectionId), target.dataset.collectionStatus),
     'delete-collection': () => deleteCollection(Number(target.dataset.collectionId)),
     'show-register-form': () => showRegisterForm(),
     'show-login-form': () => showLoginForm()
@@ -7619,6 +7621,7 @@ async function loadCollections() {
     if (!response.ok) throw new Error('Unable to load collections');
     collectionsCache = await response.json();
     renderCollections(collectionsCache);
+    loadCollectionModerationQueue();
   } catch (error) {
     const container = document.getElementById('collectionsList');
     if (container) container.textContent = 'Could not load collections. Please try again.';
@@ -7652,7 +7655,9 @@ function renderCollections(collections) {
     actions.className = 'collection-card__actions';
     const status = document.createElement('span');
     status.className = `collection-card__status${collection.is_public ? ' is-public' : ''}`;
-    status.textContent = collection.is_public ? 'Public' : 'Private';
+    status.textContent = collection.is_public
+      ? ({ approved: 'Public · Discoverable', rejected: 'Public · Needs changes' }[collection.moderation_status] || 'Public · In review')
+      : 'Private';
     const edit = document.createElement('button');
     edit.type = 'button';
     edit.className = 'collection-card__edit';
@@ -7701,6 +7706,12 @@ function renderCollections(collections) {
         const meta = document.createElement('span');
         meta.textContent = item.available ? item.category_label : 'Deleted library item';
         itemCopy.append(title, meta);
+        if (item.curator_note) {
+          const note = document.createElement('p');
+          note.className = 'collection-card__item-note';
+          note.textContent = item.curator_note;
+          itemCopy.appendChild(note);
+        }
         const controls = document.createElement('div');
         controls.className = 'collection-card__item-controls';
         const up = document.createElement('button');
@@ -7727,7 +7738,13 @@ function renderCollections(collections) {
         removeItem.dataset.collectionId = collection.id;
         removeItem.dataset.collectionItemId = item.id;
         removeItem.textContent = 'Remove';
-        controls.append(up, down, removeItem);
+        const editNote = document.createElement('button');
+        editNote.type = 'button';
+        editNote.dataset.action = 'edit-collection-note';
+        editNote.dataset.collectionId = collection.id;
+        editNote.dataset.collectionItemId = item.id;
+        editNote.textContent = item.curator_note ? 'Edit note' : 'Add note';
+        controls.append(up, down, editNote, removeItem);
         row.append(itemCopy, controls);
         itemList.appendChild(row);
       });
@@ -7735,6 +7752,68 @@ function renderCollections(collections) {
     card.appendChild(itemList);
     container.appendChild(card);
   });
+}
+
+async function loadCollectionModerationQueue() {
+  const panel = document.getElementById('collectionModerationPanel');
+  const list = document.getElementById('collectionModerationList');
+  const count = document.getElementById('collectionModerationCount');
+  if (!panel || !list || !count) return;
+  const response = await authenticatedFetch(`${API_BASE}/collections/moderation/queue`);
+  if (!response.ok) {
+    panel.hidden = true;
+    return;
+  }
+  const queue = await response.json();
+  panel.hidden = false;
+  count.textContent = `${queue.filter(item => item.moderation_status === 'pending').length} pending`;
+  list.replaceChildren();
+  if (!queue.length) {
+    const empty = document.createElement('p');
+    empty.textContent = 'No public collections are waiting for review.';
+    list.appendChild(empty);
+    return;
+  }
+  queue.forEach((collection) => {
+    const row = document.createElement('article');
+    row.className = 'collection-moderation__item';
+    const copy = document.createElement('div');
+    const title = document.createElement('strong');
+    title.textContent = collection.name;
+    const meta = document.createElement('span');
+    meta.textContent = `${collection.items.length} titles · ${collection.report_count} reports · ${collection.moderation_status}`;
+    copy.append(title, meta);
+    const actions = document.createElement('div');
+    const view = document.createElement('a');
+    view.href = collection.public_url;
+    view.target = '_blank';
+    view.rel = 'noopener noreferrer';
+    view.textContent = 'Review page ↗';
+    actions.appendChild(view);
+    ['approved', 'rejected'].forEach((moderationStatus) => {
+      const button = document.createElement('button');
+      button.type = 'button';
+      button.dataset.action = 'moderate-collection';
+      button.dataset.collectionId = collection.id;
+      button.dataset.collectionStatus = moderationStatus;
+      button.textContent = moderationStatus === 'approved' ? 'Approve' : 'Reject';
+      button.disabled = collection.moderation_status === moderationStatus;
+      actions.appendChild(button);
+    });
+    row.append(copy, actions);
+    list.appendChild(row);
+  });
+}
+
+async function moderateCollection(collectionId, moderationStatus) {
+  if (!collectionId || !['approved', 'rejected'].includes(moderationStatus)) return;
+  try {
+    const response = await authenticatedFetch(`${API_BASE}/collections/${collectionId}/moderation`, {
+      method: 'PATCH', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ status: moderationStatus }),
+    });
+    if (!response.ok) throw new Error('Unable to moderate collection');
+    await loadCollections();
+  } catch (error) { alert('Could not update that collection review. Please try again.'); }
 }
 
 async function createCollection(event) {
@@ -7759,6 +7838,7 @@ function openCollectionStudio(collectionId) {
   document.getElementById('collectionStudioId').value = String(collection.id);
   document.getElementById('collectionStudioName').value = collection.name || '';
   document.getElementById('collectionStudioDescription').value = collection.description || '';
+  document.getElementById('collectionStudioCover').value = collection.cover_url || '';
   document.getElementById('collectionStudioPublic').checked = Boolean(collection.is_public);
   const error = document.getElementById('collectionStudioError');
   error.textContent = '';
@@ -7779,6 +7859,7 @@ async function saveCollectionStudio(event) {
   const payload = {
     name: document.getElementById('collectionStudioName').value,
     description: document.getElementById('collectionStudioDescription').value,
+    cover_url: document.getElementById('collectionStudioCover').value || null,
     is_public: document.getElementById('collectionStudioPublic').checked,
   };
   error.hidden = true;
@@ -7857,6 +7938,25 @@ async function moveCollectionItem(collectionId, itemId, position) {
     if (!response.ok) throw new Error('Unable to move item');
     loadCollections();
   } catch (error) { alert('Could not reorder this collection. Please try again.'); }
+}
+
+async function editCollectionItemNote(collectionId, itemId) {
+  const collection = collectionsCache.find(item => item.id === collectionId);
+  const item = collection?.items.find(entry => entry.id === itemId);
+  if (!item) return;
+  const curatorNote = prompt('What should readers notice about this pick?', item.curator_note || '');
+  if (curatorNote === null) return;
+  if (curatorNote.length > 500) {
+    alert('Curator notes can be up to 500 characters.');
+    return;
+  }
+  try {
+    const response = await authenticatedFetch(`${API_BASE}/collections/${collectionId}/items/${itemId}`, {
+      method: 'PATCH', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ curator_note: curatorNote }),
+    });
+    if (!response.ok) throw new Error('Unable to update note');
+    loadCollections();
+  } catch (error) { alert('Could not save that curator note. Please try again.'); }
 }
 
 async function removeCollectionItem(collectionId, itemId) {

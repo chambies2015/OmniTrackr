@@ -74,6 +74,33 @@ class TestJWTTokens:
 
 class TestAuthEndpoints:
     """Test authentication API endpoints."""
+
+    def test_auth_rate_limit_wrappers_are_bound_to_registered_handlers(self):
+        """FastAPI must execute the wrapped handlers, not pre-wrap copies."""
+        from app.main import app
+        from app.routers import auth as auth_router
+
+        protected = {
+            ("/auth/register", "POST"),
+            ("/auth/login", "POST"),
+            ("/auth/request-password-reset", "POST"),
+            ("/auth/resend-verification", "POST"),
+        }
+        included_router = next(
+            route for route in app.routes
+            if getattr(route, "original_router", None) is auth_router.router
+        )
+        routes = [
+            route
+            for route in included_router.original_router.routes
+            if hasattr(route, "path")
+            and hasattr(route, "methods")
+            and any(route.path == path and method in route.methods for path, method in protected)
+        ]
+
+        assert len(routes) == len(protected)
+        assert all(route.endpoint is route.dependant.call for route in routes)
+        assert all(hasattr(route.endpoint, "__wrapped__") for route in routes)
     
     def test_register_new_user(self, client, test_user_data):
         """Test registering a new user."""

@@ -18,6 +18,7 @@ Live site: [https://www.omnitrackr.xyz/](https://www.omnitrackr.xyz/)
 - Customize visible tabs so users can hide categories they do not use.
 - Add friends, manage friend requests, view privacy-aware friend profiles, and receive notifications.
 - Create custom tabs for additional collection types with custom fields and optional poster uploads.
+- Build ordered cross-media collections with curator notes and artwork, publish them by choice, and feature moderator-approved collections in the public gallery.
 - Export and import JSON for built-in categories and custom tabs.
 - View statistics for completion, ratings, years, directors, genres, TV/anime season data, music, books, and high-level library insights.
 - Use public content pages for onboarding and discovery: `/about`, `/guides`, `/compare`, `/use-cases`, `/demo`, `/media-tracking`, `/tv-show-tracker`, `/game-tracker`, `/changelog`, `/roadmap`, `/privacy`, `/terms`, and `/contact`.
@@ -81,6 +82,7 @@ The public site is more than a login screen. These pages help visitors, search e
 - `/media-tracking` - hub linking the major guide pages.
 - `/tv-show-tracker` and `/game-tracker` - category-specific tracker guides.
 - `/reviews` - public user reviews when users choose to share individual reviews.
+- `/collections/explore` - reviewed, substantial member-curated collections spanning all six media types.
 - `/changelog` - product, security, and content update history.
 - `/roadmap` - planned improvements.
 - `/privacy`, `/terms`, and `/contact` - policy and support pages.
@@ -239,6 +241,7 @@ Public content and ads:
 | --- | --- |
 | `ADSENSE_PUBLISHER_ID` | Publisher ID used by `ads.txt` and seller metadata. |
 | `PUBLIC_REVIEW_MIN_CHARS` | Minimum review length for public review feeds. Defaults to `80`. |
+| `COLLECTION_MODERATOR_USERNAMES` | Comma-separated usernames allowed to review public collections for the gallery and search index. Keep this list limited to trusted accounts. |
 
 iTunes Search API and Open Library API do not require keys.
 
