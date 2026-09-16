@@ -1065,6 +1065,32 @@
           <button type="submit" class="action-btn">Create collection</button>
         </form>
       </section>
+      <section id="moderatorInsightsPanel" class="card moderator-insights" hidden>
+        <div class="moderator-insights__heading">
+          <div><p class="collections-hero__eyebrow">Moderator tools · read only</p><h3>Site health</h3></div>
+          <span id="moderatorInsightsGenerated"></span>
+        </div>
+        <p id="moderatorInsightsPrivacy" class="moderator-insights__privacy"></p>
+        <div id="moderatorMetricGrid" class="moderator-metric-grid" aria-live="polite"></div>
+        <div class="moderator-insights__columns">
+          <section aria-labelledby="moderatorGrowthTitle">
+            <div class="moderator-section-heading"><div><p>Last 30 days</p><h4 id="moderatorGrowthTitle">New accounts</h4></div><strong id="moderatorGrowthTotal"></strong></div>
+            <div id="moderatorGrowthChart" class="moderator-growth-chart" role="img" aria-label="Daily new account activity over the last 30 days"></div>
+          </section>
+          <section aria-labelledby="moderatorLibraryTitle">
+            <div class="moderator-section-heading"><div><p>Across every library</p><h4 id="moderatorLibraryTitle">Media mix</h4></div><strong id="moderatorCompletionRate"></strong></div>
+            <div id="moderatorCategoryStats" class="moderator-category-stats"></div>
+          </section>
+        </div>
+        <div class="moderator-insights__columns moderator-insights__columns--compact">
+          <section aria-labelledby="moderatorEngagementTitle"><div class="moderator-section-heading"><div><p>Useful habits</p><h4 id="moderatorEngagementTitle">Engagement</h4></div></div><dl id="moderatorEngagementStats" class="moderator-stat-list"></dl></section>
+          <section aria-labelledby="moderatorSafetyTitle"><div class="moderator-section-heading"><div><p>Public surface</p><h4 id="moderatorSafetyTitle">Safety & discovery</h4></div></div><dl id="moderatorSafetyStats" class="moderator-stat-list"></dl></section>
+        </div>
+        <section class="moderator-users" aria-labelledby="moderatorUsersTitle">
+          <div class="moderator-section-heading"><div><p>Newest 50 accounts</p><h4 id="moderatorUsersTitle">User overview</h4></div></div>
+          <div class="moderator-users__table-wrap"><table><thead><tr><th>User</th><th>Status</th><th>Joined</th><th>Library</th><th>Journal</th><th>Public lists</th><th>Last journal activity</th></tr></thead><tbody id="moderatorUsersBody"></tbody></table></div>
+        </section>
+      </section>
       <section id="collectionModerationPanel" class="card collection-moderation" hidden>
         <div class="collection-moderation__heading"><div><p class="collections-hero__eyebrow">Moderator tools</p><h3>Collection review queue</h3></div><span id="collectionModerationCount"></span></div>
         <p>Approve only substantial, original collections that are safe to feature publicly. Any later content edit automatically returns an approved collection to this queue.</p>

@@ -7756,53 +7756,210 @@ function renderCollections(collections) {
 
 async function loadCollectionModerationQueue() {
   const panel = document.getElementById('collectionModerationPanel');
+  const insightsPanel = document.getElementById('moderatorInsightsPanel');
   const list = document.getElementById('collectionModerationList');
   const count = document.getElementById('collectionModerationCount');
   if (!panel || !list || !count) return;
-  const response = await authenticatedFetch(`${API_BASE}/collections/moderation/queue`);
-  if (!response.ok) {
-    panel.hidden = true;
-    return;
-  }
-  const queue = await response.json();
-  panel.hidden = false;
-  count.textContent = `${queue.filter(item => item.moderation_status === 'pending').length} pending`;
-  list.replaceChildren();
-  if (!queue.length) {
-    const empty = document.createElement('p');
-    empty.textContent = 'No public collections are waiting for review.';
-    list.appendChild(empty);
-    return;
-  }
-  queue.forEach((collection) => {
-    const row = document.createElement('article');
-    row.className = 'collection-moderation__item';
-    const copy = document.createElement('div');
-    const title = document.createElement('strong');
-    title.textContent = collection.name;
-    const meta = document.createElement('span');
-    meta.textContent = `${collection.items.length} titles · ${collection.report_count} reports · ${collection.moderation_status}`;
-    copy.append(title, meta);
-    const actions = document.createElement('div');
-    const view = document.createElement('a');
-    view.href = collection.public_url;
-    view.target = '_blank';
-    view.rel = 'noopener noreferrer';
-    view.textContent = 'Review page ↗';
-    actions.appendChild(view);
-    ['approved', 'rejected'].forEach((moderationStatus) => {
-      const button = document.createElement('button');
-      button.type = 'button';
-      button.dataset.action = 'moderate-collection';
-      button.dataset.collectionId = collection.id;
-      button.dataset.collectionStatus = moderationStatus;
-      button.textContent = moderationStatus === 'approved' ? 'Approve' : 'Reject';
-      button.disabled = collection.moderation_status === moderationStatus;
-      actions.appendChild(button);
+  try {
+    const response = await authenticatedFetch(`${API_BASE}/collections/moderation/queue`);
+    if (!response.ok) throw new Error('Moderator access unavailable');
+    const queue = await response.json();
+    panel.hidden = false;
+    loadModeratorInsights();
+    count.textContent = `${queue.filter(item => item.moderation_status === 'pending').length} pending`;
+    list.replaceChildren();
+    if (!queue.length) {
+      const empty = document.createElement('p');
+      empty.textContent = 'No public collections are waiting for review.';
+      list.appendChild(empty);
+      return;
+    }
+    queue.forEach((collection) => {
+      const row = document.createElement('article');
+      row.className = 'collection-moderation__item';
+      const copy = document.createElement('div');
+      const title = document.createElement('strong');
+      title.textContent = collection.name;
+      const meta = document.createElement('span');
+      meta.textContent = `${collection.items.length} titles · ${collection.report_count} reports · ${collection.moderation_status}`;
+      copy.append(title, meta);
+      const actions = document.createElement('div');
+      const view = document.createElement('a');
+      view.href = collection.public_url;
+      view.target = '_blank';
+      view.rel = 'noopener noreferrer';
+      view.textContent = 'Review page ↗';
+      actions.appendChild(view);
+      ['approved', 'rejected'].forEach((moderationStatus) => {
+        const button = document.createElement('button');
+        button.type = 'button';
+        button.dataset.action = 'moderate-collection';
+        button.dataset.collectionId = collection.id;
+        button.dataset.collectionStatus = moderationStatus;
+        button.textContent = moderationStatus === 'approved' ? 'Approve' : 'Reject';
+        button.disabled = collection.moderation_status === moderationStatus;
+        actions.appendChild(button);
+      });
+      row.append(copy, actions);
+      list.appendChild(row);
     });
-    row.append(copy, actions);
-    list.appendChild(row);
+  } catch (error) {
+    panel.hidden = true;
+    if (insightsPanel) insightsPanel.hidden = true;
+  }
+}
+
+function moderatorNumber(value) {
+  return new Intl.NumberFormat(undefined, { maximumFractionDigits: 1 }).format(Number(value) || 0);
+}
+
+function moderatorDate(value, includeTime = false) {
+  if (!value) return 'No activity yet';
+  const parsed = new Date(value);
+  if (Number.isNaN(parsed.getTime())) return 'Unknown';
+  return new Intl.DateTimeFormat(undefined, includeTime
+    ? { dateStyle: 'medium', timeStyle: 'short' }
+    : { dateStyle: 'medium' }).format(parsed);
+}
+
+function appendModeratorMetric(container, label, value, detail) {
+  const card = document.createElement('article');
+  card.className = 'moderator-metric';
+  const labelElement = document.createElement('span');
+  labelElement.textContent = label;
+  const valueElement = document.createElement('strong');
+  valueElement.textContent = moderatorNumber(value);
+  const detailElement = document.createElement('small');
+  detailElement.textContent = detail;
+  card.append(labelElement, valueElement, detailElement);
+  container.appendChild(card);
+}
+
+function renderModeratorStatList(container, rows) {
+  container.replaceChildren();
+  rows.forEach(([label, value]) => {
+    const row = document.createElement('div');
+    const term = document.createElement('dt');
+    term.textContent = label;
+    const description = document.createElement('dd');
+    description.textContent = moderatorNumber(value);
+    row.append(term, description);
+    container.appendChild(row);
   });
+}
+
+function renderModeratorInsights(data) {
+  const panel = document.getElementById('moderatorInsightsPanel');
+  const metricGrid = document.getElementById('moderatorMetricGrid');
+  if (!panel || !metricGrid) return;
+  panel.hidden = false;
+  document.getElementById('moderatorInsightsGenerated').textContent = `Updated ${moderatorDate(data.generated_at, true)}`;
+  document.getElementById('moderatorInsightsPrivacy').textContent = data.privacy_note;
+
+  metricGrid.replaceChildren();
+  appendModeratorMetric(metricGrid, 'Accounts', data.users.total, `${moderatorNumber(data.users.new_30_days)} joined in 30 days`);
+  appendModeratorMetric(metricGrid, 'Libraries started', data.users.with_library_items, `${moderatorNumber(data.users.active)} active · ${moderatorNumber(data.users.verified)} verified`);
+  appendModeratorMetric(metricGrid, 'Library items', data.content.total_items, `${moderatorNumber(data.content.completion_percentage)}% marked complete`);
+  appendModeratorMetric(metricGrid, 'Public reach', data.moderation.views, `${moderatorNumber(data.moderation.helpful)} helpful votes`);
+
+  const growth = document.getElementById('moderatorGrowthChart');
+  const maxSignups = Math.max(1, ...data.growth.map(day => day.signups));
+  growth.replaceChildren();
+  data.growth.forEach(day => {
+    const bar = document.createElement('span');
+    bar.style.height = `${Math.max(3, (day.signups / maxSignups) * 100)}%`;
+    bar.title = `${moderatorDate(`${day.date}T12:00:00`)}: ${day.signups} new account${day.signups === 1 ? '' : 's'}`;
+    growth.appendChild(bar);
+  });
+  document.getElementById('moderatorGrowthTotal').textContent = `${moderatorNumber(data.users.new_30_days)} total`;
+
+  const categoryStats = document.getElementById('moderatorCategoryStats');
+  const maxCategory = Math.max(1, ...data.content.categories.map(category => category.total));
+  categoryStats.replaceChildren();
+  data.content.categories.forEach(category => {
+    const row = document.createElement('div');
+    row.className = 'moderator-category-row';
+    const label = document.createElement('span');
+    label.textContent = category.label;
+    const bar = document.createElement('div');
+    bar.className = 'moderator-category-bar';
+    const fill = document.createElement('i');
+    fill.style.width = `${(category.total / maxCategory) * 100}%`;
+    bar.appendChild(fill);
+    const total = document.createElement('strong');
+    total.textContent = moderatorNumber(category.total);
+    row.append(label, bar, total);
+    categoryStats.appendChild(row);
+  });
+  document.getElementById('moderatorCompletionRate').textContent = `${moderatorNumber(data.content.completion_percentage)}% complete`;
+
+  renderModeratorStatList(document.getElementById('moderatorEngagementStats'), [
+    ['Journal entries · 7 days', data.engagement.activity_entries_7_days],
+    ['Journal entries · 30 days', data.engagement.activity_entries_30_days],
+    ['Journal contributors · 30 days', data.engagement.active_journal_users_30_days],
+    ['Completion moments', data.engagement.completion_moments],
+    ['Next Up entries', data.engagement.next_up_items],
+    ['Rated library items', data.content.rated_items],
+    ['Written reviews', data.content.reviewed_items],
+    ['Public reviews', data.content.public_reviews],
+    ['Custom tracker items', data.content.custom_items],
+    ['Friendships', data.engagement.friendships],
+    ['Recommendation requests', data.engagement.recommendation_requests],
+    ['Recommendation replies', data.engagement.recommendation_submissions],
+  ]);
+  const safetyRows = [
+    ['Public collections', data.moderation.public],
+    ['Awaiting review', data.moderation.pending],
+    ['Discoverable', data.moderation.approved],
+    ['Changed after approval', data.moderation.stale_approvals],
+    ['Rejected', data.moderation.rejected],
+    ['Reports', data.moderation.reports],
+    ['Unverified over 7 days', data.users.unverified_older_than_7_days],
+    ['Deactivated accounts', data.users.deactivated],
+    ['Empty libraries', data.users.without_library_items],
+  ];
+  data.moderation.reports_by_reason.slice(0, 3).forEach(report => {
+    safetyRows.push([`Reports · ${report.reason}`, report.count]);
+  });
+  renderModeratorStatList(document.getElementById('moderatorSafetyStats'), safetyRows);
+
+  const usersBody = document.getElementById('moderatorUsersBody');
+  usersBody.replaceChildren();
+  data.recent_users.forEach(user => {
+    const row = document.createElement('tr');
+    const username = document.createElement('td');
+    username.textContent = user.username;
+    const statusCell = document.createElement('td');
+    const status = document.createElement('span');
+    status.className = `moderator-user-status${user.is_active && user.is_verified ? ' is-healthy' : ''}`;
+    status.textContent = !user.is_active ? 'Inactive' : user.is_verified ? 'Verified' : 'Unverified';
+    statusCell.appendChild(status);
+    const values = [
+      moderatorDate(user.joined_at),
+      moderatorNumber(user.library_items),
+      moderatorNumber(user.activity_entries),
+      moderatorNumber(user.public_collections),
+      moderatorDate(user.last_activity_at),
+    ];
+    row.append(username, statusCell, ...values.map(value => {
+      const cell = document.createElement('td');
+      cell.textContent = value;
+      return cell;
+    }));
+    usersBody.appendChild(row);
+  });
+}
+
+async function loadModeratorInsights() {
+  const panel = document.getElementById('moderatorInsightsPanel');
+  if (!panel) return;
+  try {
+    const response = await authenticatedFetch(`${API_BASE}/collections/moderation/insights`);
+    if (!response.ok) throw new Error('Moderator insights unavailable');
+    renderModeratorInsights(await response.json());
+  } catch (error) {
+    panel.hidden = true;
+  }
 }
 
 async function moderateCollection(collectionId, moderationStatus) {

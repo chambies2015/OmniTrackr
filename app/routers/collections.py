@@ -1,5 +1,5 @@
 """Private-by-default cross-media collections and moderated public discovery."""
-from datetime import datetime
+from datetime import datetime, timedelta
 import hashlib
 import hmac
 from html import escape
@@ -11,7 +11,7 @@ from typing import Dict, List, Tuple, Type
 
 from fastapi import APIRouter, Depends, HTTPException, Request, status
 from fastapi.responses import JSONResponse
-from sqlalchemy import func
+from sqlalchemy import case, func
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session, selectinload
 
@@ -61,18 +61,28 @@ def _sign_visitor_token(payload: str) -> str:
 
 def _visitor_identity(request: Request) -> tuple[str, str | None, bool]:
     """Return a signed pseudonymous identity and whether the browser retained it."""
-    token = request.cookies.get(VISITOR_COOKIE, "")
-    trusted_existing = False
-    if 80 <= len(token) <= 160 and "." in token:
-        payload, supplied_signature = token.rsplit(".", 1)
+    supplied_token = request.cookies.get(VISITOR_COOKIE, "")
+    if 80 <= len(supplied_token) <= 160 and "." in supplied_token:
+        payload, supplied_signature = supplied_token.rsplit(".", 1)
         expected = hmac.new(
             auth.SECRET_KEY.encode("utf-8"), payload.encode("utf-8"), hashlib.sha256
         ).hexdigest()
-        trusted_existing = bool(payload) and hmac.compare_digest(supplied_signature, expected)
-    if not trusted_existing:
-        token = _sign_visitor_token(secrets.token_urlsafe(32))
-    digest = hashlib.sha256(f"{auth.SECRET_KEY}:{token}".encode("utf-8")).hexdigest()
-    return digest, None if trusted_existing else token, trusted_existing
+        signature_is_hex = (
+            len(supplied_signature) == 64
+            and supplied_signature.isascii()
+            and all(character in "0123456789abcdef" for character in supplied_signature)
+        )
+        if payload and signature_is_hex and hmac.compare_digest(supplied_signature, expected):
+            digest = hashlib.sha256(
+                f"{auth.SECRET_KEY}:{supplied_token}".encode("utf-8")
+            ).hexdigest()
+            return digest, None, True
+
+    # Keep request-controlled bytes out of the response-cookie dataflow. Only a
+    # freshly generated, server-signed value can be returned for Set-Cookie.
+    new_token = _sign_visitor_token(secrets.token_urlsafe(32))
+    digest = hashlib.sha256(f"{auth.SECRET_KEY}:{new_token}".encode("utf-8")).hexdigest()
+    return digest, new_token, False
 
 
 def _set_visitor_cookie(response, token: str | None) -> None:
@@ -98,6 +108,212 @@ def _moderator_usernames() -> set[str]:
 def _require_moderator(current_user: models.User) -> None:
     if current_user.username.lower() not in _moderator_usernames():
         raise HTTPException(status_code=403, detail="Collection moderator access required")
+
+
+def _count(db: Session, model, *filters) -> int:
+    query = db.query(func.count(model.id))
+    if filters:
+        query = query.filter(*filters)
+    return int(query.scalar() or 0)
+
+
+def _moderator_site_insights(db: Session) -> dict:
+    """Return privacy-conscious operational metrics for trusted moderators."""
+    now = datetime.utcnow()
+    seven_days_ago = now - timedelta(days=7)
+    thirty_days_ago = now - timedelta(days=30)
+
+    total_users = _count(db, models.User)
+    users = {
+        "total": total_users,
+        "active": _count(db, models.User, models.User.is_active == True),
+        "verified": _count(db, models.User, models.User.is_verified == True),
+        "new_7_days": _count(db, models.User, models.User.created_at >= seven_days_ago),
+        "new_30_days": _count(db, models.User, models.User.created_at >= thirty_days_ago),
+        "deactivated": _count(db, models.User, models.User.is_active == False),
+        "unverified_older_than_7_days": _count(
+            db,
+            models.User,
+            models.User.is_verified == False,
+            models.User.created_at < seven_days_ago,
+        ),
+    }
+
+    category_definitions = [
+        ("movies", "Movies", models.Movie, models.Movie.watched),
+        ("tv_shows", "TV shows", models.TVShow, models.TVShow.watched),
+        ("anime", "Anime", models.Anime, models.Anime.watched),
+        ("video_games", "Video games", models.VideoGame, models.VideoGame.played),
+        ("music", "Music", models.Music, models.Music.listened),
+        ("books", "Books", models.Book, models.Book.read),
+    ]
+    categories = []
+    total_items = completed_items = rated_items = reviewed_items = public_reviews = 0
+    users_with_library: set[int] = set()
+    for key, label, model, completed_field in category_definitions:
+        has_review = (model.review.isnot(None)) & (func.length(func.trim(model.review)) > 0)
+        total, completed, rated, reviewed, public = db.query(
+            func.count(model.id),
+            func.sum(case((completed_field == True, 1), else_=0)),
+            func.sum(case((model.rating.isnot(None), 1), else_=0)),
+            func.sum(case((has_review, 1), else_=0)),
+            func.sum(case((has_review & (model.review_public == True), 1), else_=0)),
+        ).one()
+        total = int(total or 0)
+        completed = int(completed or 0)
+        rated = int(rated or 0)
+        reviewed = int(reviewed or 0)
+        public = int(public or 0)
+        total_items += total
+        completed_items += completed
+        rated_items += rated
+        reviewed_items += reviewed
+        public_reviews += public
+        categories.append({
+            "key": key,
+            "label": label,
+            "total": total,
+            "completed": completed,
+            "rated": rated,
+            "reviewed": reviewed,
+        })
+        users_with_library.update(
+            user_id for user_id, in db.query(model.user_id).distinct().all()
+        )
+
+    users["with_library_items"] = len(users_with_library)
+    users["without_library_items"] = max(total_users - len(users_with_library), 0)
+    content = {
+        "total_items": total_items,
+        "completed_items": completed_items,
+        "rated_items": rated_items,
+        "reviewed_items": reviewed_items,
+        "public_reviews": public_reviews,
+        "completion_percentage": round((completed_items / total_items * 100) if total_items else 0, 1),
+        "categories": categories,
+        "custom_tabs": _count(db, models.CustomTab),
+        "custom_items": _count(db, models.CustomTabItem),
+    }
+
+    approved_collections = db.query(models.Collection).options(
+        selectinload(models.Collection.items)
+    ).filter(models.Collection.moderation_status == "approved").all()
+    approved_media = _media_lookup_for_collections(db, approved_collections)
+    stale_approvals = sum(
+        1 for collection in approved_collections
+        if not _approval_is_current(collection, db, approved_media)
+    )
+    collection_totals = db.query(
+        func.coalesce(func.sum(models.Collection.view_count), 0),
+        func.coalesce(func.sum(models.Collection.helpful_count), 0),
+        func.coalesce(func.sum(models.Collection.report_count), 0),
+    ).one()
+    reports_by_reason = [
+        {"reason": reason, "count": int(count)}
+        for reason, count in db.query(
+            models.CollectionReport.reason,
+            func.count(models.CollectionReport.id),
+        ).group_by(models.CollectionReport.reason).order_by(func.count(models.CollectionReport.id).desc()).all()
+    ]
+    moderation = {
+        "collections_total": _count(db, models.Collection),
+        "public": _count(db, models.Collection, models.Collection.is_public == True),
+        "pending": _count(
+            db, models.Collection,
+            models.Collection.is_public == True,
+            models.Collection.moderation_status == "pending",
+        ),
+        "approved": len(approved_collections) - stale_approvals,
+        "stale_approvals": stale_approvals,
+        "rejected": _count(db, models.Collection, models.Collection.moderation_status == "rejected"),
+        "views": int(collection_totals[0] or 0),
+        "helpful": int(collection_totals[1] or 0),
+        "reports": int(collection_totals[2] or 0),
+        "reports_by_reason": reports_by_reason,
+    }
+
+    engagement = {
+        "activity_entries_7_days": _count(
+            db, models.ActivityEntry, models.ActivityEntry.occurred_at >= seven_days_ago
+        ),
+        "activity_entries_30_days": _count(
+            db, models.ActivityEntry, models.ActivityEntry.occurred_at >= thirty_days_ago
+        ),
+        "active_journal_users_30_days": int(db.query(
+            func.count(func.distinct(models.ActivityEntry.user_id))
+        ).filter(models.ActivityEntry.occurred_at >= thirty_days_ago).scalar() or 0),
+        "completion_moments": _count(db, models.CompletionMoment),
+        "next_up_items": _count(db, models.NextUpItem),
+        "friendships": _count(db, models.Friendship),
+        "recommendation_requests": _count(db, models.RecommendationRequest),
+        "recommendation_submissions": _count(db, models.RecommendationSubmission),
+    }
+
+    signup_dates = [
+        created_at for created_at, in db.query(models.User.created_at).filter(
+            models.User.created_at >= thirty_days_ago
+        ).all() if created_at
+    ]
+    signup_counts = {}
+    for created_at in signup_dates:
+        key = created_at.date().isoformat()
+        signup_counts[key] = signup_counts.get(key, 0) + 1
+    growth = []
+    for days_ago in range(29, -1, -1):
+        day = (now - timedelta(days=days_ago)).date().isoformat()
+        growth.append({"date": day, "signups": signup_counts.get(day, 0)})
+
+    recent_users = db.query(models.User).order_by(
+        models.User.created_at.desc(), models.User.id.desc()
+    ).limit(50).all()
+    recent_ids = [user.id for user in recent_users]
+    library_counts = {user_id: 0 for user_id in recent_ids}
+    for _, _, model, _ in category_definitions:
+        for user_id, count in db.query(model.user_id, func.count(model.id)).filter(
+            model.user_id.in_(recent_ids)
+        ).group_by(model.user_id).all():
+            library_counts[user_id] += int(count)
+    activity_by_user = {
+        user_id: {"count": int(count), "last": last_activity}
+        for user_id, count, last_activity in db.query(
+            models.ActivityEntry.user_id,
+            func.count(models.ActivityEntry.id),
+            func.max(models.ActivityEntry.occurred_at),
+        ).filter(models.ActivityEntry.user_id.in_(recent_ids)).group_by(models.ActivityEntry.user_id).all()
+    }
+    public_by_user = {
+        user_id: int(count)
+        for user_id, count in db.query(
+            models.Collection.user_id, func.count(models.Collection.id)
+        ).filter(
+            models.Collection.user_id.in_(recent_ids),
+            models.Collection.is_public == True,
+        ).group_by(models.Collection.user_id).all()
+    }
+    user_rows = [{
+        "username": user.username,
+        "joined_at": user.created_at.isoformat() if user.created_at else None,
+        "is_active": bool(user.is_active),
+        "is_verified": bool(user.is_verified),
+        "library_items": library_counts.get(user.id, 0),
+        "activity_entries": activity_by_user.get(user.id, {}).get("count", 0),
+        "last_activity_at": (
+            activity_by_user[user.id]["last"].isoformat()
+            if user.id in activity_by_user and activity_by_user[user.id]["last"] else None
+        ),
+        "public_collections": public_by_user.get(user.id, 0),
+    } for user in recent_users]
+
+    return {
+        "generated_at": now.isoformat(),
+        "users": users,
+        "content": content,
+        "engagement": engagement,
+        "moderation": moderation,
+        "growth": growth,
+        "recent_users": user_rows,
+        "privacy_note": "Operational aggregates only. Emails, private notes, reviews, and library titles are excluded.",
+    }
 
 
 def _return_to_review(collection: models.Collection) -> None:
@@ -396,6 +612,16 @@ async def collection_moderation_queue(
     ).order_by(models.Collection.report_count.desc(), models.Collection.published_at.asc()).limit(100).all()
     media_lookup = _media_lookup_for_collections(db, collections)
     return [_serialize_collection(collection, db, collection.user_id, media_lookup) for collection in collections]
+
+
+@router.get("/moderation/insights")
+async def collection_moderator_insights(
+    current_user: models.User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+):
+    """Give trusted moderators a read-only, privacy-conscious site health view."""
+    _require_moderator(current_user)
+    return _moderator_site_insights(db)
 
 
 @router.patch("/{collection_id}/moderation", response_model=schemas.Collection)

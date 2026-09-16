@@ -4,6 +4,8 @@ from app import crud, models
 from app.routers import collections as collections_router
 from app.routers.export_import import _export_collections, _import_collections
 from sqlalchemy import event
+from starlette.requests import Request
+from starlette.responses import Response
 
 
 PUBLIC_INTRO = (
@@ -86,6 +88,41 @@ class TestCollections:
     def test_moderation_requires_configured_trusted_username(self, authenticated_client, monkeypatch):
         monkeypatch.delenv("COLLECTION_MODERATOR_USERNAMES", raising=False)
         assert authenticated_client.get("/collections/moderation/queue").status_code == 403
+        assert authenticated_client.get("/collections/moderation/insights").status_code == 403
+
+    def test_moderator_insights_are_aggregate_and_exclude_private_user_data(
+        self, authenticated_client, db_session, test_movie_data, monkeypatch
+    ):
+        monkeypatch.setenv("COLLECTION_MODERATOR_USERNAMES", "testuser")
+        assert authenticated_client.post("/movies/", json=test_movie_data).status_code == 201
+        assert authenticated_client.post("/auth/register", json={
+            "email": "new-reader@example.com",
+            "username": "newreader",
+            "password": "readerpassword123",
+        }).status_code == 201
+        owner = db_session.query(models.User).filter(models.User.username == "testuser").one()
+        db_session.add(models.ActivityEntry(
+            user_id=owner.id,
+            category="movies",
+            title="Private journal title",
+            action="watched",
+            note="Private reflection",
+        ))
+        db_session.commit()
+
+        response = authenticated_client.get("/collections/moderation/insights")
+        assert response.status_code == 200
+        insights = response.json()
+        assert insights["users"]["total"] == 2
+        assert insights["content"]["total_items"] == 1
+        assert insights["content"]["categories"][0]["label"] == "Movies"
+        assert insights["engagement"]["activity_entries_30_days"] == 1
+        assert {row["username"] for row in insights["recent_users"]} == {"testuser", "newreader"}
+        serialized = response.text
+        assert "new-reader@example.com" not in serialized
+        assert "Private journal title" not in serialized
+        assert "Private reflection" not in serialized
+        assert "hashed_password" not in serialized
 
     def test_collection_publish_is_explicit_quality_gated_and_reversible(
         self, authenticated_client, test_movie_data, test_anime_data, test_book_data
@@ -217,7 +254,8 @@ class TestCollections:
         assert db_session.query(models.CollectionReport).count() == 1
 
     def test_public_detail_uses_signed_cookie_and_private_cache_policy(
-        self, authenticated_client, db_session, test_movie_data, test_anime_data, test_book_data
+        self, authenticated_client, db_session, test_movie_data, test_anime_data, test_book_data,
+        monkeypatch,
     ):
         collection, _, _ = _publish_three_item_collection(
             authenticated_client, test_movie_data, test_anime_data, test_book_data
@@ -230,12 +268,43 @@ class TestCollections:
 
         second = authenticated_client.get(collection["public_url"])
         assert second.status_code == 200
+        assert collections_router.VISITOR_COOKIE not in second.headers.get("set-cookie", "")
         assert db_session.query(models.CollectionView).count() == 1
         assert db_session.query(models.Collection).filter_by(id=collection["id"]).one().view_count == 1
 
-        authenticated_client.cookies.set(collections_router.VISITOR_COOKIE, "x" * 96)
-        authenticated_client.get(collection["public_url"])
+        forged_cookie = f"attacker-controlled.{'0' * 64}"
+        authenticated_client.cookies.set(collections_router.VISITOR_COOKIE, forged_cookie)
+        monkeypatch.setenv("ENVIRONMENT", "production")
+        replacement_response = authenticated_client.get(collection["public_url"])
+        set_cookie = replacement_response.headers["set-cookie"]
+        replacement_cookie = replacement_response.cookies.get(collections_router.VISITOR_COOKIE)
+
+        assert forged_cookie not in set_cookie
+        assert replacement_cookie and replacement_cookie != forged_cookie
+        payload, _ = replacement_cookie.rsplit(".", 1)
+        assert replacement_cookie == collections_router._sign_visitor_token(payload)
+        assert "httponly" in set_cookie.lower()
+        assert "samesite=lax" in set_cookie.lower()
+        assert "secure" in set_cookie.lower()
+        assert "max-age=31536000" in set_cookie.lower()
         assert db_session.query(models.CollectionView).count() == 1
+
+    def test_non_ascii_visitor_signature_is_replaced_without_error(self):
+        hostile_cookie = b"attacker-controlled." + bytes([233]) * 64
+        request = Request({
+            "type": "http",
+            "headers": [(b"cookie", collections_router.VISITOR_COOKIE.encode() + b"=" + hostile_cookie)],
+        })
+
+        _, replacement_cookie, trusted = collections_router._visitor_identity(request)
+        response = Response()
+        collections_router._set_visitor_cookie(response, replacement_cookie)
+
+        assert trusted is False
+        assert replacement_cookie
+        assert "attacker-controlled" not in response.headers["set-cookie"]
+        payload, _ = replacement_cookie.rsplit(".", 1)
+        assert replacement_cookie == collections_router._sign_visitor_token(payload)
 
     def test_collection_rate_limit_wrappers_are_bound_to_executed_handlers(self):
         protected_paths = {
