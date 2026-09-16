@@ -4458,7 +4458,11 @@ function enhanceLibraryCards(tableId) {
   table.setAttribute('role', 'table');
   const labels = Array.from(table.tHead.rows[0].cells, cell => cell.textContent.trim());
   table.querySelectorAll('thead tr, tbody tr').forEach(row => row.setAttribute('role', 'row'));
-  table.querySelectorAll('th').forEach(cell => { cell.scope = 'col'; cell.setAttribute('role', 'columnheader'); });
+  table.querySelectorAll('th').forEach(cell => {
+    cell.scope = 'col';
+    cell.setAttribute('role', 'columnheader');
+    cell.dataset.label = cell.textContent.trim();
+  });
   Array.from(table.tBodies[0].rows).forEach((row, rowIndex) => {
     Array.from(row.cells).forEach((cell, index) => {
       const label = labels[index];

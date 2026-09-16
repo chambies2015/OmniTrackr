@@ -205,7 +205,37 @@ tr.pick-focused { outline: 2px solid #14b8a6; outline-offset: -2px; }
 .library-pager { display: flex; flex-wrap: wrap; align-items: center; justify-content: flex-end; gap: 10px; padding: 14px 4px; color: var(--fg); }
 .library-pager [role="status"] { margin-right: auto; font-size: .9rem; }
 .library-card-details { display: none; }
-@media (max-width: 680px) {
+table.mobile-library .review-cell { max-width: none; }
+table.mobile-library .review-cell-preview {
+  display: -webkit-box; -webkit-box-orient: vertical; -webkit-line-clamp: 3;
+  white-space: normal; overflow-wrap: anywhere;
+}
+#mainFooter.landing-footer { box-sizing: border-box; width: 100%; margin-left: 0; margin-right: 0; }
+/* Library-only layout: preserve custom tables and existing row/edit handlers. */
+@media (min-width: 1025px) {
+  :is(#movieTable, #tvShowTable, #animeTable, #videoGameTable, #musicTable, #bookTable).mobile-library :is(th, td) {
+    width: auto; min-width: 80px; padding: 16px 12px; white-space: normal;
+    overflow-wrap: anywhere; vertical-align: middle;
+  }
+  :is(#movieTable, #tvShowTable, #animeTable, #videoGameTable, #musicTable, #bookTable).mobile-library :is(th, td):nth-child(2) {
+    min-width: 220px; width: 22%; text-align: left; line-height: 1.5;
+  }
+  :is(#movieTable, #tvShowTable, #animeTable, #videoGameTable, #musicTable, #bookTable).mobile-library [data-label="Review"] {
+    min-width: 240px; width: 25%; text-align: left; line-height: 1.5;
+  }
+  :is(#movieTable, #tvShowTable, #animeTable, #videoGameTable, #musicTable, #bookTable).mobile-library :is(th, td):last-child {
+    position: static; box-shadow: none; min-width: 216px; width: 216px; white-space: normal;
+  }
+  table.mobile-library td:last-child button.action-btn {
+    display: inline-block; box-sizing: border-box; width: 88px; min-width: 0; min-height: 44px;
+    margin: 4px; padding: 8px; white-space: normal;
+  }
+  table.mobile-library td input:not([type="checkbox"]), table.mobile-library td textarea {
+    box-sizing: border-box; width: 100%; min-width: 0;
+  }
+  table.mobile-library td textarea { min-height: 140px; resize: vertical; }
+}
+@media (max-width: 1024px) {
   table.mobile-library { display: block; width: 100%; }
   .mobile-library thead { position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); }
   .mobile-library tbody { display: grid; gap: 14px; padding: 6px; }
@@ -237,7 +267,6 @@ tr.pick-focused { outline: 2px solid #14b8a6; outline-offset: -2px; }
   .mobile-library td.library-cell img { max-width: 100%; }
   .library-pager { justify-content: center; }
   .library-pager button { min-height: 44px; }
-  #mainFooter.landing-footer { box-sizing: border-box; width: 100%; margin-left: 0; margin-right: 0; }
 }
 @media (max-width: 760px) { .todays-pick { align-items: start; grid-template-columns: 1fr; padding: 20px; } .todays-pick__actions { justify-content: flex-start; } }
 
@@ -1355,11 +1384,14 @@ body {
 
 .tabs {
   display: flex;
+  max-width: 100%;
+  overflow-x: auto;
   margin-bottom: 20px;
   border-bottom: 2px solid var(--primary);
 }
 
 .tab {
+  flex: 0 0 auto;
   padding: 12px 24px;
   background-color: var(--card-bg);
   border: none;
