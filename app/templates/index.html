@@ -52,10 +52,10 @@
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link rel="dns-prefetch" href="https://www.googletagmanager.com">
   <link rel="dns-prefetch" href="https://www.google-analytics.com">
-  <link rel="preload" href="./styles.css?v=20260916-library-layout-v5" as="style">
+  <link rel="preload" href="./styles.css?v=20260916-launchpad-v1" as="style">
   <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@700;800&family=Inter:wght@400;500;600&display=swap"
     rel="stylesheet">
-  <link rel="stylesheet" href="./styles.css?v=20260916-library-layout-v5">
+  <link rel="stylesheet" href="./styles.css?v=20260916-launchpad-v1">
   <script src="./preauth.js"></script>
   <style>
     html.authenticated #landingPage{display:none}
@@ -357,11 +357,16 @@
         <h2 id="libraryLaunchpadTitle">Build a library you’ll want to revisit.</h2>
         <p id="libraryLaunchpadSummary">Loading your library progress…</p>
         <div id="libraryLaunchpadCategories" class="library-launchpad__categories" aria-label="Choose the first kind of media to track" hidden></div>
+        <div id="libraryLaunchpadStarterPaths" class="library-launchpad__categories" hidden>
+          <button type="button" class="library-launchpad__category" data-action="launchpad-import">Bring an existing list</button>
+          <a class="library-launchpad__category" href="/discover">Browse Discover</a>
+          <p class="library-launchpad__path-hint">Import Studio lets you preview a CSV before importing. Existing records are not overwritten.</p>
+        </div>
       </div>
       <div id="libraryLaunchpadSteps" class="library-launchpad__steps" aria-live="polite"></div>
       <div class="library-launchpad__actions">
         <button type="button" class="action-btn library-launchpad__primary" data-action="launchpad-add-item">Add something</button>
-        <button type="button" class="action-btn library-launchpad__secondary" data-action="launchpad-open-insights">See insights</button>
+        <button type="button" id="libraryLaunchpadInsights" class="action-btn library-launchpad__secondary" data-action="launchpad-open-insights" hidden>See insights</button>
         <button type="button" class="library-launchpad__dismiss" data-action="launchpad-dismiss" aria-label="Dismiss library launchpad">Not now</button>
       </div>
     </section>
@@ -1879,7 +1884,7 @@
   </div>
   <script src="./credentials.js"></script>
   <script src="./auth.js?v=20260915-security-sweep"></script>
-  <script src="./app.js?v=20260916-library-layout-v1"></script>
+  <script src="./app.js?v=20260916-launchpad-v1"></script>
 
   <!-- Account Modal -->
   <div id="accountModal" class="modal-overlay" style="display: none;">

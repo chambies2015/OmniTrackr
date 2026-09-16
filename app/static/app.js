@@ -818,6 +818,7 @@ function handleDelegatedClick(event) {
     'launchpad-choose-category': () => openLaunchpadAddItem(target.dataset.launchpadCategory),
     'launchpad-open-insights': openLaunchpadInsights,
     'launchpad-dismiss': dismissLibraryLaunchpad,
+    'launchpad-import': openLaunchpadImport,
     'pulse-open-item': () => switchTab(target.dataset.pulseTab),
     'open-todays-pick': openTodaysPick,
     'open-library-search-result': () => openLibrarySearchResult(target.dataset.searchTab, target.dataset.searchTitle, Number(target.dataset.searchId)),
@@ -8331,17 +8332,37 @@ function openLaunchpadInsights() {
   }
 }
 
+function openLaunchpadImport() {
+  // Reuse the existing preview-first importer; opening it performs no import.
+  window.openAccountModal();
+  document.getElementById('importStudio')?.scrollIntoView({ block: 'start' });
+  document.getElementById('importStudioSource')?.focus({ preventScroll: true });
+}
+
 function renderLibraryLaunchpad(insights) {
   const launchpad = document.getElementById('libraryLaunchpad');
   const summary = document.getElementById('libraryLaunchpadSummary');
   const steps = document.getElementById('libraryLaunchpadSteps');
   const categories = document.getElementById('libraryLaunchpadCategories');
-  if (!launchpad || !summary || !steps || !categories || isLibraryLaunchpadDismissed()) return;
+  if (!launchpad || !summary || !steps || !categories) return;
+  if (isLibraryLaunchpadDismissed()) {
+    launchpad.hidden = true;
+    return;
+  }
 
   const total = Number(insights?.total_items || 0);
   const rated = Number(insights?.rated_items || 0);
   const reviewed = Number(insights?.reviewed_items || 0);
   const completed = Number(insights?.completed_items || 0);
+  // Let the existing dashboard take over when these introductory steps are done.
+  if (total > 0 && rated > 0 && reviewed > 0) {
+    launchpad.hidden = true;
+    return;
+  }
+  const starterPaths = document.getElementById('libraryLaunchpadStarterPaths');
+  const insightsAction = document.getElementById('libraryLaunchpadInsights');
+  if (starterPaths) starterPaths.hidden = total > 0;
+  if (insightsAction) insightsAction.hidden = total === 0;
   const launchpadSteps = [
     { complete: total > 0, label: total ? `${total} item${total === 1 ? '' : 's'} saved` : 'Save your first title' },
     { complete: rated > 0, label: rated ? `${rated} item${rated === 1 ? '' : 's'} rated` : 'Give one item a rating' },
@@ -8349,7 +8370,9 @@ function renderLibraryLaunchpad(insights) {
   ];
 
   if (!total) {
-    summary.textContent = 'Start with one title you already love. A small library is easier to make personal than a giant backlog.';
+    summary.textContent = 'Start with one title you love, bring an existing list, or browse Discover for an idea. You only need one title to begin.';
+  } else if (total === 1) {
+    summary.textContent = 'Your first title is saved. Add a rating or private note using Edit in your library, or use Next up to put it on your shortlist.';
   } else if (completed) {
     summary.textContent = `${completed} finished so far. Add a rating or note when you want your library to tell a clearer story.`;
   } else {
@@ -8360,8 +8383,8 @@ function renderLibraryLaunchpad(insights) {
   categories.hidden = total > 0;
   if (!total) {
     const choices = [
-      ['movies', 'Movie'], ['tv-shows', 'TV show'], ['anime', 'Anime'],
-      ['video-games', 'Game'], ['music', 'Album'], ['books', 'Book'],
+      ['movies', 'a movie'], ['tv-shows', 'a TV show'], ['anime', 'an anime'],
+      ['video-games', 'a game'], ['music', 'an album'], ['books', 'a book'],
     ];
     choices.forEach(([category, label]) => {
       const button = document.createElement('button');
@@ -8369,7 +8392,7 @@ function renderLibraryLaunchpad(insights) {
       button.className = 'library-launchpad__category';
       button.dataset.action = 'launchpad-choose-category';
       button.dataset.launchpadCategory = category;
-      button.textContent = `Add a ${label}`;
+      button.textContent = `Add ${label}`;
       categories.appendChild(button);
     });
   }

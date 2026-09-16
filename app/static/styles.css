@@ -167,6 +167,8 @@ body.dark-mode {
 }
 
 .library-launchpad__primary { background: #14b8a6; color: #06211f; }
+.library-launchpad__path-hint { flex-basis: 100%; font-size: .85rem; line-height: 1.5; margin: 0; opacity: .8; }
+.library-launchpad__categories a { text-decoration: none; }
 .library-launchpad__primary:hover { background: #2dd4bf; }
 .library-launchpad__secondary { background: transparent; border: 1px solid rgba(102, 126, 234, 0.6); color: var(--fg); }
 .library-launchpad__dismiss { background: transparent; border: 0; color: var(--fg); cursor: pointer; font-size: 0.8rem; opacity: 0.62; padding: 4px; }
