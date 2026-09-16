@@ -1226,6 +1226,7 @@ function switchTab(tabName) {
 }
 
 function disableOtherRowButtons(currentRow, tableId) {
+  enhanceLibraryCards(tableId);
   const buttons = document.querySelectorAll(`#${tableId} button.action-btn`);
   buttons.forEach(btn => {
     const btnRow = btn.closest('tr');
@@ -3096,8 +3097,8 @@ window.enableAnimeEdit = function (btn) {
     });
     setupReviewQualityCounter(animeReviewTextarea);
   }
-  row.cells[8].innerHTML = `<input type="checkbox" id="edit-anime-review-public" ${reviewPublic ? 'checked' : ''}>`;
-  row.cells[9].innerHTML = `
+  row.cells[9].innerHTML = `<input type="checkbox" id="edit-anime-review-public" ${reviewPublic ? 'checked' : ''}>`;
+  row.cells[10].innerHTML = `
     <button class="action-btn save-anime-btn" data-anime-id="${id}" data-was-complete="${watched}" data-completion-category="anime">Save</button>
     <button class="action-btn cancel-anime-btn">Cancel</button>
   `;
@@ -3181,8 +3182,8 @@ window.enableTVEdit = function (btn) {
     });
     setupReviewQualityCounter(tvReviewTextarea);
   }
-  row.cells[8].innerHTML = `<input type="checkbox" id="edit-tv-review-public" ${reviewPublic ? 'checked' : ''}>`;
-  row.cells[9].innerHTML = `
+  row.cells[9].innerHTML = `<input type="checkbox" id="edit-tv-review-public" ${reviewPublic ? 'checked' : ''}>`;
+  row.cells[10].innerHTML = `
     <button class="action-btn save-tv-btn" data-tv-id="${id}" data-was-complete="${watched}" data-completion-category="tv-shows">Save</button>
     <button class="action-btn cancel-tv-btn">Cancel</button>
   `;
@@ -4448,6 +4449,54 @@ async function importData(fileInput) {
     alert('Import failed: ' + error.message);
     fileInput.value = '';
   }
+}
+
+function enhanceLibraryCards(tableId) {
+  const table = document.getElementById(tableId);
+  if (!table) return;
+  table.classList.add('mobile-library');
+  table.setAttribute('role', 'table');
+  const labels = Array.from(table.tHead.rows[0].cells, cell => cell.textContent.trim());
+  table.querySelectorAll('thead tr, tbody tr').forEach(row => row.setAttribute('role', 'row'));
+  table.querySelectorAll('th').forEach(cell => { cell.scope = 'col'; cell.setAttribute('role', 'columnheader'); });
+  Array.from(table.tBodies[0].rows).forEach((row, rowIndex) => {
+    Array.from(row.cells).forEach((cell, index) => {
+      const label = labels[index];
+      cell.dataset.label = label === 'Public' ? 'Public review' : label;
+      cell.setAttribute('role', 'cell');
+      cell.classList.add('library-cell');
+      const type = index === 0 ? 'cover' : index === 1 ? 'title'
+        : label === 'Rating' ? 'rating' : ['Watched', 'Played', 'Listened', 'Read'].includes(label) ? 'status'
+        : label === 'Actions' ? 'actions' : 'detail';
+      cell.dataset.cardField = type;
+      cell.querySelectorAll('input, textarea, select').forEach(input => {
+        if (!input.hasAttribute('aria-label')) input.setAttribute('aria-label', cell.dataset.label);
+      });
+      if (type === 'status' || label === 'Public') {
+        const icon = cell.querySelector('.watched-icon');
+        if (icon) {
+          const complete = icon.classList.contains('watched');
+          icon.setAttribute('aria-label', label === 'Public' ? (complete ? 'Public review' : 'Private review')
+            : (complete ? label : `Not ${label.toLowerCase()}`));
+        }
+      }
+    });
+    const actions = row.cells[row.cells.length - 1];
+    if (!actions.querySelector('.library-card-details')) {
+      const button = document.createElement('button');
+      button.type = 'button'; button.className = 'library-card-details';
+      button.textContent = 'More details'; button.setAttribute('aria-expanded', 'false');
+      const details = Array.from(row.cells).filter(cell => cell.dataset.cardField === 'detail');
+      details.forEach((cell, index) => { cell.id = `${tableId}-card-${rowIndex}-detail-${index}`; });
+      button.setAttribute('aria-controls', details.map(cell => cell.id).join(' '));
+      button.addEventListener('click', () => {
+        const expanded = row.classList.toggle('card-expanded');
+        button.setAttribute('aria-expanded', String(expanded));
+        button.textContent = expanded ? 'Less detail' : 'More details';
+      });
+      actions.appendChild(button);
+    }
+  });
 }
 
 // Preview-first CSV Import Studio. This stays separate from JSON backup restore,
@@ -8646,6 +8695,7 @@ function scheduleLibraryLaunchpadRefresh() {
 const loadMovieLibrary = loadMovies;
 loadMovies = async function (...args) {
   const result = await loadMovieLibrary(...args);
+  enhanceLibraryCards('movieTable');
   if (!libraryPages.get('movies')?.browseOnly) {
     invalidateLibrarySearchIndex();
     scheduleLibraryLaunchpadRefresh();
@@ -8656,6 +8706,7 @@ loadMovies = async function (...args) {
 const loadTVShowLibrary = loadTVShows;
 loadTVShows = async function (...args) {
   const result = await loadTVShowLibrary(...args);
+  enhanceLibraryCards('tvShowTable');
   if (!libraryPages.get('tv-shows')?.browseOnly) {
     invalidateLibrarySearchIndex();
     scheduleLibraryLaunchpadRefresh();
@@ -8666,6 +8717,7 @@ loadTVShows = async function (...args) {
 const loadAnimeLibrary = loadAnime;
 loadAnime = async function (...args) {
   const result = await loadAnimeLibrary(...args);
+  enhanceLibraryCards('animeTable');
   if (!libraryPages.get('anime')?.browseOnly) {
     invalidateLibrarySearchIndex();
     scheduleLibraryLaunchpadRefresh();
@@ -8676,6 +8728,7 @@ loadAnime = async function (...args) {
 const loadVideoGameLibrary = loadVideoGames;
 loadVideoGames = async function (...args) {
   const result = await loadVideoGameLibrary(...args);
+  enhanceLibraryCards('videoGameTable');
   if (!libraryPages.get('video-games')?.browseOnly) {
     invalidateLibrarySearchIndex();
     scheduleLibraryLaunchpadRefresh();
@@ -8686,6 +8739,7 @@ loadVideoGames = async function (...args) {
 const loadMusicLibrary = loadMusic;
 loadMusic = async function (...args) {
   const result = await loadMusicLibrary(...args);
+  enhanceLibraryCards('musicTable');
   if (!libraryPages.get('music')?.browseOnly) {
     invalidateLibrarySearchIndex();
     scheduleLibraryLaunchpadRefresh();
@@ -8696,6 +8750,7 @@ loadMusic = async function (...args) {
 const loadBookLibrary = loadBooks;
 loadBooks = async function (...args) {
   const result = await loadBookLibrary(...args);
+  enhanceLibraryCards('bookTable');
   if (!libraryPages.get('books')?.browseOnly) {
     invalidateLibrarySearchIndex();
     scheduleLibraryLaunchpadRefresh();
