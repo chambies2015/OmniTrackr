@@ -160,6 +160,41 @@ class TestStatisticsEndpoints:
 
     def test_todays_pick_requires_authentication(self, client):
         assert client.get("/statistics/today/").status_code == 401
+
+    @pytest.mark.parametrize("category,model,done", [
+        ("movies", models.Movie, "watched"), ("tv-shows", models.TVShow, "watched"),
+        ("anime", models.Anime, "watched"), ("video-games", models.VideoGame, "played"),
+        ("music", models.Music, "listened"), ("books", models.Book, "read"),
+    ])
+    def test_todays_pick_category_and_cycling(self, authenticated_client, db_session, category, model, done):
+        owner = db_session.query(models.User).filter_by(username="testuser").one()
+        items = [model(user_id=owner.id, title=f"Pick {index}", **{done: False}) for index in range(3)]
+        db_session.add_all(items)
+        db_session.add(model(user_id=owner.id, title="Already finished", **{done: True}))
+        db_session.commit()
+        picks = []
+        for offset in (0, 1, 2, 60):
+            response = authenticated_client.get(f"/statistics/today/?category={category}&offset={offset}")
+            assert response.status_code == 200
+            data = response.json()
+            assert data["candidate_count"] == 3
+            assert data["pick"]["category"] == category
+            picks.append(data["pick"]["id"])
+        assert set(picks[:3]) == {item.id for item in items}
+        assert picks[3] == picks[0]
+
+    def test_todays_pick_filter_preserves_queue_priority(self, authenticated_client, test_movie_data, test_book_data):
+        movie = authenticated_client.post("/movies/", json={**test_movie_data, "watched": False}).json()
+        book = authenticated_client.post("/books/", json={**test_book_data, "read": False}).json()
+        authenticated_client.post("/next-up/", json={"category": "books", "item_id": book["id"]})
+        movie_pick = authenticated_client.get("/statistics/today/?category=movies").json()["pick"]
+        assert movie_pick["id"] == movie["id"]
+        assert movie_pick["source"] == "library"
+        book_pick = authenticated_client.get("/statistics/today/?category=books").json()["pick"]
+        assert book_pick["id"] == book["id"]
+        assert book_pick["source"] == "next_up"
+        assert authenticated_client.get("/statistics/today/?category=anime").json()["pick"] is None
+        assert authenticated_client.get("/statistics/today/?category=invalid").status_code == 422
     
     def test_get_watch_statistics(self, authenticated_client, test_movie_data, test_tv_show_data, test_anime_data, test_video_game_data, test_music_data, test_book_data):
         """Test getting watch statistics."""

@@ -76,7 +76,8 @@ def _next_up_pulse_item(queue_item, category: dict, db: Session, user_id: int) -
 @router.get("/today/", response_model=dict)
 async def get_todays_pick(
     response: Response,
-    offset: int = Query(0, ge=0, le=24),
+    offset: int = Query(0, ge=0, le=2147483647),
+    category: str | None = Query(None, max_length=20),
     current_user: models.User = Depends(get_current_user),
     db: Session = Depends(get_db),
 ):
@@ -95,10 +96,15 @@ async def get_todays_pick(
         {"key": "music", "label": "Album", "model": models.Music, "done": models.Music.listened, "status_label": "Not listened"},
         {"key": "books", "label": "Book", "model": models.Book, "done": models.Book.read, "status_label": "Not read"},
     ]
-    by_key = {category["key"]: category for category in categories}
+    if category is not None:
+        categories = [entry for entry in categories if entry["key"] == category]
+        if not categories:
+            raise HTTPException(status_code=422, detail="Unknown media category")
+    by_key = {entry["key"]: entry for entry in categories}
     queued = []
     for entry in db.query(models.NextUpItem).filter(
         models.NextUpItem.user_id == current_user.id,
+        models.NextUpItem.category.in_(by_key),
     ).order_by(models.NextUpItem.position, models.NextUpItem.id).limit(25):
         category = by_key.get(entry.category)
         if not category:

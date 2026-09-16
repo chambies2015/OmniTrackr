@@ -370,14 +370,25 @@
       <div class="todays-pick__copy">
         <p class="todays-pick__eyebrow">Today’s pick</p>
         <h2 id="todaysPickTitle">Just pick one.</h2>
+        <label class="todays-pick__filter" for="todaysPickFilter">Choose from
+          <select id="todaysPickFilter" data-change-action="pick-category">
+            <option value="">All media</option>
+            <option value="movies">Movies</option>
+            <option value="tv-shows">TV shows</option>
+            <option value="anime">Anime</option>
+            <option value="video-games">Games</option>
+            <option value="music">Music</option>
+            <option value="books">Books</option>
+          </select>
+        </label>
         <p id="todaysPickReason" class="todays-pick__reason"></p>
       </div>
       <div class="todays-pick__choice">
         <span id="todaysPickCategory" class="todays-pick__category"></span>
-        <strong id="todaysPickName"></strong>
+        <strong id="todaysPickName" aria-live="polite"></strong>
       </div>
       <div class="todays-pick__actions">
-        <button id="todaysPickOpen" type="button" class="action-btn todays-pick__open" data-action="pulse-open-item">Open it</button>
+        <button id="todaysPickOpen" type="button" class="action-btn todays-pick__open" data-action="open-todays-pick">Open it</button>
         <button id="todaysPickAnother" type="button" class="todays-pick__another" data-action="try-another-pick">Try another</button>
       </div>
     </section>

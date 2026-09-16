@@ -730,6 +730,7 @@ function handleDelegatedClick(event) {
     'launchpad-open-insights': openLaunchpadInsights,
     'launchpad-dismiss': dismissLibraryLaunchpad,
     'pulse-open-item': () => switchTab(target.dataset.pulseTab),
+    'open-todays-pick': openTodaysPick,
     'open-library-search-result': () => openLibrarySearchResult(target.dataset.searchTab, target.dataset.searchTitle),
     'try-another-pick': tryAnotherPick,
     'add-next-up': () => addToNextUp(target.dataset.nextUpCategory, Number(target.dataset.nextUpItemId)),
@@ -794,6 +795,7 @@ function handleDelegatedChange(event) {
   if (!target) return;
 
   const changeHandlers = {
+    'pick-category': () => { todaysPickOffset = 0; refreshTodaysPick(); },
     'profile-picture-select': handleProfilePictureSelect,
     'activity-category': populateActivityItems,
     'activity-filter': () => loadActivityTimeline(true),
@@ -1112,17 +1114,17 @@ function switchTab(tabName) {
   currentTab = tabName;
 
   if (tabName === 'movies') {
-    loadMovies();
+    return loadMovies();
   } else if (tabName === 'tv-shows') {
-    loadTVShows();
+    return loadTVShows();
   } else if (tabName === 'anime') {
-    loadAnime();
+    return loadAnime();
   } else if (tabName === 'video-games') {
-    loadVideoGames();
+    return loadVideoGames();
   } else if (tabName === 'music') {
-    loadMusic();
+    return loadMusic();
   } else if (tabName === 'books') {
-    loadBooks();
+    return loadBooks();
   } else if (tabName === 'activity') {
     loadActivityJournal();
   } else if (tabName === 'recommendations') {
@@ -8140,6 +8142,9 @@ async function deleteCollection(collectionId) {
 const LAUNCHPAD_DISMISS_KEY = 'omnitrackr_library_launchpad_dismissed';
 let launchpadRefreshTimer = null;
 let todaysPickOffset = 0;
+let todaysPickCandidateCount = 0;
+let todaysPickRequest = 0;
+let todaysPickSelection = null;
 
 function isLibraryLaunchpadDismissed() {
   try {
@@ -8308,31 +8313,81 @@ function renderLibraryPulse(pulse) {
 function renderTodaysPick(payload) {
   const section = document.getElementById('todaysPick');
   const pick = payload?.pick;
-  if (!section || !pick) {
-    section?.setAttribute('hidden', '');
-    return;
-  }
-  document.getElementById('todaysPickName').textContent = pick.title;
-  document.getElementById('todaysPickCategory').textContent = pick.category_label;
-  document.getElementById('todaysPickReason').textContent = pick.reason;
-  document.getElementById('todaysPickOpen').dataset.pulseTab = pick.category;
-  document.getElementById('todaysPickAnother').hidden = Number(payload.candidate_count) < 2;
+  if (!section) return;
+  todaysPickSelection = pick || null;
+  todaysPickCandidateCount = Number(payload?.candidate_count) || 0;
+  document.getElementById('todaysPickName').textContent = pick?.title || 'Nothing unfinished here yet.';
+  document.getElementById('todaysPickCategory').textContent = pick?.category_label || '';
+  document.getElementById('todaysPickReason').textContent = pick?.reason || 'Choose another category or add a title to your library.';
+  document.getElementById('todaysPickOpen').hidden = !pick;
+  document.getElementById('todaysPickAnother').hidden = todaysPickCandidateCount < 2;
   section.removeAttribute('hidden');
 }
 
 async function refreshTodaysPick() {
   if (!hasStoredAuth()) return;
+  const request = ++todaysPickRequest;
+  const open = document.getElementById('todaysPickOpen');
+  const another = document.getElementById('todaysPickAnother');
+  open.disabled = another.disabled = true;
+  const params = new URLSearchParams({ offset: String(todaysPickOffset) });
+  const category = document.getElementById('todaysPickFilter').value;
+  if (category) params.set('category', category);
   try {
-    const response = await authenticatedFetch(`${API_BASE}/statistics/today/?offset=${todaysPickOffset}`);
-    if (response.ok) renderTodaysPick(await response.json());
+    const response = await authenticatedFetch(`${API_BASE}/statistics/today/?${params}`);
+    if (!response.ok) throw new Error('Could not load a pick.');
+    const payload = await response.json();
+    if (request === todaysPickRequest) renderTodaysPick(payload);
   } catch (error) {
-    // This optional prompt must never interrupt the tracker.
+    if (request === todaysPickRequest) {
+      renderTodaysPick(null);
+      document.getElementById('todaysPickReason').textContent = 'Could not load a pick. Change the category to try again.';
+    }
+  } finally {
+    if (request === todaysPickRequest) open.disabled = another.disabled = false;
   }
 }
 
 function tryAnotherPick() {
-  todaysPickOffset += 1;
+  todaysPickOffset = (todaysPickOffset + 1) % Math.max(todaysPickCandidateCount, 1);
   refreshTodaysPick();
+}
+
+async function openTodaysPick() {
+  const pick = todaysPickSelection;
+  const source = LIBRARY_SEARCH_SOURCES.find(entry => entry.tab === pick?.category);
+  if (!source) return;
+  const reason = document.getElementById('todaysPickReason');
+  if (getTabButton(source.tab)?.style.display === 'none') {
+    reason.textContent = 'Enable this media category in your settings to open this title.';
+    return;
+  }
+  const button = document.getElementById('todaysPickOpen');
+  button.disabled = true;
+  try {
+    // Let an existing list request finish before changing its search input.
+    const busy = () => ({ movies: isLoadingMovies, 'tv-shows': isLoadingTVShows,
+      anime: isLoadingAnime, 'video-games': isLoadingVideoGames,
+      music: isLoadingMusic, books: isLoadingBooks })[source.tab];
+    const deadline = Date.now() + 10000;
+    while (busy() && Date.now() < deadline) await new Promise(resolve => setTimeout(resolve, 50));
+    if (busy()) throw new Error('The library is still loading. Please try opening the title again.');
+    document.getElementById(source.input).value = pick.title;
+    await switchTab(source.tab);
+    const row = document.querySelector(
+      `[data-next-up-category="${source.tab}"][data-next-up-item-id="${Number(pick.id)}"]`
+    )?.closest('tr');
+    if (!row) throw new Error('This title could not be located. Refresh your pick and try again.');
+    document.querySelectorAll('.pick-focused').forEach(element => element.classList.remove('pick-focused'));
+    row.classList.add('pick-focused');
+    row.tabIndex = -1;
+    row.focus({ preventScroll: true });
+    row.scrollIntoView({ block: 'center', behavior: 'auto' });
+  } catch (error) {
+    reason.textContent = error.message || 'Could not open this title. Please try again.';
+  } finally {
+    button.disabled = false;
+  }
 }
 
 function renderNextUpQueue(items) {
