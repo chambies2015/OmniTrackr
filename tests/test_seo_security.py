@@ -1556,7 +1556,7 @@ class TestRootEndpoint:
         assert 'id="mainContainer"' not in response.text
         assert 'id="logoutBtn"' not in response.text
         assert 'src="/static/public-landing.js"' in response.text
-        assert 'src="./app.js"' not in response.text
+        assert not re.search(r'<script\b[^>]*\bsrc=[\"\'](?:\./|/)?app\.js(?:\?[^\"\']*)?[\"\']', response.text)
         assert response.headers["cache-control"] == "no-cache"
         assert "Cookie" in response.headers["vary"]
     
@@ -1573,7 +1573,8 @@ class TestRootEndpoint:
         assert 'data-public-shell="true"' not in response.text
         assert 'id="mainContainer"' in response.text
         assert 'id="logoutBtn"' in response.text
-        assert 'src="./app.js?v=20260915-collections-v2"' in response.text
+        # Require cache busting without tying this shell contract to a release date.
+        assert re.search(r'<script\b[^>]*\bsrc="\./app\.js\?v=[A-Za-z0-9_-]+"', response.text)
         assert response.headers["cache-control"] == "private, no-store"
         assert "Cookie" in response.headers["vary"]
 
