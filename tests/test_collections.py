@@ -273,9 +273,16 @@ class TestCollections:
         assert db_session.query(models.Collection).filter_by(id=collection["id"]).one().view_count == 1
 
         forged_cookie = f"attacker-controlled.{'0' * 64}"
+        # Cookie identity includes domain/path. Remove the server-scoped cookie
+        # before adding a hostless forged value, rather than sending both.
+        authenticated_client.cookies.delete(collections_router.VISITOR_COOKIE)
         authenticated_client.cookies.set(collections_router.VISITOR_COOKIE, forged_cookie)
         monkeypatch.setenv("ENVIRONMENT", "production")
         replacement_response = authenticated_client.get(collection["public_url"])
+        assert replacement_response.status_code == 200
+        sent_cookies = replacement_response.request.headers["cookie"]
+        assert sent_cookies.count(f"{collections_router.VISITOR_COOKIE}=") == 1
+        assert f"{collections_router.VISITOR_COOKIE}={forged_cookie}" in sent_cookies
         set_cookie = replacement_response.headers["set-cookie"]
         replacement_cookie = replacement_response.cookies.get(collections_router.VISITOR_COOKIE)
 
