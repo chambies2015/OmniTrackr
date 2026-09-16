@@ -31,6 +31,9 @@ function setup() {
     isLoadingVideoGames: false, isLoadingMusic: false, isLoadingBooks: false,
     todaysPickOffset: 0, todaysPickCandidateCount: 0, todaysPickRequest: 0,
     todaysPickSelection: null,
+    editingRowId: null,
+    libraryPages: new Map(),
+    libraryPageConfig: tab => [tab + 'Table', tab + 'Sort'],
   });
   vm.runInContext(source.slice(source.indexOf('function renderTodaysPick('), source.indexOf('function renderNextUpQueue(')), context);
   return { context, element, row, categories };

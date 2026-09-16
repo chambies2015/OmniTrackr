@@ -17,17 +17,99 @@ const LIBRARY_SEARCH_SOURCES = [
 let librarySearchIndex = [];
 let librarySearchIndexReady = false;
 let librarySearchIndexPromise = null;
+let librarySearchRequest = 0;
+let librarySearchTimer;
+let librarySearchController;
+const libraryPages = new Map();
+const LIBRARY_PAGE_SIZE = 50;
+
+function libraryPageConfig(category) {
+  return {
+    movies: ['movieTable', 'movieSort', loadMovies],
+    'tv-shows': ['tvShowTable', 'tvSort', loadTVShows],
+    anime: ['animeTable', 'animeSort', loadAnime],
+    'video-games': ['videoGameTable', 'videoGameSort', loadVideoGames],
+    music: ['musicTable', 'musicSort', loadMusic], books: ['bookTable', 'bookSort', loadBooks],
+  }[category];
+}
+
+function renderLibraryPager(category, page, loading = false, error = '') {
+  const [tableId] = libraryPageConfig(category);
+  let pager = document.getElementById(`${tableId}Pager`);
+  if (!pager) {
+    pager = document.createElement('nav');
+    pager.id = `${tableId}Pager`;
+    pager.className = 'library-pager';
+    pager.setAttribute('aria-label', `${category} pages`);
+    document.getElementById(tableId).after(pager);
+  }
+  pager.replaceChildren();
+  const status = document.createElement('span');
+  status.setAttribute('role', 'status');
+  status.textContent = error || (loading ? 'Loading titles…' : page.total
+    ? `${page.offset + 1}–${Math.min(page.offset + LIBRARY_PAGE_SIZE, page.total)} of ${page.total}`
+    : 'No matching titles');
+  pager.appendChild(status);
+  for (const [label, delta] of [['Previous', -1], ['Next', 1]]) {
+    const button = document.createElement('button');
+    button.type = 'button'; button.className = 'action-btn'; button.textContent = label;
+    button.disabled = loading || (delta < 0 ? page.offset === 0 : page.offset + LIBRARY_PAGE_SIZE >= page.total);
+    button.addEventListener('click', () => {
+      if (editingRowId !== null) { alert('Save or cancel your current edit before changing pages.'); return; }
+      page.offset = Math.max(0, page.offset + delta * LIBRARY_PAGE_SIZE);
+      libraryPageConfig(category)[2]();
+    });
+    pager.appendChild(button);
+  }
+}
+
+async function fetchLibraryPage(url) {
+  const parsed = new URL(url, isLocal ? API_BASE : location.origin);
+  const category = parsed.pathname.split('/').filter(Boolean)[0];
+  const source = LIBRARY_SEARCH_SOURCES.find(entry => entry.tab === category);
+  const [, sortId] = libraryPageConfig(category);
+  const fingerprint = () => JSON.stringify([document.getElementById(source.input).value, document.getElementById(sortId).value]);
+  const signature = fingerprint();
+  let page = libraryPages.get(category);
+  if (!page || page.signature !== signature) {
+    page = { offset: 0, total: 0, signature, loadedKey: page?.loadedKey };
+    libraryPages.set(category, page);
+  }
+  parsed.searchParams.set('offset', String(page.offset));
+  parsed.searchParams.set('limit', String(LIBRARY_PAGE_SIZE));
+  if (page.focusId) parsed.searchParams.set('focus_id', String(page.focusId));
+  renderLibraryPager(category, page, true);
+  try {
+    const response = await authenticatedFetch(`${API_BASE}/library/page/${category}?${parsed.searchParams}`);
+    if (!response.ok) throw new Error('Could not load titles. Use Refresh to try again.');
+    const data = await response.json();
+    if (signature !== fingerprint()) {
+      setTimeout(() => libraryPageConfig(category)[2](), 0);
+      return { ok: false };
+    }
+    page.offset = data.offset; page.total = data.total;
+    const loadedKey = JSON.stringify([signature, data.offset]);
+    page.browseOnly = page.loadedKey !== undefined && page.loadedKey !== loadedKey
+      && Number(parsed.searchParams.get('offset')) === data.offset;
+    page.loadedKey = loadedKey;
+    renderLibraryPager(category, page);
+    return { ok: true, total: data.total, json: async () => data.items };
+  } catch (error) {
+    renderLibraryPager(category, page, false, 'Could not load titles. Use Refresh to try again.');
+    return { ok: false };
+  }
+}
 
 const posterFetchInProgress = new Set();
 const posterFetchQueue = new Map();
 
 function getPosterConcurrencyLimit() {
   const conn = navigator.connection || navigator.mozConnection || navigator.webkitConnection;
-  if (!conn) return Infinity;
+  if (!conn) return 4;
   if (conn.saveData) return 1;
   const et = conn.effectiveType;
   if (et === 'slow-2g' || et === '2g') return 2;
-  return Infinity;
+  return 4;
 }
 
 let posterSlotsInUse = 0;
@@ -98,13 +180,16 @@ async function refreshLibrarySearchIndex() {
 }
 
 function closeLibrarySearch() {
+  ++librarySearchRequest;
+  clearTimeout(librarySearchTimer);
+  librarySearchController?.abort();
   const input = document.getElementById('librarySearchInput');
   const results = document.getElementById('librarySearchResults');
   if (results) results.setAttribute('hidden', '');
   input?.setAttribute('aria-expanded', 'false');
 }
 
-function renderLibrarySearch(query) {
+function renderLibrarySearch(query, items) {
   const input = document.getElementById('librarySearchInput');
   const results = document.getElementById('librarySearchResults');
   if (!input || !results) return;
@@ -114,11 +199,7 @@ function renderLibrarySearch(query) {
     closeLibrarySearch();
     return;
   }
-  const matches = librarySearchIndex.map(item => {
-    const title = normalizeLibrarySearchText(item.title);
-    if (!item.haystack.includes(needle)) return null;
-    return { item, score: title === needle ? 0 : title.startsWith(needle) ? 1 : title.includes(needle) ? 2 : 3 };
-  }).filter(Boolean).sort((a, b) => a.score - b.score || a.item.title.localeCompare(b.item.title)).slice(0, 8);
+  const matches = items.map(item => ({ item }));
   if (!matches.length) {
     const message = document.createElement('p');
     message.className = 'library-search__message';
@@ -132,6 +213,7 @@ function renderLibrarySearch(query) {
       button.dataset.action = 'open-library-search-result';
       button.dataset.searchTab = item.tab;
       button.dataset.searchTitle = item.title;
+      button.dataset.searchId = String(item.id);
       button.setAttribute('role', 'option');
       const copy = document.createElement('span');
       copy.className = 'library-search__result-copy';
@@ -152,6 +234,9 @@ function renderLibrarySearch(query) {
 }
 
 async function handleLibrarySearchInput() {
+  const request = ++librarySearchRequest;
+  clearTimeout(librarySearchTimer);
+  librarySearchController?.abort();
   const input = document.getElementById('librarySearchInput');
   if (!input || !input.value.trim()) {
     closeLibrarySearch();
@@ -162,22 +247,26 @@ async function handleLibrarySearchInput() {
   results.textContent = 'Searching your private library…';
   results.removeAttribute('hidden');
   input.setAttribute('aria-expanded', 'true');
-  await refreshLibrarySearchIndex();
-  if (input.value === query) renderLibrarySearch(query);
+  librarySearchTimer = setTimeout(async () => {
+    librarySearchController = new AbortController();
+    try {
+      const response = await authenticatedFetch(`${API_BASE}/library/search?q=${encodeURIComponent(query.trim())}`, { signal: librarySearchController.signal });
+      if (!response.ok) throw new Error('Search unavailable');
+      const items = await response.json();
+      if (request === librarySearchRequest && input.value === query) renderLibrarySearch(query, items);
+    } catch (error) {
+      if (request === librarySearchRequest && error.name !== 'AbortError') results.textContent = 'Search could not load. Please try again.';
+    }
+  }, 250);
 }
 
-function openLibrarySearchResult(tab, title) {
+function openLibrarySearchResult(tab, title, id) {
   const source = LIBRARY_SEARCH_SOURCES.find(item => item.tab === tab);
   if (!source) return;
   closeLibrarySearch();
   const globalInput = document.getElementById('librarySearchInput');
   if (globalInput) globalInput.value = '';
-  switchTab(tab);
-  const categoryInput = document.getElementById(source.input);
-  if (!categoryInput) return;
-  categoryInput.value = title;
-  categoryInput.dispatchEvent(new Event('input', { bubbles: true }));
-  window.setTimeout(() => categoryInput.focus(), 0);
+  openLibraryItem({ category: tab, title, id });
 }
 
 function setupLibrarySearch() {
@@ -731,7 +820,7 @@ function handleDelegatedClick(event) {
     'launchpad-dismiss': dismissLibraryLaunchpad,
     'pulse-open-item': () => switchTab(target.dataset.pulseTab),
     'open-todays-pick': openTodaysPick,
-    'open-library-search-result': () => openLibrarySearchResult(target.dataset.searchTab, target.dataset.searchTitle),
+    'open-library-search-result': () => openLibrarySearchResult(target.dataset.searchTab, target.dataset.searchTitle, Number(target.dataset.searchId)),
     'try-another-pick': tryAnotherPick,
     'add-next-up': () => addToNextUp(target.dataset.nextUpCategory, Number(target.dataset.nextUpItemId)),
     'move-next-up': () => moveNextUp(Number(target.dataset.nextUpId), Number(target.dataset.nextUpPosition)),
@@ -1185,13 +1274,13 @@ async function loadMovies() {
     if (search) url += `search=${encodeURIComponent(search)}&`;
     if (sortField) url += `sort_by=${encodeURIComponent(sortField)}&`;
     if (order) url += `order=${encodeURIComponent(order)}`;
-    const res = await authenticatedFetch(url);
+    const res = await fetchLibraryPage(url);
     if (res.ok) {
       const movies = await res.json();
       const tbody = document.querySelector('#movieTable tbody');
       tbody.innerHTML = '';
       const countElem = document.getElementById('movieCount');
-      if (countElem) countElem.textContent = `${movies.length} Movies`;
+      if (countElem) countElem.textContent = `${res.total} Movies`;
       movies.forEach((movie) => {
         const tr = document.createElement('tr');
         tr.innerHTML = `
@@ -1492,13 +1581,13 @@ async function loadTVShows() {
     if (search) url += `search=${encodeURIComponent(search)}&`;
     if (sortField) url += `sort_by=${encodeURIComponent(sortField)}&`;
     if (order) url += `order=${encodeURIComponent(order)}`;
-    const res = await authenticatedFetch(url);
+    const res = await fetchLibraryPage(url);
     if (res.ok) {
       const tvShows = await res.json();
       const tbody = document.querySelector('#tvShowTable tbody');
       tbody.innerHTML = '';
       const countElem = document.getElementById('tvShowCount');
-      if (countElem) countElem.textContent = `${tvShows.length} TV Shows`;
+      if (countElem) countElem.textContent = `${res.total} TV Shows`;
       tvShows.forEach((tvShow) => {
         const tr = document.createElement('tr');
         tr.innerHTML = `
@@ -1561,13 +1650,13 @@ async function loadAnime() {
     if (search) url += `search=${encodeURIComponent(search)}&`;
     if (sortField) url += `sort_by=${encodeURIComponent(sortField)}&`;
     if (order) url += `order=${encodeURIComponent(order)}`;
-    const res = await authenticatedFetch(url);
+    const res = await fetchLibraryPage(url);
     if (res.ok) {
       const anime = await res.json();
       const tbody = document.querySelector('#animeTable tbody');
       tbody.innerHTML = '';
       const countElem = document.getElementById('animeCount');
-      if (countElem) countElem.textContent = `${anime.length} Anime`;
+      if (countElem) countElem.textContent = `${res.total} Anime`;
       anime.forEach((animeItem) => {
         const tr = document.createElement('tr');
         tr.innerHTML = `
@@ -1941,13 +2030,13 @@ async function loadVideoGames() {
     if (search) url += `search=${encodeURIComponent(search)}&`;
     if (sortField) url += `sort_by=${encodeURIComponent(sortField)}&`;
     if (order) url += `order=${encodeURIComponent(order)}`;
-    const res = await authenticatedFetch(url);
+    const res = await fetchLibraryPage(url);
     if (res.ok) {
       const videoGames = await res.json();
       const tbody = document.querySelector('#videoGameTable tbody');
       tbody.innerHTML = '';
       const countElem = document.getElementById('videoGameCount');
-      if (countElem) countElem.textContent = `${videoGames.length} Video Games`;
+      if (countElem) countElem.textContent = `${res.total} Video Games`;
       videoGames.forEach((game) => {
         const tr = document.createElement('tr');
         const releaseDateStr = game.release_date ? new Date(game.release_date).toLocaleDateString() : '';
@@ -2301,13 +2390,13 @@ async function loadMusic() {
     if (search) url += `search=${encodeURIComponent(search)}&`;
     if (sortField) url += `sort_by=${encodeURIComponent(sortField)}&`;
     if (order) url += `order=${encodeURIComponent(order)}`;
-    const res = await authenticatedFetch(url);
+    const res = await fetchLibraryPage(url);
     if (res.ok) {
       const music = await res.json();
       const tbody = document.querySelector('#musicTable tbody');
       tbody.innerHTML = '';
       const countElem = document.getElementById('musicCount');
-      if (countElem) countElem.textContent = `${music.length} Music`;
+      if (countElem) countElem.textContent = `${res.total} Music`;
       music.forEach((item) => {
         const tr = document.createElement('tr');
         tr.innerHTML = `
@@ -2650,13 +2739,13 @@ async function loadBooks() {
     if (search) url += `search=${encodeURIComponent(search)}&`;
     if (sortField) url += `sort_by=${encodeURIComponent(sortField)}&`;
     if (order) url += `order=${encodeURIComponent(order)}`;
-    const res = await authenticatedFetch(url);
+    const res = await fetchLibraryPage(url);
     if (res.ok) {
       const books = await res.json();
       const tbody = document.querySelector('#bookTable tbody');
       tbody.innerHTML = '';
       const countElem = document.getElementById('bookCount');
-      if (countElem) countElem.textContent = `${books.length} Books`;
+      if (countElem) countElem.textContent = `${res.total} Books`;
       books.forEach((book) => {
         const tr = document.createElement('tr');
         tr.innerHTML = `
@@ -8354,7 +8443,14 @@ function tryAnotherPick() {
 }
 
 async function openTodaysPick() {
-  const pick = todaysPickSelection;
+  return openLibraryItem(todaysPickSelection);
+}
+
+async function openLibraryItem(pick) {
+  if (editingRowId !== null) {
+    alert('Save or cancel your current edit before opening another title.');
+    return;
+  }
   const source = LIBRARY_SEARCH_SOURCES.find(entry => entry.tab === pick?.category);
   if (!source) return;
   const reason = document.getElementById('todaysPickReason');
@@ -8373,6 +8469,9 @@ async function openTodaysPick() {
     while (busy() && Date.now() < deadline) await new Promise(resolve => setTimeout(resolve, 50));
     if (busy()) throw new Error('The library is still loading. Please try opening the title again.');
     document.getElementById(source.input).value = pick.title;
+    const [, sortId] = libraryPageConfig(source.tab);
+    libraryPages.set(source.tab, { offset: 0, total: 0, focusId: Number(pick.id),
+      signature: JSON.stringify([pick.title, document.getElementById(sortId).value]) });
     await switchTab(source.tab);
     const row = document.querySelector(
       `[data-next-up-category="${source.tab}"][data-next-up-item-id="${Number(pick.id)}"]`
@@ -8547,48 +8646,60 @@ function scheduleLibraryLaunchpadRefresh() {
 const loadMovieLibrary = loadMovies;
 loadMovies = async function (...args) {
   const result = await loadMovieLibrary(...args);
-  invalidateLibrarySearchIndex();
-  scheduleLibraryLaunchpadRefresh();
+  if (!libraryPages.get('movies')?.browseOnly) {
+    invalidateLibrarySearchIndex();
+    scheduleLibraryLaunchpadRefresh();
+  }
   return result;
 };
 
 const loadTVShowLibrary = loadTVShows;
 loadTVShows = async function (...args) {
   const result = await loadTVShowLibrary(...args);
-  invalidateLibrarySearchIndex();
-  scheduleLibraryLaunchpadRefresh();
+  if (!libraryPages.get('tv-shows')?.browseOnly) {
+    invalidateLibrarySearchIndex();
+    scheduleLibraryLaunchpadRefresh();
+  }
   return result;
 };
 
 const loadAnimeLibrary = loadAnime;
 loadAnime = async function (...args) {
   const result = await loadAnimeLibrary(...args);
-  invalidateLibrarySearchIndex();
-  scheduleLibraryLaunchpadRefresh();
+  if (!libraryPages.get('anime')?.browseOnly) {
+    invalidateLibrarySearchIndex();
+    scheduleLibraryLaunchpadRefresh();
+  }
   return result;
 };
 
 const loadVideoGameLibrary = loadVideoGames;
 loadVideoGames = async function (...args) {
   const result = await loadVideoGameLibrary(...args);
-  invalidateLibrarySearchIndex();
-  scheduleLibraryLaunchpadRefresh();
+  if (!libraryPages.get('video-games')?.browseOnly) {
+    invalidateLibrarySearchIndex();
+    scheduleLibraryLaunchpadRefresh();
+  }
   return result;
 };
 
 const loadMusicLibrary = loadMusic;
 loadMusic = async function (...args) {
   const result = await loadMusicLibrary(...args);
-  invalidateLibrarySearchIndex();
-  scheduleLibraryLaunchpadRefresh();
+  if (!libraryPages.get('music')?.browseOnly) {
+    invalidateLibrarySearchIndex();
+    scheduleLibraryLaunchpadRefresh();
+  }
   return result;
 };
 
 const loadBookLibrary = loadBooks;
 loadBooks = async function (...args) {
   const result = await loadBookLibrary(...args);
-  invalidateLibrarySearchIndex();
-  scheduleLibraryLaunchpadRefresh();
+  if (!libraryPages.get('books')?.browseOnly) {
+    invalidateLibrarySearchIndex();
+    scheduleLibraryLaunchpadRefresh();
+  }
   return result;
 };
 

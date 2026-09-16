@@ -333,6 +333,8 @@ for route in account.router.routes:
 app.include_router(account.router)
 app.include_router(friends.router)
 app.include_router(notifications.router)
+from .routers import library
+app.include_router(library.router)
 app.include_router(movies.router)
 app.include_router(tv_shows.router)
 app.include_router(anime.router)

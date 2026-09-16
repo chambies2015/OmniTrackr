@@ -202,6 +202,8 @@ body.dark-mode {
 .todays-pick__filter { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; margin: 10px 0; color: var(--fg); font-size: .85rem; }
 .todays-pick__filter select { max-width: 100%; padding: 6px 10px; }
 tr.pick-focused { outline: 2px solid #14b8a6; outline-offset: -2px; }
+.library-pager { display: flex; flex-wrap: wrap; align-items: center; justify-content: flex-end; gap: 10px; padding: 14px 4px; color: var(--fg); }
+.library-pager [role="status"] { margin-right: auto; font-size: .9rem; }
 @media (max-width: 760px) { .todays-pick { align-items: start; grid-template-columns: 1fr; padding: 20px; } .todays-pick__actions { justify-content: flex-start; } }
 
 .library-pulse {
