@@ -24,6 +24,8 @@ class User(Base):
     failed_login_attempts = Column(Integer, default=0, nullable=False)
     locked_until = Column(DateTime, nullable=True)
     created_at = Column(DateTime, default=datetime.utcnow)
+    last_login_at = Column(DateTime, nullable=True)
+    login_count = Column(Integer, default=0, nullable=False)
     deactivated_at = Column(DateTime, nullable=True)
     
     # Privacy settings

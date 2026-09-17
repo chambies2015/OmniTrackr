@@ -161,7 +161,7 @@
       "name": "OmniTrackr",
       "url": "https://omnitrackr.xyz"
     },
-    "dateModified": "2026-09-14",
+    "dateModified": "2026-09-17",
     "publisher": {
       "@type": "Organization",
       "name": "OmniTrackr",
@@ -196,7 +196,7 @@
 
     <div class="privacy-header">
       <h1>Privacy Policy</h1>
-      <p>Last Updated: September 15, 2026</p>
+      <p>Last Updated: September 17, 2026</p>
     </div>
 
     <div class="privacy-section">
@@ -223,6 +223,7 @@
         <li><strong>Password:</strong> Stored securely using bcrypt hashing (we never store plain text passwords)</li>
         <li><strong>Profile Picture:</strong> Optional image you may upload, stored securely on our servers</li>
         <li><strong>Account Creation Date:</strong> Timestamp of when your account was created</li>
+        <li><strong>Successful Login Activity:</strong> The most recent successful login time and a running successful-login count, used for account security, support, and aggregate activation measurement</li>
       </ul>
 
       <h3>2.2 Content Data</h3>
@@ -257,18 +258,18 @@
       <p>We automatically collect certain technical information:</p>
       <ul>
         <li><strong>IP Address:</strong> Used for rate limiting and security purposes</li>
-        <li><strong>Authentication Tokens:</strong> JWT tokens stored in your browser's localStorage for session management</li>
-        <li><strong>Browser Information:</strong> Collected through Google Analytics for service improvement</li>
-        <li><strong>Usage Data:</strong> Page views, interactions, and feature usage through Google Analytics</li>
+        <li><strong>Authentication Tokens:</strong> JWT session tokens stored primarily in an HttpOnly cookie; legacy browser storage may remain during the transition from older sessions</li>
+        <li><strong>Browser Information:</strong> Collected through Google Analytics on the public landing experience when browser privacy signals do not request limited tracking</li>
+        <li><strong>Usage Data:</strong> Public landing page views and interactions collected through Google Analytics; private dashboard activity is not sent to Google Analytics</li>
       </ul>
       <p>Files submitted to the Import Studio are processed to create the preview or confirmed import you request. Previewing performs no database writes. OmniTrackr does not publish migration files or imported review text, and confirmed CSV imports mark reviews private by default.</p>
 
       <h3>2.5 Cookies and Tracking Technologies</h3>
       <p>We use the following tracking technologies:</p>
       <ul>
-        <li><strong>Google Analytics:</strong> To understand how users interact with our service and improve user experience</li>
+        <li><strong>Google Analytics:</strong> To understand visits to the public landing experience; the private signed-in dashboard does not load Google Analytics, and the public loader honors supported Global Privacy Control and Do Not Track signals</li>
         <li><strong>Google AdSense:</strong> To display relevant advertisements (if applicable)</li>
-        <li><strong>Local Storage:</strong> To store authentication tokens and user preferences</li>
+        <li><strong>Local Storage:</strong> To store interface preferences and support legacy authentication sessions</li>
       </ul>
 
       <h3>2.6 Google Ads and Advertising Cookies</h3>
@@ -346,7 +347,7 @@
       <h3>5.3 Account Deletion</h3>
       <ul>
         <li>Deactivate your account at any time through account settings</li>
-        <li>Reactivate your account within 30 days of deactivation</li>
+        <li>Reactivate your account within 90 days of deactivation</li>
         <li>Request permanent deletion of your account and all associated data by contacting us</li>
         <li>Note: Some data may be retained for legal or security purposes as required by law</li>
       </ul>
@@ -380,7 +381,7 @@
       <p>We retain your information for as long as necessary to provide our services:</p>
       <ul>
         <li><strong>Active Accounts:</strong> Data is retained while your account is active</li>
-        <li><strong>Deactivated Accounts:</strong> Data is retained for 30 days after deactivation, after which it may be permanently deleted</li>
+        <li><strong>Deactivated Accounts:</strong> Data is retained for a 90-day reactivation window, after which the account is no longer eligible for self-service reactivation and may be permanently deleted</li>
         <li><strong>Friend Requests:</strong> Expire after 30 days if not responded to</li>
         <li><strong>Verification Tokens:</strong> Expire after 1 hour</li>
         <li><strong>Password Reset Tokens:</strong> Expire after 1 hour</li>

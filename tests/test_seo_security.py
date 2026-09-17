@@ -1214,7 +1214,9 @@ class TestSecurityMiddleware:
         assert "Recent Security and Quality Improvements" in content
         assert "Recent Content Improvements" in content
         assert "Release Verification" in content
-        assert '"dateModified": "2026-07-05"' in content
+        assert '"dateModified": "2026-09-17"' in content
+        assert "September 2026: Activation and Trust Baseline" in content
+        assert "existing launchpad, Weekly playback, Library pulse, and moderator insights" in content
         assert "public reviews API default to favor substantial reviews" in content
         assert "standalone review detail pages" in content
         assert "at least 750 crawlable words" in content
@@ -1342,6 +1344,8 @@ class TestSecurityMiddleware:
         assert "The mixed landing and authenticated app shell are intentionally kept out of the ad-loader allowlist" in content
         assert "How Placements Are Reviewed" in content
         assert "Public pages should remain readable when ads are unavailable" in content
+        assert "Google-certified consent management platform" in content
+        assert "Google does not treat CMP certification as a guarantee of full legal compliance" in content
         hrefs = extract_hrefs(content)
         assert "/privacy" in hrefs
         assert "/sample-library" in hrefs
@@ -1350,6 +1354,7 @@ class TestSecurityMiddleware:
             for parsed in (urlparse(href) for href in hrefs)
         }
         assert ("https", "policies.google.com", "/technologies/partner-sites") in href_parts
+        assert ("https", "support.google.com", "/adsense/answer/13554116") in href_parts
         assert ("https", "adssettings.google.com", "/") in href_parts
 
     def test_content_quality_policy_explains_originality_and_review_standards(self, client):

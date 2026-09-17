@@ -168,6 +168,20 @@ class TestAuthEndpoints:
         assert data["token_type"] == "bearer"
         assert "user" in data
         assert "omnitrackr_session=" in response.headers.get("set-cookie", "")
+        db_session.refresh(user)
+        assert user.login_count == 1
+        assert user.last_login_at is not None
+
+        second_login = client.post(
+            "/auth/login",
+            data={
+                "username": test_user_data["username"],
+                "password": test_user_data["password"],
+            },
+        )
+        assert second_login.status_code == 200
+        db_session.refresh(user)
+        assert user.login_count == 2
     
     def test_login_with_email(self, client, test_user_data, db_session):
         """Test login using email instead of username."""

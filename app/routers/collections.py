@@ -149,7 +149,7 @@ def _moderator_site_insights(db: Session) -> dict:
     ]
     categories = []
     total_items = completed_items = rated_items = reviewed_items = public_reviews = 0
-    users_with_library: set[int] = set()
+    library_counts_by_user: dict[int, int] = {}
     for key, label, model, completed_field in category_definitions:
         has_review = (model.review.isnot(None)) & (func.length(func.trim(model.review)) > 0)
         total, completed, rated, reviewed, public = db.query(
@@ -177,12 +177,43 @@ def _moderator_site_insights(db: Session) -> dict:
             "rated": rated,
             "reviewed": reviewed,
         })
-        users_with_library.update(
-            user_id for user_id, in db.query(model.user_id).distinct().all()
-        )
+        for user_id, item_count in db.query(
+            model.user_id, func.count(model.id)
+        ).group_by(model.user_id).all():
+            library_counts_by_user[user_id] = library_counts_by_user.get(user_id, 0) + int(item_count)
 
+    users_with_library = set(library_counts_by_user)
     users["with_library_items"] = len(users_with_library)
     users["without_library_items"] = max(total_users - len(users_with_library), 0)
+
+    verified_user_ids = {
+        user_id for user_id, in db.query(models.User.id).filter(models.User.is_verified == True).all()
+    }
+    started_user_ids = users_with_library & verified_user_ids
+    activated_user_ids = {
+        user_id for user_id, item_count in library_counts_by_user.items()
+        if item_count >= 5 and user_id in verified_user_ids
+    }
+    returned_user_ids = {
+        user_id for user_id, in db.query(models.User.id).filter(models.User.login_count >= 2).all()
+    }
+    activation_counts = [
+        ("registered", "Accounts created", total_users),
+        ("verified", "Email verified", len(verified_user_ids)),
+        ("started", "Library started", len(started_user_ids)),
+        ("activated", "Five titles saved", len(activated_user_ids)),
+        ("returned", "Returned after activation", len(activated_user_ids & returned_user_ids)),
+    ]
+    activation = []
+    for index, (key, label, count) in enumerate(activation_counts):
+        previous = activation_counts[index - 1][2] if index else total_users
+        activation.append({
+            "key": key,
+            "label": label,
+            "count": count,
+            "account_rate": round((count / total_users * 100) if total_users else 0, 1),
+            "step_rate": round((count / previous * 100) if previous else 0, 1),
+        })
     content = {
         "total_items": total_items,
         "completed_items": completed_items,
@@ -311,8 +342,9 @@ def _moderator_site_insights(db: Session) -> dict:
         "engagement": engagement,
         "moderation": moderation,
         "growth": growth,
+        "activation": activation,
         "recent_users": user_rows,
-        "privacy_note": "Operational aggregates only. Emails, private notes, reviews, and library titles are excluded.",
+        "privacy_note": "Operational account and aggregate metrics only. Emails, private notes, reviews, library titles, searches, and page histories are excluded.",
     }
 
 

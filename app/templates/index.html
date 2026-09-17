@@ -3,10 +3,6 @@
 
 <head>
   <meta name="google-adsense-account" content="ca-pub-7271682066779719">
-  <!-- Google tag (gtag.js) -->
-  <script async src="https://www.googletagmanager.com/gtag/js?id=G-7EJ4ZGHNV1"></script>
-  <script src="./analytics.js" defer></script>
-
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=5.0, user-scalable=yes">
   <meta name="theme-color" content="#1e1e2f">
@@ -50,12 +46,10 @@
   <link rel="icon" type="image/x-icon" href="/omnitrackr_favicon.ico">
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link rel="dns-prefetch" href="https://www.googletagmanager.com">
-  <link rel="dns-prefetch" href="https://www.google-analytics.com">
-  <link rel="preload" href="./styles.css?v=20260916-launchpad-v1" as="style">
+  <link rel="preload" href="./styles.css?v=20260917-activation-trust-v1" as="style">
   <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@700;800&family=Inter:wght@400;500;600&display=swap"
     rel="stylesheet">
-  <link rel="stylesheet" href="./styles.css?v=20260916-launchpad-v1">
+  <link rel="stylesheet" href="./styles.css?v=20260917-activation-trust-v1">
   <script src="./preauth.js"></script>
   <style>
     html.authenticated #landingPage{display:none}
@@ -1088,6 +1082,11 @@
         </div>
         <p id="moderatorInsightsPrivacy" class="moderator-insights__privacy"></p>
         <div id="moderatorMetricGrid" class="moderator-metric-grid" aria-live="polite"></div>
+        <section class="moderator-activation" aria-labelledby="moderatorActivationTitle">
+          <div class="moderator-section-heading"><div><p>First-party milestones</p><h4 id="moderatorActivationTitle">Activation path</h4></div><strong>Aggregate only</strong></div>
+          <div id="moderatorActivationStages" class="moderator-activation-stages"></div>
+          <p class="moderator-activation-note">Return measurement starts when successful-login counting is deployed; earlier visits are not reconstructed.</p>
+        </section>
         <div class="moderator-insights__columns">
           <section aria-labelledby="moderatorGrowthTitle">
             <div class="moderator-section-heading"><div><p>Last 30 days</p><h4 id="moderatorGrowthTitle">New accounts</h4></div><strong id="moderatorGrowthTotal"></strong></div>
@@ -1884,7 +1883,7 @@
   </div>
   <script src="./credentials.js"></script>
   <script src="./auth.js?v=20260915-security-sweep"></script>
-  <script src="./app.js?v=20260916-launchpad-v1"></script>
+  <script src="./app.js?v=20260917-reliability-v1"></script>
 
   <!-- Account Modal -->
   <div id="accountModal" class="modal-overlay" style="display: none;">
@@ -2234,7 +2233,7 @@
         <div class="account-section danger-section">
           <h3>Account Deactivation</h3>
           <p class="warning-text">Deactivating your account will hide it from the system. You can reactivate within 90
-            days. After that, your account will be permanently deleted.</p>
+            days. After that, self-service reactivation is unavailable; contact support if you need deletion assistance.</p>
           <form id="deactivateAccountForm" data-submit-action="deactivate-account">
             <div>
               <input type="password" id="deactivatePassword" placeholder="Enter your password to confirm" required>

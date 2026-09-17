@@ -363,7 +363,7 @@ async def deactivate_account(
         raise HTTPException(status_code=404, detail="User not found")
     
     return {
-        "message": "Account deactivated. You can reactivate within 90 days. After that, your account will be permanently deleted."
+        "message": "Account deactivated. You can reactivate within 90 days. After that, self-service reactivation is unavailable; contact support if you need deletion assistance."
     }
 
 

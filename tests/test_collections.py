@@ -117,12 +117,34 @@ class TestCollections:
         assert insights["content"]["total_items"] == 1
         assert insights["content"]["categories"][0]["label"] == "Movies"
         assert insights["engagement"]["activity_entries_30_days"] == 1
+        assert [stage["key"] for stage in insights["activation"]] == [
+            "registered", "verified", "started", "activated", "returned"
+        ]
+        assert [stage["count"] for stage in insights["activation"]] == [2, 1, 1, 0, 0]
         assert {row["username"] for row in insights["recent_users"]} == {"testuser", "newreader"}
         serialized = response.text
         assert "new-reader@example.com" not in serialized
         assert "Private journal title" not in serialized
         assert "Private reflection" not in serialized
         assert "hashed_password" not in serialized
+
+    def test_moderator_activation_uses_existing_library_and_minimal_login_counts(
+        self, authenticated_client, test_movie_data, monkeypatch
+    ):
+        monkeypatch.setenv("COLLECTION_MODERATOR_USERNAMES", "testuser")
+        for index in range(5):
+            payload = {**test_movie_data, "title": f"Activation title {index}"}
+            assert authenticated_client.post("/movies/", json=payload).status_code == 201
+
+        second_login = authenticated_client.post(
+            "/auth/login", data={"username": "testuser", "password": "testpassword123"}
+        )
+        assert second_login.status_code == 200
+
+        activation = authenticated_client.get("/collections/moderation/insights").json()["activation"]
+        assert [stage["count"] for stage in activation] == [1, 1, 1, 1, 1]
+        assert activation[-1]["label"] == "Returned after activation"
+        assert activation[-1]["step_rate"] == 100.0
 
     def test_collection_publish_is_explicit_quality_gated_and_reversible(
         self, authenticated_client, test_movie_data, test_anime_data, test_book_data

@@ -56,7 +56,7 @@
     "name": "OmniTrackr Changelog",
     "description": "Product, security, privacy, SEO, and content updates for OmniTrackr.",
     "url": "https://omnitrackr.xyz/changelog",
-    "dateModified": "2026-07-05",
+    "dateModified": "2026-09-17",
     "inLanguage": "en-US",
     "isPartOf": { "@type": "WebSite", "name": "OmniTrackr", "url": "https://omnitrackr.xyz" },
     "publisher": { "@type": "Organization", "name": "OmniTrackr", "url": "https://omnitrackr.xyz" }
@@ -95,6 +95,20 @@
       <section class="privacy-section" aria-labelledby="why-heading">
         <h2 id="why-heading">Why Publish a Changelog?</h2>
         <p>OmniTrackr is a live media tracking app, not a static demo. Publishing a changelog gives users and reviewers a clear place to see that the site is actively maintained, that security work is taken seriously, and that public content is being improved over time. It also helps new users understand which parts of the app are mature, which areas recently changed, and what the product is trying to become.</p>
+      </section>
+
+      <section class="privacy-section" aria-labelledby="activation-trust-2026-heading">
+        <h2 id="activation-trust-2026-heading">September 2026: Activation and Trust Baseline</h2>
+        <p>This release improves the first-session path and gives maintainers a privacy-conscious way to understand whether new accounts reach a useful library. It builds on the existing launchpad, Weekly playback, Library pulse, and moderator insights instead of creating duplicate onboarding or recap features.</p>
+        <ul>
+          <li>Added aggregate stages for account creation, email verification, first library item, five saved titles, and a post-activation return.</li>
+          <li>Stored only the most recent successful login time and a running successful-login count; no page history, searches, media titles, or private notes are collected for the return signal.</li>
+          <li>Moved Google Analytics out of the private dashboard and limited it to the standalone public landing experience.</li>
+          <li>Made the public analytics loader honor supported Global Privacy Control and Do Not Track signals while disabling Google signals and ad-personalization signals.</li>
+          <li>Aligned account-deactivation language around the actual 90-day self-service reactivation window.</li>
+          <li>Consolidated stale development notes into the README, test guide, current content review, and one growth-operations reference.</li>
+        </ul>
+        <p>The return measurement begins with this release and does not guess historical visits. AdSense approval still depends on Google's review and any required account-side consent configuration; these changes are a clearer operating baseline, not an approval guarantee.</p>
       </section>
 
       <section class="privacy-section" aria-labelledby="postcards-2026-heading">

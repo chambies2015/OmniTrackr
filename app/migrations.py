@@ -147,6 +147,17 @@ def run_migrations():
                     conn.execute(text("ALTER TABLE users ADD COLUMN locked_until TIMESTAMP"))
                     conn.commit()
                     print("Added locked_until column to users table")
+            if "last_login_at" not in user_columns:
+                with engine.connect() as conn:
+                    conn.execute(text("ALTER TABLE users ADD COLUMN last_login_at TIMESTAMP"))
+                    conn.commit()
+                    print("Added last_login_at column to users table")
+            if "login_count" not in user_columns:
+                with engine.connect() as conn:
+                    conn.execute(text("ALTER TABLE users ADD COLUMN login_count INTEGER DEFAULT 0"))
+                    conn.execute(text("UPDATE users SET login_count = 0 WHERE login_count IS NULL"))
+                    conn.commit()
+                    print("Added login_count column to users table")
             if database.DATABASE_URL.startswith("postgresql"):
                 with engine.connect() as conn:
                     conn.execute(text("CREATE INDEX IF NOT EXISTS ix_users_username ON users(username)"))

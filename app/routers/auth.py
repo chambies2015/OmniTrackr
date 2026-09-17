@@ -105,7 +105,7 @@ async def login(
             if days_since_deactivation > 90:
                 raise HTTPException(
                     status_code=403,
-                    detail="Account has been permanently deactivated. It cannot be reactivated after 90 days.",
+                    detail="The 90-day self-service reactivation window has ended. Contact support if you need account assistance.",
                     headers={"WWW-Authenticate": "Bearer"},
                 )
             else:
@@ -128,6 +128,12 @@ async def login(
             detail="Please verify your email address before logging in. Check your inbox for the verification link.",
             headers={"WWW-Authenticate": "Bearer"},
         )
+
+    # Keep one minimal first-party return signal for aggregate product health.
+    # No page history, media titles, searches, or session-by-session event log is stored.
+    user.last_login_at = now_utc
+    user.login_count = (user.login_count or 0) + 1
+    db.commit()
     
     access_token = auth.create_access_token(data={"sub": user.username})
     token_response = schemas.Token(access_token=access_token, token_type="bearer", user=user)

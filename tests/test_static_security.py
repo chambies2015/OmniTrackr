@@ -8,6 +8,7 @@ INDEX_HTML = Path(__file__).resolve().parents[1] / "app" / "templates" / "index.
 AD_LOADER_JS = Path(__file__).resolve().parents[1] / "app" / "static" / "ad-loader.js"
 REVIEWS_JS = Path(__file__).resolve().parents[1] / "app" / "static" / "reviews.js"
 AUTH_JS = Path(__file__).resolve().parents[1] / "app" / "static" / "auth.js"
+ANALYTICS_JS = Path(__file__).resolve().parents[1] / "app" / "static" / "analytics.js"
 
 
 def template_name_to_public_path(template_name):
@@ -84,6 +85,23 @@ def test_adsense_loader_respects_authenticated_app_shell():
     assert "document.documentElement.classList.contains('authenticated')" in loader
     assert "document.head.appendChild(script)" in loader
     assert "scheduleAdScript()" in loader
+
+
+def test_analytics_is_public_only_and_honors_browser_privacy_signals():
+    """Acquisition measurement must stay out of the private dashboard."""
+    dashboard = INDEX_HTML.read_text(encoding="utf-8")
+    public_landing = (INDEX_HTML.parent / "public_landing.html").read_text(encoding="utf-8")
+    loader = ANALYTICS_JS.read_text(encoding="utf-8")
+
+    assert "analytics.js" not in dashboard
+    assert 'src="/analytics.js"' in public_landing
+    assert "googletagmanager.com/gtag/js" not in public_landing
+    assert "data-public-shell" in loader
+    assert "navigator.globalPrivacyControl === true" in loader
+    assert "navigator.doNotTrack === '1'" in loader
+    assert "window.doNotTrack === '1'" in loader
+    assert "allow_google_signals: false" in loader
+    assert "allow_ad_personalization_signals: false" in loader
 
 
 def test_adsense_loader_has_client_side_public_path_allowlist():

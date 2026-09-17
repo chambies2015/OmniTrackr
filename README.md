@@ -261,6 +261,22 @@ Useful focused runs:
 .\.venv\Scripts\python.exe -m pytest tests\test_statistics.py
 ```
 
+Browser-side contract tests:
+
+```powershell
+node --test tests/*.cjs
+```
+
+## Documentation
+
+- `README.md` is the canonical setup, architecture, feature, environment, and deployment overview.
+- `tests/README.md` covers the test-suite structure.
+- `docs/growth-operations.md` defines activation metrics, analytics boundaries, and the AdSense readiness checklist.
+- `docs/public-content-review.md` records the latest source-based public-content review.
+- `docs/library-performance.md` documents library paging and search behavior.
+- `API_SETUP_GUIDE.md` and `EMAIL_SETUP.md` contain the two integration-specific setup guides.
+- The public `/changelog`, `/roadmap`, `/privacy`, and `/advertising` pages describe user-visible behavior and policy.
+
 ## Deployment Notes
 
 For Render:

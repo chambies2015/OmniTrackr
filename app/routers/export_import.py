@@ -183,6 +183,9 @@ async def export_data(
     export_metadata = {
         "export_timestamp": datetime.now().isoformat(),
         "version": "1.2",
+        "account_created_at": current_user.created_at.isoformat() if current_user.created_at else None,
+        "last_login_at": current_user.last_login_at.isoformat() if current_user.last_login_at else None,
+        "successful_login_count": current_user.login_count or 0,
         "total_movies": len(movies),
         "total_tv_shows": len(tv_shows),
         "total_anime": len(anime),

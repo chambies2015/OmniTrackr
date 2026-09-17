@@ -4289,31 +4289,45 @@ document.getElementById('bookTitle').addEventListener('keypress', function(e) {
 
 document.getElementById('addBookForm').onsubmit = async function (e) {
   e.preventDefault();
+  const form = document.getElementById('addBookForm');
+  if (form.dataset.saving === 'true') return;
+  let status = document.getElementById('bookSaveStatus');
+  if (!status) {
+    status = document.createElement('p');
+    status.id = 'bookSaveStatus';
+    status.setAttribute('role', 'status');
+    form.appendChild(status);
+  }
+  status.textContent = '';
   const titleInput = document.getElementById('bookTitle');
   const authorInput = document.getElementById('bookAuthor');
   const yearInput = document.getElementById('bookYear');
   
   const title = titleInput.value.trim();
   if (!title) {
-    alert('Please enter a book title.');
+    status.textContent = 'Please enter a book title.';
+    titleInput.focus();
     return;
   }
   
   const author = authorInput.value.trim();
   if (!author) {
-    alert('Please enter an author or click "Search" to auto-fill book information.');
+    status.textContent = 'Please enter an author or click "Search" to auto-fill book information.';
+    authorInput.focus();
     return;
   }
   
   const yearVal = yearInput.value.trim();
   if (!yearVal) {
-    alert('Please enter a year or click "Search" to auto-fill book information.');
+    status.textContent = 'Please enter a year or click "Search" to auto-fill book information.';
+    yearInput.focus();
     return;
   }
   
   const year = parseInt(yearVal, 10);
   if (isNaN(year) || year < 0) {
-    alert('Please enter a valid year.');
+    status.textContent = 'Please enter a valid year.';
+    yearInput.focus();
     return;
   }
   
@@ -4336,21 +4350,35 @@ document.getElementById('addBookForm').onsubmit = async function (e) {
     book.cover_art_url = titleInput.dataset.coverArtUrl;
   }
   
-  const response = await authenticatedFetch(`${API_BASE}/books/`, {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify(book),
-  });
-  if (response.ok) {
-    document.getElementById('addBookForm').reset();
-    if (titleInput.dataset.coverArtUrl) {
-      delete titleInput.dataset.coverArtUrl;
+  form.dataset.saving = 'true';
+  const submit = form.querySelector('button[type="submit"]');
+  if (submit) submit.disabled = true;
+  status.textContent = 'Saving your book…';
+  try {
+    const response = await authenticatedFetch(`${API_BASE}/books/`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(book),
+    });
+    if (response.ok) {
+      status.textContent = '';
+      form.reset();
+      if (titleInput.dataset.coverArtUrl) {
+        delete titleInput.dataset.coverArtUrl;
+      }
+      toggleCollapsible('bookForm');
+      loadBooks();
+    } else {
+      const errorData = await response.json().catch(() => ({ detail: 'Failed to add book' }));
+      status.textContent = typeof errorData.detail === 'string' ? errorData.detail : 'Could not save this book. Check the fields and try again.';
     }
-    toggleCollapsible('bookForm');
-    loadBooks();
-  } else {
-    const errorData = await response.json().catch(() => ({ detail: 'Failed to add book' }));
-    alert(errorData.detail || 'Failed to add book');
+  } catch (error) {
+    status.textContent = error.message === 'Session expired. Please login again.'
+      ? 'Your session expired. Sign in again before saving. Your form has not been cleared.'
+      : 'Could not confirm the save. Your form has not been cleared. Check your library before retrying to avoid a duplicate.';
+  } finally {
+    delete form.dataset.saving;
+    if (submit) submit.disabled = false;
   }
 };
 
@@ -8018,6 +8046,27 @@ function renderModeratorInsights(data) {
   });
   document.getElementById('moderatorGrowthTotal').textContent = `${moderatorNumber(data.users.new_30_days)} total`;
 
+  const activationStages = document.getElementById('moderatorActivationStages');
+  activationStages.replaceChildren();
+  data.activation.forEach((stage, index) => {
+    const item = document.createElement('article');
+    item.className = 'moderator-activation-stage';
+    const step = document.createElement('span');
+    step.textContent = String(index + 1).padStart(2, '0');
+    const copy = document.createElement('div');
+    const label = document.createElement('strong');
+    label.textContent = stage.label;
+    const rate = document.createElement('small');
+    rate.textContent = index === 0
+      ? 'Baseline'
+      : `${moderatorNumber(stage.step_rate)}% from prior step · ${moderatorNumber(stage.account_rate)}% of accounts`;
+    copy.append(label, rate);
+    const count = document.createElement('b');
+    count.textContent = moderatorNumber(stage.count);
+    item.append(step, copy, count);
+    activationStages.appendChild(item);
+  });
+
   const categoryStats = document.getElementById('moderatorCategoryStats');
   const maxCategory = Math.max(1, ...data.content.categories.map(category => category.total));
   categoryStats.replaceChildren();
@@ -8962,7 +9011,7 @@ async function loadCustomTabs() {
   try {
     if (!hasStoredAuth()) return;
     
-    const response = await fetch(`${API_BASE}/custom-tabs`, authFetchOptions());
+    const response = await authenticatedFetch(`${API_BASE}/custom-tabs/`);
     
     if (response.ok) {
       customTabs = await response.json();
