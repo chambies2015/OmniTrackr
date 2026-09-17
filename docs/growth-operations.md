@@ -7,8 +7,9 @@ pages.
 
 ## Activation path
 
-Trusted collection moderators can view aggregate activation stages in the
-existing site-health panel. No separate event stream is created.
+Configured trusted operators can view aggregate activation stages in the
+existing site-health panel. No separate event stream is created, and public
+collection discovery does not depend on an operator queue.
 
 | Stage | Definition |
 | --- | --- |
@@ -72,6 +73,31 @@ notification for the author. Nothing is deleted. Editing the review changes its
 hash, restores the revision automatically, and resets its current report count
 when a new report is received. Aggregate report and unlisting counts appear in
 the existing site-health panel; review text and reporter identity do not.
+
+## Automated public-collection readiness and safety
+
+Collections remain private until their owner deliberately publishes them. The
+existing share-ready floor requires 300 trimmed introduction characters and at
+least three available titles. One collection readiness result then controls the
+editor status, gallery, detail-page indexability, and sitemap inclusion. Public
+discovery additionally requires a meaningful title, at least 45 introduction
+words, complete thoughts, varied language, and the shared checks against links,
+contact details, promotional bait, and placeholder text. Curator notes are
+included in the safety check but remain optional.
+
+A collection that meets only the share-ready floor keeps its direct URL with a
+`noindex` directive. A discovery-ready collection enters the existing gallery
+automatically; there is no routine approval queue and no paid moderation
+service. The optional trusted-operator configuration remains only for aggregate
+site health and exceptional emergency blocking.
+
+Collection reports reuse the signed public-visitor cookie and store only a fixed
+reason, timestamp, and one-way visitor hash. Free-text allegations are rejected.
+One browser can report the current collection version once, and the endpoint is
+limited to two submissions per IP address per hour. Three independent reports
+temporarily unlist that exact content hash and notify the owner. Nothing is
+deleted. An owner edit clears the current report state, reruns readiness, and
+restores the new version when it qualifies.
 
 ## Verification
 

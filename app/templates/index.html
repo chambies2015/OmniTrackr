@@ -1077,7 +1077,7 @@
       </section>
       <section id="moderatorInsightsPanel" class="card moderator-insights" hidden>
         <div class="moderator-insights__heading">
-          <div><p class="collections-hero__eyebrow">Moderator tools · read only</p><h3>Site health</h3></div>
+          <div><p class="collections-hero__eyebrow">Trusted operations · read only</p><h3>Site health</h3></div>
           <span id="moderatorInsightsGenerated"></span>
         </div>
         <p id="moderatorInsightsPrivacy" class="moderator-insights__privacy"></p>
@@ -1105,11 +1105,6 @@
           <div class="moderator-section-heading"><div><p>Newest 50 accounts</p><h4 id="moderatorUsersTitle">User overview</h4></div></div>
           <div class="moderator-users__table-wrap"><table><thead><tr><th>User</th><th>Status</th><th>Joined</th><th>Library</th><th>Journal</th><th>Public lists</th><th>Last journal activity</th></tr></thead><tbody id="moderatorUsersBody"></tbody></table></div>
         </section>
-      </section>
-      <section id="collectionModerationPanel" class="card collection-moderation" hidden>
-        <div class="collection-moderation__heading"><div><p class="collections-hero__eyebrow">Moderator tools</p><h3>Collection review queue</h3></div><span id="collectionModerationCount"></span></div>
-        <p>Approve only substantial, original collections that are safe to feature publicly. Any later content edit automatically returns an approved collection to this queue.</p>
-        <div id="collectionModerationList" class="collection-moderation__list"></div>
       </section>
       <div id="collectionsList" class="collections-list" aria-live="polite"></div>
     </div>
@@ -2554,7 +2549,8 @@
           <textarea id="collectionStudioDescription" maxlength="500" rows="7" required aria-describedby="collectionStudioHint"></textarea>
           <label for="collectionStudioCover">Collection artwork URL <span class="content-muted">(optional)</span></label>
           <input id="collectionStudioCover" type="url" maxlength="1000" placeholder="https://…">
-          <p id="collectionStudioHint" class="collection-studio-modal__hint">Private is the default. To publish, write at least 300 characters of original context and choose at least three titles. New and edited public collections remain shareable by direct link while awaiting review; only approved collections enter public discovery and search.</p>
+          <p id="collectionStudioHint" class="collection-studio-modal__hint">Private is the default. Published collections are checked automatically for useful original context, complete thoughts, varied language, safe sharing, and at least three available titles.</p>
+          <ul id="collectionReadinessChecklist" class="collection-readiness-checklist" aria-live="polite"></ul>
           <label class="collection-studio-modal__publish"><input id="collectionStudioPublic" type="checkbox"> Publish this collection publicly</label>
           <p id="collectionStudioError" class="collection-studio-modal__error" role="alert" hidden></p>
           <div class="collection-studio-modal__actions">

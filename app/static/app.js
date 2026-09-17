@@ -864,7 +864,6 @@ function handleDelegatedClick(event) {
     'move-collection-item': () => moveCollectionItem(Number(target.dataset.collectionId), Number(target.dataset.collectionItemId), Number(target.dataset.collectionPosition)),
     'remove-collection-item': () => removeCollectionItem(Number(target.dataset.collectionId), Number(target.dataset.collectionItemId)),
     'edit-collection-note': () => editCollectionItemNote(Number(target.dataset.collectionId), Number(target.dataset.collectionItemId)),
-    'moderate-collection': () => moderateCollection(Number(target.dataset.collectionId), target.dataset.collectionStatus),
     'delete-collection': () => deleteCollection(Number(target.dataset.collectionId)),
     'show-register-form': () => showRegisterForm(),
     'show-login-form': () => showLoginForm()
@@ -7809,7 +7808,7 @@ async function loadCollections() {
     if (!response.ok) throw new Error('Unable to load collections');
     collectionsCache = await response.json();
     renderCollections(collectionsCache);
-    loadCollectionModerationQueue();
+    loadModeratorInsights();
   } catch (error) {
     const container = document.getElementById('collectionsList');
     if (container) container.textContent = 'Could not load collections. Please try again.';
@@ -7844,7 +7843,11 @@ function renderCollections(collections) {
     const status = document.createElement('span');
     status.className = `collection-card__status${collection.is_public ? ' is-public' : ''}`;
     status.textContent = collection.is_public
-      ? ({ approved: 'Public · Discoverable', rejected: 'Public · Needs changes' }[collection.moderation_status] || 'Public · In review')
+      ? ({
+          approved: 'Public · Discoverable',
+          rejected: 'Public · Blocked',
+          suspended: 'Public · Temporarily unlisted',
+        }[collection.moderation_status] || 'Public · Direct link only')
       : 'Private';
     const edit = document.createElement('button');
     edit.type = 'button';
@@ -7940,61 +7943,6 @@ function renderCollections(collections) {
     card.appendChild(itemList);
     container.appendChild(card);
   });
-}
-
-async function loadCollectionModerationQueue() {
-  const panel = document.getElementById('collectionModerationPanel');
-  const insightsPanel = document.getElementById('moderatorInsightsPanel');
-  const list = document.getElementById('collectionModerationList');
-  const count = document.getElementById('collectionModerationCount');
-  if (!panel || !list || !count) return;
-  try {
-    const response = await authenticatedFetch(`${API_BASE}/collections/moderation/queue`);
-    if (!response.ok) throw new Error('Moderator access unavailable');
-    const queue = await response.json();
-    panel.hidden = false;
-    loadModeratorInsights();
-    count.textContent = `${queue.filter(item => item.moderation_status === 'pending').length} pending`;
-    list.replaceChildren();
-    if (!queue.length) {
-      const empty = document.createElement('p');
-      empty.textContent = 'No public collections are waiting for review.';
-      list.appendChild(empty);
-      return;
-    }
-    queue.forEach((collection) => {
-      const row = document.createElement('article');
-      row.className = 'collection-moderation__item';
-      const copy = document.createElement('div');
-      const title = document.createElement('strong');
-      title.textContent = collection.name;
-      const meta = document.createElement('span');
-      meta.textContent = `${collection.items.length} titles · ${collection.report_count} reports · ${collection.moderation_status}`;
-      copy.append(title, meta);
-      const actions = document.createElement('div');
-      const view = document.createElement('a');
-      view.href = collection.public_url;
-      view.target = '_blank';
-      view.rel = 'noopener noreferrer';
-      view.textContent = 'Review page ↗';
-      actions.appendChild(view);
-      ['approved', 'rejected'].forEach((moderationStatus) => {
-        const button = document.createElement('button');
-        button.type = 'button';
-        button.dataset.action = 'moderate-collection';
-        button.dataset.collectionId = collection.id;
-        button.dataset.collectionStatus = moderationStatus;
-        button.textContent = moderationStatus === 'approved' ? 'Approve' : 'Reject';
-        button.disabled = collection.moderation_status === moderationStatus;
-        actions.appendChild(button);
-      });
-      row.append(copy, actions);
-      list.appendChild(row);
-    });
-  } catch (error) {
-    panel.hidden = true;
-    if (insightsPanel) insightsPanel.hidden = true;
-  }
 }
 
 function moderatorNumber(value) {
@@ -8118,10 +8066,10 @@ function renderModeratorInsights(data) {
   ]);
   const safetyRows = [
     ['Public collections', data.moderation.public],
-    ['Awaiting review', data.moderation.pending],
+    ['Direct-link only', data.moderation.pending],
     ['Discoverable', data.moderation.approved],
-    ['Changed after approval', data.moderation.stale_approvals],
-    ['Rejected', data.moderation.rejected],
+    ['Automatically unlisted', data.moderation.collection_unlistings],
+    ['Emergency blocks', data.moderation.rejected],
     ['Reports', data.moderation.reports],
     ['Public review reports', data.moderation.review_reports],
     ['Review versions unlisted', data.moderation.review_unlistings],
@@ -8173,17 +8121,6 @@ async function loadModeratorInsights() {
   }
 }
 
-async function moderateCollection(collectionId, moderationStatus) {
-  if (!collectionId || !['approved', 'rejected'].includes(moderationStatus)) return;
-  try {
-    const response = await authenticatedFetch(`${API_BASE}/collections/${collectionId}/moderation`, {
-      method: 'PATCH', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ status: moderationStatus }),
-    });
-    if (!response.ok) throw new Error('Unable to moderate collection');
-    await loadCollections();
-  } catch (error) { alert('Could not update that collection review. Please try again.'); }
-}
-
 async function createCollection(event) {
   event.preventDefault();
   const name = document.getElementById('collectionName').value;
@@ -8211,7 +8148,40 @@ function openCollectionStudio(collectionId) {
   const error = document.getElementById('collectionStudioError');
   error.textContent = '';
   error.hidden = true;
+  renderCollectionReadinessChecklist(collection);
   document.getElementById('collectionStudioModal').style.display = 'flex';
+}
+
+function renderCollectionReadinessChecklist(collection) {
+  const list = document.getElementById('collectionReadinessChecklist');
+  if (!list || !collection) return;
+  const description = document.getElementById('collectionStudioDescription')?.value.trim() || '';
+  const title = document.getElementById('collectionStudioName')?.value.trim() || '';
+  const availableItems = collection.items.filter(item => item.available).length;
+  const savedTextIsCurrent = description === (collection.description || '').trim() && title === collection.name;
+  const rows = [
+    [description.length >= 300, `${Math.min(description.length, 300)}/300 introduction characters`],
+    [availableItems >= 3, `${Math.min(availableItems, 3)}/3 available titles`],
+    [
+      savedTextIsCurrent ? Boolean(collection.readiness?.discover_ready) : null,
+      savedTextIsCurrent
+        ? (collection.readiness?.discover_ready ? 'Automated discovery checks passed' : 'Revise the title or introduction to pass the remaining discovery checks')
+        : 'Automated discovery checks run when you save',
+    ],
+  ];
+  list.replaceChildren();
+  rows.forEach(([ready, label]) => {
+    const item = document.createElement('li');
+    item.className = ready === true ? 'is-ready' : ready === false ? 'needs-work' : 'is-pending';
+    item.textContent = `${ready === true ? '✓' : ready === false ? '•' : '…'} ${label}`;
+    list.appendChild(item);
+  });
+}
+
+function updateCollectionReadinessDraft() {
+  const collectionId = Number(document.getElementById('collectionStudioId')?.value);
+  const collection = collectionsCache.find(item => item.id === collectionId);
+  if (collection) renderCollectionReadinessChecklist(collection);
 }
 
 function closeCollectionStudio() {
@@ -10273,6 +10243,8 @@ function setupCustomTabSwitching() {
 
 document.addEventListener('DOMContentLoaded', () => {
   setupReviewQualityCounters();
+  document.getElementById('collectionStudioName')?.addEventListener('input', updateCollectionReadinessDraft);
+  document.getElementById('collectionStudioDescription')?.addEventListener('input', updateCollectionReadinessDraft);
   setupCustomTabSwitching();
   bindCustomTabForm();
   if (hasStoredAuth()) {

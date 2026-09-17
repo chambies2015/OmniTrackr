@@ -178,10 +178,10 @@ async def get_sitemap(db: Session = Depends(get_db)):
             models.User, models.Collection.user_id == models.User.id
         ).filter(
             models.Collection.is_public == True,
-            models.Collection.moderation_status == "approved",
+            models.Collection.moderation_status != "rejected",
             models.User.is_active == True,
             func.length(func.trim(models.Collection.description)) >= 300,
-        ).order_by(models.Collection.approved_at.desc()).limit(500).all()
+        ).order_by(models.Collection.published_at.desc()).limit(500).all()
         collection_media = _media_lookup_for_collections(db, approved_collections)
         eligible_collection_count = 0
         for collection in approved_collections:
@@ -366,7 +366,7 @@ OmniTrackr is a free web application for tracking and organizing movies, TV show
 
 ## Public Content
 Public reviews are available at {base_url}/reviews and individual review pages at {base_url}/reviews/[id]?category=[category]. OmniTrackr also publishes evergreen guidance at {base_url}/faq, {base_url}/guides, {base_url}/media-tracking, {base_url}/compare, {base_url}/use-cases, {base_url}/movie-tracker, {base_url}/tv-show-tracker, {base_url}/anime-tracker, {base_url}/game-tracker, {base_url}/music-tracker, {base_url}/book-tracker, {base_url}/media-statistics, {base_url}/export-import-guide, {base_url}/media-tracker-checklist, {base_url}/tracking-templates, and {base_url}/review-guidelines, a demo library at {base_url}/demo, a sample media library at {base_url}/sample-library, a human-readable site map at {base_url}/site-map, product updates at {base_url}/changelog and {base_url}/roadmap, ad transparency at {base_url}/advertising, and content quality standards at {base_url}/content-quality.
-Moderator-approved member collections are browsable at {base_url}/collections/explore. Pending and edited collections remain available only by direct link and stay outside the search index until reviewed.
+Automatically qualified member collections are browsable at {base_url}/collections/explore. Share-ready collections that miss the stricter discovery checks remain available only by direct link and stay outside the search index. Version-bound reports can temporarily unlist a collection without deleting it.
 
 ## Quality and Advertising Boundaries
 - Public ad-eligible pages are intended to be original, useful, and readable before signup.

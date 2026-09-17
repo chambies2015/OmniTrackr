@@ -280,6 +280,8 @@ class Collection(Base):
     view_count = Column(Integer, nullable=False, default=0)
     helpful_count = Column(Integer, nullable=False, default=0)
     report_count = Column(Integer, nullable=False, default=0)
+    report_content_hash = Column(String, nullable=True)
+    suspended_at = Column(DateTime, nullable=True, index=True)
     created_at = Column(DateTime, nullable=False, default=datetime.utcnow)
 
     owner = relationship("User", back_populates="collections")

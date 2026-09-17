@@ -60,6 +60,7 @@
       { "@type": "Question", "name": "What is OmniTrackr?", "acceptedAnswer": { "@type": "Answer", "text": "OmniTrackr is a personal media tracker for movies, TV shows, anime, video games, music, and books. It helps users save lists, statuses, ratings, reviews, posters, statistics, friends, privacy settings, and exports in one account." } },
       { "@type": "Question", "name": "Can I use OmniTrackr before making an account?", "acceptedAnswer": { "@type": "Answer", "text": "Visitors can read public guides, templates, comparison pages, use cases, the demo library, and public reviews before signing up. Personal tracking requires an account so private data can sync across devices." } },
       { "@type": "Question", "name": "Are my reviews public by default?", "acceptedAnswer": { "@type": "Answer", "text": "No. Reviews stay private unless a user chooses to mark eligible reviews public. Public reviews are intended for polished recommendations that help other visitors." } },
+      { "@type": "Question", "name": "How do public collections become discoverable?", "acceptedAnswer": { "@type": "Answer", "text": "Collections stay private until their owner publishes them. Substantial collections that pass deterministic quality and safety checks enter discovery automatically; version-bound reports can temporarily unlist them without deleting the owner's collection." } },
       { "@type": "Question", "name": "Can I export my media library?", "acceptedAnswer": { "@type": "Answer", "text": "Yes. OmniTrackr supports JSON export and import workflows so users can back up or move their library without relying on a single browser session." } },
       { "@type": "Question", "name": "What should I add first?", "acceptedAnswer": { "@type": "Answer", "text": "Start with a small set of favorites, unfinished items, and next-up choices. That gives enough data to test categories, statuses, ratings, and reviews before importing a full history." } },
       { "@type": "Question", "name": "Where can ads appear?", "acceptedAnswer": { "@type": "Answer", "text": "OmniTrackr intends to keep ads on public content pages such as guides, templates, comparisons, public reviews, and informational resources. Ads should not be placed inside private account forms, editing controls, or account settings." } }
@@ -141,6 +142,14 @@
           <div class="faq-answer">
             <p>You can add friends and control which parts of your library are visible. Category visibility and public review choices are separate concerns, so sharing one area does not need to expose everything.</p>
             <p>For sensitive or incomplete notes, keep them private. For polished recommendations, public reviews can help other users discover media with more context than a score alone.</p>
+          </div>
+        </article>
+
+        <article class="faq-item">
+          <h2>How do public collections become discoverable?</h2>
+          <div class="faq-answer">
+            <p>Collections stay private until you deliberately publish them. Publishing requires at least 300 characters of original context and three available titles. Collections that also pass the automatic title, writing-depth, varied-language, and public-safety checks enter the existing collection gallery and sitemap without waiting for a human queue.</p>
+            <p>A share-ready collection that misses the stricter discovery checks can remain available by direct link with a noindex directive. Three independent fixed-reason reports temporarily unlist only the current version; editing reruns the checks and can restore a qualifying revision. Reports never delete your saved collection.</p>
           </div>
         </article>
 

@@ -184,6 +184,8 @@ def run_migrations():
                 "view_count": "INTEGER DEFAULT 0",
                 "helpful_count": "INTEGER DEFAULT 0",
                 "report_count": "INTEGER DEFAULT 0",
+                "report_content_hash": "VARCHAR",
+                "suspended_at": "TIMESTAMP",
             }
             for column_name, column_type in collection_additions.items():
                 if column_name not in collection_columns:
@@ -200,6 +202,7 @@ def run_migrations():
             with engine.connect() as conn:
                 conn.execute(text("CREATE INDEX IF NOT EXISTS ix_collections_is_public ON collections(is_public)"))
                 conn.execute(text("CREATE INDEX IF NOT EXISTS ix_collections_moderation_status ON collections(moderation_status)"))
+                conn.execute(text("CREATE INDEX IF NOT EXISTS ix_collections_suspended_at ON collections(suspended_at)"))
                 conn.commit()
 
         if inspector.has_table("collection_items"):

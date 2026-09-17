@@ -61,7 +61,6 @@
     try {
       const response = await post(`/collections/public/${collectionId}/report`, {
         reason: document.getElementById('collectionReportReason').value,
-        details: document.getElementById('collectionReportDetails').value,
       });
       if (!response.ok) throw new Error('report');
       reportForm.hidden = true;

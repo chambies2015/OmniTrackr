@@ -502,6 +502,12 @@ body.dark-mode .moderator-user-status.is-healthy { color: #5eead4; }
 .collection-card__status { border: 1px solid var(--border); border-radius: 999px; color: var(--fg); font-size: .72rem; font-weight: 700; padding: 4px 8px; }
 .collection-card__status.is-public { border-color: rgba(20,184,166,.55); color: #0f766e; }
 body.dark-mode .collection-card__status.is-public { color: #5eead4; }
+.collection-readiness-checklist { display: grid; gap: 6px; list-style: none; margin: 10px 0 14px; padding: 0; }
+.collection-readiness-checklist li { border: 1px solid var(--border); border-radius: 8px; color: var(--fg); font-size: .76rem; padding: 8px 10px; }
+.collection-readiness-checklist .is-ready { border-color: rgba(20,184,166,.5); color: #0f766e; }
+body.dark-mode .collection-readiness-checklist .is-ready { color: #5eead4; }
+.collection-readiness-checklist .needs-work { border-color: rgba(245,158,11,.45); }
+.collection-readiness-checklist .is-pending { opacity: .68; }
 .collection-card__edit, .collection-card__public-link { background: transparent; border: 0; color: var(--primary); cursor: pointer; font: inherit; font-size: .78rem; font-weight: 700; padding: 4px; text-decoration: none; }
 .collection-card__edit:hover, .collection-card__public-link:hover { text-decoration: underline; }
 .collection-card__delete { background: transparent; border: 0; color: #dc2626; cursor: pointer; font-size: .78rem; padding: 4px; }

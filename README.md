@@ -18,7 +18,7 @@ Live site: [https://www.omnitrackr.xyz/](https://www.omnitrackr.xyz/)
 - Customize visible tabs so users can hide categories they do not use.
 - Add friends, manage friend requests, view privacy-aware friend profiles, and receive notifications.
 - Create custom tabs for additional collection types with custom fields and optional poster uploads.
-- Build ordered cross-media collections with curator notes and artwork, publish them by choice, and feature moderator-approved collections in the public gallery.
+- Build ordered cross-media collections with curator notes and artwork, publish them by choice, and automatically qualify substantial, safe collections for the public gallery.
 - Export and import JSON for built-in categories and custom tabs.
 - View statistics for completion, ratings, years, directors, genres, TV/anime season data, music, books, and high-level library insights.
 - Use public content pages for onboarding and discovery: `/about`, `/guides`, `/compare`, `/use-cases`, `/demo`, `/media-tracking`, `/tv-show-tracker`, `/game-tracker`, `/changelog`, `/roadmap`, `/privacy`, `/terms`, and `/contact`.
@@ -82,7 +82,7 @@ The public site is more than a login screen. These pages help visitors, search e
 - `/media-tracking` - hub linking the major guide pages.
 - `/tv-show-tracker` and `/game-tracker` - category-specific tracker guides.
 - `/reviews` - public user reviews when users choose to share individual reviews.
-- `/collections/explore` - reviewed, substantial member-curated collections spanning all six media types.
+- `/collections/explore` - automatically qualified, substantial member-curated collections spanning all six media types.
 - `/changelog` - product, security, and content update history.
 - `/roadmap` - planned improvements.
 - `/privacy`, `/terms`, and `/contact` - policy and support pages.
@@ -102,6 +102,8 @@ Users can:
 - Use a Data & Privacy Dashboard inside account settings.
 
 Public reviews are opt-in per item. A review is not public just because it exists in a user's private library. Community-ready reviews can appear in the browse feed; the stricter search-ready tier alone receives a detail URL, structured review data, sitemap inclusion, prominent ordering, or ad eligibility. Signed-browser reports are rate limited, deduplicated, and automatically unlist an exact review version after three independent reports. The review is never deleted, and a substantive author edit starts a clean version.
+
+Collections are also private by default. Publishing requires at least 300 characters of context and three available titles. A shared collection enters the gallery, search metadata, and sitemap only when the same deterministic readiness result also finds a meaningful title, sufficient words and complete thoughts, varied language, and no obvious links, contact details, promotional bait, or placeholder text. Three independent signed-browser reports temporarily unlist one exact collection version; editing creates a clean version and reruns the checks without a routine moderator queue.
 
 ## Friends And Notifications
 
@@ -243,7 +245,8 @@ Public content and ads:
 | `PUBLIC_REVIEW_MIN_CHARS` | Minimum review length for public review feeds. Defaults to `80`. |
 | `PUBLIC_REVIEW_DETAIL_MIN_CHARS` | Character floor within the broader search-ready quality checks. Defaults to `240`. |
 | `PUBLIC_REVIEW_REPORT_THRESHOLD` | Independent signed-browser reports required to temporarily unlist one exact review version. Defaults to `3`. |
-| `COLLECTION_MODERATOR_USERNAMES` | Comma-separated usernames allowed to review public collections for the gallery and search index. Keep this list limited to trusted accounts. |
+| `PUBLIC_COLLECTION_REPORT_THRESHOLD` | Independent signed-browser reports required to temporarily unlist one exact collection version. Defaults to `3`. |
+| `COLLECTION_MODERATOR_USERNAMES` | Optional trusted usernames allowed to view aggregate site health and apply an exceptional emergency collection block. Routine discovery is automatic. |
 
 iTunes Search API and Open Library API do not require keys.
 

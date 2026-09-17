@@ -114,7 +114,6 @@ def test_adsense_loader_has_client_side_public_path_allowlist():
     assert "!isAdEligiblePath()" in loader
     assert r"^\/reviews\/\d+$" in loader
     for path in (
-        "/reviews",
         "/media-tracking",
         "/sample-library",
         "/review-guidelines",
@@ -134,6 +133,7 @@ def test_adsense_loader_has_client_side_public_path_allowlist():
         "/about",
         "/faq",
         "/media-tracker-checklist",
+        "/reviews",
     ):
         assert f"'{path}'" not in loader
 

@@ -1082,7 +1082,7 @@ class CollectionModerationUpdate(BaseModel):
 
 class CollectionReportCreate(BaseModel):
     reason: str = Field(..., pattern="^(spam|harassment|copyright|unsafe|other)$")
-    details: Optional[str] = Field(None, max_length=500)
+    model_config = ConfigDict(extra="forbid")
 
 
 class PublicReviewReportCreate(BaseModel):
@@ -1101,6 +1101,15 @@ class CollectionItem(BaseModel):
     artwork_url: Optional[str] = None
 
 
+class CollectionReadiness(BaseModel):
+    share_ready: bool = False
+    discover_ready: bool = False
+    character_count: int = 0
+    word_count: int = 0
+    item_count: int = 0
+    checks: dict[str, bool] = Field(default_factory=dict)
+
+
 class Collection(BaseModel):
     id: int
     name: str
@@ -1112,5 +1121,6 @@ class Collection(BaseModel):
     view_count: int = 0
     helpful_count: int = 0
     report_count: int = 0
+    readiness: CollectionReadiness = Field(default_factory=CollectionReadiness)
     created_at: datetime
     items: List[CollectionItem] = Field(default=[])

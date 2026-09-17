@@ -358,7 +358,7 @@ for route in recommendations.router.routes:
 app.include_router(recommendations.router)
 rate_limited_collection_view = limiter.limit("60/minute")(collections.public_collection)
 rate_limited_collection_helpful = limiter.limit("20/hour")(collections.mark_collection_helpful)
-rate_limited_collection_report = limiter.limit("5/hour")(collections.report_collection)
+rate_limited_collection_report = limiter.limit("2/hour")(collections.report_collection)
 for route in collections.router.routes:
     if not hasattr(route, "path") or not hasattr(route, "methods"):
         continue

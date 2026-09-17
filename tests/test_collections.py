@@ -1,6 +1,7 @@
 """Cross-media Collection API coverage, including anime."""
 
 from app import crud, models
+from app.collection_quality import evaluate_public_collection
 from app.routers import collections as collections_router
 from app.routers.export_import import _export_collections, _import_collections
 from sqlalchemy import event
@@ -38,6 +39,22 @@ def _publish_three_item_collection(authenticated_client, test_movie_data, test_a
 
 
 class TestCollections:
+    def test_collection_quality_distinguishes_sharing_from_discovery(self):
+        share_only = evaluate_public_collection(
+            "A thoughtful shelf",
+            "same " * 75,
+            3,
+        )
+        discoverable = evaluate_public_collection(
+            "Small things that stayed with me",
+            PUBLIC_INTRO,
+            3,
+        )
+
+        assert share_only.share_ready is True
+        assert share_only.discover_ready is False
+        assert discoverable.discover_ready is True
+
     def test_collection_can_mix_movie_and_anime(self, authenticated_client, test_movie_data, test_anime_data):
         movie = authenticated_client.post("/movies/", json=test_movie_data).json()
         anime = authenticated_client.post("/anime/", json=test_anime_data).json()
@@ -181,56 +198,53 @@ class TestCollections:
         assert movie["title"] in public_page.text
         assert "Private draft." not in public_page.text
         assert test_movie_data["review"] not in public_page.text
-        assert public_page.headers["x-robots-tag"] == "noindex, follow"
-        assert '<meta name="robots" content="noindex, follow">' in public_page.text
-        assert public_url not in authenticated_client.get("/sitemap.xml").text
+        assert published.json()["moderation_status"] == "approved"
+        assert published.json()["readiness"]["discover_ready"] is True
+        assert public_page.headers["x-robots-tag"] == "index, follow"
+        assert '<meta name="robots" content="index, follow">' in public_page.text
+        assert public_url in authenticated_client.get("/sitemap.xml").text
 
         unpublished = authenticated_client.patch(f"/collections/{collection_id}", json={"is_public": False})
         assert unpublished.status_code == 200
         assert unpublished.json()["is_public"] is False
         assert authenticated_client.get(public_url).status_code == 404
 
-    def test_approved_collection_enters_gallery_and_edit_returns_it_to_review(
-        self, authenticated_client, test_movie_data, test_anime_data, test_book_data, monkeypatch
+    def test_collection_automatically_enters_and_leaves_discovery_as_quality_changes(
+        self, authenticated_client, test_movie_data, test_anime_data, test_book_data
     ):
-        monkeypatch.setenv("COLLECTION_MODERATOR_USERNAMES", "testuser")
         collection, _, items = _publish_three_item_collection(
             authenticated_client, test_movie_data, test_anime_data, test_book_data
         )
 
-        assert collection["moderation_status"] == "pending"
-        assert collection["name"] not in authenticated_client.get("/collections/explore").text
-        approved = authenticated_client.patch(
-            f"/collections/{collection['id']}/moderation", json={"status": "approved"}
-        )
-        assert approved.status_code == 200
-        assert approved.json()["moderation_status"] == "approved"
+        assert collection["moderation_status"] == "approved"
         assert collection["name"] in authenticated_client.get("/collections/explore").text
         detail = authenticated_client.get(collection["public_url"])
         assert detail.headers["x-robots-tag"] == "index, follow"
         assert collection["public_url"] in authenticated_client.get("/sitemap.xml").text
 
         updated = authenticated_client.patch(
-            f"/collections/{collection['id']}/items/{items[0]['id']}",
-            json={"curator_note": "Notice how the story makes restraint feel active rather than empty."},
+            f"/collections/{collection['id']}",
+            json={"description": "Buy followers now. " * 20},
         )
         assert updated.status_code == 200
-        assert updated.json()["curator_note"].startswith("Notice how")
-        collection_after_edit = authenticated_client.get("/collections/").json()[0]
-        assert collection_after_edit["moderation_status"] == "pending"
+        assert updated.json()["moderation_status"] == "pending"
+        assert updated.json()["readiness"]["discover_ready"] is False
         assert collection["name"] not in authenticated_client.get("/collections/explore").text
         assert collection["public_url"] not in authenticated_client.get("/sitemap.xml").text
+        assert authenticated_client.get(collection["public_url"]).headers["x-robots-tag"] == "noindex, follow"
 
-    def test_editing_referenced_media_invalidates_approval(
-        self, authenticated_client, test_movie_data, test_anime_data, test_book_data, monkeypatch
+        restored = authenticated_client.patch(
+            f"/collections/{collection['id']}", json={"description": PUBLIC_INTRO}
+        )
+        assert restored.json()["moderation_status"] == "approved"
+        assert collection["name"] in authenticated_client.get("/collections/explore").text
+
+    def test_editing_referenced_media_rechecks_quality_without_a_manual_queue(
+        self, authenticated_client, test_movie_data, test_anime_data, test_book_data
     ):
-        monkeypatch.setenv("COLLECTION_MODERATOR_USERNAMES", "testuser")
         collection, records, _ = _publish_three_item_collection(
             authenticated_client, test_movie_data, test_anime_data, test_book_data
         )
-        assert authenticated_client.patch(
-            f"/collections/{collection['id']}/moderation", json={"status": "approved"}
-        ).status_code == 200
 
         movie = records[0][1]
         assert authenticated_client.put(
@@ -238,10 +252,36 @@ class TestCollections:
         ).status_code == 200
 
         detail = authenticated_client.get(collection["public_url"])
-        assert detail.headers["x-robots-tag"] == "noindex, follow"
-        assert collection["name"] not in authenticated_client.get("/collections/explore").text
-        assert collection["public_url"] not in authenticated_client.get("/sitemap.xml").text
-        assert authenticated_client.get("/collections/").json()[0]["moderation_status"] == "pending"
+        assert detail.headers["x-robots-tag"] == "index, follow"
+        assert collection["name"] in authenticated_client.get("/collections/explore").text
+        assert collection["public_url"] in authenticated_client.get("/sitemap.xml").text
+        assert authenticated_client.get("/collections/").json()[0]["moderation_status"] == "approved"
+
+    def test_emergency_block_survives_republish_but_a_meaningful_edit_rechecks_it(
+        self, authenticated_client, test_movie_data, test_anime_data, test_book_data, monkeypatch
+    ):
+        monkeypatch.setenv("COLLECTION_MODERATOR_USERNAMES", "testuser")
+        collection, _, _ = _publish_three_item_collection(
+            authenticated_client, test_movie_data, test_anime_data, test_book_data
+        )
+        blocked = authenticated_client.patch(
+            f"/collections/{collection['id']}/moderation", json={"status": "rejected"}
+        )
+        assert blocked.json()["moderation_status"] == "rejected"
+        assert authenticated_client.get(collection["public_url"]).status_code == 404
+
+        authenticated_client.patch(f"/collections/{collection['id']}", json={"is_public": False})
+        republished = authenticated_client.patch(
+            f"/collections/{collection['id']}", json={"is_public": True}
+        )
+        assert republished.json()["moderation_status"] == "rejected"
+        assert authenticated_client.get(collection["public_url"]).status_code == 404
+
+        revised = authenticated_client.patch(
+            f"/collections/{collection['id']}", json={"name": f"{collection['name']} revised"}
+        )
+        assert revised.json()["moderation_status"] == "approved"
+        assert authenticated_client.get(collection["public_url"]).status_code == 200
 
     def test_inactive_owner_collection_is_not_sitemapped(
         self, authenticated_client, db_session, test_movie_data, test_anime_data, test_book_data, monkeypatch
@@ -272,10 +312,75 @@ class TestCollections:
         assert second.json()["count"] == 1
         assert db_session.query(models.CollectionReaction).count() == 1
 
-        report = {"reason": "spam", "details": "Repeated promotional links."}
+        report = {"reason": "spam"}
         assert authenticated_client.post(f"{collection['public_url']}/report", json=report).status_code == 201
         assert authenticated_client.post(f"{collection['public_url']}/report", json=report).status_code == 201
         assert db_session.query(models.CollectionReport).count() == 1
+
+    def test_reports_unlist_one_collection_version_and_an_edit_restores_it(
+        self, authenticated_client, db_session, test_movie_data, test_anime_data, test_book_data
+    ):
+        collection, _, _ = _publish_three_item_collection(
+            authenticated_client, test_movie_data, test_anime_data, test_book_data
+        )
+        endpoint = f"{collection['public_url']}/report"
+
+        first = authenticated_client.post(endpoint, json={"reason": "spam"})
+        duplicate = authenticated_client.post(endpoint, json={"reason": "copyright"})
+        assert first.status_code == 201
+        assert duplicate.json()["duplicate"] is True
+
+        authenticated_client.cookies.delete(collections_router.VISITOR_COOKIE)
+        second = authenticated_client.post(endpoint, json={"reason": "unsafe"})
+        authenticated_client.cookies.delete(collections_router.VISITOR_COOKIE)
+        third = authenticated_client.post(endpoint, json={"reason": "harassment"})
+
+        assert second.json()["visibility"] == "visible"
+        assert third.json()["visibility"] == "unlisted"
+        assert authenticated_client.get(collection["public_url"]).status_code == 404
+        assert collection["name"] not in authenticated_client.get("/collections/explore").text
+        assert collection["public_url"] not in authenticated_client.get("/sitemap.xml").text
+        assert authenticated_client.get("/collections/").json()[0]["moderation_status"] == "suspended"
+        assert db_session.query(models.Notification).filter_by(
+            type="collection_unlisted"
+        ).count() == 1
+
+        authenticated_client.patch(f"/collections/{collection['id']}", json={"is_public": False})
+        republished = authenticated_client.patch(
+            f"/collections/{collection['id']}", json={"is_public": True}
+        )
+        assert republished.json()["moderation_status"] == "suspended"
+        assert authenticated_client.get(collection["public_url"]).status_code == 404
+
+        revised_name = f"{collection['name']} revisited"
+        restored = authenticated_client.patch(
+            f"/collections/{collection['id']}", json={"name": revised_name}
+        )
+        assert restored.status_code == 200
+        assert restored.json()["moderation_status"] == "approved"
+        assert authenticated_client.get(collection["public_url"]).status_code == 200
+        assert revised_name in authenticated_client.get("/collections/explore").text
+
+        authenticated_client.cookies.delete(collections_router.VISITOR_COOKIE)
+        new_version = authenticated_client.post(endpoint, json={"reason": "other"})
+        db_session.expire_all()
+        stored = db_session.query(models.Collection).filter_by(id=collection["id"]).one()
+        assert new_version.json()["visibility"] == "visible"
+        assert stored.report_count == 1
+        assert stored.suspended_at is None
+        assert db_session.query(models.CollectionReport).count() == 1
+
+    def test_collection_reports_reject_free_text(
+        self, authenticated_client, test_movie_data, test_anime_data, test_book_data
+    ):
+        collection, _, _ = _publish_three_item_collection(
+            authenticated_client, test_movie_data, test_anime_data, test_book_data
+        )
+        response = authenticated_client.post(
+            f"{collection['public_url']}/report",
+            json={"reason": "other", "details": "Do not retain this free text."},
+        )
+        assert response.status_code == 422
 
     def test_public_detail_uses_signed_cookie_and_private_cache_policy(
         self, authenticated_client, db_session, test_movie_data, test_anime_data, test_book_data,

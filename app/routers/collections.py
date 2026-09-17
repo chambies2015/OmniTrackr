@@ -1,4 +1,4 @@
-"""Private-by-default cross-media collections and moderated public discovery."""
+"""Private-by-default cross-media collections and automated public discovery."""
 from datetime import datetime, timedelta
 import hashlib
 import hmac
@@ -15,6 +15,7 @@ from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session, selectinload
 
 from .. import models, schemas
+from ..collection_quality import evaluate_public_collection
 from ..csp import strict_html_response
 from ..dependencies import get_current_user, get_db
 from ..visitor_identity import (
@@ -39,6 +40,7 @@ PUBLIC_COLLECTION_MIN_DESCRIPTION_CHARS = 300
 PUBLIC_COLLECTION_MIN_ITEMS = 3
 PUBLIC_COLLECTION_MAX_ITEMS = 50
 PUBLIC_COLLECTION_GALLERY_MIN = 3
+PUBLIC_COLLECTION_REPORT_THRESHOLD = max(2, int(os.getenv("PUBLIC_COLLECTION_REPORT_THRESHOLD", "3")))
 ARTWORK_FIELDS = {
     "movies": "poster_url",
     "tv-shows": "poster_url",
@@ -187,14 +189,22 @@ def _moderator_site_insights(db: Session) -> dict:
         "custom_items": _count(db, models.CustomTabItem),
     }
 
-    approved_collections = db.query(models.Collection).options(
+    public_collections = db.query(models.Collection).options(
         selectinload(models.Collection.items)
-    ).filter(models.Collection.moderation_status == "approved").all()
-    approved_media = _media_lookup_for_collections(db, approved_collections)
-    stale_approvals = sum(
-        1 for collection in approved_collections
-        if not _approval_is_current(collection, db, approved_media)
-    )
+    ).filter(models.Collection.is_public == True).all()
+    public_media = _media_lookup_for_collections(db, public_collections)
+    rejected_collections = [
+        collection for collection in public_collections if collection.moderation_status == "rejected"
+    ]
+    suspended_collections = [
+        collection for collection in public_collections
+        if collection.moderation_status != "rejected"
+        and _current_report_state_hides_collection(collection, db, public_media)
+    ]
+    discoverable_collections = [
+        collection for collection in public_collections
+        if _collection_is_discoverable(collection, db, public_media)
+    ]
     collection_totals = db.query(
         func.coalesce(func.sum(models.Collection.view_count), 0),
         func.coalesce(func.sum(models.Collection.helpful_count), 0),
@@ -209,15 +219,18 @@ def _moderator_site_insights(db: Session) -> dict:
     ]
     moderation = {
         "collections_total": _count(db, models.Collection),
-        "public": _count(db, models.Collection, models.Collection.is_public == True),
-        "pending": _count(
-            db, models.Collection,
-            models.Collection.is_public == True,
-            models.Collection.moderation_status == "pending",
+        "public": len(public_collections),
+        "pending": max(
+            len(public_collections)
+            - len(discoverable_collections)
+            - len(suspended_collections)
+            - len(rejected_collections),
+            0,
         ),
-        "approved": len(approved_collections) - stale_approvals,
-        "stale_approvals": stale_approvals,
-        "rejected": _count(db, models.Collection, models.Collection.moderation_status == "rejected"),
+        "approved": len(discoverable_collections),
+        "stale_approvals": 0,
+        "rejected": len(rejected_collections),
+        "collection_unlistings": len(suspended_collections),
         "views": int(collection_totals[0] or 0),
         "helpful": int(collection_totals[1] or 0),
         "reports": int(collection_totals[2] or 0),
@@ -318,6 +331,9 @@ def _return_to_review(collection: models.Collection) -> None:
         collection.moderation_status = "pending"
         collection.approved_at = None
         collection.approved_content_hash = None
+    collection.report_count = 0
+    collection.report_content_hash = None
+    collection.suspended_at = None
 
 
 def _get_collection(db: Session, user_id: int, collection_id: int) -> models.Collection:
@@ -386,9 +402,21 @@ def _serialize_collection(
     media_lookup: dict | None = None,
 ) -> dict:
     items = sorted(collection.items, key=lambda item: (item.position, item.id))
-    moderation_status = collection.moderation_status
-    if moderation_status == "approved" and not _approval_is_current(collection, db, media_lookup):
+    quality = _collection_quality(collection, db, media_lookup)
+    suspended = _current_report_state_hides_collection(collection, db, media_lookup)
+    if collection.moderation_status == "rejected":
+        moderation_status = "rejected"
+    elif suspended:
+        moderation_status = "suspended"
+    elif collection.is_public and quality.discover_ready:
+        moderation_status = "approved"
+    else:
         moderation_status = "pending"
+    current_report_count = 0
+    if collection.report_content_hash:
+        current_hash = _approval_content_hash(collection, db, media_lookup)
+        if hmac.compare_digest(collection.report_content_hash, current_hash):
+            current_report_count = collection.report_count or 0
     return {
         "id": collection.id,
         "name": collection.name,
@@ -399,7 +427,15 @@ def _serialize_collection(
         "public_url": f"/collections/public/{collection.id}" if collection.is_public else None,
         "view_count": collection.view_count or 0,
         "helpful_count": collection.helpful_count or 0,
-        "report_count": collection.report_count or 0,
+        "report_count": current_report_count,
+        "readiness": {
+            "share_ready": quality.share_ready,
+            "discover_ready": quality.discover_ready and not suspended and collection.moderation_status != "rejected",
+            "character_count": quality.character_count,
+            "word_count": quality.word_count,
+            "item_count": quality.item_count,
+            "checks": quality.checks,
+        },
         "created_at": collection.created_at,
         "items": [_serialize_item(item, db, user_id, media_lookup) for item in items],
     }
@@ -415,6 +451,75 @@ def _available_items(
         serialized for item in sorted(collection.items, key=lambda entry: (entry.position, entry.id))
         if (serialized := _serialize_item(item, db, user_id, media_lookup))["available"]
     ]
+
+
+def _collection_quality(
+    collection: models.Collection,
+    db: Session,
+    media_lookup: dict | None = None,
+    description: str | None = None,
+):
+    items = _available_items(collection, db, collection.user_id, media_lookup)
+    return evaluate_public_collection(
+        collection.name,
+        collection.description if description is None else description,
+        len(items),
+        (item["curator_note"] for item in items),
+        PUBLIC_COLLECTION_MIN_DESCRIPTION_CHARS,
+        PUBLIC_COLLECTION_MIN_ITEMS,
+        PUBLIC_COLLECTION_MAX_ITEMS,
+    )
+
+
+def _current_report_state_hides_collection(
+    collection: models.Collection,
+    db: Session,
+    media_lookup: dict | None = None,
+) -> bool:
+    if not collection.suspended_at or not collection.report_content_hash:
+        return False
+    current_hash = _approval_content_hash(collection, db, media_lookup)
+    return hmac.compare_digest(collection.report_content_hash, current_hash)
+
+
+def _collection_is_discoverable(
+    collection: models.Collection,
+    db: Session,
+    media_lookup: dict | None = None,
+) -> bool:
+    return bool(
+        collection.is_public
+        and collection.moderation_status != "rejected"
+        and _collection_quality(collection, db, media_lookup).discover_ready
+        and not _current_report_state_hides_collection(collection, db, media_lookup)
+    )
+
+
+def _apply_automated_readiness(
+    collection: models.Collection,
+    db: Session,
+    media_lookup: dict | None = None,
+) -> None:
+    """Persist the automatic discovery status after an owner-authored change."""
+    if not collection.is_public:
+        if collection.moderation_status != "rejected":
+            collection.moderation_status = "pending"
+        collection.approved_at = None
+        collection.approved_content_hash = None
+        return
+    if collection.moderation_status == "rejected":
+        return
+    quality = _collection_quality(collection, db, media_lookup)
+    if quality.discover_ready:
+        content_hash = _approval_content_hash(collection, db, media_lookup)
+        if collection.moderation_status != "approved" or collection.approved_content_hash != content_hash:
+            collection.approved_at = datetime.utcnow()
+        collection.moderation_status = "approved"
+        collection.approved_content_hash = content_hash
+    else:
+        collection.moderation_status = "pending"
+        collection.approved_at = None
+        collection.approved_content_hash = None
 
 
 def _media_identity_key(media, category: str) -> tuple:
@@ -464,19 +569,18 @@ def _approval_is_current(
     db: Session,
     media_lookup: dict | None = None,
 ) -> bool:
-    if collection.moderation_status != "approved" or not collection.approved_content_hash:
-        return False
-    current_hash = _approval_content_hash(collection, db, media_lookup)
-    return hmac.compare_digest(collection.approved_content_hash, current_hash)
+    """Backward-compatible name for the automatic discovery decision."""
+    return _collection_is_discoverable(collection, db, media_lookup)
 
 
 def _require_public_ready(collection: models.Collection, description: str | None, db: Session) -> None:
-    if len((description or "").strip()) < PUBLIC_COLLECTION_MIN_DESCRIPTION_CHARS:
+    quality = _collection_quality(collection, db, description=description)
+    if not quality.checks["description_length"]:
         raise HTTPException(
             status_code=422,
             detail=f"Add at least {PUBLIC_COLLECTION_MIN_DESCRIPTION_CHARS} characters of original context before publishing.",
         )
-    if len(_available_items(collection, db, collection.user_id)) < PUBLIC_COLLECTION_MIN_ITEMS:
+    if not quality.checks["minimum_items"]:
         raise HTTPException(
             status_code=422,
             detail=f"Add at least {PUBLIC_COLLECTION_MIN_ITEMS} available titles before publishing.",
@@ -589,9 +693,12 @@ async def update_collection(
             collection.published_at = datetime.utcnow()
         elif not collection.is_public:
             collection.published_at = None
-            collection.moderation_status = "pending"
+            if collection.moderation_status != "rejected":
+                collection.moderation_status = "pending"
             collection.approved_at = None
             collection.approved_content_hash = None
+    db.flush()
+    _apply_automated_readiness(collection, db)
     db.commit()
     db.refresh(collection)
     return _serialize_collection(collection, db, current_user.id)
@@ -605,8 +712,7 @@ async def collection_moderation_queue(
     _require_moderator(current_user)
     collections = db.query(models.Collection).options(selectinload(models.Collection.items)).filter(
         models.Collection.is_public == True,
-        models.Collection.moderation_status.in_(("pending", "approved")),
-    ).order_by(models.Collection.report_count.desc(), models.Collection.published_at.asc()).limit(100).all()
+    ).order_by(models.Collection.suspended_at.desc(), models.Collection.report_count.desc()).limit(100).all()
     media_lookup = _media_lookup_for_collections(db, collections)
     return [_serialize_collection(collection, db, collection.user_id, media_lookup) for collection in collections]
 
@@ -632,16 +738,19 @@ async def moderate_collection(
     collection = db.query(models.Collection).filter(models.Collection.id == collection_id).first()
     if not collection:
         raise HTTPException(status_code=404, detail="Collection not found")
-    if payload.status == "approved":
+    if payload.status != "rejected":
         if not collection.is_public:
             raise HTTPException(status_code=422, detail="Only a published collection can be approved")
         _require_public_ready(collection, collection.description, db)
-        collection.approved_at = datetime.utcnow()
-        collection.approved_content_hash = _approval_content_hash(collection, db)
+        collection.moderation_status = "pending"
+        collection.suspended_at = None
+        collection.report_count = 0
+        collection.report_content_hash = None
+        _apply_automated_readiness(collection, db)
     else:
         collection.approved_at = None
         collection.approved_content_hash = None
-    collection.moderation_status = payload.status
+        collection.moderation_status = "rejected"
     db.commit()
     db.refresh(collection)
     return _serialize_collection(collection, db, collection.user_id)
@@ -732,6 +841,8 @@ def _public_collection_or_404(db: Session, collection_id: int) -> models.Collect
     if not collection:
         raise HTTPException(status_code=404, detail="Shared collection not found")
     media_lookup = _media_lookup_for_collections(db, [collection])
+    if _current_report_state_hides_collection(collection, db, media_lookup):
+        raise HTTPException(status_code=404, detail="Shared collection not found")
     items = _available_items(collection, db, collection.user_id, media_lookup)
     if (
         len((collection.description or "").strip()) < PUBLIC_COLLECTION_MIN_DESCRIPTION_CHARS
@@ -748,12 +859,12 @@ async def explore_collections(
     category: str = "",
     db: Session = Depends(get_db),
 ):
-    """Render the quality-gated, moderator-approved public collection directory."""
+    """Render the automatically quality-gated public collection directory."""
     query = db.query(models.Collection).options(selectinload(models.Collection.items)).join(
         models.User, models.Collection.user_id == models.User.id
     ).filter(
         models.Collection.is_public == True,
-        models.Collection.moderation_status == "approved",
+        models.Collection.moderation_status != "rejected",
         models.User.is_active == True,
     )
     normalized_query = q.strip()[:80]
@@ -771,7 +882,7 @@ async def explore_collections(
     media_lookup = _media_lookup_for_collections(db, collections)
     cards = []
     for collection in collections:
-        if not _approval_is_current(collection, db, media_lookup):
+        if not _collection_is_discoverable(collection, db, media_lookup):
             continue
         items = _available_items(collection, db, collection.user_id, media_lookup)
         if len(items) < PUBLIC_COLLECTION_MIN_ITEMS:
@@ -801,7 +912,7 @@ async def explore_collections(
     else:
         gallery_content = (
             '<div class="collection-gallery__empty"><h2>The gallery is opening soon</h2>'
-            '<p>The first reviewed member collections will appear here. '
+            '<p>The first qualifying member collections will appear here automatically. '
             '<a href="/#landing-auth">Create your library</a> and start shaping one.</p></div>'
         )
     values = {
@@ -943,28 +1054,63 @@ async def report_collection(
     db: Session = Depends(get_db),
 ):
     collection = _public_collection_or_404(db, collection_id)
+    current_hash = _approval_content_hash(collection, db)
     visitor_hash, visitor_token, _ = _visitor_identity(request)
-    existing = db.query(models.CollectionReport.id).filter(
-        models.CollectionReport.collection_id == collection.id,
-        models.CollectionReport.visitor_hash == visitor_hash,
-    ).first()
-    if not existing:
-        db.add(models.CollectionReport(
-            collection_id=collection.id,
-            visitor_hash=visitor_hash,
-            reason=payload.reason,
-            details=payload.details.strip() if payload.details else None,
-        ))
-        try:
+    duplicate = False
+    newly_unlisted = False
+    try:
+        if collection.report_content_hash != current_hash:
+            db.query(models.CollectionReport).filter(
+                models.CollectionReport.collection_id == collection.id,
+            ).delete(synchronize_session=False)
+            collection.report_content_hash = current_hash
+            collection.report_count = 0
+            collection.suspended_at = None
+        existing = db.query(models.CollectionReport.id).filter(
+            models.CollectionReport.collection_id == collection.id,
+            models.CollectionReport.visitor_hash == visitor_hash,
+        ).first()
+        duplicate = bool(existing)
+        if not duplicate:
+            db.add(models.CollectionReport(
+                collection_id=collection.id,
+                visitor_hash=visitor_hash,
+                reason=payload.reason,
+            ))
             db.flush()
-            db.query(models.Collection).filter(models.Collection.id == collection.id).update(
+            db.query(models.Collection).filter(
+                models.Collection.id == collection.id,
+                models.Collection.report_content_hash == current_hash,
+            ).update(
                 {models.Collection.report_count: models.Collection.report_count + 1},
                 synchronize_session=False,
             )
-            db.commit()
-        except IntegrityError:
-            db.rollback()
-    response = JSONResponse({"reported": True}, status_code=201)
+            db.flush()
+            db.refresh(collection)
+            if collection.report_count >= PUBLIC_COLLECTION_REPORT_THRESHOLD and not collection.suspended_at:
+                collection.suspended_at = datetime.utcnow()
+                newly_unlisted = True
+                db.add(models.Notification(
+                    user_id=collection.user_id,
+                    type="collection_unlisted",
+                    message=(
+                        f'Your public collection "{collection.name}" was automatically unlisted after '
+                        "reports from multiple independent visitors. Edit it to publish a revised version."
+                    ),
+                ))
+        db.commit()
+    except IntegrityError:
+        db.rollback()
+        duplicate = True
+        current = db.query(models.Collection).filter(models.Collection.id == collection.id).first()
+        newly_unlisted = bool(
+            current and current.report_content_hash == current_hash and current.suspended_at
+        )
+    response = JSONResponse({
+        "reported": True,
+        "duplicate": duplicate,
+        "visibility": "unlisted" if newly_unlisted else "visible",
+    }, status_code=201)
     response.headers["Cache-Control"] = "no-store"
     _set_visitor_cookie(response, visitor_token)
     return response
@@ -1015,6 +1161,9 @@ async def add_collection_item(
     db.add(item)
     _return_to_review(collection)
     try:
+        db.flush()
+        db.expire(collection, ["items"])
+        _apply_automated_readiness(collection, db)
         db.commit()
     except IntegrityError:
         db.rollback()
@@ -1040,6 +1189,8 @@ async def update_collection_item(
         raise HTTPException(status_code=404, detail="Collection item not found")
     item.curator_note = payload.curator_note
     _return_to_review(collection)
+    db.flush()
+    _apply_automated_readiness(collection, db)
     db.commit()
     db.refresh(item)
     return _serialize_item(item, db, current_user.id)
@@ -1065,6 +1216,8 @@ async def move_collection_item(
     for position, item in enumerate(items):
         item.position = position
     _return_to_review(collection)
+    db.flush()
+    _apply_automated_readiness(collection, db)
     db.commit()
     return [_serialize_item(item, db, current_user.id) for item in items]
 
@@ -1085,4 +1238,7 @@ async def remove_collection_item(
         raise HTTPException(status_code=404, detail="Collection item not found")
     db.delete(item)
     _return_to_review(collection)
+    db.flush()
+    db.expire(collection, ["items"])
+    _apply_automated_readiness(collection, db)
     db.commit()

@@ -97,6 +97,21 @@
         <p>OmniTrackr is a live media tracking app, not a static demo. Publishing a changelog gives users and reviewers a clear place to see that the site is actively maintained, that security work is taken seriously, and that public content is being improved over time. It also helps new users understand which parts of the app are mature, which areas recently changed, and what the product is trying to become.</p>
       </section>
 
+      <section class="privacy-section" aria-labelledby="automated-collection-safety-2026-heading">
+        <h2 id="automated-collection-safety-2026-heading">September 2026: Automated Collection Discovery and Recovery</h2>
+        <p>This release completes the existing public collection workflow without adding another feed, paid moderation service, or daily human approval queue.</p>
+        <ul>
+          <li>Reused the collection quality floor, gallery, content hashes, signed visitor cookie, reports, owner notifications, and aggregate health view.</li>
+          <li>Added one deterministic readiness result for the collection editor, gallery, detail-page indexability, and sitemap.</li>
+          <li>Made qualifying published collections discoverable automatically while keeping private collections private and share-ready-only pages out of search.</li>
+          <li>Replaced free-text collection allegations with fixed reasons, one report per signed browser and version, and a two-per-hour IP rate limit.</li>
+          <li>Temporarily unlisted an exact collection version after three independent reports and notified its owner without deleting the collection.</li>
+          <li>Made an owner edit clear the current report state, rerun readiness, and restore a qualifying revision automatically.</li>
+          <li>Removed the manual action queue while retaining aggregate site health and a narrowly scoped emergency block.</li>
+        </ul>
+        <p>Existing accounts, collections, library items, privacy choices, direct links, and historic public-content decisions are preserved. Collection pages remain outside the ad-loader allowlist while their quality and usefulness are measured.</p>
+      </section>
+
       <section class="privacy-section" aria-labelledby="automated-review-safety-2026-heading">
         <h2 id="automated-review-safety-2026-heading">September 2026: Automated Review Quality and Safety</h2>
         <p>This release makes public review discovery sustainable for a two-person project without introducing a manual moderation queue or paid AI service.</p>
