@@ -860,7 +860,11 @@ class TestSecurityMiddleware:
 
         assert response.status_code == 200
         content = response.text
-        assert "Why a Hub Helps" in content
+        assert "Worked Example: Turn a Scattered List Into a Shortlist" in content
+        assert "search engines a clearer map" not in content
+        assert "Add ten favorites, ten unfinished items" not in content
+        assert '/guides#tracking-heading' in content
+        assert '/discover' in extract_hrefs(content)
         assert "Choose a Workflow" in content
         assert "A Monthly Media Library Audit" in content
         assert "What Good Tracking Content Includes" in content
