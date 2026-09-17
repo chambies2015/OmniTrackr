@@ -6,6 +6,7 @@
 // Constants
 const TOKEN_KEY = 'omnitrackr_token';
 const USER_KEY = 'omnitrackr_user';
+const RETURN_PROMPT_KEY = 'omnitrackr_return_prompt';
 // Authentication is also used by the standalone public landing page, which
 // intentionally does not load the much larger private dashboard bundle.
 const AUTH_IS_LOCAL = (location.protocol === 'file:' || location.origin === 'null' || location.origin === '');
@@ -32,6 +33,11 @@ function getUser() {
 function clearAuth() {
     localStorage.removeItem(TOKEN_KEY);
     localStorage.removeItem(USER_KEY);
+    try {
+        sessionStorage.removeItem(RETURN_PROMPT_KEY);
+    } catch (error) {
+        // Authentication still works when session storage is unavailable.
+    }
 }
 
 function isAuthenticated() {
@@ -138,6 +144,19 @@ async function login(username, password) {
 
     const data = await response.json();
     saveAuthData(data.access_token, data.user);
+    try {
+        if (data.return_prompt?.eligible && Number(data.return_prompt.days_away) >= 3) {
+            sessionStorage.setItem(RETURN_PROMPT_KEY, JSON.stringify({
+                days_away: Math.min(Number(data.return_prompt.days_away), 90),
+                created_at: Date.now(),
+                shown: false,
+            }));
+        } else {
+            sessionStorage.removeItem(RETURN_PROMPT_KEY);
+        }
+    } catch (error) {
+        // The return deck is optional and never blocks login.
+    }
     // The anonymous page deliberately does not include private dashboard markup.
     // Reload after the session cookie is set so the server can return the full app.
     window.location.assign('/');

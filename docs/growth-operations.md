@@ -24,6 +24,25 @@ schema addition is deployed; historical visits are not inferred or backfilled.
 The moderator response excludes email addresses, media titles, searches, review
 text, private notes, and page histories.
 
+## Welcome Back Deck
+
+After a successful login following at least three full days away, the login
+response gives that browser a short-lived eligibility signal. It is kept in
+session storage for no more than 24 hours and is removed when the member opens
+an item, dismisses the deck, logs out, or no longer qualifies. The signal is not
+stored as a server-side visit history.
+
+Members with at least five built-in library items can receive one private deck
+composed from the existing Today’s Pick, Library Pulse, Next Up, and Activity
+Journal data. While it is active, it replaces Today’s Pick and Library Pulse;
+it does not add a fourth permanent decision surface. There are no email or push
+reminders, streaks, public return profiles, or ad placements in this flow.
+
+The site-health panel reports daily aggregate totals for decks shown, items
+opened, and decks dismissed. The aggregate rows have no user, session, media,
+IP, search, or page-history fields. Their purpose is to determine whether the
+return experience is useful enough to keep, simplify, or remove.
+
 ## Analytics boundary
 
 Google Analytics is loaded only by the standalone public landing page. It is not
@@ -35,7 +54,8 @@ anonymization.
 Aggregate activation data comes from OmniTrackr's own account and library
 records, not Google Analytics. Successful-login measurement stores only the most
 recent successful login timestamp and a running count. These values are included
-in the account's JSON export metadata.
+in the account's JSON export metadata. Welcome Back engagement is retained only
+as anonymous day-level totals and cannot be joined back to an account.
 
 ## Advertising readiness
 
@@ -110,10 +130,11 @@ Run the full suite:
 Run browser-side contract tests:
 
 ```powershell
-node --test tests/*.cjs
+$uiTests = Get-ChildItem tests -Filter *.cjs | Select-Object -ExpandProperty FullName
+node --test $uiTests
 ```
 
 Focused growth and trust checks live in `tests/test_auth.py`,
-`tests/test_collections.py`, `tests/test_first_session.py`,
+`tests/test_collections.py`, `tests/test_first_session.py`, `tests/test_statistics.py`,
 `tests/test_public_reviews.py`, `tests/test_seo_security.py`, and
 `tests/test_static_security.py`.

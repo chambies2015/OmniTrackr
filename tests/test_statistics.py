@@ -139,6 +139,97 @@ class TestStatisticsEndpoints:
         assert reflection_item["category"] == "movies"
         assert set(reflection_item["prompts"]) == {"Add a rating", "Leave a note"}
 
+    def test_return_deck_composes_existing_private_signals(self, authenticated_client, db_session, test_movie_data, test_book_data):
+        movies = []
+        for index in range(3):
+            payload = {
+                **test_movie_data,
+                "title": f"Return movie {index}",
+                "watched": False,
+                "rating": None,
+                "review": "",
+            }
+            movies.append(authenticated_client.post("/movies/", json=payload).json())
+        books = []
+        for index in range(2):
+            payload = {
+                **test_book_data,
+                "title": f"Return book {index}",
+                "read": False,
+                "rating": None,
+                "review": "",
+            }
+            books.append(authenticated_client.post("/books/", json=payload).json())
+
+        assert authenticated_client.post(
+            "/next-up/", json={"category": "books", "item_id": books[0]["id"]}
+        ).status_code == 201
+        owner = db_session.query(models.User).filter_by(username="testuser").one()
+        db_session.add(models.ActivityEntry(
+            user_id=owner.id,
+            category="movies",
+            item_id=movies[0]["id"],
+            title=movies[0]["title"],
+            action="completed",
+            note="Worth the return.",
+        ))
+        db_session.commit()
+
+        response = authenticated_client.get("/statistics/return-deck/?days_away=4")
+
+        assert response.status_code == 200
+        assert response.headers["Cache-Control"] == "private, no-store"
+        deck = response.json()
+        assert deck["eligible"] is True
+        assert deck["library_item_count"] == 5
+        assert deck["primary"]["id"] == books[0]["id"]
+        assert deck["primary"]["source"] == "next_up"
+        assert deck["alternative"]["id"] != deck["primary"]["id"]
+        assert deck["recap"]["entry_count"] == 1
+        assert deck["recap"]["completed_count"] == 1
+        assert deck["recap"]["reflection_count"] == 1
+
+    def test_return_deck_requires_activation_and_authentication(self, authenticated_client, client, test_movie_data):
+        authenticated_client.post("/movies/", json={**test_movie_data, "watched": False})
+        response = authenticated_client.get("/statistics/return-deck/?days_away=3")
+        assert response.status_code == 200
+        assert response.json() == {"eligible": False, "library_item_count": 1}
+
+        client.headers = {}
+        client.cookies.clear()
+        assert client.get("/statistics/return-deck/?days_away=3").status_code == 401
+
+    def test_return_deck_stays_hidden_without_a_useful_action(self, authenticated_client, test_movie_data):
+        for index in range(5):
+            response = authenticated_client.post("/movies/", json={
+                **test_movie_data,
+                "title": f"Finished return movie {index}",
+                "watched": True,
+                "rating": 8,
+                "review": "Already has enough private context.",
+            })
+            assert response.status_code == 201
+
+        response = authenticated_client.get("/statistics/return-deck/?days_away=3")
+        assert response.status_code == 200
+        assert response.json() == {"eligible": False, "library_item_count": 5}
+
+    def test_return_deck_engagement_is_stored_only_as_daily_aggregate(self, authenticated_client, db_session):
+        for action in ("shown", "opened", "dismissed", "shown"):
+            response = authenticated_client.post(
+                "/statistics/return-deck/engagement", json={"action": action}
+            )
+            assert response.status_code == 200
+
+        metric = db_session.query(models.ReturnPromptDailyMetric).one()
+        assert metric.shown_count == 2
+        assert metric.opened_count == 1
+        assert metric.dismissed_count == 1
+        assert not hasattr(metric, "user_id")
+        assert authenticated_client.post(
+            "/statistics/return-deck/engagement", json={"action": "clicked_title"}
+        ).status_code == 422
+
     def test_todays_pick_is_private_read_only_and_respects_next_up(self, authenticated_client, db_session, test_movie_data, test_book_data):
         movie = authenticated_client.post("/movies/", json={**test_movie_data, "watched": False}).json()
         book = authenticated_client.post("/books/", json={**test_book_data, "read": False}).json()

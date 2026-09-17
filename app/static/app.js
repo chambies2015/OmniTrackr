@@ -834,6 +834,8 @@ function handleDelegatedClick(event) {
     'launchpad-open-insights': openLaunchpadInsights,
     'launchpad-dismiss': dismissLibraryLaunchpad,
     'launchpad-import': openLaunchpadImport,
+    'dismiss-return-deck': dismissReturnDeck,
+    'open-return-deck-item': () => openReturnDeckItem(Number(target.dataset.returnDeckIndex)),
     'pulse-open-item': () => switchTab(target.dataset.pulseTab),
     'open-todays-pick': openTodaysPick,
     'open-library-search-result': () => openLibrarySearchResult(target.dataset.searchTab, target.dataset.searchTitle, Number(target.dataset.searchId)),
@@ -8063,6 +8065,9 @@ function renderModeratorInsights(data) {
     ['Friendships', data.engagement.friendships],
     ['Recommendation requests', data.engagement.recommendation_requests],
     ['Recommendation replies', data.engagement.recommendation_submissions],
+    ['Welcome Back shown', data.engagement.return_deck_shown],
+    ['Welcome Back opened', data.engagement.return_deck_opened],
+    ['Welcome Back dismissed', data.engagement.return_deck_dismissed],
   ]);
   const safetyRows = [
     ['Public collections', data.moderation.public],
@@ -8324,6 +8329,153 @@ let todaysPickOffset = 0;
 let todaysPickCandidateCount = 0;
 let todaysPickRequest = 0;
 let todaysPickSelection = null;
+let returnDeckActive = false;
+let returnDeckItems = [];
+
+function getReturnPromptContext() {
+  try {
+    const context = JSON.parse(sessionStorage.getItem('omnitrackr_return_prompt') || 'null');
+    if (!context || Number(context.days_away) < 3 || Date.now() - Number(context.created_at) > 86400000) {
+      sessionStorage.removeItem('omnitrackr_return_prompt');
+      return null;
+    }
+    return context;
+  } catch (error) {
+    return null;
+  }
+}
+
+function saveReturnPromptContext(context) {
+  try {
+    sessionStorage.setItem('omnitrackr_return_prompt', JSON.stringify(context));
+  } catch (error) {
+    // The deck can still be used without session storage.
+  }
+}
+
+function clearReturnPromptContext() {
+  try {
+    sessionStorage.removeItem('omnitrackr_return_prompt');
+  } catch (error) {
+    // Nothing else is required to dismiss an optional prompt.
+  }
+}
+
+async function recordReturnDeckEngagement(action) {
+  try {
+    await authenticatedFetch(`${API_BASE}/statistics/return-deck/engagement`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ action }),
+    });
+  } catch (error) {
+    // Anonymous product-health totals must never interrupt the dashboard.
+  }
+}
+
+function makeReturnDeckItem(item, label, detail, primary = false) {
+  const index = returnDeckItems.push(item) - 1;
+  const card = document.createElement('article');
+  card.className = `return-deck__item${primary ? ' return-deck__item--primary' : ''}`;
+  const eyebrow = document.createElement('span');
+  eyebrow.className = 'return-deck__item-label';
+  eyebrow.textContent = label;
+  const title = document.createElement('strong');
+  title.textContent = item.title;
+  const meta = document.createElement('span');
+  meta.className = 'return-deck__item-meta';
+  meta.textContent = `${item.category_label} · ${detail}`;
+  const button = document.createElement('button');
+  button.type = 'button';
+  button.className = 'return-deck__open';
+  button.dataset.action = 'open-return-deck-item';
+  button.dataset.returnDeckIndex = String(index);
+  button.textContent = label === 'Add context' ? 'Open item' : 'Open it';
+  card.append(eyebrow, title, meta, button);
+  return card;
+}
+
+function renderReturnDeck(payload, context) {
+  const deck = document.getElementById('returnDeck');
+  const actions = document.getElementById('returnDeckActions');
+  const recapElement = document.getElementById('returnDeckRecap');
+  if (!deck || !actions || !payload?.eligible) return false;
+
+  returnDeckItems = [];
+  actions.replaceChildren();
+  if (payload.primary) {
+    actions.appendChild(makeReturnDeckItem(payload.primary, 'Start here', payload.primary.reason, true));
+  }
+  if (payload.alternative) {
+    actions.appendChild(makeReturnDeckItem(payload.alternative, 'Another option', payload.alternative.status_label));
+  }
+  if (payload.reflection) {
+    const prompts = Array.isArray(payload.reflection.prompts) ? payload.reflection.prompts.join(' · ') : 'Add a personal note';
+    actions.appendChild(makeReturnDeckItem(payload.reflection, 'Add context', prompts));
+  }
+
+  const days = Number(payload.days_away) || Number(context.days_away);
+  document.getElementById('returnDeckSummary').textContent =
+    `You have been away for ${days} day${days === 1 ? '' : 's'}. Here are a few useful ways back in—nothing new to manage.`;
+  const recap = payload.recap || {};
+  const recapParts = [];
+  if (recap.entry_count) recapParts.push(`${recap.entry_count} journal moment${recap.entry_count === 1 ? '' : 's'}`);
+  if (recap.completed_count) recapParts.push(`${recap.completed_count} finished`);
+  if (recap.reflection_count) recapParts.push(`${recap.reflection_count} with a reflection`);
+  if (recap.top_category_label) recapParts.push(`${recap.top_category_label} was most active`);
+  recapElement.textContent = recapParts.length
+    ? `Since your previous visit: ${recapParts.join(' · ')}.`
+    : 'Your private library is ready when you are; no activity or streak is required.';
+
+  returnDeckActive = true;
+  document.getElementById('todaysPick')?.setAttribute('hidden', '');
+  document.getElementById('libraryPulse')?.setAttribute('hidden', '');
+  deck.removeAttribute('hidden');
+  if (!context.shown) {
+    context.shown = true;
+    saveReturnPromptContext(context);
+    recordReturnDeckEngagement('shown');
+  }
+  return true;
+}
+
+async function refreshReturnDeck() {
+  const context = getReturnPromptContext();
+  if (!context || !hasStoredAuth()) return;
+  try {
+    const params = new URLSearchParams({ days_away: String(Math.min(Number(context.days_away), 90)) });
+    const response = await authenticatedFetch(`${API_BASE}/statistics/return-deck/?${params}`);
+    if (!response.ok) throw new Error('Could not load return deck');
+    if (!renderReturnDeck(await response.json(), context)) clearReturnPromptContext();
+  } catch (error) {
+    // The established dashboard remains available if this optional layer fails.
+  }
+}
+
+function resolveReturnDeck(action) {
+  recordReturnDeckEngagement(action);
+  clearReturnPromptContext();
+  returnDeckActive = false;
+  returnDeckItems = [];
+  document.getElementById('returnDeck')?.setAttribute('hidden', '');
+  refreshTodaysPick();
+  refreshLibraryPulse();
+}
+
+function dismissReturnDeck() {
+  resolveReturnDeck('dismissed');
+}
+
+async function openReturnDeckItem(index) {
+  const item = returnDeckItems[index];
+  if (!item) return;
+  const button = document.querySelector(`[data-action="open-return-deck-item"][data-return-deck-index="${index}"]`);
+  const opened = await openLibraryItem(item, {
+    button,
+    reasonElement: document.getElementById('returnDeckSummary'),
+  });
+  if (opened) resolveReturnDeck('opened');
+}
 
 function isLibraryLaunchpadDismissed() {
   try {
@@ -8486,6 +8638,10 @@ function renderLibraryPulseList(container, items, emptyMessage) {
 function renderLibraryPulse(pulse) {
   const pulseElement = document.getElementById('libraryPulse');
   if (!pulseElement) return;
+  if (returnDeckActive) {
+    pulseElement.setAttribute('hidden', '');
+    return;
+  }
   const continueItems = Array.isArray(pulse?.continue_items) ? pulse.continue_items : [];
   const reflectionItems = Array.isArray(pulse?.reflection_items) ? pulse.reflection_items : [];
   const nextUpItems = Array.isArray(pulse?.next_up_items) ? pulse.next_up_items : [];
@@ -8515,6 +8671,10 @@ function renderTodaysPick(payload) {
   const section = document.getElementById('todaysPick');
   const pick = payload?.pick;
   if (!section) return;
+  if (returnDeckActive) {
+    section.setAttribute('hidden', '');
+    return;
+  }
   todaysPickSelection = pick || null;
   todaysPickCandidateCount = Number(payload?.candidate_count) || 0;
   document.getElementById('todaysPickName').textContent = pick?.title || 'Nothing unfinished here yet.';
@@ -8558,20 +8718,20 @@ async function openTodaysPick() {
   return openLibraryItem(todaysPickSelection);
 }
 
-async function openLibraryItem(pick) {
+async function openLibraryItem(pick, options = {}) {
   if (editingRowId !== null) {
     alert('Save or cancel your current edit before opening another title.');
-    return;
+    return false;
   }
   const source = LIBRARY_SEARCH_SOURCES.find(entry => entry.tab === pick?.category);
-  if (!source) return;
-  const reason = document.getElementById('todaysPickReason');
+  if (!source) return false;
+  const reason = options.reasonElement || document.getElementById('todaysPickReason');
   if (getTabButton(source.tab)?.style.display === 'none') {
-    reason.textContent = 'Enable this media category in your settings to open this title.';
-    return;
+    if (reason) reason.textContent = 'Enable this media category in your settings to open this title.';
+    return false;
   }
-  const button = document.getElementById('todaysPickOpen');
-  button.disabled = true;
+  const button = options.button || document.getElementById('todaysPickOpen');
+  if (button) button.disabled = true;
   try {
     // Let an existing list request finish before changing its search input.
     const busy = () => ({ movies: isLoadingMovies, 'tv-shows': isLoadingTVShows,
@@ -8594,10 +8754,12 @@ async function openLibraryItem(pick) {
     row.tabIndex = -1;
     row.focus({ preventScroll: true });
     row.scrollIntoView({ block: 'center', behavior: 'auto' });
+    return true;
   } catch (error) {
-    reason.textContent = error.message || 'Could not open this title. Please try again.';
+    if (reason) reason.textContent = error.message || 'Could not open this title. Please try again.';
+    return false;
   } finally {
-    button.disabled = false;
+    if (button) button.disabled = false;
   }
 }
 
@@ -8824,6 +8986,7 @@ loadBooks = async function (...args) {
 // Load initial data
 setupLibrarySearch();
 loadMovies();
+refreshReturnDeck();
 scheduleLibraryLaunchpadRefresh();
 
 // ============================================================================

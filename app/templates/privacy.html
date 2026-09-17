@@ -240,6 +240,7 @@
         <li><strong>Recommendation Postcards:</strong> The question, allowed media types, expiration and response limit you choose, plus submitted titles, reasons, guest display names, and owner decisions</li>
       </ul>
       <p>Your Activity Journal and weekly playback are private account features. They are not shown to friends, placed on public pages, included in public search inventory, or used as advertising surfaces.</p>
+      <p>The optional Welcome Back Deck is built on request from your private Next Up, unfinished-library, reflection, and Activity Journal data after an eligible return. Eligibility is held in browser session storage for up to 24 hours and cleared when you open an item, dismiss the deck, or log out; OmniTrackr does not store it as a server-side visit history.</p>
       <p>Tasteprint is calculated on request from private account aggregates. OmniTrackr does not create a public Tasteprint profile or store the PNG card. Category privacy and tab-visibility choices are excluded by default; if you choose to include them, the image is rendered locally in your browser and shared only through actions you take afterward.</p>
       <p>Recommendation Postcard links are unlisted bearer links: anyone who receives a valid link can read that postcard question and its owner's username and can submit one reply while the postcard remains open. Links are excluded from search indexing, carry no ads, expire after the chosen window, and stop at the selected reply limit. Replies are shown only in the owner's account inbox. A reply never changes or enters the owner's library unless the owner explicitly chooses an action.</p>
 
@@ -261,6 +262,7 @@
         <li><strong>Authentication Tokens:</strong> JWT session tokens stored primarily in an HttpOnly cookie; legacy browser storage may remain during the transition from older sessions</li>
         <li><strong>Browser Information:</strong> Collected through Google Analytics on the public landing experience when browser privacy signals do not request limited tracking</li>
         <li><strong>Usage Data:</strong> Public landing page views and interactions collected through Google Analytics; private dashboard activity is not sent to Google Analytics</li>
+        <li><strong>Welcome Back Totals:</strong> Anonymous daily counts of decks shown, items opened, and decks dismissed; these aggregate rows contain no user, session, media, search, IP, or page-history fields</li>
         <li><strong>Public Safety Reports:</strong> A fixed report reason, the public review or collection version, timestamp, and one-way hash derived from a signed browser token; report records do not include free-text allegations or a stored IP address</li>
       </ul>
       <p>Files submitted to the Import Studio are processed to create the preview or confirmed import you request. Previewing performs no database writes. OmniTrackr does not publish migration files or imported review text, and confirmed CSV imports mark reviews private by default.</p>
@@ -270,7 +272,7 @@
       <ul>
         <li><strong>Google Analytics:</strong> To understand visits to the public landing experience; the private signed-in dashboard does not load Google Analytics, and the public loader honors supported Global Privacy Control and Do Not Track signals</li>
         <li><strong>Google AdSense:</strong> To display relevant advertisements (if applicable)</li>
-        <li><strong>Local Storage:</strong> To store interface preferences and support legacy authentication sessions</li>
+        <li><strong>Browser Storage:</strong> Local storage keeps interface preferences and supports legacy authentication sessions; session storage temporarily holds Welcome Back eligibility for the current browser session</li>
         <li><strong>Public Visitor Cookie:</strong> A signed, HttpOnly, same-site token used to deduplicate collection reactions, collection views, collection reports, and public review reports without browser fingerprinting</li>
       </ul>
 

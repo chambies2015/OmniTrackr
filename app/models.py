@@ -2,7 +2,7 @@
 SQLAlchemy models for the OmniTrackr API.
 Defines the User, Movie, TV Show, Anime, and Video Game ORM models.
 """
-from sqlalchemy import Column, Integer, String, Boolean, Float, ForeignKey, DateTime, UniqueConstraint, LargeBinary, Text
+from sqlalchemy import Column, Integer, String, Boolean, Float, ForeignKey, Date, DateTime, UniqueConstraint, LargeBinary, Text
 from sqlalchemy.orm import relationship
 from datetime import datetime, timedelta
 from .database import Base
@@ -211,6 +211,22 @@ class NextUpItem(Base):
     __table_args__ = (
         UniqueConstraint("user_id", "category", "item_id", name="uq_next_up_item"),
     )
+
+
+class ReturnPromptDailyMetric(Base):
+    """Anonymous daily totals for the optional Welcome Back Deck.
+
+    These counters intentionally have no user, session, media, or page-history
+    relationship. They answer whether the return experience is useful without
+    creating another behavioral event stream.
+    """
+    __tablename__ = "return_prompt_daily_metrics"
+
+    id = Column(Integer, primary_key=True, index=True)
+    metric_date = Column(Date, nullable=False, unique=True, index=True)
+    shown_count = Column(Integer, nullable=False, default=0)
+    opened_count = Column(Integer, nullable=False, default=0)
+    dismissed_count = Column(Integer, nullable=False, default=0)
 
 
 class CompletionMoment(Base):

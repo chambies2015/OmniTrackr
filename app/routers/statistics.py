@@ -1,16 +1,26 @@
 """
 Statistics endpoints for the OmniTrackr API.
 """
-from datetime import date, datetime
+from datetime import date, datetime, timedelta
 from fastapi import APIRouter, Depends, HTTPException, Query, Response
 from sqlalchemy.orm import Session
 from sqlalchemy import and_, case, func, or_
+from sqlalchemy.exc import IntegrityError
 
 from .. import crud, schemas, models
 from ..dependencies import get_db, get_current_user
 from ..tasteprint import build_tasteprint
 
 router = APIRouter(prefix="/statistics", tags=["statistics"])
+
+LIBRARY_CATEGORIES = [
+    {"key": "movies", "label": "Movie", "model": models.Movie, "done": models.Movie.watched, "status_label": "Not watched"},
+    {"key": "tv-shows", "label": "TV show", "model": models.TVShow, "done": models.TVShow.watched, "status_label": "In progress"},
+    {"key": "anime", "label": "Anime", "model": models.Anime, "done": models.Anime.watched, "status_label": "In progress"},
+    {"key": "video-games", "label": "Game", "model": models.VideoGame, "done": models.VideoGame.played, "status_label": "Not played"},
+    {"key": "music", "label": "Album", "model": models.Music, "done": models.Music.listened, "status_label": "Not listened"},
+    {"key": "books", "label": "Book", "model": models.Book, "done": models.Book.read, "status_label": "Not read"},
+]
 
 
 @router.get("/tasteprint/", response_model=dict)
@@ -88,14 +98,7 @@ async def get_todays_pick(
     wider unfinished library so the user remains in control of the suggestion.
     """
     response.headers["Cache-Control"] = "private, no-store"
-    categories = [
-        {"key": "movies", "label": "Movie", "model": models.Movie, "done": models.Movie.watched, "status_label": "Not watched"},
-        {"key": "tv-shows", "label": "TV show", "model": models.TVShow, "done": models.TVShow.watched, "status_label": "In progress"},
-        {"key": "anime", "label": "Anime", "model": models.Anime, "done": models.Anime.watched, "status_label": "In progress"},
-        {"key": "video-games", "label": "Game", "model": models.VideoGame, "done": models.VideoGame.played, "status_label": "Not played"},
-        {"key": "music", "label": "Album", "model": models.Music, "done": models.Music.listened, "status_label": "Not listened"},
-        {"key": "books", "label": "Book", "model": models.Book, "done": models.Book.read, "status_label": "Not read"},
-    ]
+    categories = [dict(entry) for entry in LIBRARY_CATEGORIES]
     if category is not None:
         categories = [entry for entry in categories if entry["key"] == category]
         if not categories:
@@ -284,14 +287,7 @@ async def get_library_pulse(
     dashboard helper that surfaces records that are unfinished or still missing the
     personal context that makes a library useful later.
     """
-    categories = [
-        {"key": "movies", "label": "Movie", "model": models.Movie, "done": models.Movie.watched, "status_label": "Not watched"},
-        {"key": "tv-shows", "label": "TV show", "model": models.TVShow, "done": models.TVShow.watched, "status_label": "In progress"},
-        {"key": "anime", "label": "Anime", "model": models.Anime, "done": models.Anime.watched, "status_label": "In progress"},
-        {"key": "video-games", "label": "Game", "model": models.VideoGame, "done": models.VideoGame.played, "status_label": "Not played"},
-        {"key": "music", "label": "Album", "model": models.Music, "done": models.Music.listened, "status_label": "Not listened"},
-        {"key": "books", "label": "Book", "model": models.Book, "done": models.Book.read, "status_label": "Not read"},
-    ]
+    categories = [dict(entry) for entry in LIBRARY_CATEGORIES]
     continue_items = []
     reflection_items = []
 
@@ -335,6 +331,104 @@ async def get_library_pulse(
         "next_up_items": next_up_items,
         "generated_at": datetime.now().isoformat(),
     }
+
+
+@router.get("/return-deck/", response_model=dict)
+async def get_return_deck(
+    response: Response,
+    days_away: int = Query(3, ge=3, le=90),
+    current_user: models.User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+):
+    """Compose existing private signals into one optional return experience."""
+    response.headers["Cache-Control"] = "private, no-store"
+    library_item_count = sum(
+        db.query(func.count(category["model"].id)).filter(
+            category["model"].user_id == current_user.id
+        ).scalar() or 0
+        for category in LIBRARY_CATEGORIES
+    )
+    if library_item_count < 5:
+        return {"eligible": False, "library_item_count": library_item_count}
+
+    today = await get_todays_pick(Response(), 0, None, current_user, db)
+    pulse = await get_library_pulse(current_user, db)
+    primary = today.get("pick")
+    alternatives = [
+        item for item in pulse["continue_items"]
+        if not primary or (item["category"], item["id"]) != (primary["category"], primary["id"])
+    ]
+    reflection_items = [
+        item for item in pulse["reflection_items"]
+        if not primary or (item["category"], item["id"]) != (primary["category"], primary["id"])
+    ]
+    if alternatives:
+        reflection_items = [
+            item for item in reflection_items
+            if (item["category"], item["id"]) != (alternatives[0]["category"], alternatives[0]["id"])
+        ]
+    if not primary and not reflection_items:
+        return {"eligible": False, "library_item_count": library_item_count}
+
+    since = datetime.utcnow() - timedelta(days=days_away)
+    activity = db.query(models.ActivityEntry).filter(
+        models.ActivityEntry.user_id == current_user.id,
+        models.ActivityEntry.occurred_at >= since,
+    ).all()
+    category_counts = {
+        category["key"]: sum(entry.category == category["key"] for entry in activity)
+        for category in LIBRARY_CATEGORIES
+    }
+    top_category_key = max(category_counts, key=category_counts.get) if activity else None
+    category_by_key = {category["key"]: category for category in LIBRARY_CATEGORIES}
+
+    return {
+        "eligible": True,
+        "library_item_count": library_item_count,
+        "days_away": days_away,
+        "primary": primary,
+        "alternative": alternatives[0] if alternatives else None,
+        "reflection": reflection_items[0] if reflection_items else None,
+        "recap": {
+            "entry_count": len(activity),
+            "completed_count": sum(entry.action == "completed" for entry in activity),
+            "reflection_count": sum(bool((entry.note or "").strip()) for entry in activity),
+            "top_category_label": category_by_key[top_category_key]["label"] if top_category_key else None,
+        },
+    }
+
+
+@router.post("/return-deck/engagement", response_model=dict)
+async def record_return_deck_engagement(
+    payload: schemas.ReturnPromptEngagement,
+    current_user: models.User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+):
+    """Increment an anonymous daily total without retaining user or media data."""
+    metric_date = date.today()
+    field = {
+        "shown": "shown_count",
+        "opened": "opened_count",
+        "dismissed": "dismissed_count",
+    }[payload.action]
+    column = getattr(models.ReturnPromptDailyMetric, field)
+    updated = db.query(models.ReturnPromptDailyMetric).filter(
+        models.ReturnPromptDailyMetric.metric_date == metric_date
+    ).update({column: column + 1}, synchronize_session=False)
+    if not updated:
+        metric = models.ReturnPromptDailyMetric(metric_date=metric_date, **{field: 1})
+        db.add(metric)
+    try:
+        db.commit()
+    except IntegrityError:
+        # Two first events can race to create today's row. The unique date keeps
+        # one row, then the losing request retries as an atomic increment.
+        db.rollback()
+        db.query(models.ReturnPromptDailyMetric).filter(
+            models.ReturnPromptDailyMetric.metric_date == metric_date
+        ).update({column: column + 1}, synchronize_session=False)
+        db.commit()
+    return {"recorded": True}
 
 
 @router.get("/watch/", response_model=schemas.WatchStatistics)

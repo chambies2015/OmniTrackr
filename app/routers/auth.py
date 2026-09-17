@@ -129,6 +129,18 @@ async def login(
             headers={"WWW-Authenticate": "Bearer"},
         )
 
+    # Derive the optional return moment before replacing the previous successful
+    # login timestamp. The context is returned to this browser only and is not
+    # stored as a page/session history.
+    previous_login_at = user.last_login_at
+    days_away = None
+    if previous_login_at:
+        days_away = max(0, (now_utc - previous_login_at).days)
+    return_prompt = schemas.ReturnPromptContext(
+        eligible=days_away is not None and days_away >= 3,
+        days_away=min(days_away, 90) if days_away is not None and days_away >= 3 else None,
+    )
+
     # Keep one minimal first-party return signal for aggregate product health.
     # No page history, media titles, searches, or session-by-session event log is stored.
     user.last_login_at = now_utc
@@ -136,7 +148,12 @@ async def login(
     db.commit()
     
     access_token = auth.create_access_token(data={"sub": user.username})
-    token_response = schemas.Token(access_token=access_token, token_type="bearer", user=user)
+    token_response = schemas.Token(
+        access_token=access_token,
+        token_type="bearer",
+        user=user,
+        return_prompt=return_prompt,
+    )
     response = JSONResponse(
         content=jsonable_encoder(token_response),
         headers={

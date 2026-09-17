@@ -30,7 +30,7 @@ function setup() {
     isLoadingMovies: false, isLoadingTVShows: false, isLoadingAnime: false,
     isLoadingVideoGames: false, isLoadingMusic: false, isLoadingBooks: false,
     todaysPickOffset: 0, todaysPickCandidateCount: 0, todaysPickRequest: 0,
-    todaysPickSelection: null,
+    todaysPickSelection: null, returnDeckActive: false,
     editingRowId: null,
     libraryPages: new Map(),
     libraryPageConfig: tab => [tab + 'Table', tab + 'Sort'],

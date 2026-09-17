@@ -167,6 +167,7 @@ class TestAuthEndpoints:
         assert "access_token" in data
         assert data["token_type"] == "bearer"
         assert "user" in data
+        assert data["return_prompt"] == {"eligible": False, "days_away": None}
         assert "omnitrackr_session=" in response.headers.get("set-cookie", "")
         db_session.refresh(user)
         assert user.login_count == 1
@@ -182,6 +183,25 @@ class TestAuthEndpoints:
         assert second_login.status_code == 200
         db_session.refresh(user)
         assert user.login_count == 2
+
+    def test_login_offers_ephemeral_return_context_after_three_days(self, client, test_user_data, db_session):
+        register_response = client.post("/auth/register", json=test_user_data)
+        user = crud.get_user_by_id(db_session, register_response.json()["id"])
+        user.is_verified = True
+        user.verification_token = None
+        user.login_count = 3
+        user.last_login_at = datetime.now(timezone.utc).replace(tzinfo=None) - timedelta(days=4, hours=2)
+        db_session.commit()
+
+        response = client.post(
+            "/auth/login",
+            data={"username": test_user_data["username"], "password": test_user_data["password"]},
+        )
+
+        assert response.status_code == 200
+        assert response.json()["return_prompt"] == {"eligible": True, "days_away": 4}
+        db_session.refresh(user)
+        assert user.login_count == 4
     
     def test_login_with_email(self, client, test_user_data, db_session):
         """Test login using email instead of username."""

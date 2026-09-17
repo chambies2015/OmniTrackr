@@ -46,10 +46,10 @@
   <link rel="icon" type="image/x-icon" href="/omnitrackr_favicon.ico">
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link rel="preload" href="./styles.css?v=20260917-review-safety-v1" as="style">
+  <link rel="preload" href="./styles.css?v=20260917-welcome-back-v1" as="style">
   <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@700;800&family=Inter:wght@400;500;600&display=swap"
     rel="stylesheet">
-  <link rel="stylesheet" href="./styles.css?v=20260917-review-safety-v1">
+  <link rel="stylesheet" href="./styles.css?v=20260917-welcome-back-v1">
   <script src="./preauth.js"></script>
   <style>
     html.authenticated #landingPage{display:none}
@@ -363,6 +363,19 @@
         <button type="button" id="libraryLaunchpadInsights" class="action-btn library-launchpad__secondary" data-action="launchpad-open-insights" hidden>See insights</button>
         <button type="button" class="library-launchpad__dismiss" data-action="launchpad-dismiss" aria-label="Dismiss library launchpad">Not now</button>
       </div>
+    </section>
+
+    <section id="returnDeck" class="return-deck" aria-labelledby="returnDeckTitle" hidden>
+      <div class="return-deck__header">
+        <div>
+          <p class="return-deck__eyebrow">Welcome back</p>
+          <h2 id="returnDeckTitle">Pick up where you left off</h2>
+          <p id="returnDeckSummary" class="return-deck__summary"></p>
+        </div>
+        <button type="button" class="return-deck__dismiss" data-action="dismiss-return-deck" aria-label="Dismiss welcome back suggestions">Not now</button>
+      </div>
+      <div id="returnDeckActions" class="return-deck__actions" aria-live="polite"></div>
+      <div id="returnDeckRecap" class="return-deck__recap"></div>
     </section>
 
     <section id="todaysPick" class="todays-pick" aria-labelledby="todaysPickTitle" hidden>
@@ -1877,8 +1890,8 @@
     </footer>
   </div>
   <script src="./credentials.js"></script>
-  <script src="./auth.js?v=20260915-security-sweep"></script>
-  <script src="./app.js?v=20260917-review-safety-v1"></script>
+  <script src="./auth.js?v=20260917-welcome-back-v1"></script>
+  <script src="./app.js?v=20260917-welcome-back-v1"></script>
 
   <!-- Account Modal -->
   <div id="accountModal" class="modal-overlay" style="display: none;">

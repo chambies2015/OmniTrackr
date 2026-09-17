@@ -256,6 +256,15 @@ def _moderator_site_insights(db: Session) -> dict:
         "friendships": _count(db, models.Friendship),
         "recommendation_requests": _count(db, models.RecommendationRequest),
         "recommendation_submissions": _count(db, models.RecommendationSubmission),
+        "return_deck_shown": int(db.query(
+            func.coalesce(func.sum(models.ReturnPromptDailyMetric.shown_count), 0)
+        ).scalar() or 0),
+        "return_deck_opened": int(db.query(
+            func.coalesce(func.sum(models.ReturnPromptDailyMetric.opened_count), 0)
+        ).scalar() or 0),
+        "return_deck_dismissed": int(db.query(
+            func.coalesce(func.sum(models.ReturnPromptDailyMetric.dismissed_count), 0)
+        ).scalar() or 0),
     }
 
     signup_dates = [

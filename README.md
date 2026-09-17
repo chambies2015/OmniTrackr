@@ -21,6 +21,7 @@ Live site: [https://www.omnitrackr.xyz/](https://www.omnitrackr.xyz/)
 - Build ordered cross-media collections with curator notes and artwork, publish them by choice, and automatically qualify substantial, safe collections for the public gallery.
 - Export and import JSON for built-in categories and custom tabs.
 - View statistics for completion, ratings, years, directors, genres, TV/anime season data, music, books, and high-level library insights.
+- Return after three days to an optional Welcome Back Deck that composes the existing Next Up, unfinished-library, reflection, and journal signals without creating another permanent dashboard panel.
 - Use public content pages for onboarding and discovery: `/about`, `/guides`, `/compare`, `/use-cases`, `/demo`, `/media-tracking`, `/tv-show-tracker`, `/game-tracker`, `/changelog`, `/roadmap`, `/privacy`, `/terms`, and `/contact`.
 - Run with SQLite locally or PostgreSQL in production.
 
@@ -269,7 +270,8 @@ Useful focused runs:
 Browser-side contract tests:
 
 ```powershell
-node --test tests/*.cjs
+$uiTests = Get-ChildItem tests -Filter *.cjs | Select-Object -ExpandProperty FullName
+node --test $uiTests
 ```
 
 ## Documentation

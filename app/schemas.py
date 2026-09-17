@@ -193,11 +193,18 @@ class AccountReactivate(BaseModel):
     password: str = Field(..., description="Account password for verification")
 
 
+class ReturnPromptContext(BaseModel):
+    """Ephemeral login context for the private Welcome Back Deck."""
+    eligible: bool = False
+    days_away: Optional[int] = None
+
+
 class Token(BaseModel):
     """JWT token response schema."""
     access_token: str
     token_type: str = "bearer"
     user: User
+    return_prompt: ReturnPromptContext = Field(default_factory=ReturnPromptContext)
 
 
 class TokenData(BaseModel):
@@ -925,6 +932,11 @@ class NextUpItem(BaseModel):
     category_label: str
     position: int
     available: bool = True
+
+
+class ReturnPromptEngagement(BaseModel):
+    """One anonymous aggregate counter update from the Welcome Back Deck."""
+    action: Literal["shown", "opened", "dismissed"]
 
 
 # ============================================================================

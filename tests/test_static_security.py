@@ -28,8 +28,8 @@ def test_standalone_public_auth_has_its_own_api_base():
     assert "`${API_BASE}/auth/" not in source
 
     public_template = (INDEX_HTML.parent / "public_landing.html").read_text(encoding="utf-8")
-    assert 'src="/auth.js?v=20260915-security-sweep"' in public_template
-    assert 'src="./auth.js?v=20260915-security-sweep"' in INDEX_HTML.read_text(encoding="utf-8")
+    assert 'src="/auth.js?v=20260917-welcome-back-v1"' in public_template
+    assert 'src="./auth.js?v=20260917-welcome-back-v1"' in INDEX_HTML.read_text(encoding="utf-8")
     assert "/auth/reset-password?" not in source
     assert "JSON.stringify({ token, new_password: newPassword })" in source
 
@@ -263,6 +263,19 @@ def test_library_pulse_uses_safe_dom_rendering_and_existing_tabs():
     assert "title.textContent = item.title" in source
     assert "button.dataset.pulseTab = item.category" in source
     assert "'pulse-open-item': () => switchTab(target.dataset.pulseTab)" in source
+
+
+def test_welcome_back_deck_reuses_safe_dom_and_replaces_overlapping_cards():
+    source = APP_JS.read_text(encoding="utf-8")
+    template = INDEX_HTML.read_text(encoding="utf-8")
+
+    assert 'id="returnDeck"' in template
+    assert "actions.replaceChildren()" in source
+    assert "title.textContent = item.title" in source
+    assert "returnDeckActive = true" in source
+    assert "document.getElementById('todaysPick')?.setAttribute('hidden', '')" in source
+    assert "document.getElementById('libraryPulse')?.setAttribute('hidden', '')" in source
+    assert "sessionStorage.getItem('omnitrackr_return_prompt')" in source
 
 
 def test_quick_capture_searches_every_core_type_without_writing_directly():
