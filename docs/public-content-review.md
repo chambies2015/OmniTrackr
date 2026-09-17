@@ -18,7 +18,8 @@ pages. Preserve that policy; do not create another consolidation mechanism.
 | `/media-tracking` | Replace search-oriented filler and contradictory starter quantities with a fictional worked example. |
 | Category guides, checklist, templates | Existing specialized support pages; no duplicate articles or new indexable URLs added. |
 | `/compare` | Follow-up: named competitor comparisons need primary-source verification before revising or promoting. |
-| Discover and public collections/reviews | Preserve existing editorial/community content and publishing controls; not individually evaluated in this pass. |
+| Discover and public collections | Preserve existing editorial/community content and publishing controls; not individually evaluated in this pass. |
+| Public reviews | Keep one opt-in feed, distinguish community-ready summaries from search-ready inventory, and use automated version-bound reports because no manual review team is available. |
 
 ## Implemented
 
@@ -30,6 +31,12 @@ pages. Preserve that policy; do not create another consolidation mechanism.
 - Hub example: recommended film, paused anime, finished-but-unrated book; no claim
   that these are real user experiences or records.
 - Existing URLs, section anchors, indexability, and backend behavior preserved.
+- Search, structured-data, sitemap, prominent-ordering, and ad eligibility now
+  require the shared search-ready review result; ordinary community-ready reviews
+  remain browseable.
+- Fixed-reason signed-browser reports automatically unlist one exact review
+  version after three independent reports. Editing restores a revision without a
+  manual queue, and no saved review is deleted.
 
 ## Follow-up priorities
 
@@ -45,4 +52,6 @@ Google's guidance favors original reader value, reduced duplication, and clear
 navigation. It does not make these changes an approval guarantee:
 https://support.google.com/adsense/answer/10015918?hl=en
 
-No user data, routes, ads configuration, or publishing permissions were changed.
+The review-safety follow-up adds report-state records and a public report route,
+but does not rewrite existing reviews, change opt-in choices, or expose private
+library data.

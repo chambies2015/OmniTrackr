@@ -135,7 +135,6 @@ AD_ELIGIBLE_TEMPLATES = {
     "media_tracking.html",
     "review_guidelines.html",
     "sample_library.html",
-    "reviews.html",
 }
 
 NOFOLLOW_PUBLIC_TEMPLATES = {"recommendation_postcard.html"}
@@ -402,6 +401,15 @@ app.include_router(proxy.router)
 
 app.include_router(seo.router)
 app.include_router(static.router)
+rate_limited_review_report = limiter.limit("2/hour")(reviews.report_public_review)
+for route in reviews.router.routes:
+    if (
+        hasattr(route, "path")
+        and route.path == "/api/public/reviews/{category}/{review_id}/report"
+        and hasattr(route, "methods")
+        and "POST" in route.methods
+    ):
+        bind_rate_limited_endpoint(route, rate_limited_review_report)
 app.include_router(reviews.router)
 
 

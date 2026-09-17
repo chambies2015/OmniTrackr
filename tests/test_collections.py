@@ -117,6 +117,8 @@ class TestCollections:
         assert insights["content"]["total_items"] == 1
         assert insights["content"]["categories"][0]["label"] == "Movies"
         assert insights["engagement"]["activity_entries_30_days"] == 1
+        assert insights["moderation"]["review_reports"] == 0
+        assert insights["moderation"]["review_unlistings"] == 0
         assert [stage["key"] for stage in insights["activation"]] == [
             "registered", "verified", "started", "activated", "returned"
         ]

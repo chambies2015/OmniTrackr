@@ -194,7 +194,10 @@ class TestSEOEndpoints:
                 year=2026,
                 review=(
                     "This review is substantial enough for a category review listing because it explains tone, "
-                    "pacing, audience fit, and why the movie belongs in a public discovery directory."
+                    "pacing, audience fit, and why the movie belongs in a public discovery directory. The lead "
+                    "performance makes the slow opening worthwhile, while the final act pays off its quieter setup. "
+                    "I would recommend it to viewers who prefer character work over constant action and who enjoy "
+                    "a film that becomes more rewarding after its themes have time to settle."
                 ),
                 review_public=True,
             ),
@@ -569,13 +572,12 @@ class TestSecurityMiddleware:
             "/sample-library",
             "/demo",
             "/media-tracking",
-            "/reviews",
         ]
         excluded_paths = [
             "/", "/about", "/faq", "/guides", "/compare", "/use-cases",
             "/changelog", "/movie-tracker", "/anime-tracker", "/media-statistics",
             "/media-tracker-checklist", "/tracking-templates", "/roadmap",
-            "/privacy", "/advertising", "/content-quality", "/site-map", "/terms", "/contact",
+            "/privacy", "/advertising", "/content-quality", "/site-map", "/terms", "/contact", "/reviews",
         ]
 
         for path in eligible_paths:
@@ -1075,7 +1077,7 @@ class TestSecurityMiddleware:
         content = response.text
         assert "Recently Shipped" in content
         assert "Public Guide Library" in content
-        assert "Review Quality Tools" in content
+        assert "Automated Review Quality and Safety" in content
         assert "Ad and Privacy Transparency" in content
         assert "Security and SEO Cleanup" in content
         assert "Stability and Release Guardrails" in content
@@ -1341,7 +1343,7 @@ class TestSecurityMiddleware:
         assert "No deceptive placement" in content
         assert "Light by default" in content
         assert "Ads should not be placed inside private account forms" in content
-        assert "The mixed landing and authenticated app shell are intentionally kept out of the ad-loader allowlist" in content
+        assert "The mixed landing and authenticated app shell are also kept out of the ad-loader allowlist" in content
         assert "How Placements Are Reviewed" in content
         assert "Public pages should remain readable when ads are unavailable" in content
         assert "Google-certified consent management platform" in content
@@ -1373,7 +1375,8 @@ class TestSecurityMiddleware:
         assert "scraped summaries, or generic filler" in content
         assert "Public review pages for empty reviews, one-word notes, or private account data" in content
         assert "Reviews that contain obvious URLs, email addresses, phone-number-like contact details, or promotional phrases" in content
-        assert "marked noindex and do not load ads until they contain substantial public review inventory" in content
+        assert "Review directory pages stay ad-free" in content
+        assert "without exposing review text or reporter identity" in content
         assert "Machine-readable files such as ads.txt, sellers.json, llms.txt, and the AI summary endpoint" in content
         assert "Thin pages should be improved, noindexed, or removed from public discovery" in content
         hrefs = extract_hrefs(content)

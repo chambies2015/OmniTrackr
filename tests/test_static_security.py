@@ -7,6 +7,7 @@ MAIN_PY = Path(__file__).resolve().parents[1] / "app" / "main.py"
 INDEX_HTML = Path(__file__).resolve().parents[1] / "app" / "templates" / "index.html"
 AD_LOADER_JS = Path(__file__).resolve().parents[1] / "app" / "static" / "ad-loader.js"
 REVIEWS_JS = Path(__file__).resolve().parents[1] / "app" / "static" / "reviews.js"
+REVIEW_REPORT_JS = Path(__file__).resolve().parents[1] / "app" / "static" / "review_report.js"
 AUTH_JS = Path(__file__).resolve().parents[1] / "app" / "static" / "auth.js"
 ANALYTICS_JS = Path(__file__).resolve().parents[1] / "app" / "static" / "analytics.js"
 
@@ -189,12 +190,24 @@ def test_reviews_frontend_only_links_standalone_review_details():
     """Directory-quality reviews should not become clickable links to 404 detail pages."""
     source = REVIEWS_JS.read_text(encoding="utf-8")
 
-    assert "const PUBLIC_REVIEW_DETAIL_MIN_CHARS = 240" in source
     assert "function isStandaloneReview(review)" in source
+    assert "return review.search_ready === true" in source
     assert "card.classList.add('review-card--summary')" in source
     assert "if (isStandalone)" in source
     assert "item.url = reviewUrl" in source
     assert "listItem.url = reviewUrl" in source
+
+
+def test_review_reporting_uses_safe_dom_and_encoded_route_values():
+    """Report reasons and status must be rendered as text, never interpreted markup."""
+    source = REVIEW_REPORT_JS.read_text(encoding="utf-8")
+
+    assert ".innerHTML" not in source
+    assert "textContent = text" in source
+    assert "status.textContent" in source
+    assert "encodeURIComponent(form.dataset.category)" in source
+    assert "encodeURIComponent(form.dataset.reviewId)" in source
+    assert "data-review-report" in source
 
 
 def test_app_review_forms_prompt_for_substantial_public_reviews():
@@ -204,13 +217,15 @@ def test_app_review_forms_prompt_for_substantial_public_reviews():
 
     assert template.count("data-review-quality-input") == 6
     assert template.count("data-review-counter-for=") == 6
-    assert template.count("0/80 characters - add more context for public reviews") == 6
+    assert template.count("0/80 characters - add context for the community feed") == 6
     assert template.count('href="/review-guidelines"') >= 6
     assert 'class="review-quality-hint"' in source
     assert "const PUBLIC_REVIEW_MIN_CHARS = 80" in source
     assert "setupReviewQualityCounters()" in source
-    assert "getReviewQualityMessage(length)" in source
-    assert "public-ready context" in source
+    assert "getReviewQualityMessage(textarea.value)" in source
+    assert "Search-ready baseline met" in source
+    assert "SEARCH_READY_REVIEW_MIN_CHARS = 240" in source
+    assert "SEARCH_READY_REVIEW_MIN_WORDS = 35" in source
     assert source.count("${reviewQualityHintHtml('edit-") == 6
 
 

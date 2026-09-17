@@ -640,6 +640,8 @@ function closeImagePopup() {
 
 const REVIEW_PREVIEW_LEN = 60;
 const PUBLIC_REVIEW_MIN_CHARS = 80;
+const SEARCH_READY_REVIEW_MIN_CHARS = 240;
+const SEARCH_READY_REVIEW_MIN_WORDS = 35;
 
 function getReviewCellContent(review, title, subtitle) {
   if (!review || !String(review).trim()) return '';
@@ -682,15 +684,28 @@ function closeReviewModal() {
   }
 }
 
-function getReviewQualityMessage(length) {
-  if (length >= PUBLIC_REVIEW_MIN_CHARS) {
-    return `${length}/${PUBLIC_REVIEW_MIN_CHARS} characters - public-ready context`;
+function getReviewQualityMessage(reviewText) {
+  const text = String(reviewText || '').trim();
+  const length = text.length;
+  const wordCount = (text.match(/[\w'-]+/gu) || []).length;
+  const thoughtCount = (text.match(/[.!?…](?:\s|$)/gu) || []).length;
+  if (length < PUBLIC_REVIEW_MIN_CHARS) {
+    return `${length}/${PUBLIC_REVIEW_MIN_CHARS} characters - add context for the community feed`;
   }
-  return `${length}/${PUBLIC_REVIEW_MIN_CHARS} characters - add more context for public reviews`;
+  if (length < SEARCH_READY_REVIEW_MIN_CHARS) {
+    return `Community-ready · ${length}/${SEARCH_READY_REVIEW_MIN_CHARS} characters toward search-ready`;
+  }
+  if (wordCount < SEARCH_READY_REVIEW_MIN_WORDS) {
+    return `Community-ready · ${wordCount}/${SEARCH_READY_REVIEW_MIN_WORDS} words toward search-ready`;
+  }
+  if (thoughtCount < 2 && wordCount < 55) {
+    return 'Community-ready · add a second complete thought for search-ready';
+  }
+  return 'Search-ready baseline met · automated safety checks apply when published';
 }
 
 function reviewQualityHintHtml(inputId) {
-  return `<p class="review-quality-hint"><span class="review-quality-count" data-review-counter-for="${escapeHtml(inputId)}">0/${PUBLIC_REVIEW_MIN_CHARS} characters - add more context for public reviews</span>. Public reviews show best with personal context and audience fit. <a href="/review-guidelines" target="_blank" rel="noopener noreferrer">Review guide</a></p>`;
+  return `<p class="review-quality-hint"><span class="review-quality-count" data-review-counter-for="${escapeHtml(inputId)}">0/${PUBLIC_REVIEW_MIN_CHARS} characters - add context for the community feed</span>. Search-ready reviews use 240+ characters, 35+ words, complete thoughts, varied language, and no links or contact details. <a href="/review-guidelines" target="_blank" rel="noopener noreferrer">Review guide</a></p>`;
 }
 
 function setupReviewQualityCounter(textarea) {
@@ -700,8 +715,8 @@ function setupReviewQualityCounter(textarea) {
     const counter = document.querySelector(`[data-review-counter-for="${textarea.id}"]`);
     if (!counter) return;
     const length = textarea.value.trim().length;
-    counter.textContent = getReviewQualityMessage(length);
-    counter.classList.toggle('is-ready', length >= PUBLIC_REVIEW_MIN_CHARS);
+    counter.textContent = getReviewQualityMessage(textarea.value);
+    counter.classList.toggle('is-ready', length >= SEARCH_READY_REVIEW_MIN_CHARS);
   };
   textarea.addEventListener('input', updateCounter);
   updateCounter();
@@ -8108,6 +8123,8 @@ function renderModeratorInsights(data) {
     ['Changed after approval', data.moderation.stale_approvals],
     ['Rejected', data.moderation.rejected],
     ['Reports', data.moderation.reports],
+    ['Public review reports', data.moderation.review_reports],
+    ['Review versions unlisted', data.moderation.review_unlistings],
     ['Unverified over 7 days', data.users.unverified_older_than_7_days],
     ['Deactivated accounts', data.users.deactivated],
     ['Empty libraries', data.users.without_library_items],

@@ -261,6 +261,7 @@
         <li><strong>Authentication Tokens:</strong> JWT session tokens stored primarily in an HttpOnly cookie; legacy browser storage may remain during the transition from older sessions</li>
         <li><strong>Browser Information:</strong> Collected through Google Analytics on the public landing experience when browser privacy signals do not request limited tracking</li>
         <li><strong>Usage Data:</strong> Public landing page views and interactions collected through Google Analytics; private dashboard activity is not sent to Google Analytics</li>
+        <li><strong>Public Safety Reports:</strong> A fixed report reason, the public review version, timestamp, and one-way hash derived from a signed browser token; report records do not include free-text allegations or a stored IP address</li>
       </ul>
       <p>Files submitted to the Import Studio are processed to create the preview or confirmed import you request. Previewing performs no database writes. OmniTrackr does not publish migration files or imported review text, and confirmed CSV imports mark reviews private by default.</p>
 
@@ -270,6 +271,7 @@
         <li><strong>Google Analytics:</strong> To understand visits to the public landing experience; the private signed-in dashboard does not load Google Analytics, and the public loader honors supported Global Privacy Control and Do Not Track signals</li>
         <li><strong>Google AdSense:</strong> To display relevant advertisements (if applicable)</li>
         <li><strong>Local Storage:</strong> To store interface preferences and support legacy authentication sessions</li>
+        <li><strong>Public Visitor Cookie:</strong> A signed, HttpOnly, same-site token used to deduplicate collection reactions, collection views, and public review reports without browser fingerprinting</li>
       </ul>
 
       <h3>2.6 Google Ads and Advertising Cookies</h3>
@@ -288,6 +290,7 @@
         <li><strong>Social Features:</strong> To enable friend connections and allow you to view friends' collections (respecting privacy settings)</li>
         <li><strong>Communication:</strong> To send verification emails, password reset emails, and important service notifications</li>
         <li><strong>Security:</strong> To protect against fraud, unauthorized access, and ensure platform security</li>
+        <li><strong>Public Content Safety:</strong> To combine independent, rate-limited reports, temporarily unlist an exact reported review version, and notify its author; a substantive edit restores a revised version automatically</li>
         <li><strong>Analytics:</strong> To analyze usage patterns, improve our service, and understand user preferences</li>
         <li><strong>Legal Compliance:</strong> To comply with applicable laws, regulations, and legal processes</li>
       </ul>
@@ -385,6 +388,7 @@
         <li><strong>Friend Requests:</strong> Expire after 30 days if not responded to</li>
         <li><strong>Verification Tokens:</strong> Expire after 1 hour</li>
         <li><strong>Password Reset Tokens:</strong> Expire after 1 hour</li>
+        <li><strong>Public Safety Reports:</strong> Retained as needed to prevent duplicate reports, measure abuse, and protect the public review surface; a revised review starts a new current report version</li>
         <li><strong>Legal Requirements:</strong> Some data may be retained longer if required by law or for legitimate business purposes</li>
       </ul>
     </div>

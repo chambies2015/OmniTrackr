@@ -8,7 +8,6 @@
     '/sample-library',
     '/demo',
     '/media-tracking',
-    '/reviews',
   ]);
 
   function isAdEligiblePath() {

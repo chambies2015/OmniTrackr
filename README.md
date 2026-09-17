@@ -101,7 +101,7 @@ Users can:
 - Control which dashboard tabs are visible in their own interface.
 - Use a Data & Privacy Dashboard inside account settings.
 
-Public reviews are opt-in per item. A review is not public just because it exists in a user's private library.
+Public reviews are opt-in per item. A review is not public just because it exists in a user's private library. Community-ready reviews can appear in the browse feed; the stricter search-ready tier alone receives a detail URL, structured review data, sitemap inclusion, prominent ordering, or ad eligibility. Signed-browser reports are rate limited, deduplicated, and automatically unlist an exact review version after three independent reports. The review is never deleted, and a substantive author edit starts a clean version.
 
 ## Friends And Notifications
 
@@ -241,6 +241,8 @@ Public content and ads:
 | --- | --- |
 | `ADSENSE_PUBLISHER_ID` | Publisher ID used by `ads.txt` and seller metadata. |
 | `PUBLIC_REVIEW_MIN_CHARS` | Minimum review length for public review feeds. Defaults to `80`. |
+| `PUBLIC_REVIEW_DETAIL_MIN_CHARS` | Character floor within the broader search-ready quality checks. Defaults to `240`. |
+| `PUBLIC_REVIEW_REPORT_THRESHOLD` | Independent signed-browser reports required to temporarily unlist one exact review version. Defaults to `3`. |
 | `COLLECTION_MODERATOR_USERNAMES` | Comma-separated usernames allowed to review public collections for the gallery and search index. Keep this list limited to trusted accounts. |
 
 iTunes Search API and Open Library API do not require keys.

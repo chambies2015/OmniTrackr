@@ -352,6 +352,42 @@ class CollectionReport(Base):
     )
 
 
+class PublicReviewState(Base):
+    """Automated report state for one exact version of an opt-in public review."""
+    __tablename__ = "public_review_states"
+
+    id = Column(Integer, primary_key=True, index=True)
+    user_id = Column(Integer, ForeignKey("users.id", ondelete="CASCADE"), nullable=False, index=True)
+    category = Column(String, nullable=False, index=True)
+    item_id = Column(Integer, nullable=False, index=True)
+    content_hash = Column(String, nullable=False)
+    report_count = Column(Integer, nullable=False, default=0)
+    suspended_at = Column(DateTime, nullable=True, index=True)
+    created_at = Column(DateTime, nullable=False, default=datetime.utcnow)
+    updated_at = Column(DateTime, nullable=False, default=datetime.utcnow, onupdate=datetime.utcnow)
+
+    reports = relationship("PublicReviewReport", cascade="all, delete-orphan")
+
+    __table_args__ = (
+        UniqueConstraint("category", "item_id", name="uq_public_review_state_item"),
+    )
+
+
+class PublicReviewReport(Base):
+    """One bounded report per signed browser for a public review version."""
+    __tablename__ = "public_review_reports"
+
+    id = Column(Integer, primary_key=True, index=True)
+    state_id = Column(Integer, ForeignKey("public_review_states.id", ondelete="CASCADE"), nullable=False, index=True)
+    visitor_hash = Column(String, nullable=False)
+    reason = Column(String, nullable=False)
+    created_at = Column(DateTime, nullable=False, default=datetime.utcnow)
+
+    __table_args__ = (
+        UniqueConstraint("state_id", "visitor_hash", name="uq_public_review_report_visitor"),
+    )
+
+
 class FriendRequest(Base):
     """Friend request model for user friend requests."""
     __tablename__ = "friend_requests"

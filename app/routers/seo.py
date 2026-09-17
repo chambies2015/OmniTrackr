@@ -11,8 +11,9 @@ from sqlalchemy import and_, func
 
 from .. import models
 from ..dependencies import get_db
-from ..review_quality import is_public_review_safe
+from ..review_quality import evaluate_public_review
 from .collections import _approval_is_current, _media_lookup_for_collections
+from .reviews import _current_state_hides_review
 
 router = APIRouter(tags=["seo"])
 PUBLIC_REVIEW_MIN_CHARS = int(os.getenv("PUBLIC_REVIEW_MIN_CHARS", "80"))
@@ -56,13 +57,6 @@ async def get_sitemap(db: Session = Depends(get_db)):
     
     try:
         user_query = db.query(models.User.id).filter(models.User.is_active == True)
-        public_category_review_filter = lambda model_cls: and_(
-            model_cls.review.isnot(None),
-            model_cls.review != "",
-            model_cls.review_public == True,
-            func.length(func.trim(model_cls.review)) >= PUBLIC_REVIEW_MIN_CHARS,
-            model_cls.user_id.in_(user_query)
-        )
         public_detail_review_filter = lambda model_cls: and_(
             model_cls.review.isnot(None),
             model_cls.review != "",
@@ -71,11 +65,28 @@ async def get_sitemap(db: Session = Depends(get_db)):
             model_cls.user_id.in_(user_query)
         )
 
+        def visible_search_ready(category, candidates):
+            item_ids = [item.id for item in candidates]
+            state_map = {
+                state.item_id: state
+                for state in db.query(models.PublicReviewState).filter(
+                    models.PublicReviewState.category == category,
+                    models.PublicReviewState.item_id.in_(item_ids),
+                ).all()
+            } if item_ids else {}
+            return [
+                item for item in candidates
+                if evaluate_public_review(
+                    item.review, PUBLIC_REVIEW_MIN_CHARS, PUBLIC_REVIEW_DETAIL_MIN_CHARS
+                ).search_ready
+                and not _current_state_hides_review(state_map.get(item.id), category, item)
+            ]
+
         for category, model_cls in REVIEW_CATEGORY_MODELS:
             category_candidates = db.query(model_cls).filter(
-                public_category_review_filter(model_cls)
+                public_detail_review_filter(model_cls)
             ).limit(200).all()
-            if any(is_public_review_safe(item.review) for item in category_candidates):
+            if visible_search_ready(category, category_candidates):
                 sitemap_parts.append(f"""  <url>
     <loc>{base_url}/reviews?category={category}</loc>
     <lastmod>{today}</lastmod>
@@ -88,32 +99,32 @@ async def get_sitemap(db: Session = Depends(get_db)):
         movie_reviews = db.query(models.Movie).filter(
             public_detail_review_filter(models.Movie)
         ).limit(review_limit // 6).all()
-        movie_reviews = [review for review in movie_reviews if is_public_review_safe(review.review)]
+        movie_reviews = visible_search_ready("movie", movie_reviews)
         
         tv_reviews = db.query(models.TVShow).filter(
             public_detail_review_filter(models.TVShow)
         ).limit(review_limit // 6).all()
-        tv_reviews = [review for review in tv_reviews if is_public_review_safe(review.review)]
+        tv_reviews = visible_search_ready("tv_show", tv_reviews)
         
         anime_reviews = db.query(models.Anime).filter(
             public_detail_review_filter(models.Anime)
         ).limit(review_limit // 6).all()
-        anime_reviews = [review for review in anime_reviews if is_public_review_safe(review.review)]
+        anime_reviews = visible_search_ready("anime", anime_reviews)
         
         vg_reviews = db.query(models.VideoGame).filter(
             public_detail_review_filter(models.VideoGame)
         ).limit(review_limit // 6).all()
-        vg_reviews = [review for review in vg_reviews if is_public_review_safe(review.review)]
+        vg_reviews = visible_search_ready("video_game", vg_reviews)
 
         music_reviews = db.query(models.Music).filter(
             public_detail_review_filter(models.Music)
         ).limit(review_limit // 6).all()
-        music_reviews = [review for review in music_reviews if is_public_review_safe(review.review)]
+        music_reviews = visible_search_ready("music", music_reviews)
 
         book_reviews = db.query(models.Book).filter(
             public_detail_review_filter(models.Book)
         ).limit(review_limit // 6).all()
-        book_reviews = [review for review in book_reviews if is_public_review_safe(review.review)]
+        book_reviews = visible_search_ready("book", book_reviews)
         
         for review in movie_reviews:
             sitemap_parts.append(f"""  <url>

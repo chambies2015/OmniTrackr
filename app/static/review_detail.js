@@ -222,6 +222,9 @@ function displayReview(review) {
       <p><strong>Review by:</strong> ${escapeHtml(review.username)}</p>
     </div>
   `;
+  if (window.createReviewReportControls) {
+    reviewContainer.appendChild(window.createReviewReportControls(review.category, review.id));
+  }
 }
 
 function escapeHtml(text) {

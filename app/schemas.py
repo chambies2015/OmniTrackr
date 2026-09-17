@@ -1085,6 +1085,10 @@ class CollectionReportCreate(BaseModel):
     details: Optional[str] = Field(None, max_length=500)
 
 
+class PublicReviewReportCreate(BaseModel):
+    reason: str = Field(..., pattern="^(spam|harassment|personal_information|copied_content|other)$")
+
+
 class CollectionItem(BaseModel):
     id: int
     category: str

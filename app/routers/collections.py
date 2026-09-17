@@ -6,7 +6,6 @@ from html import escape
 import json
 import os
 from pathlib import Path
-import secrets
 from typing import Dict, List, Tuple, Type
 
 from fastapi import APIRouter, Depends, HTTPException, Request, status
@@ -15,9 +14,15 @@ from sqlalchemy import case, func
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session, selectinload
 
-from .. import auth, models, schemas
+from .. import models, schemas
 from ..csp import strict_html_response
 from ..dependencies import get_current_user, get_db
+from ..visitor_identity import (
+    VISITOR_COOKIE,
+    set_visitor_cookie as _set_visitor_cookie,
+    sign_visitor_token as _sign_visitor_token,
+    visitor_identity as _visitor_identity,
+)
 
 router = APIRouter(prefix="/collections", tags=["collections"])
 
@@ -34,7 +39,6 @@ PUBLIC_COLLECTION_MIN_DESCRIPTION_CHARS = 300
 PUBLIC_COLLECTION_MIN_ITEMS = 3
 PUBLIC_COLLECTION_MAX_ITEMS = 50
 PUBLIC_COLLECTION_GALLERY_MIN = 3
-VISITOR_COOKIE = "omnitrackr_collection_visitor"
 ARTWORK_FIELDS = {
     "movies": "poster_url",
     "tv-shows": "poster_url",
@@ -52,49 +56,6 @@ COPY_FIELDS = {
     "music": ("title", "artist", "year", "genre", "cover_art_url"),
     "books": ("title", "author", "year", "genre", "cover_art_url"),
 }
-
-
-def _sign_visitor_token(payload: str) -> str:
-    signature = hmac.new(auth.SECRET_KEY.encode("utf-8"), payload.encode("utf-8"), hashlib.sha256).hexdigest()
-    return f"{payload}.{signature}"
-
-
-def _visitor_identity(request: Request) -> tuple[str, str | None, bool]:
-    """Return a signed pseudonymous identity and whether the browser retained it."""
-    supplied_token = request.cookies.get(VISITOR_COOKIE, "")
-    if 80 <= len(supplied_token) <= 160 and "." in supplied_token:
-        payload, supplied_signature = supplied_token.rsplit(".", 1)
-        expected = hmac.new(
-            auth.SECRET_KEY.encode("utf-8"), payload.encode("utf-8"), hashlib.sha256
-        ).hexdigest()
-        signature_is_hex = (
-            len(supplied_signature) == 64
-            and supplied_signature.isascii()
-            and all(character in "0123456789abcdef" for character in supplied_signature)
-        )
-        if payload and signature_is_hex and hmac.compare_digest(supplied_signature, expected):
-            digest = hashlib.sha256(
-                f"{auth.SECRET_KEY}:{supplied_token}".encode("utf-8")
-            ).hexdigest()
-            return digest, None, True
-
-    # Keep request-controlled bytes out of the response-cookie dataflow. Only a
-    # freshly generated, server-signed value can be returned for Set-Cookie.
-    new_token = _sign_visitor_token(secrets.token_urlsafe(32))
-    digest = hashlib.sha256(f"{auth.SECRET_KEY}:{new_token}".encode("utf-8")).hexdigest()
-    return digest, new_token, False
-
-
-def _set_visitor_cookie(response, token: str | None) -> None:
-    if token:
-        response.set_cookie(
-            VISITOR_COOKIE,
-            token,
-            max_age=60 * 60 * 24 * 365,
-            httponly=True,
-            secure=os.getenv("ENVIRONMENT", "development").lower() == "production",
-            samesite="lax",
-        )
 
 
 def _moderator_usernames() -> set[str]:
@@ -261,6 +222,10 @@ def _moderator_site_insights(db: Session) -> dict:
         "helpful": int(collection_totals[1] or 0),
         "reports": int(collection_totals[2] or 0),
         "reports_by_reason": reports_by_reason,
+        "review_reports": _count(db, models.PublicReviewReport),
+        "review_unlistings": _count(
+            db, models.PublicReviewState, models.PublicReviewState.suspended_at.isnot(None)
+        ),
     }
 
     engagement = {

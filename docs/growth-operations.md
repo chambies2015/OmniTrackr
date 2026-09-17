@@ -48,6 +48,31 @@ application or re-review:
 5. Review public pages for original reader value, accurate claims, working navigation, and adequate moderation.
 6. Use Search Console and AdSense feedback to choose follow-up work instead of adding speculative pages.
 
+## Automated public-review quality and safety
+
+The review directory reuses the existing opt-in review field and has two display
+tiers rather than a second publishing workflow. Community-ready reviews require
+at least 80 trimmed characters, varied language, and the public safety checks.
+Search-ready reviews additionally require at least 240 characters, 35 words,
+and either two complete thoughts or 55 words. Obvious links, contact details,
+promotional phrases, placeholder text, and mechanically repeated filler fail the
+relevant public tier without changing the saved library review.
+
+Only search-ready reviews receive standalone detail pages, Review structured
+data, sitemap URLs, prominent ordering, or ad eligibility. Community-ready
+reviews remain browseable and reportable as summaries. The shared review
+directory stays ad-free; only qualifying standalone review details may load ads.
+
+Public reports reuse the signed, HTTP-only visitor cookie already used by public
+collections. The database stores its one-way hash and a fixed reason, not an IP
+address, fingerprint, or free-text report. One browser can report an exact review
+version once, and the endpoint is limited to two submissions per IP address per hour. Three
+independent reports temporarily unlist that content hash and create an in-app
+notification for the author. Nothing is deleted. Editing the review changes its
+hash, restores the revision automatically, and resets its current report count
+when a new report is received. Aggregate report and unlisting counts appear in
+the existing site-health panel; review text and reporter identity do not.
+
 ## Verification
 
 Run the full suite:
@@ -64,4 +89,5 @@ node --test tests/*.cjs
 
 Focused growth and trust checks live in `tests/test_auth.py`,
 `tests/test_collections.py`, `tests/test_first_session.py`,
-`tests/test_seo_security.py`, and `tests/test_static_security.py`.
+`tests/test_public_reviews.py`, `tests/test_seo_security.py`, and
+`tests/test_static_security.py`.
