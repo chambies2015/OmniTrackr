@@ -4,7 +4,7 @@ Tests for authentication endpoints and utilities.
 import pytest
 from datetime import datetime, timedelta, timezone
 
-from app import auth, crud, email as email_utils, models
+from app import auth, crud, email as email_utils, models, return_prompt as return_prompt_tokens
 from app.database import SessionLocal
 
 
@@ -167,7 +167,11 @@ class TestAuthEndpoints:
         assert "access_token" in data
         assert data["token_type"] == "bearer"
         assert "user" in data
-        assert data["return_prompt"] == {"eligible": False, "days_away": None}
+        assert data["return_prompt"] == {
+            "eligible": False,
+            "days_away": None,
+            "engagement_token": None,
+        }
         assert "omnitrackr_session=" in response.headers.get("set-cookie", "")
         db_session.refresh(user)
         assert user.login_count == 1
@@ -199,7 +203,12 @@ class TestAuthEndpoints:
         )
 
         assert response.status_code == 200
-        assert response.json()["return_prompt"] == {"eligible": True, "days_away": 4}
+        return_prompt = response.json()["return_prompt"]
+        assert return_prompt["eligible"] is True
+        assert return_prompt["days_away"] == 4
+        assert return_prompt_tokens.return_prompt_days_away(
+            return_prompt["engagement_token"], user.id
+        ) == 4
         db_session.refresh(user)
         assert user.login_count == 4
     

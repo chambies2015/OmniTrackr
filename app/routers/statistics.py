@@ -1,13 +1,13 @@
 """
 Statistics endpoints for the OmniTrackr API.
 """
-from datetime import date, datetime, timedelta
-from fastapi import APIRouter, Depends, HTTPException, Query, Response
+from datetime import datetime, timedelta, timezone
+from fastapi import APIRouter, Depends, Header, HTTPException, Query, Request, Response
 from sqlalchemy.orm import Session
 from sqlalchemy import and_, case, func, or_
 from sqlalchemy.exc import IntegrityError
 
-from .. import crud, schemas, models
+from .. import crud, schemas, models, return_prompt as return_prompt_tokens
 from ..dependencies import get_db, get_current_user
 from ..tasteprint import build_tasteprint
 
@@ -74,13 +74,47 @@ def _pulse_item(item, category: dict, prompts: list[str]) -> dict:
     }
 
 
-def _next_up_pulse_item(queue_item, category: dict, db: Session, user_id: int) -> dict | None:
-    """Resolve a queue reference for the compact dashboard pulse."""
-    model = category["model"]
-    item = db.query(model).filter(model.id == queue_item.item_id, model.user_id == user_id).first()
-    if not item:
-        return None
-    return _pulse_item(item, category, [])
+def _resolve_queue_pulse_items(
+    queue_items: list[models.NextUpItem],
+    categories: list[dict],
+    db: Session,
+    user_id: int,
+    *,
+    unfinished_only: bool = False,
+) -> list[dict]:
+    """Resolve an ordered queue with one media query per represented category."""
+    category_by_key = {category["key"]: category for category in categories}
+    ids_by_category: dict[str, list[int]] = {}
+    for queue_item in queue_items:
+        if queue_item.category in category_by_key:
+            ids_by_category.setdefault(queue_item.category, []).append(queue_item.item_id)
+
+    resolved = {}
+    for category_key, item_ids in ids_by_category.items():
+        category = category_by_key[category_key]
+        model = category["model"]
+        query = db.query(model).filter(model.user_id == user_id, model.id.in_(item_ids))
+        if unfinished_only:
+            query = query.filter(category["done"] == False)
+        for item in query.all():
+            resolved[(category_key, item.id)] = _pulse_item(item, category, [])
+
+    return [
+        resolved[(queue_item.category, queue_item.item_id)]
+        for queue_item in queue_items
+        if (queue_item.category, queue_item.item_id) in resolved
+    ]
+
+
+def _library_item_count(db: Session, user_id: int) -> int:
+    """Count all built-in media with one database round trip."""
+    counts = db.query(*[
+        db.query(func.count(category["model"].id)).filter(
+            category["model"].user_id == user_id
+        ).scalar_subquery()
+        for category in LIBRARY_CATEGORIES
+    ]).one()
+    return sum(int(count or 0) for count in counts)
 
 
 @router.get("/today/", response_model=dict)
@@ -104,21 +138,13 @@ async def get_todays_pick(
         if not categories:
             raise HTTPException(status_code=422, detail="Unknown media category")
     by_key = {entry["key"]: entry for entry in categories}
-    queued = []
-    for entry in db.query(models.NextUpItem).filter(
+    queue_items = db.query(models.NextUpItem).filter(
         models.NextUpItem.user_id == current_user.id,
         models.NextUpItem.category.in_(by_key),
-    ).order_by(models.NextUpItem.position, models.NextUpItem.id).limit(25):
-        category = by_key.get(entry.category)
-        if not category:
-            continue
-        item = db.query(category["model"]).filter(
-            category["model"].id == entry.item_id,
-            category["model"].user_id == current_user.id,
-            category["done"] == False,
-        ).first()
-        if item:
-            queued.append(_pulse_item(item, category, []))
+    ).order_by(models.NextUpItem.position, models.NextUpItem.id).limit(25).all()
+    queued = _resolve_queue_pulse_items(
+        queue_items, categories, db, current_user.id, unfinished_only=True
+    )
 
     if queued:
         choice = queued[offset % len(queued)]
@@ -137,7 +163,7 @@ async def get_todays_pick(
     if not candidates:
         return {"pick": None, "candidate_count": 0}
 
-    choice = candidates[(date.today().toordinal() + current_user.id + offset) % len(candidates)]
+    choice = candidates[(datetime.now(timezone.utc).date().toordinal() + current_user.id + offset) % len(candidates)]
     choice["reason"] = "A small, unfinished choice from your private library"
     choice["source"] = "library"
     return {"pick": choice, "candidate_count": len(candidates)}
@@ -315,15 +341,10 @@ async def get_library_pulse(
                 prompts.append("Leave a note")
             reflection_items.append(_pulse_item(item, category, prompts))
 
-    category_by_key = {category["key"]: category for category in categories}
     queued_items = db.query(models.NextUpItem).filter(
         models.NextUpItem.user_id == current_user.id,
     ).order_by(models.NextUpItem.position, models.NextUpItem.id).limit(3).all()
-    next_up_items = [
-        item for queue_item in queued_items
-        if (category := category_by_key.get(queue_item.category))
-        and (item := _next_up_pulse_item(queue_item, category, db, current_user.id))
-    ]
+    next_up_items = _resolve_queue_pulse_items(queued_items, categories, db, current_user.id)
 
     return {
         "continue_items": continue_items[:6],
@@ -336,18 +357,23 @@ async def get_library_pulse(
 @router.get("/return-deck/", response_model=dict)
 async def get_return_deck(
     response: Response,
-    days_away: int = Query(3, ge=3, le=90),
+    request: Request,
+    days_away: int | None = Query(None, ge=3, le=90),
+    engagement_token: str | None = Header(
+        None, alias="X-Return-Prompt", min_length=32, max_length=512
+    ),
     current_user: models.User = Depends(get_current_user),
     db: Session = Depends(get_db),
 ):
     """Compose existing private signals into one optional return experience."""
     response.headers["Cache-Control"] = "private, no-store"
-    library_item_count = sum(
-        db.query(func.count(category["model"].id)).filter(
-            category["model"].user_id == current_user.id
-        ).scalar() or 0
-        for category in LIBRARY_CATEGORIES
+    signed_days_away = return_prompt_tokens.return_prompt_days_away(
+        engagement_token, current_user.id
     )
+    if signed_days_away is None or (days_away is not None and days_away != signed_days_away):
+        raise HTTPException(status_code=403, detail="Return prompt is not active")
+    days_away = signed_days_away
+    library_item_count = _library_item_count(db, current_user.id)
     if library_item_count < 5:
         return {"eligible": False, "library_item_count": library_item_count}
 
@@ -370,16 +396,24 @@ async def get_return_deck(
     if not primary and not reflection_items:
         return {"eligible": False, "library_item_count": library_item_count}
 
-    since = datetime.utcnow() - timedelta(days=days_away)
-    activity = db.query(models.ActivityEntry).filter(
+    since = datetime.now(timezone.utc).replace(tzinfo=None) - timedelta(days=days_away)
+    activity_rows = db.query(
+        models.ActivityEntry.category,
+        func.count(models.ActivityEntry.id),
+        func.sum(case((models.ActivityEntry.action == "completed", 1), else_=0)),
+        func.sum(case((func.length(func.trim(func.coalesce(models.ActivityEntry.note, ""))) > 0, 1), else_=0)),
+    ).filter(
         models.ActivityEntry.user_id == current_user.id,
         models.ActivityEntry.occurred_at >= since,
-    ).all()
-    category_counts = {
-        category["key"]: sum(entry.category == category["key"] for entry in activity)
-        for category in LIBRARY_CATEGORIES
-    }
-    top_category_key = max(category_counts, key=category_counts.get) if activity else None
+    ).group_by(models.ActivityEntry.category).all()
+    entry_count = sum(int(row[1] or 0) for row in activity_rows)
+    completed_count = sum(int(row[2] or 0) for row in activity_rows)
+    reflection_count = sum(int(row[3] or 0) for row in activity_rows)
+    category_counts = {category["key"]: 0 for category in LIBRARY_CATEGORIES}
+    for category_key, count, _, _ in activity_rows:
+        if category_key in category_counts:
+            category_counts[category_key] = int(count or 0)
+    top_category_key = max(category_counts, key=category_counts.get) if any(category_counts.values()) else None
     category_by_key = {category["key"]: category for category in LIBRARY_CATEGORIES}
 
     return {
@@ -390,9 +424,9 @@ async def get_return_deck(
         "alternative": alternatives[0] if alternatives else None,
         "reflection": reflection_items[0] if reflection_items else None,
         "recap": {
-            "entry_count": len(activity),
-            "completed_count": sum(entry.action == "completed" for entry in activity),
-            "reflection_count": sum(bool((entry.note or "").strip()) for entry in activity),
+            "entry_count": entry_count,
+            "completed_count": completed_count,
+            "reflection_count": reflection_count,
             "top_category_label": category_by_key[top_category_key]["label"] if top_category_key else None,
         },
     }
@@ -401,33 +435,57 @@ async def get_return_deck(
 @router.post("/return-deck/engagement", response_model=dict)
 async def record_return_deck_engagement(
     payload: schemas.ReturnPromptEngagement,
+    request: Request,
     current_user: models.User = Depends(get_current_user),
     db: Session = Depends(get_db),
 ):
-    """Increment an anonymous daily total without retaining user or media data."""
-    metric_date = date.today()
+    """Record one anonymous impression and one terminal outcome per signed deck."""
+    if return_prompt_tokens.return_prompt_days_away(
+        payload.engagement_token, current_user.id
+    ) is None:
+        raise HTTPException(status_code=403, detail="Return prompt is not active")
+    # Receipts exist only to make the 24-hour prompt idempotent; retain a small
+    # grace window for delayed requests without building a long-lived ledger.
+    db.query(models.ReturnPromptEngagementReceipt).filter(
+        models.ReturnPromptEngagementReceipt.created_at
+        < datetime.now(timezone.utc).replace(tzinfo=None) - timedelta(days=7)
+    ).delete(synchronize_session=False)
+    metric_date = datetime.now(timezone.utc).date()
+    metric_exists = db.query(models.ReturnPromptDailyMetric.id).filter(
+        models.ReturnPromptDailyMetric.metric_date == metric_date
+    ).first()
+    if not metric_exists:
+        db.add(models.ReturnPromptDailyMetric(metric_date=metric_date))
+        try:
+            db.commit()
+        except IntegrityError:
+            # Another request may create today's single aggregate row first.
+            db.rollback()
+
+    token_digest = return_prompt_tokens.return_prompt_token_digest(payload.engagement_token)
+    event_kind = "shown" if payload.action == "shown" else "resolved"
+    receipt = models.ReturnPromptEngagementReceipt(
+        token_digest=token_digest,
+        event_kind=event_kind,
+        action=payload.action,
+    )
+    db.add(receipt)
     field = {
         "shown": "shown_count",
         "opened": "opened_count",
         "dismissed": "dismissed_count",
     }[payload.action]
     column = getattr(models.ReturnPromptDailyMetric, field)
-    updated = db.query(models.ReturnPromptDailyMetric).filter(
+    db.query(models.ReturnPromptDailyMetric).filter(
         models.ReturnPromptDailyMetric.metric_date == metric_date
     ).update({column: column + 1}, synchronize_session=False)
-    if not updated:
-        metric = models.ReturnPromptDailyMetric(metric_date=metric_date, **{field: 1})
-        db.add(metric)
     try:
         db.commit()
     except IntegrityError:
-        # Two first events can race to create today's row. The unique date keeps
-        # one row, then the losing request retries as an atomic increment.
+        # The receipt uniqueness makes an impression and terminal outcome
+        # idempotent. The receipt and aggregate increment commit together.
         db.rollback()
-        db.query(models.ReturnPromptDailyMetric).filter(
-            models.ReturnPromptDailyMetric.metric_date == metric_date
-        ).update({column: column + 1}, synchronize_session=False)
-        db.commit()
+        return {"recorded": False}
     return {"recorded": True}
 
 

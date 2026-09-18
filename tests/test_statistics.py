@@ -1,9 +1,17 @@
 """
 Tests for statistics endpoints.
 """
+from datetime import datetime, timedelta
+
 import pytest
 from sqlalchemy import event
-from app import models
+from app import models, return_prompt as return_prompt_tokens
+from app.routers import statistics as statistics_router
+
+
+def return_token(db_session, days_away: int) -> str:
+    owner = db_session.query(models.User).filter_by(username="testuser").one()
+    return return_prompt_tokens.create_return_prompt_token(days_away, owner.id)
 
 
 class TestStatisticsEndpoints:
@@ -175,7 +183,12 @@ class TestStatisticsEndpoints:
         ))
         db_session.commit()
 
-        response = authenticated_client.get("/statistics/return-deck/?days_away=4")
+        token = return_token(db_session, 4)
+        response = authenticated_client.get(
+            "/statistics/return-deck/",
+            params={"days_away": 4},
+            headers={"X-Return-Prompt": token},
+        )
 
         assert response.status_code == 200
         assert response.headers["Cache-Control"] == "private, no-store"
@@ -189,17 +202,154 @@ class TestStatisticsEndpoints:
         assert deck["recap"]["completed_count"] == 1
         assert deck["recap"]["reflection_count"] == 1
 
-    def test_return_deck_requires_activation_and_authentication(self, authenticated_client, client, test_movie_data):
+    def test_return_deck_query_count_is_bounded_for_a_full_queue(self, authenticated_client, db_session):
+        owner = db_session.query(models.User).filter_by(username="testuser").one()
+        movies = [
+            models.Movie(
+                user_id=owner.id,
+                title=f"Queued movie {index}",
+                watched=False,
+                review="",
+            )
+            for index in range(25)
+        ]
+        db_session.add_all(movies)
+        db_session.flush()
+        db_session.add_all([
+            models.NextUpItem(
+                user_id=owner.id,
+                category="movies",
+                item_id=movie.id,
+                position=index,
+            )
+            for index, movie in enumerate(movies)
+        ])
+        db_session.commit()
+
+        statements = []
+
+        def record_statement(conn, cursor, statement, parameters, context, executemany):
+            if statement.lstrip().upper().startswith("SELECT"):
+                statements.append(statement)
+
+        event.listen(db_session.bind, "before_cursor_execute", record_statement)
+        try:
+            token = return_token(db_session, 4)
+            response = authenticated_client.get(
+                "/statistics/return-deck/",
+                params={"days_away": 4},
+                headers={"X-Return-Prompt": token},
+            )
+        finally:
+            event.remove(db_session.bind, "before_cursor_execute", record_statement)
+
+        assert response.status_code == 200
+        assert response.json()["eligible"] is True
+        # Authentication, six-category aggregates, and two batched queue
+        # resolutions stay constant as the queue grows.
+        assert len(statements) <= 20
+
+    def test_return_deck_aggregates_activity_without_materializing_rows(
+        self, authenticated_client, db_session, test_movie_data
+    ):
+        owner = db_session.query(models.User).filter_by(username="testuser").one()
+        movies = []
+        for index in range(5):
+            response = authenticated_client.post("/movies/", json={
+                **test_movie_data,
+                "title": f"Activity movie {index}",
+                "watched": False,
+                "rating": None,
+                "review": "",
+            })
+            movies.append(response.json())
+        db_session.add_all([
+            models.ActivityEntry(
+                user_id=owner.id,
+                category="movies" if index < 150 else "books",
+                item_id=movies[index % len(movies)]["id"],
+                title=f"Activity {index}",
+                action="completed" if index % 2 == 0 else "updated",
+                note="Reflection" if index % 4 == 0 else "",
+                occurred_at=datetime.utcnow() - timedelta(hours=1),
+            )
+            for index in range(200)
+        ])
+        db_session.commit()
+
+        activity_statements = []
+
+        def record_activity_statement(conn, cursor, statement, parameters, context, executemany):
+            normalized = " ".join(statement.lower().split())
+            if " from activity_entries " in normalized:
+                activity_statements.append(normalized)
+
+        event.listen(db_session.bind, "before_cursor_execute", record_activity_statement)
+        try:
+            token = return_token(db_session, 3)
+            response = authenticated_client.get(
+                "/statistics/return-deck/",
+                params={"days_away": 3},
+                headers={"X-Return-Prompt": token},
+            )
+        finally:
+            event.remove(db_session.bind, "before_cursor_execute", record_activity_statement)
+
+        assert response.status_code == 200
+        recap = response.json()["recap"]
+        assert recap == {
+            "entry_count": 200,
+            "completed_count": 100,
+            "reflection_count": 50,
+            "top_category_label": "Movie",
+        }
+        assert len(activity_statements) == 1
+        assert "group by activity_entries.category" in activity_statements[0]
+        assert "activity_entries.title" not in activity_statements[0]
+
+    def test_return_deck_requires_activation_and_authentication(
+        self, authenticated_client, client, db_session, test_movie_data
+    ):
         authenticated_client.post("/movies/", json={**test_movie_data, "watched": False})
-        response = authenticated_client.get("/statistics/return-deck/?days_away=3")
+        token = return_token(db_session, 3)
+        response = authenticated_client.get(
+            "/statistics/return-deck/",
+            params={"days_away": 3},
+            headers={"X-Return-Prompt": token},
+        )
         assert response.status_code == 200
         assert response.json() == {"eligible": False, "library_item_count": 1}
 
+        assert authenticated_client.get(
+            "/statistics/return-deck/",
+            params={"days_away": 4},
+            headers={"X-Return-Prompt": token},
+        ).status_code == 403
+        assert authenticated_client.get("/statistics/return-deck/?days_away=3").status_code == 403
+
+        owner = db_session.query(models.User).filter_by(username="testuser").one()
+        other_user_token = return_prompt_tokens.create_return_prompt_token(3, owner.id + 1000)
+        assert authenticated_client.get(
+            "/statistics/return-deck/",
+            params={"days_away": 3},
+            headers={"X-Return-Prompt": other_user_token},
+        ).status_code == 403
+        assert authenticated_client.post(
+            "/statistics/return-deck/engagement",
+            json={"action": "shown", "engagement_token": other_user_token},
+        ).status_code == 403
+
         client.headers = {}
         client.cookies.clear()
-        assert client.get("/statistics/return-deck/?days_away=3").status_code == 401
+        assert client.get(
+            "/statistics/return-deck/",
+            params={"days_away": 3},
+            headers={"X-Return-Prompt": token},
+        ).status_code == 401
 
-    def test_return_deck_stays_hidden_without_a_useful_action(self, authenticated_client, test_movie_data):
+    def test_return_deck_stays_hidden_without_a_useful_action(
+        self, authenticated_client, db_session, test_movie_data
+    ):
         for index in range(5):
             response = authenticated_client.post("/movies/", json={
                 **test_movie_data,
@@ -210,25 +360,59 @@ class TestStatisticsEndpoints:
             })
             assert response.status_code == 201
 
-        response = authenticated_client.get("/statistics/return-deck/?days_away=3")
+        token = return_token(db_session, 3)
+        response = authenticated_client.get(
+            "/statistics/return-deck/",
+            params={"days_away": 3},
+            headers={"X-Return-Prompt": token},
+        )
         assert response.status_code == 200
         assert response.json() == {"eligible": False, "library_item_count": 5}
 
     def test_return_deck_engagement_is_stored_only_as_daily_aggregate(self, authenticated_client, db_session):
+        token = return_token(db_session, 4)
+        results = []
         for action in ("shown", "opened", "dismissed", "shown"):
             response = authenticated_client.post(
-                "/statistics/return-deck/engagement", json={"action": action}
+                "/statistics/return-deck/engagement",
+                json={"action": action, "engagement_token": token},
             )
             assert response.status_code == 200
+            results.append(response.json()["recorded"])
 
+        assert results == [True, True, False, False]
         metric = db_session.query(models.ReturnPromptDailyMetric).one()
-        assert metric.shown_count == 2
+        assert metric.shown_count == 1
         assert metric.opened_count == 1
-        assert metric.dismissed_count == 1
+        assert metric.dismissed_count == 0
         assert not hasattr(metric, "user_id")
+        receipts = db_session.query(models.ReturnPromptEngagementReceipt).all()
+        assert {(receipt.event_kind, receipt.action) for receipt in receipts} == {
+            ("shown", "shown"),
+            ("resolved", "opened"),
+        }
+        assert all(not hasattr(receipt, "user_id") for receipt in receipts)
         assert authenticated_client.post(
-            "/statistics/return-deck/engagement", json={"action": "clicked_title"}
+            "/statistics/return-deck/engagement",
+            json={"action": "clicked_title", "engagement_token": token},
         ).status_code == 422
+        assert authenticated_client.post(
+            "/statistics/return-deck/engagement",
+            json={"action": "shown", "engagement_token": f"{token}tampered"},
+        ).status_code == 403
+
+    def test_return_deck_rate_limit_wrappers_are_bound_to_executed_handlers(self):
+        protected_paths = {
+            "/statistics/return-deck/",
+            "/statistics/return-deck/engagement",
+        }
+        routes = [
+            route for route in statistics_router.router.routes
+            if getattr(route, "path", None) in protected_paths
+        ]
+        assert {route.path for route in routes} == protected_paths
+        assert all(route.endpoint is route.dependant.call for route in routes)
+        assert all(hasattr(route.endpoint, "__wrapped__") for route in routes)
 
     def test_todays_pick_is_private_read_only_and_respects_next_up(self, authenticated_client, db_session, test_movie_data, test_book_data):
         movie = authenticated_client.post("/movies/", json={**test_movie_data, "watched": False}).json()

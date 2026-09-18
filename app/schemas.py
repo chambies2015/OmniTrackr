@@ -197,6 +197,7 @@ class ReturnPromptContext(BaseModel):
     """Ephemeral login context for the private Welcome Back Deck."""
     eligible: bool = False
     days_away: Optional[int] = None
+    engagement_token: Optional[str] = None
 
 
 class Token(BaseModel):
@@ -937,6 +938,7 @@ class NextUpItem(BaseModel):
 class ReturnPromptEngagement(BaseModel):
     """One anonymous aggregate counter update from the Welcome Back Deck."""
     action: Literal["shown", "opened", "dismissed"]
+    engagement_token: str = Field(..., min_length=32, max_length=512)
 
 
 # ============================================================================

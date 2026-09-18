@@ -241,6 +241,11 @@ def _moderator_site_insights(db: Session) -> dict:
         ),
     }
 
+    return_deck_totals = db.query(
+        func.coalesce(func.sum(models.ReturnPromptDailyMetric.shown_count), 0),
+        func.coalesce(func.sum(models.ReturnPromptDailyMetric.opened_count), 0),
+        func.coalesce(func.sum(models.ReturnPromptDailyMetric.dismissed_count), 0),
+    ).one()
     engagement = {
         "activity_entries_7_days": _count(
             db, models.ActivityEntry, models.ActivityEntry.occurred_at >= seven_days_ago
@@ -256,15 +261,9 @@ def _moderator_site_insights(db: Session) -> dict:
         "friendships": _count(db, models.Friendship),
         "recommendation_requests": _count(db, models.RecommendationRequest),
         "recommendation_submissions": _count(db, models.RecommendationSubmission),
-        "return_deck_shown": int(db.query(
-            func.coalesce(func.sum(models.ReturnPromptDailyMetric.shown_count), 0)
-        ).scalar() or 0),
-        "return_deck_opened": int(db.query(
-            func.coalesce(func.sum(models.ReturnPromptDailyMetric.opened_count), 0)
-        ).scalar() or 0),
-        "return_deck_dismissed": int(db.query(
-            func.coalesce(func.sum(models.ReturnPromptDailyMetric.dismissed_count), 0)
-        ).scalar() or 0),
+        "return_deck_shown": int(return_deck_totals[0] or 0),
+        "return_deck_opened": int(return_deck_totals[1] or 0),
+        "return_deck_dismissed": int(return_deck_totals[2] or 0),
     }
 
     signup_dates = [

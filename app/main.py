@@ -340,6 +340,15 @@ app.include_router(anime.router)
 app.include_router(video_games.router)
 app.include_router(music.router)
 app.include_router(books.router)
+rate_limited_return_deck = limiter.limit("30/minute")(statistics.get_return_deck)
+rate_limited_return_engagement = limiter.limit("10/minute")(statistics.record_return_deck_engagement)
+for route in statistics.router.routes:
+    if not hasattr(route, "path") or not hasattr(route, "methods"):
+        continue
+    if route.path == "/statistics/return-deck/" and "GET" in route.methods:
+        bind_rate_limited_endpoint(route, rate_limited_return_deck)
+    elif route.path == "/statistics/return-deck/engagement" and "POST" in route.methods:
+        bind_rate_limited_endpoint(route, rate_limited_return_engagement)
 app.include_router(statistics.router)
 app.include_router(next_up.router)
 app.include_router(completion_moments.router)

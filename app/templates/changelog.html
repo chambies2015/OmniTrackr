@@ -104,8 +104,9 @@
           <li>Offers the deck only after a successful login following at least three full days away and only after five built-in titles have been saved.</li>
           <li>Composes the existing Next Up queue, Today’s Pick, Library Pulse, and Activity Journal into a primary choice, an alternative, an optional reflection, and a compact recap.</li>
           <li>Temporarily replaces Today’s Pick and Library Pulse while visible, then restores the familiar dashboard after an item is opened or the deck is dismissed.</li>
-          <li>Keeps eligibility in short-lived browser session storage rather than creating a server-side visit history.</li>
-          <li>Adds only anonymous daily shown, opened, and dismissed totals to the existing site-health panel; the totals contain no account, session, media, search, IP, or page-history fields.</li>
+          <li>Keeps eligibility and a signed random activation proof in short-lived browser session storage rather than creating a server-side visit history.</li>
+          <li>Adds only anonymous daily shown, opened, and dismissed totals to the existing site-health panel. A non-reversible digest of the random proof is retained for up to seven days to prevent duplicate counting; it cannot be joined to an account or media record.</li>
+          <li>Batches queue lookups, aggregates journal recaps in the database, and prevents the Welcome Back Deck from racing Today’s Pick and Library Pulse during dashboard startup.</li>
         </ul>
         <p>The deck does not send email or push reminders, create streaks, publish activity, use AI recommendations, or load ads in the private dashboard.</p>
       </section>

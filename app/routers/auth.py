@@ -10,7 +10,7 @@ from fastapi.encoders import jsonable_encoder
 from fastapi.responses import JSONResponse
 from sqlalchemy.orm import Session
 
-from .. import crud, schemas, models, auth, email as email_utils
+from .. import crud, schemas, models, auth, email as email_utils, return_prompt as return_prompt_tokens
 from ..dependencies import get_db
 
 router = APIRouter(prefix="/auth", tags=["auth"])
@@ -139,6 +139,11 @@ async def login(
     return_prompt = schemas.ReturnPromptContext(
         eligible=days_away is not None and days_away >= 3,
         days_away=min(days_away, 90) if days_away is not None and days_away >= 3 else None,
+        engagement_token=(
+            return_prompt_tokens.create_return_prompt_token(min(days_away, 90), user.id)
+            if days_away is not None and days_away >= 3
+            else None
+        ),
     )
 
     # Keep one minimal first-party return signal for aggregate product health.

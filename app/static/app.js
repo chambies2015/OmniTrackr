@@ -8330,17 +8330,42 @@ let todaysPickCandidateCount = 0;
 let todaysPickRequest = 0;
 let todaysPickSelection = null;
 let returnDeckActive = false;
+let returnDeckPending = false;
+let returnDeckBootstrapComplete = false;
+let returnDeckEngagementToken = null;
 let returnDeckItems = [];
+let decisionCardsRefreshPromise = null;
+let launchpadDecisionRefreshRequested = false;
+let initialMovieLibraryLoad = true;
 
 function getReturnPromptContext() {
   try {
     const context = JSON.parse(sessionStorage.getItem('omnitrackr_return_prompt') || 'null');
-    if (!context || Number(context.days_away) < 3 || Date.now() - Number(context.created_at) > 86400000) {
+    const daysAway = Number(context?.days_away);
+    const createdAt = Number(context?.created_at);
+    const engagementToken = context?.engagement_token;
+    if (
+      !context
+      || !Number.isFinite(daysAway)
+      || daysAway < 3
+      || daysAway > 90
+      || !Number.isFinite(createdAt)
+      || createdAt > Date.now() + 60000
+      || Date.now() - createdAt > 86400000
+      || typeof engagementToken !== 'string'
+      || engagementToken.length < 32
+      || engagementToken.length > 512
+    ) {
       sessionStorage.removeItem('omnitrackr_return_prompt');
       return null;
     }
     return context;
   } catch (error) {
+    try {
+      sessionStorage.removeItem('omnitrackr_return_prompt');
+    } catch (storageError) {
+      // The optional prompt remains disabled when storage is unavailable.
+    }
     return null;
   }
 }
@@ -8361,15 +8386,18 @@ function clearReturnPromptContext() {
   }
 }
 
-async function recordReturnDeckEngagement(action) {
+async function recordReturnDeckEngagement(action, engagementToken = returnDeckEngagementToken) {
+  if (!engagementToken) return false;
   try {
-    await authenticatedFetch(`${API_BASE}/statistics/return-deck/engagement`, {
+    const response = await authenticatedFetch(`${API_BASE}/statistics/return-deck/engagement`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ action }),
+      body: JSON.stringify({ action, engagement_token: engagementToken }),
     });
+    return response.ok;
   } catch (error) {
     // Anonymous product-health totals must never interrupt the dashboard.
+    return false;
   }
 }
 
@@ -8416,7 +8444,7 @@ function renderReturnDeck(payload, context) {
 
   const days = Number(payload.days_away) || Number(context.days_away);
   document.getElementById('returnDeckSummary').textContent =
-    `You have been away for ${days} day${days === 1 ? '' : 's'}. Here are a few useful ways back in—nothing new to manage.`;
+    `It has been ${days} or more days since your previous visit. Here are a few useful ways back in—nothing new to manage.`;
   const recap = payload.recap || {};
   const recapParts = [];
   if (recap.entry_count) recapParts.push(`${recap.entry_count} journal moment${recap.entry_count === 1 ? '' : 's'}`);
@@ -8428,38 +8456,73 @@ function renderReturnDeck(payload, context) {
     : 'Your private library is ready when you are; no activity or streak is required.';
 
   returnDeckActive = true;
+  returnDeckEngagementToken = context.engagement_token;
   document.getElementById('todaysPick')?.setAttribute('hidden', '');
   document.getElementById('libraryPulse')?.setAttribute('hidden', '');
   deck.removeAttribute('hidden');
   if (!context.shown) {
     context.shown = true;
     saveReturnPromptContext(context);
-    recordReturnDeckEngagement('shown');
+    recordReturnDeckEngagement('shown', context.engagement_token);
   }
   return true;
 }
 
 async function refreshReturnDeck() {
   const context = getReturnPromptContext();
-  if (!context || !hasStoredAuth()) return;
+  if (!context || !hasStoredAuth()) return false;
+  returnDeckPending = true;
   try {
-    const params = new URLSearchParams({ days_away: String(Math.min(Number(context.days_away), 90)) });
-    const response = await authenticatedFetch(`${API_BASE}/statistics/return-deck/?${params}`);
+    const params = new URLSearchParams({
+      days_away: String(context.days_away),
+    });
+    const response = await authenticatedFetch(`${API_BASE}/statistics/return-deck/?${params}`, {
+      headers: { 'X-Return-Prompt': context.engagement_token },
+    });
     if (!response.ok) throw new Error('Could not load return deck');
-    if (!renderReturnDeck(await response.json(), context)) clearReturnPromptContext();
+    const rendered = renderReturnDeck(await response.json(), context);
+    if (!rendered) clearReturnPromptContext();
+    return rendered;
   } catch (error) {
     // The established dashboard remains available if this optional layer fails.
+    clearReturnPromptContext();
+    return false;
+  } finally {
+    returnDeckPending = false;
+  }
+}
+
+async function refreshDashboardDecisionCards() {
+  if (!returnDeckBootstrapComplete || returnDeckActive || returnDeckPending) return false;
+  if (decisionCardsRefreshPromise) return decisionCardsRefreshPromise;
+  decisionCardsRefreshPromise = Promise.all([
+    refreshLibraryPulse(),
+    refreshTodaysPick(),
+  ]).then(() => true).finally(() => {
+    decisionCardsRefreshPromise = null;
+  });
+  return decisionCardsRefreshPromise;
+}
+
+async function bootstrapReturnDeck() {
+  try {
+    return await refreshReturnDeck();
+  } finally {
+    returnDeckBootstrapComplete = true;
+    scheduleLibraryLaunchpadRefresh(true);
   }
 }
 
 function resolveReturnDeck(action) {
-  recordReturnDeckEngagement(action);
-  clearReturnPromptContext();
+  if (!returnDeckActive || !returnDeckEngagementToken) return;
+  const engagementToken = returnDeckEngagementToken;
+  returnDeckEngagementToken = null;
   returnDeckActive = false;
+  recordReturnDeckEngagement(action, engagementToken);
+  clearReturnPromptContext();
   returnDeckItems = [];
   document.getElementById('returnDeck')?.setAttribute('hidden', '');
-  refreshTodaysPick();
-  refreshLibraryPulse();
+  scheduleLibraryLaunchpadRefresh(true);
 }
 
 function dismissReturnDeck() {
@@ -8907,13 +8970,15 @@ async function refreshLibraryPulse() {
   }
 }
 
-function scheduleLibraryLaunchpadRefresh() {
+function scheduleLibraryLaunchpadRefresh(refreshDecisionCards = true) {
+  launchpadDecisionRefreshRequested = launchpadDecisionRefreshRequested || refreshDecisionCards;
   window.clearTimeout(launchpadRefreshTimer);
   launchpadRefreshTimer = window.setTimeout(() => {
+    const shouldRefreshDecisionCards = launchpadDecisionRefreshRequested;
+    launchpadDecisionRefreshRequested = false;
     refreshLibraryLaunchpad();
-    refreshLibraryPulse();
     refreshNextUpQueue();
-    refreshTodaysPick();
+    if (shouldRefreshDecisionCards) refreshDashboardDecisionCards();
   }, 250);
 }
 
@@ -8923,7 +8988,9 @@ loadMovies = async function (...args) {
   enhanceLibraryCards('movieTable');
   if (!libraryPages.get('movies')?.browseOnly) {
     invalidateLibrarySearchIndex();
-    scheduleLibraryLaunchpadRefresh();
+    const refreshDecisionCards = !initialMovieLibraryLoad;
+    initialMovieLibraryLoad = false;
+    scheduleLibraryLaunchpadRefresh(refreshDecisionCards);
   }
   return result;
 };
@@ -8986,8 +9053,8 @@ loadBooks = async function (...args) {
 // Load initial data
 setupLibrarySearch();
 loadMovies();
-refreshReturnDeck();
-scheduleLibraryLaunchpadRefresh();
+scheduleLibraryLaunchpadRefresh(false);
+bootstrapReturnDeck();
 
 // ============================================================================
 // Landing Page Enhancements: Scroll Animations and User Count

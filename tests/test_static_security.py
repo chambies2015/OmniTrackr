@@ -28,8 +28,8 @@ def test_standalone_public_auth_has_its_own_api_base():
     assert "`${API_BASE}/auth/" not in source
 
     public_template = (INDEX_HTML.parent / "public_landing.html").read_text(encoding="utf-8")
-    assert 'src="/auth.js?v=20260917-welcome-back-v1"' in public_template
-    assert 'src="./auth.js?v=20260917-welcome-back-v1"' in INDEX_HTML.read_text(encoding="utf-8")
+    assert 'src="/auth.js?v=20260918-welcome-back-remedy-v2"' in public_template
+    assert 'src="./auth.js?v=20260918-welcome-back-remedy-v2"' in INDEX_HTML.read_text(encoding="utf-8")
     assert "/auth/reset-password?" not in source
     assert "JSON.stringify({ token, new_password: newPassword })" in source
 
@@ -276,6 +276,9 @@ def test_welcome_back_deck_reuses_safe_dom_and_replaces_overlapping_cards():
     assert "document.getElementById('todaysPick')?.setAttribute('hidden', '')" in source
     assert "document.getElementById('libraryPulse')?.setAttribute('hidden', '')" in source
     assert "sessionStorage.getItem('omnitrackr_return_prompt')" in source
+    assert "function refreshDashboardDecisionCards()" in source
+    assert "if (!returnDeckBootstrapComplete || returnDeckActive || returnDeckPending) return false" in source
+    assert "if (shouldRefreshDecisionCards) refreshDashboardDecisionCards()" in source
 
 
 def test_quick_capture_searches_every_core_type_without_writing_directly():

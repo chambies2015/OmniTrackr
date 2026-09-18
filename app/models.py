@@ -2,7 +2,7 @@
 SQLAlchemy models for the OmniTrackr API.
 Defines the User, Movie, TV Show, Anime, and Video Game ORM models.
 """
-from sqlalchemy import Column, Integer, String, Boolean, Float, ForeignKey, Date, DateTime, UniqueConstraint, LargeBinary, Text
+from sqlalchemy import Column, Integer, String, Boolean, Float, ForeignKey, Date, DateTime, UniqueConstraint, LargeBinary, Text, Index
 from sqlalchemy.orm import relationship
 from datetime import datetime, timedelta
 from .database import Base
@@ -229,6 +229,26 @@ class ReturnPromptDailyMetric(Base):
     dismissed_count = Column(Integer, nullable=False, default=0)
 
 
+class ReturnPromptEngagementReceipt(Base):
+    """Anonymous, short-lived deduplication state for one return prompt.
+
+    The digest is derived from a random signed token and cannot be joined to an
+    account or media record. One token may record one impression and one terminal
+    outcome (opened or dismissed).
+    """
+    __tablename__ = "return_prompt_engagement_receipts"
+
+    id = Column(Integer, primary_key=True, index=True)
+    token_digest = Column(String(64), nullable=False, index=True)
+    event_kind = Column(String(16), nullable=False)
+    action = Column(String(16), nullable=False)
+    created_at = Column(DateTime, nullable=False, default=datetime.utcnow, index=True)
+
+    __table_args__ = (
+        UniqueConstraint("token_digest", "event_kind", name="uq_return_prompt_receipt_kind"),
+    )
+
+
 class CompletionMoment(Base):
     """A private snapshot of when a user completed a library item.
 
@@ -277,6 +297,10 @@ class ActivityEntry(Base):
     created_at = Column(DateTime, nullable=False, default=datetime.utcnow)
 
     owner = relationship("User", back_populates="activity_entries")
+
+    __table_args__ = (
+        Index("ix_activity_entries_user_occurred_at", "user_id", "occurred_at"),
+    )
 
 
 class Collection(Base):

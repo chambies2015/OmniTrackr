@@ -145,9 +145,15 @@ async function login(username, password) {
     const data = await response.json();
     saveAuthData(data.access_token, data.user);
     try {
-        if (data.return_prompt?.eligible && Number(data.return_prompt.days_away) >= 3) {
+        if (
+            data.return_prompt?.eligible
+            && Number(data.return_prompt.days_away) >= 3
+            && typeof data.return_prompt.engagement_token === 'string'
+            && data.return_prompt.engagement_token.length >= 32
+        ) {
             sessionStorage.setItem(RETURN_PROMPT_KEY, JSON.stringify({
                 days_away: Math.min(Number(data.return_prompt.days_away), 90),
+                engagement_token: data.return_prompt.engagement_token,
                 created_at: Date.now(),
                 shown: false,
             }));

@@ -787,6 +787,14 @@ def run_migrations():
                     conn.commit()
                     print("Migrated video_games.review to TEXT")
 
+        if inspector.has_table("activity_entries"):
+            with engine.connect() as conn:
+                conn.execute(text(
+                    "CREATE INDEX IF NOT EXISTS ix_activity_entries_user_occurred_at "
+                    "ON activity_entries(user_id, occurred_at)"
+                ))
+                conn.commit()
+
     except Exception as e:
         print(f"Migration warning: {e}")
         pass
