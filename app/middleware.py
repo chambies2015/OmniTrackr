@@ -12,6 +12,7 @@ from .csp import build_csp
 NOINDEX_PATHS = {"/docs", "/redoc", "/openapi.json"}
 NOINDEX_PREFIXES = (
     "/account/",
+    "/activity/",
     "/anime/",
     "/api/",
     "/auth/",
@@ -22,10 +23,13 @@ NOINDEX_PREFIXES = (
     "/export/",
     "/friends",
     "/import/",
+    "/import-studio/",
     "/movies/",
     "/music/",
     "/notifications/",
     "/profile-pictures/",
+    "/recommend/",
+    "/recommendations/",
     "/static/profile_pictures/",
     "/statistics/",
     "/tv-shows/",
@@ -56,6 +60,29 @@ class SecurityHeadersMiddleware(BaseHTTPMiddleware):
             response.headers["Cache-Control"] = "no-store, no-cache, must-revalidate, max-age=0"
             response.headers["Pragma"] = "no-cache"
             response.headers["Expires"] = "0"
+
+        if request.url.path.startswith((
+            "/account/",
+            "/activity/",
+            "/anime/",
+            "/books/",
+            "/custom-tab-posters/",
+            "/custom-tabs/",
+            "/export/",
+            "/friends",
+            "/import/",
+            "/import-studio/",
+            "/movies/",
+            "/music/",
+            "/next-up/",
+            "/notifications",
+            "/recommend/",
+            "/recommendations/",
+            "/statistics/",
+            "/tv-shows/",
+            "/video-games/",
+        )):
+            response.headers["Cache-Control"] = "private, no-store"
 
         if request.url.path in NOINDEX_PATHS or request.url.path.startswith(NOINDEX_PREFIXES):
             response.headers["X-Robots-Tag"] = "noindex, nofollow"

@@ -10,7 +10,7 @@ from fastapi.encoders import jsonable_encoder
 from fastapi.responses import JSONResponse
 from sqlalchemy.orm import Session
 
-from .. import crud, schemas, models, auth, email as email_utils
+from .. import crud, schemas, models, auth, email as email_utils, return_prompt as return_prompt_tokens
 from ..dependencies import get_db
 
 router = APIRouter(prefix="/auth", tags=["auth"])
@@ -57,26 +57,32 @@ async def login(
     """Login to get access token. Users can log in using either their username or email."""
     
     user = crud.get_user_by_username_or_email(db, form_data.username)
+    # SQLAlchemy DateTime columns are stored without timezone information. Keep
+    # lockout comparisons in naive UTC so a value survives a database round trip
+    # without causing an aware-vs-naive TypeError on the next login attempt.
+    now_utc = datetime.now(timezone.utc).replace(tzinfo=None)
     
-    if user and user.locked_until and user.locked_until > datetime.now(timezone.utc):
-        remaining_minutes = int((user.locked_until - datetime.now(timezone.utc)).total_seconds() / 60)
+    password_valid = bool(user and auth.verify_password(form_data.password, user.hashed_password))
+
+    if user and user.locked_until and user.locked_until > now_utc and not password_valid:
+        remaining_minutes = max(1, int((user.locked_until - now_utc).total_seconds() / 60) + 1)
         raise HTTPException(
             status_code=423,
             detail=f"Account is locked due to too many failed login attempts. Try again in {remaining_minutes} minutes.",
             headers={"WWW-Authenticate": "Bearer"},
         )
     
-    if user and user.locked_until and user.locked_until <= datetime.now(timezone.utc):
+    if user and user.locked_until and user.locked_until <= now_utc:
         user.locked_until = None
         user.failed_login_attempts = 0
         db.commit()
     
-    if not user or not auth.verify_password(form_data.password, user.hashed_password):
+    if not password_valid:
         client_ip = request.client.host if request.client else "unknown"
         if user:
             user.failed_login_attempts = (user.failed_login_attempts or 0) + 1
             if user.failed_login_attempts >= 5:
-                user.locked_until = datetime.now(timezone.utc) + timedelta(minutes=15)
+                user.locked_until = now_utc + timedelta(minutes=15)
                 print(f"SECURITY: Account locked - Username: {form_data.username}, IP: {client_ip}, Failed attempts: {user.failed_login_attempts}")
             else:
                 print(f"SECURITY: Failed login attempt - Username: {form_data.username}, IP: {client_ip}, Attempts: {user.failed_login_attempts}")
@@ -99,7 +105,7 @@ async def login(
             if days_since_deactivation > 90:
                 raise HTTPException(
                     status_code=403,
-                    detail="Account has been permanently deactivated. It cannot be reactivated after 90 days.",
+                    detail="The 90-day self-service reactivation window has ended. Contact support if you need account assistance.",
                     headers={"WWW-Authenticate": "Bearer"},
                 )
             else:
@@ -122,9 +128,37 @@ async def login(
             detail="Please verify your email address before logging in. Check your inbox for the verification link.",
             headers={"WWW-Authenticate": "Bearer"},
         )
+
+    # Derive the optional return moment before replacing the previous successful
+    # login timestamp. The context is returned to this browser only and is not
+    # stored as a page/session history.
+    previous_login_at = user.last_login_at
+    days_away = None
+    if previous_login_at:
+        days_away = max(0, (now_utc - previous_login_at).days)
+    return_prompt = schemas.ReturnPromptContext(
+        eligible=days_away is not None and days_away >= 3,
+        days_away=min(days_away, 90) if days_away is not None and days_away >= 3 else None,
+        engagement_token=(
+            return_prompt_tokens.create_return_prompt_token(min(days_away, 90), user.id)
+            if days_away is not None and days_away >= 3
+            else None
+        ),
+    )
+
+    # Keep one minimal first-party return signal for aggregate product health.
+    # No page history, media titles, searches, or session-by-session event log is stored.
+    user.last_login_at = now_utc
+    user.login_count = (user.login_count or 0) + 1
+    db.commit()
     
     access_token = auth.create_access_token(data={"sub": user.username})
-    token_response = schemas.Token(access_token=access_token, token_type="bearer", user=user)
+    token_response = schemas.Token(
+        access_token=access_token,
+        token_type="bearer",
+        user=user,
+        return_prompt=return_prompt,
+    )
     response = JSONResponse(
         content=jsonable_encoder(token_response),
         headers={
@@ -330,22 +364,20 @@ async def request_password_reset(
 
 
 @router.post("/reset-password")
-async def reset_password(token: str, new_password: str, db: Session = Depends(get_db)):
+async def reset_password(payload: schemas.PasswordReset, db: Session = Depends(get_db)):
     """Reset password with valid token."""
-    user = None
-    if token.startswith("$2"):
-        user = db.query(models.User).filter(models.User.reset_token == token).first()
-        if not user:
-            raise HTTPException(status_code=400, detail="Invalid or expired reset token")
-    else:
-        try:
-            email = email_utils.verify_reset_token(token, max_age=3600)
-        except Exception:
-            raise HTTPException(status_code=400, detail="Invalid or expired reset token")
-        
-        user = crud.get_user_by_email(db, email)
-        if not user:
-            raise HTTPException(status_code=404, detail="User not found")
+    token = payload.token
+    new_password = payload.new_password
+    # Only the emailed, signed token is a credential. The bcrypt value persisted
+    # in the database is a verifier and must never be accepted as a bearer token.
+    try:
+        email = email_utils.verify_reset_token(token, max_age=3600)
+    except Exception:
+        raise HTTPException(status_code=400, detail="Invalid or expired reset token")
+
+    user = crud.get_user_by_email(db, email)
+    if not user:
+        raise HTTPException(status_code=400, detail="Invalid or expired reset token")
     
     if not user.reset_token_expires or user.reset_token_expires.replace(tzinfo=timezone.utc) < datetime.now(timezone.utc):
         raise HTTPException(status_code=400, detail="Reset token has expired")
@@ -354,12 +386,8 @@ async def reset_password(token: str, new_password: str, db: Session = Depends(ge
         raise HTTPException(status_code=400, detail="Invalid reset token")
     
     if user.reset_token.startswith("$2"):
-        if token.startswith("$2"):
-            if not secrets.compare_digest(user.reset_token, token):
-                raise HTTPException(status_code=400, detail="Invalid reset token")
-        else:
-            if not auth.verify_token_hash(token, user.reset_token):
-                raise HTTPException(status_code=400, detail="Invalid reset token")
+        if not auth.verify_token_hash(token, user.reset_token):
+            raise HTTPException(status_code=400, detail="Invalid reset token")
     else:
         if not secrets.compare_digest(user.reset_token, token):
             raise HTTPException(status_code=400, detail="Invalid reset token")

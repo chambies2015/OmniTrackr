@@ -1066,6 +1066,16 @@ class TestExportImport:
         
         assert response.status_code == 400
         assert "Invalid JSON" in response.json()["detail"]
+
+    def test_import_from_file_rejects_oversized_upload(self, authenticated_client, monkeypatch):
+        from app.routers import export_import
+
+        monkeypatch.setattr(export_import, "MAX_JSON_IMPORT_BYTES", 32)
+        files = {"file": ("large.json", b"{" + b" " * 64 + b"}", "application/json")}
+
+        response = authenticated_client.post("/import/file/", files=files)
+
+        assert response.status_code == 413
     
     def test_import_from_file_missing_fields(self, authenticated_client):
         """Test importing from file with missing required fields."""
@@ -1076,9 +1086,38 @@ class TestExportImport:
         files = {"file": ("test.json", file_content, "application/json")}
         response = authenticated_client.post("/import/file/", files=files)
         
-        assert response.status_code in [400, 500]
+        assert response.status_code == 400
         detail = response.json()["detail"]
         assert any(keyword in detail.lower() for keyword in ["movies", "tv_shows", "invalid", "format"])
+
+    def test_import_from_file_invalid_item_returns_client_error(self, authenticated_client):
+        """Invalid item data must not escape as an internal server error."""
+        import json
+        invalid_data = {
+            "movies": [{"title": None}],
+            "tv_shows": [],
+        }
+        files = {
+            "file": (
+                "test.json",
+                json.dumps(invalid_data).encode("utf-8"),
+                "application/json",
+            )
+        }
+
+        response = authenticated_client.post("/import/file/", files=files)
+
+        assert response.status_code == 400
+        assert "invalid import data" in response.json()["detail"].lower()
+
+    def test_import_from_file_invalid_utf8_returns_client_error(self, authenticated_client):
+        """A corrupt JSON upload should produce a useful 400, not a 500."""
+        files = {"file": ("test.json", b"\xff\xfe", "application/json")}
+
+        response = authenticated_client.post("/import/file/", files=files)
+
+        assert response.status_code == 400
+        assert "invalid json" in response.json()["detail"].lower()
     
     def test_import_from_file_backward_compatibility_no_anime(self, authenticated_client):
         """Test importing old export files without anime field (backward compatibility)."""

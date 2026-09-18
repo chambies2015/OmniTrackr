@@ -125,7 +125,7 @@ def update_custom_tab(
     if db_tab is None:
         return None
     
-    update_dict = tab_update.dict(exclude_unset=True)
+    update_dict = tab_update.model_dump(exclude_unset=True)
     
     if "fields" in update_dict:
         if len(update_dict["fields"]) > MAX_FIELDS_PER_TAB:
@@ -379,7 +379,7 @@ def update_custom_tab_item(
     if db_item is None:
         return None, "Custom tab item not found"
     
-    update_dict = item_update.dict(exclude_unset=True)
+    update_dict = item_update.model_dump(exclude_unset=True)
     
     if "title" in update_dict:
         if not update_dict["title"] or not update_dict["title"].strip():

@@ -6,6 +6,11 @@
 // Constants
 const TOKEN_KEY = 'omnitrackr_token';
 const USER_KEY = 'omnitrackr_user';
+const RETURN_PROMPT_KEY = 'omnitrackr_return_prompt';
+// Authentication is also used by the standalone public landing page, which
+// intentionally does not load the much larger private dashboard bundle.
+const AUTH_IS_LOCAL = (location.protocol === 'file:' || location.origin === 'null' || location.origin === '');
+const AUTH_API_BASE = AUTH_IS_LOCAL ? 'http://127.0.0.1:8000' : '';
 
 // ============================================================================
 // Token Management
@@ -28,6 +33,11 @@ function getUser() {
 function clearAuth() {
     localStorage.removeItem(TOKEN_KEY);
     localStorage.removeItem(USER_KEY);
+    try {
+        sessionStorage.removeItem(RETURN_PROMPT_KEY);
+    } catch (error) {
+        // Authentication still works when session storage is unavailable.
+    }
 }
 
 function isAuthenticated() {
@@ -80,7 +90,7 @@ async function authenticatedFetch(url, options = {}) {
 // ============================================================================
 
 async function register(email, username, password) {
-    const response = await fetch(`${API_BASE}/auth/register`, {
+    const response = await fetch(`${AUTH_API_BASE}/auth/register`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ email, username, password })
@@ -107,7 +117,7 @@ async function login(username, password) {
     formData.append('username', username);
     formData.append('password', password);
 
-    const response = await fetch(`${API_BASE}/auth/login`, {
+    const response = await fetch(`${AUTH_API_BASE}/auth/login`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
         credentials: 'same-origin',
@@ -134,21 +144,34 @@ async function login(username, password) {
 
     const data = await response.json();
     saveAuthData(data.access_token, data.user);
-    hideAuthModal();
-    showMainUI();
-
-    // Load initial data
-    loadMovies();
-    if (typeof loadCustomTabs === 'function') {
-        loadCustomTabs();
+    try {
+        if (
+            data.return_prompt?.eligible
+            && Number(data.return_prompt.days_away) >= 3
+            && typeof data.return_prompt.engagement_token === 'string'
+            && data.return_prompt.engagement_token.length >= 32
+        ) {
+            sessionStorage.setItem(RETURN_PROMPT_KEY, JSON.stringify({
+                days_away: Math.min(Number(data.return_prompt.days_away), 90),
+                engagement_token: data.return_prompt.engagement_token,
+                created_at: Date.now(),
+                shown: false,
+            }));
+        } else {
+            sessionStorage.removeItem(RETURN_PROMPT_KEY);
+        }
+    } catch (error) {
+        // The return deck is optional and never blocks login.
     }
-    updateUserDisplay();
+    // The anonymous page deliberately does not include private dashboard markup.
+    // Reload after the session cookie is set so the server can return the full app.
+    window.location.assign('/');
 }
 
 async function logout() {
     if (confirm('Are you sure you want to logout?')) {
         try {
-            await fetch(`${API_BASE}/auth/logout`, {
+            await fetch(`${AUTH_API_BASE}/auth/logout`, {
                 method: 'POST',
                 credentials: 'same-origin'
             });
@@ -174,12 +197,17 @@ function showAuthModal() {
     if (window.initLandingPageEnhancements) {
       window.initLandingPageEnhancements();
     }
-    document.getElementById('mainContainer').style.display = 'none';
+    const mainContainer = document.getElementById('mainContainer');
+    if (mainContainer) {
+        mainContainer.style.display = 'none';
+    }
     document.getElementById('authError').textContent = '';
     
     // Hide user display and logout button when showing landing page
-    document.getElementById('userDisplay').style.display = 'none';
-    document.getElementById('logoutBtn').style.display = 'none';
+    const userDisplay = document.getElementById('userDisplay');
+    const logoutBtn = document.getElementById('logoutBtn');
+    if (userDisplay) userDisplay.style.display = 'none';
+    if (logoutBtn) logoutBtn.style.display = 'none';
     
     // Hide notification bell
     const notificationBell = document.getElementById('notificationBell');
@@ -213,6 +241,12 @@ function hideAuthModal() {
 }
 
 function showMainUI() {
+    // Public responses intentionally omit private controls. A successful login sets
+    // the HttpOnly cookie and then reloads into the complete dashboard response.
+    if (!document.getElementById('mainContainer')) {
+        window.location.assign('/');
+        return;
+    }
     document.getElementById('mainContainer').style.display = 'block';
     document.getElementById('landingPage').style.display = 'none';
     // Show footer for logged-in view
@@ -383,7 +417,7 @@ async function reactivateAccount(usernameOrEmail, password) {
     reactivateBtn.textContent = 'Reactivating...';
     
     try {
-        const response = await fetch(`${API_BASE}/auth/reactivate`, {
+        const response = await fetch(`${AUTH_API_BASE}/auth/reactivate`, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({
@@ -453,7 +487,7 @@ async function reactivateAccount(usernameOrEmail, password) {
     reactivateBtn.textContent = 'Reactivating...';
     
     try {
-        const response = await fetch(`${API_BASE}/auth/reactivate`, {
+        const response = await fetch(`${AUTH_API_BASE}/auth/reactivate`, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({
@@ -528,7 +562,7 @@ function setupAuthHandlers() {
         btn.textContent = 'Sending...';
 
         try {
-            const response = await fetch(`${API_BASE}/auth/resend-verification?email=${encodeURIComponent(email)}`, {
+            const response = await fetch(`${AUTH_API_BASE}/auth/resend-verification?email=${encodeURIComponent(email)}`, {
                 method: 'POST',
             });
 
@@ -603,7 +637,7 @@ function setupAuthHandlers() {
         const email = document.getElementById('forgotPasswordEmail').value;
 
         try {
-            const response = await fetch(`${API_BASE}/auth/request-password-reset?email=${encodeURIComponent(email)}`, {
+            const response = await fetch(`${AUTH_API_BASE}/auth/request-password-reset?email=${encodeURIComponent(email)}`, {
                 method: 'POST',
             });
 
@@ -647,8 +681,10 @@ function setupAuthHandlers() {
         }
 
         try {
-            const response = await fetch(`${API_BASE}/auth/reset-password?token=${encodeURIComponent(token)}&new_password=${encodeURIComponent(newPassword)}`, {
+            const response = await fetch(`${AUTH_API_BASE}/auth/reset-password`, {
                 method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ token, new_password: newPassword }),
             });
 
             if (response.ok) {
@@ -670,7 +706,10 @@ function setupAuthHandlers() {
     });
 
     // Logout button
-    document.getElementById('logoutBtn').addEventListener('click', logout);
+    const logoutBtn = document.getElementById('logoutBtn');
+    if (logoutBtn) {
+        logoutBtn.addEventListener('click', logout);
+    }
 }
 
 // ============================================================================
@@ -679,6 +718,13 @@ function setupAuthHandlers() {
 
 function initAuth() {
     setupAuthHandlers();
+
+    // Do not trust legacy localStorage alone to decide that this response is an
+    // authenticated dashboard. The server decides that from the session cookie.
+    if (document.documentElement.dataset.publicShell === 'true') {
+        showAuthModal();
+        return;
+    }
     
     // Check URL parameters for email verification or password reset
     const urlParams = new URLSearchParams(window.location.search);
@@ -752,7 +798,7 @@ async function handleEmailChangeVerification(token) {
     // If user is logged in, show success message and reload account info
     if (isAuthenticated()) {
         try {
-            const response = await authenticatedFetch(`${API_BASE}/auth/verify-email?token=${encodeURIComponent(token)}`);
+            const response = await authenticatedFetch(`${AUTH_API_BASE}/auth/verify-email?token=${encodeURIComponent(token)}`);
             const data = await response.json();
             
             if (response.ok) {
@@ -797,7 +843,7 @@ async function handleEmailVerification(token) {
     displayAuthSuccess('Verifying your email...');
     
     try {
-        const response = await fetch(`${API_BASE}/auth/verify-email?token=${encodeURIComponent(token)}`);
+        const response = await fetch(`${AUTH_API_BASE}/auth/verify-email?token=${encodeURIComponent(token)}`);
         const data = await response.json();
         
         if (response.ok) {

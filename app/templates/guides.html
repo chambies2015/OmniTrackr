@@ -126,7 +126,8 @@
 
       <header class="privacy-header">
         <h1>How-To Guides</h1>
-        <p>Learn how to use OmniTrackr step by step</p>
+        <p>Use the controls confidently: save a title, record progress, choose an audience, and keep a backup.</p>
+        <p>Updated September 17, 2026 · Instructions checked against the application code.</p>
       </header>
 
       <section class="privacy-section" aria-labelledby="guide-library-heading">
@@ -157,14 +158,23 @@
 
       <section class="privacy-section" aria-labelledby="tracking-heading">
         <h2 id="tracking-heading">Tracking Media</h2>
-        <p>Each category has an "Add" or similar control to create a new entry. Fill in the fields (e.g. title, year, rating). For movies and TV shows, you can often search by title; OmniTrackr will fetch poster and metadata from supported sources when available. Mark items as watched, in progress, or plan-to-watch as needed. You can edit or delete entries from the same tab. Tracking consistently helps you build an accurate history and better statistics.</p>
+        <ol>
+          <li>Choose Movies, TV Shows, Anime, Video Games, Music, or Books. Open the category's Add form and enter the title. Use title search where available, then check the returned details before saving: editions and similarly named titles can differ.</li>
+          <li>Leave the rating blank if you have not formed an opinion. The completion checkbox is separate: Watched, Played, Listened, or Read records completion, not whether you liked the item.</li>
+          <li>For an unfinished item, leave completion unchecked. Put a stopping point or reason to return in a private note. Do not treat the checkbox as a multi-state menu with separate paused and dropped options.</li>
+          <li>Save, then use Edit on the library entry to change its details. On phones and tablets, More details expands the card; View review opens the longer note or review.</li>
+        </ol>
+        <h3>Example: returning to a show after a break</h3>
+        <p>A useful private note might read: “Paused after episode 4 of season 2; restart at episode 5. Watch with Sam.” Keep Watched unchecked until the unit you are tracking is finished. If you keep separate season entries, include the season in the title so that a completion mark is not mistaken for finishing the entire series. This convention works in a paper list or spreadsheet too.</p>
         <h3>Why tracking helps</h3>
         <p>Keeping a list of what you've watched or played helps you avoid forgetting titles, spot gaps in a series, and see how your tastes change over time. It also makes it easier to recommend things to friends and to get recommendations based on your real history.</p>
       </section>
 
       <section class="privacy-section" aria-labelledby="reviews-heading">
         <h2 id="reviews-heading">Ratings and Reviews</h2>
-        <p>You can rate items (e.g. out of 5 or 10) and optionally write a full review. Reviews are stored with the item in your collection. If you enable public reviews in your account settings, your reviews can appear on the public reviews page so others can discover your opinions. Use ratings for quick comparisons and reviews when you want to explain what you liked or disliked.</p>
+        <p>OmniTrackr ratings use a 0–10 scale. A blank rating means unrated; zero is an actual score. Choose a convention you can repeat: for example, 5 for mixed feelings, 7 for something you enjoyed, and 9 for a personal favorite. These are suggested anchors, not rules about what a work deserves. If you previously used five stars, doubling a score is a simple conversion, but leave uncertain scores blank instead of inventing precision.</p>
+        <p>The Public Review checkbox belongs to each item's Add or Edit form. Leave it unchecked for a private note. Checking it opts that review into public sharing, subject to the site's review-quality and moderation rules; it is not a promise of immediate publication. Category privacy and tab visibility are separate controls, not substitutes for checking the review's audience.</p>
+        <p>For example, “Watch with Sam next Friday” belongs in a private note. A public review should instead explain a useful judgment: “The slower first half gives the final decision weight; a good fit if you enjoy character conversations more than action.” Avoid personal details and mark spoilers. The <a href="/review-guidelines">review guide</a> has fuller before-and-after examples.</p>
       </section>
 
       <section class="privacy-section" aria-labelledby="statistics-heading">
@@ -174,12 +184,13 @@
 
       <section class="privacy-section" aria-labelledby="social-heading">
         <h2 id="social-heading">Social Features and Friends</h2>
-        <p>You can send and accept friend requests by username. Once you're friends, you can view each other's collections according to privacy settings. In account settings you control which categories and tabs are visible to friends (or everyone). Notifications will alert you to new friend requests so you can accept or decline.</p>
+        <p>You can send and accept friend requests by username. Before sharing, distinguish three decisions: which tabs you want to see in your own dashboard, which categories friends may view, and which individual reviews you want public. Hiding a tab is a layout preference, not a privacy setting. Review the category privacy controls in account settings and each item's Public Review checkbox separately. For a curated public collection, check that collection's own publishing controls as well.</p>
       </section>
 
       <section class="privacy-section" aria-labelledby="import-export-heading">
         <h2 id="import-export-heading">Import and Export</h2>
-        <p>Under account or settings you'll find options to export your data. OmniTrackr exports your collection as JSON so you can back it up or use it elsewhere. Import lets you bring in previously exported data (e.g. into a new account). This keeps you in control of your data and makes it easy to migrate or duplicate your list.</p>
+        <p>Choose the workflow that matches your file. A JSON export is a backup; a CSV from another tracker is a migration source. In account settings, Import Studio previews supported CSV files before you apply an import. Read the ready, skipped, and invalid row counts, check the category mapping, and correct unexpected results before proceeding. Opening the importer or previewing a file does not save titles.</p>
+        <p>Keep the original source file and export a backup before making a large change. Try a small sample first and compare titles, completion, and ratings afterward. Matching records are skipped by the CSV importer rather than overwritten, so use Edit when you intend to correct an existing entry. The <a href="/export-import-guide">export and import guide</a> explains the separate backup and migration workflows.</p>
       </section>
 
       <section class="privacy-section" aria-labelledby="tips-heading">
@@ -187,7 +198,7 @@
         <ul>
           <li>Add items soon after you finish them so you don't forget.</li>
           <li>Use consistent rating scales to make statistics more meaningful.</li>
-          <li>Turn on public reviews if you want to share your opinions and help others discover titles.</li>
+          <li>Choose Public Review only on entries you intentionally want to share.</li>
           <li>Export periodically as a backup.</li>
           <li>Adjust privacy per category so friends see only what you're comfortable sharing.</li>
         </ul>

@@ -2,7 +2,6 @@ let currentOffset = 0;
 let hasMore = true;
 let isLoading = false;
 const pageSize = 20;
-const PUBLIC_REVIEW_DETAIL_MIN_CHARS = 240;
 let infiniteObserver = null;
 
 function updateScrollStatus(message) {
@@ -69,7 +68,7 @@ async function loadReviews(reset = true) {
       reviewsContainer.appendChild(card);
     });
 
-    updateItemListJsonLd(reviews);
+    updateItemListJsonLd(reviews, reset);
     updatePageMetadata(category);
     currentOffset += reviews.length;
     updateScrollStatus(hasMore ? 'Scroll to load more reviews...' : 'You reached the end.');
@@ -138,15 +137,19 @@ function createReviewCard(review) {
     </div>
   `;
 
+  if (!isStandalone && window.createReviewReportControls) {
+    card.appendChild(window.createReviewReportControls(review.category, review.id));
+  }
+
   return card;
 }
 
 function isStandaloneReview(review) {
-  return (review.review || '').trim().length >= PUBLIC_REVIEW_DETAIL_MIN_CHARS;
+  return review.search_ready === true;
 }
 
-function updateItemListJsonLd(reviews) {
-  const itemListElement = reviews.map((review, index) => {
+function updateItemListJsonLd(reviews, reset = false) {
+  const itemListElement = reviews.filter(isStandaloneReview).map((review, index) => {
     const isStandalone = isStandaloneReview(review);
     const reviewUrl = `https://omnitrackr.xyz/reviews/${review.id}?category=${review.category}`;
     const item = {
@@ -167,10 +170,8 @@ function updateItemListJsonLd(reviews) {
       "position": currentOffset - reviews.length + index + 1,
       "item": item
     };
-    if (isStandalone) {
-      listItem.url = reviewUrl;
-      item.url = reviewUrl;
-    }
+    listItem.url = reviewUrl;
+    item.url = reviewUrl;
     return listItem;
   });
 
@@ -179,7 +180,10 @@ function updateItemListJsonLd(reviews) {
     try {
       const data = JSON.parse(collectionPage.textContent);
       if (data.mainEntity && data.mainEntity.itemListElement) {
-        data.mainEntity.itemListElement = data.mainEntity.itemListElement.concat(itemListElement);
+        data.mainEntity.itemListElement = reset
+          ? itemListElement
+          : data.mainEntity.itemListElement.concat(itemListElement);
+        data.mainEntity.numberOfItems = data.mainEntity.itemListElement.length;
       } else if (data.mainEntity) {
         data.mainEntity.itemListElement = itemListElement;
       }

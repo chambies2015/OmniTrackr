@@ -1,0 +1,72 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="description" content="Browse thoughtful, human-curated collections spanning movies, television, anime, games, music, and books.">
+  <meta name="robots" content="index, follow">
+  <meta name="google-adsense-account" content="ca-pub-7271682066779719">
+  <title>Community Collections | OmniTrackr</title>
+  <link rel="canonical" href="https://omnitrackr.xyz/collections/explore">
+  <link rel="icon" type="image/x-icon" href="/omnitrackr_favicon.ico">
+  <meta property="og:type" content="website">
+  <meta property="og:title" content="Community Collections | OmniTrackr">
+  <meta property="og:description" content="Ideas worth following across every kind of media, curated by OmniTrackr members.">
+  <meta property="og:url" content="https://omnitrackr.xyz/collections/explore">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@700;800&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="/styles.css">
+  <style>
+    body { min-height: 100vh; padding: 20px; }
+    .gallery-shell { margin: 0 auto; max-width: 1120px; }
+    .gallery-hero { background: radial-gradient(circle at 82% 10%, rgba(236,72,153,.22), transparent 35%), var(--card-bg); border: 1px solid var(--border); border-radius: 18px; margin-bottom: 22px; padding: clamp(28px, 6vw, 62px); }
+    .gallery-hero__eyebrow { color: #14b8a6; font-size: .78rem; font-weight: 800; letter-spacing: .1em; margin: 0 0 12px; text-transform: uppercase; }
+    .gallery-hero h1 { color: var(--fg); font-family: Poppins, sans-serif; font-size: clamp(2.3rem, 6vw, 4.6rem); letter-spacing: -.04em; line-height: 1; margin: 0; max-width: 780px; }
+    .gallery-hero > p:last-of-type { color: var(--fg-secondary); font-size: 1.05rem; line-height: 1.7; max-width: 690px; }
+    .gallery-filter { display: grid; gap: 10px; grid-template-columns: minmax(0, 1fr) minmax(180px, .35fr) auto; margin-top: 24px; }
+    .gallery-filter input, .gallery-filter select { background: var(--bg); border: 1px solid var(--border); border-radius: 9px; color: var(--fg); font: inherit; padding: 12px; }
+    .gallery-filter button { background: var(--primary); border: 0; border-radius: 9px; color: white; cursor: pointer; font: inherit; font-weight: 800; padding: 12px 18px; }
+    .gallery-summary { color: var(--fg-secondary); font-size: .86rem; margin: 20px 2px 12px; }
+    .collection-gallery { display: grid; gap: 18px; grid-template-columns: repeat(auto-fit, minmax(290px, 1fr)); }
+    .collection-tile { background: var(--card-bg); border: 1px solid var(--border); border-radius: 15px; display: grid; grid-template-columns: 120px 1fr; min-height: 190px; overflow: hidden; }
+    .collection-tile__art { background: linear-gradient(145deg, rgba(102,126,234,.28), rgba(236,72,153,.2)); display: block; min-height: 100%; }
+    .collection-tile__art img { height: 100%; object-fit: cover; width: 100%; }
+    .collection-tile__placeholder { align-items: center; color: var(--primary); display: flex; font-size: 2rem; height: 100%; justify-content: center; }
+    .collection-tile__copy { padding: 18px; }
+    .collection-tile__copy > p:first-child { color: #14b8a6; font-size: .68rem; font-weight: 800; letter-spacing: .06em; margin: 0 0 7px; text-transform: uppercase; }
+    .collection-tile h2 { font-family: Poppins, sans-serif; font-size: 1.16rem; line-height: 1.25; margin: 0 0 5px; }
+    .collection-tile h2 a { color: var(--fg); text-decoration: none; }
+    .collection-tile h2 a:hover { color: var(--primary); }
+    .collection-tile span { color: var(--fg-secondary); font-size: .75rem; }
+    .collection-tile__intro { color: var(--fg-secondary); display: -webkit-box; font-size: .82rem; line-height: 1.48; margin: 12px 0 0; overflow: hidden; -webkit-box-orient: vertical; -webkit-line-clamp: 3; }
+    .collection-gallery__empty { background: var(--card-bg); border: 1px dashed var(--border); border-radius: 14px; color: var(--fg-secondary); grid-column: 1 / -1; padding: 42px; text-align: center; }
+    .collection-gallery__empty a, .gallery-footer a { color: var(--primary); font-weight: 700; }
+    .gallery-footer { border-top: 1px solid var(--border); color: var(--fg-secondary); display: flex; flex-wrap: wrap; font-size: .8rem; gap: 10px 20px; justify-content: space-between; margin-top: 38px; padding: 22px 2px 38px; }
+    @media (max-width: 650px) { body { padding: 10px; } .gallery-filter { grid-template-columns: 1fr; } .collection-tile { grid-template-columns: 86px 1fr; } }
+  </style>
+</head>
+<body class="dark-mode">
+  <main class="gallery-shell">
+    <nav class="public-site-nav" aria-label="Public site navigation">
+      <a class="public-site-nav__brand" href="/">OmniTrackr</a>
+      <div class="public-site-nav__links"><a href="/discover">Discover</a><a href="/collections/explore" aria-current="page">Collections</a><a href="/reviews">Reviews</a><a href="/guides">Guides</a><a class="public-site-nav__cta" href="/#landing-auth">Start tracking</a></div>
+    </nav>
+    <section class="gallery-hero">
+      <p class="gallery-hero__eyebrow">Made by people, not an algorithm</p>
+      <h1>Ideas worth following across every medium.</h1>
+      <p>Browse collections that connect films, series, anime, games, albums, and books through one considered point of view. Only substantial collections that pass the automatic discovery checks appear here.</p>
+      <form class="gallery-filter" method="get" action="/collections/explore">
+        <input type="search" name="q" maxlength="80" value="{{QUERY}}" placeholder="Search a theme or description" aria-label="Search collections">
+        <select name="category" aria-label="Filter by media type">
+          <option value="" {{SELECT_ALL}}>All media</option><option value="movies" {{SELECT_MOVIES}}>Movies</option><option value="tv-shows" {{SELECT_TV_SHOWS}}>TV shows</option><option value="anime" {{SELECT_ANIME}}>Anime</option><option value="video-games" {{SELECT_VIDEO_GAMES}}>Video games</option><option value="music" {{SELECT_MUSIC}}>Music</option><option value="books" {{SELECT_BOOKS}}>Books</option>
+        </select>
+        <button type="submit">Explore</button>
+      </form>
+    </section>
+    <p class="gallery-summary">{{COUNT}} approved collection(s)</p>
+    <section class="collection-gallery" aria-label="Approved community collections">{{COLLECTIONS}}</section>
+    <footer class="gallery-footer"><span>Curated by OmniTrackr members · Reviewed before discovery</span><span><a href="/content-quality">Content standards</a> · <a href="/contact">Contact</a> · <a href="/privacy">Privacy</a></span></footer>
+  </main>
+</body>
+</html>

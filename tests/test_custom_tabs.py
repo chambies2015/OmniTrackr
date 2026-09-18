@@ -5,6 +5,8 @@ import pytest
 import json
 from io import BytesIO
 
+from app import crud, models
+
 
 class TestCustomTabEndpoints:
     """Test custom tab API endpoints."""
@@ -336,3 +338,39 @@ class TestCustomTabPosterEndpoints:
         )
         
         assert response.status_code == 403
+
+    def test_stored_poster_requires_authentication_and_ownership(
+        self, authenticated_client, custom_tab_with_uploads, db_session
+    ):
+        create_response = authenticated_client.post(
+            f"/custom-tabs/{custom_tab_with_uploads['id']}/items",
+            json={"title": "Private poster", "field_values": {}, "poster_url": None},
+        )
+        item_id = create_response.json()["id"]
+        item = db_session.query(models.CustomTabItem).filter_by(id=item_id).one()
+        item.poster_data = b"private-image"
+        item.poster_mime_type = "image/webp"
+        db_session.commit()
+
+        owner_response = authenticated_client.get(f"/custom-tab-posters/{item_id}")
+        assert owner_response.status_code == 200
+        assert owner_response.content == b"private-image"
+
+        authenticated_client.headers = {}
+        authenticated_client.cookies.clear()
+        anonymous_response = authenticated_client.get(f"/custom-tab-posters/{item_id}")
+        assert anonymous_response.status_code == 401
+
+        other_data = {"email": "other@example.com", "username": "otheruser", "password": "otherpass123"}
+        register = authenticated_client.post("/auth/register", json=other_data)
+        other = crud.get_user_by_id(db_session, register.json()["id"])
+        other.is_verified = True
+        other.verification_token = None
+        db_session.commit()
+        login = authenticated_client.post(
+            "/auth/login", data={"username": other_data["username"], "password": other_data["password"]}
+        )
+        authenticated_client.headers = {"Authorization": f"Bearer {login.json()['access_token']}"}
+
+        other_response = authenticated_client.get(f"/custom-tab-posters/{item_id}")
+        assert other_response.status_code == 404

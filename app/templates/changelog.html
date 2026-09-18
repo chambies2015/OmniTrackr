@@ -56,7 +56,7 @@
     "name": "OmniTrackr Changelog",
     "description": "Product, security, privacy, SEO, and content updates for OmniTrackr.",
     "url": "https://omnitrackr.xyz/changelog",
-    "dateModified": "2026-07-05",
+    "dateModified": "2026-09-17",
     "inLanguage": "en-US",
     "isPartOf": { "@type": "WebSite", "name": "OmniTrackr", "url": "https://omnitrackr.xyz" },
     "publisher": { "@type": "Organization", "name": "OmniTrackr", "url": "https://omnitrackr.xyz" }
@@ -95,6 +95,132 @@
       <section class="privacy-section" aria-labelledby="why-heading">
         <h2 id="why-heading">Why Publish a Changelog?</h2>
         <p>OmniTrackr is a live media tracking app, not a static demo. Publishing a changelog gives users and reviewers a clear place to see that the site is actively maintained, that security work is taken seriously, and that public content is being improved over time. It also helps new users understand which parts of the app are mature, which areas recently changed, and what the product is trying to become.</p>
+      </section>
+
+      <section class="privacy-section" aria-labelledby="welcome-back-2026-heading">
+        <h2 id="welcome-back-2026-heading">September 2026: A Calmer Way Back In</h2>
+        <p>The Welcome Back Deck turns existing private library signals into one focused return moment instead of adding another permanent dashboard widget.</p>
+        <ul>
+          <li>Offers the deck only after a successful login following at least three full days away and only after five built-in titles have been saved.</li>
+          <li>Composes the existing Next Up queue, Today’s Pick, Library Pulse, and Activity Journal into a primary choice, an alternative, an optional reflection, and a compact recap.</li>
+          <li>Temporarily replaces Today’s Pick and Library Pulse while visible, then restores the familiar dashboard after an item is opened or the deck is dismissed.</li>
+          <li>Keeps eligibility and a signed random activation proof in short-lived browser session storage rather than creating a server-side visit history.</li>
+          <li>Adds only anonymous daily shown, opened, and dismissed totals to the existing site-health panel. A non-reversible digest of the random proof is retained for up to seven days to prevent duplicate counting; it cannot be joined to an account or media record.</li>
+          <li>Batches queue lookups, aggregates journal recaps in the database, and prevents the Welcome Back Deck from racing Today’s Pick and Library Pulse during dashboard startup.</li>
+        </ul>
+        <p>The deck does not send email or push reminders, create streaks, publish activity, use AI recommendations, or load ads in the private dashboard.</p>
+      </section>
+
+      <section class="privacy-section" aria-labelledby="automated-collection-safety-2026-heading">
+        <h2 id="automated-collection-safety-2026-heading">September 2026: Automated Collection Discovery and Recovery</h2>
+        <p>This release completes the existing public collection workflow without adding another feed, paid moderation service, or daily human approval queue.</p>
+        <ul>
+          <li>Reused the collection quality floor, gallery, content hashes, signed visitor cookie, reports, owner notifications, and aggregate health view.</li>
+          <li>Added one deterministic readiness result for the collection editor, gallery, detail-page indexability, and sitemap.</li>
+          <li>Made qualifying published collections discoverable automatically while keeping private collections private and share-ready-only pages out of search.</li>
+          <li>Replaced free-text collection allegations with fixed reasons, one report per signed browser and version, and a two-per-hour IP rate limit.</li>
+          <li>Temporarily unlisted an exact collection version after three independent reports and notified its owner without deleting the collection.</li>
+          <li>Made an owner edit clear the current report state, rerun readiness, and restore a qualifying revision automatically.</li>
+          <li>Removed the manual action queue while retaining aggregate site health and a narrowly scoped emergency block.</li>
+        </ul>
+        <p>Existing accounts, collections, library items, privacy choices, direct links, and historic public-content decisions are preserved. Collection pages remain outside the ad-loader allowlist while their quality and usefulness are measured.</p>
+      </section>
+
+      <section class="privacy-section" aria-labelledby="automated-review-safety-2026-heading">
+        <h2 id="automated-review-safety-2026-heading">September 2026: Automated Review Quality and Safety</h2>
+        <p>This release makes public review discovery sustainable for a two-person project without introducing a manual moderation queue or paid AI service.</p>
+        <ul>
+          <li>Reused the existing opt-in review feed and divided it into transparent community-ready and search-ready tiers.</li>
+          <li>Reserved standalone pages, structured review data, sitemap URLs, prominent ordering, and ad eligibility for search-ready reviews.</li>
+          <li>Added editor feedback for character count, word count, complete thoughts, varied language, and public safety checks.</li>
+          <li>Reused the signed public-visitor cookie for fixed-reason, rate-limited reports without storing reporter IP addresses, fingerprints, or free-text allegations.</li>
+          <li>Automatically unlisted an exact review version after three independent reports, notified the author, and made a substantive edit restore the revision without a human queue.</li>
+          <li>Added aggregate report and unlisting totals to the existing privacy-conscious site-health panel.</li>
+        </ul>
+        <p>No reviews are deleted or rewritten by these controls. Ordinary community-ready reviews remain browseable, while private notes and reviews that do not meet a public tier remain in the owner's library.</p>
+      </section>
+
+      <section class="privacy-section" aria-labelledby="activation-trust-2026-heading">
+        <h2 id="activation-trust-2026-heading">September 2026: Activation and Trust Baseline</h2>
+        <p>This release improves the first-session path and gives maintainers a privacy-conscious way to understand whether new accounts reach a useful library. It builds on the existing launchpad, Weekly playback, Library pulse, and moderator insights instead of creating duplicate onboarding or recap features.</p>
+        <ul>
+          <li>Added aggregate stages for account creation, email verification, first library item, five saved titles, and a post-activation return.</li>
+          <li>Stored only the most recent successful login time and a running successful-login count; no page history, searches, media titles, or private notes are collected for the return signal.</li>
+          <li>Moved Google Analytics out of the private dashboard and limited it to the standalone public landing experience.</li>
+          <li>Made the public analytics loader honor supported Global Privacy Control and Do Not Track signals while disabling Google signals and ad-personalization signals.</li>
+          <li>Aligned account-deactivation language around the actual 90-day self-service reactivation window.</li>
+          <li>Consolidated stale development notes into the README, test guide, current content review, and one growth-operations reference.</li>
+        </ul>
+        <p>The return measurement begins with this release and does not guess historical visits. AdSense approval still depends on Google's review and any required account-side consent configuration; these changes are a clearer operating baseline, not an approval guarantee.</p>
+      </section>
+
+      <section class="privacy-section" aria-labelledby="postcards-2026-heading">
+        <h2 id="postcards-2026-heading">September 2026: Recommendation Postcards</h2>
+        <p>Recommendation Postcards turn the familiar “what should I try next?” conversation into a small, useful workflow without creating another public feed. Members can ask one focused question, choose eligible media types, and collect a limited number of thoughtful replies from friends or guests.</p>
+        <ul>
+          <li>Added unlisted, high-entropy guest links with a 3-to-30-day reply window and a configurable response cap.</li>
+          <li>Added direct invitations for accepted OmniTrackr friends and one-response-per-friend protection.</li>
+          <li>Added a private owner inbox with save, add to library, add to Next Up, and dismiss decisions.</li>
+          <li>Kept all replies out of the library until the owner acts; matching library items retain their existing rating, review, metadata, and completion status.</li>
+          <li>Excluded guest pages and APIs from search indexing, caching, public profiles, and advertising inventory.</li>
+          <li>Added duplicate prevention, a spam-trap field, guest submission rate limits, category restrictions, and safe text rendering.</li>
+        </ul>
+        <p>The database change is additive. Existing accounts, media records, reviews, collections, friendships, journal entries, and privacy settings are not rewritten or deleted.</p>
+      </section>
+
+      <section class="privacy-section" aria-labelledby="september-2026-heading">
+        <h2 id="september-2026-heading">September 2026: A Smaller, Stronger Public Library</h2>
+        <p>After another low-value-content review, OmniTrackr narrowed its search and advertising footprint around the pages that offer the clearest standalone experience. No guides, accounts, collections, or library records were deleted. Supporting pages remain available through the site navigation, but the XML sitemap now recommends a smaller set of original product guides, examples, public reviews, and human-edited Discover pages.</p>
+        <ul>
+          <li>Reduced the core sitemap to the public pages with the most distinct purpose, while preserving every existing route for visitors.</li>
+          <li>Marked overlapping category guides, product updates, comparison pages, and policy utilities <code>noindex, follow</code> so their links still help people without diluting search inventory.</li>
+          <li>Limited prospective ad loading to six substantial public experiences and kept it off supporting, legal, and noindex pages.</li>
+          <li>Kept member collections shareable by direct link but out of search and sitemap inventory until a moderation workflow exists.</li>
+          <li>Promoted the Discover index and authored monthly edition while treating shorter themed trails as supporting reading.</li>
+          <li>Verified authentication, accounts, media CRUD, privacy, friends, statistics, reviews, Discover, collections, and frontend security after the change.</li>
+        </ul>
+        <p>This is a content-consolidation release, not a data migration. It changes how the public site presents itself to crawlers and advertising systems while leaving signed-in workflows and user-owned records unchanged.</p>
+      </section>
+
+      <section class="privacy-section" aria-labelledby="journal-2026-heading">
+        <h2 id="journal-2026-heading">September 2026: The Private Activity Journal</h2>
+        <p>The Activity Journal gives a library a sense of time. Members can log when they start, progress through, finish, revisit, or simply make a note about any movie, TV show, anime, game, album, or book already in their library.</p>
+        <ul>
+          <li>Added one chronological, private timeline across all six built-in media types.</li>
+          <li>Added a weekly playback with moment, completion, reflection, and category counts using the member's local calendar week.</li>
+          <li>Connected the existing finish-reflection flow to one automatic completion entry without changing the underlying media record.</li>
+          <li>Kept manual logging independent from watched, played, listened, and read status so correcting a journal never rewrites the library.</li>
+          <li>Added journal data to versioned JSON exports while keeping older export files valid for import.</li>
+          <li>Kept the journal out of public profiles, search indexing, and advertising inventory.</li>
+        </ul>
+        <p>Existing items are intentionally not backfilled with guessed dates. The journal begins with real activity after the feature ships, while title and rating snapshots preserve useful context if a library entry changes later.</p>
+      </section>
+
+      <section class="privacy-section" aria-labelledby="import-studio-2026-heading">
+        <h2 id="import-studio-2026-heading">September 2026: Bring Your Library Import Studio</h2>
+        <p>The Import Studio lowers the cost of trying OmniTrackr for people who already have years of media history elsewhere. It recognizes Letterboxd, Goodreads, MyAnimeList, and flexible spreadsheet exports while treating existing OmniTrackr records as the source of truth.</p>
+        <ul>
+          <li>Added a no-write preview with ready, duplicate, and invalid outcomes before confirmation.</li>
+          <li>Added optional column mapping and downloadable templates for all six built-in media categories.</li>
+          <li>Kept migration imports additive: matching library records are skipped, never updated or deleted.</li>
+          <li>Bound confirmation to the exact file, format choice, category, and column mapping that produced the preview.</li>
+          <li>Made each confirmed batch atomic and kept imported reviews private by default.</li>
+          <li>Kept the established versioned JSON backup and restoration path backward compatible.</li>
+        </ul>
+        <p>The migration API is authenticated, private-cache protected, and excluded from search indexing. No schema changes or existing-data migrations are required for this release.</p>
+      </section>
+
+      <section class="privacy-section" aria-labelledby="tasteprint-2026-heading">
+        <h2 id="tasteprint-2026-heading">September 2026: OmniTrackr Tasteprint</h2>
+        <p>Tasteprint turns an established library into a concise portrait of how someone watches, plays, listens, and reads. It uses aggregate evidence from selected categories and the private activity journal without exposing media titles or review text through the Tasteprint API.</p>
+        <ul>
+          <li>Added evidence-backed observations for media range, library anchor, completion style, rating personality, home decade, recurring creators, and recent journal rhythm.</li>
+          <li>Added a deliberate minimum-data threshold so new accounts see honest progress instead of invented conclusions.</li>
+          <li>Excluded hidden and private categories by default while allowing the account owner to opt them into a specific calculation.</li>
+          <li>Added per-insight controls, an optional username, a copied text summary, and a branded PNG rendered entirely in the browser.</li>
+          <li>Kept Tasteprint private, unindexed, uncached, ad-free, and separate from friend profiles.</li>
+        </ul>
+        <p>No new public profile, database table, or stored share-card record is created. Downloading a card does not publish it; the user remains responsible for whether and where it is shared.</p>
       </section>
 
       <section class="privacy-section" aria-labelledby="july-2026-heading">

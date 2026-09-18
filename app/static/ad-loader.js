@@ -3,28 +3,11 @@
   const AD_SCRIPT_ID = 'omnitrackr-public-adsense';
   const AD_SRC = `https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=${AD_CLIENT}`;
   const AD_ELIGIBLE_PATHS = new Set([
-    '/about',
-    '/faq',
-    '/guides',
-    '/compare',
-    '/use-cases',
-    '/changelog',
-    '/tv-show-tracker',
-    '/game-tracker',
-    '/movie-tracker',
-    '/anime-tracker',
-    '/book-tracker',
-    '/music-tracker',
-    '/media-statistics',
     '/export-import-guide',
-    '/media-tracker-checklist',
-    '/tracking-templates',
     '/review-guidelines',
     '/sample-library',
     '/demo',
     '/media-tracking',
-    '/roadmap',
-    '/reviews',
   ]);
 
   function isAdEligiblePath() {

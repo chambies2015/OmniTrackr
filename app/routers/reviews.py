@@ -2,26 +2,31 @@
 Public review endpoints for the OmniTrackr API.
 """
 import html
+import hashlib
 import json
 import os
 import re
 from datetime import datetime
 from typing import List, Optional
-from fastapi import APIRouter, Depends, HTTPException, Query, Request
+from fastapi import APIRouter, Depends, HTTPException, Query, Request, status
+from fastapi.responses import JSONResponse
 from sqlalchemy.orm import Session
 from sqlalchemy import and_, func
+from sqlalchemy.exc import IntegrityError
 
 from .. import models, schemas
 from ..auth import AUTH_COOKIE_NAME
 from ..csp import strict_html_response
 from ..dependencies import get_db
-from ..review_quality import is_public_review_safe
+from ..review_quality import evaluate_public_review
+from ..visitor_identity import set_visitor_cookie, visitor_identity
 
 router = APIRouter(tags=["reviews"])
 
 SITE_URL = os.getenv("SITE_URL", "https://omnitrackr.xyz").rstrip("/")
 PUBLIC_REVIEW_MIN_CHARS = int(os.getenv("PUBLIC_REVIEW_MIN_CHARS", "80"))
 PUBLIC_REVIEW_DETAIL_MIN_CHARS = int(os.getenv("PUBLIC_REVIEW_DETAIL_MIN_CHARS", "240"))
+PUBLIC_REVIEW_REPORT_THRESHOLD = max(2, int(os.getenv("PUBLIC_REVIEW_REPORT_THRESHOLD", "3")))
 ADSENSE_PUBLISHER_ID = os.getenv("ADSENSE_PUBLISHER_ID", "pub-7271682066779719")
 ADSENSE_ACCOUNT = ADSENSE_PUBLISHER_ID if ADSENSE_PUBLISHER_ID.startswith("ca-") else f"ca-{ADSENSE_PUBLISHER_ID}"
 
@@ -32,6 +37,14 @@ CATEGORY_LABELS = {
     "video_game": "Video Game",
     "music": "Music",
     "book": "Book",
+}
+CATEGORY_MODELS = {
+    "movie": models.Movie,
+    "tv_show": models.TVShow,
+    "anime": models.Anime,
+    "video_game": models.VideoGame,
+    "music": models.Music,
+    "book": models.Book,
 }
 
 CATEGORY_REVIEW_CONTEXT = {
@@ -106,7 +119,7 @@ def _not_found_reviews_category_html() -> str:
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <meta name="robots" content="noindex, follow">
   <title>Review Category Not Found - OmniTrackr</title>
-  <link rel="stylesheet" href="/styles.css">
+  <link rel="stylesheet" href="/styles.css?v=20260917-review-safety-v1">
   <style>
     body { min-height: 100vh; padding: 20px; }
     .review-wrapper { max-width: 900px; margin: 0 auto; }
@@ -187,13 +200,32 @@ def _apply_category_review_context(page: str, category: Optional[str]) -> str:
 
 
 def _review_is_substantial(review: dict) -> bool:
-    review_text = (review.get("review") or "").strip()
-    return len(review_text) >= PUBLIC_REVIEW_MIN_CHARS and is_public_review_safe(review_text)
+    if "community_ready" in review:
+        return bool(review["community_ready"])
+    return evaluate_public_review(
+        review.get("review"), PUBLIC_REVIEW_MIN_CHARS, PUBLIC_REVIEW_DETAIL_MIN_CHARS
+    ).community_ready
 
 
 def _review_is_standalone(review: dict) -> bool:
-    review_text = (review.get("review") or "").strip()
-    return len(review_text) >= PUBLIC_REVIEW_DETAIL_MIN_CHARS and is_public_review_safe(review_text)
+    if "search_ready" in review:
+        return bool(review["search_ready"])
+    return evaluate_public_review(
+        review.get("review"), PUBLIC_REVIEW_MIN_CHARS, PUBLIC_REVIEW_DETAIL_MIN_CHARS
+    ).search_ready
+
+
+def _review_content_hash(category: str, item_id: int, review_text: str | None) -> str:
+    normalized = " ".join(str(review_text or "").split())
+    return hashlib.sha256(f"{category}:{item_id}:{normalized}".encode("utf-8")).hexdigest()
+
+
+def _current_state_hides_review(state: models.PublicReviewState | None, category: str, item) -> bool:
+    return bool(
+        state
+        and state.suspended_at
+        and state.content_hash == _review_content_hash(category, item.id, item.review)
+    )
 
 
 def _review_detail_url(review: dict) -> str:
@@ -233,6 +265,28 @@ def _review_meta(review: dict) -> str:
     return ""
 
 
+def _review_report_html(review: dict) -> str:
+    return f"""
+      <details class="review-report">
+        <summary>Report this review</summary>
+        <form data-review-report="true" data-category="{_escape(review['category'])}" data-review-id="{_escape(review['id'])}">
+          <label>What is the issue?
+            <select name="reason" required>
+              <option value="">Choose a reason</option>
+              <option value="spam">Spam or promotion</option>
+              <option value="harassment">Harassment</option>
+              <option value="personal_information">Personal information</option>
+              <option value="copied_content">Copied content</option>
+              <option value="other">Other safety issue</option>
+            </select>
+          </label>
+          <button type="submit">Send report</button>
+          <p class="review-report__status" aria-live="polite"></p>
+        </form>
+      </details>
+    """
+
+
 def _review_card_html(review: dict) -> str:
     standalone = _review_is_standalone(review)
     review_url = _review_detail_url(review)
@@ -243,6 +297,7 @@ def _review_card_html(review: dict) -> str:
     rating_html = f'<span class="review-rating">Rating: {_escape(rating)}/10</span>' if rating is not None else ""
     tag_open = f'<a class="review-card" href="{_escape(review_url)}">' if standalone else '<article class="review-card review-card--summary">'
     tag_close = "</a>" if standalone else "</article>"
+    report_html = "" if standalone else _review_report_html(review)
     return f"""
       {tag_open}
         <span class="review-category">{_escape(CATEGORY_LABELS.get(review["category"], review["category"]))}</span>
@@ -258,6 +313,7 @@ def _review_card_html(review: dict) -> str:
           <span>By {_escape(review.get("username"))}</span>
           {rating_html}
         </div>
+        {report_html}
       {tag_close}
     """
 
@@ -313,8 +369,9 @@ def _reviews_item_list_json_ld(reviews: list[dict], category: Optional[str] = No
     description = context["description"] if context else "Public user reviews for movies, TV shows, anime, video games, music, and books."
 
     item_list = []
-    for position, review in enumerate(reviews, start=1):
-        standalone = _review_is_standalone(review)
+    search_ready_reviews = [review for review in reviews if _review_is_standalone(review)]
+    for position, review in enumerate(search_ready_reviews, start=1):
+        standalone = True
         review_url = f"{SITE_URL}{_review_detail_url(review)}"
         review_item = {
             "@type": "ListItem",
@@ -370,23 +427,13 @@ def _inject_reviews_item_list_json_ld(page: str, reviews: list[dict], category: 
     return page.replace("</head>", f"  {script}\n</head>", 1)
 
 
-def _remove_ad_loader_for_authenticated_request(page: str, request: Request) -> str:
-    if request.cookies.get(AUTH_COOKIE_NAME):
-        return page.replace('  <script src="/static/ad-loader.js" defer></script>\n', "")
-    return page
-
-
-def _remove_public_ad_loader(page: str) -> str:
-    return page.replace('  <script src="/static/ad-loader.js" defer></script>\n', "")
-
-
 def _noindex_empty_review_category(page: str) -> str:
     page = page.replace(
         '<meta name="robots" content="index, follow, max-image-preview:large">',
         '<meta name="robots" content="noindex, follow">',
         1,
     )
-    return _remove_public_ad_loader(page)
+    return page
 
 
 def _inject_ad_loader_for_review_detail(page: str, request: Request) -> str:
@@ -405,7 +452,7 @@ def _not_found_review_html() -> str:
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <meta name="robots" content="noindex, follow">
   <title>Review Not Found - OmniTrackr</title>
-  <link rel="stylesheet" href="/styles.css">
+  <link rel="stylesheet" href="/styles.css?v=20260917-review-safety-v1">
   <style>
     body { min-height: 100vh; padding: 20px; }
     .review-wrapper { max-width: 900px; margin: 0 auto; }
@@ -511,7 +558,7 @@ def _review_detail_html(review: dict) -> str:
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@700;800&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="/styles.css">
+  <link rel="stylesheet" href="/styles.css?v=20260917-review-safety-v1">
   <style>
     body {{ min-height: 100vh; padding: 20px; }}
     .review-wrapper {{ max-width: 900px; margin: 0 auto; }}
@@ -535,6 +582,7 @@ def _review_detail_html(review: dict) -> str:
   </style>
   <script type="application/ld+json">{_safe_json_ld(json_ld)}</script>
   <script type="application/ld+json">{_safe_json_ld(breadcrumb_json_ld)}</script>
+  <script src="/static/review_report.js?v=20260917-review-safety-v1" defer></script>
 </head>
 <body class="dark-mode">
   <main class="review-wrapper">
@@ -553,6 +601,7 @@ def _review_detail_html(review: dict) -> str:
       <footer class="review-author">
         <p><strong>Review by:</strong> {_escape(review.get("username"))}</p>
       </footer>
+      {_review_report_html(review)}
     </article>
   </main>
 </body>
@@ -561,7 +610,6 @@ def _review_detail_html(review: dict) -> str:
 
 @router.get("/reviews")
 async def reviews_index(
-    request: Request,
     db: Session = Depends(get_db),
     category: Optional[str] = Query(None, description="Filter by category")
 ):
@@ -582,7 +630,9 @@ async def reviews_index(
                 offset=0,
                 min_chars=PUBLIC_REVIEW_MIN_CHARS,
             )
-            substantial_reviews = [review for review in reviews if _review_is_substantial(review)][:20]
+            substantial_reviews = [review for review in reviews if _review_is_substantial(review)]
+            substantial_reviews.sort(key=lambda review: (not _review_is_standalone(review), -review["id"]))
+            substantial_reviews = substantial_reviews[:20]
             if substantial_reviews:
                 server_reviews_html = "\n".join(_review_card_html(review) for review in substantial_reviews)
             else:
@@ -602,9 +652,9 @@ async def reviews_index(
         except Exception:
             pass
         page = _apply_category_review_context(page, category)
-        if _normalized_category(category) and not substantial_reviews:
+        search_ready_reviews = [review for review in substantial_reviews if _review_is_standalone(review)]
+        if _normalized_category(category) and not search_ready_reviews:
             page = _noindex_empty_review_category(page)
-        page = _remove_ad_loader_for_authenticated_request(page, request)
         return strict_html_response(page)
     raise HTTPException(status_code=404, detail="Reviews page not found")
 
@@ -682,9 +732,27 @@ async def get_public_reviews(
         ]
 
     for cat, items in query_conditions:
+        item_ids = [item.id for item in items]
+        state_map = {
+            state.item_id: state
+            for state in db.query(models.PublicReviewState).filter(
+                models.PublicReviewState.category == cat,
+                models.PublicReviewState.item_id.in_(item_ids),
+            ).all()
+        } if item_ids else {}
         for item in items:
             user = db.query(models.User).filter(models.User.id == item.user_id).first()
             if not user or not user.is_active:
+                continue
+
+            quality = evaluate_public_review(
+                item.review, PUBLIC_REVIEW_MIN_CHARS, PUBLIC_REVIEW_DETAIL_MIN_CHARS
+            )
+            if not quality.safe:
+                continue
+            if min_chars >= PUBLIC_REVIEW_MIN_CHARS and not quality.community_ready:
+                continue
+            if _current_state_hides_review(state_map.get(item.id), cat, item):
                 continue
 
             review_data = {
@@ -695,10 +763,9 @@ async def get_public_reviews(
                 "rating": item.rating,
                 "username": user.username,
                 "user_id": user.id,
+                "community_ready": quality.community_ready,
+                "search_ready": quality.search_ready,
             }
-
-            if not is_public_review_safe(review_data["review"]):
-                continue
 
             if cat == "movie":
                 review_data.update({
@@ -734,8 +801,8 @@ async def get_public_reviews(
 
             reviews.append(review_data)
 
+    reviews.sort(key=lambda item: (not item["search_ready"], -item["id"]))
     if not category:
-        reviews.sort(key=lambda item: item["id"], reverse=True)
         return reviews[offset:offset + limit]
     return reviews[:limit]
 
@@ -758,25 +825,21 @@ async def get_public_review(
             model_cls.user_id.in_(user_ids)
         )
 
-    item = None
-    if category == "movie":
-        item = db.query(models.Movie).filter(base_filter(models.Movie)).first()
-    elif category == "tv_show":
-        item = db.query(models.TVShow).filter(base_filter(models.TVShow)).first()
-    elif category == "anime":
-        item = db.query(models.Anime).filter(base_filter(models.Anime)).first()
-    elif category == "video_game":
-        item = db.query(models.VideoGame).filter(base_filter(models.VideoGame)).first()
-    elif category == "music":
-        item = db.query(models.Music).filter(base_filter(models.Music)).first()
-    elif category == "book":
-        item = db.query(models.Book).filter(base_filter(models.Book)).first()
-    else:
+    model_cls = CATEGORY_MODELS.get(category)
+    if not model_cls:
         raise HTTPException(status_code=400, detail="Invalid category")
+    item = db.query(model_cls).filter(base_filter(model_cls)).first()
 
     if not item:
         raise HTTPException(status_code=404, detail="Review not found")
-    if not is_public_review_safe(item.review):
+    quality = evaluate_public_review(item.review, PUBLIC_REVIEW_MIN_CHARS, PUBLIC_REVIEW_DETAIL_MIN_CHARS)
+    if not quality.safe:
+        raise HTTPException(status_code=404, detail="Review not found")
+    state = db.query(models.PublicReviewState).filter(
+        models.PublicReviewState.category == category,
+        models.PublicReviewState.item_id == item.id,
+    ).first()
+    if _current_state_hides_review(state, category, item):
         raise HTTPException(status_code=404, detail="Review not found")
 
     user = db.query(models.User).filter(models.User.id == item.user_id).first()
@@ -791,6 +854,8 @@ async def get_public_review(
         "rating": item.rating,
         "username": user.username,
         "user_id": user.id,
+        "community_ready": quality.community_ready,
+        "search_ready": quality.search_ready,
     }
 
     if category == "movie":
@@ -826,3 +891,113 @@ async def get_public_review(
         })
 
     return review_data
+
+
+@router.post(
+    "/api/public/reviews/{category}/{review_id}/report",
+    status_code=status.HTTP_201_CREATED,
+    tags=["public"],
+)
+async def report_public_review(
+    category: str,
+    review_id: int,
+    payload: schemas.PublicReviewReportCreate,
+    request: Request,
+    db: Session = Depends(get_db),
+):
+    """Record one signed-browser report and automatically unlist at the threshold."""
+    model_cls = CATEGORY_MODELS.get(category)
+    if not model_cls:
+        raise HTTPException(status_code=400, detail="Invalid category")
+    item = db.query(model_cls).join(models.User, model_cls.user_id == models.User.id).filter(
+        model_cls.id == review_id,
+        model_cls.review_public == True,
+        model_cls.review.isnot(None),
+        models.User.is_active == True,
+    ).first()
+    quality = evaluate_public_review(
+        item.review if item else None, PUBLIC_REVIEW_MIN_CHARS, PUBLIC_REVIEW_DETAIL_MIN_CHARS
+    )
+    if not item or not quality.community_ready:
+        raise HTTPException(status_code=404, detail="Review not found")
+
+    current_hash = _review_content_hash(category, item.id, item.review)
+    visitor_hash, visitor_token, _ = visitor_identity(request)
+    duplicate = False
+    newly_unlisted = False
+    try:
+        state_row = db.query(models.PublicReviewState).filter(
+            models.PublicReviewState.category == category,
+            models.PublicReviewState.item_id == item.id,
+        ).first()
+        if state_row and state_row.content_hash == current_hash and state_row.suspended_at:
+            raise HTTPException(status_code=404, detail="Review not found")
+        if not state_row:
+            state_row = models.PublicReviewState(
+                user_id=item.user_id,
+                category=category,
+                item_id=item.id,
+                content_hash=current_hash,
+                report_count=0,
+            )
+            db.add(state_row)
+            db.flush()
+        elif state_row.content_hash != current_hash:
+            db.query(models.PublicReviewReport).filter(
+                models.PublicReviewReport.state_id == state_row.id
+            ).delete(synchronize_session=False)
+            state_row.user_id = item.user_id
+            state_row.content_hash = current_hash
+            state_row.report_count = 0
+            state_row.suspended_at = None
+
+        existing = db.query(models.PublicReviewReport.id).filter(
+            models.PublicReviewReport.state_id == state_row.id,
+            models.PublicReviewReport.visitor_hash == visitor_hash,
+        ).first()
+        duplicate = bool(existing)
+        if not duplicate:
+            db.add(models.PublicReviewReport(
+                state_id=state_row.id,
+                visitor_hash=visitor_hash,
+                reason=payload.reason,
+            ))
+            db.flush()
+            db.query(models.PublicReviewState).filter(
+                models.PublicReviewState.id == state_row.id,
+                models.PublicReviewState.content_hash == current_hash,
+            ).update(
+                {models.PublicReviewState.report_count: models.PublicReviewState.report_count + 1},
+                synchronize_session=False,
+            )
+            db.flush()
+            db.refresh(state_row)
+            if state_row.report_count >= PUBLIC_REVIEW_REPORT_THRESHOLD and not state_row.suspended_at:
+                state_row.suspended_at = datetime.utcnow()
+                newly_unlisted = True
+                db.add(models.Notification(
+                    user_id=item.user_id,
+                    type="review_unlisted",
+                    message=(
+                        f'Your public review of "{item.title}" was automatically unlisted after '
+                        "reports from multiple independent visitors. Edit the review to publish a revised version."
+                    ),
+                ))
+        db.commit()
+    except IntegrityError:
+        db.rollback()
+        duplicate = True
+        current_state = db.query(models.PublicReviewState).filter(
+            models.PublicReviewState.category == category,
+            models.PublicReviewState.item_id == item.id,
+        ).first()
+        newly_unlisted = _current_state_hides_review(current_state, category, item)
+
+    visibility = "unlisted" if newly_unlisted else "visible"
+    response = JSONResponse(
+        {"reported": True, "duplicate": duplicate, "visibility": visibility},
+        status_code=status.HTTP_201_CREATED,
+    )
+    response.headers["Cache-Control"] = "no-store"
+    set_visitor_cookie(response, visitor_token)
+    return response

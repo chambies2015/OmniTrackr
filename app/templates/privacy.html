@@ -161,7 +161,7 @@
       "name": "OmniTrackr",
       "url": "https://omnitrackr.xyz"
     },
-    "dateModified": "2026-06-01",
+    "dateModified": "2026-09-17",
     "publisher": {
       "@type": "Organization",
       "name": "OmniTrackr",
@@ -196,7 +196,7 @@
 
     <div class="privacy-header">
       <h1>Privacy Policy</h1>
-      <p>Last Updated: June 2026</p>
+      <p>Last Updated: September 17, 2026</p>
     </div>
 
     <div class="privacy-section">
@@ -223,6 +223,7 @@
         <li><strong>Password:</strong> Stored securely using bcrypt hashing (we never store plain text passwords)</li>
         <li><strong>Profile Picture:</strong> Optional image you may upload, stored securely on our servers</li>
         <li><strong>Account Creation Date:</strong> Timestamp of when your account was created</li>
+        <li><strong>Successful Login Activity:</strong> The most recent successful login time and a running successful-login count, used for account security, support, and aggregate activation measurement</li>
       </ul>
 
       <h3>2.2 Content Data</h3>
@@ -232,7 +233,16 @@
         <li><strong>TV Shows:</strong> Title, year, seasons, episodes, rating, watched status, reviews, and poster URLs</li>
         <li><strong>Anime:</strong> Title, year, seasons, episodes, rating, watched status, reviews, and poster URLs</li>
         <li><strong>Video Games:</strong> Title, release date, genres, rating, played status, reviews, cover art URLs, and external links</li>
+        <li><strong>Music:</strong> Album title, artist, year, genre, rating, listened status, reviews, and cover art URLs</li>
+        <li><strong>Books:</strong> Title, author, year, genre, rating, read status, reviews, and cover art URLs</li>
+        <li><strong>Collections:</strong> Private collection names, descriptions, and references to selected library items; collections become directly shareable only when you explicitly publish them</li>
+        <li><strong>Activity Journal:</strong> Private timestamps, activity types, title snapshots, rating snapshots, and notes that you create, plus first-completion entries created through the finish reflection flow</li>
+        <li><strong>Recommendation Postcards:</strong> The question, allowed media types, expiration and response limit you choose, plus submitted titles, reasons, guest display names, and owner decisions</li>
       </ul>
+      <p>Your Activity Journal and weekly playback are private account features. They are not shown to friends, placed on public pages, included in public search inventory, or used as advertising surfaces.</p>
+      <p>The optional Welcome Back Deck is built on request from your private Next Up, unfinished-library, reflection, and Activity Journal data after an eligible return. Eligibility and a signed random activation proof are held in browser session storage for up to 24 hours and cleared when you open an item, dismiss the deck, or log out. To reject duplicate counters, OmniTrackr temporarily retains only a keyed digest of that random proof for up to seven days; it contains no account or media identifier and cannot be joined to your library. OmniTrackr does not store Welcome Back eligibility as a server-side visit history.</p>
+      <p>Tasteprint is calculated on request from private account aggregates. OmniTrackr does not create a public Tasteprint profile or store the PNG card. Category privacy and tab-visibility choices are excluded by default; if you choose to include them, the image is rendered locally in your browser and shared only through actions you take afterward.</p>
+      <p>Recommendation Postcard links are unlisted bearer links: anyone who receives a valid link can read that postcard question and its owner's username and can submit one reply while the postcard remains open. Links are excluded from search indexing, carry no ads, expire after the chosen window, and stop at the selected reply limit. Replies are shown only in the owner's account inbox. A reply never changes or enters the owner's library unless the owner explicitly chooses an action.</p>
 
       <h3>2.3 Social Features Data</h3>
       <p>When using our social features, we collect:</p>
@@ -241,23 +251,29 @@
         <li><strong>Friendships:</strong> Information about your accepted friend connections</li>
         <li><strong>Notifications:</strong> In-app notifications related to friend requests and other activities</li>
         <li><strong>Privacy Settings:</strong> Your preferences for what content is visible to friends</li>
+        <li><strong>Postcard Invitations:</strong> Records of Recommendation Postcards sent directly to accepted friends</li>
       </ul>
+      <p>If you answer a Recommendation Postcard as a guest, do not include sensitive personal information in your display name or explanation. The postcard owner will see the text you submit.</p>
 
       <h3>2.4 Technical Data</h3>
       <p>We automatically collect certain technical information:</p>
       <ul>
         <li><strong>IP Address:</strong> Used for rate limiting and security purposes</li>
-        <li><strong>Authentication Tokens:</strong> JWT tokens stored in your browser's localStorage for session management</li>
-        <li><strong>Browser Information:</strong> Collected through Google Analytics for service improvement</li>
-        <li><strong>Usage Data:</strong> Page views, interactions, and feature usage through Google Analytics</li>
+        <li><strong>Authentication Tokens:</strong> JWT session tokens stored primarily in an HttpOnly cookie; legacy browser storage may remain during the transition from older sessions</li>
+        <li><strong>Browser Information:</strong> Collected through Google Analytics on the public landing experience when browser privacy signals do not request limited tracking</li>
+        <li><strong>Usage Data:</strong> Public landing page views and interactions collected through Google Analytics; private dashboard activity is not sent to Google Analytics</li>
+        <li><strong>Welcome Back Totals:</strong> Anonymous daily counts of decks shown, items opened, and decks dismissed. A non-reversible digest of a random 24-hour activation proof is retained for up to seven days only to prevent duplicate counting; neither the aggregate rows nor these temporary receipts contain an account, media, search, IP, or page-history field</li>
+        <li><strong>Public Safety Reports:</strong> A fixed report reason, the public review or collection version, timestamp, and one-way hash derived from a signed browser token; report records do not include free-text allegations or a stored IP address</li>
       </ul>
+      <p>Files submitted to the Import Studio are processed to create the preview or confirmed import you request. Previewing performs no database writes. OmniTrackr does not publish migration files or imported review text, and confirmed CSV imports mark reviews private by default.</p>
 
       <h3>2.5 Cookies and Tracking Technologies</h3>
       <p>We use the following tracking technologies:</p>
       <ul>
-        <li><strong>Google Analytics:</strong> To understand how users interact with our service and improve user experience</li>
+        <li><strong>Google Analytics:</strong> To understand visits to the public landing experience; the private signed-in dashboard does not load Google Analytics, and the public loader honors supported Global Privacy Control and Do Not Track signals</li>
         <li><strong>Google AdSense:</strong> To display relevant advertisements (if applicable)</li>
-        <li><strong>Local Storage:</strong> To store authentication tokens and user preferences</li>
+        <li><strong>Browser Storage:</strong> Local storage keeps interface preferences and supports legacy authentication sessions; session storage temporarily holds Welcome Back eligibility for the current browser session</li>
+        <li><strong>Public Visitor Cookie:</strong> A signed, HttpOnly, same-site token used to deduplicate collection reactions, collection views, collection reports, and public review reports without browser fingerprinting</li>
       </ul>
 
       <h3>2.6 Google Ads and Advertising Cookies</h3>
@@ -276,6 +292,7 @@
         <li><strong>Social Features:</strong> To enable friend connections and allow you to view friends' collections (respecting privacy settings)</li>
         <li><strong>Communication:</strong> To send verification emails, password reset emails, and important service notifications</li>
         <li><strong>Security:</strong> To protect against fraud, unauthorized access, and ensure platform security</li>
+        <li><strong>Public Content Safety:</strong> To combine independent, rate-limited reports, temporarily unlist an exact reported review or collection version, and notify its author; a substantive edit reruns the checks and can restore a revised version automatically</li>
         <li><strong>Analytics:</strong> To analyze usage patterns, improve our service, and understand user preferences</li>
         <li><strong>Legal Compliance:</strong> To comply with applicable laws, regulations, and legal processes</li>
       </ul>
@@ -290,6 +307,8 @@
         <li>Your username is visible to all users for friend requests</li>
         <li>Your profile picture (if uploaded) is visible to your friends</li>
         <li>Your media collections and statistics may be visible to your friends based on your privacy settings</li>
+        <li>Your Activity Journal and weekly playback are not shared with friends</li>
+        <li>Your Tasteprint is private unless you independently share a downloaded card or copied summary</li>
         <li>You control what content is visible through granular privacy settings</li>
       </ul>
 
@@ -319,7 +338,7 @@
       <ul>
         <li>Access your account information through the account settings page</li>
         <li>Update your username, email, password, and profile picture at any time</li>
-        <li>Export all your data in JSON format through the export feature</li>
+        <li>Export your media library, custom tabs, and Activity Journal in JSON format through the export feature</li>
       </ul>
 
       <h3>5.2 Privacy Controls</h3>
@@ -333,7 +352,7 @@
       <h3>5.3 Account Deletion</h3>
       <ul>
         <li>Deactivate your account at any time through account settings</li>
-        <li>Reactivate your account within 30 days of deactivation</li>
+        <li>Reactivate your account within 90 days of deactivation</li>
         <li>Request permanent deletion of your account and all associated data by contacting us</li>
         <li>Note: Some data may be retained for legal or security purposes as required by law</li>
       </ul>
@@ -367,10 +386,11 @@
       <p>We retain your information for as long as necessary to provide our services:</p>
       <ul>
         <li><strong>Active Accounts:</strong> Data is retained while your account is active</li>
-        <li><strong>Deactivated Accounts:</strong> Data is retained for 30 days after deactivation, after which it may be permanently deleted</li>
+        <li><strong>Deactivated Accounts:</strong> Data is retained for a 90-day reactivation window, after which the account is no longer eligible for self-service reactivation and may be permanently deleted</li>
         <li><strong>Friend Requests:</strong> Expire after 30 days if not responded to</li>
         <li><strong>Verification Tokens:</strong> Expire after 1 hour</li>
         <li><strong>Password Reset Tokens:</strong> Expire after 1 hour</li>
+        <li><strong>Public Safety Reports:</strong> Retained as needed to prevent duplicate reports, measure abuse, and protect public review and collection surfaces; a revised review or collection starts a new current report version</li>
         <li><strong>Legal Requirements:</strong> Some data may be retained longer if required by law or for legitimate business purposes</li>
       </ul>
     </div>

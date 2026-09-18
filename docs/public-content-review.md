@@ -1,0 +1,61 @@
+# Public content review — September 17, 2026
+
+## Scope and findings
+
+This is a source-based first pass, not an exhaustive live-site or Search Console
+audit and not a diagnosis of Google's private review decision.
+
+The public inventory includes the landing page, demo/sample library, Discover
+trails and monthly editions, guides and tracking hub, category guides, templates,
+comparison/use-case pages, community reviews/collections, and policy/support pages.
+Existing SEO tests already enforce noindex and exclusion from the sitemap for
+overlapping category guides, comparison, templates, checklist, and several support
+pages. Preserve that policy; do not create another consolidation mechanism.
+
+| Area inspected | Decision |
+| --- | --- |
+| `/guides` | Correct stale instructions and make operational steps concrete. |
+| `/media-tracking` | Replace search-oriented filler and contradictory starter quantities with a fictional worked example. |
+| Category guides, checklist, templates | Existing specialized support pages; no duplicate articles or new indexable URLs added. |
+| `/compare` | Follow-up: named competitor comparisons need primary-source verification before revising or promoting. |
+| Discover and public collections | Preserve the existing collection workflow while replacing its unavailable human approval step with deterministic readiness and version-bound reports. |
+| Public reviews | Keep one opt-in feed, distinguish community-ready summaries from search-ready inventory, and use automated version-bound reports because no manual review team is available. |
+
+## Implemented
+
+- Ratings: 0–10, with blank distinct from zero, checked against `app/schemas.py`.
+- Per-item Public Review control, not a global account publishing toggle.
+- Tab visibility distinguished from friend privacy and public review sharing.
+- Completion checkbox distinguished from paused/dropped state conventions.
+- CSV preview/migration distinguished from JSON backup workflow.
+- Hub example: recommended film, paused anime, finished-but-unrated book; no claim
+  that these are real user experiences or records.
+- Existing URLs, section anchors, indexability, and backend behavior preserved.
+- Search, structured-data, sitemap, prominent-ordering, and ad eligibility now
+  require the shared search-ready review result; ordinary community-ready reviews
+  remain browseable.
+- Fixed-reason signed-browser reports automatically unlist one exact review
+  version after three independent reports. Editing restores a revision without a
+  manual queue, and no saved review is deleted.
+- Public collections reuse their existing quality floor, gallery, content hash,
+  signed visitor identity, and report route. A shared readiness result now gates
+  gallery and sitemap eligibility automatically; three independent reports
+  unlist only the current version, and an edit reruns the checks.
+
+## Follow-up priorities
+
+1. Verify named competitor claims against official documentation; avoid blanket
+   claims that OmniTrackr is better for every reader.
+2. Review the age and accuracy of hub screenshots against the current UI.
+3. Inspect each Discover edition for distinct editorial reasoning, useful limits,
+   and accurate links rather than increasing the number of collections blindly.
+4. Use actual Search Console/account feedback, if made available, to distinguish
+   discovery/indexing problems from content shortcomings.
+
+Google's guidance favors original reader value, reduced duplication, and clear
+navigation. It does not make these changes an approval guarantee:
+https://support.google.com/adsense/answer/10015918?hl=en
+
+The safety follow-ups add bounded report state without rewriting existing
+reviews or collections, changing opt-in choices, or exposing private library
+data.

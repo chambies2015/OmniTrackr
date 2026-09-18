@@ -6,16 +6,110 @@ let editingRowElement = null;
 let currentTab = 'movies';
 let notificationCountInterval = null;
 
+const LIBRARY_SEARCH_SOURCES = [
+  { endpoint: '/movies/', tab: 'movies', label: 'Movie', input: 'movieSearch', status: item => item.watched ? 'Watched' : 'Not watched' },
+  { endpoint: '/tv-shows/', tab: 'tv-shows', label: 'TV show', input: 'tvSearch', status: item => item.watched ? 'Watched' : 'In progress' },
+  { endpoint: '/anime/', tab: 'anime', label: 'Anime', input: 'animeSearch', status: item => item.watched ? 'Watched' : 'In progress' },
+  { endpoint: '/video-games/', tab: 'video-games', label: 'Game', input: 'videoGameSearch', status: item => item.played ? 'Played' : 'Not played' },
+  { endpoint: '/music/', tab: 'music', label: 'Album', input: 'musicSearch', status: item => item.listened ? 'Listened' : 'Not listened' },
+  { endpoint: '/books/', tab: 'books', label: 'Book', input: 'bookSearch', status: item => item.read ? 'Read' : 'Not read' },
+];
+let librarySearchIndex = [];
+let librarySearchIndexReady = false;
+let librarySearchIndexPromise = null;
+let librarySearchRequest = 0;
+let librarySearchTimer;
+let librarySearchController;
+const libraryPages = new Map();
+const LIBRARY_PAGE_SIZE = 50;
+
+function libraryPageConfig(category) {
+  return {
+    movies: ['movieTable', 'movieSort', loadMovies],
+    'tv-shows': ['tvShowTable', 'tvSort', loadTVShows],
+    anime: ['animeTable', 'animeSort', loadAnime],
+    'video-games': ['videoGameTable', 'videoGameSort', loadVideoGames],
+    music: ['musicTable', 'musicSort', loadMusic], books: ['bookTable', 'bookSort', loadBooks],
+  }[category];
+}
+
+function renderLibraryPager(category, page, loading = false, error = '') {
+  const [tableId] = libraryPageConfig(category);
+  let pager = document.getElementById(`${tableId}Pager`);
+  if (!pager) {
+    pager = document.createElement('nav');
+    pager.id = `${tableId}Pager`;
+    pager.className = 'library-pager';
+    pager.setAttribute('aria-label', `${category} pages`);
+    document.getElementById(tableId).after(pager);
+  }
+  pager.replaceChildren();
+  const status = document.createElement('span');
+  status.setAttribute('role', 'status');
+  status.textContent = error || (loading ? 'Loading titles…' : page.total
+    ? `${page.offset + 1}–${Math.min(page.offset + LIBRARY_PAGE_SIZE, page.total)} of ${page.total}`
+    : 'No matching titles');
+  pager.appendChild(status);
+  for (const [label, delta] of [['Previous', -1], ['Next', 1]]) {
+    const button = document.createElement('button');
+    button.type = 'button'; button.className = 'action-btn'; button.textContent = label;
+    button.disabled = loading || (delta < 0 ? page.offset === 0 : page.offset + LIBRARY_PAGE_SIZE >= page.total);
+    button.addEventListener('click', () => {
+      if (editingRowId !== null) { alert('Save or cancel your current edit before changing pages.'); return; }
+      page.offset = Math.max(0, page.offset + delta * LIBRARY_PAGE_SIZE);
+      libraryPageConfig(category)[2]();
+    });
+    pager.appendChild(button);
+  }
+}
+
+async function fetchLibraryPage(url) {
+  const parsed = new URL(url, isLocal ? API_BASE : location.origin);
+  const category = parsed.pathname.split('/').filter(Boolean)[0];
+  const source = LIBRARY_SEARCH_SOURCES.find(entry => entry.tab === category);
+  const [, sortId] = libraryPageConfig(category);
+  const fingerprint = () => JSON.stringify([document.getElementById(source.input).value, document.getElementById(sortId).value]);
+  const signature = fingerprint();
+  let page = libraryPages.get(category);
+  if (!page || page.signature !== signature) {
+    page = { offset: 0, total: 0, signature, loadedKey: page?.loadedKey };
+    libraryPages.set(category, page);
+  }
+  parsed.searchParams.set('offset', String(page.offset));
+  parsed.searchParams.set('limit', String(LIBRARY_PAGE_SIZE));
+  if (page.focusId) parsed.searchParams.set('focus_id', String(page.focusId));
+  renderLibraryPager(category, page, true);
+  try {
+    const response = await authenticatedFetch(`${API_BASE}/library/page/${category}?${parsed.searchParams}`);
+    if (!response.ok) throw new Error('Could not load titles. Use Refresh to try again.');
+    const data = await response.json();
+    if (signature !== fingerprint()) {
+      setTimeout(() => libraryPageConfig(category)[2](), 0);
+      return { ok: false };
+    }
+    page.offset = data.offset; page.total = data.total;
+    const loadedKey = JSON.stringify([signature, data.offset]);
+    page.browseOnly = page.loadedKey !== undefined && page.loadedKey !== loadedKey
+      && Number(parsed.searchParams.get('offset')) === data.offset;
+    page.loadedKey = loadedKey;
+    renderLibraryPager(category, page);
+    return { ok: true, total: data.total, json: async () => data.items };
+  } catch (error) {
+    renderLibraryPager(category, page, false, 'Could not load titles. Use Refresh to try again.');
+    return { ok: false };
+  }
+}
+
 const posterFetchInProgress = new Set();
 const posterFetchQueue = new Map();
 
 function getPosterConcurrencyLimit() {
   const conn = navigator.connection || navigator.mozConnection || navigator.webkitConnection;
-  if (!conn) return Infinity;
+  if (!conn) return 4;
   if (conn.saveData) return 1;
   const et = conn.effectiveType;
   if (et === 'slow-2g' || et === '2g') return 2;
-  return Infinity;
+  return 4;
 }
 
 let posterSlotsInUse = 0;
@@ -49,6 +143,482 @@ function escapeHtml(str) {
     .replace(/'/g, "&#39;");
 }
 
+function normalizeLibrarySearchText(value) {
+  return String(value ?? '').trim().toLocaleLowerCase();
+}
+
+function invalidateLibrarySearchIndex() {
+  librarySearchIndexReady = false;
+}
+
+async function refreshLibrarySearchIndex() {
+  if (librarySearchIndexReady) return librarySearchIndex;
+  if (librarySearchIndexPromise) return librarySearchIndexPromise;
+  librarySearchIndexPromise = Promise.all(LIBRARY_SEARCH_SOURCES.map(async source => {
+    const response = await authenticatedFetch(`${API_BASE}${source.endpoint}`);
+    if (!response.ok) return [];
+    const items = await response.json();
+    return items.map(item => ({
+      id: item.id,
+      tab: source.tab,
+      label: source.label,
+      title: String(item.title || 'Untitled'),
+      status: source.status(item),
+      haystack: normalizeLibrarySearchText([item.title, item.director, item.author, item.artist, item.genre, item.genres, item.year, item.review].filter(Boolean).join(' ')),
+    }));
+  })).then(groups => {
+    librarySearchIndex = groups.flat();
+    librarySearchIndexReady = true;
+    return librarySearchIndex;
+  }).catch(() => {
+    librarySearchIndex = [];
+    return librarySearchIndex;
+  }).finally(() => {
+    librarySearchIndexPromise = null;
+  });
+  return librarySearchIndexPromise;
+}
+
+function closeLibrarySearch() {
+  ++librarySearchRequest;
+  clearTimeout(librarySearchTimer);
+  librarySearchController?.abort();
+  const input = document.getElementById('librarySearchInput');
+  const results = document.getElementById('librarySearchResults');
+  if (results) results.setAttribute('hidden', '');
+  input?.setAttribute('aria-expanded', 'false');
+}
+
+function renderLibrarySearch(query, items) {
+  const input = document.getElementById('librarySearchInput');
+  const results = document.getElementById('librarySearchResults');
+  if (!input || !results) return;
+  const needle = normalizeLibrarySearchText(query);
+  results.replaceChildren();
+  if (!needle) {
+    closeLibrarySearch();
+    return;
+  }
+  const matches = items.map(item => ({ item }));
+  if (!matches.length) {
+    const message = document.createElement('p');
+    message.className = 'library-search__message';
+    message.textContent = 'No matches in your private library yet.';
+    results.appendChild(message);
+  } else {
+    matches.forEach(({ item }) => {
+      const button = document.createElement('button');
+      button.type = 'button';
+      button.className = 'library-search__result';
+      button.dataset.action = 'open-library-search-result';
+      button.dataset.searchTab = item.tab;
+      button.dataset.searchTitle = item.title;
+      button.dataset.searchId = String(item.id);
+      button.setAttribute('role', 'option');
+      const copy = document.createElement('span');
+      copy.className = 'library-search__result-copy';
+      const title = document.createElement('strong');
+      title.textContent = item.title;
+      const meta = document.createElement('span');
+      meta.textContent = `${item.label} · ${item.status}`;
+      copy.append(title, meta);
+      const action = document.createElement('span');
+      action.className = 'library-search__result-action';
+      action.textContent = 'Open →';
+      button.append(copy, action);
+      results.appendChild(button);
+    });
+  }
+  results.removeAttribute('hidden');
+  input.setAttribute('aria-expanded', 'true');
+}
+
+async function handleLibrarySearchInput() {
+  const request = ++librarySearchRequest;
+  clearTimeout(librarySearchTimer);
+  librarySearchController?.abort();
+  const input = document.getElementById('librarySearchInput');
+  if (!input || !input.value.trim()) {
+    closeLibrarySearch();
+    return;
+  }
+  const query = input.value;
+  const results = document.getElementById('librarySearchResults');
+  results.textContent = 'Searching your private library…';
+  results.removeAttribute('hidden');
+  input.setAttribute('aria-expanded', 'true');
+  librarySearchTimer = setTimeout(async () => {
+    librarySearchController = new AbortController();
+    try {
+      const response = await authenticatedFetch(`${API_BASE}/library/search?q=${encodeURIComponent(query.trim())}`, { signal: librarySearchController.signal });
+      if (!response.ok) throw new Error('Search unavailable');
+      const items = await response.json();
+      if (request === librarySearchRequest && input.value === query) renderLibrarySearch(query, items);
+    } catch (error) {
+      if (request === librarySearchRequest && error.name !== 'AbortError') results.textContent = 'Search could not load. Please try again.';
+    }
+  }, 250);
+}
+
+function openLibrarySearchResult(tab, title, id) {
+  const source = LIBRARY_SEARCH_SOURCES.find(item => item.tab === tab);
+  if (!source) return;
+  closeLibrarySearch();
+  const globalInput = document.getElementById('librarySearchInput');
+  if (globalInput) globalInput.value = '';
+  openLibraryItem({ category: tab, title, id });
+}
+
+function setupLibrarySearch() {
+  const input = document.getElementById('librarySearchInput');
+  if (!input) return;
+  input.addEventListener('input', handleLibrarySearchInput);
+  input.addEventListener('focus', () => {
+    if (input.value.trim()) handleLibrarySearchInput();
+  });
+  input.addEventListener('keydown', event => {
+    if (event.key === 'Escape') {
+      input.value = '';
+      closeLibrarySearch();
+    }
+  });
+  document.addEventListener('keydown', event => {
+    if ((event.ctrlKey || event.metaKey) && event.key.toLowerCase() === 'k') {
+      event.preventDefault();
+      input.focus();
+    }
+    if (event.key === 'Escape' && document.activeElement !== input) closeLibrarySearch();
+  });
+  document.addEventListener('click', event => {
+    if (!event.target.closest('.library-search')) closeLibrarySearch();
+  });
+}
+
+// ============================================================================
+// Universal quick capture
+// ============================================================================
+
+const QUICK_CAPTURE_CATEGORY_ORDER = ['movies', 'tv-shows', 'anime', 'video-games', 'music', 'books'];
+const QUICK_CAPTURE_CATEGORIES = {
+  movies: { label: 'Movies', icon: '🎬', endpoint: query => `/api/proxy/omdb?title=${encodeURIComponent(query)}&type=movie` },
+  'tv-shows': { label: 'TV shows', icon: '📺', endpoint: query => `/api/proxy/omdb?title=${encodeURIComponent(query)}&type=series` },
+  anime: { label: 'Anime', icon: '🎌', endpoint: query => `/api/proxy/jikan?query=${encodeURIComponent(query)}` },
+  'video-games': { label: 'Video games', icon: '🎮', endpoint: query => `/api/proxy/rawg?search=${encodeURIComponent(query)}` },
+  music: { label: 'Music', icon: '🎵', endpoint: query => `/api/proxy/itunes?query=${encodeURIComponent(query)}&entity=album` },
+  books: { label: 'Books', icon: '📚', endpoint: query => `/api/proxy/openlibrary?query=${encodeURIComponent(query)}` },
+};
+let quickCaptureCategory = 'all';
+let quickCaptureResults = [];
+let quickCaptureController = null;
+let quickCaptureReturnFocus = null;
+
+function openQuickCapture() {
+  const modal = document.getElementById('quickCaptureModal');
+  const query = document.getElementById('quickCaptureQuery');
+  if (!modal || !query) return;
+  quickCaptureReturnFocus = document.activeElement;
+  closeLibrarySearch();
+  modal.style.display = 'flex';
+  document.body.style.overflow = 'hidden';
+  window.setTimeout(() => {
+    query.focus();
+    query.select();
+  }, 0);
+}
+
+function closeQuickCapture() {
+  const modal = document.getElementById('quickCaptureModal');
+  if (!modal) return;
+  quickCaptureController?.abort();
+  quickCaptureController = null;
+  modal.style.display = 'none';
+  document.body.style.overflow = '';
+  if (quickCaptureReturnFocus instanceof HTMLElement) quickCaptureReturnFocus.focus();
+}
+
+function selectQuickCaptureCategory(category) {
+  if (category !== 'all' && !QUICK_CAPTURE_CATEGORIES[category]) return;
+  quickCaptureCategory = category;
+  document.querySelectorAll('[data-quick-category]').forEach(button => {
+    const selected = button.dataset.quickCategory === category;
+    button.classList.toggle('active', selected);
+    button.setAttribute('aria-pressed', String(selected));
+  });
+  const status = document.getElementById('quickCaptureStatus');
+  if (status && !document.getElementById('quickCaptureQuery')?.value.trim()) {
+    status.textContent = category === 'all'
+      ? 'Search across every media type, or choose one shelf for a faster result.'
+      : `Searching ${QUICK_CAPTURE_CATEGORIES[category].label.toLowerCase()} only.`;
+  }
+}
+
+function quickCaptureImage(url, alt) {
+  const frame = document.createElement('span');
+  frame.className = 'quick-capture-result__image';
+  if (url) {
+    const image = document.createElement('img');
+    image.src = url;
+    image.alt = '';
+    image.loading = 'lazy';
+    image.referrerPolicy = 'no-referrer';
+    image.dataset.hideOnError = 'true';
+    frame.appendChild(image);
+  } else {
+    frame.textContent = String(alt || '?').slice(0, 1).toUpperCase();
+  }
+  return frame;
+}
+
+function normalizeQuickCapturePayload(category, payload) {
+  const result = (title, meta, image, raw) => ({ category, title, meta, image, raw });
+  if (category === 'movies' || category === 'tv-shows') {
+    if (!payload?.Title || payload.Error) return [];
+    return [result(payload.Title, [payload.Year, payload.Genre].filter(value => value && value !== 'N/A').join(' · '), payload.Poster !== 'N/A' ? payload.Poster : '', payload)];
+  }
+  if (category === 'anime') {
+    return (payload?.data || []).slice(0, 4).map(item => result(
+      item.title_english || item.title,
+      [item.year, item.type, item.episodes ? `${item.episodes} episodes` : ''].filter(Boolean).join(' · '),
+      item.images?.jpg?.large_image_url || item.images?.jpg?.image_url || '',
+      item
+    ));
+  }
+  if (category === 'video-games') {
+    return (payload?.results || []).slice(0, 4).map(item => result(
+      item.name,
+      [item.released?.slice(0, 4), (item.genres || []).slice(0, 2).map(genre => genre.name).join(', ')].filter(Boolean).join(' · '),
+      item.background_image || '',
+      item
+    ));
+  }
+  if (category === 'music') {
+    return (payload?.results || []).slice(0, 4).map(item => result(
+      item.collectionName || item.trackName,
+      [item.artistName, item.releaseDate?.slice(0, 4), item.primaryGenreName].filter(Boolean).join(' · '),
+      item.artworkUrl100 || item.artworkUrl60 || '',
+      item
+    ));
+  }
+  if (category === 'books') {
+    return (payload?.docs || []).slice(0, 4).map(item => {
+      const coverId = item.cover_i || item.isbn?.[0];
+      return result(
+        item.title,
+        [item.author_name?.[0], item.first_publish_year].filter(Boolean).join(' · '),
+        coverId ? `https://covers.openlibrary.org/b/id/${coverId}-M.jpg` : '',
+        item
+      );
+    });
+  }
+  return [];
+}
+
+async function fetchQuickCaptureCategory(category, query, signal) {
+  const source = QUICK_CAPTURE_CATEGORIES[category];
+  try {
+    const response = await fetch(`${API_BASE}${source.endpoint(query)}`, { signal, headers: { Accept: 'application/json' } });
+    if (!response.ok) return { category, results: [], unavailable: true };
+    const payload = await response.json();
+    return { category, results: normalizeQuickCapturePayload(category, payload), unavailable: false };
+  } catch (error) {
+    if (error.name === 'AbortError') throw error;
+    return { category, results: [], unavailable: true };
+  }
+}
+
+function renderQuickCaptureResults(groups, query) {
+  const container = document.getElementById('quickCaptureResults');
+  const status = document.getElementById('quickCaptureStatus');
+  if (!container || !status) return;
+  container.replaceChildren();
+  quickCaptureResults = [];
+  let unavailableCount = 0;
+
+  groups.forEach(group => {
+    if (group.unavailable) unavailableCount += 1;
+    if (!group.results.length) return;
+    const section = document.createElement('section');
+    section.className = 'quick-capture-group';
+    const heading = document.createElement('h3');
+    heading.textContent = `${QUICK_CAPTURE_CATEGORIES[group.category].icon} ${QUICK_CAPTURE_CATEGORIES[group.category].label}`;
+    section.appendChild(heading);
+    const grid = document.createElement('div');
+    grid.className = 'quick-capture-result-grid';
+    group.results.forEach(item => {
+      const index = quickCaptureResults.push(item) - 1;
+      const button = document.createElement('button');
+      button.type = 'button';
+      button.className = 'quick-capture-result';
+      button.dataset.action = 'choose-quick-capture-result';
+      button.dataset.quickResultIndex = String(index);
+      button.appendChild(quickCaptureImage(item.image, item.title));
+      const copy = document.createElement('span');
+      copy.className = 'quick-capture-result__copy';
+      const title = document.createElement('strong');
+      title.textContent = item.title || 'Untitled';
+      const meta = document.createElement('small');
+      meta.textContent = item.meta || QUICK_CAPTURE_CATEGORIES[item.category].label;
+      copy.append(title, meta);
+      const action = document.createElement('span');
+      action.className = 'quick-capture-result__action';
+      action.textContent = 'Use →';
+      button.append(copy, action);
+      grid.appendChild(button);
+    });
+    section.appendChild(grid);
+    container.appendChild(section);
+  });
+
+  if (quickCaptureResults.length) {
+    status.textContent = `${quickCaptureResults.length} match${quickCaptureResults.length === 1 ? '' : 'es'} for “${query}”. Choose one to review before saving.${unavailableCount ? ` ${unavailableCount} source${unavailableCount === 1 ? ' is' : 's are'} temporarily unavailable.` : ''}`;
+  } else {
+    status.textContent = unavailableCount === groups.length
+      ? 'Metadata search is temporarily unavailable. Choose a media type and continue manually.'
+      : `No close matches for “${query}”. Try another phrase or use manual entry.`;
+  }
+}
+
+async function searchQuickCapture(event) {
+  event.preventDefault();
+  const queryInput = document.getElementById('quickCaptureQuery');
+  const results = document.getElementById('quickCaptureResults');
+  const status = document.getElementById('quickCaptureStatus');
+  const submit = event.target.querySelector('button[type="submit"]');
+  const query = queryInput?.value.trim();
+  if (!query || query.length < 2 || !results || !status || !submit) return;
+
+  quickCaptureController?.abort();
+  const controller = new AbortController();
+  quickCaptureController = controller;
+  const categories = quickCaptureCategory === 'all' ? QUICK_CAPTURE_CATEGORY_ORDER : [quickCaptureCategory];
+  results.replaceChildren();
+  status.textContent = `Searching ${categories.length === 1 ? QUICK_CAPTURE_CATEGORIES[categories[0]].label.toLowerCase() : 'every shelf'}…`;
+  submit.disabled = true;
+  submit.textContent = 'Searching…';
+  const timeout = window.setTimeout(() => controller.abort(), 20000);
+  try {
+    const groups = await Promise.all(categories.map(category => fetchQuickCaptureCategory(category, query, controller.signal)));
+    renderQuickCaptureResults(groups, query);
+  } catch (error) {
+    if (error.name === 'AbortError' && quickCaptureController === controller && document.getElementById('quickCaptureModal')?.style.display !== 'none') {
+      status.textContent = 'Search took too long. Try one media type, or continue manually.';
+    }
+  } finally {
+    window.clearTimeout(timeout);
+    if (quickCaptureController === controller) quickCaptureController = null;
+    if (!quickCaptureController) {
+      submit.disabled = false;
+      submit.textContent = 'Search';
+    }
+  }
+}
+
+function setQuickCaptureField(id, value) {
+  const input = document.getElementById(id);
+  if (input) input.value = value ?? '';
+}
+
+function prepareQuickCaptureDestination(category, title) {
+  const destinations = {
+    movies: { form: 'movieForm', title: 'movieTitle', completed: 'movieWatched' },
+    'tv-shows': { form: 'tvForm', title: 'tvTitle', completed: 'tvWatched' },
+    anime: { form: 'animeForm', title: 'animeTitle', completed: 'animeWatched' },
+    'video-games': { form: 'videoGameForm', title: 'videoGameTitle', completed: 'videoGamePlayed' },
+    music: { form: 'musicForm', title: 'musicTitle', completed: 'musicListened' },
+    books: { form: 'bookForm', title: 'bookTitle', completed: 'bookRead' },
+  };
+  const destination = destinations[category];
+  if (!destination) return null;
+  const form = document.getElementById({
+    movies: 'addMovieForm',
+    'tv-shows': 'addTVShowForm',
+    anime: 'addAnimeForm',
+    'video-games': 'addVideoGameForm',
+    music: 'addMusicForm',
+    books: 'addBookForm',
+  }[category]);
+  const hasDraft = form && Array.from(form.elements).some(field => {
+    if (field.type === 'submit' || field.type === 'button') return false;
+    if (field.type === 'checkbox' || field.type === 'radio') return field.checked;
+    return String(field.value || '').trim().length > 0;
+  });
+  if (hasDraft && !window.confirm('Replace the unsaved entry currently in this form?')) return null;
+  form?.reset();
+  const tabButton = getTabButton(category);
+  const tabWasHidden = tabButton?.style.display === 'none';
+  if (tabWasHidden) tabButton.style.display = '';
+  openLaunchpadAddItem(category);
+  if (tabWasHidden) tabButton.style.display = 'none';
+  const titleInput = document.getElementById(destination.title);
+  if (!titleInput) return null;
+  titleInput.value = title || '';
+  ['posterUrl', 'coverArtUrl', 'releaseDate', 'rawgLink'].forEach(key => delete titleInput.dataset[key]);
+  const completed = document.getElementById(destination.completed);
+  const intent = document.getElementById('quickCaptureIntent')?.value || 'saved';
+  if (completed) completed.checked = intent === 'completed';
+  return { ...destination, titleInput };
+}
+
+function applyQuickCaptureResult(index) {
+  const item = quickCaptureResults[index];
+  if (!item) return;
+  const destination = prepareQuickCaptureDestination(item.category, item.title);
+  if (!destination) return;
+  const data = item.raw || {};
+
+  if (item.category === 'movies') {
+    setQuickCaptureField('movieDirector', data.Director !== 'N/A' ? data.Director : '');
+    setQuickCaptureField('movieYear', parseInt(String(data.Year || '').split('-')[0], 10) || '');
+    if (data.Poster && data.Poster !== 'N/A') destination.titleInput.dataset.posterUrl = data.Poster;
+  } else if (item.category === 'tv-shows') {
+    setQuickCaptureField('tvYear', parseInt(String(data.Year || '').split('-')[0], 10) || '');
+    setQuickCaptureField('tvSeasons', parseInt(data.totalSeasons, 10) || '');
+    if (data.Poster && data.Poster !== 'N/A') destination.titleInput.dataset.posterUrl = data.Poster;
+  } else if (item.category === 'anime') {
+    setQuickCaptureField('animeYear', data.year || '');
+    setQuickCaptureField('animeSeasons', data.seasons || '');
+    setQuickCaptureField('animeEpisodes', data.episodes || '');
+    const poster = data.images?.jpg?.large_image_url || data.images?.jpg?.image_url;
+    if (poster) destination.titleInput.dataset.posterUrl = poster;
+  } else if (item.category === 'video-games') {
+    setQuickCaptureField('videoGameGenres', (data.genres || []).map(genre => genre.name).join(', '));
+    if (data.released) destination.titleInput.dataset.releaseDate = data.released;
+    if (data.background_image) destination.titleInput.dataset.coverArtUrl = data.background_image;
+    if (data.slug) destination.titleInput.dataset.rawgLink = `https://rawg.io/games/${data.slug}`;
+  } else if (item.category === 'music') {
+    setQuickCaptureField('musicArtist', data.artistName || '');
+    setQuickCaptureField('musicYear', parseInt(String(data.releaseDate || '').slice(0, 4), 10) || '');
+    setQuickCaptureField('musicGenre', data.primaryGenreName || '');
+    const cover = data.artworkUrl100 || data.artworkUrl60;
+    if (cover) destination.titleInput.dataset.coverArtUrl = cover;
+  } else if (item.category === 'books') {
+    setQuickCaptureField('bookAuthor', data.author_name?.[0] || '');
+    setQuickCaptureField('bookYear', data.first_publish_year || data.publish_year?.[0] || '');
+    setQuickCaptureField('bookGenre', (data.subject || []).slice(0, 3).join(', '));
+    const coverId = data.cover_i || data.isbn?.[0];
+    if (coverId) destination.titleInput.dataset.coverArtUrl = `https://covers.openlibrary.org/b/id/${coverId}-L.jpg`;
+  }
+
+  closeQuickCapture();
+  const formContent = document.getElementById(`${destination.form}Content`);
+  formContent?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+  window.setTimeout(() => destination.titleInput.focus(), 250);
+}
+
+function openQuickCaptureManual() {
+  const status = document.getElementById('quickCaptureStatus');
+  if (quickCaptureCategory === 'all') {
+    if (status) status.textContent = 'Choose Movies, TV, Anime, Games, Music, or Books before continuing manually.';
+    return;
+  }
+  const query = document.getElementById('quickCaptureQuery')?.value.trim() || '';
+  const destination = prepareQuickCaptureDestination(quickCaptureCategory, query);
+  if (!destination) return;
+  closeQuickCapture();
+  document.getElementById(`${destination.form}Content`)?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+  window.setTimeout(() => destination.titleInput.focus(), 250);
+}
+
 function showImagePopup(imageUrl, altText) {
   const modal = document.getElementById('imagePopupModal');
   const img = document.getElementById('popupImage');
@@ -70,6 +640,8 @@ function closeImagePopup() {
 
 const REVIEW_PREVIEW_LEN = 60;
 const PUBLIC_REVIEW_MIN_CHARS = 80;
+const SEARCH_READY_REVIEW_MIN_CHARS = 240;
+const SEARCH_READY_REVIEW_MIN_WORDS = 35;
 
 function getReviewCellContent(review, title, subtitle) {
   if (!review || !String(review).trim()) return '';
@@ -112,15 +684,28 @@ function closeReviewModal() {
   }
 }
 
-function getReviewQualityMessage(length) {
-  if (length >= PUBLIC_REVIEW_MIN_CHARS) {
-    return `${length}/${PUBLIC_REVIEW_MIN_CHARS} characters - public-ready context`;
+function getReviewQualityMessage(reviewText) {
+  const text = String(reviewText || '').trim();
+  const length = text.length;
+  const wordCount = (text.match(/[\w'-]+/gu) || []).length;
+  const thoughtCount = (text.match(/[.!?…](?:\s|$)/gu) || []).length;
+  if (length < PUBLIC_REVIEW_MIN_CHARS) {
+    return `${length}/${PUBLIC_REVIEW_MIN_CHARS} characters - add context for the community feed`;
   }
-  return `${length}/${PUBLIC_REVIEW_MIN_CHARS} characters - add more context for public reviews`;
+  if (length < SEARCH_READY_REVIEW_MIN_CHARS) {
+    return `Community-ready · ${length}/${SEARCH_READY_REVIEW_MIN_CHARS} characters toward search-ready`;
+  }
+  if (wordCount < SEARCH_READY_REVIEW_MIN_WORDS) {
+    return `Community-ready · ${wordCount}/${SEARCH_READY_REVIEW_MIN_WORDS} words toward search-ready`;
+  }
+  if (thoughtCount < 2 && wordCount < 55) {
+    return 'Community-ready · add a second complete thought for search-ready';
+  }
+  return 'Search-ready baseline met · automated safety checks apply when published';
 }
 
 function reviewQualityHintHtml(inputId) {
-  return `<p class="review-quality-hint"><span class="review-quality-count" data-review-counter-for="${escapeHtml(inputId)}">0/${PUBLIC_REVIEW_MIN_CHARS} characters - add more context for public reviews</span>. Public reviews show best with personal context and audience fit. <a href="/review-guidelines" target="_blank" rel="noopener noreferrer">Review guide</a></p>`;
+  return `<p class="review-quality-hint"><span class="review-quality-count" data-review-counter-for="${escapeHtml(inputId)}">0/${PUBLIC_REVIEW_MIN_CHARS} characters - add context for the community feed</span>. Search-ready reviews use 240+ characters, 35+ words, complete thoughts, varied language, and no links or contact details. <a href="/review-guidelines" target="_blank" rel="noopener noreferrer">Review guide</a></p>`;
 }
 
 function setupReviewQualityCounter(textarea) {
@@ -130,8 +715,8 @@ function setupReviewQualityCounter(textarea) {
     const counter = document.querySelector(`[data-review-counter-for="${textarea.id}"]`);
     if (!counter) return;
     const length = textarea.value.trim().length;
-    counter.textContent = getReviewQualityMessage(length);
-    counter.classList.toggle('is-ready', length >= PUBLIC_REVIEW_MIN_CHARS);
+    counter.textContent = getReviewQualityMessage(textarea.value);
+    counter.classList.toggle('is-ready', length >= SEARCH_READY_REVIEW_MIN_CHARS);
   };
   textarea.addEventListener('input', updateCounter);
   updateCounter();
@@ -170,7 +755,11 @@ function handleDelegatedClick(event) {
     const closeHandlers = {
       screenshot: () => closeScreenshotModal(event),
       review: closeReviewModal,
-      'custom-tab-manager': closeCustomTabManager
+      'quick-capture': closeQuickCapture,
+      'custom-tab-manager': closeCustomTabManager,
+      'completion-ritual': closeCompletionRitual,
+      'collection-picker': closeCollectionPicker,
+      'collection-studio': closeCollectionStudio
     };
     closeHandlers[target.dataset.closeOnBackdrop]?.();
     return;
@@ -208,6 +797,11 @@ function handleDelegatedClick(event) {
 
   const actionHandlers = {
     'open-review-modal': () => openReviewModal(target),
+    'open-quick-capture': openQuickCapture,
+    'close-quick-capture': closeQuickCapture,
+    'select-quick-capture-category': () => selectQuickCaptureCategory(target.dataset.quickCategory),
+    'choose-quick-capture-result': () => applyQuickCaptureResult(Number(target.dataset.quickResultIndex)),
+    'quick-capture-manual': openQuickCaptureManual,
     'open-friend-profile': () => openFriendProfile(Number(target.dataset.friendId)),
     'unfriend-user': () => unfriendUser(Number(target.dataset.friendId)),
     'accept-friend-request': () => acceptFriendRequest(Number(target.dataset.requestId)),
@@ -233,6 +827,46 @@ function handleDelegatedClick(event) {
     'close-book-search-modal': closeBookSearchModal,
     'close-screenshot-modal': () => closeScreenshotModal(event),
     'export-data-dashboard': exportData,
+    'apply-library-import': applyLibraryImport,
+    'download-import-template': downloadImportTemplate,
+    'launchpad-add-item': openLaunchpadAddItem,
+    'launchpad-choose-category': () => openLaunchpadAddItem(target.dataset.launchpadCategory),
+    'launchpad-open-insights': openLaunchpadInsights,
+    'launchpad-dismiss': dismissLibraryLaunchpad,
+    'launchpad-import': openLaunchpadImport,
+    'dismiss-return-deck': dismissReturnDeck,
+    'open-return-deck-item': () => openReturnDeckItem(Number(target.dataset.returnDeckIndex)),
+    'pulse-open-item': () => switchTab(target.dataset.pulseTab),
+    'open-todays-pick': openTodaysPick,
+    'open-library-search-result': () => openLibrarySearchResult(target.dataset.searchTab, target.dataset.searchTitle, Number(target.dataset.searchId)),
+    'try-another-pick': tryAnotherPick,
+    'add-next-up': () => addToNextUp(target.dataset.nextUpCategory, Number(target.dataset.nextUpItemId)),
+    'move-next-up': () => moveNextUp(Number(target.dataset.nextUpId), Number(target.dataset.nextUpPosition)),
+    'remove-next-up': () => removeNextUp(Number(target.dataset.nextUpId)),
+    'begin-completion-ritual': () => openCompletionMoment(target.dataset.completionCategory, Number(target.dataset.completionItemId)),
+    'close-completion-ritual': closeCompletionRitual,
+    'save-completion-ritual': saveCompletionRitual,
+    'activity-older-week': () => changeActivityWeek(1),
+    'activity-newer-week': () => changeActivityWeek(-1),
+    'activity-load-more': () => loadActivityTimeline(false),
+    'delete-activity': () => deleteActivityEntry(Number(target.dataset.activityId)),
+    'copy-recommendation-link': () => copyRecommendationLink(target.dataset.sharePath),
+    'close-recommendation-request': () => closeRecommendationRequest(Number(target.dataset.requestId)),
+    'invite-recommendation-friend': () => inviteRecommendationFriend(Number(target.dataset.requestId)),
+    'triage-recommendation': () => triageRecommendation(Number(target.dataset.submissionId), target.dataset.triageAction),
+    'open-recommendation-postcards': () => switchTab('recommendations'),
+    'tasteprint-refresh': () => loadTasteprint(true),
+    'tasteprint-download': downloadTasteprint,
+    'tasteprint-copy': copyTasteprintText,
+    'open-collection-picker': () => openCollectionPicker(target.dataset.collectionCategory, Number(target.dataset.collectionItemId), target.dataset.collectionItemTitle),
+    'close-collection-picker': closeCollectionPicker,
+    'open-collection-studio': () => openCollectionStudio(Number(target.dataset.collectionId)),
+    'close-collection-studio': closeCollectionStudio,
+    'add-to-collection': () => addToCollection(Number(target.dataset.collectionId)),
+    'move-collection-item': () => moveCollectionItem(Number(target.dataset.collectionId), Number(target.dataset.collectionItemId), Number(target.dataset.collectionPosition)),
+    'remove-collection-item': () => removeCollectionItem(Number(target.dataset.collectionId), Number(target.dataset.collectionItemId)),
+    'edit-collection-note': () => editCollectionItemNote(Number(target.dataset.collectionId), Number(target.dataset.collectionItemId)),
+    'delete-collection': () => deleteCollection(Number(target.dataset.collectionId)),
     'show-register-form': () => showRegisterForm(),
     'show-login-form': () => showLoginForm()
   };
@@ -244,13 +878,20 @@ function handleDelegatedSubmit(event) {
   if (!form) return;
 
   const submitHandlers = {
+    'search-quick-capture': searchQuickCapture,
     'change-username': changeUsername,
     'change-email': changeEmail,
     'change-password': changePassword,
     'update-privacy-settings': updatePrivacySettings,
     'update-tab-visibility': updateTabVisibility,
     'deactivate-account': deactivateAccount,
-    'send-friend-request': sendFriendRequest
+    'send-friend-request': sendFriendRequest,
+    'create-collection': createCollection,
+    'save-collection-studio': saveCollectionStudio,
+    'create-activity': createActivityEntry,
+    'create-recommendation-request': createRecommendationRequest,
+    'respond-recommendation': respondToRecommendation,
+    'preview-library-import': previewLibraryImport
   };
   submitHandlers[form.dataset.submitAction]?.(event);
 }
@@ -260,7 +901,15 @@ function handleDelegatedChange(event) {
   if (!target) return;
 
   const changeHandlers = {
-    'profile-picture-select': handleProfilePictureSelect
+    'pick-category': () => { todaysPickOffset = 0; refreshTodaysPick(); },
+    'profile-picture-select': handleProfilePictureSelect,
+    'activity-category': populateActivityItems,
+    'activity-filter': () => loadActivityTimeline(true),
+    'tasteprint-category': () => loadTasteprint(true),
+    'tasteprint-display': renderTasteprintCard,
+    'tasteprint-insight': updateTasteprintSelection,
+    'import-studio-file': inspectImportStudioFile,
+    'import-studio-options': resetImportStudioPreview
   };
   changeHandlers[target.dataset.changeAction]?.(event);
 }
@@ -279,7 +928,19 @@ function applyDataFillWidths(root = document) {
 }
 
 document.addEventListener('keydown', function(event) {
+  const active = document.activeElement;
+  const isTyping = active && (active.matches('input, textarea, select') || active.isContentEditable);
+  if (event.key === '/' && !event.ctrlKey && !event.metaKey && !event.altKey && !isTyping) {
+    event.preventDefault();
+    openQuickCapture();
+    return;
+  }
   if (event.key === 'Escape') {
+    const quickCapture = document.getElementById('quickCaptureModal');
+    if (quickCapture && quickCapture.style.display !== 'none') {
+      closeQuickCapture();
+      return;
+    }
     const imageModal = document.getElementById('imagePopupModal');
     if (imageModal && imageModal.style.display !== 'none') {
       closeImagePopup();
@@ -291,6 +952,242 @@ document.addEventListener('keydown', function(event) {
     }
   }
 });
+
+// ============================================================================
+// Recommendation Postcards
+// ============================================================================
+
+let recommendationFriends = [];
+
+function postcardElement(tag, className, text) {
+  const element = document.createElement(tag);
+  if (className) element.className = className;
+  if (text !== undefined) element.textContent = text;
+  return element;
+}
+
+async function recommendationError(response, fallback) {
+  try {
+    const payload = await response.json();
+    return payload.detail || fallback;
+  } catch (error) {
+    return fallback;
+  }
+}
+
+async function loadRecommendationFriends() {
+  try {
+    const response = await authenticatedFetch(`${API_BASE}/friends`);
+    recommendationFriends = response.ok ? await response.json() : [];
+  } catch (error) {
+    recommendationFriends = [];
+  }
+}
+
+function renderRecommendationRequests(postcards) {
+  const container = document.getElementById('recommendationRequests');
+  if (!container) return;
+  container.replaceChildren();
+  if (!postcards.length) {
+    const empty = postcardElement('div', 'postcards-empty');
+    empty.append(postcardElement('strong', '', 'No postcards sent yet.'), postcardElement('span', '', 'Ask a focused question above—the best prompts are about a mood, moment, or specific curiosity.'));
+    container.appendChild(empty);
+    return;
+  }
+  postcards.forEach((postcard) => {
+    const card = postcardElement('article', `postcard-request postcard-request--${postcard.state}`);
+    const state = postcardElement('span', 'postcard-state', postcard.state);
+    const prompt = postcardElement('h4', '', postcard.prompt);
+    const meta = postcardElement('p', 'postcard-meta', `${postcard.response_count}/${postcard.max_responses} replies · closes ${new Date(postcard.expires_at).toLocaleDateString()}`);
+    const categories = postcardElement('p', 'postcard-categories', postcard.categories.map(item => item.label).join(' · '));
+    const actions = postcardElement('div', 'postcard-actions');
+    const copy = postcardElement('button', 'action-btn', 'Copy guest link');
+    copy.type = 'button'; copy.dataset.action = 'copy-recommendation-link'; copy.dataset.sharePath = postcard.share_path;
+    actions.appendChild(copy);
+    if (postcard.state === 'open' && recommendationFriends.length) {
+      const select = document.createElement('select');
+      select.id = `recommendationFriend-${postcard.id}`;
+      select.setAttribute('aria-label', 'Choose a friend');
+      const placeholder = document.createElement('option');
+      placeholder.value = ''; placeholder.textContent = 'Choose a friend';
+      select.appendChild(placeholder);
+      recommendationFriends.forEach((friendship) => {
+        const option = document.createElement('option');
+        option.value = String(friendship.friend.id);
+        option.textContent = friendship.friend.username;
+        select.appendChild(option);
+      });
+      const invite = postcardElement('button', 'action-btn secondary', 'Invite');
+      invite.type = 'button'; invite.dataset.action = 'invite-recommendation-friend'; invite.dataset.requestId = String(postcard.id);
+      actions.append(select, invite);
+    }
+    if (postcard.state === 'open') {
+      const close = postcardElement('button', 'action-btn secondary', 'Close');
+      close.type = 'button'; close.dataset.action = 'close-recommendation-request'; close.dataset.requestId = String(postcard.id);
+      actions.appendChild(close);
+    }
+    card.append(state, prompt, meta, categories, actions);
+    container.appendChild(card);
+  });
+}
+
+function renderRecommendationInbox(entries) {
+  const container = document.getElementById('recommendationInbox');
+  if (!container) return;
+  container.replaceChildren();
+  if (!entries.length) {
+    const empty = postcardElement('div', 'postcards-empty');
+    empty.append(postcardElement('strong', '', 'Your inbox is quiet.'), postcardElement('span', '', 'Replies will arrive here as private cards for you to review.'));
+    container.appendChild(empty);
+    return;
+  }
+  entries.forEach((entry) => {
+    const card = postcardElement('article', `postcard-reply postcard-reply--${entry.status}`);
+    const header = postcardElement('div', 'postcard-reply__header');
+    header.append(postcardElement('span', 'postcard-reply__category', entry.category_label), postcardElement('span', 'postcard-state', entry.status));
+    const title = postcardElement('h4', '', entry.title);
+    const from = postcardElement('p', 'postcard-meta', `From ${entry.guest_name} · ${new Date(entry.created_at).toLocaleDateString()}`);
+    const reason = postcardElement('blockquote', '', entry.reason);
+    card.append(header, title, from, reason);
+    if (entry.status !== 'accepted') {
+      const actions = postcardElement('div', 'postcard-actions');
+      [['save', 'Save for later'], ['library', 'Add to library'], ['next-up', 'Add to Next Up'], ['dismiss', 'Dismiss']].forEach(([action, label]) => {
+        const button = postcardElement('button', action === 'dismiss' ? 'action-btn secondary' : 'action-btn', label);
+        button.type = 'button'; button.dataset.action = 'triage-recommendation'; button.dataset.submissionId = String(entry.id); button.dataset.triageAction = action;
+        actions.appendChild(button);
+      });
+      card.appendChild(actions);
+    } else {
+      card.appendChild(postcardElement('p', 'postcard-accepted-note', 'Accepted into your library. The original recommendation remains here as context.'));
+    }
+    container.appendChild(card);
+  });
+}
+
+function renderRecommendationInvitations(invitations) {
+  const container = document.getElementById('recommendationInvitations');
+  if (!container) return;
+  container.replaceChildren();
+  const openInvitations = invitations.filter(invitation => !invitation.responded);
+  if (!openInvitations.length) {
+    const empty = postcardElement('div', 'postcards-empty');
+    empty.append(postcardElement('strong', '', 'No postcards need a reply.'), postcardElement('span', '', 'When a friend asks for a pick, their question will appear here.'));
+    container.appendChild(empty);
+    return;
+  }
+  openInvitations.forEach((invitation) => {
+    const card = postcardElement('article', 'postcard-invitation');
+    card.append(postcardElement('p', 'postcard-meta', `From ${invitation.sender_username} · closes ${new Date(invitation.expires_at).toLocaleDateString()}`), postcardElement('h4', '', invitation.prompt));
+    const form = postcardElement('form', 'postcard-invitation__form');
+    form.dataset.submitAction = 'respond-recommendation'; form.dataset.requestId = String(invitation.request_id);
+    const categoryLabel = postcardElement('label', '', 'Media type');
+    const select = document.createElement('select'); select.name = 'category'; select.required = true;
+    invitation.categories.forEach((category) => { const option = document.createElement('option'); option.value = category.value; option.textContent = category.label; select.appendChild(option); });
+    categoryLabel.appendChild(select);
+    const titleLabel = postcardElement('label', '', 'Title');
+    const title = document.createElement('input'); title.name = 'title'; title.maxLength = 200; title.required = true; title.placeholder = 'Your pick'; titleLabel.appendChild(title);
+    const reasonLabel = postcardElement('label', '', 'Why it fits');
+    const reason = document.createElement('textarea'); reason.name = 'reason'; reason.minLength = 20; reason.maxLength = 500; reason.rows = 3; reason.required = true; reason.placeholder = 'Give them a specific reason to try it.'; reasonLabel.appendChild(reason);
+    const submit = postcardElement('button', 'action-btn', 'Send recommendation'); submit.type = 'submit';
+    const formStatus = postcardElement('span', 'postcard-form-status'); formStatus.setAttribute('role', 'status');
+    form.append(categoryLabel, titleLabel, reasonLabel, submit, formStatus);
+    card.appendChild(form);
+    container.appendChild(card);
+  });
+}
+
+async function loadRecommendationPostcards() {
+  const requestsContainer = document.getElementById('recommendationRequests');
+  if (!requestsContainer || !hasStoredAuth()) return;
+  try {
+    await loadRecommendationFriends();
+    const [requestsResponse, inboxResponse, invitationsResponse] = await Promise.all([
+      authenticatedFetch(`${API_BASE}/recommendations/requests/`),
+      authenticatedFetch(`${API_BASE}/recommendations/inbox/`),
+      authenticatedFetch(`${API_BASE}/recommendations/invitations/`),
+    ]);
+    if (!requestsResponse.ok || !inboxResponse.ok || !invitationsResponse.ok) throw new Error('Unable to load postcards');
+    const [postcards, inbox, invitations] = await Promise.all([requestsResponse.json(), inboxResponse.json(), invitationsResponse.json()]);
+    renderRecommendationRequests(postcards);
+    renderRecommendationInbox(inbox);
+    renderRecommendationInvitations(invitations);
+  } catch (error) {
+    requestsContainer.textContent = 'Could not load your postcards. Please try again.';
+  }
+}
+
+async function createRecommendationRequest(event) {
+  event.preventDefault();
+  const form = event.target;
+  const status = document.getElementById('recommendationCreateStatus');
+  const categories = Array.from(form.querySelectorAll('input[name="recommendationCategory"]:checked')).map(input => input.value);
+  if (!categories.length) { status.textContent = 'Choose at least one media type.'; return; }
+  const button = form.querySelector('button[type="submit"]'); button.disabled = true; status.textContent = 'Creating…';
+  try {
+    const response = await authenticatedFetch(`${API_BASE}/recommendations/requests/`, {
+      method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({
+        prompt: document.getElementById('recommendationPrompt').value,
+        categories,
+        expires_in_days: Number(document.getElementById('recommendationExpiry').value),
+        max_responses: Number(document.getElementById('recommendationMaxResponses').value),
+      }),
+    });
+    if (!response.ok) throw new Error(await recommendationError(response, 'Could not create the postcard.'));
+    form.reset();
+    form.querySelectorAll('input[name="recommendationCategory"]').forEach(input => { input.checked = true; });
+    document.getElementById('recommendationExpiry').value = '7'; document.getElementById('recommendationMaxResponses').value = '10';
+    status.textContent = 'Postcard ready.';
+    await loadRecommendationPostcards();
+  } catch (error) { status.textContent = error.message; } finally { button.disabled = false; }
+}
+
+async function copyRecommendationLink(sharePath) {
+  const link = new URL(sharePath, location.origin).href;
+  try { await navigator.clipboard.writeText(link); alert('Guest link copied. It contains access to this one postcard only.'); }
+  catch (error) { window.prompt('Copy this guest link:', link); }
+}
+
+async function closeRecommendationRequest(requestId) {
+  if (!confirm('Close this postcard? Existing replies stay in your inbox, but the link will stop accepting new ones.')) return;
+  const response = await authenticatedFetch(`${API_BASE}/recommendations/requests/${requestId}/close`, { method: 'POST' });
+  if (!response.ok) { alert(await recommendationError(response, 'Could not close the postcard.')); return; }
+  loadRecommendationPostcards();
+}
+
+async function inviteRecommendationFriend(requestId) {
+  const select = document.getElementById(`recommendationFriend-${requestId}`);
+  const friendId = Number(select?.value);
+  if (!friendId) { alert('Choose a friend first.'); return; }
+  const response = await authenticatedFetch(`${API_BASE}/recommendations/requests/${requestId}/invite`, {
+    method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ friend_id: friendId }),
+  });
+  if (!response.ok) { alert(await recommendationError(response, 'Could not send the invitation.')); return; }
+  alert('Postcard invitation sent.');
+  loadRecommendationPostcards();
+}
+
+async function triageRecommendation(submissionId, action) {
+  const response = await authenticatedFetch(`${API_BASE}/recommendations/submissions/${submissionId}/triage`, {
+    method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ action }),
+  });
+  if (!response.ok) { alert(await recommendationError(response, 'Could not update that recommendation.')); return; }
+  librarySearchIndexReady = false;
+  loadRecommendationPostcards();
+}
+
+async function respondToRecommendation(event) {
+  event.preventDefault();
+  const form = event.target; const button = form.querySelector('button[type="submit"]'); const status = form.querySelector('[role="status"]');
+  button.disabled = true; status.textContent = 'Sending…';
+  const response = await authenticatedFetch(`${API_BASE}/recommendations/requests/${form.dataset.requestId}/respond`, {
+    method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({
+      category: form.elements.category.value, title: form.elements.title.value, reason: form.elements.reason.value,
+    }),
+  });
+  if (!response.ok) { status.textContent = await recommendationError(response, 'Could not send your recommendation.'); button.disabled = false; return; }
+  status.textContent = 'Delivered.';
+  loadRecommendationPostcards();
+}
 
 function switchTab(tabName) {
   if (tabName !== 'statistics') {
@@ -323,23 +1220,30 @@ function switchTab(tabName) {
   currentTab = tabName;
 
   if (tabName === 'movies') {
-    loadMovies();
+    return loadMovies();
   } else if (tabName === 'tv-shows') {
-    loadTVShows();
+    return loadTVShows();
   } else if (tabName === 'anime') {
-    loadAnime();
+    return loadAnime();
   } else if (tabName === 'video-games') {
-    loadVideoGames();
+    return loadVideoGames();
   } else if (tabName === 'music') {
-    loadMusic();
+    return loadMusic();
   } else if (tabName === 'books') {
-    loadBooks();
+    return loadBooks();
+  } else if (tabName === 'activity') {
+    loadActivityJournal();
+  } else if (tabName === 'recommendations') {
+    loadRecommendationPostcards();
+  } else if (tabName === 'collections') {
+    loadCollections();
   } else if (tabName === 'statistics') {
     loadStatistics();
   }
 }
 
 function disableOtherRowButtons(currentRow, tableId) {
+  enhanceLibraryCards(tableId);
   const buttons = document.querySelectorAll(`#${tableId} button.action-btn`);
   buttons.forEach(btn => {
     const btnRow = btn.closest('tr');
@@ -388,13 +1292,13 @@ async function loadMovies() {
     if (search) url += `search=${encodeURIComponent(search)}&`;
     if (sortField) url += `sort_by=${encodeURIComponent(sortField)}&`;
     if (order) url += `order=${encodeURIComponent(order)}`;
-    const res = await authenticatedFetch(url);
+    const res = await fetchLibraryPage(url);
     if (res.ok) {
       const movies = await res.json();
       const tbody = document.querySelector('#movieTable tbody');
       tbody.innerHTML = '';
       const countElem = document.getElementById('movieCount');
-      if (countElem) countElem.textContent = `${movies.length} Movies`;
+      if (countElem) countElem.textContent = `${res.total} Movies`;
       movies.forEach((movie) => {
         const tr = document.createElement('tr');
         tr.innerHTML = `
@@ -409,6 +1313,9 @@ async function loadMovies() {
           <td><span class="watched-icon ${movie.review_public ? 'watched' : 'unwatched'}">${movie.review_public ? '✓' : '✗'}</span></td>
           <td>
             <button class="action-btn edit-movie-btn" data-movie-id="${movie.id}" data-movie-title="${escapeHtml(movie.title)}" data-movie-director="${escapeHtml(movie.director)}" data-movie-year="${movie.year}" data-movie-rating="${movie.rating ?? ''}" data-movie-watched="${movie.watched}" data-movie-review="${escapeHtml(movie.review || '')}" data-movie-review-public="${movie.review_public || false}">Edit</button>
+            <button type="button" class="action-btn" data-action="add-next-up" data-next-up-category="movies" data-next-up-item-id="${movie.id}">Next up</button>
+            <button type="button" class="action-btn" data-action="open-collection-picker" data-collection-category="movies" data-collection-item-id="${movie.id}" data-collection-item-title="${escapeHtml(movie.title)}">Collect</button>
+            ${movie.watched ? `<button type="button" class="action-btn" data-action="begin-completion-ritual" data-completion-category="movies" data-completion-item-id="${movie.id}">Reflect</button>` : ''}
             <button class="action-btn delete-movie-btn" data-movie-id="${movie.id}">Delete</button>
           </td>
         `;
@@ -625,7 +1532,7 @@ window.enableMovieEdit = function (btn) {
   }
   row.cells[8].innerHTML = `<input type="checkbox" id="edit-movie-review-public" ${reviewPublic ? 'checked' : ''}>`;
   row.cells[9].innerHTML = `
-    <button class="action-btn save-movie-btn" data-movie-id="${id}">Save</button>
+    <button class="action-btn save-movie-btn" data-movie-id="${id}" data-was-complete="${watched}" data-completion-category="movies">Save</button>
     <button class="action-btn cancel-movie-btn">Cancel</button>
   `;
   disableOtherRowButtons(row, 'movieTable');
@@ -652,6 +1559,7 @@ window.saveMovieEdit = async function (btn) {
     body: JSON.stringify(updated),
   });
   if (res.ok) {
+    if (btn.dataset.wasComplete !== 'true' && updated.watched) openCompletionMoment('movies', id);
     editingRowId = null;
     editingRowElement = null;
     enableAllRowButtons('movieTable');
@@ -691,13 +1599,13 @@ async function loadTVShows() {
     if (search) url += `search=${encodeURIComponent(search)}&`;
     if (sortField) url += `sort_by=${encodeURIComponent(sortField)}&`;
     if (order) url += `order=${encodeURIComponent(order)}`;
-    const res = await authenticatedFetch(url);
+    const res = await fetchLibraryPage(url);
     if (res.ok) {
       const tvShows = await res.json();
       const tbody = document.querySelector('#tvShowTable tbody');
       tbody.innerHTML = '';
       const countElem = document.getElementById('tvShowCount');
-      if (countElem) countElem.textContent = `${tvShows.length} TV Shows`;
+      if (countElem) countElem.textContent = `${res.total} TV Shows`;
       tvShows.forEach((tvShow) => {
         const tr = document.createElement('tr');
         tr.innerHTML = `
@@ -713,6 +1621,9 @@ async function loadTVShows() {
           <td><span class="watched-icon ${tvShow.review_public ? 'watched' : 'unwatched'}">${tvShow.review_public ? '✓' : '✗'}</span></td>
           <td>
             <button class="action-btn edit-tv-btn" data-tv-id="${tvShow.id}" data-tv-title="${escapeHtml(tvShow.title)}" data-tv-year="${tvShow.year}" data-tv-seasons="${tvShow.seasons ?? ''}" data-tv-episodes="${tvShow.episodes ?? ''}" data-tv-rating="${tvShow.rating ?? ''}" data-tv-watched="${tvShow.watched}" data-tv-review="${escapeHtml(tvShow.review || '')}" data-tv-review-public="${tvShow.review_public || false}">Edit</button>
+            <button type="button" class="action-btn" data-action="add-next-up" data-next-up-category="tv-shows" data-next-up-item-id="${tvShow.id}">Next up</button>
+            <button type="button" class="action-btn" data-action="open-collection-picker" data-collection-category="tv-shows" data-collection-item-id="${tvShow.id}" data-collection-item-title="${escapeHtml(tvShow.title)}">Collect</button>
+            ${tvShow.watched ? `<button type="button" class="action-btn" data-action="begin-completion-ritual" data-completion-category="tv-shows" data-completion-item-id="${tvShow.id}">Reflect</button>` : ''}
             <button class="action-btn delete-tv-btn" data-tv-id="${tvShow.id}">Delete</button>
           </td>
         `;
@@ -757,13 +1668,13 @@ async function loadAnime() {
     if (search) url += `search=${encodeURIComponent(search)}&`;
     if (sortField) url += `sort_by=${encodeURIComponent(sortField)}&`;
     if (order) url += `order=${encodeURIComponent(order)}`;
-    const res = await authenticatedFetch(url);
+    const res = await fetchLibraryPage(url);
     if (res.ok) {
       const anime = await res.json();
       const tbody = document.querySelector('#animeTable tbody');
       tbody.innerHTML = '';
       const countElem = document.getElementById('animeCount');
-      if (countElem) countElem.textContent = `${anime.length} Anime`;
+      if (countElem) countElem.textContent = `${res.total} Anime`;
       anime.forEach((animeItem) => {
         const tr = document.createElement('tr');
         tr.innerHTML = `
@@ -779,6 +1690,9 @@ async function loadAnime() {
           <td><span class="watched-icon ${animeItem.review_public ? 'watched' : 'unwatched'}">${animeItem.review_public ? '✓' : '✗'}</span></td>
           <td>
             <button class="action-btn edit-anime-btn" data-anime-id="${animeItem.id}" data-anime-title="${escapeHtml(animeItem.title)}" data-anime-year="${animeItem.year}" data-anime-seasons="${animeItem.seasons ?? ''}" data-anime-episodes="${animeItem.episodes ?? ''}" data-anime-rating="${animeItem.rating ?? ''}" data-anime-watched="${animeItem.watched}" data-anime-review="${escapeHtml(animeItem.review || '')}" data-anime-review-public="${animeItem.review_public || false}">Edit</button>
+            <button type="button" class="action-btn" data-action="add-next-up" data-next-up-category="anime" data-next-up-item-id="${animeItem.id}">Next up</button>
+            <button type="button" class="action-btn" data-action="open-collection-picker" data-collection-category="anime" data-collection-item-id="${animeItem.id}" data-collection-item-title="${escapeHtml(animeItem.title)}">Collect</button>
+            ${animeItem.watched ? `<button type="button" class="action-btn" data-action="begin-completion-ritual" data-completion-category="anime" data-completion-item-id="${animeItem.id}">Reflect</button>` : ''}
             <button class="action-btn delete-anime-btn" data-anime-id="${animeItem.id}">Delete</button>
           </td>
         `;
@@ -1134,13 +2048,13 @@ async function loadVideoGames() {
     if (search) url += `search=${encodeURIComponent(search)}&`;
     if (sortField) url += `sort_by=${encodeURIComponent(sortField)}&`;
     if (order) url += `order=${encodeURIComponent(order)}`;
-    const res = await authenticatedFetch(url);
+    const res = await fetchLibraryPage(url);
     if (res.ok) {
       const videoGames = await res.json();
       const tbody = document.querySelector('#videoGameTable tbody');
       tbody.innerHTML = '';
       const countElem = document.getElementById('videoGameCount');
-      if (countElem) countElem.textContent = `${videoGames.length} Video Games`;
+      if (countElem) countElem.textContent = `${res.total} Video Games`;
       videoGames.forEach((game) => {
         const tr = document.createElement('tr');
         const releaseDateStr = game.release_date ? new Date(game.release_date).toLocaleDateString() : '';
@@ -1156,6 +2070,9 @@ async function loadVideoGames() {
           <td><span class="watched-icon ${game.review_public ? 'watched' : 'unwatched'}">${game.review_public ? '✓' : '✗'}</span></td>
           <td>
             <button class="action-btn edit-video-game-btn" data-game-id="${game.id}" data-game-title="${escapeHtml(game.title)}" data-game-release-date="${game.release_date ? game.release_date.split('T')[0] : ''}" data-game-genres="${escapeHtml(game.genres || '')}" data-game-rating="${game.rating ?? ''}" data-game-played="${game.played}" data-game-review="${escapeHtml(game.review || '')}" data-game-review-public="${game.review_public || false}">Edit</button>
+            <button type="button" class="action-btn" data-action="add-next-up" data-next-up-category="video-games" data-next-up-item-id="${game.id}">Next up</button>
+            <button type="button" class="action-btn" data-action="open-collection-picker" data-collection-category="video-games" data-collection-item-id="${game.id}" data-collection-item-title="${escapeHtml(game.title)}">Collect</button>
+            ${game.played ? `<button type="button" class="action-btn" data-action="begin-completion-ritual" data-completion-category="video-games" data-completion-item-id="${game.id}">Reflect</button>` : ''}
             <button class="action-btn delete-video-game-btn" data-game-id="${game.id}">Delete</button>
           </td>
         `;
@@ -1422,7 +2339,7 @@ window.enableVideoGameEdit = function (btn) {
   }
   row.cells[8].innerHTML = `<input type="checkbox" id="edit-video-game-review-public" ${reviewPublic ? 'checked' : ''}>`;
   row.cells[9].innerHTML = `
-    <button class="action-btn save-video-game-btn" data-game-id="${id}">Save</button>
+    <button class="action-btn save-video-game-btn" data-game-id="${id}" data-was-complete="${played}" data-completion-category="video-games">Save</button>
     <button class="action-btn cancel-video-game-btn">Cancel</button>
   `;
   disableOtherRowButtons(row, 'videoGameTable');
@@ -1453,6 +2370,7 @@ window.saveVideoGameEdit = async function (btn) {
   });
 
   if (res.ok) {
+    if (btn.dataset.wasComplete !== 'true' && played) openCompletionMoment('video-games', id);
     editingRowId = null;
     editingRowElement = null;
     enableAllRowButtons('videoGameTable');
@@ -1490,13 +2408,13 @@ async function loadMusic() {
     if (search) url += `search=${encodeURIComponent(search)}&`;
     if (sortField) url += `sort_by=${encodeURIComponent(sortField)}&`;
     if (order) url += `order=${encodeURIComponent(order)}`;
-    const res = await authenticatedFetch(url);
+    const res = await fetchLibraryPage(url);
     if (res.ok) {
       const music = await res.json();
       const tbody = document.querySelector('#musicTable tbody');
       tbody.innerHTML = '';
       const countElem = document.getElementById('musicCount');
-      if (countElem) countElem.textContent = `${music.length} Music`;
+      if (countElem) countElem.textContent = `${res.total} Music`;
       music.forEach((item) => {
         const tr = document.createElement('tr');
         tr.innerHTML = `
@@ -1511,6 +2429,9 @@ async function loadMusic() {
           <td><span class="watched-icon ${item.review_public ? 'watched' : 'unwatched'}">${item.review_public ? '✓' : '✗'}</span></td>
           <td>
             <button class="action-btn edit-music-btn" data-music-id="${item.id}" data-music-title="${escapeHtml(item.title)}" data-music-artist="${escapeHtml(item.artist)}" data-music-year="${item.year}" data-music-genre="${escapeHtml(item.genre || '')}" data-music-rating="${item.rating ?? ''}" data-music-listened="${item.listened}" data-music-review="${escapeHtml(item.review || '')}" data-music-review-public="${item.review_public || false}">Edit</button>
+            <button type="button" class="action-btn" data-action="add-next-up" data-next-up-category="music" data-next-up-item-id="${item.id}">Next up</button>
+            <button type="button" class="action-btn" data-action="open-collection-picker" data-collection-category="music" data-collection-item-id="${item.id}" data-collection-item-title="${escapeHtml(item.title)}">Collect</button>
+            ${item.listened ? `<button type="button" class="action-btn" data-action="begin-completion-ritual" data-completion-category="music" data-completion-item-id="${item.id}">Reflect</button>` : ''}
             <button class="action-btn delete-music-btn" data-music-id="${item.id}">Delete</button>
           </td>
         `;
@@ -1767,7 +2688,7 @@ window.enableMusicEdit = function (btn) {
   }
   row.cells[8].innerHTML = `<input type="checkbox" id="edit-music-review-public" ${reviewPublic ? 'checked' : ''}>`;
   row.cells[9].innerHTML = `
-    <button class="action-btn save-music-btn" data-music-id="${id}">Save</button>
+    <button class="action-btn save-music-btn" data-music-id="${id}" data-was-complete="${listened}" data-completion-category="music">Save</button>
     <button class="action-btn cancel-music-btn">Cancel</button>
   `;
   disableOtherRowButtons(row, 'musicTable');
@@ -1798,6 +2719,7 @@ window.saveMusicEdit = async function (btn) {
   });
 
   if (res.ok) {
+    if (btn.dataset.wasComplete !== 'true' && listened) openCompletionMoment('music', id);
     editingRowId = null;
     editingRowElement = null;
     enableAllRowButtons('musicTable');
@@ -1835,13 +2757,13 @@ async function loadBooks() {
     if (search) url += `search=${encodeURIComponent(search)}&`;
     if (sortField) url += `sort_by=${encodeURIComponent(sortField)}&`;
     if (order) url += `order=${encodeURIComponent(order)}`;
-    const res = await authenticatedFetch(url);
+    const res = await fetchLibraryPage(url);
     if (res.ok) {
       const books = await res.json();
       const tbody = document.querySelector('#bookTable tbody');
       tbody.innerHTML = '';
       const countElem = document.getElementById('bookCount');
-      if (countElem) countElem.textContent = `${books.length} Books`;
+      if (countElem) countElem.textContent = `${res.total} Books`;
       books.forEach((book) => {
         const tr = document.createElement('tr');
         tr.innerHTML = `
@@ -1856,6 +2778,9 @@ async function loadBooks() {
           <td><span class="watched-icon ${book.review_public ? 'watched' : 'unwatched'}">${book.review_public ? '✓' : '✗'}</span></td>
           <td>
             <button class="action-btn edit-book-btn" data-book-id="${book.id}" data-book-title="${escapeHtml(book.title)}" data-book-author="${escapeHtml(book.author)}" data-book-year="${book.year}" data-book-genre="${escapeHtml(book.genre || '')}" data-book-rating="${book.rating ?? ''}" data-book-read="${book.read}" data-book-review="${escapeHtml(book.review || '')}" data-book-review-public="${book.review_public || false}">Edit</button>
+            <button type="button" class="action-btn" data-action="add-next-up" data-next-up-category="books" data-next-up-item-id="${book.id}">Next up</button>
+            <button type="button" class="action-btn" data-action="open-collection-picker" data-collection-category="books" data-collection-item-id="${book.id}" data-collection-item-title="${escapeHtml(book.title)}">Collect</button>
+            ${book.read ? `<button type="button" class="action-btn" data-action="begin-completion-ritual" data-completion-category="books" data-completion-item-id="${book.id}">Reflect</button>` : ''}
             <button class="action-btn delete-book-btn" data-book-id="${book.id}">Delete</button>
           </td>
         `;
@@ -2105,7 +3030,7 @@ window.enableBookEdit = function (btn) {
   }
   row.cells[8].innerHTML = `<input type="checkbox" id="edit-book-review-public" ${reviewPublic ? 'checked' : ''}>`;
   row.cells[9].innerHTML = `
-    <button class="action-btn save-book-btn" data-book-id="${id}">Save</button>
+    <button class="action-btn save-book-btn" data-book-id="${id}" data-was-complete="${read}" data-completion-category="books">Save</button>
     <button class="action-btn cancel-book-btn">Cancel</button>
   `;
   disableOtherRowButtons(row, 'bookTable');
@@ -2136,6 +3061,7 @@ window.saveBookEdit = async function (btn) {
   });
 
   if (res.ok) {
+    if (btn.dataset.wasComplete !== 'true' && read) openCompletionMoment('books', id);
     editingRowId = null;
     editingRowElement = null;
     enableAllRowButtons('bookTable');
@@ -2188,9 +3114,9 @@ window.enableAnimeEdit = function (btn) {
     });
     setupReviewQualityCounter(animeReviewTextarea);
   }
-  row.cells[8].innerHTML = `<input type="checkbox" id="edit-anime-review-public" ${reviewPublic ? 'checked' : ''}>`;
-  row.cells[9].innerHTML = `
-    <button class="action-btn save-anime-btn" data-anime-id="${id}">Save</button>
+  row.cells[9].innerHTML = `<input type="checkbox" id="edit-anime-review-public" ${reviewPublic ? 'checked' : ''}>`;
+  row.cells[10].innerHTML = `
+    <button class="action-btn save-anime-btn" data-anime-id="${id}" data-was-complete="${watched}" data-completion-category="anime">Save</button>
     <button class="action-btn cancel-anime-btn">Cancel</button>
   `;
   disableOtherRowButtons(row, 'animeTable');
@@ -2220,6 +3146,7 @@ window.saveAnimeEdit = async function (btn) {
     body: JSON.stringify(updated),
   });
   if (res.ok) {
+    if (btn.dataset.wasComplete !== 'true' && updated.watched) openCompletionMoment('anime', id);
     editingRowId = null;
     editingRowElement = null;
     enableAllRowButtons('animeTable');
@@ -2272,9 +3199,9 @@ window.enableTVEdit = function (btn) {
     });
     setupReviewQualityCounter(tvReviewTextarea);
   }
-  row.cells[8].innerHTML = `<input type="checkbox" id="edit-tv-review-public" ${reviewPublic ? 'checked' : ''}>`;
-  row.cells[9].innerHTML = `
-    <button class="action-btn save-tv-btn" data-tv-id="${id}">Save</button>
+  row.cells[9].innerHTML = `<input type="checkbox" id="edit-tv-review-public" ${reviewPublic ? 'checked' : ''}>`;
+  row.cells[10].innerHTML = `
+    <button class="action-btn save-tv-btn" data-tv-id="${id}" data-was-complete="${watched}" data-completion-category="tv-shows">Save</button>
     <button class="action-btn cancel-tv-btn">Cancel</button>
   `;
   disableOtherRowButtons(row, 'tvShowTable');
@@ -2304,6 +3231,7 @@ window.saveTVEdit = async function (btn) {
     body: JSON.stringify(updated),
   });
   if (res.ok) {
+    if (btn.dataset.wasComplete !== 'true' && updated.watched) openCompletionMoment('tv-shows', id);
     editingRowId = null;
     editingRowElement = null;
     enableAllRowButtons('tvShowTable');
@@ -3117,6 +4045,8 @@ function selectMusicResult(album) {
   const albumGenre = album.primaryGenreName || '';
   
   document.getElementById('musicTitle').value = albumTitle;
+  const titleInput = document.getElementById('musicTitle');
+  if (coverArtUrl) titleInput.dataset.coverArtUrl = coverArtUrl;
   if (document.getElementById('musicArtist')) {
     document.getElementById('musicArtist').value = albumArtist;
   }
@@ -3375,31 +4305,45 @@ document.getElementById('bookTitle').addEventListener('keypress', function(e) {
 
 document.getElementById('addBookForm').onsubmit = async function (e) {
   e.preventDefault();
+  const form = document.getElementById('addBookForm');
+  if (form.dataset.saving === 'true') return;
+  let status = document.getElementById('bookSaveStatus');
+  if (!status) {
+    status = document.createElement('p');
+    status.id = 'bookSaveStatus';
+    status.setAttribute('role', 'status');
+    form.appendChild(status);
+  }
+  status.textContent = '';
   const titleInput = document.getElementById('bookTitle');
   const authorInput = document.getElementById('bookAuthor');
   const yearInput = document.getElementById('bookYear');
   
   const title = titleInput.value.trim();
   if (!title) {
-    alert('Please enter a book title.');
+    status.textContent = 'Please enter a book title.';
+    titleInput.focus();
     return;
   }
   
   const author = authorInput.value.trim();
   if (!author) {
-    alert('Please enter an author or click "Search" to auto-fill book information.');
+    status.textContent = 'Please enter an author or click "Search" to auto-fill book information.';
+    authorInput.focus();
     return;
   }
   
   const yearVal = yearInput.value.trim();
   if (!yearVal) {
-    alert('Please enter a year or click "Search" to auto-fill book information.');
+    status.textContent = 'Please enter a year or click "Search" to auto-fill book information.';
+    yearInput.focus();
     return;
   }
   
   const year = parseInt(yearVal, 10);
   if (isNaN(year) || year < 0) {
-    alert('Please enter a valid year.');
+    status.textContent = 'Please enter a valid year.';
+    yearInput.focus();
     return;
   }
   
@@ -3422,21 +4366,35 @@ document.getElementById('addBookForm').onsubmit = async function (e) {
     book.cover_art_url = titleInput.dataset.coverArtUrl;
   }
   
-  const response = await authenticatedFetch(`${API_BASE}/books/`, {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify(book),
-  });
-  if (response.ok) {
-    document.getElementById('addBookForm').reset();
-    if (titleInput.dataset.coverArtUrl) {
-      delete titleInput.dataset.coverArtUrl;
+  form.dataset.saving = 'true';
+  const submit = form.querySelector('button[type="submit"]');
+  if (submit) submit.disabled = true;
+  status.textContent = 'Saving your book…';
+  try {
+    const response = await authenticatedFetch(`${API_BASE}/books/`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(book),
+    });
+    if (response.ok) {
+      status.textContent = '';
+      form.reset();
+      if (titleInput.dataset.coverArtUrl) {
+        delete titleInput.dataset.coverArtUrl;
+      }
+      toggleCollapsible('bookForm');
+      loadBooks();
+    } else {
+      const errorData = await response.json().catch(() => ({ detail: 'Failed to add book' }));
+      status.textContent = typeof errorData.detail === 'string' ? errorData.detail : 'Could not save this book. Check the fields and try again.';
     }
-    toggleCollapsible('bookForm');
-    loadBooks();
-  } else {
-    const errorData = await response.json().catch(() => ({ detail: 'Failed to add book' }));
-    alert(errorData.detail || 'Failed to add book');
+  } catch (error) {
+    status.textContent = error.message === 'Session expired. Please login again.'
+      ? 'Your session expired. Sign in again before saving. Your form has not been cleared.'
+      : 'Could not confirm the save. Your form has not been cleared. Check your library before retrying to avoid a duplicate.';
+  } finally {
+    delete form.dataset.saving;
+    if (submit) submit.disabled = false;
   }
 };
 
@@ -3460,7 +4418,7 @@ async function exportData() {
     document.body.removeChild(a);
     URL.revokeObjectURL(url);
 
-    alert(`Export successful! Exported ${data.export_metadata.total_movies} movies, ${data.export_metadata.total_tv_shows} TV shows, ${data.export_metadata.total_anime || 0} anime, ${data.export_metadata.total_video_games || 0} video games, ${data.export_metadata.total_music || 0} music, ${data.export_metadata.total_books || 0} books, and ${data.export_metadata.total_custom_tabs || 0} custom tabs.`);
+    alert(`Export successful! Exported ${data.export_metadata.total_movies} movies, ${data.export_metadata.total_tv_shows} TV shows, ${data.export_metadata.total_anime || 0} anime, ${data.export_metadata.total_video_games || 0} video games, ${data.export_metadata.total_music || 0} music, ${data.export_metadata.total_books || 0} books, ${data.export_metadata.total_custom_tabs || 0} custom tabs, and ${data.export_metadata.total_activities || 0} journal entries.`);
   } catch (error) {
     alert('Export failed: ' + error.message);
   }
@@ -3538,10 +4496,313 @@ async function importData(fileInput) {
   }
 }
 
+function enhanceLibraryCards(tableId) {
+  const table = document.getElementById(tableId);
+  if (!table) return;
+  table.classList.add('mobile-library');
+  table.setAttribute('role', 'table');
+  const labels = Array.from(table.tHead.rows[0].cells, cell => cell.textContent.trim());
+  table.querySelectorAll('thead tr, tbody tr').forEach(row => row.setAttribute('role', 'row'));
+  table.querySelectorAll('th').forEach(cell => {
+    cell.scope = 'col';
+    cell.setAttribute('role', 'columnheader');
+    cell.dataset.label = cell.textContent.trim();
+  });
+  Array.from(table.tBodies[0].rows).forEach((row, rowIndex) => {
+    Array.from(row.cells).forEach((cell, index) => {
+      const label = labels[index];
+      cell.dataset.label = label === 'Public' ? 'Public review' : label;
+      cell.setAttribute('role', 'cell');
+      cell.classList.add('library-cell');
+      const type = index === 0 ? 'cover' : index === 1 ? 'title'
+        : label === 'Rating' ? 'rating' : ['Watched', 'Played', 'Listened', 'Read'].includes(label) ? 'status'
+        : label === 'Actions' ? 'actions' : 'detail';
+      cell.dataset.cardField = type;
+      cell.querySelectorAll('input, textarea, select').forEach(input => {
+        if (!input.hasAttribute('aria-label')) input.setAttribute('aria-label', cell.dataset.label);
+      });
+      if (type === 'status' || label === 'Public') {
+        const icon = cell.querySelector('.watched-icon');
+        if (icon) {
+          const complete = icon.classList.contains('watched');
+          icon.setAttribute('aria-label', label === 'Public' ? (complete ? 'Public review' : 'Private review')
+            : (complete ? label : `Not ${label.toLowerCase()}`));
+        }
+      }
+    });
+    const actions = row.cells[row.cells.length - 1];
+    if (!actions.querySelector('.library-card-details')) {
+      const button = document.createElement('button');
+      button.type = 'button'; button.className = 'library-card-details';
+      button.textContent = 'More details'; button.setAttribute('aria-expanded', 'false');
+      const details = Array.from(row.cells).filter(cell => cell.dataset.cardField === 'detail');
+      details.forEach((cell, index) => { cell.id = `${tableId}-card-${rowIndex}-detail-${index}`; });
+      button.setAttribute('aria-controls', details.map(cell => cell.id).join(' '));
+      button.addEventListener('click', () => {
+        const expanded = row.classList.toggle('card-expanded');
+        button.setAttribute('aria-expanded', String(expanded));
+        button.textContent = expanded ? 'Less detail' : 'More details';
+      });
+      actions.appendChild(button);
+    }
+  });
+}
+
+// Preview-first CSV Import Studio. This stays separate from JSON backup restore,
+// because migration imports skip matches instead of updating existing records.
+let importStudioPreview = null;
+
+const importStudioMappingFields = [
+  ['title', 'Title'], ['category', 'Category'], ['year', 'Year'], ['creator', 'Director / author / artist'],
+  ['rating', 'Rating (0–10)'], ['status', 'Completed status'], ['review', 'Private review / note'],
+  ['genre', 'Genre'], ['seasons', 'Seasons'], ['episodes', 'Episodes'], ['release_date', 'Release date']
+];
+
+function parseDelimitedHeader(text) {
+  const firstLine = text.split(/\r?\n/, 1)[0] || '';
+  const delimiters = [',', '\t', ';'];
+  const delimiter = delimiters.reduce((best, candidate) =>
+    firstLine.split(candidate).length > firstLine.split(best).length ? candidate : best, ',');
+  const fields = [];
+  let current = '';
+  let quoted = false;
+  for (let index = 0; index < firstLine.length; index += 1) {
+    const character = firstLine[index];
+    if (character === '"') {
+      if (quoted && firstLine[index + 1] === '"') {
+        current += '"';
+        index += 1;
+      } else {
+        quoted = !quoted;
+      }
+    } else if (character === delimiter && !quoted) {
+      fields.push(current.trim());
+      current = '';
+    } else {
+      current += character;
+    }
+  }
+  fields.push(current.trim());
+  return fields.filter(Boolean).slice(0, 100);
+}
+
+function resetImportStudioPreview() {
+  importStudioPreview = null;
+  const applyButton = document.getElementById('importStudioApplyButton');
+  const results = document.getElementById('importStudioResults');
+  if (applyButton) applyButton.disabled = true;
+  if (results) {
+    results.hidden = true;
+    results.replaceChildren();
+  }
+}
+
+async function inspectImportStudioFile() {
+  resetImportStudioPreview();
+  const input = document.getElementById('importStudioFile');
+  const mapping = document.getElementById('importStudioMapping');
+  const file = input?.files?.[0];
+  if (!mapping) return;
+  mapping.replaceChildren();
+  if (!file) {
+    const message = document.createElement('p');
+    message.className = 'info-text';
+    message.textContent = 'Choose a file to inspect its columns.';
+    mapping.appendChild(message);
+    return;
+  }
+  try {
+    const headers = parseDelimitedHeader(await file.text());
+    importStudioMappingFields.forEach(([target, labelText]) => {
+      const label = document.createElement('label');
+      const text = document.createElement('span');
+      text.textContent = labelText;
+      const select = document.createElement('select');
+      select.dataset.importMapTarget = target;
+      const empty = document.createElement('option');
+      empty.value = '';
+      empty.textContent = 'Automatic / not included';
+      select.appendChild(empty);
+      headers.forEach(header => {
+        const option = document.createElement('option');
+        option.value = header;
+        option.textContent = header;
+        if (header.trim().toLowerCase().replace(/[^a-z0-9]+/g, '_').replace(/^_|_$/g, '') === target) {
+          option.selected = true;
+        }
+        select.appendChild(option);
+      });
+      select.addEventListener('change', resetImportStudioPreview);
+      label.append(text, select);
+      mapping.appendChild(label);
+    });
+  } catch (error) {
+    const message = document.createElement('p');
+    message.className = 'info-text';
+    message.textContent = 'These columns could not be inspected in the browser. The server can still attempt a preview.';
+    mapping.appendChild(message);
+  }
+}
+
+function getImportStudioMapping() {
+  const mapping = {};
+  document.querySelectorAll('[data-import-map-target]').forEach(select => {
+    if (select.value) mapping[select.dataset.importMapTarget] = select.value;
+  });
+  return mapping;
+}
+
+function buildImportStudioFormData(includeConfirmation = false) {
+  const file = document.getElementById('importStudioFile')?.files?.[0];
+  if (!file) throw new Error('Choose a CSV or TSV file first.');
+  const formData = new FormData();
+  formData.append('file', file);
+  formData.append('source', document.getElementById('importStudioSource')?.value || 'auto');
+  formData.append('category', document.getElementById('importStudioCategory')?.value || '');
+  formData.append('mapping_json', JSON.stringify(getImportStudioMapping()));
+  if (includeConfirmation) formData.append('fingerprint_confirmation', importStudioPreview?.fingerprint || '');
+  return formData;
+}
+
+function importStudioMetric(value, label) {
+  const metric = document.createElement('div');
+  metric.className = 'import-studio__metric';
+  const count = document.createElement('strong');
+  count.textContent = String(value);
+  const text = document.createElement('span');
+  text.textContent = label;
+  metric.append(count, text);
+  return metric;
+}
+
+function renderImportStudioPreview(data) {
+  const results = document.getElementById('importStudioResults');
+  if (!results) return;
+  results.replaceChildren();
+  results.hidden = false;
+
+  const summary = document.createElement('div');
+  summary.className = 'import-studio__summary';
+  summary.append(
+    importStudioMetric(data.total_rows, 'Rows read'),
+    importStudioMetric(data.ready_count, 'Ready to import'),
+    importStudioMetric(data.duplicate_count, 'Duplicates skipped'),
+    importStudioMetric(data.invalid_count, 'Rows needing attention')
+  );
+  results.appendChild(summary);
+
+  const breakdown = Object.entries(data.by_category || {}).filter(([, count]) => count > 0);
+  if (breakdown.length) {
+    const line = document.createElement('p');
+    line.className = 'info-text';
+    line.textContent = breakdown.map(([category, count]) => `${category.replace('-', ' ')}: ${count}`).join(' · ');
+    results.appendChild(line);
+  }
+
+  const wrap = document.createElement('div');
+  wrap.className = 'import-studio__table-wrap';
+  const table = document.createElement('table');
+  table.className = 'import-studio__table';
+  const head = document.createElement('thead');
+  const headRow = document.createElement('tr');
+  ['CSV row', 'Title', 'Category', 'Outcome', 'Reason'].forEach(label => {
+    const th = document.createElement('th');
+    th.textContent = label;
+    headRow.appendChild(th);
+  });
+  head.appendChild(headRow);
+  table.appendChild(head);
+  const body = document.createElement('tbody');
+  (data.preview || []).forEach(item => {
+    const row = document.createElement('tr');
+    [item.row, item.title, item.category ? item.category.replace('-', ' ') : '—', item.status, item.reason || 'Will be added'].forEach((value, index) => {
+      const cell = document.createElement('td');
+      cell.textContent = String(value);
+      if (index === 3) cell.className = `import-studio__row-status import-studio__row-status--${item.status}`;
+      row.appendChild(cell);
+    });
+    body.appendChild(row);
+  });
+  table.appendChild(body);
+  wrap.appendChild(table);
+  results.appendChild(wrap);
+  if (data.preview_truncated) {
+    const note = document.createElement('p');
+    note.className = 'info-text';
+    note.textContent = 'Showing the first 100 rows. All rows will follow the same validation rules.';
+    results.appendChild(note);
+  }
+}
+
+async function previewLibraryImport(event) {
+  event.preventDefault();
+  const status = document.getElementById('importStudioStatus');
+  const previewButton = document.getElementById('importStudioPreviewButton');
+  resetImportStudioPreview();
+  try {
+    status.textContent = 'Reading and comparing your file…';
+    previewButton.disabled = true;
+    const response = await authenticatedFetch(`${API_BASE}/import-studio/preview/`, { method: 'POST', body: buildImportStudioFormData() });
+    const data = await response.json().catch(() => ({}));
+    if (!response.ok) throw new Error(data.detail || 'The file could not be previewed.');
+    importStudioPreview = data;
+    renderImportStudioPreview(data);
+    status.textContent = `Detected ${data.detected_source}. Preview complete—nothing has been saved.`;
+    document.getElementById('importStudioApplyButton').disabled = data.ready_count === 0;
+  } catch (error) {
+    status.textContent = error.message;
+  } finally {
+    previewButton.disabled = false;
+  }
+}
+
+async function applyLibraryImport() {
+  if (!importStudioPreview?.fingerprint || importStudioPreview.ready_count < 1) return;
+  const status = document.getElementById('importStudioStatus');
+  const applyButton = document.getElementById('importStudioApplyButton');
+  if (!confirm(`Import ${importStudioPreview.ready_count} new item${importStudioPreview.ready_count === 1 ? '' : 's'}? Existing library records will be skipped.`)) return;
+  try {
+    applyButton.disabled = true;
+    status.textContent = 'Saving the new rows as one batch…';
+    const response = await authenticatedFetch(`${API_BASE}/import-studio/apply/`, { method: 'POST', body: buildImportStudioFormData(true) });
+    const data = await response.json().catch(() => ({}));
+    if (!response.ok) throw new Error(data.detail || 'The import could not be completed.');
+    status.textContent = `Import complete: ${data.created_count} added, ${data.duplicate_count} duplicates skipped, ${data.invalid_count} rows left unchanged.`;
+    importStudioPreview = null;
+    document.getElementById('importStudioFile').value = '';
+    document.getElementById('importStudioResults').hidden = true;
+    await inspectImportStudioFile();
+  } catch (error) {
+    status.textContent = error.message;
+    applyButton.disabled = false;
+  }
+}
+
+async function downloadImportTemplate() {
+  const category = document.getElementById('importStudioTemplateCategory')?.value || 'movies';
+  const status = document.getElementById('importStudioStatus');
+  try {
+    const response = await authenticatedFetch(`${API_BASE}/import-studio/template/${encodeURIComponent(category)}/`);
+    if (!response.ok) throw new Error('The template could not be downloaded.');
+    const url = URL.createObjectURL(await response.blob());
+    const link = document.createElement('a');
+    link.href = url;
+    link.download = `omnitrackr-${category}-template.csv`;
+    document.body.appendChild(link);
+    link.click();
+    link.remove();
+    URL.revokeObjectURL(url);
+  } catch (error) {
+    if (status) status.textContent = error.message;
+  }
+}
+
 // Statistics functions
 function loadStatistics() {
   document.getElementById('statsLoading').style.display = 'none';
   document.getElementById('statsContent').style.display = 'block';
+  loadMonthlyReplay();
+  loadTasteprint(false);
   if (!categoryStatsCache['library-insights']) {
     toggleCategoryAccordion('library-insights');
   }
@@ -5527,6 +6788,8 @@ async function loadNotifications() {
             <button class="notification-action-btn accept-btn" data-action="accept-friend-request" data-request-id="${notif.friend_request_id}">Accept</button>
             <button class="notification-action-btn deny-btn" data-action="deny-friend-request" data-request-id="${notif.friend_request_id}">Deny</button>
           `;
+        } else if (notif.type === 'recommendation_received' || notif.type === 'recommendation_invitation') {
+          actionButtons = '<button class="notification-action-btn" data-action="open-recommendation-postcards">Open Postcards</button>';
         }
 
         return `
@@ -5888,8 +7151,1910 @@ function restoreSidebarState() {
   }
 }
 
+let activeCompletionMomentId = null;
+
+async function openCompletionMoment(category, itemId) {
+  if (!category || !Number.isInteger(itemId) || itemId < 1) return;
+  try {
+    const response = await authenticatedFetch(`${API_BASE}/completion-moments/`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ category, item_id: itemId }),
+    });
+    if (response.status === 409) {
+      alert('Mark this item finished before adding a reflection.');
+      return;
+    }
+    if (!response.ok) throw new Error('Unable to start reflection');
+    const moment = await response.json();
+    activeCompletionMomentId = moment.id;
+    document.getElementById('completionRitualTitle').textContent = moment.title;
+    document.getElementById('completionRitualTakeaway').value = moment.takeaway || '';
+    document.getElementById('completionRitualFavorite').checked = Boolean(moment.favorite);
+    document.getElementById('completionRitualModal').style.display = 'flex';
+  } catch (error) {
+    alert('Could not open the finish ritual. Please try again.');
+  }
+}
+
+function closeCompletionRitual() {
+  const modal = document.getElementById('completionRitualModal');
+  if (modal) modal.style.display = 'none';
+  activeCompletionMomentId = null;
+}
+
+async function saveCompletionRitual() {
+  if (!activeCompletionMomentId) return;
+  const takeaway = document.getElementById('completionRitualTakeaway').value;
+  const favorite = document.getElementById('completionRitualFavorite').checked;
+  try {
+    const response = await authenticatedFetch(`${API_BASE}/completion-moments/${activeCompletionMomentId}`, {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ takeaway, favorite }),
+    });
+    if (!response.ok) throw new Error('Unable to save reflection');
+    closeCompletionRitual();
+    loadMonthlyReplay();
+  } catch (error) {
+    alert('Could not save your reflection. Please try again.');
+  }
+}
+
+function renderMonthlyReplay(replay) {
+  const section = document.getElementById('monthlyReplay');
+  const period = document.getElementById('monthlyReplayPeriod');
+  const content = document.getElementById('monthlyReplayContent');
+  if (!section || !period || !content) return;
+  period.textContent = replay.month_label || 'This month';
+  content.replaceChildren();
+
+  const stats = document.createElement('div');
+  stats.className = 'monthly-replay__stats';
+  [
+    [replay.completed_count || 0, 'finished'],
+    [replay.reflection_count || 0, 'reflections'],
+    [replay.favorite_count || 0, 'favorites'],
+  ].forEach(([value, label]) => {
+    const stat = document.createElement('div');
+    stat.className = 'monthly-replay__stat';
+    const number = document.createElement('strong');
+    number.textContent = String(value);
+    const caption = document.createElement('span');
+    caption.textContent = label;
+    stat.append(number, caption);
+    stats.appendChild(stat);
+  });
+  content.appendChild(stats);
+
+  const highlights = Array.isArray(replay.highlights) ? replay.highlights : [];
+  if (!highlights.length) {
+    const empty = document.createElement('p');
+    empty.className = 'monthly-replay__empty';
+    empty.textContent = 'Finish something and add a private reflection to start this month’s time capsule.';
+    content.appendChild(empty);
+  } else {
+    const list = document.createElement('div');
+    list.className = 'monthly-replay__highlights';
+    highlights.forEach((item) => {
+      const card = document.createElement('div');
+      card.className = 'monthly-replay__highlight';
+      const title = document.createElement('strong');
+      title.textContent = `${item.favorite ? '★ ' : ''}${item.title}`;
+      const meta = document.createElement('span');
+      meta.textContent = [item.category_label, item.rating != null ? `${Number(item.rating).toFixed(1)}/10` : 'Unrated'].join(' · ');
+      card.append(title, meta);
+      if (item.takeaway) {
+        const takeaway = document.createElement('p');
+        takeaway.textContent = item.takeaway;
+        card.appendChild(takeaway);
+      }
+      list.appendChild(card);
+    });
+    content.appendChild(list);
+  }
+  section.removeAttribute('hidden');
+}
+
+async function loadMonthlyReplay() {
+  if (!hasStoredAuth()) return;
+  try {
+    const response = await authenticatedFetch(`${API_BASE}/completion-moments/replay/`);
+    if (response.ok) renderMonthlyReplay(await response.json());
+  } catch (error) {
+    // Monthly Replay is supplemental and should never block the statistics dashboard.
+  }
+}
+
+// ============================================================================
+// Private Tasteprint and local share-card rendering
+// ============================================================================
+
+let tasteprintData = null;
+let tasteprintRequestId = 0;
+let tasteprintSelectedInsights = new Set();
+
+function selectedTasteprintCategories() {
+  return Array.from(document.querySelectorAll('[data-tasteprint-category]:checked')).map(input => input.value);
+}
+
+function selectedTasteprintInsights() {
+  if (!tasteprintData) return [];
+  return tasteprintData.insights.filter(insight => tasteprintSelectedInsights.has(insight.key)).slice(0, 6);
+}
+
+function renderTasteprintCategories(data) {
+  const container = document.getElementById('tasteprintCategoryControls');
+  if (!container) return;
+  container.replaceChildren();
+  const selected = new Set(data.selected_categories || []);
+  (data.available_categories || []).forEach(category => {
+    const label = document.createElement('label');
+    label.className = 'tasteprint__category';
+    const input = document.createElement('input');
+    input.type = 'checkbox';
+    input.value = category.key;
+    input.checked = selected.has(category.key);
+    input.dataset.tasteprintCategory = '';
+    input.dataset.changeAction = 'tasteprint-category';
+    const name = document.createElement('span');
+    name.textContent = category.label;
+    const meta = document.createElement('small');
+    const flags = [];
+    if (category.private) flags.push('private');
+    if (category.hidden) flags.push('hidden');
+    meta.textContent = `${category.total} item${category.total === 1 ? '' : 's'}${flags.length ? ` · ${flags.join(' · ')}` : ''}`;
+    label.append(input, name, meta);
+    container.appendChild(label);
+  });
+}
+
+function renderTasteprintProgress(data) {
+  const container = document.getElementById('tasteprintProgress');
+  if (!container) return;
+  container.replaceChildren();
+  if (data.ready) return;
+  const panel = document.createElement('div');
+  panel.className = 'tasteprint__progress-panel';
+  const heading = document.createElement('strong');
+  heading.textContent = 'Your Tasteprint is still developing.';
+  const detail = document.createElement('span');
+  const needs = [];
+  if (data.needed_items) needs.push(`${data.needed_items} more library item${data.needed_items === 1 ? '' : 's'}`);
+  if (data.needed_ratings) needs.push(`${data.needed_ratings} more rating${data.needed_ratings === 1 ? '' : 's'}`);
+  detail.textContent = needs.length
+    ? `Add ${needs.join(' and ')} across the selected categories to unlock an evidence-backed share card.`
+    : 'Select at least one category with enough history to build the card.';
+  panel.append(heading, detail);
+  container.appendChild(panel);
+}
+
+function updateTasteprintSelection(event) {
+  const input = event?.target;
+  if (!input) return;
+  if (input.checked && !tasteprintSelectedInsights.has(input.value) && tasteprintSelectedInsights.size >= 6) {
+    input.checked = false;
+    const status = document.getElementById('tasteprintStatus');
+    if (status) status.textContent = 'Choose up to six insights for a readable share card.';
+  } else if (input.checked) {
+    tasteprintSelectedInsights.add(input.value);
+  } else {
+    tasteprintSelectedInsights.delete(input.value);
+  }
+  renderTasteprintCard();
+}
+
+function renderTasteprintCard() {
+  const card = document.getElementById('tasteprintCard');
+  const insights = document.getElementById('tasteprintInsights');
+  if (!card || !insights || !tasteprintData) return;
+  const includeName = document.getElementById('tasteprintIncludeName')?.checked;
+  document.getElementById('tasteprintCardName').textContent = includeName ? `${tasteprintData.display_name}'s Tasteprint` : 'My Tasteprint';
+  const includedLabels = (tasteprintData.available_categories || [])
+    .filter(category => tasteprintData.selected_categories.includes(category.key) && category.total > 0)
+    .map(category => category.label);
+  document.getElementById('tasteprintCardScope').textContent = `${tasteprintData.total_items} items · ${tasteprintData.rated_items} rated · ${includedLabels.join(' + ') || 'No categories selected'}`;
+  insights.replaceChildren();
+  (tasteprintData.insights || []).forEach((insight, index) => {
+    const item = document.createElement('div');
+    item.className = `tasteprint-card__insight${index < 6 ? '' : ' is-excluded'}`;
+    const checkbox = document.createElement('input');
+    checkbox.type = 'checkbox';
+    checkbox.value = insight.key;
+    checkbox.checked = tasteprintSelectedInsights.has(insight.key);
+    checkbox.dataset.tasteprintInsight = '';
+    checkbox.dataset.changeAction = 'tasteprint-insight';
+    checkbox.setAttribute('aria-label', `Include ${insight.label} on share card`);
+    const label = document.createElement('label');
+    label.textContent = insight.label;
+    const value = document.createElement('h5');
+    value.textContent = insight.value;
+    const detail = document.createElement('p');
+    detail.textContent = insight.detail;
+    item.append(checkbox, label, value, detail);
+    insights.appendChild(item);
+  });
+  if (!tasteprintData.insights.length) {
+    const empty = document.createElement('p');
+    empty.textContent = 'Select categories with library history to reveal your first patterns.';
+    insights.appendChild(empty);
+  }
+  card.hidden = false;
+  const canShare = tasteprintData.ready && selectedTasteprintInsights().length > 0;
+  document.getElementById('tasteprintDownload').disabled = !canShare;
+  document.getElementById('tasteprintCopy').disabled = !canShare;
+}
+
+async function loadTasteprint(useCurrentSelection = false) {
+  if (!hasStoredAuth()) return;
+  const requestId = ++tasteprintRequestId;
+  const status = document.getElementById('tasteprintStatus');
+  if (status) status.textContent = 'Reading your private aggregates…';
+  try {
+    let url = `${API_BASE}/statistics/tasteprint/`;
+    if (useCurrentSelection) {
+      url += `?categories=${encodeURIComponent(selectedTasteprintCategories().join(','))}`;
+    }
+    const response = await authenticatedFetch(url);
+    const data = await response.json().catch(() => ({}));
+    if (!response.ok) throw new Error(data.detail || 'Tasteprint could not be generated.');
+    if (requestId !== tasteprintRequestId) return;
+    tasteprintData = data;
+    tasteprintSelectedInsights = new Set((data.insights || []).slice(0, 6).map(insight => insight.key));
+    renderTasteprintCategories(data);
+    renderTasteprintProgress(data);
+    renderTasteprintCard();
+    if (status) {
+      status.textContent = data.ready
+        ? `${data.insights.length} evidence-backed patterns found. Choose up to six for your card.`
+        : `Using ${data.total_items} selected items and ${data.rated_items} ratings. Preliminary patterns stay private until the share card unlocks.`;
+    }
+  } catch (error) {
+    if (requestId === tasteprintRequestId && status) status.textContent = error.message;
+  }
+}
+
+function tasteprintShareText() {
+  const includeName = document.getElementById('tasteprintIncludeName')?.checked;
+  const heading = includeName ? `${tasteprintData.display_name}'s OmniTrackr Tasteprint` : 'My OmniTrackr Tasteprint';
+  const lines = selectedTasteprintInsights().map(insight => `${insight.label}: ${insight.value} — ${insight.detail}`);
+  return [heading, ...lines, 'Built from my media history at omnitrackr.xyz'].join('\n');
+}
+
+async function copyTasteprintText() {
+  if (!tasteprintData?.ready || !selectedTasteprintInsights().length) return;
+  const text = tasteprintShareText();
+  const status = document.getElementById('tasteprintStatus');
+  try {
+    await navigator.clipboard.writeText(text);
+  } catch (error) {
+    const textarea = document.createElement('textarea');
+    textarea.value = text;
+    textarea.style.position = 'fixed';
+    textarea.style.opacity = '0';
+    document.body.appendChild(textarea);
+    textarea.select();
+    document.execCommand('copy');
+    textarea.remove();
+  }
+  if (status) status.textContent = 'Tasteprint summary copied. Nothing was published.';
+}
+
+function drawWrappedCanvasText(context, text, x, y, maxWidth, lineHeight, maxLines = 3) {
+  const words = String(text).split(/\s+/);
+  const lines = [];
+  let line = '';
+  words.forEach(word => {
+    const candidate = line ? `${line} ${word}` : word;
+    if (context.measureText(candidate).width > maxWidth && line) {
+      lines.push(line);
+      line = word;
+    } else {
+      line = candidate;
+    }
+  });
+  if (line) lines.push(line);
+  lines.slice(0, maxLines).forEach((value, index) => {
+    let rendered = value;
+    if (index === maxLines - 1 && lines.length > maxLines) rendered = `${value.replace(/[.,;:]?$/, '')}…`;
+    context.fillText(rendered, x, y + index * lineHeight);
+  });
+  return Math.min(lines.length, maxLines) * lineHeight;
+}
+
+function fitCanvasFont(context, text, maximumSize, minimumSize, maximumWidth) {
+  let size = maximumSize;
+  do {
+    context.font = `700 ${size}px Arial, sans-serif`;
+    if (context.measureText(text).width <= maximumWidth) return;
+    size -= 2;
+  } while (size >= minimumSize);
+}
+
+function drawCanvasRoundedRect(context, x, y, width, height, radius) {
+  context.beginPath();
+  if (typeof context.roundRect === 'function') {
+    context.roundRect(x, y, width, height, radius);
+  } else {
+    context.rect(x, y, width, height);
+  }
+}
+
+function buildTasteprintCanvas() {
+  const canvas = document.createElement('canvas');
+  canvas.width = 1200;
+  canvas.height = 1500;
+  const context = canvas.getContext('2d');
+  const background = context.createLinearGradient(0, 0, 1200, 1500);
+  background.addColorStop(0, '#11152a');
+  background.addColorStop(.56, '#24134a');
+  background.addColorStop(1, '#082c32');
+  context.fillStyle = background;
+  context.fillRect(0, 0, 1200, 1500);
+
+  const glow = context.createRadialGradient(1040, 110, 10, 1040, 110, 430);
+  glow.addColorStop(0, 'rgba(94,234,212,.25)');
+  glow.addColorStop(1, 'rgba(94,234,212,0)');
+  context.fillStyle = glow;
+  context.fillRect(600, 0, 600, 600);
+
+  context.fillStyle = '#ffffff';
+  context.font = '700 38px Arial, sans-serif';
+  context.fillText('OmniTrackr', 72, 86);
+  context.fillStyle = '#5eead4';
+  context.font = '700 20px Arial, sans-serif';
+  context.textAlign = 'right';
+  context.fillText('MEDIA TASTEPRINT', 1128, 84);
+  context.textAlign = 'left';
+
+  const includeName = document.getElementById('tasteprintIncludeName')?.checked;
+  context.fillStyle = '#c4b5fd';
+  context.font = '700 20px Arial, sans-serif';
+  context.fillText('A PRIVATE MEDIA PORTRAIT', 72, 190);
+  context.fillStyle = '#ffffff';
+  const cardTitle = includeName ? `${tasteprintData.display_name}'s Tasteprint` : 'My Tasteprint';
+  fitCanvasFont(context, cardTitle, 64, 36, 1056);
+  context.fillText(cardTitle, 72, 270);
+  const labels = tasteprintData.available_categories
+    .filter(category => tasteprintData.selected_categories.includes(category.key) && category.total > 0)
+    .map(category => category.label);
+  context.fillStyle = '#cbd5e1';
+  context.font = '26px Arial, sans-serif';
+  context.fillText(`${tasteprintData.total_items} items  ·  ${tasteprintData.rated_items} rated  ·  ${labels.join(' + ')}`, 72, 320);
+
+  selectedTasteprintInsights().forEach((insight, index) => {
+    const column = index % 2;
+    const row = Math.floor(index / 2);
+    const x = 72 + column * 540;
+    const y = 390 + row * 260;
+    context.fillStyle = 'rgba(255,255,255,.065)';
+    context.strokeStyle = 'rgba(255,255,255,.17)';
+    context.lineWidth = 2;
+    drawCanvasRoundedRect(context, x, y, 500, 220, 20);
+    context.fill();
+    context.stroke();
+    context.fillStyle = '#a7f3d0';
+    context.font = '700 18px Arial, sans-serif';
+    context.fillText(insight.label.toUpperCase(), x + 28, y + 42);
+    context.fillStyle = '#ffffff';
+    context.font = '700 32px Arial, sans-serif';
+    drawWrappedCanvasText(context, insight.value, x + 28, y + 88, 440, 38, 2);
+    context.fillStyle = '#cbd5e1';
+    context.font = '21px Arial, sans-serif';
+    drawWrappedCanvasText(context, insight.detail, x + 28, y + 150, 440, 28, 2);
+  });
+
+  context.strokeStyle = 'rgba(255,255,255,.16)';
+  context.beginPath();
+  context.moveTo(72, 1392);
+  context.lineTo(1128, 1392);
+  context.stroke();
+  context.fillStyle = '#94a3b8';
+  context.font = '21px Arial, sans-serif';
+  context.fillText('Built from patterns, not recommendations', 72, 1440);
+  context.textAlign = 'right';
+  context.fillStyle = '#e2e8f0';
+  context.font = '700 22px Arial, sans-serif';
+  context.fillText('omnitrackr.xyz', 1128, 1440);
+  return canvas;
+}
+
+function downloadTasteprint() {
+  if (!tasteprintData?.ready || !selectedTasteprintInsights().length) return;
+  const canvas = buildTasteprintCanvas();
+  canvas.toBlob(blob => {
+    if (!blob) return;
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.href = url;
+    link.download = `omnitrackr-tasteprint-${new Date().toISOString().slice(0, 10)}.png`;
+    document.body.appendChild(link);
+    link.click();
+    link.remove();
+    URL.revokeObjectURL(url);
+    const status = document.getElementById('tasteprintStatus');
+    if (status) status.textContent = 'Tasteprint downloaded on this device. Nothing was published.';
+  }, 'image/png');
+}
+
+// ============================================================================
+// Private cross-media activity journal
+// ============================================================================
+
+const ACTIVITY_PAGE_SIZE = 30;
+let activityTimelineOffset = 0;
+let activityWeekOffset = 0;
+
+function localDateTimeValue(date = new Date()) {
+  const shifted = new Date(date.getTime() - date.getTimezoneOffset() * 60000);
+  return shifted.toISOString().slice(0, 16);
+}
+
+function setupActivityJournal() {
+  const input = document.getElementById('activityOccurredAt');
+  if (input && !input.value) input.value = localDateTimeValue();
+}
+
+async function populateActivityItems() {
+  const category = document.getElementById('activityCategory')?.value;
+  const select = document.getElementById('activityItem');
+  if (!category || !select) return;
+  select.disabled = true;
+  select.replaceChildren(new Option('Loading your library…', ''));
+  await refreshLibrarySearchIndex();
+  const items = librarySearchIndex
+    .filter(item => item.tab === category)
+    .sort((a, b) => a.title.localeCompare(b.title));
+  select.replaceChildren(new Option(items.length ? 'Choose a library item' : 'No items in this category yet', ''));
+  items.forEach(item => select.appendChild(new Option(item.title, String(item.id))));
+  select.disabled = !items.length;
+}
+
+function activityQuery(reset) {
+  if (reset) activityTimelineOffset = 0;
+  const params = new URLSearchParams({ limit: String(ACTIVITY_PAGE_SIZE), offset: String(activityTimelineOffset) });
+  const category = document.getElementById('activityFilterCategory')?.value;
+  const action = document.getElementById('activityFilterAction')?.value;
+  if (category) params.set('category', category);
+  if (action) params.set('action', action);
+  return params;
+}
+
+function formatActivityDate(value) {
+  const date = new Date(value.endsWith('Z') ? value : `${value}Z`);
+  if (Number.isNaN(date.getTime())) return '';
+  return new Intl.DateTimeFormat(undefined, {
+    month: 'short', day: 'numeric', year: date.getFullYear() === new Date().getFullYear() ? undefined : 'numeric',
+    hour: 'numeric', minute: '2-digit'
+  }).format(date);
+}
+
+function activityIcon(category) {
+  return { movies: '🎬', 'tv-shows': '📺', anime: '🎌', 'video-games': '🎮', music: '🎵', books: '📚' }[category] || '•';
+}
+
+function buildActivityCard(entry) {
+  const article = document.createElement('article');
+  article.className = 'activity-entry';
+  const marker = document.createElement('span');
+  marker.className = 'activity-entry__marker';
+  marker.textContent = activityIcon(entry.category);
+  const copy = document.createElement('div');
+  copy.className = 'activity-entry__copy';
+  const top = document.createElement('div');
+  top.className = 'activity-entry__top';
+  const heading = document.createElement('h4');
+  heading.textContent = entry.title;
+  const date = document.createElement('time');
+  date.dateTime = entry.occurred_at;
+  date.textContent = formatActivityDate(entry.occurred_at);
+  top.append(heading, date);
+  const meta = document.createElement('p');
+  meta.className = 'activity-entry__meta';
+  meta.textContent = `${entry.action_label} · ${entry.category_label}${entry.rating != null ? ` · ${Number(entry.rating).toFixed(1)}/10 snapshot` : ''}`;
+  copy.append(top, meta);
+  if (entry.note) {
+    const note = document.createElement('p');
+    note.className = 'activity-entry__note';
+    note.textContent = entry.note;
+    copy.appendChild(note);
+  }
+  const actions = document.createElement('div');
+  actions.className = 'activity-entry__actions';
+  const open = document.createElement('button');
+  open.type = 'button';
+  open.className = 'activity-entry__open';
+  open.dataset.action = 'pulse-open-item';
+  open.dataset.pulseTab = entry.category;
+  open.textContent = 'Open library';
+  const remove = document.createElement('button');
+  remove.type = 'button';
+  remove.className = 'activity-entry__delete';
+  remove.dataset.action = 'delete-activity';
+  remove.dataset.activityId = entry.id;
+  remove.textContent = 'Remove entry';
+  actions.append(open, remove);
+  article.append(marker, copy, actions);
+  return article;
+}
+
+async function loadActivityTimeline(reset = true) {
+  if (!hasStoredAuth()) return;
+  const container = document.getElementById('activityTimeline');
+  const more = document.getElementById('activityLoadMore');
+  if (!container || !more) return;
+  if (reset) container.textContent = 'Loading your private history…';
+  try {
+    const response = await authenticatedFetch(`${API_BASE}/activity/?${activityQuery(reset)}`);
+    if (!response.ok) throw new Error('Unable to load journal');
+    const entries = await response.json();
+    if (reset) container.replaceChildren();
+    entries.forEach(entry => container.appendChild(buildActivityCard(entry)));
+    if (reset && !entries.length) {
+      const empty = document.createElement('div');
+      empty.className = 'activity-empty';
+      empty.innerHTML = '<strong>Your journal starts with the next moment.</strong><span>Log something you begin, revisit, or want to remember. Existing library history has not been guessed or backfilled.</span>';
+      container.appendChild(empty);
+    }
+    activityTimelineOffset += entries.length;
+    more.hidden = entries.length < ACTIVITY_PAGE_SIZE;
+  } catch (error) {
+    if (reset) container.textContent = 'Could not load your journal. Please try again.';
+    more.hidden = true;
+  }
+}
+
+function renderActivityRecap(recap) {
+  const period = document.getElementById('activityRecapPeriod');
+  const content = document.getElementById('activityRecapContent');
+  const newer = document.getElementById('activityNewerWeek');
+  if (!period || !content || !newer) return;
+  period.textContent = recap.period_label;
+  newer.disabled = activityWeekOffset === 0;
+  content.replaceChildren();
+  const stats = document.createElement('div');
+  stats.className = 'activity-recap__stats';
+  [[recap.entry_count, 'moments'], [recap.completed_count, 'finished'], [recap.reflection_count, 'with notes']].forEach(([value, label]) => {
+    const stat = document.createElement('div');
+    stat.className = 'activity-recap__stat';
+    const number = document.createElement('strong'); number.textContent = String(value || 0);
+    const caption = document.createElement('span'); caption.textContent = label;
+    stat.append(number, caption); stats.appendChild(stat);
+  });
+  content.appendChild(stats);
+  const categories = Array.isArray(recap.category_counts) ? recap.category_counts : [];
+  if (categories.length) {
+    const mix = document.createElement('p');
+    mix.className = 'activity-recap__mix';
+    mix.textContent = categories.map(item => `${activityIcon(item.category)} ${item.label} ${item.count}`).join('   ·   ');
+    content.appendChild(mix);
+  } else {
+    const empty = document.createElement('p');
+    empty.className = 'activity-recap__empty';
+    empty.textContent = activityWeekOffset ? 'No moments were logged this week.' : 'Your week is unwritten. Log one media moment whenever it feels worth remembering.';
+    content.appendChild(empty);
+  }
+}
+
+async function loadActivityRecap() {
+  if (!hasStoredAuth()) return;
+  try {
+    const timezoneOffset = new Date().getTimezoneOffset();
+    const response = await authenticatedFetch(`${API_BASE}/activity/weekly/?offset=${activityWeekOffset}&tz_offset_minutes=${timezoneOffset}`);
+    if (response.ok) renderActivityRecap(await response.json());
+  } catch (error) {
+    const content = document.getElementById('activityRecapContent');
+    if (content) content.textContent = 'Could not load this week right now.';
+  }
+}
+
+function changeActivityWeek(delta) {
+  activityWeekOffset = Math.max(0, Math.min(52, activityWeekOffset + delta));
+  loadActivityRecap();
+}
+
+async function createActivityEntry(event) {
+  event.preventDefault();
+  const status = document.getElementById('activityFormStatus');
+  const localWhen = document.getElementById('activityOccurredAt').value;
+  const payload = {
+    category: document.getElementById('activityCategory').value,
+    item_id: Number(document.getElementById('activityItem').value),
+    action: document.getElementById('activityAction').value,
+    note: document.getElementById('activityNote').value,
+    occurred_at: localWhen ? new Date(localWhen).toISOString() : new Date().toISOString(),
+  };
+  if (!payload.item_id) { status.textContent = 'Choose something from your library first.'; return; }
+  status.textContent = 'Saving…';
+  try {
+    const response = await authenticatedFetch(`${API_BASE}/activity/`, {
+      method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload),
+    });
+    if (!response.ok) {
+      const body = await response.json().catch(() => ({}));
+      throw new Error(body.detail || 'Could not save this moment');
+    }
+    document.getElementById('activityNote').value = '';
+    document.getElementById('activityOccurredAt').value = localDateTimeValue();
+    status.textContent = 'Moment saved.';
+    await Promise.all([loadActivityTimeline(true), loadActivityRecap()]);
+  } catch (error) {
+    status.textContent = error.message || 'Could not save this moment. Please try again.';
+  }
+}
+
+async function deleteActivityEntry(entryId) {
+  if (!Number.isInteger(entryId) || entryId < 1) return;
+  if (!confirm('Remove this journal entry? The media item will stay in your library.')) return;
+  try {
+    const response = await authenticatedFetch(`${API_BASE}/activity/${entryId}`, { method: 'DELETE' });
+    if (!response.ok) throw new Error('Unable to remove journal entry');
+    await Promise.all([loadActivityTimeline(true), loadActivityRecap()]);
+  } catch (error) {
+    alert('Could not remove that journal entry. Please try again.');
+  }
+}
+
+async function loadActivityJournal() {
+  setupActivityJournal();
+  await Promise.all([populateActivityItems(), loadActivityTimeline(true), loadActivityRecap()]);
+}
+
+let collectionsCache = [];
+let collectionPickerTarget = null;
+
+async function loadCollections() {
+  if (!hasStoredAuth()) return;
+  try {
+    const response = await authenticatedFetch(`${API_BASE}/collections/`);
+    if (!response.ok) throw new Error('Unable to load collections');
+    collectionsCache = await response.json();
+    renderCollections(collectionsCache);
+    loadModeratorInsights();
+  } catch (error) {
+    const container = document.getElementById('collectionsList');
+    if (container) container.textContent = 'Could not load collections. Please try again.';
+  }
+}
+
+function renderCollections(collections) {
+  const container = document.getElementById('collectionsList');
+  if (!container) return;
+  container.replaceChildren();
+  if (!collections.length) {
+    const empty = document.createElement('p');
+    empty.className = 'collections-empty';
+    empty.textContent = 'Start with a feeling, a theme, or a future plan. Then add anything from your library — including anime.';
+    container.appendChild(empty);
+    return;
+  }
+  collections.forEach((collection) => {
+    const card = document.createElement('article');
+    card.className = 'collection-card';
+    const header = document.createElement('div');
+    header.className = 'collection-card__header';
+    const copy = document.createElement('div');
+    const name = document.createElement('h3');
+    name.textContent = collection.name;
+    const count = document.createElement('span');
+    count.className = 'collection-card__count';
+    count.textContent = `${collection.items.length} item${collection.items.length === 1 ? '' : 's'}`;
+    copy.append(name, count);
+    const actions = document.createElement('div');
+    actions.className = 'collection-card__actions';
+    const status = document.createElement('span');
+    status.className = `collection-card__status${collection.is_public ? ' is-public' : ''}`;
+    status.textContent = collection.is_public
+      ? ({
+          approved: 'Public · Discoverable',
+          rejected: 'Public · Blocked',
+          suspended: 'Public · Temporarily unlisted',
+        }[collection.moderation_status] || 'Public · Direct link only')
+      : 'Private';
+    const edit = document.createElement('button');
+    edit.type = 'button';
+    edit.className = 'collection-card__edit';
+    edit.dataset.action = 'open-collection-studio';
+    edit.dataset.collectionId = collection.id;
+    edit.textContent = 'Edit & share';
+    actions.append(status, edit);
+    if (collection.is_public && collection.public_url) {
+      const publicLink = document.createElement('a');
+      publicLink.className = 'collection-card__public-link';
+      publicLink.href = collection.public_url;
+      publicLink.target = '_blank';
+      publicLink.rel = 'noopener noreferrer';
+      publicLink.textContent = 'View public page ↗';
+      actions.appendChild(publicLink);
+    }
+    const remove = document.createElement('button');
+    remove.type = 'button';
+    remove.className = 'collection-card__delete';
+    remove.dataset.action = 'delete-collection';
+    remove.dataset.collectionId = collection.id;
+    remove.textContent = 'Delete';
+    actions.appendChild(remove);
+    header.append(copy, actions);
+    card.appendChild(header);
+    if (collection.description) {
+      const description = document.createElement('p');
+      description.className = 'collection-card__description';
+      description.textContent = collection.description;
+      card.appendChild(description);
+    }
+    const itemList = document.createElement('div');
+    itemList.className = 'collection-card__items';
+    if (!collection.items.length) {
+      const empty = document.createElement('p');
+      empty.className = 'collection-card__empty';
+      empty.textContent = 'Open any media tab and choose Collect to add the first item.';
+      itemList.appendChild(empty);
+    } else {
+      collection.items.forEach((item, index) => {
+        const row = document.createElement('div');
+        row.className = `collection-card__item${item.available ? '' : ' is-unavailable'}`;
+        const itemCopy = document.createElement('div');
+        const title = document.createElement('strong');
+        title.textContent = item.title;
+        const meta = document.createElement('span');
+        meta.textContent = item.available ? item.category_label : 'Deleted library item';
+        itemCopy.append(title, meta);
+        if (item.curator_note) {
+          const note = document.createElement('p');
+          note.className = 'collection-card__item-note';
+          note.textContent = item.curator_note;
+          itemCopy.appendChild(note);
+        }
+        const controls = document.createElement('div');
+        controls.className = 'collection-card__item-controls';
+        const up = document.createElement('button');
+        up.type = 'button';
+        up.dataset.action = 'move-collection-item';
+        up.dataset.collectionId = collection.id;
+        up.dataset.collectionItemId = item.id;
+        up.dataset.collectionPosition = Math.max(index - 1, 0);
+        up.disabled = index === 0;
+        up.setAttribute('aria-label', `Move ${item.title} up`);
+        up.textContent = '↑';
+        const down = document.createElement('button');
+        down.type = 'button';
+        down.dataset.action = 'move-collection-item';
+        down.dataset.collectionId = collection.id;
+        down.dataset.collectionItemId = item.id;
+        down.dataset.collectionPosition = index + 1;
+        down.disabled = index === collection.items.length - 1;
+        down.setAttribute('aria-label', `Move ${item.title} down`);
+        down.textContent = '↓';
+        const removeItem = document.createElement('button');
+        removeItem.type = 'button';
+        removeItem.dataset.action = 'remove-collection-item';
+        removeItem.dataset.collectionId = collection.id;
+        removeItem.dataset.collectionItemId = item.id;
+        removeItem.textContent = 'Remove';
+        const editNote = document.createElement('button');
+        editNote.type = 'button';
+        editNote.dataset.action = 'edit-collection-note';
+        editNote.dataset.collectionId = collection.id;
+        editNote.dataset.collectionItemId = item.id;
+        editNote.textContent = item.curator_note ? 'Edit note' : 'Add note';
+        controls.append(up, down, editNote, removeItem);
+        row.append(itemCopy, controls);
+        itemList.appendChild(row);
+      });
+    }
+    card.appendChild(itemList);
+    container.appendChild(card);
+  });
+}
+
+function moderatorNumber(value) {
+  return new Intl.NumberFormat(undefined, { maximumFractionDigits: 1 }).format(Number(value) || 0);
+}
+
+function moderatorDate(value, includeTime = false) {
+  if (!value) return 'No activity yet';
+  const parsed = new Date(value);
+  if (Number.isNaN(parsed.getTime())) return 'Unknown';
+  return new Intl.DateTimeFormat(undefined, includeTime
+    ? { dateStyle: 'medium', timeStyle: 'short' }
+    : { dateStyle: 'medium' }).format(parsed);
+}
+
+function appendModeratorMetric(container, label, value, detail) {
+  const card = document.createElement('article');
+  card.className = 'moderator-metric';
+  const labelElement = document.createElement('span');
+  labelElement.textContent = label;
+  const valueElement = document.createElement('strong');
+  valueElement.textContent = moderatorNumber(value);
+  const detailElement = document.createElement('small');
+  detailElement.textContent = detail;
+  card.append(labelElement, valueElement, detailElement);
+  container.appendChild(card);
+}
+
+function renderModeratorStatList(container, rows) {
+  container.replaceChildren();
+  rows.forEach(([label, value]) => {
+    const row = document.createElement('div');
+    const term = document.createElement('dt');
+    term.textContent = label;
+    const description = document.createElement('dd');
+    description.textContent = moderatorNumber(value);
+    row.append(term, description);
+    container.appendChild(row);
+  });
+}
+
+function renderModeratorInsights(data) {
+  const panel = document.getElementById('moderatorInsightsPanel');
+  const metricGrid = document.getElementById('moderatorMetricGrid');
+  if (!panel || !metricGrid) return;
+  panel.hidden = false;
+  document.getElementById('moderatorInsightsGenerated').textContent = `Updated ${moderatorDate(data.generated_at, true)}`;
+  document.getElementById('moderatorInsightsPrivacy').textContent = data.privacy_note;
+
+  metricGrid.replaceChildren();
+  appendModeratorMetric(metricGrid, 'Accounts', data.users.total, `${moderatorNumber(data.users.new_30_days)} joined in 30 days`);
+  appendModeratorMetric(metricGrid, 'Libraries started', data.users.with_library_items, `${moderatorNumber(data.users.active)} active · ${moderatorNumber(data.users.verified)} verified`);
+  appendModeratorMetric(metricGrid, 'Library items', data.content.total_items, `${moderatorNumber(data.content.completion_percentage)}% marked complete`);
+  appendModeratorMetric(metricGrid, 'Public reach', data.moderation.views, `${moderatorNumber(data.moderation.helpful)} helpful votes`);
+
+  const growth = document.getElementById('moderatorGrowthChart');
+  const maxSignups = Math.max(1, ...data.growth.map(day => day.signups));
+  growth.replaceChildren();
+  data.growth.forEach(day => {
+    const bar = document.createElement('span');
+    bar.style.height = `${Math.max(3, (day.signups / maxSignups) * 100)}%`;
+    bar.title = `${moderatorDate(`${day.date}T12:00:00`)}: ${day.signups} new account${day.signups === 1 ? '' : 's'}`;
+    growth.appendChild(bar);
+  });
+  document.getElementById('moderatorGrowthTotal').textContent = `${moderatorNumber(data.users.new_30_days)} total`;
+
+  const activationStages = document.getElementById('moderatorActivationStages');
+  activationStages.replaceChildren();
+  data.activation.forEach((stage, index) => {
+    const item = document.createElement('article');
+    item.className = 'moderator-activation-stage';
+    const step = document.createElement('span');
+    step.textContent = String(index + 1).padStart(2, '0');
+    const copy = document.createElement('div');
+    const label = document.createElement('strong');
+    label.textContent = stage.label;
+    const rate = document.createElement('small');
+    rate.textContent = index === 0
+      ? 'Baseline'
+      : `${moderatorNumber(stage.step_rate)}% from prior step · ${moderatorNumber(stage.account_rate)}% of accounts`;
+    copy.append(label, rate);
+    const count = document.createElement('b');
+    count.textContent = moderatorNumber(stage.count);
+    item.append(step, copy, count);
+    activationStages.appendChild(item);
+  });
+
+  const categoryStats = document.getElementById('moderatorCategoryStats');
+  const maxCategory = Math.max(1, ...data.content.categories.map(category => category.total));
+  categoryStats.replaceChildren();
+  data.content.categories.forEach(category => {
+    const row = document.createElement('div');
+    row.className = 'moderator-category-row';
+    const label = document.createElement('span');
+    label.textContent = category.label;
+    const bar = document.createElement('div');
+    bar.className = 'moderator-category-bar';
+    const fill = document.createElement('i');
+    fill.style.width = `${(category.total / maxCategory) * 100}%`;
+    bar.appendChild(fill);
+    const total = document.createElement('strong');
+    total.textContent = moderatorNumber(category.total);
+    row.append(label, bar, total);
+    categoryStats.appendChild(row);
+  });
+  document.getElementById('moderatorCompletionRate').textContent = `${moderatorNumber(data.content.completion_percentage)}% complete`;
+
+  renderModeratorStatList(document.getElementById('moderatorEngagementStats'), [
+    ['Journal entries · 7 days', data.engagement.activity_entries_7_days],
+    ['Journal entries · 30 days', data.engagement.activity_entries_30_days],
+    ['Journal contributors · 30 days', data.engagement.active_journal_users_30_days],
+    ['Completion moments', data.engagement.completion_moments],
+    ['Next Up entries', data.engagement.next_up_items],
+    ['Rated library items', data.content.rated_items],
+    ['Written reviews', data.content.reviewed_items],
+    ['Public reviews', data.content.public_reviews],
+    ['Custom tracker items', data.content.custom_items],
+    ['Friendships', data.engagement.friendships],
+    ['Recommendation requests', data.engagement.recommendation_requests],
+    ['Recommendation replies', data.engagement.recommendation_submissions],
+    ['Welcome Back shown', data.engagement.return_deck_shown],
+    ['Welcome Back opened', data.engagement.return_deck_opened],
+    ['Welcome Back dismissed', data.engagement.return_deck_dismissed],
+  ]);
+  const safetyRows = [
+    ['Public collections', data.moderation.public],
+    ['Direct-link only', data.moderation.pending],
+    ['Discoverable', data.moderation.approved],
+    ['Automatically unlisted', data.moderation.collection_unlistings],
+    ['Emergency blocks', data.moderation.rejected],
+    ['Reports', data.moderation.reports],
+    ['Public review reports', data.moderation.review_reports],
+    ['Review versions unlisted', data.moderation.review_unlistings],
+    ['Unverified over 7 days', data.users.unverified_older_than_7_days],
+    ['Deactivated accounts', data.users.deactivated],
+    ['Empty libraries', data.users.without_library_items],
+  ];
+  data.moderation.reports_by_reason.slice(0, 3).forEach(report => {
+    safetyRows.push([`Reports · ${report.reason}`, report.count]);
+  });
+  renderModeratorStatList(document.getElementById('moderatorSafetyStats'), safetyRows);
+
+  const usersBody = document.getElementById('moderatorUsersBody');
+  usersBody.replaceChildren();
+  data.recent_users.forEach(user => {
+    const row = document.createElement('tr');
+    const username = document.createElement('td');
+    username.textContent = user.username;
+    const statusCell = document.createElement('td');
+    const status = document.createElement('span');
+    status.className = `moderator-user-status${user.is_active && user.is_verified ? ' is-healthy' : ''}`;
+    status.textContent = !user.is_active ? 'Inactive' : user.is_verified ? 'Verified' : 'Unverified';
+    statusCell.appendChild(status);
+    const values = [
+      moderatorDate(user.joined_at),
+      moderatorNumber(user.library_items),
+      moderatorNumber(user.activity_entries),
+      moderatorNumber(user.public_collections),
+      moderatorDate(user.last_activity_at),
+    ];
+    row.append(username, statusCell, ...values.map(value => {
+      const cell = document.createElement('td');
+      cell.textContent = value;
+      return cell;
+    }));
+    usersBody.appendChild(row);
+  });
+}
+
+async function loadModeratorInsights() {
+  const panel = document.getElementById('moderatorInsightsPanel');
+  if (!panel) return;
+  try {
+    const response = await authenticatedFetch(`${API_BASE}/collections/moderation/insights`);
+    if (!response.ok) throw new Error('Moderator insights unavailable');
+    renderModeratorInsights(await response.json());
+  } catch (error) {
+    panel.hidden = true;
+  }
+}
+
+async function createCollection(event) {
+  event.preventDefault();
+  const name = document.getElementById('collectionName').value;
+  const description = document.getElementById('collectionDescription').value;
+  try {
+    const response = await authenticatedFetch(`${API_BASE}/collections/`, {
+      method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ name, description }),
+    });
+    if (!response.ok) throw new Error('Unable to create collection');
+    event.target.reset();
+    await loadCollections();
+  } catch (error) {
+    alert('Could not create that collection. Please try again.');
+  }
+}
+
+function openCollectionStudio(collectionId) {
+  const collection = collectionsCache.find(item => item.id === collectionId);
+  if (!collection) return;
+  document.getElementById('collectionStudioId').value = String(collection.id);
+  document.getElementById('collectionStudioName').value = collection.name || '';
+  document.getElementById('collectionStudioDescription').value = collection.description || '';
+  document.getElementById('collectionStudioCover').value = collection.cover_url || '';
+  document.getElementById('collectionStudioPublic').checked = Boolean(collection.is_public);
+  const error = document.getElementById('collectionStudioError');
+  error.textContent = '';
+  error.hidden = true;
+  renderCollectionReadinessChecklist(collection);
+  document.getElementById('collectionStudioModal').style.display = 'flex';
+}
+
+function renderCollectionReadinessChecklist(collection) {
+  const list = document.getElementById('collectionReadinessChecklist');
+  if (!list || !collection) return;
+  const description = document.getElementById('collectionStudioDescription')?.value.trim() || '';
+  const title = document.getElementById('collectionStudioName')?.value.trim() || '';
+  const availableItems = collection.items.filter(item => item.available).length;
+  const savedTextIsCurrent = description === (collection.description || '').trim() && title === collection.name;
+  const rows = [
+    [description.length >= 300, `${Math.min(description.length, 300)}/300 introduction characters`],
+    [availableItems >= 3, `${Math.min(availableItems, 3)}/3 available titles`],
+    [
+      savedTextIsCurrent ? Boolean(collection.readiness?.discover_ready) : null,
+      savedTextIsCurrent
+        ? (collection.readiness?.discover_ready ? 'Automated discovery checks passed' : 'Revise the title or introduction to pass the remaining discovery checks')
+        : 'Automated discovery checks run when you save',
+    ],
+  ];
+  list.replaceChildren();
+  rows.forEach(([ready, label]) => {
+    const item = document.createElement('li');
+    item.className = ready === true ? 'is-ready' : ready === false ? 'needs-work' : 'is-pending';
+    item.textContent = `${ready === true ? '✓' : ready === false ? '•' : '…'} ${label}`;
+    list.appendChild(item);
+  });
+}
+
+function updateCollectionReadinessDraft() {
+  const collectionId = Number(document.getElementById('collectionStudioId')?.value);
+  const collection = collectionsCache.find(item => item.id === collectionId);
+  if (collection) renderCollectionReadinessChecklist(collection);
+}
+
+function closeCollectionStudio() {
+  const modal = document.getElementById('collectionStudioModal');
+  if (modal) modal.style.display = 'none';
+}
+
+async function saveCollectionStudio(event) {
+  event.preventDefault();
+  const collectionId = Number(document.getElementById('collectionStudioId').value);
+  if (!Number.isInteger(collectionId) || collectionId < 1) return;
+  const error = document.getElementById('collectionStudioError');
+  const payload = {
+    name: document.getElementById('collectionStudioName').value,
+    description: document.getElementById('collectionStudioDescription').value,
+    cover_url: document.getElementById('collectionStudioCover').value || null,
+    is_public: document.getElementById('collectionStudioPublic').checked,
+  };
+  error.hidden = true;
+  try {
+    const response = await authenticatedFetch(`${API_BASE}/collections/${collectionId}`, {
+      method: 'PATCH', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload),
+    });
+    if (!response.ok) {
+      const body = await response.json().catch(() => ({}));
+      error.textContent = body.detail || 'Could not save this collection. Please try again.';
+      error.hidden = false;
+      return;
+    }
+    closeCollectionStudio();
+    await loadCollections();
+  } catch (requestError) {
+    error.textContent = 'Could not save this collection. Please try again.';
+    error.hidden = false;
+  }
+}
+
+async function openCollectionPicker(category, itemId, itemTitle) {
+  if (!category || !Number.isInteger(itemId) || itemId < 1) return;
+  collectionPickerTarget = { category, itemId, itemTitle: itemTitle || 'this item' };
+  await loadCollections();
+  const options = document.getElementById('collectionPickerOptions');
+  const title = document.getElementById('collectionPickerItemTitle');
+  if (!options || !title) return;
+  title.textContent = `Choose a collection for ${collectionPickerTarget.itemTitle}.`;
+  options.replaceChildren();
+  if (!collectionsCache.length) {
+    const empty = document.createElement('p');
+    empty.textContent = 'Create your first collection in the Collections tab, then come back to add this item.';
+    options.appendChild(empty);
+  } else {
+    collectionsCache.forEach((collection) => {
+      const button = document.createElement('button');
+      button.type = 'button';
+      button.className = 'collection-picker-modal__option';
+      button.dataset.action = 'add-to-collection';
+      button.dataset.collectionId = collection.id;
+      button.textContent = collection.name;
+      options.appendChild(button);
+    });
+  }
+  document.getElementById('collectionPickerModal').style.display = 'flex';
+}
+
+function closeCollectionPicker() {
+  const modal = document.getElementById('collectionPickerModal');
+  if (modal) modal.style.display = 'none';
+  collectionPickerTarget = null;
+}
+
+async function addToCollection(collectionId) {
+  if (!collectionPickerTarget || !collectionId) return;
+  try {
+    const response = await authenticatedFetch(`${API_BASE}/collections/${collectionId}/items`, {
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ category: collectionPickerTarget.category, item_id: collectionPickerTarget.itemId }),
+    });
+    if (response.status === 409) { alert('That item is already in this collection.'); return; }
+    if (!response.ok) throw new Error('Unable to add item');
+    closeCollectionPicker();
+    loadCollections();
+  } catch (error) {
+    alert('Could not add that item to the collection. Please try again.');
+  }
+}
+
+async function moveCollectionItem(collectionId, itemId, position) {
+  try {
+    const response = await authenticatedFetch(`${API_BASE}/collections/${collectionId}/items/${itemId}/position`, {
+      method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ position }),
+    });
+    if (!response.ok) throw new Error('Unable to move item');
+    loadCollections();
+  } catch (error) { alert('Could not reorder this collection. Please try again.'); }
+}
+
+async function editCollectionItemNote(collectionId, itemId) {
+  const collection = collectionsCache.find(item => item.id === collectionId);
+  const item = collection?.items.find(entry => entry.id === itemId);
+  if (!item) return;
+  const curatorNote = prompt('What should readers notice about this pick?', item.curator_note || '');
+  if (curatorNote === null) return;
+  if (curatorNote.length > 500) {
+    alert('Curator notes can be up to 500 characters.');
+    return;
+  }
+  try {
+    const response = await authenticatedFetch(`${API_BASE}/collections/${collectionId}/items/${itemId}`, {
+      method: 'PATCH', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ curator_note: curatorNote }),
+    });
+    if (!response.ok) throw new Error('Unable to update note');
+    loadCollections();
+  } catch (error) { alert('Could not save that curator note. Please try again.'); }
+}
+
+async function removeCollectionItem(collectionId, itemId) {
+  try {
+    const response = await authenticatedFetch(`${API_BASE}/collections/${collectionId}/items/${itemId}`, { method: 'DELETE' });
+    if (!response.ok) throw new Error('Unable to remove item');
+    loadCollections();
+  } catch (error) { alert('Could not remove that item. Please try again.'); }
+}
+
+async function deleteCollection(collectionId) {
+  if (!confirm('Delete this collection? Its media entries will stay in your library.')) return;
+  try {
+    const response = await authenticatedFetch(`${API_BASE}/collections/${collectionId}`, { method: 'DELETE' });
+    if (!response.ok) throw new Error('Unable to delete collection');
+    loadCollections();
+  } catch (error) { alert('Could not delete that collection. Please try again.'); }
+}
+
+// ============================================================================
+// First-library guidance
+// ============================================================================
+
+const LAUNCHPAD_DISMISS_KEY = 'omnitrackr_library_launchpad_dismissed';
+let launchpadRefreshTimer = null;
+let todaysPickOffset = 0;
+let todaysPickCandidateCount = 0;
+let todaysPickRequest = 0;
+let todaysPickSelection = null;
+let returnDeckActive = false;
+let returnDeckPending = false;
+let returnDeckBootstrapComplete = false;
+let returnDeckEngagementToken = null;
+let returnDeckItems = [];
+let decisionCardsRefreshPromise = null;
+let launchpadDecisionRefreshRequested = false;
+let initialMovieLibraryLoad = true;
+
+function getReturnPromptContext() {
+  try {
+    const context = JSON.parse(sessionStorage.getItem('omnitrackr_return_prompt') || 'null');
+    const daysAway = Number(context?.days_away);
+    const createdAt = Number(context?.created_at);
+    const engagementToken = context?.engagement_token;
+    if (
+      !context
+      || !Number.isFinite(daysAway)
+      || daysAway < 3
+      || daysAway > 90
+      || !Number.isFinite(createdAt)
+      || createdAt > Date.now() + 60000
+      || Date.now() - createdAt > 86400000
+      || typeof engagementToken !== 'string'
+      || engagementToken.length < 32
+      || engagementToken.length > 512
+    ) {
+      sessionStorage.removeItem('omnitrackr_return_prompt');
+      return null;
+    }
+    return context;
+  } catch (error) {
+    try {
+      sessionStorage.removeItem('omnitrackr_return_prompt');
+    } catch (storageError) {
+      // The optional prompt remains disabled when storage is unavailable.
+    }
+    return null;
+  }
+}
+
+function saveReturnPromptContext(context) {
+  try {
+    sessionStorage.setItem('omnitrackr_return_prompt', JSON.stringify(context));
+  } catch (error) {
+    // The deck can still be used without session storage.
+  }
+}
+
+function clearReturnPromptContext() {
+  try {
+    sessionStorage.removeItem('omnitrackr_return_prompt');
+  } catch (error) {
+    // Nothing else is required to dismiss an optional prompt.
+  }
+}
+
+async function recordReturnDeckEngagement(action, engagementToken = returnDeckEngagementToken) {
+  if (!engagementToken) return false;
+  try {
+    const response = await authenticatedFetch(`${API_BASE}/statistics/return-deck/engagement`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ action, engagement_token: engagementToken }),
+    });
+    return response.ok;
+  } catch (error) {
+    // Anonymous product-health totals must never interrupt the dashboard.
+    return false;
+  }
+}
+
+function makeReturnDeckItem(item, label, detail, primary = false) {
+  const index = returnDeckItems.push(item) - 1;
+  const card = document.createElement('article');
+  card.className = `return-deck__item${primary ? ' return-deck__item--primary' : ''}`;
+  const eyebrow = document.createElement('span');
+  eyebrow.className = 'return-deck__item-label';
+  eyebrow.textContent = label;
+  const title = document.createElement('strong');
+  title.textContent = item.title;
+  const meta = document.createElement('span');
+  meta.className = 'return-deck__item-meta';
+  meta.textContent = `${item.category_label} · ${detail}`;
+  const button = document.createElement('button');
+  button.type = 'button';
+  button.className = 'return-deck__open';
+  button.dataset.action = 'open-return-deck-item';
+  button.dataset.returnDeckIndex = String(index);
+  button.textContent = label === 'Add context' ? 'Open item' : 'Open it';
+  card.append(eyebrow, title, meta, button);
+  return card;
+}
+
+function renderReturnDeck(payload, context) {
+  const deck = document.getElementById('returnDeck');
+  const actions = document.getElementById('returnDeckActions');
+  const recapElement = document.getElementById('returnDeckRecap');
+  if (!deck || !actions || !payload?.eligible) return false;
+
+  returnDeckItems = [];
+  actions.replaceChildren();
+  if (payload.primary) {
+    actions.appendChild(makeReturnDeckItem(payload.primary, 'Start here', payload.primary.reason, true));
+  }
+  if (payload.alternative) {
+    actions.appendChild(makeReturnDeckItem(payload.alternative, 'Another option', payload.alternative.status_label));
+  }
+  if (payload.reflection) {
+    const prompts = Array.isArray(payload.reflection.prompts) ? payload.reflection.prompts.join(' · ') : 'Add a personal note';
+    actions.appendChild(makeReturnDeckItem(payload.reflection, 'Add context', prompts));
+  }
+
+  const days = Number(payload.days_away) || Number(context.days_away);
+  document.getElementById('returnDeckSummary').textContent =
+    `It has been ${days} or more days since your previous visit. Here are a few useful ways back in—nothing new to manage.`;
+  const recap = payload.recap || {};
+  const recapParts = [];
+  if (recap.entry_count) recapParts.push(`${recap.entry_count} journal moment${recap.entry_count === 1 ? '' : 's'}`);
+  if (recap.completed_count) recapParts.push(`${recap.completed_count} finished`);
+  if (recap.reflection_count) recapParts.push(`${recap.reflection_count} with a reflection`);
+  if (recap.top_category_label) recapParts.push(`${recap.top_category_label} was most active`);
+  recapElement.textContent = recapParts.length
+    ? `Since your previous visit: ${recapParts.join(' · ')}.`
+    : 'Your private library is ready when you are; no activity or streak is required.';
+
+  returnDeckActive = true;
+  returnDeckEngagementToken = context.engagement_token;
+  document.getElementById('todaysPick')?.setAttribute('hidden', '');
+  document.getElementById('libraryPulse')?.setAttribute('hidden', '');
+  deck.removeAttribute('hidden');
+  if (!context.shown) {
+    context.shown = true;
+    saveReturnPromptContext(context);
+    recordReturnDeckEngagement('shown', context.engagement_token);
+  }
+  return true;
+}
+
+async function refreshReturnDeck() {
+  const context = getReturnPromptContext();
+  if (!context || !hasStoredAuth()) return false;
+  returnDeckPending = true;
+  try {
+    const params = new URLSearchParams({
+      days_away: String(context.days_away),
+    });
+    const response = await authenticatedFetch(`${API_BASE}/statistics/return-deck/?${params}`, {
+      headers: { 'X-Return-Prompt': context.engagement_token },
+    });
+    if (!response.ok) throw new Error('Could not load return deck');
+    const rendered = renderReturnDeck(await response.json(), context);
+    if (!rendered) clearReturnPromptContext();
+    return rendered;
+  } catch (error) {
+    // The established dashboard remains available if this optional layer fails.
+    clearReturnPromptContext();
+    return false;
+  } finally {
+    returnDeckPending = false;
+  }
+}
+
+async function refreshDashboardDecisionCards() {
+  if (!returnDeckBootstrapComplete || returnDeckActive || returnDeckPending) return false;
+  if (decisionCardsRefreshPromise) return decisionCardsRefreshPromise;
+  decisionCardsRefreshPromise = Promise.all([
+    refreshLibraryPulse(),
+    refreshTodaysPick(),
+  ]).then(() => true).finally(() => {
+    decisionCardsRefreshPromise = null;
+  });
+  return decisionCardsRefreshPromise;
+}
+
+async function bootstrapReturnDeck() {
+  try {
+    return await refreshReturnDeck();
+  } finally {
+    returnDeckBootstrapComplete = true;
+    scheduleLibraryLaunchpadRefresh(true);
+  }
+}
+
+function resolveReturnDeck(action) {
+  if (!returnDeckActive || !returnDeckEngagementToken) return;
+  const engagementToken = returnDeckEngagementToken;
+  returnDeckEngagementToken = null;
+  returnDeckActive = false;
+  recordReturnDeckEngagement(action, engagementToken);
+  clearReturnPromptContext();
+  returnDeckItems = [];
+  document.getElementById('returnDeck')?.setAttribute('hidden', '');
+  scheduleLibraryLaunchpadRefresh(true);
+}
+
+function dismissReturnDeck() {
+  resolveReturnDeck('dismissed');
+}
+
+async function openReturnDeckItem(index) {
+  const item = returnDeckItems[index];
+  if (!item) return;
+  const button = document.querySelector(`[data-action="open-return-deck-item"][data-return-deck-index="${index}"]`);
+  const opened = await openLibraryItem(item, {
+    button,
+    reasonElement: document.getElementById('returnDeckSummary'),
+  });
+  if (opened) resolveReturnDeck('opened');
+}
+
+function isLibraryLaunchpadDismissed() {
+  try {
+    return localStorage.getItem(LAUNCHPAD_DISMISS_KEY) === 'true';
+  } catch (error) {
+    return false;
+  }
+}
+
+function dismissLibraryLaunchpad() {
+  try {
+    localStorage.setItem(LAUNCHPAD_DISMISS_KEY, 'true');
+  } catch (error) {
+    // The launchpad remains functional when browser storage is unavailable.
+  }
+  document.getElementById('libraryLaunchpad')?.setAttribute('hidden', '');
+}
+
+function openLaunchpadAddItem(category = 'movies') {
+  const destinations = {
+    movies: { form: 'movieForm', input: 'movieTitle' },
+    'tv-shows': { form: 'tvForm', input: 'tvTitle' },
+    anime: { form: 'animeForm', input: 'animeTitle' },
+    'video-games': { form: 'videoGameForm', input: 'videoGameTitle' },
+    music: { form: 'musicForm', input: 'musicTitle' },
+    books: { form: 'bookForm', input: 'bookTitle' },
+  };
+  const destination = destinations[category] || destinations.movies;
+  switchTab(category in destinations ? category : 'movies');
+  const formContent = document.getElementById(`${destination.form}Content`);
+  if (formContent?.style.display === 'none') {
+    toggleCollapsible(destination.form);
+  }
+  window.setTimeout(() => document.getElementById(destination.input)?.focus(), 0);
+}
+
+function openLaunchpadInsights() {
+  switchTab('statistics');
+  const insights = document.getElementById('libraryInsightsStatsContent');
+  if (insights?.style.display === 'none') {
+    toggleCategoryAccordion('library-insights');
+  }
+}
+
+function openLaunchpadImport() {
+  // Reuse the existing preview-first importer; opening it performs no import.
+  window.openAccountModal();
+  document.getElementById('importStudio')?.scrollIntoView({ block: 'start' });
+  document.getElementById('importStudioSource')?.focus({ preventScroll: true });
+}
+
+function renderLibraryLaunchpad(insights) {
+  const launchpad = document.getElementById('libraryLaunchpad');
+  const summary = document.getElementById('libraryLaunchpadSummary');
+  const steps = document.getElementById('libraryLaunchpadSteps');
+  const categories = document.getElementById('libraryLaunchpadCategories');
+  if (!launchpad || !summary || !steps || !categories) return;
+  if (isLibraryLaunchpadDismissed()) {
+    launchpad.hidden = true;
+    return;
+  }
+
+  const total = Number(insights?.total_items || 0);
+  const rated = Number(insights?.rated_items || 0);
+  const reviewed = Number(insights?.reviewed_items || 0);
+  const completed = Number(insights?.completed_items || 0);
+  // Let the existing dashboard take over when these introductory steps are done.
+  if (total > 0 && rated > 0 && reviewed > 0) {
+    launchpad.hidden = true;
+    return;
+  }
+  const starterPaths = document.getElementById('libraryLaunchpadStarterPaths');
+  const insightsAction = document.getElementById('libraryLaunchpadInsights');
+  if (starterPaths) starterPaths.hidden = total > 0;
+  if (insightsAction) insightsAction.hidden = total === 0;
+  const launchpadSteps = [
+    { complete: total > 0, label: total ? `${total} item${total === 1 ? '' : 's'} saved` : 'Save your first title' },
+    { complete: rated > 0, label: rated ? `${rated} item${rated === 1 ? '' : 's'} rated` : 'Give one item a rating' },
+    { complete: reviewed > 0, label: reviewed ? `${reviewed} note${reviewed === 1 ? '' : 's'} written` : 'Leave a note for future you' },
+  ];
+
+  if (!total) {
+    summary.textContent = 'Start with one title you love, bring an existing list, or browse Discover for an idea. You only need one title to begin.';
+  } else if (total === 1) {
+    summary.textContent = 'Your first title is saved. Add a rating or private note using Edit in your library, or use Next up to put it on your shortlist.';
+  } else if (completed) {
+    summary.textContent = `${completed} finished so far. Add a rating or note when you want your library to tell a clearer story.`;
+  } else {
+    summary.textContent = 'Your library is taking shape. Mark progress, add a rating, or leave a note when a detail is worth remembering.';
+  }
+
+  categories.replaceChildren();
+  categories.hidden = total > 0;
+  if (!total) {
+    const choices = [
+      ['movies', 'a movie'], ['tv-shows', 'a TV show'], ['anime', 'an anime'],
+      ['video-games', 'a game'], ['music', 'an album'], ['books', 'a book'],
+    ];
+    choices.forEach(([category, label]) => {
+      const button = document.createElement('button');
+      button.type = 'button';
+      button.className = 'library-launchpad__category';
+      button.dataset.action = 'launchpad-choose-category';
+      button.dataset.launchpadCategory = category;
+      button.textContent = `Add ${label}`;
+      categories.appendChild(button);
+    });
+  }
+
+  steps.replaceChildren();
+  launchpadSteps.forEach((step) => {
+    const item = document.createElement('div');
+    item.className = `library-launchpad__step${step.complete ? ' is-complete' : ''}`;
+    const icon = document.createElement('span');
+    icon.className = 'library-launchpad__step-icon';
+    icon.textContent = step.complete ? '✓' : '○';
+    const label = document.createElement('span');
+    label.textContent = step.label;
+    item.append(icon, label);
+    steps.appendChild(item);
+  });
+  launchpad.removeAttribute('hidden');
+}
+
+function renderLibraryPulseList(container, items, emptyMessage) {
+  if (!container) return;
+  container.replaceChildren();
+  if (!items.length) {
+    const empty = document.createElement('p');
+    empty.className = 'library-pulse__empty';
+    empty.textContent = emptyMessage;
+    container.appendChild(empty);
+    return;
+  }
+
+  items.forEach((item) => {
+    const button = document.createElement('button');
+    button.type = 'button';
+    button.className = 'library-pulse__item';
+    button.dataset.action = 'pulse-open-item';
+    button.dataset.pulseTab = item.category;
+    const copy = document.createElement('span');
+    copy.className = 'library-pulse__item-copy';
+    const title = document.createElement('span');
+    title.className = 'library-pulse__item-title';
+    title.textContent = item.title;
+    const meta = document.createElement('span');
+    meta.className = 'library-pulse__item-meta';
+    const prompts = Array.isArray(item.prompts) && item.prompts.length ? item.prompts.join(' · ') : item.status_label;
+    meta.textContent = `${item.category_label} · ${prompts}`;
+    copy.append(title, meta);
+    const action = document.createElement('span');
+    action.className = 'library-pulse__item-action';
+    action.textContent = 'Open →';
+    button.append(copy, action);
+    container.appendChild(button);
+  });
+}
+
+function renderLibraryPulse(pulse) {
+  const pulseElement = document.getElementById('libraryPulse');
+  if (!pulseElement) return;
+  if (returnDeckActive) {
+    pulseElement.setAttribute('hidden', '');
+    return;
+  }
+  const continueItems = Array.isArray(pulse?.continue_items) ? pulse.continue_items : [];
+  const reflectionItems = Array.isArray(pulse?.reflection_items) ? pulse.reflection_items : [];
+  const nextUpItems = Array.isArray(pulse?.next_up_items) ? pulse.next_up_items : [];
+  if (!continueItems.length && !reflectionItems.length && !nextUpItems.length) {
+    pulseElement.setAttribute('hidden', '');
+    return;
+  }
+  renderLibraryPulseList(
+    document.getElementById('libraryPulseNextUp'),
+    nextUpItems,
+    'No queue yet. Use “Next up” on any item you want to make time for.'
+  );
+  renderLibraryPulseList(
+    document.getElementById('libraryPulseContinue'),
+    continueItems,
+    'Nothing unfinished right now. Add a future watch, read, listen, or play when inspiration strikes.'
+  );
+  renderLibraryPulseList(
+    document.getElementById('libraryPulseReflect'),
+    reflectionItems,
+    'Your saved items already have ratings and notes. Nice work keeping the story behind your library.'
+  );
+  pulseElement.removeAttribute('hidden');
+}
+
+function renderTodaysPick(payload) {
+  const section = document.getElementById('todaysPick');
+  const pick = payload?.pick;
+  if (!section) return;
+  if (returnDeckActive) {
+    section.setAttribute('hidden', '');
+    return;
+  }
+  todaysPickSelection = pick || null;
+  todaysPickCandidateCount = Number(payload?.candidate_count) || 0;
+  document.getElementById('todaysPickName').textContent = pick?.title || 'Nothing unfinished here yet.';
+  document.getElementById('todaysPickCategory').textContent = pick?.category_label || '';
+  document.getElementById('todaysPickReason').textContent = pick?.reason || 'Choose another category or add a title to your library.';
+  document.getElementById('todaysPickOpen').hidden = !pick;
+  document.getElementById('todaysPickAnother').hidden = todaysPickCandidateCount < 2;
+  section.removeAttribute('hidden');
+}
+
+async function refreshTodaysPick() {
+  if (!hasStoredAuth()) return;
+  const request = ++todaysPickRequest;
+  const open = document.getElementById('todaysPickOpen');
+  const another = document.getElementById('todaysPickAnother');
+  open.disabled = another.disabled = true;
+  const params = new URLSearchParams({ offset: String(todaysPickOffset) });
+  const category = document.getElementById('todaysPickFilter').value;
+  if (category) params.set('category', category);
+  try {
+    const response = await authenticatedFetch(`${API_BASE}/statistics/today/?${params}`);
+    if (!response.ok) throw new Error('Could not load a pick.');
+    const payload = await response.json();
+    if (request === todaysPickRequest) renderTodaysPick(payload);
+  } catch (error) {
+    if (request === todaysPickRequest) {
+      renderTodaysPick(null);
+      document.getElementById('todaysPickReason').textContent = 'Could not load a pick. Change the category to try again.';
+    }
+  } finally {
+    if (request === todaysPickRequest) open.disabled = another.disabled = false;
+  }
+}
+
+function tryAnotherPick() {
+  todaysPickOffset = (todaysPickOffset + 1) % Math.max(todaysPickCandidateCount, 1);
+  refreshTodaysPick();
+}
+
+async function openTodaysPick() {
+  return openLibraryItem(todaysPickSelection);
+}
+
+async function openLibraryItem(pick, options = {}) {
+  if (editingRowId !== null) {
+    alert('Save or cancel your current edit before opening another title.');
+    return false;
+  }
+  const source = LIBRARY_SEARCH_SOURCES.find(entry => entry.tab === pick?.category);
+  if (!source) return false;
+  const reason = options.reasonElement || document.getElementById('todaysPickReason');
+  if (getTabButton(source.tab)?.style.display === 'none') {
+    if (reason) reason.textContent = 'Enable this media category in your settings to open this title.';
+    return false;
+  }
+  const button = options.button || document.getElementById('todaysPickOpen');
+  if (button) button.disabled = true;
+  try {
+    // Let an existing list request finish before changing its search input.
+    const busy = () => ({ movies: isLoadingMovies, 'tv-shows': isLoadingTVShows,
+      anime: isLoadingAnime, 'video-games': isLoadingVideoGames,
+      music: isLoadingMusic, books: isLoadingBooks })[source.tab];
+    const deadline = Date.now() + 10000;
+    while (busy() && Date.now() < deadline) await new Promise(resolve => setTimeout(resolve, 50));
+    if (busy()) throw new Error('The library is still loading. Please try opening the title again.');
+    document.getElementById(source.input).value = pick.title;
+    const [, sortId] = libraryPageConfig(source.tab);
+    libraryPages.set(source.tab, { offset: 0, total: 0, focusId: Number(pick.id),
+      signature: JSON.stringify([pick.title, document.getElementById(sortId).value]) });
+    await switchTab(source.tab);
+    const row = document.querySelector(
+      `[data-next-up-category="${source.tab}"][data-next-up-item-id="${Number(pick.id)}"]`
+    )?.closest('tr');
+    if (!row) throw new Error('This title could not be located. Refresh your pick and try again.');
+    document.querySelectorAll('.pick-focused').forEach(element => element.classList.remove('pick-focused'));
+    row.classList.add('pick-focused');
+    row.tabIndex = -1;
+    row.focus({ preventScroll: true });
+    row.scrollIntoView({ block: 'center', behavior: 'auto' });
+    return true;
+  } catch (error) {
+    if (reason) reason.textContent = error.message || 'Could not open this title. Please try again.';
+    return false;
+  } finally {
+    if (button) button.disabled = false;
+  }
+}
+
+function renderNextUpQueue(items) {
+  const queueElement = document.getElementById('nextUpQueue');
+  const container = document.getElementById('nextUpQueueItems');
+  if (!queueElement || !container) return;
+
+  container.replaceChildren();
+  if (!items.length) {
+    const empty = document.createElement('p');
+    empty.className = 'next-up-queue__empty';
+    empty.textContent = 'Nothing is waiting in the wings. Add a title from any media list whenever you want to turn “someday” into a plan.';
+    container.appendChild(empty);
+  } else {
+    items.forEach((item, index) => {
+      const row = document.createElement('div');
+      row.className = `next-up-queue__item${item.available ? '' : ' is-unavailable'}`;
+      const order = document.createElement('span');
+      order.className = 'next-up-queue__order';
+      order.textContent = String(index + 1);
+      const copy = document.createElement('div');
+      copy.className = 'next-up-queue__copy';
+      const title = document.createElement('strong');
+      title.textContent = item.title;
+      const meta = document.createElement('span');
+      meta.textContent = item.available ? item.category_label : 'This library item was deleted';
+      copy.append(title, meta);
+      const controls = document.createElement('div');
+      controls.className = 'next-up-queue__controls';
+      if (item.available) {
+        const open = document.createElement('button');
+        open.type = 'button';
+        open.className = 'next-up-queue__open';
+        open.dataset.action = 'pulse-open-item';
+        open.dataset.pulseTab = item.category;
+        open.textContent = 'Open';
+        controls.appendChild(open);
+      }
+      const up = document.createElement('button');
+      up.type = 'button';
+      up.className = 'next-up-queue__icon-button';
+      up.dataset.action = 'move-next-up';
+      up.dataset.nextUpId = item.id;
+      up.dataset.nextUpPosition = Math.max(index - 1, 0);
+      up.disabled = index === 0;
+      up.setAttribute('aria-label', `Move ${item.title} up`);
+      up.textContent = '↑';
+      const down = document.createElement('button');
+      down.type = 'button';
+      down.className = 'next-up-queue__icon-button';
+      down.dataset.action = 'move-next-up';
+      down.dataset.nextUpId = item.id;
+      down.dataset.nextUpPosition = index + 1;
+      down.disabled = index === items.length - 1;
+      down.setAttribute('aria-label', `Move ${item.title} down`);
+      down.textContent = '↓';
+      const remove = document.createElement('button');
+      remove.type = 'button';
+      remove.className = 'next-up-queue__remove';
+      remove.dataset.action = 'remove-next-up';
+      remove.dataset.nextUpId = item.id;
+      remove.setAttribute('aria-label', `Remove ${item.title} from Next Up`);
+      remove.textContent = 'Remove';
+      controls.append(up, down, remove);
+      row.append(order, copy, controls);
+      container.appendChild(row);
+    });
+  }
+  queueElement.removeAttribute('hidden');
+}
+
+async function refreshNextUpQueue() {
+  if (!hasStoredAuth()) return;
+  try {
+    const response = await authenticatedFetch(`${API_BASE}/next-up/`);
+    if (response.ok) renderNextUpQueue(await response.json());
+  } catch (error) {
+    // The queue is supplementary; never interrupt the tracker if it is unavailable.
+  }
+}
+
+async function addToNextUp(category, itemId) {
+  if (!category || !Number.isInteger(itemId) || itemId < 1) return;
+  try {
+    const response = await authenticatedFetch(`${API_BASE}/next-up/`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ category, item_id: itemId }),
+    });
+    if (response.status === 409) {
+      alert('That item is already in your Next Up queue.');
+      return;
+    }
+    if (!response.ok) throw new Error('Unable to add queue item');
+    await Promise.all([refreshNextUpQueue(), refreshLibraryPulse(), refreshTodaysPick()]);
+  } catch (error) {
+    alert('Could not add that item to Next Up. Please try again.');
+  }
+}
+
+async function moveNextUp(queueId, position) {
+  try {
+    const response = await authenticatedFetch(`${API_BASE}/next-up/${queueId}/position`, {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ position }),
+    });
+    if (!response.ok) throw new Error('Unable to move queue item');
+    renderNextUpQueue(await response.json());
+    refreshLibraryPulse();
+    refreshTodaysPick();
+  } catch (error) {
+    alert('Could not reorder Next Up. Please try again.');
+  }
+}
+
+async function removeNextUp(queueId) {
+  try {
+    const response = await authenticatedFetch(`${API_BASE}/next-up/${queueId}`, { method: 'DELETE' });
+    if (!response.ok) throw new Error('Unable to remove queue item');
+    await Promise.all([refreshNextUpQueue(), refreshLibraryPulse(), refreshTodaysPick()]);
+  } catch (error) {
+    alert('Could not remove that item from Next Up. Please try again.');
+  }
+}
+
+async function refreshLibraryLaunchpad() {
+  if (isLibraryLaunchpadDismissed() || !hasStoredAuth()) return;
+  try {
+    const response = await authenticatedFetch(`${API_BASE}/statistics/insights/`);
+    if (response.ok) renderLibraryLaunchpad(await response.json());
+  } catch (error) {
+    // Guidance is optional; it should never interrupt the main tracker.
+  }
+}
+
+async function refreshLibraryPulse() {
+  if (!hasStoredAuth()) return;
+  try {
+    const response = await authenticatedFetch(`${API_BASE}/statistics/pulse/`);
+    if (response.ok) renderLibraryPulse(await response.json());
+  } catch (error) {
+    // Pulse is optional and should never interrupt the tracker.
+  }
+}
+
+function scheduleLibraryLaunchpadRefresh(refreshDecisionCards = true) {
+  launchpadDecisionRefreshRequested = launchpadDecisionRefreshRequested || refreshDecisionCards;
+  window.clearTimeout(launchpadRefreshTimer);
+  launchpadRefreshTimer = window.setTimeout(() => {
+    const shouldRefreshDecisionCards = launchpadDecisionRefreshRequested;
+    launchpadDecisionRefreshRequested = false;
+    refreshLibraryLaunchpad();
+    refreshNextUpQueue();
+    if (shouldRefreshDecisionCards) refreshDashboardDecisionCards();
+  }, 250);
+}
+
+const loadMovieLibrary = loadMovies;
+loadMovies = async function (...args) {
+  const result = await loadMovieLibrary(...args);
+  enhanceLibraryCards('movieTable');
+  if (!libraryPages.get('movies')?.browseOnly) {
+    invalidateLibrarySearchIndex();
+    const refreshDecisionCards = !initialMovieLibraryLoad;
+    initialMovieLibraryLoad = false;
+    scheduleLibraryLaunchpadRefresh(refreshDecisionCards);
+  }
+  return result;
+};
+
+const loadTVShowLibrary = loadTVShows;
+loadTVShows = async function (...args) {
+  const result = await loadTVShowLibrary(...args);
+  enhanceLibraryCards('tvShowTable');
+  if (!libraryPages.get('tv-shows')?.browseOnly) {
+    invalidateLibrarySearchIndex();
+    scheduleLibraryLaunchpadRefresh();
+  }
+  return result;
+};
+
+const loadAnimeLibrary = loadAnime;
+loadAnime = async function (...args) {
+  const result = await loadAnimeLibrary(...args);
+  enhanceLibraryCards('animeTable');
+  if (!libraryPages.get('anime')?.browseOnly) {
+    invalidateLibrarySearchIndex();
+    scheduleLibraryLaunchpadRefresh();
+  }
+  return result;
+};
+
+const loadVideoGameLibrary = loadVideoGames;
+loadVideoGames = async function (...args) {
+  const result = await loadVideoGameLibrary(...args);
+  enhanceLibraryCards('videoGameTable');
+  if (!libraryPages.get('video-games')?.browseOnly) {
+    invalidateLibrarySearchIndex();
+    scheduleLibraryLaunchpadRefresh();
+  }
+  return result;
+};
+
+const loadMusicLibrary = loadMusic;
+loadMusic = async function (...args) {
+  const result = await loadMusicLibrary(...args);
+  enhanceLibraryCards('musicTable');
+  if (!libraryPages.get('music')?.browseOnly) {
+    invalidateLibrarySearchIndex();
+    scheduleLibraryLaunchpadRefresh();
+  }
+  return result;
+};
+
+const loadBookLibrary = loadBooks;
+loadBooks = async function (...args) {
+  const result = await loadBookLibrary(...args);
+  enhanceLibraryCards('bookTable');
+  if (!libraryPages.get('books')?.browseOnly) {
+    invalidateLibrarySearchIndex();
+    scheduleLibraryLaunchpadRefresh();
+  }
+  return result;
+};
+
 // Load initial data
+setupLibrarySearch();
 loadMovies();
+scheduleLibraryLaunchpadRefresh(false);
+bootstrapReturnDeck();
 
 // ============================================================================
 // Landing Page Enhancements: Scroll Animations and User Count
@@ -6063,7 +9228,7 @@ async function loadCustomTabs() {
   try {
     if (!hasStoredAuth()) return;
     
-    const response = await fetch(`${API_BASE}/custom-tabs`, authFetchOptions());
+    const response = await authenticatedFetch(`${API_BASE}/custom-tabs/`);
     
     if (response.ok) {
       customTabs = await response.json();
@@ -7308,6 +10473,8 @@ function setupCustomTabSwitching() {
 
 document.addEventListener('DOMContentLoaded', () => {
   setupReviewQualityCounters();
+  document.getElementById('collectionStudioName')?.addEventListener('input', updateCollectionReadinessDraft);
+  document.getElementById('collectionStudioDescription')?.addEventListener('input', updateCollectionReadinessDraft);
   setupCustomTabSwitching();
   bindCustomTabForm();
   if (hasStoredAuth()) {

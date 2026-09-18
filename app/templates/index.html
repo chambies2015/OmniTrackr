@@ -3,10 +3,6 @@
 
 <head>
   <meta name="google-adsense-account" content="ca-pub-7271682066779719">
-  <!-- Google tag (gtag.js) -->
-  <script async src="https://www.googletagmanager.com/gtag/js?id=G-7EJ4ZGHNV1"></script>
-  <script src="./analytics.js" defer></script>
-
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=5.0, user-scalable=yes">
   <meta name="theme-color" content="#1e1e2f">
@@ -50,12 +46,10 @@
   <link rel="icon" type="image/x-icon" href="/omnitrackr_favicon.ico">
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link rel="dns-prefetch" href="https://www.googletagmanager.com">
-  <link rel="dns-prefetch" href="https://www.google-analytics.com">
-  <link rel="preload" href="./styles.css" as="style">
+  <link rel="preload" href="./styles.css?v=20260918-welcome-back-remedy-v2" as="style">
   <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@700;800&family=Inter:wght@400;500;600&display=swap"
     rel="stylesheet">
-  <link rel="stylesheet" href="./styles.css">
+  <link rel="stylesheet" href="./styles.css?v=20260918-welcome-back-remedy-v2">
   <script src="./preauth.js"></script>
   <style>
     html.authenticated #landingPage{display:none}
@@ -179,7 +173,7 @@
         "name": "Can I export my data?",
         "acceptedAnswer": {
           "@type": "Answer",
-          "text": "Yes! You can export your entire collection (movies, TV shows, anime, video games, music, and books) as a JSON file at any time. This allows you to backup your data or import it into another account. You can also import JSON files to quickly add multiple entries."
+          "text": "Yes. Export your movies, TV shows, anime, video games, music, books, collections, and private journal as a JSON backup. The Import Studio can also preview Letterboxd, Goodreads, MyAnimeList, and generic CSV migrations without overwriting existing library records."
         }
       },
       {
@@ -337,15 +331,117 @@
   <main class="container" id="mainContainer">
     <header class="header" role="banner">
       <p class="app-title" role="heading" aria-level="1">OmniTrackr</p>
+      <div class="library-search" role="search">
+        <label class="sr-only" for="librarySearchInput">Find anything in your library</label>
+        <div class="library-search__field">
+          <span aria-hidden="true">⌕</span>
+          <input id="librarySearchInput" type="search" maxlength="200" autocomplete="off" placeholder="Find anything in your library…" aria-controls="librarySearchResults" aria-expanded="false">
+          <kbd aria-hidden="true">Ctrl K</kbd>
+        </div>
+        <div id="librarySearchResults" class="library-search__results" role="listbox" aria-label="Library search results" aria-live="polite" hidden></div>
+      </div>
+      <button type="button" id="quickCaptureButton" class="quick-capture-trigger" data-action="open-quick-capture" aria-haspopup="dialog" aria-controls="quickCaptureModal">
+        <span aria-hidden="true">＋</span> Add anything <kbd aria-hidden="true">/</kbd>
+      </button>
     </header>
 
+    <section id="libraryLaunchpad" class="library-launchpad" aria-labelledby="libraryLaunchpadTitle" hidden>
+      <div class="library-launchpad__copy">
+        <p class="library-launchpad__eyebrow">Your library, your pace</p>
+        <h2 id="libraryLaunchpadTitle">Build a library you’ll want to revisit.</h2>
+        <p id="libraryLaunchpadSummary">Loading your library progress…</p>
+        <div id="libraryLaunchpadCategories" class="library-launchpad__categories" aria-label="Choose the first kind of media to track" hidden></div>
+        <div id="libraryLaunchpadStarterPaths" class="library-launchpad__categories" hidden>
+          <button type="button" class="library-launchpad__category" data-action="launchpad-import">Bring an existing list</button>
+          <a class="library-launchpad__category" href="/discover">Browse Discover</a>
+          <p class="library-launchpad__path-hint">Import Studio lets you preview a CSV before importing. Existing records are not overwritten.</p>
+        </div>
+      </div>
+      <div id="libraryLaunchpadSteps" class="library-launchpad__steps" aria-live="polite"></div>
+      <div class="library-launchpad__actions">
+        <button type="button" class="action-btn library-launchpad__primary" data-action="launchpad-add-item">Add something</button>
+        <button type="button" id="libraryLaunchpadInsights" class="action-btn library-launchpad__secondary" data-action="launchpad-open-insights" hidden>See insights</button>
+        <button type="button" class="library-launchpad__dismiss" data-action="launchpad-dismiss" aria-label="Dismiss library launchpad">Not now</button>
+      </div>
+    </section>
+
+    <section id="returnDeck" class="return-deck" aria-labelledby="returnDeckTitle" hidden>
+      <div class="return-deck__header">
+        <div>
+          <p class="return-deck__eyebrow">Welcome back</p>
+          <h2 id="returnDeckTitle">Pick up where you left off</h2>
+          <p id="returnDeckSummary" class="return-deck__summary"></p>
+        </div>
+        <button type="button" class="return-deck__dismiss" data-action="dismiss-return-deck" aria-label="Dismiss welcome back suggestions">Not now</button>
+      </div>
+      <div id="returnDeckActions" class="return-deck__actions" aria-live="polite"></div>
+      <div id="returnDeckRecap" class="return-deck__recap"></div>
+    </section>
+
+    <section id="todaysPick" class="todays-pick" aria-labelledby="todaysPickTitle" hidden>
+      <div class="todays-pick__copy">
+        <p class="todays-pick__eyebrow">Today’s pick</p>
+        <h2 id="todaysPickTitle">Just pick one.</h2>
+        <label class="todays-pick__filter" for="todaysPickFilter">Choose from
+          <select id="todaysPickFilter" data-change-action="pick-category">
+            <option value="">All media</option>
+            <option value="movies">Movies</option>
+            <option value="tv-shows">TV shows</option>
+            <option value="anime">Anime</option>
+            <option value="video-games">Games</option>
+            <option value="music">Music</option>
+            <option value="books">Books</option>
+          </select>
+        </label>
+        <p id="todaysPickReason" class="todays-pick__reason"></p>
+      </div>
+      <div class="todays-pick__choice">
+        <span id="todaysPickCategory" class="todays-pick__category"></span>
+        <strong id="todaysPickName" aria-live="polite"></strong>
+      </div>
+      <div class="todays-pick__actions">
+        <button id="todaysPickOpen" type="button" class="action-btn todays-pick__open" data-action="open-todays-pick">Open it</button>
+        <button id="todaysPickAnother" type="button" class="todays-pick__another" data-action="try-another-pick">Try another</button>
+      </div>
+    </section>
+
+    <section id="libraryPulse" class="library-pulse" aria-labelledby="libraryPulseTitle" hidden>
+      <div class="library-pulse__header">
+        <div>
+          <p class="library-pulse__eyebrow">Library pulse</p>
+          <h2 id="libraryPulseTitle">A few good next moves</h2>
+        </div>
+        <button type="button" class="library-pulse__insights" data-action="launchpad-open-insights">View full insights</button>
+      </div>
+      <div class="library-pulse__columns">
+        <section aria-labelledby="libraryPulseNextUpTitle"><h3 id="libraryPulseNextUpTitle">Your Next Up</h3><div id="libraryPulseNextUp" class="library-pulse__list"></div></section>
+        <section aria-labelledby="libraryPulseContinueTitle"><h3 id="libraryPulseContinueTitle">Pick up next</h3><div id="libraryPulseContinue" class="library-pulse__list"></div></section>
+        <section aria-labelledby="libraryPulseReflectTitle"><h3 id="libraryPulseReflectTitle">Make it memorable</h3><div id="libraryPulseReflect" class="library-pulse__list"></div></section>
+      </div>
+    </section>
+
+    <section id="nextUpQueue" class="next-up-queue" aria-labelledby="nextUpQueueTitle" hidden>
+      <div class="next-up-queue__header">
+        <div>
+          <p class="next-up-queue__eyebrow">Intentional queue</p>
+          <h2 id="nextUpQueueTitle">Next Up</h2>
+        </div>
+        <p class="next-up-queue__hint">Choose any saved item from its library list. Your queue stays private and never changes the item itself.</p>
+      </div>
+      <div id="nextUpQueueItems" class="next-up-queue__items" aria-live="polite"></div>
+    </section>
+
     <div class="tabs">
+      <a class="tab" href="/discover">Discover ↗</a>
       <button class="tab active" data-switch-tab="movies">🎬 Movies</button>
       <button class="tab" data-switch-tab="tv-shows">📺 TV Shows</button>
       <button class="tab" data-switch-tab="anime">🎌 Anime</button>
       <button class="tab" data-switch-tab="video-games">🎮 Video Games</button>
       <button class="tab" data-switch-tab="music">🎵 Music</button>
       <button class="tab" data-switch-tab="books">📚 Books</button>
+      <button class="tab" data-switch-tab="activity">📝 Journal</button>
+      <button class="tab" data-switch-tab="recommendations">💌 Postcards</button>
+      <button class="tab" data-switch-tab="collections">🗂 Collections</button>
       <button class="tab" data-switch-tab="statistics">📊 Statistics</button>
       <div id="customTabsContainer"></div>
       <button class="tab" id="manageCustomTabsBtn" data-action="show-custom-tab-manager" style="background-color: #6366f1; margin-left: auto;">⚙️ Manage Custom Tabs</button>
@@ -378,7 +474,7 @@
             </div>
             <div>
               <textarea id="movieReview" class="review-textarea" data-review-quality-input placeholder="Review (optional)" rows="1"></textarea>
-              <p class="review-quality-hint"><span class="review-quality-count" data-review-counter-for="movieReview">0/80 characters - add more context for public reviews</span>. Public reviews show best with personal context, audience fit, and what stood out. <a href="/review-guidelines" target="_blank" rel="noopener noreferrer">Review guide</a></p>
+              <p class="review-quality-hint"><span class="review-quality-count" data-review-counter-for="movieReview">0/80 characters - add context for the community feed</span>. Search-ready reviews use 240+ characters, 35+ words, complete thoughts, varied language, and no links or contact details. <a href="/review-guidelines" target="_blank" rel="noopener noreferrer">Review guide</a></p>
             </div>
             <div>
               <label>Public Review <input type="checkbox" id="movieReviewPublic"></label>
@@ -461,7 +557,7 @@
             </div>
             <div>
               <textarea id="tvReview" class="review-textarea" data-review-quality-input placeholder="Review (optional)" rows="1"></textarea>
-              <p class="review-quality-hint"><span class="review-quality-count" data-review-counter-for="tvReview">0/80 characters - add more context for public reviews</span>. Public reviews show best with personal context, audience fit, and what stood out. <a href="/review-guidelines" target="_blank" rel="noopener noreferrer">Review guide</a></p>
+              <p class="review-quality-hint"><span class="review-quality-count" data-review-counter-for="tvReview">0/80 characters - add context for the community feed</span>. Search-ready reviews use 240+ characters, 35+ words, complete thoughts, varied language, and no links or contact details. <a href="/review-guidelines" target="_blank" rel="noopener noreferrer">Review guide</a></p>
             </div>
             <div>
               <label>Public Review <input type="checkbox" id="tvReviewPublic"></label>
@@ -545,7 +641,7 @@
             </div>
             <div>
               <textarea id="animeReview" class="review-textarea" data-review-quality-input placeholder="Review (optional)" rows="1"></textarea>
-              <p class="review-quality-hint"><span class="review-quality-count" data-review-counter-for="animeReview">0/80 characters - add more context for public reviews</span>. Public reviews show best with personal context, audience fit, and what stood out. <a href="/review-guidelines" target="_blank" rel="noopener noreferrer">Review guide</a></p>
+              <p class="review-quality-hint"><span class="review-quality-count" data-review-counter-for="animeReview">0/80 characters - add context for the community feed</span>. Search-ready reviews use 240+ characters, 35+ words, complete thoughts, varied language, and no links or contact details. <a href="/review-guidelines" target="_blank" rel="noopener noreferrer">Review guide</a></p>
             </div>
             <div>
               <label>Public Review <input type="checkbox" id="animeReviewPublic"></label>
@@ -629,7 +725,7 @@
             </div>
             <div>
               <textarea id="musicReview" class="review-textarea" data-review-quality-input placeholder="Review (optional)" rows="1"></textarea>
-              <p class="review-quality-hint"><span class="review-quality-count" data-review-counter-for="musicReview">0/80 characters - add more context for public reviews</span>. Public reviews show best with personal context, audience fit, and what stood out. <a href="/review-guidelines" target="_blank" rel="noopener noreferrer">Review guide</a></p>
+              <p class="review-quality-hint"><span class="review-quality-count" data-review-counter-for="musicReview">0/80 characters - add context for the community feed</span>. Search-ready reviews use 240+ characters, 35+ words, complete thoughts, varied language, and no links or contact details. <a href="/review-guidelines" target="_blank" rel="noopener noreferrer">Review guide</a></p>
             </div>
             <div>
               <label>Public Review <input type="checkbox" id="musicReviewPublic"></label>
@@ -712,7 +808,7 @@
             </div>
             <div>
               <textarea id="bookReview" class="review-textarea" data-review-quality-input placeholder="Review (optional)" rows="1"></textarea>
-              <p class="review-quality-hint"><span class="review-quality-count" data-review-counter-for="bookReview">0/80 characters - add more context for public reviews</span>. Public reviews show best with personal context, audience fit, and what stood out. <a href="/review-guidelines" target="_blank" rel="noopener noreferrer">Review guide</a></p>
+              <p class="review-quality-hint"><span class="review-quality-count" data-review-counter-for="bookReview">0/80 characters - add context for the community feed</span>. Search-ready reviews use 240+ characters, 35+ words, complete thoughts, varied language, and no links or contact details. <a href="/review-guidelines" target="_blank" rel="noopener noreferrer">Review guide</a></p>
             </div>
             <div>
               <label>Public Review <input type="checkbox" id="bookReviewPublic"></label>
@@ -789,7 +885,7 @@
             </div>
             <div>
               <textarea id="videoGameReview" class="review-textarea" data-review-quality-input placeholder="Review (optional)" rows="1"></textarea>
-              <p class="review-quality-hint"><span class="review-quality-count" data-review-counter-for="videoGameReview">0/80 characters - add more context for public reviews</span>. Public reviews show best with personal context, audience fit, and what stood out. <a href="/review-guidelines" target="_blank" rel="noopener noreferrer">Review guide</a></p>
+              <p class="review-quality-hint"><span class="review-quality-count" data-review-counter-for="videoGameReview">0/80 characters - add context for the community feed</span>. Search-ready reviews use 240+ characters, 35+ words, complete thoughts, varied language, and no links or contact details. <a href="/review-guidelines" target="_blank" rel="noopener noreferrer">Review guide</a></p>
             </div>
             <div>
               <label>Public Review <input type="checkbox" id="videoGameReviewPublic"></label>
@@ -842,6 +938,190 @@
       </div>
     </div>
 
+    <!-- Private Activity Journal Tab Content -->
+    <div id="activity-tab" class="tab-content">
+      <section class="activity-hero">
+        <div>
+          <p class="activity-hero__eyebrow">Private across every media type</p>
+          <h2>Your Activity Journal</h2>
+          <p>Remember what you started, where you made progress, and what stayed with you. Entries are visible only inside your account.</p>
+        </div>
+        <span class="activity-hero__privacy">No public profile · No ads</span>
+      </section>
+
+      <section class="activity-recap" aria-labelledby="activityRecapTitle">
+        <div class="activity-recap__header">
+          <div>
+            <p class="activity-recap__eyebrow">Weekly playback</p>
+            <h3 id="activityRecapTitle">This week in media</h3>
+            <p id="activityRecapPeriod"></p>
+          </div>
+          <div class="activity-recap__controls">
+            <button type="button" class="action-btn secondary" data-action="activity-older-week">← Older</button>
+            <button type="button" class="action-btn secondary" id="activityNewerWeek" data-action="activity-newer-week">Newer →</button>
+          </div>
+        </div>
+        <div id="activityRecapContent" aria-live="polite"><p>Loading your week…</p></div>
+      </section>
+
+      <section class="card activity-create" aria-labelledby="activityCreateTitle">
+        <div class="activity-create__intro">
+          <div><p class="activity-create__eyebrow">Quick log</p><h3 id="activityCreateTitle">Add a moment</h3></div>
+          <p>Choose something already in your library. Logging a moment never changes its rating, status, or review.</p>
+        </div>
+        <form id="activityForm" class="activity-form" data-submit-action="create-activity">
+          <label>Media type
+            <select id="activityCategory" required data-change-action="activity-category">
+              <option value="movies">Movie</option><option value="tv-shows">TV show</option>
+              <option value="anime">Anime</option><option value="video-games">Game</option>
+              <option value="music">Album</option><option value="books">Book</option>
+            </select>
+          </label>
+          <label>Library item
+            <select id="activityItem" required><option value="">Loading your library…</option></select>
+          </label>
+          <label>Moment
+            <select id="activityAction" required>
+              <option value="started">Started</option><option value="progressed">Made progress</option>
+              <option value="completed">Finished</option><option value="revisited">Revisited</option>
+              <option value="noted">Added a note</option>
+            </select>
+          </label>
+          <label>When
+            <input id="activityOccurredAt" type="datetime-local" required>
+          </label>
+          <label class="activity-form__note">Private note
+            <textarea id="activityNote" rows="2" maxlength="500" placeholder="What do you want future-you to remember?"></textarea>
+          </label>
+          <div class="activity-form__submit"><button type="submit" class="action-btn">Log this moment</button><span id="activityFormStatus" role="status"></span></div>
+        </form>
+      </section>
+
+      <section class="activity-timeline" aria-labelledby="activityTimelineTitle">
+        <div class="activity-timeline__header">
+          <div><p class="activity-timeline__eyebrow">Your private history</p><h3 id="activityTimelineTitle">Recent moments</h3></div>
+          <div class="activity-timeline__filters">
+            <select id="activityFilterCategory" data-change-action="activity-filter" aria-label="Filter journal by media type">
+              <option value="">All media</option><option value="movies">Movies</option><option value="tv-shows">TV shows</option>
+              <option value="anime">Anime</option><option value="video-games">Games</option><option value="music">Albums</option><option value="books">Books</option>
+            </select>
+            <select id="activityFilterAction" data-change-action="activity-filter" aria-label="Filter journal by moment">
+              <option value="">All moments</option><option value="started">Started</option><option value="progressed">Progress</option>
+              <option value="completed">Finished</option><option value="revisited">Revisited</option><option value="noted">Notes</option>
+            </select>
+          </div>
+        </div>
+        <div id="activityTimeline" class="activity-timeline__list" aria-live="polite"></div>
+        <button id="activityLoadMore" type="button" class="action-btn secondary activity-load-more" data-action="activity-load-more" hidden>Load earlier moments</button>
+      </section>
+    </div>
+
+    <!-- Recommendation Postcards Tab Content -->
+    <div id="recommendations-tab" class="tab-content">
+      <section class="postcards-hero">
+        <div>
+          <p class="postcards-eyebrow">Ask one good question</p>
+          <h2>Recommendation Postcards</h2>
+          <p>Invite a few thoughtful picks from friends or anyone with your expiring link. Every reply waits here until you decide to save, add, queue, or dismiss it.</p>
+        </div>
+        <span class="postcards-privacy">Private inbox · No automatic library changes</span>
+      </section>
+
+      <section class="card postcards-create" aria-labelledby="postcardCreateTitle">
+        <div class="postcards-section-heading">
+          <div><p class="postcards-eyebrow">New postcard</p><h3 id="postcardCreateTitle">What are you in the mood for?</h3></div>
+          <p>Links are unlisted, expire automatically, and stop at your response limit.</p>
+        </div>
+        <form id="recommendationRequestForm" class="postcards-create-form" data-submit-action="create-recommendation-request">
+          <label class="postcards-prompt">Your question
+            <textarea id="recommendationPrompt" rows="2" minlength="10" maxlength="280" required placeholder="What should I try when I want a clever mystery that isn't relentlessly bleak?"></textarea>
+          </label>
+          <fieldset>
+            <legend>Invite recommendations from</legend>
+            <div class="postcards-category-grid">
+              <label><input type="checkbox" name="recommendationCategory" value="movies" checked> Movies</label>
+              <label><input type="checkbox" name="recommendationCategory" value="tv-shows" checked> TV shows</label>
+              <label><input type="checkbox" name="recommendationCategory" value="anime" checked> Anime</label>
+              <label><input type="checkbox" name="recommendationCategory" value="video-games" checked> Games</label>
+              <label><input type="checkbox" name="recommendationCategory" value="music" checked> Albums</label>
+              <label><input type="checkbox" name="recommendationCategory" value="books" checked> Books</label>
+            </div>
+          </fieldset>
+          <label>Reply window
+            <select id="recommendationExpiry"><option value="3">3 days</option><option value="7" selected>7 days</option><option value="14">14 days</option><option value="30">30 days</option></select>
+          </label>
+          <label>Response limit
+            <select id="recommendationMaxResponses"><option value="5">5 replies</option><option value="10" selected>10 replies</option><option value="15">15 replies</option><option value="20">20 replies</option></select>
+          </label>
+          <div class="postcards-form-submit"><button type="submit" class="action-btn">Create postcard</button><span id="recommendationCreateStatus" role="status"></span></div>
+        </form>
+      </section>
+
+      <section class="postcards-panel" aria-labelledby="postcardActiveTitle">
+        <div class="postcards-section-heading"><div><p class="postcards-eyebrow">Outgoing</p><h3 id="postcardActiveTitle">Your postcards</h3></div><p>Copy a guest link or invite an OmniTrackr friend directly.</p></div>
+        <div id="recommendationRequests" class="postcards-grid" aria-live="polite"><p>Loading postcards…</p></div>
+      </section>
+
+      <section class="postcards-panel" aria-labelledby="postcardInboxTitle">
+        <div class="postcards-section-heading"><div><p class="postcards-eyebrow">Incoming</p><h3 id="postcardInboxTitle">Recommendation inbox</h3></div><p>Nothing enters your library without an action from you.</p></div>
+        <div id="recommendationInbox" class="postcards-inbox" aria-live="polite"><p>Loading replies…</p></div>
+      </section>
+
+      <section class="postcards-panel" aria-labelledby="postcardInvitesTitle">
+        <div class="postcards-section-heading"><div><p class="postcards-eyebrow">From friends</p><h3 id="postcardInvitesTitle">Postcards waiting for you</h3></div><p>Answer with one title and the reason it fits.</p></div>
+        <div id="recommendationInvitations" class="postcards-inbox" aria-live="polite"><p>Loading invitations…</p></div>
+      </section>
+    </div>
+
+    <!-- Collections Tab Content -->
+    <div id="collections-tab" class="tab-content">
+      <section class="collections-hero">
+        <p class="collections-hero__eyebrow">Private by default · share only by choice</p>
+        <h2>Collections</h2>
+        <p>Bring together movies, TV shows, anime, games, music, and books around any idea that matters to you. When a shelf is ready to share, add your point of view and publish it deliberately.</p>
+      </section>
+      <section class="card collections-create">
+        <h3>Create a collection</h3>
+        <form id="createCollectionForm" data-submit-action="create-collection">
+          <input id="collectionName" type="text" maxlength="80" required placeholder="e.g. Rainy Sunday escapes">
+          <textarea id="collectionDescription" maxlength="500" rows="2" placeholder="What belongs here? Private until you choose to publish."></textarea>
+          <button type="submit" class="action-btn">Create collection</button>
+        </form>
+      </section>
+      <section id="moderatorInsightsPanel" class="card moderator-insights" hidden>
+        <div class="moderator-insights__heading">
+          <div><p class="collections-hero__eyebrow">Trusted operations · read only</p><h3>Site health</h3></div>
+          <span id="moderatorInsightsGenerated"></span>
+        </div>
+        <p id="moderatorInsightsPrivacy" class="moderator-insights__privacy"></p>
+        <div id="moderatorMetricGrid" class="moderator-metric-grid" aria-live="polite"></div>
+        <section class="moderator-activation" aria-labelledby="moderatorActivationTitle">
+          <div class="moderator-section-heading"><div><p>First-party milestones</p><h4 id="moderatorActivationTitle">Activation path</h4></div><strong>Aggregate only</strong></div>
+          <div id="moderatorActivationStages" class="moderator-activation-stages"></div>
+          <p class="moderator-activation-note">Return measurement starts when successful-login counting is deployed; earlier visits are not reconstructed.</p>
+        </section>
+        <div class="moderator-insights__columns">
+          <section aria-labelledby="moderatorGrowthTitle">
+            <div class="moderator-section-heading"><div><p>Last 30 days</p><h4 id="moderatorGrowthTitle">New accounts</h4></div><strong id="moderatorGrowthTotal"></strong></div>
+            <div id="moderatorGrowthChart" class="moderator-growth-chart" role="img" aria-label="Daily new account activity over the last 30 days"></div>
+          </section>
+          <section aria-labelledby="moderatorLibraryTitle">
+            <div class="moderator-section-heading"><div><p>Across every library</p><h4 id="moderatorLibraryTitle">Media mix</h4></div><strong id="moderatorCompletionRate"></strong></div>
+            <div id="moderatorCategoryStats" class="moderator-category-stats"></div>
+          </section>
+        </div>
+        <div class="moderator-insights__columns moderator-insights__columns--compact">
+          <section aria-labelledby="moderatorEngagementTitle"><div class="moderator-section-heading"><div><p>Useful habits</p><h4 id="moderatorEngagementTitle">Engagement</h4></div></div><dl id="moderatorEngagementStats" class="moderator-stat-list"></dl></section>
+          <section aria-labelledby="moderatorSafetyTitle"><div class="moderator-section-heading"><div><p>Public surface</p><h4 id="moderatorSafetyTitle">Safety & discovery</h4></div></div><dl id="moderatorSafetyStats" class="moderator-stat-list"></dl></section>
+        </div>
+        <section class="moderator-users" aria-labelledby="moderatorUsersTitle">
+          <div class="moderator-section-heading"><div><p>Newest 50 accounts</p><h4 id="moderatorUsersTitle">User overview</h4></div></div>
+          <div class="moderator-users__table-wrap"><table><thead><tr><th>User</th><th>Status</th><th>Joined</th><th>Library</th><th>Journal</th><th>Public lists</th><th>Last journal activity</th></tr></thead><tbody id="moderatorUsersBody"></tbody></table></div>
+        </section>
+      </section>
+      <div id="collectionsList" class="collections-list" aria-live="polite"></div>
+    </div>
+
     <!-- Statistics Tab Content -->
     <div id="statistics-tab" class="tab-content">
       <div class="card">
@@ -857,6 +1137,46 @@
       </div>
 
       <div id="statsContent" style="display: none;">
+        <section id="monthlyReplay" class="monthly-replay" aria-labelledby="monthlyReplayTitle" hidden>
+          <div class="monthly-replay__header">
+            <div>
+              <p class="monthly-replay__eyebrow">Private time capsule</p>
+              <h3 id="monthlyReplayTitle">Monthly Replay</h3>
+            </div>
+            <span id="monthlyReplayPeriod" class="monthly-replay__period"></span>
+          </div>
+          <div id="monthlyReplayContent"></div>
+        </section>
+        <section id="tasteprint" class="tasteprint" aria-labelledby="tasteprintTitle">
+          <div class="tasteprint__header">
+            <div>
+              <p class="tasteprint__eyebrow">Your library, reflected back</p>
+              <h3 id="tasteprintTitle">OmniTrackr Tasteprint</h3>
+              <p>See the patterns across your media history, then choose what belongs on a shareable card.</p>
+            </div>
+            <span class="tasteprint__privacy">Private calculation · No public profile</span>
+          </div>
+          <div id="tasteprintCategoryControls" class="tasteprint__categories" aria-label="Tasteprint categories"></div>
+          <div class="tasteprint__toolbar">
+            <button type="button" class="action-btn" data-action="tasteprint-refresh">Refresh Tasteprint</button>
+            <label class="tasteprint__name-choice"><input id="tasteprintIncludeName" type="checkbox" data-change-action="tasteprint-display"> Put my username on the card</label>
+            <button type="button" class="action-btn" id="tasteprintDownload" data-action="tasteprint-download" disabled>Download PNG</button>
+            <button type="button" class="action-btn" id="tasteprintCopy" data-action="tasteprint-copy" disabled>Copy text</button>
+          </div>
+          <div id="tasteprintStatus" class="tasteprint__status" role="status" aria-live="polite">Reading your private aggregates…</div>
+          <div id="tasteprintProgress" class="tasteprint__progress"></div>
+          <article id="tasteprintCard" class="tasteprint-card" hidden aria-label="Tasteprint card preview">
+            <div class="tasteprint-card__brand"><strong>OmniTrackr</strong><span>MEDIA TASTEPRINT</span></div>
+            <div class="tasteprint-card__intro">
+              <p id="tasteprintCardKicker">A private media portrait</p>
+              <h4 id="tasteprintCardName">My Tasteprint</h4>
+              <span id="tasteprintCardScope"></span>
+            </div>
+            <div id="tasteprintInsights" class="tasteprint-card__insights"></div>
+            <footer><span>Built from patterns, not recommendations</span><strong>omnitrackr.xyz</strong></footer>
+          </article>
+          <p class="tasteprint__note">Only checked insights are drawn into the PNG or copied summary. The image is rendered on this device and is not uploaded to OmniTrackr.</p>
+        </section>
         <div class="accordion-section">
           <div class="accordion-header" data-toggle-category-accordion="library-insights">
             <h3>Library Insights</h3>
@@ -1001,6 +1321,7 @@
           <a href="/compare">Compare</a>
           <a href="/use-cases">Use Cases</a>
           <a href="/reviews">Reviews</a>
+          <a href="/collections/explore">Collections</a>
           <a href="/faq">FAQ</a>
           <a href="/content-quality">Content Quality</a>
           <a href="/advertising">Advertising</a>
@@ -1365,7 +1686,7 @@
             <span class="faq-icon">+</span>
           </button>
           <div class="faq-answer" id="faq-answer-4">
-            <p>Yes! You can export your entire collection (movies, TV shows, anime, video games, music, and books) as a JSON file at any time. This allows you to backup your data or import it into another account. You can also import JSON files to quickly add multiple entries.</p>
+            <p>Yes. Export your complete library and private journal as a JSON backup. To bring an existing history into OmniTrackr, use the preview-first Import Studio for Letterboxd, Goodreads, MyAnimeList, or generic CSV files; matching records are skipped instead of overwritten.</p>
           </div>
         </div>
 
@@ -1569,8 +1890,8 @@
     </footer>
   </div>
   <script src="./credentials.js"></script>
-  <script src="./auth.js"></script>
-  <script src="./app.js"></script>
+  <script src="./auth.js?v=20260918-welcome-back-remedy-v2"></script>
+  <script src="./app.js?v=20260918-welcome-back-remedy-v2"></script>
 
   <!-- Account Modal -->
   <div id="accountModal" class="modal-overlay" style="display: none;">
@@ -1784,6 +2105,72 @@
           </div>
         </div>
 
+        <!-- Preview-first migration studio -->
+        <div class="account-section import-studio" id="importStudio">
+          <div class="import-studio__eyebrow">Bring your history with you</div>
+          <h3>Import Studio</h3>
+          <p class="info-text">Preview a Letterboxd, Goodreads, MyAnimeList, or generic CSV before anything is saved. Existing records are never overwritten: matches and repeated rows are skipped.</p>
+          <form id="importStudioForm" data-submit-action="preview-library-import">
+            <div class="import-studio__controls">
+              <label>
+                <span>Export format</span>
+                <select id="importStudioSource" data-change-action="import-studio-options">
+                  <option value="auto">Detect automatically</option>
+                  <option value="letterboxd">Letterboxd CSV</option>
+                  <option value="goodreads">Goodreads CSV</option>
+                  <option value="myanimelist">MyAnimeList CSV</option>
+                  <option value="generic">Generic CSV / spreadsheet</option>
+                </select>
+              </label>
+              <label>
+                <span>Generic CSV category</span>
+                <select id="importStudioCategory" data-change-action="import-studio-options">
+                  <option value="">Use the category column</option>
+                  <option value="movies">Movies</option>
+                  <option value="tv-shows">TV Shows</option>
+                  <option value="anime">Anime</option>
+                  <option value="video-games">Video Games</option>
+                  <option value="music">Music</option>
+                  <option value="books">Books</option>
+                </select>
+              </label>
+              <label class="import-studio__file-label">
+                <span>CSV or TSV file · up to 5 MB / 5,000 rows</span>
+                <input id="importStudioFile" type="file" accept=".csv,.tsv,text/csv,text/tab-separated-values" required data-change-action="import-studio-file">
+              </label>
+            </div>
+
+            <details class="import-studio__mapping" id="importStudioMappingPanel">
+              <summary>Map unusual spreadsheet columns</summary>
+              <p class="info-text">Optional. Match OmniTrackr fields to your file's headers. Choose at least Title when your spreadsheet uses a different name.</p>
+              <div id="importStudioMapping" class="import-studio__mapping-grid">
+                <p class="info-text">Choose a file to inspect its columns.</p>
+              </div>
+            </details>
+
+            <div class="import-studio__actions">
+              <button type="submit" class="action-btn" id="importStudioPreviewButton">Preview import</button>
+              <button type="button" class="action-btn import-studio__apply" id="importStudioApplyButton" data-action="apply-library-import" disabled>Import ready rows</button>
+              <label class="import-studio__template-select">
+                <span class="sr-only">Template category</span>
+                <select id="importStudioTemplateCategory">
+                  <option value="movies">Movie template</option>
+                  <option value="tv-shows">TV show template</option>
+                  <option value="anime">Anime template</option>
+                  <option value="video-games">Game template</option>
+                  <option value="music">Music template</option>
+                  <option value="books">Book template</option>
+                </select>
+              </label>
+              <button type="button" class="action-btn" data-action="download-import-template">Download template</button>
+              <a class="action-btn" href="/export-import-guide" target="_blank" rel="noopener noreferrer">Migration guide</a>
+            </div>
+          </form>
+          <div id="importStudioStatus" class="import-studio__status" role="status" aria-live="polite"></div>
+          <div id="importStudioResults" hidden></div>
+          <p class="import-studio__safety"><strong>Safety promise:</strong> preview performs no writes, imports are additive and atomic, imported reviews stay private, and artwork lookups are deferred until you visit the relevant library tab.</p>
+        </div>
+
         <!-- Tab Visibility Settings Section -->
         <div class="account-section">
           <h3>Tab Visibility</h3>
@@ -1854,7 +2241,7 @@
         <div class="account-section danger-section">
           <h3>Account Deactivation</h3>
           <p class="warning-text">Deactivating your account will hide it from the system. You can reactivate within 90
-            days. After that, your account will be permanently deleted.</p>
+            days. After that, self-service reactivation is unavailable; contact support if you need deletion assistance.</p>
           <form id="deactivateAccountForm" data-submit-action="deactivate-account">
             <div>
               <input type="password" id="deactivatePassword" placeholder="Enter your password to confirm" required>
@@ -2078,6 +2465,112 @@
       </div>
       <div class="modal-body">
         <div id="bookSearchResults" class="search-results-grid"></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Universal Quick Capture Modal -->
+  <div id="quickCaptureModal" class="modal-overlay quick-capture-overlay" style="display: none;" data-close-on-backdrop="quick-capture" role="dialog" aria-modal="true" aria-labelledby="quickCaptureTitle">
+    <div class="modal-content quick-capture-modal" data-stop-propagation>
+      <div class="quick-capture-header">
+        <div>
+          <p class="quick-capture-eyebrow">One search · every shelf</p>
+          <h2 id="quickCaptureTitle">Add anything</h2>
+          <p>Search movies, shows, anime, games, albums, and books together.</p>
+        </div>
+        <button type="button" class="modal-close" data-action="close-quick-capture" aria-label="Close quick capture">×</button>
+      </div>
+      <div class="quick-capture-body">
+        <form id="quickCaptureSearchForm" class="quick-capture-search" data-submit-action="search-quick-capture">
+          <label class="sr-only" for="quickCaptureQuery">Title, artist, author, or game</label>
+          <div class="quick-capture-search-field">
+            <span aria-hidden="true">⌕</span>
+            <input id="quickCaptureQuery" name="query" type="search" minlength="2" maxlength="200" autocomplete="off" placeholder="Try Dune, Frieren, Hades, or an artist…" required>
+            <button type="submit" class="action-btn">Search</button>
+          </div>
+          <div class="quick-capture-controls">
+            <div id="quickCaptureCategories" class="quick-capture-categories" aria-label="Limit search by media type">
+              <button type="button" class="active" data-action="select-quick-capture-category" data-quick-category="all" aria-pressed="true">All</button>
+              <button type="button" data-action="select-quick-capture-category" data-quick-category="movies" aria-pressed="false">🎬 Movies</button>
+              <button type="button" data-action="select-quick-capture-category" data-quick-category="tv-shows" aria-pressed="false">📺 TV</button>
+              <button type="button" data-action="select-quick-capture-category" data-quick-category="anime" aria-pressed="false">🎌 Anime</button>
+              <button type="button" data-action="select-quick-capture-category" data-quick-category="video-games" aria-pressed="false">🎮 Games</button>
+              <button type="button" data-action="select-quick-capture-category" data-quick-category="music" aria-pressed="false">🎵 Music</button>
+              <button type="button" data-action="select-quick-capture-category" data-quick-category="books" aria-pressed="false">📚 Books</button>
+            </div>
+            <label class="quick-capture-intent" for="quickCaptureIntent"><span>Add as</span><select id="quickCaptureIntent"><option value="saved">Not completed / save for later</option><option value="completed">Completed</option></select></label>
+          </div>
+        </form>
+        <div id="quickCaptureStatus" class="quick-capture-status" role="status" aria-live="polite">Search across every media type, or choose one shelf for a faster result.</div>
+        <div id="quickCaptureResults" class="quick-capture-results" aria-label="Metadata search results"></div>
+        <div class="quick-capture-manual">
+          <div><strong>Can’t find it?</strong><span>Choose a media type above and continue with manual entry.</span></div>
+          <button type="button" data-action="quick-capture-manual">Enter manually →</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Finish Ritual Modal -->
+  <div id="completionRitualModal" class="modal-overlay" style="display: none;" data-close-on-backdrop="completion-ritual">
+    <div class="modal-content completion-ritual-modal" data-stop-propagation>
+      <div class="modal-header">
+        <h2>One small reflection</h2>
+        <button class="modal-close" data-action="close-completion-ritual" aria-label="Close finish ritual">×</button>
+      </div>
+      <div class="modal-body">
+        <p class="completion-ritual-modal__eyebrow">Finished</p>
+        <h3 id="completionRitualTitle" class="completion-ritual-modal__title"></h3>
+        <p class="completion-ritual-modal__copy">What is one thing you want future you to remember? This stays private.</p>
+        <textarea id="completionRitualTakeaway" class="review-textarea" maxlength="500" rows="3" placeholder="A moment, feeling, or reason it stood out…"></textarea>
+        <label class="completion-ritual-modal__favorite"><input type="checkbox" id="completionRitualFavorite"> This is a personal favorite</label>
+        <div class="completion-ritual-modal__actions">
+          <button type="button" class="action-btn" data-action="save-completion-ritual">Save reflection</button>
+          <button type="button" class="completion-ritual-modal__skip" data-action="close-completion-ritual">Not now</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Collection Picker Modal -->
+  <div id="collectionPickerModal" class="modal-overlay" style="display: none;" data-close-on-backdrop="collection-picker">
+    <div class="modal-content collection-picker-modal" data-stop-propagation>
+      <div class="modal-header">
+        <h2>Add to collection</h2>
+        <button class="modal-close" data-action="close-collection-picker" aria-label="Close collection picker">×</button>
+      </div>
+      <div class="modal-body">
+        <p id="collectionPickerItemTitle" class="collection-picker-modal__item"></p>
+        <div id="collectionPickerOptions" class="collection-picker-modal__options"></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Collection Studio Modal -->
+  <div id="collectionStudioModal" class="modal-overlay" style="display: none;" data-close-on-backdrop="collection-studio">
+    <div class="modal-content collection-studio-modal" data-stop-propagation>
+      <div class="modal-header">
+        <h2>Edit &amp; share collection</h2>
+        <button class="modal-close" data-action="close-collection-studio" aria-label="Close collection studio">×</button>
+      </div>
+      <div class="modal-body">
+        <form id="collectionStudioForm" data-submit-action="save-collection-studio">
+          <input id="collectionStudioId" type="hidden">
+          <label for="collectionStudioName">Collection title</label>
+          <input id="collectionStudioName" type="text" maxlength="80" required>
+          <label for="collectionStudioDescription">Your introduction</label>
+          <textarea id="collectionStudioDescription" maxlength="500" rows="7" required aria-describedby="collectionStudioHint"></textarea>
+          <label for="collectionStudioCover">Collection artwork URL <span class="content-muted">(optional)</span></label>
+          <input id="collectionStudioCover" type="url" maxlength="1000" placeholder="https://…">
+          <p id="collectionStudioHint" class="collection-studio-modal__hint">Private is the default. Published collections are checked automatically for useful original context, complete thoughts, varied language, safe sharing, and at least three available titles.</p>
+          <ul id="collectionReadinessChecklist" class="collection-readiness-checklist" aria-live="polite"></ul>
+          <label class="collection-studio-modal__publish"><input id="collectionStudioPublic" type="checkbox"> Publish this collection publicly</label>
+          <p id="collectionStudioError" class="collection-studio-modal__error" role="alert" hidden></p>
+          <div class="collection-studio-modal__actions">
+            <button type="submit" class="action-btn">Save collection</button>
+            <button type="button" class="completion-ritual-modal__skip" data-action="close-collection-studio">Cancel</button>
+          </div>
+        </form>
       </div>
     </div>
   </div>
