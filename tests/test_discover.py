@@ -1,9 +1,56 @@
 """Discover must be readable publicly and preserve existing libraries on save."""
 import pytest
 from html import unescape
+from html.parser import HTMLParser
+from urllib.parse import parse_qs, urlsplit
 from app import models
 from app.discover_catalog import MONTHLY_EDITIONS, TRAILS
 from app.routers.collections import CATEGORIES
+
+
+class DiscoverElements(HTMLParser):
+    def __init__(self, html):
+        super().__init__()
+        self.elements = []
+        self.feed(html)
+
+    def handle_starttag(self, tag, attrs):
+        self.elements.append((tag, dict(attrs)))
+
+
+def test_guest_save_links_return_to_the_exact_trail(client):
+    paths = ['/discover/' + slug for slug in TRAILS]
+    paths += ['/discover/monthly/' + slug for slug in MONTHLY_EDITIONS]
+    for path in paths:
+        elements = DiscoverElements(client.get(path).text).elements
+        signin = next(attrs for tag, attrs in elements if attrs.get('id') == 'signin')
+        url = urlsplit(signin['href'])
+        assert url.path == '/' and not url.netloc
+        assert url.fragment == 'landing-auth'
+        assert parse_qs(url.query) == {'next': [path + '#save-picks']}
+        assert any(attrs.get('id') == 'save-picks' for _, attrs in elements)
+
+
+def test_discover_remains_readable_without_javascript(client):
+    response = client.get('/discover')
+    elements = DiscoverElements(response.text).elements
+    cards = [attrs for tag, attrs in elements if tag == 'article' and 'data-search' in attrs]
+    assert len(cards) == len(TRAILS)
+    assert all('hidden' not in card for card in cards)
+    filters = next(attrs for tag, attrs in elements if attrs.get('id') == 'trail-filters')
+    assert 'hidden' in filters  # Controls appear only after their behavior is available.
+    for trail in TRAILS.values():
+        assert all(item['title'] in unescape(response.text) for item in trail['items'])
+    assert '/static/ad-loader.js' not in response.text
+
+
+def test_discover_search_metadata_is_escaped(client, monkeypatch):
+    trail = next(iter(TRAILS.values()))
+    monkeypatch.setitem(trail, 'name', '\"><img src=x onerror=alert(1)>')
+    response = client.get('/discover')
+    assert '<img src=x' not in response.text
+    cards = [attrs for tag, attrs in DiscoverElements(response.text).elements if 'data-search' in attrs]
+    assert trail['name'] in cards[0]['data-search']
 
 
 def test_catalog_is_balanced_and_complete():

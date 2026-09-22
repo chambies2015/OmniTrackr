@@ -41,6 +41,23 @@ h1 { font-size: clamp(3rem, 6.4vw, 5.15rem); letter-spacing: -.045em; line-heigh
 h2 { font-size: clamp(1.42rem, 2.4vw, 2rem); line-height: 1.2; margin: 0 0 12px; }
 p { line-height: 1.75; }
 .hero > p:last-child { color: #d9def0; font-size: 1.14rem; line-height: 1.65; margin: 0; max-width: 690px; }
+.save-jump { display: inline-block; margin-top: 18px; }
+.save-panel { scroll-margin-top: 24px; }
+.save-panel fieldset { border: 0; margin: 22px 0; padding: 0; min-width: 0; }
+.save-panel legend { color: #fff; font-weight: 700; }
+.save-panel #signin { display: inline-block; margin: 16px 0; }
+.trail-filters { margin: 36px 0 22px; }
+.trail-filter-fields { align-items: end; display: flex; flex-wrap: wrap; gap: 16px; }
+.trail-filter-fields > div:first-child { flex: 1 1 300px; }
+.trail-filter-fields > div { flex: 0 1 200px; min-width: 0; }
+.trail-filter-fields label { display: block; color: #e1e5f3; font-size: .9rem; font-weight: 600; margin-bottom: 9px; }
+.trail-filter-fields input, .trail-filter-fields select { background: #202239; border: 1px solid #68728c; border-radius: 8px; color: #fff; font: inherit; height: 48px; margin: 0; padding: 10px 13px; width: 100%; }
+.trail-filter-fields input::placeholder { color: #b4bed4; }
+.filter-reset { background: transparent; border: 1px solid #68728c; border-radius: 8px; color: #d9def0; cursor: pointer; font: inherit; height: 48px; margin: 0; padding: 10px 16px; }
+.filter-reset:hover { background: #30334e; }
+.trail-empty { border: 1px dashed #68728c; border-radius: 12px; color: #d9def0; padding: 30px; }
+.trail .trail-titles { border-top: 1px solid rgba(170, 161, 255, .2); color: #c7d2fe; font-size: .88rem; line-height: 1.7; padding-top: 15px; }
+.trail-titles strong { color: #f1f5f9; display: block; font-size: .76rem; letter-spacing: .04em; margin-bottom: 6px; text-transform: uppercase; }
 .monthly-feature {
   align-items: end;
   background:
@@ -95,6 +112,7 @@ p { line-height: 1.75; }
   transition: background-color .2s ease, transform .2s ease;
 }
 .button:hover, .save-panel button:hover { background: #2dd4bf; color: #07131f; text-decoration: none; transform: translateY(-1px); }
+.discover-main .button { color: #07131f; }
 button:disabled { cursor: wait; opacity: .6; }
 .editorial {
   background: rgba(32, 34, 57, .64);
@@ -141,4 +159,8 @@ button:disabled { cursor: wait; opacity: .6; }
   .public-site-nav__links { gap: 8px 13px; }
   .public-site-nav__links a { font-size: .85rem; }
   h1 { font-size: clamp(2.65rem, 14vw, 3.55rem); }
+}
+@media (prefers-reduced-motion: reduce) {
+  .trail, .button, .save-panel button { transition: none; }
+  .trail:hover, .button:hover, .save-panel button:hover { transform: none; }
 }

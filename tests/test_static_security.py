@@ -28,8 +28,8 @@ def test_standalone_public_auth_has_its_own_api_base():
     assert "`${API_BASE}/auth/" not in source
 
     public_template = (INDEX_HTML.parent / "public_landing.html").read_text(encoding="utf-8")
-    assert 'src="/auth.js?v=20260918-welcome-back-remedy-v2"' in public_template
-    assert 'src="./auth.js?v=20260918-welcome-back-remedy-v2"' in INDEX_HTML.read_text(encoding="utf-8")
+    assert 'src="/auth.js?v=20260922-discover-journey"' in public_template
+    assert 'src="./auth.js?v=20260922-discover-journey"' in INDEX_HTML.read_text(encoding="utf-8")
     assert "/auth/reset-password?" not in source
     assert "JSON.stringify({ token, new_password: newPassword })" in source
 

@@ -1236,7 +1236,7 @@ function switchTab(tabName) {
   } else if (tabName === 'recommendations') {
     loadRecommendationPostcards();
   } else if (tabName === 'collections') {
-    loadCollections();
+    return loadCollections();
   } else if (tabName === 'statistics') {
     loadStatistics();
   }
@@ -7803,6 +7803,71 @@ async function loadActivityJournal() {
 let collectionsCache = [];
 let collectionPickerTarget = null;
 
+function consumeCollectionNavigationTarget() {
+  const url = new URL(window.location.href);
+  const values = url.searchParams.getAll('collection');
+  if (!values.length) return null;
+  url.searchParams.delete('collection');
+  window.history.replaceState(window.history.state, '', `${url.pathname}${url.search}${url.hash}`);
+  // Collection IDs use positive PostgreSQL integers. Reject ambiguous or coerced values.
+  if (values.length !== 1 || !/^[1-9]\d{0,9}$/.test(values[0])) return null;
+  const id = Number(values[0]);
+  return id <= 2147483647 ? id : null;
+}
+
+async function openCollectionFromLocation() {
+  const container = document.getElementById('collectionsList');
+  if (!container || !hasStoredAuth()) return false;
+  const collectionId = consumeCollectionNavigationTarget();
+  if (collectionId === null) return false;
+
+  let interrupted = false;
+  const stopAutoFocus = () => { interrupted = true; };
+  document.addEventListener('pointerdown', stopAutoFocus, true);
+  document.addEventListener('keydown', stopAutoFocus, true);
+  document.addEventListener('wheel', stopAutoFocus, true);
+  document.addEventListener('touchstart', stopAutoFocus, true);
+  try {
+    container.textContent = 'Opening your saved collection…';
+    const collections = await switchTab('collections');
+    if (interrupted || currentTab !== 'collections' || !hasStoredAuth()) return false;
+    // Initial guidance above the tabs can finish after the collection request.
+    // Wait for those existing renders before scrolling once to the saved card.
+    await dashboardStartupLayoutReady;
+    // A late response must not pull someone away from their next action.
+    if (interrupted || currentTab !== 'collections' || !hasStoredAuth()) return false;
+    if (!Array.isArray(collections)) {
+      container.tabIndex = -1;
+      container.focus({ preventScroll: true });
+      container.scrollIntoView({ block: 'start', behavior: 'auto' });
+      return false;
+    }
+    // Only the authenticated owner's collection list can resolve this target.
+    const collection = collections.find(item => item.id === collectionId);
+    const card = collection && document.getElementById(`collection-${collectionId}`);
+    if (!card) {
+      const message = document.createElement('p');
+      message.className = 'collections-empty';
+      message.setAttribute('role', 'status');
+      message.textContent = 'That collection is unavailable in this account.';
+      container.prepend(message);
+      message.tabIndex = -1;
+      message.focus({ preventScroll: true });
+      message.scrollIntoView({ block: 'start', behavior: 'auto' });
+      return false;
+    }
+    card.tabIndex = -1;
+    card.focus({ preventScroll: true });
+    card.scrollIntoView({ block: 'start', behavior: 'auto' });
+    return true;
+  } finally {
+    document.removeEventListener('pointerdown', stopAutoFocus, true);
+    document.removeEventListener('keydown', stopAutoFocus, true);
+    document.removeEventListener('wheel', stopAutoFocus, true);
+    document.removeEventListener('touchstart', stopAutoFocus, true);
+  }
+}
+
 async function loadCollections() {
   if (!hasStoredAuth()) return;
   try {
@@ -7811,9 +7876,11 @@ async function loadCollections() {
     collectionsCache = await response.json();
     renderCollections(collectionsCache);
     loadModeratorInsights();
+    return collectionsCache;
   } catch (error) {
     const container = document.getElementById('collectionsList');
     if (container) container.textContent = 'Could not load collections. Please try again.';
+    return null;
   }
 }
 
@@ -7830,6 +7897,7 @@ function renderCollections(collections) {
   }
   collections.forEach((collection) => {
     const card = document.createElement('article');
+    card.id = `collection-${collection.id}`;
     card.className = 'collection-card';
     const header = document.createElement('div');
     header.className = 'collection-card__header';
@@ -8970,15 +9038,34 @@ async function refreshLibraryPulse() {
   }
 }
 
+const dashboardLayoutRefreshes = new Set();
+let scheduledDashboardLayoutRefresh = null;
+
+function waitForDashboardLayoutRefreshes() {
+  // Initial producers have settled: capture their running and scheduled batches
+  // once, without waiting for later refreshes caused by normal interaction.
+  return Promise.allSettled(Array.from(dashboardLayoutRefreshes));
+}
+
 function scheduleLibraryLaunchpadRefresh(refreshDecisionCards = true) {
   launchpadDecisionRefreshRequested = launchpadDecisionRefreshRequested || refreshDecisionCards;
+  if (!scheduledDashboardLayoutRefresh) {
+    const batch = {};
+    batch.promise = new Promise(resolve => { batch.resolve = resolve; });
+    scheduledDashboardLayoutRefresh = batch;
+    dashboardLayoutRefreshes.add(batch.promise);
+    batch.promise.then(() => dashboardLayoutRefreshes.delete(batch.promise));
+  }
   window.clearTimeout(launchpadRefreshTimer);
   launchpadRefreshTimer = window.setTimeout(() => {
+    const batch = scheduledDashboardLayoutRefresh;
+    scheduledDashboardLayoutRefresh = null;
     const shouldRefreshDecisionCards = launchpadDecisionRefreshRequested;
     launchpadDecisionRefreshRequested = false;
-    refreshLibraryLaunchpad();
-    refreshNextUpQueue();
+    const launchpadRequest = refreshLibraryLaunchpad();
+    const queueRequest = refreshNextUpQueue();
     if (shouldRefreshDecisionCards) refreshDashboardDecisionCards();
+    Promise.allSettled([launchpadRequest, queueRequest, decisionCardsRefreshPromise]).then(batch.resolve);
   }, 250);
 }
 
@@ -9052,9 +9139,13 @@ loadBooks = async function (...args) {
 
 // Load initial data
 setupLibrarySearch();
-loadMovies();
+const initialMovieLibraryRequest = loadMovies();
 scheduleLibraryLaunchpadRefresh(false);
-bootstrapReturnDeck();
+const initialReturnDeckRequest = bootstrapReturnDeck();
+const dashboardStartupLayoutReady = Promise.allSettled([
+  initialMovieLibraryRequest,
+  initialReturnDeckRequest,
+]).then(waitForDashboardLayoutRefreshes);
 
 // ============================================================================
 // Landing Page Enhancements: Scroll Animations and User Count
@@ -10479,6 +10570,7 @@ document.addEventListener('DOMContentLoaded', () => {
   bindCustomTabForm();
   if (hasStoredAuth()) {
     loadCustomTabs();
+    openCollectionFromLocation();
   }
 });
 

@@ -88,6 +88,9 @@
 .discovery-aside { border-left: 1px solid rgba(255,255,255,.28); padding-left: 28px; }
 .discovery-aside strong { font-family: Poppins, sans-serif; font-size: 1.1rem; }
 .discovery-aside p { font-size: .95rem; margin-top: 10px; }
+.discovery-aside a { color: #fff; text-underline-offset: 4px; }
+.discovery-starts { display: grid; gap: 14px; list-style: none; margin: 20px 0; padding: 0; }
+.discovery-starts a { display: inline-block; line-height: 1.5; padding-block: 4px; }
 .landing-faq--focused { margin-bottom: 22px; }
 .landing-eyebrow--dark { color: var(--primary); text-align: center; }
 .landing-footer--public { box-sizing: border-box; margin: 0; width: 100%; }

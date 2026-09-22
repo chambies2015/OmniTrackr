@@ -24,6 +24,29 @@ schema addition is deployed; historical visits are not inferred or backfilled.
 The moderator response excludes email addresses, media titles, searches, review
 text, private notes, and page histories.
 
+## Discover to first save
+
+The homepage now links directly to existing editorial trails. Discover's search
+and format filters run in the browser without sending search text or creating a
+new analytics stream. All recommendations and source links remain readable
+without JavaScript or an account; filters appear only when their script runs.
+
+A guest's save link carries an allowlisted Discover destination through login.
+The destination is held for at most 24 hours in session storage, so signup and
+email verification can continue in the same tab. A separate tab or browser may
+not retain that intent; the original tab remains the place to resume. A denied
+storage setting still allows a return after login on the current page.
+
+Returning performs a read-only preview. Saving always requires a submit, and an
+expired session retains only selected public catalog keys for a retry. Existing
+title matches are reused without changing ratings, reviews, or completion.
+The confirmation opens the saved collection through the owner's authenticated
+collection list. Navigation never publishes a collection or queues a title.
+
+The signed-out homepage also now processes email-verification and password-reset
+links before choosing the normal login form. It continues to ignore stale local
+authentication data when deciding whether to show the private dashboard.
+
 ## Welcome Back Deck
 
 After a successful login following at least three full days away, the login

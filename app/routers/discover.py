@@ -1,6 +1,7 @@
 """Public editorial trails with authenticated, atomic library saves."""
 from html import escape
 from pathlib import Path
+from urllib.parse import quote
 from fastapi import APIRouter, Depends, HTTPException, Response
 from pydantic import BaseModel, Field
 from sqlalchemy import func
@@ -39,10 +40,31 @@ def page(title, description, path, content, *, indexable=True):
 
 @router.get("/discover")
 def discover_index():
-    cards = "".join(f'<article class="trail"><p class="eyebrow">{t["tag"]}</p><h2><a href="/discover/{slug}">{escape(t["name"])}</a></h2><p>{escape(t["intro"])}</p><p class="muted">' + " · ".join(CATEGORIES[i["category"]][1] for i in t["items"]) + f'</p><a class="button" href="/discover/{slug}">Explore this trail →</a></article>' for slug, t in TRAILS.items())
+    cards = []
+    for slug, trail in TRAILS.items():
+        categories = " ".join(item["category"] for item in trail["items"])
+        titles = " · ".join(item["title"] for item in trail["items"])
+        creators = " ".join(str(value) for item in trail["items"] for value in item["meta"].values())
+        search = " ".join((trail["name"], trail["tag"], trail["intro"], titles, creators))
+        formats = " · ".join(CATEGORIES[item["category"]][1] for item in trail["items"])
+        cards.append(
+            f'<article class="trail" data-formats="{escape(categories, quote=True)}" data-search="{escape(search, quote=True)}">'
+            f'<p class="eyebrow">{escape(trail["tag"])}</p><h2><a href="/discover/{slug}">{escape(trail["name"])}</a></h2>'
+            f'<p>{escape(trail["intro"])}</p><p class="trail-titles"><strong>Inside this trail</strong>{escape(titles)}</p>'
+            f'<p class="muted">{escape(formats)}</p><a class="button" href="/discover/{slug}">Explore this trail →</a></article>'
+        )
+    options = ''.join(f'<option value="{category}">{label}</option>' for category, (_, label) in CATEGORIES.items())
+    filters = (
+        '<section id="trail-filters" class="trail-filters" aria-label="Find a trail" hidden>'
+        '<div class="trail-filter-fields"><div><label for="trail-search">What are you curious about?</label>'
+        '<input id="trail-search" type="search" maxlength="100" placeholder="Try a title, creator, or theme" aria-controls="trail-list"></div>'
+        f'<div><label for="trail-format">Include a format</label><select id="trail-format" aria-controls="trail-list"><option value="">Any format</option>{options}</select></div>'
+        '<button id="trail-reset" type="button" class="filter-reset">Clear filters</button></div>'
+        '<p id="trail-results" class="muted" role="status" aria-live="polite" aria-atomic="true"></p></section>'
+    )
     edition_slug, edition = next(iter(MONTHLY_EDITIONS.items()))
     edition_card = f'<section class="monthly-feature"><div><p class="eyebrow">{escape(edition["tag"])}</p><h2>{escape(edition["name"])}</h2><p>{escape(edition["intro"])}</p><p class="muted">{escape(edition["published"])} · Six media types · Six carefully chosen places to start</p></div><a class="button" href="/discover/monthly/{edition_slug}">Read this edition →</a></section>'
-    return page("Discover", "Thoughtful trails across movies, TV, anime, games, music and books.", "/discover", '<header class="hero"><p class="eyebrow">SIX MEDIA TYPES. NEW CONNECTIONS.</p><h1>Follow your curiosity.</h1><p>Find your next watch, read, listen or play through a shared idea. Explore freely, then save the picks that feel like you.</p></header>' + edition_card + '<div class="trails">' + cards + '</div><section class="editorial"><h2>How these trails work</h2><p>These are editorial suggestions, not rankings or user reviews. Each pick has a reason to be here, a caveat, and a source for learning more. Start with one; there is no need to finish a whole collection.</p><p>Saving requires an account. You choose which titles to add, and can review existing matches before confirming.</p></section>')
+    return page("Discover", "Thoughtful trails across movies, TV, anime, games, music and books.", "/discover", '<header class="hero"><p class="eyebrow">SIX MEDIA TYPES. NEW CONNECTIONS.</p><h1>Follow your curiosity.</h1><p>Find your next watch, read, listen or play through a shared idea. Explore freely, then save the picks that feel like you.</p></header>' + edition_card + filters + '<p id="trail-empty" class="trail-empty" hidden>No trails match yet. Try a broader theme or choose Any format.</p><div id="trail-list" class="trails">' + ''.join(cards) + '</div><section class="editorial"><h2>How these trails work</h2><p>These are editorial suggestions, not rankings or user reviews. Each pick has a reason to be here, a caveat, and a source for learning more. Start with one; there is no need to finish a whole collection.</p><p>Saving requires an account. You choose which titles to add, and can review existing matches before confirming.</p></section>')
 
 
 def detail_content(trail, back_path, back_label, api_path, published, essay=None):
@@ -50,7 +72,8 @@ def detail_content(trail, back_path, back_label, api_path, published, essay=None
     essay_section = ""
     if essay:
         essay_section = f'<section class="editorial edition-essay"><h2>{escape(essay["title"])}</h2><p>{escape(essay["body"])}</p></section>'
-    return f'<header class="hero"><a href="{back_path}">← {escape(back_label)}</a><p class="eyebrow">{escape(trail["tag"])}</p><h1>{escape(trail["name"])}</h1><p>{escape(trail["intro"])}</p></header>{essay_section}<section class="editorial"><h2>Choose your starting point</h2><p>{escape(trail["guide"])}</p></section><div class="picks">{items}</div><section class="editorial"><h2>Take something with you</h2><p>{escape(trail["prompt"])}</p><p class="muted">Editorial suggestions · Published {escape(published)}. Source links are informational, not affiliate links. Availability varies by region.</p></section><section class="save-panel" data-trail="{escape(api_path, quote=True)}"><h2>Make this collection yours</h2><p>Preview your library matches, then select the titles you want in a private collection. Existing ratings, reviews and progress are preserved.</p><button id="preview" type="button">Preview saving</button><a id="signin" href="/#landing-auth" hidden>Sign in, then return here to preview →</a><form id="saveForm" hidden><div id="choices"></div><button id="save" type="submit">Save selected picks</button></form><p id="status" role="status"></p></section>'
+    signin = '/?next=' + quote('/discover/' + api_path + '#save-picks', safe='') + '#landing-auth'
+    return f'<header class="hero"><a href="{back_path}">← {escape(back_label)}</a><p class="eyebrow">{escape(trail["tag"])}</p><h1>{escape(trail["name"])}</h1><p>{escape(trail["intro"])}</p><a class="save-jump" href="#save-picks">Save picks to your library ↓</a></header>{essay_section}<section class="editorial"><h2>Choose your starting point</h2><p>{escape(trail["guide"])}</p></section><div class="picks">{items}</div><section class="editorial"><h2>Take something with you</h2><p>{escape(trail["prompt"])}</p><p class="muted">Editorial suggestions · Published {escape(published)}. Source links are informational, not affiliate links. Availability varies by region.</p></section><section id="save-picks" class="save-panel" data-trail="{escape(api_path, quote=True)}"><h2>Make this collection yours</h2><p>Preview your library matches, then select the titles you want in a private collection. Existing ratings, reviews and progress are preserved.</p><button id="preview" type="button">Preview saving</button><a id="signin" href="{escape(signin, quote=True)}" hidden>Sign in or create an account to continue here →</a><form id="saveForm" hidden><fieldset id="choices"><legend>Titles to save</legend></fieldset><button id="save" type="submit">Save selected picks</button></form><p id="status" role="status" aria-live="polite"></p><noscript><p>Enable JavaScript to preview and save picks. You can read every recommendation without it.</p></noscript></section>'
 
 
 @router.get("/discover/monthly/{slug}")

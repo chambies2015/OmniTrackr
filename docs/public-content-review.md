@@ -1,5 +1,28 @@
 # Public content review — September 17, 2026
 
+## Follow-up — September 22, 2026
+
+Read the live homepage and Discover experience, inspected the content and
+authentication routes, and rechecked Google's content and navigation guidance.
+The repository already contains ten editorial trails, a monthly edition, public
+review quality gates, and deliberate consolidation of overlapping search pages.
+The clearest actionable gap was the route from public reading to a saved library:
+sign-in discarded the chosen trail, and a successful save led to the generic
+dashboard. A separate initialization bug also skipped verification/reset links
+on the anonymous homepage.
+
+This update promotes existing Discover content on the homepage, makes trails
+searchable by title/creator/theme and format, preserves the Discover destination
+through same-tab authentication, fixes verification/reset dispatch, and opens the
+saved collection directly. Original editorial text, source links, public opt-in
+rules, indexability, and advertising eligibility remain as before. No new database
+schema, production data operation, or advertising inventory was introduced.
+
+This is a usability and activation improvement, not evidence of AdSense approval.
+After deployment, use actual Search Console coverage and the account's current
+AdSense feedback to select the next content revision. Account review decisions,
+traffic, and consent configuration were not accessible in this audit.
+
 ## Scope and findings
 
 This is a source-based first pass, not an exhaustive live-site or Search Console

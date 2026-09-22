@@ -7,10 +7,74 @@
 const TOKEN_KEY = 'omnitrackr_token';
 const USER_KEY = 'omnitrackr_user';
 const RETURN_PROMPT_KEY = 'omnitrackr_return_prompt';
+const DISCOVER_AUTH_RETURN_KEY = 'omnitrackr_discover_auth_return';
+const DISCOVER_AUTH_RETURN_TTL = 24 * 60 * 60 * 1000;
+let discoverAuthReturnContext = null;
 // Authentication is also used by the standalone public landing page, which
 // intentionally does not load the much larger private dashboard bundle.
 const AUTH_IS_LOCAL = (location.protocol === 'file:' || location.origin === 'null' || location.origin === '');
 const AUTH_API_BASE = AUTH_IS_LOCAL ? 'http://127.0.0.1:8000' : '';
+
+// Keep a visitor's chosen Discover page through same-tab registration and email
+// verification. This is only a navigation hint; returning never saves picks.
+function validateDiscoverAuthReturn(value) {
+    if (typeof value !== 'string' || value.length > 180) return null;
+    const match = value.match(/^\/discover\/(?:monthly\/)?[a-z0-9-]+(?:#save-picks)?$/);
+    // Compare the entire match as JavaScript's $ can precede a final newline.
+    return match && match[0] === value ? value : null;
+}
+
+function clearDiscoverAuthReturn() {
+    discoverAuthReturnContext = null;
+    try {
+        sessionStorage.removeItem(DISCOVER_AUTH_RETURN_KEY);
+    } catch (error) {
+        // Navigation and authentication still work without browser storage.
+    }
+}
+
+function getDiscoverAuthReturn() {
+    try {
+        const context = discoverAuthReturnContext
+            || JSON.parse(sessionStorage.getItem(DISCOVER_AUTH_RETURN_KEY));
+        const now = Date.now();
+        if (
+            context
+            && validateDiscoverAuthReturn(context.path)
+            && Number.isFinite(context.created_at)
+            && context.created_at <= now
+            && now - context.created_at < DISCOVER_AUTH_RETURN_TTL
+        ) {
+            return context.path;
+        }
+    } catch (error) {
+        // Ignore malformed state or unavailable browser storage.
+    }
+    clearDiscoverAuthReturn();
+    return null;
+}
+
+function captureDiscoverAuthReturn() {
+    if (document.documentElement.dataset.publicShell !== 'true' || window.location.pathname !== '/') return;
+    const params = new URLSearchParams(window.location.search);
+    if (!params.has('next')) return;
+    const values = params.getAll('next');
+    const path = values.length === 1 ? validateDiscoverAuthReturn(values[0]) : null;
+    clearDiscoverAuthReturn();
+    if (!path) return;
+    discoverAuthReturnContext = { path, created_at: Date.now() };
+    try {
+        sessionStorage.setItem(DISCOVER_AUTH_RETURN_KEY, JSON.stringify(discoverAuthReturnContext));
+    } catch (error) {
+        // The current page can still return correctly when storage is blocked.
+    }
+}
+
+function consumeDiscoverAuthReturn() {
+    const path = getDiscoverAuthReturn();
+    clearDiscoverAuthReturn();
+    return path || '/';
+}
 
 // ============================================================================
 // Token Management
@@ -33,6 +97,7 @@ function getUser() {
 function clearAuth() {
     localStorage.removeItem(TOKEN_KEY);
     localStorage.removeItem(USER_KEY);
+    clearDiscoverAuthReturn();
     try {
         sessionStorage.removeItem(RETURN_PROMPT_KEY);
     } catch (error) {
@@ -165,7 +230,7 @@ async function login(username, password) {
     }
     // The anonymous page deliberately does not include private dashboard markup.
     // Reload after the session cookie is set so the server can return the full app.
-    window.location.assign('/');
+    window.location.assign(consumeDiscoverAuthReturn());
 }
 
 async function logout() {
@@ -717,15 +782,9 @@ function setupAuthHandlers() {
 // ============================================================================
 
 function initAuth() {
+    captureDiscoverAuthReturn();
     setupAuthHandlers();
 
-    // Do not trust legacy localStorage alone to decide that this response is an
-    // authenticated dashboard. The server decides that from the session cookie.
-    if (document.documentElement.dataset.publicShell === 'true') {
-        showAuthModal();
-        return;
-    }
-    
     // Check URL parameters for email verification or password reset
     const urlParams = new URLSearchParams(window.location.search);
     const verifyToken = urlParams.get('token');
@@ -783,6 +842,14 @@ function initAuth() {
         showLoginForm();
         // Clean URL
         window.history.replaceState({}, document.title, window.location.pathname);
+        return;
+    }
+
+    // Verification and password-reset links must work before login. Once those
+    // links have been handled, only the server-selected dashboard may show the
+    // private UI; stale localStorage must not reveal it on the public shell.
+    if (document.documentElement.dataset.publicShell === 'true') {
+        showAuthModal();
         return;
     }
 

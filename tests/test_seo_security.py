@@ -1295,12 +1295,16 @@ class TestSecurityMiddleware:
         assert "Your media history, in one place" in content
         assert "Remember more than the title." in content
         assert "From recommendation to a memory you can revisit" in content
-        assert "Public reviews are optional. Useful context isn’t." in content
+        assert "One good pick can lead somewhere new." in content
         assert "A few honest answers" in content
         hrefs = extract_hrefs(content)
         assert "/guides" in hrefs
         assert "/reviews" in hrefs
         assert "/privacy" in hrefs
+        assert "/discover" in hrefs
+        assert "/discover/one-evening-well-spent" in hrefs
+        assert "/discover/finding-your-feet" in hrefs
+        assert "/discover/beautifully-strange-worlds" in hrefs
 
     def test_homepage_hero_demonstrates_tracking_without_remote_screenshot(self, client):
         """The first viewport should show an adaptable product story, not a stale UI capture."""
