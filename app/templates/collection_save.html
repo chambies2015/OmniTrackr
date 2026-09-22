@@ -1,0 +1,50 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="robots" content="noindex, follow">
+  <meta name="description" content="Choose titles from a shared OmniTrackr collection and preview your private copy before saving.">
+  <title>{{TITLE}}</title>
+  <link rel="icon" href="/omnitrackr_favicon.ico">
+  <link rel="stylesheet" href="/styles.css?v=20260922-collection-save">
+  <link rel="stylesheet" href="/static/collection-save.css?v=20260922-collection-save">
+  <script src="/static/collection-save.js?v=20260922-collection-save" defer></script>
+</head>
+<body class="dark-mode collection-save-page">
+  <div class="collection-save-shell">
+    <nav class="public-site-nav public-site-nav--focused" aria-label="Public site navigation">
+      <a class="public-site-nav__brand" href="/">OmniTrackr</a>
+      <div class="public-site-nav__links"><a href="/collections/explore">Collections</a><a href="/discover">Discover</a><a href="/guides">Guides</a></div>
+    </nav>
+    <main>
+      <a class="collection-save-back" href="{{BACK_URL}}">← Back to the collection</a>
+      <section id="collectionSavePanel" class="collection-save-panel" data-collection-id="{{COLLECTION_ID}}" aria-labelledby="collectionSaveHeading">
+        <p class="collection-save-eyebrow">FROM THE COMMUNITY · YOUR PRIVATE LIBRARY</p>
+        <h1 id="collectionSaveHeading">Good finds. Make them yours.</h1>
+        <h2 id="collectionSaveTitle">{{COLLECTION_NAME}}</h2>
+        <p class="collection-save-intro">Choose the titles you want to keep together. We’ll check your library before you save a private collection.</p>
+        <fieldset id="collectionSaveChoices" class="collection-save-choices" hidden>
+          <legend>Choose your titles</legend>
+          <div class="collection-save-selection-actions"><button id="collectionSaveAll" type="button">Select all</button><button id="collectionSaveNone" type="button">Clear selection</button></div>
+          <div id="collectionSaveItems" class="collection-save-items"></div>
+        </fieldset>
+        <div class="collection-save-preview">
+          <p id="collectionSaveSummary">Existing titles keep your own ratings, reviews and progress. New titles start unfinished and unrated.</p>
+          <p id="collectionSaveStatus" role="status" aria-live="polite" aria-atomic="true"></p>
+        </div>
+        <div class="collection-save-actions">
+          <button id="collectionSaveConfirm" type="button" hidden>Save my private collection</button>
+          <a id="collectionSaveOpen" class="collection-save-primary" href="/" hidden>Open your saved collection →</a>
+          <a id="collectionSaveSignin" class="collection-save-primary" href="{{SIGNIN_URL}}" hidden>Sign in or create an account →</a>
+          <button id="collectionSaveRetry" class="collection-save-secondary" type="button" hidden>Check my library again</button>
+        </div>
+        <p class="collection-save-footnote">Your copy is private and can be edited independently. The curator’s personal ratings, reviews and progress are never copied.</p>
+        <noscript><p>Enable JavaScript to choose titles and confirm your private copy. You can still <a href="{{BACK_URL}}">read the shared collection</a>.</p></noscript>
+      </section>
+      <p class="collection-save-more"><a href="/collections/explore">Explore more collections →</a></p>
+    </main>
+    <footer><a href="/privacy">Privacy</a><a href="/contact">Contact</a></footer>
+  </div>
+</body>
+</html>

@@ -5,11 +5,14 @@ import hmac
 from html import escape
 import json
 import os
+import re
 from pathlib import Path
-from typing import Dict, List, Tuple, Type
+from typing import Annotated, Dict, List, Tuple, Type
+from urllib.parse import quote
 
-from fastapi import APIRouter, Depends, HTTPException, Request, status
+from fastapi import APIRouter, Depends, HTTPException, Request, Response, status
 from fastapi.responses import JSONResponse
+from pydantic import BaseModel, ConfigDict, Field
 from sqlalchemy import case, func
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session, selectinload
@@ -782,70 +785,185 @@ async def collection_moderation_reports(
     ]
 
 
-@router.post("/public/{collection_id}/copy", response_model=schemas.Collection, status_code=status.HTTP_201_CREATED)
-async def copy_public_collection(
-    collection_id: int,
-    current_user: models.User = Depends(get_current_user),
-    db: Session = Depends(get_db),
-):
-    source_collection = _public_collection_or_404(db, collection_id)
-    source_items = sorted(source_collection.items, key=lambda item: (item.position, item.id))[:PUBLIC_COLLECTION_MAX_ITEMS]
-    source_lookup = _media_lookup_for_collections(db, [source_collection])
+def _collection_save_snapshot(db, source):
+    lookup = _media_lookup_for_collections(db, [source])
+    items = [
+        (item, lookup[(source.user_id, item.category, item.item_id)])
+        for item in sorted(source.items, key=lambda item: (item.position, item.id))[:PUBLIC_COLLECTION_MAX_ITEMS]
+        if (source.user_id, item.category, item.item_id) in lookup
+    ]
+    # Bind confirmation to every field we copy, including edition identity.
+    payload = {
+        "id": source.id, "name": source.name, "description": source.description,
+        "cover_url": source.cover_url,
+        "items": [
+            {"id": item.id, "category": item.category, "position": item.position,
+             "curator_note": item.curator_note,
+             "metadata": {field: getattr(media, field, None) for field in COPY_FIELDS[item.category]}}
+            for item, media in items
+        ],
+    }
+    version = hashlib.sha256(json.dumps(payload, sort_keys=True, default=str, ensure_ascii=True).encode("utf-8")).hexdigest()
+    return items, version
+
+
+def _collection_save_matches(db, user_id, items):
     titles_by_category: dict[str, set[str]] = {category: set() for category in CATEGORIES}
-    for source_item in source_items:
-        source_media = source_lookup.get((source_collection.user_id, source_item.category, source_item.item_id))
-        if source_media:
-            titles_by_category[source_item.category].add(source_media.title.strip().lower())
+    for item, media in items:
+        titles_by_category[item.category].add(media.title.strip().lower())
     existing_lookup = {}
     for category, titles in titles_by_category.items():
         if not titles:
             continue
         model, _ = CATEGORIES[category]
         for media in db.query(model).filter(
-            model.user_id == current_user.id,
-            func.lower(model.title).in_(titles),
-        ).all():
-            existing_lookup[(category, _media_identity_key(media, category))] = media
-    copy = models.Collection(
-        user_id=current_user.id,
-        name=f"{source_collection.name} — saved"[:80],
-        description=source_collection.description,
-        cover_url=source_collection.cover_url,
-        is_public=False,
-        moderation_status="pending",
+            model.user_id == user_id,
+            func.lower(func.trim(model.title)).in_(titles),
+        ).order_by(model.id).all():
+            existing_lookup.setdefault((category, _media_identity_key(media, category)), media)
+    return existing_lookup
+
+
+class CollectionSaveSelection(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+    version: str = Field(pattern=r"^[a-f0-9]{64}$")
+    item_ids: list[Annotated[int, Field(strict=True, gt=0, le=2147483647)]] = Field(
+        min_length=1, max_length=PUBLIC_COLLECTION_MAX_ITEMS,
     )
-    db.add(copy)
-    db.flush()
-    copied_position = 0
-    for source_item in source_items:
-        source_media = source_lookup.get((source_collection.user_id, source_item.category, source_item.item_id))
-        if not source_media:
-            continue
-        media = _copy_media_for_user(
-            db, source_media, source_item.category, current_user.id, existing_lookup
+
+
+def _save_public_selection(db, user, collection_id, selection=None):
+    # Match Discover/review locks: concurrent saves for an account serialize on PostgreSQL.
+    db.query(models.User).filter(models.User.id == user.id).with_for_update().first()
+    try:
+        source = _public_collection_or_404(db, collection_id, lock=True)
+        items, version = _collection_save_snapshot(db, source)
+        ids = [item.id for item, _ in items] if selection is None else selection.item_ids
+        if selection is not None and selection.version != version:
+            raise HTTPException(409, "This collection changed. Preview it again before saving.")
+        if not ids or len(ids) != len(set(ids)) or not set(ids).issubset({item.id for item, _ in items}):
+            raise HTTPException(422, "Choose available titles from this collection.")
+        selection_key = hashlib.sha256((version + ":" + ",".join(map(str, sorted(ids)))).encode("ascii")).hexdigest()
+        receipt = db.query(models.CollectionSaveReceipt).filter_by(
+            user_id=user.id, source_collection_id=collection_id, selection_key=selection_key,
+        ).first()
+        if receipt:
+            saved = db.query(models.Collection).filter_by(id=receipt.collection_id, user_id=user.id).first()
+            if saved:
+                result = {"collection_id": saved.id, "created": 0, "reused": len(ids), "already_saved": True}
+                db.commit()
+                return saved, result
+            # Recover if an external deletion did not run the ORM/database cascade.
+            db.delete(receipt)
+            db.flush()
+        selected = [(item, media) for item, media in items if item.id in set(ids)]
+        existing = _collection_save_matches(db, user.id, selected)
+        saved = models.Collection(
+            user_id=user.id, name=f"{source.name} — saved"[:80], description=source.description,
+            cover_url=source.cover_url, is_public=False, moderation_status="pending",
         )
-        db.add(models.CollectionItem(
-            collection_id=copy.id,
-            category=source_item.category,
-            item_id=media.id,
-            position=copied_position,
-            curator_note=source_item.curator_note,
+        db.add(saved)
+        db.flush()
+        created = reused = 0
+        # A source may contain two records for the same edition. Keep one membership.
+        memberships = set()
+        for item, source_media in selected:
+            key = (item.category, _media_identity_key(source_media, item.category))
+            if key in existing:
+                reused += 1
+            else:
+                created += 1
+            media = _copy_media_for_user(db, source_media, item.category, user.id, existing)
+            membership = (item.category, media.id)
+            if membership in memberships:
+                continue
+            db.add(models.CollectionItem(
+                collection_id=saved.id, category=item.category, item_id=media.id,
+                position=len(memberships), curator_note=item.curator_note,
+            ))
+            memberships.add(membership)
+        db.add(models.CollectionSaveReceipt(
+            user_id=user.id, source_collection_id=collection_id, selection_key=selection_key, collection_id=saved.id,
         ))
-        copied_position += 1
-    db.commit()
-    db.refresh(copy)
-    return _serialize_collection(copy, db, current_user.id)
+        result = {"collection_id": saved.id, "created": created, "reused": reused, "already_saved": False}
+        db.commit()
+        return saved, result
+    except Exception:
+        db.rollback()
+        raise
 
 
-def _public_collection_or_404(db: Session, collection_id: int) -> models.Collection:
-    collection = db.query(models.Collection).options(selectinload(models.Collection.items)).join(
+@router.get("/public/{collection_id}/save")
+def collection_save_page(collection_id: int, db: Session = Depends(get_db)):
+    try:
+        source = _public_collection_or_404(db, collection_id)
+    except HTTPException:
+        page = '<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><meta name="robots" content="noindex, follow"><title>Collection unavailable - OmniTrackr</title></head><body><main><h1>This collection is unavailable</h1><p>It may have been made private, changed, or removed.</p><a href="/collections/explore">Explore public collections</a></main></body></html>'
+        response = strict_html_response(page, status_code=404)
+    else:
+        path = f"/collections/public/{collection_id}/save"
+        page = (Path(__file__).parents[1] / "templates" / "collection_save.html").read_text(encoding="utf-8")
+        values = {
+            "TITLE": f"Save {source.name} - OmniTrackr", "COLLECTION_NAME": source.name,
+            "COLLECTION_ID": collection_id, "BACK_URL": f"/collections/public/{collection_id}",
+            "SIGNIN_URL": "/?next=" + quote(path, safe="") + "#landing-auth",
+        }
+        page = re.sub(r"\{\{([A-Z_]+)\}\}", lambda match: escape(str(values[match[1]]), quote=True) if match[1] in values else match[0], page)
+        response = strict_html_response(page)
+    response.headers["Cache-Control"] = "private, no-store"
+    response.headers["X-Robots-Tag"] = "noindex, follow"
+    return response
+
+
+@router.get("/public/{collection_id}/save-preview")
+def collection_save_preview(
+    collection_id: int, response: Response, current_user: models.User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+):
+    response.headers["Cache-Control"] = "private, no-store"
+    source = _public_collection_or_404(db, collection_id)
+    items, version = _collection_save_snapshot(db, source)
+    existing = _collection_save_matches(db, current_user.id, items)
+    return {
+        "collection_name": source.name, "version": version,
+        "items": [{"id": item.id, "title": media.title, "category": item.category,
+                   "category_label": CATEGORIES[item.category][1],
+                   "existing": (item.category, _media_identity_key(media, item.category)) in existing}
+                  for item, media in items],
+    }
+
+
+@router.post("/public/{collection_id}/save")
+def save_public_collection(
+    collection_id: int, selection: CollectionSaveSelection, response: Response,
+    current_user: models.User = Depends(get_current_user), db: Session = Depends(get_db),
+):
+    response.headers["Cache-Control"] = "private, no-store"
+    _, result = _save_public_selection(db, current_user, collection_id, selection)
+    return result
+
+
+@router.post("/public/{collection_id}/copy", response_model=schemas.Collection, status_code=status.HTTP_201_CREATED)
+def copy_public_collection(
+    collection_id: int, current_user: models.User = Depends(get_current_user), db: Session = Depends(get_db),
+):
+    """Keep older clients working, with the same repeated-save protection."""
+    saved, _ = _save_public_selection(db, current_user, collection_id)
+    return _serialize_collection(saved, db, current_user.id)
+
+
+def _public_collection_or_404(db: Session, collection_id: int, *, lock=False) -> models.Collection:
+    query = db.query(models.Collection).options(selectinload(models.Collection.items)).join(
         models.User, models.Collection.user_id == models.User.id
     ).filter(
         models.Collection.id == collection_id,
         models.Collection.is_public == True,
         models.Collection.moderation_status != "rejected",
         models.User.is_active == True,
-    ).first()
+    )
+    if lock:
+        query = query.with_for_update(of=models.Collection)
+    collection = query.populate_existing().first()
     if not collection:
         raise HTTPException(status_code=404, detail="Shared collection not found")
     media_lookup = _media_lookup_for_collections(db, [collection])

@@ -1,0 +1,47 @@
+.collection-save-page { margin: 0; padding: 0; min-height: 100vh; background: #10151e; color: #edf2f7; }
+.collection-save-shell { max-width: 1040px; margin: auto; padding: 0 32px; }
+.collection-save-shell, .collection-save-shell * { box-sizing: border-box; }
+.collection-save-shell [hidden] { display: none !important; }
+.collection-save-shell .public-site-nav { padding: 22px 0; }
+.collection-save-shell .public-site-nav__links a { color: #cad7e3; }
+.collection-save-shell main { max-width: 760px; margin: 48px auto 80px; }
+.collection-save-back, .collection-save-more a { color: #a9d7cb; text-decoration: none; }
+.collection-save-back { display: inline-block; padding: 12px 0; margin-bottom: 16px; }
+.collection-save-panel { padding: 40px; border: 1px solid #34424b; border-radius: 24px; background: linear-gradient(140deg, #1a2a2d, #18202c 55%); box-shadow: 0 18px 64px #0003; }
+.collection-save-eyebrow { color: #a5d3c4; font-size: .75rem; font-weight: 700; letter-spacing: .1em; line-height: 1.6; }
+.collection-save-panel h1 { margin: 18px 0 28px; font-size: clamp(1.9rem, 5vw, 2.7rem); letter-spacing: -.04em; line-height: 1.12; }
+.collection-save-panel h2 { margin: 0 0 12px; font-size: 1.45rem; overflow-wrap: anywhere; }
+.collection-save-intro { color: #bcc8d3; line-height: 1.65; }
+.collection-save-choices { min-width: 0; padding: 0; margin: 28px 0; border: 0; }
+.collection-save-choices legend { padding: 0; font-size: 1.05rem; font-weight: 700; }
+.collection-save-selection-actions { display: flex; flex-wrap: wrap; gap: 8px; margin: 12px 0; }
+.collection-save-selection-actions button { min-height: 40px; padding: 6px 12px; border: 1px solid #637983; border-radius: 8px; color: #cce1df; background: transparent; font: inherit; font-size: .85rem; cursor: pointer; }
+.collection-save-items { display: grid; gap: 10px; }
+.collection-save-item { display: flex; align-items: flex-start; gap: 14px; margin: 0; padding: 16px; border: 1px solid #ffffff20; border-radius: 12px; background: #0d162566; cursor: pointer; }
+.collection-save-item:has(input:checked) { border-color: #6bb29b; background: #15322e70; }
+.collection-save-item input { flex: 0 0 20px; width: 20px; height: 20px; margin: 2px 0 0; accent-color: #a9e1ce; cursor: pointer; }
+.collection-save-item__content { display: grid; min-width: 0; gap: 7px; }
+.collection-save-item__title { color: #edf2f7; font-weight: 600; line-height: 1.45; overflow-wrap: anywhere; }
+.collection-save-item__meta { display: flex; flex-wrap: wrap; align-items: center; gap: 6px 12px; color: #b9c8d2; font-size: .8rem; line-height: 1.45; }
+.collection-save-item__badge { border-radius: 5px; padding: 3px 7px; background: #a9e1ce14; color: #b4e5d5; }
+.collection-save-item__badge--existing { background: #93b9e518; color: #c4dbf5; }
+.collection-save-preview { margin: 24px 0; padding: 18px 20px; border-radius: 12px; border: 1px solid #ffffff17; background: #0d162566; line-height: 1.6; }
+.collection-save-preview p { margin: 0; }
+#collectionSaveStatus { color: #b5ceca; }
+#collectionSaveStatus:not(:empty) { margin-top: 10px; }
+.collection-save-actions { display: flex; align-items: center; flex-wrap: wrap; gap: 12px; }
+.collection-save-actions button, .collection-save-primary { display: inline-flex; justify-content: center; align-items: center; min-height: 48px; border: 1px solid transparent; border-radius: 10px; padding: 12px 20px; background: #a9e1ce; color: #102821; font: inherit; font-weight: 700; text-decoration: none; cursor: pointer; }
+.collection-save-actions .collection-save-secondary { background: transparent; border-color: #6c8990; color: #d6e2e9; }
+.collection-save-shell button:disabled, .collection-save-item input:disabled { cursor: default; opacity: .6; }
+.collection-save-shell a:focus-visible, .collection-save-shell button:focus-visible, .collection-save-shell input:focus-visible { outline: 3px solid #efca91; outline-offset: 4px; }
+.collection-save-footnote { margin: 24px 0 0; font-size: .85rem; line-height: 1.6; color: #a3b2c0; }
+.collection-save-more { margin: 24px 0; }
+.collection-save-shell footer { display: flex; justify-content: center; gap: 24px; padding: 24px; border-top: 1px solid #ffffff14; }
+.collection-save-shell footer a { color: #adbfc9; }
+@media (max-width: 600px) {
+  .collection-save-shell { padding: 0 18px; }
+  .collection-save-shell main { margin-top: 24px; }
+  .collection-save-panel { padding: 26px 20px; border-radius: 18px; }
+  .collection-save-actions > * { width: 100%; }
+  .collection-save-preview, .collection-save-item { padding: 14px; }
+}

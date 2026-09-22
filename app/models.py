@@ -329,6 +329,24 @@ class Collection(Base):
     reactions = relationship("CollectionReaction", cascade="all, delete-orphan")
     reports = relationship("CollectionReport", cascade="all, delete-orphan")
     views = relationship("CollectionView", cascade="all, delete-orphan")
+    save_receipts = relationship("CollectionSaveReceipt", cascade="all, delete-orphan")
+
+
+class CollectionSaveReceipt(Base):
+    """Remember an explicitly saved selection without coupling it to its source."""
+    __tablename__ = "collection_save_receipts"
+
+    id = Column(Integer, primary_key=True)
+    user_id = Column(Integer, ForeignKey("users.id"), nullable=False, index=True)
+    # A source can be removed without removing or rewriting a reader's copy.
+    source_collection_id = Column(Integer, nullable=False)
+    selection_key = Column(String(64), nullable=False)
+    collection_id = Column(Integer, ForeignKey("collections.id", ondelete="CASCADE"), nullable=False, index=True)
+    created_at = Column(DateTime, nullable=False, default=datetime.utcnow)
+
+    __table_args__ = (
+        UniqueConstraint("user_id", "source_collection_id", "selection_key", name="uq_collection_save_selection"),
+    )
 
 
 class CollectionItem(Base):

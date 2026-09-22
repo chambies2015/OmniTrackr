@@ -180,9 +180,9 @@ test('ambiguous repeated next parameters clear the previous intent', async () =>
   assert.deepEqual(s.redirects, ['/']);
 });
 
-test('next is only captured on the public root landing page', async () => {
-  for (const options of [{ publicShell: false }, { pathname: '/discover/example' }]) {
-    const s = setup({ search: nextQuery('/discover/finding-your-feet'), ...options });
+test('next is only captured at the root, regardless of the selected shell', async () => {
+  for (const publicShell of [true, false]) {
+    const s = setup({ search: nextQuery('/discover/finding-your-feet'), pathname: '/discover/example', publicShell });
     s.context.initAuth();
     await s.context.login('reader', 'password');
     assert.deepEqual(s.redirects, ['/']);
@@ -305,8 +305,8 @@ test('demo intent survives registration and same-tab verification without carryi
   assert.deepEqual(verified.redirects, ['/?start=demo']);
 });
 
-test('review and Discover return destinations take precedence over current or stored demo intent', async () => {
-  for (const destination of ['/reviews/42/save?category=book', '/discover/finding-your-feet#save-picks']) {
+test('review, Discover, and collection return destinations take precedence over current or stored demo intent', async () => {
+  for (const destination of ['/reviews/42/save?category=book', '/discover/finding-your-feet#save-picks', '/collections/public/42/save']) {
     for (const stored of [false, true]) {
       const storage = new Map([[demoKey, JSON.stringify({ source: 'demo', created_at: now })]]);
       if (stored) storage.set(returnKey, JSON.stringify({ path: destination, created_at: now }));
@@ -378,4 +378,150 @@ test('demo signup intent is only captured on the server-selected anonymous root 
     await s.context.login('reader', 'password');
     assert.deepEqual(s.redirects, ['/']);
   }
+});
+
+test('collection login returns to the exact preview without submitting a copy request', async () => {
+  for (const destination of ['/collections/public/1/save', '/collections/public/42/save', '/collections/public/2147483647/save']) {
+    const s = setup({ search: nextQuery(destination) });
+    s.context.initAuth();
+    assert.equal(s.requests.length, 0);
+    assert.equal(s.redirects.length, 0);
+    await s.context.login('reader', 'password');
+    assert.deepEqual(s.redirects, [destination]);
+    assert.deepEqual(s.requests.map(request => request.url), ['/auth/login']);
+    assert.equal(s.storage.has(returnKey), false);
+    assert.equal(s.context.consumeDiscoverAuthReturn(), '/');
+  }
+});
+
+test('collection signup and same-tab verification retain only the preview destination for 24 hours', async () => {
+  const destination = '/collections/public/42/save';
+  const signup = setup({ search: nextQuery(destination) });
+  signup.context.initAuth();
+  await signup.context.register('reader@example.com', 'reader', 'secret-password');
+  assert.deepEqual(JSON.parse(signup.storage.get(returnKey)), { path: destination, created_at: now });
+  assert.deepEqual(signup.requests.map(request => request.url), ['/auth/register']);
+  assert.deepEqual(signup.redirects, []);
+  const verified = setup({ search: '?token=verification-token&email_verified=true', storage: signup.storage });
+  verified.context.initAuth();
+  await new Promise(resolve => setImmediate(resolve));
+  assert.deepEqual(verified.requests.map(request => request.url), ['/auth/verify-email?token=verification-token']);
+  assert.equal(verified.context.getDiscoverAuthReturn(), destination);
+  await verified.context.login('reader', 'secret-password');
+  assert.deepEqual(verified.redirects, [destination]);
+  assert.deepEqual(verified.requests.map(request => request.url), ['/auth/verify-email?token=verification-token', '/auth/login']);
+  for (const createdAt of [now - ttl, now + 1]) {
+    const expired = setup({ storage: new Map([[returnKey, JSON.stringify({ path: destination, created_at: createdAt })]]) });
+    await expired.context.login('reader', 'password');
+    assert.deepEqual(expired.redirects, ['/']);
+  }
+});
+
+test('collection return paths reject foreign hosts, invalid IDs, suffixes, encodings, and controls', async () => {
+  for (const destination of [
+    '//evil.example/collections/public/42/save', 'https://omnitrackr.xyz/collections/public/42/save',
+    '/\\evil.example/collections/public/42/save', '/collections/public/0/save', '/collections/public/01/save',
+    '/collections/public/-1/save', '/collections/public/1.0/save', '/collections/public/1e2/save',
+    '/collections/public/2147483648/save', '/collections/public/99999999999/save',
+    '/collections/public/42/save/', '/collections/public/42/save?next=//evil.example',
+    '/collections/public/42/save?', '/collections/public/42/save#', '/collections/public/42/save#confirm',
+    '/collections/public/42/copy', '/collections/public/42', '/collections/public//42/save',
+    '/collections/public/%34%32/save', '/collections/public/../42/save', '/collections/public/42%2fsave',
+    '/collections/Public/42/save', '/collections/public/42/save\n', '/collections/public/42/save\r',
+    '/collections/public/42/save\u0000', '/collections/public/42/save\u2028',
+  ]) {
+    const storage = new Map([[returnKey, JSON.stringify({ path: '/collections/public/1/save', created_at: now })]]);
+    const s = setup({ search: nextQuery(destination), storage });
+    s.context.initAuth();
+    await s.context.login('reader', 'password');
+    assert.deepEqual(s.redirects, ['/'], destination);
+    assert.deepEqual(s.requests.map(request => request.url), ['/auth/login'], destination);
+    assert.equal(storage.has(returnKey), false, destination);
+  }
+});
+
+test('collection return retains recovery form priority and survives a failed login', async () => {
+  const destination = '/collections/public/42/save';
+  const s = setup({ search: `${nextQuery(destination)}&reset_token=reset-secret&start=demo` });
+  s.context.initAuth();
+  assert.equal(s.elements.get('resetPasswordFormElement').dataset.resetToken, 'reset-secret');
+  assert.equal(s.elements.get('resetPasswordForm').style.display, 'block');
+  assert.notEqual(s.elements.get('registerForm')?.style.display, 'block');
+  assert.equal(s.context.getDiscoverAuthReturn(), destination);
+  const successfulFetch = s.context.fetch;
+  s.context.fetch = async () => ({ ok: false, status: 401, json: async () => ({ detail: 'Invalid credentials' }) });
+  await assert.rejects(s.context.login('reader', 'wrong'), /Invalid credentials/);
+  assert.deepEqual(s.redirects, []);
+  assert.equal(s.context.getDiscoverAuthReturn(), destination);
+  s.context.fetch = successfulFetch;
+  await s.context.login('reader', 'password');
+  assert.deepEqual(s.redirects, [destination]);
+});
+
+test('a current-page collection return still works when session storage is unavailable', async () => {
+  const destination = '/collections/public/42/save';
+  const s = setup({ search: nextQuery(destination), blockedStorage: true });
+  s.context.initAuth();
+  await s.context.login('reader', 'password');
+  assert.deepEqual(s.redirects, [destination]);
+  assert.deepEqual(s.requests.map(request => request.url), ['/auth/login']);
+});
+
+test('an expired cookie selecting the legacy root shell still returns login to the collection preview', async () => {
+  const destination = '/collections/public/42/save';
+  const s = setup({ search: nextQuery(destination), publicShell: false });
+  s.context.initAuth();
+  assert.equal(s.context.modalCalls, 1);
+  assert.equal(s.context.mainUICalls || 0, 0);
+  assert.equal(s.context.getDiscoverAuthReturn(), destination);
+  await s.context.login('reader', 'password');
+  assert.deepEqual(s.redirects, [destination]);
+  assert.deepEqual(s.requests.map(request => request.url), ['/auth/login']);
+});
+
+test('a legacy-shell 401 clears stale credentials while retaining the chosen save destination', async () => {
+  for (const destination of ['/collections/public/42/save', '/reviews/42/save?category=book', '/discover/finding-your-feet#save-picks']) {
+    const s = setup({ search: nextQuery(destination), publicShell: false });
+    s.context.saveAuthData(null, { id: 1, username: 'reader' });
+    s.context.initAuth();
+    assert.equal(s.context.mainUICalls, 1);
+    const successfulFetch = s.context.fetch;
+    s.context.fetch = async (url, options) => {
+      s.requests.push({ url, options });
+      return { ok: false, status: 401 };
+    };
+    await assert.rejects(s.context.authenticatedFetch('/auth/me'), /Session expired/);
+    assert.equal(s.context.isAuthenticated(), false);
+    assert.equal(s.context.modalCalls, 1);
+    assert.equal(s.context.getDiscoverAuthReturn(), destination);
+    s.context.fetch = successfulFetch;
+    await s.context.login('reader', 'password');
+    assert.deepEqual(s.redirects, [destination]);
+    assert.deepEqual(s.requests.map(request => request.url), ['/auth/me', '/auth/login']);
+    assert.equal(s.storage.has(returnKey), false);
+  }
+});
+
+test('legacy-shell invalid or ambiguous next parameters cannot keep a previous save destination', async () => {
+  const destination = '/collections/public/42/save';
+  for (const search of [nextQuery('//evil.example'), nextQuery('/collections/public/42/save?next=//evil.example'),
+    nextQuery('/collections/public/0/save'), `${nextQuery(destination)}&next=${encodeURIComponent(destination)}`]) {
+    const storage = new Map([[returnKey, JSON.stringify({ path: destination, created_at: now })]]);
+    const s = setup({ search, publicShell: false, storage });
+    s.context.initAuth();
+    assert.equal(s.context.getDiscoverAuthReturn(), null);
+    await s.context.login('reader', 'password');
+    assert.deepEqual(s.redirects, ['/'], search);
+    assert.equal(storage.has(returnKey), false);
+  }
+});
+
+test('explicit logout clears a collection destination retained during expired-session recovery', async () => {
+  const s = setup({ search: nextQuery('/collections/public/42/save'), publicShell: false });
+  s.context.initAuth();
+  s.context.clearAuth({ preserveReturn: true });
+  assert.equal(s.context.getDiscoverAuthReturn(), '/collections/public/42/save');
+  await s.context.logout();
+  assert.equal(s.context.getDiscoverAuthReturn(), null);
+  assert.equal(s.storage.has(returnKey), false);
 });

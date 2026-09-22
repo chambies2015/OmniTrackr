@@ -89,7 +89,8 @@ class SecurityHeadersMiddleware(BaseHTTPMiddleware):
         review_path = request.url.path.rstrip("/")
         review_save_api = review_path.startswith("/api/public/reviews/") and review_path.endswith(("/save-preview", "/save"))
         review_save_page = review_path.startswith("/reviews/") and review_path.endswith("/save")
-        if review_save_api or review_save_page:
+        collection_save = review_path.startswith("/collections/public/") and review_path.endswith(("/save-preview", "/save", "/copy"))
+        if review_save_api or review_save_page or collection_save:
             # Include authentication and validation failures before a route runs.
             response.headers["Cache-Control"] = "private, no-store"
             response.headers["X-Robots-Tag"] = "noindex, follow"

@@ -38,15 +38,6 @@
         document.getElementById('collectionHelpfulCount').textContent = `${result.count} found this helpful`;
         button.textContent = 'Marked helpful';
         setStatus('Thanks—your feedback helps thoughtful collections stand out.');
-      } else if (action === 'copy') {
-        const response = await post(`/collections/public/${collectionId}/copy`);
-        if (response.status === 401) {
-          window.location.href = '/#landing-auth';
-          return;
-        }
-        if (!response.ok) throw new Error('copy');
-        setStatus('Saved privately. Open Collections in your library to edit your copy.');
-        button.textContent = 'Saved privately';
       }
     } catch (error) {
       button.disabled = false;

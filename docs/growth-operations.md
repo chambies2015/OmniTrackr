@@ -24,6 +24,39 @@ schema addition is deployed; historical visits are not inferred or backfilled.
 The moderator response excludes email addresses, media titles, searches, review
 text, private notes, and page histories.
 
+## Public collection to private library
+
+Public collection pages link to `/collections/public/{id}/save`. The standalone,
+ad-free, analytics-free page is `noindex` and `private, no-store`, including
+authentication and validation failures. Reading the page or its authenticated
+preview never creates a collection. The preview distinguishes exact edition
+matches from new titles; readers select titles and explicitly confirm the save.
+New records begin unfinished, unrated, and without a public review. Reused
+records retain every personal field.
+
+The existing strictly validated, 24-hour same-tab authentication return retains
+this save page through signup, email verification and login. Returning loads a
+fresh preview; it never performs a save. Verification completed in another tab
+may lose this optional return context. The original public collection remains
+available to revisit.
+
+A save checks current source visibility, moderation and the complete copied
+content version. Changes require a fresh preview. A transaction saves the
+selection and a `collection_save_receipts` row together. Its unique key uses the
+account, source collection, content version and selected item IDs, so repeated
+clicks or a retry after a lost response reuse the original saved collection,
+including after a private rename or edit. A different selection or revised
+source can create a separate copy after explicit confirmation. Result links use
+the existing owner-checked `/?collection={id}` navigation.
+
+The receipt table is an additive `Base.metadata.create_all` schema change; it
+does not rewrite existing tables or data. Deleting a saved collection removes
+its receipt, allowing a future explicit save. Source edits, withdrawal or deletion
+never update or remove private copies. Copies from before this release and
+imported backups remain intact and are not retrospectively linked to a source.
+The older `/copy` endpoint keeps its response contract and uses the same
+duplicate protection for the full selection.
+
 ## Interactive demo to first title
 
 The homepage links to an interactive `/demo` before signup. Six fictional sample
@@ -228,9 +261,15 @@ restores the new version when it qualifies.
 
 ## Verification
 
-Run the full suite:
+Run the full suite against an isolated database. Set these before importing the
+app, because startup creates tables and runs migrations:
 
 ```powershell
+$env:PYTHON_DOTENV_DISABLED = '1'
+$env:DATABASE_URL = 'sqlite:///:memory:'
+$env:ENVIRONMENT = 'development'
+$env:SECRET_KEY = 'omnitrackr-isolated-test-key-not-for-deployment'
+$env:TESTING = 'true'
 .\.venv\Scripts\python.exe -m pytest
 ```
 
@@ -241,7 +280,13 @@ $uiTests = Get-ChildItem tests -Filter *.cjs | Select-Object -ExpandProperty Ful
 node --test $uiTests
 ```
 
+For a disposable collection walkthrough, run
+`.\.venv\Scripts\python.exe -m tests.manual_mobile_preview --empty --collections`.
+Open `http://localhost:8765/collections/public/1`, sign in as `preview` with the
+fixture password `local-preview-only`, and select titles before saving. Its
+temporary SQLite data and per-run session secret are separate from production.
+
 Focused growth and trust checks live in `tests/test_auth.py`,
-`tests/test_collections.py`, `tests/test_first_session.py`, `tests/test_statistics.py`,
+`tests/test_collections.py`, `tests/test_collection_save.py`, `tests/test_first_session.py`, `tests/test_statistics.py`,
 `tests/test_public_reviews.py`, `tests/test_seo_security.py`, and
 `tests/test_static_security.py`.

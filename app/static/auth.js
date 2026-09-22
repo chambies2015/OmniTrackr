@@ -17,15 +17,18 @@ let demoStartContext = null;
 const AUTH_IS_LOCAL = (location.protocol === 'file:' || location.origin === 'null' || location.origin === '');
 const AUTH_API_BASE = AUTH_IS_LOCAL ? 'http://127.0.0.1:8000' : '';
 
-// Keep a visitor's chosen Discover or review save page through same-tab
-// registration and email verification. Returning never saves a title or picks.
+// Keep a visitor's chosen Discover, review, or collection save page through
+// same-tab registration and email verification. Returning only opens a preview;
+// saving always requires the visitor's explicit confirmation on that page.
 function validateDiscoverAuthReturn(value) {
     if (typeof value !== 'string' || value.length > 180) return null;
     const match = value.match(/^\/discover\/(?:monthly\/)?[a-z0-9-]+(?:#save-picks)?$/);
     // Compare the entire match as JavaScript's $ can precede a final newline.
     if (match && match[0] === value) return value;
     const review = value.match(/^\/reviews\/([1-9]\d{0,9})\/save\?category=(movie|tv_show|anime|video_game|music|book)$/);
-    return review && review[0] === value && Number(review[1]) <= 2147483647 ? value : null;
+    if (review && review[0] === value && Number(review[1]) <= 2147483647) return value;
+    const collection = value.match(/^\/collections\/public\/([1-9]\d{0,9})\/save$/);
+    return collection && collection[0] === value && Number(collection[1]) <= 2147483647 ? value : null;
 }
 
 function clearDiscoverAuthReturn() {
@@ -59,7 +62,9 @@ function getDiscoverAuthReturn() {
 }
 
 function captureDiscoverAuthReturn() {
-    if (document.documentElement.dataset.publicShell !== 'true' || window.location.pathname !== '/') return;
+    // An expired cookie may select the full dashboard shell before authentication
+    // fails. Capture the same strictly allowlisted root-page intent in either shell.
+    if (window.location.pathname !== '/') return;
     const params = new URLSearchParams(window.location.search);
     if (!params.has('next')) return;
     const values = params.getAll('next');
@@ -109,7 +114,7 @@ function getDemoStartIntent() {
 function captureDemoStartIntent() {
     if (document.documentElement.dataset.publicShell !== 'true' || window.location.pathname !== '/') return;
     const params = new URLSearchParams(window.location.search);
-    // An explicitly chosen review or Discover destination always takes priority.
+    // An explicitly chosen Discover, review, or collection destination takes priority.
     if (params.has('next')) {
         clearDemoStartIntent();
         return;
@@ -147,10 +152,10 @@ function getUser() {
     return userStr ? JSON.parse(userStr) : null;
 }
 
-function clearAuth() {
+function clearAuth({ preserveReturn = false } = {}) {
     localStorage.removeItem(TOKEN_KEY);
     localStorage.removeItem(USER_KEY);
-    clearDiscoverAuthReturn();
+    if (!preserveReturn) clearDiscoverAuthReturn();
     clearDemoStartIntent();
     try {
         sessionStorage.removeItem(RETURN_PROMPT_KEY);
@@ -189,7 +194,9 @@ async function authenticatedFetch(url, options = {}) {
 
         // Handle 401 Unauthorized - token expired or invalid
         if (response.status === 401) {
-            clearAuth();
+            // Keep a chosen save preview while recovering an expired session.
+            // Explicit logout still clears navigation intent along with credentials.
+            clearAuth({ preserveReturn: true });
             showAuthModal();
             throw new Error('Session expired. Please login again.');
         }

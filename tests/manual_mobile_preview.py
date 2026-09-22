@@ -6,9 +6,11 @@ Add --quick-capture for deterministic, local-only metadata search QA: movies and
 music load promptly, TV is empty, anime is slow, games fail once, and books time
 out once. Games and books recover on retry for each new search query.
 Add --reviews for synthetic community reviews and a private existing-title match.
+Add --collections for a synthetic shared collection with an existing private book.
 """
 import os
 import argparse
+import secrets
 import tempfile
 from pathlib import Path
 
@@ -80,11 +82,13 @@ def main():
                         help='Use local synthetic metadata with progressive results, failures, and retry recovery')
     parser.add_argument('--reviews', action='store_true',
                         help='Seed local public reviews for browsing, login handoff, and save QA')
+    parser.add_argument('--collections', action='store_true',
+                        help='Seed a local public collection and existing private title for save QA')
     args = parser.parse_args()
     with tempfile.TemporaryDirectory(prefix="omnitrackr-mobile-") as directory:
         os.environ.update(PYTHON_DOTENV_DISABLED="1", DATABASE_URL=f"sqlite:///{Path(directory).as_posix()}/preview.db",
                           ENVIRONMENT="development", TESTING="true",
-                          SECRET_KEY="local-disposable-mobile-preview-only")
+                          SECRET_KEY=secrets.token_urlsafe(32))
         if args.quick_capture:
             os.environ.update(PYTHON_DOTENV_DISABLED="1", OMDB_API_KEY="local-preview-only",
                               RAWG_API_KEY="local-preview-only")
@@ -143,6 +147,52 @@ def main():
                 db.add(models.Movie(user_id=user.id, title=titles[0], year=2024, rating=9.2, watched=True,
                                     review="My private review must survive the public-review save flow.",
                                     poster_url="/static/omnitrackr_vortex.png"))
+            if args.collections:
+                curator = models.User(username="sample_curator", email="curator@example.invalid",
+                                      hashed_password=auth.get_password_hash("local-preview-only"), is_verified=True)
+                db.add(curator)
+                db.flush()
+                collection = models.Collection(
+                    user_id=curator.id, name="A quiet weekend across six worlds", is_public=True,
+                    moderation_status="approved", description=(
+                        "Some weekends are better spent following a small curiosity than chasing a big checklist. "
+                        "These six fictional choices offer a little room to breathe, each in a different medium. "
+                        "Start with the film if you have an evening free, take the album on a slow walk, or keep "
+                        "the book nearby for a chapter before bed. The common thread is patient storytelling and "
+                        "the pleasure of noticing details. Choose what fits your time and leave the rest for later."
+                    ),
+                )
+                db.add(collection)
+                db.flush()
+                titles = ["The Quiet Observatory", "Letters from Tomorrow", "A Garden After Rain",
+                          "River of Small Wonders", "Northbound", "The Lantern Atlas"]
+                notes = ["A gentle film for an evening with no interruptions.",
+                         "Short episodes make room for one more small mystery.",
+                         "The artwork rewards a slower look at the background details.",
+                         "Explore at your own pace and follow the paths that interest you.",
+                         "A companion for a long walk or a quiet afternoon.",
+                         "Read a chapter before bed and let the map unfold slowly."]
+                categories = ["movies", "tv-shows", "anime", "video-games", "music", "books"]
+                for position, (category, model, title, note) in enumerate(zip(
+                    categories, (models.Movie, models.TVShow, models.Anime, models.VideoGame, models.Music, models.Book),
+                    titles, notes,
+                )):
+                    data = dict(user_id=curator.id, title=title, rating=8.5,
+                                review="Curator personal review is not copied.", review_public=False)
+                    for key, value in dict(year=2024, director="Sample director", author="Sample author",
+                                           artist="Sample artist", genre="Adventure", genres="Adventure",
+                                           seasons=1, episodes=8, poster_url="/static/omnitrackr_vortex.png",
+                                           cover_art_url="/static/omnitrackr_vortex.png").items():
+                        if hasattr(model, key):
+                            data[key] = value
+                    item = model(**data)
+                    db.add(item)
+                    db.flush()
+                    db.add(models.CollectionItem(collection_id=collection.id, category=category,
+                                                 item_id=item.id, position=position, curator_note=note))
+                db.add(models.Book(user_id=user.id, title=titles[-1], author="Sample author", year=2024,
+                                   rating=9.2, read=True, review="My private book note must survive saving this collection.",
+                                   review_public=False, cover_art_url="/static/omnitrackr_vortex.png"))
             db.commit()
 
         @app.get("/qa", response_class=HTMLResponse)
