@@ -6,6 +6,7 @@ const vm = require('node:vm');
 
 const source = fs.readFileSync(path.join(__dirname, '../app/static/auth.js'), 'utf8');
 const returnKey = 'omnitrackr_discover_auth_return';
+const demoKey = 'omnitrackr_demo_start';
 const now = 1900000000000;
 const ttl = 24 * 60 * 60 * 1000;
 const nextQuery = destination => `?next=${encodeURIComponent(destination)}`;
@@ -274,5 +275,107 @@ test('review return paths reject foreign hosts, ambiguous queries, invalid IDs, 
     await s.context.login('reader', 'password');
     assert.deepEqual(s.redirects, ['/'], destination);
     assert.deepEqual(s.requests.map(request => request.url), ['/auth/login'], destination);
+  }
+});
+
+test('demo signup opens registration and login returns only to the fixed first-title destination', async () => {
+  const s = setup({ search: '?start=demo' });
+  s.context.initAuth();
+  assert.equal(s.elements.get('registerForm').style.display, 'block');
+  assert.equal(s.elements.get('loginForm').style.display, 'none');
+  assert.deepEqual(JSON.parse(s.storage.get(demoKey)), { source: 'demo', created_at: now });
+  assert.equal(s.requests.length, 0);
+  await s.context.login('reader', 'password');
+  assert.deepEqual(s.redirects, ['/?start=demo']);
+  assert.deepEqual(s.requests.map(request => request.url), ['/auth/login']);
+  assert.equal(s.storage.has(demoKey), false);
+  assert.equal(s.context.consumeDiscoverAuthReturn(), '/');
+});
+
+test('demo intent survives registration and same-tab verification without carrying sample data', async () => {
+  const signup = setup({ search: '?start=demo' });
+  signup.context.initAuth();
+  await signup.context.register('reader@example.com', 'reader', 'private-password');
+  assert.deepEqual(JSON.parse(signup.storage.get(demoKey)), { source: 'demo', created_at: now });
+  assert.deepEqual(signup.requests.map(request => request.url), ['/auth/register']);
+  const verified = setup({ search: '?email_verified=true', storage: signup.storage });
+  verified.context.initAuth();
+  assert.equal(verified.elements.has('registerForm'), false);
+  await verified.context.login('reader', 'private-password');
+  assert.deepEqual(verified.redirects, ['/?start=demo']);
+});
+
+test('review and Discover return destinations take precedence over current or stored demo intent', async () => {
+  for (const destination of ['/reviews/42/save?category=book', '/discover/finding-your-feet#save-picks']) {
+    for (const stored of [false, true]) {
+      const storage = new Map([[demoKey, JSON.stringify({ source: 'demo', created_at: now })]]);
+      if (stored) storage.set(returnKey, JSON.stringify({ path: destination, created_at: now }));
+      const s = setup({ search: stored ? '?start=demo' : `${nextQuery(destination)}&start=demo`, storage });
+      s.context.initAuth();
+      assert.equal(s.elements.has('registerForm'), false);
+      await s.context.login('reader', 'password');
+      assert.deepEqual(s.redirects, [destination]);
+      assert.equal(s.storage.has(demoKey), false);
+    }
+  }
+});
+
+test('demo intent never overrides verification or password-recovery forms', async () => {
+  for (const query of ['reset_token=reset-secret', 'token=verify-secret&email_verified=true', 'email_verified=true', 'password_reset=true', 'email_change_token=change-secret&email_change=true']) {
+    const s = setup({ search: `?start=demo&${query}` });
+    s.context.handleEmailVerification = () => { s.context.verified = true; };
+    s.context.handleEmailChangeVerification = () => { s.context.changed = true; };
+    s.context.initAuth();
+    assert.notEqual(s.elements.get('registerForm')?.style.display, 'block', query);
+    assert.equal(s.context.getDemoStartIntent(), false, query);
+    assert.equal(s.redirects.length, 0, query);
+  }
+});
+
+test('malformed or repeated demo starts cannot retain stale intent or choose a redirect', async () => {
+  for (const search of ['?start=', '?start=Demo', '?start=demo%0A', '?start=//evil.example', '?start=demo&start=demo', '?start=demo&next=//evil.example']) {
+    const storage = new Map([[demoKey, JSON.stringify({ source: 'demo', created_at: now })]]);
+    const s = setup({ search, storage });
+    s.context.initAuth();
+    assert.notEqual(s.elements.get('registerForm')?.style.display, 'block', search);
+    await s.context.login('reader', 'password');
+    assert.deepEqual(s.redirects, ['/'], search);
+  }
+});
+
+test('stored demo intent expires and rejects malformed timestamps or an unknown source', async () => {
+  for (const raw of ['not JSON', 'null', '[]', JSON.stringify({ source: 'demo' }),
+    JSON.stringify({ source: 'demo', created_at: String(now) }),
+    JSON.stringify({ source: 'demo', created_at: now + 1 }),
+    JSON.stringify({ source: 'demo', created_at: now - ttl }),
+    JSON.stringify({ source: '//evil.example', created_at: now })]) {
+    const s = setup({ storage: new Map([[demoKey, raw]]) });
+    await s.context.login('reader', 'password');
+    assert.deepEqual(s.redirects, ['/'], raw);
+    assert.equal(s.storage.has(demoKey), false, raw);
+  }
+  const s = setup({ storage: new Map([[demoKey, JSON.stringify({ source: 'demo', created_at: now - ttl + 1 })]]) });
+  await s.context.login('reader', 'password');
+  assert.deepEqual(s.redirects, ['/?start=demo']);
+});
+
+test('blocked storage supports a current-page demo signup and logout clears its memory fallback', async () => {
+  const s = setup({ search: '?start=demo', blockedStorage: true });
+  s.context.initAuth();
+  assert.equal(s.elements.get('registerForm').style.display, 'block');
+  await s.context.login('reader', 'password');
+  assert.deepEqual(s.redirects, ['/?start=demo']);
+  s.context.initAuth();
+  await s.context.logout();
+  assert.equal(s.context.getDemoStartIntent(), false);
+});
+
+test('demo signup intent is only captured on the server-selected anonymous root shell', async () => {
+  for (const options of [{ publicShell: false }, { pathname: '/demo' }]) {
+    const s = setup({ search: '?start=demo', ...options });
+    s.context.initAuth();
+    assert.equal(s.context.getDemoStartIntent(), false);
+    await s.context.login('reader', 'password');
+    assert.deepEqual(s.redirects, ['/']);
   }
 });

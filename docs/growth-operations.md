@@ -24,6 +24,32 @@ schema addition is deployed; historical visits are not inferred or backfilled.
 The moderator response excludes email addresses, media titles, searches, review
 text, private notes, and page histories.
 
+## Interactive demo to first title
+
+The homepage links to an interactive `/demo` before signup. Six fictional sample
+entries are rendered on the server so the page remains useful without JavaScript.
+Its small standalone script supports category filters, adding sample titles,
+completion, ratings and notes, with statistics calculated from the sample library.
+Practice state lives only in the page's memory and resets on reload or Reset.
+The demo sends no library requests, uses no browser storage, and never transfers
+practice entries to a real account. It loads neither ads nor analytics.
+
+The signup link uses the fixed `/?start=demo#landing-auth` destination. A bounded
+same-tab navigation hint keeps the first-title context through registration and
+email verification; it contains no sample titles, ratings or notes. Existing
+review and Discover destinations and account-recovery actions take precedence.
+For an empty account, the existing launchpad guides the member into Add Anything
+after an explicit click. Searching, selecting and saving remain separate actions.
+Existing accounts keep their own library and onboarding preferences.
+
+Success is evaluated through the existing aggregate activation milestones:
+verified accounts, first title, five titles, and later returns. No new visitor
+tracking, event stream, database schema, or attribution claim is introduced.
+
+For local browser QA, `python -m tests.manual_mobile_preview --empty --quick-capture`
+provides an empty synthetic account and local metadata responses. `/demo` can be
+used anonymously; the fixture's `preview` account uses `local-preview-only`.
+
 ## Add anything search reliability
 
 Quick Capture renders each media source independently. Each source has a

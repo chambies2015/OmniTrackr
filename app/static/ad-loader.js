@@ -6,7 +6,6 @@
     '/export-import-guide',
     '/review-guidelines',
     '/sample-library',
-    '/demo',
     '/media-tracking',
   ]);
 

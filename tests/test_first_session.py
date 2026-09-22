@@ -49,3 +49,33 @@ def test_first_book_survives_cookie_logout_and_login(authenticated_client, test_
     assert restored.json()['review'] == 'Private reading note'
     assert restored.json()['review_public'] is False
     assert 'id="mainContainer"' in client.get('/').text
+
+
+def test_demo_is_sample_only_even_when_a_member_is_signed_in(authenticated_client):
+    client = authenticated_client
+    created = client.post('/books/', json={
+        'title': 'Private member title never shown in the demo',
+        'author': 'Private author', 'year': 2024,
+    })
+    assert created.status_code in (200, 201)
+    item_id = created.json()['id']
+    client.put(f'/books/{item_id}', json={
+        'rating': 9, 'read': True, 'review': 'Private member note never shown in the demo',
+        'review_public': False,
+    })
+    before = client.get(f'/books/{item_id}').json()
+
+    response = client.get('/demo')
+    assert response.status_code == 200
+    assert before['title'] not in response.text
+    assert before['review'] not in response.text
+    assert '/static/ad-loader.js' not in response.text
+    scripts = ScriptSources()
+    scripts.feed(response.text)
+    assert len(scripts.sources) == 1
+    assert urlsplit(scripts.sources[0]).path == '/static/demo.js'
+    script_response = client.get(scripts.sources[0])
+    assert script_response.status_code == 200
+    assert 'javascript' in script_response.headers['content-type']
+    assert client.get(f'/books/{item_id}').json() == before
+    assert len(client.get('/books/').json()) == 1

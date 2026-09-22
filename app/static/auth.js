@@ -10,6 +10,8 @@ const RETURN_PROMPT_KEY = 'omnitrackr_return_prompt';
 const DISCOVER_AUTH_RETURN_KEY = 'omnitrackr_discover_auth_return';
 const DISCOVER_AUTH_RETURN_TTL = 24 * 60 * 60 * 1000;
 let discoverAuthReturnContext = null;
+const DEMO_START_KEY = 'omnitrackr_demo_start';
+let demoStartContext = null;
 // Authentication is also used by the standalone public landing page, which
 // intentionally does not load the much larger private dashboard bundle.
 const AUTH_IS_LOCAL = (location.protocol === 'file:' || location.origin === 'null' || location.origin === '');
@@ -74,8 +76,57 @@ function captureDiscoverAuthReturn() {
 
 function consumeDiscoverAuthReturn() {
     const path = getDiscoverAuthReturn();
+    const startDemo = getDemoStartIntent();
     clearDiscoverAuthReturn();
-    return path || '/';
+    clearDemoStartIntent();
+    return path || (startDemo ? '/?start=demo' : '/');
+}
+
+function clearDemoStartIntent() {
+    demoStartContext = null;
+    try {
+        sessionStorage.removeItem(DEMO_START_KEY);
+    } catch (error) {
+        // Optional onboarding must also work when browser storage is blocked.
+    }
+}
+
+function getDemoStartIntent() {
+    try {
+        const context = demoStartContext || JSON.parse(sessionStorage.getItem(DEMO_START_KEY));
+        const now = Date.now();
+        if (context?.source === 'demo' && Number.isFinite(context.created_at)
+            && context.created_at <= now && now - context.created_at < DISCOVER_AUTH_RETURN_TTL) {
+            return true;
+        }
+    } catch (error) {
+        // Ignore expired, malformed, or unavailable session state.
+    }
+    clearDemoStartIntent();
+    return false;
+}
+
+function captureDemoStartIntent() {
+    if (document.documentElement.dataset.publicShell !== 'true' || window.location.pathname !== '/') return;
+    const params = new URLSearchParams(window.location.search);
+    // An explicitly chosen review or Discover destination always takes priority.
+    if (params.has('next')) {
+        clearDemoStartIntent();
+        return;
+    }
+    if (!params.has('start')) return;
+    clearDemoStartIntent();
+    const values = params.getAll('start');
+    if (values.length !== 1 || values[0] !== 'demo' || getDiscoverAuthReturn()
+        || ['token', 'reset_token', 'email_verified', 'password_reset', 'email_change_token', 'email_change']
+            .some(key => params.has(key))) return;
+    // This is navigation-only state: no demo titles, notes, or credentials cross over.
+    demoStartContext = { source: 'demo', created_at: Date.now() };
+    try {
+        sessionStorage.setItem(DEMO_START_KEY, JSON.stringify(demoStartContext));
+    } catch (error) {
+        // The current page still provides the same fixed return destination.
+    }
 }
 
 // ============================================================================
@@ -100,6 +151,7 @@ function clearAuth() {
     localStorage.removeItem(TOKEN_KEY);
     localStorage.removeItem(USER_KEY);
     clearDiscoverAuthReturn();
+    clearDemoStartIntent();
     try {
         sessionStorage.removeItem(RETURN_PROMPT_KEY);
     } catch (error) {
@@ -785,6 +837,7 @@ function setupAuthHandlers() {
 
 function initAuth() {
     captureDiscoverAuthReturn();
+    captureDemoStartIntent();
     setupAuthHandlers();
 
     // Check URL parameters for email verification or password reset
@@ -852,6 +905,8 @@ function initAuth() {
     // private UI; stale localStorage must not reveal it on the public shell.
     if (document.documentElement.dataset.publicShell === 'true') {
         showAuthModal();
+        if (urlParams.getAll('start').length === 1 && urlParams.get('start') === 'demo'
+            && getDemoStartIntent() && !getDiscoverAuthReturn()) showRegisterForm();
         return;
     }
 

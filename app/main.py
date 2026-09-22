@@ -130,7 +130,6 @@ INDEXABLE_PUBLIC_TEMPLATES = {
 # without an account.  Directory, policy, release-note, and overlapping guide
 # pages remain useful and linked, but are not treated as advertising inventory.
 AD_ELIGIBLE_TEMPLATES = {
-    "demo.html",
     "export_import_guide.html",
     "media_tracking.html",
     "review_guidelines.html",

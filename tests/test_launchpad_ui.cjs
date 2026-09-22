@@ -24,6 +24,7 @@ function setup(dismissed = false) {
   };
   let opens = 0;
   const context = vm.createContext({
+    demoStartGuidance: false,
     document: { getElementById: get, createElement: makeElement },
     isLibraryLaunchpadDismissed: () => dismissed,
     window: { openAccountModal: () => { opens++; } },

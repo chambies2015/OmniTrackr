@@ -929,8 +929,8 @@ function handleDelegatedClick(event) {
     'export-data-dashboard': exportData,
     'apply-library-import': applyLibraryImport,
     'download-import-template': downloadImportTemplate,
-    'launchpad-add-item': openLaunchpadAddItem,
-    'launchpad-choose-category': () => openLaunchpadAddItem(target.dataset.launchpadCategory),
+    'launchpad-add-item': openLaunchpadQuickCapture,
+    'launchpad-choose-category': () => openLaunchpadQuickCapture(target.dataset.launchpadCategory),
     'launchpad-open-insights': openLaunchpadInsights,
     'launchpad-dismiss': dismissLibraryLaunchpad,
     'launchpad-import': openLaunchpadImport,
@@ -8602,6 +8602,7 @@ async function deleteCollection(collectionId) {
 // ============================================================================
 
 const LAUNCHPAD_DISMISS_KEY = 'omnitrackr_library_launchpad_dismissed';
+let demoStartGuidance = false;
 let launchpadRefreshTimer = null;
 let todaysPickOffset = 0;
 let todaysPickCandidateCount = 0;
@@ -8615,6 +8616,18 @@ let returnDeckItems = [];
 let decisionCardsRefreshPromise = null;
 let launchpadDecisionRefreshRequested = false;
 let initialMovieLibraryLoad = true;
+
+function captureDemoStartGuidance() {
+  const params = new URLSearchParams(window.location.search);
+  if (!params.has('start')) return;
+  const values = params.getAll('start');
+  demoStartGuidance = window.location.pathname === '/' && values.length === 1 && values[0] === 'demo'
+    && !['next', 'collection', 'library_category', 'library_item', 'token', 'reset_token',
+      'email_verified', 'password_reset', 'email_change_token', 'email_change'].some(key => params.has(key));
+  params.delete('start');
+  const query = params.toString();
+  window.history.replaceState(window.history.state, '', `${window.location.pathname}${query ? `?${query}` : ''}${window.location.hash}`);
+}
 
 function getReturnPromptContext() {
   try {
@@ -8835,6 +8848,11 @@ function dismissLibraryLaunchpad() {
   document.getElementById('libraryLaunchpad')?.setAttribute('hidden', '');
 }
 
+function openLaunchpadQuickCapture(category) {
+  if (QUICK_CAPTURE_CATEGORIES[category]) selectQuickCaptureCategory(category);
+  openQuickCapture();
+}
+
 function openLaunchpadAddItem(category = 'movies') {
   const destinations = {
     movies: { form: 'movieForm', input: 'movieTitle' },
@@ -8883,6 +8901,7 @@ function renderLibraryLaunchpad(insights) {
   const rated = Number(insights?.rated_items || 0);
   const reviewed = Number(insights?.reviewed_items || 0);
   const completed = Number(insights?.completed_items || 0);
+  if (total > 0) demoStartGuidance = false;
   // Let the existing dashboard take over when these introductory steps are done.
   if (total > 0 && rated > 0 && reviewed > 0) {
     launchpad.hidden = true;
@@ -8899,7 +8918,9 @@ function renderLibraryLaunchpad(insights) {
   ];
 
   if (!total) {
-    summary.textContent = 'Start with one title you love, bring an existing list, or browse Discover for an idea. You only need one title to begin.';
+    summary.textContent = demoStartGuidance
+      ? 'Make it yours: use Add Anything to search for your first real title. Your demo practice stays separate from this private library.'
+      : 'Start with one title you love, bring an existing list, or browse Discover for an idea. You only need one title to begin.';
   } else if (total === 1) {
     summary.textContent = 'Your first title is saved. Add a rating or private note using Edit in your library, or use Next up to put it on your shortlist.';
   } else if (completed) {
@@ -10791,6 +10812,7 @@ document.addEventListener('DOMContentLoaded', () => {
   setupCustomTabSwitching();
   bindCustomTabForm();
   if (hasStoredAuth()) {
+    captureDemoStartGuidance();
     loadCustomTabs();
     openDashboardTargetFromLocation();
   }

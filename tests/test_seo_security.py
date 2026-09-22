@@ -571,11 +571,10 @@ class TestSecurityMiddleware:
             "/export-import-guide",
             "/review-guidelines",
             "/sample-library",
-            "/demo",
             "/media-tracking",
         ]
         excluded_paths = [
-            "/", "/about", "/faq", "/guides", "/compare", "/use-cases",
+            "/", "/demo", "/about", "/faq", "/guides", "/compare", "/use-cases",
             "/changelog", "/movie-tracker", "/anime-tracker", "/media-statistics",
             "/media-tracker-checklist", "/tracking-templates", "/roadmap",
             "/privacy", "/advertising", "/content-quality", "/site-map", "/terms", "/contact", "/reviews",
@@ -654,7 +653,6 @@ class TestSecurityMiddleware:
             "/export-import-guide",
             "/review-guidelines",
             "/sample-library",
-            "/demo",
             "/media-tracking",
         ]
 
@@ -802,6 +800,8 @@ class TestSecurityMiddleware:
             if path == "/":
                 # The landing page intentionally keeps a small, task-focused nav.
                 assert {"/", "/guides", "/reviews", "/faq", "/privacy", "/#landing-auth"}.issubset(hrefs)
+            elif path == "/demo":
+                assert {"/", "/media-tracking", "/guides", "/reviews", "/faq", "/privacy", "/?start=demo#landing-auth"}.issubset(hrefs)
             elif path.startswith("/reviews"):
                 # Discovery puts member content first, with guidance and supporting
                 # pages available through focused navigation and the site map.
@@ -809,7 +809,8 @@ class TestSecurityMiddleware:
                 assert {f"/reviews?category={category}" for category in ("movie", "tv_show", "anime", "video_game", "music", "book")}.issubset(hrefs)
             else:
                 assert expected_hrefs.issubset(hrefs)
-            assert 'class="public-site-nav__cta" href="/#landing-auth"' in response.text
+            if path != "/demo":
+                assert 'class="public-site-nav__cta" href="/#landing-auth"' in response.text
 
     def test_public_pages_do_not_render_mojibake_text(self, client):
         """Public pages should not show broken UTF-8 artifacts to visitors or reviewers."""
@@ -1095,23 +1096,29 @@ class TestSecurityMiddleware:
         assert "/compare" in hrefs
 
     def test_demo_page_explains_sample_library_workflow_and_privacy(self, client):
-        """Demo page should be useful standalone content before signup."""
+        """The demo renders a useful sample library before scripts or signup."""
         response = client.get("/demo")
 
         assert response.status_code == 200
         content = response.text
-        assert "Sample Collection" in content
-        assert "Sample Statistics" in content
-        assert "Example Tracking Workflow" in content
-        assert "What the Demo Helps You Decide" in content
-        assert "fictional and does not expose real user libraries" in content
-        assert "mark the current status" in content
+        assert content.count('data-sample-id=') == 6
+        for stat_id in ("demoTotal", "demoFinished", "demoNext", "demoAverage"):
+            assert f'id="{stat_id}"' in content
+        assert "/static/demo.js?v=" in content
+        assert "/static/demo.css?v=" in content
+        assert "/static/ad-loader.js" not in content
+        assert "/analytics.js" not in content
+        quality = parse_page_quality(content)
+        assert quality.h1_count == 1
+        assert quality.description_count == 1
+        assert quality.canonical_hrefs == ["https://omnitrackr.xyz/demo"]
+        assert "noindex" not in " ".join(quality.robots_contents)
         hrefs = extract_hrefs(content)
         assert "/media-tracking" in hrefs
         assert "/reviews" in hrefs
         assert "/faq" in hrefs
-        assert "/compare" in hrefs
         assert "/privacy" in hrefs
+        assert "/?start=demo#landing-auth" in hrefs
 
     def test_export_import_guide_explains_portability_and_backup_safety(self, client):
         """Export guide should be practical trust-building content before signup."""

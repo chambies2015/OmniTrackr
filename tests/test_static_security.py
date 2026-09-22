@@ -119,7 +119,6 @@ def test_adsense_loader_has_client_side_public_path_allowlist():
         "/sample-library",
         "/review-guidelines",
         "/export-import-guide",
-        "/demo",
     ):
         assert f"'{path}'" in loader
     for path in (
@@ -135,6 +134,7 @@ def test_adsense_loader_has_client_side_public_path_allowlist():
         "/faq",
         "/media-tracker-checklist",
         "/reviews",
+        "/demo",
     ):
         assert f"'{path}'" not in loader
 
@@ -245,7 +245,7 @@ def test_library_launchpad_is_client_side_and_uses_existing_insights():
     assert "const LAUNCHPAD_DISMISS_KEY" in source
     assert "function renderLibraryLaunchpad(insights)" in source
     assert "function openLaunchpadAddItem(category = 'movies')" in source
-    assert "'launchpad-choose-category': () => openLaunchpadAddItem(target.dataset.launchpadCategory)" in source
+    assert "'launchpad-choose-category': () => openLaunchpadQuickCapture(target.dataset.launchpadCategory)" in source
     assert "button.dataset.launchpadCategory = category" in source
     assert "`${API_BASE}/statistics/insights/`" in source
     assert "localStorage.setItem(LAUNCHPAD_DISMISS_KEY, 'true')" in source
