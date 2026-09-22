@@ -970,14 +970,15 @@ body {
 .quick-capture-trigger:hover, .quick-capture-trigger:focus-visible { box-shadow: 0 15px 38px rgba(13, 148, 136, .4); outline: 2px solid rgba(153, 246, 228, .75); outline-offset: 2px; transform: translateY(-1px); }
 .quick-capture-trigger > span { font-size: 1.12rem; line-height: 1; }
 .quick-capture-trigger kbd { background: rgba(6, 43, 43, .13); border: 1px solid rgba(6, 43, 43, .18); border-radius: 5px; font: inherit; font-size: .7rem; padding: 2px 6px; }
-.quick-capture-overlay { align-items: flex-start; overflow-y: auto; padding: clamp(16px, 5vh, 54px) 16px; z-index: 12000; }
-.quick-capture-modal { background: #111426; border: 1px solid rgba(167, 139, 250, .34); border-radius: 22px; box-shadow: 0 35px 90px rgba(0, 0, 0, .58); max-height: min(860px, 90vh); max-width: 960px; overflow: hidden; width: min(960px, 96vw); }
-.quick-capture-header { align-items: flex-start; background: radial-gradient(circle at 90% 0, rgba(124, 58, 237, .28), transparent 38%), linear-gradient(145deg, rgba(35, 26, 71, .96), rgba(17, 20, 38, .96)); border-bottom: 1px solid rgba(255,255,255,.09); display: flex; justify-content: space-between; padding: 26px 28px 22px; }
+.modal-overlay.quick-capture-overlay { align-items: flex-start; box-sizing: border-box; overflow-y: auto; padding: clamp(16px, 5vh, 54px) 16px; z-index: 12000; }
+.modal-content.quick-capture-modal { background: #111426; border: 1px solid rgba(167, 139, 250, .34); border-radius: 22px; box-shadow: 0 35px 90px rgba(0, 0, 0, .58); display: flex; flex-direction: column; max-height: min(860px, 90vh); max-width: 960px; overflow: hidden; padding: 0; width: min(960px, 96vw); }
+.quick-capture-modal, .quick-capture-modal * { box-sizing: border-box; }
+.quick-capture-header { align-items: flex-start; background: radial-gradient(circle at 90% 0, rgba(124, 58, 237, .28), transparent 38%), linear-gradient(145deg, rgba(35, 26, 71, .96), rgba(17, 20, 38, .96)); border-bottom: 1px solid rgba(255,255,255,.09); display: flex; flex-shrink: 0; justify-content: space-between; padding: 26px 28px 22px; }
 .quick-capture-header h2 { color: #fff; font-family: Poppins, sans-serif; font-size: clamp(1.75rem, 4vw, 2.45rem); letter-spacing: -.04em; margin: 3px 0 5px; }
 .quick-capture-header p { color: #b8bfd7; line-height: 1.5; margin: 0; }
 .quick-capture-header .modal-close { color: #d8d9e8; flex: 0 0 auto; position: static; }
 .quick-capture-eyebrow { color: #5eead4 !important; font-size: .68rem; font-weight: 800; letter-spacing: .13em; text-transform: uppercase; }
-.quick-capture-body { max-height: calc(90vh - 130px); overflow-y: auto; padding: 22px 28px 26px; }
+.quick-capture-body { flex: 1; min-height: 0; overflow-y: auto; padding: 22px 28px 26px; }
 .quick-capture-search-field { align-items: center; background: rgba(255,255,255,.055); border: 1px solid rgba(167,139,250,.46); border-radius: 13px; display: flex; gap: 10px; padding: 7px; }
 .quick-capture-search-field:focus-within { border-color: #5eead4; box-shadow: 0 0 0 3px rgba(94,234,212,.12); }
 .quick-capture-search-field > span { color: #a78bfa; font-size: 1.35rem; margin-left: 8px; transform: rotate(-20deg); }
@@ -995,6 +996,11 @@ body {
 .quick-capture-status { color: #aeb4ca; font-size: .8rem; line-height: 1.5; min-height: 22px; padding: 15px 2px 8px; }
 .quick-capture-results { display: grid; gap: 18px; }
 .quick-capture-group h3 { color: #ecebff; font-family: Poppins, sans-serif; font-size: .82rem; letter-spacing: .01em; margin: 0 0 8px; }
+.quick-capture-source-status { color: #b8bfd7; font-size: .8rem; line-height: 1.5; margin: 0 0 8px; }
+.quick-capture-retry { background: rgba(94,234,212,.08); border: 1px solid rgba(94,234,212,.45); border-radius: 8px; color: #99f6e4; cursor: pointer; font: inherit; font-size: .78rem; font-weight: 700; min-height: 44px; padding: 8px 12px; }
+.quick-capture-retry:hover, .quick-capture-retry:focus-visible { background: rgba(94,234,212,.16); outline: 2px solid #5eead4; outline-offset: 2px; }
+.quick-capture-retry:disabled { cursor: wait; opacity: .6; }
+.quick-capture-retry[hidden] { display: none; }
 .quick-capture-result-grid { display: grid; gap: 8px; grid-template-columns: repeat(2, minmax(0, 1fr)); }
 .quick-capture-result { align-items: center; background: rgba(255,255,255,.04); border: 1px solid rgba(255,255,255,.08); border-radius: 11px; color: #eef2ff; cursor: pointer; display: grid; gap: 11px; grid-template-columns: 44px minmax(0, 1fr) auto; min-width: 0; padding: 8px; text-align: left; transition: background .16s ease, border-color .16s ease, transform .16s ease; }
 .quick-capture-result:hover, .quick-capture-result:focus-visible { background: rgba(124,58,237,.13); border-color: rgba(167,139,250,.54); outline: 0; transform: translateY(-1px); }
@@ -1005,7 +1011,7 @@ body {
 .quick-capture-result__copy strong { font-size: .86rem; }
 .quick-capture-result__copy small { color: #9da4bc; font-size: .67rem; margin-top: 4px; }
 .quick-capture-result__action { color: #5eead4; font-size: .68rem; font-weight: 800; padding-right: 4px; }
-.quick-capture-manual { align-items: center; border-top: 1px solid rgba(255,255,255,.09); display: flex; gap: 18px; justify-content: space-between; margin-top: 22px; padding-top: 18px; }
+.quick-capture-manual { align-items: center; border-bottom: 1px solid rgba(255,255,255,.09); display: flex; gap: 18px; justify-content: space-between; margin-top: 16px; padding-bottom: 16px; }
 .quick-capture-manual div { display: flex; flex-direction: column; }
 .quick-capture-manual strong { color: #f1f5f9; font-size: .82rem; }
 .quick-capture-manual span { color: #8f96ae; font-size: .7rem; margin-top: 3px; }
@@ -1034,10 +1040,10 @@ body {
 }
 
 @media (max-width: 680px) {
-  .quick-capture-overlay { padding: 0; }
-  .quick-capture-modal { border: 0; border-radius: 0; max-height: 100vh; min-height: 100vh; width: 100vw; }
+  .modal-overlay.quick-capture-overlay { padding: 0; }
+  .modal-content.quick-capture-modal { border: 0; border-radius: 0; height: 100dvh; max-height: 100dvh; width: 100%; }
   .quick-capture-header { padding: 20px 18px 17px; }
-  .quick-capture-body { max-height: calc(100vh - 112px); padding: 16px 18px 24px; }
+  .quick-capture-body { padding: 16px 18px 24px; }
   .quick-capture-controls { align-items: flex-start; flex-direction: column; }
   .quick-capture-categories { flex-wrap: nowrap; margin-inline: -18px; overflow-x: auto; padding: 0 18px 5px; width: calc(100% + 36px); }
   .quick-capture-result-grid { grid-template-columns: 1fr; }

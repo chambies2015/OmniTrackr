@@ -2,6 +2,9 @@
 
 Disposable local browser fixture. Never mounts its helper route in production.
 All writes go to a newly created temporary SQLite database; stop with Ctrl+C.
+Add --quick-capture for deterministic, local-only metadata search QA: movies and
+music load promptly, TV is empty, anime is slow, games fail once, and books time
+out once. Games and books recover on retry for each new search query.
 """
 import os
 import argparse
@@ -9,14 +12,79 @@ import tempfile
 from pathlib import Path
 
 
+def _install_quick_capture_sources(app):
+    """Keep real proxy/auth behavior while replacing all upstream network access."""
+    import asyncio
+    from contextlib import asynccontextmanager
+    import httpx
+
+    class PreviewMetadataClient:
+        def __init__(self):
+            self.attempts = {}
+
+        async def get(self, url, *, params):
+            request = httpx.Request("GET", url, params=params)
+            sources = {
+                "https://www.omdbapi.com/": "tv" if params.get("type") == "series" else "movies",
+                "https://api.rawg.io/api/games": "games",
+                "https://api.jikan.moe/v4/anime": "anime",
+                "https://itunes.apple.com/search": "music",
+                "https://openlibrary.org/search.json": "books",
+            }
+            source = sources.get(url)
+            if source is None:
+                raise httpx.ConnectError("Unconfigured local preview metadata source", request=request)
+            query = next((params[key] for key in ("t", "search", "q", "term") if key in params), "")
+            key = (source, query)
+            attempt = self.attempts[key] = self.attempts.get(key, 0) + 1
+            delays = {"movies": 0.2, "tv": 0.4, "anime": 3.5, "games": 0.6, "music": 0.3, "books": 0.3}
+            await asyncio.sleep(20 if source == "books" and attempt == 1 else delays[source])
+            if source == "games" and attempt == 1:
+                return httpx.Response(503, json={"detail": "Synthetic temporary failure"}, request=request)
+            payloads = {
+                "movies": {"Response": "True", "Title": "Preview film", "Year": "2024",
+                           "Genre": "Adventure", "Director": "Preview director", "Poster": "N/A"},
+                "tv": {"Response": "False", "Error": "Series not found!"},
+                "anime": {"data": [{"title": "Preview anime", "year": 2024, "type": "TV",
+                                    "episodes": 12, "genres": [{"name": "Adventure"}]}]},
+                "games": {"results": [{"name": "Preview game", "released": "2024-01-01",
+                                       "genres": [{"name": "Adventure"}]}]},
+                "music": {"results": [{"collectionName": "Preview album", "artistName": "Preview artist",
+                                       "releaseDate": "2024-01-01", "primaryGenreName": "Alternative"}]},
+                "books": {"docs": [{"title": "Preview book", "author_name": ["Preview author"],
+                                    "first_publish_year": 2024, "subject": ["Adventure"]}]},
+            }
+            return httpx.Response(200, json=payloads[source], request=request)
+
+    original_lifespan = app.router.lifespan_context
+
+    @asynccontextmanager
+    async def preview_lifespan(application):
+        async with original_lifespan(application):
+            upstream_client = application.state.external_api_client
+            application.state.external_api_client = PreviewMetadataClient()
+            try:
+                yield
+            finally:
+                # The original lifespan still owns and closes its real client.
+                application.state.external_api_client = upstream_client
+
+    app.router.lifespan_context = preview_lifespan
+
+
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument('--empty', action='store_true', help='Start with an empty synthetic library for onboarding QA')
+    parser.add_argument('--quick-capture', action='store_true',
+                        help='Use local synthetic metadata with progressive results, failures, and retry recovery')
     args = parser.parse_args()
     with tempfile.TemporaryDirectory(prefix="omnitrackr-mobile-") as directory:
         os.environ.update(DATABASE_URL=f"sqlite:///{Path(directory).as_posix()}/preview.db",
                           ENVIRONMENT="development", TESTING="true",
                           SECRET_KEY="local-disposable-mobile-preview-only")
+        if args.quick_capture:
+            os.environ.update(PYTHON_DOTENV_DISABLED="1", OMDB_API_KEY="local-preview-only",
+                              RAWG_API_KEY="local-preview-only")
         # Fresh model-created schema: legacy migrations are not part of this UI fixture.
         from app import migrations
         migrations.run_migrations = lambda: None
@@ -26,6 +94,9 @@ def main():
         from fastapi.responses import HTMLResponse
         from app.csp import nonce_html_response
         import uvicorn
+
+        if args.quick_capture:
+            _install_quick_capture_sources(app)
 
         with SessionLocal() as db:
             user = models.User(username="preview", email="preview@example.invalid",

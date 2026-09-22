@@ -24,6 +24,26 @@ schema addition is deployed; historical visits are not inferred or backfilled.
 The moderator response excludes email addresses, media titles, searches, review
 text, private notes, and page histories.
 
+## Add anything search reliability
+
+Quick Capture renders each media source independently. Each source has a
+15-second client deadline (including body parsing), and failed sources can be
+retried individually without repeating successful lookups. OMDB's HTTP-200
+error bodies distinguish a recognized title miss from service/quota failures.
+Successful result buttons keep their DOM identity and selection index as other
+sources arrive. No source retries automatically.
+
+Editing the query, choosing a different media category, or closing the dialog
+aborts outstanding requests and invalidates their render state. Session identity
+checks also reject late responses that arrive after cancellation. Typing and
+changing categories do not issue searches; the user submits Search explicitly.
+Manual entry is above the results and remains available while requests run.
+
+Searches use the existing authenticated metadata proxies. Choosing a result or
+manual entry fills the existing category form, preserves its draft-replacement
+confirmation and completion intent, and requires an explicit save. No library
+record, database schema, or public sharing preference is changed by searching.
+
 ## Discover to first save
 
 The homepage now links directly to existing editorial trails. Discover's search

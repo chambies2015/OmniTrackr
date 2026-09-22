@@ -311,6 +311,32 @@ let quickCaptureCategory = 'all';
 let quickCaptureResults = [];
 let quickCaptureController = null;
 let quickCaptureReturnFocus = null;
+let quickCaptureSearch = null;
+const QUICK_CAPTURE_TIMEOUT_MS = 15000;
+
+function resetQuickCaptureSearch() {
+  quickCaptureController?.abort();
+  quickCaptureController = null;
+  quickCaptureSearch = null;
+  quickCaptureResults = [];
+  document.getElementById('quickCaptureResults')?.replaceChildren();
+  const status = document.getElementById('quickCaptureStatus');
+  if (status) status.textContent = quickCaptureCategory === 'all'
+    ? 'Search every shelf. Results appear as each source responds.'
+    : `Search ${QUICK_CAPTURE_CATEGORIES[quickCaptureCategory].label.toLowerCase()}, or continue with manual entry.`;
+}
+
+function handleQuickCaptureQueryInput() {
+  const query = document.getElementById('quickCaptureQuery')?.value.trim();
+  if (quickCaptureSearch && query !== quickCaptureSearch.query) resetQuickCaptureSearch();
+}
+
+function isCurrentQuickCaptureSearch(search) {
+  return quickCaptureSearch === search && !search.controller.signal.aborted
+    && document.getElementById('quickCaptureModal')?.style.display !== 'none'
+    && document.getElementById('quickCaptureQuery')?.value.trim() === search.query
+    && quickCaptureCategory === search.category;
+}
 
 function openQuickCapture() {
   const modal = document.getElementById('quickCaptureModal');
@@ -329,8 +355,7 @@ function openQuickCapture() {
 function closeQuickCapture() {
   const modal = document.getElementById('quickCaptureModal');
   if (!modal) return;
-  quickCaptureController?.abort();
-  quickCaptureController = null;
+  resetQuickCaptureSearch();
   modal.style.display = 'none';
   document.body.style.overflow = '';
   if (quickCaptureReturnFocus instanceof HTMLElement) quickCaptureReturnFocus.focus();
@@ -338,18 +363,14 @@ function closeQuickCapture() {
 
 function selectQuickCaptureCategory(category) {
   if (category !== 'all' && !QUICK_CAPTURE_CATEGORIES[category]) return;
+  const changed = quickCaptureCategory !== category;
   quickCaptureCategory = category;
   document.querySelectorAll('[data-quick-category]').forEach(button => {
     const selected = button.dataset.quickCategory === category;
     button.classList.toggle('active', selected);
     button.setAttribute('aria-pressed', String(selected));
   });
-  const status = document.getElementById('quickCaptureStatus');
-  if (status && !document.getElementById('quickCaptureQuery')?.value.trim()) {
-    status.textContent = category === 'all'
-      ? 'Search across every media type, or choose one shelf for a faster result.'
-      : `Searching ${QUICK_CAPTURE_CATEGORIES[category].label.toLowerCase()} only.`;
-  }
+  if (changed) resetQuickCaptureSearch();
 }
 
 function quickCaptureImage(url, alt) {
@@ -415,36 +436,113 @@ function normalizeQuickCapturePayload(category, payload) {
 
 async function fetchQuickCaptureCategory(category, query, signal) {
   const source = QUICK_CAPTURE_CATEGORIES[category];
+  const controller = new AbortController();
+  const unavailable = reason => ({ category, results: [], unavailable: true, reason });
+  let stop;
+  const stopped = new Promise(resolve => { stop = resolve; });
+  const cancel = () => { controller.abort(); stop(unavailable('cancelled')); };
+  signal.addEventListener('abort', cancel, { once: true });
+  const timeout = window.setTimeout(() => {
+    controller.abort();
+    stop(unavailable('timeout'));
+  }, QUICK_CAPTURE_TIMEOUT_MS);
   try {
-    const response = await fetch(`${API_BASE}${source.endpoint(query)}`, { signal, headers: { Accept: 'application/json' } });
-    if (!response.ok) return { category, results: [], unavailable: true };
-    const payload = await response.json();
-    return { category, results: normalizeQuickCapturePayload(category, payload), unavailable: false };
-  } catch (error) {
-    if (error.name === 'AbortError') throw error;
-    return { category, results: [], unavailable: true };
+    if (signal.aborted) { cancel(); return unavailable('cancelled'); }
+    const request = (async () => {
+      try {
+        const response = await fetch(`${API_BASE}${source.endpoint(query)}`, {
+          signal: controller.signal, credentials: 'same-origin', headers: { Accept: 'application/json' },
+        });
+        if (!response.ok) return unavailable(response.status === 429 ? 'busy' : response.status === 401 ? 'signin' : 'unavailable');
+        const payload = await response.json();
+        // OMDB also uses HTTP 200 for quota/key errors, not just title misses.
+        if ((category === 'movies' || category === 'tv-shows') && (payload?.Error || payload?.Response === 'False')) {
+          return /^(movie|series|episode) not found[.!]?$/i.test(String(payload.Error || '').trim())
+            ? { category, results: [], unavailable: false }
+            : unavailable('unavailable');
+        }
+        const valid = category === 'movies' || category === 'tv-shows' ? typeof payload?.Title === 'string'
+          : Array.isArray(payload?.[{ anime: 'data', 'video-games': 'results', music: 'results', books: 'docs' }[category]]);
+        if (!valid) return unavailable('unavailable');
+        return { category, results: normalizeQuickCapturePayload(category, payload), unavailable: false };
+      } catch (_) {
+        return unavailable('unavailable');
+      }
+    })();
+    // Settle even if a slow response body does not react promptly to abort.
+    return await Promise.race([request, stopped]);
+  } finally {
+    window.clearTimeout(timeout);
+    signal.removeEventListener('abort', cancel);
   }
 }
 
-function renderQuickCaptureResults(groups, query) {
-  const container = document.getElementById('quickCaptureResults');
+function updateQuickCaptureStatus(search) {
+  if (!isCurrentQuickCaptureSearch(search)) return;
   const status = document.getElementById('quickCaptureStatus');
-  if (!container || !status) return;
-  container.replaceChildren();
-  quickCaptureResults = [];
-  let unavailableCount = 0;
+  if (!status) return;
+  if (search.manualRequested) {
+    status.textContent = 'Choose Movies, TV, Anime, Games, Music, or Books before continuing manually.';
+    return;
+  }
+  const groups = Array.from(search.groups.values());
+  const pending = groups.filter(group => group.state === 'loading').length;
+  const unavailable = groups.filter(group => group.state === 'unavailable').length;
+  const count = quickCaptureResults.length;
+  if (count) {
+    status.textContent = `${count} match${count === 1 ? '' : 'es'} for “${search.query}”. Choose one to review before saving.`;
+  } else if (pending) {
+    status.textContent = `Searching for “${search.query}”… You can enter a title manually at any time.`;
+  } else {
+    status.textContent = unavailable === groups.length
+      ? 'Metadata search is temporarily unavailable. Retry a source below, or choose a media type and enter manually.'
+      : `No close matches for “${search.query}”. Try another phrase or use manual entry.`;
+  }
+  if (pending) status.textContent += ` ${pending} source${pending === 1 ? ' is' : 's are'} still searching.`;
+  if (unavailable && unavailable !== groups.length) status.textContent += ` ${unavailable} source${unavailable === 1 ? ' is' : 's are'} unavailable; retry below.`;
+}
 
-  groups.forEach(group => {
-    if (group.unavailable) unavailableCount += 1;
-    if (!group.results.length) return;
+function createQuickCaptureGroups(search, categories, container) {
+  for (const category of categories) {
     const section = document.createElement('section');
     section.className = 'quick-capture-group';
+    section.dataset.quickSource = category;
     const heading = document.createElement('h3');
-    heading.textContent = `${QUICK_CAPTURE_CATEGORIES[group.category].icon} ${QUICK_CAPTURE_CATEGORIES[group.category].label}`;
-    section.appendChild(heading);
+    heading.textContent = `${QUICK_CAPTURE_CATEGORIES[category].icon} ${QUICK_CAPTURE_CATEGORIES[category].label}`;
+    const note = document.createElement('p');
+    note.className = 'quick-capture-source-status';
+    const retry = document.createElement('button');
+    retry.type = 'button';
+    retry.className = 'quick-capture-retry';
+    retry.dataset.action = 'retry-quick-capture-source';
+    retry.dataset.quickCategory = category;
+    retry.textContent = `Retry ${QUICK_CAPTURE_CATEGORIES[category].label.toLowerCase()}`;
+    retry.hidden = true;
     const grid = document.createElement('div');
     grid.className = 'quick-capture-result-grid';
-    group.results.forEach(item => {
+    section.append(heading, note, retry, grid);
+    container.appendChild(section);
+    search.groups.set(category, { category, state: 'loading', note, retry, grid, attempt: null });
+  }
+}
+
+function renderQuickCaptureResults(search, group, result) {
+  if (!isCurrentQuickCaptureSearch(search)) return;
+  group.state = result.unavailable ? 'unavailable' : 'ready';
+  const messages = {
+    timeout: 'This source took too long. Try it again or enter the title manually.',
+    busy: 'This source is busy. Try again shortly.',
+    signin: 'Your session has expired. Sign in again to search this source.',
+    unavailable: 'This source is unavailable right now.',
+  };
+  group.note.textContent = result.unavailable ? messages[result.reason] || messages.unavailable
+    : result.results.length ? '' : 'No matches from this source.';
+  group.note.hidden = !group.note.textContent;
+  group.retry.hidden = !result.unavailable;
+  group.retry.disabled = false;
+  if (result.results.length) {
+    // Append stable indices; another source must not replace a focused result.
+    result.results.forEach(item => {
       const index = quickCaptureResults.push(item) - 1;
       const button = document.createElement('button');
       button.type = 'button';
@@ -463,19 +561,31 @@ function renderQuickCaptureResults(groups, query) {
       action.className = 'quick-capture-result__action';
       action.textContent = 'Use →';
       button.append(copy, action);
-      grid.appendChild(button);
+      group.grid.appendChild(button);
     });
-    section.appendChild(grid);
-    container.appendChild(section);
-  });
-
-  if (quickCaptureResults.length) {
-    status.textContent = `${quickCaptureResults.length} match${quickCaptureResults.length === 1 ? '' : 'es'} for “${query}”. Choose one to review before saving.${unavailableCount ? ` ${unavailableCount} source${unavailableCount === 1 ? ' is' : 's are'} temporarily unavailable.` : ''}`;
-  } else {
-    status.textContent = unavailableCount === groups.length
-      ? 'Metadata search is temporarily unavailable. Choose a media type and continue manually.'
-      : `No close matches for “${query}”. Try another phrase or use manual entry.`;
   }
+  updateQuickCaptureStatus(search);
+}
+
+async function runQuickCaptureSource(search, group) {
+  const attempt = {};
+  group.attempt = attempt;
+  group.state = 'loading';
+  group.note.hidden = false;
+  group.note.textContent = 'Searching…';
+  group.retry.disabled = true;
+  updateQuickCaptureStatus(search);
+  const result = await fetchQuickCaptureCategory(group.category, search.query, search.controller.signal);
+  if (!isCurrentQuickCaptureSearch(search) || group.attempt !== attempt) return;
+  renderQuickCaptureResults(search, group, result);
+}
+
+function retryQuickCaptureCategory(category) {
+  const search = quickCaptureSearch;
+  if (!search || !isCurrentQuickCaptureSearch(search)) return;
+  const group = search.groups.get(category);
+  if (!group || group.state !== 'unavailable') return;
+  return runQuickCaptureSource(search, group);
 }
 
 async function searchQuickCapture(event) {
@@ -483,34 +593,19 @@ async function searchQuickCapture(event) {
   const queryInput = document.getElementById('quickCaptureQuery');
   const results = document.getElementById('quickCaptureResults');
   const status = document.getElementById('quickCaptureStatus');
-  const submit = event.target.querySelector('button[type="submit"]');
   const query = queryInput?.value.trim();
-  if (!query || query.length < 2 || !results || !status || !submit) return;
-
-  quickCaptureController?.abort();
+  if (!query || query.length < 2 || query.length > 200 || !results || !status) return;
+  if (quickCaptureSearch && isCurrentQuickCaptureSearch(quickCaptureSearch)
+    && Array.from(quickCaptureSearch.groups.values()).some(group => group.state === 'loading')) return;
+  resetQuickCaptureSearch();
   const controller = new AbortController();
   quickCaptureController = controller;
   const categories = quickCaptureCategory === 'all' ? QUICK_CAPTURE_CATEGORY_ORDER : [quickCaptureCategory];
-  results.replaceChildren();
-  status.textContent = `Searching ${categories.length === 1 ? QUICK_CAPTURE_CATEGORIES[categories[0]].label.toLowerCase() : 'every shelf'}…`;
-  submit.disabled = true;
-  submit.textContent = 'Searching…';
-  const timeout = window.setTimeout(() => controller.abort(), 20000);
-  try {
-    const groups = await Promise.all(categories.map(category => fetchQuickCaptureCategory(category, query, controller.signal)));
-    renderQuickCaptureResults(groups, query);
-  } catch (error) {
-    if (error.name === 'AbortError' && quickCaptureController === controller && document.getElementById('quickCaptureModal')?.style.display !== 'none') {
-      status.textContent = 'Search took too long. Try one media type, or continue manually.';
-    }
-  } finally {
-    window.clearTimeout(timeout);
-    if (quickCaptureController === controller) quickCaptureController = null;
-    if (!quickCaptureController) {
-      submit.disabled = false;
-      submit.textContent = 'Search';
-    }
-  }
+  const search = { query, category: quickCaptureCategory, controller, groups: new Map() };
+  quickCaptureSearch = search;
+  createQuickCaptureGroups(search, categories, results);
+  // Each source renders independently; completion never gates the first result.
+  await Promise.allSettled(Array.from(search.groups.values(), group => runQuickCaptureSource(search, group)));
 }
 
 function setQuickCaptureField(id, value) {
@@ -560,6 +655,7 @@ function prepareQuickCaptureDestination(category, title) {
 }
 
 function applyQuickCaptureResult(index) {
+  if (!quickCaptureSearch || !isCurrentQuickCaptureSearch(quickCaptureSearch)) return;
   const item = quickCaptureResults[index];
   if (!item) return;
   const destination = prepareQuickCaptureDestination(item.category, item.title);
@@ -608,7 +704,9 @@ function applyQuickCaptureResult(index) {
 function openQuickCaptureManual() {
   const status = document.getElementById('quickCaptureStatus');
   if (quickCaptureCategory === 'all') {
+    if (quickCaptureSearch) quickCaptureSearch.manualRequested = true;
     if (status) status.textContent = 'Choose Movies, TV, Anime, Games, Music, or Books before continuing manually.';
+    document.querySelector('[data-quick-category="movies"]')?.focus();
     return;
   }
   const query = document.getElementById('quickCaptureQuery')?.value.trim() || '';
@@ -800,6 +898,7 @@ function handleDelegatedClick(event) {
     'open-quick-capture': openQuickCapture,
     'close-quick-capture': closeQuickCapture,
     'select-quick-capture-category': () => selectQuickCaptureCategory(target.dataset.quickCategory),
+    'retry-quick-capture-source': () => retryQuickCaptureCategory(target.dataset.quickCategory),
     'choose-quick-capture-result': () => applyQuickCaptureResult(Number(target.dataset.quickResultIndex)),
     'quick-capture-manual': openQuickCaptureManual,
     'open-friend-profile': () => openFriendProfile(Number(target.dataset.friendId)),
@@ -917,6 +1016,9 @@ function handleDelegatedChange(event) {
 document.addEventListener('click', handleDelegatedClick);
 document.addEventListener('submit', handleDelegatedSubmit);
 document.addEventListener('change', handleDelegatedChange);
+document.addEventListener('input', event => {
+  if (event.target.id === 'quickCaptureQuery') handleQuickCaptureQueryInput();
+});
 document.addEventListener('error', handleImageFallback, true);
 
 function applyDataFillWidths(root = document) {

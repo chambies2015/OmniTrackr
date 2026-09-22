@@ -46,10 +46,10 @@
   <link rel="icon" type="image/x-icon" href="/omnitrackr_favicon.ico">
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link rel="preload" href="./styles.css?v=20260918-welcome-back-remedy-v2" as="style">
+  <link rel="preload" href="./styles.css?v=20260922-quick-capture-v2" as="style">
   <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@700;800&family=Inter:wght@400;500;600&display=swap"
     rel="stylesheet">
-  <link rel="stylesheet" href="./styles.css?v=20260918-welcome-back-remedy-v2">
+  <link rel="stylesheet" href="./styles.css?v=20260922-quick-capture-v2">
   <script src="./preauth.js"></script>
   <style>
     html.authenticated #landingPage{display:none}
@@ -1891,7 +1891,7 @@
   </div>
   <script src="./credentials.js"></script>
   <script src="./auth.js?v=20260922-discover-journey"></script>
-  <script src="./app.js?v=20260922-discover-journey-v2"></script>
+  <script src="./app.js?v=20260922-quick-capture"></script>
 
   <!-- Account Modal -->
   <div id="accountModal" class="modal-overlay" style="display: none;">
@@ -2501,12 +2501,12 @@
             <label class="quick-capture-intent" for="quickCaptureIntent"><span>Add as</span><select id="quickCaptureIntent"><option value="saved">Not completed / save for later</option><option value="completed">Completed</option></select></label>
           </div>
         </form>
-        <div id="quickCaptureStatus" class="quick-capture-status" role="status" aria-live="polite">Search across every media type, or choose one shelf for a faster result.</div>
-        <div id="quickCaptureResults" class="quick-capture-results" aria-label="Metadata search results"></div>
         <div class="quick-capture-manual">
-          <div><strong>Can’t find it?</strong><span>Choose a media type above and continue with manual entry.</span></div>
+          <div><strong>Prefer to enter it yourself?</strong><span>Choose a media type above. You can add a title while search runs.</span></div>
           <button type="button" data-action="quick-capture-manual">Enter manually →</button>
         </div>
+        <div id="quickCaptureStatus" class="quick-capture-status" role="status" aria-live="polite" aria-atomic="true">Search every shelf. Results appear as each source responds.</div>
+        <div id="quickCaptureResults" class="quick-capture-results" aria-label="Metadata search results"></div>
       </div>
     </div>
   </div>
