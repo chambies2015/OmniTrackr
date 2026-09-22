@@ -253,6 +253,9 @@ class Movie(MovieBase):
     model_config = ConfigDict(from_attributes=True)
 
     id: int
+    # Stored/imported catalog metadata can be incomplete. Creation stays strict.
+    director: Optional[str] = None
+    year: Optional[int] = Field(None, ge=0)
 
 
 class TVShowBase(BaseModel):
@@ -291,6 +294,7 @@ class TVShow(TVShowBase):
     model_config = ConfigDict(from_attributes=True)
 
     id: int
+    year: Optional[int] = Field(None, ge=0)
 
 
 class AnimeBase(BaseModel):
@@ -329,6 +333,7 @@ class Anime(AnimeBase):
     model_config = ConfigDict(from_attributes=True)
 
     id: int
+    year: Optional[int] = Field(None, ge=0)
 
 
 class VideoGameBase(BaseModel):
@@ -407,6 +412,8 @@ class Music(MusicBase):
     model_config = ConfigDict(from_attributes=True)
 
     id: int
+    artist: Optional[str] = None
+    year: Optional[int] = Field(None, ge=0)
 
 
 class BookBase(BaseModel):
@@ -445,6 +452,8 @@ class Book(BookBase):
     model_config = ConfigDict(from_attributes=True)
 
     id: int
+    author: Optional[str] = None
+    year: Optional[int] = Field(None, ge=0)
 
 
 # ============================================================================

@@ -67,3 +67,53 @@ def test_library_read_validation(client, authenticated_client):
     authenticated_client.cookies.clear()
     assert client.get('/library/page/movies').status_code == 401
     assert client.get('/library/search?q=title').status_code == 401
+
+
+@pytest.mark.parametrize("category", list(CATEGORIES))
+def test_exact_item_lookup_accepts_sparse_metadata_and_only_returns_owned_identity(authenticated_client, db_session, category):
+    owner = db_session.query(models.User).filter_by(username="testuser").one()
+    other = models.User(username="other", email="other@example.com", hashed_password="unused")
+    db_session.add(other)
+    db_session.flush()
+    model = CATEGORIES[category][0]
+    own = model(user_id=owner.id, title="Sparse saved title")
+    foreign = model(user_id=other.id, title="Private foreign title", review="Private foreign opinion")
+    db_session.add_all([own, foreign])
+    db_session.commit()
+    result = authenticated_client.get(f"/library/item/{category}/{own.id}")
+    assert result.status_code == 200
+    assert result.json() == {"id": own.id, "title": "Sparse saved title"}
+    assert result.headers["cache-control"] == "private, no-store"
+    denied = authenticated_client.get(f"/library/item/{category}/{foreign.id}")
+    missing = authenticated_client.get(f"/library/item/{category}/99999999")
+    assert denied.status_code == missing.status_code == 404
+    assert denied.json() == missing.json()
+    assert "Private foreign" not in denied.text
+    assert denied.headers["cache-control"] == "private, no-store"
+    # Both the normal page and legacy detail endpoint must honestly preserve nulls.
+    page = authenticated_client.get(f"/library/page/{category}?focus_id={own.id}")
+    assert page.status_code == 200
+    returned = page.json()["items"][0]
+    assert returned["id"] == own.id and page.json()["total"] == 1
+    nullable_fields = {
+        "movies": ("director", "year"), "tv-shows": ("year", "seasons", "episodes"),
+        "anime": ("year", "seasons", "episodes"), "video-games": ("release_date", "genres"),
+        "music": ("artist", "year", "genre"), "books": ("author", "year", "genre"),
+    }[category]
+    db_session.refresh(own)
+    assert all(returned[field] is None and getattr(own, field) is None for field in nullable_fields)
+    detail = authenticated_client.get(f"/{category}/{own.id}")
+    assert detail.status_code == 200
+    assert all(detail.json()[field] is None for field in nullable_fields)
+
+
+@pytest.mark.parametrize("category", ["movies", "tv-shows", "anime", "music", "books"])
+def test_nullable_read_metadata_does_not_relax_create_validation(authenticated_client, category):
+    assert authenticated_client.post(f"/{category}/", json={"title": "Incomplete create"}).status_code == 422
+
+
+def test_exact_item_lookup_requires_auth_and_rejects_unknown_categories(client, authenticated_client):
+    assert authenticated_client.get("/library/item/unknown/1").status_code == 400
+    authenticated_client.headers.clear()
+    authenticated_client.cookies.clear()
+    assert client.get("/library/item/movies/1").status_code == 401

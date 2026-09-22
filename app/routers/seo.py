@@ -39,7 +39,6 @@ CORE_SITEMAP_PATHS = (
     ("/export-import-guide", "monthly", "0.75"),
     ("/review-guidelines", "monthly", "0.75"),
     ("/sample-library", "monthly", "0.8"),
-    ("/reviews", "daily", "0.8"),
 )
 
 
@@ -76,17 +75,19 @@ async def get_sitemap(db: Session = Depends(get_db)):
             } if item_ids else {}
             return [
                 item for item in candidates
-                if evaluate_public_review(
+                if (item.title or "").strip() and evaluate_public_review(
                     item.review, PUBLIC_REVIEW_MIN_CHARS, PUBLIC_REVIEW_DETAIL_MIN_CHARS
                 ).search_ready
                 and not _current_state_hides_review(state_map.get(item.id), category, item)
             ]
 
+        review_directory_ready = False
         for category, model_cls in REVIEW_CATEGORY_MODELS:
             category_candidates = db.query(model_cls).filter(
                 public_detail_review_filter(model_cls)
             ).limit(200).all()
             if visible_search_ready(category, category_candidates):
+                review_directory_ready = True
                 sitemap_parts.append(f"""  <url>
     <loc>{base_url}/reviews?category={category}</loc>
     <lastmod>{today}</lastmod>
@@ -173,6 +174,12 @@ async def get_sitemap(db: Session = Depends(get_db)):
     <changefreq>monthly</changefreq>
     <priority>0.6</priority>
   </url>""")
+
+        if review_directory_ready:
+            sitemap_parts.append(
+                f"  <url><loc>{base_url}/reviews</loc><changefreq>daily</changefreq>"
+                "<priority>0.8</priority></url>"
+            )
 
         approved_collections = db.query(models.Collection).options(selectinload(models.Collection.items)).join(
             models.User, models.Collection.user_id == models.User.id

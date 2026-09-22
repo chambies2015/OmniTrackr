@@ -24,6 +24,7 @@ NOINDEX_PREFIXES = (
     "/friends",
     "/import/",
     "/import-studio/",
+    "/library/",
     "/movies/",
     "/music/",
     "/notifications/",
@@ -72,6 +73,7 @@ class SecurityHeadersMiddleware(BaseHTTPMiddleware):
             "/friends",
             "/import/",
             "/import-studio/",
+            "/library/",
             "/movies/",
             "/music/",
             "/next-up/",
@@ -83,6 +85,14 @@ class SecurityHeadersMiddleware(BaseHTTPMiddleware):
             "/video-games/",
         )):
             response.headers["Cache-Control"] = "private, no-store"
+
+        review_path = request.url.path.rstrip("/")
+        review_save_api = review_path.startswith("/api/public/reviews/") and review_path.endswith(("/save-preview", "/save"))
+        review_save_page = review_path.startswith("/reviews/") and review_path.endswith("/save")
+        if review_save_api or review_save_page:
+            # Include authentication and validation failures before a route runs.
+            response.headers["Cache-Control"] = "private, no-store"
+            response.headers["X-Robots-Tag"] = "noindex, follow"
 
         if request.url.path in NOINDEX_PATHS or request.url.path.startswith(NOINDEX_PREFIXES):
             response.headers["X-Robots-Tag"] = "noindex, nofollow"

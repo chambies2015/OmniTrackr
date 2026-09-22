@@ -1,0 +1,45 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="robots" content="noindex, follow">
+  <meta name="description" content="Preview a title from the OmniTrackr community before adding it to your own library.">
+  <title>{{TITLE}}</title>
+  <link rel="icon" href="/omnitrackr_favicon.ico">
+  <link rel="stylesheet" href="/styles.css?v=20260922-review-discovery">
+  <link rel="stylesheet" href="/static/review-save.css?v=20260922-review-discovery">
+  <script src="/static/review-save.js?v=20260922-review-discovery" defer></script>
+</head>
+<body class="dark-mode review-save-page">
+  <div class="review-save-shell">
+    <nav class="public-site-nav public-site-nav--focused" aria-label="Public site navigation">
+      <a class="public-site-nav__brand" href="/">OmniTrackr</a>
+      <div class="public-site-nav__links"><a href="/reviews">Public reviews</a><a href="/discover">Discover</a><a href="/guides">Guides</a></div>
+    </nav>
+    <main>
+      <a class="review-save-back" href="{{REVIEW_URL}}">← Back to reviews</a>
+      <section id="reviewSavePanel" class="review-save-panel" data-review-id="{{REVIEW_ID}}" data-category="{{CATEGORY}}" aria-labelledby="reviewSaveHeading">
+        <p class="review-save-eyebrow">FROM THE COMMUNITY · {{CATEGORY_LABEL}}</p>
+        <h1 id="reviewSaveHeading">Make room for your next find.</h1>
+        <h2 id="reviewSaveTitle">{{SOURCE_TITLE}}</h2>
+        <p class="review-save-intro">Add this title to your library, then make it your own with your notes and rating.</p>
+        <div class="review-save-preview">
+          <p id="reviewSaveSummary">Preview your library before confirming. Existing notes, ratings and progress are preserved.</p>
+          <p id="reviewSaveStatus" role="status" aria-live="polite" aria-atomic="true"></p>
+        </div>
+        <div class="review-save-actions">
+          <button id="reviewSaveConfirm" type="button" hidden>Add title to my library</button>
+          <a id="reviewSaveOpen" class="review-save-primary" href="/" hidden>Open your title →</a>
+          <a id="reviewSaveSignin" class="review-save-primary" href="{{SIGNIN_URL}}" hidden>Sign in or create an account →</a>
+          <button id="reviewSaveRetry" class="review-save-secondary" type="button" hidden>Check my library again</button>
+        </div>
+        <p class="review-save-footnote">A new title starts unfinished and unrated. The reviewer’s opinion remains credited to them.</p>
+        <noscript><p>Enable JavaScript to check your library and confirm adding this title. You can still <a href="{{REVIEW_URL}}">read the community’s reviews</a>.</p></noscript>
+      </section>
+      <p class="review-save-more"><a href="/reviews">Keep exploring reviews →</a></p>
+    </main>
+    <footer><a href="/privacy">Privacy</a><a href="/contact">Contact</a></footer>
+  </div>
+</body>
+</html>

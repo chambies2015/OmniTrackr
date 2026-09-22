@@ -866,20 +866,16 @@ class TestPublicReviews:
         response = client.get("/reviews")
         assert response.status_code == 200
         assert "text/html" in response.headers["content-type"]
-        assert "What Makes These Reviews Useful?" in response.text
-        assert "How to Browse Public Reviews" in response.text
-        assert "Editorial Review Examples" in response.text
-        assert "Review Writing Tips" in response.text
-        assert "first-party guidance, not user submissions" in response.text
-        assert "Movie example" in response.text
-        assert "Game example" in response.text
-        assert "Book, album, or show example" in response.text
+        assert "From the community" in response.text
+        assert 'id="reviewFilters"' in response.text
+        assert 'action="/reviews" method="get"' in response.text
+        assert 'id="reviewSearch" name="q" type="search" maxlength="100"' in response.text
+        assert '<label for="categoryFilter">Media type</label>' in response.text
+        assert response.text.index('id="reviewsContainer"') < response.text.index('class="reviews-guide"')
         assert 'href="/review-guidelines"' in response.text
-        assert 'href="/media-tracker-checklist"' in response.text
-        assert "Generic review helper links without a category are intentionally not indexed" in response.text
-        assert "Public review quality also protects the site experience" in response.text
-        assert 'href="/reviews?category=movie"' in response.text
-        assert 'href="/reviews?category=video_game"' in response.text
+        assert '<option value="movie">Movies</option>' in response.text
+        assert '<option value="video_game">Video Games</option>' in response.text
+        assert 'data-hydrated="true"' in response.text
 
     def test_empty_review_category_page_is_noindexed_and_ad_free(self, client):
         """Empty user-generated category pages should not look like ad inventory."""

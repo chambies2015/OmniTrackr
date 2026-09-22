@@ -5,6 +5,7 @@ All writes go to a newly created temporary SQLite database; stop with Ctrl+C.
 Add --quick-capture for deterministic, local-only metadata search QA: movies and
 music load promptly, TV is empty, anime is slow, games fail once, and books time
 out once. Games and books recover on retry for each new search query.
+Add --reviews for synthetic community reviews and a private existing-title match.
 """
 import os
 import argparse
@@ -77,9 +78,11 @@ def main():
     parser.add_argument('--empty', action='store_true', help='Start with an empty synthetic library for onboarding QA')
     parser.add_argument('--quick-capture', action='store_true',
                         help='Use local synthetic metadata with progressive results, failures, and retry recovery')
+    parser.add_argument('--reviews', action='store_true',
+                        help='Seed local public reviews for browsing, login handoff, and save QA')
     args = parser.parse_args()
     with tempfile.TemporaryDirectory(prefix="omnitrackr-mobile-") as directory:
-        os.environ.update(DATABASE_URL=f"sqlite:///{Path(directory).as_posix()}/preview.db",
+        os.environ.update(PYTHON_DOTENV_DISABLED="1", DATABASE_URL=f"sqlite:///{Path(directory).as_posix()}/preview.db",
                           ENVIRONMENT="development", TESTING="true",
                           SECRET_KEY="local-disposable-mobile-preview-only")
         if args.quick_capture:
@@ -114,6 +117,32 @@ def main():
                         if hasattr(model, key):
                             data[key] = value
                     db.add(model(**data))
+            if args.reviews:
+                author = models.User(username="sample_reader", email="reader@example.invalid",
+                                     hashed_password=auth.get_password_hash("local-preview-only"), is_verified=True)
+                db.add(author)
+                db.flush()
+                titles = ["The Lantern Atlas", "River of Small Wonders", "A Garden After Rain",
+                          "The Quiet Observatory", "Northbound", "Letters from Tomorrow"]
+                review = (
+                    "The slower opening gives the characters room to reveal their loyalties through small decisions. "
+                    "I especially enjoyed the contrast between the bright setting and the uneasy conversations. "
+                    "Choose this for a quiet evening when you can pay attention to details; the ending rewards that patience."
+                )
+                for model in (models.Movie, models.TVShow, models.Anime, models.VideoGame, models.Music, models.Book):
+                    for index, title in enumerate(titles):
+                        data = dict(user_id=author.id, title=title, review_public=True, rating=8.5,
+                                    review=review if index != 2 else "A gentle, colorful experience with memorable characters. The thoughtful pacing made a welcome change from my usual choices.")
+                        for key, value in dict(year=2024, director="Sample director", author="Sample author",
+                                               artist="Sample artist", genre="Adventure", genres="Adventure",
+                                               seasons=1, episodes=8, poster_url="/static/omnitrackr_vortex.png",
+                                               cover_art_url="/static/omnitrackr_vortex.png").items():
+                            if hasattr(model, key):
+                                data[key] = value
+                        db.add(model(**data))
+                db.add(models.Movie(user_id=user.id, title=titles[0], year=2024, rating=9.2, watched=True,
+                                    review="My private review must survive the public-review save flow.",
+                                    poster_url="/static/omnitrackr_vortex.png"))
             db.commit()
 
         @app.get("/qa", response_class=HTMLResponse)

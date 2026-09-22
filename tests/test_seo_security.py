@@ -170,12 +170,12 @@ class TestSEOEndpoints:
         assert "/advertising" not in content
         assert "/content-quality" not in content
     
-    def test_sitemap_includes_reviews_page(self, client):
-        """Test that sitemap includes the reviews page."""
+    def test_sitemap_omits_empty_reviews_directory(self, client):
+        """An empty, noindexed directory should not be submitted for indexing."""
         response = client.get("/sitemap.xml")
         assert response.status_code == 200
         content = response.text
-        assert "/reviews" in content
+        assert "/reviews" not in content
         assert "/reviews?category=" not in content
 
     def test_sitemap_review_category_urls_require_substantial_inventory(self, client, db_session, authenticated_client, test_user_data):
@@ -237,6 +237,7 @@ class TestSEOEndpoints:
         assert movie.id is not None
         assert book.id is not None
         assert "/reviews?category=movie" in content
+        assert "/reviews</loc>" in content
         assert "/reviews?category=book" not in content
         assert f"/reviews/{spammy_movie.id}?category=movie" not in content
 
@@ -655,7 +656,6 @@ class TestSecurityMiddleware:
             "/sample-library",
             "/demo",
             "/media-tracking",
-            "/reviews",
         ]
 
         for path in eligible_paths:
@@ -802,6 +802,11 @@ class TestSecurityMiddleware:
             if path == "/":
                 # The landing page intentionally keeps a small, task-focused nav.
                 assert {"/", "/guides", "/reviews", "/faq", "/privacy", "/#landing-auth"}.issubset(hrefs)
+            elif path.startswith("/reviews"):
+                # Discovery puts member content first, with guidance and supporting
+                # pages available through focused navigation and the site map.
+                assert {"/", "/reviews", "/discover", "/guides", "/privacy", "/site-map", "/review-guidelines", "/#landing-auth"}.issubset(hrefs)
+                assert {f"/reviews?category={category}" for category in ("movie", "tv_show", "anime", "video_game", "music", "book")}.issubset(hrefs)
             else:
                 assert expected_hrefs.issubset(hrefs)
             assert 'class="public-site-nav__cta" href="/#landing-auth"' in response.text

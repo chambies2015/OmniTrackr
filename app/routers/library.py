@@ -80,3 +80,19 @@ def library_page(
     items = query.offset(offset).limit(limit).all()
     return {"items": [schema.model_validate(item).model_dump() for item in items],
             "total": total, "offset": offset, "limit": limit}
+
+
+@router.get("/item/{category}/{item_id}")
+def library_item(
+    category: str, item_id: int, response: Response,
+    current_user: models.User = Depends(get_current_user), db: Session = Depends(get_db),
+):
+    """Resolve an exact owned item without requiring complete catalog metadata."""
+    response.headers["Cache-Control"] = "private, no-store"
+    if category not in CATEGORIES:
+        raise HTTPException(400, "Unknown media category", headers={"Cache-Control": "private, no-store"})
+    model = CATEGORIES[category][0]
+    item = db.query(model.id, model.title).filter(model.id == item_id, model.user_id == current_user.id).first()
+    if item is None:
+        raise HTTPException(404, "Library item not found", headers={"Cache-Control": "private, no-store"})
+    return {"id": item.id, "title": item.title}

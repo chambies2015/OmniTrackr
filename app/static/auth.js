@@ -15,13 +15,15 @@ let discoverAuthReturnContext = null;
 const AUTH_IS_LOCAL = (location.protocol === 'file:' || location.origin === 'null' || location.origin === '');
 const AUTH_API_BASE = AUTH_IS_LOCAL ? 'http://127.0.0.1:8000' : '';
 
-// Keep a visitor's chosen Discover page through same-tab registration and email
-// verification. This is only a navigation hint; returning never saves picks.
+// Keep a visitor's chosen Discover or review save page through same-tab
+// registration and email verification. Returning never saves a title or picks.
 function validateDiscoverAuthReturn(value) {
     if (typeof value !== 'string' || value.length > 180) return null;
     const match = value.match(/^\/discover\/(?:monthly\/)?[a-z0-9-]+(?:#save-picks)?$/);
     // Compare the entire match as JavaScript's $ can precede a final newline.
-    return match && match[0] === value ? value : null;
+    if (match && match[0] === value) return value;
+    const review = value.match(/^\/reviews\/([1-9]\d{0,9})\/save\?category=(movie|tv_show|anime|video_game|music|book)$/);
+    return review && review[0] === value && Number(review[1]) <= 2147483647 ? value : null;
 }
 
 function clearDiscoverAuthReturn() {

@@ -28,8 +28,9 @@ def test_standalone_public_auth_has_its_own_api_base():
     assert "`${API_BASE}/auth/" not in source
 
     public_template = (INDEX_HTML.parent / "public_landing.html").read_text(encoding="utf-8")
-    assert 'src="/auth.js?v=20260922-discover-journey"' in public_template
-    assert 'src="./auth.js?v=20260922-discover-journey"' in INDEX_HTML.read_text(encoding="utf-8")
+    public_auth = re.search(r'src="/auth\.js\?v=([^\"]+)"', public_template)
+    assert public_auth, "The public shell needs the versioned authentication bundle"
+    assert f'src="./auth.js?v={public_auth.group(1)}"' in INDEX_HTML.read_text(encoding="utf-8")
     assert "/auth/reset-password?" not in source
     assert "JSON.stringify({ token, new_password: newPassword })" in source
 
@@ -180,10 +181,11 @@ def test_adsense_loader_waits_for_idle_and_skips_noindex_pages():
 
 
 def test_reviews_frontend_requests_substantial_public_reviews():
-    """The public reviews page should not replace curated SSR content with short notes."""
+    """Browsing uses the server-gated feed instead of requesting unfiltered notes."""
     source = REVIEWS_JS.read_text(encoding="utf-8")
 
-    assert "min_chars=80" in source
+    assert "/api/public/review-feed?" in source
+    assert "min_chars=" not in source
 
 
 def test_reviews_frontend_only_links_standalone_review_details():
@@ -194,8 +196,9 @@ def test_reviews_frontend_only_links_standalone_review_details():
     assert "return review.search_ready === true" in source
     assert "card.classList.add('review-card--summary')" in source
     assert "if (isStandalone)" in source
-    assert "item.url = reviewUrl" in source
-    assert "listItem.url = reviewUrl" in source
+    assert "link.href = reviewUrl" in source
+    assert "clearReplacedReviewSchema()" in source
+    assert "data.mainEntity.itemListElement = []" in source
 
 
 def test_review_reporting_uses_safe_dom_and_encoded_route_values():

@@ -229,3 +229,50 @@ test('blocked session storage does not prevent login or the current page return'
     assert.deepEqual(s.redirects, [destination || '/']);
   }
 });
+
+test('review save destinations support every media category and return after login without saving', async () => {
+  for (const category of ['movie', 'tv_show', 'anime', 'video_game', 'music', 'book']) {
+    const destination = `/reviews/2147483647/save?category=${category}`;
+    const s = setup({ search: nextQuery(destination) });
+    s.context.initAuth();
+    await s.context.login('reader', 'password');
+    assert.deepEqual(s.redirects, [destination]);
+    assert.deepEqual(s.requests.map(request => request.url), ['/auth/login']);
+    assert.equal(s.context.getDiscoverAuthReturn(), null);
+  }
+});
+
+test('review signup and same-tab email verification preserve only the destination until expiry', async () => {
+  const destination = '/reviews/42/save?category=book';
+  const firstPage = setup({ search: nextQuery(destination) });
+  firstPage.context.initAuth();
+  await firstPage.context.register('reader@example.com', 'reader', 'secret-password');
+  assert.deepEqual(JSON.parse(firstPage.storage.get(returnKey)), { path: destination, created_at: now });
+  assert.deepEqual(firstPage.requests.map(request => request.url), ['/auth/register']);
+  const verifiedPage = setup({ search: '?email_verified=true', storage: firstPage.storage });
+  verifiedPage.context.initAuth();
+  await verifiedPage.context.login('reader', 'secret-password');
+  assert.deepEqual(verifiedPage.redirects, [destination]);
+  const expired = setup({ storage: new Map([[returnKey, JSON.stringify({ path: destination, created_at: now - ttl })]]) });
+  await expired.context.login('reader', 'password');
+  assert.deepEqual(expired.redirects, ['/']);
+});
+
+test('review return paths reject foreign hosts, ambiguous queries, invalid IDs, encodings, and controls', async () => {
+  for (const destination of [
+    '//evil.example/reviews/42/save?category=book', 'https://omnitrackr.xyz/reviews/42/save?category=book',
+    '/reviews/0/save?category=book', '/reviews/01/save?category=book', '/reviews/-1/save?category=book',
+    '/reviews/1.0/save?category=book', '/reviews/1e2/save?category=book', '/reviews/2147483648/save?category=book',
+    '/reviews/42/save?category=books', '/reviews/42/save?category=Book', '/reviews/42/save?category=book&category=movie',
+    '/reviews/42/save?category=book&next=//evil.example', '/reviews/42/save?category=book&',
+    '/reviews/42/save/?category=book', '/reviews/42/save?category=book#save', '/reviews/42/save',
+    '/reviews/%34%32/save?category=book', '/reviews/42/save?category=%62ook', '/reviews/../42/save?category=book',
+    '/reviews/42/save?category=book\n', '/reviews/42/save?category=book\r', '/reviews/42/save?category=book\u0000',
+  ]) {
+    const s = setup({ search: nextQuery(destination) });
+    s.context.initAuth();
+    await s.context.login('reader', 'password');
+    assert.deepEqual(s.redirects, ['/'], destination);
+    assert.deepEqual(s.requests.map(request => request.url), ['/auth/login'], destination);
+  }
+});

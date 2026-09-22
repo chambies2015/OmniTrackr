@@ -44,6 +44,44 @@ manual entry fills the existing category form, preserves its draft-replacement
 confirmation and completion intent, and requires an explicit save. No library
 record, database schema, or public sharing preference is changed by searching.
 
+## Public reviews to personal library
+
+The public review directory puts member reviews directly after its title and
+filters. Title searches and category filters share the same eligibility and
+ordering on the server and in the browser. Review quality, active authors, and
+version-bound moderation are checked before pagination. The existing public
+review API retains its array response; the directory uses a paginated feed
+with explicit continuation state. Search-result URLs and directories without
+search-ready reviews are not indexed.
+
+Initial cards are server rendered and remain visible as the browser initializes.
+Filtering replaces them only after a successful response; failed requests keep
+the previous cards with an explicit retry. Category changes cancel superseded
+requests, and generation checks reject late responses. Writing guidance lives
+on the existing review guide, linked from the directory.
+
+Save links open a separate, unindexed preview page. Guests can return to that
+page after same-tab login, registration, and email verification through the
+existing 24-hour navigation hint. Previewing only reads the current user's
+library. Adding requires explicit confirmation, and the server rechecks public
+eligibility and the previewed metadata version. A title match in that category
+is reused without editing it. A new item contains allowlisted public metadata,
+starts unfinished and unrated, and has no review or public-review selection.
+The source author's notes, ratings, and completion state are never copied.
+
+After saving, an owner-scoped dashboard link opens the exact library item.
+Ambiguous or invalid identifiers are rejected; interrupted navigation respects
+the member's next action. Read responses accept missing stored creator/year
+metadata so older imports can still open; creation validation is unchanged.
+There are no database schema changes or new analytics events.
+The directory and save pages remain ad-free.
+
+For disposable browser QA, run
+`python -m tests.manual_mobile_preview --reviews`. This creates only temporary
+synthetic data. The fixture's `preview` account uses `local-preview-only` as its
+password; `/qa` also provides a local authenticated entry point. Stop the
+fixture with Ctrl+C.
+
 ## Discover to first save
 
 The homepage now links directly to existing editorial trails. Discover's search

@@ -5,6 +5,7 @@ let editingRowId = null;
 let editingRowElement = null;
 let currentTab = 'movies';
 let notificationCountInterval = null;
+let dashboardTabVisibilityReady = Promise.resolve();
 
 const LIBRARY_SEARCH_SOURCES = [
   { endpoint: '/movies/', tab: 'movies', label: 'Movie', input: 'movieSearch', status: item => item.watched ? 'Watched' : 'Not watched' },
@@ -1406,15 +1407,15 @@ async function loadMovies() {
         tr.innerHTML = `
           <td id="movie-poster-${movie.id}"></td>
           <td>${movie.title}</td>
-          <td>${movie.director}</td>
-          <td>${movie.year}</td>
+          <td>${escapeHtml(movie.director ?? '')}</td>
+          <td>${movie.year ?? ''}</td>
           <td>${movie.rating !== null && movie.rating !== undefined ? parseFloat(movie.rating).toFixed(1) + '/10' : ''}</td>
           <td><span class="watched-icon ${movie.watched ? 'watched' : 'unwatched'}">${movie.watched ? '✓' : '✗'}</span></td>
           <td class="review-cell">${getReviewCellContent(movie.review, movie.title, [movie.director, movie.year].filter(Boolean).join(' \u2022 '))}</td>
           <td><a href="https://www.imdb.com/find?q=${encodeURIComponent(movie.title)}" target="_blank">Search</a></td>
           <td><span class="watched-icon ${movie.review_public ? 'watched' : 'unwatched'}">${movie.review_public ? '✓' : '✗'}</span></td>
           <td>
-            <button class="action-btn edit-movie-btn" data-movie-id="${movie.id}" data-movie-title="${escapeHtml(movie.title)}" data-movie-director="${escapeHtml(movie.director)}" data-movie-year="${movie.year}" data-movie-rating="${movie.rating ?? ''}" data-movie-watched="${movie.watched}" data-movie-review="${escapeHtml(movie.review || '')}" data-movie-review-public="${movie.review_public || false}">Edit</button>
+            <button class="action-btn edit-movie-btn" data-movie-id="${movie.id}" data-movie-title="${escapeHtml(movie.title)}" data-movie-director="${escapeHtml(movie.director ?? '')}" data-movie-year="${movie.year ?? ''}" data-movie-rating="${movie.rating ?? ''}" data-movie-watched="${movie.watched}" data-movie-review="${escapeHtml(movie.review || '')}" data-movie-review-public="${movie.review_public || false}">Edit</button>
             <button type="button" class="action-btn" data-action="add-next-up" data-next-up-category="movies" data-next-up-item-id="${movie.id}">Next up</button>
             <button type="button" class="action-btn" data-action="open-collection-picker" data-collection-category="movies" data-collection-item-id="${movie.id}" data-collection-item-title="${escapeHtml(movie.title)}">Collect</button>
             ${movie.watched ? `<button type="button" class="action-btn" data-action="begin-completion-ritual" data-completion-category="movies" data-completion-item-id="${movie.id}">Reflect</button>` : ''}
@@ -1611,7 +1612,7 @@ window.enableMovieEdit = function (btn) {
   // Read data from dataset (browsers handle this securely)
   const title = btn.dataset.movieTitle || '';
   const director = btn.dataset.movieDirector || '';
-  const year = parseInt(btn.dataset.movieYear, 10);
+  const year = btn.dataset.movieYear || '';
   const ratingVal = btn.dataset.movieRating || '';
   const watched = btn.dataset.movieWatched === 'true';
   const review = btn.dataset.movieReview || '';
@@ -1713,7 +1714,7 @@ async function loadTVShows() {
         tr.innerHTML = `
           <td id="tv-poster-${tvShow.id}"></td>
           <td>${tvShow.title}</td>
-          <td>${tvShow.year}</td>
+          <td>${tvShow.year ?? ''}</td>
           <td>${tvShow.seasons ?? ''}</td>
           <td>${tvShow.episodes ?? ''}</td>
           <td>${tvShow.rating !== null && tvShow.rating !== undefined ? parseFloat(tvShow.rating).toFixed(1) + '/10' : ''}</td>
@@ -1722,7 +1723,7 @@ async function loadTVShows() {
           <td><a href="https://www.imdb.com/find?q=${encodeURIComponent(tvShow.title)}" target="_blank">Search</a></td>
           <td><span class="watched-icon ${tvShow.review_public ? 'watched' : 'unwatched'}">${tvShow.review_public ? '✓' : '✗'}</span></td>
           <td>
-            <button class="action-btn edit-tv-btn" data-tv-id="${tvShow.id}" data-tv-title="${escapeHtml(tvShow.title)}" data-tv-year="${tvShow.year}" data-tv-seasons="${tvShow.seasons ?? ''}" data-tv-episodes="${tvShow.episodes ?? ''}" data-tv-rating="${tvShow.rating ?? ''}" data-tv-watched="${tvShow.watched}" data-tv-review="${escapeHtml(tvShow.review || '')}" data-tv-review-public="${tvShow.review_public || false}">Edit</button>
+            <button class="action-btn edit-tv-btn" data-tv-id="${tvShow.id}" data-tv-title="${escapeHtml(tvShow.title)}" data-tv-year="${tvShow.year ?? ''}" data-tv-seasons="${tvShow.seasons ?? ''}" data-tv-episodes="${tvShow.episodes ?? ''}" data-tv-rating="${tvShow.rating ?? ''}" data-tv-watched="${tvShow.watched}" data-tv-review="${escapeHtml(tvShow.review || '')}" data-tv-review-public="${tvShow.review_public || false}">Edit</button>
             <button type="button" class="action-btn" data-action="add-next-up" data-next-up-category="tv-shows" data-next-up-item-id="${tvShow.id}">Next up</button>
             <button type="button" class="action-btn" data-action="open-collection-picker" data-collection-category="tv-shows" data-collection-item-id="${tvShow.id}" data-collection-item-title="${escapeHtml(tvShow.title)}">Collect</button>
             ${tvShow.watched ? `<button type="button" class="action-btn" data-action="begin-completion-ritual" data-completion-category="tv-shows" data-completion-item-id="${tvShow.id}">Reflect</button>` : ''}
@@ -1782,7 +1783,7 @@ async function loadAnime() {
         tr.innerHTML = `
           <td id="anime-poster-${animeItem.id}"></td>
           <td>${animeItem.title}</td>
-          <td class="table-cell-center">${animeItem.year}</td>
+          <td class="table-cell-center">${animeItem.year ?? ''}</td>
           <td class="table-cell-center">${animeItem.seasons ?? ''}</td>
           <td class="table-cell-center">${animeItem.episodes ?? ''}</td>
           <td class="table-cell-center">${animeItem.rating !== null && animeItem.rating !== undefined ? parseFloat(animeItem.rating).toFixed(1) + '/10' : ''}</td>
@@ -1791,7 +1792,7 @@ async function loadAnime() {
           <td><a href="https://www.imdb.com/find?q=${encodeURIComponent(animeItem.title)}" target="_blank">Search</a></td>
           <td><span class="watched-icon ${animeItem.review_public ? 'watched' : 'unwatched'}">${animeItem.review_public ? '✓' : '✗'}</span></td>
           <td>
-            <button class="action-btn edit-anime-btn" data-anime-id="${animeItem.id}" data-anime-title="${escapeHtml(animeItem.title)}" data-anime-year="${animeItem.year}" data-anime-seasons="${animeItem.seasons ?? ''}" data-anime-episodes="${animeItem.episodes ?? ''}" data-anime-rating="${animeItem.rating ?? ''}" data-anime-watched="${animeItem.watched}" data-anime-review="${escapeHtml(animeItem.review || '')}" data-anime-review-public="${animeItem.review_public || false}">Edit</button>
+            <button class="action-btn edit-anime-btn" data-anime-id="${animeItem.id}" data-anime-title="${escapeHtml(animeItem.title)}" data-anime-year="${animeItem.year ?? ''}" data-anime-seasons="${animeItem.seasons ?? ''}" data-anime-episodes="${animeItem.episodes ?? ''}" data-anime-rating="${animeItem.rating ?? ''}" data-anime-watched="${animeItem.watched}" data-anime-review="${escapeHtml(animeItem.review || '')}" data-anime-review-public="${animeItem.review_public || false}">Edit</button>
             <button type="button" class="action-btn" data-action="add-next-up" data-next-up-category="anime" data-next-up-item-id="${animeItem.id}">Next up</button>
             <button type="button" class="action-btn" data-action="open-collection-picker" data-collection-category="anime" data-collection-item-id="${animeItem.id}" data-collection-item-title="${escapeHtml(animeItem.title)}">Collect</button>
             ${animeItem.watched ? `<button type="button" class="action-btn" data-action="begin-completion-ritual" data-completion-category="anime" data-completion-item-id="${animeItem.id}">Reflect</button>` : ''}
@@ -2522,15 +2523,15 @@ async function loadMusic() {
         tr.innerHTML = `
           <td id="music-poster-${item.id}"></td>
           <td>${escapeHtml(item.title)}</td>
-          <td>${escapeHtml(item.artist)}</td>
-          <td>${item.year}</td>
+          <td>${escapeHtml(item.artist ?? '')}</td>
+          <td>${item.year ?? ''}</td>
           <td>${item.genre ? escapeHtml(item.genre) : ''}</td>
           <td>${item.rating !== null && item.rating !== undefined ? parseFloat(item.rating).toFixed(1) + '/10' : ''}</td>
           <td><span class="watched-icon ${item.listened ? 'watched' : 'unwatched'}">${item.listened ? '✓' : '✗'}</span></td>
           <td class="review-cell">${getReviewCellContent(item.review, item.title, item.artist || '')}</td>
           <td><span class="watched-icon ${item.review_public ? 'watched' : 'unwatched'}">${item.review_public ? '✓' : '✗'}</span></td>
           <td>
-            <button class="action-btn edit-music-btn" data-music-id="${item.id}" data-music-title="${escapeHtml(item.title)}" data-music-artist="${escapeHtml(item.artist)}" data-music-year="${item.year}" data-music-genre="${escapeHtml(item.genre || '')}" data-music-rating="${item.rating ?? ''}" data-music-listened="${item.listened}" data-music-review="${escapeHtml(item.review || '')}" data-music-review-public="${item.review_public || false}">Edit</button>
+            <button class="action-btn edit-music-btn" data-music-id="${item.id}" data-music-title="${escapeHtml(item.title)}" data-music-artist="${escapeHtml(item.artist ?? '')}" data-music-year="${item.year ?? ''}" data-music-genre="${escapeHtml(item.genre || '')}" data-music-rating="${item.rating ?? ''}" data-music-listened="${item.listened}" data-music-review="${escapeHtml(item.review || '')}" data-music-review-public="${item.review_public || false}">Edit</button>
             <button type="button" class="action-btn" data-action="add-next-up" data-next-up-category="music" data-next-up-item-id="${item.id}">Next up</button>
             <button type="button" class="action-btn" data-action="open-collection-picker" data-collection-category="music" data-collection-item-id="${item.id}" data-collection-item-title="${escapeHtml(item.title)}">Collect</button>
             ${item.listened ? `<button type="button" class="action-btn" data-action="begin-completion-ritual" data-completion-category="music" data-completion-item-id="${item.id}">Reflect</button>` : ''}
@@ -2765,7 +2766,7 @@ window.enableMusicEdit = function (btn) {
   editingRowElement = row;
   const title = btn.dataset.musicTitle || '';
   const artist = btn.dataset.musicArtist || '';
-  const year = parseInt(btn.dataset.musicYear, 10);
+  const year = btn.dataset.musicYear || '';
   const genre = btn.dataset.musicGenre || '';
   const ratingVal = btn.dataset.musicRating || '';
   const listened = btn.dataset.musicListened === 'true';
@@ -2773,7 +2774,7 @@ window.enableMusicEdit = function (btn) {
   const reviewPublic = btn.dataset.musicReviewPublic === 'true';
   row.cells[1].innerHTML = `<input type="text" id="edit-music-title" value="${escapeHtml(title)}">`;
   row.cells[2].innerHTML = `<input type="text" id="edit-music-artist" value="${escapeHtml(artist)}">`;
-  row.cells[3].innerHTML = `<input type="number" id="edit-music-year" value="${year}">`;
+  row.cells[3].innerHTML = `<input type="number" id="edit-music-year" value="${escapeHtml(year)}">`;
   row.cells[4].innerHTML = `<input type="text" id="edit-music-genre" value="${escapeHtml(genre)}">`;
   row.cells[5].innerHTML = `<input type="number" min="0" max="10" step="0.1" id="edit-music-rating" value="${ratingVal}">`;
   row.cells[6].innerHTML = `<input type="checkbox" id="edit-music-listened" ${listened ? 'checked' : ''}>`;
@@ -2871,15 +2872,15 @@ async function loadBooks() {
         tr.innerHTML = `
           <td id="book-poster-${book.id}"></td>
           <td>${escapeHtml(book.title)}</td>
-          <td>${escapeHtml(book.author)}</td>
-          <td>${book.year}</td>
+          <td>${escapeHtml(book.author ?? '')}</td>
+          <td>${book.year ?? ''}</td>
           <td>${book.genre ? escapeHtml(book.genre) : ''}</td>
           <td>${book.rating !== null && book.rating !== undefined ? parseFloat(book.rating).toFixed(1) + '/10' : ''}</td>
           <td><span class="watched-icon ${book.read ? 'watched' : 'unwatched'}">${book.read ? '✓' : '✗'}</span></td>
           <td class="review-cell">${getReviewCellContent(book.review, book.title, book.author || '')}</td>
           <td><span class="watched-icon ${book.review_public ? 'watched' : 'unwatched'}">${book.review_public ? '✓' : '✗'}</span></td>
           <td>
-            <button class="action-btn edit-book-btn" data-book-id="${book.id}" data-book-title="${escapeHtml(book.title)}" data-book-author="${escapeHtml(book.author)}" data-book-year="${book.year}" data-book-genre="${escapeHtml(book.genre || '')}" data-book-rating="${book.rating ?? ''}" data-book-read="${book.read}" data-book-review="${escapeHtml(book.review || '')}" data-book-review-public="${book.review_public || false}">Edit</button>
+            <button class="action-btn edit-book-btn" data-book-id="${book.id}" data-book-title="${escapeHtml(book.title)}" data-book-author="${escapeHtml(book.author ?? '')}" data-book-year="${book.year ?? ''}" data-book-genre="${escapeHtml(book.genre || '')}" data-book-rating="${book.rating ?? ''}" data-book-read="${book.read}" data-book-review="${escapeHtml(book.review || '')}" data-book-review-public="${book.review_public || false}">Edit</button>
             <button type="button" class="action-btn" data-action="add-next-up" data-next-up-category="books" data-next-up-item-id="${book.id}">Next up</button>
             <button type="button" class="action-btn" data-action="open-collection-picker" data-collection-category="books" data-collection-item-id="${book.id}" data-collection-item-title="${escapeHtml(book.title)}">Collect</button>
             ${book.read ? `<button type="button" class="action-btn" data-action="begin-completion-ritual" data-completion-category="books" data-completion-item-id="${book.id}">Reflect</button>` : ''}
@@ -3107,7 +3108,7 @@ window.enableBookEdit = function (btn) {
   editingRowElement = row;
   const title = btn.dataset.bookTitle || '';
   const author = btn.dataset.bookAuthor || '';
-  const year = parseInt(btn.dataset.bookYear, 10);
+  const year = btn.dataset.bookYear || '';
   const genre = btn.dataset.bookGenre || '';
   const ratingVal = btn.dataset.bookRating || '';
   const read = btn.dataset.bookRead === 'true';
@@ -3115,7 +3116,7 @@ window.enableBookEdit = function (btn) {
   const reviewPublic = btn.dataset.bookReviewPublic === 'true';
   row.cells[1].innerHTML = `<input type="text" id="edit-book-title" value="${escapeHtml(title)}">`;
   row.cells[2].innerHTML = `<input type="text" id="edit-book-author" value="${escapeHtml(author)}">`;
-  row.cells[3].innerHTML = `<input type="number" id="edit-book-year" value="${year}">`;
+  row.cells[3].innerHTML = `<input type="number" id="edit-book-year" value="${escapeHtml(year)}">`;
   row.cells[4].innerHTML = `<input type="text" id="edit-book-genre" value="${escapeHtml(genre)}">`;
   row.cells[5].innerHTML = `<input type="number" min="0" max="10" step="0.1" id="edit-book-rating" value="${ratingVal}">`;
   row.cells[6].innerHTML = `<input type="checkbox" id="edit-book-read" ${read ? 'checked' : ''}>`;
@@ -3192,7 +3193,7 @@ window.enableAnimeEdit = function (btn) {
   editingRowElement = row;
   // Read data from dataset (browsers handle this securely)
   const title = btn.dataset.animeTitle || '';
-  const year = parseInt(btn.dataset.animeYear, 10);
+  const year = btn.dataset.animeYear || '';
   const seasons = btn.dataset.animeSeasons || '';
   const episodes = btn.dataset.animeEpisodes || '';
   const ratingVal = btn.dataset.animeRating || '';
@@ -3277,7 +3278,7 @@ window.enableTVEdit = function (btn) {
   editingRowElement = row;
   // Read data from dataset (browsers handle this securely)
   const title = btn.dataset.tvTitle || '';
-  const year = parseInt(btn.dataset.tvYear, 10);
+  const year = btn.dataset.tvYear || '';
   const seasons = btn.dataset.tvSeasons || '';
   const episodes = btn.dataset.tvEpisodes || '';
   const ratingVal = btn.dataset.tvRating || '';
@@ -7158,7 +7159,7 @@ document.addEventListener('DOMContentLoaded', function () {
     updateNotificationCount();
     
     // Load tab visibility settings
-    loadTabVisibility();
+    dashboardTabVisibilityReady = loadTabVisibility();
 
     // Show friends sidebar
     const friendsSidebar = document.getElementById('friendsSidebar');
@@ -7904,6 +7905,113 @@ async function loadActivityJournal() {
 
 let collectionsCache = [];
 let collectionPickerTarget = null;
+
+function consumeLibraryNavigationTarget() {
+  const url = new URL(window.location.href);
+  const categories = url.searchParams.getAll('library_category');
+  const ids = url.searchParams.getAll('library_item');
+  if (!categories.length && !ids.length) return null;
+  url.searchParams.delete('library_category');
+  url.searchParams.delete('library_item');
+  window.history.replaceState(window.history.state, '', `${url.pathname}${url.search}${url.hash}`);
+  if (categories.length !== 1 || ids.length !== 1) return null;
+  if (!LIBRARY_SEARCH_SOURCES.some(source => source.tab === categories[0])) return null;
+  const id = Number(ids[0]);
+  if (!Number.isInteger(id) || id < 1 || id > 2147483647 || String(id) !== ids[0]) return null;
+  return { category: categories[0], id };
+}
+
+async function openLibraryItemFromLocation() {
+  const status = document.getElementById('libraryNavigationStatus');
+  if (!status || !hasStoredAuth()) return false;
+  const params = new URL(window.location.href).searchParams;
+  if (!params.has('library_category') && !params.has('library_item')) return false;
+  const target = consumeLibraryNavigationTarget();
+  status.hidden = false;
+  if (!target) {
+    status.textContent = 'This library link is invalid. Find the title using your library search.';
+    return false;
+  }
+  if (editingRowId !== null) {
+    status.textContent = 'Save or cancel your current edit before opening another title.';
+    return false;
+  }
+  let interrupted = false;
+  const stopAutoFocus = () => { interrupted = true; };
+  const events = ['pointerdown', 'keydown', 'wheel', 'touchstart', 'popstate', 'hashchange'];
+  for (const event of events) {
+    (event === 'popstate' || event === 'hashchange' ? window : document).addEventListener(event, stopAutoFocus, true);
+  }
+  const canContinue = () => !interrupted && hasStoredAuth() && editingRowId === null;
+  try {
+    status.textContent = 'Opening your saved title…';
+    // Honor category visibility before resolving the owner's title.
+    await dashboardTabVisibilityReady;
+    if (!canContinue()) return false;
+    if (getTabButton(target.category)?.style.display === 'none') {
+      status.textContent = 'Enable this media category in your settings to open this title.';
+      return false;
+    }
+    const startingTab = currentTab;
+    const response = await authenticatedFetch(`${API_BASE}/library/item/${target.category}/${target.id}`);
+    if (currentTab !== startingTab) interrupted = true;
+    if (!canContinue()) return false;
+    if (!response.ok) {
+      status.textContent = response.status === 404
+        ? 'That title is unavailable in this account. It may have been removed.'
+        : 'Could not open this title. Try finding it using your library search.';
+      return false;
+    }
+    // The owner-scoped response supplies the title; never trust a title from the URL.
+    const item = await response.json();
+    if (currentTab !== startingTab) interrupted = true;
+    if (!canContinue()) return false;
+    if (item?.id !== target.id || typeof item.title !== 'string' || !item.title.trim()) {
+      status.textContent = 'That title is unavailable in this account.';
+      return false;
+    }
+    const opened = await openLibraryItem({ ...target, title: item.title }, {
+      button: null, reasonElement: status, shouldContinue: (expectedTab = currentTab) => {
+        if (currentTab !== expectedTab) interrupted = true;
+        return canContinue();
+      },
+      focusReady: dashboardStartupLayoutReady,
+    });
+    if (opened) status.textContent = `Opened “${item.title}” in your library.`;
+    return opened;
+  } catch (error) {
+    if (canContinue()) status.textContent = 'Could not open this title. Try finding it using your library search.';
+    return false;
+  } finally {
+    if (!canContinue()) {
+      status.hidden = true;
+      status.textContent = '';
+    }
+    for (const event of events) {
+      (event === 'popstate' || event === 'hashchange' ? window : document).removeEventListener(event, stopAutoFocus, true);
+    }
+  }
+}
+
+function openDashboardTargetFromLocation() {
+  if (!hasStoredAuth()) return false;
+  const params = new URL(window.location.href).searchParams;
+  if (params.has('library_category') || params.has('library_item')) {
+    // Ambiguous mixed handoffs must never race each other or choose a different title.
+    if (params.has('collection')) {
+      consumeCollectionNavigationTarget();
+      consumeLibraryNavigationTarget();
+      const status = document.getElementById('libraryNavigationStatus');
+      if (status) {
+        status.hidden = false;
+        status.textContent = 'This library link has conflicting destinations. Find the title using your library search.';
+      }
+      return false;
+    }
+    return openLibraryItemFromLocation();
+  }
+  return openCollectionFromLocation();
+}
 
 function consumeCollectionNavigationTarget() {
   const url = new URL(window.location.href);
@@ -8952,6 +9060,10 @@ async function openTodaysPick() {
 }
 
 async function openLibraryItem(pick, options = {}) {
+  const guarded = typeof options.shouldContinue === 'function';
+  const canContinue = (tab) => !guarded || (options.shouldContinue(tab) && currentTab === tab);
+  const startingTab = guarded ? currentTab : null;
+  if (!canContinue(startingTab)) return false;
   if (editingRowId !== null) {
     alert('Save or cancel your current edit before opening another title.');
     return false;
@@ -8963,7 +9075,7 @@ async function openLibraryItem(pick, options = {}) {
     if (reason) reason.textContent = 'Enable this media category in your settings to open this title.';
     return false;
   }
-  const button = options.button || document.getElementById('todaysPickOpen');
+  const button = options.button === null ? null : options.button || document.getElementById('todaysPickOpen');
   if (button) button.disabled = true;
   try {
     // Let an existing list request finish before changing its search input.
@@ -8971,13 +9083,20 @@ async function openLibraryItem(pick, options = {}) {
       anime: isLoadingAnime, 'video-games': isLoadingVideoGames,
       music: isLoadingMusic, books: isLoadingBooks })[source.tab];
     const deadline = Date.now() + 10000;
-    while (busy() && Date.now() < deadline) await new Promise(resolve => setTimeout(resolve, 50));
+    while (busy() && Date.now() < deadline) {
+      await new Promise(resolve => setTimeout(resolve, 50));
+      if (!canContinue(startingTab)) return false;
+    }
+    if (!canContinue(startingTab)) return false;
     if (busy()) throw new Error('The library is still loading. Please try opening the title again.');
     document.getElementById(source.input).value = pick.title;
     const [, sortId] = libraryPageConfig(source.tab);
     libraryPages.set(source.tab, { offset: 0, total: 0, focusId: Number(pick.id),
       signature: JSON.stringify([pick.title, document.getElementById(sortId).value]) });
     await switchTab(source.tab);
+    if (!canContinue(source.tab)) return false;
+    if (options.focusReady) await options.focusReady;
+    if (!canContinue(source.tab)) return false;
     const row = document.querySelector(
       `[data-next-up-category="${source.tab}"][data-next-up-item-id="${Number(pick.id)}"]`
     )?.closest('tr');
@@ -8989,6 +9108,7 @@ async function openLibraryItem(pick, options = {}) {
     row.scrollIntoView({ block: 'center', behavior: 'auto' });
     return true;
   } catch (error) {
+    if (guarded && !options.shouldContinue()) return false;
     if (reason) reason.textContent = error.message || 'Could not open this title. Please try again.';
     return false;
   } finally {
@@ -10672,7 +10792,7 @@ document.addEventListener('DOMContentLoaded', () => {
   bindCustomTabForm();
   if (hasStoredAuth()) {
     loadCustomTabs();
-    openCollectionFromLocation();
+    openDashboardTargetFromLocation();
   }
 });
 
