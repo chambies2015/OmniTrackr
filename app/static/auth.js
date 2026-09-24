@@ -157,6 +157,7 @@ function clearAuth({ preserveReturn = false } = {}) {
     localStorage.removeItem(USER_KEY);
     // Storage events do not fire in this tab, including when a background request expires.
     window.OmniProgress?.reset();
+    window.resetDailyDashboard?.();
     if (!preserveReturn) clearDiscoverAuthReturn();
     clearDemoStartIntent();
     try {

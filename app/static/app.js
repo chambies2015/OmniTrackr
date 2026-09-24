@@ -23,6 +23,7 @@ let librarySearchTimer;
 let librarySearchController;
 const libraryPages = new Map();
 const LIBRARY_PAGE_SIZE = 50;
+const dailyDashboardState = { items: [], expanded: false, epoch: 0, openRequest: 0, mutationPending: false, mutationRequest: 0, refreshAfterMutation: false };
 
 function libraryPageConfig(category) {
   return {
@@ -870,7 +871,7 @@ function handleDelegatedClick(event) {
   }
 
   if (target.dataset.switchTab) {
-    switchTab(target.dataset.switchTab);
+    navigateLibraryTab(target.dataset.switchTab);
     return;
   }
 
@@ -936,7 +937,9 @@ function handleDelegatedClick(event) {
     'launchpad-import': openLaunchpadImport,
     'dismiss-return-deck': dismissReturnDeck,
     'open-return-deck-item': () => openReturnDeckItem(Number(target.dataset.returnDeckIndex)),
-    'pulse-open-item': () => switchTab(target.dataset.pulseTab),
+    'pulse-open-item': () => openDashboardItem(target),
+    'activity-open-library': () => switchTab(target.dataset.pulseTab),
+    'toggle-next-up': toggleNextUpQueue,
     'open-todays-pick': openTodaysPick,
     'open-library-search-result': () => openLibrarySearchResult(target.dataset.searchTab, target.dataset.searchTitle, Number(target.dataset.searchId)),
     'try-another-pick': tryAnotherPick,
@@ -7187,7 +7190,6 @@ window.toggleFriendsSidebar = function () {
   const toggleBtn = document.getElementById('toggleFriendsSidebar');
   const floatingToggleBtn = document.getElementById('showFriendsSidebar');
   const footer = document.getElementById('mainFooter');
-  const notificationBell = document.getElementById('notificationBell');
   const notificationDropdown = document.getElementById('notificationDropdown');
 
   if (!sidebar || !container) return;
@@ -7204,7 +7206,6 @@ window.toggleFriendsSidebar = function () {
     }
     if (floatingToggleBtn) floatingToggleBtn.style.display = 'none';
     if (footer) footer.classList.remove('sidebar-hidden');
-    if (notificationBell) notificationBell.style.left = '270px';
     if (notificationDropdown) notificationDropdown.classList.remove('sidebar-hidden');
   } else {
     // Hide sidebar
@@ -7216,7 +7217,6 @@ window.toggleFriendsSidebar = function () {
     }
     if (floatingToggleBtn) floatingToggleBtn.style.display = 'flex';
     if (footer) footer.classList.add('sidebar-hidden');
-    if (notificationBell) notificationBell.style.left = '20px';
     if (notificationDropdown) notificationDropdown.classList.add('sidebar-hidden');
   }
 
@@ -7240,7 +7240,6 @@ function restoreSidebarState() {
       const toggleBtn = document.getElementById('toggleFriendsSidebar');
       const floatingToggleBtn = document.getElementById('showFriendsSidebar');
       const footer = document.getElementById('mainFooter');
-      const notificationBell = document.getElementById('notificationBell');
       const notificationDropdown = document.getElementById('notificationDropdown');
 
       if (sidebar && container) {
@@ -7252,7 +7251,6 @@ function restoreSidebarState() {
         }
         if (floatingToggleBtn) floatingToggleBtn.style.display = 'flex';
         if (footer) footer.classList.add('sidebar-hidden');
-        if (notificationBell) notificationBell.style.left = '20px';
         if (notificationDropdown) notificationDropdown.classList.add('sidebar-hidden');
       }
     }, 100);
@@ -7772,7 +7770,7 @@ function buildActivityCard(entry) {
   const open = document.createElement('button');
   open.type = 'button';
   open.className = 'activity-entry__open';
-  open.dataset.action = 'pulse-open-item';
+  open.dataset.action = 'activity-open-library';
   open.dataset.pulseTab = entry.category;
   open.textContent = 'Open library';
   const remove = document.createElement('button');
@@ -8971,6 +8969,85 @@ function renderLibraryLaunchpad(insights) {
   launchpad.removeAttribute('hidden');
 }
 
+function dailyDashboardSessionKey() {
+  if (!hasStoredAuth()) return null;
+  const user = typeof getUser === 'function' ? getUser() : null;
+  const token = typeof getToken === 'function' ? getToken() : null;
+  return JSON.stringify([dailyDashboardState.epoch, user?.id ?? user?.username ?? null, token]);
+}
+
+function resetDailyDashboard() {
+  dailyDashboardState.epoch++;
+  dailyDashboardState.openRequest++;
+  dailyDashboardState.items = [];
+  dailyDashboardState.expanded = false;
+  dailyDashboardState.mutationPending = false;
+  dailyDashboardState.refreshAfterMutation = false;
+  refreshNextUpQueue.request = (refreshNextUpQueue.request || 0) + 1;
+  refreshLibraryPulse.request = (refreshLibraryPulse.request || 0) + 1;
+  ++todaysPickRequest;
+  todaysPickSelection = null;
+  for (const id of ['libraryPulse', 'todaysPick', 'nextUpQueue']) {
+    document.getElementById(id)?.setAttribute('hidden', '');
+  }
+  for (const id of ['nextUpQueueItems', 'libraryPulseContinue', 'libraryPulseReflect', 'todaysPickName', 'todaysPickCategory', 'todaysPickReason']) {
+    document.getElementById(id)?.replaceChildren();
+  }
+  const reflections = document.getElementById('libraryPulseReflections');
+  if (reflections) { reflections.open = false; reflections.hidden = true; }
+  const toggle = document.getElementById('nextUpQueueToggle');
+  if (toggle) { toggle.hidden = true; toggle.disabled = false; toggle.setAttribute('aria-expanded', 'false'); }
+  const status = document.getElementById('libraryNavigationStatus');
+  if (status) { status.hidden = true; status.textContent = ''; }
+}
+
+async function openDashboardItem(button) {
+  const session = dailyDashboardSessionKey();
+  if (!session) return false;
+  const status = document.getElementById('libraryNavigationStatus');
+  if (status) { status.hidden = false; status.textContent = ''; }
+  if (editingRowId !== null) {
+    if (status) status.textContent = 'Save or cancel your current edit before opening another title.';
+    return false;
+  }
+  const id = Number(button.dataset.pulseItemId);
+  const category = button.dataset.pulseTab;
+  if (!Number.isInteger(id) || id < 1 || id > 2147483647 || !LIBRARY_SEARCH_SOURCES.some(source => source.tab === category)) {
+    if (status) status.textContent = 'That title is unavailable. Refresh your library and try again.';
+    return false;
+  }
+  const request = ++dailyDashboardState.openRequest;
+  const active = () => request === dailyDashboardState.openRequest && session === dailyDashboardSessionKey();
+  const title = button.dataset.pulseTitle || 'Untitled';
+  const openingMessage = `Opening “${title}”…`;
+  if (status) status.textContent = openingMessage;
+  const opened = await openLibraryItem({ id, category, title }, {
+    button, reasonElement: status,
+    shouldContinue: (expectedTab = currentTab) => active() && editingRowId === null && currentTab === expectedTab,
+  });
+  if (active() && status && (opened || status.textContent === openingMessage)) { status.hidden = true; status.textContent = ''; }
+  return opened;
+}
+
+async function navigateLibraryTab(tabName) {
+  const session = dailyDashboardSessionKey();
+  const content = document.getElementById(`${tabName}-tab`);
+  if (!session || !content || getTabButton(tabName)?.style.display === 'none') return false;
+  if (editingRowId !== null) {
+    alert('Save or cancel your current edit before opening another category.');
+    return false;
+  }
+  const request = ++dailyDashboardState.openRequest;
+  await switchTab(tabName);
+  if (request !== dailyDashboardState.openRequest || session !== dailyDashboardSessionKey()
+    || currentTab !== tabName || editingRowId !== null) return false;
+  const heading = content.querySelector('h2, h3') || content;
+  heading.tabIndex = -1;
+  heading.focus({ preventScroll: true });
+  heading.scrollIntoView({ block: 'start', behavior: 'auto' });
+  return true;
+}
+
 function renderLibraryPulseList(container, items, emptyMessage) {
   if (!container) return;
   container.replaceChildren();
@@ -8988,6 +9065,8 @@ function renderLibraryPulseList(container, items, emptyMessage) {
     button.className = 'library-pulse__item';
     button.dataset.action = 'pulse-open-item';
     button.dataset.pulseTab = item.category;
+    button.dataset.pulseItemId = String(item.id);
+    button.dataset.pulseTitle = item.title;
     const copy = document.createElement('span');
     copy.className = 'library-pulse__item-copy';
     const title = document.createElement('span');
@@ -9022,19 +9101,13 @@ function renderLibraryPulse(pulse) {
   }
   const continueItems = Array.isArray(pulse?.continue_items) ? pulse.continue_items : [];
   const reflectionItems = Array.isArray(pulse?.reflection_items) ? pulse.reflection_items : [];
-  const nextUpItems = Array.isArray(pulse?.next_up_items) ? pulse.next_up_items : [];
-  if (!continueItems.length && !reflectionItems.length && !nextUpItems.length) {
+  if (!continueItems.length && !reflectionItems.length) {
     pulseElement.setAttribute('hidden', '');
     return;
   }
   renderLibraryPulseList(
-    document.getElementById('libraryPulseNextUp'),
-    nextUpItems,
-    'No queue yet. Use “Next up” on any item you want to make time for.'
-  );
-  renderLibraryPulseList(
     document.getElementById('libraryPulseContinue'),
-    continueItems,
+    continueItems.slice(0, 2),
     'Nothing unfinished right now. Add a future watch, read, listen, or play when inspiration strikes.'
   );
   renderLibraryPulseList(
@@ -9042,10 +9115,14 @@ function renderLibraryPulse(pulse) {
     reflectionItems,
     'Your saved items already have ratings and notes. Nice work keeping the story behind your library.'
   );
+  const reflections = document.getElementById('libraryPulseReflections');
+  if (reflections) reflections.hidden = !reflectionItems.length;
+  const count = document.getElementById('libraryPulseReflectionCount');
+  if (count) count.textContent = `(${reflectionItems.length})`;
   pulseElement.removeAttribute('hidden');
 }
 
-function renderTodaysPick(payload) {
+function renderTodaysPick(payload, { showEmpty = false } = {}) {
   const section = document.getElementById('todaysPick');
   const pick = payload?.pick;
   if (!section) return;
@@ -9060,11 +9137,16 @@ function renderTodaysPick(payload) {
   document.getElementById('todaysPickReason').textContent = pick?.reason || 'Choose another category or add a title to your library.';
   document.getElementById('todaysPickOpen').hidden = !pick;
   document.getElementById('todaysPickAnother').hidden = todaysPickCandidateCount < 2;
+  if (!pick && !todaysPickCandidateCount && !document.getElementById('todaysPickFilter')?.value && !showEmpty) {
+    section.setAttribute('hidden', '');
+    return;
+  }
   section.removeAttribute('hidden');
 }
 
 async function refreshTodaysPick() {
   if (!hasStoredAuth()) return;
+  const session = dailyDashboardSessionKey();
   const request = ++todaysPickRequest;
   const open = document.getElementById('todaysPickOpen');
   const another = document.getElementById('todaysPickAnother');
@@ -9076,14 +9158,14 @@ async function refreshTodaysPick() {
     const response = await authenticatedFetch(`${API_BASE}/statistics/today/?${params}`);
     if (!response.ok) throw new Error('Could not load a pick.');
     const payload = await response.json();
-    if (request === todaysPickRequest) renderTodaysPick(payload);
+    if (request === todaysPickRequest && session === dailyDashboardSessionKey()) renderTodaysPick(payload);
   } catch (error) {
-    if (request === todaysPickRequest) {
-      renderTodaysPick(null);
+    if (request === todaysPickRequest && session === dailyDashboardSessionKey()) {
+      renderTodaysPick(null, { showEmpty: true });
       document.getElementById('todaysPickReason').textContent = 'Could not load a pick. Change the category to try again.';
     }
   } finally {
-    if (request === todaysPickRequest) open.disabled = another.disabled = false;
+    if (request === todaysPickRequest && session === dailyDashboardSessionKey()) open.disabled = another.disabled = false;
   }
 }
 
@@ -9153,21 +9235,68 @@ async function openLibraryItem(pick, options = {}) {
   }
 }
 
+function captureNextUpQueueFocus() {
+  const focused = document.activeElement;
+  const row = focused?.closest?.('[data-next-up-row-id]');
+  if (!row || !document.getElementById('nextUpQueueItems')?.contains(row)) return null;
+  return {
+    id: row.dataset.nextUpRowId,
+    index: dailyDashboardState.items.findIndex(item => String(item.id) === row.dataset.nextUpRowId),
+    action: focused.dataset.action,
+    direction: focused.dataset.nextUpDirection,
+  };
+}
+
+function restoreNextUpQueueFocus(focus) {
+  if (!focus) return;
+  const container = document.getElementById('nextUpQueueItems');
+  const rows = Array.from(container.children).filter(row => row.dataset.nextUpRowId);
+  const row = rows.find(candidate => candidate.dataset.nextUpRowId === focus.id)
+    || rows[Math.min(Math.max(focus.index, 0), rows.length - 1)];
+  const buttons = row ? Array.from(row.querySelectorAll('button')).filter(button => !button.disabled) : [];
+  const target = buttons.find(button => button.dataset.action === focus.action && button.dataset.nextUpDirection === focus.direction)
+    || buttons.find(button => button.dataset.action === focus.action) || buttons[0]
+    || document.getElementById('quickCaptureButton') || getTabButton(currentTab);
+  target?.focus({ preventScroll: true });
+}
+
+function toggleNextUpQueue() {
+  if (dailyDashboardState.mutationPending) return;
+  dailyDashboardState.expanded = !dailyDashboardState.expanded;
+  renderNextUpQueue(dailyDashboardState.items);
+}
+
 function renderNextUpQueue(items) {
   const queueElement = document.getElementById('nextUpQueue');
   const container = document.getElementById('nextUpQueueItems');
   if (!queueElement || !container) return;
-
+  const focus = captureNextUpQueueFocus();
+  dailyDashboardState.items = Array.isArray(items) ? items : [];
+  items = dailyDashboardState.items;
+  const shown = dailyDashboardState.expanded ? items : items.slice(0, 3);
+  const summary = document.getElementById('nextUpQueueSummary');
+  if (summary) {
+    summary.textContent = items.length ? `${shown.length} of ${items.length} ${items.length === 1 ? 'title' : 'titles'} · Your order, your pace.` : 'Your next good story starts here.';
+    summary.tabIndex = -1;
+  }
+  const toggle = document.getElementById('nextUpQueueToggle');
+  if (toggle) {
+    toggle.hidden = items.length < 2;
+    toggle.disabled = dailyDashboardState.mutationPending;
+    toggle.textContent = dailyDashboardState.expanded ? 'Show less' : `Manage queue (${items.length})`;
+    toggle.setAttribute('aria-expanded', String(dailyDashboardState.expanded));
+  }
+  container.setAttribute('aria-busy', String(dailyDashboardState.mutationPending));
   container.replaceChildren();
   if (!items.length) {
-    const empty = document.createElement('p');
-    empty.className = 'next-up-queue__empty';
-    empty.textContent = 'Nothing is waiting in the wings. Add a title from any media list whenever you want to turn “someday” into a plan.';
-    container.appendChild(empty);
+    queueElement.setAttribute('hidden', '');
+    restoreNextUpQueueFocus(focus);
+    return;
   } else {
-    items.forEach((item, index) => {
+    shown.forEach((item, index) => {
       const row = document.createElement('div');
       row.className = `next-up-queue__item${item.available ? '' : ' is-unavailable'}`;
+      row.dataset.nextUpRowId = String(item.id);
       const order = document.createElement('span');
       order.className = 'next-up-queue__order';
       order.textContent = String(index + 1);
@@ -9187,7 +9316,10 @@ function renderNextUpQueue(items) {
         open.className = 'next-up-queue__open';
         open.dataset.action = 'pulse-open-item';
         open.dataset.pulseTab = item.category;
+        open.dataset.pulseItemId = String(item.item_id);
+        open.dataset.pulseTitle = item.title;
         open.textContent = 'Open';
+        open.setAttribute('aria-label', `Open ${item.title}`);
         controls.appendChild(open);
         if (typeof window !== 'undefined') window.OmniProgress?.appendAction(controls, item);
       }
@@ -9197,7 +9329,8 @@ function renderNextUpQueue(items) {
       up.dataset.action = 'move-next-up';
       up.dataset.nextUpId = item.id;
       up.dataset.nextUpPosition = Math.max(index - 1, 0);
-      up.disabled = index === 0;
+      up.dataset.nextUpDirection = 'up';
+      up.disabled = index === 0 || dailyDashboardState.mutationPending;
       up.setAttribute('aria-label', `Move ${item.title} up`);
       up.textContent = '↑';
       const down = document.createElement('button');
@@ -9206,7 +9339,8 @@ function renderNextUpQueue(items) {
       down.dataset.action = 'move-next-up';
       down.dataset.nextUpId = item.id;
       down.dataset.nextUpPosition = index + 1;
-      down.disabled = index === items.length - 1;
+      down.dataset.nextUpDirection = 'down';
+      down.disabled = index === items.length - 1 || dailyDashboardState.mutationPending;
       down.setAttribute('aria-label', `Move ${item.title} down`);
       down.textContent = '↓';
       const remove = document.createElement('button');
@@ -9214,24 +9348,28 @@ function renderNextUpQueue(items) {
       remove.className = 'next-up-queue__remove';
       remove.dataset.action = 'remove-next-up';
       remove.dataset.nextUpId = item.id;
+      remove.disabled = dailyDashboardState.mutationPending;
       remove.setAttribute('aria-label', `Remove ${item.title} from Next Up`);
       remove.textContent = 'Remove';
-      controls.append(up, down, remove);
+      if (dailyDashboardState.expanded) controls.append(up, down);
+      controls.appendChild(remove);
       row.append(order, copy, controls);
       container.appendChild(row);
     });
   }
   queueElement.removeAttribute('hidden');
+  restoreNextUpQueueFocus(focus);
 }
 
 async function refreshNextUpQueue(shouldContinue = () => true) {
   if (!hasStoredAuth()) return;
+  const session = dailyDashboardSessionKey();
   const request = refreshNextUpQueue.request = (refreshNextUpQueue.request || 0) + 1;
   try {
     const response = await authenticatedFetch(`${API_BASE}/next-up/`);
     if (response.ok) {
       const items = await response.json();
-      if (request === refreshNextUpQueue.request && shouldContinue() && hasStoredAuth()) renderNextUpQueue(items);
+      if (request === refreshNextUpQueue.request && !dailyDashboardState.mutationPending && shouldContinue() && session === dailyDashboardSessionKey()) renderNextUpQueue(items);
     }
   } catch (error) {
     // The queue is supplementary; never interrupt the tracker if it is unavailable.
@@ -9240,24 +9378,39 @@ async function refreshNextUpQueue(shouldContinue = () => true) {
 
 async function addToNextUp(category, itemId) {
   if (!category || !Number.isInteger(itemId) || itemId < 1) return;
+  const session = dailyDashboardSessionKey();
+  if (!session) return;
   try {
     const response = await authenticatedFetch(`${API_BASE}/next-up/`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ category, item_id: itemId }),
     });
+    if (session !== dailyDashboardSessionKey()) return;
     if (response.status === 409) {
       alert('That item is already in your Next Up queue.');
       return;
     }
     if (!response.ok) throw new Error('Unable to add queue item');
-    await Promise.all([refreshNextUpQueue(), refreshLibraryPulse(), refreshTodaysPick()]);
+    // A move response may have been captured before this addition committed.
+    // Re-read once the mutation settles instead of discarding the added title's refresh.
+    if (dailyDashboardState.mutationPending) dailyDashboardState.refreshAfterMutation = true;
+    const queueRefresh = dailyDashboardState.mutationPending ? null : refreshNextUpQueue();
+    await Promise.all([queueRefresh, refreshLibraryPulse(), refreshTodaysPick()]);
   } catch (error) {
-    alert('Could not add that item to Next Up. Please try again.');
+    if (session === dailyDashboardSessionKey()) alert('Could not add that item to Next Up. Please try again.');
   }
 }
 
 async function moveNextUp(queueId, position) {
+  const session = dailyDashboardSessionKey();
+  if (!session || dailyDashboardState.mutationPending || !Number.isInteger(queueId) || queueId < 1 || !Number.isInteger(position) || position < 0) return;
+  dailyDashboardState.mutationPending = true;
+  const mutation = ++dailyDashboardState.mutationRequest;
+  refreshNextUpQueue.request = (refreshNextUpQueue.request || 0) + 1;
+  const toggle = document.getElementById('nextUpQueueToggle');
+  if (toggle) toggle.disabled = true;
+  document.getElementById('nextUpQueueItems')?.setAttribute('aria-busy', 'true');
   try {
     const response = await authenticatedFetch(`${API_BASE}/next-up/${queueId}/position`, {
       method: 'PUT',
@@ -9265,21 +9418,58 @@ async function moveNextUp(queueId, position) {
       body: JSON.stringify({ position }),
     });
     if (!response.ok) throw new Error('Unable to move queue item');
-    renderNextUpQueue(await response.json());
+    const items = await response.json();
+    if (session !== dailyDashboardSessionKey()) return;
+    dailyDashboardState.mutationPending = false;
+    // A queue read started during this move may contain the earlier order.
+    refreshNextUpQueue.request = (refreshNextUpQueue.request || 0) + 1;
+    renderNextUpQueue(items);
     refreshLibraryPulse();
     refreshTodaysPick();
   } catch (error) {
-    alert('Could not reorder Next Up. Please try again.');
+    if (session === dailyDashboardSessionKey()) alert('Could not reorder Next Up. Please try again.');
+  } finally {
+    if (session === dailyDashboardSessionKey() && mutation === dailyDashboardState.mutationRequest) {
+      dailyDashboardState.mutationPending = false;
+      if (toggle) toggle.disabled = false;
+      document.getElementById('nextUpQueueItems')?.setAttribute('aria-busy', 'false');
+      if (dailyDashboardState.refreshAfterMutation) {
+        dailyDashboardState.refreshAfterMutation = false;
+        await refreshNextUpQueue();
+      }
+    }
   }
 }
 
 async function removeNextUp(queueId) {
+  const session = dailyDashboardSessionKey();
+  if (!session || dailyDashboardState.mutationPending || !Number.isInteger(queueId) || queueId < 1) return;
+  dailyDashboardState.mutationPending = true;
+  const mutation = ++dailyDashboardState.mutationRequest;
+  refreshNextUpQueue.request = (refreshNextUpQueue.request || 0) + 1;
+  const toggle = document.getElementById('nextUpQueueToggle');
+  if (toggle) toggle.disabled = true;
+  document.getElementById('nextUpQueueItems')?.setAttribute('aria-busy', 'true');
   try {
     const response = await authenticatedFetch(`${API_BASE}/next-up/${queueId}`, { method: 'DELETE' });
     if (!response.ok) throw new Error('Unable to remove queue item');
+    if (session !== dailyDashboardSessionKey()) return;
+    dailyDashboardState.mutationPending = false;
+    renderNextUpQueue(dailyDashboardState.items.filter(item => item.id !== queueId));
+    dailyDashboardState.refreshAfterMutation = false;
     await Promise.all([refreshNextUpQueue(), refreshLibraryPulse(), refreshTodaysPick()]);
   } catch (error) {
-    alert('Could not remove that item from Next Up. Please try again.');
+    if (session === dailyDashboardSessionKey()) alert('Could not remove that item from Next Up. Please try again.');
+  } finally {
+    if (session === dailyDashboardSessionKey() && mutation === dailyDashboardState.mutationRequest) {
+      dailyDashboardState.mutationPending = false;
+      if (toggle) toggle.disabled = false;
+      document.getElementById('nextUpQueueItems')?.setAttribute('aria-busy', 'false');
+      if (dailyDashboardState.refreshAfterMutation) {
+        dailyDashboardState.refreshAfterMutation = false;
+        await refreshNextUpQueue();
+      }
+    }
   }
 }
 
@@ -9295,12 +9485,13 @@ async function refreshLibraryLaunchpad() {
 
 async function refreshLibraryPulse(shouldContinue = () => true) {
   if (!hasStoredAuth()) return;
+  const session = dailyDashboardSessionKey();
   const request = refreshLibraryPulse.request = (refreshLibraryPulse.request || 0) + 1;
   try {
     const response = await authenticatedFetch(`${API_BASE}/statistics/pulse/`);
     if (response.ok) {
       const pulse = await response.json();
-      if (request === refreshLibraryPulse.request && shouldContinue() && hasStoredAuth()) renderLibraryPulse(pulse);
+      if (request === refreshLibraryPulse.request && shouldContinue() && session === dailyDashboardSessionKey()) renderLibraryPulse(pulse);
     }
   } catch (error) {
     // Pulse is optional and should never interrupt the tracker.

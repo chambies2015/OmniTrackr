@@ -262,8 +262,9 @@ test('summary cards expose location without private reminders and queue actions 
 
 test('Continue, Next Up and Welcome Back integrate checkpoint actions without nesting buttons', () => {
   const s = setup();
+  vm.runInContext(app.match(/const dailyDashboardState = .*;/)[0], s.context);
   vm.runInContext(app.slice(app.indexOf('function renderLibraryPulseList('), app.indexOf('function renderLibraryPulse(')), s.context);
-  vm.runInContext(app.slice(app.indexOf('function renderNextUpQueue('), app.indexOf('async function refreshNextUpQueue(')), s.context);
+  vm.runInContext(app.slice(app.indexOf('function captureNextUpQueueFocus('), app.indexOf('async function refreshNextUpQueue(')), s.context);
   vm.runInContext('let returnDeckItems = [];\n' + app.slice(app.indexOf('function makeReturnDeckItem('), app.indexOf('function renderReturnDeck(')), s.context);
   const item = { id: 42, category: 'tv-shows', category_label: 'TV show', title: 'A title', status_label: 'In progress', progress: checkpoint() };
   const pulse = s.get('pulse'); s.context.renderLibraryPulseList(pulse, [item], 'Nothing here');

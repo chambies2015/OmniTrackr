@@ -8,6 +8,10 @@ out once. Games and books recover on retry for each new search query.
 Add --reviews for synthetic community reviews and a private existing-title match.
 Add --collections for a synthetic shared collection with an existing private book.
 Add --progress for unfinished titles with private episode and reading checkpoints.
+Add --daily-dashboard for a compact fixture with checkpoints, an eight-entry queue,
+and a checkpointed book behind 51 same-title editions. The /qa page identifies
+the exact target book and includes the suggested dashboard checks. This flag
+skips the default 52-title-per-category seed and works with --empty.
 Open /qa/expire in a second tab to test background session-expiry cleanup.
 """
 import os
@@ -88,7 +92,10 @@ def main():
                         help='Seed a local public collection and existing private title for save QA')
     parser.add_argument('--progress', action='store_true',
                         help='Seed a local private library with episode and reading checkpoints')
+    parser.add_argument('--daily-dashboard', action='store_true',
+                        help='Seed checkpoints, an eight-entry queue, and a duplicate-title target beyond page one')
     args = parser.parse_args()
+    daily_dashboard_note = ''
     with tempfile.TemporaryDirectory(prefix="omnitrackr-mobile-") as directory:
         os.environ.update(PYTHON_DOTENV_DISABLED="1", DATABASE_URL=f"sqlite:///{Path(directory).as_posix()}/preview.db",
                           ENVIRONMENT="development", TESTING="true",
@@ -115,7 +122,7 @@ def main():
             db.add(user)
             db.flush()
             for model in (models.Movie, models.TVShow, models.Anime, models.VideoGame, models.Music, models.Book):
-                for index in range(0 if args.empty else 52):
+                for index in range(0 if args.empty or args.daily_dashboard else 52):
                     data = dict(user_id=user.id, title=f"A journey through the stars — chapter {index + 1}",
                                 rating=8.5, review="A thoughtful story. This private note should remain private.")
                     for key, value in dict(year=2024, director="Sample director", author="Sample author",
@@ -197,7 +204,17 @@ def main():
                 db.add(models.Book(user_id=user.id, title=titles[-1], author="Sample author", year=2024,
                                    rating=9.2, read=True, review="My private book note must survive saving this collection.",
                                    review_public=False, cover_art_url="/static/omnitrackr_vortex.png"))
-            if args.progress:
+            if args.daily_dashboard:
+                # The checkpointed edition is created after these 51 exact-title
+                # matches, so ordinary first-page browsing cannot include it.
+                # Completed editions do not crowd the unfinished-title prompts.
+                for edition in range(1, 52):
+                    db.add(models.Book(user_id=user.id, title="The Lantern Atlas", year=2024,
+                                       author=f"Archive edition {edition:02d}", read=True, rating=8,
+                                       review="Finished synthetic edition for exact-title navigation QA.",
+                                       review_public=False, cover_art_url="/static/omnitrackr_vortex.png"))
+                db.flush()
+            if args.progress or args.daily_dashboard:
                 from datetime import datetime
                 for category, model, title, unit, position, season in (
                     ("tv-shows", models.TVShow, "Letters from Tomorrow", "episode", 4, 2),
@@ -207,7 +224,8 @@ def main():
                     data = dict(user_id=user.id, title=title, year=2024, rating=8,
                                 review="My review stays separate from progress.", review_public=False)
                     if category == "books":
-                        data.update(author="Sample Author", read=False)
+                        data.update(author="Dashboard target edition" if args.daily_dashboard else "Sample Author",
+                                    read=False)
                     else:
                         data.update(seasons=3, episodes=24, watched=False)
                     item = model(**data)
@@ -218,6 +236,34 @@ def main():
                         updated_at=datetime.utcnow()))
                     db.add(models.NextUpItem(user_id=user.id, category=category, item_id=item.id,
                                             position={"tv-shows": 0, "anime": 1, "books": 2}[category]))
+                    if args.daily_dashboard and category == "books":
+                        daily_dashboard_note = (
+                            f'<p>Exact navigation target: book ID <strong>{item.id}</strong>, '
+                            '<strong>The Lantern Atlas</strong>, author <strong>Dashboard target edition</strong>, '
+                            'with page 128 saved. Its 51 same-title editions precede it in ordinary browsing.</p>'
+                            '<p>Check Continue and Next Up Open actions, expand the eight-entry queue, '
+                            'reorder or remove an entry, and confirm the expanded state survives refresh. '
+                            'The last entry is deliberately unavailable. Switch categories and check search '
+                            'and Add anything at desktop and mobile widths.</p>'
+                        )
+            if args.daily_dashboard:
+                for position, category, item in (
+                    (3, "movies", models.Movie(user_id=user.id, title="The Quiet Observatory", year=2024,
+                                               watched=False, poster_url="/static/omnitrackr_vortex.png")),
+                    (4, "video-games", models.VideoGame(user_id=user.id, title="River of Small Wonders",
+                                                         played=False, cover_art_url="/static/omnitrackr_vortex.png")),
+                    (5, "music", models.Music(user_id=user.id, title="Northbound", artist="Sample artist",
+                                              listened=False, cover_art_url="/static/omnitrackr_vortex.png")),
+                    (6, "movies", models.Movie(user_id=user.id, title="Letters Across the Harbor", year=2023,
+                                               watched=False, poster_url="/static/omnitrackr_vortex.png")),
+                ):
+                    db.add(item)
+                    db.flush()
+                    db.add(models.NextUpItem(user_id=user.id, category=category, item_id=item.id,
+                                            position=position))
+                # Queue references are intentionally polymorphic. A missing ID
+                # safely represents an unavailable title in this disposable DB.
+                db.add(models.NextUpItem(user_id=user.id, category="movies", item_id=2147483000, position=7))
             db.commit()
 
         @app.get("/qa", response_class=HTMLResponse)
@@ -225,8 +271,9 @@ def main():
             response = nonce_html_response('''<!doctype html><html><head><title>Local mobile QA</title></head>
               <body style="background:#171727;color:white;font:16px sans-serif">
               <p>Disposable synthetic library for local QA.</p>
+              <!-- fixture notes -->
               <script>localStorage.setItem('omnitrackr_user', JSON.stringify({id:1,username:'preview'}));</script>
-              <a href="/">Open preview library</a></body></html>''')
+              <a href="/">Open preview library</a></body></html>'''.replace('<!-- fixture notes -->', daily_dashboard_note))
             response.set_cookie(auth.AUTH_COOKIE_NAME, auth.create_access_token({"sub": "preview"}), httponly=True)
             return response
 

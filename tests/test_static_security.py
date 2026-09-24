@@ -265,7 +265,8 @@ def test_library_pulse_uses_safe_dom_rendering_and_existing_tabs():
     assert "`${API_BASE}/statistics/pulse/`" in source
     assert "title.textContent = item.title" in source
     assert "button.dataset.pulseTab = item.category" in source
-    assert "'pulse-open-item': () => switchTab(target.dataset.pulseTab)" in source
+    assert "'pulse-open-item': () => openDashboardItem(target)" in source
+    assert "'activity-open-library': () => switchTab(target.dataset.pulseTab)" in source
 
 
 def test_welcome_back_deck_reuses_safe_dom_and_replaces_overlapping_cards():

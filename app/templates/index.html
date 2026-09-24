@@ -46,10 +46,10 @@
   <link rel="icon" type="image/x-icon" href="/omnitrackr_favicon.ico">
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link rel="preload" href="./styles.css?v=20260922-quick-capture-v2" as="style">
+  <link rel="preload" href="./styles.css?v=20260924-daily-dashboard-v4" as="style">
   <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@700;800&family=Inter:wght@400;500;600&display=swap"
     rel="stylesheet">
-  <link rel="stylesheet" href="./styles.css?v=20260922-quick-capture-v2">
+  <link rel="stylesheet" href="./styles.css?v=20260924-daily-dashboard-v4">
   <link rel="stylesheet" href="/static/progress.css?v=20260922-progress">
   <script src="./preauth.js"></script>
   <style>
@@ -290,6 +290,9 @@
 </head>
 
 <body class="dark-mode">
+  <div class="account-toolbar" role="group" aria-label="Account controls">
+  <button id="showFriendsSidebar" class="sidebar-toggle-floating" title="Show Friends Sidebar"
+    aria-label="Show friends sidebar" style="display: none;">▶</button>
   <button id="toggleMode" class="toggle-btn" aria-label="Toggle between dark and light mode">Light Mode</button>
   <button id="notificationBell" class="notification-bell" aria-label="View notifications">
     🔔
@@ -309,6 +312,7 @@
     <span id="userDisplayText"></span>
   </button>
   <button id="logoutBtn" aria-label="Logout from your account">Logout</button>
+  </div>
 
   <!-- Friends Sidebar -->
   <aside id="friendsSidebar" class="friends-sidebar" style="display: none;">
@@ -324,10 +328,6 @@
       <p class="no-friends">No friends yet</p>
     </div>
   </aside>
-
-  <!-- Floating Toggle Button (shown when sidebar is hidden) -->
-  <button id="showFriendsSidebar" class="sidebar-toggle-floating" title="Show Friends Sidebar"
-    aria-label="Show friends sidebar" style="display: none;">▶</button>
 
   <main class="container" id="mainContainer">
     <header class="header" role="banner">
@@ -345,6 +345,22 @@
         <span aria-hidden="true">＋</span> Add anything <kbd aria-hidden="true">/</kbd>
       </button>
     </header>
+
+    <nav class="tabs" aria-label="Library categories and tools">
+      <a class="tab" href="/discover">Discover ↗</a>
+      <button class="tab active" data-switch-tab="movies">🎬 Movies</button>
+      <button class="tab" data-switch-tab="tv-shows">📺 TV Shows</button>
+      <button class="tab" data-switch-tab="anime">🎌 Anime</button>
+      <button class="tab" data-switch-tab="video-games">🎮 Video Games</button>
+      <button class="tab" data-switch-tab="music">🎵 Music</button>
+      <button class="tab" data-switch-tab="books">📚 Books</button>
+      <button class="tab" data-switch-tab="activity">📝 Journal</button>
+      <button class="tab" data-switch-tab="recommendations">💌 Postcards</button>
+      <button class="tab" data-switch-tab="collections">🗂 Collections</button>
+      <button class="tab" data-switch-tab="statistics">📊 Statistics</button>
+      <div id="customTabsContainer"></div>
+      <button class="tab" id="manageCustomTabsBtn" data-action="show-custom-tab-manager" style="background-color: #6366f1; margin-left: auto;">⚙️ Manage Custom Tabs</button>
+    </nav>
 
     <p id="libraryNavigationStatus" role="status" aria-live="polite" aria-atomic="true" hidden></p>
 
@@ -381,10 +397,26 @@
       <div id="returnDeckRecap" class="return-deck__recap"></div>
     </section>
 
+    <div class="daily-dashboard">
+    <section id="libraryPulse" class="library-pulse" aria-labelledby="libraryPulseTitle" hidden>
+      <div class="library-pulse__header">
+        <div>
+          <p class="library-pulse__eyebrow">Right where you left off</p>
+          <h2 id="libraryPulseTitle">Continue</h2>
+        </div>
+        <button type="button" class="library-pulse__insights" data-action="launchpad-open-insights">View insights</button>
+      </div>
+      <div id="libraryPulseContinue" class="library-pulse__list library-pulse__continue"></div>
+      <details id="libraryPulseReflections" class="library-pulse__reflections" hidden>
+        <summary>Make it memorable <span id="libraryPulseReflectionCount"></span></summary>
+        <p>A rating or a few words can bring a finished title back to life.</p>
+        <div id="libraryPulseReflect" class="library-pulse__list"></div>
+      </details>
+    </section>
+
     <section id="todaysPick" class="todays-pick" aria-labelledby="todaysPickTitle" hidden>
       <div class="todays-pick__copy">
-        <p class="todays-pick__eyebrow">Today’s pick</p>
-        <h2 id="todaysPickTitle">Just pick one.</h2>
+        <h2 id="todaysPickTitle">Today’s pick</h2>
         <label class="todays-pick__filter" for="todaysPickFilter">Choose from
           <select id="todaysPickFilter" data-change-action="pick-category">
             <option value="">All media</option>
@@ -407,48 +439,20 @@
         <button id="todaysPickAnother" type="button" class="todays-pick__another" data-action="try-another-pick">Try another</button>
       </div>
     </section>
-
-    <section id="libraryPulse" class="library-pulse" aria-labelledby="libraryPulseTitle" hidden>
-      <div class="library-pulse__header">
-        <div>
-          <p class="library-pulse__eyebrow">Library pulse</p>
-          <h2 id="libraryPulseTitle">A few good next moves</h2>
-        </div>
-        <button type="button" class="library-pulse__insights" data-action="launchpad-open-insights">View full insights</button>
-      </div>
-      <div class="library-pulse__columns">
-        <section aria-labelledby="libraryPulseNextUpTitle"><h3 id="libraryPulseNextUpTitle">Your Next Up</h3><div id="libraryPulseNextUp" class="library-pulse__list"></div></section>
-        <section aria-labelledby="libraryPulseContinueTitle"><h3 id="libraryPulseContinueTitle">Pick up next</h3><div id="libraryPulseContinue" class="library-pulse__list"></div></section>
-        <section aria-labelledby="libraryPulseReflectTitle"><h3 id="libraryPulseReflectTitle">Make it memorable</h3><div id="libraryPulseReflect" class="library-pulse__list"></div></section>
-      </div>
-    </section>
+    </div>
 
     <section id="nextUpQueue" class="next-up-queue" aria-labelledby="nextUpQueueTitle" hidden>
       <div class="next-up-queue__header">
         <div>
-          <p class="next-up-queue__eyebrow">Intentional queue</p>
           <h2 id="nextUpQueueTitle">Next Up</h2>
+          <p id="nextUpQueueSummary" class="next-up-queue__summary"></p>
         </div>
-        <p class="next-up-queue__hint">Choose any saved item from its library list. Your queue stays private and never changes the item itself.</p>
+        <button id="nextUpQueueToggle" type="button" class="next-up-queue__toggle" data-action="toggle-next-up" aria-controls="nextUpQueueItems" aria-expanded="false" hidden>Manage queue</button>
       </div>
       <div id="nextUpQueueItems" class="next-up-queue__items" aria-live="polite"></div>
     </section>
 
-    <div class="tabs">
-      <a class="tab" href="/discover">Discover ↗</a>
-      <button class="tab active" data-switch-tab="movies">🎬 Movies</button>
-      <button class="tab" data-switch-tab="tv-shows">📺 TV Shows</button>
-      <button class="tab" data-switch-tab="anime">🎌 Anime</button>
-      <button class="tab" data-switch-tab="video-games">🎮 Video Games</button>
-      <button class="tab" data-switch-tab="music">🎵 Music</button>
-      <button class="tab" data-switch-tab="books">📚 Books</button>
-      <button class="tab" data-switch-tab="activity">📝 Journal</button>
-      <button class="tab" data-switch-tab="recommendations">💌 Postcards</button>
-      <button class="tab" data-switch-tab="collections">🗂 Collections</button>
-      <button class="tab" data-switch-tab="statistics">📊 Statistics</button>
-      <div id="customTabsContainer"></div>
-      <button class="tab" id="manageCustomTabsBtn" data-action="show-custom-tab-manager" style="background-color: #6366f1; margin-left: auto;">⚙️ Manage Custom Tabs</button>
-    </div>
+
 
     <!-- Movies Tab Content -->
     <div id="movies-tab" class="tab-content active">
@@ -1918,9 +1922,9 @@
     </form>
   </dialog>
   <script src="./credentials.js"></script>
-  <script src="./auth.js?v=20260924-progress-session"></script>
+  <script src="./auth.js?v=20260924-daily-dashboard"></script>
   <script src="/static/progress.js?v=20260922-progress"></script>
-  <script src="./app.js?v=20260922-progress"></script>
+  <script src="./app.js?v=20260924-daily-dashboard-v4"></script>
 
   <!-- Account Modal -->
   <div id="accountModal" class="modal-overlay" style="display: none;">

@@ -23,7 +23,7 @@ function setup() {
       querySelectorAll: () => [],
     },
     URLSearchParams, setTimeout, Date,
-    API_BASE: '', hasStoredAuth: () => true,
+    API_BASE: '', hasStoredAuth: () => true, dailyDashboardSessionKey: () => 'test-session',
     LIBRARY_SEARCH_SOURCES: categories.map(tab => ({ tab, input: tab + 'Search' })),
     getTabButton: () => ({ style: {} }),
     switchTab: async tab => { context.openedTab = tab; },
@@ -49,6 +49,7 @@ test('another pick cycles beyond 25 clicks without exceeding the candidate pool'
 
 test('empty category keeps the filter accessible and hides item actions', () => {
   const { context, element } = setup();
+  element('todaysPickFilter').value = 'books';
   context.renderTodaysPick({ pick: null, candidate_count: 0 });
   assert.equal(element('todaysPickOpen').hidden, true);
   assert.equal(element('todaysPickAnother').hidden, true);

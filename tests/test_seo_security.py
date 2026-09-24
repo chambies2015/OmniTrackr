@@ -1228,7 +1228,7 @@ class TestSecurityMiddleware:
         assert "Recent Security and Quality Improvements" in content
         assert "Recent Content Improvements" in content
         assert "Release Verification" in content
-        assert '"dateModified": "2026-09-22"' in content
+        assert '"dateModified": "2026-09-24"' in content
         assert "September 2026: Activation and Trust Baseline" in content
         assert "existing launchpad, Weekly playback, Library pulse, and moderator insights" in content
         assert "public reviews API default to favor substantial reviews" in content
@@ -1318,18 +1318,24 @@ class TestSecurityMiddleware:
         assert "/discover/finding-your-feet" in hrefs
         assert "/discover/beautifully-strange-worlds" in hrefs
 
-    def test_homepage_hero_demonstrates_tracking_without_remote_screenshot(self, client):
-        """The first viewport should show an adaptable product story, not a stale UI capture."""
+    def test_homepage_hero_examples_match_supported_tracking(self, client):
+        """Sample entries must distinguish checkpoints and statuses from unsupported tracking."""
         response = client.get("/")
 
         assert response.status_code == 200
         content = response.text
         assert "landing-library-showcase" in content
-        assert "In progress" in content
-        assert "18 of 28 episodes" in content
-        assert "32 hours played" in content
-        assert "media moments" in content
-        assert "Your most active week this month" in content
+        assert "Example library" in content
+        assert "Last watched: episode 18" in content
+        assert "Played</small>" in content
+        assert "Not read" in content
+        assert "journal moments" in content
+        assert "Cross-media explorer" in content
+        assert "18 of 28 episodes" not in content
+        assert "hours played" not in content
+        assert "Want to read" not in content
+        assert "Your most active week this month" not in content
+        assert 'class="showcase-progress"' not in content
         assert "github.com/user-attachments" not in content
 
     def test_privacy_policy_discloses_google_ads_data_use(self, client):

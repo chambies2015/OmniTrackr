@@ -293,6 +293,56 @@ and restore time. Older backups remain valid. The existing media import merge
 behavior is unchanged. The public demo uses fictional in-memory checkpoints and
 restores its examples on reset/reload.
 
+## Compact daily dashboard
+
+Search, Add Anything, and the horizontally scrollable category navigation sit
+above daily suggestions. Account controls stay in the document flow, including
+the Friends toggle, so they cannot cover the library controls on a phone.
+Choosing a category brings its heading into view, including custom categories.
+Continue shows two recent unfinished titles, with all reflection suggestions
+available under Make it memorable. Today's Pick shares the same panel, and the
+Welcome Back flow still replaces those suggestions when appropriate.
+
+Next Up initially shows three entries. Manage queue expands the full list and
+its existing reorder controls; Remove remains available in the preview. Expansion
+is in-memory UI state and survives refreshes and progress saves. The saved queue
+order changes only after an explicit queue action. Keyboard focus follows the
+same entry after a reorder or the next available control after removal. Account
+cleanup clears the preview, private suggestion copy, and expansion state.
+An empty queue stays hidden. With no unfinished titles, the unfiltered Today's
+Pick also stays hidden; a selected category with no matches keeps its filter
+available. A new account therefore sees its launchpad without extra empty cards.
+
+Suggestion and queue Open actions use the existing exact-ID library navigation,
+including its pagination lookup, hidden-category checks, and edit protection.
+Queue entry IDs remain separate from media IDs. Journal's Open library action
+continues to open the category because historic entries can outlive their titles.
+
+This release changes frontend behavior and public copy; it adds no database
+schema or migrations. Public homepage examples now identify themselves as
+examples and show supported checkpoints, completion states, journal counts, and
+Tasteprint text, without game-hour tracking or episode percentage claims.
+
+For a disposable dashboard walkthrough, run
+`.\.venv\Scripts\python.exe -m tests.manual_mobile_preview --daily-dashboard --quick-capture`
+and open `http://127.0.0.1:8765/qa`. The eight-entry queue includes an unavailable
+entry, and the checkpointed book has 51 same-title editions ahead of it in normal
+browsing. Verify Continue and Next Up both open the target edition identified on
+the fixture page, then check expansion, reordering, progress refresh, and mobile
+navigation. The fixture creates a temporary SQLite database and does not load
+the project's `.env`.
+
+Dashboard release verification, September 24, 2026: all 227 frontend tests and
+97 focused public-page/SEO/static-security tests passed, along with JavaScript
+syntax and diff checks. Disposable browser checks covered desktop and 390/320px
+mobile layouts, both themes, exact edition navigation beyond the first page,
+queue reorder and progress refresh, category navigation, Notifications and
+Friends controls, and public homepage examples. A background 401 cleared the
+private dashboard and progress draft. An empty library showed only onboarding;
+adding its first title activated suggestions, and removing its only queue entry
+returned focus to Add Anything while preserving the saved movie. No production
+data was used and nothing was deployed.
+
 ## Verification
 
 Run the full suite against an isolated database. Set these before importing the
