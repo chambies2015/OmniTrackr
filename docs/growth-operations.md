@@ -164,6 +164,47 @@ The signed-out homepage also now processes email-verification and password-reset
 links before choosing the normal login form. It continues to ignore stale local
 authentication data when deciding whether to show the private dashboard.
 
+## Expanded Discover guides
+
+Three existing trails now have complete public decision guides:
+`one-evening-well-spent`, `finding-your-feet`, and
+`beautifully-strange-worlds`. Their reviewed editorial data lives in
+`app/discover_guides.py`; existing catalog keys and saved-title metadata remain
+in `app/discover_catalog.py`. Each guide adds a practical comparison, cross-media
+analysis, starting notes, related reading, and four verified primary sources.
+The full reading experience is server rendered, with
+page anchors and source notes available without JavaScript or authentication.
+
+Only those three trail details are promoted to `index, follow` and included in
+the sitemap. The remaining seven stay `noindex, follow` and excluded. Article
+structured data identifies OmniTrackr as the organization author/publisher;
+`dateModified`, the visible review date, and sitemap `lastmod` use the guide's
+explicit `reviewed` date, currently `2026-09-24`. The original publication date
+remains `2026-09-08`. Change the review date when the guide is substantively
+reviewed; do not replace it with the current request date. Directory and monthly
+edition indexing policy is unchanged.
+
+The visible method note discloses AI assistance and separates factual source
+checks from editorial judgments. Source notes describe what is supported and
+flag regional access or additional plot detail when relevant. This release
+corrects Blue's official link from the wrong album (`id=13`) to `id=5`, updates
+Florence's publisher URL and removes its unsupported one-hour estimate, explains
+Before Sunset's sequel context, and uses the specific Earthsea author page,
+original Mushishi broadcaster page, and direct Piranesi publisher page. Reading
+and game commitments describe the experience rather than guaranteed durations.
+
+The guides retain the existing save-panel selectors and authenticated API.
+Preview, same-tab auth return, explicit title selection, duplicate matching,
+private collection creation, and preservation of existing personal fields are
+unchanged. There are no database/schema changes, new events, or new ad slots.
+Release verification passed 129 focused Python tests and all 227 frontend
+tests. Disposable browser checks covered desktop and 390/320px mobile reading,
+section links, guest sign-in return, selected saves, repeat-save matching, and
+opening the private collection. Independent source review found no actionable
+factual or spoiler issues. The content-quality policy now reflects the guides'
+AI assistance and source-checking method. See `docs/public-content-review.md`
+for the publication decision and limits of AdSense readiness evidence.
+
 ## Welcome Back Deck
 
 After a successful login following at least three full days away, the login

@@ -11,6 +11,7 @@ from sqlalchemy import and_, func
 
 from .. import models
 from ..dependencies import get_db
+from ..discover_guides import GUIDES
 from ..review_quality import evaluate_public_review
 from .collections import _approval_is_current, _media_lookup_for_collections
 from .reviews import _current_state_hides_review
@@ -217,6 +218,14 @@ async def get_sitemap(db: Session = Depends(get_db)):
         *[f"/discover/monthly/{slug}" for slug in MONTHLY_EDITIONS],
     ]:
         sitemap_parts.append(f"<url><loc>{base_url}{path}</loc></url>")
+    # Only the completed editorial guides join the search inventory. Shorter
+    # trails remain available to readers without being submitted for indexing.
+    for slug, guide in GUIDES.items():
+        sitemap_parts.append(
+            f"<url><loc>{base_url}/discover/{slug}</loc>"
+            f"<lastmod>{guide['reviewed']}</lastmod>"
+            "<changefreq>monthly</changefreq><priority>0.75</priority></url>"
+        )
     sitemap_parts.append("</urlset>")
     sitemap = "\n".join(sitemap_parts)
     

@@ -1,5 +1,47 @@
 # Public content review — September 17, 2026
 
+## Follow-up — September 24, 2026: three Discover guides
+
+Expanded three existing trails into public decision guides: **One evening, well
+spent**, **Finding your feet**, and **Beautifully strange worlds**. Each now has
+a comparison of pace, commitment and fit; original cross-media analysis;
+practical starting notes; two related trails; and a dated source list. All
+editorial reading is server rendered and available without an account or
+JavaScript. No new recommendation titles or saved-title metadata were added.
+
+Verified all twelve primary sources and corrected specific catalog problems:
+Blue's official album link used `id=13` (Shadows and Light); it now uses `id=5`.
+Florence uses its current publisher URL and no longer promises an unsupported
+one-hour completion time. Before Sunset identifies its Before Sunrise sequel
+context. Earthsea links to the author's individual book page, the original 2005
+Mushishi series links to its original broadcaster, and Piranesi links directly
+to its publisher. Comparisons distinguish interpretation from verified facts,
+qualify variable reading/game pace, and avoid revealing mystery solutions.
+
+The guides and updated content-quality policy explicitly disclose AI assistance,
+identify OmniTrackr as the publishing organization, and explain source checking.
+Each guide describes what its sources support. They do not
+claim firsthand experience or a human editorial review team. Their visible
+review date, Article `dateModified`, and sitemap `lastmod` are September 24,
+2026; the original publication date remains September 8, 2026.
+
+Only these three completed guides become indexable and enter the sitemap. The
+other seven trail detail pages remain `noindex, follow` and excluded from the
+sitemap; the Discover directory and monthly edition retain their existing
+policy. Existing preview, authentication return, selection, and private save
+behavior are unchanged. No database migration, production data operation, new
+tracking, or new advertising placement is part of this release.
+
+Release verification passed 129 focused Python tests and all 227 frontend tests.
+Disposable browser checks covered desktop and 390/320px layouts, page anchors,
+guest sign-in return, selected saves, existing matches, repeat saves without
+duplicates, and opening the resulting private collection. Browser QA caught and
+fixed inherited table header colors and mobile label positioning. Content and
+source review found no actionable factual or spoiler issues. This
+is a content improvement, not evidence that Google will index the pages or
+approve AdSense; production Search Console and account review feedback remain
+the appropriate evidence for the next revision.
+
 ## Follow-up — September 22, 2026
 
 Read the live homepage and Discover experience, inspected the content and

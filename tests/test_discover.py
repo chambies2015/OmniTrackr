@@ -5,6 +5,7 @@ from html.parser import HTMLParser
 from urllib.parse import parse_qs, urlsplit
 from app import models
 from app.discover_catalog import MONTHLY_EDITIONS, TRAILS
+from app.discover_guides import GUIDES
 from app.routers.collections import CATEGORIES
 
 
@@ -96,9 +97,14 @@ def test_public_content_and_auth(client, db_session):
     sitemap = client.get('/sitemap.xml').text
     for slug in TRAILS:
         trail_page = client.get(f'/discover/{slug}')
-        assert trail_page.headers['x-robots-tag'] == 'noindex, follow'
-        assert '<meta name="robots" content="noindex, follow">' in trail_page.text
-        assert f'/discover/{slug}' not in sitemap
+        if slug in GUIDES:
+            assert 'noindex' not in trail_page.headers.get('x-robots-tag', '')
+            assert '<meta name="robots" content="index, follow, max-image-preview:large">' in trail_page.text
+            assert f'/discover/{slug}' in sitemap
+        else:
+            assert trail_page.headers['x-robots-tag'] == 'noindex, follow'
+            assert '<meta name="robots" content="noindex, follow">' in trail_page.text
+            assert f'/discover/{slug}' not in sitemap
     for slug in MONTHLY_EDITIONS:
         assert f'/discover/monthly/{slug}' in sitemap
 

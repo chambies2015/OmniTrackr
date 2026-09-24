@@ -1393,7 +1393,7 @@ class TestSecurityMiddleware:
         assert "User-Generated Content Safeguards" in content
         assert "Content OmniTrackr Should Avoid" in content
         assert "Maintenance and Review Process" in content
-        assert '"dateModified": "2026-07-06"' in content
+        assert '"dateModified": "2026-09-24"' in content
         assert "scraped summaries, or generic filler" in content
         assert "Public review pages for empty reviews, one-word notes, or private account data" in content
         assert "Reviews that contain obvious URLs, email addresses, phone-number-like contact details, or promotional phrases" in content
