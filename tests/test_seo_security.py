@@ -1228,7 +1228,7 @@ class TestSecurityMiddleware:
         assert "Recent Security and Quality Improvements" in content
         assert "Recent Content Improvements" in content
         assert "Release Verification" in content
-        assert '"dateModified": "2026-09-17"' in content
+        assert '"dateModified": "2026-09-22"' in content
         assert "September 2026: Activation and Trust Baseline" in content
         assert "existing launchpad, Weekly playback, Library pulse, and moderator insights" in content
         assert "public reviews API default to favor substantial reviews" in content
