@@ -1,9 +1,9 @@
 .demo-page { margin: 0; background: #10171f; color: #edf3f4; font-family: Inter, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; line-height: 1.55; }
 .demo-page *, .demo-page *::before, .demo-page *::after { box-sizing: border-box; }
 .demo-page [hidden] { display: none !important; }
-.demo-page button, .demo-page input, .demo-page textarea { font: inherit; }
+.demo-page button, .demo-page input, .demo-page textarea, .demo-page select { font: inherit; }
 .demo-page a { color: #b4e2d1; }
-.demo-page a:focus-visible, .demo-page button:focus-visible, .demo-page input:focus-visible, .demo-page textarea:focus-visible, .demo-page [tabindex="-1"]:focus { outline: 3px solid #efc886; outline-offset: 4px; }
+.demo-page a:focus-visible, .demo-page button:focus-visible, .demo-page input:focus-visible, .demo-page textarea:focus-visible, .demo-page select:focus-visible, .demo-page [tabindex="-1"]:focus { outline: 3px solid #efc886; outline-offset: 4px; }
 .demo-page button { cursor: pointer; }
 .demo-shell { max-width: 1220px; padding: 0 36px; margin: auto; }
 .demo-skip { position: absolute; top: -100px; left: 16px; z-index: 10; background: #17382e; padding: 12px 20px; }
@@ -92,12 +92,22 @@
 .demo-checkbox input { width: 20px; height: 20px; accent-color: #b3e4ce; }
 .demo-rating-input { display: flex; align-items: center; gap: 10px; margin: 7px 0; color: #b6c8ce; font-size: .83rem; }
 .demo-rating-input input { width: 105px; min-height: 44px; padding: 9px 12px; }
-.demo-panel input[type="number"], .demo-panel textarea { background: #101e26; border: 1px solid #667e87; border-radius: 7px; color: #edf2f4; }
+.demo-panel input[type="number"], .demo-panel textarea, .demo-panel select { background: #101e26; border: 1px solid #667e87; border-radius: 7px; color: #edf2f4; }
 .demo-panel textarea { display: block; width: 100%; padding: 12px; margin: 8px 0 5px; resize: vertical; }
 .demo-panel textarea::placeholder { color: #9cabb5; }
 .demo-panel small { color: #a4b9c1; font-size: .72rem; line-height: 1.6; }
 .demo-editor-actions { margin-top: 20px; }
 .demo-error { color: #ffd5ba; font-size: .84rem; }
+.demo-card-progress { margin-top: 14px; padding-top: 12px; border-top: 1px solid #ffffff17; }
+.demo-progress-label { font-size: .59rem; letter-spacing: .1em; color: #a6cebe; }
+.demo-card-progress p { margin: 5px 0 0; font-size: .78rem; color: #d1e4dd; overflow-wrap: anywhere; }
+.demo-card-progress p.demo-progress-reminder { color: #a9bec6; font-size: .74rem; white-space: pre-wrap; }
+.demo-progress-form { border-top: 1px solid #698579; margin-top: 27px; padding-top: 24px; }
+.demo-progress-form h4 { margin: 0 0 8px; font-size: 1rem; }
+.demo-progress-form > p:not(.demo-error) { color: #b7c9ce; font-size: .82rem; max-width: 680px; }
+.demo-progress-fields { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 16px; margin: 18px 0; }
+.demo-progress-fields > div { min-width: 0; }
+.demo-progress-fields input, .demo-progress-fields select { display: block; width: 100%; min-height: 44px; padding: 10px 12px; margin-top: 7px; }
 .demo-next-step { display: flex; align-items: center; justify-content: space-between; gap: 35px; margin: 52px 0 40px; padding: 32px; background: linear-gradient(130deg, #203b36, #20303b); border: 1px solid #405d57; border-radius: 14px; }
 .demo-next-step > div { max-width: 570px; }
 .demo-next-step h2 { font-size: 1.7rem; letter-spacing: -.035em; margin: 0 0 12px; font-weight: 600; }
@@ -155,7 +165,7 @@
   .demo-panel { padding: 19px; }
   .demo-panel-heading { align-items: flex-start; }
   .demo-panel-heading h3 { font-size: 1.05rem; }
-  .demo-catalog-grid, .demo-edit-fields { grid-template-columns: 1fr; }
+  .demo-catalog-grid, .demo-edit-fields, .demo-progress-fields { grid-template-columns: 1fr; }
   .demo-edit-fields { gap: 12px; }
   .demo-catalog-item { padding: 12px; }
   .demo-editor-actions > button { width: 100%; }

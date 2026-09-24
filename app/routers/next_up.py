@@ -8,6 +8,7 @@ from sqlalchemy.orm import Session
 
 from .. import models, schemas
 from ..dependencies import get_current_user, get_db
+from ..progress import get_checkpoint_map, serialize_checkpoint
 
 router = APIRouter(prefix="/next-up", tags=["next-up"])
 
@@ -27,9 +28,10 @@ def _referenced_item(db: Session, user_id: int, category: str, item_id: int):
     return db.query(model).filter(model.id == item_id, model.user_id == user_id).first()
 
 
-def _serialize(entry: models.NextUpItem, db: Session, user_id: int) -> dict:
+def _serialize(entry: models.NextUpItem, db: Session, user_id: int, checkpoints=None) -> dict:
     item = _referenced_item(db, user_id, entry.category, entry.item_id)
     _, category_label = CATEGORIES[entry.category]
+    checkpoints = get_checkpoint_map(db, user_id) if checkpoints is None else checkpoints
     return {
         "id": entry.id,
         "category": entry.category,
@@ -38,6 +40,7 @@ def _serialize(entry: models.NextUpItem, db: Session, user_id: int) -> dict:
         "category_label": category_label,
         "position": entry.position,
         "available": item is not None,
+        "progress": serialize_checkpoint(checkpoints.get((entry.category, entry.item_id))) if item else None,
     }
 
 
@@ -59,7 +62,8 @@ async def list_next_up(
     entries = db.query(models.NextUpItem).filter(
         models.NextUpItem.user_id == current_user.id,
     ).order_by(models.NextUpItem.position, models.NextUpItem.id).all()
-    return [_serialize(entry, db, current_user.id) for entry in entries]
+    checkpoints = get_checkpoint_map(db, current_user.id)
+    return [_serialize(entry, db, current_user.id, checkpoints) for entry in entries]
 
 
 @router.post("/", response_model=schemas.NextUpItem, status_code=status.HTTP_201_CREATED)
@@ -116,7 +120,8 @@ async def move_next_up(
     for position, entry in enumerate(entries):
         entry.position = position
     db.commit()
-    return [_serialize(entry, db, current_user.id) for entry in entries]
+    checkpoints = get_checkpoint_map(db, current_user.id)
+    return [_serialize(entry, db, current_user.id, checkpoints) for entry in entries]
 
 
 @router.delete("/{queue_id}", status_code=status.HTTP_204_NO_CONTENT)

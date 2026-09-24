@@ -56,6 +56,7 @@ function setup() {
     card: id => get('demoCards').children.find(node => node.dataset.sampleId === id),
     edit(id) {get(`demoEdit-${id}`).trigger('click');},
     save() {return get('demoEditForm').trigger('submit');},
+    saveProgress() {return get('demoProgressForm').trigger('submit');},
     add(id) {get('demoAdd').trigger('click'); get(`demoCatalogAdd-${id}`).trigger('click');},
     active: () => activeElement,
   };
@@ -233,4 +234,145 @@ test('unexpected filter values do not enter the rendering path', () => {
   s.filterButton('all').trigger('click');
   s.get('demoFilters').children.at(-1).trigger('click');
   assert.equal(s.cards().length, 6);
+});
+
+test('show and book checkpoints match the static fallback and only supported samples expose progress', () => {
+  const s = setup();
+  for (const [id, summary] of [
+    ['northbound', 'Last watched: season 1, episode 4'],
+    ['quiet-observatory', 'Last watched: season 1, episode 12'],
+    ['letters-tomorrow', 'Last read: page 84'],
+  ]) {
+    assert.ok(s.card(id).textContent.includes(summary));
+    assert.ok(template.includes(summary));
+    s.edit(id);
+    assert.equal(s.get('demoProgressForm').hidden, false);
+  }
+  for (const id of ['lantern-atlas', 'garden-circuit', 'after-rain']) {
+    s.edit(id);
+    assert.equal(s.get('demoProgressForm').hidden, true);
+    const before = s.card(id).textContent;
+    s.saveProgress();
+    assert.equal(s.card(id).textContent, before);
+  }
+});
+
+test('updating a checkpoint preserves completion, rating, note, and unsaved general edits', () => {
+  const s = setup();
+  s.edit('northbound');
+  s.get('demoEditFinished').checked = true;
+  s.get('demoEditRating').value = '10';
+  s.get('demoEditNote').value = 'An unsaved review';
+  s.get('demoProgressPosition').value = '5';
+  s.get('demoProgressSeason').value = '2';
+  s.get('demoProgressNote').value = 'Continue with the reunion.';
+  s.saveProgress();
+  assert.match(s.card('northbound').textContent, /Last watched: season 2, episode 5/);
+  assert.match(s.card('northbound').textContent, /Continue with the reunion/);
+  assert.match(s.card('northbound').textContent, /Not finishedUnrated/);
+  assert.doesNotMatch(s.card('northbound').textContent, /An unsaved review/);
+  assert.equal(s.get('demoEditNote').value, 'An unsaved review');
+  assert.equal(s.get('demoFinished').textContent, '3');
+  assert.equal(s.get('demoAverage').textContent, '8.5 / 10');
+  assert.equal(s.get('demoEditor').hidden, false);
+  s.get('demoEditCancel').trigger('click');
+  s.edit('northbound');
+  assert.equal(s.get('demoEditFinished').checked, false);
+  assert.equal(s.get('demoEditRating').value, '');
+  assert.equal(s.get('demoEditNote').value, '');
+  assert.equal(s.get('demoProgressPosition').value, '5');
+});
+
+test('season zero, optional season, page and chapter progress are accepted without finishing samples', () => {
+  const s = setup();
+  s.edit('quiet-observatory');
+  s.get('demoProgressSeason').value = '0';
+  s.get('demoProgressPosition').value = '2';
+  s.saveProgress();
+  assert.match(s.card('quiet-observatory').textContent, /Last watched: season 0, episode 2/);
+  s.get('demoProgressSeason').value = '';
+  s.get('demoProgressPosition').value = '1000000';
+  s.saveProgress();
+  assert.match(s.card('quiet-observatory').textContent, /Last watched: episode 1000000/);
+  s.edit('letters-tomorrow');
+  assert.equal(s.get('demoProgressSeasonField').hidden, true);
+  assert.equal(s.get('demoProgressUnitField').hidden, false);
+  s.get('demoProgressUnit').value = 'chapter';
+  s.get('demoProgressUnit').trigger('change');
+  assert.equal(s.get('demoProgressPositionLabel').textContent, 'Last read chapter');
+  s.get('demoProgressPosition').value = '9';
+  s.saveProgress();
+  assert.match(s.card('letters-tomorrow').textContent, /Last read: chapter 9/);
+  assert.doesNotMatch(s.card('letters-tomorrow').textContent, /Last read: page/);
+  assert.match(s.card('letters-tomorrow').textContent, /Not finishedUnrated/);
+  assert.equal(s.get('demoFinished').textContent, '3');
+  assert.deepEqual(s.sideEffects, []);
+});
+
+test('invalid checkpoint values never replace the saved checkpoint or other sample fields', () => {
+  const s = setup();
+  const original = s.card('northbound').textContent;
+  for (const position of ['', '0', '-1', '1.5', '1e3', 'Infinity', 'no', '1000001']) {
+    s.edit('northbound');
+    s.get('demoProgressPosition').value = position;
+    s.saveProgress();
+    assert.equal(s.card('northbound').textContent, original, position);
+    assert.equal(s.get('demoProgressError').hidden, false);
+  }
+  for (const season of ['-1', '0.5', '1e2', '10001', 'Infinity']) {
+    s.edit('northbound');
+    s.get('demoProgressSeason').value = season;
+    s.saveProgress();
+    assert.equal(s.card('northbound').textContent, original, season);
+    assert.equal(s.active().id, 'demoProgressSeason');
+  }
+  s.edit('northbound');
+  s.get('demoProgressPosition').validity.badInput = true;
+  s.saveProgress();
+  assert.equal(s.card('northbound').textContent, original);
+  s.get('demoProgressPosition').validity.badInput = false;
+  s.edit('letters-tomorrow');
+  const book = s.card('letters-tomorrow').textContent;
+  s.get('demoProgressUnit').value = 'episode';
+  s.saveProgress();
+  assert.equal(s.card('letters-tomorrow').textContent, book);
+});
+
+test('checkpoint reminders are literal text and limited to 300 characters', () => {
+  const s = setup();
+  s.edit('northbound');
+  const note = '<img src=x onerror=alert(1)>\n<script>no()</script>';
+  s.get('demoProgressNote').value = note;
+  s.saveProgress();
+  const rendered = s.descendants(s.card('northbound')).find(node => node.className === 'demo-progress-reminder');
+  assert.equal(rendered.textContent, note);
+  assert.equal(rendered.children.length, 0);
+  s.get('demoProgressNote').value = 'n'.repeat(300);
+  s.saveProgress();
+  assert.match(s.card('northbound').textContent, /n{300}/);
+  s.get('demoProgressNote').value = 'n'.repeat(301);
+  s.saveProgress();
+  assert.match(s.get('demoProgressError').textContent, /300/);
+  assert.doesNotMatch(s.card('northbound').textContent, /n{301}/);
+});
+
+test('clearing progress preserves all other fields and reset or reload restores original checkpoints', () => {
+  const s = setup();
+  s.edit('quiet-observatory');
+  s.get('demoProgressClear').trigger('click');
+  assert.match(s.card('quiet-observatory').textContent, /Watched8 \/ 10Loved the quiet moments/);
+  assert.match(s.card('quiet-observatory').textContent, /No checkpoint yet/);
+  assert.equal(s.get('demoProgressPosition').value, '');
+  assert.equal(s.get('demoProgressNote').value, '');
+  assert.equal(s.get('demoProgressClear').disabled, true);
+  assert.equal(s.active().id, 'demoProgressPosition');
+  s.edit('letters-tomorrow');
+  s.get('demoProgressPosition').value = '200';
+  s.saveProgress();
+  s.get('demoReset').trigger('click');
+  assert.match(s.card('quiet-observatory').textContent, /Last watched: season 1, episode 12/);
+  assert.match(s.card('letters-tomorrow').textContent, /Last read: page 84/);
+  const reloaded = setup();
+  assert.match(reloaded.card('letters-tomorrow').textContent, /Last read: page 84/);
+  assert.deepEqual(s.sideEffects, []);
 });

@@ -556,6 +556,7 @@ class ExportData(BaseModel):
     custom_tabs: List[dict] = Field(default=[], description="List of all custom tabs with their items")
     activities: List[ActivityEntry] = Field(default=[], description="Private activity journal entries")
     collections: List[dict] = Field(default=[], description="Private cross-media collections and curator notes")
+    progress_checkpoints: List[dict] = Field(default_factory=list, description="Private episode and reading checkpoints")
     export_metadata: dict = Field(..., description="Export metadata including timestamp and version")
     
 class ImportData(BaseModel):
@@ -571,6 +572,7 @@ class ImportData(BaseModel):
     custom_tabs: List[dict] = Field(default=[], description="Custom tabs to import (optional for backward compatibility)")
     activities: List[ActivityEntryImport] = Field(default=[], description="Activity journal entries (optional for backward compatibility)")
     collections: List[dict] = Field(default=[], description="Collections to restore privately (optional for backward compatibility)")
+    progress_checkpoints: List[dict] = Field(default_factory=list, max_length=10000, description="Checkpoints to restore only where no saved progress exists")
     
 class ImportResult(BaseModel):
     """Schema for import operation results"""
@@ -594,6 +596,8 @@ class ImportResult(BaseModel):
     activities_skipped: int = Field(default=0, description="Number of duplicate journal entries skipped")
     collections_created: int = Field(default=0, description="Number of private collections restored")
     collections_skipped: int = Field(default=0, description="Number of existing or invalid collections skipped")
+    progress_created: int = Field(default=0, description="Number of private checkpoints restored")
+    progress_skipped: int = Field(default=0, description="Existing, ambiguous, unavailable or invalid checkpoints skipped")
     errors: List[str] = Field(default=[], description="List of errors encountered during import")
     
 # Statistics schemas
@@ -942,6 +946,7 @@ class NextUpItem(BaseModel):
     category_label: str
     position: int
     available: bool = True
+    progress: Optional[dict] = None
 
 
 class ReturnPromptEngagement(BaseModel):

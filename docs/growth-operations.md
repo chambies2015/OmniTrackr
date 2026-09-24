@@ -259,6 +259,40 @@ temporarily unlist that exact content hash and notify the owner. Nothing is
 deleted. An owner edit clears the current report state, reruns readiness, and
 restores the new version when it qualifies.
 
+## Private progress checkpoints
+
+TV, anime, and books have a separate private stopping point. The progress editor
+saves the last watched episode (optional season; season 0 means specials), or the
+last read page/chapter, plus an optional 300-character reminder. Explicit Save
+and Clear actions affect only the checkpoint. They never change completion,
+ratings, reviews, episode/season metadata, or Journal history. Recently updated
+unfinished checkpoints lead Continue; Next Up keeps its manual order. Relevant
+Welcome Back cards also display the saved stopping point.
+
+Storage adds the `progress_checkpoints` table through the existing model startup
+path without rewriting existing media. Its owner/category/item key is unique.
+Owner/media row locks and conditional revisions serialize writes; SQLite reserves
+the owner write transaction. Old tabs receive a conflict, and retries repeat the
+same request without advancing the revision twice. Clear retains an empty
+revision record so stale writes and old backups cannot resurrect a cleared place.
+Deleting an owned title removes its checkpoint; account deletion cascades.
+
+The authenticated `/progress/{category}/{item_id}` API and dashboard responses
+use private/no-store caching. Checkpoints do not enter public or friend media
+schemas, shared collections, reviews, or copied recommendations. Editor drafts
+stay in memory and are discarded on account change or page exit. Progress has no
+ad slot or new analytics stream.
+
+JSON backup version 1.3 includes `progress_checkpoints`. Restore matches an owned
+title and complete edition identity (year, plus author for books, including nulls),
+requires exactly one match, and creates only absent checkpoints. Ambiguous,
+malformed, missing-title, existing, and previously cleared checkpoints are skipped
+and counted in the import result. Database IDs, revisions, and saved timestamps
+from the file are not trusted; restored checkpoints receive a new local revision
+and restore time. Older backups remain valid. The existing media import merge
+behavior is unchanged. The public demo uses fictional in-memory checkpoints and
+restores its examples on reset/reload.
+
 ## Verification
 
 Run the full suite against an isolated database. Set these before importing the
@@ -285,6 +319,32 @@ For a disposable collection walkthrough, run
 Open `http://localhost:8765/collections/public/1`, sign in as `preview` with the
 fixture password `local-preview-only`, and select titles before saving. Its
 temporary SQLite data and per-run session secret are separate from production.
+
+For checkpoint browser QA, use
+`.\.venv\Scripts\python.exe -m tests.manual_mobile_preview --empty --quick-capture --progress`
+and open `http://127.0.0.1:8765/qa`. The fixture contains synthetic private TV,
+anime, and book checkpoints. Check save, clear, mobile dialog layout, Continue,
+Next Up, and `/demo`. Checkpoint backend, integration, and UI regressions live in
+the `tests/test_progress*` files.
+
+Checkpoint release verification, September 24, 2026: a fresh, complete backend
+run passed all 758 tests. All 208 frontend tests, JavaScript syntax checks, and
+`git diff --check` also passed. The follow-up review found and fixed same-tab
+session expiry leaving an idle progress dialog open: `clearAuth()` now immediately
+closes it and erases its private draft, with a regression using the real auth
+cleanup function. Auth asset versions were updated in both entry templates.
+
+Browser checks used the disposable SQLite fixture: desktop episode saves,
+mobile chapter saves, queue refresh, unchanged media details, and demo save,
+clear, reset, and mobile layout. A separate browser expiry check confirmed that
+a background 401 closes the native progress dialog and empties its title and
+reminder fields. Reproduce it by opening `/qa/expire` in a second fixture tab
+while leaving an unsaved progress draft open in the first. The in-app browser
+could not automate the native
+confirmation for clearing private progress; its request/revision behavior is
+covered by the API and frontend tests. PostgreSQL schema compilation passed for
+the new table and indexes, but no PostgreSQL runtime was available for execution
+tests. No production database or account was used, and nothing was deployed.
 
 Focused growth and trust checks live in `tests/test_auth.py`,
 `tests/test_collections.py`, `tests/test_collection_save.py`, `tests/test_first_session.py`, `tests/test_statistics.py`,

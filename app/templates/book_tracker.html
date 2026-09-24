@@ -44,7 +44,7 @@
     "@type": "Article",
     "headline": "Book Tracker for Reading Lists, Reviews and Statistics",
     "description": "A guide to tracking books with OmniTrackr, including reading lists, authors, genres, ratings, reviews, privacy and statistics.",
-    "dateModified": "2026-06-23",
+    "dateModified": "2026-09-22",
     "author": { "@type": "Organization", "name": "OmniTrackr" },
     "publisher": { "@type": "Organization", "name": "OmniTrackr", "url": "https://omnitrackr.xyz" },
     "mainEntityOfPage": "https://omnitrackr.xyz/book-tracker",
@@ -91,11 +91,13 @@
         <ol>
           <li>Add books when they are recommended, borrowed, bought, or finished.</li>
           <li>Record author and year so editions, adaptations, and similarly titled books are easier to identify.</li>
-          <li>Use read status to separate finished books from future reading.</li>
+          <li>Choose <strong>Update progress</strong> on a saved book, select pages or chapters, and enter the last one you finished.</li>
+          <li>Use Read to mark the whole book finished. Updating a page or chapter leaves that choice unchanged.</li>
           <li>Rate after finishing, or after deciding the book is not worth continuing.</li>
           <li>Write notes about style, pacing, ideas, characters, usefulness, or who would appreciate it.</li>
         </ol>
-        <p>A good book tracker should handle both casual reading and long-term lists. You do not need to log every page. You need enough context to remember why a book mattered and whether it deserves a recommendation later.</p>
+        <p>You do not need to log every page. If you stop at page 84, save page 84 as your checkpoint. If chapter numbers travel better between your print and ebook editions, choose chapters instead. The checkpoint holds one position at a time; switching to chapters replaces the page position when you save.</p>
+        <p>Add an optional Private reminder, such as “Begin the second letter next time.” It is separate from your review and rating. Clear progress removes the position and reminder, leaving the rest of the book unchanged. Try it on the book sample in the <a href="/demo">demo</a>.</p>
         <p>For a large backlog, the most useful habit is separating intent from completion. A book you bought, a library hold, a friend's recommendation, and a finished favorite should not all feel like the same task. Keeping status, rating, and review fields distinct helps your list stay honest instead of turning into an unread pile with no context.</p>
       </section>
 
@@ -121,7 +123,8 @@
       <section class="content-section" aria-labelledby="privacy-heading">
         <h2 id="privacy-heading">Privacy and Public Book Notes</h2>
         <p>Not every reading note needs to be public. Some books are personal, work-related, unfinished, or tied to private life events. OmniTrackr lets you keep your library and notes private while still making room for public reviews when you intentionally want to share a recommendation.</p>
-        <p>That separation matters for quality too. Private notes can be rough reminders. Public reviews should be more complete, with enough context for another reader to understand whether the book fits their interests.</p>
+        <p>Private notes can be rough reminders. Page and chapter checkpoints, including their reminders, always stay private: publishing a review or sharing your books with friends does not publish them. Public reviews can then focus on helping another reader decide whether the book fits their interests.</p>
+        <p>Checkpoints are included in JSON backups. Treat an exported file as personal data and store it somewhere private. The <a href="/export-import-guide">backup guide</a> explains restore behavior and duplicate handling.</p>
       </section>
 
       <section class="content-section" aria-labelledby="related-heading">

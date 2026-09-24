@@ -10,6 +10,7 @@ from sqlalchemy.exc import IntegrityError
 from .. import crud, schemas, models, return_prompt as return_prompt_tokens
 from ..dependencies import get_db, get_current_user
 from ..tasteprint import build_tasteprint
+from ..progress import get_checkpoint_map, serialize_checkpoint
 
 router = APIRouter(prefix="/statistics", tags=["statistics"])
 
@@ -81,6 +82,7 @@ def _resolve_queue_pulse_items(
     user_id: int,
     *,
     unfinished_only: bool = False,
+    checkpoints: dict | None = None,
 ) -> list[dict]:
     """Resolve an ordered queue with one media query per represented category."""
     category_by_key = {category["key"]: category for category in categories}
@@ -99,11 +101,22 @@ def _resolve_queue_pulse_items(
         for item in query.all():
             resolved[(category_key, item.id)] = _pulse_item(item, category, [])
 
-    return [
+    result = [
         resolved[(queue_item.category, queue_item.item_id)]
         for queue_item in queue_items
         if (queue_item.category, queue_item.item_id) in resolved
     ]
+    if any(item["category"] in {"tv-shows", "anime", "books"} for item in result):
+        _attach_progress(result, checkpoints if checkpoints is not None else get_checkpoint_map(db, user_id))
+    return result
+
+
+def _attach_progress(items: list[dict], checkpoints: dict) -> None:
+    """Add owner-only progress to private dashboard responses, never public media schemas."""
+    for item in items:
+        checkpoint = checkpoints.get((item["category"], item["id"]))
+        if checkpoint:
+            item["progress"] = serialize_checkpoint(checkpoint)
 
 
 def _library_item_count(db: Session, user_id: int) -> int:
@@ -164,6 +177,8 @@ async def get_todays_pick(
         return {"pick": None, "candidate_count": 0}
 
     choice = candidates[(datetime.now(timezone.utc).date().toordinal() + current_user.id + offset) % len(candidates)]
+    if choice["category"] in {"tv-shows", "anime", "books"}:
+        _attach_progress([choice], get_checkpoint_map(db, current_user.id))
     choice["reason"] = "A small, unfinished choice from your private library"
     choice["source"] = "library"
     return {"pick": choice, "candidate_count": len(candidates)}
@@ -309,21 +324,40 @@ async def get_library_pulse(
 ):
     """Return a small, action-oriented slice of the current user's library.
 
-    This intentionally avoids creating a new persistence model. It is a read-only
-    dashboard helper that surfaces records that are unfinished or still missing the
-    personal context that makes a library useful later.
+    Recent private checkpoints lead Continue; the existing unfinished-library
+    fallback remains available when no checkpoint exists. This endpoint only reads.
     """
     categories = [dict(entry) for entry in LIBRARY_CATEGORIES]
     continue_items = []
     reflection_items = []
+    progressed_items = []
+    checkpoints = get_checkpoint_map(db, current_user.id)
 
     for category in categories:
         model = category["model"]
-        unfinished = db.query(model).filter(
+        query = db.query(model).filter(
             model.user_id == current_user.id,
             category["done"] == False,
-        ).order_by(model.id.desc()).limit(2).all()
-        continue_items.extend(_pulse_item(item, category, []) for item in unfinished)
+        )
+        if category["key"] in {"tv-shows", "anime", "books"}:
+            checkpoint = models.ProgressCheckpoint
+            query = query.outerjoin(checkpoint, and_(
+                checkpoint.user_id == current_user.id,
+                checkpoint.category == category["key"], checkpoint.item_id == model.id,
+                checkpoint.unit.isnot(None),
+            )).order_by(case((checkpoint.id.isnot(None), 0), else_=1), checkpoint.updated_at.desc(), model.id.desc())
+        else:
+            query = query.order_by(model.id.desc())
+        unfinished = query.limit(6).all()
+        fallback = []
+        for item in unfinished:
+            serialized = _pulse_item(item, category, [])
+            checkpoint = checkpoints.get((category["key"], item.id))
+            if checkpoint:
+                progressed_items.append((checkpoint.updated_at, checkpoint.id, serialized))
+            else:
+                fallback.append(serialized)
+        continue_items.extend(fallback[:2])
 
         needs_context = db.query(model).filter(
             model.user_id == current_user.id,
@@ -344,7 +378,11 @@ async def get_library_pulse(
     queued_items = db.query(models.NextUpItem).filter(
         models.NextUpItem.user_id == current_user.id,
     ).order_by(models.NextUpItem.position, models.NextUpItem.id).limit(3).all()
-    next_up_items = _resolve_queue_pulse_items(queued_items, categories, db, current_user.id)
+    next_up_items = _resolve_queue_pulse_items(queued_items, categories, db, current_user.id, checkpoints=checkpoints)
+    progressed_items.sort(key=lambda entry: (entry[0], entry[1]), reverse=True)
+    continue_items = [entry[2] for entry in progressed_items] + continue_items
+    _attach_progress(continue_items, checkpoints)
+    _attach_progress(reflection_items, checkpoints)
 
     return {
         "continue_items": continue_items[:6],

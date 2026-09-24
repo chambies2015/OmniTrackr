@@ -245,9 +245,9 @@ class TestStatisticsEndpoints:
 
         assert response.status_code == 200
         assert response.json()["eligible"] is True
-        # Authentication, six-category aggregates, and two batched queue
-        # resolutions stay constant as the queue grows.
-        assert len(statements) <= 20
+        # Authentication, six-category aggregates, two batched queue resolutions,
+        # and one owner-scoped checkpoint query stay constant as the queue grows.
+        assert len(statements) <= 21
 
     def test_return_deck_aggregates_activity_without_materializing_rows(
         self, authenticated_client, db_session, test_movie_data

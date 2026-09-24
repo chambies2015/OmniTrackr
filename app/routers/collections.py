@@ -612,10 +612,10 @@ def _copy_media_for_user(
     if existing_lookup is None:
         # Keep the SQL comparison aligned with the database's LOWER() behavior;
         # the stricter in-memory identity comparison below still uses casefold().
-        title = source.title.strip().lower()
+        title = source.title.strip()
         candidates = db.query(model).filter(
             model.user_id == user_id,
-            func.lower(model.title) == title,
+            func.lower(func.trim(model.title)) == func.lower(title),
         ).all()
         existing = next(
             (candidate for candidate in candidates if _media_identity_key(candidate, category) == key[1]),
@@ -810,7 +810,7 @@ def _collection_save_snapshot(db, source):
 def _collection_save_matches(db, user_id, items):
     titles_by_category: dict[str, set[str]] = {category: set() for category in CATEGORIES}
     for item, media in items:
-        titles_by_category[item.category].add(media.title.strip().lower())
+        titles_by_category[item.category].add(media.title.strip())
     existing_lookup = {}
     for category, titles in titles_by_category.items():
         if not titles:
@@ -818,7 +818,7 @@ def _collection_save_matches(db, user_id, items):
         model, _ = CATEGORIES[category]
         for media in db.query(model).filter(
             model.user_id == user_id,
-            func.lower(func.trim(model.title)).in_(titles),
+            func.lower(func.trim(model.title)).in_([func.lower(title) for title in titles]),
         ).order_by(model.id).all():
             existing_lookup.setdefault((category, _media_identity_key(media, category)), media)
     return existing_lookup

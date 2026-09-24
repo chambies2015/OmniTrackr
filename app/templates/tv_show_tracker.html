@@ -55,7 +55,7 @@
     "@type": "Article",
     "headline": "TV Show Tracker for Series, Episodes, Reviews and Statistics",
     "description": "A guide to tracking TV shows with OmniTrackr, including seasons, episodes, ratings, reviews, privacy, and statistics.",
-    "dateModified": "2026-06-01",
+    "dateModified": "2026-09-22",
     "author": { "@type": "Organization", "name": "OmniTrackr" },
     "publisher": { "@type": "Organization", "name": "OmniTrackr", "url": "https://omnitrackr.xyz" },
     "mainEntityOfPage": "https://omnitrackr.xyz/tv-show-tracker",
@@ -103,12 +103,14 @@
         <ol>
           <li>Add the show when you start it or when a friend recommends it.</li>
           <li>Record the year and basic season or episode count when available.</li>
-          <li>Use watched status to separate completed shows from in-progress shows.</li>
+          <li>Choose <strong>Update progress</strong> on a saved show and record the last episode you watched, with a season if you know it.</li>
+          <li>Keep Watched unchecked until you finish the show. Saving an episode checkpoint does not mark it watched.</li>
           <li>Rate the series after a meaningful sample, not necessarily after one episode.</li>
           <li>Write a short review when you finish a season or decide to stop watching.</li>
         </ol>
         <p>This workflow keeps the list useful without asking you to log every single viewing session. For many viewers, tracking the show and broad progress is enough to prevent forgotten series and half-finished watchlists.</p>
-        <p>When a show has a long break between seasons, the review field can act like a memory checkpoint. Save whether you were still invested, which characters or arcs mattered, and whether you planned to continue. Months later, that context is more useful than only seeing a title marked in progress.</p>
+        <p>For example, after episode 4 of season 2, choose Update progress, enter episode 4 and season 2, and save. The checkpoint records the last episode finished, so episode 5 is next. Use season 0 for specials, or leave season blank when a show uses continuous numbering.</p>
+        <p>The optional Private reminder can hold a short cue such as “Next: the station reunion; watch with Sam.” It stays separate from the review. Clear progress removes the checkpoint and its reminder without changing Watched, your rating, or your review. Try these controls in the <a href="/demo">interactive demo</a>.</p>
       </section>
 
       <section class="privacy-section" aria-labelledby="season-heading">
@@ -131,8 +133,8 @@
 
       <section class="privacy-section" aria-labelledby="privacy-heading">
         <h2 id="privacy-heading">Privacy and Friend Sharing</h2>
-        <p>TV lists can be social without being fully public. OmniTrackr privacy controls let you decide whether friends can see your TV shows and statistics. That means you can share completed favorites while keeping in-progress viewing, guilty pleasures, or experimental recommendations private.</p>
-        <p>This separation matters because TV viewing can be habitual and personal. A private note can say why you stopped watching, while a public review can focus on whether the show is worth someone else's time.</p>
+        <p>TV lists can be social without being fully public. Category privacy controls decide whether friends can see your TV library; each review has its own public-sharing choice. Episode checkpoints and their reminders stay private even when you share the category or publish a review.</p>
+        <p>Checkpoints are included in JSON backups. Keep those files private because they can contain personal reminders. See the <a href="/export-import-guide">backup guide</a> before restoring a library.</p>
       </section>
 
       <section class="privacy-section" aria-labelledby="related-heading">

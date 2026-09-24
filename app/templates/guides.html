@@ -127,7 +127,7 @@
       <header class="privacy-header">
         <h1>How-To Guides</h1>
         <p>Use the controls confidently: save a title, record progress, choose an audience, and keep a backup.</p>
-        <p>Updated September 17, 2026 · Instructions checked against the application code.</p>
+        <p>Updated September 22, 2026.</p>
       </header>
 
       <section class="privacy-section" aria-labelledby="guide-library-heading">
@@ -161,11 +161,13 @@
         <ol>
           <li>Choose Movies, TV Shows, Anime, Video Games, Music, or Books. Open the category's Add form and enter the title. Use title search where available, then check the returned details before saving: editions and similarly named titles can differ.</li>
           <li>Leave the rating blank if you have not formed an opinion. The completion checkbox is separate: Watched, Played, Listened, or Read records completion, not whether you liked the item.</li>
-          <li>For an unfinished item, leave completion unchecked. Put a stopping point or reason to return in a private note. Do not treat the checkbox as a multi-state menu with separate paused and dropped options.</li>
+          <li>For an unfinished item, leave completion unchecked. TV shows, anime, and books have a separate Update progress action for your stopping point. The completion checkbox does not have separate paused and dropped options.</li>
           <li>Save, then use Edit on the library entry to change its details. On phones and tablets, More details expands the card; View review opens the longer note or review.</li>
         </ol>
         <h3>Example: returning to a show after a break</h3>
-        <p>A useful private note might read: “Paused after episode 4 of season 2; restart at episode 5. Watch with Sam.” Keep Watched unchecked until the unit you are tracking is finished. If you keep separate season entries, include the season in the title so that a completion mark is not mistaken for finishing the entire series. This convention works in a paper list or spreadsheet too.</p>
+        <p>Choose <strong>Update progress</strong> on the saved show, enter episode 4 and season 2, and save. This means episode 4 is the last one watched. Add a Private reminder such as “Watch episode 5 with Sam.” Keep Watched unchecked until the show is finished; the progress control does not change it, your rating, your review, or the show's episode count.</p>
+        <h3>Books, specials, and clearing a checkpoint</h3>
+        <p>For a book, choose page or chapter and enter the last one read. A book keeps one position, so changing the unit replaces its previous page or chapter when saved. TV and anime seasons are optional; season 0 is available for specials. <strong>Clear progress</strong> removes only the checkpoint and its reminder. These details stay private even if you share the category with friends or publish a review. You can practice in the <a href="/demo">demo</a>.</p>
         <h3>Why tracking helps</h3>
         <p>Keeping a list of what you've watched or played helps you avoid forgetting titles, spot gaps in a series, and see how your tastes change over time. It also makes it easier to recommend things to friends and to get recommendations based on your real history.</p>
       </section>
@@ -190,7 +192,7 @@
       <section class="privacy-section" aria-labelledby="import-export-heading">
         <h2 id="import-export-heading">Import and Export</h2>
         <p>Choose the workflow that matches your file. A JSON export is a backup; a CSV from another tracker is a migration source. In account settings, Import Studio previews supported CSV files before you apply an import. Read the ready, skipped, and invalid row counts, check the category mapping, and correct unexpected results before proceeding. Opening the importer or previewing a file does not save titles.</p>
-        <p>Keep the original source file and export a backup before making a large change. Try a small sample first and compare titles, completion, and ratings afterward. Matching records are skipped by the CSV importer rather than overwritten, so use Edit when you intend to correct an existing entry. The <a href="/export-import-guide">export and import guide</a> explains the separate backup and migration workflows.</p>
+        <p>Keep the original source file and export a backup before making a large change. Progress checkpoints and their private reminders are included in JSON backups, so protect those files. Try a small sample first and compare titles, completion, and ratings afterward. Matching records are skipped by the CSV importer rather than overwritten, so use Edit when you intend to correct an existing entry. The <a href="/export-import-guide">export and import guide</a> explains the separate backup and migration workflows.</p>
       </section>
 
       <section class="privacy-section" aria-labelledby="tips-heading">

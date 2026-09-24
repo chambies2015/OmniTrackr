@@ -44,7 +44,7 @@
     "@type": "Article",
     "headline": "Anime Tracker for Seasonal Watchlists, Reviews and Statistics",
     "description": "A guide to tracking anime with OmniTrackr, including seasonal watchlists, stalled shows, episodes, ratings, reviews, privacy and statistics.",
-    "dateModified": "2026-06-23",
+    "dateModified": "2026-09-22",
     "author": { "@type": "Organization", "name": "OmniTrackr" },
     "publisher": { "@type": "Organization", "name": "OmniTrackr", "url": "https://omnitrackr.xyz" },
     "mainEntityOfPage": "https://omnitrackr.xyz/anime-tracker",
@@ -92,7 +92,8 @@
         <ol>
           <li>Add shows when you plan to watch them, not only after finishing.</li>
           <li>Record year, seasons, and episode count when available so different releases are easier to identify.</li>
-          <li>Use watched status to distinguish finished series from stalled or planned shows.</li>
+          <li>Use <strong>Update progress</strong> on a saved anime to record the last watched episode and, optionally, its season.</li>
+          <li>Keep Watched unchecked while you are still watching. Updating a checkpoint does not finish the series or change its total episode count.</li>
           <li>Rate after you have seen enough to judge the characters, pacing, animation, and ending.</li>
           <li>Write review notes about tone, adaptation quality, arcs, comfort-watch value, or who would enjoy it.</li>
         </ol>
@@ -103,12 +104,12 @@
         <h2 id="seasonal-heading">Seasonal Anime and Stalled Shows</h2>
         <p>Seasonal anime is easy to start and easy to lose track of. A show may look promising after one episode, sit untouched for weeks, then either become a favorite or quietly fall off the list. Tracking status gives those half-finished decisions a place to live.</p>
         <ul>
-          <li><strong>Plan to watch:</strong> use this for seasonal premieres, friend recommendations, and older shows you want to remember.</li>
-          <li><strong>In progress:</strong> use this for shows you are actively watching, especially when episodes release weekly.</li>
+          <li><strong>Plan to watch:</strong> save the title and leave Watched unchecked. There is no separate planned-status selector.</li>
+          <li><strong>In progress:</strong> save your last watched episode with Update progress. For a continuously numbered series, leave season blank; for a special, season 0 is available.</li>
           <li><strong>Watched:</strong> mark finished series clearly so statistics and recommendations stay accurate.</li>
-          <li><strong>Stalled or dropped:</strong> leave a note explaining whether the issue was pacing, mood, availability, filler, or simply timing.</li>
+          <li><strong>Stalled or dropped:</strong> keep the last episode and use its Private reminder for a short reason to return or stop. These are your own notes, not additional status options.</li>
         </ul>
-        <p>Those notes are useful later. A stalled show may deserve a second chance in the right mood, while a dropped show with a clear reason can stop taking up mental space in your backlog.</p>
+        <p>For a weekly series, record episode 7 after watching it and add “Start episode 8 next time.” You do not need to rewrite the review each week. Clear progress removes only the episode checkpoint and reminder, preserving your rating, review, and Watched choice.</p>
       </section>
 
       <section class="content-section" aria-labelledby="review-heading">
@@ -127,7 +128,7 @@
       <section class="content-section" aria-labelledby="privacy-heading">
         <h2 id="privacy-heading">Privacy and Public Anime Reviews</h2>
         <p>Not every anime note needs to be public. Private notes can include spoilers, unfinished thoughts, personal context, or messy reactions. Public anime reviews should be written for someone deciding whether to start the show, continue past a slow opening, or avoid something that does not fit their taste.</p>
-        <p>OmniTrackr lets users choose which reviews are public, so anime tracking can stay useful as a private watch history while still supporting polished recommendations when a review is ready to share.</p>
+        <p>OmniTrackr lets users choose which reviews are public. Episode checkpoints and their reminders always stay private, including when friends can view the anime category or a review is public. They are included in JSON backups, so keep exported files private. Practice with the anime sample in the <a href="/demo">demo</a> before changing your own library.</p>
       </section>
 
       <section class="content-section" aria-labelledby="related-heading">

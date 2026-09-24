@@ -18,11 +18,11 @@
   <meta name="twitter:title" content="Try OmniTrackr — No Account Needed">
   <meta name="twitter:description" content="Explore an interactive sample library before creating your own.">
   <meta name="twitter:image" content="https://omnitrackr.xyz/omnitrackr_vortex.png">
-  <link rel="stylesheet" href="/static/demo.css?v=20260922-interactive-demo-v2">
+  <link rel="stylesheet" href="/static/demo.css?v=20260922-progress">
   <script type="application/ld+json">
   {"@context":"https://schema.org","@type":"WebPage","name":"OmniTrackr Demo","description":"Try a sample media library without an account. Practice adding titles, completion, ratings, and notes using fictional sample data.","url":"https://omnitrackr.xyz/demo","dateModified":"2026-09-22","inLanguage":"en-US","isPartOf":{"@type":"WebSite","name":"OmniTrackr","url":"https://omnitrackr.xyz"}}
   </script>
-  <script src="/static/demo.js?v=20260922-interactive-demo-v2" defer></script>
+  <script src="/static/demo.js?v=20260922-progress" defer></script>
 </head>
 <body class="demo-page">
   <a href="#demoMain" class="demo-skip">Skip to sample library</a>
@@ -40,7 +40,7 @@
           <p class="demo-eyebrow"><span class="demo-dot" aria-hidden="true"></span> INTERACTIVE DEMO · NO ACCOUNT NEEDED</p>
           <h1>Make room for<br>your next favorite.</h1>
           <p class="demo-lead">Movies, shows, anime, games, music, books. One place to remember what you loved — and what comes next.</p>
-          <p class="demo-invitation">Try a small sample library below. Add a title, mark it finished, or give it your own rating.</p>
+          <p class="demo-invitation">Try a small sample library below. Add a title, give it a rating, or save where you left off in a show or book.</p>
         </div>
         <aside class="demo-practice" aria-label="About this demo">
           <span class="demo-practice-icon" aria-hidden="true">✦</span><strong>A space to try things</strong>
@@ -78,6 +78,20 @@
             <p id="demoEditError" class="demo-error" role="alert" hidden></p>
             <div class="demo-editor-actions"><button type="submit" class="demo-button demo-button-primary">Save sample changes</button><button type="button" id="demoEditCancel" class="demo-button demo-button-quiet">Cancel</button></div>
           </form>
+          <form id="demoProgressForm" class="demo-progress-form" aria-labelledby="demoProgressHeading" hidden>
+            <h4 id="demoProgressHeading">Where you left off</h4>
+            <p>Save the last episode, page, or chapter you finished. This checkpoint is separate from completion, your rating, and the note above.</p>
+            <div class="demo-progress-fields">
+              <div id="demoProgressUnitField"><label for="demoProgressUnit">Track by</label><select id="demoProgressUnit"><option value="page">Page</option><option value="chapter">Chapter</option></select></div>
+              <div id="demoProgressSeasonField"><label for="demoProgressSeason">Season <span>(optional)</span></label><input id="demoProgressSeason" type="number" min="0" max="10000" step="1" inputmode="numeric" aria-describedby="demoProgressSeasonHint"><small id="demoProgressSeasonHint">Season 0 is for specials.</small></div>
+              <div><label id="demoProgressPositionLabel" for="demoProgressPosition">Last watched episode</label><input id="demoProgressPosition" type="number" min="1" max="1000000" step="1" inputmode="numeric" required></div>
+            </div>
+            <label for="demoProgressNote">Private reminder <span>(optional)</span></label>
+            <textarea id="demoProgressNote" rows="2" maxlength="300" aria-describedby="demoProgressNoteHint" placeholder="What will help you pick this up again?"></textarea>
+            <small id="demoProgressNoteHint">In your real library, checkpoints and these reminders stay private. These samples reset on reload.</small>
+            <p id="demoProgressError" class="demo-error" role="alert" hidden></p>
+            <div class="demo-editor-actions"><button type="submit" class="demo-button demo-button-primary">Update progress</button><button type="button" id="demoProgressClear" class="demo-button demo-button-quiet">Clear progress</button></div>
+          </form>
         </section>
         <div id="demoFilters" class="demo-filters" role="group" aria-label="Filter sample library by category" hidden>
           <button type="button" data-category="all" aria-pressed="true">All media</button><button type="button" data-category="movie" aria-pressed="false">Movies</button><button type="button" data-category="tv_show" aria-pressed="false">TV shows</button><button type="button" data-category="anime" aria-pressed="false">Anime</button><button type="button" data-category="video_game" aria-pressed="false">Games</button><button type="button" data-category="music" aria-pressed="false">Music</button><button type="button" data-category="book" aria-pressed="false">Books</button>
@@ -85,21 +99,21 @@
         <p id="demoStatus" class="demo-status" role="status" aria-live="polite" aria-atomic="true">Six sample titles. Start anywhere.</p>
         <div id="demoCards" class="demo-grid">
           <article class="demo-card" data-sample-id="lantern-atlas"><div class="demo-cover demo-cover-movie" aria-hidden="true"><span>01</span><b>THE<br>LANTERN<br>ATLAS</b><i>AN IMAGINED FILM</i></div><div class="demo-card-body"><span class="demo-category">Movie</span><h3>The Lantern Atlas</h3><p class="demo-card-description">A cartographer follows a trail of lights through a city that changes after sunset.</p><div class="demo-card-facts"><span class="demo-complete">Watched</span><span class="demo-card-rating">9 / 10</span></div><p class="demo-note">A world I would happily get lost in again.</p></div></article>
-          <article class="demo-card" data-sample-id="northbound"><div class="demo-cover demo-cover-tv_show" aria-hidden="true"><span>02</span><b>NORTH<br>BOUND</b><i>AN IMAGINED SERIES</i></div><div class="demo-card-body"><span class="demo-category">TV show</span><h3>Northbound</h3><p class="demo-card-description">Night-shift strangers find their stories crossing on the last train home.</p><div class="demo-card-facts"><span>Not finished</span><span class="demo-card-rating">Unrated</span></div><p class="demo-note demo-note-empty">No note yet. What would you remember?</p></div></article>
-          <article class="demo-card" data-sample-id="quiet-observatory"><div class="demo-cover demo-cover-anime" aria-hidden="true"><span>03</span><b>THE QUIET<br>OBSERVATORY</b><i>AN IMAGINED ANIME</i></div><div class="demo-card-body"><span class="demo-category">Anime</span><h3>The Quiet Observatory</h3><p class="demo-card-description">Two apprentices map a sky where each constellation holds a forgotten story.</p><div class="demo-card-facts"><span class="demo-complete">Watched</span><span class="demo-card-rating">8 / 10</span></div><p class="demo-note">Loved the quiet moments between adventures.</p></div></article>
+          <article class="demo-card" data-sample-id="northbound"><div class="demo-cover demo-cover-tv_show" aria-hidden="true"><span>02</span><b>NORTH<br>BOUND</b><i>AN IMAGINED SERIES</i></div><div class="demo-card-body"><span class="demo-category">TV show</span><h3>Northbound</h3><p class="demo-card-description">Night-shift strangers find their stories crossing on the last train home.</p><div class="demo-card-facts"><span>Not finished</span><span class="demo-card-rating">Unrated</span></div><p class="demo-note demo-note-empty">No note yet. What would you remember?</p><div class="demo-card-progress"><span class="demo-progress-label">YOUR CHECKPOINT</span><p>Last watched: season 1, episode 4</p><p class="demo-progress-reminder">Next time: the station reunion.</p></div></div></article>
+          <article class="demo-card" data-sample-id="quiet-observatory"><div class="demo-cover demo-cover-anime" aria-hidden="true"><span>03</span><b>THE QUIET<br>OBSERVATORY</b><i>AN IMAGINED ANIME</i></div><div class="demo-card-body"><span class="demo-category">Anime</span><h3>The Quiet Observatory</h3><p class="demo-card-description">Two apprentices map a sky where each constellation holds a forgotten story.</p><div class="demo-card-facts"><span class="demo-complete">Watched</span><span class="demo-card-rating">8 / 10</span></div><p class="demo-note">Loved the quiet moments between adventures.</p><div class="demo-card-progress"><span class="demo-progress-label">YOUR CHECKPOINT</span><p>Last watched: season 1, episode 12</p></div></div></article>
           <article class="demo-card" data-sample-id="garden-circuit"><div class="demo-cover demo-cover-video_game" aria-hidden="true"><span>04</span><b>GARDEN<br>CIRCUIT</b><i>AN IMAGINED GAME</i></div><div class="demo-card-body"><span class="demo-category">Game</span><h3>Garden Circuit</h3><p class="demo-card-description">Bring a sleeping greenhouse to life, one small mechanical puzzle at a time.</p><div class="demo-card-facts"><span>Not finished</span><span class="demo-card-rating">Unrated</span></div><p class="demo-note demo-note-empty">No note yet. What would you remember?</p></div></article>
           <article class="demo-card" data-sample-id="after-rain"><div class="demo-cover demo-cover-music" aria-hidden="true"><span>05</span><b>AFTER<br>THE RAIN</b><i>AN IMAGINED ALBUM</i></div><div class="demo-card-body"><span class="demo-category">Music</span><h3>After the Rain</h3><p class="demo-card-description">Warm piano, soft percussion, and a little breathing room for a slow Sunday.</p><div class="demo-card-facts"><span class="demo-complete">Listened</span><span class="demo-card-rating">8.5 / 10</span></div><p class="demo-note">The soundtrack for an unhurried morning.</p></div></article>
-          <article class="demo-card" data-sample-id="letters-tomorrow"><div class="demo-cover demo-cover-book" aria-hidden="true"><span>06</span><b>LETTERS FROM<br>TOMORROW</b><i>AN IMAGINED BOOK</i></div><div class="demo-card-body"><span class="demo-category">Book</span><h3>Letters from Tomorrow</h3><p class="demo-card-description">A bookshop owner receives letters dated one day ahead and has to decide what to change.</p><div class="demo-card-facts"><span>Not finished</span><span class="demo-card-rating">Unrated</span></div><p class="demo-note demo-note-empty">No note yet. What would you remember?</p></div></article>
+          <article class="demo-card" data-sample-id="letters-tomorrow"><div class="demo-cover demo-cover-book" aria-hidden="true"><span>06</span><b>LETTERS FROM<br>TOMORROW</b><i>AN IMAGINED BOOK</i></div><div class="demo-card-body"><span class="demo-category">Book</span><h3>Letters from Tomorrow</h3><p class="demo-card-description">A bookshop owner receives letters dated one day ahead and has to decide what to change.</p><div class="demo-card-facts"><span>Not finished</span><span class="demo-card-rating">Unrated</span></div><p class="demo-note demo-note-empty">No note yet. What would you remember?</p><div class="demo-card-progress"><span class="demo-progress-label">YOUR CHECKPOINT</span><p>Last read: page 84</p><p class="demo-progress-reminder">Pick up at the second letter.</p></div></div></article>
         </div>
         <noscript><p class="demo-noscript">You’re viewing the sample library. Enable JavaScript to try adding, rating, and editing its fictional titles, or create your own library below.</p></noscript>
       </section>
       <section class="demo-next-step" aria-labelledby="demoNextHeading">
-        <div><p class="demo-eyebrow">FROM PRACTICE TO PERSONAL</p><h2 id="demoNextHeading">Now make it your library.</h2><p>Start with one movie, album, game, or book you love. Create your free account, verify your email, then search for your first real title.</p><p class="demo-transfer-note">You’ll start fresh. These sample titles, ratings, and notes won’t be transferred.</p></div>
+        <div><p class="demo-eyebrow">FROM PRACTICE TO PERSONAL</p><h2 id="demoNextHeading">Now make it your library.</h2><p>Start with one movie, album, game, or book you love. Create your free account, verify your email, then search for your first real title.</p><p class="demo-transfer-note">You’ll start fresh. These sample titles, checkpoints, ratings, and notes won’t be transferred.</p></div>
         <a class="demo-button demo-button-primary" href="/?start=demo#landing-auth">Create my free library <span aria-hidden="true">↗</span></a>
       </section>
       <section class="demo-explainer" aria-label="From sample to real library">
         <div><h2>Keep the part worth remembering</h2><p>A title is a starting point. Completion tells you what’s left, a rating records your reaction, and a note keeps the reason you loved it. Try all three on any sample card.</p></div>
-        <div><h2>Make a habit, at your pace</h2><p>In your real library, add what you want to explore and return when you finish it. Need ideas for getting started? Read our <a href="/guides">tracking guides</a> or browse <a href="/reviews">member reviews</a>.</p></div>
+        <div><h2>Make a habit, at your pace</h2><p>Try a checkpoint on a TV show, anime, or book sample. In your real library, your last episode or page gives you a place to return without marking the whole title finished. Read our <a href="/guides">tracking guides</a> or browse <a href="/reviews">member reviews</a>.</p></div>
       </section>
     </main>
     <footer class="demo-footer"><span>OmniTrackr · A home for your media</span><div><a href="/faq">FAQ</a><a href="/privacy">Privacy</a><a href="/guides">Guides</a><a href="/media-tracking">Tracking Hub</a></div></footer>

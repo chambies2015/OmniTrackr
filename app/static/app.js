@@ -1300,6 +1300,7 @@ function switchTab(tabName) {
     }
   }
 
+  window.OmniProgress?.navigate();
   document.querySelectorAll('.tab').forEach(tab => tab.classList.remove('active'));
   const targetTab = getTabButton(tabName);
   if (targetTab) {
@@ -1725,6 +1726,7 @@ async function loadTVShows() {
           <td>
             <button class="action-btn edit-tv-btn" data-tv-id="${tvShow.id}" data-tv-title="${escapeHtml(tvShow.title)}" data-tv-year="${tvShow.year ?? ''}" data-tv-seasons="${tvShow.seasons ?? ''}" data-tv-episodes="${tvShow.episodes ?? ''}" data-tv-rating="${tvShow.rating ?? ''}" data-tv-watched="${tvShow.watched}" data-tv-review="${escapeHtml(tvShow.review || '')}" data-tv-review-public="${tvShow.review_public || false}">Edit</button>
             <button type="button" class="action-btn" data-action="add-next-up" data-next-up-category="tv-shows" data-next-up-item-id="${tvShow.id}">Next up</button>
+            <button type="button" class="action-btn" data-progress-category="tv-shows" data-progress-item-id="${tvShow.id}" data-progress-title="${escapeHtml(tvShow.title)}">Update progress</button>
             <button type="button" class="action-btn" data-action="open-collection-picker" data-collection-category="tv-shows" data-collection-item-id="${tvShow.id}" data-collection-item-title="${escapeHtml(tvShow.title)}">Collect</button>
             ${tvShow.watched ? `<button type="button" class="action-btn" data-action="begin-completion-ritual" data-completion-category="tv-shows" data-completion-item-id="${tvShow.id}">Reflect</button>` : ''}
             <button class="action-btn delete-tv-btn" data-tv-id="${tvShow.id}">Delete</button>
@@ -1794,6 +1796,7 @@ async function loadAnime() {
           <td>
             <button class="action-btn edit-anime-btn" data-anime-id="${animeItem.id}" data-anime-title="${escapeHtml(animeItem.title)}" data-anime-year="${animeItem.year ?? ''}" data-anime-seasons="${animeItem.seasons ?? ''}" data-anime-episodes="${animeItem.episodes ?? ''}" data-anime-rating="${animeItem.rating ?? ''}" data-anime-watched="${animeItem.watched}" data-anime-review="${escapeHtml(animeItem.review || '')}" data-anime-review-public="${animeItem.review_public || false}">Edit</button>
             <button type="button" class="action-btn" data-action="add-next-up" data-next-up-category="anime" data-next-up-item-id="${animeItem.id}">Next up</button>
+            <button type="button" class="action-btn" data-progress-category="anime" data-progress-item-id="${animeItem.id}" data-progress-title="${escapeHtml(animeItem.title)}">Update progress</button>
             <button type="button" class="action-btn" data-action="open-collection-picker" data-collection-category="anime" data-collection-item-id="${animeItem.id}" data-collection-item-title="${escapeHtml(animeItem.title)}">Collect</button>
             ${animeItem.watched ? `<button type="button" class="action-btn" data-action="begin-completion-ritual" data-completion-category="anime" data-completion-item-id="${animeItem.id}">Reflect</button>` : ''}
             <button class="action-btn delete-anime-btn" data-anime-id="${animeItem.id}">Delete</button>
@@ -2882,6 +2885,7 @@ async function loadBooks() {
           <td>
             <button class="action-btn edit-book-btn" data-book-id="${book.id}" data-book-title="${escapeHtml(book.title)}" data-book-author="${escapeHtml(book.author ?? '')}" data-book-year="${book.year ?? ''}" data-book-genre="${escapeHtml(book.genre || '')}" data-book-rating="${book.rating ?? ''}" data-book-read="${book.read}" data-book-review="${escapeHtml(book.review || '')}" data-book-review-public="${book.review_public || false}">Edit</button>
             <button type="button" class="action-btn" data-action="add-next-up" data-next-up-category="books" data-next-up-item-id="${book.id}">Next up</button>
+            <button type="button" class="action-btn" data-progress-category="books" data-progress-item-id="${book.id}" data-progress-title="${escapeHtml(book.title)}">Update progress</button>
             <button type="button" class="action-btn" data-action="open-collection-picker" data-collection-category="books" data-collection-item-id="${book.id}" data-collection-item-title="${escapeHtml(book.title)}">Collect</button>
             ${book.read ? `<button type="button" class="action-btn" data-action="begin-completion-ritual" data-completion-category="books" data-completion-item-id="${book.id}">Reflect</button>` : ''}
             <button class="action-btn delete-book-btn" data-book-id="${book.id}">Delete</button>
@@ -4521,7 +4525,7 @@ async function exportData() {
     document.body.removeChild(a);
     URL.revokeObjectURL(url);
 
-    alert(`Export successful! Exported ${data.export_metadata.total_movies} movies, ${data.export_metadata.total_tv_shows} TV shows, ${data.export_metadata.total_anime || 0} anime, ${data.export_metadata.total_video_games || 0} video games, ${data.export_metadata.total_music || 0} music, ${data.export_metadata.total_books || 0} books, ${data.export_metadata.total_custom_tabs || 0} custom tabs, and ${data.export_metadata.total_activities || 0} journal entries.`);
+    alert(`Export successful! Exported ${data.export_metadata.total_movies} movies, ${data.export_metadata.total_tv_shows} TV shows, ${data.export_metadata.total_anime || 0} anime, ${data.export_metadata.total_video_games || 0} video games, ${data.export_metadata.total_music || 0} music, ${data.export_metadata.total_books || 0} books, ${data.export_metadata.total_custom_tabs || 0} custom tabs, ${data.export_metadata.total_activities || 0} journal entries, and ${data.export_metadata.total_progress_checkpoints || 0} private progress checkpoints.`);
   } catch (error) {
     alert('Export failed: ' + error.message);
   }
@@ -4559,6 +4563,7 @@ async function importData(fileInput) {
     message += `Music: ${result.music_created || 0} created, ${result.music_updated || 0} updated\n`;
     message += `Books: ${result.books_created || 0} created, ${result.books_updated || 0} updated\n`;
     message += `Custom Tabs: ${result.custom_tabs_created || 0} created, ${result.custom_tabs_updated || 0} updated`;
+    message += `\nPrivate progress: ${result.progress_created || 0} restored, ${result.progress_skipped || 0} skipped. Existing or cleared checkpoints stay unchanged.`;
 
     if (result.errors.length > 0) {
       message += `\n\nErrors:\n${result.errors.join('\n')}`;
@@ -8711,6 +8716,10 @@ function makeReturnDeckItem(item, label, detail, primary = false) {
   button.dataset.returnDeckIndex = String(index);
   button.textContent = label === 'Add context' ? 'Open item' : 'Open it';
   card.append(eyebrow, title, meta, button);
+  if (typeof window !== 'undefined' && window.OmniProgress) {
+    window.OmniProgress.appendSummary(card, item);
+    window.OmniProgress.appendAction(card, item);
+  }
   return card;
 }
 
@@ -8989,11 +8998,18 @@ function renderLibraryPulseList(container, items, emptyMessage) {
     const prompts = Array.isArray(item.prompts) && item.prompts.length ? item.prompts.join(' · ') : item.status_label;
     meta.textContent = `${item.category_label} · ${prompts}`;
     copy.append(title, meta);
+    if (typeof window !== 'undefined') window.OmniProgress?.appendSummary(copy, item);
     const action = document.createElement('span');
     action.className = 'library-pulse__item-action';
     action.textContent = 'Open →';
     button.append(copy, action);
-    container.appendChild(button);
+    if (typeof window !== 'undefined' && window.OmniProgress && ['tv-shows', 'anime', 'books'].includes(item.category)) {
+      const row = document.createElement('div');
+      row.className = 'library-pulse__progress-row';
+      row.appendChild(button);
+      window.OmniProgress.appendAction(row, item);
+      container.appendChild(row);
+    } else container.appendChild(button);
   });
 }
 
@@ -9162,6 +9178,7 @@ function renderNextUpQueue(items) {
       const meta = document.createElement('span');
       meta.textContent = item.available ? item.category_label : 'This library item was deleted';
       copy.append(title, meta);
+      if (typeof window !== 'undefined') window.OmniProgress?.appendSummary(copy, item);
       const controls = document.createElement('div');
       controls.className = 'next-up-queue__controls';
       if (item.available) {
@@ -9172,6 +9189,7 @@ function renderNextUpQueue(items) {
         open.dataset.pulseTab = item.category;
         open.textContent = 'Open';
         controls.appendChild(open);
+        if (typeof window !== 'undefined') window.OmniProgress?.appendAction(controls, item);
       }
       const up = document.createElement('button');
       up.type = 'button';
@@ -9206,11 +9224,15 @@ function renderNextUpQueue(items) {
   queueElement.removeAttribute('hidden');
 }
 
-async function refreshNextUpQueue() {
+async function refreshNextUpQueue(shouldContinue = () => true) {
   if (!hasStoredAuth()) return;
+  const request = refreshNextUpQueue.request = (refreshNextUpQueue.request || 0) + 1;
   try {
     const response = await authenticatedFetch(`${API_BASE}/next-up/`);
-    if (response.ok) renderNextUpQueue(await response.json());
+    if (response.ok) {
+      const items = await response.json();
+      if (request === refreshNextUpQueue.request && shouldContinue() && hasStoredAuth()) renderNextUpQueue(items);
+    }
   } catch (error) {
     // The queue is supplementary; never interrupt the tracker if it is unavailable.
   }
@@ -9271,11 +9293,15 @@ async function refreshLibraryLaunchpad() {
   }
 }
 
-async function refreshLibraryPulse() {
+async function refreshLibraryPulse(shouldContinue = () => true) {
   if (!hasStoredAuth()) return;
+  const request = refreshLibraryPulse.request = (refreshLibraryPulse.request || 0) + 1;
   try {
     const response = await authenticatedFetch(`${API_BASE}/statistics/pulse/`);
-    if (response.ok) renderLibraryPulse(await response.json());
+    if (response.ok) {
+      const pulse = await response.json();
+      if (request === refreshLibraryPulse.request && shouldContinue() && hasStoredAuth()) renderLibraryPulse(pulse);
+    }
   } catch (error) {
     // Pulse is optional and should never interrupt the tracker.
   }
@@ -10793,6 +10819,7 @@ function setupCustomTabSwitching() {
           document.querySelectorAll('.tab-content').forEach(c => c.classList.remove('active'));
           const content = document.getElementById(`custom-${tabId}-tab`);
           if (content) {
+            window.OmniProgress?.navigate();
             content.classList.add('active');
             currentTab = tabName;
             loadCustomTabItems(tab);
@@ -10816,5 +10843,26 @@ document.addEventListener('DOMContentLoaded', () => {
     loadCustomTabs();
     openDashboardTargetFromLocation();
   }
+});
+
+window.OmniProgress?.configure({
+  base: API_BASE,
+  request: (...args) => authenticatedFetch(...args),
+  sessionKey: () => {
+    if (!hasStoredAuth()) return null;
+    const user = typeof getUser === 'function' ? getUser() : null;
+    return JSON.stringify([user?.id ?? user?.username ?? null,
+      typeof getToken === 'function' ? getToken() : getAuthTokenValue()]);
+  },
+  contextKey: () => currentTab,
+  canOpen: () => {
+    if (editingRowId === null) return true;
+    alert('Save or cancel your current title edit before updating progress.');
+    return false;
+  },
+  onSaved: (_payload, shouldContinue) => {
+    if (!shouldContinue()) return;
+    return Promise.allSettled([refreshNextUpQueue(shouldContinue), refreshLibraryPulse(shouldContinue)]);
+  },
 });
 

@@ -7,6 +7,8 @@ music load promptly, TV is empty, anime is slow, games fail once, and books time
 out once. Games and books recover on retry for each new search query.
 Add --reviews for synthetic community reviews and a private existing-title match.
 Add --collections for a synthetic shared collection with an existing private book.
+Add --progress for unfinished titles with private episode and reading checkpoints.
+Open /qa/expire in a second tab to test background session-expiry cleanup.
 """
 import os
 import argparse
@@ -84,6 +86,8 @@ def main():
                         help='Seed local public reviews for browsing, login handoff, and save QA')
     parser.add_argument('--collections', action='store_true',
                         help='Seed a local public collection and existing private title for save QA')
+    parser.add_argument('--progress', action='store_true',
+                        help='Seed a local private library with episode and reading checkpoints')
     args = parser.parse_args()
     with tempfile.TemporaryDirectory(prefix="omnitrackr-mobile-") as directory:
         os.environ.update(PYTHON_DOTENV_DISABLED="1", DATABASE_URL=f"sqlite:///{Path(directory).as_posix()}/preview.db",
@@ -193,6 +197,27 @@ def main():
                 db.add(models.Book(user_id=user.id, title=titles[-1], author="Sample author", year=2024,
                                    rating=9.2, read=True, review="My private book note must survive saving this collection.",
                                    review_public=False, cover_art_url="/static/omnitrackr_vortex.png"))
+            if args.progress:
+                from datetime import datetime
+                for category, model, title, unit, position, season in (
+                    ("tv-shows", models.TVShow, "Letters from Tomorrow", "episode", 4, 2),
+                    ("anime", models.Anime, "A Garden After Rain", "episode", 7, None),
+                    ("books", models.Book, "The Lantern Atlas", "page", 128, None),
+                ):
+                    data = dict(user_id=user.id, title=title, year=2024, rating=8,
+                                review="My review stays separate from progress.", review_public=False)
+                    if category == "books":
+                        data.update(author="Sample Author", read=False)
+                    else:
+                        data.update(seasons=3, episodes=24, watched=False)
+                    item = model(**data)
+                    db.add(item)
+                    db.flush()
+                    db.add(models.ProgressCheckpoint(user_id=user.id, category=category, item_id=item.id,
+                        unit=unit, position=position, season=season, note="Private place reminder", revision=1,
+                        updated_at=datetime.utcnow()))
+                    db.add(models.NextUpItem(user_id=user.id, category=category, item_id=item.id,
+                                            position={"tv-shows": 0, "anime": 1, "books": 2}[category]))
             db.commit()
 
         @app.get("/qa", response_class=HTMLResponse)
@@ -203,6 +228,14 @@ def main():
               <script>localStorage.setItem('omnitrackr_user', JSON.stringify({id:1,username:'preview'}));</script>
               <a href="/">Open preview library</a></body></html>''')
             response.set_cookie(auth.AUTH_COOKIE_NAME, auth.create_access_token({"sub": "preview"}), httponly=True)
+            return response
+
+        @app.get("/qa/expire", response_class=HTMLResponse)
+        def expire_preview_session():
+            response = nonce_html_response('''<!doctype html><html><head><title>Expired local QA session</title></head>
+              <body><p>The disposable preview session has expired. Keep the original library tab open
+              to check that its next background request clears private editors.</p></body></html>''')
+            response.delete_cookie(auth.AUTH_COOKIE_NAME)
             return response
 
         try:

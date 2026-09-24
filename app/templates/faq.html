@@ -53,7 +53,7 @@
     "@type": "FAQPage",
     "name": "OmniTrackr Frequently Asked Questions",
     "url": "https://omnitrackr.xyz/faq",
-    "dateModified": "2026-07-05",
+    "dateModified": "2026-09-22",
     "inLanguage": "en-US",
     "isPartOf": { "@type": "WebSite", "name": "OmniTrackr", "url": "https://omnitrackr.xyz" },
     "mainEntity": [
@@ -63,7 +63,8 @@
       { "@type": "Question", "name": "How do public collections become discoverable?", "acceptedAnswer": { "@type": "Answer", "text": "Collections stay private until their owner publishes them. Substantial collections that pass deterministic quality and safety checks enter discovery automatically; version-bound reports can temporarily unlist them without deleting the owner's collection." } },
       { "@type": "Question", "name": "Can I export my media library?", "acceptedAnswer": { "@type": "Answer", "text": "Yes. OmniTrackr supports JSON export and import workflows so users can back up or move their library without relying on a single browser session." } },
       { "@type": "Question", "name": "What should I add first?", "acceptedAnswer": { "@type": "Answer", "text": "Start with a small set of favorites, unfinished items, and next-up choices. That gives enough data to test categories, statuses, ratings, and reviews before importing a full history." } },
-      { "@type": "Question", "name": "Where can ads appear?", "acceptedAnswer": { "@type": "Answer", "text": "OmniTrackr intends to keep ads on public content pages such as guides, templates, comparisons, public reviews, and informational resources. Ads should not be placed inside private account forms, editing controls, or account settings." } }
+      { "@type": "Question", "name": "Can I save where I stopped in a show or book?", "acceptedAnswer": { "@type": "Answer", "text": "Yes. Update progress saves the last watched episode for TV shows and anime, or the last read page or chapter for books. Checkpoints and their reminders stay private, are included in JSON backups, and do not change completion, ratings, or reviews." } },
+      { "@type": "Question", "name": "Where can ads appear?", "acceptedAnswer": { "@type": "Answer", "text": "Ad eligibility is limited to the media tracking hub, export and import guide, review guidelines, sample library, and qualifying standalone public review pages. The interactive demo, review directory, sign-in pages, and private tracking controls are ad-free. Eligibility does not mean ads are currently running." } }
     ]
   }
   </script>
@@ -93,7 +94,7 @@
       <a href="/" class="back-link">Back to OmniTrackr</a>
       <header class="public-header">
         <h1>OmniTrackr FAQ</h1>
-        <p>Answers for new visitors, returning users, and reviewers evaluating how OmniTrackr handles media tracking, privacy, public content, exports, and ads.</p>
+        <p>Answers about media tracking, private progress, public reviews, exports, and ads.</p>
       </header>
 
       <p class="faq-intro">OmniTrackr is designed around one simple idea: your media life is larger than one watchlist. These answers explain how the app keeps movies, shows, anime, games, albums, and books organized without forcing every note or review to be public.</p>
@@ -126,6 +127,14 @@
           <div class="faq-answer">
             <p>OmniTrackr supports movies, TV shows, anime, video games, music, and books. Each category has fields that fit that media type, so a TV show can focus on progress while a game can focus on backlog and played status.</p>
             <p>The category guides explain the details: <a href="/movie-tracker">movies</a>, <a href="/tv-show-tracker">TV shows</a>, <a href="/anime-tracker">anime</a>, <a href="/game-tracker">games</a>, <a href="/music-tracker">music</a>, and <a href="/book-tracker">books</a>.</p>
+          </div>
+        </article>
+
+        <article class="faq-item">
+          <h2>Can I save where I stopped in a show or book?</h2>
+          <div class="faq-answer">
+            <p>Yes. Choose <strong>Update progress</strong> on a saved TV show, anime, or book. Record the last watched episode, with an optional season, or choose the last read page or chapter. Season 0 is available for specials. The optional Private reminder gives you a short cue for next time.</p>
+            <p>Saving or clearing progress does not change completion, ratings, reviews, or title metadata. Checkpoints and their reminders stay private even when you share a category with friends or publish a review. They are included in JSON backups, so protect your exported files. Try a checkpoint in the <a href="/demo">demo</a>; sample changes reset on reload.</p>
           </div>
         </article>
 
@@ -188,8 +197,8 @@
         <article class="faq-item">
           <h2>Where can ads appear?</h2>
           <div class="faq-answer">
-            <p>OmniTrackr intends to keep ads on public informational pages such as guides, templates, comparisons, public reviews, the demo library, and other resources visitors can read without signing in.</p>
-            <p>Ads should not be placed inside private account forms, password reset flows, collection editing controls, import/export controls, friend controls, or account settings. The <a href="/advertising">Advertising Policy</a> explains this in more detail.</p>
+            <p>Ad eligibility is limited to the <a href="/media-tracking">media tracking hub</a>, <a href="/export-import-guide">export and import guide</a>, <a href="/review-guidelines">review guidelines</a>, <a href="/sample-library">sample library</a>, and qualifying standalone public review pages. Eligibility does not mean ads are currently running.</p>
+            <p>The interactive demo, review directory, comparisons, tracking templates, sign-in and recovery pages, and private tracking controls are ad-free. That includes progress updates, collection editing, import/export controls, friends, and account settings. The <a href="/advertising">Advertising Policy</a> explains this in more detail.</p>
           </div>
         </article>
 

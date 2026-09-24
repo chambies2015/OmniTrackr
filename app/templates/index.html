@@ -50,6 +50,7 @@
   <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@700;800&family=Inter:wght@400;500;600&display=swap"
     rel="stylesheet">
   <link rel="stylesheet" href="./styles.css?v=20260922-quick-capture-v2">
+  <link rel="stylesheet" href="/static/progress.css?v=20260922-progress">
   <script src="./preauth.js"></script>
   <style>
     html.authenticated #landingPage{display:none}
@@ -1891,9 +1892,35 @@
       </div>
     </footer>
   </div>
+  <dialog id="progressDialog" class="progress-dialog" aria-labelledby="progressTitle" aria-describedby="progressPrivacy">
+    <div class="progress-dialog__header">
+      <div><p class="progress-dialog__eyebrow">Pick up where you left off</p><h2 id="progressTitle">Your progress</h2></div>
+      <button type="button" id="progressClose" class="progress-dialog__close" aria-label="Close progress editor">×</button>
+    </div>
+    <p id="progressPrivacy" class="progress-dialog__privacy">Save the last episode, page or chapter you finished. Your checkpoint and reminder are private. They do not change your rating, review or finished status.</p>
+    <p id="progressCurrent" class="progress-dialog__current" hidden></p>
+    <form id="progressForm" novalidate>
+      <fieldset id="progressFields" disabled>
+        <label id="progressUnitField">Track by<select id="progressUnit"><option value="page">Page</option><option value="chapter">Chapter</option><option value="episode" hidden>Episode</option></select></label>
+        <label><span id="progressPositionLabel">Last watched episode</span><input id="progressPosition" type="number" inputmode="numeric" min="1" max="1000000" step="1" required></label>
+        <label id="progressSeasonField">Season (optional)<input id="progressSeason" type="number" inputmode="numeric" min="0" max="10000" step="1"><span class="progress-dialog__hint">Leave blank for continuous episode numbering. Use season 0 for specials.</span></label>
+        <label>Private reminder (optional)<textarea id="progressNote" maxlength="300" rows="3" placeholder="A detail to remember next time"></textarea><span class="progress-dialog__hint">Up to 300 characters. Visible only to you.</span></label>
+      </fieldset>
+      <p id="progressStatus" class="progress-dialog__status" role="status" aria-live="polite"></p>
+      <div class="progress-dialog__actions">
+        <button type="submit" id="progressSave" class="progress-dialog__save" disabled>Save progress</button>
+        <button type="button" id="progressClear" class="progress-dialog__clear" hidden>Clear progress</button>
+        <button type="button" id="progressRetry" hidden>Retry same change</button>
+        <button type="button" id="progressReload" hidden>Reload saved progress</button>
+        <button type="button" id="progressCancel">Close</button>
+      </div>
+      <p class="progress-dialog__hint">Closing keeps your draft in this tab until you leave or sign out. Changes are only saved when you choose Save progress.</p>
+    </form>
+  </dialog>
   <script src="./credentials.js"></script>
-  <script src="./auth.js?v=20260922-collection-save-v2"></script>
-  <script src="./app.js?v=20260922-interactive-demo"></script>
+  <script src="./auth.js?v=20260924-progress-session"></script>
+  <script src="/static/progress.js?v=20260922-progress"></script>
+  <script src="./app.js?v=20260922-progress"></script>
 
   <!-- Account Modal -->
   <div id="accountModal" class="modal-overlay" style="display: none;">
@@ -2081,7 +2108,7 @@
         <!-- Data & Privacy Dashboard Section -->
         <div class="account-section">
           <h3>Your Data & Privacy Dashboard</h3>
-          <p class="info-text">A quick summary of backup, privacy, public review, and policy controls for your account.</p>
+          <p class="info-text">A quick summary of backup, privacy, public review, and policy controls for your account. JSON backups include your private progress checkpoints and reminders. Restoring a backup keeps existing or cleared checkpoints unchanged and restores missing checkpoints only when their exact title and edition can be matched.</p>
           <div class="account-info">
             <div class="info-item">
               <span class="info-label">Data Backup:</span>

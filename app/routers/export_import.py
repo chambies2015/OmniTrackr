@@ -10,6 +10,7 @@ from sqlalchemy.orm import Session, selectinload
 
 from .. import crud, schemas, models
 from ..dependencies import get_db, get_current_user
+from ..progress import CATEGORIES as PROGRESS_CATEGORIES, get_checkpoint_map, serialize_checkpoint, validate_checkpoint, stage_import_checkpoint, lock_progress_owner
 from .activity import _serialize as serialize_activity, import_activity_entries
 
 router = APIRouter(prefix="", tags=["export-import"])
@@ -101,6 +102,69 @@ def _export_collections(db: Session, user_id: int) -> list[dict]:
     return exported
 
 
+def _export_progress(db: Session, user_id: int) -> list[dict]:
+    checkpoints = get_checkpoint_map(db, user_id)
+    exported = []
+    for category, model in PROGRESS_CATEGORIES.items():
+        ids = [item_id for (key, item_id) in checkpoints if key == category]
+        if not ids:
+            continue
+        for media in db.query(model).filter(model.user_id == user_id, model.id.in_(ids)).order_by(model.id).all():
+            progress = serialize_checkpoint(checkpoints[(category, media.id)])
+            exported.append({
+                "category": category, "title": media.title, **_exported_identity(media, category),
+                "checkpoint": {key: progress[key] for key in ("unit", "position", "season", "note")},
+                "updated_at": progress["updated_at"],
+            })
+    return exported
+
+
+def _import_progress(db: Session, user_id: int, payloads: list[dict]) -> tuple[int, int]:
+    """Restore only an unambiguous owned edition; never overwrite current progress."""
+    if not payloads:
+        return 0, 0
+    created = skipped = 0
+    try:
+        lock_progress_owner(db, user_id)
+        for raw in payloads:
+            category = raw.get("category")
+            title = raw.get("title")
+            if not isinstance(category, str) or category not in PROGRESS_CATEGORIES or not isinstance(title, str) or not title.strip():
+                skipped += 1
+                continue
+            try:
+                checkpoint = validate_checkpoint(category, raw.get("checkpoint"))
+                # New backups always carry complete edition identity, including nulls.
+                if "year" not in raw or (raw["year"] is not None and (type(raw["year"]) is not int or not -2147483648 <= raw["year"] <= 2147483647)):
+                    raise ValueError("Missing edition year")
+                if category == "books" and ("author" not in raw or (raw["author"] is not None and not isinstance(raw["author"], str))):
+                    raise ValueError("Missing edition author")
+            except (ValidationError, ValueError, TypeError):
+                skipped += 1
+                continue
+            model = PROGRESS_CATEGORIES[category]
+            query = db.query(model).filter(
+                model.user_id == user_id, func.lower(func.trim(model.title)) == func.lower(func.trim(title)),
+                model.year == raw["year"],
+            )
+            if category == "books":
+                author = raw["author"]
+                query = query.filter(model.author.is_(None) if author is None else func.lower(func.trim(model.author)) == func.lower(func.trim(author)))
+            matches = query.limit(2).all()
+            if len(matches) != 1:
+                skipped += 1
+                continue
+            if stage_import_checkpoint(db, user_id, category, matches[0].id, checkpoint):
+                created += 1
+            else:
+                skipped += 1
+        db.commit()
+        return created, skipped
+    except Exception:
+        db.rollback()
+        raise
+
+
 def _import_collections(db: Session, user_id: int, payloads: list[dict]) -> tuple[int, int]:
     created = skipped = 0
     for raw in payloads[:200]:
@@ -167,7 +231,7 @@ async def export_data(
     current_user: models.User = Depends(get_current_user),
     db: Session = Depends(get_db)
 ):
-    """Export the user's media, custom tabs, journal, and collections as JSON."""
+    """Export private media, custom tabs, journal, collections, and checkpoints."""
     movies = crud.get_all_movies(db, current_user.id)
     tv_shows = crud.get_all_tv_shows(db, current_user.id)
     anime = crud.get_all_anime(db, current_user.id)
@@ -179,10 +243,11 @@ async def export_data(
         models.ActivityEntry.user_id == current_user.id
     ).order_by(models.ActivityEntry.occurred_at.desc(), models.ActivityEntry.id.desc()).all()
     collections = _export_collections(db, current_user.id)
+    progress_checkpoints = _export_progress(db, current_user.id)
 
     export_metadata = {
         "export_timestamp": datetime.now().isoformat(),
-        "version": "1.2",
+        "version": "1.3",
         "account_created_at": current_user.created_at.isoformat() if current_user.created_at else None,
         "last_login_at": current_user.last_login_at.isoformat() if current_user.last_login_at else None,
         "successful_login_count": current_user.login_count or 0,
@@ -195,6 +260,7 @@ async def export_data(
         "total_custom_tabs": len(custom_tabs),
         "total_activities": len(activities),
         "total_collections": len(collections),
+        "total_progress_checkpoints": len(progress_checkpoints),
     }
 
     return schemas.ExportData(
@@ -207,6 +273,7 @@ async def export_data(
         custom_tabs=custom_tabs,
         activities=[serialize_activity(entry) for entry in activities],
         collections=collections,
+        progress_checkpoints=progress_checkpoints,
         export_metadata=export_metadata
     )
 
@@ -227,6 +294,7 @@ async def import_data(
     custom_tabs_created, custom_tabs_updated, custom_tab_errors = crud.import_custom_tabs(db, current_user.id, import_data.custom_tabs)
     activities_created, activities_skipped = import_activity_entries(db, current_user.id, import_data.activities)
     collections_created, collections_skipped = _import_collections(db, current_user.id, import_data.collections)
+    progress_created, progress_skipped = _import_progress(db, current_user.id, import_data.progress_checkpoints)
 
     all_errors = movie_errors + tv_show_errors + anime_errors + video_game_errors + music_errors + book_errors + custom_tab_errors
 
@@ -249,6 +317,8 @@ async def import_data(
         activities_skipped=activities_skipped,
         collections_created=collections_created,
         collections_skipped=collections_skipped,
+        progress_created=progress_created,
+        progress_skipped=progress_skipped,
         errors=all_errors
     )
 
@@ -285,7 +355,7 @@ async def import_from_file(
         activities = [schemas.ActivityEntryImport(**entry) for entry in data.get('activities', [])]
         collections = data.get('collections', [])
 
-        import_data = schemas.ImportData(movies=movies, tv_shows=tv_shows, anime=anime, video_games=video_games, music=music, books=books, custom_tabs=custom_tabs, activities=activities, collections=collections)
+        import_data = schemas.ImportData(movies=movies, tv_shows=tv_shows, anime=anime, video_games=video_games, music=music, books=books, custom_tabs=custom_tabs, activities=activities, collections=collections, progress_checkpoints=data.get('progress_checkpoints', []))
 
         # Import the data
         movies_created, movies_updated, movie_errors = crud.import_movies(db, current_user.id, import_data.movies)
@@ -297,6 +367,7 @@ async def import_from_file(
         custom_tabs_created, custom_tabs_updated, custom_tab_errors = crud.import_custom_tabs(db, current_user.id, import_data.custom_tabs)
         activities_created, activities_skipped = import_activity_entries(db, current_user.id, import_data.activities)
         collections_created, collections_skipped = _import_collections(db, current_user.id, import_data.collections)
+        progress_created, progress_skipped = _import_progress(db, current_user.id, import_data.progress_checkpoints)
 
         all_errors = movie_errors + tv_show_errors + anime_errors + video_game_errors + music_errors + book_errors + custom_tab_errors
 
@@ -319,6 +390,8 @@ async def import_from_file(
             activities_skipped=activities_skipped,
             collections_created=collections_created,
             collections_skipped=collections_skipped,
+            progress_created=progress_created,
+            progress_skipped=progress_skipped,
             errors=all_errors
         )
 

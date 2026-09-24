@@ -45,6 +45,7 @@ from .routers import (
     next_up,
     completion_moments,
     activity,
+    progress,
     collections,
     discover,
     import_studio,
@@ -352,6 +353,7 @@ app.include_router(statistics.router)
 app.include_router(next_up.router)
 app.include_router(completion_moments.router)
 app.include_router(activity.router)
+app.include_router(progress.router)
 app.include_router(import_studio.router)
 from .routers.recommendations import submit_public_recommendation
 rate_limited_recommendation = limiter.limit("5/hour")(submit_public_recommendation)

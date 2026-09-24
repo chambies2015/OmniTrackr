@@ -11,11 +11,11 @@
   };
   const originals = [
     {id: 'lantern-atlas', title: 'The Lantern Atlas', cover: 'THE\nLANTERN\nATLAS', category: 'movie', description: 'A cartographer follows a trail of lights through a city that changes after sunset.', finished: true, rating: 9, note: 'A world I would happily get lost in again.'},
-    {id: 'northbound', title: 'Northbound', cover: 'NORTH\nBOUND', category: 'tv_show', description: 'Night-shift strangers find their stories crossing on the last train home.', finished: false, rating: null, note: ''},
-    {id: 'quiet-observatory', title: 'The Quiet Observatory', cover: 'THE QUIET\nOBSERVATORY', category: 'anime', description: 'Two apprentices map a sky where each constellation holds a forgotten story.', finished: true, rating: 8, note: 'Loved the quiet moments between adventures.'},
+    {id: 'northbound', title: 'Northbound', cover: 'NORTH\nBOUND', category: 'tv_show', description: 'Night-shift strangers find their stories crossing on the last train home.', finished: false, rating: null, note: '', progress: {unit: 'episode', position: 4, season: 1, note: 'Next time: the station reunion.'}},
+    {id: 'quiet-observatory', title: 'The Quiet Observatory', cover: 'THE QUIET\nOBSERVATORY', category: 'anime', description: 'Two apprentices map a sky where each constellation holds a forgotten story.', finished: true, rating: 8, note: 'Loved the quiet moments between adventures.', progress: {unit: 'episode', position: 12, season: 1, note: ''}},
     {id: 'garden-circuit', title: 'Garden Circuit', cover: 'GARDEN\nCIRCUIT', category: 'video_game', description: 'Bring a sleeping greenhouse to life, one small mechanical puzzle at a time.', finished: false, rating: null, note: ''},
     {id: 'after-rain', title: 'After the Rain', cover: 'AFTER\nTHE RAIN', category: 'music', description: 'Warm piano, soft percussion, and a little breathing room for a slow Sunday.', finished: true, rating: 8.5, note: 'The soundtrack for an unhurried morning.'},
-    {id: 'letters-tomorrow', title: 'Letters from Tomorrow', cover: 'LETTERS FROM\nTOMORROW', category: 'book', description: 'A bookshop owner receives letters dated one day ahead and has to decide what to change.', finished: false, rating: null, note: ''},
+    {id: 'letters-tomorrow', title: 'Letters from Tomorrow', cover: 'LETTERS FROM\nTOMORROW', category: 'book', description: 'A bookshop owner receives letters dated one day ahead and has to decide what to change.', finished: false, rating: null, note: '', progress: {unit: 'page', position: 84, season: null, note: 'Pick up at the second letter.'}},
   ];
   const catalog = [
     {id: 'last-lighthouse', title: 'The Last Lighthouse', cover: 'THE LAST\nLIGHTHOUSE', category: 'movie', description: 'An unlikely crew keeps a coastal light shining through one extraordinary winter.'},
@@ -27,7 +27,8 @@
   ];
   const get = id => document.getElementById(id);
   if (!get('demoCards') || !get('demoEditForm')) return;
-  let items = originals.map(item => ({...item}));
+  const freshSamples = () => originals.map(item => ({...item, progress: item.progress ? {...item.progress} : null}));
+  let items = freshSamples();
   let filter = 'all';
   let editingId = null;
   const element = (tag, className, text) => {
@@ -46,6 +47,15 @@
   const hideCatalog = () => {
     get('demoCatalog').hidden = true;
     get('demoAdd').setAttribute('aria-expanded', 'false');
+  };
+  const supportsProgress = item => ['tv_show', 'anime', 'book'].includes(item.category);
+  const progressSummary = progress => {
+    if (!progress) return 'No checkpoint yet';
+    if (progress.unit === 'episode') {
+      const season = progress.season === null ? '' : `season ${progress.season}, `;
+      return `Last watched: ${season}episode ${progress.position}`;
+    }
+    return `Last read: ${progress.unit} ${progress.position}`;
   };
 
   function renderStats() {
@@ -76,6 +86,12 @@
       const facts = element('div', 'demo-card-facts');
       facts.append(element('span', item.finished ? 'demo-complete' : '', item.finished ? category.finished : 'Not finished'), element('span', 'demo-card-rating', item.rating === null ? 'Unrated' : `${item.rating} / 10`));
       body.append(facts, element('p', item.note ? 'demo-note' : 'demo-note demo-note-empty', item.note || 'No note yet. What would you remember?'));
+      if (supportsProgress(item)) {
+        const progress = element('div', 'demo-card-progress');
+        progress.append(element('span', 'demo-progress-label', 'YOUR CHECKPOINT'), element('p', '', progressSummary(item.progress)));
+        if (item.progress?.note) progress.append(element('p', 'demo-progress-reminder', item.progress.note));
+        body.append(progress);
+      }
       const edit = element('button', 'demo-card-edit', 'Edit sample →');
       edit.type = 'button';
       edit.id = `demoEdit-${item.id}`;
@@ -122,10 +138,77 @@
     get('demoEditFinishedLabel').textContent = `${categories[item.category].finished} / finished`;
     get('demoEditRating').value = item.rating === null ? '' : String(item.rating);
     get('demoEditNote').value = item.note;
+    populateProgress(item);
     get('demoEditError').hidden = true;
     get('demoEditor').hidden = false;
     get('demoEditFinished').focus();
   }
+
+  function populateProgress(item) {
+    get('demoProgressForm').hidden = !supportsProgress(item);
+    const book = item.category === 'book';
+    get('demoProgressUnitField').hidden = !book;
+    get('demoProgressSeasonField').hidden = book;
+    get('demoProgressUnit').value = book ? (item.progress?.unit || 'page') : 'episode';
+    get('demoProgressPositionLabel').textContent = book ? `Last read ${item.progress?.unit || 'page'}` : 'Last watched episode';
+    get('demoProgressPosition').value = item.progress ? String(item.progress.position) : '';
+    get('demoProgressSeason').value = item.progress?.season === null || item.progress?.season === undefined ? '' : String(item.progress.season);
+    get('demoProgressNote').value = item.progress?.note || '';
+    get('demoProgressClear').disabled = !item.progress;
+    get('demoProgressError').hidden = true;
+  }
+
+  get('demoProgressUnit').addEventListener('change', () => {
+    const unit = get('demoProgressUnit').value;
+    if (['page', 'chapter'].includes(unit)) get('demoProgressPositionLabel').textContent = `Last read ${unit}`;
+  });
+
+  get('demoProgressForm').addEventListener('submit', event => {
+    event.preventDefault();
+    const item = items.find(entry => entry.id === editingId);
+    if (!item || !supportsProgress(item)) return;
+    const book = item.category === 'book';
+    const positionInput = get('demoProgressPosition');
+    const seasonInput = get('demoProgressSeason');
+    const rawPosition = positionInput.value.trim();
+    const rawSeason = seasonInput.value.trim();
+    const note = get('demoProgressNote').value.trim();
+    const unit = book ? get('demoProgressUnit').value : 'episode';
+    const invalid = (message, input) => {
+      get('demoProgressError').textContent = message;
+      get('demoProgressError').hidden = false;
+      input.focus();
+    };
+    if (!/^\d+$/.test(rawPosition) || positionInput.validity?.badInput || Number(rawPosition) < 1 || Number(rawPosition) > 1000000) {
+      invalid('Enter a whole episode, page, or chapter number from 1 to 1,000,000.', positionInput);
+      return;
+    }
+    if (!book && (seasonInput.validity?.badInput || (rawSeason !== '' && (!/^\d+$/.test(rawSeason) || Number(rawSeason) > 10000)))) {
+      invalid('Use a whole season number from 0 to 10,000, or leave it blank. Season 0 is for specials.', seasonInput);
+      return;
+    }
+    if (book && !['page', 'chapter'].includes(unit)) {
+      invalid('Choose pages or chapters for this book.', get('demoProgressUnit'));
+      return;
+    }
+    if (note.length > 300) {
+      invalid('Keep your checkpoint reminder to 300 characters or fewer.', get('demoProgressNote'));
+      return;
+    }
+    item.progress = {unit, position: Number(rawPosition), season: book || rawSeason === '' ? null : Number(rawSeason), note};
+    populateProgress(item);
+    renderCards();
+    announce(`Checkpoint updated for “${item.title}”. Completion, rating, and your other note are unchanged.`);
+  });
+  get('demoProgressClear').addEventListener('click', () => {
+    const item = items.find(entry => entry.id === editingId);
+    if (!item || !supportsProgress(item)) return;
+    item.progress = null;
+    populateProgress(item);
+    renderCards();
+    get('demoProgressPosition').focus();
+    announce(`Checkpoint cleared for “${item.title}”. Completion, rating, and your other note are unchanged.`);
+  });
 
   function addSample(id) {
     const sample = catalog.find(entry => entry.id === id);
@@ -205,7 +288,7 @@
     });
   });
   get('demoReset').addEventListener('click', () => {
-    items = originals.map(item => ({...item}));
+    items = freshSamples();
     filter = 'all';
     hideEditor();
     hideCatalog();

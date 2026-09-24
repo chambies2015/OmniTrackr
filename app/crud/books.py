@@ -70,9 +70,13 @@ def update_book(db: Session, user_id: int, book_id: int, book_update: schemas.Bo
 
 
 def delete_book(db: Session, user_id: int, book_id: int) -> Optional[models.Book]:
-    db_book = get_book_by_id(db, user_id, book_id)
+    from ..progress import delete_progress_for_item, lock_progress_owner
+    lock_progress_owner(db, user_id)
+    db_book = db.query(models.Book).filter_by(user_id=user_id, id=book_id).with_for_update().first()
     if db_book is None:
+        db.rollback()
         return None
+    delete_progress_for_item(db, user_id, "books", book_id)
     db.delete(db_book)
     db.commit()
     return db_book

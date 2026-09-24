@@ -64,6 +64,7 @@ class User(Base):
     notifications = relationship("Notification", back_populates="user", cascade="all, delete-orphan")
     custom_tabs = relationship("CustomTab", back_populates="owner", cascade="all, delete-orphan")
     next_up_items = relationship("NextUpItem", back_populates="owner", cascade="all, delete-orphan")
+    progress_checkpoints = relationship("ProgressCheckpoint", back_populates="owner", cascade="all, delete-orphan")
     completion_moments = relationship("CompletionMoment", back_populates="owner", cascade="all, delete-orphan")
     activity_entries = relationship("ActivityEntry", back_populates="owner", cascade="all, delete-orphan")
     collections = relationship("Collection", back_populates="owner", cascade="all, delete-orphan")
@@ -188,6 +189,32 @@ class Book(Base):
     # User relationship
     user_id = Column(Integer, ForeignKey("users.id"), nullable=False, index=True)
     owner = relationship("User", back_populates="books")
+
+
+class ProgressCheckpoint(Base):
+    """Private stopping points, separate from all shareable media fields.
+
+    Clearing a checkpoint retains a revision-only tombstone so another open tab
+    cannot unknowingly recreate an outdated checkpoint after it was cleared.
+    """
+    __tablename__ = "progress_checkpoints"
+
+    id = Column(Integer, primary_key=True, index=True)
+    user_id = Column(Integer, ForeignKey("users.id"), nullable=False, index=True)
+    category = Column(String(16), nullable=False)
+    item_id = Column(Integer, nullable=False)
+    unit = Column(String(8), nullable=True)
+    position = Column(Integer, nullable=True)
+    season = Column(Integer, nullable=True)
+    note = Column(String(300), nullable=True)
+    revision = Column(Integer, nullable=False, default=1)
+    updated_at = Column(DateTime, nullable=False, default=datetime.utcnow)
+
+    owner = relationship("User", back_populates="progress_checkpoints")
+
+    __table_args__ = (
+        UniqueConstraint("user_id", "category", "item_id", name="uq_progress_checkpoint_item"),
+    )
 
 
 class NextUpItem(Base):

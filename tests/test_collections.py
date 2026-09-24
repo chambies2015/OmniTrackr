@@ -501,7 +501,7 @@ class TestCollections:
         )
 
         backup = authenticated_client.get("/export/").json()
-        assert backup["export_metadata"]["version"] == "1.2"
+        assert backup["export_metadata"]["version"] == "1.3"
         assert backup["collections"][0]["items"][0]["curator_note"].startswith("The opening")
 
     def test_collection_backup_preserves_same_title_edition_identity(
