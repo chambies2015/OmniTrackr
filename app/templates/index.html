@@ -52,7 +52,7 @@
   <link rel="stylesheet" href="./styles.css?v=20260924-import-studio-final">
   <link rel="stylesheet" href="/static/progress.css?v=20260922-progress">
   <link rel="stylesheet" href="/static/app-theme.css?v=20260924-visual-4">
-  <link rel="stylesheet" href="/static/library-theme.css?v=20260924-visual-5">
+  <link rel="stylesheet" href="/static/library-theme.css?v=20260924-library-filters-1">
   <link rel="stylesheet" href="/static/dialog-theme.css?v=20260924-visual-4">
   <script src="./preauth.js"></script>
   <style>
@@ -527,6 +527,7 @@
           <button id="importMovies" class="action-btn library-utility">Import Data</button>
         </div>
         <input type="file" id="importFile" accept=".json" style="display: none;">
+        <div id="movieTableFilters" class="library-filters" aria-label="Library filters"></div>
         <div class="table-container library-table-wrap">
           <table id="movieTable" class="library-table">
             <thead>
@@ -613,6 +614,7 @@
           <button id="importTVShows" class="action-btn library-utility">Import Data</button>
         </div>
         <input type="file" id="importTVFile" accept=".json" style="display: none;">
+        <div id="tvShowTableFilters" class="library-filters" aria-label="Library filters"></div>
         <div class="table-container library-table-wrap">
           <table id="tvShowTable" class="library-table">
             <thead>
@@ -700,6 +702,7 @@
           <button id="importAnime" class="action-btn library-utility">Import Data</button>
         </div>
         <input type="file" id="importAnimeFile" accept=".json" style="display: none;">
+        <div id="animeTableFilters" class="library-filters" aria-label="Library filters"></div>
         <div class="table-container library-table-wrap">
           <table id="animeTable" class="library-table">
             <thead>
@@ -787,6 +790,7 @@
           <button id="importMusic" class="action-btn library-utility">Import Data</button>
         </div>
         <input type="file" id="importMusicFile" accept=".json" style="display: none;">
+        <div id="musicTableFilters" class="library-filters" aria-label="Library filters"></div>
         <div class="table-container library-table-wrap">
           <table id="musicTable" class="library-table">
             <thead>
@@ -873,6 +877,7 @@
           <button id="importBooks" class="action-btn library-utility">Import Data</button>
         </div>
         <input type="file" id="importBookFile" accept=".json" style="display: none;">
+        <div id="bookTableFilters" class="library-filters" aria-label="Library filters"></div>
         <div class="table-container library-table-wrap">
           <table id="bookTable" class="library-table">
             <thead>
@@ -951,6 +956,7 @@
           <button id="importVideoGames" class="action-btn library-utility">Import Data</button>
         </div>
         <input type="file" id="importVideoGameFile" accept=".json" style="display: none;">
+        <div id="videoGameTableFilters" class="library-filters" aria-label="Library filters"></div>
         <div class="table-container library-table-wrap">
           <table id="videoGameTable" class="library-table">
             <thead>
@@ -1950,10 +1956,10 @@
     </form>
   </dialog>
   <script src="./credentials.js"></script>
-  <script src="./auth.js?v=20260924-import-studio-final"></script>
+  <script src="./auth.js?v=20260924-library-filters-1"></script>
   <script src="/static/import-studio.js?v=20260924-import-studio-final"></script>
   <script src="/static/progress.js?v=20260922-progress"></script>
-  <script src="./app.js?v=20260924-visual-4"></script>
+  <script src="./app.js?v=20260924-library-filters-1"></script>
 
   <!-- Account Modal -->
   <div id="accountModal" class="modal-overlay" style="display: none;">

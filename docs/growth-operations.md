@@ -480,6 +480,43 @@ the manager's existing raw-fetch path failed in the local HTTP fixture, so its
 full browser flow was not validated. No production data or schema was touched,
 and nothing was deployed.
 
+## Library quick filters
+
+The September 24, 2026 library update adds completion, Unrated, and Has saved
+progress filters to the six built-in categories. Completion labels match each
+category. Unrated means a null rating; zero remains a rated score. Saved progress
+is available only for TV, anime, and books and requires an owned checkpoint with
+an active unit. Cleared checkpoint revision rows do not qualify.
+
+`GET /library/page/{category}` accepts `completion=all|unfinished|finished`,
+`unrated`, and `has_progress`. Filters combine with text search before counting,
+sorting, focus priority, and pagination. Existing responses remain compatible.
+Each category keeps its view in page memory; Clear search & filters preserves
+sorting. Explicit item navigation and opening an imported category clear that
+destination's filters. Logout and authentication changes clear browsing state,
+and old responses cannot replace a newer view or restart an expired session.
+
+An active inline edit blocks filter changes. Pending list reads temporarily
+disable row actions so a new edit cannot be replaced by the response. Saving or
+clearing progress refreshes an active saved-progress view after any older read,
+with navigation, authentication, and edit guards. These controls are read-only;
+they add no migrations, bulk changes, analytics events, or publishing changes.
+
+The public demo and Guides page show Books → Read → Unrated using a fictional
+title. This is a usability improvement, not evidence of AdSense approval.
+
+Release verification: all 296 frontend tests and 88 focused backend tests passed,
+including filtering, library performance, progress lifecycle/integration, static
+security, and public-guide accuracy. JavaScript syntax and patch whitespace
+checks passed. Backend runs used isolated SQLite with dotenv disabled.
+Disposable browser checks covered desktop, 768px tablet and 320px mobile;
+light/dark filters; pagination beyond 50 titles; category state; empty states;
+exact-item navigation; editing an unrated title to a zero rating; and saving a
+checkpoint while preserving the filtered view. The private note remained intact.
+The demo passed desktop/320px checks, empty-state keyboard reset, and signup
+handoff tests. Progress clearing and request races are covered by automated
+tests. No production data or schema was accessed or changed; nothing was deployed.
+
 ## Verification
 
 Run the full suite against an isolated database. Set these before importing the

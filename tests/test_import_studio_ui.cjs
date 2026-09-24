@@ -479,7 +479,7 @@ test('the application refresh bridge invalidates imported library pages and resp
   Object.assign(s.context, {
     getTabButton: category => tabs.get(category),
     invalidateLibrarySearchIndex: () => {invalidated++;},
-    categoryStatsCache: stats, libraryPages: pages,
+    categoryStatsCache: stats, libraryPages: pages, libraryFilters: new Map(),
     scheduleLibraryLaunchpadRefresh: () => {scheduled++;},
     currentTab: 'books', editingRowId: null,
     loadMovies: async () => {}, loadTVShows: async () => {}, loadAnime: async () => {},
@@ -535,7 +535,7 @@ function setupImportRefreshRace(category = 'books', bindControls = false) {
   }
   Object.assign(s.context, {
     getTabButton: () => tab,
-    invalidateLibrarySearchIndex() {}, categoryStatsCache: {}, libraryPages: new Map(),
+    invalidateLibrarySearchIndex() {}, categoryStatsCache: {}, libraryPages: new Map(), libraryFilters: new Map(),
     scheduleLibraryLaunchpadRefresh() {}, currentTab: category, editingRowId: null,
     libraryPageConfig: name => [null, null, s.context[loaders[name]]],
     LIBRARY_SEARCH_SOURCES: [{tab: category, input: search.id}],

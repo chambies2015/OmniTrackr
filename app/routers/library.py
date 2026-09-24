@@ -1,4 +1,6 @@
 """Bounded, private library browsing and cross-media search."""
+from typing import Literal
+
 from fastapi import APIRouter, Depends, HTTPException, Query, Response
 from sqlalchemy import String, case, cast, func, or_
 from sqlalchemy.orm import Session
@@ -57,15 +59,40 @@ def library_page(
     search: str = Query("", max_length=500), sort_by: str = Query("", max_length=30),
     order: str = Query("", max_length=10), offset: int = Query(0, ge=0, le=2147483647),
     limit: int = Query(50, ge=1, le=100), focus_id: int | None = Query(None, ge=1),
+    completion: Literal["all", "unfinished", "finished"] = Query("all"),
+    unrated: bool = Query(False), has_progress: bool = Query(False),
     current_user: models.User = Depends(get_current_user), db: Session = Depends(get_db),
 ):
     response.headers["Cache-Control"] = "private, no-store"
     if category not in CATEGORIES:
         raise HTTPException(status_code=404, detail="Unknown media category")
-    model, schema, _, _, fields = CATEGORIES[category]
+    if has_progress and category not in {"tv-shows", "anime", "books"}:
+        raise HTTPException(
+            status_code=422, detail="Saved progress is available for TV shows, anime, and books",
+            headers={"Cache-Control": "private, no-store"},
+        )
+    model, schema, _, completion_field, fields = CATEGORIES[category]
     query = db.query(model).filter(model.user_id == current_user.id)
     if search:
         query = query.filter(or_(*(getattr(model, field).ilike(f"%{search}%") for field in fields)))
+    completed = getattr(model, completion_field)
+    if completion == "finished":
+        query = query.filter(completed.is_(True))
+    elif completion == "unfinished":
+        query = query.filter(or_(completed.is_(False), completed.is_(None)))
+    if unrated:
+        query = query.filter(model.rating.is_(None))
+    if has_progress:
+        # A cleared checkpoint retains its row for revision safety. Only active
+        # checkpoints of this category and owner qualify; EXISTS avoids joins
+        # changing the result count or pagination.
+        checkpoint = models.ProgressCheckpoint
+        query = query.filter(db.query(checkpoint.id).filter(
+            checkpoint.user_id == current_user.id,
+            checkpoint.category == category,
+            checkpoint.item_id == model.id,
+            checkpoint.unit.is_not(None),
+        ).exists())
     total = query.count()
     # A direct item navigation can surface an exact ID even among duplicate titles.
     if focus_id is not None:

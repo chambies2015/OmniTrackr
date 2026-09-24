@@ -9,13 +9,14 @@ function setup() {
   const timers = [];
   const context = vm.createContext({
     URL, isLocal: false, location: { origin: 'http://localhost' }, API_BASE: '',
-    LIBRARY_PAGE_SIZE: 50, libraryPages: new Map(),
+    LIBRARY_PAGE_SIZE: 50, libraryPages: new Map(), libraryFilters: new Map(), libraryBrowseEpoch: 0,
     LIBRARY_SEARCH_SOURCES: [{ tab: 'movies', input: 'movieSearch' }],
     document: { getElementById: id => elements[id] },
     libraryPageConfig: () => ['movieTable', 'movieSort', () => { context.reloads++; }],
     renderLibraryPager: (...args) => { context.pager = args; },
     setTimeout: callback => timers.push(callback), reloads: 0,
   });
+  vm.runInContext(source.slice(source.indexOf('function getLibraryFilters('), source.indexOf('function renderLibraryFilters(')), context);
   vm.runInContext(source.slice(source.indexOf('async function fetchLibraryPage('), source.indexOf('const posterFetchInProgress')), context);
   return { context, elements, timers };
 }
@@ -68,7 +69,7 @@ test('page failure reports an error and does not pretend the library is empty', 
 test('exact navigation priority is cleared when the user changes their search', async () => {
   const { context, elements } = setup();
   const urls = [];
-  context.libraryPages.set('movies', { offset: 0, total: 100, signature: '["",""]', focusId: 99 });
+  context.libraryPages.set('movies', { offset: 0, total: 100, signature: context.libraryPageSignature('movies'), focusId: 99 });
   context.authenticatedFetch = async url => {
     urls.push(new URL(url, 'http://localhost'));
     return { ok: true, json: async () => ({ items: [], total: 100, offset: 0 }) };

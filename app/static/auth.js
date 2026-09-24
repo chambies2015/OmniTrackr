@@ -159,6 +159,7 @@ function clearAuth({ preserveReturn = false } = {}) {
     window.OmniProgress?.reset();
     window.OmniImportStudio?.reset();
     window.resetDailyDashboard?.();
+    window.resetLibraryBrowsing?.();
     if (!preserveReturn) clearDiscoverAuthReturn();
     clearDemoStartIntent();
     try {

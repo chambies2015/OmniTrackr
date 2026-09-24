@@ -193,6 +193,70 @@ body.app-shell .library-panel > .library-toolbar {
   background: transparent;
 }
 body.app-shell .library-toolbar button.library-utility { min-height: 44px; white-space: nowrap; }
+body.app-shell .library-filters {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 10px 16px;
+  margin: -8px 0 22px;
+}
+body.app-shell .library-filters:empty { display: none; }
+body.app-shell .library-filter-completion {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+  padding: 4px;
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  background: var(--surface-muted);
+}
+body.app-shell .library-filters button {
+  min-height: 40px;
+  padding: 8px 12px;
+  border: 1px solid transparent;
+  border-radius: 7px;
+  background: transparent;
+  color: var(--fg-secondary);
+  font: inherit;
+  font-size: .8rem;
+  font-weight: 600;
+  cursor: pointer;
+  box-shadow: none;
+  transform: none;
+}
+body.app-shell .library-filters button:hover { color: var(--fg); background: var(--surface-hover); }
+body.app-shell .library-filter-completion button[aria-pressed="true"] {
+  color: var(--primary);
+  background: var(--accent-soft);
+  border-color: var(--primary);
+}
+body.app-shell .library-filter-option {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  min-height: 44px;
+  margin: 0;
+  color: var(--fg-secondary);
+  font-size: .82rem;
+  cursor: pointer;
+}
+body.app-shell .library-filter-option input {
+  width: 18px;
+  height: 18px;
+  margin: 0;
+  accent-color: var(--accent-solid);
+}
+body.app-shell .library-filter-option input:focus-visible { outline: 2px solid var(--primary); outline-offset: 3px; }
+body.app-shell .library-filters .library-filter-reset { margin-left: auto; color: var(--primary); }
+body.app-shell .library-filters .library-filter-reset:disabled { opacity: .5; cursor: default; background: transparent; }
+body.app-shell .library-filter-status {
+  flex-basis: 100%;
+  margin: 0;
+  min-height: 1.5em;
+  color: var(--fg-secondary);
+  font-size: .8rem;
+  line-height: 1.5;
+}
 body.app-shell .library-table-wrap {
   border: 1px solid var(--border);
   border-radius: 10px;
@@ -321,6 +385,10 @@ body.app-shell .library-pager [role="status"] { font-size: .82rem; }
   body.app-shell .library-pager { justify-content: flex-start; }
 }
 @media (max-width: 600px) {
+  body.app-shell .library-filters { gap: 8px 14px; }
+  body.app-shell .library-filter-completion { width: 100%; }
+  body.app-shell .library-filter-completion button { flex: 1; padding-inline: 8px; min-height: 44px; }
+  body.app-shell .library-filters .library-filter-reset { margin-left: 0; padding-left: 0; min-height: 44px; }
   body.app-shell .card.library-add-panel { padding: 4px 16px; }
   body.app-shell .card.library-panel { padding: 18px 14px; }
   body.app-shell .library-panel > .library-heading { gap: 10px; margin-bottom: 18px; }

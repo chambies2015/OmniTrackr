@@ -60,7 +60,7 @@ function setup(url = 'https://omnitrackr.xyz/?library_category=books&library_ite
     currentTab: 'movies', editingRowId: options.editingRowId ?? null,
     isLoadingMovies: false, isLoadingTVShows: false, isLoadingAnime: false,
     isLoadingVideoGames: false, isLoadingMusic: false, isLoadingBooks: false,
-    libraryPages: new Map(),
+    libraryPages: new Map(), libraryFilters: new Map(), renderLibraryFilters() {},
     dashboardStartupLayoutReady: options.layoutReady || Promise.resolve(),
     dashboardTabVisibilityReady: options.visibilityReady || Promise.resolve(),
     document: {
@@ -98,6 +98,7 @@ function setup(url = 'https://omnitrackr.xyz/?library_category=books&library_ite
     },
     openCollectionFromLocation: () => { context.collectionCalls = (context.collectionCalls || 0) + 1; return true; },
   });
+  vm.runInContext(source.slice(source.indexOf('function getLibraryFilters('), source.indexOf('function renderLibraryFilters(')), context);
   vm.runInContext(source.slice(source.indexOf('const LIBRARY_SEARCH_SOURCES ='), source.indexOf('let librarySearchIndex =')), context);
   vm.runInContext(source.slice(source.indexOf('function consumeLibraryNavigationTarget('), source.indexOf('async function openCollectionFromLocation(')), context);
   vm.runInContext(source.slice(source.indexOf('async function openLibraryItem('), source.indexOf('function renderNextUpQueue(')), context);

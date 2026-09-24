@@ -43,7 +43,7 @@ function setup() {
     isLoadingMovies: false, isLoadingTVShows: false, isLoadingAnime: false,
     isLoadingVideoGames: false, isLoadingMusic: false, isLoadingBooks: false,
     LIBRARY_SEARCH_SOURCES: categories.map(tab => ({ tab, input: tab + 'Search' })),
-    libraryPages: new Map(), libraryPageConfig: tab => [tab + 'Table', tab + 'Sort'],
+    libraryPages: new Map(), libraryFilters: new Map(), renderLibraryFilters() {}, libraryPageConfig: tab => [tab + 'Table', tab + 'Sort'],
     getTabButton: tab => tabs.get(tab),
     window: {}, alert: value => alerts.push(value),
     document: {
@@ -56,6 +56,7 @@ function setup() {
     authenticatedFetch: async (url, options) => { requests.push({ url, options }); return response([]); },
   });
   context.document.activeElement = get('outside');
+  vm.runInContext(source.slice(source.indexOf('function getLibraryFilters('), source.indexOf('function renderLibraryFilters(')), context);
   vm.runInContext(source.match(/const dailyDashboardState = .*;/)[0], context);
   vm.runInContext(source.slice(source.indexOf('function dailyDashboardSessionKey('), source.indexOf('const dashboardLayoutRefreshes')), context);
   const refreshPick = context.refreshTodaysPick;

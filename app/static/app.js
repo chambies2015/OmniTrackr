@@ -22,6 +22,8 @@ let librarySearchRequest = 0;
 let librarySearchTimer;
 let librarySearchController;
 const libraryPages = new Map();
+const libraryFilters = new Map();
+let libraryBrowseEpoch = 0;
 const LIBRARY_PAGE_SIZE = 50;
 const dailyDashboardState = { items: [], expanded: false, epoch: 0, openRequest: 0, mutationPending: false, mutationRequest: 0, refreshAfterMutation: false };
 
@@ -35,8 +37,130 @@ function libraryPageConfig(category) {
   }[category];
 }
 
+function getLibraryFilters(category) {
+  return libraryFilters.get(category) || { completion: 'all', unrated: false, hasProgress: false };
+}
+
+function libraryPageSignature(category) {
+  const source = LIBRARY_SEARCH_SOURCES.find(entry => entry.tab === category);
+  const [, sortId] = libraryPageConfig(category);
+  const filters = getLibraryFilters(category);
+  return JSON.stringify([document.getElementById(source.input).value, document.getElementById(sortId).value,
+    filters.completion, filters.unrated, filters.hasProgress]);
+}
+
+function renderLibraryFilters(category) {
+  const [tableId] = libraryPageConfig(category);
+  const host = document.getElementById(`${tableId}Filters`);
+  if (!host) return;
+  const source = LIBRARY_SEARCH_SOURCES.find(entry => entry.tab === category);
+  if (!host.childElementCount) {
+    const labels = {
+      movies: ['Not watched', 'Watched'], 'tv-shows': ['Not finished', 'Finished'],
+      anime: ['Not finished', 'Finished'], 'video-games': ['Not played', 'Played'],
+      music: ['Not listened', 'Listened'], books: ['Not read', 'Read'],
+    }[category];
+    const group = document.createElement('div');
+    group.className = 'library-filter-completion';
+    group.setAttribute('role', 'group');
+    group.setAttribute('aria-label', 'Completion status');
+    for (const [value, label] of [['all', 'All'], ['unfinished', labels[0]], ['finished', labels[1]]]) {
+      const button = document.createElement('button');
+      button.type = 'button'; button.textContent = label; button.dataset.completion = value;
+      button.addEventListener('click', () => applyLibraryFilters(category, { completion: value }));
+      group.appendChild(button);
+    }
+    host.appendChild(group);
+    const options = [['unrated', 'Unrated']];
+    if (['tv-shows', 'anime', 'books'].includes(category)) options.push(['hasProgress', 'Has saved progress']);
+    for (const [key, labelText] of options) {
+      const label = document.createElement('label');
+      label.className = 'library-filter-option';
+      const input = document.createElement('input');
+      input.type = 'checkbox'; input.dataset.libraryFilter = key;
+      input.addEventListener('change', () => {
+        applyLibraryFilters(category, { [key]: input.checked });
+        renderLibraryFilters(category);
+      });
+      const text = document.createElement('span'); text.textContent = labelText;
+      label.append(input, text); host.appendChild(label);
+    }
+    const reset = document.createElement('button');
+    reset.type = 'button'; reset.className = 'library-filter-reset'; reset.textContent = 'Clear search & filters';
+    reset.addEventListener('click', () => applyLibraryFilters(category,
+      { completion: 'all', unrated: false, hasProgress: false }, { clearSearch: true }));
+    host.appendChild(reset);
+    const feedback = document.createElement('p');
+    feedback.id = `${tableId}FilterStatus`; feedback.className = 'library-filter-status';
+    feedback.setAttribute('role', 'status'); host.appendChild(feedback);
+  }
+  const filters = getLibraryFilters(category);
+  host.querySelectorAll('[data-completion]').forEach(button => {
+    button.setAttribute('aria-pressed', String(button.dataset.completion === filters.completion));
+  });
+  host.querySelectorAll('[data-library-filter]').forEach(input => { input.checked = filters[input.dataset.libraryFilter]; });
+  host.querySelector('.library-filter-reset').disabled = filters.completion === 'all' && !filters.unrated
+    && !filters.hasProgress && !document.getElementById(source.input).value;
+}
+
+function applyLibraryFilters(category, changes, { clearSearch = false } = {}) {
+  if (!libraryPageConfig(category)) return false;
+  if (editingRowId !== null) {
+    alert('Save or cancel your current edit before changing filters.');
+    return false;
+  }
+  const previous = getLibraryFilters(category);
+  const next = { ...previous, ...changes };
+  if (!['all', 'unfinished', 'finished'].includes(next.completion)) return false;
+  next.unrated = !!next.unrated;
+  next.hasProgress = ['tv-shows', 'anime', 'books'].includes(category) && !!next.hasProgress;
+  const source = LIBRARY_SEARCH_SOURCES.find(entry => entry.tab === category);
+  if (clearSearch) document.getElementById(source.input).value = '';
+  libraryFilters.set(category, next);
+  const oldPage = libraryPages.get(category);
+  libraryPages.set(category, { offset: 0, total: 0, signature: libraryPageSignature(category), loadedKey: oldPage?.loadedKey });
+  renderLibraryFilters(category);
+  libraryPageConfig(category)[2]();
+  return true;
+}
+
+function resetLibraryBrowsing() {
+  libraryBrowseEpoch++;
+  libraryFilters.clear();
+  libraryPages.clear();
+  for (const source of LIBRARY_SEARCH_SOURCES) {
+    const input = document.getElementById(source.input);
+    if (input) input.value = '';
+    const [tableId, sortId] = libraryPageConfig(source.tab);
+    const sort = document.getElementById(sortId);
+    if (sort) sort.value = '';
+    renderLibraryFilters(source.tab);
+    const status = document.getElementById(`${tableId}FilterStatus`);
+    if (status) status.textContent = '';
+  }
+}
+window.resetLibraryBrowsing = resetLibraryBrowsing;
+window.addEventListener('storage', event => {
+  if (event.key === null || ['omnitrackr_user', 'omnitrackr_token'].includes(event.key)) resetLibraryBrowsing();
+});
+
 function renderLibraryPager(category, page, loading = false, error = '') {
   const [tableId] = libraryPageConfig(category);
+  const table = document.getElementById(tableId);
+  table.setAttribute('aria-busy', String(loading));
+  if (editingRowId === null) {
+    table.querySelectorAll('button').forEach(button => { button.disabled = loading; });
+  }
+  renderLibraryFilters(category);
+  const feedback = document.getElementById(`${tableId}FilterStatus`);
+  const source = LIBRARY_SEARCH_SOURCES.find(entry => entry.tab === category);
+  const filters = getLibraryFilters(category);
+  const filtered = filters.completion !== 'all' || filters.unrated || filters.hasProgress
+    || !!document.getElementById(source.input).value;
+  if (feedback) feedback.textContent = error || (loading ? 'Loading titles…' : page.total
+    ? `${page.total} ${page.total === 1 ? 'title' : 'titles'}${filtered ? (page.total === 1 ? ' matches your view' : ' match your view') : ' in this library'}.`
+    : filtered ? 'No titles match. Try another search or clear your filters.'
+      : 'Your library is ready for its first title. Use Add anything to get started.');
   let pager = document.getElementById(`${tableId}Pager`);
   if (!pager) {
     pager = document.createElement('nav');
@@ -68,9 +192,8 @@ function renderLibraryPager(category, page, loading = false, error = '') {
 async function fetchLibraryPage(url) {
   const parsed = new URL(url, isLocal ? API_BASE : location.origin);
   const category = parsed.pathname.split('/').filter(Boolean)[0];
-  const source = LIBRARY_SEARCH_SOURCES.find(entry => entry.tab === category);
-  const [, sortId] = libraryPageConfig(category);
-  const fingerprint = () => JSON.stringify([document.getElementById(source.input).value, document.getElementById(sortId).value]);
+  const epoch = libraryBrowseEpoch;
+  const fingerprint = () => libraryPageSignature(category);
   const signature = fingerprint();
   let page = libraryPages.get(category);
   if (!page || page.signature !== signature) {
@@ -79,14 +202,19 @@ async function fetchLibraryPage(url) {
   }
   parsed.searchParams.set('offset', String(page.offset));
   parsed.searchParams.set('limit', String(LIBRARY_PAGE_SIZE));
+  const filters = getLibraryFilters(category);
+  parsed.searchParams.set('completion', filters.completion);
+  parsed.searchParams.set('unrated', String(filters.unrated));
+  parsed.searchParams.set('has_progress', String(filters.hasProgress));
   if (page.focusId) parsed.searchParams.set('focus_id', String(page.focusId));
   renderLibraryPager(category, page, true);
   try {
     const response = await authenticatedFetch(`${API_BASE}/library/page/${category}?${parsed.searchParams}`);
     if (!response.ok) throw new Error('Could not load titles. Use Refresh to try again.');
     const data = await response.json();
-    if (signature !== fingerprint()) {
-      setTimeout(() => libraryPageConfig(category)[2](), 0);
+    if (epoch !== libraryBrowseEpoch) return { ok: false };
+    if (signature !== fingerprint() || libraryPages.get(category) !== page) {
+      setTimeout(() => { if (epoch === libraryBrowseEpoch) libraryPageConfig(category)[2](); }, 0);
       return { ok: false };
     }
     page.offset = data.offset; page.total = data.total;
@@ -97,6 +225,11 @@ async function fetchLibraryPage(url) {
     renderLibraryPager(category, page);
     return { ok: true, total: data.total, json: async () => data.items };
   } catch (error) {
+    if (epoch !== libraryBrowseEpoch) return { ok: false };
+    if (signature !== fingerprint() || libraryPages.get(category) !== page) {
+      setTimeout(() => { if (epoch === libraryBrowseEpoch) libraryPageConfig(category)[2](); }, 0);
+      return { ok: false };
+    }
     renderLibraryPager(category, page, false, 'Could not load titles. Use Refresh to try again.');
     return { ok: false };
   }
@@ -8969,10 +9102,11 @@ async function openLibraryItem(pick, options = {}) {
     }
     if (!canContinue(startingTab)) return false;
     if (busy()) throw new Error('The library is still loading. Please try opening the title again.');
+    libraryFilters.delete(source.tab);
     document.getElementById(source.input).value = pick.title;
-    const [, sortId] = libraryPageConfig(source.tab);
     libraryPages.set(source.tab, { offset: 0, total: 0, focusId: Number(pick.id),
-      signature: JSON.stringify([pick.title, document.getElementById(sortId).value]) });
+      signature: libraryPageSignature(source.tab) });
+    renderLibraryFilters(source.tab);
     await switchTab(source.tab);
     if (!canContinue(source.tab)) return false;
     if (options.focusReady) await options.focusReady;
@@ -9422,6 +9556,7 @@ if (window.OmniImportStudio) {
     }
     const source = LIBRARY_SEARCH_SOURCES.find(entry => entry.tab === category);
     if (!source) return;
+    libraryFilters.delete(category);
     document.getElementById(source.input).value = '';
     libraryPages.delete(category);
     window.closeAccountModal();
@@ -10869,6 +11004,25 @@ document.addEventListener('DOMContentLoaded', () => {
   }
 });
 
+async function refreshLibraryProgressView(payload, shouldContinue) {
+  const category = payload?.category;
+  if (!['tv-shows', 'anime', 'books'].includes(category)) return;
+  const epoch = libraryBrowseEpoch;
+  const current = () => epoch === libraryBrowseEpoch && shouldContinue()
+    && currentTab === category && editingRowId === null && getLibraryFilters(category).hasProgress;
+  if (!current()) return;
+  const busy = () => ({ 'tv-shows': isLoadingTVShows, anime: isLoadingAnime, books: isLoadingBooks })[category];
+  // Let an older read finish before requesting the post-save filtered view.
+  // Calling the loader while it is busy would otherwise discard this refresh.
+  const deadline = Date.now() + 10000;
+  while (busy() && Date.now() < deadline) {
+    await new Promise(resolve => setTimeout(resolve, 50));
+    if (!current()) return;
+  }
+  if (!current() || busy()) return;
+  return libraryPageConfig(category)[2]();
+}
+
 window.OmniProgress?.configure({
   base: API_BASE,
   request: (...args) => authenticatedFetch(...args),
@@ -10884,9 +11038,12 @@ window.OmniProgress?.configure({
     alert('Save or cancel your current title edit before updating progress.');
     return false;
   },
-  onSaved: (_payload, shouldContinue) => {
+  onSaved: (payload, shouldContinue) => {
     if (!shouldContinue()) return;
-    return Promise.allSettled([refreshNextUpQueue(shouldContinue), refreshLibraryPulse(shouldContinue)]);
+    return Promise.allSettled([
+      refreshNextUpQueue(shouldContinue), refreshLibraryPulse(shouldContinue),
+      refreshLibraryProgressView(payload, shouldContinue),
+    ]);
   },
 });
 

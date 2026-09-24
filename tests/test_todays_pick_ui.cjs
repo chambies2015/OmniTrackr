@@ -32,9 +32,10 @@ function setup() {
     todaysPickOffset: 0, todaysPickCandidateCount: 0, todaysPickRequest: 0,
     todaysPickSelection: null, returnDeckActive: false,
     editingRowId: null,
-    libraryPages: new Map(),
+    libraryPages: new Map(), libraryFilters: new Map(), renderLibraryFilters() {},
     libraryPageConfig: tab => [tab + 'Table', tab + 'Sort'],
   });
+  vm.runInContext(source.slice(source.indexOf('function getLibraryFilters('), source.indexOf('function renderLibraryFilters(')), context);
   vm.runInContext(source.slice(source.indexOf('function renderTodaysPick('), source.indexOf('function renderNextUpQueue(')), context);
   return { context, element, row, categories };
 }

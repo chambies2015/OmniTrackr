@@ -2,20 +2,20 @@
   'use strict';
 
   const categories = {
-    movie: {label: 'Movie', plural: 'movies', finished: 'Watched', artwork: 'AN IMAGINED FILM'},
-    tv_show: {label: 'TV show', plural: 'TV shows', finished: 'Watched', artwork: 'AN IMAGINED SERIES'},
-    anime: {label: 'Anime', plural: 'anime', finished: 'Watched', artwork: 'AN IMAGINED ANIME'},
-    video_game: {label: 'Game', plural: 'games', finished: 'Played', artwork: 'AN IMAGINED GAME'},
-    music: {label: 'Music', plural: 'music', finished: 'Listened', artwork: 'AN IMAGINED ALBUM'},
-    book: {label: 'Book', plural: 'books', finished: 'Read', artwork: 'AN IMAGINED BOOK'},
+    movie: {label: 'Movie', plural: 'movies', finished: 'Watched', unfinished: 'Unwatched', artwork: 'AN IMAGINED FILM'},
+    tv_show: {label: 'TV show', plural: 'TV shows', finished: 'Watched', unfinished: 'Unwatched', artwork: 'AN IMAGINED SERIES'},
+    anime: {label: 'Anime', plural: 'anime', finished: 'Watched', unfinished: 'Unwatched', artwork: 'AN IMAGINED ANIME'},
+    video_game: {label: 'Game', plural: 'games', finished: 'Played', unfinished: 'Unplayed', artwork: 'AN IMAGINED GAME'},
+    music: {label: 'Music', plural: 'music', finished: 'Listened', unfinished: 'Not listened', artwork: 'AN IMAGINED ALBUM'},
+    book: {label: 'Book', plural: 'books', finished: 'Read', unfinished: 'Unread', artwork: 'AN IMAGINED BOOK'},
   };
   const originals = [
     {id: 'lantern-atlas', title: 'The Lantern Atlas', cover: 'THE\nLANTERN\nATLAS', category: 'movie', description: 'A cartographer follows a trail of lights through a city that changes after sunset.', finished: true, rating: 9, note: 'A world I would happily get lost in again.'},
     {id: 'northbound', title: 'Northbound', cover: 'NORTH\nBOUND', category: 'tv_show', description: 'Night-shift strangers find their stories crossing on the last train home.', finished: false, rating: null, note: '', progress: {unit: 'episode', position: 4, season: 1, note: 'Next time: the station reunion.'}},
-    {id: 'quiet-observatory', title: 'The Quiet Observatory', cover: 'THE QUIET\nOBSERVATORY', category: 'anime', description: 'Two apprentices map a sky where each constellation holds a forgotten story.', finished: true, rating: 8, note: 'Loved the quiet moments between adventures.', progress: {unit: 'episode', position: 12, season: 1, note: ''}},
+    {id: 'quiet-observatory', title: 'The Quiet Observatory', cover: 'THE QUIET\nOBSERVATORY', category: 'anime', description: 'Two apprentices map a sky where each constellation holds a forgotten story.', finished: false, rating: 8, note: 'Loved the quiet moments between adventures.', progress: {unit: 'episode', position: 12, season: 1, note: ''}},
     {id: 'garden-circuit', title: 'Garden Circuit', cover: 'GARDEN\nCIRCUIT', category: 'video_game', description: 'Bring a sleeping greenhouse to life, one small mechanical puzzle at a time.', finished: false, rating: null, note: ''},
     {id: 'after-rain', title: 'After the Rain', cover: 'AFTER\nTHE RAIN', category: 'music', description: 'Warm piano, soft percussion, and a little breathing room for a slow Sunday.', finished: true, rating: 8.5, note: 'The soundtrack for an unhurried morning.'},
-    {id: 'letters-tomorrow', title: 'Letters from Tomorrow', cover: 'LETTERS FROM\nTOMORROW', category: 'book', description: 'A bookshop owner receives letters dated one day ahead and has to decide what to change.', finished: false, rating: null, note: '', progress: {unit: 'page', position: 84, season: null, note: 'Pick up at the second letter.'}},
+    {id: 'letters-tomorrow', title: 'Letters from Tomorrow', cover: 'LETTERS FROM\nTOMORROW', category: 'book', description: 'A bookshop owner receives letters dated one day ahead and has to decide what to change.', finished: true, rating: null, note: '', progress: {unit: 'page', position: 84, season: null, note: 'The second letter is worth revisiting.'}},
   ];
   const catalog = [
     {id: 'last-lighthouse', title: 'The Last Lighthouse', cover: 'THE LAST\nLIGHTHOUSE', category: 'movie', description: 'An unlikely crew keeps a coastal light shining through one extraordinary winter.'},
@@ -30,6 +30,9 @@
   const freshSamples = () => originals.map(item => ({...item, progress: item.progress ? {...item.progress} : null}));
   let items = freshSamples();
   let filter = 'all';
+  let completion = 'all';
+  let unratedOnly = false;
+  let progressOnly = false;
   let editingId = null;
   const element = (tag, className, text) => {
     const node = document.createElement(tag);
@@ -73,8 +76,15 @@
   function renderCards() {
     const cards = get('demoCards');
     cards.replaceChildren();
+    const inCategory = items.filter(item => filter === 'all' || item.category === filter);
+    const visible = inCategory.filter(item =>
+      (completion === 'all' || item.finished === (completion === 'finished')) &&
+      (!unratedOnly || item.rating === null) &&
+      (!progressOnly || (supportsProgress(item) && item.progress !== null && item.progress !== undefined)));
+    get('demoResultCount').textContent = `Showing ${visible.length} of ${inCategory.length} sample ${inCategory.length === 1 ? 'title' : 'titles'}`;
+    get('demoEmpty').hidden = visible.length !== 0;
     items.forEach((item, index) => {
-      if (filter !== 'all' && item.category !== filter) return;
+      if (!visible.includes(item)) return;
       const category = categories[item.category];
       const card = element('article', 'demo-card');
       card.dataset.sampleId = item.id;
@@ -107,6 +117,35 @@
     get('demoFilters').querySelectorAll('button').forEach(button => {
       button.setAttribute('aria-pressed', String(button.dataset.category === filter));
     });
+    get('demoCompletionFilters').querySelectorAll('button').forEach(button => {
+      button.setAttribute('aria-pressed', String(button.dataset.completion === completion));
+      button.textContent = button.dataset.completion === 'all' ? 'All' :
+        filter === 'all' ? (button.dataset.completion === 'finished' ? 'Finished' : 'Unfinished') :
+        categories[filter][button.dataset.completion];
+    });
+    get('demoUnrated').setAttribute('aria-pressed', String(unratedOnly));
+    get('demoHasProgress').hidden = !['tv_show', 'anime', 'book'].includes(filter);
+    get('demoHasProgress').setAttribute('aria-pressed', String(progressOnly));
+    get('demoClearFilters').disabled = completion === 'all' && !unratedOnly && !progressOnly;
+  }
+
+  function clearQuickFilters() {
+    completion = 'all';
+    unratedOnly = false;
+    progressOnly = false;
+    hideEditor();
+    hideCatalog();
+    renderFilters();
+    renderCards();
+    announce('Filters cleared. Statistics still cover the whole sample library.');
+  }
+
+  function updateQuickFilters() {
+    hideEditor();
+    hideCatalog();
+    renderFilters();
+    renderCards();
+    announce('Filters updated. Statistics still cover the whole sample library.');
   }
 
   function renderCatalog() {
@@ -216,9 +255,7 @@
     items.push({...sample, finished: false, rating: null, note: ''});
     // Show the new title even when a different category was selected.
     filter = sample.category;
-    hideEditor();
-    hideCatalog();
-    renderFilters();
+    clearQuickFilters();
     renderStats();
     renderCards();
     announce(`Added “${sample.title}” to your sample library. Try Edit sample to give it a rating.`);
@@ -278,21 +315,41 @@
       const selected = button.dataset.category;
       if (selected !== 'all' && !Object.hasOwn(categories, selected)) return;
       filter = selected;
+      if (!['tv_show', 'anime', 'book'].includes(filter)) progressOnly = false;
       hideEditor();
       hideCatalog();
       renderFilters();
       renderCards();
-      const visible = items.filter(item => filter === 'all' || item.category === filter).length;
+      const visible = get('demoCards').children.length;
       const group = filter === 'all' ? 'All media' : categories[filter].plural[0].toUpperCase() + categories[filter].plural.slice(1);
       announce(`${group}: ${visible} sample ${visible === 1 ? 'title' : 'titles'}. Statistics still cover the whole sample library.`);
     });
   });
+  get('demoCompletionFilters').querySelectorAll('button').forEach(button => {
+    button.addEventListener('click', () => {
+      if (!['all', 'unfinished', 'finished'].includes(button.dataset.completion)) return;
+      completion = button.dataset.completion;
+      updateQuickFilters();
+    });
+  });
+  get('demoUnrated').addEventListener('click', () => {
+    unratedOnly = !unratedOnly;
+    updateQuickFilters();
+  });
+  get('demoHasProgress').addEventListener('click', () => {
+    if (!['tv_show', 'anime', 'book'].includes(filter)) return;
+    progressOnly = !progressOnly;
+    updateQuickFilters();
+  });
+  get('demoClearFilters').addEventListener('click', clearQuickFilters);
+  get('demoEmptyClear').addEventListener('click', () => {
+    clearQuickFilters();
+    get('demoCompletionAll').focus();
+  });
   get('demoReset').addEventListener('click', () => {
     items = freshSamples();
     filter = 'all';
-    hideEditor();
-    hideCatalog();
-    renderFilters();
+    clearQuickFilters();
     renderStats();
     renderCards();
     announce('Demo reset. Your original six sample titles are ready to try again.');
@@ -308,8 +365,10 @@
       get('demoAdd').focus();
     }
   });
+  renderFilters();
   renderCards();
   renderStats();
   get('demoToolbar').hidden = false;
   get('demoFilters').hidden = false;
+  get('demoQuickFilters').hidden = false;
 })();

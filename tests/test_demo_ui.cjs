@@ -37,6 +37,11 @@ function setup() {
   const filters = ['all', 'movie', 'tv_show', 'anime', 'video_game', 'music', 'book'].map(category => {
     const node = new Element('button'); node.dataset.category = category; get('demoFilters').append(node); return node;
   });
+  const completionFilters = ['all', 'unfinished', 'finished'].map(completion => {
+    const node = completion === 'all' ? get('demoCompletionAll') : new Element('button');
+    node.tagName = 'BUTTON'; node.dataset.completion = completion;
+    get('demoCompletionFilters').append(node); return node;
+  });
   ['demoToolbar', 'demoFilters', 'demoCatalog', 'demoEditor', 'demoEditError'].forEach(id => {get(id).hidden = true;});
   const events = new Map();
   const forbidden = name => () => {sideEffects.push(name); throw Error(`Unexpected ${name}`);};
@@ -52,6 +57,8 @@ function setup() {
     get, events, sideEffects, descendants,
     filter(category) {filters.find(node => node.dataset.category === category).trigger('click');},
     filterButton: category => filters.find(node => node.dataset.category === category),
+    completion(value) {completionFilters.find(node => node.dataset.completion === value).trigger('click');},
+    completionButton: value => completionFilters.find(node => node.dataset.completion === value),
     cards: () => get('demoCards').children,
     card: id => get('demoCards').children.find(node => node.dataset.sampleId === id),
     edit(id) {get(`demoEdit-${id}`).trigger('click');},
@@ -91,6 +98,120 @@ test('category filtering reports visible count while keeping whole-library stati
   assert.equal(s.filterButton('all').attributes['aria-pressed'], 'false');
   s.filter('all');
   assert.equal(s.cards().length, 6);
+});
+
+test('completion and unrated filters combine across categories without changing whole-library statistics', () => {
+  const s = setup();
+  s.completion('finished');
+  assert.deepEqual(s.cards().map(card => card.dataset.sampleId), ['lantern-atlas', 'after-rain', 'letters-tomorrow']);
+  s.get('demoUnrated').trigger('click');
+  assert.deepEqual(s.cards().map(card => card.dataset.sampleId), ['letters-tomorrow']);
+  assert.equal(s.get('demoResultCount').textContent, 'Showing 1 of 6 sample titles');
+  assert.equal(s.get('demoTotal').textContent, '6');
+  assert.equal(s.get('demoFinished').textContent, '3');
+  assert.equal(s.get('demoAverage').textContent, '8.5 / 10');
+  s.filter('book');
+  assert.equal(s.get('demoResultCount').textContent, 'Showing 1 of 1 sample title');
+  assert.equal(s.completionButton('finished').textContent, 'Read');
+  assert.equal(s.completionButton('unfinished').textContent, 'Unread');
+  assert.equal(s.completionButton('finished').attributes['aria-pressed'], 'true');
+  assert.equal(s.get('demoUnrated').attributes['aria-pressed'], 'true');
+  assert.match(template, /Books → Read → Unrated/);
+  assert.deepEqual(s.sideEffects, []);
+});
+
+test('empty results offer a category-preserving reset with usable focus and no lost edits', () => {
+  const s = setup();
+  s.filter('book');
+  s.edit('letters-tomorrow');
+  s.get('demoEditNote').value = 'Keep this practice note';
+  s.save();
+  s.completion('unfinished');
+  assert.equal(s.cards().length, 0);
+  assert.equal(s.get('demoEmpty').hidden, false);
+  assert.equal(s.get('demoResultCount').textContent, 'Showing 0 of 1 sample title');
+  assert.equal(s.get('demoClearFilters').disabled, false);
+  s.get('demoEmptyClear').trigger('click');
+  assert.deepEqual(s.cards().map(card => card.dataset.sampleId), ['letters-tomorrow']);
+  assert.match(s.card('letters-tomorrow').textContent, /Keep this practice note/);
+  assert.equal(s.get('demoEmpty').hidden, true);
+  assert.equal(s.get('demoClearFilters').disabled, true);
+  assert.equal(s.filterButton('book').attributes['aria-pressed'], 'true');
+  assert.equal(s.active().id, 'demoCompletionAll');
+});
+
+test('saved progress filtering is available only in supported categories and combines with completion', () => {
+  const s = setup();
+  assert.equal(s.get('demoHasProgress').hidden, true);
+  s.get('demoHasProgress').trigger('click');
+  assert.equal(s.cards().length, 6);
+  s.add('midnight-diner');
+  assert.equal(s.get('demoHasProgress').hidden, false);
+  s.get('demoHasProgress').trigger('click');
+  assert.deepEqual(s.cards().map(card => card.dataset.sampleId), ['northbound']);
+  s.completion('unfinished');
+  assert.equal(s.cards().length, 1);
+  s.completion('finished');
+  assert.equal(s.cards().length, 0);
+  s.completion('all');
+  s.filter('movie');
+  assert.equal(s.get('demoHasProgress').hidden, true);
+  assert.equal(s.get('demoHasProgress').attributes['aria-pressed'], 'false');
+  assert.equal(s.cards().length, 1);
+  s.filter('tv_show');
+  assert.equal(s.cards().length, 2);
+  s.get('demoHasProgress').trigger('click');
+  s.edit('northbound');
+  s.get('demoProgressClear').trigger('click');
+  assert.equal(s.cards().length, 0);
+  assert.equal(s.get('demoEmpty').hidden, false);
+  s.get('demoProgressPosition').value = '5';
+  s.saveProgress();
+  assert.deepEqual(s.cards().map(card => card.dataset.sampleId), ['northbound']);
+});
+
+test('editing a filtered sample immediately reevaluates results and treats a zero rating as rated', () => {
+  const s = setup();
+  s.filter('book');
+  s.completion('finished');
+  s.get('demoUnrated').trigger('click');
+  s.edit('letters-tomorrow');
+  s.get('demoEditRating').value = '0';
+  s.save();
+  assert.equal(s.cards().length, 0);
+  assert.equal(s.get('demoResultCount').textContent, 'Showing 0 of 1 sample title');
+  assert.equal(s.active().id, 'demoAdd');
+  s.get('demoUnrated').trigger('click');
+  assert.match(s.card('letters-tomorrow').textContent, /Read0 \/ 10/);
+  s.edit('letters-tomorrow');
+  s.get('demoEditFinished').checked = false;
+  s.save();
+  assert.equal(s.cards().length, 0);
+  s.completion('unfinished');
+  assert.equal(s.cards().length, 1);
+});
+
+test('adding reveals the new sample and resetting restores data and every quick filter', () => {
+  const s = setup();
+  s.filter('book');
+  s.completion('finished');
+  s.get('demoUnrated').trigger('click');
+  s.get('demoHasProgress').trigger('click');
+  s.add('borrowed-summer');
+  assert.deepEqual(s.cards().map(card => card.dataset.sampleId), ['letters-tomorrow', 'borrowed-summer']);
+  assert.equal(s.completionButton('all').attributes['aria-pressed'], 'true');
+  assert.equal(s.get('demoUnrated').attributes['aria-pressed'], 'false');
+  assert.equal(s.get('demoHasProgress').attributes['aria-pressed'], 'false');
+  assert.equal(s.active().id, 'demoEdit-borrowed-summer');
+  s.completion('unfinished');
+  s.get('demoUnrated').trigger('click');
+  s.get('demoHasProgress').trigger('click');
+  s.get('demoReset').trigger('click');
+  assert.equal(s.cards().length, 6);
+  assert.equal(s.get('demoResultCount').textContent, 'Showing 6 of 6 sample titles');
+  assert.equal(s.get('demoClearFilters').disabled, true);
+  assert.equal(s.get('demoHasProgress').hidden, true);
+  assert.equal(s.completionButton('all').attributes['aria-pressed'], 'true');
 });
 
 test('adding switches to the sample category and focuses its edit action without duplicates', () => {
@@ -304,7 +425,7 @@ test('season zero, optional season, page and chapter progress are accepted witho
   s.saveProgress();
   assert.match(s.card('letters-tomorrow').textContent, /Last read: chapter 9/);
   assert.doesNotMatch(s.card('letters-tomorrow').textContent, /Last read: page/);
-  assert.match(s.card('letters-tomorrow').textContent, /Not finishedUnrated/);
+  assert.match(s.card('letters-tomorrow').textContent, /ReadUnrated/);
   assert.equal(s.get('demoFinished').textContent, '3');
   assert.deepEqual(s.sideEffects, []);
 });
@@ -360,7 +481,7 @@ test('clearing progress preserves all other fields and reset or reload restores 
   const s = setup();
   s.edit('quiet-observatory');
   s.get('demoProgressClear').trigger('click');
-  assert.match(s.card('quiet-observatory').textContent, /Watched8 \/ 10Loved the quiet moments/);
+  assert.match(s.card('quiet-observatory').textContent, /Not finished8 \/ 10Loved the quiet moments/);
   assert.match(s.card('quiet-observatory').textContent, /No checkpoint yet/);
   assert.equal(s.get('demoProgressPosition').value, '');
   assert.equal(s.get('demoProgressNote').value, '');
