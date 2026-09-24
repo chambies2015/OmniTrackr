@@ -8,6 +8,7 @@ out once. Games and books recover on retry for each new search query.
 Add --reviews for synthetic community reviews and a private existing-title match.
 Add --collections for a synthetic shared collection with an existing private book.
 Add --progress for unfinished titles with private episode and reading checkpoints.
+Add --friends N for 0 to 100 accepted synthetic friends (defaults to none).
 Add --daily-dashboard for a compact fixture with checkpoints, an eight-entry queue,
 and a checkpointed book behind 51 same-title editions. The /qa page identifies
 the exact target book and includes the suggested dashboard checks. This flag
@@ -94,7 +95,11 @@ def main():
                         help='Seed a local private library with episode and reading checkpoints')
     parser.add_argument('--daily-dashboard', action='store_true',
                         help='Seed checkpoints, an eight-entry queue, and a duplicate-title target beyond page one')
+    parser.add_argument('--friends', type=int, default=0, metavar='N',
+                        help='Seed N accepted synthetic friends for panel sizing QA (0 to 100)')
     args = parser.parse_args()
+    if not 0 <= args.friends <= 100:
+        parser.error('--friends must be between 0 and 100')
     daily_dashboard_note = ''
     with tempfile.TemporaryDirectory(prefix="omnitrackr-mobile-") as directory:
         os.environ.update(PYTHON_DOTENV_DISABLED="1", DATABASE_URL=f"sqlite:///{Path(directory).as_posix()}/preview.db",
@@ -121,6 +126,16 @@ def main():
                                hashed_password=auth.get_password_hash("local-preview-only"), is_verified=True)
             db.add(user)
             db.flush()
+            for index in range(1, args.friends + 1):
+                friend = models.User(username=f"preview_friend_{index:03d}",
+                                     email=f"preview-friend-{index:03d}@example.invalid",
+                                     hashed_password=user.hashed_password, is_verified=True)
+                db.add(friend)
+                db.flush()
+                # Friendship rows represent accepted connections. Keep the same
+                # canonical user ordering as the ordinary acceptance workflow.
+                db.add(models.Friendship(user1_id=min(user.id, friend.id),
+                                         user2_id=max(user.id, friend.id)))
             for model in (models.Movie, models.TVShow, models.Anime, models.VideoGame, models.Music, models.Book):
                 for index in range(0 if args.empty or args.daily_dashboard else 52):
                     data = dict(user_id=user.id, title=f"A journey through the stars — chapter {index + 1}",
@@ -273,7 +288,9 @@ def main():
               <p>Disposable synthetic library for local QA.</p>
               <!-- fixture notes -->
               <script>localStorage.setItem('omnitrackr_user', JSON.stringify({id:1,username:'preview'}));</script>
-              <a href="/">Open preview library</a></body></html>'''.replace('<!-- fixture notes -->', daily_dashboard_note))
+              <a href="/">Open preview library</a></body></html>'''.replace(
+                  '<!-- fixture notes -->',
+                  f'<p>Accepted synthetic friends: {args.friends}.</p>' + daily_dashboard_note))
             response.set_cookie(auth.AUTH_COOKIE_NAME, auth.create_access_token({"sub": "preview"}), httponly=True)
             return response
 

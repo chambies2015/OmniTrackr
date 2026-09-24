@@ -51,7 +51,7 @@
     rel="stylesheet">
   <link rel="stylesheet" href="./styles.css?v=20260924-import-studio-final">
   <link rel="stylesheet" href="/static/progress.css?v=20260922-progress">
-  <link rel="stylesheet" href="/static/app-theme.css?v=20260924-visual-4">
+  <link rel="stylesheet" href="/static/app-theme.css?v=20260924-friends-panel-2">
   <link rel="stylesheet" href="/static/library-theme.css?v=20260924-library-filters-1">
   <link rel="stylesheet" href="/static/dialog-theme.css?v=20260924-visual-4">
   <script src="./preauth.js"></script>
@@ -294,8 +294,11 @@
 
 <body class="dark-mode app-shell">
   <div class="account-toolbar" role="group" aria-label="Account controls">
-  <button id="showFriendsSidebar" class="sidebar-toggle-floating" title="Show Friends Sidebar"
-    aria-label="Show friends sidebar" style="display: none;">▶</button>
+  <button id="showFriendsSidebar" class="sidebar-toggle-floating" type="button" title="Friends"
+    aria-label="Friends" aria-expanded="false" aria-controls="friendsSidebar" hidden>
+    <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="1.7" aria-hidden="true"><circle cx="9" cy="8" r="3"/><path d="M3 20v-2a6 6 0 0 1 12 0v2M16 5a3 3 0 0 1 0 6M21 20v-2a6 6 0 0 0-3-5.2"/></svg>
+    <span>Friends</span>
+  </button>
   <button id="toggleMode" class="toggle-btn" aria-label="Toggle between dark and light mode">Light Mode</button>
   <button id="notificationBell" class="notification-bell" aria-label="View notifications">
     🔔
@@ -317,17 +320,17 @@
   <button id="logoutBtn" aria-label="Logout from your account">Logout</button>
   </div>
 
-  <!-- Friends Sidebar -->
-  <aside id="friendsSidebar" class="friends-sidebar" style="display: none;">
+  <!-- Friends panel overlays the workspace without changing its layout. -->
+  <aside id="friendsSidebar" class="friends-sidebar hidden" aria-labelledby="friendsPanelTitle" hidden>
     <div class="friends-sidebar-header">
-      <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px;">
-        <h2 style="margin: 0;">Friends</h2>
-        <button id="toggleFriendsSidebar" class="sidebar-toggle-btn" title="Hide Friends Sidebar"
-          aria-label="Hide friends sidebar">◀</button>
+      <div class="friends-panel-heading">
+        <h2 id="friendsPanelTitle">Friends</h2>
+        <button id="toggleFriendsSidebar" class="sidebar-toggle-btn" type="button" title="Close friends"
+          aria-label="Close friends">×</button>
       </div>
       <button id="sendFriendRequestBtn" class="action-btn">+ Add Friend</button>
     </div>
-    <div id="friendsList" class="friends-list">
+    <div id="friendsList" class="friends-list" role="region" aria-label="Friends list" tabindex="0">
       <p class="no-friends">No friends yet</p>
     </div>
   </aside>
@@ -1956,10 +1959,10 @@
     </form>
   </dialog>
   <script src="./credentials.js"></script>
-  <script src="./auth.js?v=20260924-library-filters-1"></script>
+  <script src="./auth.js?v=20260924-friends-panel-1"></script>
   <script src="/static/import-studio.js?v=20260924-import-studio-final"></script>
   <script src="/static/progress.js?v=20260922-progress"></script>
-  <script src="./app.js?v=20260924-library-filters-1"></script>
+  <script src="./app.js?v=20260924-friends-panel-1"></script>
 
   <!-- Account Modal -->
   <div id="accountModal" class="modal-overlay" style="display: none;">

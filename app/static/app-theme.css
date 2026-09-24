@@ -56,8 +56,8 @@ body.app-shell :is(button, input, select, textarea) { font-family: inherit; }
 body.app-shell :is(button, a, input, select, textarea, summary):focus-visible { outline: 3px solid var(--primary); outline-offset: 3px; }
 body.app-shell input::placeholder, body.app-shell textarea::placeholder { color: var(--fg-secondary); opacity: 1; }
 body.app-shell :is(button, select):disabled { cursor: not-allowed; }
-body.app-shell .container { padding: 0; width: calc(100% - 250px); max-width: 1480px; margin: 0 auto 0 250px; }
-body.app-shell .container.sidebar-hidden { width: 100%; max-width: 1480px; margin-inline: auto; }
+body.app-shell .container,
+body.app-shell .container.sidebar-hidden { padding: 0; width: 100%; max-width: 1480px; margin-inline: auto; transition: none; }
 
 /* A quiet account strip leaves the library search and capture action prominent. */
 body.app-shell .account-toolbar { width: 100%; max-width: 1480px; margin: 0 auto 16px; gap: 8px; }
@@ -128,10 +128,59 @@ body.app-shell button.action-btn:hover { box-shadow: none; transform: none; filt
 body.app-shell button.action-btn:disabled { filter: none; opacity: .5; }
 body.app-shell :is(.todays-pick__open, .library-launchpad__primary) { margin: 0; }
 body.app-shell .library-launchpad__secondary { background: var(--surface-muted); color: var(--fg); border-color: var(--border); }
-body.app-shell .friends-sidebar { background: var(--card-bg); border-right: 1px solid var(--border); box-shadow: none; }
-body.app-shell .friends-sidebar-header { background: var(--surface-muted); border-color: var(--border); }
-body.app-shell .friends-sidebar-header h2 { font-family: inherit; font-size: 1.15rem; }
-body.app-shell .sidebar-toggle-btn { background: var(--accent-soft); color: var(--primary); }
+/* Friends is a content-sized panel; only a long list needs its own scrollbar. */
+body.app-shell .account-toolbar #showFriendsSidebar {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 7px;
+  width: auto;
+  height: auto;
+  background: var(--card-bg);
+  border-color: var(--border);
+  color: var(--fg);
+}
+body.app-shell .account-toolbar #showFriendsSidebar[aria-expanded="true"] { background: var(--accent-soft); color: var(--primary); border-color: var(--primary); }
+body.app-shell #showFriendsSidebar[hidden], body.app-shell .friends-sidebar[hidden] { display: none !important; }
+body.app-shell .friends-sidebar {
+  display: flex;
+  flex-direction: column;
+  position: fixed;
+  top: var(--friends-panel-top, 76px);
+  right: var(--friends-panel-right, 28px);
+  left: auto;
+  bottom: auto;
+  box-sizing: border-box;
+  width: min(340px, calc(100% - 24px));
+  max-width: calc(100% - 24px);
+  height: auto;
+  max-height: calc(100vh - var(--friends-panel-top, 76px) - 12px);
+  max-height: calc(100dvh - var(--friends-panel-top, 76px) - 12px);
+  padding: 0;
+  overflow: hidden;
+  background: var(--card-bg);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  box-shadow: var(--shadow-lg);
+  transform: none;
+  transition: none;
+  z-index: 1100;
+}
+body.app-shell .friends-sidebar::before { content: none; }
+body.app-shell .friends-sidebar-header { flex: 0 0 auto; margin: 0; padding: 12px 16px 16px; background: var(--surface-muted); border-bottom: 1px solid var(--border); }
+body.app-shell .friends-panel-heading { display: flex; justify-content: space-between; align-items: center; gap: 12px; margin-bottom: 10px; }
+body.app-shell .friends-sidebar-header h2 { margin: 0; font-family: inherit; font-size: 1.05rem; color: var(--fg); }
+body.app-shell .sidebar-toggle-btn { width: 44px; height: 44px; border-radius: 8px; background: transparent; color: var(--fg-secondary); font-size: 1.5rem; }
+body.app-shell .sidebar-toggle-btn:hover { background: var(--accent-soft); color: var(--primary); transform: none; }
+body.app-shell .friends-list { min-height: 0; flex: 0 1 auto; overflow-y: auto; overflow-x: hidden; overscroll-behavior: contain; padding: 12px; gap: 8px; }
+body.app-shell .friends-list .no-friends { margin: 0; padding: 16px 8px; color: var(--fg-secondary); }
+body.app-shell .friend-item { flex: 0 0 auto; gap: 12px; padding: 10px; border-color: var(--border); background: var(--surface-muted); }
+body.app-shell .friend-item:hover { background: var(--surface-hover); transform: none; }
+body.app-shell .friend-item-content { min-width: 0; gap: 10px; }
+body.app-shell .friend-username { min-width: 0; overflow-wrap: anywhere; font-size: .85rem; }
+body.app-shell .friend-profile-picture { width: 36px; height: 36px; border-color: var(--border); }
+body.app-shell .unfriend-btn { flex-shrink: 0; min-width: 36px; min-height: 36px; color: var(--danger); background: transparent; border-color: transparent; }
+body.app-shell .unfriend-btn:hover { background: var(--surface-hover); border-color: var(--danger); transform: none; }
 body.app-shell .auth-form button { background: var(--accent-solid); color: var(--on-accent); }
 body.app-shell #mainFooter.landing-footer { background: transparent; border-top: 1px solid var(--border); box-shadow: none; margin-top: 28px; padding: 28px 0; }
 body.app-shell #mainFooter .footer-text { color: var(--fg-secondary); font-size: .78rem; }

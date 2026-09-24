@@ -7014,17 +7014,7 @@ document.addEventListener('DOMContentLoaded', function () {
     }
   });
 
-  // Set up friends sidebar toggle
-  const toggleFriendsSidebarBtn = document.getElementById('toggleFriendsSidebar');
-  if (toggleFriendsSidebarBtn) {
-    toggleFriendsSidebarBtn.addEventListener('click', toggleFriendsSidebar);
-  }
-
-  // Set up floating toggle button
-  const showFriendsSidebarBtn = document.getElementById('showFriendsSidebar');
-  if (showFriendsSidebarBtn) {
-    showFriendsSidebarBtn.addEventListener('click', showFriendsSidebar);
-  }
+  initializeFriendsPanel();
 
   // Initialize FAQ accordion functionality
   const faqQuestions = document.querySelectorAll('.faq-question');
@@ -7063,92 +7053,109 @@ document.addEventListener('DOMContentLoaded', function () {
     // Load tab visibility settings
     dashboardTabVisibilityReady = loadTabVisibility();
 
-    // Show friends sidebar
-    const friendsSidebar = document.getElementById('friendsSidebar');
-    if (friendsSidebar) {
-      friendsSidebar.style.display = 'block';
-    }
-
-    // Restore sidebar state from localStorage
-    restoreSidebarState();
-
     // Set up interval to refresh notification count every 30 seconds
     notificationCountInterval = setInterval(updateNotificationCount, 30000);
   }
 });
 
-// Toggle friends sidebar visibility
+// Friends is an independent disclosure panel; opening it never changes page geometry.
+function positionFriendsPanel() {
+  const sidebar = document.getElementById('friendsSidebar');
+  const toolbar = document.querySelector('.account-toolbar');
+  if (!sidebar || sidebar.hidden || !toolbar) return;
+  const bounds = toolbar.getBoundingClientRect();
+  const viewport = document.documentElement;
+  const top = Math.max(12, Math.min(bounds.bottom + 8, (window.innerHeight || viewport.clientHeight) - 160));
+  const right = Math.max(12, viewport.clientWidth - bounds.right);
+  sidebar.style.setProperty('--friends-panel-top', `${top}px`);
+  sidebar.style.setProperty('--friends-panel-right', `${right}px`);
+}
+
+function setFriendsSidebarOpen(open, { persist = true, restoreFocus = false, focusPanel = false } = {}) {
+  const sidebar = document.getElementById('friendsSidebar');
+  const trigger = document.getElementById('showFriendsSidebar');
+  const authenticated = isAuthenticated();
+  const expanded = Boolean(open && authenticated);
+  if (trigger) {
+    trigger.hidden = !authenticated;
+    trigger.style.removeProperty('display');
+    trigger.setAttribute('aria-expanded', String(expanded));
+    trigger.setAttribute('aria-controls', 'friendsSidebar');
+  }
+  if (!sidebar) return;
+  const wasOpen = !sidebar.hidden;
+  sidebar.hidden = !expanded;
+  sidebar.classList.toggle('hidden', !expanded);
+  sidebar.style.removeProperty('display');
+  if (expanded) {
+    positionFriendsPanel();
+    if (focusPanel) document.getElementById('toggleFriendsSidebar')?.focus();
+  } else if (restoreFocus && wasOpen && authenticated) {
+    trigger?.focus();
+  }
+  if (persist && authenticated) {
+    try {
+      localStorage.setItem('friendsSidebarHidden', String(!expanded));
+    } catch (error) {
+      // The panel remains usable when browser storage is unavailable.
+    }
+  }
+}
+
 window.toggleFriendsSidebar = function () {
   const sidebar = document.getElementById('friendsSidebar');
-  const container = document.querySelector('.container');
-  const toggleBtn = document.getElementById('toggleFriendsSidebar');
-  const floatingToggleBtn = document.getElementById('showFriendsSidebar');
-  const footer = document.getElementById('mainFooter');
-  const notificationDropdown = document.getElementById('notificationDropdown');
-
-  if (!sidebar || !container) return;
-
-  const isHidden = sidebar.classList.contains('hidden');
-
-  if (isHidden) {
-    // Show sidebar
-    sidebar.classList.remove('hidden');
-    container.classList.remove('sidebar-hidden');
-    if (toggleBtn) {
-      toggleBtn.textContent = '◀';
-      toggleBtn.title = 'Hide Friends Sidebar';
-    }
-    if (floatingToggleBtn) floatingToggleBtn.style.display = 'none';
-    if (footer) footer.classList.remove('sidebar-hidden');
-    if (notificationDropdown) notificationDropdown.classList.remove('sidebar-hidden');
-  } else {
-    // Hide sidebar
-    sidebar.classList.add('hidden');
-    container.classList.add('sidebar-hidden');
-    if (toggleBtn) {
-      toggleBtn.textContent = '▶';
-      toggleBtn.title = 'Show Friends Sidebar';
-    }
-    if (floatingToggleBtn) floatingToggleBtn.style.display = 'flex';
-    if (footer) footer.classList.add('sidebar-hidden');
-    if (notificationDropdown) notificationDropdown.classList.add('sidebar-hidden');
-  }
-
-  // Save preference to localStorage
-  localStorage.setItem('friendsSidebarHidden', !isHidden);
+  if (sidebar) setFriendsSidebarOpen(sidebar.hidden, { focusPanel: sidebar.hidden, restoreFocus: !sidebar.hidden });
 };
 
-// Show sidebar from floating button
 window.showFriendsSidebar = function () {
   toggleFriendsSidebar();
 };
 
-// Restore sidebar state from localStorage (called from main DOMContentLoaded)
 function restoreSidebarState() {
-  const sidebarHidden = localStorage.getItem('friendsSidebarHidden') === 'true';
-  if (sidebarHidden && isAuthenticated()) {
-    // Wait a bit for sidebar to be shown first, then hide it
-    setTimeout(() => {
-      const sidebar = document.getElementById('friendsSidebar');
-      const container = document.querySelector('.container');
-      const toggleBtn = document.getElementById('toggleFriendsSidebar');
-      const floatingToggleBtn = document.getElementById('showFriendsSidebar');
-      const footer = document.getElementById('mainFooter');
-      const notificationDropdown = document.getElementById('notificationDropdown');
-
-      if (sidebar && container) {
-        sidebar.classList.add('hidden');
-        container.classList.add('sidebar-hidden');
-        if (toggleBtn) {
-          toggleBtn.textContent = '▶';
-          toggleBtn.title = 'Show Friends Sidebar';
-        }
-        if (floatingToggleBtn) floatingToggleBtn.style.display = 'flex';
-        if (footer) footer.classList.add('sidebar-hidden');
-        if (notificationDropdown) notificationDropdown.classList.add('sidebar-hidden');
-      }
-    }, 100);
+  let sidebarHidden = false;
+  try {
+    sidebarHidden = localStorage.getItem('friendsSidebarHidden') === 'true';
+  } catch (error) {
+    // Use the default state when browser storage is unavailable.
   }
+  setFriendsSidebarOpen(!sidebarHidden, { persist: false });
+}
+
+window.resetFriendsPanel = function () {
+  setFriendsSidebarOpen(false, { persist: false });
+};
+
+function friendsPanelHasActiveModal() {
+  return Array.from(document.querySelectorAll('.modal-overlay, dialog[open], .screenshot-modal.show')).some(modal => {
+    const style = window.getComputedStyle(modal);
+    return !modal.hidden && style.display !== 'none' && style.visibility !== 'hidden';
+  });
+}
+
+let friendsPanelInitialized = false;
+function initializeFriendsPanel() {
+  if (friendsPanelInitialized) return;
+  friendsPanelInitialized = true;
+  document.getElementById('toggleFriendsSidebar')?.addEventListener('click', () => {
+    setFriendsSidebarOpen(false, { restoreFocus: true });
+  });
+  document.getElementById('showFriendsSidebar')?.addEventListener('click', showFriendsSidebar);
+  // Capture phase checks overlays before their own close handlers run.
+  document.addEventListener('click', event => {
+    const sidebar = document.getElementById('friendsSidebar');
+    const trigger = document.getElementById('showFriendsSidebar');
+    if (!sidebar || sidebar.hidden || sidebar.contains(event.target) || trigger?.contains(event.target) || friendsPanelHasActiveModal()) return;
+    setFriendsSidebarOpen(false);
+  }, true);
+  document.addEventListener('keydown', event => {
+    const sidebar = document.getElementById('friendsSidebar');
+    if (event.key !== 'Escape' || event.defaultPrevented || !sidebar || sidebar.hidden || friendsPanelHasActiveModal()) return;
+    event.preventDefault();
+    setFriendsSidebarOpen(false, { restoreFocus: true });
+  }, true);
+  window.addEventListener('resize', positionFriendsPanel);
+  window.addEventListener('scroll', positionFriendsPanel, { passive: true });
+  restoreSidebarState();
 }
 
 let activeCompletionMomentId = null;

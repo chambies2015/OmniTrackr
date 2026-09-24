@@ -160,6 +160,7 @@ function clearAuth({ preserveReturn = false } = {}) {
     window.OmniImportStudio?.reset();
     window.resetDailyDashboard?.();
     window.resetLibraryBrowsing?.();
+    window.resetFriendsPanel?.();
     if (!preserveReturn) clearDiscoverAuthReturn();
     clearDemoStartIntent();
     try {
@@ -346,11 +347,7 @@ function showAuthModal() {
         notificationBell.style.display = 'none';
     }
     
-    // Hide friends sidebar
-    const friendsSidebar = document.getElementById('friendsSidebar');
-    if (friendsSidebar) {
-        friendsSidebar.style.display = 'none';
-    }
+    window.resetFriendsPanel?.();
     
     // Hide footer for logged-in view when showing landing page
     const mainFooter = document.getElementById('mainFooter');
@@ -390,11 +387,7 @@ function showMainUI() {
     if (notificationBell) {
         notificationBell.style.display = 'flex';
     }
-    // Show friends sidebar
-    const friendsSidebar = document.getElementById('friendsSidebar');
-    if (friendsSidebar) {
-        friendsSidebar.style.display = 'block';
-    }
+    if (typeof restoreSidebarState === 'function') restoreSidebarState();
     
     // Load friends list and notification count
     if (typeof loadFriendsList === 'function') {

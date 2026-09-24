@@ -517,6 +517,31 @@ The demo passed desktop/320px checks, empty-state keyboard reset, and signup
 handoff tests. Progress clearing and request races are covered by automated
 tests. No production data or schema was accessed or changed; nothing was deployed.
 
+## Friends panel follow-up (September 24, 2026)
+
+Friends now opens from a labeled icon button as an independent panel. Opening
+and closing it preserves the centered library layout. Its height follows the
+friend list until the available viewport height is reached; only the list then
+scrolls, leaving Add Friend and Close visible. Escape returns focus to the
+trigger, outside clicks dismiss the panel, and existing dialogs and the saved
+open/closed preference remain supported.
+
+The disposable preview accepts `--empty --friends 3` or `--empty --friends 30`.
+Browser checks covered stable desktop geometry, compact three-friend height,
+long-list scrolling to the last friend, 320px mobile fit with a page scrollbar,
+light/dark themes, Add Friend dialog dismissal, and Escape focus return.
+All 309 frontend tests and 86 focused friends, privacy, and static-security
+tests passed. No production database or schema changes are involved.
+
+Post-interruption completion audit: an independent review found no regressions
+introduced by the Friends patch. A fresh full run passed all 822 backend tests
+against in-memory SQLite and all 309 frontend tests; JavaScript syntax and diff
+checks also passed. Additional disposable browser checks confirmed the compact
+zero-friend state, a closed panel staying closed after reload, background session
+expiry hiding both Friends controls, and signing back in restoring the saved
+panel preference. No further implementation changes were needed. These checks
+did not access production or deploy the changes.
+
 ## Verification
 
 Run the full suite against an isolated database. Set these before importing the
