@@ -36,6 +36,18 @@ async def get_auth():
     raise HTTPException(status_code=404, detail="auth.js not found")
 
 
+@router.get("/preauth.js")
+async def get_preauth():
+    return FileResponse(os.path.join(os.path.dirname(__file__), "..", "static", "preauth.js"),
+                        media_type="application/javascript", headers=CACHE_JS_CSS)
+
+
+@router.get("/analytics.js")
+async def get_analytics():
+    return FileResponse(os.path.join(os.path.dirname(__file__), "..", "static", "analytics.js"),
+                        media_type="application/javascript", headers=CACHE_JS_CSS)
+
+
 @router.get("/app.js")
 async def get_app():
     app_file = os.path.join(os.path.dirname(__file__), "..", "static", "app.js")

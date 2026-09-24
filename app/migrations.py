@@ -147,10 +147,71 @@ def run_migrations():
                     conn.execute(text("ALTER TABLE users ADD COLUMN locked_until TIMESTAMP"))
                     conn.commit()
                     print("Added locked_until column to users table")
+            if "last_login_at" not in user_columns:
+                with engine.connect() as conn:
+                    conn.execute(text("ALTER TABLE users ADD COLUMN last_login_at TIMESTAMP"))
+                    conn.commit()
+                    print("Added last_login_at column to users table")
+            if "login_count" not in user_columns:
+                with engine.connect() as conn:
+                    conn.execute(text("ALTER TABLE users ADD COLUMN login_count INTEGER DEFAULT 0"))
+                    conn.execute(text("UPDATE users SET login_count = 0 WHERE login_count IS NULL"))
+                    conn.commit()
+                    print("Added login_count column to users table")
             if database.DATABASE_URL.startswith("postgresql"):
                 with engine.connect() as conn:
                     conn.execute(text("CREATE INDEX IF NOT EXISTS ix_users_username ON users(username)"))
                     conn.commit()
+
+        if inspector.has_table("collections"):
+            collection_columns = {col["name"] for col in inspector.get_columns("collections")}
+            if "is_public" not in collection_columns:
+                with engine.connect() as conn:
+                    conn.execute(text("ALTER TABLE collections ADD COLUMN is_public BOOLEAN DEFAULT FALSE"))
+                    conn.execute(text("UPDATE collections SET is_public = FALSE WHERE is_public IS NULL"))
+                    conn.commit()
+                    print("Added is_public column to collections table")
+            if "published_at" not in collection_columns:
+                with engine.connect() as conn:
+                    conn.execute(text("ALTER TABLE collections ADD COLUMN published_at TIMESTAMP"))
+                    conn.commit()
+                    print("Added published_at column to collections table")
+            collection_additions = {
+                "cover_url": "VARCHAR",
+                "moderation_status": "VARCHAR DEFAULT 'pending'",
+                "approved_at": "TIMESTAMP",
+                "approved_content_hash": "VARCHAR",
+                "view_count": "INTEGER DEFAULT 0",
+                "helpful_count": "INTEGER DEFAULT 0",
+                "report_count": "INTEGER DEFAULT 0",
+                "report_content_hash": "VARCHAR",
+                "suspended_at": "TIMESTAMP",
+            }
+            for column_name, column_type in collection_additions.items():
+                if column_name not in collection_columns:
+                    with engine.connect() as conn:
+                        conn.execute(text(f"ALTER TABLE collections ADD COLUMN {column_name} {column_type}"))
+                        conn.commit()
+                        print(f"Added {column_name} column to collections table")
+            with engine.connect() as conn:
+                conn.execute(text("UPDATE collections SET moderation_status = 'pending' WHERE moderation_status IS NULL"))
+                conn.execute(text("UPDATE collections SET view_count = 0 WHERE view_count IS NULL"))
+                conn.execute(text("UPDATE collections SET helpful_count = 0 WHERE helpful_count IS NULL"))
+                conn.execute(text("UPDATE collections SET report_count = 0 WHERE report_count IS NULL"))
+                conn.commit()
+            with engine.connect() as conn:
+                conn.execute(text("CREATE INDEX IF NOT EXISTS ix_collections_is_public ON collections(is_public)"))
+                conn.execute(text("CREATE INDEX IF NOT EXISTS ix_collections_moderation_status ON collections(moderation_status)"))
+                conn.execute(text("CREATE INDEX IF NOT EXISTS ix_collections_suspended_at ON collections(suspended_at)"))
+                conn.commit()
+
+        if inspector.has_table("collection_items"):
+            collection_item_columns = {col["name"] for col in inspector.get_columns("collection_items")}
+            if "curator_note" not in collection_item_columns:
+                with engine.connect() as conn:
+                    conn.execute(text("ALTER TABLE collection_items ADD COLUMN curator_note TEXT"))
+                    conn.commit()
+                    print("Added curator_note column to collection_items table")
 
         review_public_columns_added = False
 
@@ -725,6 +786,14 @@ def run_migrations():
                         conn.execute(text("ALTER TABLE video_games ALTER COLUMN review TYPE TEXT"))
                     conn.commit()
                     print("Migrated video_games.review to TEXT")
+
+        if inspector.has_table("activity_entries"):
+            with engine.connect() as conn:
+                conn.execute(text(
+                    "CREATE INDEX IF NOT EXISTS ix_activity_entries_user_occurred_at "
+                    "ON activity_entries(user_id, occurred_at)"
+                ))
+                conn.commit()
 
     except Exception as e:
         print(f"Migration warning: {e}")

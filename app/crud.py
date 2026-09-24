@@ -61,7 +61,7 @@ def update_user(db: Session, user_id: int, user_update: schemas.UserUpdate) -> O
     if db_user is None:
         return None
     
-    update_dict = user_update.dict(exclude_unset=True)
+    update_dict = user_update.model_dump(exclude_unset=True)
     
     if 'username' in update_dict and update_dict['username'] != db_user.username:
         existing_user = get_user_by_username(db, update_dict['username'])
@@ -122,7 +122,7 @@ def update_privacy_settings(db: Session, user_id: int, privacy_settings: schemas
     if db_user is None:
         return None
     
-    update_dict = privacy_settings.dict(exclude_unset=True)
+    update_dict = privacy_settings.model_dump(exclude_unset=True)
     
     if 'movies_private' in update_dict:
         db_user.movies_private = update_dict['movies_private']
@@ -161,7 +161,7 @@ def update_tab_visibility(db: Session, user_id: int, tab_visibility: schemas.Tab
     if db_user is None:
         return None
     
-    update_dict = tab_visibility.dict(exclude_unset=True)
+    update_dict = tab_visibility.model_dump(exclude_unset=True)
     
     if 'movies_visible' in update_dict:
         db_user.movies_visible = update_dict['movies_visible']
@@ -263,7 +263,7 @@ def get_movie_by_id(db: Session, user_id: int, movie_id: int) -> Optional[models
 
 
 def create_movie(db: Session, user_id: int, movie: schemas.MovieCreate) -> models.Movie:
-    movie_dict = movie.dict()
+    movie_dict = movie.model_dump()
     if movie_dict.get('rating') is not None:
         movie_dict['rating'] = round(float(movie_dict['rating']), 1)
     db_movie = models.Movie(**movie_dict, user_id=user_id)
@@ -277,7 +277,7 @@ def update_movie(db: Session, user_id: int, movie_id: int, movie_update: schemas
     db_movie = get_movie_by_id(db, user_id, movie_id)
     if db_movie is None:
         return None
-    update_dict = movie_update.dict(exclude_unset=True)
+    update_dict = movie_update.model_dump(exclude_unset=True)
     if 'rating' in update_dict and update_dict['rating'] is not None:
         update_dict['rating'] = round(float(update_dict['rating']), 1)
     for field, value in update_dict.items():
@@ -328,7 +328,7 @@ def get_tv_show_by_id(db: Session, user_id: int, tv_show_id: int) -> Optional[mo
 
 
 def create_tv_show(db: Session, user_id: int, tv_show: schemas.TVShowCreate) -> models.TVShow:
-    tv_show_dict = tv_show.dict()
+    tv_show_dict = tv_show.model_dump()
     if tv_show_dict.get('rating') is not None:
         tv_show_dict['rating'] = round(float(tv_show_dict['rating']), 1)
     db_tv_show = models.TVShow(**tv_show_dict, user_id=user_id)
@@ -342,7 +342,7 @@ def update_tv_show(db: Session, user_id: int, tv_show_id: int, tv_show_update: s
     db_tv_show = get_tv_show_by_id(db, user_id, tv_show_id)
     if db_tv_show is None:
         return None
-    update_dict = tv_show_update.dict(exclude_unset=True)
+    update_dict = tv_show_update.model_dump(exclude_unset=True)
     if 'rating' in update_dict and update_dict['rating'] is not None:
         update_dict['rating'] = round(float(update_dict['rating']), 1)
     for field, value in update_dict.items():
@@ -393,7 +393,7 @@ def get_anime_by_id(db: Session, user_id: int, anime_id: int) -> Optional[models
 
 
 def create_anime(db: Session, user_id: int, anime: schemas.AnimeCreate) -> models.Anime:
-    anime_dict = anime.dict()
+    anime_dict = anime.model_dump()
     if anime_dict.get('rating') is not None:
         anime_dict['rating'] = round(float(anime_dict['rating']), 1)
     db_anime = models.Anime(**anime_dict, user_id=user_id)
@@ -407,7 +407,7 @@ def update_anime(db: Session, user_id: int, anime_id: int, anime_update: schemas
     db_anime = get_anime_by_id(db, user_id, anime_id)
     if db_anime is None:
         return None
-    update_dict = anime_update.dict(exclude_unset=True)
+    update_dict = anime_update.model_dump(exclude_unset=True)
     if 'rating' in update_dict and update_dict['rating'] is not None:
         update_dict['rating'] = round(float(update_dict['rating']), 1)
     for field, value in update_dict.items():
@@ -459,7 +459,7 @@ def get_video_game_by_id(db: Session, user_id: int, game_id: int) -> Optional[mo
 
 
 def create_video_game(db: Session, user_id: int, video_game: schemas.VideoGameCreate) -> models.VideoGame:
-    video_game_dict = video_game.dict()
+    video_game_dict = video_game.model_dump()
     if video_game_dict.get('rating') is not None:
         video_game_dict['rating'] = round(float(video_game_dict['rating']), 1)
     db_video_game = models.VideoGame(**video_game_dict, user_id=user_id)
@@ -473,7 +473,7 @@ def update_video_game(db: Session, user_id: int, game_id: int, video_game_update
     db_video_game = get_video_game_by_id(db, user_id, game_id)
     if db_video_game is None:
         return None
-    update_dict = video_game_update.dict(exclude_unset=True)
+    update_dict = video_game_update.model_dump(exclude_unset=True)
     if 'rating' in update_dict and update_dict['rating'] is not None:
         update_dict['rating'] = round(float(update_dict['rating']), 1)
     for field, value in update_dict.items():
@@ -566,11 +566,11 @@ def import_movies(db: Session, user_id: int, movies: List[schemas.MovieCreate]) 
             )
             
             if existing_movie:
-                for field, value in movie_data.dict(exclude_unset=True).items():
+                for field, value in movie_data.model_dump(exclude_unset=True).items():
                     setattr(existing_movie, field, value)
                 updated += 1
             else:
-                db_movie = models.Movie(**movie_data.dict(), user_id=user_id)
+                db_movie = models.Movie(**movie_data.model_dump(), user_id=user_id)
                 db.add(db_movie)
                 created += 1
         except Exception as e:
@@ -599,11 +599,11 @@ def import_tv_shows(db: Session, user_id: int, tv_shows: List[schemas.TVShowCrea
             )
             
             if existing_tv_show:
-                for field, value in tv_show_data.dict(exclude_unset=True).items():
+                for field, value in tv_show_data.model_dump(exclude_unset=True).items():
                     setattr(existing_tv_show, field, value)
                 updated += 1
             else:
-                db_tv_show = models.TVShow(**tv_show_data.dict(), user_id=user_id)
+                db_tv_show = models.TVShow(**tv_show_data.model_dump(), user_id=user_id)
                 db.add(db_tv_show)
                 created += 1
         except Exception as e:
@@ -632,11 +632,11 @@ def import_anime(db: Session, user_id: int, anime: List[schemas.AnimeCreate]) ->
             )
             
             if existing_anime:
-                for field, value in anime_data.dict(exclude_unset=True).items():
+                for field, value in anime_data.model_dump(exclude_unset=True).items():
                     setattr(existing_anime, field, value)
                 updated += 1
             else:
-                db_anime = models.Anime(**anime_data.dict(), user_id=user_id)
+                db_anime = models.Anime(**anime_data.model_dump(), user_id=user_id)
                 db.add(db_anime)
                 created += 1
         except Exception as e:
@@ -665,14 +665,14 @@ def import_video_games(db: Session, user_id: int, video_games: List[schemas.Vide
             )
             
             if existing_video_game:
-                update_dict = video_game_data.dict(exclude_unset=True)
+                update_dict = video_game_data.model_dump(exclude_unset=True)
                 if 'rating' in update_dict and update_dict['rating'] is not None:
                     update_dict['rating'] = round(float(update_dict['rating']), 1)
                 for field, value in update_dict.items():
                     setattr(existing_video_game, field, value)
                 updated += 1
             else:
-                video_game_dict = video_game_data.dict()
+                video_game_dict = video_game_data.model_dump()
                 if video_game_dict.get('rating') is not None:
                     video_game_dict['rating'] = round(float(video_game_dict['rating']), 1)
                 db_video_game = models.VideoGame(**video_game_dict, user_id=user_id)

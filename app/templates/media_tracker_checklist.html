@@ -57,7 +57,7 @@
     "name": "Media Tracker Setup Checklist",
     "description": "A practical checklist for setting up categories, ratings, reviews, privacy controls, imports, exports, and first-week maintenance in OmniTrackr.",
     "url": "https://omnitrackr.xyz/media-tracker-checklist",
-    "dateModified": "2026-07-03",
+    "dateModified": "2026-09-24",
     "inLanguage": "en-US",
     "step": [
       { "@type": "HowToStep", "name": "Choose active media categories" },
@@ -69,35 +69,46 @@
     "publisher": { "@type": "Organization", "name": "OmniTrackr", "url": "https://omnitrackr.xyz" }
   }
   </script>
+  <link rel="stylesheet" href="/static/public-reader.css?v=20260924-reader-2">
 </head>
 
-<body>
-  <div class="public-wrapper">
-    <div class="public-container">
-      <nav class="public-site-nav" aria-label="Public site navigation">
-        <a class="public-site-nav__brand" href="/">OmniTrackr</a>
-        <div class="public-site-nav__links">
-          <a href="/demo">Demo</a>
-          <a href="/media-tracking">Tracking Hub</a>
-          <a href="/guides">Guides</a>
-          <a href="/site-map">Site Map</a>
-          <a href="/sample-library">Sample Library</a>
-          <a href="/compare">Compare</a>
-          <a href="/use-cases">Use Cases</a>
-          <a href="/reviews">Reviews</a>
-          <a href="/faq">FAQ</a>
-          <a href="/content-quality">Content Quality</a>
-          <a href="/advertising">Advertising</a>
-          <a href="/privacy">Privacy</a>
-          <a class="public-site-nav__cta" href="/#landing-auth">Start tracking</a>
-        </div>
-      </nav>
-      <a href="/" class="back-link">Back to OmniTrackr</a>
+<body class="public-reader">
+  <a class="reader-skip" href="#reader-main">Skip to guide</a>
+  <div class="reader-nav-wrap">
+    <nav class="public-site-nav" aria-label="Public site navigation">
+      <a class="public-site-nav__brand" href="/">OmniTrackr</a>
+      <div class="public-site-nav__links">
+        <a href="/demo">Demo</a>
+        <a href="/discover">Discover</a>
+        <a href="/reviews">Reviews</a>
+        <a href="/collections/explore">Collections</a>
+        <a href="/guides">Guides</a>
+        <a href="/faq">FAQ</a>
+        <a class="public-site-nav__cta" href="/#landing-auth">Start tracking</a>
+      </div>
+    </nav>
+  </div>
+  <div class="reader-shell">
+    <main id="reader-main" tabindex="-1" class="reader-main public-container">
+<a href="/" class="back-link">Back to OmniTrackr</a>
 
       <header class="public-header">
         <h1>Media Tracker Setup Checklist</h1>
         <p>A practical first-session plan for turning scattered watchlists, reading notes, game backlogs, albums, and ratings into a library you can actually maintain.</p>
       </header>
+      <details class="reader-contents">
+        <summary>On this page</summary>
+        <nav aria-label="On this page">
+          <a href="#why-heading">Why Start With a Checklist?</a>
+          <a href="#category-heading">1. Choose Your Active Categories</a>
+          <a href="#rating-heading">2. Define Your Rating Scale Before Adding Everything</a>
+          <a href="#starter-heading">3. Add a Starter Library, Not Your Entire History</a>
+          <a href="#reviews-heading">4. Separate Private Notes From Public Reviews</a>
+          <a href="#privacy-heading">5. Check Privacy, Friends, and Export Habits</a>
+          <a href="#first-week-heading">First-Week Cleanup Checklist</a>
+        </nav>
+      </details>
+
 
       <section class="public-section" aria-labelledby="why-heading">
         <h2 id="why-heading">Why Start With a Checklist?</h2>
@@ -134,7 +145,7 @@
         <ol>
           <li>Add the title, year or release date, and category-specific fields you know.</li>
           <li>Let OmniTrackr fetch available poster or cover art when supported.</li>
-          <li>Mark status accurately: watched, in progress, plan-to-watch, completed, paused, or equivalent notes.</li>
+          <li>Check completion only for finished items. Use a note for paused or dropped, and a saved checkpoint for your current episode, page, or chapter.</li>
           <li>Add a rating only when you can explain it later.</li>
           <li>Write one or two sentences of private context before deciding whether a public review makes sense.</li>
         </ol>
@@ -142,6 +153,7 @@
 
       <section class="public-section" aria-labelledby="reviews-heading">
         <h2 id="reviews-heading">4. Separate Private Notes From Public Reviews</h2>
+        <p class="reader-note">Leaving Public Review unchecked keeps an item's text off public review pages. Friends can still read it if the category is shared. Keep both controls private for personal item notes, or use your private journal or a checkpoint reminder.</p>
         <p>Private notes can be messy. They can include spoilers, personal context, unfinished thoughts, or reminders that only make sense to you. Public reviews should be different. A public review should help another person understand the recommendation, the audience fit, and the reason behind the score. OmniTrackr supports opt-in public reviews, and the public review feed favors substantial review text so shared pages stay useful rather than becoming a thin list of one-word reactions.</p>
         <p>Use this rule of thumb: if the note only helps future you, keep it private. If it helps a stranger decide whether a movie, show, anime, game, album, or book fits their taste, polish it into a public review. That boundary protects privacy and improves the public browsing experience.</p>
       </section>
@@ -164,8 +176,40 @@
         </ul>
         <p>For more help, compare workflows on the <a href="/media-tracking">media tracking hub</a>, use the <a href="/tracking-templates">tracking templates</a>, browse the <a href="/sample-library">sample library</a>, or read the <a href="/review-guidelines">review guidelines</a>.</p>
       </section>
-    </div>
+    </main>
   </div>
+  <footer class="reader-footer">
+    <div class="reader-footer__inner">
+      <p class="reader-footer__intro">OmniTrackr · Your media, remembered. Read freely, then build a library of your own.</p>
+      <div class="reader-footer__groups">
+        <div><h2>Explore</h2><ul>
+          <li><a href="/">Home</a></li>
+          <li><a href="/media-tracking">Tracking hub</a></li>
+          <li><a href="/sample-library">Sample library</a></li>
+          <li><a href="/compare">Compare trackers</a></li>
+          <li><a href="/use-cases">Ways to use OmniTrackr</a></li>
+          <li><a href="/site-map">Site map</a></li>
+        </ul></div>
+        <div><h2>Keep learning</h2><ul>
+          <li><a href="/guides">All guides</a></li>
+          <li><a href="/export-import-guide">Import &amp; backups</a></li>
+          <li><a href="/media-tracker-checklist">Setup checklist</a></li>
+          <li><a href="/tracking-templates">Templates</a></li>
+          <li><a href="/review-guidelines">Review guide</a></li>
+          <li><a href="/media-statistics">Statistics guide</a></li>
+        </ul></div>
+        <div><h2>About OmniTrackr</h2><ul>
+          <li><a href="/about">About</a></li>
+          <li><a href="/contact">Contact</a></li>
+          <li><a href="/changelog">What’s new</a></li>
+          <li><a href="/content-quality">Content quality</a></li>
+          <li><a href="/advertising">Advertising</a></li>
+          <li><a href="/privacy">Privacy</a></li>
+          <li><a href="/terms">Terms</a></li>
+        </ul></div>
+      </div>
+    </div>
+  </footer>
 </body>
 
 </html>

@@ -1,143 +1,140 @@
 <!DOCTYPE html>
 <html lang="en">
-
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <meta name="description" content="Explore a sample OmniTrackr media library with movies, TV shows, anime, games, music, books, ratings, reviews, statistics, privacy controls, and export workflows before signing up.">
+  <title>OmniTrackr Demo — Try a Media Library Without an Account</title>
+  <meta name="description" content="Try OmniTrackr without an account. Explore a sample library, add a title, mark it finished, and try ratings and notes before starting your own media collection.">
   <meta name="robots" content="index, follow, max-image-preview:large">
-  <meta name="author" content="OmniTrackr">
-  <title>OmniTrackr Demo - Sample Media Library, Reviews & Stats</title>
   <link rel="canonical" href="https://omnitrackr.xyz/demo">
   <link rel="icon" type="image/x-icon" href="/omnitrackr_favicon.ico">
   <meta property="og:type" content="website">
   <meta property="og:url" content="https://omnitrackr.xyz/demo">
-  <meta property="og:title" content="OmniTrackr Demo - Sample Media Library, Reviews & Stats">
-  <meta property="og:description" content="Preview how OmniTrackr organizes movies, shows, anime, games, music, books, ratings, reviews, privacy, export, and statistics.">
+  <meta property="og:title" content="Try OmniTrackr — No Account Needed">
+  <meta property="og:description" content="A small sample library you can make your own. Try adding, finishing, rating, and remembering your media.">
   <meta property="og:image" content="https://omnitrackr.xyz/omnitrackr_vortex.png">
-  <meta property="og:image:alt" content="OmniTrackr demo media library">
-  <meta property="og:site_name" content="OmniTrackr">
+  <meta property="og:image:alt" content="OmniTrackr">
   <meta name="twitter:card" content="summary_large_image">
-  <meta name="twitter:title" content="OmniTrackr Demo">
-  <meta name="twitter:description" content="Preview a sample OmniTrackr media library with ratings, reviews, privacy, export, and stats.">
+  <meta name="twitter:title" content="Try OmniTrackr — No Account Needed">
+  <meta name="twitter:description" content="Explore an interactive sample library before creating your own.">
   <meta name="twitter:image" content="https://omnitrackr.xyz/omnitrackr_vortex.png">
-  <link rel="preconnect" href="https://fonts.googleapis.com">
-  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@700;800&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="/styles.css">
-  <style>
-    body { min-height: 100vh; padding: 20px; }
-    .public-wrapper { max-width: 1120px; margin: 0 auto; }
-    .public-container { background: var(--card-bg); border-radius: 16px; padding: 50px 40px; margin: 20px 0; box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3); border: 1px solid var(--border); color: var(--fg); line-height: 1.75; }
-    @media (max-width: 768px) { .public-container { padding: 30px 20px; margin: 10px 0; } }
-    .public-header { text-align: center; margin-bottom: 40px; padding-bottom: 20px; border-bottom: 2px solid var(--border); }
-    .public-header h1 { font-family: 'Poppins', sans-serif; font-size: 2.35rem; margin-bottom: 10px; color: var(--fg); }
-    .public-header p, .public-section p, .public-section li { color: var(--fg-secondary); }
-    .public-section { margin-bottom: 38px; }
-    .public-section h2 { font-family: 'Poppins', sans-serif; font-size: 1.65rem; margin-bottom: 15px; color: var(--primary); }
-    .public-section ul { margin-left: 20px; }
-    .demo-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(230px, 1fr)); gap: 16px; margin: 20px 0; }
-    .demo-card { border: 1px solid var(--border); border-radius: 10px; padding: 18px; background: rgba(255, 255, 255, 0.04); }
-    .demo-card h3 { margin-bottom: 8px; color: var(--fg); font-size: 1.05rem; }
-    .demo-card p { margin: 0 0 8px; }
-    .demo-pill { display: inline-block; padding: 3px 9px; border-radius: 999px; background: var(--primary); color: white; font-size: 0.78rem; margin-bottom: 8px; }
-    .demo-stats { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 14px; }
-    .demo-stat { border: 1px solid var(--border); border-radius: 10px; padding: 18px; text-align: center; }
-    .demo-stat strong { display: block; font-size: 1.8rem; color: var(--primary); }
-    .back-link { display: inline-block; margin-bottom: 30px; color: var(--primary); text-decoration: none; font-weight: 500; }
-  </style>
+  <link rel="stylesheet" href="/static/demo.css?v=20260924-library-filters">
   <script type="application/ld+json">
-  {
-    "@context": "https://schema.org",
-    "@type": "WebPage",
-    "name": "OmniTrackr Demo",
-    "description": "A sample media library showing how OmniTrackr tracks movies, shows, anime, games, music, books, reviews, ratings, privacy controls, export workflows, and statistics.",
-    "url": "https://omnitrackr.xyz/demo",
-    "dateModified": "2026-06-01",
-    "inLanguage": "en-US",
-    "isPartOf": { "@type": "WebSite", "name": "OmniTrackr", "url": "https://omnitrackr.xyz" }
-  }
+  {"@context":"https://schema.org","@type":"WebPage","name":"OmniTrackr Demo","description":"Try a sample media library without an account. Practice adding titles, completion, ratings, and notes using fictional sample data.","url":"https://omnitrackr.xyz/demo","dateModified":"2026-09-24","inLanguage":"en-US","isPartOf":{"@type":"WebSite","name":"OmniTrackr","url":"https://omnitrackr.xyz"}}
   </script>
+  <script src="/static/demo.js?v=20260924-library-filters" defer></script>
 </head>
-
-<body>
-  <div class="public-wrapper">
-    <div class="public-container">
-      <nav class="public-site-nav" aria-label="Public site navigation">
-        <a class="public-site-nav__brand" href="/">OmniTrackr</a>
-        <div class="public-site-nav__links">
-          <a href="/demo">Demo</a>
-          <a href="/media-tracking">Tracking Hub</a>
-          <a href="/guides">Guides</a>
-          <a href="/site-map">Site Map</a>
-          <a href="/sample-library">Sample Library</a>
-          <a href="/compare">Compare</a>
-          <a href="/use-cases">Use Cases</a>
-          <a href="/reviews">Reviews</a>
-          <a href="/faq">FAQ</a>
-          <a href="/content-quality">Content Quality</a>
-          <a href="/advertising">Advertising</a>
-          <a href="/privacy">Privacy</a>
-          <a class="public-site-nav__cta" href="/#landing-auth">Start tracking</a>
+<body class="demo-page">
+  <a href="#demoMain" class="demo-skip">Skip to sample library</a>
+  <div class="demo-shell">
+    <nav class="public-site-nav" aria-label="Public site navigation">
+      <a class="public-site-nav__brand" href="/">OmniTrackr<span aria-hidden="true">.</span></a>
+      <div class="public-site-nav__links">
+        <a href="/demo" aria-current="page">Demo</a><a href="/media-tracking">Tracking Hub</a><a href="/guides">Guides</a><a href="/reviews">Reviews</a>
+        <a class="public-site-nav__cta" href="/?start=demo#landing-auth">Start tracking</a>
+      </div>
+    </nav>
+    <main id="demoMain">
+      <header class="demo-hero">
+        <div class="demo-hero-copy">
+          <p class="demo-eyebrow"><span class="demo-dot" aria-hidden="true"></span> INTERACTIVE DEMO · NO ACCOUNT NEEDED</p>
+          <h1>Make room for<br>your next favorite.</h1>
+          <p class="demo-lead">Movies, shows, anime, games, music, books. One place to remember what you loved — and what comes next.</p>
+          <p class="demo-invitation">Try a small sample library below. Add a title, give it a rating, or save where you left off in a show or book.</p>
         </div>
-      </nav>
-      <a href="/" class="back-link">Back to OmniTrackr</a>
-      <header class="public-header">
-        <h1>OmniTrackr Demo Library</h1>
-        <p>Preview how a cross-media collection feels before creating an account. This sample uses fictional demo data and does not expose real user content.</p>
+        <aside class="demo-practice" aria-label="About this demo">
+          <span class="demo-practice-icon" aria-hidden="true">✦</span><strong>A space to try things</strong>
+          <p class="demo-practice-detail">Fictional titles. Sample ratings. Your changes stay in this page and reset when you reload.</p><p class="demo-practice-detail">Practice entries never go into a real library.</p>
+          <p class="demo-practice-compact">Fictional samples. Changes reset on reload and never enter a real library.</p>
+        </aside>
       </header>
-
-      <section class="public-section" aria-labelledby="sample-library-heading">
-        <h2 id="sample-library-heading">Sample Collection</h2>
-        <p>This fictional library shows the kind of mixed media history OmniTrackr is built for. A real account can contain a movie watched last night, a TV series in progress, a seasonal anime, a game backlog item, an album worth revisiting, and a book recommendation in the same place. The point is not to replace every specialist community; it is to keep your personal record consistent across categories.</p>
-        <div class="demo-grid">
-          <article class="demo-card"><span class="demo-pill">Movie</span><h3>Arrival</h3><p>Rating: 9.2/10 | Watched</p><p>A quiet science-fiction favorite with a review about pacing, emotion, and rewatch value.</p></article>
-          <article class="demo-card"><span class="demo-pill">TV Show</span><h3>Severance</h3><p>Rating: 9.0/10 | In progress</p><p>Tracked by season with notes about tone, mystery structure, and friend recommendations.</p></article>
-          <article class="demo-card"><span class="demo-pill">Anime</span><h3>Frieren</h3><p>Rating: 9.4/10 | Watched</p><p>A public-style review can explain mood, worldbuilding, and who the series fits best.</p></article>
-          <article class="demo-card"><span class="demo-pill">Game</span><h3>Hades</h3><p>Rating: 9.5/10 | Played</p><p>Backlog tracking separates completed favorites from games waiting for another run.</p></article>
-          <article class="demo-card"><span class="demo-pill">Music</span><h3>Kind of Blue</h3><p>Rating: 9.8/10 | Listened</p><p>Albums can sit beside movies and books so taste history is not split across apps.</p></article>
-          <article class="demo-card"><span class="demo-pill">Book</span><h3>Project Hail Mary</h3><p>Rating: 8.7/10 | Read</p><p>Book notes preserve why a recommendation worked instead of only saving the title.</p></article>
+      <section class="demo-library" aria-labelledby="demoLibraryHeading">
+        <div class="demo-library-heading">
+          <div><p class="demo-eyebrow">YOUR PRACTICE SPACE</p><h2 id="demoLibraryHeading">The sample library</h2></div>
+          <div class="demo-toolbar" id="demoToolbar" hidden>
+            <button type="button" id="demoReset" class="demo-button demo-button-quiet">Reset demo</button>
+            <button type="button" id="demoAdd" class="demo-button demo-button-primary" aria-expanded="false" aria-controls="demoCatalog">+ Add a sample</button>
+          </div>
         </div>
-        <p>Each sample card represents a normal entry: title, category, status, rating, metadata, and a note or review. Posters and cover art make scanning easier, while the written note preserves why the item mattered. That is especially helpful months later when a rating alone no longer explains your taste.</p>
-      </section>
-
-      <section class="public-section" aria-labelledby="demo-stats-heading">
-        <h2 id="demo-stats-heading">Sample Statistics</h2>
-        <div class="demo-stats">
-          <div class="demo-stat"><strong>126</strong><span>Total items</span></div>
-          <div class="demo-stat"><strong>78%</strong><span>Completed</span></div>
-          <div class="demo-stat"><strong>8.4</strong><span>Average rating</span></div>
-          <div class="demo-stat"><strong>34</strong><span>Written reviews</span></div>
+        <div class="demo-stats" aria-label="Whole sample library statistics">
+          <div><strong id="demoTotal">6</strong><span>Titles saved</span></div><div><strong id="demoFinished">3</strong><span>Finished</span></div><div><strong id="demoNext">3</strong><span>Still to enjoy</span></div>
+          <div><strong id="demoAverage">8.5<span class="demo-stat-unit"> / 10</span></strong><span>Average rating</span></div>
         </div>
-        <p>Logged-in users get category breakdowns, rating distributions, top-rated items, genre analysis for games, season and episode analysis for shows, and exportable collection data.</p>
-        <p>The statistics are designed for personal reflection rather than public pressure. You can see whether most of your backlog is games, which categories you rate highest, how many items have reviews, and where your collection is thin. That makes OmniTrackr useful for annual wrap-ups, recommendation lists, backlog cleanup, and deciding what to watch, play, read, or hear next.</p>
+        <p class="demo-stats-caption">Statistics cover your whole sample library. Unrated titles don’t affect the average.</p>
+        <section id="demoCatalog" class="demo-panel" aria-labelledby="demoCatalogHeading" hidden>
+          <div class="demo-panel-heading"><div><p class="demo-eyebrow">MAKE A LITTLE ROOM</p><h3 id="demoCatalogHeading" tabindex="-1">Choose your next sample</h3></div><button id="demoCatalogClose" type="button" class="demo-button demo-button-quiet">Close</button></div>
+          <p>Choose from six fictional titles to try adding something new. Your real library lets you search for actual media.</p><div id="demoCatalogItems" class="demo-catalog-grid"></div>
+        </section>
+        <section id="demoEditor" class="demo-panel" aria-labelledby="demoEditorHeading" hidden>
+          <div class="demo-panel-heading"><div><p class="demo-eyebrow">TRY MAKING IT YOURS</p><h3 id="demoEditorHeading">Edit sample</h3></div></div>
+          <form id="demoEditForm">
+            <div class="demo-edit-fields">
+              <label class="demo-checkbox"><input id="demoEditFinished" type="checkbox"> <span id="demoEditFinishedLabel">Finished</span></label>
+              <div class="demo-rating-field"><label for="demoEditRating">Your rating <span>(optional)</span></label><div class="demo-rating-input"><input id="demoEditRating" name="rating" type="number" min="0" max="10" step="0.1" inputmode="decimal" aria-describedby="demoRatingHint"><span>/ 10</span></div><small id="demoRatingHint">0–10, including decimals. Leave blank for unrated.</small></div>
+            </div>
+            <label for="demoEditNote">A note for yourself <span>(optional)</span></label>
+            <textarea id="demoEditNote" name="note" rows="3" maxlength="500" placeholder="What would you like to remember?" aria-describedby="demoNoteHint"></textarea>
+            <small id="demoNoteHint">Practice text only; it is never published or saved to an account. Up to 500 characters.</small>
+            <p id="demoEditError" class="demo-error" role="alert" hidden></p>
+            <div class="demo-editor-actions"><button type="submit" class="demo-button demo-button-primary">Save sample changes</button><button type="button" id="demoEditCancel" class="demo-button demo-button-quiet">Cancel</button></div>
+          </form>
+          <form id="demoProgressForm" class="demo-progress-form" aria-labelledby="demoProgressHeading" hidden>
+            <h4 id="demoProgressHeading">Where you left off</h4>
+            <p>Save the last episode, page, or chapter you finished. This checkpoint is separate from completion, your rating, and the note above.</p>
+            <div class="demo-progress-fields">
+              <div id="demoProgressUnitField"><label for="demoProgressUnit">Track by</label><select id="demoProgressUnit"><option value="page">Page</option><option value="chapter">Chapter</option></select></div>
+              <div id="demoProgressSeasonField"><label for="demoProgressSeason">Season <span>(optional)</span></label><input id="demoProgressSeason" type="number" min="0" max="10000" step="1" inputmode="numeric" aria-describedby="demoProgressSeasonHint"><small id="demoProgressSeasonHint">Season 0 is for specials.</small></div>
+              <div><label id="demoProgressPositionLabel" for="demoProgressPosition">Last watched episode</label><input id="demoProgressPosition" type="number" min="1" max="1000000" step="1" inputmode="numeric" required></div>
+            </div>
+            <label for="demoProgressNote">Private reminder <span>(optional)</span></label>
+            <textarea id="demoProgressNote" rows="2" maxlength="300" aria-describedby="demoProgressNoteHint" placeholder="What will help you pick this up again?"></textarea>
+            <small id="demoProgressNoteHint">In your real library, checkpoints and these reminders stay private. These samples reset on reload.</small>
+            <p id="demoProgressError" class="demo-error" role="alert" hidden></p>
+            <div class="demo-editor-actions"><button type="submit" class="demo-button demo-button-primary">Update progress</button><button type="button" id="demoProgressClear" class="demo-button demo-button-quiet">Clear progress</button></div>
+          </form>
+        </section>
+        <div id="demoFilters" class="demo-filters" role="group" aria-label="Filter sample library by category" hidden>
+          <button type="button" data-category="all" aria-pressed="true">All media</button><button type="button" data-category="movie" aria-pressed="false">Movies</button><button type="button" data-category="tv_show" aria-pressed="false">TV shows</button><button type="button" data-category="anime" aria-pressed="false">Anime</button><button type="button" data-category="video_game" aria-pressed="false">Games</button><button type="button" data-category="music" aria-pressed="false">Music</button><button type="button" data-category="book" aria-pressed="false">Books</button>
+        </div>
+        <div id="demoQuickFilters" class="demo-quick-filters" hidden>
+          <div class="demo-quick-filter-controls">
+            <div id="demoCompletionFilters" class="demo-completion-filters" role="group" aria-label="Filter sample library by completion">
+              <button type="button" id="demoCompletionAll" data-completion="all" aria-pressed="true">All</button>
+              <button type="button" data-completion="unfinished" aria-pressed="false">Unfinished</button>
+              <button type="button" data-completion="finished" aria-pressed="false">Finished</button>
+            </div>
+            <div class="demo-extra-filters" role="group" aria-label="Additional sample library filters">
+              <button type="button" id="demoUnrated" aria-pressed="false">Unrated</button>
+              <button type="button" id="demoHasProgress" aria-pressed="false" hidden>Has saved progress</button>
+            </div>
+          </div>
+          <div class="demo-filter-summary"><p id="demoResultCount" role="status" aria-live="polite" aria-atomic="true">Showing 6 of 6 sample titles</p><button type="button" id="demoClearFilters" disabled>Clear filters</button></div>
+          <p class="demo-filter-hint">Try <strong>Books → Read → Unrated</strong> to find a finished book waiting for your rating. Saved progress is a separate checkpoint; it doesn’t mark a title finished.</p>
+        </div>
+        <p id="demoStatus" class="demo-status" role="status" aria-live="polite" aria-atomic="true">Six sample titles. Start anywhere.</p>
+        <div id="demoEmpty" class="demo-empty" hidden>
+          <h3>No samples match these filters</h3><p>Try a different combination, or clear the filters to see every sample in this category. Your practice entries are still here.</p><button type="button" id="demoEmptyClear" class="demo-button demo-button-quiet">Clear filters for this category</button>
+        </div>
+        <div id="demoCards" class="demo-grid">
+          <article class="demo-card" data-sample-id="lantern-atlas"><div class="demo-cover demo-cover-movie" aria-hidden="true"><span>01</span><b>THE<br>LANTERN<br>ATLAS</b><i>AN IMAGINED FILM</i></div><div class="demo-card-body"><span class="demo-category">Movie</span><h3>The Lantern Atlas</h3><p class="demo-card-description">A cartographer follows a trail of lights through a city that changes after sunset.</p><div class="demo-card-facts"><span class="demo-complete">Watched</span><span class="demo-card-rating">9 / 10</span></div><p class="demo-note">A world I would happily get lost in again.</p></div></article>
+          <article class="demo-card" data-sample-id="northbound"><div class="demo-cover demo-cover-tv_show" aria-hidden="true"><span>02</span><b>NORTH<br>BOUND</b><i>AN IMAGINED SERIES</i></div><div class="demo-card-body"><span class="demo-category">TV show</span><h3>Northbound</h3><p class="demo-card-description">Night-shift strangers find their stories crossing on the last train home.</p><div class="demo-card-facts"><span>Not finished</span><span class="demo-card-rating">Unrated</span></div><p class="demo-note demo-note-empty">No note yet. What would you remember?</p><div class="demo-card-progress"><span class="demo-progress-label">YOUR CHECKPOINT</span><p>Last watched: season 1, episode 4</p><p class="demo-progress-reminder">Next time: the station reunion.</p></div></div></article>
+          <article class="demo-card" data-sample-id="quiet-observatory"><div class="demo-cover demo-cover-anime" aria-hidden="true"><span>03</span><b>THE QUIET<br>OBSERVATORY</b><i>AN IMAGINED ANIME</i></div><div class="demo-card-body"><span class="demo-category">Anime</span><h3>The Quiet Observatory</h3><p class="demo-card-description">Two apprentices map a sky where each constellation holds a forgotten story.</p><div class="demo-card-facts"><span>Not finished</span><span class="demo-card-rating">8 / 10</span></div><p class="demo-note">Loved the quiet moments between adventures.</p><div class="demo-card-progress"><span class="demo-progress-label">YOUR CHECKPOINT</span><p>Last watched: season 1, episode 12</p></div></div></article>
+          <article class="demo-card" data-sample-id="garden-circuit"><div class="demo-cover demo-cover-video_game" aria-hidden="true"><span>04</span><b>GARDEN<br>CIRCUIT</b><i>AN IMAGINED GAME</i></div><div class="demo-card-body"><span class="demo-category">Game</span><h3>Garden Circuit</h3><p class="demo-card-description">Bring a sleeping greenhouse to life, one small mechanical puzzle at a time.</p><div class="demo-card-facts"><span>Not finished</span><span class="demo-card-rating">Unrated</span></div><p class="demo-note demo-note-empty">No note yet. What would you remember?</p></div></article>
+          <article class="demo-card" data-sample-id="after-rain"><div class="demo-cover demo-cover-music" aria-hidden="true"><span>05</span><b>AFTER<br>THE RAIN</b><i>AN IMAGINED ALBUM</i></div><div class="demo-card-body"><span class="demo-category">Music</span><h3>After the Rain</h3><p class="demo-card-description">Warm piano, soft percussion, and a little breathing room for a slow Sunday.</p><div class="demo-card-facts"><span class="demo-complete">Listened</span><span class="demo-card-rating">8.5 / 10</span></div><p class="demo-note">The soundtrack for an unhurried morning.</p></div></article>
+          <article class="demo-card" data-sample-id="letters-tomorrow"><div class="demo-cover demo-cover-book" aria-hidden="true"><span>06</span><b>LETTERS FROM<br>TOMORROW</b><i>AN IMAGINED BOOK</i></div><div class="demo-card-body"><span class="demo-category">Book</span><h3>Letters from Tomorrow</h3><p class="demo-card-description">A bookshop owner receives letters dated one day ahead and has to decide what to change.</p><div class="demo-card-facts"><span class="demo-complete">Read</span><span class="demo-card-rating">Unrated</span></div><p class="demo-note demo-note-empty">No note yet. What would you remember?</p><div class="demo-card-progress"><span class="demo-progress-label">YOUR CHECKPOINT</span><p>Last read: page 84</p><p class="demo-progress-reminder">The second letter is worth revisiting.</p></div></div></article>
+        </div>
+        <noscript><p class="demo-noscript">You’re viewing the sample library. Enable JavaScript to try adding, rating, and editing its fictional titles, or create your own library below.</p></noscript>
       </section>
-
-      <section class="public-section" aria-labelledby="workflow-heading">
-        <h2 id="workflow-heading">Example Tracking Workflow</h2>
-        <p>A typical OmniTrackr session is intentionally simple. Add the item, choose the right category, mark the current status, add a rating when you have one, and write a note only if it helps future-you. The same rhythm works across categories, so switching from a film to an album or book does not require learning a different app.</p>
-        <ul>
-          <li><strong>Before starting:</strong> save items as plan-to-watch, plan-to-play, plan-to-read, or similar backlog states.</li>
-          <li><strong>While in progress:</strong> track TV seasons, anime episodes, games being played, books being read, and music you are actively revisiting.</li>
-          <li><strong>After finishing:</strong> add a rating and a review that explains tone, pacing, difficulty, mood, replay value, reread value, or who might enjoy it.</li>
-          <li><strong>When sharing:</strong> keep private notes private and make only polished reviews public when they are useful to other visitors.</li>
-        </ul>
+      <section class="demo-next-step" aria-labelledby="demoNextHeading">
+        <div><p class="demo-eyebrow">FROM PRACTICE TO PERSONAL</p><h2 id="demoNextHeading">Now make it your library.</h2><p>Start with one movie, album, game, or book you love. Create your free account, verify your email, then search for your first real title.</p><p class="demo-transfer-note">You’ll start fresh. These sample titles, checkpoints, ratings, and notes won’t be transferred.</p></div>
+        <a class="demo-button demo-button-primary" href="/?start=demo#landing-auth">Create my free library <span aria-hidden="true">↗</span></a>
       </section>
-
-      <section class="public-section" aria-labelledby="comparison-heading">
-        <h2 id="comparison-heading">What the Demo Helps You Decide</h2>
-        <p>The demo is useful if you are comparing OmniTrackr with spreadsheets, movie-only apps, book shelves, TV trackers, or game backlog tools. Spreadsheets are flexible but require maintenance. Single-category apps can be excellent, but they split your entertainment history into separate places. OmniTrackr is strongest when you want one private library with optional public reviews, friend visibility controls, stats, and exports.</p>
-        <p>If your tracking habits are simple, the sample collection shows that OmniTrackr can stay lightweight. If your library is larger, the sample statistics and cross-category layout show how the app scales without forcing everything into one generic list.</p>
+      <section class="demo-explainer" aria-label="From sample to real library">
+        <div><h2>Keep the part worth remembering</h2><p>A title is a starting point. Completion tells you what’s left, a rating records your reaction, and a note keeps the reason you loved it. Try all three on any sample card.</p></div>
+        <div><h2>Make a habit, at your pace</h2><p>Try a checkpoint on a TV show, anime, or book sample. In your real library, your last episode or page gives you a place to return without marking the whole title finished. Read our <a href="/guides">tracking guides</a> or browse <a href="/reviews">member reviews</a>.</p></div>
       </section>
-
-      <section class="public-section" aria-labelledby="privacy-heading">
-        <h2 id="privacy-heading">What This Demo Shows</h2>
-        <p>The demo is meant to answer a simple question: what does OmniTrackr actually do after signup? It shows the app's core value without requiring visitors or AdSense reviewers to create an account. Real accounts can keep categories private, choose which reviews are public, export data, and decide what friends can see.</p>
-        <p>The sample data on this page is fictional and does not expose real user libraries. Public reviews elsewhere on OmniTrackr appear only when users mark an individual review public. Account data, private notes, friend visibility settings, and export files remain controlled by the user.</p>
-        <p>For deeper details, read the <a href="/media-tracking">media tracking hub</a>, browse <a href="/reviews">public reviews</a>, check the <a href="/faq">FAQ</a>, compare tracking options on the <a href="/compare">comparison page</a>, or review the <a href="/privacy">Privacy Policy</a>.</p>
-      </section>
-    </div>
+    </main>
+    <footer class="demo-footer"><span>OmniTrackr · A home for your media</span><div><a href="/faq">FAQ</a><a href="/privacy">Privacy</a><a href="/guides">Guides</a><a href="/media-tracking">Tracking Hub</a></div></footer>
   </div>
 </body>
-
 </html>

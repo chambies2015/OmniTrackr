@@ -44,41 +44,52 @@
     "@type": "Article",
     "headline": "Book Tracker for Reading Lists, Reviews and Statistics",
     "description": "A guide to tracking books with OmniTrackr, including reading lists, authors, genres, ratings, reviews, privacy and statistics.",
-    "dateModified": "2026-06-23",
+    "dateModified": "2026-09-22",
     "author": { "@type": "Organization", "name": "OmniTrackr" },
     "publisher": { "@type": "Organization", "name": "OmniTrackr", "url": "https://omnitrackr.xyz" },
     "mainEntityOfPage": "https://omnitrackr.xyz/book-tracker",
     "inLanguage": "en-US"
   }
   </script>
+  <link rel="stylesheet" href="/static/public-reader.css?v=20260924-reader-2">
 </head>
 
-<body>
-  <div class="content-wrapper">
-    <div class="content-container">
-      <nav class="public-site-nav" aria-label="Public site navigation">
-        <a class="public-site-nav__brand" href="/">OmniTrackr</a>
-        <div class="public-site-nav__links">
-          <a href="/demo">Demo</a>
-          <a href="/media-tracking">Tracking Hub</a>
-          <a href="/guides">Guides</a>
-          <a href="/site-map">Site Map</a>
-          <a href="/sample-library">Sample Library</a>
-          <a href="/compare">Compare</a>
-          <a href="/use-cases">Use Cases</a>
-          <a href="/reviews">Reviews</a>
-          <a href="/faq">FAQ</a>
-          <a href="/content-quality">Content Quality</a>
-          <a href="/advertising">Advertising</a>
-          <a href="/privacy">Privacy</a>
-          <a class="public-site-nav__cta" href="/#landing-auth">Start tracking</a>
-        </div>
-      </nav>
-      <a href="/media-tracking" class="back-link">Back to Media Tracking Hub</a>
+<body class="public-reader">
+  <a class="reader-skip" href="#reader-main">Skip to guide</a>
+  <div class="reader-nav-wrap">
+    <nav class="public-site-nav" aria-label="Public site navigation">
+      <a class="public-site-nav__brand" href="/">OmniTrackr</a>
+      <div class="public-site-nav__links">
+        <a href="/demo">Demo</a>
+        <a href="/discover">Discover</a>
+        <a href="/reviews">Reviews</a>
+        <a href="/collections/explore">Collections</a>
+        <a href="/guides">Guides</a>
+        <a href="/faq">FAQ</a>
+        <a class="public-site-nav__cta" href="/#landing-auth">Start tracking</a>
+      </div>
+    </nav>
+  </div>
+  <div class="reader-shell">
+    <main id="reader-main" tabindex="-1" class="reader-main content-container">
+<a href="/media-tracking" class="back-link">Back to Media Tracking Hub</a>
       <header class="content-header">
         <h1>Book Tracker</h1>
         <p>Keep reading lists, finished books, ratings, reviews, authors, genres, cover art, privacy settings, and statistics in the same account as the rest of your media.</p>
       </header>
+      <details class="reader-contents">
+        <summary>On this page</summary>
+        <nav aria-label="On this page">
+          <a href="#why-heading">Why Books Belong Beside Other Media</a>
+          <a href="#workflow-heading">A Reading List Workflow That Stays Useful</a>
+          <a href="#formats-heading">Formats, Editions, and Rereads</a>
+          <a href="#review-heading">What Makes a Book Review Helpful?</a>
+          <a href="#stats-heading">Book Statistics and Reading Patterns</a>
+          <a href="#privacy-heading">Privacy and Public Book Notes</a>
+          <a href="#related-heading">Related Pages</a>
+        </nav>
+      </details>
+
 
       <section class="content-section" aria-labelledby="why-heading">
         <h2 id="why-heading">Why Books Belong Beside Other Media</h2>
@@ -91,11 +102,13 @@
         <ol>
           <li>Add books when they are recommended, borrowed, bought, or finished.</li>
           <li>Record author and year so editions, adaptations, and similarly titled books are easier to identify.</li>
-          <li>Use read status to separate finished books from future reading.</li>
+          <li>Choose <strong>Update progress</strong> on a saved book, select pages or chapters, and enter the last one you finished.</li>
+          <li>Use Read to mark the whole book finished. Updating a page or chapter leaves that choice unchanged.</li>
           <li>Rate after finishing, or after deciding the book is not worth continuing.</li>
           <li>Write notes about style, pacing, ideas, characters, usefulness, or who would appreciate it.</li>
         </ol>
-        <p>A good book tracker should handle both casual reading and long-term lists. You do not need to log every page. You need enough context to remember why a book mattered and whether it deserves a recommendation later.</p>
+        <p>You do not need to log every page. If you stop at page 84, save page 84 as your checkpoint. If chapter numbers travel better between your print and ebook editions, choose chapters instead. The checkpoint holds one position at a time; switching to chapters replaces the page position when you save.</p>
+        <p>Add an optional Private reminder, such as “Begin the second letter next time.” It is separate from your review and rating. Clear progress removes the position and reminder, leaving the rest of the book unchanged. Try it on the book sample in the <a href="/demo">demo</a>.</p>
         <p>For a large backlog, the most useful habit is separating intent from completion. A book you bought, a library hold, a friend's recommendation, and a finished favorite should not all feel like the same task. Keeping status, rating, and review fields distinct helps your list stay honest instead of turning into an unread pile with no context.</p>
       </section>
 
@@ -121,15 +134,48 @@
       <section class="content-section" aria-labelledby="privacy-heading">
         <h2 id="privacy-heading">Privacy and Public Book Notes</h2>
         <p>Not every reading note needs to be public. Some books are personal, work-related, unfinished, or tied to private life events. OmniTrackr lets you keep your library and notes private while still making room for public reviews when you intentionally want to share a recommendation.</p>
-        <p>That separation matters for quality too. Private notes can be rough reminders. Public reviews should be more complete, with enough context for another reader to understand whether the book fits their interests.</p>
+        <p>Private notes can be rough reminders. Page and chapter checkpoints, including their reminders, always stay private: publishing a review or sharing your books with friends does not publish them. Public reviews can then focus on helping another reader decide whether the book fits their interests.</p>
+        <p>Checkpoints are included in JSON backups. Treat an exported file as personal data and store it somewhere private. The <a href="/export-import-guide">backup guide</a> explains restore behavior and duplicate handling.</p>
       </section>
 
       <section class="content-section" aria-labelledby="related-heading">
         <h2 id="related-heading">Related Pages</h2>
         <p>For broader workflows, visit the <a href="/media-tracking">media tracking hub</a>, compare patterns on the <a href="/media-statistics">media statistics guide</a>, read about <a href="/export-import-guide">data backup and export</a>, or explore <a href="/reviews">public reviews</a>.</p>
       </section>
-    </div>
+    </main>
   </div>
+  <footer class="reader-footer">
+    <div class="reader-footer__inner">
+      <p class="reader-footer__intro">OmniTrackr · Your media, remembered. Read freely, then build a library of your own.</p>
+      <div class="reader-footer__groups">
+        <div><h2>Explore</h2><ul>
+          <li><a href="/">Home</a></li>
+          <li><a href="/media-tracking">Tracking hub</a></li>
+          <li><a href="/sample-library">Sample library</a></li>
+          <li><a href="/compare">Compare trackers</a></li>
+          <li><a href="/use-cases">Ways to use OmniTrackr</a></li>
+          <li><a href="/site-map">Site map</a></li>
+        </ul></div>
+        <div><h2>Keep learning</h2><ul>
+          <li><a href="/guides">All guides</a></li>
+          <li><a href="/export-import-guide">Import &amp; backups</a></li>
+          <li><a href="/media-tracker-checklist">Setup checklist</a></li>
+          <li><a href="/tracking-templates">Templates</a></li>
+          <li><a href="/review-guidelines">Review guide</a></li>
+          <li><a href="/media-statistics">Statistics guide</a></li>
+        </ul></div>
+        <div><h2>About OmniTrackr</h2><ul>
+          <li><a href="/about">About</a></li>
+          <li><a href="/contact">Contact</a></li>
+          <li><a href="/changelog">What’s new</a></li>
+          <li><a href="/content-quality">Content quality</a></li>
+          <li><a href="/advertising">Advertising</a></li>
+          <li><a href="/privacy">Privacy</a></li>
+          <li><a href="/terms">Terms</a></li>
+        </ul></div>
+      </div>
+    </div>
+  </footer>
 </body>
 
 </html>

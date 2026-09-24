@@ -6,6 +6,8 @@ import re
 import pytest
 from datetime import datetime
 from app import models, crud
+from app.routers import reviews as reviews_router
+from app.review_quality import evaluate_public_review
 from app.schemas import MovieCreate, TVShowCreate, AnimeCreate, VideoGameCreate, MusicCreate, BookCreate
 
 
@@ -20,6 +22,26 @@ class TestPublicReviews:
         data = response.json()
         assert isinstance(data, list)
         assert len(data) == 0
+
+    def test_shared_quality_engine_distinguishes_community_and_search_inventory(self):
+        community = evaluate_public_review(
+            "This compact review explains the patient pacing, warm tone, and audience fit. "
+            "I would recommend it to viewers who enjoy quiet character work."
+        )
+        search = evaluate_public_review(
+            "This review explains why the patient pacing supports the lead performance instead of simply slowing "
+            "the story down. The middle section repeats one conflict, but the final act rewards that setup with a "
+            "credible emotional turn. I would recommend it to viewers who enjoy quiet character work, careful "
+            "sound design, and endings that value resolution over surprise. It is not the best fit for someone "
+            "looking for constant action, but it earns its rating through restraint and memorable performances."
+        )
+        repeated = evaluate_public_review("same words repeat again. " * 30)
+
+        assert community.community_ready is True
+        assert community.search_ready is False
+        assert search.search_ready is True
+        assert repeated.community_ready is False
+        assert repeated.checks["varied_language"] is False
     
     def test_get_public_reviews_with_movie_review(self, client, db_session, authenticated_client, test_user_data):
         """Test getting public reviews includes movie reviews."""
@@ -57,6 +79,8 @@ class TestPublicReviews:
         assert movie_review["rating"] == 8.5
         assert movie_review["director"] == movie_data["director"]
         assert movie_review["year"] == movie_data["year"]
+        assert movie_review["community_ready"] is True
+        assert movie_review["search_ready"] is False
         assert "username" in movie_review
         assert "user_id" in movie_review
 
@@ -842,20 +866,16 @@ class TestPublicReviews:
         response = client.get("/reviews")
         assert response.status_code == 200
         assert "text/html" in response.headers["content-type"]
-        assert "What Makes These Reviews Useful?" in response.text
-        assert "How to Browse Public Reviews" in response.text
-        assert "Editorial Review Examples" in response.text
-        assert "Review Writing Tips" in response.text
-        assert "first-party guidance, not user submissions" in response.text
-        assert "Movie example" in response.text
-        assert "Game example" in response.text
-        assert "Book, album, or show example" in response.text
+        assert "From the community" in response.text
+        assert 'id="reviewFilters"' in response.text
+        assert 'action="/reviews" method="get"' in response.text
+        assert 'id="reviewSearch" name="q" type="search" maxlength="100"' in response.text
+        assert '<label for="categoryFilter">Media type</label>' in response.text
+        assert response.text.index('id="reviewsContainer"') < response.text.index('class="reviews-guide"')
         assert 'href="/review-guidelines"' in response.text
-        assert 'href="/media-tracker-checklist"' in response.text
-        assert "Generic review helper links without a category are intentionally not indexed" in response.text
-        assert "Public review quality also protects the site experience" in response.text
-        assert 'href="/reviews?category=movie"' in response.text
-        assert 'href="/reviews?category=video_game"' in response.text
+        assert '<option value="movie">Movies</option>' in response.text
+        assert '<option value="video_game">Video Games</option>' in response.text
+        assert 'data-hydrated="true"' in response.text
 
     def test_empty_review_category_page_is_noindexed_and_ad_free(self, client):
         """Empty user-generated category pages should not look like ad inventory."""
@@ -991,13 +1011,17 @@ class TestPublicReviews:
         db_session.commit()
 
         response = client.get(f"/reviews/{movie.id}?category=movie")
+        directory_response = client.get("/reviews?category=movie")
 
         assert response.status_code == 200
         assert '<meta name="robots" content="index, follow, max-image-preview:large">' in response.text
         assert '<meta name="google-adsense-account" content="ca-pub-7271682066779719">' in response.text
         assert "/static/ad-loader.js" in response.text
+        assert "/static/review_report.js" in response.text
+        assert f'data-review-id="{movie.id}"' in response.text
         assert "pagead2.googlesyndication.com/pagead/js/adsbygoogle.js" not in response.text
         assert "Publisher Signal Detail Movie Review" in response.text
+        assert "/static/ad-loader.js" not in directory_response.text
 
         client.cookies.set("omnitrackr_session", "test-session")
         authenticated_response = client.get(f"/reviews/{movie.id}?category=movie")
@@ -1034,6 +1058,7 @@ class TestPublicReviews:
         assert category_response.status_code == 200
         assert "Directory Quality Only" in category_response.text
         assert 'class="review-card review-card--summary"' in category_response.text
+        assert f'data-review-id="{movie.id}"' in category_response.text
         assert f"/reviews/{movie.id}?category=movie" not in category_response.text
         match = re.search(
             r'<script type="application/ld\+json" id="server-review-item-list"[^>]*>(.*?)</script>',
@@ -1042,8 +1067,85 @@ class TestPublicReviews:
         assert match is not None
         structured_data = json.loads(match.group(1))
         structured_json = json.dumps(structured_data)
-        assert "Directory Quality Only Movie Review" in structured_json
+        assert "Directory Quality Only Movie Review" not in structured_json
         assert f"https://omnitrackr.xyz/reviews/{movie.id}?category=movie" not in structured_json
         assert detail_response.status_code == 404
         assert '<meta name="robots" content="noindex, follow">' in detail_response.text
         assert "/static/ad-loader.js" not in detail_response.text
+
+    def test_independent_reports_unlist_exact_review_version_and_edit_restores_it(
+        self, client, db_session, authenticated_client, test_user_data
+    ):
+        """Three signed browsers unlist without deletion; a substantive edit starts clean."""
+        user = db_session.query(models.User).filter(models.User.username == test_user_data["username"]).first()
+        user.reviews_public = True
+        review_text = (
+            "This review explains the deliberate pacing and the lead performance in enough detail for another "
+            "viewer to understand the rating. The middle act repeats one conflict, but the ending rewards the "
+            "setup and makes the film worth revisiting. I would recommend it to viewers who enjoy patient, "
+            "character-focused thrillers more than constant action or plot twists."
+        )
+        movie = crud.create_movie(
+            db_session,
+            user.id,
+            MovieCreate(
+                title="Automatically Moderated Movie",
+                director="Safety Director",
+                year=2026,
+                rating=8,
+                review=review_text,
+                review_public=True,
+            ),
+        )
+        db_session.commit()
+        endpoint = f"/api/public/reviews/movie/{movie.id}/report"
+
+        first = client.post(endpoint, json={"reason": "spam"})
+        duplicate = client.post(endpoint, json={"reason": "copied_content"})
+        assert first.status_code == 201
+        assert duplicate.json()["duplicate"] is True
+        assert db_session.query(models.PublicReviewReport).count() == 1
+
+        from app.visitor_identity import VISITOR_COOKIE
+        client.cookies.delete(VISITOR_COOKIE)
+        second = client.post(endpoint, json={"reason": "harassment"})
+        client.cookies.delete(VISITOR_COOKIE)
+        third = client.post(endpoint, json={"reason": "personal_information"})
+
+        assert second.json()["visibility"] == "visible"
+        assert third.json()["visibility"] == "unlisted"
+        assert client.get(f"/api/public/reviews/{movie.id}?category=movie").status_code == 404
+        assert "Automatically Moderated Movie" not in client.get("/reviews?category=movie").text
+        assert f"/reviews/{movie.id}?category=movie" not in client.get("/sitemap.xml").text
+        assert db_session.query(models.Movie).filter_by(id=movie.id).one().review == review_text
+        assert db_session.query(models.Notification).filter_by(
+            user_id=user.id, type="review_unlisted"
+        ).count() == 1
+
+        revised = (
+            review_text
+            + " On reflection, the sound design also gives quiet scenes enough tension to carry the slower pace."
+        )
+        movie.review = revised
+        db_session.commit()
+        restored = client.get(f"/api/public/reviews/{movie.id}?category=movie")
+        assert restored.status_code == 200
+        assert restored.json()["review"] == revised
+        assert f"/reviews/{movie.id}?category=movie" in client.get("/sitemap.xml").text
+
+        client.cookies.delete(VISITOR_COOKIE)
+        new_version_report = client.post(endpoint, json={"reason": "other"})
+        db_session.expire_all()
+        state = db_session.query(models.PublicReviewState).filter_by(category="movie", item_id=movie.id).one()
+        assert new_version_report.json()["visibility"] == "visible"
+        assert state.report_count == 1
+        assert state.suspended_at is None
+
+    def test_review_report_rate_limit_wraps_the_executed_handler(self):
+        routes = [
+            route for route in reviews_router.router.routes
+            if route.path == "/api/public/reviews/{category}/{review_id}/report"
+        ]
+        assert len(routes) == 1
+        assert routes[0].endpoint is routes[0].dependant.call
+        assert hasattr(routes[0].endpoint, "__wrapped__")

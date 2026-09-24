@@ -161,19 +161,21 @@ class TestSEOEndpoints:
         assert "<urlset" in content
         assert "omnitrackr.xyz" in content or "sitemap" in content.lower()
     
-    def test_sitemap_includes_privacy_page(self, client):
-        """Test that sitemap includes the privacy page."""
+    def test_sitemap_excludes_supporting_policy_pages(self, client):
+        """Trust pages stay accessible without inflating the submitted search inventory."""
         response = client.get("/sitemap.xml")
         assert response.status_code == 200
         content = response.text
-        assert "/privacy" in content
+        assert "/privacy" not in content
+        assert "/advertising" not in content
+        assert "/content-quality" not in content
     
-    def test_sitemap_includes_reviews_page(self, client):
-        """Test that sitemap includes the reviews page."""
+    def test_sitemap_omits_empty_reviews_directory(self, client):
+        """An empty, noindexed directory should not be submitted for indexing."""
         response = client.get("/sitemap.xml")
         assert response.status_code == 200
         content = response.text
-        assert "/reviews" in content
+        assert "/reviews" not in content
         assert "/reviews?category=" not in content
 
     def test_sitemap_review_category_urls_require_substantial_inventory(self, client, db_session, authenticated_client, test_user_data):
@@ -192,7 +194,10 @@ class TestSEOEndpoints:
                 year=2026,
                 review=(
                     "This review is substantial enough for a category review listing because it explains tone, "
-                    "pacing, audience fit, and why the movie belongs in a public discovery directory."
+                    "pacing, audience fit, and why the movie belongs in a public discovery directory. The lead "
+                    "performance makes the slow opening worthwhile, while the final act pays off its quieter setup. "
+                    "I would recommend it to viewers who prefer character work over constant action and who enjoy "
+                    "a film that becomes more rewarding after its themes have time to settle."
                 ),
                 review_public=True,
             ),
@@ -232,6 +237,7 @@ class TestSEOEndpoints:
         assert movie.id is not None
         assert book.id is not None
         assert "/reviews?category=movie" in content
+        assert "/reviews</loc>" in content
         assert "/reviews?category=book" not in content
         assert f"/reviews/{spammy_movie.id}?category=movie" not in content
 
@@ -281,33 +287,24 @@ class TestSEOEndpoints:
         assert f"/reviews/{directory_quality_review.id}?category=movie" not in content
         assert f"/reviews/{standalone_review.id}?category=movie" in content
 
-    def test_sitemap_includes_public_value_pages(self, client):
-        """Test that sitemap includes public editorial pages for crawlers."""
+    def test_sitemap_concentrates_on_distinct_public_value_pages(self, client):
+        """The sitemap should favor complete experiences over overlapping support pages."""
         response = client.get("/sitemap.xml")
         assert response.status_code == 200
         content = response.text
-        assert "/compare" in content
-        assert "/use-cases" in content
-        assert "/changelog" in content
-        assert "/advertising" in content
-        assert "/content-quality" in content
-        assert "/site-map" in content
-        assert "/faq" in content
-        assert "/tv-show-tracker" in content
-        assert "/game-tracker" in content
-        assert "/movie-tracker" in content
-        assert "/anime-tracker" in content
-        assert "/book-tracker" in content
-        assert "/music-tracker" in content
-        assert "/media-statistics" in content
-        assert "/export-import-guide" in content
-        assert "/media-tracker-checklist" in content
-        assert "/tracking-templates" in content
-        assert "/review-guidelines" in content
-        assert "/sample-library" in content
-        assert "/demo" in content
-        assert "/media-tracking" in content
-        assert "/roadmap" in content
+        for path in (
+            "/about", "/faq", "/guides", "/export-import-guide",
+            "/review-guidelines", "/sample-library", "/demo", "/media-tracking",
+        ):
+            assert path in content
+        for path in (
+            "/compare", "/use-cases", "/changelog", "/site-map",
+            "/tv-show-tracker", "/game-tracker", "/movie-tracker",
+            "/anime-tracker", "/book-tracker", "/music-tracker",
+            "/media-statistics", "/media-tracker-checklist",
+            "/tracking-templates", "/roadmap",
+        ):
+            assert path not in content
     
     def test_sitemap_includes_homepage(self, client):
         """Test that sitemap includes the homepage."""
@@ -357,31 +354,9 @@ class TestSEOEndpoints:
         assert "text/plain" in response.headers["content-type"]
         content = response.text
         assert "User-agent: *" in content
+        assert "Allow: /" in content
         assert "Allow: /ads.txt" in content
         assert "Allow: /sellers.json" in content
-        assert "Allow: /reviews" in content
-        assert "Allow: /compare" in content
-        assert "Allow: /use-cases" in content
-        assert "Allow: /changelog" in content
-        assert "Allow: /advertising" in content
-        assert "Allow: /content-quality" in content
-        assert "Allow: /site-map" in content
-        assert "Allow: /faq" in content
-        assert "Allow: /tv-show-tracker" in content
-        assert "Allow: /game-tracker" in content
-        assert "Allow: /movie-tracker" in content
-        assert "Allow: /anime-tracker" in content
-        assert "Allow: /book-tracker" in content
-        assert "Allow: /music-tracker" in content
-        assert "Allow: /media-statistics" in content
-        assert "Allow: /export-import-guide" in content
-        assert "Allow: /media-tracker-checklist" in content
-        assert "Allow: /tracking-templates" in content
-        assert "Allow: /review-guidelines" in content
-        assert "Allow: /sample-library" in content
-        assert "Allow: /demo" in content
-        assert "Allow: /media-tracking" in content
-        assert "Allow: /roadmap" in content
         assert "Disallow: /docs" in content
         assert "Disallow: /redoc" in content
         assert "Disallow: /openapi.json" in content
@@ -520,6 +495,12 @@ class TestSecurityMiddleware:
         assert "Referrer-Policy" in response.headers
         assert "Permissions-Policy" in response.headers
 
+    def test_private_cookie_authenticated_responses_are_not_shared_cacheable(self, authenticated_client):
+        for path in ("/movies/", "/friends", "/notifications/"):
+            response = authenticated_client.get(path)
+            assert response.status_code == 200
+            assert response.headers["cache-control"] == "private, no-store"
+
     def test_public_content_pages_use_nonce_csp_without_unsafe_inline(self, client):
         """Public SEO/content pages should not need unsafe-inline in CSP."""
         for path in [
@@ -587,30 +568,17 @@ class TestSecurityMiddleware:
     def test_adsense_loader_is_limited_to_public_content_pages(self, client):
         """AdSense should not load on the mixed landing/dashboard shell or legal pages."""
         eligible_paths = [
-            "/about",
-            "/faq",
-            "/guides",
-            "/compare",
-            "/use-cases",
-            "/changelog",
-            "/tv-show-tracker",
-            "/game-tracker",
-            "/movie-tracker",
-            "/anime-tracker",
-            "/book-tracker",
-            "/music-tracker",
-            "/media-statistics",
             "/export-import-guide",
-            "/media-tracker-checklist",
-            "/tracking-templates",
             "/review-guidelines",
             "/sample-library",
-            "/demo",
             "/media-tracking",
-            "/roadmap",
-            "/reviews",
         ]
-        excluded_paths = ["/", "/privacy", "/advertising", "/content-quality", "/site-map", "/terms", "/contact"]
+        excluded_paths = [
+            "/", "/demo", "/about", "/faq", "/guides", "/compare", "/use-cases",
+            "/changelog", "/movie-tracker", "/anime-tracker", "/media-statistics",
+            "/media-tracker-checklist", "/tracking-templates", "/roadmap",
+            "/privacy", "/advertising", "/content-quality", "/site-map", "/terms", "/contact", "/reviews",
+        ]
 
         for path in eligible_paths:
             response = client.get(path)
@@ -673,7 +641,7 @@ class TestSecurityMiddleware:
 
     def test_adsense_loader_is_suppressed_for_authenticated_public_requests(self, authenticated_client):
         """Logged-in users should not receive the public ad-loader on guide/review pages."""
-        for path in ("/about", "/reviews", "/media-tracking"):
+        for path in ("/demo", "/reviews", "/media-tracking"):
             response = authenticated_client.get(path)
             assert response.status_code == 200
             assert "/static/ad-loader.js" not in response.text
@@ -682,28 +650,10 @@ class TestSecurityMiddleware:
     def test_ad_eligible_public_pages_have_substantial_original_inventory(self, client):
         """Every ad-eligible public page should render as substantial content inventory."""
         eligible_paths = [
-            "/about",
-            "/faq",
-            "/guides",
-            "/compare",
-            "/use-cases",
-            "/changelog",
-            "/tv-show-tracker",
-            "/game-tracker",
-            "/movie-tracker",
-            "/anime-tracker",
-            "/book-tracker",
-            "/music-tracker",
-            "/media-statistics",
             "/export-import-guide",
-            "/media-tracker-checklist",
-            "/tracking-templates",
             "/review-guidelines",
             "/sample-library",
-            "/demo",
             "/media-tracking",
-            "/roadmap",
-            "/reviews",
         ]
 
         for path in eligible_paths:
@@ -717,8 +667,8 @@ class TestSecurityMiddleware:
             assert quality.canonical_count == 1, f"{path} should have one canonical URL"
             assert quality.json_ld_count >= 1, f"{path} should include structured data"
 
-    def test_indexable_public_utility_pages_are_not_thin_placeholders(self, client):
-        """Legal, support, and ad-disclosure pages should also provide useful trust content."""
+    def test_supporting_public_utility_pages_are_useful_but_noindexed(self, client):
+        """Legal and support pages remain useful without becoming search inventory."""
         utility_paths = [
             "/privacy",
             "/advertising",
@@ -738,6 +688,37 @@ class TestSecurityMiddleware:
             assert quality.description_count == 1, f"{path} should have one meta description"
             assert quality.canonical_count == 1, f"{path} should have one canonical URL"
             assert quality.json_ld_count >= 1, f"{path} should include structured data"
+            assert "noindex" in " ".join(quality.robots_contents).lower()
+            assert response.headers["x-robots-tag"] == "noindex, follow"
+            assert "/static/ad-loader.js" not in response.text
+
+    def test_overlapping_guides_remain_accessible_but_outside_search_inventory(self, client):
+        """Consolidated guides should keep working for visitors and internal links."""
+        supporting_paths = [
+            "/compare",
+            "/use-cases",
+            "/changelog",
+            "/tv-show-tracker",
+            "/game-tracker",
+            "/movie-tracker",
+            "/anime-tracker",
+            "/book-tracker",
+            "/music-tracker",
+            "/media-statistics",
+            "/media-tracker-checklist",
+            "/tracking-templates",
+            "/roadmap",
+        ]
+        sitemap = client.get("/sitemap.xml").text
+
+        for path in supporting_paths:
+            response = client.get(path)
+            quality = parse_page_quality(response.text)
+
+            assert response.status_code == 200
+            assert response.headers["x-robots-tag"] == "noindex, follow"
+            assert "noindex" in " ".join(quality.robots_contents).lower()
+            assert path not in sitemap
             assert "/static/ad-loader.js" not in response.text
 
     def test_public_pages_have_click_focused_metadata(self, client):
@@ -816,8 +797,20 @@ class TestSecurityMiddleware:
             assert response.status_code == 200
             assert 'aria-label="Public site navigation"' in response.text
             hrefs = extract_hrefs(response.text)
-            assert expected_hrefs.issubset(hrefs)
-            assert 'class="public-site-nav__cta" href="/#landing-auth"' in response.text
+            if path == "/":
+                # The landing page intentionally keeps a small, task-focused nav.
+                assert {"/", "/guides", "/reviews", "/faq", "/privacy", "/#landing-auth"}.issubset(hrefs)
+            elif path == "/demo":
+                assert {"/", "/media-tracking", "/guides", "/reviews", "/faq", "/privacy", "/?start=demo#landing-auth"}.issubset(hrefs)
+            elif path.startswith("/reviews"):
+                # Discovery puts member content first, with guidance and supporting
+                # pages available through focused navigation and the site map.
+                assert {"/", "/reviews", "/discover", "/guides", "/privacy", "/site-map", "/review-guidelines", "/#landing-auth"}.issubset(hrefs)
+                assert {f"/reviews?category={category}" for category in ("movie", "tv_show", "anime", "video_game", "music", "book")}.issubset(hrefs)
+            else:
+                assert expected_hrefs.issubset(hrefs)
+            if path != "/demo":
+                assert 'class="public-site-nav__cta" href="/#landing-auth"' in response.text
 
     def test_public_pages_do_not_render_mojibake_text(self, client):
         """Public pages should not show broken UTF-8 artifacts to visitors or reviewers."""
@@ -875,11 +868,18 @@ class TestSecurityMiddleware:
 
         assert response.status_code == 200
         content = response.text
-        assert "Why a Hub Helps" in content
+        assert "Worked Example: Turn a Scattered List Into a Shortlist" in content
+        assert "search engines a clearer map" not in content
+        assert "Add ten favorites, ten unfinished items" not in content
+        assert '/guides#tracking-heading' in content
+        assert '/discover' in extract_hrefs(content)
         assert "Choose a Workflow" in content
         assert "A Monthly Media Library Audit" in content
         assert "What Good Tracking Content Includes" in content
+        assert "A Visual Tour of the Tracker" in content
+        assert "Make Your First Ten Minutes Count" in content
         assert "original context over copied descriptions" in content
+        assert content.count('loading="lazy" decoding="async"') >= 4
         hrefs = extract_hrefs(content)
         for path in (
             "/movie-tracker",
@@ -1083,7 +1083,7 @@ class TestSecurityMiddleware:
         content = response.text
         assert "Recently Shipped" in content
         assert "Public Guide Library" in content
-        assert "Review Quality Tools" in content
+        assert "Automated Review Quality and Safety" in content
         assert "Ad and Privacy Transparency" in content
         assert "Security and SEO Cleanup" in content
         assert "Stability and Release Guardrails" in content
@@ -1096,23 +1096,29 @@ class TestSecurityMiddleware:
         assert "/compare" in hrefs
 
     def test_demo_page_explains_sample_library_workflow_and_privacy(self, client):
-        """Demo page should be useful standalone content before signup."""
+        """The demo renders a useful sample library before scripts or signup."""
         response = client.get("/demo")
 
         assert response.status_code == 200
         content = response.text
-        assert "Sample Collection" in content
-        assert "Sample Statistics" in content
-        assert "Example Tracking Workflow" in content
-        assert "What the Demo Helps You Decide" in content
-        assert "fictional and does not expose real user libraries" in content
-        assert "mark the current status" in content
+        assert content.count('data-sample-id=') == 6
+        for stat_id in ("demoTotal", "demoFinished", "demoNext", "demoAverage"):
+            assert f'id="{stat_id}"' in content
+        assert "/static/demo.js?v=" in content
+        assert "/static/demo.css?v=" in content
+        assert "/static/ad-loader.js" not in content
+        assert "/analytics.js" not in content
+        quality = parse_page_quality(content)
+        assert quality.h1_count == 1
+        assert quality.description_count == 1
+        assert quality.canonical_hrefs == ["https://omnitrackr.xyz/demo"]
+        assert "noindex" not in " ".join(quality.robots_contents)
         hrefs = extract_hrefs(content)
         assert "/media-tracking" in hrefs
         assert "/reviews" in hrefs
         assert "/faq" in hrefs
-        assert "/compare" in hrefs
         assert "/privacy" in hrefs
+        assert "/?start=demo#landing-auth" in hrefs
 
     def test_export_import_guide_explains_portability_and_backup_safety(self, client):
         """Export guide should be practical trust-building content before signup."""
@@ -1222,7 +1228,9 @@ class TestSecurityMiddleware:
         assert "Recent Security and Quality Improvements" in content
         assert "Recent Content Improvements" in content
         assert "Release Verification" in content
-        assert '"dateModified": "2026-07-05"' in content
+        assert '"dateModified": "2026-09-24"' in content
+        assert "September 2026: Activation and Trust Baseline" in content
+        assert "existing launchpad, Weekly playback, Library pulse, and moderator insights" in content
         assert "public reviews API default to favor substantial reviews" in content
         assert "standalone review detail pages" in content
         assert "at least 750 crawlable words" in content
@@ -1274,57 +1282,61 @@ class TestSecurityMiddleware:
         assert "color: var(--primary)" in guides_h1_rule
         assert "-webkit-text-fill-color: transparent" not in guides_h1_rule
 
-    def test_home_footer_uses_clean_emoji_link_set(self, client):
-        """Home footers should avoid old social links and use emoji labels."""
+    def test_home_public_navigation_keeps_key_resources_discoverable(self, client):
+        """The anonymous homepage should prioritize public resources over app controls."""
         response = client.get("/")
 
         assert response.status_code == 200
         content = response.text
+        assert 'data-public-shell="true"' in content
         assert "🐙 GitHub" not in content
         assert "LinkedIn" not in content
-        assert "/media-tracker-checklist" in extract_hrefs(content)
-        assert "/tracking-templates" in extract_hrefs(content)
         assert "/faq" in extract_hrefs(content)
-        assert "/review-guidelines" in extract_hrefs(content)
-        for label in (
-            "📧 omnitrackr@gmail.com",
-            "☕ Ko-fi",
-            "ℹ️ About",
-            "👀 Demo",
-            "🧭 Tracking Hub",
-            "📘 Guides",
-            "⚖️ Compare",
-            "💡 Use Cases",
-            "📺 TV Tracker",
-            "🎮 Game Tracker",
-            "📝 Changelog",
-            "🗺️ Roadmap",
-            "📜 Terms",
-            "✉️ Contact",
-            "🔒 Privacy Policy",
-        ):
-            assert label in content
+        assert "/guides" in extract_hrefs(content)
+        assert "/reviews" in extract_hrefs(content)
+        assert "OmniTrackr" in content
+        assert "Start tracking" in content
+        assert "Public reviews" in content
 
-    def test_homepage_highlights_recent_public_quality_updates(self, client):
-        """Landing page should surface recent public resources for visitors and reviewers."""
+    def test_homepage_prioritizes_product_workflow_over_internal_content_inventory(self, client):
+        """Landing page should explain the product before sending people into guides."""
         response = client.get("/")
 
         assert response.status_code == 200
         content = response.text
-        assert "Recently improved" in content
-        assert "Fresh resources for new visitors and reviewers" in content
-        assert "Setup Checklist" in content
-        assert "Sample Media Library" in content
-        assert "Content Quality Policy" in content
-        assert "Human-Readable Site Map" in content
-        assert "Advertising Transparency" in content
-        assert "avoid thin or duplicate content" in content
+        assert "Your media history, in one place" in content
+        assert "Remember more than the title." in content
+        assert "From recommendation to a memory you can revisit" in content
+        assert "One good pick can lead somewhere new." in content
+        assert "A few honest answers" in content
         hrefs = extract_hrefs(content)
-        assert "/media-tracker-checklist" in hrefs
-        assert "/sample-library" in hrefs
-        assert "/content-quality" in hrefs
-        assert "/site-map" in hrefs
-        assert "/advertising" in hrefs
+        assert "/guides" in hrefs
+        assert "/reviews" in hrefs
+        assert "/privacy" in hrefs
+        assert "/discover" in hrefs
+        assert "/discover/one-evening-well-spent" in hrefs
+        assert "/discover/finding-your-feet" in hrefs
+        assert "/discover/beautifully-strange-worlds" in hrefs
+
+    def test_homepage_hero_examples_match_supported_tracking(self, client):
+        """Sample entries must distinguish checkpoints and statuses from unsupported tracking."""
+        response = client.get("/")
+
+        assert response.status_code == 200
+        content = response.text
+        assert "landing-library-showcase" in content
+        assert "Example library" in content
+        assert "Last watched: episode 18" in content
+        assert "Played</small>" in content
+        assert "Not read" in content
+        assert "journal moments" in content
+        assert "Cross-media explorer" in content
+        assert "18 of 28 episodes" not in content
+        assert "hours played" not in content
+        assert "Want to read" not in content
+        assert "Your most active week this month" not in content
+        assert 'class="showcase-progress"' not in content
+        assert "github.com/user-attachments" not in content
 
     def test_privacy_policy_discloses_google_ads_data_use(self, client):
         """Privacy policy should include required Google ads/cookie disclosures."""
@@ -1353,9 +1365,11 @@ class TestSecurityMiddleware:
         assert "No deceptive placement" in content
         assert "Light by default" in content
         assert "Ads should not be placed inside private account forms" in content
-        assert "The mixed landing and authenticated app shell are intentionally kept out of the ad-loader allowlist" in content
+        assert "The mixed landing and authenticated app shell are also kept out of the ad-loader allowlist" in content
         assert "How Placements Are Reviewed" in content
         assert "Public pages should remain readable when ads are unavailable" in content
+        assert "Google-certified consent management platform" in content
+        assert "Google does not treat CMP certification as a guarantee of full legal compliance" in content
         hrefs = extract_hrefs(content)
         assert "/privacy" in hrefs
         assert "/sample-library" in hrefs
@@ -1364,6 +1378,7 @@ class TestSecurityMiddleware:
             for parsed in (urlparse(href) for href in hrefs)
         }
         assert ("https", "policies.google.com", "/technologies/partner-sites") in href_parts
+        assert ("https", "support.google.com", "/adsense/answer/13554116") in href_parts
         assert ("https", "adssettings.google.com", "/") in href_parts
 
     def test_content_quality_policy_explains_originality_and_review_standards(self, client):
@@ -1378,11 +1393,12 @@ class TestSecurityMiddleware:
         assert "User-Generated Content Safeguards" in content
         assert "Content OmniTrackr Should Avoid" in content
         assert "Maintenance and Review Process" in content
-        assert '"dateModified": "2026-07-06"' in content
+        assert '"dateModified": "2026-09-24"' in content
         assert "scraped summaries, or generic filler" in content
         assert "Public review pages for empty reviews, one-word notes, or private account data" in content
         assert "Reviews that contain obvious URLs, email addresses, phone-number-like contact details, or promotional phrases" in content
-        assert "marked noindex and do not load ads until they contain substantial public review inventory" in content
+        assert "Review directory pages stay ad-free" in content
+        assert "without exposing review text or reporter identity" in content
         assert "Machine-readable files such as ads.txt, sellers.json, llms.txt, and the AI summary endpoint" in content
         assert "Thin pages should be improved, noindexed, or removed from public discovery" in content
         hrefs = extract_hrefs(content)
@@ -1565,15 +1581,34 @@ class TestRootEndpoint:
     """Test root endpoint."""
     
     def test_get_root(self, client):
-        """Test GET request to root."""
+        """Anonymous users receive a focused public page, not empty private tables."""
         response = client.get("/")
         assert response.status_code == 200
         quality = parse_page_quality(response.text)
         assert quality.h1_count == 1
-        assert '<p class="app-title" role="heading" aria-level="1">OmniTrackr</p>' in response.text
+        assert 'data-public-shell="true"' in response.text
+        assert 'id="mainContainer"' not in response.text
+        assert 'id="logoutBtn"' not in response.text
+        assert 'src="/static/public-landing.js"' in response.text
+        assert not re.search(r'<script\b[^>]*\bsrc=[\"\'](?:\./|/)?app\.js(?:\?[^\"\']*)?[\"\']', response.text)
+        assert response.headers["cache-control"] == "no-cache"
+        assert "Cookie" in response.headers["vary"]
     
     def test_head_root(self, client):
         """Test HEAD request to root."""
         response = client.head("/")
         assert response.status_code == 200
+
+    def test_authenticated_root_keeps_the_full_dashboard(self, authenticated_client):
+        """A signed-in session must keep the existing dashboard and application bundle."""
+        response = authenticated_client.get("/")
+
+        assert response.status_code == 200
+        assert 'data-public-shell="true"' not in response.text
+        assert 'id="mainContainer"' in response.text
+        assert 'id="logoutBtn"' in response.text
+        # Require cache busting without tying this shell contract to a release date.
+        assert re.search(r'<script\b[^>]*\bsrc="\./app\.js\?v=[A-Za-z0-9_-]+"', response.text)
+        assert response.headers["cache-control"] == "private, no-store"
+        assert "Cookie" in response.headers["vary"]
 

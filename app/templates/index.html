@@ -3,10 +3,6 @@
 
 <head>
   <meta name="google-adsense-account" content="ca-pub-7271682066779719">
-  <!-- Google tag (gtag.js) -->
-  <script async src="https://www.googletagmanager.com/gtag/js?id=G-7EJ4ZGHNV1"></script>
-  <script src="./analytics.js" defer></script>
-
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=5.0, user-scalable=yes">
   <meta name="theme-color" content="#1e1e2f">
@@ -50,12 +46,14 @@
   <link rel="icon" type="image/x-icon" href="/omnitrackr_favicon.ico">
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link rel="dns-prefetch" href="https://www.googletagmanager.com">
-  <link rel="dns-prefetch" href="https://www.google-analytics.com">
-  <link rel="preload" href="./styles.css" as="style">
-  <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@700;800&family=Inter:wght@400;500;600&display=swap"
+  <link rel="preload" href="./styles.css?v=20260924-import-studio-final" as="style">
+  <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@700;800&family=Inter:wght@400;500;600;700&display=swap"
     rel="stylesheet">
-  <link rel="stylesheet" href="./styles.css">
+  <link rel="stylesheet" href="./styles.css?v=20260924-import-studio-final">
+  <link rel="stylesheet" href="/static/progress.css?v=20260922-progress">
+  <link rel="stylesheet" href="/static/app-theme.css?v=20260924-friends-panel-2">
+  <link rel="stylesheet" href="/static/library-theme.css?v=20260924-library-filters-1">
+  <link rel="stylesheet" href="/static/dialog-theme.css?v=20260924-visual-4">
   <script src="./preauth.js"></script>
   <style>
     html.authenticated #landingPage{display:none}
@@ -179,7 +177,7 @@
         "name": "Can I export my data?",
         "acceptedAnswer": {
           "@type": "Answer",
-          "text": "Yes! You can export your entire collection (movies, TV shows, anime, video games, music, and books) as a JSON file at any time. This allows you to backup your data or import it into another account. You can also import JSON files to quickly add multiple entries."
+          "text": "Yes. Export your movies, TV shows, anime, video games, music, books, collections, and private journal as a JSON backup. The Import Studio can also preview Letterboxd, Goodreads, MyAnimeList, and generic CSV migrations without overwriting existing library records."
         }
       },
       {
@@ -294,7 +292,13 @@
   </script>
 </head>
 
-<body class="dark-mode">
+<body class="dark-mode app-shell">
+  <div class="account-toolbar" role="group" aria-label="Account controls">
+  <button id="showFriendsSidebar" class="sidebar-toggle-floating" type="button" title="Friends"
+    aria-label="Friends" aria-expanded="false" aria-controls="friendsSidebar" hidden>
+    <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="1.7" aria-hidden="true"><circle cx="9" cy="8" r="3"/><path d="M3 20v-2a6 6 0 0 1 12 0v2M16 5a3 3 0 0 1 0 6M21 20v-2a6 6 0 0 0-3-5.2"/></svg>
+    <span>Friends</span>
+  </button>
   <button id="toggleMode" class="toggle-btn" aria-label="Toggle between dark and light mode">Light Mode</button>
   <button id="notificationBell" class="notification-bell" aria-label="View notifications">
     🔔
@@ -314,103 +318,221 @@
     <span id="userDisplayText"></span>
   </button>
   <button id="logoutBtn" aria-label="Logout from your account">Logout</button>
+  </div>
 
-  <!-- Friends Sidebar -->
-  <aside id="friendsSidebar" class="friends-sidebar" style="display: none;">
+  <!-- Friends panel overlays the workspace without changing its layout. -->
+  <aside id="friendsSidebar" class="friends-sidebar hidden" aria-labelledby="friendsPanelTitle" hidden>
     <div class="friends-sidebar-header">
-      <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px;">
-        <h2 style="margin: 0;">Friends</h2>
-        <button id="toggleFriendsSidebar" class="sidebar-toggle-btn" title="Hide Friends Sidebar"
-          aria-label="Hide friends sidebar">◀</button>
+      <div class="friends-panel-heading">
+        <h2 id="friendsPanelTitle">Friends</h2>
+        <button id="toggleFriendsSidebar" class="sidebar-toggle-btn" type="button" title="Close friends"
+          aria-label="Close friends">×</button>
       </div>
       <button id="sendFriendRequestBtn" class="action-btn">+ Add Friend</button>
     </div>
-    <div id="friendsList" class="friends-list">
+    <div id="friendsList" class="friends-list" role="region" aria-label="Friends list" tabindex="0">
       <p class="no-friends">No friends yet</p>
     </div>
   </aside>
 
-  <!-- Floating Toggle Button (shown when sidebar is hidden) -->
-  <button id="showFriendsSidebar" class="sidebar-toggle-floating" title="Show Friends Sidebar"
-    aria-label="Show friends sidebar" style="display: none;">▶</button>
-
   <main class="container" id="mainContainer">
     <header class="header" role="banner">
-      <p class="app-title" role="heading" aria-level="1">OmniTrackr</p>
+      <div class="app-brand">
+        <span class="app-brand__mark" aria-hidden="true"><svg viewBox="0 0 32 32" width="28" height="28" fill="none"><circle cx="16" cy="16" r="10" stroke="currentColor" stroke-width="2"/><path d="M6 16h20M16 6c-7 5-7 15 0 20 7-5 7-15 0-20Z" stroke="currentColor" stroke-width="1.5"/></svg></span>
+        <div><p class="app-title" role="heading" aria-level="1">OmniTrackr</p><p class="app-brand__caption">Your media, remembered.</p></div>
+      </div>
+      <div class="library-search" role="search">
+        <label class="sr-only" for="librarySearchInput">Find anything in your library</label>
+        <div class="library-search__field">
+          <span aria-hidden="true">⌕</span>
+          <input id="librarySearchInput" type="search" maxlength="200" autocomplete="off" placeholder="Find anything in your library…" aria-controls="librarySearchResults" aria-expanded="false">
+          <kbd aria-hidden="true">Ctrl K</kbd>
+        </div>
+        <div id="librarySearchResults" class="library-search__results" role="listbox" aria-label="Library search results" aria-live="polite" hidden></div>
+      </div>
+      <button type="button" id="quickCaptureButton" class="quick-capture-trigger" data-action="open-quick-capture" aria-haspopup="dialog" aria-controls="quickCaptureModal">
+        <span aria-hidden="true">＋</span> Add anything <kbd aria-hidden="true">/</kbd>
+      </button>
     </header>
 
-    <div class="tabs">
-      <button class="tab active" data-switch-tab="movies">🎬 Movies</button>
-      <button class="tab" data-switch-tab="tv-shows">📺 TV Shows</button>
-      <button class="tab" data-switch-tab="anime">🎌 Anime</button>
-      <button class="tab" data-switch-tab="video-games">🎮 Video Games</button>
-      <button class="tab" data-switch-tab="music">🎵 Music</button>
-      <button class="tab" data-switch-tab="books">📚 Books</button>
-      <button class="tab" data-switch-tab="statistics">📊 Statistics</button>
-      <div id="customTabsContainer"></div>
-      <button class="tab" id="manageCustomTabsBtn" data-action="show-custom-tab-manager" style="background-color: #6366f1; margin-left: auto;">⚙️ Manage Custom Tabs</button>
+    <nav class="tabs" aria-label="Library categories and tools">
+      <div class="library-nav__group" role="group" aria-label="Media libraries">
+        <span class="library-nav__label" aria-hidden="true">Library</span>
+        <button class="tab active" data-switch-tab="movies">Movies</button>
+        <button class="tab" data-switch-tab="tv-shows">TV Shows</button>
+        <button class="tab" data-switch-tab="anime">Anime</button>
+        <button class="tab" data-switch-tab="video-games">Games</button>
+        <button class="tab" data-switch-tab="music">Music</button>
+        <button class="tab" data-switch-tab="books">Books</button>
+      </div>
+      <div class="library-nav__group library-nav__group--tools" role="group" aria-label="Personal tools and custom libraries">
+        <span class="library-nav__label" aria-hidden="true">Your space</span>
+        <button class="tab" data-switch-tab="activity">Journal</button>
+        <button class="tab" data-switch-tab="recommendations">Postcards</button>
+        <button class="tab" data-switch-tab="collections">Collections</button>
+        <button class="tab" data-switch-tab="statistics">Statistics</button>
+        <a class="tab" href="/discover">Discover ↗</a>
+        <div id="customTabsContainer"></div>
+        <button class="tab library-nav__manage" id="manageCustomTabsBtn" data-action="show-custom-tab-manager">Manage custom tabs</button>
+      </div>
+      <p class="library-nav__hint">Scroll the tabs to explore more <span aria-hidden="true">→</span></p>
+    </nav>
+
+    <p id="libraryNavigationStatus" role="status" aria-live="polite" aria-atomic="true" hidden></p>
+
+    <section id="libraryLaunchpad" class="library-launchpad" aria-labelledby="libraryLaunchpadTitle" hidden>
+      <div class="library-launchpad__copy">
+        <p class="library-launchpad__eyebrow">Your library, your pace</p>
+        <h2 id="libraryLaunchpadTitle">Build a library you’ll want to revisit.</h2>
+        <p id="libraryLaunchpadSummary">Loading your library progress…</p>
+        <div id="libraryLaunchpadCategories" class="library-launchpad__categories" aria-label="Choose the first kind of media to track" hidden></div>
+        <div id="libraryLaunchpadStarterPaths" class="library-launchpad__categories" hidden>
+          <button type="button" class="library-launchpad__category" data-action="launchpad-import">Bring an existing list</button>
+          <a class="library-launchpad__category" href="/discover">Browse Discover</a>
+          <p class="library-launchpad__path-hint">Import Studio lets you preview a CSV before importing. Existing records are not overwritten.</p>
+        </div>
+      </div>
+      <div id="libraryLaunchpadSteps" class="library-launchpad__steps" aria-live="polite"></div>
+      <div class="library-launchpad__actions">
+        <button type="button" class="action-btn library-launchpad__primary" data-action="launchpad-add-item">Add Anything</button>
+        <button type="button" id="libraryLaunchpadInsights" class="action-btn library-launchpad__secondary" data-action="launchpad-open-insights" hidden>See insights</button>
+        <button type="button" class="library-launchpad__dismiss" data-action="launchpad-dismiss" aria-label="Dismiss library launchpad">Not now</button>
+      </div>
+    </section>
+
+    <section id="returnDeck" class="return-deck" aria-labelledby="returnDeckTitle" hidden>
+      <div class="return-deck__header">
+        <div>
+          <p class="return-deck__eyebrow">Welcome back</p>
+          <h2 id="returnDeckTitle">Pick up where you left off</h2>
+          <p id="returnDeckSummary" class="return-deck__summary"></p>
+        </div>
+        <button type="button" class="return-deck__dismiss" data-action="dismiss-return-deck" aria-label="Dismiss welcome back suggestions">Not now</button>
+      </div>
+      <div id="returnDeckActions" class="return-deck__actions" aria-live="polite"></div>
+      <div id="returnDeckRecap" class="return-deck__recap"></div>
+    </section>
+
+    <div class="daily-dashboard">
+    <section id="libraryPulse" class="library-pulse" aria-labelledby="libraryPulseTitle" hidden>
+      <div class="library-pulse__header">
+        <div>
+          <p class="library-pulse__eyebrow">Right where you left off</p>
+          <h2 id="libraryPulseTitle">Continue</h2>
+        </div>
+        <button type="button" class="library-pulse__insights" data-action="launchpad-open-insights">View insights</button>
+      </div>
+      <div id="libraryPulseContinue" class="library-pulse__list library-pulse__continue"></div>
+      <details id="libraryPulseReflections" class="library-pulse__reflections" hidden>
+        <summary>Make it memorable <span id="libraryPulseReflectionCount"></span></summary>
+        <p>A rating or a few words can bring a finished title back to life.</p>
+        <div id="libraryPulseReflect" class="library-pulse__list"></div>
+      </details>
+    </section>
+
+    <section id="todaysPick" class="todays-pick" aria-labelledby="todaysPickTitle" hidden>
+      <div class="todays-pick__copy">
+        <h2 id="todaysPickTitle">Today’s pick</h2>
+        <label class="todays-pick__filter" for="todaysPickFilter">Choose from
+          <select id="todaysPickFilter" data-change-action="pick-category">
+            <option value="">All media</option>
+            <option value="movies">Movies</option>
+            <option value="tv-shows">TV shows</option>
+            <option value="anime">Anime</option>
+            <option value="video-games">Games</option>
+            <option value="music">Music</option>
+            <option value="books">Books</option>
+          </select>
+        </label>
+        <p id="todaysPickReason" class="todays-pick__reason"></p>
+      </div>
+      <div class="todays-pick__choice">
+        <span id="todaysPickCategory" class="todays-pick__category"></span>
+        <strong id="todaysPickName" aria-live="polite"></strong>
+      </div>
+      <div class="todays-pick__actions">
+        <button id="todaysPickOpen" type="button" class="action-btn todays-pick__open" data-action="open-todays-pick">Open it</button>
+        <button id="todaysPickAnother" type="button" class="todays-pick__another" data-action="try-another-pick">Try another</button>
+      </div>
+    </section>
     </div>
 
-    <!-- Movies Tab Content -->
-    <div id="movies-tab" class="tab-content active">
-      <div class="card">
-        <div class="collapsible-header" data-toggle-collapsible="movieForm">
-          <h2 style="margin: 0; display: inline-block;">Add Movie</h2>
-          <span class="collapsible-icon" id="movieFormIcon">▼</span>
+    <section id="nextUpQueue" class="next-up-queue" aria-labelledby="nextUpQueueTitle" hidden>
+      <div class="next-up-queue__header">
+        <div>
+          <h2 id="nextUpQueueTitle">Next Up</h2>
+          <p id="nextUpQueueSummary" class="next-up-queue__summary"></p>
         </div>
-        <div class="collapsible-content" id="movieFormContent" style="display: none;">
-          <form id="addMovieForm">
-            <div style="display: flex; gap: 10px;">
-              <input type="text" id="movieTitle" placeholder="Title" required style="flex: 1;">
-              <button type="button" id="searchMovieBtn" class="action-btn" style="white-space: nowrap;">Search</button>
+        <button id="nextUpQueueToggle" type="button" class="next-up-queue__toggle" data-action="toggle-next-up" aria-controls="nextUpQueueItems" aria-expanded="false" hidden>Manage queue</button>
+      </div>
+      <div id="nextUpQueueItems" class="next-up-queue__items" aria-live="polite"></div>
+    </section>
+
+
+
+    <!-- Movies Tab Content -->
+    <div id="movies-tab" class="tab-content active library-section">
+      <div class="card library-add-panel">
+        <div class="collapsible-header">
+          <h2><button type="button" class="library-add-toggle" aria-expanded="false" data-toggle-collapsible="movieForm" aria-controls="movieFormContent"><span>Add Movie</span><span class="collapsible-icon" id="movieFormIcon" aria-hidden="true">▼</span></button></h2>
+        </div>
+        <div class="collapsible-content" id="movieFormContent" hidden>
+          <form id="addMovieForm" class="library-add-form">
+            <div class="library-add-search">
+              <label class="library-field-label" for="movieTitle">Title</label>
+              <input type="text" id="movieTitle" placeholder="Title" required>
+              <button type="button" id="searchMovieBtn" class="action-btn library-search-button">Search</button>
             </div>
-            <div>
+            <div class="library-add-field">
+              <label class="library-field-label" for="movieDirector">Director</label>
               <input type="text" id="movieDirector" placeholder="Director (auto-filled from search)">
             </div>
-            <div>
+            <div class="library-add-field">
+              <label class="library-field-label" for="movieYear">Release year</label>
               <input type="number" id="movieYear" placeholder="Year (auto-filled from search)">
             </div>
-            <div>
+            <div class="library-add-field">
+              <label class="library-field-label" for="movieRating">Your rating</label>
               <input type="number" min="0" max="10" step="0.1" id="movieRating" placeholder="Rating (0-10.0)">
             </div>
-            <div>
+            <div class="library-add-check">
               <label>Watched <input type="checkbox" id="movieWatched"></label>
             </div>
-            <div>
+            <div class="library-add-field library-add-review">
+              <label class="library-field-label" for="movieReview">Your review</label>
               <textarea id="movieReview" class="review-textarea" data-review-quality-input placeholder="Review (optional)" rows="1"></textarea>
-              <p class="review-quality-hint"><span class="review-quality-count" data-review-counter-for="movieReview">0/80 characters - add more context for public reviews</span>. Public reviews show best with personal context, audience fit, and what stood out. <a href="/review-guidelines" target="_blank" rel="noopener noreferrer">Review guide</a></p>
+              <p class="review-quality-hint"><span class="review-quality-count" data-review-counter-for="movieReview">0/80 characters - add context for the community feed</span>. Search-ready reviews use 240+ characters, 35+ words, complete thoughts, varied language, and no links or contact details. <a href="/review-guidelines" target="_blank" rel="noopener noreferrer">Review guide</a></p>
             </div>
-            <div>
+            <div class="library-add-check">
               <label>Public Review <input type="checkbox" id="movieReviewPublic"></label>
             </div>
             <button type="submit" class="action-btn">Add Movie</button>
           </form>
         </div>
       </div>
-      <div class="card">
-        <div style="display:flex; justify-content: space-between; align-items: center; margin-bottom: 10px;">
-          <h2 style="margin: 0;">Movies</h2>
-          <span id="movieCount" style="font-weight: bold;"></span>
+      <div class="card library-panel">
+        <div class="library-heading">
+          <h2>Movies</h2>
+          <span id="movieCount" class="library-count"></span>
         </div>
-        <div style="display:flex; flex-wrap: wrap; gap: 10px; margin-bottom: 10px;">
-          <input type="text" id="movieSearch" placeholder="Search by title or director"
-            style="flex: 2; min-width: 200px;">
-          <select id="movieSort" style="flex: 1; min-width: 200px;">
+        <div class="library-toolbar">
+          <input type="text" id="movieSearch" aria-label="Search this library" placeholder="Search by title or director"
+            class="library-filter-search">
+          <select id="movieSort" aria-label="Sort this library" class="library-sort">
             <option value="">Sort by...</option>
             <option value="rating-asc">Rating (Low → High)</option>
             <option value="rating-desc">Rating (High → Low)</option>
             <option value="year-asc">Year (Oldest → Newest)</option>
             <option value="year-desc">Year (Newest → Oldest)</option>
           </select>
-          <button id="loadMovies" class="action-btn" style="flex: 1; min-width: 120px;">Refresh</button>
-          <button id="exportMovies" class="action-btn"
-            style="flex: 1; min-width: 120px; background-color: #4caf50;">Export Data</button>
-          <button id="importMovies" class="action-btn"
-            style="flex: 1; min-width: 120px; background-color: #ff9800;">Import Data</button>
+          <button id="loadMovies" class="action-btn library-utility">Refresh</button>
+          <button id="exportMovies" class="action-btn library-utility">Export Data</button>
+          <button id="importMovies" class="action-btn library-utility">Import Data</button>
         </div>
         <input type="file" id="importFile" accept=".json" style="display: none;">
-        <div class="table-container">
-          <table id="movieTable">
+        <div id="movieTableFilters" class="library-filters" aria-label="Library filters"></div>
+        <div class="table-container library-table-wrap">
+          <table id="movieTable" class="library-table">
             <thead>
               <tr>
                 <th>Poster</th>
@@ -432,68 +554,72 @@
     </div>
 
     <!-- TV Shows Tab Content -->
-    <div id="tv-shows-tab" class="tab-content">
-      <div class="card">
-        <div class="collapsible-header" data-toggle-collapsible="tvForm">
-          <h2 style="margin: 0; display: inline-block;">Add TV Show</h2>
-          <span class="collapsible-icon" id="tvFormIcon">▼</span>
+    <div id="tv-shows-tab" class="tab-content library-section">
+      <div class="card library-add-panel">
+        <div class="collapsible-header">
+          <h2><button type="button" class="library-add-toggle" aria-expanded="false" data-toggle-collapsible="tvForm" aria-controls="tvFormContent"><span>Add TV Show</span><span class="collapsible-icon" id="tvFormIcon" aria-hidden="true">▼</span></button></h2>
         </div>
-        <div class="collapsible-content" id="tvFormContent" style="display: none;">
-          <form id="addTVShowForm">
-            <div style="display: flex; gap: 10px;">
-              <input type="text" id="tvTitle" placeholder="Title" required style="flex: 1;">
-              <button type="button" id="searchTVShowBtn" class="action-btn" style="white-space: nowrap;">Search</button>
+        <div class="collapsible-content" id="tvFormContent" hidden>
+          <form id="addTVShowForm" class="library-add-form">
+            <div class="library-add-search">
+              <label class="library-field-label" for="tvTitle">Title</label>
+              <input type="text" id="tvTitle" placeholder="Title" required>
+              <button type="button" id="searchTVShowBtn" class="action-btn library-search-button">Search</button>
             </div>
-            <div>
+            <div class="library-add-field">
+              <label class="library-field-label" for="tvYear">Release year</label>
               <input type="number" id="tvYear" placeholder="Year (auto-filled from search)">
             </div>
-            <div>
+            <div class="library-add-field">
+              <label class="library-field-label" for="tvSeasons">Seasons</label>
               <input type="number" id="tvSeasons" placeholder="Seasons (optional)">
             </div>
-            <div>
+            <div class="library-add-field">
+              <label class="library-field-label" for="tvEpisodes">Episodes</label>
               <input type="number" id="tvEpisodes" placeholder="Episodes (optional)">
             </div>
-            <div>
+            <div class="library-add-field">
+              <label class="library-field-label" for="tvRating">Your rating</label>
               <input type="number" min="0" max="10" step="0.1" id="tvRating" placeholder="Rating (0-10.0)">
             </div>
-            <div>
+            <div class="library-add-check">
               <label>Watched <input type="checkbox" id="tvWatched"></label>
             </div>
-            <div>
+            <div class="library-add-field library-add-review">
+              <label class="library-field-label" for="tvReview">Your review</label>
               <textarea id="tvReview" class="review-textarea" data-review-quality-input placeholder="Review (optional)" rows="1"></textarea>
-              <p class="review-quality-hint"><span class="review-quality-count" data-review-counter-for="tvReview">0/80 characters - add more context for public reviews</span>. Public reviews show best with personal context, audience fit, and what stood out. <a href="/review-guidelines" target="_blank" rel="noopener noreferrer">Review guide</a></p>
+              <p class="review-quality-hint"><span class="review-quality-count" data-review-counter-for="tvReview">0/80 characters - add context for the community feed</span>. Search-ready reviews use 240+ characters, 35+ words, complete thoughts, varied language, and no links or contact details. <a href="/review-guidelines" target="_blank" rel="noopener noreferrer">Review guide</a></p>
             </div>
-            <div>
+            <div class="library-add-check">
               <label>Public Review <input type="checkbox" id="tvReviewPublic"></label>
             </div>
             <button type="submit" class="action-btn">Add TV Show</button>
           </form>
         </div>
       </div>
-      <div class="card">
-        <div style="display:flex; justify-content: space-between; align-items: center; margin-bottom: 10px;">
-          <h2 style="margin: 0;">TV Shows</h2>
-          <span id="tvShowCount" style="font-weight: bold;"></span>
+      <div class="card library-panel">
+        <div class="library-heading">
+          <h2>TV Shows</h2>
+          <span id="tvShowCount" class="library-count"></span>
         </div>
-        <div style="display:flex; flex-wrap: wrap; gap: 10px; margin-bottom: 10px;">
-          <input type="text" id="tvSearch" placeholder="Search by title"
-            style="flex: 2; min-width: 200px;">
-          <select id="tvSort" style="flex: 1; min-width: 200px;">
+        <div class="library-toolbar">
+          <input type="text" id="tvSearch" aria-label="Search this library" placeholder="Search by title"
+            class="library-filter-search">
+          <select id="tvSort" aria-label="Sort this library" class="library-sort">
             <option value="">Sort by...</option>
             <option value="rating-asc">Rating (Low → High)</option>
             <option value="rating-desc">Rating (High → Low)</option>
             <option value="year-asc">Year (Oldest → Newest)</option>
             <option value="year-desc">Year (Newest → Oldest)</option>
           </select>
-          <button id="loadTVShows" class="action-btn" style="flex: 1; min-width: 120px;">Refresh</button>
-          <button id="exportTVShows" class="action-btn"
-            style="flex: 1; min-width: 120px; background-color: #4caf50;">Export Data</button>
-          <button id="importTVShows" class="action-btn"
-            style="flex: 1; min-width: 120px; background-color: #ff9800;">Import Data</button>
+          <button id="loadTVShows" class="action-btn library-utility">Refresh</button>
+          <button id="exportTVShows" class="action-btn library-utility">Export Data</button>
+          <button id="importTVShows" class="action-btn library-utility">Import Data</button>
         </div>
         <input type="file" id="importTVFile" accept=".json" style="display: none;">
-        <div class="table-container">
-          <table id="tvShowTable">
+        <div id="tvShowTableFilters" class="library-filters" aria-label="Library filters"></div>
+        <div class="table-container library-table-wrap">
+          <table id="tvShowTable" class="library-table">
             <thead>
               <tr>
                 <th>Poster</th>
@@ -516,68 +642,72 @@
     </div>
 
     <!-- Anime Tab Content -->
-    <div id="anime-tab" class="tab-content">
-      <div class="card">
-        <div class="collapsible-header" data-toggle-collapsible="animeForm">
-          <h2 style="margin: 0; display: inline-block;">Add Anime</h2>
-          <span class="collapsible-icon" id="animeFormIcon">▼</span>
+    <div id="anime-tab" class="tab-content library-section">
+      <div class="card library-add-panel">
+        <div class="collapsible-header">
+          <h2><button type="button" class="library-add-toggle" aria-expanded="false" data-toggle-collapsible="animeForm" aria-controls="animeFormContent"><span>Add Anime</span><span class="collapsible-icon" id="animeFormIcon" aria-hidden="true">▼</span></button></h2>
         </div>
-        <div class="collapsible-content" id="animeFormContent" style="display: none;">
-          <form id="addAnimeForm">
-            <div style="display: flex; gap: 10px;">
-              <input type="text" id="animeTitle" placeholder="Title" required style="flex: 1;">
-              <button type="button" id="searchAnimeBtn" class="action-btn" style="white-space: nowrap;">Search</button>
+        <div class="collapsible-content" id="animeFormContent" hidden>
+          <form id="addAnimeForm" class="library-add-form">
+            <div class="library-add-search">
+              <label class="library-field-label" for="animeTitle">Title</label>
+              <input type="text" id="animeTitle" placeholder="Title" required>
+              <button type="button" id="searchAnimeBtn" class="action-btn library-search-button">Search</button>
             </div>
-            <div>
+            <div class="library-add-field">
+              <label class="library-field-label" for="animeYear">Release year</label>
               <input type="number" id="animeYear" placeholder="Year (auto-filled from search)">
             </div>
-            <div>
+            <div class="library-add-field">
+              <label class="library-field-label" for="animeSeasons">Seasons</label>
               <input type="number" id="animeSeasons" placeholder="Seasons (optional)">
             </div>
-            <div>
+            <div class="library-add-field">
+              <label class="library-field-label" for="animeEpisodes">Episodes</label>
               <input type="number" id="animeEpisodes" placeholder="Episodes (optional)">
             </div>
-            <div>
+            <div class="library-add-field">
+              <label class="library-field-label" for="animeRating">Your rating</label>
               <input type="number" min="0" max="10" step="0.1" id="animeRating" placeholder="Rating (0-10.0)">
             </div>
-            <div>
+            <div class="library-add-check">
               <label>Watched <input type="checkbox" id="animeWatched"></label>
             </div>
-            <div>
+            <div class="library-add-field library-add-review">
+              <label class="library-field-label" for="animeReview">Your review</label>
               <textarea id="animeReview" class="review-textarea" data-review-quality-input placeholder="Review (optional)" rows="1"></textarea>
-              <p class="review-quality-hint"><span class="review-quality-count" data-review-counter-for="animeReview">0/80 characters - add more context for public reviews</span>. Public reviews show best with personal context, audience fit, and what stood out. <a href="/review-guidelines" target="_blank" rel="noopener noreferrer">Review guide</a></p>
+              <p class="review-quality-hint"><span class="review-quality-count" data-review-counter-for="animeReview">0/80 characters - add context for the community feed</span>. Search-ready reviews use 240+ characters, 35+ words, complete thoughts, varied language, and no links or contact details. <a href="/review-guidelines" target="_blank" rel="noopener noreferrer">Review guide</a></p>
             </div>
-            <div>
+            <div class="library-add-check">
               <label>Public Review <input type="checkbox" id="animeReviewPublic"></label>
             </div>
             <button type="submit" class="action-btn">Add Anime</button>
           </form>
         </div>
       </div>
-      <div class="card">
-        <div style="display:flex; justify-content: space-between; align-items: center; margin-bottom: 10px;">
-          <h2 style="margin: 0;">Anime</h2>
-          <span id="animeCount" style="font-weight: bold;"></span>
+      <div class="card library-panel">
+        <div class="library-heading">
+          <h2>Anime</h2>
+          <span id="animeCount" class="library-count"></span>
         </div>
-        <div style="display:flex; flex-wrap: wrap; gap: 10px; margin-bottom: 10px;">
-          <input type="text" id="animeSearch" placeholder="Search by title"
-            style="flex: 2; min-width: 200px;">
-          <select id="animeSort" style="flex: 1; min-width: 200px;">
+        <div class="library-toolbar">
+          <input type="text" id="animeSearch" aria-label="Search this library" placeholder="Search by title"
+            class="library-filter-search">
+          <select id="animeSort" aria-label="Sort this library" class="library-sort">
             <option value="">Sort by...</option>
             <option value="rating-asc">Rating (Low → High)</option>
             <option value="rating-desc">Rating (High → Low)</option>
             <option value="year-asc">Year (Oldest → Newest)</option>
             <option value="year-desc">Year (Newest → Oldest)</option>
           </select>
-          <button id="loadAnime" class="action-btn" style="flex: 1; min-width: 120px;">Refresh</button>
-          <button id="exportAnime" class="action-btn"
-            style="flex: 1; min-width: 120px; background-color: #4caf50;">Export Data</button>
-          <button id="importAnime" class="action-btn"
-            style="flex: 1; min-width: 120px; background-color: #ff9800;">Import Data</button>
+          <button id="loadAnime" class="action-btn library-utility">Refresh</button>
+          <button id="exportAnime" class="action-btn library-utility">Export Data</button>
+          <button id="importAnime" class="action-btn library-utility">Import Data</button>
         </div>
         <input type="file" id="importAnimeFile" accept=".json" style="display: none;">
-        <div class="table-container">
-          <table id="animeTable">
+        <div id="animeTableFilters" class="library-filters" aria-label="Library filters"></div>
+        <div class="table-container library-table-wrap">
+          <table id="animeTable" class="library-table">
             <thead>
               <tr>
                 <th>Poster</th>
@@ -600,68 +730,72 @@
     </div>
 
     <!-- Music Tab Content -->
-    <div id="music-tab" class="tab-content">
-      <div class="card">
-        <div class="collapsible-header" data-toggle-collapsible="musicForm">
-          <h2 style="margin: 0; display: inline-block;">Add Music</h2>
-          <span class="collapsible-icon" id="musicFormIcon">▼</span>
+    <div id="music-tab" class="tab-content library-section">
+      <div class="card library-add-panel">
+        <div class="collapsible-header">
+          <h2><button type="button" class="library-add-toggle" aria-expanded="false" data-toggle-collapsible="musicForm" aria-controls="musicFormContent"><span>Add Music</span><span class="collapsible-icon" id="musicFormIcon" aria-hidden="true">▼</span></button></h2>
         </div>
-        <div class="collapsible-content" id="musicFormContent" style="display: none;">
-          <form id="addMusicForm">
-            <div style="display: flex; gap: 10px;">
-              <input type="text" id="musicTitle" placeholder="Title" required style="flex: 1;">
-              <button type="button" id="searchMusicBtn" class="action-btn" style="white-space: nowrap;">Search</button>
+        <div class="collapsible-content" id="musicFormContent" hidden>
+          <form id="addMusicForm" class="library-add-form">
+            <div class="library-add-search">
+              <label class="library-field-label" for="musicTitle">Title</label>
+              <input type="text" id="musicTitle" placeholder="Title" required>
+              <button type="button" id="searchMusicBtn" class="action-btn library-search-button">Search</button>
             </div>
-            <div>
+            <div class="library-add-field">
+              <label class="library-field-label" for="musicArtist">Artist</label>
               <input type="text" id="musicArtist" placeholder="Artist (auto-filled from search)">
             </div>
-            <div>
+            <div class="library-add-field">
+              <label class="library-field-label" for="musicYear">Release year</label>
               <input type="number" id="musicYear" placeholder="Year (auto-filled from search)">
             </div>
-            <div>
+            <div class="library-add-field">
+              <label class="library-field-label" for="musicGenre">Genre</label>
               <input type="text" id="musicGenre" placeholder="Genre">
             </div>
-            <div>
+            <div class="library-add-field">
+              <label class="library-field-label" for="musicRating">Your rating</label>
               <input type="number" min="0" max="10" step="0.1" id="musicRating" placeholder="Rating (0-10.0)">
             </div>
-            <div>
+            <div class="library-add-check">
               <label>Listened <input type="checkbox" id="musicListened"></label>
             </div>
-            <div>
+            <div class="library-add-field library-add-review">
+              <label class="library-field-label" for="musicReview">Your review</label>
               <textarea id="musicReview" class="review-textarea" data-review-quality-input placeholder="Review (optional)" rows="1"></textarea>
-              <p class="review-quality-hint"><span class="review-quality-count" data-review-counter-for="musicReview">0/80 characters - add more context for public reviews</span>. Public reviews show best with personal context, audience fit, and what stood out. <a href="/review-guidelines" target="_blank" rel="noopener noreferrer">Review guide</a></p>
+              <p class="review-quality-hint"><span class="review-quality-count" data-review-counter-for="musicReview">0/80 characters - add context for the community feed</span>. Search-ready reviews use 240+ characters, 35+ words, complete thoughts, varied language, and no links or contact details. <a href="/review-guidelines" target="_blank" rel="noopener noreferrer">Review guide</a></p>
             </div>
-            <div>
+            <div class="library-add-check">
               <label>Public Review <input type="checkbox" id="musicReviewPublic"></label>
             </div>
             <button type="submit" class="action-btn">Add Music</button>
           </form>
         </div>
       </div>
-      <div class="card">
-        <div style="display:flex; justify-content: space-between; align-items: center; margin-bottom: 10px;">
-          <h2 style="margin: 0;">Music</h2>
-          <span id="musicCount" style="font-weight: bold;"></span>
+      <div class="card library-panel">
+        <div class="library-heading">
+          <h2>Music</h2>
+          <span id="musicCount" class="library-count"></span>
         </div>
-        <div style="display:flex; flex-wrap: wrap; gap: 10px; margin-bottom: 10px;">
-          <input type="text" id="musicSearch" placeholder="Search by title, artist, or genre"
-            style="flex: 2; min-width: 200px;">
-          <select id="musicSort" style="flex: 1; min-width: 200px;">
+        <div class="library-toolbar">
+          <input type="text" id="musicSearch" aria-label="Search this library" placeholder="Search by title, artist, or genre"
+            class="library-filter-search">
+          <select id="musicSort" aria-label="Sort this library" class="library-sort">
             <option value="">Sort by...</option>
             <option value="rating-asc">Rating (Low → High)</option>
             <option value="rating-desc">Rating (High → Low)</option>
             <option value="year-asc">Year (Oldest → Newest)</option>
             <option value="year-desc">Year (Newest → Oldest)</option>
           </select>
-          <button id="loadMusic" class="action-btn" style="flex: 1; min-width: 120px;">Refresh</button>
-          <button id="exportMusic" class="action-btn"
-            style="flex: 1; min-width: 120px; background-color: #4caf50;">Export Data</button>
-          <button id="importMusic" class="action-btn"
-            style="flex: 1; min-width: 120px; background-color: #ff9800;">Import Data</button>
+          <button id="loadMusic" class="action-btn library-utility">Refresh</button>
+          <button id="exportMusic" class="action-btn library-utility">Export Data</button>
+          <button id="importMusic" class="action-btn library-utility">Import Data</button>
         </div>
         <input type="file" id="importMusicFile" accept=".json" style="display: none;">
-        <div class="table-container">
-          <table id="musicTable">
+        <div id="musicTableFilters" class="library-filters" aria-label="Library filters"></div>
+        <div class="table-container library-table-wrap">
+          <table id="musicTable" class="library-table">
             <thead>
               <tr>
                 <th>Cover Art</th>
@@ -683,68 +817,72 @@
     </div>
 
     <!-- Books Tab Content -->
-    <div id="books-tab" class="tab-content">
-      <div class="card">
-        <div class="collapsible-header" data-toggle-collapsible="bookForm">
-          <h2 style="margin: 0; display: inline-block;">Add Book</h2>
-          <span class="collapsible-icon" id="bookFormIcon">▼</span>
+    <div id="books-tab" class="tab-content library-section">
+      <div class="card library-add-panel">
+        <div class="collapsible-header">
+          <h2><button type="button" class="library-add-toggle" aria-expanded="false" data-toggle-collapsible="bookForm" aria-controls="bookFormContent"><span>Add Book</span><span class="collapsible-icon" id="bookFormIcon" aria-hidden="true">▼</span></button></h2>
         </div>
-        <div class="collapsible-content" id="bookFormContent" style="display: none;">
-          <form id="addBookForm">
-            <div style="display: flex; gap: 10px;">
-              <input type="text" id="bookTitle" placeholder="Title" required style="flex: 1;">
-              <button type="button" id="searchBookBtn" class="action-btn" style="white-space: nowrap;">Search</button>
+        <div class="collapsible-content" id="bookFormContent" hidden>
+          <form id="addBookForm" class="library-add-form">
+            <div class="library-add-search">
+              <label class="library-field-label" for="bookTitle">Title</label>
+              <input type="text" id="bookTitle" placeholder="Title" required>
+              <button type="button" id="searchBookBtn" class="action-btn library-search-button">Search</button>
             </div>
-            <div>
+            <div class="library-add-field">
+              <label class="library-field-label" for="bookAuthor">Author</label>
               <input type="text" id="bookAuthor" placeholder="Author (auto-filled from search)">
             </div>
-            <div>
+            <div class="library-add-field">
+              <label class="library-field-label" for="bookYear">Release year</label>
               <input type="number" id="bookYear" placeholder="Year (auto-filled from search)">
             </div>
-            <div>
+            <div class="library-add-field">
+              <label class="library-field-label" for="bookGenre">Genre</label>
               <input type="text" id="bookGenre" placeholder="Genre">
             </div>
-            <div>
+            <div class="library-add-field">
+              <label class="library-field-label" for="bookRating">Your rating</label>
               <input type="number" min="0" max="10" step="0.1" id="bookRating" placeholder="Rating (0-10.0)">
             </div>
-            <div>
+            <div class="library-add-check">
               <label>Read <input type="checkbox" id="bookRead"></label>
             </div>
-            <div>
+            <div class="library-add-field library-add-review">
+              <label class="library-field-label" for="bookReview">Your review</label>
               <textarea id="bookReview" class="review-textarea" data-review-quality-input placeholder="Review (optional)" rows="1"></textarea>
-              <p class="review-quality-hint"><span class="review-quality-count" data-review-counter-for="bookReview">0/80 characters - add more context for public reviews</span>. Public reviews show best with personal context, audience fit, and what stood out. <a href="/review-guidelines" target="_blank" rel="noopener noreferrer">Review guide</a></p>
+              <p class="review-quality-hint"><span class="review-quality-count" data-review-counter-for="bookReview">0/80 characters - add context for the community feed</span>. Search-ready reviews use 240+ characters, 35+ words, complete thoughts, varied language, and no links or contact details. <a href="/review-guidelines" target="_blank" rel="noopener noreferrer">Review guide</a></p>
             </div>
-            <div>
+            <div class="library-add-check">
               <label>Public Review <input type="checkbox" id="bookReviewPublic"></label>
             </div>
             <button type="submit" class="action-btn">Add Book</button>
           </form>
         </div>
       </div>
-      <div class="card">
-        <div style="display:flex; justify-content: space-between; align-items: center; margin-bottom: 10px;">
-          <h2 style="margin: 0;">Books</h2>
-          <span id="bookCount" style="font-weight: bold;"></span>
+      <div class="card library-panel">
+        <div class="library-heading">
+          <h2>Books</h2>
+          <span id="bookCount" class="library-count"></span>
         </div>
-        <div style="display:flex; flex-wrap: wrap; gap: 10px; margin-bottom: 10px;">
-          <input type="text" id="bookSearch" placeholder="Search by title, author, or genre"
-            style="flex: 2; min-width: 200px;">
-          <select id="bookSort" style="flex: 1; min-width: 200px;">
+        <div class="library-toolbar">
+          <input type="text" id="bookSearch" aria-label="Search this library" placeholder="Search by title, author, or genre"
+            class="library-filter-search">
+          <select id="bookSort" aria-label="Sort this library" class="library-sort">
             <option value="">Sort by...</option>
             <option value="rating-asc">Rating (Low → High)</option>
             <option value="rating-desc">Rating (High → Low)</option>
             <option value="year-asc">Year (Oldest → Newest)</option>
             <option value="year-desc">Year (Newest → Oldest)</option>
           </select>
-          <button id="loadBooks" class="action-btn" style="flex: 1; min-width: 120px;">Refresh</button>
-          <button id="exportBooks" class="action-btn"
-            style="flex: 1; min-width: 120px; background-color: #4caf50;">Export Data</button>
-          <button id="importBooks" class="action-btn"
-            style="flex: 1; min-width: 120px; background-color: #ff9800;">Import Data</button>
+          <button id="loadBooks" class="action-btn library-utility">Refresh</button>
+          <button id="exportBooks" class="action-btn library-utility">Export Data</button>
+          <button id="importBooks" class="action-btn library-utility">Import Data</button>
         </div>
         <input type="file" id="importBookFile" accept=".json" style="display: none;">
-        <div class="table-container">
-          <table id="bookTable">
+        <div id="bookTableFilters" class="library-filters" aria-label="Library filters"></div>
+        <div class="table-container library-table-wrap">
+          <table id="bookTable" class="library-table">
             <thead>
               <tr>
                 <th>Cover Art</th>
@@ -766,62 +904,64 @@
     </div>
 
     <!-- Video Games Tab Content -->
-    <div id="video-games-tab" class="tab-content">
-      <div class="card">
-        <div class="collapsible-header" data-toggle-collapsible="videoGameForm">
-          <h2 style="margin: 0; display: inline-block;">Add Video Game</h2>
-          <span class="collapsible-icon" id="videoGameFormIcon">▼</span>
+    <div id="video-games-tab" class="tab-content library-section">
+      <div class="card library-add-panel">
+        <div class="collapsible-header">
+          <h2><button type="button" class="library-add-toggle" aria-expanded="false" data-toggle-collapsible="videoGameForm" aria-controls="videoGameFormContent"><span>Add Video Game</span><span class="collapsible-icon" id="videoGameFormIcon" aria-hidden="true">▼</span></button></h2>
         </div>
-        <div class="collapsible-content" id="videoGameFormContent" style="display: none;">
-          <form id="addVideoGameForm">
-            <div style="display: flex; gap: 10px;">
-              <input type="text" id="videoGameTitle" placeholder="Title" required style="flex: 1;">
-              <button type="button" id="searchVideoGameBtn" class="action-btn" style="white-space: nowrap;">Search</button>
+        <div class="collapsible-content" id="videoGameFormContent" hidden>
+          <form id="addVideoGameForm" class="library-add-form">
+            <div class="library-add-search">
+              <label class="library-field-label" for="videoGameTitle">Title</label>
+              <input type="text" id="videoGameTitle" placeholder="Title" required>
+              <button type="button" id="searchVideoGameBtn" class="action-btn library-search-button">Search</button>
             </div>
-            <div>
+            <div class="library-add-field">
+              <label class="library-field-label" for="videoGameGenres">Genres</label>
               <input type="text" id="videoGameGenres" placeholder="Genres (comma-separated)">
             </div>
-            <div>
+            <div class="library-add-field">
+              <label class="library-field-label" for="videoGameRating">Your rating</label>
               <input type="number" min="0" max="10" step="0.1" id="videoGameRating" placeholder="Rating (0-10.0)">
             </div>
-            <div>
+            <div class="library-add-check">
               <label>Played <input type="checkbox" id="videoGamePlayed"></label>
             </div>
-            <div>
+            <div class="library-add-field library-add-review">
+              <label class="library-field-label" for="videoGameReview">Your review</label>
               <textarea id="videoGameReview" class="review-textarea" data-review-quality-input placeholder="Review (optional)" rows="1"></textarea>
-              <p class="review-quality-hint"><span class="review-quality-count" data-review-counter-for="videoGameReview">0/80 characters - add more context for public reviews</span>. Public reviews show best with personal context, audience fit, and what stood out. <a href="/review-guidelines" target="_blank" rel="noopener noreferrer">Review guide</a></p>
+              <p class="review-quality-hint"><span class="review-quality-count" data-review-counter-for="videoGameReview">0/80 characters - add context for the community feed</span>. Search-ready reviews use 240+ characters, 35+ words, complete thoughts, varied language, and no links or contact details. <a href="/review-guidelines" target="_blank" rel="noopener noreferrer">Review guide</a></p>
             </div>
-            <div>
+            <div class="library-add-check">
               <label>Public Review <input type="checkbox" id="videoGameReviewPublic"></label>
             </div>
             <button type="submit" class="action-btn">Add Video Game</button>
           </form>
         </div>
       </div>
-      <div class="card">
-        <div style="display:flex; justify-content: space-between; align-items: center; margin-bottom: 10px;">
-          <h2 style="margin: 0;">Video Games</h2>
-          <span id="videoGameCount" style="font-weight: bold;"></span>
+      <div class="card library-panel">
+        <div class="library-heading">
+          <h2>Video Games</h2>
+          <span id="videoGameCount" class="library-count"></span>
         </div>
-        <div style="display:flex; flex-wrap: wrap; gap: 10px; margin-bottom: 10px;">
-          <input type="text" id="videoGameSearch" placeholder="Search by title or genres"
-            style="flex: 2; min-width: 200px;">
-          <select id="videoGameSort" style="flex: 1; min-width: 200px;">
+        <div class="library-toolbar">
+          <input type="text" id="videoGameSearch" aria-label="Search this library" placeholder="Search by title or genres"
+            class="library-filter-search">
+          <select id="videoGameSort" aria-label="Sort this library" class="library-sort">
             <option value="">Sort by...</option>
             <option value="rating-asc">Rating (Low → High)</option>
             <option value="rating-desc">Rating (High → Low)</option>
             <option value="release_date-asc">Release Date (Oldest → Newest)</option>
             <option value="release_date-desc">Release Date (Newest → Oldest)</option>
           </select>
-          <button id="loadVideoGames" class="action-btn" style="flex: 1; min-width: 120px;">Refresh</button>
-          <button id="exportVideoGames" class="action-btn"
-            style="flex: 1; min-width: 120px; background-color: #4caf50;">Export Data</button>
-          <button id="importVideoGames" class="action-btn"
-            style="flex: 1; min-width: 120px; background-color: #ff9800;">Import Data</button>
+          <button id="loadVideoGames" class="action-btn library-utility">Refresh</button>
+          <button id="exportVideoGames" class="action-btn library-utility">Export Data</button>
+          <button id="importVideoGames" class="action-btn library-utility">Import Data</button>
         </div>
         <input type="file" id="importVideoGameFile" accept=".json" style="display: none;">
-        <div class="table-container">
-          <table id="videoGameTable">
+        <div id="videoGameTableFilters" class="library-filters" aria-label="Library filters"></div>
+        <div class="table-container library-table-wrap">
+          <table id="videoGameTable" class="library-table">
             <thead>
               <tr>
                 <th>Cover Art</th>
@@ -842,6 +982,190 @@
       </div>
     </div>
 
+    <!-- Private Activity Journal Tab Content -->
+    <div id="activity-tab" class="tab-content">
+      <section class="activity-hero">
+        <div>
+          <p class="activity-hero__eyebrow">Private across every media type</p>
+          <h2>Your Activity Journal</h2>
+          <p>Remember what you started, where you made progress, and what stayed with you. Entries are visible only inside your account.</p>
+        </div>
+        <span class="activity-hero__privacy">No public profile · No ads</span>
+      </section>
+
+      <section class="activity-recap" aria-labelledby="activityRecapTitle">
+        <div class="activity-recap__header">
+          <div>
+            <p class="activity-recap__eyebrow">Weekly playback</p>
+            <h3 id="activityRecapTitle">This week in media</h3>
+            <p id="activityRecapPeriod"></p>
+          </div>
+          <div class="activity-recap__controls">
+            <button type="button" class="action-btn secondary" data-action="activity-older-week">← Older</button>
+            <button type="button" class="action-btn secondary" id="activityNewerWeek" data-action="activity-newer-week">Newer →</button>
+          </div>
+        </div>
+        <div id="activityRecapContent" aria-live="polite"><p>Loading your week…</p></div>
+      </section>
+
+      <section class="card activity-create" aria-labelledby="activityCreateTitle">
+        <div class="activity-create__intro">
+          <div><p class="activity-create__eyebrow">Quick log</p><h3 id="activityCreateTitle">Add a moment</h3></div>
+          <p>Choose something already in your library. Logging a moment never changes its rating, status, or review.</p>
+        </div>
+        <form id="activityForm" class="activity-form" data-submit-action="create-activity">
+          <label>Media type
+            <select id="activityCategory" required data-change-action="activity-category">
+              <option value="movies">Movie</option><option value="tv-shows">TV show</option>
+              <option value="anime">Anime</option><option value="video-games">Game</option>
+              <option value="music">Album</option><option value="books">Book</option>
+            </select>
+          </label>
+          <label>Library item
+            <select id="activityItem" required><option value="">Loading your library…</option></select>
+          </label>
+          <label>Moment
+            <select id="activityAction" required>
+              <option value="started">Started</option><option value="progressed">Made progress</option>
+              <option value="completed">Finished</option><option value="revisited">Revisited</option>
+              <option value="noted">Added a note</option>
+            </select>
+          </label>
+          <label>When
+            <input id="activityOccurredAt" type="datetime-local" required>
+          </label>
+          <label class="activity-form__note">Private note
+            <textarea id="activityNote" rows="2" maxlength="500" placeholder="What do you want future-you to remember?"></textarea>
+          </label>
+          <div class="activity-form__submit"><button type="submit" class="action-btn">Log this moment</button><span id="activityFormStatus" role="status"></span></div>
+        </form>
+      </section>
+
+      <section class="activity-timeline" aria-labelledby="activityTimelineTitle">
+        <div class="activity-timeline__header">
+          <div><p class="activity-timeline__eyebrow">Your private history</p><h3 id="activityTimelineTitle">Recent moments</h3></div>
+          <div class="activity-timeline__filters">
+            <select id="activityFilterCategory" data-change-action="activity-filter" aria-label="Filter journal by media type">
+              <option value="">All media</option><option value="movies">Movies</option><option value="tv-shows">TV shows</option>
+              <option value="anime">Anime</option><option value="video-games">Games</option><option value="music">Albums</option><option value="books">Books</option>
+            </select>
+            <select id="activityFilterAction" data-change-action="activity-filter" aria-label="Filter journal by moment">
+              <option value="">All moments</option><option value="started">Started</option><option value="progressed">Progress</option>
+              <option value="completed">Finished</option><option value="revisited">Revisited</option><option value="noted">Notes</option>
+            </select>
+          </div>
+        </div>
+        <div id="activityTimeline" class="activity-timeline__list" aria-live="polite"></div>
+        <button id="activityLoadMore" type="button" class="action-btn secondary activity-load-more" data-action="activity-load-more" hidden>Load earlier moments</button>
+      </section>
+    </div>
+
+    <!-- Recommendation Postcards Tab Content -->
+    <div id="recommendations-tab" class="tab-content">
+      <section class="postcards-hero">
+        <div>
+          <p class="postcards-eyebrow">Ask one good question</p>
+          <h2>Recommendation Postcards</h2>
+          <p>Invite a few thoughtful picks from friends or anyone with your expiring link. Every reply waits here until you decide to save, add, queue, or dismiss it.</p>
+        </div>
+        <span class="postcards-privacy">Private inbox · No automatic library changes</span>
+      </section>
+
+      <section class="card postcards-create" aria-labelledby="postcardCreateTitle">
+        <div class="postcards-section-heading">
+          <div><p class="postcards-eyebrow">New postcard</p><h3 id="postcardCreateTitle">What are you in the mood for?</h3></div>
+          <p>Links are unlisted, expire automatically, and stop at your response limit.</p>
+        </div>
+        <form id="recommendationRequestForm" class="postcards-create-form" data-submit-action="create-recommendation-request">
+          <label class="postcards-prompt">Your question
+            <textarea id="recommendationPrompt" rows="2" minlength="10" maxlength="280" required placeholder="What should I try when I want a clever mystery that isn't relentlessly bleak?"></textarea>
+          </label>
+          <fieldset>
+            <legend>Invite recommendations from</legend>
+            <div class="postcards-category-grid">
+              <label><input type="checkbox" name="recommendationCategory" value="movies" checked> Movies</label>
+              <label><input type="checkbox" name="recommendationCategory" value="tv-shows" checked> TV shows</label>
+              <label><input type="checkbox" name="recommendationCategory" value="anime" checked> Anime</label>
+              <label><input type="checkbox" name="recommendationCategory" value="video-games" checked> Games</label>
+              <label><input type="checkbox" name="recommendationCategory" value="music" checked> Albums</label>
+              <label><input type="checkbox" name="recommendationCategory" value="books" checked> Books</label>
+            </div>
+          </fieldset>
+          <label>Reply window
+            <select id="recommendationExpiry"><option value="3">3 days</option><option value="7" selected>7 days</option><option value="14">14 days</option><option value="30">30 days</option></select>
+          </label>
+          <label>Response limit
+            <select id="recommendationMaxResponses"><option value="5">5 replies</option><option value="10" selected>10 replies</option><option value="15">15 replies</option><option value="20">20 replies</option></select>
+          </label>
+          <div class="postcards-form-submit"><button type="submit" class="action-btn">Create postcard</button><span id="recommendationCreateStatus" role="status"></span></div>
+        </form>
+      </section>
+
+      <section class="postcards-panel" aria-labelledby="postcardActiveTitle">
+        <div class="postcards-section-heading"><div><p class="postcards-eyebrow">Outgoing</p><h3 id="postcardActiveTitle">Your postcards</h3></div><p>Copy a guest link or invite an OmniTrackr friend directly.</p></div>
+        <div id="recommendationRequests" class="postcards-grid" aria-live="polite"><p>Loading postcards…</p></div>
+      </section>
+
+      <section class="postcards-panel" aria-labelledby="postcardInboxTitle">
+        <div class="postcards-section-heading"><div><p class="postcards-eyebrow">Incoming</p><h3 id="postcardInboxTitle">Recommendation inbox</h3></div><p>Nothing enters your library without an action from you.</p></div>
+        <div id="recommendationInbox" class="postcards-inbox" aria-live="polite"><p>Loading replies…</p></div>
+      </section>
+
+      <section class="postcards-panel" aria-labelledby="postcardInvitesTitle">
+        <div class="postcards-section-heading"><div><p class="postcards-eyebrow">From friends</p><h3 id="postcardInvitesTitle">Postcards waiting for you</h3></div><p>Answer with one title and the reason it fits.</p></div>
+        <div id="recommendationInvitations" class="postcards-inbox" aria-live="polite"><p>Loading invitations…</p></div>
+      </section>
+    </div>
+
+    <!-- Collections Tab Content -->
+    <div id="collections-tab" class="tab-content">
+      <section class="collections-hero">
+        <p class="collections-hero__eyebrow">Private by default · share only by choice</p>
+        <h2>Collections</h2>
+        <p>Bring together movies, TV shows, anime, games, music, and books around any idea that matters to you. When a shelf is ready to share, add your point of view and publish it deliberately.</p>
+      </section>
+      <section class="card collections-create">
+        <h3>Create a collection</h3>
+        <form id="createCollectionForm" data-submit-action="create-collection">
+          <input id="collectionName" type="text" maxlength="80" required placeholder="e.g. Rainy Sunday escapes">
+          <textarea id="collectionDescription" maxlength="500" rows="2" placeholder="What belongs here? Private until you choose to publish."></textarea>
+          <button type="submit" class="action-btn">Create collection</button>
+        </form>
+      </section>
+      <section id="moderatorInsightsPanel" class="card moderator-insights" hidden>
+        <div class="moderator-insights__heading">
+          <div><p class="collections-hero__eyebrow">Trusted operations · read only</p><h3>Site health</h3></div>
+          <span id="moderatorInsightsGenerated"></span>
+        </div>
+        <p id="moderatorInsightsPrivacy" class="moderator-insights__privacy"></p>
+        <div id="moderatorMetricGrid" class="moderator-metric-grid" aria-live="polite"></div>
+        <section class="moderator-activation" aria-labelledby="moderatorActivationTitle">
+          <div class="moderator-section-heading"><div><p>First-party milestones</p><h4 id="moderatorActivationTitle">Activation path</h4></div><strong>Aggregate only</strong></div>
+          <div id="moderatorActivationStages" class="moderator-activation-stages"></div>
+          <p class="moderator-activation-note">Return measurement starts when successful-login counting is deployed; earlier visits are not reconstructed.</p>
+        </section>
+        <div class="moderator-insights__columns">
+          <section aria-labelledby="moderatorGrowthTitle">
+            <div class="moderator-section-heading"><div><p>Last 30 days</p><h4 id="moderatorGrowthTitle">New accounts</h4></div><strong id="moderatorGrowthTotal"></strong></div>
+            <div id="moderatorGrowthChart" class="moderator-growth-chart" role="img" aria-label="Daily new account activity over the last 30 days"></div>
+          </section>
+          <section aria-labelledby="moderatorLibraryTitle">
+            <div class="moderator-section-heading"><div><p>Across every library</p><h4 id="moderatorLibraryTitle">Media mix</h4></div><strong id="moderatorCompletionRate"></strong></div>
+            <div id="moderatorCategoryStats" class="moderator-category-stats"></div>
+          </section>
+        </div>
+        <div class="moderator-insights__columns moderator-insights__columns--compact">
+          <section aria-labelledby="moderatorEngagementTitle"><div class="moderator-section-heading"><div><p>Useful habits</p><h4 id="moderatorEngagementTitle">Engagement</h4></div></div><dl id="moderatorEngagementStats" class="moderator-stat-list"></dl></section>
+          <section aria-labelledby="moderatorSafetyTitle"><div class="moderator-section-heading"><div><p>Public surface</p><h4 id="moderatorSafetyTitle">Safety & discovery</h4></div></div><dl id="moderatorSafetyStats" class="moderator-stat-list"></dl></section>
+        </div>
+        <section class="moderator-users" aria-labelledby="moderatorUsersTitle">
+          <div class="moderator-section-heading"><div><p>Newest 50 accounts</p><h4 id="moderatorUsersTitle">User overview</h4></div></div>
+          <div class="moderator-users__table-wrap"><table><thead><tr><th>User</th><th>Status</th><th>Joined</th><th>Library</th><th>Journal</th><th>Public lists</th><th>Last journal activity</th></tr></thead><tbody id="moderatorUsersBody"></tbody></table></div>
+        </section>
+      </section>
+      <div id="collectionsList" class="collections-list" aria-live="polite"></div>
+    </div>
+
     <!-- Statistics Tab Content -->
     <div id="statistics-tab" class="tab-content">
       <div class="card">
@@ -857,6 +1181,46 @@
       </div>
 
       <div id="statsContent" style="display: none;">
+        <section id="monthlyReplay" class="monthly-replay" aria-labelledby="monthlyReplayTitle" hidden>
+          <div class="monthly-replay__header">
+            <div>
+              <p class="monthly-replay__eyebrow">Private time capsule</p>
+              <h3 id="monthlyReplayTitle">Monthly Replay</h3>
+            </div>
+            <span id="monthlyReplayPeriod" class="monthly-replay__period"></span>
+          </div>
+          <div id="monthlyReplayContent"></div>
+        </section>
+        <section id="tasteprint" class="tasteprint" aria-labelledby="tasteprintTitle">
+          <div class="tasteprint__header">
+            <div>
+              <p class="tasteprint__eyebrow">Your library, reflected back</p>
+              <h3 id="tasteprintTitle">OmniTrackr Tasteprint</h3>
+              <p>See the patterns across your media history, then choose what belongs on a shareable card.</p>
+            </div>
+            <span class="tasteprint__privacy">Private calculation · No public profile</span>
+          </div>
+          <div id="tasteprintCategoryControls" class="tasteprint__categories" aria-label="Tasteprint categories"></div>
+          <div class="tasteprint__toolbar">
+            <button type="button" class="action-btn" data-action="tasteprint-refresh">Refresh Tasteprint</button>
+            <label class="tasteprint__name-choice"><input id="tasteprintIncludeName" type="checkbox" data-change-action="tasteprint-display"> Put my username on the card</label>
+            <button type="button" class="action-btn" id="tasteprintDownload" data-action="tasteprint-download" disabled>Download PNG</button>
+            <button type="button" class="action-btn" id="tasteprintCopy" data-action="tasteprint-copy" disabled>Copy text</button>
+          </div>
+          <div id="tasteprintStatus" class="tasteprint__status" role="status" aria-live="polite">Reading your private aggregates…</div>
+          <div id="tasteprintProgress" class="tasteprint__progress"></div>
+          <article id="tasteprintCard" class="tasteprint-card" hidden aria-label="Tasteprint card preview">
+            <div class="tasteprint-card__brand"><strong>OmniTrackr</strong><span>MEDIA TASTEPRINT</span></div>
+            <div class="tasteprint-card__intro">
+              <p id="tasteprintCardKicker">A private media portrait</p>
+              <h4 id="tasteprintCardName">My Tasteprint</h4>
+              <span id="tasteprintCardScope"></span>
+            </div>
+            <div id="tasteprintInsights" class="tasteprint-card__insights"></div>
+            <footer><span>Built from patterns, not recommendations</span><strong>omnitrackr.xyz</strong></footer>
+          </article>
+          <p class="tasteprint__note">Only checked insights are drawn into the PNG or copied summary. The image is rendered on this device and is not uploaded to OmniTrackr.</p>
+        </section>
         <div class="accordion-section">
           <div class="accordion-header" data-toggle-category-accordion="library-insights">
             <h3>Library Insights</h3>
@@ -1001,6 +1365,7 @@
           <a href="/compare">Compare</a>
           <a href="/use-cases">Use Cases</a>
           <a href="/reviews">Reviews</a>
+          <a href="/collections/explore">Collections</a>
           <a href="/faq">FAQ</a>
           <a href="/content-quality">Content Quality</a>
           <a href="/advertising">Advertising</a>
@@ -1365,7 +1730,7 @@
             <span class="faq-icon">+</span>
           </button>
           <div class="faq-answer" id="faq-answer-4">
-            <p>Yes! You can export your entire collection (movies, TV shows, anime, video games, music, and books) as a JSON file at any time. This allows you to backup your data or import it into another account. You can also import JSON files to quickly add multiple entries.</p>
+            <p>Yes. Export your complete library and private journal as a JSON backup. To bring an existing history into OmniTrackr, use the preview-first Import Studio for Letterboxd, Goodreads, MyAnimeList, or generic CSV files; matching records are skipped instead of overwritten.</p>
           </div>
         </div>
 
@@ -1568,9 +1933,36 @@
       </div>
     </footer>
   </div>
+  <dialog id="progressDialog" class="progress-dialog" aria-labelledby="progressTitle" aria-describedby="progressPrivacy">
+    <div class="progress-dialog__header">
+      <div><p class="progress-dialog__eyebrow">Pick up where you left off</p><h2 id="progressTitle">Your progress</h2></div>
+      <button type="button" id="progressClose" class="progress-dialog__close" aria-label="Close progress editor">×</button>
+    </div>
+    <p id="progressPrivacy" class="progress-dialog__privacy">Save the last episode, page or chapter you finished. Your checkpoint and reminder are private. They do not change your rating, review or finished status.</p>
+    <p id="progressCurrent" class="progress-dialog__current" hidden></p>
+    <form id="progressForm" novalidate>
+      <fieldset id="progressFields" disabled>
+        <label id="progressUnitField">Track by<select id="progressUnit"><option value="page">Page</option><option value="chapter">Chapter</option><option value="episode" hidden>Episode</option></select></label>
+        <label><span id="progressPositionLabel">Last watched episode</span><input id="progressPosition" type="number" inputmode="numeric" min="1" max="1000000" step="1" required></label>
+        <label id="progressSeasonField">Season (optional)<input id="progressSeason" type="number" inputmode="numeric" min="0" max="10000" step="1"><span class="progress-dialog__hint">Leave blank for continuous episode numbering. Use season 0 for specials.</span></label>
+        <label>Private reminder (optional)<textarea id="progressNote" maxlength="300" rows="3" placeholder="A detail to remember next time"></textarea><span class="progress-dialog__hint">Up to 300 characters. Visible only to you.</span></label>
+      </fieldset>
+      <p id="progressStatus" class="progress-dialog__status" role="status" aria-live="polite"></p>
+      <div class="progress-dialog__actions">
+        <button type="submit" id="progressSave" class="progress-dialog__save" disabled>Save progress</button>
+        <button type="button" id="progressClear" class="progress-dialog__clear" hidden>Clear progress</button>
+        <button type="button" id="progressRetry" hidden>Retry same change</button>
+        <button type="button" id="progressReload" hidden>Reload saved progress</button>
+        <button type="button" id="progressCancel">Close</button>
+      </div>
+      <p class="progress-dialog__hint">Closing keeps your draft in this tab until you leave or sign out. Changes are only saved when you choose Save progress.</p>
+    </form>
+  </dialog>
   <script src="./credentials.js"></script>
-  <script src="./auth.js"></script>
-  <script src="./app.js"></script>
+  <script src="./auth.js?v=20260924-friends-panel-1"></script>
+  <script src="/static/import-studio.js?v=20260924-import-studio-final"></script>
+  <script src="/static/progress.js?v=20260922-progress"></script>
+  <script src="./app.js?v=20260924-friends-panel-1"></script>
 
   <!-- Account Modal -->
   <div id="accountModal" class="modal-overlay" style="display: none;">
@@ -1758,7 +2150,7 @@
         <!-- Data & Privacy Dashboard Section -->
         <div class="account-section">
           <h3>Your Data & Privacy Dashboard</h3>
-          <p class="info-text">A quick summary of backup, privacy, public review, and policy controls for your account.</p>
+          <p class="info-text">A quick summary of backup, privacy, public review, and policy controls for your account. JSON backups include your private progress checkpoints and reminders. Restoring a backup keeps existing or cleared checkpoints unchanged and restores missing checkpoints only when their exact title and edition can be matched.</p>
           <div class="account-info">
             <div class="info-item">
               <span class="info-label">Data Backup:</span>
@@ -1782,6 +2174,80 @@
             <a class="action-btn" href="/privacy" target="_blank" rel="noopener noreferrer">Privacy Policy</a>
             <a class="action-btn" href="/reviews" target="_blank" rel="noopener noreferrer">Public Reviews</a>
           </div>
+        </div>
+
+        <!-- Preview-first migration studio -->
+        <div class="account-section import-studio" id="importStudio">
+          <div class="import-studio__eyebrow">Bring your history with you</div>
+          <h3>Import Studio</h3>
+          <p class="info-text">Preview a Letterboxd, Goodreads, MyAnimeList, or generic CSV before anything is saved. Existing records are never overwritten: matches and repeated rows are skipped.</p>
+          <form id="importStudioForm" data-submit-action="preview-library-import">
+            <div class="import-studio__controls">
+              <label>
+                <span>Export format</span>
+                <select id="importStudioSource" data-change-action="import-studio-options">
+                  <option value="auto">Detect automatically</option>
+                  <option value="letterboxd">Letterboxd CSV</option>
+                  <option value="goodreads">Goodreads CSV</option>
+                  <option value="myanimelist">MyAnimeList CSV</option>
+                  <option value="generic">Generic CSV / spreadsheet</option>
+                </select>
+              </label>
+              <label>
+                <span>Generic CSV category</span>
+                <select id="importStudioCategory" data-change-action="import-studio-options">
+                  <option value="">Use the category column</option>
+                  <option value="movies">Movies</option>
+                  <option value="tv-shows">TV Shows</option>
+                  <option value="anime">Anime</option>
+                  <option value="video-games">Video Games</option>
+                  <option value="music">Music</option>
+                  <option value="books">Books</option>
+                </select>
+              </label>
+              <label class="import-studio__file-label">
+                <span>CSV or TSV file · up to 5 MB / 5,000 rows</span>
+                <input id="importStudioFile" type="file" accept=".csv,.tsv,text/csv,text/tab-separated-values" required data-change-action="import-studio-file">
+              </label>
+            </div>
+
+            <details class="import-studio__mapping" id="importStudioMappingPanel">
+              <summary>Map unusual spreadsheet columns</summary>
+              <p class="info-text">Optional. Match OmniTrackr fields to your file's headers. Choose at least Title when your spreadsheet uses a different name.</p>
+              <div id="importStudioMapping" class="import-studio__mapping-grid">
+                <p class="info-text">Choose a file to inspect its columns.</p>
+              </div>
+            </details>
+
+            <div class="import-studio__actions">
+              <button type="submit" class="action-btn" id="importStudioPreviewButton">Preview import</button>
+              <button type="button" class="action-btn import-studio__apply" id="importStudioApplyButton" data-action="apply-library-import" disabled>Import ready rows</button>
+              <label class="import-studio__template-select">
+                <span class="sr-only">Template category</span>
+                <select id="importStudioTemplateCategory">
+                  <option value="movies">Movie template</option>
+                  <option value="tv-shows">TV show template</option>
+                  <option value="anime">Anime template</option>
+                  <option value="video-games">Game template</option>
+                  <option value="music">Music template</option>
+                  <option value="books">Book template</option>
+                </select>
+              </label>
+              <button type="button" class="action-btn" data-action="download-import-template">Download template</button>
+              <a class="action-btn" href="/export-import-guide" target="_blank" rel="noopener noreferrer">Migration guide</a>
+            </div>
+          </form>
+          <div id="importStudioStatus" class="import-studio__status" role="status" aria-live="polite"></div>
+          <section id="importStudioConfirm" class="import-studio__confirm" aria-labelledby="importStudioConfirmHeading" hidden>
+            <h4 id="importStudioConfirmHeading">Confirm your import</h4>
+            <p id="importStudioConfirmSummary"></p>
+            <div class="import-studio__actions">
+              <button id="importStudioConfirmButton" type="button" class="action-btn" data-action="confirm-library-import">Confirm import</button>
+              <button id="importStudioCancelButton" type="button" class="action-btn" data-action="cancel-library-import">Keep reviewing</button>
+            </div>
+          </section>
+          <div id="importStudioResults" hidden></div>
+          <p class="import-studio__safety"><strong>Safety promise:</strong> preview performs no writes, imports are additive and atomic, imported reviews stay private, and artwork lookups are deferred until you visit the relevant library tab.</p>
         </div>
 
         <!-- Tab Visibility Settings Section -->
@@ -1854,7 +2320,7 @@
         <div class="account-section danger-section">
           <h3>Account Deactivation</h3>
           <p class="warning-text">Deactivating your account will hide it from the system. You can reactivate within 90
-            days. After that, your account will be permanently deleted.</p>
+            days. After that, self-service reactivation is unavailable; contact support if you need deletion assistance.</p>
           <form id="deactivateAccountForm" data-submit-action="deactivate-account">
             <div>
               <input type="password" id="deactivatePassword" placeholder="Enter your password to confirm" required>
@@ -2078,6 +2544,112 @@
       </div>
       <div class="modal-body">
         <div id="bookSearchResults" class="search-results-grid"></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Universal Quick Capture Modal -->
+  <div id="quickCaptureModal" class="modal-overlay quick-capture-overlay" style="display: none;" data-close-on-backdrop="quick-capture" role="dialog" aria-modal="true" aria-labelledby="quickCaptureTitle">
+    <div class="modal-content quick-capture-modal" data-stop-propagation>
+      <div class="quick-capture-header">
+        <div>
+          <p class="quick-capture-eyebrow">One search · every shelf</p>
+          <h2 id="quickCaptureTitle">Add anything</h2>
+          <p>Search movies, shows, anime, games, albums, and books together.</p>
+        </div>
+        <button type="button" class="modal-close" data-action="close-quick-capture" aria-label="Close quick capture">×</button>
+      </div>
+      <div class="quick-capture-body">
+        <form id="quickCaptureSearchForm" class="quick-capture-search" data-submit-action="search-quick-capture">
+          <label class="sr-only" for="quickCaptureQuery">Title, artist, author, or game</label>
+          <div class="quick-capture-search-field">
+            <span aria-hidden="true">⌕</span>
+            <input id="quickCaptureQuery" name="query" type="search" minlength="2" maxlength="200" autocomplete="off" placeholder="Try Dune, Frieren, Hades, or an artist…" required>
+            <button type="submit" class="action-btn">Search</button>
+          </div>
+          <div class="quick-capture-controls">
+            <div id="quickCaptureCategories" class="quick-capture-categories" aria-label="Limit search by media type">
+              <button type="button" class="active" data-action="select-quick-capture-category" data-quick-category="all" aria-pressed="true">All</button>
+              <button type="button" data-action="select-quick-capture-category" data-quick-category="movies" aria-pressed="false">🎬 Movies</button>
+              <button type="button" data-action="select-quick-capture-category" data-quick-category="tv-shows" aria-pressed="false">📺 TV</button>
+              <button type="button" data-action="select-quick-capture-category" data-quick-category="anime" aria-pressed="false">🎌 Anime</button>
+              <button type="button" data-action="select-quick-capture-category" data-quick-category="video-games" aria-pressed="false">🎮 Games</button>
+              <button type="button" data-action="select-quick-capture-category" data-quick-category="music" aria-pressed="false">🎵 Music</button>
+              <button type="button" data-action="select-quick-capture-category" data-quick-category="books" aria-pressed="false">📚 Books</button>
+            </div>
+            <label class="quick-capture-intent" for="quickCaptureIntent"><span>Add as</span><select id="quickCaptureIntent"><option value="saved">Not completed / save for later</option><option value="completed">Completed</option></select></label>
+          </div>
+        </form>
+        <div class="quick-capture-manual">
+          <div><strong>Prefer to enter it yourself?</strong><span>Choose a media type above. You can add a title while search runs.</span></div>
+          <button type="button" data-action="quick-capture-manual">Enter manually →</button>
+        </div>
+        <div id="quickCaptureStatus" class="quick-capture-status" role="status" aria-live="polite" aria-atomic="true">Search every shelf. Results appear as each source responds.</div>
+        <div id="quickCaptureResults" class="quick-capture-results" aria-label="Metadata search results"></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Finish Ritual Modal -->
+  <div id="completionRitualModal" class="modal-overlay" style="display: none;" data-close-on-backdrop="completion-ritual">
+    <div class="modal-content completion-ritual-modal" data-stop-propagation>
+      <div class="modal-header">
+        <h2>One small reflection</h2>
+        <button class="modal-close" data-action="close-completion-ritual" aria-label="Close finish ritual">×</button>
+      </div>
+      <div class="modal-body">
+        <p class="completion-ritual-modal__eyebrow">Finished</p>
+        <h3 id="completionRitualTitle" class="completion-ritual-modal__title"></h3>
+        <p class="completion-ritual-modal__copy">What is one thing you want future you to remember? This stays private.</p>
+        <textarea id="completionRitualTakeaway" class="review-textarea" maxlength="500" rows="3" placeholder="A moment, feeling, or reason it stood out…"></textarea>
+        <label class="completion-ritual-modal__favorite"><input type="checkbox" id="completionRitualFavorite"> This is a personal favorite</label>
+        <div class="completion-ritual-modal__actions">
+          <button type="button" class="action-btn" data-action="save-completion-ritual">Save reflection</button>
+          <button type="button" class="completion-ritual-modal__skip" data-action="close-completion-ritual">Not now</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Collection Picker Modal -->
+  <div id="collectionPickerModal" class="modal-overlay" style="display: none;" data-close-on-backdrop="collection-picker">
+    <div class="modal-content collection-picker-modal" data-stop-propagation>
+      <div class="modal-header">
+        <h2>Add to collection</h2>
+        <button class="modal-close" data-action="close-collection-picker" aria-label="Close collection picker">×</button>
+      </div>
+      <div class="modal-body">
+        <p id="collectionPickerItemTitle" class="collection-picker-modal__item"></p>
+        <div id="collectionPickerOptions" class="collection-picker-modal__options"></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Collection Studio Modal -->
+  <div id="collectionStudioModal" class="modal-overlay" style="display: none;" data-close-on-backdrop="collection-studio">
+    <div class="modal-content collection-studio-modal" data-stop-propagation>
+      <div class="modal-header">
+        <h2>Edit &amp; share collection</h2>
+        <button class="modal-close" data-action="close-collection-studio" aria-label="Close collection studio">×</button>
+      </div>
+      <div class="modal-body">
+        <form id="collectionStudioForm" data-submit-action="save-collection-studio">
+          <input id="collectionStudioId" type="hidden">
+          <label for="collectionStudioName">Collection title</label>
+          <input id="collectionStudioName" type="text" maxlength="80" required>
+          <label for="collectionStudioDescription">Your introduction</label>
+          <textarea id="collectionStudioDescription" maxlength="500" rows="7" required aria-describedby="collectionStudioHint"></textarea>
+          <label for="collectionStudioCover">Collection artwork URL <span class="content-muted">(optional)</span></label>
+          <input id="collectionStudioCover" type="url" maxlength="1000" placeholder="https://…">
+          <p id="collectionStudioHint" class="collection-studio-modal__hint">Private is the default. Published collections are checked automatically for useful original context, complete thoughts, varied language, safe sharing, and at least three available titles.</p>
+          <ul id="collectionReadinessChecklist" class="collection-readiness-checklist" aria-live="polite"></ul>
+          <label class="collection-studio-modal__publish"><input id="collectionStudioPublic" type="checkbox"> Publish this collection publicly</label>
+          <p id="collectionStudioError" class="collection-studio-modal__error" role="alert" hidden></p>
+          <div class="collection-studio-modal__actions">
+            <button type="submit" class="action-btn">Save collection</button>
+            <button type="button" class="completion-ritual-modal__skip" data-action="close-collection-studio">Cancel</button>
+          </div>
+        </form>
       </div>
     </div>
   </div>

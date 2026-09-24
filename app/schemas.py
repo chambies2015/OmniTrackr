@@ -2,9 +2,9 @@
 Pydantic models (schemas) for the OmniTrackr API.
 These define the shape of data accepted/returned by the API.
 """
-from typing import Optional, List
+from typing import Optional, List, Literal
 from datetime import datetime
-from pydantic import BaseModel, Field, field_validator
+from pydantic import BaseModel, ConfigDict, Field, field_validator
 
 
 def validate_public_url(value: Optional[str]) -> Optional[str]:
@@ -42,16 +42,14 @@ class UserLogin(BaseModel):
 
 class User(UserBase):
     """Schema for user responses."""
+    model_config = ConfigDict(from_attributes=True)
+
     id: int
     is_active: bool
     is_verified: bool = False
     created_at: Optional[datetime] = None
     profile_picture_url: Optional[str] = None
     
-    class Config:
-        from_attributes = True
-
-
 class UserUpdate(BaseModel):
     """Schema for updating user information."""
     username: Optional[str] = Field(None, min_length=3, max_length=50)
@@ -63,6 +61,12 @@ class PasswordChange(BaseModel):
     """Schema for changing password."""
     current_password: str = Field(..., description="Current password for verification")
     new_password: str = Field(..., min_length=6, max_length=128, description="New password (min 6 characters)")
+
+
+class PasswordReset(BaseModel):
+    """One-time reset credential and replacement password, carried in the request body."""
+    token: str = Field(..., min_length=1, max_length=2048)
+    new_password: str = Field(..., min_length=6, max_length=128)
 
 
 class EmailChange(BaseModel):
@@ -84,6 +88,8 @@ class AccountDeactivate(BaseModel):
 
 class PrivacySettings(BaseModel):
     """Schema for privacy settings."""
+    model_config = ConfigDict(from_attributes=True)
+
     movies_private: bool = Field(False, description="Make movies private")
     tv_shows_private: bool = Field(False, description="Make TV shows private")
     anime_private: bool = Field(False, description="Make anime private")
@@ -92,10 +98,6 @@ class PrivacySettings(BaseModel):
     books_private: bool = Field(False, description="Make books private")
     statistics_private: bool = Field(False, description="Make statistics private")
     
-    class Config:
-        from_attributes = True
-
-
 class PrivacySettingsUpdate(BaseModel):
     """Schema for updating privacy settings."""
     movies_private: Optional[bool] = None
@@ -109,6 +111,8 @@ class PrivacySettingsUpdate(BaseModel):
 
 class TabVisibility(BaseModel):
     """Schema for tab visibility settings."""
+    model_config = ConfigDict(from_attributes=True)
+
     movies_visible: bool = Field(True, description="Show Movies tab")
     tv_shows_visible: bool = Field(True, description="Show TV Shows tab")
     anime_visible: bool = Field(True, description="Show Anime tab")
@@ -116,10 +120,6 @@ class TabVisibility(BaseModel):
     music_visible: bool = Field(True, description="Show Music tab")
     books_visible: bool = Field(True, description="Show Books tab")
     
-    class Config:
-        from_attributes = True
-
-
 class TabVisibilityUpdate(BaseModel):
     """Schema for updating tab visibility settings."""
     movies_visible: Optional[bool] = None
@@ -141,6 +141,8 @@ class FriendRequestCreate(BaseModel):
 
 class FriendRequestResponse(BaseModel):
     """Schema for friend request responses."""
+    model_config = ConfigDict(from_attributes=True)
+
     id: int
     sender_id: int
     receiver_id: int
@@ -150,10 +152,6 @@ class FriendRequestResponse(BaseModel):
     created_at: datetime
     expires_at: datetime
     
-    class Config:
-        from_attributes = True
-
-
 class FriendRequestAction(BaseModel):
     """Schema for friend request actions (accept/deny)."""
     action: str = Field(..., description="Action to take: 'accept' or 'deny'")
@@ -161,16 +159,16 @@ class FriendRequestAction(BaseModel):
 
 class FriendshipResponse(BaseModel):
     """Schema for friendship responses."""
+    model_config = ConfigDict(from_attributes=True)
+
     id: int
     friend: User
     created_at: datetime
     
-    class Config:
-        from_attributes = True
-
-
 class NotificationResponse(BaseModel):
     """Schema for notification responses."""
+    model_config = ConfigDict(from_attributes=True)
+
     id: int
     type: str
     message: str
@@ -178,10 +176,6 @@ class NotificationResponse(BaseModel):
     created_at: datetime
     read_at: Optional[datetime] = None
     
-    class Config:
-        from_attributes = True
-
-
 class UserCount(BaseModel):
     """Schema for user count response."""
     count: int = Field(..., description="Total number of active users")
@@ -199,11 +193,19 @@ class AccountReactivate(BaseModel):
     password: str = Field(..., description="Account password for verification")
 
 
+class ReturnPromptContext(BaseModel):
+    """Ephemeral login context for the private Welcome Back Deck."""
+    eligible: bool = False
+    days_away: Optional[int] = None
+    engagement_token: Optional[str] = None
+
+
 class Token(BaseModel):
     """JWT token response schema."""
     access_token: str
     token_type: str = "bearer"
     user: User
+    return_prompt: ReturnPromptContext = Field(default_factory=ReturnPromptContext)
 
 
 class TokenData(BaseModel):
@@ -248,10 +250,12 @@ class MovieUpdate(BaseModel):
 
 
 class Movie(MovieBase):
-    id: int
+    model_config = ConfigDict(from_attributes=True)
 
-    class Config:
-        from_attributes = True
+    id: int
+    # Stored/imported catalog metadata can be incomplete. Creation stays strict.
+    director: Optional[str] = None
+    year: Optional[int] = Field(None, ge=0)
 
 
 class TVShowBase(BaseModel):
@@ -287,10 +291,10 @@ class TVShowUpdate(BaseModel):
 
 
 class TVShow(TVShowBase):
-    id: int
+    model_config = ConfigDict(from_attributes=True)
 
-    class Config:
-        from_attributes = True
+    id: int
+    year: Optional[int] = Field(None, ge=0)
 
 
 class AnimeBase(BaseModel):
@@ -326,10 +330,10 @@ class AnimeUpdate(BaseModel):
 
 
 class Anime(AnimeBase):
-    id: int
+    model_config = ConfigDict(from_attributes=True)
 
-    class Config:
-        from_attributes = True
+    id: int
+    year: Optional[int] = Field(None, ge=0)
 
 
 class VideoGameBase(BaseModel):
@@ -367,10 +371,9 @@ class VideoGameUpdate(BaseModel):
 
 
 class VideoGame(VideoGameBase):
-    id: int
+    model_config = ConfigDict(from_attributes=True)
 
-    class Config:
-        from_attributes = True
+    id: int
 
 
 class MusicBase(BaseModel):
@@ -406,10 +409,11 @@ class MusicUpdate(BaseModel):
 
 
 class Music(MusicBase):
-    id: int
+    model_config = ConfigDict(from_attributes=True)
 
-    class Config:
-        from_attributes = True
+    id: int
+    artist: Optional[str] = None
+    year: Optional[int] = Field(None, ge=0)
 
 
 class BookBase(BaseModel):
@@ -445,15 +449,104 @@ class BookUpdate(BaseModel):
 
 
 class Book(BookBase):
-    id: int
+    model_config = ConfigDict(from_attributes=True)
 
-    class Config:
-        from_attributes = True
+    id: int
+    author: Optional[str] = None
+    year: Optional[int] = Field(None, ge=0)
+
+
+# ============================================================================
+# Private Activity Journal Schemas
+# ============================================================================
+
+ACTIVITY_CATEGORIES = {"movies", "tv-shows", "anime", "video-games", "music", "books"}
+ACTIVITY_ACTIONS = {"started", "progressed", "completed", "revisited", "noted"}
+
+
+class ActivityEntryCreate(BaseModel):
+    category: str
+    item_id: int = Field(..., ge=1)
+    action: str = "noted"
+    note: Optional[str] = Field(None, max_length=500)
+    occurred_at: Optional[datetime] = None
+
+    @field_validator("category")
+    @classmethod
+    def validate_activity_category(cls, value: str) -> str:
+        normalized = value.strip().lower()
+        if normalized not in ACTIVITY_CATEGORIES:
+            raise ValueError("Category must be a supported library category")
+        return normalized
+
+    @field_validator("action")
+    @classmethod
+    def validate_activity_action(cls, value: str) -> str:
+        normalized = value.strip().lower()
+        if normalized not in ACTIVITY_ACTIONS:
+            raise ValueError("Action must be started, progressed, completed, revisited, or noted")
+        return normalized
+
+    @field_validator("note")
+    @classmethod
+    def normalize_activity_note(cls, value: Optional[str]) -> Optional[str]:
+        return value.strip() or None if value else None
+
+
+class ActivityEntryUpdate(BaseModel):
+    action: Optional[str] = None
+    note: Optional[str] = Field(None, max_length=500)
+    occurred_at: Optional[datetime] = None
+
+    @field_validator("action")
+    @classmethod
+    def validate_activity_update_action(cls, value: Optional[str]) -> Optional[str]:
+        if value is None:
+            return None
+        normalized = value.strip().lower()
+        if normalized not in ACTIVITY_ACTIONS:
+            raise ValueError("Action must be started, progressed, completed, revisited, or noted")
+        return normalized
+
+    @field_validator("note")
+    @classmethod
+    def normalize_activity_update_note(cls, value: Optional[str]) -> Optional[str]:
+        return value.strip() or None if value else None
+
+
+class ActivityEntry(BaseModel):
+    id: int
+    category: str
+    category_label: str
+    item_id: Optional[int] = None
+    title: str
+    action: str
+    action_label: str
+    note: Optional[str] = None
+    rating: Optional[float] = None
+    source: str
+    occurred_at: datetime
+
+
+class ActivityEntryImport(BaseModel):
+    category: str
+    item_id: Optional[int] = Field(None, ge=1)
+    title: str = Field(..., min_length=1, max_length=500)
+    action: str
+    note: Optional[str] = Field(None, max_length=500)
+    rating: Optional[float] = Field(None, ge=0, le=10)
+    occurred_at: datetime
+
+    _validate_category = field_validator("category")(ActivityEntryCreate.validate_activity_category.__func__)
+    _validate_action = field_validator("action")(ActivityEntryCreate.validate_activity_action.__func__)
+    _normalize_note = field_validator("note")(ActivityEntryCreate.normalize_activity_note.__func__)
 
 
 # Export/Import schemas
 class ExportData(BaseModel):
     """Schema for exporting all data from OmniTrackr"""
+    model_config = ConfigDict(from_attributes=True)
+
     movies: List[Movie] = Field(..., description="List of all movies")
     tv_shows: List[TVShow] = Field(..., description="List of all TV shows")
     anime: List[Anime] = Field(..., description="List of all anime")
@@ -461,14 +554,15 @@ class ExportData(BaseModel):
     music: List[Music] = Field(..., description="List of all music")
     books: List[Book] = Field(..., description="List of all books")
     custom_tabs: List[dict] = Field(default=[], description="List of all custom tabs with their items")
+    activities: List[ActivityEntry] = Field(default=[], description="Private activity journal entries")
+    collections: List[dict] = Field(default=[], description="Private cross-media collections and curator notes")
+    progress_checkpoints: List[dict] = Field(default_factory=list, description="Private episode and reading checkpoints")
     export_metadata: dict = Field(..., description="Export metadata including timestamp and version")
     
-    class Config:
-        from_attributes = True
-
-
 class ImportData(BaseModel):
     """Schema for importing data into OmniTrackr"""
+    model_config = ConfigDict(from_attributes=True)
+
     movies: List[MovieCreate] = Field(default=[], description="Movies to import")
     tv_shows: List[TVShowCreate] = Field(default=[], description="TV shows to import")
     anime: List[AnimeCreate] = Field(default=[], description="Anime to import")
@@ -476,13 +570,14 @@ class ImportData(BaseModel):
     music: List[MusicCreate] = Field(default=[], description="Music to import")
     books: List[BookCreate] = Field(default=[], description="Books to import")
     custom_tabs: List[dict] = Field(default=[], description="Custom tabs to import (optional for backward compatibility)")
+    activities: List[ActivityEntryImport] = Field(default=[], description="Activity journal entries (optional for backward compatibility)")
+    collections: List[dict] = Field(default=[], description="Collections to restore privately (optional for backward compatibility)")
+    progress_checkpoints: List[dict] = Field(default_factory=list, max_length=10000, description="Checkpoints to restore only where no saved progress exists")
     
-    class Config:
-        from_attributes = True
-
-
 class ImportResult(BaseModel):
     """Schema for import operation results"""
+    model_config = ConfigDict(from_attributes=True)
+
     movies_created: int = Field(..., description="Number of movies created")
     movies_updated: int = Field(..., description="Number of movies updated")
     tv_shows_created: int = Field(..., description="Number of TV shows created")
@@ -497,12 +592,14 @@ class ImportResult(BaseModel):
     books_updated: int = Field(..., description="Number of books updated")
     custom_tabs_created: int = Field(default=0, description="Number of custom tabs created")
     custom_tabs_updated: int = Field(default=0, description="Number of custom tabs updated")
+    activities_created: int = Field(default=0, description="Number of journal entries created")
+    activities_skipped: int = Field(default=0, description="Number of duplicate journal entries skipped")
+    collections_created: int = Field(default=0, description="Number of private collections restored")
+    collections_skipped: int = Field(default=0, description="Number of existing or invalid collections skipped")
+    progress_created: int = Field(default=0, description="Number of private checkpoints restored")
+    progress_skipped: int = Field(default=0, description="Existing, ambiguous, unavailable or invalid checkpoints skipped")
     errors: List[str] = Field(default=[], description="List of errors encountered during import")
     
-    class Config:
-        from_attributes = True
-
-
 # Statistics schemas
 class WatchStatistics(BaseModel):
     """Schema for watch statistics"""
@@ -759,18 +856,17 @@ class CustomTabFieldCreate(BaseModel):
 
 
 class CustomTabField(CustomTabFieldCreate):
+    model_config = ConfigDict(from_attributes=True)
+
     id: int
     tab_id: int
-    
-    class Config:
-        from_attributes = True
 
 
 class CustomTabCreate(BaseModel):
     name: str = Field(..., min_length=1, max_length=100, description="Tab name")
     source_type: str = Field("none", description="Metadata source: omdb, jikan, rawg, or none")
     allow_uploads: bool = Field(True, description="Allow poster uploads")
-    fields: List[CustomTabFieldCreate] = Field(default=[], max_items=30, description="Field definitions")
+    fields: List[CustomTabFieldCreate] = Field(default=[], max_length=30, description="Field definitions")
 
 
 class CustomTabUpdate(BaseModel):
@@ -781,6 +877,8 @@ class CustomTabUpdate(BaseModel):
 
 
 class CustomTab(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+
     id: int
     user_id: int
     name: str
@@ -790,10 +888,6 @@ class CustomTab(BaseModel):
     created_at: Optional[datetime] = None
     fields: List[CustomTabField] = Field(default=[])
     
-    class Config:
-        from_attributes = True
-
-
 class CustomTabItemCreate(BaseModel):
     title: str = Field(..., min_length=1, max_length=500, description="Item title")
     field_values: dict = Field(default={}, description="Field values as key-value pairs")
@@ -811,6 +905,8 @@ class CustomTabItemUpdate(BaseModel):
 
 
 class CustomTabItem(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+
     id: int
     tab_id: int
     title: str
@@ -818,5 +914,241 @@ class CustomTabItem(BaseModel):
     poster_url: Optional[str] = None
     created_at: Optional[datetime] = None
     
-    class Config:
-        from_attributes = True
+# ============================================================================
+# Next Up Queue Schemas
+# ============================================================================
+
+NEXT_UP_CATEGORIES = {"movies", "tv-shows", "anime", "video-games", "music", "books"}
+
+
+class NextUpItemCreate(BaseModel):
+    category: str = Field(..., description="Library category for the queued item")
+    item_id: int = Field(..., ge=1, description="ID of the existing library item")
+
+    @field_validator("category")
+    @classmethod
+    def validate_category(cls, value: str) -> str:
+        normalized = value.strip().lower()
+        if normalized not in NEXT_UP_CATEGORIES:
+            raise ValueError("Category must be a supported library category")
+        return normalized
+
+
+class NextUpItemMove(BaseModel):
+    position: int = Field(..., ge=0, description="Zero-based queue position")
+
+
+class NextUpItem(BaseModel):
+    id: int
+    category: str
+    item_id: int
+    title: str
+    category_label: str
+    position: int
+    available: bool = True
+    progress: Optional[dict] = None
+
+
+class ReturnPromptEngagement(BaseModel):
+    """One anonymous aggregate counter update from the Welcome Back Deck."""
+    action: Literal["shown", "opened", "dismissed"]
+    engagement_token: str = Field(..., min_length=32, max_length=512)
+
+
+# ============================================================================
+# Recommendation Postcard Schemas
+# ============================================================================
+
+RECOMMENDATION_CATEGORIES = {"movies", "tv-shows", "anime", "video-games", "music", "books"}
+
+
+class RecommendationRequestCreate(BaseModel):
+    prompt: str = Field(..., min_length=10, max_length=280)
+    categories: List[str] = Field(..., min_length=1, max_length=6)
+    expires_in_days: int = Field(7, ge=1, le=30)
+    max_responses: int = Field(10, ge=3, le=20)
+
+    @field_validator("prompt")
+    @classmethod
+    def clean_prompt(cls, value: str) -> str:
+        return " ".join(value.split())
+
+    @field_validator("categories")
+    @classmethod
+    def validate_categories(cls, value: List[str]) -> List[str]:
+        normalized = list(dict.fromkeys(category.strip().lower() for category in value))
+        if any(category not in RECOMMENDATION_CATEGORIES for category in normalized):
+            raise ValueError("Categories must use built-in media types")
+        return normalized
+
+
+class RecommendationSubmissionCreate(BaseModel):
+    guest_name: str = Field(..., min_length=1, max_length=50)
+    category: str
+    title: str = Field(..., min_length=1, max_length=200)
+    reason: str = Field(..., min_length=20, max_length=500)
+    website: Optional[str] = Field(None, max_length=200, description="Spam-trap field; leave blank")
+
+    @field_validator("guest_name", "title", "reason")
+    @classmethod
+    def clean_text(cls, value: str) -> str:
+        return " ".join(value.split())
+
+    @field_validator("category")
+    @classmethod
+    def validate_category(cls, value: str) -> str:
+        normalized = value.strip().lower()
+        if normalized not in RECOMMENDATION_CATEGORIES:
+            raise ValueError("Category must be a supported media type")
+        return normalized
+
+
+class RecommendationFriendSubmissionCreate(BaseModel):
+    category: str
+    title: str = Field(..., min_length=1, max_length=200)
+    reason: str = Field(..., min_length=20, max_length=500)
+
+    _clean_title = field_validator("title")(RecommendationSubmissionCreate.clean_text.__func__)
+    _clean_reason = field_validator("reason")(RecommendationSubmissionCreate.clean_text.__func__)
+    _validate_category = field_validator("category")(RecommendationSubmissionCreate.validate_category.__func__)
+
+
+class RecommendationInviteCreate(BaseModel):
+    friend_id: int = Field(..., ge=1)
+
+
+class RecommendationTriage(BaseModel):
+    action: Literal["save", "library", "next-up", "dismiss"]
+
+
+# ============================================================================
+# Completion Moment Schemas
+# ============================================================================
+
+class CompletionMomentCreate(NextUpItemCreate):
+    """Reference an already-finished library item for a private reflection."""
+
+
+class CompletionMomentUpdate(BaseModel):
+    takeaway: Optional[str] = Field(None, max_length=500, description="A short private takeaway")
+    favorite: Optional[bool] = Field(None, description="Whether this was a personal favorite")
+
+    @field_validator("takeaway")
+    @classmethod
+    def normalize_takeaway(cls, value: Optional[str]) -> Optional[str]:
+        if value is None:
+            return None
+        return value.strip() or None
+
+
+class CompletionMoment(BaseModel):
+    id: int
+    category: str
+    category_label: str
+    item_id: int
+    title: str
+    rating: Optional[float] = None
+    takeaway: Optional[str] = None
+    favorite: bool = False
+    completed_at: datetime
+
+
+# ============================================================================
+# Cross-media Collection Schemas
+# ============================================================================
+
+class CollectionCreate(BaseModel):
+    name: str = Field(..., min_length=1, max_length=80, description="Collection name")
+    description: Optional[str] = Field(None, max_length=500, description="Optional private collection note")
+    cover_url: Optional[str] = Field(None, max_length=1000, description="Optional public collection artwork URL")
+
+    @field_validator("name")
+    @classmethod
+    def normalize_name(cls, value: str) -> str:
+        normalized = value.strip()
+        if not normalized:
+            raise ValueError("Collection name cannot be blank")
+        return normalized
+
+    @field_validator("description")
+    @classmethod
+    def normalize_description(cls, value: Optional[str]) -> Optional[str]:
+        return value.strip() or None if value else None
+
+    _validate_cover_url = field_validator("cover_url")(validate_public_url)
+
+
+class CollectionUpdate(BaseModel):
+    name: Optional[str] = Field(None, min_length=1, max_length=80)
+    description: Optional[str] = Field(None, max_length=500)
+    cover_url: Optional[str] = Field(None, max_length=1000)
+    is_public: Optional[bool] = None
+
+    _validate_cover_url = field_validator("cover_url")(validate_public_url)
+
+
+class CollectionItemCreate(NextUpItemCreate):
+    """Add one existing media record to a collection."""
+
+
+class CollectionItemMove(BaseModel):
+    position: int = Field(..., ge=0)
+
+
+class CollectionItemUpdate(BaseModel):
+    curator_note: Optional[str] = Field(None, max_length=500)
+
+    @field_validator("curator_note")
+    @classmethod
+    def normalize_curator_note(cls, value: Optional[str]) -> Optional[str]:
+        return value.strip() or None if value else None
+
+
+class CollectionModerationUpdate(BaseModel):
+    status: str = Field(..., pattern="^(pending|approved|rejected)$")
+
+
+class CollectionReportCreate(BaseModel):
+    reason: str = Field(..., pattern="^(spam|harassment|copyright|unsafe|other)$")
+    model_config = ConfigDict(extra="forbid")
+
+
+class PublicReviewReportCreate(BaseModel):
+    reason: str = Field(..., pattern="^(spam|harassment|personal_information|copied_content|other)$")
+
+
+class CollectionItem(BaseModel):
+    id: int
+    category: str
+    category_label: str
+    item_id: int
+    title: str
+    position: int
+    available: bool = True
+    curator_note: Optional[str] = None
+    artwork_url: Optional[str] = None
+
+
+class CollectionReadiness(BaseModel):
+    share_ready: bool = False
+    discover_ready: bool = False
+    character_count: int = 0
+    word_count: int = 0
+    item_count: int = 0
+    checks: dict[str, bool] = Field(default_factory=dict)
+
+
+class Collection(BaseModel):
+    id: int
+    name: str
+    description: Optional[str] = None
+    cover_url: Optional[str] = None
+    is_public: bool = False
+    moderation_status: str = "pending"
+    public_url: Optional[str] = None
+    view_count: int = 0
+    helpful_count: int = 0
+    report_count: int = 0
+    readiness: CollectionReadiness = Field(default_factory=CollectionReadiness)
+    created_at: datetime
+    items: List[CollectionItem] = Field(default=[])

@@ -4,6 +4,8 @@ Provides CRUD endpoints for managing movies and TV shows.
 """
 import os
 import re
+import httpx
+from contextlib import asynccontextmanager
 from fastapi import FastAPI, Depends, HTTPException, Request
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import FileResponse, Response, RedirectResponse
@@ -21,7 +23,7 @@ from .csp import nonce_html_response, strict_html_response
 from .auth import AUTH_COOKIE_NAME
 from .migrations import run_migrations
 from .middleware import SecurityHeadersMiddleware, BotFilterMiddleware
-from .dependencies import get_db
+from .dependencies import get_db, get_current_user
 from .routers import (
     auth,
     account,
@@ -40,6 +42,14 @@ from .routers import (
     static,
     custom_tabs,
     reviews,
+    next_up,
+    completion_moments,
+    activity,
+    progress,
+    collections,
+    discover,
+    import_studio,
+    recommendations,
 )
 
 # Create database tables
@@ -48,8 +58,38 @@ Base.metadata.create_all(bind=engine)
 # Run migrations
 run_migrations()
 
+@asynccontextmanager
+async def lifespan(application: FastAPI):
+    """Own pooled network resources and lightweight startup maintenance."""
+    application.state.external_api_client = httpx.AsyncClient(
+        timeout=httpx.Timeout(12.0, connect=5.0),
+        limits=httpx.Limits(max_connections=20, max_keepalive_connections=10),
+        follow_redirects=False,
+    )
+    try:
+        db = SessionLocal()
+        try:
+            expired_count = crud.expire_friend_requests(db)
+            if expired_count > 0:
+                print(f"Expired {expired_count} old friend requests on startup")
+        finally:
+            db.close()
+    except Exception as e:
+        print(f"Error expiring friend requests on startup: {e}")
+
+    try:
+        yield
+    finally:
+        await application.state.external_api_client.aclose()
+
+
 # Initialize FastAPI
-app = FastAPI(title="OmniTrackr API", description="Manage your movies, TV shows, anime, video games, music, and books", version="0.1.0")
+app = FastAPI(
+    title="OmniTrackr API",
+    description="Manage your movies, TV shows, anime, video games, music, and books",
+    version="0.1.0",
+    lifespan=lifespan,
+)
 
 # Initialize rate limiter
 if os.getenv("TESTING", "").lower() == "true":
@@ -60,17 +100,11 @@ app.state.limiter = limiter
 app.add_exception_handler(RateLimitExceeded, _rate_limit_exceeded_handler)
 
 
-@app.on_event("startup")
-async def startup_event():
-    """Run tasks on application startup."""
-    try:
-        db = SessionLocal()
-        expired_count = crud.expire_friend_requests(db)
-        if expired_count > 0:
-            print(f"Expired {expired_count} old friend requests on startup")
-        db.close()
-    except Exception as e:
-        print(f"Error expiring friend requests on startup: {e}")
+def bind_rate_limited_endpoint(route, endpoint) -> None:
+    """Replace both the visible endpoint and FastAPI's captured request callable."""
+    route.endpoint = endpoint
+    if hasattr(route, "dependant"):
+        route.dependant.call = endpoint
 
 
 # Add middleware
@@ -81,30 +115,29 @@ app.add_middleware(SlowAPIMiddleware)
 
 ENVIRONMENT = os.getenv("ENVIRONMENT", "development").lower()
 
-AD_ELIGIBLE_TEMPLATES = {
+INDEXABLE_PUBLIC_TEMPLATES = {
     "about.html",
+    "demo.html",
+    "export_import_guide.html",
     "faq.html",
     "guides.html",
-    "compare.html",
-    "use_cases.html",
-    "changelog.html",
-    "tv_show_tracker.html",
-    "game_tracker.html",
-    "movie_tracker.html",
-    "anime_tracker.html",
-    "book_tracker.html",
-    "music_tracker.html",
-    "media_statistics.html",
-    "export_import_guide.html",
-    "media_tracker_checklist.html",
-    "tracking_templates.html",
+    "media_tracking.html",
     "review_guidelines.html",
     "sample_library.html",
-    "demo.html",
-    "media_tracking.html",
-    "roadmap.html",
     "reviews.html",
 }
+
+# Ads are limited to the small set of pages that provide a complete experience
+# without an account.  Directory, policy, release-note, and overlapping guide
+# pages remain useful and linked, but are not treated as advertising inventory.
+AD_ELIGIBLE_TEMPLATES = {
+    "export_import_guide.html",
+    "media_tracking.html",
+    "review_guidelines.html",
+    "sample_library.html",
+}
+
+NOFOLLOW_PUBLIC_TEMPLATES = {"recommendation_postcard.html"}
 
 
 def inject_adsense_account_meta(html: str) -> str:
@@ -127,13 +160,74 @@ def inject_public_ad_loader(html: str, template_name: str, request: Request | No
     return html.replace("</head>", f"{loader}</head>", 1)
 
 
+def apply_public_search_policy(html: str, template_name: str) -> tuple[str, bool]:
+    """Keep useful supporting pages accessible without diluting search inventory."""
+    indexable = template_name in INDEXABLE_PUBLIC_TEMPLATES
+    if indexable:
+        return html, True
+
+    directive = "noindex, nofollow" if template_name in NOFOLLOW_PUBLIC_TEMPLATES else "noindex, follow"
+    noindex_meta = f'<meta name="robots" content="{directive}">'
+    robots_pattern = r'<meta\s+name=["\']robots["\']\s+content=["\'][^"\']*["\']\s*/?>'
+    if re.search(robots_pattern, html, flags=re.IGNORECASE):
+        html = re.sub(robots_pattern, noindex_meta, html, count=1, flags=re.IGNORECASE)
+    elif "</head>" in html:
+        html = html.replace("</head>", f"  {noindex_meta}\n</head>", 1)
+    return html, False
+
+
 def strict_template_response(template_name: str, request: Request | None = None):
     html_file = os.path.join(os.path.dirname(__file__), "templates", template_name)
     if os.path.exists(html_file):
         with open(html_file, "r", encoding="utf-8") as file:
-            html = inject_adsense_account_meta(file.read())
-            return strict_html_response(inject_public_ad_loader(html, template_name, request))
+            html, indexable = apply_public_search_policy(file.read(), template_name)
+            html = inject_adsense_account_meta(html)
+            response = strict_html_response(inject_public_ad_loader(html, template_name, request))
+            response.headers["Vary"] = "Cookie"
+            if not indexable:
+                response.headers["X-Robots-Tag"] = (
+                    "noindex, nofollow" if template_name in NOFOLLOW_PUBLIC_TEMPLATES else "noindex, follow"
+                )
+            return response
     return None
+
+
+def public_root_html(html: str) -> str:
+    """Return the standalone public landing experience without the private app shell.
+
+    The dashboard and its empty tables used to be sent to every anonymous visitor and
+    hidden only with CSS. A dedicated public template is clearer for visitors and
+    crawlers, while signed-in visitors still receive the complete dashboard unchanged.
+    The previous extraction path remains as a safe fallback for incomplete deployments.
+    """
+    public_template = os.path.join(os.path.dirname(__file__), "templates", "public_landing.html")
+    if os.path.exists(public_template):
+        with open(public_template, "r", encoding="utf-8") as file:
+            return file.read()
+
+    landing_marker = "  <!-- Landing Page -->"
+    scripts_marker = '  <script src="./credentials.js"></script>'
+    body_match = re.search(r"<body[^>]*>", html, flags=re.IGNORECASE)
+    landing_start = html.find(landing_marker)
+    scripts_start = html.rfind(scripts_marker)
+
+    # Keep the original page usable if a future template edit moves a marker.
+    if not body_match or landing_start == -1 or scripts_start == -1 or landing_start >= scripts_start:
+        return html
+
+    public_head = html[:body_match.end()]
+    public_head = public_head.replace(
+        '<html lang="en">',
+        '<html lang="en" data-public-shell="true">',
+        1,
+    )
+    public_head = public_head.replace('  <script src="./preauth.js"></script>\n', "", 1)
+    public_tail = html[scripts_start:].replace(
+        '  <script src="./app.js"></script>',
+        '  <script src="/static/public-landing.js" defer></script>',
+        1,
+    )
+    return f"{public_head}\n{html[landing_start:scripts_start]}{public_tail}"
 allowed_origins_str = os.getenv("ALLOWED_ORIGINS", "")
 if allowed_origins_str:
     allowed_origins = [origin.strip() for origin in allowed_origins_str.split(",") if origin.strip()]
@@ -168,10 +262,21 @@ async def serve_profile_picture(user_id: int, db: Session = Depends(get_db)):
 
 
 @app.get("/custom-tab-posters/{item_id}")
-async def serve_custom_tab_poster(item_id: int, db: Session = Depends(get_db)):
-    """Serve custom tab item posters from database."""
-    from . import models
-    item = db.query(models.CustomTabItem).filter(models.CustomTabItem.id == item_id).first()
+async def serve_custom_tab_poster(
+    item_id: int,
+    current_user: models.User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+):
+    """Serve a custom-tab poster only to the owner of that private tab."""
+    item = (
+        db.query(models.CustomTabItem)
+        .join(models.CustomTab, models.CustomTabItem.tab_id == models.CustomTab.id)
+        .filter(
+            models.CustomTabItem.id == item_id,
+            models.CustomTab.user_id == current_user.id,
+        )
+        .first()
+    )
     if not item or not item.poster_data:
         raise HTTPException(status_code=404, detail="Poster not found")
     
@@ -200,38 +305,81 @@ if os.path.exists(static_dir):
     app.mount("/static", StaticFiles(directory=static_dir), name="static")
 
 
-# Include routers
-app.include_router(auth.router)
-
-# Apply rate limiting to auth endpoints
+# Apply rate limiting to auth endpoints before including the router. FastAPI
+# copies APIRoute objects during include_router(), so changing the source router
+# afterward would leave the application's registered handlers unprotected.
 for route in auth.router.routes:
     if hasattr(route, 'path') and hasattr(route, 'methods') and hasattr(route, 'endpoint'):
         if route.path == "/auth/register" and 'POST' in route.methods:
-            route.endpoint = limiter.limit("5/minute")(route.endpoint)
+            bind_rate_limited_endpoint(route, limiter.limit("5/minute")(route.endpoint))
         elif route.path == "/auth/login" and 'POST' in route.methods:
-            route.endpoint = limiter.limit("5/minute")(route.endpoint)
+            bind_rate_limited_endpoint(route, limiter.limit("5/minute")(route.endpoint))
         elif route.path == "/auth/request-password-reset" and 'POST' in route.methods:
-            route.endpoint = limiter.limit("3/hour")(route.endpoint)
+            bind_rate_limited_endpoint(route, limiter.limit("3/hour")(route.endpoint))
         elif route.path == "/auth/resend-verification" and 'POST' in route.methods:
-            route.endpoint = limiter.limit("3/hour")(route.endpoint)
+            bind_rate_limited_endpoint(route, limiter.limit("3/hour")(route.endpoint))
+
+# Include routers
+app.include_router(auth.router)
 
 # Include account router and apply rate limiting to profile picture upload
 from .routers.account import upload_profile_picture
 rate_limited_profile_picture = limiter.limit("10/minute")(upload_profile_picture)
 for route in account.router.routes:
     if hasattr(route, 'path') and route.path == "/account/profile-picture" and hasattr(route, 'methods') and 'POST' in route.methods:
-        route.endpoint = rate_limited_profile_picture
+        bind_rate_limited_endpoint(route, rate_limited_profile_picture)
 
 app.include_router(account.router)
 app.include_router(friends.router)
 app.include_router(notifications.router)
+from .routers import library
+app.include_router(library.router)
 app.include_router(movies.router)
 app.include_router(tv_shows.router)
 app.include_router(anime.router)
 app.include_router(video_games.router)
 app.include_router(music.router)
 app.include_router(books.router)
+rate_limited_return_deck = limiter.limit("30/minute")(statistics.get_return_deck)
+rate_limited_return_engagement = limiter.limit("10/minute")(statistics.record_return_deck_engagement)
+for route in statistics.router.routes:
+    if not hasattr(route, "path") or not hasattr(route, "methods"):
+        continue
+    if route.path == "/statistics/return-deck/" and "GET" in route.methods:
+        bind_rate_limited_endpoint(route, rate_limited_return_deck)
+    elif route.path == "/statistics/return-deck/engagement" and "POST" in route.methods:
+        bind_rate_limited_endpoint(route, rate_limited_return_engagement)
 app.include_router(statistics.router)
+app.include_router(next_up.router)
+app.include_router(completion_moments.router)
+app.include_router(activity.router)
+app.include_router(progress.router)
+app.include_router(import_studio.router)
+from .routers.recommendations import submit_public_recommendation
+rate_limited_recommendation = limiter.limit("5/hour")(submit_public_recommendation)
+for route in recommendations.router.routes:
+    if (
+        hasattr(route, "path")
+        and route.path == "/recommendations/public/{token}"
+        and hasattr(route, "methods")
+        and "POST" in route.methods
+    ):
+        bind_rate_limited_endpoint(route, rate_limited_recommendation)
+app.include_router(recommendations.router)
+rate_limited_collection_view = limiter.limit("60/minute")(collections.public_collection)
+rate_limited_collection_helpful = limiter.limit("20/hour")(collections.mark_collection_helpful)
+rate_limited_collection_report = limiter.limit("2/hour")(collections.report_collection)
+for route in collections.router.routes:
+    if not hasattr(route, "path") or not hasattr(route, "methods"):
+        continue
+    if route.path == "/collections/public/{collection_id}" and "GET" in route.methods:
+        bind_rate_limited_endpoint(route, rate_limited_collection_view)
+    elif route.path == "/collections/public/{collection_id}/helpful" and "POST" in route.methods:
+        bind_rate_limited_endpoint(route, rate_limited_collection_helpful)
+    elif route.path == "/collections/public/{collection_id}/report" and "POST" in route.methods:
+        bind_rate_limited_endpoint(route, rate_limited_collection_report)
+app.include_router(collections.router)
+app.include_router(discover.router)
 app.include_router(export_import.router)
 app.include_router(custom_tabs.router)
 
@@ -249,33 +397,59 @@ rate_limited_openlibrary = limiter.limit("60/minute")(proxy_openlibrary_api)
 # Replace the endpoints in the router before including it
 for route in proxy.router.routes:
     if hasattr(route, 'path') and route.path == "/api/proxy/omdb":
-        route.endpoint = rate_limited_omdb
+        bind_rate_limited_endpoint(route, rate_limited_omdb)
     elif hasattr(route, 'path') and route.path == "/api/proxy/rawg":
-        route.endpoint = rate_limited_rawg
+        bind_rate_limited_endpoint(route, rate_limited_rawg)
     elif hasattr(route, 'path') and route.path == "/api/proxy/jikan":
-        route.endpoint = rate_limited_jikan
+        bind_rate_limited_endpoint(route, rate_limited_jikan)
     elif hasattr(route, 'path') and route.path == "/api/proxy/itunes":
-        route.endpoint = rate_limited_itunes
+        bind_rate_limited_endpoint(route, rate_limited_itunes)
     elif hasattr(route, 'path') and route.path == "/api/proxy/openlibrary":
-        route.endpoint = rate_limited_openlibrary
+        bind_rate_limited_endpoint(route, rate_limited_openlibrary)
 
 app.include_router(proxy.router)
 
 app.include_router(seo.router)
 app.include_router(static.router)
+rate_limited_review_report = limiter.limit("2/hour")(reviews.report_public_review)
+for route in reviews.router.routes:
+    if (
+        hasattr(route, "path")
+        and route.path == "/api/public/reviews/{category}/{review_id}/report"
+        and hasattr(route, "methods")
+        and "POST" in route.methods
+    ):
+        bind_rate_limited_endpoint(route, rate_limited_review_report)
 app.include_router(reviews.router)
 
 
 # Root endpoint
 @app.get("/", tags=["root"])
 @app.head("/", tags=["root"])
-async def read_root():
+async def read_root(request: Request):
     # Serve the HTML UI file
     html_file = os.path.join(os.path.dirname(__file__), "templates", "index.html")
     if os.path.exists(html_file):
         with open(html_file, "r", encoding="utf-8") as file:
-            return nonce_html_response(file.read())
+            html = file.read()
+            authenticated_shell = bool(request.cookies.get(AUTH_COOKIE_NAME))
+            if not authenticated_shell:
+                html = public_root_html(html)
+            response = nonce_html_response(html)
+            response.headers["Cache-Control"] = "private, no-store" if authenticated_shell else "no-cache"
+            response.headers["Vary"] = "Cookie"
+            return response
     return {"message": "OmniTrackr API is running 🚀"}
+
+
+@app.get("/recommend/{token}", tags=["public"])
+async def recommendation_postcard_page(request: Request, token: str):
+    """Serve an unindexed guest response page; the token is read by client JS."""
+    response = strict_template_response("recommendation_postcard.html", request)
+    if response:
+        response.headers["Cache-Control"] = "no-store"
+        return response
+    raise HTTPException(status_code=404, detail="Recommendation Postcard page not found")
 
 
 # Privacy Policy endpoint

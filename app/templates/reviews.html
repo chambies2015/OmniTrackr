@@ -1,6 +1,5 @@
 <!DOCTYPE html>
 <html lang="en">
-
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -11,7 +10,6 @@
   <title>Public Media Reviews for Movies, Shows, Games, Music & Books - OmniTrackr</title>
   <link rel="canonical" href="https://omnitrackr.xyz/reviews">
   <link rel="icon" type="image/x-icon" href="/omnitrackr_favicon.ico">
-  
   <meta property="og:type" content="website">
   <meta property="og:url" content="https://omnitrackr.xyz/reviews">
   <meta property="og:title" content="Public Media Reviews - OmniTrackr">
@@ -20,7 +18,6 @@
   <meta property="og:image:alt" content="OmniTrackr public media reviews">
   <meta property="og:site_name" content="OmniTrackr">
   <meta property="og:locale" content="en_US">
-  
   <meta name="twitter:card" content="summary_large_image">
   <meta name="twitter:url" content="https://omnitrackr.xyz/reviews">
   <meta name="twitter:title" content="Public Media Reviews - OmniTrackr">
@@ -29,270 +26,9 @@
   <meta name="twitter:image:alt" content="OmniTrackr public media reviews">
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@700;800&family=Inter:wght@400;500;600&display=swap"
-    rel="stylesheet">
-  <link rel="stylesheet" href="/styles.css">
-  <script type="application/ld+json">
-  {
-    "@context": "https://schema.org",
-    "@type": "CollectionPage",
-    "name": "Public Media Reviews - OmniTrackr",
-    "description": "Public user reviews for movies, TV shows, anime, video games, music, and books.",
-    "url": "https://omnitrackr.xyz/reviews",
-    "inLanguage": "en-US",
-    "isPartOf": { "@type": "WebSite", "name": "OmniTrackr", "url": "https://omnitrackr.xyz" },
-    "about": ["movie reviews", "TV show reviews", "anime reviews", "video game reviews", "music reviews", "book reviews"],
-    "breadcrumb": {
-      "@type": "BreadcrumbList",
-      "itemListElement": [
-        { "@type": "ListItem", "position": 1, "name": "Home", "item": "https://omnitrackr.xyz/" },
-        { "@type": "ListItem", "position": 2, "name": "Public Reviews", "item": "https://omnitrackr.xyz/reviews" }
-      ]
-    }
-  }
-  </script>
-  <style>
-    body {
-      min-height: 100vh;
-      padding: 20px;
-    }
-
-    .reviews-wrapper {
-      max-width: 1200px;
-      margin: 0 auto;
-    }
-
-    .reviews-header {
-      text-align: center;
-      margin-bottom: 40px;
-      padding-bottom: 20px;
-      border-bottom: 2px solid var(--border);
-    }
-
-    .reviews-header h1 {
-      font-size: 2.5rem;
-      margin-bottom: 15px;
-      color: var(--fg);
-    }
-
-    .reviews-header p {
-      font-size: 1.1rem;
-      color: var(--fg-secondary);
-      max-width: 700px;
-      margin: 0 auto;
-    }
-
-    .filter-section {
-      background: var(--card-bg);
-      padding: 20px;
-      border-radius: 12px;
-      margin-bottom: 30px;
-      display: flex;
-      gap: 15px;
-      flex-wrap: wrap;
-      align-items: center;
-    }
-
-    .reviews-guide {
-      background: var(--card-bg);
-      border: 1px solid var(--border);
-      border-radius: 12px;
-      padding: 24px;
-      margin-bottom: 30px;
-      color: var(--fg-secondary);
-      line-height: 1.7;
-    }
-
-    .reviews-guide h2,
-    .reviews-guide h3 {
-      color: var(--fg);
-      margin-bottom: 10px;
-    }
-
-    .review-category-grid {
-      display: grid;
-      grid-template-columns: repeat(auto-fit, minmax(210px, 1fr));
-      gap: 14px;
-      margin-top: 18px;
-    }
-
-    .review-category-card {
-      border: 1px solid var(--border);
-      border-radius: 10px;
-      padding: 16px;
-      background: rgba(255, 255, 255, 0.04);
-    }
-
-    .review-category-card h3 {
-      font-size: 1rem;
-      margin-bottom: 6px;
-    }
-
-    .review-example-grid {
-      display: grid;
-      gap: 16px;
-      grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
-      margin-top: 18px;
-    }
-
-    .review-example-card {
-      background: rgba(255, 255, 255, 0.04);
-      border: 1px solid var(--border);
-      border-radius: 10px;
-      padding: 18px;
-    }
-
-    .review-example-card h3 {
-      color: var(--fg);
-      font-size: 1rem;
-      margin-bottom: 8px;
-    }
-
-    .review-example-card p {
-      margin-bottom: 10px;
-    }
-
-    .filter-section select,
-    .filter-section button {
-      padding: 10px 20px;
-      border: 1px solid var(--border);
-      border-radius: 8px;
-      background: var(--bg);
-      color: var(--fg);
-      font-size: 1rem;
-      cursor: pointer;
-    }
-
-    .filter-section button {
-      background: var(--primary);
-      color: white;
-      border: none;
-    }
-
-    .reviews-grid {
-      display: grid;
-      grid-template-columns: repeat(auto-fill, minmax(350px, 1fr));
-      gap: 25px;
-      margin-bottom: 40px;
-    }
-
-    .review-card {
-      background: var(--card-bg);
-      border-radius: 12px;
-      color: inherit;
-      display: block;
-      padding: 25px;
-      box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
-      border: 1px solid var(--border);
-      text-decoration: none;
-      transition: transform 0.2s, box-shadow 0.2s;
-      cursor: pointer;
-    }
-
-    a.review-card:hover {
-      transform: translateY(-5px);
-      box-shadow: 0 8px 16px rgba(0, 0, 0, 0.2);
-    }
-
-    .review-card--summary {
-      cursor: default;
-    }
-
-    .review-card-header {
-      display: flex;
-      align-items: center;
-      gap: 15px;
-      margin-bottom: 15px;
-    }
-
-    .review-poster {
-      width: 60px;
-      height: 90px;
-      object-fit: cover;
-      border-radius: 6px;
-    }
-
-    .review-card-title {
-      flex: 1;
-    }
-
-    .review-card-title h3 {
-      margin: 0 0 5px 0;
-      font-size: 1.2rem;
-      color: var(--fg);
-    }
-
-    .review-card-title p {
-      margin: 0;
-      font-size: 0.9rem;
-      color: var(--fg-secondary);
-    }
-
-    .review-preview {
-      color: var(--fg-secondary);
-      line-height: 1.6;
-      margin-bottom: 15px;
-      display: -webkit-box;
-      -webkit-line-clamp: 4;
-      -webkit-box-orient: vertical;
-      overflow: hidden;
-    }
-
-    .review-meta {
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
-      font-size: 0.9rem;
-      color: var(--fg-secondary);
-    }
-
-    .review-rating {
-      font-weight: 600;
-      color: var(--primary);
-    }
-
-    .review-category {
-      display: inline-block;
-      padding: 4px 12px;
-      background: var(--primary);
-      color: white;
-      border-radius: 12px;
-      font-size: 0.8rem;
-      margin-bottom: 10px;
-    }
-
-    .loading {
-      text-align: center;
-      padding: 40px;
-      color: var(--fg-secondary);
-    }
-
-    .no-reviews {
-      text-align: center;
-      padding: 60px 20px;
-      color: var(--fg-secondary);
-    }
-
-    .back-link {
-      display: inline-block;
-      margin-bottom: 20px;
-      color: var(--primary);
-      text-decoration: none;
-      font-weight: 500;
-    }
-
-    .back-link:hover {
-      text-decoration: underline;
-    }
-
-    .scroll-status {
-      text-align: center;
-      color: var(--fg-secondary);
-      padding: 16px 0 36px;
-      min-height: 24px;
-    }
-  </style>
-  
+  <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@700;800&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="/styles.css?v=20260924-daily-dashboard-v4">
+  <link rel="stylesheet" href="/static/reviews.css?v=20260922-review-discovery">
   <script type="application/ld+json">
   {
     "@context": "https://schema.org",
@@ -301,119 +37,92 @@
     "description": "Discover thoughtful reviews and insights from the OmniTrackr community. Explore reviews for movies, TV shows, anime, video games, music, and books shared by our users.",
     "url": "https://omnitrackr.xyz/reviews",
     "inLanguage": "en-US",
-    "isPartOf": {
-      "@type": "WebSite",
-      "name": "OmniTrackr",
-      "url": "https://omnitrackr.xyz"
-    },
-    "mainEntity": {
-      "@type": "ItemList",
-      "itemListElement": []
-    }
+    "isPartOf": { "@type": "WebSite", "name": "OmniTrackr", "url": "https://omnitrackr.xyz" },
+    "mainEntity": { "@type": "ItemList", "itemListElement": [] }
   }
   </script>
-  <script src="/static/ad-loader.js" defer></script>
 </head>
-
-<body class="dark-mode">
+<body class="dark-mode reviews-page">
+  <a class="reviews-skip-link" href="#community-reviews">Skip to reviews</a>
   <div class="reviews-wrapper">
     <nav class="public-site-nav" aria-label="Public site navigation">
       <a class="public-site-nav__brand" href="/">OmniTrackr</a>
       <div class="public-site-nav__links">
-        <a href="/demo">Demo</a>
-        <a href="/media-tracking">Tracking Hub</a>
+        <a href="/discover">Discover</a>
+        <a href="/reviews" aria-current="page">Reviews</a>
         <a href="/guides">Guides</a>
-        <a href="/site-map">Site Map</a>
-          <a href="/sample-library">Sample Library</a>
-          <a href="/compare">Compare</a>
-        <a href="/use-cases">Use Cases</a>
-        <a href="/reviews">Reviews</a>
-          <a href="/faq">FAQ</a>
-          <a href="/content-quality">Content Quality</a>
-          <a href="/advertising">Advertising</a>
-        <a href="/privacy">Privacy</a>
-        <a class="public-site-nav__cta" href="/#landing-auth">Start tracking</a>
+        <a class="public-site-nav__cta" href="/#landing-auth">My library</a>
       </div>
     </nav>
-    <a href="/" class="back-link">Back to Home</a>
-    
-    <div class="reviews-header">
-      <h1>Public Reviews</h1>
-      <p>Discover thoughtful reviews and insights from the OmniTrackr community. Explore reviews for movies, TV shows, anime, video games, music, and books shared by our users.</p>
-    </div>
-
-    <section class="reviews-guide" aria-labelledby="reviews-guide-heading">
-      <h2 id="reviews-guide-heading">What Makes These Reviews Useful?</h2>
-      <p>OmniTrackr public reviews are written by users who choose to share individual ratings and notes from their personal media libraries. The strongest reviews explain more than a score: they describe pacing, mood, replay value, characters, genre fit, comfort-watch potential, or why an item belongs in a backlog.</p>
-      <p>The public reviews directory favors substantial notes over quick one-line reactions. Short private notes can still be useful inside an account, but shared reviews should give another visitor enough context to decide whether a movie, show, anime, game, album, or book fits their taste. That quality bar keeps the page useful even when the newest reviews come from different categories.</p>
-      <p>Because OmniTrackr covers several media types, the reviews page is meant to help with discovery across formats. A visitor might arrive looking for a movie opinion and leave with a book, game, album, or series recommendation that matches the same mood. The category filter keeps browsing focused when one format matters more than the others.</p>
-      <div class="review-category-grid">
-        <div class="review-category-card"><h3>Movies</h3><p>Look for notes about direction, performances, pacing, tone, and rewatch value.</p></div>
-        <div class="review-category-card"><h3>TV Shows</h3><p>Helpful TV reviews mention season consistency, episode count, arcs, and whether a show works weekly or as a binge.</p></div>
-        <div class="review-category-card"><h3>Games</h3><p>Game reviews often focus on mechanics, difficulty, performance, story, replay value, and backlog fit.</p></div>
-        <div class="review-category-card"><h3>Books, Music, and Anime</h3><p>These reviews help preserve slower-form impressions, album moods, reading context, and seasonal anime recommendations.</p></div>
-      </div>
-    </section>
-
-    <div class="filter-section">
-      <select id="categoryFilter">
-        <option value="">All Categories</option>
-        <option value="movie">Movies</option>
-        <option value="tv_show">TV Shows</option>
-        <option value="anime">Anime</option>
-        <option value="video_game">Video Games</option>
-        <option value="music">Music</option>
-        <option value="book">Books</option>
-      </select>
-      <button id="filterReviewsButton" type="button">Filter</button>
-    </div>
-
-    <section class="reviews-guide" aria-labelledby="browse-heading">
-      <h2 id="browse-heading">How to Browse Public Reviews</h2>
-      <p>Use All Categories when you want a mixed view of the latest substantial public reviews. Use a specific category when you are comparing one type of media, such as movies, TV shows, anime, video games, music, or books. The page keeps the original user review text visible, but trims card previews so browsing stays readable on mobile and desktop.</p>
-      <p>If a review opens into a detail page, that page is meant to preserve the full review with category-specific metadata like director, year, seasons, episodes, genres, artist, or author when available. Generic review helper links without a category are intentionally not indexed because they do not contain enough standalone review content.</p>
-      <p class="crawlable-review-links">Browse crawlable category views for <a href="/reviews?category=movie">movie reviews</a>, <a href="/reviews?category=tv_show">TV show reviews</a>, <a href="/reviews?category=anime">anime reviews</a>, <a href="/reviews?category=video_game">video game reviews</a>, <a href="/reviews?category=music">music reviews</a>, or <a href="/reviews?category=book">book reviews</a>.</p>
-    </section>
-
-    <section class="reviews-guide" aria-labelledby="review-examples-heading">
-      <h2 id="review-examples-heading">Editorial Review Examples</h2>
-      <p>These examples are first-party guidance, not user submissions. They show the level of detail OmniTrackr encourages before a note is useful as public content: personal context, category-specific details, and a clear recommendation. A public review can be shorter than these examples, but it should still explain why the rating exists.</p>
-      <div class="review-example-grid">
-        <article class="review-example-card">
-          <h3>Movie example</h3>
-          <p><strong>Useful angle:</strong> mention the mood, pacing, and rewatch value instead of repeating the plot summary.</p>
-          <p>A strong movie note might say that a thriller works best for viewers who like slow tension, practical performances, and a final act that rewards patience. It can also explain why the same movie may not fit someone looking for constant action or easy background watching.</p>
-        </article>
-        <article class="review-example-card">
-          <h3>Game example</h3>
-          <p><strong>Useful angle:</strong> connect mechanics, difficulty, platform, and completion goals.</p>
-          <p>A helpful game review might compare a short campaign with a long backlog entry, call out whether side quests feel essential or optional, and explain if the controls still feel good after several sessions. That context is more useful than a score alone.</p>
-        </article>
-        <article class="review-example-card">
-          <h3>Book, album, or show example</h3>
-          <p><strong>Useful angle:</strong> describe when the recommendation fits.</p>
-          <p>For a book, album, anime season, or TV series, a quality review can explain whether it rewards close attention, works in short sessions, improves after the opening chapters or episodes, or belongs in a comfort-media list for repeat visits.</p>
-        </article>
-      </div>
-      <p>For a deeper checklist, read the <a href="/review-guidelines">review guidelines</a> and the <a href="/media-tracker-checklist">media tracker setup checklist</a>. Both pages explain how private notes, public reviews, ratings, and privacy controls work together.</p>
-    </section>
-
-    <div id="reviewsContainer" class="reviews-grid">
-      <div class="loading">Loading reviews...</div>
-    </div>
-    <div id="scrollSentinel" class="scroll-status"></div>
-
-    <section class="reviews-guide" aria-labelledby="review-tips-heading">
-      <h2 id="review-tips-heading">Review Writing Tips</h2>
-      <p>A useful public review does not have to be long, but it should be specific. Mention who the item is for, what stood out, what did not work, and whether you would recommend it. Reviews with clear context are easier for other people to trust and easier for OmniTrackr to showcase.</p>
-      <p>Good reviews often answer three simple questions: what kind of experience was it, who would enjoy it, and what should someone know before starting? For games, that might mean difficulty, mechanics, performance, and replay value. For shows, it might mean pacing, episode length, and whether the ending pays off. For books and music, it might mean mood, density, reread or relisten value, and when the recommendation fits best.</p>
-      <p>Users control which reviews are public. Private notes stay useful for personal memory, while public reviews are better when they are polished enough for someone outside the account to read.</p>
-      <p>Public review quality also protects the site experience. A directory full of copied summaries or one-word reactions would not help visitors decide what to watch, play, read, or hear. OmniTrackr encourages personal context, clear recommendations, and privacy-aware sharing so public reviews add value beyond a title and a score.</p>
-      <p>For broader tracking workflows, visit the <a href="/media-tracking">media tracking hub</a>, preview the <a href="/demo">demo library</a>, read the <a href="/review-guidelines">review guidelines</a>, or use the <a href="/use-cases">use cases guide</a>.</p>
-    </section>
+    <main>
+      <header class="reviews-header">
+        <p class="reviews-eyebrow">A good recommendation starts with a real opinion</p>
+        <h1>Public Reviews</h1>
+        <p>Find your next favorite through the movies, shows, games, music, and books people are talking about.</p>
+      </header>
+      <section id="community-reviews" aria-labelledby="community-reviews-heading">
+        <div class="reviews-section-heading">
+          <h2 id="community-reviews-heading">From the community</h2>
+          <a href="/review-guidelines">What makes a useful review?</a>
+        </div>
+        <form id="reviewFilters" class="review-filters" action="/reviews" method="get" role="search" aria-label="Find public reviews">
+          <div class="review-search-field">
+            <label for="reviewSearch">Search by title</label>
+            <input id="reviewSearch" name="q" type="search" maxlength="100" placeholder="A film, a book, a new obsession…" value="{{QUERY}}">
+          </div>
+          <div class="review-category-field">
+            <label for="categoryFilter">Media type</label>
+            <select id="categoryFilter" name="category">
+              <option value="">All media</option>
+              <option value="movie">Movies</option>
+              <option value="tv_show">TV Shows</option>
+              <option value="anime">Anime</option>
+              <option value="video_game">Video Games</option>
+              <option value="music">Music</option>
+              <option value="book">Books</option>
+            </select>
+          </div>
+          <button id="filterReviewsButton" type="submit">Find reviews</button>
+        </form>
+        <div id="reviewFeedStatus" class="review-feed-status" role="status" aria-live="polite" aria-atomic="true"></div>
+        <div id="reviewsContainer" class="reviews-grid" data-hydrated="true" data-category="{{CATEGORY}}" data-query="{{QUERY}}" data-next-offset="{{NEXT_OFFSET}}" data-has-more="{{HAS_MORE}}">
+          {{SERVER_REVIEWS}}
+        </div>
+        <div class="review-pagination">
+          <button id="loadMoreReviews" type="button" hidden>Load more reviews</button>
+          <button id="retryReviews" type="button" hidden>Try again</button>
+        </div>
+        <noscript><p class="review-no-script">Use the search form to browse another title or media type. Enable JavaScript to load more reviews on this page.</p></noscript>
+      </section>
+      <aside class="reviews-guide" aria-labelledby="reviews-guide-heading">
+        <div>
+          <h2 id="reviews-guide-heading">Your perspective could be someone’s next favorite.</h2>
+          <p>Keep personal notes in your library, and choose which reviews to share. Tell readers what stood out, who would enjoy it, and why.</p>
+        </div>
+        <a href="/review-guidelines">Read the review guide <span aria-hidden="true">→</span></a>
+      </aside>
+    </main>
+    <nav class="reviews-category-nav" aria-label="Browse reviews by media type">
+      <span>Browse reviews</span>
+      <a href="/reviews?category=movie">Movies</a>
+      <a href="/reviews?category=tv_show">TV shows</a>
+      <a href="/reviews?category=anime">Anime</a>
+      <a href="/reviews?category=video_game">Video games</a>
+      <a href="/reviews?category=music">Music</a>
+      <a href="/reviews?category=book">Books</a>
+    </nav>
+    <footer class="reviews-footer">
+      <p>One library for everything you love.</p>
+      <nav aria-label="More about OmniTrackr">
+        <a href="/demo">Try the demo</a>
+        <a href="/media-tracking">Tracking hub</a>
+        <a href="/privacy">Privacy</a>
+        <a href="/content-quality">Content quality</a>
+        <a href="/site-map">Site map</a>
+      </nav>
+    </footer>
   </div>
-
-  <script src="/static/reviews.js" defer></script>
+  <script src="/static/review_report.js?v=20260917-review-safety-v1" defer></script>
+  <script src="/static/reviews.js?v=20260922-review-discovery" defer></script>
 </body>
-
 </html>

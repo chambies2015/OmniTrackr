@@ -4,7 +4,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <meta name="description" content="Compare OmniTrackr with spreadsheets, IMDb, Letterboxd, Trakt, Goodreads, and backlog apps to choose the right media tracker for your collection.">
+  <meta name="description" content="Choose a media tracker by your daily routine. Compare OmniTrackr, spreadsheets, IMDb, Letterboxd, Trakt, and Goodreads, then plan a preview-first CSV import.">
   <meta name="robots" content="index, follow, max-image-preview:large">
   <meta name="author" content="OmniTrackr">
   <title>OmniTrackr vs Spreadsheets, IMDb, Letterboxd, Trakt & Goodreads</title>
@@ -14,7 +14,7 @@
   <meta property="og:type" content="article">
   <meta property="og:url" content="https://omnitrackr.xyz/compare">
   <meta property="og:title" content="OmniTrackr vs Spreadsheets, IMDb, Letterboxd, Trakt & Goodreads">
-  <meta property="og:description" content="A practical comparison of OmniTrackr, spreadsheets, movie apps, TV trackers, book apps, and game backlog tools.">
+  <meta property="og:description" content="A sourced decision guide with honest tradeoffs, OmniTrackr limitations, and practical steps for bringing an existing library into the Import Studio.">
   <meta property="og:image" content="https://omnitrackr.xyz/omnitrackr_vortex.png">
   <meta property="og:image:alt" content="OmniTrackr media tracking comparison guide">
   <meta property="og:site_name" content="OmniTrackr">
@@ -23,7 +23,7 @@
   <meta name="twitter:card" content="summary">
   <meta name="twitter:url" content="https://omnitrackr.xyz/compare">
   <meta name="twitter:title" content="OmniTrackr Media Tracker Comparison">
-  <meta name="twitter:description" content="Compare OmniTrackr with spreadsheets, IMDb, Letterboxd, Trakt, Goodreads, and backlog tools.">
+  <meta name="twitter:description" content="Choose a media tracker by your routine, understand the tradeoffs, and preview an existing library before importing.">
   <meta name="twitter:image" content="https://omnitrackr.xyz/omnitrackr_vortex.png">
   <meta name="twitter:image:alt" content="OmniTrackr comparison guide">
   <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -75,8 +75,8 @@
     "@context": "https://schema.org",
     "@type": "Article",
     "headline": "OmniTrackr vs Spreadsheets, IMDb, Letterboxd, Trakt and Goodreads",
-    "description": "A practical comparison of media tracking tools for movies, shows, anime, games, music, and books.",
-    "dateModified": "2026-06-01",
+    "description": "A sourced decision guide to media trackers, with OmniTrackr limitations and preview-first CSV migration steps.",
+    "dateModified": "2026-09-24",
     "author": { "@type": "Organization", "name": "OmniTrackr" },
     "publisher": { "@type": "Organization", "name": "OmniTrackr", "url": "https://omnitrackr.xyz" },
     "mainEntityOfPage": "https://omnitrackr.xyz/compare",
@@ -94,90 +94,98 @@
     ]
   }
   </script>
+  <link rel="stylesheet" href="/static/public-reader.css?v=20260924-reader-2">
 </head>
 
-<body>
-  <div class="privacy-wrapper">
-    <div class="privacy-container">
-      <nav class="public-site-nav" aria-label="Public site navigation">
-        <a class="public-site-nav__brand" href="/">OmniTrackr</a>
-        <div class="public-site-nav__links">
-          <a href="/demo">Demo</a>
-          <a href="/media-tracking">Tracking Hub</a>
-          <a href="/guides">Guides</a>
-          <a href="/site-map">Site Map</a>
-          <a href="/sample-library">Sample Library</a>
-          <a href="/compare">Compare</a>
-          <a href="/use-cases">Use Cases</a>
-          <a href="/reviews">Reviews</a>
-          <a href="/faq">FAQ</a>
-          <a href="/content-quality">Content Quality</a>
-          <a href="/advertising">Advertising</a>
-          <a href="/privacy">Privacy</a>
-          <a class="public-site-nav__cta" href="/#landing-auth">Start tracking</a>
-        </div>
-      </nav>
-      <a href="/" class="back-link">Back to OmniTrackr</a>
+<body class="public-reader">
+  <a class="reader-skip" href="#reader-main">Skip to guide</a>
+  <div class="reader-nav-wrap">
+    <nav class="public-site-nav" aria-label="Public site navigation">
+      <a class="public-site-nav__brand" href="/">OmniTrackr</a>
+      <div class="public-site-nav__links">
+        <a href="/demo">Demo</a>
+        <a href="/discover">Discover</a>
+        <a href="/reviews">Reviews</a>
+        <a href="/collections/explore">Collections</a>
+        <a href="/guides">Guides</a>
+        <a href="/faq">FAQ</a>
+        <a class="public-site-nav__cta" href="/#landing-auth">Start tracking</a>
+      </div>
+    </nav>
+  </div>
+  <div class="reader-shell">
+    <main id="reader-main" tabindex="-1" class="reader-main privacy-container">
+<a href="/" class="back-link">Back to OmniTrackr</a>
 
       <header class="privacy-header">
+        <p class="reader-kicker">Choose your tracking routine</p>
         <h1>Media Tracker Comparison</h1>
-        <p>How OmniTrackr fits beside spreadsheets, movie apps, book apps, TV trackers, and game backlog tools.</p>
+        <p>Find a home for your media history that fits how you actually watch, read, listen, and play.</p>
+        <p>By OmniTrackr &middot; Updated <time datetime="2026-09-24">September 24, 2026</time></p>
       </header>
 
+      <nav class="reader-jump" aria-label="On this page">
+        <a href="#table-heading">Compare options</a>
+        <a href="#decision-heading">Choose a routine</a>
+        <a href="#limits-heading">Know the limits</a>
+        <a href="#migration-heading">Bring your list</a>
+        <a href="#method-heading">Sources &amp; method</a>
+      </nav>
+
       <section class="privacy-section" aria-labelledby="why-compare-heading">
-        <h2 id="why-compare-heading">Why Compare Media Trackers?</h2>
-        <p>Most people do not start with one perfect media library. They start with a note on their phone, a streaming watchlist, a spreadsheet, a few ratings on IMDb or Letterboxd, a Goodreads shelf, and a game backlog somewhere else. That works until the collection becomes scattered. A movie you meant to watch sits in one place, a book recommendation sits in another, and the game you finished last month is not connected to the rest of your taste history.</p>
-        <p>OmniTrackr is built for people who want one personal dashboard for many kinds of media. It is not meant to replace every community-specific site. Letterboxd is still excellent for film culture, Goodreads is familiar for book discovery, and Trakt is strong for TV automation. OmniTrackr is strongest when you want to keep a private or semi-private cross-media record with ratings, reviews, statuses, statistics, exports, and friend visibility controls in one account.</p>
+        <h2 id="why-compare-heading">Start with the Job You Need Done</h2>
+        <p>A good tracker should make a repeated task easier: finding your next book, remembering where you stopped in a show, or recalling why a film stayed with you. Moving years of history will not help if that everyday task becomes harder.</p>
+        <p>OmniTrackr brings movies, TV, anime, games, music, and books into one library. That is useful when you move between formats. If a film discussion community or automatic playback logging is the main reason you track, keep that requirement at the center of your choice. You can use OmniTrackr alongside another service without rebuilding your entire history.</p>
       </section>
 
       <section class="privacy-section" aria-labelledby="table-heading">
-        <h2 id="table-heading">Quick Comparison</h2>
-        <div class="comparison-table-wrap">
+        <h2 id="table-heading">Compare the Everyday Use</h2>
+        <p>The middle column summarizes documented features. The final column is our editorial advice about fit, not a ranking. On a narrow screen, scroll the table sideways to read every column.</p>
+        <div class="comparison-table-wrap" role="region" aria-label="Media tracker comparison" tabindex="0">
           <table class="comparison-table">
+            <caption>Tracking options and the routine each can support</caption>
             <colgroup>
-              <col style="width: 14%;">
-              <col style="width: 20%;">
-              <col style="width: 25%;">
-              <col style="width: 41%;">
+              <col style="width: 18%;">
+              <col style="width: 40%;">
+              <col style="width: 42%;">
             </colgroup>
             <thead>
               <tr>
-                <th>Option</th>
-                <th>Best For</th>
-                <th>Tradeoff</th>
-                <th>Where OmniTrackr Helps</th>
+                <th scope="col">Option</th>
+                <th scope="col">What it offers</th>
+                <th scope="col">When we would choose it</th>
               </tr>
             </thead>
             <tbody>
               <tr>
-                <td>Spreadsheet</td>
-                <td>Custom columns, formulas, and offline backups.</td>
-                <td>Manual entry becomes slow, mobile use can be clumsy, and posters or category-specific fields take extra work.</td>
-                <td>OmniTrackr gives each media type a focused form, visual library, account sync, and export without maintaining a sheet layout.</td>
+                <th scope="row">Spreadsheet</th>
+                <td>A layout you control: your own columns, formulas, and files. Sharing and offline behavior depend on the spreadsheet software you choose.</td>
+                <td>Your custom fields or analysis matter more than a ready-made library. Try a few rows on your phone before committing to the layout.</td>
               </tr>
               <tr>
-                <td>IMDb or Letterboxd</td>
-                <td>Movie discovery, public film reviews, and film-focused lists.</td>
-                <td>They are centered on movies and film discussion rather than your full media life.</td>
-                <td>OmniTrackr keeps movies alongside TV, anime, games, music, and books so your overall taste history is easier to review.</td>
+                <th scope="row">IMDb</th>
+                <td>Lists for movie and TV picks, with public or private visibility and list export. See <a href="https://help.imdb.com/article/imdb/track-movies-tv/faq-for-the-list-feature/GNQMN47VZSE7KW38">IMDb's Lists FAQ</a>.</td>
+                <td>You already browse IMDb and want to organize titles there. Its TV support makes it a different choice from a film-only list.</td>
               </tr>
               <tr>
-                <td>Trakt or TV trackers</td>
-                <td>Episode progress, watch history, and TV automation.</td>
-                <td>TV tracking is the main strength; other categories usually require another app.</td>
-                <td>OmniTrackr works well as a broader personal library when you want TV history next to everything else you consume.</td>
+                <th scope="row">Letterboxd</th>
+                <td>A film diary, ratings, reviews, watchlists, and following other members. See <a href="https://letterboxd.com/about/faq/">Letterboxd's feature overview</a>.</td>
+                <td>Discussing films and following other viewers is a central part of your habit. Keep using that community even if you collect other formats elsewhere.</td>
               </tr>
               <tr>
-                <td>Goodreads or book shelves</td>
-                <td>Book lists, reading goals, and book community activity.</td>
-                <td>Books are isolated from the rest of your entertainment and review history.</td>
-                <td>OmniTrackr lets books share the same rating habits, review style, privacy controls, and export flow as other categories.</td>
+                <th scope="row">Trakt</th>
+                <td>Movie and episode history, including automatic playback tracking through integrations that send scrobble events. See <a href="https://docs.trakt.tv/reference/about-scrobble">Trakt's scrobbling documentation</a>.</td>
+                <td>Logging what plays in your media center is the priority. Check compatibility with your actual player; OmniTrackr does not provide playback scrobbling.</td>
               </tr>
               <tr>
-                <td>Game backlog app</td>
-                <td>Game completion status and backlog management.</td>
-                <td>Game-focused tools rarely help with movies, albums, shows, or books.</td>
-                <td>OmniTrackr is useful when games are one part of a wider collection rather than a separate island.</td>
+                <th scope="row">Goodreads</th>
+                <td>Reading shelves, book recommendations, community reviews, and seeing what friends read. See <a href="https://www.goodreads.com/about/us">Goodreads' overview</a>.</td>
+                <td>Book discovery and a reading community are your main goals. Test whether your shelf and edition habits transfer before moving a book collection.</td>
+              </tr>
+              <tr>
+                <th scope="row">OmniTrackr</th>
+                <td>Six media categories, ratings, notes with category sharing controls, private journal entries, progress checkpoints for TV, anime, and books, collections, and JSON backups. <a href="/demo">Try the interactive demo</a>.</td>
+                <td>You want one place to choose what is next and remember experiences across formats, and are comfortable updating your own progress.</td>
               </tr>
             </tbody>
           </table>
@@ -185,37 +193,92 @@
       </section>
 
       <section class="privacy-section" aria-labelledby="decision-heading">
-        <h2 id="decision-heading">Which Option Should You Choose?</h2>
-        <h3>Choose a spreadsheet when you need total control</h3>
-        <p>A spreadsheet is still the most flexible option for custom formulas, unusual columns, or one-time analysis. If you need a very specific database shape, a sheet may be the right home. The cost is upkeep: every new category, status, and visual field is something you have to design and maintain yourself.</p>
-        <h3>Choose a niche community app when community is the goal</h3>
-        <p>If you mainly want to discuss films with film people, a film app is a better first stop. If you mainly want reading challenges and book conversations, a book app is a better first stop. Those communities are valuable because they go deep on one format. OmniTrackr is meant for the personal collection layer that sits across formats.</p>
-        <h3>Choose OmniTrackr when your media life crosses categories</h3>
-        <p>OmniTrackr is a practical fit when you want one place to answer questions such as: What have I finished this year? Which category do I rate highest? What did I recommend to a friend? Which reviews do I want public, and which lists should stay private? The app is especially useful for people who bounce between films, shows, anime seasons, games, albums, and books instead of treating each category as a separate hobby.</p>
+        <h2 id="decision-heading">Test a Routine Before Moving a History</h2>
+        <h3>If you mostly lose track of recommendations</h3>
+        <p>Save three things you might start next, then return a few days later. Can you find them quickly and choose one? In OmniTrackr, <strong>Next Up</strong> gives a short list a deliberate order. A huge imported backlog is less useful if it hides those three choices.</p>
+        <h3>If you forget where you left off</h3>
+        <p>Try saving an episode or book page in the demo, then look at the checkpoint on that sample title's card. In your own library, recent unfinished checkpoints also appear in <strong>Continue</strong>. OmniTrackr checkpoints are manual reminders. If you need progress to follow your player automatically, evaluate a compatible Trakt integration instead.</p>
+        <h3>If you want to remember what mattered</h3>
+        <p>Write one sentence about something you finished. Decide whether it belongs in a private journal, a review, or a collection you deliberately share. OmniTrackr separates those choices; the <a href="/guides#social-heading">sharing guide</a> explains how to check them.</p>
+        <p class="reader-note">A useful trial is one ordinary week, not a complete migration. Keep your existing tracker while testing the new routine. Decide which service holds your main record so that two lists do not quietly diverge.</p>
+      </section>
+
+      <section class="privacy-section" aria-labelledby="limits-heading">
+        <h2 id="limits-heading">Where OmniTrackr Has Limits</h2>
+        <ul>
+          <li><strong>No automatic account sync:</strong> importing a file is a one-time action. Later changes on Letterboxd, Goodreads, Trakt, or another service do not flow into OmniTrackr automatically.</li>
+          <li><strong>Manual progress:</strong> OmniTrackr does not connect to your streaming player to log viewing. Current episode, page, or chapter reminders must be updated by you.</li>
+          <li><strong>A migration is not a full copy of a service:</strong> supported CSV fields become library records. Social connections, custom source shelves, likes, and a complete source diary are not recreated.</li>
+          <li><strong>Duplicate matching is simple:</strong> the studio checks title and year for movies, TV, and anime; title and release year for games; title and artist for music; and title and author for books. It does not reconcile alternate titles or identify book editions by ISBN.</li>
+        </ul>
+        <p>If those limits remove the feature you value most, keep the specialist tool for that job. OmniTrackr can still hold a smaller selection of favorites, current titles, and next choices across your other categories.</p>
       </section>
 
       <section class="privacy-section" aria-labelledby="migration-heading">
-        <h2 id="migration-heading">A Simple Migration Path</h2>
+        <h2 id="migration-heading">Bring an Existing List with the Import Studio</h2>
+        <p>You do not need to type an existing library again. In <strong>Account Settings &rarr; Import Studio</strong>, a file preview shows what would be added before you confirm. The studio accepts UTF-8 CSV or TSV, up to 5 MB and 5,000 rows per batch.</p>
         <ol>
-          <li>Start with the category you use most, such as movies or games.</li>
-          <li>Add only finished items first so the list becomes useful quickly.</li>
-          <li>Use a consistent rating scale before adding older entries.</li>
-          <li>Add reviews only where you have something specific to remember or share.</li>
-          <li>Export your OmniTrackr data periodically so you keep a portable backup.</li>
+          <li><strong>Keep the original export.</strong> Make a working copy for any changes. For a Letterboxd export, extract the ZIP first and choose a supported film CSV from it; do not upload the ZIP. <a href="https://letterboxd.com/user/exportdata/">Letterboxd's export page</a> describes the files it provides.</li>
+          <li><strong>Choose a supported source.</strong> The studio understands Letterboxd-style, Goodreads-style, and MyAnimeList-style CSV columns. MyAnimeList XML is not accepted. For a spreadsheet, choose <strong>Generic CSV / spreadsheet</strong>, select a media category, and map your columns if their names differ. Category templates are available in the studio.</li>
+          <li><strong>Preview a small batch.</strong> Select <strong>Preview import</strong>. This step does not save records. Inspect ready, duplicate, and invalid rows, including later pages of the results. Check the year, rating, and completion state against your original list.</li>
+          <li><strong>Check what transfers.</strong> Letterboxd and Goodreads adapters double five-point ratings: 3.5 becomes 7/10. Generic CSV ratings already use a ten-point scale. Letterboxd review text and diary visits are not imported; Goodreads review text is supported, but custom shelves and reading dates are not preserved.</li>
+          <li><strong>Confirm the batch.</strong> Confirmation imports all ready rows in that preview, skipping duplicate and invalid rows. Existing records keep their values. Imported review text is not published to public review pages, but friends can read it if you share the category. To import a smaller selection, reduce the file and preview it again.</li>
+          <li><strong>Check the result in your library.</strong> Review the created and skipped counts, open the relevant category, and set any current progress reminders. Download an OmniTrackr JSON backup after you are satisfied with the result.</li>
         </ol>
-        <p>This slower approach avoids the common trap of trying to rebuild years of history in one sitting. A tracker is most useful when it becomes part of a normal routine, not when it turns into a weekend data-entry project.</p>
+        <p>There is no dedicated IMDb or Trakt adapter. If you have a CSV from another source, use the generic option and check every mapped field in the preview; do not assume its status or rating values have the same meaning. Missing years and different spellings can also prevent duplicate matches.</p>
+        <p class="reader-note"><strong>CSV migration and JSON restore are different.</strong> The Import Studio only adds new records. Restoring an OmniTrackr JSON backup can update matching library records. Use the <a href="/export-import-guide">export and import guide</a> for worked examples, matching rules, and backup details before restoring a file.</p>
+      </section>
+
+      <section class="privacy-section" aria-labelledby="method-heading">
+        <h2 id="method-heading">Sources and How We Compared</h2>
+        <p>This guide was prepared with AI assistance for OmniTrackr, the maker of one of the tools being compared. Named product features were checked against the official pages linked above on <time datetime="2026-09-24">September 24, 2026</time>. OmniTrackr's import details were checked against its supported formats and current preview workflow. Our <a href="/content-quality">content-quality policy</a> explains how we approach sources and corrections.</p>
+        <p>The recommendations are our editorial judgment about common routines, not benchmark results or a claim that one tool is best for everyone. This is not an exhaustive feature or pricing comparison. Other services can change their features, export formats, and plans; check the linked documentation before making a choice. Send corrections through <a href="/contact">Contact</a>.</p>
       </section>
 
       <section class="privacy-section" aria-labelledby="related-heading">
-        <h2 id="related-heading">Related OmniTrackr Resources</h2>
-        <p>For setup instructions, read the <a href="/guides">OmniTrackr guides</a>. For examples of public review pages, browse <a href="/reviews">public media reviews</a>. For workflow ideas by audience and category, see <a href="/use-cases">media tracking use cases</a>.</p>
+        <h2 id="related-heading">Take the Next Useful Step</h2>
+        <p>Explore the demo before creating an account, or follow the import guide if you already have a list. For something new to add, <a href="/discover">Discover</a> offers editorial starting points across media.</p>
+        <div class="reader-actions">
+          <a href="/demo">Try the interactive demo</a>
+          <a href="/export-import-guide">Plan your import</a>
+          <a href="/guides">Find a getting-started guide</a>
+        </div>
       </section>
 
-      <nav class="privacy-section" aria-label="Related pages">
-        <p><a href="/">Home</a> | <a href="/use-cases">Use Cases</a> | <a href="/guides">Guides</a> | <a href="/about">About</a> | <a href="/contact">Contact</a> | <a href="/privacy">Privacy Policy</a> | <a href="/terms">Terms</a></p>
-      </nav>
-    </div>
+</main>
   </div>
+  <footer class="reader-footer">
+    <div class="reader-footer__inner">
+      <p class="reader-footer__intro">OmniTrackr · Your media, remembered. Read freely, then build a library of your own.</p>
+      <div class="reader-footer__groups">
+        <div><h2>Explore</h2><ul>
+          <li><a href="/">Home</a></li>
+          <li><a href="/media-tracking">Tracking hub</a></li>
+          <li><a href="/sample-library">Sample library</a></li>
+          <li><a href="/compare">Compare trackers</a></li>
+          <li><a href="/use-cases">Ways to use OmniTrackr</a></li>
+          <li><a href="/site-map">Site map</a></li>
+        </ul></div>
+        <div><h2>Keep learning</h2><ul>
+          <li><a href="/guides">All guides</a></li>
+          <li><a href="/export-import-guide">Import &amp; backups</a></li>
+          <li><a href="/media-tracker-checklist">Setup checklist</a></li>
+          <li><a href="/tracking-templates">Templates</a></li>
+          <li><a href="/review-guidelines">Review guide</a></li>
+          <li><a href="/media-statistics">Statistics guide</a></li>
+        </ul></div>
+        <div><h2>About OmniTrackr</h2><ul>
+          <li><a href="/about">About</a></li>
+          <li><a href="/contact">Contact</a></li>
+          <li><a href="/changelog">What’s new</a></li>
+          <li><a href="/content-quality">Content quality</a></li>
+          <li><a href="/advertising">Advertising</a></li>
+          <li><a href="/privacy">Privacy</a></li>
+          <li><a href="/terms">Terms</a></li>
+        </ul></div>
+      </div>
+    </div>
+  </footer>
 </body>
 
 </html>

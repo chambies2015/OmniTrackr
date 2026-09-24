@@ -2,7 +2,9 @@
 Tests for authentication endpoints and utilities.
 """
 import pytest
-from app import auth, crud, models
+from datetime import datetime, timedelta, timezone
+
+from app import auth, crud, email as email_utils, models, return_prompt as return_prompt_tokens
 from app.database import SessionLocal
 
 
@@ -31,6 +33,13 @@ class TestPasswordHashing:
         hashed = auth.get_password_hash(password)
         
         assert auth.verify_password("wrongpassword", hashed) is False
+
+    def test_verify_password_preserves_legacy_bcrypt_truncation(self):
+        """Existing pre-limit accounts remain usable after the input hardening."""
+        legacy_prefix = "x" * 72
+        hashed = auth.get_password_hash(legacy_prefix)
+
+        assert auth.verify_password(legacy_prefix + "legacy-suffix", hashed) is True
 
 
 class TestJWTTokens:
@@ -65,6 +74,33 @@ class TestJWTTokens:
 
 class TestAuthEndpoints:
     """Test authentication API endpoints."""
+
+    def test_auth_rate_limit_wrappers_are_bound_to_registered_handlers(self):
+        """FastAPI must execute the wrapped handlers, not pre-wrap copies."""
+        from app.main import app
+        from app.routers import auth as auth_router
+
+        protected = {
+            ("/auth/register", "POST"),
+            ("/auth/login", "POST"),
+            ("/auth/request-password-reset", "POST"),
+            ("/auth/resend-verification", "POST"),
+        }
+        included_router = next(
+            route for route in app.routes
+            if getattr(route, "original_router", None) is auth_router.router
+        )
+        routes = [
+            route
+            for route in included_router.original_router.routes
+            if hasattr(route, "path")
+            and hasattr(route, "methods")
+            and any(route.path == path and method in route.methods for path, method in protected)
+        ]
+
+        assert len(routes) == len(protected)
+        assert all(route.endpoint is route.dependant.call for route in routes)
+        assert all(hasattr(route.endpoint, "__wrapped__") for route in routes)
     
     def test_register_new_user(self, client, test_user_data):
         """Test registering a new user."""
@@ -131,7 +167,50 @@ class TestAuthEndpoints:
         assert "access_token" in data
         assert data["token_type"] == "bearer"
         assert "user" in data
+        assert data["return_prompt"] == {
+            "eligible": False,
+            "days_away": None,
+            "engagement_token": None,
+        }
         assert "omnitrackr_session=" in response.headers.get("set-cookie", "")
+        db_session.refresh(user)
+        assert user.login_count == 1
+        assert user.last_login_at is not None
+
+        second_login = client.post(
+            "/auth/login",
+            data={
+                "username": test_user_data["username"],
+                "password": test_user_data["password"],
+            },
+        )
+        assert second_login.status_code == 200
+        db_session.refresh(user)
+        assert user.login_count == 2
+
+    def test_login_offers_ephemeral_return_context_after_three_days(self, client, test_user_data, db_session):
+        register_response = client.post("/auth/register", json=test_user_data)
+        user = crud.get_user_by_id(db_session, register_response.json()["id"])
+        user.is_verified = True
+        user.verification_token = None
+        user.login_count = 3
+        user.last_login_at = datetime.now(timezone.utc).replace(tzinfo=None) - timedelta(days=4, hours=2)
+        db_session.commit()
+
+        response = client.post(
+            "/auth/login",
+            data={"username": test_user_data["username"], "password": test_user_data["password"]},
+        )
+
+        assert response.status_code == 200
+        return_prompt = response.json()["return_prompt"]
+        assert return_prompt["eligible"] is True
+        assert return_prompt["days_away"] == 4
+        assert return_prompt_tokens.return_prompt_days_away(
+            return_prompt["engagement_token"], user.id
+        ) == 4
+        db_session.refresh(user)
+        assert user.login_count == 4
     
     def test_login_with_email(self, client, test_user_data, db_session):
         """Test login using email instead of username."""
@@ -231,6 +310,28 @@ class TestAuthEndpoints:
         )
         
         assert response.status_code == 401
+
+    def test_repeated_failed_logins_lock_account_without_server_error(self, client, test_user_data, db_session):
+        """A persisted lock timestamp must remain comparable after a database round trip."""
+        register_response = client.post("/auth/register", json=test_user_data)
+        user = crud.get_user_by_id(db_session, register_response.json()["id"])
+        user.is_verified = True
+        user.verification_token = None
+        db_session.commit()
+
+        for _ in range(5):
+            response = client.post(
+                "/auth/login",
+                data={"username": test_user_data["username"], "password": "wrongpassword"},
+            )
+            assert response.status_code == 401
+
+        recovered = client.post(
+            "/auth/login",
+            data={"username": test_user_data["username"], "password": test_user_data["password"]},
+        )
+        assert recovered.status_code == 200
+        assert "access_token" in recovered.json()
     
     def test_login_nonexistent_user(self, client):
         """Test login with non-existent user."""
@@ -243,6 +344,24 @@ class TestAuthEndpoints:
         )
         
         assert response.status_code == 401
+
+    def test_overlong_login_password_is_rejected_without_server_error(self, client, test_user_data):
+        client.post("/auth/register", json=test_user_data)
+
+        response = client.post(
+            "/auth/login",
+            data={"username": test_user_data["username"], "password": "x" * 10_000},
+        )
+
+        assert response.status_code == 401
+
+    def test_password_over_bcrypt_byte_limit_is_rejected(self, client, test_user_data):
+        payload = {**test_user_data, "password": "é" * 40}
+
+        response = client.post("/auth/register", json=payload)
+
+        assert response.status_code == 400
+        assert "72 UTF-8 bytes" in response.json()["detail"]
 
 
 class TestEmailVerification:
@@ -311,17 +430,18 @@ class TestPasswordReset:
         user.verification_token = None
         db_session.commit()
         
-        # Request password reset
-        client.post(f"/auth/request-password-reset?email={test_user_data['email']}")
-        
-        # Get reset token from database
-        db_session.refresh(user)
-        assert user.reset_token is not None
+        # Store the same verifier shape used by the real reset request while
+        # retaining the raw emailed token needed to exercise the endpoint.
+        raw_token = email_utils.generate_reset_token(test_user_data["email"])
+        user.reset_token = auth.hash_token(raw_token)
+        user.reset_token_expires = datetime.now(timezone.utc) + timedelta(hours=1)
+        db_session.commit()
         
         # Reset password
         new_password = "newpassword123"
         response = client.post(
-            f"/auth/reset-password?token={user.reset_token}&new_password={new_password}"
+            "/auth/reset-password",
+            json={"token": raw_token, "new_password": new_password},
         )
         
         assert response.status_code == 200
@@ -339,8 +459,26 @@ class TestPasswordReset:
     
     def test_reset_password_invalid_token(self, client):
         """Test password reset with invalid token."""
-        response = client.post("/auth/reset-password?token=invalid_token&new_password=newpass123")
+        response = client.post(
+            "/auth/reset-password",
+            json={"token": "invalid_token", "new_password": "newpass123"},
+        )
         
+        assert response.status_code == 400
+
+    def test_reset_password_rejects_stored_verifier_as_bearer_token(self, client, test_user_data, db_session):
+        client.post("/auth/register", json=test_user_data)
+        user = crud.get_user_by_email(db_session, test_user_data["email"])
+        raw_token = email_utils.generate_reset_token(test_user_data["email"])
+        user.reset_token = auth.hash_token(raw_token)
+        user.reset_token_expires = datetime.now(timezone.utc) + timedelta(hours=1)
+        db_session.commit()
+
+        response = client.post(
+            "/auth/reset-password",
+            json={"token": user.reset_token, "new_password": "newpassword123"},
+        )
+
         assert response.status_code == 400
 
 

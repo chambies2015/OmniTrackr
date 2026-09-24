@@ -47,7 +47,7 @@
     "name": "OmniTrackr Roadmap",
     "description": "Recently shipped and planned OmniTrackr improvements for media tracking, reviews, statistics, privacy, public content, and imports.",
     "url": "https://omnitrackr.xyz/roadmap",
-    "dateModified": "2026-07-05",
+    "dateModified": "2026-09-17",
     "inLanguage": "en-US",
     "isPartOf": { "@type": "WebSite", "name": "OmniTrackr", "url": "https://omnitrackr.xyz" }
   }
@@ -86,19 +86,22 @@
         <p>OmniTrackr has moved beyond a simple private list. The latest release work focuses on making the public side useful before signup while keeping the logged-in tracker safe, fast, and familiar for existing users. Visitors can now read practical guides, compare tracking options, preview a sample library, understand privacy controls, and browse public reviews that users intentionally share.</p>
         <div class="roadmap-grid">
           <div class="roadmap-card"><h3>Public Guide Library</h3><p>Guides now explain movie, TV, anime, game, music, book, statistics, export, template, and review workflows in crawlable pages.</p></div>
-          <div class="roadmap-card"><h3>Review Quality Tools</h3><p>Public reviews are supported by clearer category filters, review guidelines, quality prompts, and minimum-content safeguards.</p></div>
+          <div class="roadmap-card"><h3>Automated Review Quality and Safety</h3><p>Community and search-ready tiers now share one quality engine, while signed-browser reports can temporarily unlist an exact review version without deleting it or creating a manual queue.</p></div>
+          <div class="roadmap-card"><h3>Automated Collection Discovery</h3><p>Published collections now use one readiness result across the editor, gallery, search metadata, and sitemap, with version-bound reports and self-service recovery instead of a human queue.</p></div>
           <div class="roadmap-card"><h3>Ad and Privacy Transparency</h3><p>Advertising and privacy pages explain where ads may appear, how Google ads use cookies, and why private account areas stay separate.</p></div>
           <div class="roadmap-card"><h3>Security and SEO Cleanup</h3><p>Recent work tightened CSP handling, removed unsafe inline requirements, improved metadata, and kept generated API docs out of search results.</p></div>
+          <div class="roadmap-card"><h3>Activation and Trust Baseline</h3><p>The existing moderator health view now shows aggregate first-session milestones, while analytics stays out of the private dashboard.</p></div>
+          <div class="roadmap-card"><h3>Welcome Back Deck</h3><p>Activated members returning after a real absence now get one private, dismissible route back into Next Up, unfinished titles, reflections, and recent journal activity.</p></div>
         </div>
       </section>
 
       <section class="public-section" aria-labelledby="now-heading">
         <h2 id="now-heading">Now</h2>
-        <p>Current priorities are deliberately practical. The goal is to make OmniTrackr easier to understand for a first-time visitor while preserving the workflows existing users already rely on.</p>
+        <p>Current priorities are deliberately practical. The goal is to learn from the new activation baseline, finish first-session reliability work, and preserve the workflows existing users already rely on.</p>
         <ul>
-          <li>Improve public content quality with richer demo examples, guide hubs, and category-specific tracking pages.</li>
-          <li>Strengthen public reviews with better filtering, clearer category explanations, and review writing guidance.</li>
-          <li>Improve account trust surfaces with clearer data, privacy, export, and public review controls.</li>
+          <li>Monitor the path from verified account to first title, five saved titles, and a later return.</li>
+          <li>Reduce save and import friction where the aggregate milestones show a meaningful drop.</li>
+          <li>Keep account, privacy, export, and advertising language aligned with production behavior.</li>
           <li>Keep ads limited to public informational pages so the private tracking dashboard does not become cluttered.</li>
         </ul>
         <p>Current work also emphasizes content quality. Public pages should answer real tracking questions instead of acting as empty search pages. Category guides, review guidance, comparison pages, and demo content are being expanded so visitors can learn something useful even before they decide to register.</p>
@@ -106,12 +109,11 @@
 
       <section class="public-section" aria-labelledby="next-heading">
         <h2 id="next-heading">Next</h2>
-        <p>The next set of improvements is aimed at reducing setup friction. A media tracker is most useful when people can bring in existing lists, clean up old backlogs, and see progress without rebuilding everything by hand.</p>
+        <p>The Welcome Back candidate has shipped by composing existing dashboard signals rather than creating another workflow. The next feature decision will follow its anonymous aggregate use alongside the established activation path.</p>
         <ul>
-          <li>Add CSV import templates for movies, TV shows, games, books, music, and custom lists.</li>
+          <li>Refine the existing import templates and launchpad where first-session evidence shows friction.</li>
           <li>Improve statistics with trends, rating coverage, backlog progress, and clearer category comparisons.</li>
-          <li>Add more category examples for movies, books, anime, and music tracking workflows.</li>
-          <li>Explore better public review discovery without exposing private notes or personal libraries by default.</li>
+          <li>Measure search-ready review and collection coverage plus automated-report health before expanding public discovery or advertising inventory.</li>
         </ul>
       </section>
 

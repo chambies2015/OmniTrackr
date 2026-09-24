@@ -82,39 +82,49 @@
     ]
   }
   </script>
+  <link rel="stylesheet" href="/static/public-reader.css?v=20260924-reader-2">
 </head>
 
-<body>
-  <div class="privacy-wrapper">
-    <div class="privacy-container">
-      <nav class="public-site-nav" aria-label="Public site navigation">
-        <a class="public-site-nav__brand" href="/">OmniTrackr</a>
-        <div class="public-site-nav__links">
-          <a href="/demo">Demo</a>
-          <a href="/media-tracking">Tracking Hub</a>
-          <a href="/guides">Guides</a>
-          <a href="/site-map">Site Map</a>
-          <a href="/sample-library">Sample Library</a>
-          <a href="/compare">Compare</a>
-          <a href="/use-cases">Use Cases</a>
-          <a href="/reviews">Reviews</a>
-          <a href="/faq">FAQ</a>
-          <a href="/content-quality">Content Quality</a>
-          <a href="/advertising">Advertising</a>
-          <a href="/privacy">Privacy</a>
-          <a class="public-site-nav__cta" href="/#landing-auth">Start tracking</a>
-        </div>
-      </nav>
-      <a href="/" class="back-link">Back to OmniTrackr</a>
+<body class="public-reader">
+  <a class="reader-skip" href="#reader-main">Skip to guide</a>
+  <div class="reader-nav-wrap">
+    <nav class="public-site-nav" aria-label="Public site navigation">
+      <a class="public-site-nav__brand" href="/">OmniTrackr</a>
+      <div class="public-site-nav__links">
+        <a href="/demo">Demo</a>
+        <a href="/discover">Discover</a>
+        <a href="/reviews">Reviews</a>
+        <a href="/collections/explore">Collections</a>
+        <a href="/guides">Guides</a>
+        <a href="/faq">FAQ</a>
+        <a class="public-site-nav__cta" href="/#landing-auth">Start tracking</a>
+      </div>
+    </nav>
+  </div>
+  <div class="reader-shell">
+    <main id="reader-main" tabindex="-1" class="reader-main privacy-container">
+<a href="/" class="back-link">Back to OmniTrackr</a>
 
       <header class="privacy-header">
         <h1>Sample Media Library</h1>
-        <p>A fictional, crawlable example of how an OmniTrackr library can stay organized.</p>
+        <p>A fictional example of keeping favorites, unfinished stories, and private checkpoints in one library.</p>
       </header>
+      <details class="reader-contents">
+        <summary>On this page</summary>
+        <nav aria-label="On this page">
+          <a href="#why-sample-heading">Why a Sample Library Helps</a>
+          <a href="#records-heading">Example Records</a>
+          <a href="#workflow-heading">A Weekly Cleanup Workflow</a>
+          <a href="#privacy-heading">Privacy Choices in the Sample</a>
+          <a href="#stats-heading">What Statistics Would Show</a>
+          <a href="#next-heading">What to Try Next</a>
+        </nav>
+      </details>
+
 
       <section class="privacy-section" aria-labelledby="why-sample-heading">
         <h2 id="why-sample-heading">Why a Sample Library Helps</h2>
-        <p>This page is a first-party example, not a copy of a user account and not a live feed of private data. It shows how someone might use OmniTrackr to organize a mixed media life across movies, TV shows, anime, video games, music, and books. New visitors can inspect the kind of records OmniTrackr supports before signing up, and search or ad reviewers can evaluate useful public content without needing access to a password-protected dashboard.</p>
+        <p>This is a fictional example, not a copy of a user account and not a live feed of private data. It shows how someone might organize movies, TV shows, anime, games, albums, and books. Use it to decide which details would help you remember your own media, then try the controls in the <a href="/demo">interactive demo</a>.</p>
         <p>The fictional library below favors practical decisions over perfect cataloging. A useful tracker should answer ordinary questions: what am I watching now, what did I finish, what do I want to revisit, which notes are private, and which reviews are polished enough to share? Those details are what separate a living media library from a thin list of titles.</p>
       </section>
 
@@ -125,24 +135,24 @@
             <p class="sample-label">Movie</p>
             <h3>Signal Harbor</h3>
             <p><strong>Status:</strong> Watched. <strong>Rating:</strong> 8.5/10. <strong>Review choice:</strong> Public.</p>
-            <p>The public review focuses on pacing, character payoff, and whether the ending feels earned. Private notes keep spoiler-heavy thoughts separate from the public version.</p>
+            <p>The public review focuses on pacing, character payoff, and whether the ending feels earned. The writer leaves personal details and plot spoilers out of this shared review.</p>
           </article>
           <article class="sample-card">
             <p class="sample-label">TV Show</p>
             <h3>Northline Dispatch</h3>
-            <p><strong>Status:</strong> In progress. <strong>Progress:</strong> Season 2, episode 4. <strong>Review choice:</strong> Private until finished.</p>
-            <p>The record keeps episode progress visible without forcing a final rating too early. A note reminds the viewer which subplot was paused before a long break.</p>
+            <p><strong>Watched:</strong> Unchecked. <strong>Last watched:</strong> Season 2, episode 4. <strong>Review choice:</strong> Private.</p>
+            <p>Update progress records the last episode finished. The separate Private reminder says “Start episode 5 next time; watch with Sam.” Neither changes the rating or the show's total episode count.</p>
           </article>
           <article class="sample-card">
             <p class="sample-label">Anime</p>
             <h3>Glass Circuit</h3>
-            <p><strong>Status:</strong> Planned. <strong>Season:</strong> Winter backlog. <strong>Review choice:</strong> Not reviewed yet.</p>
-            <p>The entry is useful even before watching because it records why it was added: strong animation recommendations and a short episode count that fits a weekend queue.</p>
+            <p><strong>Watched:</strong> Unchecked. <strong>Last watched:</strong> Episode 3, with no season specified. <strong>Review choice:</strong> Not reviewed yet.</p>
+            <p>The viewer uses continuous episode numbering, so the season stays blank. A short checkpoint reminder makes this easy to resume without writing a review before forming an opinion.</p>
           </article>
           <article class="sample-card">
             <p class="sample-label">Game</p>
             <h3>Lantern Vale</h3>
-            <p><strong>Status:</strong> Playing. <strong>Platform:</strong> PC. <strong>Review choice:</strong> Private notes now, public review later.</p>
+            <p><strong>Played:</strong> Unchecked. <strong>Rating:</strong> Not rated yet. <strong>Review choice:</strong> Private notes now, public review later.</p>
             <p>The note tracks combat feel, accessibility settings, and whether the side quests still feel fresh after ten hours. Completion status can be updated when the credits roll.</p>
           </article>
           <article class="sample-card">
@@ -154,27 +164,28 @@
           <article class="sample-card">
             <p class="sample-label">Book</p>
             <h3>The Orchard Index</h3>
-            <p><strong>Status:</strong> Reading. <strong>Format:</strong> Ebook. <strong>Review choice:</strong> Private note.</p>
-            <p>The note captures chapter progress, a few themes to revisit, and whether the book belongs in a later recommendation list for friends.</p>
+            <p><strong>Read:</strong> Unchecked. <strong>Last read:</strong> Chapter 9. <strong>Review choice:</strong> Private.</p>
+            <p>The reader chose chapters because they move between editions with different page numbers. The checkpoint reminder says “Start the orchard letters next.” A page checkpoint would work too; the book keeps one position at a time.</p>
           </article>
         </div>
       </section>
 
       <section class="privacy-section" aria-labelledby="workflow-heading">
         <h2 id="workflow-heading">A Weekly Cleanup Workflow</h2>
-        <p>A sample library is most valuable when it shows maintenance, not just data entry. Once a week, this fictional user reviews items marked in progress, updates statuses, and trims the planned list. Movies that were added from a recommendation but no longer sound interesting can be removed. Shows that stalled for more than a month can move to paused. Games can be tagged by platform or play style so the backlog does not become one long undifferentiated pile.</p>
+        <p>Once a week, this reader checks unfinished items and decides what still sounds appealing. They update a show's last watched episode, change a book's checkpoint to the last chapter read, and mark a finished album Listened. “Paused,” “planned,” and “playing” describe their intentions; they are not extra completion states in the app. A short private review or checkpoint reminder can hold that context.</p>
+        <p>Clear progress is useful when starting a show or book again: it removes only the checkpoint and its reminder. The title, completion choice, rating, and review stay in place. Before a larger cleanup, the reader exports a JSON backup, which includes private checkpoints and reminders, and stores it somewhere private.</p>
         <p>The cleanup also checks review quality. Short private notes are fine for memory, but public reviews should contain enough context to help someone else. Instead of posting "good" or "boring," the user expands public notes with what worked, what audience might enjoy it, and whether the rating reflects craft, personal mood, or rewatch value. That makes the public review feed more useful for visitors and keeps the private library honest for the account owner.</p>
       </section>
 
       <section class="privacy-section" aria-labelledby="privacy-heading">
         <h2 id="privacy-heading">Privacy Choices in the Sample</h2>
-        <p>Not every entry needs to be public. In this sample, finished movie and album reviews are shared because they are polished and spoiler-safe. The TV, game, and book notes stay private because they contain unfinished thoughts or progress reminders. OmniTrackr's value is not only in publishing reviews; it is also in letting people keep a personal record without turning every note into public content.</p>
-        <p>Friend visibility can be adjusted separately from public review visibility. A user might let friends see finished movies while hiding books, music, or custom categories. That separation matters for a media tracker because entertainment history can be personal, messy, seasonal, and full of half-finished experiments. A good default gives the user control first.</p>
+        <p>In this sample, movie and album reviews are published because they are polished and spoiler-safe. The TV, game, and book reviews are not published to public review pages; keeping their categories private also prevents friends from reading those notes. Episode, page, and chapter checkpoints and their reminders always stay private; publishing a review does not publish a checkpoint.</p>
+        <p>Friend visibility can be adjusted by category separately from public review choices. Letting friends see TV shows does not reveal episode checkpoints or their reminders. Copying a public collection or saving a reviewed title also does not copy the author's personal progress.</p>
       </section>
 
       <section class="privacy-section" aria-labelledby="stats-heading">
         <h2 id="stats-heading">What Statistics Would Show</h2>
-        <p>With the sample records above, the statistics view would show a small but balanced library: one watched movie, one active TV show, one planned anime, one playing game, one listened album, and one book in progress. As the library grows, those counts become more interesting. Ratings reveal whether the user is generous or selective. Completion data shows whether the backlog is shrinking or drifting. Review coverage shows whether finished items have meaningful notes or only numeric ratings.</p>
+        <p>With these six records, completion statistics count one watched movie and one listened album: two finished titles and four unfinished. A checkpoint at episode 4 or chapter 9 does not increase the completion count. Ratings show reactions, while review coverage shows which titles have a written note or review. A checkpoint reminder stays separate from review coverage.</p>
         <p>This is why OmniTrackr keeps media types together. A spreadsheet can count entries, but a focused app can make the routine easier: add the item, update the status, write a note, decide whether it is public, and let the dashboard summarize the pattern over time.</p>
       </section>
 
@@ -183,11 +194,40 @@
         <p>If this example matches the kind of library you want to build, start with the <a href="/demo">demo</a>, then read the <a href="/tracking-templates">tracking templates</a> for rating scales and cleanup prompts. The <a href="/review-guidelines">review guidelines</a> explain how to turn quick notes into useful public reviews, while the <a href="/media-tracking">tracking hub</a> links to category-specific guides for movies, TV, anime, games, music, books, statistics, and export.</p>
       </section>
 
-      <nav class="privacy-section" aria-label="Related pages">
-        <p><a href="/">Home</a> | <a href="/demo">Demo</a> | <a href="/media-tracking">Tracking Hub</a> | <a href="/guides">Guides</a> | <a href="/compare">Compare</a> | <a href="/use-cases">Use Cases</a> | <a href="/reviews">Reviews</a> | <a href="/faq">FAQ</a> | <a href="/advertising">Advertising</a> | <a href="/privacy">Privacy</a></p>
-      </nav>
-    </div>
+</main>
   </div>
+  <footer class="reader-footer">
+    <div class="reader-footer__inner">
+      <p class="reader-footer__intro">OmniTrackr · Your media, remembered. Read freely, then build a library of your own.</p>
+      <div class="reader-footer__groups">
+        <div><h2>Explore</h2><ul>
+          <li><a href="/">Home</a></li>
+          <li><a href="/media-tracking">Tracking hub</a></li>
+          <li><a href="/sample-library">Sample library</a></li>
+          <li><a href="/compare">Compare trackers</a></li>
+          <li><a href="/use-cases">Ways to use OmniTrackr</a></li>
+          <li><a href="/site-map">Site map</a></li>
+        </ul></div>
+        <div><h2>Keep learning</h2><ul>
+          <li><a href="/guides">All guides</a></li>
+          <li><a href="/export-import-guide">Import &amp; backups</a></li>
+          <li><a href="/media-tracker-checklist">Setup checklist</a></li>
+          <li><a href="/tracking-templates">Templates</a></li>
+          <li><a href="/review-guidelines">Review guide</a></li>
+          <li><a href="/media-statistics">Statistics guide</a></li>
+        </ul></div>
+        <div><h2>About OmniTrackr</h2><ul>
+          <li><a href="/about">About</a></li>
+          <li><a href="/contact">Contact</a></li>
+          <li><a href="/changelog">What’s new</a></li>
+          <li><a href="/content-quality">Content quality</a></li>
+          <li><a href="/advertising">Advertising</a></li>
+          <li><a href="/privacy">Privacy</a></li>
+          <li><a href="/terms">Terms</a></li>
+        </ul></div>
+      </div>
+    </div>
+  </footer>
 </body>
 
 </html>

@@ -6,6 +6,133 @@
 // Constants
 const TOKEN_KEY = 'omnitrackr_token';
 const USER_KEY = 'omnitrackr_user';
+const RETURN_PROMPT_KEY = 'omnitrackr_return_prompt';
+const DISCOVER_AUTH_RETURN_KEY = 'omnitrackr_discover_auth_return';
+const DISCOVER_AUTH_RETURN_TTL = 24 * 60 * 60 * 1000;
+let discoverAuthReturnContext = null;
+const DEMO_START_KEY = 'omnitrackr_demo_start';
+let demoStartContext = null;
+// Authentication is also used by the standalone public landing page, which
+// intentionally does not load the much larger private dashboard bundle.
+const AUTH_IS_LOCAL = (location.protocol === 'file:' || location.origin === 'null' || location.origin === '');
+const AUTH_API_BASE = AUTH_IS_LOCAL ? 'http://127.0.0.1:8000' : '';
+
+// Keep a visitor's chosen Discover, review, or collection save page through
+// same-tab registration and email verification. Returning only opens a preview;
+// saving always requires the visitor's explicit confirmation on that page.
+function validateDiscoverAuthReturn(value) {
+    if (typeof value !== 'string' || value.length > 180) return null;
+    const match = value.match(/^\/discover\/(?:monthly\/)?[a-z0-9-]+(?:#save-picks)?$/);
+    // Compare the entire match as JavaScript's $ can precede a final newline.
+    if (match && match[0] === value) return value;
+    const review = value.match(/^\/reviews\/([1-9]\d{0,9})\/save\?category=(movie|tv_show|anime|video_game|music|book)$/);
+    if (review && review[0] === value && Number(review[1]) <= 2147483647) return value;
+    const collection = value.match(/^\/collections\/public\/([1-9]\d{0,9})\/save$/);
+    return collection && collection[0] === value && Number(collection[1]) <= 2147483647 ? value : null;
+}
+
+function clearDiscoverAuthReturn() {
+    discoverAuthReturnContext = null;
+    try {
+        sessionStorage.removeItem(DISCOVER_AUTH_RETURN_KEY);
+    } catch (error) {
+        // Navigation and authentication still work without browser storage.
+    }
+}
+
+function getDiscoverAuthReturn() {
+    try {
+        const context = discoverAuthReturnContext
+            || JSON.parse(sessionStorage.getItem(DISCOVER_AUTH_RETURN_KEY));
+        const now = Date.now();
+        if (
+            context
+            && validateDiscoverAuthReturn(context.path)
+            && Number.isFinite(context.created_at)
+            && context.created_at <= now
+            && now - context.created_at < DISCOVER_AUTH_RETURN_TTL
+        ) {
+            return context.path;
+        }
+    } catch (error) {
+        // Ignore malformed state or unavailable browser storage.
+    }
+    clearDiscoverAuthReturn();
+    return null;
+}
+
+function captureDiscoverAuthReturn() {
+    // An expired cookie may select the full dashboard shell before authentication
+    // fails. Capture the same strictly allowlisted root-page intent in either shell.
+    if (window.location.pathname !== '/') return;
+    const params = new URLSearchParams(window.location.search);
+    if (!params.has('next')) return;
+    const values = params.getAll('next');
+    const path = values.length === 1 ? validateDiscoverAuthReturn(values[0]) : null;
+    clearDiscoverAuthReturn();
+    if (!path) return;
+    discoverAuthReturnContext = { path, created_at: Date.now() };
+    try {
+        sessionStorage.setItem(DISCOVER_AUTH_RETURN_KEY, JSON.stringify(discoverAuthReturnContext));
+    } catch (error) {
+        // The current page can still return correctly when storage is blocked.
+    }
+}
+
+function consumeDiscoverAuthReturn() {
+    const path = getDiscoverAuthReturn();
+    const startDemo = getDemoStartIntent();
+    clearDiscoverAuthReturn();
+    clearDemoStartIntent();
+    return path || (startDemo ? '/?start=demo' : '/');
+}
+
+function clearDemoStartIntent() {
+    demoStartContext = null;
+    try {
+        sessionStorage.removeItem(DEMO_START_KEY);
+    } catch (error) {
+        // Optional onboarding must also work when browser storage is blocked.
+    }
+}
+
+function getDemoStartIntent() {
+    try {
+        const context = demoStartContext || JSON.parse(sessionStorage.getItem(DEMO_START_KEY));
+        const now = Date.now();
+        if (context?.source === 'demo' && Number.isFinite(context.created_at)
+            && context.created_at <= now && now - context.created_at < DISCOVER_AUTH_RETURN_TTL) {
+            return true;
+        }
+    } catch (error) {
+        // Ignore expired, malformed, or unavailable session state.
+    }
+    clearDemoStartIntent();
+    return false;
+}
+
+function captureDemoStartIntent() {
+    if (document.documentElement.dataset.publicShell !== 'true' || window.location.pathname !== '/') return;
+    const params = new URLSearchParams(window.location.search);
+    // An explicitly chosen Discover, review, or collection destination takes priority.
+    if (params.has('next')) {
+        clearDemoStartIntent();
+        return;
+    }
+    if (!params.has('start')) return;
+    clearDemoStartIntent();
+    const values = params.getAll('start');
+    if (values.length !== 1 || values[0] !== 'demo' || getDiscoverAuthReturn()
+        || ['token', 'reset_token', 'email_verified', 'password_reset', 'email_change_token', 'email_change']
+            .some(key => params.has(key))) return;
+    // This is navigation-only state: no demo titles, notes, or credentials cross over.
+    demoStartContext = { source: 'demo', created_at: Date.now() };
+    try {
+        sessionStorage.setItem(DEMO_START_KEY, JSON.stringify(demoStartContext));
+    } catch (error) {
+        // The current page still provides the same fixed return destination.
+    }
+}
 
 // ============================================================================
 // Token Management
@@ -25,9 +152,22 @@ function getUser() {
     return userStr ? JSON.parse(userStr) : null;
 }
 
-function clearAuth() {
+function clearAuth({ preserveReturn = false } = {}) {
     localStorage.removeItem(TOKEN_KEY);
     localStorage.removeItem(USER_KEY);
+    // Storage events do not fire in this tab, including when a background request expires.
+    window.OmniProgress?.reset();
+    window.OmniImportStudio?.reset();
+    window.resetDailyDashboard?.();
+    window.resetLibraryBrowsing?.();
+    window.resetFriendsPanel?.();
+    if (!preserveReturn) clearDiscoverAuthReturn();
+    clearDemoStartIntent();
+    try {
+        sessionStorage.removeItem(RETURN_PROMPT_KEY);
+    } catch (error) {
+        // Authentication still works when session storage is unavailable.
+    }
 }
 
 function isAuthenticated() {
@@ -60,7 +200,9 @@ async function authenticatedFetch(url, options = {}) {
 
         // Handle 401 Unauthorized - token expired or invalid
         if (response.status === 401) {
-            clearAuth();
+            // Keep a chosen save preview while recovering an expired session.
+            // Explicit logout still clears navigation intent along with credentials.
+            clearAuth({ preserveReturn: true });
             showAuthModal();
             throw new Error('Session expired. Please login again.');
         }
@@ -80,7 +222,7 @@ async function authenticatedFetch(url, options = {}) {
 // ============================================================================
 
 async function register(email, username, password) {
-    const response = await fetch(`${API_BASE}/auth/register`, {
+    const response = await fetch(`${AUTH_API_BASE}/auth/register`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ email, username, password })
@@ -107,7 +249,7 @@ async function login(username, password) {
     formData.append('username', username);
     formData.append('password', password);
 
-    const response = await fetch(`${API_BASE}/auth/login`, {
+    const response = await fetch(`${AUTH_API_BASE}/auth/login`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
         credentials: 'same-origin',
@@ -134,21 +276,34 @@ async function login(username, password) {
 
     const data = await response.json();
     saveAuthData(data.access_token, data.user);
-    hideAuthModal();
-    showMainUI();
-
-    // Load initial data
-    loadMovies();
-    if (typeof loadCustomTabs === 'function') {
-        loadCustomTabs();
+    try {
+        if (
+            data.return_prompt?.eligible
+            && Number(data.return_prompt.days_away) >= 3
+            && typeof data.return_prompt.engagement_token === 'string'
+            && data.return_prompt.engagement_token.length >= 32
+        ) {
+            sessionStorage.setItem(RETURN_PROMPT_KEY, JSON.stringify({
+                days_away: Math.min(Number(data.return_prompt.days_away), 90),
+                engagement_token: data.return_prompt.engagement_token,
+                created_at: Date.now(),
+                shown: false,
+            }));
+        } else {
+            sessionStorage.removeItem(RETURN_PROMPT_KEY);
+        }
+    } catch (error) {
+        // The return deck is optional and never blocks login.
     }
-    updateUserDisplay();
+    // The anonymous page deliberately does not include private dashboard markup.
+    // Reload after the session cookie is set so the server can return the full app.
+    window.location.assign(consumeDiscoverAuthReturn());
 }
 
 async function logout() {
     if (confirm('Are you sure you want to logout?')) {
         try {
-            await fetch(`${API_BASE}/auth/logout`, {
+            await fetch(`${AUTH_API_BASE}/auth/logout`, {
                 method: 'POST',
                 credentials: 'same-origin'
             });
@@ -174,12 +329,17 @@ function showAuthModal() {
     if (window.initLandingPageEnhancements) {
       window.initLandingPageEnhancements();
     }
-    document.getElementById('mainContainer').style.display = 'none';
+    const mainContainer = document.getElementById('mainContainer');
+    if (mainContainer) {
+        mainContainer.style.display = 'none';
+    }
     document.getElementById('authError').textContent = '';
     
     // Hide user display and logout button when showing landing page
-    document.getElementById('userDisplay').style.display = 'none';
-    document.getElementById('logoutBtn').style.display = 'none';
+    const userDisplay = document.getElementById('userDisplay');
+    const logoutBtn = document.getElementById('logoutBtn');
+    if (userDisplay) userDisplay.style.display = 'none';
+    if (logoutBtn) logoutBtn.style.display = 'none';
     
     // Hide notification bell
     const notificationBell = document.getElementById('notificationBell');
@@ -187,11 +347,7 @@ function showAuthModal() {
         notificationBell.style.display = 'none';
     }
     
-    // Hide friends sidebar
-    const friendsSidebar = document.getElementById('friendsSidebar');
-    if (friendsSidebar) {
-        friendsSidebar.style.display = 'none';
-    }
+    window.resetFriendsPanel?.();
     
     // Hide footer for logged-in view when showing landing page
     const mainFooter = document.getElementById('mainFooter');
@@ -213,6 +369,12 @@ function hideAuthModal() {
 }
 
 function showMainUI() {
+    // Public responses intentionally omit private controls. A successful login sets
+    // the HttpOnly cookie and then reloads into the complete dashboard response.
+    if (!document.getElementById('mainContainer')) {
+        window.location.assign('/');
+        return;
+    }
     document.getElementById('mainContainer').style.display = 'block';
     document.getElementById('landingPage').style.display = 'none';
     // Show footer for logged-in view
@@ -225,11 +387,7 @@ function showMainUI() {
     if (notificationBell) {
         notificationBell.style.display = 'flex';
     }
-    // Show friends sidebar
-    const friendsSidebar = document.getElementById('friendsSidebar');
-    if (friendsSidebar) {
-        friendsSidebar.style.display = 'block';
-    }
+    if (typeof restoreSidebarState === 'function') restoreSidebarState();
     
     // Load friends list and notification count
     if (typeof loadFriendsList === 'function') {
@@ -383,7 +541,7 @@ async function reactivateAccount(usernameOrEmail, password) {
     reactivateBtn.textContent = 'Reactivating...';
     
     try {
-        const response = await fetch(`${API_BASE}/auth/reactivate`, {
+        const response = await fetch(`${AUTH_API_BASE}/auth/reactivate`, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({
@@ -453,7 +611,7 @@ async function reactivateAccount(usernameOrEmail, password) {
     reactivateBtn.textContent = 'Reactivating...';
     
     try {
-        const response = await fetch(`${API_BASE}/auth/reactivate`, {
+        const response = await fetch(`${AUTH_API_BASE}/auth/reactivate`, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({
@@ -528,7 +686,7 @@ function setupAuthHandlers() {
         btn.textContent = 'Sending...';
 
         try {
-            const response = await fetch(`${API_BASE}/auth/resend-verification?email=${encodeURIComponent(email)}`, {
+            const response = await fetch(`${AUTH_API_BASE}/auth/resend-verification?email=${encodeURIComponent(email)}`, {
                 method: 'POST',
             });
 
@@ -603,7 +761,7 @@ function setupAuthHandlers() {
         const email = document.getElementById('forgotPasswordEmail').value;
 
         try {
-            const response = await fetch(`${API_BASE}/auth/request-password-reset?email=${encodeURIComponent(email)}`, {
+            const response = await fetch(`${AUTH_API_BASE}/auth/request-password-reset?email=${encodeURIComponent(email)}`, {
                 method: 'POST',
             });
 
@@ -647,8 +805,10 @@ function setupAuthHandlers() {
         }
 
         try {
-            const response = await fetch(`${API_BASE}/auth/reset-password?token=${encodeURIComponent(token)}&new_password=${encodeURIComponent(newPassword)}`, {
+            const response = await fetch(`${AUTH_API_BASE}/auth/reset-password`, {
                 method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ token, new_password: newPassword }),
             });
 
             if (response.ok) {
@@ -670,7 +830,10 @@ function setupAuthHandlers() {
     });
 
     // Logout button
-    document.getElementById('logoutBtn').addEventListener('click', logout);
+    const logoutBtn = document.getElementById('logoutBtn');
+    if (logoutBtn) {
+        logoutBtn.addEventListener('click', logout);
+    }
 }
 
 // ============================================================================
@@ -678,8 +841,10 @@ function setupAuthHandlers() {
 // ============================================================================
 
 function initAuth() {
+    captureDiscoverAuthReturn();
+    captureDemoStartIntent();
     setupAuthHandlers();
-    
+
     // Check URL parameters for email verification or password reset
     const urlParams = new URLSearchParams(window.location.search);
     const verifyToken = urlParams.get('token');
@@ -740,6 +905,16 @@ function initAuth() {
         return;
     }
 
+    // Verification and password-reset links must work before login. Once those
+    // links have been handled, only the server-selected dashboard may show the
+    // private UI; stale localStorage must not reveal it on the public shell.
+    if (document.documentElement.dataset.publicShell === 'true') {
+        showAuthModal();
+        if (urlParams.getAll('start').length === 1 && urlParams.get('start') === 'demo'
+            && getDemoStartIntent() && !getDiscoverAuthReturn()) showRegisterForm();
+        return;
+    }
+
     if (!isAuthenticated()) {
         showAuthModal();
     } else {
@@ -752,7 +927,7 @@ async function handleEmailChangeVerification(token) {
     // If user is logged in, show success message and reload account info
     if (isAuthenticated()) {
         try {
-            const response = await authenticatedFetch(`${API_BASE}/auth/verify-email?token=${encodeURIComponent(token)}`);
+            const response = await authenticatedFetch(`${AUTH_API_BASE}/auth/verify-email?token=${encodeURIComponent(token)}`);
             const data = await response.json();
             
             if (response.ok) {
@@ -797,7 +972,7 @@ async function handleEmailVerification(token) {
     displayAuthSuccess('Verifying your email...');
     
     try {
-        const response = await fetch(`${API_BASE}/auth/verify-email?token=${encodeURIComponent(token)}`);
+        const response = await fetch(`${AUTH_API_BASE}/auth/verify-email?token=${encodeURIComponent(token)}`);
         const data = await response.json();
         
         if (response.ok) {

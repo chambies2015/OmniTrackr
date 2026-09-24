@@ -1,15 +1,42 @@
 """
 Statistics endpoints for the OmniTrackr API.
 """
-from datetime import datetime
-from fastapi import APIRouter, Depends
+from datetime import datetime, timedelta, timezone
+from fastapi import APIRouter, Depends, Header, HTTPException, Query, Request, Response
 from sqlalchemy.orm import Session
-from sqlalchemy import func
+from sqlalchemy import and_, case, func, or_
+from sqlalchemy.exc import IntegrityError
 
-from .. import crud, schemas, models
+from .. import crud, schemas, models, return_prompt as return_prompt_tokens
 from ..dependencies import get_db, get_current_user
+from ..tasteprint import build_tasteprint
+from ..progress import get_checkpoint_map, serialize_checkpoint
 
 router = APIRouter(prefix="/statistics", tags=["statistics"])
+
+LIBRARY_CATEGORIES = [
+    {"key": "movies", "label": "Movie", "model": models.Movie, "done": models.Movie.watched, "status_label": "Not watched"},
+    {"key": "tv-shows", "label": "TV show", "model": models.TVShow, "done": models.TVShow.watched, "status_label": "In progress"},
+    {"key": "anime", "label": "Anime", "model": models.Anime, "done": models.Anime.watched, "status_label": "In progress"},
+    {"key": "video-games", "label": "Game", "model": models.VideoGame, "done": models.VideoGame.played, "status_label": "Not played"},
+    {"key": "music", "label": "Album", "model": models.Music, "done": models.Music.listened, "status_label": "Not listened"},
+    {"key": "books", "label": "Book", "model": models.Book, "done": models.Book.read, "status_label": "Not read"},
+]
+
+
+@router.get("/tasteprint/", response_model=dict)
+async def get_tasteprint(
+    response: Response,
+    categories: str | None = Query(None, max_length=120),
+    current_user: models.User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+):
+    """Build a private aggregate portrait from explicitly selected categories."""
+    response.headers["Cache-Control"] = "private, no-store"
+    try:
+        return build_tasteprint(db, current_user, categories)
+    except ValueError as exc:
+        raise HTTPException(status_code=400, detail=str(exc)) from exc
 
 
 def _count_public_reviews(db: Session, model, user_id: int) -> int:
@@ -34,6 +61,127 @@ def _count_rated_items(db: Session, model, user_id: int) -> int:
         model.user_id == user_id,
         model.rating.isnot(None)
     ).count()
+
+
+def _pulse_item(item, category: dict, prompts: list[str]) -> dict:
+    """Serialize only the small, current-user fields needed by the dashboard pulse."""
+    return {
+        "id": item.id,
+        "title": item.title,
+        "category": category["key"],
+        "category_label": category["label"],
+        "status_label": category["status_label"],
+        "prompts": prompts,
+    }
+
+
+def _resolve_queue_pulse_items(
+    queue_items: list[models.NextUpItem],
+    categories: list[dict],
+    db: Session,
+    user_id: int,
+    *,
+    unfinished_only: bool = False,
+    checkpoints: dict | None = None,
+) -> list[dict]:
+    """Resolve an ordered queue with one media query per represented category."""
+    category_by_key = {category["key"]: category for category in categories}
+    ids_by_category: dict[str, list[int]] = {}
+    for queue_item in queue_items:
+        if queue_item.category in category_by_key:
+            ids_by_category.setdefault(queue_item.category, []).append(queue_item.item_id)
+
+    resolved = {}
+    for category_key, item_ids in ids_by_category.items():
+        category = category_by_key[category_key]
+        model = category["model"]
+        query = db.query(model).filter(model.user_id == user_id, model.id.in_(item_ids))
+        if unfinished_only:
+            query = query.filter(category["done"] == False)
+        for item in query.all():
+            resolved[(category_key, item.id)] = _pulse_item(item, category, [])
+
+    result = [
+        resolved[(queue_item.category, queue_item.item_id)]
+        for queue_item in queue_items
+        if (queue_item.category, queue_item.item_id) in resolved
+    ]
+    if any(item["category"] in {"tv-shows", "anime", "books"} for item in result):
+        _attach_progress(result, checkpoints if checkpoints is not None else get_checkpoint_map(db, user_id))
+    return result
+
+
+def _attach_progress(items: list[dict], checkpoints: dict) -> None:
+    """Add owner-only progress to private dashboard responses, never public media schemas."""
+    for item in items:
+        checkpoint = checkpoints.get((item["category"], item["id"]))
+        if checkpoint:
+            item["progress"] = serialize_checkpoint(checkpoint)
+
+
+def _library_item_count(db: Session, user_id: int) -> int:
+    """Count all built-in media with one database round trip."""
+    counts = db.query(*[
+        db.query(func.count(category["model"].id)).filter(
+            category["model"].user_id == user_id
+        ).scalar_subquery()
+        for category in LIBRARY_CATEGORIES
+    ]).one()
+    return sum(int(count or 0) for count in counts)
+
+
+@router.get("/today/", response_model=dict)
+async def get_todays_pick(
+    response: Response,
+    offset: int = Query(0, ge=0, le=2147483647),
+    category: str | None = Query(None, max_length=20),
+    current_user: models.User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+):
+    """Choose one private, unfinished title without modifying the library.
+
+    The choice is stable for the day, while ``offset`` lets the interface offer
+    another option. A deliberately ordered Next Up queue takes priority over the
+    wider unfinished library so the user remains in control of the suggestion.
+    """
+    response.headers["Cache-Control"] = "private, no-store"
+    categories = [dict(entry) for entry in LIBRARY_CATEGORIES]
+    if category is not None:
+        categories = [entry for entry in categories if entry["key"] == category]
+        if not categories:
+            raise HTTPException(status_code=422, detail="Unknown media category")
+    by_key = {entry["key"]: entry for entry in categories}
+    queue_items = db.query(models.NextUpItem).filter(
+        models.NextUpItem.user_id == current_user.id,
+        models.NextUpItem.category.in_(by_key),
+    ).order_by(models.NextUpItem.position, models.NextUpItem.id).limit(25).all()
+    queued = _resolve_queue_pulse_items(
+        queue_items, categories, db, current_user.id, unfinished_only=True
+    )
+
+    if queued:
+        choice = queued[offset % len(queued)]
+        choice["reason"] = f"#{(offset % len(queued)) + 1} in your private Next Up queue"
+        choice["source"] = "next_up"
+        return {"pick": choice, "candidate_count": len(queued)}
+
+    candidates = []
+    for category in categories:
+        items = db.query(category["model"]).filter(
+            category["model"].user_id == current_user.id,
+            category["done"] == False,
+        ).order_by(category["model"].id.desc()).limit(12).all()
+        candidates.extend(_pulse_item(item, category, []) for item in items)
+
+    if not candidates:
+        return {"pick": None, "candidate_count": 0}
+
+    choice = candidates[(datetime.now(timezone.utc).date().toordinal() + current_user.id + offset) % len(candidates)]
+    if choice["category"] in {"tv-shows", "anime", "books"}:
+        _attach_progress([choice], get_checkpoint_map(db, current_user.id))
+    choice["reason"] = "A small, unfinished choice from your private library"
+    choice["source"] = "library"
+    return {"pick": choice, "candidate_count": len(candidates)}
 
 
 @router.get("/", response_model=schemas.StatisticsDashboard)
@@ -111,14 +259,21 @@ async def get_library_insights(
 
     for category in categories:
         model = category["model"]
-        count = db.query(model).filter(model.user_id == user_id).count()
-        completed = db.query(model).filter(
-            model.user_id == user_id,
-            category["done_field"] == True
-        ).count()
-        rated = _count_rated_items(db, model, user_id)
-        reviewed = _count_reviewed_items(db, model, user_id)
-        public_review_count = _count_public_reviews(db, model, user_id)
+        has_review = and_(
+            model.review.isnot(None),
+            func.length(func.trim(model.review)) > 0,
+        )
+        count, completed, rated, reviewed, public_review_count = db.query(
+            func.count(model.id),
+            func.sum(case((category["done_field"] == True, 1), else_=0)),
+            func.sum(case((model.rating.isnot(None), 1), else_=0)),
+            func.sum(case((has_review, 1), else_=0)),
+            func.sum(case((and_(has_review, model.review_public == True), 1), else_=0)),
+        ).filter(model.user_id == user_id).one()
+        completed = int(completed or 0)
+        rated = int(rated or 0)
+        reviewed = int(reviewed or 0)
+        public_review_count = int(public_review_count or 0)
 
         total_items += count
         completed_items += completed
@@ -160,6 +315,216 @@ async def get_library_insights(
         "categories": category_summaries,
         "generated_at": datetime.now().isoformat()
     }
+
+
+@router.get("/pulse/", response_model=dict)
+async def get_library_pulse(
+    current_user: models.User = Depends(get_current_user),
+    db: Session = Depends(get_db)
+):
+    """Return a small, action-oriented slice of the current user's library.
+
+    Recent private checkpoints lead Continue; the existing unfinished-library
+    fallback remains available when no checkpoint exists. This endpoint only reads.
+    """
+    categories = [dict(entry) for entry in LIBRARY_CATEGORIES]
+    continue_items = []
+    reflection_items = []
+    progressed_items = []
+    checkpoints = get_checkpoint_map(db, current_user.id)
+
+    for category in categories:
+        model = category["model"]
+        query = db.query(model).filter(
+            model.user_id == current_user.id,
+            category["done"] == False,
+        )
+        if category["key"] in {"tv-shows", "anime", "books"}:
+            checkpoint = models.ProgressCheckpoint
+            query = query.outerjoin(checkpoint, and_(
+                checkpoint.user_id == current_user.id,
+                checkpoint.category == category["key"], checkpoint.item_id == model.id,
+                checkpoint.unit.isnot(None),
+            )).order_by(case((checkpoint.id.isnot(None), 0), else_=1), checkpoint.updated_at.desc(), model.id.desc())
+        else:
+            query = query.order_by(model.id.desc())
+        unfinished = query.limit(6).all()
+        fallback = []
+        for item in unfinished:
+            serialized = _pulse_item(item, category, [])
+            checkpoint = checkpoints.get((category["key"], item.id))
+            if checkpoint:
+                progressed_items.append((checkpoint.updated_at, checkpoint.id, serialized))
+            else:
+                fallback.append(serialized)
+        continue_items.extend(fallback[:2])
+
+        needs_context = db.query(model).filter(
+            model.user_id == current_user.id,
+            or_(
+                model.rating.is_(None),
+                model.review.is_(None),
+                func.length(func.trim(model.review)) == 0,
+            ),
+        ).order_by(model.id.desc()).limit(2).all()
+        for item in needs_context:
+            prompts = []
+            if item.rating is None:
+                prompts.append("Add a rating")
+            if not (item.review or "").strip():
+                prompts.append("Leave a note")
+            reflection_items.append(_pulse_item(item, category, prompts))
+
+    queued_items = db.query(models.NextUpItem).filter(
+        models.NextUpItem.user_id == current_user.id,
+    ).order_by(models.NextUpItem.position, models.NextUpItem.id).limit(3).all()
+    next_up_items = _resolve_queue_pulse_items(queued_items, categories, db, current_user.id, checkpoints=checkpoints)
+    progressed_items.sort(key=lambda entry: (entry[0], entry[1]), reverse=True)
+    continue_items = [entry[2] for entry in progressed_items] + continue_items
+    _attach_progress(continue_items, checkpoints)
+    _attach_progress(reflection_items, checkpoints)
+
+    return {
+        "continue_items": continue_items[:6],
+        "reflection_items": reflection_items[:6],
+        "next_up_items": next_up_items,
+        "generated_at": datetime.now().isoformat(),
+    }
+
+
+@router.get("/return-deck/", response_model=dict)
+async def get_return_deck(
+    response: Response,
+    request: Request,
+    days_away: int | None = Query(None, ge=3, le=90),
+    engagement_token: str | None = Header(
+        None, alias="X-Return-Prompt", min_length=32, max_length=512
+    ),
+    current_user: models.User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+):
+    """Compose existing private signals into one optional return experience."""
+    response.headers["Cache-Control"] = "private, no-store"
+    signed_days_away = return_prompt_tokens.return_prompt_days_away(
+        engagement_token, current_user.id
+    )
+    if signed_days_away is None or (days_away is not None and days_away != signed_days_away):
+        raise HTTPException(status_code=403, detail="Return prompt is not active")
+    days_away = signed_days_away
+    library_item_count = _library_item_count(db, current_user.id)
+    if library_item_count < 5:
+        return {"eligible": False, "library_item_count": library_item_count}
+
+    today = await get_todays_pick(Response(), 0, None, current_user, db)
+    pulse = await get_library_pulse(current_user, db)
+    primary = today.get("pick")
+    alternatives = [
+        item for item in pulse["continue_items"]
+        if not primary or (item["category"], item["id"]) != (primary["category"], primary["id"])
+    ]
+    reflection_items = [
+        item for item in pulse["reflection_items"]
+        if not primary or (item["category"], item["id"]) != (primary["category"], primary["id"])
+    ]
+    if alternatives:
+        reflection_items = [
+            item for item in reflection_items
+            if (item["category"], item["id"]) != (alternatives[0]["category"], alternatives[0]["id"])
+        ]
+    if not primary and not reflection_items:
+        return {"eligible": False, "library_item_count": library_item_count}
+
+    since = datetime.now(timezone.utc).replace(tzinfo=None) - timedelta(days=days_away)
+    activity_rows = db.query(
+        models.ActivityEntry.category,
+        func.count(models.ActivityEntry.id),
+        func.sum(case((models.ActivityEntry.action == "completed", 1), else_=0)),
+        func.sum(case((func.length(func.trim(func.coalesce(models.ActivityEntry.note, ""))) > 0, 1), else_=0)),
+    ).filter(
+        models.ActivityEntry.user_id == current_user.id,
+        models.ActivityEntry.occurred_at >= since,
+    ).group_by(models.ActivityEntry.category).all()
+    entry_count = sum(int(row[1] or 0) for row in activity_rows)
+    completed_count = sum(int(row[2] or 0) for row in activity_rows)
+    reflection_count = sum(int(row[3] or 0) for row in activity_rows)
+    category_counts = {category["key"]: 0 for category in LIBRARY_CATEGORIES}
+    for category_key, count, _, _ in activity_rows:
+        if category_key in category_counts:
+            category_counts[category_key] = int(count or 0)
+    top_category_key = max(category_counts, key=category_counts.get) if any(category_counts.values()) else None
+    category_by_key = {category["key"]: category for category in LIBRARY_CATEGORIES}
+
+    return {
+        "eligible": True,
+        "library_item_count": library_item_count,
+        "days_away": days_away,
+        "primary": primary,
+        "alternative": alternatives[0] if alternatives else None,
+        "reflection": reflection_items[0] if reflection_items else None,
+        "recap": {
+            "entry_count": entry_count,
+            "completed_count": completed_count,
+            "reflection_count": reflection_count,
+            "top_category_label": category_by_key[top_category_key]["label"] if top_category_key else None,
+        },
+    }
+
+
+@router.post("/return-deck/engagement", response_model=dict)
+async def record_return_deck_engagement(
+    payload: schemas.ReturnPromptEngagement,
+    request: Request,
+    current_user: models.User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+):
+    """Record one anonymous impression and one terminal outcome per signed deck."""
+    if return_prompt_tokens.return_prompt_days_away(
+        payload.engagement_token, current_user.id
+    ) is None:
+        raise HTTPException(status_code=403, detail="Return prompt is not active")
+    # Receipts exist only to make the 24-hour prompt idempotent; retain a small
+    # grace window for delayed requests without building a long-lived ledger.
+    db.query(models.ReturnPromptEngagementReceipt).filter(
+        models.ReturnPromptEngagementReceipt.created_at
+        < datetime.now(timezone.utc).replace(tzinfo=None) - timedelta(days=7)
+    ).delete(synchronize_session=False)
+    metric_date = datetime.now(timezone.utc).date()
+    metric_exists = db.query(models.ReturnPromptDailyMetric.id).filter(
+        models.ReturnPromptDailyMetric.metric_date == metric_date
+    ).first()
+    if not metric_exists:
+        db.add(models.ReturnPromptDailyMetric(metric_date=metric_date))
+        try:
+            db.commit()
+        except IntegrityError:
+            # Another request may create today's single aggregate row first.
+            db.rollback()
+
+    token_digest = return_prompt_tokens.return_prompt_token_digest(payload.engagement_token)
+    event_kind = "shown" if payload.action == "shown" else "resolved"
+    receipt = models.ReturnPromptEngagementReceipt(
+        token_digest=token_digest,
+        event_kind=event_kind,
+        action=payload.action,
+    )
+    db.add(receipt)
+    field = {
+        "shown": "shown_count",
+        "opened": "opened_count",
+        "dismissed": "dismissed_count",
+    }[payload.action]
+    column = getattr(models.ReturnPromptDailyMetric, field)
+    db.query(models.ReturnPromptDailyMetric).filter(
+        models.ReturnPromptDailyMetric.metric_date == metric_date
+    ).update({column: column + 1}, synchronize_session=False)
+    try:
+        db.commit()
+    except IntegrityError:
+        # The receipt uniqueness makes an impression and terminal outcome
+        # idempotent. The receipt and aggregate increment commit together.
+        db.rollback()
+        return {"recorded": False}
+    return {"recorded": True}
 
 
 @router.get("/watch/", response_model=schemas.WatchStatistics)

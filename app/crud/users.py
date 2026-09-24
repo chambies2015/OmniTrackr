@@ -72,7 +72,7 @@ def update_user(db: Session, user_id: int, user_update: schemas.UserUpdate) -> O
     if db_user is None:
         return None
     
-    update_dict = user_update.dict(exclude_unset=True)
+    update_dict = user_update.model_dump(exclude_unset=True)
     
     if 'username' in update_dict and update_dict['username'] != db_user.username:
         existing_user = get_user_by_username(db, update_dict['username'])
@@ -133,7 +133,7 @@ def update_privacy_settings(db: Session, user_id: int, privacy_settings: schemas
     if db_user is None:
         return None
     
-    update_dict = privacy_settings.dict(exclude_unset=True)
+    update_dict = privacy_settings.model_dump(exclude_unset=True)
     
     if 'movies_private' in update_dict:
         db_user.movies_private = update_dict['movies_private']
@@ -178,7 +178,7 @@ def update_tab_visibility(db: Session, user_id: int, tab_visibility: schemas.Tab
     if db_user is None:
         return None
     
-    update_dict = tab_visibility.dict(exclude_unset=True)
+    update_dict = tab_visibility.model_dump(exclude_unset=True)
     
     if 'movies_visible' in update_dict:
         db_user.movies_visible = update_dict['movies_visible']
