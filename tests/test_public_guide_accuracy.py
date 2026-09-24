@@ -7,8 +7,9 @@ def test_how_to_guide_explains_actual_controls(client):
     assert 'Public Review checkbox belongs to each item' in content
     assert 'Hiding a tab is a layout preference, not a privacy setting' in content
     assert 'subject to the site' in content
+    assert 'Friends can still read reviews and notes in a category you share with them' in content
+    assert 'Leave it unchecked for a private note' not in content
     assert 'previewing a file does not save titles' in content
     assert 'out of 5 or 10' not in content
     assert 'enable public reviews in your account settings' not in content
     assert 'mark items as watched, in progress, or plan-to-watch' not in content.lower()
-

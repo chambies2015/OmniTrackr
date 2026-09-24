@@ -1,5 +1,30 @@
 # Public content review — September 17, 2026
 
+## Follow-up — September 24, 2026: public guide reading paths
+
+Reorganized `/guides` around starting a library, importing a list, saving a
+checkpoint, and choosing an audience. Sixteen existing guide/support pages now
+share a reading layout, compact public navigation, keyboard skip links, section
+jumps, and grouped footer links. Existing URLs and bookmarked section IDs remain.
+
+Rewrote `/compare` using official IMDb, Letterboxd, Trakt, and Goodreads sources.
+IMDb and Letterboxd now have separate rows; IMDb supports TV lists. The page
+separates documented features from editorial fit, discloses AI assistance and
+OmniTrackr's interest, and describes manual progress, absent account sync, limited
+CSV fields, duplicate matching, and the difference between CSV and JSON restore.
+It recommends a small trial before moving a history. No pricing claims were added.
+
+Source review also clarified a privacy distinction: unchecked Public Review
+prevents public review publication, but friends can read item notes when category
+sharing permits it. The guides now explain that boundary and point to journal
+entries and checkpoint reminders for personal context. No sharing behavior changed.
+
+This completes the named-comparison follow-up below. Indexability, sitemap
+eligibility, and advertising eligibility remain unchanged; `/compare` stays
+`noindex, follow`. No new article URLs, ad placements, database changes, or
+production data operations are part of this release. Verification details are
+recorded in `docs/growth-operations.md`.
+
 ## Follow-up — September 24, 2026: three Discover guides
 
 Expanded three existing trails into public decision guides: **One evening, well
@@ -109,8 +134,8 @@ pages. Preserve that policy; do not create another consolidation mechanism.
 
 ## Follow-up priorities
 
-1. Verify named competitor claims against official documentation; avoid blanket
-   claims that OmniTrackr is better for every reader.
+1. Recheck named competitor claims when their official documentation changes;
+   the September 24 comparison refresh establishes the source-checked baseline.
 2. Review the age and accuracy of hub screenshots against the current UI.
 3. Inspect each Discover edition for distinct editorial reasoning, useful limits,
    and accurate links rather than increasing the number of collections blindly.

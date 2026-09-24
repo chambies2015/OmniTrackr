@@ -51,34 +51,45 @@
     "inLanguage": "en-US"
   }
   </script>
+  <link rel="stylesheet" href="/static/public-reader.css?v=20260924-reader-2">
 </head>
 
-<body>
-  <div class="content-wrapper">
-    <div class="content-container">
-      <nav class="public-site-nav" aria-label="Public site navigation">
-        <a class="public-site-nav__brand" href="/">OmniTrackr</a>
-        <div class="public-site-nav__links">
-          <a href="/demo">Demo</a>
-          <a href="/media-tracking">Tracking Hub</a>
-          <a href="/guides">Guides</a>
-          <a href="/site-map">Site Map</a>
-          <a href="/sample-library">Sample Library</a>
-          <a href="/compare">Compare</a>
-          <a href="/use-cases">Use Cases</a>
-          <a href="/reviews">Reviews</a>
-          <a href="/faq">FAQ</a>
-          <a href="/content-quality">Content Quality</a>
-          <a href="/advertising">Advertising</a>
-          <a href="/privacy">Privacy</a>
-          <a class="public-site-nav__cta" href="/#landing-auth">Start tracking</a>
-        </div>
-      </nav>
-      <a href="/media-tracking" class="back-link">Back to Media Tracking Hub</a>
+<body class="public-reader">
+  <a class="reader-skip" href="#reader-main">Skip to guide</a>
+  <div class="reader-nav-wrap">
+    <nav class="public-site-nav" aria-label="Public site navigation">
+      <a class="public-site-nav__brand" href="/">OmniTrackr</a>
+      <div class="public-site-nav__links">
+        <a href="/demo">Demo</a>
+        <a href="/discover">Discover</a>
+        <a href="/reviews">Reviews</a>
+        <a href="/collections/explore">Collections</a>
+        <a href="/guides">Guides</a>
+        <a href="/faq">FAQ</a>
+        <a class="public-site-nav__cta" href="/#landing-auth">Start tracking</a>
+      </div>
+    </nav>
+  </div>
+  <div class="reader-shell">
+    <main id="reader-main" tabindex="-1" class="reader-main content-container">
+<a href="/media-tracking" class="back-link">Back to Media Tracking Hub</a>
       <header class="content-header">
         <h1>Music Tracker</h1>
         <p>Track albums, artists, genres, listened status, ratings, reviews, cover art, privacy, and statistics alongside the rest of your media history.</p>
       </header>
+      <details class="reader-contents">
+        <summary>On this page</summary>
+        <nav aria-label="On this page">
+          <a href="#why-heading">Why Track Music in a Media Library?</a>
+          <a href="#workflow-heading">A Lightweight Music Tracking Workflow</a>
+          <a href="#album-heading">Albums, Artists, and Relisten Notes</a>
+          <a href="#review-heading">Writing Music Reviews That Help Later</a>
+          <a href="#stats-heading">Music Statistics and Taste Patterns</a>
+          <a href="#privacy-heading">Privacy, Sharing, and Recommendations</a>
+          <a href="#related-heading">Related Pages</a>
+        </nav>
+      </details>
+
 
       <section class="content-section" aria-labelledby="why-heading">
         <h2 id="why-heading">Why Track Music in a Media Library?</h2>
@@ -134,8 +145,40 @@
         <h2 id="related-heading">Related Pages</h2>
         <p>For broader workflows, visit the <a href="/media-tracking">media tracking hub</a>, learn about <a href="/media-statistics">media statistics</a>, read the <a href="/review-guidelines">review guidelines</a>, try the <a href="/demo">demo library</a>, or browse <a href="/reviews">public reviews</a>.</p>
       </section>
-    </div>
+    </main>
   </div>
+  <footer class="reader-footer">
+    <div class="reader-footer__inner">
+      <p class="reader-footer__intro">OmniTrackr · Your media, remembered. Read freely, then build a library of your own.</p>
+      <div class="reader-footer__groups">
+        <div><h2>Explore</h2><ul>
+          <li><a href="/">Home</a></li>
+          <li><a href="/media-tracking">Tracking hub</a></li>
+          <li><a href="/sample-library">Sample library</a></li>
+          <li><a href="/compare">Compare trackers</a></li>
+          <li><a href="/use-cases">Ways to use OmniTrackr</a></li>
+          <li><a href="/site-map">Site map</a></li>
+        </ul></div>
+        <div><h2>Keep learning</h2><ul>
+          <li><a href="/guides">All guides</a></li>
+          <li><a href="/export-import-guide">Import &amp; backups</a></li>
+          <li><a href="/media-tracker-checklist">Setup checklist</a></li>
+          <li><a href="/tracking-templates">Templates</a></li>
+          <li><a href="/review-guidelines">Review guide</a></li>
+          <li><a href="/media-statistics">Statistics guide</a></li>
+        </ul></div>
+        <div><h2>About OmniTrackr</h2><ul>
+          <li><a href="/about">About</a></li>
+          <li><a href="/contact">Contact</a></li>
+          <li><a href="/changelog">What’s new</a></li>
+          <li><a href="/content-quality">Content quality</a></li>
+          <li><a href="/advertising">Advertising</a></li>
+          <li><a href="/privacy">Privacy</a></li>
+          <li><a href="/terms">Terms</a></li>
+        </ul></div>
+      </div>
+    </div>
+  </footer>
 </body>
 
 </html>

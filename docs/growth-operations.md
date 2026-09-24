@@ -544,6 +544,29 @@ did not access production or deploy the changes.
 
 ## Verification
 
+### Public guide reading refresh (September 24, 2026)
+
+Sixteen existing public guide/support pages use the scoped `public-reader.css`
+asset. The Guides hub offers four task paths; the comparison explains official
+product features, editorial fit, and the actual Import Studio workflow. All
+reading and section navigation works without application JavaScript. Public
+review and friend-category visibility are described separately. Routes, stored
+data, sharing behavior, search policy, and advertising eligibility are unchanged.
+
+Independent review caught inherited dark table colors, CTA hover contrast, and
+ambiguous privacy wording; these were corrected. Browser checks used only the
+disposable SQLite preview: 1440px desktop, 390px mobile, all sixteen pages at
+320px, native table-of-contents expansion, fragment destinations, keyboard skip
+focus, and keyboard scrolling within the comparison table. No page-level
+horizontal overflow or browser errors appeared. The browser used its dark color
+scheme; the light palette was reviewed in CSS rather than emulated in-browser.
+
+Regression checks: 117 focused public-reader, guide accuracy, SEO, and static
+security tests; all 309 frontend tests. The new reader contracts verify keyboard
+landmarks, valid local/cross-page fragment targets, preserved bookmarks, native
+task paths, and comparison-table semantics. No production account or database
+was accessed and nothing was deployed.
+
 Run the full suite against an isolated database. Set these before importing the
 app, because startup creates tables and runs migrations:
 
