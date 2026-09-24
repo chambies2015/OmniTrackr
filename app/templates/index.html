@@ -46,11 +46,14 @@
   <link rel="icon" type="image/x-icon" href="/omnitrackr_favicon.ico">
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link rel="preload" href="./styles.css?v=20260924-daily-dashboard-v4" as="style">
-  <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@700;800&family=Inter:wght@400;500;600&display=swap"
+  <link rel="preload" href="./styles.css?v=20260924-import-studio-final" as="style">
+  <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@700;800&family=Inter:wght@400;500;600;700&display=swap"
     rel="stylesheet">
   <link rel="stylesheet" href="./styles.css?v=20260924-import-studio-final">
   <link rel="stylesheet" href="/static/progress.css?v=20260922-progress">
+  <link rel="stylesheet" href="/static/app-theme.css?v=20260924-visual-4">
+  <link rel="stylesheet" href="/static/library-theme.css?v=20260924-visual-5">
+  <link rel="stylesheet" href="/static/dialog-theme.css?v=20260924-visual-4">
   <script src="./preauth.js"></script>
   <style>
     html.authenticated #landingPage{display:none}
@@ -289,7 +292,7 @@
   </script>
 </head>
 
-<body class="dark-mode">
+<body class="dark-mode app-shell">
   <div class="account-toolbar" role="group" aria-label="Account controls">
   <button id="showFriendsSidebar" class="sidebar-toggle-floating" title="Show Friends Sidebar"
     aria-label="Show friends sidebar" style="display: none;">▶</button>
@@ -331,7 +334,10 @@
 
   <main class="container" id="mainContainer">
     <header class="header" role="banner">
-      <p class="app-title" role="heading" aria-level="1">OmniTrackr</p>
+      <div class="app-brand">
+        <span class="app-brand__mark" aria-hidden="true"><svg viewBox="0 0 32 32" width="28" height="28" fill="none"><circle cx="16" cy="16" r="10" stroke="currentColor" stroke-width="2"/><path d="M6 16h20M16 6c-7 5-7 15 0 20 7-5 7-15 0-20Z" stroke="currentColor" stroke-width="1.5"/></svg></span>
+        <div><p class="app-title" role="heading" aria-level="1">OmniTrackr</p><p class="app-brand__caption">Your media, remembered.</p></div>
+      </div>
       <div class="library-search" role="search">
         <label class="sr-only" for="librarySearchInput">Find anything in your library</label>
         <div class="library-search__field">
@@ -347,19 +353,26 @@
     </header>
 
     <nav class="tabs" aria-label="Library categories and tools">
-      <a class="tab" href="/discover">Discover ↗</a>
-      <button class="tab active" data-switch-tab="movies">🎬 Movies</button>
-      <button class="tab" data-switch-tab="tv-shows">📺 TV Shows</button>
-      <button class="tab" data-switch-tab="anime">🎌 Anime</button>
-      <button class="tab" data-switch-tab="video-games">🎮 Video Games</button>
-      <button class="tab" data-switch-tab="music">🎵 Music</button>
-      <button class="tab" data-switch-tab="books">📚 Books</button>
-      <button class="tab" data-switch-tab="activity">📝 Journal</button>
-      <button class="tab" data-switch-tab="recommendations">💌 Postcards</button>
-      <button class="tab" data-switch-tab="collections">🗂 Collections</button>
-      <button class="tab" data-switch-tab="statistics">📊 Statistics</button>
-      <div id="customTabsContainer"></div>
-      <button class="tab" id="manageCustomTabsBtn" data-action="show-custom-tab-manager" style="background-color: #6366f1; margin-left: auto;">⚙️ Manage Custom Tabs</button>
+      <div class="library-nav__group" role="group" aria-label="Media libraries">
+        <span class="library-nav__label" aria-hidden="true">Library</span>
+        <button class="tab active" data-switch-tab="movies">Movies</button>
+        <button class="tab" data-switch-tab="tv-shows">TV Shows</button>
+        <button class="tab" data-switch-tab="anime">Anime</button>
+        <button class="tab" data-switch-tab="video-games">Games</button>
+        <button class="tab" data-switch-tab="music">Music</button>
+        <button class="tab" data-switch-tab="books">Books</button>
+      </div>
+      <div class="library-nav__group library-nav__group--tools" role="group" aria-label="Personal tools and custom libraries">
+        <span class="library-nav__label" aria-hidden="true">Your space</span>
+        <button class="tab" data-switch-tab="activity">Journal</button>
+        <button class="tab" data-switch-tab="recommendations">Postcards</button>
+        <button class="tab" data-switch-tab="collections">Collections</button>
+        <button class="tab" data-switch-tab="statistics">Statistics</button>
+        <a class="tab" href="/discover">Discover ↗</a>
+        <div id="customTabsContainer"></div>
+        <button class="tab library-nav__manage" id="manageCustomTabsBtn" data-action="show-custom-tab-manager">Manage custom tabs</button>
+      </div>
+      <p class="library-nav__hint">Scroll the tabs to explore more <span aria-hidden="true">→</span></p>
     </nav>
 
     <p id="libraryNavigationStatus" role="status" aria-live="polite" aria-atomic="true" hidden></p>
@@ -455,65 +468,67 @@
 
 
     <!-- Movies Tab Content -->
-    <div id="movies-tab" class="tab-content active">
-      <div class="card">
-        <div class="collapsible-header" data-toggle-collapsible="movieForm">
-          <h2 style="margin: 0; display: inline-block;">Add Movie</h2>
-          <span class="collapsible-icon" id="movieFormIcon">▼</span>
+    <div id="movies-tab" class="tab-content active library-section">
+      <div class="card library-add-panel">
+        <div class="collapsible-header">
+          <h2><button type="button" class="library-add-toggle" aria-expanded="false" data-toggle-collapsible="movieForm" aria-controls="movieFormContent"><span>Add Movie</span><span class="collapsible-icon" id="movieFormIcon" aria-hidden="true">▼</span></button></h2>
         </div>
-        <div class="collapsible-content" id="movieFormContent" style="display: none;">
-          <form id="addMovieForm">
-            <div style="display: flex; gap: 10px;">
-              <input type="text" id="movieTitle" placeholder="Title" required style="flex: 1;">
-              <button type="button" id="searchMovieBtn" class="action-btn" style="white-space: nowrap;">Search</button>
+        <div class="collapsible-content" id="movieFormContent" hidden>
+          <form id="addMovieForm" class="library-add-form">
+            <div class="library-add-search">
+              <label class="library-field-label" for="movieTitle">Title</label>
+              <input type="text" id="movieTitle" placeholder="Title" required>
+              <button type="button" id="searchMovieBtn" class="action-btn library-search-button">Search</button>
             </div>
-            <div>
+            <div class="library-add-field">
+              <label class="library-field-label" for="movieDirector">Director</label>
               <input type="text" id="movieDirector" placeholder="Director (auto-filled from search)">
             </div>
-            <div>
+            <div class="library-add-field">
+              <label class="library-field-label" for="movieYear">Release year</label>
               <input type="number" id="movieYear" placeholder="Year (auto-filled from search)">
             </div>
-            <div>
+            <div class="library-add-field">
+              <label class="library-field-label" for="movieRating">Your rating</label>
               <input type="number" min="0" max="10" step="0.1" id="movieRating" placeholder="Rating (0-10.0)">
             </div>
-            <div>
+            <div class="library-add-check">
               <label>Watched <input type="checkbox" id="movieWatched"></label>
             </div>
-            <div>
+            <div class="library-add-field library-add-review">
+              <label class="library-field-label" for="movieReview">Your review</label>
               <textarea id="movieReview" class="review-textarea" data-review-quality-input placeholder="Review (optional)" rows="1"></textarea>
               <p class="review-quality-hint"><span class="review-quality-count" data-review-counter-for="movieReview">0/80 characters - add context for the community feed</span>. Search-ready reviews use 240+ characters, 35+ words, complete thoughts, varied language, and no links or contact details. <a href="/review-guidelines" target="_blank" rel="noopener noreferrer">Review guide</a></p>
             </div>
-            <div>
+            <div class="library-add-check">
               <label>Public Review <input type="checkbox" id="movieReviewPublic"></label>
             </div>
             <button type="submit" class="action-btn">Add Movie</button>
           </form>
         </div>
       </div>
-      <div class="card">
-        <div style="display:flex; justify-content: space-between; align-items: center; margin-bottom: 10px;">
-          <h2 style="margin: 0;">Movies</h2>
-          <span id="movieCount" style="font-weight: bold;"></span>
+      <div class="card library-panel">
+        <div class="library-heading">
+          <h2>Movies</h2>
+          <span id="movieCount" class="library-count"></span>
         </div>
-        <div style="display:flex; flex-wrap: wrap; gap: 10px; margin-bottom: 10px;">
-          <input type="text" id="movieSearch" placeholder="Search by title or director"
-            style="flex: 2; min-width: 200px;">
-          <select id="movieSort" style="flex: 1; min-width: 200px;">
+        <div class="library-toolbar">
+          <input type="text" id="movieSearch" aria-label="Search this library" placeholder="Search by title or director"
+            class="library-filter-search">
+          <select id="movieSort" aria-label="Sort this library" class="library-sort">
             <option value="">Sort by...</option>
             <option value="rating-asc">Rating (Low → High)</option>
             <option value="rating-desc">Rating (High → Low)</option>
             <option value="year-asc">Year (Oldest → Newest)</option>
             <option value="year-desc">Year (Newest → Oldest)</option>
           </select>
-          <button id="loadMovies" class="action-btn" style="flex: 1; min-width: 120px;">Refresh</button>
-          <button id="exportMovies" class="action-btn"
-            style="flex: 1; min-width: 120px; background-color: #4caf50;">Export Data</button>
-          <button id="importMovies" class="action-btn"
-            style="flex: 1; min-width: 120px; background-color: #ff9800;">Import Data</button>
+          <button id="loadMovies" class="action-btn library-utility">Refresh</button>
+          <button id="exportMovies" class="action-btn library-utility">Export Data</button>
+          <button id="importMovies" class="action-btn library-utility">Import Data</button>
         </div>
         <input type="file" id="importFile" accept=".json" style="display: none;">
-        <div class="table-container">
-          <table id="movieTable">
+        <div class="table-container library-table-wrap">
+          <table id="movieTable" class="library-table">
             <thead>
               <tr>
                 <th>Poster</th>
@@ -535,68 +550,71 @@
     </div>
 
     <!-- TV Shows Tab Content -->
-    <div id="tv-shows-tab" class="tab-content">
-      <div class="card">
-        <div class="collapsible-header" data-toggle-collapsible="tvForm">
-          <h2 style="margin: 0; display: inline-block;">Add TV Show</h2>
-          <span class="collapsible-icon" id="tvFormIcon">▼</span>
+    <div id="tv-shows-tab" class="tab-content library-section">
+      <div class="card library-add-panel">
+        <div class="collapsible-header">
+          <h2><button type="button" class="library-add-toggle" aria-expanded="false" data-toggle-collapsible="tvForm" aria-controls="tvFormContent"><span>Add TV Show</span><span class="collapsible-icon" id="tvFormIcon" aria-hidden="true">▼</span></button></h2>
         </div>
-        <div class="collapsible-content" id="tvFormContent" style="display: none;">
-          <form id="addTVShowForm">
-            <div style="display: flex; gap: 10px;">
-              <input type="text" id="tvTitle" placeholder="Title" required style="flex: 1;">
-              <button type="button" id="searchTVShowBtn" class="action-btn" style="white-space: nowrap;">Search</button>
+        <div class="collapsible-content" id="tvFormContent" hidden>
+          <form id="addTVShowForm" class="library-add-form">
+            <div class="library-add-search">
+              <label class="library-field-label" for="tvTitle">Title</label>
+              <input type="text" id="tvTitle" placeholder="Title" required>
+              <button type="button" id="searchTVShowBtn" class="action-btn library-search-button">Search</button>
             </div>
-            <div>
+            <div class="library-add-field">
+              <label class="library-field-label" for="tvYear">Release year</label>
               <input type="number" id="tvYear" placeholder="Year (auto-filled from search)">
             </div>
-            <div>
+            <div class="library-add-field">
+              <label class="library-field-label" for="tvSeasons">Seasons</label>
               <input type="number" id="tvSeasons" placeholder="Seasons (optional)">
             </div>
-            <div>
+            <div class="library-add-field">
+              <label class="library-field-label" for="tvEpisodes">Episodes</label>
               <input type="number" id="tvEpisodes" placeholder="Episodes (optional)">
             </div>
-            <div>
+            <div class="library-add-field">
+              <label class="library-field-label" for="tvRating">Your rating</label>
               <input type="number" min="0" max="10" step="0.1" id="tvRating" placeholder="Rating (0-10.0)">
             </div>
-            <div>
+            <div class="library-add-check">
               <label>Watched <input type="checkbox" id="tvWatched"></label>
             </div>
-            <div>
+            <div class="library-add-field library-add-review">
+              <label class="library-field-label" for="tvReview">Your review</label>
               <textarea id="tvReview" class="review-textarea" data-review-quality-input placeholder="Review (optional)" rows="1"></textarea>
               <p class="review-quality-hint"><span class="review-quality-count" data-review-counter-for="tvReview">0/80 characters - add context for the community feed</span>. Search-ready reviews use 240+ characters, 35+ words, complete thoughts, varied language, and no links or contact details. <a href="/review-guidelines" target="_blank" rel="noopener noreferrer">Review guide</a></p>
             </div>
-            <div>
+            <div class="library-add-check">
               <label>Public Review <input type="checkbox" id="tvReviewPublic"></label>
             </div>
             <button type="submit" class="action-btn">Add TV Show</button>
           </form>
         </div>
       </div>
-      <div class="card">
-        <div style="display:flex; justify-content: space-between; align-items: center; margin-bottom: 10px;">
-          <h2 style="margin: 0;">TV Shows</h2>
-          <span id="tvShowCount" style="font-weight: bold;"></span>
+      <div class="card library-panel">
+        <div class="library-heading">
+          <h2>TV Shows</h2>
+          <span id="tvShowCount" class="library-count"></span>
         </div>
-        <div style="display:flex; flex-wrap: wrap; gap: 10px; margin-bottom: 10px;">
-          <input type="text" id="tvSearch" placeholder="Search by title"
-            style="flex: 2; min-width: 200px;">
-          <select id="tvSort" style="flex: 1; min-width: 200px;">
+        <div class="library-toolbar">
+          <input type="text" id="tvSearch" aria-label="Search this library" placeholder="Search by title"
+            class="library-filter-search">
+          <select id="tvSort" aria-label="Sort this library" class="library-sort">
             <option value="">Sort by...</option>
             <option value="rating-asc">Rating (Low → High)</option>
             <option value="rating-desc">Rating (High → Low)</option>
             <option value="year-asc">Year (Oldest → Newest)</option>
             <option value="year-desc">Year (Newest → Oldest)</option>
           </select>
-          <button id="loadTVShows" class="action-btn" style="flex: 1; min-width: 120px;">Refresh</button>
-          <button id="exportTVShows" class="action-btn"
-            style="flex: 1; min-width: 120px; background-color: #4caf50;">Export Data</button>
-          <button id="importTVShows" class="action-btn"
-            style="flex: 1; min-width: 120px; background-color: #ff9800;">Import Data</button>
+          <button id="loadTVShows" class="action-btn library-utility">Refresh</button>
+          <button id="exportTVShows" class="action-btn library-utility">Export Data</button>
+          <button id="importTVShows" class="action-btn library-utility">Import Data</button>
         </div>
         <input type="file" id="importTVFile" accept=".json" style="display: none;">
-        <div class="table-container">
-          <table id="tvShowTable">
+        <div class="table-container library-table-wrap">
+          <table id="tvShowTable" class="library-table">
             <thead>
               <tr>
                 <th>Poster</th>
@@ -619,68 +637,71 @@
     </div>
 
     <!-- Anime Tab Content -->
-    <div id="anime-tab" class="tab-content">
-      <div class="card">
-        <div class="collapsible-header" data-toggle-collapsible="animeForm">
-          <h2 style="margin: 0; display: inline-block;">Add Anime</h2>
-          <span class="collapsible-icon" id="animeFormIcon">▼</span>
+    <div id="anime-tab" class="tab-content library-section">
+      <div class="card library-add-panel">
+        <div class="collapsible-header">
+          <h2><button type="button" class="library-add-toggle" aria-expanded="false" data-toggle-collapsible="animeForm" aria-controls="animeFormContent"><span>Add Anime</span><span class="collapsible-icon" id="animeFormIcon" aria-hidden="true">▼</span></button></h2>
         </div>
-        <div class="collapsible-content" id="animeFormContent" style="display: none;">
-          <form id="addAnimeForm">
-            <div style="display: flex; gap: 10px;">
-              <input type="text" id="animeTitle" placeholder="Title" required style="flex: 1;">
-              <button type="button" id="searchAnimeBtn" class="action-btn" style="white-space: nowrap;">Search</button>
+        <div class="collapsible-content" id="animeFormContent" hidden>
+          <form id="addAnimeForm" class="library-add-form">
+            <div class="library-add-search">
+              <label class="library-field-label" for="animeTitle">Title</label>
+              <input type="text" id="animeTitle" placeholder="Title" required>
+              <button type="button" id="searchAnimeBtn" class="action-btn library-search-button">Search</button>
             </div>
-            <div>
+            <div class="library-add-field">
+              <label class="library-field-label" for="animeYear">Release year</label>
               <input type="number" id="animeYear" placeholder="Year (auto-filled from search)">
             </div>
-            <div>
+            <div class="library-add-field">
+              <label class="library-field-label" for="animeSeasons">Seasons</label>
               <input type="number" id="animeSeasons" placeholder="Seasons (optional)">
             </div>
-            <div>
+            <div class="library-add-field">
+              <label class="library-field-label" for="animeEpisodes">Episodes</label>
               <input type="number" id="animeEpisodes" placeholder="Episodes (optional)">
             </div>
-            <div>
+            <div class="library-add-field">
+              <label class="library-field-label" for="animeRating">Your rating</label>
               <input type="number" min="0" max="10" step="0.1" id="animeRating" placeholder="Rating (0-10.0)">
             </div>
-            <div>
+            <div class="library-add-check">
               <label>Watched <input type="checkbox" id="animeWatched"></label>
             </div>
-            <div>
+            <div class="library-add-field library-add-review">
+              <label class="library-field-label" for="animeReview">Your review</label>
               <textarea id="animeReview" class="review-textarea" data-review-quality-input placeholder="Review (optional)" rows="1"></textarea>
               <p class="review-quality-hint"><span class="review-quality-count" data-review-counter-for="animeReview">0/80 characters - add context for the community feed</span>. Search-ready reviews use 240+ characters, 35+ words, complete thoughts, varied language, and no links or contact details. <a href="/review-guidelines" target="_blank" rel="noopener noreferrer">Review guide</a></p>
             </div>
-            <div>
+            <div class="library-add-check">
               <label>Public Review <input type="checkbox" id="animeReviewPublic"></label>
             </div>
             <button type="submit" class="action-btn">Add Anime</button>
           </form>
         </div>
       </div>
-      <div class="card">
-        <div style="display:flex; justify-content: space-between; align-items: center; margin-bottom: 10px;">
-          <h2 style="margin: 0;">Anime</h2>
-          <span id="animeCount" style="font-weight: bold;"></span>
+      <div class="card library-panel">
+        <div class="library-heading">
+          <h2>Anime</h2>
+          <span id="animeCount" class="library-count"></span>
         </div>
-        <div style="display:flex; flex-wrap: wrap; gap: 10px; margin-bottom: 10px;">
-          <input type="text" id="animeSearch" placeholder="Search by title"
-            style="flex: 2; min-width: 200px;">
-          <select id="animeSort" style="flex: 1; min-width: 200px;">
+        <div class="library-toolbar">
+          <input type="text" id="animeSearch" aria-label="Search this library" placeholder="Search by title"
+            class="library-filter-search">
+          <select id="animeSort" aria-label="Sort this library" class="library-sort">
             <option value="">Sort by...</option>
             <option value="rating-asc">Rating (Low → High)</option>
             <option value="rating-desc">Rating (High → Low)</option>
             <option value="year-asc">Year (Oldest → Newest)</option>
             <option value="year-desc">Year (Newest → Oldest)</option>
           </select>
-          <button id="loadAnime" class="action-btn" style="flex: 1; min-width: 120px;">Refresh</button>
-          <button id="exportAnime" class="action-btn"
-            style="flex: 1; min-width: 120px; background-color: #4caf50;">Export Data</button>
-          <button id="importAnime" class="action-btn"
-            style="flex: 1; min-width: 120px; background-color: #ff9800;">Import Data</button>
+          <button id="loadAnime" class="action-btn library-utility">Refresh</button>
+          <button id="exportAnime" class="action-btn library-utility">Export Data</button>
+          <button id="importAnime" class="action-btn library-utility">Import Data</button>
         </div>
         <input type="file" id="importAnimeFile" accept=".json" style="display: none;">
-        <div class="table-container">
-          <table id="animeTable">
+        <div class="table-container library-table-wrap">
+          <table id="animeTable" class="library-table">
             <thead>
               <tr>
                 <th>Poster</th>
@@ -703,68 +724,71 @@
     </div>
 
     <!-- Music Tab Content -->
-    <div id="music-tab" class="tab-content">
-      <div class="card">
-        <div class="collapsible-header" data-toggle-collapsible="musicForm">
-          <h2 style="margin: 0; display: inline-block;">Add Music</h2>
-          <span class="collapsible-icon" id="musicFormIcon">▼</span>
+    <div id="music-tab" class="tab-content library-section">
+      <div class="card library-add-panel">
+        <div class="collapsible-header">
+          <h2><button type="button" class="library-add-toggle" aria-expanded="false" data-toggle-collapsible="musicForm" aria-controls="musicFormContent"><span>Add Music</span><span class="collapsible-icon" id="musicFormIcon" aria-hidden="true">▼</span></button></h2>
         </div>
-        <div class="collapsible-content" id="musicFormContent" style="display: none;">
-          <form id="addMusicForm">
-            <div style="display: flex; gap: 10px;">
-              <input type="text" id="musicTitle" placeholder="Title" required style="flex: 1;">
-              <button type="button" id="searchMusicBtn" class="action-btn" style="white-space: nowrap;">Search</button>
+        <div class="collapsible-content" id="musicFormContent" hidden>
+          <form id="addMusicForm" class="library-add-form">
+            <div class="library-add-search">
+              <label class="library-field-label" for="musicTitle">Title</label>
+              <input type="text" id="musicTitle" placeholder="Title" required>
+              <button type="button" id="searchMusicBtn" class="action-btn library-search-button">Search</button>
             </div>
-            <div>
+            <div class="library-add-field">
+              <label class="library-field-label" for="musicArtist">Artist</label>
               <input type="text" id="musicArtist" placeholder="Artist (auto-filled from search)">
             </div>
-            <div>
+            <div class="library-add-field">
+              <label class="library-field-label" for="musicYear">Release year</label>
               <input type="number" id="musicYear" placeholder="Year (auto-filled from search)">
             </div>
-            <div>
+            <div class="library-add-field">
+              <label class="library-field-label" for="musicGenre">Genre</label>
               <input type="text" id="musicGenre" placeholder="Genre">
             </div>
-            <div>
+            <div class="library-add-field">
+              <label class="library-field-label" for="musicRating">Your rating</label>
               <input type="number" min="0" max="10" step="0.1" id="musicRating" placeholder="Rating (0-10.0)">
             </div>
-            <div>
+            <div class="library-add-check">
               <label>Listened <input type="checkbox" id="musicListened"></label>
             </div>
-            <div>
+            <div class="library-add-field library-add-review">
+              <label class="library-field-label" for="musicReview">Your review</label>
               <textarea id="musicReview" class="review-textarea" data-review-quality-input placeholder="Review (optional)" rows="1"></textarea>
               <p class="review-quality-hint"><span class="review-quality-count" data-review-counter-for="musicReview">0/80 characters - add context for the community feed</span>. Search-ready reviews use 240+ characters, 35+ words, complete thoughts, varied language, and no links or contact details. <a href="/review-guidelines" target="_blank" rel="noopener noreferrer">Review guide</a></p>
             </div>
-            <div>
+            <div class="library-add-check">
               <label>Public Review <input type="checkbox" id="musicReviewPublic"></label>
             </div>
             <button type="submit" class="action-btn">Add Music</button>
           </form>
         </div>
       </div>
-      <div class="card">
-        <div style="display:flex; justify-content: space-between; align-items: center; margin-bottom: 10px;">
-          <h2 style="margin: 0;">Music</h2>
-          <span id="musicCount" style="font-weight: bold;"></span>
+      <div class="card library-panel">
+        <div class="library-heading">
+          <h2>Music</h2>
+          <span id="musicCount" class="library-count"></span>
         </div>
-        <div style="display:flex; flex-wrap: wrap; gap: 10px; margin-bottom: 10px;">
-          <input type="text" id="musicSearch" placeholder="Search by title, artist, or genre"
-            style="flex: 2; min-width: 200px;">
-          <select id="musicSort" style="flex: 1; min-width: 200px;">
+        <div class="library-toolbar">
+          <input type="text" id="musicSearch" aria-label="Search this library" placeholder="Search by title, artist, or genre"
+            class="library-filter-search">
+          <select id="musicSort" aria-label="Sort this library" class="library-sort">
             <option value="">Sort by...</option>
             <option value="rating-asc">Rating (Low → High)</option>
             <option value="rating-desc">Rating (High → Low)</option>
             <option value="year-asc">Year (Oldest → Newest)</option>
             <option value="year-desc">Year (Newest → Oldest)</option>
           </select>
-          <button id="loadMusic" class="action-btn" style="flex: 1; min-width: 120px;">Refresh</button>
-          <button id="exportMusic" class="action-btn"
-            style="flex: 1; min-width: 120px; background-color: #4caf50;">Export Data</button>
-          <button id="importMusic" class="action-btn"
-            style="flex: 1; min-width: 120px; background-color: #ff9800;">Import Data</button>
+          <button id="loadMusic" class="action-btn library-utility">Refresh</button>
+          <button id="exportMusic" class="action-btn library-utility">Export Data</button>
+          <button id="importMusic" class="action-btn library-utility">Import Data</button>
         </div>
         <input type="file" id="importMusicFile" accept=".json" style="display: none;">
-        <div class="table-container">
-          <table id="musicTable">
+        <div class="table-container library-table-wrap">
+          <table id="musicTable" class="library-table">
             <thead>
               <tr>
                 <th>Cover Art</th>
@@ -786,68 +810,71 @@
     </div>
 
     <!-- Books Tab Content -->
-    <div id="books-tab" class="tab-content">
-      <div class="card">
-        <div class="collapsible-header" data-toggle-collapsible="bookForm">
-          <h2 style="margin: 0; display: inline-block;">Add Book</h2>
-          <span class="collapsible-icon" id="bookFormIcon">▼</span>
+    <div id="books-tab" class="tab-content library-section">
+      <div class="card library-add-panel">
+        <div class="collapsible-header">
+          <h2><button type="button" class="library-add-toggle" aria-expanded="false" data-toggle-collapsible="bookForm" aria-controls="bookFormContent"><span>Add Book</span><span class="collapsible-icon" id="bookFormIcon" aria-hidden="true">▼</span></button></h2>
         </div>
-        <div class="collapsible-content" id="bookFormContent" style="display: none;">
-          <form id="addBookForm">
-            <div style="display: flex; gap: 10px;">
-              <input type="text" id="bookTitle" placeholder="Title" required style="flex: 1;">
-              <button type="button" id="searchBookBtn" class="action-btn" style="white-space: nowrap;">Search</button>
+        <div class="collapsible-content" id="bookFormContent" hidden>
+          <form id="addBookForm" class="library-add-form">
+            <div class="library-add-search">
+              <label class="library-field-label" for="bookTitle">Title</label>
+              <input type="text" id="bookTitle" placeholder="Title" required>
+              <button type="button" id="searchBookBtn" class="action-btn library-search-button">Search</button>
             </div>
-            <div>
+            <div class="library-add-field">
+              <label class="library-field-label" for="bookAuthor">Author</label>
               <input type="text" id="bookAuthor" placeholder="Author (auto-filled from search)">
             </div>
-            <div>
+            <div class="library-add-field">
+              <label class="library-field-label" for="bookYear">Release year</label>
               <input type="number" id="bookYear" placeholder="Year (auto-filled from search)">
             </div>
-            <div>
+            <div class="library-add-field">
+              <label class="library-field-label" for="bookGenre">Genre</label>
               <input type="text" id="bookGenre" placeholder="Genre">
             </div>
-            <div>
+            <div class="library-add-field">
+              <label class="library-field-label" for="bookRating">Your rating</label>
               <input type="number" min="0" max="10" step="0.1" id="bookRating" placeholder="Rating (0-10.0)">
             </div>
-            <div>
+            <div class="library-add-check">
               <label>Read <input type="checkbox" id="bookRead"></label>
             </div>
-            <div>
+            <div class="library-add-field library-add-review">
+              <label class="library-field-label" for="bookReview">Your review</label>
               <textarea id="bookReview" class="review-textarea" data-review-quality-input placeholder="Review (optional)" rows="1"></textarea>
               <p class="review-quality-hint"><span class="review-quality-count" data-review-counter-for="bookReview">0/80 characters - add context for the community feed</span>. Search-ready reviews use 240+ characters, 35+ words, complete thoughts, varied language, and no links or contact details. <a href="/review-guidelines" target="_blank" rel="noopener noreferrer">Review guide</a></p>
             </div>
-            <div>
+            <div class="library-add-check">
               <label>Public Review <input type="checkbox" id="bookReviewPublic"></label>
             </div>
             <button type="submit" class="action-btn">Add Book</button>
           </form>
         </div>
       </div>
-      <div class="card">
-        <div style="display:flex; justify-content: space-between; align-items: center; margin-bottom: 10px;">
-          <h2 style="margin: 0;">Books</h2>
-          <span id="bookCount" style="font-weight: bold;"></span>
+      <div class="card library-panel">
+        <div class="library-heading">
+          <h2>Books</h2>
+          <span id="bookCount" class="library-count"></span>
         </div>
-        <div style="display:flex; flex-wrap: wrap; gap: 10px; margin-bottom: 10px;">
-          <input type="text" id="bookSearch" placeholder="Search by title, author, or genre"
-            style="flex: 2; min-width: 200px;">
-          <select id="bookSort" style="flex: 1; min-width: 200px;">
+        <div class="library-toolbar">
+          <input type="text" id="bookSearch" aria-label="Search this library" placeholder="Search by title, author, or genre"
+            class="library-filter-search">
+          <select id="bookSort" aria-label="Sort this library" class="library-sort">
             <option value="">Sort by...</option>
             <option value="rating-asc">Rating (Low → High)</option>
             <option value="rating-desc">Rating (High → Low)</option>
             <option value="year-asc">Year (Oldest → Newest)</option>
             <option value="year-desc">Year (Newest → Oldest)</option>
           </select>
-          <button id="loadBooks" class="action-btn" style="flex: 1; min-width: 120px;">Refresh</button>
-          <button id="exportBooks" class="action-btn"
-            style="flex: 1; min-width: 120px; background-color: #4caf50;">Export Data</button>
-          <button id="importBooks" class="action-btn"
-            style="flex: 1; min-width: 120px; background-color: #ff9800;">Import Data</button>
+          <button id="loadBooks" class="action-btn library-utility">Refresh</button>
+          <button id="exportBooks" class="action-btn library-utility">Export Data</button>
+          <button id="importBooks" class="action-btn library-utility">Import Data</button>
         </div>
         <input type="file" id="importBookFile" accept=".json" style="display: none;">
-        <div class="table-container">
-          <table id="bookTable">
+        <div class="table-container library-table-wrap">
+          <table id="bookTable" class="library-table">
             <thead>
               <tr>
                 <th>Cover Art</th>
@@ -869,62 +896,63 @@
     </div>
 
     <!-- Video Games Tab Content -->
-    <div id="video-games-tab" class="tab-content">
-      <div class="card">
-        <div class="collapsible-header" data-toggle-collapsible="videoGameForm">
-          <h2 style="margin: 0; display: inline-block;">Add Video Game</h2>
-          <span class="collapsible-icon" id="videoGameFormIcon">▼</span>
+    <div id="video-games-tab" class="tab-content library-section">
+      <div class="card library-add-panel">
+        <div class="collapsible-header">
+          <h2><button type="button" class="library-add-toggle" aria-expanded="false" data-toggle-collapsible="videoGameForm" aria-controls="videoGameFormContent"><span>Add Video Game</span><span class="collapsible-icon" id="videoGameFormIcon" aria-hidden="true">▼</span></button></h2>
         </div>
-        <div class="collapsible-content" id="videoGameFormContent" style="display: none;">
-          <form id="addVideoGameForm">
-            <div style="display: flex; gap: 10px;">
-              <input type="text" id="videoGameTitle" placeholder="Title" required style="flex: 1;">
-              <button type="button" id="searchVideoGameBtn" class="action-btn" style="white-space: nowrap;">Search</button>
+        <div class="collapsible-content" id="videoGameFormContent" hidden>
+          <form id="addVideoGameForm" class="library-add-form">
+            <div class="library-add-search">
+              <label class="library-field-label" for="videoGameTitle">Title</label>
+              <input type="text" id="videoGameTitle" placeholder="Title" required>
+              <button type="button" id="searchVideoGameBtn" class="action-btn library-search-button">Search</button>
             </div>
-            <div>
+            <div class="library-add-field">
+              <label class="library-field-label" for="videoGameGenres">Genres</label>
               <input type="text" id="videoGameGenres" placeholder="Genres (comma-separated)">
             </div>
-            <div>
+            <div class="library-add-field">
+              <label class="library-field-label" for="videoGameRating">Your rating</label>
               <input type="number" min="0" max="10" step="0.1" id="videoGameRating" placeholder="Rating (0-10.0)">
             </div>
-            <div>
+            <div class="library-add-check">
               <label>Played <input type="checkbox" id="videoGamePlayed"></label>
             </div>
-            <div>
+            <div class="library-add-field library-add-review">
+              <label class="library-field-label" for="videoGameReview">Your review</label>
               <textarea id="videoGameReview" class="review-textarea" data-review-quality-input placeholder="Review (optional)" rows="1"></textarea>
               <p class="review-quality-hint"><span class="review-quality-count" data-review-counter-for="videoGameReview">0/80 characters - add context for the community feed</span>. Search-ready reviews use 240+ characters, 35+ words, complete thoughts, varied language, and no links or contact details. <a href="/review-guidelines" target="_blank" rel="noopener noreferrer">Review guide</a></p>
             </div>
-            <div>
+            <div class="library-add-check">
               <label>Public Review <input type="checkbox" id="videoGameReviewPublic"></label>
             </div>
             <button type="submit" class="action-btn">Add Video Game</button>
           </form>
         </div>
       </div>
-      <div class="card">
-        <div style="display:flex; justify-content: space-between; align-items: center; margin-bottom: 10px;">
-          <h2 style="margin: 0;">Video Games</h2>
-          <span id="videoGameCount" style="font-weight: bold;"></span>
+      <div class="card library-panel">
+        <div class="library-heading">
+          <h2>Video Games</h2>
+          <span id="videoGameCount" class="library-count"></span>
         </div>
-        <div style="display:flex; flex-wrap: wrap; gap: 10px; margin-bottom: 10px;">
-          <input type="text" id="videoGameSearch" placeholder="Search by title or genres"
-            style="flex: 2; min-width: 200px;">
-          <select id="videoGameSort" style="flex: 1; min-width: 200px;">
+        <div class="library-toolbar">
+          <input type="text" id="videoGameSearch" aria-label="Search this library" placeholder="Search by title or genres"
+            class="library-filter-search">
+          <select id="videoGameSort" aria-label="Sort this library" class="library-sort">
             <option value="">Sort by...</option>
             <option value="rating-asc">Rating (Low → High)</option>
             <option value="rating-desc">Rating (High → Low)</option>
             <option value="release_date-asc">Release Date (Oldest → Newest)</option>
             <option value="release_date-desc">Release Date (Newest → Oldest)</option>
           </select>
-          <button id="loadVideoGames" class="action-btn" style="flex: 1; min-width: 120px;">Refresh</button>
-          <button id="exportVideoGames" class="action-btn"
-            style="flex: 1; min-width: 120px; background-color: #4caf50;">Export Data</button>
-          <button id="importVideoGames" class="action-btn"
-            style="flex: 1; min-width: 120px; background-color: #ff9800;">Import Data</button>
+          <button id="loadVideoGames" class="action-btn library-utility">Refresh</button>
+          <button id="exportVideoGames" class="action-btn library-utility">Export Data</button>
+          <button id="importVideoGames" class="action-btn library-utility">Import Data</button>
         </div>
         <input type="file" id="importVideoGameFile" accept=".json" style="display: none;">
-        <div class="table-container">
-          <table id="videoGameTable">
+        <div class="table-container library-table-wrap">
+          <table id="videoGameTable" class="library-table">
             <thead>
               <tr>
                 <th>Cover Art</th>
@@ -1925,7 +1953,7 @@
   <script src="./auth.js?v=20260924-import-studio-final"></script>
   <script src="/static/import-studio.js?v=20260924-import-studio-final"></script>
   <script src="/static/progress.js?v=20260922-progress"></script>
-  <script src="./app.js?v=20260924-import-studio-final"></script>
+  <script src="./app.js?v=20260924-visual-4"></script>
 
   <!-- Account Modal -->
   <div id="accountModal" class="modal-overlay" style="display: none;">

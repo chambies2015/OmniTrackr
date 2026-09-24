@@ -1,0 +1,174 @@
+/* The signed-in workspace shares one visual vocabulary. Public editorial pages
+   keep their own presentation; existing layout and interaction hooks stay put. */
+body.app-shell {
+  --bg: #f3f5f9;
+  --fg: #232b3e;
+  --fg-secondary: #606b80;
+  --card-bg: #ffffff;
+  --surface-muted: #f7f8fc;
+  --surface-hover: #edf0f8;
+  --field-bg: #ffffff;
+  --border: #dce1ec;
+  --primary: #6149bd;
+  --primary-hover: #543da9;
+  --accent-solid: #6750c5;
+  --on-accent: #ffffff;
+  --accent-soft: #eeeafa;
+  --teal: #087c70;
+  --teal-soft: #e7f5f1;
+  --danger: #b63249;
+  --table-row-alt: #f8f9fc;
+  --shadow-sm: 0 2px 8px #24314b05;
+  --shadow-lg: 0 24px 70px #18223726;
+  --radius: 14px;
+  color-scheme: light;
+  background: var(--bg);
+  color: var(--fg);
+  font-family: Inter, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+  font-size: 14px;
+  padding: 20px 28px 0;
+}
+
+body.app-shell.dark-mode {
+  --bg: #10141d;
+  --fg: #edf0f7;
+  --fg-secondary: #a4aec2;
+  --card-bg: #191f2c;
+  --surface-muted: #151b27;
+  --surface-hover: #242c3d;
+  --field-bg: #131925;
+  --border: #30394c;
+  --primary: #baa9fb;
+  --primary-hover: #d0c3ff;
+  --accent-solid: #b6a2fa;
+  --on-accent: #211440;
+  --accent-soft: #2c2542;
+  --teal: #8ad8c3;
+  --teal-soft: #1b3535;
+  --danger: #ff9caa;
+  --table-row-alt: #1c2331;
+  --shadow-sm: 0 2px 8px #00000012;
+  --shadow-lg: 0 24px 70px #00000066;
+  color-scheme: dark;
+}
+
+body.app-shell :is(button, input, select, textarea) { font-family: inherit; }
+body.app-shell :is(button, a, input, select, textarea, summary):focus-visible { outline: 3px solid var(--primary); outline-offset: 3px; }
+body.app-shell input::placeholder, body.app-shell textarea::placeholder { color: var(--fg-secondary); opacity: 1; }
+body.app-shell :is(button, select):disabled { cursor: not-allowed; }
+body.app-shell .container { padding: 0; width: calc(100% - 250px); max-width: 1480px; margin: 0 auto 0 250px; }
+body.app-shell .container.sidebar-hidden { width: 100%; max-width: 1480px; margin-inline: auto; }
+
+/* A quiet account strip leaves the library search and capture action prominent. */
+body.app-shell .account-toolbar { width: 100%; max-width: 1480px; margin: 0 auto 16px; gap: 8px; }
+body.app-shell .account-toolbar :is(#toggleMode, #notificationBell, #userDisplay, #showFriendsSidebar, #logoutBtn) {
+  background: transparent; border: 1px solid transparent; border-radius: 9px;
+  color: var(--fg-secondary); box-shadow: none; font-size: .8rem; font-weight: 500;
+  min-height: 40px; padding: 8px 12px; transform: none;
+}
+body.app-shell .account-toolbar :is(#toggleMode, #notificationBell, #userDisplay, #showFriendsSidebar, #logoutBtn):hover { background: var(--surface-hover); color: var(--fg); }
+body.app-shell .account-toolbar #userDisplay { color: var(--fg); background: var(--card-bg); border-color: var(--border); }
+body.app-shell .account-toolbar #notificationBell { font-size: 1rem; }
+body.app-shell .account-toolbar .user-profile-picture { border: 1px solid var(--border); width: 26px; height: 26px; }
+body.app-shell .notification-dropdown { background: var(--card-bg); border: 1px solid var(--border); box-shadow: var(--shadow-lg); color: var(--fg); }
+
+body.app-shell .header { background: var(--card-bg); border: 1px solid var(--border); border-radius: var(--radius); padding: 22px 24px; gap: 28px; margin-bottom: 12px; box-shadow: var(--shadow-sm); }
+body.app-shell .app-brand { display: flex; align-items: center; gap: 12px; }
+body.app-shell .app-brand__mark { display: grid; place-items: center; width: 44px; height: 44px; flex: 0 0 auto; background: var(--accent-soft); color: var(--primary); border-radius: 13px; }
+body.app-shell .header .app-title { background: none; -webkit-text-fill-color: currentColor; color: var(--fg); filter: none; text-shadow: none; text-transform: none; font: 700 1.28rem/1.2 Inter, sans-serif; letter-spacing: -.04em; }
+body.app-shell .app-brand__caption { color: var(--fg-secondary); font-size: .7rem; margin: 5px 0 0; }
+body.app-shell .library-search__field { background: var(--field-bg); border-color: var(--border); box-shadow: none; color: var(--fg-secondary); border-radius: 10px; min-height: 46px; }
+body.app-shell .library-search__field input, body.app-shell .library-search__field input:focus { background: transparent; color: var(--fg); box-shadow: none; border: 0; }
+body.app-shell .library-search__field input::placeholder { color: var(--fg-secondary); opacity: 1; }
+body.app-shell .library-search__field:focus-within { border-color: var(--primary); box-shadow: 0 0 0 3px var(--accent-soft); }
+body.app-shell .library-search kbd { background: var(--surface-muted); border-color: var(--border); color: var(--fg-secondary); }
+body.app-shell .library-search__results { border-color: var(--border); box-shadow: var(--shadow-lg); }
+body.app-shell .library-search__result:hover, body.app-shell .library-search__result:focus-visible { background: var(--accent-soft); }
+body.app-shell .quick-capture-trigger { background: var(--accent-solid); color: var(--on-accent); border: 1px solid var(--accent-solid); border-radius: 10px; box-shadow: none; backdrop-filter: none; min-height: 46px; font-weight: 600; }
+body.app-shell .quick-capture-trigger:hover, body.app-shell .quick-capture-trigger:focus-visible { box-shadow: none; transform: none; outline-color: var(--primary); }
+body.app-shell .quick-capture-trigger kbd { background: transparent; border-color: currentColor; opacity: .6; }
+
+/* Two compact, independently scrollable rows distinguish libraries from tools. */
+body.app-shell .tabs { display: block; overflow: visible; border: 0; margin: 0 0 22px; }
+body.app-shell .library-nav__group { display: flex; align-items: center; gap: 4px; overflow-x: auto; overscroll-behavior-x: contain; scrollbar-width: thin; scrollbar-color: var(--border) transparent; padding: 3px 0; }
+body.app-shell .library-nav__group--tools { border-top: 1px solid var(--border); margin-top: 3px; }
+body.app-shell .library-nav__label { flex: 0 0 86px; box-sizing: border-box; padding-left: 4px; color: var(--fg-secondary); font-size: .63rem; font-weight: 600; text-transform: uppercase; letter-spacing: .09em; }
+body.app-shell .tabs .tab { background: transparent; color: var(--fg-secondary); border: 1px solid transparent; border-radius: 8px; font-size: .83rem; font-weight: 500; min-height: 42px; padding: 9px 14px; }
+body.app-shell .tabs .tab:hover { background: var(--surface-hover); color: var(--fg); }
+body.app-shell .tabs .tab.active { background: var(--accent-soft); color: var(--primary); border-color: color-mix(in srgb, var(--primary) 30%, var(--border)); font-weight: 700; box-shadow: inset 0 -2px var(--primary); }
+body.app-shell .tabs .library-nav__manage { margin-left: auto; color: var(--fg-secondary); font-size: .75rem; text-decoration: underline; text-underline-offset: 4px; }
+body.app-shell .library-nav__hint { display: none; margin: 4px 0 0; color: var(--fg-secondary); font-size: .68rem; }
+
+/* Shared surfaces and rhythm; dashboard content and ordering stay unchanged. */
+body.app-shell .card { border: 1px solid var(--border); border-radius: var(--radius); box-shadow: var(--shadow-sm); }
+body.app-shell .card:hover { box-shadow: var(--shadow-sm); }
+body.app-shell th { background: var(--surface-muted); color: var(--fg-secondary); box-shadow: none; }
+body.app-shell :is(.daily-dashboard, .next-up-queue, .return-deck, .library-launchpad) { border-color: var(--border); box-shadow: var(--shadow-sm); }
+body.app-shell :is(.return-deck, .library-launchpad) { background: var(--card-bg); }
+body.app-shell .daily-dashboard .library-pulse { background: transparent; }
+body.app-shell .daily-dashboard .todays-pick { background: var(--surface-muted); border-color: var(--border); }
+body.app-shell :is(.library-pulse, .todays-pick, .next-up-queue, .return-deck, .library-launchpad) h2 { font-family: inherit; font-size: 1rem; font-weight: 600; letter-spacing: -.02em; }
+body.app-shell :is(.library-pulse__eyebrow, .return-deck__eyebrow, .library-launchpad__eyebrow) { color: var(--teal); font-size: .65rem; letter-spacing: .08em; font-weight: 600; }
+body.app-shell .library-pulse__item { background: var(--surface-muted); border-color: var(--border); }
+body.app-shell .library-pulse__item:hover { background: var(--surface-hover); border-color: var(--primary); }
+body.app-shell .library-pulse__item-title { font-weight: 600; }
+body.app-shell .daily-dashboard .library-pulse__progress-row { border-color: var(--border); background: var(--surface-muted); }
+body.app-shell .next-up-queue { background: var(--card-bg); }
+body.app-shell .next-up-queue__item { background: var(--surface-muted); border-color: var(--border); }
+body.app-shell .next-up-queue__position { background: var(--accent-soft); color: var(--primary); }
+body.app-shell :is(.next-up-queue__open, .return-deck__open) { color: var(--teal); border-color: var(--border); }
+body.app-shell .next-up-queue__remove { color: var(--danger); }
+body.app-shell :is(.next-up-queue__controls button, .library-pulse__insights, .next-up-queue__toggle, .todays-pick__another) { min-height: 40px; }
+body.app-shell .todays-pick__choice { border-color: var(--teal); }
+body.app-shell .todays-pick__filter select { background: var(--field-bg); color: var(--fg); border-color: var(--border); border-radius: 8px; min-height: 40px; }
+body.app-shell :is(.daily-dashboard, .next-up-queue, .return-deck) .progress-checkpoint { color: var(--teal); }
+body.app-shell .progress-update { background: var(--teal-soft); border-color: var(--border); color: var(--teal); }
+body.app-shell button.action-btn { background: var(--accent-solid); color: var(--on-accent); border: 1px solid transparent; border-radius: 8px; box-shadow: none; font-weight: 600; transform: none; }
+body.app-shell button.action-btn:hover { box-shadow: none; transform: none; filter: brightness(.96); }
+body.app-shell button.action-btn:disabled { filter: none; opacity: .5; }
+body.app-shell :is(.todays-pick__open, .library-launchpad__primary) { margin: 0; }
+body.app-shell .library-launchpad__secondary { background: var(--surface-muted); color: var(--fg); border-color: var(--border); }
+body.app-shell .friends-sidebar { background: var(--card-bg); border-right: 1px solid var(--border); box-shadow: none; }
+body.app-shell .friends-sidebar-header { background: var(--surface-muted); border-color: var(--border); }
+body.app-shell .friends-sidebar-header h2 { font-family: inherit; font-size: 1.15rem; }
+body.app-shell .sidebar-toggle-btn { background: var(--accent-soft); color: var(--primary); }
+body.app-shell .auth-form button { background: var(--accent-solid); color: var(--on-accent); }
+body.app-shell #mainFooter.landing-footer { background: transparent; border-top: 1px solid var(--border); box-shadow: none; margin-top: 28px; padding: 28px 0; }
+body.app-shell #mainFooter .footer-text { color: var(--fg-secondary); font-size: .78rem; }
+body.app-shell #mainFooter .footer-link { color: var(--fg-secondary); font-size: .75rem; background: transparent; border: 0; padding: 4px; }
+body.app-shell #mainFooter .footer-link:hover { color: var(--primary); transform: none; }
+
+@media (max-width: 1100px) {
+  body.app-shell .header { gap: 16px; padding: 18px; }
+  body.app-shell .app-brand__caption { display: none; }
+  body.app-shell .app-brand__mark { width: 36px; height: 36px; border-radius: 10px; }
+}
+@media (max-width: 768px) {
+  body.app-shell { padding: 12px 16px 0; }
+  body.app-shell .container, body.app-shell .container.sidebar-hidden { width: 100%; margin: 0; padding: 0; }
+  body.app-shell .account-toolbar { gap: 3px; margin: 0 0 12px; }
+  body.app-shell .account-toolbar :is(#toggleMode, #notificationBell, #userDisplay, #showFriendsSidebar, #logoutBtn) { min-height: 44px; padding: 6px 9px; }
+  body.app-shell .header { grid-template-columns: minmax(0, 1fr) auto; gap: 18px 12px; }
+  body.app-shell .header .library-search { grid-column: 1 / -1; grid-row: 2; }
+  body.app-shell .header .app-title { font-size: 1.17rem; }
+  body.app-shell .quick-capture-trigger { font-size: .8rem; padding: 0 12px; }
+  body.app-shell .quick-capture-trigger kbd { display: none; }
+  body.app-shell .library-nav__label { flex-basis: 76px; font-size: .59rem; }
+  body.app-shell .tabs .tab { padding: 10px 12px; min-height: 44px; }
+  body.app-shell .library-nav__hint { display: block; }
+  body.app-shell .tabs { margin-bottom: 18px; }
+  body.app-shell .account-toolbar .notification-dropdown { width: min(400px, calc(100vw - 32px)); }
+}
+@media (max-width: 380px) {
+  body.app-shell { padding-inline: 10px; }
+  body.app-shell .header { padding: 14px; gap: 14px 8px; }
+  body.app-shell .app-brand { gap: 7px; }
+  body.app-shell .app-brand__mark { width: 28px; height: 32px; }
+  body.app-shell .app-brand__mark svg { width: 22px; }
+  body.app-shell .header .app-title { font-size: 1rem; }
+  body.app-shell .quick-capture-trigger { font-size: .74rem; padding-inline: 8px; }
+  body.app-shell .account-toolbar :is(#toggleMode, #notificationBell, #userDisplay, #showFriendsSidebar, #logoutBtn) { padding-inline: 7px; }
+}
+@media (prefers-reduced-motion: reduce) {
+  body.app-shell, body.app-shell *, body.app-shell *::before, body.app-shell *::after { animation: none !important; scroll-behavior: auto !important; transition: none !important; }
+}

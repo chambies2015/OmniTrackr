@@ -25,3 +25,65 @@ for (const [name, prefix] of [['TV', 'tv'], ['Anime', 'anime']]) {
     assert.doesNotMatch(row.cells[10].innerHTML, /Delete/);
   });
 }
+
+function collapsibleHarness() {
+  const classes = new Set();
+  const rotated = new Set();
+  const classList = values => ({ contains: key => values.has(key), add: key => values.add(key), remove: key => values.delete(key) });
+  const content = { hidden: true, style: {}, classList: classList(classes) };
+  const icon = { classList: classList(rotated) };
+  const toggle = { dataset: { toggleCollapsible: 'movieForm' }, expanded: 'false', setAttribute(name, value) { if (name === 'aria-expanded') this.expanded = value; } };
+  const otherToggle = { dataset: { toggleCollapsible: 'bookForm' }, expanded: 'false', setAttribute(name, value) { if (name === 'aria-expanded') this.expanded = value; } };
+  const pending = [];
+  const context = vm.createContext({
+    window: {},
+    document: {
+      getElementById: id => id.endsWith('Content') ? content : icon,
+      querySelectorAll: () => [toggle, otherToggle],
+    },
+    setTimeout: callback => pending.push(callback),
+  });
+  const start = source.indexOf('window.toggleCollapsible =');
+  vm.runInContext(source.slice(start, source.indexOf('// Account Management Functions', start)), context);
+  return { content, toggle, otherToggle, classes, rotated, pending, activate: () => context.window.toggleCollapsible('movieForm') };
+}
+
+test('built-in add forms have native collapsed buttons tied to their content', () => {
+  const template = fs.readFileSync(require('node:path').join(__dirname, '../app/templates/index.html'), 'utf8');
+  for (const id of ['movieForm', 'tvForm', 'animeForm', 'musicForm', 'bookForm', 'videoGameForm']) {
+    const button = template.match(new RegExp(`<button\\b[^>]*data-toggle-collapsible="${id}"[^>]*>`));
+    assert.ok(button, `${id} has a keyboard-operable button`);
+    assert.match(button[0], /type="button"/);
+    assert.match(button[0], /aria-expanded="false"/);
+    assert.match(button[0], new RegExp(`aria-controls="${id}Content"`));
+    assert.match(template, new RegExp(`<div\\b[^>]*id="${id}Content"[^>]*\\bhidden\\b`));
+  }
+});
+
+test('add-form expanded state follows opening and closing only its own toggle', () => {
+  const h = collapsibleHarness();
+  h.activate();
+  assert.equal(h.content.hidden, false);
+  assert.equal(h.content.style.display, 'block');
+  assert.equal(h.toggle.expanded, 'true');
+  assert.equal(h.otherToggle.expanded, 'false');
+  assert.equal(h.rotated.has('rotated'), true);
+  h.activate();
+  assert.equal(h.toggle.expanded, 'false');
+  assert.equal(h.rotated.has('rotated'), false);
+  h.pending.forEach(callback => callback());
+  assert.equal(h.content.hidden, true);
+  assert.equal(h.content.style.display, 'none');
+});
+
+test('reopening during the collapse animation keeps form and toggle expanded', () => {
+  const h = collapsibleHarness();
+  h.activate();
+  h.activate();
+  h.activate();
+  h.pending.forEach(callback => callback());
+  assert.equal(h.toggle.expanded, 'true');
+  assert.equal(h.content.hidden, false);
+  assert.equal(h.content.style.display, 'block');
+  assert.equal(h.classes.has('expanded'), true);
+});

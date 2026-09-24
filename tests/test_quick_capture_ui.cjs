@@ -39,6 +39,9 @@ function setup() {
       this.style = {}; this.value = ''; this.checked = false; this.hidden = false; this.disabled = false;
       this.type = ''; this._text = ''; this.className = '';
       this.classList = {
+        contains: name => this.className.split(' ').includes(name),
+        add: name => this.classList.toggle(name, true),
+        remove: name => this.classList.toggle(name, false),
         toggle: (name, enabled) => {
           const names = new Set(this.className.split(' ').filter(Boolean));
           if (enabled) names.add(name); else names.delete(name);
@@ -109,7 +112,14 @@ function setup() {
     form.elements = [titleId, checkedId, ...fields].map(id => add(id, 'input'));
     get(checkedId).type = 'checkbox';
     form.reset = () => { form.resets = (form.resets || 0) + 1; form.elements.forEach(field => { field.value = ''; field.checked = false; }); };
-    add(contentPrefix + 'Content');
+    const content = add(contentPrefix + 'Content');
+    content.hidden = true;
+    content.className = 'collapsible-content';
+    add(contentPrefix + 'Icon');
+    const toggle = add(contentPrefix + 'Toggle', 'button');
+    toggle.dataset.toggleCollapsible = contentPrefix;
+    toggle.setAttribute('aria-expanded', 'false');
+    document.body.append(toggle);
   }
   const requests = [], timers = new Map(), opened = [], confirmations = [];
   let timerId = 0, now = 0, confirmResult = true;
@@ -123,7 +133,7 @@ function setup() {
       confirm(message) { confirmations.push(message); return confirmResult; },
     },
     closeLibrarySearch() {}, getTabButton: category => tabs.get(category),
-    openLaunchpadAddItem: category => opened.push(category),
+    switchTab: category => opened.push(category),
     fetch(url, options) {
       // Deliberately ignore abort: stale response guards must also handle a response
       // that arrives after cancellation or whose JSON decoding is already in flight.
@@ -131,6 +141,11 @@ function setup() {
       return pending.promise;
     },
   });
+  const toggleStart = source.indexOf('window.toggleCollapsible =');
+  vm.runInContext(source.slice(toggleStart, source.indexOf('// Account Management Functions', toggleStart)), context);
+  context.toggleCollapsible = context.window.toggleCollapsible;
+  const addStart = source.indexOf('function openLaunchpadAddItem(');
+  vm.runInContext(source.slice(addStart, source.indexOf('function openLaunchpadInsights(', addStart)), context);
   vm.runInContext(source.slice(source.indexOf('const QUICK_CAPTURE_CATEGORY_ORDER'), source.indexOf('function showImagePopup(')), context);
   return {
     context, get, document, requests, timers, opened, confirmations, submit, manual,
@@ -151,6 +166,40 @@ function setup() {
     },
   };
 }
+
+for (const category of categories) {
+  test(`Quick Capture opens the initially hidden ${category} form and focuses its selected title`, () => {
+    const s = setup();
+    const destination = s.context.prepareQuickCaptureDestination(category, 'My selected title');
+    const content = s.get(destination.form + 'Content');
+    assert.equal(content.hidden, false);
+    assert.equal(content.classList.contains('expanded'), true);
+    assert.equal(content.style.display, 'block');
+    assert.equal(s.get(destination.form + 'Toggle').getAttribute('aria-expanded'), 'true');
+    assert.deepEqual(s.opened, [category]);
+    assert.equal(destination.titleInput.value, 'My selected title');
+    s.advance(0);
+    assert.equal(s.document.activeElement, destination.titleInput);
+    assert.equal(s.requests.length, 0, 'handoff never saves a library item');
+  });
+}
+
+test('Quick Capture keeps an already expanded form open during title handoff', () => {
+  const s = setup();
+  const content = s.get('bookFormContent');
+  content.hidden = false;
+  content.style.display = 'block';
+  content.classList.add('expanded');
+  s.get('bookFormToggle').setAttribute('aria-expanded', 'true');
+  const destination = s.context.prepareQuickCaptureDestination('books', 'A selected book');
+  assert.equal(content.hidden, false);
+  assert.equal(content.classList.contains('expanded'), true);
+  assert.equal(s.get('bookFormToggle').getAttribute('aria-expanded'), 'true');
+  assert.deepEqual(s.opened, ['books']);
+  s.advance(300);
+  assert.equal(content.hidden, false);
+  assert.equal(s.document.activeElement, destination.titleInput);
+});
 
 test('a fast source becomes usable while other sources are still loading', async () => {
   const s = setup();

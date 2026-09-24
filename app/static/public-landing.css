@@ -1,4 +1,10 @@
 .public-site-nav--focused { max-width: 1180px; }
+.landing-public-nav .public-site-nav--focused { background: #191f2c; border: 1px solid #30394c; border-radius: 14px; }
+.public-site-nav--focused .public-site-nav__brand { color: #baa9fb; }
+.public-site-nav--focused .public-site-nav__links a { color: #cad2e3; }
+.public-site-nav--focused .public-site-nav__links a:hover { color: #fff; }
+.public-site-nav--focused .public-site-nav__links .public-site-nav__cta { color: #d0c3ff; border-color: #8f7ccc; }
+.public-site-nav--focused a:focus-visible { outline: 3px solid #baa9fb; outline-offset: 4px; border-radius: 4px; }
 .landing-hero--focused { min-height: 72vh; overflow: hidden; }
 .landing-hero--focused .landing-hero-inner { gap: clamp(42px, 5vw, 76px); grid-template-columns: minmax(370px, .82fr) minmax(540px, 1.18fr); width: min(1280px, 100%); }
 .landing-hero--focused .landing-title { font-size: clamp(3.8rem, 5.3vw, 5.4rem); }

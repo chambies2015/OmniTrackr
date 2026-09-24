@@ -5271,8 +5271,14 @@ if (videoGameReviewTextarea) {
 window.toggleCollapsible = function (formId) {
   const content = document.getElementById(formId + 'Content');
   const icon = document.getElementById(formId + 'Icon');
+  const expanding = content.hidden || !content.classList.contains('expanded');
+  document.querySelectorAll('[data-toggle-collapsible]').forEach(toggle => {
+    if (toggle.dataset.toggleCollapsible === formId) {
+      toggle.setAttribute('aria-expanded', String(expanding));
+    }
+  });
 
-  if (content.hidden || !content.classList.contains('expanded')) {
+  if (expanding) {
     content.hidden = false;
     content.style.display = 'block';
     content.classList.add('expanded');
@@ -8627,7 +8633,7 @@ function openLaunchpadAddItem(category = 'movies') {
   const destination = destinations[category] || destinations.movies;
   switchTab(category in destinations ? category : 'movies');
   const formContent = document.getElementById(`${destination.form}Content`);
-  if (formContent?.style.display === 'none') {
+  if (formContent && (formContent.hidden || !formContent.classList.contains('expanded'))) {
     toggleCollapsible(destination.form);
   }
   window.setTimeout(() => document.getElementById(destination.input)?.focus(), 0);
@@ -10831,9 +10837,7 @@ function setupCustomTabSwitching() {
         const tab = customTabs.find(t => t.id === tabId);
         if (tab) {
           document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
-          const tabButton = Array.from(document.querySelectorAll('.tab')).find(btn => 
-            btn.textContent === tab.name || btn.dataset.switchTab === `custom-${tabId}`
-          );
+          const tabButton = getTabButton(`custom-${tabId}`);
           if (tabButton) tabButton.classList.add('active');
           
           document.querySelectorAll('.tab-content').forEach(c => c.classList.remove('active'));

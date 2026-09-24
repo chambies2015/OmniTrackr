@@ -442,6 +442,44 @@ in this environment; SQLite tests establish retry, isolation, and rollback
 behavior. No production database, existing account data, or schema was changed,
 and nothing was deployed.
 
+## Cohesive library appearance
+
+The September 24, 2026 visual refresh gives the application a shared violet and
+teal palette, quieter surfaces, and consistent typography in light and dark
+mode. The header keeps library search and Add Anything prominent. Navigation
+groups the six built-in media libraries separately from Journal, Postcards,
+Collections, Statistics, Discover, and custom tabs; both groups remain usable
+on narrow screens.
+
+All six library categories share labeled add forms, a consistent search/sort
+toolbar, clearer desktop tables, and mobile cards. Existing IDs and interaction
+hooks remain in place for searching, sorting, pagination, editing, completion,
+reviews, and progress. Shared dialog styling covers account settings, Import
+Studio, quick capture, collections, and the native progress dialog, including
+fields, disabled controls, focus indicators, and status messages in both themes.
+
+The presentation is scoped through `body.app-shell` in `app-theme.css`,
+`library-theme.css`, and `dialog-theme.css`. Existing features and keyboard
+shortcuts remain available. Small frontend fixes keep disclosure state, Quick
+Capture handoffs, and custom-tab selection aligned with the new markup. It adds
+no backend endpoints, API contracts, data migrations, or schema changes.
+
+Release verification: all 269 frontend tests passed, including regressions for
+native-hidden add forms, keyboard disclosure state, Quick Capture handoffs for
+all six categories, and custom tabs sharing built-in names. The 98 focused SEO,
+static-security, and public-guide checks passed using isolated SQLite with
+dotenv disabled. JavaScript syntax and patch whitespace checks passed.
+
+Browser review used the disposable synthetic library at 320px, 390px, 768px,
+and 1440px. Checks covered light/dark appearance, desktop tables and mobile
+cards, sidebar layout, search, detail expansion, unchanged-value edit/save,
+keyboard add-form toggles, and account, Import Studio, Quick Capture, and
+progress dialogs. Manual entry and metadata selection both opened the correct
+add form with title focus. Custom-tab identity is covered by frontend tests;
+the manager's existing raw-fetch path failed in the local HTTP fixture, so its
+full browser flow was not validated. No production data or schema was touched,
+and nothing was deployed.
+
 ## Verification
 
 Run the full suite against an isolated database. Set these before importing the
