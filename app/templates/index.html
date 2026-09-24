@@ -49,7 +49,7 @@
   <link rel="preload" href="./styles.css?v=20260924-daily-dashboard-v4" as="style">
   <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@700;800&family=Inter:wght@400;500;600&display=swap"
     rel="stylesheet">
-  <link rel="stylesheet" href="./styles.css?v=20260924-daily-dashboard-v4">
+  <link rel="stylesheet" href="./styles.css?v=20260924-import-studio-final">
   <link rel="stylesheet" href="/static/progress.css?v=20260922-progress">
   <script src="./preauth.js"></script>
   <style>
@@ -1922,9 +1922,10 @@
     </form>
   </dialog>
   <script src="./credentials.js"></script>
-  <script src="./auth.js?v=20260924-daily-dashboard"></script>
+  <script src="./auth.js?v=20260924-import-studio-final"></script>
+  <script src="/static/import-studio.js?v=20260924-import-studio-final"></script>
   <script src="/static/progress.js?v=20260922-progress"></script>
-  <script src="./app.js?v=20260924-daily-dashboard-v4"></script>
+  <script src="./app.js?v=20260924-import-studio-final"></script>
 
   <!-- Account Modal -->
   <div id="accountModal" class="modal-overlay" style="display: none;">
@@ -2200,6 +2201,14 @@
             </div>
           </form>
           <div id="importStudioStatus" class="import-studio__status" role="status" aria-live="polite"></div>
+          <section id="importStudioConfirm" class="import-studio__confirm" aria-labelledby="importStudioConfirmHeading" hidden>
+            <h4 id="importStudioConfirmHeading">Confirm your import</h4>
+            <p id="importStudioConfirmSummary"></p>
+            <div class="import-studio__actions">
+              <button id="importStudioConfirmButton" type="button" class="action-btn" data-action="confirm-library-import">Confirm import</button>
+              <button id="importStudioCancelButton" type="button" class="action-btn" data-action="cancel-library-import">Keep reviewing</button>
+            </div>
+          </section>
           <div id="importStudioResults" hidden></div>
           <p class="import-studio__safety"><strong>Safety promise:</strong> preview performs no writes, imports are additive and atomic, imported reviews stay private, and artwork lookups are deferred until you visit the relevant library tab.</p>
         </div>

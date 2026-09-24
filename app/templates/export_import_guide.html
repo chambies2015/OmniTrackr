@@ -4,7 +4,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <meta name="description" content="Move Letterboxd, Goodreads, MyAnimeList, spreadsheet, and OmniTrackr data safely with preview-first CSV migration, duplicate protection, and portable JSON backups.">
+  <meta name="description" content="Work through CSV examples for books and music, check converted ratings and completion, resolve duplicates, and keep a portable OmniTrackr JSON backup.">
   <meta name="robots" content="index, follow, max-image-preview:large">
   <meta name="author" content="OmniTrackr">
   <title>Export & Import Guide - Back Up and Move Your Media Library</title>
@@ -13,7 +13,7 @@
   <meta property="og:type" content="article">
   <meta property="og:url" content="https://omnitrackr.xyz/export-import-guide">
   <meta property="og:title" content="Export & Import Guide - Back Up and Move Your Media Library">
-  <meta property="og:description" content="A practical guide to previewing Letterboxd, Goodreads, MyAnimeList, and spreadsheet migrations, plus OmniTrackr JSON backups and restores.">
+  <meta property="og:description" content="Worked CSV examples, supported fields, rating conversion, duplicate rules, and preview-first migration, plus OmniTrackr JSON backups and restores.">
   <meta property="og:image" content="https://omnitrackr.xyz/omnitrackr_vortex.png">
   <meta property="og:image:alt" content="OmniTrackr export and import guide">
   <meta property="og:site_name" content="OmniTrackr">
@@ -34,8 +34,17 @@
     .content-header p, .content-section p, .content-section li { color: var(--fg-secondary); }
     .content-section { margin-bottom: 38px; }
     .content-section h2 { font-family: 'Poppins', sans-serif; font-size: 1.75rem; margin-bottom: 15px; color: var(--primary); }
+    .content-section h3 { font-size: 1.2rem; margin: 24px 0 10px; }
     .content-section ul, .content-section ol { margin-left: 20px; margin-bottom: 15px; }
     .content-section li { margin-bottom: 8px; }
+    .content-section code { font-size: .92em; overflow-wrap: anywhere; }
+    .csv-example { max-width: 100%; overflow-x: auto; padding: 16px; border: 1px solid var(--border); border-radius: 10px; background: var(--bg); line-height: 1.65; }
+    .csv-example code { white-space: pre; overflow-wrap: normal; }
+    .csv-example:focus-visible, .guide-jump a:focus-visible { outline: 3px solid var(--primary); outline-offset: 3px; }
+    .guide-jump { display: flex; flex-wrap: wrap; gap: 8px 20px; margin: 24px 0 36px; }
+    .guide-jump a { padding: 8px 0; }
+    .content-section { scroll-margin-top: 24px; }
+    .guide-updated { font-size: .9rem; }
     .back-link { display: inline-block; margin-bottom: 30px; color: var(--primary); text-decoration: none; font-weight: 500; }
   </style>
   <script type="application/ld+json">
@@ -43,8 +52,8 @@
     "@context": "https://schema.org",
     "@type": "Article",
     "headline": "Export and Import Guide for Portable Media Library Backups",
-    "description": "A guide to preview-first CSV migration from Letterboxd, Goodreads, MyAnimeList, and spreadsheets, plus OmniTrackr JSON backups and restores.",
-    "dateModified": "2026-09-14",
+    "description": "Worked CSV examples, supported fields, rating conversion, duplicate rules, and preview-first migration, plus OmniTrackr JSON backups and restores.",
+    "dateModified": "2026-09-24",
     "author": { "@type": "Organization", "name": "OmniTrackr" },
     "publisher": { "@type": "Organization", "name": "OmniTrackr", "url": "https://omnitrackr.xyz" },
     "mainEntityOfPage": "https://omnitrackr.xyz/export-import-guide",
@@ -78,7 +87,15 @@
       <header class="content-header">
         <h1>Export &amp; Import Guide</h1>
         <p>Bring an existing media history into OmniTrackr without surrendering control of the library you already built.</p>
+        <p class="guide-updated">By OmniTrackr · Updated <time datetime="2026-09-24">September 24, 2026</time></p>
       </header>
+      <nav class="guide-jump" aria-label="In this guide">
+        <a href="#sources-heading">Supported files</a>
+        <a href="#examples-heading">Worked examples</a>
+        <a href="#preview-heading">Review and import</a>
+        <a href="#duplicates-heading">Duplicate rules</a>
+        <a href="#export-heading">JSON backups</a>
+      </nav>
 
       <section class="content-section" aria-labelledby="why-heading">
         <h2 id="why-heading">Why Data Portability Matters</h2>
@@ -89,14 +106,15 @@
 
       <section class="content-section" aria-labelledby="export-heading">
         <h2 id="export-heading">What an Export Includes</h2>
-        <p>Exports include metadata about the export itself and lists for movies, TV shows, anime, video games, music, books, and custom tabs. Entries preserve fields such as titles, creators, years, ratings, status values, reviews, public-review choices, poster or cover URLs, and category-specific metadata.</p>
+        <p>JSON exports include movies, TV shows, anime, video games, music, custom tabs, and books, along with your private journal, collections, and saved episode or reading checkpoints. Entries include titles, creators, years, ratings, completion, reviews, public-review choices, artwork URLs, and category-specific details.</p>
         <p>A regular export is useful before major account changes, after large import sessions, or any time a user wants an offline backup of their media history.</p>
         <ul>
           <li><strong>Core categories:</strong> movies, TV shows, anime, video games, music, and books are exported as separate lists so category-specific fields remain understandable.</li>
           <li><strong>Review context:</strong> review text and rating fields travel with the entry, which helps preserve why an item mattered instead of only saving its title.</li>
-          <li><strong>Privacy choices:</strong> public-review flags and visibility-related fields are part of the exported data where supported, so restored data keeps important sharing context.</li>
+          <li><strong>Privacy choices:</strong> public-review flags appear in the backup. Restored collections are private, and a restore does not republish them. Check an entry's current sharing setting before intentionally making it public.</li>
           <li><strong>Artwork references:</strong> poster and cover URLs are included when available, but users should remember those images may come from third-party sources that can change over time.</li>
           <li><strong>Custom tabs:</strong> flexible custom lists are included so specialized collections do not disappear during a backup.</li>
+          <li><strong>Saved place and context:</strong> journal entries, collection notes, and progress checkpoints belong in a JSON backup. A checkpoint is restored only when its library edition can be matched unambiguously and no saved checkpoint already exists.</li>
         </ul>
       </section>
 
@@ -109,12 +127,46 @@
       <section class="content-section" aria-labelledby="sources-heading">
         <h2 id="sources-heading">What the Import Studio Understands</h2>
         <ul>
-          <li><strong>Letterboxd:</strong> watched, diary, ratings, and watchlist-style CSV columns become movie records. Letterboxd's five-point rating is converted to OmniTrackr's ten-point scale. Watchlist rows remain unwatched.</li>
-          <li><strong>Goodreads:</strong> title, author, publication year, shelf status, rating, date read, and review fields become private book records. Goodreads ratings are also converted from five points to ten.</li>
-          <li><strong>MyAnimeList:</strong> series title, episode total, score, status, start year, and comments become anime records.</li>
+          <li><strong>Letterboxd-style CSV:</strong> <code>Name</code>, <code>Year</code>, and <code>Rating</code> become movie details. Ratings use a five-point input scale and are doubled: 3.5 becomes 7/10. A positioned watchlist row without a watched date or date remains unwatched; other supported rows are marked watched. The adapter does not import review text or turn repeated diary visits into journal entries.</li>
+          <li><strong>Goodreads-style CSV:</strong> <code>Title</code>, <code>Author</code>, <code>Year Published</code>, <code>My Rating</code>, and <code>My Review</code> become book details. Ratings are doubled: 4 becomes 8/10. A <code>read</code> value in <code>Exclusive Shelf</code> or a nonempty <code>Date Read</code> marks the book read. The date itself, custom shelves, and reading history are not imported.</li>
+          <li><strong>MyAnimeList-style CSV:</strong> <code>series_title</code>, <code>series_episodes</code>, <code>my_score</code>, <code>my_status</code>, <code>series_start</code>, and <code>my_comments</code> become anime details. Scores use the ten-point scale. This accepts CSV columns, not a native MyAnimeList XML file. Episode totals describe the series; they do not set your current episode.</li>
           <li><strong>Generic spreadsheets:</strong> choose one of OmniTrackr's six categories or include a category column. Familiar headings such as title, creator, year, rating, status, review, genre, seasons, episodes, and release date are recognized automatically.</li>
         </ul>
         <p>When a spreadsheet uses personal headings such as “Thing,” “Maker,” or “My verdict,” open the optional mapping panel and pair those columns with OmniTrackr fields before previewing. Downloadable templates are available for every built-in category if you would rather copy data into a known layout.</p>
+        <p>For personal headings, select the generic spreadsheet source. Mapping chooses which columns to read; it does not change the rating scale. A generic rating is already out of ten, so convert your own five-star scores before importing. Choose a single category for the whole file, or leave the category selection unset and supply a <code>category</code> column for a mixed library.</p>
+        <p>Use a plain-text <code>.csv</code> or <code>.tsv</code> file with a header row and UTF-8 encoding. Comma, semicolon, and tab separators are recognized. An Excel workbook, ZIP archive, XML export, or a JSON backup needs its own conversion or workflow; renaming its extension does not convert it.</p>
+      </section>
+
+      <section class="content-section" aria-labelledby="examples-heading">
+        <h2 id="examples-heading">Worked Examples: Check the Meaning, Not Just the Count</h2>
+        <p>These titles, creators, and notes are fictional. Copy a small sample into a text file to see how the preview works before bringing over a large history. Preview alone never saves the examples.</p>
+
+        <h3>A music file that keeps listening status</h3>
+        <p>Save this as <code>music-sample.csv</code>, select the generic spreadsheet source, and choose Music:</p>
+        <pre class="csv-example" tabindex="0" aria-label="Music CSV example"><code>title,artist,year,genre,rating,listened,review
+Night Windows,The Harbor Lights,2024,Ambient,8.5,true,"Quiet rhythms, best with headphones."
+Morning Signals,The Harbor Lights,2025,Electronic,,false,Recommended by a friend</code></pre>
+        <ul>
+          <li><strong>Night Windows:</strong> listened, rated 8.5/10, with a private note. The quotation marks keep the comma inside the note instead of starting another column.</li>
+          <li><strong>Morning Signals:</strong> not listened and unrated. The empty rating cell means “no rating”; <code>false</code> keeps the album unfinished.</li>
+        </ul>
+        <p>The built-in templates use <code>watched</code> for movies, TV, and anime; <code>played</code> for video games; <code>listened</code> for music; and <code>read</code> for books. Use <code>true</code> or <code>false</code> for a clear completion value. Completion is separate from rating: an unfinished title can have a score, and a finished title can stay unrated.</p>
+
+        <h3>A book file with a duplicate and a missing title</h3>
+        <p>Save this as <code>books-sample.csv</code>, use the generic spreadsheet source, and choose Books. If none of these books is already in your library, the five data rows produce three ready rows, one duplicate, and one invalid row:</p>
+        <pre class="csv-example" tabindex="0" aria-label="Books CSV example"><code>title,author,year,rating,read,review
+Lanterns at Noon,Ada Vale,2024,8,true,An ending worth returning to
+Lanterns at Noon,Ada Vale,2024,6,false,A repeated row
+The Paper Coast,Rui Sen,2022,,false,Start this next
+A Quiet Engine,Neve Holt,2025,0,true,Finished but not for me
+,Mila Wynn,2023,7,false,This row needs its title</code></pre>
+        <ol>
+          <li>File row 2 is ready. Row 3 repeats the same title and author, so the first valid version wins and the later row is skipped.</li>
+          <li>Row 4 is ready and unrated. Row 5 is ready with an explicit <strong>0/10</strong> rating. In a generic spreadsheet, zero is a score; leave the cell blank when you mean unrated.</li>
+          <li>Row 6 needs a title. Fix it in the file and preview again, or import the three ready rows and bring the corrected entry over later.</li>
+        </ol>
+        <p>Keep a copy of the original file while cleaning it. Missing values and source-specific placeholders can mean different things across services; compare the converted rating and completion with your original record before confirming. Non-numeric or out-of-range ratings need correction rather than being silently changed to a valid score.</p>
+        <p>For game release dates, use a full date such as <code>2024-06-15</code> when you know it. For TV and anime, <code>seasons</code> and <code>episodes</code> are totals, not progress. CSV import does not create episode, page, or chapter checkpoints; set your place after importing, or restore saved checkpoints from an OmniTrackr JSON backup.</p>
       </section>
 
       <section class="content-section" aria-labelledby="preview-heading">
@@ -124,11 +176,26 @@
           <li>Select the original service or let OmniTrackr detect it from the headers.</li>
           <li>Choose the file and map unusual columns if necessary.</li>
           <li>Preview the batch. No database writes happen during this step.</li>
-          <li>Review ready, duplicate, and invalid totals along with the row-level explanation.</li>
+          <li>Review ready, duplicate, and invalid totals. Filter by outcome and page through the file to inspect rows beyond the first page.</li>
+          <li>Check the converted rating, completion, and private review or note for the rows you plan to import. A successful parse is not proof that the chosen columns mean what you intended.</li>
           <li>Confirm only when the preview looks right. The exact file and mapping must still match the preview.</li>
         </ol>
         <p>The confirmed batch is atomic: all ready rows are created together, or none are created if saving fails. Duplicate and invalid rows remain unchanged. Imported review text is private by default, and the studio does not call external artwork services while processing the file.</p>
         <p>Imports are limited to 5 MB and 5,000 rows per batch. This keeps the preview understandable and prevents one accidental export from overwhelming an account. Larger histories can be split into dated or category-specific files.</p>
+        <p>After a successful import, the results stay visible so you can check how many titles were created and how many were skipped. Use the category action, such as <strong>Open Books</strong>, to visit that library. If a connection drops before you receive a result, preview the same file again: titles that were saved will be classified as duplicates instead of being overwritten.</p>
+      </section>
+
+      <section class="content-section" aria-labelledby="duplicates-heading">
+        <h2 id="duplicates-heading">What Counts as a Duplicate?</h2>
+        <p>The studio checks both your existing library and earlier valid rows in the same file. It compares records within each category using these details:</p>
+        <ul>
+          <li><strong>Movies, TV, and anime:</strong> title and year.</li>
+          <li><strong>Video games:</strong> title and release year.</li>
+          <li><strong>Music:</strong> title and artist.</li>
+          <li><strong>Books:</strong> title and author.</li>
+        </ul>
+        <p>Title matching ignores letter case and repeated spaces. It is not a search for alternate titles, ISBNs, or external service IDs. A different spelling or a missing year can prevent a match; two book editions with the same title and author count as the same book here even if their years differ. Inspect possible edition differences before confirming.</p>
+        <p>A duplicate is skipped completely. Its imported rating, completion, and review never replace the copy already in your library. If you want to change an existing title, edit it in its library tab. JSON restore uses different matching rules and can update existing records, so keep a fresh backup before restoring one.</p>
       </section>
 
       <section class="content-section" aria-labelledby="habits-heading">

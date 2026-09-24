@@ -1,5 +1,6 @@
 """Preview-first, additive CSV migration endpoints."""
 import json
+from typing import Literal
 
 from fastapi import APIRouter, Depends, File, Form, HTTPException, UploadFile
 from fastapi.responses import Response
@@ -47,6 +48,9 @@ async def preview_import(
     source: str = Form("auto"),
     category: str | None = Form(None),
     mapping_json: str = Form(""),
+    status_filter: Literal["all", "ready", "duplicate", "invalid"] = Form("all"),
+    offset: int = Form(0, ge=0),
+    limit: int = Form(100, ge=1, le=100),
     current_user: models.User = Depends(get_current_user),
     db: Session = Depends(get_db),
 ):
@@ -55,7 +59,7 @@ async def preview_import(
     mapping = _mapping_or_400(mapping_json)
     detected, rows = _parse_or_400(content, source, category, mapping)
     digest = fingerprint(content, source, category or "", mapping_json)
-    return summarize(detected, digest, classify_rows(db, current_user.id, rows))
+    return summarize(detected, digest, classify_rows(db, current_user.id, rows), status_filter, offset, limit)
 
 
 @router.post("/apply/")
@@ -75,10 +79,14 @@ async def apply_import(
         raise HTTPException(status_code=409, detail="The file changed after preview. Preview it again before importing.")
     mapping = _mapping_or_400(mapping_json)
     detected, rows = _parse_or_400(content, source, category, mapping)
-    classified = classify_rows(db, current_user.id, rows)
     try:
+        # Serialize confirmed imports for this account in production PostgreSQL.
+        # Reclassify after the lock: another completed import may add duplicates.
+        db.query(models.User).filter(models.User.id == current_user.id).with_for_update().one()
+        classified = classify_rows(db, current_user.id, rows)
         result = apply_classified(db, current_user.id, classified)
     except Exception as exc:
+        db.rollback()
         raise HTTPException(status_code=500, detail="Nothing was imported because the batch could not be saved.") from exc
     return {**result, "detected_source": detected}
 

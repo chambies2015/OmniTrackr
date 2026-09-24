@@ -384,6 +384,64 @@ adding its first title activated suggestions, and removing its only queue entry
 returned focus to Add Anything while preserving the saved movie. No production
 data was used and nothing was deployed.
 
+## Inspectable Import Studio
+
+The September 24, 2026 import update makes existing CSV migration easier to
+inspect before a member commits a batch. Music's `listened` column is now read
+as completion, matching the downloadable template. Generic ratings keep the
+distinction between an explicit zero and an empty cell; the latter is unrated.
+Malformed or out-of-range values are reported as invalid rows instead of being
+silently clamped or discarded. Explicit column mappings take precedence over
+automatic aliases, including mapped blank or false values.
+
+The preview exposes converted ratings, completion, and private review text.
+Outcome filtering and pagination cover the whole accepted file, rather than
+only the first 100 rows. Changing the file or its interpretation invalidates
+the preview; older responses must not restore a stale confirmation. A completed
+import retains a result summary and offers navigation to the affected library
+categories. These results are transient UI state, not another history store.
+
+The write contract remains additive: preview performs no writes, the user
+explicitly confirms the matching file and options, and ready records commit in
+one transaction. Duplicates are rechecked against the member's current library
+when applying. Existing records and their personal fields are never updated by
+CSV import. Reviews remain private, and this release adds no schema or migration.
+
+The expanded `/export-import-guide` uses fictional music and book CSV samples
+with expected ratings, completion, duplicate, and invalid-row outcomes. It
+documents category-specific duplicate matching, UTF-8 CSV/TSV requirements,
+the 5 MB / 5,000-row limits, and the difference between CSV migration and JSON
+restore. MyAnimeList support is explicitly described as CSV-column support;
+native XML is not accepted. Goodreads read dates set completion but are not
+preserved as dated journal entries. Letterboxd review text and repeated diary
+visits are not migrated by that adapter. CSV episode totals do not create
+progress checkpoints; checkpoints belong to the separate JSON backup path.
+
+Release verification, September 24, 2026: all 139 focused backend, SEO/security,
+static-security, and public-guide checks passed against isolated SQLite. All 254
+frontend checks passed, including stale responses, file changes, inline
+confirmation, timeouts covering the response body, logout cleanup, and deferred
+library refresh after an older request. Backend coverage includes every media
+category, explicit mappings, rows beyond 100, duplicate preservation, atomic
+rollback, and the guide's published CSV examples.
+
+A disposable browser walkthrough read 106 synthetic rows, located both invalid
+rows at the end through filtering, showed zero separately from an unrated value,
+rendered literal private-note text, cancelled and confirmed the inline prompt,
+then added 103 titles while skipping one duplicate and two invalid rows. Opening
+Books showed the two correct entries; repeating the preview produced zero ready
+rows and 104 duplicates. Final renderer/layout checks at desktop, 390px, and
+320px covered dark/light themes, expanded notes, and no Import Studio horizontal
+overflow. The mobile checks caught and corrected inherited table widths,
+file-picker overflow, and light-mode title contrast. An independent integration
+review caught a lost refresh behind an older library request; regression tests
+now cover all six category loaders and their Refresh/sort controls.
+
+The PostgreSQL per-account import lock has no live PostgreSQL concurrency test
+in this environment; SQLite tests establish retry, isolation, and rollback
+behavior. No production database, existing account data, or schema was changed,
+and nothing was deployed.
+
 ## Verification
 
 Run the full suite against an isolated database. Set these before importing the

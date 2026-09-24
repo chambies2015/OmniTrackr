@@ -4618,12 +4618,35 @@ body.dark-mode .account-section form input {
 
 /* Preview-first CSV migration studio */
 .import-studio {
+  --fg-secondary: #555d70;
+  --border: rgba(102, 126, 234, 0.25);
   padding: 24px;
   border: 1px solid rgba(102, 126, 234, 0.28);
   border-radius: 16px;
   background:
     radial-gradient(circle at top right, rgba(0, 210, 190, 0.12), transparent 42%),
     rgba(102, 126, 234, 0.06);
+}
+
+body.dark-mode .import-studio {
+  --fg-secondary: #b9bfd1;
+  --border: rgba(175, 188, 240, 0.22);
+}
+
+.import-studio,
+.import-studio * {
+  box-sizing: border-box;
+}
+
+.import-studio__controls label,
+.import-studio__mapping-grid label,
+.import-studio__controls input {
+  min-width: 0;
+  max-width: 100%;
+}
+
+.import-studio__controls input {
+  width: 100%;
 }
 
 .import-studio__eyebrow {
@@ -4748,7 +4771,7 @@ body.dark-mode .account-section form input {
 }
 
 .import-studio__table-wrap {
-  max-height: 320px;
+  max-height: 520px;
   overflow: auto;
   border: 1px solid var(--border);
   border-radius: 10px;
@@ -4759,6 +4782,7 @@ body.dark-mode .account-section form input {
   border-collapse: collapse;
   color: var(--fg);
   font-size: 0.82rem;
+  table-layout: fixed;
 }
 
 .import-studio__table th,
@@ -4767,14 +4791,45 @@ body.dark-mode .account-section form input {
   border-bottom: 1px solid var(--border);
   text-align: left;
   vertical-align: top;
+  position: static;
+  white-space: normal;
+  overflow-wrap: anywhere;
+  border-radius: 0;
+  box-shadow: none;
+  text-transform: none;
+  letter-spacing: normal;
 }
 
 .import-studio__table th {
+  color: var(--fg);
   position: sticky;
   top: 0;
   z-index: 1;
   background: var(--card-bg);
 }
+
+.import-studio__table caption { padding: 12px; color: var(--fg-secondary); text-align: left; }
+.import-studio__table thead th:first-child { width: 60px; }
+.import-studio__table thead th:nth-child(2) { width: 25%; }
+.import-studio__table thead th:nth-child(3) { width: 23%; }
+.import-studio__table tbody th { position: static; font-weight: 600; }
+.import-studio__table tbody tr, .import-studio__table tbody tr:hover { transform: none; box-shadow: none; }
+.import-studio__table .import-studio__category { color: var(--fg-secondary); display: block; font-size: .75rem; font-weight: 400; margin-top: 7px; }
+.import-studio__table p { line-height: 1.65; margin: 0 0 8px; }
+.import-studio__table summary { cursor: pointer; font-weight: 600; padding: 7px 0; }
+.import-studio__table .import-studio__note { white-space: pre-wrap; }
+.import-studio__review-controls { align-items: center; display: flex; flex-wrap: wrap; gap: 10px; margin: 18px 0; }
+.import-studio__review-controls label { color: var(--fg); display: grid; gap: 6px; }
+.import-studio__review-controls select { background: var(--bg); border: 1px solid var(--border); border-radius: 7px; color: var(--fg); font: inherit; min-height: 44px; padding: 8px 12px; }
+.import-studio__review-controls .info-text { flex: 1 1 160px; margin: 0; }
+.import-studio__review-controls .action-btn { margin: 0; min-height: 44px; }
+.import-studio__pages { display: flex; gap: 10px; max-width: 100%; }
+.import-studio__pages .action-btn { min-width: 0; padding: 10px 12px; }
+.import-studio__confirm { border: 1px solid var(--primary); border-radius: 10px; margin: 18px 0; padding: 20px; }
+.import-studio__confirm h4, #importStudioResults h4 { color: var(--fg); font-size: 1.1rem; margin: 0 0 10px; }
+.import-studio__confirm p { color: var(--fg-secondary); line-height: 1.65; }
+.import-studio [hidden] { display: none !important; }
+.import-studio :focus-visible { outline: 3px solid var(--primary); outline-offset: 3px; }
 
 .import-studio__row-status {
   font-weight: 700;
@@ -4798,12 +4853,20 @@ body.dark-mode .account-section form input {
   .import-studio__controls,
   .import-studio__mapping-grid,
   .import-studio__summary {
-    grid-template-columns: 1fr;
+    grid-template-columns: minmax(0, 1fr);
   }
 
   .import-studio {
     padding: 18px;
   }
+  .import-studio__table-wrap { max-height: 65vh; }
+  .import-studio__table, .import-studio__table tbody { display: block; }
+  .import-studio__table caption { display: block; }
+  .import-studio__table thead { clip-path: inset(50%); height: 1px; overflow: hidden; position: absolute; width: 1px; }
+  .import-studio__table tbody tr { border-bottom: 2px solid var(--border); display: block; margin: 0; padding: 10px 14px; }
+  .import-studio__table tbody th, .import-studio__table tbody td { background: transparent; border: 0; display: block; padding: 8px 0; width: 100%; }
+  .import-studio__table tbody th { font-size: .95rem; }
+  .import-studio__table td::before { color: var(--fg-secondary); content: attr(data-label); display: block; font-size: .7rem; font-weight: 600; margin-bottom: 5px; position: static; white-space: normal; width: auto; }
 }
 
 .danger-section {

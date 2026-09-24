@@ -929,6 +929,8 @@ function handleDelegatedClick(event) {
     'close-screenshot-modal': () => closeScreenshotModal(event),
     'export-data-dashboard': exportData,
     'apply-library-import': applyLibraryImport,
+    'confirm-library-import': confirmLibraryImport,
+    'cancel-library-import': cancelLibraryImport,
     'download-import-template': downloadImportTemplate,
     'launchpad-add-item': openLaunchpadQuickCapture,
     'launchpad-choose-category': () => openLaunchpadQuickCapture(target.dataset.launchpadCategory),
@@ -4659,254 +4661,7 @@ function enhanceLibraryCards(tableId) {
   });
 }
 
-// Preview-first CSV Import Studio. This stays separate from JSON backup restore,
-// because migration imports skip matches instead of updating existing records.
-let importStudioPreview = null;
-
-const importStudioMappingFields = [
-  ['title', 'Title'], ['category', 'Category'], ['year', 'Year'], ['creator', 'Director / author / artist'],
-  ['rating', 'Rating (0–10)'], ['status', 'Completed status'], ['review', 'Private review / note'],
-  ['genre', 'Genre'], ['seasons', 'Seasons'], ['episodes', 'Episodes'], ['release_date', 'Release date']
-];
-
-function parseDelimitedHeader(text) {
-  const firstLine = text.split(/\r?\n/, 1)[0] || '';
-  const delimiters = [',', '\t', ';'];
-  const delimiter = delimiters.reduce((best, candidate) =>
-    firstLine.split(candidate).length > firstLine.split(best).length ? candidate : best, ',');
-  const fields = [];
-  let current = '';
-  let quoted = false;
-  for (let index = 0; index < firstLine.length; index += 1) {
-    const character = firstLine[index];
-    if (character === '"') {
-      if (quoted && firstLine[index + 1] === '"') {
-        current += '"';
-        index += 1;
-      } else {
-        quoted = !quoted;
-      }
-    } else if (character === delimiter && !quoted) {
-      fields.push(current.trim());
-      current = '';
-    } else {
-      current += character;
-    }
-  }
-  fields.push(current.trim());
-  return fields.filter(Boolean).slice(0, 100);
-}
-
-function resetImportStudioPreview() {
-  importStudioPreview = null;
-  const applyButton = document.getElementById('importStudioApplyButton');
-  const results = document.getElementById('importStudioResults');
-  if (applyButton) applyButton.disabled = true;
-  if (results) {
-    results.hidden = true;
-    results.replaceChildren();
-  }
-}
-
-async function inspectImportStudioFile() {
-  resetImportStudioPreview();
-  const input = document.getElementById('importStudioFile');
-  const mapping = document.getElementById('importStudioMapping');
-  const file = input?.files?.[0];
-  if (!mapping) return;
-  mapping.replaceChildren();
-  if (!file) {
-    const message = document.createElement('p');
-    message.className = 'info-text';
-    message.textContent = 'Choose a file to inspect its columns.';
-    mapping.appendChild(message);
-    return;
-  }
-  try {
-    const headers = parseDelimitedHeader(await file.text());
-    importStudioMappingFields.forEach(([target, labelText]) => {
-      const label = document.createElement('label');
-      const text = document.createElement('span');
-      text.textContent = labelText;
-      const select = document.createElement('select');
-      select.dataset.importMapTarget = target;
-      const empty = document.createElement('option');
-      empty.value = '';
-      empty.textContent = 'Automatic / not included';
-      select.appendChild(empty);
-      headers.forEach(header => {
-        const option = document.createElement('option');
-        option.value = header;
-        option.textContent = header;
-        if (header.trim().toLowerCase().replace(/[^a-z0-9]+/g, '_').replace(/^_|_$/g, '') === target) {
-          option.selected = true;
-        }
-        select.appendChild(option);
-      });
-      select.addEventListener('change', resetImportStudioPreview);
-      label.append(text, select);
-      mapping.appendChild(label);
-    });
-  } catch (error) {
-    const message = document.createElement('p');
-    message.className = 'info-text';
-    message.textContent = 'These columns could not be inspected in the browser. The server can still attempt a preview.';
-    mapping.appendChild(message);
-  }
-}
-
-function getImportStudioMapping() {
-  const mapping = {};
-  document.querySelectorAll('[data-import-map-target]').forEach(select => {
-    if (select.value) mapping[select.dataset.importMapTarget] = select.value;
-  });
-  return mapping;
-}
-
-function buildImportStudioFormData(includeConfirmation = false) {
-  const file = document.getElementById('importStudioFile')?.files?.[0];
-  if (!file) throw new Error('Choose a CSV or TSV file first.');
-  const formData = new FormData();
-  formData.append('file', file);
-  formData.append('source', document.getElementById('importStudioSource')?.value || 'auto');
-  formData.append('category', document.getElementById('importStudioCategory')?.value || '');
-  formData.append('mapping_json', JSON.stringify(getImportStudioMapping()));
-  if (includeConfirmation) formData.append('fingerprint_confirmation', importStudioPreview?.fingerprint || '');
-  return formData;
-}
-
-function importStudioMetric(value, label) {
-  const metric = document.createElement('div');
-  metric.className = 'import-studio__metric';
-  const count = document.createElement('strong');
-  count.textContent = String(value);
-  const text = document.createElement('span');
-  text.textContent = label;
-  metric.append(count, text);
-  return metric;
-}
-
-function renderImportStudioPreview(data) {
-  const results = document.getElementById('importStudioResults');
-  if (!results) return;
-  results.replaceChildren();
-  results.hidden = false;
-
-  const summary = document.createElement('div');
-  summary.className = 'import-studio__summary';
-  summary.append(
-    importStudioMetric(data.total_rows, 'Rows read'),
-    importStudioMetric(data.ready_count, 'Ready to import'),
-    importStudioMetric(data.duplicate_count, 'Duplicates skipped'),
-    importStudioMetric(data.invalid_count, 'Rows needing attention')
-  );
-  results.appendChild(summary);
-
-  const breakdown = Object.entries(data.by_category || {}).filter(([, count]) => count > 0);
-  if (breakdown.length) {
-    const line = document.createElement('p');
-    line.className = 'info-text';
-    line.textContent = breakdown.map(([category, count]) => `${category.replace('-', ' ')}: ${count}`).join(' · ');
-    results.appendChild(line);
-  }
-
-  const wrap = document.createElement('div');
-  wrap.className = 'import-studio__table-wrap';
-  const table = document.createElement('table');
-  table.className = 'import-studio__table';
-  const head = document.createElement('thead');
-  const headRow = document.createElement('tr');
-  ['CSV row', 'Title', 'Category', 'Outcome', 'Reason'].forEach(label => {
-    const th = document.createElement('th');
-    th.textContent = label;
-    headRow.appendChild(th);
-  });
-  head.appendChild(headRow);
-  table.appendChild(head);
-  const body = document.createElement('tbody');
-  (data.preview || []).forEach(item => {
-    const row = document.createElement('tr');
-    [item.row, item.title, item.category ? item.category.replace('-', ' ') : '—', item.status, item.reason || 'Will be added'].forEach((value, index) => {
-      const cell = document.createElement('td');
-      cell.textContent = String(value);
-      if (index === 3) cell.className = `import-studio__row-status import-studio__row-status--${item.status}`;
-      row.appendChild(cell);
-    });
-    body.appendChild(row);
-  });
-  table.appendChild(body);
-  wrap.appendChild(table);
-  results.appendChild(wrap);
-  if (data.preview_truncated) {
-    const note = document.createElement('p');
-    note.className = 'info-text';
-    note.textContent = 'Showing the first 100 rows. All rows will follow the same validation rules.';
-    results.appendChild(note);
-  }
-}
-
-async function previewLibraryImport(event) {
-  event.preventDefault();
-  const status = document.getElementById('importStudioStatus');
-  const previewButton = document.getElementById('importStudioPreviewButton');
-  resetImportStudioPreview();
-  try {
-    status.textContent = 'Reading and comparing your file…';
-    previewButton.disabled = true;
-    const response = await authenticatedFetch(`${API_BASE}/import-studio/preview/`, { method: 'POST', body: buildImportStudioFormData() });
-    const data = await response.json().catch(() => ({}));
-    if (!response.ok) throw new Error(data.detail || 'The file could not be previewed.');
-    importStudioPreview = data;
-    renderImportStudioPreview(data);
-    status.textContent = `Detected ${data.detected_source}. Preview complete—nothing has been saved.`;
-    document.getElementById('importStudioApplyButton').disabled = data.ready_count === 0;
-  } catch (error) {
-    status.textContent = error.message;
-  } finally {
-    previewButton.disabled = false;
-  }
-}
-
-async function applyLibraryImport() {
-  if (!importStudioPreview?.fingerprint || importStudioPreview.ready_count < 1) return;
-  const status = document.getElementById('importStudioStatus');
-  const applyButton = document.getElementById('importStudioApplyButton');
-  if (!confirm(`Import ${importStudioPreview.ready_count} new item${importStudioPreview.ready_count === 1 ? '' : 's'}? Existing library records will be skipped.`)) return;
-  try {
-    applyButton.disabled = true;
-    status.textContent = 'Saving the new rows as one batch…';
-    const response = await authenticatedFetch(`${API_BASE}/import-studio/apply/`, { method: 'POST', body: buildImportStudioFormData(true) });
-    const data = await response.json().catch(() => ({}));
-    if (!response.ok) throw new Error(data.detail || 'The import could not be completed.');
-    status.textContent = `Import complete: ${data.created_count} added, ${data.duplicate_count} duplicates skipped, ${data.invalid_count} rows left unchanged.`;
-    importStudioPreview = null;
-    document.getElementById('importStudioFile').value = '';
-    document.getElementById('importStudioResults').hidden = true;
-    await inspectImportStudioFile();
-  } catch (error) {
-    status.textContent = error.message;
-    applyButton.disabled = false;
-  }
-}
-
-async function downloadImportTemplate() {
-  const category = document.getElementById('importStudioTemplateCategory')?.value || 'movies';
-  const status = document.getElementById('importStudioStatus');
-  try {
-    const response = await authenticatedFetch(`${API_BASE}/import-studio/template/${encodeURIComponent(category)}/`);
-    if (!response.ok) throw new Error('The template could not be downloaded.');
-    const url = URL.createObjectURL(await response.blob());
-    const link = document.createElement('a');
-    link.href = url;
-    link.download = `omnitrackr-${category}-template.csv`;
-    document.body.appendChild(link);
-    link.click();
-    link.remove();
-    URL.revokeObjectURL(url);
-  } catch (error) {
-    if (status) status.textContent = error.message;
-  }
-}
+// Import Studio is loaded from /static/import-studio.js.
 
 // Statistics functions
 function loadStatistics() {
@@ -5392,20 +5147,20 @@ function displayGenreStats(stats, idPrefix) {
 }
 
 // Event listeners
-document.getElementById('loadMovies').addEventListener('click', loadMovies);
-document.getElementById('loadTVShows').addEventListener('click', loadTVShows);
-document.getElementById('loadAnime').addEventListener('click', loadAnime);
-document.getElementById('loadVideoGames').addEventListener('click', loadVideoGames);
-document.getElementById('loadMusic').addEventListener('click', loadMusic);
-document.getElementById('loadBooks').addEventListener('click', loadBooks);
+document.getElementById('loadMovies').addEventListener('click', () => loadMovies());
+document.getElementById('loadTVShows').addEventListener('click', () => loadTVShows());
+document.getElementById('loadAnime').addEventListener('click', () => loadAnime());
+document.getElementById('loadVideoGames').addEventListener('click', () => loadVideoGames());
+document.getElementById('loadMusic').addEventListener('click', () => loadMusic());
+document.getElementById('loadBooks').addEventListener('click', () => loadBooks());
 
 // Automatic sorting and search
-document.getElementById('movieSort').addEventListener('change', loadMovies);
-document.getElementById('tvSort').addEventListener('change', loadTVShows);
-document.getElementById('animeSort').addEventListener('change', loadAnime);
-document.getElementById('videoGameSort').addEventListener('change', loadVideoGames);
-document.getElementById('musicSort').addEventListener('change', loadMusic);
-document.getElementById('bookSort').addEventListener('change', loadBooks);
+document.getElementById('movieSort').addEventListener('change', () => loadMovies());
+document.getElementById('tvSort').addEventListener('change', () => loadTVShows());
+document.getElementById('animeSort').addEventListener('change', () => loadAnime());
+document.getElementById('videoGameSort').addEventListener('change', () => loadVideoGames());
+document.getElementById('musicSort').addEventListener('change', () => loadMusic());
+document.getElementById('bookSort').addEventListener('change', () => loadBooks());
 
 // Automatic search with debounce
 let movieSearchTimeout;
@@ -9596,6 +9351,80 @@ loadBooks = async function (...args) {
   }
   return result;
 };
+
+// Import completion reuses the existing library and dashboard refresh paths.
+if (window.OmniImportStudio) {
+  const activeImportLibraryLoads = new Map();
+  let importLibraryRefreshEpoch = 0;
+  const trackImportLibraryLoad = (category, load) => function (...args) {
+    const request = load(...args);
+    // A duplicate invocation can return immediately while the first load is
+    // still running. Keep tracking the first load until it has rendered.
+    if (!activeImportLibraryLoads.has(category) && request?.then) {
+      activeImportLibraryLoads.set(category, request);
+      const finished = () => {
+        if (activeImportLibraryLoads.get(category) === request) activeImportLibraryLoads.delete(category);
+      };
+      request.then(finished, finished);
+    }
+    return request;
+  };
+  loadMovies = trackImportLibraryLoad('movies', loadMovies);
+  loadTVShows = trackImportLibraryLoad('tv-shows', loadTVShows);
+  loadAnime = trackImportLibraryLoad('anime', loadAnime);
+  loadVideoGames = trackImportLibraryLoad('video-games', loadVideoGames);
+  loadMusic = trackImportLibraryLoad('music', loadMusic);
+  loadBooks = trackImportLibraryLoad('books', loadBooks);
+
+  const resetImportSession = window.OmniImportStudio.reset;
+  window.OmniImportStudio.reset = (...args) => {
+    importLibraryRefreshEpoch++;
+    return resetImportSession?.(...args);
+  };
+  window.addEventListener('pagehide', () => { importLibraryRefreshEpoch++; });
+  window.addEventListener('storage', event => {
+    if (event.key === null || ['omnitrackr_user', 'omnitrackr_token'].includes(event.key)) importLibraryRefreshEpoch++;
+  });
+
+  const refreshImportedCategory = async (category, pending = activeImportLibraryLoads.get(category)) => {
+    const account = importStudioAccountKey();
+    const epoch = importLibraryRefreshEpoch;
+    if (pending) {
+      try { await pending; } catch (_) { /* A failed old load still needs a fresh request. */ }
+    }
+    if (epoch !== importLibraryRefreshEpoch || account !== importStudioAccountKey()
+        || currentTab !== category || editingRowId !== null) return;
+    return libraryPageConfig(category)?.[2]();
+  };
+
+  window.OmniImportStudio.canOpenCategory = category => {
+    const button = getTabButton(category);
+    return !!button && button.style.display !== 'none';
+  };
+  window.OmniImportStudio.refresh = counts => {
+    invalidateLibrarySearchIndex();
+    Object.keys(categoryStatsCache).forEach(key => { delete categoryStatsCache[key]; });
+    Object.keys(counts).filter(category => counts[category] > 0).forEach(category => libraryPages.delete(category));
+    scheduleLibraryLaunchpadRefresh();
+    if (counts[currentTab] > 0 && editingRowId === null) return refreshImportedCategory(currentTab);
+  };
+  window.OmniImportStudio.openCategory = category => {
+    if (!window.OmniImportStudio.canOpenCategory(category)) return;
+    if (editingRowId !== null) {
+      document.getElementById('importStudioStatus').textContent = 'Your import is saved. Save or cancel your current library edit before opening another category.';
+      return;
+    }
+    const source = LIBRARY_SEARCH_SOURCES.find(entry => entry.tab === category);
+    if (!source) return;
+    document.getElementById(source.input).value = '';
+    libraryPages.delete(category);
+    window.closeAccountModal();
+    const pending = activeImportLibraryLoads.get(category);
+    switchTab(category);
+    getTabButton(category)?.focus();
+    if (pending) return refreshImportedCategory(category, pending);
+  };
+}
 
 // Load initial data
 setupLibrarySearch();

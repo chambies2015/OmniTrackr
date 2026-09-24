@@ -4,6 +4,7 @@ from __future__ import annotations
 import csv
 import hashlib
 import io
+import math
 import re
 from dataclasses import dataclass
 from datetime import datetime
@@ -79,22 +80,30 @@ def _first(row: dict[str, str], *names: str) -> str:
 
 
 def _integer(value: str, default: int = 0) -> int:
-    match = re.search(r"\d{4}", value or "")
-    if match:
-        return int(match.group(0))
-    try:
-        return max(0, int(float(value)))
-    except (TypeError, ValueError):
+    if not value:
         return default
+    # MyAnimeList exports a full series start date rather than a year.
+    if re.fullmatch(r"\d{4}[-/]\d{2}[-/]\d{2}", value):
+        try:
+            return _date(value).year
+        except ValueError:
+            raise ValueError("Year must contain a valid year or series start date.") from None
+    year = _optional_integer(value, "Year")
+    if year > 9999:
+        raise ValueError("Year must be between 0 and 9999.")
+    return year
 
 
-def _optional_integer(value: str) -> int | None:
+def _optional_integer(value: str, field: str) -> int | None:
     if not value:
         return None
     try:
-        return max(0, int(float(value)))
+        number = float(value)
     except (TypeError, ValueError):
-        return None
+        raise ValueError(f"{field} must be a non-negative whole number.") from None
+    if not math.isfinite(number) or number < 0 or not number.is_integer() or number > 2147483647:
+        raise ValueError(f"{field} must be a non-negative whole number below 2,147,483,648.")
+    return int(number)
 
 
 def _rating(value: str, five_point: bool = False) -> float | None:
@@ -103,14 +112,17 @@ def _rating(value: str, five_point: bool = False) -> float | None:
     try:
         rating = float(value)
     except (TypeError, ValueError):
-        return None
+        raise ValueError("Rating must be a number.") from None
+    maximum = 5 if five_point else 10
+    if not math.isfinite(rating) or not 0 <= rating <= maximum:
+        raise ValueError(f"Rating must be between 0 and {maximum}.")
     if five_point:
         rating *= 2
-    return round(min(10.0, max(0.0, rating)), 1)
+    return round(rating, 1)
 
 
 def _truthy(value: str) -> bool:
-    return _clean(value).lower() in {"1", "true", "yes", "y", "watched", "read", "played", "completed", "complete", "finished"}
+    return _clean(value).lower() in {"1", "true", "yes", "y", "watched", "read", "played", "listened", "completed", "complete", "finished"}
 
 
 def _date(value: str) -> datetime | None:
@@ -119,13 +131,13 @@ def _date(value: str) -> datetime | None:
     cleaned = value.strip()
     for fmt in ("%Y-%m-%d", "%Y/%m/%d", "%m/%d/%Y", "%d/%m/%Y", "%Y"):
         try:
-            return datetime.strptime(cleaned[:10] if fmt != "%Y" else cleaned[:4], fmt)
+            return datetime.strptime(cleaned, fmt)
         except ValueError:
             continue
     try:
         return datetime.fromisoformat(cleaned.replace("Z", "+00:00")).replace(tzinfo=None)
     except ValueError:
-        return None
+        raise ValueError("Release date must be a valid date (for example, YYYY-MM-DD) or a four-digit year.") from None
 
 
 def _completed_status(value: str) -> bool:
@@ -160,46 +172,61 @@ def _read_csv(content: bytes) -> tuple[list[dict[str, str]], set[str]]:
     reader = csv.DictReader(io.StringIO(text), dialect=dialect)
     if not reader.fieldnames:
         raise ValueError("The CSV file does not contain a header row.")
-    rows = [_normalized_row(row) for row in reader]
+    try:
+        rows = [_normalized_row(row) for row in reader]
+    except csv.Error as exc:
+        raise ValueError("The CSV could not be read. Check its quoting and column lengths.") from exc
     if len(rows) > MAX_IMPORT_ROWS:
         raise ValueError(f"Imports are limited to {MAX_IMPORT_ROWS:,} rows at a time.")
     return rows, {_header(name) for name in reader.fieldnames}
 
 
-def _base_data(row: dict[str, str]) -> tuple[str, int, float | None, str | None]:
-    title = _first(row, "title", "name")
-    year = _integer(_first(row, "year", "release year", "release_year", "year published", "original publication year"))
-    rating = _rating(_first(row, "rating", "score", "my rating"))
-    review = _first(row, "review", "notes", "note", "my review") or None
-    return title, year, rating, review
+def _field(row: dict[str, str], mapping: dict[str, str], target: str, *aliases: str) -> str:
+    """Explicit mappings, including blank values, take precedence over aliases."""
+    if target in mapping:
+        return row.get(mapping[target], "")
+    return _first(row, *aliases)
 
 
-def _generic_row(row: dict[str, str], category_override: str | None) -> tuple[str, dict[str, Any]]:
-    raw_category = category_override or _first(row, "category", "type", "media type", "media_type")
+def _generic_row(row: dict[str, str], category_override: str | None, mapping: dict[str, str]) -> tuple[str, dict[str, Any]]:
+    def field(target: str, *aliases: str) -> str:
+        return _field(row, mapping, target, *aliases)
+
+    raw_category = category_override or field("category", "category", "type", "media type", "media_type")
     category = CATEGORY_ALIASES.get(_clean(raw_category).lower())
     if not category:
         raise ValueError("Choose a media category or add a category column to the CSV.")
-    title, year, rating, review = _base_data(row)
+    title = field("title", "title", "name")
     if not title:
         raise ValueError("Title is required.")
-    completed = _truthy(_first(row, "completed", "watched", "read", "played", "finished", "status"))
+    year = _integer(field("year", "year", "release year", "year published", "original publication year")) if category != "video-games" else None
+    rating = _rating(field("rating", "rating", "score", "my rating"))
+    review = field("review", "review", "notes", "note", "my review") or None
+    completion_field = {"video-games": "played", "music": "listened", "books": "read"}.get(category, "watched")
+    completed = _truthy(field("status", "completed", completion_field, "status", "finished", "watched", "read", "played", "listened"))
     common = {"title": title, "rating": rating, "review": review, "review_public": False}
     if category == "movies":
-        data = {**common, "director": _first(row, "director", "creator") or "Unknown director", "year": year, "watched": completed}
+        data = {**common, "director": field("creator", "director", "creator") or "Unknown director", "year": year, "watched": completed}
     elif category in {"tv-shows", "anime"}:
-        data = {**common, "year": year, "seasons": _optional_integer(_first(row, "seasons")), "episodes": _optional_integer(_first(row, "episodes")), "watched": completed}
+        data = {**common, "year": year, "seasons": _optional_integer(field("seasons", "seasons"), "Seasons"), "episodes": _optional_integer(field("episodes", "episodes"), "Episodes"), "watched": completed}
     elif category == "video-games":
-        data = {**common, "release_date": _date(_first(row, "release date", "release_date", "date", "year")), "genres": _first(row, "genres", "genre") or None, "played": completed}
+        release = field("release_date", "release date", "date")
+        if "release_date" not in mapping and not release:
+            release = field("year", "year", "release year")
+        data = {**common, "release_date": _date(release), "genres": field("genre", "genres", "genre") or None, "played": completed}
     elif category == "music":
-        data = {**common, "artist": _first(row, "artist", "creator") or "Unknown artist", "year": year, "genre": _first(row, "genre", "genres") or None, "listened": completed}
+        data = {**common, "artist": field("creator", "artist", "creator") or "Unknown artist", "year": year, "genre": field("genre", "genre", "genres") or None, "listened": completed}
     else:
-        data = {**common, "author": _first(row, "author", "creator") or "Unknown author", "year": year, "genre": _first(row, "genre", "genres") or None, "read": completed}
+        data = {**common, "author": field("creator", "author", "creator") or "Unknown author", "year": year, "genre": field("genre", "genre", "genres") or None, "read": completed}
     return category, data
 
 
-def _source_row(source: str, row: dict[str, str], category_override: str | None) -> tuple[str, dict[str, Any]]:
+def _source_row(source: str, row: dict[str, str], category_override: str | None, mapping: dict[str, str]) -> tuple[str, dict[str, Any]]:
     if source == "generic":
-        return _generic_row(row, category_override)
+        return _generic_row(row, category_override, mapping)
+    # Keep supported source adapters' existing mapping behavior without mutating
+    # the original row or letting one mapping overwrite another one's source.
+    row = {**row, **{target: row[source_name] for target, source_name in mapping.items()}}
     if source == "letterboxd":
         title = _first(row, "name")
         if not title:
@@ -227,7 +254,7 @@ def _source_row(source: str, row: dict[str, str], category_override: str | None)
     start = _first(row, "series start")
     return "anime", {
         "title": title, "year": _integer(start), "seasons": None,
-        "episodes": _optional_integer(_first(row, "series episodes")),
+        "episodes": _optional_integer(_first(row, "series episodes"), "Episodes"),
         "rating": _rating(_first(row, "my score")),
         "watched": _completed_status(_first(row, "my status")),
         "review": _first(row, "my comments", "comments") or None,
@@ -250,6 +277,7 @@ def parse_csv(
         if not category_override:
             raise ValueError("Unsupported generic media category.")
     rows, headers = _read_csv(content)
+    normalized_mapping = {}
     if column_mapping:
         allowed_targets = {
             "category", "title", "year", "creator", "rating", "status", "review",
@@ -260,21 +288,23 @@ def parse_csv(
             for target, source_name in column_mapping.items()
             if _header(target) in allowed_targets and _header(source_name)
         }
-        for row in rows:
-            for target, source_name in normalized_mapping.items():
-                if source_name in row:
-                    row[target] = row[source_name]
+        missing = set(normalized_mapping.values()) - headers
+        if missing:
+            raise ValueError("Mapped CSV columns were not found: " + ", ".join(sorted(missing)) + ".")
         headers.update(normalized_mapping.keys())
     detected = _detect_source(headers) if source == "auto" else source
     parsed: list[ParsedRow] = []
     for number, row in enumerate(rows, start=2):
         try:
-            category, data = _source_row(detected, row, category_override)
+            category, data = _source_row(detected, row, category_override, normalized_mapping)
             validated = SCHEMA_BY_CATEGORY[category](**data)
             parsed.append(ParsedRow(number, category, validated.title, validated.model_dump()))
-        except (ValueError, ValidationError) as exc:
-            title = _first(row, "title", "name", "series title") or f"Row {number}"
-            message = str(exc).split("\n", 1)[0]
+        except ValueError as exc:
+            title = _field(row, normalized_mapping, "title", "title", "name", "series title") or f"Row {number}"
+            if isinstance(exc, ValidationError):
+                message = "; ".join(f"{'.'.join(str(part) for part in error['loc'])}: {error['msg']}" for error in exc.errors())
+            else:
+                message = str(exc)
             parsed.append(ParsedRow(number, None, title, None, message))
     return detected, parsed
 
@@ -311,26 +341,57 @@ def classify_rows(db: Session, user_id: int, rows: Iterable[ParsedRow]) -> list[
             continue
         identity = _identity(row.category, row.data)
         if identity in identities[row.category]:
-            classified.append({"row": row.row, "category": row.category, "title": row.title, "status": "duplicate", "reason": "Already in this library or repeated in the file."})
+            classified.append({"row": row.row, "category": row.category, "title": row.title, "status": "duplicate", "reason": "Already in this library or repeated in the file.", "data": row.data})
             continue
         identities[row.category].add(identity)
         classified.append({"row": row.row, "category": row.category, "title": row.title, "status": "ready", "reason": None, "data": row.data})
     return classified
 
 
-def summarize(source: str, digest: str, classified: list[dict[str, Any]]) -> dict[str, Any]:
+def _preview_values(data: dict[str, Any] | None) -> dict[str, Any] | None:
+    """Describe the CSV candidate, never the stored record it might duplicate."""
+    if data is None:
+        return None
+    release = data.get("release_date")
+    return {
+        "creator": data.get("director") or data.get("artist") or data.get("author"),
+        "year": data.get("year") if "year" in data else release.year if release else None,
+        "release_date": release.date().isoformat() if release else None,
+        "rating": data.get("rating"),
+        "completed": bool(data.get("watched") or data.get("read") or data.get("played") or data.get("listened")),
+        "review": data.get("review"),
+        "genre": data.get("genre") or data.get("genres"),
+        "seasons": data.get("seasons"),
+        "episodes": data.get("episodes"),
+    }
+
+
+def summarize(
+    source: str,
+    digest: str,
+    classified: list[dict[str, Any]],
+    status_filter: str = "all",
+    offset: int = 0,
+    limit: int = 100,
+) -> dict[str, Any]:
     counts = {"ready": 0, "duplicate": 0, "invalid": 0}
     by_category = {category: 0 for category in MODEL_BY_CATEGORY}
     for item in classified:
         counts[item["status"]] += 1
         if item["status"] == "ready" and item["category"]:
             by_category[item["category"]] += 1
-    preview = [{key: value for key, value in item.items() if key != "data"} for item in classified[:100]]
+    filtered = [item for item in classified if status_filter == "all" or item["status"] == status_filter]
+    offset = min(offset, len(filtered))
+    preview = [
+        {**{key: value for key, value in item.items() if key != "data"}, "values": _preview_values(item.get("data"))}
+        for item in filtered[offset:offset + limit]
+    ]
     return {
         "fingerprint": digest, "detected_source": source, "total_rows": len(classified),
         "ready_count": counts["ready"], "duplicate_count": counts["duplicate"],
         "invalid_count": counts["invalid"], "by_category": by_category,
-        "preview": preview, "preview_truncated": len(classified) > 100,
+        "preview": preview, "preview_truncated": len(filtered) > len(preview),
+        "preview_total": len(filtered), "preview_offset": offset, "preview_limit": limit,
     }
 
 
