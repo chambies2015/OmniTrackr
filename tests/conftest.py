@@ -3,6 +3,7 @@ Pytest configuration and fixtures for OmniTrackr tests.
 """
 import os
 os.environ["TESTING"] = "true"  # Disable rate limiting in tests
+os.environ.setdefault("RELEASE_RADAR_CACHE_DIR", "")  # No on-disk Release Radar cache in tests
 
 import pytest
 from fastapi.testclient import TestClient
@@ -25,6 +26,19 @@ engine = create_engine(
     poolclass=StaticPool,
 )
 TestingSessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
+
+
+@pytest.fixture(autouse=True)
+def offline_release_radar(monkeypatch):
+    """Release Radar must never reach real APIs from the test suite."""
+    from app import release_radar
+
+    async def offline(client, window):
+        raise release_radar.ProviderUnavailable("network disabled in tests")
+
+    for category in release_radar.CATEGORY_ORDER:
+        monkeypatch.setitem(release_radar.PROVIDERS, category, offline)
+    monkeypatch.setattr(release_radar, "CACHE", release_radar.RadarCache(None))
 
 
 @pytest.fixture(scope="function")

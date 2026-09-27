@@ -4,12 +4,12 @@ SEO endpoints for the OmniTrackr API.
 import os
 import json
 from datetime import datetime
-from fastapi import APIRouter, Depends
+from fastapi import APIRouter, Depends, Request
 from fastapi.responses import Response
 from sqlalchemy.orm import Session, selectinload
 from sqlalchemy import and_, func
 
-from .. import models
+from .. import models, release_radar
 from ..dependencies import get_db
 from ..discover_guides import GUIDES
 from ..review_quality import evaluate_public_review
@@ -44,7 +44,7 @@ CORE_SITEMAP_PATHS = (
 
 
 @router.get("/sitemap.xml")
-async def get_sitemap(db: Session = Depends(get_db)):
+async def get_sitemap(request: Request = None, db: Session = Depends(get_db)):
     """Generate and serve sitemap.xml for SEO."""
     base_url = os.getenv("SITE_URL", "https://omnitrackr.xyz")
     today = datetime.now().strftime('%Y-%m-%d')
@@ -55,6 +55,33 @@ async def get_sitemap(db: Session = Depends(get_db)):
             f"<priority>{priority}</priority></url>"
         )
     
+    # Release Radar pages are listed only when their cached data makes them
+    # indexable (a cold cache is warmed in the background for the next crawl).
+    radar_client = getattr(request.app.state, "external_api_client", None) if request else None
+    featured_total = 0
+    radar_parts = []
+    for radar_category in release_radar.CATEGORY_ORDER:
+        featured = release_radar.featured_window(radar_category)
+        for window in release_radar.allowed_windows(radar_category):
+            if window.start < featured.start:
+                continue
+            cached = release_radar.CACHE.peek(window)
+            count = len(cached.get("items", [])) if cached else 0
+            if window == featured:
+                featured_total += count
+                if cached is None and radar_client is not None:
+                    release_radar.CACHE.warm(radar_client, window)
+            if count >= release_radar.MIN_INDEXABLE_ITEMS:
+                path = f"/release-radar/{radar_category}" if window == featured else f"/release-radar/{radar_category}/{window.slug}"
+                changefreq, priority = ("daily", "0.8") if window == featured else ("weekly", "0.6")
+                radar_parts.append(
+                    f"  <url><loc>{base_url}{path}</loc><lastmod>{today}</lastmod>"
+                    f"<changefreq>{changefreq}</changefreq><priority>{priority}</priority></url>"
+                )
+    if featured_total >= release_radar.MIN_INDEXABLE_ITEMS:
+        sitemap_parts.append(f"  <url><loc>{base_url}/release-radar</loc><lastmod>{today}</lastmod><changefreq>daily</changefreq><priority>0.85</priority></url>")
+    sitemap_parts.extend(radar_parts)
+
     try:
         user_query = db.query(models.User.id).filter(models.User.is_active == True)
         public_detail_review_filter = lambda model_cls: and_(
@@ -382,6 +409,8 @@ OmniTrackr is a free web application for tracking and organizing movies, TV show
 
 ## Public Content
 Public reviews are available at {base_url}/reviews and individual review pages at {base_url}/reviews/[id]?category=[category]. OmniTrackr also publishes evergreen guidance at {base_url}/faq, {base_url}/guides, {base_url}/media-tracking, {base_url}/compare, {base_url}/use-cases, {base_url}/movie-tracker, {base_url}/tv-show-tracker, {base_url}/anime-tracker, {base_url}/game-tracker, {base_url}/music-tracker, {base_url}/book-tracker, {base_url}/media-statistics, {base_url}/export-import-guide, {base_url}/media-tracker-checklist, {base_url}/tracking-templates, and {base_url}/review-guidelines, a demo library at {base_url}/demo, a sample media library at {base_url}/sample-library, a human-readable site map at {base_url}/site-map, product updates at {base_url}/changelog and {base_url}/roadmap, ad transparency at {base_url}/advertising, and content quality standards at {base_url}/content-quality.
+Release Radar at {base_url}/release-radar lists upcoming movies (Wikidata), TV premieres (TVmaze), the current anime season (AniList), and new video games (RAWG), refreshed every few hours, with one-click tracking for members.
+
 Automatically qualified member collections are browsable at {base_url}/collections/explore. Share-ready collections that miss the stricter discovery checks remain available only by direct link and stay outside the search index. Version-bound reports can temporarily unlist a collection without deleting it.
 
 ## Quality and Advertising Boundaries

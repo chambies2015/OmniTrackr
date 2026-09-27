@@ -1,0 +1,233 @@
+{
+ "candidates": [
+  {
+   "film": {
+    "value": "http://www.wikidata.org/entity/Q1001"
+   },
+   "filmLabel": {
+    "value": "Digger"
+   },
+   "date": {
+    "value": "2026-10-01T00:00:00Z"
+   },
+   "links": {
+    "value": "23"
+   }
+  },
+  {
+   "film": {
+    "value": "http://www.wikidata.org/entity/Q1001"
+   },
+   "filmLabel": {
+    "value": "Digger"
+   },
+   "date": {
+    "value": "2026-10-02T00:00:00Z"
+   },
+   "links": {
+    "value": "23"
+   },
+   "place": {
+    "value": "http://www.wikidata.org/entity/Q30"
+   }
+  },
+  {
+   "film": {
+    "value": "http://www.wikidata.org/entity/Q1001"
+   },
+   "filmLabel": {
+    "value": "Digger"
+   },
+   "date": {
+    "value": "2026-10-02T00:00:00Z"
+   },
+   "links": {
+    "value": "23"
+   },
+   "place": {
+    "value": "http://www.wikidata.org/entity/Q145"
+   }
+  },
+  {
+   "film": {
+    "value": "http://www.wikidata.org/entity/Q1002"
+   },
+   "filmLabel": {
+    "value": "Verity"
+   },
+   "date": {
+    "value": "2026-10-02T00:00:00Z"
+   },
+   "links": {
+    "value": "16"
+   },
+   "place": {
+    "value": "http://www.wikidata.org/entity/Q30"
+   }
+  },
+  {
+   "film": {
+    "value": "http://www.wikidata.org/entity/Q1003"
+   },
+   "filmLabel": {
+    "value": "Hope"
+   },
+   "date": {
+    "value": "2026-10-08T00:00:00Z"
+   },
+   "links": {
+    "value": "21"
+   },
+   "place": {
+    "value": "http://www.wikidata.org/entity/Q183"
+   }
+  },
+  {
+   "film": {
+    "value": "http://www.wikidata.org/entity/Q1004"
+   },
+   "filmLabel": {
+    "value": "Whalefall"
+   },
+   "date": {
+    "value": "2026-10-16T00:00:00Z"
+   },
+   "links": {
+    "value": "14"
+   }
+  },
+  {
+   "film": {
+    "value": "http://www.wikidata.org/entity/Q1005"
+   },
+   "filmLabel": {
+    "value": "Q132732126"
+   },
+   "date": {
+    "value": "2026-10-29T00:00:00Z"
+   },
+   "links": {
+    "value": "11"
+   }
+  },
+  {
+   "film": {
+    "value": "http://www.wikidata.org/entity/Q1006"
+   },
+   "filmLabel": {
+    "value": "The Thing with Feathers"
+   },
+   "date": {
+    "value": "2026-10-15T00:00:00Z"
+   },
+   "links": {
+    "value": "10"
+   },
+   "place": {
+    "value": "http://www.wikidata.org/entity/Q30"
+   }
+  },
+  {
+   "film": {
+    "value": "http://www.wikidata.org/entity/Q1007"
+   },
+   "filmLabel": {
+    "value": "Sense and Sensibility"
+   },
+   "date": {
+    "value": "2026-10-16T00:00:00Z"
+   },
+   "links": {
+    "value": "13"
+   },
+   "place": {
+    "value": "http://www.wikidata.org/entity/Q30"
+   }
+  },
+  {
+   "film": {
+    "value": "http://www.wikidata.org/entity/Q1008"
+   },
+   "filmLabel": {
+    "value": "Early Festival Film"
+   },
+   "date": {
+    "value": "2026-09-05T00:00:00Z"
+   },
+   "links": {
+    "value": "30"
+   }
+  }
+ ],
+ "details": [
+  {
+   "film": {
+    "value": "http://www.wikidata.org/entity/Q1001"
+   },
+   "dirLabel": {
+    "value": "Alejandro Gonz\u00e1lez I\u00f1\u00e1rritu"
+   },
+   "genreLabel": {
+    "value": "drama film"
+   },
+   "imdb": {
+    "value": "tt31450459"
+   }
+  },
+  {
+   "film": {
+    "value": "http://www.wikidata.org/entity/Q1001"
+   },
+   "dirLabel": {
+    "value": "Alejandro Gonz\u00e1lez I\u00f1\u00e1rritu"
+   },
+   "genreLabel": {
+    "value": "comedy film"
+   },
+   "imdb": {
+    "value": "tt31450459"
+   }
+  },
+  {
+   "film": {
+    "value": "http://www.wikidata.org/entity/Q1002"
+   },
+   "dirLabel": {
+    "value": "Michael Showalter"
+   },
+   "genreLabel": {
+    "value": "thriller film"
+   }
+  },
+  {
+   "film": {
+    "value": "http://www.wikidata.org/entity/Q1004"
+   },
+   "genreLabel": {
+    "value": "drama film"
+   }
+  },
+  {
+   "film": {
+    "value": "http://www.wikidata.org/entity/Q1006"
+   },
+   "dirLabel": {
+    "value": "Dylan Southern"
+   },
+   "genreLabel": {
+    "value": "drama film"
+   }
+  },
+  {
+   "film": {
+    "value": "http://www.wikidata.org/entity/Q1007"
+   },
+   "dirLabel": {
+    "value": "Georgia Oakley"
+   },
+   "genreLabel": {
+    "value": "romance film"
+   }
+  }
+ ]
+}

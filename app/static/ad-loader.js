@@ -11,7 +11,8 @@
 
   function isAdEligiblePath() {
     return AD_ELIGIBLE_PATHS.has(window.location.pathname) ||
-      /^\/reviews\/\d+$/.test(window.location.pathname);
+      /^\/reviews\/\d+$/.test(window.location.pathname) ||
+      /^\/release-radar(\/(movies|tv|anime|games)(\/[a-z0-9-]{4,20})?)?$/.test(window.location.pathname);
   }
 
   function hasStoredAuth() {

@@ -17,7 +17,7 @@ from sqlalchemy.orm import Session
 from sqlalchemy import and_, func
 from sqlalchemy.exc import IntegrityError
 
-from .. import models, schemas
+from .. import affiliate, models, schemas
 from ..auth import AUTH_COOKIE_NAME
 from ..csp import strict_html_response
 from ..dependencies import get_current_user, get_db
@@ -267,6 +267,16 @@ def _absolute_url(path_or_url: str) -> str:
     if path_or_url.startswith(("http://", "https://")):
         return path_or_url
     return f"{SITE_URL}{path_or_url if path_or_url.startswith('/') else '/' + path_or_url}"
+
+
+def _review_affiliate_html(review: dict) -> str:
+    """Optional, clearly labelled shopping link; empty unless an affiliate tag is configured."""
+    category = review.get("category") or ""
+    creator = review.get("author") or review.get("artist") or review.get("director") or ""
+    links = affiliate.links_html(category, review.get("title") or "", creator, css_class="review-affiliate-links")
+    if not links:
+        return ""
+    return f'<div class="review-affiliate">{links}{affiliate.disclosure_html("review-affiliate-disclosure")}</div>'
 
 
 def _review_meta(review: dict) -> str:
@@ -614,6 +624,9 @@ def _review_detail_html(review: dict) -> str:
     .review-save-link {{ display: inline-flex; align-items: center; justify-content: center; min-height: 44px; padding: 10px 18px; border-radius: 9px; background: var(--primary); color: white; text-decoration: none; font-weight: 600; }}
     .review-save-link:focus-visible {{ outline: 3px solid var(--fg); outline-offset: 4px; }}
     .review-save-note {{ color: var(--fg-secondary); margin-top: 10px; line-height: 1.6; }}
+    .review-affiliate {{ margin-top: 14px; }}
+    .review-affiliate .affiliate-link {{ color: var(--primary); font-weight: 600; }}
+    .review-affiliate-disclosure {{ color: var(--fg-secondary); font-size: .85rem; margin-top: 6px; }}
     @media (max-width: 768px) {{
       .review-header {{ flex-direction: column; }}
       .review-poster-large {{ height: auto; max-height: 400px; width: 100%; }}
@@ -640,6 +653,7 @@ def _review_detail_html(review: dict) -> str:
       <section class="review-content">{_escape(review.get("review"))}</section>
       <a class="review-save-link" href="/reviews/{review['id']}/save?category={_escape(category)}">Save to my library</a>
       <p class="review-save-note">Keep this title for later. Preview your library match before confirming.</p>
+      {_review_affiliate_html(review)}
       <footer class="review-author">
         <p><strong>Review by:</strong> {_escape(review.get("username"))}</p>
       </footer>

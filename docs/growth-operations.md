@@ -622,3 +622,37 @@ Focused growth and trust checks live in `tests/test_auth.py`,
 `tests/test_collections.py`, `tests/test_collection_save.py`, `tests/test_first_session.py`, `tests/test_statistics.py`,
 `tests/test_public_reviews.py`, `tests/test_seo_security.py`, and
 `tests/test_static_security.py`.
+
+## Release Radar
+
+`/release-radar` is a public, server-rendered hub with four sections (movies,
+TV premieres, anime season, video games). Each section has a featured period
+(the current month or season, or the next one once it is ten days away) and a
+bounded range of one period back and up to three ahead.
+
+Sources and licensing: Wikidata (CC0) for films, TVmaze (CC BY-SA, linked on
+every page) for premieres, AniList (free below $150/month revenue) for anime,
+and RAWG (free for hobby projects with an active link) for games. TMDB was
+deliberately not used because its free tier excludes commercial sites.
+
+Data is normalized in `app/release_radar.py`, cached in memory and in
+`RELEASE_RADAR_CACHE_DIR`, refreshed in the background after six hours, and
+served stale when a provider fails. A cold page waits at most a few seconds,
+then shows a noindex "gathering" state that refreshes itself.
+
+Indexing and ads: a list needs 8 titles to be indexable and listed in the
+sitemap, and 12 to load the ad script. Radar notes are calculated from the
+list (busiest week, new versus returning, platform spread), not written per
+title. Only aggregate library counts appear, never usernames.
+
+Tracking reuses the member's existing entry when the title already exists
+(case-insensitive match), otherwise creates an unfinished, unrated, private
+record, and links it to a private "Release Radar" collection. Saves are keyed
+to cached items, so clients cannot inject arbitrary titles. No schema changes.
+
+Affiliate links (`app/affiliate.py`) are off unless `AMAZON_ASSOCIATES_TAG` is
+set. When on, they appear on radar cards and standalone review pages with the
+Amazon Associates disclosure, `rel="sponsored"`, and a new tab. Discover trails
+stay affiliate-free because they promise informational source links.
+
+Local preview with fixtures (no network): `python -m tests.manual_release_radar_preview`.

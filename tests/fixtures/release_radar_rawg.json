@@ -1,0 +1,192 @@
+{
+ "results": [
+  {
+   "slug": "fixture-starfall",
+   "name": "Fixture: Starfall Odyssey",
+   "released": "2026-10-06",
+   "tba": false,
+   "added": 1800,
+   "platforms": [
+    {
+     "platform": {
+      "name": "PC"
+     }
+    },
+    {
+     "platform": {
+      "name": "PlayStation 5"
+     }
+    },
+    {
+     "platform": {
+      "name": "Xbox Series S/X"
+     }
+    }
+   ],
+   "genres": [
+    {
+     "name": "Action"
+    },
+    {
+     "name": "RPG"
+    }
+   ],
+   "background_image": "https://media.rawg.io/media/games/fixture-starfall.jpg"
+  },
+  {
+   "slug": "fixture-pocket-farm",
+   "name": "Fixture Pocket Farm",
+   "released": "2026-10-06",
+   "tba": false,
+   "added": 950,
+   "platforms": [
+    {
+     "platform": {
+      "name": "Nintendo Switch 2"
+     }
+    },
+    {
+     "platform": {
+      "name": "PC"
+     }
+    }
+   ],
+   "genres": [
+    {
+     "name": "Simulation"
+    },
+    {
+     "name": "Indie"
+    }
+   ],
+   "background_image": "https://media.rawg.io/media/games/fixture-pocket-farm.jpg"
+  },
+  {
+   "slug": "fixture-racing",
+   "name": "Fixture Racing Circuit",
+   "released": "2026-10-13",
+   "tba": false,
+   "added": 700,
+   "platforms": [
+    {
+     "platform": {
+      "name": "PC"
+     }
+    },
+    {
+     "platform": {
+      "name": "PlayStation 5"
+     }
+    },
+    {
+     "platform": {
+      "name": "Xbox Series S/X"
+     }
+    },
+    {
+     "platform": {
+      "name": "Nintendo Switch 2"
+     }
+    }
+   ],
+   "genres": [
+    {
+     "name": "Racing"
+    },
+    {
+     "name": "Sports"
+    }
+   ],
+   "background_image": "https://media.rawg.io/media/games/fixture-racing.jpg"
+  },
+  {
+   "slug": "fixture-tactics",
+   "name": "Fixture Tactics",
+   "released": "2026-10-20",
+   "tba": false,
+   "added": 400,
+   "platforms": [
+    {
+     "platform": {
+      "name": "PC"
+     }
+    }
+   ],
+   "genres": [
+    {
+     "name": "Strategy"
+    }
+   ],
+   "background_image": null
+  },
+  {
+   "slug": "fixture-horror",
+   "name": "Fixture Night Terrors",
+   "released": "2026-10-27",
+   "tba": false,
+   "added": 1200,
+   "platforms": [
+    {
+     "platform": {
+      "name": "PC"
+     }
+    },
+    {
+     "platform": {
+      "name": "PlayStation 5"
+     }
+    }
+   ],
+   "genres": [
+    {
+     "name": "Action"
+    },
+    {
+     "name": "Horror"
+    }
+   ],
+   "background_image": "https://media.rawg.io/media/games/fixture-horror.jpg"
+  },
+  {
+   "slug": "Bad Slug!",
+   "name": "Bad slug is dropped",
+   "released": "2026-10-10",
+   "tba": false,
+   "added": 5000,
+   "platforms": [
+    {
+     "platform": {
+      "name": "PC"
+     }
+    }
+   ],
+   "genres": [
+    {
+     "name": "Action"
+    }
+   ],
+   "background_image": "https://media.rawg.io/media/games/Bad Slug!.jpg"
+  },
+  {
+   "slug": "fixture-next-month",
+   "name": "Fixture Next Month",
+   "released": "2026-11-03",
+   "tba": false,
+   "added": 3000,
+   "platforms": [
+    {
+     "platform": {
+      "name": "PC"
+     }
+    }
+   ],
+   "genres": [
+    {
+     "name": "Action"
+    }
+   ],
+   "background_image": "https://media.rawg.io/media/games/fixture-next-month.jpg"
+  }
+ ],
+ "next": null
+}

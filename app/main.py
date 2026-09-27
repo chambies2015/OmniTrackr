@@ -48,6 +48,7 @@ from .routers import (
     progress,
     collections,
     discover,
+    release_radar,
     import_studio,
     recommendations,
 )
@@ -380,6 +381,7 @@ for route in collections.router.routes:
         bind_rate_limited_endpoint(route, rate_limited_collection_report)
 app.include_router(collections.router)
 app.include_router(discover.router)
+app.include_router(release_radar.router)
 app.include_router(export_import.router)
 app.include_router(custom_tabs.router)
 

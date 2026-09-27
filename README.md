@@ -22,6 +22,7 @@ Live site: [https://www.omnitrackr.xyz/](https://www.omnitrackr.xyz/)
 - Export and import JSON for built-in categories and custom tabs.
 - View statistics for completion, ratings, years, directors, genres, TV/anime season data, music, books, and high-level library insights.
 - Return after three days to an optional Welcome Back Deck that composes the existing Next Up, unfinished-library, reflection, and journal signals without creating another permanent dashboard panel.
+- Browse **Release Radar** (`/release-radar`): upcoming movies, TV premieres, the anime season, and new games, with calculated Radar notes, aggregate library counts, and one-click tracking into a private Release Radar collection. No database schema changes.
 - Use public content pages for onboarding and discovery: `/about`, `/guides`, `/compare`, `/use-cases`, `/demo`, `/media-tracking`, `/tv-show-tracker`, `/game-tracker`, `/changelog`, `/roadmap`, `/privacy`, `/terms`, and `/contact`.
 - Run with SQLite locally or PostgreSQL in production.
 
@@ -236,7 +237,7 @@ External metadata:
 | Variable | Purpose |
 | --- | --- |
 | `OMDB_API_KEY` | Optional movie/TV metadata and posters. |
-| `RAWG_API_KEY` | Optional video game metadata and cover art. |
+| `RAWG_API_KEY` | Optional video game metadata and cover art. Also powers the Release Radar games list. |
 
 Public content and ads:
 
@@ -250,6 +251,18 @@ Public content and ads:
 | `COLLECTION_MODERATOR_USERNAMES` | Optional trusted usernames allowed to view aggregate site health and apply an exceptional emergency collection block. Routine discovery is automatic. |
 
 iTunes Search API and Open Library API do not require keys.
+
+Release Radar and affiliate links:
+
+| Variable | Purpose |
+| --- | --- |
+| `AMAZON_ASSOCIATES_TAG` | Optional Amazon Associates tracking ID (for example `omnitrackr-20`). When set, Release Radar cards and standalone review pages show a labelled "Find it on Amazon" link plus the required disclosure. Unset means no affiliate links anywhere. |
+| `AFFILIATE_DISCLOSURE` | Optional override for the disclosure sentence. |
+| `RELEASE_RADAR_CACHE_DIR` | Where Release Radar keeps its JSON cache between restarts. Defaults to the system temp folder; set to an empty value to keep it in memory only. |
+| `RELEASE_RADAR_FRESH_SECONDS` | How long a list is served before a background refresh. Defaults to 6 hours. |
+| `RELEASE_RADAR_FIRST_WAIT` | Seconds a page waits for a cold list before showing the "gathering" state. Defaults to `6`. |
+
+Release Radar needs no new keys for movies (Wikidata), TV (TVmaze), or anime (AniList). Games use the existing `RAWG_API_KEY`.
 
 ## Testing
 
