@@ -892,6 +892,7 @@ html {
 
 body {
   background-image: url('./omnitrackr_vortex.png');
+  background-image: image-set(url('/omnitrackr_vortex.webp') type('image/webp'), url('/omnitrackr_vortex.png') type('image/png'));
   background-size: cover;
   background-position: center;
   background-attachment: fixed;
@@ -3004,6 +3005,7 @@ body.dark-mode .card>div:nth-of-type(2) {
   text-align: center;
   padding: 80px 20px 60px;
   background-image: url('/vortex.gif');
+  background-image: image-set(url('/vortex.webp') type('image/webp'), url('/vortex.gif') type('image/gif'));
   background-size: cover;
   background-position: center;
   background-repeat: no-repeat;
@@ -3846,6 +3848,19 @@ body.dark-mode .landing-footer {
     url('/vortex.gif');
   background-size: cover;
   background-position: center;
+  background-image:
+    linear-gradient(90deg, rgba(12, 16, 32, 0.86), rgba(12, 16, 32, 0.58)),
+    image-set(url('/vortex.webp') type('image/webp'), url('/vortex.gif') type('image/gif'));
+}
+
+/* The vortex keeps its look for everyone; people who ask their OS for less
+   motion get a still frame of the same artwork (about 4 KB) instead. */
+@media (prefers-reduced-motion: reduce) {
+  .landing-hero {
+    background-image:
+      linear-gradient(90deg, rgba(12, 16, 32, 0.86), rgba(12, 16, 32, 0.58)),
+      url('/vortex-still.webp');
+  }
 }
 
 .landing-hero::before {
