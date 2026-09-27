@@ -1305,7 +1305,8 @@ class TestSecurityMiddleware:
         assert response.status_code == 200
         content = response.text
         assert "Your media history, in one place" in content
-        assert "Remember more than the title." in content
+        visible = re.sub(r"<[^>]+>", "", content)
+        assert "Remember more than the title." in visible
         assert "From recommendation to a memory you can revisit" in content
         assert "One good pick can lead somewhere new." in content
         assert "A few honest answers" in content
@@ -1589,7 +1590,7 @@ class TestRootEndpoint:
         assert 'data-public-shell="true"' in response.text
         assert 'id="mainContainer"' not in response.text
         assert 'id="logoutBtn"' not in response.text
-        assert 'src="/static/public-landing.js"' in response.text
+        assert re.search(r'src="/static/public-landing\.js(?:\?v=[\w.-]+)?"', response.text)
         assert not re.search(r'<script\b[^>]*\bsrc=[\"\'](?:\./|/)?app\.js(?:\?[^\"\']*)?[\"\']', response.text)
         assert response.headers["cache-control"] == "no-cache"
         assert "Cookie" in response.headers["vary"]

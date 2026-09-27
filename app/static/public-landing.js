@@ -58,6 +58,11 @@
       return;
     }
 
+    // Close the compact menu after a choice or a click elsewhere.
+    document.querySelectorAll('details.lp-menu[open]').forEach(function (menu) {
+      if (!menu.contains(event.target) || event.target.closest('.lp-menu__panel a')) menu.open = false;
+    });
+
     const faqQuestion = event.target.closest('.faq-question');
     if (faqQuestion) {
       const item = faqQuestion.closest('.faq-item');
@@ -69,6 +74,13 @@
   });
 
   document.addEventListener('keydown', function (event) {
-    if (event.key === 'Escape') closePreview();
+    if (event.key === 'Escape') {
+      closePreview();
+      document.querySelectorAll('details.lp-menu[open]').forEach(function (menu) {
+        menu.open = false;
+        const summary = menu.querySelector('summary');
+        if (summary) summary.focus();
+      });
+    }
   });
 })();

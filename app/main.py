@@ -193,7 +193,7 @@ def strict_template_response(template_name: str, request: Request | None = None)
     return None
 
 
-def public_root_html(html: str) -> str:
+def public_root_html(html: str, request: Request | None = None) -> str:
     """Return the standalone public landing experience without the private app shell.
 
     The dashboard and its empty tables used to be sent to every anonymous visitor and
@@ -204,7 +204,16 @@ def public_root_html(html: str) -> str:
     public_template = os.path.join(os.path.dirname(__file__), "templates", "public_landing.html")
     if os.path.exists(public_template):
         with open(public_template, "r", encoding="utf-8") as file:
-            return file.read()
+            page = file.read()
+        if "<!--RELEASE_RADAR_STRIP-->" in page:
+            strip = ""
+            try:
+                client = getattr(request.app.state, "external_api_client", None) if request else None
+                strip = release_radar.home_strip_html(client)
+            except Exception:
+                strip = ""  # The homepage never depends on third-party release data.
+            page = page.replace("<!--RELEASE_RADAR_STRIP-->", strip, 1)
+        return page
 
     landing_marker = "  <!-- Landing Page -->"
     scripts_marker = '  <script src="./credentials.js"></script>'
@@ -436,7 +445,7 @@ async def read_root(request: Request):
             html = file.read()
             authenticated_shell = bool(request.cookies.get(AUTH_COOKIE_NAME))
             if not authenticated_shell:
-                html = public_root_html(html)
+                html = public_root_html(html, request)
             response = nonce_html_response(html)
             response.headers["Cache-Control"] = "private, no-store" if authenticated_shell else "no-cache"
             response.headers["Vary"] = "Cookie"

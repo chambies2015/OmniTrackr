@@ -549,3 +549,61 @@ def radar_save(selection: RadarSave, response: Response, user=Depends(get_curren
         db.rollback()
         raise
     return {"state": state, "title": record.title, "collection_id": collection.id}
+
+
+# ---------------------------------------------------------------------------
+# Homepage strip: fresh, public release data for the anonymous landing page.
+# Reads only what is already cached (never waits); warms missing lists.
+# ---------------------------------------------------------------------------
+
+HOME_STRIP_MAX = 10
+HOME_STRIP_DAYS = 21
+
+
+def home_strip_items(client=None, today: Optional[date] = None) -> list[dict]:
+    today = today or _today()
+    pool: list[dict] = []
+    for category in radar.CATEGORY_ORDER:
+        current = radar.current_window(category, today)
+        windows = radar.allowed_windows(category, today)
+        for window in (current, windows[windows.index(current) + 1]):
+            entry = radar.CACHE.peek(window)
+            if entry is None:
+                if client is not None:
+                    radar.CACHE.warm(client, window)
+                continue
+            pool.extend(entry.get("items", []))
+    upcoming = {i["key"]: i for i in radar.upcoming_within(pool, today, HOME_STRIP_DAYS)}.values()
+    per_category: dict[str, int] = {}
+    chosen = []
+    for item in sorted(upcoming, key=lambda i: -i["popularity"]):
+        if per_category.get(item["category"], 0) < 3:
+            per_category[item["category"]] = per_category.get(item["category"], 0) + 1
+            chosen.append(item)
+        if len(chosen) >= HOME_STRIP_MAX:
+            break
+    return sorted(chosen, key=lambda i: (i["date"], -i["popularity"]))
+
+
+def home_strip_html(client=None, today: Optional[date] = None) -> str:
+    items = home_strip_items(client, today)
+    if len(items) < 4:
+        return ""
+    labels = {"movies": "Movie", "tv": "TV", "anime": "Anime", "games": "Game"}
+    cards = []
+    for item in items:
+        art = (f'<img src="{escape(item["image"], quote=True)}" alt="" loading="lazy" decoding="async" referrerpolicy="no-referrer">'
+               if item.get("image") else f'<span class="lp-radar-card__initial" aria-hidden="true">{escape(item["title"][:1].upper())}</span>')
+        cards.append(
+            f'<li><a class="lp-radar-card" href="/release-radar/{item["category"]}#item-{escape(item["key"], quote=True)}">'
+            f'<span class="lp-radar-card__art">{art}<span class="lp-radar-card__type">{labels[item["category"]]}</span></span>'
+            f'<span class="lp-radar-card__date"><time datetime="{item["date"]}">{_format_day(item["date"])}</time></span>'
+            f'<span class="lp-radar-card__title">{escape(item["title"])}</span></a></li>'
+        )
+    return (
+        '<section class="lp-section lp-radar" aria-labelledby="lp-radar-title"><div class="lp-wrap">'
+        '<div class="lp-section-head lp-section-head--row"><div><p class="lp-eyebrow">Release Radar · updated every few hours</p>'
+        '<h2 id="lp-radar-title">Coming out soon</h2></div>'
+        '<a class="lp-link-arrow" href="/release-radar">See everything coming out <span aria-hidden="true">→</span></a></div>'
+        f'<ul class="lp-radar-rail">{"".join(cards)}</ul></div></section>'
+    )

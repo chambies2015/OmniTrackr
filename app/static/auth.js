@@ -413,7 +413,7 @@ function showLoginForm(scroll = true) {
     document.getElementById('forgotPasswordForm').style.display = 'none';
     document.getElementById('resetPasswordForm').style.display = 'none';
     document.getElementById('resendVerificationContainer').style.display = 'none';
-    document.getElementById('authTitle').textContent = 'Login to OmniTrackr';
+    document.getElementById('authTitle').textContent = 'Log in to OmniTrackr';
     document.getElementById('authError').textContent = '';
     document.getElementById('authSuccess').style.display = 'none';
     const reactivateContainer = document.getElementById('reactivateContainer');
@@ -432,7 +432,7 @@ function showRegisterForm(scroll = true) {
     document.getElementById('registerForm').style.display = 'block';
     document.getElementById('forgotPasswordForm').style.display = 'none';
     document.getElementById('resetPasswordForm').style.display = 'none';
-    document.getElementById('authTitle').textContent = 'Register for OmniTrackr';
+    document.getElementById('authTitle').textContent = 'Create your free account';
     document.getElementById('authError').textContent = '';
     document.getElementById('authSuccess').style.display = 'none';
     if (scroll && document.getElementById('landingPage').style.display === 'block') {
