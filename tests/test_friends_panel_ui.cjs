@@ -135,7 +135,7 @@ test('Friends toggle synchronizes hidden and expanded state without changing sur
   assert.deepEqual(h.writes, [['friendsSidebarHidden', 'false'], ['friendsSidebarHidden', 'true']]);
 });
 
-for (const [preference, expectedHidden] of [[undefined, false], ['false', false], ['true', true]]) {
+for (const [preference, expectedHidden] of [[undefined, true], ['false', false], ['true', true]]) {
   test(`restoring ${preference ?? 'default'} preference preserves it without taking focus`, () => {
     const h = harness({ preference });
     h.context.initializeFriendsPanel();
@@ -148,15 +148,15 @@ for (const [preference, expectedHidden] of [[undefined, false], ['false', false]
 test('denied browser storage does not prevent opening, closing, or initializing the panel', () => {
   const h = harness({ denyStorage: true });
   assert.doesNotThrow(() => h.context.initializeFriendsPanel());
-  assert.equal(h.sidebar.hidden, false);
-  assert.doesNotThrow(() => h.click(h.close));
   assert.equal(h.sidebar.hidden, true);
   assert.doesNotThrow(() => h.click(h.trigger));
   assert.equal(h.sidebar.hidden, false);
+  assert.doesNotThrow(() => h.click(h.close));
+  assert.equal(h.sidebar.hidden, true);
 });
 
 test('outside click dismisses Friends without stealing focus from the clicked control', () => {
-  const h = harness();
+  const h = harness({ preference: 'false' });
   h.context.initializeFriendsPanel();
   h.documentEvent('click', { target: h.friend });
   assert.equal(h.sidebar.hidden, false);
@@ -170,7 +170,7 @@ test('outside click dismisses Friends without stealing focus from the clicked co
 });
 
 test('Escape dismisses Friends and restores trigger focus, but respects already handled keys', () => {
-  const h = harness();
+  const h = harness({ preference: 'false' });
   h.context.initializeFriendsPanel();
   h.documentEvent('keydown', { key: 'Enter' });
   h.documentEvent('keydown', { key: 'Escape', defaultPrevented: true });
@@ -183,7 +183,7 @@ test('Escape dismisses Friends and restores trigger focus, but respects already 
 });
 
 test('open dialogs keep Friends open during outside clicks and Escape until the dialog is dismissed', () => {
-  const h = harness();
+  const h = harness({ preference: 'false' });
   h.context.initializeFriendsPanel();
   const modal = { hidden: false, display: 'flex', visibility: 'visible' };
   h.modals.push(modal);
@@ -249,7 +249,7 @@ test('clearing authentication runs the real reset hook without replacing the sav
 });
 
 test('panel follows toolbar bounds and clamps its top and right positions during scrolling and resizing', () => {
-  const h = harness();
+  const h = harness({ preference: 'false' });
   h.context.initializeFriendsPanel();
   const top = () => h.sidebar.style.getPropertyValue('--friends-panel-top');
   const right = () => h.sidebar.style.getPropertyValue('--friends-panel-right');

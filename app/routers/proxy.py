@@ -51,7 +51,7 @@ async def proxy_omdb_api(
         raise HTTPException(status_code=e.response.status_code, detail="OMDB API request failed")
     except httpx.TimeoutException:
         raise HTTPException(status_code=504, detail="OMDB API request timeout - may be due to network issues or VPN blocking")
-    except httpx.ConnectError:
+    except httpx.TransportError:
         raise HTTPException(status_code=504, detail="OMDB API connection error - may be due to network issues or VPN blocking")
     except Exception:
         raise HTTPException(status_code=500, detail="Error fetching from OMDB API")
@@ -91,7 +91,7 @@ async def proxy_rawg_api(
         raise HTTPException(status_code=e.response.status_code, detail="RAWG API request failed")
     except httpx.TimeoutException:
         raise HTTPException(status_code=504, detail="RAWG API request timeout - may be due to network issues or VPN blocking")
-    except httpx.ConnectError:
+    except httpx.TransportError:
         raise HTTPException(status_code=504, detail="RAWG API connection error - may be due to network issues or VPN blocking")
     except Exception:
         raise HTTPException(status_code=500, detail="Error fetching from RAWG API")
@@ -127,7 +127,7 @@ async def proxy_jikan_api(
         raise HTTPException(status_code=e.response.status_code, detail="Jikan API request failed")
     except httpx.TimeoutException:
         raise HTTPException(status_code=504, detail="Jikan API request timeout - may be due to network issues or VPN blocking")
-    except httpx.ConnectError:
+    except httpx.TransportError:
         raise HTTPException(status_code=504, detail="Jikan API connection error - may be due to network issues or VPN blocking")
     except Exception:
         raise HTTPException(status_code=500, detail="Error fetching from Jikan API")
@@ -169,7 +169,7 @@ async def proxy_itunes_api(
         raise HTTPException(status_code=e.response.status_code, detail="iTunes API request failed")
     except httpx.TimeoutException:
         raise HTTPException(status_code=504, detail="iTunes API request timeout - may be due to network issues or VPN blocking")
-    except httpx.ConnectError:
+    except httpx.TransportError:
         raise HTTPException(status_code=504, detail="iTunes API connection error - may be due to network issues or VPN blocking")
     except Exception:
         raise HTTPException(status_code=500, detail="Error fetching from iTunes API")
@@ -210,7 +210,7 @@ async def proxy_openlibrary_api(
         raise HTTPException(status_code=e.response.status_code, detail="Open Library API request failed")
     except httpx.TimeoutException:
         raise HTTPException(status_code=504, detail="Open Library API request timeout - may be due to network issues or VPN blocking")
-    except httpx.ConnectError:
+    except httpx.TransportError:
         raise HTTPException(status_code=504, detail="Open Library API connection error - may be due to network issues or VPN blocking")
     except Exception:
         raise HTTPException(status_code=500, detail="Error fetching from Open Library API")

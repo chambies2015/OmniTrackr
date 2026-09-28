@@ -131,6 +131,7 @@ function setup() {
     window: {
       setTimeout, clearTimeout,
       confirm(message) { confirmations.push(message); return confirmResult; },
+      getComputedStyle: element => ({ display: element.style.display || 'block' }),
     },
     closeLibrarySearch() {}, getTabButton: category => tabs.get(category),
     switchTab: category => opened.push(category),

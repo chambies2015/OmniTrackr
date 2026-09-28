@@ -109,7 +109,13 @@
     groups.get(id).push(link);
   }
 
-  (async () => {
+  // Guests never have a stored session; skip the lookup instead of logging a 401.
+  const mayBeSignedIn = (() => {
+    try { return !!(localStorage.getItem('omnitrackr_user') || localStorage.getItem('omnitrackr_token')); }
+    catch (_) { return true; }
+  })();
+
+  if (mayBeSignedIn) (async () => {
     let signedIn = false;
     for (const [id, groupLinks] of groups) {
       if (!/^(movies|tv|anime|games)\/[a-z0-9-]{4,20}$/.test(id)) continue;

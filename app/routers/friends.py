@@ -250,6 +250,44 @@ async def get_friend_video_games(
     return schemas.FriendVideoGamesResponse(video_games=video_games, count=len(video_games))
 
 
+@router.get("/{friend_id}/music", response_model=schemas.FriendMusicResponse)
+async def get_friend_music(
+    friend_id: int,
+    current_user: models.User = Depends(get_current_user),
+    db: Session = Depends(get_db)
+):
+    """Get friend's music list (if not private, requires friendship)."""
+    if not crud.are_friends(db, current_user.id, friend_id):
+        raise HTTPException(status_code=403, detail="You are not friends with this user")
+
+    music = crud.get_friend_music(db, friend_id)
+    if music is None:
+        if crud.get_user_by_id(db, friend_id) is None:
+            raise HTTPException(status_code=404, detail="Friend not found")
+        raise HTTPException(status_code=403, detail="This user has made their music private")
+
+    return schemas.FriendMusicResponse(music=music, count=len(music))
+
+
+@router.get("/{friend_id}/books", response_model=schemas.FriendBooksResponse)
+async def get_friend_books(
+    friend_id: int,
+    current_user: models.User = Depends(get_current_user),
+    db: Session = Depends(get_db)
+):
+    """Get friend's books list (if not private, requires friendship)."""
+    if not crud.are_friends(db, current_user.id, friend_id):
+        raise HTTPException(status_code=403, detail="You are not friends with this user")
+
+    books = crud.get_friend_books(db, friend_id)
+    if books is None:
+        if crud.get_user_by_id(db, friend_id) is None:
+            raise HTTPException(status_code=404, detail="Friend not found")
+        raise HTTPException(status_code=403, detail="This user has made their books private")
+
+    return schemas.FriendBooksResponse(books=books, count=len(books))
+
+
 @router.get("/{friend_id}/statistics", response_model=schemas.FriendStatisticsResponse)
 async def get_friend_statistics(
     friend_id: int,

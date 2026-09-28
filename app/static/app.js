@@ -236,6 +236,27 @@ async function fetchLibraryPage(url) {
 }
 
 const posterFetchInProgress = new Set();
+
+// Metadata lookups are repeated on every re-render for items without artwork.
+// Remember successful proxy answers (including "not found") for this page load
+// so those renders stop spending the OMDb/RAWG/iTunes quotas.
+const proxyLookupCache = new Map();
+async function cachedProxyFetch(url, options) {
+  if (proxyLookupCache.has(url)) {
+    return new Response(proxyLookupCache.get(url), { status: 200, headers: { 'Content-Type': 'application/json' } });
+  }
+  const response = await fetch(url, options);
+  if (response.ok) {
+    try {
+      const body = await response.clone().text();
+      if (proxyLookupCache.size >= 500) proxyLookupCache.clear();
+      proxyLookupCache.set(url, body);
+    } catch (error) {
+      // Leave uncached; the caller still reads the original response.
+    }
+  }
+  return response;
+}
 const posterFetchQueue = new Map();
 
 function getPosterConcurrencyLimit() {
@@ -276,6 +297,17 @@ function escapeHtml(str) {
     .replace(/>/g, "&gt;")
     .replace(/"/g, "&quot;")
     .replace(/'/g, "&#39;");
+}
+
+// Only http(s) links may reach an href; anything else (javascript:, data:, junk) is dropped.
+function safeHttpUrl(value) {
+  if (!value) return '';
+  try {
+    const url = new URL(String(value), window.location.origin);
+    return url.protocol === 'http:' || url.protocol === 'https:' ? url.href : '';
+  } catch (error) {
+    return '';
+  }
 }
 
 function normalizeLibrarySearchText(value) {
@@ -466,9 +498,15 @@ function handleQuickCaptureQueryInput() {
   if (quickCaptureSearch && query !== quickCaptureSearch.query) resetQuickCaptureSearch();
 }
 
+// Template style="display: none" attributes become CSP classes on the server, so
+// element.style.display starts empty; ask the computed style what is showing.
+function isElementShown(element) {
+  return !!element && !element.hidden && window.getComputedStyle(element).display !== 'none';
+}
+
 function isCurrentQuickCaptureSearch(search) {
   return quickCaptureSearch === search && !search.controller.signal.aborted
-    && document.getElementById('quickCaptureModal')?.style.display !== 'none'
+    && isElementShown(document.getElementById('quickCaptureModal'))
     && document.getElementById('quickCaptureQuery')?.value.trim() === search.query
     && quickCaptureCategory === search.category;
 }
@@ -952,6 +990,8 @@ function setupReviewQualityCounter(textarea) {
     counter.classList.toggle('is-ready', length >= SEARCH_READY_REVIEW_MIN_CHARS);
   };
   textarea.addEventListener('input', updateCounter);
+  // form.reset() does not fire "input"; refresh once the reset has cleared the value.
+  textarea.form?.addEventListener('reset', () => setTimeout(updateCounter, 0));
   updateCounter();
 }
 
@@ -1155,8 +1195,11 @@ function handleDelegatedChange(event) {
 document.addEventListener('click', handleDelegatedClick);
 document.addEventListener('submit', handleDelegatedSubmit);
 document.addEventListener('change', handleDelegatedChange);
+const FRIEND_FILTERS = new Set(['Movies', 'TVShows', 'Anime', 'VideoGames', 'Music', 'Books']);
 document.addEventListener('input', event => {
   if (event.target.id === 'quickCaptureQuery') handleQuickCaptureQueryInput();
+  const friendFilter = event.target.dataset?.friendFilter;
+  if (FRIEND_FILTERS.has(friendFilter)) window[`filterFriend${friendFilter}`]();
 });
 document.addEventListener('error', handleImageFallback, true);
 
@@ -1178,21 +1221,34 @@ document.addEventListener('keydown', function(event) {
   }
   if (event.key === 'Escape') {
     const quickCapture = document.getElementById('quickCaptureModal');
-    if (quickCapture && quickCapture.style.display !== 'none') {
+    if (isElementShown(quickCapture)) {
       closeQuickCapture();
       return;
     }
     const imageModal = document.getElementById('imagePopupModal');
-    if (imageModal && imageModal.style.display !== 'none') {
+    if (isElementShown(imageModal)) {
       closeImagePopup();
       return;
     }
     const reviewModal = document.getElementById('reviewModal');
-    if (reviewModal && reviewModal.style.display !== 'none') {
+    if (isElementShown(reviewModal)) {
       closeReviewModal();
+      return;
     }
+    closeTopmostModalOverlay(event);
   }
 });
+
+// Escape closes any other open dialog through its own close control, so each
+// modal keeps its own cleanup logic (account, friends, collections, search...).
+function closeTopmostModalOverlay(event) {
+  const open = Array.from(document.querySelectorAll('.modal-overlay')).filter(isElementShown);
+  const overlay = open[open.length - 1];
+  const closer = overlay?.querySelector('[data-action^="close-"]');
+  if (!closer) return;
+  event.preventDefault();
+  closer.click();
+}
 
 // ============================================================================
 // Recommendation Postcards
@@ -1540,12 +1596,12 @@ async function loadMovies() {
       const tbody = document.querySelector('#movieTable tbody');
       tbody.innerHTML = '';
       const countElem = document.getElementById('movieCount');
-      if (countElem) countElem.textContent = `${res.total} Movies`;
+      if (countElem) countElem.textContent = `${res.total} Movie${res.total === 1 ? '' : 's'}`;
       movies.forEach((movie) => {
         const tr = document.createElement('tr');
         tr.innerHTML = `
           <td id="movie-poster-${movie.id}"></td>
-          <td>${movie.title}</td>
+          <td>${escapeHtml(movie.title ?? '')}</td>
           <td>${escapeHtml(movie.director ?? '')}</td>
           <td>${movie.year ?? ''}</td>
           <td>${movie.rating !== null && movie.rating !== undefined ? parseFloat(movie.rating).toFixed(1) + '/10' : ''}</td>
@@ -1589,7 +1645,6 @@ function displayMoviePoster(id, posterUrl, title = null) {
         altText = `${row.cells[1].textContent} movie poster`;
       }
     }
-    altText = escapeHtml(altText);
     const img = document.createElement('img');
     img.src = posterUrl;
     img.alt = altText;
@@ -1639,7 +1694,7 @@ async function fetchMoviePoster(id, title, year) {
     
     let res;
     try {
-      res = await fetch(proxyUrl, { 
+      res = await cachedProxyFetch(proxyUrl, { 
         signal: controller.signal,
         headers: {
           'Accept': 'application/json'
@@ -1732,7 +1787,7 @@ function updateMovieRowMetadata(id, normalizedTitle) {
   if (!row) return;
 
   if (normalizedTitle && row.cells[1]) {
-    row.cells[1].textContent = escapeHtml(normalizedTitle);
+    row.cells[1].textContent = normalizedTitle;
   }
 }
 
@@ -1847,12 +1902,12 @@ async function loadTVShows() {
       const tbody = document.querySelector('#tvShowTable tbody');
       tbody.innerHTML = '';
       const countElem = document.getElementById('tvShowCount');
-      if (countElem) countElem.textContent = `${res.total} TV Shows`;
+      if (countElem) countElem.textContent = `${res.total} TV Show${res.total === 1 ? '' : 's'}`;
       tvShows.forEach((tvShow) => {
         const tr = document.createElement('tr');
         tr.innerHTML = `
           <td id="tv-poster-${tvShow.id}"></td>
-          <td>${tvShow.title}</td>
+          <td>${escapeHtml(tvShow.title ?? '')}</td>
           <td>${tvShow.year ?? ''}</td>
           <td>${tvShow.seasons ?? ''}</td>
           <td>${tvShow.episodes ?? ''}</td>
@@ -1922,7 +1977,7 @@ async function loadAnime() {
         const tr = document.createElement('tr');
         tr.innerHTML = `
           <td id="anime-poster-${animeItem.id}"></td>
-          <td>${animeItem.title}</td>
+          <td>${escapeHtml(animeItem.title ?? '')}</td>
           <td class="table-cell-center">${animeItem.year ?? ''}</td>
           <td class="table-cell-center">${animeItem.seasons ?? ''}</td>
           <td class="table-cell-center">${animeItem.episodes ?? ''}</td>
@@ -2045,7 +2100,7 @@ async function fetchTVPoster(id, title, year) {
     
     let res;
     try {
-      res = await fetch(proxyUrl, { 
+      res = await cachedProxyFetch(proxyUrl, { 
         signal: controller.signal,
         headers: {
           'Accept': 'application/json'
@@ -2138,7 +2193,7 @@ function updateTVRowMetadata(id, normalizedTitle) {
   if (!row) return;
 
   if (normalizedTitle && row.cells[1]) {
-    row.cells[1].textContent = escapeHtml(normalizedTitle);
+    row.cells[1].textContent = normalizedTitle;
   }
 }
 
@@ -2174,7 +2229,7 @@ async function fetchAnimePoster(id, title, year) {
     
     let res;
     try {
-      res = await fetch(proxyUrl, { 
+      res = await cachedProxyFetch(proxyUrl, { 
         signal: controller.signal,
         headers: {
           'Accept': 'application/json'
@@ -2263,7 +2318,7 @@ function updateAnimeRowMetadata(id, normalizedTitle) {
   if (!row) return;
 
   if (normalizedTitle && row.cells[1]) {
-    row.cells[1].textContent = escapeHtml(normalizedTitle);
+    row.cells[1].textContent = normalizedTitle;
   }
 }
 
@@ -2298,7 +2353,7 @@ async function loadVideoGames() {
       const tbody = document.querySelector('#videoGameTable tbody');
       tbody.innerHTML = '';
       const countElem = document.getElementById('videoGameCount');
-      if (countElem) countElem.textContent = `${res.total} Video Games`;
+      if (countElem) countElem.textContent = `${res.total} Video Game${res.total === 1 ? '' : 's'}`;
       videoGames.forEach((game) => {
         const tr = document.createElement('tr');
         const releaseDateStr = game.release_date ? new Date(game.release_date).toLocaleDateString() : '';
@@ -2309,7 +2364,7 @@ async function loadVideoGames() {
           <td>${game.genres ? escapeHtml(game.genres) : ''}</td>
           <td><span class="watched-icon ${game.played ? 'watched' : 'unwatched'}">${game.played ? '✓' : '✗'}</span></td>
           <td>${game.rating !== null && game.rating !== undefined ? parseFloat(game.rating).toFixed(1) + '/10' : ''}</td>
-          <td>${game.rawg_link ? `<a href="${game.rawg_link}" target="_blank">View on RAWG</a>` : ''}</td>
+          <td>${safeHttpUrl(game.rawg_link) ? `<a href="${escapeHtml(safeHttpUrl(game.rawg_link))}" target="_blank" rel="noopener noreferrer">View on RAWG</a>` : ''}</td>
           <td class="review-cell">${getReviewCellContent(game.review, game.title, game.release_date ? new Date(game.release_date).toLocaleDateString() : (game.genres || ''))}</td>
           <td><span class="watched-icon ${game.review_public ? 'watched' : 'unwatched'}">${game.review_public ? '✓' : '✗'}</span></td>
           <td>
@@ -2347,7 +2402,6 @@ function displayVideoGamePoster(id, posterUrl, title = null) {
         altText = `${row.cells[1].textContent} video game cover art`;
       }
     }
-    altText = escapeHtml(altText);
     const img = document.createElement('img');
     img.src = posterUrl;
     img.alt = altText;
@@ -2367,7 +2421,7 @@ function updateVideoGameRowMetadata(id, genres, rawgLink, releaseDate, normalize
   if (!row) return;
 
   if (normalizedTitle && row.cells[1]) {
-    row.cells[1].textContent = escapeHtml(normalizedTitle);
+    row.cells[1].textContent = normalizedTitle;
   }
 
   if (releaseDate && row.cells[2]) {
@@ -2376,12 +2430,12 @@ function updateVideoGameRowMetadata(id, genres, rawgLink, releaseDate, normalize
   }
 
   if (row.cells[3]) {
-    row.cells[3].textContent = genres ? escapeHtml(genres) : '';
+    row.cells[3].textContent = genres || '';
   }
 
   if (row.cells[6]) {
-    if (rawgLink) {
-      row.cells[6].innerHTML = `<a href="${rawgLink}" target="_blank">View on RAWG</a>`;
+    if (safeHttpUrl(rawgLink)) {
+      row.cells[6].innerHTML = `<a href="${escapeHtml(safeHttpUrl(rawgLink))}" target="_blank" rel="noopener noreferrer">View on RAWG</a>`;
     } else {
       row.cells[6].textContent = '';
     }
@@ -2423,7 +2477,7 @@ async function fetchVideoGameMetadata(id, title) {
       
       let res;
       try {
-        res = await fetch(proxyUrl, { 
+        res = await cachedProxyFetch(proxyUrl, { 
           signal: controller.signal,
           headers: {
             'Accept': 'application/json'
@@ -2705,7 +2759,6 @@ function displayMusicPoster(id, posterUrl, title = null) {
         altText = `${row.cells[1].textContent} music cover art`;
       }
     }
-    altText = escapeHtml(altText);
     const img = document.createElement('img');
     img.src = posterUrl;
     img.alt = altText;
@@ -2749,7 +2802,7 @@ async function fetchMusicMetadata(id, title, artist) {
       
       let res;
       try {
-        res = await fetch(proxyUrl, { 
+        res = await cachedProxyFetch(proxyUrl, { 
           signal: controller.signal,
           headers: {
             'Accept': 'application/json'
@@ -2860,11 +2913,11 @@ function updateMusicRowMetadata(id, artist, year, genre, normalizedTitle) {
   if (!row) return;
 
   if (normalizedTitle && row.cells[1]) {
-    row.cells[1].textContent = escapeHtml(normalizedTitle);
+    row.cells[1].textContent = normalizedTitle;
   }
 
   if (artist && row.cells[2]) {
-    row.cells[2].textContent = escapeHtml(artist);
+    row.cells[2].textContent = artist;
   }
 
   if (year && row.cells[3]) {
@@ -2872,7 +2925,7 @@ function updateMusicRowMetadata(id, artist, year, genre, normalizedTitle) {
   }
 
   if (genre && row.cells[4]) {
-    row.cells[4].textContent = escapeHtml(genre);
+    row.cells[4].textContent = genre;
   }
 }
 
@@ -3007,7 +3060,7 @@ async function loadBooks() {
       const tbody = document.querySelector('#bookTable tbody');
       tbody.innerHTML = '';
       const countElem = document.getElementById('bookCount');
-      if (countElem) countElem.textContent = `${res.total} Books`;
+      if (countElem) countElem.textContent = `${res.total} Book${res.total === 1 ? '' : 's'}`;
       books.forEach((book) => {
         const tr = document.createElement('tr');
         tr.innerHTML = `
@@ -3055,7 +3108,6 @@ function displayBookPoster(id, posterUrl, title = null) {
         altText = `${row.cells[1].textContent} book cover art`;
       }
     }
-    altText = escapeHtml(altText);
     const img = document.createElement('img');
     img.src = posterUrl;
     img.alt = altText;
@@ -3099,7 +3151,7 @@ async function fetchBookMetadata(id, title, author) {
       
       let res;
       try {
-        res = await fetch(proxyUrl, { 
+        res = await cachedProxyFetch(proxyUrl, { 
           signal: controller.signal,
           headers: {
             'Accept': 'application/json'
@@ -3203,11 +3255,11 @@ function updateBookRowMetadata(id, author, year, genre, normalizedTitle) {
   if (!row) return;
 
   if (normalizedTitle && row.cells[1]) {
-    row.cells[1].textContent = escapeHtml(normalizedTitle);
+    row.cells[1].textContent = normalizedTitle;
   }
 
   if (author && row.cells[2]) {
-    row.cells[2].textContent = escapeHtml(author);
+    row.cells[2].textContent = author;
   }
 
   if (year && row.cells[3]) {
@@ -3215,7 +3267,7 @@ function updateBookRowMetadata(id, author, year, genre, normalizedTitle) {
   }
 
   if (genre && row.cells[4]) {
-    row.cells[4].textContent = escapeHtml(genre);
+    row.cells[4].textContent = genre;
   }
 }
 
@@ -3513,7 +3565,7 @@ async function searchMovieMetadata() {
     
     let res;
     try {
-      res = await fetch(proxyUrl, {
+      res = await cachedProxyFetch(proxyUrl, {
         signal: controller.signal,
         headers: {
           'Accept': 'application/json'
@@ -3618,7 +3670,7 @@ async function searchTVShowMetadata() {
     
     let res;
     try {
-      res = await fetch(proxyUrl, {
+      res = await cachedProxyFetch(proxyUrl, {
         signal: controller.signal,
         headers: {
           'Accept': 'application/json'
@@ -3717,7 +3769,7 @@ async function searchAnimeMetadata() {
     
     let res;
     try {
-      res = await fetch(proxyUrl, {
+      res = await cachedProxyFetch(proxyUrl, {
         signal: controller.signal,
         headers: {
           'Accept': 'application/json'
@@ -3810,7 +3862,7 @@ async function searchVideoGameMetadata() {
     
     let res;
     try {
-      res = await fetch(proxyUrl, {
+      res = await cachedProxyFetch(proxyUrl, {
         signal: controller.signal,
         headers: {
           'Accept': 'application/json'
@@ -4171,7 +4223,7 @@ async function searchMusicMetadata() {
     
     let res;
     try {
-      res = await fetch(proxyUrl, {
+      res = await cachedProxyFetch(proxyUrl, {
         signal: controller.signal,
         headers: {
           'Accept': 'application/json'
@@ -4407,7 +4459,7 @@ async function searchBookMetadata() {
     
     let res;
     try {
-      res = await fetch(proxyUrl, {
+      res = await cachedProxyFetch(proxyUrl, {
         signal: controller.signal,
         headers: {
           'Accept': 'application/json'
@@ -4834,7 +4886,7 @@ function toggleCategoryAccordion(category) {
     return;
   }
   
-  const isExpanded = content.style.display !== 'none';
+  const isExpanded = isElementShown(content);
   
   if (isExpanded) {
     content.style.display = 'none';
@@ -5096,7 +5148,7 @@ function displayCategoryHighestRated(items, idPrefix) {
     const itemDiv = document.createElement('div');
     itemDiv.className = 'rated-item';
     itemDiv.innerHTML = `
-      <div class="rated-item-title">${item.title}</div>
+      <div class="rated-item-title">${escapeHtml(item.title ?? '')}</div>
       <div class="rated-item-rating">${parseFloat(item.rating).toFixed(1)}/10</div>
     `;
     container.appendChild(itemDiv);
@@ -5148,7 +5200,7 @@ function displayCategoryTopDirectors(directors, idPrefix) {
     const directorDiv = document.createElement('div');
     directorDiv.className = 'director-item';
     directorDiv.innerHTML = `
-      <div class="director-name">${director.director}</div>
+      <div class="director-name">${escapeHtml(director.director ?? '')}</div>
       <div class="director-rating">${director.count} ${director.count === 1 ? 'movie' : 'movies'}</div>
     `;
     container.appendChild(directorDiv);
@@ -5169,7 +5221,7 @@ function displayCategoryHighestRatedDirectors(directors, idPrefix) {
     const directorDiv = document.createElement('div');
     directorDiv.className = 'director-item';
     directorDiv.innerHTML = `
-      <div class="director-name">${director.director}</div>
+      <div class="director-name">${escapeHtml(director.director ?? '')}</div>
       <div class="director-rating">${director.avg_rating.toFixed(1)}/10 <span class="director-count-muted">(${director.count} ${director.count === 1 ? 'movie' : 'movies'})</span></div>
     `;
     container.appendChild(directorDiv);
@@ -5189,7 +5241,7 @@ function displaySeasonsEpisodesStats(stats, idPrefix) {
         const showDiv = document.createElement('div');
         showDiv.className = 'rated-item';
         showDiv.innerHTML = `
-          <div class="rated-item-title">${show.title}</div>
+          <div class="rated-item-title">${escapeHtml(show.title ?? '')}</div>
           <div class="rated-item-rating">${show.seasons} ${show.seasons === 1 ? 'season' : 'seasons'}</div>
         `;
         mostSeasonsContainer.appendChild(showDiv);
@@ -5206,7 +5258,7 @@ function displaySeasonsEpisodesStats(stats, idPrefix) {
         const showDiv = document.createElement('div');
         showDiv.className = 'rated-item';
         showDiv.innerHTML = `
-          <div class="rated-item-title">${show.title}</div>
+          <div class="rated-item-title">${escapeHtml(show.title ?? '')}</div>
           <div class="rated-item-rating">${show.episodes} ${show.episodes === 1 ? 'episode' : 'episodes'}</div>
         `;
         mostEpisodesContainer.appendChild(showDiv);
@@ -5233,7 +5285,7 @@ function displayGenreStats(stats, idPrefix) {
       const barDiv = document.createElement('div');
       barDiv.className = 'rating-bar';
       barDiv.innerHTML = `
-        <div class="rating-bar-label">${genre}</div>
+        <div class="rating-bar-label">${escapeHtml(genre)}</div>
         <div class="bar-track-flex">
           <div class="rating-bar-fill bar-fill-absolute" data-fill-width="${percentage}"></div>
         </div>
@@ -5253,7 +5305,7 @@ function displayGenreStats(stats, idPrefix) {
         const genreDiv = document.createElement('div');
         genreDiv.className = 'rated-item';
         genreDiv.innerHTML = `
-          <div class="rated-item-title">${genre.genre}</div>
+          <div class="rated-item-title">${escapeHtml(genre.genre ?? '')}</div>
           <div class="rated-item-rating">${genre.count} ${genre.count === 1 ? 'game' : 'games'}</div>
         `;
         topGenresContainer.appendChild(genreDiv);
@@ -5270,7 +5322,7 @@ function displayGenreStats(stats, idPrefix) {
         const genreDiv = document.createElement('div');
         genreDiv.className = 'rated-item';
         genreDiv.innerHTML = `
-          <div class="rated-item-title">${genre.genre}</div>
+          <div class="rated-item-title">${escapeHtml(genre.genre ?? '')}</div>
           <div class="rated-item-rating">${genre.count} ${genre.count === 1 ? 'game' : 'games'}</div>
         `;
         mostPlayedContainer.appendChild(genreDiv);
@@ -6213,17 +6265,23 @@ window.unfriendUser = async function (friendId) {
 // ============================================================================
 
 let currentFriendId = null;
-let accordionStates = {
-  movies: false,
-  tvShows: false,
-  anime: false,
-  videoGames: false,
-  statistics: false
-};
+const FRIEND_PROFILE_SECTIONS = ['movies', 'tvShows', 'anime', 'videoGames', 'music', 'books', 'statistics'];
+function freshAccordionStates() {
+  return Object.fromEntries(FRIEND_PROFILE_SECTIONS.map(section => [section, false]));
+}
+let accordionStates = freshAccordionStates();
 let currentFriendMovies = [];
 let currentFriendTVShows = [];
 let currentFriendAnime = [];
 let currentFriendVideoGames = [];
+let currentFriendMusic = [];
+let currentFriendBooks = [];
+
+// Friend list errors go in the list container so the search box survives for the next friend.
+function showFriendListError(containerId, detail, fallback) {
+  const container = document.getElementById(containerId);
+  if (container) container.innerHTML = `<p class="error-message">${escapeHtml(detail || fallback)}</p>`;
+}
 
 window.openFriendProfile = async function (friendId) {
   currentFriendId = friendId;
@@ -6238,15 +6296,11 @@ window.closeFriendProfile = function () {
   currentFriendTVShows = [];
   currentFriendAnime = [];
   currentFriendVideoGames = [];
-  accordionStates = {
-    movies: false,
-    tvShows: false,
-    anime: false,
-    videoGames: false,
-    statistics: false
-  };
+  currentFriendMusic = [];
+  currentFriendBooks = [];
+  accordionStates = freshAccordionStates();
   // Reset accordion states
-  ['movies', 'tvShows', 'anime', 'videoGames', 'statistics'].forEach(section => {
+  FRIEND_PROFILE_SECTIONS.forEach(section => {
     const content = document.getElementById(`${section}Content`);
     const icon = document.getElementById(`${section}Icon`);
     if (content && icon) {
@@ -6263,6 +6317,10 @@ window.closeFriendProfile = function () {
   if (tvShowsSearch) tvShowsSearch.value = '';
   if (animeSearch) animeSearch.value = '';
   if (videoGamesSearch) videoGamesSearch.value = '';
+  ['friendMusicSearch', 'friendBooksSearch'].forEach(id => {
+    const input = document.getElementById(id);
+    if (input) input.value = '';
+  });
 }
 
 window.loadFriendProfile = async function (friendId) {
@@ -6296,6 +6354,8 @@ window.loadFriendProfile = async function (friendId) {
       updateTVShowsSummary(profile);
       updateAnimeSummary(profile);
       updateVideoGamesSummary(profile);
+      updateMusicSummary(profile);
+      updateBooksSummary(profile);
       updateStatisticsSummary(profile);
     } else {
       const error = await response.json();
@@ -6349,6 +6409,28 @@ function updateVideoGamesSummary(profile) {
   }
 }
 
+function updateMusicSummary(profile) {
+  const summaryDiv = document.getElementById('musicSummary');
+  if (!summaryDiv) return;
+  if (profile.music_private) {
+    summaryDiv.innerHTML = '<p class="privacy-message">This user has made their music private</p>';
+  } else {
+    const count = profile.music_count || 0;
+    summaryDiv.innerHTML = `<p class="summary-text">${count} Album${count !== 1 ? 's' : ''}</p>`;
+  }
+}
+
+function updateBooksSummary(profile) {
+  const summaryDiv = document.getElementById('booksSummary');
+  if (!summaryDiv) return;
+  if (profile.books_private) {
+    summaryDiv.innerHTML = '<p class="privacy-message">This user has made their books private</p>';
+  } else {
+    const count = profile.books_count || 0;
+    summaryDiv.innerHTML = `<p class="summary-text">${count} Book${count !== 1 ? 's' : ''}</p>`;
+  }
+}
+
 function updateStatisticsSummary(profile) {
   const summaryDiv = document.getElementById('statisticsSummary');
   if (profile.statistics_private) {
@@ -6379,6 +6461,10 @@ window.toggleAccordion = async function (section) {
       await loadFriendAnime(currentFriendId);
     } else if (section === 'videoGames') {
       await loadFriendVideoGames(currentFriendId);
+    } else if (section === 'music') {
+      await loadFriendMusic(currentFriendId);
+    } else if (section === 'books') {
+      await loadFriendBooks(currentFriendId);
     } else if (section === 'statistics') {
       await loadFriendStatistics(currentFriendId);
     }
@@ -6431,11 +6517,11 @@ window.loadFriendMovies = async function (friendId) {
       }
     } else {
       const error = await response.json();
-      document.getElementById('moviesList').innerHTML = `<p class="error-message">${error.detail || 'Failed to load movies'}</p>`;
+      showFriendListError('friendMoviesListContainer', error.detail, 'Failed to load movies');
     }
   } catch (error) {
     console.error('Failed to load friend movies:', error);
-    document.getElementById('moviesList').innerHTML = '<p class="error-message">Failed to load movies</p>';
+    showFriendListError('friendMoviesListContainer', '', 'Failed to load movies');
   }
 }
 
@@ -6505,11 +6591,11 @@ window.loadFriendTVShows = async function (friendId) {
       }
     } else {
       const error = await response.json();
-      document.getElementById('tvShowsList').innerHTML = `<p class="error-message">${error.detail || 'Failed to load TV shows'}</p>`;
+      showFriendListError('friendTVShowsListContainer', error.detail, 'Failed to load TV shows');
     }
   } catch (error) {
     console.error('Failed to load friend TV shows:', error);
-    document.getElementById('tvShowsList').innerHTML = '<p class="error-message">Failed to load TV shows</p>';
+    showFriendListError('friendTVShowsListContainer', '', 'Failed to load TV shows');
   }
 }
 
@@ -6556,11 +6642,11 @@ window.loadFriendAnime = async function (friendId) {
       }
     } else {
       const error = await response.json();
-      document.getElementById('animeList').innerHTML = `<p class="error-message">${error.detail || 'Failed to load anime'}</p>`;
+      showFriendListError('friendAnimeListContainer', error.detail, 'Failed to load anime');
     }
   } catch (error) {
     console.error('Failed to load friend anime:', error);
-    document.getElementById('animeList').innerHTML = '<p class="error-message">Failed to load anime</p>';
+    showFriendListError('friendAnimeListContainer', '', 'Failed to load anime');
   }
 }
 
@@ -6633,11 +6719,11 @@ window.loadFriendVideoGames = async function (friendId) {
       }
     } else {
       const error = await response.json();
-      document.getElementById('videoGamesList').innerHTML = `<p class="error-message">${error.detail || 'Failed to load video games'}</p>`;
+      showFriendListError('friendVideoGamesListContainer', error.detail, 'Failed to load video games');
     }
   } catch (error) {
     console.error('Failed to load friend video games:', error);
-    document.getElementById('videoGamesList').innerHTML = '<p class="error-message">Failed to load video games</p>';
+    showFriendListError('friendVideoGamesListContainer', '', 'Failed to load video games');
   }
 }
 
@@ -6662,7 +6748,7 @@ window.renderFriendVideoGames = function (videoGames) {
         ${releaseDateStr ? `<span>Release Date: ${releaseDateStr}</span>` : ''}
         ${game.genres ? `<span>Genres: ${escapeHtml(game.genres)}</span>` : ''}
         <span class="watched-badge ${game.played ? 'watched' : 'unwatched'}">${game.played ? 'Played' : 'Not Played'}</span>
-        ${game.rawg_link ? `<a href="${game.rawg_link}" target="_blank" class="rawg-link">View on RAWG</a>` : ''}
+        ${safeHttpUrl(game.rawg_link) ? `<a href="${escapeHtml(safeHttpUrl(game.rawg_link))}" target="_blank" rel="noopener noreferrer" class="rawg-link">View on RAWG</a>` : ''}
       </div>
       ${game.review ? `<p class="friend-item-review">${escapeHtml(game.review)}</p>` : ''}
     </div>
@@ -6692,6 +6778,88 @@ window.filterFriendVideoGames = function () {
   });
 
   renderFriendVideoGames(filtered);
+}
+
+function renderFriendShelf(containerId, items, emptyText, describe) {
+  const container = document.getElementById(containerId);
+  if (!container) return;
+  if (items.length === 0) {
+    container.innerHTML = `<p class="empty-message">${escapeHtml(emptyText)}</p>`;
+    return;
+  }
+  container.innerHTML = items.map(item => {
+    const { creatorLabel, creator, doneLabel, done } = describe(item);
+    const rating = item.rating !== null && item.rating !== undefined ? `<span class="rating-badge">${parseFloat(item.rating).toFixed(1)}/10</span>` : '';
+    return `
+    <div class="friend-item-card">
+      <div class="friend-item-header">
+        <h4>${escapeHtml(item.title || '')}</h4>
+        ${rating}
+      </div>
+      <div class="friend-item-details">
+        ${creator ? `<span>${creatorLabel}: ${escapeHtml(creator)}</span>` : ''}
+        ${item.year ? `<span>Year: ${escapeHtml(item.year)}</span>` : ''}
+        ${item.genre ? `<span>Genre: ${escapeHtml(item.genre)}</span>` : ''}
+        <span class="watched-badge ${done ? 'watched' : 'unwatched'}">${done ? doneLabel : `Not ${doneLabel}`}</span>
+      </div>
+      ${item.review ? `<p class="friend-item-review">${escapeHtml(item.review)}</p>` : ''}
+    </div>
+    `;
+  }).join('');
+}
+
+function filterFriendShelf(items, searchId, fields) {
+  const input = document.getElementById(searchId);
+  const term = input ? input.value.toLowerCase().trim() : '';
+  if (!term) return items;
+  return items.filter(item => fields.some(field => String(item[field] ?? '').toLowerCase().includes(term)));
+}
+
+const describeFriendAlbum = item => ({ creatorLabel: 'Artist', creator: item.artist, doneLabel: 'Listened', done: item.listened });
+const describeFriendBook = item => ({ creatorLabel: 'Author', creator: item.author, doneLabel: 'Read', done: item.read });
+
+window.loadFriendMusic = async function (friendId) {
+  try {
+    const response = await authenticatedFetch(`${API_BASE}/friends/${friendId}/music`);
+    if (response.ok) {
+      const data = await response.json();
+      currentFriendMusic = data.music || [];
+      renderFriendShelf('friendMusicListContainer', currentFriendMusic, 'No music yet', describeFriendAlbum);
+    } else {
+      const error = await response.json().catch(() => ({}));
+      showFriendListError('friendMusicListContainer', error.detail, 'Failed to load music');
+    }
+  } catch (error) {
+    console.error('Failed to load friend music:', error);
+    showFriendListError('friendMusicListContainer', '', 'Failed to load music');
+  }
+}
+
+window.filterFriendMusic = function () {
+  const filtered = filterFriendShelf(currentFriendMusic, 'friendMusicSearch', ['title', 'artist', 'year', 'genre', 'review']);
+  renderFriendShelf('friendMusicListContainer', filtered, 'No music found', describeFriendAlbum);
+}
+
+window.loadFriendBooks = async function (friendId) {
+  try {
+    const response = await authenticatedFetch(`${API_BASE}/friends/${friendId}/books`);
+    if (response.ok) {
+      const data = await response.json();
+      currentFriendBooks = data.books || [];
+      renderFriendShelf('friendBooksListContainer', currentFriendBooks, 'No books yet', describeFriendBook);
+    } else {
+      const error = await response.json().catch(() => ({}));
+      showFriendListError('friendBooksListContainer', error.detail, 'Failed to load books');
+    }
+  } catch (error) {
+    console.error('Failed to load friend books:', error);
+    showFriendListError('friendBooksListContainer', '', 'Failed to load books');
+  }
+}
+
+window.filterFriendBooks = function () {
+  const filtered = filterFriendShelf(currentFriendBooks, 'friendBooksSearch', ['title', 'author', 'year', 'genre', 'review']);
+  renderFriendShelf('friendBooksListContainer', filtered, 'No books found', describeFriendBook);
 }
 
 window.loadFriendStatistics = async function (friendId) {
@@ -6751,7 +6919,7 @@ window.loadFriendStatistics = async function (friendId) {
       statsDiv.style.display = 'block';
     } else {
       const error = await response.json();
-      document.getElementById('statisticsData').innerHTML = `<p class="error-message">${error.detail || 'Failed to load statistics'}</p>`;
+      document.getElementById('statisticsData').innerHTML = `<p class="error-message">${escapeHtml(error.detail || 'Failed to load statistics')}</p>`;
     }
   } catch (error) {
     console.error('Failed to load friend statistics:', error);
@@ -7112,9 +7280,11 @@ window.showFriendsSidebar = function () {
 };
 
 function restoreSidebarState() {
-  let sidebarHidden = false;
+  // Friends starts closed so it never covers the library on a first visit;
+  // members who opened it keep it open ("false" is stored when they do).
+  let sidebarHidden = true;
   try {
-    sidebarHidden = localStorage.getItem('friendsSidebarHidden') === 'true';
+    sidebarHidden = localStorage.getItem('friendsSidebarHidden') !== 'false';
   } catch (error) {
     // Use the default state when browser storage is unavailable.
   }
@@ -8296,11 +8466,19 @@ function renderModeratorInsights(data) {
   });
 }
 
+// Most members are not moderators: after one 401/403 stop asking on every Collections visit.
+let moderatorInsightsDenied = false;
+
 async function loadModeratorInsights() {
   const panel = document.getElementById('moderatorInsightsPanel');
   if (!panel) return;
+  if (moderatorInsightsDenied) {
+    panel.hidden = true;
+    return;
+  }
   try {
     const response = await authenticatedFetch(`${API_BASE}/collections/moderation/insights`);
+    if (response.status === 401 || response.status === 403) moderatorInsightsDenied = true;
     if (!response.ok) throw new Error('Moderator insights unavailable');
     renderModeratorInsights(await response.json());
   } catch (error) {
@@ -8782,7 +8960,7 @@ function openLaunchpadAddItem(category = 'movies') {
 function openLaunchpadInsights() {
   switchTab('statistics');
   const insights = document.getElementById('libraryInsightsStatsContent');
-  if (insights?.style.display === 'none') {
+  if (insights && !isElementShown(insights)) {
     toggleCategoryAccordion('library-insights');
   }
 }
@@ -9957,6 +10135,8 @@ async function handleAddCustomTabItem(tab) {
     });
     
     let posterUrl = null;
+    // Keep the chosen file itself: the form is cleared before the upload runs.
+    let posterFile = null;
     if (tab.allow_uploads) {
       const posterUrlInput = document.getElementById(`customTab${tab.id}PosterUrl`);
       const posterFileInput = document.getElementById(`customTab${tab.id}PosterFile`);
@@ -9964,12 +10144,12 @@ async function handleAddCustomTabItem(tab) {
       if (posterUrlInput && posterUrlInput.value.trim()) {
         posterUrl = posterUrlInput.value.trim();
       } else if (posterFileInput && posterFileInput.files.length > 0) {
-        posterUrl = 'pending_upload';
+        posterFile = posterFileInput.files[0];
       }
     }
     
     if (tab.source_type !== 'none' && title) {
-      await fetchMetadataForCustomTab(tab, title, fieldValues, posterUrl);
+      await fetchMetadataForCustomTab(tab, title, fieldValues, posterUrl, posterFile);
       return;
     }
     
@@ -10003,8 +10183,8 @@ async function handleAddCustomTabItem(tab) {
         if (posterFileInput) posterFileInput.value = '';
       }
       
-      if (posterUrl === 'pending_upload' && posterFileInput && posterFileInput.files.length > 0) {
-        await uploadCustomTabPoster(tab.id, item.id, posterFileInput.files[0]);
+      if (posterFile) {
+        await uploadCustomTabPoster(tab.id, item.id, posterFile);
       }
       
       loadCustomTabItems(tab);
@@ -10023,12 +10203,12 @@ async function handleAddCustomTabItem(tab) {
     const submitBtn = titleInput?.closest('form')?.querySelector('button[type="submit"]');
     if (submitBtn) {
       submitBtn.disabled = false;
-      submitBtn.textContent = `Add ${escapeHtml(tab.name)}`;
+      submitBtn.textContent = `Add ${tab.name}`;
     }
   }
 }
 
-async function fetchMetadataForCustomTab(tab, title, fieldValues, posterUrl) {
+async function fetchMetadataForCustomTab(tab, title, fieldValues, posterUrl, posterFile = null) {
   try {
     let metadataFetched = false;
     
@@ -10120,7 +10300,7 @@ async function fetchMetadataForCustomTab(tab, title, fieldValues, posterUrl) {
     const finalTitle = fieldValues.title || title;
     delete fieldValues.title;
     
-    await createCustomTabItemAfterMetadata(tab, finalTitle, fieldValues, posterUrl, token);
+    await createCustomTabItemAfterMetadata(tab, finalTitle, fieldValues, posterUrl, posterFile);
   } catch (error) {
     console.error('Error fetching metadata:', error);
     if (error.name === 'AbortError') {
@@ -10132,11 +10312,11 @@ async function fetchMetadataForCustomTab(tab, title, fieldValues, posterUrl) {
     const finalTitle = fieldValues.title || title;
     delete fieldValues.title;
     
-    await createCustomTabItemAfterMetadata(tab, finalTitle, fieldValues, posterUrl, token);
+    await createCustomTabItemAfterMetadata(tab, finalTitle, fieldValues, posterUrl, posterFile);
   }
 }
 
-async function createCustomTabItemAfterMetadata(tab, title, fieldValues, posterUrl, token) {
+async function createCustomTabItemAfterMetadata(tab, title, fieldValues, posterUrl, posterFile = null) {
   try {
     const response = await fetch(`${API_BASE}/custom-tabs/${tab.id}/items`, {
       method: 'POST',
@@ -10168,9 +10348,9 @@ async function createCustomTabItemAfterMetadata(tab, title, fieldValues, posterU
         if (posterFileInput) posterFileInput.value = '';
       }
       
-      const posterFileInput = document.getElementById(`customTab${tab.id}PosterFile`);
-      if (posterFileInput && posterFileInput.files.length > 0 && !posterUrl) {
-        await uploadCustomTabPoster(tab.id, item.id, posterFileInput.files[0]);
+      // A poster the member chose themselves wins over one found by the metadata lookup.
+      if (posterFile) {
+        await uploadCustomTabPoster(tab.id, item.id, posterFile);
       }
       
       loadCustomTabItems(tab);
@@ -10400,7 +10580,7 @@ async function editCustomTabItem(tabId, itemId) {
       titleInput.scrollIntoView({ behavior: 'smooth', block: 'center' });
       
       const formContent = document.getElementById(`customTab${tabId}FormContent`);
-      if (formContent && formContent.style.display === 'none') {
+      if (formContent && !isElementShown(formContent)) {
         toggleCollapsible(`customTab${tabId}Form`);
       }
       
@@ -10429,7 +10609,7 @@ async function editCustomTabItem(tabId, itemId) {
         const submitBtn = form.querySelector('button[type="submit"]');
         if (submitBtn) {
           const originalText = submitBtn.textContent;
-          submitBtn.textContent = `Update ${escapeHtml(tab.name)}`;
+          submitBtn.textContent = `Update ${tab.name}`;
           submitBtn.onclick = async (e) => {
             e.preventDefault();
             await handleUpdateCustomTabItem(tab, itemId);
@@ -10557,7 +10737,7 @@ async function handleUpdateCustomTabItem(tab, itemId) {
           if (posterFileInput) posterFileInput.value = '';
         }
         if (submitBtn) {
-          submitBtn.textContent = `Add ${escapeHtml(tab.name)}`;
+          submitBtn.textContent = `Add ${tab.name}`;
           submitBtn.onclick = null;
           const cancelBtn = submitBtn.parentElement.querySelector('button[type="button"].action-btn');
           if (cancelBtn && cancelBtn.textContent === 'Cancel') {
@@ -10582,7 +10762,7 @@ async function handleUpdateCustomTabItem(tab, itemId) {
     if (submitBtn) {
       submitBtn.disabled = false;
       if (!submitBtn.onclick) {
-        submitBtn.textContent = `Add ${escapeHtml(tab.name)}`;
+        submitBtn.textContent = `Add ${tab.name}`;
       }
     }
   }
@@ -10607,7 +10787,7 @@ async function loadCustomTabsList() {
       listContainer.innerHTML = '<div class="custom-tab-list-status">Loading...</div>';
     }
     
-    const response = await fetch(`${API_BASE}/custom-tabs`, authFetchOptions());
+    const response = await fetch(`${API_BASE}/custom-tabs/`, authFetchOptions());
     
     if (response.ok) {
       const tabs = await response.json();

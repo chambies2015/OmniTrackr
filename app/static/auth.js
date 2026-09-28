@@ -578,69 +578,6 @@ function displayAuthSuccess(message) {
     document.getElementById('authError').textContent = '';
 }
 
-function showReactivateOption(usernameOrEmail) {
-    // Create or show reactivate button
-    let reactivateContainer = document.getElementById('reactivateContainer');
-    if (!reactivateContainer) {
-        reactivateContainer = document.createElement('div');
-        reactivateContainer.id = 'reactivateContainer';
-        reactivateContainer.className = 'reactivate-container';
-        document.getElementById('loginForm').appendChild(reactivateContainer);
-    }
-    
-    reactivateContainer.innerHTML = `
-        <button type="button" id="reactivateBtn" class="action-btn action-btn-full">
-            Reactivate Account
-        </button>
-    `;
-    
-    document.getElementById('reactivateBtn').onclick = () => {
-        const password = document.getElementById('loginPassword').value;
-        if (!password) {
-            displayAuthError('Please enter your password to reactivate your account.');
-            return;
-        }
-        reactivateAccount(usernameOrEmail, password);
-    };
-    
-    reactivateContainer.style.display = 'block';
-}
-
-async function reactivateAccount(usernameOrEmail, password) {
-    const reactivateBtn = document.getElementById('reactivateBtn');
-    const originalText = reactivateBtn.textContent;
-    reactivateBtn.disabled = true;
-    reactivateBtn.textContent = 'Reactivating...';
-    
-    try {
-        const response = await fetch(`${AUTH_API_BASE}/auth/reactivate`, {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({
-                username: usernameOrEmail,
-                password: password
-            })
-        });
-        
-        if (response.ok) {
-            const user = await response.json();
-            displayAuthSuccess('Account reactivated successfully! You can now log in.');
-            // Hide reactivate button
-            document.getElementById('reactivateContainer').style.display = 'none';
-            // Clear password field for security
-            document.getElementById('loginPassword').value = '';
-        } else {
-            const error = await response.json();
-            displayAuthError(error.detail || 'Failed to reactivate account. Please try again.');
-        }
-    } catch (error) {
-        displayAuthError('Failed to reactivate account. Please try again.');
-    } finally {
-        reactivateBtn.disabled = false;
-        reactivateBtn.textContent = originalText;
-    }
-}
-
 // ============================================================================
 // Event Handlers
 // ============================================================================

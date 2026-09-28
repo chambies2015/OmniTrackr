@@ -91,6 +91,8 @@ async def update_custom_tab(
         if db_tab is None:
             raise HTTPException(status_code=404, detail="Custom tab not found")
         return db_tab
+    except HTTPException:
+        raise
     except ValueError as e:
         raise HTTPException(status_code=400, detail=str(e))
     except Exception:
