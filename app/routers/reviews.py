@@ -18,6 +18,7 @@ from sqlalchemy import and_, func
 from sqlalchemy.exc import IntegrityError
 
 from .. import affiliate, models, schemas
+from ..site_chrome import apply_site_chrome, message_page
 from ..auth import AUTH_COOKIE_NAME
 from ..csp import strict_html_response
 from ..dependencies import get_current_user, get_db
@@ -128,31 +129,11 @@ def _normalized_category(category: Optional[str]) -> Optional[str]:
 
 
 def _not_found_reviews_category_html() -> str:
-    return """<!DOCTYPE html>
-<html lang="en">
-<head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <meta name="robots" content="noindex, follow">
-  <title>Review Category Not Found - OmniTrackr</title>
-  <link rel="stylesheet" href="/styles.css?v=20260917-review-safety-v1">
-  <style>
-    body { min-height: 100vh; padding: 20px; }
-    .review-wrapper { max-width: 900px; margin: 0 auto; }
-    .review-container { background: var(--card-bg); border: 1px solid var(--border); border-radius: 16px; color: var(--fg); margin: 20px 0; padding: 40px; }
-    .back-link { color: var(--primary); display: inline-block; font-weight: 500; margin-bottom: 20px; text-decoration: none; }
-  </style>
-</head>
-<body class="dark-mode">
-  <main class="review-wrapper">
-    <a href="/reviews" class="back-link">Back to Reviews</a>
-    <section class="review-container">
-      <h1>Review category not found</h1>
-      <p>This review category is unavailable. Browse the public reviews directory to find movies, TV shows, anime, games, music, and books with substantial public review text.</p>
-    </section>
-  </main>
-</body>
-</html>"""
+    return message_page(
+        "Review Category Not Found", "Review category not found",
+        "This review category is unavailable. Browse the public reviews directory to find movies, TV shows, anime, games, music, and books with substantial public review text.",
+        eyebrow="Public reviews", actions=(("Browse public reviews", "/reviews"), ("Go to the homepage", "/")),
+    )
 
 
 def _apply_category_review_context(page: str, category: Optional[str]) -> str:
@@ -251,7 +232,7 @@ def _review_detail_url(review: dict) -> str:
 
 
 def _review_image(review: dict) -> str:
-    return _safe_media_url(review.get("poster_url") or review.get("cover_art_url")) or "/static/default-avatar.svg"
+    return _safe_media_url(review.get("poster_url") or review.get("cover_art_url")) or "/static/poster-placeholder.svg"
 
 
 def _safe_media_url(value):
@@ -344,7 +325,7 @@ def _review_card_html(review: dict) -> str:
       <article class="review-card{'' if standalone else ' review-card--summary'}" data-review-key="{_escape(review['category'])}:{review['id']}">
         <span class="review-category">{_escape(CATEGORY_LABELS.get(review["category"], review["category"]))}</span>
         <div class="review-card-header">
-          <img src="{_escape(_review_image(review))}" alt="" loading="lazy" width="64" height="88" data-fallback-src="/static/default-avatar.svg" class="review-poster">
+          <img src="{_escape(_review_image(review))}" alt="" loading="lazy" width="64" height="88" data-fallback-src="/static/poster-placeholder.svg" class="review-poster">
           <div class="review-card-title">
             <h3>{title}</h3>
             <p class="review-item-meta">{_escape(_review_meta(review))}</p>
@@ -492,34 +473,14 @@ def _inject_ad_loader_for_review_detail(page: str, request: Request) -> str:
 
 
 def _not_found_review_html() -> str:
-    return """<!DOCTYPE html>
-<html lang="en">
-<head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <meta name="robots" content="noindex, follow">
-  <title>Review Not Found - OmniTrackr</title>
-  <link rel="stylesheet" href="/styles.css?v=20260917-review-safety-v1">
-  <style>
-    body { min-height: 100vh; padding: 20px; }
-    .review-wrapper { max-width: 900px; margin: 0 auto; }
-    .review-container { background: var(--card-bg); border: 1px solid var(--border); border-radius: 16px; color: var(--fg); margin: 20px 0; padding: 40px; }
-    .back-link { color: var(--primary); display: inline-block; font-weight: 500; margin-bottom: 20px; text-decoration: none; }
-  </style>
-</head>
-<body class="dark-mode">
-  <main class="review-wrapper">
-    <a href="/reviews" class="back-link">Back to Reviews</a>
-    <section class="review-container">
-      <h1>Review not found</h1>
-      <p>This review is unavailable, private, or no longer meets the public review quality threshold.</p>
-    </section>
-  </main>
-</body>
-</html>"""
+    return message_page(
+        "Review Not Found", "Review not found",
+        "This review is unavailable, private, or no longer meets the public review quality threshold.",
+        eyebrow="Public reviews", actions=(("Browse public reviews", "/reviews"), ("Go to the homepage", "/")),
+    )
 
 
-def _review_detail_html(review: dict) -> str:
+def _review_detail_html(review: dict, more_reviews: Optional[list] = None) -> str:
     category_label = CATEGORY_LABELS.get(review.get("category"), "Media")
     title = f"{review.get('title')} {category_label} Review by {review.get('username')} - OmniTrackr"
     review_excerpt = (review.get("review") or "").strip().replace("\n", " ")
@@ -556,7 +517,17 @@ def _review_detail_html(review: dict) -> str:
             detail_rows.append(("Episodes", review.get("episodes")))
         item_reviewed = {"@type": "TVSeries", "name": review.get("title")}
 
-    details_html = "\n".join(f"<p><strong>{_escape(label)}:</strong> {_escape(value)}</p>" for label, value in detail_rows)
+    details_html = "\n".join(f"<p><span>{_escape(label)}</span> {_escape(value)}</p>" for label, value in detail_rows)
+    more_html = ""
+    if more_reviews:
+        cards = "\n".join(_review_card_html(item) for item in more_reviews)
+        label = CATEGORY_LABELS.get(category, "")
+        more_html = (
+            '<section class="review-more site-wrap" aria-labelledby="review-more-title">'
+            f'<div class="review-more__head"><h2 id="review-more-title">More {_escape(label.lower())} reviews</h2>'
+            f'<a href="/reviews?category={_escape(category)}">See all <span aria-hidden="true">→</span></a></div>'
+            f'<div class="reviews-grid">{cards}</div></section>'
+        )
     json_ld = {
         "@context": "https://schema.org",
         "@type": "Review",
@@ -606,60 +577,43 @@ def _review_detail_html(review: dict) -> str:
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@700;800&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="/styles.css?v=20260917-review-safety-v1">
-  <style>
-    body {{ min-height: 100vh; padding: 20px; }}
-    .review-wrapper {{ max-width: 900px; margin: 0 auto; }}
-    .review-container {{ background: var(--card-bg); border: 1px solid var(--border); border-radius: 16px; box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3); color: var(--fg); margin: 20px 0; padding: 40px; }}
-    .review-header {{ border-bottom: 2px solid var(--border); display: flex; gap: 30px; margin-bottom: 30px; padding-bottom: 30px; }}
-    .review-poster-large {{ border-radius: 12px; flex-shrink: 0; height: 225px; object-fit: cover; width: 150px; }}
-    .review-header-info {{ flex: 1; }}
-    .review-header-info h1 {{ color: var(--fg); font-size: 2rem; margin: 0 0 15px; }}
-    .review-meta-info {{ color: var(--fg-secondary); line-height: 1.8; margin-bottom: 15px; }}
-    .review-rating-large {{ color: var(--primary); font-size: 1.5rem; font-weight: 600; margin-bottom: 15px; }}
-    .review-category-badge {{ background: var(--primary); border-radius: 16px; color: white; display: inline-block; font-size: 0.9rem; margin-bottom: 15px; padding: 6px 16px; }}
-    .review-content {{ color: var(--fg); font-size: 1.1rem; line-height: 1.9; margin-bottom: 30px; white-space: pre-wrap; }}
-    .review-author {{ border-top: 1px solid var(--border); color: var(--fg-secondary); padding-top: 20px; }}
-    .back-link {{ color: var(--primary); display: inline-block; font-weight: 500; margin-bottom: 20px; text-decoration: none; }}
-    .back-link:hover {{ text-decoration: underline; }}
-    .review-save-link {{ display: inline-flex; align-items: center; justify-content: center; min-height: 44px; padding: 10px 18px; border-radius: 9px; background: var(--primary); color: white; text-decoration: none; font-weight: 600; }}
-    .review-save-link:focus-visible {{ outline: 3px solid var(--fg); outline-offset: 4px; }}
-    .review-save-note {{ color: var(--fg-secondary); margin-top: 10px; line-height: 1.6; }}
-    .review-affiliate {{ margin-top: 14px; }}
-    .review-affiliate .affiliate-link {{ color: var(--primary); font-weight: 600; }}
-    .review-affiliate-disclosure {{ color: var(--fg-secondary); font-size: .85rem; margin-top: 6px; }}
-    @media (max-width: 768px) {{
-      .review-header {{ flex-direction: column; }}
-      .review-poster-large {{ height: auto; max-height: 400px; width: 100%; }}
-      .review-container {{ padding: 25px; }}
-    }}
-  </style>
+  <link rel="stylesheet" href="/static/reviews.css?v=20260928-site-1">
+  <link rel="stylesheet" href="/static/review-detail.css?v=20260928-site-1">
   <script type="application/ld+json">{_safe_json_ld(json_ld)}</script>
   <script type="application/ld+json">{_safe_json_ld(breadcrumb_json_ld)}</script>
   <script src="/static/review_report.js?v=20260917-review-safety-v1" defer></script>
 </head>
-<body class="dark-mode">
-  <main class="review-wrapper">
-    <a href="/reviews" class="back-link">Back to Reviews</a>
-    <article class="review-container">
-      <header class="review-header">
-        <img src="{_escape(_review_image(review))}" alt="{_escape(review.get("title"))} poster" class="review-poster-large">
-        <div class="review-header-info">
-          <span class="review-category-badge">{_escape(CATEGORY_LABELS.get(category, category))}</span>
-          <h1>{_escape(review.get("title"))}</h1>
-          {rating_html}
-          <div class="review-meta-info">{details_html}</div>
+<body class="dark-mode site review-page">
+  <!--SITE_NAV:reviews-->
+  <main>
+    <article class="review-article">
+      <header class="review-hero">
+        <div class="review-hero__backdrop" aria-hidden="true"><img src="{_escape(_review_image(review))}" alt=""></div>
+        <div class="site-wrap review-hero__grid">
+          <img src="{_escape(_review_image(review))}" alt="{_escape(review.get("title"))} poster" class="review-poster-large">
+          <div class="review-header-info">
+            <nav class="review-crumbs" aria-label="Breadcrumb"><a href="/reviews">Public reviews</a><span aria-hidden="true">/</span><a href="/reviews?category={_escape(category)}">{_escape(CATEGORY_LABELS.get(category, category))}</a></nav>
+            <h1>{_escape(review.get("title"))}</h1>
+            <div class="review-hero__meta">{rating_html}<span class="review-byline">Reviewed by <strong>{_escape(review.get("username"))}</strong></span></div>
+            <div class="review-meta-info">{details_html}</div>
+          </div>
         </div>
       </header>
-      <section class="review-content">{_escape(review.get("review"))}</section>
-      <a class="review-save-link" href="/reviews/{review['id']}/save?category={_escape(category)}">Save to my library</a>
-      <p class="review-save-note">Keep this title for later. Preview your library match before confirming.</p>
-      {_review_affiliate_html(review)}
-      <footer class="review-author">
-        <p><strong>Review by:</strong> {_escape(review.get("username"))}</p>
-      </footer>
-      {_review_report_html(review)}
+      <div class="site-wrap review-body">
+        <section class="review-content" aria-label="Review">{_escape(review.get("review"))}</section>
+        <aside class="review-aside" aria-label="Keep this title">
+          <p class="site-eyebrow">Sounds like your kind of thing?</p>
+          <h2>Keep it for later</h2>
+          <p class="review-save-note">Save it to your own private library. You preview any existing match before confirming.</p>
+          <a class="review-save-link site-btn site-btn--primary" href="/reviews/{review['id']}/save?category={_escape(category)}">Save to my library</a>
+          {_review_affiliate_html(review)}
+          {_review_report_html(review)}
+        </aside>
+      </div>
     </article>
+    {more_html}
   </main>
+  <!--SITE_FOOTER-->
 </body>
 </html>"""
 
@@ -677,7 +631,10 @@ def reviews_index(
     q = q.strip()
     html_file = os.path.join(os.path.dirname(__file__), "..", "templates", "reviews.html")
     with open(html_file, "r", encoding="utf-8") as file:
-        page = file.read()
+        page = apply_site_chrome(file.read())
+    if category:
+        chip = f'<a href="/reviews?category={_normalized_category(category)}">'
+        page = page.replace(chip, chip[:-1] + ' aria-current="page">', 1)
     feed = _public_review_feed(db, category, q, 20, 0)
     reviews = feed["reviews"]
     if reviews:
@@ -716,14 +673,21 @@ async def review_detail(
             review = await get_public_review(review_id=review_id, category=category, db=db)
             if not _review_is_standalone(review):
                 return strict_html_response(_not_found_review_html(), status_code=404)
-            return strict_html_response(_inject_ad_loader_for_review_detail(_review_detail_html(review), request))
+            more = []
+            try:
+                feed = _public_review_feed(db, review["category"], "", 7, 0)["reviews"]
+                more = [item for item in feed if item["id"] != review["id"]][:4]
+            except Exception:
+                more = []  # Related reviews are optional; never block the page.
+            page = apply_site_chrome(_review_detail_html(review, more))
+            return strict_html_response(_inject_ad_loader_for_review_detail(page, request))
         except HTTPException:
             return strict_html_response(_not_found_review_html(), status_code=404)
 
     html_file = os.path.join(os.path.dirname(__file__), "..", "templates", "review_detail.html")
     if os.path.exists(html_file):
         with open(html_file, "r", encoding="utf-8") as file:
-            return strict_html_response(file.read())
+            return strict_html_response(apply_site_chrome(file.read()))
     raise HTTPException(status_code=404, detail="Review detail page not found")
 
 
@@ -908,7 +872,7 @@ def review_save_page(
         path = f"/reviews/{review_id}/save?category={category}"
         filename = os.path.join(os.path.dirname(__file__), "..", "templates", "review_save.html")
         with open(filename, "r", encoding="utf-8") as template:
-            page = template.read()
+            page = apply_site_chrome(template.read())
         values = {
             "TITLE": f"Save {review['title']} - OmniTrackr", "CATEGORY": category,
             "CATEGORY_LABEL": CATEGORY_LABELS[category], "REVIEW_ID": review_id,

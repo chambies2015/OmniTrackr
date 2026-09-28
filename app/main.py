@@ -11,6 +11,8 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import FileResponse, Response, RedirectResponse
 from fastapi.staticfiles import StaticFiles
 from starlette.middleware.gzip import GZipMiddleware
+from starlette.exceptions import HTTPException as StarletteHTTPException
+from fastapi.exception_handlers import http_exception_handler
 from slowapi import Limiter, _rate_limit_exceeded_handler
 from slowapi.errors import RateLimitExceeded
 from slowapi.middleware import SlowAPIMiddleware
@@ -19,6 +21,7 @@ from sqlalchemy.orm import Session
 
 from . import crud, schemas, models
 from .database import Base, SessionLocal, engine
+from .site_chrome import apply_site_chrome, message_page
 from .csp import nonce_html_response, strict_html_response
 from .auth import AUTH_COOKIE_NAME
 from .migrations import run_migrations
@@ -101,6 +104,27 @@ app.state.limiter = limiter
 app.add_exception_handler(RateLimitExceeded, _rate_limit_exceeded_handler)
 
 
+HTML_404_EXCLUDED_PREFIXES = ("/api/", "/auth/", "/static/", "/docs", "/redoc", "/openapi.json")
+
+
+async def friendly_not_found(request: Request, exc: StarletteHTTPException):
+    """Browsers get a styled 404 page for public URLs; API clients keep JSON errors."""
+    wants_html = "text/html" in request.headers.get("accept", "")
+    if (exc.status_code == 404 and wants_html and request.method in ("GET", "HEAD")
+            and not request.url.path.startswith(HTML_404_EXCLUDED_PREFIXES)):
+        page = message_page(
+            "Page not found", "This page drifted into the void",
+            "The link may be old or mistyped. One of these should get you back on track.",
+            eyebrow="404",
+            actions=(("Go to the homepage", "/"), ("See what's coming out", "/release-radar"), ("Browse reviews", "/reviews")),
+        )
+        return strict_html_response(page, status_code=404)
+    return await http_exception_handler(request, exc)
+
+
+app.add_exception_handler(StarletteHTTPException, friendly_not_found)
+
+
 def bind_rate_limited_endpoint(route, endpoint) -> None:
     """Replace both the visible endpoint and FastAPI's captured request callable."""
     route.endpoint = endpoint
@@ -181,7 +205,7 @@ def strict_template_response(template_name: str, request: Request | None = None)
     html_file = os.path.join(os.path.dirname(__file__), "templates", template_name)
     if os.path.exists(html_file):
         with open(html_file, "r", encoding="utf-8") as file:
-            html, indexable = apply_public_search_policy(file.read(), template_name)
+            html, indexable = apply_public_search_policy(apply_site_chrome(file.read()), template_name)
             html = inject_adsense_account_meta(html)
             response = strict_html_response(inject_public_ad_loader(html, template_name, request))
             response.headers["Vary"] = "Cookie"
@@ -213,7 +237,7 @@ def public_root_html(html: str, request: Request | None = None) -> str:
             except Exception:
                 strip = ""  # The homepage never depends on third-party release data.
             page = page.replace("<!--RELEASE_RADAR_STRIP-->", strip, 1)
-        return page
+        return apply_site_chrome(page, login_action=True)
 
     landing_marker = "  <!-- Landing Page -->"
     scripts_marker = '  <script src="./credentials.js"></script>'

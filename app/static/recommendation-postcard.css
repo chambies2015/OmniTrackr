@@ -3,7 +3,7 @@
 body { margin:0; min-height:100vh; color:var(--ink); font-family:Inter,ui-sans-serif,system-ui,sans-serif; background:radial-gradient(circle at 28% 20%,rgba(124,58,237,.28),transparent 36rem),radial-gradient(circle at 85% 80%,rgba(20,184,166,.13),transparent 32rem),var(--night); }
 a { color:inherit; }
 .postcard-nav { min-height:72px; padding:0 clamp(20px,7vw,110px); display:flex; align-items:center; justify-content:space-between; gap:20px; border-bottom:1px solid var(--line); background:rgba(13,11,29,.75); backdrop-filter:blur(18px); }
-.postcard-brand { text-decoration:none; font-weight:800; letter-spacing:-.03em; color:#8aa4ff; font-size:1.18rem; }
+.postcard-brand { text-decoration:none; font-weight:800; letter-spacing:-.03em; color:#f7f5ff; font-size:1.18rem; }
 .postcard-own { color:var(--teal); font-size:.9rem; text-underline-offset:4px; }
 .postcard-shell { width:min(760px,calc(100% - 32px)); margin:clamp(46px,8vw,96px) auto 64px; }
 .postcard-intro { margin-bottom:28px; }
@@ -22,10 +22,10 @@ blockquote { margin:0 0 28px; font-family:Georgia,serif; font-size:clamp(1.55rem
 .postcard-form label:nth-of-type(3),.postcard-form label:nth-of-type(4) { grid-column:1/-1; }
 input,select,textarea { width:100%; border:1px solid var(--line); border-radius:10px; padding:12px 13px; color:var(--ink); background:rgba(4,3,16,.55); font:inherit; }
 textarea { resize:vertical; }
-input:focus,select:focus,textarea:focus { outline:2px solid var(--teal); outline-offset:2px; }
+input:focus,select:focus,textarea:focus { outline:2px solid #c4b5fd; outline-offset:2px; }
 .postcard-trap { position:absolute!important; left:-10000px!important; width:1px!important; height:1px!important; overflow:hidden!important; }
 .postcard-submit { grid-column:1/-1; display:flex; align-items:center; gap:15px; flex-wrap:wrap; }
-button,.postcardUnavailable a { border:0; border-radius:10px; padding:12px 18px; background:linear-gradient(135deg,var(--teal),#71a7ff); color:#071712; font-weight:800; cursor:pointer; }
+button,.postcardUnavailable a { border:0; border-radius:10px; padding:12px 18px; background:linear-gradient(135deg,#8b5cf6,#a855f7); color:#fff; font-weight:700; border-radius:999px; cursor:pointer; }
 button:disabled { opacity:.55; cursor:wait; }
 #postcardFormStatus { color:var(--muted); }
 #postcardUnavailable h2 { margin-top:0; font-size:2rem; }

@@ -234,7 +234,7 @@ test('cards use real separate read/save links, safe text, and preserve a zero ra
   assert.equal(card.querySelector('.review-title-link').href, '/reviews/1?category=book');
   assert.equal(card.querySelector('.review-save-link').href, '/reviews/1/save?category=book');
   assert.equal(card.querySelector('.review-rating').textContent, 'Rating: 0/10');
-  assert.equal(card.querySelector('img').src, '/static/default-avatar.svg');
+  assert.equal(card.querySelector('img').src, '/static/poster-placeholder.svg');
   assert.equal(card.listeners.click, undefined, 'card does not hijack nested actions');
   assert.equal(s.reports.length, 0);
 });

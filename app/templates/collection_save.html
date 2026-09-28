@@ -8,15 +8,13 @@
   <title>{{TITLE}}</title>
   <link rel="icon" href="/omnitrackr_favicon.ico">
   <link rel="stylesheet" href="/styles.css?v=20260922-collection-save">
-  <link rel="stylesheet" href="/static/collection-save.css?v=20260922-collection-save">
+  <link rel="stylesheet" href="/static/collection-save.css?v=20260928-site-2">
   <script src="/static/collection-save.js?v=20260922-collection-save" defer></script>
 </head>
-<body class="dark-mode collection-save-page">
+<body class="dark-mode collection-save-page site">
+  <!--SITE_NAV:-->
   <div class="collection-save-shell">
-    <nav class="public-site-nav public-site-nav--focused" aria-label="Public site navigation">
-      <a class="public-site-nav__brand" href="/">OmniTrackr</a>
-      <div class="public-site-nav__links"><a href="/collections/explore">Collections</a><a href="/release-radar">Release Radar</a><a href="/discover">Discover</a><a href="/guides">Guides</a></div>
-    </nav>
+
     <main>
       <a class="collection-save-back" href="{{BACK_URL}}">← Back to the collection</a>
       <section id="collectionSavePanel" class="collection-save-panel" data-collection-id="{{COLLECTION_ID}}" aria-labelledby="collectionSaveHeading">
@@ -44,7 +42,8 @@
       </section>
       <p class="collection-save-more"><a href="/collections/explore">Explore more collections →</a></p>
     </main>
-    <footer><a href="/privacy">Privacy</a><a href="/contact">Contact</a></footer>
+
   </div>
+  <!--SITE_FOOTER-->
 </body>
 </html>

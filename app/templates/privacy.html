@@ -27,126 +27,7 @@
   <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@700;800&family=Inter:wght@400;500;600&display=swap"
     rel="stylesheet">
   <link rel="stylesheet" href="/styles.css">
-  <style>
-    body {
-      min-height: 100vh;
-      padding: 20px;
-    }
-
-    .privacy-wrapper {
-      max-width: 1000px;
-      margin: 0 auto;
-    }
-
-    .privacy-container {
-      background: var(--card-bg);
-      border-radius: 16px;
-      padding: 50px 40px;
-      margin: 20px 0;
-      box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3);
-      border: 1px solid var(--border);
-      color: var(--fg);
-      line-height: 1.8;
-    }
-
-    @media (max-width: 768px) {
-      .privacy-container {
-        padding: 30px 20px;
-        margin: 10px 0;
-      }
-    }
-
-    .privacy-header {
-      text-align: center;
-      margin-bottom: 40px;
-      padding-bottom: 20px;
-      border-bottom: 2px solid var(--border);
-    }
-
-    .privacy-header h1 {
-      font-family: 'Poppins', sans-serif;
-      font-size: 2.5rem;
-      margin-bottom: 10px;
-      background: linear-gradient(135deg, var(--primary) 0%, var(--secondary) 100%);
-      -webkit-background-clip: text;
-      -webkit-text-fill-color: transparent;
-      background-clip: text;
-    }
-
-    .privacy-header p {
-      color: var(--fg-secondary);
-      font-size: 0.95rem;
-    }
-
-    .privacy-section {
-      margin-bottom: 40px;
-    }
-
-    .privacy-section h2 {
-      font-family: 'Poppins', sans-serif;
-      font-size: 1.8rem;
-      margin-bottom: 15px;
-      color: var(--primary);
-    }
-
-    .privacy-section h3 {
-      font-family: 'Inter', sans-serif;
-      font-size: 1.3rem;
-      margin-top: 25px;
-      margin-bottom: 12px;
-      color: var(--fg);
-      font-weight: 600;
-    }
-
-    .privacy-section p {
-      margin-bottom: 15px;
-      color: var(--fg-secondary);
-    }
-
-    .privacy-section ul {
-      margin-left: 20px;
-      margin-bottom: 15px;
-      color: var(--fg-secondary);
-    }
-
-    .privacy-section li {
-      margin-bottom: 8px;
-    }
-
-    .privacy-section strong {
-      color: var(--fg);
-    }
-
-    .back-link {
-      display: inline-block;
-      margin-bottom: 30px;
-      color: var(--primary);
-      text-decoration: none;
-      font-weight: 500;
-      transition: color 0.3s ease;
-    }
-
-    .back-link:hover {
-      color: var(--secondary);
-    }
-
-    .last-updated {
-      text-align: center;
-      color: var(--fg-secondary);
-      font-size: 0.9rem;
-      margin-top: 40px;
-      padding-top: 20px;
-      border-top: 1px solid var(--border);
-    }
-
-    .contact-info {
-      background: rgba(var(--primary-rgb, 102, 126, 234), 0.1);
-      padding: 20px;
-      border-radius: 8px;
-      margin-top: 20px;
-      border: 1px solid var(--border);
-    }
-  </style>
+  <link rel="stylesheet" href="/static/public-reader.css?v=20260928-site-2">
   
   <script type="application/ld+json">
   {
@@ -171,27 +52,11 @@
   </script>
 </head>
 
-<body>
-  <div class="privacy-wrapper">
-    <div class="privacy-container">
-    <nav class="public-site-nav" aria-label="Public site navigation">
-      <a class="public-site-nav__brand" href="/">OmniTrackr</a>
-      <div class="public-site-nav__links">
-        <a href="/demo">Demo</a>
-        <a href="/media-tracking">Tracking Hub</a>
-        <a href="/guides">Guides</a>
-        <a href="/site-map">Site Map</a>
-          <a href="/sample-library">Sample Library</a>
-          <a href="/compare">Compare</a>
-        <a href="/use-cases">Use Cases</a>
-        <a href="/reviews">Reviews</a>
-          <a href="/faq">FAQ</a>
-          <a href="/content-quality">Content Quality</a>
-          <a href="/advertising">Advertising</a>
-        <a href="/privacy">Privacy</a>
-        <a class="public-site-nav__cta" href="/#landing-auth">Start tracking</a>
-      </div>
-    </nav>
+<body class="public-reader site">
+  <a class="reader-skip" href="#reader-main">Skip to content</a>
+  <!--SITE_NAV:-->
+  <div class="reader-shell">
+    <main id="reader-main" tabindex="-1" class="reader-main privacy-container">
     <a href="/" class="back-link">← Back to OmniTrackr</a>
 
     <div class="privacy-header">
@@ -456,15 +321,12 @@
       </div>
     </div>
 
-    <nav class="privacy-section" aria-label="Related pages">
-      <p><a href="/">Home</a> | <a href="/about">About</a> | <a href="/guides">Guides</a> | <a href="/compare">Compare</a> | <a href="/use-cases">Use Cases</a> | <a href="/changelog">Changelog</a> | <a href="/terms">Terms</a> | <a href="/contact">Contact</a></p>
-    </nav>
-
     <div class="last-updated">
       <p>This Privacy Policy was last updated on June 2026</p>
     </div>
-    </div>
+    </main>
   </div>
+  <!--SITE_FOOTER-->
 </body>
 
 </html>

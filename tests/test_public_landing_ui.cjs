@@ -44,26 +44,6 @@ function setup() {
   return {listeners, menu, summary, link, outside, faqItem, faqQuestion, click, calls};
 }
 
-test('menu closes after choosing a link or clicking elsewhere, but not when clicking inside', () => {
-  const ui = setup();
-  ui.menu.open = true;
-  ui.click(ui.summary);
-  assert.equal(ui.menu.open, true);
-  ui.click(ui.link);
-  assert.equal(ui.menu.open, false);
-  ui.menu.open = true;
-  ui.click(ui.outside);
-  assert.equal(ui.menu.open, false);
-});
-
-test('escape closes the menu and returns focus to its button', () => {
-  const ui = setup();
-  ui.menu.open = true;
-  ui.listeners.keydown({key: 'Escape'});
-  assert.equal(ui.menu.open, false);
-  assert.equal(ui.summary.focused, true);
-});
-
 test('faq questions toggle and report their state', () => {
   const ui = setup();
   ui.click(ui.faqQuestion);

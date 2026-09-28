@@ -14,7 +14,7 @@
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@700;800&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="/styles.css">
-  <link rel="stylesheet" href="/static/public-landing.css?v=20260927-redesign-1">
+  <link rel="stylesheet" href="/static/public-landing.css?v=20260928-site-1">
   <meta property="og:type" content="website">
   <meta property="og:url" content="https://omnitrackr.xyz/">
   <meta property="og:title" content="OmniTrackr — One private home for your media life">
@@ -32,7 +32,7 @@
   </script>
   <script src="/analytics.js" defer></script>
 </head>
-<body class="dark-mode lp">
+<body class="dark-mode lp site">
   <svg class="lp-sprite" aria-hidden="true" focusable="false">
     <symbol id="i-film" viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="16" rx="2"/><path d="M7 4v16M17 4v16M3 9h4M3 15h4M17 9h4M17 15h4"/></symbol>
     <symbol id="i-tv" viewBox="0 0 24 24"><rect x="3" y="6" width="18" height="12" rx="2"/><path d="M8 21h8M9 2l3 4 3-4"/></symbol>
@@ -50,35 +50,7 @@
     <symbol id="i-arrow" viewBox="0 0 24 24"><path d="M5 12h14M13 6l6 6-6 6"/></symbol>
   </svg>
   <main id="landingPage">
-    <header class="lp-nav-wrap">
-      <nav class="public-site-nav public-site-nav--focused lp-nav" aria-label="Public site navigation">
-        <a class="public-site-nav__brand lp-brand" href="/"><img src="/vortex-still.webp" alt="" width="28" height="28">OmniTrackr</a>
-        <div class="public-site-nav__links">
-          <a href="#how-it-works">How it works</a>
-          <a href="/release-radar">Release Radar</a>
-          <a href="/discover">Discover</a>
-          <a href="/reviews">Public reviews</a>
-          <a href="/collections/explore">Collections</a>
-          <a href="/guides">Guides</a>
-          <a href="/faq">FAQ</a>
-          <a class="lp-nav__login" href="/#landing-auth" data-action="show-login-form">Log in</a>
-          <a class="public-site-nav__cta" href="/#landing-auth">Start tracking</a>
-          <details class="lp-menu">
-            <summary aria-label="More pages"><span></span><span></span><span></span></summary>
-            <div class="lp-menu__panel">
-              <a href="#how-it-works">How it works</a>
-              <a href="/release-radar">Release Radar</a>
-              <a href="/discover">Discover</a>
-              <a href="/reviews">Public reviews</a>
-              <a href="/collections/explore">Collections</a>
-              <a href="/guides">Guides</a>
-              <a href="/faq">FAQ</a>
-              <a class="lp-menu__login" href="/#landing-auth" data-action="show-login-form">Log in</a>
-            </div>
-          </details>
-        </div>
-      </nav>
-    </header>
+    <!--SITE_NAV:-->
 
     <section class="landing-hero lp-hero" aria-labelledby="hero-title">
       <div class="lp-wrap lp-hero__grid">
@@ -272,22 +244,11 @@
       </div>
     </section>
 
-    <footer class="landing-footer landing-footer--public lp-footer">
-      <div class="lp-wrap lp-footer__grid">
-        <div class="lp-footer__brand">
-          <a class="lp-brand" href="/"><img src="/vortex-still.webp" alt="" width="28" height="28">OmniTrackr</a>
-          <p class="footer-text">A free, independent media tracker for everything you watch, play, read, and hear.</p>
-          <a class="footer-link lp-footer__kofi" href="https://ko-fi.com/omnitrackr" target="_blank" rel="noopener noreferrer">Support on Ko-fi ↗</a>
-        </div>
-        <nav class="lp-footer__col" aria-label="Explore"><h3>Explore</h3><a class="footer-link" href="/release-radar">Release Radar</a><a class="footer-link" href="/discover">Discover</a><a class="footer-link" href="/reviews">Public reviews</a><a class="footer-link" href="/collections/explore">Collections</a><a class="footer-link" href="/demo">Demo</a></nav>
-        <nav class="lp-footer__col" aria-label="Learn"><h3>Learn</h3><a class="footer-link" href="/guides">Guides</a><a class="footer-link" href="/faq">FAQ</a><a class="footer-link" href="/compare">Compare</a><a class="footer-link" href="/changelog">Changelog</a><a class="footer-link" href="/site-map">Site map</a></nav>
-        <nav class="lp-footer__col" aria-label="OmniTrackr"><h3>OmniTrackr</h3><a class="footer-link" href="/about">About</a><a class="footer-link" href="/contact">Contact</a><a class="footer-link" href="/privacy">Privacy</a><a class="footer-link" href="/terms">Terms</a><a class="footer-link" href="/advertising">Ads &amp; affiliates</a></nav>
-      </div>
-    </footer>
+    <!--SITE_FOOTER-->
   </main>
   <div id="screenshotModal" class="screenshot-modal" data-close-on-backdrop="screenshot"><button class="screenshot-modal-close" data-action="close-screenshot-modal" aria-label="Close image preview">×</button><img id="screenshotModalImage" class="screenshot-modal-content" src="" alt=""><div id="screenshotModalCaption" class="screenshot-modal-caption"></div></div>
   <script src="/credentials.js"></script>
   <script src="/auth.js?v=20260927-redesign-1"></script>
-  <script src="/static/public-landing.js?v=20260927-redesign-1" defer></script>
+  <script src="/static/public-landing.js?v=20260928-site-1" defer></script>
 </body>
 </html>

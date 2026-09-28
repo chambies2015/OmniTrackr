@@ -142,13 +142,13 @@ function reviewText(tag, className, value) {
 }
 
 function reviewImageUrl(value) {
-  if (typeof value !== 'string') return '/static/default-avatar.svg';
+  if (typeof value !== 'string') return '/static/poster-placeholder.svg';
   if (value.startsWith('/') && !value.startsWith('//') && !value.includes('\\')) return value;
   try {
     const url = new URL(value);
     if (url.protocol === 'https:' || url.protocol === 'http:') return url.href;
   } catch (_) { /* Use a local fallback for missing or unsupported artwork. */ }
-  return '/static/default-avatar.svg';
+  return '/static/poster-placeholder.svg';
 }
 
 function reviewItemMetadata(review) {
@@ -185,7 +185,7 @@ function createReviewCard(review) {
   poster.loading = 'lazy';
   poster.width = 64;
   poster.height = 88;
-  poster.dataset.fallbackSrc = '/static/default-avatar.svg';
+  poster.dataset.fallbackSrc = '/static/poster-placeholder.svg';
   const titleBlock = reviewText('div', 'review-card-title', '');
   const title = document.createElement('h3');
   if (isStandalone) {

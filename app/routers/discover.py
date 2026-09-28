@@ -10,6 +10,7 @@ from sqlalchemy import func
 from sqlalchemy.orm import Session
 from .. import models
 from ..csp import strict_html_response
+from ..site_chrome import apply_site_chrome
 from ..dependencies import get_current_user, get_db
 from ..discover_catalog import MONTHLY_EDITIONS, TRAILS
 from ..discover_guides import GUIDES
@@ -31,7 +32,7 @@ def monthly_for(slug):
 
 
 def page(title, description, path, content, *, indexable=True, structured_data=None):
-    html = (Path(__file__).parents[1] / "templates" / "discover.html").read_text(encoding="utf-8")
+    html = apply_site_chrome((Path(__file__).parents[1] / "templates" / "discover.html").read_text(encoding="utf-8"))
     robots = "index, follow, max-image-preview:large" if indexable else "noindex, follow"
     for key, value in {"TITLE": escape(title), "DESCRIPTION": escape(description, quote=True), "PATH": path, "ROBOTS": robots, "CONTENT": content}.items():
         html = html.replace("{{" + key + "}}", value)

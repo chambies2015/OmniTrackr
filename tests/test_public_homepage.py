@@ -36,7 +36,7 @@ def test_homepage_keeps_auth_and_navigation_contracts(client):
         assert required in ids, required
     assert sum(1 for tag, _ in tags if tag == "h1") == 1
     assert any(a.get("data-action") == "show-register-form" for _, a in tags)
-    menu = html[html.index('<details class="lp-menu">'):html.index("</details>")]
+    menu = html[html.index('<details class="site-menu">'):html.index("</details>")]
     for href in ("/release-radar", "/discover", "/reviews", "/collections/explore", "/guides", "/faq"):
         assert f'href="{href}"' in menu
     assert 'data-action="show-login-form"' in menu

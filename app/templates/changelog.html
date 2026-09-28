@@ -31,23 +31,7 @@
   <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@700;800&family=Inter:wght@400;500;600&display=swap"
     rel="stylesheet">
   <link rel="stylesheet" href="/styles.css">
-  <style>
-    body { min-height: 100vh; padding: 20px; }
-    .privacy-wrapper { max-width: 1040px; margin: 0 auto; }
-    .privacy-container { background: var(--card-bg); border-radius: 16px; padding: 50px 40px; margin: 20px 0; box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3); border: 1px solid var(--border); color: var(--fg); line-height: 1.8; }
-    @media (max-width: 768px) { .privacy-container { padding: 30px 20px; margin: 10px 0; } }
-    .privacy-header { text-align: center; margin-bottom: 40px; padding-bottom: 20px; border-bottom: 2px solid var(--border); }
-    .privacy-header h1 { font-family: 'Poppins', sans-serif; font-size: 2.35rem; margin-bottom: 10px; background: linear-gradient(135deg, var(--primary) 0%, var(--secondary) 100%); -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text; }
-    .privacy-header p { color: var(--fg-secondary); font-size: 1rem; }
-    .privacy-section { margin-bottom: 38px; }
-    .privacy-section h2 { font-family: 'Poppins', sans-serif; font-size: 1.75rem; margin-bottom: 15px; color: var(--primary); }
-    .privacy-section h3 { font-family: 'Inter', sans-serif; font-size: 1.25rem; margin-top: 22px; margin-bottom: 12px; color: var(--fg); font-weight: 600; }
-    .privacy-section p { margin-bottom: 15px; color: var(--fg-secondary); }
-    .privacy-section ul { margin-left: 20px; margin-bottom: 15px; color: var(--fg-secondary); }
-    .privacy-section li { margin-bottom: 8px; }
-    .back-link { display: inline-block; margin-bottom: 30px; color: var(--primary); text-decoration: none; font-weight: 500; transition: color 0.3s ease; }
-    .back-link:hover { color: var(--secondary); }
-  </style>
+  <link rel="stylesheet" href="/static/public-reader.css?v=20260928-site-2">
 
   <script type="application/ld+json">
   {
@@ -64,27 +48,11 @@
   </script>
 </head>
 
-<body>
-  <div class="privacy-wrapper">
-    <div class="privacy-container">
-      <nav class="public-site-nav" aria-label="Public site navigation">
-        <a class="public-site-nav__brand" href="/">OmniTrackr</a>
-        <div class="public-site-nav__links">
-          <a href="/demo">Demo</a>
-          <a href="/media-tracking">Tracking Hub</a>
-          <a href="/guides">Guides</a>
-          <a href="/site-map">Site Map</a>
-          <a href="/sample-library">Sample Library</a>
-          <a href="/compare">Compare</a>
-          <a href="/use-cases">Use Cases</a>
-          <a href="/reviews">Reviews</a>
-          <a href="/faq">FAQ</a>
-          <a href="/content-quality">Content Quality</a>
-          <a href="/advertising">Advertising</a>
-          <a href="/privacy">Privacy</a>
-          <a class="public-site-nav__cta" href="/#landing-auth">Start tracking</a>
-        </div>
-      </nav>
+<body class="public-reader site">
+  <a class="reader-skip" href="#reader-main">Skip to content</a>
+  <!--SITE_NAV:-->
+  <div class="reader-shell">
+    <main id="reader-main" tabindex="-1" class="reader-main privacy-container">
       <a href="/" class="back-link">Back to OmniTrackr</a>
 
       <header class="privacy-header">
@@ -95,6 +63,20 @@
       <section class="privacy-section" aria-labelledby="why-heading">
         <h2 id="why-heading">Why Publish a Changelog?</h2>
         <p>See what has changed in your library and which new controls are available. Each update explains what you can do and how it affects your existing tracking.</p>
+      </section>
+
+      <section class="privacy-section" aria-labelledby="site-redesign-2026-heading">
+        <h2 id="site-redesign-2026-heading">September 28, 2026: One Look Across the Public Site</h2>
+        <p>Every public page now shares the homepage's design, header, and footer.</p>
+        <ul>
+          <li>Guides and tracking pages use a dark reading layout with clearer steps, callouts, and tables.</li>
+          <li>Public reviews put search and media-type shortcuts up front; each review page has a larger header and suggests more reviews in the same category.</li>
+          <li>Titles without artwork show a placeholder instead of a profile icon.</li>
+          <li>On phones, every section is one tap away in the menu.</li>
+          <li>About, FAQ, privacy and policy pages, the roadmap, site map, demo, and community collections now use the same design.</li>
+          <li>FAQ answers are always visible, including without JavaScript.</li>
+          <li>Broken or old links now land on a helpful page with ways back instead of a plain error.</li>
+        </ul>
       </section>
 
       <section class="privacy-section" aria-labelledby="release-radar-2026-heading">
@@ -424,12 +406,9 @@
         <h2 id="what-next-heading">What Is Next?</h2>
         <p>Planned improvements include more category-specific guides, clearer onboarding for new accounts, richer sample workflows, and continued dependency/security maintenance. The goal is to keep OmniTrackr useful for active users while making the public website easier for new visitors, search engines, and policy reviewers to understand.</p>
       </section>
-
-      <nav class="privacy-section" aria-label="Related pages">
-        <p><a href="/">Home</a> | <a href="/guides">Guides</a> | <a href="/sample-library">Sample Library</a> | <a href="/content-quality">Content Quality</a> | <a href="/review-guidelines">Review Guidelines</a> | <a href="/compare">Compare</a> | <a href="/use-cases">Use Cases</a> | <a href="/tv-show-tracker">TV Show Tracker</a> | <a href="/game-tracker">Game Tracker</a> | <a href="/privacy">Privacy Policy</a></p>
-      </nav>
-    </div>
+    </main>
   </div>
+  <!--SITE_FOOTER-->
 </body>
 
 </html>

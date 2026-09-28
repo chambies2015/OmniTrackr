@@ -2,8 +2,6 @@
 .collection-save-shell { max-width: 1040px; margin: auto; padding: 0 32px; }
 .collection-save-shell, .collection-save-shell * { box-sizing: border-box; }
 .collection-save-shell [hidden] { display: none !important; }
-.collection-save-shell .public-site-nav { padding: 22px 0; }
-.collection-save-shell .public-site-nav__links a { color: #cad7e3; }
 .collection-save-shell main { max-width: 760px; margin: 48px auto 80px; }
 .collection-save-back, .collection-save-more a { color: #a9d7cb; text-decoration: none; }
 .collection-save-back { display: inline-block; padding: 12px 0; margin-bottom: 16px; }
@@ -45,3 +43,13 @@
   .collection-save-actions > * { width: 100%; }
   .collection-save-preview, .collection-save-item { padding: 14px; }
 }
+
+/* Site-wide purple theme (September 2026 redesign). */
+.collection-save-page.site { background: radial-gradient(900px 480px at 85% -100px, rgba(124, 58, 237, .30), transparent 70%), var(--site-bg); background-repeat: no-repeat; color: var(--site-text); }
+.collection-save-panel { background: linear-gradient(180deg, rgba(255, 255, 255, .06), rgba(255, 255, 255, .02)); border-color: var(--site-border-strong); }
+.collection-save-panel h1, .collection-save-panel h2 { font-family: var(--site-display); }
+.collection-save-eyebrow { color: var(--site-teal); }
+.collection-save-back, .collection-save-more a { color: var(--site-violet-soft); }
+.collection-save-preview { background: rgba(11, 10, 24, .6); border-color: var(--site-border); }
+.collection-save-actions button, .collection-save-primary { background: linear-gradient(135deg, var(--site-violet), var(--site-violet-2)); border-radius: 999px; box-shadow: 0 10px 26px rgba(139, 92, 246, .32); color: #fff; }
+.collection-save-actions .collection-save-secondary { background: var(--site-surface); border-color: var(--site-border-strong); box-shadow: none; color: var(--site-text); }

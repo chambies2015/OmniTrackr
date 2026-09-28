@@ -28,7 +28,7 @@
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@700;800&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="/styles.css?v=20260924-daily-dashboard-v4">
-  <link rel="stylesheet" href="/static/reviews.css?v=20260922-review-discovery">
+  <link rel="stylesheet" href="/static/reviews.css?v=20260928-site-1">
   <script type="application/ld+json">
   {
     "@context": "https://schema.org",
@@ -42,48 +42,51 @@
   }
   </script>
 </head>
-<body class="dark-mode reviews-page">
-  <a class="reviews-skip-link" href="#community-reviews">Skip to reviews</a>
-  <div class="reviews-wrapper">
-    <nav class="public-site-nav" aria-label="Public site navigation">
-      <a class="public-site-nav__brand" href="/">OmniTrackr</a>
-      <div class="public-site-nav__links">
-        <a href="/release-radar">Release Radar</a><a href="/discover">Discover</a>
-        <a href="/reviews" aria-current="page">Reviews</a>
-        <a href="/guides">Guides</a>
-        <a class="public-site-nav__cta" href="/#landing-auth">My library</a>
-      </div>
-    </nav>
+<body class="dark-mode reviews-page site">
+  <a class="reviews-skip-link site-skip" href="#community-reviews">Skip to reviews</a>
+  <!--SITE_NAV:reviews-->
+  <header class="reviews-header site-hero">
+    <div class="site-wrap">
+      <p class="reviews-eyebrow site-eyebrow">A good recommendation starts with a real opinion</p>
+      <h1>Public Reviews</h1>
+      <p>Find your next favorite through the movies, shows, games, music, and books people are talking about.</p>
+      <form id="reviewFilters" class="review-filters" action="/reviews" method="get" role="search" aria-label="Find public reviews">
+        <div class="review-search-field">
+          <label for="reviewSearch">Search by title</label>
+          <input id="reviewSearch" name="q" type="search" maxlength="100" placeholder="A film, a book, a new obsession…" value="{{QUERY}}">
+        </div>
+        <div class="review-category-field">
+          <label for="categoryFilter">Media type</label>
+          <select id="categoryFilter" name="category">
+            <option value="">All media</option>
+            <option value="movie">Movies</option>
+            <option value="tv_show">TV Shows</option>
+            <option value="anime">Anime</option>
+            <option value="video_game">Video Games</option>
+            <option value="music">Music</option>
+            <option value="book">Books</option>
+          </select>
+        </div>
+        <button id="filterReviewsButton" type="submit">Find reviews</button>
+      </form>
+      <nav class="reviews-category-nav" aria-label="Browse reviews by media type">
+        <span>Browse</span>
+        <a href="/reviews?category=movie">Movies</a>
+        <a href="/reviews?category=tv_show">TV shows</a>
+        <a href="/reviews?category=anime">Anime</a>
+        <a href="/reviews?category=video_game">Video games</a>
+        <a href="/reviews?category=music">Music</a>
+        <a href="/reviews?category=book">Books</a>
+      </nav>
+    </div>
+  </header>
+  <div class="reviews-wrapper site-wrap">
     <main>
-      <header class="reviews-header">
-        <p class="reviews-eyebrow">A good recommendation starts with a real opinion</p>
-        <h1>Public Reviews</h1>
-        <p>Find your next favorite through the movies, shows, games, music, and books people are talking about.</p>
-      </header>
       <section id="community-reviews" aria-labelledby="community-reviews-heading">
         <div class="reviews-section-heading">
           <h2 id="community-reviews-heading">From the community</h2>
           <a href="/review-guidelines">What makes a useful review?</a>
         </div>
-        <form id="reviewFilters" class="review-filters" action="/reviews" method="get" role="search" aria-label="Find public reviews">
-          <div class="review-search-field">
-            <label for="reviewSearch">Search by title</label>
-            <input id="reviewSearch" name="q" type="search" maxlength="100" placeholder="A film, a book, a new obsession…" value="{{QUERY}}">
-          </div>
-          <div class="review-category-field">
-            <label for="categoryFilter">Media type</label>
-            <select id="categoryFilter" name="category">
-              <option value="">All media</option>
-              <option value="movie">Movies</option>
-              <option value="tv_show">TV Shows</option>
-              <option value="anime">Anime</option>
-              <option value="video_game">Video Games</option>
-              <option value="music">Music</option>
-              <option value="book">Books</option>
-            </select>
-          </div>
-          <button id="filterReviewsButton" type="submit">Find reviews</button>
-        </form>
         <div id="reviewFeedStatus" class="review-feed-status" role="status" aria-live="polite" aria-atomic="true"></div>
         <div id="reviewsContainer" class="reviews-grid" data-hydrated="true" data-category="{{CATEGORY}}" data-query="{{QUERY}}" data-next-offset="{{NEXT_OFFSET}}" data-has-more="{{HAS_MORE}}">
           {{SERVER_REVIEWS}}
@@ -96,33 +99,19 @@
       </section>
       <aside class="reviews-guide" aria-labelledby="reviews-guide-heading">
         <div>
+          <p class="site-eyebrow">Share what you thought</p>
           <h2 id="reviews-guide-heading">Your perspective could be someone’s next favorite.</h2>
           <p>Keep personal notes in your library, and choose which reviews to share. Tell readers what stood out, who would enjoy it, and why.</p>
         </div>
-        <a href="/review-guidelines">Read the review guide <span aria-hidden="true">→</span></a>
+        <div class="reviews-guide__actions">
+          <a class="site-btn site-btn--primary" href="/#landing-auth">Start your library</a>
+          <a class="site-btn site-btn--ghost" href="/review-guidelines">Read the review guide <span aria-hidden="true">→</span></a>
+        </div>
       </aside>
     </main>
-    <nav class="reviews-category-nav" aria-label="Browse reviews by media type">
-      <span>Browse reviews</span>
-      <a href="/reviews?category=movie">Movies</a>
-      <a href="/reviews?category=tv_show">TV shows</a>
-      <a href="/reviews?category=anime">Anime</a>
-      <a href="/reviews?category=video_game">Video games</a>
-      <a href="/reviews?category=music">Music</a>
-      <a href="/reviews?category=book">Books</a>
-    </nav>
-    <footer class="reviews-footer">
-      <p>One library for everything you love.</p>
-      <nav aria-label="More about OmniTrackr">
-        <a href="/demo">Try the demo</a>
-        <a href="/media-tracking">Tracking hub</a>
-        <a href="/privacy">Privacy</a>
-        <a href="/content-quality">Content quality</a>
-        <a href="/site-map">Site map</a>
-      </nav>
-    </footer>
   </div>
+  <!--SITE_FOOTER-->
   <script src="/static/review_report.js?v=20260917-review-safety-v1" defer></script>
-  <script src="/static/reviews.js?v=20260922-review-discovery" defer></script>
+  <script src="/static/reviews.js?v=20260928-site-1" defer></script>
 </body>
 </html>

@@ -174,7 +174,7 @@ function updateMetadata(review) {
 function displayReview(review) {
   updateMetadata(review);
 
-  const posterUrl = review.poster_url || review.cover_art_url || '/static/default-avatar.svg';
+  const posterUrl = review.poster_url || review.cover_art_url || '/static/poster-placeholder.svg';
   const categoryLabel = review.category === 'tv_show' ? 'TV Show' :
                        review.category === 'video_game' ? 'Video Game' :
                        review.category.charAt(0).toUpperCase() + review.category.slice(1);
@@ -207,7 +207,7 @@ function displayReview(review) {
 
   reviewContainer.innerHTML = `
     <div class="review-header">
-      <img src="${escapeHtml(posterUrl)}" alt="${escapeHtml(review.title)}" class="review-poster-large" data-fallback-src="/static/default-avatar.svg">
+      <img src="${escapeHtml(posterUrl)}" alt="${escapeHtml(review.title)}" class="review-poster-large" data-fallback-src="/static/poster-placeholder.svg">
       <div class="review-header-info">
         <span class="review-category-badge">${escapeHtml(categoryLabel)}</span>
         <h1>${escapeHtml(review.title)}</h1>

@@ -16,6 +16,7 @@ from sqlalchemy.orm import Session
 from .. import affiliate, models
 from .. import release_radar as radar
 from ..csp import strict_html_response
+from ..site_chrome import apply_site_chrome
 from ..dependencies import get_current_user, get_db
 
 router = APIRouter()
@@ -68,7 +69,7 @@ def _category_path(category: str, window: Optional[radar.Window] = None) -> str:
 
 def _render(title: str, description: str, canonical: str, content: str, *, indexable: bool,
             structured: Optional[dict] = None, ads: bool = False, refresh: bool = False) -> Response:
-    html = (Path(__file__).parents[1] / "templates" / "release_radar.html").read_text(encoding="utf-8")
+    html = apply_site_chrome((Path(__file__).parents[1] / "templates" / "release_radar.html").read_text(encoding="utf-8"))
     extra_head = '<meta name="google-adsense-account" content="ca-pub-7271682066779719">'
     if refresh:
         extra_head += '<meta http-equiv="refresh" content="45">'

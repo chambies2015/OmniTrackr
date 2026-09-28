@@ -19,6 +19,7 @@ from sqlalchemy.orm import Session, selectinload
 
 from .. import models, schemas
 from ..collection_quality import evaluate_public_collection
+from ..site_chrome import apply_site_chrome, message_page
 from ..csp import strict_html_response
 from ..dependencies import get_current_user, get_db
 from ..visitor_identity import (
@@ -898,11 +899,15 @@ def collection_save_page(collection_id: int, db: Session = Depends(get_db)):
     try:
         source = _public_collection_or_404(db, collection_id)
     except HTTPException:
-        page = '<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><meta name="robots" content="noindex, follow"><title>Collection unavailable - OmniTrackr</title></head><body><main><h1>This collection is unavailable</h1><p>It may have been made private, changed, or removed.</p><a href="/collections/explore">Explore public collections</a></main></body></html>'
+        page = message_page(
+            "Collection unavailable", "This collection is unavailable",
+            "It may have been made private, changed, or removed.",
+            eyebrow="Collections", actions=(("Explore public collections", "/collections/explore"), ("Go to the homepage", "/")),
+        )
         response = strict_html_response(page, status_code=404)
     else:
         path = f"/collections/public/{collection_id}/save"
-        page = (Path(__file__).parents[1] / "templates" / "collection_save.html").read_text(encoding="utf-8")
+        page = apply_site_chrome((Path(__file__).parents[1] / "templates" / "collection_save.html").read_text(encoding="utf-8"))
         values = {
             "TITLE": f"Save {source.name} - OmniTrackr", "COLLECTION_NAME": source.name,
             "COLLECTION_ID": collection_id, "BACK_URL": f"/collections/public/{collection_id}",
@@ -1030,7 +1035,7 @@ async def explore_collections(
         )
         if len(cards) >= 48:
             break
-    template = (Path(__file__).parents[1] / "templates" / "collection_gallery.html").read_text(encoding="utf-8")
+    template = apply_site_chrome((Path(__file__).parents[1] / "templates" / "collection_gallery.html").read_text(encoding="utf-8"))
     if cards:
         gallery_content = "".join(cards)
     elif normalized_query or category:
@@ -1073,7 +1078,7 @@ async def explore_collections(
 async def public_collection(collection_id: int, request: Request, db: Session = Depends(get_db)):
     """Render the deliberately limited public view of an explicitly shared shelf."""
     collection = _public_collection_or_404(db, collection_id)
-    template = (Path(__file__).parents[1] / "templates" / "public_collection.html").read_text(encoding="utf-8")
+    template = apply_site_chrome((Path(__file__).parents[1] / "templates" / "public_collection.html").read_text(encoding="utf-8"))
     visitor_hash, visitor_token, trusted_visitor = _visitor_identity(request)
     if trusted_visitor:
         existing_view = db.query(models.CollectionView.id).filter(
