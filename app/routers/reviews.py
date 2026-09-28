@@ -443,15 +443,14 @@ def _reviews_item_list_json_ld(reviews: list[dict], category: Optional[str] = No
 
 def _inject_reviews_item_list_json_ld(page: str, reviews: list[dict], category: Optional[str] = None) -> str:
     json_ld = _safe_json_ld(_reviews_item_list_json_ld(reviews, category))
-    script = f'<script type="application/ld+json" id="server-review-item-list">{json_ld}</script>'
-    pattern = (
-        r'\s*<script type="application/ld\+json">\s*\{\s*"@context": "https://schema\.org",\s*'
-        r'"@type": "CollectionPage",\s*"name": "Public Reviews - OmniTrackr".*?'
-        r'"itemListElement": \[\]\s*\}\s*\}\s*</script>'
-    )
-    updated_page, count = re.subn(pattern, lambda _: f"\n  {script}", page, count=1, flags=re.DOTALL)
-    if count:
-        return updated_page
+    opening_tag = '<script type="application/ld+json" id="server-review-item-list">'
+    script = f'{opening_tag}{json_ld}</script>'
+    # Locate the template's dedicated block without backtracking over user content.
+    start = page.find(opening_tag)
+    if start != -1:
+        end = page.find("</script>", start + len(opening_tag))
+        if end != -1:
+            return page[:start] + script + page[end + len("</script>"):]
     return page.replace("</head>", f"  {script}\n</head>", 1)
 
 

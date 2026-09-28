@@ -5,10 +5,52 @@ import json
 import re
 import pytest
 from datetime import datetime
+from pathlib import Path
+from time import perf_counter
 from app import models, crud
 from app.routers import reviews as reviews_router
 from app.review_quality import evaluate_public_review
 from app.schemas import MovieCreate, TVShowCreate, AnimeCreate, VideoGameCreate, MusicCreate, BookCreate
+
+
+class TestReviewJsonLdInjection:
+    def test_replaces_template_schema_and_preserves_other_scripts(self):
+        page = (Path(reviews_router.__file__).parent.parent / "templates" / "reviews.html").read_text(encoding="utf-8")
+        other_script = '<script type="application/ld+json">{"@type":"WebSite"}</script>'
+        page = page.replace("</head>", other_script + "</head>")
+
+        updated = reviews_router._inject_reviews_item_list_json_ld(page, [], "movie")
+
+        assert updated.count('id="server-review-item-list"') == 1
+        assert '"name": "Public Reviews - OmniTrackr"' not in updated
+        assert '"name": "Movie Reviews - OmniTrackr"' in updated
+        assert other_script in updated
+        assert updated.split("</head>", 1)[1] == page.split("</head>", 1)[1]
+
+    @pytest.mark.parametrize(
+        "payload",
+        [" " * 100_000, ('"itemListElement": []' + " " * 100) * 1000],
+        ids=["whitespace", "repeated-json-fragments"],
+    )
+    def test_missing_schema_with_adversarial_content_is_fast(self, payload):
+        page = "<head></head><body>" + payload + "</body>"
+        start = perf_counter()
+        updated = reviews_router._inject_reviews_item_list_json_ld(page, [])
+        elapsed = perf_counter() - start
+
+        assert elapsed < 1.0
+        assert updated.count('id="server-review-item-list"') == 1
+        assert updated.endswith("</head><body>" + payload + "</body>")
+
+    def test_unclosed_schema_uses_head_fallback(self):
+        page = '<head><script type="application/ld+json" id="server-review-item-list">{</head>'
+        updated = reviews_router._inject_reviews_item_list_json_ld(page, [])
+        assert updated.startswith(page.removesuffix("</head>"))
+        assert updated.endswith("</script>\n</head>")
+
+    def test_no_schema_or_head_leaves_page_unchanged(self):
+        page = "<body>Review content</body>"
+        assert reviews_router._inject_reviews_item_list_json_ld(page, []) == page
 
 
 class TestPublicReviews:
