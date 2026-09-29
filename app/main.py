@@ -26,6 +26,7 @@ from .csp import nonce_html_response, strict_html_response
 from .auth import AUTH_COOKIE_NAME
 from .migrations import run_migrations
 from .middleware import SecurityHeadersMiddleware, BotFilterMiddleware
+from .site_traffic import RECORDER as TRAFFIC_RECORDER, SiteTrafficMiddleware
 from .dependencies import get_db, get_current_user
 from .routers import (
     auth,
@@ -54,6 +55,7 @@ from .routers import (
     release_radar,
     import_studio,
     recommendations,
+    site_stats,
 )
 
 # Create database tables
@@ -85,6 +87,10 @@ async def lifespan(application: FastAPI):
         yield
     finally:
         await application.state.external_api_client.aclose()
+        try:
+            TRAFFIC_RECORDER.flush()  # Keep the last minute of page-view counts.
+        except Exception:
+            pass
 
 
 # Initialize FastAPI
@@ -137,6 +143,7 @@ app.add_middleware(GZipMiddleware, minimum_size=500)
 app.add_middleware(SecurityHeadersMiddleware)
 app.add_middleware(BotFilterMiddleware)
 app.add_middleware(SlowAPIMiddleware)
+app.add_middleware(SiteTrafficMiddleware)
 
 ENVIRONMENT = os.getenv("ENVIRONMENT", "development").lower()
 
@@ -456,6 +463,7 @@ for route in reviews.router.routes:
     ):
         bind_rate_limited_endpoint(route, rate_limited_review_report)
 app.include_router(reviews.router)
+app.include_router(site_stats.router)
 
 
 # Root endpoint

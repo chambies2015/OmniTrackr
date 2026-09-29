@@ -17,6 +17,7 @@ from sqlalchemy import case, func
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session, selectinload
 
+from ..admin_access import moderator_usernames
 from .. import models, schemas
 from ..collection_quality import evaluate_public_collection
 from ..site_chrome import apply_site_chrome, message_page
@@ -65,11 +66,8 @@ COPY_FIELDS = {
 
 
 def _moderator_usernames() -> set[str]:
-    return {
-        username.strip().lower()
-        for username in os.getenv("COLLECTION_MODERATOR_USERNAMES", "").split(",")
-        if username.strip()
-    }
+    # ADMIN_USERNAMES / COLLECTION_MODERATOR_USERNAMES, variable name matched case-insensitively.
+    return moderator_usernames()
 
 
 def _require_moderator(current_user: models.User) -> None:

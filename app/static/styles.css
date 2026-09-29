@@ -6261,6 +6261,9 @@ body.dark-mode .search-result-item:hover {
   margin: 0;
   flex-shrink: 0;
 }
+.account-toolbar .site-stats-link { align-items: center; background: linear-gradient(135deg, #8b5cf6, #a855f7); border-radius: 8px; color: #fff; display: inline-flex; font-weight: 600; min-height: 44px; padding: 0 14px; text-decoration: none; }
+.account-toolbar .site-stats-link[hidden] { display: none; }
+.account-toolbar .site-stats-link:hover { filter: brightness(1.1); }
 .account-toolbar #showFriendsSidebar { min-width: 44px; width: 44px; height: 44px; transform: none; border-radius: 8px; }
 .account-toolbar #notificationBell { position: relative; inset: auto; }
 .account-toolbar #userDisplay { max-width: 200px; }

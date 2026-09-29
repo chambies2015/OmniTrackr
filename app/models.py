@@ -627,3 +627,20 @@ class CustomTabItem(Base):
     created_at = Column(DateTime, default=datetime.utcnow)
     
     tab = relationship("CustomTab", back_populates="items")
+
+
+class SiteTrafficDaily(Base):
+    """Anonymous daily traffic totals for the owner's Site stats page.
+
+    One row per (day, kind, key): kind is "total" (key "views" or "visitors"),
+    "page" (a URL path), "source" (referring site), "device" or "audience".
+    No user id, IP address, cookie or per-visit row is ever stored.
+    """
+    __tablename__ = "site_traffic_daily"
+    __table_args__ = (UniqueConstraint("day", "kind", "key", name="uq_site_traffic_daily_day_kind_key"),)
+
+    id = Column(Integer, primary_key=True, index=True)
+    day = Column(Date, nullable=False, index=True)
+    kind = Column(String(16), nullable=False)
+    key = Column(String(200), nullable=False)
+    count = Column(Integer, nullable=False, default=0)

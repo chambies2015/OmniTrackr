@@ -8466,6 +8466,23 @@ function renderModeratorInsights(data) {
   });
 }
 
+// The owner-only Site stats link appears only when the server says this account is an admin.
+let siteStatsAccessRequest = null;
+window.resetSiteStatsLink = function () {
+  siteStatsAccessRequest = null;
+  const link = document.getElementById('siteStatsLink');
+  if (link) link.hidden = true;
+};
+window.refreshSiteStatsLink = function () {
+  const link = document.getElementById('siteStatsLink');
+  if (!link || siteStatsAccessRequest) return siteStatsAccessRequest;
+  siteStatsAccessRequest = fetch(`${API_BASE}/api/site-stats/access`, authFetchOptions())
+    .then(response => (response.ok ? response.json() : { admin: false }))
+    .then(result => { link.hidden = !result?.admin; })
+    .catch(() => { link.hidden = true; });
+  return siteStatsAccessRequest;
+};
+
 // Most members are not moderators: after one 401/403 stop asking on every Collections visit.
 let moderatorInsightsDenied = false;
 
