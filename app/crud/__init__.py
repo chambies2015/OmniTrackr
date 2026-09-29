@@ -6,6 +6,7 @@ Re-exports all CRUD functions for backward compatibility.
 from .users import (
     get_user_by_username,
     get_user_by_username_auth,
+    get_user_by_id_auth,
     get_user_by_email,
     get_user_by_username_or_email,
     get_user_by_id,
@@ -161,6 +162,7 @@ __all__ = [
     # User operations
     "get_user_by_username",
     "get_user_by_username_auth",
+    "get_user_by_id_auth",
     "get_user_by_email",
     "get_user_by_username_or_email",
     "get_user_by_id",

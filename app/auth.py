@@ -111,6 +111,29 @@ def create_access_token(data: dict, expires_delta: Optional[timedelta] = None) -
     return encoded_jwt
 
 
+def create_user_access_token(user) -> str:
+    """Session token for a user.
+
+    `uid` is the stable identity; `sub` (the username at sign-in) is kept for
+    older clients. Keying sessions on the id means renaming an account keeps
+    it signed in, and a token issued before a rename can never authenticate as
+    someone who later registers the old username.
+    """
+    return create_access_token(data={"sub": user.username, "uid": user.id})
+
+
+def set_auth_cookie(response, access_token: str) -> None:
+    response.set_cookie(
+        key=AUTH_COOKIE_NAME,
+        value=access_token,
+        max_age=AUTH_COOKIE_MAX_AGE_SECONDS,
+        httponly=True,
+        secure=ENVIRONMENT == "production",
+        samesite="lax",
+        path="/",
+    )
+
+
 def decode_access_token(token: str) -> Optional[dict]:
     """
     Decode and validate a JWT access token.

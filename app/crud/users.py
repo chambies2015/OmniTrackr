@@ -31,6 +31,23 @@ def get_user_by_username_auth(db: Session, username: str) -> Optional[models.Use
     ).filter(models.User.username == username).first()
 
 
+def get_user_by_id_auth(db: Session, user_id: int) -> Optional[models.User]:
+    """Get user by id with minimal columns for auth (session tokens carry the id)."""
+    return db.query(models.User).options(
+        load_only(
+            models.User.id,
+            models.User.email,
+            models.User.username,
+            models.User.hashed_password,
+            models.User.is_active,
+            models.User.is_verified,
+            models.User.verification_token,
+            models.User.created_at,
+            models.User.profile_picture_url,
+        )
+    ).filter(models.User.id == user_id).first()
+
+
 def get_user_by_email(db: Session, email: str) -> Optional[models.User]:
     """Get user by email."""
     return db.query(models.User).filter(models.User.email == email).first()

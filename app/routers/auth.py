@@ -152,7 +152,7 @@ async def login(
     user.login_count = (user.login_count or 0) + 1
     db.commit()
     
-    access_token = auth.create_access_token(data={"sub": user.username})
+    access_token = auth.create_user_access_token(user)
     token_response = schemas.Token(
         access_token=access_token,
         token_type="bearer",
@@ -167,15 +167,7 @@ async def login(
             "Expires": "0"
         }
     )
-    response.set_cookie(
-        key=auth.AUTH_COOKIE_NAME,
-        value=access_token,
-        max_age=auth.AUTH_COOKIE_MAX_AGE_SECONDS,
-        httponly=True,
-        secure=auth.ENVIRONMENT == "production",
-        samesite="lax",
-        path="/",
-    )
+    auth.set_auth_cookie(response, access_token)
     return response
 
 

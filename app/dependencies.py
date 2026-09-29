@@ -44,11 +44,16 @@ async def get_current_user(
     if payload is None:
         raise credentials_exception
     
+    user_id = payload.get("uid")
     username: str = payload.get("sub")
-    if username is None:
+    if isinstance(user_id, int) and not isinstance(user_id, bool):
+        # Current tokens: the account id survives username changes.
+        user = crud.get_user_by_id_auth(db, user_id)
+    elif username is not None:
+        # Tokens issued before ids were added (expire within a day of deploy).
+        user = crud.get_user_by_username_auth(db, username=username)
+    else:
         raise credentials_exception
-    
-    user = crud.get_user_by_username_auth(db, username=username)
     if user is None or not user.is_active:
         raise credentials_exception
     

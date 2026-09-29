@@ -5556,21 +5556,15 @@ window.changeUsername = async function (event) {
     if (response.ok) {
       const updatedUser = await response.json();
 
-      // Close the modal first
+      // The server refreshed the session cookie, so the member stays signed in.
       closeAccountModal();
-
-      // Show success message and inform user to relogin
-      alert('Username changed successfully! Please login again with your new username.');
-
-      // Force logout without confirmation (JWT token contains old username and is now invalid)
-      // Use clearAuth from auth.js (available globally)
-      if (typeof clearAuth === 'function') {
-        clearAuth();
-      } else {
-        // Fallback: clear localStorage directly
+      try {
         localStorage.removeItem('omnitrackr_token');
-        localStorage.removeItem('omnitrackr_user');
+        localStorage.setItem('omnitrackr_user', JSON.stringify(updatedUser));
+      } catch (storageError) {
+        // The cookie session still works without storage.
       }
+      alert(`Username changed to ${updatedUser.username}. Use it the next time you log in.`);
       location.reload();
     } else {
       const error = await response.json();
