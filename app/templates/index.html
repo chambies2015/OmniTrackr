@@ -46,10 +46,10 @@
   <link rel="icon" type="image/x-icon" href="/omnitrackr_favicon.ico">
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link rel="preload" href="./styles.css?v=20260929-site-stats-1" as="style">
+  <link rel="preload" href="./styles.css?v=20260929-for-you-1" as="style">
   <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@700;800&family=Inter:wght@400;500;600;700&display=swap"
     rel="stylesheet">
-  <link rel="stylesheet" href="./styles.css?v=20260929-site-stats-1">
+  <link rel="stylesheet" href="./styles.css?v=20260929-for-you-1">
   <link rel="stylesheet" href="/static/progress.css?v=20260922-progress">
   <link rel="stylesheet" href="/static/app-theme.css?v=20260924-friends-panel-2">
   <link rel="stylesheet" href="/static/library-theme.css?v=20260924-library-filters-1">
@@ -400,6 +400,40 @@
         <button type="button" id="libraryLaunchpadInsights" class="action-btn library-launchpad__secondary" data-action="launchpad-open-insights" hidden>See insights</button>
         <button type="button" class="library-launchpad__dismiss" data-action="launchpad-dismiss" aria-label="Dismiss library launchpad">Not now</button>
       </div>
+    </section>
+
+    <section id="starterPicks" class="for-you-card starter-picks" aria-labelledby="starterPicksTitle" hidden>
+      <div class="for-you-card__head">
+        <div>
+          <p class="for-you-card__eyebrow">Quick start</p>
+          <h2 id="starterPicksTitle">Add a few favorites in one click</h2>
+          <p id="starterPicksSummary" class="for-you-card__summary">Popular with OmniTrackr members and coming out soon. Tap Add on anything you've seen or want to see.</p>
+        </div>
+        <div class="for-you-card__side">
+          <p id="starterPicksProgress" class="starter-picks__progress" aria-live="polite"></p>
+          <button type="button" class="for-you-card__dismiss" data-for-you-action="dismiss-starter" aria-label="Hide quick start suggestions">Not now</button>
+        </div>
+      </div>
+      <div id="starterPicksPopular" class="for-you-grid" aria-label="Popular with members"></div>
+      <h3 id="starterPicksUpcomingTitle" class="for-you-card__subhead" hidden>Coming out soon</h3>
+      <div id="starterPicksUpcoming" class="for-you-grid" aria-label="Coming out soon"></div>
+      <p id="starterPicksStatus" class="for-you-card__status" role="status" aria-live="polite"></p>
+    </section>
+
+    <section id="comingUp" class="for-you-card coming-up" aria-labelledby="comingUpTitle" hidden>
+      <div class="for-you-card__head">
+        <div>
+          <p class="for-you-card__eyebrow">Release Radar</p>
+          <h2 id="comingUpTitle">Coming up for you</h2>
+          <p id="comingUpSummary" class="for-you-card__summary"></p>
+        </div>
+        <label id="comingUpEmail" class="coming-up__email" hidden>
+          <input type="checkbox" id="comingUpEmailToggle">
+          <span>Email me this weekly</span>
+        </label>
+      </div>
+      <div id="comingUpList" class="for-you-grid for-you-grid--wide"></div>
+      <p id="comingUpStatus" class="for-you-card__status" role="status" aria-live="polite"></p>
     </section>
 
     <section id="returnDeck" class="return-deck" aria-labelledby="returnDeckTitle" hidden>
@@ -1961,10 +1995,11 @@
     </form>
   </dialog>
   <script src="./credentials.js"></script>
-  <script src="./auth.js?v=20260929-site-stats-1"></script>
+  <script src="./auth.js?v=20260929-for-you-1"></script>
   <script src="/static/import-studio.js?v=20260924-import-studio-final"></script>
   <script src="/static/progress.js?v=20260922-progress"></script>
   <script src="./app.js?v=20260929-session-1"></script>
+  <script src="/static/for-you.js?v=20260929-1"></script>
 
   <!-- Account Modal -->
   <div id="accountModal" class="modal-overlay" style="display: none;">

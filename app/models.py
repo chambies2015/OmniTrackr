@@ -644,3 +644,19 @@ class SiteTrafficDaily(Base):
     kind = Column(String(16), nullable=False)
     key = Column(String(200), nullable=False)
     count = Column(Integer, nullable=False, default=0)
+
+
+class EmailDigestSubscription(Base):
+    """A member's opt-in to the weekly "Coming up for you" email.
+
+    A row exists only while the member is opted in; unsubscribing deletes it.
+    The token powers the one-click unsubscribe link in every email.
+    """
+    __tablename__ = "email_digest_subscriptions"
+
+    id = Column(Integer, primary_key=True, index=True)
+    user_id = Column(Integer, ForeignKey("users.id", ondelete="CASCADE"), nullable=False, unique=True, index=True)
+    token = Column(String(64), nullable=False, unique=True, index=True)
+    created_at = Column(DateTime, nullable=False, default=datetime.utcnow)
+    last_checked_at = Column(DateTime, nullable=True)
+    last_sent_at = Column(DateTime, nullable=True)

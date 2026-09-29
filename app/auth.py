@@ -8,6 +8,8 @@ import jwt
 from jwt import InvalidTokenError
 import bcrypt
 import re
+import hashlib
+import hmac
 import os
 from dotenv import load_dotenv
 
@@ -24,7 +26,8 @@ if not SECRET_KEY:
     warnings.warn("Using default SECRET_KEY - not for production!")
 
 ALGORITHM = "HS256"
-ACCESS_TOKEN_EXPIRE_MINUTES = 60 * 24
+# Members stay signed in for 30 days; a password change or reset ends every other session.
+ACCESS_TOKEN_EXPIRE_MINUTES = 60 * 24 * 30
 AUTH_COOKIE_NAME = "omnitrackr_session"
 AUTH_COOKIE_MAX_AGE_SECONDS = ACCESS_TOKEN_EXPIRE_MINUTES * 60
 
@@ -119,7 +122,21 @@ def create_user_access_token(user) -> str:
     it signed in, and a token issued before a rename can never authenticate as
     someone who later registers the old username.
     """
-    return create_access_token(data={"sub": user.username, "uid": user.id})
+    return create_access_token(data={
+        "sub": user.username,
+        "uid": user.id,
+        "pv": password_fingerprint(user.hashed_password),
+    })
+
+
+def password_fingerprint(hashed_password: Optional[str]) -> str:
+    """A keyed, one-way marker of the current password hash.
+
+    Tokens carry it so changing or resetting a password signs out every other
+    session, which matters now that sessions last 30 days.
+    """
+    digest = hmac.new(SECRET_KEY.encode(), (hashed_password or "").encode(), hashlib.sha256)
+    return digest.hexdigest()[:16]
 
 
 def set_auth_cookie(response, access_token: str) -> None:

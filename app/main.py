@@ -2,6 +2,7 @@
 Entry point for the OmniTrackr API.
 Provides CRUD endpoints for managing movies and TV shows.
 """
+import asyncio
 import os
 import re
 import httpx
@@ -27,6 +28,7 @@ from .auth import AUTH_COOKIE_NAME
 from .migrations import run_migrations
 from .middleware import SecurityHeadersMiddleware, BotFilterMiddleware
 from .site_traffic import RECORDER as TRAFFIC_RECORDER, SiteTrafficMiddleware
+from . import digest as digest_emails
 from .dependencies import get_db, get_current_user
 from .routers import (
     auth,
@@ -56,6 +58,7 @@ from .routers import (
     import_studio,
     recommendations,
     site_stats,
+    for_you,
 )
 
 # Create database tables
@@ -83,9 +86,14 @@ async def lifespan(application: FastAPI):
     except Exception as e:
         print(f"Error expiring friend requests on startup: {e}")
 
+    digest_task = None
+    if digest_emails.enabled_for_process():
+        digest_task = asyncio.create_task(digest_emails.digest_loop(application))
     try:
         yield
     finally:
+        if digest_task is not None:
+            digest_task.cancel()
         await application.state.external_api_client.aclose()
         try:
             TRAFFIC_RECORDER.flush()  # Keep the last minute of page-view counts.
@@ -464,6 +472,7 @@ for route in reviews.router.routes:
         bind_rate_limited_endpoint(route, rate_limited_review_report)
 app.include_router(reviews.router)
 app.include_router(site_stats.router)
+app.include_router(for_you.router)
 
 
 # Root endpoint

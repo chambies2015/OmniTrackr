@@ -10,11 +10,11 @@ import time
 from datetime import date, datetime, timedelta, timezone
 from pathlib import Path
 
-from fastapi import APIRouter, Depends, HTTPException, Query, Response
+from fastapi import APIRouter, Depends, HTTPException, Query, Request, Response
 from sqlalchemy import func
 from sqlalchemy.orm import Session
 
-from .. import models, release_radar
+from .. import editorial_collections, models, release_radar
 from ..admin_access import is_site_admin
 from ..csp import strict_html_response
 from ..dependencies import get_current_user, get_db
@@ -111,11 +111,12 @@ def _traffic(db: Session, days: int, today: date) -> dict:
 def _popular_titles(db: Session, limit: int = 12) -> list[dict]:
     """Titles saved by the most distinct members (only titles in 2+ libraries)."""
     rows = []
+    editors = db.query(models.User.id).filter(models.User.username == editorial_collections.EDITOR_USERNAME)
     for key, label, model in LIBRARY_MODELS:
         title = func.lower(func.trim(model.title))
         for normalized, display, members in db.query(
             title, func.min(model.title), func.count(func.distinct(model.user_id))
-        ).group_by(title).having(func.count(func.distinct(model.user_id)) >= 2).order_by(
+        ).filter(~model.user_id.in_(editors)).group_by(title).having(func.count(func.distinct(model.user_id)) >= 2).order_by(
             func.count(func.distinct(model.user_id)).desc()
         ).limit(limit).all():
             rows.append({"category": label, "title": display, "members": int(members)})
@@ -222,4 +223,23 @@ async def site_stats_overview(
         "popular_titles": _popular_titles(db),
         "insights": insights,
         "system": _system(),
+        "editor_collections": editorial_collections.status(db),
     }
+
+
+@router.post("/api/site-stats/editor-collections")
+async def publish_editor_collections(
+    request: Request,
+    response: Response,
+    current_user: models.User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+):
+    """Publish the starter public collections (idempotent; existing ones are left alone)."""
+    _require_admin(current_user)
+    _no_store(response)
+    client = getattr(request.app.state, "external_api_client", None)
+    try:
+        return await editorial_collections.publish(db, client)
+    except ValueError as error:
+        db.rollback()
+        raise HTTPException(status_code=409, detail=str(error))

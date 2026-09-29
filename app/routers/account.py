@@ -119,8 +119,11 @@ async def change_password(
     
     if updated_user is None:
         raise HTTPException(status_code=404, detail="User not found")
-    
-    return {"message": "Password changed successfully"}
+
+    # Other devices are signed out by the new password; keep this one signed in.
+    response = JSONResponse(content={"message": "Password changed successfully"}, headers={"Cache-Control": "no-store"})
+    auth.set_auth_cookie(response, auth.create_user_access_token(updated_user))
+    return response
 
 
 @router.put("/privacy", response_model=schemas.PrivacySettings)

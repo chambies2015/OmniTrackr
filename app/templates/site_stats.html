@@ -10,8 +10,8 @@
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@700;800&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="/static/site.css?v=20260928-site-1">
-  <link rel="stylesheet" href="/static/site-stats.css?v=20260929-1">
-  <script src="/static/site-stats.js?v=20260929-1" defer></script>
+  <link rel="stylesheet" href="/static/site-stats.css?v=20260929-2">
+  <script src="/static/site-stats.js?v=20260929-2" defer></script>
 </head>
 <body class="site stats-page">
   <header class="site-header">
@@ -114,6 +114,15 @@
           <div class="stats-table-wrap" id="radarTable"></div>
         </section>
       </div>
+
+      <section class="stats-card stats-card--wide" id="editorCard">
+        <div class="stats-card__head">
+          <div><h2>Starter public collections</h2><p id="editorSummary">Curated collections written by the OmniTrackr editors, so the public Collections page has real content from day one.</p></div>
+          <button type="button" class="site-btn site-btn--primary site-btn--sm" id="editorPublish">Publish collections</button>
+        </div>
+        <ul class="stats-editor-list" id="editorList"></ul>
+        <p class="stats-editor-status" id="editorStatus" role="status" aria-live="polite"></p>
+      </section>
 
       <section class="stats-card stats-card--wide">
         <div class="stats-card__head"><div><h2>Newest members</h2><p>The 50 most recent accounts. Emails and library contents are never shown.</p></div></div>

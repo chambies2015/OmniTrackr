@@ -50,12 +50,15 @@ async def get_current_user(
         # Current tokens: the account id survives username changes.
         user = crud.get_user_by_id_auth(db, user_id)
     elif username is not None:
-        # Tokens issued before ids were added (expire within a day of deploy).
+        # Tokens issued before ids were added (24-hour tokens, gone a day after deploy).
         user = crud.get_user_by_username_auth(db, username=username)
     else:
         raise credentials_exception
     if user is None or not user.is_active:
         raise credentials_exception
+    fingerprint = payload.get("pv")
+    if fingerprint is not None and fingerprint != auth.password_fingerprint(user.hashed_password):
+        raise credentials_exception  # Password changed since this session began.
     
     return user
 

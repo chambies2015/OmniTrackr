@@ -455,6 +455,53 @@
     $('recentMembers').replaceChildren(rows.length ? table(['Member', 'Joined', 'Verified', 'Titles', 'Journal', 'Last journal entry'], rows, 3) : el('p', 'stats-empty', 'No members yet.'));
   }
 
+  function renderEditor(data) {
+    const info = data.editor_collections;
+    const card = $('editorCard');
+    if (!card || !info) return;
+    const list = $('editorList');
+    list.replaceChildren();
+    const published = new Set(info.published_names || []);
+    info.names.forEach(name => {
+      const row = el('li');
+      const done = info.published >= info.available || published.has(name);
+      row.append(el('span', '', name), el('span', `stats-status ${done ? 'stats-status--ok' : 'stats-status--warn'}`, done ? '✓ Published' : 'Not yet'));
+      list.appendChild(row);
+    });
+    const all = info.published >= info.available;
+    $('editorPublish').hidden = all;
+    $('editorSummary').textContent = all
+      ? `All ${info.available} starter collections are live on the public Collections page. Edit or unpublish them like any other collection.`
+      : `${info.published} of ${info.available} starter collections published. Publishing adds them to the public Collections page under an editors account (not your library).`;
+  }
+
+  async function publishEditor() {
+    const button = $('editorPublish');
+    const status = $('editorStatus');
+    button.disabled = true;
+    button.textContent = 'Publishing… (looking up cover art)';
+    try {
+      const response = await fetch('/api/site-stats/editor-collections', { method: 'POST', credentials: 'same-origin', headers: authHeaders() });
+      const result = await response.json().catch(() => ({}));
+      if (!response.ok) throw new Error(result.detail || `HTTP ${response.status}`);
+      const listed = result.created.filter(item => item.listed).length;
+      const art = result.created.reduce((sum, item) => sum + item.with_artwork, 0);
+      const items = result.created.reduce((sum, item) => sum + item.items, 0);
+      status.textContent = result.created.length
+        ? `Published ${result.created.length} collection${result.created.length === 1 ? '' : 's'} (${listed} listed publicly, cover art found for ${art} of ${items} titles).`
+        : 'Everything was already published.';
+      if (state.data) {
+        state.data.editor_collections = result.status;
+        renderEditor(state.data);
+      }
+    } catch (error) {
+      status.textContent = `Could not publish: ${error.message}`;
+    } finally {
+      button.disabled = false;
+      button.textContent = 'Publish collections';
+    }
+  }
+
   function render(data) {
     state.data = data;
     $('statsUpdated').textContent = `Updated ${dateTime(data.generated_at)} · last ${data.days} days · signed in as ${data.viewer}`;
@@ -468,6 +515,7 @@
     renderTitles(data);
     renderHealth(data);
     renderMembers(data);
+    renderEditor(data);
   }
 
   // ---------------------------------------------------------------- report
@@ -575,6 +623,7 @@
     });
     $('statsRefresh').addEventListener('click', load);
     $('statsCopy').addEventListener('click', copyReport);
+    $('editorPublish')?.addEventListener('click', publishEditor);
     let resizeTimer = null;
     window.addEventListener('resize', () => {
       clearTimeout(resizeTimer);

@@ -117,3 +117,49 @@ def test_rename_page_no_longer_forces_a_logout():
     body = app_js[start:app_js.index("\n};", start)]
     assert "clearAuth()" not in body
     assert "localStorage.setItem('omnitrackr_user', JSON.stringify(updatedUser))" in body
+
+
+# ---------------------------------------------------------------- 30-day sessions
+
+def test_sessions_last_thirty_days(client, db_session):
+    from datetime import datetime, timezone
+    _register(client, db_session, "longstay", "longstay@example.com")
+    response = client.post("/auth/login", data={"username": "longstay", "password": "password123"})
+    payload = auth.decode_access_token(response.json()["access_token"])
+    lifetime = payload["exp"] - datetime.now(timezone.utc).timestamp()
+    assert 29 * 86400 < lifetime <= 30 * 86400 + 5
+    cookie = response.headers["set-cookie"]
+    assert f"Max-Age={30 * 24 * 60 * 60}" in cookie
+    assert "HttpOnly" in cookie
+
+
+def test_password_change_signs_out_other_sessions_but_keeps_this_one(client, db_session):
+    _register(client, db_session, "rotator", "rotator@example.com")
+    other_device = _token(client, "rotator")
+    this_device = _token(client, "rotator")
+    response = client.put(
+        "/account/password",
+        json={"current_password": "password123", "new_password": "newpassword456"},
+        headers={"Authorization": f"Bearer {this_device}"},
+    )
+    assert response.status_code == 200
+    fresh = response.cookies.get(auth.AUTH_COOKIE_NAME)
+    assert fresh
+    assert _me(client, other_device).status_code == 401
+    assert _me(client, this_device).status_code == 401  # the pre-change token is retired too
+    assert _me(client, fresh).status_code == 200
+
+
+def test_password_reset_signs_out_every_session(client, db_session):
+    user = _register(client, db_session, "resetme", "resetme@example.com")
+    token = _token(client, "resetme")
+    user.hashed_password = auth.get_password_hash("brandnew789")
+    db_session.commit()
+    assert _me(client, token).status_code == 401
+
+
+def test_session_tokens_do_not_expose_the_password_hash(client, db_session):
+    user = _register(client, db_session, "opaque", "opaque@example.com")
+    payload = auth.decode_access_token(_token(client, "opaque"))
+    assert len(payload["pv"]) == 16
+    assert payload["pv"] not in user.hashed_password

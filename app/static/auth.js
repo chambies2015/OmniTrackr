@@ -164,6 +164,7 @@ function clearAuth({ preserveReturn = false } = {}) {
     window.resetLibraryBrowsing?.();
     window.resetFriendsPanel?.();
     window.resetSiteStatsLink?.();
+    window.resetForYou?.();
     if (!preserveReturn) clearDiscoverAuthReturn();
     clearDemoStartIntent();
     try {
@@ -352,6 +353,7 @@ function showAuthModal() {
     
     window.resetFriendsPanel?.();
     window.resetSiteStatsLink?.();
+    window.resetForYou?.();
     
     // Hide footer for logged-in view when showing landing page
     const mainFooter = document.getElementById('mainFooter');
@@ -398,6 +400,7 @@ function showMainUI() {
         loadFriendsList();
     }
     window.refreshSiteStatsLink?.();
+    window.refreshForYou?.();
     if (typeof updateNotificationCount === 'function') {
         updateNotificationCount();
         // Set up interval to refresh notification count every 30 seconds
