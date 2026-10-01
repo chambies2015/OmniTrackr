@@ -1495,6 +1495,7 @@ function switchTab(tabName) {
   }
 
   window.OmniProgress?.navigate();
+  if (document.body?.dataset) document.body.dataset.activeTab = tabName;
   document.querySelectorAll('.tab').forEach(tab => tab.classList.remove('active'));
   const targetTab = getTabButton(tabName);
   if (targetTab) {
@@ -4843,8 +4844,65 @@ function enhanceLibraryCards(tableId) {
       });
       actions.appendChild(button);
     }
+    groupRowActions(actions);
   });
 }
+
+// Keep Edit visible and tuck the other row actions into a small "More" menu.
+// Buttons keep their classes and data attributes, so every existing handler still works.
+function groupRowActions(cell) {
+  if (!cell || cell.querySelector('.row-actions')) return;
+  const buttons = Array.from(cell.children).filter(node => node.matches && node.matches('button.action-btn'));
+  const primary = buttons.find(button => /\bedit-[\w-]+-btn\b/.test(button.className));
+  if (!primary) return; // Edit mode (Save/Cancel) keeps its own layout.
+  const secondary = buttons.filter(button => button !== primary);
+  const wrapper = document.createElement('div');
+  wrapper.className = 'row-actions';
+  cell.insertBefore(wrapper, primary);
+  wrapper.appendChild(primary);
+  if (!secondary.length) return;
+  const menu = document.createElement('details');
+  menu.className = 'row-menu';
+  const summary = document.createElement('summary');
+  summary.textContent = 'More';
+  summary.setAttribute('aria-label', 'More actions');
+  const panel = document.createElement('div');
+  panel.className = 'row-menu__panel';
+  secondary.forEach(button => panel.appendChild(button));
+  menu.append(summary, panel);
+  wrapper.appendChild(menu);
+  // Tables scroll sideways, which would clip a normal dropdown: pin the open menu to the viewport.
+  const place = () => {
+    const box = summary.getBoundingClientRect();
+    const width = Math.max(168, panel.offsetWidth || 168);
+    const left = Math.min(window.innerWidth - width - 8, Math.max(8, box.right - width));
+    const below = box.bottom + 6;
+    const height = panel.offsetHeight || 180;
+    const top = below + height > window.innerHeight - 8 ? Math.max(8, box.top - height - 6) : below;
+    panel.style.left = `${left}px`;
+    panel.style.top = `${top}px`;
+  };
+  menu.rowMenuPlace = place;
+  menu.addEventListener('toggle', () => { if (menu.open) place(); });
+}
+['scroll', 'resize'].forEach(type => window.addEventListener(type, () => {
+  document.querySelectorAll('details.row-menu[open]').forEach(menu => menu.rowMenuPlace?.());
+}, { passive: true, capture: true }));
+
+document.addEventListener('click', event => {
+  document.querySelectorAll('details.row-menu[open]').forEach(menu => {
+    const chosen = event.target.closest && event.target.closest('.row-menu__panel button');
+    if (!menu.contains(event.target) || (chosen && menu.contains(chosen))) menu.removeAttribute('open');
+  });
+});
+document.addEventListener('keydown', event => {
+  if (event.key !== 'Escape') return;
+  const open = document.querySelector('details.row-menu[open]');
+  if (!open) return;
+  open.removeAttribute('open');
+  open.querySelector('summary')?.focus();
+  event.stopPropagation();
+}, true);
 
 // Import Studio is loaded from /static/import-studio.js.
 

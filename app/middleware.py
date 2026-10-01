@@ -97,6 +97,16 @@ class SecurityHeadersMiddleware(BaseHTTPMiddleware):
             response.headers["Cache-Control"] = "private, no-store"
             response.headers["X-Robots-Tag"] = "noindex, follow"
 
+        path = request.url.path
+        if (path.startswith("/static/") and not path.startswith("/static/profile_pictures/")
+                and response.status_code == 200 and "cache-control" not in response.headers):
+            # Versioned assets (?v=...) never change, so browsers can keep them for a year;
+            # unversioned ones are rechecked daily.
+            versioned = "v=" in request.url.query
+            response.headers["Cache-Control"] = (
+                "public, max-age=31536000, immutable" if versioned else "public, max-age=86400"
+            )
+
         if request.url.path in NOINDEX_PATHS or request.url.path.startswith(NOINDEX_PREFIXES):
             response.headers["X-Robots-Tag"] = "noindex, nofollow"
 
