@@ -200,7 +200,10 @@ def test_full_page_renders_everything(client, db_session):
         for directive in response.headers["content-security-policy"].split(";")
         if (tokens := directive.split())
     }
-    assert "https://www.youtube-nocookie.com" in directives["frame-src"]
+    assert any(
+        source == "https://www.youtube-nocookie.com"
+        for source in directives["frame-src"]
+    )
     assert "<iframe" not in html  # trailers load only when played
 
 
