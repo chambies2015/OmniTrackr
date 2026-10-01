@@ -54,6 +54,7 @@
   <link rel="stylesheet" href="/static/app-theme.css?v=20260924-friends-panel-2">
   <link rel="stylesheet" href="/static/library-theme.css?v=20260924-library-filters-1">
   <link rel="stylesheet" href="/static/dialog-theme.css?v=20260924-visual-4">
+  <link rel="stylesheet" href="/static/dashboard-2026.css?v=20261001-1">
   <script src="./preauth.js"></script>
   <style>
     html.authenticated #landingPage{display:none}
@@ -292,7 +293,7 @@
   </script>
 </head>
 
-<body class="dark-mode app-shell">
+<body class="dark-mode app-shell" data-active-tab="movies">
   <div class="account-toolbar" role="group" aria-label="Account controls">
   <button id="showFriendsSidebar" class="sidebar-toggle-floating" type="button" title="Friends"
     aria-label="Friends" aria-expanded="false" aria-controls="friendsSidebar" hidden>
@@ -339,7 +340,7 @@
   <main class="container" id="mainContainer">
     <header class="header" role="banner">
       <div class="app-brand">
-        <span class="app-brand__mark" aria-hidden="true"><svg viewBox="0 0 32 32" width="28" height="28" fill="none"><circle cx="16" cy="16" r="10" stroke="currentColor" stroke-width="2"/><path d="M6 16h20M16 6c-7 5-7 15 0 20 7-5 7-15 0-20Z" stroke="currentColor" stroke-width="1.5"/></svg></span>
+        <span class="app-brand__mark" aria-hidden="true"><img src="/vortex-still.webp" alt="" width="40" height="40"></span>
         <div><p class="app-title" role="heading" aria-level="1">OmniTrackr</p><p class="app-brand__caption">Your media, remembered.</p></div>
       </div>
       <div class="library-search" role="search">
@@ -1205,9 +1206,10 @@
     <!-- Statistics Tab Content -->
     <div id="statistics-tab" class="tab-content">
       <div class="card">
-        <h2
-          style="background: linear-gradient(135deg, #667eea 0%, #764ba2 50%, #f093fb 100%); -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text; margin-bottom: 24px;">
-          📊 Statistics Dashboard</h2>
+        <div class="stats-page-heading">
+          <p class="stats-page-heading__eyebrow">Your numbers</p>
+          <h2>Statistics</h2>
+        </div>
         <div id="statsLoading" style="text-align: center; padding: 40px;">
           <div
             style="display: inline-block; width: 40px; height: 40px; border: 4px solid rgba(102, 126, 234, 0.2); border-top-color: var(--primary); border-radius: 50%; animation: spin 1s linear infinite;">
@@ -1359,31 +1361,36 @@
   </main>
 
   <!-- Footer for Logged-in View -->
-  <footer class="landing-footer" id="mainFooter">
-    <div class="footer-content">
-      <p class="footer-text">Connect with us</p>
-      <div class="footer-links">
-        <a href="mailto:omnitrackr@gmail.com" class="footer-link">📧 omnitrackr@gmail.com</a>
-        <a href="https://ko-fi.com/omnitrackr" target="_blank" rel="noopener noreferrer" class="footer-link">☕ Ko-fi</a>
-        <a href="/about" class="footer-link">ℹ️ About</a>
-        <a href="/faq" class="footer-link">❓ FAQ</a>
-        <a href="/demo" class="footer-link">👀 Demo</a>
-        <a href="/media-tracking" class="footer-link">🧭 Tracking Hub</a>
-        <a href="/guides" class="footer-link">📘 Guides</a>
-        <a href="/media-tracker-checklist" class="footer-link">✅ Setup Checklist</a>
-        <a href="/tracking-templates" class="footer-link">🧩 Templates</a>
-        <a href="/review-guidelines" class="footer-link">✍️ Review Guide</a>
-        <a href="/compare" class="footer-link">⚖️ Compare</a>
-        <a href="/use-cases" class="footer-link">💡 Use Cases</a>
-        <a href="/tv-show-tracker" class="footer-link">📺 TV Tracker</a>
-        <a href="/game-tracker" class="footer-link">🎮 Game Tracker</a>
-        <a href="/changelog" class="footer-link">📝 Changelog</a>
-        <a href="/roadmap" class="footer-link">🗺️ Roadmap</a>
-        <a href="/terms" class="footer-link">📜 Terms</a>
-        <a href="/contact" class="footer-link">✉️ Contact</a>
-        <a href="/advertising" class="footer-link">📣 Advertising</a>
-        <a href="/privacy" class="footer-link">🔒 Privacy Policy</a>
+  <footer class="landing-footer app-footer" id="mainFooter">
+    <div class="app-footer__grid">
+      <div>
+        <a class="app-footer__brand" href="/"><img src="/vortex-still.webp" alt="" width="26" height="26">OmniTrackr</a>
+        <p>A free, independent media tracker for everything you watch, play, read, and hear.</p>
+        <p><a class="app-footer__support" href="https://ko-fi.com/omnitrackr" target="_blank" rel="noopener noreferrer">Support OmniTrackr on Ko-fi ↗</a></p>
       </div>
+      <nav aria-label="Explore">
+        <h2>Explore</h2>
+        <a href="/release-radar">Release Radar</a>
+        <a href="/discover">Discover</a>
+        <a href="/reviews">Public reviews</a>
+        <a href="/collections/explore">Collections</a>
+      </nav>
+      <nav aria-label="Help">
+        <h2>Help</h2>
+        <a href="/guides">Guides</a>
+        <a href="/export-import-guide">Import &amp; backups</a>
+        <a href="/review-guidelines">Review guide</a>
+        <a href="/faq">FAQ</a>
+        <a href="/contact">Contact</a>
+      </nav>
+      <nav aria-label="OmniTrackr">
+        <h2>OmniTrackr</h2>
+        <a href="/about">About</a>
+        <a href="/changelog">What's new</a>
+        <a href="/roadmap">Roadmap</a>
+        <a href="/privacy">Privacy</a>
+        <a href="/terms">Terms</a>
+      </nav>
     </div>
   </footer>
 
@@ -1998,7 +2005,7 @@
   <script src="./auth.js?v=20260929-for-you-1"></script>
   <script src="/static/import-studio.js?v=20260924-import-studio-final"></script>
   <script src="/static/progress.js?v=20260922-progress"></script>
-  <script src="./app.js?v=20260929-session-1"></script>
+  <script src="./app.js?v=20261001-dashboard-1"></script>
   <script src="/static/for-you.js?v=20260929-1"></script>
 
   <!-- Account Modal -->
