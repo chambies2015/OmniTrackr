@@ -27,7 +27,7 @@
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@700;800&family=Inter:wght@400;500;600&display=swap"
     rel="stylesheet">
-  <link rel="stylesheet" href="/styles.css">
+  <link rel="stylesheet" href="/styles.css?v=20260917-review-safety-v1">
   <style>
     body {
       min-height: 100vh;
@@ -154,34 +154,20 @@
   </style>
 </head>
 
-<body class="dark-mode">
-  <div class="review-wrapper">
-    <nav class="public-site-nav" aria-label="Public site navigation">
-      <a class="public-site-nav__brand" href="/">OmniTrackr</a>
-      <div class="public-site-nav__links">
-        <a href="/demo">Demo</a>
-        <a href="/media-tracking">Tracking Hub</a>
-        <a href="/guides">Guides</a>
-        <a href="/site-map">Site Map</a>
-          <a href="/sample-library">Sample Library</a>
-          <a href="/compare">Compare</a>
-        <a href="/use-cases">Use Cases</a>
-        <a href="/reviews">Reviews</a>
-          <a href="/faq">FAQ</a>
-          <a href="/content-quality">Content Quality</a>
-          <a href="/advertising">Advertising</a>
-        <a href="/privacy">Privacy</a>
-        <a class="public-site-nav__cta" href="/#landing-auth">Start tracking</a>
-      </div>
-    </nav>
+<body class="dark-mode site">
+  <!--SITE_NAV:reviews-->
+  <div class="review-wrapper site-wrap">
+
     <a href="/reviews" class="back-link">Back to Reviews</a>
     
     <div id="reviewContainer" class="review-container">
       <div class="loading">Loading review...</div>
     </div>
   </div>
+  <!--SITE_FOOTER-->
 
-  <script src="/static/review_detail.js" defer></script>
+  <script src="/static/review_report.js?v=20260917-review-safety-v1" defer></script>
+  <script src="/static/review_detail.js?v=20260917-review-safety-v1" defer></script>
 </body>
 
 </html>

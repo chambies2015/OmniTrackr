@@ -3,6 +3,8 @@ Account management endpoints for the OmniTrackr API.
 """
 import io
 from fastapi import APIRouter, Depends, HTTPException, UploadFile, File, Request, status
+from fastapi.encoders import jsonable_encoder
+from fastapi.responses import JSONResponse
 from sqlalchemy.orm import Session
 
 try:
@@ -15,6 +17,9 @@ from .. import crud, schemas, models, auth, email as email_utils
 from ..dependencies import get_db, get_current_user
 
 router = APIRouter(prefix="/account", tags=["account"])
+
+MAX_IMAGE_UPLOAD_BYTES = 5 * 1024 * 1024
+MAX_IMAGE_PIXELS = 20_000_000
 
 
 @router.get("/me", response_model=schemas.User)
@@ -45,7 +50,13 @@ async def change_username(
         updated_user = crud.update_user(db, current_user.id, user_update)
         if updated_user is None:
             raise HTTPException(status_code=404, detail="User not found")
-        return updated_user
+        # Refresh the session so the member stays signed in under the new name.
+        response = JSONResponse(
+            content=jsonable_encoder(schemas.User.model_validate(updated_user)),
+            headers={"Cache-Control": "no-store"},
+        )
+        auth.set_auth_cookie(response, auth.create_user_access_token(updated_user))
+        return response
     except ValueError as e:
         raise HTTPException(status_code=400, detail=str(e))
 
@@ -108,8 +119,11 @@ async def change_password(
     
     if updated_user is None:
         raise HTTPException(status_code=404, detail="User not found")
-    
-    return {"message": "Password changed successfully"}
+
+    # Other devices are signed out by the new password; keep this one signed in.
+    response = JSONResponse(content={"message": "Password changed successfully"}, headers={"Cache-Control": "no-store"})
+    auth.set_auth_cookie(response, auth.create_user_access_token(updated_user))
+    return response
 
 
 @router.put("/privacy", response_model=schemas.PrivacySettings)
@@ -187,8 +201,8 @@ async def upload_profile_picture(
         )
     
     # Validate file size (max 5MB)
-    file_content = await file.read()
-    if len(file_content) > 5 * 1024 * 1024:  # 5MB
+    file_content = await file.read(MAX_IMAGE_UPLOAD_BYTES + 1)
+    if len(file_content) > MAX_IMAGE_UPLOAD_BYTES:
         raise HTTPException(status_code=400, detail="File size exceeds 5MB limit")
     
     # Content validation: Verify file is actually an image using magic bytes
@@ -232,6 +246,11 @@ async def upload_profile_picture(
     
     try:
         # Open image from bytes
+        image = Image.open(io.BytesIO(file_content))
+        width, height = image.size
+        if width <= 0 or height <= 0 or width * height > MAX_IMAGE_PIXELS:
+            raise HTTPException(status_code=400, detail="Image dimensions are too large")
+        image.verify()
         image = Image.open(io.BytesIO(file_content))
         
         # Convert to RGB/RGBA for processing
@@ -319,7 +338,7 @@ async def upload_profile_picture(
         print(f"Error processing image: {e}")
         raise HTTPException(
             status_code=400,
-            detail=f"Failed to process image: {str(e)}"
+            detail="Failed to process image. Please choose a valid JPEG, PNG, GIF, or WebP file."
         )
 
 
@@ -355,7 +374,7 @@ async def deactivate_account(
         raise HTTPException(status_code=404, detail="User not found")
     
     return {
-        "message": "Account deactivated. You can reactivate within 90 days. After that, your account will be permanently deleted."
+        "message": "Account deactivated. You can reactivate within 90 days. After that, self-service reactivation is unavailable; contact support if you need deletion assistance."
     }
 
 

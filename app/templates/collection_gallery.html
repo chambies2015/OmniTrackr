@@ -1,0 +1,45 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="description" content="Browse thoughtful, human-curated collections spanning movies, television, anime, games, music, and books.">
+  <meta name="robots" content="index, follow">
+  <meta name="google-adsense-account" content="ca-pub-7271682066779719">
+  <title>Community Collections | OmniTrackr</title>
+  <link rel="canonical" href="https://omnitrackr.xyz/collections/explore">
+  <link rel="icon" type="image/x-icon" href="/omnitrackr_favicon.ico">
+  <meta property="og:type" content="website">
+  <meta property="og:title" content="Community Collections | OmniTrackr">
+  <meta property="og:description" content="Ideas worth following across every kind of media, curated by OmniTrackr members.">
+  <meta property="og:url" content="https://omnitrackr.xyz/collections/explore">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@700;800&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="/styles.css">
+  <link rel="stylesheet" href="/static/collections-public.css?v=20260928-site-2">
+</head>
+<body class="dark-mode site collections-page">
+  <!--SITE_NAV:collections-->
+  <main>
+    <section class="gallery-hero site-hero"><div class="site-wrap">
+      <p class="gallery-hero__eyebrow site-eyebrow">Made by people, not an algorithm</p>
+      <h1>Ideas worth following across every medium.</h1>
+      <p>Browse collections that connect films, series, anime, games, albums, and books through one considered point of view. Only substantial collections that pass the automatic discovery checks appear here.</p>
+      <form class="gallery-filter" method="get" action="/collections/explore">
+        <input type="search" name="q" maxlength="80" value="{{QUERY}}" placeholder="Search a theme or description" aria-label="Search collections">
+        <select name="category" aria-label="Filter by media type">
+          <option value="" {{SELECT_ALL}}>All media</option><option value="movies" {{SELECT_MOVIES}}>Movies</option><option value="tv-shows" {{SELECT_TV_SHOWS}}>TV shows</option><option value="anime" {{SELECT_ANIME}}>Anime</option><option value="video-games" {{SELECT_VIDEO_GAMES}}>Video games</option><option value="music" {{SELECT_MUSIC}}>Music</option><option value="books" {{SELECT_BOOKS}}>Books</option>
+        </select>
+        <button type="submit">Explore</button>
+      </form>
+    </div></section>
+    <div class="site-wrap gallery-body">
+    <p class="gallery-summary">{{COUNT}} approved collection(s)</p>
+    <section class="collection-gallery" aria-label="Approved community collections">{{COLLECTIONS}}</section>
+    <footer class="gallery-footer"><span>Curated by OmniTrackr members · Reviewed before discovery</span><span><a href="/content-quality">Content standards</a> · <a href="/contact">Contact</a> · <a href="/privacy">Privacy</a></span></footer>
+    </div>
+  </main>
+  <!--SITE_FOOTER-->
+</body>
+</html>

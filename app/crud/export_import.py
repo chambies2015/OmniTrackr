@@ -129,7 +129,7 @@ def import_movies(db: Session, user_id: int, movies: List[schemas.MovieCreate]) 
             )
             
             if existing_movie:
-                update_dict = movie_data.dict(exclude_unset=True)
+                update_dict = movie_data.model_dump(exclude_unset=True)
                 allowed_fields = {'title', 'director', 'year', 'rating', 'watched', 'review', 'poster_url'}
                 for field, value in update_dict.items():
                     if field in allowed_fields:
@@ -138,7 +138,7 @@ def import_movies(db: Session, user_id: int, movies: List[schemas.MovieCreate]) 
                         setattr(existing_movie, field, value)
                 updated += 1
             else:
-                db_movie = models.Movie(**movie_data.dict(), user_id=user_id)
+                db_movie = models.Movie(**movie_data.model_dump(), user_id=user_id)
                 db.add(db_movie)
                 created += 1
         except Exception as e:
@@ -167,7 +167,7 @@ def import_tv_shows(db: Session, user_id: int, tv_shows: List[schemas.TVShowCrea
             )
             
             if existing_tv_show:
-                update_dict = tv_show_data.dict(exclude_unset=True)
+                update_dict = tv_show_data.model_dump(exclude_unset=True)
                 allowed_fields = {'title', 'year', 'seasons', 'episodes', 'rating', 'watched', 'review', 'poster_url'}
                 for field, value in update_dict.items():
                     if field in allowed_fields:
@@ -176,7 +176,7 @@ def import_tv_shows(db: Session, user_id: int, tv_shows: List[schemas.TVShowCrea
                         setattr(existing_tv_show, field, value)
                 updated += 1
             else:
-                db_tv_show = models.TVShow(**tv_show_data.dict(), user_id=user_id)
+                db_tv_show = models.TVShow(**tv_show_data.model_dump(), user_id=user_id)
                 db.add(db_tv_show)
                 created += 1
         except Exception as e:
@@ -205,7 +205,7 @@ def import_anime(db: Session, user_id: int, anime: List[schemas.AnimeCreate]) ->
             )
             
             if existing_anime:
-                update_dict = anime_data.dict(exclude_unset=True)
+                update_dict = anime_data.model_dump(exclude_unset=True)
                 allowed_fields = {'title', 'year', 'seasons', 'episodes', 'rating', 'watched', 'review', 'poster_url'}
                 for field, value in update_dict.items():
                     if field in allowed_fields:
@@ -214,7 +214,7 @@ def import_anime(db: Session, user_id: int, anime: List[schemas.AnimeCreate]) ->
                         setattr(existing_anime, field, value)
                 updated += 1
             else:
-                db_anime = models.Anime(**anime_data.dict(), user_id=user_id)
+                db_anime = models.Anime(**anime_data.model_dump(), user_id=user_id)
                 db.add(db_anime)
                 created += 1
         except Exception as e:
@@ -243,7 +243,7 @@ def import_video_games(db: Session, user_id: int, video_games: List[schemas.Vide
             )
             
             if existing_video_game:
-                update_dict = video_game_data.dict(exclude_unset=True)
+                update_dict = video_game_data.model_dump(exclude_unset=True)
                 allowed_fields = {'title', 'release_date', 'genres', 'rating', 'played', 'review', 'cover_art_url', 'rawg_link'}
                 for field, value in update_dict.items():
                     if field in allowed_fields:
@@ -252,7 +252,7 @@ def import_video_games(db: Session, user_id: int, video_games: List[schemas.Vide
                         setattr(existing_video_game, field, value)
                 updated += 1
             else:
-                video_game_dict = video_game_data.dict()
+                video_game_dict = video_game_data.model_dump()
                 if video_game_dict.get('rating') is not None:
                     video_game_dict['rating'] = round(float(video_game_dict['rating']), 1)
                 db_video_game = models.VideoGame(**video_game_dict, user_id=user_id)
@@ -293,7 +293,7 @@ def import_music(db: Session, user_id: int, music: List[schemas.MusicCreate]) ->
             )
             
             if existing_music:
-                update_dict = music_data.dict(exclude_unset=True)
+                update_dict = music_data.model_dump(exclude_unset=True)
                 allowed_fields = {'title', 'artist', 'year', 'genre', 'rating', 'listened', 'review', 'cover_art_url'}
                 for field, value in update_dict.items():
                     if field in allowed_fields:
@@ -302,7 +302,7 @@ def import_music(db: Session, user_id: int, music: List[schemas.MusicCreate]) ->
                         setattr(existing_music, field, value)
                 updated += 1
             else:
-                music_dict = music_data.dict()
+                music_dict = music_data.model_dump()
                 if music_dict.get('rating') is not None:
                     music_dict['rating'] = round(float(music_dict['rating']), 1)
                 db_music = models.Music(**music_dict, user_id=user_id)
@@ -343,7 +343,7 @@ def import_books(db: Session, user_id: int, books: List[schemas.BookCreate]) -> 
             )
             
             if existing_book:
-                update_dict = book_data.dict(exclude_unset=True)
+                update_dict = book_data.model_dump(exclude_unset=True)
                 allowed_fields = {'title', 'author', 'year', 'genre', 'rating', 'read', 'review', 'cover_art_url'}
                 for field, value in update_dict.items():
                     if field in allowed_fields:
@@ -352,7 +352,7 @@ def import_books(db: Session, user_id: int, books: List[schemas.BookCreate]) -> 
                         setattr(existing_book, field, value)
                 updated += 1
             else:
-                book_dict = book_data.dict()
+                book_dict = book_data.model_dump()
                 if book_dict.get('rating') is not None:
                     book_dict['rating'] = round(float(book_dict['rating']), 1)
                 db_book = models.Book(**book_dict, user_id=user_id)

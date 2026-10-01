@@ -1,0 +1,431 @@
+/* Signed-in dialog surfaces. Load after the base, progress, and app themes.
+   Geometry, visibility, scrolling, and native dialog behavior stay with their
+   existing component styles. */
+body.app-shell .modal-overlay:not(.image-popup-overlay) {
+  background: rgb(12 17 27 / 64%);
+}
+
+body.app-shell .modal-content,
+body.app-shell .progress-dialog {
+  background: var(--card-bg);
+  color: var(--fg);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  box-shadow: var(--shadow-lg);
+  font-family: inherit;
+}
+
+body.app-shell .modal-body,
+body.app-shell .quick-capture-body {
+  background: var(--card-bg);
+  color: var(--fg);
+}
+
+body.app-shell .modal-header,
+body.app-shell .quick-capture-header {
+  background: var(--surface-muted);
+  border-bottom-color: var(--border);
+}
+
+body.app-shell .modal-header h2,
+body.app-shell .quick-capture-header h2,
+body.app-shell .progress-dialog h2 {
+  color: var(--fg);
+  font-family: inherit;
+  font-weight: 700;
+  letter-spacing: -.025em;
+  text-shadow: none;
+  overflow-wrap: anywhere;
+}
+
+body.app-shell .modal-content :is(h3, h4, label),
+body.app-shell .progress-dialog label {
+  color: var(--fg);
+}
+
+body.app-shell .modal-content a:not(.action-btn),
+body.app-shell .progress-dialog a {
+  color: var(--primary);
+}
+
+body.app-shell .modal-content .modal-close,
+body.app-shell .progress-dialog .progress-dialog__close {
+  background: transparent;
+  color: var(--fg-secondary);
+  border-color: transparent;
+  border-radius: 8px;
+  box-shadow: none;
+  flex-shrink: 0;
+}
+
+body.app-shell .modal-content .modal-close:hover,
+body.app-shell .progress-dialog .progress-dialog__close:hover {
+  background: var(--surface-hover);
+  color: var(--fg);
+  transform: none;
+}
+
+/* Only text-like controls receive field styling; switches and checkboxes keep
+   their component dimensions and native interaction. */
+body.app-shell .modal-content :is(input[type="text"], input[type="search"], input[type="email"], input[type="password"], input[type="number"], input[type="date"], input[type="url"], input[type="file"], select, textarea),
+body.app-shell .progress-dialog :is(input, select, textarea) {
+  background: var(--field-bg);
+  color: var(--fg);
+  border-color: var(--border);
+  border-radius: 8px;
+  box-shadow: none;
+  font-family: inherit;
+}
+
+body.app-shell .modal-content :is(input, textarea)::placeholder,
+body.app-shell .progress-dialog :is(input, textarea)::placeholder {
+  color: var(--fg-secondary);
+  opacity: 1;
+}
+
+body.app-shell .modal-content select option,
+body.app-shell .progress-dialog select option {
+  background: var(--field-bg);
+  color: var(--fg);
+}
+
+body.app-shell .modal-content :is(input, select, textarea):focus,
+body.app-shell .progress-dialog :is(input, select, textarea):focus {
+  border-color: var(--primary);
+  box-shadow: none;
+}
+
+body.app-shell .modal-content :is(button, a, input, select, textarea, summary):focus-visible,
+body.app-shell .progress-dialog :is(button, a, input, select, textarea):focus-visible {
+  outline: 2px solid var(--primary);
+  outline-offset: 3px;
+}
+
+body.app-shell .modal-content .action-btn,
+body.app-shell .progress-dialog .progress-dialog__save {
+  background: var(--accent-solid);
+  color: var(--on-accent);
+  border-color: var(--accent-solid);
+  box-shadow: none;
+  font-family: inherit;
+  font-weight: 650;
+  text-decoration: none;
+  transform: none;
+}
+
+body.app-shell .modal-content .action-btn:hover:not(:disabled),
+body.app-shell .modal-content .action-btn:active:not(:disabled),
+body.app-shell .progress-dialog .progress-dialog__save:hover:not(:disabled) {
+  background: var(--accent-solid);
+  box-shadow: inset 0 0 0 1px var(--on-accent);
+  transform: none;
+}
+
+body.app-shell .modal-content :is(.completion-ritual-modal__skip, .collection-picker-modal__option),
+body.app-shell .progress-dialog button:not(.progress-dialog__save):not(.progress-dialog__close) {
+  background: var(--surface-muted);
+  color: var(--fg);
+  border-color: var(--border);
+  box-shadow: none;
+  opacity: 1;
+}
+
+body.app-shell .modal-content :is(.completion-ritual-modal__skip, .collection-picker-modal__option):hover,
+body.app-shell .progress-dialog button:not(.progress-dialog__save):not(.progress-dialog__close):hover:not(:disabled) {
+  background: var(--surface-hover);
+  border-color: var(--primary);
+}
+
+body.app-shell .modal-content :is(.info-text, .info-label, .review-modal-subtitle, .collection-studio-modal__hint, .collection-picker-modal__item, .completion-ritual-modal__copy, .content-muted),
+body.app-shell .progress-dialog :is(.progress-dialog__privacy, .progress-dialog__hint) {
+  color: var(--fg-secondary);
+  opacity: 1;
+}
+
+body.app-shell .modal-content :is(.completion-ritual-modal__eyebrow, .collection-readiness-checklist .is-ready),
+body.app-shell .progress-dialog__eyebrow {
+  color: var(--teal);
+}
+
+body.app-shell .modal-content :is(.error-message, .collection-studio-modal__error) {
+  color: var(--danger);
+}
+
+body.app-shell .modal-content .error-message {
+  background: color-mix(in srgb, var(--danger) 8%, var(--card-bg));
+  border-color: color-mix(in srgb, var(--danger) 35%, var(--border));
+}
+
+body.app-shell .modal-content .success-message {
+  background: var(--teal-soft);
+  border-color: color-mix(in srgb, var(--teal) 35%, var(--border));
+  color: var(--teal);
+}
+
+/* Account settings and the migration preview share the surrounding theme. */
+body.app-shell .account-section {
+  border-color: var(--border);
+}
+
+body.app-shell .account-section h3 {
+  color: var(--fg);
+  font-size: 1.08rem;
+  letter-spacing: -.015em;
+}
+
+body.app-shell .modal-content :is(.info-item, .toggle-label),
+body.app-shell #createCustomTabForm {
+  background: var(--surface-muted);
+  border-color: var(--border);
+}
+
+body.app-shell .modal-content .toggle-label:hover {
+  background: var(--surface-hover);
+}
+
+body.app-shell .modal-content .toggle-switch:checked {
+  background: var(--accent-solid);
+  border-color: var(--accent-solid);
+}
+
+body.app-shell .profile-picture-preview-img {
+  border-color: var(--border);
+  box-shadow: var(--shadow-sm);
+}
+
+body.app-shell .import-studio {
+  --fg-secondary: inherit;
+  --border: inherit;
+  background: var(--surface-muted);
+  border-color: var(--border);
+  border-radius: var(--radius);
+}
+
+body.app-shell .import-studio__eyebrow,
+body.app-shell .import-studio__row-status--ready {
+  color: var(--teal);
+}
+
+body.app-shell .import-studio__row-status--duplicate {
+  color: var(--fg-secondary);
+}
+
+body.app-shell .import-studio__row-status--invalid {
+  color: var(--danger);
+}
+
+body.app-shell .import-studio :is(.import-studio__mapping, .import-studio__metric, .import-studio__table-wrap) {
+  background: var(--card-bg);
+  border-color: var(--border);
+}
+
+body.app-shell .import-studio__table thead th {
+  background: var(--surface-muted);
+}
+
+body.app-shell .import-studio__confirm {
+  background: var(--accent-soft);
+  border-color: var(--primary);
+}
+
+/* Existing component rules use !important for this action and danger buttons. */
+body.app-shell .modal-content .import-studio__apply {
+  background: var(--accent-solid) !important;
+}
+
+body.app-shell .modal-content .danger-section {
+  background: color-mix(in srgb, var(--danger) 6%, var(--card-bg));
+  border-color: color-mix(in srgb, var(--danger) 30%, var(--border));
+}
+
+body.app-shell .modal-content .danger-section h3 {
+  color: var(--danger);
+}
+
+body.app-shell .modal-content .danger-btn,
+body.app-shell .modal-content .danger-btn:hover {
+  background: var(--card-bg) !important;
+  border: 1px solid var(--danger);
+  color: var(--danger);
+  box-shadow: none !important;
+}
+
+body.app-shell .modal-content .danger-btn:hover {
+  background: color-mix(in srgb, var(--danger) 10%, var(--card-bg)) !important;
+}
+
+/* Quick Capture uses the same light/dark surfaces as the library. */
+body.app-shell .modal-content.quick-capture-modal {
+  background: var(--card-bg);
+  border-color: var(--border);
+  box-shadow: var(--shadow-lg);
+}
+
+body.app-shell .quick-capture-header p,
+body.app-shell .quick-capture-modal :is(.quick-capture-intent, .quick-capture-status, .quick-capture-source-status, .quick-capture-result__copy small, .quick-capture-manual span) {
+  color: var(--fg-secondary);
+}
+
+body.app-shell .quick-capture-header .quick-capture-eyebrow {
+  color: var(--teal) !important;
+}
+
+body.app-shell .quick-capture-search-field {
+  background: var(--field-bg);
+  border-color: var(--border);
+  border-radius: 10px;
+}
+
+body.app-shell .quick-capture-search-field:focus-within {
+  border-color: var(--primary);
+  box-shadow: 0 0 0 2px var(--accent-soft);
+}
+
+body.app-shell .quick-capture-search-field > span {
+  color: var(--fg-secondary);
+}
+
+body.app-shell .quick-capture-modal .quick-capture-search-field input[type="search"] {
+  background: transparent;
+  border: 0;
+  color: var(--fg);
+  box-shadow: none;
+}
+
+body.app-shell .quick-capture-categories button {
+  background: var(--surface-muted);
+  border-color: var(--border);
+  color: var(--fg-secondary);
+}
+
+body.app-shell .quick-capture-categories button:hover,
+body.app-shell .quick-capture-categories button:focus-visible,
+body.app-shell .quick-capture-categories button.active {
+  background: var(--accent-soft);
+  border-color: var(--primary);
+  color: var(--primary);
+}
+
+body.app-shell .quick-capture-modal :is(.quick-capture-group h3, .quick-capture-manual strong) {
+  color: var(--fg);
+  font-family: inherit;
+}
+
+body.app-shell .quick-capture-result {
+  background: var(--surface-muted);
+  border-color: var(--border);
+  color: var(--fg);
+}
+
+body.app-shell .quick-capture-result:hover,
+body.app-shell .quick-capture-result:focus-visible {
+  background: var(--surface-hover);
+  border-color: var(--primary);
+  transform: none;
+}
+
+body.app-shell .quick-capture-result__image {
+  background: var(--accent-soft);
+  color: var(--primary);
+  font-family: inherit;
+}
+
+body.app-shell .quick-capture-result__action,
+body.app-shell .quick-capture-manual button,
+body.app-shell .quick-capture-manual button:hover {
+  color: var(--primary);
+}
+
+body.app-shell .quick-capture-manual {
+  border-color: var(--border);
+}
+
+body.app-shell .quick-capture-retry,
+body.app-shell .quick-capture-retry:hover {
+  background: var(--teal-soft);
+  color: var(--teal);
+  border-color: var(--teal);
+}
+
+body.app-shell .search-result-item {
+  background: var(--surface-muted);
+  border-color: var(--border);
+  box-shadow: none;
+}
+
+body.app-shell .search-result-item:hover {
+  background: var(--surface-hover);
+  border-color: var(--primary);
+  box-shadow: none;
+  transform: none;
+}
+
+body.app-shell .search-result-item p {
+  color: var(--fg-secondary);
+}
+
+/* The progress editor remains a native dialog in the browser's top layer. */
+body.app-shell .progress-dialog::backdrop {
+  background: rgb(12 17 27 / 64%);
+  backdrop-filter: none;
+}
+
+body.app-shell .progress-dialog__current {
+  background: var(--teal-soft);
+  color: var(--teal);
+}
+
+body.app-shell .progress-dialog__status {
+  color: var(--fg);
+}
+
+body.app-shell .modal-content :is(button, input, select, textarea):disabled,
+body.app-shell .progress-dialog :is(button, input, select, textarea):disabled {
+  color: var(--fg-secondary);
+  cursor: not-allowed;
+  filter: none;
+  opacity: .75;
+  transform: none;
+}
+
+body.app-shell .modal-content button.action-btn:disabled,
+body.app-shell .progress-dialog button:disabled {
+  background: var(--surface-muted);
+  border-color: var(--border);
+  box-shadow: none;
+  opacity: 1;
+}
+
+body.app-shell .modal-content .import-studio__apply:disabled {
+  background: var(--surface-muted) !important;
+}
+
+@media (max-width: 680px) {
+  body.app-shell .modal-content.quick-capture-modal {
+    border: 0;
+    border-radius: 0;
+  }
+}
+
+@media (max-width: 480px) {
+  body.app-shell .modal-content .info-item {
+    flex-wrap: wrap;
+    gap: 4px 12px;
+  }
+
+  body.app-shell .modal-content .info-value {
+    min-width: 0;
+    overflow-wrap: anywhere;
+  }
+
+  body.app-shell .modal-content :is(.completion-ritual-modal__actions, .collection-studio-modal__actions) {
+    flex-wrap: wrap;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  body.app-shell .modal-overlay,
+  body.app-shell .modal-content {
+    animation: none;
+  }
+}

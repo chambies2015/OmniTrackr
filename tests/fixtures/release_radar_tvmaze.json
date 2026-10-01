@@ -1,0 +1,274 @@
+[
+ {
+  "airdate": "2026-10-01",
+  "season": 1,
+  "number": 1,
+  "show": {
+   "id": 86587,
+   "url": "https://www.tvmaze.com/shows/86587/x",
+   "name": "War",
+   "type": "Scripted",
+   "language": "English",
+   "genres": [
+    "Thriller",
+    "Legal"
+   ],
+   "premiered": "2026-10-01",
+   "weight": 99,
+   "network": {
+    "name": "HBO"
+   },
+   "webChannel": null,
+   "image": {
+    "medium": "https://static.tvmaze.com/uploads/images/medium_portrait/641/86587.jpg"
+   }
+  }
+ },
+ {
+  "airdate": "2026-10-01",
+  "season": 25,
+  "number": 1,
+  "show": {
+   "id": 7037,
+   "url": "https://www.tvmaze.com/shows/7037/x",
+   "name": "Ask This Old House",
+   "type": "Reality",
+   "language": "English",
+   "genres": [
+    "DIY"
+   ],
+   "premiered": "2002-10-10",
+   "weight": 96,
+   "network": {
+    "name": "PBS"
+   },
+   "webChannel": null,
+   "image": {
+    "medium": "https://static.tvmaze.com/uploads/images/medium_portrait/641/7037.jpg"
+   }
+  }
+ },
+ {
+  "airdate": "2026-10-01",
+  "season": 1,
+  "number": 1,
+  "_embedded": {
+   "show": {
+    "id": 90001,
+    "url": "https://www.tvmaze.com/shows/90001/x",
+    "name": "East of Eden",
+    "type": "Scripted",
+    "language": "English",
+    "genres": [
+     "Drama"
+    ],
+    "premiered": "2026-10-01",
+    "weight": 99,
+    "network": null,
+    "webChannel": {
+     "name": "Netflix"
+    },
+    "image": {
+     "medium": "https://static.tvmaze.com/uploads/images/medium_portrait/641/90001.jpg"
+    }
+   }
+  }
+ },
+ {
+  "airdate": "2026-10-01",
+  "season": 1,
+  "number": 1,
+  "_embedded": {
+   "show": {
+    "id": 90002,
+    "url": "https://www.tvmaze.com/shows/90002/x",
+    "name": "Your Personal Taxi",
+    "type": "Scripted",
+    "language": "Korean",
+    "genres": [
+     "Drama",
+     "Romance"
+    ],
+    "premiered": "2026-10-01",
+    "weight": 69,
+    "network": null,
+    "webChannel": {
+     "name": "Netflix"
+    },
+    "image": {
+     "medium": "https://static.tvmaze.com/uploads/images/medium_portrait/641/90002.jpg"
+    }
+   }
+  }
+ },
+ {
+  "airdate": "2026-10-01",
+  "season": 1,
+  "number": 1,
+  "_embedded": {
+   "show": {
+    "id": 90003,
+    "url": "https://www.tvmaze.com/shows/90003/x",
+    "name": "Break Clause",
+    "type": "Scripted",
+    "language": "English",
+    "genres": [
+     "Comedy"
+    ],
+    "premiered": "2026-10-01",
+    "weight": 95,
+    "network": null,
+    "webChannel": {
+     "name": "Channel 4"
+    },
+    "image": {
+     "medium": "https://static.tvmaze.com/uploads/images/medium_portrait/641/90003.jpg"
+    }
+   }
+  }
+ },
+ {
+  "airdate": "2026-10-08",
+  "season": 3,
+  "number": 1,
+  "show": {
+   "id": 90004,
+   "url": "https://www.tvmaze.com/shows/90004/x",
+   "name": "Fixture Returning Drama",
+   "type": "Scripted",
+   "language": "English",
+   "genres": [
+    "Drama",
+    "Crime"
+   ],
+   "premiered": "2022-04-02",
+   "weight": 97,
+   "network": {
+    "name": "HBO"
+   },
+   "webChannel": null,
+   "image": {
+    "medium": "https://static.tvmaze.com/uploads/images/medium_portrait/641/90004.jpg"
+   }
+  }
+ },
+ {
+  "airdate": "2026-10-09",
+  "season": 2,
+  "number": 2,
+  "show": {
+   "id": 90004,
+   "url": "https://www.tvmaze.com/shows/90004/x",
+   "name": "Not A Premiere Episode",
+   "type": "Scripted",
+   "language": "English",
+   "genres": [
+    "Drama"
+   ],
+   "premiered": "2026-10-01",
+   "weight": 97,
+   "network": {
+    "name": "HBO"
+   },
+   "webChannel": null,
+   "image": {
+    "medium": "https://static.tvmaze.com/uploads/images/medium_portrait/641/90004.jpg"
+   }
+  }
+ },
+ {
+  "airdate": "2026-10-09",
+  "season": 1,
+  "number": 1,
+  "show": {
+   "id": 90005,
+   "url": "https://www.tvmaze.com/shows/90005/x",
+   "name": "Late Night Fixture",
+   "type": "Talk Show",
+   "language": "English",
+   "genres": [],
+   "premiered": "2026-10-01",
+   "weight": 99,
+   "network": {
+    "name": "NBC"
+   },
+   "webChannel": null,
+   "image": {
+    "medium": "https://static.tvmaze.com/uploads/images/medium_portrait/641/90005.jpg"
+   }
+  }
+ },
+ {
+  "airdate": "2026-10-09",
+  "season": 1,
+  "number": 1,
+  "show": {
+   "id": 90006,
+   "url": "https://www.tvmaze.com/shows/90006/x",
+   "name": "Obscure Fixture",
+   "type": "Scripted",
+   "language": "English",
+   "genres": [
+    "Drama"
+   ],
+   "premiered": "2026-10-01",
+   "weight": 20,
+   "network": {
+    "name": "Local"
+   },
+   "webChannel": null,
+   "image": {
+    "medium": "https://static.tvmaze.com/uploads/images/medium_portrait/641/90006.jpg"
+   }
+  }
+ },
+ {
+  "airdate": "2026-10-15",
+  "season": 1,
+  "number": 1,
+  "_embedded": {
+   "show": {
+    "id": 90007,
+    "url": "https://www.tvmaze.com/shows/90007/x",
+    "name": "Fixture Animated Series",
+    "type": "Animation",
+    "language": "English",
+    "genres": [
+     "Comedy",
+     "Family"
+    ],
+    "premiered": "2026-10-01",
+    "weight": 90,
+    "network": null,
+    "webChannel": {
+     "name": "Disney+"
+    },
+    "image": null
+   }
+  }
+ },
+ {
+  "airdate": "2026-11-01",
+  "season": 1,
+  "number": 1,
+  "show": {
+   "id": 90008,
+   "url": "https://www.tvmaze.com/shows/90008/x",
+   "name": "Outside The Window",
+   "type": "Scripted",
+   "language": "English",
+   "genres": [
+    "Drama"
+   ],
+   "premiered": "2026-10-01",
+   "weight": 99,
+   "network": {
+    "name": "HBO"
+   },
+   "webChannel": null,
+   "image": {
+    "medium": "https://static.tvmaze.com/uploads/images/medium_portrait/641/90008.jpg"
+   }
+  }
+ }
+]

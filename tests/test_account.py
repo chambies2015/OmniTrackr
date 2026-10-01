@@ -304,13 +304,14 @@ class TestAccountEndpoints:
         assert "message" in data
         assert "password" in data["message"].lower()
         
-        # Verify new password works by logging in
-        # First, get the username from account info
+        # The old bearer token is retired by the password change; the refreshed
+        # session cookie keeps this browser signed in.
+        authenticated_client.headers = {}  # Remove the pre-change auth header
         account_response = authenticated_client.get("/account/me")
+        assert account_response.status_code == 200
         username = account_response.json()["username"]
-        
-        # Logout and login with new password
-        authenticated_client.headers = {}  # Remove auth header
+
+        # Login with new password
         login_response = authenticated_client.post(
             "/auth/login",
             data={

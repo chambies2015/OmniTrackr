@@ -1,0 +1,59 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="description" content="{{DESCRIPTION}}">
+  <meta name="robots" content="{{ROBOTS}}">
+  <meta name="author" content="OmniTrackr member">
+  <title>{{TITLE}} | OmniTrackr Collection</title>
+  <link rel="canonical" href="https://omnitrackr.xyz{{PATH}}">
+  <link rel="icon" type="image/x-icon" href="/omnitrackr_favicon.ico">
+  <meta property="og:type" content="website">
+  <meta property="og:title" content="{{TITLE}} | OmniTrackr Collection">
+  <meta property="og:description" content="{{DESCRIPTION}}">
+  <meta property="og:url" content="https://omnitrackr.xyz{{PATH}}">
+  <meta property="og:site_name" content="OmniTrackr">
+  {{OG_IMAGE}}
+  <script type="application/ld+json">{{STRUCTURED_DATA}}</script>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@700;800&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="/styles.css">
+  <link rel="stylesheet" href="/static/collections-public.css?v=20260928-site-2">
+</head>
+<body class="site collections-page">
+  <!--SITE_NAV:collections-->
+  <main class="share-wrap site-wrap">
+    <div class="share-card">
+      <a class="back-link" href="/collections/explore">← All collections</a>
+      <header>
+        <div><p class="share-eyebrow">Shared collection · {{COUNT}} titles</p>
+          <h1>{{TITLE}}</h1>
+          <p class="share-intro">{{INTRO}}</p>
+          <div class="share-metrics"><span>{{VIEWS}} readers</span><span id="collectionHelpfulCount">{{HELPFUL}} found this helpful</span></div>
+        </div>
+        {{COVER}}
+      </header>
+      <section aria-labelledby="collection-items-title">
+        <p class="share-note" id="collection-items-title">This is a member-curated list. It shares only the titles deliberately selected for this collection, not personal ratings, progress, reviews, or profile details.</p>
+        <ol class="collection-list">{{ITEMS}}</ol>
+        <div class="collection-actions" data-collection-id="{{COLLECTION_ID}}">
+          <button type="button" data-collection-action="helpful">Helpful</button>
+          <a href="/collections/public/{{COLLECTION_ID}}/save">Save a private copy</a>
+          <button type="button" data-collection-action="show-report">Report</button>
+          <p class="collection-actions__status" id="collectionActionStatus" role="status" aria-live="polite"></p>
+        </div>
+        <form class="collection-report" id="collectionReportForm" hidden>
+          <label for="collectionReportReason">Why are you reporting this collection?</label>
+          <select id="collectionReportReason" required><option value="spam">Spam</option><option value="harassment">Harassment</option><option value="copyright">Copyright concern</option><option value="unsafe">Unsafe content</option><option value="other">Other</option></select>
+          <button type="submit">Send report</button>
+        </form>
+      </section>
+      <footer class="share-footer">Enjoyed this point of view? <a href="/#landing-auth">Create a private library</a> and make a collection of your own.</footer>
+    </div>
+  </main>
+  <!--SITE_FOOTER-->
+  <script src="/static/public-collections.js?v=20260922-collection-save" defer></script>
+</body>
+</html>

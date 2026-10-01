@@ -41,7 +41,7 @@ def get_music_by_id(db: Session, user_id: int, music_id: int) -> Optional[models
 
 
 def create_music(db: Session, user_id: int, music: schemas.MusicCreate) -> models.Music:
-    music_dict = music.dict()
+    music_dict = music.model_dump()
     if music_dict.get('rating') is not None:
         music_dict['rating'] = round(float(music_dict['rating']), 1)
     db_music = models.Music(**music_dict, user_id=user_id)
@@ -55,7 +55,7 @@ def update_music(db: Session, user_id: int, music_id: int, music_update: schemas
     db_music = get_music_by_id(db, user_id, music_id)
     if db_music is None:
         return None
-    update_dict = music_update.dict(exclude_unset=True)
+    update_dict = music_update.model_dump(exclude_unset=True)
     
     allowed_fields = {'title', 'artist', 'year', 'genre', 'rating', 'listened', 'review', 'review_public', 'cover_art_url'}
     for field, value in update_dict.items():

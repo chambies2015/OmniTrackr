@@ -62,35 +62,34 @@
     "inLanguage": "en-US"
   }
   </script>
+  <link rel="stylesheet" href="/static/public-reader.css?v=20260928-site-2">
 </head>
 
-<body>
-  <div class="privacy-wrapper">
-    <div class="privacy-container">
-      <nav class="public-site-nav" aria-label="Public site navigation">
-        <a class="public-site-nav__brand" href="/">OmniTrackr</a>
-        <div class="public-site-nav__links">
-          <a href="/demo">Demo</a>
-          <a href="/media-tracking">Tracking Hub</a>
-          <a href="/guides">Guides</a>
-          <a href="/site-map">Site Map</a>
-          <a href="/sample-library">Sample Library</a>
-          <a href="/compare">Compare</a>
-          <a href="/use-cases">Use Cases</a>
-          <a href="/reviews">Reviews</a>
-          <a href="/faq">FAQ</a>
-          <a href="/content-quality">Content Quality</a>
-          <a href="/advertising">Advertising</a>
-          <a href="/privacy">Privacy</a>
-          <a class="public-site-nav__cta" href="/#landing-auth">Start tracking</a>
-        </div>
-      </nav>
-      <a href="/" class="back-link">Back to OmniTrackr</a>
+<body class="public-reader site">
+  <a class="reader-skip" href="#reader-main">Skip to guide</a>
+  <!--SITE_NAV:guides-->
+  <div class="reader-shell">
+    <main id="reader-main" tabindex="-1" class="reader-main privacy-container">
+<a href="/" class="back-link">Back to OmniTrackr</a>
 
       <header class="privacy-header">
         <h1>Game Tracker</h1>
         <p>Organize video game backlogs, played status, genres, ratings, reviews, cover art, and gaming statistics.</p>
       </header>
+      <details class="reader-contents">
+        <summary>On this page</summary>
+        <nav aria-label="On this page">
+          <a href="#why-heading">Why Track Video Games?</a>
+          <a href="#backlog-heading">A Better Backlog Workflow</a>
+          <a href="#completion-heading">Completion, Platforms, and Play Style</a>
+          <a href="#review-heading">What to Put in a Game Review</a>
+          <a href="#stats-heading">Using Game Statistics</a>
+          <a href="#cleanup-heading">Game Backlog Cleanup Checklist</a>
+          <a href="#privacy-heading">Sharing a Game Library</a>
+          <a href="#related-heading">Related Pages</a>
+        </nav>
+      </details>
+
 
       <section class="privacy-section" aria-labelledby="why-heading">
         <h2 id="why-heading">Why Track Video Games?</h2>
@@ -152,11 +151,9 @@
         <p>For other tracking workflows, read the <a href="/tv-show-tracker">TV show tracker guide</a>, the broader <a href="/use-cases">media tracking use cases</a>, or the <a href="/compare">media tracker comparison page</a>.</p>
       </section>
 
-      <nav class="privacy-section" aria-label="Related pages">
-        <p><a href="/">Home</a> | <a href="/tv-show-tracker">TV Show Tracker</a> | <a href="/compare">Compare</a> | <a href="/use-cases">Use Cases</a> | <a href="/reviews">Public Reviews</a> | <a href="/privacy">Privacy Policy</a></p>
-      </nav>
-    </div>
+</main>
   </div>
+  <!--SITE_FOOTER-->
 </body>
 
 </html>

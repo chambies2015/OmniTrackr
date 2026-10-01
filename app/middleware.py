@@ -12,6 +12,7 @@ from .csp import build_csp
 NOINDEX_PATHS = {"/docs", "/redoc", "/openapi.json"}
 NOINDEX_PREFIXES = (
     "/account/",
+    "/activity/",
     "/anime/",
     "/api/",
     "/auth/",
@@ -22,10 +23,15 @@ NOINDEX_PREFIXES = (
     "/export/",
     "/friends",
     "/import/",
+    "/import-studio/",
+    "/library/",
     "/movies/",
     "/music/",
     "/notifications/",
     "/profile-pictures/",
+    "/progress/",
+    "/recommend/",
+    "/recommendations/",
     "/static/profile_pictures/",
     "/statistics/",
     "/tv-shows/",
@@ -56,6 +62,40 @@ class SecurityHeadersMiddleware(BaseHTTPMiddleware):
             response.headers["Cache-Control"] = "no-store, no-cache, must-revalidate, max-age=0"
             response.headers["Pragma"] = "no-cache"
             response.headers["Expires"] = "0"
+
+        if request.url.path.startswith((
+            "/account/",
+            "/activity/",
+            "/anime/",
+            "/books/",
+            "/custom-tab-posters/",
+            "/custom-tabs/",
+            "/export/",
+            "/friends",
+            "/import/",
+            "/import-studio/",
+            "/library/",
+            "/movies/",
+            "/music/",
+            "/next-up/",
+            "/progress/",
+            "/notifications",
+            "/recommend/",
+            "/recommendations/",
+            "/statistics/",
+            "/tv-shows/",
+            "/video-games/",
+        )):
+            response.headers["Cache-Control"] = "private, no-store"
+
+        review_path = request.url.path.rstrip("/")
+        review_save_api = review_path.startswith("/api/public/reviews/") and review_path.endswith(("/save-preview", "/save"))
+        review_save_page = review_path.startswith("/reviews/") and review_path.endswith("/save")
+        collection_save = review_path.startswith("/collections/public/") and review_path.endswith(("/save-preview", "/save", "/copy"))
+        if review_save_api or review_save_page or collection_save:
+            # Include authentication and validation failures before a route runs.
+            response.headers["Cache-Control"] = "private, no-store"
+            response.headers["X-Robots-Tag"] = "noindex, follow"
 
         if request.url.path in NOINDEX_PATHS or request.url.path.startswith(NOINDEX_PREFIXES):
             response.headers["X-Robots-Tag"] = "noindex, nofollow"

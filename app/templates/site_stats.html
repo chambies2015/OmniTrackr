@@ -1,0 +1,137 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="robots" content="noindex, nofollow">
+  <title>Site stats - OmniTrackr</title>
+  <link rel="icon" type="image/x-icon" href="/omnitrackr_favicon.ico">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@700;800&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="/static/site.css?v=20260928-site-1">
+  <link rel="stylesheet" href="/static/site-stats.css?v=20260929-2">
+  <script src="/static/site-stats.js?v=20260929-2" defer></script>
+</head>
+<body class="site stats-page">
+  <header class="site-header">
+    <nav class="site-nav" aria-label="Site stats">
+      <a class="site-brand" href="/"><img src="/vortex-still.webp" alt="" width="28" height="28">OmniTrackr</a>
+      <div class="site-nav__links">
+        <span class="stats-badge">Owner only</span>
+        <a class="site-btn site-btn--ghost site-btn--sm" href="/">Back to my library</a>
+      </div>
+    </nav>
+  </header>
+
+  <main class="site-wrap stats-main" id="statsMain">
+    <div class="stats-head">
+      <div>
+        <p class="site-eyebrow">Site stats</p>
+        <h1>How OmniTrackr is doing</h1>
+        <p class="stats-sub" id="statsUpdated">Loading the latest numbers…</p>
+      </div>
+      <div class="stats-controls" role="group" aria-label="Date range and actions">
+        <div class="stats-range" role="radiogroup" aria-label="Date range">
+          <button type="button" data-range="7" aria-pressed="false">7 days</button>
+          <button type="button" data-range="30" aria-pressed="true">30 days</button>
+          <button type="button" data-range="90" aria-pressed="false">90 days</button>
+        </div>
+        <button type="button" class="site-btn site-btn--ghost site-btn--sm" id="statsRefresh">Refresh</button>
+        <button type="button" class="site-btn site-btn--primary site-btn--sm" id="statsCopy">Copy report for Claude</button>
+      </div>
+    </div>
+    <p class="stats-toast" id="statsToast" role="status" aria-live="polite"></p>
+
+    <section class="stats-gate" id="statsGate" hidden>
+      <h2 id="statsGateTitle"></h2>
+      <p id="statsGateText"></p>
+      <a class="site-btn site-btn--primary" id="statsGateAction" href="/#landing-auth">Log in</a>
+    </section>
+
+    <div id="statsBody" class="stats-body" aria-busy="true">
+      <section class="stats-kpis" id="statsKpis" aria-label="Headline numbers"></section>
+
+      <section class="stats-card stats-card--wide">
+        <div class="stats-card__head">
+          <div><h2>Traffic</h2><p id="trafficNote">Human page views and estimated unique visitors per day.</p></div>
+          <div class="stats-legend" aria-hidden="true">
+            <span><i class="stats-key stats-key--views"></i>Page views</span>
+            <span><i class="stats-key stats-key--visitors"></i>Visitors</span>
+          </div>
+        </div>
+        <div class="stats-chart" id="trafficChart"></div>
+        <details class="stats-table-toggle"><summary>Show as table</summary><div id="trafficTable"></div></details>
+      </section>
+
+      <div class="stats-grid">
+        <section class="stats-card"><div class="stats-card__head"><div><h2>Top pages</h2><p>Where visitors spend their views.</p></div></div><div class="stats-bars" id="topPages"></div></section>
+        <section class="stats-card"><div class="stats-card__head"><div><h2>Traffic sources</h2><p>Sites that sent visitors (first page of a visit).</p></div></div><div class="stats-bars" id="trafficSources"></div></section>
+      </div>
+
+      <div class="stats-grid">
+        <section class="stats-card"><div class="stats-card__head"><div><h2>Devices</h2><p>Share of page views.</p></div></div><div id="deviceSplit"></div></section>
+        <section class="stats-card"><div class="stats-card__head"><div><h2>Guests vs members</h2><p>Page views by signed-out guests and signed-in members.</p></div></div><div id="audienceSplit"></div></section>
+      </div>
+
+      <div class="stats-grid">
+        <section class="stats-card">
+          <div class="stats-card__head"><div><h2>New members</h2><p id="signupNote">Accounts created per day.</p></div></div>
+          <div class="stats-chart stats-chart--short" id="signupChart"></div>
+          <details class="stats-table-toggle"><summary>Show as table</summary><div id="signupTable"></div></details>
+        </section>
+        <section class="stats-card">
+          <div class="stats-card__head"><div><h2>Journal activity</h2><p>Entries members logged per day.</p></div></div>
+          <div class="stats-chart stats-chart--short" id="journalChart"></div>
+          <details class="stats-table-toggle"><summary>Show as table</summary><div id="journalTable"></div></details>
+        </section>
+      </div>
+
+      <section class="stats-card stats-card--wide">
+        <div class="stats-card__head"><div><h2>Member journey</h2><p>How many accounts reach each step. The percentage is of the step before.</p></div></div>
+        <div class="stats-funnel" id="activationFunnel"></div>
+      </section>
+
+      <div class="stats-grid">
+        <section class="stats-card">
+          <div class="stats-card__head"><div><h2>Libraries</h2><p>Titles tracked across all members.</p></div></div>
+          <div class="stats-table-wrap" id="categoryTable"></div>
+        </section>
+        <section class="stats-card">
+          <div class="stats-card__head"><div><h2>Community</h2><p>Sharing, reviews and moderation.</p></div></div>
+          <dl class="stats-list" id="communityList"></dl>
+        </section>
+      </div>
+
+      <div class="stats-grid">
+        <section class="stats-card">
+          <div class="stats-card__head"><div><h2>Most tracked titles</h2><p>Titles saved by two or more members.</p></div></div>
+          <ol class="stats-titles" id="popularTitles"></ol>
+        </section>
+        <section class="stats-card">
+          <div class="stats-card__head"><div><h2>Site health</h2><p>Integrations and Release Radar data.</p></div></div>
+          <ul class="stats-health" id="healthList"></ul>
+          <div class="stats-table-wrap" id="radarTable"></div>
+        </section>
+      </div>
+
+      <section class="stats-card stats-card--wide" id="editorCard">
+        <div class="stats-card__head">
+          <div><h2>Starter public collections</h2><p id="editorSummary">Curated collections written by the OmniTrackr editors, so the public Collections page has real content from day one.</p></div>
+          <button type="button" class="site-btn site-btn--primary site-btn--sm" id="editorPublish">Publish collections</button>
+        </div>
+        <ul class="stats-editor-list" id="editorList"></ul>
+        <p class="stats-editor-status" id="editorStatus" role="status" aria-live="polite"></p>
+      </section>
+
+      <section class="stats-card stats-card--wide">
+        <div class="stats-card__head"><div><h2>Newest members</h2><p>The 50 most recent accounts. Emails and library contents are never shown.</p></div></div>
+        <div class="stats-table-wrap" id="recentMembers"></div>
+      </section>
+
+      <p class="stats-privacy" id="statsPrivacy"></p>
+    </div>
+    <div class="stats-tooltip" id="statsTooltip" role="tooltip" hidden></div>
+  </main>
+</body>
+</html>

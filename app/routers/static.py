@@ -36,6 +36,18 @@ async def get_auth():
     raise HTTPException(status_code=404, detail="auth.js not found")
 
 
+@router.get("/preauth.js")
+async def get_preauth():
+    return FileResponse(os.path.join(os.path.dirname(__file__), "..", "static", "preauth.js"),
+                        media_type="application/javascript", headers=CACHE_JS_CSS)
+
+
+@router.get("/analytics.js")
+async def get_analytics():
+    return FileResponse(os.path.join(os.path.dirname(__file__), "..", "static", "analytics.js"),
+                        media_type="application/javascript", headers=CACHE_JS_CSS)
+
+
 @router.get("/app.js")
 async def get_app():
     app_file = os.path.join(os.path.dirname(__file__), "..", "static", "app.js")
@@ -77,6 +89,30 @@ async def get_vortex_gif():
     if os.path.exists(bg_file):
         return FileResponse(bg_file, media_type="image/gif", headers=CACHE_IMAGES)
     raise HTTPException(status_code=404, detail="vortex.gif not found")
+
+
+# Optimized WebP renditions of the vortex artwork. The original PNG/GIF stay
+# available for social previews, old caches, and browsers without WebP support.
+WEBP_ASSETS = {
+    "/vortex.webp": "vortex.webp",
+    "/vortex-still.webp": "vortex-still.webp",
+    "/omnitrackr_vortex.webp": "omnitrackr_vortex.webp",
+}
+
+
+def _webp_endpoint(filename: str):
+    async def serve_webp():
+        path = os.path.join(os.path.dirname(__file__), "..", "static", filename)
+        if os.path.exists(path):
+            return FileResponse(path, media_type="image/webp", headers=CACHE_IMAGES)
+        raise HTTPException(status_code=404, detail=f"{filename} not found")
+
+    serve_webp.__name__ = "get_" + filename.replace("-", "_").replace(".", "_")
+    return serve_webp
+
+
+for _route, _filename in WEBP_ASSETS.items():
+    router.add_api_route(_route, _webp_endpoint(_filename), methods=["GET", "HEAD"], include_in_schema=False)
 
 
 @router.get("/favicon.ico")

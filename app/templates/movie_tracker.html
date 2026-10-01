@@ -52,34 +52,32 @@
     "inLanguage": "en-US"
   }
   </script>
+  <link rel="stylesheet" href="/static/public-reader.css?v=20260928-site-2">
 </head>
 
-<body>
-  <div class="content-wrapper">
-    <div class="content-container">
-      <nav class="public-site-nav" aria-label="Public site navigation">
-        <a class="public-site-nav__brand" href="/">OmniTrackr</a>
-        <div class="public-site-nav__links">
-          <a href="/demo">Demo</a>
-          <a href="/media-tracking">Tracking Hub</a>
-          <a href="/guides">Guides</a>
-          <a href="/site-map">Site Map</a>
-          <a href="/sample-library">Sample Library</a>
-          <a href="/compare">Compare</a>
-          <a href="/use-cases">Use Cases</a>
-          <a href="/reviews">Reviews</a>
-          <a href="/faq">FAQ</a>
-          <a href="/content-quality">Content Quality</a>
-          <a href="/advertising">Advertising</a>
-          <a href="/privacy">Privacy</a>
-          <a class="public-site-nav__cta" href="/#landing-auth">Start tracking</a>
-        </div>
-      </nav>
-      <a href="/media-tracking" class="back-link">Back to Media Tracking Hub</a>
+<body class="public-reader site">
+  <a class="reader-skip" href="#reader-main">Skip to guide</a>
+  <!--SITE_NAV:guides-->
+  <div class="reader-shell">
+    <main id="reader-main" tabindex="-1" class="reader-main content-container">
+<a href="/media-tracking" class="back-link">Back to Media Tracking Hub</a>
       <header class="content-header">
         <h1>Movie Tracker</h1>
         <p>Build a movie watchlist that preserves ratings, reviews, posters, watched status, privacy choices, and long-term taste history.</p>
       </header>
+      <details class="reader-contents">
+        <summary>On this page</summary>
+        <nav aria-label="On this page">
+          <a href="#why-heading">Why Track Movies Outside a Streaming App?</a>
+          <a href="#workflow-heading">A Practical Movie Tracking Workflow</a>
+          <a href="#watchlist-heading">Watchlists, Rewatches, and Recommendations</a>
+          <a href="#review-heading">What Makes a Movie Review Useful?</a>
+          <a href="#stats-heading">Using Movie Statistics</a>
+          <a href="#privacy-heading">Privacy for Movie Lists and Reviews</a>
+          <a href="#related-heading">Related Pages</a>
+        </nav>
+      </details>
+
 
       <section class="content-section" aria-labelledby="why-heading">
         <h2 id="why-heading">Why Track Movies Outside a Streaming App?</h2>
@@ -128,8 +126,9 @@
         <h2 id="related-heading">Related Pages</h2>
         <p>For broader workflows, visit the <a href="/media-tracking">media tracking hub</a>, compare OmniTrackr with other options on the <a href="/compare">tracker comparison page</a>, improve review quality with the <a href="/review-guidelines">review guidelines</a>, or browse <a href="/reviews">public media reviews</a>.</p>
       </section>
-    </div>
+    </main>
   </div>
+  <!--SITE_FOOTER-->
 </body>
 
 </html>

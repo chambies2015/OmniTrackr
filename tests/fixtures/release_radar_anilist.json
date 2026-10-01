@@ -1,0 +1,214 @@
+[
+ {
+  "id": 195516,
+  "siteUrl": "https://anilist.co/anime/195516",
+  "format": "TV",
+  "episodes": null,
+  "popularity": 74305,
+  "genres": [
+   "Drama",
+   "Mystery"
+  ],
+  "source": "LIGHT_NOVEL",
+  "title": {
+   "romaji": "Kusuriya no Hitorigoto 3rd Season",
+   "english": "The Apothecary Diaries Season 3"
+  },
+  "startDate": {
+   "year": 2026,
+   "month": 10,
+   "day": 2
+  },
+  "coverImage": {
+   "large": "https://s4.anilist.co/file/anilistcdn/media/anime/cover/medium/bx195516-MJpUZlOberqH.jpg"
+  },
+  "studios": {
+   "nodes": [
+    {
+     "name": "OLM"
+    }
+   ]
+  }
+ },
+ {
+  "id": 195539,
+  "siteUrl": "https://anilist.co/anime/195539",
+  "format": "ONA",
+  "episodes": 10,
+  "popularity": 67407,
+  "genres": [
+   "Action",
+   "Drama",
+   "Sci-Fi"
+  ],
+  "source": "VIDEO_GAME",
+  "title": {
+   "romaji": "Cyberpunk: Edgerunners 2",
+   "english": "Cyberpunk: Edgerunners 2"
+  },
+  "startDate": {
+   "year": 2026,
+   "month": 10,
+   "day": 20
+  },
+  "coverImage": {
+   "large": "https://s4.anilist.co/file/anilistcdn/media/anime/cover/medium/bx195539-jaarfaxv6K0Z.jpg"
+  },
+  "studios": {
+   "nodes": [
+    {
+     "name": "TRIGGER"
+    }
+   ]
+  }
+ },
+ {
+  "id": 195604,
+  "siteUrl": "https://anilist.co/anime/195604",
+  "format": "TV",
+  "episodes": null,
+  "popularity": 65167,
+  "genres": [
+   "Action",
+   "Adventure",
+   "Comedy",
+   "Fantasy"
+  ],
+  "source": "MANGA",
+  "title": {
+   "romaji": "Black Clover 2nd Season",
+   "english": "Black Clover Season 2"
+  },
+  "startDate": {
+   "year": 2026,
+   "month": 10,
+   "day": 3
+  },
+  "coverImage": {
+   "large": "https://s4.anilist.co/file/anilistcdn/media/anime/cover/medium/bx195604-8xUI10lVVhPY.jpg"
+  },
+  "studios": {
+   "nodes": [
+    {
+     "name": "Studio Pierrot"
+    }
+   ]
+  }
+ },
+ {
+  "id": 160275,
+  "siteUrl": "https://anilist.co/anime/160275",
+  "format": "MOVIE",
+  "episodes": 1,
+  "popularity": 40126,
+  "genres": [
+   "Adventure",
+   "Drama",
+   "Fantasy",
+   "Mystery"
+  ],
+  "source": "MANGA",
+  "title": {
+   "romaji": "Made in Abyss: Mezameru Shinpi",
+   "english": null
+  },
+  "startDate": {
+   "year": 2026,
+   "month": 10,
+   "day": 23
+  },
+  "coverImage": {
+   "large": "https://s4.anilist.co/file/anilistcdn/media/anime/cover/medium/bx160275-cBOWJpcCGeMq.jpg"
+  },
+  "studios": {
+   "nodes": [
+    {
+     "name": "Kinema Citrus"
+    }
+   ]
+  }
+ },
+ {
+  "id": 900001,
+  "siteUrl": "https://anilist.co/anime/900001",
+  "format": "TV",
+  "episodes": 12,
+  "popularity": 21000,
+  "genres": [
+   "Comedy",
+   "Slice of Life"
+  ],
+  "source": "ORIGINAL",
+  "title": {
+   "romaji": "Fixture Original Show",
+   "english": "Fixture Original Show"
+  },
+  "startDate": {
+   "year": 2026,
+   "month": 10,
+   "day": 5
+  },
+  "coverImage": {},
+  "studios": {
+   "nodes": [
+    {
+     "name": "OLM"
+    }
+   ]
+  }
+ },
+ {
+  "id": 900002,
+  "siteUrl": "https://anilist.co/anime/900002",
+  "format": "MUSIC",
+  "episodes": 1,
+  "popularity": 90000,
+  "genres": [
+   "Music"
+  ],
+  "source": "ORIGINAL",
+  "title": {
+   "romaji": "Excluded Music Video",
+   "english": null
+  },
+  "startDate": {
+   "year": 2026,
+   "month": 10,
+   "day": 1
+  },
+  "coverImage": {},
+  "studios": {
+   "nodes": []
+  }
+ },
+ {
+  "id": 900003,
+  "siteUrl": "javascript:alert(1)",
+  "format": "TV",
+  "episodes": 12,
+  "popularity": 15000,
+  "genres": [
+   "Romance"
+  ],
+  "source": "MANGA",
+  "title": {
+   "romaji": "<script>alert(1)</script>",
+   "english": null
+  },
+  "startDate": {
+   "year": 2026,
+   "month": null,
+   "day": null
+  },
+  "coverImage": {
+   "large": "https://evil.example/x.jpg"
+  },
+  "studios": {
+   "nodes": [
+    {
+     "name": "Fixture Studio"
+    }
+   ]
+  }
+ }
+]

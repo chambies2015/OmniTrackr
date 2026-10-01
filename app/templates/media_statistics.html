@@ -51,34 +51,33 @@
     "inLanguage": "en-US"
   }
   </script>
+  <link rel="stylesheet" href="/static/public-reader.css?v=20260928-site-2">
 </head>
 
-<body>
-  <div class="content-wrapper">
-    <div class="content-container">
-      <nav class="public-site-nav" aria-label="Public site navigation">
-        <a class="public-site-nav__brand" href="/">OmniTrackr</a>
-        <div class="public-site-nav__links">
-          <a href="/demo">Demo</a>
-          <a href="/media-tracking">Tracking Hub</a>
-          <a href="/guides">Guides</a>
-          <a href="/site-map">Site Map</a>
-          <a href="/sample-library">Sample Library</a>
-          <a href="/compare">Compare</a>
-          <a href="/use-cases">Use Cases</a>
-          <a href="/reviews">Reviews</a>
-          <a href="/faq">FAQ</a>
-          <a href="/content-quality">Content Quality</a>
-          <a href="/advertising">Advertising</a>
-          <a href="/privacy">Privacy</a>
-          <a class="public-site-nav__cta" href="/#landing-auth">Start tracking</a>
-        </div>
-      </nav>
-      <a href="/media-tracking" class="back-link">Back to Media Tracking Hub</a>
+<body class="public-reader site">
+  <a class="reader-skip" href="#reader-main">Skip to guide</a>
+  <!--SITE_NAV:guides-->
+  <div class="reader-shell">
+    <main id="reader-main" tabindex="-1" class="reader-main content-container">
+<a href="/media-tracking" class="back-link">Back to Media Tracking Hub</a>
       <header class="content-header">
         <h1>Media Statistics</h1>
         <p>Use completion progress, ratings, review coverage, years, directors, genres, seasons, and category comparisons to understand your media library.</p>
       </header>
+      <details class="reader-contents">
+        <summary>On this page</summary>
+        <nav aria-label="On this page">
+          <a href="#why-heading">Why Statistics Matter in a Media Tracker</a>
+          <a href="#signals-heading">Signals Worth Watching</a>
+          <a href="#category-heading">Category-Specific Insights</a>
+          <a href="#review-coverage-heading">Using Review Coverage</a>
+          <a href="#action-heading">How to Use the Numbers</a>
+          <a href="#interpret-heading">How to Interpret Statistics Without Overfitting</a>
+          <a href="#privacy-heading">Privacy and Sharing</a>
+          <a href="#related-heading">Related Pages</a>
+        </nav>
+      </details>
+
 
       <section class="content-section" aria-labelledby="why-heading">
         <h2 id="why-heading">Why Statistics Matter in a Media Tracker</h2>
@@ -147,8 +146,9 @@
         <h2 id="related-heading">Related Pages</h2>
         <p>See the <a href="/demo">demo library</a>, learn about <a href="/export-import-guide">export and import</a>, visit the <a href="/media-tracking">media tracking hub</a>, read the <a href="/review-guidelines">review guidelines</a>, or compare OmniTrackr with other tracking options on the <a href="/compare">comparison page</a>.</p>
       </section>
-    </div>
+    </main>
   </div>
+  <!--SITE_FOOTER-->
 </body>
 
 </html>

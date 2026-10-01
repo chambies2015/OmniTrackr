@@ -1,0 +1,28 @@
+.progress-dialog { width: min(540px, calc(100vw - 32px)); max-height: calc(100dvh - 32px); box-sizing: border-box; margin: auto; padding: 26px; overflow-y: auto; background: #17232b; color: #edf6f4; border: 1px solid #41655f; border-radius: 18px; box-shadow: 0 24px 80px #0009; }
+.progress-dialog::backdrop { background: #07121cd9; backdrop-filter: blur(4px); }
+.progress-dialog__header { display: flex; align-items: flex-start; justify-content: space-between; gap: 16px; }
+.progress-dialog__eyebrow { margin: 0 0 8px; color: #86d7ba; font-size: .8rem; font-weight: 700; text-transform: uppercase; letter-spacing: .08em; }
+.progress-dialog h2 { margin: 0; color: #f4f9f8; font-size: 1.5rem; line-height: 1.25; overflow-wrap: anywhere; }
+.progress-dialog button { min-height: 42px; padding: 10px 14px; border: 1px solid #54716d; border-radius: 9px; background: #263b43; color: #f1f8f6; cursor: pointer; font: inherit; }
+.progress-dialog .progress-dialog__close { min-width: 42px; padding: 4px 10px; font-size: 1.4rem; flex-shrink: 0; }
+.progress-dialog button:disabled { opacity: .55; cursor: default; }
+.progress-dialog button:focus-visible, .progress-dialog input:focus-visible, .progress-dialog select:focus-visible, .progress-dialog textarea:focus-visible, .progress-update:focus-visible { outline: 3px solid #87e3c6; outline-offset: 3px; }
+.progress-dialog__privacy, .progress-dialog__hint { color: #bacfce; font-size: .88rem; line-height: 1.55; }
+.progress-dialog__current { padding: 12px 14px; background: #213b3c; border-radius: 9px; color: #bdebdc; font-size: .9rem; }
+.progress-dialog fieldset { display: grid; gap: 16px; margin: 20px 0 0; padding: 0; border: 0; min-width: 0; }
+.progress-dialog label { display: grid; gap: 7px; color: #e8f4f0; font-size: .95rem; font-weight: 600; }
+.progress-dialog input, .progress-dialog select, .progress-dialog textarea { display: block; box-sizing: border-box; width: 100%; max-width: 100%; min-height: 44px; margin: 0; padding: 10px 12px; border: 1px solid #53706e; border-radius: 8px; color: #f5fbf9; background: #102129; font: inherit; }
+.progress-dialog textarea { min-height: 82px; resize: vertical; }
+.progress-dialog__hint { margin: 0; font-weight: 400; }
+.progress-dialog__status { min-height: 2.6em; margin: 18px 0; color: #dcece5; line-height: 1.5; font-size: .9rem; }
+.progress-dialog__actions { display: flex; flex-wrap: wrap; gap: 9px; }
+.progress-dialog .progress-dialog__save { background: #9ae2c6; border-color: #9ae2c6; color: #10291f; font-weight: 700; }
+.progress-dialog .progress-dialog__clear { margin-right: auto; background: transparent; }
+.progress-dialog [hidden] { display: none !important; }
+.progress-checkpoint { display: block; margin-top: 6px; color: #a4e1c8; font-size: .83rem; line-height: 1.45; }
+.progress-checkpoint[hidden] { display: none; }
+.progress-update { min-height: 38px; padding: 7px 11px; border: 1px solid #456b61; border-radius: 8px; background: #1d3736; color: #c3f0df; font: inherit; font-size: .82rem; cursor: pointer; }
+.library-pulse__progress-row { display: grid; gap: 7px; }
+.library-pulse__progress-row > .progress-update { justify-self: start; margin-left: 12px; }
+.return-deck__item > .progress-update { align-self: start; }
+@media (max-width: 480px) { .progress-dialog { padding: 20px; } .progress-dialog__actions > button { flex: 1 1 42%; } .progress-dialog__actions .progress-dialog__clear { margin-right: 0; } }

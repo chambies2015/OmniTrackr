@@ -4,8 +4,8 @@ Friends endpoints for the OmniTrackr API.
 from datetime import datetime
 from typing import List
 from fastapi import APIRouter, Depends, HTTPException
-from sqlalchemy.orm import Session
-from sqlalchemy import and_
+from sqlalchemy.orm import Session, joinedload
+from sqlalchemy import and_, or_
 
 from .. import crud, schemas, models
 from ..dependencies import get_db, get_current_user
@@ -107,28 +107,24 @@ async def get_friends(
     db: Session = Depends(get_db)
 ):
     """Get list of all friends."""
-    friends = crud.get_friends(db, current_user.id)
-    
-    # Convert to FriendshipResponse format
-    friendships = []
-    for friend in friends:
-        # Find the friendship record
-        user1_id = min(current_user.id, friend.id)
-        user2_id = max(current_user.id, friend.id)
-        friendship = db.query(models.Friendship).filter(
-            and_(
-                models.Friendship.user1_id == user1_id,
-                models.Friendship.user2_id == user2_id
-            )
-        ).first()
-        if friendship:
-            friendships.append(schemas.FriendshipResponse(
-                id=friendship.id,
-                friend=friend,
-                created_at=friendship.created_at
-            ))
-    
-    return friendships
+    friendships = db.query(models.Friendship).options(
+        joinedload(models.Friendship.user1),
+        joinedload(models.Friendship.user2),
+    ).filter(
+        or_(
+            models.Friendship.user1_id == current_user.id,
+            models.Friendship.user2_id == current_user.id,
+        )
+    ).all()
+
+    return [
+        schemas.FriendshipResponse(
+            id=friendship.id,
+            friend=friendship.user2 if friendship.user1_id == current_user.id else friendship.user1,
+            created_at=friendship.created_at,
+        )
+        for friendship in friendships
+    ]
 
 
 @router.delete("/{friend_id}", response_model=dict)
@@ -252,6 +248,44 @@ async def get_friend_video_games(
         raise HTTPException(status_code=403, detail="This user has made their video games private")
     
     return schemas.FriendVideoGamesResponse(video_games=video_games, count=len(video_games))
+
+
+@router.get("/{friend_id}/music", response_model=schemas.FriendMusicResponse)
+async def get_friend_music(
+    friend_id: int,
+    current_user: models.User = Depends(get_current_user),
+    db: Session = Depends(get_db)
+):
+    """Get friend's music list (if not private, requires friendship)."""
+    if not crud.are_friends(db, current_user.id, friend_id):
+        raise HTTPException(status_code=403, detail="You are not friends with this user")
+
+    music = crud.get_friend_music(db, friend_id)
+    if music is None:
+        if crud.get_user_by_id(db, friend_id) is None:
+            raise HTTPException(status_code=404, detail="Friend not found")
+        raise HTTPException(status_code=403, detail="This user has made their music private")
+
+    return schemas.FriendMusicResponse(music=music, count=len(music))
+
+
+@router.get("/{friend_id}/books", response_model=schemas.FriendBooksResponse)
+async def get_friend_books(
+    friend_id: int,
+    current_user: models.User = Depends(get_current_user),
+    db: Session = Depends(get_db)
+):
+    """Get friend's books list (if not private, requires friendship)."""
+    if not crud.are_friends(db, current_user.id, friend_id):
+        raise HTTPException(status_code=403, detail="You are not friends with this user")
+
+    books = crud.get_friend_books(db, friend_id)
+    if books is None:
+        if crud.get_user_by_id(db, friend_id) is None:
+            raise HTTPException(status_code=404, detail="Friend not found")
+        raise HTTPException(status_code=403, detail="This user has made their books private")
+
+    return schemas.FriendBooksResponse(books=books, count=len(books))
 
 
 @router.get("/{friend_id}/statistics", response_model=schemas.FriendStatisticsResponse)

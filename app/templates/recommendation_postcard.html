@@ -1,0 +1,67 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="robots" content="noindex, nofollow">
+  <meta name="description" content="Reply to a private OmniTrackr Recommendation Postcard.">
+  <title>Recommendation Postcard · OmniTrackr</title>
+  <link rel="icon" type="image/x-icon" href="/omnitrackr_favicon.ico">
+  <link rel="stylesheet" href="/static/recommendation-postcard.css">
+  <script src="/static/recommendation-postcard.js" defer></script>
+</head>
+<body>
+  <header class="postcard-nav">
+    <a class="postcard-brand" href="/">OmniTrackr</a>
+    <a class="postcard-own" href="/?auth=register">Create your own library</a>
+  </header>
+  <main class="postcard-shell">
+    <section class="postcard-intro" aria-labelledby="postcardTitle">
+      <p class="eyebrow">A note from someone you know</p>
+      <h1 id="postcardTitle">Recommendation Postcard</h1>
+      <p>This private-by-link page asks for one thoughtful media recommendation. It is not a public profile and carries no ads.</p>
+    </section>
+
+    <section id="postcardLoading" class="postcard paper" aria-live="polite">
+      <p>Opening the postcard…</p>
+    </section>
+
+    <section id="postcardContent" class="postcard paper" hidden>
+      <p class="postcard-from">For <strong id="postcardOwner"></strong></p>
+      <blockquote id="postcardPrompt"></blockquote>
+      <div id="postcardCategories" class="category-stamps" aria-label="Requested media types"></div>
+      <p id="postcardRemaining" class="postcard-count"></p>
+
+      <form id="postcardResponseForm" class="postcard-form">
+        <label>Your name
+          <input id="postcardGuestName" name="guest_name" type="text" maxlength="50" autocomplete="name" required>
+        </label>
+        <label>Media type
+          <select id="postcardCategory" name="category" required></select>
+        </label>
+        <label>What should they try?
+          <input id="postcardRecommendationTitle" name="title" type="text" maxlength="200" required placeholder="Title">
+        </label>
+        <label>Why is it right for them?
+          <textarea id="postcardReason" name="reason" minlength="20" maxlength="500" rows="5" required placeholder="A specific, personal reason makes the recommendation useful."></textarea>
+        </label>
+        <label class="postcard-trap" aria-hidden="true">Website
+          <input id="postcardWebsite" name="website" type="text" tabindex="-1" autocomplete="off">
+        </label>
+        <div class="postcard-submit">
+          <button type="submit">Send recommendation</button>
+          <span id="postcardFormStatus" role="status"></span>
+        </div>
+      </form>
+    </section>
+
+    <section id="postcardUnavailable" class="postcard paper" hidden aria-live="polite">
+      <p class="eyebrow">Postcard complete</p>
+      <h2 id="postcardUnavailableTitle">This postcard is no longer accepting replies.</h2>
+      <p id="postcardUnavailableMessage">The sender may have closed it, reached their response limit, or let it expire.</p>
+      <a href="/">Explore OmniTrackr</a>
+    </section>
+  </main>
+  <footer>One recommendation, delivered thoughtfully. Guest replies are visible only to the postcard owner.</footer>
+</body>
+</html>

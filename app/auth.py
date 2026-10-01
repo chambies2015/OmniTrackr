@@ -4,9 +4,12 @@ Handles password hashing, JWT token creation and validation.
 """
 from datetime import datetime, timedelta, timezone
 from typing import Optional
-from jose import JWTError, jwt
+import jwt
+from jwt import InvalidTokenError
 import bcrypt
 import re
+import hashlib
+import hmac
 import os
 from dotenv import load_dotenv
 
@@ -23,14 +26,24 @@ if not SECRET_KEY:
     warnings.warn("Using default SECRET_KEY - not for production!")
 
 ALGORITHM = "HS256"
-ACCESS_TOKEN_EXPIRE_MINUTES = 60 * 24
+# Members stay signed in for 30 days; a password change or reset ends every other session.
+ACCESS_TOKEN_EXPIRE_MINUTES = 60 * 24 * 30
 AUTH_COOKIE_NAME = "omnitrackr_session"
 AUTH_COOKIE_MAX_AGE_SECONDS = ACCESS_TOKEN_EXPIRE_MINUTES * 60
 
 
 def verify_password(plain_password: str, hashed_password: str) -> bool:
     """Verify a plain password against a hashed password."""
-    return bcrypt.checkpw(plain_password.encode('utf-8'), hashed_password.encode('utf-8'))
+    try:
+        password_bytes = plain_password.encode("utf-8")
+        if len(password_bytes) > 72:
+            # Existing bcrypt hashes may have been created when the library
+            # silently truncated inputs. Keep those accounts usable; all new
+            # and changed passwords are limited by validate_password_strength.
+            password_bytes = password_bytes[:72]
+        return bcrypt.checkpw(password_bytes, hashed_password.encode("utf-8"))
+    except (TypeError, ValueError):
+        return False
 
 
 def validate_password_strength(password: str) -> tuple[bool, str]:
@@ -40,6 +53,8 @@ def validate_password_strength(password: str) -> tuple[bool, str]:
     Returns:
         (is_valid, error_message)
     """
+    if len(password.encode("utf-8")) > 72:
+        return False, "Password must be no more than 72 UTF-8 bytes long"
     if ENVIRONMENT != "production":
         return True, ""
     if len(password) < 8:
@@ -99,6 +114,43 @@ def create_access_token(data: dict, expires_delta: Optional[timedelta] = None) -
     return encoded_jwt
 
 
+def create_user_access_token(user) -> str:
+    """Session token for a user.
+
+    `uid` is the stable identity; `sub` (the username at sign-in) is kept for
+    older clients. Keying sessions on the id means renaming an account keeps
+    it signed in, and a token issued before a rename can never authenticate as
+    someone who later registers the old username.
+    """
+    return create_access_token(data={
+        "sub": user.username,
+        "uid": user.id,
+        "pv": password_fingerprint(user.hashed_password),
+    })
+
+
+def password_fingerprint(hashed_password: Optional[str]) -> str:
+    """A keyed, one-way marker of the current password hash.
+
+    Tokens carry it so changing or resetting a password signs out every other
+    session, which matters now that sessions last 30 days.
+    """
+    digest = hmac.new(SECRET_KEY.encode(), (hashed_password or "").encode(), hashlib.sha256)
+    return digest.hexdigest()[:16]
+
+
+def set_auth_cookie(response, access_token: str) -> None:
+    response.set_cookie(
+        key=AUTH_COOKIE_NAME,
+        value=access_token,
+        max_age=AUTH_COOKIE_MAX_AGE_SECONDS,
+        httponly=True,
+        secure=ENVIRONMENT == "production",
+        samesite="lax",
+        path="/",
+    )
+
+
 def decode_access_token(token: str) -> Optional[dict]:
     """
     Decode and validate a JWT access token.
@@ -112,5 +164,5 @@ def decode_access_token(token: str) -> Optional[dict]:
     try:
         payload = jwt.decode(token, SECRET_KEY, algorithms=[ALGORITHM])
         return payload
-    except JWTError:
+    except InvalidTokenError:
         return None

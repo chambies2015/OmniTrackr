@@ -39,7 +39,7 @@ def get_tv_show_by_id(db: Session, user_id: int, tv_show_id: int) -> Optional[mo
 
 
 def create_tv_show(db: Session, user_id: int, tv_show: schemas.TVShowCreate) -> models.TVShow:
-    tv_show_dict = tv_show.dict()
+    tv_show_dict = tv_show.model_dump()
     if tv_show_dict.get('rating') is not None:
         tv_show_dict['rating'] = round(float(tv_show_dict['rating']), 1)
     db_tv_show = models.TVShow(**tv_show_dict, user_id=user_id)
@@ -53,7 +53,7 @@ def update_tv_show(db: Session, user_id: int, tv_show_id: int, tv_show_update: s
     db_tv_show = get_tv_show_by_id(db, user_id, tv_show_id)
     if db_tv_show is None:
         return None
-    update_dict = tv_show_update.dict(exclude_unset=True)
+    update_dict = tv_show_update.model_dump(exclude_unset=True)
     
     allowed_fields = {'title', 'year', 'seasons', 'episodes', 'rating', 'watched', 'review', 'review_public', 'poster_url'}
     for field, value in update_dict.items():
@@ -68,9 +68,13 @@ def update_tv_show(db: Session, user_id: int, tv_show_id: int, tv_show_update: s
 
 
 def delete_tv_show(db: Session, user_id: int, tv_show_id: int) -> Optional[models.TVShow]:
-    db_tv_show = get_tv_show_by_id(db, user_id, tv_show_id)
+    from ..progress import delete_progress_for_item, lock_progress_owner
+    lock_progress_owner(db, user_id)
+    db_tv_show = db.query(models.TVShow).filter_by(user_id=user_id, id=tv_show_id).with_for_update().first()
     if db_tv_show is None:
+        db.rollback()
         return None
+    delete_progress_for_item(db, user_id, "tv-shows", tv_show_id)
     db.delete(db_tv_show)
     db.commit()
     return db_tv_show
