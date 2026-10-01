@@ -431,6 +431,13 @@
     const dbRow = el('li');
     dbRow.append(el('span', '', `Database: ${system.database}`), el('span', 'stats-status stats-status--ok', '✓ Connected'));
     list.appendChild(dbRow);
+    if (system.title_details) {
+      const details = system.title_details;
+      const row = el('li');
+      row.append(el('span', '', `Title pages: details found for ${number(details.found)} (${number(details.not_found)} not found, ${number(details.errors)} errors)`),
+        el('span', `stats-status ${details.errors > details.found ? 'stats-status--warn' : 'stats-status--ok'}`, details.errors > details.found ? '! Check' : '✓ OK'));
+      list.appendChild(row);
+    }
     system.integrations.forEach(item => {
       const row = el('li');
       row.append(el('span', '', item.name), el('span', `stats-status ${item.configured ? 'stats-status--ok' : 'stats-status--warn'}`, item.configured ? '✓ Set up' : '! Not set'));
@@ -540,6 +547,7 @@
       '',
       `Health: ${data.system.database}; ${data.system.integrations.map(item => `${item.name}: ${item.configured ? 'ok' : 'NOT SET'}`).join('; ')}.`,
       `Release Radar: ${data.system.release_radar.map(entry => `${entry.category} ${entry.items} titles${entry.error ? ` (${entry.error})` : ''}`).join(', ')}.`,
+      data.system.title_details ? `Title pages: details for ${number(data.system.title_details.found)}, not found ${number(data.system.title_details.not_found)}, errors ${number(data.system.title_details.errors)}.` : '',
     ];
     return lines.join('\n');
   }

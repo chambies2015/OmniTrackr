@@ -151,6 +151,13 @@ def _library_additions(db: Session, days: int, today: date) -> list[dict]:
     ]
 
 
+def _title_details(db: Session) -> dict:
+    """How many title pages have their public facts cached (filled in by a background job)."""
+    counts = dict(db.query(models.TitleMetadata.status, func.count(models.TitleMetadata.id))
+                  .group_by(models.TitleMetadata.status).all())
+    return {"found": int(counts.get("ok", 0)), "not_found": int(counts.get("miss", 0)), "errors": int(counts.get("error", 0))}
+
+
 def _system() -> dict:
     database_url = os.getenv("DATABASE_URL", "")
     radar = []
@@ -222,7 +229,7 @@ async def site_stats_overview(
         "traffic": _traffic(db, days, today),
         "popular_titles": _popular_titles(db),
         "insights": insights,
-        "system": _system(),
+        "system": {**_system(), "title_details": _title_details(db)},
         "editor_collections": editorial_collections.status(db),
     }
 
