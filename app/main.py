@@ -59,6 +59,7 @@ from .routers import (
     recommendations,
     site_stats,
     for_you,
+    titles,
 )
 
 # Create database tables
@@ -87,13 +88,17 @@ async def lifespan(application: FastAPI):
         print(f"Error expiring friend requests on startup: {e}")
 
     digest_task = None
+    title_task = None
     if digest_emails.enabled_for_process():
         digest_task = asyncio.create_task(digest_emails.digest_loop(application))
+    if os.getenv("TESTING", "").lower() != "true":
+        title_task = asyncio.create_task(titles.warm_loop(application))
     try:
         yield
     finally:
-        if digest_task is not None:
-            digest_task.cancel()
+        for task in (digest_task, title_task):
+            if task is not None:
+                task.cancel()
         await application.state.external_api_client.aclose()
         try:
             TRAFFIC_RECORDER.flush()  # Keep the last minute of page-view counts.
@@ -473,6 +478,7 @@ for route in reviews.router.routes:
 app.include_router(reviews.router)
 app.include_router(site_stats.router)
 app.include_router(for_you.router)
+app.include_router(titles.router)
 
 
 # Root endpoint

@@ -402,7 +402,16 @@ def _serialize_item(
         "available": media is not None,
         "curator_note": item.curator_note,
         "artwork_url": getattr(media, artwork_field, None) if media else None,
+        "title_path": _title_path(item.category, media),
     }
+
+
+def _title_path(category: str, media) -> str | None:
+    if media is None or not (media.title or "").strip():
+        return None
+    from ..title_pages import LIBRARY_TO_KIND, path_for_item
+    kind = LIBRARY_TO_KIND.get(category)
+    return path_for_item(kind, media) if kind else None
 
 
 def _serialize_collection(
@@ -1101,7 +1110,9 @@ async def public_collection(collection_id: int, request: Request, db: Session = 
         '<li class="collection-entry">'
         f'<span class="collection-entry__number">{position:02d}</span>'
         + (f'<img src="{escape(item["artwork_url"], quote=True)}" alt="" loading="lazy" referrerpolicy="no-referrer">' if item["artwork_url"] else '')
-        + f'<div><p>{escape(item["category_label"])}</p><h2>{escape(item["title"])}</h2>'
+        + f'<div><p>{escape(item["category_label"])}</p><h2>'
+        + (f'<a href="{escape(item["title_path"], quote=True)}">{escape(item["title"])}</a>' if item.get("title_path") else escape(item["title"]))
+        + '</h2>'
         + (f'<div class="collection-entry__note">{escape(item["curator_note"])}</div>' if item["curator_note"] else '')
         + '</div></li>'
         for position, item in enumerate(items, 1)

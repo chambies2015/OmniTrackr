@@ -479,6 +479,14 @@ def _not_found_review_html() -> str:
     )
 
 
+def _title_page_link(review: dict) -> str:
+    from ..title_pages import path_for_review_category
+    path = path_for_review_category(review.get("category"), review.get("title") or "", review.get("year"), review.get("release_date"))
+    if not path:
+        return ""
+    return f'<p class="review-title-link"><a href="{_escape(path)}">Trailer, details and more reviews of {_escape(review.get("title"))} <span aria-hidden="true">→</span></a></p>'
+
+
 def _review_detail_html(review: dict, more_reviews: Optional[list] = None) -> str:
     category_label = CATEGORY_LABELS.get(review.get("category"), "Media")
     title = f"{review.get('title')} {category_label} Review by {review.get('username')} - OmniTrackr"
@@ -577,7 +585,7 @@ def _review_detail_html(review: dict, more_reviews: Optional[list] = None) -> st
   <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@700;800&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="/styles.css?v=20260917-review-safety-v1">
   <link rel="stylesheet" href="/static/reviews.css?v=20260928-site-1">
-  <link rel="stylesheet" href="/static/review-detail.css?v=20260928-site-1">
+  <link rel="stylesheet" href="/static/review-detail.css?v=20261001-titles-1">
   <script type="application/ld+json">{_safe_json_ld(json_ld)}</script>
   <script type="application/ld+json">{_safe_json_ld(breadcrumb_json_ld)}</script>
   <script src="/static/review_report.js?v=20260917-review-safety-v1" defer></script>
@@ -593,6 +601,7 @@ def _review_detail_html(review: dict, more_reviews: Optional[list] = None) -> st
           <div class="review-header-info">
             <nav class="review-crumbs" aria-label="Breadcrumb"><a href="/reviews">Public reviews</a><span aria-hidden="true">/</span><a href="/reviews?category={_escape(category)}">{_escape(CATEGORY_LABELS.get(category, category))}</a></nav>
             <h1>{_escape(review.get("title"))}</h1>
+            {_title_page_link(review)}
             <div class="review-hero__meta">{rating_html}<span class="review-byline">Reviewed by <strong>{_escape(review.get("username"))}</strong></span></div>
             <div class="review-meta-info">{details_html}</div>
           </div>

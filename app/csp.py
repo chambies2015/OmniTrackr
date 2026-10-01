@@ -35,7 +35,7 @@ def build_csp(nonce: str | None = None, allow_inline_script: bool = False, allow
         "font-src 'self' https://fonts.gstatic.com; "
         "img-src 'self' data: https: http:; "
         "connect-src 'self' https://www.google-analytics.com https://www.googletagmanager.com; "
-        "frame-src https://www.google.com; "
+        "frame-src https://www.google.com https://www.youtube-nocookie.com; "
         "object-src 'none'; "
         "base-uri 'self'; "
         "form-action 'self'; "

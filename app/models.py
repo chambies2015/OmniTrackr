@@ -660,3 +660,18 @@ class EmailDigestSubscription(Base):
     created_at = Column(DateTime, nullable=False, default=datetime.utcnow)
     last_checked_at = Column(DateTime, nullable=True)
     last_sent_at = Column(DateTime, nullable=True)
+
+
+class TitleMetadata(Base):
+    """Cached public facts about a title (from Wikipedia/Wikidata, TVmaze, RAWG...).
+
+    Keyed by "<category>:<normalized title>:<year>". Shared by every title page
+    and never linked to a member.
+    """
+    __tablename__ = "title_metadata"
+
+    id = Column(Integer, primary_key=True, index=True)
+    key = Column(String(300), nullable=False, unique=True, index=True)
+    status = Column(String(16), nullable=False, default="ok")
+    data = Column(Text, nullable=True)
+    fetched_at = Column(DateTime, nullable=False, default=datetime.utcnow)
