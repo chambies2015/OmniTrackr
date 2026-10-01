@@ -68,6 +68,29 @@ def test_find_handles_numbers_and_accents(db_session):
     assert title_pages.find(db_session, "movie", "pokemon-the-first-movie-1998").title == "Pokémon: The First Movie"
 
 
+@pytest.mark.parametrize("title,year,slug", [
+    ("Film", 2014, "film-2014"),
+    ("Blade Runner 2049", None, "blade-runner-2049"),
+    ("Film 123", None, "film-123"),
+    ("Film 12345", None, "film-12345"),
+    ("2014", None, "2014"),
+    ("Film 0000", None, "film-0000"),
+])
+def test_find_preserves_year_suffix_and_yearless_numeric_titles(db_session, title, year, slug):
+    add_movie(db_session, member(db_session, "suffix"), title=title, year=year)
+    db_session.commit()
+
+    group = title_pages.find(db_session, "movie", slug)
+
+    assert group is not None
+    assert (group.title, group.year) == (title, year)
+
+
+@pytest.mark.parametrize("slug", ["a" * 20_000, "a" * 131, "a-" * 10_000 + "2014", "film-２０１４"])
+def test_find_rejects_invalid_slugs_before_database_lookup(slug):
+    assert title_pages.find(None, "movie", slug) is None
+
+
 def test_deactivated_members_do_not_create_pages(db_session):
     gone = member(db_session, "gone", active=False)
     add_movie(db_session, gone)
@@ -172,7 +195,12 @@ def test_full_page_renders_everything(client, db_session):
         assert expected in html, expected
     assert '<meta name="robots" content="index, follow' in html
     assert "/static/ad-loader.js" in html
-    assert "youtube-nocookie.com" in response.headers["content-security-policy"]
+    directives = {
+        tokens[0]: tokens[1:]
+        for directive in response.headers["content-security-policy"].split(";")
+        if (tokens := directive.split())
+    }
+    assert "https://www.youtube-nocookie.com" in directives["frame-src"]
     assert "<iframe" not in html  # trailers load only when played
 
 
@@ -282,13 +310,13 @@ class FakeClient:
 
 def wikidata_routes(qid, label, description, claims, sitelink, labels):
     def search(url, params):
-        return "wikidata.org" in url and params.get("action") == "wbsearchentities"
+        return url == "https://www.wikidata.org/w/api.php" and params.get("action") == "wbsearchentities"
 
     def entity(url, params):
-        return "wikidata.org" in url and params.get("action") == "wbgetentities" and params.get("ids") == qid
+        return url == "https://www.wikidata.org/w/api.php" and params.get("action") == "wbgetentities" and params.get("ids") == qid
 
     def label_lookup(url, params):
-        return "wikidata.org" in url and params.get("action") == "wbgetentities" and params.get("props") == "labels"
+        return url == "https://www.wikidata.org/w/api.php" and params.get("action") == "wbgetentities" and params.get("props") == "labels"
 
     return [
         (search, {"search": [{"id": "Q1", "label": label, "description": "1999 film"},
@@ -300,6 +328,24 @@ def wikidata_routes(qid, label, description, claims, sitelink, labels):
           "thumbnail": {"source": "https://upload.wikimedia.org/x.jpg"},
           "content_urls": {"desktop": {"page": "https://en.wikipedia.org/wiki/X"}}}),
     ]
+
+
+@pytest.mark.parametrize("url,expected", [
+    ("https://www.wikidata.org/w/api.php", True),
+    ("https://www.wikidata.org.attacker.example/w/api.php", False),
+    ("https://www.wikidata.org@attacker.example/w/api.php", False),
+    ("https://attacker.example/w/api.php?source=wikidata.org", False),
+    ("http://www.wikidata.org/w/api.php", False),
+])
+def test_wikidata_fake_routes_require_exact_endpoint(url, expected):
+    routes = wikidata_routes("Q1", "Film", "A film", {}, "Film", {})
+    parameters = [
+        {"action": "wbsearchentities"},
+        {"action": "wbgetentities", "ids": "Q1"},
+        {"action": "wbgetentities", "props": "labels"},
+    ]
+    for (matches, _), params in zip(routes[:3], parameters):
+        assert matches(url, params) is expected
 
 
 def item(qid):

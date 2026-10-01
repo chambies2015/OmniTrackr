@@ -104,10 +104,10 @@ def find(db: Session, kind: str, slug: str) -> Optional[TitleGroup]:
     if kind not in KINDS or not re.fullmatch(r"[a-z0-9-]{1,130}", slug or ""):
         return None
     model = KINDS[kind][0]
-    match = re.fullmatch(r"(.+?)-(\d{4})", slug)
+    base, separator, year_suffix = slug.rpartition("-")
     candidates_slugs = [(slug, None)]
-    if match:
-        candidates_slugs.insert(0, (match.group(1), int(match.group(2))))
+    if base and separator and len(year_suffix) == 4 and year_suffix.isdigit():
+        candidates_slugs.insert(0, (base, int(year_suffix)))
     for base, year in candidates_slugs:
         words = [w for w in base.split("-") if w]
         if not words:
