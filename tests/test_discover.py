@@ -1,5 +1,6 @@
 """Discover must be readable publicly and preserve existing libraries on save."""
 import pytest
+from datetime import date
 from html import unescape
 from html.parser import HTMLParser
 from urllib.parse import parse_qs, urlsplit
@@ -65,12 +66,19 @@ def test_catalog_is_balanced_and_complete():
         assert all(item['why'] and item['caveat'] and item['source'] for item in items)
         all_categories.update(item['category'] for item in items)
     assert all_categories == set(CATEGORIES)
-    assert len(MONTHLY_EDITIONS) == 1
+    assert len(MONTHLY_EDITIONS) >= 2
+    assert [edition['published_date'] for edition in MONTHLY_EDITIONS.values()] == sorted(
+        edition['published_date'] for edition in MONTHLY_EDITIONS.values()
+    )
     for edition in MONTHLY_EDITIONS.values():
+        date.fromisoformat(edition['published_date'])
         assert len(edition['items']) == 6
         assert {item['category'] for item in edition['items']} == set(CATEGORIES)
-        assert edition['essay_title'] and edition['essay'] and edition['published']
-        assert all(item['why'] and item['caveat'] and item['source'] for item in edition['items'])
+        assert edition['essay_title'] and edition['essay'] and edition['published'] and edition['published_date']
+        assert all(
+            item['why'] and item['caveat'] and item['source'].startswith('https://')
+            for item in edition['items']
+        )
 
 
 def test_public_content_and_auth(client, db_session):
@@ -78,6 +86,11 @@ def test_public_content_and_auth(client, db_session):
     assert 'Follow your curiosity' in index
     for edition in MONTHLY_EDITIONS.values():
         assert edition['name'] in unescape(index)
+    latest = next(reversed(MONTHLY_EDITIONS.values()))
+    assert all(
+        unescape(index).index(latest['name']) < unescape(index).index(edition['name'])
+        for edition in list(MONTHLY_EDITIONS.values())[:-1]
+    )
     for slug, trail in TRAILS.items():
         page = client.get('/discover/' + slug)
         assert page.status_code == 200

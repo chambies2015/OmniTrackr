@@ -68,6 +68,11 @@ p { line-height: 1.75; }
 .monthly-feature p { color: #e1e5f3; margin: 0 0 12px; }
 .monthly-feature .muted { color: #c2cbe4; margin: 0; }
 .monthly-feature .button { flex: 0 0 auto; white-space: nowrap; }
+.monthly-archive { margin: 0 0 34px; max-width: none; }
+.monthly-archive ul { display: grid; gap: 12px; list-style: none; margin: 18px 0 0; padding: 0; }
+.monthly-archive li { align-items: baseline; border-top: 1px solid var(--site-border); display: grid; gap: 6px 18px; grid-template-columns: minmax(210px, .75fr) minmax(0, 1.8fr); padding-top: 14px; }
+.monthly-archive a { font-weight: 700; }
+.monthly-archive span { color: #b9c2da; line-height: 1.65; }
 .trails { display: grid; gap: 20px; grid-template-columns: repeat(2, minmax(0, 1fr)); }
 .trail {
   background: linear-gradient(180deg, rgba(255, 255, 255, .06), rgba(255, 255, 255, .02));
@@ -180,6 +185,7 @@ button:disabled { cursor: wait; opacity: .6; }
 @media (max-width: 760px) {
     .hero { padding: 58px 0 38px; }
   .monthly-feature { align-items: flex-start; flex-direction: column; padding: 26px; }
+  .monthly-archive li { grid-template-columns: 1fr; }
   .trails { grid-template-columns: 1fr; }
   .trail { min-height: 0; padding: 25px; }
   .pick, .editorial, .save-panel { padding: 23px; }

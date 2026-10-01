@@ -240,11 +240,13 @@ async def get_sitemap(request: Request = None, db: Session = Depends(get_db)):
         pass
     
     from ..discover_catalog import MONTHLY_EDITIONS
-    for path in [
-        "/discover",
-        *[f"/discover/monthly/{slug}" for slug in MONTHLY_EDITIONS],
-    ]:
-        sitemap_parts.append(f"<url><loc>{base_url}{path}</loc></url>")
+    sitemap_parts.append(f"<url><loc>{base_url}/discover</loc></url>")
+    for slug, edition in MONTHLY_EDITIONS.items():
+        sitemap_parts.append(
+            f"<url><loc>{base_url}/discover/monthly/{slug}</loc>"
+            f"<lastmod>{edition['published_date']}</lastmod>"
+            "<changefreq>monthly</changefreq><priority>0.75</priority></url>"
+        )
     # Only the completed editorial guides join the search inventory. Shorter
     # trails remain available to readers without being submitted for indexing.
     for slug, guide in GUIDES.items():

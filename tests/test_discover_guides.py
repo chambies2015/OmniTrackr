@@ -196,7 +196,13 @@ def test_sitemap_has_exact_promoted_trails_and_preserves_monthly_editions(client
     for slug in MONTHLY_EDITIONS:
         response = client.get(f"/discover/monthly/{slug}")
         assert "noindex" not in response.headers.get("x-robots-tag", "")
-        assert MONTHLY_EDITIONS[slug]["essay"] in GuidePage(response.text).visible_text
+        page = GuidePage(response.text)
+        assert MONTHLY_EDITIONS[slug]["essay"] in page.visible_text
+        entry = entries[f"https://omnitrackr.xyz/discover/monthly/{slug}"]
+        assert entry.findtext("sm:lastmod", namespaces=SITEMAP_NS) == MONTHLY_EDITIONS[slug]["published_date"]
+        article = page.articles[0]
+        assert article["datePublished"] == MONTHLY_EDITIONS[slug]["published_date"]
+        assert article["mainEntityOfPage"] == f"https://omnitrackr.xyz/discover/monthly/{slug}"
 
 
 def test_guide_last_modified_tracks_the_review_date_not_request_date(client, monkeypatch):

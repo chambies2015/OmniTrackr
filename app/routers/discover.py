@@ -73,9 +73,19 @@ def discover_index():
         '<button id="trail-reset" type="button" class="filter-reset">Clear filters</button></div>'
         '<p id="trail-results" class="muted" role="status" aria-live="polite" aria-atomic="true"></p></section>'
     )
-    edition_slug, edition = next(iter(MONTHLY_EDITIONS.items()))
+    edition_slug, edition = next(reversed(MONTHLY_EDITIONS.items()))
     edition_card = f'<section class="monthly-feature"><div><p class="eyebrow">{escape(edition["tag"])}</p><h2>{escape(edition["name"])}</h2><p>{escape(edition["intro"])}</p><p class="muted">{escape(edition["published"])} · Six media types · Six carefully chosen places to start</p></div><a class="button" href="/discover/monthly/{edition_slug}">Read this edition →</a></section>'
-    return page("Discover", "Thoughtful trails across movies, TV, anime, games, music and books.", "/discover", '<header class="hero"><p class="eyebrow">SIX MEDIA TYPES. NEW CONNECTIONS.</p><h1>Follow your curiosity.</h1><p>Find your next watch, read, listen or play through a shared idea. Explore freely, then save the picks that feel like you.</p></header>' + edition_card + filters + '<p id="trail-empty" class="trail-empty" hidden>No trails match yet. Try a broader theme or choose Any format.</p><div id="trail-list" class="trails">' + ''.join(cards) + '</div><section class="editorial"><h2>How these trails work</h2><p>These are editorial suggestions, not rankings or user reviews. Each pick has a reason to be here, a caveat, and a source for learning more. Start with one; there is no need to finish a whole collection.</p><p>Saving requires an account. You choose which titles to add, and can review existing matches before confirming.</p></section>')
+    archive_items = ''.join(
+        f'<li><a href="/discover/monthly/{escape(slug, quote=True)}">{escape(item["name"])}</a>'
+        f'<span>{escape(item["intro"])}</span></li>'
+        for slug, item in reversed(list(MONTHLY_EDITIONS.items()))
+        if slug != edition_slug
+    )
+    archive = (
+        '<section class="editorial monthly-archive"><h2>Past monthly editions</h2>'
+        f'<ul>{archive_items}</ul></section>' if archive_items else ''
+    )
+    return page("Discover", "Thoughtful trails across movies, TV, anime, games, music and books.", "/discover", '<header class="hero"><p class="eyebrow">SIX MEDIA TYPES. NEW CONNECTIONS.</p><h1>Follow your curiosity.</h1><p>Find your next watch, read, listen or play through a shared idea. Explore freely, then save the picks that feel like you.</p></header>' + edition_card + archive + filters + '<p id="trail-empty" class="trail-empty" hidden>No trails match yet. Try a broader theme or choose Any format.</p><div id="trail-list" class="trails">' + ''.join(cards) + '</div><section class="editorial"><h2>How these trails work</h2><p>These are editorial suggestions, not rankings or user reviews. Each pick has a reason to be here, a caveat, and a source for learning more. Start with one; there is no need to finish a whole collection.</p><p>Saving requires an account. You choose which titles to add, and can review existing matches before confirming.</p></section>')
 
 
 def detail_content(trail, back_path, back_label, api_path, published, essay=None):
@@ -169,7 +179,23 @@ def guide_content(slug, trail, guide):
 @router.get("/discover/monthly/{slug}")
 def monthly_detail(slug: str):
     edition = monthly_for(slug)
-    return page(edition["name"] + " | Discover", edition["intro"], "/discover/monthly/" + slug, detail_content(edition, "/discover", "Discover", "monthly/" + slug, edition["published"], {"title": edition["essay_title"], "body": edition["essay"]}))
+    canonical = "https://omnitrackr.xyz/discover/monthly/" + slug
+    return page(
+        edition["name"] + " | Discover",
+        edition["intro"],
+        "/discover/monthly/" + slug,
+        detail_content(edition, "/discover", "Discover", "monthly/" + slug, edition["published"], {"title": edition["essay_title"], "body": edition["essay"]}),
+        structured_data={
+            "@context": "https://schema.org", "@type": "Article",
+            "headline": edition["name"], "description": edition["intro"],
+            "datePublished": edition["published_date"],
+            "dateModified": edition["published_date"],
+            "mainEntityOfPage": canonical, "url": canonical,
+            "author": {"@type": "Organization", "name": "OmniTrackr", "url": "https://omnitrackr.xyz/about"},
+            "publisher": {"@type": "Organization", "name": "OmniTrackr", "url": "https://omnitrackr.xyz/"},
+            "inLanguage": "en-US",
+        },
+    )
 
 
 @router.get("/discover/{slug}")
