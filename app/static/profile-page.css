@@ -1,0 +1,29 @@
+/* Public profiles (/u/<username>). Builds on site.css and title-page.css. */
+.profile-hero { background: radial-gradient(900px 420px at 85% 0%, rgba(124, 58, 237, .28), transparent 65%), radial-gradient(600px 360px at 0% 100%, rgba(45, 212, 191, .08), transparent 60%), var(--site-bg); border-bottom: 1px solid var(--site-border); }
+.profile-hero__inner.site-wrap { padding-bottom: 40px; padding-top: 48px; }
+.profile-hero__inner { align-items: center; display: grid; gap: 32px; grid-template-columns: 120px minmax(0, 1fr); }
+.profile-hero__avatar { aspect-ratio: 1; background: linear-gradient(160deg, #3b2a7a, #141630); border: 2px solid var(--site-border-strong); border-radius: 50%; box-shadow: 0 20px 50px rgba(0, 0, 0, .45); height: 120px; object-fit: cover; width: 120px; }
+.profile-hero__avatar--empty { align-items: center; color: var(--site-violet-soft); display: flex; font: 800 3rem var(--site-display); justify-content: center; }
+.profile-hero h1 { font: 800 clamp(2rem, 4.2vw, 3.2rem)/1.05 var(--site-display); letter-spacing: -.035em; margin: 0 0 8px; overflow-wrap: anywhere; }
+.profile-hero__meta { color: var(--site-muted); margin: 0 0 12px; }
+.profile-hero__bio { color: var(--site-soft); font-size: 1.05rem; line-height: 1.6; margin: 0 0 10px; max-width: 680px; overflow-wrap: anywhere; }
+.profile-hero .site-eyebrow { margin-bottom: 8px; }
+.profile-owner-note { background: rgba(45, 212, 191, .08); border: 1px solid rgba(45, 212, 191, .3); border-radius: 12px; color: var(--site-teal-soft); font-size: .9rem; margin: 14px 0 0; padding: 10px 14px; }
+.profile-owner-note a { color: var(--site-text); }
+.profile-stats { display: grid; gap: 12px; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); }
+.profile-stat { background: var(--site-surface); border: 1px solid var(--site-border); border-radius: 16px; display: grid; gap: 2px; padding: 16px; }
+.profile-stat strong { font: 800 1.8rem/1.1 var(--site-display); }
+.profile-stat span { color: var(--site-text); font-weight: 600; }
+.profile-stat small { color: var(--site-muted); font-size: .8rem; }
+.profile-rating { color: var(--site-amber); font-weight: 700; }
+.profile-review__title { color: var(--site-text) !important; font-weight: 700; text-decoration: none; }
+.profile-review__title:hover { text-decoration: underline; }
+.profile-page .title-review header { flex-wrap: wrap; gap: 8px; justify-content: flex-start; }
+.profile-page .title-review__rating { margin-left: auto; }
+.profile-cta { align-items: center; display: flex; flex-wrap: wrap; gap: 20px; justify-content: space-between; padding: 24px 28px; }
+.profile-cta h2 { font: 700 1.25rem var(--site-display); margin: 0 0 6px; }
+.profile-cta p { color: var(--site-muted); margin: 0; }
+@media (max-width: 640px) {
+  .profile-hero__inner { gap: 18px; grid-template-columns: 1fr; justify-items: start; }
+  .profile-hero__avatar { height: 88px; width: 88px; }
+}

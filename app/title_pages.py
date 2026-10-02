@@ -86,6 +86,24 @@ def _active_ids(db: Session):
     return db.query(models.User.id).filter(models.User.is_active == True)
 
 
+# A member who made a category private ("not visible to anyone") never feeds that
+# category's public pages, counts, or "also track" suggestions.
+PRIVATE_FLAG = {"movie": "movies_private", "tv": "tv_shows_private", "anime": "anime_private",
+                "game": "video_games_private", "album": "music_private", "book": "books_private"}
+
+
+def _shareable_ids(db: Session, kind: str):
+    flag = getattr(models.User, PRIVATE_FLAG[kind])
+    return db.query(models.User.id).filter(models.User.is_active == True, flag == False)
+
+
+def _visible_rows(db: Session, kind: str, model):
+    """Library rows that may appear on public pages: shareable members, plus any review the member chose to publish."""
+    from sqlalchemy import or_
+    return db.query(model).filter(model.user_id.in_(_active_ids(db))).filter(or_(
+        model.user_id.in_(_shareable_ids(db, kind)), model.review_public == True))
+
+
 @dataclass
 class TitleGroup:
     kind: str
@@ -112,7 +130,7 @@ def find(db: Session, kind: str, slug: str) -> Optional[TitleGroup]:
         words = [w for w in base.split("-") if w]
         if not words:
             continue
-        query = db.query(model).filter(model.user_id.in_(_active_ids(db)))
+        query = _visible_rows(db, kind, model)
         longest = max(words, key=len)
         if len(longest) >= 2:
             query = query.filter(func.lower(model.title).contains(longest))
@@ -120,7 +138,7 @@ def find(db: Session, kind: str, slug: str) -> Optional[TitleGroup]:
                 if slugify(row.title or "") == base and item_year(kind, row) == year]
         if not rows and len(longest) >= 2:
             # Accented titles ("Pokémon") don't contain their ASCII slug words; scan without the filter.
-            rows = [row for row in db.query(model).filter(model.user_id.in_(_active_ids(db))).limit(20000).all()
+            rows = [row for row in _visible_rows(db, kind, model).limit(20000).all()
                     if slugify(row.title or "") == base and item_year(kind, row) == year]
         if rows:
             names = Counter((row.title or "").strip() for row in rows)
@@ -158,6 +176,10 @@ def _public_reviews(db: Session, kind: str, items: list) -> list[dict]:
             "url": f"/reviews/{item.id}?category={review_category}",
         })
     reviews.sort(key=lambda r: (not r["search_ready"], -len(r["review"])))
+    from .public_profiles import enabled_profile_paths
+    profiles = enabled_profile_paths(db, [review["user_id"] for review in reviews])
+    for review in reviews:
+        review["profile_url"] = profiles.get(review["user_id"])
     return reviews
 
 
@@ -185,7 +207,8 @@ def _collections_featuring(db: Session, kind: str, items: list) -> list[dict]:
 
 def _related(db: Session, kind: str, group: TitleGroup, limit: int = 8) -> list[dict]:
     """Titles most often tracked by the same members (any kind), excluding the editors account."""
-    member_ids = {item.user_id for item in group.items}
+    shareable = {uid for uid, in _shareable_ids(db, kind).all()}
+    member_ids = {item.user_id for item in group.items if item.user_id in shareable}
     editors = {uid for uid, in _editor_ids(db).all()}
     member_ids -= editors
     if len(member_ids) < 2:
@@ -195,7 +218,7 @@ def _related(db: Session, kind: str, group: TitleGroup, limit: int = 8) -> list[
     for other_kind, (model, _, _, label, _) in KINDS.items():
         normalized = func.lower(func.trim(model.title))
         rows = db.query(normalized, func.count(func.distinct(model.user_id)), func.min(model.id)).filter(
-            model.user_id.in_(member_ids)).group_by(normalized).having(func.count(func.distinct(model.user_id)) >= 2).all()
+            model.user_id.in_(member_ids), model.user_id.in_(_shareable_ids(db, other_kind))).group_by(normalized).having(func.count(func.distinct(model.user_id)) >= 2).all()
         for name, members, sample_id in rows:
             if not name or (other_kind == kind and name == group.normalized):
                 continue
@@ -275,7 +298,7 @@ def popular(db: Session, kind: str, limit: int = 24, min_members: int = 2) -> li
     normalized = func.lower(func.trim(model.title))
     members = func.count(func.distinct(model.user_id))
     rows = db.query(normalized, members, func.min(model.id)).filter(
-        model.user_id.in_(_active_ids(db)), ~model.user_id.in_(_editor_ids(db)),
+        model.user_id.in_(_shareable_ids(db, kind)), ~model.user_id.in_(_editor_ids(db)),
     ).group_by(normalized).having(members >= min_members).order_by(members.desc(), normalized).limit(limit).all()
     results = []
     for name, count, sample_id in rows:

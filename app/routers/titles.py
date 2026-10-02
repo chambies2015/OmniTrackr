@@ -20,7 +20,7 @@ from ..site_chrome import apply_site_chrome, message_page
 
 router = APIRouter(tags=["titles"])
 SITE_URL = os.getenv("SITE_URL", "https://omnitrackr.xyz").rstrip("/")
-CSS_VERSION = "20261001-titles-1"
+CSS_VERSION = "20261002-profiles-1"
 JS_VERSION = "20261001-titles-1"
 SCHEMA_TYPES = {"movie": "Movie", "tv": "TVSeries", "anime": "TVSeries", "game": "VideoGame", "album": "MusicAlbum", "book": "Book"}
 CREATOR_SCHEMA = {"movie": "director", "album": "byArtist", "book": "author"}
@@ -210,7 +210,9 @@ def _community_html(group, summary: dict) -> str:
     reviews = ""
     for review in summary["reviews"][:6]:
         rating = f'<span class="title-review__rating">{_e(review["rating"])}/10</span>' if review["rating"] is not None else ""
-        reviews += (f'<article class="title-review"><header><strong>{_e(review["username"])}</strong>{rating}</header>'
+        author = (f'<a class="title-review__author" href="{_e(review["profile_url"])}">{_e(review["username"])}</a>'
+                  if review.get("profile_url") else _e(review["username"]))
+        reviews += (f'<article class="title-review"><header><strong>{author}</strong>{rating}</header>'
                     f'<p>{_e(_excerpt(review["review"], 420))}</p>'
                     f'<a href="{_e(review["url"])}">Read the full review <span aria-hidden="true">→</span></a></article>')
     if not reviews:

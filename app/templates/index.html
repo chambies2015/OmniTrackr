@@ -54,7 +54,7 @@
   <link rel="stylesheet" href="/static/app-theme.css?v=20260924-friends-panel-2">
   <link rel="stylesheet" href="/static/library-theme.css?v=20260924-library-filters-1">
   <link rel="stylesheet" href="/static/dialog-theme.css?v=20260924-visual-4">
-  <link rel="stylesheet" href="/static/dashboard-2026.css?v=20261001-1">
+  <link rel="stylesheet" href="/static/dashboard-2026.css?v=20261002-profiles-1">
   <script src="./preauth.js"></script>
   <style>
     html.authenticated #landingPage{display:none}
@@ -2007,6 +2007,7 @@
   <script src="/static/progress.js?v=20260922-progress"></script>
   <script src="./app.js?v=20261001-dashboard-1"></script>
   <script src="/static/for-you.js?v=20260929-1"></script>
+  <script src="/static/public-profile.js?v=20261002-profiles-1"></script>
 
   <!-- Account Modal -->
   <div id="accountModal" class="modal-overlay" style="display: none;">
@@ -2188,6 +2189,41 @@
             <button type="submit" class="action-btn">Save Privacy Settings</button>
             <div id="privacyError" class="error-message"></div>
             <div id="privacySuccess" class="success-message"></div>
+          </form>
+        </div>
+
+        <!-- Public Profile Section -->
+        <div class="account-section" id="publicProfileSection">
+          <h3>Public profile</h3>
+          <p class="info-text">Off unless you switch it on. When it's on, anyone can see the parts you choose at your own
+            page. Private categories, your email, friends, notes and progress are never shown.</p>
+          <form id="publicProfileForm" novalidate>
+            <div class="privacy-toggle-item">
+              <label for="profileEnabled" class="toggle-label">
+                <span>Show my public profile</span>
+                <div class="toggle-container">
+                  <input type="checkbox" id="profileEnabled" class="toggle-switch">
+                  <span class="toggle-slider"></span>
+                </div>
+              </label>
+            </div>
+            <p class="profile-settings__link" id="profileLinkRow" hidden>Your page: <a id="profileLink" href="#" target="_blank" rel="noopener"></a>
+              <button type="button" class="profile-settings__copy" id="profileCopyLink">Copy link</button></p>
+            <div class="form-group">
+              <label for="profileBio">Short bio <span class="profile-settings__count" id="profileBioCount">0/280</span></label>
+              <textarea id="profileBio" maxlength="280" rows="3" placeholder="What do you love to watch, play, read or listen to?"></textarea>
+            </div>
+            <fieldset class="profile-settings__parts">
+              <legend>What your profile shows</legend>
+              <label class="profile-settings__check"><input type="checkbox" id="profileShowStats"> Library counts</label>
+              <label class="profile-settings__check"><input type="checkbox" id="profileShowFavorites"> Favorites (titles you rated 8 or higher)</label>
+              <label class="profile-settings__check"><input type="checkbox" id="profileShowReviews"> Public reviews</label>
+              <label class="profile-settings__check"><input type="checkbox" id="profileShowCollections"> Public collections</label>
+            </fieldset>
+            <p class="info-text profile-settings__private" id="profilePrivateNote" hidden></p>
+            <button type="submit" class="action-btn" id="profileSave">Save public profile</button>
+            <div id="profileError" class="error-message" role="alert"></div>
+            <div id="profileSuccess" class="success-message" role="status"></div>
           </form>
         </div>
 

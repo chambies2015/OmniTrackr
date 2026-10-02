@@ -60,6 +60,7 @@ from .routers import (
     site_stats,
     for_you,
     titles,
+    profiles,
 )
 
 # Create database tables
@@ -479,6 +480,20 @@ app.include_router(reviews.router)
 app.include_router(site_stats.router)
 app.include_router(for_you.router)
 app.include_router(titles.router)
+
+rate_limited_profile_card = limiter.limit("30/minute")(profiles.profile_card)
+rate_limited_profile_card_by_id = limiter.limit("30/minute")(profiles.profile_card_by_id)
+rate_limited_profile_settings = limiter.limit("20/minute")(profiles.update_profile_settings)
+for route in profiles.router.routes:
+    if not hasattr(route, "path") or not hasattr(route, "methods"):
+        continue
+    if route.path == "/u/{handle}/card.png":
+        bind_rate_limited_endpoint(route, rate_limited_profile_card)
+    elif route.path == "/u/id/{user_id:int}/card.png":
+        bind_rate_limited_endpoint(route, rate_limited_profile_card_by_id)
+    elif route.path == "/api/profile/settings" and "PUT" in route.methods:
+        bind_rate_limited_endpoint(route, rate_limited_profile_settings)
+app.include_router(profiles.router)
 
 
 # Root endpoint
