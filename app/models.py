@@ -675,3 +675,24 @@ class TitleMetadata(Base):
     status = Column(String(16), nullable=False, default="ok")
     data = Column(Text, nullable=True)
     fetched_at = Column(DateTime, nullable=False, default=datetime.utcnow)
+
+
+class PublicProfile(Base):
+    """A member's opt-in public profile at /u/<username>.
+
+    A row exists once the member has opened the settings; nothing is public
+    unless ``enabled`` is true. Each section can be hidden separately, and the
+    per-category privacy flags on the user always win.
+    """
+    __tablename__ = "public_profiles"
+
+    id = Column(Integer, primary_key=True, index=True)
+    user_id = Column(Integer, ForeignKey("users.id", ondelete="CASCADE"), nullable=False, unique=True, index=True)
+    enabled = Column(Boolean, nullable=False, default=False, index=True)
+    bio = Column(String(280), nullable=True)
+    show_stats = Column(Boolean, nullable=False, default=True)
+    show_favorites = Column(Boolean, nullable=False, default=True)
+    show_reviews = Column(Boolean, nullable=False, default=True)
+    show_collections = Column(Boolean, nullable=False, default=True)
+    created_at = Column(DateTime, nullable=False, default=datetime.utcnow)
+    updated_at = Column(DateTime, nullable=False, default=datetime.utcnow, onupdate=datetime.utcnow)

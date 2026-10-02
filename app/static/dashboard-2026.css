@@ -165,3 +165,17 @@ body.app-shell :is(.card, .modal-content) :is(input[type="text"], input[type="nu
   border-color: var(--accent-solid); box-shadow: 0 0 0 3px color-mix(in srgb, var(--accent-solid) 25%, transparent);
 }
 body.app-shell .collections-hero__eyebrow { color: var(--teal); }
+
+/* ---------- Account → Public profile ---------- */
+body.app-shell #publicProfileForm textarea { box-sizing: border-box; font: inherit; min-height: 84px; resize: vertical; width: 100%; }
+.profile-settings__link { align-items: center; display: flex; flex-wrap: wrap; gap: 8px; margin: 4px 0 14px; overflow-wrap: anywhere; }
+.profile-settings__link a { color: #c4b5fd; font-weight: 600; }
+.profile-settings__copy { background: transparent; border: 1px solid rgba(196, 181, 253, .45); border-radius: 999px; color: inherit; cursor: pointer; font: inherit; font-size: .8rem; padding: 4px 12px; }
+.profile-settings__copy:hover { border-color: #c4b5fd; }
+.profile-settings__count { float: right; font-size: .8rem; font-weight: 400; opacity: .7; }
+.profile-settings__count.is-over { color: #fca5a5; opacity: 1; }
+.profile-settings__parts { border: 1px solid rgba(255, 255, 255, .12); border-radius: 12px; display: grid; gap: 8px; margin: 0 0 12px; padding: 12px 14px; }
+.profile-settings__parts legend { font-size: .85rem; font-weight: 600; padding: 0 6px; }
+.profile-settings__check { align-items: center; cursor: pointer; display: flex; gap: 10px; }
+.profile-settings__check input { accent-color: #8b5cf6; height: 16px; width: 16px; }
+.profile-settings__parts:disabled { opacity: .55; }

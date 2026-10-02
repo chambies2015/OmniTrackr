@@ -104,3 +104,4 @@
   .title-reviews { grid-template-columns: 1fr; }
 }
 @media (prefers-reduced-motion: reduce) { .title-gallery__item img { transition: none; } }
+.title-review header a.title-review__author { color: var(--site-text); font-weight: 700; margin: 0; text-decoration: underline; text-decoration-color: rgba(196, 181, 253, .6); text-underline-offset: 3px; }

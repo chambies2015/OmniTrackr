@@ -38,13 +38,24 @@ def admin_env(monkeypatch):
 def test_admin_list_reads_both_variables_case_insensitively(admin_env):
     admin_env.setenv("collection_moderator_usernames", "Dan ")
     admin_env.setenv("ADMIN_USERNAMES", "owner,  second")
-    assert admin_access.admin_usernames() == {"dan", "owner", "second"}
+    assert admin_access.admin_usernames() == {"Dan", "owner", "second"}
 
     class User:
-        username = "DAN"
-    assert admin_access.is_site_admin(User())
+        username = "Dan"
+    assert admin_access.is_site_admin(User()) and admin_access.is_moderator(User())
     User.username = "someone"
     assert not admin_access.is_site_admin(User())
+
+
+@pytest.mark.parametrize("lookalike", ["DAN", "dan", "dAn", "Dan ", " Dan"])
+def test_capitalised_copies_of_the_owner_name_are_not_admins(admin_env, lookalike):
+    """Usernames are unique only as typed, so admin matching must be exact."""
+    admin_env.setenv("ADMIN_USERNAMES", "Dan")
+
+    class User:
+        username = lookalike
+    assert not admin_access.is_site_admin(User())
+    assert not admin_access.is_moderator(User())
 
 
 def test_no_admins_by_default(admin_env):

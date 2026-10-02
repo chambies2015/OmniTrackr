@@ -201,7 +201,7 @@ async def wikidata_facts(client, category: str, qid: str) -> dict:
         if isinstance(video, str) and TRAILER_ID.match(video):
             result["trailer"] = video
             break
-    imdb = next((v for v in map(_value, _claims(entity, "P345")) if isinstance(v, str) and v.startswith("tt")), None)
+    imdb = next((v for v in map(_value, _claims(entity, "P345")) if isinstance(v, str) and re.fullmatch(r"tt\d{5,10}", v)), None)
     if imdb:
         result["imdb_url"] = f"https://www.imdb.com/title/{imdb}/"
     website = next((v for v in map(_value, _claims(entity, "P856")) if isinstance(v, str)), None)

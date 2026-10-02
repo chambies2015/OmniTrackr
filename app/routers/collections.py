@@ -17,7 +17,7 @@ from sqlalchemy import case, func
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session, selectinload
 
-from ..admin_access import moderator_usernames
+from ..admin_access import is_moderator, moderator_usernames
 from .. import models, schemas
 from ..collection_quality import evaluate_public_collection
 from ..site_chrome import apply_site_chrome, message_page
@@ -71,7 +71,7 @@ def _moderator_usernames() -> set[str]:
 
 
 def _require_moderator(current_user: models.User) -> None:
-    if current_user.username.lower() not in _moderator_usernames():
+    if not is_moderator(current_user):
         raise HTTPException(status_code=403, detail="Collection moderator access required")
 
 

@@ -334,7 +334,7 @@ def _review_card_html(review: dict) -> str:
         <p class="review-preview">{_escape(preview)}</p>
         {expanded_text}
         <div class="review-meta">
-          <span class="review-author">By {_escape(review.get("username"))}</span>
+          <span class="review-author">By {_author_html(review)}</span>
           {rating_html}
         </div>
         <div class="review-card-actions">
@@ -479,6 +479,26 @@ def _not_found_review_html() -> str:
     )
 
 
+def _author_html(review: dict) -> str:
+    """The reviewer's name, linked to their public profile when they have switched one on."""
+    name = _escape(review.get("username"))
+    url = review.get("profile_url")
+    if isinstance(url, str) and url.startswith("/u/"):
+        return f'<a class="review-author-link" href="{_escape(url)}">{name}</a>'
+    return name
+
+
+def _attach_profile_urls(db: Session, reviews: list) -> None:
+    try:
+        from ..public_profiles import enabled_profile_paths
+        paths = enabled_profile_paths(db, [review.get("user_id") for review in reviews])
+    except Exception:
+        return
+    for review in reviews:
+        if review.get("user_id") in paths:
+            review["profile_url"] = paths[review["user_id"]]
+
+
 def _title_page_link(review: dict) -> str:
     from ..title_pages import path_for_review_category
     path = path_for_review_category(review.get("category"), review.get("title") or "", review.get("year"), review.get("release_date"))
@@ -584,8 +604,8 @@ def _review_detail_html(review: dict, more_reviews: Optional[list] = None) -> st
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@700;800&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="/styles.css?v=20260917-review-safety-v1">
-  <link rel="stylesheet" href="/static/reviews.css?v=20260928-site-1">
-  <link rel="stylesheet" href="/static/review-detail.css?v=20261001-titles-1">
+  <link rel="stylesheet" href="/static/reviews.css?v=20261002-profiles-1">
+  <link rel="stylesheet" href="/static/review-detail.css?v=20261002-profiles-1">
   <script type="application/ld+json">{_safe_json_ld(json_ld)}</script>
   <script type="application/ld+json">{_safe_json_ld(breadcrumb_json_ld)}</script>
   <script src="/static/review_report.js?v=20260917-review-safety-v1" defer></script>
@@ -602,7 +622,7 @@ def _review_detail_html(review: dict, more_reviews: Optional[list] = None) -> st
             <nav class="review-crumbs" aria-label="Breadcrumb"><a href="/reviews">Public reviews</a><span aria-hidden="true">/</span><a href="/reviews?category={_escape(category)}">{_escape(CATEGORY_LABELS.get(category, category))}</a></nav>
             <h1>{_escape(review.get("title"))}</h1>
             {_title_page_link(review)}
-            <div class="review-hero__meta">{rating_html}<span class="review-byline">Reviewed by <strong>{_escape(review.get("username"))}</strong></span></div>
+            <div class="review-hero__meta">{rating_html}<span class="review-byline">Reviewed by <strong>{_author_html(review)}</strong></span></div>
             <div class="review-meta-info">{details_html}</div>
           </div>
         </div>
@@ -645,6 +665,7 @@ def reviews_index(
         page = page.replace(chip, chip[:-1] + ' aria-current="page">', 1)
     feed = _public_review_feed(db, category, q, 20, 0)
     reviews = feed["reviews"]
+    _attach_profile_urls(db, reviews)
     if reviews:
         cards = "\n".join(_review_card_html(review) for review in reviews)
     elif q:
@@ -687,6 +708,7 @@ async def review_detail(
                 more = [item for item in feed if item["id"] != review["id"]][:4]
             except Exception:
                 more = []  # Related reviews are optional; never block the page.
+            _attach_profile_urls(db, [review])
             page = apply_site_chrome(_review_detail_html(review, more))
             return strict_html_response(_inject_ad_loader_for_review_detail(page, request))
         except HTTPException:

@@ -266,6 +266,13 @@ async def get_sitemap(request: Request = None, db: Session = Depends(get_db)):
             sitemap_parts.append(f"<url><loc>{base_url}{path}</loc><changefreq>weekly</changefreq><priority>0.65</priority></url>")
     except Exception:
         pass
+    # Public profiles join only when the member opted in and the page has original content.
+    try:
+        from .. import public_profiles
+        for path in public_profiles.sitemap_paths(db):
+            sitemap_parts.append(f"<url><loc>{base_url}{path}</loc><changefreq>weekly</changefreq><priority>0.4</priority></url>")
+    except Exception:
+        pass
     sitemap_parts.append("</urlset>")
     sitemap = "\n".join(sitemap_parts)
     

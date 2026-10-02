@@ -70,6 +70,16 @@ def owned_titles(db: Session, user_id: int, categories: Iterable[str] = LIBRARY)
 
 # ---------------------------------------------------------------- starter picks
 
+PRIVATE_FLAG = {"movies": "movies_private", "tv-shows": "tv_shows_private", "anime": "anime_private",
+                "video-games": "video_games_private", "music": "music_private", "books": "books_private"}
+
+
+def _shareable_ids(db: Session, category: str):
+    """Active members who haven't made this category private (private shelves never feed suggestions)."""
+    flag = getattr(models.User, PRIVATE_FLAG[category])
+    return db.query(models.User.id).filter(models.User.is_active == True, flag == False)
+
+
 def popular_titles(db: Session, category: str, exclude_user_id: int | None = None, limit: int = 8) -> list[dict]:
     """Titles saved by at least two members, with metadata from the most complete entry."""
     model, fields = LIBRARY[category]
@@ -77,7 +87,8 @@ def popular_titles(db: Session, category: str, exclude_user_id: int | None = Non
     members = func.count(func.distinct(model.user_id))
     # The editors account curates collections; it isn't a member, so it never makes a title "popular".
     editors = db.query(models.User.id).filter(models.User.username == EDITOR_USERNAME)
-    query = (db.query(normalized, members).filter(~model.user_id.in_(editors))
+    shareable = _shareable_ids(db, category)
+    query = (db.query(normalized, members).filter(~model.user_id.in_(editors), model.user_id.in_(shareable))
              .group_by(normalized).having(members >= POPULAR_MIN_MEMBERS))
     rows = query.order_by(members.desc(), normalized).limit(limit * 3).all()
     if not rows:
@@ -88,7 +99,7 @@ def popular_titles(db: Session, category: str, exclude_user_id: int | None = Non
     counts = {name: int(count) for name, count in rows if name and name not in owned}
     if not counts:
         return []
-    candidates = db.query(model).filter(normalized.in_(list(counts))).all()
+    candidates = db.query(model).filter(normalized.in_(list(counts)), model.user_id.in_(_shareable_ids(db, category))).all()
     best: dict[str, object] = {}
     image_field = IMAGE_FIELD[category]
     for entry in candidates:
@@ -127,7 +138,9 @@ def popular_entry_payload(db: Session, category: str, title: str) -> Optional[di
         return None
     model, fields = LIBRARY[category]
     normalized = _normalized_column(model)
-    entries = db.query(model).filter(normalized == title.strip().lower()).all()
+    entries = db.query(model).filter(normalized == title.strip().lower(), model.user_id.in_(_shareable_ids(db, category))).all()
+    if not entries:
+        return None
     image_field = IMAGE_FIELD[category]
     entries.sort(key=lambda entry: (bool(_safe_image(getattr(entry, image_field, None))),
                                     sum(bool(getattr(entry, f, None)) for f in fields)), reverse=True)
