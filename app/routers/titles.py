@@ -9,6 +9,7 @@ from html import escape
 from typing import Optional
 
 from fastapi import APIRouter, Depends, HTTPException, Request, Response
+from pydantic import BaseModel, Field
 from sqlalchemy import func
 from sqlalchemy.orm import Session
 
@@ -26,6 +27,7 @@ SCHEMA_TYPES = {"movie": "Movie", "tv": "TVSeries", "anime": "TVSeries", "game":
 CREATOR_SCHEMA = {"movie": "director", "album": "byArtist", "book": "author"}
 CREATOR_LABEL = {"movie": "Director", "album": "Artist", "book": "Author"}
 KIND_PLURALS = {"movie": "Movies", "tv": "TV shows", "anime": "Anime", "game": "Games", "album": "Albums", "book": "Books"}
+GUEST_LIST_MAX = 30
 VERBS = {"movie": "watched", "tv": "watched", "anime": "watched", "game": "played", "album": "listened to", "book": "read"}
 
 
@@ -291,7 +293,11 @@ def render(group, summary: dict, metadata: Optional[dict], indexable: bool, sign
                                          summary.get("creator")]))
     track = ('<button type="button" class="site-btn site-btn--primary" data-title-add '
              f'data-title-kind="{_e(group.kind)}" data-title-slug="{_e(group.path.rsplit("/", 1)[1])}">Add to my library</button>'
-             if signed_in else '<a class="site-btn site-btn--primary" href="/#landing-auth">Track it free</a>')
+             if signed_in else
+             ('<button type="button" class="site-btn site-btn--primary" data-guest-save aria-pressed="false" '
+              f'data-guest-kind="{_e(group.kind)}" data-guest-slug="{_e(group.path.rsplit("/", 1)[1])}" '
+              f'data-guest-title="{_e(group.title)}">Save to my list</button>'
+              '<a class="site-btn site-btn--ghost" href="/#signup">Create free account</a>'))
     reviews_link = (f'<a class="site-btn site-btn--ghost" href="#community-title">Read {len(summary["reviews"])} member review'
                     f'{"s" if len(summary["reviews"]) != 1 else ""}</a>' if summary["reviews"] else "")
     body = "".join([
@@ -321,6 +327,7 @@ def render(group, summary: dict, metadata: Optional[dict], indexable: bool, sign
   <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@700;800&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="/static/title-page.css?v={CSS_VERSION}">
   <script src="/static/title-page.js?v={JS_VERSION}" defer></script>
+  {'' if signed_in else '<script src="/static/guest-list.js?v=20261003-guest-2" defer></script>'}
   {ad_loader}
   {_json_ld(group, summary, metadata, canonical, image)}
 </head>
@@ -375,18 +382,16 @@ async def title_page(kind: str, slug: str, request: Request, db: Session = Depen
     return response
 
 
-@router.post("/api/titles/{kind}/{slug}/add")
-def add_title(kind: str, slug: str, response: Response, user=Depends(get_current_user), db: Session = Depends(get_db)):
-    """Add this title to the member's library with public details only (never anyone's rating or notes)."""
-    response.headers["Cache-Control"] = "private, no-store"
-    group = title_pages.find(db, kind, slug)
-    if group is None:
-        raise HTTPException(404, "Title not found")
-    model, _, library_category, _, _ = title_pages.KINDS[kind]
+def add_group_to_library(db: Session, user, group) -> tuple[str, object]:
+    """Add a title to the member's library with public details only (never anyone's rating or notes).
+
+    Returns ("existing" | "created", record). Does not commit.
+    """
+    model, _, library_category, _, _ = title_pages.KINDS[group.kind]
     normalized = func.lower(func.trim(model.title))
     existing = db.query(model).filter(model.user_id == user.id, normalized == group.normalized).first()
     if existing:
-        return {"state": "existing", "title": existing.title, "category": library_category}
+        return "existing", existing
     from ..for_you import LIBRARY
     fields = LIBRARY[library_category][1]
     source = max(group.items, key=lambda item: sum(bool(getattr(item, f, None)) for f in fields))
@@ -395,12 +400,64 @@ def add_title(kind: str, slug: str, response: Response, user=Depends(get_current
     for image_field in ("poster_url", "cover_art_url", "rawg_link"):
         if image_field in payload and not title_pages._safe_image(payload[image_field]):
             payload[image_field] = None
-    if kind == "movie" and payload.get("director") is None:
+    if group.kind == "movie" and payload.get("director") is None:
         payload["director"] = ""
     record = model(user_id=user.id, **payload)
     db.add(record)
+    db.flush()
+    return "created", record
+
+
+@router.post("/api/titles/{kind}/{slug}/add")
+def add_title(kind: str, slug: str, response: Response, user=Depends(get_current_user), db: Session = Depends(get_db)):
+    """Add this title to the member's library with public details only (never anyone's rating or notes)."""
+    response.headers["Cache-Control"] = "private, no-store"
+    group = title_pages.find(db, kind, slug)
+    if group is None:
+        raise HTTPException(404, "Title not found")
+    state, record = add_group_to_library(db, user, group)
     db.commit()
-    return {"state": "created", "title": record.title, "category": library_category}
+    return {"state": state, "title": record.title, "category": title_pages.KINDS[kind][2]}
+
+
+class GuestListItem(BaseModel):
+    kind: str = Field(..., max_length=10)
+    slug: str = Field(..., max_length=130)
+
+
+class GuestListImport(BaseModel):
+    items: list[GuestListItem] = Field(default_factory=list, max_length=GUEST_LIST_MAX)
+
+
+@router.post("/api/guest-list/import")
+def import_guest_list(
+    payload: GuestListImport,
+    request: Request,
+    response: Response,
+    user=Depends(get_current_user),
+    db: Session = Depends(get_db),
+):
+    """Move titles a visitor saved before signing up (kept in their browser) into their new library."""
+    response.headers["Cache-Control"] = "private, no-store"
+    added, existing, missing = [], [], 0
+    seen = set()
+    for item in payload.items:
+        key = (item.kind, item.slug)
+        if key in seen:
+            continue
+        seen.add(key)
+        group = title_pages.find(db, item.kind, item.slug) if item.kind in title_pages.KINDS else None
+        if group is None:
+            missing += 1
+            continue
+        state, record = add_group_to_library(db, user, group)
+        entry = {"title": record.title, "category": title_pages.KINDS[item.kind][2]}
+        (added if state == "created" else existing).append(entry)
+    db.commit()
+    if added:
+        from .. import funnel
+        funnel.record("guest_list_imported", request)
+    return {"added": added, "existing": existing, "missing": missing}
 
 
 @router.get("/titles", include_in_schema=False)

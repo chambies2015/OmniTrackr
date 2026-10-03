@@ -179,3 +179,6 @@ body.app-shell #publicProfileForm textarea { box-sizing: border-box; font: inher
 .profile-settings__check { align-items: center; cursor: pointer; display: flex; gap: 10px; }
 .profile-settings__check input { accent-color: #8b5cf6; height: 16px; width: 16px; }
 .profile-settings__parts:disabled { opacity: .55; }
+
+/* Guest list moved into a new library */
+.guest-import-toast { background: #14112a; border: 1px solid rgba(45, 212, 191, .45); border-radius: 14px; bottom: 24px; box-shadow: 0 20px 50px rgba(0, 0, 0, .5); color: #f5f3ff; font-weight: 600; left: 50%; max-width: min(92vw, 520px); padding: 14px 18px; position: fixed; transform: translateX(-50%); z-index: 1000; }

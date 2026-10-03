@@ -810,7 +810,8 @@ class TestSecurityMiddleware:
             else:
                 assert expected_hrefs.issubset(hrefs)
             if path != "/demo":
-                assert re.search(r'class="public-site-nav__cta[^"]*" href="/#landing-auth"', response.text)
+                # "Start tracking" opens the sign-up form; "Log in" keeps #landing-auth.
+                assert re.search(r'class="public-site-nav__cta[^"]*" href="/#signup"', response.text)
 
     def test_public_pages_do_not_render_mojibake_text(self, client):
         """Public pages should not show broken UTF-8 artifacts to visitors or reviewers."""

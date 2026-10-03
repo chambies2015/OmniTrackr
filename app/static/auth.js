@@ -225,6 +225,56 @@ async function authenticatedFetch(url, options = {}) {
 // Authentication API Calls
 // ============================================================================
 
+// Turn any API error body into one sentence a person can act on.
+function authErrorMessage(body, fallback) {
+    const detail = body && body.detail;
+    if (typeof detail === 'string' && detail.trim()) return detail;
+    if (Array.isArray(detail) && detail.length) {
+        const first = detail[0] || {};
+        const field = Array.isArray(first.loc) ? String(first.loc[first.loc.length - 1] || '') : '';
+        const labels = { email: 'Email', username: 'Username', password: 'Password' };
+        const label = labels[field] || 'This field';
+        if (first.type === 'string_too_short' || /at least/i.test(first.msg || '')) {
+            const min = first.ctx && first.ctx.min_length;
+            return `${label} is too short${min ? ` (at least ${min} characters)` : ''}.`;
+        }
+        if (first.type === 'string_too_long' || /at most/i.test(first.msg || '')) {
+            const max = first.ctx && first.ctx.max_length;
+            return `${label} is too long${max ? ` (at most ${max} characters)` : ''}.`;
+        }
+        if (first.type === 'missing') return `${label} is required.`;
+        return `${label}: ${String(first.msg || 'please check this field').replace(/^Value error, /, '')}`;
+    }
+    return fallback;
+}
+
+// Anonymous sign-up funnel counters (see /site-stats). Never blocks anything.
+const reportedFunnelEvents = new Set();
+function reportFunnelEvent(event) {
+    if (reportedFunnelEvents.has(event)) return;
+    reportedFunnelEvents.add(event);
+    try {
+        // A beacon never delays the page or navigation.
+        if (typeof navigator !== 'undefined' && typeof navigator.sendBeacon === 'function' && typeof Blob === 'function') {
+            navigator.sendBeacon('/api/funnel', new Blob([JSON.stringify({ event })], { type: 'application/json' }));
+        }
+    } catch (error) { /* analytics only */ }
+}
+window.reportFunnelEvent = reportFunnelEvent;
+
+const USERNAME_PATTERN = /^[A-Za-z0-9][A-Za-z0-9_.-]{2,29}$/;
+
+// Mirrors app/signup_rules.py so most mistakes are caught before the round trip.
+function signupProblem(email, username, password, confirmPassword) {
+    if (!email || !email.includes('@')) return 'Enter the email address you want to use.';
+    const trimmed = (username || '').trim();
+    if (trimmed.length < 3 || trimmed.length > 30) return 'Usernames need 3–30 characters.';
+    if (!USERNAME_PATTERN.test(trimmed)) return 'Usernames can use letters, numbers, dots, dashes or underscores, and must start with a letter or number.';
+    if ((password || '').length < 8) return 'Use at least 8 characters for your password.';
+    if (password !== confirmPassword) return "The two passwords don't match.";
+    return null;
+}
+
 async function register(email, username, password) {
     const response = await fetch(`${AUTH_API_BASE}/auth/register`, {
         method: 'POST',
@@ -233,19 +283,27 @@ async function register(email, username, password) {
     });
 
     if (!response.ok) {
-        const error = await response.json();
-        throw new Error(error.detail || 'Registration failed');
+        const error = await response.json().catch(() => ({}));
+        throw new Error(authErrorMessage(error, 'Something went wrong creating your account. Please try again.'));
     }
 
-    const user = await response.json();
-
-    // Show success message about email verification
-    displayAuthSuccess('Registration successful! Please check your email to verify your account. You can login once verified.');
-    
-    // Clear form
+    await response.json();
     document.getElementById('registerFormElement').reset();
-    
-    // Don't auto-redirect - let user read the message and click back to login manually
+    showVerificationSent(email);
+}
+
+// After sign-up: switch to the log-in form with the email filled in and the resend button ready.
+function showVerificationSent(email) {
+    showLoginForm(false);
+    document.getElementById('authTitle').textContent = 'Check your inbox';
+    const loginField = document.getElementById('loginUsername');
+    if (loginField) loginField.value = email;
+    let saved = 0;
+    try { saved = (JSON.parse(localStorage.getItem('omnitrackr_guest_list') || '[]') || []).length; } catch (error) { saved = 0; }
+    const keep = saved ? ` Your ${saved} saved title${saved === 1 ? '' : 's'} will be added to your library when you log in.` : '';
+    displayAuthSuccess(`Almost there! We sent a link to ${email}. Open it to activate your account (it works for 48 hours), then log in here.${keep} No email after a few minutes? Check spam, or resend it below.`);
+    const resend = document.getElementById('resendVerificationContainer');
+    if (resend) resend.style.display = 'block';
 }
 
 async function login(username, password) {
@@ -426,14 +484,25 @@ function showLoginForm(scroll = true) {
     if (reactivateContainer) {
         reactivateContainer.style.display = 'none';
     }
-    if (scroll && document.getElementById('landingPage').style.display === 'block') {
+    if (scroll && landingVisible()) {
         setTimeout(() => {
             document.querySelector('.landing-auth').scrollIntoView({ behavior: 'smooth', block: 'center' });
         }, 100);
     }
 }
 
+function landingVisible() {
+    const landing = document.getElementById('landingPage');
+    if (!landing) return false;
+    if (typeof getComputedStyle !== 'function') return landing.style.display === 'block';
+    return getComputedStyle(landing).display !== 'none';
+}
+
 function showRegisterForm(scroll = true) {
+    reportFunnelEvent('signup_form_opened');
+    try {
+        if ((JSON.parse(localStorage.getItem('omnitrackr_guest_list') || '[]') || []).length) reportFunnelEvent('guest_list_signup');
+    } catch (error) { /* no saved list */ }
     document.getElementById('loginForm').style.display = 'none';
     document.getElementById('registerForm').style.display = 'block';
     document.getElementById('forgotPasswordForm').style.display = 'none';
@@ -441,7 +510,7 @@ function showRegisterForm(scroll = true) {
     document.getElementById('authTitle').textContent = 'Create your free account';
     document.getElementById('authError').textContent = '';
     document.getElementById('authSuccess').style.display = 'none';
-    if (scroll && document.getElementById('landingPage').style.display === 'block') {
+    if (scroll && landingVisible()) {
         setTimeout(() => {
             document.querySelector('.landing-auth').scrollIntoView({ behavior: 'smooth', block: 'center' });
         }, 100);
@@ -456,7 +525,7 @@ function showForgotPasswordForm(scroll = true) {
     document.getElementById('authTitle').textContent = 'Reset Password';
     document.getElementById('authError').textContent = '';
     document.getElementById('authSuccess').style.display = 'none';
-    if (scroll && document.getElementById('landingPage').style.display === 'block') {
+    if (scroll && landingVisible()) {
         setTimeout(() => {
             document.querySelector('.landing-auth').scrollIntoView({ behavior: 'smooth', block: 'center' });
         }, 100);
@@ -474,7 +543,7 @@ function showResetPasswordForm(resetToken = null, scroll = true) {
     if (resetToken) {
         document.getElementById('resetPasswordFormElement').dataset.resetToken = resetToken;
     }
-    if (scroll && document.getElementById('landingPage').style.display === 'block') {
+    if (scroll && landingVisible()) {
         setTimeout(() => {
             document.querySelector('.landing-auth').scrollIntoView({ behavior: 'smooth', block: 'center' });
         }, 100);
@@ -654,25 +723,27 @@ function setupAuthHandlers() {
     // Register form submission
     document.getElementById('registerFormElement').addEventListener('submit', async (e) => {
         e.preventDefault();
-        const email = document.getElementById('registerEmail').value;
-        const username = document.getElementById('registerUsername').value;
+        const email = document.getElementById('registerEmail').value.trim();
+        const username = document.getElementById('registerUsername').value.trim();
         const password = document.getElementById('registerPassword').value;
         const confirmPassword = document.getElementById('registerConfirmPassword').value;
 
-        if (password !== confirmPassword) {
-            displayAuthError('Passwords do not match');
+        const problem = signupProblem(email, username, password, confirmPassword);
+        if (problem) {
+            reportFunnelEvent('signup_rejected_invalid');
+            displayAuthError(problem);
             return;
         }
 
-        if (password.length < 6) {
-            displayAuthError('Password must be at least 6 characters');
-            return;
-        }
-
+        const button = e.target.querySelector('button[type="submit"]');
+        const label = button ? button.textContent : '';
+        if (button) { button.disabled = true; button.textContent = 'Creating your account…'; }
         try {
             await register(email, username, password);
         } catch (error) {
             displayAuthError(error.message);
+        } finally {
+            if (button) { button.disabled = false; button.textContent = label; }
         }
     });
 
@@ -855,6 +926,10 @@ function initAuth() {
     // private UI; stale localStorage must not reveal it on the public shell.
     if (document.documentElement.dataset.publicShell === 'true') {
         showAuthModal();
+        if (window.location.hash === '#signup') {
+            showRegisterForm();
+            return;
+        }
         if (urlParams.getAll('start').length === 1 && urlParams.get('start') === 'demo'
             && getDemoStartIntent() && !getDiscoverAuthReturn()) showRegisterForm();
         return;
@@ -950,3 +1025,11 @@ if (document.readyState === 'loading') {
 } else {
     initAuth();
 }
+
+// "Start tracking" links elsewhere point at /#signup; follow them on the homepage too.
+if (typeof window.addEventListener === 'function') window.addEventListener('hashchange', () => {
+    if (window.location.hash === '#signup' && document.documentElement.dataset.publicShell === 'true'
+        && document.getElementById('registerForm')) {
+        showRegisterForm();
+    }
+});

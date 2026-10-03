@@ -115,11 +115,29 @@ app = FastAPI(
     lifespan=lifespan,
 )
 
+def client_address(request: Request) -> str:
+    """The visitor's address for rate limits.
+
+    On Render every request reaches the app from an internal load balancer, so
+    limits keyed on the socket address were shared by all visitors (for example
+    five sign-ups a minute for the whole site). Render sits behind Cloudflare,
+    which sets True-Client-IP / CF-Connecting-IP to the real visitor and
+    overwrites any value a client sends. Those headers are trusted only when
+    running on Render (RENDER=true, set by Render itself).
+    """
+    if os.getenv("RENDER", "").lower() == "true":
+        for header in ("true-client-ip", "cf-connecting-ip"):
+            value = (request.headers.get(header) or "").strip()
+            if value:
+                return value[:64]
+    return get_remote_address(request)
+
+
 # Initialize rate limiter
 if os.getenv("TESTING", "").lower() == "true":
     limiter = Limiter(key_func=lambda: "test", enabled=False)
 else:
-    limiter = Limiter(key_func=get_remote_address)
+    limiter = Limiter(key_func=client_address)
 app.state.limiter = limiter
 app.add_exception_handler(RateLimitExceeded, _rate_limit_exceeded_handler)
 
@@ -258,6 +276,13 @@ def public_root_html(html: str, request: Request | None = None) -> str:
             except Exception:
                 strip = ""  # The homepage never depends on third-party release data.
             page = page.replace("<!--RELEASE_RADAR_STRIP-->", strip, 1)
+        if "<!--GUEST_PICKS-->" in page:
+            try:
+                from . import guest_picks
+                picks_html = guest_picks.homepage_section()
+            except Exception:
+                picks_html = ""  # The homepage never depends on this section.
+            page = page.replace("<!--GUEST_PICKS-->", picks_html, 1)
         return apply_site_chrome(page, login_action=True)
 
     landing_marker = "  <!-- Landing Page -->"
@@ -477,8 +502,16 @@ for route in reviews.router.routes:
     ):
         bind_rate_limited_endpoint(route, rate_limited_review_report)
 app.include_router(reviews.router)
+rate_limited_funnel_event = limiter.limit("30/minute")(site_stats.record_funnel_event)
+for route in site_stats.router.routes:
+    if getattr(route, "path", None) == "/api/funnel":
+        bind_rate_limited_endpoint(route, rate_limited_funnel_event)
 app.include_router(site_stats.router)
 app.include_router(for_you.router)
+rate_limited_guest_import = limiter.limit("10/minute")(titles.import_guest_list)
+for route in titles.router.routes:
+    if getattr(route, "path", None) == "/api/guest-list/import":
+        bind_rate_limited_endpoint(route, rate_limited_guest_import)
 app.include_router(titles.router)
 
 rate_limited_profile_card = limiter.limit("30/minute")(profiles.profile_card)

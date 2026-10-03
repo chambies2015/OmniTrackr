@@ -1051,7 +1051,7 @@ async def explore_collections(
         gallery_content = (
             '<div class="collection-gallery__empty"><h2>The gallery is opening soon</h2>'
             '<p>The first qualifying member collections will appear here automatically. '
-            '<a href="/#landing-auth">Create your library</a> and start shaping one.</p></div>'
+            '<a href="/#signup">Create your library</a> and start shaping one.</p></div>'
         )
     values = {
         "COLLECTIONS": gallery_content,

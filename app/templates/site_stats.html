@@ -10,8 +10,8 @@
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@700;800&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="/static/site.css?v=20260928-site-1">
-  <link rel="stylesheet" href="/static/site-stats.css?v=20260929-2">
-  <script src="/static/site-stats.js?v=20261001-titles-1" defer></script>
+  <link rel="stylesheet" href="/static/site-stats.css?v=20261003-funnel-1">
+  <script src="/static/site-stats.js?v=20261003-funnel-1" defer></script>
 </head>
 <body class="site stats-page">
   <header class="site-header">
@@ -86,6 +86,15 @@
           <details class="stats-table-toggle"><summary>Show as table</summary><div id="journalTable"></div></details>
         </section>
       </div>
+
+      <section class="stats-card stats-card--wide">
+        <div class="stats-card__head"><div><h2>Sign-up funnel</h2><p>How visitors move through sign-up in this range. Anonymous daily counts, starting with this update.</p></div></div>
+        <div class="stats-funnel" id="signupFunnel"></div>
+        <div class="stats-grid stats-grid--inner">
+          <div><h3 class="stats-subhead">Where sign-ups stall</h3><dl class="stats-list" id="signupIssues"></dl></div>
+          <div><h3 class="stats-subhead">Guest lists &amp; return features</h3><dl class="stats-list" id="guestList"></dl></div>
+        </div>
+      </section>
 
       <section class="stats-card stats-card--wide">
         <div class="stats-card__head"><div><h2>Member journey</h2><p>How many accounts reach each step. The percentage is of the step before.</p></div></div>

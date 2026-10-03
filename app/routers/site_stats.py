@@ -11,10 +11,11 @@ from datetime import date, datetime, timedelta, timezone
 from pathlib import Path
 
 from fastapi import APIRouter, Depends, HTTPException, Query, Request, Response
+from pydantic import BaseModel, Field
 from sqlalchemy import func
 from sqlalchemy.orm import Session
 
-from .. import editorial_collections, models, release_radar
+from .. import editorial_collections, funnel, models, release_radar
 from ..admin_access import is_site_admin
 from ..csp import strict_html_response
 from ..dependencies import get_current_user, get_db
@@ -151,6 +152,23 @@ def _library_additions(db: Session, days: int, today: date) -> list[dict]:
     ]
 
 
+def _funnel(db: Session, days: int, today: date) -> dict:
+    """Sign-up funnel counters for the range (see app/funnel.py)."""
+    table = models.SiteTrafficDaily
+    start = today - timedelta(days=days - 1)
+    counts = dict(db.query(table.key, func.sum(table.count)).filter(
+        table.kind == "funnel", table.day >= start).group_by(table.key).all())
+    return funnel.summary({key: int(value or 0) for key, value in counts.items()})
+
+
+def _retention(db: Session) -> dict:
+    """Opt-in counts for features that bring members back."""
+    return {
+        "weekly_email_subscribers": int(db.query(func.count(models.EmailDigestSubscription.id)).scalar() or 0),
+        "public_profiles": int(db.query(func.count(models.PublicProfile.id)).filter(models.PublicProfile.enabled == True).scalar() or 0),
+    }
+
+
 def _title_details(db: Session) -> dict:
     """How many title pages have their public facts cached (filled in by a background job)."""
     counts = dict(db.query(models.TitleMetadata.status, func.count(models.TitleMetadata.id))
@@ -227,6 +245,8 @@ async def site_stats_overview(
         "signups": _signups(db, days, today),
         "journal_activity": _library_additions(db, days, today),
         "traffic": _traffic(db, days, today),
+        "funnel": _funnel(db, days, today),
+        "retention": _retention(db),
         "popular_titles": _popular_titles(db),
         "insights": insights,
         "system": {**_system(), "title_details": _title_details(db)},
@@ -250,3 +270,15 @@ async def publish_editor_collections(
     except ValueError as error:
         db.rollback()
         raise HTTPException(status_code=409, detail=str(error))
+
+
+class FunnelEvent(BaseModel):
+    event: str = Field(..., max_length=40)
+
+
+@router.post("/api/funnel", status_code=204, include_in_schema=False)
+async def record_funnel_event(payload: FunnelEvent, request: Request):
+    """Browser-side sign-up moments (whitelisted names only; nothing about the visitor is stored)."""
+    if payload.event in funnel.CLIENT_EVENTS:
+        funnel.record(payload.event, request)
+    return Response(status_code=204)

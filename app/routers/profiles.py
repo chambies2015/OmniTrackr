@@ -170,7 +170,7 @@ def render(view, *, signed_in: bool, is_owner: bool) -> str:
     cta = ("" if signed_in else
            '<section class="profile-cta site-card"><div><h2>Track your own movies, shows, games, music and books</h2>'
            '<p>OmniTrackr is free. Build your library, rate what you finish and share a profile like this one.</p></div>'
-           '<a class="site-btn site-btn--primary" href="/#landing-auth">Start tracking free</a></section>')
+           '<a class="site-btn site-btn--primary" href="/#signup">Start tracking free</a></section>')
     chips = "".join(f'<span class="site-chip">{_e(bit)}</span>' for bit in summary_bits)
     page = f"""<!DOCTYPE html>
 <html lang="en">

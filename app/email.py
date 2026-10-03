@@ -3,6 +3,7 @@ Email utilities for OmniTrackr.
 Handles sending verification and password reset emails.
 """
 import os
+from html import escape as _escape_html
 from typing import List
 from fastapi_mail import FastMail, MessageSchema, ConnectionConfig, MessageType
 from itsdangerous import URLSafeTimedSerializer
@@ -36,6 +37,8 @@ serializer = URLSafeTimedSerializer(SECRET_KEY)
 
 # Base URL for the application
 APP_URL = os.getenv("APP_URL", "http://localhost:8000")
+# New-account verification links stay valid for 48 hours (people often open them the next day).
+VERIFICATION_MAX_AGE = 48 * 3600
 
 
 def generate_verification_token(email: str) -> str:
@@ -137,7 +140,7 @@ async def send_verification_email(email: str, username: str, token: str):
                 <h1 style="color: white; margin: 0;">Welcome to OmniTrackr!</h1>
             </div>
             <div style="padding: 30px; background-color: #f9f9f9;">
-                <h2>Hi {username},</h2>
+                <h2>Hi {_escape_html(username)},</h2>
                 <p>Thank you for registering with OmniTrackr! To complete your registration, please verify your email address by clicking the button below:</p>
                 <div style="text-align: center; margin: 30px 0;">
                     <a href="{verification_url}" 
@@ -147,7 +150,7 @@ async def send_verification_email(email: str, username: str, token: str):
                 </div>
                 <p>Or copy and paste this link into your browser:</p>
                 <p style="word-break: break-all; color: #667eea;">{verification_url}</p>
-                <p><strong>This link will expire in 1 hour.</strong></p>
+                <p><strong>This link will expire in 48 hours.</strong></p>
                 <hr style="border: none; border-top: 1px solid #ddd; margin: 30px 0;">
                 <p style="color: #666; font-size: 12px;">
                     If you didn't create an account with OmniTrackr, you can safely ignore this email.
@@ -212,7 +215,7 @@ async def send_password_reset_email(email: str, username: str, token: str):
                 <h1 style="color: white; margin: 0;">Password Reset Request</h1>
             </div>
             <div style="padding: 30px; background-color: #f9f9f9;">
-                <h2>Hi {username},</h2>
+                <h2>Hi {_escape_html(username)},</h2>
                 <p>We received a request to reset your OmniTrackr password. Click the button below to create a new password:</p>
                 <div style="text-align: center; margin: 30px 0;">
                     <a href="{reset_url}" 
@@ -287,7 +290,7 @@ async def send_email_change_verification_email(new_email: str, username: str, to
                 <h1 style="color: white; margin: 0;">Email Change Request</h1>
             </div>
             <div style="padding: 30px; background-color: #f9f9f9;">
-                <h2>Hi {username},</h2>
+                <h2>Hi {_escape_html(username)},</h2>
                 <p>You requested to change your OmniTrackr email address to this address. Please verify your new email by clicking the button below:</p>
                 <div style="text-align: center; margin: 30px 0;">
                     <a href="{verification_url}" 
