@@ -169,6 +169,15 @@ def _retention(db: Session) -> dict:
     }
 
 
+def _announcement_status(db: Session) -> dict | None:
+    try:
+        from .. import announcements
+        return announcements.status(db)
+    except Exception:
+        db.rollback()
+        return None
+
+
 def _title_details(db: Session) -> dict:
     """How many title pages have their public facts cached (filled in by a background job)."""
     counts = dict(db.query(models.TitleMetadata.status, func.count(models.TitleMetadata.id))
@@ -251,6 +260,7 @@ async def site_stats_overview(
         "insights": insights,
         "system": {**_system(), "title_details": _title_details(db)},
         "editor_collections": editorial_collections.status(db),
+        "announcement": _announcement_status(db),
     }
 
 
@@ -282,3 +292,49 @@ async def record_funnel_event(payload: FunnelEvent, request: Request):
     if payload.event in funnel.CLIENT_EVENTS:
         funnel.record(payload.event, request)
     return Response(status_code=204)
+
+
+# ---------------------------------------------------------------- "What's new" email
+
+class AnnouncementAction(BaseModel):
+    action: str = Field(..., pattern="^(start|pause|test)$")
+
+
+@router.get("/site-stats/announcement-preview", include_in_schema=False)
+async def announcement_preview(request: Request, current_user: models.User = Depends(get_current_user),
+                               db: Session = Depends(get_db)):
+    """The update email exactly as the owner would receive it (nothing is sent)."""
+    from fastapi.responses import HTMLResponse
+    from .. import announcements
+    from ..for_you import radar_pool
+    _require_admin(current_user)
+    try:
+        pool = radar_pool(None, getattr(request.app.state, "external_api_client", None))
+    except Exception:
+        pool = None
+    subject, html, _text, _url = announcements.email_for(db, current_user, pool)
+    banner = (f'<div style="font:14px Arial,sans-serif;background:#fef3c7;color:#78350f;padding:10px 16px">'
+              f'Preview only. Subject: <strong>{subject.replace("<", "&lt;")}</strong></div>')
+    response = HTMLResponse(html.replace(
+        '<div style="max-width:560px', banner + '<div style="max-width:560px', 1))
+    response.headers["Content-Security-Policy"] = "default-src 'none'; img-src https: data:; style-src 'unsafe-inline'; frame-ancestors 'none'"
+    _no_store(response)
+    return response
+
+
+@router.post("/api/site-stats/announcement")
+async def announcement_action(payload: AnnouncementAction, request: Request, response: Response,
+                              current_user: models.User = Depends(get_current_user), db: Session = Depends(get_db)):
+    from .. import announcements
+    _require_admin(current_user)
+    _no_store(response)
+    if payload.action == "test":
+        if not announcements.mail_configured():
+            raise HTTPException(status_code=409, detail="Email isn't configured on this server.")
+        try:
+            await announcements.send_test(db, current_user, getattr(request.app.state, "external_api_client", None))
+        except Exception as error:
+            raise HTTPException(status_code=502, detail=f"The test email couldn't be sent: {error}")
+        return {**announcements.status(db), "message": f"Test sent to {current_user.email}."}
+    announcements.set_status(db, "sending" if payload.action == "start" else "paused")
+    return announcements.status(db)

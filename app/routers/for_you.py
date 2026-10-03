@@ -2,6 +2,7 @@
 from __future__ import annotations
 
 from typing import Literal
+from html import escape
 
 from fastapi import APIRouter, Depends, HTTPException, Query, Request, Response
 from pydantic import BaseModel, Field
@@ -130,3 +131,45 @@ def unsubscribe(token: str = Query("", max_length=64), db: Session = Depends(get
     digest.unsubscribe_token(db, token)
     return _unsubscribe_page("Unsubscribed", "You're unsubscribed",
                              "You won't get the weekly email any more. You can turn it back on from your library whenever you like.")
+
+
+# ---------------------------------------------------------------- product update emails
+
+def _updates_page(title: str, heading: str, message: str, token: str = "", confirm: bool = False):
+    page = message_page(title, heading, message, eyebrow="Product updates",
+                        actions=(("Go to OmniTrackr", "/"),))
+    if confirm:
+        form = (f'<form method="post" action="/email/updates/unsubscribe?token={escape(token, quote=True)}" class="site-message__actions">'
+                '<button class="site-btn site-btn--primary" type="submit">Unsubscribe</button></form>')
+        page = page.replace('<div class="site-message__actions">', form + '<div class="site-message__actions">', 1)
+    response = strict_html_response(page)
+    response.headers["Cache-Control"] = "no-store"
+    response.headers["X-Robots-Tag"] = "noindex, nofollow"
+    return response
+
+
+@router.get("/email/updates/unsubscribe", include_in_schema=False)
+def updates_unsubscribe_confirm(token: str = Query("", max_length=200), db: Session = Depends(get_db)):
+    from .. import announcements
+    user_id = announcements.user_id_from_token(token)
+    if user_id is None:
+        return _updates_page("Unsubscribe", "This link isn't valid",
+                             "Open the unsubscribe link from the email again, or contact us from the Contact page.")
+    if announcements.opted_out(db, user_id):
+        return _updates_page("Unsubscribed", "You're already unsubscribed",
+                             "You won't get product update emails. Account emails like password resets still arrive.")
+    return _updates_page("Unsubscribe", "Stop product update emails?",
+                         "Press the button to stop occasional OmniTrackr product updates. Account emails like password "
+                         "resets still arrive, and nothing else about your account changes.",
+                         token=token, confirm=True)
+
+
+@router.post("/email/updates/unsubscribe", include_in_schema=False)
+def updates_unsubscribe(token: str = Query("", max_length=200), db: Session = Depends(get_db)):
+    """Also the one-click target of the List-Unsubscribe header (RFC 8058)."""
+    from .. import announcements
+    user_id = announcements.user_id_from_token(token)
+    if user_id is not None and db.get(models.User, user_id) is not None:
+        announcements.opt_out(db, user_id)
+    return _updates_page("Unsubscribed", "You're unsubscribed",
+                         "You won't get product update emails any more. Account emails like password resets still arrive.")

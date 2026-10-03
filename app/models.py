@@ -696,3 +696,35 @@ class PublicProfile(Base):
     show_collections = Column(Boolean, nullable=False, default=True)
     created_at = Column(DateTime, nullable=False, default=datetime.utcnow)
     updated_at = Column(DateTime, nullable=False, default=datetime.utcnow, onupdate=datetime.utcnow)
+
+
+class EmailCampaign(Base):
+    """A one-time product update email (e.g. "What's new"), started by the site owner."""
+    __tablename__ = "email_campaigns"
+
+    id = Column(Integer, primary_key=True, index=True)
+    key = Column(String(80), nullable=False, unique=True, index=True)
+    status = Column(String(16), nullable=False, default="draft")  # draft, sending, paused, done
+    started_at = Column(DateTime, nullable=True)
+    finished_at = Column(DateTime, nullable=True)
+
+
+class EmailCampaignSend(Base):
+    """Who has been sent (or skipped for) a campaign, so nobody gets it twice."""
+    __tablename__ = "email_campaign_sends"
+    __table_args__ = (UniqueConstraint("campaign_key", "user_id", name="uq_email_campaign_send"),)
+
+    id = Column(Integer, primary_key=True, index=True)
+    campaign_key = Column(String(80), nullable=False, index=True)
+    user_id = Column(Integer, ForeignKey("users.id", ondelete="CASCADE"), nullable=False, index=True)
+    status = Column(String(16), nullable=False, default="sent")  # sent, failed, test
+    sent_at = Column(DateTime, nullable=False, default=datetime.utcnow, index=True)
+
+
+class EmailOptOut(Base):
+    """A member who asked not to receive product update emails (account emails still go out)."""
+    __tablename__ = "email_opt_outs"
+
+    id = Column(Integer, primary_key=True, index=True)
+    user_id = Column(Integer, ForeignKey("users.id", ondelete="CASCADE"), nullable=False, unique=True, index=True)
+    created_at = Column(DateTime, nullable=False, default=datetime.utcnow)
