@@ -136,7 +136,7 @@ def render_card(item: dict, count: int, return_path: str, *, compact: bool = Fal
     key = escape(item["key"], quote=True)
     title = escape(item["title"])
     art = (
-        f'<img src="{escape(item["image"], quote=True)}" alt="" loading="lazy" decoding="async" referrerpolicy="no-referrer">'
+        f'<img src="{escape(item["image"], quote=True)}" alt="" width="200" height="300" loading="lazy" decoding="async" referrerpolicy="no-referrer">'
         if item.get("image") else f'<span class="radar-card__initial" aria-hidden="true">{escape(item["title"][:1].upper())}</span>'
     )
     when = (
@@ -593,7 +593,7 @@ def home_strip_html(client=None, today: Optional[date] = None) -> str:
     labels = {"movies": "Movie", "tv": "TV", "anime": "Anime", "games": "Game"}
     cards = []
     for item in items:
-        art = (f'<img src="{escape(item["image"], quote=True)}" alt="" loading="lazy" decoding="async" referrerpolicy="no-referrer">'
+        art = (f'<img src="{escape(item["image"], quote=True)}" alt="" width="200" height="300" loading="lazy" decoding="async" referrerpolicy="no-referrer">'
                if item.get("image") else f'<span class="lp-radar-card__initial" aria-hidden="true">{escape(item["title"][:1].upper())}</span>')
         cards.append(
             f'<li><a class="lp-radar-card" href="/release-radar/{item["category"]}#item-{escape(item["key"], quote=True)}">'

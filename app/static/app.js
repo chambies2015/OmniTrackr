@@ -6273,24 +6273,6 @@ window.denyFriendRequest = async function (requestId) {
   }
 }
 
-window.cancelFriendRequest = async function (requestId) {
-  try {
-    const response = await authenticatedFetch(`${API_BASE}/friends/requests/${requestId}`, {
-      method: 'DELETE'
-    });
-
-    if (response.ok) {
-      loadNotifications();
-      updateNotificationCount();
-    } else {
-      const error = await response.json();
-      alert(error.detail || 'Failed to cancel friend request');
-    }
-  } catch (error) {
-    alert('Failed to cancel friend request. Please try again.');
-  }
-}
-
 window.unfriendUser = async function (friendId) {
   if (!confirm('Are you sure you want to unfriend this user?')) {
     return;
