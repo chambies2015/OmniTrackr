@@ -61,6 +61,7 @@ from .routers import (
     for_you,
     titles,
     profiles,
+    pwa,
 )
 
 # Create database tables
@@ -90,14 +91,18 @@ async def lifespan(application: FastAPI):
 
     digest_task = None
     title_task = None
+    announcement_task = None
     if digest_emails.enabled_for_process():
         digest_task = asyncio.create_task(digest_emails.digest_loop(application))
+    from . import announcements
+    if announcements.enabled_for_process():
+        announcement_task = asyncio.create_task(announcements.announcement_loop(application))
     if os.getenv("TESTING", "").lower() != "true":
         title_task = asyncio.create_task(titles.warm_loop(application))
     try:
         yield
     finally:
-        for task in (digest_task, title_task):
+        for task in (digest_task, title_task, announcement_task):
             if task is not None:
                 task.cancel()
         await application.state.external_api_client.aclose()
@@ -527,6 +532,7 @@ for route in profiles.router.routes:
     elif route.path == "/api/profile/settings" and "PUT" in route.methods:
         bind_rate_limited_endpoint(route, rate_limited_profile_settings)
 app.include_router(profiles.router)
+app.include_router(pwa.router)
 
 
 # Root endpoint

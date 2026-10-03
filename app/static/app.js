@@ -8869,6 +8869,31 @@ function makeReturnDeckItem(item, label, detail, primary = false) {
   return card;
 }
 
+// "Out now": Release Radar titles tied to the member's library that came out while they were away.
+function renderReturnDeckReleased(items) {
+  const box = document.getElementById('returnDeckReleased');
+  if (!box) return;
+  box.replaceChildren();
+  const safe = (Array.isArray(items) ? items : []).filter(item => item && typeof item.url === 'string' && item.url.startsWith('/release-radar'));
+  box.hidden = safe.length === 0;
+  if (!safe.length) return;
+  const heading = document.createElement('p');
+  heading.className = 'return-deck__released-title';
+  heading.textContent = 'Out now from your library';
+  const list = document.createElement('ul');
+  safe.slice(0, 3).forEach(item => {
+    const row = document.createElement('li');
+    const link = document.createElement('a');
+    link.href = item.url;
+    link.textContent = item.title;
+    const meta = document.createElement('span');
+    meta.textContent = [item.label, item.reason].filter(Boolean).join(' · ');
+    row.append(link, meta);
+    list.appendChild(row);
+  });
+  box.append(heading, list);
+}
+
 function renderReturnDeck(payload, context) {
   const deck = document.getElementById('returnDeck');
   const actions = document.getElementById('returnDeckActions');
@@ -8888,6 +8913,7 @@ function renderReturnDeck(payload, context) {
     actions.appendChild(makeReturnDeckItem(payload.reflection, 'Add context', prompts));
   }
 
+  renderReturnDeckReleased(payload.released_while_away);
   const days = Number(payload.days_away) || Number(context.days_away);
   document.getElementById('returnDeckSummary').textContent =
     `It has been ${days} or more days since your previous visit. Here are a few useful ways back in—nothing new to manage.`;

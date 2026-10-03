@@ -153,3 +153,5 @@
 /* Sign-up funnel card */
 .stats-grid--inner { margin-top: 18px; }
 .stats-subhead { color: var(--site-soft); font-size: .9rem; font-weight: 600; margin: 0 0 6px; }
+.stats-announce__actions { display: flex; flex-wrap: wrap; gap: 8px; justify-content: flex-end; }
+.stats-announce__actions [hidden] { display: none !important; }

@@ -547,6 +547,67 @@
     }
   }
 
+  const ANNOUNCEMENT_STATES = {
+    draft: 'Not started',
+    sending: 'Sending (about 30 a day)',
+    paused: 'Paused',
+    done: 'Finished',
+  };
+
+  function renderAnnouncement(data) {
+    const info = data.announcement;
+    const card = $('announcementCard');
+    if (!card) return;
+    card.hidden = !info;
+    if (!info) return;
+    const rows = [
+      ['Status', ANNOUNCEMENT_STATES[info.status] || info.status],
+      ['Sent', number(info.sent)],
+      ['Still to send', number(info.remaining)],
+      ['Failed', number(info.failed)],
+      ['Unsubscribed from updates', number(info.opted_out)],
+      ['Daily limit', `${number(info.daily_limit)} (keeps room for sign-up and reset emails on the free Mailgun plan)`],
+    ];
+    if (info.status !== 'done' && info.days_to_finish) rows.push(['Time to reach everyone', `about ${info.days_to_finish} day${info.days_to_finish === 1 ? '' : 's'}`]);
+    if (!info.mail_configured) rows.push(['Email', 'NOT configured on this server: nothing can be sent']);
+    const list = $('announcementList');
+    list.replaceChildren();
+    rows.forEach(([label, value]) => {
+      const row = el('div');
+      row.append(el('dt', '', label), el('dd', '', String(value)));
+      list.appendChild(row);
+    });
+    $('announcementStart').hidden = info.status === 'sending' || info.status === 'done';
+    $('announcementStart').textContent = info.status === 'paused' ? 'Resume sending' : 'Start sending';
+    $('announcementPause').hidden = info.status !== 'sending';
+  }
+
+  async function announcementAction(action) {
+    const status = $('announcementStatus');
+    if (action === 'start' && !window.confirm('Start sending the “What’s new” email to verified members? About 30 go out per day, and you can pause any time.')) return;
+    const buttons = document.querySelectorAll('[data-announcement]');
+    buttons.forEach(button => { button.disabled = true; });
+    status.textContent = action === 'test' ? 'Sending a test to your email…' : 'Saving…';
+    try {
+      const response = await fetch('/api/site-stats/announcement', {
+        method: 'POST', credentials: 'same-origin',
+        headers: { ...authHeaders(), 'Content-Type': 'application/json' },
+        body: JSON.stringify({ action }),
+      });
+      const result = await response.json().catch(() => ({}));
+      if (!response.ok) throw new Error(result.detail || `HTTP ${response.status}`);
+      if (state.data) {
+        state.data.announcement = result;
+        renderAnnouncement(state.data);
+      }
+      status.textContent = result.message || (action === 'start' ? 'Started. The first batch goes out within the hour.' : 'Paused. Nothing more will be sent until you resume.');
+    } catch (error) {
+      status.textContent = `Couldn't do that: ${error.message}`;
+    } finally {
+      buttons.forEach(button => { button.disabled = false; });
+    }
+  }
+
   function render(data) {
     state.data = data;
     $('statsUpdated').textContent = `Updated ${dateTime(data.generated_at)} · last ${data.days} days · signed in as ${data.viewer}`;
@@ -562,6 +623,7 @@
     renderHealth(data);
     renderMembers(data);
     renderEditor(data);
+    renderAnnouncement(data);
   }
 
   // ---------------------------------------------------------------- report
@@ -675,6 +737,9 @@
     $('statsRefresh').addEventListener('click', load);
     $('statsCopy').addEventListener('click', copyReport);
     $('editorPublish')?.addEventListener('click', publishEditor);
+    document.querySelectorAll('[data-announcement]').forEach(button => {
+      button.addEventListener('click', () => announcementAction(button.dataset.announcement));
+    });
     let resizeTimer = null;
     window.addEventListener('resize', () => {
       clearTimeout(resizeTimer);

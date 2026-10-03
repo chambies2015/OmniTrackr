@@ -10,8 +10,8 @@
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@700;800&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="/static/site.css?v=20260928-site-1">
-  <link rel="stylesheet" href="/static/site-stats.css?v=20261003-funnel-1">
-  <script src="/static/site-stats.js?v=20261003-funnel-1" defer></script>
+  <link rel="stylesheet" href="/static/site-stats.css?v=20261003-announce-1">
+  <script src="/static/site-stats.js?v=20261003-announce-1" defer></script>
 </head>
 <body class="site stats-page">
   <header class="site-header">
@@ -131,6 +131,20 @@
         </div>
         <ul class="stats-editor-list" id="editorList"></ul>
         <p class="stats-editor-status" id="editorStatus" role="status" aria-live="polite"></p>
+      </section>
+
+      <section class="stats-card stats-card--wide" id="announcementCard" hidden>
+        <div class="stats-card__head">
+          <div><h2>“What’s new” email</h2><p id="announcementSummary">A one-time product update to verified members. Nothing is sent until you press Start.</p></div>
+          <div class="stats-announce__actions">
+            <a class="site-btn site-btn--ghost site-btn--sm" href="/site-stats/announcement-preview" target="_blank" rel="noopener">Preview</a>
+            <button type="button" class="site-btn site-btn--ghost site-btn--sm" data-announcement="test">Send a test to me</button>
+            <button type="button" class="site-btn site-btn--primary site-btn--sm" data-announcement="start" id="announcementStart">Start sending</button>
+            <button type="button" class="site-btn site-btn--ghost site-btn--sm" data-announcement="pause" id="announcementPause" hidden>Pause</button>
+          </div>
+        </div>
+        <dl class="stats-list" id="announcementList"></dl>
+        <p class="stats-editor-status" id="announcementStatus" role="status" aria-live="polite"></p>
       </section>
 
       <section class="stats-card stats-card--wide">
