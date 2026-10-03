@@ -58,7 +58,7 @@
   <link rel="stylesheet" href="/static/app-theme.css?v=20260924-friends-panel-2">
   <link rel="stylesheet" href="/static/library-theme.css?v=20260924-library-filters-1">
   <link rel="stylesheet" href="/static/dialog-theme.css?v=20260924-visual-4">
-  <link rel="stylesheet" href="/static/dashboard-2026.css?v=20261003-pwa-1">
+  <link rel="stylesheet" href="/static/dashboard-2026.css?v=20261004-firstrun-1">
   <script src="./preauth.js"></script>
   <style>
     html.authenticated #landingPage{display:none}
@@ -388,6 +388,24 @@
 
     <p id="libraryNavigationStatus" role="status" aria-live="polite" aria-atomic="true" hidden></p>
 
+    <section id="starterPicks" class="for-you-card starter-picks" aria-labelledby="starterPicksTitle" hidden>
+      <div class="for-you-card__head">
+        <div>
+          <p class="for-you-card__eyebrow">Quick start</p>
+          <h2 id="starterPicksTitle">Add a few favorites in one click</h2>
+          <p id="starterPicksSummary" class="for-you-card__summary">Popular with OmniTrackr members and coming out soon. Tap Add on anything you've seen or want to see.</p>
+        </div>
+        <div class="for-you-card__side">
+          <p id="starterPicksProgress" class="starter-picks__progress" aria-live="polite"></p>
+          <button type="button" class="for-you-card__dismiss" data-for-you-action="dismiss-starter" aria-label="Hide quick start suggestions">Not now</button>
+        </div>
+      </div>
+      <div id="starterPicksPopular" class="for-you-grid" aria-label="Popular with members"></div>
+      <h3 id="starterPicksUpcomingTitle" class="for-you-card__subhead" hidden>Coming out soon</h3>
+      <div id="starterPicksUpcoming" class="for-you-grid" aria-label="Coming out soon"></div>
+      <p id="starterPicksStatus" class="for-you-card__status" role="status" aria-live="polite"></p>
+    </section>
+
     <section id="libraryLaunchpad" class="library-launchpad" aria-labelledby="libraryLaunchpadTitle" hidden>
       <div class="library-launchpad__copy">
         <p class="library-launchpad__eyebrow">Your library, your pace</p>
@@ -406,24 +424,6 @@
         <button type="button" id="libraryLaunchpadInsights" class="action-btn library-launchpad__secondary" data-action="launchpad-open-insights" hidden>See insights</button>
         <button type="button" class="library-launchpad__dismiss" data-action="launchpad-dismiss" aria-label="Dismiss library launchpad">Not now</button>
       </div>
-    </section>
-
-    <section id="starterPicks" class="for-you-card starter-picks" aria-labelledby="starterPicksTitle" hidden>
-      <div class="for-you-card__head">
-        <div>
-          <p class="for-you-card__eyebrow">Quick start</p>
-          <h2 id="starterPicksTitle">Add a few favorites in one click</h2>
-          <p id="starterPicksSummary" class="for-you-card__summary">Popular with OmniTrackr members and coming out soon. Tap Add on anything you've seen or want to see.</p>
-        </div>
-        <div class="for-you-card__side">
-          <p id="starterPicksProgress" class="starter-picks__progress" aria-live="polite"></p>
-          <button type="button" class="for-you-card__dismiss" data-for-you-action="dismiss-starter" aria-label="Hide quick start suggestions">Not now</button>
-        </div>
-      </div>
-      <div id="starterPicksPopular" class="for-you-grid" aria-label="Popular with members"></div>
-      <h3 id="starterPicksUpcomingTitle" class="for-you-card__subhead" hidden>Coming out soon</h3>
-      <div id="starterPicksUpcoming" class="for-you-grid" aria-label="Coming out soon"></div>
-      <p id="starterPicksStatus" class="for-you-card__status" role="status" aria-live="polite"></p>
     </section>
 
     <section id="comingUp" class="for-you-card coming-up" aria-labelledby="comingUpTitle" hidden>
@@ -1507,7 +1507,7 @@
   <script src="./auth.js?v=20261003-signup-1"></script>
   <script src="/static/import-studio.js?v=20260924-import-studio-final"></script>
   <script src="/static/progress.js?v=20260922-progress"></script>
-  <script src="./app.js?v=20261003-return-1"></script>
+  <script src="./app.js?v=20261004-cleanup-1"></script>
   <script src="/static/for-you.js?v=20260929-1"></script>
   <script src="/static/public-profile.js?v=20261002-profiles-1"></script>
   <script src="/static/guest-list.js?v=20261003-guest-2"></script>

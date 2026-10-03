@@ -201,7 +201,7 @@ body.lp #landingPage { background: none; display: block; min-height: 0; padding:
 .showcase-private > span { font-size: .5rem; }
 .showcase-tabs { align-items: center; border-bottom: 1px solid rgba(255,255,255,.07); display: flex; gap: 8px; overflow: hidden; padding: 11px 14px; }
 .showcase-tabs span { border-radius: 999px; color: #94a3b8; flex: 0 0 auto; font-size: .72rem; font-weight: 700; padding: 6px 10px; }
-.showcase-tabs .active { background: var(--lp-violet); color: #fff; }
+.showcase-tabs .active { background: #7c3aed; color: #fff; }
 .showcase-content { display: grid; grid-template-columns: minmax(0, 1fr) 150px; }
 .showcase-main { min-width: 0; padding: 18px; }
 .showcase-section-label { align-items: center; color: #f8fafc; display: flex; font-size: .8rem; justify-content: space-between; margin-bottom: 12px; }

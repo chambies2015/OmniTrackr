@@ -38,7 +38,7 @@ def section_html(items: list[dict]) -> str:
     tiles = []
     for item in items:
         slug = item["url"].rsplit("/", 1)[1]
-        art = (f'<img src="{escape(item["image"], quote=True)}" alt="" loading="lazy" decoding="async" referrerpolicy="no-referrer">'
+        art = (f'<img src="{escape(item["image"], quote=True)}" alt="" width="200" height="300" loading="lazy" decoding="async" referrerpolicy="no-referrer">'
                if item.get("image") else f'<span class="lp-pick__initial" aria-hidden="true">{escape(item["title"][:1].upper())}</span>')
         year = f' · {item["year"]}' if item.get("year") else ""
         tiles.append(
