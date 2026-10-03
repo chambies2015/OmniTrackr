@@ -14,7 +14,7 @@
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@700;800&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="/styles.css">
-  <link rel="stylesheet" href="/static/public-landing.css?v=20260928-site-1">
+  <link rel="stylesheet" href="/static/public-landing.css?v=20261003-signup-1">
   <meta property="og:type" content="website">
   <meta property="og:url" content="https://omnitrackr.xyz/">
   <meta property="og:title" content="OmniTrackr — One private home for your media life">
@@ -86,6 +86,8 @@
         </div>
       </div>
     </section>
+
+<!--GUEST_PICKS-->
 
 <!--RELEASE_RADAR_STRIP-->
 
@@ -220,6 +222,7 @@
     </section>
 
     <section class="landing-auth lp-auth" id="landing-auth" aria-labelledby="authTitle">
+      <span id="signup" class="lp-anchor" aria-hidden="true"></span>
       <div class="lp-wrap lp-auth__grid">
         <div class="lp-auth__pitch">
           <p class="lp-eyebrow">Start your library</p>
@@ -236,10 +239,10 @@
           <p class="auth-context">Create a free account, or sign in to continue where you left off.</p>
           <div id="authError" role="alert"></div>
         <div id="authSuccess" role="status"></div>
-        <div id="loginForm" class="auth-form"><form id="loginFormElement"><label class="sr-only" for="loginUsername">Username or email</label><input type="text" id="loginUsername" placeholder="Username or email" required><label class="sr-only" for="loginPassword">Password</label><input type="password" id="loginPassword" placeholder="Password" required><button type="submit">Log in</button></form><div id="resendVerificationContainer"><p>Didn't receive the verification email?</p><button type="button" id="resendVerificationBtn" class="action-btn auth-full-button">Resend verification email</button></div><div class="auth-toggle">New here? <a id="showRegister">Create an account</a><br><a id="showForgotPassword" class="auth-secondary-link">Forgot password?</a></div></div>
-        <div id="registerForm" class="auth-form"><form id="registerFormElement"><label class="sr-only" for="registerEmail">Email</label><input type="email" id="registerEmail" placeholder="Email" required><label class="sr-only" for="registerUsername">Username</label><input type="text" id="registerUsername" placeholder="Username" required><label class="sr-only" for="registerPassword">Password</label><input type="password" id="registerPassword" placeholder="Password" required><label class="sr-only" for="registerConfirmPassword">Confirm password</label><input type="password" id="registerConfirmPassword" placeholder="Confirm password" required><button type="submit">Create free account</button></form><div class="auth-toggle">Already have an account? <a id="showLogin">Log in</a></div></div>
+        <div id="loginForm" class="auth-form"><form id="loginFormElement"><label class="sr-only" for="loginUsername">Username or email</label><input type="text" id="loginUsername" placeholder="Username or email" autocomplete="username" required><label class="sr-only" for="loginPassword">Password</label><input type="password" id="loginPassword" placeholder="Password" autocomplete="current-password" required><button type="submit">Log in</button></form><div id="resendVerificationContainer"><p>Didn't receive the verification email?</p><button type="button" id="resendVerificationBtn" class="action-btn auth-full-button">Resend verification email</button></div><div class="auth-toggle">New here? <a id="showRegister">Create an account</a><br><a id="showForgotPassword" class="auth-secondary-link">Forgot password?</a></div></div>
+        <div id="registerForm" class="auth-form"><form id="registerFormElement"><label class="sr-only" for="registerEmail">Email</label><input type="email" id="registerEmail" placeholder="Email" autocomplete="email" required><label class="sr-only" for="registerUsername">Username</label><input type="text" id="registerUsername" placeholder="Username" autocomplete="username" minlength="3" maxlength="30" aria-describedby="registerUsernameHint" required><p class="auth-hint" id="registerUsernameHint">3–30 letters, numbers, dots, dashes or underscores. Shown on anything you share.</p><label class="sr-only" for="registerPassword">Password</label><input type="password" id="registerPassword" placeholder="Password" autocomplete="new-password" minlength="8" aria-describedby="registerPasswordHint" required><p class="auth-hint" id="registerPasswordHint">At least 8 characters. A short phrase is easy to remember and hard to guess.</p><label class="sr-only" for="registerConfirmPassword">Confirm password</label><input type="password" id="registerConfirmPassword" placeholder="Confirm password" autocomplete="new-password" required><button type="submit">Create free account</button></form><div class="auth-toggle">Already have an account? <a id="showLogin">Log in</a></div></div>
         <div id="forgotPasswordForm" class="auth-form"><form id="forgotPasswordFormElement"><p class="auth-helper-text">Enter your email and we’ll send a password-reset link.</p><label class="sr-only" for="forgotPasswordEmail">Email</label><input type="email" id="forgotPasswordEmail" placeholder="Email" required><button type="submit">Send reset link</button></form><div class="auth-toggle"><a id="backToLogin">Back to login</a></div></div>
-        <div id="resetPasswordForm" class="auth-form"><form id="resetPasswordFormElement"><p class="auth-helper-text">Choose a new password.</p><label class="sr-only" for="newPassword">New password</label><input type="password" id="newPassword" placeholder="New password" required minlength="6"><label class="sr-only" for="confirmNewPassword">Confirm new password</label><input type="password" id="confirmNewPassword" placeholder="Confirm new password" required minlength="6"><button type="submit">Reset password</button></form></div>
+        <div id="resetPasswordForm" class="auth-form"><form id="resetPasswordFormElement"><p class="auth-helper-text">Choose a new password.</p><label class="sr-only" for="newPassword">New password</label><input type="password" id="newPassword" placeholder="New password" autocomplete="new-password" required minlength="8"><label class="sr-only" for="confirmNewPassword">Confirm new password</label><input type="password" id="confirmNewPassword" placeholder="Confirm new password" autocomplete="new-password" required minlength="8"><button type="submit">Reset password</button></form></div>
         </div>
       </div>
     </section>
@@ -248,7 +251,8 @@
   </main>
   <div id="screenshotModal" class="screenshot-modal" data-close-on-backdrop="screenshot"><button class="screenshot-modal-close" data-action="close-screenshot-modal" aria-label="Close image preview">×</button><img id="screenshotModalImage" class="screenshot-modal-content" alt=""><div id="screenshotModalCaption" class="screenshot-modal-caption"></div></div>
   <script src="/credentials.js"></script>
-  <script src="/auth.js?v=20260929-for-you-1"></script>
+  <script src="/auth.js?v=20261003-signup-1"></script>
   <script src="/static/public-landing.js?v=20260928-site-1" defer></script>
+  <script src="/static/guest-list.js?v=20261003-guest-2" defer></script>
 </body>
 </html>

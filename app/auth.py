@@ -46,17 +46,24 @@ def verify_password(plain_password: str, hashed_password: str) -> bool:
         return False
 
 
-def validate_password_strength(password: str) -> tuple[bool, str]:
+def validate_password_strength(password: str, username: str = "", email: str = "") -> tuple[bool, str]:
     """
-    Validate password strength.
-    
+    Validate a newly chosen password.
+
+    Follows current guidance (NIST SP 800-63B): a minimum length and a check
+    against common passwords, instead of symbol/uppercase rules that push people
+    toward predictable passwords. Existing passwords are never re-checked.
+
     Returns:
         (is_valid, error_message)
     """
+    from .signup_rules import password_problem
     if len(password.encode("utf-8")) > 72:
         return False, "Password must be no more than 72 UTF-8 bytes long"
     if ENVIRONMENT != "production":
         return True, ""
+    problem = password_problem(password, username, email)
+    return (False, problem) if problem else (True, "")
     if len(password) < 8:
         return False, "Password must be at least 8 characters long"
     if len(password) > 128:

@@ -39,10 +39,14 @@ async def change_username(
     if not auth.verify_password(username_change.password, current_user.hashed_password):
         raise HTTPException(status_code=401, detail="Incorrect password")
     
-    # Check if username is already taken
-    existing_user = crud.get_user_by_username(db, username_change.new_username)
-    if existing_user and existing_user.id != current_user.id:
-        raise HTTPException(status_code=400, detail="Username already taken")
+    from ..signup_rules import username_problem, username_taken
+    if username_change.new_username != current_user.username:
+        problem = username_problem(username_change.new_username)
+        if problem:
+            raise HTTPException(status_code=400, detail=problem)
+        # Capitals-only changes of your own name are fine; anyone else's name (in any case) is not.
+        if username_taken(db, username_change.new_username, exclude_user_id=current_user.id):
+            raise HTTPException(status_code=400, detail="Username already taken")
     
     # Update username
     try:
@@ -112,6 +116,11 @@ async def change_password(
     if not auth.verify_password(password_change.current_password, current_user.hashed_password):
         raise HTTPException(status_code=401, detail="Incorrect current password")
     
+    is_valid, error_msg = auth.validate_password_strength(
+        password_change.new_password, current_user.username, current_user.email)
+    if not is_valid:
+        raise HTTPException(status_code=400, detail=error_msg)
+
     # Hash new password and update
     hashed_new_password = auth.get_password_hash(password_change.new_password)
     user_update = schemas.UserUpdate(password=hashed_new_password)

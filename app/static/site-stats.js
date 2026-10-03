@@ -378,6 +378,44 @@
     });
   }
 
+  function renderSignupFunnel(data) {
+    const container = $('signupFunnel');
+    if (!container || !data.funnel) return;
+    container.replaceChildren();
+    const homeViews = (data.traffic.top_pages.find(page => page.key === '/') || {}).count || 0;
+    const steps = [{ label: 'Homepage views', count: homeViews }, ...data.funnel.steps];
+    const first = Math.max(...steps.map(step => step.count), 1);
+    steps.forEach((step, index) => {
+      const row = el('div', 'stats-step');
+      const track = el('div', 'stats-step__track');
+      const fill = el('div', 'stats-step__fill');
+      fill.style.width = `${percent(step.count, first)}%`;
+      track.appendChild(fill);
+      const previous = index ? steps[index - 1].count : 0;
+      const rate = index && previous ? `${Math.round((step.count / previous) * 100)}%` : '';
+      const value = el('div', 'stats-step__value');
+      value.append(el('b', '', number(step.count)), el('span', '', rate));
+      row.append(el('div', 'stats-step__label', step.label), track, value);
+      container.appendChild(row);
+    });
+    const fillList = (id, items) => {
+      const list = $(id);
+      list.replaceChildren();
+      items.forEach(item => {
+        const row = el('div');
+        row.append(el('dt', '', item.label), el('dd', '', number(item.count)));
+        list.appendChild(row);
+      });
+    };
+    fillList('signupIssues', data.funnel.issues);
+    const retention = data.retention || {};
+    fillList('guestList', [
+      ...data.funnel.guest,
+      { label: 'Weekly email subscribers (now)', count: retention.weekly_email_subscribers || 0 },
+      { label: 'Public profiles switched on (now)', count: retention.public_profiles || 0 },
+    ]);
+  }
+
   function renderLibraries(data) {
     const content = data.insights.content;
     const rows = content.categories.map(category => [category.label, number(category.total), number(category.completed), number(category.rated), number(category.reviewed)]);
@@ -517,6 +555,7 @@
     renderTraffic(data);
     renderGrowth(data);
     renderFunnel(data);
+    renderSignupFunnel(data);
     renderLibraries(data);
     renderCommunity(data);
     renderTitles(data);
@@ -540,6 +579,10 @@
       `Members: ${number(insights.users.total)} total, ${number(insights.users.verified)} verified, ${number(members.new_in_range)} new (previous ${days} days: ${number(members.new_previous_range)}).`,
       `Active (logged in): ${number(members.active_24_hours)} in 24h, ${number(members.active_7_days)} in 7 days, ${number(members.active_30_days)} in 30 days.`,
       `Journey: ${insights.activation.map(stage => `${stage.label} ${number(stage.count)}`).join(' → ')}`,
+      data.funnel ? `Sign-up funnel: ${data.funnel.steps.map(step => `${step.label} ${number(step.count)}`).join(' → ')}` : '',
+      data.funnel ? `Sign-up issues: ${data.funnel.issues.filter(item => item.count).map(item => `${item.label} ${number(item.count)}`).join('; ') || 'none'}` : '',
+      data.funnel ? `Guest lists: ${data.funnel.guest.map(item => `${item.label} ${number(item.count)}`).join('; ')}` : '',
+      data.retention ? `Return features: ${number(data.retention.weekly_email_subscribers)} weekly email subscribers, ${number(data.retention.public_profiles)} public profiles on.` : '',
       '',
       `Libraries: ${number(insights.content.total_items)} titles (${insights.content.categories.map(category => `${category.label} ${number(category.total)}`).join(', ')}), ${number(insights.content.public_reviews)} public reviews, ${number(insights.content.custom_items)} custom-tab items.`,
       `Community: ${number(insights.moderation.approved)} listed public collections, ${number(insights.moderation.views)} collection views, ${number(insights.engagement.friendships)} friendships, ${number(insights.engagement.activity_entries_30_days)} journal entries in 30 days, reports ${number(insights.moderation.reports)}/${number(insights.moderation.review_reports)}.`,
@@ -549,7 +592,7 @@
       `Release Radar: ${data.system.release_radar.map(entry => `${entry.category} ${entry.items} titles${entry.error ? ` (${entry.error})` : ''}`).join(', ')}.`,
       data.system.title_details ? `Title pages: details for ${number(data.system.title_details.found)}, not found ${number(data.system.title_details.not_found)}, errors ${number(data.system.title_details.errors)}.` : '',
     ];
-    return lines.join('\n');
+    return lines.filter((line, index) => line !== '' || (index > 0 && lines[index - 1] !== '')).join('\n');
   }
 
   async function copyReport() {

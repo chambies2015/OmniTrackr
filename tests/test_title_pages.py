@@ -191,7 +191,7 @@ def test_full_page_renders_everything(client, db_session):
     for expected in ("<h1>Interstellar", "2014 film by Christopher Nolan", "Science fiction", "73%", "Rotten Tomatoes",
                      'data-youtube-id="zSWdZVtXT7E"', "Description from <a", "CC BY-SA 4.0", "169 min",
                      "https://img.example/s1-small.jpg", "member tracking it", "Read the full review",
-                     "/reviews/", "Track it free", '"@type": "Movie"', "BreadcrumbList"):
+                     "/reviews/", "data-guest-save", "Create free account", '"@type": "Movie"', "BreadcrumbList"):
         assert expected in html, expected
     assert '<meta name="robots" content="index, follow' in html
     assert "/static/ad-loader.js" in html
