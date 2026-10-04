@@ -4,6 +4,7 @@ Handles sending verification and password reset emails.
 """
 import os
 from html import escape as _escape_html
+from html.parser import HTMLParser
 from typing import List
 from fastapi_mail import FastMail, MessageSchema, ConnectionConfig, MessageType
 from fastapi_mail.schemas import MultipartSubtypeEnum
@@ -43,18 +44,50 @@ APP_URL = os.getenv("APP_URL", "http://localhost:8000")
 VERIFICATION_MAX_AGE = 48 * 3600
 
 
+class _TextExtractor(HTMLParser):
+    """Collects readable text from one of our HTML emails in a single pass (no regexes)."""
+
+    BLOCK_TAGS = {"p", "div", "h1", "h2", "h3", "h4", "h5", "h6", "tr", "li", "table"}
+    SKIP_TAGS = {"script", "style", "head"}
+
+    def __init__(self):
+        super().__init__(convert_charrefs=True)
+        self.parts: list[str] = []
+        self.skip_depth = 0
+        self.link_href: str | None = None
+        self.link_text: list[str] = []
+
+    def handle_starttag(self, tag, attrs):
+        if tag in self.SKIP_TAGS:
+            self.skip_depth += 1
+        elif tag == "br":
+            self.parts.append("\n")
+        elif tag == "a" and not self.skip_depth:
+            self.link_href = dict(attrs).get("href")
+            self.link_text = []
+
+    def handle_endtag(self, tag):
+        if tag in self.SKIP_TAGS:
+            self.skip_depth = max(0, self.skip_depth - 1)
+        elif tag == "a" and self.link_href is not None:
+            label = " ".join("".join(self.link_text).split())
+            self.parts.append(f"{label} ({self.link_href})" if label else self.link_href)
+            self.link_href, self.link_text = None, []
+        elif tag in self.BLOCK_TAGS:
+            self.parts.append("\n")
+
+    def handle_data(self, data):
+        if self.skip_depth:
+            return
+        (self.link_text if self.link_href is not None else self.parts).append(data)
+
+
 def html_to_text(html: str) -> str:
     """A readable plain-text version of one of our HTML emails (links kept as "text (url)")."""
-    import re
-    from html import unescape
-    text = re.sub(r"(?is)<(script|style|head)[^>]*>.*?</\1>", "", html)
-    text = re.sub(r'(?is)<a\s[^>]*href="([^"]+)"[^>]*>(.*?)</a>',
-                  lambda m: f"{re.sub(r'<[^>]+>', '', m.group(2)).strip()} ({unescape(m.group(1))})", text)
-    text = re.sub(r"(?i)<br\s*/?>", "\n", text)
-    text = re.sub(r"(?i)</(p|div|h[1-6]|tr|li|table)>", "\n", text)
-    text = re.sub(r"<[^>]+>", "", text)
-    text = unescape(text)
-    lines = [" ".join(line.split()) for line in text.splitlines()]
+    extractor = _TextExtractor()
+    extractor.feed(html)
+    extractor.close()
+    lines = [" ".join(line.split()) for line in "".join(extractor.parts).splitlines()]
     out, blank = [], False
     for line in lines:
         if line:
