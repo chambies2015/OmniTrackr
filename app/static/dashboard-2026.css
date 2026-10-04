@@ -194,3 +194,7 @@ body.app-shell .return-deck__released span { font-size: .85rem; opacity: .75; }
 /* First visit: Quick start leads; the launchpad keeps its steps and import path but
    drops its own "Add a movie / Add a book…" chips, which repeat Quick start and Add anything. */
 body.app-shell #starterPicks:not([hidden]) ~ #libraryLaunchpad #libraryLaunchpadCategories { display: none; }
+
+/* Library titles link to their public title pages */
+body.app-shell a.title-page-link { color: inherit; text-decoration: underline; text-decoration-color: rgba(196, 181, 253, .45); text-underline-offset: 3px; }
+body.app-shell a.title-page-link:hover { color: #c4b5fd; text-decoration-color: currentColor; }

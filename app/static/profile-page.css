@@ -27,3 +27,4 @@
   .profile-hero__inner { gap: 18px; grid-template-columns: 1fr; justify-items: start; }
   .profile-hero__avatar { height: 88px; width: 88px; }
 }
+.profile-hero__actions { margin: 4px 0 0; }

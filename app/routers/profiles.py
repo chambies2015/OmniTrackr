@@ -22,7 +22,7 @@ from ..site_chrome import apply_site_chrome
 
 router = APIRouter(tags=["profiles"])
 SITE_URL = os.getenv("SITE_URL", "https://omnitrackr.xyz").rstrip("/")
-CSS_VERSION = "20261002-profiles-1"
+CSS_VERSION = "20261004-share-1"
 TITLE_CSS_VERSION = "20261002-profiles-1"
 
 
@@ -195,6 +195,7 @@ def render(view, *, signed_in: bool, is_owner: bool) -> str:
   <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@700;800&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="/static/title-page.css?v={TITLE_CSS_VERSION}">
   <link rel="stylesheet" href="/static/profile-page.css?v={CSS_VERSION}">
+  <script src="/static/share.js?v=20261004-share-1" defer></script>
 </head>
 <body class="site title-page profile-page">
   <!--SITE_NAV:-->
@@ -208,6 +209,7 @@ def render(view, *, signed_in: bool, is_owner: bool) -> str:
           <p class="profile-hero__meta">{_e(since)}</p>
           {_bio_html(profile.bio)}
           <div class="title-hero__chips">{chips}</div>
+          <p class="profile-hero__actions"><button type="button" class="site-btn site-btn--ghost site-btn--sm" data-share data-share-title="{_e(name)} on OmniTrackr">Share profile</button></p>
           {owner_note}
         </div>
       </div>

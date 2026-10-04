@@ -19,7 +19,7 @@
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@700;800&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="/static/collections-public.css?v=20261001-titles-1">
+  <link rel="stylesheet" href="/static/collections-public.css?v=20261004-share-1">
 </head>
 <body class="site collections-page">
   <!--SITE_NAV:collections-->
@@ -30,7 +30,7 @@
         <div><p class="share-eyebrow">Shared collection · {{COUNT}} titles</p>
           <h1>{{TITLE}}</h1>
           <p class="share-intro">{{INTRO}}</p>
-          <div class="share-metrics"><span>{{VIEWS}} readers</span><span id="collectionHelpfulCount">{{HELPFUL}} found this helpful</span></div>
+          <div class="share-metrics"><span>{{VIEWS}} readers</span><span id="collectionHelpfulCount">{{HELPFUL}} found this helpful</span><button type="button" class="site-btn site-btn--ghost site-btn--sm share-button" data-share data-share-title="{{TITLE}} · an OmniTrackr collection">Share</button></div>
         </div>
         {{COVER}}
       </header>
@@ -54,5 +54,6 @@
   </main>
   <!--SITE_FOOTER-->
   <script src="/static/public-collections.js?v=20260922-collection-save" defer></script>
+  <script src="/static/share.js?v=20261004-share-1" defer></script>
 </body>
 </html>
