@@ -80,6 +80,15 @@ def _shareable_ids(db: Session, category: str):
     return db.query(models.User.id).filter(models.User.is_active == True, flag == False)
 
 
+def _title_page(category: str, entry) -> Optional[str]:
+    """The public title page for a popular pick (it exists because 2+ members track it)."""
+    try:
+        from . import title_pages
+        return title_pages.path_for_item(title_pages.LIBRARY_TO_KIND[category], entry)
+    except Exception:
+        return None
+
+
 def popular_titles(db: Session, category: str, exclude_user_id: int | None = None, limit: int = 8) -> list[dict]:
     """Titles saved by at least two members, with metadata from the most complete entry."""
     model, fields = LIBRARY[category]
@@ -125,6 +134,7 @@ def popular_titles(db: Session, category: str, exclude_user_id: int | None = Non
             "image": _safe_image(getattr(entry, image_field, None)),
             "members": count,
             "source": "popular",
+            "url": _title_page(category, entry),
         })
         if len(picks) >= limit:
             break

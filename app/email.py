@@ -6,6 +6,7 @@ import os
 from html import escape as _escape_html
 from typing import List
 from fastapi_mail import FastMail, MessageSchema, ConnectionConfig, MessageType
+from fastapi_mail.schemas import MultipartSubtypeEnum
 from itsdangerous import URLSafeTimedSerializer
 from dotenv import load_dotenv
 
@@ -15,7 +16,8 @@ load_dotenv()
 conf = ConnectionConfig(
     MAIL_USERNAME=os.getenv("MAIL_USERNAME", ""),
     MAIL_PASSWORD=os.getenv("MAIL_PASSWORD", ""),
-    MAIL_FROM=os.getenv("MAIL_FROM", "noreply@omnitrackr.com"),
+    MAIL_FROM=os.getenv("MAIL_FROM", "noreply@omnitrackr.xyz"),
+    MAIL_FROM_NAME=os.getenv("MAIL_FROM_NAME", "OmniTrackr"),
     MAIL_PORT=int(os.getenv("MAIL_PORT", "587")),
     MAIL_SERVER=os.getenv("MAIL_SERVER", "smtp.gmail.com"),
     MAIL_STARTTLS=os.getenv("MAIL_STARTTLS", "True").lower() == "true",
@@ -39,6 +41,42 @@ serializer = URLSafeTimedSerializer(SECRET_KEY)
 APP_URL = os.getenv("APP_URL", "http://localhost:8000")
 # New-account verification links stay valid for 48 hours (people often open them the next day).
 VERIFICATION_MAX_AGE = 48 * 3600
+
+
+def html_to_text(html: str) -> str:
+    """A readable plain-text version of one of our HTML emails (links kept as "text (url)")."""
+    import re
+    from html import unescape
+    text = re.sub(r"(?is)<(script|style|head)[^>]*>.*?</\1>", "", html)
+    text = re.sub(r'(?is)<a\s[^>]*href="([^"]+)"[^>]*>(.*?)</a>',
+                  lambda m: f"{re.sub(r'<[^>]+>', '', m.group(2)).strip()} ({unescape(m.group(1))})", text)
+    text = re.sub(r"(?i)<br\s*/?>", "\n", text)
+    text = re.sub(r"(?i)</(p|div|h[1-6]|tr|li|table)>", "\n", text)
+    text = re.sub(r"<[^>]+>", "", text)
+    text = unescape(text)
+    lines = [" ".join(line.split()) for line in text.splitlines()]
+    out, blank = [], False
+    for line in lines:
+        if line:
+            out.append(line)
+            blank = False
+        elif not blank and out:
+            out.append("")
+            blank = True
+    return "\n".join(out).strip() + "\n"
+
+
+def html_message(subject: str, recipients: list, html: str, headers: dict | None = None):
+    """multipart/alternative: plain text first, HTML last (the part mail apps prefer).
+
+    A text part alongside the HTML is one of the basic things spam filters look for.
+    """
+    return MessageSchema(
+        subject=subject, recipients=recipients,
+        body=html_to_text(html), alternative_body=html,
+        subtype=MessageType.plain, multipart_subtype=MultipartSubtypeEnum.alternative,
+        headers=headers,
+    )
 
 
 def generate_verification_token(email: str) -> str:
@@ -160,12 +198,7 @@ async def send_verification_email(email: str, username: str, token: str):
     </html>
     """
     
-    message = MessageSchema(
-        subject="Verify Your OmniTrackr Email",
-        recipients=[email],
-        body=html,
-        subtype=MessageType.html
-    )
+    message = html_message("Verify Your OmniTrackr Email", [email], html)
     
     # Only send if email credentials are configured
     if conf.MAIL_USERNAME and conf.MAIL_PASSWORD:
@@ -235,12 +268,7 @@ async def send_password_reset_email(email: str, username: str, token: str):
     </html>
     """
     
-    message = MessageSchema(
-        subject="Reset Your OmniTrackr Password",
-        recipients=[email],
-        body=html,
-        subtype=MessageType.html
-    )
+    message = html_message("Reset Your OmniTrackr Password", [email], html)
     
     # Only send if email credentials are configured
     if conf.MAIL_USERNAME and conf.MAIL_PASSWORD:
@@ -310,12 +338,7 @@ async def send_email_change_verification_email(new_email: str, username: str, to
     </html>
     """
     
-    message = MessageSchema(
-        subject="Verify Your New OmniTrackr Email",
-        recipients=[new_email],
-        body=html,
-        subtype=MessageType.html
-    )
+    message = html_message("Verify Your New OmniTrackr Email", [new_email], html)
     
     # Only send if email credentials are configured
     if conf.MAIL_USERNAME and conf.MAIL_PASSWORD:

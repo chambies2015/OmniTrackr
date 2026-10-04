@@ -177,6 +177,7 @@
       popular.appendChild(itemCard({
         image: pick.image, title: pick.title, meta,
         note: `Saved by ${pick.members} members`,
+        link: typeof pick.url === 'string' && pick.url.startsWith('/titles/') ? pick.url : null,
         action: addButton('Add', () => addPopular(pick)),
       }));
     });

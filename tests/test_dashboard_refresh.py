@@ -53,9 +53,13 @@ def test_reader_pages_skip_the_dashboard_stylesheet(template):
     assert "/styles.css" not in html
 
 
-@pytest.mark.parametrize("template", ("public_landing", "release_radar", "reviews", "discover", "faq", "compare"))
-def test_pages_that_still_need_it_keep_it(template):
-    assert "/styles.css" in (TEMPLATES / f"{template}.html").read_text(encoding="utf-8")
+@pytest.mark.parametrize("template", ("public_landing", "release_radar", "reviews", "discover", "faq", "compare",
+                                      "collection_gallery", "collection_save", "review_save"))
+def test_pages_that_needed_it_use_the_small_subset(template):
+    """These pages used a few legacy rules; they now load only those (public-legacy.css, ~5 KB gzipped)."""
+    html = (TEMPLATES / f"{template}.html").read_text(encoding="utf-8")
+    assert "/styles.css" not in html
+    assert "/static/public-legacy.css?v=" in html
 
 
 def test_versioned_static_files_are_cached_for_a_year(client):

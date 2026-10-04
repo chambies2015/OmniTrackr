@@ -327,6 +327,7 @@ def render(group, summary: dict, metadata: Optional[dict], indexable: bool, sign
   <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@700;800&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="/static/title-page.css?v={CSS_VERSION}">
   <script src="/static/title-page.js?v={JS_VERSION}" defer></script>
+  <script src="/static/share.js?v=20261004-share-1" defer></script>
   {'' if signed_in else '<script src="/static/guest-list.js?v=20261003-guest-2" defer></script>'}
   {ad_loader}
   {_json_ld(group, summary, metadata, canonical, image)}
@@ -345,7 +346,7 @@ def render(group, summary: dict, metadata: Optional[dict], indexable: bool, sign
           {f'<p class="title-hero__lead">{_e(lead[:1].upper() + lead[1:])}</p>' if lead else ''}
           <div class="title-hero__chips">{genres}</div>
           {_scores_html(summary, metadata)}
-          <div class="title-hero__actions">{track}{reviews_link}</div>
+          <div class="title-hero__actions">{track}{reviews_link}<button type="button" class="site-btn site-btn--ghost" data-share data-share-title="{_e(group.title + year)} on OmniTrackr">Share</button></div>
           <p class="title-hero__status" role="status" aria-live="polite"></p>
           {_links_html(metadata)}
         </div>

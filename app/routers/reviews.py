@@ -603,12 +603,13 @@ def _review_detail_html(review: dict, more_reviews: Optional[list] = None) -> st
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@700;800&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="/styles.css?v=20260917-review-safety-v1">
+  <link rel="stylesheet" href="/static/public-legacy.css?v=20261004-legacy-1">
   <link rel="stylesheet" href="/static/reviews.css?v=20261002-profiles-1">
-  <link rel="stylesheet" href="/static/review-detail.css?v=20261002-profiles-1">
+  <link rel="stylesheet" href="/static/review-detail.css?v=20261004-share-1">
   <script type="application/ld+json">{_safe_json_ld(json_ld)}</script>
   <script type="application/ld+json">{_safe_json_ld(breadcrumb_json_ld)}</script>
   <script src="/static/review_report.js?v=20260917-review-safety-v1" defer></script>
+  <script src="/static/share.js?v=20261004-share-1" defer></script>
 </head>
 <body class="dark-mode site review-page">
   <!--SITE_NAV:reviews-->
@@ -622,7 +623,7 @@ def _review_detail_html(review: dict, more_reviews: Optional[list] = None) -> st
             <nav class="review-crumbs" aria-label="Breadcrumb"><a href="/reviews">Public reviews</a><span aria-hidden="true">/</span><a href="/reviews?category={_escape(category)}">{_escape(CATEGORY_LABELS.get(category, category))}</a></nav>
             <h1>{_escape(review.get("title"))}</h1>
             {_title_page_link(review)}
-            <div class="review-hero__meta">{rating_html}<span class="review-byline">Reviewed by <strong>{_author_html(review)}</strong></span></div>
+            <div class="review-hero__meta">{rating_html}<span class="review-byline">Reviewed by <strong>{_author_html(review)}</strong></span><button type="button" class="site-btn site-btn--ghost site-btn--sm review-share" data-share data-share-title="{_escape(review.get("title"))} review on OmniTrackr">Share</button></div>
             <div class="review-meta-info">{details_html}</div>
           </div>
         </div>

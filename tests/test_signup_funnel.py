@@ -205,9 +205,9 @@ def test_usernames_are_escaped_in_emails(monkeypatch):
 
     monkeypatch.setattr(email_utils, "MessageSchema", FakeMessage)
     asyncio.run(email_utils.send_verification_email("x@example.com", '<a href="https://evil.example">win</a>', "tok"))
-    assert '<a href="https://evil.example">' not in sent["body"]
-    assert "&lt;a href=" in sent["body"]
-    assert "48 hours" in sent["body"]
+    html = sent["alternative_body"]
+    assert '<a href="https://evil.example">' not in html and "&lt;a href=" in html
+    assert "48 hours" in html and "48 hours" in sent["body"]  # plain-text part too
 
 
 # ---------------------------------------------------------------- guest list
