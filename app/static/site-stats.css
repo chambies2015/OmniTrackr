@@ -149,3 +149,9 @@
 .stats-editor-list li span:first-child { color: var(--site-soft); }
 .stats-editor-status { color: var(--site-teal-soft); font-size: .86rem; margin: 12px 0 0; min-height: 1.2em; }
 #editorPublish[hidden] { display: none; }
+
+/* Sign-up funnel card */
+.stats-grid--inner { margin-top: 18px; }
+.stats-subhead { color: var(--site-soft); font-size: .9rem; font-weight: 600; margin: 0 0 6px; }
+.stats-announce__actions { display: flex; flex-wrap: wrap; gap: 8px; justify-content: flex-end; }
+.stats-announce__actions [hidden] { display: none !important; }

@@ -35,6 +35,7 @@ FOOTER_GROUPS = (
         ("Discover", "/discover"),
         ("Public reviews", "/reviews"),
         ("Collections", "/collections/explore"),
+        ("Popular titles", "/titles"),
         ("Interactive demo", "/demo"),
         ("Sample library", "/sample-library"),
     )),
@@ -80,6 +81,7 @@ def site_nav(active: str = "", *, login_action: bool = False) -> str:
         for key, label, href in NAV_ITEMS
     )
     login_attr = ' data-action="show-login-form"' if login_action else ""
+    signup_attr = ' data-action="show-register-form"' if login_action else ""
     return (
         '<header class="site-header">'
         '<nav class="public-site-nav site-nav" aria-label="Public site navigation">'
@@ -87,7 +89,7 @@ def site_nav(active: str = "", *, login_action: bool = False) -> str:
         '<div class="public-site-nav__links site-nav__links">'
         f'{"".join(links)}'
         f'<a class="site-nav__login" href="/#landing-auth"{login_attr}>Log in</a>'
-        '<a class="public-site-nav__cta site-btn site-btn--primary site-btn--sm" href="/#landing-auth">Start tracking</a>'
+        f'<a class="public-site-nav__cta site-btn site-btn--primary site-btn--sm" href="/#signup"{signup_attr}>Start tracking</a>'
         '<details class="site-menu"><summary aria-label="More pages"><span></span><span></span><span></span></summary>'
         f'<div class="site-menu__panel">{menu_links}'
         f'<a class="site-menu__login" href="/#landing-auth"{login_attr}>Log in</a></div></details>'
@@ -106,7 +108,7 @@ def site_footer() -> str:
         '<footer class="site-footer"><div class="site-wrap site-footer__grid">'
         f'<div class="site-footer__brand">{_brand()}'
         '<p>A free, independent media tracker for everything you watch, play, read, and hear.</p>'
-        '<a class="site-footer__cta" href="/#landing-auth">Start your library <span aria-hidden="true">→</span></a>'
+        '<a class="site-footer__cta" href="/#signup">Start your library <span aria-hidden="true">→</span></a>'
         '<a class="site-footer__kofi" href="https://ko-fi.com/omnitrackr" target="_blank" rel="noopener noreferrer">Support on Ko-fi ↗</a>'
         f'</div>{columns}</div></footer>'
     )

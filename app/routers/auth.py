@@ -12,6 +12,8 @@ from sqlalchemy.orm import Session
 
 from .. import crud, schemas, models, auth, email as email_utils, return_prompt as return_prompt_tokens
 from ..dependencies import get_db
+from .. import funnel
+from ..signup_rules import username_problem, username_taken
 
 router = APIRouter(prefix="/auth", tags=["auth"])
 
@@ -25,24 +27,36 @@ async def register(
     db: Session = Depends(get_db)
 ):
     """Register a new user and send verification email."""
-    
-    is_valid, error_msg = auth.validate_password_strength(user.password)
+    funnel.record("signup_submitted", request)
+    user.email = user.email.strip()
+
+    problem = username_problem(user.username)
+    if problem:
+        funnel.record("signup_rejected_username_invalid", request)
+        raise HTTPException(status_code=400, detail=problem)
+
+    is_valid, error_msg = auth.validate_password_strength(user.password, user.username, user.email)
     if not is_valid:
+        funnel.record("signup_rejected_password", request)
         raise HTTPException(status_code=400, detail=error_msg)
     
     if crud.get_user_by_email(db, user.email):
-        raise HTTPException(status_code=400, detail="Email already registered")
-    if crud.get_user_by_username(db, user.username):
-        raise HTTPException(status_code=400, detail="Username already taken")
+        funnel.record("signup_rejected_email_taken", request)
+        raise HTTPException(status_code=400, detail="Email already registered. Log in, or reset your password if you forgot it.")
+    if username_taken(db, user.username):
+        funnel.record("signup_rejected_username_taken", request)
+        raise HTTPException(status_code=400, detail="Username already taken. Try adding a number or a word.")
     
     verification_token = email_utils.generate_verification_token(user.email)
     
     hashed_password = auth.get_password_hash(user.password)
     db_user = crud.create_user(db, user, hashed_password, verification_token)
+    funnel.record("signup_created", request)
     
     try:
         await email_utils.send_verification_email(user.email, user.username, verification_token)
     except Exception as e:
+        funnel.record("signup_email_failed", request)
         print(f"Failed to send verification email: {e}")
     
     return db_user
@@ -123,6 +137,7 @@ async def login(
             )
     
     if not user.is_verified:
+        funnel.record("login_blocked_unverified", request)
         raise HTTPException(
             status_code=403,
             detail="Please verify your email address before logging in. Check your inbox for the verification link.",
@@ -133,6 +148,8 @@ async def login(
     # login timestamp. The context is returned to this browser only and is not
     # stored as a page/session history.
     previous_login_at = user.last_login_at
+    if not user.login_count:
+        funnel.record("first_login", request)
     days_away = None
     if previous_login_at:
         days_away = max(0, (now_utc - previous_login_at).days)
@@ -197,7 +214,7 @@ async def verify_email(token: str, db: Session = Depends(get_db)):
     """Verify user email with token (handles both initial verification and email change)."""
     # First, try regular email verification (most common case)
     try:
-        email = email_utils.verify_token(token, max_age=3600)  # 1 hour expiration
+        email = email_utils.verify_token(token, max_age=email_utils.VERIFICATION_MAX_AGE)
         # This is a regular email verification token
         user = crud.get_user_by_email(db, email)
         if not user:
@@ -207,6 +224,7 @@ async def verify_email(token: str, db: Session = Depends(get_db)):
             return {"message": "Email already verified"}
         
         # Mark user as verified
+        funnel.record("email_verified")
         user.is_verified = True
         user.verification_token = None
         db.commit()
@@ -262,7 +280,8 @@ async def verify_email(token: str, db: Session = Depends(get_db)):
             raise
         except Exception:
             # Neither token type worked
-            raise HTTPException(status_code=400, detail="Invalid or expired verification token")
+            funnel.record("verification_link_expired")
+            raise HTTPException(status_code=400, detail="This verification link has expired or was already used. Log in with your email to get a new one.")
 
 
 @router.post("/resend-verification")
@@ -283,6 +302,7 @@ async def resend_verification_email(
     if user.is_verified:
         return {"message": "Email is already verified. You can log in."}
     
+    funnel.record("verification_resent", request)
     # Generate new verification token
     verification_token = email_utils.generate_verification_token(user.email)
     user.verification_token = verification_token

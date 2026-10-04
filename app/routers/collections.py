@@ -17,7 +17,7 @@ from sqlalchemy import case, func
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session, selectinload
 
-from ..admin_access import moderator_usernames
+from ..admin_access import is_moderator, moderator_usernames
 from .. import models, schemas
 from ..collection_quality import evaluate_public_collection
 from ..site_chrome import apply_site_chrome, message_page
@@ -71,7 +71,7 @@ def _moderator_usernames() -> set[str]:
 
 
 def _require_moderator(current_user: models.User) -> None:
-    if current_user.username.lower() not in _moderator_usernames():
+    if not is_moderator(current_user):
         raise HTTPException(status_code=403, detail="Collection moderator access required")
 
 
@@ -402,7 +402,16 @@ def _serialize_item(
         "available": media is not None,
         "curator_note": item.curator_note,
         "artwork_url": getattr(media, artwork_field, None) if media else None,
+        "title_path": _title_path(item.category, media),
     }
+
+
+def _title_path(category: str, media) -> str | None:
+    if media is None or not (media.title or "").strip():
+        return None
+    from ..title_pages import LIBRARY_TO_KIND, path_for_item
+    kind = LIBRARY_TO_KIND.get(category)
+    return path_for_item(kind, media) if kind else None
 
 
 def _serialize_collection(
@@ -1042,7 +1051,7 @@ async def explore_collections(
         gallery_content = (
             '<div class="collection-gallery__empty"><h2>The gallery is opening soon</h2>'
             '<p>The first qualifying member collections will appear here automatically. '
-            '<a href="/#landing-auth">Create your library</a> and start shaping one.</p></div>'
+            '<a href="/#signup">Create your library</a> and start shaping one.</p></div>'
         )
     values = {
         "COLLECTIONS": gallery_content,
@@ -1101,7 +1110,9 @@ async def public_collection(collection_id: int, request: Request, db: Session = 
         '<li class="collection-entry">'
         f'<span class="collection-entry__number">{position:02d}</span>'
         + (f'<img src="{escape(item["artwork_url"], quote=True)}" alt="" loading="lazy" referrerpolicy="no-referrer">' if item["artwork_url"] else '')
-        + f'<div><p>{escape(item["category_label"])}</p><h2>{escape(item["title"])}</h2>'
+        + f'<div><p>{escape(item["category_label"])}</p><h2>'
+        + (f'<a href="{escape(item["title_path"], quote=True)}">{escape(item["title"])}</a>' if item.get("title_path") else escape(item["title"]))
+        + '</h2>'
         + (f'<div class="collection-entry__note">{escape(item["curator_note"])}</div>' if item["curator_note"] else '')
         + '</div></li>'
         for position, item in enumerate(items, 1)

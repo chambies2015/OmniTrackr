@@ -59,6 +59,9 @@ from .routers import (
     recommendations,
     site_stats,
     for_you,
+    titles,
+    profiles,
+    pwa,
 )
 
 # Create database tables
@@ -87,13 +90,21 @@ async def lifespan(application: FastAPI):
         print(f"Error expiring friend requests on startup: {e}")
 
     digest_task = None
+    title_task = None
+    announcement_task = None
     if digest_emails.enabled_for_process():
         digest_task = asyncio.create_task(digest_emails.digest_loop(application))
+    from . import announcements
+    if announcements.enabled_for_process():
+        announcement_task = asyncio.create_task(announcements.announcement_loop(application))
+    if os.getenv("TESTING", "").lower() != "true":
+        title_task = asyncio.create_task(titles.warm_loop(application))
     try:
         yield
     finally:
-        if digest_task is not None:
-            digest_task.cancel()
+        for task in (digest_task, title_task, announcement_task):
+            if task is not None:
+                task.cancel()
         await application.state.external_api_client.aclose()
         try:
             TRAFFIC_RECORDER.flush()  # Keep the last minute of page-view counts.
@@ -109,11 +120,29 @@ app = FastAPI(
     lifespan=lifespan,
 )
 
+def client_address(request: Request) -> str:
+    """The visitor's address for rate limits.
+
+    On Render every request reaches the app from an internal load balancer, so
+    limits keyed on the socket address were shared by all visitors (for example
+    five sign-ups a minute for the whole site). Render sits behind Cloudflare,
+    which sets True-Client-IP / CF-Connecting-IP to the real visitor and
+    overwrites any value a client sends. Those headers are trusted only when
+    running on Render (RENDER=true, set by Render itself).
+    """
+    if os.getenv("RENDER", "").lower() == "true":
+        for header in ("true-client-ip", "cf-connecting-ip"):
+            value = (request.headers.get(header) or "").strip()
+            if value:
+                return value[:64]
+    return get_remote_address(request)
+
+
 # Initialize rate limiter
 if os.getenv("TESTING", "").lower() == "true":
     limiter = Limiter(key_func=lambda: "test", enabled=False)
 else:
-    limiter = Limiter(key_func=get_remote_address)
+    limiter = Limiter(key_func=client_address)
 app.state.limiter = limiter
 app.add_exception_handler(RateLimitExceeded, _rate_limit_exceeded_handler)
 
@@ -252,6 +281,13 @@ def public_root_html(html: str, request: Request | None = None) -> str:
             except Exception:
                 strip = ""  # The homepage never depends on third-party release data.
             page = page.replace("<!--RELEASE_RADAR_STRIP-->", strip, 1)
+        if "<!--GUEST_PICKS-->" in page:
+            try:
+                from . import guest_picks
+                picks_html = guest_picks.homepage_section()
+            except Exception:
+                picks_html = ""  # The homepage never depends on this section.
+            page = page.replace("<!--GUEST_PICKS-->", picks_html, 1)
         return apply_site_chrome(page, login_action=True)
 
     landing_marker = "  <!-- Landing Page -->"
@@ -471,8 +507,32 @@ for route in reviews.router.routes:
     ):
         bind_rate_limited_endpoint(route, rate_limited_review_report)
 app.include_router(reviews.router)
+rate_limited_funnel_event = limiter.limit("30/minute")(site_stats.record_funnel_event)
+for route in site_stats.router.routes:
+    if getattr(route, "path", None) == "/api/funnel":
+        bind_rate_limited_endpoint(route, rate_limited_funnel_event)
 app.include_router(site_stats.router)
 app.include_router(for_you.router)
+rate_limited_guest_import = limiter.limit("10/minute")(titles.import_guest_list)
+for route in titles.router.routes:
+    if getattr(route, "path", None) == "/api/guest-list/import":
+        bind_rate_limited_endpoint(route, rate_limited_guest_import)
+app.include_router(titles.router)
+
+rate_limited_profile_card = limiter.limit("30/minute")(profiles.profile_card)
+rate_limited_profile_card_by_id = limiter.limit("30/minute")(profiles.profile_card_by_id)
+rate_limited_profile_settings = limiter.limit("20/minute")(profiles.update_profile_settings)
+for route in profiles.router.routes:
+    if not hasattr(route, "path") or not hasattr(route, "methods"):
+        continue
+    if route.path == "/u/{handle}/card.png":
+        bind_rate_limited_endpoint(route, rate_limited_profile_card)
+    elif route.path == "/u/id/{user_id:int}/card.png":
+        bind_rate_limited_endpoint(route, rate_limited_profile_card_by_id)
+    elif route.path == "/api/profile/settings" and "PUT" in route.methods:
+        bind_rate_limited_endpoint(route, rate_limited_profile_settings)
+app.include_router(profiles.router)
+app.include_router(pwa.router)
 
 
 # Root endpoint

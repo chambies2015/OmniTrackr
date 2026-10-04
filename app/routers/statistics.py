@@ -392,6 +392,31 @@ async def get_library_pulse(
     }
 
 
+def _released_while_away(request: Request, db: Session, user_id: int, days_away: int) -> list[dict]:
+    """Release Radar titles connected to the member's library that came out while they were away."""
+    try:
+        from datetime import date as _date
+        from ..for_you import coming_up, radar_pool
+        from .. import release_radar
+        today = release_radar.today_utc()
+        pool = radar_pool(today, getattr(request.app.state, "external_api_client", None))
+        if not pool:
+            return []  # No Release Radar data cached yet; skip the library lookups.
+        start = today - timedelta(days=max(days_away, 7))
+        released = []
+        for card in coming_up(db, user_id, today=today, pool=pool)["matches"]:
+            try:
+                day = _date.fromisoformat(card.get("date") or "")
+            except ValueError:
+                continue
+            if start <= day <= today:
+                released.append({"title": card["title"], "label": card["label"], "date": card["date"],
+                                 "url": card["url"], "reason": card.get("reason")})
+        return released[:3]
+    except Exception:
+        return []  # Optional; the deck works without it.
+
+
 @router.get("/return-deck/", response_model=dict)
 async def get_return_deck(
     response: Response,
@@ -458,6 +483,7 @@ async def get_return_deck(
         "eligible": True,
         "library_item_count": library_item_count,
         "days_away": days_away,
+        "released_while_away": _released_while_away(request, db, current_user.id, days_away),
         "primary": primary,
         "alternative": alternatives[0] if alternatives else None,
         "reflection": reflection_items[0] if reflection_items else None,

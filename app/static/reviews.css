@@ -80,3 +80,4 @@
   .review-card { padding: 18px; }
 }
 @media (prefers-reduced-motion: reduce) { .review-card { transition: none; } }
+.review-author-link { color: inherit !important; text-decoration: underline; text-decoration-color: rgba(196, 181, 253, .6); text-underline-offset: 3px; }

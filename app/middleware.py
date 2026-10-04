@@ -2,6 +2,8 @@
 Middleware for the OmniTrackr API.
 Contains security headers and bot filtering middleware.
 """
+import re
+
 from starlette.middleware.base import BaseHTTPMiddleware
 from starlette.requests import Request
 from starlette.responses import Response as StarletteResponse
@@ -38,6 +40,7 @@ NOINDEX_PREFIXES = (
     "/video-games/",
 )
 PUBLIC_WELL_KNOWN_PATHS = {"/.well-known/ai.txt"}
+PUBLIC_PROFILE_PATH = re.compile(r"^/u/(?:[A-Za-z0-9_-][A-Za-z0-9_.-]{0,49}|id/\d{1,10})(?:/card\.png)?/?$")
 
 
 class SecurityHeadersMiddleware(BaseHTTPMiddleware):
@@ -96,6 +99,16 @@ class SecurityHeadersMiddleware(BaseHTTPMiddleware):
             # Include authentication and validation failures before a route runs.
             response.headers["Cache-Control"] = "private, no-store"
             response.headers["X-Robots-Tag"] = "noindex, follow"
+
+        path = request.url.path
+        if (path.startswith("/static/") and not path.startswith("/static/profile_pictures/")
+                and response.status_code == 200 and "cache-control" not in response.headers):
+            # Versioned assets (?v=...) never change, so browsers can keep them for a year;
+            # unversioned ones are rechecked daily.
+            versioned = "v=" in request.url.query
+            response.headers["Cache-Control"] = (
+                "public, max-age=31536000, immutable" if versioned else "public, max-age=86400"
+            )
 
         if request.url.path in NOINDEX_PATHS or request.url.path.startswith(NOINDEX_PREFIXES):
             response.headers["X-Robots-Tag"] = "noindex, nofollow"
@@ -215,6 +228,10 @@ class BotFilterMiddleware(BaseHTTPMiddleware):
         reason = ""
         
         if path in PUBLIC_WELL_KNOWN_PATHS:
+            return await call_next(request)
+        if PUBLIC_PROFILE_PATH.match(request.url.path):
+            # /u/<username> pages: a username such as "admin_fan" would otherwise
+            # trip the substring scan. The route validates the name itself.
             return await call_next(request)
 
         if any(suspicious in path for suspicious in self.SUSPICIOUS_PATHS) or \

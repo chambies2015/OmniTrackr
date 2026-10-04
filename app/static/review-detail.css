@@ -43,3 +43,8 @@
   .review-hero__grid { align-items: start; grid-template-columns: 110px minmax(0, 1fr); }
   .review-header-info h1 { font-size: 1.9rem; }
 }
+.review-title-link { margin: -4px 0 12px; }
+.review-title-link a { color: var(--site-teal-soft, #99f6e4); font-weight: 600; text-decoration: none; }
+.review-title-link a:hover { text-decoration: underline; }
+.review-byline .review-author-link { color: #fff !important; text-decoration: underline; text-decoration-color: rgba(196, 181, 253, .6); text-underline-offset: 3px; }
+.review-hero__meta .review-share { margin-left: 8px; min-height: 32px; padding: 0 14px; }

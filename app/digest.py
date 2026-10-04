@@ -151,15 +151,12 @@ def build_digest(username: str, report: dict, unsubscribe_url: str) -> tuple[str
 
 
 async def _send(to: str, subject: str, html: str, unsubscribe_url: str) -> None:
-    from fastapi_mail import FastMail, MessageSchema, MessageType
-    from .email import conf
-    message = MessageSchema(
-        subject=subject, recipients=[to], body=html, subtype=MessageType.html,
-        headers={
-            "List-Unsubscribe": f"<{unsubscribe_url}>",
-            "List-Unsubscribe-Post": "List-Unsubscribe=One-Click",
-        },
-    )
+    from fastapi_mail import FastMail
+    from .email import conf, html_message
+    message = html_message(subject, [to], html, headers={
+        "List-Unsubscribe": f"<{unsubscribe_url}>",
+        "List-Unsubscribe-Post": "List-Unsubscribe=One-Click",
+    })
     await asyncio.wait_for(FastMail(conf).send_message(message), timeout=30.0)
 
 

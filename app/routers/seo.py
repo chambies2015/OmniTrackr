@@ -255,6 +255,24 @@ async def get_sitemap(request: Request = None, db: Session = Depends(get_db)):
             f"<lastmod>{guide['reviewed']}</lastmod>"
             "<changefreq>monthly</changefreq><priority>0.75</priority></url>"
         )
+    # Title pages join only when they have real substance (see title_pages.is_indexable).
+    try:
+        from .titles import sitemap_entries
+        from .. import title_pages
+        title_paths = sitemap_entries(db)
+        if sum(len(title_pages.popular(db, kind, limit=8)) for kind in title_pages.KINDS) >= 8:
+            sitemap_parts.append(f"<url><loc>{base_url}/titles</loc><changefreq>weekly</changefreq><priority>0.7</priority></url>")
+        for path in title_paths:
+            sitemap_parts.append(f"<url><loc>{base_url}{path}</loc><changefreq>weekly</changefreq><priority>0.65</priority></url>")
+    except Exception:
+        pass
+    # Public profiles join only when the member opted in and the page has original content.
+    try:
+        from .. import public_profiles
+        for path in public_profiles.sitemap_paths(db):
+            sitemap_parts.append(f"<url><loc>{base_url}{path}</loc><changefreq>weekly</changefreq><priority>0.4</priority></url>")
+    except Exception:
+        pass
     sitemap_parts.append("</urlset>")
     sitemap = "\n".join(sitemap_parts)
     

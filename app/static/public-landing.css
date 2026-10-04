@@ -201,7 +201,7 @@ body.lp #landingPage { background: none; display: block; min-height: 0; padding:
 .showcase-private > span { font-size: .5rem; }
 .showcase-tabs { align-items: center; border-bottom: 1px solid rgba(255,255,255,.07); display: flex; gap: 8px; overflow: hidden; padding: 11px 14px; }
 .showcase-tabs span { border-radius: 999px; color: #94a3b8; flex: 0 0 auto; font-size: .72rem; font-weight: 700; padding: 6px 10px; }
-.showcase-tabs .active { background: var(--lp-violet); color: #fff; }
+.showcase-tabs .active { background: #7c3aed; color: #fff; }
 .showcase-content { display: grid; grid-template-columns: minmax(0, 1fr) 150px; }
 .showcase-main { min-width: 0; padding: 18px; }
 .showcase-section-label { align-items: center; color: #f8fafc; display: flex; font-size: .8rem; justify-content: space-between; margin-bottom: 12px; }
@@ -288,3 +288,30 @@ body.lp #landingPage { background: none; display: block; min-height: 0; padding:
   .lp-orbit, .lp-orbit__tile { animation: none; }
   .lp-btn, .lp-card, .lp-radar-card__art { transition: none; }
 }
+.lp .lp-auth__card .auth-hint { color: var(--lp-muted); font-size: .82rem; line-height: 1.4; margin: -6px 0 12px; text-align: left; }
+
+/* Start your list (guest picks) */
+.lp-picks { background: var(--lp-bg); border-top: 1px solid var(--lp-border); padding: 56px 0 64px; }
+.lp-picks__lead { color: var(--lp-muted); margin: 8px 0 0; }
+.lp-picks__grid { display: grid; gap: 16px; grid-template-columns: repeat(6, minmax(0, 1fr)); list-style: none; margin: 0; padding: 0; }
+.lp-pick { background: none; border: 0; color: var(--lp-text); cursor: pointer; display: flex; flex-direction: column; font: inherit; gap: 6px; padding: 0; text-align: left; width: 100%; }
+.lp-pick__art { aspect-ratio: 2 / 3; background: linear-gradient(160deg, #3b2a7a, #141630); border: 2px solid var(--lp-border); border-radius: 14px; display: block; overflow: hidden; position: relative; transition: transform .15s ease, border-color .15s ease, box-shadow .15s ease; }
+.lp-pick__art img { height: 100%; object-fit: cover; width: 100%; }
+.lp-pick__initial { align-items: center; color: rgba(255, 255, 255, .5); display: flex; font: 800 2.4rem Poppins, sans-serif; height: 100%; justify-content: center; }
+.lp-pick__check { align-items: center; background: rgba(11, 10, 24, .72); border: 2px solid rgba(255, 255, 255, .7); border-radius: 50%; color: transparent; display: flex; font-size: .9rem; font-weight: 800; height: 28px; justify-content: center; position: absolute; right: 8px; top: 8px; transition: background .15s ease, color .15s ease; width: 28px; }
+.lp-pick:hover .lp-pick__art, .lp-pick:focus-visible .lp-pick__art { border-color: rgba(196, 181, 253, .6); transform: translateY(-3px); }
+.lp-pick:focus-visible { outline: none; }
+.lp-pick[aria-pressed="true"] .lp-pick__art { border-color: var(--lp-teal); box-shadow: 0 0 0 3px rgba(45, 212, 191, .25); }
+.lp-pick[aria-pressed="true"] .lp-pick__check { background: var(--lp-teal); border-color: var(--lp-teal); color: #0b0a18; }
+.lp-pick__title { display: -webkit-box; font-size: .92rem; font-weight: 600; line-height: 1.35; overflow: hidden; -webkit-box-orient: vertical; -webkit-line-clamp: 2; }
+.lp-pick__meta { color: var(--lp-muted); font-size: .78rem; }
+.lp-picks__bar { align-items: center; backdrop-filter: blur(14px); background: rgba(20, 17, 42, .92); border: 1px solid var(--lp-border-strong); border-radius: 18px; bottom: 16px; box-shadow: 0 20px 50px rgba(0, 0, 0, .5); display: flex; flex-wrap: wrap; gap: 14px; justify-content: space-between; margin: 28px auto 0; max-width: 720px; padding: 14px 16px 14px 22px; position: sticky; z-index: 20; }
+.lp-picks__bar[hidden] { display: none; }
+.lp-picks__count { color: var(--lp-text); font-weight: 600; margin: 0; }
+@media (max-width: 900px) { .lp-picks__grid { grid-template-columns: repeat(4, minmax(0, 1fr)); } }
+@media (max-width: 560px) {
+  .lp-picks__grid { gap: 12px; grid-template-columns: repeat(3, minmax(0, 1fr)); }
+  .lp-picks__bar { border-radius: 14px; padding: 12px 14px; }
+  .lp-picks__bar .lp-btn { flex: 1 1 100%; justify-content: center; }
+}
+.lp-anchor { display: block; height: 0; overflow: hidden; }
