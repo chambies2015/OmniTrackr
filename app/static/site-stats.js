@@ -382,8 +382,11 @@
     const container = $('signupFunnel');
     if (!container || !data.funnel) return;
     container.replaceChildren();
+    // Ranges from before the visitor step existed fall back to all "/" page views.
+    const counted = data.funnel.steps.some(step => step.event === 'landing_viewed' && step.count > 0);
     const homeViews = (data.traffic.top_pages.find(page => page.key === '/') || {}).count || 0;
-    const steps = [{ label: 'Homepage views', count: homeViews }, ...data.funnel.steps];
+    const steps = counted ? data.funnel.steps.slice()
+      : [{ label: 'Homepage views (all, incl. members)', count: homeViews }, ...data.funnel.steps.filter(step => step.event !== 'landing_viewed')];
     const first = Math.max(...steps.map(step => step.count), 1);
     steps.forEach((step, index) => {
       const row = el('div', 'stats-step');

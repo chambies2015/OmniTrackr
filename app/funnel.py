@@ -17,6 +17,7 @@ from .site_traffic import BOT_PATTERN, RECORDER
 
 # Ordered as the Site stats page shows them: (event, label)
 STEPS = (
+    ("landing_viewed", "Homepage seen by a visitor"),
     ("signup_form_opened", "Sign-up form opened"),
     ("signup_submitted", "Sign-up submitted"),
     ("signup_created", "Account created"),

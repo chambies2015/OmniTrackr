@@ -158,6 +158,48 @@ def set_auth_cookie(response, access_token: str) -> None:
     )
 
 
+# Marks the browser that created an account, so opening the verification link in that
+# same browser can sign the new member straight in (no second password entry).
+# The cookie alone grants nothing: it only counts together with a valid
+# verification token for the same account.
+PENDING_SIGNUP_COOKIE = "omnitrackr_pending_signup"
+PENDING_SIGNUP_MAX_AGE_SECONDS = 48 * 3600
+
+
+def _pending_signup_serializer():
+    from itsdangerous import URLSafeTimedSerializer
+    return URLSafeTimedSerializer(SECRET_KEY, salt="pending-signup")
+
+
+def set_pending_signup_cookie(response, user_id: int) -> None:
+    response.set_cookie(
+        key=PENDING_SIGNUP_COOKIE,
+        value=_pending_signup_serializer().dumps({"uid": int(user_id)}),
+        max_age=PENDING_SIGNUP_MAX_AGE_SECONDS,
+        httponly=True,
+        secure=ENVIRONMENT == "production",
+        samesite="lax",
+        path="/auth",
+    )
+
+
+def clear_pending_signup_cookie(response) -> None:
+    response.delete_cookie(key=PENDING_SIGNUP_COOKIE, path="/auth", samesite="lax",
+                           secure=ENVIRONMENT == "production", httponly=True)
+
+
+def pending_signup_user_id(value: Optional[str]) -> Optional[int]:
+    """The account id this browser just created, or None if absent, expired or tampered."""
+    if not value or len(value) > 512:
+        return None
+    try:
+        data = _pending_signup_serializer().loads(value, max_age=PENDING_SIGNUP_MAX_AGE_SECONDS)
+        uid = data.get("uid") if isinstance(data, dict) else None
+        return uid if isinstance(uid, int) and uid > 0 else None
+    except Exception:
+        return None
+
+
 def decode_access_token(token: str) -> Optional[dict]:
     """
     Decode and validate a JWT access token.

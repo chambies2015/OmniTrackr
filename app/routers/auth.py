@@ -4,7 +4,7 @@ Authentication endpoints for the OmniTrackr API.
 import os
 import secrets
 from datetime import datetime, timedelta, timezone
-from fastapi import APIRouter, Depends, HTTPException, status, Request
+from fastapi import APIRouter, Depends, HTTPException, status, Request, Response
 from fastapi.security import OAuth2PasswordRequestForm
 from fastapi.encoders import jsonable_encoder
 from fastapi.responses import JSONResponse
@@ -24,6 +24,7 @@ router = APIRouter(prefix="/auth", tags=["auth"])
 async def register(
     user: schemas.UserCreate,
     request: Request,
+    response: Response,
     db: Session = Depends(get_db)
 ):
     """Register a new user and send verification email."""
@@ -58,7 +59,8 @@ async def register(
     except Exception as e:
         funnel.record("signup_email_failed", request)
         print(f"Failed to send verification email: {e}")
-    
+
+    auth.set_pending_signup_cookie(response, db_user.id)
     return db_user
 
 
@@ -209,8 +211,30 @@ async def logout():
     return response
 
 
+def _sign_in_after_verification(request: Request, user: models.User, db: Session, message: str):
+    """Open the new account in the browser that created it (see auth.PENDING_SIGNUP_COOKIE)."""
+    pending = auth.pending_signup_user_id(request.cookies.get(auth.PENDING_SIGNUP_COOKIE)) if request else None
+    if pending != user.id or not user.is_active:
+        # A different browser (often the mail app's): log in as usual, with the email filled in.
+        return {"message": message, "signed_in": False, "login_hint": user.email}
+    if not user.login_count:
+        funnel.record("first_login", request)
+    user.last_login_at = datetime.now(timezone.utc).replace(tzinfo=None)
+    user.login_count = (user.login_count or 0) + 1
+    db.commit()
+    db.refresh(user)
+    response = JSONResponse(
+        content={"message": message, "signed_in": True,
+                 "user": jsonable_encoder(schemas.User.model_validate(user))},
+        headers={"Cache-Control": "no-store, no-cache, must-revalidate, max-age=0", "Pragma": "no-cache", "Expires": "0"},
+    )
+    auth.set_auth_cookie(response, auth.create_user_access_token(user))
+    auth.clear_pending_signup_cookie(response)
+    return response
+
+
 @router.get("/verify-email")
-async def verify_email(token: str, db: Session = Depends(get_db)):
+async def verify_email(token: str, request: Request = None, db: Session = Depends(get_db)):
     """Verify user email with token (handles both initial verification and email change)."""
     # First, try regular email verification (most common case)
     try:
@@ -229,8 +253,8 @@ async def verify_email(token: str, db: Session = Depends(get_db)):
         user.verification_token = None
         db.commit()
         db.refresh(user)
-        
-        return {"message": "Email verified successfully! You can now use all features."}
+
+        return _sign_in_after_verification(request, user, db, "Email verified successfully! You can now use all features.")
     except HTTPException:
         raise
     except Exception:

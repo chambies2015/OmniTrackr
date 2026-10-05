@@ -140,9 +140,22 @@ function captureDemoStartIntent() {
 // Token Management
 // ============================================================================
 
+// Remembers that this browser has signed in before (kept after logging out), so the
+// homepage can offer "Log in" first to members and "Create account" first to newcomers.
+const KNOWN_MEMBER_KEY = 'omnitrackr_known_member';
+
 function saveAuthData(token, user) {
     localStorage.removeItem(TOKEN_KEY);
     localStorage.setItem(USER_KEY, JSON.stringify(user));
+    try { localStorage.setItem(KNOWN_MEMBER_KEY, '1'); } catch (error) { /* optional */ }
+}
+
+function knownMember() {
+    try {
+        return Boolean(localStorage.getItem(KNOWN_MEMBER_KEY) || localStorage.getItem(USER_KEY) || localStorage.getItem(TOKEN_KEY));
+    } catch (error) {
+        return false;
+    }
 }
 
 function getToken() {
@@ -498,8 +511,8 @@ function landingVisible() {
     return getComputedStyle(landing).display !== 'none';
 }
 
-function showRegisterForm(scroll = true) {
-    reportFunnelEvent('signup_form_opened');
+function showRegisterForm(scroll = true, { report = true } = {}) {
+    if (report) reportFunnelEvent('signup_form_opened');
     try {
         if ((JSON.parse(localStorage.getItem('omnitrackr_guest_list') || '[]') || []).length) reportFunnelEvent('guest_list_signup');
     } catch (error) { /* no saved list */ }
@@ -720,6 +733,8 @@ function setupAuthHandlers() {
         }
     });
 
+    document.getElementById('registerFormElement').addEventListener('focusin', () => reportFunnelEvent('signup_form_opened'));
+
     // Register form submission
     document.getElementById('registerFormElement').addEventListener('submit', async (e) => {
         e.preventDefault();
@@ -931,7 +946,15 @@ function initAuth() {
             return;
         }
         if (urlParams.getAll('start').length === 1 && urlParams.get('start') === 'demo'
-            && getDemoStartIntent() && !getDiscoverAuthReturn()) showRegisterForm();
+            && getDemoStartIntent() && !getDiscoverAuthReturn()) {
+            showRegisterForm();
+            return;
+        }
+        // Newcomers who scroll to the bottom find the sign-up form, not a log-in box.
+        // Counted as "opened" only once they start filling it in.
+        // "Log in" links from other pages arrive as /#landing-auth (without a return path).
+        if (window.location.hash === '#landing-auth' && !urlParams.has('next')) return;
+        if (!knownMember()) showRegisterForm(false, { report: false });
         return;
     }
 
@@ -992,17 +1015,24 @@ async function handleEmailVerification(token) {
     displayAuthSuccess('Verifying your email...');
     
     try {
-        const response = await fetch(`${AUTH_API_BASE}/auth/verify-email?token=${encodeURIComponent(token)}`);
+        const response = await fetch(`${AUTH_API_BASE}/auth/verify-email?token=${encodeURIComponent(token)}`, { credentials: 'same-origin' });
         const data = await response.json();
         
         if (response.ok) {
-            displayAuthSuccess(data.message + ' Redirecting to login...');
-            
-            // Clear URL parameters and show login after 3 seconds
-            setTimeout(() => {
-                window.history.replaceState({}, document.title, window.location.pathname);
-                showLoginForm();
-            }, 3000);
+            window.history.replaceState({}, document.title, window.location.pathname);
+            if (data.signed_in && data.user) {
+                // Same browser that signed up: the server already set the session cookie.
+                saveAuthData(null, data.user);
+                displayAuthSuccess('Email verified. Opening your library…');
+                window.location.assign(consumeDiscoverAuthReturn());
+                return;
+            }
+            showLoginForm();
+            displayAuthSuccess('Email verified! Log in to open your library.');
+            const loginField = document.getElementById('loginUsername');
+            if (loginField && data.login_hint) loginField.value = data.login_hint;
+            const passwordField = document.getElementById('loginPassword');
+            if (passwordField) passwordField.focus();
         } else {
             displayAuthError(data.detail || 'Email verification failed');
             setTimeout(() => {

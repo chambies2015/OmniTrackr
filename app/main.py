@@ -29,6 +29,7 @@ from .migrations import run_migrations
 from .middleware import SecurityHeadersMiddleware, BotFilterMiddleware
 from .site_traffic import RECORDER as TRAFFIC_RECORDER, SiteTrafficMiddleware
 from . import digest as digest_emails
+from . import funnel
 from .dependencies import get_db, get_current_user
 from .routers import (
     auth,
@@ -288,6 +289,13 @@ def public_root_html(html: str, request: Request | None = None) -> str:
             except Exception:
                 picks_html = ""  # The homepage never depends on this section.
             page = page.replace("<!--GUEST_PICKS-->", picks_html, 1)
+        if "<!--COMMUNITY_PROOF-->" in page:
+            try:
+                from . import landing_proof
+                proof_html = landing_proof.homepage_section()
+            except Exception:
+                proof_html = ""  # The homepage never depends on this section.
+            page = page.replace("<!--COMMUNITY_PROOF-->", proof_html, 1)
         return apply_site_chrome(page, login_action=True)
 
     landing_marker = "  <!-- Landing Page -->"
@@ -547,6 +555,8 @@ async def read_root(request: Request):
             authenticated_shell = bool(request.cookies.get(AUTH_COOKIE_NAME))
             if not authenticated_shell:
                 html = public_root_html(html, request)
+                if request.method == "GET" and "token" not in request.query_params:
+                    funnel.record("landing_viewed", request)
             response = nonce_html_response(html)
             response.headers["Cache-Control"] = "private, no-store" if authenticated_shell else "no-cache"
             response.headers["Vary"] = "Cookie"
