@@ -236,6 +236,15 @@ class TestSEOEndpoints:
         assert response.status_code == 200
         assert movie.id is not None
         assert book.id is not None
+        # One standalone review is not yet a listing worth indexing.
+        assert "/reviews?category=movie" not in content
+        assert "/reviews</loc>" not in content
+        for n in (2, 3):
+            crud.create_movie(db_session, user.id, MovieCreate(
+                title=f"Sitemap Category Movie {n}", director="Category Director", year=2026,
+                review=movie.review, review_public=True))
+        db_session.commit()
+        content = client.get("/sitemap.xml").text
         assert "/reviews?category=movie" in content
         assert "/reviews</loc>" in content
         assert "/reviews?category=book" not in content

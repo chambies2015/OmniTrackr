@@ -54,6 +54,12 @@ FIRST_LOAD_WAIT_SECONDS = float(os.getenv("RELEASE_RADAR_FIRST_WAIT", "6"))
 USER_AGENT = "OmniTrackr/1.0 (https://omnitrackr.xyz; omnitrackr@gmail.com) ReleaseRadar"
 # Lists shorter than this are noindex and stay out of the sitemap.
 MIN_INDEXABLE_ITEMS = 8
+# Release lists are mostly data from Wikidata, TVmaze, AniList and RAWG with the same
+# explanatory text on every page. Useful to visitors, but thin for search and ads
+# (AdSense "low value content", Oct 2026): only the overview is indexed, and no
+# Release Radar page carries ads.
+INDEX_CATEGORY_PAGES = False
+RADAR_ADS = False
 MAX_ITEMS = {"movies": 80, "tv": 120, "anime": 100, "games": 60}
 ALLOWED_IMAGE_HOSTS = (
     "static.tvmaze.com",

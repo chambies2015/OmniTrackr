@@ -15,6 +15,14 @@ LONG_REVIEW = (
     "feeling cheap. Some dialogue is clumsy, yet the time-dilation planet hit me hard on a rewatch and the final "
     "act ties the father and daughter threads together better than I remembered."
 )
+ESSAY = LONG_REVIEW + (
+    " On the big screen the sound design is overwhelming in the best way, and the silence in space is used as a "
+    "weapon. Matthew McConaughey anchors the film with a performance that sells both the pilot and the father. "
+    "The middle hour drags a little around the Mann sequence, and the exposition can feel like a lecture, but "
+    "the ideas are ambitious and the images are unforgettable. I came back to it years later expecting to be "
+    "less impressed and found the opposite: the emotional logic holds up even when the physics is a stretch, "
+    "and the ending still made the whole room quiet."
+)
 
 
 def member(db, name, active=True):
@@ -151,10 +159,12 @@ def test_suspended_reviews_stay_hidden(db_session):
 @pytest.mark.parametrize("summary,metadata,expected", [
     ({"search_ready_reviews": 1, "reviews": [1], "members": 1, "collections": []}, None, True),
     ({"search_ready_reviews": 0, "reviews": [], "members": 5, "collections": []}, None, False),
-    ({"search_ready_reviews": 0, "reviews": [], "members": 3, "collections": []}, {"description": "x"}, True),
+    # Borrowed descriptions, member counts, short reviews or collections alone aren't enough (Oct 5, AdSense).
+    ({"search_ready_reviews": 0, "reviews": [], "members": 3, "collections": []}, {"description": "x"}, False),
     ({"search_ready_reviews": 0, "reviews": [], "members": 1, "collections": []}, {"description": "x"}, False),
-    ({"search_ready_reviews": 0, "reviews": [1], "members": 1, "collections": []}, {"description": "x"}, True),
-    ({"search_ready_reviews": 0, "reviews": [], "members": 1, "collections": [1]}, {"description": "x"}, True),
+    ({"search_ready_reviews": 0, "reviews": [1], "members": 1, "collections": []}, {"description": "x"}, False),
+    ({"search_ready_reviews": 0, "reviews": [], "members": 1, "collections": [1]}, {"description": "x"}, False),
+    ({"search_ready_reviews": 2, "reviews": [1, 2], "members": 9, "collections": [1]}, {"description": "x"}, True),
 ])
 def test_indexing_needs_real_substance(summary, metadata, expected):
     assert title_pages.is_indexable(summary, metadata) is expected
@@ -182,7 +192,7 @@ def seed_metadata(db, data=SAMPLE, key="movie:interstellar:2014"):
 
 def test_full_page_renders_everything(client, db_session):
     a = member(db_session, "writer")
-    add_movie(db_session, a, review=LONG_REVIEW, review_public=True, rating=9.5, watched=True)
+    add_movie(db_session, a, review=ESSAY, review_public=True, rating=9.5, watched=True)
     db_session.commit()
     seed_metadata(db_session)
     response = client.get("/titles/movie/interstellar-2014")
@@ -265,6 +275,12 @@ def test_titles_directory(client, db_session):
         user = member(db_session, f"d{index}")
         for number in range(8):
             add_movie(db_session, user, title=f"Film {number}", year=2000 + number)
+    db_session.commit()
+    response = client.get("/titles")
+    assert response.headers["x-robots-tag"] == "noindex, follow"  # popular, but no member reviews yet
+    writer = member(db_session, "critic")
+    for number in range(8):
+        add_movie(db_session, writer, title=f"Film {number}", year=2000 + number, review=LONG_REVIEW, review_public=True)
     db_session.commit()
     response = client.get("/titles")
     assert "x-robots-tag" not in response.headers
@@ -510,3 +526,77 @@ def test_site_stats_reports_title_detail_coverage(authenticated_client, db_sessi
     title_metadata.store(db_session, "movie:b:2000", None, "miss")
     details = authenticated_client.get("/api/site-stats/overview").json()["system"]["title_details"]
     assert details == {"found": 1, "not_found": 1, "errors": 0}
+
+
+# ---------------------------------------------------------------- member content first (AdSense, Oct 2026)
+
+@pytest.mark.parametrize("text,expected", [
+    ("One. Two. Three.", "One. Two."),
+    ("Only one sentence here", "Only one sentence here"),
+    ("Is it? Yes! More.", "Is it? Yes!"),
+    ("  Spaced   out.  Next   bit. Third. ", "Spaced out. Next bit."),
+    ("", ""),
+])
+def test_lead_sentences(text, expected):
+    assert titles_router._lead_sentences(text) == expected
+
+
+def test_lead_sentences_respects_the_length_limit():
+    long_text = ("word " * 200).strip() + ". Next."
+    lead = titles_router._lead_sentences(long_text, limit=100)
+    assert len(lead) <= 101 and lead.endswith("…")
+
+
+def test_borrowed_description_is_a_short_lead_with_a_link_out(client, db_session):
+    a = member(db_session, "writer")
+    add_movie(db_session, a, review=LONG_REVIEW, review_public=True, rating=9.5, watched=True)
+    db_session.commit()
+    long_description = "Interstellar is a 2014 epic science fiction film. It follows astronauts. " + "Filler sentence here. " * 40
+    seed_metadata(db_session, dict(SAMPLE, description=long_description))
+    html = client.get("/titles/movie/interstellar-2014").text
+    assert "Interstellar is a 2014 epic science fiction film. It follows astronauts." in html
+    assert "Filler sentence here" not in html
+    assert 'class="title-readmore" href="https://en.wikipedia.org/wiki/Interstellar_(film)"' in html
+    assert "Read more on Wikipedia" in html
+    assert "CC BY-SA 4.0" in html  # attribution kept
+
+
+def test_member_reviews_come_before_borrowed_text(client, db_session):
+    a = member(db_session, "writer")
+    add_movie(db_session, a, review=LONG_REVIEW, review_public=True, rating=9.5, watched=True)
+    db_session.commit()
+    seed_metadata(db_session)
+    html = client.get("/titles/movie/interstellar-2014").text
+    assert html.index("Read the full review") < html.index("Description from <a")
+    assert html.index("Read the full review") < html.index('data-youtube-id="zSWdZVtXT7E"')
+
+
+def test_metadata_without_reviews_is_not_indexed_or_monetized(client, db_session):
+    for name in ("m1", "m2", "m3", "m4"):
+        add_movie(db_session, member(db_session, name), rating=8, watched=True)
+    db_session.commit()
+    seed_metadata(db_session)
+    response = client.get("/titles/movie/interstellar-2014")
+    assert response.headers["x-robots-tag"] == "noindex, follow"
+    assert "/static/ad-loader.js" not in response.text
+    assert "/titles/movie/interstellar-2014" not in client.get("/sitemap.xml").text
+
+
+def test_a_single_short_review_indexes_the_page_without_ads(client, db_session):
+    add_movie(db_session, member(db_session, "writer"), review=LONG_REVIEW, review_public=True, rating=9, watched=True)
+    db_session.commit()
+    seed_metadata(db_session)
+    response = client.get("/titles/movie/interstellar-2014")
+    assert '<meta name="robots" content="index, follow' in response.text
+    assert "/static/ad-loader.js" not in response.text
+    assert "/titles/movie/interstellar-2014" in client.get("/sitemap.xml").text
+
+
+def test_ad_eligibility_counts_member_writing():
+    review = {"review": "word " * 80, "search_ready": True}
+    summary = {"search_ready_reviews": 1, "reviews": [review]}
+    assert not title_pages.is_ad_eligible(summary, None)
+    summary = {"search_ready_reviews": 2, "reviews": [review, dict(review)]}
+    assert title_pages.is_ad_eligible(summary, None)
+    summary = {"search_ready_reviews": 0, "reviews": [dict(review, search_ready=False)] * 3}
+    assert not title_pages.is_ad_eligible(summary, None)

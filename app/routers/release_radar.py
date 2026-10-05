@@ -385,7 +385,7 @@ async def radar_hub(request: Request, db: Session = Depends(get_db)):
     structured = _structured(title, "/release-radar", strip or [i for c in radar.CATEGORY_ORDER for i in items_by_category[c][:6]])
     warming = any(entries[c] is None for c in radar.CATEGORY_ORDER)
     return _render(title, description, "/release-radar", content, indexable=indexable, structured=structured,
-                   ads=total >= AD_ELIGIBLE_MIN_ITEMS, refresh=warming)
+                   ads=radar.RADAR_ADS and total >= AD_ELIGIBLE_MIN_ITEMS, refresh=warming)
 
 
 @router.get("/release-radar/jump")
@@ -425,10 +425,10 @@ async def _category_page(request: Request, db: Session, category: str, window: r
         + '<p id="radar-empty" class="trail-empty" hidden>Nothing matches those filters. Try another genre or clear the search.</p>'
         + _about_section(category)
     )
-    indexable = len(items) >= MIN_INDEXABLE_ITEMS
+    indexable = radar.INDEX_CATEGORY_PAGES and len(items) >= MIN_INDEXABLE_ITEMS
     return _render(title, description, canonical, content, indexable=indexable,
                    structured=_structured(title, canonical, items) if items else None,
-                   ads=len(items) >= AD_ELIGIBLE_MIN_ITEMS, refresh=entry is None)
+                   ads=radar.RADAR_ADS and len(items) >= AD_ELIGIBLE_MIN_ITEMS, refresh=entry is None)
 
 
 @router.get("/release-radar/{category}")

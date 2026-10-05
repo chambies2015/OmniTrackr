@@ -983,7 +983,8 @@ class TestPublicReviews:
         assert response.status_code == 200
         assert "<title>Movie Reviews - OmniTrackr</title>" in response.text
         assert '<link rel="canonical" href="https://omnitrackr.xyz/reviews?category=movie">' in response.text
-        assert '<meta name="robots" content="index, follow, max-image-preview:large">' in response.text
+        # A single standalone review keeps the listing out of search (needs three).
+        assert '<meta name="robots" content="noindex, follow">' in response.text
         assert "<h1>Movie Reviews</h1>" in response.text
         assert '<option value="movie" selected>' in response.text
         assert f"/reviews/{movie.id}?category=movie" in response.text
@@ -1045,7 +1046,13 @@ class TestPublicReviews:
                     "This public review is substantial enough for the generated detail page because it explains the "
                     "movie's tone, pacing, audience fit, standout scenes, and rewatch value in a way that can help "
                     "another reader decide whether it belongs on their own watchlist. It is intentionally longer than "
-                    "a quick note so the standalone page has useful context for search visitors."
+                    "a quick note so the standalone page has useful context for search visitors. The opening "
+                    "act takes its time, but it introduces the family, the town and the stakes with real care, so "
+                    "the later turns land with weight. The cinematography favors long, steady shots that let the "
+                    "actors work, and the score stays out of the way until the final sequence. I would happily "
+                    "watch it again, and I think it suits anyone who enjoys grounded drama with a hopeful ending. The "
+                    "supporting cast deserves credit too, especially the younger brother, whose small choices give "
+                    "the quieter scenes a warmth that carries the film through its slower middle stretch."
                 ),
                 review_public=True,
             ),

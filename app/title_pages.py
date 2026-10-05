@@ -18,7 +18,7 @@ from sqlalchemy.orm import Session
 
 from . import models
 from .editorial_collections import EDITOR_USERNAME
-from .review_quality import evaluate_public_review
+from .review_quality import AD_MIN_REVIEW_WORDS, evaluate_public_review, word_count
 
 # URL kind -> (model, review category, library category, label, creator field)
 KINDS = {
@@ -281,15 +281,21 @@ def summarize(db: Session, group: TitleGroup) -> dict:
 
 
 def is_indexable(summary: dict, metadata: Optional[dict]) -> bool:
-    """Only pages with real substance are offered to search engines."""
-    if summary["search_ready_reviews"] >= 1:
-        return True
-    has_description = bool(metadata and metadata.get("description"))
-    if has_description and summary["reviews"]:
-        return True
-    if has_description and summary["members"] >= INDEX_MIN_MEMBERS:
-        return True
-    return has_description and bool(summary["collections"])
+    """Offered to search engines (and eligible for ads) only with original member writing.
+
+    Facts and descriptions borrowed from Wikipedia, TVmaze and others are useful to
+    visitors but aren't ours; a page needs at least one substantial public member
+    review before it counts as OmniTrackr content (AdSense "low value content").
+    """
+    return summary["search_ready_reviews"] >= 1
+
+
+def is_ad_eligible(summary: dict, metadata: Optional[dict]) -> bool:
+    """Ads need more than a single short review: enough member writing to carry the page."""
+    if not is_indexable(summary, metadata):
+        return False
+    written = sum(word_count(review["review"]) for review in summary["reviews"] if review["search_ready"])
+    return written >= AD_MIN_REVIEW_WORDS
 
 
 def popular(db: Session, kind: str, limit: int = 24, min_members: int = 2) -> list[dict]:

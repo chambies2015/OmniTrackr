@@ -7363,6 +7363,57 @@ function initializeFriendsPanel() {
 }
 
 let activeCompletionMomentId = null;
+let activeCompletionCategory = null;
+let completionSaving = false;
+const COMPLETION_RELOADERS = {
+  movies: 'loadMovies', 'tv-shows': 'loadTVShows', anime: 'loadAnime',
+  'video-games': 'loadVideoGames', music: 'loadMusic', books: 'loadBooks',
+};
+
+function countReviewWords(text) {
+  const words = String(text || '').match(/[A-Za-z0-9À-ɏ'’]+/g);
+  return words ? words.length : 0;
+}
+
+// Live guidance under the finish-modal review box (thresholds mirror review_quality.py).
+function completionReviewHint(words) {
+  if (words === 0) return '';
+  if (words < 15) return `${words} word${words === 1 ? '' : 's'}: keep going, a couple of sentences is plenty`;
+  if (words < 40) return `${words} words: a little more and it gets its own page`;
+  if (words < 150) return `${words} words: good, this can have its own review page`;
+  return `${words} words: a thorough review, thank you`;
+}
+
+function updateCompletionReviewMeter() {
+  const text = document.getElementById('completionReviewText');
+  const count = document.getElementById('completionReviewCount');
+  const save = document.getElementById('completionRitualSave');
+  const words = countReviewWords(text && text.value);
+  if (count) count.textContent = completionReviewHint(words);
+  if (save) save.textContent = words ? 'Save reflection and review' : 'Save reflection';
+}
+
+function completionReviewMessage(result) {
+  if (!result.public) return { text: 'Review saved to your library. Only you can see it.' };
+  if (result.standalone) return { text: 'Your review is live on OmniTrackr. ', link: result.review_url, linkText: 'See your review' };
+  if (result.listed) return { text: 'Your review is on the reviews page. Add a few more sentences from your library any time and it gets its own page.' };
+  return { text: "Review saved. It's a little short to show publicly yet; add a sentence or two from your library and it will appear." };
+}
+
+function showCompletionResult(message) {
+  const box = document.getElementById('completionReviewResult');
+  if (!box) return;
+  box.replaceChildren(document.createTextNode(message.text));
+  if (message.link && message.link.startsWith('/reviews/')) {
+    const link = document.createElement('a');
+    link.href = message.link;
+    link.target = '_blank';
+    link.rel = 'noopener';
+    link.textContent = message.linkText;
+    box.appendChild(link);
+  }
+  box.hidden = false;
+}
 
 async function openCompletionMoment(category, itemId) {
   if (!category || !Number.isInteger(itemId) || itemId < 1) return;
@@ -7379,9 +7430,23 @@ async function openCompletionMoment(category, itemId) {
     if (!response.ok) throw new Error('Unable to start reflection');
     const moment = await response.json();
     activeCompletionMomentId = moment.id;
+    activeCompletionCategory = category;
     document.getElementById('completionRitualTitle').textContent = moment.title;
     document.getElementById('completionRitualTakeaway').value = moment.takeaway || '';
     document.getElementById('completionRitualFavorite').checked = Boolean(moment.favorite);
+    const step = document.getElementById('completionReviewStep');
+    const text = document.getElementById('completionReviewText');
+    const result = document.getElementById('completionReviewResult');
+    if (step) step.hidden = moment.has_review !== false;
+    if (text) { text.value = ''; text.oninput = updateCompletionReviewMeter; }
+    const visibility = document.getElementById('completionReviewPublic');
+    if (visibility) visibility.checked = true;
+    if (result) { result.hidden = true; result.replaceChildren(); }
+    const save = document.getElementById('completionRitualSave');
+    if (save) save.dataset.action = 'save-completion-ritual';
+    const skip = document.getElementById('completionRitualSkip');
+    if (skip) skip.hidden = false;
+    updateCompletionReviewMeter();
     document.getElementById('completionRitualModal').style.display = 'flex';
   } catch (error) {
     alert('Could not open the finish ritual. Please try again.');
@@ -7392,23 +7457,66 @@ function closeCompletionRitual() {
   const modal = document.getElementById('completionRitualModal');
   if (modal) modal.style.display = 'none';
   activeCompletionMomentId = null;
+  activeCompletionCategory = null;
+}
+
+async function saveCompletionReview(momentId, review, isPublic) {
+  const response = await authenticatedFetch(`${API_BASE}/completion-moments/${momentId}/review`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ review, public: isPublic }),
+  });
+  if (response.status === 409) return { conflict: true };
+  if (!response.ok) throw new Error('Unable to save review');
+  return response.json();
 }
 
 async function saveCompletionRitual() {
-  if (!activeCompletionMomentId) return;
+  if (!activeCompletionMomentId || completionSaving) return;
+  const momentId = activeCompletionMomentId;
+  const category = activeCompletionCategory;
   const takeaway = document.getElementById('completionRitualTakeaway').value;
   const favorite = document.getElementById('completionRitualFavorite').checked;
+  const step = document.getElementById('completionReviewStep');
+  const reviewBox = document.getElementById('completionReviewText');
+  const review = step && !step.hidden && reviewBox ? reviewBox.value.trim() : '';
+  completionSaving = true;
   try {
-    const response = await authenticatedFetch(`${API_BASE}/completion-moments/${activeCompletionMomentId}`, {
+    const response = await authenticatedFetch(`${API_BASE}/completion-moments/${momentId}`, {
       method: 'PATCH',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ takeaway, favorite }),
     });
     if (!response.ok) throw new Error('Unable to save reflection');
-    closeCompletionRitual();
-    loadMonthlyReplay();
+    if (typeof loadMonthlyReplay === 'function') loadMonthlyReplay();
+    if (!review) {
+      closeCompletionRitual();
+      return;
+    }
+    let result;
+    try {
+      result = await saveCompletionReview(momentId, review, document.getElementById('completionReviewPublic').checked);
+    } catch (error) {
+      alert('Your reflection was saved, but the review could not be. Your text is still here; please try again.');
+      return;
+    }
+    if (result.conflict) {
+      showCompletionResult({ text: 'This title already has a review, so nothing was replaced. You can edit it from your library.' });
+    } else {
+      showCompletionResult(completionReviewMessage(result));
+      const reload = typeof globalThis !== 'undefined' ? globalThis[COMPLETION_RELOADERS[category]] : null;
+      if (typeof reload === 'function') reload();
+    }
+    step.hidden = true;
+    reviewBox.value = '';
+    const save = document.getElementById('completionRitualSave');
+    if (save) { save.textContent = 'Done'; save.dataset.action = 'close-completion-ritual'; }
+    const skip = document.getElementById('completionRitualSkip');
+    if (skip) skip.hidden = true;
   } catch (error) {
     alert('Could not save your reflection. Please try again.');
+  } finally {
+    completionSaving = false;
   }
 }
 

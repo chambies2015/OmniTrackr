@@ -1051,6 +1051,23 @@ class CompletionMoment(BaseModel):
     takeaway: Optional[str] = None
     favorite: bool = False
     completed_at: datetime
+    # Whether the library entry already has a written review (the finish modal then
+    # skips its "share a review" step instead of offering to overwrite it).
+    has_review: Optional[bool] = None
+
+
+class CompletionReview(BaseModel):
+    """A review written from the finish modal, saved onto the finished library entry."""
+    review: str = Field(..., min_length=1, max_length=10000)
+    public: bool = False
+
+    @field_validator("review")
+    @classmethod
+    def normalize_review(cls, value: str) -> str:
+        value = value.strip()
+        if not value:
+            raise ValueError("Write a few words first")
+        return value
 
 
 # ============================================================================
