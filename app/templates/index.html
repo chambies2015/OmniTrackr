@@ -50,10 +50,10 @@
   <script src="/static/pwa.js?v=20261003-pwa-1" defer></script>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link rel="preload" href="./styles.css?v=20260929-for-you-1" as="style">
+  <link rel="preload" href="./styles.css?v=20261005-finish-review-1" as="style">
   <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@700;800&family=Inter:wght@400;500;600;700&display=swap"
     rel="stylesheet">
-  <link rel="stylesheet" href="./styles.css?v=20260929-for-you-1">
+  <link rel="stylesheet" href="./styles.css?v=20261005-finish-review-1">
   <link rel="stylesheet" href="/static/progress.css?v=20260922-progress">
   <link rel="stylesheet" href="/static/app-theme.css?v=20260924-friends-panel-2">
   <link rel="stylesheet" href="/static/library-theme.css?v=20260924-library-filters-1">
@@ -1507,7 +1507,7 @@
   <script src="./auth.js?v=20261003-signup-1"></script>
   <script src="/static/import-studio.js?v=20260924-import-studio-final"></script>
   <script src="/static/progress.js?v=20260922-progress"></script>
-  <script src="./app.js?v=20261004-cleanup-1"></script>
+  <script src="./app.js?v=20261005-finish-review-1"></script>
   <script src="/static/for-you.js?v=20261004-links-1"></script>
   <script src="/static/title-links.js?v=20261004-links-1"></script>
   <script src="/static/public-profile.js?v=20261002-profiles-1"></script>
@@ -2223,9 +2223,20 @@
         <p class="completion-ritual-modal__copy">What is one thing you want future you to remember? This stays private.</p>
         <textarea id="completionRitualTakeaway" class="review-textarea" maxlength="500" rows="3" placeholder="A moment, feeling, or reason it stood out…"></textarea>
         <label class="completion-ritual-modal__favorite"><input type="checkbox" id="completionRitualFavorite"> This is a personal favorite</label>
+        <section id="completionReviewStep" class="completion-ritual-modal__review" hidden aria-labelledby="completionReviewHeading">
+          <h4 id="completionReviewHeading">Want to write a review too?</h4>
+          <p class="completion-ritual-modal__copy">Optional. A few sentences on what worked, what didn't and who would enjoy it helps other members decide what to try next.</p>
+          <label class="sr-only" for="completionReviewText">Your review</label>
+          <textarea id="completionReviewText" class="review-textarea" maxlength="10000" rows="5" placeholder="What stood out, what didn't land, and who you'd recommend it to…"></textarea>
+          <div class="completion-ritual-modal__review-meta">
+            <span id="completionReviewCount" aria-live="polite"></span>
+            <label><input type="checkbox" id="completionReviewPublic" checked> Public: show it on the reviews page with my username</label>
+          </div>
+        </section>
+        <p id="completionReviewResult" class="completion-ritual-modal__result" role="status" hidden></p>
         <div class="completion-ritual-modal__actions">
-          <button type="button" class="action-btn" data-action="save-completion-ritual">Save reflection</button>
-          <button type="button" class="completion-ritual-modal__skip" data-action="close-completion-ritual">Not now</button>
+          <button type="button" class="action-btn" id="completionRitualSave" data-action="save-completion-ritual">Save reflection</button>
+          <button type="button" class="completion-ritual-modal__skip" id="completionRitualSkip" data-action="close-completion-ritual">Not now</button>
         </div>
       </div>
     </div>

@@ -22,7 +22,7 @@ from ..site_chrome import apply_site_chrome, message_page
 from ..auth import AUTH_COOKIE_NAME
 from ..csp import strict_html_response
 from ..dependencies import get_current_user, get_db
-from ..review_quality import evaluate_public_review
+from ..review_quality import AD_MIN_REVIEW_WORDS, MIN_INDEXED_LISTING_REVIEWS, evaluate_public_review, word_count
 from ..visitor_identity import set_visitor_cookie, visitor_identity
 
 router = APIRouter(tags=["reviews"])
@@ -463,8 +463,10 @@ def _noindex_empty_review_category(page: str) -> str:
     return page
 
 
-def _inject_ad_loader_for_review_detail(page: str, request: Request) -> str:
+def _inject_ad_loader_for_review_detail(page: str, request: Request, review: dict | None = None) -> str:
     if request.cookies.get(AUTH_COOKIE_NAME):
+        return page
+    if review is not None and word_count(review.get("review")) < AD_MIN_REVIEW_WORDS:
         return page
     if "/static/ad-loader.js" in page or "</head>" not in page:
         return page
@@ -681,7 +683,8 @@ def reviews_index(
     page = re.sub(r"\{\{(SERVER_REVIEWS|CATEGORY|QUERY|NEXT_OFFSET|HAS_MORE)\}\}", lambda match: replacements[match[1]], page)
     page = _inject_reviews_item_list_json_ld(page, reviews, category)
     page = _apply_category_review_context(page, category)
-    noindex = bool(q) or not any(_review_is_standalone(review) for review in reviews)
+    standalone = sum(1 for review in reviews if _review_is_standalone(review))
+    noindex = bool(q) or standalone < MIN_INDEXED_LISTING_REVIEWS
     if noindex:
         page = _noindex_empty_review_category(page)
     response = strict_html_response(page)
@@ -711,7 +714,7 @@ async def review_detail(
                 more = []  # Related reviews are optional; never block the page.
             _attach_profile_urls(db, [review])
             page = apply_site_chrome(_review_detail_html(review, more))
-            return strict_html_response(_inject_ad_loader_for_review_detail(page, request))
+            return strict_html_response(_inject_ad_loader_for_review_detail(page, request, review))
         except HTTPException:
             return strict_html_response(_not_found_review_html(), status_code=404)
 

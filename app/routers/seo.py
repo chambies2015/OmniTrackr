@@ -12,7 +12,7 @@ from sqlalchemy import and_, func
 from .. import models, release_radar
 from ..dependencies import get_db
 from ..discover_guides import GUIDES
-from ..review_quality import evaluate_public_review
+from ..review_quality import MIN_INDEXED_LISTING_REVIEWS, evaluate_public_review
 from .collections import _approval_is_current, _media_lookup_for_collections
 from .reviews import _current_state_hides_review
 
@@ -71,7 +71,7 @@ async def get_sitemap(request: Request = None, db: Session = Depends(get_db)):
                 featured_total += count
                 if cached is None and radar_client is not None:
                     release_radar.CACHE.warm(radar_client, window)
-            if count >= release_radar.MIN_INDEXABLE_ITEMS:
+            if count >= release_radar.MIN_INDEXABLE_ITEMS and release_radar.INDEX_CATEGORY_PAGES:
                 path = f"/release-radar/{radar_category}" if window == featured else f"/release-radar/{radar_category}/{window.slug}"
                 changefreq, priority = ("daily", "0.8") if window == featured else ("weekly", "0.6")
                 radar_parts.append(
@@ -109,13 +109,14 @@ async def get_sitemap(request: Request = None, db: Session = Depends(get_db)):
                 and not _current_state_hides_review(state_map.get(item.id), category, item)
             ]
 
-        review_directory_ready = False
+        search_ready_total = 0
         for category, model_cls in REVIEW_CATEGORY_MODELS:
             category_candidates = db.query(model_cls).filter(
                 public_detail_review_filter(model_cls)
             ).limit(200).all()
-            if visible_search_ready(category, category_candidates):
-                review_directory_ready = True
+            ready_count = len(visible_search_ready(category, category_candidates))
+            search_ready_total += ready_count
+            if ready_count >= MIN_INDEXED_LISTING_REVIEWS:
                 sitemap_parts.append(f"""  <url>
     <loc>{base_url}/reviews?category={category}</loc>
     <lastmod>{today}</lastmod>
@@ -203,7 +204,7 @@ async def get_sitemap(request: Request = None, db: Session = Depends(get_db)):
     <priority>0.6</priority>
   </url>""")
 
-        if review_directory_ready:
+        if search_ready_total >= MIN_INDEXED_LISTING_REVIEWS:
             sitemap_parts.append(
                 f"  <url><loc>{base_url}/reviews</loc><changefreq>daily</changefreq>"
                 "<priority>0.8</priority></url>"
@@ -260,7 +261,7 @@ async def get_sitemap(request: Request = None, db: Session = Depends(get_db)):
         from .titles import sitemap_entries
         from .. import title_pages
         title_paths = sitemap_entries(db)
-        if sum(len(title_pages.popular(db, kind, limit=8)) for kind in title_pages.KINDS) >= 8:
+        if len(title_pages.reviewed_titles(db)) >= 8:
             sitemap_parts.append(f"<url><loc>{base_url}/titles</loc><changefreq>weekly</changefreq><priority>0.7</priority></url>")
         for path in title_paths:
             sitemap_parts.append(f"<url><loc>{base_url}{path}</loc><changefreq>weekly</changefreq><priority>0.65</priority></url>")

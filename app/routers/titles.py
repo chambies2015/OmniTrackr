@@ -55,6 +55,20 @@ def _excerpt(text: str, limit: int) -> str:
     return text if len(text) <= limit else text[:limit].rsplit(" ", 1)[0] + "…"
 
 
+def _lead_sentences(text: str, sentences: int = 2, limit: int = 320) -> str:
+    """The first sentence or two of a borrowed description (pages lead with our own content)."""
+    text = " ".join((text or "").split())
+    end, found = 0, 0
+    while found < sentences:
+        cut = min((i for i in (text.find(". ", end), text.find("! ", end), text.find("? ", end)) if i != -1), default=-1)
+        if cut == -1 or cut + 1 > limit:
+            break
+        end, found = cut + 1, found + 1
+    if found:
+        return text[:end]
+    return _excerpt(text, limit)
+
+
 def _paragraphs(text: str) -> str:
     return "".join(f"<p>{_e(part.strip())}</p>" for part in (text or "").split("\n") if part.strip())
 
@@ -96,7 +110,7 @@ def _json_ld(group, summary: dict, metadata: dict, canonical: str, image: Option
     if image:
         item["image"] = image
     if metadata.get("short_description") or metadata.get("description"):
-        item["description"] = _excerpt(metadata.get("description") or metadata.get("short_description"), 300)
+        item["description"] = _lead_sentences(metadata.get("description") or metadata.get("short_description"), limit=300)
     if _genres(metadata):
         item["genre"] = _genres(metadata)[:4]
     creator = summary.get("creator")
@@ -185,7 +199,10 @@ def _about_html(group, summary: dict, metadata: dict) -> str:
                             if source.get("license_url") else "")
             credit = (f'<p class="title-credit">Description from <a href="{_e(source.get("url"))}" rel="noopener">{_e(source["name"])}</a>'
                       f'{license_part}.</p>')
-        description = f'<div class="title-description">{_paragraphs(metadata["description"])}{credit}</div>'
+        more = (f' <a class="title-readmore" href="{_e(source.get("url"))}" rel="noopener">Read more on {_e(source["name"])} ↗</a>'
+                if source.get("url") and source.get("name") else "")
+        description = (f'<div class="title-description"><p>{_e(_lead_sentences(metadata["description"]))}{more}</p>'
+                       f'{credit}</div>')
     facts = "".join(f"<div><dt>{_e(label)}</dt><dd>{_e(value)}</dd></div>" for label, value in rows if value)
     if not description and not facts:
         return ""
@@ -301,11 +318,13 @@ def render(group, summary: dict, metadata: Optional[dict], indexable: bool, sign
     reviews_link = (f'<a class="site-btn site-btn--ghost" href="#community-title">Read {len(summary["reviews"])} member review'
                     f'{"s" if len(summary["reviews"]) != 1 else ""}</a>' if summary["reviews"] else "")
     body = "".join([
-        _trailer_html(group, metadata), _about_html(group, summary, metadata), _gallery_html(group, metadata),
-        _tracks_html(metadata), _community_html(group, summary), _collections_html(summary), _related_html(summary),
+        # Our own content first: member reviews and stats, then collections and "also track".
+        _community_html(group, summary), _trailer_html(group, metadata), _about_html(group, summary, metadata),
+        _collections_html(summary), _related_html(summary), _gallery_html(group, metadata), _tracks_html(metadata),
     ])
     og_image = f'<meta property="og:image" content="{_e(image)}">' if image else ""
-    ad_loader = '<script src="/static/ad-loader.js" defer></script>' if indexable and not signed_in else ""
+    ad_loader = ('<script src="/static/ad-loader.js" defer></script>'
+                 if indexable and not signed_in and title_pages.is_ad_eligible(summary, metadata) else "")
     page = f"""<!DOCTYPE html>
 <html lang="en">
 <head>
@@ -478,7 +497,9 @@ def titles_index(request: Request, db: Session = Depends(get_db)):
                       f'<strong>{_e(item["title"])}</strong><small>{_e(item["members"])} members{_e(year)}</small></a>')
         sections.append(f'<section class="title-section" id="{kind}" aria-labelledby="{kind}-heading">'
                         f'<h2 id="{kind}-heading">{_e(KIND_PLURALS[kind])}</h2><div class="title-related-grid">{cards}</div></section>')
-    robots = "index, follow" if total >= 8 else "noindex, follow"
+    # The directory itself is mostly links; it's only worth indexing once enough titles have member reviews.
+    index_directory = len(title_pages.reviewed_titles(db)) >= 8
+    robots = "index, follow" if index_directory else "noindex, follow"
     page = f"""<!DOCTYPE html>
 <html lang="en">
 <head>
@@ -509,7 +530,7 @@ def titles_index(request: Request, db: Session = Depends(get_db)):
 </html>"""
     response = strict_html_response(apply_site_chrome(page))
     response.headers["Cache-Control"] = "public, max-age=900"
-    if total < 8:
+    if not index_directory:
         response.headers["X-Robots-Tag"] = "noindex, follow"
     return response
 
