@@ -11,11 +11,11 @@ const now = 1900000000000;
 const ttl = 24 * 60 * 60 * 1000;
 const nextQuery = destination => `?next=${encodeURIComponent(destination)}`;
 
-function setup({ search = '', pathname = '/', publicShell = true, storage = new Map(), blockedStorage = false } = {}) {
+function setup({ search = '', pathname = '/', publicShell = true, storage = new Map(), blockedStorage = false, knownMember = false } = {}) {
   const redirects = [];
   const requests = [];
   const elements = new Map();
-  const local = new Map();
+  const local = new Map(knownMember ? [['omnitrackr_known_member', '1']] : []);
   const location = {
     pathname, search, protocol: 'https:', origin: 'https://omnitrackr.xyz',
     assign: destination => redirects.push(destination), reload() {},
@@ -310,7 +310,7 @@ test('review, Discover, and collection return destinations take precedence over 
     for (const stored of [false, true]) {
       const storage = new Map([[demoKey, JSON.stringify({ source: 'demo', created_at: now })]]);
       if (stored) storage.set(returnKey, JSON.stringify({ path: destination, created_at: now }));
-      const s = setup({ search: stored ? '?start=demo' : `${nextQuery(destination)}&start=demo`, storage });
+      const s = setup({ search: stored ? '?start=demo' : `${nextQuery(destination)}&start=demo`, storage, knownMember: true });
       s.context.initAuth();
       assert.equal(s.elements.has('registerForm'), false);
       await s.context.login('reader', 'password');
@@ -335,7 +335,7 @@ test('demo intent never overrides verification or password-recovery forms', asyn
 test('malformed or repeated demo starts cannot retain stale intent or choose a redirect', async () => {
   for (const search of ['?start=', '?start=Demo', '?start=demo%0A', '?start=//evil.example', '?start=demo&start=demo', '?start=demo&next=//evil.example']) {
     const storage = new Map([[demoKey, JSON.stringify({ source: 'demo', created_at: now })]]);
-    const s = setup({ search, storage });
+    const s = setup({ search, storage, knownMember: true });
     s.context.initAuth();
     assert.notEqual(s.elements.get('registerForm')?.style.display, 'block', search);
     await s.context.login('reader', 'password');
@@ -524,4 +524,38 @@ test('explicit logout clears a collection destination retained during expired-se
   await s.context.logout();
   assert.equal(s.context.getDiscoverAuthReturn(), null);
   assert.equal(s.storage.has(returnKey), false);
+});
+
+
+test('newcomers see the sign-up form at the bottom of the homepage; returning members see log-in', () => {
+  const newcomer = setup();
+  newcomer.context.initAuth();
+  assert.equal(newcomer.elements.get('registerForm').style.display, 'block');
+  const member = setup({ knownMember: true });
+  member.context.initAuth();
+  assert.notEqual(member.elements.get('registerForm')?.style.display, 'block');
+});
+
+test('the default sign-up form is not counted as opened until someone uses it', () => {
+  const s = setup();
+  const beacons = [];
+  s.context.navigator = { sendBeacon: (url, blob) => { beacons.push(url); return true; } };
+  s.context.Blob = function Blob() {};
+  s.context.initAuth();
+  assert.equal(beacons.length, 0);
+  s.context.showRegisterForm();
+  assert.equal(beacons.length, 1);
+});
+
+test('a successful login marks the browser as a returning member', async () => {
+  const s = setup();
+  await s.context.login('reader', 'password');
+  assert.equal(s.context.knownMember(), true);
+});
+
+test('"Log in" links from other pages keep the log-in form', () => {
+  const s = setup();
+  s.context.window.location.hash = '#landing-auth';
+  s.context.initAuth();
+  assert.notEqual(s.elements.get('registerForm')?.style.display, 'block');
 });

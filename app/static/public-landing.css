@@ -105,6 +105,22 @@ body.lp #landingPage { background: none; display: block; min-height: 0; padding:
 .lp-section-head a { color: var(--lp-violet-soft); }
 
 /* Release Radar strip */
+.lp-voices { border-top: 1px solid var(--lp-border); padding: 56px 0 60px; }
+.lp-voices__facts { color: var(--lp-soft); font-size: .95rem; margin: 10px 0 0; }
+.lp-voices__facts strong { color: var(--lp-text); }
+.lp-voices__list { display: grid; gap: 16px; grid-template-columns: repeat(3, minmax(0, 1fr)); list-style: none; margin: 28px 0 0; padding: 0; }
+.lp-voice { background: var(--lp-surface); border: 1px solid var(--lp-border); border-radius: var(--lp-radius); display: flex; flex-direction: column; gap: 10px; padding: 20px; }
+.lp-voice__meta { align-items: center; color: var(--lp-teal); display: flex; font-size: .74rem; font-weight: 700; justify-content: space-between; letter-spacing: .06em; margin: 0; text-transform: uppercase; }
+.lp-voice__rating { background: rgba(139, 92, 246, .18); border-radius: 999px; color: var(--lp-violet-soft); letter-spacing: 0; padding: 3px 9px; }
+.lp-voice__title { font-size: 1.08rem; margin: 0; }
+.lp-voice__title a { color: var(--lp-text); text-decoration: none; }
+.lp-voice__title a:hover { text-decoration: underline; }
+.lp-voice__quote { border-left: 3px solid var(--lp-violet); color: var(--lp-soft); flex: 1; font-size: .95rem; line-height: 1.6; margin: 0; padding-left: 12px; }
+.lp-voice__quote p { margin: 0; }
+.lp-voice__by { color: var(--lp-muted); font-size: .86rem; margin: 0; }
+.lp-voice__by a, .lp-voices__more a { color: var(--lp-violet-soft); }
+.lp-voices__more { color: var(--lp-muted); margin: 22px 0 0; }
+@media (max-width: 860px) { .lp-voices__list { grid-template-columns: 1fr; } }
 .lp-radar { background: linear-gradient(180deg, var(--lp-bg) 0%, var(--lp-bg-2) 100%); border-top: 1px solid var(--lp-border); padding: 56px 0 64px; }
 .lp-radar-rail { display: grid; gap: 16px; grid-auto-columns: minmax(150px, 1fr); grid-auto-flow: column; list-style: none; margin: 0; overflow-x: auto; padding: 4px 2px 14px; scroll-snap-type: x mandatory; scrollbar-color: rgba(255, 255, 255, .2) transparent; -webkit-mask-image: linear-gradient(90deg, #000 88%, transparent); mask-image: linear-gradient(90deg, #000 88%, transparent); }
 .lp-radar-rail li { scroll-snap-align: start; }
