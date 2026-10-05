@@ -1,4 +1,6 @@
 """Opening the verification link in the browser that signed up signs the member straight in (Oct 2026)."""
+import pytest
+
 from app import auth, email as email_utils, models
 
 
@@ -56,13 +58,23 @@ def test_cookie_for_another_account_does_not_sign_in(client, db_session):
     assert client.get(f"/auth/verify-email?token={token}").json()["signed_in"] is False
 
 
-def test_tampered_or_forged_cookie_is_ignored(client, db_session):
+@pytest.mark.parametrize("forge", ["plain_json", "bad_signature"])
+def test_tampered_or_forged_cookie_is_ignored(client, db_session, forge):
     register(client)
     user, token = token_for(db_session)
-    client.cookies.set(auth.PENDING_SIGNUP_COOKIE, '{"uid": %d}' % user.id, path="/auth")
-    assert client.get(f"/auth/verify-email?token={token}").json()["signed_in"] is False
-    for bad in (None, "", "x" * 600, "garbage.value"):
-        assert auth.pending_signup_user_id(bad) is None
+    genuine = client.cookies.get(auth.PENDING_SIGNUP_COOKIE)
+    forged = ('{"uid": %d}' % user.id) if forge == "plain_json" else genuine[:-4] + ("AAAA" if not genuine.endswith("AAAA") else "BBBB")
+    client.cookies.clear()  # send only the forged cookie (a jar can hold both under different domains)
+    client.cookies.set(auth.PENDING_SIGNUP_COOKIE, forged)
+    assert len([c for c in client.cookies.jar if c.name == auth.PENDING_SIGNUP_COOKIE]) == 1
+    response = client.get(f"/auth/verify-email?token={token}")
+    assert response.json()["signed_in"] is False
+    assert not any(c.startswith(f"{auth.AUTH_COOKIE_NAME}=") for c in response.headers.get_list("set-cookie"))
+
+
+@pytest.mark.parametrize("bad", [None, "", "x" * 600, "garbage.value"])
+def test_malformed_cookie_values_are_rejected(bad):
+    assert auth.pending_signup_user_id(bad) is None
 
 
 def test_reusing_the_link_never_signs_in_again(client, db_session):
