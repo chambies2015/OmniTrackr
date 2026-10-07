@@ -310,7 +310,7 @@ test('cookie authentication works with blocked storage and existing token sessio
 test('public detail offers a real preview link with no automatic copy POST', () => {
   const template = fs.readFileSync(path.join(__dirname, '../app/templates/public_collection.html'), 'utf8');
   const actions = fs.readFileSync(path.join(__dirname, '../app/static/public-collections.js'), 'utf8');
-  assert.match(template, /<a href="\/collections\/public\/\{\{COLLECTION_ID\}\}\/save">Save a private copy<\/a>/);
+  assert.match(template, /<a rel="nofollow" href="\/collections\/public\/\{\{COLLECTION_ID\}\}\/save">Save a private copy<\/a>/);
   assert.doesNotMatch(template, /data-collection-action="copy"/);
   assert.doesNotMatch(actions, /\/copy|window\.location/);
   assert.match(actions, /\/helpful/);
