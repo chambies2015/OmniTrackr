@@ -212,6 +212,7 @@ function createReviewCard(review) {
   card.appendChild(meta);
   const actions = reviewText('div', 'review-card-actions', '');
   const save = reviewText('a', 'review-save-link', 'Save to my library');
+  save.rel = 'nofollow';
   save.href = `/reviews/${encodeURIComponent(review.id)}/save?category=${encodeURIComponent(review.category)}`;
   save.setAttribute('aria-label', `Save ${review.title} to my library`);
   actions.appendChild(save);

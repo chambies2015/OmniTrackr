@@ -160,7 +160,7 @@ def render_card(item: dict, count: int, return_path: str, *, compact: bool = Fal
     buy = affiliate.links_html(category, item["title"], creator)
     search = " ".join([item["title"], item.get("alt_title", ""), *item["genres"], *item["platforms"], *item["details"]])
     add = (
-        f'<a class="radar-add" data-radar-add="{key}" href="{escape(_signin_href(return_path), quote=True)}">'
+        f'<a class="radar-add" data-radar-add="{key}" rel="nofollow" href="{escape(_signin_href(return_path), quote=True)}">'
         f'<span aria-hidden="true">+</span> Track this<span class="visually-hidden"> {title}</span></a>'
     )
     return (

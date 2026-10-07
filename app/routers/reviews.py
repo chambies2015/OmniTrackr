@@ -338,7 +338,7 @@ def _review_card_html(review: dict) -> str:
           {rating_html}
         </div>
         <div class="review-card-actions">
-          <a class="review-save-link" href="/reviews/{review['id']}/save?category={_escape(review['category'])}" aria-label="Save {_escape(review.get('title'))} to my library">Save to my library</a>
+          <a class="review-save-link" rel="nofollow" href="/reviews/{review['id']}/save?category={_escape(review['category'])}" aria-label="Save {_escape(review.get('title'))} to my library">Save to my library</a>
           {detail_link}
         </div>
         {report_html}
@@ -636,7 +636,7 @@ def _review_detail_html(review: dict, more_reviews: Optional[list] = None) -> st
           <p class="site-eyebrow">Sounds like your kind of thing?</p>
           <h2>Keep it for later</h2>
           <p class="review-save-note">Save it to your own private library. You preview any existing match before confirming.</p>
-          <a class="review-save-link site-btn site-btn--primary" href="/reviews/{review['id']}/save?category={_escape(category)}">Save to my library</a>
+          <a class="review-save-link site-btn site-btn--primary" rel="nofollow" href="/reviews/{review['id']}/save?category={_escape(category)}">Save to my library</a>
           {_review_affiliate_html(review)}
           {_review_report_html(review)}
         </aside>
