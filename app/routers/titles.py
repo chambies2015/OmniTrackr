@@ -17,7 +17,7 @@ from .. import models, title_metadata, title_pages
 from ..auth import AUTH_COOKIE_NAME
 from ..csp import strict_html_response
 from ..dependencies import get_current_user, get_db
-from ..site_chrome import apply_site_chrome, message_page
+from ..site_chrome import apply_site_chrome, editorial_picks, message_page
 
 router = APIRouter(tags=["titles"])
 SITE_URL = os.getenv("SITE_URL", "https://omnitrackr.xyz").rstrip("/")
@@ -497,6 +497,12 @@ def titles_index(request: Request, db: Session = Depends(get_db)):
                       f'<strong>{_e(item["title"])}</strong><small>{_e(item["members"])} members{_e(year)}</small></a>')
         sections.append(f'<section class="title-section" id="{kind}" aria-labelledby="{kind}-heading">'
                         f'<h2 id="{kind}-heading">{_e(KIND_PLURALS[kind])}</h2><div class="title-related-grid">{cards}</div></section>')
+    if not sections:
+        sections.append(editorial_picks(
+            "Looking for something to start?",
+            "Titles appear here as members track them. Meanwhile, these OmniTrackr guides compare picks across "
+            "every medium and explain who each one suits.",
+        ))
     # The directory itself is mostly links; it's only worth indexing once enough titles have member reviews.
     index_directory = len(title_pages.reviewed_titles(db)) >= 8
     robots = "index, follow" if index_directory else "noindex, follow"
@@ -523,7 +529,7 @@ def titles_index(request: Request, db: Session = Depends(get_db)):
       <h1>What OmniTrackr members are tracking</h1>
       <p>The most-tracked movies, shows, anime, games, books and albums on OmniTrackr. Every title has its details, trailer, scores and what members thought of it.</p>
     </div></section>
-    <div class="site-wrap title-body">{"".join(sections) or '<p class="title-empty">Titles appear here once members start tracking them.</p>'}</div>
+    <div class="site-wrap title-body">{"".join(sections)}</div>
   </main>
   <!--SITE_FOOTER-->
 </body>

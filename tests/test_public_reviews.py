@@ -927,7 +927,9 @@ class TestPublicReviews:
         assert "<title>Music Reviews - OmniTrackr</title>" in response.text
         assert '<meta name="robots" content="noindex, follow">' in response.text
         assert "/static/ad-loader.js" not in response.text
-        assert "Community reviews are being curated" in response.text
+        assert "Community reviews are being curated" not in response.text
+        assert 'class="site-picks"' in response.text
+        assert 'href="/discover/one-evening-well-spent"' in response.text
 
     def test_invalid_review_category_page_is_noindexed_404(self, client):
         """Unsupported category queries should not duplicate the indexable reviews page."""

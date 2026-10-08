@@ -20,7 +20,7 @@ from sqlalchemy.orm import Session, selectinload
 from ..admin_access import is_moderator, moderator_usernames
 from .. import models, schemas
 from ..collection_quality import evaluate_public_collection
-from ..site_chrome import apply_site_chrome, message_page
+from ..site_chrome import apply_site_chrome, editorial_picks, message_page
 from ..csp import strict_html_response
 from ..dependencies import get_current_user, get_db
 from ..visitor_identity import (
@@ -1048,16 +1048,17 @@ async def explore_collections(
     elif normalized_query or category:
         gallery_content = '<div class="collection-gallery__empty"><h2>No collections found</h2><p>Try a different search or media type.</p></div>'
     else:
-        gallery_content = (
-            '<div class="collection-gallery__empty"><h2>The gallery is opening soon</h2>'
-            '<p>The first qualifying member collections will appear here automatically. '
-            '<a href="/#signup">Create your library</a> and start shaping one.</p></div>'
+        gallery_content = editorial_picks(
+            "Cross-media trails from OmniTrackr",
+            "Member collections join this gallery once they pass the discovery checks. Until then, these "
+            "editorial trails connect films, series, anime, games, albums, and books around one idea.",
         )
     values = {
         "COLLECTIONS": gallery_content,
         "QUERY": escape(normalized_query, quote=True),
         "CATEGORY": escape(category, quote=True),
-        "COUNT": str(len(cards)),
+        "COUNT": (f"{len(cards)} approved collection(s)" if cards or normalized_query or category
+                  else "Editorial picks while the gallery fills"),
         "SELECT_ALL": "selected" if not category else "",
         "SELECT_MOVIES": "selected" if category == "movies" else "",
         "SELECT_TV_SHOWS": "selected" if category == "tv-shows" else "",

@@ -210,10 +210,12 @@ def test_full_page_renders_everything(client, db_session):
         for directive in response.headers["content-security-policy"].split(";")
         if (tokens := directive.split())
     }
+    # Ad pages allow https: frames (Google's strict AdSense CSP), which covers trailers.
     assert any(
-        source == "https://www.youtube-nocookie.com"
+        source in ("https://www.youtube-nocookie.com", "https:")
         for source in directives["frame-src"]
     )
+    assert "'strict-dynamic'" in directives["script-src"]
     assert "<iframe" not in html  # trailers load only when played
 
 

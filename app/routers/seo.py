@@ -35,6 +35,7 @@ CORE_SITEMAP_PATHS = (
     ("/about", "monthly", "0.7"),
     ("/faq", "monthly", "0.7"),
     ("/guides", "monthly", "0.75"),
+    ("/compare", "monthly", "0.7"),
     ("/demo", "monthly", "0.8"),
     ("/media-tracking", "monthly", "0.85"),
     ("/export-import-guide", "monthly", "0.75"),
