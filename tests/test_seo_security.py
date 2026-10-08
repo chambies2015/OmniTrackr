@@ -304,10 +304,11 @@ class TestSEOEndpoints:
         for path in (
             "/about", "/faq", "/guides", "/export-import-guide",
             "/review-guidelines", "/sample-library", "/demo", "/media-tracking",
+            "/compare",
         ):
             assert path in content
         for path in (
-            "/compare", "/use-cases", "/changelog", "/site-map",
+            "/use-cases", "/changelog", "/site-map",
             "/tv-show-tracker", "/game-tracker", "/movie-tracker",
             "/anime-tracker", "/book-tracker", "/music-tracker",
             "/media-statistics", "/media-tracker-checklist",
@@ -544,10 +545,18 @@ class TestSecurityMiddleware:
             response = client.get(path)
             assert response.status_code == 200
             csp = response.headers["Content-Security-Policy"]
-            assert "'unsafe-inline'" not in csp
             assert "'nonce-" in csp
             assert ' nonce="' in response.text
             assert ' style="' not in response.text
+            if '<script src="/static/ad-loader.js"' in response.text:
+                # Google's supported AdSense CSP: nonce + 'strict-dynamic'; the
+                # 'unsafe-inline' and https: fallbacks are ignored by CSP3 browsers.
+                script_src = next(d for d in csp.split(";") if d.strip().startswith("script-src"))
+                assert "'strict-dynamic'" in script_src
+                scripts = re.findall(r"<script\b[^>]*>", response.text)
+                assert scripts and all(" nonce=" in tag for tag in scripts)
+            else:
+                assert "'unsafe-inline'" not in csp
 
     def test_root_script_csp_uses_nonce_without_unsafe_inline(self, client):
         """The dashboard should not need unsafe-inline in CSP."""
@@ -679,12 +688,9 @@ class TestSecurityMiddleware:
     def test_supporting_public_utility_pages_are_useful_but_noindexed(self, client):
         """Legal and support pages remain useful without becoming search inventory."""
         utility_paths = [
-            "/privacy",
             "/advertising",
             "/content-quality",
             "/site-map",
-            "/terms",
-            "/contact",
         ]
 
         for path in utility_paths:
@@ -704,7 +710,6 @@ class TestSecurityMiddleware:
     def test_overlapping_guides_remain_accessible_but_outside_search_inventory(self, client):
         """Consolidated guides should keep working for visitors and internal links."""
         supporting_paths = [
-            "/compare",
             "/use-cases",
             "/changelog",
             "/tv-show-tracker",
@@ -1623,3 +1628,42 @@ class TestRootEndpoint:
         assert response.headers["cache-control"] == "private, no-store"
         assert "Cookie" in response.headers["vary"]
 
+
+
+def test_trust_pages_are_indexable_but_stay_out_of_sitemap(client):
+    """Privacy, terms, and contact should not hide the site's identity from crawlers."""
+    sitemap = client.get("/sitemap.xml").text
+    for path in ("/privacy", "/terms", "/contact"):
+        response = client.get(path)
+        assert response.status_code == 200
+        assert "x-robots-tag" not in response.headers
+        assert "noindex" not in " ".join(parse_page_quality(response.text).robots_contents).lower()
+        assert f"/{path.strip('/')}</loc>" not in sitemap
+        assert "/static/ad-loader.js" not in response.text
+
+
+def test_empty_member_directories_offer_editorial_picks(client):
+    """Empty directories should read as content, not as a site under construction."""
+    for path in ("/collections/explore", "/titles", "/reviews"):
+        html = client.get(path).text
+        assert 'class="site-picks"' in html, path
+        assert 'href="/discover/one-evening-well-spent"' in html, path
+        assert "opening soon" not in html and "being curated" not in html, path
+    filtered = client.get("/collections/explore?q=nothing-matches").text
+    assert "No collections found" in filtered and 'class="site-picks"' not in filtered
+
+
+def test_ad_csp_nonces_every_script_only_when_loader_present():
+    from app.csp import nonce_html_response
+
+    plain = nonce_html_response('<html><head><script src="/static/x.js"></script></head></html>')
+    assert "'strict-dynamic'" not in plain.headers["Content-Security-Policy"]
+    assert b'<script src="/static/x.js">' in plain.body
+
+    ad = nonce_html_response(
+        '<html><head><script src="/static/x.js"></script>'
+        '<script src="/static/ad-loader.js" defer></script></head></html>'
+    )
+    csp = ad.headers["Content-Security-Policy"]
+    assert "'strict-dynamic'" in csp and "frame-src https:" in csp and "object-src 'none'" in csp
+    assert ad.body.count(b" nonce=") == 2

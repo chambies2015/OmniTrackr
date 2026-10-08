@@ -18,7 +18,7 @@ from sqlalchemy import and_, func
 from sqlalchemy.exc import IntegrityError
 
 from .. import affiliate, models, schemas
-from ..site_chrome import apply_site_chrome, message_page
+from ..site_chrome import apply_site_chrome, editorial_picks, message_page
 from ..auth import AUTH_COOKIE_NAME
 from ..csp import strict_html_response
 from ..dependencies import get_current_user, get_db
@@ -677,7 +677,11 @@ def reviews_index(
     elif q:
         cards = '<section class="no-reviews"><h2>No matching reviews yet</h2><p>Try another title or choose All Categories.</p></section>'
     else:
-        cards = '<section class="no-reviews"><h2>Community reviews are being curated</h2><p>Thoughtful public reviews will appear here as members share them.</p></section>'
+        cards = editorial_picks(
+            "Start with an editorial guide",
+            "No member has shared a public review in this section yet. These OmniTrackr guides compare films, "
+            "series, anime, games, albums, and books, and explain who each pick suits.",
+        )
     replacements = {
         "SERVER_REVIEWS": cards, "CATEGORY": _escape(category or ""), "QUERY": _escape(q),
         "NEXT_OFFSET": str(feed["next_offset"]), "HAS_MORE": str(feed["has_more"]).lower(),
