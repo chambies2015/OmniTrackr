@@ -85,6 +85,8 @@ class Movie(Base):
     review = Column(Text, nullable=True)
     review_public = Column(Boolean, default=False, nullable=False)
     poster_url = Column(String, nullable=True)
+    # When the item entered the library. NULL means it predates add-date tracking.
+    added_at = Column(DateTime, nullable=True, default=datetime.utcnow)
     
     # User relationship
     user_id = Column(Integer, ForeignKey("users.id"), nullable=False, index=True)
@@ -105,6 +107,8 @@ class TVShow(Base):
     review = Column(Text, nullable=True)
     review_public = Column(Boolean, default=False, nullable=False)
     poster_url = Column(String, nullable=True)
+    # When the item entered the library. NULL means it predates add-date tracking.
+    added_at = Column(DateTime, nullable=True, default=datetime.utcnow)
     
     # User relationship
     user_id = Column(Integer, ForeignKey("users.id"), nullable=False, index=True)
@@ -125,6 +129,8 @@ class Anime(Base):
     review = Column(Text, nullable=True)
     review_public = Column(Boolean, default=False, nullable=False)
     poster_url = Column(String, nullable=True)
+    # When the item entered the library. NULL means it predates add-date tracking.
+    added_at = Column(DateTime, nullable=True, default=datetime.utcnow)
     
     # User relationship
     user_id = Column(Integer, ForeignKey("users.id"), nullable=False, index=True)
@@ -145,6 +151,8 @@ class VideoGame(Base):
     review_public = Column(Boolean, default=False, nullable=False)
     cover_art_url = Column(String, nullable=True)
     rawg_link = Column(String, nullable=True)
+    # When the item entered the library. NULL means it predates add-date tracking.
+    added_at = Column(DateTime, nullable=True, default=datetime.utcnow)
     
     # User relationship
     user_id = Column(Integer, ForeignKey("users.id"), nullable=False, index=True)
@@ -165,6 +173,8 @@ class Music(Base):
     review = Column(Text, nullable=True)
     review_public = Column(Boolean, default=False, nullable=False)
     cover_art_url = Column(String, nullable=True)
+    # When the item entered the library. NULL means it predates add-date tracking.
+    added_at = Column(DateTime, nullable=True, default=datetime.utcnow)
     
     # User relationship
     user_id = Column(Integer, ForeignKey("users.id"), nullable=False, index=True)
@@ -185,6 +195,8 @@ class Book(Base):
     review = Column(Text, nullable=True)
     review_public = Column(Boolean, default=False, nullable=False)
     cover_art_url = Column(String, nullable=True)
+    # When the item entered the library. NULL means it predates add-date tracking.
+    added_at = Column(DateTime, nullable=True, default=datetime.utcnow)
     
     # User relationship
     user_id = Column(Integer, ForeignKey("users.id"), nullable=False, index=True)
