@@ -142,3 +142,28 @@ async def get_favicon_png():
     raise HTTPException(status_code=404, detail="favicon.png not found")
 
 
+
+
+# Installable app (PWA). The worker and manifest live at the site root so the
+# worker's scope covers every page; both revalidate so updates reach installs.
+STATIC_DIR = os.path.join(os.path.dirname(__file__), "..", "static")
+NO_CACHE = {"Cache-Control": "no-cache"}
+
+
+@router.get("/manifest.webmanifest", include_in_schema=False)
+@router.head("/manifest.webmanifest", include_in_schema=False)
+async def get_web_manifest():
+    return FileResponse(os.path.join(STATIC_DIR, "manifest.webmanifest"),
+                        media_type="application/manifest+json", headers=CACHE_JS_CSS)
+
+
+@router.get("/sw.js", include_in_schema=False)
+async def get_service_worker():
+    return FileResponse(os.path.join(STATIC_DIR, "sw.js"), media_type="application/javascript",
+                        headers={**NO_CACHE, "Service-Worker-Allowed": "/"})
+
+
+@router.get("/offline", include_in_schema=False)
+async def get_offline_page():
+    return FileResponse(os.path.join(STATIC_DIR, "offline.html"), media_type="text/html",
+                        headers={**NO_CACHE, "X-Robots-Tag": "noindex, nofollow"})

@@ -16,6 +16,7 @@ from html import escape
 
 SITE_CSS_VERSION = "20260928-site-1"
 SITE_JS_VERSION = "20260928-site-1"
+PWA_JS_VERSION = "20261008-pwa-1"
 
 # (key, label, href) in display order. The first NAV_PRIMARY entries stay
 # visible on tablets; everything is always available in the compact menu.
@@ -117,6 +118,15 @@ def site_assets() -> str:
             f'<script src="/static/site.js?v={SITE_JS_VERSION}" defer></script>')
 
 
+def pwa_head() -> str:
+    """Manifest, home-screen icon and worker registration for the installable app."""
+    return ('<link rel="manifest" href="/manifest.webmanifest">'
+            '<link rel="apple-touch-icon" href="/static/icons/apple-touch-icon.png">'
+            '<meta name="mobile-web-app-capable" content="yes">'
+            '<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">'
+            f'<script src="/static/pwa.js?v={PWA_JS_VERSION}" defer></script>')
+
+
 def apply_site_chrome(html: str, *, login_action: bool = False) -> str:
     """Replace the nav/footer markers; leaves pages without markers untouched."""
     if "<!--SITE_" not in html:
@@ -125,6 +135,8 @@ def apply_site_chrome(html: str, *, login_action: bool = False) -> str:
     html = html.replace(FOOTER_MARKER, site_footer(), 1)
     if "/static/site.css" not in html and "</head>" in html:
         html = html.replace("</head>", site_assets() + "\n</head>", 1)
+    if 'rel="manifest"' not in html and "</head>" in html:
+        html = html.replace("</head>", pwa_head() + "\n</head>", 1)
     return html
 
 

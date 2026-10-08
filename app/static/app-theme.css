@@ -61,14 +61,21 @@ body.app-shell .container.sidebar-hidden { padding: 0; width: 100%; max-width: 1
 
 /* A quiet account strip leaves the library search and capture action prominent. */
 body.app-shell .account-toolbar { width: 100%; max-width: 1480px; margin: 0 auto 16px; gap: 8px; }
-body.app-shell .account-toolbar :is(#toggleMode, #notificationBell, #userDisplay, #showFriendsSidebar, #logoutBtn) {
+body.app-shell .account-toolbar :is(#toggleMode, #notificationBell, #userDisplay, #showFriendsSidebar, #installAppBtn, #logoutBtn) {
   background: transparent; border: 1px solid transparent; border-radius: 9px;
   color: var(--fg-secondary); box-shadow: none; font-size: .8rem; font-weight: 500;
   min-height: 40px; padding: 8px 12px; transform: none;
 }
-body.app-shell .account-toolbar :is(#toggleMode, #notificationBell, #userDisplay, #showFriendsSidebar, #logoutBtn):hover { background: var(--surface-hover); color: var(--fg); }
+body.app-shell .account-toolbar :is(#toggleMode, #notificationBell, #userDisplay, #showFriendsSidebar, #installAppBtn, #logoutBtn):hover { background: var(--surface-hover); color: var(--fg); }
 body.app-shell .account-toolbar #userDisplay { color: var(--fg); background: var(--card-bg); border-color: var(--border); }
 body.app-shell .account-toolbar #notificationBell { font-size: 1rem; }
+body.app-shell .account-toolbar #installAppBtn { display: inline-flex; align-items: center; gap: 6px; }
+body.app-shell .account-toolbar #installAppBtn[hidden] { display: none; }
+html.is-installed-app body.app-shell .account-toolbar #installAppBtn { display: none; }
+body.app-shell .install-app-dialog { background: var(--card-bg); border: 1px solid var(--border); border-radius: var(--radius); box-shadow: var(--shadow-lg); color: var(--fg); max-width: min(420px, calc(100vw - 32px)); padding: 22px 24px; }
+body.app-shell .install-app-dialog::backdrop { background: rgb(0 0 0 / .55); }
+body.app-shell .install-app-dialog h2 { font-size: 1.1rem; margin: 0 0 12px; }
+body.app-shell .install-app-dialog ol { margin: 0 0 18px; padding-left: 20px; color: var(--fg-secondary); line-height: 1.55; }
 body.app-shell .account-toolbar .user-profile-picture { border: 1px solid var(--border); width: 26px; height: 26px; }
 body.app-shell .notification-dropdown { background: var(--card-bg); border: 1px solid var(--border); box-shadow: var(--shadow-lg); color: var(--fg); }
 
@@ -196,7 +203,7 @@ body.app-shell #mainFooter .footer-link:hover { color: var(--primary); transform
   body.app-shell { padding: 12px 16px 0; }
   body.app-shell .container, body.app-shell .container.sidebar-hidden { width: 100%; margin: 0; padding: 0; }
   body.app-shell .account-toolbar { gap: 3px; margin: 0 0 12px; }
-  body.app-shell .account-toolbar :is(#toggleMode, #notificationBell, #userDisplay, #showFriendsSidebar, #logoutBtn) { min-height: 44px; padding: 6px 9px; }
+  body.app-shell .account-toolbar :is(#toggleMode, #notificationBell, #userDisplay, #showFriendsSidebar, #installAppBtn, #logoutBtn) { min-height: 44px; padding: 6px 9px; }
   body.app-shell .header { grid-template-columns: minmax(0, 1fr) auto; gap: 18px 12px; }
   body.app-shell .header .library-search { grid-column: 1 / -1; grid-row: 2; }
   body.app-shell .header .app-title { font-size: 1.17rem; }
@@ -216,8 +223,11 @@ body.app-shell #mainFooter .footer-link:hover { color: var(--primary); transform
   body.app-shell .app-brand__mark svg { width: 22px; }
   body.app-shell .header .app-title { font-size: 1rem; }
   body.app-shell .quick-capture-trigger { font-size: .74rem; padding-inline: 8px; }
-  body.app-shell .account-toolbar :is(#toggleMode, #notificationBell, #userDisplay, #showFriendsSidebar, #logoutBtn) { padding-inline: 7px; }
+  body.app-shell .account-toolbar :is(#toggleMode, #notificationBell, #userDisplay, #showFriendsSidebar, #installAppBtn, #logoutBtn) { padding-inline: 7px; }
 }
 @media (prefers-reduced-motion: reduce) {
   body.app-shell, body.app-shell *, body.app-shell *::before, body.app-shell *::after { animation: none !important; scroll-behavior: auto !important; transition: none !important; }
+}
+@media (max-width: 480px) {
+  body.app-shell .account-toolbar #installAppBtn span { display: none; }
 }

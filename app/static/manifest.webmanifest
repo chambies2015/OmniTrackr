@@ -1,0 +1,24 @@
+{
+  "id": "/",
+  "name": "OmniTrackr",
+  "short_name": "OmniTrackr",
+  "description": "Track movies, TV shows, anime, video games, music, and books in one private library.",
+  "lang": "en",
+  "dir": "ltr",
+  "start_url": "/",
+  "scope": "/",
+  "display": "standalone",
+  "background_color": "#0b0a18",
+  "theme_color": "#1e1e2f",
+  "categories": ["entertainment", "lifestyle", "books"],
+  "icons": [
+    {"src": "/static/icons/icon-192.png", "sizes": "192x192", "type": "image/png", "purpose": "any"},
+    {"src": "/static/icons/icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "any"},
+    {"src": "/static/icons/icon-maskable-512.png", "sizes": "512x512", "type": "image/png", "purpose": "maskable"}
+  ],
+  "shortcuts": [
+    {"name": "Release Radar", "short_name": "Releases", "description": "Upcoming movies, TV, anime and games", "url": "/release-radar", "icons": [{"src": "/static/icons/icon-192.png", "sizes": "192x192", "type": "image/png"}]},
+    {"name": "Discover", "short_name": "Discover", "description": "Cross-media picks and guides", "url": "/discover", "icons": [{"src": "/static/icons/icon-192.png", "sizes": "192x192", "type": "image/png"}]},
+    {"name": "Public reviews", "short_name": "Reviews", "description": "Reviews members chose to share", "url": "/reviews", "icons": [{"src": "/static/icons/icon-192.png", "sizes": "192x192", "type": "image/png"}]}
+  ]
+}

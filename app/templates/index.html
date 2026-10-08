@@ -44,6 +44,10 @@
   <title>OmniTrackr - Free Media Tracker for Movies, Shows, Games, Music & Books</title>
   <link rel="image_src" href="https://omnitrackr.xyz/omnitrackr_vortex.png">
   <link rel="icon" type="image/x-icon" href="/omnitrackr_favicon.ico">
+  <link rel="manifest" href="/manifest.webmanifest">
+  <link rel="apple-touch-icon" href="/static/icons/apple-touch-icon.png">
+  <meta name="mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link rel="preload" href="./styles.css?v=20260929-for-you-1" as="style">
@@ -51,10 +55,11 @@
     rel="stylesheet">
   <link rel="stylesheet" href="./styles.css?v=20260929-for-you-1">
   <link rel="stylesheet" href="/static/progress.css?v=20260922-progress">
-  <link rel="stylesheet" href="/static/app-theme.css?v=20260924-friends-panel-2">
+  <link rel="stylesheet" href="/static/app-theme.css?v=20261008-pwa-1">
   <link rel="stylesheet" href="/static/library-theme.css?v=20260924-library-filters-1">
   <link rel="stylesheet" href="/static/dialog-theme.css?v=20260924-visual-4">
   <script src="./preauth.js"></script>
+  <script src="/static/pwa.js?v=20261008-pwa-1" defer></script>
   <style>
     html.authenticated #landingPage{display:none}
     html.authenticated #mainContainer,
@@ -318,8 +323,22 @@
     <span id="userDisplayText"></span>
   </button>
   <a id="siteStatsLink" class="site-stats-link" href="/site-stats" hidden>Site stats</a>
+  <button id="installAppBtn" class="install-app-btn" type="button" aria-label="Install OmniTrackr as an app" hidden>
+    <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><path d="M12 3v12M7 10l5 5 5-5M5 21h14"/></svg>
+    <span>Install app</span>
+  </button>
   <button id="logoutBtn" aria-label="Logout from your account">Logout</button>
   </div>
+
+  <dialog id="installAppDialog" class="install-app-dialog" aria-labelledby="installAppDialogTitle">
+    <h2 id="installAppDialogTitle">Add OmniTrackr to your Home Screen</h2>
+    <ol>
+      <li>Tap the <strong>Share</strong> button in Safari's toolbar.</li>
+      <li>Choose <strong>Add to Home Screen</strong>.</li>
+      <li>Tap <strong>Add</strong>. OmniTrackr opens full screen from your Home Screen.</li>
+    </ol>
+    <button id="installAppDialogClose" class="action-btn" type="button">Got it</button>
+  </dialog>
 
   <!-- Friends panel overlays the workspace without changing its layout. -->
   <aside id="friendsSidebar" class="friends-sidebar hidden" aria-labelledby="friendsPanelTitle" hidden>
