@@ -72,13 +72,15 @@ def test_demo_is_sample_only_even_when_a_member_is_signed_in(authenticated_clien
     assert '/static/ad-loader.js' not in response.text
     scripts = ScriptSources()
     scripts.feed(response.text)
-    # Besides the sample library, only the shared header helper may load; it
-    # never makes requests or touches browser storage.
-    site_scripts = [src for src in scripts.sources if urlsplit(src).path == '/static/site.js']
-    assert len(site_scripts) == 1
-    site_js = client.get(site_scripts[0]).text
-    assert 'fetch(' not in site_js and 'Storage' not in site_js and 'XMLHttpRequest' not in site_js
-    scripts.sources.remove(site_scripts[0])
+    # Besides the sample library, only the shared header helper and the
+    # installable-app helper may load; neither makes requests or touches
+    # browser storage.
+    for helper in ('/static/site.js', '/static/pwa.js'):
+        helper_scripts = [src for src in scripts.sources if urlsplit(src).path == helper]
+        assert len(helper_scripts) == 1
+        helper_js = client.get(helper_scripts[0]).text
+        assert 'fetch(' not in helper_js and 'Storage' not in helper_js and 'XMLHttpRequest' not in helper_js
+        scripts.sources.remove(helper_scripts[0])
     assert len(scripts.sources) == 1
     assert urlsplit(scripts.sources[0]).path == '/static/demo.js'
     script_response = client.get(scripts.sources[0])
