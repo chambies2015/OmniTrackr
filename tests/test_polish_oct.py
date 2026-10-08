@@ -2,6 +2,8 @@
 import re
 from pathlib import Path
 
+from app import dashboard_assets
+
 INDEX = Path("app/templates/index.html").read_text(encoding="utf-8")
 LANDING = Path("app/templates/public_landing.html").read_text(encoding="utf-8")
 
@@ -42,5 +44,5 @@ def test_dependency_security_floors():
 
 
 def test_dead_code_and_unused_files_are_gone():
-    assert "cancelFriendRequest" not in Path("app/static/app.js").read_text(encoding="utf-8")
+    assert "cancelFriendRequest" not in dashboard_assets.full_source()
     assert not Path("app/static/movie_theater_background.jpg").exists()

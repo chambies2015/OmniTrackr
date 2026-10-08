@@ -14,6 +14,7 @@
     bookTable: ['book', '.edit-book-btn', 'bookTitle', 'bookYear', 'books_private'],
   };
   let privacy = null;
+  let privacyRequest = null;
 
   // Mirrors title_pages.slugify / title_slug on the server.
   function slugify(text) {
@@ -31,6 +32,12 @@
 
   async function loadPrivacy() {
     if (privacy) return privacy;
+    // All six library tables ask on page load; they share one request.
+    if (!privacyRequest) privacyRequest = fetchPrivacy().finally(() => { privacyRequest = null; });
+    return privacyRequest;
+  }
+
+  async function fetchPrivacy() {
     try {
       const options = typeof authFetchOptions === 'function' ? authFetchOptions() : { credentials: 'same-origin' };
       const response = await fetch(`${typeof API_BASE === 'string' ? API_BASE : ''}/account/privacy`, options);

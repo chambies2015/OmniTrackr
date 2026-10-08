@@ -4,10 +4,12 @@ from pathlib import Path
 
 import pytest
 
+from app import dashboard_assets
+
 ROOT = Path(__file__).resolve().parents[1]
 TEMPLATES = ROOT / "app" / "templates"
 INDEX = (TEMPLATES / "index.html").read_text(encoding="utf-8")
-APP_JS = (ROOT / "app" / "static" / "app.js").read_text(encoding="utf-8")
+APP_JS = dashboard_assets.full_source()
 THEME = (ROOT / "app" / "static" / "dashboard-2026.css").read_text(encoding="utf-8")
 
 READER_TEMPLATES = (
