@@ -111,6 +111,8 @@ body.lp #landingPage { background: none; display: block; min-height: 0; padding:
 .lp-voices__list { display: grid; gap: 16px; grid-template-columns: repeat(3, minmax(0, 1fr)); list-style: none; margin: 28px 0 0; padding: 0; }
 .lp-voice { background: var(--lp-surface); border: 1px solid var(--lp-border); border-radius: var(--lp-radius); display: flex; flex-direction: column; gap: 10px; padding: 20px; }
 .lp-voice__meta { align-items: center; color: var(--lp-teal); display: flex; font-size: .74rem; font-weight: 700; justify-content: space-between; letter-spacing: .06em; margin: 0; text-transform: uppercase; }
+.lp-voice--spotlight { border-color: rgba(45, 212, 191, .45); box-shadow: 0 0 0 1px rgba(45, 212, 191, .15) inset; }
+.lp-voice__badge { color: #5eead4; }
 .lp-voice__rating { background: rgba(139, 92, 246, .18); border-radius: 999px; color: var(--lp-violet-soft); letter-spacing: 0; padding: 3px 9px; }
 .lp-voice__title { font-size: 1.08rem; margin: 0; }
 .lp-voice__title a { color: var(--lp-text); text-decoration: none; }

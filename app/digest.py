@@ -21,6 +21,9 @@ from . import release_radar as radar
 from .for_you import coming_up
 
 SEND_EVERY = timedelta(days=7) - timedelta(hours=1)
+# Weeks with no news from the member's own library are skipped, except for a short
+# "popular this month" round-up at most this often.
+ROUNDUP_EVERY = timedelta(days=28) - timedelta(hours=1)
 CHECK_EVERY_SECONDS = 3600
 FIRST_CHECK_DELAY_SECONDS = 180
 
@@ -78,6 +81,37 @@ def unsubscribe_token(db: Session, token: str) -> bool:
     return bool(removed)
 
 
+# ---------------------------------------------------------------- one-click opt-in links (emails only)
+
+SUBSCRIBE_LINK_MAX_AGE = 60 * 24 * 3600  # links in an email stay valid for 60 days
+
+
+def _subscribe_serializer():
+    from itsdangerous import URLSafeTimedSerializer
+    from .email import SECRET_KEY
+    return URLSafeTimedSerializer(SECRET_KEY, salt="weekly-email-subscribe")
+
+
+def subscribe_link_token(user_id: int) -> str:
+    """Signed, member-specific link token. Opening it only shows a confirm button."""
+    return _subscribe_serializer().dumps({"u": int(user_id)})
+
+
+def user_id_from_subscribe_token(token: str) -> int | None:
+    if not token or len(token) > 300:
+        return None
+    try:
+        data = _subscribe_serializer().loads(token, max_age=SUBSCRIBE_LINK_MAX_AGE)
+    except Exception:
+        return None
+    uid = data.get("u") if isinstance(data, dict) else None
+    return uid if isinstance(uid, int) and not isinstance(uid, bool) and uid > 0 else None
+
+
+def subscribe_link(user_id: int) -> str:
+    return f"{app_url()}/email/weekly/subscribe?token={subscribe_link_token(user_id)}"
+
+
 # ---------------------------------------------------------------- email content
 
 def _day(iso: str | None) -> str:
@@ -104,8 +138,26 @@ def _rows(cards: list[dict], base: str) -> str:
     return "".join(rows)
 
 
-def build_digest(username: str, report: dict, unsubscribe_url: str) -> tuple[str, str, str] | None:
-    """(subject, html, text) or None when there is nothing to send."""
+def _spotlight_section(review: dict | None, base: str) -> tuple[str, list[str]]:
+    """'Review of the week' block (html, text lines); empty when there is none."""
+    if not review:
+        return "", []
+    text = " ".join((review.get("review") or "").split())
+    excerpt = text if len(text) <= 260 else text[:260].rsplit(" ", 1)[0] + "…"
+    url = f"{base}/reviews/{int(review['id'])}?category={review['category']}"
+    html = (
+        '<h2 style="font-size:17px;color:#1f1640;margin:24px 0 8px">Review of the week</h2>'
+        '<div style="border-left:3px solid #7c3aed;padding:2px 0 2px 14px">'
+        f'<a href="{escape(url, quote=True)}" style="color:#1f1640;font-weight:700;text-decoration:none;font-size:15px">{escape(review.get("title") or "")}</a>'
+        f'<div style="color:#3b3557;font-size:14px;line-height:1.6;margin-top:4px">{escape(excerpt)}</div>'
+        f'<div style="color:#8a86a3;font-size:13px;margin-top:6px">by {escape(review.get("username") or "a member")} · '
+        f'<a href="{escape(url, quote=True)}" style="color:#6d28d9">Read the review</a></div></div>'
+    )
+    return html, ["Review of the week:", f"{review.get('title')} by {review.get('username')}: {excerpt}", url, ""]
+
+
+def build_digest(username: str, report: dict, unsubscribe_url: str, spotlight: dict | None = None) -> tuple[str, str, str] | None:
+    """(subject, html, text) or None when there is nothing to send. `spotlight` never forces a send."""
     matches, popular = report["matches"], report["popular"]
     if not matches and not popular:
         return None
@@ -113,7 +165,7 @@ def build_digest(username: str, report: dict, unsubscribe_url: str) -> tuple[str
     if matches:
         subject = f"Coming up for you: {matches[0]['title']}" + (f" and {len(matches) - 1} more" if len(matches) > 1 else "")
     else:
-        subject = f"This week on Release Radar: {popular[0]['title']} and more"
+        subject = f"This month on Release Radar: {popular[0]['title']} and more"
     sections = []
     text = [f"Hi {username},", ""]
     if matches:
@@ -128,6 +180,10 @@ def build_digest(username: str, report: dict, unsubscribe_url: str) -> tuple[str
         text.append("Popular this month:")
         text += [f"- {c['title']} ({c['label']}, {_day(c.get('date'))})" for c in popular[:5]]
         text.append("")
+    spotlight_html, spotlight_text = _spotlight_section(spotlight, base)
+    if spotlight_html:
+        sections.append(spotlight_html)
+        text += spotlight_text
     text += [f"See everything: {base}/release-radar", "",
              "You get this because you turned on the weekly email in OmniTrackr.",
              f"Unsubscribe with one click: {unsubscribe_url}"]
@@ -181,6 +237,13 @@ async def send_due_digests(session_factory, client=None, now: datetime | None = 
         ).order_by(models.EmailDigestSubscription.last_checked_at.asc().nullsfirst(),
                    models.EmailDigestSubscription.id).all()
         pool = None
+        spotlight = None
+        try:
+            from .review_spotlight import build as build_spotlight
+            spotlight = build_spotlight(db, now)
+        except Exception:
+            db.rollback()
+            spotlight = None  # The weekly email never depends on it.
         for subscription in due:
             if allowance <= 0:
                 stats["limited"] += 1
@@ -195,8 +258,11 @@ async def send_due_digests(session_factory, client=None, now: datetime | None = 
                 from .for_you import radar_pool
                 pool = radar_pool(today, client)
             report = coming_up(db, user.id, today=today, pool=pool)
+            if not report["matches"] and subscription.last_sent_at and subscription.last_sent_at > now - ROUNDUP_EVERY:
+                stats["skipped"] += 1  # a quiet week: no news from their library, round-up sent recently
+                continue
             unsubscribe_url = f"{app_url()}/email/unsubscribe?token={subscription.token}"
-            built = build_digest(user.username, report, unsubscribe_url)
+            built = build_digest(user.username, report, unsubscribe_url, spotlight)
             if built is None:
                 stats["skipped"] += 1
                 continue

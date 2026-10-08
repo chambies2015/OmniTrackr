@@ -506,6 +506,11 @@ app.include_router(proxy.router)
 app.include_router(seo.router)
 app.include_router(static.router)
 rate_limited_review_report = limiter.limit("2/hour")(reviews.report_public_review)
+rate_limited_review_helpful = limiter.limit("30/hour")(reviews.mark_review_helpful)
+for route in reviews.router.routes:
+    if (getattr(route, "path", None) == "/api/public/reviews/{category}/{review_id}/helpful"
+            and "POST" in getattr(route, "methods", set())):
+        bind_rate_limited_endpoint(route, rate_limited_review_helpful)
 for route in reviews.router.routes:
     if (
         hasattr(route, "path")

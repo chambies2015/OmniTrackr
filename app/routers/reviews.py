@@ -509,7 +509,7 @@ def _title_page_link(review: dict) -> str:
     return f'<p class="review-title-link"><a href="{_escape(path)}">Trailer, details and more reviews of {_escape(review.get("title"))} <span aria-hidden="true">→</span></a></p>'
 
 
-def _review_detail_html(review: dict, more_reviews: Optional[list] = None) -> str:
+def _review_detail_html(review: dict, more_reviews: Optional[list] = None, helpful_count: int = 0) -> str:
     category_label = CATEGORY_LABELS.get(review.get("category"), "Media")
     title = f"{review.get('title')} {category_label} Review by {review.get('username')} - OmniTrackr"
     review_excerpt = (review.get("review") or "").strip().replace("\n", " ")
@@ -607,10 +607,10 @@ def _review_detail_html(review: dict, more_reviews: Optional[list] = None) -> st
   <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@700;800&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="/static/public-legacy.css?v=20261004-legacy-1">
   <link rel="stylesheet" href="/static/reviews.css?v=20261002-profiles-1">
-  <link rel="stylesheet" href="/static/review-detail.css?v=20261004-share-1">
+  <link rel="stylesheet" href="/static/review-detail.css?v=20261007-helpful-1">
   <script type="application/ld+json">{_safe_json_ld(json_ld)}</script>
   <script type="application/ld+json">{_safe_json_ld(breadcrumb_json_ld)}</script>
-  <script src="/static/review_report.js?v=20260917-review-safety-v1" defer></script>
+  <script src="/static/review_report.js?v=20261007-helpful-1" defer></script>
   <script src="/static/share.js?v=20261004-share-1" defer></script>
 </head>
 <body class="dark-mode site review-page">
@@ -631,7 +631,10 @@ def _review_detail_html(review: dict, more_reviews: Optional[list] = None) -> st
         </div>
       </header>
       <div class="site-wrap review-body">
-        <section class="review-content" aria-label="Review">{_escape(review.get("review"))}</section>
+        <div class="review-main">
+          <section class="review-content" aria-label="Review">{_escape(review.get("review"))}</section>
+          {_helpful_html(review, helpful_count)}
+        </div>
         <aside class="review-aside" aria-label="Keep this title">
           <p class="site-eyebrow">Sounds like your kind of thing?</p>
           <h2>Keep it for later</h2>
@@ -713,7 +716,8 @@ async def review_detail(
             except Exception:
                 more = []  # Related reviews are optional; never block the page.
             _attach_profile_urls(db, [review])
-            page = apply_site_chrome(_review_detail_html(review, more))
+            helpful = review_helpful_counts(db, [(review["category"], review["id"])]).get((review["category"], int(review["id"])), 0)
+            page = apply_site_chrome(_review_detail_html(review, more, helpful))
             return strict_html_response(_inject_ad_loader_for_review_detail(page, request, review))
         except HTTPException:
             return strict_html_response(_not_found_review_html(), status_code=404)
@@ -967,6 +971,100 @@ def save_review_title(
     except Exception:
         db.rollback()
         raise
+
+
+# ---------------------------------------------------------------- "Helpful" marks (Oct 2026)
+
+HELPFUL_MILESTONES = (1, 3, 10, 25, 50, 100, 250, 500, 1000)
+
+
+def review_helpful_counts(db: Session, keys) -> dict:
+    """{(category, item_id): count} for the given reviews, in one query."""
+    keys = [(category, int(item_id)) for category, item_id in keys]
+    if not keys:
+        return {}
+    ids_by_category: dict = {}
+    for category, item_id in keys:
+        ids_by_category.setdefault(category, set()).add(item_id)
+    counts = {}
+    table = models.ReviewReaction
+    for category, ids in ids_by_category.items():
+        rows = db.query(table.item_id, func.count(table.id)).filter(
+            table.category == category, table.item_id.in_(sorted(ids))).group_by(table.item_id).all()
+        counts.update({(category, item_id): int(count) for item_id, count in rows})
+    return counts
+
+
+def _helpful_label(count: int) -> str:
+    if count <= 0:
+        return "Be the first to mark this helpful"
+    return "1 person found this helpful" if count == 1 else f"{count} people found this helpful"
+
+
+def _helpful_html(review: dict, count: int) -> str:
+    return (
+        f'<div class="review-helpful" data-review-helpful data-category="{_escape(review["category"])}" '
+        f'data-review-id="{_escape(review["id"])}">'
+        '<button type="button" class="site-btn site-btn--ghost site-btn--sm review-helpful__button" '
+        'aria-pressed="false">👍 Helpful</button>'
+        f'<span class="review-helpful__count" aria-live="polite">{_escape(_helpful_label(count))}</span></div>'
+    )
+
+
+def _signed_in_user_id(request: Request) -> Optional[int]:
+    from ..auth import decode_access_token
+    token = request.cookies.get(AUTH_COOKIE_NAME)
+    payload = decode_access_token(token) if token else None
+    uid = payload.get("uid") if isinstance(payload, dict) else None
+    return uid if isinstance(uid, int) else None
+
+
+@router.post("/api/public/reviews/{category}/{review_id}/helpful", include_in_schema=False)
+async def mark_review_helpful(category: str, review_id: int, request: Request, db: Session = Depends(get_db)):
+    """One mark per browser; the writer hears about it at milestones, never per click."""
+    model_cls = CATEGORY_MODELS.get(category)
+    if not model_cls:
+        raise HTTPException(status_code=400, detail="Invalid category")
+    item = db.query(model_cls).join(models.User, model_cls.user_id == models.User.id).filter(
+        model_cls.id == review_id,
+        model_cls.review_public == True,  # noqa: E712
+        model_cls.review.isnot(None),
+        models.User.is_active == True,  # noqa: E712
+    ).first()
+    quality = evaluate_public_review(item.review if item else None, PUBLIC_REVIEW_MIN_CHARS, PUBLIC_REVIEW_DETAIL_MIN_CHARS)
+    if not item or not quality.community_ready:
+        raise HTTPException(status_code=404, detail="Review not found")
+    state_row = db.query(models.PublicReviewState).filter(
+        models.PublicReviewState.category == category, models.PublicReviewState.item_id == item.id).first()
+    if _current_state_hides_review(state_row, category, item):
+        raise HTTPException(status_code=404, detail="Review not found")
+    if _signed_in_user_id(request) == item.user_id:
+        raise HTTPException(status_code=403, detail="You can't mark your own review as helpful.")
+
+    visitor_hash, visitor_token, _ = visitor_identity(request)
+    table = models.ReviewReaction
+    already = db.query(table.id).filter(table.category == category, table.item_id == item.id,
+                                        table.visitor_hash == visitor_hash).first()
+    if not already:
+        db.add(table(category=category, item_id=item.id, visitor_hash=visitor_hash))
+        try:
+            db.flush()
+            count = review_helpful_counts(db, [(category, item.id)]).get((category, item.id), 0)
+            if count in HELPFUL_MILESTONES:
+                who = "Someone" if count == 1 else f"{count} people"
+                verb = "found" if count == 1 else "have found"
+                db.add(models.Notification(
+                    user_id=item.user_id, type="review_helpful",
+                    message=f'{who} {verb} your review of "{item.title}" helpful. Thanks for writing it!',
+                ))
+            db.commit()
+        except IntegrityError:
+            db.rollback()
+    count = review_helpful_counts(db, [(category, item.id)]).get((category, item.id), 0)
+    response = JSONResponse({"helpful": True, "count": count, "label": _helpful_label(count)})
+    response.headers["Cache-Control"] = "no-store"
+    set_visitor_cookie(response, visitor_token)
+    return response
 
 
 @router.post(

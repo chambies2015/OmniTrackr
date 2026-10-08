@@ -162,8 +162,12 @@ FEATURES = (
 )
 
 
-def build_email(username: str, library_count: int, matches: list[dict], unsubscribe_url: str) -> tuple[str, str, str]:
-    """(subject, html, text) for one member."""
+WEEKLY_FEATURE = "A weekly heads-up (optional)"
+
+
+def build_email(username: str, library_count: int, matches: list[dict], unsubscribe_url: str,
+                weekly_url: str | None = None) -> tuple[str, str, str]:
+    """(subject, html, text) for one member. `weekly_url` adds a one-click weekly-email button."""
     base = app_url()
 
     def link(path: str) -> str:
@@ -190,11 +194,22 @@ def build_email(username: str, library_count: int, matches: list[dict], unsubscr
     )
     matches_html = ('<h2 style="font-size:17px;color:#1f1640;margin:24px 0 4px">Coming up from your library</h2>'
                     f'<table role="presentation" width="100%" cellspacing="0" cellpadding="0">{match_rows}</table>') if matches else ""
+    features = [f for f in FEATURES if not (weekly_url and f[0] == WEEKLY_FEATURE)]
+    weekly_html = ""
+    if weekly_url:
+        weekly_html = (
+            '<div style="background:#f4f0ff;border:1px solid #e1d8fb;border-radius:12px;padding:16px 18px;margin:22px 0 4px">'
+            '<div style="color:#1f1640;font-weight:700;font-size:16px">Want a heads-up when something you track comes out?</div>'
+            '<div style="color:#5b5675;font-size:14px;line-height:1.5;margin:6px 0 12px">One short email a week with new episodes, '
+            'seasons, games and releases from your library. Quiet weeks are skipped apart from a short monthly round-up, and every email has a one-click unsubscribe.</div>'
+            f'<a href="{escape(weekly_url, quote=True)}" style="background:#1a1433;color:#fff;padding:10px 18px;border-radius:999px;'
+            'text-decoration:none;font-weight:700;font-size:14px">Email me weekly</a></div>'
+        )
     feature_rows = "".join(
         '<tr><td style="padding:10px 0;border-top:1px solid #e9e5f5">'
         f'<a href="{escape(link(path), quote=True)}" style="color:#1f1640;font-weight:700;text-decoration:none;font-size:15px">{escape(title)}</a>'
         f'<div style="color:#5b5675;font-size:14px;line-height:1.5">{escape(text)}</div></td></tr>'
-        for title, text, path in FEATURES
+        for title, text, path in features
     )
     html = (
         '<html><body style="margin:0;background:#f4f2fb;font-family:Arial,Helvetica,sans-serif">'
@@ -205,7 +220,7 @@ def build_email(username: str, library_count: int, matches: list[dict], unsubscr
         '<div style="background:#fff;border-radius:0 0 14px 14px;padding:8px 24px 24px">'
         f'<p style="color:#1f1640;font-size:15px;line-height:1.6">Hi {escape(username)}, OmniTrackr has grown a lot since you signed up. '
         f'Here’s the short version. {escape(library_line)}</p>'
-        + matches_html +
+        + matches_html + weekly_html +
         '<h2 style="font-size:17px;color:#1f1640;margin:24px 0 4px">New since you joined</h2>'
         f'<table role="presentation" width="100%" cellspacing="0" cellpadding="0">{feature_rows}</table>'
         f'<p style="margin:26px 0 8px"><a href="{escape(link("/"), quote=True)}" '
@@ -221,8 +236,11 @@ def build_email(username: str, library_count: int, matches: list[dict], unsubscr
         text.append("Coming up from your library:")
         text += [f"- {card['title']} ({card['label']}, {_day(card.get('date'))})" for card in matches[:3]]
         text.append("")
+    if weekly_url:
+        text += ["Want a heads-up when something you track comes out? A short weekly email (quiet weeks skipped, apart from a monthly round-up):",
+                 weekly_url, ""]
     text.append("New since you joined:")
-    text += [f"- {title}: {body}" for title, body, _ in FEATURES]
+    text += [f"- {title}: {body}" for title, body, _ in features]
     text += ["", f"Open your library: {link('/')}", "",
              "You're getting this one-time update because you have an OmniTrackr account.",
              f"Unsubscribe from product updates: {unsubscribe_url}"]
@@ -237,7 +255,9 @@ def email_for(db: Session, user: models.User, pool=None) -> tuple[str, str, str,
     except Exception:
         matches = []
     unsubscribe_url = f"{app_url()}/email/updates/unsubscribe?token={unsubscribe_token(user.id)}"
-    subject, html, text = build_email(user.username, _library_count(db, user.id), matches, unsubscribe_url)
+    from . import digest
+    weekly_url = None if digest.subscription_for(db, user.id) else digest.subscribe_link(user.id)
+    subject, html, text = build_email(user.username, _library_count(db, user.id), matches, unsubscribe_url, weekly_url)
     return subject, html, text, unsubscribe_url
 
 

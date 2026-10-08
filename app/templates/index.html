@@ -50,10 +50,10 @@
   <script src="/static/pwa.js?v=20261003-pwa-1" defer></script>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link rel="preload" href="./styles.css?v=20261005-finish-review-1" as="style">
+  <link rel="preload" href="./styles.css?v=20261007-weekly-1" as="style">
   <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@700;800&family=Inter:wght@400;500;600;700&display=swap"
     rel="stylesheet">
-  <link rel="stylesheet" href="./styles.css?v=20261005-finish-review-1">
+  <link rel="stylesheet" href="./styles.css?v=20261007-weekly-1">
   <link rel="stylesheet" href="/static/progress.css?v=20260922-progress">
   <link rel="stylesheet" href="/static/app-theme.css?v=20260924-friends-panel-2">
   <link rel="stylesheet" href="/static/library-theme.css?v=20260924-library-filters-1">
@@ -404,6 +404,13 @@
       <h3 id="starterPicksUpcomingTitle" class="for-you-card__subhead" hidden>Coming out soon</h3>
       <div id="starterPicksUpcoming" class="for-you-grid" aria-label="Coming out soon"></div>
       <p id="starterPicksStatus" class="for-you-card__status" role="status" aria-live="polite"></p>
+      <div class="weekly-invite" data-weekly-invite="starter" hidden>
+        <p class="weekly-invite__text"><strong>Get a weekly heads-up.</strong> A short email when something you track has a new episode, season or release. Quiet weeks are skipped (just a monthly round-up), and every email has a one-click unsubscribe.</p>
+        <div class="weekly-invite__actions">
+          <button type="button" class="action-btn weekly-invite__yes" data-weekly-action="subscribe">Email me weekly</button>
+          <button type="button" class="weekly-invite__no" data-weekly-action="dismiss">Not now</button>
+        </div>
+      </div>
     </section>
 
     <section id="libraryLaunchpad" class="library-launchpad" aria-labelledby="libraryLaunchpadTitle" hidden>
@@ -437,6 +444,13 @@
           <input type="checkbox" id="comingUpEmailToggle">
           <span>Email me this weekly</span>
         </label>
+      </div>
+      <div class="weekly-invite" data-weekly-invite="coming-up" hidden>
+        <p class="weekly-invite__text"><strong>Get a weekly heads-up.</strong> A short email when something you track has a new episode, season or release. Quiet weeks are skipped (just a monthly round-up), and every email has a one-click unsubscribe.</p>
+        <div class="weekly-invite__actions">
+          <button type="button" class="action-btn weekly-invite__yes" data-weekly-action="subscribe">Email me weekly</button>
+          <button type="button" class="weekly-invite__no" data-weekly-action="dismiss">Not now</button>
+        </div>
       </div>
       <div id="comingUpList" class="for-you-grid for-you-grid--wide"></div>
       <p id="comingUpStatus" class="for-you-card__status" role="status" aria-live="polite"></p>
@@ -1508,7 +1522,7 @@
   <script src="/static/import-studio.js?v=20260924-import-studio-final"></script>
   <script src="/static/progress.js?v=20260922-progress"></script>
   <script src="./app.js?v=20261005-finish-review-1"></script>
-  <script src="/static/for-you.js?v=20261004-links-1"></script>
+  <script src="/static/for-you.js?v=20261007-weekly-1"></script>
   <script src="/static/title-links.js?v=20261004-links-1"></script>
   <script src="/static/public-profile.js?v=20261002-profiles-1"></script>
   <script src="/static/guest-list.js?v=20261003-guest-2"></script>
