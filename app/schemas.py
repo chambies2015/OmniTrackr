@@ -253,6 +253,7 @@ class Movie(MovieBase):
     model_config = ConfigDict(from_attributes=True)
 
     id: int
+    added_at: Optional[datetime] = None
     # Stored/imported catalog metadata can be incomplete. Creation stays strict.
     director: Optional[str] = None
     year: Optional[int] = Field(None, ge=0)
@@ -294,6 +295,7 @@ class TVShow(TVShowBase):
     model_config = ConfigDict(from_attributes=True)
 
     id: int
+    added_at: Optional[datetime] = None
     year: Optional[int] = Field(None, ge=0)
 
 
@@ -333,6 +335,7 @@ class Anime(AnimeBase):
     model_config = ConfigDict(from_attributes=True)
 
     id: int
+    added_at: Optional[datetime] = None
     year: Optional[int] = Field(None, ge=0)
 
 
@@ -374,6 +377,7 @@ class VideoGame(VideoGameBase):
     model_config = ConfigDict(from_attributes=True)
 
     id: int
+    added_at: Optional[datetime] = None
 
 
 class MusicBase(BaseModel):
@@ -412,6 +416,7 @@ class Music(MusicBase):
     model_config = ConfigDict(from_attributes=True)
 
     id: int
+    added_at: Optional[datetime] = None
     artist: Optional[str] = None
     year: Optional[int] = Field(None, ge=0)
 
@@ -452,6 +457,7 @@ class Book(BookBase):
     model_config = ConfigDict(from_attributes=True)
 
     id: int
+    added_at: Optional[datetime] = None
     author: Optional[str] = None
     year: Optional[int] = Field(None, ge=0)
 
@@ -543,6 +549,35 @@ class ActivityEntryImport(BaseModel):
 
 
 # Export/Import schemas
+class LibraryImportAddedAt(BaseModel):
+    """Optional add date carried by a backup file. Missing means unknown."""
+    added_at: Optional[datetime] = None
+
+
+class MovieImport(MovieCreate, LibraryImportAddedAt):
+    pass
+
+
+class TVShowImport(TVShowCreate, LibraryImportAddedAt):
+    pass
+
+
+class AnimeImport(AnimeCreate, LibraryImportAddedAt):
+    pass
+
+
+class VideoGameImport(VideoGameCreate, LibraryImportAddedAt):
+    pass
+
+
+class MusicImport(MusicCreate, LibraryImportAddedAt):
+    pass
+
+
+class BookImport(BookCreate, LibraryImportAddedAt):
+    pass
+
+
 class ExportData(BaseModel):
     """Schema for exporting all data from OmniTrackr"""
     model_config = ConfigDict(from_attributes=True)
@@ -563,12 +598,12 @@ class ImportData(BaseModel):
     """Schema for importing data into OmniTrackr"""
     model_config = ConfigDict(from_attributes=True)
 
-    movies: List[MovieCreate] = Field(default=[], description="Movies to import")
-    tv_shows: List[TVShowCreate] = Field(default=[], description="TV shows to import")
-    anime: List[AnimeCreate] = Field(default=[], description="Anime to import")
-    video_games: List[VideoGameCreate] = Field(default=[], description="Video games to import")
-    music: List[MusicCreate] = Field(default=[], description="Music to import")
-    books: List[BookCreate] = Field(default=[], description="Books to import")
+    movies: List[MovieImport] = Field(default=[], description="Movies to import")
+    tv_shows: List[TVShowImport] = Field(default=[], description="TV shows to import")
+    anime: List[AnimeImport] = Field(default=[], description="Anime to import")
+    video_games: List[VideoGameImport] = Field(default=[], description="Video games to import")
+    music: List[MusicImport] = Field(default=[], description="Music to import")
+    books: List[BookImport] = Field(default=[], description="Books to import")
     custom_tabs: List[dict] = Field(default=[], description="Custom tabs to import (optional for backward compatibility)")
     activities: List[ActivityEntryImport] = Field(default=[], description="Activity journal entries (optional for backward compatibility)")
     collections: List[dict] = Field(default=[], description="Collections to restore privately (optional for backward compatibility)")

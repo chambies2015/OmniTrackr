@@ -2,10 +2,24 @@
 Export/Import CRUD operations for the OmniTrackr API.
 """
 from typing import List, Optional
-from datetime import datetime
+from datetime import datetime, timezone
+from sqlalchemy import null
 from sqlalchemy.orm import Session
 
 from .. import models, schemas
+
+
+def _library_row(data: dict) -> dict:
+    """Keep a backup's added_at when it is a real past date; otherwise leave it unknown."""
+    if "added_at" in data:
+        added_at = data["added_at"]
+        if added_at is not None and added_at.tzinfo is not None:
+            added_at = added_at.astimezone(timezone.utc).replace(tzinfo=None)
+        if added_at is not None and added_at > datetime.utcnow():
+            added_at = None
+        # null() rather than None: the ORM would otherwise fill in today's date.
+        data["added_at"] = added_at if added_at is not None else null()
+    return data
 
 
 def get_all_movies(db: Session, user_id: int) -> List[models.Movie]:
@@ -138,7 +152,7 @@ def import_movies(db: Session, user_id: int, movies: List[schemas.MovieCreate]) 
                         setattr(existing_movie, field, value)
                 updated += 1
             else:
-                db_movie = models.Movie(**movie_data.model_dump(), user_id=user_id)
+                db_movie = models.Movie(**_library_row(movie_data.model_dump()), user_id=user_id)
                 db.add(db_movie)
                 created += 1
         except Exception as e:
@@ -176,7 +190,7 @@ def import_tv_shows(db: Session, user_id: int, tv_shows: List[schemas.TVShowCrea
                         setattr(existing_tv_show, field, value)
                 updated += 1
             else:
-                db_tv_show = models.TVShow(**tv_show_data.model_dump(), user_id=user_id)
+                db_tv_show = models.TVShow(**_library_row(tv_show_data.model_dump()), user_id=user_id)
                 db.add(db_tv_show)
                 created += 1
         except Exception as e:
@@ -214,7 +228,7 @@ def import_anime(db: Session, user_id: int, anime: List[schemas.AnimeCreate]) ->
                         setattr(existing_anime, field, value)
                 updated += 1
             else:
-                db_anime = models.Anime(**anime_data.model_dump(), user_id=user_id)
+                db_anime = models.Anime(**_library_row(anime_data.model_dump()), user_id=user_id)
                 db.add(db_anime)
                 created += 1
         except Exception as e:
@@ -255,7 +269,7 @@ def import_video_games(db: Session, user_id: int, video_games: List[schemas.Vide
                 video_game_dict = video_game_data.model_dump()
                 if video_game_dict.get('rating') is not None:
                     video_game_dict['rating'] = round(float(video_game_dict['rating']), 1)
-                db_video_game = models.VideoGame(**video_game_dict, user_id=user_id)
+                db_video_game = models.VideoGame(**_library_row(video_game_dict), user_id=user_id)
                 db.add(db_video_game)
                 created += 1
         except Exception as e:
@@ -305,7 +319,7 @@ def import_music(db: Session, user_id: int, music: List[schemas.MusicCreate]) ->
                 music_dict = music_data.model_dump()
                 if music_dict.get('rating') is not None:
                     music_dict['rating'] = round(float(music_dict['rating']), 1)
-                db_music = models.Music(**music_dict, user_id=user_id)
+                db_music = models.Music(**_library_row(music_dict), user_id=user_id)
                 db.add(db_music)
                 created += 1
         except Exception as e:
@@ -355,7 +369,7 @@ def import_books(db: Session, user_id: int, books: List[schemas.BookCreate]) -> 
                 book_dict = book_data.model_dump()
                 if book_dict.get('rating') is not None:
                     book_dict['rating'] = round(float(book_dict['rating']), 1)
-                db_book = models.Book(**book_dict, user_id=user_id)
+                db_book = models.Book(**_library_row(book_dict), user_id=user_id)
                 db.add(db_book)
                 created += 1
         except Exception as e:
