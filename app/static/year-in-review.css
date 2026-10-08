@@ -1,0 +1,38 @@
+/* Year in Review (/year-in-review/<year> and shared /recap/<token>). Builds on profile-page.css. */
+.recap-hero .profile-hero__inner { grid-template-columns: minmax(0, 1fr); }
+.recap-years { display: inline-flex; flex-wrap: wrap; gap: 6px; }
+.recap-years .site-chip { text-decoration: none; }
+.recap-year--active { border-color: var(--site-violet) !important; color: var(--site-text) !important; }
+.recap-stats { display: grid; gap: 12px; grid-template-columns: repeat(auto-fit, minmax(140px, 1fr)); margin: 8px 0 28px; }
+.recap-stat { background: linear-gradient(160deg, rgba(124, 58, 237, .22), rgba(20, 22, 48, .6)); border: 1px solid var(--site-border-strong); border-radius: 18px; display: grid; gap: 4px; padding: 18px; }
+.recap-stat strong { font: 800 clamp(1.9rem, 4vw, 2.6rem)/1 var(--site-display); }
+.recap-stat span { color: var(--site-teal-soft); font-size: .9rem; font-weight: 600; }
+.recap-highlights { display: grid; gap: 12px; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); margin-bottom: 8px; }
+.recap-highlight { background: var(--site-surface); border: 1px solid var(--site-border); border-radius: 16px; display: grid; gap: 4px; padding: 16px; }
+.recap-highlight span { color: var(--site-muted); font-size: .8rem; letter-spacing: .04em; text-transform: uppercase; }
+.recap-highlight strong { font: 700 1.2rem/1.25 var(--site-display); overflow-wrap: anywhere; }
+.recap-highlight small { color: var(--site-muted); }
+.recap-list { counter-reset: recap; display: grid; gap: 8px; list-style: none; margin: 0; padding: 0; }
+.recap-list li { align-items: center; background: var(--site-surface); border: 1px solid var(--site-border); border-radius: 14px; counter-increment: recap; display: grid; gap: 2px 12px; grid-template-columns: 2rem minmax(0, 1fr) auto; padding: 12px 16px; }
+.recap-list li::before { color: var(--site-violet-soft); content: counter(recap); font: 800 1.1rem var(--site-display); grid-row: span 2; }
+.recap-list strong { overflow-wrap: anywhere; }
+.recap-list span { color: var(--site-muted); font-size: .85rem; grid-column: 2; }
+.recap-list b { grid-column: 3; grid-row: 1 / span 2; }
+.recap-months { align-items: end; display: grid; gap: 6px; grid-template-columns: repeat(12, minmax(0, 1fr)); height: 180px; list-style: none; margin: 0; padding: 0; }
+.recap-months li { align-items: center; display: flex; flex-direction: column-reverse; gap: 4px; height: 100%; justify-content: flex-start; }
+.recap-months small { color: var(--site-muted); font-size: .72rem; }
+.recap-months b { color: var(--site-soft); font-size: .75rem; min-height: 1em; }
+.recap-bar { max-height: calc(100% - 2.4rem); background: linear-gradient(180deg, var(--site-violet), rgba(45, 212, 191, .7)); border-radius: 8px 8px 3px 3px; display: block; min-height: 0; width: 100%; }
+.recap-share { display: grid; gap: 16px 24px; grid-template-columns: minmax(0, 1fr) auto; margin: 32px 0; padding: 24px 28px; }
+.recap-share h2 { font: 700 1.25rem var(--site-display); margin: 0 0 6px; }
+.recap-share p { color: var(--site-muted); line-height: 1.6; margin: 0 0 8px; }
+.recap-share__link a { color: var(--site-violet-soft); overflow-wrap: anywhere; }
+.recap-share__status { color: var(--site-teal-soft) !important; min-height: 1.2em; }
+.recap-share__actions { align-content: start; display: flex; flex-direction: column; gap: 8px; }
+.recap-share__card { border: 1px solid var(--site-border); border-radius: 14px; grid-column: 1 / -1; height: auto; max-width: 600px; width: 100%; }
+[hidden] { display: none !important; }
+@media (max-width: 640px) {
+  .recap-share { grid-template-columns: 1fr; padding: 20px; }
+  .recap-months { gap: 3px; height: 140px; }
+  .recap-months small { font-size: .6rem; }
+}
