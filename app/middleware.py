@@ -32,15 +32,19 @@ NOINDEX_PREFIXES = (
     "/notifications/",
     "/profile-pictures/",
     "/progress/",
+    "/recap/",
     "/recommend/",
     "/recommendations/",
     "/static/profile_pictures/",
     "/statistics/",
     "/tv-shows/",
     "/video-games/",
+    "/year-in-review",
 )
 PUBLIC_WELL_KNOWN_PATHS = {"/.well-known/ai.txt"}
 PUBLIC_PROFILE_PATH = re.compile(r"^/u/(?:[A-Za-z0-9_-][A-Za-z0-9_.-]{0,49}|id/\d{1,10})(?:/card\.png)?/?$")
+# Shared Year in Review links carry a random token that could contain a scanned word.
+PUBLIC_RECAP_PATH = re.compile(r"^/recap/[A-Za-z0-9_-]{8,32}(?:/card\.png)?/?$")
 
 
 class SecurityHeadersMiddleware(BaseHTTPMiddleware):
@@ -229,7 +233,7 @@ class BotFilterMiddleware(BaseHTTPMiddleware):
         
         if path in PUBLIC_WELL_KNOWN_PATHS:
             return await call_next(request)
-        if PUBLIC_PROFILE_PATH.match(request.url.path):
+        if PUBLIC_PROFILE_PATH.match(request.url.path) or PUBLIC_RECAP_PATH.match(request.url.path):
             # /u/<username> pages: a username such as "admin_fan" would otherwise
             # trip the substring scan. The route validates the name itself.
             return await call_next(request)

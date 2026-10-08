@@ -50,10 +50,10 @@
   <script src="/static/pwa.js?v=20261008-ios-1" defer></script>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link rel="preload" href="./styles.css?v=20261007-weekly-1" as="style">
+  <link rel="preload" href="./styles.css?v=20261008-recap-1" as="style">
   <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@700;800&family=Inter:wght@400;500;600;700&display=swap"
     rel="stylesheet">
-  <link rel="stylesheet" href="./styles.css?v=20261007-weekly-1">
+  <link rel="stylesheet" href="./styles.css?v=20261008-recap-1">
   <link rel="stylesheet" href="/static/progress.css?v=20260922-progress">
   <link rel="stylesheet" href="/static/app-theme.css?v=20260924-friends-panel-2">
   <link rel="stylesheet" href="/static/library-theme.css?v=20260924-library-filters-1">
@@ -421,6 +421,15 @@
           <button type="button" class="weekly-invite__no" data-weekly-action="dismiss">Not now</button>
         </div>
       </div>
+    </section>
+
+    <section id="yearInReviewBanner" class="recap-banner" aria-labelledby="yearInReviewBannerTitle" hidden>
+      <div>
+        <p class="recap-banner__eyebrow">Year in Review</p>
+        <h2 id="yearInReviewBannerTitle">Your year in media is ready</h2>
+        <p>What you finished, your highest rated titles and your busiest month, with a card you can share.</p>
+      </div>
+      <a class="action-btn" id="yearInReviewBannerLink" href="/year-in-review">See your recap</a>
     </section>
 
     <section id="libraryLaunchpad" class="library-launchpad" aria-labelledby="libraryLaunchpadTitle" hidden>
@@ -1066,6 +1075,7 @@
             <p class="activity-recap__eyebrow">Weekly playback</p>
             <h3 id="activityRecapTitle">This week in media</h3>
             <p id="activityRecapPeriod"></p>
+            <p class="activity-recap__year"><a href="/year-in-review">See your whole year so far →</a></p>
           </div>
           <div class="activity-recap__controls">
             <button type="button" class="action-btn secondary" data-action="activity-older-week">← Older</button>
@@ -1536,6 +1546,7 @@
   <script src="/static/title-links.js?v=20261004-links-1"></script>
   <script src="/static/public-profile.js?v=20261002-profiles-1"></script>
   <script src="/static/supporter.js?v=20261008-supporters-1"></script>
+  <script src="/static/year-in-review-entry.js?v=20261008-recap-1" defer></script>
   <script src="/static/guest-list.js?v=20261003-guest-2"></script>
 
   <!-- Account Modal -->

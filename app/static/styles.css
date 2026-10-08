@@ -6346,3 +6346,24 @@ body.dark-mode .for-you-item__add.is-added { color: #5eead4; }
   .for-you-card__side { align-items: flex-start; }
   .for-you-grid { grid-template-columns: 1fr; }
 }
+
+/* Year in Review banner (shown in December and January) */
+.recap-banner {
+  align-items: center;
+  background: radial-gradient(circle at 92% 10%, rgba(45, 212, 191, 0.18), transparent 40%), linear-gradient(120deg, rgba(124, 58, 237, 0.32), rgba(20, 22, 48, 0.6));
+  border: 1px solid rgba(139, 92, 246, 0.45);
+  border-radius: 14px;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 16px 24px;
+  justify-content: space-between;
+  margin: 0 0 22px;
+  padding: 22px 25px;
+}
+.recap-banner[hidden] { display: none; }
+.recap-banner h2 { margin: 0 0 6px; }
+.recap-banner p { margin: 0; }
+.recap-banner__eyebrow { font-size: 0.75rem; font-weight: 700; letter-spacing: 0.08em; opacity: 0.8; text-transform: uppercase; }
+.recap-banner .action-btn { text-decoration: none; }
+.activity-recap__year { margin: 6px 0 0; }
+.activity-recap__year a { color: inherit; font-weight: 600; }
