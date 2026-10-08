@@ -18,7 +18,7 @@ from urllib.parse import quote
 from sqlalchemy import case, func
 from sqlalchemy.orm import Session
 
-from . import models, title_pages
+from . import models, supporters, title_pages
 from .review_quality import evaluate_public_review, is_public_review_safe
 
 BIO_MAX_CHARS = 280
@@ -269,6 +269,7 @@ class ProfileView:
     favorites: list
     reviews: list
     collections: list
+    supporter: Optional[dict] = None
 
     @property
     def path(self) -> str:
@@ -292,6 +293,7 @@ def build(db: Session, user: models.User, profile: models.PublicProfile) -> Prof
         favorites=_favorites(db, user) if profile.show_favorites else [],
         reviews=_reviews(db, user) if profile.show_reviews else [],
         collections=_collections(db, user) if profile.show_collections else [],
+        supporter=supporters.public_badge(db, user.id),
     )
 
 

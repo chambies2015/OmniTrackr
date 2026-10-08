@@ -28,3 +28,14 @@
   .profile-hero__avatar { height: 88px; width: 88px; }
 }
 .profile-hero__actions { margin: 4px 0 0; }
+/* Ko-fi supporters: badge, avatar ring and an optional accent color. */
+.profile-hero { --profile-accent: 139, 92, 246; }
+.profile-hero--accent-teal { --profile-accent: 45, 212, 191; }
+.profile-hero--accent-amber { --profile-accent: 245, 158, 11; }
+.profile-hero--accent-rose { --profile-accent: 244, 114, 182; }
+.profile-hero--accent-sky { --profile-accent: 56, 189, 248; }
+.profile-hero--supporter { background: radial-gradient(900px 420px at 85% 0%, rgba(var(--profile-accent), .3), transparent 65%), radial-gradient(600px 360px at 0% 100%, rgba(var(--profile-accent), .1), transparent 60%), var(--site-bg); }
+.profile-hero--supporter .profile-hero__avatar { border-color: rgb(var(--profile-accent)); box-shadow: 0 0 0 4px rgba(var(--profile-accent), .25), 0 20px 50px rgba(0, 0, 0, .45); }
+.profile-supporter { align-items: center; background: rgba(var(--profile-accent), .14); border: 1px solid rgba(var(--profile-accent), .5); border-radius: 999px; color: var(--site-text) !important; display: inline-flex; font-size: .82rem; font-weight: 600; gap: 6px; margin: 0 0 10px; padding: 4px 12px; text-decoration: none; }
+.profile-supporter span { color: rgb(var(--profile-accent)); }
+.profile-supporter:hover { background: rgba(var(--profile-accent), .22); }

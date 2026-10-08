@@ -202,3 +202,16 @@ body.app-shell #starterPicks:not([hidden]) ~ #libraryLaunchpad #libraryLaunchpad
 /* Library titles link to their public title pages */
 body.app-shell a.title-page-link { color: inherit; text-decoration: underline; text-decoration-color: rgba(196, 181, 253, .45); text-underline-offset: 3px; }
 body.app-shell a.title-page-link:hover { color: #c4b5fd; text-decoration-color: currentColor; }
+
+/* ---------- Account → Supporter ---------- */
+#supporterSection code { background: rgba(255, 255, 255, .08); border-radius: 6px; padding: 2px 8px; }
+.supporter-kofi { display: inline-block; text-decoration: none; }
+.supporter-accent { align-items: center; cursor: pointer; display: inline-flex; gap: 8px; margin-right: 14px; text-transform: capitalize; }
+.supporter-accent input { accent-color: #8b5cf6; }
+.supporter-accent__swatch { border-radius: 50%; display: inline-block; height: 14px; width: 14px; }
+.supporter-accent__swatch--violet { background: #8b5cf6; }
+.supporter-accent__swatch--teal { background: #2dd4bf; }
+.supporter-accent__swatch--amber { background: #f59e0b; }
+.supporter-accent__swatch--rose { background: #f472b6; }
+.supporter-accent__swatch--sky { background: #38bdf8; }
+.supporter-accent__swatch--none { border: 1px dashed rgba(255, 255, 255, .5); }
