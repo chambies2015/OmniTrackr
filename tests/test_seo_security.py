@@ -553,7 +553,7 @@ class TestSecurityMiddleware:
                 # 'unsafe-inline' and https: fallbacks are ignored by CSP3 browsers.
                 script_src = next(d for d in csp.split(";") if d.strip().startswith("script-src"))
                 assert "'strict-dynamic'" in script_src
-                scripts = re.findall(r"<script\b[^>]*>", response.text)
+                scripts = re.findall(r"<script\b[^>]*>", response.text, flags=re.IGNORECASE)
                 assert scripts and all(" nonce=" in tag for tag in scripts)
             else:
                 assert "'unsafe-inline'" not in csp
