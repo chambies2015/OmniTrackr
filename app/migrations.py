@@ -799,3 +799,30 @@ def run_migrations():
         print(f"Migration warning: {e}")
         pass
 
+    add_library_added_at_columns()
+
+
+LIBRARY_TABLES = ("movies", "tv_shows", "anime", "video_games", "music", "books")
+
+
+def add_library_added_at_columns():
+    """Add a nullable added_at column to each library table.
+
+    Existing rows keep NULL: their real add date was never recorded, so nothing
+    is backfilled. New rows get a timestamp from the model default.
+    """
+    try:
+        inspector = inspect(engine)
+        for table in LIBRARY_TABLES:
+            if not inspector.has_table(table):
+                continue
+            columns = {col["name"] for col in inspector.get_columns(table)}
+            if "added_at" in columns:
+                continue
+            with engine.connect() as conn:
+                conn.execute(text(f"ALTER TABLE {table} ADD COLUMN added_at TIMESTAMP"))
+                conn.commit()
+                print(f"Added added_at column to {table} table")
+    except Exception as e:
+        print(f"Migration warning (added_at): {e}")
+
