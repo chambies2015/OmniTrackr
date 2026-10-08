@@ -345,12 +345,12 @@ async def import_from_file(
             raise HTTPException(status_code=400, detail="Invalid file format. Expected 'movies' and 'tv_shows' arrays. 'anime', 'video_games', 'music', and 'books' are optional for backward compatibility.")
 
         # Convert to Pydantic models
-        movies = [schemas.MovieCreate(**movie) for movie in data.get('movies', [])]
-        tv_shows = [schemas.TVShowCreate(**tv_show) for tv_show in data.get('tv_shows', [])]
-        anime = [schemas.AnimeCreate(**anime_item) for anime_item in data.get('anime', [])]
-        video_games = [schemas.VideoGameCreate(**video_game) for video_game in data.get('video_games', [])]
-        music = [schemas.MusicCreate(**music_item) for music_item in data.get('music', [])]
-        books = [schemas.BookCreate(**book) for book in data.get('books', [])]
+        movies = [schemas.MovieImport(**movie) for movie in data.get('movies', [])]
+        tv_shows = [schemas.TVShowImport(**tv_show) for tv_show in data.get('tv_shows', [])]
+        anime = [schemas.AnimeImport(**anime_item) for anime_item in data.get('anime', [])]
+        video_games = [schemas.VideoGameImport(**video_game) for video_game in data.get('video_games', [])]
+        music = [schemas.MusicImport(**music_item) for music_item in data.get('music', [])]
+        books = [schemas.BookImport(**book) for book in data.get('books', [])]
         custom_tabs = data.get('custom_tabs', [])
         activities = [schemas.ActivityEntryImport(**entry) for entry in data.get('activities', [])]
         collections = data.get('collections', [])
