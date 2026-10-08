@@ -85,6 +85,42 @@ class TestJWTTokens:
 
         assert jwt.decode(token, options={"verify_signature": False})["sub"] == "testuser"
     
+    @pytest.mark.parametrize("nested_object", [False, True])
+    @pytest.mark.parametrize("use_jwks_client", [False, True])
+    def test_recursive_payload_raises_decode_error(self, nested_object, use_jwks_client, monkeypatch):
+        """Unverified payload parsing must preserve PyJWT's error contract."""
+        depth = max(20_000, sys.getrecursionlimit() * 20)
+        payload = (
+            b'{"a":' * depth + b'0' + b'}' * depth
+            if nested_object else b'[' * depth + b']' * depth
+        )
+
+        def encode_segment(value):
+            return base64.urlsafe_b64encode(value).rstrip(b'=').decode('ascii')
+
+        token = '.'.join([
+            encode_segment(b'{"alg":"HS256","kid":"test"}'),
+            encode_segment(payload),
+            encode_segment(b'forged-signature'),
+        ])
+        with pytest.raises(jwt.DecodeError):
+            if use_jwks_client:
+                # The malformed payload must fail before any network/key lookup.
+                client = jwt.PyJWKClient('https://example.invalid/jwks')
+
+                def unexpected_key_lookup(kid):
+                    pytest.fail("Recursive payload reached key lookup")
+
+                monkeypatch.setattr(client, 'get_signing_key', unexpected_key_lookup)
+                client.get_signing_key_from_jwt(token)
+            else:
+                jwt.decode(token, options={"verify_signature": False})
+
+    def test_decode_ordinary_payload_without_signature_verification(self):
+        token = auth.create_access_token({"sub": "testuser"})
+
+        assert jwt.decode(token, options={"verify_signature": False})["sub"] == "testuser"
+
     def test_create_access_token(self):
         """Test that access tokens are created successfully."""
         data = {"sub": "testuser"}
