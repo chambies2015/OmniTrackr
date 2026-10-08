@@ -800,3 +800,26 @@ class KofiPayment(Base):
     user_id = Column(Integer, ForeignKey("users.id", ondelete="SET NULL"), nullable=True, index=True)
     received_at = Column(DateTime, nullable=False, default=datetime.utcnow)
     linked_at = Column(DateTime, nullable=True)
+
+
+class YearInReviewShare(Base):
+    """A member's opt-in public Year in Review link: a frozen snapshot at /recap/<token>.
+
+    Nothing is public until the member shares, the snapshot leaves out private
+    categories and all notes and reviews, and deleting the row ends the link.
+    """
+    __tablename__ = "year_in_review_shares"
+
+    id = Column(Integer, primary_key=True, index=True)
+    user_id = Column(Integer, ForeignKey("users.id", ondelete="CASCADE"), nullable=False, index=True)
+    year = Column(Integer, nullable=False)
+    token = Column(String(32), nullable=False, unique=True, index=True)
+    snapshot = Column(Text, nullable=False, default="{}")
+    created_at = Column(DateTime, nullable=False, default=datetime.utcnow)
+    updated_at = Column(DateTime, nullable=False, default=datetime.utcnow)
+
+    owner = relationship("User")
+
+    __table_args__ = (
+        UniqueConstraint("user_id", "year", name="uq_year_in_review_share_year"),
+    )

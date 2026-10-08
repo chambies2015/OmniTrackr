@@ -64,6 +64,7 @@ from .routers import (
     profiles,
     pwa,
     supporters,
+    year_in_review,
 )
 
 # Create database tables
@@ -552,6 +553,19 @@ for route in supporters.router.routes:
     if getattr(route, "path", None) == "/api/kofi/webhook" and "POST" in getattr(route, "methods", set()):
         bind_rate_limited_endpoint(route, rate_limited_kofi_webhook)
 app.include_router(supporters.router)
+
+rate_limited_recap_card = limiter.limit("30/minute")(year_in_review.shared_card)
+rate_limited_own_recap_card = limiter.limit("30/minute")(year_in_review.own_card)
+rate_limited_recap_share = limiter.limit("20/minute")(year_in_review.share_recap)
+for route in year_in_review.router.routes:
+    path, methods = getattr(route, "path", None), getattr(route, "methods", set())
+    if path == "/recap/{token}/card.png":
+        bind_rate_limited_endpoint(route, rate_limited_recap_card)
+    elif path == "/api/year-in-review/{year}/card.png":
+        bind_rate_limited_endpoint(route, rate_limited_own_recap_card)
+    elif path == "/api/year-in-review/{year}/share" and "PUT" in methods:
+        bind_rate_limited_endpoint(route, rate_limited_recap_share)
+app.include_router(year_in_review.router)
 
 
 # Root endpoint
