@@ -14,7 +14,7 @@ from __future__ import annotations
 import re
 from html import escape
 
-SITE_CSS_VERSION = "20260928-site-1"
+SITE_CSS_VERSION = "20261008-site-1"
 SITE_JS_VERSION = "20260928-site-1"
 
 # (key, label, href) in display order. The first NAV_PRIMARY entries stay
@@ -158,3 +158,34 @@ def message_page(title: str, heading: str, message: str, *, eyebrow: str = "",
         '  </main>\n  <!--SITE_FOOTER-->\n</body>\n</html>'
     )
     return apply_site_chrome(page)
+
+
+def editorial_picks(heading: str, intro: str, *, limit: int = 6) -> str:
+    """Links to the authored Discover guides and trails, for empty directories.
+
+    A directory that has nothing to list yet (no qualifying member reviews or
+    collections) should still give a visitor something real to read instead of
+    a placeholder. Completed guides come first, then the latest monthly edition
+    and the shorter trails. Every value is escaped.
+    """
+    from .discover_catalog import MONTHLY_EDITIONS, TRAILS
+    from .discover_guides import GUIDES
+
+    picks = [(f"/discover/{slug}", TRAILS[slug]["name"], guide["summary"])
+             for slug, guide in GUIDES.items() if slug in TRAILS]
+    for slug, edition in sorted(MONTHLY_EDITIONS.items(), key=lambda pair: pair[1]["published_date"], reverse=True)[:1]:
+        picks.append((f"/discover/monthly/{slug}", edition["name"], edition["intro"]))
+    picks.extend((f"/discover/{slug}", trail["name"], trail["intro"])
+                 for slug, trail in TRAILS.items() if slug not in GUIDES)
+    cards = "".join(
+        f'<li><a href="{escape(href, quote=True)}"><strong>{escape(name)}</strong>'
+        f'<span>{escape(blurb)}</span></a></li>'
+        for href, name, blurb in picks[:limit]
+    )
+    return (
+        '<section class="site-picks" aria-labelledby="site-picks-heading">'
+        f'<h2 id="site-picks-heading">{escape(heading)}</h2><p>{escape(intro)}</p>'
+        f'<ul class="site-picks__list">{cards}</ul>'
+        '<p class="site-picks__more"><a href="/discover">See every Discover trail →</a></p>'
+        '</section>'
+    )

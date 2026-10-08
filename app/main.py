@@ -187,8 +187,13 @@ app.add_middleware(SiteTrafficMiddleware)
 
 ENVIRONMENT = os.getenv("ENVIRONMENT", "development").lower()
 
+# Trust pages (privacy, terms, contact) stay indexable so search and ad
+# reviewers see the same site identity a visitor does; they are still left out
+# of the sitemap. The source-checked comparison is original reference content.
 INDEXABLE_PUBLIC_TEMPLATES = {
     "about.html",
+    "compare.html",
+    "contact.html",
     "demo.html",
     "export_import_guide.html",
     "faq.html",
@@ -196,7 +201,9 @@ INDEXABLE_PUBLIC_TEMPLATES = {
     "media_tracking.html",
     "review_guidelines.html",
     "sample_library.html",
+    "privacy.html",
     "reviews.html",
+    "terms.html",
 }
 
 # Ads are limited to the small set of pages that provide a complete experience

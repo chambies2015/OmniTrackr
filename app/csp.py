@@ -44,6 +44,35 @@ def build_csp(nonce: str | None = None, allow_inline_script: bool = False, allow
     )
 
 
+def build_ad_csp(nonce: str) -> str:
+    """Policy for public pages that load Google AdSense.
+
+    Google supports only a strict, nonce-based CSP for AdSense: adsbygoogle.js
+    loads further scripts, frames, and requests from domains that change over
+    time (ad frames, ad quality checks, and the Privacy & messaging consent
+    dialog). 'strict-dynamic' trusts what the nonced loader adds, while
+    'unsafe-inline' and https: are fallbacks that modern browsers ignore.
+    See https://support.google.com/adsense/answer/16283098.
+    """
+    return (
+        "default-src 'self'; "
+        f"script-src 'nonce-{nonce}' 'unsafe-inline' 'unsafe-eval' 'strict-dynamic' https: http:; "
+        "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; "
+        "font-src 'self' https://fonts.gstatic.com; "
+        "img-src 'self' data: https: http:; "
+        "connect-src 'self' https:; "
+        "frame-src https:; "
+        "object-src 'none'; "
+        "base-uri 'self'; "
+        "form-action 'self'; "
+        "frame-ancestors 'none'; "
+        "upgrade-insecure-requests;"
+    )
+
+
+AD_LOADER_TAG = '<script src="/static/ad-loader.js"'
+
+
 def _safe_style_declarations(style: str) -> str | None:
     declarations = style.replace("\x00", "").strip()
     lower_declarations = declarations.lower()
@@ -61,9 +90,11 @@ def _safe_style_declarations(style: str) -> str | None:
 
 
 class _CSPHTMLTransformer(HTMLParser):
-    def __init__(self, nonce: str, add_nonces: bool = True, extract_styles: bool = True):
+    def __init__(self, nonce: str, add_nonces: bool = True, extract_styles: bool = True,
+                 nonce_external_scripts: bool = False):
         super().__init__(convert_charrefs=False)
         self.nonce = nonce
+        self.nonce_external_scripts = nonce_external_scripts
         self.add_nonces = add_nonces
         self.extract_styles = extract_styles
         self.output: list[str] = []
@@ -139,7 +170,9 @@ class _CSPHTMLTransformer(HTMLParser):
             and not self.has_attr(rendered_attrs, "nonce")
             and (
                 normalized_tag == "style"
-                or (normalized_tag == "script" and not self.has_attr(rendered_attrs, "src"))
+                or (normalized_tag == "script" and (
+                    self.nonce_external_scripts or not self.has_attr(rendered_attrs, "src")
+                ))
             )
         )
         if should_nonce:
@@ -186,8 +219,12 @@ class _CSPHTMLTransformer(HTMLParser):
             self.style_block_inserted = True
 
 
-def transform_html_for_csp(html: str, nonce: str, add_nonces: bool = True, extract_styles: bool = True) -> str:
-    transformer = _CSPHTMLTransformer(nonce, add_nonces=add_nonces, extract_styles=extract_styles)
+def transform_html_for_csp(html: str, nonce: str, add_nonces: bool = True, extract_styles: bool = True,
+                           nonce_external_scripts: bool = False) -> str:
+    transformer = _CSPHTMLTransformer(
+        nonce, add_nonces=add_nonces, extract_styles=extract_styles,
+        nonce_external_scripts=nonce_external_scripts,
+    )
     transformer.feed(html)
     transformer.close()
     return "".join(transformer.output)
@@ -208,6 +245,14 @@ def nonce_html_response(
     allow_inline_script: bool = False,
 ) -> HTMLResponse:
     nonce = secrets.token_urlsafe(16)
+    if AD_LOADER_TAG in html and not allow_inline_script:
+        # Under 'strict-dynamic' only nonced scripts run, so every script tag
+        # on an ad page carries the nonce, including same-origin files.
+        return HTMLResponse(
+            transform_html_for_csp(html, nonce, nonce_external_scripts=True),
+            status_code=status_code,
+            headers={"Content-Security-Policy": build_ad_csp(nonce)},
+        )
     return HTMLResponse(
         transform_html_for_csp(html, nonce),
         status_code=status_code,
