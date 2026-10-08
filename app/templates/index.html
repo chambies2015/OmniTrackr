@@ -47,7 +47,7 @@
   <link rel="manifest" href="/manifest.webmanifest">
   <link rel="apple-touch-icon" href="/static/icons/apple-touch-icon.png?v=20261003-pwa-1">
   <meta name="apple-mobile-web-app-title" content="OmniTrackr">
-  <script src="/static/pwa.js?v=20261003-pwa-1" defer></script>
+  <script src="/static/pwa.js?v=20261008-ios-1" defer></script>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link rel="preload" href="./styles.css?v=20261007-weekly-1" as="style">
@@ -58,7 +58,7 @@
   <link rel="stylesheet" href="/static/app-theme.css?v=20260924-friends-panel-2">
   <link rel="stylesheet" href="/static/library-theme.css?v=20260924-library-filters-1">
   <link rel="stylesheet" href="/static/dialog-theme.css?v=20260924-visual-4">
-  <link rel="stylesheet" href="/static/dashboard-2026.css?v=20261004-links-1">
+  <link rel="stylesheet" href="/static/dashboard-2026.css?v=20261008-ios-1">
   <script src="./preauth.js"></script>
   <style>
     html.authenticated #landingPage{display:none}
@@ -326,6 +326,16 @@
   <button type="button" id="installAppBtn" class="site-stats-link install-app-btn" hidden>Install app</button>
   <button id="logoutBtn" aria-label="Logout from your account">Logout</button>
   </div>
+
+  <dialog id="installAppDialog" class="install-app-dialog" aria-labelledby="installAppDialogTitle">
+    <h2 id="installAppDialogTitle">Add OmniTrackr to your Home Screen</h2>
+    <ol>
+      <li>Tap the <strong>Share</strong> button in Safari.</li>
+      <li>Choose <strong>Add to Home Screen</strong>.</li>
+      <li>Tap <strong>Add</strong>. OmniTrackr then opens full screen from its own icon.</li>
+    </ol>
+    <button id="installAppDialogClose" class="action-btn" type="button">Got it</button>
+  </dialog>
 
   <!-- Friends panel overlays the workspace without changing its layout. -->
   <aside id="friendsSidebar" class="friends-sidebar hidden" aria-labelledby="friendsPanelTitle" hidden>
