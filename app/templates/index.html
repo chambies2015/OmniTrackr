@@ -58,7 +58,7 @@
   <link rel="stylesheet" href="/static/app-theme.css?v=20260924-friends-panel-2">
   <link rel="stylesheet" href="/static/library-theme.css?v=20260924-library-filters-1">
   <link rel="stylesheet" href="/static/dialog-theme.css?v=20260924-visual-4">
-  <link rel="stylesheet" href="/static/dashboard-2026.css?v=20261008-ios-1">
+  <link rel="stylesheet" href="/static/dashboard-2026.css?v=20261008-supporters-1">
   <script src="./preauth.js"></script>
   <style>
     html.authenticated #landingPage{display:none}
@@ -1535,6 +1535,7 @@
   <script src="/static/for-you.js?v=20261007-weekly-1"></script>
   <script src="/static/title-links.js?v=20261004-links-1"></script>
   <script src="/static/public-profile.js?v=20261002-profiles-1"></script>
+  <script src="/static/supporter.js?v=20261008-supporters-1"></script>
   <script src="/static/guest-list.js?v=20261003-guest-2"></script>
 
   <!-- Account Modal -->
@@ -1753,6 +1754,36 @@
             <div id="profileError" class="error-message" role="alert"></div>
             <div id="profileSuccess" class="success-message" role="status"></div>
           </form>
+        </div>
+
+        <!-- Supporter Section -->
+        <div class="account-section" id="supporterSection">
+          <h3>Supporter</h3>
+          <p class="info-text" id="supporterStatus">OmniTrackr is free. Supporting it on Ko-fi adds a badge and an accent color to your
+            public profile. <a href="/supporters" target="_blank" rel="noopener">What supporters get</a></p>
+          <p class="profile-settings__link">Your supporter code: <code id="supporterCode">-</code>
+            <button type="button" class="profile-settings__copy" id="supporterCopyCode">Copy code</button></p>
+          <p class="info-text">Perks switch on by themselves when you use your OmniTrackr email on Ko-fi. If you use another email,
+            paste this code into your Ko-fi message.</p>
+          <p><a class="action-btn supporter-kofi" id="supporterKofiLink" href="https://ko-fi.com/omnitrackr" target="_blank"
+              rel="noopener noreferrer">Support on Ko-fi ↗</a></p>
+          <form id="supporterForm" novalidate hidden>
+            <div class="privacy-toggle-item">
+              <label for="supporterShowBadge" class="toggle-label">
+                <span>Show the Supporter badge on my public profile</span>
+                <div class="toggle-container">
+                  <input type="checkbox" id="supporterShowBadge" class="toggle-switch">
+                  <span class="toggle-slider"></span>
+                </div>
+              </label>
+            </div>
+            <fieldset class="profile-settings__parts" id="supporterAccents">
+              <legend>Profile accent color</legend>
+            </fieldset>
+            <button type="submit" class="action-btn" id="supporterSave">Save supporter settings</button>
+          </form>
+          <div id="supporterError" class="error-message" role="alert"></div>
+          <div id="supporterSuccess" class="success-message" role="status"></div>
         </div>
 
         <!-- Data & Privacy Dashboard Section -->

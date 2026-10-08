@@ -748,3 +748,43 @@ class EmailOptOut(Base):
     id = Column(Integer, primary_key=True, index=True)
     user_id = Column(Integer, ForeignKey("users.id", ondelete="CASCADE"), nullable=False, unique=True, index=True)
     created_at = Column(DateTime, nullable=False, default=datetime.utcnow)
+
+
+class Supporter(Base):
+    """A member who has supported OmniTrackr on Ko-fi (Oct 2026).
+
+    A new table only: the users table is untouched. Perks are cosmetic and last
+    while ``active_until`` is in the future; ``since`` is kept after a lapse so a
+    returning supporter keeps their original date.
+    """
+    __tablename__ = "supporters"
+
+    id = Column(Integer, primary_key=True, index=True)
+    user_id = Column(Integer, ForeignKey("users.id", ondelete="CASCADE"), nullable=False, unique=True, index=True)
+    since = Column(DateTime, nullable=False, default=datetime.utcnow)
+    active_until = Column(DateTime, nullable=False, default=datetime.utcnow)
+    monthly = Column(Boolean, nullable=False, default=False)
+    show_badge = Column(Boolean, nullable=False, default=True)
+    accent = Column(String(16), nullable=True)
+    updated_at = Column(DateTime, nullable=False, default=datetime.utcnow, onupdate=datetime.utcnow)
+
+
+class KofiPayment(Base):
+    """One Ko-fi webhook delivery, kept so a retried delivery is never counted twice.
+
+    The payer's email is stored only as a keyed hash so a payment made before the
+    matching OmniTrackr account existed can still be linked later.
+    """
+    __tablename__ = "kofi_payments"
+
+    id = Column(Integer, primary_key=True, index=True)
+    message_id = Column(String(80), nullable=False, unique=True, index=True)
+    kind = Column(String(24), nullable=False)
+    amount = Column(String(16), nullable=True)
+    currency = Column(String(8), nullable=True)
+    monthly = Column(Boolean, nullable=False, default=False)
+    email_hash = Column(String(64), nullable=True, index=True)
+    from_name = Column(String(80), nullable=True)
+    user_id = Column(Integer, ForeignKey("users.id", ondelete="SET NULL"), nullable=True, index=True)
+    received_at = Column(DateTime, nullable=False, default=datetime.utcnow)
+    linked_at = Column(DateTime, nullable=True)

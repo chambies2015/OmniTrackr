@@ -63,6 +63,7 @@ from .routers import (
     titles,
     profiles,
     pwa,
+    supporters,
 )
 
 # Create database tables
@@ -546,6 +547,11 @@ for route in profiles.router.routes:
         bind_rate_limited_endpoint(route, rate_limited_profile_settings)
 app.include_router(profiles.router)
 app.include_router(pwa.router)
+rate_limited_kofi_webhook = limiter.limit("60/minute")(supporters.kofi_webhook)
+for route in supporters.router.routes:
+    if getattr(route, "path", None) == "/api/kofi/webhook" and "POST" in getattr(route, "methods", set()):
+        bind_rate_limited_endpoint(route, rate_limited_kofi_webhook)
+app.include_router(supporters.router)
 
 
 # Root endpoint
@@ -792,6 +798,14 @@ async def terms_page(request: Request):
 @app.get("/contact", tags=["public"])
 async def contact_page(request: Request):
     response = strict_template_response("contact.html", request)
+    if response:
+        return response
+    raise HTTPException(status_code=404, detail="Page not found")
+
+
+@app.get("/supporters", tags=["public"])
+async def supporters_page(request: Request):
+    response = strict_template_response("supporters.html", request)
     if response:
         return response
     raise HTTPException(status_code=404, detail="Page not found")

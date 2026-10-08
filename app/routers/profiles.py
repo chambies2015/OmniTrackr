@@ -22,7 +22,7 @@ from ..site_chrome import apply_site_chrome
 
 router = APIRouter(tags=["profiles"])
 SITE_URL = os.getenv("SITE_URL", "https://omnitrackr.xyz").rstrip("/")
-CSS_VERSION = "20261004-share-1"
+CSS_VERSION = "20261008-supporters-1"
 TITLE_CSS_VERSION = "20261002-profiles-1"
 
 
@@ -82,6 +82,25 @@ def _avatar_html(user: models.User) -> str:
         return f'<img class="profile-hero__avatar" src="/profile-pictures/{user.id}" alt="" width="120" height="120">'
     initial = (user.username or "?")[:1].upper()
     return f'<div class="profile-hero__avatar profile-hero__avatar--empty" aria-hidden="true">{_e(initial)}</div>'
+
+
+def _supporter_html(view) -> str:
+    if not view.supporter:
+        return ""
+    since = view.supporter.get("since")
+    title = f"Supporting OmniTrackr on Ko-fi since {since:%B} {since.year}" if since else "Supports OmniTrackr on Ko-fi"
+    return (f'<a class="profile-supporter" href="/supporters" title="{_e(title)}">'
+            '<span aria-hidden="true">♥</span> Supporter</a>')
+
+
+def _hero_class(view) -> str:
+    accent = (view.supporter or {}).get("accent")
+    classes = "profile-hero"
+    if view.supporter:
+        classes += " profile-hero--supporter"
+    if accent:
+        classes += f" profile-hero--accent-{accent}"
+    return classes
 
 
 def _stats_html(view) -> str:
@@ -200,12 +219,13 @@ def render(view, *, signed_in: bool, is_owner: bool) -> str:
 <body class="site title-page profile-page">
   <!--SITE_NAV:-->
   <main>
-    <section class="profile-hero">
+    <section class="{_e(_hero_class(view))}">
       <div class="site-wrap profile-hero__inner">
         {_avatar_html(user)}
         <div class="profile-hero__copy">
           <p class="site-eyebrow">Public profile</p>
           <h1>{_e(name)}</h1>
+          {_supporter_html(view)}
           <p class="profile-hero__meta">{_e(since)}</p>
           {_bio_html(profile.bio)}
           <div class="title-hero__chips">{chips}</div>
