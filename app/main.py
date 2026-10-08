@@ -20,7 +20,7 @@ from slowapi.middleware import SlowAPIMiddleware
 from slowapi.util import get_remote_address
 from sqlalchemy.orm import Session
 
-from . import crud, schemas, models
+from . import crud, schemas, models, dashboard_assets
 from .database import Base, SessionLocal, engine
 from .site_chrome import apply_site_chrome, message_page
 from .csp import nonce_html_response, strict_html_response
@@ -589,6 +589,12 @@ async def read_root(request: Request):
                 html = public_root_html(html, request)
                 if request.method == "GET" and "token" not in request.query_params:
                     funnel.record("landing_viewed", request)
+            else:
+                _, dashboard_version = dashboard_assets.bundle()
+                html = html.replace('src="./app.js"', f'src="./app.js?v={dashboard_version}"', 1)
+                # Signed-in pages show the Friends button; drawing it from the start keeps
+                # the toolbar from re-wrapping (and the page from shifting) once scripts run.
+                html = html.replace('aria-controls="friendsSidebar" hidden>', 'aria-controls="friendsSidebar">', 1)
             response = nonce_html_response(html)
             response.headers["Cache-Control"] = "private, no-store" if authenticated_shell else "no-cache"
             response.headers["Vary"] = "Cookie"

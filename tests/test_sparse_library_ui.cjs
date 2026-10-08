@@ -4,7 +4,7 @@ const assert = require('node:assert/strict');
 const fs = require('node:fs');
 const path = require('node:path');
 const vm = require('node:vm');
-const source = fs.readFileSync(path.join(__dirname, '../app/static/app.js'), 'utf8');
+const source = require('./helpers/dashboard_source.cjs');
 const categories = [
   {name: 'Movie', loader: 'Movies', table: 'movieTable', prefix: 'movie', end: 'function displayMoviePoster(', creator: 'director', yearCell: 3, completion: 'watched'},
   {name: 'TV', loader: 'TVShows', table: 'tvShowTable', prefix: 'tv', end: '// Anime functions', yearCell: 2, completion: 'watched'},

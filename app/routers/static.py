@@ -5,6 +5,8 @@ import os
 from fastapi import APIRouter, HTTPException
 from fastapi.responses import FileResponse, Response
 
+from .. import dashboard_assets
+
 router = APIRouter()
 
 
@@ -26,6 +28,7 @@ async def get_credentials():
 
 CACHE_JS_CSS = {"Cache-Control": "public, max-age=86400"}
 CACHE_IMAGES = {"Cache-Control": "public, max-age=2592000"}
+CACHE_VERSIONED = {"Cache-Control": "public, max-age=31536000, immutable"}
 
 
 @router.get("/auth.js")
@@ -49,11 +52,12 @@ async def get_analytics():
 
 
 @router.get("/app.js")
-async def get_app():
-    app_file = os.path.join(os.path.dirname(__file__), "..", "static", "app.js")
-    if os.path.exists(app_file):
-        return FileResponse(app_file, headers=CACHE_JS_CSS)
-    raise HTTPException(status_code=404, detail="app.js not found")
+async def get_app(v: str | None = None):
+    """The dashboard bundle (see app/dashboard_assets.py)."""
+    script, version = dashboard_assets.bundle()
+    # The page links this with a content hash, so a matching ?v= never changes.
+    cache = CACHE_VERSIONED if v == version else CACHE_JS_CSS
+    return Response(content=script, media_type="application/javascript", headers=cache)
 
 
 @router.get("/styles.css")

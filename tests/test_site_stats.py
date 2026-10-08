@@ -5,7 +5,7 @@ from pathlib import Path
 import pytest
 from starlette.requests import Request
 
-from app import admin_access, models, site_traffic
+from app import admin_access, dashboard_assets, models, site_traffic
 from app.site_traffic import TrafficRecorder, classify_device, should_count, traffic_source
 from tests.conftest import TestingSessionLocal
 
@@ -260,7 +260,7 @@ def test_traffic_table_is_new_and_separate():
 
 def test_dashboard_link_is_hidden_until_the_server_confirms_admin():
     index = (ROOT / "app" / "templates" / "index.html").read_text(encoding="utf-8")
-    app_js = (ROOT / "app" / "static" / "app.js").read_text(encoding="utf-8")
+    app_js = dashboard_assets.full_source()
     auth_js = (ROOT / "app" / "static" / "auth.js").read_text(encoding="utf-8")
     assert '<a id="siteStatsLink" class="site-stats-link" href="/site-stats" hidden>' in index
     assert "/api/site-stats/access" in app_js

@@ -111,8 +111,8 @@ def test_site_stats_admin_follows_the_current_username(client, db_session, monke
 
 
 def test_rename_page_no_longer_forces_a_logout():
-    from pathlib import Path
-    app_js = (Path(__file__).resolve().parents[1] / "app" / "static" / "app.js").read_text(encoding="utf-8")
+    from app import dashboard_assets
+    app_js = dashboard_assets.full_source()
     start = app_js.index("window.changeUsername = async function")
     body = app_js[start:app_js.index("\n};", start)]
     assert "clearAuth()" not in body
