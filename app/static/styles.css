@@ -6335,6 +6335,12 @@ body.dark-mode .for-you-item__add.is-added { color: #5eead4; }
 .coming-up__email { align-items: center; background: rgba(255, 255, 255, 0.06); border: 1px solid rgba(139, 92, 246, 0.35); border-radius: 999px; color: var(--fg); cursor: pointer; display: inline-flex; font-size: 0.85rem; font-weight: 600; gap: 8px; padding: 8px 14px; }
 .coming-up__email[hidden] { display: none; }
 .coming-up__email input { accent-color: #8b5cf6; height: 16px; margin: 0; width: 16px; }
+.weekly-invite { align-items: center; background: linear-gradient(135deg, rgba(139, 92, 246, 0.16), rgba(20, 184, 166, 0.1)); border: 1px solid rgba(139, 92, 246, 0.35); border-radius: 14px; display: flex; flex-wrap: wrap; gap: 12px 18px; justify-content: space-between; margin: 14px 0; padding: 14px 16px; }
+.weekly-invite[hidden] { display: none; }
+.weekly-invite__text { color: var(--fg); flex: 1 1 280px; font-size: 0.92rem; line-height: 1.5; margin: 0; }
+.weekly-invite__actions { align-items: center; display: flex; gap: 10px; }
+.weekly-invite__no { background: transparent; border: 0; color: var(--fg); cursor: pointer; font-size: 0.85rem; opacity: 0.7; padding: 6px; }
+.weekly-invite__no:hover { opacity: 1; text-decoration: underline; }
 @media (max-width: 600px) {
   .for-you-card { padding: 16px; }
   .for-you-card__side { align-items: flex-start; }

@@ -439,6 +439,26 @@ class CollectionReport(Base):
     )
 
 
+class ReviewReaction(Base):
+    """One "helpful" mark per browser for a public review (Oct 2026).
+
+    A new table only: library tables are untouched. Like collection reactions, it
+    stores a keyed hash of a signed browser cookie, never an IP address or user id.
+    """
+    __tablename__ = "review_reactions"
+
+    id = Column(Integer, primary_key=True, index=True)
+    category = Column(String, nullable=False)
+    item_id = Column(Integer, nullable=False)
+    visitor_hash = Column(String, nullable=False)
+    created_at = Column(DateTime, nullable=False, default=datetime.utcnow)
+
+    __table_args__ = (
+        UniqueConstraint("category", "item_id", "visitor_hash", name="uq_review_reaction_visitor"),
+        Index("ix_review_reactions_item", "category", "item_id"),
+    )
+
+
 class PublicReviewState(Base):
     """Automated report state for one exact version of an opt-in public review."""
     __tablename__ = "public_review_states"

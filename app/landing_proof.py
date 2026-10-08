@@ -82,9 +82,10 @@ def section_html(reviews: list[dict], counts: dict) -> str:
         profile = review.get("profile_url")
         author = (f'<a href="{escape(profile, quote=True)}">{name}</a>'
                   if isinstance(profile, str) and profile.startswith("/u/") else name)
+        badge = '<span class="lp-voice__badge">Review of the week</span> · ' if review.get("spotlight") else ""
         cards.append(
-            '<li class="lp-voice">'
-            f'<p class="lp-voice__meta"><span>{escape(CATEGORY_LABELS.get(review["category"], "Title"))}</span>{rating_html}</p>'
+            f'<li class="lp-voice{" lp-voice--spotlight" if review.get("spotlight") else ""}">'
+            f'<p class="lp-voice__meta"><span>{badge}{escape(CATEGORY_LABELS.get(review["category"], "Title"))}</span>{rating_html}</p>'
             f'<h3 class="lp-voice__title"><a href="{url}">{escape(review["title"])}</a></h3>'
             f'<blockquote class="lp-voice__quote"><p>{escape(_excerpt(review.get("review") or ""))}</p></blockquote>'
             f'<p class="lp-voice__by">— {author} · <a href="{url}">Read the review</a></p>'
@@ -111,6 +112,14 @@ def section_html(reviews: list[dict], counts: dict) -> str:
 def build(db) -> str:
     from .routers import reviews as reviews_router
     feed = reviews_router._public_review_feed(db, None, "", 40, 0)["reviews"]
+    try:
+        from . import review_spotlight
+        spotlight = review_spotlight.build(db)
+    except Exception:
+        spotlight = None
+    if spotlight:
+        key = (spotlight["category"], spotlight["id"])
+        feed = [dict(spotlight, spotlight=True)] + [r for r in feed if (r["category"], r["id"]) != key]
     chosen = pick_reviews(feed)
     reviews_router._attach_profile_urls(db, chosen)
     return section_html(chosen, stats(db))

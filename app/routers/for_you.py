@@ -133,6 +133,58 @@ def unsubscribe(token: str = Query("", max_length=64), db: Session = Depends(get
                              "You won't get the weekly email any more. You can turn it back on from your library whenever you like.")
 
 
+# ---------------------------------------------------------------- one-click opt-in from an email
+
+def _weekly_page(title: str, heading: str, message: str, token: str = "", confirm: bool = False):
+    page = message_page(title, heading, message, eyebrow="Weekly email",
+                        actions=(("Open my library", "/"), ("Open Release Radar", "/release-radar")))
+    if confirm:
+        # A real button, so link scanners in mail apps can't subscribe anyone by prefetching.
+        form = (f'<form method="post" action="/email/weekly/subscribe?token={escape(token, quote=True)}" class="site-message__actions">'
+                '<button class="site-btn site-btn--primary" type="submit">Yes, email me weekly</button></form>')
+        page = page.replace('<div class="site-message__actions">', form + '<div class="site-message__actions">', 1)
+    response = strict_html_response(page)
+    response.headers["Cache-Control"] = "no-store"
+    response.headers["X-Robots-Tag"] = "noindex, nofollow"
+    return response
+
+
+def _weekly_member(db: Session, token: str):
+    user_id = digest.user_id_from_subscribe_token(token)
+    user = db.get(models.User, user_id) if user_id else None
+    if user is None or not user.is_active or not user.is_verified or not user.email:
+        return None
+    return user
+
+
+@router.get("/email/weekly/subscribe", include_in_schema=False)
+def weekly_subscribe_confirm(token: str = Query("", max_length=300), db: Session = Depends(get_db)):
+    user = _weekly_member(db, token)
+    if user is None:
+        return _weekly_page("Weekly email", "This link has expired",
+                            "Turn on the weekly email from the \u201cComing up for you\u201d card in your library instead.")
+    if digest.subscription_for(db, user.id):
+        return _weekly_page("Weekly email", "You're already subscribed",
+                            "You'll get a short email when something you track has a release coming up. "
+                            "Every email has a one-click unsubscribe.")
+    return _weekly_page("Weekly email", "Get a weekly heads-up?",
+                        "Once a week, a short email lists new episodes, seasons, games and releases connected to what "
+                        "you track. Weeks with no news are skipped apart from a short monthly round-up, and every email has a one-click unsubscribe.",
+                        token=token, confirm=True)
+
+
+@router.post("/email/weekly/subscribe", include_in_schema=False)
+def weekly_subscribe(token: str = Query("", max_length=300), db: Session = Depends(get_db)):
+    user = _weekly_member(db, token)
+    if user is None:
+        return _weekly_page("Weekly email", "This link has expired",
+                            "Turn on the weekly email from the \u201cComing up for you\u201d card in your library instead.")
+    digest.subscribe(db, user.id)
+    return _weekly_page("Weekly email", "You're subscribed",
+                        "Your first weekly email arrives within a day if something you track is coming up. "
+                        "You can turn it off any time from any email or from your library.")
+
+
 # ---------------------------------------------------------------- product update emails
 
 def _updates_page(title: str, heading: str, message: str, token: str = "", confirm: bool = False):
