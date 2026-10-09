@@ -5,7 +5,7 @@ from typing import Dict, List, Tuple, Type
 from fastapi import APIRouter, Depends, HTTPException, Query, status
 from sqlalchemy.orm import Session
 
-from .. import models, schemas
+from .. import models, schemas, title_pages
 from ..review_quality import AD_MIN_REVIEW_WORDS, evaluate_public_review
 from .reviews import PUBLIC_REVIEW_DETAIL_MIN_CHARS, PUBLIC_REVIEW_MIN_CHARS
 from ..dependencies import get_current_user, get_db
@@ -121,6 +121,9 @@ async def save_completion_review(
         "standalone": standalone,
         "substantial": quality.word_count >= AD_MIN_REVIEW_WORDS,
         "review_url": f"/reviews/{item.id}?category={REVIEW_CATEGORY[moment.category]}" if standalone else None,
+        # Listed reviews also appear on the title's public page.
+        "title_url": (title_pages.path_for_item(title_pages.LIBRARY_TO_KIND[moment.category], item)
+                      if payload.public and quality.community_ready and moment.category in title_pages.LIBRARY_TO_KIND else None),
     }
 
 

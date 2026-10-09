@@ -1,5 +1,5 @@
 // Title pages: click-to-play trailers (nothing loads from YouTube until asked)
-// and "Add to my library" for signed-in members.
+// "Add to my library" and "Write a review" for signed-in members.
 (function () {
   'use strict';
 
@@ -47,6 +47,131 @@
       button.textContent = original;
       if (status) status.textContent = 'Could not add it right now. Please try again.';
     }
+  }
+
+  // ---------- Write a review (members) ----------
+  const reviewForm = document.querySelector('[data-title-review]');
+
+  function countWords(text) {
+    const words = String(text || '').match(/[A-Za-z0-9\u00C0-\u024F'\u2019]+/g);
+    return words ? words.length : 0;
+  }
+
+  // Mirrors evaluate_public_review in review_quality.py: 80 characters to be listed here;
+  // 240 characters, 35 words and two sentences (or 55 words) for a page of its own.
+  function reviewHint(text) {
+    const value = String(text || '').trim();
+    const words = countWords(value);
+    if (!words) return '';
+    const sentences = (value.match(/[.!?\u2026](?:\s|$)/g) || []).length;
+    const label = `${words} word${words === 1 ? '' : 's'}`;
+    if (value.length < 80) return `${label}: keep going, a couple of sentences is plenty`;
+    if (value.length < 240 || words < 35 || (sentences < 2 && words < 55)) return `${label}: it will show here; a little more and it gets its own page`;
+    if (words < 150) return `${label}: good, this gets its own review page`;
+    return `${label}: a thorough review, thank you`;
+  }
+
+  function reviewStatus(message, link) {
+    const status = reviewForm.querySelector('.title-write__status');
+    status.replaceChildren(document.createTextNode(message));
+    if (link && /^\/reviews\/\d+\?category=[a-z_]+$/.test(link)) {
+      const anchor = document.createElement('a');
+      anchor.href = link;
+      anchor.textContent = 'See your review';
+      status.append(' ', anchor);
+    }
+  }
+
+  function signInUrl() {
+    return `/?next=${encodeURIComponent(`${window.location.pathname}#write-review`)}#landing-auth`;
+  }
+
+  async function loadOwnReview() {
+    const submit = reviewForm.querySelector('[type="submit"]');
+    submit.disabled = true;
+    reviewForm.dataset.expected = '';
+    try {
+      const response = await fetch(`/api/titles/${encodeURIComponent(reviewForm.dataset.titleKind)}/${encodeURIComponent(reviewForm.dataset.titleSlug)}/my-review`, {
+        credentials: 'same-origin', headers: authHeaders(),
+      });
+      if (response.status === 401) {
+        reviewStatus('Your session has ended. Sign in again to write a review.');
+        const anchor = document.createElement('a');
+        anchor.href = signInUrl();
+        anchor.textContent = 'Sign in';
+        reviewForm.querySelector('.title-write__status').append(' ', anchor);
+        return;
+      }
+      if (!response.ok) throw new Error('load failed');
+      const data = await response.json();
+      if (data.in_library && data.review) {
+        reviewForm.elements.review.value = data.review;
+        reviewForm.dataset.expected = data.review;
+        reviewForm.querySelector('[type="submit"]').textContent = 'Update review';
+      }
+      if (data.in_library && data.rating !== null && data.rating !== undefined) reviewForm.elements.rating.value = data.rating;
+      if (data.in_library) reviewForm.elements.public.checked = data.review ? Boolean(data.public) : true;
+      reviewForm.querySelector('.title-write__meter').textContent = reviewHint(reviewForm.elements.review.value);
+      submit.disabled = false;
+    } catch (error) {
+      reviewStatus('Could not load your library entry. Reload the page to try again.');
+    }
+  }
+
+  async function saveReview(event) {
+    event.preventDefault();
+    const review = reviewForm.elements.review.value.trim();
+    const ratingText = reviewForm.elements.rating.value.trim();
+    const rating = ratingText === '' ? null : Number(ratingText);
+    if (!review) {
+      reviewStatus('Write a few words first.');
+      reviewForm.elements.review.focus();
+      return;
+    }
+    if (rating !== null && !(Number.isFinite(rating) && rating >= 0 && rating <= 10)) {
+      reviewStatus('Ratings go from 0 to 10.');
+      reviewForm.elements.rating.focus();
+      return;
+    }
+    const submit = reviewForm.querySelector('[type="submit"]');
+    submit.disabled = true;
+    reviewStatus('Saving…');
+    try {
+      const response = await fetch(`/api/titles/${encodeURIComponent(reviewForm.dataset.titleKind)}/${encodeURIComponent(reviewForm.dataset.titleSlug)}/review`, {
+        method: 'PUT',
+        credentials: 'same-origin',
+        headers: { ...authHeaders(), 'Content-Type': 'application/json' },
+        body: JSON.stringify({ review, rating, public: reviewForm.elements.public.checked, expected_review: reviewForm.dataset.expected || '' }),
+      });
+      if (response.status === 401) {
+        window.location.href = signInUrl();
+        return;
+      }
+      const data = await response.json().catch(() => ({}));
+      if (!response.ok) {
+        reviewStatus(typeof data.detail === 'string' ? data.detail : 'Could not save your review. Your text is still here; please try again.');
+        return;
+      }
+      reviewForm.dataset.expected = review;
+      submit.textContent = 'Update review';
+      const added = data.state === 'created' ? ' It is in your library now too.' : '';
+      if (!data.public) reviewStatus(`Saved to your library. Only you can see it.${added}`);
+      else if (data.standalone) reviewStatus(`Your review is live on OmniTrackr.${added}`, data.review_url);
+      else if (data.listed) reviewStatus(`Your review will appear on this page.${added} Add a few more sentences any time and it gets its own page.`);
+      else reviewStatus(`Saved.${added} It is a little short to show publicly yet; add a sentence or two and it will appear here.`);
+    } catch (error) {
+      reviewStatus('Could not save your review. Your text is still here; please try again.');
+    } finally {
+      submit.disabled = false;
+    }
+  }
+
+  if (reviewForm) {
+    reviewForm.addEventListener('submit', saveReview);
+    reviewForm.elements.review.addEventListener('input', () => {
+      reviewForm.querySelector('.title-write__meter').textContent = reviewHint(reviewForm.elements.review.value);
+    });
+    loadOwnReview();
   }
 
   document.addEventListener('click', event => {

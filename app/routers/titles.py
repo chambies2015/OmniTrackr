@@ -9,7 +9,7 @@ from html import escape
 from typing import Optional
 
 from fastapi import APIRouter, Depends, HTTPException, Request, Response
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, field_validator
 from sqlalchemy import func
 from sqlalchemy.orm import Session
 
@@ -21,8 +21,8 @@ from ..site_chrome import apply_site_chrome, editorial_picks, message_page
 
 router = APIRouter(tags=["titles"])
 SITE_URL = os.getenv("SITE_URL", "https://omnitrackr.xyz").rstrip("/")
-CSS_VERSION = "20261002-profiles-1"
-JS_VERSION = "20261001-titles-1"
+CSS_VERSION = "20261009-write-1"
+JS_VERSION = "20261009-write-1"
 SCHEMA_TYPES = {"movie": "Movie", "tv": "TVSeries", "anime": "TVSeries", "game": "VideoGame", "album": "MusicAlbum", "book": "Book"}
 CREATOR_SCHEMA = {"movie": "director", "album": "byArtist", "book": "author"}
 CREATOR_LABEL = {"movie": "Director", "album": "Artist", "book": "Author"}
@@ -235,11 +235,45 @@ def _community_html(group, summary: dict) -> str:
                     f'<p>{_e(_excerpt(review["review"], 420))}</p>'
                     f'<a href="{_e(review["url"])}">Read the full review <span aria-hidden="true">→</span></a></article>')
     if not reviews:
-        reviews = (f'<p class="title-empty">No public reviews yet. Track {_e(group.title)} on OmniTrackr and share yours '
-                   f'— it will appear here.</p>')
+        reviews = (f'<p class="title-empty">No public reviews yet. <a href="#write-review">Be the first to review '
+                   f'{_e(group.title)}</a>.</p>')
     return (f'<section class="title-section" aria-labelledby="community-title"><h2 id="community-title">On OmniTrackr</h2>'
             f'<div class="title-stats">{"".join(tiles)}</div>'
             f'<h3 class="title-subhead">Member reviews</h3><div class="title-reviews">{reviews}</div></section>')
+
+
+def _write_review_html(group, summary: dict, signed_in: bool) -> str:
+    """The prompt (and, for members, the form) that turns a visitor into the next reviewer."""
+    verb = VERBS[group.kind]
+    first = not summary["reviews"]
+    heading = f"Be the first to review {group.title}" if first else f"Add your review of {group.title}"
+    lead = (f"Have you {verb} it? A few honest sentences help the next person decide. "
+            "Reviews of a few sentences (about 50 words) get their own page and can show up in search.")
+    slug = group.path.rsplit("/", 1)[1]
+    if signed_in:
+        action = (
+            f'<form class="title-write__form" data-title-review data-title-kind="{_e(group.kind)}" data-title-slug="{_e(slug)}" novalidate>'
+            '<label class="title-write__label" for="titleReviewText">Your review</label>'
+            f'<textarea id="titleReviewText" name="review" rows="6" maxlength="10000" required '
+            f'placeholder="What stayed with you? Who would you recommend it to?"></textarea>'
+            '<p class="title-write__meter" id="titleReviewMeter" aria-live="polite"></p>'
+            '<div class="title-write__row">'
+            '<label class="title-write__rating" for="titleReviewRating"><span>Rating <small>(optional, out of 10)</small></span>'
+            '<input id="titleReviewRating" name="rating" type="number" min="0" max="10" step="0.1" inputmode="decimal"></label>'
+            '<label class="title-write__public"><input id="titleReviewPublic" name="public" type="checkbox" checked> Show it on this page</label>'
+            '</div>'
+            '<p class="title-write__note">Saving adds the title to your library if it isn\'t there yet. You can edit or hide the review any time.</p>'
+            '<button type="submit" class="site-btn site-btn--primary">Save review</button>'
+            '<p class="title-write__status" role="status" aria-live="polite"></p></form>'
+        )
+    else:
+        from urllib.parse import quote
+        signin = "/?next=" + quote(f"{group.path}#write-review", safe="") + "#landing-auth"
+        action = (f'<div class="title-write__actions"><a class="site-btn site-btn--primary" href="{_e(signin)}">Sign in to write a review</a>'
+                  '<a class="site-btn site-btn--ghost" href="/#signup">Create a free account</a></div>'
+                  '<p class="title-write__note">Free, and your library stays private unless you choose to share a review.</p>')
+    return (f'<section class="title-section title-write" id="write-review" aria-labelledby="write-review-title">'
+            f'<h2 id="write-review-title">{_e(heading)}</h2><p class="title-write__lead">{_e(lead)}</p>{action}</section>')
 
 
 def _collections_html(summary: dict) -> str:
@@ -316,10 +350,12 @@ def render(group, summary: dict, metadata: Optional[dict], indexable: bool, sign
               f'data-guest-title="{_e(group.title)}">Save to my list</button>'
               '<a class="site-btn site-btn--ghost" href="/#signup">Create free account</a>'))
     reviews_link = (f'<a class="site-btn site-btn--ghost" href="#community-title">Read {len(summary["reviews"])} member review'
-                    f'{"s" if len(summary["reviews"]) != 1 else ""}</a>' if summary["reviews"] else "")
+                    f'{"s" if len(summary["reviews"]) != 1 else ""}</a>' if summary["reviews"]
+                    else '<a class="site-btn site-btn--ghost" href="#write-review">Write the first review</a>')
     body = "".join([
         # Our own content first: member reviews and stats, then collections and "also track".
-        _community_html(group, summary), _trailer_html(group, metadata), _about_html(group, summary, metadata),
+        _community_html(group, summary), _write_review_html(group, summary, signed_in),
+        _trailer_html(group, metadata), _about_html(group, summary, metadata),
         _collections_html(summary), _related_html(summary), _gallery_html(group, metadata), _tracks_html(metadata),
     ])
     og_image = f'<meta property="og:image" content="{_e(image)}">' if image else ""
@@ -438,6 +474,75 @@ def add_title(kind: str, slug: str, response: Response, user=Depends(get_current
     state, record = add_group_to_library(db, user, group)
     db.commit()
     return {"state": state, "title": record.title, "category": title_pages.KINDS[kind][2]}
+
+
+class TitleReview(BaseModel):
+    review: str = Field(..., min_length=1, max_length=10000)
+    rating: Optional[float] = Field(None, ge=0, le=10)
+    public: bool = True
+    # The review text the composer loaded; a mismatch means it was edited elsewhere since.
+    expected_review: str = Field("", max_length=10000)
+
+    @field_validator("review")
+    @classmethod
+    def _strip(cls, value: str) -> str:
+        value = value.strip()
+        if not value:
+            raise ValueError("Write a few words first")
+        return value
+
+
+def _own_item(db: Session, user, group):
+    model = title_pages.KINDS[group.kind][0]
+    normalized = func.lower(func.trim(model.title))
+    return db.query(model).filter(model.user_id == user.id, normalized == group.normalized).first()
+
+
+@router.get("/api/titles/{kind}/{slug}/my-review")
+def my_title_review(kind: str, slug: str, response: Response, user=Depends(get_current_user), db: Session = Depends(get_db)):
+    """The member's own entry for this title, so the title page composer can start from it."""
+    response.headers["Cache-Control"] = "private, no-store"
+    group = title_pages.find(db, kind, slug)
+    if group is None:
+        raise HTTPException(404, "Title not found")
+    item = _own_item(db, user, group)
+    if item is None:
+        return {"in_library": False, "review": "", "rating": None, "public": True}
+    return {"in_library": True, "review": item.review or "", "rating": item.rating, "public": bool(item.review_public)}
+
+
+@router.put("/api/titles/{kind}/{slug}/review")
+def save_title_review(kind: str, slug: str, payload: TitleReview, request: Request, response: Response,
+                      user=Depends(get_current_user), db: Session = Depends(get_db)):
+    """Write or update the member's review from the title page (adds the title to their library if needed)."""
+    from ..review_quality import evaluate_public_review
+    from .reviews import PUBLIC_REVIEW_DETAIL_MIN_CHARS, PUBLIC_REVIEW_MIN_CHARS
+    response.headers["Cache-Control"] = "private, no-store"
+    group = title_pages.find(db, kind, slug)
+    if group is None:
+        raise HTTPException(404, "Title not found")
+    item = _own_item(db, user, group)
+    if item is not None and (item.review or "").strip() != payload.expected_review.strip():
+        raise HTTPException(409, "Your review for this title changed somewhere else. Reload the page to see the latest version.")
+    state = "existing"
+    if item is None:
+        state, item = add_group_to_library(db, user, group)
+    item.review = payload.review
+    item.review_public = payload.public
+    if payload.rating is not None:
+        item.rating = round(payload.rating, 1)
+    db.commit()
+    quality = evaluate_public_review(payload.review, PUBLIC_REVIEW_MIN_CHARS, PUBLIC_REVIEW_DETAIL_MIN_CHARS)
+    review_category = title_pages.KINDS[kind][1]
+    standalone = payload.public and quality.search_ready
+    return {
+        "state": state,
+        "public": payload.public,
+        "word_count": quality.word_count,
+        "listed": payload.public and quality.community_ready,
+        "standalone": standalone,
+        "review_url": f"/reviews/{item.id}?category={review_category}" if standalone else None,
+    }
 
 
 class GuestListItem(BaseModel):
