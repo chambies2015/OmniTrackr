@@ -173,6 +173,7 @@ class NotificationResponse(BaseModel):
     type: str
     message: str
     friend_request_id: Optional[int] = None
+    link: Optional[str] = None
     created_at: datetime
     read_at: Optional[datetime] = None
     

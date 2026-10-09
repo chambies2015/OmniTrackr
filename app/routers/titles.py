@@ -4,7 +4,9 @@ from __future__ import annotations
 import asyncio
 import json
 import os
-from datetime import date
+import re
+import secrets
+from datetime import date, datetime, timedelta
 from html import escape
 from typing import Optional
 
@@ -21,13 +23,15 @@ from ..site_chrome import apply_site_chrome, editorial_picks, message_page
 
 router = APIRouter(tags=["titles"])
 SITE_URL = os.getenv("SITE_URL", "https://omnitrackr.xyz").rstrip("/")
-CSS_VERSION = "20261009-write-1"
-JS_VERSION = "20261009-write-1"
+CSS_VERSION = "20261009-take-1"
+JS_VERSION = "20261009-take-1"
 SCHEMA_TYPES = {"movie": "Movie", "tv": "TVSeries", "anime": "TVSeries", "game": "VideoGame", "album": "MusicAlbum", "book": "Book"}
 CREATOR_SCHEMA = {"movie": "director", "album": "byArtist", "book": "author"}
 CREATOR_LABEL = {"movie": "Director", "album": "Artist", "book": "Author"}
 KIND_PLURALS = {"movie": "Movies", "tv": "TV shows", "anime": "Anime", "game": "Games", "album": "Albums", "book": "Books"}
 GUEST_LIST_MAX = 30
+TAKE_DAYS = 60
+TAKE_TOKEN = re.compile(r"[A-Za-z0-9_-]{16,64}")
 VERBS = {"movie": "watched", "tv": "watched", "anime": "watched", "game": "played", "album": "listened to", "book": "read"}
 
 
@@ -88,6 +92,20 @@ def _genres(metadata: dict) -> list[str]:
 
 def _metadata_creator(kind: str, summary: dict) -> Optional[str]:
     return summary.get("creator")
+
+
+def _take_for(db: Session, token: Optional[str], group):
+    """A live "what did you think?" request for this title, with its asker (or None)."""
+    if not token or not TAKE_TOKEN.fullmatch(token):
+        return None
+    take = db.query(models.TakeRequest).filter(models.TakeRequest.token == token).first()
+    if (take is None or take.expires_at <= datetime.utcnow()
+            or take.kind != group.kind or take.slug != group.path.rsplit("/", 1)[1]):
+        return None
+    asker = db.get(models.User, take.asker_id)
+    if asker is None or not asker.is_active:
+        return None
+    return take, asker
 
 
 async def _load(request: Request, db: Session, kind: str, slug: str):
@@ -242,17 +260,24 @@ def _community_html(group, summary: dict) -> str:
             f'<h3 class="title-subhead">Member reviews</h3><div class="title-reviews">{reviews}</div></section>')
 
 
-def _write_review_html(group, summary: dict, signed_in: bool) -> str:
+def _write_review_html(group, summary: dict, signed_in: bool, take=None) -> str:
     """The prompt (and, for members, the form) that turns a visitor into the next reviewer."""
     verb = VERBS[group.kind]
     first = not summary["reviews"]
     heading = f"Be the first to review {group.title}" if first else f"Add your review of {group.title}"
+    asked = ""
+    if take:
+        heading = f"Share your take on {group.title}"
+        asked = (f'<p class="title-write__asked"><strong>{_e(take[1].username)}</strong> asked what you thought of '
+                 f'{_e(group.title)}. Your review appears on this page, and they get a note when it does.</p>')
     lead = (f"Have you {verb} it? A few honest sentences help the next person decide. "
             "Reviews of a few sentences (about 50 words) get their own page and can show up in search.")
     slug = group.path.rsplit("/", 1)[1]
     if signed_in:
+        take_attr = f' data-take="{_e(take[0].token)}"' if take else ""
         action = (
-            f'<form class="title-write__form" data-title-review data-title-kind="{_e(group.kind)}" data-title-slug="{_e(slug)}" novalidate>'
+            f'<form class="title-write__form" data-title-review data-title-kind="{_e(group.kind)}" data-title-slug="{_e(slug)}"'
+            f'{take_attr} novalidate>'
             '<label class="title-write__label" for="titleReviewText">Your review</label>'
             f'<textarea id="titleReviewText" name="review" rows="6" maxlength="10000" required '
             f'placeholder="What stayed with you? Who would you recommend it to?"></textarea>'
@@ -268,12 +293,13 @@ def _write_review_html(group, summary: dict, signed_in: bool) -> str:
         )
     else:
         from urllib.parse import quote
-        signin = "/?next=" + quote(f"{group.path}#write-review", safe="") + "#landing-auth"
+        query = f"?take={take[0].token}" if take else ""
+        signin = "/?next=" + quote(f"{group.path}{query}#write-review", safe="") + "#landing-auth"
         action = (f'<div class="title-write__actions"><a class="site-btn site-btn--primary" href="{_e(signin)}">Sign in to write a review</a>'
                   '<a class="site-btn site-btn--ghost" href="/#signup">Create a free account</a></div>'
                   '<p class="title-write__note">Free, and your library stays private unless you choose to share a review.</p>')
     return (f'<section class="title-section title-write" id="write-review" aria-labelledby="write-review-title">'
-            f'<h2 id="write-review-title">{_e(heading)}</h2><p class="title-write__lead">{_e(lead)}</p>{action}</section>')
+            f'<h2 id="write-review-title">{_e(heading)}</h2>{asked}<p class="title-write__lead">{_e(lead)}</p>{action}</section>')
 
 
 def _collections_html(summary: dict) -> str:
@@ -317,7 +343,7 @@ def _sources_html(metadata: dict) -> str:
             'member data is aggregated from OmniTrackr libraries and never identifies who tracks a title.</p>')
 
 
-def render(group, summary: dict, metadata: Optional[dict], indexable: bool, signed_in: bool) -> str:
+def render(group, summary: dict, metadata: Optional[dict], indexable: bool, signed_in: bool, take=None) -> str:
     metadata = metadata or {}
     kind_label = title_pages.KINDS[group.kind][3]
     canonical = SITE_URL + group.path
@@ -349,12 +375,15 @@ def render(group, summary: dict, metadata: Optional[dict], indexable: bool, sign
               f'data-guest-kind="{_e(group.kind)}" data-guest-slug="{_e(group.path.rsplit("/", 1)[1])}" '
               f'data-guest-title="{_e(group.title)}">Save to my list</button>'
               '<a class="site-btn site-btn--ghost" href="/#signup">Create free account</a>'))
+    ask = (f'<button type="button" class="site-btn site-btn--ghost" id="ask-friend" data-take-ask '
+           f'data-title-kind="{_e(group.kind)}" data-title-slug="{_e(group.path.rsplit("/", 1)[1])}" '
+           f'data-take-title="{_e(group.title)}">Ask a friend for their take</button>' if signed_in else "")
     reviews_link = (f'<a class="site-btn site-btn--ghost" href="#community-title">Read {len(summary["reviews"])} member review'
                     f'{"s" if len(summary["reviews"]) != 1 else ""}</a>' if summary["reviews"]
                     else '<a class="site-btn site-btn--ghost" href="#write-review">Write the first review</a>')
     body = "".join([
         # Our own content first: member reviews and stats, then collections and "also track".
-        _community_html(group, summary), _write_review_html(group, summary, signed_in),
+        _community_html(group, summary), _write_review_html(group, summary, signed_in, take),
         _trailer_html(group, metadata), _about_html(group, summary, metadata),
         _collections_html(summary), _related_html(summary), _gallery_html(group, metadata), _tracks_html(metadata),
     ])
@@ -401,7 +430,7 @@ def render(group, summary: dict, metadata: Optional[dict], indexable: bool, sign
           {f'<p class="title-hero__lead">{_e(lead[:1].upper() + lead[1:])}</p>' if lead else ''}
           <div class="title-hero__chips">{genres}</div>
           {_scores_html(summary, metadata)}
-          <div class="title-hero__actions">{track}{reviews_link}<button type="button" class="site-btn site-btn--ghost" data-share data-share-title="{_e(group.title + year)} on OmniTrackr">Share</button></div>
+          <div class="title-hero__actions">{track}{reviews_link}{ask}<button type="button" class="site-btn site-btn--ghost" data-share data-share-title="{_e(group.title + year)} on OmniTrackr">Share</button></div>
           <p class="title-hero__status" role="status" aria-live="polite"></p>
           {_links_html(metadata)}
         </div>
@@ -425,15 +454,19 @@ async def title_page(kind: str, slug: str, request: Request, db: Session = Depen
     group, summary, metadata = await _load(request, db, kind, slug)
     if group is None:
         raise HTTPException(404, "Title not found")
+    token = request.query_params.get("take")
     if slug != group.path.rsplit("/", 1)[1]:
         from fastapi.responses import RedirectResponse
-        return RedirectResponse(group.path, status_code=301)
+        keep = f"?take={token}" if token and TAKE_TOKEN.fullmatch(token) else ""
+        return RedirectResponse(group.path + keep, status_code=301)
     indexable = title_pages.is_indexable(summary, metadata)
     signed_in = bool(request.cookies.get(AUTH_COOKIE_NAME))
-    response = strict_html_response(render(group, summary, metadata, indexable, signed_in))
-    response.headers["Cache-Control"] = "private, no-store" if signed_in else "public, max-age=600"
+    take = _take_for(db, token, group)
+    response = strict_html_response(render(group, summary, metadata, indexable, signed_in, take))
+    response.headers["Cache-Control"] = "private, no-store" if signed_in or token else "public, max-age=600"
     response.headers["Vary"] = "Cookie"
-    if not indexable:
+    if not indexable or token:
+        # Personal ?take= links stay out of search; the canonical page carries the content.
         response.headers["X-Robots-Tag"] = "noindex, follow"
     return response
 
@@ -482,6 +515,8 @@ class TitleReview(BaseModel):
     public: bool = True
     # The review text the composer loaded; a mismatch means it was edited elsewhere since.
     expected_review: str = Field("", max_length=10000)
+    # Present when the member arrived through a friend's "what did you think?" link.
+    take: Optional[str] = Field(None, max_length=64)
 
     @field_validator("review")
     @classmethod
@@ -496,6 +531,53 @@ def _own_item(db: Session, user, group):
     model = title_pages.KINDS[group.kind][0]
     normalized = func.lower(func.trim(model.title))
     return db.query(model).filter(model.user_id == user.id, normalized == group.normalized).first()
+
+
+@router.post("/api/titles/{kind}/{slug}/ask")
+def ask_for_takes(kind: str, slug: str, request: Request, response: Response,
+                  user=Depends(get_current_user), db: Session = Depends(get_db)):
+    """A link the member can send friends: the title page, asking for their review."""
+    response.headers["Cache-Control"] = "private, no-store"
+    group = title_pages.find(db, kind, slug)
+    if group is None:
+        raise HTTPException(404, "Title not found")
+    page_slug = group.path.rsplit("/", 1)[1]
+    now = datetime.utcnow()
+    take = db.query(models.TakeRequest).filter(
+        models.TakeRequest.asker_id == user.id, models.TakeRequest.kind == group.kind,
+        models.TakeRequest.slug == page_slug, models.TakeRequest.expires_at > now + timedelta(days=7),
+    ).order_by(models.TakeRequest.expires_at.desc()).first()
+    if take is None:
+        take = models.TakeRequest(asker_id=user.id, kind=group.kind, slug=page_slug, title=group.title,
+                                  token=secrets.token_urlsafe(18), created_at=now, expires_at=now + timedelta(days=TAKE_DAYS))
+        db.add(take)
+        db.commit()
+    return {
+        "url": f"{SITE_URL}{group.path}?take={take.token}#write-review",
+        "title": f"{group.title} on OmniTrackr",
+        "text": f"What did you think of {group.title}? I'd love your take.",
+        "expires_at": take.expires_at.isoformat(),
+    }
+
+
+def _deliver_take(db: Session, token: Optional[str], group, responder) -> Optional[str]:
+    """Tell the asker (once per friend) that a friend answered; returns the asker's username."""
+    found = _take_for(db, token, group)
+    if not found:
+        return None
+    take, asker = found
+    if asker.id == responder.id:
+        return None
+    if db.query(models.TakeResponse).filter_by(request_id=take.id, responder_id=responder.id).first():
+        return asker.username
+    db.add(models.TakeResponse(request_id=take.id, responder_id=responder.id))
+    db.add(models.Notification(user_id=asker.id, type="take_received", link=f"{group.path}#community-title",
+                               message=f"{responder.username} shared their take on {group.title}."))
+    try:
+        db.commit()
+    except Exception:
+        db.rollback()  # A double submit raced the unique constraint; the note already went out.
+    return asker.username
 
 
 @router.get("/api/titles/{kind}/{slug}/my-review")
@@ -535,11 +617,15 @@ def save_title_review(kind: str, slug: str, payload: TitleReview, request: Reque
     quality = evaluate_public_review(payload.review, PUBLIC_REVIEW_MIN_CHARS, PUBLIC_REVIEW_DETAIL_MIN_CHARS)
     review_category = title_pages.KINDS[kind][1]
     standalone = payload.public and quality.search_ready
+    listed = payload.public and quality.community_ready
+    # Only a review the friend can actually read on the page counts as an answer.
+    asked_by = _deliver_take(db, payload.take, group, user) if listed and payload.take else None
     return {
+        "asked_by": asked_by,
         "state": state,
         "public": payload.public,
         "word_count": quality.word_count,
-        "listed": payload.public and quality.community_ready,
+        "listed": listed,
         "standalone": standalone,
         "review_url": f"/reviews/{item.id}?category={review_category}" if standalone else None,
     }

@@ -1,5 +1,5 @@
 // Title pages: click-to-play trailers (nothing loads from YouTube until asked)
-// "Add to my library" and "Write a review" for signed-in members.
+// "Add to my library", "Write a review" and "Ask a friend" for signed-in members.
 (function () {
   'use strict';
 
@@ -83,7 +83,9 @@
   }
 
   function signInUrl() {
-    return `/?next=${encodeURIComponent(`${window.location.pathname}#write-review`)}#landing-auth`;
+    const take = new URLSearchParams(window.location.search).get('take');
+    const query = take && /^[A-Za-z0-9_-]{16,64}$/.test(take) ? `?take=${take}` : '';
+    return `/?next=${encodeURIComponent(`${window.location.pathname}${query}#write-review`)}#landing-auth`;
   }
 
   async function loadOwnReview() {
@@ -141,7 +143,10 @@
         method: 'PUT',
         credentials: 'same-origin',
         headers: { ...authHeaders(), 'Content-Type': 'application/json' },
-        body: JSON.stringify({ review, rating, public: reviewForm.elements.public.checked, expected_review: reviewForm.dataset.expected || '' }),
+        body: JSON.stringify({
+          review, rating, public: reviewForm.elements.public.checked,
+          expected_review: reviewForm.dataset.expected || '', take: reviewForm.dataset.take || null,
+        }),
       });
       if (response.status === 401) {
         window.location.href = signInUrl();
@@ -154,7 +159,8 @@
       }
       reviewForm.dataset.expected = review;
       submit.textContent = 'Update review';
-      const added = data.state === 'created' ? ' It is in your library now too.' : '';
+      const added = (data.state === 'created' ? ' It is in your library now too.' : '')
+        + (data.asked_by ? ` We let ${data.asked_by} know.` : '');
       if (!data.public) reviewStatus(`Saved to your library. Only you can see it.${added}`);
       else if (data.standalone) reviewStatus(`Your review is live on OmniTrackr.${added}`, data.review_url);
       else if (data.listed) reviewStatus(`Your review will appear on this page.${added} Add a few more sentences any time and it gets its own page.`);
@@ -174,6 +180,43 @@
     loadOwnReview();
   }
 
+  // ---------- Ask a friend for their take (members) ----------
+  async function askFriend(button) {
+    const status = document.querySelector('.title-hero__status');
+    button.disabled = true;
+    try {
+      const response = await fetch(`/api/titles/${encodeURIComponent(button.dataset.titleKind)}/${encodeURIComponent(button.dataset.titleSlug)}/ask`, {
+        method: 'POST', credentials: 'same-origin', headers: authHeaders(),
+      });
+      if (response.status === 401) {
+        window.location.href = signInUrl();
+        return;
+      }
+      const data = await response.json().catch(() => ({}));
+      if (!response.ok || typeof data.url !== 'string') throw new Error('ask failed');
+      const note = "When a friend reviews it from your link, you'll get a notification.";
+      if (navigator.share) {
+        try {
+          await navigator.share({ title: data.title, text: data.text, url: data.url });
+          if (status) status.textContent = `Sent. ${note}`;
+          return;
+        } catch (error) {
+          if (error && error.name === 'AbortError') return;
+        }
+      }
+      try {
+        await navigator.clipboard.writeText(`${data.text} ${data.url}`);
+        if (status) status.textContent = `Link copied. Paste it to a friend. ${note}`;
+      } catch (error) {
+        window.prompt('Copy this link and send it to a friend:', data.url);
+      }
+    } catch (error) {
+      if (status) status.textContent = 'Could not make a link right now. Please try again.';
+    } finally {
+      button.disabled = false;
+    }
+  }
+
   document.addEventListener('click', event => {
     const trailer = event.target.closest && event.target.closest('.title-trailer');
     if (trailer) {
@@ -182,5 +225,7 @@
     }
     const add = event.target.closest && event.target.closest('[data-title-add]');
     if (add) addToLibrary(add);
+    const ask = event.target.closest && event.target.closest('[data-take-ask]');
+    if (ask) askFriend(ask);
   });
 })();

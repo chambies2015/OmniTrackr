@@ -23,7 +23,7 @@ from ..site_chrome import apply_site_chrome
 router = APIRouter(tags=["profiles"])
 SITE_URL = os.getenv("SITE_URL", "https://omnitrackr.xyz").rstrip("/")
 CSS_VERSION = "20261008-supporters-1"
-TITLE_CSS_VERSION = "20261009-write-1"
+TITLE_CSS_VERSION = "20261009-take-1"
 
 
 def _e(value) -> str:

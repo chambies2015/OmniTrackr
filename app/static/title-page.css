@@ -78,6 +78,7 @@
 
 .title-write { background: linear-gradient(180deg, rgba(139, 92, 246, .12), rgba(255, 255, 255, .02)); border: 1px solid rgba(139, 92, 246, .35); border-radius: 18px; max-width: 760px; padding: 24px; scroll-margin-top: 88px; }
 .title-write h2 { margin-bottom: 8px; }
+.title-write__asked { background: rgba(45, 212, 191, .1); border: 1px solid rgba(45, 212, 191, .35); border-radius: 12px; color: var(--site-text); line-height: 1.55; margin: 0 0 14px; padding: 10px 14px; }
 .title-write__lead { color: var(--site-soft); line-height: 1.6; margin: 0 0 16px; }
 .title-write__form { display: grid; gap: 10px; }
 .title-write__label { color: var(--site-text); font-weight: 600; }

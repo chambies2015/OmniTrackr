@@ -25,6 +25,8 @@ async function loadNotifications() {
           `;
         } else if (notif.type === 'recommendation_received' || notif.type === 'recommendation_invitation') {
           actionButtons = '<button class="notification-action-btn" data-action="open-recommendation-postcards">Open Postcards</button>';
+        } else if (notif.type === 'take_received' && /^\/titles\/[a-z]+\/[a-z0-9-]+#community-title$/.test(notif.link || '')) {
+          actionButtons = `<a class="notification-action-btn" href="${escapeHtml(notif.link)}">Read their take</a>`;
         }
 
         return `
