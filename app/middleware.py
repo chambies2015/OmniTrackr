@@ -109,7 +109,8 @@ class SecurityHeadersMiddleware(BaseHTTPMiddleware):
                 and response.status_code == 200 and "cache-control" not in response.headers):
             # Versioned assets (?v=...) never change, so browsers can keep them for a year;
             # unversioned ones are rechecked daily.
-            versioned = "v=" in request.url.query
+            # Font files are never edited in place (a new cut gets a new file name).
+            versioned = "v=" in request.url.query or path.startswith("/static/fonts/")
             response.headers["Cache-Control"] = (
                 "public, max-age=31536000, immutable" if versioned else "public, max-age=86400"
             )

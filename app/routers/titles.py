@@ -341,9 +341,9 @@ def render(group, summary: dict, metadata: Optional[dict], indexable: bool, sign
   {og_image}
   <meta name="twitter:card" content="summary_large_image">
   <link rel="icon" type="image/x-icon" href="/omnitrackr_favicon.ico">
-  <link rel="preconnect" href="https://fonts.googleapis.com">
-  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@700;800&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <link rel="preload" href="/static/fonts/poppins-700-latin.woff2" as="font" type="font/woff2" crossorigin>
+  <link rel="preload" href="/static/fonts/poppins-800-latin.woff2" as="font" type="font/woff2" crossorigin>
+  <link rel="stylesheet" href="/static/fonts.css?v=20261009-fonts-1">
   <link rel="stylesheet" href="/static/title-page.css?v={CSS_VERSION}">
   <script src="/static/title-page.js?v={JS_VERSION}" defer></script>
   <script src="/static/share.js?v=20261004-share-1" defer></script>
@@ -516,9 +516,9 @@ def titles_index(request: Request, db: Session = Depends(get_db)):
   <meta name="robots" content="{robots}">
   <link rel="canonical" href="{SITE_URL}/titles">
   <link rel="icon" type="image/x-icon" href="/omnitrackr_favicon.ico">
-  <link rel="preconnect" href="https://fonts.googleapis.com">
-  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@700;800&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <link rel="preload" href="/static/fonts/poppins-700-latin.woff2" as="font" type="font/woff2" crossorigin>
+  <link rel="preload" href="/static/fonts/poppins-800-latin.woff2" as="font" type="font/woff2" crossorigin>
+  <link rel="stylesheet" href="/static/fonts.css?v=20261009-fonts-1">
   <link rel="stylesheet" href="/static/title-page.css?v={CSS_VERSION}">
 </head>
 <body class="site title-page">
