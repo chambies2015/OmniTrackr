@@ -14,7 +14,7 @@ from __future__ import annotations
 import re
 from html import escape
 
-SITE_CSS_VERSION = "20261009-site-1"
+SITE_CSS_VERSION = "20261009-kofi-1"
 SITE_JS_VERSION = "20260928-site-1"
 
 # (key, label, href) in display order. The first NAV_PRIMARY entries stay

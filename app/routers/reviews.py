@@ -486,8 +486,20 @@ def _author_html(review: dict) -> str:
     name = _escape(review.get("username"))
     url = review.get("profile_url")
     if isinstance(url, str) and url.startswith("/u/"):
-        return f'<a class="review-author-link" href="{_escape(url)}">{name}</a>'
-    return name
+        name = f'<a class="review-author-link" href="{_escape(url)}">{name}</a>'
+    from ..supporters import chip_html
+    return name + chip_html(review.get("supporter"))
+
+
+def _attach_supporter_badges(db: Session, reviews: list) -> None:
+    """Mark reviews by current Ko-fi supporters who show their badge. Optional: never blocks a page."""
+    try:
+        from ..supporters import public_badges
+        badges = public_badges(db, [review.get("user_id") for review in reviews])
+    except Exception:
+        return
+    for review in reviews:
+        review["supporter"] = badges.get(review.get("user_id"))
 
 
 def _attach_profile_urls(db: Session, reviews: list) -> None:
@@ -720,6 +732,7 @@ async def review_detail(
             except Exception:
                 more = []  # Related reviews are optional; never block the page.
             _attach_profile_urls(db, [review])
+            _attach_supporter_badges(db, [review])
             helpful = review_helpful_counts(db, [(review["category"], review["id"])]).get((review["category"], int(review["id"])), 0)
             page = apply_site_chrome(_review_detail_html(review, more, helpful))
             return strict_html_response(_inject_ad_loader_for_review_detail(page, request, review))
@@ -794,6 +807,7 @@ def _public_review_feed(db, category, q, limit, offset, min_chars=PUBLIC_REVIEW_
         key=lambda review: (not review["search_ready"], -review["id"], review["category"]),
     )
     reviews = prefix[offset:offset + limit]
+    _attach_supporter_badges(db, reviews)
     return {"reviews": reviews, "has_more": len(prefix) > offset + limit, "next_offset": offset + len(reviews)}
 
 

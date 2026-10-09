@@ -15,7 +15,7 @@ from pydantic import BaseModel, Field, field_validator
 from sqlalchemy import func
 from sqlalchemy.orm import Session
 
-from .. import models, title_metadata, title_pages
+from .. import models, supporters, title_metadata, title_pages
 from ..auth import AUTH_COOKIE_NAME
 from ..csp import strict_html_response
 from ..dependencies import get_current_user, get_db
@@ -23,8 +23,8 @@ from ..site_chrome import apply_site_chrome, editorial_picks, message_page
 
 router = APIRouter(tags=["titles"])
 SITE_URL = os.getenv("SITE_URL", "https://omnitrackr.xyz").rstrip("/")
-CSS_VERSION = "20261009-take-1"
-JS_VERSION = "20261009-take-1"
+CSS_VERSION = "20261009-kofi-1"
+JS_VERSION = "20261009-kofi-1"
 SCHEMA_TYPES = {"movie": "Movie", "tv": "TVSeries", "anime": "TVSeries", "game": "VideoGame", "album": "MusicAlbum", "book": "Book"}
 CREATOR_SCHEMA = {"movie": "director", "album": "byArtist", "book": "author"}
 CREATOR_LABEL = {"movie": "Director", "album": "Artist", "book": "Author"}
@@ -249,7 +249,7 @@ def _community_html(group, summary: dict) -> str:
         rating = f'<span class="title-review__rating">{_e(review["rating"])}/10</span>' if review["rating"] is not None else ""
         author = (f'<a class="title-review__author" href="{_e(review["profile_url"])}">{_e(review["username"])}</a>'
                   if review.get("profile_url") else _e(review["username"]))
-        reviews += (f'<article class="title-review"><header><strong>{author}</strong>{rating}</header>'
+        reviews += (f'<article class="title-review"><header><strong>{author}{supporters.chip_html(review.get("supporter"))}</strong>{rating}</header>'
                     f'<p>{_e(_excerpt(review["review"], 420))}</p>'
                     f'<a href="{_e(review["url"])}">Read the full review <span aria-hidden="true">→</span></a></article>')
     if not reviews:

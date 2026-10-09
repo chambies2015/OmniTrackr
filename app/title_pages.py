@@ -178,8 +178,11 @@ def _public_reviews(db: Session, kind: str, items: list) -> list[dict]:
     reviews.sort(key=lambda r: (not r["search_ready"], -len(r["review"])))
     from .public_profiles import enabled_profile_paths
     profiles = enabled_profile_paths(db, [review["user_id"] for review in reviews])
+    from .supporters import public_badges
+    badges = public_badges(db, [review["user_id"] for review in reviews])
     for review in reviews:
         review["profile_url"] = profiles.get(review["user_id"])
+        review["supporter"] = badges.get(review["user_id"])
     return reviews
 
 
