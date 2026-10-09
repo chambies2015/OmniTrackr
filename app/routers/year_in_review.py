@@ -23,7 +23,7 @@ from .profiles import _CardCache, _fit, _font
 router = APIRouter(tags=["year-in-review"])
 SITE_URL = os.getenv("SITE_URL", "https://omnitrackr.xyz").rstrip("/")
 ASSET_VERSION = "20261008-recap-1"
-TITLE_CSS_VERSION = "20261009-write-1"
+TITLE_CSS_VERSION = "20261009-take-1"
 FIRST_TRACKED_NOTE = {
     2026: "OmniTrackr started keeping a dated journal in September 2026 and add dates in October, "
           "so this year's recap covers the autumn. Next year's will cover all twelve months.",

@@ -800,6 +800,23 @@ def run_migrations():
         pass
 
     add_library_added_at_columns()
+    add_notification_link_column()
+
+
+def add_notification_link_column():
+    """Add a nullable link column to notifications. Existing rows keep NULL (no link)."""
+    try:
+        inspector = inspect(engine)
+        if not inspector.has_table("notifications"):
+            return
+        if "link" in {col["name"] for col in inspector.get_columns("notifications")}:
+            return
+        with engine.connect() as conn:
+            conn.execute(text("ALTER TABLE notifications ADD COLUMN link VARCHAR"))
+            conn.commit()
+            print("Added link column to notifications table")
+    except Exception as e:
+        print(f"Migration warning (notification link): {e}")
 
 
 LIBRARY_TABLES = ("movies", "tv_shows", "anime", "video_games", "music", "books")

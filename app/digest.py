@@ -156,8 +156,23 @@ def _spotlight_section(review: dict | None, base: str) -> tuple[str, list[str]]:
     return html, ["Review of the week:", f"{review.get('title')} by {review.get('username')}: {excerpt}", url, ""]
 
 
-def build_digest(username: str, report: dict, unsubscribe_url: str, spotlight: dict | None = None) -> tuple[str, str, str] | None:
-    """(subject, html, text) or None when there is nothing to send. `spotlight` never forces a send."""
+def _ask_section(ask: dict | None, base: str) -> tuple[str, list[str]]:
+    """'Ask a friend' block for a title the member finished recently; empty when there is none."""
+    if not ask:
+        return "", []
+    url = f"{base}{ask['path']}#ask-friend"
+    html = (
+        '<h2 style="font-size:17px;color:#1f1640;margin:24px 0 8px">What did your friends think?</h2>'
+        f'<p style="color:#3b3557;font-size:14px;line-height:1.6;margin:0">You finished <strong>{escape(ask["title"])}</strong> recently. '
+        'Send a friend a link and their review shows up on the title page, with a note to you when it does.</p>'
+        f'<p style="margin:8px 0 0"><a href="{escape(url, quote=True)}" style="color:#6d28d9;font-weight:700">Ask a friend for their take</a></p>'
+    )
+    return html, [f"What did your friends think of {ask['title']}? Ask them for their take: {url}", ""]
+
+
+def build_digest(username: str, report: dict, unsubscribe_url: str, spotlight: dict | None = None,
+                 ask: dict | None = None) -> tuple[str, str, str] | None:
+    """(subject, html, text) or None when there is nothing to send. `spotlight` and `ask` never force a send."""
     matches, popular = report["matches"], report["popular"]
     if not matches and not popular:
         return None
@@ -184,6 +199,10 @@ def build_digest(username: str, report: dict, unsubscribe_url: str, spotlight: d
     if spotlight_html:
         sections.append(spotlight_html)
         text += spotlight_text
+    ask_html, ask_text = _ask_section(ask, base)
+    if ask_html:
+        sections.append(ask_html)
+        text += ask_text
     text += [f"See everything: {base}/release-radar", "",
              "You get this because you turned on the weekly email in OmniTrackr.",
              f"Unsubscribe with one click: {unsubscribe_url}"]
@@ -204,6 +223,25 @@ def build_digest(username: str, report: dict, unsubscribe_url: str, spotlight: d
         '</div></div></body></html>'
     )
     return subject, html, "\n".join(text)
+
+
+def recent_finish(db: Session, user_id: int, now: datetime) -> dict | None:
+    """The member's latest finish in the last three weeks that has a public title page."""
+    from . import title_pages
+    moments = db.query(models.CompletionMoment).filter(
+        models.CompletionMoment.user_id == user_id,
+        models.CompletionMoment.completed_at >= now - timedelta(days=21),
+    ).order_by(models.CompletionMoment.completed_at.desc()).limit(5).all()
+    for moment in moments:
+        kind = title_pages.LIBRARY_TO_KIND.get(moment.category)
+        model = title_pages.KINDS[kind][0] if kind else None
+        item = db.query(model).filter(model.id == moment.item_id, model.user_id == user_id).first() if model else None
+        if item is None or not (item.title or "").strip():
+            continue
+        path = title_pages.path_for_item(kind, item)
+        if title_pages.find(db, kind, path.rsplit("/", 1)[1]) is not None:
+            return {"title": item.title.strip(), "path": path}
+    return None
 
 
 async def _send(to: str, subject: str, html: str, unsubscribe_url: str) -> None:
@@ -262,7 +300,12 @@ async def send_due_digests(session_factory, client=None, now: datetime | None = 
                 stats["skipped"] += 1  # a quiet week: no news from their library, round-up sent recently
                 continue
             unsubscribe_url = f"{app_url()}/email/unsubscribe?token={subscription.token}"
-            built = build_digest(user.username, report, unsubscribe_url, spotlight)
+            try:
+                ask = recent_finish(db, user.id, now)
+            except Exception:
+                db.rollback()
+                ask = None  # The weekly email never depends on it.
+            built = build_digest(user.username, report, unsubscribe_url, spotlight, ask)
             if built is None:
                 stats["skipped"] += 1
                 continue

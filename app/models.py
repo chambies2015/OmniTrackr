@@ -554,6 +554,8 @@ class Notification(Base):
     type = Column(String, nullable=False)
     message = Column(String, nullable=False)
     friend_request_id = Column(Integer, ForeignKey("friend_requests.id"), nullable=True, index=True)
+    # Optional same-site path the notification opens (e.g. a title page). NULL for older rows.
+    link = Column(String, nullable=True)
     created_at = Column(DateTime, default=datetime.utcnow, index=True)
     read_at = Column(DateTime, nullable=True)
     
@@ -597,6 +599,34 @@ class RecommendationSubmission(Base):
     created_at = Column(DateTime, nullable=False, default=datetime.utcnow, index=True)
 
     request = relationship("RecommendationRequest", back_populates="submissions")
+
+
+class TakeRequest(Base):
+    """A member's shareable "what did you think of this title?" link (title page ?take=<token>)."""
+    __tablename__ = "take_requests"
+
+    id = Column(Integer, primary_key=True, index=True)
+    asker_id = Column(Integer, ForeignKey("users.id", ondelete="CASCADE"), nullable=False, index=True)
+    kind = Column(String, nullable=False)
+    slug = Column(String, nullable=False)
+    title = Column(String, nullable=False)
+    token = Column(String, unique=True, nullable=False, index=True)
+    created_at = Column(DateTime, nullable=False, default=datetime.utcnow)
+    expires_at = Column(DateTime, nullable=False, index=True)
+
+    __table_args__ = (Index("ix_take_requests_asker_title", "asker_id", "kind", "slug"),)
+
+
+class TakeResponse(Base):
+    """One friend answered a take request with a public review (the asker is told once)."""
+    __tablename__ = "take_responses"
+
+    id = Column(Integer, primary_key=True, index=True)
+    request_id = Column(Integer, ForeignKey("take_requests.id", ondelete="CASCADE"), nullable=False, index=True)
+    responder_id = Column(Integer, ForeignKey("users.id", ondelete="CASCADE"), nullable=False, index=True)
+    created_at = Column(DateTime, nullable=False, default=datetime.utcnow)
+
+    __table_args__ = (UniqueConstraint("request_id", "responder_id", name="uq_take_response_responder"),)
 
 
 class RecommendationInvitation(Base):

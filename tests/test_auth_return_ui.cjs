@@ -561,7 +561,8 @@ test('"Log in" links from other pages keep the log-in form', () => {
 });
 
 test('signing in from a title page returns to its review form', async () => {
-  for (const destination of ['/titles/movie/interstellar-2014#write-review', '/titles/album/in-rainbows-2007#write-review']) {
+  for (const destination of ['/titles/movie/interstellar-2014#write-review', '/titles/album/in-rainbows-2007#write-review',
+    '/titles/movie/interstellar-2014?take=AbC_dEf-1234567890xyz#write-review']) {
     const s = setup({ search: nextQuery(destination) });
     s.context.initAuth();
     await s.context.login('reader', 'password');
@@ -571,6 +572,8 @@ test('signing in from a title page returns to its review form', async () => {
     '/titles/movie/interstellar-2014', '/titles/movie/interstellar-2014#other', '/titles/film/interstellar-2014#write-review',
     '/titles/movie/Interstellar#write-review', '/titles/movie/../../account#write-review', '/titles/movie/#write-review',
     '//evil.example/titles/movie/x#write-review', '/titles/movie/x#write-review\n',
+    '/titles/movie/x?take=short#write-review', '/titles/movie/x?take=AbC_dEf-1234567890xyz&next=//evil#write-review',
+    '/titles/movie/x?take=AbC_dEf-1234567890xyz',
   ]) {
     const s = setup({ search: nextQuery(destination) });
     s.context.initAuth();
