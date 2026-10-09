@@ -536,9 +536,12 @@ for route in site_stats.router.routes:
 app.include_router(site_stats.router)
 app.include_router(for_you.router)
 rate_limited_guest_import = limiter.limit("10/minute")(titles.import_guest_list)
+rate_limited_title_review = limiter.limit("20/minute")(titles.save_title_review)
 for route in titles.router.routes:
     if getattr(route, "path", None) == "/api/guest-list/import":
         bind_rate_limited_endpoint(route, rate_limited_guest_import)
+    elif getattr(route, "path", None) == "/api/titles/{kind}/{slug}/review":
+        bind_rate_limited_endpoint(route, rate_limited_title_review)
 app.include_router(titles.router)
 
 rate_limited_profile_card = limiter.limit("30/minute")(profiles.profile_card)

@@ -17,7 +17,7 @@ let demoStartContext = null;
 const AUTH_IS_LOCAL = (location.protocol === 'file:' || location.origin === 'null' || location.origin === '');
 const AUTH_API_BASE = AUTH_IS_LOCAL ? 'http://127.0.0.1:8000' : '';
 
-// Keep a visitor's chosen Discover, review, or collection save page through
+// Keep a visitor's chosen Discover, review, title, or collection page through
 // same-tab registration and email verification. Returning only opens a preview;
 // saving always requires the visitor's explicit confirmation on that page.
 function validateDiscoverAuthReturn(value) {
@@ -29,6 +29,8 @@ function validateDiscoverAuthReturn(value) {
     if (review && review[0] === value && Number(review[1]) <= 2147483647) return value;
     const radar = value.match(/^\/release-radar(?:\/(?:movies|tv|anime|games)(?:\/(?:\d{4}-\d{2}|(?:winter|spring|summer|fall)-\d{4}))?)?$/);
     if (radar && radar[0] === value) return value;
+    const title = value.match(/^\/titles\/(?:movie|tv|anime|game|album|book)\/[a-z0-9-]{1,130}#write-review$/);
+    if (title && title[0] === value) return value;
     const collection = value.match(/^\/collections\/public\/([1-9]\d{0,9})\/save$/);
     return collection && collection[0] === value && Number(collection[1]) <= 2147483647 ? value : null;
 }

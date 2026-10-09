@@ -32,7 +32,12 @@ function updateCompletionReviewMeter() {
 function completionReviewMessage(result) {
   if (!result.public) return { text: 'Review saved to your library. Only you can see it.' };
   if (result.standalone) return { text: 'Your review is live on OmniTrackr. ', link: result.review_url, linkText: 'See your review' };
-  if (result.listed) return { text: 'Your review is on the reviews page. Add a few more sentences from your library any time and it gets its own page.' };
+  if (result.listed) {
+    return {
+      text: 'Your review is on the reviews page and the title page. Add a few more sentences from your library any time and it gets its own page. ',
+      link: result.title_url, linkText: 'See the title page',
+    };
+  }
   return { text: "Review saved. It's a little short to show publicly yet; add a sentence or two from your library and it will appear." };
 }
 
@@ -40,7 +45,7 @@ function showCompletionResult(message) {
   const box = document.getElementById('completionReviewResult');
   if (!box) return;
   box.replaceChildren(document.createTextNode(message.text));
-  if (message.link && message.link.startsWith('/reviews/')) {
+  if (message.link && (message.link.startsWith('/reviews/') || /^\/titles\/[a-z]+\/[a-z0-9-]+$/.test(message.link))) {
     const link = document.createElement('a');
     link.href = message.link;
     link.target = '_blank';
