@@ -32,10 +32,11 @@ CACHE_VERSIONED = {"Cache-Control": "public, max-age=31536000, immutable"}
 
 
 @router.get("/auth.js")
-async def get_auth():
+async def get_auth(v: str | None = None):
     auth_file = os.path.join(os.path.dirname(__file__), "..", "static", "auth.js")
     if os.path.exists(auth_file):
-        return FileResponse(auth_file, headers=CACHE_JS_CSS)
+        # Pages link it as /auth.js?v=<release>, bumped whenever the file changes (like /static/).
+        return FileResponse(auth_file, headers=CACHE_VERSIONED if v else CACHE_JS_CSS)
     raise HTTPException(status_code=404, detail="auth.js not found")
 
 

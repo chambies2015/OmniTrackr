@@ -114,7 +114,16 @@ body.site :is(a, button, summary, input, select, textarea):focus-visible { outli
 }
 @media (max-width: 440px) {
   .site-header .site-nav__links > .site-nav__login { display: none; }
+  /* Keep the bar on one row whichever font is showing: when the web font replaced the
+     fallback, the slightly wider brand pushed the links onto a second row and moved
+     the whole page down (public-legacy.css lets this nav wrap). */
+  .site-header .site-nav { flex-wrap: nowrap; gap: 8px; padding: 12px; }
+  .site-header .site-nav__links { gap: 8px; }
+  .site-header .site-nav__links > .public-site-nav__cta { font-size: .85rem; padding: 0 12px; }
   .site-menu__panel .site-menu__login { border-top: 1px solid var(--site-border); color: #fff; display: block; font-weight: 600; margin-top: 4px; }
+}
+@media (max-width: 340px) {
+  .site-brand img { display: none; }
 }
 @media (prefers-reduced-motion: reduce) {
   .site-btn { transition: none; }
