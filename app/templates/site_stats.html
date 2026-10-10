@@ -10,8 +10,8 @@
   <link rel="preload" href="/static/fonts/poppins-800-latin.woff2" as="font" type="font/woff2" crossorigin>
   <link rel="stylesheet" href="/static/fonts.css?v=20261009-fonts-1">
   <link rel="stylesheet" href="/static/site.css?v=20261009-kofi-1">
-  <link rel="stylesheet" href="/static/site-stats.css?v=20261003-announce-1">
-  <script src="/static/site-stats.js?v=20261010-growth-1" defer></script>
+  <link rel="stylesheet" href="/static/site-stats.css?v=20261010-kofi-link-1">
+  <script src="/static/site-stats.js?v=20261010-kofi-link-1" defer></script>
 </head>
 <body class="site stats-page">
   <header class="site-header">
@@ -104,6 +104,12 @@
           <div><h3 class="stats-subhead">Weekly email</h3><dl class="stats-list" id="growthEmail"></dl></div>
           <div><h3 class="stats-subhead">Ask a friend for their take</h3><dl class="stats-list" id="growthTakes"></dl></div>
         </div>
+      </section>
+
+      <section class="stats-card stats-card--wide" id="kofiCard">
+        <div class="stats-card__head"><div><h2>Ko-fi payments to link</h2><p id="kofiSummary">Payments Ko-fi sent without a supporter code or a matching verified email. Type the member's username to switch their perks on.</p></div></div>
+        <ul class="stats-kofi-list" id="kofiList"></ul>
+        <p class="stats-editor-status" id="kofiStatus" role="status" aria-live="polite"></p>
       </section>
 
       <section class="stats-card stats-card--wide">

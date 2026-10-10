@@ -481,6 +481,90 @@
     });
   }
 
+  function paymentLabel(payment) {
+    const amount = [payment.amount, payment.currency].filter(Boolean).join(' ');
+    const kind = payment.monthly ? `${payment.kind || 'Payment'} (monthly)` : (payment.kind || 'Payment');
+    return {
+      name: payment.from_name || 'Name not given',
+      detail: [amount, kind, payment.received_at ? `received ${dayOnly(payment.received_at)}` : ''].filter(Boolean).join(' · '),
+    };
+  }
+
+  function renderKofiPayments(payments) {
+    const list = $('kofiList');
+    if (!list) return;
+    list.replaceChildren();
+    $('kofiSummary').textContent = payments.length
+      ? `${payments.length} payment${payments.length === 1 ? '' : 's'} came in without a supporter code or a matching verified email. Type the member's username to switch their perks on.`
+      : 'Every Ko-fi payment is linked to a member. Payments without a supporter code or matching email will show up here.';
+    if (!payments.length) {
+      list.appendChild(el('li', 'stats-kofi__empty', 'Nothing to link.'));
+      return;
+    }
+    payments.forEach(payment => {
+      const label = paymentLabel(payment);
+      const row = el('li');
+      const info = el('div', 'stats-kofi__info');
+      info.append(el('b', '', label.name), el('span', '', label.detail));
+      const form = el('form', 'stats-kofi__form');
+      form.dataset.messageId = payment.message_id;
+      const input = el('input');
+      input.type = 'text';
+      input.name = 'username';
+      input.placeholder = 'Member username';
+      input.autocomplete = 'off';
+      input.spellcheck = false;
+      input.maxLength = 80;
+      input.required = true;
+      input.setAttribute('aria-label', `Username to link the payment from ${label.name} to`);
+      const button = el('button', 'site-btn site-btn--primary site-btn--sm', 'Link');
+      button.type = 'submit';
+      form.append(input, button);
+      form.addEventListener('submit', event => {
+        event.preventDefault();
+        linkPayment(form, label.name);
+      });
+      row.append(info, form);
+      list.appendChild(row);
+    });
+  }
+
+  async function loadKofiPayments() {
+    if (!$('kofiList')) return;
+    try {
+      const response = await fetch('/api/supporters/unmatched', { credentials: 'same-origin', headers: authHeaders() });
+      if (!response.ok) throw new Error(`HTTP ${response.status}`);
+      renderKofiPayments((await response.json()).payments || []);
+    } catch (error) {
+      $('kofiStatus').textContent = 'Could not load Ko-fi payments. Press Refresh to try again.';
+    }
+  }
+
+  async function linkPayment(form, name) {
+    const status = $('kofiStatus');
+    const username = form.username.value.trim().replace(/^@/, '');
+    if (!username) return;
+    if (!window.confirm(`Link the Ko-fi payment from ${name} to @${username}? Their supporter perks switch on right away.`)) return;
+    const button = form.querySelector('button');
+    button.disabled = true;
+    try {
+      const response = await fetch('/api/supporters/link', {
+        method: 'POST',
+        credentials: 'same-origin',
+        headers: { ...authHeaders(), 'Content-Type': 'application/json' },
+        body: JSON.stringify({ message_id: form.dataset.messageId, username }),
+      });
+      const result = await response.json().catch(() => ({}));
+      if (!response.ok) throw new Error(typeof result.detail === 'string' ? result.detail : `HTTP ${response.status}`);
+      status.textContent = `Linked to @${result.username}. Their supporter perks are on.`;
+      await load();
+    } catch (error) {
+      status.textContent = `Could not link: ${error.message}`;
+    } finally {
+      button.disabled = false;
+    }
+  }
+
   function renderLibraries(data) {
     const content = data.insights.content;
     const rows = content.categories.map(category => [category.label, number(category.total), number(category.completed), number(category.rated), number(category.reviewed)]);
@@ -785,6 +869,7 @@
       if (!response.ok) throw new Error(`HTTP ${response.status}`);
       render(await response.json());
       $('statsToast').textContent = '';
+      loadKofiPayments();
     } catch (error) {
       $('statsToast').textContent = 'Could not load the latest numbers. Check your connection and press Refresh.';
     } finally {
@@ -820,7 +905,7 @@
   }
 
   if (typeof module !== 'undefined' && module.exports) {
-    module.exports = { buildReport, growthRows, niceMax, delta, percent };
+    module.exports = { buildReport, growthRows, paymentLabel, niceMax, delta, percent };
   } else if (document.readyState === 'loading') {
     document.addEventListener('DOMContentLoaded', init);
   } else {
