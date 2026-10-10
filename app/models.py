@@ -892,6 +892,27 @@ class GoalAchievement(Base):
     __table_args__ = (UniqueConstraint("user_id", "year", "category", name="uq_goal_achievement"),)
 
 
+class MonthlyChallengeEntry(Base):
+    """A member who took a monthly challenge (Oct 2026), e.g. month "2026-10".
+
+    A new table only. Progress is never stored: it is counted from the month's
+    finishes. ``completed_at`` is set the first time every step is done,
+    ``seen_at`` once the dashboard celebration is dismissed, and ``share_token``
+    exists only while the member shares the completion.
+    """
+    __tablename__ = "monthly_challenge_entries"
+
+    id = Column(Integer, primary_key=True, index=True)
+    user_id = Column(Integer, ForeignKey("users.id", ondelete="CASCADE"), nullable=False, index=True)
+    month = Column(String(7), nullable=False, index=True)
+    joined_at = Column(DateTime, nullable=False, default=datetime.utcnow)
+    completed_at = Column(DateTime, nullable=True)
+    seen_at = Column(DateTime, nullable=True)
+    share_token = Column(String(32), nullable=True, unique=True, index=True)
+
+    __table_args__ = (UniqueConstraint("user_id", "month", name="uq_monthly_challenge_entry"),)
+
+
 class YearInReviewShare(Base):
     """A member's opt-in public Year in Review link: a frozen snapshot at /recap/<token>.
 

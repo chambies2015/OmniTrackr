@@ -66,6 +66,7 @@ TITLES = {
     "recommendation_invitation": "A friend wants your recommendations",
     "take_received": "A friend shared their take",
     "goal_reached": "Goal reached",
+    "challenge_complete": "Challenge complete",
     "release_day": "Out today",
     "review_helpful": "Your review helped someone",
 }

@@ -627,6 +627,26 @@ for route in goals_router.router.routes:
         bind_rate_limited_endpoint(route, rate_limited_goal_card)
 app.include_router(goals_router.router)
 
+from .routers import challenges as challenges_router
+rate_limited_challenge_join = limiter.limit("30/minute")(challenges_router.join_challenge)
+rate_limited_challenge_leave = limiter.limit("30/minute")(challenges_router.leave_challenge)
+rate_limited_challenge_share = limiter.limit("20/minute")(challenges_router.share_challenge)
+rate_limited_challenge_page = limiter.limit("60/minute")(challenges_router.shared_challenge_page)
+rate_limited_challenge_card = limiter.limit("30/minute")(challenges_router.shared_challenge_card)
+for route in challenges_router.router.routes:
+    path, methods = getattr(route, "path", None), getattr(route, "methods", set())
+    if path == "/api/challenge/join" and "POST" in methods:
+        bind_rate_limited_endpoint(route, rate_limited_challenge_join)
+    elif path == "/api/challenge/join" and "DELETE" in methods:
+        bind_rate_limited_endpoint(route, rate_limited_challenge_leave)
+    elif path == "/api/challenge/share" and "PUT" in methods:
+        bind_rate_limited_endpoint(route, rate_limited_challenge_share)
+    elif path == "/challenge/{token}":
+        bind_rate_limited_endpoint(route, rate_limited_challenge_page)
+    elif path == "/challenge/{token}/card.png":
+        bind_rate_limited_endpoint(route, rate_limited_challenge_card)
+app.include_router(challenges_router.router)
+
 
 # Root endpoint
 @app.get("/", tags=["root"])

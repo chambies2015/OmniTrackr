@@ -249,6 +249,17 @@ async def get_sitemap(request: Request = None, db: Session = Depends(get_db)):
             f"<lastmod>{edition['published_date']}</lastmod>"
             "<changefreq>monthly</changefreq><priority>0.75</priority></url>"
         )
+    # Monthly challenge guides that have started; future months stay unpublished.
+    from .. import challenges
+    challenge_months = challenges.public_months()
+    if challenge_months:
+        sitemap_parts.append(f"<url><loc>{base_url}/challenges</loc><changefreq>monthly</changefreq><priority>0.7</priority></url>")
+    for month in challenge_months:
+        sitemap_parts.append(
+            f"<url><loc>{base_url}/challenges/{challenges.slug_for(month)}</loc>"
+            f"<lastmod>{challenges.CHALLENGES[month]['published']}</lastmod>"
+            "<changefreq>monthly</changefreq><priority>0.7</priority></url>"
+        )
     # Only the completed editorial guides join the search inventory. Shorter
     # trails remain available to readers without being submitted for indexing.
     for slug, guide in GUIDES.items():
