@@ -48,11 +48,11 @@
   <link rel="apple-touch-icon" href="/static/icons/apple-touch-icon.png?v=20261003-pwa-1">
   <meta name="apple-mobile-web-app-title" content="OmniTrackr">
   <script src="/static/pwa.js?v=20261008-ios-1" defer></script>
-  <link rel="preload" href="./styles.css?v=20261010-firstweek-1" as="style">
+  <link rel="preload" href="./styles.css?v=20261010-invite-1" as="style">
   <link rel="preload" href="/static/fonts/poppins-700-latin.woff2" as="font" type="font/woff2" crossorigin>
   <link rel="preload" href="/static/fonts/poppins-800-latin.woff2" as="font" type="font/woff2" crossorigin>
   <link rel="stylesheet" href="/static/fonts.css?v=20261009-fonts-1">
-  <link rel="stylesheet" href="./styles.css?v=20261010-firstweek-1">
+  <link rel="stylesheet" href="./styles.css?v=20261010-invite-1">
   <link rel="stylesheet" href="/static/progress.css?v=20260922-progress">
   <link rel="stylesheet" href="/static/app-theme.css?v=20260924-friends-panel-2">
   <link rel="stylesheet" href="/static/library-theme.css?v=20260924-library-filters-1">
@@ -1538,7 +1538,7 @@
     </form>
   </dialog>
   <script src="./credentials.js"></script>
-  <script src="./auth.js?v=20261009-take-1"></script>
+  <script src="./auth.js?v=20261010-invite-1"></script>
   <script src="/static/import-studio.js?v=20260924-import-studio-final"></script>
   <script src="/static/progress.js?v=20260922-progress"></script>
   <script src="./app.js"></script>
@@ -1997,6 +1997,12 @@
         </div>
         <button type="submit" class="action-btn">Send Request</button>
       </form>
+      <div class="friend-invite">
+        <h3>Friend not on OmniTrackr yet?</h3>
+        <p>Send them your invite link. When they sign up through it, you become friends automatically.</p>
+        <button type="button" class="action-btn friend-invite__share" data-action="share-friend-invite">Share my invite link</button>
+        <p id="friendInviteStatus" class="friend-invite__status" role="status" aria-live="polite"></p>
+      </div>
     </div>
   </div>
 

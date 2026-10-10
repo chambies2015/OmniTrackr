@@ -629,6 +629,27 @@ class TakeResponse(Base):
     __table_args__ = (UniqueConstraint("request_id", "responder_id", name="uq_take_response_responder"),)
 
 
+class FriendInvite(Base):
+    """A member's reusable invite link (/join/<token>): whoever joins or accepts through it becomes their friend."""
+    __tablename__ = "friend_invites"
+
+    id = Column(Integer, primary_key=True, index=True)
+    user_id = Column(Integer, ForeignKey("users.id", ondelete="CASCADE"), nullable=False, unique=True, index=True)
+    token = Column(String(32), unique=True, nullable=False, index=True)
+    created_at = Column(DateTime, nullable=False, default=datetime.utcnow)
+
+
+class FriendInviteSignup(Base):
+    """A new account created through an invite link; the friendship is made once the email is verified."""
+    __tablename__ = "friend_invite_signups"
+
+    id = Column(Integer, primary_key=True, index=True)
+    inviter_id = Column(Integer, ForeignKey("users.id", ondelete="CASCADE"), nullable=False, index=True)
+    invitee_id = Column(Integer, ForeignKey("users.id", ondelete="CASCADE"), nullable=False, unique=True, index=True)
+    created_at = Column(DateTime, nullable=False, default=datetime.utcnow)
+    completed_at = Column(DateTime, nullable=True)
+
+
 class RecommendationInvitation(Base):
     """Private delivery of a postcard prompt to an existing friend."""
     __tablename__ = "recommendation_invitations"

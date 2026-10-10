@@ -726,6 +726,7 @@ function handleDelegatedClick(event) {
     'launchpad-dismiss': dismissLibraryLaunchpad,
     'launchpad-import': openLaunchpadImport,
     'launchpad-add-friend': openLaunchpadAddFriend,
+    'share-friend-invite': () => shareFriendInvite(target),
     'launchpad-weekly-email': () => enableLaunchpadWeeklyEmail(target),
     'dismiss-return-deck': dismissReturnDeck,
     'open-return-deck-item': () => openReturnDeckItem(Number(target.dataset.returnDeckIndex)),

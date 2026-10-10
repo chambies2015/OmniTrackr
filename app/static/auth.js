@@ -31,6 +31,8 @@ function validateDiscoverAuthReturn(value) {
     if (radar && radar[0] === value) return value;
     const title = value.match(/^\/titles\/(?:movie|tv|anime|game|album|book)\/[a-z0-9-]{1,130}(?:\?take=[A-Za-z0-9_-]{16,64})?#write-review$/);
     if (title && title[0] === value) return value;
+    const invite = value.match(/^\/join\/[A-Za-z0-9_-]{16,32}$/);
+    if (invite && invite[0] === value) return value;
     const collection = value.match(/^\/collections\/public\/([1-9]\d{0,9})\/save$/);
     return collection && collection[0] === value && Number(collection[1]) <= 2147483647 ? value : null;
 }
@@ -113,6 +115,44 @@ function getDemoStartIntent() {
     }
     clearDemoStartIntent();
     return false;
+}
+
+// A friend's /join link sends visitors to /?invite=<token>#signup; signing up from
+// this tab sends the token along so the two become friends once the email is verified.
+const FRIEND_INVITE_KEY = 'omnitrackr_friend_invite';
+
+function validFriendInvite(value) {
+    return typeof value === 'string' && /^[A-Za-z0-9_-]{16,32}$/.test(value) ? value : null;
+}
+
+function captureFriendInvite() {
+    if (window.location.pathname !== '/') return;
+    const values = new URLSearchParams(window.location.search).getAll('invite');
+    const token = values.length === 1 ? validFriendInvite(values[0]) : null;
+    if (!token) return;
+    try {
+        sessionStorage.setItem(FRIEND_INVITE_KEY, token);
+    } catch (error) {
+        // The invite still applies while this page stays open.
+    }
+    window.omnitrackrFriendInvite = token;
+}
+
+function getFriendInvite() {
+    try {
+        return validFriendInvite(window.omnitrackrFriendInvite) || validFriendInvite(sessionStorage.getItem(FRIEND_INVITE_KEY));
+    } catch (error) {
+        return validFriendInvite(window.omnitrackrFriendInvite);
+    }
+}
+
+function clearFriendInvite() {
+    window.omnitrackrFriendInvite = null;
+    try {
+        sessionStorage.removeItem(FRIEND_INVITE_KEY);
+    } catch (error) {
+        // Nothing stored.
+    }
 }
 
 function captureDemoStartIntent() {
@@ -291,10 +331,11 @@ function signupProblem(email, username, password, confirmPassword) {
 }
 
 async function register(email, username, password) {
+    const invite = getFriendInvite();
     const response = await fetch(`${AUTH_API_BASE}/auth/register`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ email, username, password })
+        body: JSON.stringify(invite ? { email, username, password, invite } : { email, username, password })
     });
 
     if (!response.ok) {
@@ -303,6 +344,7 @@ async function register(email, username, password) {
     }
 
     await response.json();
+    clearFriendInvite();
     document.getElementById('registerFormElement').reset();
     showVerificationSent(email);
 }
@@ -875,6 +917,7 @@ function setupAuthHandlers() {
 
 function initAuth() {
     captureDiscoverAuthReturn();
+    captureFriendInvite();
     captureDemoStartIntent();
     setupAuthHandlers();
 

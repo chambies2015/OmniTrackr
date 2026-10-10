@@ -580,6 +580,20 @@ for route in year_in_review.router.routes:
         bind_rate_limited_endpoint(route, rate_limited_recap_share)
 app.include_router(year_in_review.router)
 
+from .routers import invites
+rate_limited_invite_link = limiter.limit("20/minute")(invites.invite_link)
+rate_limited_invite_accept = limiter.limit("20/minute")(invites.accept_invite)
+rate_limited_join_page = limiter.limit("60/minute")(invites.join_page)
+for route in invites.router.routes:
+    path = getattr(route, "path", None)
+    if path == "/api/friends/invite-link":
+        bind_rate_limited_endpoint(route, rate_limited_invite_link)
+    elif path == "/api/friends/invite/{token}/accept":
+        bind_rate_limited_endpoint(route, rate_limited_invite_accept)
+    elif path == "/join/{token}":
+        bind_rate_limited_endpoint(route, rate_limited_join_page)
+app.include_router(invites.router)
+
 
 # Root endpoint
 @app.get("/", tags=["root"])

@@ -6372,3 +6372,11 @@ body.dark-mode .for-you-item__add.is-added { color: #5eead4; }
 .library-launchpad__step-action { background: transparent; border: 1px solid rgba(20, 184, 166, .55); border-radius: 999px; color: #5eead4; cursor: pointer; flex-shrink: 0; font: inherit; font-size: .76rem; font-weight: 700; margin-left: auto; padding: 3px 10px; text-decoration: none; white-space: nowrap; }
 .library-launchpad__step-action:hover, .library-launchpad__step-action:focus-visible { background: rgba(20, 184, 166, .16); }
 .library-launchpad__step-action:disabled { cursor: progress; opacity: .6; }
+
+/* Friend request modal: invite someone who isn't a member yet. */
+.friend-invite { border-top: 1px solid rgba(102, 126, 234, .3); margin-top: 18px; padding-top: 16px; }
+.friend-invite h3 { font-size: 1rem; margin: 0 0 6px; }
+.friend-invite p { font-size: .88rem; line-height: 1.5; margin: 0 0 12px; opacity: .85; }
+.friend-invite__status:empty { display: none; }
+.friend-invite__status { margin: 10px 0 0 !important; overflow-wrap: anywhere; }
+.friend-invite__share { width: 100%; }

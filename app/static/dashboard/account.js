@@ -796,11 +796,43 @@ window.openFriendRequestModal = function () {
   document.getElementById('friendRequestModal').style.display = 'flex';
 }
 
+// "Friend not on OmniTrackr yet?": share the member's reusable /join link.
+async function shareFriendInvite(button) {
+  const status = document.getElementById('friendInviteStatus');
+  if (button) button.disabled = true;
+  try {
+    const response = await authenticatedFetch(`${API_BASE}/api/friends/invite-link`, { method: 'POST' });
+    const data = await response.json().catch(() => ({}));
+    if (!response.ok || typeof data.url !== 'string') throw new Error(data.detail || 'Could not create your invite link. Please try again.');
+    if (navigator.share) {
+      try {
+        await navigator.share({ title: 'Join me on OmniTrackr', text: data.text, url: data.url });
+        if (status) status.textContent = 'Invite sent. You will get a notification when they join.';
+        return;
+      } catch (error) {
+        if (error && error.name === 'AbortError') return;
+      }
+    }
+    try {
+      await navigator.clipboard.writeText(`${data.text} ${data.url}`);
+      if (status) status.textContent = 'Invite link copied. Paste it in a message to your friend.';
+    } catch (error) {
+      if (status) status.textContent = `Copy this link and send it to your friend: ${data.url}`;
+    }
+  } catch (error) {
+    if (status) status.textContent = error.message || 'Could not create your invite link. Please try again.';
+  } finally {
+    if (button) button.disabled = false;
+  }
+}
+
 window.closeFriendRequestModal = function () {
   document.getElementById('friendRequestModal').style.display = 'none';
   document.getElementById('friendRequestForm').reset();
   document.getElementById('friendRequestError').style.display = 'none';
   document.getElementById('friendRequestMessage').style.display = 'none';
+  const inviteStatus = document.getElementById('friendInviteStatus');
+  if (inviteStatus) inviteStatus.textContent = '';
 }
 
 window.sendFriendRequest = async function (event) {

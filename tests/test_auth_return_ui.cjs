@@ -581,3 +581,33 @@ test('signing in from a title page returns to its review form', async () => {
     assert.deepEqual(s.redirects, ['/'], destination);
   }
 });
+
+test('signing in from a friend invite returns to the invite page', async () => {
+  const s = setup({ search: nextQuery('/join/AbC_dEf-1234567890xyz') });
+  s.context.initAuth();
+  await s.context.login('reader', 'password');
+  assert.deepEqual(s.redirects, ['/join/AbC_dEf-1234567890xyz']);
+  for (const destination of ['/join/short', '/join/AbC_dEf-1234567890xyz/extra', '/join/AbC_dEf-1234567890xyz?x=1', '//evil/join/AbC_dEf-1234567890xyz']) {
+    const other = setup({ search: nextQuery(destination) });
+    other.context.initAuth();
+    await other.context.login('reader', 'password');
+    assert.deepEqual(other.redirects, ['/'], destination);
+  }
+});
+
+test('signing up from an invite link sends the invite token once', async () => {
+  const token = 'AbC_dEf-1234567890xyz';
+  const s = setup({ search: `?invite=${token}` });
+  s.context.initAuth();
+  await s.context.register('reader@example.com', 'reader', 'secret-password');
+  const body = JSON.parse(s.requests.find(r => r.url.endsWith('/auth/register')).options.body);
+  assert.equal(body.invite, token);
+  assert.equal(s.storage.has('omnitrackr_friend_invite'), false);  // used up
+  for (const search of ['?invite=bad', `?invite=${token}&invite=${token}`, '']) {
+    const plain = setup({ search });
+    plain.context.initAuth();
+    await plain.context.register('reader@example.com', 'reader', 'secret-password');
+    const sent = JSON.parse(plain.requests.find(r => r.url.endsWith('/auth/register')).options.body);
+    assert.equal('invite' in sent, false, search);
+  }
+});
