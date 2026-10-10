@@ -48,11 +48,11 @@
   <link rel="apple-touch-icon" href="/static/icons/apple-touch-icon.png?v=20261003-pwa-1">
   <meta name="apple-mobile-web-app-title" content="OmniTrackr">
   <script src="/static/pwa.js?v=20261008-ios-1" defer></script>
-  <link rel="preload" href="./styles.css?v=20261010-invite-1" as="style">
+  <link rel="preload" href="./styles.css?v=20261010-goal-reached-1" as="style">
   <link rel="preload" href="/static/fonts/poppins-700-latin.woff2" as="font" type="font/woff2" crossorigin>
   <link rel="preload" href="/static/fonts/poppins-800-latin.woff2" as="font" type="font/woff2" crossorigin>
   <link rel="stylesheet" href="/static/fonts.css?v=20261009-fonts-1">
-  <link rel="stylesheet" href="./styles.css?v=20261010-invite-1">
+  <link rel="stylesheet" href="./styles.css?v=20261010-goal-reached-1">
   <link rel="stylesheet" href="/static/progress.css?v=20260922-progress">
   <link rel="stylesheet" href="/static/app-theme.css?v=20260924-friends-panel-2">
   <link rel="stylesheet" href="/static/library-theme.css?v=20260924-library-filters-1">
@@ -542,6 +542,25 @@
         <button id="nextUpQueueToggle" type="button" class="next-up-queue__toggle" data-action="toggle-next-up" aria-controls="nextUpQueueItems" aria-expanded="false" hidden>Manage queue</button>
       </div>
       <div id="nextUpQueueItems" class="next-up-queue__items" aria-live="polite"></div>
+    </section>
+
+    <section id="yearGoals" class="year-goals" aria-labelledby="yearGoalsTitle" hidden>
+      <div class="year-goals__header">
+        <div>
+          <p class="year-goals__eyebrow">Yearly goals</p>
+          <h2 id="yearGoalsTitle">Your goals</h2>
+          <p id="yearGoalsSummary" class="year-goals__summary"></p>
+        </div>
+        <div id="yearGoalsYears" class="year-goals__years" role="group" aria-label="Goal year" hidden></div>
+      </div>
+      <div id="yearGoalsCelebration" class="year-goals__celebration" role="status" hidden></div>
+      <ul id="yearGoalsList" class="year-goals__list" hidden></ul>
+      <div id="yearGoalsFormSlot"></div>
+      <div class="year-goals__footer">
+        <button id="yearGoalsAdd" type="button" class="action-btn year-goals__add">Set a goal</button>
+        <button id="yearGoalsDismiss" type="button" class="year-goals__dismiss">Not now</button>
+        <p id="yearGoalsStatus" class="year-goals__status" role="status" aria-live="polite"></p>
+      </div>
     </section>
 
 
@@ -1538,7 +1557,7 @@
     </form>
   </dialog>
   <script src="./credentials.js"></script>
-  <script src="./auth.js?v=20261010-audit-auth-2"></script>
+  <script src="./auth.js?v=20261010-audit-goals-1"></script>
   <script src="/static/import-studio.js?v=20260924-import-studio-final"></script>
   <script src="/static/progress.js?v=20260922-progress"></script>
   <script src="./app.js"></script>
@@ -1546,6 +1565,7 @@
   <script src="/static/title-links.js?v=20261008-speed-1"></script>
   <script src="/static/public-profile.js?v=20261002-profiles-1"></script>
   <script src="/static/supporter.js?v=20261008-supporters-1"></script>
+  <script src="/static/goals.js?v=20261010-goal-reached-1"></script>
   <script src="/static/year-in-review-entry.js?v=20261008-recap-1" defer></script>
   <script src="/static/guest-list.js?v=20261010-audit-guest-1"></script>
 

@@ -184,14 +184,30 @@ def _invite_section(invite: bool, base: str) -> tuple[str, list[str]]:
     return html, [f"Better with a friend: send your invite link and you become friends when they join: {url}", ""]
 
 
+def _goals_section(goals: list | None, year: int | None, base: str) -> tuple[str, list[str]]:
+    """'Your <year> goals' progress lines; empty when the member has set none."""
+    if not goals or not year:
+        return "", []
+    rows = "".join(
+        f'<li style="margin:0 0 4px">{escape(goal["summary"])}</li>' for goal in goals)
+    url = f"{base}/#goals"
+    html = (
+        f'<h2 style="font-size:17px;color:#1f1640;margin:24px 0 8px">Your {int(year)} goals</h2>'
+        f'<ul style="color:#3b3557;font-size:14px;line-height:1.6;margin:0;padding-left:18px">{rows}</ul>'
+        f'<p style="margin:8px 0 0"><a href="{escape(url, quote=True)}" style="color:#6d28d9;font-weight:700">See your goals</a></p>'
+    )
+    return html, [f"Your {int(year)} goals:"] + [f"- {goal['summary']}" for goal in goals] + [url, ""]
+
+
 def invite_nudge_due(user_id: int, now: datetime) -> bool:
     """About once a month per member (a different week for each), never every week."""
     return now.isocalendar().week % 4 == user_id % 4
 
 
 def build_digest(username: str, report: dict, unsubscribe_url: str, spotlight: dict | None = None,
-                 ask: dict | None = None, invite: bool = False) -> tuple[str, str, str] | None:
-    """(subject, html, text) or None when there is nothing to send. `spotlight`, `ask` and `invite` never force a send."""
+                 ask: dict | None = None, invite: bool = False, goals: list | None = None,
+                 goals_year: int | None = None) -> tuple[str, str, str] | None:
+    """(subject, html, text) or None when there is nothing to send. `spotlight`, `ask`, `invite` and `goals` never force a send."""
     matches, popular = report["matches"], report["popular"]
     if not matches and not popular:
         return None
@@ -214,6 +230,10 @@ def build_digest(username: str, report: dict, unsubscribe_url: str, spotlight: d
         text.append("Popular this month:")
         text += [f"- {c['title']} ({c['label']}, {_day(c.get('date'))})" for c in popular[:5]]
         text.append("")
+    goals_html, goals_text = _goals_section(goals, goals_year, base)
+    if goals_html:
+        sections.append(goals_html)
+        text += goals_text
     spotlight_html, spotlight_text = _spotlight_section(spotlight, base)
     if spotlight_html:
         sections.append(spotlight_html)
@@ -351,7 +371,14 @@ async def send_due_digests(session_factory, client=None, now: datetime | None = 
                     invite = not has_friends(db, user.id)
                 except Exception:
                     db.rollback()  # Optional, like the ask above.
-            built = build_digest(user.username, report, unsubscribe_url, spotlight, ask, invite)
+            try:
+                from .goals import progress as goal_progress
+                member_goals = goal_progress(db, user, now.year, today=now.date())
+            except Exception:
+                db.rollback()
+                member_goals = []  # Optional, like the ask above.
+            built = build_digest(user.username, report, unsubscribe_url, spotlight, ask, invite,
+                                 member_goals, now.year)
             if built is None:
                 stats["skipped"] += 1
                 continue
