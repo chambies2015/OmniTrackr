@@ -853,6 +853,25 @@ class KofiPayment(Base):
     linked_at = Column(DateTime, nullable=True)
 
 
+class YearlyGoal(Base):
+    """A member's private target for one year, e.g. finish 24 books in 2027 (Oct 2026).
+
+    A new table only. Progress is never stored: it is counted from the same
+    finishes Year in Review uses, so editing the library keeps it right.
+    """
+    __tablename__ = "yearly_goals"
+
+    id = Column(Integer, primary_key=True, index=True)
+    user_id = Column(Integer, ForeignKey("users.id", ondelete="CASCADE"), nullable=False, index=True)
+    year = Column(Integer, nullable=False)
+    category = Column(String(16), nullable=False)
+    target = Column(Integer, nullable=False)
+    created_at = Column(DateTime, nullable=False, default=datetime.utcnow)
+    updated_at = Column(DateTime, nullable=False, default=datetime.utcnow, onupdate=datetime.utcnow)
+
+    __table_args__ = (UniqueConstraint("user_id", "year", "category", name="uq_yearly_goal"),)
+
+
 class YearInReviewShare(Base):
     """A member's opt-in public Year in Review link: a frozen snapshot at /recap/<token>.
 
