@@ -117,3 +117,54 @@ def test_deactivated_inviters_links_stop_working(authenticated_client, db_sessio
 def test_requires_login(client):
     assert client.post("/api/friends/invite-link").status_code == 401
     assert client.post("/api/friends/invite/" + "y" * 22 + "/accept").status_code == 401
+
+
+# ---------------------------------------------------------------- spreading the word
+
+def _brought(db, inviter, *names, completed=True, active=True):
+    from datetime import datetime
+    for name in names:
+        friend = member(db, name)
+        friend.is_active = active
+        db.add(models.FriendInviteSignup(inviter_id=inviter.id, invitee_id=friend.id,
+                                         completed_at=datetime.utcnow() if completed else None))
+    db.commit()
+
+
+def test_profile_shows_how_many_friends_joined(client, db_session):
+    from tests.test_public_profiles import enable, library, member as profile_member
+    host = profile_member(db_session, "host")
+    library(db_session, host)
+    enable(db_session, host, show_stats=True)
+    assert "Brought" not in client.get("/u/host").text
+    _brought(db_session, host, "one", "two")
+    _brought(db_session, host, "pending", completed=False)
+    _brought(db_session, host, "gone", active=False)
+    assert '<span class="site-chip">Brought 2 friends to OmniTrackr</span>' in client.get("/u/host").text
+    db_session.query(models.PublicProfile).filter_by(user_id=host.id).update({"show_stats": False})
+    db_session.commit()
+    assert "Brought" not in client.get("/u/host").text  # follows the member's "Library counts" choice
+
+
+def test_weekly_email_invite_nudge(db_session):
+    from datetime import datetime
+    from app import digest
+    report = {"matches": [{"title": "Severance", "label": "TV", "date": "2026-10-02", "url": "/release-radar/tv", "reason": "x"}],
+              "popular": []}
+    _, html, text = digest.build_digest("reader", report, "u", None, None, True)
+    assert "Better with a friend" in html and "/#invite-friends" in html and "/#invite-friends" in text
+    ask = {"title": "Heat", "path": "/titles/movie/heat-1995"}
+    _, html, _ = digest.build_digest("reader", report, "u", None, ask, True)
+    assert "Better with a friend" not in html  # one social ask per email
+    assert digest.build_digest("reader", {"matches": [], "popular": []}, "u", None, None, True) is None  # never forces a send
+    weeks = [digest.invite_nudge_due(7, datetime(2026, 1, 5) + __import__("datetime").timedelta(weeks=w)) for w in range(12)]
+    assert weeks.count(True) == 3  # about once a month
+
+
+def test_has_friends(db_session):
+    a, b = member(db_session, "a"), member(db_session, "b")
+    db_session.commit()
+    assert not friend_invites.has_friends(db_session, a.id)
+    db_session.add(models.Friendship(user1_id=a.id, user2_id=b.id))
+    db_session.commit()
+    assert friend_invites.has_friends(db_session, a.id) and friend_invites.has_friends(db_session, b.id)

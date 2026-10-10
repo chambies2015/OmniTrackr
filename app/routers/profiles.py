@@ -175,6 +175,8 @@ def render(view, *, signed_in: bool, is_owner: bool) -> str:
         summary_bits.append(f"{len(view.reviews)} public review{'s' if len(view.reviews) != 1 else ''}")
     if view.collections:
         summary_bits.append(f"{len(view.collections)} collection{'s' if len(view.collections) != 1 else ''}")
+    if view.friends_brought:
+        summary_bits.append(f"Brought {view.friends_brought} friend{'s' if view.friends_brought != 1 else ''} to OmniTrackr")
     lead = profile.bio or ""
     meta_description = _excerpt(
         (f"{name} on OmniTrackr: " + (", ".join(summary_bits) if summary_bits else "movies, shows, games, music and books"))

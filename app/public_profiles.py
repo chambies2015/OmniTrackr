@@ -5,7 +5,9 @@ Nothing about a member is public until they switch their profile on. Even then:
 - only reviews that already pass the public review checks (and are not
   suspended by reports) are shown,
 - only public collections that pass the collection checks are listed,
-- email, friends, notes, progress and unrated items are never shown.
+- email, friends, notes, progress and unrated items are never shown. The one
+  social number is how many people joined through the member's invite link
+  (a count, never who), shown only alongside the library stats.
 """
 from __future__ import annotations
 
@@ -18,7 +20,7 @@ from urllib.parse import quote
 from sqlalchemy import case, func
 from sqlalchemy.orm import Session
 
-from . import models, supporters, title_pages
+from . import friend_invites, models, supporters, title_pages
 from .review_quality import evaluate_public_review, is_public_review_safe
 
 BIO_MAX_CHARS = 280
@@ -270,6 +272,7 @@ class ProfileView:
     reviews: list
     collections: list
     supporter: Optional[dict] = None
+    friends_brought: int = 0
 
     @property
     def path(self) -> str:
@@ -294,6 +297,8 @@ def build(db: Session, user: models.User, profile: models.PublicProfile) -> Prof
         reviews=_reviews(db, user) if profile.show_reviews else [],
         collections=_collections(db, user) if profile.show_collections else [],
         supporter=supporters.public_badge(db, user.id),
+        # A count only (never who): shown with the library stats the member chose to share.
+        friends_brought=friend_invites.friends_brought(db, user.id) if profile.show_stats else 0,
     )
 
 

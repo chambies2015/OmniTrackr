@@ -102,3 +102,17 @@ def complete_signup(db: Session, user) -> Optional[str]:
         return None
     befriend(db, inviter, user, joined=True)
     return inviter.username
+
+
+def friends_brought(db: Session, user_id: int) -> int:
+    """How many active members joined OmniTrackr through this member's invite link."""
+    return (db.query(models.FriendInviteSignup.id)
+            .join(models.User, models.User.id == models.FriendInviteSignup.invitee_id)
+            .filter(models.FriendInviteSignup.inviter_id == user_id,
+                    models.FriendInviteSignup.completed_at.isnot(None), models.User.is_active.is_(True))
+            .count())
+
+
+def has_friends(db: Session, user_id: int) -> bool:
+    return db.query(models.Friendship.id).filter(
+        (models.Friendship.user1_id == user_id) | (models.Friendship.user2_id == user_id)).first() is not None

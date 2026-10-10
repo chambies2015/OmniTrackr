@@ -826,6 +826,22 @@ async function shareFriendInvite(button) {
   }
 }
 
+// The weekly email's "Get my invite link" opens /#invite-friends: show the friend form with the invite option.
+function openInviteFromHash(attempt = 0) {
+  if (window.location.hash !== '#invite-friends') return;
+  if (!(typeof getUser === 'function' && getUser()) || !document.getElementById('friendRequestModal')) {
+    if (attempt < 10) window.setTimeout(() => openInviteFromHash(attempt + 1), 500);
+    return;
+  }
+  window.openFriendRequestModal();
+  try {
+    window.history.replaceState(window.history.state, '', `${window.location.pathname}${window.location.search}`);
+  } catch (error) {
+    // Keeping the hash is harmless.
+  }
+}
+openInviteFromHash();
+
 window.closeFriendRequestModal = function () {
   document.getElementById('friendRequestModal').style.display = 'none';
   document.getElementById('friendRequestForm').reset();
