@@ -913,3 +913,22 @@ class YearInReviewShare(Base):
     __table_args__ = (
         UniqueConstraint("user_id", "year", name="uq_year_in_review_share_year"),
     )
+
+
+class ReleaseAlert(Base):
+    """A release-day alert already sent: one row per member and Release Radar title (Oct 2026).
+
+    A new table only. It keeps a member from being told twice about the same
+    release, even after they dismiss the notification or the app restarts.
+    """
+    __tablename__ = "release_alerts"
+
+    id = Column(Integer, primary_key=True, index=True)
+    user_id = Column(Integer, ForeignKey("users.id", ondelete="CASCADE"), nullable=False, index=True)
+    category = Column(String(16), nullable=False)
+    item_key = Column(String(80), nullable=False)
+    title = Column(String(200), nullable=False)
+    release_date = Column(Date, nullable=False)
+    created_at = Column(DateTime, nullable=False, default=datetime.utcnow)
+
+    __table_args__ = (UniqueConstraint("user_id", "category", "item_key", name="uq_release_alert"),)

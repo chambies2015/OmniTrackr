@@ -433,6 +433,15 @@ async def digest_loop(app) -> None:
                             await radar.CACHE.get(client, window, wait=20)
                         except Exception:
                             pass
+            try:
+                from .for_you import radar_pool
+                from .release_alerts import send_due_alerts
+                today = radar.today_utc()
+                alerts = await asyncio.to_thread(send_due_alerts, SessionLocal, radar_pool(today), today)
+                if alerts["members"]:
+                    print(f"Release day alerts: {alerts}")
+            except Exception as error:  # Never blocks the weekly email.
+                print(f"Release day alerts failed: {error}")
             stats = await send_due_digests(SessionLocal, client)
             if stats["sent"] or stats["failed"]:
                 print(f"Weekly emails: {stats}")
