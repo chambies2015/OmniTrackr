@@ -831,6 +831,7 @@ window.sendFriendRequest = async function (event) {
       successEl.textContent = `Friend request sent to ${username}!`;
       successEl.style.display = 'block';
       document.getElementById('friendRequestForm').reset();
+      if (typeof scheduleLibraryLaunchpadRefresh === 'function') scheduleLibraryLaunchpadRefresh(false);
       setTimeout(() => {
         closeFriendRequestModal();
         updateNotificationCount();

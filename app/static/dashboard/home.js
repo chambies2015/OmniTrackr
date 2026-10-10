@@ -510,7 +510,7 @@ function openLaunchpadImport() {
   document.getElementById('importStudioSource')?.focus({ preventScroll: true });
 }
 
-function renderLibraryLaunchpad(insights) {
+function renderLibraryLaunchpad(insights, firstWeek = null) {
   const launchpad = document.getElementById('libraryLaunchpad');
   const summary = document.getElementById('libraryLaunchpadSummary');
   const steps = document.getElementById('libraryLaunchpadSteps');
@@ -526,8 +526,11 @@ function renderLibraryLaunchpad(insights) {
   const reviewed = Number(insights?.reviewed_items || 0);
   const completed = Number(insights?.completed_items || 0);
   if (total > 0) demoStartGuidance = false;
+  const libraryDone = total > 0 && rated > 0 && reviewed > 0;
+  // New members also get a few social steps once they have a title saved.
+  const socialSteps = total > 0 ? firstWeekSteps(firstWeek) : [];
   // Let the existing dashboard take over when these introductory steps are done.
-  if (total > 0 && rated > 0 && reviewed > 0) {
+  if (libraryDone && socialSteps.every((step) => step.complete)) {
     launchpad.hidden = true;
     return;
   }
@@ -541,7 +544,9 @@ function renderLibraryLaunchpad(insights) {
     { complete: reviewed > 0, label: reviewed ? `${reviewed} note${reviewed === 1 ? '' : 's'} written` : 'Leave a note for future you' },
   ];
 
-  if (!total) {
+  if (libraryDone) {
+    summary.textContent = 'Your library is set up. OmniTrackr gets better with people in it: add a friend, share a review, and let the weekly email tell you what\'s coming.';
+  } else if (!total) {
     summary.textContent = demoStartGuidance
       ? 'Make it yours: use Add Anything to search for your first real title. Your demo practice stays separate from this private library.'
       : 'Start with one title you love, bring an existing list, or browse Discover for an idea. You only need one title to begin.';
@@ -572,7 +577,7 @@ function renderLibraryLaunchpad(insights) {
   }
 
   steps.replaceChildren();
-  launchpadSteps.forEach((step) => {
+  launchpadSteps.concat(socialSteps).forEach((step) => {
     const item = document.createElement('div');
     item.className = `library-launchpad__step${step.complete ? ' is-complete' : ''}`;
     const icon = document.createElement('span');
@@ -581,9 +586,73 @@ function renderLibraryLaunchpad(insights) {
     const label = document.createElement('span');
     label.textContent = step.label;
     item.append(icon, label);
+    const action = step.complete ? null : launchpadStepAction(step.action);
+    if (action) item.appendChild(action);
     steps.appendChild(item);
   });
   launchpad.removeAttribute('hidden');
+}
+
+// Social steps for members in their first weeks (from /api/for-you/first-week).
+function firstWeekSteps(firstWeek) {
+  if (!firstWeek?.show) return [];
+  const steps = [{
+    complete: Boolean(firstWeek.friend),
+    label: firstWeek.friend ? 'Friend added' : 'Add a friend to see what they track',
+    action: { kind: 'button', text: 'Add a friend', dataset: { action: 'launchpad-add-friend' } },
+  }];
+  const target = firstWeek.review_target;
+  steps.push({
+    complete: Boolean(firstWeek.public_review),
+    label: firstWeek.public_review ? 'Public review shared'
+      : target ? `Share a public review of ${target.title}` : 'Share a public review from any title page',
+    action: target && typeof target.path === 'string' && target.path.startsWith('/titles/')
+      ? { kind: 'link', text: 'Write it', href: `${target.path}#write-review` } : null,
+  });
+  if (firstWeek.email_available) {
+    const verified = Boolean(firstWeek.verified);
+    steps.push({
+      complete: Boolean(firstWeek.weekly_email),
+      label: firstWeek.weekly_email ? 'Weekly email on'
+        : verified ? 'Get a weekly email when something you track comes out' : 'Verify your email to get the weekly release email',
+      action: verified ? { kind: 'button', text: 'Turn on', dataset: { action: 'launchpad-weekly-email' } } : null,
+    });
+  }
+  return steps;
+}
+
+function launchpadStepAction(action) {
+  if (!action) return null;
+  const element = document.createElement(action.kind === 'link' ? 'a' : 'button');
+  element.className = 'library-launchpad__step-action';
+  element.textContent = action.text;
+  if (action.kind === 'link') element.href = action.href;
+  else {
+    element.type = 'button';
+    Object.assign(element.dataset, action.dataset);
+  }
+  return element;
+}
+
+function openLaunchpadAddFriend() {
+  if (typeof window.openFriendRequestModal === 'function') window.openFriendRequestModal();
+}
+
+async function enableLaunchpadWeeklyEmail(button) {
+  const summary = document.getElementById('libraryLaunchpadSummary');
+  if (button) button.disabled = true;
+  try {
+    const response = await authenticatedFetch(`${API_BASE}/api/for-you/email`, {
+      method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ enabled: true }),
+    });
+    const data = await response.json().catch(() => ({}));
+    if (!response.ok) throw new Error(data.detail || 'Could not turn on the weekly email. Please try again.');
+    if (summary) summary.textContent = 'Weekly email on. Every email has a one-click unsubscribe.';
+    scheduleLibraryLaunchpadRefresh(false);
+  } catch (error) {
+    if (summary) summary.textContent = error.message || 'Could not turn on the weekly email. Please try again.';
+    if (button) button.disabled = false;
+  }
 }
 
 function dailyDashboardSessionKey() {
@@ -1094,8 +1163,12 @@ async function removeNextUp(queueId) {
 async function refreshLibraryLaunchpad() {
   if (isLibraryLaunchpadDismissed() || !hasStoredAuth()) return;
   try {
-    const response = await authenticatedFetch(`${API_BASE}/statistics/insights/`);
-    if (response.ok) renderLibraryLaunchpad(await response.json());
+    const [response, firstWeek] = await Promise.all([
+      authenticatedFetch(`${API_BASE}/statistics/insights/`),
+      authenticatedFetch(`${API_BASE}/api/for-you/first-week`)
+        .then((reply) => (reply.ok ? reply.json() : null)).catch(() => null),
+    ]);
+    if (response.ok) renderLibraryLaunchpad(await response.json(), firstWeek);
   } catch (error) {
     // Guidance is optional; it should never interrupt the main tracker.
   }

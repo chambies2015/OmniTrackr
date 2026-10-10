@@ -725,6 +725,8 @@ function handleDelegatedClick(event) {
     'launchpad-open-insights': openLaunchpadInsights,
     'launchpad-dismiss': dismissLibraryLaunchpad,
     'launchpad-import': openLaunchpadImport,
+    'launchpad-add-friend': openLaunchpadAddFriend,
+    'launchpad-weekly-email': () => enableLaunchpadWeeklyEmail(target),
     'dismiss-return-deck': dismissReturnDeck,
     'open-return-deck-item': () => openReturnDeckItem(Number(target.dataset.returnDeckIndex)),
     'pulse-open-item': () => openDashboardItem(target),
