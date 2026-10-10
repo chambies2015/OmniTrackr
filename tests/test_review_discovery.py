@@ -186,7 +186,7 @@ def test_feed_uses_joined_queries_without_per_review_lookups(client, db_session,
         assert len(client.get("/api/public/review-feed", params={"limit": 40}).json()["reviews"]) == 40
     finally:
         event.remove(db_session.bind, "before_cursor_execute", capture)
-    assert len(queries) == 6
+    assert len(queries) == 7  # includes one batched supporter-badge lookup for the whole page
 
 
 @pytest.mark.parametrize("params", [{"q": "x" * 101}, {"limit": 41}, {"offset": -1}, {"category": "unknown"}])

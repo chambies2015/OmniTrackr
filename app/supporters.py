@@ -20,6 +20,7 @@ from __future__ import annotations
 
 import hashlib
 import hmac
+import html
 import json
 import os
 import re
@@ -107,6 +108,30 @@ def public_badge(db: Session, user_id: int) -> Optional[dict]:
     if not is_active(supporter) or not supporter.show_badge:
         return None
     return {"since": supporter.since, "accent": supporter.accent if supporter.accent in ACCENTS else None}
+
+
+def public_badges(db: Session, user_ids) -> dict:
+    """Badges for many members at once (review lists), keyed by user id. Only shown badges are returned."""
+    ids = {int(i) for i in user_ids if i}
+    if not ids:
+        return {}
+    rows = (db.query(models.Supporter)
+            .filter(models.Supporter.user_id.in_(ids), models.Supporter.active_until > _now(),
+                    models.Supporter.show_badge.is_(True)).all())
+    return {row.user_id: {"accent": row.accent if row.accent in ACCENTS else None,
+                          "since": f"{row.since:%B} {row.since.year}" if row.since else None} for row in rows}
+
+
+def chip_html(badge: Optional[dict]) -> str:
+    """The small ♥ Supporter chip shown beside a member's name on reviews."""
+    if not badge:
+        return ""
+    since = badge.get("since")
+    title = f"Supporting OmniTrackr on Ko-fi since {since}" if since else "Supports OmniTrackr on Ko-fi"
+    accent = badge.get("accent")
+    accent_class = f" supporter-chip--{accent}" if accent in ACCENTS else ""
+    return (f'<a class="supporter-chip{accent_class}" href="/supporters" title="{html.escape(title)}">'
+            '<span aria-hidden="true">♥</span> Supporter</a>')
 
 
 def _grant(db: Session, user_id: int, payment: models.KofiPayment) -> models.Supporter:

@@ -148,3 +148,12 @@ body.site :is(a, button, summary, input, select, textarea):focus-visible { outli
 .site-picks__list span { font-size: .93rem; }
 .site-picks__more { margin: 16px 0 0; }
 .site-picks__more a { color: var(--site-teal-soft); font-weight: 600; }
+
+/* Ko-fi supporter chip beside a reviewer's name (title pages, review lists, review pages). */
+.supporter-chip { --chip-accent: 139, 92, 246; align-items: center; background: rgba(var(--chip-accent), .14); border: 1px solid rgba(var(--chip-accent), .45); border-radius: 999px; color: var(--site-text) !important; display: inline-flex; font-family: var(--site-font); font-size: .72rem; font-weight: 600; gap: 4px; line-height: 1.4; margin-left: 8px; padding: 1px 8px; text-decoration: none !important; vertical-align: middle; white-space: nowrap; }
+.supporter-chip span { color: rgb(var(--chip-accent)); }
+.supporter-chip:hover { background: rgba(var(--chip-accent), .24); }
+.supporter-chip--teal { --chip-accent: 45, 212, 191; }
+.supporter-chip--amber { --chip-accent: 245, 158, 11; }
+.supporter-chip--rose { --chip-accent: 244, 114, 182; }
+.supporter-chip--sky { --chip-accent: 56, 189, 248; }
