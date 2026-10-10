@@ -42,6 +42,21 @@ def test_native_import_batch_deduplicates_and_rounds(db_session, key, model, sch
     assert item.rating == 8.2
 
 
+@pytest.mark.parametrize("key,model,schema,apply,metadata", MEDIA)
+def test_native_import_restore_keeps_current_review_privacy(db_session, key, model, schema, apply, metadata):
+    user = new_user(db_session)
+    backup = schema(title="Restored", review="Old take", review_public=True, **metadata)
+    assert apply(db_session, user.id, [backup]) == (1, 0, [])
+    item = db_session.query(model).filter_by(user_id=user.id).one()
+    assert item.review_public is True
+    item.review_public = False
+    db_session.commit()
+    assert apply(db_session, user.id, [schema(title="Restored", review="Old take", review_public=True, rating=6, **metadata)]) == (0, 1, [])
+    db_session.refresh(item)
+    assert item.review_public is False
+    assert item.rating == 6
+
+
 @pytest.mark.parametrize("key,model,schema,apply,metadata", [MEDIA[0], MEDIA[4], MEDIA[5]])
 def test_native_import_preserves_same_title_creator_editions(db_session, key, model, schema, apply, metadata):
     user = new_user(db_session)

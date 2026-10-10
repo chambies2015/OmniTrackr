@@ -151,6 +151,10 @@ def _import_media(db: Session, user_id: int, entries, model, identity_fields, la
                 if existing is None:
                     db.add(model(**_library_row(values), user_id=user_id))
                 else:
+                    # A restore can hide a review but must not re-publish one
+                    # the user has since made private.
+                    if values.get("review_public") and not existing.review_public:
+                        values.pop("review_public")
                     for field, value in values.items():
                         if field != "added_at":
                             setattr(existing, field, value)

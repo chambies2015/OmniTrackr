@@ -531,6 +531,18 @@ def run_migrations():
             except Exception as e:
                 print(f"Note: Could not backfill review_public values: {e}")
 
+        # Responses now require a boolean. Old API writes could store NULL,
+        # which public pages already treated as private, so keep it private.
+        try:
+            with engine.begin() as conn:
+                for table in ("movies", "tv_shows", "anime", "video_games", "music", "books"):
+                    if inspector.has_table(table) and "review_public" in {
+                        col["name"] for col in inspect(engine).get_columns(table)
+                    }:
+                        conn.execute(text(f'UPDATE "{table}" SET review_public = FALSE WHERE review_public IS NULL'))
+        except Exception as e:
+            print(f"Note: Could not clear empty review_public values: {e}")
+
         if not inspector.has_table("friend_requests"):
             with engine.connect() as conn:
                 if database.DATABASE_URL.startswith("postgresql"):

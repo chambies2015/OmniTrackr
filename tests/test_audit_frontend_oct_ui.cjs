@@ -304,3 +304,28 @@ test('older collection reads cannot overwrite a later refreshed list or its erro
   earlier.resolve({ok:true,json:async()=>[{id:1,name:'Stale'}]});assert.equal(await older,null);
   assert.equal(context.collectionsCache[0].name,'Latest');assert.equal(rendered.length,1);
 });
+
+for (const [updater, posterPrefix, selector, args, expected] of [
+  ['updateVideoGameRowMetadata', 'video-game', '.edit-video-game-btn', ['RPG', null, '2020-05-01T00:00:00', 'Game'],
+    {gameTitle: 'Game', gameGenres: 'RPG', gameReleaseDate: '2020-05-01'}],
+  ['updateMusicRowMetadata', 'music', '.edit-music-btn', ['Artist', 1999, 'Rock', 'Album'],
+    {musicTitle: 'Album', musicArtist: 'Artist', musicYear: '1999', musicGenre: 'Rock'}],
+  ['updateBookRowMetadata', 'book', '.edit-book-btn', ['Author', 1950, 'Fantasy', 'Book'],
+    {bookTitle: 'Book', bookAuthor: 'Author', bookYear: '1950', bookGenre: 'Fantasy'}],
+]) {
+  test(updater + ' keeps the Edit button in step with lookup metadata', () => {
+    const btn = {dataset: {keep: 'yes'}};
+    const cells = Array.from({length: 10}, () => ({textContent: '', innerHTML: ''}));
+    const row = {cells, querySelector: sel => (sel === selector ? btn : null)};
+    const context = vm.createContext({editingRowElement: null, safeHttpUrl: () => null, escapeHtml: v => v,
+      document: {querySelector: sel => (sel === '#' + posterPrefix + '-poster-7' ? {closest: () => row} : null)}});
+    vm.runInContext(part('function syncEditButtonData(', 'function updateVideoGameRowMetadata(') + '\n' +
+      part('function ' + updater + '(', '\n}\n') + '\n}', context);
+    context[updater](7, ...args);
+    assert.deepEqual({...btn.dataset}, {keep: 'yes', ...expected});
+    context.editingRowElement = row;
+    btn.dataset = {};
+    context[updater](7, ...args);
+    assert.deepEqual({...btn.dataset}, {}, 'a row being edited is left alone');
+  });
+}

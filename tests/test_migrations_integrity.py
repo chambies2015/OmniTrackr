@@ -322,3 +322,17 @@ def test_postgresql_review_type_upgrade_covers_all_six_and_is_idempotent(monkeyp
     assert len(statements) == 6
     migrations._migrate_review_column_types()
     assert len(statements) == 6
+
+
+@pytest.mark.parametrize("model", MEDIA, ids=lambda model: model.__tablename__)
+def test_null_review_privacy_becomes_private(migration_engine, model):
+    engine = migration_engine
+    create_schema(engine, model, omit_privacy=True)
+    migrations.run_migrations()
+    table = model.__tablename__
+    with engine.begin() as connection:
+        connection.exec_driver_sql(f'UPDATE "{table}" SET review_public = NULL WHERE id=17')
+    migrations.run_migrations()
+    with engine.connect() as connection:
+        assert connection.exec_driver_sql(f'SELECT review_public FROM "{table}" WHERE id=17').scalar_one() == 0
+        assert connection.exec_driver_sql(f'SELECT review FROM "{table}" WHERE id=17').scalar_one().startswith("Preserved review")

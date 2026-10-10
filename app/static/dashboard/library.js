@@ -930,9 +930,24 @@ function displayVideoGamePoster(id, posterUrl, title = null) {
   }
 }
 
+// Lookups save metadata after the list renders, so the Edit button's data-* values go stale.
+// Keep them in step, or a later edit would send the old blanks and erase what the lookup saved.
+function syncEditButtonData(row, selector, values) {
+  const btn = row.querySelector(selector);
+  if (!btn) return;
+  Object.entries(values).forEach(([key, value]) => {
+    if (value !== null && value !== undefined && value !== '') btn.dataset[key] = String(value);
+  });
+}
+
 function updateVideoGameRowMetadata(id, genres, rawgLink, releaseDate, normalizedTitle) {
   const row = document.querySelector(`#video-game-poster-${id}`)?.closest('tr');
-  if (!row) return;
+  if (!row || row === editingRowElement) return;
+  syncEditButtonData(row, '.edit-video-game-btn', {
+    gameTitle: normalizedTitle,
+    gameGenres: genres,
+    gameReleaseDate: releaseDate ? String(releaseDate).split('T')[0] : '',
+  });
 
   if (normalizedTitle && row.cells[1]) {
     row.cells[1].textContent = normalizedTitle;
@@ -1397,6 +1412,12 @@ async function fetchMusicMetadata(id, title, artist) {
 function updateMusicRowMetadata(id, artist, year, genre, normalizedTitle) {
   const row = document.querySelector(`#music-poster-${id}`)?.closest('tr');
   if (!row || row === editingRowElement) return;
+  syncEditButtonData(row, '.edit-music-btn', {
+    musicTitle: normalizedTitle,
+    musicArtist: artist,
+    musicYear: year,
+    musicGenre: genre,
+  });
 
   if (normalizedTitle && row.cells[1]) {
     row.cells[1].textContent = normalizedTitle;
@@ -1711,6 +1732,12 @@ async function fetchBookMetadata(id, title, author) {
 function updateBookRowMetadata(id, author, year, genre, normalizedTitle) {
   const row = document.querySelector(`#book-poster-${id}`)?.closest('tr');
   if (!row || row === editingRowElement) return;
+  syncEditButtonData(row, '.edit-book-btn', {
+    bookTitle: normalizedTitle,
+    bookAuthor: author,
+    bookYear: year,
+    bookGenre: genre,
+  });
 
   if (normalizedTitle && row.cells[1]) {
     row.cells[1].textContent = normalizedTitle;
