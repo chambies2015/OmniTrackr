@@ -495,6 +495,10 @@ async function login(username, password) {
 
 async function logout() {
     if (confirm('Are you sure you want to logout?')) {
+        // Stop this member's phone/desktop notifications on this device first.
+        if (window.omniPush && typeof window.omniPush.forgetDevice === 'function') {
+            await window.omniPush.forgetDevice();
+        }
         try {
             await fetch(`${AUTH_API_BASE}/auth/logout`, {
                 method: 'POST',

@@ -932,3 +932,36 @@ class ReleaseAlert(Base):
     created_at = Column(DateTime, nullable=False, default=datetime.utcnow)
 
     __table_args__ = (UniqueConstraint("user_id", "category", "item_key", name="uq_release_alert"),)
+
+
+class PushSubscription(Base):
+    """A browser or installed app that asked for notifications on this device (Oct 2026).
+
+    A new table only. Each row is one device's Web Push subscription; the
+    endpoint is the push service URL the browser handed out. Removing a row
+    just stops pushes to that device; the in-app bell is unaffected.
+    """
+    __tablename__ = "push_subscriptions"
+
+    id = Column(Integer, primary_key=True, index=True)
+    user_id = Column(Integer, ForeignKey("users.id", ondelete="CASCADE"), nullable=False, index=True)
+    endpoint = Column(String(1024), nullable=False, unique=True)
+    p256dh = Column(String(128), nullable=False)
+    auth = Column(String(64), nullable=False)
+    created_at = Column(DateTime, nullable=False, default=datetime.utcnow)
+    last_success_at = Column(DateTime, nullable=True)
+    failure_count = Column(Integer, nullable=False, default=0)
+
+
+class WebPushKey(Base):
+    """The site's own Web Push signing key (VAPID), created once on first use (Oct 2026).
+
+    A single row (id 1). Browsers tie each subscription to this public key, so
+    it must stay the same; the VAPID_PRIVATE_KEY environment variable, when set,
+    is used instead.
+    """
+    __tablename__ = "web_push_keys"
+
+    id = Column(Integer, primary_key=True)
+    private_pem = Column(Text, nullable=False)
+    created_at = Column(DateTime, nullable=False, default=datetime.utcnow)

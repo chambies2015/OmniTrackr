@@ -6,8 +6,9 @@
  *  - Pages always come from the network. Library pages are private, so no HTML
  *    is stored; when the network is down the visitor sees /offline instead.
  *  - API calls, sign-in and everything else are never touched.
+ *  - Push messages show a notification; tapping it opens that page.
  */
-const VERSION = '20261003-pwa-1';
+const VERSION = '20261010-push-1';
 const STATIC_CACHE = `omnitrackr-static-${VERSION}`;
 const OFFLINE_CACHE = `omnitrackr-offline-${VERSION}`;
 const OFFLINE_URL = '/offline';
@@ -72,4 +73,37 @@ self.addEventListener('fetch', event => {
   if (url.pathname.startsWith('/static/') && url.searchParams.has('v')) {
     event.respondWith(staticFirst(request));
   }
+});
+
+// Phone and desktop notifications. The server only sends these to devices
+// whose member turned them on from the notification bell.
+self.addEventListener('push', event => {
+  let data = {};
+  try {
+    data = event.data ? event.data.json() : {};
+  } catch (error) {
+    data = { body: event.data ? event.data.text() : '' };
+  }
+  const url = typeof data.url === 'string' && data.url.startsWith('/') && !data.url.startsWith('//') ? data.url : '/';
+  event.waitUntil(self.registration.showNotification(String(data.title || 'OmniTrackr'), {
+    body: String(data.body || ''),
+    icon: '/static/icons/icon-192.png?v=20261003-pwa-1',
+    data: { url },
+  }));
+});
+
+self.addEventListener('notificationclick', event => {
+  event.notification.close();
+  const url = new URL((event.notification.data && event.notification.data.url) || '/', self.location.origin);
+  if (url.origin !== self.location.origin) return;
+  event.waitUntil((async () => {
+    const windows = await self.clients.matchAll({ type: 'window', includeUncontrolled: true });
+    const open = windows.find(client => new URL(client.url).origin === self.location.origin && 'focus' in client);
+    if (open) {
+      await open.focus();
+      if ('navigate' in open) return open.navigate(url.href).catch(() => self.clients.openWindow(url.href));
+      return undefined;
+    }
+    return self.clients.openWindow(url.href);
+  })());
 });
