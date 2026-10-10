@@ -170,9 +170,28 @@ def _ask_section(ask: dict | None, base: str) -> tuple[str, list[str]]:
     return html, [f"What did your friends think of {ask['title']}? Ask them for their take: {url}", ""]
 
 
+def _invite_section(invite: bool, base: str) -> tuple[str, list[str]]:
+    """'Bring a friend' block for members with no friends yet; empty otherwise."""
+    if not invite:
+        return "", []
+    url = f"{base}/#invite-friends"
+    html = (
+        '<h2 style="font-size:17px;color:#1f1640;margin:24px 0 8px">Better with a friend</h2>'
+        '<p style="color:#3b3557;font-size:14px;line-height:1.6;margin:0">See what your friends are watching, playing and reading. '
+        'Send them your invite link and you become friends as soon as they join.</p>'
+        f'<p style="margin:8px 0 0"><a href="{escape(url, quote=True)}" style="color:#6d28d9;font-weight:700">Get my invite link</a></p>'
+    )
+    return html, [f"Better with a friend: send your invite link and you become friends when they join: {url}", ""]
+
+
+def invite_nudge_due(user_id: int, now: datetime) -> bool:
+    """About once a month per member (a different week for each), never every week."""
+    return now.isocalendar().week % 4 == user_id % 4
+
+
 def build_digest(username: str, report: dict, unsubscribe_url: str, spotlight: dict | None = None,
-                 ask: dict | None = None) -> tuple[str, str, str] | None:
-    """(subject, html, text) or None when there is nothing to send. `spotlight` and `ask` never force a send."""
+                 ask: dict | None = None, invite: bool = False) -> tuple[str, str, str] | None:
+    """(subject, html, text) or None when there is nothing to send. `spotlight`, `ask` and `invite` never force a send."""
     matches, popular = report["matches"], report["popular"]
     if not matches and not popular:
         return None
@@ -203,6 +222,10 @@ def build_digest(username: str, report: dict, unsubscribe_url: str, spotlight: d
     if ask_html:
         sections.append(ask_html)
         text += ask_text
+    invite_html, invite_text = _invite_section(invite and not ask_html, base)
+    if invite_html:
+        sections.append(invite_html)
+        text += invite_text
     text += [f"See everything: {base}/release-radar", "",
              "You get this because you turned on the weekly email in OmniTrackr.",
              f"Unsubscribe with one click: {unsubscribe_url}"]
@@ -305,7 +328,14 @@ async def send_due_digests(session_factory, client=None, now: datetime | None = 
             except Exception:
                 db.rollback()
                 ask = None  # The weekly email never depends on it.
-            built = build_digest(user.username, report, unsubscribe_url, spotlight, ask)
+            invite = False
+            if ask is None and invite_nudge_due(user.id, now):
+                try:
+                    from .friend_invites import has_friends
+                    invite = not has_friends(db, user.id)
+                except Exception:
+                    db.rollback()  # Optional, like the ask above.
+            built = build_digest(user.username, report, unsubscribe_url, spotlight, ask, invite)
             if built is None:
                 stats["skipped"] += 1
                 continue
