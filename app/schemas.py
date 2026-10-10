@@ -32,6 +32,7 @@ class UserBase(BaseModel):
 class UserCreate(UserBase):
     """Schema for user registration."""
     password: str = Field(..., min_length=6, max_length=128, description="User password (min 6 characters)")
+    invite: Optional[str] = Field(None, max_length=64, description="Friend invite token from a /join link")
 
 
 class UserLogin(BaseModel):

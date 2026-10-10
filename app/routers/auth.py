@@ -53,6 +53,13 @@ async def register(
     hashed_password = auth.get_password_hash(user.password)
     db_user = crud.create_user(db, user, hashed_password, verification_token)
     funnel.record("signup_created", request)
+    if user.invite:
+        try:
+            from .. import friend_invites
+            friend_invites.record_signup(db, user.invite, db_user)
+        except Exception as e:  # An invite never blocks sign-up.
+            db.rollback()
+            print(f"Failed to record friend invite: {e}")
     
     try:
         await email_utils.send_verification_email(user.email, user.username, verification_token)
@@ -253,6 +260,12 @@ async def verify_email(token: str, request: Request = None, db: Session = Depend
         user.verification_token = None
         db.commit()
         db.refresh(user)
+        try:
+            from .. import friend_invites
+            friend_invites.complete_signup(db, user)
+        except Exception as e:  # Friendship from an invite is a bonus; verification already succeeded.
+            db.rollback()
+            print(f"Failed to complete friend invite: {e}")
 
         return _sign_in_after_verification(request, user, db, "Email verified successfully! You can now use all features.")
     except HTTPException:
