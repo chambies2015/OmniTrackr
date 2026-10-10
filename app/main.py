@@ -20,17 +20,18 @@ from slowapi.middleware import SlowAPIMiddleware
 from slowapi.util import get_remote_address
 from sqlalchemy.orm import Session
 
+from .integer_bounds import PositiveDatabaseId, SQL_INTEGER_MAX
 from . import crud, schemas, models, dashboard_assets
 from .database import Base, SessionLocal, engine
 from .site_chrome import apply_site_chrome, message_page
 from .csp import nonce_html_response, strict_html_response
 from .auth import AUTH_COOKIE_NAME
 from .migrations import run_migrations
-from .middleware import SecurityHeadersMiddleware, BotFilterMiddleware
+from .middleware import SecurityHeadersMiddleware, BotFilterMiddleware, CSRFProtectionMiddleware, RequestBodyLimitMiddleware, UploadAuthenticationMiddleware
 from .site_traffic import RECORDER as TRAFFIC_RECORDER, SiteTrafficMiddleware
 from . import digest as digest_emails
 from . import funnel
-from .dependencies import get_db, get_current_user
+from .dependencies import get_db, get_current_user, get_optional_current_user
 from .routers import (
     auth,
     account,
@@ -179,6 +180,9 @@ def bind_rate_limited_endpoint(route, endpoint) -> None:
 
 
 # Add middleware
+app.add_middleware(RequestBodyLimitMiddleware)
+app.add_middleware(UploadAuthenticationMiddleware)
+app.add_middleware(CSRFProtectionMiddleware)
 app.add_middleware(GZipMiddleware, minimum_size=500)
 app.add_middleware(SecurityHeadersMiddleware)
 app.add_middleware(BotFilterMiddleware)
@@ -323,7 +327,7 @@ def public_root_html(html: str, request: Request | None = None) -> str:
         '<html lang="en" data-public-shell="true">',
         1,
     )
-    public_head = public_head.replace('  <script src="./preauth.js"></script>\n', "", 1)
+    public_head = public_head.replace('  <script src="./preauth.js?v=20261010-audit-preauth-1"></script>\n', "", 1)
     public_tail = html[scripts_start:].replace(
         '  <script src="./app.js"></script>',
         '  <script src="/static/public-landing.js" defer></script>',
@@ -351,11 +355,19 @@ app.add_middleware(
 # Serve profile pictures from database
 # Using /profile-pictures/ path to avoid conflict with /static/ mount
 @app.get("/profile-pictures/{user_id}")
-async def serve_profile_picture(user_id: int, db: Session = Depends(get_db)):
+async def serve_profile_picture(
+    user_id: PositiveDatabaseId,
+    viewer: models.User | None = Depends(get_optional_current_user),
+    db: Session = Depends(get_db),
+):
     """Serve profile pictures from database."""
     # Get user from database
     user = crud.get_user_by_id(db, user_id)
-    if not user or not user.profile_picture_data:
+    if not user or not user.is_active or not user.profile_picture_data:
+        raise HTTPException(status_code=404, detail="Profile picture not found")
+    own_or_friend = viewer is not None and (viewer.id == user.id or crud.are_friends(db, viewer.id, user.id))
+    public = db.query(models.PublicProfile.id).filter_by(user_id=user.id, enabled=True).first() is not None
+    if not own_or_friend and not public:
         raise HTTPException(status_code=404, detail="Profile picture not found")
     
     # Return image data with appropriate MIME type
@@ -365,7 +377,7 @@ async def serve_profile_picture(user_id: int, db: Session = Depends(get_db)):
 
 @app.get("/custom-tab-posters/{item_id}")
 async def serve_custom_tab_poster(
-    item_id: int,
+    item_id: PositiveDatabaseId,
     current_user: models.User = Depends(get_current_user),
     db: Session = Depends(get_db),
 ):
@@ -392,11 +404,12 @@ async def serve_custom_tab_poster(
 async def serve_profile_picture_old(filename: str):
     """Backward compatibility endpoint for old profile picture URLs."""
     # Try to extract user_id from filename (format: {user_id}_{uuid}.{ext})
-    match = re.match(r'^(\d+)_', filename)
+    match = re.match(r'^([0-9]{1,10})_', filename)
     if match:
         user_id = int(match.group(1))
-        # Redirect to new endpoint
-        return RedirectResponse(url=f"/profile-pictures/{user_id}", status_code=301)
+        if 1 <= user_id <= SQL_INTEGER_MAX:
+            # Redirect to new endpoint
+            return RedirectResponse(url=f"/profile-pictures/{user_id}", status_code=301)
     raise HTTPException(status_code=404, detail="Profile picture not found")
 
 
@@ -555,7 +568,7 @@ for route in profiles.router.routes:
         continue
     if route.path == "/u/{handle}/card.png":
         bind_rate_limited_endpoint(route, rate_limited_profile_card)
-    elif route.path == "/u/id/{user_id:int}/card.png":
+    elif route.path == "/u/id/{user_id:database_id}/card.png":
         bind_rate_limited_endpoint(route, rate_limited_profile_card_by_id)
     elif route.path == "/api/profile/settings" and "PUT" in route.methods:
         bind_rate_limited_endpoint(route, rate_limited_profile_settings)

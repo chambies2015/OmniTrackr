@@ -5,6 +5,7 @@ from fastapi import APIRouter, Depends, HTTPException, Query, Response
 from sqlalchemy import String, case, cast, func, or_
 from sqlalchemy.orm import Session
 
+from ..integer_bounds import PositiveDatabaseId
 from .. import models, schemas
 from ..dependencies import get_current_user, get_db
 
@@ -58,7 +59,7 @@ def library_page(
     category: str, response: Response,
     search: str = Query("", max_length=500), sort_by: str = Query("", max_length=30),
     order: str = Query("", max_length=10), offset: int = Query(0, ge=0, le=2147483647),
-    limit: int = Query(50, ge=1, le=100), focus_id: int | None = Query(None, ge=1),
+    limit: int = Query(50, ge=1, le=100), focus_id: int | None = Query(None, ge=1, le=2147483647),
     completion: Literal["all", "unfinished", "finished"] = Query("all"),
     unrated: bool = Query(False), has_progress: bool = Query(False),
     current_user: models.User = Depends(get_current_user), db: Session = Depends(get_db),
@@ -111,7 +112,7 @@ def library_page(
 
 @router.get("/item/{category}/{item_id}")
 def library_item(
-    category: str, item_id: int, response: Response,
+    category: str, item_id: PositiveDatabaseId, response: Response,
     current_user: models.User = Depends(get_current_user), db: Session = Depends(get_db),
 ):
     """Resolve an exact owned item without requiring complete catalog metadata."""

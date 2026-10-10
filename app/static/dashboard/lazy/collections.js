@@ -1,13 +1,19 @@
 async function loadCollections() {
   if (!hasStoredAuth()) return;
+  const sequence = ++collectionLoadSequence;
+  const current = () => sequence === collectionLoadSequence && hasStoredAuth();
   try {
     const response = await authenticatedFetch(`${API_BASE}/collections/`);
+    if (!current()) return null;
     if (!response.ok) throw new Error('Unable to load collections');
-    collectionsCache = await response.json();
+    const collections = await response.json();
+    if (!current()) return null;
+    collectionsCache = collections;
     renderCollections(collectionsCache);
     loadModeratorInsights();
     return collectionsCache;
   } catch (error) {
+    if (!current()) return null;
     const container = document.getElementById('collectionsList');
     if (container) container.textContent = 'Could not load collections. Please try again.';
     return null;

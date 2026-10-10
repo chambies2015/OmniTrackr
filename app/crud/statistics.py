@@ -104,7 +104,7 @@ def get_rating_statistics(db: Session, user_id: int) -> dict:
     avg_rating = round(sum(all_ratings) / len(all_ratings), 1)
     
     distribution = {}
-    for i in range(1, 11):
+    for i in range(0, 11):
         count = sum(1 for rating in all_ratings if round(rating) == i)
         if count > 0:
             distribution[str(i)] = count
@@ -169,19 +169,19 @@ def get_year_statistics(db: Session, user_id: int) -> dict:
     movie_years = db.query(models.Movie.year, func.count(models.Movie.id)).filter(
         models.Movie.user_id == user_id
     ).group_by(models.Movie.year).all()
-    movie_data = {str(year): count for year, count in movie_years}
+    movie_data = {str(year): count for year, count in movie_years if year is not None}
     
     # TV shows by year
     tv_years = db.query(models.TVShow.year, func.count(models.TVShow.id)).filter(
         models.TVShow.user_id == user_id
     ).group_by(models.TVShow.year).all()
-    tv_data = {str(year): count for year, count in tv_years}
+    tv_data = {str(year): count for year, count in tv_years if year is not None}
     
     # Anime by year
     anime_years = db.query(models.Anime.year, func.count(models.Anime.id)).filter(
         models.Anime.user_id == user_id
     ).group_by(models.Anime.year).all()
-    anime_data = {str(year): count for year, count in anime_years}
+    anime_data = {str(year): count for year, count in anime_years if year is not None}
     
     # Video games by year (extract year from release_date)
     video_games = db.query(models.VideoGame).filter(
@@ -199,13 +199,13 @@ def get_year_statistics(db: Session, user_id: int) -> dict:
     music_years = db.query(models.Music.year, func.count(models.Music.id)).filter(
         models.Music.user_id == user_id
     ).group_by(models.Music.year).all()
-    music_data = {str(year): count for year, count in music_years}
+    music_data = {str(year): count for year, count in music_years if year is not None}
     
     # Books by year
     book_years = db.query(models.Book.year, func.count(models.Book.id)).filter(
         models.Book.user_id == user_id
     ).group_by(models.Book.year).all()
-    book_data = {str(year): count for year, count in book_years}
+    book_data = {str(year): count for year, count in book_years if year is not None}
     
     all_years = set(movie_data.keys()) | set(tv_data.keys()) | set(anime_data.keys()) | set(video_game_data.keys()) | set(music_data.keys()) | set(book_data.keys())
     all_years = sorted([int(year) for year in all_years])
@@ -245,7 +245,9 @@ def get_director_statistics(db: Session, user_id: int) -> dict:
         models.Movie.director, 
         func.count(models.Movie.id).label('count')
     ).filter(
-        models.Movie.user_id == user_id
+        models.Movie.user_id == user_id,
+        models.Movie.director.isnot(None),
+        func.trim(models.Movie.director) != '',
     ).group_by(models.Movie.director).order_by(func.count(models.Movie.id).desc()).limit(10).all()
     
     # Directors with highest average ratings
@@ -256,7 +258,9 @@ def get_director_statistics(db: Session, user_id: int) -> dict:
     ).filter(
         models.Movie.user_id == user_id
     ).filter(
-        models.Movie.rating.isnot(None)
+        models.Movie.rating.isnot(None),
+        models.Movie.director.isnot(None),
+        func.trim(models.Movie.director) != '',
     ).group_by(models.Movie.director).order_by(
         func.avg(models.Movie.rating).desc(),
         func.count(models.Movie.id).desc()  # Secondary sort by movie count for ties
@@ -284,7 +288,7 @@ def get_movie_statistics(db: Session, user_id: int) -> dict:
     movie_years = db.query(models.Movie.year, func.count(models.Movie.id)).filter(
         models.Movie.user_id == user_id
     ).group_by(models.Movie.year).all()
-    movie_data = {str(year): count for year, count in movie_years}
+    movie_data = {str(year): count for year, count in movie_years if year is not None}
     
     all_years = sorted([int(year) for year in movie_data.keys()]) if movie_data else []
     
@@ -304,7 +308,7 @@ def get_movie_statistics(db: Session, user_id: int) -> dict:
     else:
         avg_rating = round(sum(movie_ratings) / len(movie_ratings), 1)
         distribution = {}
-        for i in range(1, 11):
+        for i in range(0, 11):
             count = sum(1 for rating in movie_ratings if round(rating) == i)
             if count > 0:
                 distribution[str(i)] = count
@@ -362,7 +366,7 @@ def get_tv_show_statistics(db: Session, user_id: int) -> dict:
     tv_years = db.query(models.TVShow.year, func.count(models.TVShow.id)).filter(
         models.TVShow.user_id == user_id
     ).group_by(models.TVShow.year).all()
-    tv_data = {str(year): count for year, count in tv_years}
+    tv_data = {str(year): count for year, count in tv_years if year is not None}
     
     all_years = sorted([int(year) for year in tv_data.keys()]) if tv_data else []
     
@@ -382,7 +386,7 @@ def get_tv_show_statistics(db: Session, user_id: int) -> dict:
     else:
         avg_rating = round(sum(tv_ratings) / len(tv_ratings), 1)
         distribution = {}
-        for i in range(1, 11):
+        for i in range(0, 11):
             count = sum(1 for rating in tv_ratings if round(rating) == i)
             if count > 0:
                 distribution[str(i)] = count
@@ -469,7 +473,7 @@ def get_anime_statistics(db: Session, user_id: int) -> dict:
     anime_years = db.query(models.Anime.year, func.count(models.Anime.id)).filter(
         models.Anime.user_id == user_id
     ).group_by(models.Anime.year).all()
-    anime_data = {str(year): count for year, count in anime_years}
+    anime_data = {str(year): count for year, count in anime_years if year is not None}
     
     all_years = sorted([int(year) for year in anime_data.keys()]) if anime_data else []
     
@@ -489,7 +493,7 @@ def get_anime_statistics(db: Session, user_id: int) -> dict:
     else:
         avg_rating = round(sum(anime_ratings) / len(anime_ratings), 1)
         distribution = {}
-        for i in range(1, 11):
+        for i in range(0, 11):
             count = sum(1 for rating in anime_ratings if round(rating) == i)
             if count > 0:
                 distribution[str(i)] = count
@@ -602,7 +606,7 @@ def get_video_game_statistics(db: Session, user_id: int) -> dict:
     else:
         avg_rating = round(sum(video_game_ratings) / len(video_game_ratings), 1)
         distribution = {}
-        for i in range(1, 11):
+        for i in range(0, 11):
             count = sum(1 for rating in video_game_ratings if round(rating) == i)
             if count > 0:
                 distribution[str(i)] = count
@@ -706,7 +710,7 @@ def get_music_statistics(db: Session, user_id: int) -> dict:
     else:
         avg_rating = round(sum(music_ratings) / len(music_ratings), 1)
         distribution = {}
-        for i in range(1, 11):
+        for i in range(0, 11):
             count = sum(1 for rating in music_ratings if round(rating) == i)
             if count > 0:
                 distribution[str(i)] = count
@@ -786,7 +790,7 @@ def get_books_statistics(db: Session, user_id: int) -> dict:
     else:
         avg_rating = round(sum(book_ratings) / len(book_ratings), 1)
         distribution = {}
-        for i in range(1, 11):
+        for i in range(0, 11):
             count = sum(1 for rating in book_ratings if round(rating) == i)
             if count > 0:
                 distribution[str(i)] = count

@@ -5,6 +5,7 @@ from typing import List, Optional
 from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session
 
+from ..integer_bounds import PositiveDatabaseId
 from .. import crud, schemas, models
 from ..dependencies import get_db, get_current_user
 
@@ -24,7 +25,7 @@ async def list_movies(
 
 @router.get("/{movie_id}", response_model=schemas.Movie)
 async def get_movie(
-    movie_id: int,
+    movie_id: PositiveDatabaseId,
     current_user: models.User = Depends(get_current_user),
     db: Session = Depends(get_db)
 ):
@@ -45,7 +46,7 @@ async def create_movie(
 
 @router.put("/{movie_id}", response_model=schemas.Movie)
 async def update_movie(
-    movie_id: int,
+    movie_id: PositiveDatabaseId,
     movie: schemas.MovieUpdate,
     current_user: models.User = Depends(get_current_user),
     db: Session = Depends(get_db)
@@ -58,7 +59,7 @@ async def update_movie(
 
 @router.delete("/{movie_id}", response_model=schemas.Movie)
 async def delete_movie(
-    movie_id: int,
+    movie_id: PositiveDatabaseId,
     current_user: models.User = Depends(get_current_user),
     db: Session = Depends(get_db)
 ):

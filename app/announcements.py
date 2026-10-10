@@ -304,6 +304,12 @@ async def send_due(session_factory, client=None, now: datetime | None = None, se
         except Exception:
             pool = None
         for user in users:
+            from .email_quota import lock_email_budget
+            lock_email_budget(db)
+            if allowance(db, now) <= 0:
+                db.rollback()
+                stats["limited"] = True
+                break
             # Claim first so an overlapping run can never send twice.
             claim = models.EmailCampaignSend(campaign_key=CAMPAIGN_KEY, user_id=user.id, status="sent", sent_at=now)
             db.add(claim)

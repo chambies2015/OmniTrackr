@@ -8,6 +8,7 @@ from sqlalchemy.orm import Session
 
 from .. import models
 from ..dependencies import get_current_user, get_db
+from ..progress import lock_progress_owner
 from ..import_studio import MAX_IMPORT_BYTES, apply_classified, classify_rows, fingerprint, parse_csv, summarize
 
 
@@ -80,9 +81,9 @@ async def apply_import(
     mapping = _mapping_or_400(mapping_json)
     detected, rows = _parse_or_400(content, source, category, mapping)
     try:
-        # Serialize confirmed imports for this account in production PostgreSQL.
-        # Reclassify after the lock: another completed import may add duplicates.
-        db.query(models.User).filter(models.User.id == current_user.id).with_for_update().one()
+        # Reserve SQLite's write transaction too; FOR UPDATE alone is ignored
+        # there. Reclassify only after another same-owner import has committed.
+        lock_progress_owner(db, current_user.id)
         classified = classify_rows(db, current_user.id, rows)
         result = apply_classified(db, current_user.id, classified)
     except Exception as exc:

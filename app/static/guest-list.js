@@ -44,15 +44,14 @@
     const item = { kind, slug, title: String(title || '').slice(0, 200) };
     if (!valid(item)) return { list, added: false };
     list.push(item);
-    write(list);
+    if (!write(list)) return { list: read(), added: false, storageError: true };
     report('guest_pick_added');
     return { list, added: true };
   }
 
   function remove(kind, slug) {
     const list = read().filter(item => !(item.kind === kind && item.slug === slug));
-    write(list);
-    return list;
+    return write(list) ? list : read();
   }
 
   function report(event) {
@@ -114,9 +113,12 @@
       };
       button.addEventListener('click', () => {
         const saved = has(read(), kind, slug);
-        if (saved) remove(kind, slug);
-        else add(kind, slug, title);
-        show(!saved);
+        const result = saved ? remove(kind, slug) : add(kind, slug, title);
+        const persisted = has(read(), kind, slug);
+        show(persisted);
+        if (status && !saved && !persisted) status.textContent = result.full
+          ? 'Your list is full (30 titles). Remove a title before saving another.'
+          : 'This browser could not save your list. Enable browser storage and try again.';
       });
       show(has(read(), kind, slug));
     });
@@ -155,7 +157,9 @@
       return null;
     }
     const result = await response.json().catch(() => null);
-    write([]);
+    if (!result || !Array.isArray(result.added) || !Array.isArray(result.existing)) return null;
+    // Preserve titles saved in another tab while this request was running.
+    write(read().filter(item => !has(list, item.kind, item.slug)));
     if (result) {
       const added = (result.added || []).length;
       if (added) {

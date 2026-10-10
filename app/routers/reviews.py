@@ -17,10 +17,12 @@ from sqlalchemy.orm import Session
 from sqlalchemy import and_, func
 from sqlalchemy.exc import IntegrityError
 
+from ..integer_bounds import PositiveDatabaseId
 from .. import affiliate, models, schemas
 from ..site_chrome import apply_site_chrome, editorial_picks, message_page
 from ..auth import AUTH_COOKIE_NAME
 from ..csp import strict_html_response
+from ..progress import lock_progress_owner
 from ..dependencies import get_current_user, get_db
 from ..review_quality import AD_MIN_REVIEW_WORDS, MIN_INDEXED_LISTING_REVIEWS, evaluate_public_review, word_count
 from ..visitor_identity import set_visitor_cookie, visitor_identity
@@ -715,7 +717,7 @@ def reviews_index(
 @router.get("/reviews/{review_id}")
 async def review_detail(
     request: Request,
-    review_id: int,
+    review_id: PositiveDatabaseId,
     category: Optional[str] = Query(None, description="Category: movie, tv_show, anime, video_game, music, or book"),
     db: Session = Depends(get_db)
 ):
@@ -816,7 +818,7 @@ def get_public_reviews(
     db: Session = Depends(get_db),
     category: Optional[str] = Query(None, description="Filter by category"),
     limit: int = Query(20, ge=1, le=100),
-    offset: int = Query(0, ge=0),
+    offset: int = Query(0, ge=0, le=2147483647),
     min_chars: int = Query(PUBLIC_REVIEW_MIN_CHARS, ge=1, le=2000),
     q: str = Query("", max_length=100),
 ):
@@ -830,14 +832,14 @@ def get_public_review_feed(
     category: Optional[str] = Query(None, description="Filter by category"),
     q: str = Query("", max_length=100),
     limit: int = Query(20, ge=1, le=40),
-    offset: int = Query(0, ge=0),
+    offset: int = Query(0, ge=0, le=2147483647),
 ):
     return _public_review_feed(db, category, q, limit, offset)
 
 
 @router.get("/api/public/reviews/{review_id}", response_model=dict, tags=["public"])
 async def get_public_review(
-    review_id: int,
+    review_id: PositiveDatabaseId,
     category: str = Query(..., description="Category: movie, tv_show, anime, video_game, music, or book"),
     db: Session = Depends(get_db)
 ):
@@ -918,7 +920,7 @@ def _existing_review_title(db, user_id, review):
 
 @router.get("/reviews/{review_id}/save")
 def review_save_page(
-    review_id: int, category: str = Query(...), db: Session = Depends(get_db),
+    review_id: PositiveDatabaseId, category: str = Query(...), db: Session = Depends(get_db),
 ):
     try:
         review = _saveable_review(db, review_id, category)
@@ -945,7 +947,7 @@ def review_save_page(
 
 @router.get("/api/public/reviews/{review_id}/save-preview")
 def review_save_preview(
-    review_id: int, response: Response, category: str = Query(...),
+    review_id: PositiveDatabaseId, response: Response, category: str = Query(...),
     user=Depends(get_current_user), db: Session = Depends(get_db),
 ):
     response.headers["Cache-Control"] = "private, no-store"
@@ -964,12 +966,12 @@ class ReviewSaveSelection(BaseModel):
 
 @router.post("/api/public/reviews/{review_id}/save")
 def save_review_title(
-    review_id: int, selection: ReviewSaveSelection, response: Response,
+    review_id: PositiveDatabaseId, selection: ReviewSaveSelection, response: Response,
     category: str = Query(...), user=Depends(get_current_user), db: Session = Depends(get_db),
 ):
     response.headers["Cache-Control"] = "private, no-store"
-    # Match Discover's lock so simultaneous saves and retries serialize per account.
-    db.query(models.User).filter(models.User.id == user.id).with_for_update().first()
+    # Serialize saves with deletion of a reused owned title on every database.
+    lock_progress_owner(db, user.id)
     try:
         review = _saveable_review(db, review_id, category, lock=True)
         if selection.version != _review_save_version(review):
@@ -1037,23 +1039,31 @@ def _signed_in_user_id(request: Request) -> Optional[int]:
     return uid if isinstance(uid, int) else None
 
 
+def _locked_public_feedback_item(db, model, review_id):
+    """Lock the media owner before checking whether feedback still has a target."""
+    owner_id = db.query(model.user_id).filter(model.id == review_id).scalar()
+    if owner_id is None:
+        return None
+    lock_progress_owner(db, owner_id)
+    return db.query(model).join(models.User, model.user_id == models.User.id).filter(
+        model.id == review_id, model.user_id == owner_id,
+        model.review_public == True, model.review.isnot(None),
+        models.User.is_active == True,
+    ).populate_existing().with_for_update().first()
+
+
 @router.post("/api/public/reviews/{category}/{review_id}/helpful", include_in_schema=False)
-async def mark_review_helpful(category: str, review_id: int, request: Request, db: Session = Depends(get_db)):
+async def mark_review_helpful(category: str, review_id: PositiveDatabaseId, request: Request, db: Session = Depends(get_db)):
     """One mark per browser; the writer hears about it at milestones, never per click."""
     model_cls = CATEGORY_MODELS.get(category)
     if not model_cls:
         raise HTTPException(status_code=400, detail="Invalid category")
-    item = db.query(model_cls).join(models.User, model_cls.user_id == models.User.id).filter(
-        model_cls.id == review_id,
-        model_cls.review_public == True,  # noqa: E712
-        model_cls.review.isnot(None),
-        models.User.is_active == True,  # noqa: E712
-    ).first()
+    item = _locked_public_feedback_item(db, model_cls, review_id)
     quality = evaluate_public_review(item.review if item else None, PUBLIC_REVIEW_MIN_CHARS, PUBLIC_REVIEW_DETAIL_MIN_CHARS)
     if not item or not quality.community_ready:
         raise HTTPException(status_code=404, detail="Review not found")
     state_row = db.query(models.PublicReviewState).filter(
-        models.PublicReviewState.category == category, models.PublicReviewState.item_id == item.id).first()
+        models.PublicReviewState.category == category, models.PublicReviewState.item_id == review_id).first()
     if _current_state_hides_review(state_row, category, item):
         raise HTTPException(status_code=404, detail="Review not found")
     if _signed_in_user_id(request) == item.user_id:
@@ -1061,13 +1071,13 @@ async def mark_review_helpful(category: str, review_id: int, request: Request, d
 
     visitor_hash, visitor_token, _ = visitor_identity(request)
     table = models.ReviewReaction
-    already = db.query(table.id).filter(table.category == category, table.item_id == item.id,
+    already = db.query(table.id).filter(table.category == category, table.item_id == review_id,
                                         table.visitor_hash == visitor_hash).first()
     if not already:
-        db.add(table(category=category, item_id=item.id, visitor_hash=visitor_hash))
+        db.add(table(category=category, item_id=review_id, visitor_hash=visitor_hash))
         try:
             db.flush()
-            count = review_helpful_counts(db, [(category, item.id)]).get((category, item.id), 0)
+            count = review_helpful_counts(db, [(category, review_id)]).get((category, review_id), 0)
             if count in HELPFUL_MILESTONES:
                 who = "Someone" if count == 1 else f"{count} people"
                 verb = "found" if count == 1 else "have found"
@@ -1078,7 +1088,7 @@ async def mark_review_helpful(category: str, review_id: int, request: Request, d
             db.commit()
         except IntegrityError:
             db.rollback()
-    count = review_helpful_counts(db, [(category, item.id)]).get((category, item.id), 0)
+    count = review_helpful_counts(db, [(category, review_id)]).get((category, review_id), 0)
     response = JSONResponse({"helpful": True, "count": count, "label": _helpful_label(count)})
     response.headers["Cache-Control"] = "no-store"
     set_visitor_cookie(response, visitor_token)
@@ -1092,7 +1102,7 @@ async def mark_review_helpful(category: str, review_id: int, request: Request, d
 )
 async def report_public_review(
     category: str,
-    review_id: int,
+    review_id: PositiveDatabaseId,
     payload: schemas.PublicReviewReportCreate,
     request: Request,
     db: Session = Depends(get_db),
@@ -1101,26 +1111,21 @@ async def report_public_review(
     model_cls = CATEGORY_MODELS.get(category)
     if not model_cls:
         raise HTTPException(status_code=400, detail="Invalid category")
-    item = db.query(model_cls).join(models.User, model_cls.user_id == models.User.id).filter(
-        model_cls.id == review_id,
-        model_cls.review_public == True,
-        model_cls.review.isnot(None),
-        models.User.is_active == True,
-    ).first()
+    item = _locked_public_feedback_item(db, model_cls, review_id)
     quality = evaluate_public_review(
         item.review if item else None, PUBLIC_REVIEW_MIN_CHARS, PUBLIC_REVIEW_DETAIL_MIN_CHARS
     )
     if not item or not quality.community_ready:
         raise HTTPException(status_code=404, detail="Review not found")
 
-    current_hash = _review_content_hash(category, item.id, item.review)
+    current_hash = _review_content_hash(category, review_id, item.review)
     visitor_hash, visitor_token, _ = visitor_identity(request)
     duplicate = False
     newly_unlisted = False
     try:
         state_row = db.query(models.PublicReviewState).filter(
             models.PublicReviewState.category == category,
-            models.PublicReviewState.item_id == item.id,
+            models.PublicReviewState.item_id == review_id,
         ).first()
         if state_row and state_row.content_hash == current_hash and state_row.suspended_at:
             raise HTTPException(status_code=404, detail="Review not found")
@@ -1128,7 +1133,7 @@ async def report_public_review(
             state_row = models.PublicReviewState(
                 user_id=item.user_id,
                 category=category,
-                item_id=item.id,
+                item_id=review_id,
                 content_hash=current_hash,
                 report_count=0,
             )
@@ -1181,7 +1186,7 @@ async def report_public_review(
         duplicate = True
         current_state = db.query(models.PublicReviewState).filter(
             models.PublicReviewState.category == category,
-            models.PublicReviewState.item_id == item.id,
+            models.PublicReviewState.item_id == review_id,
         ).first()
         newly_unlisted = _current_state_hides_review(current_state, category, item)
 

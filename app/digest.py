@@ -291,7 +291,12 @@ async def send_due_digests(session_factory, client=None, now: datetime | None = 
         sent_today = db.query(models.EmailDigestSubscription).filter(
             models.EmailDigestSubscription.last_sent_at >= now - timedelta(hours=24)
         ).count()
-        allowance = daily_limit() - sent_today
+        # Both email schedulers draw from the same rolling daily budget.
+        from .announcements import shared_cap
+        sent_campaign = db.query(models.EmailCampaignSend).filter(
+            models.EmailCampaignSend.sent_at >= now - timedelta(hours=24)
+        ).count()
+        allowance = min(daily_limit() - sent_today, shared_cap() - sent_today - sent_campaign)
         due = db.query(models.EmailDigestSubscription).filter(
             (models.EmailDigestSubscription.last_checked_at.is_(None))
             | (models.EmailDigestSubscription.last_checked_at <= now - SEND_EVERY)
@@ -310,8 +315,19 @@ async def send_due_digests(session_factory, client=None, now: datetime | None = 
                 stats["limited"] += 1
                 continue
             user = db.query(models.User).filter_by(id=subscription.user_id).first()
-            subscription.last_checked_at = now
-            db.commit()  # Mark first so an overlapping run can never send twice.
+            # Another process may have loaded this same due list. Claim with
+            # a conditional update rather than writing a stale ORM snapshot.
+            previous_checked_at = subscription.last_checked_at
+            claimed = db.query(models.EmailDigestSubscription).filter(
+                models.EmailDigestSubscription.id == subscription.id,
+                (models.EmailDigestSubscription.last_checked_at.is_(None))
+                | (models.EmailDigestSubscription.last_checked_at <= now - SEND_EVERY),
+            ).update({models.EmailDigestSubscription.last_checked_at: now}, synchronize_session=False)
+            db.commit()
+            if not claimed:
+                stats["skipped"] += 1
+                continue
+            db.refresh(subscription)
             if user is None or not user.is_active or not user.is_verified or not user.email:
                 stats["skipped"] += 1
                 continue
@@ -340,14 +356,34 @@ async def send_due_digests(session_factory, client=None, now: datetime | None = 
                 stats["skipped"] += 1
                 continue
             subject, html, _text = built
+            # Reserve under a cross-process lock before awaiting the provider.
+            # Other schedulers count this in-flight send against the shared cap.
+            from .email_quota import lock_email_budget
+            lock_email_budget(db)
+            sent_digest = db.query(models.EmailDigestSubscription).filter(
+                models.EmailDigestSubscription.last_sent_at >= now - timedelta(hours=24)
+            ).count()
+            sent_campaign = db.query(models.EmailCampaignSend).filter(
+                models.EmailCampaignSend.sent_at >= now - timedelta(hours=24)
+            ).count()
+            if sent_digest >= daily_limit() or sent_digest + sent_campaign >= shared_cap():
+                subscription.last_checked_at = previous_checked_at
+                db.commit()
+                stats["limited"] += 1
+                continue
+            previous_sent_at = subscription.last_sent_at
+            subscription.last_sent_at = now
+            db.commit()
             try:
                 await sender(user.email, subject, html, unsubscribe_url)
             except Exception as error:  # One bad address must not stop the rest.
                 print(f"Weekly email to user {user.id} failed: {error}")
+                # Preserve the existing failed-send retry semantics without
+                # consuming a successful-send allowance.
+                subscription.last_sent_at = previous_sent_at
+                db.commit()
                 stats["failed"] += 1
                 continue
-            subscription.last_sent_at = now
-            db.commit()
             allowance -= 1
             stats["sent"] += 1
         return stats

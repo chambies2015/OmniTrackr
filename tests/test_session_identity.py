@@ -98,16 +98,17 @@ def test_deactivated_accounts_are_refused_by_id(client, db_session):
     assert _me(client, token).status_code == 401
 
 
-def test_site_stats_admin_follows_the_current_username(client, db_session, monkeypatch):
+def test_renaming_to_an_unclaimed_admin_name_does_not_grant_access(client, db_session, monkeypatch):
     monkeypatch.delenv("COLLECTION_MODERATOR_USERNAMES", raising=False)
     monkeypatch.setenv("ADMIN_USERNAMES", "owner_now")
     _register(client, db_session, "owner_before", "owner@example.com")
     token = _token(client, "owner_before")
     headers = {"Authorization": f"Bearer {token}"}
     assert client.get("/api/site-stats/access", headers=headers).json() == {"admin": False}
-    client.put("/account/username", json={"new_username": "owner_now", "password": "password123"}, headers=headers)
-    assert client.get("/api/site-stats/access", headers=headers).json() == {"admin": True}
-    assert client.get("/api/site-stats/overview", headers=headers).status_code == 200
+    response = client.put("/account/username", json={"new_username": "owner_now", "password": "password123"}, headers=headers)
+    assert response.status_code == 400
+    assert client.get("/api/site-stats/access", headers=headers).json() == {"admin": False}
+    assert client.get("/api/site-stats/overview", headers=headers).status_code == 403
 
 
 def test_rename_page_no_longer_forces_a_logout():

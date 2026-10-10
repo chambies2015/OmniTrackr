@@ -6,7 +6,9 @@ from fastapi import APIRouter, Depends, HTTPException, Query, Response, status
 from sqlalchemy import func
 from sqlalchemy.orm import Session
 
+from ..integer_bounds import PositiveDatabaseId
 from .. import models, schemas
+from ..progress import lock_progress_owner
 from ..dependencies import get_current_user, get_db
 
 router = APIRouter(prefix="/activity", tags=["activity"])
@@ -80,7 +82,7 @@ async def list_activity(
     category: str | None = Query(None),
     action: str | None = Query(None),
     limit: int = Query(50, ge=1, le=100),
-    offset: int = Query(0, ge=0),
+    offset: int = Query(0, ge=0, le=2147483647),
     current_user: models.User = Depends(get_current_user),
     db: Session = Depends(get_db),
 ):
@@ -105,6 +107,7 @@ async def create_activity(
     current_user: models.User = Depends(get_current_user),
     db: Session = Depends(get_db),
 ):
+    lock_progress_owner(db, current_user.id)
     item = _media_item(db, current_user.id, payload.category, payload.item_id)
     if not item:
         raise HTTPException(status_code=404, detail="Library item not found")
@@ -127,7 +130,7 @@ async def create_activity(
 
 @router.patch("/{entry_id}", response_model=schemas.ActivityEntry)
 async def update_activity(
-    entry_id: int,
+    entry_id: PositiveDatabaseId,
     payload: schemas.ActivityEntryUpdate,
     current_user: models.User = Depends(get_current_user),
     db: Session = Depends(get_db),
@@ -150,7 +153,7 @@ async def update_activity(
 
 @router.delete("/{entry_id}", status_code=status.HTTP_204_NO_CONTENT)
 async def delete_activity(
-    entry_id: int,
+    entry_id: PositiveDatabaseId,
     current_user: models.User = Depends(get_current_user),
     db: Session = Depends(get_db),
 ):
@@ -212,24 +215,28 @@ def import_activity_entries(
     db: Session, user_id: int, entries: list[schemas.ActivityEntryImport]
 ) -> tuple[int, int]:
     """Import optional journal snapshots after media import, skipping exact duplicates."""
+    if entries:
+        lock_progress_owner(db, user_id)
     created = skipped = 0
     for incoming in entries:
         model, _ = CATEGORIES[incoming.category]
-        item = None
-        if incoming.item_id:
-            item = db.query(model).filter(model.id == incoming.item_id, model.user_id == user_id).first()
-        if item is None:
-            item = db.query(model).filter(
-                model.user_id == user_id,
-                func.lower(func.trim(model.title)) == incoming.title.strip().lower(),
-            ).order_by(model.id).first()
+        # Backup IDs belong to the source account. Only a unique owned title
+        # can bind the snapshot to the destination's library.
+        title = incoming.title.strip()
+        matches = db.query(model).filter(
+            model.user_id == user_id,
+            func.lower(func.trim(model.title)) == title.lower(),
+        ).limit(2).all()
+        item = matches[0] if len(matches) == 1 else None
         occurred_at = _naive_utc(incoming.occurred_at)
         duplicate = db.query(models.ActivityEntry.id).filter(
             models.ActivityEntry.user_id == user_id,
             models.ActivityEntry.category == incoming.category,
-            models.ActivityEntry.title == incoming.title,
+            models.ActivityEntry.title == title,
             models.ActivityEntry.action == incoming.action,
             models.ActivityEntry.occurred_at == occurred_at,
+            models.ActivityEntry.note == incoming.note,
+            models.ActivityEntry.rating == incoming.rating,
         ).first()
         if duplicate:
             skipped += 1
@@ -238,13 +245,14 @@ def import_activity_entries(
             user_id=user_id,
             category=incoming.category,
             item_id=item.id if item else None,
-            title=incoming.title.strip(),
+            title=title,
             action=incoming.action,
             note=incoming.note,
             rating=incoming.rating,
             source="import",
             occurred_at=occurred_at,
         ))
+        db.flush()
         created += 1
     db.commit()
     return created, skipped

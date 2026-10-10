@@ -12,4 +12,4 @@ const modules = [...assets.match(/EAGER_MODULES = \(([^)]*)\)/)[1].matchAll(/"([
 module.exports = modules
   .map(name => fs.readFileSync(path.join(dashboardDir, name), 'utf8'))
   .join('')
-  .replace(/^\/\/ @lazy-chunk lazy\/([\w.-]+)\n/gm, (_, file) => fs.readFileSync(path.join(dashboardDir, 'lazy', file), 'utf8'));
+  .replace(/^\/\/ @lazy-chunk lazy\/([\w.-]+)\r?\n/gm, (_, file) => fs.readFileSync(path.join(dashboardDir, 'lazy', file), 'utf8'));

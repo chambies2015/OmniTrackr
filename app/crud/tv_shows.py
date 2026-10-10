@@ -68,14 +68,5 @@ def update_tv_show(db: Session, user_id: int, tv_show_id: int, tv_show_update: s
 
 
 def delete_tv_show(db: Session, user_id: int, tv_show_id: int) -> Optional[models.TVShow]:
-    from ..progress import delete_progress_for_item, lock_progress_owner
-    lock_progress_owner(db, user_id)
-    db_tv_show = db.query(models.TVShow).filter_by(user_id=user_id, id=tv_show_id).with_for_update().first()
-    if db_tv_show is None:
-        db.rollback()
-        return None
-    delete_progress_for_item(db, user_id, "tv-shows", tv_show_id)
-    db.delete(db_tv_show)
-    db.commit()
-    return db_tv_show
-
+    from ..library_lifecycle import delete_owned_media
+    return delete_owned_media(db, user_id, "tv-shows", tv_show_id)

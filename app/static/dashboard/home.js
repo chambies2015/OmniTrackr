@@ -1,4 +1,5 @@
 let collectionsCache = [];
+let collectionLoadSequence = 0;
 let collectionPickerTarget = null;
 
 function consumeLibraryNavigationTarget() {

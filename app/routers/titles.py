@@ -19,6 +19,7 @@ from .. import models, supporters, title_metadata, title_pages
 from ..auth import AUTH_COOKIE_NAME
 from ..csp import strict_html_response
 from ..dependencies import get_current_user, get_db
+from ..progress import lock_progress_owner
 from ..site_chrome import apply_site_chrome, editorial_picks, message_page
 
 router = APIRouter(tags=["titles"])
@@ -412,7 +413,7 @@ def render(group, summary: dict, metadata: Optional[dict], indexable: bool, sign
   <link rel="stylesheet" href="/static/title-page.css?v={CSS_VERSION}">
   <script src="/static/title-page.js?v={JS_VERSION}" defer></script>
   <script src="/static/share.js?v=20261004-share-1" defer></script>
-  {'' if signed_in else '<script src="/static/guest-list.js?v=20261003-guest-2" defer></script>'}
+  {'' if signed_in else '<script src="/static/guest-list.js?v=20261010-audit-guest-1" defer></script>'}
   {ad_loader}
   {_json_ld(group, summary, metadata, canonical, image)}
 </head>
@@ -476,6 +477,7 @@ def add_group_to_library(db: Session, user, group) -> tuple[str, object]:
 
     Returns ("existing" | "created", record). Does not commit.
     """
+    lock_progress_owner(db, user.id)
     model, _, library_category, _, _ = title_pages.KINDS[group.kind]
     normalized = func.lower(func.trim(model.title))
     existing = db.query(model).filter(model.user_id == user.id, normalized == group.normalized).first()
@@ -501,12 +503,14 @@ def add_group_to_library(db: Session, user, group) -> tuple[str, object]:
 def add_title(kind: str, slug: str, response: Response, user=Depends(get_current_user), db: Session = Depends(get_db)):
     """Add this title to the member's library with public details only (never anyone's rating or notes)."""
     response.headers["Cache-Control"] = "private, no-store"
+    lock_progress_owner(db, user.id)
     group = title_pages.find(db, kind, slug)
     if group is None:
         raise HTTPException(404, "Title not found")
     state, record = add_group_to_library(db, user, group)
+    result = {"state": state, "title": record.title, "category": title_pages.KINDS[kind][2]}
     db.commit()
-    return {"state": state, "title": record.title, "category": title_pages.KINDS[kind][2]}
+    return result
 
 
 class TitleReview(BaseModel):
@@ -600,6 +604,7 @@ def save_title_review(kind: str, slug: str, payload: TitleReview, request: Reque
     from ..review_quality import evaluate_public_review
     from .reviews import PUBLIC_REVIEW_DETAIL_MIN_CHARS, PUBLIC_REVIEW_MIN_CHARS
     response.headers["Cache-Control"] = "private, no-store"
+    lock_progress_owner(db, user.id)
     group = title_pages.find(db, kind, slug)
     if group is None:
         raise HTTPException(404, "Title not found")
@@ -613,6 +618,7 @@ def save_title_review(kind: str, slug: str, payload: TitleReview, request: Reque
     item.review_public = payload.public
     if payload.rating is not None:
         item.rating = round(payload.rating, 1)
+    item_id = item.id
     db.commit()
     quality = evaluate_public_review(payload.review, PUBLIC_REVIEW_MIN_CHARS, PUBLIC_REVIEW_DETAIL_MIN_CHARS)
     review_category = title_pages.KINDS[kind][1]
@@ -627,7 +633,7 @@ def save_title_review(kind: str, slug: str, payload: TitleReview, request: Reque
         "word_count": quality.word_count,
         "listed": listed,
         "standalone": standalone,
-        "review_url": f"/reviews/{item.id}?category={review_category}" if standalone else None,
+        "review_url": f"/reviews/{item_id}?category={review_category}" if standalone else None,
     }
 
 
@@ -650,6 +656,7 @@ def import_guest_list(
 ):
     """Move titles a visitor saved before signing up (kept in their browser) into their new library."""
     response.headers["Cache-Control"] = "private, no-store"
+    lock_progress_owner(db, user.id)
     added, existing, missing = [], [], 0
     seen = set()
     for item in payload.items:

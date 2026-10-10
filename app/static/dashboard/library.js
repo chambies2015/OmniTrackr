@@ -208,7 +208,7 @@ async function fetchMoviePoster(id, title, year) {
     
     let res;
     try {
-      res = await cachedProxyFetch(proxyUrl, { 
+      res = await cachedProxyFetch(proxyUrl, {
         signal: controller.signal,
         headers: {
           'Accept': 'application/json'
@@ -298,7 +298,7 @@ async function saveMoviePosterUrl(id, posterUrl, normalizedTitle) {
 
 function updateMovieRowMetadata(id, normalizedTitle) {
   const row = document.querySelector(`#movie-poster-${id}`)?.closest('tr');
-  if (!row) return;
+  if (!row || row === editingRowElement) return;
 
   if (normalizedTitle && row.cells[1]) {
     row.cells[1].textContent = normalizedTitle;
@@ -359,7 +359,7 @@ window.saveMovieEdit = async function (btn) {
     watched: document.getElementById('edit-movie-watched').checked,
   };
   const ratingVal = document.getElementById('edit-movie-rating').value;
-  if (ratingVal) updated.rating = parseFloat(ratingVal);
+  updated.rating = ratingVal === '' ? null : parseFloat(ratingVal);
   const reviewVal = document.getElementById('edit-movie-review') ? document.getElementById('edit-movie-review').value : '';
   if (reviewVal !== undefined) updated.review = reviewVal;
   const reviewPublicEl = document.getElementById('edit-movie-review-public');
@@ -614,7 +614,7 @@ async function fetchTVPoster(id, title, year) {
     
     let res;
     try {
-      res = await cachedProxyFetch(proxyUrl, { 
+      res = await cachedProxyFetch(proxyUrl, {
         signal: controller.signal,
         headers: {
           'Accept': 'application/json'
@@ -743,7 +743,7 @@ async function fetchAnimePoster(id, title, year) {
     
     let res;
     try {
-      res = await cachedProxyFetch(proxyUrl, { 
+      res = await cachedProxyFetch(proxyUrl, {
         signal: controller.signal,
         headers: {
           'Accept': 'application/json'
@@ -991,7 +991,7 @@ async function fetchVideoGameMetadata(id, title) {
       
       let res;
       try {
-        res = await cachedProxyFetch(proxyUrl, { 
+        res = await cachedProxyFetch(proxyUrl, {
           signal: controller.signal,
           headers: {
             'Accept': 'application/json'
@@ -1167,10 +1167,10 @@ window.saveVideoGameEdit = async function (btn) {
   const reviewVal = document.getElementById('edit-video-game-review') ? document.getElementById('edit-video-game-review').value : '';
 
   const updateData = { title };
-  if (releaseDate) updateData.release_date = releaseDate;
-  if (genres) updateData.genres = genres;
+  updateData.release_date = releaseDate || null;
+  updateData.genres = genres || null;
   updateData.played = played;
-  if (ratingVal) updateData.rating = parseFloat(ratingVal);
+  updateData.rating = ratingVal === '' ? null : parseFloat(ratingVal);
   if (reviewVal !== undefined) updateData.review = reviewVal;
   const reviewPublicEl = document.getElementById('edit-video-game-review-public');
   if (reviewPublicEl) updateData.review_public = reviewPublicEl.checked;
@@ -1289,142 +1289,114 @@ function displayMusicPoster(id, posterUrl, title = null) {
 
 async function fetchMusicMetadata(id, title, artist) {
   const cacheKey = `music-${title}-${artist}`;
-
-  if (posterFetchInProgress.has(cacheKey)) {
-    const existingPromise = posterFetchQueue.get(cacheKey);
-    if (existingPromise) {
+  const row = document.querySelector(`#music-poster-${id}`)?.closest('tr');
+  const current = () => row && row !== editingRowElement
+    && document.querySelector(`#music-poster-${id}`)?.closest('tr') === row;
+  let pending = posterFetchQueue.get(cacheKey);
+  if (!pending) {
+    posterFetchInProgress.add(cacheKey);
+    pending = (async () => {
+      await waitForPosterSlot();
       try {
-        const result = await existingPromise;
-        if (result && result.cover_art_url) {
-          displayMusicPoster(id, result.cover_art_url, result.normalized_title || title);
-          await saveMusicMetadata(id, result.cover_art_url, result.artist, result.year, result.genre, result.normalized_title);
-          updateMusicRowMetadata(id, result.artist, result.year, result.genre, result.normalized_title);
-        }
-      } catch (err) {
-      }
-    }
-    return;
-  }
+        try {
+          const searchQuery = artist ? `${title} ${artist}` : title;
+          const proxyUrl = `${API_BASE}/api/proxy/itunes?query=${encodeURIComponent(searchQuery)}&entity=album`;
 
-  const fetchPromise = (async () => {
-    try {
-      const searchQuery = artist ? `${title} ${artist}` : title;
-      const proxyUrl = `${API_BASE}/api/proxy/itunes?query=${encodeURIComponent(searchQuery)}&entity=album`;
-      
-      const controller = new AbortController();
-      const timeoutId = setTimeout(() => controller.abort(), 30000);
-      
-      let res;
-      try {
-        res = await cachedProxyFetch(proxyUrl, { 
-          signal: controller.signal,
-          headers: {
-            'Accept': 'application/json'
+          const controller = new AbortController();
+          const timeoutId = setTimeout(() => controller.abort(), 30000);
+
+          let res;
+          try {
+            res = await cachedProxyFetch(proxyUrl, {
+              signal: controller.signal,
+              headers: {
+                'Accept': 'application/json'
+              }
+            });
+            clearTimeout(timeoutId);
+          } catch (fetchError) {
+            clearTimeout(timeoutId);
+            if (fetchError.name === 'AbortError') {
+              console.warn(`iTunes API request timeout for "${title}". This may be due to network issues or VPN blocking.`);
+            } else {
+              console.warn(`Network error fetching metadata for "${title}":`, fetchError.message);
+            }
+            return null;
           }
-        });
-        clearTimeout(timeoutId);
-      } catch (fetchError) {
-        clearTimeout(timeoutId);
-        if (fetchError.name === 'AbortError') {
-          console.warn(`iTunes API request timeout for "${title}". This may be due to network issues or VPN blocking.`);
-        } else {
-          console.warn(`Network error fetching metadata for "${title}":`, fetchError.message);
-        }
-        return null;
-      }
 
-      if (!res.ok) {
-        if (res.status === 429) {
-          console.warn('iTunes API rate limit reached. Metadata will be fetched later.');
+          if (!res.ok) {
+            if (res.status === 429) {
+              console.warn('iTunes API rate limit reached. Metadata will be fetched later.');
+              return null;
+            }
+            if (res.status === 503) {
+              console.warn('iTunes API not available.');
+              return null;
+            }
+            if (res.status === 504) {
+              console.warn(`iTunes API timeout for "${title}". This may be due to network issues or VPN blocking.`);
+              return null;
+            }
+            if (res.status >= 500) {
+              console.warn(`iTunes API server error (${res.status}) for "${title}". This may be due to network issues.`);
+              return null;
+            }
+            return null;
+          }
+
+          let data;
+          try {
+            data = await res.json();
+          } catch (jsonError) {
+            console.warn(`Failed to parse iTunes API response for "${title}":`, jsonError);
+            return null;
+          }
+
+          if (data.errorMessage) {
+            console.warn(`iTunes API error for "${title}": ${data.errorMessage}`);
+            return null;
+          }
+          if (data && data.results && data.results.length > 0) {
+            const album = data.results[0];
+            const coverArtUrl = album.artworkUrl100 || album.artworkUrl60 || null;
+            const normalizedTitle = album.collectionName || album.trackName || null;
+            const albumArtist = album.artistName || null;
+            const albumYear = album.releaseDate ? parseInt(album.releaseDate.split('-')[0]) : null;
+            const albumGenres = album.primaryGenreName || null;
+
+            if (coverArtUrl) {
+
+              return { cover_art_url: coverArtUrl, artist: albumArtist, year: albumYear, genre: albumGenres, normalized_title: normalizedTitle };
+            }
+          }
+          return null;
+        } catch (err) {
+          console.error('Error fetching music metadata:', err);
           return null;
         }
-        if (res.status === 503) {
-          console.warn('iTunes API not available.');
-          return null;
-        }
-        if (res.status === 504) {
-          console.warn(`iTunes API timeout for "${title}". This may be due to network issues or VPN blocking.`);
-          return null;
-        }
-        if (res.status >= 500) {
-          console.warn(`iTunes API server error (${res.status}) for "${title}". This may be due to network issues.`);
-          return null;
-        }
-        return null;
-      }
 
-      let data;
-      try {
-        data = await res.json();
-      } catch (jsonError) {
-        console.warn(`Failed to parse iTunes API response for "${title}":`, jsonError);
-        return null;
+      } finally { releasePosterSlot(); }
+    })();
+    posterFetchQueue.set(cacheKey, pending);
+    pending.finally(() => setTimeout(() => {
+      if (posterFetchQueue.get(cacheKey) === pending) {
+        posterFetchQueue.delete(cacheKey); posterFetchInProgress.delete(cacheKey);
       }
-
-      if (data.errorMessage) {
-        console.warn(`iTunes API error for "${title}": ${data.errorMessage}`);
-        return null;
-      }
-      if (data && data.results && data.results.length > 0) {
-        const album = data.results[0];
-        const coverArtUrl = album.artworkUrl100 || album.artworkUrl60 || null;
-        const normalizedTitle = album.collectionName || album.trackName || null;
-        const albumArtist = album.artistName || null;
-        const albumYear = album.releaseDate ? parseInt(album.releaseDate.split('-')[0]) : null;
-        const albumGenres = album.primaryGenreName || null;
-
-        if (coverArtUrl) {
-          await saveMusicMetadata(id, coverArtUrl, albumArtist, albumYear, albumGenres, normalizedTitle);
-          displayMusicPoster(id, coverArtUrl, normalizedTitle || title);
-          updateMusicRowMetadata(id, albumArtist, albumYear, albumGenres, normalizedTitle);
-
-          return { cover_art_url: coverArtUrl, artist: albumArtist, year: albumYear, genre: albumGenres, normalized_title: normalizedTitle };
-        }
-      }
-      return null;
-    } catch (err) {
-      console.error('Error fetching music metadata:', err);
-      return null;
-    }
-  })();
-
-  const existingPromise = posterFetchQueue.get(cacheKey);
-  if (existingPromise) {
-    try {
-      const result = await existingPromise;
-      if (result && result.cover_art_url) {
-        displayMusicPoster(id, result.cover_art_url, result.normalized_title || title);
-        await saveMusicMetadata(id, result.cover_art_url, result.artist, result.year, result.genre, result.normalized_title);
-        updateMusicRowMetadata(id, result.artist, result.year, result.genre, result.normalized_title);
-      }
-    } catch (err) {
-    }
-    return;
+    }, 1000)).catch(() => {});
   }
-
-  await waitForPosterSlot();
-  posterFetchQueue.set(cacheKey, fetchPromise);
-  posterFetchInProgress.add(cacheKey);
-
   try {
-    const result = await fetchPromise;
-    if (result && result.cover_art_url) {
-      displayMusicPoster(id, result.cover_art_url, result.normalized_title || title);
-      await saveMusicMetadata(id, result.cover_art_url, result.artist, result.year, result.genre, result.normalized_title);
-      updateMusicRowMetadata(id, result.artist, result.year, result.genre, result.normalized_title);
-    }
-  } catch (err) {
-    console.error('Error fetching music metadata:', err);
-  } finally {
-    releasePosterSlot();
-    posterFetchInProgress.delete(cacheKey);
-    posterFetchQueue.delete(cacheKey);
-  }
+    const result = await pending;
+    if (!result?.cover_art_url || !current()) return;
+    await saveMusicMetadata(id, result.cover_art_url, result.artist, result.year, result.genre, result.normalized_title);
+    if (!current()) return;
+    displayMusicPoster(id, result.cover_art_url, result.normalized_title || title);
+    updateMusicRowMetadata(id, result.artist, result.year, result.genre, result.normalized_title);
+  } catch (error) { console.error('Error fetching music metadata:', error); }
 }
 
 function updateMusicRowMetadata(id, artist, year, genre, normalizedTitle) {
   const row = document.querySelector(`#music-poster-${id}`)?.closest('tr');
-  if (!row) return;
+  if (!row || row === editingRowElement) return;
 
   if (normalizedTitle && row.cells[1]) {
     row.cells[1].textContent = normalizedTitle;
@@ -1516,9 +1488,9 @@ window.saveMusicEdit = async function (btn) {
   const reviewVal = document.getElementById('edit-music-review') ? document.getElementById('edit-music-review').value : '';
 
   const updateData = { title, artist, year };
-  if (genre) updateData.genre = genre;
+  updateData.genre = genre || null;
   updateData.listened = listened;
-  if (ratingVal) updateData.rating = parseFloat(ratingVal);
+  updateData.rating = ratingVal === '' ? null : parseFloat(ratingVal);
   if (reviewVal !== undefined) updateData.review = reviewVal;
   const reviewPublicEl = document.getElementById('edit-music-review-public');
   if (reviewPublicEl) updateData.review_public = reviewPublicEl.checked;
@@ -1638,135 +1610,107 @@ function displayBookPoster(id, posterUrl, title = null) {
 
 async function fetchBookMetadata(id, title, author) {
   const cacheKey = `book-${title}-${author}`;
-
-  if (posterFetchInProgress.has(cacheKey)) {
-    const existingPromise = posterFetchQueue.get(cacheKey);
-    if (existingPromise) {
+  const row = document.querySelector(`#book-poster-${id}`)?.closest('tr');
+  const current = () => row && row !== editingRowElement
+    && document.querySelector(`#book-poster-${id}`)?.closest('tr') === row;
+  let pending = posterFetchQueue.get(cacheKey);
+  if (!pending) {
+    posterFetchInProgress.add(cacheKey);
+    pending = (async () => {
+      await waitForPosterSlot();
       try {
-        const result = await existingPromise;
-        if (result && result.cover_art_url) {
-          displayBookPoster(id, result.cover_art_url, result.normalized_title || title);
-          await saveBookMetadata(id, result.cover_art_url, result.author, result.year, result.genre, result.normalized_title);
-          updateBookRowMetadata(id, result.author, result.year, result.genre, result.normalized_title);
-        }
-      } catch (err) {
-      }
-    }
-    return;
-  }
+        try {
+          const searchQuery = author ? `${title} ${author}` : title;
+          const proxyUrl = `${API_BASE}/api/proxy/openlibrary?query=${encodeURIComponent(searchQuery)}`;
 
-  const fetchPromise = (async () => {
-    try {
-      const searchQuery = author ? `${title} ${author}` : title;
-      const proxyUrl = `${API_BASE}/api/proxy/openlibrary?query=${encodeURIComponent(searchQuery)}`;
-      
-      const controller = new AbortController();
-      const timeoutId = setTimeout(() => controller.abort(), 30000);
-      
-      let res;
-      try {
-        res = await cachedProxyFetch(proxyUrl, { 
-          signal: controller.signal,
-          headers: {
-            'Accept': 'application/json'
+          const controller = new AbortController();
+          const timeoutId = setTimeout(() => controller.abort(), 30000);
+
+          let res;
+          try {
+            res = await cachedProxyFetch(proxyUrl, {
+              signal: controller.signal,
+              headers: {
+                'Accept': 'application/json'
+              }
+            });
+            clearTimeout(timeoutId);
+          } catch (fetchError) {
+            clearTimeout(timeoutId);
+            if (fetchError.name === 'AbortError') {
+              console.warn(`Open Library API request timeout for "${title}". This may be due to network issues or VPN blocking.`);
+            } else {
+              console.warn(`Network error fetching metadata for "${title}":`, fetchError.message);
+            }
+            return null;
           }
-        });
-        clearTimeout(timeoutId);
-      } catch (fetchError) {
-        clearTimeout(timeoutId);
-        if (fetchError.name === 'AbortError') {
-          console.warn(`Open Library API request timeout for "${title}". This may be due to network issues or VPN blocking.`);
-        } else {
-          console.warn(`Network error fetching metadata for "${title}":`, fetchError.message);
-        }
-        return null;
-      }
 
-      if (!res.ok) {
-        if (res.status === 429) {
-          console.warn('Open Library API rate limit reached. Metadata will be fetched later.');
+          if (!res.ok) {
+            if (res.status === 429) {
+              console.warn('Open Library API rate limit reached. Metadata will be fetched later.');
+              return null;
+            }
+            if (res.status === 504) {
+              console.warn(`Open Library API timeout for "${title}". This may be due to network issues or VPN blocking.`);
+              return null;
+            }
+            if (res.status >= 500) {
+              console.warn(`Open Library API server error (${res.status}) for "${title}". This may be due to network issues.`);
+              return null;
+            }
+            return null;
+          }
+
+          let data;
+          try {
+            data = await res.json();
+          } catch (jsonError) {
+            console.warn(`Failed to parse Open Library API response for "${title}":`, jsonError);
+            return null;
+          }
+
+          if (data && data.docs && data.docs.length > 0) {
+            const book = data.docs[0];
+            const coverId = book.cover_i || book.isbn?.[0] || null;
+            const coverArtUrl = coverId ? `https://covers.openlibrary.org/b/id/${coverId}-L.jpg` : null;
+            const normalizedTitle = book.title || null;
+            const bookAuthor = book.author_name && book.author_name.length > 0 ? book.author_name[0] : null;
+            const bookYear = book.first_publish_year || book.publish_year?.[0] || null;
+            const bookGenres = book.subject ? book.subject.slice(0, 3).join(', ') : null;
+
+            if (coverArtUrl) {
+
+              return { cover_art_url: coverArtUrl, author: bookAuthor, year: bookYear, genre: bookGenres, normalized_title: normalizedTitle };
+            }
+          }
+          return null;
+        } catch (err) {
+          console.error('Error fetching book metadata:', err);
           return null;
         }
-        if (res.status === 504) {
-          console.warn(`Open Library API timeout for "${title}". This may be due to network issues or VPN blocking.`);
-          return null;
-        }
-        if (res.status >= 500) {
-          console.warn(`Open Library API server error (${res.status}) for "${title}". This may be due to network issues.`);
-          return null;
-        }
-        return null;
+
+      } finally { releasePosterSlot(); }
+    })();
+    posterFetchQueue.set(cacheKey, pending);
+    pending.finally(() => setTimeout(() => {
+      if (posterFetchQueue.get(cacheKey) === pending) {
+        posterFetchQueue.delete(cacheKey); posterFetchInProgress.delete(cacheKey);
       }
-
-      let data;
-      try {
-        data = await res.json();
-      } catch (jsonError) {
-        console.warn(`Failed to parse Open Library API response for "${title}":`, jsonError);
-        return null;
-      }
-
-      if (data && data.docs && data.docs.length > 0) {
-        const book = data.docs[0];
-        const coverId = book.cover_i || book.isbn?.[0] || null;
-        const coverArtUrl = coverId ? `https://covers.openlibrary.org/b/id/${coverId}-L.jpg` : null;
-        const normalizedTitle = book.title || null;
-        const bookAuthor = book.author_name && book.author_name.length > 0 ? book.author_name[0] : null;
-        const bookYear = book.first_publish_year || book.publish_year?.[0] || null;
-        const bookGenres = book.subject ? book.subject.slice(0, 3).join(', ') : null;
-
-        if (coverArtUrl) {
-          await saveBookMetadata(id, coverArtUrl, bookAuthor, bookYear, bookGenres, normalizedTitle);
-          displayBookPoster(id, coverArtUrl, normalizedTitle || title);
-          updateBookRowMetadata(id, bookAuthor, bookYear, bookGenres, normalizedTitle);
-
-          return { cover_art_url: coverArtUrl, author: bookAuthor, year: bookYear, genre: bookGenres, normalized_title: normalizedTitle };
-        }
-      }
-      return null;
-    } catch (err) {
-      console.error('Error fetching book metadata:', err);
-      return null;
-    }
-  })();
-
-  const existingPromise = posterFetchQueue.get(cacheKey);
-  if (existingPromise) {
-    try {
-      const result = await existingPromise;
-      if (result && result.cover_art_url) {
-        displayBookPoster(id, result.cover_art_url, result.normalized_title || title);
-        await saveBookMetadata(id, result.cover_art_url, result.author, result.year, result.genre, result.normalized_title);
-        updateBookRowMetadata(id, result.author, result.year, result.genre, result.normalized_title);
-      }
-    } catch (err) {
-    }
-    return;
+    }, 1000)).catch(() => {});
   }
-
-  await waitForPosterSlot();
-  posterFetchQueue.set(cacheKey, fetchPromise);
-  posterFetchInProgress.add(cacheKey);
-
   try {
-    const result = await fetchPromise;
-    if (result && result.cover_art_url) {
-      displayBookPoster(id, result.cover_art_url, result.normalized_title || title);
-      await saveBookMetadata(id, result.cover_art_url, result.author, result.year, result.genre, result.normalized_title);
-      updateBookRowMetadata(id, result.author, result.year, result.genre, result.normalized_title);
-    }
-  } catch (err) {
-    console.error('Error fetching book metadata:', err);
-  } finally {
-    releasePosterSlot();
-    posterFetchInProgress.delete(cacheKey);
-    posterFetchQueue.delete(cacheKey);
-  }
+    const result = await pending;
+    if (!result?.cover_art_url || !current()) return;
+    await saveBookMetadata(id, result.cover_art_url, result.author, result.year, result.genre, result.normalized_title);
+    if (!current()) return;
+    displayBookPoster(id, result.cover_art_url, result.normalized_title || title);
+    updateBookRowMetadata(id, result.author, result.year, result.genre, result.normalized_title);
+  } catch (error) { console.error('Error fetching book metadata:', error); }
 }
 
 function updateBookRowMetadata(id, author, year, genre, normalizedTitle) {
   const row = document.querySelector(`#book-poster-${id}`)?.closest('tr');
-  if (!row) return;
+  if (!row || row === editingRowElement) return;
 
   if (normalizedTitle && row.cells[1]) {
     row.cells[1].textContent = normalizedTitle;
@@ -1858,9 +1802,9 @@ window.saveBookEdit = async function (btn) {
   const reviewVal = document.getElementById('edit-book-review') ? document.getElementById('edit-book-review').value : '';
 
   const updateData = { title, author, year };
-  if (genre) updateData.genre = genre;
+  updateData.genre = genre || null;
   updateData.read = read;
-  if (ratingVal) updateData.rating = parseFloat(ratingVal);
+  updateData.rating = ratingVal === '' ? null : parseFloat(ratingVal);
   if (reviewVal !== undefined) updateData.review = reviewVal;
   const reviewPublicEl = document.getElementById('edit-book-review-public');
   if (reviewPublicEl) updateData.review_public = reviewPublicEl.checked;
@@ -1942,11 +1886,11 @@ window.saveAnimeEdit = async function (btn) {
     watched: document.getElementById('edit-anime-watched').checked,
   };
   const seasonsVal = document.getElementById('edit-anime-seasons').value;
-  if (seasonsVal) updated.seasons = parseInt(seasonsVal, 10);
+  updated.seasons = seasonsVal === '' ? null : parseInt(seasonsVal, 10);
   const episodesVal = document.getElementById('edit-anime-episodes').value;
-  if (episodesVal) updated.episodes = parseInt(episodesVal, 10);
+  updated.episodes = episodesVal === '' ? null : parseInt(episodesVal, 10);
   const ratingVal = document.getElementById('edit-anime-rating').value;
-  if (ratingVal) updated.rating = parseFloat(ratingVal);
+  updated.rating = ratingVal === '' ? null : parseFloat(ratingVal);
   const reviewVal = document.getElementById('edit-anime-review') ? document.getElementById('edit-anime-review').value : '';
   if (reviewVal !== undefined) updated.review = reviewVal;
   const reviewPublicEl = document.getElementById('edit-anime-review-public');
@@ -2027,11 +1971,11 @@ window.saveTVEdit = async function (btn) {
     watched: document.getElementById('edit-tv-watched').checked,
   };
   const seasonsVal = document.getElementById('edit-tv-seasons').value;
-  if (seasonsVal) updated.seasons = parseInt(seasonsVal, 10);
+  updated.seasons = seasonsVal === '' ? null : parseInt(seasonsVal, 10);
   const episodesVal = document.getElementById('edit-tv-episodes').value;
-  if (episodesVal) updated.episodes = parseInt(episodesVal, 10);
+  updated.episodes = episodesVal === '' ? null : parseInt(episodesVal, 10);
   const ratingVal = document.getElementById('edit-tv-rating').value;
-  if (ratingVal) updated.rating = parseFloat(ratingVal);
+  updated.rating = ratingVal === '' ? null : parseFloat(ratingVal);
   const reviewVal = document.getElementById('edit-tv-review') ? document.getElementById('edit-tv-review').value : '';
   if (reviewVal !== undefined) updated.review = reviewVal;
   const reviewPublicEl = document.getElementById('edit-tv-review-public');

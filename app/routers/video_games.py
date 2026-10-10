@@ -5,6 +5,7 @@ from typing import List, Optional
 from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session
 
+from ..integer_bounds import PositiveDatabaseId
 from .. import crud, schemas, models
 from ..dependencies import get_db, get_current_user
 
@@ -24,7 +25,7 @@ async def list_video_games(
 
 @router.get("/{game_id}", response_model=schemas.VideoGame)
 async def get_video_game(
-    game_id: int,
+    game_id: PositiveDatabaseId,
     current_user: models.User = Depends(get_current_user),
     db: Session = Depends(get_db)
 ):
@@ -45,7 +46,7 @@ async def create_video_game(
 
 @router.put("/{game_id}", response_model=schemas.VideoGame)
 async def update_video_game(
-    game_id: int,
+    game_id: PositiveDatabaseId,
     video_game: schemas.VideoGameUpdate,
     current_user: models.User = Depends(get_current_user),
     db: Session = Depends(get_db)
@@ -58,7 +59,7 @@ async def update_video_game(
 
 @router.delete("/{game_id}", response_model=schemas.VideoGame)
 async def delete_video_game(
-    game_id: int,
+    game_id: PositiveDatabaseId,
     current_user: models.User = Depends(get_current_user),
     db: Session = Depends(get_db)
 ):

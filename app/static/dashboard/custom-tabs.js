@@ -309,7 +309,7 @@ async function fetchMetadataForCustomTab(tab, title, fieldValues, posterUrl, pos
         if (response.ok) {
           const data = await response.json();
           if (data.Response === 'True' && data.Poster && data.Poster !== 'N/A') {
-            posterUrl = data.Poster;
+            posterUrl = posterUrl || data.Poster;
             if (data.Title) fieldValues.title = data.Title;
             if (data.Year) fieldValues.year = parseInt(data.Year);
             if (data.Director && data.Director !== 'N/A') fieldValues.director = data.Director;
@@ -335,7 +335,7 @@ async function fetchMetadataForCustomTab(tab, title, fieldValues, posterUrl, pos
             const anime = data.data[0];
             const posterUrlFromApi = anime.images?.jpg?.large_image_url || anime.images?.jpg?.image_url;
             if (posterUrlFromApi) {
-              posterUrl = posterUrlFromApi;
+              posterUrl = posterUrl || posterUrlFromApi;
               if (anime.title) fieldValues.title = anime.title;
               if (anime.year) fieldValues.year = anime.year;
               if (anime.seasons) fieldValues.seasons = anime.seasons;
@@ -362,7 +362,7 @@ async function fetchMetadataForCustomTab(tab, title, fieldValues, posterUrl, pos
           if (data.results && data.results.length > 0) {
             const game = data.results[0];
             if (game.background_image) {
-              posterUrl = game.background_image;
+              posterUrl = posterUrl || game.background_image;
               if (game.name) fieldValues.title = game.name;
               if (game.released) fieldValues.release_date = game.released;
               if (game.genres && game.genres.length > 0) {
@@ -450,29 +450,26 @@ async function createCustomTabItemAfterMetadata(tab, title, fieldValues, posterU
 }
 
 async function uploadCustomTabPoster(tabId, itemId, file) {
+  if (!hasStoredAuth()) return false;
+  if (file.size > 5 * 1024 * 1024) {
+    alert('The poster must be 5 MB or smaller. Choose a smaller image and try again.');
+    return false;
+  }
   try {
-    if (!hasStoredAuth()) return;
-    
-    if (file.size > 5 * 1024 * 1024) {
-      console.error('File size exceeds 5MB limit');
-      return;
-    }
-    
-    const formData = new FormData();
-    formData.append('file', file);
-    
+    const body = new FormData(); body.append('file', file);
     const response = await fetch(`${API_BASE}/custom-tabs/${tabId}/items/${itemId}/poster`, {
-      method: 'POST',
-      ...authFetchOptions(),
-      body: formData
+      method: 'POST', ...authFetchOptions(), body,
     });
-    
     if (!response.ok) {
-      const errorData = await response.json().catch(() => ({ detail: 'Failed to upload poster' }));
-      console.error('Failed to upload poster:', errorData.detail);
+      const error = await response.json().catch(() => ({}));
+      alert(typeof error.detail === 'string' ? error.detail : 'The item was saved, but its poster could not be uploaded. Please try again.');
+      return false;
     }
+    return true;
   } catch (error) {
     console.error('Error uploading poster:', error);
+    alert('The item was saved, but its poster could not be uploaded. Please try again.');
+    return false;
   }
 }
 
@@ -637,218 +634,118 @@ async function deleteCustomTabItem(tabId, itemId) {
   }
 }
 
+function resetCustomTabItemForm(tab) {
+  const form = document.getElementById(`addCustomTab${tab.id}Form`);
+  if (!form) return;
+  form.dataset.editRequest = String(Number(form.dataset.editRequest || 0) + 1);
+  delete form.dataset.editingItemId;
+  const title = document.getElementById(`customTab${tab.id}Title`);
+  if (title) title.value = '';
+  tab.fields.forEach(field => {
+    const input = document.getElementById(`customTab${tab.id}Field${field.key}`);
+    if (!input) return;
+    if (input.type === 'checkbox') input.checked = false;
+    else input.value = '';
+  });
+  for (const suffix of ['PosterUrl', 'PosterFile']) {
+    const input = document.getElementById(`customTab${tab.id}${suffix}`);
+    if (input) input.value = '';
+  }
+  const submit = form.querySelector('button[type="submit"]');
+  if (submit) { submit.textContent = `Add ${tab.name}`; submit.onclick = null; }
+  form.querySelector('[data-custom-tab-cancel]')?.remove();
+}
+
 async function editCustomTabItem(tabId, itemId) {
+  const tab = customTabs.find(t => t.id === tabId);
+  const form = document.getElementById(`addCustomTab${tabId}Form`);
+  if (!hasStoredAuth() || !tab || !form || form.dataset.savingItem) return;
+  const request = String(Number(form.dataset.editRequest || 0) + 1);
+  form.dataset.editRequest = request;
+  const current = () => form.dataset.editRequest === request && !form.dataset.savingItem && hasStoredAuth();
   try {
-    if (!hasStoredAuth()) {
-      alert('You must be logged in to edit items');
-      return;
-    }
-    
-    const tab = customTabs.find(t => t.id === tabId);
-    if (!tab) {
-      alert('Tab not found');
-      return;
-    }
-    
     const response = await fetch(`${API_BASE}/custom-tabs/${tabId}/items/${itemId}`, authFetchOptions());
-    
-    if (!response.ok) {
-      alert('Failed to load item for editing');
-      return;
-    }
-    
+    if (!current()) return;
+    if (!response.ok) { alert('Failed to load item for editing'); return; }
     const item = await response.json();
-    
+    if (!current()) return;
+    // Every field belongs to this item, including its absent optional values.
+    resetCustomTabItemForm(tab);
     const titleInput = document.getElementById(`customTab${tabId}Title`);
-    if (titleInput) {
-      titleInput.value = item.title;
-      titleInput.scrollIntoView({ behavior: 'smooth', block: 'center' });
-      
-      const formContent = document.getElementById(`customTab${tabId}FormContent`);
-      if (formContent && !isElementShown(formContent)) {
-        toggleCollapsible(`customTab${tabId}Form`);
-      }
-      
-      tab.fields.forEach(field => {
-        const input = document.getElementById(`customTab${tabId}Field${field.key}`);
-        if (input && item.field_values && item.field_values[field.key] !== undefined) {
-          const value = item.field_values[field.key];
-          if (input.type === 'checkbox') {
-            input.checked = Boolean(value);
-          } else {
-            input.value = value;
-          }
-        }
-      });
-      
-      if (tab.allow_uploads && item.poster_url) {
-        const posterUrlInput = document.getElementById(`customTab${tabId}PosterUrl`);
-        if (posterUrlInput) {
-          posterUrlInput.value = item.poster_url;
-        }
-      }
-      
-      const form = document.getElementById(`addCustomTab${tabId}Form`);
-      if (form) {
-        form.dataset.editingItemId = itemId;
-        const submitBtn = form.querySelector('button[type="submit"]');
-        if (submitBtn) {
-          const originalText = submitBtn.textContent;
-          submitBtn.textContent = `Update ${tab.name}`;
-          submitBtn.onclick = async (e) => {
-            e.preventDefault();
-            await handleUpdateCustomTabItem(tab, itemId);
-          };
-          
-          const cancelBtn = document.createElement('button');
-          cancelBtn.type = 'button';
-          cancelBtn.className = 'action-btn';
-          cancelBtn.style.marginLeft = '10px';
-          cancelBtn.style.backgroundColor = '#666';
-          cancelBtn.textContent = 'Cancel';
-          cancelBtn.onclick = () => {
-            form.dataset.editingItemId = '';
-            titleInput.value = '';
-            tab.fields.forEach(field => {
-              const input = document.getElementById(`customTab${tabId}Field${field.key}`);
-              if (input) {
-                if (input.type === 'checkbox') {
-                  input.checked = false;
-                } else {
-                  input.value = '';
-                }
-              }
-            });
-            if (tab.allow_uploads) {
-              const posterUrlInput = document.getElementById(`customTab${tabId}PosterUrl`);
-              const posterFileInput = document.getElementById(`customTab${tabId}PosterFile`);
-              if (posterUrlInput) posterUrlInput.value = '';
-              if (posterFileInput) posterFileInput.value = '';
-            }
-            submitBtn.textContent = originalText;
-            submitBtn.onclick = null;
-            cancelBtn.remove();
-          };
-          submitBtn.parentElement.appendChild(cancelBtn);
-        }
-      }
+    if (!titleInput) return;
+    titleInput.value = item.title;
+    const content = document.getElementById(`customTab${tabId}FormContent`);
+    if (content && !isElementShown(content)) toggleCollapsible(`customTab${tabId}Form`);
+    tab.fields.forEach(field => {
+      const input = document.getElementById(`customTab${tabId}Field${field.key}`);
+      const value = item.field_values?.[field.key];
+      if (!input) return;
+      if (input.type === 'checkbox') input.checked = value === true;
+      else input.value = value ?? '';
+    });
+    const posterUrl = document.getElementById(`customTab${tabId}PosterUrl`);
+    if (posterUrl) posterUrl.value = item.poster_url || '';
+    form.dataset.editingItemId = String(itemId);
+    const submit = form.querySelector('button[type="submit"]');
+    if (submit) {
+      submit.textContent = `Update ${tab.name}`;
+      // The form's submit listener preserves native required/number validation.
+      const cancel = document.createElement('button');
+      cancel.type = 'button'; cancel.className = 'action-btn';
+      cancel.dataset.customTabCancel = 'true'; cancel.textContent = 'Cancel';
+      cancel.onclick = () => { if (!form.dataset.savingItem) resetCustomTabItemForm(tab); };
+      submit.parentElement.appendChild(cancel);
     }
+    titleInput.scrollIntoView({ behavior: 'smooth', block: 'center' });
   } catch (error) {
+    if (!current()) return;
     console.error('Error loading item for editing:', error);
     alert('Failed to load item for editing');
   }
 }
 
 async function handleUpdateCustomTabItem(tab, itemId) {
+  const form = document.getElementById(`addCustomTab${tab.id}Form`);
+  if (!hasStoredAuth() || !form || form.dataset.savingItem
+      || Number(form.dataset.editingItemId) !== itemId || form.reportValidity?.() === false) return;
+  const titleInput = document.getElementById(`customTab${tab.id}Title`);
+  const title = titleInput.value.trim();
+  if (!title || title.length > 500) { alert('Enter a title of 1 to 500 characters.'); return; }
+  const submit = form.querySelector('button[type="submit"]');
+  const fields = {};
+  tab.fields.forEach(field => {
+    const input = document.getElementById(`customTab${tab.id}Field${field.key}`);
+    if (!input) return;
+    if (field.field_type === 'boolean' || field.field_type === 'status') fields[field.key] = input.checked;
+    else if (input.value.trim()) fields[field.key] = ['number', 'rating'].includes(field.field_type)
+      ? Number(input.value) : input.value.trim();
+  });
+  const posterFile = tab.allow_uploads ? document.getElementById(`customTab${tab.id}PosterFile`)?.files?.[0] : null;
+  const posterUrl = tab.allow_uploads ? document.getElementById(`customTab${tab.id}PosterUrl`)?.value.trim() || null : null;
+  form.dataset.savingItem = String(itemId);
+  if (submit) { submit.disabled = true; submit.textContent = 'Updating...'; }
   try {
-    if (!hasStoredAuth()) return;
-    
-    const titleInput = document.getElementById(`customTab${tab.id}Title`);
-    const submitBtn = titleInput?.closest('form')?.querySelector('button[type="submit"]');
-    const originalBtnText = submitBtn?.textContent;
-    
-    if (submitBtn) {
-      submitBtn.disabled = true;
-      submitBtn.textContent = 'Updating...';
-    }
-    
-    const title = titleInput.value.trim();
-    
-    if (!title) {
-      alert('Title is required');
-      if (submitBtn) {
-        submitBtn.disabled = false;
-        submitBtn.textContent = originalBtnText;
-      }
-      return;
-    }
-    
-    const fieldValues = {};
-    tab.fields.forEach(field => {
-      const input = document.getElementById(`customTab${tab.id}Field${field.key}`);
-      if (input) {
-        if (field.field_type === 'boolean' || field.field_type === 'status') {
-          fieldValues[field.key] = input.checked;
-        } else {
-          const value = input.value.trim();
-          if (value) {
-            if (field.field_type === 'number' || field.field_type === 'rating') {
-              fieldValues[field.key] = parseFloat(value);
-            } else {
-              fieldValues[field.key] = value;
-            }
-          }
-        }
-      }
-    });
-    
-    let posterUrl = null;
-    if (tab.allow_uploads) {
-      const posterUrlInput = document.getElementById(`customTab${tab.id}PosterUrl`);
-      if (posterUrlInput && posterUrlInput.value.trim()) {
-        posterUrl = posterUrlInput.value.trim();
-      }
-    }
-    
     const response = await fetch(`${API_BASE}/custom-tabs/${tab.id}/items/${itemId}`, {
-      method: 'PUT',
-      ...authFetchOptions({ headers: { 'Content-Type': 'application/json' } }),
-      body: JSON.stringify({
-        title,
-        field_values: fieldValues,
-        poster_url: posterUrl
-      })
+      method: 'PUT', ...authFetchOptions({ headers: { 'Content-Type': 'application/json' } }),
+      body: JSON.stringify({ title, field_values: fields, poster_url: posterUrl }),
     });
-    
-    if (response.ok) {
-      const form = document.getElementById(`addCustomTab${tab.id}Form`);
-      if (form) {
-        delete form.dataset.editingItemId;
-        titleInput.value = '';
-        tab.fields.forEach(field => {
-          const input = document.getElementById(`customTab${tab.id}Field${field.key}`);
-          if (input) {
-            if (input.type === 'checkbox') {
-              input.checked = false;
-            } else {
-              input.value = '';
-            }
-          }
-        });
-        if (tab.allow_uploads) {
-          const posterUrlInput = document.getElementById(`customTab${tab.id}PosterUrl`);
-          const posterFileInput = document.getElementById(`customTab${tab.id}PosterFile`);
-          if (posterUrlInput) posterUrlInput.value = '';
-          if (posterFileInput) posterFileInput.value = '';
-        }
-        if (submitBtn) {
-          submitBtn.textContent = `Add ${tab.name}`;
-          submitBtn.onclick = null;
-          const cancelBtn = submitBtn.parentElement.querySelector('button[type="button"].action-btn');
-          if (cancelBtn && cancelBtn.textContent === 'Cancel') {
-            cancelBtn.remove();
-          }
-        }
-      }
-      loadCustomTabItems(tab);
-    } else {
-      const errorData = await response.json().catch(() => ({ detail: 'Failed to update item' }));
-      alert(errorData.detail || 'Failed to update item');
-    }
-  } catch (error) {
-    if (error.message === 'Validation failed') {
+    if (!response.ok) {
+      const error = await response.json().catch(() => ({}));
+      alert(typeof error.detail === 'string' ? error.detail : 'Failed to update item');
       return;
     }
+    // Keep the draft and file available if the artwork could not be uploaded.
+    if (posterFile && !await uploadCustomTabPoster(tab.id, itemId, posterFile)) return;
+    resetCustomTabItemForm(tab);
+    await loadCustomTabItems(tab);
+  } catch (error) {
     console.error('Error updating custom tab item:', error);
-    alert('Failed to update item. Please try again.');
+    alert('Failed to update item. Your form has not been cleared. Please try again.');
   } finally {
-    const titleInput = document.getElementById(`customTab${tab.id}Title`);
-    const submitBtn = titleInput?.closest('form')?.querySelector('button[type="submit"]');
-    if (submitBtn) {
-      submitBtn.disabled = false;
-      if (!submitBtn.onclick) {
-        submitBtn.textContent = `Add ${tab.name}`;
-      }
+    delete form.dataset.savingItem;
+    if (submit) {
+      submit.disabled = false;
+      submit.textContent = form.dataset.editingItemId ? `Update ${tab.name}` : `Add ${tab.name}`;
     }
   }
 }
@@ -998,7 +895,7 @@ function setupCustomTabSwitching() {
           document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
           const tabButton = getTabButton(`custom-${tabId}`);
           if (tabButton) tabButton.classList.add('active');
-          
+
           document.querySelectorAll('.tab-content').forEach(c => c.classList.remove('active'));
           const content = document.getElementById(`custom-${tabId}-tab`);
           if (content) {

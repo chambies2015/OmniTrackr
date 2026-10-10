@@ -112,7 +112,7 @@ def test_successful_signup_and_verification_are_counted(client, db_session, reco
     assert register(client).status_code == 201
     assert counted(recorder, "signup_created") == 1
     user = db_session.query(models.User).filter_by(username="newfan").one()
-    token = email_utils.generate_verification_token(user.email)
+    token = user.verification_token
     assert client.get(f"/auth/verify-email?token={token}").status_code == 200
     assert counted(recorder, "email_verified") == 1
     login = client.post("/auth/login", data={"username": "newfan", "password": "tea on the porch"})
@@ -191,7 +191,7 @@ def test_verification_links_last_48_hours(client, db_session, monkeypatch):
         return real(token, max_age=max_age)
 
     monkeypatch.setattr(email_utils, "verify_token", spy)
-    token = email_utils.generate_verification_token("newfan@example.com")
+    token = db_session.query(models.User).filter_by(username="newfan").one().verification_token
     client.get(f"/auth/verify-email?token={token}")
     assert seen["max_age"] == 48 * 3600
 

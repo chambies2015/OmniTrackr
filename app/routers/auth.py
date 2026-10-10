@@ -254,6 +254,9 @@ async def verify_email(token: str, request: Request = None, db: Session = Depend
         if user.is_verified:
             return {"message": "Email already verified"}
         
+        if not user.verification_token or not secrets.compare_digest(user.verification_token, token):
+            raise HTTPException(status_code=400, detail="This verification link was replaced. Request a new verification email.")
+
         # Mark user as verified
         funnel.record("email_verified")
         user.is_verified = True
@@ -434,14 +437,14 @@ async def reset_password(payload: schemas.PasswordReset, db: Session = Depends(g
     if not user.reset_token:
         raise HTTPException(status_code=400, detail="Invalid reset token")
     
-    if user.reset_token.startswith("$2"):
+    if user.reset_token.startswith(("$2", "sha256$")):
         if not auth.verify_token_hash(token, user.reset_token):
             raise HTTPException(status_code=400, detail="Invalid reset token")
     else:
         if not secrets.compare_digest(user.reset_token, token):
             raise HTTPException(status_code=400, detail="Invalid reset token")
     
-    is_valid, error_msg = auth.validate_password_strength(new_password)
+    is_valid, error_msg = auth.validate_password_strength(new_password, user.username, user.email)
     if not is_valid:
         raise HTTPException(status_code=400, detail=error_msg)
     
