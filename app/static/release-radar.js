@@ -88,8 +88,8 @@
       owned.add(card.dataset.key);
       markSaved(link);
       live.textContent = result.state === 'created'
-        ? `${result.title} added to your library and your Release Radar collection.`
-        : `${result.title} was already in your library; it is now in your Release Radar collection too.`;
+        ? `${result.title} added to your library and your Release Radar collection. We'll let you know the day it comes out.`
+        : `${result.title} was already in your library; it is now in your Release Radar collection too. We'll let you know the day it comes out.`;
     } catch (_) {
       live.textContent = 'Could not save that title. Please try again.';
       link.classList.add('radar-add--error');

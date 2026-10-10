@@ -269,7 +269,7 @@
     }
     const summary = $('comingUpSummary');
     if (matches.length) {
-      summary.textContent = `${matches.length} new release${matches.length === 1 ? '' : 's'} connected to titles you track.`;
+      summary.textContent = `${matches.length} new release${matches.length === 1 ? '' : 's'} connected to titles you track. We'll send you a notification on the day each one comes out.`;
     } else {
       summary.textContent = "Nothing from your library is on the schedule right now. Here's what's popular instead.";
     }
