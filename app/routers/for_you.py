@@ -68,6 +68,12 @@ async def get_coming_up(request: Request, response: Response, user=Depends(get_c
     return report
 
 
+@router.get("/api/for-you/first-week")
+def get_first_week(response: Response, user=Depends(get_current_user), db: Session = Depends(get_db)):
+    _private(response)
+    return for_you.first_week(db, user)
+
+
 def _email_state(db: Session, user_id: int) -> dict:
     subscription = digest.subscription_for(db, user_id)
     return {

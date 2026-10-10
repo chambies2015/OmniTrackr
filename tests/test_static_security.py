@@ -244,7 +244,7 @@ def test_library_launchpad_is_client_side_and_uses_existing_insights():
     assert 'data-action="launchpad-open-insights"' in template
     assert 'data-action="launchpad-dismiss"' in template
     assert "const LAUNCHPAD_DISMISS_KEY" in source
-    assert "function renderLibraryLaunchpad(insights)" in source
+    assert "function renderLibraryLaunchpad(insights, firstWeek = null)" in source
     assert "function openLaunchpadAddItem(category = 'movies')" in source
     assert "'launchpad-choose-category': () => openLaunchpadQuickCapture(target.dataset.launchpadCategory)" in source
     assert "button.dataset.launchpadCategory = category" in source

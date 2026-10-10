@@ -275,3 +275,52 @@ def coming_up(db: Session, user_id: int, today: Optional[date] = None, client=No
         "matches": matches[:12],
         "popular": popular,
     }
+
+
+# ---------------------------------------------------------------- first weeks
+
+NEW_MEMBER_DAYS = 30
+
+
+def _review_target(db: Session, user_id: int) -> Optional[dict]:
+    """A title from the member's library that has a public title page to review on, finished ones first."""
+    from . import title_pages
+    candidates = []
+    for kind, (model, *_rest) in title_pages.KINDS.items():
+        finished = getattr(model, title_pages.COMPLETE_FIELD[kind])
+        rows = (db.query(model).filter(model.user_id == user_id, model.title.isnot(None))
+                .order_by(finished.desc(), model.id.desc()).limit(3).all())
+        candidates += [(bool(getattr(row, title_pages.COMPLETE_FIELD[kind])), row.id, kind, row) for row in rows]
+    candidates.sort(key=lambda c: (not c[0], -c[1]))
+    for _, _, kind, item in candidates[:8]:
+        if not (item.title or "").strip():
+            continue
+        path = title_pages.path_for_item(kind, item)
+        if title_pages.find(db, kind, path.rsplit("/", 1)[1]) is not None:
+            return {"title": item.title.strip(), "path": path}
+    return None
+
+
+def first_week(db: Session, user, now: Optional[datetime] = None) -> dict:
+    """The social steps of the library launchpad, for members who joined in the last NEW_MEMBER_DAYS days."""
+    from . import digest
+    now = now or datetime.utcnow()
+    if not user.created_at or user.created_at < now - timedelta(days=NEW_MEMBER_DAYS):
+        return {"show": False}
+    friend = (db.query(models.Friendship.id).filter((models.Friendship.user1_id == user.id)
+                                                     | (models.Friendship.user2_id == user.id)).first() is not None
+              or db.query(models.FriendRequest.id).filter(models.FriendRequest.sender_id == user.id,
+                                                          models.FriendRequest.status == "pending").first() is not None)
+    public_review = any(
+        db.query(model.id).filter(model.user_id == user.id, model.review_public.is_(True),
+                                  func.length(func.trim(model.review)) > 0).first() is not None
+        for model, _ in LIBRARY.values())
+    return {
+        "show": True,
+        "friend": friend,
+        "public_review": public_review,
+        "review_target": None if public_review else _review_target(db, user.id),
+        "weekly_email": digest.subscription_for(db, user.id) is not None,
+        "email_available": digest.mail_configured(),
+        "verified": bool(user.is_verified),
+    }
