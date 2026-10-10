@@ -36,3 +36,12 @@
   .recap-months { gap: 3px; height: 140px; }
   .recap-months small { font-size: .6rem; }
 }
+
+/* Yearly goals */
+.recap-goals { display: grid; gap: 10px; grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); list-style: none; margin: 0; padding: 0; }
+.recap-goal { background: var(--site-surface); border: 1px solid var(--site-border); border-radius: 16px; display: grid; gap: 8px; padding: 14px 16px; }
+.recap-goal strong { font: 700 1.05rem/1.25 var(--site-display); }
+.recap-goal small { color: var(--site-muted); }
+.recap-goal--done small { color: var(--site-teal-soft); font-weight: 600; }
+.recap-goal__track { background: var(--site-surface-2); border-radius: 999px; display: block; height: 8px; overflow: hidden; }
+.recap-goal__fill { background: linear-gradient(90deg, var(--site-violet), rgba(45, 212, 191, .85)); border-radius: 999px; display: block; height: 100%; }

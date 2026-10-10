@@ -59,25 +59,26 @@ def _title_key(category: str, item_id, title: str) -> tuple:
     return (category, item_id) if item_id is not None else (category, " ".join((title or "").lower().split()))
 
 
-def build(db: Session, user: models.User, year: int, *, public: bool = False) -> dict:
-    """The recap for one calendar year (UTC). ``public`` drops categories the member keeps private."""
-    start, end = datetime(year, 1, 1), datetime(year + 1, 1, 1)
-    visible = _visible(user, public)
+def _year_bounds(year: int) -> tuple[datetime, datetime]:
+    return datetime(year, 1, 1), datetime(year + 1, 1, 1)
 
+
+def _finishes(db: Session, user_id: int, year: int, visible: list[str]) -> tuple[list, dict[tuple, dict]]:
+    """(journal entries, finished titles) for the year; each title counts once, however many times it was logged."""
+    start, end = _year_bounds(year)
     entries = db.query(models.ActivityEntry).filter(
-        models.ActivityEntry.user_id == user.id,
+        models.ActivityEntry.user_id == user_id,
         models.ActivityEntry.occurred_at >= start,
         models.ActivityEntry.occurred_at < end,
         models.ActivityEntry.category.in_(visible),
     ).order_by(models.ActivityEntry.occurred_at.asc(), models.ActivityEntry.id.asc()).all()
     moments = db.query(models.CompletionMoment).filter(
-        models.CompletionMoment.user_id == user.id,
+        models.CompletionMoment.user_id == user_id,
         models.CompletionMoment.completed_at >= start,
         models.CompletionMoment.completed_at < end,
         models.CompletionMoment.category.in_(visible),
     ).order_by(models.CompletionMoment.completed_at.asc()).all()
 
-    # Finished titles: each title counts once, however many times it was logged.
     finished: dict[tuple, dict] = {}
     for entry in entries:
         if entry.action != "completed":
@@ -96,6 +97,23 @@ def build(db: Session, user: models.User, year: int, *, public: bool = False) ->
         row["favorite"] = row["favorite"] or bool(moment.favorite)
         if row["rating"] is None:
             row["rating"] = moment.rating
+    return entries, finished
+
+
+def finished_counts(db: Session, user_id: int, year: int) -> dict[str, int]:
+    """Titles finished in the year per category, counted exactly as the recap counts them."""
+    _, finished = _finishes(db, user_id, year, list(CATEGORIES))
+    counts = {key: 0 for key in CATEGORIES}
+    for row in finished.values():
+        counts[row["category"]] = counts.get(row["category"], 0) + 1
+    return counts
+
+
+def build(db: Session, user: models.User, year: int, *, public: bool = False) -> dict:
+    """The recap for one calendar year (UTC). ``public`` drops categories the member keeps private."""
+    start, end = _year_bounds(year)
+    visible = _visible(user, public)
+    entries, finished = _finishes(db, user.id, year, visible)
 
     categories = []
     for key in visible:
@@ -154,9 +172,24 @@ def build(db: Session, user: models.User, year: int, *, public: bool = False) ->
         "library_total": library_total,
         "is_empty": not (finished_total or entries or library_total),
     }
+    recap["goals"] = _goals(db, user, year, finished, public)
     if not public:
         recap["reflections_total"] = sum(1 for entry in entries if (entry.note or "").strip())
     return recap
+
+
+def _goals(db: Session, user: models.User, year: int, finished: dict, public: bool) -> list[dict]:
+    """The member's goals for the year, counted from the recap's own finishes. Optional: never breaks the recap."""
+    from . import goals
+    counts = {key: 0 for key in CATEGORIES}
+    for row in finished.values():
+        counts[row["category"]] = counts.get(row["category"], 0) + 1
+    try:
+        return goals.progress(db, user, year, counts=counts,
+                              categories=goals.public_categories(user) if public else None)
+    except Exception:
+        db.rollback()
+        return []
 
 
 # ---------------------------------------------------------------- sharing

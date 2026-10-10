@@ -22,7 +22,7 @@ from .profiles import _CardCache, _fit, _font
 
 router = APIRouter(tags=["year-in-review"])
 SITE_URL = os.getenv("SITE_URL", "https://omnitrackr.xyz").rstrip("/")
-ASSET_VERSION = "20261008-recap-1"
+ASSET_VERSION = "20261010-goals-1"
 TITLE_CSS_VERSION = "20261009-take-1"
 FIRST_TRACKED_NOTE = {
     2026: "OmniTrackr started keeping a dated journal in September 2026 and add dates in October, "
@@ -152,6 +152,22 @@ def _highlights(recap: dict) -> str:
     return f'<div class="recap-highlights">{"".join(bits)}</div>' if bits else ""
 
 
+def _goals(recap: dict) -> str:
+    rows = recap.get("goals") or []
+    if not rows:
+        return ""
+    items = ""
+    for goal in rows:
+        reached = goal["done"] >= goal["target"]
+        status = "Goal reached" if reached else f'{goal["target"] - goal["done"]} to go'
+        items += (f'<li class="recap-goal{" recap-goal--done" if reached else ""}">'
+                  f'<strong>{_e(goal["done"])} of {_e(goal["target"])} {_e(goal["noun"])}</strong>'
+                  f'<span class="recap-goal__track"><span class="recap-goal__fill" style="width: {int(goal["percent"])}%"></span></span>'
+                  f'<small>{_e(status)}</small></li>')
+    return (f'<section class="title-section" aria-labelledby="recap-goals"><h2 id="recap-goals">Goals</h2>'
+            f'<ol class="recap-goals">{items}</ol></section>')
+
+
 def _months(recap: dict) -> str:
     counts = recap.get("months") or []
     if not any(counts):
@@ -199,6 +215,7 @@ def _body(recap: dict, *, private: bool) -> str:
     parts = [
         f'<div class="recap-stats">{_stat_tiles(recap, private=private)}</div>',
         _highlights(recap),
+        _goals(recap),
         _title_list(recap.get("top_rated", []), "Highest rated finishes", "recap-top"),
         _title_list(recap.get("favorites", []), "Marked as favorites", "recap-favorites"),
         _categories(recap),
