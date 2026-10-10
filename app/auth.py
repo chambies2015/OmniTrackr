@@ -86,17 +86,22 @@ def get_password_hash(password: str) -> str:
 
 
 def hash_token(token: str) -> str:
-    """Hash a token for secure storage."""
-    salt = bcrypt.gensalt()
-    return bcrypt.hashpw(token.encode('utf-8'), salt).decode('utf-8')
+    """Bind every byte of a signed reset credential, including its signature."""
+    return "sha256$" + hashlib.sha256(token.encode("utf-8")).hexdigest()
 
 
 def verify_token_hash(token: str, hashed_token: str) -> bool:
-    """Verify a token against its hash using constant-time comparison."""
+    """Check current verifiers and unambiguous legacy bcrypt verifiers."""
     try:
-        return bcrypt.checkpw(token.encode('utf-8'), hashed_token.encode('utf-8'))
-    except Exception:
-        return False
+        if hashed_token.startswith("sha256$"):
+            return hmac.compare_digest(hash_token(token), hashed_token)
+        # bcrypt ignored the suffix of older long credentials. Those links
+        # must be reissued because the stored verifier cannot bind every byte.
+        if hashed_token.startswith(("$2a$", "$2b$", "$2y$")) and len(token.encode("utf-8")) <= 72:
+            return bcrypt.checkpw(token.encode("utf-8"), hashed_token.encode("utf-8"))
+    except (TypeError, ValueError, AttributeError):
+        pass
+    return False
 
 
 def create_access_token(data: dict, expires_delta: Optional[timedelta] = None) -> str:

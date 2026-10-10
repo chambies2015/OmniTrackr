@@ -3,8 +3,8 @@ Email utilities for OmniTrackr.
 Handles sending verification and password reset emails.
 """
 import os
-from html import escape as _escape_html
-from html.parser import HTMLParser
+import secrets
+from html import escape as _escape_html, unescape as _unescape_html
 from typing import List
 from fastapi_mail import FastMail, MessageSchema, ConnectionConfig, MessageType
 from fastapi_mail.schemas import MultipartSubtypeEnum
@@ -44,42 +44,162 @@ APP_URL = os.getenv("APP_URL", "http://localhost:8000")
 VERIFICATION_MAX_AGE = 48 * 3600
 
 
-class _TextExtractor(HTMLParser):
-    """Collects readable text from one of our HTML emails in a single pass (no regexes)."""
+class _TextExtractor:
+    """A monotonic HTML lexer for our mail's readable text alternative.
+
+    HTMLParser repeatedly searches the remaining input for an unfinished tag,
+    making malformed tag sequences quadratic. Here every scan advances its
+    cursor, and incomplete tags are emitted as text without buffering/retrying.
+    """
 
     BLOCK_TAGS = {"p", "div", "h1", "h2", "h3", "h4", "h5", "h6", "tr", "li", "table"}
-    SKIP_TAGS = {"script", "style", "head"}
+    RAW_TAGS = {"script", "style"}
+    SPACE = " \t\n\r\f"
 
     def __init__(self):
-        super().__init__(convert_charrefs=True)
         self.parts: list[str] = []
-        self.skip_depth = 0
+        self.head_depth = 0
+        self.raw_tag: str | None = None
         self.link_href: str | None = None
         self.link_text: list[str] = []
 
-    def handle_starttag(self, tag, attrs):
-        if tag in self.SKIP_TAGS:
-            self.skip_depth += 1
-        elif tag == "br":
-            self.parts.append("\n")
-        elif tag == "a" and not self.skip_depth:
-            self.link_href = dict(attrs).get("href")
-            self.link_text = []
+    @staticmethod
+    def _tag_end(html: str, cursor: int) -> tuple[int, bool]:
+        """Stop at a terminator or a fresh unquoted '<'; never rescan a prefix."""
+        quote = None
+        while cursor < len(html):
+            char = html[cursor]
+            if quote is not None:
+                if char == quote:
+                    quote = None
+            elif char in "\"'":
+                quote = char
+            elif char == ">":
+                return cursor + 1, True
+            elif char == "<":
+                return cursor, False
+            cursor += 1
+        return cursor, False
 
-    def handle_endtag(self, tag):
-        if tag in self.SKIP_TAGS:
-            self.skip_depth = max(0, self.skip_depth - 1)
-        elif tag == "a" and self.link_href is not None:
+    def _href(self, html: str, cursor: int, end: int) -> str | None:
+        """Read only href; discarded attributes need no allocation or decoding."""
+        href = None
+        while cursor < end:
+            while cursor < end and html[cursor] in self.SPACE + "/":
+                cursor += 1
+            name_start = cursor
+            while cursor < end and html[cursor] not in self.SPACE + "=/":
+                cursor += 1
+            is_href = cursor - name_start == 4 and html[name_start:cursor].lower() == "href"
+            while cursor < end and html[cursor] in self.SPACE:
+                cursor += 1
+            if cursor >= end or html[cursor] != "=":
+                if is_href:
+                    href = None
+                continue
+            cursor += 1
+            while cursor < end and html[cursor] in self.SPACE:
+                cursor += 1
+            quote = html[cursor] if cursor < end and html[cursor] in "\"'" else None
+            if quote:
+                cursor += 1
+            value_start = cursor
+            if quote:
+                while cursor < end and html[cursor] != quote:
+                    cursor += 1
+            else:
+                while cursor < end and html[cursor] not in self.SPACE:
+                    cursor += 1
+            if is_href:
+                href = _unescape_html(html[value_start:cursor])
+            if quote and cursor < end:
+                cursor += 1
+        return href
+
+    def _append(self, text: str):
+        if not self.head_depth and not self.raw_tag:
+            (self.link_text if self.link_href is not None else self.parts).append(text)
+
+    def _flush_link(self):
+        if self.link_href is not None:
             label = " ".join("".join(self.link_text).split())
-            self.parts.append(f"{label} ({self.link_href})" if label else self.link_href)
+            self.parts.append(f"{label} ({self.link_href})" if label and self.link_href else label or self.link_href)
             self.link_href, self.link_text = None, []
-        elif tag in self.BLOCK_TAGS:
-            self.parts.append("\n")
 
-    def handle_data(self, data):
-        if self.skip_depth:
+    def feed(self, html: str):
+        cursor = 0
+        size = len(html)
+        while cursor < size:
+            opening = html.find("<", cursor)
+            if opening == -1:
+                self._append(_unescape_html(html[cursor:]))
+                break
+            self._append(_unescape_html(html[cursor:opening]))
+            if self.raw_tag:
+                name_end = opening + 2 + len(self.raw_tag)
+                if (html[opening:opening + 2] != "</"
+                        or html[opening + 2:name_end].lower() != self.raw_tag
+                        or (name_end < size and html[name_end] not in self.SPACE + "/>")):
+                    cursor = opening + 1
+                    continue
+            if html.startswith("<!--", opening):
+                comment_end = html.find("-->", opening + 4)
+                cursor = size if comment_end == -1 else comment_end + 3
+                continue
+            if html.startswith(("<!", "<?"), opening):
+                cursor, _ = self._tag_end(html, opening + 2)
+                continue
+            closing = html.startswith("</", opening)
+            name_start = opening + (2 if closing else 1)
+            if name_start >= size or not ("a" <= html[name_start].lower() <= "z"):
+                self._append("<")
+                cursor = opening + 1
+                continue
+            name_end = name_start
+            while name_end < size and html[name_end] not in self.SPACE + "/><":
+                name_end += 1
+            end, complete = self._tag_end(html, name_end)
+            if not complete:
+                self._append(_unescape_html(html[opening:end]))
+                cursor = end
+                continue
+            # Only our recognized tags are short, so a huge name stays unallocated.
+            tag = html[name_start:name_end].lower() if name_end - name_start <= 6 else ""
+            if closing:
+                self._end_tag(tag)
+            else:
+                self._start_tag(tag, html, name_end, end - 1)
+                if html[end - 2] == "/":
+                    self._end_tag(tag)
+            cursor = end
+
+    def _start_tag(self, tag: str, html: str, attrs_start: int, attrs_end: int):
+        if tag == "head":
+            self.head_depth += 1
+        elif tag in self.RAW_TAGS:
+            self.raw_tag = tag
+        elif self.head_depth:
             return
-        (self.link_text if self.link_href is not None else self.parts).append(data)
+        elif tag == "br":
+            self._append("\n")
+        elif tag == "a":
+            self._flush_link()
+            self.link_href = self._href(html, attrs_start, attrs_end)
+
+    def _end_tag(self, tag: str):
+        if tag == self.raw_tag:
+            self.raw_tag = None
+        elif tag == "head":
+            self.head_depth = max(0, self.head_depth - 1)
+        elif not self.head_depth:
+            if tag == "a":
+                self._flush_link()
+            elif tag in self.BLOCK_TAGS:
+                self._append("\n")
+
+    def close(self):
+        # A malformed or unclosed link must not silently discard readable text.
+        self._flush_link()
 
 
 def html_to_text(html: str) -> str:
@@ -114,7 +234,7 @@ def html_message(subject: str, recipients: list, html: str, headers: dict | None
 
 def generate_verification_token(email: str) -> str:
     """Generate a secure verification token for email verification."""
-    return serializer.dumps(email, salt="email-verification")
+    return serializer.dumps({"email": email, "nonce": secrets.token_urlsafe(24)}, salt="email-verification")
 
 
 def verify_token(token: str, max_age: int = 3600) -> str:
@@ -133,6 +253,10 @@ def verify_token(token: str, max_age: int = 3600) -> str:
     """
     try:
         email = serializer.loads(token, salt="email-verification", max_age=max_age)
+        if isinstance(email, dict):
+            email = email.get("email")
+        if not isinstance(email, str) or not email:
+            raise ValueError("Invalid email token payload")
         return email
     except Exception:
         raise
@@ -140,7 +264,7 @@ def verify_token(token: str, max_age: int = 3600) -> str:
 
 def generate_reset_token(email: str) -> str:
     """Generate a secure token for password reset."""
-    return serializer.dumps(email, salt="password-reset")
+    return serializer.dumps({"email": email, "nonce": secrets.token_urlsafe(24)}, salt="password-reset")
 
 
 def verify_reset_token(token: str, max_age: int = 3600) -> str:
@@ -159,6 +283,10 @@ def verify_reset_token(token: str, max_age: int = 3600) -> str:
     """
     try:
         email = serializer.loads(token, salt="password-reset", max_age=max_age)
+        if isinstance(email, dict):
+            email = email.get("email")
+        if not isinstance(email, str) or not email:
+            raise ValueError("Invalid email token payload")
         return email
     except Exception:
         raise

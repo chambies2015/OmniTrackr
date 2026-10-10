@@ -2,6 +2,11 @@
 // ============================================================================
 
 let currentFriendId = null;
+let friendProfileGeneration = 0;
+function currentFriendRequest(friendId) {
+  const generation = friendProfileGeneration;
+  return () => currentFriendId === friendId && generation === friendProfileGeneration;
+}
 const FRIEND_PROFILE_SECTIONS = ['movies', 'tvShows', 'anime', 'videoGames', 'music', 'books', 'statistics'];
 function freshAccordionStates() {
   return Object.fromEntries(FRIEND_PROFILE_SECTIONS.map(section => [section, false]));
@@ -21,12 +26,21 @@ function showFriendListError(containerId, detail, fallback) {
 }
 
 window.openFriendProfile = async function (friendId) {
+  closeFriendProfile();
   currentFriendId = friendId;
+  document.getElementById('friendProfileUsername').textContent = 'Loading profile…';
+  const picture = document.getElementById('friendProfilePicture');
+  if (picture) picture.src = '/static/default-avatar.svg';
+  FRIEND_PROFILE_SECTIONS.forEach(section => {
+    const summary = document.getElementById(`${section}Summary`);
+    if (summary) summary.textContent = 'Loading…';
+  });
   document.getElementById('friendProfileModal').style.display = 'flex';
   await loadFriendProfile(friendId);
 }
 
 window.closeFriendProfile = function () {
+  friendProfileGeneration++;
   document.getElementById('friendProfileModal').style.display = 'none';
   currentFriendId = null;
   currentFriendMovies = [];
@@ -45,6 +59,9 @@ window.closeFriendProfile = function () {
       icon.textContent = '▼';
     }
   });
+  ['friendMoviesListContainer', 'friendTVShowsListContainer', 'friendAnimeListContainer',
+    'friendVideoGamesListContainer', 'friendMusicListContainer', 'friendBooksListContainer', 'statisticsData']
+    .forEach(id => { const node = document.getElementById(id); if (node) node.innerHTML = ''; });
   // Clear search inputs
   const moviesSearch = document.getElementById('friendMoviesSearch');
   const tvShowsSearch = document.getElementById('friendTVShowsSearch');
@@ -61,13 +78,16 @@ window.closeFriendProfile = function () {
 }
 
 window.loadFriendProfile = async function (friendId) {
+  const current = currentFriendRequest(friendId);
   try {
     // Get friend data from friends list to access profile picture
     const friendsResponse = await authenticatedFetch(`${API_BASE}/friends`);
+    if (!current()) return;
     let friendProfilePictureUrl = '/static/default-avatar.svg';
 
     if (friendsResponse.ok) {
       const friends = await friendsResponse.json();
+      if (!current()) return;
       const friend = friends.find(f => f.friend.id === friendId);
       if (friend && friend.friend.profile_picture_url) {
         friendProfilePictureUrl = friend.friend.profile_picture_url;
@@ -82,8 +102,10 @@ window.loadFriendProfile = async function (friendId) {
 
     // Get profile summary
     const response = await authenticatedFetch(`${API_BASE}/friends/${friendId}/profile`);
+    if (!current()) return;
     if (response.ok) {
       const profile = await response.json();
+      if (!current()) return;
       document.getElementById('friendProfileUsername').textContent = profile.username;
 
       // Update summaries
@@ -96,10 +118,12 @@ window.loadFriendProfile = async function (friendId) {
       updateStatisticsSummary(profile);
     } else {
       const error = await response.json();
+      if (!current()) return;
       alert(error.detail || 'Failed to load friend profile');
       closeFriendProfile();
     }
   } catch (error) {
+    if (!current()) return;
     console.error('Failed to load friend profile:', error);
     alert('Failed to load friend profile');
     closeFriendProfile();
@@ -238,10 +262,13 @@ function renderFriendMovies(movies) {
 }
 
 window.loadFriendMovies = async function (friendId) {
+  const current = currentFriendRequest(friendId);
   try {
     const response = await authenticatedFetch(`${API_BASE}/friends/${friendId}/movies`);
+    if (!current()) return;
     if (response.ok) {
       const data = await response.json();
+      if (!current()) return;
       const listDiv = document.getElementById('moviesList');
 
       // Store full data for filtering
@@ -254,9 +281,11 @@ window.loadFriendMovies = async function (friendId) {
       }
     } else {
       const error = await response.json();
+      if (!current()) return;
       showFriendListError('friendMoviesListContainer', error.detail, 'Failed to load movies');
     }
   } catch (error) {
+    if (!current()) return;
     console.error('Failed to load friend movies:', error);
     showFriendListError('friendMoviesListContainer', '', 'Failed to load movies');
   }
@@ -312,10 +341,13 @@ function renderFriendTVShows(tvShows) {
 }
 
 window.loadFriendTVShows = async function (friendId) {
+  const current = currentFriendRequest(friendId);
   try {
     const response = await authenticatedFetch(`${API_BASE}/friends/${friendId}/tv-shows`);
+    if (!current()) return;
     if (response.ok) {
       const data = await response.json();
+      if (!current()) return;
       const listDiv = document.getElementById('tvShowsList');
 
       // Store full data for filtering
@@ -328,9 +360,11 @@ window.loadFriendTVShows = async function (friendId) {
       }
     } else {
       const error = await response.json();
+      if (!current()) return;
       showFriendListError('friendTVShowsListContainer', error.detail, 'Failed to load TV shows');
     }
   } catch (error) {
+    if (!current()) return;
     console.error('Failed to load friend TV shows:', error);
     showFriendListError('friendTVShowsListContainer', '', 'Failed to load TV shows');
   }
@@ -363,10 +397,13 @@ window.filterFriendTVShows = function () {
 }
 
 window.loadFriendAnime = async function (friendId) {
+  const current = currentFriendRequest(friendId);
   try {
     const response = await authenticatedFetch(`${API_BASE}/friends/${friendId}/anime`);
+    if (!current()) return;
     if (response.ok) {
       const data = await response.json();
+      if (!current()) return;
       const listDiv = document.getElementById('animeList');
 
       // Store full data for filtering
@@ -379,9 +416,11 @@ window.loadFriendAnime = async function (friendId) {
       }
     } else {
       const error = await response.json();
+      if (!current()) return;
       showFriendListError('friendAnimeListContainer', error.detail, 'Failed to load anime');
     }
   } catch (error) {
+    if (!current()) return;
     console.error('Failed to load friend anime:', error);
     showFriendListError('friendAnimeListContainer', '', 'Failed to load anime');
   }
@@ -440,10 +479,13 @@ window.filterFriendAnime = function () {
 }
 
 window.loadFriendVideoGames = async function (friendId) {
+  const current = currentFriendRequest(friendId);
   try {
     const response = await authenticatedFetch(`${API_BASE}/friends/${friendId}/video-games`);
+    if (!current()) return;
     if (response.ok) {
       const data = await response.json();
+      if (!current()) return;
       const listDiv = document.getElementById('videoGamesList');
 
       // Store full data for filtering
@@ -456,9 +498,11 @@ window.loadFriendVideoGames = async function (friendId) {
       }
     } else {
       const error = await response.json();
+      if (!current()) return;
       showFriendListError('friendVideoGamesListContainer', error.detail, 'Failed to load video games');
     }
   } catch (error) {
+    if (!current()) return;
     console.error('Failed to load friend video games:', error);
     showFriendListError('friendVideoGamesListContainer', '', 'Failed to load video games');
   }
@@ -556,17 +600,22 @@ const describeFriendAlbum = item => ({ creatorLabel: 'Artist', creator: item.art
 const describeFriendBook = item => ({ creatorLabel: 'Author', creator: item.author, doneLabel: 'Read', done: item.read });
 
 window.loadFriendMusic = async function (friendId) {
+  const current = currentFriendRequest(friendId);
   try {
     const response = await authenticatedFetch(`${API_BASE}/friends/${friendId}/music`);
+    if (!current()) return;
     if (response.ok) {
       const data = await response.json();
+      if (!current()) return;
       currentFriendMusic = data.music || [];
       renderFriendShelf('friendMusicListContainer', currentFriendMusic, 'No music yet', describeFriendAlbum);
     } else {
       const error = await response.json().catch(() => ({}));
+      if (!current()) return;
       showFriendListError('friendMusicListContainer', error.detail, 'Failed to load music');
     }
   } catch (error) {
+    if (!current()) return;
     console.error('Failed to load friend music:', error);
     showFriendListError('friendMusicListContainer', '', 'Failed to load music');
   }
@@ -578,17 +627,22 @@ window.filterFriendMusic = function () {
 }
 
 window.loadFriendBooks = async function (friendId) {
+  const current = currentFriendRequest(friendId);
   try {
     const response = await authenticatedFetch(`${API_BASE}/friends/${friendId}/books`);
+    if (!current()) return;
     if (response.ok) {
       const data = await response.json();
+      if (!current()) return;
       currentFriendBooks = data.books || [];
       renderFriendShelf('friendBooksListContainer', currentFriendBooks, 'No books yet', describeFriendBook);
     } else {
       const error = await response.json().catch(() => ({}));
+      if (!current()) return;
       showFriendListError('friendBooksListContainer', error.detail, 'Failed to load books');
     }
   } catch (error) {
+    if (!current()) return;
     console.error('Failed to load friend books:', error);
     showFriendListError('friendBooksListContainer', '', 'Failed to load books');
   }
@@ -600,10 +654,13 @@ window.filterFriendBooks = function () {
 }
 
 window.loadFriendStatistics = async function (friendId) {
+  const current = currentFriendRequest(friendId);
   try {
     const response = await authenticatedFetch(`${API_BASE}/friends/${friendId}/statistics`);
+    if (!current()) return;
     if (response.ok) {
       const stats = await response.json();
+      if (!current()) return;
       const statsDiv = document.getElementById('statisticsData');
 
       // Compact statistics display
@@ -656,9 +713,11 @@ window.loadFriendStatistics = async function (friendId) {
       statsDiv.style.display = 'block';
     } else {
       const error = await response.json();
+      if (!current()) return;
       document.getElementById('statisticsData').innerHTML = `<p class="error-message">${escapeHtml(error.detail || 'Failed to load statistics')}</p>`;
     }
   } catch (error) {
+    if (!current()) return;
     console.error('Failed to load friend statistics:', error);
     document.getElementById('statisticsData').innerHTML = '<p class="error-message">Failed to load statistics</p>';
   }

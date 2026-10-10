@@ -5,6 +5,7 @@ from typing import List, Optional
 from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session
 
+from ..integer_bounds import PositiveDatabaseId
 from .. import crud, schemas, models
 from ..dependencies import get_db, get_current_user
 
@@ -24,7 +25,7 @@ async def list_books(
 
 @router.get("/{book_id}", response_model=schemas.Book)
 async def get_book(
-    book_id: int,
+    book_id: PositiveDatabaseId,
     current_user: models.User = Depends(get_current_user),
     db: Session = Depends(get_db)
 ):
@@ -45,7 +46,7 @@ async def create_book(
 
 @router.put("/{book_id}", response_model=schemas.Book)
 async def update_book(
-    book_id: int,
+    book_id: PositiveDatabaseId,
     book: schemas.BookUpdate,
     current_user: models.User = Depends(get_current_user),
     db: Session = Depends(get_db)
@@ -58,7 +59,7 @@ async def update_book(
 
 @router.delete("/{book_id}", response_model=schemas.Book)
 async def delete_book(
-    book_id: int,
+    book_id: PositiveDatabaseId,
     current_user: models.User = Depends(get_current_user),
     db: Session = Depends(get_db)
 ):

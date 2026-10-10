@@ -7,10 +7,11 @@ from pydantic import BaseModel, ConfigDict, Field, field_validator, model_valida
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
 
+from .integer_bounds import PositiveDatabaseId
 from . import models
 
 ProgressCategory = Literal["tv-shows", "anime", "books"]
-PositiveItemId = Annotated[int, Field(gt=0, le=2147483647)]
+PositiveItemId = PositiveDatabaseId
 CATEGORIES = {"tv-shows": models.TVShow, "anime": models.Anime, "books": models.Book}
 
 

@@ -33,7 +33,7 @@ test1234 test12345 testpass testpassword
 """.split())
 
 
-def username_problem(username: str) -> Optional[str]:
+def username_problem(username: str, *, current_privileged_username: str = "") -> Optional[str]:
     """Why a new username can't be used, or None."""
     if username != username.strip():
         return "Usernames can't start or end with a space."
@@ -41,6 +41,12 @@ def username_problem(username: str) -> Optional[str]:
         return f"Usernames need {USERNAME_HINT}."
     if not USERNAME_RE.fullmatch(username):
         return f"Usernames can use {USERNAME_HINT.split(': ', 1)[1]}, and must start with a letter or number."
+    from .admin_access import moderator_usernames
+    if username.casefold() in {name.casefold() for name in moderator_usernames()}:
+        # Only a current privileged holder may retain a case variant of their
+        # own reserved name. An old unprivileged case collision cannot claim it.
+        if not current_privileged_username or username.casefold() != current_privileged_username.casefold():
+            return "This username is reserved. Choose a different username."
     return None
 
 

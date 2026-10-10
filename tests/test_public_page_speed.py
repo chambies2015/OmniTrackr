@@ -54,7 +54,7 @@ class TestAssets:
                 assert (STATIC / "tour" / src).exists(), src
 
     def test_versioned_auth_script_is_cached_for_a_year(self, client):
-        assert client.get("/auth.js?v=20261010-goals-1").headers["cache-control"] == "public, max-age=31536000, immutable"
+        assert client.get("/auth.js?v=20261010-audit-goals-1").headers["cache-control"] == "public, max-age=31536000, immutable"
         assert client.get("/auth.js").headers["cache-control"] == "public, max-age=86400"
 
     def test_narrow_screens_keep_the_header_on_one_row(self):

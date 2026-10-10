@@ -14,6 +14,7 @@ try:
 except ImportError:
     PIL_AVAILABLE = False
 
+from ..integer_bounds import PositiveDatabaseId
 from .. import crud, schemas, models
 from ..dependencies import get_db, get_current_user
 
@@ -55,7 +56,7 @@ async def list_custom_tabs(
 
 @router.get("/{tab_id}", response_model=schemas.CustomTab)
 async def get_custom_tab(
-    tab_id: int,
+    tab_id: PositiveDatabaseId,
     current_user: models.User = Depends(get_current_user),
     db: Session = Depends(get_db)
 ):
@@ -81,7 +82,7 @@ async def create_custom_tab(
 
 @router.put("/{tab_id}", response_model=schemas.CustomTab)
 async def update_custom_tab(
-    tab_id: int,
+    tab_id: PositiveDatabaseId,
     tab: schemas.CustomTabUpdate,
     current_user: models.User = Depends(get_current_user),
     db: Session = Depends(get_db)
@@ -101,7 +102,7 @@ async def update_custom_tab(
 
 @router.delete("/{tab_id}", response_model=schemas.CustomTab)
 async def delete_custom_tab(
-    tab_id: int,
+    tab_id: PositiveDatabaseId,
     current_user: models.User = Depends(get_current_user),
     db: Session = Depends(get_db)
 ):
@@ -113,7 +114,7 @@ async def delete_custom_tab(
 
 @router.get("/{tab_id}/items", response_model=List[schemas.CustomTabItem])
 async def list_custom_tab_items(
-    tab_id: int,
+    tab_id: PositiveDatabaseId,
     search: Optional[str] = None,
     sort_by: Optional[str] = None,
     order: Optional[str] = None,
@@ -129,8 +130,8 @@ async def list_custom_tab_items(
 
 @router.get("/{tab_id}/items/{item_id}", response_model=schemas.CustomTabItem)
 async def get_custom_tab_item(
-    tab_id: int,
-    item_id: int,
+    tab_id: PositiveDatabaseId,
+    item_id: PositiveDatabaseId,
     current_user: models.User = Depends(get_current_user),
     db: Session = Depends(get_db)
 ):
@@ -143,7 +144,7 @@ async def get_custom_tab_item(
 
 @router.post("/{tab_id}/items", response_model=schemas.CustomTabItem, status_code=201)
 async def create_custom_tab_item(
-    tab_id: int,
+    tab_id: PositiveDatabaseId,
     item: schemas.CustomTabItemCreate,
     current_user: models.User = Depends(get_current_user),
     db: Session = Depends(get_db)
@@ -159,8 +160,8 @@ async def create_custom_tab_item(
 
 @router.put("/{tab_id}/items/{item_id}", response_model=schemas.CustomTabItem)
 async def update_custom_tab_item(
-    tab_id: int,
-    item_id: int,
+    tab_id: PositiveDatabaseId,
+    item_id: PositiveDatabaseId,
     item: schemas.CustomTabItemUpdate,
     current_user: models.User = Depends(get_current_user),
     db: Session = Depends(get_db)
@@ -176,8 +177,8 @@ async def update_custom_tab_item(
 
 @router.delete("/{tab_id}/items/{item_id}", response_model=schemas.CustomTabItem)
 async def delete_custom_tab_item(
-    tab_id: int,
-    item_id: int,
+    tab_id: PositiveDatabaseId,
+    item_id: PositiveDatabaseId,
     current_user: models.User = Depends(get_current_user),
     db: Session = Depends(get_db)
 ):
@@ -190,8 +191,8 @@ async def delete_custom_tab_item(
 
 @router.post("/{tab_id}/items/{item_id}/poster", response_model=schemas.CustomTabItem)
 async def upload_custom_tab_item_poster(
-    tab_id: int,
-    item_id: int,
+    tab_id: PositiveDatabaseId,
+    item_id: PositiveDatabaseId,
     request: Request,
     file: UploadFile = File(...),
     current_user: models.User = Depends(get_current_user),

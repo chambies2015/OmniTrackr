@@ -5,6 +5,7 @@ from typing import List
 from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session
 
+from ..integer_bounds import PositiveDatabaseId
 from .. import crud, schemas, models
 from ..dependencies import get_db, get_current_user
 
@@ -33,7 +34,7 @@ async def get_notification_count(
 
 @router.delete("/{notification_id}", response_model=dict)
 async def dismiss_notification(
-    notification_id: int,
+    notification_id: PositiveDatabaseId,
     current_user: models.User = Depends(get_current_user),
     db: Session = Depends(get_db)
 ):

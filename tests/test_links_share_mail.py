@@ -103,7 +103,8 @@ def test_sender_has_a_display_name():
     assert email_utils.conf.MAIL_FROM_NAME == "OmniTrackr"
 
 
-@pytest.mark.parametrize("attack", ["<head" * 50_000, "<a " * 50_000, '<a href="!"' * 30_000, "<" * 200_000, "a" * 200_000])
+@pytest.mark.parametrize("attack", ["<head" * 50_000, "<a " * 50_000, '<a href="!"' * 30_000, "<" * 200_000, "a" * 200_000],
+                         ids=["unfinished-head", "unfinished-link", "unfinished-href", "angle-brackets", "plain-text"])
 def test_html_to_text_stays_fast_on_hostile_input(attack):
     """CodeQL py/polynomial-redos: the converter is a single-pass parser, not backtracking regexes."""
     import time

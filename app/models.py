@@ -147,7 +147,7 @@ class VideoGame(Base):
     genres = Column(String, nullable=True)
     rating = Column(Float, nullable=True)
     played = Column(Boolean, default=False)
-    review = Column(String, nullable=True)
+    review = Column(Text, nullable=True)
     review_public = Column(Boolean, default=False, nullable=False)
     cover_art_url = Column(String, nullable=True)
     rawg_link = Column(String, nullable=True)

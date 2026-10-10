@@ -14,6 +14,7 @@ from fastapi.responses import RedirectResponse
 from pydantic import BaseModel, Field
 from sqlalchemy.orm import Session
 
+from ..integer_bounds import PositiveDatabaseId
 from .. import models, public_profiles
 from ..auth import AUTH_COOKIE_NAME
 from ..csp import strict_html_response
@@ -274,8 +275,8 @@ def _viewer_id(request: Request, db: Session) -> Optional[int]:
     return uid if isinstance(uid, int) and not isinstance(uid, bool) else None
 
 
-@router.get("/u/id/{user_id:int}", include_in_schema=False)
-def profile_by_id(user_id: int, request: Request, db: Session = Depends(get_db)):
+@router.get("/u/id/{user_id:database_id}", include_in_schema=False)
+def profile_by_id(user_id: PositiveDatabaseId, request: Request, db: Session = Depends(get_db)):
     return _profile_response(request, db, public_profiles.find_user_by_id(db, user_id), request.url.path)
 
 
@@ -419,8 +420,8 @@ def _card_response(db: Session, user: Optional[models.User]):
                              "X-Content-Type-Options": "nosniff"})
 
 
-@router.get("/u/id/{user_id:int}/card.png", include_in_schema=False)
-def profile_card_by_id(user_id: int, request: Request, db: Session = Depends(get_db)):
+@router.get("/u/id/{user_id:database_id}/card.png", include_in_schema=False)
+def profile_card_by_id(user_id: PositiveDatabaseId, request: Request, db: Session = Depends(get_db)):
     return _card_response(db, public_profiles.find_user_by_id(db, user_id))
 
 

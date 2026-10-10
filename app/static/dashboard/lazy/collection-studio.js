@@ -118,19 +118,20 @@ async function saveCollectionStudio(event) {
 
 async function openCollectionPicker(category, itemId, itemTitle) {
   if (!category || !Number.isInteger(itemId) || itemId < 1) return;
-  collectionPickerTarget = { category, itemId, itemTitle: itemTitle || 'this item' };
-  await loadCollections();
+  const target = collectionPickerTarget = { category, itemId, itemTitle: itemTitle || 'this item' };
+  const collections = await loadCollections();
+  if (collectionPickerTarget !== target || !Array.isArray(collections) || !hasStoredAuth()) return;
   const options = document.getElementById('collectionPickerOptions');
   const title = document.getElementById('collectionPickerItemTitle');
   if (!options || !title) return;
-  title.textContent = `Choose a collection for ${collectionPickerTarget.itemTitle}.`;
+  title.textContent = `Choose a collection for ${target.itemTitle}.`;
   options.replaceChildren();
-  if (!collectionsCache.length) {
+  if (!collections.length) {
     const empty = document.createElement('p');
     empty.textContent = 'Create your first collection in the Collections tab, then come back to add this item.';
     options.appendChild(empty);
   } else {
-    collectionsCache.forEach((collection) => {
+    collections.forEach((collection) => {
       const button = document.createElement('button');
       button.type = 'button';
       button.className = 'collection-picker-modal__option';

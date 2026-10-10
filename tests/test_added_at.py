@@ -2,6 +2,7 @@
 import json
 from datetime import datetime, timedelta
 
+import pytest
 from sqlalchemy import create_engine, inspect, text
 from sqlalchemy.pool import StaticPool
 
@@ -15,6 +16,58 @@ CREATE_PAYLOADS = {
     "/music/": {"title": "Blonde", "artist": "Frank Ocean", "year": 2016},
     "/books/": {"title": "Piranesi", "author": "Susanna Clarke", "year": 2020},
 }
+
+MEDIA_MODELS = {
+    "movies": models.Movie, "tv_shows": models.TVShow, "anime": models.Anime,
+    "video_games": models.VideoGame, "music": models.Music, "books": models.Book,
+}
+
+
+@pytest.mark.parametrize("file_upload", [False, True])
+def test_all_backup_categories_preserve_dates_without_rewriting_existing_rows(
+    authenticated_client, db_session, file_upload,
+):
+    dated = "2020-01-02T03:04:05+02:00"
+    payload = {}
+    for path, fields in CREATE_PAYLOADS.items():
+        category = path.strip("/").replace("-", "_")
+        payload[category] = [
+            dict(fields, title=f"{category}-dated", added_at=dated, review_public=False),
+            dict(fields, title=f"{category}-unknown", added_at=None),
+            dict(fields, title=f"{category}-missing"),
+            dict(fields, title=f"{category}-future", added_at="2999-01-01T00:00:00"),
+        ]
+
+    def restore(data):
+        if file_upload:
+            return authenticated_client.post(
+                "/import/file/", files={"file": ("backup.json", json.dumps(data), "application/json")},
+            )
+        return authenticated_client.post("/import/", json=data)
+
+    response = restore(payload)
+    assert response.status_code == 200, response.text
+    assert response.json()["errors"] == []
+    for category, model in MEDIA_MODELS.items():
+        rows = {row.title: row for row in db_session.query(model).all()}
+        assert rows[f"{category}-dated"].added_at == datetime(2020, 1, 2, 1, 4, 5)
+        assert all(rows[f"{category}-{suffix}"].added_at is None for suffix in ("unknown", "missing", "future"))
+
+    exported = authenticated_client.get("/export/").json()
+    for category in MEDIA_MODELS:
+        for row in exported[category]:
+            row["added_at"] = "2000-01-01T00:00:00"
+            row["rating"] = 8.6
+    response = restore(exported)
+    assert response.status_code == 200, response.text
+    assert response.json()["errors"] == []
+    db_session.expire_all()
+    for category, model in MEDIA_MODELS.items():
+        rows = {row.title: row for row in db_session.query(model).all()}
+        assert len(rows) == 4
+        assert rows[f"{category}-dated"].added_at == datetime(2020, 1, 2, 1, 4, 5)
+        assert all(rows[f"{category}-{suffix}"].added_at is None for suffix in ("unknown", "missing", "future"))
+        assert all(row.rating == 8.6 and row.review_public is False for row in rows.values())
 
 
 def test_new_items_record_added_at(authenticated_client):

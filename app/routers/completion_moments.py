@@ -6,8 +6,10 @@ from fastapi import APIRouter, Depends, HTTPException, Query, status
 from sqlalchemy.orm import Session
 
 from .. import models, schemas, title_pages
+from ..integer_bounds import PositiveDatabaseId
 from ..review_quality import AD_MIN_REVIEW_WORDS, evaluate_public_review
 from .reviews import PUBLIC_REVIEW_DETAIL_MIN_CHARS, PUBLIC_REVIEW_MIN_CHARS
+from ..progress import lock_progress_owner
 from ..dependencies import get_current_user, get_db
 from .activity import record_completion_activity
 
@@ -57,6 +59,7 @@ async def create_completion_moment(
     current_user: models.User = Depends(get_current_user),
     db: Session = Depends(get_db),
 ):
+    lock_progress_owner(db, current_user.id)
     model, _, done_field = CATEGORIES[payload.category]
     item = db.query(model).filter(model.id == payload.item_id, model.user_id == current_user.id).first()
     if not item:
@@ -79,9 +82,10 @@ async def create_completion_moment(
         )
         db.add(moment)
         record_completion_activity(db, current_user.id, payload.category, item)
-        db.commit()
-        db.refresh(moment)
-    return {**_serialize(moment), "has_review": bool((item.review or "").strip())}
+        db.flush()
+    result = {**_serialize(moment), "has_review": bool((item.review or "").strip())}
+    db.commit()
+    return result
 
 
 # Public review URLs use the singular API categories.
@@ -91,12 +95,13 @@ REVIEW_CATEGORY = {"movies": "movie", "tv-shows": "tv_show", "anime": "anime", "
 
 @router.post("/{moment_id}/review", response_model=dict)
 async def save_completion_review(
-    moment_id: int,
+    moment_id: PositiveDatabaseId,
     payload: schemas.CompletionReview,
     current_user: models.User = Depends(get_current_user),
     db: Session = Depends(get_db),
 ):
     """Save a review written right after finishing. Never replaces an existing review."""
+    lock_progress_owner(db, current_user.id)
     moment = db.query(models.CompletionMoment).filter(
         models.CompletionMoment.id == moment_id,
         models.CompletionMoment.user_id == current_user.id,
@@ -111,25 +116,28 @@ async def save_completion_review(
         raise HTTPException(status_code=409, detail="This title already has a review. Edit it from your library.")
     item.review = payload.review
     item.review_public = payload.public
-    db.commit()
+    item_id = item.id
+    category = moment.category
     quality = evaluate_public_review(payload.review, PUBLIC_REVIEW_MIN_CHARS, PUBLIC_REVIEW_DETAIL_MIN_CHARS)
     standalone = payload.public and quality.search_ready
-    return {
+    result = {
         "public": payload.public,
         "word_count": quality.word_count,
         "listed": payload.public and quality.community_ready,
         "standalone": standalone,
         "substantial": quality.word_count >= AD_MIN_REVIEW_WORDS,
-        "review_url": f"/reviews/{item.id}?category={REVIEW_CATEGORY[moment.category]}" if standalone else None,
+        "review_url": f"/reviews/{item_id}?category={REVIEW_CATEGORY[category]}" if standalone else None,
         # Listed reviews also appear on the title's public page.
-        "title_url": (title_pages.path_for_item(title_pages.LIBRARY_TO_KIND[moment.category], item)
-                      if payload.public and quality.community_ready and moment.category in title_pages.LIBRARY_TO_KIND else None),
+        "title_url": (title_pages.path_for_item(title_pages.LIBRARY_TO_KIND[category], item)
+                      if payload.public and quality.community_ready and category in title_pages.LIBRARY_TO_KIND else None),
     }
+    db.commit()
+    return result
 
 
 @router.patch("/{moment_id}", response_model=schemas.CompletionMoment)
 async def update_completion_moment(
-    moment_id: int,
+    moment_id: PositiveDatabaseId,
     payload: schemas.CompletionMomentUpdate,
     current_user: models.User = Depends(get_current_user),
     db: Session = Depends(get_db),

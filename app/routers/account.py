@@ -41,7 +41,11 @@ async def change_username(
     
     from ..signup_rules import username_problem, username_taken
     if username_change.new_username != current_user.username:
-        problem = username_problem(username_change.new_username)
+        from ..admin_access import is_site_admin
+        problem = username_problem(
+            username_change.new_username,
+            current_privileged_username=current_user.username if is_site_admin(current_user) else "",
+        )
         if problem:
             raise HTTPException(status_code=400, detail=problem)
         # Capitals-only changes of your own name are fine; anyone else's name (in any case) is not.

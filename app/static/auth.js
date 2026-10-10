@@ -187,31 +187,60 @@ function captureDemoStartIntent() {
 const KNOWN_MEMBER_KEY = 'omnitrackr_known_member';
 
 function saveAuthData(token, user) {
-    localStorage.removeItem(TOKEN_KEY);
-    localStorage.setItem(USER_KEY, JSON.stringify(user));
-    try { localStorage.setItem(KNOWN_MEMBER_KEY, '1'); } catch (error) { /* optional */ }
+    // The cookie is authoritative. Keep this tab usable if browser storage is denied,
+    // and never reuse a legacy token that could not be removed during a new login.
+    getUser.current = user;
+    recoverCookieSession.generation = (recoverCookieSession.generation || 0) + 1;
+    let needsFallback = Boolean(getUser.storageBlocked);
+    try { localStorage.removeItem(TOKEN_KEY); } catch (_) { needsFallback = true; }
+    try { localStorage.setItem(USER_KEY, JSON.stringify(user)); } catch (_) { needsFallback = true; }
+    try { localStorage.setItem(KNOWN_MEMBER_KEY, '1'); } catch (_) { /* optional */ }
+    if (!needsFallback) delete getUser.current;
+    try {
+        if (needsFallback) sessionStorage.setItem('omnitrackr_session_user', JSON.stringify(user));
+        else sessionStorage.removeItem('omnitrackr_session_user');
+    } catch (_) { /* The in-memory user and HttpOnly cookie still work. */ }
 }
 
 function knownMember() {
+    if (getUser()) return true;
     try {
-        return Boolean(localStorage.getItem(KNOWN_MEMBER_KEY) || localStorage.getItem(USER_KEY) || localStorage.getItem(TOKEN_KEY));
-    } catch (error) {
-        return false;
-    }
+        return Boolean(localStorage.getItem(KNOWN_MEMBER_KEY) || localStorage.getItem(TOKEN_KEY));
+    } catch (_) { return false; }
 }
 
 function getToken() {
-    return localStorage.getItem(TOKEN_KEY);
+    if (Object.hasOwn(getUser, 'current') || getSessionAuthUser()) return null;
+    try { return localStorage.getItem(TOKEN_KEY); }
+    catch (_) { getUser.storageBlocked = true; return null; }
+}
+
+function getSessionAuthUser() {
+    try {
+        const user = JSON.parse(sessionStorage.getItem('omnitrackr_session_user') || 'null');
+        return user && typeof user === 'object' && !Array.isArray(user) ? user : null;
+    } catch (_) { return null; }
 }
 
 function getUser() {
-    const userStr = localStorage.getItem(USER_KEY);
-    return userStr ? JSON.parse(userStr) : null;
+    if (Object.hasOwn(getUser, 'current')) return getUser.current;
+    const fallback = getSessionAuthUser();
+    if (fallback) return fallback;
+    try {
+        const value = JSON.parse(localStorage.getItem(USER_KEY) || 'null');
+        return value && typeof value === 'object' && !Array.isArray(value) ? value : null;
+    } catch (_) { getUser.storageBlocked = true; return null; }
 }
 
 function clearAuth({ preserveReturn = false } = {}) {
-    localStorage.removeItem(TOKEN_KEY);
-    localStorage.removeItem(USER_KEY);
+    // Clear the authoritative in-memory state even if persisted values cannot be removed.
+    if (typeof getUser === 'function') getUser.current = null;
+    if (typeof recoverCookieSession === 'function') {
+        recoverCookieSession.generation = (recoverCookieSession.generation || 0) + 1;
+    }
+    try { sessionStorage.removeItem('omnitrackr_session_user'); } catch (_) {}
+    try { localStorage.removeItem(TOKEN_KEY); } catch (_) {}
+    try { localStorage.removeItem(USER_KEY); } catch (_) {}
     // Storage events do not fire in this tab, including when a background request expires.
     window.OmniProgress?.reset();
     window.OmniImportStudio?.reset();
@@ -234,12 +263,56 @@ function isAuthenticated() {
     return !!getUser() || !!getToken();
 }
 
+function canRecoverCookieSession() {
+    return getUser.storageBlocked && !Object.hasOwn(getUser, 'current')
+        && document.documentElement?.dataset?.publicShell !== 'true'
+        && Boolean(document.getElementById('mainContainer'));
+}
+
+function recoverCookieSession() {
+    if (!canRecoverCookieSession()) return Promise.resolve(false);
+    if (recoverCookieSession.pending) return recoverCookieSession.pending;
+    const generation = recoverCookieSession.generation || 0;
+    const controller = new AbortController();
+    let timeout;
+    const pending = (async () => {
+        try {
+            const user = await Promise.race([
+                (async () => {
+                    const response = await fetch(`${AUTH_API_BASE}/account/me`, {
+                        credentials: 'same-origin', cache: 'no-store', signal: controller.signal,
+                    });
+                    if (!response.ok) return null;
+                    return response.json();
+                })(),
+                new Promise((_, reject) => {
+                    timeout = setTimeout(() => { controller.abort(); reject(new Error('Session recovery timed out')); }, 10000);
+                }),
+            ]);
+            if (generation !== (recoverCookieSession.generation || 0)) return false;
+            if (!user || !Number.isSafeInteger(user.id) || user.id < 1 || typeof user.username !== 'string') return false;
+            saveAuthData(null, user);
+            return true;
+        } catch (_) { return false; }
+        finally { clearTimeout(timeout); }
+    })();
+    recoverCookieSession.pending = pending;
+    pending.finally(() => {
+        if (recoverCookieSession.pending === pending) recoverCookieSession.pending = null;
+    });
+    return pending;
+}
+
 //  ============================================================================
 // Authenticated Fetch Wrapper
 // ============================================================================
 
 async function authenticatedFetch(url, options = {}) {
-    const token = getToken();
+    let token = getToken();
+    if (!isAuthenticated() && canRecoverCookieSession()) {
+        await recoverCookieSession();
+        token = getToken();
+    }
 
     if (!isAuthenticated()) {
         showAuthModal();
@@ -1007,6 +1080,18 @@ function initAuth() {
     }
 
     if (!isAuthenticated()) {
+        if (canRecoverCookieSession()) {
+            return recoverCookieSession().then(recovered => {
+                if (!recovered) { if (!isAuthenticated()) showAuthModal(); return; }
+                showMainUI();
+                updateUserDisplay();
+                // Main-library requests await the same recovery in authenticatedFetch.
+                // These optional startup readers initially skipped a missing stored user.
+                for (const name of ['loadCustomTabs', 'openDashboardTargetFromLocation', 'bootstrapReturnDeck']) {
+                    try { Promise.resolve(window[name]?.()).catch(() => {}); } catch (_) { /* optional */ }
+                }
+            });
+        }
         showAuthModal();
     } else {
         showMainUI();
@@ -1110,4 +1195,14 @@ if (typeof window.addEventListener === 'function') window.addEventListener('hash
         && document.getElementById('registerForm')) {
         showRegisterForm();
     }
+});
+
+// Other tabs can replace or clear a session. Re-read their stored identity instead
+// of retaining this tab's fallback user after a cross-tab sign-in or logout.
+if (typeof window.addEventListener === 'function') window.addEventListener('storage', event => {
+    if (event.key !== null && event.key !== USER_KEY && event.key !== TOKEN_KEY) return;
+    delete getUser.current;
+    getUser.storageBlocked = false;
+    recoverCookieSession.generation = (recoverCookieSession.generation || 0) + 1;
+    try { sessionStorage.removeItem('omnitrackr_session_user'); } catch (_) {}
 });

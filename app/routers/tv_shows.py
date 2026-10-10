@@ -5,6 +5,7 @@ from typing import List, Optional
 from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session
 
+from ..integer_bounds import PositiveDatabaseId
 from .. import crud, schemas, models
 from ..dependencies import get_db, get_current_user
 
@@ -24,7 +25,7 @@ async def list_tv_shows(
 
 @router.get("/{tv_show_id}", response_model=schemas.TVShow)
 async def get_tv_show(
-    tv_show_id: int,
+    tv_show_id: PositiveDatabaseId,
     current_user: models.User = Depends(get_current_user),
     db: Session = Depends(get_db)
 ):
@@ -45,7 +46,7 @@ async def create_tv_show(
 
 @router.put("/{tv_show_id}", response_model=schemas.TVShow)
 async def update_tv_show(
-    tv_show_id: int,
+    tv_show_id: PositiveDatabaseId,
     tv_show: schemas.TVShowUpdate,
     current_user: models.User = Depends(get_current_user),
     db: Session = Depends(get_db)
@@ -58,7 +59,7 @@ async def update_tv_show(
 
 @router.delete("/{tv_show_id}", response_model=schemas.TVShow)
 async def delete_tv_show(
-    tv_show_id: int,
+    tv_show_id: PositiveDatabaseId,
     current_user: models.User = Depends(get_current_user),
     db: Session = Depends(get_db)
 ):

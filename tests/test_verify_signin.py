@@ -10,7 +10,7 @@ def register(client, username="newfan", email="newfan@example.com", password="te
 
 def token_for(db, username="newfan"):
     user = db.query(models.User).filter_by(username=username).one()
-    return user, email_utils.generate_verification_token(user.email)
+    return user, user.verification_token
 
 
 def test_register_marks_this_browser_with_a_signed_httponly_cookie(client, db_session):

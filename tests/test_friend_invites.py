@@ -66,7 +66,7 @@ def test_signup_through_the_link_makes_friends_after_verification(authenticated_
     newfan = db_session.query(models.User).filter_by(username="newfan").one()
     assert not _friends(db_session, inviter, newfan)  # not until the email is verified
 
-    verify = email_utils.generate_verification_token(newfan.email)
+    verify = newfan.verification_token
     assert authenticated_client.get(f"/auth/verify-email?token={verify}").status_code == 200
     assert _friends(db_session, inviter, newfan)
     note = db_session.query(models.Notification).filter_by(user_id=inviter.id, type="friend_invite_accepted").one()
