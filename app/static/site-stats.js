@@ -419,6 +419,68 @@
     ]);
   }
 
+  function growthRows(growth) {
+    const { invites, supporters, weekly_email: email, takes } = growth;
+    return {
+      growthInvites: [
+        { label: 'Sign-ups through an invite', count: invites.signups },
+        { label: 'Friendships made by invites', count: invites.friends_made },
+        { label: 'Invited, waiting to verify email (now)', count: invites.awaiting_verification },
+        { label: 'Invite links created', count: invites.new_links },
+        { label: 'Members with a link (all time)', count: invites.links },
+      ],
+      growthSupporters: [
+        { label: 'Active supporters (now)', count: supporters.active },
+        { label: 'Monthly members (now)', count: supporters.monthly },
+        { label: 'New supporters', count: supporters.new },
+        { label: 'Ko-fi payments received', count: supporters.payments },
+        { label: 'Payments not linked to a member (now)', count: supporters.unlinked_payments },
+        { label: 'Supporters (all time)', count: supporters.all_time },
+      ],
+      growthEmail: [
+        { label: 'Subscribers (now)', count: email.subscribers },
+        { label: 'New opt-ins', count: email.new },
+      ],
+      growthTakes: [
+        { label: 'Links shared', count: takes.asked },
+        { label: 'Friends who answered', count: takes.answered },
+      ],
+    };
+  }
+
+  const GROWTH_HEADINGS = {
+    growthInvites: 'Friend invite links',
+    growthSupporters: 'Ko-fi supporters',
+    growthEmail: 'Weekly email',
+    growthTakes: 'Ask a friend for their take',
+  };
+
+  function growthReport(data) {
+    if (!data.growth) return [];
+    return [
+      `Growth features (last ${data.days} days; "now" rows are current totals):`,
+      ...Object.entries(growthRows(data.growth)).map(([id, items]) =>
+        `- ${GROWTH_HEADINGS[id]}: ${items.map(item => `${item.label} ${number(item.count)}`).join('; ')}`),
+    ];
+  }
+
+  function renderGrowthFeatures(data) {
+    const card = $('growthCard');
+    if (!card) return;
+    card.hidden = !data.growth;
+    if (!data.growth) return;
+    $('growthNote').textContent = `Invite links, Ko-fi supporters, the weekly email and "ask a friend" in the last ${data.days} days. Rows marked "now" are current totals.`;
+    Object.entries(growthRows(data.growth)).forEach(([id, items]) => {
+      const list = $(id);
+      list.replaceChildren();
+      items.forEach(item => {
+        const row = el('div');
+        row.append(el('dt', '', item.label), el('dd', '', number(item.count)));
+        list.appendChild(row);
+      });
+    });
+  }
+
   function renderLibraries(data) {
     const content = data.insights.content;
     const rows = content.categories.map(category => [category.label, number(category.total), number(category.completed), number(category.rated), number(category.reviewed)]);
@@ -620,6 +682,7 @@
     renderGrowth(data);
     renderFunnel(data);
     renderSignupFunnel(data);
+    renderGrowthFeatures(data);
     renderLibraries(data);
     renderCommunity(data);
     renderTitles(data);
@@ -647,6 +710,7 @@
       data.funnel ? `Sign-up funnel: ${data.funnel.steps.map(step => `${step.label} ${number(step.count)}`).join(' → ')}` : '',
       data.funnel ? `Sign-up issues: ${data.funnel.issues.filter(item => item.count).map(item => `${item.label} ${number(item.count)}`).join('; ') || 'none'}` : '',
       data.funnel ? `Guest lists: ${data.funnel.guest.map(item => `${item.label} ${number(item.count)}`).join('; ')}` : '',
+      ...growthReport(data),
       data.retention ? `Return features: ${number(data.retention.weekly_email_subscribers)} weekly email subscribers, ${number(data.retention.public_profiles)} public profiles on.` : '',
       '',
       `Libraries: ${number(insights.content.total_items)} titles (${insights.content.categories.map(category => `${category.label} ${number(category.total)}`).join(', ')}), ${number(insights.content.public_reviews)} public reviews, ${number(insights.content.custom_items)} custom-tab items.`,
@@ -756,7 +820,7 @@
   }
 
   if (typeof module !== 'undefined' && module.exports) {
-    module.exports = { buildReport, niceMax, delta, percent };
+    module.exports = { buildReport, growthRows, niceMax, delta, percent };
   } else if (document.readyState === 'loading') {
     document.addEventListener('DOMContentLoaded', init);
   } else {

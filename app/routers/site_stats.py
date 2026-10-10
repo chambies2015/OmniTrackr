@@ -169,6 +169,43 @@ def _retention(db: Session) -> dict:
     }
 
 
+def _count(query) -> int:
+    return int(query.scalar() or 0)
+
+
+def _growth(db: Session, days: int, now: datetime) -> dict:
+    """This month's growth features: invite links, Ko-fi supporters, weekly email and "ask a friend"."""
+    start = now - timedelta(days=days)
+    signup = models.FriendInviteSignup
+    supporter = models.Supporter
+    payment = models.KofiPayment
+    return {
+        "invites": {
+            "links": _count(db.query(func.count(models.FriendInvite.id))),
+            "new_links": _counts_between(db, models.FriendInvite.created_at, start),
+            "signups": _counts_between(db, signup.created_at, start),
+            "friends_made": _counts_between(db, signup.completed_at, start),
+            "awaiting_verification": _count(db.query(func.count(signup.id)).filter(signup.completed_at.is_(None))),
+        },
+        "supporters": {
+            "active": _count(db.query(func.count(supporter.id)).filter(supporter.active_until > now)),
+            "monthly": _count(db.query(func.count(supporter.id)).filter(supporter.active_until > now, supporter.monthly == True)),
+            "all_time": _count(db.query(func.count(supporter.id))),
+            "new": _counts_between(db, supporter.since, start),
+            "payments": _counts_between(db, payment.received_at, start),
+            "unlinked_payments": _count(db.query(func.count(payment.id)).filter(payment.user_id.is_(None))),
+        },
+        "weekly_email": {
+            "subscribers": _count(db.query(func.count(models.EmailDigestSubscription.id))),
+            "new": _counts_between(db, models.EmailDigestSubscription.created_at, start),
+        },
+        "takes": {
+            "asked": _counts_between(db, models.TakeRequest.created_at, start),
+            "answered": _counts_between(db, models.TakeResponse.created_at, start),
+        },
+    }
+
+
 def _announcement_status(db: Session) -> dict | None:
     try:
         from .. import announcements
@@ -256,6 +293,7 @@ async def site_stats_overview(
         "traffic": _traffic(db, days, today),
         "funnel": _funnel(db, days, today),
         "retention": _retention(db),
+        "growth": _growth(db, days, now),
         "popular_titles": _popular_titles(db),
         "insights": insights,
         "system": {**_system(), "title_details": _title_details(db)},
