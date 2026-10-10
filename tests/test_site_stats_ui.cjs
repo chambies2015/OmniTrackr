@@ -90,3 +90,11 @@ test('the copied report lists the growth features with their numbers', () => {
   assert.doesNotMatch(report, /undefined|NaN/);
   assert.equal(stats.growthRows(data.growth).growthInvites.length, 5);
 });
+
+test('Ko-fi payments to link read as name, amount, kind and day', () => {
+  assert.deepEqual(stats.paymentLabel({
+    from_name: 'Sam', amount: '5.00', currency: 'USD', kind: 'Subscription', monthly: true, received_at: '2026-10-09T18:00:00',
+  }), { name: 'Sam', detail: '5.00 USD · Subscription (monthly) · received Oct 9, 2026' });
+  assert.deepEqual(stats.paymentLabel({ from_name: null, amount: null, currency: null, kind: null, monthly: false, received_at: null }),
+    { name: 'Name not given', detail: 'Payment' });
+});

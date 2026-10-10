@@ -77,6 +77,8 @@ def test_page_shell_is_public_but_noindex_and_holds_no_data(client):
     assert "/static/site-stats.js" in response.text
     assert "Content-Security-Policy" in response.headers
     assert "testuser" not in response.text
+    # The Ko-fi linking card is an empty shell too; payments load from the admin-only API.
+    assert 'id="kofiCard"' in response.text and 'id="kofiList"></ul>' in response.text
 
 
 def test_overview_requires_login(client):
