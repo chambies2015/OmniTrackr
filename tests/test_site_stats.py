@@ -131,6 +131,45 @@ def test_overview_for_admin_has_every_section(authenticated_client, admin_env, d
     assert "@example.com" not in response.text and "hashed_password" not in response.text
 
 
+def test_overview_growth_counts_invites_supporters_email_and_takes(authenticated_client, admin_env, db_session):
+    from datetime import datetime
+    admin_env.setenv("ADMIN_USERNAMES", "testuser")
+    user = db_session.query(models.User).filter_by(username="testuser").one()
+    friend = models.User(username="growthfriend", email="growthfriend@example.com", hashed_password="x", is_verified=True)
+    waiting = models.User(username="growthwaiting", email="growthwaiting@example.com", hashed_password="x")
+    db_session.add_all([friend, waiting])
+    db_session.flush()
+    now = datetime.utcnow()
+    old = now - timedelta(days=60)
+    take = models.TakeRequest(asker_id=user.id, kind="movie", slug="heat-1995", title="Heat", token="growthtake",
+                              expires_at=now + timedelta(days=30))
+    db_session.add_all([
+        models.FriendInvite(user_id=user.id, token="growthinvite"),
+        models.FriendInviteSignup(inviter_id=user.id, invitee_id=friend.id, completed_at=now),
+        models.FriendInviteSignup(inviter_id=user.id, invitee_id=waiting.id),
+        models.Supporter(user_id=user.id, since=now, active_until=now + timedelta(days=30), monthly=True),
+        models.Supporter(user_id=friend.id, since=old, active_until=old + timedelta(days=30)),
+        models.KofiPayment(message_id="growth-1", kind="Donation", user_id=user.id),
+        models.KofiPayment(message_id="growth-2", kind="Donation"),
+        models.EmailDigestSubscription(user_id=user.id, token="growthdigest"),
+        take,
+    ])
+    db_session.flush()
+    db_session.add(models.TakeResponse(request_id=take.id, responder_id=friend.id))
+    db_session.commit()
+
+    response = authenticated_client.get("/api/site-stats/overview?days=30")
+    assert response.status_code == 200
+    growth = response.json()["growth"]
+    assert growth["invites"] == {"links": 1, "new_links": 1, "signups": 2, "friends_made": 1, "awaiting_verification": 1}
+    assert growth["supporters"] == {"active": 1, "monthly": 1, "all_time": 2, "new": 1, "payments": 2, "unlinked_payments": 1}
+    assert growth["weekly_email"] == {"subscribers": 1, "new": 1}
+    assert growth["takes"] == {"asked": 1, "answered": 1}
+    # Counts only: no tokens or Ko-fi details anywhere, and no usernames in the growth block.
+    assert "growthinvite" not in response.text and "growth-2" not in response.text
+    assert "growthfriend" not in str(growth)
+
+
 @pytest.mark.parametrize("days", [3, 91])
 def test_overview_range_is_bounded(authenticated_client, admin_env, days):
     admin_env.setenv("ADMIN_USERNAMES", "testuser")
