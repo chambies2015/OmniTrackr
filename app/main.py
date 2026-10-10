@@ -20,16 +20,18 @@ from slowapi.middleware import SlowAPIMiddleware
 from slowapi.util import get_remote_address
 from sqlalchemy.orm import Session
 
-from . import crud, schemas, models
+from .integer_bounds import PositiveDatabaseId, SQL_INTEGER_MAX
+from . import crud, schemas, models, dashboard_assets
 from .database import Base, SessionLocal, engine
 from .site_chrome import apply_site_chrome, message_page
 from .csp import nonce_html_response, strict_html_response
 from .auth import AUTH_COOKIE_NAME
 from .migrations import run_migrations
-from .middleware import SecurityHeadersMiddleware, BotFilterMiddleware
+from .middleware import SecurityHeadersMiddleware, BotFilterMiddleware, CSRFProtectionMiddleware, RequestBodyLimitMiddleware, UploadAuthenticationMiddleware
 from .site_traffic import RECORDER as TRAFFIC_RECORDER, SiteTrafficMiddleware
 from . import digest as digest_emails
-from .dependencies import get_db, get_current_user
+from . import funnel
+from .dependencies import get_db, get_current_user, get_optional_current_user
 from .routers import (
     auth,
     account,
@@ -59,6 +61,11 @@ from .routers import (
     recommendations,
     site_stats,
     for_you,
+    titles,
+    profiles,
+    pwa,
+    supporters,
+    year_in_review,
 )
 
 # Create database tables
@@ -87,13 +94,21 @@ async def lifespan(application: FastAPI):
         print(f"Error expiring friend requests on startup: {e}")
 
     digest_task = None
+    title_task = None
+    announcement_task = None
     if digest_emails.enabled_for_process():
         digest_task = asyncio.create_task(digest_emails.digest_loop(application))
+    from . import announcements
+    if announcements.enabled_for_process():
+        announcement_task = asyncio.create_task(announcements.announcement_loop(application))
+    if os.getenv("TESTING", "").lower() != "true":
+        title_task = asyncio.create_task(titles.warm_loop(application))
     try:
         yield
     finally:
-        if digest_task is not None:
-            digest_task.cancel()
+        for task in (digest_task, title_task, announcement_task):
+            if task is not None:
+                task.cancel()
         await application.state.external_api_client.aclose()
         try:
             TRAFFIC_RECORDER.flush()  # Keep the last minute of page-view counts.
@@ -109,11 +124,29 @@ app = FastAPI(
     lifespan=lifespan,
 )
 
+def client_address(request: Request) -> str:
+    """The visitor's address for rate limits.
+
+    On Render every request reaches the app from an internal load balancer, so
+    limits keyed on the socket address were shared by all visitors (for example
+    five sign-ups a minute for the whole site). Render sits behind Cloudflare,
+    which sets True-Client-IP / CF-Connecting-IP to the real visitor and
+    overwrites any value a client sends. Those headers are trusted only when
+    running on Render (RENDER=true, set by Render itself).
+    """
+    if os.getenv("RENDER", "").lower() == "true":
+        for header in ("true-client-ip", "cf-connecting-ip"):
+            value = (request.headers.get(header) or "").strip()
+            if value:
+                return value[:64]
+    return get_remote_address(request)
+
+
 # Initialize rate limiter
 if os.getenv("TESTING", "").lower() == "true":
     limiter = Limiter(key_func=lambda: "test", enabled=False)
 else:
-    limiter = Limiter(key_func=get_remote_address)
+    limiter = Limiter(key_func=client_address)
 app.state.limiter = limiter
 app.add_exception_handler(RateLimitExceeded, _rate_limit_exceeded_handler)
 
@@ -147,6 +180,9 @@ def bind_rate_limited_endpoint(route, endpoint) -> None:
 
 
 # Add middleware
+app.add_middleware(RequestBodyLimitMiddleware)
+app.add_middleware(UploadAuthenticationMiddleware)
+app.add_middleware(CSRFProtectionMiddleware)
 app.add_middleware(GZipMiddleware, minimum_size=500)
 app.add_middleware(SecurityHeadersMiddleware)
 app.add_middleware(BotFilterMiddleware)
@@ -155,8 +191,13 @@ app.add_middleware(SiteTrafficMiddleware)
 
 ENVIRONMENT = os.getenv("ENVIRONMENT", "development").lower()
 
+# Trust pages (privacy, terms, contact) stay indexable so search and ad
+# reviewers see the same site identity a visitor does; they are still left out
+# of the sitemap. The source-checked comparison is original reference content.
 INDEXABLE_PUBLIC_TEMPLATES = {
     "about.html",
+    "compare.html",
+    "contact.html",
     "demo.html",
     "export_import_guide.html",
     "faq.html",
@@ -164,7 +205,9 @@ INDEXABLE_PUBLIC_TEMPLATES = {
     "media_tracking.html",
     "review_guidelines.html",
     "sample_library.html",
+    "privacy.html",
     "reviews.html",
+    "terms.html",
 }
 
 # Ads are limited to the small set of pages that provide a complete experience
@@ -252,6 +295,20 @@ def public_root_html(html: str, request: Request | None = None) -> str:
             except Exception:
                 strip = ""  # The homepage never depends on third-party release data.
             page = page.replace("<!--RELEASE_RADAR_STRIP-->", strip, 1)
+        if "<!--GUEST_PICKS-->" in page:
+            try:
+                from . import guest_picks
+                picks_html = guest_picks.homepage_section()
+            except Exception:
+                picks_html = ""  # The homepage never depends on this section.
+            page = page.replace("<!--GUEST_PICKS-->", picks_html, 1)
+        if "<!--COMMUNITY_PROOF-->" in page:
+            try:
+                from . import landing_proof
+                proof_html = landing_proof.homepage_section()
+            except Exception:
+                proof_html = ""  # The homepage never depends on this section.
+            page = page.replace("<!--COMMUNITY_PROOF-->", proof_html, 1)
         return apply_site_chrome(page, login_action=True)
 
     landing_marker = "  <!-- Landing Page -->"
@@ -270,7 +327,7 @@ def public_root_html(html: str, request: Request | None = None) -> str:
         '<html lang="en" data-public-shell="true">',
         1,
     )
-    public_head = public_head.replace('  <script src="./preauth.js"></script>\n', "", 1)
+    public_head = public_head.replace('  <script src="./preauth.js?v=20261010-audit-preauth-1"></script>\n', "", 1)
     public_tail = html[scripts_start:].replace(
         '  <script src="./app.js"></script>',
         '  <script src="/static/public-landing.js" defer></script>',
@@ -298,11 +355,19 @@ app.add_middleware(
 # Serve profile pictures from database
 # Using /profile-pictures/ path to avoid conflict with /static/ mount
 @app.get("/profile-pictures/{user_id}")
-async def serve_profile_picture(user_id: int, db: Session = Depends(get_db)):
+async def serve_profile_picture(
+    user_id: PositiveDatabaseId,
+    viewer: models.User | None = Depends(get_optional_current_user),
+    db: Session = Depends(get_db),
+):
     """Serve profile pictures from database."""
     # Get user from database
     user = crud.get_user_by_id(db, user_id)
-    if not user or not user.profile_picture_data:
+    if not user or not user.is_active or not user.profile_picture_data:
+        raise HTTPException(status_code=404, detail="Profile picture not found")
+    own_or_friend = viewer is not None and (viewer.id == user.id or crud.are_friends(db, viewer.id, user.id))
+    public = db.query(models.PublicProfile.id).filter_by(user_id=user.id, enabled=True).first() is not None
+    if not own_or_friend and not public:
         raise HTTPException(status_code=404, detail="Profile picture not found")
     
     # Return image data with appropriate MIME type
@@ -312,7 +377,7 @@ async def serve_profile_picture(user_id: int, db: Session = Depends(get_db)):
 
 @app.get("/custom-tab-posters/{item_id}")
 async def serve_custom_tab_poster(
-    item_id: int,
+    item_id: PositiveDatabaseId,
     current_user: models.User = Depends(get_current_user),
     db: Session = Depends(get_db),
 ):
@@ -339,11 +404,12 @@ async def serve_custom_tab_poster(
 async def serve_profile_picture_old(filename: str):
     """Backward compatibility endpoint for old profile picture URLs."""
     # Try to extract user_id from filename (format: {user_id}_{uuid}.{ext})
-    match = re.match(r'^(\d+)_', filename)
+    match = re.match(r'^([0-9]{1,10})_', filename)
     if match:
         user_id = int(match.group(1))
-        # Redirect to new endpoint
-        return RedirectResponse(url=f"/profile-pictures/{user_id}", status_code=301)
+        if 1 <= user_id <= SQL_INTEGER_MAX:
+            # Redirect to new endpoint
+            return RedirectResponse(url=f"/profile-pictures/{user_id}", status_code=301)
     raise HTTPException(status_code=404, detail="Profile picture not found")
 
 
@@ -462,6 +528,11 @@ app.include_router(proxy.router)
 app.include_router(seo.router)
 app.include_router(static.router)
 rate_limited_review_report = limiter.limit("2/hour")(reviews.report_public_review)
+rate_limited_review_helpful = limiter.limit("30/hour")(reviews.mark_review_helpful)
+for route in reviews.router.routes:
+    if (getattr(route, "path", None) == "/api/public/reviews/{category}/{review_id}/helpful"
+            and "POST" in getattr(route, "methods", set())):
+        bind_rate_limited_endpoint(route, rate_limited_review_helpful)
 for route in reviews.router.routes:
     if (
         hasattr(route, "path")
@@ -471,8 +542,90 @@ for route in reviews.router.routes:
     ):
         bind_rate_limited_endpoint(route, rate_limited_review_report)
 app.include_router(reviews.router)
+rate_limited_funnel_event = limiter.limit("30/minute")(site_stats.record_funnel_event)
+for route in site_stats.router.routes:
+    if getattr(route, "path", None) == "/api/funnel":
+        bind_rate_limited_endpoint(route, rate_limited_funnel_event)
 app.include_router(site_stats.router)
 app.include_router(for_you.router)
+rate_limited_guest_import = limiter.limit("10/minute")(titles.import_guest_list)
+rate_limited_title_review = limiter.limit("20/minute")(titles.save_title_review)
+rate_limited_take_ask = limiter.limit("20/minute")(titles.ask_for_takes)
+for route in titles.router.routes:
+    if getattr(route, "path", None) == "/api/guest-list/import":
+        bind_rate_limited_endpoint(route, rate_limited_guest_import)
+    elif getattr(route, "path", None) == "/api/titles/{kind}/{slug}/review":
+        bind_rate_limited_endpoint(route, rate_limited_title_review)
+    elif getattr(route, "path", None) == "/api/titles/{kind}/{slug}/ask":
+        bind_rate_limited_endpoint(route, rate_limited_take_ask)
+app.include_router(titles.router)
+
+rate_limited_profile_card = limiter.limit("30/minute")(profiles.profile_card)
+rate_limited_profile_card_by_id = limiter.limit("30/minute")(profiles.profile_card_by_id)
+rate_limited_profile_settings = limiter.limit("20/minute")(profiles.update_profile_settings)
+for route in profiles.router.routes:
+    if not hasattr(route, "path") or not hasattr(route, "methods"):
+        continue
+    if route.path == "/u/{handle}/card.png":
+        bind_rate_limited_endpoint(route, rate_limited_profile_card)
+    elif route.path == "/u/id/{user_id:database_id}/card.png":
+        bind_rate_limited_endpoint(route, rate_limited_profile_card_by_id)
+    elif route.path == "/api/profile/settings" and "PUT" in route.methods:
+        bind_rate_limited_endpoint(route, rate_limited_profile_settings)
+app.include_router(profiles.router)
+app.include_router(pwa.router)
+rate_limited_kofi_webhook = limiter.limit("60/minute")(supporters.kofi_webhook)
+for route in supporters.router.routes:
+    if getattr(route, "path", None) == "/api/kofi/webhook" and "POST" in getattr(route, "methods", set()):
+        bind_rate_limited_endpoint(route, rate_limited_kofi_webhook)
+app.include_router(supporters.router)
+
+rate_limited_recap_card = limiter.limit("30/minute")(year_in_review.shared_card)
+rate_limited_own_recap_card = limiter.limit("30/minute")(year_in_review.own_card)
+rate_limited_recap_share = limiter.limit("20/minute")(year_in_review.share_recap)
+for route in year_in_review.router.routes:
+    path, methods = getattr(route, "path", None), getattr(route, "methods", set())
+    if path == "/recap/{token}/card.png":
+        bind_rate_limited_endpoint(route, rate_limited_recap_card)
+    elif path == "/api/year-in-review/{year}/card.png":
+        bind_rate_limited_endpoint(route, rate_limited_own_recap_card)
+    elif path == "/api/year-in-review/{year}/share" and "PUT" in methods:
+        bind_rate_limited_endpoint(route, rate_limited_recap_share)
+app.include_router(year_in_review.router)
+
+from .routers import invites
+rate_limited_invite_link = limiter.limit("20/minute")(invites.invite_link)
+rate_limited_invite_accept = limiter.limit("20/minute")(invites.accept_invite)
+rate_limited_join_page = limiter.limit("60/minute")(invites.join_page)
+for route in invites.router.routes:
+    path = getattr(route, "path", None)
+    if path == "/api/friends/invite-link":
+        bind_rate_limited_endpoint(route, rate_limited_invite_link)
+    elif path == "/api/friends/invite/{token}/accept":
+        bind_rate_limited_endpoint(route, rate_limited_invite_accept)
+    elif path == "/join/{token}":
+        bind_rate_limited_endpoint(route, rate_limited_join_page)
+app.include_router(invites.router)
+
+from .routers import goals as goals_router
+rate_limited_goal_save = limiter.limit("30/minute")(goals_router.save_goal)
+rate_limited_goal_delete = limiter.limit("30/minute")(goals_router.delete_goal)
+rate_limited_goal_share = limiter.limit("20/minute")(goals_router.share_goal)
+rate_limited_goal_page = limiter.limit("60/minute")(goals_router.shared_goal_page)
+rate_limited_goal_card = limiter.limit("30/minute")(goals_router.shared_goal_card)
+for route in goals_router.router.routes:
+    path, methods = getattr(route, "path", None), getattr(route, "methods", set())
+    if path == "/api/goals/{year}/{category}" and "PUT" in methods:
+        bind_rate_limited_endpoint(route, rate_limited_goal_save)
+    elif path == "/api/goals/{year}/{category}" and "DELETE" in methods:
+        bind_rate_limited_endpoint(route, rate_limited_goal_delete)
+    elif path == "/api/goals/{year}/{category}/share" and "PUT" in methods:
+        bind_rate_limited_endpoint(route, rate_limited_goal_share)
+    elif path == "/goal/{token}":
+        bind_rate_limited_endpoint(route, rate_limited_goal_page)
+    elif path == "/goal/{token}/card.png":
+        bind_rate_limited_endpoint(route, rate_limited_goal_card)
+app.include_router(goals_router.router)
 
 
 # Root endpoint
@@ -487,6 +640,14 @@ async def read_root(request: Request):
             authenticated_shell = bool(request.cookies.get(AUTH_COOKIE_NAME))
             if not authenticated_shell:
                 html = public_root_html(html, request)
+                if request.method == "GET" and "token" not in request.query_params:
+                    funnel.record("landing_viewed", request)
+            else:
+                _, dashboard_version = dashboard_assets.bundle()
+                html = html.replace('src="./app.js"', f'src="./app.js?v={dashboard_version}"', 1)
+                # Signed-in pages show the Friends button; drawing it from the start keeps
+                # the toolbar from re-wrapping (and the page from shifting) once scripts run.
+                html = html.replace('aria-controls="friendsSidebar" hidden>', 'aria-controls="friendsSidebar">', 1)
             response = nonce_html_response(html)
             response.headers["Cache-Control"] = "private, no-store" if authenticated_shell else "no-cache"
             response.headers["Vary"] = "Cookie"
@@ -717,6 +878,14 @@ async def terms_page(request: Request):
 @app.get("/contact", tags=["public"])
 async def contact_page(request: Request):
     response = strict_template_response("contact.html", request)
+    if response:
+        return response
+    raise HTTPException(status_code=404, detail="Page not found")
+
+
+@app.get("/supporters", tags=["public"])
+async def supporters_page(request: Request):
+    response = strict_template_response("supporters.html", request)
     if response:
         return response
     raise HTTPException(status_code=404, detail="Page not found")

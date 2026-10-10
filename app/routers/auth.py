@@ -4,7 +4,7 @@ Authentication endpoints for the OmniTrackr API.
 import os
 import secrets
 from datetime import datetime, timedelta, timezone
-from fastapi import APIRouter, Depends, HTTPException, status, Request
+from fastapi import APIRouter, Depends, HTTPException, status, Request, Response
 from fastapi.security import OAuth2PasswordRequestForm
 from fastapi.encoders import jsonable_encoder
 from fastapi.responses import JSONResponse
@@ -12,6 +12,8 @@ from sqlalchemy.orm import Session
 
 from .. import crud, schemas, models, auth, email as email_utils, return_prompt as return_prompt_tokens
 from ..dependencies import get_db
+from .. import funnel
+from ..signup_rules import username_problem, username_taken
 
 router = APIRouter(prefix="/auth", tags=["auth"])
 
@@ -22,29 +24,50 @@ router = APIRouter(prefix="/auth", tags=["auth"])
 async def register(
     user: schemas.UserCreate,
     request: Request,
+    response: Response,
     db: Session = Depends(get_db)
 ):
     """Register a new user and send verification email."""
-    
-    is_valid, error_msg = auth.validate_password_strength(user.password)
+    funnel.record("signup_submitted", request)
+    user.email = user.email.strip()
+
+    problem = username_problem(user.username)
+    if problem:
+        funnel.record("signup_rejected_username_invalid", request)
+        raise HTTPException(status_code=400, detail=problem)
+
+    is_valid, error_msg = auth.validate_password_strength(user.password, user.username, user.email)
     if not is_valid:
+        funnel.record("signup_rejected_password", request)
         raise HTTPException(status_code=400, detail=error_msg)
     
     if crud.get_user_by_email(db, user.email):
-        raise HTTPException(status_code=400, detail="Email already registered")
-    if crud.get_user_by_username(db, user.username):
-        raise HTTPException(status_code=400, detail="Username already taken")
+        funnel.record("signup_rejected_email_taken", request)
+        raise HTTPException(status_code=400, detail="Email already registered. Log in, or reset your password if you forgot it.")
+    if username_taken(db, user.username):
+        funnel.record("signup_rejected_username_taken", request)
+        raise HTTPException(status_code=400, detail="Username already taken. Try adding a number or a word.")
     
     verification_token = email_utils.generate_verification_token(user.email)
     
     hashed_password = auth.get_password_hash(user.password)
     db_user = crud.create_user(db, user, hashed_password, verification_token)
+    funnel.record("signup_created", request)
+    if user.invite:
+        try:
+            from .. import friend_invites
+            friend_invites.record_signup(db, user.invite, db_user)
+        except Exception as e:  # An invite never blocks sign-up.
+            db.rollback()
+            print(f"Failed to record friend invite: {e}")
     
     try:
         await email_utils.send_verification_email(user.email, user.username, verification_token)
     except Exception as e:
+        funnel.record("signup_email_failed", request)
         print(f"Failed to send verification email: {e}")
-    
+
+    auth.set_pending_signup_cookie(response, db_user.id)
     return db_user
 
 
@@ -123,6 +146,7 @@ async def login(
             )
     
     if not user.is_verified:
+        funnel.record("login_blocked_unverified", request)
         raise HTTPException(
             status_code=403,
             detail="Please verify your email address before logging in. Check your inbox for the verification link.",
@@ -133,6 +157,8 @@ async def login(
     # login timestamp. The context is returned to this browser only and is not
     # stored as a page/session history.
     previous_login_at = user.last_login_at
+    if not user.login_count:
+        funnel.record("first_login", request)
     days_away = None
     if previous_login_at:
         days_away = max(0, (now_utc - previous_login_at).days)
@@ -192,12 +218,34 @@ async def logout():
     return response
 
 
+def _sign_in_after_verification(request: Request, user: models.User, db: Session, message: str):
+    """Open the new account in the browser that created it (see auth.PENDING_SIGNUP_COOKIE)."""
+    pending = auth.pending_signup_user_id(request.cookies.get(auth.PENDING_SIGNUP_COOKIE)) if request else None
+    if pending != user.id or not user.is_active:
+        # A different browser (often the mail app's): log in as usual, with the email filled in.
+        return {"message": message, "signed_in": False, "login_hint": user.email}
+    if not user.login_count:
+        funnel.record("first_login", request)
+    user.last_login_at = datetime.now(timezone.utc).replace(tzinfo=None)
+    user.login_count = (user.login_count or 0) + 1
+    db.commit()
+    db.refresh(user)
+    response = JSONResponse(
+        content={"message": message, "signed_in": True,
+                 "user": jsonable_encoder(schemas.User.model_validate(user))},
+        headers={"Cache-Control": "no-store, no-cache, must-revalidate, max-age=0", "Pragma": "no-cache", "Expires": "0"},
+    )
+    auth.set_auth_cookie(response, auth.create_user_access_token(user))
+    auth.clear_pending_signup_cookie(response)
+    return response
+
+
 @router.get("/verify-email")
-async def verify_email(token: str, db: Session = Depends(get_db)):
+async def verify_email(token: str, request: Request = None, db: Session = Depends(get_db)):
     """Verify user email with token (handles both initial verification and email change)."""
     # First, try regular email verification (most common case)
     try:
-        email = email_utils.verify_token(token, max_age=3600)  # 1 hour expiration
+        email = email_utils.verify_token(token, max_age=email_utils.VERIFICATION_MAX_AGE)
         # This is a regular email verification token
         user = crud.get_user_by_email(db, email)
         if not user:
@@ -206,13 +254,23 @@ async def verify_email(token: str, db: Session = Depends(get_db)):
         if user.is_verified:
             return {"message": "Email already verified"}
         
+        if not user.verification_token or not secrets.compare_digest(user.verification_token, token):
+            raise HTTPException(status_code=400, detail="This verification link was replaced. Request a new verification email.")
+
         # Mark user as verified
+        funnel.record("email_verified")
         user.is_verified = True
         user.verification_token = None
         db.commit()
         db.refresh(user)
-        
-        return {"message": "Email verified successfully! You can now use all features."}
+        try:
+            from .. import friend_invites
+            friend_invites.complete_signup(db, user)
+        except Exception as e:  # Friendship from an invite is a bonus; verification already succeeded.
+            db.rollback()
+            print(f"Failed to complete friend invite: {e}")
+
+        return _sign_in_after_verification(request, user, db, "Email verified successfully! You can now use all features.")
     except HTTPException:
         raise
     except Exception:
@@ -262,7 +320,8 @@ async def verify_email(token: str, db: Session = Depends(get_db)):
             raise
         except Exception:
             # Neither token type worked
-            raise HTTPException(status_code=400, detail="Invalid or expired verification token")
+            funnel.record("verification_link_expired")
+            raise HTTPException(status_code=400, detail="This verification link has expired or was already used. Log in with your email to get a new one.")
 
 
 @router.post("/resend-verification")
@@ -283,6 +342,7 @@ async def resend_verification_email(
     if user.is_verified:
         return {"message": "Email is already verified. You can log in."}
     
+    funnel.record("verification_resent", request)
     # Generate new verification token
     verification_token = email_utils.generate_verification_token(user.email)
     user.verification_token = verification_token
@@ -377,14 +437,14 @@ async def reset_password(payload: schemas.PasswordReset, db: Session = Depends(g
     if not user.reset_token:
         raise HTTPException(status_code=400, detail="Invalid reset token")
     
-    if user.reset_token.startswith("$2"):
+    if user.reset_token.startswith(("$2", "sha256$")):
         if not auth.verify_token_hash(token, user.reset_token):
             raise HTTPException(status_code=400, detail="Invalid reset token")
     else:
         if not secrets.compare_digest(user.reset_token, token):
             raise HTTPException(status_code=400, detail="Invalid reset token")
     
-    is_valid, error_msg = auth.validate_password_strength(new_password)
+    is_valid, error_msg = auth.validate_password_strength(new_password, user.username, user.email)
     if not is_valid:
         raise HTTPException(status_code=400, detail=error_msg)
     

@@ -11,11 +11,11 @@ const now = 1900000000000;
 const ttl = 24 * 60 * 60 * 1000;
 const nextQuery = destination => `?next=${encodeURIComponent(destination)}`;
 
-function setup({ search = '', pathname = '/', publicShell = true, storage = new Map(), blockedStorage = false } = {}) {
+function setup({ search = '', pathname = '/', publicShell = true, storage = new Map(), blockedStorage = false, knownMember = false } = {}) {
   const redirects = [];
   const requests = [];
   const elements = new Map();
-  const local = new Map();
+  const local = new Map(knownMember ? [['omnitrackr_known_member', '1']] : []);
   const location = {
     pathname, search, protocol: 'https:', origin: 'https://omnitrackr.xyz',
     assign: destination => redirects.push(destination), reload() {},
@@ -310,7 +310,7 @@ test('review, Discover, and collection return destinations take precedence over 
     for (const stored of [false, true]) {
       const storage = new Map([[demoKey, JSON.stringify({ source: 'demo', created_at: now })]]);
       if (stored) storage.set(returnKey, JSON.stringify({ path: destination, created_at: now }));
-      const s = setup({ search: stored ? '?start=demo' : `${nextQuery(destination)}&start=demo`, storage });
+      const s = setup({ search: stored ? '?start=demo' : `${nextQuery(destination)}&start=demo`, storage, knownMember: true });
       s.context.initAuth();
       assert.equal(s.elements.has('registerForm'), false);
       await s.context.login('reader', 'password');
@@ -335,7 +335,7 @@ test('demo intent never overrides verification or password-recovery forms', asyn
 test('malformed or repeated demo starts cannot retain stale intent or choose a redirect', async () => {
   for (const search of ['?start=', '?start=Demo', '?start=demo%0A', '?start=//evil.example', '?start=demo&start=demo', '?start=demo&next=//evil.example']) {
     const storage = new Map([[demoKey, JSON.stringify({ source: 'demo', created_at: now })]]);
-    const s = setup({ search, storage });
+    const s = setup({ search, storage, knownMember: true });
     s.context.initAuth();
     assert.notEqual(s.elements.get('registerForm')?.style.display, 'block', search);
     await s.context.login('reader', 'password');
@@ -524,4 +524,90 @@ test('explicit logout clears a collection destination retained during expired-se
   await s.context.logout();
   assert.equal(s.context.getDiscoverAuthReturn(), null);
   assert.equal(s.storage.has(returnKey), false);
+});
+
+
+test('newcomers see the sign-up form at the bottom of the homepage; returning members see log-in', () => {
+  const newcomer = setup();
+  newcomer.context.initAuth();
+  assert.equal(newcomer.elements.get('registerForm').style.display, 'block');
+  const member = setup({ knownMember: true });
+  member.context.initAuth();
+  assert.notEqual(member.elements.get('registerForm')?.style.display, 'block');
+});
+
+test('the default sign-up form is not counted as opened until someone uses it', () => {
+  const s = setup();
+  const beacons = [];
+  s.context.navigator = { sendBeacon: (url, blob) => { beacons.push(url); return true; } };
+  s.context.Blob = function Blob() {};
+  s.context.initAuth();
+  assert.equal(beacons.length, 0);
+  s.context.showRegisterForm();
+  assert.equal(beacons.length, 1);
+});
+
+test('a successful login marks the browser as a returning member', async () => {
+  const s = setup();
+  await s.context.login('reader', 'password');
+  assert.equal(s.context.knownMember(), true);
+});
+
+test('"Log in" links from other pages keep the log-in form', () => {
+  const s = setup();
+  s.context.window.location.hash = '#landing-auth';
+  s.context.initAuth();
+  assert.notEqual(s.elements.get('registerForm')?.style.display, 'block');
+});
+
+test('signing in from a title page returns to its review form', async () => {
+  for (const destination of ['/titles/movie/interstellar-2014#write-review', '/titles/album/in-rainbows-2007#write-review',
+    '/titles/movie/interstellar-2014?take=AbC_dEf-1234567890xyz#write-review']) {
+    const s = setup({ search: nextQuery(destination) });
+    s.context.initAuth();
+    await s.context.login('reader', 'password');
+    assert.deepEqual(s.redirects, [destination]);
+  }
+  for (const destination of [
+    '/titles/movie/interstellar-2014', '/titles/movie/interstellar-2014#other', '/titles/film/interstellar-2014#write-review',
+    '/titles/movie/Interstellar#write-review', '/titles/movie/../../account#write-review', '/titles/movie/#write-review',
+    '//evil.example/titles/movie/x#write-review', '/titles/movie/x#write-review\n',
+    '/titles/movie/x?take=short#write-review', '/titles/movie/x?take=AbC_dEf-1234567890xyz&next=//evil#write-review',
+    '/titles/movie/x?take=AbC_dEf-1234567890xyz',
+  ]) {
+    const s = setup({ search: nextQuery(destination) });
+    s.context.initAuth();
+    await s.context.login('reader', 'password');
+    assert.deepEqual(s.redirects, ['/'], destination);
+  }
+});
+
+test('signing in from a friend invite returns to the invite page', async () => {
+  const s = setup({ search: nextQuery('/join/AbC_dEf-1234567890xyz') });
+  s.context.initAuth();
+  await s.context.login('reader', 'password');
+  assert.deepEqual(s.redirects, ['/join/AbC_dEf-1234567890xyz']);
+  for (const destination of ['/join/short', '/join/AbC_dEf-1234567890xyz/extra', '/join/AbC_dEf-1234567890xyz?x=1', '//evil/join/AbC_dEf-1234567890xyz']) {
+    const other = setup({ search: nextQuery(destination) });
+    other.context.initAuth();
+    await other.context.login('reader', 'password');
+    assert.deepEqual(other.redirects, ['/'], destination);
+  }
+});
+
+test('signing up from an invite link sends the invite token once', async () => {
+  const token = 'AbC_dEf-1234567890xyz';
+  const s = setup({ search: `?invite=${token}` });
+  s.context.initAuth();
+  await s.context.register('reader@example.com', 'reader', 'secret-password');
+  const body = JSON.parse(s.requests.find(r => r.url.endsWith('/auth/register')).options.body);
+  assert.equal(body.invite, token);
+  assert.equal(s.storage.has('omnitrackr_friend_invite'), false);  // used up
+  for (const search of ['?invite=bad', `?invite=${token}&invite=${token}`, '']) {
+    const plain = setup({ search });
+    plain.context.initAuth();
+    await plain.context.register('reader@example.com', 'reader', 'secret-password');
+    const sent = JSON.parse(plain.requests.find(r => r.url.endsWith('/auth/register')).options.body);
+    assert.equal('invite' in sent, false, search);
+  }
 });

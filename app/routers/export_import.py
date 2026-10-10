@@ -9,6 +9,7 @@ from sqlalchemy import func
 from sqlalchemy.orm import Session, selectinload
 
 from .. import crud, schemas, models
+from ..integer_bounds import SQL_INTEGER_MAX
 from ..dependencies import get_db, get_current_user
 from ..progress import CATEGORIES as PROGRESS_CATEGORIES, get_checkpoint_map, serialize_checkpoint, validate_checkpoint, stage_import_checkpoint, lock_progress_owner
 from .activity import _serialize as serialize_activity, import_activity_entries
@@ -57,15 +58,26 @@ def _exported_identity(media, category: str) -> dict:
 def _apply_import_identity(query, model, category: str, raw_item: dict):
     """Narrow new backups to the exact same-titled edition; retain old backup compatibility."""
     for field in COLLECTION_MATCH_FIELDS[category]:
-        if field not in raw_item or raw_item[field] is None:
+        if field not in raw_item:
             continue
         value = raw_item[field]
+        if value is None:
+            query = query.filter(getattr(model, field).is_(None))
+            continue
         try:
-            if field == "release_date" and isinstance(value, str):
-                value = date.fromisoformat(value)
+            if field == "release_date":
+                if not isinstance(value, str):
+                    return None
+                value = datetime.fromisoformat(value.replace("Z", "+00:00")).replace(tzinfo=None)
             elif field == "year":
+                if isinstance(value, bool):
+                    return None
                 value = int(value)
-        except (TypeError, ValueError):
+                if not 0 <= value <= SQL_INTEGER_MAX:
+                    return None
+            elif not isinstance(value, str):
+                return None
+        except (TypeError, ValueError, OverflowError):
             return None
         column = getattr(model, field)
         if isinstance(value, str):
@@ -166,6 +178,8 @@ def _import_progress(db: Session, user_id: int, payloads: list[dict]) -> tuple[i
 
 
 def _import_collections(db: Session, user_id: int, payloads: list[dict]) -> tuple[int, int]:
+    if payloads:
+        lock_progress_owner(db, user_id)
     created = skipped = 0
     for raw in payloads[:200]:
         try:
@@ -193,6 +207,7 @@ def _import_collections(db: Session, user_id: int, payloads: list[dict]) -> tupl
         db.add(collection)
         db.flush()
         position = 0
+        seen_items = set()
         raw_items = raw.get("items", [])
         if not isinstance(raw_items, list):
             raw_items = []
@@ -200,7 +215,10 @@ def _import_collections(db: Session, user_id: int, payloads: list[dict]) -> tupl
             if not isinstance(raw_item, dict):
                 continue
             category = raw_item.get("category")
-            title = str(raw_item.get("title", "")).strip()
+            title = raw_item.get("title")
+            if not isinstance(category, str) or not isinstance(title, str):
+                continue
+            title = title.strip()
             model = COLLECTION_MEDIA_MODELS.get(category)
             if not model or not title:
                 continue
@@ -209,9 +227,14 @@ def _import_collections(db: Session, user_id: int, payloads: list[dict]) -> tupl
                 func.lower(model.title) == title.lower(),
             )
             media_query = _apply_import_identity(media_query, model, category, raw_item)
-            media = media_query.first() if media_query is not None else None
-            if not media:
+            matches = media_query.limit(2).all() if media_query is not None else []
+            if len(matches) != 1:
                 continue
+            media = matches[0]
+            identity = (category, media.id)
+            if identity in seen_items:
+                continue
+            seen_items.add(identity)
             note = str(raw_item.get("curator_note") or "").strip()[:500] or None
             db.add(models.CollectionItem(
                 collection_id=collection.id,
@@ -221,6 +244,7 @@ def _import_collections(db: Session, user_id: int, payloads: list[dict]) -> tupl
                 curator_note=note,
             ))
             position += 1
+        db.flush()
         created += 1
     db.commit()
     return created, skipped
@@ -330,7 +354,7 @@ async def import_from_file(
     db: Session = Depends(get_db)
 ):
     """Import data from a JSON file upload"""
-    if not file.filename.endswith('.json'):
+    if not file.filename or not file.filename.lower().endswith('.json'):
         raise HTTPException(status_code=400, detail="File must be a JSON file")
 
     try:
@@ -341,59 +365,12 @@ async def import_from_file(
 
         # Validate the imported data structure
         # Note: 'anime', 'video_games', 'music', and 'books' are optional for backward compatibility with old export files
-        if 'movies' not in data or 'tv_shows' not in data:
+        if not isinstance(data, dict) or 'movies' not in data or 'tv_shows' not in data:
             raise HTTPException(status_code=400, detail="Invalid file format. Expected 'movies' and 'tv_shows' arrays. 'anime', 'video_games', 'music', and 'books' are optional for backward compatibility.")
 
-        # Convert to Pydantic models
-        movies = [schemas.MovieCreate(**movie) for movie in data.get('movies', [])]
-        tv_shows = [schemas.TVShowCreate(**tv_show) for tv_show in data.get('tv_shows', [])]
-        anime = [schemas.AnimeCreate(**anime_item) for anime_item in data.get('anime', [])]
-        video_games = [schemas.VideoGameCreate(**video_game) for video_game in data.get('video_games', [])]
-        music = [schemas.MusicCreate(**music_item) for music_item in data.get('music', [])]
-        books = [schemas.BookCreate(**book) for book in data.get('books', [])]
-        custom_tabs = data.get('custom_tabs', [])
-        activities = [schemas.ActivityEntryImport(**entry) for entry in data.get('activities', [])]
-        collections = data.get('collections', [])
-
-        import_data = schemas.ImportData(movies=movies, tv_shows=tv_shows, anime=anime, video_games=video_games, music=music, books=books, custom_tabs=custom_tabs, activities=activities, collections=collections, progress_checkpoints=data.get('progress_checkpoints', []))
-
-        # Import the data
-        movies_created, movies_updated, movie_errors = crud.import_movies(db, current_user.id, import_data.movies)
-        tv_shows_created, tv_shows_updated, tv_show_errors = crud.import_tv_shows(db, current_user.id, import_data.tv_shows)
-        anime_created, anime_updated, anime_errors = crud.import_anime(db, current_user.id, import_data.anime)
-        video_games_created, video_games_updated, video_game_errors = crud.import_video_games(db, current_user.id, import_data.video_games)
-        music_created, music_updated, music_errors = crud.import_music(db, current_user.id, import_data.music)
-        books_created, books_updated, book_errors = crud.import_books(db, current_user.id, import_data.books)
-        custom_tabs_created, custom_tabs_updated, custom_tab_errors = crud.import_custom_tabs(db, current_user.id, import_data.custom_tabs)
-        activities_created, activities_skipped = import_activity_entries(db, current_user.id, import_data.activities)
-        collections_created, collections_skipped = _import_collections(db, current_user.id, import_data.collections)
-        progress_created, progress_skipped = _import_progress(db, current_user.id, import_data.progress_checkpoints)
-
-        all_errors = movie_errors + tv_show_errors + anime_errors + video_game_errors + music_errors + book_errors + custom_tab_errors
-
-        return schemas.ImportResult(
-            movies_created=movies_created,
-            movies_updated=movies_updated,
-            tv_shows_created=tv_shows_created,
-            tv_shows_updated=tv_shows_updated,
-            anime_created=anime_created,
-            anime_updated=anime_updated,
-            video_games_created=video_games_created,
-            video_games_updated=video_games_updated,
-            music_created=music_created,
-            music_updated=music_updated,
-            books_created=books_created,
-            books_updated=books_updated,
-            custom_tabs_created=custom_tabs_created,
-            custom_tabs_updated=custom_tabs_updated,
-            activities_created=activities_created,
-            activities_skipped=activities_skipped,
-            collections_created=collections_created,
-            collections_skipped=collections_skipped,
-            progress_created=progress_created,
-            progress_skipped=progress_skipped,
-            errors=all_errors
-        )
+        # Reuse the body endpoint's schema and import behavior for native backups.
+        import_payload = schemas.ImportData.model_validate(data)
+        return await import_data(import_payload, current_user, db)
 
     except HTTPException:
         # Preserve intentional client errors instead of masking them as a 500.

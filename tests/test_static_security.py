@@ -1,8 +1,9 @@
 import re
 from pathlib import Path
 
+from app import dashboard_assets
 
-APP_JS = Path(__file__).resolve().parents[1] / "app" / "static" / "app.js"
+
 MAIN_PY = Path(__file__).resolve().parents[1] / "app" / "main.py"
 INDEX_HTML = Path(__file__).resolve().parents[1] / "app" / "templates" / "index.html"
 AD_LOADER_JS = Path(__file__).resolve().parents[1] / "app" / "static" / "ad-loader.js"
@@ -37,7 +38,7 @@ def test_standalone_public_auth_has_its_own_api_base():
 
 def test_review_modal_does_not_decode_attributes_with_inner_html():
     """Review modal should not reinterpret attribute text as HTML."""
-    source = APP_JS.read_text(encoding="utf-8")
+    source = dashboard_assets.full_source()
     review_modal_start = source.index("function openReviewModal")
     review_modal_end = source.index("function closeReviewModal")
     review_modal_source = source[review_modal_start:review_modal_end]
@@ -49,7 +50,7 @@ def test_review_modal_does_not_decode_attributes_with_inner_html():
 
 def test_music_and_books_privacy_controls_are_wired():
     """Music and books settings should save the same fields the API exposes."""
-    source = APP_JS.read_text(encoding="utf-8")
+    source = dashboard_assets.full_source()
     template = INDEX_HTML.read_text(encoding="utf-8")
 
     for control_id in ("musicPrivate", "booksPrivate", "musicVisible", "booksVisible"):
@@ -62,7 +63,7 @@ def test_music_and_books_privacy_controls_are_wired():
 
 def test_library_insights_frontend_is_wired():
     """Statistics dashboard should expose and request the library insights panel."""
-    source = APP_JS.read_text(encoding="utf-8")
+    source = dashboard_assets.full_source()
     template = INDEX_HTML.read_text(encoding="utf-8")
 
     assert 'data-toggle-category-accordion="library-insights"' in template
@@ -215,7 +216,7 @@ def test_review_reporting_uses_safe_dom_and_encoded_route_values():
 
 def test_app_review_forms_prompt_for_substantial_public_reviews():
     """In-app review fields should help users write useful public reviews without blocking saves."""
-    source = APP_JS.read_text(encoding="utf-8")
+    source = dashboard_assets.full_source()
     template = INDEX_HTML.read_text(encoding="utf-8")
 
     assert template.count("data-review-quality-input") == 6
@@ -234,7 +235,7 @@ def test_app_review_forms_prompt_for_substantial_public_reviews():
 
 def test_library_launchpad_is_client_side_and_uses_existing_insights():
     """First-use guidance should be optional and must not mutate library records."""
-    source = APP_JS.read_text(encoding="utf-8")
+    source = dashboard_assets.full_source()
     template = INDEX_HTML.read_text(encoding="utf-8")
 
     assert 'id="libraryLaunchpad"' in template
@@ -243,7 +244,7 @@ def test_library_launchpad_is_client_side_and_uses_existing_insights():
     assert 'data-action="launchpad-open-insights"' in template
     assert 'data-action="launchpad-dismiss"' in template
     assert "const LAUNCHPAD_DISMISS_KEY" in source
-    assert "function renderLibraryLaunchpad(insights)" in source
+    assert "function renderLibraryLaunchpad(insights, firstWeek = null)" in source
     assert "function openLaunchpadAddItem(category = 'movies')" in source
     assert "'launchpad-choose-category': () => openLaunchpadQuickCapture(target.dataset.launchpadCategory)" in source
     assert "button.dataset.launchpadCategory = category" in source
@@ -255,7 +256,7 @@ def test_library_launchpad_is_client_side_and_uses_existing_insights():
 
 def test_library_pulse_uses_safe_dom_rendering_and_existing_tabs():
     """Pulse cards should not interpolate library titles into HTML or create new records."""
-    source = APP_JS.read_text(encoding="utf-8")
+    source = dashboard_assets.full_source()
     template = INDEX_HTML.read_text(encoding="utf-8")
 
     assert 'id="libraryPulse"' in template
@@ -270,7 +271,7 @@ def test_library_pulse_uses_safe_dom_rendering_and_existing_tabs():
 
 
 def test_welcome_back_deck_reuses_safe_dom_and_replaces_overlapping_cards():
-    source = APP_JS.read_text(encoding="utf-8")
+    source = dashboard_assets.full_source()
     template = INDEX_HTML.read_text(encoding="utf-8")
 
     assert 'id="returnDeck"' in template
@@ -287,7 +288,7 @@ def test_welcome_back_deck_reuses_safe_dom_and_replaces_overlapping_cards():
 
 def test_quick_capture_searches_every_core_type_without_writing_directly():
     """Quick capture should prefill proven forms and leave the final save to the user."""
-    source = APP_JS.read_text(encoding="utf-8")
+    source = dashboard_assets.full_source()
     template = INDEX_HTML.read_text(encoding="utf-8")
     quick_capture = source[source.index("// Universal quick capture"):source.index("function showImagePopup")]
 

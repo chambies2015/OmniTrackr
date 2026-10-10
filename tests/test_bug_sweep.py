@@ -12,9 +12,10 @@ import httpx
 import pytest
 
 from app import auth, crud, models, schemas
+from app import dashboard_assets
 
 ROOT = Path(__file__).resolve().parents[1]
-APP_JS = (ROOT / "app" / "static" / "app.js").read_text(encoding="utf-8")
+APP_JS = dashboard_assets.full_source()
 AUTH_JS = (ROOT / "app" / "static" / "auth.js").read_text(encoding="utf-8")
 INDEX_HTML = (ROOT / "app" / "templates" / "index.html").read_text(encoding="utf-8")
 

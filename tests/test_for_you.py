@@ -363,3 +363,18 @@ def test_artwork_lookup_is_best_effort(monkeypatch):
     monkeypatch.setenv("OMDB_API_KEY", "k")
     assert asyncio.run(editorial_collections._artwork(Boom(), "movies", "Arrival", 2016, None)) is None
     assert asyncio.run(editorial_collections._artwork(None, "books", "Dune", 1965, "Frank Herbert")) is None
+
+
+def test_quiet_weeks_are_skipped_except_a_monthly_roundup(db_session, pinned_today, monkeypatch):
+    casual = member(db_session, "casual")  # nothing in their library is on the schedule
+    db_session.commit()
+    digest.subscribe(db_session, casual.id)
+    popular = [{"title": "Big Game", "label": "Game", "date": None, "url": "/release-radar/games#g", "category": "games"}]
+    monkeypatch.setattr(for_you, "upcoming_popular", lambda *a, **k: list(popular))
+    seed_cache({})
+    start = datetime(2026, 9, 29, 12)
+    sent = run_digests(now=start)[1]
+    assert len(sent) == 1 and sent[0][1].startswith("This month on Release Radar")   # first round-up
+    for weeks in (1, 2, 3):
+        assert run_digests(now=start + timedelta(weeks=weeks))[1] == []               # quiet weeks: nothing
+    assert len(run_digests(now=start + timedelta(weeks=4))[1]) == 1                  # next monthly round-up

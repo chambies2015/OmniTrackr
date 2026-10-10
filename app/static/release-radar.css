@@ -10,7 +10,7 @@
 .radar-tabs { display: flex; flex-wrap: wrap; gap: 8px; margin: 0 0 26px; }
 .radar-tabs a { border: 1px solid rgba(150, 137, 255, .35); border-radius: 999px; color: #e1e5f3 !important; font-size: .92rem; font-weight: 600; padding: 8px 16px; text-decoration: none; }
 .radar-tabs a:hover { background: rgba(119, 136, 255, .16); }
-.radar-tabs a[aria-current="page"] { background: var(--site-violet); border-color: var(--site-violet); color: #fff !important; }
+.radar-tabs a[aria-current="page"] { background: #7c3aed; border-color: #7c3aed; color: #fff !important; }
 
 .radar-window { align-items: center; display: grid; gap: 12px; grid-template-columns: 1fr auto 1fr; margin: 0 0 28px; }
 .radar-window__next { justify-self: end; }

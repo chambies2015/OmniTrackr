@@ -6,7 +6,9 @@ from sqlalchemy import func
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
 
+from ..integer_bounds import PositiveDatabaseId
 from .. import models, schemas
+from ..progress import lock_progress_owner
 from ..dependencies import get_current_user, get_db
 from ..progress import get_checkpoint_map, serialize_checkpoint
 
@@ -72,6 +74,7 @@ async def add_next_up(
     current_user: models.User = Depends(get_current_user),
     db: Session = Depends(get_db),
 ):
+    lock_progress_owner(db, current_user.id)
     if not _referenced_item(db, current_user.id, payload.category, payload.item_id):
         raise HTTPException(status_code=404, detail="Library item not found")
 
@@ -94,17 +97,18 @@ async def add_next_up(
     )
     db.add(entry)
     try:
+        db.flush()
+        result = _serialize(entry, db, current_user.id)
         db.commit()
     except IntegrityError:
         db.rollback()
         raise HTTPException(status_code=409, detail="That item is already in Next Up")
-    db.refresh(entry)
-    return _serialize(entry, db, current_user.id)
+    return result
 
 
 @router.put("/{queue_id}/position", response_model=List[schemas.NextUpItem])
 async def move_next_up(
-    queue_id: int,
+    queue_id: PositiveDatabaseId,
     payload: schemas.NextUpItemMove,
     current_user: models.User = Depends(get_current_user),
     db: Session = Depends(get_db),
@@ -126,7 +130,7 @@ async def move_next_up(
 
 @router.delete("/{queue_id}", status_code=status.HTTP_204_NO_CONTENT)
 async def remove_next_up(
-    queue_id: int,
+    queue_id: PositiveDatabaseId,
     current_user: models.User = Depends(get_current_user),
     db: Session = Depends(get_db),
 ):

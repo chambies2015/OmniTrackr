@@ -70,9 +70,5 @@ def update_music(db: Session, user_id: int, music_id: int, music_update: schemas
 
 
 def delete_music(db: Session, user_id: int, music_id: int) -> Optional[models.Music]:
-    db_music = get_music_by_id(db, user_id, music_id)
-    if db_music is None:
-        return None
-    db.delete(db_music)
-    db.commit()
-    return db_music
+    from ..library_lifecycle import delete_owned_media
+    return delete_owned_media(db, user_id, "music", music_id)

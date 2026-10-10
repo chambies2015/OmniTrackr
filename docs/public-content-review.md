@@ -1,5 +1,36 @@
 # Public content review — September 17, 2026
 
+## Follow-up — October 8, 2026: AdSense reviewer pass
+
+Reviewed the public site from the code as an AdSense reviewer would reach it
+(the live site and AdSense account were not reachable from the review
+environment). Three code-side gaps were fixed; the account-side steps are in
+`docs/adsense-account-checklist.md`.
+
+- **Ads and the consent message were blocked by our own CSP.** Google supports
+  only a strict nonce-based CSP for AdSense
+  (https://support.google.com/adsense/answer/16283098). The previous allowlist
+  admitted `adsbygoogle.js` but blocked the frames, ad-quality requests, and
+  Privacy & messaging (CMP) scripts it loads. Pages that carry the ad loader now
+  get `script-src 'nonce-…' 'strict-dynamic'` with Google's fallbacks, open
+  `frame-src`/`connect-src` to https, and a nonce on every script tag. All other
+  pages keep the existing strict policy unchanged.
+- **Trust pages were noindexed.** `/privacy`, `/terms`, and `/contact` are now
+  indexable (still outside the sitemap), so crawlers see the same site identity
+  visitors do. The source-checked `/compare` page is indexable and in the sitemap.
+  Overlapping category guides, templates, checklist, roadmap, and changelog keep
+  their `noindex, follow` policy.
+- **Empty directories read as "under construction".** With no qualifying member
+  content, `/collections/explore`, `/reviews`, and `/titles` said "opening soon"
+  or "being curated" while linked from the main navigation. They now show the
+  authored Discover guides and latest monthly edition instead. Indexing rules for
+  those directories are unchanged.
+
+No database, user data, ad placement, or ad-eligibility change is part of this
+release. Live verification still needed after deploy: open an ad-eligible page
+signed out and confirm the browser console shows no CSP violations from
+googlesyndication, doubleclick, adtrafficquality, or fundingchoicesmessages.
+
 ## Follow-up — September 24, 2026: public guide reading paths
 
 Reorganized `/guides` around starting a library, importing a list, saving a

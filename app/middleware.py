@@ -2,6 +2,11 @@
 Middleware for the OmniTrackr API.
 Contains security headers and bot filtering middleware.
 """
+import re
+import os
+from contextlib import contextmanager
+from urllib.parse import urlsplit
+
 from starlette.middleware.base import BaseHTTPMiddleware
 from starlette.requests import Request
 from starlette.responses import Response as StarletteResponse
@@ -30,14 +35,19 @@ NOINDEX_PREFIXES = (
     "/notifications/",
     "/profile-pictures/",
     "/progress/",
+    "/recap/",
     "/recommend/",
     "/recommendations/",
     "/static/profile_pictures/",
     "/statistics/",
     "/tv-shows/",
     "/video-games/",
+    "/year-in-review",
 )
 PUBLIC_WELL_KNOWN_PATHS = {"/.well-known/ai.txt"}
+PUBLIC_PROFILE_PATH = re.compile(r"^/u/(?:[A-Za-z0-9_-][A-Za-z0-9_.-]{0,49}|id/\d{1,10})(?:/card\.png)?/?$")
+# Shared Year in Review links carry a random token that could contain a scanned word.
+PUBLIC_RECAP_PATH = re.compile(r"^/recap/[A-Za-z0-9_-]{8,32}(?:/card\.png)?/?$")
 
 
 class SecurityHeadersMiddleware(BaseHTTPMiddleware):
@@ -96,6 +106,17 @@ class SecurityHeadersMiddleware(BaseHTTPMiddleware):
             # Include authentication and validation failures before a route runs.
             response.headers["Cache-Control"] = "private, no-store"
             response.headers["X-Robots-Tag"] = "noindex, follow"
+
+        path = request.url.path
+        if (path.startswith("/static/") and not path.startswith("/static/profile_pictures/")
+                and response.status_code == 200 and "cache-control" not in response.headers):
+            # Versioned assets (?v=...) never change, so browsers can keep them for a year;
+            # unversioned ones are rechecked daily.
+            # Font files are never edited in place (a new cut gets a new file name).
+            versioned = "v=" in request.url.query or path.startswith("/static/fonts/")
+            response.headers["Cache-Control"] = (
+                "public, max-age=31536000, immutable" if versioned else "public, max-age=86400"
+            )
 
         if request.url.path in NOINDEX_PATHS or request.url.path.startswith(NOINDEX_PREFIXES):
             response.headers["X-Robots-Tag"] = "noindex, nofollow"
@@ -216,6 +237,10 @@ class BotFilterMiddleware(BaseHTTPMiddleware):
         
         if path in PUBLIC_WELL_KNOWN_PATHS:
             return await call_next(request)
+        if PUBLIC_PROFILE_PATH.match(request.url.path) or PUBLIC_RECAP_PATH.match(request.url.path):
+            # /u/<username> pages: a username such as "admin_fan" would otherwise
+            # trip the substring scan. The route validates the name itself.
+            return await call_next(request)
 
         if any(suspicious in path for suspicious in self.SUSPICIOUS_PATHS) or \
            any(suspicious in normalized_path for suspicious in self.SUSPICIOUS_PATHS):
@@ -241,3 +266,141 @@ class BotFilterMiddleware(BaseHTTPMiddleware):
         
         return await call_next(request)
 
+
+
+def _browser_origin(value: str, *, referer: bool = False) -> str | None:
+    """Normalize an HTTP(S) origin without trusting forwarded headers."""
+    try:
+        if any(char.isspace() for char in value) or "\\" in value:
+            return None
+        parts = urlsplit(value)
+        if parts.scheme not in ("http", "https") or not parts.hostname or parts.username is not None or parts.password is not None:
+            return None
+        if not referer and (parts.path not in ("", "/") or parts.query or parts.fragment):
+            return None
+        host = parts.hostname.lower()
+        if ":" in host:
+            host = f"[{host}]"
+        port = parts.port
+        suffix = f":{port}" if port is not None and port != (443 if parts.scheme == "https" else 80) else ""
+        return f"{parts.scheme}://{host}{suffix}"
+    except (ValueError, TypeError):
+        return None
+
+
+class CSRFProtectionMiddleware(BaseHTTPMiddleware):
+    """Reject browser writes from untrusted sites; native API clients still work."""
+    async def dispatch(self, request: Request, call_next):
+        if request.method in ("GET", "HEAD", "OPTIONS", "TRACE"):
+            return await call_next(request)
+        origin = request.headers.get("origin")
+        referer = request.headers.get("referer")
+        trusted = {_browser_origin(str(request.base_url))}
+        for configured in os.getenv("ALLOWED_ORIGINS", "").split(","):
+            normalized = _browser_origin(configured.strip())
+            if normalized:
+                trusted.add(normalized)
+        trusted.discard(None)
+        if origin is not None:
+            allow_local_file = (origin == "null"
+                                and os.getenv("ENVIRONMENT", "development").lower() != "production"
+                                and os.getenv("ALLOW_NULL_ORIGIN", "").lower() == "true")
+            allowed = allow_local_file or _browser_origin(origin) in trusted
+        elif referer is not None:
+            allowed = _browser_origin(referer, referer=True) in trusted
+        else:
+            allowed = request.headers.get("sec-fetch-site", "").lower() != "cross-site"
+        if not allowed:
+            return StarletteResponse('{"detail":"Cross-site request rejected"}', status_code=403, media_type="application/json")
+        return await call_next(request)
+
+
+def _protected_upload_path(path: str) -> bool:
+    path = path.rstrip("/")
+    return (path in {"/account/profile-picture", "/import/file", "/import-studio/preview", "/import-studio/apply"}
+            or re.fullmatch(r"/custom-tabs/[^/]+/items/[^/]+/poster", path) is not None)
+
+
+class UploadAuthenticationMiddleware:
+    """Authenticate file uploads before FastAPI starts its multipart parser."""
+    def __init__(self, app):
+        self.app = app
+
+    async def __call__(self, scope, receive, send):
+        if scope["type"] != "http" or scope["method"] != "POST" or not _protected_upload_path(scope["path"]):
+            return await self.app(scope, receive, send)
+        from fastapi import HTTPException
+        from . import auth
+        from .dependencies import get_current_user, get_db, oauth2_scheme
+
+        request = Request(scope, receive=receive)
+        try:
+            token = await oauth2_scheme(request)
+            if not token and not request.cookies.get(auth.AUTH_COOKIE_NAME):
+                raise HTTPException(401, "Could not validate credentials", headers={"WWW-Authenticate": "Bearer"})
+            # Use the same database provider as the route, including isolated
+            # database overrides. Authentication checks revocation and activity.
+            provider = request.app.dependency_overrides.get(get_db, get_db)
+            with contextmanager(provider)() as db:
+                await get_current_user(request, token, db)
+        except HTTPException as exc:
+            from starlette.responses import JSONResponse
+            return await JSONResponse({"detail": exc.detail}, status_code=exc.status_code,
+                                      headers=exc.headers)(scope, receive, send)
+        await self.app(scope, receive, send)
+
+
+class RequestBodyLimitMiddleware:
+    """Bound bytes before JSON or multipart parsing, including chunked uploads."""
+    def __init__(self, app, max_body_bytes: int = 26 * 1024 * 1024):
+        self.app = app
+        self.max_body_bytes = max_body_bytes
+
+    async def __call__(self, scope, receive, send):
+        if scope["type"] != "http":
+            return await self.app(scope, receive, send)
+        from starlette.formparsers import MultiPartException
+
+        class BodyLimitExceeded(MultiPartException):
+            pass
+
+        response = StarletteResponse('{"detail":"Request body too large"}', status_code=413, media_type="application/json")
+        headers = dict(scope.get("headers", []))
+        try:
+            length = int(headers.get(b"content-length", b"0"))
+        except (ValueError, TypeError):
+            length = 0
+        limit = self.max_body_bytes
+        path = scope["path"].rstrip("/")
+        if _protected_upload_path(path) and path != "/import/file":
+            # Five MiB files plus bounded multipart fields and framing.
+            limit = min(limit, 6 * 1024 * 1024)
+        elif path == "/auth/login":
+            limit = min(limit, 64 * 1024)
+        if length > limit:
+            return await response(scope, receive, send)
+        received = 0
+        exceeded = False
+
+        async def bounded_receive():
+            nonlocal received, exceeded
+            message = await receive()
+            if message["type"] == "http.request":
+                received += len(message.get("body", b""))
+                if received > limit:
+                    exceeded = True
+                    # Multipart parsers close already-spooled files on this
+                    # exception; endpoint code never receives the excess chunk.
+                    raise BodyLimitExceeded("Request body too large")
+            return message
+
+        async def bounded_send(message):
+            if not exceeded:
+                await send(message)
+
+        try:
+            await self.app(scope, bounded_receive, bounded_send)
+        except BodyLimitExceeded:
+            pass
+        if exceeded:
+            await response(scope, receive, send)

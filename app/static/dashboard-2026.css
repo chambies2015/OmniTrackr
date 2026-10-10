@@ -1,0 +1,217 @@
+/* Signed-in dashboard on the same design language as the public site (site.css):
+   deep violet night, Inter + Poppins, violet pill actions, teal eyebrows.
+   Loaded last; it only re-skins existing hooks, so layout and behaviour stay put. */
+
+body.app-shell.dark-mode {
+  --bg: #0b0a18;
+  --fg: #f1effc;
+  --fg-secondary: #aaa6cb;
+  --card-bg: #15122b;
+  --surface-muted: #110f24;
+  --surface-hover: #221c42;
+  --field-bg: #0f0d21;
+  --border: #2a2550;
+  --primary: #c4b5fd;
+  --primary-hover: #ddd6fe;
+  --accent-solid: #8b5cf6;
+  --on-accent: #ffffff;
+  --accent-soft: #241c49;
+  --teal: #5eead4;
+  --teal-soft: #123a37;
+  --danger: #fda4af;
+  --table-row-alt: #13102a;
+  --shadow-sm: 0 1px 0 rgba(255, 255, 255, .03) inset, 0 8px 24px rgba(0, 0, 0, .25);
+  --shadow-lg: 0 30px 80px rgba(0, 0, 0, .6);
+  background:
+    radial-gradient(1100px 520px at 88% -160px, rgba(124, 58, 237, .26), transparent 70%),
+    radial-gradient(700px 420px at -10% 30%, rgba(45, 212, 191, .07), transparent 60%),
+    var(--bg);
+  background-attachment: fixed;
+}
+
+body.app-shell {
+  --primary: #6d28d9;
+  --primary-hover: #5b21b6;
+  --accent-solid: #7c3aed;
+  --accent-soft: #efe9ff;
+  -webkit-font-smoothing: antialiased;
+}
+
+body.app-shell :is(h1, h2, h3, .library-heading h2, .for-you-card h2) { font-family: Poppins, Inter, system-ui, sans-serif; letter-spacing: -.015em; }
+
+/* ---------- Header: vortex mark, roomy search, gradient capture button ---------- */
+body.app-shell .header { background: linear-gradient(180deg, rgba(255, 255, 255, .05), rgba(255, 255, 255, .02)), var(--card-bg); border-radius: 18px; }
+body.app-shell .app-brand__mark { background: none; border-radius: 50%; overflow: visible; }
+body.app-shell .app-brand__mark img { border-radius: 50%; box-shadow: 0 0 22px rgba(168, 85, 247, .55); display: block; height: 40px; width: 40px; }
+body.app-shell .header .app-title { font-family: Poppins, Inter, sans-serif; font-weight: 700; letter-spacing: -.02em; }
+body.app-shell .library-search__field { border-radius: 999px; padding-inline: 18px; }
+body.app-shell .quick-capture-trigger {
+  background: linear-gradient(135deg, #8b5cf6, #a855f7); border: 0; border-radius: 999px; color: #fff;
+  box-shadow: 0 10px 28px rgba(139, 92, 246, .35); font-weight: 600;
+}
+body.app-shell .quick-capture-trigger:hover { filter: brightness(1.08); }
+body.app-shell .quick-capture-trigger kbd { background: rgba(255, 255, 255, .18); border-color: rgba(255, 255, 255, .3); color: #fff; }
+
+/* ---------- Account strip and Site stats button ---------- */
+body.app-shell .account-toolbar :is(#toggleMode, #notificationBell, #userDisplay, #showFriendsSidebar, #logoutBtn) { border-radius: 999px; }
+body.app-shell .account-toolbar #userDisplay { padding-inline: 6px 14px; }
+body.app-shell .account-toolbar .site-stats-link { border-radius: 999px; min-height: 40px; font-size: .82rem; }
+
+/* ---------- Tabs: quiet labels, pill for the active section ---------- */
+body.app-shell .tabs { border: 0; }
+body.app-shell .library-nav__label { color: var(--teal); letter-spacing: .14em; }
+body.app-shell .tabs .tab { border-radius: 999px; border: 1px solid transparent; font-weight: 500; }
+body.app-shell .tabs .tab:hover { background: var(--surface-hover); }
+body.app-shell .tabs .tab.active {
+  background: var(--accent-soft); border-color: color-mix(in srgb, var(--accent-solid) 55%, transparent);
+  color: var(--fg); box-shadow: none; font-weight: 600;
+}
+
+/* ---------- Cards and panels ---------- */
+body.app-shell .card,
+body.app-shell :is(.library-pulse, .todays-pick, .next-up-queue, .return-deck) {
+  border-radius: 18px;
+}
+body.app-shell.dark-mode .card,
+body.app-shell.dark-mode :is(.library-pulse, .todays-pick, .next-up-queue) {
+  background: linear-gradient(180deg, rgba(255, 255, 255, .045), rgba(255, 255, 255, .015)), var(--card-bg);
+}
+body.app-shell .library-heading h2 { font-size: 1.45rem; }
+body.app-shell .library-count { border-radius: 999px; }
+
+/* Primary actions read as the public site's pill buttons; utilities stay quiet. */
+body.app-shell .library-add-form button[type="submit"],
+body.app-shell .library-launchpad__primary,
+body.app-shell .todays-pick button.action-btn:first-of-type {
+  background: linear-gradient(135deg, #8b5cf6, #a855f7); border: 0; border-radius: 999px; color: #fff;
+}
+body.app-shell .library-utility,
+body.app-shell .library-sort,
+body.app-shell .library-filter-search { border-radius: 999px; }
+body.app-shell .library-filter-search { padding-inline: 16px; }
+
+/* ---------- Library table ---------- */
+body.app-shell .library-table-wrap { border-radius: 14px; }
+body.app-shell .library-table thead th { font-size: .7rem; letter-spacing: .08em; text-transform: uppercase; color: var(--fg-secondary); }
+body.app-shell .library-table tbody tr { transition: background .15s ease; }
+body.app-shell .library-table td[data-card-field="title"] { font-weight: 600; }
+body.app-shell .library-table img { border-radius: 8px; }
+
+/* Row actions: Edit stays visible; the rest live in a small "More" menu. */
+body.app-shell .row-actions { align-items: center; display: inline-flex; gap: 6px; position: relative; }
+body.app-shell .row-menu { position: relative; }
+body.app-shell .row-menu > summary {
+  align-items: center; background: var(--surface-muted); border: 1px solid var(--border); border-radius: 999px;
+  color: var(--fg); cursor: pointer; display: inline-flex; font-size: .8rem; font-weight: 600; gap: 4px;
+  list-style: none; min-height: 34px; padding: 0 12px; user-select: none;
+}
+body.app-shell .row-menu > summary::-webkit-details-marker { display: none; }
+body.app-shell .row-menu > summary:hover, body.app-shell .row-menu[open] > summary { background: var(--surface-hover); }
+body.app-shell .row-menu__panel {
+  background: var(--card-bg); border: 1px solid var(--border); border-radius: 12px; box-shadow: var(--shadow-lg);
+  display: grid; gap: 2px; min-width: 168px; padding: 6px; position: fixed; z-index: 80;
+}
+body.app-shell .row-menu__panel button.action-btn {
+  background: none; border: 0; border-radius: 8px; box-shadow: none; color: var(--fg); justify-content: flex-start;
+  margin: 0; min-height: 36px; padding: 0 12px; text-align: left; width: 100%;
+}
+body.app-shell .row-menu__panel button.action-btn:hover { background: var(--surface-hover); }
+body.app-shell .row-menu__panel button.action-btn:is(.delete-btn, [class*="delete"]) { color: var(--danger); }
+body.app-shell .row-actions > button.action-btn { border-radius: 999px; min-height: 34px; }
+
+/* ---------- Dashboard widgets only belong next to libraries ---------- */
+body.app-shell:is([data-active-tab="statistics"], [data-active-tab="collections"], [data-active-tab="activity"], [data-active-tab="recommendations"])
+  :is(#libraryLaunchpad, #starterPicks, #comingUp, #returnDeck, .daily-dashboard, #nextUpQueue) {
+  display: none !important;
+}
+
+/* ---------- Footer ---------- */
+body.app-shell #mainFooter.app-footer { text-align: left; border-top: 1px solid var(--border); color: var(--fg-secondary); margin: 48px auto 0; max-width: 1480px; padding: 36px 0 40px; }
+body.app-shell .app-footer__grid { display: grid; gap: 28px; grid-template-columns: minmax(0, 1.4fr) repeat(3, minmax(0, 1fr)); }
+body.app-shell .app-footer__brand { align-items: center; color: var(--fg); display: inline-flex; font: 700 1.05rem Poppins, Inter, sans-serif; gap: 10px; text-decoration: none; }
+body.app-shell .app-footer__brand img { border-radius: 50%; box-shadow: 0 0 16px rgba(168, 85, 247, .5); height: 26px; width: 26px; }
+body.app-shell .app-footer p { font-size: .88rem; line-height: 1.6; margin: 10px 0 0; max-width: 320px; }
+body.app-shell .app-footer h2 { color: var(--fg); font: 700 .74rem Inter, sans-serif; letter-spacing: .12em; margin: 0 0 10px; text-transform: uppercase; }
+body.app-shell .app-footer nav { display: flex; flex-direction: column; gap: 8px; }
+body.app-shell .app-footer a:not(.app-footer__brand) { color: var(--fg-secondary); font-size: .88rem; text-decoration: none; }
+body.app-shell .app-footer a:not(.app-footer__brand):hover { color: var(--fg); }
+body.app-shell .app-footer .app-footer__support { color: var(--primary); font-weight: 600; }
+
+@media (max-width: 860px) {
+  body.app-shell .app-footer__grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  body.app-shell .app-footer__grid > div:first-child { grid-column: 1 / -1; }
+}
+@media (max-width: 760px) {
+  body.app-shell .row-actions { box-sizing: border-box; display: grid; gap: 8px; grid-template-columns: 1fr 1fr; width: 100%; }
+  body.app-shell .row-actions > button.action-btn { width: 100%; }
+  body.app-shell .row-menu > summary { box-sizing: border-box; justify-content: center; min-height: 44px; width: 100%; }
+}
+@media (prefers-reduced-motion: reduce) { body.app-shell .library-table tbody tr { transition: none; } }
+
+/* "Add Movie" row: plain text with a plus, no inherited gradient highlight. */
+body.app-shell .library-add-panel .collapsible-header h2,
+body.app-shell .library-add-panel .collapsible-header h2 * { background: none !important; -webkit-text-fill-color: currentColor; text-shadow: none; }
+body.app-shell .library-add-toggle { color: var(--fg); font-family: Poppins, Inter, sans-serif; font-size: 1.05rem; padding-inline: 4px; }
+body.app-shell .library-add-toggle > span:first-child::before { color: var(--primary); content: "+"; font-weight: 700; margin-right: 10px; }
+body.app-shell .stats-page-heading { margin-bottom: 20px; }
+body.app-shell .stats-page-heading__eyebrow { color: var(--teal); font-size: .74rem; font-weight: 700; letter-spacing: .14em; margin: 0 0 6px; text-transform: uppercase; }
+body.app-shell .stats-page-heading h2 { color: var(--fg); font-size: 1.6rem; margin: 0; }
+
+/* One field style across the workspace. */
+body.app-shell.dark-mode :is(.card, .modal-content, .for-you-card) :is(input[type="text"], input[type="number"], input[type="search"], input[type="url"], input[type="email"], input[type="password"], input[type="date"], textarea, select):not(.library-filter-search) {
+  background: var(--field-bg); border: 1px solid var(--border); color: var(--fg);
+}
+body.app-shell :is(.card, .modal-content) :is(input[type="text"], input[type="number"], input[type="search"], input[type="url"], input[type="email"], input[type="password"], input[type="date"], textarea, select):focus {
+  border-color: var(--accent-solid); box-shadow: 0 0 0 3px color-mix(in srgb, var(--accent-solid) 25%, transparent);
+}
+body.app-shell .collections-hero__eyebrow { color: var(--teal); }
+
+/* ---------- Account → Public profile ---------- */
+body.app-shell #publicProfileForm textarea { box-sizing: border-box; font: inherit; min-height: 84px; resize: vertical; width: 100%; }
+.profile-settings__link { align-items: center; display: flex; flex-wrap: wrap; gap: 8px; margin: 4px 0 14px; overflow-wrap: anywhere; }
+.profile-settings__link a { color: #c4b5fd; font-weight: 600; }
+.profile-settings__copy { background: transparent; border: 1px solid rgba(196, 181, 253, .45); border-radius: 999px; color: inherit; cursor: pointer; font: inherit; font-size: .8rem; padding: 4px 12px; }
+.profile-settings__copy:hover { border-color: #c4b5fd; }
+.profile-settings__count { float: right; font-size: .8rem; font-weight: 400; opacity: .7; }
+.profile-settings__count.is-over { color: #fca5a5; opacity: 1; }
+.profile-settings__parts { border: 1px solid rgba(255, 255, 255, .12); border-radius: 12px; display: grid; gap: 8px; margin: 0 0 12px; padding: 12px 14px; }
+.profile-settings__parts legend { font-size: .85rem; font-weight: 600; padding: 0 6px; }
+.profile-settings__check { align-items: center; cursor: pointer; display: flex; gap: 10px; }
+.profile-settings__check input { accent-color: #8b5cf6; height: 16px; width: 16px; }
+.profile-settings__parts:disabled { opacity: .55; }
+
+/* Guest list moved into a new library */
+.guest-import-toast { background: #14112a; border: 1px solid rgba(45, 212, 191, .45); border-radius: 14px; bottom: 24px; box-shadow: 0 20px 50px rgba(0, 0, 0, .5); color: #f5f3ff; font-weight: 600; left: 50%; max-width: min(92vw, 520px); padding: 14px 18px; position: fixed; transform: translateX(-50%); z-index: 1000; }
+body.app-shell .account-toolbar .install-app-btn { border: 0; cursor: pointer; font-family: inherit; font-weight: 600; }
+body.app-shell .account-toolbar .install-app-btn[hidden] { display: none; }
+body.app-shell .install-app-dialog { box-sizing: border-box; margin: auto; background: var(--card-bg, #1e1e2f); border: 1px solid var(--border, rgb(255 255 255 / .12)); border-radius: 14px; color: var(--fg, #f4f2ff); max-width: min(420px, calc(100vw - 32px)); padding: 22px 24px; }
+body.app-shell .install-app-dialog::backdrop { background: rgb(0 0 0 / .55); }
+body.app-shell .install-app-dialog h2 { font-size: 1.1rem; margin: 0 0 12px; }
+body.app-shell .install-app-dialog ol { line-height: 1.55; margin: 0 0 18px; padding-left: 20px; }
+body.app-shell .return-deck__released { margin-top: 16px; }
+body.app-shell .return-deck__released-title { font-size: .78rem; font-weight: 700; letter-spacing: .08em; margin: 0 0 8px; opacity: .75; text-transform: uppercase; }
+body.app-shell .return-deck__released ul { display: grid; gap: 8px; list-style: none; margin: 0; padding: 0; }
+body.app-shell .return-deck__released li { display: flex; flex-wrap: wrap; gap: 4px 10px; }
+body.app-shell .return-deck__released a { color: #c4b5fd; font-weight: 700; }
+body.app-shell .return-deck__released span { font-size: .85rem; opacity: .75; }
+
+/* First visit: Quick start leads; the launchpad keeps its steps and import path but
+   drops its own "Add a movie / Add a book…" chips, which repeat Quick start and Add anything. */
+body.app-shell #starterPicks:not([hidden]) ~ #libraryLaunchpad #libraryLaunchpadCategories { display: none; }
+
+/* Library titles link to their public title pages */
+body.app-shell a.title-page-link { color: inherit; text-decoration: underline; text-decoration-color: rgba(196, 181, 253, .45); text-underline-offset: 3px; }
+body.app-shell a.title-page-link:hover { color: #c4b5fd; text-decoration-color: currentColor; }
+
+/* ---------- Account → Supporter ---------- */
+#supporterSection code { background: rgba(255, 255, 255, .08); border-radius: 6px; padding: 2px 8px; }
+.supporter-kofi { display: inline-block; text-decoration: none; }
+.supporter-accent { align-items: center; cursor: pointer; display: inline-flex; gap: 8px; margin-right: 14px; text-transform: capitalize; }
+.supporter-accent input { accent-color: #8b5cf6; }
+.supporter-accent__swatch { border-radius: 50%; display: inline-block; height: 14px; width: 14px; }
+.supporter-accent__swatch--violet { background: #8b5cf6; }
+.supporter-accent__swatch--teal { background: #2dd4bf; }
+.supporter-accent__swatch--amber { background: #f59e0b; }
+.supporter-accent__swatch--rose { background: #f472b6; }
+.supporter-accent__swatch--sky { background: #38bdf8; }
+.supporter-accent__swatch--none { border: 1px dashed rgba(255, 255, 255, .5); }

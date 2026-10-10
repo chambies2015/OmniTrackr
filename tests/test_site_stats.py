@@ -5,7 +5,7 @@ from pathlib import Path
 import pytest
 from starlette.requests import Request
 
-from app import admin_access, models, site_traffic
+from app import admin_access, dashboard_assets, models, site_traffic
 from app.site_traffic import TrafficRecorder, classify_device, should_count, traffic_source
 from tests.conftest import TestingSessionLocal
 
@@ -38,13 +38,24 @@ def admin_env(monkeypatch):
 def test_admin_list_reads_both_variables_case_insensitively(admin_env):
     admin_env.setenv("collection_moderator_usernames", "Dan ")
     admin_env.setenv("ADMIN_USERNAMES", "owner,  second")
-    assert admin_access.admin_usernames() == {"dan", "owner", "second"}
+    assert admin_access.admin_usernames() == {"Dan", "owner", "second"}
 
     class User:
-        username = "DAN"
-    assert admin_access.is_site_admin(User())
+        username = "Dan"
+    assert admin_access.is_site_admin(User()) and admin_access.is_moderator(User())
     User.username = "someone"
     assert not admin_access.is_site_admin(User())
+
+
+@pytest.mark.parametrize("lookalike", ["DAN", "dan", "dAn", "Dan ", " Dan"])
+def test_capitalised_copies_of_the_owner_name_are_not_admins(admin_env, lookalike):
+    """Usernames are unique only as typed, so admin matching must be exact."""
+    admin_env.setenv("ADMIN_USERNAMES", "Dan")
+
+    class User:
+        username = lookalike
+    assert not admin_access.is_site_admin(User())
+    assert not admin_access.is_moderator(User())
 
 
 def test_no_admins_by_default(admin_env):
@@ -66,6 +77,8 @@ def test_page_shell_is_public_but_noindex_and_holds_no_data(client):
     assert "/static/site-stats.js" in response.text
     assert "Content-Security-Policy" in response.headers
     assert "testuser" not in response.text
+    # The Ko-fi linking card is an empty shell too; payments load from the admin-only API.
+    assert 'id="kofiCard"' in response.text and 'id="kofiList"></ul>' in response.text
 
 
 def test_overview_requires_login(client):
@@ -118,6 +131,45 @@ def test_overview_for_admin_has_every_section(authenticated_client, admin_env, d
     assert any(item["name"].startswith("OMDb") for item in data["system"]["integrations"])
     # Aggregates only: no emails or password material anywhere in the payload.
     assert "@example.com" not in response.text and "hashed_password" not in response.text
+
+
+def test_overview_growth_counts_invites_supporters_email_and_takes(authenticated_client, admin_env, db_session):
+    from datetime import datetime
+    admin_env.setenv("ADMIN_USERNAMES", "testuser")
+    user = db_session.query(models.User).filter_by(username="testuser").one()
+    friend = models.User(username="growthfriend", email="growthfriend@example.com", hashed_password="x", is_verified=True)
+    waiting = models.User(username="growthwaiting", email="growthwaiting@example.com", hashed_password="x")
+    db_session.add_all([friend, waiting])
+    db_session.flush()
+    now = datetime.utcnow()
+    old = now - timedelta(days=60)
+    take = models.TakeRequest(asker_id=user.id, kind="movie", slug="heat-1995", title="Heat", token="growthtake",
+                              expires_at=now + timedelta(days=30))
+    db_session.add_all([
+        models.FriendInvite(user_id=user.id, token="growthinvite"),
+        models.FriendInviteSignup(inviter_id=user.id, invitee_id=friend.id, completed_at=now),
+        models.FriendInviteSignup(inviter_id=user.id, invitee_id=waiting.id),
+        models.Supporter(user_id=user.id, since=now, active_until=now + timedelta(days=30), monthly=True),
+        models.Supporter(user_id=friend.id, since=old, active_until=old + timedelta(days=30)),
+        models.KofiPayment(message_id="growth-1", kind="Donation", user_id=user.id),
+        models.KofiPayment(message_id="growth-2", kind="Donation"),
+        models.EmailDigestSubscription(user_id=user.id, token="growthdigest"),
+        take,
+    ])
+    db_session.flush()
+    db_session.add(models.TakeResponse(request_id=take.id, responder_id=friend.id))
+    db_session.commit()
+
+    response = authenticated_client.get("/api/site-stats/overview?days=30")
+    assert response.status_code == 200
+    growth = response.json()["growth"]
+    assert growth["invites"] == {"links": 1, "new_links": 1, "signups": 2, "friends_made": 1, "awaiting_verification": 1}
+    assert growth["supporters"] == {"active": 1, "monthly": 1, "all_time": 2, "new": 1, "payments": 2, "unlinked_payments": 1}
+    assert growth["weekly_email"] == {"subscribers": 1, "new": 1}
+    assert growth["takes"] == {"asked": 1, "answered": 1}
+    # Counts only: no tokens or Ko-fi details anywhere, and no usernames in the growth block.
+    assert "growthinvite" not in response.text and "growth-2" not in response.text
+    assert "growthfriend" not in str(growth)
 
 
 @pytest.mark.parametrize("days", [3, 91])
@@ -249,7 +301,7 @@ def test_traffic_table_is_new_and_separate():
 
 def test_dashboard_link_is_hidden_until_the_server_confirms_admin():
     index = (ROOT / "app" / "templates" / "index.html").read_text(encoding="utf-8")
-    app_js = (ROOT / "app" / "static" / "app.js").read_text(encoding="utf-8")
+    app_js = dashboard_assets.full_source()
     auth_js = (ROOT / "app" / "static" / "auth.js").read_text(encoding="utf-8")
     assert '<a id="siteStatsLink" class="site-stats-link" href="/site-stats" hidden>' in index
     assert "/api/site-stats/access" in app_js

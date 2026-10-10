@@ -251,7 +251,9 @@ class TestPages:
             assert label in html
         assert "<script>alert(1)</script>" not in html
         assert "&lt;script&gt;alert(1)&lt;/script&gt;" in html
-        assert "/static/ad-loader.js" in html  # substantial, indexable page
+        # Indexed (overview with its own guide text) but never monetized: release lists
+        # are mostly third-party data (AdSense "low value content", Oct 2026).
+        assert "/static/ad-loader.js" not in html
         assert "evil.example" not in html and "javascript:" not in html
         parsed = Elements(html)
         data = json.loads(parsed.scripts[0])
@@ -481,21 +483,36 @@ def test_sitemap_lists_only_indexable_radar_pages(client, fixture_radar):
         assert "noindex" not in response.text and "noindex" not in response.headers.get("x-robots-tag", "")
 
 
-def test_sitemap_includes_substantial_sections(client, monkeypatch):
+def _plenty_of_tv(monkeypatch):
     install_fixture_providers(today=TODAY, monkeypatch=monkeypatch)
     many = [radar.make_item(category="tv", key=f"tvm-{n}-s1", title=f"Show {n}", release_date="2026-10-0%d" % (n % 9 + 1),
-                            source_url=None, popularity=90 - n) for n in range(10)]
+                            source_url=None, popularity=90 - n) for n in range(14)]
 
     async def plenty(client, window):
         return list(many) if window.slug == "2026-10" else []
 
     monkeypatch.setitem(radar.PROVIDERS, "tv", plenty)
-    client.get("/release-radar/tv")
+
+
+def test_large_category_pages_stay_out_of_index_and_ads(client, monkeypatch):
+    _plenty_of_tv(monkeypatch)
+    page = client.get("/release-radar/tv")
+    assert '<meta name="robots" content="noindex, follow">' in page.text
+    assert page.headers["x-robots-tag"] == "noindex, follow"
+    assert "/static/ad-loader.js" not in page.text
     body = client.get("/sitemap.xml").text
-    assert "https://omnitrackr.xyz/release-radar/tv</loc>" in body
+    assert "/release-radar/tv</loc>" not in body
+    assert "https://omnitrackr.xyz/release-radar</loc>" in body
+
+
+def test_category_indexing_switch_still_works(client, monkeypatch):
+    _plenty_of_tv(monkeypatch)
+    monkeypatch.setattr(radar, "INDEX_CATEGORY_PAGES", True)
+    monkeypatch.setattr(radar, "RADAR_ADS", True)
     page = client.get("/release-radar/tv")
     assert '<meta name="robots" content="index, follow, max-image-preview:large">' in page.text
-    assert "/static/ad-loader.js" not in page.text  # 10 items: indexable, but below the ad threshold
+    assert "/static/ad-loader.js" in page.text  # 14 items: above the ad threshold
+    assert "https://omnitrackr.xyz/release-radar/tv</loc>" in client.get("/sitemap.xml").text
 
 
 def test_llms_txt_describes_radar(client):

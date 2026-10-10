@@ -141,6 +141,19 @@ function reviewText(tag, className, value) {
   return element;
 }
 
+const SUPPORTER_ACCENTS = new Set(['teal', 'amber', 'rose', 'sky']);
+
+function supporterChip(badge) {
+  const chip = reviewText('a', 'supporter-chip', '');
+  if (SUPPORTER_ACCENTS.has(badge.accent)) chip.classList.add(`supporter-chip--${badge.accent}`);
+  chip.href = '/supporters';
+  chip.title = badge.since ? `Supporting OmniTrackr on Ko-fi since ${badge.since}` : 'Supports OmniTrackr on Ko-fi';
+  const heart = reviewText('span', '', '♥');
+  heart.setAttribute('aria-hidden', 'true');
+  chip.append(heart, ' Supporter');
+  return chip;
+}
+
 function reviewImageUrl(value) {
   if (typeof value !== 'string') return '/static/poster-placeholder.svg';
   if (value.startsWith('/') && !value.startsWith('//') && !value.includes('\\')) return value;
@@ -205,13 +218,16 @@ function createReviewCard(review) {
     card.appendChild(details);
   }
   const meta = reviewText('div', 'review-meta', '');
-  meta.appendChild(reviewText('span', 'review-author', `By ${review.username || 'Community member'}`));
+  const author = reviewText('span', 'review-author', `By ${review.username || 'Community member'}`);
+  if (review.supporter) author.appendChild(supporterChip(review.supporter));
+  meta.appendChild(author);
   if (review.rating !== null && review.rating !== undefined) {
     meta.appendChild(reviewText('span', 'review-rating', `Rating: ${review.rating}/10`));
   }
   card.appendChild(meta);
   const actions = reviewText('div', 'review-card-actions', '');
   const save = reviewText('a', 'review-save-link', 'Save to my library');
+  save.rel = 'nofollow';
   save.href = `/reviews/${encodeURIComponent(review.id)}/save?category=${encodeURIComponent(review.category)}`;
   save.setAttribute('aria-label', `Save ${review.title} to my library`);
   actions.appendChild(save);

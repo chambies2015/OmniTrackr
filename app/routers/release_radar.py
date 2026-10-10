@@ -136,7 +136,7 @@ def render_card(item: dict, count: int, return_path: str, *, compact: bool = Fal
     key = escape(item["key"], quote=True)
     title = escape(item["title"])
     art = (
-        f'<img src="{escape(item["image"], quote=True)}" alt="" loading="lazy" decoding="async" referrerpolicy="no-referrer">'
+        f'<img src="{escape(item["image"], quote=True)}" alt="" width="200" height="300" loading="lazy" decoding="async" referrerpolicy="no-referrer">'
         if item.get("image") else f'<span class="radar-card__initial" aria-hidden="true">{escape(item["title"][:1].upper())}</span>'
     )
     when = (
@@ -160,7 +160,7 @@ def render_card(item: dict, count: int, return_path: str, *, compact: bool = Fal
     buy = affiliate.links_html(category, item["title"], creator)
     search = " ".join([item["title"], item.get("alt_title", ""), *item["genres"], *item["platforms"], *item["details"]])
     add = (
-        f'<a class="radar-add" data-radar-add="{key}" href="{escape(_signin_href(return_path), quote=True)}">'
+        f'<a class="radar-add" data-radar-add="{key}" rel="nofollow" href="{escape(_signin_href(return_path), quote=True)}">'
         f'<span aria-hidden="true">+</span> Track this<span class="visually-hidden"> {title}</span></a>'
     )
     return (
@@ -385,7 +385,7 @@ async def radar_hub(request: Request, db: Session = Depends(get_db)):
     structured = _structured(title, "/release-radar", strip or [i for c in radar.CATEGORY_ORDER for i in items_by_category[c][:6]])
     warming = any(entries[c] is None for c in radar.CATEGORY_ORDER)
     return _render(title, description, "/release-radar", content, indexable=indexable, structured=structured,
-                   ads=total >= AD_ELIGIBLE_MIN_ITEMS, refresh=warming)
+                   ads=radar.RADAR_ADS and total >= AD_ELIGIBLE_MIN_ITEMS, refresh=warming)
 
 
 @router.get("/release-radar/jump")
@@ -425,10 +425,10 @@ async def _category_page(request: Request, db: Session, category: str, window: r
         + '<p id="radar-empty" class="trail-empty" hidden>Nothing matches those filters. Try another genre or clear the search.</p>'
         + _about_section(category)
     )
-    indexable = len(items) >= MIN_INDEXABLE_ITEMS
+    indexable = radar.INDEX_CATEGORY_PAGES and len(items) >= MIN_INDEXABLE_ITEMS
     return _render(title, description, canonical, content, indexable=indexable,
                    structured=_structured(title, canonical, items) if items else None,
-                   ads=len(items) >= AD_ELIGIBLE_MIN_ITEMS, refresh=entry is None)
+                   ads=radar.RADAR_ADS and len(items) >= AD_ELIGIBLE_MIN_ITEMS, refresh=entry is None)
 
 
 @router.get("/release-radar/{category}")
@@ -593,7 +593,7 @@ def home_strip_html(client=None, today: Optional[date] = None) -> str:
     labels = {"movies": "Movie", "tv": "TV", "anime": "Anime", "games": "Game"}
     cards = []
     for item in items:
-        art = (f'<img src="{escape(item["image"], quote=True)}" alt="" loading="lazy" decoding="async" referrerpolicy="no-referrer">'
+        art = (f'<img src="{escape(item["image"], quote=True)}" alt="" width="200" height="300" loading="lazy" decoding="async" referrerpolicy="no-referrer">'
                if item.get("image") else f'<span class="lp-radar-card__initial" aria-hidden="true">{escape(item["title"][:1].upper())}</span>')
         cards.append(
             f'<li><a class="lp-radar-card" href="/release-radar/{item["category"]}#item-{escape(item["key"], quote=True)}">'

@@ -224,40 +224,46 @@ def _generic_row(row: dict[str, str], category_override: str | None, mapping: di
 def _source_row(source: str, row: dict[str, str], category_override: str | None, mapping: dict[str, str]) -> tuple[str, dict[str, Any]]:
     if source == "generic":
         return _generic_row(row, category_override, mapping)
-    # Keep supported source adapters' existing mapping behavior without mutating
-    # the original row or letting one mapping overwrite another one's source.
-    row = {**row, **{target: row[source_name] for target, source_name in mapping.items()}}
+    def field(target: str, *aliases: str) -> str:
+        return _field(row, mapping, target, *aliases)
+
     if source == "letterboxd":
-        title = _first(row, "name")
+        title = field("title", "name")
         if not title:
             raise ValueError("Name is required.")
+        completed = (_truthy(field("status")) if "status" in mapping else
+                     not (_first(row, "position") and not _first(row, "date", "watched date")))
         return "movies", {
-            "title": title, "director": "Unknown director", "year": _integer(_first(row, "year")),
-            "rating": _rating(_first(row, "rating"), five_point=True),
-            "watched": False if _first(row, "position") and not _first(row, "date", "watched date") else True,
-            "review": None, "review_public": False,
+            "title": title, "director": field("creator", "director") or "Unknown director",
+            "year": _integer(field("year", "year")),
+            "rating": _rating(field("rating", "rating"), five_point=True),
+            "watched": completed,
+            "review": field("review", "review", "notes") or None, "review_public": False,
         }
     if source == "goodreads":
-        title = _first(row, "title")
+        title = field("title", "title")
         if not title:
             raise ValueError("Title is required.")
+        completed = (_truthy(field("status")) if "status" in mapping else
+                     _completed_status(_first(row, "exclusive shelf")) or bool(_first(row, "date read")))
         return "books", {
-            "title": title, "author": _first(row, "author", "author l-f") or "Unknown author",
-            "year": _integer(_first(row, "year published", "original publication year")),
-            "genre": None, "rating": _rating(_first(row, "my rating"), five_point=True),
-            "read": _completed_status(_first(row, "exclusive shelf")) or bool(_first(row, "date read")),
-            "review": _first(row, "my review") or None, "review_public": False,
+            "title": title, "author": field("creator", "author", "author l-f") or "Unknown author",
+            "year": _integer(field("year", "year published", "original publication year")),
+            "genre": field("genre", "genre", "genres") or None,
+            "rating": _rating(field("rating", "my rating"), five_point=True),
+            "read": completed,
+            "review": field("review", "my review") or None, "review_public": False,
         }
-    title = _first(row, "series title")
+    title = field("title", "series title")
     if not title:
         raise ValueError("Series title is required.")
-    start = _first(row, "series start")
     return "anime", {
-        "title": title, "year": _integer(start), "seasons": None,
-        "episodes": _optional_integer(_first(row, "series episodes"), "Episodes"),
-        "rating": _rating(_first(row, "my score")),
-        "watched": _completed_status(_first(row, "my status")),
-        "review": _first(row, "my comments", "comments") or None,
+        "title": title, "year": _integer(field("year", "series start")),
+        "seasons": _optional_integer(field("seasons", "seasons"), "Seasons"),
+        "episodes": _optional_integer(field("episodes", "series episodes"), "Episodes"),
+        "rating": _rating(field("rating", "my score")),
+        "watched": _truthy(field("status", "my status")),
+        "review": field("review", "my comments", "comments") or None,
         "review_public": False,
     }
 

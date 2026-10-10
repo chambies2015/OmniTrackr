@@ -70,6 +70,25 @@ def owned_titles(db: Session, user_id: int, categories: Iterable[str] = LIBRARY)
 
 # ---------------------------------------------------------------- starter picks
 
+PRIVATE_FLAG = {"movies": "movies_private", "tv-shows": "tv_shows_private", "anime": "anime_private",
+                "video-games": "video_games_private", "music": "music_private", "books": "books_private"}
+
+
+def _shareable_ids(db: Session, category: str):
+    """Active members who haven't made this category private (private shelves never feed suggestions)."""
+    flag = getattr(models.User, PRIVATE_FLAG[category])
+    return db.query(models.User.id).filter(models.User.is_active == True, flag == False)
+
+
+def _title_page(category: str, entry) -> Optional[str]:
+    """The public title page for a popular pick (it exists because 2+ members track it)."""
+    try:
+        from . import title_pages
+        return title_pages.path_for_item(title_pages.LIBRARY_TO_KIND[category], entry)
+    except Exception:
+        return None
+
+
 def popular_titles(db: Session, category: str, exclude_user_id: int | None = None, limit: int = 8) -> list[dict]:
     """Titles saved by at least two members, with metadata from the most complete entry."""
     model, fields = LIBRARY[category]
@@ -77,7 +96,8 @@ def popular_titles(db: Session, category: str, exclude_user_id: int | None = Non
     members = func.count(func.distinct(model.user_id))
     # The editors account curates collections; it isn't a member, so it never makes a title "popular".
     editors = db.query(models.User.id).filter(models.User.username == EDITOR_USERNAME)
-    query = (db.query(normalized, members).filter(~model.user_id.in_(editors))
+    shareable = _shareable_ids(db, category)
+    query = (db.query(normalized, members).filter(~model.user_id.in_(editors), model.user_id.in_(shareable))
              .group_by(normalized).having(members >= POPULAR_MIN_MEMBERS))
     rows = query.order_by(members.desc(), normalized).limit(limit * 3).all()
     if not rows:
@@ -88,7 +108,7 @@ def popular_titles(db: Session, category: str, exclude_user_id: int | None = Non
     counts = {name: int(count) for name, count in rows if name and name not in owned}
     if not counts:
         return []
-    candidates = db.query(model).filter(normalized.in_(list(counts))).all()
+    candidates = db.query(model).filter(normalized.in_(list(counts)), model.user_id.in_(_shareable_ids(db, category))).all()
     best: dict[str, object] = {}
     image_field = IMAGE_FIELD[category]
     for entry in candidates:
@@ -114,6 +134,7 @@ def popular_titles(db: Session, category: str, exclude_user_id: int | None = Non
             "image": _safe_image(getattr(entry, image_field, None)),
             "members": count,
             "source": "popular",
+            "url": _title_page(category, entry),
         })
         if len(picks) >= limit:
             break
@@ -127,7 +148,9 @@ def popular_entry_payload(db: Session, category: str, title: str) -> Optional[di
         return None
     model, fields = LIBRARY[category]
     normalized = _normalized_column(model)
-    entries = db.query(model).filter(normalized == title.strip().lower()).all()
+    entries = db.query(model).filter(normalized == title.strip().lower(), model.user_id.in_(_shareable_ids(db, category))).all()
+    if not entries:
+        return None
     image_field = IMAGE_FIELD[category]
     entries.sort(key=lambda entry: (bool(_safe_image(getattr(entry, image_field, None))),
                                     sum(bool(getattr(entry, f, None)) for f in fields)), reverse=True)
@@ -251,4 +274,53 @@ def coming_up(db: Session, user_id: int, today: Optional[date] = None, client=No
         "library_total": len(library),
         "matches": matches[:12],
         "popular": popular,
+    }
+
+
+# ---------------------------------------------------------------- first weeks
+
+NEW_MEMBER_DAYS = 30
+
+
+def _review_target(db: Session, user_id: int) -> Optional[dict]:
+    """A title from the member's library that has a public title page to review on, finished ones first."""
+    from . import title_pages
+    candidates = []
+    for kind, (model, *_rest) in title_pages.KINDS.items():
+        finished = getattr(model, title_pages.COMPLETE_FIELD[kind])
+        rows = (db.query(model).filter(model.user_id == user_id, model.title.isnot(None))
+                .order_by(finished.desc(), model.id.desc()).limit(3).all())
+        candidates += [(bool(getattr(row, title_pages.COMPLETE_FIELD[kind])), row.id, kind, row) for row in rows]
+    candidates.sort(key=lambda c: (not c[0], -c[1]))
+    for _, _, kind, item in candidates[:8]:
+        if not (item.title or "").strip():
+            continue
+        path = title_pages.path_for_item(kind, item)
+        if title_pages.find(db, kind, path.rsplit("/", 1)[1]) is not None:
+            return {"title": item.title.strip(), "path": path}
+    return None
+
+
+def first_week(db: Session, user, now: Optional[datetime] = None) -> dict:
+    """The social steps of the library launchpad, for members who joined in the last NEW_MEMBER_DAYS days."""
+    from . import digest
+    now = now or datetime.utcnow()
+    if not user.created_at or user.created_at < now - timedelta(days=NEW_MEMBER_DAYS):
+        return {"show": False}
+    friend = (db.query(models.Friendship.id).filter((models.Friendship.user1_id == user.id)
+                                                     | (models.Friendship.user2_id == user.id)).first() is not None
+              or db.query(models.FriendRequest.id).filter(models.FriendRequest.sender_id == user.id,
+                                                          models.FriendRequest.status == "pending").first() is not None)
+    public_review = any(
+        db.query(model.id).filter(model.user_id == user.id, model.review_public.is_(True),
+                                  func.length(func.trim(model.review)) > 0).first() is not None
+        for model, _ in LIBRARY.values())
+    return {
+        "show": True,
+        "friend": friend,
+        "public_review": public_review,
+        "review_target": None if public_review else _review_target(db, user.id),
+        "weekly_email": digest.subscription_for(db, user.id) is not None,
+        "email_available": digest.mail_configured(),
+        "verified": bool(user.is_verified),
     }

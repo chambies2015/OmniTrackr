@@ -149,3 +149,21 @@
 .stats-editor-list li span:first-child { color: var(--site-soft); }
 .stats-editor-status { color: var(--site-teal-soft); font-size: .86rem; margin: 12px 0 0; min-height: 1.2em; }
 #editorPublish[hidden] { display: none; }
+
+/* Sign-up funnel card */
+.stats-grid--inner { margin-top: 18px; }
+.stats-subhead { color: var(--site-soft); font-size: .9rem; font-weight: 600; margin: 0 0 6px; }
+.stats-announce__actions { display: flex; flex-wrap: wrap; gap: 8px; justify-content: flex-end; }
+.stats-announce__actions [hidden] { display: none !important; }
+
+/* Ko-fi payments to link */
+.stats-kofi-list { display: grid; gap: 8px; list-style: none; margin: 0; padding: 0; }
+.stats-kofi-list li { align-items: center; background: var(--site-surface); border: 1px solid var(--site-border); border-radius: 10px; display: flex; flex-wrap: wrap; gap: 10px 16px; justify-content: space-between; padding: 10px 12px; }
+.stats-kofi-list li.stats-kofi__empty { color: var(--site-muted); font-size: .88rem; justify-content: flex-start; }
+.stats-kofi__info { display: grid; gap: 2px; min-width: 0; }
+.stats-kofi__info b { font-size: .92rem; overflow-wrap: anywhere; }
+.stats-kofi__info span { color: var(--site-muted); font-size: .8rem; }
+.stats-kofi__form { align-items: center; display: flex; flex-wrap: wrap; gap: 8px; }
+.stats-kofi__form input { background: var(--site-surface-2); border: 1px solid var(--site-border-strong); border-radius: 8px; color: #fff; font: .88rem var(--site-font); min-height: 34px; padding: 0 10px; width: 180px; }
+.stats-kofi__form input:focus-visible { outline: 2px solid var(--stats-visitors); outline-offset: 1px; }
+@media (max-width: 560px) { .stats-kofi__form, .stats-kofi__form input { width: 100%; } .stats-kofi__form .site-btn { flex: 1; } }

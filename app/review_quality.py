@@ -68,6 +68,17 @@ def is_public_review_safe(review_text: str | None) -> bool:
     return True
 
 
+# AdSense "low value content" (Oct 2026): ads sit only beside a substantial amount of
+# original member writing, and review listings join search only once they hold a
+# few standalone reviews rather than one lonely card.
+AD_MIN_REVIEW_WORDS = 150
+MIN_INDEXED_LISTING_REVIEWS = 3
+
+
+def word_count(text: str | None) -> int:
+    return len(WORD_PATTERN.findall(str(text or "")))
+
+
 def evaluate_public_review(
     review_text: str | None,
     community_min_chars: int = 80,

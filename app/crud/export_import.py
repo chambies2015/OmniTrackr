@@ -2,10 +2,24 @@
 Export/Import CRUD operations for the OmniTrackr API.
 """
 from typing import List, Optional
-from datetime import datetime
+from datetime import datetime, timezone
+from sqlalchemy import null
 from sqlalchemy.orm import Session
 
 from .. import models, schemas
+
+
+def _library_row(data: dict) -> dict:
+    """Keep a backup's added_at when it is a real past date; otherwise leave it unknown."""
+    if "added_at" in data:
+        added_at = data["added_at"]
+        if added_at is not None and added_at.tzinfo is not None:
+            added_at = added_at.astimezone(timezone.utc).replace(tzinfo=None)
+        if added_at is not None and added_at > datetime.utcnow():
+            added_at = None
+        # null() rather than None: the ORM would otherwise fill in today's date.
+        data["added_at"] = added_at if added_at is not None else null()
+    return data
 
 
 def get_all_movies(db: Session, user_id: int) -> List[models.Movie]:
@@ -116,266 +130,92 @@ def find_video_game_by_title_and_release_date(db: Session, user_id: int, title: 
     return query.first()
 
 
-def import_movies(db: Session, user_id: int, movies: List[schemas.MovieCreate]) -> tuple[int, int, List[str]]:
-    """Import movies, returning (created_count, updated_count, errors)"""
-    created = 0
-    updated = 0
+def _import_media(db: Session, user_id: int, entries, model, identity_fields, label):
+    """Keep complete edition identity and make each saved row visible to the next."""
+    created = updated = 0
     errors = []
-    
-    for movie_data in movies:
+    if not entries:
+        return created, updated, errors
+    from ..progress import lock_progress_owner
+    # Reserve SQLite's outer write transaction before nested savepoints, and
+    # serialize same-owner imports before their duplicate checks on every DB.
+    lock_progress_owner(db, user_id)
+    for incoming in entries:
         try:
-            existing_movie = find_movie_by_title_and_director(
-                db, user_id, movie_data.title, movie_data.director
-            )
-            
-            if existing_movie:
-                update_dict = movie_data.model_dump(exclude_unset=True)
-                allowed_fields = {'title', 'director', 'year', 'rating', 'watched', 'review', 'poster_url'}
-                for field, value in update_dict.items():
-                    if field in allowed_fields:
-                        if field == 'rating' and value is not None:
-                            value = round(float(value), 1)
-                        setattr(existing_movie, field, value)
-                updated += 1
-            else:
-                db_movie = models.Movie(**movie_data.model_dump(), user_id=user_id)
-                db.add(db_movie)
+            with db.begin_nested():
+                identity = {field: getattr(incoming, field) for field in identity_fields}
+                existing = db.query(model).filter_by(user_id=user_id, **identity).first()
+                values = incoming.model_dump(exclude_unset=existing is not None)
+                if values.get("rating") is not None:
+                    values["rating"] = round(float(values["rating"]), 1)
+                if existing is None:
+                    db.add(model(**_library_row(values), user_id=user_id))
+                else:
+                    # A restore can hide a review but must not re-publish one
+                    # the user has since made private.
+                    if values.get("review_public") and not existing.review_public:
+                        values.pop("review_public")
+                    for field, value in values.items():
+                        if field != "added_at":
+                            setattr(existing, field, value)
+                db.flush()
+            if existing is None:
                 created += 1
-        except Exception as e:
-            errors.append(f"Error importing movie '{movie_data.title}': {str(e)}")
-    
+            else:
+                updated += 1
+        except Exception:
+            errors.append(f"Could not import {label} '{incoming.title}'.")
     try:
         db.commit()
-    except Exception as e:
+    except Exception:
         db.rollback()
-        errors.append(f"Database error during movie import: {str(e)}")
+        errors.append(f"The {label} import could not be saved.")
         return 0, 0, errors
-    
     return created, updated, errors
 
 
-def import_tv_shows(db: Session, user_id: int, tv_shows: List[schemas.TVShowCreate]) -> tuple[int, int, List[str]]:
-    """Import TV shows, returning (created_count, updated_count, errors)"""
-    created = 0
-    updated = 0
-    errors = []
-    
-    for tv_show_data in tv_shows:
-        try:
-            existing_tv_show = find_tv_show_by_title_and_year(
-                db, user_id, tv_show_data.title, tv_show_data.year
-            )
-            
-            if existing_tv_show:
-                update_dict = tv_show_data.model_dump(exclude_unset=True)
-                allowed_fields = {'title', 'year', 'seasons', 'episodes', 'rating', 'watched', 'review', 'poster_url'}
-                for field, value in update_dict.items():
-                    if field in allowed_fields:
-                        if field == 'rating' and value is not None:
-                            value = round(float(value), 1)
-                        setattr(existing_tv_show, field, value)
-                updated += 1
-            else:
-                db_tv_show = models.TVShow(**tv_show_data.model_dump(), user_id=user_id)
-                db.add(db_tv_show)
-                created += 1
-        except Exception as e:
-            errors.append(f"Error importing TV show '{tv_show_data.title}': {str(e)}")
-    
-    try:
-        db.commit()
-    except Exception as e:
-        db.rollback()
-        errors.append(f"Database error during TV show import: {str(e)}")
-        return 0, 0, errors
-    
-    return created, updated, errors
+def import_movies(db: Session, user_id: int, movies) -> tuple[int, int, List[str]]:
+    return _import_media(db, user_id, movies, models.Movie, ("title", "director", "year"), "movie")
 
 
-def import_anime(db: Session, user_id: int, anime: List[schemas.AnimeCreate]) -> tuple[int, int, List[str]]:
-    """Import anime, returning (created_count, updated_count, errors)"""
-    created = 0
-    updated = 0
-    errors = []
-    
-    for anime_data in anime:
-        try:
-            existing_anime = find_anime_by_title_and_year(
-                db, user_id, anime_data.title, anime_data.year
-            )
-            
-            if existing_anime:
-                update_dict = anime_data.model_dump(exclude_unset=True)
-                allowed_fields = {'title', 'year', 'seasons', 'episodes', 'rating', 'watched', 'review', 'poster_url'}
-                for field, value in update_dict.items():
-                    if field in allowed_fields:
-                        if field == 'rating' and value is not None:
-                            value = round(float(value), 1)
-                        setattr(existing_anime, field, value)
-                updated += 1
-            else:
-                db_anime = models.Anime(**anime_data.model_dump(), user_id=user_id)
-                db.add(db_anime)
-                created += 1
-        except Exception as e:
-            errors.append(f"Error importing anime '{anime_data.title}': {str(e)}")
-    
-    try:
-        db.commit()
-    except Exception as e:
-        db.rollback()
-        errors.append(f"Database error during anime import: {str(e)}")
-        return 0, 0, errors
-    
-    return created, updated, errors
+def import_tv_shows(db: Session, user_id: int, tv_shows) -> tuple[int, int, List[str]]:
+    return _import_media(db, user_id, tv_shows, models.TVShow, ("title", "year"), "TV show")
 
 
-def import_video_games(db: Session, user_id: int, video_games: List[schemas.VideoGameCreate]) -> tuple[int, int, List[str]]:
-    """Import video games, returning (created_count, updated_count, errors)"""
-    created = 0
-    updated = 0
-    errors = []
-    
-    for video_game_data in video_games:
-        try:
-            existing_video_game = find_video_game_by_title_and_release_date(
-                db, user_id, video_game_data.title, video_game_data.release_date
-            )
-            
-            if existing_video_game:
-                update_dict = video_game_data.model_dump(exclude_unset=True)
-                allowed_fields = {'title', 'release_date', 'genres', 'rating', 'played', 'review', 'cover_art_url', 'rawg_link'}
-                for field, value in update_dict.items():
-                    if field in allowed_fields:
-                        if field == 'rating' and value is not None:
-                            value = round(float(value), 1)
-                        setattr(existing_video_game, field, value)
-                updated += 1
-            else:
-                video_game_dict = video_game_data.model_dump()
-                if video_game_dict.get('rating') is not None:
-                    video_game_dict['rating'] = round(float(video_game_dict['rating']), 1)
-                db_video_game = models.VideoGame(**video_game_dict, user_id=user_id)
-                db.add(db_video_game)
-                created += 1
-        except Exception as e:
-            errors.append(f"Error importing video game '{video_game_data.title}': {str(e)}")
-    
-    try:
-        db.commit()
-    except Exception as e:
-        db.rollback()
-        errors.append(f"Database error during video game import: {str(e)}")
-        return 0, 0, errors
-    
-    return created, updated, errors
+def import_anime(db: Session, user_id: int, anime) -> tuple[int, int, List[str]]:
+    return _import_media(db, user_id, anime, models.Anime, ("title", "year"), "anime")
+
+
+def import_video_games(db: Session, user_id: int, video_games) -> tuple[int, int, List[str]]:
+    return _import_media(db, user_id, video_games, models.VideoGame, ("title", "release_date"), "video game")
 
 
 def find_music_by_title_and_artist(db: Session, user_id: int, title: str, artist: str) -> Optional[models.Music]:
-    """Find music by title and artist for import conflict resolution"""
-    return db.query(models.Music).filter(
-        models.Music.user_id == user_id,
-        models.Music.title == title,
-        models.Music.artist == artist
-    ).first()
+    return db.query(models.Music).filter_by(user_id=user_id, title=title, artist=artist).first()
 
 
-def import_music(db: Session, user_id: int, music: List[schemas.MusicCreate]) -> tuple[int, int, List[str]]:
-    """Import music, returning (created_count, updated_count, errors)"""
-    created = 0
-    updated = 0
-    errors = []
-    
-    for music_data in music:
-        try:
-            existing_music = find_music_by_title_and_artist(
-                db, user_id, music_data.title, music_data.artist
-            )
-            
-            if existing_music:
-                update_dict = music_data.model_dump(exclude_unset=True)
-                allowed_fields = {'title', 'artist', 'year', 'genre', 'rating', 'listened', 'review', 'cover_art_url'}
-                for field, value in update_dict.items():
-                    if field in allowed_fields:
-                        if field == 'rating' and value is not None:
-                            value = round(float(value), 1)
-                        setattr(existing_music, field, value)
-                updated += 1
-            else:
-                music_dict = music_data.model_dump()
-                if music_dict.get('rating') is not None:
-                    music_dict['rating'] = round(float(music_dict['rating']), 1)
-                db_music = models.Music(**music_dict, user_id=user_id)
-                db.add(db_music)
-                created += 1
-        except Exception as e:
-            errors.append(f"Error importing music '{music_data.title}': {str(e)}")
-    
-    try:
-        db.commit()
-    except Exception as e:
-        db.rollback()
-        errors.append(f"Database error during music import: {str(e)}")
-        return 0, 0, errors
-    
-    return created, updated, errors
+def import_music(db: Session, user_id: int, music) -> tuple[int, int, List[str]]:
+    return _import_media(db, user_id, music, models.Music, ("title", "artist", "year"), "music")
 
 
 def find_book_by_title_and_author(db: Session, user_id: int, title: str, author: str) -> Optional[models.Book]:
-    """Find book by title and author for import conflict resolution"""
-    return db.query(models.Book).filter(
-        models.Book.user_id == user_id,
-        models.Book.title == title,
-        models.Book.author == author
-    ).first()
+    return db.query(models.Book).filter_by(user_id=user_id, title=title, author=author).first()
 
 
-def import_books(db: Session, user_id: int, books: List[schemas.BookCreate]) -> tuple[int, int, List[str]]:
-    """Import books, returning (created_count, updated_count, errors)"""
-    created = 0
-    updated = 0
-    errors = []
-    
-    for book_data in books:
-        try:
-            existing_book = find_book_by_title_and_author(
-                db, user_id, book_data.title, book_data.author
-            )
-            
-            if existing_book:
-                update_dict = book_data.model_dump(exclude_unset=True)
-                allowed_fields = {'title', 'author', 'year', 'genre', 'rating', 'read', 'review', 'cover_art_url'}
-                for field, value in update_dict.items():
-                    if field in allowed_fields:
-                        if field == 'rating' and value is not None:
-                            value = round(float(value), 1)
-                        setattr(existing_book, field, value)
-                updated += 1
-            else:
-                book_dict = book_data.model_dump()
-                if book_dict.get('rating') is not None:
-                    book_dict['rating'] = round(float(book_dict['rating']), 1)
-                db_book = models.Book(**book_dict, user_id=user_id)
-                db.add(db_book)
-                created += 1
-        except Exception as e:
-            errors.append(f"Error importing book '{book_data.title}': {str(e)}")
-    
-    try:
-        db.commit()
-    except Exception as e:
-        db.rollback()
-        errors.append(f"Database error during book import: {str(e)}")
-        return 0, 0, errors
-    
-    return created, updated, errors
+def import_books(db: Session, user_id: int, books) -> tuple[int, int, List[str]]:
+    return _import_media(db, user_id, books, models.Book, ("title", "author", "year"), "book")
 
 
 def import_custom_tabs(db: Session, user_id: int, custom_tabs_data: List[dict]) -> tuple[int, int, List[str]]:
     """Import custom tabs with their items, returning (created_count, updated_count, errors)"""
+    import json
+    from collections import Counter
     from ..crud import custom_tabs
     from .. import schemas
-    
+
+    def item_identity(title, field_values, poster_url):
+        return title, json.dumps(field_values or {}, sort_keys=True, separators=(",", ":")), poster_url
+
     created = 0
     updated = 0
     errors = []
@@ -418,6 +258,12 @@ def import_custom_tabs(db: Session, user_id: int, custom_tabs_data: List[dict]) 
                 created += 1
             
             items = tab_data.get("items", [])
+            # Preserve duplicate snapshots in a backup, without multiplying
+            # those same rows every time the backup is restored.
+            remaining = Counter(
+                item_identity(item.title, json.loads(item.field_values) if item.field_values else {}, item.poster_url)
+                for item in custom_tabs.get_custom_tab_items(db, user_id, tab_id)
+            )
             for item_data in items:
                 try:
                     item_create = schemas.CustomTabItemCreate(
@@ -425,6 +271,10 @@ def import_custom_tabs(db: Session, user_id: int, custom_tabs_data: List[dict]) 
                         field_values=item_data.get("field_values", {}),
                         poster_url=item_data.get("poster_url")
                     )
+                    identity = item_identity(item_create.title, item_create.field_values, item_create.poster_url)
+                    if remaining[identity]:
+                        remaining[identity] -= 1
+                        continue
                     item_result, error_msg = custom_tabs.create_custom_tab_item(db, user_id, tab_id, item_create)
                     if error_msg:
                         errors.append(f"Error importing item '{item_data.get('title', 'unknown')}' in tab '{tab_data['name']}': {error_msg}")

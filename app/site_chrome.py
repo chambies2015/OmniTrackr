@@ -14,7 +14,7 @@ from __future__ import annotations
 import re
 from html import escape
 
-SITE_CSS_VERSION = "20260928-site-1"
+SITE_CSS_VERSION = "20261009-kofi-1"
 SITE_JS_VERSION = "20260928-site-1"
 
 # (key, label, href) in display order. The first NAV_PRIMARY entries stay
@@ -35,6 +35,7 @@ FOOTER_GROUPS = (
         ("Discover", "/discover"),
         ("Public reviews", "/reviews"),
         ("Collections", "/collections/explore"),
+        ("Popular titles", "/titles"),
         ("Interactive demo", "/demo"),
         ("Sample library", "/sample-library"),
     )),
@@ -80,6 +81,7 @@ def site_nav(active: str = "", *, login_action: bool = False) -> str:
         for key, label, href in NAV_ITEMS
     )
     login_attr = ' data-action="show-login-form"' if login_action else ""
+    signup_attr = ' data-action="show-register-form"' if login_action else ""
     return (
         '<header class="site-header">'
         '<nav class="public-site-nav site-nav" aria-label="Public site navigation">'
@@ -87,7 +89,7 @@ def site_nav(active: str = "", *, login_action: bool = False) -> str:
         '<div class="public-site-nav__links site-nav__links">'
         f'{"".join(links)}'
         f'<a class="site-nav__login" href="/#landing-auth"{login_attr}>Log in</a>'
-        '<a class="public-site-nav__cta site-btn site-btn--primary site-btn--sm" href="/#landing-auth">Start tracking</a>'
+        f'<a class="public-site-nav__cta site-btn site-btn--primary site-btn--sm" href="/#signup"{signup_attr}>Start tracking</a>'
         '<details class="site-menu"><summary aria-label="More pages"><span></span><span></span><span></span></summary>'
         f'<div class="site-menu__panel">{menu_links}'
         f'<a class="site-menu__login" href="/#landing-auth"{login_attr}>Log in</a></div></details>'
@@ -106,7 +108,7 @@ def site_footer() -> str:
         '<footer class="site-footer"><div class="site-wrap site-footer__grid">'
         f'<div class="site-footer__brand">{_brand()}'
         '<p>A free, independent media tracker for everything you watch, play, read, and hear.</p>'
-        '<a class="site-footer__cta" href="/#landing-auth">Start your library <span aria-hidden="true">→</span></a>'
+        '<a class="site-footer__cta" href="/#signup">Start your library <span aria-hidden="true">→</span></a>'
         '<a class="site-footer__kofi" href="https://ko-fi.com/omnitrackr" target="_blank" rel="noopener noreferrer">Support on Ko-fi ↗</a>'
         f'</div>{columns}</div></footer>'
     )
@@ -145,9 +147,9 @@ def message_page(title: str, heading: str, message: str, *, eyebrow: str = "",
         '  <meta name="robots" content="noindex, follow">\n'
         f'  <title>{escape(title)} - OmniTrackr</title>\n'
         '  <link rel="icon" type="image/x-icon" href="/omnitrackr_favicon.ico">\n'
-        '  <link rel="preconnect" href="https://fonts.googleapis.com">\n'
-        '  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>\n'
-        '  <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@700;800&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">\n'
+        '  <link rel="preload" href="/static/fonts/poppins-700-latin.woff2" as="font" type="font/woff2" crossorigin>\n'
+        '  <link rel="preload" href="/static/fonts/poppins-800-latin.woff2" as="font" type="font/woff2" crossorigin>\n'
+        '  <link rel="stylesheet" href="/static/fonts.css?v=20261009-fonts-1">\n'
         '</head>\n<body class="site site-message-page">\n  <!--SITE_NAV:-->\n'
         '  <main class="site-message site-wrap">\n'
         '    <div class="site-message__orb" aria-hidden="true"><img src="/vortex-still.webp" alt="" width="160" height="160"></div>\n'
@@ -156,3 +158,34 @@ def message_page(title: str, heading: str, message: str, *, eyebrow: str = "",
         '  </main>\n  <!--SITE_FOOTER-->\n</body>\n</html>'
     )
     return apply_site_chrome(page)
+
+
+def editorial_picks(heading: str, intro: str, *, limit: int = 6) -> str:
+    """Links to the authored Discover guides and trails, for empty directories.
+
+    A directory that has nothing to list yet (no qualifying member reviews or
+    collections) should still give a visitor something real to read instead of
+    a placeholder. Completed guides come first, then the latest monthly edition
+    and the shorter trails. Every value is escaped.
+    """
+    from .discover_catalog import MONTHLY_EDITIONS, TRAILS
+    from .discover_guides import GUIDES
+
+    picks = [(f"/discover/{slug}", TRAILS[slug]["name"], guide["summary"])
+             for slug, guide in GUIDES.items() if slug in TRAILS]
+    for slug, edition in sorted(MONTHLY_EDITIONS.items(), key=lambda pair: pair[1]["published_date"], reverse=True)[:1]:
+        picks.append((f"/discover/monthly/{slug}", edition["name"], edition["intro"]))
+    picks.extend((f"/discover/{slug}", trail["name"], trail["intro"])
+                 for slug, trail in TRAILS.items() if slug not in GUIDES)
+    cards = "".join(
+        f'<li><a href="{escape(href, quote=True)}"><strong>{escape(name)}</strong>'
+        f'<span>{escape(blurb)}</span></a></li>'
+        for href, name, blurb in picks[:limit]
+    )
+    return (
+        '<section class="site-picks" aria-labelledby="site-picks-heading">'
+        f'<h2 id="site-picks-heading">{escape(heading)}</h2><p>{escape(intro)}</p>'
+        f'<ul class="site-picks__list">{cards}</ul>'
+        '<p class="site-picks__more"><a href="/discover">See every Discover trail →</a></p>'
+        '</section>'
+    )

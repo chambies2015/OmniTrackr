@@ -5,7 +5,7 @@
   <meta name="google-adsense-account" content="ca-pub-7271682066779719">
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=5.0, user-scalable=yes">
-  <meta name="theme-color" content="#1e1e2f">
+  <meta name="theme-color" content="#0b0a18">
   <meta name="description"
     content="Track movies, TV shows, anime, video games, music, and books in one free media tracker. Rate, review, analyze stats, share with friends, and export your data.">
   <meta name="author" content="OmniTrackr">
@@ -44,21 +44,26 @@
   <title>OmniTrackr - Free Media Tracker for Movies, Shows, Games, Music & Books</title>
   <link rel="image_src" href="https://omnitrackr.xyz/omnitrackr_vortex.png">
   <link rel="icon" type="image/x-icon" href="/omnitrackr_favicon.ico">
-  <link rel="preconnect" href="https://fonts.googleapis.com">
-  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link rel="preload" href="./styles.css?v=20260929-for-you-1" as="style">
-  <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@700;800&family=Inter:wght@400;500;600;700&display=swap"
-    rel="stylesheet">
-  <link rel="stylesheet" href="./styles.css?v=20260929-for-you-1">
+  <link rel="manifest" href="/manifest.webmanifest">
+  <link rel="apple-touch-icon" href="/static/icons/apple-touch-icon.png?v=20261003-pwa-1">
+  <meta name="apple-mobile-web-app-title" content="OmniTrackr">
+  <script src="/static/pwa.js?v=20261008-ios-1" defer></script>
+  <link rel="preload" href="./styles.css?v=20261010-goal-reached-1" as="style">
+  <link rel="preload" href="/static/fonts/poppins-700-latin.woff2" as="font" type="font/woff2" crossorigin>
+  <link rel="preload" href="/static/fonts/poppins-800-latin.woff2" as="font" type="font/woff2" crossorigin>
+  <link rel="stylesheet" href="/static/fonts.css?v=20261009-fonts-1">
+  <link rel="stylesheet" href="./styles.css?v=20261010-goal-reached-1">
   <link rel="stylesheet" href="/static/progress.css?v=20260922-progress">
   <link rel="stylesheet" href="/static/app-theme.css?v=20260924-friends-panel-2">
   <link rel="stylesheet" href="/static/library-theme.css?v=20260924-library-filters-1">
   <link rel="stylesheet" href="/static/dialog-theme.css?v=20260924-visual-4">
-  <script src="./preauth.js"></script>
+  <link rel="stylesheet" href="/static/dashboard-2026.css?v=20261008-supporters-1">
+  <script src="./preauth.js?v=20261010-audit-preauth-1"></script>
   <style>
     html.authenticated #landingPage{display:none}
     html.authenticated #mainContainer,
     html.authenticated #mainFooter{display:block}
+    html.dashboard-settling #movies-tab{visibility:hidden}
   </style>
 
   <!-- JSON-LD Structured Data -->
@@ -292,7 +297,7 @@
   </script>
 </head>
 
-<body class="dark-mode app-shell">
+<body class="dark-mode app-shell" data-active-tab="movies">
   <div class="account-toolbar" role="group" aria-label="Account controls">
   <button id="showFriendsSidebar" class="sidebar-toggle-floating" type="button" title="Friends"
     aria-label="Friends" aria-expanded="false" aria-controls="friendsSidebar" hidden>
@@ -318,8 +323,19 @@
     <span id="userDisplayText"></span>
   </button>
   <a id="siteStatsLink" class="site-stats-link" href="/site-stats" hidden>Site stats</a>
+  <button type="button" id="installAppBtn" class="site-stats-link install-app-btn" hidden>Install app</button>
   <button id="logoutBtn" aria-label="Logout from your account">Logout</button>
   </div>
+
+  <dialog id="installAppDialog" class="install-app-dialog" aria-labelledby="installAppDialogTitle">
+    <h2 id="installAppDialogTitle">Add OmniTrackr to your Home Screen</h2>
+    <ol>
+      <li>Tap the <strong>Share</strong> button in Safari.</li>
+      <li>Choose <strong>Add to Home Screen</strong>.</li>
+      <li>Tap <strong>Add</strong>. OmniTrackr then opens full screen from its own icon.</li>
+    </ol>
+    <button id="installAppDialogClose" class="action-btn" type="button">Got it</button>
+  </dialog>
 
   <!-- Friends panel overlays the workspace without changing its layout. -->
   <aside id="friendsSidebar" class="friends-sidebar hidden" aria-labelledby="friendsPanelTitle" hidden>
@@ -339,7 +355,7 @@
   <main class="container" id="mainContainer">
     <header class="header" role="banner">
       <div class="app-brand">
-        <span class="app-brand__mark" aria-hidden="true"><svg viewBox="0 0 32 32" width="28" height="28" fill="none"><circle cx="16" cy="16" r="10" stroke="currentColor" stroke-width="2"/><path d="M6 16h20M16 6c-7 5-7 15 0 20 7-5 7-15 0-20Z" stroke="currentColor" stroke-width="1.5"/></svg></span>
+        <span class="app-brand__mark" aria-hidden="true"><img src="/vortex-still.webp" alt="" width="40" height="40"></span>
         <div><p class="app-title" role="heading" aria-level="1">OmniTrackr</p><p class="app-brand__caption">Your media, remembered.</p></div>
       </div>
       <div class="library-search" role="search">
@@ -382,6 +398,40 @@
 
     <p id="libraryNavigationStatus" role="status" aria-live="polite" aria-atomic="true" hidden></p>
 
+    <section id="starterPicks" class="for-you-card starter-picks" aria-labelledby="starterPicksTitle" hidden>
+      <div class="for-you-card__head">
+        <div>
+          <p class="for-you-card__eyebrow">Quick start</p>
+          <h2 id="starterPicksTitle">Add a few favorites in one click</h2>
+          <p id="starterPicksSummary" class="for-you-card__summary">Popular with OmniTrackr members and coming out soon. Tap Add on anything you've seen or want to see.</p>
+        </div>
+        <div class="for-you-card__side">
+          <p id="starterPicksProgress" class="starter-picks__progress" aria-live="polite"></p>
+          <button type="button" class="for-you-card__dismiss" data-for-you-action="dismiss-starter" aria-label="Hide quick start suggestions">Not now</button>
+        </div>
+      </div>
+      <div id="starterPicksPopular" class="for-you-grid" aria-label="Popular with members"></div>
+      <h3 id="starterPicksUpcomingTitle" class="for-you-card__subhead" hidden>Coming out soon</h3>
+      <div id="starterPicksUpcoming" class="for-you-grid" aria-label="Coming out soon"></div>
+      <p id="starterPicksStatus" class="for-you-card__status" role="status" aria-live="polite"></p>
+      <div class="weekly-invite" data-weekly-invite="starter" hidden>
+        <p class="weekly-invite__text"><strong>Get a weekly heads-up.</strong> A short email when something you track has a new episode, season or release. Quiet weeks are skipped (just a monthly round-up), and every email has a one-click unsubscribe.</p>
+        <div class="weekly-invite__actions">
+          <button type="button" class="action-btn weekly-invite__yes" data-weekly-action="subscribe">Email me weekly</button>
+          <button type="button" class="weekly-invite__no" data-weekly-action="dismiss">Not now</button>
+        </div>
+      </div>
+    </section>
+
+    <section id="yearInReviewBanner" class="recap-banner" aria-labelledby="yearInReviewBannerTitle" hidden>
+      <div>
+        <p class="recap-banner__eyebrow">Year in Review</p>
+        <h2 id="yearInReviewBannerTitle">Your year in media is ready</h2>
+        <p>What you finished, your highest rated titles and your busiest month, with a card you can share.</p>
+      </div>
+      <a class="action-btn" id="yearInReviewBannerLink" href="/year-in-review">See your recap</a>
+    </section>
+
     <section id="libraryLaunchpad" class="library-launchpad" aria-labelledby="libraryLaunchpadTitle" hidden>
       <div class="library-launchpad__copy">
         <p class="library-launchpad__eyebrow">Your library, your pace</p>
@@ -402,24 +452,6 @@
       </div>
     </section>
 
-    <section id="starterPicks" class="for-you-card starter-picks" aria-labelledby="starterPicksTitle" hidden>
-      <div class="for-you-card__head">
-        <div>
-          <p class="for-you-card__eyebrow">Quick start</p>
-          <h2 id="starterPicksTitle">Add a few favorites in one click</h2>
-          <p id="starterPicksSummary" class="for-you-card__summary">Popular with OmniTrackr members and coming out soon. Tap Add on anything you've seen or want to see.</p>
-        </div>
-        <div class="for-you-card__side">
-          <p id="starterPicksProgress" class="starter-picks__progress" aria-live="polite"></p>
-          <button type="button" class="for-you-card__dismiss" data-for-you-action="dismiss-starter" aria-label="Hide quick start suggestions">Not now</button>
-        </div>
-      </div>
-      <div id="starterPicksPopular" class="for-you-grid" aria-label="Popular with members"></div>
-      <h3 id="starterPicksUpcomingTitle" class="for-you-card__subhead" hidden>Coming out soon</h3>
-      <div id="starterPicksUpcoming" class="for-you-grid" aria-label="Coming out soon"></div>
-      <p id="starterPicksStatus" class="for-you-card__status" role="status" aria-live="polite"></p>
-    </section>
-
     <section id="comingUp" class="for-you-card coming-up" aria-labelledby="comingUpTitle" hidden>
       <div class="for-you-card__head">
         <div>
@@ -431,6 +463,13 @@
           <input type="checkbox" id="comingUpEmailToggle">
           <span>Email me this weekly</span>
         </label>
+      </div>
+      <div class="weekly-invite" data-weekly-invite="coming-up" hidden>
+        <p class="weekly-invite__text"><strong>Get a weekly heads-up.</strong> A short email when something you track has a new episode, season or release. Quiet weeks are skipped (just a monthly round-up), and every email has a one-click unsubscribe.</p>
+        <div class="weekly-invite__actions">
+          <button type="button" class="action-btn weekly-invite__yes" data-weekly-action="subscribe">Email me weekly</button>
+          <button type="button" class="weekly-invite__no" data-weekly-action="dismiss">Not now</button>
+        </div>
       </div>
       <div id="comingUpList" class="for-you-grid for-you-grid--wide"></div>
       <p id="comingUpStatus" class="for-you-card__status" role="status" aria-live="polite"></p>
@@ -446,6 +485,7 @@
         <button type="button" class="return-deck__dismiss" data-action="dismiss-return-deck" aria-label="Dismiss welcome back suggestions">Not now</button>
       </div>
       <div id="returnDeckActions" class="return-deck__actions" aria-live="polite"></div>
+      <div id="returnDeckReleased" class="return-deck__released" hidden></div>
       <div id="returnDeckRecap" class="return-deck__recap"></div>
     </section>
 
@@ -502,6 +542,25 @@
         <button id="nextUpQueueToggle" type="button" class="next-up-queue__toggle" data-action="toggle-next-up" aria-controls="nextUpQueueItems" aria-expanded="false" hidden>Manage queue</button>
       </div>
       <div id="nextUpQueueItems" class="next-up-queue__items" aria-live="polite"></div>
+    </section>
+
+    <section id="yearGoals" class="year-goals" aria-labelledby="yearGoalsTitle" hidden>
+      <div class="year-goals__header">
+        <div>
+          <p class="year-goals__eyebrow">Yearly goals</p>
+          <h2 id="yearGoalsTitle">Your goals</h2>
+          <p id="yearGoalsSummary" class="year-goals__summary"></p>
+        </div>
+        <div id="yearGoalsYears" class="year-goals__years" role="group" aria-label="Goal year" hidden></div>
+      </div>
+      <div id="yearGoalsCelebration" class="year-goals__celebration" role="status" hidden></div>
+      <ul id="yearGoalsList" class="year-goals__list" hidden></ul>
+      <div id="yearGoalsFormSlot"></div>
+      <div class="year-goals__footer">
+        <button id="yearGoalsAdd" type="button" class="action-btn year-goals__add">Set a goal</button>
+        <button id="yearGoalsDismiss" type="button" class="year-goals__dismiss">Not now</button>
+        <p id="yearGoalsStatus" class="year-goals__status" role="status" aria-live="polite"></p>
+      </div>
     </section>
 
 
@@ -1035,6 +1094,7 @@
             <p class="activity-recap__eyebrow">Weekly playback</p>
             <h3 id="activityRecapTitle">This week in media</h3>
             <p id="activityRecapPeriod"></p>
+            <p class="activity-recap__year"><a href="/year-in-review">See your whole year so far →</a></p>
           </div>
           <div class="activity-recap__controls">
             <button type="button" class="action-btn secondary" data-action="activity-older-week">← Older</button>
@@ -1205,9 +1265,10 @@
     <!-- Statistics Tab Content -->
     <div id="statistics-tab" class="tab-content">
       <div class="card">
-        <h2
-          style="background: linear-gradient(135deg, #667eea 0%, #764ba2 50%, #f093fb 100%); -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text; margin-bottom: 24px;">
-          📊 Statistics Dashboard</h2>
+        <div class="stats-page-heading">
+          <p class="stats-page-heading__eyebrow">Your numbers</p>
+          <h2>Statistics</h2>
+        </div>
         <div id="statsLoading" style="text-align: center; padding: 40px;">
           <div
             style="display: inline-block; width: 40px; height: 40px; border: 4px solid rgba(102, 126, 234, 0.2); border-top-color: var(--primary); border-radius: 50%; animation: spin 1s linear infinite;">
@@ -1359,129 +1420,42 @@
   </main>
 
   <!-- Footer for Logged-in View -->
-  <footer class="landing-footer" id="mainFooter">
-    <div class="footer-content">
-      <p class="footer-text">Connect with us</p>
-      <div class="footer-links">
-        <a href="mailto:omnitrackr@gmail.com" class="footer-link">📧 omnitrackr@gmail.com</a>
-        <a href="https://ko-fi.com/omnitrackr" target="_blank" rel="noopener noreferrer" class="footer-link">☕ Ko-fi</a>
-        <a href="/about" class="footer-link">ℹ️ About</a>
-        <a href="/faq" class="footer-link">❓ FAQ</a>
-        <a href="/demo" class="footer-link">👀 Demo</a>
-        <a href="/media-tracking" class="footer-link">🧭 Tracking Hub</a>
-        <a href="/guides" class="footer-link">📘 Guides</a>
-        <a href="/media-tracker-checklist" class="footer-link">✅ Setup Checklist</a>
-        <a href="/tracking-templates" class="footer-link">🧩 Templates</a>
-        <a href="/review-guidelines" class="footer-link">✍️ Review Guide</a>
-        <a href="/compare" class="footer-link">⚖️ Compare</a>
-        <a href="/use-cases" class="footer-link">💡 Use Cases</a>
-        <a href="/tv-show-tracker" class="footer-link">📺 TV Tracker</a>
-        <a href="/game-tracker" class="footer-link">🎮 Game Tracker</a>
-        <a href="/changelog" class="footer-link">📝 Changelog</a>
-        <a href="/roadmap" class="footer-link">🗺️ Roadmap</a>
-        <a href="/terms" class="footer-link">📜 Terms</a>
-        <a href="/contact" class="footer-link">✉️ Contact</a>
-        <a href="/advertising" class="footer-link">📣 Advertising</a>
-        <a href="/privacy" class="footer-link">🔒 Privacy Policy</a>
+  <footer class="landing-footer app-footer" id="mainFooter">
+    <div class="app-footer__grid">
+      <div>
+        <a class="app-footer__brand" href="/"><img src="/vortex-still.webp" alt="" width="26" height="26">OmniTrackr</a>
+        <p>A free, independent media tracker for everything you watch, play, read, and hear.</p>
+        <p><a class="app-footer__support" href="https://ko-fi.com/omnitrackr" target="_blank" rel="noopener noreferrer">Support OmniTrackr on Ko-fi ↗</a></p>
       </div>
+      <nav aria-label="Explore">
+        <h2>Explore</h2>
+        <a href="/release-radar">Release Radar</a>
+        <a href="/discover">Discover</a>
+        <a href="/reviews">Public reviews</a>
+        <a href="/collections/explore">Collections</a>
+      </nav>
+      <nav aria-label="Help">
+        <h2>Help</h2>
+        <a href="/guides">Guides</a>
+        <a href="/export-import-guide">Import &amp; backups</a>
+        <a href="/review-guidelines">Review guide</a>
+        <a href="/faq">FAQ</a>
+        <a href="/contact">Contact</a>
+      </nav>
+      <nav aria-label="OmniTrackr">
+        <h2>OmniTrackr</h2>
+        <a href="/about">About</a>
+        <a href="/changelog">What's new</a>
+        <a href="/roadmap">Roadmap</a>
+        <a href="/privacy">Privacy</a>
+        <a href="/terms">Terms</a>
+      </nav>
     </div>
   </footer>
 
-  <!-- Landing Page -->
+  <!-- Sign-in fallback: shown only if a session ends while the dashboard is open.
+       Visitors without a session get templates/public_landing.html instead. -->
   <div id="landingPage" role="main">
-    <div class="landing-public-nav">
-      <nav class="public-site-nav" aria-label="Public site navigation">
-        <a class="public-site-nav__brand" href="/">OmniTrackr</a>
-        <div class="public-site-nav__links">
-          <a href="/demo">Demo</a>
-          <a href="/media-tracking">Tracking Hub</a>
-          <a href="/guides">Guides</a>
-          <a href="/site-map">Site Map</a>
-          <a href="/sample-library">Sample Library</a>
-          <a href="/compare">Compare</a>
-          <a href="/use-cases">Use Cases</a>
-          <a href="/reviews">Reviews</a>
-          <a href="/collections/explore">Collections</a>
-          <a href="/faq">FAQ</a>
-          <a href="/content-quality">Content Quality</a>
-          <a href="/advertising">Advertising</a>
-          <a href="/privacy">Privacy</a>
-          <a class="public-site-nav__cta" href="/#landing-auth">Start tracking</a>
-        </div>
-      </nav>
-    </div>
-    <!-- Hero Section -->
-    <section class="landing-hero" aria-labelledby="hero-title">
-      <div class="landing-hero-inner">
-        <div class="landing-hero-copy">
-          <p class="landing-eyebrow">One private library for every kind of media</p>
-          <h1 id="hero-title" class="landing-title">OmniTrackr</h1>
-          <p class="landing-subtitle">Track movies, shows, anime, games, music, and books in one clean dashboard.</p>
-          <p class="landing-intro">
-            Build a media journal with ratings, reviews, posters, statistics, privacy controls, friend discovery, and
-            JSON export whenever you want your data back.
-          </p>
-          <div class="landing-cta-row">
-            <button type="button" class="landing-cta primary" data-action="show-register-form">Create free account</button>
-            <button type="button" class="landing-cta secondary" data-action="show-login-form">Log in</button>
-            <a class="landing-cta link" href="/reviews">Explore public reviews</a>
-          </div>
-          <p class="user-count" id="userCountDisplay">Loading...</p>
-        </div>
-        <button type="button"
-          class="landing-product-preview"
-          data-screenshot-src="https://github.com/user-attachments/assets/3ebb53c7-5cc3-4225-a028-2b3eb5dfbdb7"
-          data-screenshot-alt="OmniTrackr dashboard preview">
-          <img src="https://github.com/user-attachments/assets/3ebb53c7-5cc3-4225-a028-2b3eb5dfbdb7"
-            alt="OmniTrackr dashboard showing a media collection with posters, ratings, and search"
-            class="landing-preview-image">
-          <span class="landing-preview-caption">Dashboard preview</span>
-        </button>
-      </div>
-    </section>
-
-    <section class="landing-proof" aria-label="OmniTrackr highlights">
-      <div class="landing-proof-grid">
-        <div><strong>170+</strong><span>users tracking media</span></div>
-        <div><strong>6</strong><span>media categories</span></div>
-        <div><strong>Free</strong><span>no credit card needed</span></div>
-        <div><strong>Private</strong><span>share only what you choose</span></div>
-      </div>
-    </section>
-
-    <section class="landing-release-highlights" aria-labelledby="release-highlights-title">
-      <div class="landing-section-heading">
-        <p class="landing-eyebrow">Recently improved</p>
-        <h2 id="release-highlights-title" class="features-title">Fresh resources for new visitors and reviewers</h2>
-        <p>
-          OmniTrackr now includes a clearer public content library, transparent advertising standards, and practical
-          guides that explain how the tracker works before anyone creates an account.
-        </p>
-      </div>
-      <div class="landing-release-grid">
-        <a class="landing-release-card" href="/media-tracker-checklist">
-          <span>Setup Checklist</span>
-          <p>Plan categories, ratings, reviews, privacy, exports, and first-week cleanup before your library grows.</p>
-        </a>
-        <a class="landing-release-card" href="/sample-library">
-          <span>Sample Media Library</span>
-          <p>Browse example movies, shows, games, albums, and books with realistic notes and tracking context.</p>
-        </a>
-        <a class="landing-release-card" href="/content-quality">
-          <span>Content Quality Policy</span>
-          <p>Read how public pages, reviews, and guides are maintained to avoid thin or duplicate content.</p>
-        </a>
-        <a class="landing-release-card" href="/site-map">
-          <span>Human-Readable Site Map</span>
-          <p>Find every public guide, tracker page, policy, and support resource in one organized directory.</p>
-        </a>
-        <a class="landing-release-card" href="/advertising">
-          <span>Advertising Transparency</span>
-          <p>Review where ads may appear, where they are intentionally excluded, and how privacy controls work.</p>
-        </a>
-      </div>
-    </section>
-
     <!-- Authentication Section -->
     <section class="landing-auth" id="landing-auth" aria-labelledby="authTitle">
       <div class="auth-container">
@@ -1549,389 +1523,6 @@
       </div>
     </section>
 
-    <!-- Features Section -->
-    <section class="landing-features" aria-labelledby="features-title">
-      <div class="landing-section-heading">
-        <p class="landing-eyebrow">Why people use it</p>
-        <h2 id="features-title" class="features-title">A calmer way to remember what you love</h2>
-        <p>OmniTrackr keeps your collection organized without forcing movies, books, games, and music into separate apps.</p>
-      </div>
-      <div class="features-grid compact">
-        <div class="feature-card">
-          <div class="feature-icon">🎬</div>
-          <h3>Track Movies, TV Shows, Anime, Video Games, Music & Books</h3>
-          <p>Organize your entire media collection in one place with ratings, reviews, and status tracking for movies, TV shows, anime, video games, music albums, and books.</p>
-          <p class="feature-microcopy">Track everything you watch, play, listen to, and read - effortlessly.</p>
-        </div>
-        <div class="feature-card">
-          <div class="feature-icon">📊</div>
-          <h3>Statistics Dashboard</h3>
-          <p>Comprehensive analytics showing your viewing habits, ratings, and favorite directors. <a href="#screenshots-title" style="color: var(--primary); text-decoration: underline;">See it in action</a>.</p>
-          <p class="feature-microcopy">Numbers don't lie, but they tell great stories</p>
-        </div>
-        <div class="feature-card">
-          <div class="feature-icon">💾</div>
-          <h3>Export/Import Data</h3>
-          <p>Backup your collection or import from JSON files with smart conflict resolution.</p>
-          <p class="feature-microcopy">Your data, always in your control</p>
-        </div>
-        <div class="feature-card">
-          <div class="feature-icon">🖼️</div>
-          <h3>Automatic Posters & Cover Art</h3>
-          <p>Beautiful posters and cover art fetched automatically from trusted APIs. Titles normalize to official names.</p>
-          <p class="feature-microcopy">Because visuals make everything better</p>
-        </div>
-        <div class="feature-card">
-          <div class="feature-icon">🔍</div>
-          <h3>Smart Search & Sort</h3>
-          <p>Automatic filtering and sorting - find what you're looking for instantly as you type.</p>
-          <p class="feature-microcopy">Find your favorites in a flash</p>
-        </div>
-        <div class="feature-card">
-          <div class="feature-icon">👥</div>
-          <h3>Friends & Social</h3>
-          <p>Connect with friends, send friend requests, and explore friends' collections and statistics with privacy
-            controls.</p>
-          <p class="feature-microcopy">Share the love, keep the privacy</p>
-        </div>
-        <div class="feature-card">
-          <div class="feature-icon">🔔</div>
-          <h3>Real-time Notifications</h3>
-          <p>Stay updated with friend requests and social interactions through our notification system.</p>
-          <p class="feature-microcopy">Never miss a connection</p>
-        </div>
-        <div class="feature-card">
-          <div class="feature-icon">⚙️</div>
-          <h3>Account Management</h3>
-          <p>Full control over your account - change username, email, password, upload profile pictures, and manage
-            privacy settings.</p>
-          <p class="feature-microcopy">Your watchlist, your rules</p>
-        </div>
-        <div class="feature-card">
-          <div class="feature-icon">🔒</div>
-          <h3>Privacy Controls</h3>
-          <p>Granular privacy settings for your movies, TV shows, anime, video games, music, books, and statistics - control what friends can see.</p>
-          <p class="feature-microcopy">Privacy that actually works</p>
-        </div>
-      </div>
-    </section>
-
-    <!-- How It Works Section -->
-    <section class="landing-how-it-works" aria-labelledby="how-it-works-title" style="padding: 80px 20px; background: var(--bg-secondary);">
-      <div style="max-width: 1200px; margin: 0 auto;">
-        <h2 id="how-it-works-title" class="features-title" style="text-align: center; margin-bottom: 50px;">How OmniTrackr Works</h2>
-        <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 30px; margin-bottom: 50px;">
-          <div style="background: var(--card-bg); padding: 30px; border-radius: 12px; box-shadow: 0 4px 6px rgba(0,0,0,0.1);">
-            <div style="font-size: 3rem; margin-bottom: 20px; text-align: center;">1️⃣</div>
-            <h3 style="margin-bottom: 15px; color: var(--primary);">Create Your Account</h3>
-            <p style="line-height: 1.6; color: var(--fg-secondary);">Sign up with your email, verify your account, and start tracking. Free, no credit card needed.</p>
-          </div>
-          <div style="background: var(--card-bg); padding: 30px; border-radius: 12px; box-shadow: 0 4px 6px rgba(0,0,0,0.1);">
-            <div style="font-size: 3rem; margin-bottom: 20px; text-align: center;">2️⃣</div>
-            <h3 style="margin-bottom: 15px; color: var(--primary);">Add Your Media</h3>
-            <p style="line-height: 1.6; color: var(--fg-secondary);">Enter a title and year. We automatically fetch posters, cover art, and normalize titles to official names for consistency.</p>
-          </div>
-          <div style="background: var(--card-bg); padding: 30px; border-radius: 12px; box-shadow: 0 4px 6px rgba(0,0,0,0.1);">
-            <div style="font-size: 3rem; margin-bottom: 20px; text-align: center;">3️⃣</div>
-            <h3 style="margin-bottom: 15px; color: var(--primary);">Rate and Review</h3>
-            <p style="line-height: 1.6; color: var(--fg-secondary);">Rate items 0-10.0 with decimal precision. Add reviews and mark items as watched to track progress.</p>
-          </div>
-          <div style="background: var(--card-bg); padding: 30px; border-radius: 12px; box-shadow: 0 4px 6px rgba(0,0,0,0.1);">
-            <div style="font-size: 3rem; margin-bottom: 20px; text-align: center;">4️⃣</div>
-            <h3 style="margin-bottom: 15px; color: var(--primary);">Explore Statistics</h3>
-            <p style="line-height: 1.6; color: var(--fg-secondary);">See favorite directors, top decades, rating distributions, genre preferences, and completion percentages. Visual charts reveal your patterns.</p>
-          </div>
-          <div style="background: var(--card-bg); padding: 30px; border-radius: 12px; box-shadow: 0 4px 6px rgba(0,0,0,0.1);">
-            <div style="font-size: 3rem; margin-bottom: 20px; text-align: center;">5️⃣</div>
-            <h3 style="margin-bottom: 15px; color: var(--primary);">Connect with Friends</h3>
-            <p style="line-height: 1.6; color: var(--fg-secondary);">Send friend requests, explore collections, compare stats, and discover new media. Privacy controls let you decide what to share.</p>
-          </div>
-          <div style="background: var(--card-bg); padding: 30px; border-radius: 12px; box-shadow: 0 4px 6px rgba(0,0,0,0.1);">
-            <div style="font-size: 3rem; margin-bottom: 20px; text-align: center;">6️⃣</div>
-            <h3 style="margin-bottom: 15px; color: var(--primary);">Export and Backup</h3>
-            <p style="line-height: 1.6; color: var(--fg-secondary);">Export your collection as JSON anytime. Smart imports update existing entries instead of creating duplicates. Your data stays portable.</p>
-          </div>
-        </div>
-        <p style="text-align: center; margin-top: 20px;"><a href="#faq-title" style="color: var(--primary); text-decoration: underline;">Frequently asked questions</a></p>
-      </div>
-    </section>
-
-    <!-- Getting Started Guide Section -->
-    <section class="landing-guide" aria-labelledby="guide-title" style="padding: 80px 20px;">
-      <div style="max-width: 1000px; margin: 0 auto;">
-        <h2 id="guide-title" class="features-title" style="text-align: center; margin-bottom: 50px;">Getting Started Guide</h2>
-        
-        <div style="background: var(--card-bg); padding: 40px; border-radius: 12px; box-shadow: 0 4px 6px rgba(0,0,0,0.1); margin-bottom: 30px;">
-          <h3 style="color: var(--primary); margin-bottom: 20px; font-size: 1.5rem;">Step-by-Step: Building Your First Collection</h3>
-          <ol style="line-height: 2; color: var(--fg-secondary); padding-left: 20px;">
-            <li style="margin-bottom: 15px;"><strong style="color: var(--fg);">Register and Verify:</strong> Create your account with email, then click the verification link in your inbox.</li>
-            <li style="margin-bottom: 15px;"><strong style="color: var(--fg);">Login to Your Dashboard:</strong> Access tabs for Movies, TV Shows, Anime, Video Games, Music, Books, and Statistics. Hide tabs you don't use in settings.</li>
-            <li style="margin-bottom: 15px;"><strong style="color: var(--fg);">Add Your First Entry:</strong> Enter a title and year. We'll fetch the poster and official title. Add a rating, mark as watched, and write a review.</li>
-            <li style="margin-bottom: 15px;"><strong style="color: var(--fg);">Organize Your Collection:</strong> Search by title, director, or genre. Sort by rating or year. Edit or delete entries anytime.</li>
-            <li style="margin-bottom: 15px;"><strong style="color: var(--fg);">Explore Statistics:</strong> View watch progress, rating distributions, favorite directors, and genre preferences. Updates in real-time.</li>
-            <li style="margin-bottom: 15px;"><strong style="color: var(--fg);">Connect with Friends:</strong> Send requests by username. Accept via the notification bell. Browse friends' collections and discover new media.</li>
-            <li style="margin-bottom: 15px;"><strong style="color: var(--fg);">Backup Your Data:</strong> Export your collection as JSON. Import it later or migrate to another account.</li>
-          </ol>
-        </div>
-
-        <div style="background: var(--card-bg); padding: 40px; border-radius: 12px; box-shadow: 0 4px 6px rgba(0,0,0,0.1); margin-bottom: 30px;">
-          <h3 style="color: var(--primary); margin-bottom: 20px; font-size: 1.5rem;">Understanding Title Normalization</h3>
-          <p style="line-height: 1.8; color: var(--fg-secondary); margin-bottom: 15px;">Titles automatically normalize to official names. "skyrim" becomes "The Elder Scrolls V: Skyrim", ensuring consistency across your collection.</p>
-        </div>
-
-        <div style="background: var(--card-bg); padding: 40px; border-radius: 12px; box-shadow: 0 4px 6px rgba(0,0,0,0.1);">
-          <h3 style="color: var(--primary); margin-bottom: 20px; font-size: 1.5rem;">Making the Most of Your Statistics</h3>
-          <p style="line-height: 1.8; color: var(--fg-secondary); margin-bottom: 15px;">Statistics show completion progress, rating averages and distributions, decade breakdowns, top directors, and genre preferences. All data updates in real-time.</p>
-        </div>
-      </div>
-    </section>
-
-    <!-- Tips & Best Practices Section -->
-    <section class="landing-tips" aria-labelledby="tips-title" style="padding: 80px 20px; background: var(--bg-secondary);">
-      <div style="max-width: 1000px; margin: 0 auto;">
-        <h2 id="tips-title" class="features-title" style="text-align: center; margin-bottom: 50px;">Tips & Best Practices</h2>
-        
-        <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 30px;">
-          <div style="background: var(--card-bg); padding: 30px; border-radius: 12px; box-shadow: 0 4px 6px rgba(0,0,0,0.1);">
-            <h3 style="color: var(--primary); margin-bottom: 15px;">📝 Organizing Your Collection</h3>
-            <p style="line-height: 1.8; color: var(--fg-secondary);">Add watched items first, then build your watchlist. Write brief reviews to remember why you rated something. Use search and sort to stay organized.</p>
-          </div>
-
-          <div style="background: var(--card-bg); padding: 30px; border-radius: 12px; box-shadow: 0 4px 6px rgba(0,0,0,0.1);">
-            <h3 style="color: var(--primary); margin-bottom: 15px;">⭐ Rating Consistency</h3>
-            <p style="line-height: 1.8; color: var(--fg-secondary);">Develop a consistent scale (5.0 average, 7.0+ good, 8.5+ great). Use decimals for nuance. Your stats dashboard shows rating distributions to help maintain consistency.</p>
-          </div>
-
-          <div style="background: var(--card-bg); padding: 30px; border-radius: 12px; box-shadow: 0 4px 6px rgba(0,0,0,0.1);">
-            <h3 style="color: var(--primary); margin-bottom: 15px;">👥 Social Features</h3>
-            <p style="line-height: 1.8; color: var(--fg-secondary);">Browse friends' collections and filter by rating to find their top picks. Use privacy settings to control what you share. Respect what others choose to keep private.</p>
-          </div>
-
-          <div style="background: var(--card-bg); padding: 30px; border-radius: 12px; box-shadow: 0 4px 6px rgba(0,0,0,0.1);">
-            <h3 style="color: var(--primary); margin-bottom: 15px;">💾 Data Management</h3>
-            <p style="line-height: 1.8; color: var(--fg-secondary);">Export regularly as backup. JSON files include all metadata. Smart imports update entries instead of duplicating, so reimporting is safe.</p>
-          </div>
-
-          <div style="background: var(--card-bg); padding: 30px; border-radius: 12px; box-shadow: 0 4px 6px rgba(0,0,0,0.1);">
-            <h3 style="color: var(--primary); margin-bottom: 15px;">🔒 Privacy & Security</h3>
-            <p style="line-height: 1.8; color: var(--fg-secondary);">Make any category private individually. Private data stays completely hidden from friends. Use a strong password and enable email verification for security.</p>
-          </div>
-
-          <div style="background: var(--card-bg); padding: 30px; border-radius: 12px; box-shadow: 0 4px 6px rgba(0,0,0,0.1);">
-            <h3 style="color: var(--primary); margin-bottom: 15px;">📊 Using Statistics Effectively</h3>
-            <p style="line-height: 1.8; color: var(--fg-secondary);">Check stats to spot patterns in your viewing habits. Find your top directors and favorite eras. Use insights to discover content you'll love. Updates in real-time.</p>
-          </div>
-        </div>
-      </div>
-    </section>
-
-    <!-- FAQ Section -->
-    <section class="landing-faq" aria-labelledby="faq-title">
-      <h2 id="faq-title" class="faq-title">Frequently Asked Questions</h2>
-      <div class="faq-container">
-        <div class="faq-item">
-          <button class="faq-question" aria-expanded="false" aria-controls="faq-answer-1">
-            <span>What is OmniTrackr?</span>
-            <span class="faq-icon">+</span>
-          </button>
-          <div class="faq-answer" id="faq-answer-1">
-            <p>OmniTrackr is a free, web-based application that helps you track and organize your movie, TV show, anime, video game, music, and book collection. You can rate, review, and analyze your media with comprehensive statistics, beautiful posters and cover art, and social features to share with friends.</p>
-          </div>
-        </div>
-
-        <div class="faq-item">
-          <button class="faq-question" aria-expanded="false" aria-controls="faq-answer-2">
-            <span>Is OmniTrackr free to use?</span>
-            <span class="faq-icon">+</span>
-          </button>
-          <div class="faq-answer" id="faq-answer-2">
-            <p>Yes! OmniTrackr is completely free to use. There are no subscription fees, premium tiers, or hidden
-              costs. Just create an account and start tracking your media collection.</p>
-          </div>
-        </div>
-
-        <div class="faq-item">
-          <button class="faq-question" aria-expanded="false" aria-controls="faq-answer-3">
-            <span>How do I add movies, TV shows, anime, video games, music, and books?</span>
-            <span class="faq-icon">+</span>
-          </button>
-          <div class="faq-answer" id="faq-answer-3">
-            <p>Simply use the "Add Movie", "Add TV Show", "Add Anime", "Add Video Game", "Add Music", or "Add Book" forms in your dashboard. Enter the title, year, and other details. The app will automatically fetch beautiful posters and cover art from the OMDB API (movies/TV shows), Jikan API (anime), RAWG API (video games), iTunes Search API (music), and Open Library API (books). Titles are automatically normalized to official names when metadata is fetched. You can also import your collection from JSON files.</p>
-          </div>
-        </div>
-
-        <div class="faq-item">
-          <button class="faq-question" aria-expanded="false" aria-controls="faq-answer-4">
-            <span>Can I export my data?</span>
-            <span class="faq-icon">+</span>
-          </button>
-          <div class="faq-answer" id="faq-answer-4">
-            <p>Yes. Export your complete library and private journal as a JSON backup. To bring an existing history into OmniTrackr, use the preview-first Import Studio for Letterboxd, Goodreads, MyAnimeList, or generic CSV files; matching records are skipped instead of overwritten.</p>
-          </div>
-        </div>
-
-        <div class="faq-item">
-          <button class="faq-question" aria-expanded="false" aria-controls="faq-answer-5">
-            <span>How do friend requests work?</span>
-            <span class="faq-icon">+</span>
-          </button>
-          <div class="faq-answer" id="faq-answer-5">
-            <p>You can send friend requests to other users by their username. When someone sends you a request, you'll
-              receive a notification. You can accept or deny requests. Once accepted, you can view each other's
-              collections and statistics (respecting privacy settings). Friend requests expire after 30 days if not
-              responded to.</p>
-          </div>
-        </div>
-
-        <div class="faq-item">
-          <button class="faq-question" aria-expanded="false" aria-controls="faq-answer-6">
-            <span>What are privacy settings?</span>
-            <span class="faq-icon">+</span>
-          </button>
-          <div class="faq-answer" id="faq-answer-6">
-            <p>Privacy settings allow you to control what friends can see. You can make your movies, TV shows, anime, video games, music, books, or statistics private. When enabled, even your friends won't be able to see that data - it's completely private to you. You can change these settings anytime in your account settings.</p>
-          </div>
-        </div>
-
-        <div class="faq-item">
-          <button class="faq-question" aria-expanded="false" aria-controls="faq-answer-7">
-            <span>How do I change my password or email?</span>
-            <span class="faq-icon">+</span>
-          </button>
-          <div class="faq-answer" id="faq-answer-7">
-            <p>Click on your username in the top right corner to open the account settings modal. From there, you can
-              change your username, email, password, upload a profile picture, and manage your privacy settings. Email
-              changes require verification via email.</p>
-          </div>
-        </div>
-
-        <div class="faq-item">
-          <button class="faq-question" aria-expanded="false" aria-controls="faq-answer-8">
-            <span>What if I forget my password?</span>
-            <span class="faq-icon">+</span>
-          </button>
-          <div class="faq-answer" id="faq-answer-8">
-            <p>Click "Forgot Password?" on the login page. Enter your email address, and we'll send you a password reset
-              link. Click the link in the email to set a new password. Make sure to check your spam folder if you don't
-              see the email.</p>
-          </div>
-        </div>
-
-        <div class="faq-item">
-          <button class="faq-question" aria-expanded="false" aria-controls="faq-answer-9">
-            <span>Can I rate movies, TV shows, anime, video games, music, and books with decimals?</span>
-            <span class="faq-icon">+</span>
-          </button>
-          <div class="faq-answer" id="faq-answer-9">
-            <p>Yes! You can rate any item from 0 to 10.0 with one decimal place precision (e.g., 7.5, 8.4, 9.2). The statistics dashboard will calculate averages and other metrics using these decimal ratings.</p>
-          </div>
-        </div>
-
-        <div class="faq-item">
-          <button class="faq-question" aria-expanded="false" aria-controls="faq-answer-10">
-            <span>How do I contact support?</span>
-            <span class="faq-icon">+</span>
-          </button>
-          <div class="faq-answer" id="faq-answer-10">
-            <p>You can reach us via email at <a href="mailto:omnitrackr@gmail.com"
-                style="color: var(--primary);">omnitrackr@gmail.com</a> or through the <a href="/contact"
-                style="color: var(--primary);">contact page</a>. We're happy to help!</p>
-          </div>
-        </div>
-      </div>
-    </section>
-
-    <!-- Editorial Reviews Section -->
-    <section class="landing-editorial-reviews" aria-labelledby="editorial-reviews-title" style="padding: 80px 20px; background: var(--bg-secondary);">
-      <div style="max-width: 1200px; margin: 0 auto;">
-        <h2 id="editorial-reviews-title" class="features-title" style="text-align: center; margin-bottom: 50px;">Featured Reviews & Insights</h2>
-        <p style="text-align: center; font-size: 1.1rem; color: var(--fg-secondary); margin-bottom: 40px; max-width: 800px; margin-left: auto; margin-right: auto;">
-          Write detailed reviews to remember what made media special and discover new favorites through the community.
-        </p>
-        <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 30px; margin-bottom: 40px;">
-          <div style="background: var(--card-bg); padding: 30px; border-radius: 12px; box-shadow: 0 4px 6px rgba(0,0,0,0.1);">
-            <h3 style="color: var(--primary); margin-bottom: 15px; font-size: 1.3rem;">The Power of Detailed Reviews</h3>
-            <p style="line-height: 1.8; color: var(--fg-secondary);">Transform your media tracking into a meaningful journal. Articulate what makes content memorable, recall your ratings later, and share recommendations with friends.</p>
-          </div>
-          <div style="background: var(--card-bg); padding: 30px; border-radius: 12px; box-shadow: 0 4px 6px rgba(0,0,0,0.1);">
-            <h3 style="color: var(--primary); margin-bottom: 15px; font-size: 1.3rem;">Building Your Media Legacy</h3>
-            <p style="line-height: 1.8; color: var(--fg-secondary);">Build a personal archive of your media journey. Track evolving tastes, identify patterns, and discover connections across your collection over time.</p>
-          </div>
-          <div style="background: var(--card-bg); padding: 30px; border-radius: 12px; box-shadow: 0 4px 6px rgba(0,0,0,0.1);">
-            <h3 style="color: var(--primary); margin-bottom: 15px; font-size: 1.3rem;">Community-Driven Discovery</h3>
-            <p style="line-height: 1.8; color: var(--fg-secondary);">Discover hidden gems through community reviews. Search by genre, director, or time period to find recommendations that match your interests.</p>
-          </div>
-        </div>
-        <div style="text-align: center; margin-top: 30px;">
-          <a href="/reviews" style="display: inline-block; padding: 15px 30px; background: var(--primary); color: white; text-decoration: none; border-radius: 8px; font-weight: 600; transition: background 0.3s;">Explore Public Reviews →</a>
-        </div>
-      </div>
-    </section>
-
-    <!-- Screenshots Section -->
-    <section class="landing-screenshots" aria-labelledby="screenshots-title">
-      <h2 id="screenshots-title" class="screenshots-title">See OmniTrackr in Action</h2>
-      <p class="screenshots-subtitle">Click any screenshot to enlarge • Take a look at what you'll get when you sign up</p>
-      <div class="screenshots-grid">
-        <div class="screenshot-item" data-screenshot-src="https://github.com/user-attachments/assets/3ebb53c7-5cc3-4225-a028-2b3eb5dfbdb7" data-screenshot-alt="Main Dashboard - Track all your media in one place">
-          <img src="https://github.com/user-attachments/assets/3ebb53c7-5cc3-4225-a028-2b3eb5dfbdb7" 
-               alt="OmniTrackr dashboard showing movie collection with ratings, posters, and search functionality" 
-               loading="lazy"
-               class="screenshot-image">
-          <p class="screenshot-caption">Main Dashboard - Track all your media in one place</p>
-          <div style="padding: 15px; background: var(--card-bg); border-radius: 8px; margin-top: 10px;">
-            <p style="line-height: 1.7; color: var(--fg-secondary); font-size: 0.95rem;">One place for movies, TV, anime, games, music, and books. Add entries, rate, review, and track progress with search and sort. Posters and cover art fetch automatically so your collection stays polished.</p>
-          </div>
-          <div class="screenshot-overlay">
-            <span class="screenshot-zoom-icon">🔍</span>
-            <span class="screenshot-zoom-text">Click to enlarge</span>
-          </div>
-        </div>
-        <div class="screenshot-item" data-screenshot-src="https://github.com/user-attachments/assets/fd49c269-5402-46d8-a5c2-921fa48520f9" data-screenshot-alt="Statistics Dashboard - Comprehensive analytics">
-          <img src="https://github.com/user-attachments/assets/fd49c269-5402-46d8-a5c2-921fa48520f9" 
-               alt="Media tracking statistics showing completion rates, rating distributions, and favorite directors" 
-               loading="lazy"
-               class="screenshot-image">
-          <p class="screenshot-caption">Statistics Dashboard - Comprehensive analytics</p>
-          <div style="padding: 15px; background: var(--card-bg); border-radius: 8px; margin-top: 10px;">
-            <p style="line-height: 1.7; color: var(--fg-secondary); font-size: 0.95rem;">See completion percentages, rating distributions, and top directors, artists, and genres. Category-specific stats show your habits over time so you can spot trends and favorites at a glance.</p>
-          </div>
-          <div class="screenshot-overlay">
-            <span class="screenshot-zoom-icon">🔍</span>
-            <span class="screenshot-zoom-text">Click to enlarge</span>
-          </div>
-        </div>
-        <div class="screenshot-item" data-screenshot-src="https://github.com/user-attachments/assets/f2debd1d-23bc-4c15-baac-f457c562d72a" data-screenshot-alt="Privacy Settings - Control who can see your data">
-          <img src="https://github.com/user-attachments/assets/f2debd1d-23bc-4c15-baac-f457c562d72a" 
-               alt="Granular privacy controls for movies, TV shows, anime, video games, music, and books" 
-               loading="lazy"
-               class="screenshot-image">
-          <p class="screenshot-caption">Privacy Settings - Control who can see your data</p>
-          <div style="padding: 15px; background: var(--card-bg); border-radius: 8px; margin-top: 10px;">
-            <p style="line-height: 1.7; color: var(--fg-secondary); font-size: 0.95rem;">Hide any category from friends or everyone. Toggle privacy per category so you can share TV while keeping movies private. Email verification, password protection, and account deactivation keep your data under your control.</p>
-          </div>
-          <div class="screenshot-overlay">
-            <span class="screenshot-zoom-icon">🔍</span>
-            <span class="screenshot-zoom-text">Click to enlarge</span>
-          </div>
-        </div>
-        <div class="screenshot-item" data-screenshot-src="https://github.com/user-attachments/assets/8abbd7a1-c81e-48aa-878b-624e3042ca22" data-screenshot-alt="Friends & Social - Connect and share with friends">
-          <img src="https://github.com/user-attachments/assets/8abbd7a1-c81e-48aa-878b-624e3042ca22" 
-               alt="Friends list and social features for sharing media collections and discovering recommendations" 
-               loading="lazy"
-               class="screenshot-image">
-          <p class="screenshot-caption">Friends & Social - Connect and share with friends</p>
-          <div style="padding: 15px; background: var(--card-bg); border-radius: 8px; margin-top: 10px;">
-            <p style="line-height: 1.7; color: var(--fg-secondary); font-size: 0.95rem;">Add friends, browse their shared collections, and get recommendations from their top picks. Notifications keep you in the loop. What you see respects their privacy settings, so everyone controls their own visibility.</p>
-          </div>
-          <div class="screenshot-overlay">
-            <span class="screenshot-zoom-icon">🔍</span>
-            <span class="screenshot-zoom-text">Click to enlarge</span>
-          </div>
-        </div>
-      </div>
-    </section>
-
     <!-- Screenshot Lightbox Modal -->
     <div id="screenshotModal" class="screenshot-modal" data-close-on-backdrop="screenshot">
       <span class="screenshot-modal-close" data-action="close-screenshot-modal">&times;</span>
@@ -1939,35 +1530,6 @@
       <div id="screenshotModalCaption" class="screenshot-modal-caption"></div>
     </div>
 
-    <!-- Footer Section -->
-    <footer class="landing-footer">
-      <div class="footer-content">
-        <p class="footer-text">Connect with us</p>
-        <div class="footer-links">
-          <a href="mailto:omnitrackr@gmail.com" class="footer-link">📧 omnitrackr@gmail.com</a>
-          <a href="https://ko-fi.com/omnitrackr" target="_blank" rel="noopener noreferrer" class="footer-link">☕
-            Ko-fi</a>
-          <a href="/about" class="footer-link">ℹ️ About</a>
-          <a href="/faq" class="footer-link">❓ FAQ</a>
-          <a href="/demo" class="footer-link">👀 Demo</a>
-          <a href="/media-tracking" class="footer-link">🧭 Tracking Hub</a>
-          <a href="/guides" class="footer-link">📘 Guides</a>
-          <a href="/media-tracker-checklist" class="footer-link">✅ Setup Checklist</a>
-          <a href="/tracking-templates" class="footer-link">🧩 Templates</a>
-          <a href="/review-guidelines" class="footer-link">✍️ Review Guide</a>
-          <a href="/compare" class="footer-link">⚖️ Compare</a>
-          <a href="/use-cases" class="footer-link">💡 Use Cases</a>
-          <a href="/tv-show-tracker" class="footer-link">📺 TV Tracker</a>
-          <a href="/game-tracker" class="footer-link">🎮 Game Tracker</a>
-          <a href="/changelog" class="footer-link">📝 Changelog</a>
-          <a href="/roadmap" class="footer-link">🗺️ Roadmap</a>
-          <a href="/terms" class="footer-link">📜 Terms</a>
-          <a href="/contact" class="footer-link">✉️ Contact</a>
-          <a href="/advertising" class="footer-link">📣 Advertising</a>
-          <a href="/privacy" class="footer-link">🔒 Privacy Policy</a>
-        </div>
-      </div>
-    </footer>
   </div>
   <dialog id="progressDialog" class="progress-dialog" aria-labelledby="progressTitle" aria-describedby="progressPrivacy">
     <div class="progress-dialog__header">
@@ -1995,11 +1557,17 @@
     </form>
   </dialog>
   <script src="./credentials.js"></script>
-  <script src="./auth.js?v=20260929-for-you-1"></script>
+  <script src="./auth.js?v=20261010-audit-goals-1"></script>
   <script src="/static/import-studio.js?v=20260924-import-studio-final"></script>
   <script src="/static/progress.js?v=20260922-progress"></script>
-  <script src="./app.js?v=20260929-session-1"></script>
-  <script src="/static/for-you.js?v=20260929-1"></script>
+  <script src="./app.js"></script>
+  <script src="/static/for-you.js?v=20261007-weekly-1"></script>
+  <script src="/static/title-links.js?v=20261008-speed-1"></script>
+  <script src="/static/public-profile.js?v=20261002-profiles-1"></script>
+  <script src="/static/supporter.js?v=20261008-supporters-1"></script>
+  <script src="/static/goals.js?v=20261010-goal-reached-1"></script>
+  <script src="/static/year-in-review-entry.js?v=20261008-recap-1" defer></script>
+  <script src="/static/guest-list.js?v=20261010-audit-guest-1"></script>
 
   <!-- Account Modal -->
   <div id="accountModal" class="modal-overlay" style="display: none;">
@@ -2182,6 +1750,71 @@
             <div id="privacyError" class="error-message"></div>
             <div id="privacySuccess" class="success-message"></div>
           </form>
+        </div>
+
+        <!-- Public Profile Section -->
+        <div class="account-section" id="publicProfileSection">
+          <h3>Public profile</h3>
+          <p class="info-text">Off unless you switch it on. When it's on, anyone can see the parts you choose at your own
+            page. Private categories, your email, friends, notes and progress are never shown.</p>
+          <form id="publicProfileForm" novalidate>
+            <div class="privacy-toggle-item">
+              <label for="profileEnabled" class="toggle-label">
+                <span>Show my public profile</span>
+                <div class="toggle-container">
+                  <input type="checkbox" id="profileEnabled" class="toggle-switch">
+                  <span class="toggle-slider"></span>
+                </div>
+              </label>
+            </div>
+            <p class="profile-settings__link" id="profileLinkRow" hidden>Your page: <a id="profileLink" href="#" target="_blank" rel="noopener"></a>
+              <button type="button" class="profile-settings__copy" id="profileCopyLink">Copy link</button></p>
+            <div class="form-group">
+              <label for="profileBio">Short bio <span class="profile-settings__count" id="profileBioCount">0/280</span></label>
+              <textarea id="profileBio" maxlength="280" rows="3" placeholder="What do you love to watch, play, read or listen to?"></textarea>
+            </div>
+            <fieldset class="profile-settings__parts">
+              <legend>What your profile shows</legend>
+              <label class="profile-settings__check"><input type="checkbox" id="profileShowStats"> Library counts (and how many friends you invited)</label>
+              <label class="profile-settings__check"><input type="checkbox" id="profileShowFavorites"> Favorites (titles you rated 8 or higher)</label>
+              <label class="profile-settings__check"><input type="checkbox" id="profileShowReviews"> Public reviews</label>
+              <label class="profile-settings__check"><input type="checkbox" id="profileShowCollections"> Public collections</label>
+            </fieldset>
+            <p class="info-text profile-settings__private" id="profilePrivateNote" hidden></p>
+            <button type="submit" class="action-btn" id="profileSave">Save public profile</button>
+            <div id="profileError" class="error-message" role="alert"></div>
+            <div id="profileSuccess" class="success-message" role="status"></div>
+          </form>
+        </div>
+
+        <!-- Supporter Section -->
+        <div class="account-section" id="supporterSection">
+          <h3>Supporter</h3>
+          <p class="info-text" id="supporterStatus">OmniTrackr is free. Supporting it on Ko-fi adds a badge beside your public reviews and an
+            accent color to your public profile. <a href="/supporters" target="_blank" rel="noopener">What supporters get</a></p>
+          <p class="profile-settings__link">Your supporter code: <code id="supporterCode">-</code>
+            <button type="button" class="profile-settings__copy" id="supporterCopyCode">Copy code</button></p>
+          <p class="info-text">Perks switch on by themselves when you use your OmniTrackr email on Ko-fi. If you use another email,
+            paste this code into your Ko-fi message.</p>
+          <p><a class="action-btn supporter-kofi" id="supporterKofiLink" href="https://ko-fi.com/omnitrackr" target="_blank"
+              rel="noopener noreferrer">Support on Ko-fi ↗</a></p>
+          <form id="supporterForm" novalidate hidden>
+            <div class="privacy-toggle-item">
+              <label for="supporterShowBadge" class="toggle-label">
+                <span>Show the Supporter badge on my public profile and reviews</span>
+                <div class="toggle-container">
+                  <input type="checkbox" id="supporterShowBadge" class="toggle-switch">
+                  <span class="toggle-slider"></span>
+                </div>
+              </label>
+            </div>
+            <fieldset class="profile-settings__parts" id="supporterAccents">
+              <legend>Profile accent color</legend>
+            </fieldset>
+            <button type="submit" class="action-btn" id="supporterSave">Save supporter settings</button>
+          </form>
+          <div id="supporterError" class="error-message" role="alert"></div>
+          <div id="supporterSuccess" class="success-message" role="status"></div>
         </div>
 
         <!-- Data & Privacy Dashboard Section -->
@@ -2384,6 +2017,12 @@
         </div>
         <button type="submit" class="action-btn">Send Request</button>
       </form>
+      <div class="friend-invite">
+        <h3>Friend not on OmniTrackr yet?</h3>
+        <p>Send them your invite link. When they sign up through it, you become friends automatically.</p>
+        <button type="button" class="action-btn friend-invite__share" data-action="share-friend-invite">Share my invite link</button>
+        <p id="friendInviteStatus" class="friend-invite__status" role="status" aria-live="polite"></p>
+      </div>
     </div>
   </div>
 
@@ -2676,9 +2315,20 @@
         <p class="completion-ritual-modal__copy">What is one thing you want future you to remember? This stays private.</p>
         <textarea id="completionRitualTakeaway" class="review-textarea" maxlength="500" rows="3" placeholder="A moment, feeling, or reason it stood out…"></textarea>
         <label class="completion-ritual-modal__favorite"><input type="checkbox" id="completionRitualFavorite"> This is a personal favorite</label>
+        <section id="completionReviewStep" class="completion-ritual-modal__review" hidden aria-labelledby="completionReviewHeading">
+          <h4 id="completionReviewHeading">Want to write a review too?</h4>
+          <p class="completion-ritual-modal__copy">Optional. A few sentences on what worked, what didn't and who would enjoy it helps other members decide what to try next.</p>
+          <label class="sr-only" for="completionReviewText">Your review</label>
+          <textarea id="completionReviewText" class="review-textarea" maxlength="10000" rows="5" placeholder="What stood out, what didn't land, and who you'd recommend it to…"></textarea>
+          <div class="completion-ritual-modal__review-meta">
+            <span id="completionReviewCount" aria-live="polite"></span>
+            <label><input type="checkbox" id="completionReviewPublic" checked> Public: show it on the reviews page with my username</label>
+          </div>
+        </section>
+        <p id="completionReviewResult" class="completion-ritual-modal__result" role="status" hidden></p>
         <div class="completion-ritual-modal__actions">
-          <button type="button" class="action-btn" data-action="save-completion-ritual">Save reflection</button>
-          <button type="button" class="completion-ritual-modal__skip" data-action="close-completion-ritual">Not now</button>
+          <button type="button" class="action-btn" id="completionRitualSave" data-action="save-completion-ritual">Save reflection</button>
+          <button type="button" class="completion-ritual-modal__skip" id="completionRitualSkip" data-action="close-completion-ritual">Not now</button>
         </div>
       </div>
     </div>

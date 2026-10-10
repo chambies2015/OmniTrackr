@@ -19,6 +19,7 @@ body.public-reader {
 }
 .public-reader a { color: var(--site-violet-soft); text-decoration-color: rgba(196, 181, 253, .45); text-underline-offset: 4px; }
 .public-reader a:hover { color: #fff; text-decoration-color: currentColor; }
+.public-reader .faq-answer a { text-decoration-line: underline; } /* in-text links must not rely on color alone */
 .public-reader .reader-skip { background: #fff; border: 0; border-radius: 8px; color: #140f2e; font-weight: 700; left: 16px; padding: 10px 16px; position: absolute; top: -100px; z-index: 100; }
 .public-reader .reader-skip:focus { top: 12px; }
 

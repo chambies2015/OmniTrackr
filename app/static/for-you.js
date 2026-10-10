@@ -9,7 +9,7 @@
     'video-games': 'loadVideoGames', music: 'loadMusic', books: 'loadBooks',
   };
   const RADAR_TO_LIBRARY = { movies: 'movies', tv: 'tv-shows', anime: 'anime', games: 'video-games' };
-  const state = { request: 0, libraryTotal: 0, added: 0, busy: new Set() };
+  const state = { request: 0, libraryTotal: 0, added: 0, busy: new Set(), email: {} };
 
   const $ = id => document.getElementById(id);
   const apiBase = () => (typeof API_BASE === 'string' ? API_BASE : '');
@@ -44,6 +44,68 @@
   function dismissStarter() {
     try { localStorage.setItem(storageKey(), '1'); } catch (error) { /* session-only */ }
     $('starterPicks').hidden = true;
+  }
+
+  // ---------------------------------------------------------- weekly email invite
+  // Offered where members are engaged: once Quick start reaches its goal, and on the
+  // "Coming up for you" card. Always opt-in; "Not now" hides it on this device.
+
+  function weeklyKey() {
+    return storageKey().replace('starter_picks_hidden', 'weekly_invite_hidden');
+  }
+
+  function weeklyDismissed() {
+    try { return localStorage.getItem(weeklyKey()) === '1'; } catch (error) { return false; }
+  }
+
+  function canInvite() {
+    return Boolean(state.email.available) && !state.email.enabled && !weeklyDismissed();
+  }
+
+  function renderInvites() {
+    const find = selector => (typeof document.querySelector === 'function' ? document.querySelector(selector) : null);
+    const starter = find('[data-weekly-invite="starter"]');
+    const comingUp = find('[data-weekly-invite="coming-up"]');
+    const starterSection = $('starterPicks');
+    const showStarter = canInvite() && Boolean(starterSection && !starterSection.hidden)
+      && state.libraryTotal + state.added >= STARTER_GOAL;
+    if (starter) starter.hidden = !showStarter;
+    if (comingUp) comingUp.hidden = !canInvite() || showStarter;
+    const wrap = $('comingUpEmail');
+    if (wrap) wrap.hidden = !state.email.enabled && (!state.email.available || canInvite());
+    const toggle = $('comingUpEmailToggle');
+    if (toggle) toggle.checked = Boolean(state.email.enabled);
+  }
+
+  async function setWeekly(enabled) {
+    const response = await fetch(`${apiBase()}/api/for-you/email`, fetchOptions({
+      method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ enabled }),
+    }));
+    const data = await response.json().catch(() => ({}));
+    if (!response.ok) throw new Error(data.detail || 'Could not update the weekly email. Please try again.');
+    state.email = { ...state.email, ...data };
+    return data;
+  }
+
+  async function acceptInvite(invite) {
+    const where = invite.dataset.weeklyInvite;
+    const status = where === 'starter' ? $('starterPicksStatus') : $('comingUpStatus');
+    const button = invite.querySelector('[data-weekly-action="subscribe"]');
+    if (button) button.disabled = true;
+    try {
+      await setWeekly(true);
+      if (status) status.textContent = 'Weekly email on. Your first one arrives within a day if something you track is coming up; every email has a one-click unsubscribe.';
+    } catch (error) {
+      if (status) status.textContent = error.message;
+    } finally {
+      if (button) button.disabled = false;
+      renderInvites();
+    }
+  }
+
+  function dismissInvite() {
+    try { localStorage.setItem(weeklyKey(), '1'); } catch (error) { /* session-only */ }
+    renderInvites();
   }
 
   function friendlyDate(iso) {
@@ -130,6 +192,7 @@
     if (!progress) return;
     progress.textContent = total >= STARTER_GOAL ? `${total} titles saved — nice start!` : `${total} of ${STARTER_GOAL} titles saved`;
     progress.classList.toggle('is-done', total >= STARTER_GOAL);
+    renderInvites();
   }
 
   async function postJson(path, body) {
@@ -177,6 +240,7 @@
       popular.appendChild(itemCard({
         image: pick.image, title: pick.title, meta,
         note: `Saved by ${pick.members} members`,
+        link: typeof pick.url === 'string' && pick.url.startsWith('/titles/') ? pick.url : null,
         action: addButton('Add', () => addPopular(pick)),
       }));
     });
@@ -225,11 +289,8 @@
   }
 
   function renderEmail(email) {
-    const wrap = $('comingUpEmail');
-    const toggle = $('comingUpEmailToggle');
-    if (!wrap || !toggle) return;
-    wrap.hidden = !email.available && !email.enabled;
-    toggle.checked = Boolean(email.enabled);
+    state.email = email || {};
+    renderInvites();
   }
 
   async function saveEmail(event) {
@@ -246,6 +307,7 @@
         status.textContent = data.detail || 'Could not update the weekly email. Please try again.';
       } else {
         toggle.checked = Boolean(data.enabled);
+        state.email = { ...state.email, ...data };
         status.textContent = data.enabled
           ? 'Weekly email on. Your first one arrives within a day; every email has a one-click unsubscribe.'
           : 'Weekly email off.';
@@ -270,6 +332,7 @@
     try {
       const comingUp = await getJson('/api/for-you/coming-up');
       if (request !== state.request) return;
+      state.email = comingUp.email || {};
       let starterShown = false;
       // Starter picks count every category; coming-up counts only radar ones, so ask separately.
       if (!starterDismissed()) {
@@ -286,6 +349,7 @@
       }
       // While quick start is showing its own release picks, only show real library matches here.
       renderComingUp(starterShown ? { ...comingUp, popular: [] } : comingUp);
+      renderInvites();
     } catch (error) {
       // Suggestions are optional; the library works without them.
     }
@@ -300,6 +364,12 @@
     document.addEventListener('click', event => {
       const target = event.target.closest && event.target.closest('[data-for-you-action="dismiss-starter"]');
       if (target) dismissStarter();
+      const weekly = event.target.closest && event.target.closest('[data-weekly-action]');
+      if (weekly) {
+        const invite = weekly.closest('[data-weekly-invite]');
+        if (weekly.dataset.weeklyAction === 'subscribe' && invite) acceptInvite(invite);
+        if (weekly.dataset.weeklyAction === 'dismiss') dismissInvite();
+      }
     });
     const toggle = $('comingUpEmailToggle');
     if (toggle) toggle.addEventListener('change', saveEmail);
@@ -308,7 +378,7 @@
   window.refreshForYou = refreshForYou;
   window.resetForYou = resetForYou;
   if (typeof module !== 'undefined' && module.exports) {
-    module.exports = { friendlyDate, renderStarter, renderComingUp, state, STARTER_GOAL };
+    module.exports = { friendlyDate, renderStarter, renderComingUp, renderInvites, acceptInvite, dismissInvite, state, STARTER_GOAL };
   } else if (document.readyState === 'loading') {
     document.addEventListener('DOMContentLoaded', init);
   } else {

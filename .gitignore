@@ -225,3 +225,6 @@ SEO_GUIDE.md
 SEO_RECOMMENDATIONS.md
 TESTING.md
 logs.txt
+
+# Claude delivery archives (unpacked into the working tree, never committed)
+omni-*.tgz

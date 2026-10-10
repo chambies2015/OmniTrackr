@@ -21,6 +21,9 @@ from . import release_radar as radar
 from .for_you import coming_up
 
 SEND_EVERY = timedelta(days=7) - timedelta(hours=1)
+# Weeks with no news from the member's own library are skipped, except for a short
+# "popular this month" round-up at most this often.
+ROUNDUP_EVERY = timedelta(days=28) - timedelta(hours=1)
 CHECK_EVERY_SECONDS = 3600
 FIRST_CHECK_DELAY_SECONDS = 180
 
@@ -78,6 +81,37 @@ def unsubscribe_token(db: Session, token: str) -> bool:
     return bool(removed)
 
 
+# ---------------------------------------------------------------- one-click opt-in links (emails only)
+
+SUBSCRIBE_LINK_MAX_AGE = 60 * 24 * 3600  # links in an email stay valid for 60 days
+
+
+def _subscribe_serializer():
+    from itsdangerous import URLSafeTimedSerializer
+    from .email import SECRET_KEY
+    return URLSafeTimedSerializer(SECRET_KEY, salt="weekly-email-subscribe")
+
+
+def subscribe_link_token(user_id: int) -> str:
+    """Signed, member-specific link token. Opening it only shows a confirm button."""
+    return _subscribe_serializer().dumps({"u": int(user_id)})
+
+
+def user_id_from_subscribe_token(token: str) -> int | None:
+    if not token or len(token) > 300:
+        return None
+    try:
+        data = _subscribe_serializer().loads(token, max_age=SUBSCRIBE_LINK_MAX_AGE)
+    except Exception:
+        return None
+    uid = data.get("u") if isinstance(data, dict) else None
+    return uid if isinstance(uid, int) and not isinstance(uid, bool) and uid > 0 else None
+
+
+def subscribe_link(user_id: int) -> str:
+    return f"{app_url()}/email/weekly/subscribe?token={subscribe_link_token(user_id)}"
+
+
 # ---------------------------------------------------------------- email content
 
 def _day(iso: str | None) -> str:
@@ -104,8 +138,76 @@ def _rows(cards: list[dict], base: str) -> str:
     return "".join(rows)
 
 
-def build_digest(username: str, report: dict, unsubscribe_url: str) -> tuple[str, str, str] | None:
-    """(subject, html, text) or None when there is nothing to send."""
+def _spotlight_section(review: dict | None, base: str) -> tuple[str, list[str]]:
+    """'Review of the week' block (html, text lines); empty when there is none."""
+    if not review:
+        return "", []
+    text = " ".join((review.get("review") or "").split())
+    excerpt = text if len(text) <= 260 else text[:260].rsplit(" ", 1)[0] + "…"
+    url = f"{base}/reviews/{int(review['id'])}?category={review['category']}"
+    html = (
+        '<h2 style="font-size:17px;color:#1f1640;margin:24px 0 8px">Review of the week</h2>'
+        '<div style="border-left:3px solid #7c3aed;padding:2px 0 2px 14px">'
+        f'<a href="{escape(url, quote=True)}" style="color:#1f1640;font-weight:700;text-decoration:none;font-size:15px">{escape(review.get("title") or "")}</a>'
+        f'<div style="color:#3b3557;font-size:14px;line-height:1.6;margin-top:4px">{escape(excerpt)}</div>'
+        f'<div style="color:#8a86a3;font-size:13px;margin-top:6px">by {escape(review.get("username") or "a member")} · '
+        f'<a href="{escape(url, quote=True)}" style="color:#6d28d9">Read the review</a></div></div>'
+    )
+    return html, ["Review of the week:", f"{review.get('title')} by {review.get('username')}: {excerpt}", url, ""]
+
+
+def _ask_section(ask: dict | None, base: str) -> tuple[str, list[str]]:
+    """'Ask a friend' block for a title the member finished recently; empty when there is none."""
+    if not ask:
+        return "", []
+    url = f"{base}{ask['path']}#ask-friend"
+    html = (
+        '<h2 style="font-size:17px;color:#1f1640;margin:24px 0 8px">What did your friends think?</h2>'
+        f'<p style="color:#3b3557;font-size:14px;line-height:1.6;margin:0">You finished <strong>{escape(ask["title"])}</strong> recently. '
+        'Send a friend a link and their review shows up on the title page, with a note to you when it does.</p>'
+        f'<p style="margin:8px 0 0"><a href="{escape(url, quote=True)}" style="color:#6d28d9;font-weight:700">Ask a friend for their take</a></p>'
+    )
+    return html, [f"What did your friends think of {ask['title']}? Ask them for their take: {url}", ""]
+
+
+def _invite_section(invite: bool, base: str) -> tuple[str, list[str]]:
+    """'Bring a friend' block for members with no friends yet; empty otherwise."""
+    if not invite:
+        return "", []
+    url = f"{base}/#invite-friends"
+    html = (
+        '<h2 style="font-size:17px;color:#1f1640;margin:24px 0 8px">Better with a friend</h2>'
+        '<p style="color:#3b3557;font-size:14px;line-height:1.6;margin:0">See what your friends are watching, playing and reading. '
+        'Send them your invite link and you become friends as soon as they join.</p>'
+        f'<p style="margin:8px 0 0"><a href="{escape(url, quote=True)}" style="color:#6d28d9;font-weight:700">Get my invite link</a></p>'
+    )
+    return html, [f"Better with a friend: send your invite link and you become friends when they join: {url}", ""]
+
+
+def _goals_section(goals: list | None, year: int | None, base: str) -> tuple[str, list[str]]:
+    """'Your <year> goals' progress lines; empty when the member has set none."""
+    if not goals or not year:
+        return "", []
+    rows = "".join(
+        f'<li style="margin:0 0 4px">{escape(goal["summary"])}</li>' for goal in goals)
+    url = f"{base}/#goals"
+    html = (
+        f'<h2 style="font-size:17px;color:#1f1640;margin:24px 0 8px">Your {int(year)} goals</h2>'
+        f'<ul style="color:#3b3557;font-size:14px;line-height:1.6;margin:0;padding-left:18px">{rows}</ul>'
+        f'<p style="margin:8px 0 0"><a href="{escape(url, quote=True)}" style="color:#6d28d9;font-weight:700">See your goals</a></p>'
+    )
+    return html, [f"Your {int(year)} goals:"] + [f"- {goal['summary']}" for goal in goals] + [url, ""]
+
+
+def invite_nudge_due(user_id: int, now: datetime) -> bool:
+    """About once a month per member (a different week for each), never every week."""
+    return now.isocalendar().week % 4 == user_id % 4
+
+
+def build_digest(username: str, report: dict, unsubscribe_url: str, spotlight: dict | None = None,
+                 ask: dict | None = None, invite: bool = False, goals: list | None = None,
+                 goals_year: int | None = None) -> tuple[str, str, str] | None:
+    """(subject, html, text) or None when there is nothing to send. `spotlight`, `ask`, `invite` and `goals` never force a send."""
     matches, popular = report["matches"], report["popular"]
     if not matches and not popular:
         return None
@@ -113,7 +215,7 @@ def build_digest(username: str, report: dict, unsubscribe_url: str) -> tuple[str
     if matches:
         subject = f"Coming up for you: {matches[0]['title']}" + (f" and {len(matches) - 1} more" if len(matches) > 1 else "")
     else:
-        subject = f"This week on Release Radar: {popular[0]['title']} and more"
+        subject = f"This month on Release Radar: {popular[0]['title']} and more"
     sections = []
     text = [f"Hi {username},", ""]
     if matches:
@@ -128,6 +230,22 @@ def build_digest(username: str, report: dict, unsubscribe_url: str) -> tuple[str
         text.append("Popular this month:")
         text += [f"- {c['title']} ({c['label']}, {_day(c.get('date'))})" for c in popular[:5]]
         text.append("")
+    goals_html, goals_text = _goals_section(goals, goals_year, base)
+    if goals_html:
+        sections.append(goals_html)
+        text += goals_text
+    spotlight_html, spotlight_text = _spotlight_section(spotlight, base)
+    if spotlight_html:
+        sections.append(spotlight_html)
+        text += spotlight_text
+    ask_html, ask_text = _ask_section(ask, base)
+    if ask_html:
+        sections.append(ask_html)
+        text += ask_text
+    invite_html, invite_text = _invite_section(invite and not ask_html, base)
+    if invite_html:
+        sections.append(invite_html)
+        text += invite_text
     text += [f"See everything: {base}/release-radar", "",
              "You get this because you turned on the weekly email in OmniTrackr.",
              f"Unsubscribe with one click: {unsubscribe_url}"]
@@ -150,16 +268,32 @@ def build_digest(username: str, report: dict, unsubscribe_url: str) -> tuple[str
     return subject, html, "\n".join(text)
 
 
+def recent_finish(db: Session, user_id: int, now: datetime) -> dict | None:
+    """The member's latest finish in the last three weeks that has a public title page."""
+    from . import title_pages
+    moments = db.query(models.CompletionMoment).filter(
+        models.CompletionMoment.user_id == user_id,
+        models.CompletionMoment.completed_at >= now - timedelta(days=21),
+    ).order_by(models.CompletionMoment.completed_at.desc()).limit(5).all()
+    for moment in moments:
+        kind = title_pages.LIBRARY_TO_KIND.get(moment.category)
+        model = title_pages.KINDS[kind][0] if kind else None
+        item = db.query(model).filter(model.id == moment.item_id, model.user_id == user_id).first() if model else None
+        if item is None or not (item.title or "").strip():
+            continue
+        path = title_pages.path_for_item(kind, item)
+        if title_pages.find(db, kind, path.rsplit("/", 1)[1]) is not None:
+            return {"title": item.title.strip(), "path": path}
+    return None
+
+
 async def _send(to: str, subject: str, html: str, unsubscribe_url: str) -> None:
-    from fastapi_mail import FastMail, MessageSchema, MessageType
-    from .email import conf
-    message = MessageSchema(
-        subject=subject, recipients=[to], body=html, subtype=MessageType.html,
-        headers={
-            "List-Unsubscribe": f"<{unsubscribe_url}>",
-            "List-Unsubscribe-Post": "List-Unsubscribe=One-Click",
-        },
-    )
+    from fastapi_mail import FastMail
+    from .email import conf, html_message
+    message = html_message(subject, [to], html, headers={
+        "List-Unsubscribe": f"<{unsubscribe_url}>",
+        "List-Unsubscribe-Post": "List-Unsubscribe=One-Click",
+    })
     await asyncio.wait_for(FastMail(conf).send_message(message), timeout=30.0)
 
 
@@ -177,20 +311,43 @@ async def send_due_digests(session_factory, client=None, now: datetime | None = 
         sent_today = db.query(models.EmailDigestSubscription).filter(
             models.EmailDigestSubscription.last_sent_at >= now - timedelta(hours=24)
         ).count()
-        allowance = daily_limit() - sent_today
+        # Both email schedulers draw from the same rolling daily budget.
+        from .announcements import shared_cap
+        sent_campaign = db.query(models.EmailCampaignSend).filter(
+            models.EmailCampaignSend.sent_at >= now - timedelta(hours=24)
+        ).count()
+        allowance = min(daily_limit() - sent_today, shared_cap() - sent_today - sent_campaign)
         due = db.query(models.EmailDigestSubscription).filter(
             (models.EmailDigestSubscription.last_checked_at.is_(None))
             | (models.EmailDigestSubscription.last_checked_at <= now - SEND_EVERY)
         ).order_by(models.EmailDigestSubscription.last_checked_at.asc().nullsfirst(),
                    models.EmailDigestSubscription.id).all()
         pool = None
+        spotlight = None
+        try:
+            from .review_spotlight import build as build_spotlight
+            spotlight = build_spotlight(db, now)
+        except Exception:
+            db.rollback()
+            spotlight = None  # The weekly email never depends on it.
         for subscription in due:
             if allowance <= 0:
                 stats["limited"] += 1
                 continue
             user = db.query(models.User).filter_by(id=subscription.user_id).first()
-            subscription.last_checked_at = now
-            db.commit()  # Mark first so an overlapping run can never send twice.
+            # Another process may have loaded this same due list. Claim with
+            # a conditional update rather than writing a stale ORM snapshot.
+            previous_checked_at = subscription.last_checked_at
+            claimed = db.query(models.EmailDigestSubscription).filter(
+                models.EmailDigestSubscription.id == subscription.id,
+                (models.EmailDigestSubscription.last_checked_at.is_(None))
+                | (models.EmailDigestSubscription.last_checked_at <= now - SEND_EVERY),
+            ).update({models.EmailDigestSubscription.last_checked_at: now}, synchronize_session=False)
+            db.commit()
+            if not claimed:
+                stats["skipped"] += 1
+                continue
+            db.refresh(subscription)
             if user is None or not user.is_active or not user.is_verified or not user.email:
                 stats["skipped"] += 1
                 continue
@@ -198,20 +355,62 @@ async def send_due_digests(session_factory, client=None, now: datetime | None = 
                 from .for_you import radar_pool
                 pool = radar_pool(today, client)
             report = coming_up(db, user.id, today=today, pool=pool)
+            if not report["matches"] and subscription.last_sent_at and subscription.last_sent_at > now - ROUNDUP_EVERY:
+                stats["skipped"] += 1  # a quiet week: no news from their library, round-up sent recently
+                continue
             unsubscribe_url = f"{app_url()}/email/unsubscribe?token={subscription.token}"
-            built = build_digest(user.username, report, unsubscribe_url)
+            try:
+                ask = recent_finish(db, user.id, now)
+            except Exception:
+                db.rollback()
+                ask = None  # The weekly email never depends on it.
+            invite = False
+            if ask is None and invite_nudge_due(user.id, now):
+                try:
+                    from .friend_invites import has_friends
+                    invite = not has_friends(db, user.id)
+                except Exception:
+                    db.rollback()  # Optional, like the ask above.
+            try:
+                from .goals import progress as goal_progress
+                member_goals = goal_progress(db, user, now.year, today=now.date())
+            except Exception:
+                db.rollback()
+                member_goals = []  # Optional, like the ask above.
+            built = build_digest(user.username, report, unsubscribe_url, spotlight, ask, invite,
+                                 member_goals, now.year)
             if built is None:
                 stats["skipped"] += 1
                 continue
             subject, html, _text = built
+            # Reserve under a cross-process lock before awaiting the provider.
+            # Other schedulers count this in-flight send against the shared cap.
+            from .email_quota import lock_email_budget
+            lock_email_budget(db)
+            sent_digest = db.query(models.EmailDigestSubscription).filter(
+                models.EmailDigestSubscription.last_sent_at >= now - timedelta(hours=24)
+            ).count()
+            sent_campaign = db.query(models.EmailCampaignSend).filter(
+                models.EmailCampaignSend.sent_at >= now - timedelta(hours=24)
+            ).count()
+            if sent_digest >= daily_limit() or sent_digest + sent_campaign >= shared_cap():
+                subscription.last_checked_at = previous_checked_at
+                db.commit()
+                stats["limited"] += 1
+                continue
+            previous_sent_at = subscription.last_sent_at
+            subscription.last_sent_at = now
+            db.commit()
             try:
                 await sender(user.email, subject, html, unsubscribe_url)
             except Exception as error:  # One bad address must not stop the rest.
                 print(f"Weekly email to user {user.id} failed: {error}")
+                # Preserve the existing failed-send retry semantics without
+                # consuming a successful-send allowance.
+                subscription.last_sent_at = previous_sent_at
+                db.commit()
                 stats["failed"] += 1
                 continue
-            subscription.last_sent_at = now
-            db.commit()
             allowance -= 1
             stats["sent"] += 1
         return stats

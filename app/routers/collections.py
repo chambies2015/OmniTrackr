@@ -17,11 +17,13 @@ from sqlalchemy import case, func
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session, selectinload
 
-from ..admin_access import moderator_usernames
+from ..integer_bounds import PositiveDatabaseId
+from ..admin_access import is_moderator, moderator_usernames
 from .. import models, schemas
 from ..collection_quality import evaluate_public_collection
-from ..site_chrome import apply_site_chrome, message_page
+from ..site_chrome import apply_site_chrome, editorial_picks, message_page
 from ..csp import strict_html_response
+from ..progress import lock_progress_owner
 from ..dependencies import get_current_user, get_db
 from ..visitor_identity import (
     VISITOR_COOKIE,
@@ -71,7 +73,7 @@ def _moderator_usernames() -> set[str]:
 
 
 def _require_moderator(current_user: models.User) -> None:
-    if current_user.username.lower() not in _moderator_usernames():
+    if not is_moderator(current_user):
         raise HTTPException(status_code=403, detail="Collection moderator access required")
 
 
@@ -402,7 +404,16 @@ def _serialize_item(
         "available": media is not None,
         "curator_note": item.curator_note,
         "artwork_url": getattr(media, artwork_field, None) if media else None,
+        "title_path": _title_path(item.category, media),
     }
+
+
+def _title_path(category: str, media) -> str | None:
+    if media is None or not (media.title or "").strip():
+        return None
+    from ..title_pages import LIBRARY_TO_KIND, path_for_item
+    kind = LIBRARY_TO_KIND.get(category)
+    return path_for_item(kind, media) if kind else None
 
 
 def _serialize_collection(
@@ -669,7 +680,7 @@ async def create_collection(
 
 @router.patch("/{collection_id}", response_model=schemas.Collection)
 async def update_collection(
-    collection_id: int,
+    collection_id: PositiveDatabaseId,
     payload: schemas.CollectionUpdate,
     current_user: models.User = Depends(get_current_user),
     db: Session = Depends(get_db),
@@ -739,7 +750,7 @@ async def collection_moderator_insights(
 
 @router.patch("/{collection_id}/moderation", response_model=schemas.Collection)
 async def moderate_collection(
-    collection_id: int,
+    collection_id: PositiveDatabaseId,
     payload: schemas.CollectionModerationUpdate,
     current_user: models.User = Depends(get_current_user),
     db: Session = Depends(get_db),
@@ -768,7 +779,7 @@ async def moderate_collection(
 
 @router.get("/{collection_id}/moderation/reports")
 async def collection_moderation_reports(
-    collection_id: int,
+    collection_id: PositiveDatabaseId,
     current_user: models.User = Depends(get_current_user),
     db: Session = Depends(get_db),
 ):
@@ -832,8 +843,8 @@ class CollectionSaveSelection(BaseModel):
 
 
 def _save_public_selection(db, user, collection_id, selection=None):
-    # Match Discover/review locks: concurrent saves for an account serialize on PostgreSQL.
-    db.query(models.User).filter(models.User.id == user.id).with_for_update().first()
+    # Serialize saves with media deletion, including SQLite write reservation.
+    lock_progress_owner(db, user.id)
     try:
         source = _public_collection_or_404(db, collection_id, lock=True)
         items, version = _collection_save_snapshot(db, source)
@@ -893,7 +904,7 @@ def _save_public_selection(db, user, collection_id, selection=None):
 
 
 @router.get("/public/{collection_id}/save")
-def collection_save_page(collection_id: int, db: Session = Depends(get_db)):
+def collection_save_page(collection_id: PositiveDatabaseId, db: Session = Depends(get_db)):
     try:
         source = _public_collection_or_404(db, collection_id)
     except HTTPException:
@@ -920,7 +931,7 @@ def collection_save_page(collection_id: int, db: Session = Depends(get_db)):
 
 @router.get("/public/{collection_id}/save-preview")
 def collection_save_preview(
-    collection_id: int, response: Response, current_user: models.User = Depends(get_current_user),
+    collection_id: PositiveDatabaseId, response: Response, current_user: models.User = Depends(get_current_user),
     db: Session = Depends(get_db),
 ):
     response.headers["Cache-Control"] = "private, no-store"
@@ -938,7 +949,7 @@ def collection_save_preview(
 
 @router.post("/public/{collection_id}/save")
 def save_public_collection(
-    collection_id: int, selection: CollectionSaveSelection, response: Response,
+    collection_id: PositiveDatabaseId, selection: CollectionSaveSelection, response: Response,
     current_user: models.User = Depends(get_current_user), db: Session = Depends(get_db),
 ):
     response.headers["Cache-Control"] = "private, no-store"
@@ -948,7 +959,7 @@ def save_public_collection(
 
 @router.post("/public/{collection_id}/copy", response_model=schemas.Collection, status_code=status.HTTP_201_CREATED)
 def copy_public_collection(
-    collection_id: int, current_user: models.User = Depends(get_current_user), db: Session = Depends(get_db),
+    collection_id: PositiveDatabaseId, current_user: models.User = Depends(get_current_user), db: Session = Depends(get_db),
 ):
     """Keep older clients working, with the same repeated-save protection."""
     saved, _ = _save_public_selection(db, current_user, collection_id)
@@ -1039,16 +1050,17 @@ async def explore_collections(
     elif normalized_query or category:
         gallery_content = '<div class="collection-gallery__empty"><h2>No collections found</h2><p>Try a different search or media type.</p></div>'
     else:
-        gallery_content = (
-            '<div class="collection-gallery__empty"><h2>The gallery is opening soon</h2>'
-            '<p>The first qualifying member collections will appear here automatically. '
-            '<a href="/#landing-auth">Create your library</a> and start shaping one.</p></div>'
+        gallery_content = editorial_picks(
+            "Cross-media trails from OmniTrackr",
+            "Member collections join this gallery once they pass the discovery checks. Until then, these "
+            "editorial trails connect films, series, anime, games, albums, and books around one idea.",
         )
     values = {
         "COLLECTIONS": gallery_content,
         "QUERY": escape(normalized_query, quote=True),
         "CATEGORY": escape(category, quote=True),
-        "COUNT": str(len(cards)),
+        "COUNT": (f"{len(cards)} approved collection(s)" if cards or normalized_query or category
+                  else "Editorial picks while the gallery fills"),
         "SELECT_ALL": "selected" if not category else "",
         "SELECT_MOVIES": "selected" if category == "movies" else "",
         "SELECT_TV_SHOWS": "selected" if category == "tv-shows" else "",
@@ -1073,7 +1085,7 @@ async def explore_collections(
 
 
 @router.get("/public/{collection_id}")
-async def public_collection(collection_id: int, request: Request, db: Session = Depends(get_db)):
+async def public_collection(collection_id: PositiveDatabaseId, request: Request, db: Session = Depends(get_db)):
     """Render the deliberately limited public view of an explicitly shared shelf."""
     collection = _public_collection_or_404(db, collection_id)
     template = apply_site_chrome((Path(__file__).parents[1] / "templates" / "public_collection.html").read_text(encoding="utf-8"))
@@ -1101,7 +1113,9 @@ async def public_collection(collection_id: int, request: Request, db: Session = 
         '<li class="collection-entry">'
         f'<span class="collection-entry__number">{position:02d}</span>'
         + (f'<img src="{escape(item["artwork_url"], quote=True)}" alt="" loading="lazy" referrerpolicy="no-referrer">' if item["artwork_url"] else '')
-        + f'<div><p>{escape(item["category_label"])}</p><h2>{escape(item["title"])}</h2>'
+        + f'<div><p>{escape(item["category_label"])}</p><h2>'
+        + (f'<a href="{escape(item["title_path"], quote=True)}">{escape(item["title"])}</a>' if item.get("title_path") else escape(item["title"]))
+        + '</h2>'
         + (f'<div class="collection-entry__note">{escape(item["curator_note"])}</div>' if item["curator_note"] else '')
         + '</div></li>'
         for position, item in enumerate(items, 1)
@@ -1149,7 +1163,7 @@ async def public_collection(collection_id: int, request: Request, db: Session = 
 
 
 @router.post("/public/{collection_id}/helpful")
-async def mark_collection_helpful(collection_id: int, request: Request, db: Session = Depends(get_db)):
+async def mark_collection_helpful(collection_id: PositiveDatabaseId, request: Request, db: Session = Depends(get_db)):
     collection = _public_collection_or_404(db, collection_id)
     visitor_hash, visitor_token, _ = _visitor_identity(request)
     existing = db.query(models.CollectionReaction.id).filter(
@@ -1177,7 +1191,7 @@ async def mark_collection_helpful(collection_id: int, request: Request, db: Sess
 
 @router.post("/public/{collection_id}/report", status_code=status.HTTP_201_CREATED)
 async def report_collection(
-    collection_id: int,
+    collection_id: PositiveDatabaseId,
     payload: schemas.CollectionReportCreate,
     request: Request,
     db: Session = Depends(get_db),
@@ -1247,7 +1261,7 @@ async def report_collection(
 
 @router.delete("/{collection_id}", status_code=status.HTTP_204_NO_CONTENT)
 async def delete_collection(
-    collection_id: int,
+    collection_id: PositiveDatabaseId,
     current_user: models.User = Depends(get_current_user),
     db: Session = Depends(get_db),
 ):
@@ -1258,11 +1272,12 @@ async def delete_collection(
 
 @router.post("/{collection_id}/items", response_model=schemas.CollectionItem, status_code=status.HTTP_201_CREATED)
 async def add_collection_item(
-    collection_id: int,
+    collection_id: PositiveDatabaseId,
     payload: schemas.CollectionItemCreate,
     current_user: models.User = Depends(get_current_user),
     db: Session = Depends(get_db),
 ):
+    lock_progress_owner(db, current_user.id)
     collection = _get_collection(db, current_user.id, collection_id)
     if len(collection.items) >= PUBLIC_COLLECTION_MAX_ITEMS:
         raise HTTPException(
@@ -1293,18 +1308,18 @@ async def add_collection_item(
         db.flush()
         db.expire(collection, ["items"])
         _apply_automated_readiness(collection, db)
+        result = _serialize_item(item, db, current_user.id)
         db.commit()
     except IntegrityError:
         db.rollback()
         raise HTTPException(status_code=409, detail="That item is already in this collection")
-    db.refresh(item)
-    return _serialize_item(item, db, current_user.id)
+    return result
 
 
 @router.patch("/{collection_id}/items/{item_id}", response_model=schemas.CollectionItem)
 async def update_collection_item(
-    collection_id: int,
-    item_id: int,
+    collection_id: PositiveDatabaseId,
+    item_id: PositiveDatabaseId,
     payload: schemas.CollectionItemUpdate,
     current_user: models.User = Depends(get_current_user),
     db: Session = Depends(get_db),
@@ -1327,8 +1342,8 @@ async def update_collection_item(
 
 @router.put("/{collection_id}/items/{item_id}/position", response_model=List[schemas.CollectionItem])
 async def move_collection_item(
-    collection_id: int,
-    item_id: int,
+    collection_id: PositiveDatabaseId,
+    item_id: PositiveDatabaseId,
     payload: schemas.CollectionItemMove,
     current_user: models.User = Depends(get_current_user),
     db: Session = Depends(get_db),
@@ -1353,8 +1368,8 @@ async def move_collection_item(
 
 @router.delete("/{collection_id}/items/{item_id}", status_code=status.HTTP_204_NO_CONTENT)
 async def remove_collection_item(
-    collection_id: int,
-    item_id: int,
+    collection_id: PositiveDatabaseId,
+    item_id: PositiveDatabaseId,
     current_user: models.User = Depends(get_current_user),
     db: Session = Depends(get_db),
 ):
