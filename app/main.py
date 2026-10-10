@@ -597,12 +597,21 @@ app.include_router(invites.router)
 from .routers import goals as goals_router
 rate_limited_goal_save = limiter.limit("30/minute")(goals_router.save_goal)
 rate_limited_goal_delete = limiter.limit("30/minute")(goals_router.delete_goal)
+rate_limited_goal_share = limiter.limit("20/minute")(goals_router.share_goal)
+rate_limited_goal_page = limiter.limit("60/minute")(goals_router.shared_goal_page)
+rate_limited_goal_card = limiter.limit("30/minute")(goals_router.shared_goal_card)
 for route in goals_router.router.routes:
     path, methods = getattr(route, "path", None), getattr(route, "methods", set())
     if path == "/api/goals/{year}/{category}" and "PUT" in methods:
         bind_rate_limited_endpoint(route, rate_limited_goal_save)
     elif path == "/api/goals/{year}/{category}" and "DELETE" in methods:
         bind_rate_limited_endpoint(route, rate_limited_goal_delete)
+    elif path == "/api/goals/{year}/{category}/share" and "PUT" in methods:
+        bind_rate_limited_endpoint(route, rate_limited_goal_share)
+    elif path == "/goal/{token}":
+        bind_rate_limited_endpoint(route, rate_limited_goal_page)
+    elif path == "/goal/{token}/card.png":
+        bind_rate_limited_endpoint(route, rate_limited_goal_card)
 app.include_router(goals_router.router)
 
 

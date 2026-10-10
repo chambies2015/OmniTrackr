@@ -30,3 +30,18 @@ test('a category with a goal is offered only while editing that goal', () => {
   assert.deepEqual(goals.openCategories(data, null).map(item => item.key), ['all', 'movies']);
   assert.deepEqual(goals.openCategories(data, 'books').map(item => item.key), ['all', 'books', 'movies']);
 });
+
+test('the celebration picks the first goal not yet dismissed and names it', () => {
+  const data = {
+    year: 2026,
+    goals: [
+      { category: 'all', noun: 'titles', achievement: { target: 50, celebrate: false } },
+      { category: 'books', noun: 'books', achievement: { target: 24, celebrate: true } },
+      { category: 'movies', noun: 'movies', achievement: null },
+    ],
+  };
+  const goal = goals.celebrationGoal(data);
+  assert.equal(goal.category, 'books');
+  assert.equal(goals.celebrationText(goal, 2026), 'You reached your 2026 goal: 24 books.');
+  assert.equal(goals.celebrationGoal({ goals: [data.goals[0]] }), null);
+});

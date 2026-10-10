@@ -6412,14 +6412,24 @@ body.dark-mode .for-you-item__add.is-added { color: #5eead4; }
 .year-goal__pace { color: var(--fg); font-size: .8rem; opacity: .72; }
 .year-goal--done .year-goal__pace { color: #0f766e; font-weight: 700; opacity: 1; }
 .year-goal--behind .year-goal__pace { color: #b45309; opacity: 1; }
-.year-goal__actions { display: flex; gap: 6px; grid-column: 2; }
-.year-goal__actions button, .year-goals__cancel, .year-goals__dismiss { background: transparent; border: 0; color: var(--fg); cursor: pointer; font: inherit; font-size: .8rem; min-height: 32px; opacity: .75; padding: 0 6px; text-decoration: underline; text-underline-offset: 2px; }
+.year-goal__actions { display: flex; flex-wrap: wrap; gap: 2px 6px; grid-column: 2; }
+.year-goal__actions button { white-space: nowrap; }
+.year-goal__actions button, .year-goals__cancel, .year-goals__dismiss { background: transparent; border: 0; color: var(--fg); cursor: pointer; font: inherit; font-size: .8rem; min-height: 32px; opacity: .75; padding: 0 4px; text-decoration: underline; text-underline-offset: 2px; }
 .year-goal__actions button:hover, .year-goals__cancel:hover, .year-goals__dismiss:hover { opacity: 1; }
 .year-goals__form { align-items: center; background: rgba(255, 255, 255, .22); border: 1px dashed var(--border); border-radius: 12px; display: flex; flex-wrap: wrap; gap: 10px; margin: 0 0 12px; padding: 12px; }
 .year-goals__field { align-items: center; color: var(--fg); display: flex; flex-wrap: wrap; font-size: .92rem; gap: 8px; }
 .year-goals .year-goals__field input { flex: 0 0 auto; width: 84px; }
 .year-goals .year-goals__field select { flex: 0 1 auto; max-width: 100%; width: auto; }
 .year-goals__field input, .year-goals__field select { background: var(--field-bg, var(--card-bg)); border: 1px solid var(--border); border-radius: 8px; color: var(--fg); font: inherit; min-height: 40px; padding: 0 10px; }
+.year-goals__celebration { align-items: center; background: linear-gradient(110deg, rgba(20, 184, 166, .18), rgba(102, 126, 234, .14)); border: 1px solid rgba(20, 184, 166, .45); border-radius: 12px; display: flex; flex-wrap: wrap; gap: 10px 16px; justify-content: space-between; margin: 0 0 12px; padding: 12px 14px; }
+.year-goals__celebration[hidden] { display: none; }
+.year-goals__celebration-copy { display: grid; gap: 2px; }
+.year-goals__celebration-copy strong { color: var(--fg); font-size: 1rem; }
+.year-goals__celebration-copy span { color: var(--fg); font-size: .84rem; opacity: .8; }
+.year-goals__celebration-actions { align-items: center; display: flex; flex-wrap: wrap; gap: 6px 10px; }
+.year-goals__raise, .year-goals__celebration-dismiss { background: transparent; border: 0; color: var(--fg); cursor: pointer; font: inherit; font-size: .84rem; min-height: 36px; padding: 0 6px; text-decoration: underline; text-underline-offset: 2px; }
+.year-goal__actions .year-goal__share { color: #0f766e; font-weight: 700; opacity: 1; }
+body.app-shell .year-goal__actions .year-goal__share { color: var(--teal); }
 .year-goals__footer { align-items: center; display: flex; flex-wrap: wrap; gap: 8px 12px; }
 .year-goals__add[hidden], .year-goals__dismiss[hidden] { display: none; }
 .year-goals__status { color: #0f766e; font-size: .84rem; margin: 0; min-height: 1.2em; }

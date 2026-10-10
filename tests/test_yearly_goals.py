@@ -127,3 +127,83 @@ def test_weekly_email_lists_goals_without_forcing_a_send():
 def test_yearly_goal_table_is_new_and_separate():
     assert models.YearlyGoal.__tablename__ == "yearly_goals"
     assert "goal" not in " ".join(models.User.__table__.columns.keys())
+
+
+def test_reaching_a_goal_notifies_once_and_celebrates_until_dismissed(authenticated_client, db_session):
+    _seed(authenticated_client)
+    year = datetime.utcnow().year
+    goal = authenticated_client.put(f"/api/goals/{year}/books", json={"target": 2}).json()["goals"][0]
+    assert goal["achievement"]["celebrate"] is True and goal["achievement"]["shared"] is False
+    authenticated_client.get("/api/goals")
+    user = _user(db_session)
+    notes = db_session.query(models.Notification).filter_by(user_id=user.id, type="goal_reached").all()
+    assert len(notes) == 1 and notes[0].link == "/#goals" and "2 books" in notes[0].message
+
+    seen = authenticated_client.post(f"/api/goals/{year}/books/seen").json()
+    assert seen["celebrate"] is False
+    assert authenticated_client.get("/api/goals").json()["goals"][0]["achievement"]["celebrate"] is False
+
+    # Raising the bar and reaching it again is a new moment.
+    authenticated_client.put(f"/api/goals/{year}/books", json={"target": 3})
+    assert authenticated_client.get("/api/goals").json()["goals"][0]["achievement"] is None
+    _finish(authenticated_client, "/books/", {"title": "Emma", "author": "J. Austen", "year": 1815}, "read")
+    again = authenticated_client.get("/api/goals").json()["goals"][0]["achievement"]
+    assert again["target"] == 3 and again["celebrate"] is True
+    assert db_session.query(models.Notification).filter_by(user_id=user.id, type="goal_reached").count() == 2
+
+
+def test_unreached_goals_have_no_moment(authenticated_client):
+    year = datetime.utcnow().year
+    goal = authenticated_client.put(f"/api/goals/{year}/books", json={"target": 5}).json()["goals"][0]
+    assert goal["achievement"] is None
+    assert authenticated_client.put(f"/api/goals/{year}/books/share").status_code == 404
+    assert authenticated_client.post(f"/api/goals/{year}/books/seen").status_code == 404
+
+
+def test_shared_goal_page_and_card_show_only_the_headline(authenticated_client, client, db_session):
+    _seed(authenticated_client)
+    year = datetime.utcnow().year
+    authenticated_client.put(f"/api/goals/{year}/books", json={"target": 2})
+    shared = authenticated_client.put(f"/api/goals/{year}/books/share").json()
+    assert shared["shared"] is True and shared["celebrate"] is False and "/goal/" in shared["url"]
+    path = shared["url"].split("omnitrackr.xyz", 1)[1]
+    assert authenticated_client.put(f"/api/goals/{year}/books/share").json()["url"] == shared["url"]
+
+    authenticated_client.cookies.clear()
+    page = client.get(path)
+    assert page.status_code == 200
+    assert f"testuser read 2 books in {year}" in page.text
+    assert "Piranesi" not in page.text and "Dune" not in page.text
+    assert "noindex" in page.headers["X-Robots-Tag"] and 'href="/#signup"' in page.text
+    assert f'{path}/card.png' in page.text
+    card = client.get(f"{path}/card.png")
+    assert card.status_code == 200 and card.headers["content-type"] == "image/png"
+
+    # A shelf made private takes the page down; so does stopping sharing.
+    user = _user(db_session)
+    user.books_private = True
+    db_session.commit()
+    assert client.get(path).status_code == 404
+    user.books_private = False
+    db_session.commit()
+    assert client.get(path).status_code == 200
+
+
+def test_stop_sharing_and_removing_the_goal_end_the_link(authenticated_client, db_session):
+    _seed(authenticated_client)
+    year = datetime.utcnow().year
+    authenticated_client.put(f"/api/goals/{year}/books", json={"target": 2})
+    url = authenticated_client.put(f"/api/goals/{year}/books/share").json()["url"]
+    path = url.split("omnitrackr.xyz", 1)[1]
+    assert authenticated_client.delete(f"/api/goals/{year}/books/share").json()["shared"] is False
+    assert authenticated_client.get(path).status_code == 404
+    url = authenticated_client.put(f"/api/goals/{year}/books/share").json()["url"]
+    authenticated_client.delete(f"/api/goals/{year}/books")
+    assert authenticated_client.get(url.split("omnitrackr.xyz", 1)[1]).status_code == 404
+    assert db_session.query(models.GoalAchievement).count() == 0
+
+
+def test_headline_wording():
+    assert goals.headline("sam", "books", 24, 2026) == "sam read 24 books in 2026"
+    assert goals.headline("sam", "music", 1, 2026) == "sam listened to 1 album in 2026"
+    assert goals.headline("sam", "all", 100, 2027) == "sam finished 100 titles in 2027"

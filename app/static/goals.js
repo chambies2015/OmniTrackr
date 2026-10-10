@@ -99,8 +99,58 @@
     remove.dataset.goalCategory = goal.category;
     remove.setAttribute('aria-label', `Remove your ${goal.noun} goal`);
     actions.append(edit, remove);
+    if (goal.achievement) {
+      const shareButton = el('button', 'year-goal__share', goal.achievement.shared ? 'Copy link' : 'Share');
+      shareButton.type = 'button';
+      shareButton.dataset.goalAction = 'share';
+      shareButton.dataset.goalCategory = goal.category;
+      shareButton.setAttribute('aria-label', `Share your ${goal.noun} goal`);
+      actions.prepend(shareButton);
+      if (goal.achievement.shared) {
+        const stop = el('button', 'year-goal__unshare', 'Stop sharing');
+        stop.type = 'button';
+        stop.dataset.goalAction = 'unshare';
+        stop.dataset.goalCategory = goal.category;
+        actions.appendChild(stop);
+      }
+    }
     item.append(ring(goal), copy, actions);
     return item;
+  }
+
+  function celebrationGoal(data) {
+    return (data.goals || []).find(goal => goal.achievement && goal.achievement.celebrate) || null;
+  }
+
+  function celebrationText(goal, year) {
+    return `You reached your ${year} goal: ${goal.achievement.target} ${goal.noun}.`;
+  }
+
+  function renderCelebration(data) {
+    const box = $('yearGoalsCelebration');
+    if (!box) return;
+    const goal = celebrationGoal(data);
+    box.hidden = !goal;
+    box.replaceChildren();
+    if (!goal) return;
+    const copy = el('div', 'year-goals__celebration-copy');
+    copy.append(el('strong', '', celebrationText(goal, data.year)),
+      el('span', '', 'Nicely done. Share it, or keep going and raise the bar.'));
+    const share = el('button', 'action-btn', 'Share it');
+    share.type = 'button';
+    share.dataset.goalAction = 'share';
+    share.dataset.goalCategory = goal.category;
+    const raise = el('button', 'year-goals__raise', 'Raise the goal');
+    raise.type = 'button';
+    raise.dataset.goalAction = 'edit';
+    raise.dataset.goalCategory = goal.category;
+    const dismiss = el('button', 'year-goals__celebration-dismiss', 'Dismiss');
+    dismiss.type = 'button';
+    dismiss.dataset.goalAction = 'seen';
+    dismiss.dataset.goalCategory = goal.category;
+    const actions = el('div', 'year-goals__celebration-actions');
+    actions.append(share, raise, dismiss);
+    box.append(copy, actions);
   }
 
   function goalForm(data) {
@@ -165,6 +215,7 @@
       years.appendChild(chip);
     });
     years.hidden = years.childElementCount < 2;
+    renderCelebration(data);
     const list = $('yearGoalsList');
     list.replaceChildren(...goals.map(goalItem));
     list.hidden = !goals.length;
@@ -234,6 +285,49 @@
     }
   }
 
+  async function achievementAction(method, category, suffix) {
+    if (state.busy) return null;
+    state.busy = true;
+    status('');
+    try {
+      const response = await fetch(`${apiBase()}/api/goals/${encodeURIComponent(state.year)}/${encodeURIComponent(category)}/${suffix}`, fetchOptions({
+        method, headers: { Accept: 'application/json' },
+      }));
+      const data = await response.json().catch(() => ({}));
+      if (!response.ok) throw new Error(typeof data.detail === 'string' ? data.detail : 'Something went wrong. Try again.');
+      const goal = (state.data?.goals || []).find(item => item.category === category);
+      if (goal) goal.achievement = data;
+      return data;
+    } catch (error) {
+      status(error.message || 'Something went wrong. Try again.');
+      return null;
+    } finally {
+      state.busy = false;
+    }
+  }
+
+  async function shareAchievement(category) {
+    const goal = (state.data?.goals || []).find(item => item.category === category);
+    const achievement = await achievementAction('PUT', category, 'share');
+    if (!achievement || !achievement.url) return;
+    render(state.data);
+    const text = goal ? celebrationText(goal, state.data.year).replace('You reached your', 'I reached my') : 'I reached my goal on OmniTrackr.';
+    if (navigator.share) {
+      try {
+        await navigator.share({ title: text, text, url: achievement.url });
+        return;
+      } catch (error) {
+        if (error && error.name === 'AbortError') return;
+      }
+    }
+    try {
+      await navigator.clipboard.writeText(achievement.url);
+      status('Link copied. It shows only the goal, never your titles.');
+    } catch (error) {
+      status(achievement.url);
+    }
+  }
+
   function handleClick(event) {
     const target = event.target.closest && event.target.closest('#yearGoals [data-goal-action], #yearGoals [data-goal-year], #yearGoalsAdd, #yearGoalsDismiss');
     if (!target || !state.data) return;
@@ -265,6 +359,14 @@
       $('yearGoalsForm')?.querySelector('input')?.focus();
     } else if (action === 'remove') {
       send('DELETE', target.dataset.goalCategory);
+    } else if (action === 'share') {
+      shareAchievement(target.dataset.goalCategory);
+    } else if (action === 'unshare') {
+      achievementAction('DELETE', target.dataset.goalCategory, 'share').then(data => {
+        if (data) { render(state.data); status('Sharing stopped. The old link no longer works.'); }
+      });
+    } else if (action === 'seen') {
+      achievementAction('POST', target.dataset.goalCategory, 'seen').then(data => { if (data) render(state.data); });
     } else if (action === 'cancel') {
       state.editing = null;
       render(state.data);
@@ -305,7 +407,7 @@
     window.resetYearGoals = resetYearGoals;
   }
   if (typeof module !== 'undefined' && module.exports) {
-    module.exports = { paceText, ringOffset, openCategories, RING_LENGTH };
+    module.exports = { paceText, ringOffset, openCategories, celebrationGoal, celebrationText, RING_LENGTH };
   } else if (document.readyState === 'loading') {
     document.addEventListener('DOMContentLoaded', init);
   } else {
