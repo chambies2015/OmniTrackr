@@ -68,10 +68,8 @@ from .routers import (
     year_in_review,
 )
 
-# Create database tables
 Base.metadata.create_all(bind=engine)
 
-# Run migrations
 run_migrations()
 
 @asynccontextmanager
@@ -116,7 +114,6 @@ async def lifespan(application: FastAPI):
             pass
 
 
-# Initialize FastAPI
 app = FastAPI(
     title="OmniTrackr API",
     description="Manage your movies, TV shows, anime, video games, music, and books",
@@ -142,7 +139,6 @@ def client_address(request: Request) -> str:
     return get_remote_address(request)
 
 
-# Initialize rate limiter
 if os.getenv("TESTING", "").lower() == "true":
     limiter = Limiter(key_func=lambda: "test", enabled=False)
 else:
@@ -179,7 +175,6 @@ def bind_rate_limited_endpoint(route, endpoint) -> None:
         route.dependant.call = endpoint
 
 
-# Add middleware
 app.add_middleware(RequestBodyLimitMiddleware)
 app.add_middleware(UploadAuthenticationMiddleware)
 app.add_middleware(CSRFProtectionMiddleware)
@@ -351,9 +346,7 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-# Profile pictures are now stored in the database for persistence across deployments
-# Serve profile pictures from database
-# Using /profile-pictures/ path to avoid conflict with /static/ mount
+# Profile pictures live in the database; /profile-pictures/ keeps them clear of the /static/ mount.
 @app.get("/profile-pictures/{user_id}")
 async def serve_profile_picture(
     user_id: PositiveDatabaseId,
@@ -361,7 +354,6 @@ async def serve_profile_picture(
     db: Session = Depends(get_db),
 ):
     """Serve profile pictures from database."""
-    # Get user from database
     user = crud.get_user_by_id(db, user_id)
     if not user or not user.is_active or not user.profile_picture_data:
         raise HTTPException(status_code=404, detail="Profile picture not found")
@@ -370,7 +362,6 @@ async def serve_profile_picture(
     if not own_or_friend and not public:
         raise HTTPException(status_code=404, detail="Profile picture not found")
     
-    # Return image data with appropriate MIME type
     mime_type = user.profile_picture_mime_type or "image/jpeg"
     return Response(content=user.profile_picture_data, media_type=mime_type)
 
@@ -398,23 +389,19 @@ async def serve_custom_tab_poster(
     return Response(content=item.poster_data, media_type=mime_type)
 
 
-# Backward compatibility: support old filename-based URLs (for migration period)
-# This must be registered BEFORE the static mount to take precedence
+# Old filename-based picture URLs redirect to the database route. Registered
+# before the static mount so it takes precedence.
 @app.get("/static/profile_pictures/{filename}")
 async def serve_profile_picture_old(filename: str):
     """Backward compatibility endpoint for old profile picture URLs."""
-    # Try to extract user_id from filename (format: {user_id}_{uuid}.{ext})
     match = re.match(r'^([0-9]{1,10})_', filename)
     if match:
         user_id = int(match.group(1))
         if 1 <= user_id <= SQL_INTEGER_MAX:
-            # Redirect to new endpoint
             return RedirectResponse(url=f"/profile-pictures/{user_id}", status_code=301)
     raise HTTPException(status_code=404, detail="Profile picture not found")
 
 
-# Mount static files for the UI
-# This must be AFTER the backward compatibility route to allow it to take precedence
 static_dir = os.path.join(os.path.dirname(__file__), "static")
 if os.path.exists(static_dir):
     app.mount("/static", StaticFiles(directory=static_dir), name="static")
@@ -434,7 +421,6 @@ for route in auth.router.routes:
         elif route.path == "/auth/resend-verification" and 'POST' in route.methods:
             bind_rate_limited_endpoint(route, limiter.limit("3/hour")(route.endpoint))
 
-# Include routers
 app.include_router(auth.router)
 
 # Include account router and apply rate limiting to profile picture upload
@@ -499,18 +485,15 @@ app.include_router(release_radar.router)
 app.include_router(export_import.router)
 app.include_router(custom_tabs.router)
 
-# Include proxy router and apply rate limiting
-# We need to wrap the endpoints with rate limiting decorators
+# Rate-limit the metadata proxy endpoints before including the router.
 from .routers.proxy import proxy_omdb_api, proxy_rawg_api, proxy_jikan_api, proxy_itunes_api, proxy_openlibrary_api
 
-# Create rate-limited versions
 rate_limited_omdb = limiter.limit("60/minute")(proxy_omdb_api)
 rate_limited_rawg = limiter.limit("60/minute")(proxy_rawg_api)
 rate_limited_jikan = limiter.limit("60/minute")(proxy_jikan_api)
 rate_limited_itunes = limiter.limit("60/minute")(proxy_itunes_api)
 rate_limited_openlibrary = limiter.limit("60/minute")(proxy_openlibrary_api)
 
-# Replace the endpoints in the router before including it
 for route in proxy.router.routes:
     if hasattr(route, 'path') and route.path == "/api/proxy/omdb":
         bind_rate_limited_endpoint(route, rate_limited_omdb)
@@ -648,11 +631,9 @@ for route in challenges_router.router.routes:
 app.include_router(challenges_router.router)
 
 
-# Root endpoint
 @app.get("/", tags=["root"])
 @app.head("/", tags=["root"])
 async def read_root(request: Request):
-    # Serve the HTML UI file
     html_file = os.path.join(os.path.dirname(__file__), "templates", "index.html")
     if os.path.exists(html_file):
         with open(html_file, "r", encoding="utf-8") as file:
