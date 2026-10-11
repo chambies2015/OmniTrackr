@@ -283,12 +283,7 @@ async def upload_profile_picture(
             }
             
             # If image has transparency, ensure we preserve it
-            if image.mode == 'RGBA':
-                # WebP supports transparency natively
-                image.save(output, **save_kwargs)
-            else:
-                # RGB image
-                image.save(output, **save_kwargs)
+            image.save(output, **save_kwargs)
             
             image_data = output.getvalue()
             
@@ -298,9 +293,9 @@ async def upload_profile_picture(
             quality = max(60, quality - 10)  # Don't go below 60
         
         # If still too large after optimization, use more aggressive compression
-        if len(image_data) > 300 * 1024:  # Still over 300KB
+        if len(image_data) > 300 * 1024:  # Still over 300KB after quality 60
             output = io.BytesIO()
-            image.save(output, format='WEBP', quality=70, method=6, lossless=False)
+            image.save(output, format='WEBP', quality=40, method=6, lossless=False)
             image_data = output.getvalue()
         
         # Update database with image data, MIME type, and virtual URL
