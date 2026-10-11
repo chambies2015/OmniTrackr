@@ -43,6 +43,7 @@ FOOTER_GROUPS = (
     ("Learn", (
         ("Guides", "/guides"),
         ("Tracking hub", "/media-tracking"),
+        ("Switch from another tracker", "/switch"),
         ("Import & backups", "/export-import-guide"),
         ("Review guide", "/review-guidelines"),
         ("Compare trackers", "/compare"),

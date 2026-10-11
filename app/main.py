@@ -200,6 +200,7 @@ INDEXABLE_PUBLIC_TEMPLATES = {
     "media_tracking.html",
     "review_guidelines.html",
     "sample_library.html",
+    "switch.html",
     "privacy.html",
     "reviews.html",
     "terms.html",
@@ -809,6 +810,14 @@ async def media_statistics_page(request: Request):
 @app.get("/export-import-guide", tags=["public"])
 async def export_import_guide_page(request: Request):
     response = strict_template_response("export_import_guide.html", request)
+    if response:
+        return response
+    raise HTTPException(status_code=404, detail="Page not found")
+
+
+@app.get("/switch", tags=["public"])
+async def switch_page(request: Request):
+    response = strict_template_response("switch.html", request)
     if response:
         return response
     raise HTTPException(status_code=404, detail="Page not found")
