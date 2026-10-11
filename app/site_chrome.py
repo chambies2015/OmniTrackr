@@ -33,6 +33,7 @@ FOOTER_GROUPS = (
     ("Explore", (
         ("Release Radar", "/release-radar"),
         ("Discover", "/discover"),
+        ("Monthly challenge", "/challenges"),
         ("Public reviews", "/reviews"),
         ("Collections", "/collections/explore"),
         ("Popular titles", "/titles"),

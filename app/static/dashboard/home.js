@@ -1217,6 +1217,7 @@ function scheduleLibraryLaunchpadRefresh(refreshDecisionCards = true) {
     const launchpadRequest = refreshLibraryLaunchpad();
     const queueRequest = refreshNextUpQueue();
     window.refreshYearGoals?.();
+    window.refreshMonthlyChallenge?.();
     if (shouldRefreshDecisionCards) refreshDashboardDecisionCards();
     Promise.allSettled([launchpadRequest, queueRequest, decisionCardsRefreshPromise]).then(batch.resolve);
   }, 250);

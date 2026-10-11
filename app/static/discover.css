@@ -211,3 +211,11 @@ button:disabled { cursor: wait; opacity: .6; }
   .trail, .button, .save-panel button { transition: none; }
   .trail:hover, .button:hover, .save-panel button:hover { transform: none; }
 }
+
+/* Monthly challenge guides (Oct 2026) */
+.challenge-count{margin-top:1rem;font-weight:600;opacity:.85}
+.challenge-steps-brief{margin:.75rem 0 0;padding-left:1.25rem;line-height:1.6}
+.challenge-edition ul{margin:.75rem 0;padding-left:1.25rem;line-height:1.7}
+.challenge-cta .button{display:inline-block;margin-right:1rem}
+.challenge-cta__member{display:inline-block;margin-top:.5rem}
+.challenge-intro p + p{margin-top:.9em}
