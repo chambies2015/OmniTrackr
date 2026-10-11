@@ -205,13 +205,13 @@
         <p>You do not need to type an existing library again. In <strong>Account Settings &rarr; Import Studio</strong>, a file preview shows what would be added before you confirm. The studio accepts UTF-8 CSV or TSV, up to 5 MB and 5,000 rows per batch.</p>
         <ol>
           <li><strong>Keep the original export.</strong> Make a working copy for any changes. For a Letterboxd export, extract the ZIP first and choose a supported film CSV from it; do not upload the ZIP. <a href="https://letterboxd.com/user/exportdata/">Letterboxd's export page</a> describes the files it provides.</li>
-          <li><strong>Choose a supported source.</strong> The studio understands Letterboxd-style, Goodreads-style, and MyAnimeList-style CSV columns. MyAnimeList XML is not accepted. For a spreadsheet, choose <strong>Generic CSV / spreadsheet</strong>, select a media category, and map your columns if their names differ. Category templates are available in the studio.</li>
+          <li><strong>Choose a supported source.</strong> The studio understands IMDb, Letterboxd, Goodreads, StoryGraph, and MyAnimeList CSV columns. MyAnimeList XML is not accepted. For a spreadsheet, choose <strong>Generic CSV / spreadsheet</strong>, select a media category, and map your columns if their names differ. Category templates are available in the studio.</li>
           <li><strong>Preview a small batch.</strong> Select <strong>Preview import</strong>. This step does not save records. Inspect ready, duplicate, and invalid rows, including later pages of the results. Check the year, rating, and completion state against your original list.</li>
-          <li><strong>Check what transfers.</strong> Letterboxd and Goodreads adapters double five-point ratings: 3.5 becomes 7/10. Generic CSV ratings already use a ten-point scale. Letterboxd review text and diary visits are not imported; Goodreads review text is supported, but custom shelves and reading dates are not preserved.</li>
+          <li><strong>Check what transfers.</strong> Letterboxd, Goodreads, and StoryGraph adapters double five-point ratings: 3.5 becomes 7/10. IMDb and generic CSV ratings already use a ten-point scale. Review text from a review column comes over as a private note; Letterboxd diary visits, custom shelves, and reading dates are not preserved.</li>
           <li><strong>Confirm the batch.</strong> Confirmation imports all ready rows in that preview, skipping duplicate and invalid rows. Existing records keep their values. Imported review text is not published to public review pages, but friends can read it if you share the category. To import a smaller selection, reduce the file and preview it again.</li>
           <li><strong>Check the result in your library.</strong> Review the created and skipped counts, open the relevant category, and set any current progress reminders. Download an OmniTrackr JSON backup after you are satisfied with the result.</li>
         </ol>
-        <p>There is no dedicated IMDb or Trakt adapter. If you have a CSV from another source, use the generic option and check every mapped field in the preview; do not assume its status or rating values have the same meaning. Missing years and different spellings can also prevent duplicate matches.</p>
+        <p>IMDb ratings, watchlist, and list exports have their own adapter, covered step by step in the <a href="/switch">switching guide</a>. There is no dedicated Trakt adapter. If you have a CSV from another source, use the generic option and check every mapped field in the preview; do not assume its status or rating values have the same meaning. Missing years and different spellings can also prevent duplicate matches.</p>
         <p class="reader-note"><strong>CSV migration and JSON restore are different.</strong> The Import Studio only adds new records. Restoring an OmniTrackr JSON backup can update matching library records. Use the <a href="/export-import-guide">export and import guide</a> for worked examples, matching rules, and backup details before restoring a file.</p>
       </section>
 
@@ -223,9 +223,10 @@
 
       <section class="privacy-section" aria-labelledby="related-heading">
         <h2 id="related-heading">Take the Next Useful Step</h2>
-        <p>Explore the demo before creating an account, or follow the import guide if you already have a list. For something new to add, <a href="/release-radar">Release Radar</a><a href="/discover">Discover</a> offers editorial starting points across media.</p>
+        <p>Explore the demo before creating an account, or follow the import guide if you already have a list. For something new to add, <a href="/release-radar">Release Radar</a> and <a href="/discover">Discover</a> offer editorial starting points across media.</p>
         <div class="reader-actions">
           <a href="/demo">Try the interactive demo</a>
+          <a href="/switch">Switch from another tracker</a>
           <a href="/export-import-guide">Plan your import</a>
           <a href="/guides">Find a getting-started guide</a>
         </div>

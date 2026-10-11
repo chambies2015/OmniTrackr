@@ -1,0 +1,232 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="description" content="Move your ratings from IMDb, Letterboxd, Goodreads, The StoryGraph, or MyAnimeList into OmniTrackr. Where each export lives, what transfers, how ratings convert, and what to check afterward.">
+  <meta name="robots" content="index, follow, max-image-preview:large">
+  <meta name="author" content="OmniTrackr">
+  <title>Switch to OmniTrackr - Move Your IMDb, Letterboxd, Goodreads and StoryGraph History</title>
+  <link rel="canonical" href="https://omnitrackr.xyz/switch">
+  <link rel="icon" type="image/x-icon" href="/omnitrackr_favicon.ico">
+  <meta property="og:type" content="article">
+  <meta property="og:url" content="https://omnitrackr.xyz/switch">
+  <meta property="og:title" content="Switch to OmniTrackr Without Starting Over">
+  <meta property="og:description" content="Step-by-step exports for IMDb, Letterboxd, Goodreads, The StoryGraph, and MyAnimeList, with rating conversion and a preview before anything is saved.">
+  <meta property="og:image" content="https://omnitrackr.xyz/omnitrackr_vortex.png">
+  <meta property="og:image:alt" content="Switching guide for OmniTrackr">
+  <meta property="og:site_name" content="OmniTrackr">
+  <meta name="twitter:card" content="summary">
+  <meta name="twitter:title" content="Switch to OmniTrackr Without Starting Over">
+  <meta name="twitter:description" content="Bring years of IMDb, Letterboxd, Goodreads, StoryGraph, and MyAnimeList ratings into one tracker, previewed before anything is saved.">
+  <link rel="preload" href="/static/fonts/poppins-700-latin.woff2" as="font" type="font/woff2" crossorigin>
+  <link rel="preload" href="/static/fonts/poppins-800-latin.woff2" as="font" type="font/woff2" crossorigin>
+  <link rel="stylesheet" href="/static/fonts.css?v=20261009-fonts-1">
+  <style>
+    body { min-height: 100vh; padding: 20px; }
+    .content-container { background: var(--card-bg); border-radius: 16px; padding: 50px 40px; margin: 20px 0; box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3); border: 1px solid var(--border); color: var(--fg); line-height: 1.8; }
+    @media (max-width: 768px) { .content-container { padding: 30px 20px; margin: 10px 0; } }
+    .content-header { text-align: center; margin-bottom: 40px; padding-bottom: 20px; border-bottom: 2px solid var(--border); }
+    .content-header h1 { font-family: 'Poppins', sans-serif; font-size: 2.35rem; margin-bottom: 10px; color: var(--fg); }
+    .content-header p, .content-section p, .content-section li, .content-section td { color: var(--fg-secondary); }
+    .content-section { margin-bottom: 38px; scroll-margin-top: 24px; }
+    .content-section h2 { font-family: 'Poppins', sans-serif; font-size: 1.75rem; margin-bottom: 15px; color: var(--primary); }
+    .content-section h3 { font-size: 1.2rem; margin: 24px 0 10px; }
+    .content-section ul, .content-section ol { margin-left: 20px; margin-bottom: 15px; }
+    .content-section li { margin-bottom: 8px; }
+    .content-section code { font-size: .92em; overflow-wrap: anywhere; }
+    .switch-table-wrap { max-width: 100%; overflow-x: auto; border: 1px solid var(--border); border-radius: 10px; }
+    .switch-table { width: 100%; border-collapse: collapse; font-size: .95rem; line-height: 1.5; }
+    .switch-table th, .switch-table td { padding: 10px 12px; text-align: left; vertical-align: top; border-bottom: 1px solid var(--border); }
+    .switch-table thead th { background: var(--bg); color: var(--fg); }
+    .switch-table tbody tr:last-child th, .switch-table tbody tr:last-child td { border-bottom: 0; }
+    .switch-table-wrap:focus-visible, .guide-jump a:focus-visible { outline: 3px solid var(--primary); outline-offset: 3px; }
+    .guide-jump { display: flex; flex-wrap: wrap; gap: 8px 20px; margin: 24px 0 36px; }
+    .guide-jump a { padding: 8px 0; }
+    .guide-updated { font-size: .9rem; }
+    .back-link { display: inline-block; margin-bottom: 30px; color: var(--primary); text-decoration: none; font-weight: 500; }
+  </style>
+  <script type="application/ld+json">
+  {
+    "@context": "https://schema.org",
+    "@type": "HowTo",
+    "name": "Move your media history to OmniTrackr",
+    "description": "Export your ratings from IMDb, Letterboxd, Goodreads, The StoryGraph, or MyAnimeList and preview them in OmniTrackr's Import Studio before saving.",
+    "dateModified": "2026-10-11",
+    "inLanguage": "en-US",
+    "mainEntityOfPage": "https://omnitrackr.xyz/switch",
+    "publisher": { "@type": "Organization", "name": "OmniTrackr", "url": "https://omnitrackr.xyz" },
+    "step": [
+      { "@type": "HowToStep", "name": "Download your export", "text": "Request the CSV export from the service you use now and keep the original file." },
+      { "@type": "HowToStep", "name": "Open the Import Studio", "text": "Create a free OmniTrackr account and open Account Settings, then Import Studio." },
+      { "@type": "HowToStep", "name": "Preview the file", "text": "Choose the file and select Preview import. Nothing is saved during the preview." },
+      { "@type": "HowToStep", "name": "Check and confirm", "text": "Check converted ratings and completion, then confirm. Duplicates and rows needing attention are skipped." }
+    ]
+  }
+  </script>
+  <link rel="stylesheet" href="/static/public-reader.css?v=20261009-site-3">
+</head>
+
+<body class="public-reader site">
+  <a class="reader-skip" href="#reader-main">Skip to guide</a>
+  <!--SITE_NAV:guides-->
+  <div class="reader-shell">
+    <main id="reader-main" tabindex="-1" class="reader-main content-container">
+      <a href="/guides" class="back-link">Back to Guides</a>
+      <header class="content-header">
+        <h1>Switch to OmniTrackr Without Starting Over</h1>
+        <p>Your ratings already live somewhere. This guide shows where each service keeps its export, what comes across, and what to check before anything is saved.</p>
+        <p class="guide-updated">By OmniTrackr · Updated <time datetime="2026-10-11">October 11, 2026</time></p>
+      </header>
+      <nav class="guide-jump" aria-label="On this page">
+        <a href="#glance-heading">At a glance</a>
+        <a href="#imdb-heading">IMDb</a>
+        <a href="#letterboxd-heading">Letterboxd</a>
+        <a href="#goodreads-heading">Goodreads</a>
+        <a href="#storygraph-heading">The StoryGraph</a>
+        <a href="#mal-heading">MyAnimeList</a>
+        <a href="#other-heading">Other services</a>
+        <a href="#after-heading">After importing</a>
+      </nav>
+
+      <section class="content-section" aria-labelledby="why-heading">
+        <h2 id="why-heading">Why People Switch, and Why They Hesitate</h2>
+        <p>Most people do not keep one tracker for everything. Films go in one app, books in another, anime in a third, and games in a notes file or nowhere at all. That works until you want to answer a simple question across all of it, like what you finished this year, what a friend recommended last spring, or which unfinished series deserves another try.</p>
+        <p>The reason people stay split across services is rarely loyalty. It is the fear of retyping hundreds of ratings and losing years of history on the way. A switch is only worth it if the history comes with you, nothing you already have gets overwritten, and you can leave again later with your data intact.</p>
+        <p>OmniTrackr's Import Studio is built around those three conditions. It reads the export file a service gives you, shows every row it would create before saving anything, skips titles you already track, and keeps imported notes private. You can export your whole OmniTrackr library as a file whenever you want.</p>
+      </section>
+
+      <section class="content-section" aria-labelledby="glance-heading">
+        <h2 id="glance-heading">What Transfers at a Glance</h2>
+        <div class="switch-table-wrap" tabindex="0" role="region" aria-label="What transfers from each service">
+          <table class="switch-table">
+            <thead>
+              <tr><th scope="col">Coming from</th><th scope="col">Becomes</th><th scope="col">Rating conversion</th><th scope="col">Marked finished when</th></tr>
+            </thead>
+            <tbody>
+              <tr><th scope="row">IMDb</th><td>Movies, TV shows, and games, by title type</td><td>Already out of 10: 8 stays 8/10</td><td>The title has your rating</td></tr>
+              <tr><th scope="row">Letterboxd</th><td>Movies</td><td>Stars doubled: 3.5 becomes 7/10</td><td>The row is not an unwatched watchlist entry</td></tr>
+              <tr><th scope="row">Goodreads</th><td>Books</td><td>Stars doubled: 4 becomes 8/10</td><td>Shelf is <code>read</code> or a read date exists</td></tr>
+              <tr><th scope="row">The StoryGraph</th><td>Books</td><td>Stars doubled, quarters kept: 4.25 becomes 8.5/10</td><td>Read status is <code>read</code></td></tr>
+              <tr><th scope="row">MyAnimeList</th><td>Anime</td><td>Already out of 10</td><td>Status is completed</td></tr>
+              <tr><th scope="row">A spreadsheet</th><td>Any of the six categories</td><td>Read as out of 10</td><td>Your completion column says so</td></tr>
+            </tbody>
+          </table>
+        </div>
+        <p>Every source follows the same safety rules. The preview never writes to your library. A title that is already in your library, or appears twice in the file, is skipped rather than replacing what you have. Imported notes and reviews stay private until you choose to publish one.</p>
+      </section>
+
+      <section class="content-section" aria-labelledby="imdb-heading">
+        <h2 id="imdb-heading">From IMDb</h2>
+        <p>IMDb is where many people have the longest history, often years of quick ratings given right after a film or a season finale. It is also the one export that mixes categories, so a single file can fill your Movies, TV Shows, and Games at once.</p>
+        <h3>Get the file</h3>
+        <ol>
+          <li>Sign in on the IMDb website and open your Ratings page from your account menu.</li>
+          <li>Use the page's menu to start an export. IMDb prepares the file in the background rather than downloading it immediately.</li>
+          <li>Open your exports page from the same menu once the export is ready and download the CSV.</li>
+          <li>Repeat for your Watchlist or any list you want to bring, since each list exports separately.</li>
+        </ol>
+        <p>IMDb has changed where these menus sit more than once. If a step looks different, look for an "Export" option on the ratings or list page itself.</p>
+        <h3>What comes across</h3>
+        <ul>
+          <li><strong>Category comes from the Title Type column.</strong> Movies, TV movies, shorts, specials, and videos become movies. TV series and mini series become TV shows. Video games go to Games with their release date and genres.</li>
+          <li><strong>Ratings stay as they are.</strong> IMDb already rates out of ten, so nothing is converted.</li>
+          <li><strong>Rated means watched.</strong> Any title with your rating is marked watched or played. An unrated title from your watchlist arrives unfinished, ready for your Next Up.</li>
+          <li><strong>Episodes are left out.</strong> If you rated individual episodes, those rows show as needing attention with the reason, and the series row imports normally. Podcast and music video entries are skipped the same way.</li>
+          <li><strong>Anime arrives as TV.</strong> IMDb files anime as TV series, so it lands in TV Shows. If you would rather keep anime separate, import a MyAnimeList file for those titles instead.</li>
+          <li><strong>The director becomes the movie's director.</strong> Season and episode totals are not in IMDb's file, so you can add them later if you want progress tracking.</li>
+        </ul>
+        <p>Importing the ratings file and then the watchlist is safe. A title that appears in both files is created once, from whichever file you import first.</p>
+      </section>
+
+      <section class="content-section" aria-labelledby="letterboxd-heading">
+        <h2 id="letterboxd-heading">From Letterboxd</h2>
+        <p>Letterboxd's export is a ZIP archive that holds several CSV files. Extract it first; the Import Studio reads a CSV, not the ZIP itself.</p>
+        <ol>
+          <li>Open Settings on the Letterboxd website, go to the data section, and export your data. <a href="https://letterboxd.com/user/exportdata/">Letterboxd's export page</a> describes the files.</li>
+          <li>Extract the archive and pick the file you want. <code>ratings.csv</code> or <code>watched.csv</code> brings what you have seen, and <code>watchlist.csv</code> brings what you plan to watch.</li>
+          <li>Preview it in the Import Studio. Half stars carry over: 3.5 stars becomes 7/10.</li>
+        </ol>
+        <p>Watchlist rows stay unwatched. If you import <code>reviews.csv</code>, the review text arrives as a private note on the movie. Repeated diary entries for the same film are not turned into separate journal entries, and likes, lists, and tags stay on Letterboxd.</p>
+      </section>
+
+      <section class="content-section" aria-labelledby="goodreads-heading">
+        <h2 id="goodreads-heading">From Goodreads</h2>
+        <ol>
+          <li>On the Goodreads website, open My Books and find Import and export in the left-hand tools.</li>
+          <li>Choose to export your library. Goodreads builds the file and then offers a download link on the same page.</li>
+          <li>Preview <code>goodreads_library_export.csv</code> in the Import Studio.</li>
+        </ol>
+        <p>Title, author, publication year, your star rating, and your review come across, with stars doubled so 4 stars becomes 8/10. A book on your <code>read</code> shelf, or with a read date, is marked read. Books on to-read or currently-reading stay unread. Custom shelves and the dates themselves are not imported.</p>
+      </section>
+
+      <section class="content-section" aria-labelledby="storygraph-heading">
+        <h2 id="storygraph-heading">From The StoryGraph</h2>
+        <p>The StoryGraph is popular with readers who left Goodreads, and its export works well here. Its star ratings use quarter stars, and those are kept: 3.75 stars becomes 7.5/10.</p>
+        <ol>
+          <li>Open your account settings on The StoryGraph and look for the option to export your library.</li>
+          <li>Generate the export and download the CSV once it is ready.</li>
+          <li>Preview it in the Import Studio. It is recognized automatically from its <code>Read Status</code> and <code>Star Rating</code> columns.</li>
+        </ol>
+        <p>Only books with a <code>read</code> status are marked read. To-read, currently reading, paused, and did-not-finish books arrive unread, so they stay visible as unfinished. Your written review becomes a private note.</p>
+        <p>The StoryGraph's file has no publication year, so imported books have no year until you add one. It also means a book you already track with a year is still matched as a duplicate, because books are matched on title and author. Moods, pace, content warnings, and tags are not imported.</p>
+      </section>
+
+      <section class="content-section" aria-labelledby="mal-heading">
+        <h2 id="mal-heading">From MyAnimeList</h2>
+        <p>MyAnimeList's own export is an XML file, which the Import Studio does not read. Convert it to CSV first, keeping columns such as <code>series_title</code>, <code>series_episodes</code>, <code>my_score</code>, <code>my_status</code>, and <code>series_start</code>. Many community tools and spreadsheet programs can do that conversion.</p>
+        <p>Scores already use a ten-point scale and stay as they are. A completed status marks the series watched. The episode count describes the whole series; it does not set the episode you are on, so set your place after importing.</p>
+      </section>
+
+      <section class="content-section" aria-labelledby="other-heading">
+        <h2 id="other-heading">From Trakt, a Spreadsheet, or Anything Else</h2>
+        <p>There is no dedicated Trakt adapter yet, and some services only export JSON. If you can get your history into a CSV, choose <strong>Generic CSV / spreadsheet</strong> in the Import Studio. Pick one category for the whole file, or add a <code>category</code> column for a mixed library.</p>
+        <p>If your columns have personal names like "Thing" or "My verdict", open the mapping panel and pair them with OmniTrackr's fields. A generic rating is read as out of ten, so double five-star scores before importing. The <a href="/tracking-templates">tracking templates</a> give you a ready layout for each category, and the <a href="/export-import-guide">export and import guide</a> walks through worked examples with expected results.</p>
+      </section>
+
+      <section class="content-section" aria-labelledby="preview-heading">
+        <h2 id="preview-heading">Preview Before Anything Is Saved</h2>
+        <ol>
+          <li>Create a free account and open <strong>Account Settings → Import Studio</strong>.</li>
+          <li>Leave the format on <strong>Detect automatically</strong>, or pick your service from the list.</li>
+          <li>Choose your CSV and select <strong>Preview import</strong>. The preview says which format it recognized.</li>
+          <li>Look at the totals for ready, duplicate, and needing-attention rows, then page through a few rows and compare the rating and finished state with your original service.</li>
+          <li>Confirm when it looks right. All ready rows are saved together, or none are if something goes wrong.</li>
+        </ol>
+        <p>Each file can hold up to 5,000 rows and 5 MB. A very long history can be split into several files and imported one after another; titles saved by an earlier file are recognized as duplicates.</p>
+      </section>
+
+      <section class="content-section" aria-labelledby="after-heading">
+        <h2 id="after-heading">Your First Week After Switching</h2>
+        <p>An import gives you the history. A few small steps afterward make the library feel like yours instead of a copy of somewhere else.</p>
+        <ul>
+          <li><strong>Pick something for Next Up.</strong> Imported watchlist and to-read titles arrive unfinished. Choosing one or two for Next Up turns a long backlog into a short decision.</li>
+          <li><strong>Set your place in what you are in the middle of.</strong> Episode, page, and chapter progress is not in any export, so add it for the few titles you are actively on.</li>
+          <li><strong>Publish a review you are proud of.</strong> Imported reviews are private. If one says something worth sharing, make it public from the title and it can appear on its <a href="/reviews">public review page</a>.</li>
+          <li><strong>Set a yearly goal.</strong> With your history in place, your progress toward this year's goal starts from the titles you already finished.</li>
+          <li><strong>Invite a friend.</strong> Friends can see the categories you choose to share and ask for your take on a title.</li>
+          <li><strong>Keep a backup.</strong> Download an OmniTrackr export once you are happy with the result, so the work you just did is safe in a file you control.</li>
+        </ul>
+      </section>
+
+      <section class="content-section" aria-labelledby="keep-heading">
+        <h2 id="keep-heading">Should You Keep the Old Service?</h2>
+        <p>Importing is a one-time copy, not a sync. Ratings you add on IMDb or Goodreads after importing will not appear here on their own. Some people keep their old account for what it does best, such as Letterboxd's film community or Goodreads' book pages, and use OmniTrackr as the one place that holds every category together. Others move completely. Either way works, and the <a href="/compare">tracker comparison</a> describes which routines each tool fits.</p>
+      </section>
+
+      <section class="content-section" aria-labelledby="method-heading">
+        <h2 id="method-heading">How This Guide Was Checked</h2>
+        <p>This guide was prepared with AI assistance for OmniTrackr. The import behavior described here was checked against the Import Studio's supported formats on <time datetime="2026-10-11">October 11, 2026</time>. Menu names on other services change often, so the export steps describe where to look rather than promising exact button labels. If something here no longer matches, please tell us through <a href="/contact">Contact</a>. Our <a href="/content-quality">content-quality policy</a> explains how corrections are handled.</p>
+      </section>
+
+      <section class="content-section" aria-labelledby="related-heading">
+        <h2 id="related-heading">Related Pages</h2>
+        <p>Try the <a href="/demo">interactive demo</a> before creating an account, read the <a href="/export-import-guide">export and import guide</a> for duplicate rules and worked examples, or browse the <a href="/guides">how-to guides</a> for each media category.</p>
+      </section>
+    </main>
+  </div>
+  <!--SITE_FOOTER-->
+</body>
+
+</html>

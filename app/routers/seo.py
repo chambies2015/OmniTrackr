@@ -39,6 +39,7 @@ CORE_SITEMAP_PATHS = (
     ("/demo", "monthly", "0.8"),
     ("/media-tracking", "monthly", "0.85"),
     ("/export-import-guide", "monthly", "0.75"),
+    ("/switch", "monthly", "0.75"),
     ("/review-guidelines", "monthly", "0.75"),
     ("/sample-library", "monthly", "0.8"),
 )
@@ -406,6 +407,7 @@ OmniTrackr is a free web application for tracking and organizing movies, TV show
 - Music tracker guide: {base_url}/music-tracker
 - Media statistics guide: {base_url}/media-statistics
 - Export and import guide: {base_url}/export-import-guide
+- Switching guide (IMDb, Letterboxd, Goodreads, StoryGraph, MyAnimeList): {base_url}/switch
 - Media tracker setup checklist: {base_url}/media-tracker-checklist
 - Media tracking templates: {base_url}/tracking-templates
 - Media review guidelines: {base_url}/review-guidelines

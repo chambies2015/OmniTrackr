@@ -18,7 +18,26 @@ from . import models, schemas
 
 MAX_IMPORT_BYTES = 5 * 1024 * 1024
 MAX_IMPORT_ROWS = 5000
-SUPPORTED_SOURCES = {"auto", "letterboxd", "goodreads", "myanimelist", "generic"}
+SUPPORTED_SOURCES = {"auto", "letterboxd", "goodreads", "myanimelist", "imdb", "storygraph", "generic"}
+SOURCE_LABELS = {
+    "letterboxd": "Letterboxd", "goodreads": "Goodreads", "myanimelist": "MyAnimeList",
+    "imdb": "IMDb", "storygraph": "The StoryGraph", "generic": "Generic CSV / spreadsheet",
+}
+# IMDb "Title Type" values, compared with spaces and punctuation removed so both the
+# current export ("TV Mini Series") and the older one ("tvMiniSeries") are understood.
+IMDB_TITLE_TYPES = {
+    "movie": "movies", "tvmovie": "movies", "short": "movies", "tvshort": "movies",
+    "tvspecial": "movies", "video": "movies",
+    "tvseries": "tv-shows", "tvminiseries": "tv-shows",
+    "videogame": "video-games",
+}
+IMDB_SKIPPED_TYPES = {
+    "tvepisode": "IMDb episode ratings aren't imported. Add the series instead.",
+    "podcastepisode": "IMDb podcast entries aren't a supported category.",
+    "podcastseries": "IMDb podcast entries aren't a supported category.",
+    "musicvideo": "IMDb music videos aren't a supported category.",
+}
+STORYGRAPH_FINISHED = {"read"}
 CATEGORY_ALIASES = {
     "movie": "movies", "movies": "movies", "film": "movies", "films": "movies",
     "tv": "tv-shows", "show": "tv-shows", "shows": "tv-shows", "tv show": "tv-shows",
@@ -151,6 +170,10 @@ def _detect_source(headers: set[str]) -> str:
         return "goodreads"
     if "series_title" in headers and ({"my_score", "my_status"} & headers):
         return "myanimelist"
+    if {"const", "title_type"}.issubset(headers) and "title" in headers:
+        return "imdb"
+    if {"title", "authors", "read_status"}.issubset(headers):
+        return "storygraph"
     if "title" in headers or "name" in headers:
         return "generic"
     raise ValueError("Could not find a title column or recognize this export format.")
@@ -221,6 +244,36 @@ def _generic_row(row: dict[str, str], category_override: str | None, mapping: di
     return category, data
 
 
+def _imdb_row(row: dict[str, str], mapping: dict[str, str]) -> tuple[str, dict[str, Any]]:
+    """IMDb ratings, watchlist and list exports share one layout across movies, TV and games."""
+    def field(target: str, *aliases: str) -> str:
+        return _field(row, mapping, target, *aliases)
+
+    title = field("title", "title")
+    if not title:
+        raise ValueError("Title is required.")
+    raw_type = field("category", "title type")
+    kind = re.sub(r"[^a-z]", "", raw_type.lower())
+    if kind in IMDB_SKIPPED_TYPES:
+        raise ValueError(IMDB_SKIPPED_TYPES[kind])
+    category = IMDB_TITLE_TYPES.get(kind) or CATEGORY_ALIASES.get(_clean(raw_type).lower())
+    if not category:
+        raise ValueError(f"IMDb title type \"{raw_type or 'blank'}\" isn't a supported category.")
+    rating = _rating(field("rating", "your rating"))
+    # A rated title has been seen; watchlist and list rows without a rating stay unfinished.
+    completed = _truthy(field("status")) if "status" in mapping else rating is not None or bool(_first(row, "date rated"))
+    review = field("review", "description") or None
+    common = {"title": title, "rating": rating, "review": review, "review_public": False}
+    if category == "video-games":
+        release = field("release_date", "release date") or ("" if "release_date" in mapping else field("year", "year"))
+        return category, {**common, "release_date": _date(release), "genres": field("genre", "genres") or None, "played": completed}
+    year = _integer(field("year", "year"))
+    if category == "movies":
+        return category, {**common, "director": field("creator", "directors", "director") or "Unknown director",
+                          "year": year, "watched": completed}
+    return category, {**common, "year": year, "seasons": None, "episodes": None, "watched": completed}
+
+
 def _source_row(source: str, row: dict[str, str], category_override: str | None, mapping: dict[str, str]) -> tuple[str, dict[str, Any]]:
     if source == "generic":
         return _generic_row(row, category_override, mapping)
@@ -253,6 +306,22 @@ def _source_row(source: str, row: dict[str, str], category_override: str | None,
             "rating": _rating(field("rating", "my rating"), five_point=True),
             "read": completed,
             "review": field("review", "my review") or None, "review_public": False,
+        }
+    if source == "imdb":
+        return _imdb_row(row, mapping)
+    if source == "storygraph":
+        title = field("title", "title")
+        if not title:
+            raise ValueError("Title is required.")
+        completed = (_truthy(field("status")) if "status" in mapping else
+                     _clean(_first(row, "read status")).lower() in STORYGRAPH_FINISHED)
+        return "books", {
+            "title": title, "author": field("creator", "authors", "author") or "Unknown author",
+            "year": _integer(field("year", "year", "year published")),
+            "genre": field("genre", "genre", "genres") or None,
+            "rating": _rating(field("rating", "star rating"), five_point=True),
+            "read": completed,
+            "review": field("review", "review") or None, "review_public": False,
         }
     title = field("title", "series title")
     if not title:

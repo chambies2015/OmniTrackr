@@ -182,7 +182,7 @@
         "name": "Can I export my data?",
         "acceptedAnswer": {
           "@type": "Answer",
-          "text": "Yes. Export your movies, TV shows, anime, video games, music, books, collections, and private journal as a JSON backup. The Import Studio can also preview Letterboxd, Goodreads, MyAnimeList, and generic CSV migrations without overwriting existing library records."
+          "text": "Yes. Export your movies, TV shows, anime, video games, music, books, collections, and private journal as a JSON backup. The Import Studio can also preview IMDb, Letterboxd, Goodreads, StoryGraph, MyAnimeList, and generic CSV migrations without overwriting existing library records."
         }
       },
       {
@@ -445,7 +445,7 @@
         <div id="libraryLaunchpadStarterPaths" class="library-launchpad__categories" hidden>
           <button type="button" class="library-launchpad__category" data-action="launchpad-import">Bring an existing list</button>
           <a class="library-launchpad__category" href="/discover">Browse Discover</a>
-          <p class="library-launchpad__path-hint">Import Studio lets you preview a CSV before importing. Existing records are not overwritten.</p>
+          <p class="library-launchpad__path-hint">Import Studio reads IMDb, Letterboxd, Goodreads, StoryGraph, and MyAnimeList exports, and lets you preview them before importing. Existing records are not overwritten.</p>
         </div>
       </div>
       <div id="libraryLaunchpadSteps" class="library-launchpad__steps" aria-live="polite"></div>
@@ -1579,7 +1579,7 @@
   </dialog>
   <script src="./credentials.js"></script>
   <script src="./auth.js?v=20261010-challenge-1"></script>
-  <script src="/static/import-studio.js?v=20260924-import-studio-final"></script>
+  <script src="/static/import-studio.js?v=20261011-imdb-storygraph"></script>
   <script src="/static/progress.js?v=20260922-progress"></script>
   <script src="./app.js"></script>
   <script src="/static/for-you.js?v=20261007-weekly-1"></script>
@@ -1873,15 +1873,17 @@
         <div class="account-section import-studio" id="importStudio">
           <div class="import-studio__eyebrow">Bring your history with you</div>
           <h3>Import Studio</h3>
-          <p class="info-text">Preview a Letterboxd, Goodreads, MyAnimeList, or generic CSV before anything is saved. Existing records are never overwritten: matches and repeated rows are skipped.</p>
+          <p class="info-text">Preview an IMDb, Letterboxd, Goodreads, StoryGraph, MyAnimeList, or generic CSV before anything is saved. Existing records are never overwritten: matches and repeated rows are skipped.</p>
           <form id="importStudioForm" data-submit-action="preview-library-import">
             <div class="import-studio__controls">
               <label>
                 <span>Export format</span>
                 <select id="importStudioSource" data-change-action="import-studio-options">
                   <option value="auto">Detect automatically</option>
+                  <option value="imdb">IMDb ratings, watchlist or list CSV</option>
                   <option value="letterboxd">Letterboxd CSV</option>
                   <option value="goodreads">Goodreads CSV</option>
+                  <option value="storygraph">The StoryGraph CSV</option>
                   <option value="myanimelist">MyAnimeList CSV</option>
                   <option value="generic">Generic CSV / spreadsheet</option>
                 </select>
