@@ -122,6 +122,11 @@ async def change_password(
     
     if updated_user is None:
         raise HTTPException(status_code=404, detail="User not found")
+    # A reset link emailed before this change must not undo it.
+    if updated_user.reset_token or updated_user.reset_token_expires:
+        updated_user.reset_token = None
+        updated_user.reset_token_expires = None
+        db.commit()
 
     # Other devices are signed out by the new password; keep this one signed in.
     response = JSONResponse(content={"message": "Password changed successfully"}, headers={"Cache-Control": "no-store"})

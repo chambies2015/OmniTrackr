@@ -12,6 +12,7 @@ import secrets
 from datetime import date, datetime
 from typing import Optional
 
+from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
 
 from . import models, year_in_review
@@ -66,7 +67,14 @@ def save(db: Session, user_id: int, year: int, category: str, target: int,
         db.add(goal)
     else:
         goal.target = target
-    db.commit()
+    try:
+        db.commit()
+    except IntegrityError:
+        # A second tab created the same goal first; apply this target to it.
+        db.rollback()
+        goal = db.query(models.YearlyGoal).filter_by(user_id=user_id, year=year, category=category).one()
+        goal.target = target
+        db.commit()
     return goal
 
 
@@ -179,18 +187,29 @@ def record_reached(db: Session, user: models.User, year: int, goal_rows: list[di
             db.add(row)
             new.append(goal)
         elif row.target < goal["target"]:
-            row.target, row.reached_at, row.seen_at = goal["target"], datetime.utcnow(), None
-            new.append(goal)
+            # Claim the raise atomically so overlapping dashboard loads announce it once.
+            claimed = (db.query(models.GoalAchievement)
+                       .filter(models.GoalAchievement.id == row.id, models.GoalAchievement.target < goal["target"])
+                       .update({"target": goal["target"], "reached_at": datetime.utcnow(), "seen_at": None},
+                               synchronize_session=False))
+            db.refresh(row)
+            if claimed:
+                new.append(goal)
         reached[goal["category"]] = row
     if new:
-        db.commit()
+        try:
+            db.commit()
+        except IntegrityError:
+            # Another request recorded the same achievement first; it sends the notification.
+            db.rollback()
+            return {row.category: row for row in db.query(models.GoalAchievement).filter_by(user_id=user.id, year=year).all()
+                    if row.category in {goal["category"] for goal in goal_rows if goal["pace"]["status"] == "done"}}
         for goal in new:
             singular, plural = NOUNS[goal["category"]]
             noun = singular if goal["target"] == 1 else plural
             message = f"Goal reached: {goal['target']} {noun} in {year}. Nicely done!"
-            notification = create_notification(db, user.id, "goal_reached", message)
-            notification.link = "/#goals"
-            db.commit()
+            # The link must be set before the first flush: that is when the push is queued.
+            create_notification(db, user.id, "goal_reached", message, link="/#goals")
     return reached
 
 
@@ -261,9 +280,23 @@ def payload(db: Session, user: models.User, year: int, today: Optional[date] = N
     except Exception:
         db.rollback()
         reached = {}  # The goals card never depends on it.
+    shared = {}
+    if len(reached) < len(goal_rows):
+        try:
+            shared = {row.category: row for row in db.query(models.GoalAchievement).filter(
+                models.GoalAchievement.user_id == user.id, models.GoalAchievement.year == year,
+                models.GoalAchievement.share_token.isnot(None)).all()}
+        except Exception:
+            db.rollback()
     for goal in goal_rows:
         row = reached.get(goal["category"])
-        goal["achievement"] = achievement_payload(row) if row is not None else None
+        if row is not None:
+            goal["achievement"] = achievement_payload(row)
+        elif goal["category"] in shared:
+            # A raised goal keeps its earlier share link live, so keep "Stop sharing" reachable.
+            goal["achievement"] = {**achievement_payload(shared[goal["category"]]), "celebrate": False}
+        else:
+            goal["achievement"] = None
     return {
         "year": year,
         "years": allowed_years(today),

@@ -128,9 +128,10 @@
         await api('/notifications/push/subscription/remove', {
           method: 'POST', body: JSON.stringify({ endpoint: subscription.endpoint }),
         });
-      } finally {
-        await subscription.unsubscribe();
+      } catch (error) {
+        // The browser subscription is removed regardless; the server drops the stale row on its next send.
       }
+      await subscription.unsubscribe();
     }
     render('off');
   }

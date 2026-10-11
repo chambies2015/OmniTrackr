@@ -15,7 +15,7 @@ function keyBytes(value) {
 }
 
 function setup({permission = 'default', grant = 'granted', subscribed = false, push = true, userAgent = DESKTOP,
-                signedIn = true, standalone = false} = {}) {
+                signedIn = true, standalone = false, removeFails = false} = {}) {
   const docListeners = {};
   const winListeners = {};
   const calls = [];
@@ -58,6 +58,7 @@ function setup({permission = 'default', grant = 'granted', subscribed = false, p
   };
   const authenticatedFetch = async (url, options = {}) => {
     calls.push([options.method || 'GET', url, options.body ? JSON.parse(options.body) : undefined]);
+    if (removeFails && url.endsWith('/remove')) throw new TypeError('Failed to fetch');
     return {ok: true, async json() { return url.endsWith('/key') ? {public_key: KEY, devices: 0} : {enabled: true}; }};
   };
   const context = vm.createContext({
@@ -91,6 +92,15 @@ test('turning off removes the device on the server and in the browser', async ()
   await ui.click(ui.button);
   assert.deepEqual(ui.calls.at(-1).slice(0, 2), ['POST', '/notifications/push/subscription/remove']);
   assert.equal(ui.current(), null);
+  assert.equal(ui.button.textContent, 'Turn on');
+});
+
+test('turning off while offline still turns this device off', async () => {
+  const ui = setup({permission: 'granted', subscribed: true, removeFails: true});
+  await ui.window.omniPush.refresh();
+  await ui.click(ui.button);
+  assert.equal(ui.current(), null);
+  assert.equal(ui.box.dataset.state, 'off');
   assert.equal(ui.button.textContent, 'Turn on');
 });
 

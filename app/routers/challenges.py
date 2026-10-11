@@ -1,11 +1,12 @@
 """Monthly challenges: the member's opt-in challenge card, public guides and the shareable completion."""
 from __future__ import annotations
 
+import re
 from datetime import datetime
 from html import escape
 from urllib.parse import quote
 
-from fastapi import APIRouter, Depends, HTTPException, Request, Response
+from fastapi import APIRouter, Depends, HTTPException, Query, Request, Response
 from sqlalchemy.orm import Session
 
 from .. import challenges, models
@@ -18,6 +19,7 @@ from .profiles import _CardCache
 
 router = APIRouter(tags=["challenges"])
 _CARDS = _CardCache(size=64)
+_MONTH_PATTERN = re.compile(r"\d{4}-(0[1-9]|1[0-2])")
 SIGNUP_PATH = "/?next=" + quote("/#challenge", safe="") + "#landing-auth"
 
 
@@ -25,8 +27,15 @@ def _no_store(response: Response) -> None:
     response.headers["Cache-Control"] = "private, no-store"
 
 
-def _current_entry_or_404(db: Session, user: models.User) -> models.MonthlyChallengeEntry:
-    entry = challenges.get_entry(db, user.id, challenges.month_key())
+def _completed_entry_or_404(db: Session, user: models.User, month: str | None = None) -> models.MonthlyChallengeEntry:
+    """The member's completed entry for ``month`` (default: this month). Earlier months stay
+    reachable so a completion near the month boundary can still be shared or un-shared."""
+    current = challenges.month_key()
+    if month is None:
+        month = current
+    elif not _MONTH_PATTERN.fullmatch(month) or month > current:
+        raise HTTPException(status_code=404, detail="This month's challenge isn't complete yet.")
+    entry = challenges.get_entry(db, user.id, month)
     if entry is None or entry.completed_at is None:
         raise HTTPException(status_code=404, detail="This month's challenge isn't complete yet.")
     return entry
@@ -61,28 +70,28 @@ def leave_challenge(request: Request, response: Response, user: models.User = De
 
 @router.post("/api/challenge/seen")
 def challenge_seen(response: Response, user: models.User = Depends(get_current_user),
-                   db: Session = Depends(get_db)):
+                   db: Session = Depends(get_db), month: str | None = Query(default=None, max_length=7)):
     """The member dismissed the dashboard celebration."""
     _no_store(response)
-    entry = _current_entry_or_404(db, user)
+    entry = _completed_entry_or_404(db, user, month)
     challenges.mark_seen(db, entry)
     return challenges.completion_payload(entry)
 
 
 @router.put("/api/challenge/share")
 def share_challenge(request: Request, response: Response, user: models.User = Depends(get_current_user),
-                    db: Session = Depends(get_db)):
+                    db: Session = Depends(get_db), month: str | None = Query(default=None, max_length=7)):
     """Make a public link for a completed challenge. It shows the steps, never titles."""
     _no_store(response)
-    entry = _current_entry_or_404(db, user)
+    entry = _completed_entry_or_404(db, user, month)
     return challenges.completion_payload(challenges.share(db, entry))
 
 
 @router.delete("/api/challenge/share")
 def unshare_challenge(response: Response, user: models.User = Depends(get_current_user),
-                      db: Session = Depends(get_db)):
+                      db: Session = Depends(get_db), month: str | None = Query(default=None, max_length=7)):
     _no_store(response)
-    entry = _current_entry_or_404(db, user)
+    entry = _completed_entry_or_404(db, user, month)
     _CARDS.clear_user(user.id)
     return challenges.completion_payload(challenges.unshare(db, entry))
 

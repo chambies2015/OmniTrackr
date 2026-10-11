@@ -19,6 +19,7 @@ from datetime import date, datetime
 from typing import Optional
 
 from sqlalchemy import func
+from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
 
 from . import models, title_pages, year_in_review
@@ -272,7 +273,12 @@ def join(db: Session, user_id: int, month: str) -> models.MonthlyChallengeEntry:
     if entry is None:
         entry = models.MonthlyChallengeEntry(user_id=user_id, month=month)
         db.add(entry)
-        db.commit()
+        try:
+            db.commit()
+        except IntegrityError:
+            # A double click or second tab joined first.
+            db.rollback()
+            entry = get_entry(db, user_id, month)
     return entry
 
 
@@ -290,7 +296,15 @@ def record_completed(db: Session, user: models.User, month: str, entry: models.M
     """Mark a joined challenge complete the first time every step is done, and tell the member once."""
     if entry.completed_at is not None or not steps or not all(step["done"] for step in steps):
         return False
-    entry.completed_at = datetime.utcnow()
+    # Claim completion atomically so overlapping dashboard loads notify only once.
+    claimed = (db.query(models.MonthlyChallengeEntry)
+               .filter(models.MonthlyChallengeEntry.id == entry.id, models.MonthlyChallengeEntry.completed_at.is_(None))
+               .update({"completed_at": datetime.utcnow()}, synchronize_session=False))
+    if not claimed:
+        db.rollback()
+        db.refresh(entry)
+        return False
+    db.refresh(entry)
     name = challenge_for(month)["name"]
     db.add(models.Notification(
         user_id=user.id, type="challenge_complete",

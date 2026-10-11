@@ -420,6 +420,8 @@ for route in auth.router.routes:
             bind_rate_limited_endpoint(route, limiter.limit("3/hour")(route.endpoint))
         elif route.path == "/auth/resend-verification" and 'POST' in route.methods:
             bind_rate_limited_endpoint(route, limiter.limit("3/hour")(route.endpoint))
+        elif route.path == "/auth/reactivate" and 'POST' in route.methods:
+            bind_rate_limited_endpoint(route, limiter.limit("5/minute")(route.endpoint))
 
 app.include_router(auth.router)
 

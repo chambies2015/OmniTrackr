@@ -455,6 +455,7 @@ async def reset_password(payload: schemas.PasswordReset, db: Session = Depends(g
 @router.post("/reactivate", response_model=schemas.User)
 async def reactivate_account_public(
     reactivate: schemas.AccountReactivate,
+    request: Request,
     db: Session = Depends(get_db)
 ):
     """Reactivate a deactivated account via public endpoint (within 90-day window)."""
@@ -468,18 +469,24 @@ async def reactivate_account_public(
     else:
         raise HTTPException(status_code=400, detail="Username or email is required")
     
+    invalid = HTTPException(status_code=401, detail="Invalid credentials or account not found")
     if not user:
-        # Don't reveal if account exists for security
-        raise HTTPException(
-            status_code=401,
-            detail="Invalid credentials or account not found"
-        )
-    
+        raise invalid
+
+    # Shares the login lockout, so this endpoint can't be used to keep guessing a password.
+    now_utc = datetime.now(timezone.utc).replace(tzinfo=None)
+    if user.locked_until and user.locked_until > now_utc:
+        raise invalid
     if not auth.verify_password(reactivate.password, user.hashed_password):
-        raise HTTPException(
-            status_code=401,
-            detail="Invalid credentials or account not found"
-        )
+        user.failed_login_attempts = (user.failed_login_attempts or 0) + 1
+        if user.failed_login_attempts >= 5:
+            user.locked_until = now_utc + timedelta(minutes=15)
+        db.commit()
+        raise invalid
+    if user.failed_login_attempts or user.locked_until:
+        user.failed_login_attempts = 0
+        user.locked_until = None
+        db.commit()
     
     if user.is_active:
         raise HTTPException(status_code=400, detail="Account is already active")
