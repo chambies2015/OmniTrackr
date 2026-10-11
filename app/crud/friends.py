@@ -254,13 +254,15 @@ def remove_friendship(db: Session, user_id: int, friend_id: int) -> bool:
 # Notification CRUD operations
 # ============================================================================
 
-def create_notification(db: Session, user_id: int, type: str, message: str, friend_request_id: Optional[int] = None) -> models.Notification:
+def create_notification(db: Session, user_id: int, type: str, message: str, friend_request_id: Optional[int] = None,
+                        link: Optional[str] = None) -> models.Notification:
     """Create a notification for a user."""
     notification = models.Notification(
         user_id=user_id,
         type=type,
         message=message,
-        friend_request_id=friend_request_id
+        friend_request_id=friend_request_id,
+        link=link,
     )
     db.add(notification)
     db.commit()

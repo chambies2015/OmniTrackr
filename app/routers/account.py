@@ -35,7 +35,6 @@ async def change_username(
     db: Session = Depends(get_db)
 ):
     """Change username (requires password confirmation)."""
-    # Verify password
     if not auth.verify_password(username_change.password, current_user.hashed_password):
         raise HTTPException(status_code=401, detail="Incorrect password")
     
@@ -52,7 +51,6 @@ async def change_username(
         if username_taken(db, username_change.new_username, exclude_user_id=current_user.id):
             raise HTTPException(status_code=400, detail="Username already taken")
     
-    # Update username
     try:
         user_update = schemas.UserUpdate(username=username_change.new_username)
         updated_user = crud.update_user(db, current_user.id, user_update)
@@ -76,24 +74,18 @@ async def change_email(
     db: Session = Depends(get_db)
 ):
     """Change email address (requires password + sends verification email to new address)."""
-    # Verify password
     if not auth.verify_password(email_change.password, current_user.hashed_password):
         raise HTTPException(status_code=401, detail="Incorrect password")
     
-    # Check if email is already registered
     existing_user = crud.get_user_by_email(db, email_change.new_email)
     if existing_user and existing_user.id != current_user.id:
         raise HTTPException(status_code=400, detail="Email already registered")
     
-    # Generate email change verification token
     email_change_token = email_utils.generate_email_change_token(current_user.email, email_change.new_email)
     
-    # Store the new email and token temporarily (we'll update email after verification)
-    # For now, store in verification_token field with a special prefix
     current_user.verification_token = f"email_change:{email_change_token}:{email_change.new_email}"
     db.commit()
     
-    # Send verification email to new address
     try:
         await email_utils.send_email_change_verification_email(
             email_change.new_email,
@@ -116,7 +108,6 @@ async def change_password(
     db: Session = Depends(get_db)
 ):
     """Change password (requires current password)."""
-    # Verify current password
     if not auth.verify_password(password_change.current_password, current_user.hashed_password):
         raise HTTPException(status_code=401, detail="Incorrect current password")
     
@@ -125,13 +116,17 @@ async def change_password(
     if not is_valid:
         raise HTTPException(status_code=400, detail=error_msg)
 
-    # Hash new password and update
     hashed_new_password = auth.get_password_hash(password_change.new_password)
     user_update = schemas.UserUpdate(password=hashed_new_password)
     updated_user = crud.update_user(db, current_user.id, user_update)
     
     if updated_user is None:
         raise HTTPException(status_code=404, detail="User not found")
+    # A reset link emailed before this change must not undo it.
+    if updated_user.reset_token or updated_user.reset_token_expires:
+        updated_user.reset_token = None
+        updated_user.reset_token_expires = None
+        db.commit()
 
     # Other devices are signed out by the new password; keep this one signed in.
     response = JSONResponse(content={"message": "Password changed successfully"}, headers={"Cache-Control": "no-store"})
@@ -205,7 +200,6 @@ async def upload_profile_picture(
     db: Session = Depends(get_db)
 ):
     """Upload a profile picture with content validation and image processing."""
-    # Validate file type
     allowed_types = ["image/jpeg", "image/jpg", "image/png", "image/gif", "image/webp"]
     if file.content_type not in allowed_types:
         raise HTTPException(
@@ -220,17 +214,13 @@ async def upload_profile_picture(
     
     # Content validation: Verify file is actually an image using magic bytes
     try:
-        # Check magic bytes (file signature) to verify it's actually an image
         file_signature = file_content[:12]  # Read first 12 bytes
         detected_format = None
         
-        # Check JPEG
         if file_signature[:3] == b'\xff\xd8\xff':
             detected_format = 'jpeg'
-        # Check PNG
         elif file_signature[:8] == b'\x89PNG\r\n\x1a\n':
             detected_format = 'png'
-        # Check GIF
         elif file_signature[:6] in [b'GIF87a', b'GIF89a']:
             detected_format = 'gif'
         # Check WebP (RIFF...WEBP)
@@ -250,7 +240,6 @@ async def upload_profile_picture(
             detail="Failed to validate image content. Please ensure the file is a valid image."
         )
     
-    # Process and optimize image
     if not PIL_AVAILABLE:
         raise HTTPException(
             status_code=500,
@@ -258,7 +247,6 @@ async def upload_profile_picture(
         )
     
     try:
-        # Open image from bytes
         image = Image.open(io.BytesIO(file_content))
         width, height = image.size
         if width <= 0 or height <= 0 or width * height > MAX_IMAGE_PIXELS:
@@ -266,19 +254,14 @@ async def upload_profile_picture(
         image.verify()
         image = Image.open(io.BytesIO(file_content))
         
-        # Convert to RGB/RGBA for processing
         # WebP supports transparency, so preserve RGBA if present
         if image.mode == 'RGBA':
-            # Keep RGBA for WebP (supports transparency)
             pass
         elif image.mode in ('LA', 'P'):
-            # Convert palette/grayscale with alpha to RGBA
             image = image.convert('RGBA')
         elif image.mode == 'L':
-            # Grayscale to RGB
             image = image.convert('RGB')
         elif image.mode not in ('RGB', 'RGBA'):
-            # Convert other modes to RGB
             image = image.convert('RGB')
         
         # Resize if image is too large (max 512x512 for profile pictures - optimized size)
@@ -287,11 +270,9 @@ async def upload_profile_picture(
             image.thumbnail(max_size, Image.Resampling.LANCZOS)
         
         # Always convert to WebP for best compression (typically 25-35% smaller than JPEG)
-        # WebP provides excellent quality at smaller file sizes
         mime_type = "image/webp"
         
         # Save optimized image to memory with adaptive quality
-        # Start with quality 80, reduce if file is still too large
         max_target_size = 200 * 1024  # Target: 200KB max
         quality = 80
         image_data = None
@@ -299,7 +280,6 @@ async def upload_profile_picture(
         for attempt in range(3):  # Try up to 3 quality levels
             output = io.BytesIO()
             
-            # Save as WebP with current quality
             save_kwargs = {
                 'format': 'WEBP',
                 'quality': quality,
@@ -308,26 +288,19 @@ async def upload_profile_picture(
             }
             
             # If image has transparency, ensure we preserve it
-            if image.mode == 'RGBA':
-                # WebP supports transparency natively
-                image.save(output, **save_kwargs)
-            else:
-                # RGB image
-                image.save(output, **save_kwargs)
+            image.save(output, **save_kwargs)
             
             image_data = output.getvalue()
             
-            # If file size is acceptable or we've tried enough, break
             if len(image_data) <= max_target_size or attempt >= 2:
                 break
             
-            # Reduce quality for next attempt
             quality = max(60, quality - 10)  # Don't go below 60
         
         # If still too large after optimization, use more aggressive compression
-        if len(image_data) > 300 * 1024:  # Still over 300KB
+        if len(image_data) > 300 * 1024:  # Still over 300KB after quality 60
             output = io.BytesIO()
-            image.save(output, format='WEBP', quality=70, method=6, lossless=False)
+            image.save(output, format='WEBP', quality=40, method=6, lossless=False)
             image_data = output.getvalue()
         
         # Update database with image data, MIME type, and virtual URL
@@ -361,7 +334,6 @@ async def reset_profile_picture(
     db: Session = Depends(get_db)
 ):
     """Reset/remove profile picture."""
-    # Update database to clear profile picture data
     updated_user = crud.reset_profile_picture(db, current_user.id)
     
     if updated_user is None:
@@ -377,11 +349,9 @@ async def deactivate_account(
     db: Session = Depends(get_db)
 ):
     """Deactivate account (soft delete, requires password confirmation)."""
-    # Verify password
     if not auth.verify_password(deactivate.password, current_user.hashed_password):
         raise HTTPException(status_code=401, detail="Incorrect password")
     
-    # Deactivate account
     deactivated_user = crud.deactivate_user(db, current_user.id)
     if deactivated_user is None:
         raise HTTPException(status_code=404, detail="User not found")

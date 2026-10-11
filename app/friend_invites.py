@@ -15,6 +15,7 @@ import secrets
 from datetime import datetime
 from typing import Optional
 
+from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
 
 from . import models
@@ -36,7 +37,12 @@ def link_for(db: Session, user, reset: bool = False) -> models.FriendInvite:
     elif reset:
         invite.token = secrets.token_urlsafe(16)
         invite.created_at = datetime.utcnow()
-    db.commit()
+    try:
+        db.commit()
+    except IntegrityError:
+        # Two first-time requests raced; use the link the other one made.
+        db.rollback()
+        invite = db.query(models.FriendInvite).filter(models.FriendInvite.user_id == user.id).one()
     db.refresh(invite)
     return invite
 
@@ -95,12 +101,15 @@ def complete_signup(db: Session, user) -> Optional[str]:
         models.FriendInviteSignup.invitee_id == user.id, models.FriendInviteSignup.completed_at.is_(None)).first()
     if signup is None:
         return None
-    signup.completed_at = datetime.utcnow()
-    db.commit()
     inviter = db.query(models.User).filter(models.User.id == signup.inviter_id).first()
     if inviter is None or not inviter.is_active:
+        signup.completed_at = datetime.utcnow()
+        db.commit()
         return None
     befriend(db, inviter, user, joined=True)
+    # Marked only once the friendship exists, so a failure doesn't count as an invite brought in.
+    signup.completed_at = datetime.utcnow()
+    db.commit()
     return inviter.username
 
 

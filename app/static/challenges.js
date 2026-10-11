@@ -160,7 +160,9 @@
   }
 
   async function updateCompletion(method, path) {
-    const completion = await call(method, path);
+    // Name the month on screen so a completion stays reachable after the month turns over.
+    const month = state.data && state.data.month;
+    const completion = await call(method, month ? `${path}?month=${encodeURIComponent(month)}` : path);
     if (completion && state.data) {
       state.data.completion = completion;
       render(state.data);

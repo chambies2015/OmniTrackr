@@ -208,11 +208,22 @@ def valid_keys(p256dh: str, auth: str) -> bool:
     return len(point) == 65 and len(secret) == 16
 
 
-def save_subscription(db: Session, user_id: int, endpoint: str, p256dh: str, auth: str) -> bool:
+def save_subscription(db: Session, user_id: int, endpoint: str, p256dh: str, auth: str, _retry: bool = True) -> bool:
     """Store (or move to this member) one device's subscription; keeps the newest ten per member.
 
     Returns True when the device is newly turned on for this member.
     """
+    try:
+        return _save_subscription(db, user_id, endpoint, p256dh, auth)
+    except IntegrityError:
+        # The page-load sync and the "Turn on" click raced to insert the same endpoint.
+        db.rollback()
+        if not _retry:
+            raise
+        return save_subscription(db, user_id, endpoint, p256dh, auth, _retry=False)
+
+
+def _save_subscription(db: Session, user_id: int, endpoint: str, p256dh: str, auth: str) -> bool:
     row = db.query(models.PushSubscription).filter(models.PushSubscription.endpoint == endpoint).first()
     fresh = row is None or row.user_id != user_id
     if row is None:

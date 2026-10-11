@@ -246,7 +246,6 @@ async def verify_email(token: str, request: Request = None, db: Session = Depend
     # First, try regular email verification (most common case)
     try:
         email = email_utils.verify_token(token, max_age=email_utils.VERIFICATION_MAX_AGE)
-        # This is a regular email verification token
         user = crud.get_user_by_email(db, email)
         if not user:
             raise HTTPException(status_code=404, detail="User not found")
@@ -257,7 +256,6 @@ async def verify_email(token: str, request: Request = None, db: Session = Depend
         if not user.verification_token or not secrets.compare_digest(user.verification_token, token):
             raise HTTPException(status_code=400, detail="This verification link was replaced. Request a new verification email.")
 
-        # Mark user as verified
         funnel.record("email_verified")
         user.is_verified = True
         user.verification_token = None
@@ -277,7 +275,6 @@ async def verify_email(token: str, request: Request = None, db: Session = Depend
         # Not a regular email verification token, try email change token
         try:
             old_email, new_email = email_utils.verify_email_change_token(token, max_age=3600)
-            # This is an email change verification
             user = crud.get_user_by_email(db, old_email)
             if not user:
                 raise HTTPException(status_code=404, detail="User not found")
@@ -343,7 +340,6 @@ async def resend_verification_email(
         return {"message": "Email is already verified. You can log in."}
     
     funnel.record("verification_resent", request)
-    # Generate new verification token
     verification_token = email_utils.generate_verification_token(user.email)
     user.verification_token = verification_token
     db.commit()
@@ -361,7 +357,6 @@ async def resend_verification_email(
         # Still return success message for security (don't reveal email wasn't sent)
         return {"message": "If that email is registered and unverified, a verification email has been sent."}
     
-    # Send verification email (async, non-blocking)
     email_sent = False
     try:
         await email_utils.send_verification_email(user.email, user.username, verification_token)
@@ -460,10 +455,10 @@ async def reset_password(payload: schemas.PasswordReset, db: Session = Depends(g
 @router.post("/reactivate", response_model=schemas.User)
 async def reactivate_account_public(
     reactivate: schemas.AccountReactivate,
+    request: Request,
     db: Session = Depends(get_db)
 ):
     """Reactivate a deactivated account via public endpoint (within 90-day window)."""
-    # Find user by username or email
     user = None
     if reactivate.username:
         user = crud.get_user_by_username(db, reactivate.username)
@@ -474,29 +469,31 @@ async def reactivate_account_public(
     else:
         raise HTTPException(status_code=400, detail="Username or email is required")
     
+    invalid = HTTPException(status_code=401, detail="Invalid credentials or account not found")
     if not user:
-        # Don't reveal if account exists for security
-        raise HTTPException(
-            status_code=401,
-            detail="Invalid credentials or account not found"
-        )
-    
-    # Verify password
+        raise invalid
+
+    # Shares the login lockout, so this endpoint can't be used to keep guessing a password.
+    now_utc = datetime.now(timezone.utc).replace(tzinfo=None)
+    if user.locked_until and user.locked_until > now_utc:
+        raise invalid
     if not auth.verify_password(reactivate.password, user.hashed_password):
-        raise HTTPException(
-            status_code=401,
-            detail="Invalid credentials or account not found"
-        )
+        user.failed_login_attempts = (user.failed_login_attempts or 0) + 1
+        if user.failed_login_attempts >= 5:
+            user.locked_until = now_utc + timedelta(minutes=15)
+        db.commit()
+        raise invalid
+    if user.failed_login_attempts or user.locked_until:
+        user.failed_login_attempts = 0
+        user.locked_until = None
+        db.commit()
     
-    # Check if account is already active
     if user.is_active:
         raise HTTPException(status_code=400, detail="Account is already active")
     
-    # Check if account was deactivated
     if not user.deactivated_at:
         raise HTTPException(status_code=400, detail="Account was not deactivated")
     
-    # Reactivate account
     try:
         reactivated_user = crud.reactivate_user(db, user.id)
         if reactivated_user is None:
