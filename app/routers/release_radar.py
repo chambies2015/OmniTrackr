@@ -413,7 +413,10 @@ async def _category_page(request: Request, db: Session, category: str, window: r
         for label, group in _group_by_week(items)
     )
     title = SEO_TITLES[category].format(label=window.label)
-    description = (f"{len(items) or 'Every'} {SUMMARY_LABELS[category]} for {window.label}, "
+    # Naming a few real titles makes the search snippet match what people actually look up.
+    highlights = [item["title"] for item in items[:3] if (item.get("title") or "").strip()]
+    including = f", including {', '.join(highlights[:-1])} and {highlights[-1]}" if len(highlights) >= 2 else ""
+    description = (f"{len(items) or 'Every'} {SUMMARY_LABELS[category]} for {window.label}{including}, "
                    "with dates, details and one-click tracking in OmniTrackr.")
     content = (
         f'<header class="hero radar-hero radar-hero--{category}"><p class="eyebrow">Release Radar · {escape(window.label)}</p>'

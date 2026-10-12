@@ -244,7 +244,7 @@ async def get_sitemap(request: Request = None, db: Session = Depends(get_db)):
         pass
     
     from ..discover_catalog import MONTHLY_EDITIONS
-    sitemap_parts.append(f"<url><loc>{base_url}/discover</loc></url>")
+    sitemap_parts.append(f"<url><loc>{base_url}/discover</loc><changefreq>weekly</changefreq><priority>0.8</priority></url>")
     for slug, edition in MONTHLY_EDITIONS.items():
         sitemap_parts.append(
             f"<url><loc>{base_url}/discover/monthly/{slug}</loc>"
