@@ -1,6 +1,17 @@
-// Year in Review owner page: create, refresh, copy and stop a shared recap link.
+// Year in Review owner page: create, refresh, copy and stop a shared recap link; count Ko-fi clicks.
 (function () {
   'use strict';
+
+  const kofi = document.querySelector('[data-recap-kofi]');
+  if (kofi) {
+    kofi.addEventListener('click', () => {
+      try {
+        if (navigator.sendBeacon) {
+          navigator.sendBeacon('/api/funnel', new Blob([JSON.stringify({ event: 'recap_kofi_clicked' })], { type: 'application/json' }));
+        }
+      } catch (error) { /* counting is optional */ }
+    });
+  }
 
   const box = document.querySelector('[data-recap-year]');
   if (!box) return;

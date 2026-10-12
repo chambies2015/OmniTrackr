@@ -199,6 +199,62 @@ def _goals_section(goals: list | None, year: int | None, base: str) -> tuple[str
     return html, [f"Your {int(year)} goals:"] + [f"- {goal['summary']}" for goal in goals] + [url, ""]
 
 
+def challenge_line(db: Session, user_id: int, today: date) -> dict | None:
+    """This month's challenge for the weekly email: progress when joined, an invitation otherwise.
+
+    None when there is nothing useful to say: the challenge is already complete, the month
+    is nearly over for someone who hasn't joined, or the month has no curated challenge.
+    """
+    from . import challenges
+    month = challenges.month_key(today)
+    left = challenges.days_left(month, today)
+    entry = challenges.get_entry(db, user_id, month)
+    challenge = challenges.challenge_for(month)
+    if entry is None:
+        if not challenges.is_curated(month) or left < 7:
+            return None
+        return {"joined": False, "name": challenge["name"], "tagline": challenge["tagline"],
+                "month_name": challenges.MONTH_NAMES[today.month - 1], "days_left": left,
+                "total_steps": len(challenge["steps"])}
+    steps = challenges.progress(db, user_id, month)
+    if entry.completed_at is not None or not steps or all(step["done"] for step in steps) or left <= 0:
+        return None
+    upcoming = next(step for step in steps if not step["done"])
+    return {"joined": True, "name": challenge["name"], "days_left": left,
+            "done_steps": sum(1 for step in steps if step["done"]), "total_steps": len(steps),
+            "next": upcoming["label"], "next_count": upcoming["count"], "next_target": upcoming["target"]}
+
+
+STEP_WORDS = {1: "one", 2: "two", 3: "three", 4: "four", 5: "five"}
+
+
+def _challenge_section(challenge: dict | None, base: str) -> tuple[str, list[str]]:
+    """'This month's challenge' block; empty when there is none."""
+    if not challenge:
+        return "", []
+    url = f"{base}/#challenge"
+    days = f'{challenge["days_left"]} day{"" if challenge["days_left"] == 1 else "s"} left'
+    if challenge["joined"]:
+        next_step = challenge["next"]
+        if challenge["next_target"] > 1:
+            next_step += f' ({challenge["next_count"]} of {challenge["next_target"]})'
+        summary = f'{challenge["done_steps"]} of {challenge["total_steps"]} steps done, {days}.'
+        body = (f'<p style="color:#3b3557;font-size:14px;line-height:1.6;margin:0"><strong>{escape(challenge["name"])}</strong>: '
+                f'{escape(summary)}<br>Next up: {escape(next_step)}.</p>')
+        link_label = "See your challenge"
+        text = [f"This month's challenge, {challenge['name']}: {summary} Next up: {next_step}. {url}", ""]
+    else:
+        count = challenge["total_steps"]
+        steps = f'{STEP_WORDS.get(count, str(count))} small step{"" if count == 1 else "s"}'.capitalize()
+        body = (f'<p style="color:#3b3557;font-size:14px;line-height:1.6;margin:0"><strong>{escape(challenge["name"])}</strong>: '
+                f'{escape(challenge["tagline"])} {escape(steps)}, {escape(days)}, and anything you finished this month already counts.</p>')
+        link_label = f'Take the {challenge["month_name"]} challenge'
+        text = [f"This month's challenge, {challenge['name']}: {challenge['tagline']} {days}. {url}", ""]
+    html = ('<h2 style="font-size:17px;color:#1f1640;margin:24px 0 8px">This month\'s challenge</h2>' + body +
+            f'<p style="margin:8px 0 0"><a href="{escape(url, quote=True)}" style="color:#6d28d9;font-weight:700">{escape(link_label)}</a></p>')
+    return html, text
+
+
 def invite_nudge_due(user_id: int, now: datetime) -> bool:
     """About once a month per member (a different week for each), never every week."""
     return now.isocalendar().week % 4 == user_id % 4
@@ -206,8 +262,9 @@ def invite_nudge_due(user_id: int, now: datetime) -> bool:
 
 def build_digest(username: str, report: dict, unsubscribe_url: str, spotlight: dict | None = None,
                  ask: dict | None = None, invite: bool = False, goals: list | None = None,
-                 goals_year: int | None = None) -> tuple[str, str, str] | None:
-    """(subject, html, text) or None when there is nothing to send. `spotlight`, `ask`, `invite` and `goals` never force a send."""
+                 goals_year: int | None = None, challenge: dict | None = None) -> tuple[str, str, str] | None:
+    """(subject, html, text) or None when there is nothing to send. `spotlight`, `ask`, `invite`, `goals`
+    and `challenge` never force a send."""
     matches, popular = report["matches"], report["popular"]
     if not matches and not popular:
         return None
@@ -234,6 +291,10 @@ def build_digest(username: str, report: dict, unsubscribe_url: str, spotlight: d
     if goals_html:
         sections.append(goals_html)
         text += goals_text
+    challenge_html, challenge_text = _challenge_section(challenge, base)
+    if challenge_html:
+        sections.append(challenge_html)
+        text += challenge_text
     spotlight_html, spotlight_text = _spotlight_section(spotlight, base)
     if spotlight_html:
         sections.append(spotlight_html)
@@ -377,8 +438,13 @@ async def send_due_digests(session_factory, client=None, now: datetime | None = 
             except Exception:
                 db.rollback()
                 member_goals = []  # Optional, like the ask above.
+            try:
+                challenge = challenge_line(db, user.id, now.date())
+            except Exception:
+                db.rollback()
+                challenge = None  # Optional, like the ask above.
             built = build_digest(user.username, report, unsubscribe_url, spotlight, ask, invite,
-                                 member_goals, now.year)
+                                 member_goals, now.year, challenge)
             if built is None:
                 stats["skipped"] += 1
                 continue
