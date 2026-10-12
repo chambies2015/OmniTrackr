@@ -24,6 +24,25 @@ schema addition is deployed; historical visits are not inferred or backfilled.
 The moderator response excludes email addresses, media titles, searches, review
 text, private notes, and page histories.
 
+## Homepage search to guest list
+
+The anonymous homepage hero has a search box (`app/title_search.py`,
+`app/static/title-search.js`). `GET /api/titles/search?q=` is public, rate
+limited to 60 a minute per visitor, cacheable for five minutes, and never calls
+an external API. It searches an in-memory index, rebuilt at most every 10
+minutes, of titles in members' shareable categories (the same titles that have
+a `/titles` page). Results carry public details only: kind, title, year, slug
+and a safe image URL, never member counts or ids. Every query word must start a
+title word; exact and leading matches rank first, then titles more members track.
+
+Choosing a result adds it to the existing browser-only guest list, so the hero,
+the "Start your list" tiles and the sticky save bar stay in sync. The slug
+round-trips through `title_pages.find`, so `POST /api/guest-list/import` moves
+it into the new library after sign-up. A search with no match offers sign-up,
+since a member's own search covers the external catalogs. Searching reports the
+anonymous `title_search_used` guest moment to Site stats once per page view. No
+schema change.
+
 ## Public collection to private library
 
 Public collection pages link to `/collections/public/{id}/save`. The standalone,
