@@ -10,12 +10,12 @@ from datetime import date, datetime, timedelta
 from html import escape
 from typing import Optional
 
-from fastapi import APIRouter, Depends, HTTPException, Request, Response
+from fastapi import APIRouter, Depends, HTTPException, Query, Request, Response
 from pydantic import BaseModel, Field, field_validator
 from sqlalchemy import func
 from sqlalchemy.orm import Session
 
-from .. import models, supporters, title_metadata, title_pages
+from .. import models, supporters, title_metadata, title_pages, title_search
 from ..auth import AUTH_COOKIE_NAME
 from ..csp import strict_html_response
 from ..dependencies import get_current_user, get_db
@@ -413,7 +413,7 @@ def render(group, summary: dict, metadata: Optional[dict], indexable: bool, sign
   <link rel="stylesheet" href="/static/title-page.css?v={CSS_VERSION}">
   <script src="/static/title-page.js?v={JS_VERSION}" defer></script>
   <script src="/static/share.js?v=20261004-share-1" defer></script>
-  {'' if signed_in else '<script src="/static/guest-list.js?v=20261010-audit-guest-1" defer></script>'}
+  {'' if signed_in else '<script src="/static/guest-list.js?v=20261012-hero-search-1" defer></script>'}
   {ad_loader}
   {_json_ld(group, summary, metadata, canonical, image)}
 </head>
@@ -676,6 +676,13 @@ def import_guest_list(
         from .. import funnel
         funnel.record("guest_list_imported", request)
     return {"added": added, "existing": existing, "missing": missing}
+
+
+@router.get("/api/titles/search")
+def search_titles(request: Request, response: Response, q: str = Query("", max_length=200), db: Session = Depends(get_db)):
+    """Homepage search over titles members track; anyone can use it, no account needed."""
+    response.headers["Cache-Control"] = "public, max-age=300"
+    return {"results": title_search.search(title_search.index(db), q)}
 
 
 @router.get("/titles", include_in_schema=False)

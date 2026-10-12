@@ -18,7 +18,7 @@
   <link rel="preload" href="/static/fonts/poppins-800-latin.woff2" as="font" type="font/woff2" crossorigin>
   <link rel="stylesheet" href="/static/fonts.css?v=20261009-fonts-1">
   <link rel="stylesheet" href="/static/public-legacy.css?v=20261004-legacy-1">
-  <link rel="stylesheet" href="/static/public-landing.css?v=20261007-spotlight-1">
+  <link rel="stylesheet" href="/static/public-landing.css?v=20261012-hero-search-1">
   <meta property="og:type" content="website">
   <meta property="og:url" content="https://omnitrackr.xyz/">
   <meta property="og:title" content="OmniTrackr — One private home for your media life">
@@ -51,6 +51,7 @@
     <symbol id="i-radar" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><circle cx="12" cy="12" r="5"/><path d="M12 12l6-6"/><circle cx="12" cy="12" r="1"/></symbol>
     <symbol id="i-swap" viewBox="0 0 24 24"><path d="M7 4L3 8l4 4M3 8h14M17 20l4-4-4-4M21 16H7"/></symbol>
     <symbol id="i-check" viewBox="0 0 24 24"><path d="M5 12.5l4.5 4.5L19 7.5"/></symbol>
+    <symbol id="i-search" viewBox="0 0 24 24"><circle cx="11" cy="11" r="7"/><path d="M20 20l-3.5-3.5"/></symbol>
     <symbol id="i-arrow" viewBox="0 0 24 24"><path d="M5 12h14M13 6l6 6-6 6"/></symbol>
   </svg>
   <main id="landingPage">
@@ -62,6 +63,16 @@
           <p class="lp-eyebrow">Your media history, in one place</p>
           <h1 id="hero-title" class="lp-title">Remember more than <span class="lp-title__accent">the title.</span></h1>
           <p class="lp-lead">Movies, TV, anime, games, music, and books in one private library, with the ratings, notes, and progress that make each one yours.</p>
+          <form class="lp-search" role="search" action="/titles" method="get" data-title-search>
+            <label class="lp-search__label" for="lpSearchInput">What have you watched, played or read lately?</label>
+            <div class="lp-search__field">
+              <svg class="lp-icon lp-search__icon" aria-hidden="true"><use href="#i-search"/></svg>
+              <input id="lpSearchInput" class="lp-search__input" type="search" name="q" placeholder="Try Interstellar, Frieren or Hades" autocomplete="off" spellcheck="false" maxlength="80" aria-describedby="lpSearchHint" aria-controls="lpSearchResults">
+            </div>
+            <p class="lp-search__hint" id="lpSearchHint">Tap a result to start your list. No account needed.</p>
+            <div class="lp-search__results" id="lpSearchResults" aria-live="polite" hidden></div>
+            <div class="lp-search__bar" data-guest-bar hidden><p class="lp-search__count" data-guest-count></p><button type="button" class="lp-btn lp-btn--primary lp-btn--small" data-action="show-register-form">Save my list, free <svg class="lp-icon" aria-hidden="true"><use href="#i-arrow"/></svg></button></div>
+          </form>
           <div class="lp-cta-row">
             <button type="button" class="lp-btn lp-btn--primary" data-action="show-register-form">Create a free library <svg class="lp-icon" aria-hidden="true"><use href="#i-arrow"/></svg></button>
             <a class="lp-btn lp-btn--ghost" href="/demo">Try it—no account needed</a>
@@ -260,6 +271,7 @@
   <script src="/credentials.js"></script>
   <script src="/auth.js?v=20261010-challenge-1"></script>
   <script src="/static/public-landing.js?v=20260928-site-1" defer></script>
-  <script src="/static/guest-list.js?v=20261010-audit-guest-1" defer></script>
+  <script src="/static/guest-list.js?v=20261012-hero-search-1" defer></script>
+  <script src="/static/title-search.js?v=20261012-hero-search-1" defer></script>
 </body>
 </html>

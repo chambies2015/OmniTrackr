@@ -75,26 +75,35 @@
   }
 
   // ------------------------------------------------------------ homepage tiles
+  // Tiles are the "Start your list" picks and the hero search results (added later
+  // by title-search.js), so clicks are delegated and every refresh re-reads the page.
+  const TILE = '[data-guest-kind][data-guest-slug]:not([data-guest-save])';
+
+  function refreshTiles() {
+    const list = read();
+    document.querySelectorAll(TILE).forEach(tile => {
+      tile.setAttribute('aria-pressed', String(has(list, tile.dataset.guestKind, tile.dataset.guestSlug)));
+    });
+    document.querySelectorAll('[data-guest-bar]').forEach(bar => { bar.hidden = list.length === 0; });
+    document.querySelectorAll('[data-guest-count]').forEach(counter => {
+      counter.textContent = list.length ? `${countText(list.length)}. Create a free account to keep it.` : '';
+    });
+  }
+
+  function toggleTile(tile) {
+    const { guestKind: kind, guestSlug: slug, guestTitle: title } = tile.dataset;
+    const result = has(read(), kind, slug) ? { list: remove(kind, slug) } : add(kind, slug, title);
+    refreshTiles();
+    return result;
+  }
+
   function setupTiles() {
-    const tiles = Array.from(document.querySelectorAll('[data-guest-kind][data-guest-slug]:not([data-guest-save])'));
-    if (!tiles.length) return;
-    const bar = document.querySelector('[data-guest-bar]');
-    const counter = document.querySelector('[data-guest-count]');
-    const refresh = () => {
-      const list = read();
-      tiles.forEach(tile => {
-        tile.setAttribute('aria-pressed', String(has(list, tile.dataset.guestKind, tile.dataset.guestSlug)));
-      });
-      if (bar) bar.hidden = list.length === 0;
-      if (counter) counter.textContent = list.length ? `${countText(list.length)}. Create a free account to keep it.` : '';
-    };
-    tiles.forEach(tile => tile.addEventListener('click', () => {
-      const { guestKind: kind, guestSlug: slug, guestTitle: title } = tile.dataset;
-      if (has(read(), kind, slug)) remove(kind, slug);
-      else add(kind, slug, title);
-      refresh();
-    }));
-    refresh();
+    if (!document.querySelector('[data-guest-bar]')) return;
+    document.addEventListener('click', event => {
+      const tile = event.target && event.target.closest ? event.target.closest(TILE) : null;
+      if (tile) toggleTile(tile);
+    });
+    refreshTiles();
   }
 
   // ------------------------------------------------------------ title pages (guests)
@@ -177,7 +186,7 @@
     setTimeout(importList, 800);
   }
 
-  const api = { read, write, add, remove, importList, KEY, MAX };
+  const api = { read, write, add, remove, importList, refreshTiles, toggleTile, KEY, MAX };
   window.OmniGuestList = api;
   if (typeof module !== 'undefined' && module.exports) module.exports = api;
   if (typeof document !== 'undefined' && document.addEventListener) {

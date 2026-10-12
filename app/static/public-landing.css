@@ -333,3 +333,40 @@ body.lp #landingPage { background: none; display: block; min-height: 0; padding:
   .lp-picks__bar .lp-btn { flex: 1 1 100%; justify-content: center; }
 }
 .lp-anchor { display: block; height: 0; overflow: hidden; }
+
+/* ---------- Hero search (title-search.js) ---------- */
+.lp-search { margin: 0 0 22px; max-width: 540px; position: relative; }
+.lp-search__label { color: var(--lp-text); display: block; font-weight: 600; margin: 0 0 10px; }
+.lp-search__field { position: relative; }
+.lp-search__icon { color: var(--lp-violet-soft); left: 18px; pointer-events: none; position: absolute; top: 50%; transform: translateY(-50%); }
+.lp .lp-search__input { -webkit-appearance: none; appearance: none; background: rgba(255, 255, 255, .07); border: 1px solid var(--lp-border-strong); border-radius: 999px; box-sizing: border-box; color: var(--lp-text); font: 500 1.05rem Inter, sans-serif; margin: 0; min-height: 56px; padding: 0 20px 0 50px; width: 100%; }
+.lp .lp-search__input::placeholder { color: var(--lp-muted); opacity: 1; }
+.lp .lp-search__input:focus { background: rgba(255, 255, 255, .1); border-color: var(--lp-violet-soft); outline: none; }
+.lp .lp-search__input:focus-visible { outline: 3px solid rgba(196, 181, 253, .45); outline-offset: 2px; }
+.lp-search__hint { color: var(--lp-muted); font-size: .88rem; margin: 8px 0 0 20px; }
+.lp-search__results { background: rgba(20, 17, 42, .96); border: 1px solid var(--lp-border-strong); border-radius: 18px; box-shadow: 0 20px 50px rgba(0, 0, 0, .45); margin-top: 12px; max-height: 360px; overflow-y: auto; padding: 6px; }
+.lp-search__results[hidden] { display: none; }
+.lp-search__list { list-style: none; margin: 0; padding: 0; }
+.lp-search__result { align-items: center; background: none; border: 0; border-radius: 12px; color: var(--lp-text); cursor: pointer; display: flex; font: inherit; gap: 12px; padding: 8px 10px; text-align: left; width: 100%; }
+.lp-search__result:hover, .lp-search__result:focus-visible { background: var(--lp-surface-2); }
+.lp-search__art { align-items: center; background: linear-gradient(160deg, #3b2a7a, #141630); border-radius: 6px; color: rgba(255, 255, 255, .6); display: flex; flex: 0 0 40px; font: 800 1.1rem Poppins, sans-serif; height: 60px; justify-content: center; overflow: hidden; }
+.lp-search__art img { display: block; height: 100%; object-fit: cover; width: 100%; }
+.lp-search__copy { display: flex; flex: 1 1 auto; flex-direction: column; gap: 2px; min-width: 0; }
+.lp-search__title { display: -webkit-box; font-weight: 600; line-height: 1.3; overflow: hidden; -webkit-box-orient: vertical; -webkit-line-clamp: 2; }
+.lp-search__meta { color: var(--lp-muted); font-size: .82rem; }
+.lp-search__state { border: 1px solid var(--lp-border-strong); border-radius: 999px; color: var(--lp-violet-soft); flex: 0 0 auto; font-size: .82rem; font-weight: 700; padding: 6px 12px; }
+.lp-search__state::before { content: "+ Add"; }
+.lp-search__result[aria-pressed="true"] .lp-search__state { background: var(--lp-teal); border-color: var(--lp-teal); color: #0b0a18; }
+.lp-search__result[aria-pressed="true"] .lp-search__state::before { content: "✓ On your list"; }
+.lp-search__empty { color: var(--lp-soft); margin: 0; padding: 8px 12px; }
+.lp-search__empty p { margin: 0 0 6px; }
+.lp-search__link { background: none; border: 0; color: var(--lp-violet-soft); cursor: pointer; font: inherit; font-weight: 700; padding: 0; text-decoration: underline; }
+.lp-search__bar { align-items: center; background: rgba(45, 212, 191, .08); border: 1px solid rgba(45, 212, 191, .35); border-radius: 16px; display: flex; flex-wrap: wrap; gap: 10px 14px; justify-content: space-between; margin-top: 12px; padding: 10px 10px 10px 18px; }
+.lp-search__bar[hidden] { display: none; }
+.lp-search__count { color: var(--lp-text); font-weight: 600; margin: 0; }
+.lp-btn--small { font-size: .92rem; min-height: 42px; padding: 0 18px; }
+@media (max-width: 640px) {
+  .lp-search__hint { margin-left: 4px; }
+  .lp-search__bar .lp-btn { flex: 1 1 100%; }
+}
+.lp-hero__copy { min-width: 0; } /* long result titles ellipsize instead of widening the hero on phones */
