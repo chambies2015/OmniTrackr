@@ -30,9 +30,16 @@
 .recap-share__status { color: var(--site-teal-soft) !important; min-height: 1.2em; }
 .recap-share__actions { align-content: start; display: flex; flex-direction: column; gap: 8px; }
 .recap-share__card { border: 1px solid var(--site-border); border-radius: 14px; grid-column: 1 / -1; height: auto; max-width: 600px; width: 100%; }
+.recap-support { margin: 0 0 32px; padding: 24px 28px; }
+.recap-support h2 { font: 700 1.25rem var(--site-display); margin: 0 0 6px; }
+.recap-support p { color: var(--site-muted); line-height: 1.6; margin: 0 0 10px; }
+.recap-support code { color: var(--site-text); font-size: .95em; overflow-wrap: anywhere; }
+.recap-support__actions { display: flex; flex-wrap: wrap; gap: 8px; margin: 14px 0 0 !important; }
+.recap-support--thanks { border-color: rgba(45, 212, 191, .45); }
 [hidden] { display: none !important; }
 @media (max-width: 640px) {
   .recap-share { grid-template-columns: 1fr; padding: 20px; }
+  .recap-support { padding: 20px; }
   .recap-months { gap: 3px; height: 140px; }
   .recap-months small { font-size: .6rem; }
 }

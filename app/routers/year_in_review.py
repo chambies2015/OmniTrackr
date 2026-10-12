@@ -13,7 +13,7 @@ from fastapi import APIRouter, Depends, HTTPException, Request, Response
 from fastapi.responses import RedirectResponse
 from sqlalchemy.orm import Session
 
-from .. import auth, models, year_in_review
+from .. import auth, models, supporters, year_in_review
 from ..auth import AUTH_COOKIE_NAME
 from ..csp import strict_html_response
 from ..dependencies import get_current_user, get_db
@@ -22,7 +22,7 @@ from .profiles import _CardCache, _fit, _font
 
 router = APIRouter(tags=["year-in-review"])
 SITE_URL = os.getenv("SITE_URL", "https://omnitrackr.xyz").rstrip("/")
-ASSET_VERSION = "20261010-goals-1"
+ASSET_VERSION = "20261012-support-1"
 TITLE_CSS_VERSION = "20261009-take-1"
 FIRST_TRACKED_NOTE = {
     2026: "OmniTrackr started keeping a dated journal in September 2026 and add dates in October, "
@@ -281,6 +281,39 @@ def _page(*, title: str, description: str, canonical: str, card_url: str, eyebro
     return apply_site_chrome(page)
 
 
+def _support_box(db: Session, user: models.User, year: int) -> str:
+    """Closing note on the owner's recap: a thank-you for supporters, a Ko-fi ask for everyone else."""
+    supporter = supporters.get_supporter(db, user.id)
+    kofi = _e(supporters.KOFI_URL)
+    if supporters.is_active(supporter):
+        since = f" since {supporter.since.strftime('%B %Y')}" if supporter.since else ""
+        return (f'<section class="site-card recap-support recap-support--thanks" aria-labelledby="recap-support">'
+                f'<h2 id="recap-support">Thank you for supporting OmniTrackr</h2>'
+                f'<p>Your Ko-fi support{_e(since)} helped pay for the hosting behind this recap, your library and '
+                f'everything else you used in {year}. It keeps every tracking feature free for everyone.</p>'
+                '<p><a class="site-btn site-btn--ghost" href="/supporters">See what supporters get</a></p></section>')
+    if supporter is not None:
+        heading = f"Thanks for supporting OmniTrackr in {year}"
+        lead = (f"Your Ko-fi support helped keep OmniTrackr running this year. If you'd like your badge back "
+                f"for {year + 1}, a one-off tip turns it on for 30 days and a monthly membership keeps it on.")
+    else:
+        heading = f"Help keep OmniTrackr free in {year + 1}"
+        lead = ("OmniTrackr is built and run by one developer as a side project, with no investors and no paywall. "
+                "Hosting, email and title data are paid for out of pocket and by members who chip in on Ko-fi. "
+                "If this recap was worth a few minutes of your year, a one-off tip or a small monthly membership "
+                "helps keep it running next year.")
+    code = _e(supporters.supporter_code(user.id))
+    return (f'<section class="site-card recap-support" aria-labelledby="recap-support">'
+            f'<h2 id="recap-support">{_e(heading)}</h2><p>{_e(lead)}</p>'
+            '<p>Every tracking feature stays free either way. Supporters get a badge beside their name on their profile '
+            'and reviews, and a profile accent color.</p>'
+            f'<p class="recap-support__code">Use the same email on Ko-fi as here, or paste your supporter code '
+            f'<code>{code}</code> into the Ko-fi message, and the badge finds your account.</p>'
+            f'<p class="recap-support__actions"><a class="site-btn site-btn--primary" href="{kofi}" target="_blank" '
+            'rel="noopener noreferrer" data-recap-kofi>Support on Ko-fi ↗</a>'
+            '<a class="site-btn site-btn--ghost" href="/supporters">How supporting works</a></p></section>')
+
+
 def _summary(recap: dict) -> str:
     bits = [f"{_plural(recap.get('finished_total', 0), 'title')} finished"]
     top = recap.get("top_category")
@@ -335,7 +368,7 @@ def recap_page(year: int, request: Request, db: Session = Depends(get_db)):
         heading=f"Your {year} in media{so_far}",
         lead=_summary(recap) + ".",
         actions=f'<span class="recap-years">{years}</span>',
-        body=_body(recap, private=True) + share_box,
+        body=_body(recap, private=True) + share_box + ("" if recap.get("is_empty") else _support_box(db, user, year)),
         script=True,
     )
     response = strict_html_response(html)
