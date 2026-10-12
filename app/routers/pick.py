@@ -1,7 +1,6 @@
 """Pick for me (/pick): one curated suggestion at a time, for visitors and members."""
 from __future__ import annotations
 
-import json
 from html import escape
 from typing import Optional
 
@@ -108,7 +107,7 @@ def _pool_section(details: dict, collection_links: dict) -> str:
             f'<div class="pf-pool__groups">{"".join(groups)}</div></section>')
 
 
-def _pool_json(details: dict, collection_links: dict) -> str:
+def _pool_rows(details: dict, collection_links: dict) -> list[dict]:
     rows = []
     for entry in pick.pool():
         detail = details.get(entry["id"], {})
@@ -118,9 +117,7 @@ def _pool_json(details: dict, collection_links: dict) -> str:
             "why": entry["why"], "caveat": entry["caveat"], "source": entry["source_label"],
             "sourceUrl": _source_url(entry, collection_links), "url": detail.get("url"), "image": detail.get("image"),
         })
-    payload = json.dumps(rows, ensure_ascii=False, separators=(",", ":"))
-    payload = payload.replace("&", "\\u0026").replace("<", "\\u003c").replace(">", "\\u003e")
-    return f'<script type="application/json" id="pickPool">{payload}</script>'
+    return rows
 
 
 GUIDANCE = (
@@ -174,7 +171,6 @@ def pick_page(request: Request,
         f'{card(chosen, details, collection_links, signed_in)}</article>{guest_bar}</section>'
         + GUIDANCE
         + _pool_section(details, collection_links)
-        + _pool_json(details, collection_links)
     )
     head = f'<link rel="stylesheet" href="/static/pick-for-me.css?v={CSS_VERSION}">'
     if not signed_in:
@@ -191,6 +187,14 @@ def pick_page(request: Request,
     response.headers["Cache-Control"] = "private, no-cache"
     response.headers["Vary"] = "Cookie"
     return response
+
+
+@router.get("/api/pick/pool")
+def pick_pool(request: Request, response: Response, db: Session = Depends(get_db)):
+    """Every pick with its public details, for picking in the browser without a request per pick."""
+    response.headers["Cache-Control"] = "public, max-age=600"
+    details = pick.title_details(title_search.index(db))
+    return {"picks": _pool_rows(details, pick.collection_links(db))}
 
 
 class PickAdd(BaseModel):

@@ -1,5 +1,4 @@
 """Pick for me (/pick): one curated suggestion at a time, saved to a guest list or a library (Oct 2026)."""
-import json
 import random
 import re
 from datetime import date
@@ -15,12 +14,6 @@ def fresh_index():
     title_search.clear_cache()
     yield
     title_search.clear_cache()
-
-
-def pool_json(html):
-    match = re.search(r'<script type="application/json" id="pickPool"[^>]*>(.*?)</script>', html, re.S)
-    assert match, "the page embeds the pick pool"
-    return json.loads(match.group(1))
 
 
 def test_pool_is_built_from_the_editorial_writing_with_one_entry_per_title():
@@ -65,7 +58,6 @@ def test_public_page_is_indexable_and_complete_without_scripts(client):
     assert "How to choose when everything sounds good" in html and "Where these picks come from" in html
     assert f"Every title we might pick ({len(pick.pool())})" in html
     assert "/static/pick-for-me.js?v=" in html and "/static/guest-list.js?v=" in html
-    assert len(pool_json(html)) == len(pick.pool())
     assert "Cookie" in response.headers["vary"]
 
 
@@ -80,12 +72,16 @@ def test_format_and_shared_links_choose_the_card_and_stay_out_of_search(client):
     assert client.get("/pick", params={"format": "<x>", "pick": "movie/does-not-exist"}).status_code == 200
 
 
-def test_embedded_pool_cannot_break_out_of_its_script_tag(client, monkeypatch):
-    evil = dict(pick.pool()[0], why="</script><script>alert(1)</script>", id="movie/evil", slug="evil")
-    monkeypatch.setattr(pick, "_pool", [evil])
-    html = client.get("/pick").text
-    assert "</script><script>alert(1)" not in html
-    assert pool_json(html)[0]["why"] == "</script><script>alert(1)</script>"
+def test_pool_endpoint_serves_every_pick_with_public_details_only(client):
+    response = client.get("/api/pick/pool")
+    assert response.status_code == 200
+    assert response.headers["cache-control"] == "public, max-age=600"
+    picks = response.json()["picks"]
+    assert len(picks) == len(pick.pool())
+    arrival = next(row for row in picks if row["id"] == "movie/arrival-2016")
+    assert set(arrival) == {"id", "kind", "slug", "label", "title", "year", "creator", "why", "caveat", "source",
+                            "sourceUrl", "url", "image"}
+    assert arrival["sourceUrl"] == "/discover/distant-futures" and arrival["url"] is None
 
 
 def test_signed_in_visitors_get_an_add_button_instead_of_the_guest_list(client):

@@ -1,5 +1,6 @@
 // Pick for me (/pick): one curated suggestion at a time.
-// The pool is embedded in the page (#pickPool), so picking needs no request.
+// The pool loads once from GET /api/pick/pool, so later picks need no request;
+// until it arrives (or without JavaScript) the format form reloads the page.
 // Visitors save picks to the guest list (guest-list.js handles the button);
 // members add them to their library through POST /api/pick/add.
 (function () {
@@ -191,17 +192,23 @@
     }
   }
 
-  function init() {
+  async function loadPool() {
+    try {
+      const response = await fetch('/api/pick/pool', { headers: { Accept: 'application/json' } });
+      if (!response.ok) return [];
+      const data = await response.json();
+      const picks = data && Array.isArray(data.picks) ? data.picks : [];
+      return picks.filter(entry => entry && KINDS.has(entry.kind) && typeof entry.id === 'string');
+    } catch (error) {
+      return []; // The server-rendered pick and the plain form keep working.
+    }
+  }
+
+  async function init() {
     const tool = document.getElementById('pick-tool');
     const card = document.getElementById('pickCard');
-    const data = document.getElementById('pickPool');
-    if (!tool || !card || !data) return;
-    let pool = [];
-    try {
-      pool = JSON.parse(data.textContent || '[]').filter(entry => entry && KINDS.has(entry.kind) && typeof entry.id === 'string');
-    } catch (error) {
-      return; // The server-rendered pick and the plain form keep working.
-    }
+    if (!tool || !card) return;
+    const pool = await loadPool();
     if (!pool.length) return;
     const signedIn = tool.dataset.signedIn === 'true';
     const form = tool.querySelector('[data-pick-form]');
