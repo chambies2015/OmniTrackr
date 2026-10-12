@@ -31,7 +31,7 @@ def monthly_for(slug):
     return MONTHLY_EDITIONS[slug]
 
 
-def page(title, description, path, content, *, indexable=True, structured_data=None):
+def page(title, description, path, content, *, indexable=True, structured_data=None, head=''):
     html = apply_site_chrome((Path(__file__).parents[1] / "templates" / "discover.html").read_text(encoding="utf-8"))
     robots = "index, follow, max-image-preview:large" if indexable else "noindex, follow"
     for key, value in {"TITLE": escape(title), "DESCRIPTION": escape(description, quote=True), "PATH": path, "ROBOTS": robots, "CONTENT": content}.items():
@@ -41,7 +41,7 @@ def page(title, description, path, content, *, indexable=True, structured_data=N
     if structured_data:
         payload = json.dumps(structured_data, ensure_ascii=False).replace('&', '\\u0026').replace('<', '\\u003c').replace('>', '\\u003e')
         structured = f'<script type="application/ld+json">{payload}</script>'
-    html = html.replace('{{STRUCTURED_DATA}}', structured)
+    html = html.replace('{{STRUCTURED_DATA}}', structured + head)
     response = strict_html_response(html)
     if not indexable:
         response.headers["X-Robots-Tag"] = "noindex, follow"

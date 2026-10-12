@@ -675,3 +675,25 @@ Amazon Associates disclosure, `rel="sponsored"`, and a new tab. Discover trails
 stay affiliate-free because they promise informational source links.
 
 Local preview with fixtures (no network): `python -m tests.manual_release_radar_preview`.
+
+## Pick for me (/pick)
+
+A public "can't decide" page that suggests one title at a time. The pool
+(`app/pick.py`) is built from editorial writing already in code: Discover
+trails, monthly editions and the editors' starter collections, de-duplicated by
+format and title. Nothing reads members' libraries except the cached title
+search index, used only for artwork and to link picks that already have a
+title page (so the page never links to a 404).
+
+Picking happens in the browser from the pool embedded in the page; without
+JavaScript the format form reloads `/pick?format=...`. `/pick` is indexable and
+in the sitemap; `?format=` and shared `?pick=` links are noindex.
+
+Visitors save a pick to the guest list. `POST /api/guest-list/import` now
+falls back to the curated pool when no member tracks that title yet. Members
+use `POST /api/pick/add` (30/minute), which reuses a title they already have
+(case-insensitive) and otherwise creates an unfinished, unrated record with
+only the title, year and creator. No schema change.
+
+Site stats rows: "Pick for me suggestion asked for" and "Pick for me suggestion
+saved to a list or library".

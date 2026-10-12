@@ -38,6 +38,8 @@ REJECTIONS = (
 GUEST = (
     ("title_search_used", "Guest searched for a title on the homepage"),
     ("guest_pick_added", "Guest saved a title"),
+    ("pick_used", "Pick for me suggestion asked for"),
+    ("pick_saved", "Pick for me suggestion saved to a list or library"),
     ("guest_list_signup", "Guest with saved titles opened sign-up"),
     ("guest_list_imported", "Saved titles moved into a new library"),
     ("share_clicked", "Share button used on a public page"),
@@ -46,7 +48,7 @@ GUEST = (
 SERVER_EVENTS = {name for name, _ in STEPS + REJECTIONS + GUEST}
 # Events a browser may report; everything else is recorded on the server only.
 CLIENT_EVENTS = {"signup_form_opened", "signup_rejected_invalid", "guest_pick_added", "guest_list_signup", "share_clicked",
-                 "recap_kofi_clicked", "title_search_used"}
+                 "recap_kofi_clicked", "title_search_used", "pick_used", "pick_saved"}
 
 
 def record(event: str, request=None) -> bool:
