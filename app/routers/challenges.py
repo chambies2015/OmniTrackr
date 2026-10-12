@@ -209,7 +209,19 @@ def challenges_index(db: Session = Depends(get_db)):
         + _how_it_counts()
     )
     description = "A small, opt-in challenge every month across movies, TV, anime, games, music and books, with a written guide."
-    return page("Monthly challenges", description, "/challenges", content, indexable=bool(months))
+    structured = {
+        "@context": "https://schema.org", "@type": "CollectionPage",
+        "name": "Monthly challenges", "url": challenges.SITE_URL + "/challenges",
+        "description": description, "inLanguage": "en-US",
+        "isPartOf": {"@type": "WebSite", "name": "OmniTrackr", "url": challenges.SITE_URL + "/"},
+        "mainEntity": {"@type": "ItemList", "itemListElement": [
+            {"@type": "ListItem", "position": position, "name": f'{challenges.month_label(month)}: {challenges.CHALLENGES[month]["name"]}',
+             "url": f"{challenges.SITE_URL}/challenges/{challenges.slug_for(month)}"}
+            for position, month in enumerate(months, start=1)
+        ]},
+    }
+    return page("Monthly media challenges", description, "/challenges", content, indexable=bool(months),
+                structured_data=structured if months else None)
 
 
 @router.get("/challenges/{slug}", include_in_schema=False)

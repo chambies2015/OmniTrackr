@@ -43,6 +43,13 @@ CORE_SITEMAP_PATHS = (
     ("/review-guidelines", "monthly", "0.75"),
     ("/sample-library", "monthly", "0.8"),
     ("/pick", "weekly", "0.7"),
+    ("/movie-tracker", "monthly", "0.75"),
+    ("/tv-show-tracker", "monthly", "0.75"),
+    ("/anime-tracker", "monthly", "0.75"),
+    ("/game-tracker", "monthly", "0.75"),
+    ("/book-tracker", "monthly", "0.75"),
+    ("/music-tracker", "monthly", "0.75"),
+    ("/use-cases", "monthly", "0.7"),
 )
 
 
@@ -244,7 +251,7 @@ async def get_sitemap(request: Request = None, db: Session = Depends(get_db)):
         pass
     
     from ..discover_catalog import MONTHLY_EDITIONS
-    sitemap_parts.append(f"<url><loc>{base_url}/discover</loc></url>")
+    sitemap_parts.append(f"<url><loc>{base_url}/discover</loc><changefreq>weekly</changefreq><priority>0.8</priority></url>")
     for slug, edition in MONTHLY_EDITIONS.items():
         sitemap_parts.append(
             f"<url><loc>{base_url}/discover/monthly/{slug}</loc>"

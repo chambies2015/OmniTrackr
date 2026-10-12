@@ -7,6 +7,8 @@ recommendations; the catalog remains the authority for saved-title metadata.
 GUIDES = {
     "one-evening-well-spent": {
         "reviewed": "2026-09-24",
+        # Search result title; the page heading keeps the trail name.
+        "search_title": "Something great for one evening: a film, show, game or album",
         "summary": "Choose between Before Sunset, The Good Place, Florence, and Blue with a practical guide to attention, emotional tone, and where to stop for the evening.",
         "lead": [
             "An evening can be short in several different ways. You might have little time, little patience for learning a new world, or enough energy to listen but not to follow a screen. Those are different needs. This guide compares four ways to spend a sitting: a conversation-led film, the beginning of a television comedy, an interactive relationship story, and a complete album.",
@@ -100,6 +102,7 @@ GUIDES = {
     },
     "finding-your-feet": {
         "reviewed": "2026-09-24",
+        "search_title": "Stories about starting over: Kiki, Stardew Valley and more",
         "summary": "Compare Kiki's Delivery Service, Stardew Valley, Walter Mitty, and A Wizard of Earthsea by pace, commitment, and the kind of beginning you want to explore.",
         "lead": [
             "Starting over can mean leaving home, making somewhere habitable, taking a risk, or accepting responsibility for something that went wrong. Those changes do not feel alike. This selection uses four different forms to explore them, without treating a fresh beginning as a promise that uncertainty will disappear.",
@@ -193,6 +196,7 @@ GUIDES = {
     },
     "beautifully-strange-worlds": {
         "reviewed": "2026-09-24",
+        "search_title": "Strange worlds like Spirited Away, Mushishi and Outer Wilds",
         "summary": "Find your way into Spirited Away, Mushishi, Outer Wilds, or Piranesi with spoiler-conscious comparisons of pace, uncertainty, and how each world invites discovery.",
         "lead": [
             "An unfamiliar world can ask you to admire it, live beside it, investigate it, or reconsider what you think you know about it. These four works offer different versions of that invitation. Their appeal does not depend on arriving with a glossary or catching up on a long fictional history.",

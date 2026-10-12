@@ -692,7 +692,7 @@ def search_titles(request: Request, response: Response, q: str = Query("", max_l
 
 @router.get("/titles", include_in_schema=False)
 def titles_index(request: Request, db: Session = Depends(get_db)):
-    sections, total = [], 0
+    sections, total, listed = [], 0, []
     for kind in title_pages.KINDS:
         items = title_pages.popular(db, kind, limit=18)
         total += len(items)
@@ -700,6 +700,7 @@ def titles_index(request: Request, db: Session = Depends(get_db)):
             continue
         cards = ""
         for item in items:
+            listed.append(item)
             art = (f'<img src="{_e(item["image"])}" alt="" loading="lazy">' if item.get("image")
                    else f'<span>{_e(item["title"][:1].upper())}</span>')
             year = f" · {item['year']}" if item.get("year") else ""
@@ -716,20 +717,37 @@ def titles_index(request: Request, db: Session = Depends(get_db)):
     # The directory itself is mostly links; it's only worth indexing once enough titles have member reviews.
     index_directory = len(title_pages.reviewed_titles(db)) >= 8
     robots = "index, follow" if index_directory else "noindex, follow"
+    index_description = ("The movies, TV shows, anime, games, books and albums OmniTrackr members track most, "
+                         "each with details, trailers, scores and member reviews.")
+    item_list = {"@context": "https://schema.org", "@type": "CollectionPage", "name": "Popular titles on OmniTrackr",
+                 "url": f"{SITE_URL}/titles", "description": index_description,
+                 "mainEntity": {"@type": "ItemList", "itemListElement": [
+                     {"@type": "ListItem", "position": position, "name": item["title"], "url": SITE_URL + item["url"]}
+                     for position, item in enumerate(listed[:100], start=1)]}}
+    item_list_json = json.dumps(item_list, ensure_ascii=False).replace("</", "<\\/")
+    structured = f'<script type="application/ld+json">{item_list_json}</script>' if listed else ""
     page = f"""<!DOCTYPE html>
 <html lang="en">
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Popular titles on OmniTrackr: movies, shows, anime, games, books and albums</title>
-  <meta name="description" content="The movies, TV shows, anime, games, books and albums OmniTrackr members track most, each with details, trailers, scores and member reviews.">
+  <meta name="description" content="{_e(index_description)}">
   <meta name="robots" content="{robots}">
   <link rel="canonical" href="{SITE_URL}/titles">
+  <meta property="og:title" content="Popular titles on OmniTrackr">
+  <meta property="og:description" content="{_e(index_description)}">
+  <meta property="og:type" content="website">
+  <meta property="og:url" content="{SITE_URL}/titles">
+  <meta property="og:site_name" content="OmniTrackr">
+  <meta property="og:image" content="{SITE_URL}/omnitrackr_vortex.png">
+  <meta name="twitter:card" content="summary">
   <link rel="icon" type="image/x-icon" href="/omnitrackr_favicon.ico">
   <link rel="preload" href="/static/fonts/poppins-700-latin.woff2" as="font" type="font/woff2" crossorigin>
   <link rel="preload" href="/static/fonts/poppins-800-latin.woff2" as="font" type="font/woff2" crossorigin>
   <link rel="stylesheet" href="/static/fonts.css?v=20261009-fonts-1">
   <link rel="stylesheet" href="/static/title-page.css?v={CSS_VERSION}">
+  {structured}
 </head>
 <body class="site title-page">
   <!--SITE_NAV:titles-->

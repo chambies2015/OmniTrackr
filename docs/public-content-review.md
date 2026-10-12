@@ -1,5 +1,15 @@
 # Public content review — September 17, 2026
 
+## Follow-up — October 12, 2026: category tracker guides indexed
+
+Dan chose to let search engines index the six category tracker guides
+(`/movie-tracker`, `/tv-show-tracker`, `/anime-tracker`, `/game-tracker`,
+`/book-tracker`, `/music-tracker`) and `/use-cases`, and to list them in the
+sitemap. They match real search demand ("anime tracker", "game backlog
+tracker"). They stay outside `AD_ELIGIBLE_TEMPLATES`, so ad inventory is
+unchanged. Templates, checklist, statistics guide, roadmap and changelog keep
+`noindex, follow`. This supersedes the October 8 note below for those seven pages.
+
 ## Follow-up — October 8, 2026: AdSense reviewer pass
 
 Reviewed the public site from the code as an AdSense reviewer would reach it
