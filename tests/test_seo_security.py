@@ -304,13 +304,13 @@ class TestSEOEndpoints:
         for path in (
             "/about", "/faq", "/guides", "/export-import-guide",
             "/review-guidelines", "/sample-library", "/demo", "/media-tracking",
-            "/compare",
+            "/compare", "/use-cases",
+            "/tv-show-tracker", "/game-tracker", "/movie-tracker",
+            "/anime-tracker", "/book-tracker", "/music-tracker",
         ):
             assert path in content
         for path in (
-            "/use-cases", "/changelog", "/site-map",
-            "/tv-show-tracker", "/game-tracker", "/movie-tracker",
-            "/anime-tracker", "/book-tracker", "/music-tracker",
+            "/changelog", "/site-map",
             "/media-statistics", "/media-tracker-checklist",
             "/tracking-templates", "/roadmap",
         ):
@@ -710,14 +710,7 @@ class TestSecurityMiddleware:
     def test_overlapping_guides_remain_accessible_but_outside_search_inventory(self, client):
         """Consolidated guides should keep working for visitors and internal links."""
         supporting_paths = [
-            "/use-cases",
             "/changelog",
-            "/tv-show-tracker",
-            "/game-tracker",
-            "/movie-tracker",
-            "/anime-tracker",
-            "/book-tracker",
-            "/music-tracker",
             "/media-statistics",
             "/media-tracker-checklist",
             "/tracking-templates",

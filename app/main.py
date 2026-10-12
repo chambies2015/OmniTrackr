@@ -204,6 +204,16 @@ INDEXABLE_PUBLIC_TEMPLATES = {
     "privacy.html",
     "reviews.html",
     "terms.html",
+    # The category tracker guides and use cases answer the searches people actually
+    # type ("anime tracker", "game backlog tracker"). Indexed since October 2026,
+    # but still outside AD_ELIGIBLE_TEMPLATES, so ad inventory is unchanged.
+    "movie_tracker.html",
+    "tv_show_tracker.html",
+    "anime_tracker.html",
+    "game_tracker.html",
+    "book_tracker.html",
+    "music_tracker.html",
+    "use_cases.html",
 }
 
 # Ads are limited to the small set of pages that provide a complete experience

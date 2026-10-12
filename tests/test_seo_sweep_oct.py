@@ -82,3 +82,16 @@ def test_radar_category_description_names_real_titles(client, monkeypatch):
     description = meta(html, "name", "description")
     assert "including Alpha, Bravo and Charlie," in description
     assert meta(html, "name", "twitter:description") == description
+
+
+TRACKER_PAGES = ["/movie-tracker", "/tv-show-tracker", "/anime-tracker", "/game-tracker",
+                 "/book-tracker", "/music-tracker", "/use-cases"]
+
+
+@pytest.mark.parametrize("path", TRACKER_PAGES)
+def test_tracker_guides_are_indexable_in_the_sitemap_and_ad_free(client, path):
+    response = client.get(path)
+    assert meta(response.text, "name", "robots") == "index, follow, max-image-preview:large"
+    assert "x-robots-tag" not in response.headers
+    assert "/static/ad-loader.js" not in response.text
+    assert f"https://omnitrackr.xyz{path}</loc>" in client.get("/sitemap.xml").text
