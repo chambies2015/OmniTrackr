@@ -636,6 +636,16 @@ for route in challenges_router.router.routes:
         bind_rate_limited_endpoint(route, rate_limited_challenge_card)
 app.include_router(challenges_router.router)
 
+from .routers import pick as pick_router
+rate_limited_pick_add = limiter.limit("30/minute")(pick_router.add_pick)
+rate_limited_pick_pool = limiter.limit("60/minute")(pick_router.pick_pool)
+for route in pick_router.router.routes:
+    if getattr(route, "path", None) == "/api/pick/add":
+        bind_rate_limited_endpoint(route, rate_limited_pick_add)
+    elif getattr(route, "path", None) == "/api/pick/pool":
+        bind_rate_limited_endpoint(route, rate_limited_pick_pool)
+app.include_router(pick_router.router)
+
 
 @app.get("/", tags=["root"])
 @app.head("/", tags=["root"])

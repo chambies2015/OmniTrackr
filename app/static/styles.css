@@ -240,6 +240,8 @@ body.dark-mode .daily-dashboard .progress-checkpoint, body.dark-mode .next-up-qu
 .todays-pick__open:hover { background: #2dd4bf; border-color: #2dd4bf; }
 .todays-pick__another { background: transparent; border: 0; color: var(--primary); cursor: pointer; font: inherit; font-size: .82rem; font-weight: 700; padding: 7px 2px; }
 .todays-pick__another:hover { text-decoration: underline; }
+.todays-pick__new { align-items: center; display: inline-flex; color: var(--primary); font-size: .82rem; font-weight: 700; padding: 7px 2px; text-decoration: none; }
+.todays-pick__new:hover { text-decoration: underline; }
 .todays-pick__filter { display: flex; align-items: center; gap: 8px; margin: 0; color: var(--fg); font-size: .8rem; white-space: nowrap; }
 .todays-pick__filter select { width: auto; max-width: 100%; margin: 0; padding: 6px 10px; }
 tr.pick-focused { outline: 2px solid #14b8a6; outline-offset: -2px; }
@@ -314,7 +316,7 @@ table.mobile-library .review-cell-preview {
   .todays-pick__copy { grid-template-columns: minmax(0, 1fr); }
   .todays-pick__actions { justify-content: flex-start; }
   .todays-pick__filter select { min-height: 44px; }
-  .todays-pick__another { min-height: 44px; }
+  .todays-pick__another, .todays-pick__new { min-height: 44px; }
 }
 
 .library-pulse {

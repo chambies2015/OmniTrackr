@@ -15,7 +15,7 @@ from pydantic import BaseModel, Field, field_validator
 from sqlalchemy import func
 from sqlalchemy.orm import Session
 
-from .. import models, supporters, title_metadata, title_pages, title_search
+from .. import models, pick, supporters, title_metadata, title_pages, title_search
 from ..auth import AUTH_COOKIE_NAME
 from ..csp import strict_html_response
 from ..dependencies import get_current_user, get_db
@@ -665,10 +665,15 @@ def import_guest_list(
             continue
         seen.add(key)
         group = title_pages.find(db, item.kind, item.slug) if item.kind in title_pages.KINDS else None
-        if group is None:
+        curated = pick.find(item.kind, item.slug) if group is None else None
+        if group is None and curated is None:
             missing += 1
             continue
-        state, record = add_group_to_library(db, user, group)
+        if group is not None:
+            state, record = add_group_to_library(db, user, group)
+        else:
+            # A Pick for me suggestion no member tracks yet: copy the editors' title, year and creator.
+            state, record = pick.add_to_library(db, user, curated)
         entry = {"title": record.title, "category": title_pages.KINDS[item.kind][2]}
         (added if state == "created" else existing).append(entry)
     db.commit()
