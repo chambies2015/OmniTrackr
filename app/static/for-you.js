@@ -9,7 +9,7 @@
     'video-games': 'loadVideoGames', music: 'loadMusic', books: 'loadBooks',
   };
   const RADAR_TO_LIBRARY = { movies: 'movies', tv: 'tv-shows', anime: 'anime', games: 'video-games' };
-  const state = { request: 0, libraryTotal: 0, added: 0, busy: new Set(), email: {} };
+  const state = { request: 0, libraryTotal: 0, added: 0, busy: new Set(), email: {}, calendar: {} };
 
   const $ = id => document.getElementById(id);
   const apiBase = () => (typeof API_BASE === 'string' ? API_BASE : '');
@@ -320,6 +320,100 @@
     }
   }
 
+  // ---------------------------------------------------------- private release calendar
+
+  function calendarStatus(text) {
+    const status = $('releaseCalendarStatus');
+    if (status) status.textContent = text;
+  }
+
+  function renderCalendar(data) {
+    state.calendar = data || {};
+    const panel = $('releaseCalendarPanel');
+    const button = $('comingUpCalendarButton');
+    if (!panel || !button) return;
+    const links = state.calendar.enabled ? (state.calendar.links || {}) : null;
+    const safe = (url, prefix) => (typeof url === 'string' && url.startsWith(prefix) ? url : '#');
+    if (links) {
+      $('releaseCalendarGoogle').href = safe(links.google, 'https://calendar.google.com/');
+      $('releaseCalendarApple').href = safe(links.webcal, 'webcal://');
+      $('releaseCalendarOutlook').href = safe(links.outlook, 'https://outlook.live.com/');
+    }
+    button.textContent = links ? 'My calendar' : 'Add to my calendar';
+  }
+
+  async function calendarRequest(method, path) {
+    const response = await fetch(`${apiBase()}${path}`, fetchOptions({ method }));
+    const data = await response.json().catch(() => ({}));
+    if (!response.ok) throw new Error(data.detail || 'Could not update your calendar. Please try again.');
+    return data;
+  }
+
+  async function openCalendar() {
+    const panel = $('releaseCalendarPanel');
+    const button = $('comingUpCalendarButton');
+    if (!panel || !button) return;
+    if (!panel.hidden) {
+      panel.hidden = true;
+      button.setAttribute('aria-expanded', 'false');
+      return;
+    }
+    button.disabled = true;
+    try {
+      renderCalendar(await calendarRequest('POST', '/api/calendar'));
+      panel.hidden = false;
+      button.setAttribute('aria-expanded', 'true');
+      calendarStatus('');
+    } catch (error) {
+      calendarStatus(error.message);
+      const status = $('comingUpStatus');
+      if (status) status.textContent = error.message;
+    } finally {
+      button.disabled = false;
+    }
+  }
+
+  async function copyCalendar() {
+    const url = state.calendar && state.calendar.links && state.calendar.links.url;
+    if (!url) return;
+    try {
+      await navigator.clipboard.writeText(url);
+      calendarStatus('Address copied. In your calendar app, choose "Add calendar from URL" or "Subscribe" and paste it.');
+    } catch (error) {
+      calendarStatus(`Paste this address into your calendar app: ${url}`);
+    }
+  }
+
+  async function resetCalendar() {
+    try {
+      renderCalendar(await calendarRequest('POST', '/api/calendar/reset'));
+      calendarStatus('New address ready. The old one has stopped working, so add this one to your calendar again.');
+    } catch (error) {
+      calendarStatus(error.message);
+    }
+  }
+
+  async function turnOffCalendar() {
+    try {
+      renderCalendar(await calendarRequest('DELETE', '/api/calendar'));
+      $('releaseCalendarPanel').hidden = true;
+      $('comingUpCalendarButton').setAttribute('aria-expanded', 'false');
+      const status = $('comingUpStatus');
+      if (status) status.textContent = 'Calendar turned off. Its address no longer works; you can remove it from your calendar app.';
+    } catch (error) {
+      calendarStatus(error.message);
+    }
+  }
+
+  function openCalendarFromLink() {
+    if (window.location.hash !== '#release-calendar' || state.calendarLinkHandled) return;
+    const section = $('comingUp');
+    if (!section || section.hidden) return;
+    state.calendarLinkHandled = true;
+    section.scrollIntoView({ block: 'start' });
+    if ($('releaseCalendarPanel').hidden) openCalendar();
+  }
+
   async function getJson(path) {
     const response = await fetch(`${apiBase()}${path}`, fetchOptions());
     if (!response.ok) throw new Error(`HTTP ${response.status}`);
@@ -350,6 +444,7 @@
       // While quick start is showing its own release picks, only show real library matches here.
       renderComingUp(starterShown ? { ...comingUp, popular: [] } : comingUp);
       renderInvites();
+      openCalendarFromLink();
     } catch (error) {
       // Suggestions are optional; the library works without them.
     }
@@ -373,12 +468,19 @@
     });
     const toggle = $('comingUpEmailToggle');
     if (toggle) toggle.addEventListener('change', saveEmail);
+    const handlers = {
+      comingUpCalendarButton: openCalendar, releaseCalendarCopy: copyCalendar,
+      releaseCalendarReset: resetCalendar, releaseCalendarOff: turnOffCalendar,
+    };
+    Object.entries(handlers).forEach(([id, handler]) => { const node = $(id); if (node) node.addEventListener('click', handler); });
+    window.addEventListener('hashchange', () => { state.calendarLinkHandled = false; openCalendarFromLink(); });
   }
 
   window.refreshForYou = refreshForYou;
   window.resetForYou = resetForYou;
   if (typeof module !== 'undefined' && module.exports) {
-    module.exports = { friendlyDate, renderStarter, renderComingUp, renderInvites, acceptInvite, dismissInvite, state, STARTER_GOAL };
+    module.exports = { friendlyDate, renderStarter, renderComingUp, renderInvites, acceptInvite, dismissInvite, state, STARTER_GOAL,
+      renderCalendar, openCalendar, copyCalendar, resetCalendar, turnOffCalendar };
   } else if (document.readyState === 'loading') {
     document.addEventListener('DOMContentLoaded', init);
   } else {

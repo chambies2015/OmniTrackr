@@ -676,6 +676,39 @@ stay affiliate-free because they promise informational source links.
 
 Local preview with fixtures (no network): `python -m tests.manual_release_radar_preview`.
 
+## Release calendars
+
+Release Radar dates can be subscribed to from any calendar app
+(`app/release_calendar.py`, `app/routers/calendar.py`). Feeds are plain
+iCalendar with all-day events, a stable UID per title (so a moved date updates
+in place) and a 12-hour refresh hint. They are built only from Release Radar's
+cache, so a calendar app polling them never triggers an outside API call
+beyond the radar's normal refresh; a cold section waits a few seconds once,
+then serves a valid empty calendar with a five-minute cache.
+
+Public feeds need no account: `/calendar/release-radar.ics` (the 15 most
+followed titles per section and period) and `/calendar/release-radar/{movies,tv,anime,games}.ics`
+(the whole section). Each Release Radar page has a box with Google Calendar,
+Apple Calendar (webcal), Outlook and "Copy address" links, plus a link that
+invites guests to sign up for a private calendar. Clicks are counted as the
+anonymous funnel event `calendar_subscribe_clicked`.
+
+A member's private feed lists only releases connected to their library (the
+same matching as "Coming up for you" and release day alerts) from two weeks
+back to four months ahead. It is turned on from "Add to my calendar" on the
+"Coming up for you" card. The address is `/calendar/u/feed-{token}.ics`,
+where the token is random and stored in the new `calendar_feeds` table; there
+is no "/" right before the token so the bot filter's path scan never trips on
+it. "Get a new address" swaps the token and "Turn off" deletes the row, so an
+old address returns 404 at once, as does the feed of a deactivated account.
+Events carry titles, dates and a Release Radar link only, never ratings,
+notes, usernames or emails. `last_fetched_at` is written at most every six
+hours and only feeds the Site stats count of calendars refreshed in the last
+seven days.
+
+Schema: one new table (`calendar_feeds`), created by `create_all`. No existing
+table or row changes.
+
 ## Pick for me (/pick)
 
 A public "can't decide" page that suggests one title at a time. The pool

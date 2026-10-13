@@ -656,6 +656,20 @@ for route in pick_router.router.routes:
         bind_rate_limited_endpoint(route, rate_limited_pick_pool)
 app.include_router(pick_router.router)
 
+from .routers import calendar as calendar_router
+rate_limited_calendar_all = limiter.limit("60/minute")(calendar_router.release_radar_calendar)
+rate_limited_calendar_section = limiter.limit("60/minute")(calendar_router.release_radar_section_calendar)
+rate_limited_calendar_member = limiter.limit("30/minute")(calendar_router.member_calendar)
+for route in calendar_router.router.routes:
+    path = getattr(route, "path", None)
+    if path == "/calendar/release-radar.ics":
+        bind_rate_limited_endpoint(route, rate_limited_calendar_all)
+    elif path == "/calendar/release-radar/{feed}.ics":
+        bind_rate_limited_endpoint(route, rate_limited_calendar_section)
+    elif path == "/calendar/u/feed-{token}.ics":
+        bind_rate_limited_endpoint(route, rate_limited_calendar_member)
+app.include_router(calendar_router.router)
+
 
 @app.get("/", tags=["root"])
 @app.head("/", tags=["root"])

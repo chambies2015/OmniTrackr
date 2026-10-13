@@ -421,6 +421,7 @@
 
   function growthRows(growth) {
     const { invites, supporters, weekly_email: email, takes } = growth;
+    const calendar = growth.calendar || {};
     return {
       growthInvites: [
         { label: 'Sign-ups through an invite', count: invites.signups },
@@ -441,6 +442,11 @@
         { label: 'Subscribers (now)', count: email.subscribers },
         { label: 'New opt-ins', count: email.new },
       ],
+      growthCalendar: [
+        { label: 'Members with a private calendar (now)', count: calendar.feeds || 0 },
+        { label: 'Calendars refreshed in the last 7 days (now)', count: calendar.refreshed_7d || 0 },
+        { label: 'New private calendars', count: calendar.new || 0 },
+      ],
       growthTakes: [
         { label: 'Links shared', count: takes.asked },
         { label: 'Friends who answered', count: takes.answered },
@@ -452,6 +458,7 @@
     growthInvites: 'Friend invite links',
     growthSupporters: 'Ko-fi supporters',
     growthEmail: 'Weekly email',
+    growthCalendar: 'Release calendar',
     growthTakes: 'Ask a friend for their take',
   };
 
@@ -469,7 +476,7 @@
     if (!card) return;
     card.hidden = !data.growth;
     if (!data.growth) return;
-    $('growthNote').textContent = `Invite links, Ko-fi supporters, the weekly email and "ask a friend" in the last ${data.days} days. Rows marked "now" are current totals.`;
+    $('growthNote').textContent = `Invite links, Ko-fi supporters, the weekly email, release calendars and "ask a friend" in the last ${data.days} days. Rows marked "now" are current totals.`;
     Object.entries(growthRows(data.growth)).forEach(([id, items]) => {
       const list = $(id);
       list.replaceChildren();

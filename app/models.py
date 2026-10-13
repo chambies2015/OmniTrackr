@@ -832,6 +832,21 @@ class Supporter(Base):
     updated_at = Column(DateTime, nullable=False, default=datetime.utcnow, onupdate=datetime.utcnow)
 
 
+class CalendarFeed(Base):
+    """A member's private release calendar address (Oct 2026). A new table only.
+
+    A row exists only while the feed is on; turning it off deletes the row, and a
+    reset replaces the token so the old address stops working.
+    """
+    __tablename__ = "calendar_feeds"
+
+    id = Column(Integer, primary_key=True, index=True)
+    user_id = Column(Integer, ForeignKey("users.id", ondelete="CASCADE"), nullable=False, unique=True, index=True)
+    token = Column(String(64), nullable=False, unique=True, index=True)
+    created_at = Column(DateTime, nullable=False, default=datetime.utcnow)
+    last_fetched_at = Column(DateTime, nullable=True)
+
+
 class KofiPayment(Base):
     """One Ko-fi webhook delivery, kept so a retried delivery is never counted twice.
 
