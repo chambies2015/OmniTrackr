@@ -14,6 +14,7 @@ from sqlalchemy import func
 from sqlalchemy.orm import Session
 
 from .. import affiliate, models
+from .. import release_calendar
 from .. import release_radar as radar
 from ..csp import strict_html_response
 from ..site_chrome import apply_site_chrome
@@ -171,6 +172,45 @@ def render_card(item: dict, count: int, return_path: str, *, compact: bool = Fal
         f'<p class="radar-card__date">{when}{note}</p><h3 class="radar-card__title">{title}</h3>{alt}{details}{platforms}'
         f'<ul class="radar-chips" aria-label="Tags">{chips}</ul>{community}'
         f'<div class="radar-card__actions">{add}{source}{buy}</div></div></article>'
+    )
+
+
+CALENDAR_WHAT = {
+    "all": "the most followed new movies, TV premieres, anime and games",
+    "movies": "every new movie on this radar",
+    "tv": "every TV premiere and new season on this radar",
+    "anime": "every show in this anime season and the next",
+    "games": "every game release on this radar",
+}
+
+
+def _calendar_box(category: Optional[str]) -> str:
+    """Subscribe-in-your-calendar links for this section (or the highlights on the overview)."""
+    feed = category or "all"
+    name = release_calendar.FEED_NAMES[feed]
+    links = release_calendar.subscribe_links(release_calendar.public_feed_path(feed), name)
+    what = CALENDAR_WHAT[feed]
+
+    def button(label: str, href: str, kind: str, primary: bool = False) -> str:
+        extra = ' target="_blank" rel="noopener nofollow"' if href.startswith("https://") and kind != "file" else ' rel="nofollow"'
+        cls = "radar-calendar__btn" + (" radar-calendar__btn--primary" if primary else "")
+        return f'<a class="{cls}" href="{escape(href, quote=True)}" data-calendar-link="{kind}"{extra}>{escape(label)}</a>'
+
+    return (
+        '<section class="radar-calendar" aria-labelledby="radar-calendar-title">'
+        '<div class="radar-calendar__text"><h2 id="radar-calendar-title">Put these dates in your calendar</h2>'
+        f'<p>Subscribe once and {escape(what)} will appear in the calendar you already use. '
+        'New dates and changes arrive on their own. No account needed.</p></div>'
+        '<div class="radar-calendar__actions">'
+        + button("Google Calendar", links["google"], "google", primary=True)
+        + button("Apple Calendar", links["webcal"], "apple")
+        + button("Outlook", links["outlook"], "outlook")
+        + f'<button type="button" class="radar-calendar__btn" data-calendar-copy="{escape(links["url"], quote=True)}" hidden>Copy address</button>'
+        + f'<noscript>{button("Calendar address", links["url"], "file")}</noscript>'
+        + '</div><p class="radar-calendar__member">Only want releases connected to what you track? '
+        f'<a href="{escape(_signin_href("/release-radar"), quote=True)}" rel="nofollow" data-calendar-member>Members get a private calendar of their own</a>, '
+        'built from their library: new seasons, sequels and release days.</p>'
+        '<p class="radar-calendar__status" role="status" aria-live="polite" data-calendar-status></p></section>'
     )
 
 
@@ -378,7 +418,7 @@ async def radar_hub(request: Request, db: Session = Depends(get_db)):
         '<p>New movies, TV premieres, the current anime season and upcoming games, side by side. '
         'Spot something you want to see, play or finish, and track it in one click.</p>'
         + (f'<p class="radar-hero__summary">{escape(summary)}</p>' if summary else "")
-        + '</header>' + _category_tabs(None) + strip_html + tracked_html + "".join(sections) + _about_section(None)
+        + '</header>' + _category_tabs(None) + strip_html + _calendar_box(None) + tracked_html + "".join(sections) + _about_section(None)
     )
     indexable = total >= MIN_INDEXABLE_ITEMS
     title = f"Release Radar: new movies, TV, anime and games for {windows['movies'].label}"
@@ -424,6 +464,7 @@ async def _category_page(request: Request, db: Session, category: str, window: r
         + _category_tabs(category) + _window_nav(category, window)
         + _status_message(entry, category)
         + _notes_html(notes)
+        + _calendar_box(category)
         + (_filters(category, items) if items else "")
         + f'<div id="radar-list" data-radar-category="{category}" data-radar-window="{window.slug}">{groups}</div>'
         + '<p id="radar-empty" class="trail-empty" hidden>Nothing matches those filters. Try another genre or clear the search.</p>'

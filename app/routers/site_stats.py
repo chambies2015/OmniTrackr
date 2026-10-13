@@ -174,7 +174,7 @@ def _count(query) -> int:
 
 
 def _growth(db: Session, days: int, now: datetime) -> dict:
-    """This month's growth features: invite links, Ko-fi supporters, weekly email and "ask a friend"."""
+    """This month's growth features: invite links, Ko-fi supporters, weekly email, release calendars and "ask a friend"."""
     start = now - timedelta(days=days)
     signup = models.FriendInviteSignup
     supporter = models.Supporter
@@ -198,6 +198,12 @@ def _growth(db: Session, days: int, now: datetime) -> dict:
         "weekly_email": {
             "subscribers": _count(db.query(func.count(models.EmailDigestSubscription.id))),
             "new": _counts_between(db, models.EmailDigestSubscription.created_at, start),
+        },
+        "calendar": {
+            "feeds": _count(db.query(func.count(models.CalendarFeed.id))),
+            "new": _counts_between(db, models.CalendarFeed.created_at, start),
+            "refreshed_7d": _count(db.query(func.count(models.CalendarFeed.id))
+                                   .filter(models.CalendarFeed.last_fetched_at >= now - timedelta(days=7))),
         },
         "takes": {
             "asked": _counts_between(db, models.TakeRequest.created_at, start),

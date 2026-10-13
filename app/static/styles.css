@@ -6522,3 +6522,18 @@ body.app-shell .month-challenge__status { color: var(--teal); }
   .year-goals .year-goals__field input { width: 72px; }
   .year-goals__form .action-btn { flex: 1; }
 }
+
+/* Private release calendar (Coming up for you) */
+.coming-up__tools { align-items: center; display: flex; flex-wrap: wrap; gap: 8px; }
+.coming-up__calendar-btn { background: rgba(20, 184, 166, 0.14); border: 1px solid rgba(20, 184, 166, 0.45); border-radius: 999px; color: var(--fg); cursor: pointer; font: inherit; font-size: 0.85rem; font-weight: 600; padding: 8px 14px; }
+.coming-up__calendar-btn:hover, .coming-up__calendar-btn[aria-expanded="true"] { background: rgba(20, 184, 166, 0.26); }
+.release-calendar { background: linear-gradient(135deg, rgba(20, 184, 166, 0.12), rgba(139, 92, 246, 0.14)); border: 1px solid rgba(20, 184, 166, 0.35); border-radius: 14px; display: grid; gap: 12px; margin: 14px 0; padding: 14px 16px; }
+.release-calendar[hidden] { display: none; }
+.release-calendar__text { color: var(--fg); font-size: 0.92rem; line-height: 1.5; margin: 0; }
+.release-calendar__actions, .release-calendar__manage { align-items: center; display: flex; flex-wrap: wrap; gap: 8px 10px; }
+.release-calendar__link { background: rgba(255, 255, 255, 0.06); border: 1px solid rgba(139, 92, 246, 0.35); border-radius: 999px; color: var(--fg); cursor: pointer; font: inherit; font-size: 0.85rem; font-weight: 600; padding: 7px 14px; text-decoration: none; }
+.release-calendar__link--primary { background: var(--accent-solid, #7c3aed); border-color: transparent; color: var(--on-accent, #fff); }
+.release-calendar__quiet { background: transparent; border: 0; color: var(--fg); cursor: pointer; font-size: 0.82rem; opacity: 0.7; padding: 4px 6px; }
+.release-calendar__quiet:hover { opacity: 1; text-decoration: underline; }
+.release-calendar__status { color: var(--fg); font-size: 0.85rem; margin: 0; opacity: 0.85; }
+.release-calendar__status:empty { display: none; }

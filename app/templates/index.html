@@ -48,11 +48,11 @@
   <link rel="apple-touch-icon" href="/static/icons/apple-touch-icon.png?v=20261003-pwa-1">
   <meta name="apple-mobile-web-app-title" content="OmniTrackr">
   <script src="/static/pwa.js?v=20261008-ios-1" defer></script>
-  <link rel="preload" href="./styles.css?v=20261012-pick-1" as="style">
+  <link rel="preload" href="./styles.css?v=20261013-calendar-1" as="style">
   <link rel="preload" href="/static/fonts/poppins-700-latin.woff2" as="font" type="font/woff2" crossorigin>
   <link rel="preload" href="/static/fonts/poppins-800-latin.woff2" as="font" type="font/woff2" crossorigin>
   <link rel="stylesheet" href="/static/fonts.css?v=20261009-fonts-1">
-  <link rel="stylesheet" href="./styles.css?v=20261012-pick-1">
+  <link rel="stylesheet" href="./styles.css?v=20261013-calendar-1">
   <link rel="stylesheet" href="/static/progress.css?v=20260922-progress">
   <link rel="stylesheet" href="/static/app-theme.css?v=20260924-friends-panel-2">
   <link rel="stylesheet" href="/static/library-theme.css?v=20260924-library-filters-1">
@@ -463,10 +463,27 @@
           <h2 id="comingUpTitle">Coming up for you</h2>
           <p id="comingUpSummary" class="for-you-card__summary"></p>
         </div>
-        <label id="comingUpEmail" class="coming-up__email" hidden>
-          <input type="checkbox" id="comingUpEmailToggle">
-          <span>Email me this weekly</span>
-        </label>
+        <div class="coming-up__tools">
+          <button type="button" id="comingUpCalendarButton" class="coming-up__calendar-btn" aria-expanded="false" aria-controls="releaseCalendarPanel">Add to my calendar</button>
+          <label id="comingUpEmail" class="coming-up__email" hidden>
+            <input type="checkbox" id="comingUpEmailToggle">
+            <span>Email me this weekly</span>
+          </label>
+        </div>
+      </div>
+      <div id="releaseCalendarPanel" class="release-calendar" hidden>
+        <p class="release-calendar__text"><strong>Your private release calendar.</strong> New seasons, sequels and release days connected to your library appear in the calendar you already use and update on their own. Only you have this address, and it shows titles and dates, nothing else from your library.</p>
+        <div class="release-calendar__actions">
+          <a id="releaseCalendarGoogle" class="release-calendar__link release-calendar__link--primary" href="#" target="_blank" rel="noopener">Google Calendar</a>
+          <a id="releaseCalendarApple" class="release-calendar__link" href="#">Apple Calendar</a>
+          <a id="releaseCalendarOutlook" class="release-calendar__link" href="#" target="_blank" rel="noopener">Outlook</a>
+          <button type="button" id="releaseCalendarCopy" class="release-calendar__link">Copy address</button>
+        </div>
+        <div class="release-calendar__manage">
+          <button type="button" id="releaseCalendarReset" class="release-calendar__quiet">Get a new address</button>
+          <button type="button" id="releaseCalendarOff" class="release-calendar__quiet">Turn off</button>
+        </div>
+        <p id="releaseCalendarStatus" class="release-calendar__status" role="status" aria-live="polite"></p>
       </div>
       <div class="weekly-invite" data-weekly-invite="coming-up" hidden>
         <p class="weekly-invite__text"><strong>Get a weekly heads-up.</strong> A short email when something you track has a new episode, season or release. Quiet weeks are skipped (just a monthly round-up), and every email has a one-click unsubscribe.</p>
@@ -1583,7 +1600,7 @@
   <script src="/static/import-studio.js?v=20261011-imdb-storygraph"></script>
   <script src="/static/progress.js?v=20260922-progress"></script>
   <script src="./app.js"></script>
-  <script src="/static/for-you.js?v=20261007-weekly-1"></script>
+  <script src="/static/for-you.js?v=20261013-calendar-1"></script>
   <script src="/static/title-links.js?v=20261008-speed-1"></script>
   <script src="/static/public-profile.js?v=20261002-profiles-1"></script>
   <script src="/static/supporter.js?v=20261008-supporters-1"></script>

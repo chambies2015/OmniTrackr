@@ -13,6 +13,43 @@
     });
   }
 
+  // ---- Calendar subscribe box ---------------------------------------------
+  const calendarBox = document.querySelector('.radar-calendar');
+  if (calendarBox) {
+    const status = calendarBox.querySelector('[data-calendar-status]');
+    const counted = () => {
+      try {
+        if (navigator.sendBeacon) {
+          navigator.sendBeacon('/api/funnel', new Blob([JSON.stringify({ event: 'calendar_subscribe_clicked' })], { type: 'application/json' }));
+        }
+      } catch (_) { /* counting is optional */ }
+    };
+    calendarBox.querySelectorAll('[data-calendar-link]').forEach(link => link.addEventListener('click', counted));
+    const copy = calendarBox.querySelector('[data-calendar-copy]');
+    if (copy && navigator.clipboard) {
+      copy.hidden = false;
+      copy.addEventListener('click', async () => {
+        try {
+          await navigator.clipboard.writeText(copy.dataset.calendarCopy);
+          counted();
+          if (status) status.textContent = 'Calendar address copied. Paste it into your calendar app under "Add calendar from URL" or "Subscribe".';
+        } catch (_) {
+          if (status) status.textContent = `Copy this address into your calendar app: ${copy.dataset.calendarCopy}`;
+        }
+      });
+    }
+    const member = calendarBox.querySelector('[data-calendar-member]');
+    let signedIn = false;
+    try { signedIn = !!(localStorage.getItem('omnitrackr_user') || localStorage.getItem('omnitrackr_token')); } catch (_) {}
+    if (member && signedIn) {
+      const link = document.createElement('a');
+      link.href = '/#release-calendar';
+      link.textContent = 'Turn on your private calendar';
+      member.parentNode.replaceChildren('Only want releases connected to what you track? ', link,
+        ' from the "Coming up for you" card in your library.');
+    }
+  }
+
   // ---- Filters ------------------------------------------------------------
   const filters = document.getElementById('radar-filters');
   const list = document.getElementById('radar-list');
