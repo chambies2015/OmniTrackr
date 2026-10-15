@@ -656,6 +656,20 @@ for route in pick_router.router.routes:
         bind_rate_limited_endpoint(route, rate_limited_pick_pool)
 app.include_router(pick_router.router)
 
+from .routers import tier_list as tier_list_router
+rate_limited_tier_templates = limiter.limit("60/minute")(tier_list_router.tier_list_templates)
+rate_limited_tier_library = limiter.limit("30/minute")(tier_list_router.tier_list_library)
+rate_limited_tier_image = limiter.limit("240/minute")(tier_list_router.tier_list_image)
+for route in tier_list_router.router.routes:
+    path = getattr(route, "path", None)
+    if path == "/api/tier-list/templates":
+        bind_rate_limited_endpoint(route, rate_limited_tier_templates)
+    elif path == "/api/tier-list/library":
+        bind_rate_limited_endpoint(route, rate_limited_tier_library)
+    elif path == "/api/tier-list/image":
+        bind_rate_limited_endpoint(route, rate_limited_tier_image)
+app.include_router(tier_list_router.router)
+
 from .routers import calendar as calendar_router
 rate_limited_calendar_all = limiter.limit("60/minute")(calendar_router.release_radar_calendar)
 rate_limited_calendar_section = limiter.limit("60/minute")(calendar_router.release_radar_section_calendar)
