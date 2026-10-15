@@ -22,6 +22,13 @@ MAX_IMAGE_UPLOAD_BYTES = 5 * 1024 * 1024
 MAX_IMAGE_PIXELS = 20_000_000
 
 
+def _password_confirmed(user: models.User, password: str) -> bool:
+    """The current password matches, or the account was made with Google and has none yet."""
+    if not user.has_password:
+        return True
+    return bool(password) and auth.verify_password(password, user.hashed_password)
+
+
 @router.get("/me", response_model=schemas.User)
 async def get_current_account(current_user: models.User = Depends(get_current_user)):
     """Get current user's account information."""
@@ -35,7 +42,7 @@ async def change_username(
     db: Session = Depends(get_db)
 ):
     """Change username (requires password confirmation)."""
-    if not auth.verify_password(username_change.password, current_user.hashed_password):
+    if not _password_confirmed(current_user, username_change.password):
         raise HTTPException(status_code=401, detail="Incorrect password")
     
     from ..signup_rules import username_problem, username_taken
@@ -74,7 +81,7 @@ async def change_email(
     db: Session = Depends(get_db)
 ):
     """Change email address (requires password + sends verification email to new address)."""
-    if not auth.verify_password(email_change.password, current_user.hashed_password):
+    if not _password_confirmed(current_user, email_change.password):
         raise HTTPException(status_code=401, detail="Incorrect password")
     
     existing_user = crud.get_user_by_email(db, email_change.new_email)
@@ -108,7 +115,7 @@ async def change_password(
     db: Session = Depends(get_db)
 ):
     """Change password (requires current password)."""
-    if not auth.verify_password(password_change.current_password, current_user.hashed_password):
+    if not _password_confirmed(current_user, password_change.current_password):
         raise HTTPException(status_code=401, detail="Incorrect current password")
     
     is_valid, error_msg = auth.validate_password_strength(
@@ -123,9 +130,10 @@ async def change_password(
     if updated_user is None:
         raise HTTPException(status_code=404, detail="User not found")
     # A reset link emailed before this change must not undo it.
-    if updated_user.reset_token or updated_user.reset_token_expires:
+    if updated_user.reset_token or updated_user.reset_token_expires or not updated_user.has_password:
         updated_user.reset_token = None
         updated_user.reset_token_expires = None
+        updated_user.password_set = True
         db.commit()
 
     # Other devices are signed out by the new password; keep this one signed in.
@@ -349,6 +357,9 @@ async def deactivate_account(
     db: Session = Depends(get_db)
 ):
     """Deactivate account (soft delete, requires password confirmation)."""
+    if not current_user.has_password:
+        # Reactivating later needs a password, so an account made with Google chooses one first.
+        raise HTTPException(status_code=400, detail="Set a password under Change Password first. You'll need it to reactivate your account later.")
     if not auth.verify_password(deactivate.password, current_user.hashed_password):
         raise HTTPException(status_code=401, detail="Incorrect password")
     

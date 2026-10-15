@@ -370,3 +370,11 @@ body.lp #landingPage { background: none; display: block; min-height: 0; padding:
   .lp-search__bar .lp-btn { flex: 1 1 100%; }
 }
 .lp-hero__copy { min-width: 0; } /* long result titles ellipsize instead of widening the hero on phones */
+
+/* Sign in with Google (shown only once the owner configures it) */
+.lp .lp-auth__card .auth-google { align-items: center; background: #fff; border: 1px solid #dadce0; border-radius: 12px; color: #1f1f1f; display: flex; font: 600 1rem Inter, sans-serif; gap: 12px; justify-content: center; min-height: 50px; padding: 12px 16px; text-decoration: none; transition: background-color .15s ease, box-shadow .15s ease; }
+.lp .lp-auth__card .auth-google:hover { background: #f8f9fa; box-shadow: 0 6px 18px rgba(0, 0, 0, .25); }
+.lp .lp-auth__card .auth-google:focus-visible { box-shadow: 0 0 0 3px rgba(139, 92, 246, .55); outline: none; }
+.lp .lp-auth__card .auth-google__logo { flex: none; }
+.lp .lp-auth__card .auth-or { align-items: center; color: var(--lp-muted); display: flex; font-size: .85rem; gap: 12px; margin: 16px 0; }
+.lp .lp-auth__card .auth-or::before, .lp .lp-auth__card .auth-or::after { background: var(--lp-border-strong); content: ""; flex: 1; height: 1px; }

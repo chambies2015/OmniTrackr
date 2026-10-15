@@ -7,12 +7,12 @@ from datetime import datetime, timedelta, timezone
 from fastapi import APIRouter, Depends, HTTPException, status, Request, Response
 from fastapi.security import OAuth2PasswordRequestForm
 from fastapi.encoders import jsonable_encoder
-from fastapi.responses import JSONResponse
+from fastapi.responses import JSONResponse, RedirectResponse
 from sqlalchemy.orm import Session
 
 from .. import crud, schemas, models, auth, email as email_utils, return_prompt as return_prompt_tokens
 from ..dependencies import get_db
-from .. import funnel
+from .. import funnel, google_signin
 from ..signup_rules import username_problem, username_taken
 
 router = APIRouter(prefix="/auth", tags=["auth"])
@@ -444,6 +444,7 @@ async def reset_password(payload: schemas.PasswordReset, db: Session = Depends(g
         raise HTTPException(status_code=400, detail=error_msg)
     
     user.hashed_password = auth.get_password_hash(new_password)
+    user.password_set = True
     user.reset_token = None
     user.reset_token_expires = None
     db.commit()
@@ -502,3 +503,106 @@ async def reactivate_account_public(
     except ValueError as e:
         raise HTTPException(status_code=400, detail=str(e))
 
+
+
+# ---------------------------------------------------------------- Sign in with Google
+
+def _google_redirect(location: str) -> RedirectResponse:
+    response = RedirectResponse(location, status_code=303)
+    response.headers["Cache-Control"] = "no-store"
+    response.headers["Referrer-Policy"] = "no-referrer"
+    return response
+
+
+def _google_failure(code: str) -> RedirectResponse:
+    response = _google_redirect(f"/?google_error={code}#landing-auth")
+    response.delete_cookie(key=google_signin.STATE_COOKIE, path=google_signin.STATE_COOKIE_PATH,
+                           samesite="lax", secure=auth.ENVIRONMENT == "production", httponly=True)
+    return response
+
+
+@router.get("/google/start", include_in_schema=False)
+async def google_start(request: Request, invite: str | None = None):
+    """Send the visitor to Google's account chooser (only when the owner configured it)."""
+    if not google_signin.configured():
+        return _google_failure("unavailable")
+    funnel.record("google_signin_started", request)
+    state, cookie_value = google_signin.new_state(google_signin.valid_invite(invite))
+    response = _google_redirect(google_signin.authorize_url(state))
+    response.set_cookie(
+        key=google_signin.STATE_COOKIE,
+        value=cookie_value,
+        max_age=google_signin.STATE_MAX_AGE_SECONDS,
+        httponly=True,
+        secure=auth.ENVIRONMENT == "production",
+        samesite="lax",
+        path=google_signin.STATE_COOKIE_PATH,
+    )
+    return response
+
+
+@router.get("/google/callback", include_in_schema=False)
+async def google_callback(
+    request: Request,
+    code: str | None = None,
+    state: str | None = None,
+    error: str | None = None,
+    db: Session = Depends(get_db),
+):
+    """Finish Sign in with Google: check the state, read Google's answer, then sign in."""
+    if not google_signin.configured():
+        return _google_failure("unavailable")
+    try:
+        saved = google_signin.read_state(request.cookies.get(google_signin.STATE_COOKIE))
+        if not state or len(state) > 256 or not secrets.compare_digest(state, saved["state"]):
+            raise google_signin.SignInError("expired")
+        if error:
+            raise google_signin.SignInError("cancelled" if error == "access_denied" else "failed")
+        if not code or len(code) > 2048:
+            raise google_signin.SignInError("failed")
+        client = getattr(request.app.state, "external_api_client", None)
+        id_token = await google_signin.exchange_code(code, client)
+        profile = google_signin.read_id_token(id_token, saved["nonce"])
+        user, outcome = google_signin.find_or_create_user(db, profile)
+    except google_signin.SignInError as problem:
+        if problem.code != "cancelled":
+            funnel.record("google_signin_failed", request)
+        return _google_failure(problem.code)
+
+    if outcome == "created":
+        funnel.record("signup_created", request)
+        funnel.record("google_account_created", request)
+        if saved.get("invite"):
+            try:
+                from .. import friend_invites
+                if friend_invites.record_signup(db, saved["invite"], user):
+                    friend_invites.complete_signup(db, user)
+            except Exception as e:  # An invite never blocks sign-up.
+                db.rollback()
+                print(f"Failed to record friend invite: {e}")
+    elif outcome == "linked":
+        funnel.record("google_account_linked", request)
+        try:
+            from .. import friend_invites
+            friend_invites.complete_signup(db, user)  # Finishes an invite left waiting on verification.
+        except Exception as e:
+            db.rollback()
+            print(f"Failed to complete friend invite: {e}")
+    else:
+        funnel.record("google_signin", request)
+
+    if not user.login_count:
+        funnel.record("first_login", request)
+    user.last_login_at = datetime.now(timezone.utc).replace(tzinfo=None)
+    user.login_count = (user.login_count or 0) + 1
+    user.failed_login_attempts = 0
+    user.locked_until = None
+    db.commit()
+    db.refresh(user)
+
+    target = "/?signed_in=google&new=1" if outcome == "created" else "/?signed_in=google"
+    response = _google_redirect(target)
+    auth.set_auth_cookie(response, auth.create_user_access_token(user))
+    response.delete_cookie(key=google_signin.STATE_COOKIE, path=google_signin.STATE_COOKIE_PATH,
+                           samesite="lax", secure=auth.ENVIRONMENT == "production", httponly=True)
+    return response

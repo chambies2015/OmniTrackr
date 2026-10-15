@@ -998,14 +998,69 @@ function setupAuthHandlers() {
 // Initialization
 // ============================================================================
 
+// ============================================================================
+// Sign in with Google
+// ============================================================================
+
+// /auth/google/callback sends people back with ?google_error=<code>. Each code has
+// its own sentence here, so no text from the address bar is ever shown.
+const GOOGLE_ERRORS = {
+    cancelled: 'Google sign-in was cancelled. Try again, or use your email below.',
+    expired: 'That Google sign-in took too long or was opened in another tab. Please try again.',
+    failed: "Google sign-in didn't work this time. Please try again, or use your email below.",
+    unverified: "Google hasn't verified that email address yet, so it can't be used. Use your email below instead.",
+    deactivated: 'This account is deactivated. Log in with your password to reactivate it, or reset your password first.',
+    unavailable: "Google sign-in isn't available right now. Use your email below.",
+};
+
+function googleErrorMessage(code) {
+    return Object.hasOwn(GOOGLE_ERRORS, code) ? GOOGLE_ERRORS[code] : GOOGLE_ERRORS.failed;
+}
+
+function setupGoogleSignIn() {
+    // A friend's invite link travels with the visitor to Google and back.
+    if (typeof document.querySelectorAll !== 'function') return;
+    document.querySelectorAll('[data-google-signin]').forEach(link => {
+        link.addEventListener('click', () => {
+            const invite = getFriendInvite();
+            link.href = invite ? `/auth/google/start?invite=${encodeURIComponent(invite)}` : '/auth/google/start';
+        });
+    });
+}
+
+// The callback already set the session cookie; learn who signed in, then open the
+// library (or the page the visitor was on before signing up) like a password login.
+async function finishGoogleSignIn() {
+    try {
+        const response = await fetch(`${AUTH_API_BASE}/account/me`, { credentials: 'same-origin', cache: 'no-store' });
+        const user = response.ok ? await response.json() : null;
+        if (!user || !Number.isSafeInteger(user.id) || user.id < 1 || typeof user.username !== 'string') {
+            throw new Error('No session');
+        }
+        saveAuthData(null, user);
+        clearFriendInvite();
+        try { sessionStorage.removeItem(RETURN_PROMPT_KEY); } catch (_) { /* optional */ }
+        window.location.replace(consumeDiscoverAuthReturn());
+    } catch (_) {
+        window.history.replaceState({}, document.title, window.location.pathname);
+        showAuthModal();
+        displayAuthError(GOOGLE_ERRORS.failed);
+    }
+}
+
 function initAuth() {
     captureDiscoverAuthReturn();
     captureFriendInvite();
     captureDemoStartIntent();
     setupAuthHandlers();
+    setupGoogleSignIn();
 
     // Check URL parameters for email verification or password reset
     const urlParams = new URLSearchParams(window.location.search);
+
+    if (urlParams.get('signed_in') === 'google' && document.documentElement.dataset.publicShell !== 'true') {
+        return finishGoogleSignIn();
+    }
     const verifyToken = urlParams.get('token');
     const resetToken = urlParams.get('reset_token');
     const emailVerified = urlParams.get('email_verified');
@@ -1069,6 +1124,14 @@ function initAuth() {
     // private UI; stale localStorage must not reveal it on the public shell.
     if (document.documentElement.dataset.publicShell === 'true') {
         showAuthModal();
+        if (urlParams.has('google_error')) {
+            if (knownMember()) showLoginForm(false);
+            else showRegisterForm(false, { report: false });
+            displayAuthError(googleErrorMessage(urlParams.get('google_error')));
+            window.history.replaceState({}, document.title, window.location.pathname + '#landing-auth');
+            setTimeout(() => document.querySelector('.landing-auth')?.scrollIntoView({ block: 'center' }), 100);
+            return;
+        }
         if (window.location.hash === '#signup') {
             showRegisterForm();
             return;

@@ -274,6 +274,19 @@ def run_migrations():
                     conn.execute(text("UPDATE users SET login_count = 0 WHERE login_count IS NULL"))
                     conn.commit()
                     print("Added login_count column to users table")
+            if "google_sub" not in user_columns:
+                with engine.connect() as conn:
+                    conn.execute(text("ALTER TABLE users ADD COLUMN google_sub VARCHAR"))
+                    conn.commit()
+                    print("Added google_sub column to users table")
+            if "password_set" not in user_columns:
+                with engine.connect() as conn:
+                    conn.execute(text("ALTER TABLE users ADD COLUMN password_set BOOLEAN"))
+                    conn.commit()
+                    print("Added password_set column to users table")
+            with engine.connect() as conn:
+                conn.execute(text("CREATE UNIQUE INDEX IF NOT EXISTS ix_users_google_sub ON users(google_sub)"))
+                conn.commit()
             if database.DATABASE_URL.startswith("postgresql"):
                 with engine.connect() as conn:
                     conn.execute(text("CREATE INDEX IF NOT EXISTS ix_users_username ON users(username)"))

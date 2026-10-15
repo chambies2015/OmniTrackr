@@ -194,12 +194,40 @@ window.loadAccountInfo = async function () {
       // Email verification status
       document.getElementById('accountVerified').textContent = user.is_verified ? '✓ Verified' : '✗ Not Verified';
       document.getElementById('accountVerified').style.color = user.is_verified ? '#4caf50' : '#f44336';
+      applyPasswordState(user.has_password !== false);
     } else {
       console.error('Failed to load account info');
     }
   } catch (error) {
     console.error('Error loading account info:', error);
   }
+}
+
+// Accounts made with Google have no password until the member chooses one, so the
+// "Current password" boxes are hidden and Change Password becomes Set a Password.
+function applyPasswordState(hasPassword) {
+  ['usernamePassword', 'emailPassword', 'currentPassword'].forEach(id => {
+    const input = document.getElementById(id);
+    if (!input) return;
+    input.required = hasPassword;
+    if (!hasPassword) input.value = '';
+    if (input.parentElement) input.parentElement.hidden = !hasPassword;
+  });
+  const form = document.getElementById('changePasswordForm');
+  if (!form) return;
+  const heading = form.parentElement && form.parentElement.querySelector('h3');
+  if (heading) heading.textContent = hasPassword ? 'Change Password' : 'Set a Password';
+  const button = form.querySelector('button[type="submit"]');
+  if (button) button.textContent = hasPassword ? 'Change Password' : 'Set Password';
+  let note = document.getElementById('googlePasswordNote');
+  if (!hasPassword && !note) {
+    note = document.createElement('p');
+    note.id = 'googlePasswordNote';
+    note.className = 'account-note';
+    note.textContent = 'You signed up with Google, so this account has no password yet. Choose one to also log in with your email or username.';
+    form.prepend(note);
+  }
+  if (note) note.hidden = hasPassword;
 }
 
 window.changeUsername = async function (event) {
@@ -317,6 +345,7 @@ window.changePassword = async function (event) {
       successEl.textContent = data.message || 'Password changed successfully!';
       successEl.style.display = 'block';
       document.getElementById('changePasswordForm').reset();
+      applyPasswordState(true);
     } else {
       const error = await response.json();
       errorEl.textContent = error.detail || 'Failed to change password';
