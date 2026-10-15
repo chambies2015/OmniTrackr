@@ -5,7 +5,8 @@ that go from vague to obvious; a clue never contains a word of the answer, and
 tests check that. The note is shown once the puzzle is over and on its archive
 page, so it is written to be worth reading on its own.
 
-To add puzzles, append to PUZZLES. Never reorder or edit the answer of an entry
+When every puzzle has run, the game starts over from #1 on its own (see
+daily.bank_index). To add puzzles, append to PUZZLES. Never reorder or edit the answer of an entry
 that has already been published: puzzle numbers in people's shared results and
 the archive pages depend on the order.
 """
@@ -626,4 +627,587 @@ PUZZLES = (
     ], "Frank Darabont's film is about patience and hope more than prison, which is why so many people call it their "
        "favourite. It has sat at the top of IMDb's user ratings for many years. Morgan Freeman's narration makes it as easy to "
        "rewatch as a favourite book."),
+    _p("movie", "The Godfather", 1972, "Francis Ford Coppola", [], [
+        "A crime drama film from 1972, adapted from a best-selling novel.",
+        "It won the Academy Award for Best Picture, and its sequel won it too two years later.",
+        "It opens at a lavish wedding, where the head of a crime family hears requests from his guests.",
+        "A film producer wakes up next to the severed head of his prized racehorse.",
+        "The youngest son, a war hero who wanted nothing to do with the family business, shoots two men in a restaurant.",
+        "Marlon Brando plays Vito Corleone and Al Pacino plays Michael.",
+    ], "Francis Ford Coppola fought the studio over almost everything, from casting Al Pacino to shooting in dark, amber "
+       "light, and won nearly every argument. The result is a crime film that plays like a family tragedy. Michael's slow "
+       "change from outsider to head of the family is the spine of the story, and Part II continues it."),
+    _p("tv", "The Sopranos", 1999, "David Chase", [], [
+        "A crime drama series that premiered in 1999 and ran for six seasons.",
+        "It aired on HBO and is often credited with starting television's era of prestige drama.",
+        "A New Jersey mob boss secretly starts seeing a psychiatrist after a series of panic attacks.",
+        "His troubles seem to start when a family of ducks leaves his swimming pool.",
+        "The series ends with a sudden cut to black in a diner while 'Don't Stop Believin'' plays.",
+        "James Gandolfini plays Tony, with Edie Falco as Carmela and Lorraine Bracco as Dr. Melfi.",
+    ], "David Chase made a gangster story about therapy, family and suburban boredom, and showed that TV could be as "
+       "ambitious as film. James Gandolfini makes a frightening man sympathetic and then makes you regret it. The ending is "
+       "still argued about, which is exactly what Chase intended."),
+    _p("anime", "Naruto", 2002, "Studio Pierrot", [], [
+        "An anime series that began airing in Japan in 2002.",
+        "It was animated by Studio Pierrot, and a sequel series following the hero as a teenager began in 2007.",
+        "An orphaned boy with a nine-tailed fox spirit sealed inside him is shunned by his village.",
+        "He dreams of becoming Hokage, the leader of his hidden village.",
+        "His team is led by a masked teacher who is always late and reads trashy novels.",
+        "He trains alongside Sasuke Uchiha and Sakura Haruno in the Hidden Leaf Village.",
+    ], "For many viewers outside Japan this was the first long anime they followed every week, and its story about a lonely "
+       "kid earning respect still lands. The ninja world has a clear set of rules that makes its fights easy to follow. "
+       "The Chūnin exam arc is where it really gets going."),
+    _p("game", "Super Mario Bros.", 1985, "Nintendo", ["super mario brothers", "super mario", "mario bros", "smb"], [
+        "A side-scrolling platform game released in 1985.",
+        "It was made by Nintendo, designed by Shigeru Miyamoto, and came bundled with many NES consoles.",
+        "A plumber has to cross eight worlds to rescue a princess from a king of turtles.",
+        "Mushrooms make you bigger, and a flower lets you throw fireballs.",
+        "At the end of most castles, a mushroom retainer tells you she is in another castle.",
+        "Two brothers in red and green caps face Bowser, King of the Koopas, to save Princess Peach.",
+    ], "Its first screen teaches you to run, jump and avoid enemies without a single word of text, which is why designers still "
+       "study it. It helped bring home video games back after the crash of 1983. Speedrunners are still shaving fractions "
+       "of a second off it today."),
+    _p("book", "The Great Gatsby", 1925, "F. Scott Fitzgerald", [], [
+        "A novel published in 1925 and set during the Jazz Age.",
+        "Its author also wrote This Side of Paradise and Tender Is the Night.",
+        "A young bond salesman rents a small house on Long Island next to a mansion where huge parties are thrown.",
+        "A green light at the end of a dock across the bay haunts the mansion's owner.",
+        "A billboard with giant eyes watches over a grey valley of ashes.",
+        "Nick Carraway narrates, and Daisy Buchanan is the woman his mysterious neighbour still loves.",
+    ], "It sold poorly in its author's lifetime and is now one of the most taught American novels. It is short, and every "
+       "sentence is doing work: the parties, the cars and the green light all say something about wanting a past you cannot "
+       "have. Read the last page twice."),
+    _p("album", "Rumours", 1977, "Fleetwood Mac", [], [
+        "A rock album released in 1977.",
+        "It won the Grammy for Album of the Year and is one of the best-selling albums ever made.",
+        "Its band's two couples were breaking up while they recorded it.",
+        "One of its songs became the theme of Bill Clinton's 1992 presidential campaign.",
+        "Its songs include 'Go Your Own Way', 'Dreams' and 'The Chain'.",
+        "Fleetwood Mac's album with Stevie Nicks, Lindsey Buckingham and Christine McVie.",
+    ], "The band members wrote songs to and about each other while their relationships fell apart, and somehow made one of "
+       "the smoothest-sounding records of the 1970s. 'Dreams' found a new generation in 2020 thanks to a viral skateboard "
+       "video. Listen to it in order to hear the conversation between the songs."),
+    _p("movie", "Up", 2009, "Pete Docter", [], [
+        "An animated adventure film from 2009.",
+        "It was the first animated film to open the Cannes Film Festival, and it won the Oscar for Best Animated Feature.",
+        "Its opening minutes tell the whole story of a marriage with no dialogue.",
+        "A grumpy widower ties thousands of balloons to his house and floats away.",
+        "A talking dog named Dug announces that he has just met you and loves you.",
+        "Carl Fredricksen and a Wilderness Explorer named Russell head for Paradise Falls.",
+    ], "The wordless 'Married Life' sequence is one of the most famous openings in film, and it gives the rest of the "
+       "adventure its weight. After that it becomes a silly, warm story about letting go of the past. Michael Giacchino's "
+       "score won an Oscar."),
+    _p("tv", "Succession", 2018, "Jesse Armstrong", [], [
+        "A drama series that premiered in 2018 and ran for four seasons.",
+        "It aired on HBO, was created by a British writer of Peep Show, and won the Emmy for Outstanding Drama Series three times.",
+        "The ageing founder of a huge media company keeps his four adult children guessing about who will take over.",
+        "The family's company is called Waystar Royco.",
+        "A gangly cousin from out of town keeps getting pulled into the company's scandals.",
+        "Logan Roy and his children Kendall, Shiv, Roman and Connor.",
+    ], "It is a drama about terrible rich people that is also one of the funniest shows on TV, thanks to insults sharp enough "
+       "to quote. Nobody gets what they want for long. The final season, which builds to one last board vote, is as good as "
+       "anything before it."),
+    _p("anime", "Hunter x Hunter", 2011, "Madhouse", ["hunter hunter", "hxh"], [
+        "An anime series from 2011, the second adaptation of its manga.",
+        "It was animated by Madhouse, from a manga by Yoshihiro Togashi, the creator of YuYu Hakusho.",
+        "A boy raised on an island leaves home to find the father who left him behind.",
+        "He takes a deadly exam to earn a licence that opens almost any door in the world.",
+        "Fighters use Nen, an aura they shape into a personal ability with its own rules.",
+        "Gon Freecss and his friend Killua Zoldyck, heir to a family of assassins.",
+    ], "It starts as a bright adventure and keeps changing shape, and its Chimera Ant arc is one of the darkest and most "
+       "admired stories in shōnen anime. The power system rewards clever rules over raw strength. The manga is famous for "
+       "long breaks, so the 2011 series is the full story so far."),
+    _p("game", "Pokémon Red and Blue", 1996, "Game Freak",
+       ["pokemon red", "pokemon blue", "pokemon red blue", "pokemon green", "pokemon red and green"], [
+        "A role-playing game first released in Japan in 1996, for a handheld console.",
+        "It was made by Game Freak and came in two versions with slightly different creatures to catch.",
+        "A boy leaves his hometown with his first partner, chosen from three, to collect eight badges.",
+        "Trading between two copies over a link cable is the only way to complete the collection.",
+        "Your rival, the grandson of the local professor, always seems to be one step ahead.",
+        "Choose Bulbasaur, Charmander or Squirtle, and try to catch all 151.",
+    ], "Satoshi Tajiri based the idea on his childhood love of collecting insects, and the link cable turned a single-player "
+       "game into a playground craze. It started what became the highest-grossing media franchise in the world. Its bugs, "
+       "like the famous MissingNo., became legends of their own."),
+    _p("movie", "The Lion King", 1994, "Roger Allers and Rob Minkoff", [], [
+        "An animated film from 1994, set on the African savanna.",
+        "Its songs were written by Elton John and Tim Rice, with a score by Hans Zimmer.",
+        "A young prince runs away after being made to believe he caused his father's death.",
+        "A meerkat and a warthog teach him a carefree motto.",
+        "His wicked uncle takes the throne with the help of hyenas.",
+        "Simba, Mufasa, Scar, Timon and Pumbaa, and the song 'Hakuna Matata'.",
+    ], "It borrows the bones of Hamlet and sets them to some of Disney's best songs, and the wildebeest stampede is still a "
+       "remarkable piece of animation. It became one of the highest-grossing animated films ever, and the stage musical has "
+       "run on Broadway since 1997."),
+    _p("tv", "The Mandalorian", 2019, "Jon Favreau", [], [
+        "A space western series that premiered in 2019.",
+        "It was the first live-action series in its franchise, made by Jon Favreau for Disney+.",
+        "A masked bounty hunter who never removes his helmet takes a job to retrieve a mysterious asset.",
+        "The asset turns out to be a small green child who can use the Force.",
+        "Its sets were often giant LED screens on a stage called the Volume.",
+        "Pedro Pascal plays Din Djarin, who protects Grogu.",
+    ], "Jon Favreau went back to the western and samurai films that inspired the original trilogy, with short, self-contained "
+       "episodes that each feel like a small adventure. Grogu became an instant phenomenon. Its LED stage changed how many effects-heavy shows are filmed."),
+    _p("anime", "Chainsaw Man", 2022, "MAPPA", [], [
+        "An anime series that began airing in 2022.",
+        "It was animated by MAPPA, from a manga by Tatsuki Fujimoto.",
+        "A young man drowning in his dead father's debts hunts devils for the yakuza.",
+        "His devil companion, a little dog called Pochita, merges with his heart after he is killed.",
+        "He joins a government team of devil hunters led by a mysterious woman named Makima.",
+        "Denji can pull a cord in his chest to grow blades from his head and arms.",
+    ], "Tatsuki Fujimoto's story looks like a gory action comedy and turns out to be about a boy who has never had anything, "
+       "learning what he wants. Every episode has its own ending song. The Reze film continues the story from the end of "
+       "the first season."),
+    _p("game", "Half-Life 2", 2004, "Valve", ["half life 2", "hl2"], [
+        "A first-person shooter released in 2004.",
+        "Its studio also built the Steam store, which this game helped launch by requiring it.",
+        "A silent theoretical physicist arrives by train in a city controlled by an alien empire called the Combine.",
+        "A gravity gun lets you pick up objects and fling them, including saw blades.",
+        "A zombie-filled town called Ravenholm is one of its scariest chapters.",
+        "Gordon Freeman fights alongside Alyx Vance in City 17.",
+    ], "Its physics engine let players solve problems with objects, not just bullets, and its characters had faces that "
+       "showed real emotion. It tells its story without ever taking control away from you. The Episode One and Two "
+       "follow-ups continue the story."),
+    _p("book", "Frankenstein", 1818, "Mary Shelley", [], [
+        "A Gothic novel first published in 1818.",
+        "Its author began it at 18, during a ghost-story contest with Lord Byron near Lake Geneva.",
+        "A ship's captain trying to reach the North Pole rescues a half-frozen man from the ice.",
+        "A young scientist brings a body built from parts to life, then abandons it in horror.",
+        "The creature teaches himself to read by secretly watching a family in a cottage.",
+        "Victor and his nameless creation, in Mary Shelley's novel.",
+    ], "Often called the first science fiction novel, it is less about a monster than about a creator who refuses "
+       "responsibility for what he made. The creature is eloquent and hurt, nothing like the grunting film version. It is "
+       "shorter and stranger than most people expect."),
+    _p("movie", "Titanic", 1997, "James Cameron", [], [
+        "A romantic disaster film from 1997.",
+        "It won eleven Academy Awards and was the highest-grossing film ever for more than a decade.",
+        "A treasure hunter searching a shipwreck for a diamond meets an elderly survivor.",
+        "A poor artist wins his ticket in a poker game moments before departure.",
+        "Céline Dion's 'My Heart Will Go On' became one of the best-selling singles ever.",
+        "Leonardo DiCaprio and Kate Winslet play Jack and Rose.",
+    ], "James Cameron built a nearly full-size replica of the ship and spent a fortune most people thought he would never earn "
+       "back. The love story carries you into the long, terrifying second half, which plays out almost in real time. It "
+       "is three hours that move fast."),
+    _p("album", "The Dark Side of the Moon", 1973, "Pink Floyd", [], [
+        "A progressive rock album released in 1973.",
+        "It stayed on the US Billboard 200 album chart for more than 900 weeks.",
+        "Alan Parsons engineered it at Abbey Road Studios, with heartbeats, cash registers and clocks in the mix.",
+        "Its cover shows a beam of light passing through a prism and splitting into a rainbow.",
+        "Its songs deal with time, money, conflict and madness.",
+        "Pink Floyd's album with 'Money', 'Time' and 'The Great Gig in the Sky'.",
+    ], "It flows as one continuous piece, which made it a favourite for testing new hi-fi systems for decades. Clare Torry's "
+       "wordless vocal on 'The Great Gig in the Sky' was improvised in a single session. Listen to it from start to finish, "
+       "ideally on headphones."),
+    _p("tv", "Sherlock", 2010, "Steven Moffat and Mark Gatiss", [], [
+        "A crime drama series that premiered in 2010, with feature-length episodes.",
+        "It was co-created by Steven Moffat and Mark Gatiss for the BBC.",
+        "It moves a famous Victorian detective to present-day London, where clues arrive by text message.",
+        "His new flatmate is an army doctor just back from Afghanistan.",
+        "His greatest enemy is a consulting criminal named Jim Moriarty.",
+        "Benedict Cumberbatch and Martin Freeman live at 221B Baker Street.",
+    ], "Updating Conan Doyle's stories to the age of smartphones should not have worked as well as it did. On-screen text "
+       "shows the detective's deductions as they happen. The first two series, especially 'A Scandal in Belgravia', are the "
+       "most loved."),
+    _p("anime", "Mob Psycho 100", 2016, "Bones", ["mob psycho"], [
+        "An action comedy anime series that began in 2016.",
+        "It was animated by Bones, from a manga by ONE, the creator of One-Punch Man.",
+        "A shy middle school boy with enormous psychic power tries hard to live a normal life.",
+        "He works for a fake psychic and con artist who pays him almost nothing.",
+        "A meter tracks his bottled-up emotions, and when it fills, something explodes.",
+        "Shigeo Kageyama works for Reigen Arataka, with the spirit Dimple floating nearby.",
+    ], "Its hand-drawn fight scenes are some of the most inventive animation of the decade, but the heart of it is a kind boy "
+       "learning that being strong does not make you a good person. Reigen, the fraud who gives genuinely good advice, "
+       "steals the show."),
+    _p("game", "Undertale", 2015, "Toby Fox", [], [
+        "A role-playing game released in 2015.",
+        "It was made almost entirely by one person, Toby Fox, who also wrote its music.",
+        "A child falls into an underground world full of monsters.",
+        "You can finish the game without killing anyone, by talking, flirting or petting your way out of fights.",
+        "The game remembers what you did, even after you reset.",
+        "Sans, Papyrus, Toriel and Undyne, and the song 'Megalovania'.",
+    ], "It plays with what players expect from role-playing games, so that sparing an enemy feels as meaningful as beating "
+       "one. It is funny, kind and occasionally unsettling. Play it blind, and play the peaceful route first."),
+    _p("movie", "Star Wars", 1977, "George Lucas",
+       ["a new hope", "star wars a new hope", "star wars episode iv a new hope", "episode iv a new hope"], [
+        "A space adventure film from 1977.",
+        "Its writer and director founded Industrial Light & Magic to make its effects.",
+        "A farm boy on a desert planet finds a secret message hidden in a small robot.",
+        "An old hermit gives him his father's laser sword.",
+        "Rebels destroy a moon-sized battle station by firing into a small exhaust port.",
+        "Luke Skywalker, Princess Leia, Han Solo and Darth Vader.",
+    ], "George Lucas mixed old Flash Gordon serials, westerns and samurai films into a fairy tale that almost nobody at the "
+       "studio believed in. It changed how blockbusters were made and sold. Its lived-in, dusty look is a big reason it "
+       "still holds up."),
+    _p("tv", "Ted Lasso", 2020, "Jason Sudeikis, Bill Lawrence, Brendan Hunt and Joe Kelly", [], [
+        "A comedy series that premiered in 2020.",
+        "It streams on Apple TV+ and grew out of a character from adverts for NBC's football coverage.",
+        "An American college football coach is hired to manage an English football club, knowing nothing about the sport.",
+        "The club's new owner secretly hopes he will fail, to spite her ex-husband.",
+        "He bakes biscuits for his boss every morning and puts up a sign saying 'BELIEVE' in the locker room.",
+        "Jason Sudeikis plays the coach of AFC Richmond.",
+    ], "It arrived in the middle of 2020 and won people over with a lead character who is relentlessly kind without being "
+       "naive. It handles anxiety and therapy with real care under the jokes. It won the Emmy for Outstanding Comedy Series "
+       "twice."),
+    _p("anime", "Sailor Moon", 1992, "Toei Animation", ["bishoujo senshi sailor moon", "pretty guardian sailor moon"], [
+        "A magical girl anime series that began airing in 1992.",
+        "It was animated by Toei Animation, from a manga by Naoko Takeuchi.",
+        "A clumsy 14-year-old schoolgirl meets a talking black cat with a crescent mark on its forehead.",
+        "She transforms with a brooch into a heroine in a school-uniform outfit with a tiara.",
+        "She leads a team of guardians, each named after a planet.",
+        "Usagi Tsukino, her cat Luna and the mysterious Tuxedo Mask.",
+    ], "It turned the magical girl story into a team adventure about friendship and became a global hit in the 1990s. Many "
+       "fans now in their thirties can still recite the transformation lines. Sailor Moon Crystal and the Eternal films "
+       "retell the manga more closely."),
+    _p("game", "God of War", 2018, "Santa Monica Studio", ["gow", "god of war 2018"], [
+        "An action-adventure game released in 2018, a fresh start for a long-running series.",
+        "It was made by Santa Monica Studio for the PlayStation 4.",
+        "A Spartan warrior, now living quietly in Norse lands, sets out with his young son to scatter his wife's ashes.",
+        "The whole game is presented as one continuous shot, with no camera cuts.",
+        "He fights with a frost axe that flies back to his hand when he calls it.",
+        "Kratos and his son Atreus journey to the highest peak in the nine realms.",
+    ], "The series was known for rage and spectacle, and this reboot turned it into a story about a father learning to talk "
+       "to his son. The one-shot camera keeps you close to them the whole time. Ragnarök finishes the Norse story."),
+    _p("book", "Project Hail Mary", 2021, "Andy Weir", [], [
+        "A science fiction novel published in 2021.",
+        "Its author's first novel was The Martian.",
+        "A man wakes up alone on a spaceship with no memory of who he is or why he is there.",
+        "Tiny organisms are dimming the Sun, and Earth's survival depends on his mission.",
+        "He makes friends with an alien engineer who speaks in musical notes.",
+        "Ryland Grace and Rocky, a spider-like alien from 40 Eridani.",
+    ], "Andy Weir loves solving science problems on the page, and this is his best book for it, with a friendship at its "
+       "centre that is genuinely moving. You learn who the narrator is at the same pace he does. A film adaptation starring "
+       "Ryan Gosling followed in 2026."),
+    _p("movie", "Alien", 1979, "Ridley Scott", [], [
+        "A science fiction horror film from 1979.",
+        "It was directed by Ridley Scott, and the Swiss artist H. R. Giger designed its creature.",
+        "The crew of a commercial towing spaceship answers a distress signal from an uncharted planet.",
+        "A creature bursts out of a crew member's chest during a meal.",
+        "The ship's science officer turns out to be an android.",
+        "Sigourney Weaver plays Ripley aboard the Nostromo.",
+    ], "Ridley Scott treated a monster movie like a haunted-house film set among tired workers, and kept the creature hidden "
+       "for most of it. Ripley became one of film's great heroes almost by accident. James Cameron's Aliens turns the "
+       "sequel into an action film."),
+    _p("tv", "Better Call Saul", 2015, "Vince Gilligan and Peter Gould", [], [
+        "A crime drama series that premiered in 2015 and ran for six seasons.",
+        "It is a prequel to another famous series, from the same co-creator.",
+        "A small-time lawyer and former con man struggles to be taken seriously by his successful older brother.",
+        "Black-and-white flash-forwards show him managing a cinnamon roll shop in Omaha.",
+        "His brother believes he is allergic to electricity.",
+        "Bob Odenkirk plays Jimmy McGill, with Rhea Seehorn as Kim Wexler.",
+    ], "Many viewers think it is even better than the show it spun off from, because it is slower and sadder, about a man who "
+       "keeps choosing the wrong road. Rhea Seehorn's Kim is the real heart of it. You can watch it without having seen "
+       "the original."),
+    _p("anime", "Steins;Gate", 2011, "White Fox", ["steins gate", "steinsgate"], [
+        "A science fiction thriller anime that aired in 2011, based on a visual novel.",
+        "It was animated by White Fox.",
+        "A self-proclaimed mad scientist in Akihabara accidentally finds a way to send text messages to the past.",
+        "A microwave oven is part of the machine.",
+        "Every change to the past shifts the world to a different timeline, and only he remembers.",
+        "Rintaro Okabe, who calls himself Hououin Kyouma, tries to save his friend Mayuri.",
+    ], "The first half is a slow, goofy hangout show, and that is deliberate: it makes the second half's time-travel tragedy "
+       "hit much harder. Its rules are consistent enough that fans still map out its timelines. Stick with it past "
+       "episode 10."),
+    _p("game", "Among Us", 2018, "Innersloth", [], [
+        "A multiplayer party game first released in 2018.",
+        "Made by a tiny studio called Innersloth, it became a worldwide hit two years later when streamers picked it up.",
+        "A crew does repair tasks on a spaceship while one or more saboteurs secretly kill them off.",
+        "When a body is reported, everyone meets to discuss and vote someone out.",
+        "The characters are colourful bean-shaped astronauts.",
+        "Crewmates and impostors, and the phrase 'Red is sus'.",
+    ], "It is the board game Mafia moved to a spaceship, and in 2020 it was how many friends hung out when they could not "
+       "meet. The fun is all in the arguments. It is best with a group that knows each other well enough to lie badly."),
+    _p("album", "Lemonade", 2016, "Beyoncé", [], [
+        "An R&B and pop album released in 2016.",
+        "It was released together with an hour-long film first shown on HBO.",
+        "Its songs move from suspicion and anger over infidelity to forgiveness.",
+        "In one music video, its singer smashes car windows with a baseball bat.",
+        "Its songs include 'Formation', 'Sorry' and 'Hold Up'.",
+        "Beyoncé's album that mentions 'Becky with the good hair'.",
+    ], "It moves through rock, country, blues and hip-hop while telling one story about betrayal and repair, and it ties that "
+       "personal story to the history of Black women in the American South. Watch the film once; it changes how the "
+       "album sounds."),
+    _p("movie", "Ratatouille", 2007, "Brad Bird", [], [
+        "An animated film from 2007, set in Paris.",
+        "It was directed for Pixar by Brad Bird, who also made The Incredibles.",
+        "A rat with a superb sense of smell dreams of becoming a chef.",
+        "He controls a clumsy kitchen boy by pulling his hair under his chef's hat.",
+        "A stern food critic is won over by a simple peasant dish that reminds him of his mother.",
+        "Remy and Linguini cook at Gusteau's, whose motto is 'Anyone can cook'.",
+    ], "Brad Bird made a film about creativity and criticism that adults may enjoy even more than children. Anton Ego's "
+       "closing review is one of the best monologues in animation. The kitchen scenes were researched in real Paris "
+       "restaurants."),
+    _p("tv", "The Crown", 2016, "Peter Morgan", [], [
+        "A historical drama series that premiered in 2016 and ran for six seasons.",
+        "It was created by Peter Morgan, who wrote the film The Queen, for Netflix.",
+        "It follows the reign of a British monarch, starting with her wedding in 1947.",
+        "The lead actors are replaced every two seasons as the characters age.",
+        "Claire Foy, Olivia Colman and Imelda Staunton each play the lead role.",
+        "The lives of Queen Elizabeth II, Prince Philip and Princess Margaret.",
+    ], "It is drama, not documentary, and it invents private conversations freely, but it is beautifully made and very good "
+       "on the tension between duty and family. The first two seasons, with Claire Foy, are often called the strongest. "
+       "Each episode works almost as a short film."),
+    _p("anime", "Haikyu!!", 2014, "Production I.G", ["haikyu", "haikyuu"], [
+        "A sports anime series that began airing in 2014.",
+        "It was animated by Production I.G, from a manga by Haruichi Furudate.",
+        "A short boy who can jump incredibly high joins his high school's struggling team.",
+        "He is forced to team up with a genius setter he lost to in middle school.",
+        "Their quick attack, where the ball arrives just as he reaches the top of his jump, becomes their weapon.",
+        "Shoyo Hinata and Tobio Kageyama play volleyball for Karasuno High.",
+    ], "It makes volleyball tense even for people who have never watched a match, and every rival team gets its own story. "
+       "Nobody is a villain; they all just want to win. Its matches can run for several episodes and still feel short."),
+    _p("game", "Baldur's Gate 3", 2023, "Larian Studios", ["baldurs gate 3", "bg3", "baldurs gate iii"], [
+        "A role-playing game that left early access in 2023.",
+        "It was made by Larian Studios, based on the fifth edition rules of Dungeons & Dragons.",
+        "You wake up aboard a crashing ship with a tadpole parasite in your brain.",
+        "Dice rolls decide whether you can talk, sneak or trick your way past a problem.",
+        "It won Game of the Year at The Game Awards 2023.",
+        "Shadowheart, Astarion, Lae'zel and Karlach can join your party on the Sword Coast.",
+    ], "It feels like playing a tabletop game with a very generous dungeon master: almost any plan you come up with is allowed, "
+       "and the story bends around it. Its companions are fully voiced and remember everything. It is long, so take your "
+       "time with the first act."),
+    _p("movie", "Whiplash", 2014, "Damien Chazelle", [], [
+        "A drama film from 2014 about music.",
+        "It was expanded from a short film its director made to raise money for the feature.",
+        "A first-year drummer at a top New York music school is picked for its elite jazz band.",
+        "His conductor throws a chair at his head to make a point about tempo.",
+        "J. K. Simmons won the Academy Award for Best Supporting Actor as the conductor.",
+        "Miles Teller plays Andrew, and Terence Fletcher keeps asking whether he is rushing or dragging.",
+    ], "It is shot and cut like a thriller, and the last ten minutes are as tense as any action climax. It leaves open whether "
+       "greatness is worth what it costs. Damien Chazelle made it for just a few million dollars, and it won three Oscars."),
+    _p("tv", "Fleabag", 2016, "Phoebe Waller-Bridge", [], [
+        "A comedy-drama series that premiered in 2016 and ran for two short seasons.",
+        "Its creator and star first wrote it as a one-woman stage show at the Edinburgh Fringe.",
+        "A young woman runs a struggling guinea pig café in London.",
+        "She keeps breaking the fourth wall to make comments to the camera.",
+        "In the second season she falls for a priest, played by Andrew Scott.",
+        "Phoebe Waller-Bridge's series, with Olivia Colman as the godmother.",
+    ], "Twelve half-hour episodes are all there is, and almost every one is both very funny and quietly devastating. The "
+       "asides to the camera become part of the story. The second season is often called one of the best seasons of TV "
+       "ever made."),
+    _p("anime", "Vinland Saga", 2019, "Wit Studio", [], [
+        "A historical anime series that began in 2019, set in the 11th century.",
+        "Wit Studio animated its first season, from a manga by Makoto Yukimura.",
+        "A boy joins the band of Viking mercenaries whose leader killed his father, hoping for a duel.",
+        "Its second season takes place almost entirely on a farm, where he works as a slave.",
+        "It slowly turns from a revenge story into one about rejecting violence.",
+        "Thorfinn chases Askeladd and dreams of a peaceful country across the sea.",
+    ], "The first season is a brutal Viking war story; the second is quiet and reflective, and fans argue about which is "
+       "better. Together they make one of anime's most thoughtful stories about violence. Askeladd is a great antagonist."),
+    _p("game", "Pac-Man", 1980, "Namco", ["pacman"], [
+        "An arcade maze game released in 1980.",
+        "It was made by Namco and designed by Toru Iwatani, who said a pizza with a slice missing inspired its hero.",
+        "You eat every dot in a maze while four ghosts chase you.",
+        "Eating a power pellet turns the ghosts blue so you can eat them.",
+        "The ghosts are named Blinky, Pinky, Inky and Clyde.",
+        "A yellow circle with a mouth that goes 'wakka wakka'.",
+    ], "It was designed to appeal to people who did not play shooting games, and it became one of the first video game "
+       "characters known everywhere. Each ghost has its own chasing behaviour, which is why expert routes exist. Pac-Man "
+       "Championship Edition is a great modern take."),
+    _p("book", "The Catcher in the Rye", 1951, "J. D. Salinger", [], [
+        "A novel published in 1951.",
+        "Its reclusive author published very little afterwards and lived quietly in New Hampshire.",
+        "A 16-year-old is expelled from his prep school and spends a few days wandering New York City.",
+        "He calls almost everyone around him a 'phony'.",
+        "He wonders where the ducks in Central Park go when the pond freezes over.",
+        "Holden Caulfield and his little sister Phoebe.",
+    ], "Its voice, rambling, funny and hurt, is why readers either love it or cannot stand its narrator. Underneath the "
+       "complaining is a boy grieving his brother. It is short and reads quickly, and it reads differently at 16 and at 40."),
+    _p("movie", "Knives Out", 2019, "Rian Johnson", [], [
+        "A murder mystery film from 2019.",
+        "It was written and directed by Rian Johnson, and its screenplay was nominated for an Academy Award.",
+        "A wealthy crime novelist is found dead the morning after his 85th birthday party.",
+        "His nurse throws up whenever she tells a lie.",
+        "A detective with a Southern drawl is hired anonymously to investigate.",
+        "Daniel Craig plays Benoit Blanc, and Ana de Armas plays Marta.",
+    ], "Rian Johnson revived the Agatha Christie-style whodunit and gave it a sharp point about inheritance and class. It "
+       "reveals one big secret early and still has a twist left. Glass Onion and Wake Up Dead Man bring the detective back."),
+    _p("tv", "Wednesday", 2022, "Alfred Gough and Miles Millar", [], [
+        "A supernatural comedy series that premiered in 2022.",
+        "Tim Burton directed half of its first season's episodes for Netflix.",
+        "A deadpan teenage girl from a famously macabre family is sent to a boarding school for outcasts.",
+        "A disembodied hand named Thing is her companion.",
+        "Her dance at a school ball went viral on TikTok.",
+        "Jenna Ortega plays the daughter of Morticia and Gomez Addams at Nevermore Academy.",
+    ], "It is a teen mystery wrapped in the Addams Family's gothic style, and Jenna Ortega's unblinking performance makes it. "
+       "Its first season became one of Netflix's most-watched English-language series. Season two continued the story back at Nevermore."),
+    _p("anime", "Violet Evergarden", 2018, "Kyoto Animation", [], [
+        "A drama anime series from 2018.",
+        "It was animated by Kyoto Animation, from a light novel by Kana Akatsuki.",
+        "A former child soldier with mechanical arms returns from war.",
+        "She takes a job writing letters for other people, to learn what love means.",
+        "Her commanding officer's last words were 'I love you', and she does not understand them.",
+        "She works as an Auto Memory Doll for the CH Postal Company.",
+    ], "It is often called the most beautiful anime ever made, and each episode tells one small story through a letter. Bring "
+       "tissues for episode 10. The film that follows the series wraps up her story."),
+    _p("game", "Dark Souls", 2011, "FromSoftware", [], [
+        "An action role-playing game released in 2011.",
+        "It was directed by Hidetaka Miyazaki and became famous for its punishing difficulty.",
+        "You play a cursed undead who escapes an asylum and is sent on a pilgrimage.",
+        "Resting at a bonfire restores your health but brings every enemy back.",
+        "Firelink Shrine links to almost every area of an interconnected world called Lordran.",
+        "Link the First Flame, after fighting Ornstein and Smough.",
+    ], "Its reputation for difficulty hides how fair it is: almost every death teaches you something. Its world folds back on "
+       "itself in surprising shortcuts, and its story is told through item descriptions and ruins. It inspired a whole "
+       "genre of 'soulslikes'."),
+    _p("album", "Random Access Memories", 2013, "Daft Punk", [], [
+        "An electronic dance album released in 2013.",
+        "It won the Grammy for Album of the Year.",
+        "It was recorded mostly with live musicians instead of samples, including Nile Rodgers and Giorgio Moroder.",
+        "Its biggest single features Pharrell Williams.",
+        "Its songs include 'Get Lucky', 'Instant Crush' and 'Giorgio by Moroder'.",
+        "Daft Punk's album, by the duo who perform in robot helmets.",
+    ], "Daft Punk turned away from computers to make a warm, expensive-sounding tribute to the disco and soft rock of the late "
+       "1970s. 'Get Lucky' was the song of summer 2013. 'Touch' with Paul Williams is the strange, moving centrepiece."),
+    _p("movie", "La La Land", 2016, "Damien Chazelle", [], [
+        "A musical romance film from 2016.",
+        "It won six Academy Awards and was briefly announced as Best Picture by mistake.",
+        "A jazz pianist and an aspiring actress meet in Los Angeles.",
+        "It opens with a song-and-dance number on a jammed freeway.",
+        "Its final minutes imagine the life the couple might have had together.",
+        "Ryan Gosling and Emma Stone play Sebastian and Mia.",
+    ], "It borrows from old Hollywood and French musicals but ends on a bittersweet note that keeps people arguing. The "
+       "epilogue does in a few minutes what most films need an hour for. 'City of Stars' won the Oscar for Best Original Song."),
+    _p("tv", "Chernobyl", 2019, "Craig Mazin", [], [
+        "A historical drama miniseries from 2019, five episodes long.",
+        "It was written by Craig Mazin for HBO and Sky.",
+        "It dramatises a 1986 disaster in the Soviet Union and the lies told about it.",
+        "Miners dig a tunnel beneath a burning reactor, working naked in the heat.",
+        "Its first line asks: 'What is the cost of lies?'",
+        "Jared Harris plays the scientist Valery Legasov, near the city of Pripyat.",
+    ], "It is a horror story where the monster is radiation and the villain is a system that would rather lie than admit "
+       "failure. Five episodes are all you need. The companion podcast explains what was changed for the drama."),
+    _p("anime", "Bleach", 2004, "Studio Pierrot", [], [
+        "An anime series that began in 2004 and returned in 2022 for its final story.",
+        "It was animated by Studio Pierrot, from a manga by Tite Kubo.",
+        "A teenager who can see ghosts gains the powers of a Soul Reaper.",
+        "He uses an enormous sword and fights monstrous lost souls called Hollows.",
+        "His friends include a quiet giant and an archer from a rival clan of spirit hunters.",
+        "Ichigo Kurosaki and Rukia Kuchiki.",
+    ], "Tite Kubo's sense of style, from the character designs to the swords, made it one of the 'big three' shōnen series of "
+       "the 2000s. The Soul Society arc is the classic. Thousand-Year Blood War finally adapts the ending with much bigger "
+       "animation."),
+    _p("game", "Grand Theft Auto V", 2013, "Rockstar North", ["gta v", "gta 5", "grand theft auto 5", "gtav", "gta5"], [
+        "An open-world action game released in 2013.",
+        "It was made by Rockstar North, a Scottish studio, and became one of the best-selling games ever.",
+        "You can switch between three criminals at almost any moment.",
+        "It is set in Los Santos, a satire of Los Angeles.",
+        "Its online mode has kept players busy for more than a decade.",
+        "Michael, Franklin and Trevor plan heists together.",
+    ], "Its version of Los Angeles is packed with satire of celebrity, tech and politics, and the heists are its best "
+       "missions. It has been released on three console generations. Its sequel became one of the most anticipated games "
+       "of all time."),
+    _p("movie", "Barbie", 2023, "Greta Gerwig", [], [
+        "A comedy film from 2023 based on a toy.",
+        "It was directed by Greta Gerwig and was the highest-grossing film of its year.",
+        "A doll in a perfect pink world suddenly starts thinking about death.",
+        "She travels to Los Angeles with her boyfriend, who discovers the patriarchy.",
+        "It came out the same weekend as Oppenheimer, and the two were paired as one event.",
+        "Margot Robbie and Ryan Gosling, whose big number is 'I'm Just Ken'.",
+    ], "Greta Gerwig turned a toy commercial into a comedy about growing up and what is expected of women, with sets built "
+       "by hand in bright pink. Ryan Gosling's Ken nearly steals it. America Ferrera's speech became one of the year's most "
+       "shared scenes."),
+    _p("tv", "Seinfeld", 1989, "Larry David", [], [
+        "A sitcom that premiered in 1989 and ran for nine seasons.",
+        "It was created by Larry David and the stand-up comedian it is named after.",
+        "Often called 'a show about nothing', it follows four friends on Manhattan's Upper West Side.",
+        "A soup seller refuses to serve customers who break his rules.",
+        "One episode is spent entirely waiting for a table at a Chinese restaurant.",
+        "Jerry, George, Elaine and Kramer.",
+    ], "Its rule was 'no hugging, no learning', and its characters never grow, which is exactly why it still works. Its "
+       "phrases, from 'yada yada' to 'double dipping', entered everyday speech. Start with season four, its best."),
+    _p("movie", "Your Name", 2016, "Makoto Shinkai", ["kimi no na wa"], [
+        "An animated film released in Japan in 2016.",
+        "It was written and directed by Makoto Shinkai and became one of the highest-grossing anime films ever.",
+        "A girl in a small mountain town and a boy in Tokyo start waking up in each other's bodies.",
+        "They leave each other notes on their phones and on their skin.",
+        "A comet passing the Earth turns out to matter more than either of them knows.",
+        "Taki and Mitsuha, with songs by the band Radwimps.",
+    ], "It starts as a body-swap comedy and turns into something bigger halfway through, which is best not spoiled. Makoto "
+       "Shinkai's skies and city lights look almost photographic. Weathering With You and Suzume are his follow-ups."),
+    _p("game", "Disco Elysium", 2019, "ZA/UM", [], [
+        "A role-playing game released in 2019 with almost no combat.",
+        "It was made by the Estonian studio ZA/UM.",
+        "A detective wakes up in a wrecked hostel room with total amnesia and a terrible hangover.",
+        "The voices in his head are his own skills, and they argue with him and with each other.",
+        "A body hangs from a tree behind the hostel in the city of Revachol.",
+        "Harry Du Bois and his patient partner Kim Kitsuragi investigate a murder.",
+    ], "It is a detective novel you play, with some of the best writing in any game, and failing a check is often more "
+       "interesting than passing it. Politics, grief and very dark comedy run through it. The Final Cut edition adds full "
+       "voice acting."),
+    _p("tv", "The Wire", 2002, "David Simon", [], [
+        "A crime drama series that premiered in 2002 and ran for five seasons.",
+        "It was created by David Simon, a former police reporter, for HBO.",
+        "Each season looks at a different part of one American city: the drug trade, the docks, city hall, schools and the newspaper.",
+        "Detectives listen in on drug dealers who use payphones and pagers.",
+        "A shotgun-carrying stick-up man who robs only drug dealers whistles 'The Farmer in the Dell'.",
+        "Jimmy McNulty, Stringer Bell and Omar Little, in Baltimore.",
+    ], "It is often called the greatest TV drama ever made, because it treats a whole city as its main character and shows how "
+       "institutions grind people down. It is slow at first and asks for attention. Season four, about four schoolboys, is "
+       "the one people remember."),
+    _p("book", "Harry Potter and the Philosopher's Stone", 1997, "J. K. Rowling",
+       ["harry potter", "harry potter and the sorcerers stone", "philosophers stone", "sorcerers stone"], [
+        "A fantasy novel for children first published in 1997.",
+        "Its author wrote much of it in Edinburgh cafés, and it was turned down by several publishers.",
+        "Letters start arriving for an orphan who sleeps in a cupboard under the stairs.",
+        "A half-giant gamekeeper tells him he is a wizard.",
+        "At school he is sorted into a house by a talking hat.",
+        "Hogwarts, Ron, Hermione and the boy who lived.",
+    ], "The first book of a series that got a generation reading, it is short, funny and full of small inventions, from "
+       "Chocolate Frog cards to moving staircases. Later books get much darker. In the US it was published as the "
+       "Sorcerer's Stone."),
+    _p("movie", "Pulp Fiction", 1994, "Quentin Tarantino", [], [
+        "A crime film from 1994, told out of chronological order.",
+        "It won the Palme d'Or at Cannes, and its director shared the Oscar for its screenplay.",
+        "Two hitmen talk about what a Quarter Pounder is called in France.",
+        "A gangster's wife overdoses, and her date has to stab a needle of adrenaline into her heart.",
+        "Nobody ever sees what glows inside the briefcase.",
+        "John Travolta and Uma Thurman dance the twist at Jack Rabbit Slim's.",
+    ], "Quentin Tarantino built a crime film out of conversations about burgers, foot massages and miracles, and shuffled the "
+       "order so the ending comes in the middle. It revived John Travolta's career and was copied for years. The dialogue "
+       "is the reason to watch."),
+    _p("anime", "One-Punch Man", 2015, "Madhouse", ["one punch man", "onepunchman", "opm"], [
+        "A superhero comedy anime series that began in 2015.",
+        "Its first season was animated by Madhouse, from a webcomic by ONE redrawn by Yusuke Murata.",
+        "A bald hero has become so strong that every fight ends at once, and he is bored.",
+        "He trained by doing 100 push-ups, 100 sit-ups, 100 squats and a 10-kilometre run every day.",
+        "His cyborg disciple talks in long, earnest speeches.",
+        "Saitama and Genos work for the Hero Association.",
+    ], "It is a parody of superhero and shōnen stories that is also a great example of them, with huge, lavish fights that "
+       "end in a single blow. The joke never wears out because the side characters care so much. Season one is the one "
+       "to watch first."),
+    _p("game", "Outer Wilds", 2019, "Mobius Digital", [], [
+        "A space exploration game released in 2019.",
+        "It was made by Mobius Digital and published by Annapurna Interactive.",
+        "You are a new astronaut in a tiny solar system, and the sun explodes after 22 minutes.",
+        "Each time, you wake up at the start of the loop with only what you have learned.",
+        "Everything there is to find is there from the start; you progress through knowledge, not upgrades.",
+        "Your village is on Timber Hearth, and an ancient race called the Nomai left writing everywhere.",
+    ], "It is a mystery you solve by being curious, and the less you know going in the better. Many players call it the best "
+       "game they have played and refuse to say why. Do not look anything up."),
+    _p("movie", "The Princess Bride", 1987, "Rob Reiner", [], [
+        "A fantasy adventure comedy film from 1987, framed as a story read to a sick boy.",
+        "It was directed by Rob Reiner, from a novel by William Goldman, who also wrote the screenplay.",
+        "A farm boy whose only reply is 'As you wish' leaves to make his fortune while his love waits.",
+        "A Spanish swordsman has spent 20 years looking for the six-fingered man who killed his father.",
+        "A battle of wits is fought over two goblets of wine, one of them poisoned.",
+        "Westley, Buttercup and Inigo Montoya.",
+    ], "It was not a big hit in cinemas and became a classic on home video, with lines people quote to this day. It manages "
+       "to be a sincere fairy tale and a parody of one at the same time. The novel adds even more jokes."),
+    _p("album", "Purple Rain", 1984, "Prince and the Revolution", [], [
+        "A pop and rock album released in 1984, the soundtrack to a film.",
+        "Its singer starred in the film it came from, about a young musician in Minneapolis.",
+        "It spent 24 weeks at number one on the US album chart.",
+        "Its songs include 'When Doves Cry' and 'Let's Go Crazy'.",
+        "Its title track was first recorded at a live show and ends with a long guitar solo.",
+        "Prince and the Revolution's album.",
+    ], "Prince mixed rock, funk and gospel into nine songs with almost no weak spots. 'When Doves Cry' famously has no bass "
+       "line. The title track closes the album and the film, and its final minutes are some of his best guitar playing."),
+    _p("anime", "Dragon Ball Z", 1989, "Toei Animation", ["dbz"], [
+        "An action anime series that began in 1989, the sequel to an earlier series.",
+        "It was animated by Toei Animation, from Akira Toriyama's manga.",
+        "A martial artist who was sent to Earth as a baby learns he belongs to a warrior race of aliens.",
+        "Fights can last for many episodes, with characters powering up while they shout.",
+        "Gathering seven magic orbs summons a wish-granting serpent called Shenron.",
+        "Goku, Vegeta and Gohan, and the Super Saiyan transformation.",
+    ], "For many fans around the world it was their first anime, shown on afternoon TV. Akira Toriyama's clear, bold designs "
+       "shaped decades of action manga. Dragon Ball Z Kai trims the filler if the original feels too long."),
 )

@@ -33,7 +33,7 @@ def _words(text):
 
 
 def test_bank_is_complete_and_no_clue_gives_the_answer_away():
-    assert len(PUZZLES) >= 60
+    assert len(PUZZLES) >= 120
     seen = set()
     for entry in PUZZLES:
         assert entry["kind"] in title_pages.KINDS
