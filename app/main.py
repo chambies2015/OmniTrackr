@@ -670,6 +670,17 @@ for route in tier_list_router.router.routes:
         bind_rate_limited_endpoint(route, rate_limited_tier_image)
 app.include_router(tier_list_router.router)
 
+from .routers import daily as daily_router
+rate_limited_daily_guess = limiter.limit("120/minute")(daily_router.daily_guess)
+rate_limited_daily_add = limiter.limit("30/minute")(daily_router.daily_add)
+for route in daily_router.router.routes:
+    path = getattr(route, "path", None)
+    if path == "/api/daily/{number}/guess":
+        bind_rate_limited_endpoint(route, rate_limited_daily_guess)
+    elif path == "/api/daily/add":
+        bind_rate_limited_endpoint(route, rate_limited_daily_add)
+app.include_router(daily_router.router)
+
 from .routers import calendar as calendar_router
 rate_limited_calendar_all = limiter.limit("60/minute")(calendar_router.release_radar_calendar)
 rate_limited_calendar_section = limiter.limit("60/minute")(calendar_router.release_radar_section_calendar)
