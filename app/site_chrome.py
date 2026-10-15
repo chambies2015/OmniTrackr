@@ -34,6 +34,7 @@ FOOTER_GROUPS = (
         ("Release Radar", "/release-radar"),
         ("Discover", "/discover"),
         ("Pick for me", "/pick"),
+        ("Tier list maker", "/tier-list"),
         ("Monthly challenge", "/challenges"),
         ("Public reviews", "/reviews"),
         ("Collections", "/collections/explore"),
