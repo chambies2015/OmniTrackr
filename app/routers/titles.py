@@ -667,6 +667,10 @@ def import_guest_list(
         group = title_pages.find(db, item.kind, item.slug) if item.kind in title_pages.KINDS else None
         curated = pick.find(item.kind, item.slug) if group is None else None
         if group is None and curated is None:
+            # An OmniTrackr Daily answer no member tracks yet.
+            from .. import daily
+            curated = daily.find_answer(item.kind, item.slug)
+        if group is None and curated is None:
             missing += 1
             continue
         if group is not None:

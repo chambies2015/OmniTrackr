@@ -44,6 +44,7 @@ CORE_SITEMAP_PATHS = (
     ("/sample-library", "monthly", "0.8"),
     ("/pick", "weekly", "0.7"),
     ("/tier-list", "monthly", "0.7"),
+    ("/daily", "daily", "0.8"),
     ("/movie-tracker", "monthly", "0.75"),
     ("/tv-show-tracker", "monthly", "0.75"),
     ("/anime-tracker", "monthly", "0.75"),
@@ -270,6 +271,16 @@ async def get_sitemap(request: Request = None, db: Session = Depends(get_db)):
             f"<lastmod>{challenges.CHALLENGES[month]['published']}</lastmod>"
             "<changefreq>monthly</changefreq><priority>0.7</priority></url>"
         )
+    # OmniTrackr Daily: the archive and each finished puzzle (today's answer stays off the sitemap).
+    from .. import daily
+    daily_numbers = daily.archive_numbers()
+    if daily_numbers:
+        sitemap_parts.append(f"<url><loc>{base_url}/daily/archive</loc><changefreq>daily</changefreq><priority>0.6</priority></url>")
+    for number in daily_numbers:
+        sitemap_parts.append(
+            f"<url><loc>{base_url}/daily/{number}</loc><lastmod>{daily.date_for(number).isoformat()}</lastmod>"
+            "<changefreq>yearly</changefreq><priority>0.5</priority></url>"
+        )
     # Only the completed editorial guides join the search inventory. Shorter
     # trails remain available to readers without being submitted for indexing.
     for slug, guide in GUIDES.items():
@@ -455,6 +466,7 @@ OmniTrackr is a free web application for tracking and organizing movies, TV show
 Public reviews are available at {base_url}/reviews and individual review pages at {base_url}/reviews/[id]?category=[category]. OmniTrackr also publishes evergreen guidance at {base_url}/faq, {base_url}/guides, {base_url}/media-tracking, {base_url}/compare, {base_url}/use-cases, {base_url}/movie-tracker, {base_url}/tv-show-tracker, {base_url}/anime-tracker, {base_url}/game-tracker, {base_url}/music-tracker, {base_url}/book-tracker, {base_url}/media-statistics, {base_url}/export-import-guide, {base_url}/media-tracker-checklist, {base_url}/tracking-templates, and {base_url}/review-guidelines, a demo library at {base_url}/demo, a sample media library at {base_url}/sample-library, a human-readable site map at {base_url}/site-map, product updates at {base_url}/changelog and {base_url}/roadmap, ad transparency at {base_url}/advertising, and content quality standards at {base_url}/content-quality.
 Release Radar at {base_url}/release-radar lists upcoming movies (Wikidata), TV premieres (TVmaze), the current anime season (AniList), and new video games (RAWG), refreshed every few hours, with one-click tracking for members.
 Pick for me at {base_url}/pick suggests one editorially chosen movie, TV show, anime, game, book or album at a time, with the reason it was chosen and a caveat.
+OmniTrackr Daily at {base_url}/daily is a free daily guessing game: one movie, TV show, anime, game, book or album a day, guessed from six hand-written clues, with past puzzles, answers and editors' notes at {base_url}/daily/archive.
 The tier list maker at {base_url}/tier-list ranks movies, TV shows, anime, games, books or albums from S to D in the browser and saves the board as an image; boards are never stored on the server.
 
 Automatically qualified member collections are browsable at {base_url}/collections/explore. Share-ready collections that miss the stricter discovery checks remain available only by direct link and stay outside the search index. Version-bound reports can temporarily unlist a collection without deleting it.
