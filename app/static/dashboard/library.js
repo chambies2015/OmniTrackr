@@ -2511,6 +2511,14 @@ function enhanceLibraryCards(tableId) {
         : label === 'Rating' ? 'rating' : ['Watched', 'Played', 'Listened', 'Read'].includes(label) ? 'status'
         : label === 'Actions' ? 'actions' : 'detail';
       cell.dataset.cardField = type;
+      // A coverless title shows its first letter instead of "No cover".
+      const name = type === 'cover' ? row.cells[1]?.textContent.trim() : '';
+      if (name) { // Edit mode swaps the title for an input; keep the letter it had.
+        cell.dataset.initial = (name.match(/[\p{L}\p{N}]/u) || [''])[0].toUpperCase();
+        let hash = 0;
+        for (const char of name) hash = (hash * 31 + char.codePointAt(0)) % 997;
+        cell.style.setProperty('--cover-shift', String((hash % 61) - 30));
+      }
       cell.querySelectorAll('input, textarea, select').forEach(input => {
         if (!input.hasAttribute('aria-label')) input.setAttribute('aria-label', cell.dataset.label);
       });
@@ -2613,3 +2621,65 @@ function loadStatistics() {
 
 const categoryStatsCache = {};
 
+
+/* List or Shelf: how the six built-in libraries are laid out on wide screens.
+   The choice is a body class and this browser's preference; rows, edit mode
+   and every row handler stay exactly as library.js renders them. Phones keep
+   their card layout either way. */
+(function () {
+  const KEY = 'omnitrackr_library_view';
+  const VIEWS = ['list', 'shelf'];
+
+  function saved() {
+    try {
+      const value = localStorage.getItem(KEY);
+      return VIEWS.includes(value) ? value : 'list';
+    } catch (_) {
+      return 'list';
+    }
+  }
+
+  function apply(view) {
+    document.body.classList.toggle('library-view-shelf', view === 'shelf');
+    document.querySelectorAll('.library-view-toggle button').forEach(button => {
+      button.setAttribute('aria-pressed', String(button.dataset.view === view));
+    });
+  }
+
+  function choose(view) {
+    try { localStorage.setItem(KEY, view); } catch (_) { /* this tab still switches */ }
+    apply(view);
+  }
+
+  function toggle() {
+    const group = document.createElement('div');
+    group.className = 'library-view-toggle';
+    group.setAttribute('role', 'group');
+    group.setAttribute('aria-label', 'Library layout');
+    [['list', 'List'], ['shelf', 'Shelf']].forEach(([view, label]) => {
+      const button = document.createElement('button');
+      button.type = 'button';
+      button.dataset.view = view;
+      button.textContent = label;
+      button.addEventListener('click', () => choose(view));
+      group.appendChild(button);
+    });
+    return group;
+  }
+
+  function init() {
+    document.querySelectorAll('.library-panel > .library-heading').forEach(heading => {
+      if (heading.querySelector('.library-view-toggle')) return;
+      const count = heading.querySelector('.library-count');
+      const tools = document.createElement('div');
+      tools.className = 'library-heading__tools';
+      heading.appendChild(tools);
+      if (count) tools.appendChild(count);
+      tools.appendChild(toggle());
+    });
+    apply(saved());
+  }
+
+  if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', init);
+  else init();
+})();
