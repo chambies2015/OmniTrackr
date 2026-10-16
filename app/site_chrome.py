@@ -15,7 +15,7 @@ import re
 from html import escape
 
 SITE_CSS_VERSION = "20261009-kofi-1"
-SITE_JS_VERSION = "20260928-site-1"
+SITE_JS_VERSION = "20261016-reader-1"
 
 # (key, label, href) in display order. The first NAV_PRIMARY entries stay
 # visible on tablets; everything is always available in the compact menu.
