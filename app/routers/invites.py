@@ -37,7 +37,7 @@ def invite_link(request: Request, response: Response, options: InviteLinkOptions
     return {
         "url": f"{SITE_URL}/join/{invite.token}",
         "text": f"Join me on OmniTrackr, a free tracker for movies, shows, anime, games, music and books. "
-                "We'll be friends as soon as you sign up.",
+                "We'll be friends as soon as you sign up. Then we can see how well our taste matches.",
     }
 
 
@@ -68,7 +68,8 @@ def join_page(token: str, request: Request, db: Session = Depends(get_db)):
         page = message_page(
             f"{name} invited you", f"{name} invited you to OmniTrackr",
             f"Track the movies, shows, anime, games, music and books you love in one free library. "
-            f"Join through this link and you and {name} become friends, so you can see what each other is into.",
+            f"Join through this link and you and {name} become friends, so you can see what each other is into "
+            f"and get a Taste Match: your shared favorites, your biggest disagreements and what to try next.",
             eyebrow="You're invited",
             actions=(("Join for free", f"/?invite={token}#signup"),
                      ("I already have an account", f"/?next={quote(f'/join/{token}', safe='')}#landing-auth")),

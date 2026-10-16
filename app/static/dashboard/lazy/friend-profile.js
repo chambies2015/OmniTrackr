@@ -36,12 +36,14 @@ window.openFriendProfile = async function (friendId) {
     if (summary) summary.textContent = 'Loading…';
   });
   document.getElementById('friendProfileModal').style.display = 'flex';
+  if (window.OmniTasteMatch) window.OmniTasteMatch.show(friendId);
   await loadFriendProfile(friendId);
 }
 
 window.closeFriendProfile = function () {
   friendProfileGeneration++;
   document.getElementById('friendProfileModal').style.display = 'none';
+  if (window.OmniTasteMatch) window.OmniTasteMatch.clear();
   currentFriendId = null;
   currentFriendMovies = [];
   currentFriendTVShows = [];
