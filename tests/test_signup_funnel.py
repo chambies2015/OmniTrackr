@@ -152,6 +152,12 @@ def test_browser_can_only_report_whitelisted_events(client, recorder):
     assert all(key in funnel.SERVER_EVENTS for (_, kind, key) in recorder._pending if kind == "funnel")
 
 
+def test_hero_sign_up_clicks_are_counted(client, recorder):
+    assert client.post("/api/funnel", json={"event": "hero_signup_clicked"}).status_code == 204
+    assert counted(recorder, "hero_signup_clicked") == 1
+    assert "hero_signup_clicked" in dict(funnel.GUEST)
+
+
 def test_bots_are_not_counted(client, recorder):
     client.post("/api/funnel", json={"event": "signup_form_opened"}, headers={"User-Agent": "Googlebot/2.1"})
     assert counted(recorder, "signup_form_opened") == 0

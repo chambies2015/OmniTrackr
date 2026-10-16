@@ -64,8 +64,23 @@ def test_button_is_hidden_until_configured(client):
 
 def test_button_shows_on_both_forms_once_configured(client, google):
     page = client.get("/").text
-    assert page.count('href="/auth/google/start"') == 2
+    # The log-in form, the sign-up form and the homepage hero.
+    assert page.count('href="/auth/google/start"') == 3
     assert "Sign up with Google" in page and "Log in with Google" in page
+
+
+def test_hero_offers_google_and_email_sign_up_once_configured(client, google):
+    page = client.get("/").text
+    assert "HERO_SIGNUP" not in page
+    assert "Continue with Google" in page and "Sign up with email" in page
+    assert 'class="lp-btn lp-btn--google" href="/auth/google/start" rel="nofollow" data-google-signin data-hero-signup' in page
+    assert 'href="/demo"' in page
+
+
+def test_hero_keeps_the_email_button_without_google(client):
+    page = client.get("/").text
+    assert "HERO_SIGNUP" not in page and "Continue with Google" not in page
+    assert "Create a free library" in page and 'data-action="show-register-form" data-hero-signup' in page
 
 
 def test_start_sends_visitor_to_google_with_a_signed_state(client, google):
