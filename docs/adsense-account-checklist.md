@@ -81,6 +81,6 @@ OmniTrackr is mostly an app, and much of its public text explains how to use
 the app. AdSense tends to judge sites like this by how much stand-alone content
 they have for people who will never sign up. The best content to grow is the
 authored Discover guides and monthly editions, because they are reviewed and
-cite their sources. Seven Discover trails are still short and noindexed. Turning
-them into full guides, like the three finished ones, adds the most original,
-indexable content for the effort.
+cite their sources. Since October 16, 2026 all ten Discover trails are full,
+indexed guides. Keep adding one monthly edition each month, and give Google a
+few weeks to index the new guides before requesting another review.

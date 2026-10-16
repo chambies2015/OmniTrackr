@@ -14,6 +14,8 @@ from app.discover_guides import GUIDES
 
 PROMOTED_TRAILS = {
     "one-evening-well-spent", "finding-your-feet", "beautifully-strange-worlds",
+    "notice-the-details", "small-adventures", "clever-mysteries", "found-family",
+    "weather-and-windows", "make-something", "distant-futures",
 }
 SITEMAP_NS = {"sm": "http://www.sitemaps.org/schemas/sitemap/0.9"}
 
