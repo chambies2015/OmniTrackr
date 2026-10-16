@@ -27,7 +27,7 @@ def test_pool_is_built_from_the_editorial_writing_with_one_entry_per_title():
         assert entry["why"].strip() and entry["source_label"].strip()
         assert entry["id"] == f"{entry['kind']}/{entry['slug']}"
         assert entry["slug"] == title_pages.title_slug(entry["title"], entry["year"])
-        assert entry["source_url"] is None or entry["source_url"].startswith("/discover/")
+        assert entry["source_url"] is None or entry["source_url"].startswith(("/discover/", "/if-you-liked/"))
     arrival = pick.find("movie", "arrival-2016")
     assert arrival and arrival["creator"] == "Denis Villeneuve" and arrival["source_url"] == "/discover/distant-futures"
     assert pick.find_id("movie/arrival-2016") is arrival

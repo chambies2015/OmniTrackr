@@ -679,6 +679,9 @@ for route in pick_router.router.routes:
         bind_rate_limited_endpoint(route, rate_limited_pick_pool)
 app.include_router(pick_router.router)
 
+from .routers import if_you_liked as if_you_liked_router
+app.include_router(if_you_liked_router.router)
+
 from .routers import tier_list as tier_list_router
 rate_limited_tier_templates = limiter.limit("60/minute")(tier_list_router.tier_list_templates)
 rate_limited_tier_library = limiter.limit("30/minute")(tier_list_router.tier_list_library)
