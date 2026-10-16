@@ -527,7 +527,8 @@ async def google_start(request: Request, invite: str | None = None):
     if not google_signin.configured():
         return _google_failure("unavailable")
     funnel.record("google_signin_started", request)
-    state, cookie_value = google_signin.new_state(google_signin.valid_invite(invite))
+    state, cookie_value = google_signin.new_state(google_signin.valid_invite(invite),
+                                                  google_signin.redirect_uri(request))
     response = _google_redirect(google_signin.authorize_url(state))
     response.set_cookie(
         key=google_signin.STATE_COOKIE,
@@ -561,7 +562,7 @@ async def google_callback(
         if not code or len(code) > 2048:
             raise google_signin.SignInError("failed")
         client = getattr(request.app.state, "external_api_client", None)
-        id_token = await google_signin.exchange_code(code, client)
+        id_token = await google_signin.exchange_code(code, client, saved["redirect_uri"])
         profile = google_signin.read_id_token(id_token, saved["nonce"])
         user, outcome = google_signin.find_or_create_user(db, profile)
     except google_signin.SignInError as problem:

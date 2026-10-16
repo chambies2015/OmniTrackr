@@ -64,12 +64,39 @@ def configured() -> bool:
     return bool(client_id() and client_secret())
 
 
-def redirect_uri() -> str:
+CALLBACK_PATH = "/auth/google/callback"
+
+
+def _known_hosts() -> set[str]:
+    """The site's own host names (from APP_URL and SITE_URL), with and without www."""
+    from urllib.parse import urlparse
+
+    hosts = {"omnitrackr.xyz"}
+    for name in ("APP_URL", "SITE_URL"):
+        host = urlparse(os.getenv(name, "")).netloc.lower()
+        if host:
+            hosts.add(host)
+    return hosts | {h[4:] for h in hosts if h.startswith("www.")} | {"www." + h for h in hosts if not h.startswith("www.")}
+
+
+def redirect_uri(request=None) -> str:
+    """Where Google sends the visitor back.
+
+    It must be the host the visitor started on, because the state cookie belongs to
+    that host (omnitrackr.xyz and www.omnitrackr.xyz don't share cookies). Only the
+    site's own host names are used; anything else falls back to APP_URL.
+    """
     override = os.getenv("GOOGLE_REDIRECT_URI", "").strip()
     if override:
         return override
+    if request is not None:
+        host = (request.headers.get("host") or "").strip().lower()
+        if host and host in _known_hosts():
+            # Render ends TLS before the app, so the app itself only sees http.
+            scheme = "https" if auth.ENVIRONMENT == "production" else request.url.scheme
+            return f"{scheme}://{host}{CALLBACK_PATH}"
     from .email import APP_URL
-    return f"{APP_URL.rstrip('/')}/auth/google/callback"
+    return f"{APP_URL.rstrip('/')}{CALLBACK_PATH}"
 
 
 # ---------------------------------------------------------------- state cookie
@@ -82,9 +109,10 @@ def valid_invite(value) -> Optional[str]:
     return value if isinstance(value, str) and _INVITE_RE.fullmatch(value) else None
 
 
-def new_state(invite: Optional[str] = None) -> tuple[dict, str]:
-    """A fresh {state, nonce, invite} and its signed cookie value."""
-    data = {"state": secrets.token_urlsafe(24), "nonce": secrets.token_urlsafe(24)}
+def new_state(invite: Optional[str] = None, return_to: Optional[str] = None) -> tuple[dict, str]:
+    """A fresh {state, nonce, redirect_uri, invite} and its signed cookie value."""
+    data = {"state": secrets.token_urlsafe(24), "nonce": secrets.token_urlsafe(24),
+            "redirect_uri": return_to or redirect_uri()}
     if valid_invite(invite):
         data["invite"] = invite
     return data, _serializer().dumps(data)
@@ -101,13 +129,15 @@ def read_state(cookie_value: Optional[str]) -> dict:
         raise SignInError("failed")
     if not isinstance(data, dict) or not isinstance(data.get("state"), str) or not isinstance(data.get("nonce"), str):
         raise SignInError("failed")
+    if not isinstance(data.get("redirect_uri"), str):
+        data["redirect_uri"] = redirect_uri()
     return data
 
 
 def authorize_url(state: dict) -> str:
     return AUTHORIZE_URL + "?" + urlencode({
         "client_id": client_id(),
-        "redirect_uri": redirect_uri(),
+        "redirect_uri": state["redirect_uri"],
         "response_type": "code",
         "scope": "openid email profile",
         "state": state["state"],
@@ -119,15 +149,18 @@ def authorize_url(state: dict) -> str:
 
 # ---------------------------------------------------------------- talking to Google
 
-async def exchange_code(code: str, http_client=None) -> str:
-    """Trade the one-time code for Google's ID token (a JWT)."""
+async def exchange_code(code: str, http_client=None, return_to: Optional[str] = None) -> str:
+    """Trade the one-time code for Google's ID token (a JWT).
+
+    return_to must be the same redirect_uri the visitor was sent to Google with.
+    """
     import httpx
 
     payload = {
         "code": code,
         "client_id": client_id(),
         "client_secret": client_secret(),
-        "redirect_uri": redirect_uri(),
+        "redirect_uri": return_to or redirect_uri(),
         "grant_type": "authorization_code",
     }
     try:

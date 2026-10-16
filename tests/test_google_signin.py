@@ -18,8 +18,9 @@ def google(monkeypatch):
     monkeypatch.setenv("GOOGLE_REDIRECT_URI", "https://omnitrackr.xyz/auth/google/callback")
     answer = {"claims": {}}
 
-    async def fake_exchange(code, http_client=None):
+    async def fake_exchange(code, http_client=None, return_to=None):
         assert code == "good-code"
+        answer["return_to"] = return_to
         return jwt.encode(answer["claims"], "not-checked", algorithm="HS256")
 
     monkeypatch.setattr(google_signin, "exchange_code", fake_exchange)
@@ -247,3 +248,27 @@ async def test_code_exchange_posts_to_google(monkeypatch):
     with pytest.raises(google_signin.SignInError) as broken:
         await google_signin.exchange_code("abc", _FakeClient(_FakeResponse(200, {"access_token": "x"})))
     assert broken.value.code == "failed"
+
+
+@pytest.mark.parametrize("host, expected", [
+    ("omnitrackr.xyz", "https://omnitrackr.xyz/auth/google/callback"),
+    ("www.omnitrackr.xyz", "https://www.omnitrackr.xyz/auth/google/callback"),
+    ("evil.example", "https://omnitrackr.xyz/auth/google/callback"),
+])
+def test_google_returns_visitors_to_the_host_they_started_on(client, google, monkeypatch, host, expected):
+    """The state cookie belongs to one host, so the return address must be that host."""
+    monkeypatch.delenv("GOOGLE_REDIRECT_URI")
+    monkeypatch.setenv("APP_URL", "https://omnitrackr.xyz")
+    monkeypatch.setattr("app.email.APP_URL", "https://omnitrackr.xyz")
+    monkeypatch.setattr(auth, "ENVIRONMENT", "production")
+    response = client.get("/auth/google/start", headers={"host": host}, follow_redirects=False)
+    query = parse_qs(urlparse(response.headers["location"]).query)
+    assert query["redirect_uri"] == [expected]
+    saved = google_signin.read_state(response.cookies.get(google_signin.STATE_COOKIE)
+                                     or response.headers["set-cookie"].split(";")[0].split("=", 1)[1])
+    assert saved["redirect_uri"] == expected
+
+
+def test_code_exchange_uses_the_same_return_address(client, google, db_session):
+    _sign_in(client, google)
+    assert google["return_to"] == "https://omnitrackr.xyz/auth/google/callback"
