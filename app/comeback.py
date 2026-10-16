@@ -124,16 +124,20 @@ def due_members(db: Session, now: datetime, limit: int | None = None) -> list[mo
         ~models.User.id.in_(opted), ~models.User.id.in_(weekly),
         ~models.User.id.in_(recent_comeback), ~models.User.id.in_(recent_whats_new),
     ).order_by(models.User.id).all()
+    # Every come-back email ever sent, read once (a few rows per member at most) instead of
+    # one count query per candidate, which made Site stats slow with many quiet members.
+    sent_at_by_user: dict[int, list[datetime]] = {}
+    for user_id, sent_at in db.query(models.EmailCampaignSend.user_id, models.EmailCampaignSend.sent_at).filter(
+            models.EmailCampaignSend.campaign_key.like(f"{SEND_PREFIX}%"),
+            models.EmailCampaignSend.status == "sent"):
+        if sent_at is not None:
+            sent_at_by_user.setdefault(user_id, []).append(sent_at)
     due = []
     for user in candidates:
-        if _away_since(user) >= cutoff:
+        away_since = _away_since(user)
+        if away_since >= cutoff:
             continue
-        unanswered = db.query(func.count(models.EmailCampaignSend.id)).filter(
-            models.EmailCampaignSend.user_id == user.id,
-            models.EmailCampaignSend.campaign_key.like(f"{SEND_PREFIX}%"),
-            models.EmailCampaignSend.status == "sent",
-            models.EmailCampaignSend.sent_at > _away_since(user),
-        ).scalar() or 0
+        unanswered = sum(1 for sent_at in sent_at_by_user.get(user.id, ()) if sent_at > away_since)
         if unanswered >= MAX_UNANSWERED:
             continue
         due.append(user)
@@ -387,12 +391,13 @@ async def send_due(session_factory, client=None, now: datetime | None = None, se
             except Exception:
                 db.rollback()
                 continue
-            subject, html, _text, unsubscribe_url = email_for(db, user, pool, now.date())
             try:
+                subject, html, _text, unsubscribe_url = email_for(db, user, pool, now.date())
                 await sender(user.email, subject, html, unsubscribe_url)
                 stats["sent"] += 1
             except Exception as error:  # One bad address must not stop the rest.
                 print(f"Come-back email to user {user.id} failed: {error}")
+                db.rollback()  # building the email may have left the session mid-transaction
                 claim.status = "failed"
                 db.commit()
                 stats["failed"] += 1

@@ -18,11 +18,13 @@ from sqlalchemy.orm import Session
 from . import title_pages
 
 CACHE_SECONDS = 600
+FAILURE_RETRY_SECONDS = 60
 ROWS_PER_KIND = 50000
 RESULT_LIMIT = 8
 QUERY_MAX = 80
 _cache: dict = {"at": 0.0, "entries": None}
 _lock = threading.Lock()
+_build_lock = threading.Lock()  # one rebuild at a time; other requests keep using the old index
 
 
 def build_index(db: Session) -> list[dict]:
@@ -66,15 +68,31 @@ def index(db: Session) -> list[dict]:
     """The cached index; an empty list if the database can't be read."""
     now = time.monotonic()
     with _lock:
-        if _cache["entries"] is not None and now - _cache["at"] < CACHE_SECONDS:
-            return _cache["entries"]
+        stale = _cache["entries"]
+        if stale is not None and now - _cache["at"] < CACHE_SECONDS:
+            return stale
+    # Several pages read the index at once when it expires; only one of them rebuilds it.
+    if not _build_lock.acquire(blocking=stale is None):
+        return stale
     try:
-        entries = build_index(db)
-    except Exception:
-        entries = []  # The homepage search never breaks the page; retry after the cache window.
-    with _lock:
-        _cache["at"], _cache["entries"] = now, entries
-    return entries
+        with _lock:
+            if _cache["entries"] is not None and time.monotonic() - _cache["at"] < CACHE_SECONDS:
+                return _cache["entries"]
+        try:
+            entries = build_index(db)
+        except Exception:
+            # The homepage search never breaks the page. Leave the session usable for the rest
+            # of the request, keep the last good index, and try again in a minute.
+            db.rollback()
+            entries = stale if stale is not None else []
+            with _lock:
+                _cache["at"], _cache["entries"] = time.monotonic() - CACHE_SECONDS + FAILURE_RETRY_SECONDS, entries
+            return entries
+        with _lock:
+            _cache["at"], _cache["entries"] = time.monotonic(), entries
+        return entries
+    finally:
+        _build_lock.release()
 
 
 def clear_cache() -> None:

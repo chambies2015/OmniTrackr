@@ -1,6 +1,7 @@
 """Tier list maker (/tier-list): rank movies, shows, anime, games, books or albums from S to D."""
 from __future__ import annotations
 
+import asyncio
 from html import escape
 from urllib.parse import urljoin
 
@@ -20,6 +21,20 @@ GUEST_LIST_JS = "/static/guest-list.js?v=20261012-hero-search-1"
 DESCRIPTION = ("Free tier list maker for movies, TV shows, anime, video games, books and albums. Start from a ready-made "
                "set or search any title, drag it from S to D, and save the finished list as an image. No account needed.")
 MAX_REDIRECTS = 3
+# The image proxy shares the outgoing connection pool with Google sign-in, Release Radar and
+# the metadata lookups. Capping it keeps a burst of poster requests (one export asks for up to
+# 30 at once) from taking every connection and stalling those.
+IMAGE_CONCURRENCY = 6
+IMAGE_QUEUE_SECONDS = 10.0
+IMAGE_FETCH_SECONDS = 20.0
+_image_slots: asyncio.Semaphore | None = None
+
+
+def _slots() -> asyncio.Semaphore:
+    global _image_slots
+    if _image_slots is None:
+        _image_slots = asyncio.Semaphore(IMAGE_CONCURRENCY)
+    return _image_slots
 
 
 def _e(value) -> str:
@@ -174,6 +189,21 @@ async def tier_list_image(request: Request, url: str = Query(..., max_length=100
     client = getattr(request.app.state, "external_api_client", None)
     if client is None:
         raise HTTPException(503, "Images unavailable")
+    slots = _slots()
+    try:
+        await asyncio.wait_for(slots.acquire(), timeout=IMAGE_QUEUE_SECONDS)
+    except asyncio.TimeoutError:
+        raise HTTPException(503, "Images are busy, try again in a moment")
+    try:
+        # A whole fetch, redirects included, gets a hard deadline so a trickling host can't hold a slot.
+        return await asyncio.wait_for(_fetch_image(client, url), timeout=IMAGE_FETCH_SECONDS)
+    except asyncio.TimeoutError:
+        raise HTTPException(504, "Image took too long")
+    finally:
+        slots.release()
+
+
+async def _fetch_image(client, url: str) -> Response:
     current = url
     try:
         for _ in range(MAX_REDIRECTS + 1):

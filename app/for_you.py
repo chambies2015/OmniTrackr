@@ -243,12 +243,42 @@ def _matches(library_title: str, radar_title: str) -> bool:
     return theirs.startswith(mine + " ")
 
 
+class LibraryMatcher:
+    """Finds the first library title that _matches() a radar title, without comparing every pair.
+
+    _matches() only accepts an exact normalized title or a whole-word prefix of the radar
+    title, so each radar name needs one lookup per word instead of one per library title.
+    A large library (thousands of imported titles) against a full Release Radar pool
+    otherwise costs millions of comparisons on every request.
+    """
+
+    def __init__(self, titles: Iterable):
+        self._first: dict[str, tuple[int, object]] = {}
+        for position, entry in enumerate(titles):
+            title = entry[-1] if isinstance(entry, tuple) else entry
+            key = normalize_title(title)
+            if len(key) >= 4 and key not in self._first:
+                self._first[key] = (position, entry)
+
+    def find(self, names: Iterable[str]):
+        """The earliest library entry (in the order given) matching any of the names, or None."""
+        best = None
+        for name in names:
+            words = normalize_title(name).split()
+            for size in range(1, len(words) + 1):
+                hit = self._first.get(" ".join(words[:size]))
+                if hit is not None and (best is None or hit[0] < best[0]):
+                    best = hit
+        return best[1] if best else None
+
+
 def coming_up(db: Session, user_id: int, today: Optional[date] = None, client=None,
               pool: Optional[list[dict]] = None) -> dict:
     today = today or radar.today_utc()
     pool = radar_pool(today, client) if pool is None else pool
     owned = owned_titles(db, user_id, ("movies", "tv-shows", "anime", "video-games"))
     library = [(category, title) for category, titles in owned.items() for title in titles]
+    matcher = LibraryMatcher(library)
     start, end = today - timedelta(days=7), today + timedelta(days=60)
     matches = []
     matched_keys = set()
@@ -260,7 +290,7 @@ def coming_up(db: Session, user_id: int, today: Optional[date] = None, client=No
         if not (start <= day <= end):
             continue
         names = [item["title"]] + ([item["alt_title"]] if item.get("alt_title") else [])
-        hit = next(((cat, title) for cat, title in library if any(_matches(title, name) for name in names)), None)
+        hit = matcher.find(names)
         if hit is None:
             continue
         same = normalize_title(hit[1]) == normalize_title(item["title"])
