@@ -2,7 +2,7 @@
 Account management endpoints for the OmniTrackr API.
 """
 import io
-from fastapi import APIRouter, Depends, HTTPException, UploadFile, File, Request, status
+from fastapi import APIRouter, Depends, HTTPException, UploadFile, File, Request, Response, status
 from fastapi.encoders import jsonable_encoder
 from fastapi.responses import JSONResponse
 from sqlalchemy.orm import Session
@@ -33,6 +33,22 @@ def _password_confirmed(user: models.User, password: str) -> bool:
 async def get_current_account(current_user: models.User = Depends(get_current_user)):
     """Get current user's account information."""
     return current_user
+
+
+@router.post("/visit", include_in_schema=False)
+async def record_visit(response: Response, current_user: models.User = Depends(get_current_user),
+                       db: Session = Depends(get_db)):
+    """Count today as a visit day; the first visit after 3+ days away offers the Welcome Back Deck."""
+    from .. import return_prompt, visits
+    response.headers["Cache-Control"] = "private, no-store"
+    days_away = visits.record_visit(db, current_user)
+    if days_away is None or days_away < visits.WELCOME_BACK_MIN_DAYS:
+        return {"return_prompt": schemas.ReturnPromptContext().model_dump()}
+    days_away = min(days_away, 90)
+    return {"return_prompt": schemas.ReturnPromptContext(
+        eligible=True, days_away=days_away,
+        engagement_token=return_prompt.create_return_prompt_token(days_away, current_user.id),
+    ).model_dump()}
 
 
 @router.put("/username", response_model=schemas.User)

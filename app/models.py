@@ -26,6 +26,11 @@ class User(Base):
     created_at = Column(DateTime, default=datetime.utcnow)
     last_login_at = Column(DateTime, nullable=True)
     login_count = Column(Integer, default=0, nullable=False)
+    # The last day (UTC) the member opened OmniTrackr while signed in, and how many
+    # different days they have. Sessions last 30 days, so a log-in alone misses most
+    # returns. Older rows are empty until the member's next visit.
+    last_seen_on = Column(Date, nullable=True)
+    visit_days = Column(Integer, default=0, nullable=False)
     deactivated_at = Column(DateTime, nullable=True)
     # Google account id ("sub") for Sign in with Google; empty for password-only accounts.
     google_sub = Column(String, unique=True, index=True, nullable=True)

@@ -12,7 +12,7 @@ from pathlib import Path
 
 from fastapi import APIRouter, Depends, HTTPException, Query, Request, Response
 from pydantic import BaseModel, Field
-from sqlalchemy import func
+from sqlalchemy import func, or_
 from sqlalchemy.orm import Session
 
 from .. import editorial_collections, funnel, google_signin, models, release_radar
@@ -65,6 +65,12 @@ def _counts_between(db: Session, column, start: datetime, end: datetime | None =
     if end is not None:
         query = query.filter(column < end)
     return int(query.scalar() or 0)
+
+
+def _active_since(db: Session, start: datetime) -> int:
+    """Members who logged in or opened OmniTrackr on a still-open session since `start`."""
+    return int(db.query(func.count(models.User.id)).filter(or_(
+        models.User.last_login_at >= start, models.User.last_seen_on >= start.date())).scalar() or 0)
 
 
 def _traffic(db: Session, days: int, today: date) -> dict:
@@ -221,6 +227,15 @@ def _announcement_status(db: Session) -> dict | None:
         return None
 
 
+def _comeback_status(db: Session) -> dict | None:
+    try:
+        from .. import comeback
+        return comeback.status(db)
+    except Exception:
+        db.rollback()
+        return None
+
+
 def _title_details(db: Session) -> dict:
     """How many title pages have their public facts cached (filled in by a background job)."""
     counts = dict(db.query(models.TitleMetadata.status, func.count(models.TitleMetadata.id))
@@ -279,11 +294,10 @@ async def site_stats_overview(
     now = datetime.now(timezone.utc).replace(tzinfo=None)
     today = now.date()
     insights = _moderator_site_insights(db)
-    last_login = models.User.last_login_at
     members = {
-        "active_24_hours": _counts_between(db, last_login, now - timedelta(hours=24)),
-        "active_7_days": _counts_between(db, last_login, now - timedelta(days=7)),
-        "active_30_days": _counts_between(db, last_login, now - timedelta(days=30)),
+        "active_24_hours": _active_since(db, now - timedelta(hours=24)),
+        "active_7_days": _active_since(db, now - timedelta(days=7)),
+        "active_30_days": _active_since(db, now - timedelta(days=30)),
         "new_today": _counts_between(db, models.User.created_at, datetime.combine(today, datetime.min.time())),
         "new_in_range": _counts_between(db, models.User.created_at, now - timedelta(days=days)),
         "new_previous_range": _counts_between(
@@ -306,6 +320,7 @@ async def site_stats_overview(
         "system": {**_system(), "title_details": _title_details(db)},
         "editor_collections": editorial_collections.status(db),
         "announcement": _announcement_status(db),
+        "comeback": _comeback_status(db),
     }
 
 
@@ -383,3 +398,49 @@ async def announcement_action(payload: AnnouncementAction, request: Request, res
         return {**announcements.status(db), "message": f"Test sent to {current_user.email}."}
     announcements.set_status(db, "sending" if payload.action == "start" else "paused")
     return announcements.status(db)
+
+
+# ---------------------------------------------------------------- come-back email
+
+class ComebackAction(BaseModel):
+    action: str = Field(..., pattern="^(start|pause|test)$")
+
+
+@router.get("/site-stats/comeback-preview", include_in_schema=False)
+async def comeback_preview(request: Request, current_user: models.User = Depends(get_current_user),
+                           db: Session = Depends(get_db)):
+    """The come-back email as the owner would receive it (nothing is sent)."""
+    from fastapi.responses import HTMLResponse
+    from .. import comeback
+    from ..for_you import radar_pool
+    _require_admin(current_user)
+    try:
+        pool = radar_pool(None, getattr(request.app.state, "external_api_client", None))
+    except Exception:
+        pool = None
+    subject, html, _text, _url = comeback.email_for(db, current_user, pool)
+    banner = (f'<div style="font:14px Arial,sans-serif;background:#fef3c7;color:#78350f;padding:10px 16px">'
+              f'Preview only, filled in from your own library. Subject: <strong>{subject.replace("&", "&amp;").replace("<", "&lt;")}</strong></div>')
+    response = HTMLResponse(html.replace(
+        '<div style="max-width:560px', banner + '<div style="max-width:560px', 1))
+    response.headers["Content-Security-Policy"] = "default-src 'none'; img-src https: data:; style-src 'unsafe-inline'; frame-ancestors 'none'"
+    _no_store(response)
+    return response
+
+
+@router.post("/api/site-stats/comeback")
+async def comeback_action(payload: ComebackAction, request: Request, response: Response,
+                          current_user: models.User = Depends(get_current_user), db: Session = Depends(get_db)):
+    from .. import comeback
+    _require_admin(current_user)
+    _no_store(response)
+    if payload.action == "test":
+        if not comeback.mail_configured():
+            raise HTTPException(status_code=409, detail="Email isn't configured on this server.")
+        try:
+            await comeback.send_test(db, current_user, getattr(request.app.state, "external_api_client", None))
+        except Exception as error:
+            raise HTTPException(status_code=502, detail=f"The test email couldn't be sent: {error}")
+        return {**comeback.status(db), "message": f"Test sent to {current_user.email}."}
+    comeback.set_status(db, "sending" if payload.action == "start" else "paused")
+    return comeback.status(db)
