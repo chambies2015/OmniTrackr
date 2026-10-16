@@ -1,5 +1,26 @@
 # Public content review — September 17, 2026
 
+## Follow-up — October 16, 2026: all ten Discover trails are full guides
+
+The seven remaining short trails (Notice the details, Small adventures, Clever
+mysteries, Found family, Weather and windows, Make something, Distant futures)
+are now complete decision guides like the first three: a comparison table,
+three analysis sections, two notes per pick, two related trails and a dated
+source list. That adds roughly 5,900 words of original editorial text. Adding a
+trail to `GUIDES` makes it indexable, lists it in the sitemap with its review
+date, gives it Article structured data and an "In-depth guide" label on
+`/discover`. No ad placement, catalog title, saved-title metadata or user data
+changed. Discover guides stay outside the ad loader.
+
+Source links were checked on October 16. Six official pages could not be read
+from the review environment (robots rules or blocking) and were kept because
+they are the official pages the trails already cite: Brian Eno's shop, Lauryn
+Hill, Phoebe Bridgers, BBC Programmes, Ursula K. Le Guin, and the Peacock and
+Netflix listings vary by region. Three trail sources were replaced in the guide
+source list with pages that could be read: the Independent Cinema Office for
+Knives Out, the New Zealand Film Commission for Hunt for the Wilderpeople, and
+the Warner Bros. Discovery announcement for Scavengers Reign.
+
 ## Follow-up — October 12, 2026: category tracker guides indexed
 
 Dan chose to let search engines index the six category tracker guides
