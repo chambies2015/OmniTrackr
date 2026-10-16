@@ -44,6 +44,7 @@ CORE_SITEMAP_PATHS = (
     ("/sample-library", "monthly", "0.8"),
     ("/pick", "weekly", "0.7"),
     ("/tier-list", "monthly", "0.7"),
+    ("/if-you-liked", "monthly", "0.75"),
     ("/daily", "daily", "0.8"),
     ("/movie-tracker", "monthly", "0.75"),
     ("/tv-show-tracker", "monthly", "0.75"),
@@ -289,6 +290,15 @@ async def get_sitemap(request: Request = None, db: Session = Depends(get_db)):
             f"<lastmod>{guide['reviewed']}</lastmod>"
             "<changefreq>monthly</changefreq><priority>0.75</priority></url>"
         )
+    # "If you liked" guides: hand-written, complete pages.
+    from .. import if_you_liked
+    from ..if_you_liked_guides import GUIDES as LIKED_GUIDES
+    for slug, guide in LIKED_GUIDES.items():
+        sitemap_parts.append(
+            f"<url><loc>{base_url}{if_you_liked.path(slug)}</loc>"
+            f"<lastmod>{guide['reviewed']}</lastmod>"
+            "<changefreq>monthly</changefreq><priority>0.75</priority></url>"
+        )
     # Title pages join only when they have real substance (see title_pages.is_indexable).
     try:
         from .titles import sitemap_entries
@@ -465,6 +475,7 @@ OmniTrackr is a free web application for tracking and organizing movies, TV show
 ## Public Content
 Public reviews are available at {base_url}/reviews and individual review pages at {base_url}/reviews/[id]?category=[category]. OmniTrackr also publishes evergreen guidance at {base_url}/faq, {base_url}/guides, {base_url}/media-tracking, {base_url}/compare, {base_url}/use-cases, {base_url}/movie-tracker, {base_url}/tv-show-tracker, {base_url}/anime-tracker, {base_url}/game-tracker, {base_url}/music-tracker, {base_url}/book-tracker, {base_url}/media-statistics, {base_url}/export-import-guide, {base_url}/media-tracker-checklist, {base_url}/tracking-templates, and {base_url}/review-guidelines, a demo library at {base_url}/demo, a sample media library at {base_url}/sample-library, a human-readable site map at {base_url}/site-map, product updates at {base_url}/changelog and {base_url}/roadmap, ad transparency at {base_url}/advertising, and content quality standards at {base_url}/content-quality.
 Release Radar at {base_url}/release-radar lists upcoming movies (Wikidata), TV premieres (TVmaze), the current anime season (AniList), and new video games (RAWG), refreshed every few hours, with one-click tracking for members.
+"If you liked" guides at {base_url}/if-you-liked recommend what to watch, play, read or hear after a well-loved title (for example {base_url}/if-you-liked/interstellar), across formats, with why each pick fits and a caveat.
 Pick for me at {base_url}/pick suggests one editorially chosen movie, TV show, anime, game, book or album at a time, with the reason it was chosen and a caveat.
 OmniTrackr Daily at {base_url}/daily is a free daily guessing game: one movie, TV show, anime, game, book or album a day, guessed from six hand-written clues, with past puzzles, answers and editors' notes at {base_url}/daily/archive.
 The tier list maker at {base_url}/tier-list ranks movies, TV shows, anime, games, books or albums from S to D in the browser and saves the board as an image; boards are never stored on the server.

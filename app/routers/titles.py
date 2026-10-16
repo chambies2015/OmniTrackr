@@ -324,6 +324,20 @@ def _related_html(summary: dict) -> str:
     return f'<section class="title-section" aria-labelledby="related-title"><h2 id="related-title">Members who track this also track</h2><div class="title-related-grid">{cards}</div></section>'
 
 
+def _if_you_liked_html(group) -> str:
+    """A link to the hand-written "If you liked" guide about this title, when one exists."""
+    from .. import if_you_liked
+    slug = if_you_liked.for_title(group.kind, group.title)
+    if slug is None:
+        return ""
+    guide = if_you_liked.guide(slug)
+    names = ", ".join(item["title"] for item in guide["picks"][:3])
+    return (f'<section class="title-section title-liked" aria-labelledby="liked-title"><h2 id="liked-title">Loved it? Here is what to try next</h2>'
+            f'<p>Our guide picks {len(guide["picks"])} titles that share what made {_e(guide["anchor"]["title"])} work, '
+            f'across formats, including {_e(names)}.</p>'
+            f'<a class="site-btn site-btn--ghost" href="{_e(if_you_liked.path(slug))}">If you liked {_e(guide["anchor"]["title"])} →</a></section>')
+
+
 def _links_html(metadata: dict) -> str:
     links = metadata.get("links") or []
     if not links:
@@ -386,7 +400,7 @@ def render(group, summary: dict, metadata: Optional[dict], indexable: bool, sign
         # Our own content first: member reviews and stats, then collections and "also track".
         _community_html(group, summary), _write_review_html(group, summary, signed_in, take),
         _trailer_html(group, metadata), _about_html(group, summary, metadata),
-        _collections_html(summary), _related_html(summary), _gallery_html(group, metadata), _tracks_html(metadata),
+        _if_you_liked_html(group), _collections_html(summary), _related_html(summary), _gallery_html(group, metadata), _tracks_html(metadata),
     ])
     og_image = f'<meta property="og:image" content="{_e(image)}">' if image else ""
     ad_loader = ('<script src="/static/ad-loader.js" defer></script>'

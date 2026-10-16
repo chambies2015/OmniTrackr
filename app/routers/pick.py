@@ -2,7 +2,7 @@
 from __future__ import annotations
 
 from html import escape
-from typing import Optional
+from typing import Literal, Optional
 
 from fastapi import APIRouter, Depends, HTTPException, Query, Request, Response
 from pydantic import BaseModel, Field
@@ -103,7 +103,7 @@ def _pool_section(details: dict, collection_links: dict) -> str:
     return (f'<section id="pick-pool" class="pf-pool" aria-labelledby="pfPoolHeading"><p class="eyebrow">THE WHOLE POOL</p>'
             f'<h2 id="pfPoolHeading">Every title we might pick ({total})</h2>'
             '<p>Prefer to browse? These are all the titles Pick for me draws from, grouped by format. Each one comes from a '
-            'Discover trail, a monthly edition or an editors\' collection, where you can read it next to the picks it was chosen with.</p>'
+            'Discover trail, a monthly edition, an editors\' collection or an "If you liked" guide, where you can read it next to the picks it was chosen with.</p>'
             f'<div class="pf-pool__groups">{"".join(groups)}</div></section>')
 
 
@@ -132,7 +132,7 @@ GUIDANCE = (
     'or the first hour of a game. Saving it to a list also helps, because a pick you are not ready for tonight can still '
     'be the right one next weekend.</p></section>'
     '<section class="editorial pf-method"><h2>Where these picks come from</h2>'
-    '<p>Every suggestion comes from OmniTrackr\'s own editorial writing: the Discover trails, the monthly editions and the '
+    '<p>Every suggestion comes from OmniTrackr\'s own editorial writing: the Discover trails, the monthly editions, the "If you liked" guides and the '
     'starter collections written by the OmniTrackr editors. They are not rankings, sponsored placements or anyone\'s '
     'private ratings. Picks are random within the format you choose, and the page avoids repeating a recent pick until it '
     'runs out of others.</p>'
@@ -199,6 +199,8 @@ def pick_pool(request: Request, response: Response, db: Session = Depends(get_db
 
 class PickAdd(BaseModel):
     id: str = Field(..., min_length=3, max_length=160)
+    # Where the button was: Pick for me itself, or an "If you liked" guide (counted separately on Site stats).
+    source: Literal["pick", "if-you-liked"] = "pick"
 
 
 @router.post("/api/pick/add")
@@ -218,5 +220,5 @@ def add_pick(payload: PickAdd, request: Request, response: Response,
     }
     db.commit()
     if state == "created":
-        funnel.record("pick_saved", request)
+        funnel.record("liked_saved" if payload.source == "if-you-liked" else "pick_saved", request)
     return result

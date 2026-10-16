@@ -98,6 +98,17 @@ def discover_index():
             f'<h2>{escape(challenge["name"])}</h2><p>{escape(challenge["tagline"])}</p>'
             f'<a class="button" href="/challenges/{challenges.slug_for(month)}">See this month\'s challenge →</a></section>'
         )
+    from ..if_you_liked_guides import GUIDES as LIKED_GUIDES
+    liked_links = " · ".join(
+        f'<a href="/if-you-liked/{escape(slug, quote=True)}">{escape(guide["anchor"]["title"])}</a>'
+        for slug, guide in LIKED_GUIDES.items()
+    )
+    liked_card = (
+        '<section class="editorial challenge-promo"><p class="eyebrow">IF YOU LIKED</p>'
+        '<h2>Just finished something you loved?</h2>'
+        f'<p>Hand-written guides to what to try next, across formats: {liked_links}.</p>'
+        '<a class="button" href="/if-you-liked">See every guide →</a></section>'
+    )
     archive = (
         '<section class="editorial monthly-archive"><h2>Past monthly editions</h2>'
         f'<ul>{archive_items}</ul></section>' if archive_items else ''
@@ -113,7 +124,7 @@ def discover_index():
         "isPartOf": {"@type": "WebSite", "name": "OmniTrackr", "url": "https://omnitrackr.xyz/"},
         "mainEntity": {"@type": "ItemList", "itemListElement": trail_links},
     }
-    return page("Discover: what to watch, play, read or hear next", DISCOVER_DESCRIPTION, "/discover", '<header class="hero"><p class="eyebrow">SIX MEDIA TYPES. NEW CONNECTIONS.</p><h1>Follow your curiosity.</h1><p>Find your next watch, read, listen or play through a shared idea. Explore freely, then save the picks that feel like you.</p></header>' + edition_card + challenge_card + archive + filters + '<p id="trail-empty" class="trail-empty" hidden>No trails match yet. Try a broader theme or choose Any format.</p><div id="trail-list" class="trails">' + ''.join(cards) + '</div><section class="editorial"><h2>How these trails work</h2><p>These are editorial suggestions, not rankings or user reviews. Each pick has a reason to be here, a caveat, and a source for learning more. Start with one; there is no need to finish a whole collection.</p><p>Saving requires an account. You choose which titles to add, and can review existing matches before confirming.</p></section>', structured_data=structured)
+    return page("Discover: what to watch, play, read or hear next", DISCOVER_DESCRIPTION, "/discover", '<header class="hero"><p class="eyebrow">SIX MEDIA TYPES. NEW CONNECTIONS.</p><h1>Follow your curiosity.</h1><p>Find your next watch, read, listen or play through a shared idea. Explore freely, then save the picks that feel like you.</p></header>' + edition_card + challenge_card + liked_card + archive + filters + '<p id="trail-empty" class="trail-empty" hidden>No trails match yet. Try a broader theme or choose Any format.</p><div id="trail-list" class="trails">' + ''.join(cards) + '</div><section class="editorial"><h2>How these trails work</h2><p>These are editorial suggestions, not rankings or user reviews. Each pick has a reason to be here, a caveat, and a source for learning more. Start with one; there is no need to finish a whole collection.</p><p>Saving requires an account. You choose which titles to add, and can review existing matches before confirming.</p></section>', structured_data=structured)
 
 
 def detail_content(trail, back_path, back_label, api_path, published, essay=None):
