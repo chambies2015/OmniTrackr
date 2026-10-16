@@ -405,6 +405,26 @@ function signupProblem(email, username, password, confirmPassword) {
     return null;
 }
 
+// A username taken from the start of the email address ("sam.lee@…" → "sam.lee"),
+// or '' when nothing usable is left. The server still checks it is free.
+function suggestUsername(email) {
+    let base = String(email || '').split('@')[0].split('+')[0].replace(/[^A-Za-z0-9_.-]/g, '').replace(/^[^A-Za-z0-9]+/, '').slice(0, 30);
+    if (base.length && base.length < 3) base = `${base}${'123'.slice(0, 3 - base.length)}`;
+    return USERNAME_PATTERN.test(base) ? base : '';
+}
+
+// Fill the username from the email until the visitor types their own.
+function setupUsernameSuggestion() {
+    const email = document.getElementById('registerEmail');
+    const username = document.getElementById('registerUsername');
+    if (!email || !username) return;
+    username.addEventListener('input', () => { username.dataset.edited = username.value ? 'true' : ''; });
+    email.addEventListener('input', () => {
+        if (username.dataset.edited === 'true') return;
+        username.value = suggestUsername(email.value);
+    });
+}
+
 async function register(email, username, password) {
     const invite = getFriendInvite();
     const response = await fetch(`${AUTH_API_BASE}/auth/register`, {
@@ -428,6 +448,7 @@ async function register(email, username, password) {
 function showVerificationSent(email) {
     showLoginForm(false);
     document.getElementById('authTitle').textContent = 'Check your inbox';
+    setAuthContext('One last step before your library opens.');
     const loginField = document.getElementById('loginUsername');
     if (loginField) loginField.value = email;
     let saved = 0;
@@ -618,17 +639,30 @@ function showLoginForm(scroll = true) {
     document.getElementById('resetPasswordForm').style.display = 'none';
     document.getElementById('resendVerificationContainer').style.display = 'none';
     document.getElementById('authTitle').textContent = 'Log in to OmniTrackr';
+    setAuthContext('Welcome back. Pick up where you left off.');
     document.getElementById('authError').textContent = '';
     document.getElementById('authSuccess').style.display = 'none';
     const reactivateContainer = document.getElementById('reactivateContainer');
     if (reactivateContainer) {
         reactivateContainer.style.display = 'none';
     }
-    if (scroll && landingVisible()) {
-        setTimeout(() => {
-            document.querySelector('.landing-auth').scrollIntoView({ behavior: 'smooth', block: 'center' });
-        }, 100);
-    }
+    if (scroll) revealAuthCard();
+}
+
+// The line under the form title, when the page has one.
+function setAuthContext(text) {
+    const context = document.querySelector('.auth-container .auth-context');
+    if (context) context.textContent = text;
+}
+
+// Bring the form card into view: in a pop-up on the homepage (public-landing.js),
+// otherwise by scrolling to the sign-up section.
+function revealAuthCard() {
+    if (!landingVisible()) return;
+    if (window.OmniAuthDialog && window.OmniAuthDialog.open()) return;
+    setTimeout(() => {
+        document.querySelector('.landing-auth')?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    }, 100);
 }
 
 function landingVisible() {
@@ -648,13 +682,10 @@ function showRegisterForm(scroll = true, { report = true } = {}) {
     document.getElementById('forgotPasswordForm').style.display = 'none';
     document.getElementById('resetPasswordForm').style.display = 'none';
     document.getElementById('authTitle').textContent = 'Create your free account';
+    setAuthContext('Free, private by default, and ready in under a minute.');
     document.getElementById('authError').textContent = '';
     document.getElementById('authSuccess').style.display = 'none';
-    if (scroll && landingVisible()) {
-        setTimeout(() => {
-            document.querySelector('.landing-auth').scrollIntoView({ behavior: 'smooth', block: 'center' });
-        }, 100);
-    }
+    if (scroll) revealAuthCard();
 }
 
 function showForgotPasswordForm(scroll = true) {
@@ -665,11 +696,7 @@ function showForgotPasswordForm(scroll = true) {
     document.getElementById('authTitle').textContent = 'Reset Password';
     document.getElementById('authError').textContent = '';
     document.getElementById('authSuccess').style.display = 'none';
-    if (scroll && landingVisible()) {
-        setTimeout(() => {
-            document.querySelector('.landing-auth').scrollIntoView({ behavior: 'smooth', block: 'center' });
-        }, 100);
-    }
+    if (scroll) revealAuthCard();
 }
 
 function showResetPasswordForm(resetToken = null, scroll = true) {
@@ -683,11 +710,7 @@ function showResetPasswordForm(resetToken = null, scroll = true) {
     if (resetToken) {
         document.getElementById('resetPasswordFormElement').dataset.resetToken = resetToken;
     }
-    if (scroll && landingVisible()) {
-        setTimeout(() => {
-            document.querySelector('.landing-auth').scrollIntoView({ behavior: 'smooth', block: 'center' });
-        }, 100);
-    }
+    if (scroll) revealAuthCard();
 }
 
 function updateUserDisplay() {
@@ -861,6 +884,7 @@ function setupAuthHandlers() {
     });
 
     document.getElementById('registerFormElement').addEventListener('focusin', () => reportFunnelEvent('signup_form_opened'));
+    setupUsernameSuggestion();
 
     // Register form submission
     document.getElementById('registerFormElement').addEventListener('submit', async (e) => {
@@ -868,7 +892,9 @@ function setupAuthHandlers() {
         const email = document.getElementById('registerEmail').value.trim();
         const username = document.getElementById('registerUsername').value.trim();
         const password = document.getElementById('registerPassword').value;
-        const confirmPassword = document.getElementById('registerConfirmPassword').value;
+        // The homepage form has a show-password button instead of a second password box.
+        const confirmField = document.getElementById('registerConfirmPassword');
+        const confirmPassword = confirmField ? confirmField.value : password;
 
         const problem = signupProblem(email, username, password, confirmPassword);
         if (problem) {
@@ -1083,10 +1109,7 @@ function initAuth() {
     // Handle password reset
     if (resetToken) {
         showAuthModal();
-        // Scroll to auth section
-        setTimeout(() => {
-            document.querySelector('.landing-auth').scrollIntoView({ behavior: 'smooth', block: 'center' });
-        }, 100);
+        revealAuthCard();
         showResetPasswordForm(resetToken);
         return;
     }
@@ -1094,10 +1117,7 @@ function initAuth() {
     // Handle successful verification redirect
     if (emailVerified === 'true' && !verifyToken) {
         showAuthModal();
-        // Scroll to auth section
-        setTimeout(() => {
-            document.querySelector('.landing-auth').scrollIntoView({ behavior: 'smooth', block: 'center' });
-        }, 100);
+        revealAuthCard();
         displayAuthSuccess('✅ Email verified successfully! You can now log in.');
         showLoginForm();
         // Clean URL
@@ -1108,10 +1128,7 @@ function initAuth() {
     // Handle successful password reset redirect
     if (passwordReset === 'true') {
         showAuthModal();
-        // Scroll to auth section
-        setTimeout(() => {
-            document.querySelector('.landing-auth').scrollIntoView({ behavior: 'smooth', block: 'center' });
-        }, 100);
+        revealAuthCard();
         displayAuthSuccess('✅ Password reset successfully! You can now log in with your new password.');
         showLoginForm();
         // Clean URL
@@ -1129,7 +1146,7 @@ function initAuth() {
             else showRegisterForm(false, { report: false });
             displayAuthError(googleErrorMessage(urlParams.get('google_error')));
             window.history.replaceState({}, document.title, window.location.pathname + '#landing-auth');
-            setTimeout(() => document.querySelector('.landing-auth')?.scrollIntoView({ block: 'center' }), 100);
+            revealAuthCard();
             return;
         }
         if (window.location.hash === '#signup') {
@@ -1196,9 +1213,7 @@ async function handleEmailChangeVerification(token) {
     } else {
         // User not logged in, show auth modal with success message
         showAuthModal();
-        setTimeout(() => {
-            document.querySelector('.landing-auth').scrollIntoView({ behavior: 'smooth', block: 'center' });
-        }, 100);
+        revealAuthCard();
         displayAuthSuccess('✅ Email changed successfully! Please log in with your new email.');
         showLoginForm();
         window.history.replaceState({}, document.title, window.location.pathname);
@@ -1207,8 +1222,7 @@ async function handleEmailChangeVerification(token) {
 
 async function handleEmailVerification(token) {
     showAuthModal();
-    // Scroll to auth section
-    document.querySelector('.landing-auth').scrollIntoView({ behavior: 'smooth', block: 'center' });
+    revealAuthCard();
     document.getElementById('authTitle').textContent = 'Email Verification';
     document.getElementById('loginForm').style.display = 'none';
     document.getElementById('registerForm').style.display = 'none';
