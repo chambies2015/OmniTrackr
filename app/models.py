@@ -27,6 +27,11 @@ class User(Base):
     last_login_at = Column(DateTime, nullable=True)
     login_count = Column(Integer, default=0, nullable=False)
     deactivated_at = Column(DateTime, nullable=True)
+    # Google account id ("sub") for Sign in with Google; empty for password-only accounts.
+    google_sub = Column(String, unique=True, index=True, nullable=True)
+    # False only for accounts made with Google that have not chosen a password yet.
+    # Older rows are empty (NULL), which means a password was chosen at sign-up.
+    password_set = Column(Boolean, nullable=True)
     
     # Privacy settings
     movies_private = Column(Boolean, default=False, nullable=False)
@@ -70,6 +75,11 @@ class User(Base):
     collections = relationship("Collection", back_populates="owner", cascade="all, delete-orphan")
     recommendation_requests = relationship("RecommendationRequest", back_populates="owner", cascade="all, delete-orphan")
     recommendation_invitations = relationship("RecommendationInvitation", back_populates="recipient", cascade="all, delete-orphan")
+
+    @property
+    def has_password(self) -> bool:
+        """Whether the member knows a password for this account (see password_set)."""
+        return self.password_set is not False
 
 
 class Movie(Base):

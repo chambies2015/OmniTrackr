@@ -411,6 +411,7 @@
       });
     };
     fillList('signupIssues', data.funnel.issues);
+    if ($('googleSignin')) fillList('googleSignin', data.funnel.google || []);
     const retention = data.retention || {};
     fillList('guestList', [
       ...data.funnel.guest,
@@ -801,6 +802,7 @@
       data.funnel ? `Sign-up funnel: ${data.funnel.steps.map(step => `${step.label} ${number(step.count)}`).join(' → ')}` : '',
       data.funnel ? `Sign-up issues: ${data.funnel.issues.filter(item => item.count).map(item => `${item.label} ${number(item.count)}`).join('; ') || 'none'}` : '',
       data.funnel ? `Guest lists: ${data.funnel.guest.map(item => `${item.label} ${number(item.count)}`).join('; ')}` : '',
+      data.funnel && data.funnel.google ? `Google sign-in: ${data.funnel.google.map(item => `${item.label} ${number(item.count)}`).join('; ')}` : '',
       ...growthReport(data),
       data.retention ? `Return features: ${number(data.retention.weekly_email_subscribers)} weekly email subscribers, ${number(data.retention.public_profiles)} public profiles on.` : '',
       '',

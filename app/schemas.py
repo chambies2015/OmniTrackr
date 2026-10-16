@@ -52,7 +52,8 @@ class User(UserBase):
     is_verified: bool = False
     created_at: Optional[datetime] = None
     profile_picture_url: Optional[str] = None
-    
+    has_password: bool = True
+
 class UserUpdate(BaseModel):
     """Schema for updating user information."""
     username: Optional[str] = Field(None, min_length=3, max_length=50)
@@ -62,7 +63,7 @@ class UserUpdate(BaseModel):
 
 class PasswordChange(BaseModel):
     """Schema for changing password."""
-    current_password: str = Field(..., description="Current password for verification")
+    current_password: str = Field("", description="Current password (not needed while an account made with Google has none)")
     new_password: str = Field(..., min_length=6, max_length=128, description="New password (min 6 characters)")
 
 
@@ -75,13 +76,13 @@ class PasswordReset(BaseModel):
 class EmailChange(BaseModel):
     """Schema for changing email address."""
     new_email: str = Field(..., description="New email address")
-    password: str = Field(..., description="Current password for verification")
+    password: str = Field("", description="Current password (not needed while an account made with Google has none)")
 
 
 class UsernameChange(BaseModel):
     """Schema for changing username."""
     new_username: str = Field(..., min_length=3, max_length=50, description="New username")
-    password: str = Field(..., description="Current password for verification")
+    password: str = Field("", description="Current password (not needed while an account made with Google has none)")
 
 
 class AccountDeactivate(BaseModel):

@@ -232,6 +232,14 @@ Email:
 | `MAIL_STARTTLS` | Usually `True`. |
 | `MAIL_SSL_TLS` | Usually `False` for STARTTLS. |
 
+Sign in with Google (optional; the button stays hidden until both are set):
+
+| Variable | Purpose |
+| --- | --- |
+| `GOOGLE_CLIENT_ID` | OAuth client ID of a "Web application" client in Google Cloud Console. |
+| `GOOGLE_CLIENT_SECRET` | That client's secret. |
+| `GOOGLE_REDIRECT_URI` | Optional. Defaults to `APP_URL` + `/auth/google/callback`; add exactly this address under "Authorized redirect URIs". |
+
 External metadata:
 
 | Variable | Purpose |

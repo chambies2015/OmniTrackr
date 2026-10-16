@@ -51,7 +51,14 @@ GUEST = (
     ("daily_solved", "Daily puzzle: solved"),
     ("daily_shared", "Daily puzzle: result shared"),
 )
-SERVER_EVENTS = {name for name, _ in STEPS + REJECTIONS + GUEST}
+GOOGLE = (
+    ("google_signin_started", "Google button pressed"),
+    ("google_account_created", "New accounts made with Google"),
+    ("google_account_linked", "Existing accounts linked to Google"),
+    ("google_signin", "Log-ins with Google"),
+    ("google_signin_failed", "Google sign-in that didn't finish"),
+)
+SERVER_EVENTS = {name for name, _ in STEPS + REJECTIONS + GUEST + GOOGLE}
 # Events a browser may report; everything else is recorded on the server only.
 CLIENT_EVENTS = {"signup_form_opened", "signup_rejected_invalid", "guest_pick_added", "guest_list_signup", "share_clicked",
                  "recap_kofi_clicked", "title_search_used", "pick_used", "pick_saved",
@@ -87,4 +94,5 @@ def summary(counts: dict[str, int]) -> dict:
         "steps": [{"event": name, "label": label, "count": int(counts.get(name, 0))} for name, label in STEPS],
         "issues": [{"event": name, "label": label, "count": int(counts.get(name, 0))} for name, label in REJECTIONS],
         "guest": [{"event": name, "label": label, "count": int(counts.get(name, 0))} for name, label in GUEST],
+        "google": [{"event": name, "label": label, "count": int(counts.get(name, 0))} for name, label in GOOGLE],
     }
