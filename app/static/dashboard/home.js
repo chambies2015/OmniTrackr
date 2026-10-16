@@ -420,8 +420,41 @@ async function refreshDashboardDecisionCards() {
   return decisionCardsRefreshPromise;
 }
 
+// Counts today as a visit day. Sessions last 30 days, so a member coming back after
+// a while often never logs in again; this offers them the Welcome Back Deck too.
+async function recordVisitDay() {
+  if (!hasStoredAuth()) return;
+  let timeout = null;
+  try {
+    const controller = typeof AbortController === 'function' ? new AbortController() : null;
+    if (controller) timeout = setTimeout(() => controller.abort(), 4000);
+    const response = await authenticatedFetch(`${API_BASE}/account/visit`, { method: 'POST', signal: controller?.signal });
+    if (!response.ok) return;
+    const prompt = (await response.json())?.return_prompt;
+    if (
+      prompt?.eligible
+      && Number(prompt.days_away) >= 3
+      && typeof prompt.engagement_token === 'string'
+      && prompt.engagement_token.length >= 32
+      && !getReturnPromptContext()
+    ) {
+      saveReturnPromptContext({
+        days_away: Math.min(Number(prompt.days_away), 90),
+        engagement_token: prompt.engagement_token,
+        created_at: Date.now(),
+        shown: false,
+      });
+    }
+  } catch (error) {
+    // Optional: the dashboard never waits on or fails because of this.
+  } finally {
+    if (timeout) clearTimeout(timeout);
+  }
+}
+
 async function bootstrapReturnDeck() {
   try {
+    await recordVisitDay();
     return await refreshReturnDeck();
   } finally {
     returnDeckBootstrapComplete = true;

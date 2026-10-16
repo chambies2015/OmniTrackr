@@ -765,6 +765,67 @@
     }
   }
 
+  const COMEBACK_STATES = {
+    draft: 'Not started',
+    sending: 'On: checking every hour',
+    paused: 'Paused',
+  };
+
+  function renderComeback(data) {
+    const info = data.comeback;
+    const card = $('comebackCard');
+    if (!card) return;
+    card.hidden = !info;
+    if (!info) return;
+    let statusLabel = COMEBACK_STATES[info.status] || info.status;
+    if (info.status === 'sending' && info.waiting_on_whats_new) statusLabel = 'On, waiting until the “What’s new” email finishes';
+    const rows = [
+      ['Status', statusLabel],
+      ['Members due now', `${number(info.due_now)} (away ${info.away_days}+ days)`],
+      ['Sent in the last 30 days', number(info.sent_30d)],
+      [`Came back within ${info.came_back_window_days} days of one`, number(info.came_back)],
+      ['Sent all time', number(info.sent_all_time)],
+      ['Daily limit', `${number(info.daily_limit)} (shares the daily email budget, so sign-up and reset emails always go out)`],
+    ];
+    if (!info.mail_configured) rows.push(['Email', 'NOT configured on this server: nothing can be sent']);
+    const list = $('comebackList');
+    list.replaceChildren();
+    rows.forEach(([label, value]) => {
+      const row = el('div');
+      row.append(el('dt', '', label), el('dd', '', String(value)));
+      list.appendChild(row);
+    });
+    $('comebackStart').hidden = info.status === 'sending';
+    $('comebackStart').textContent = info.status === 'paused' ? 'Resume sending' : 'Start sending';
+    $('comebackPause').hidden = info.status !== 'sending';
+  }
+
+  async function comebackAction(action) {
+    const status = $('comebackStatus');
+    if (action === 'start' && !window.confirm('Turn on the come-back email? Members away 30+ days get one personal check-in, at most every 60 days, up to 20 a day. You can pause any time.')) return;
+    const buttons = document.querySelectorAll('[data-comeback]');
+    buttons.forEach(button => { button.disabled = true; });
+    status.textContent = action === 'test' ? 'Sending a test to your email…' : 'Saving…';
+    try {
+      const response = await fetch('/api/site-stats/comeback', {
+        method: 'POST', credentials: 'same-origin',
+        headers: { ...authHeaders(), 'Content-Type': 'application/json' },
+        body: JSON.stringify({ action }),
+      });
+      const result = await response.json().catch(() => ({}));
+      if (!response.ok) throw new Error(result.detail || `HTTP ${response.status}`);
+      if (state.data) {
+        state.data.comeback = result;
+        renderComeback(state.data);
+      }
+      status.textContent = result.message || (action === 'start' ? 'On. The first emails go out within the hour.' : 'Paused. Nothing more will be sent until you resume.');
+    } catch (error) {
+      status.textContent = `Couldn't do that: ${error.message}`;
+    } finally {
+      buttons.forEach(button => { button.disabled = false; });
+    }
+  }
+
   function render(data) {
     state.data = data;
     $('statsUpdated').textContent = `Updated ${dateTime(data.generated_at)} · last ${data.days} days · signed in as ${data.viewer}`;
@@ -782,6 +843,7 @@
     renderMembers(data);
     renderEditor(data);
     renderAnnouncement(data);
+    renderComeback(data);
   }
 
   // ---------------------------------------------------------------- report
@@ -797,13 +859,15 @@
       `Devices: ${list(traffic.devices)} · Audience: ${list(traffic.audience)}`,
       '',
       `Members: ${number(insights.users.total)} total, ${number(insights.users.verified)} verified, ${number(members.new_in_range)} new (previous ${days} days: ${number(members.new_previous_range)}).`,
-      `Active (logged in): ${number(members.active_24_hours)} in 24h, ${number(members.active_7_days)} in 7 days, ${number(members.active_30_days)} in 30 days.`,
+      `Active (logged in or visited): ${number(members.active_24_hours)} in 24h, ${number(members.active_7_days)} in 7 days, ${number(members.active_30_days)} in 30 days.`,
       `Journey: ${insights.activation.map(stage => `${stage.label} ${number(stage.count)}`).join(' → ')}`,
       data.funnel ? `Sign-up funnel: ${data.funnel.steps.map(step => `${step.label} ${number(step.count)}`).join(' → ')}` : '',
       data.funnel ? `Sign-up issues: ${data.funnel.issues.filter(item => item.count).map(item => `${item.label} ${number(item.count)}`).join('; ') || 'none'}` : '',
       data.funnel ? `Guest lists: ${data.funnel.guest.map(item => `${item.label} ${number(item.count)}`).join('; ')}` : '',
       data.funnel && data.funnel.google ? `Google sign-in: ${data.funnel.google.map(item => `${item.label} ${number(item.count)}`).join('; ')}` : '',
       ...growthReport(data),
+      data.announcement ? `What's new email: ${data.announcement.status}, ${number(data.announcement.sent)} sent, ${number(data.announcement.remaining)} still to send, ${number(data.announcement.opted_out)} unsubscribed from updates.` : '',
+      data.comeback ? `Come-back email: ${data.comeback.status}, ${number(data.comeback.due_now)} members due now, ${number(data.comeback.sent_30d)} sent in 30 days, ${number(data.comeback.came_back)} came back within ${data.comeback.came_back_window_days} days of one.` : '',
       data.retention ? `Return features: ${number(data.retention.weekly_email_subscribers)} weekly email subscribers, ${number(data.retention.public_profiles)} public profiles on.` : '',
       '',
       `Libraries: ${number(insights.content.total_items)} titles (${insights.content.categories.map(category => `${category.label} ${number(category.total)}`).join(', ')}), ${number(insights.content.public_reviews)} public reviews, ${number(insights.content.custom_items)} custom-tab items.`,
@@ -900,6 +964,9 @@
     $('editorPublish')?.addEventListener('click', publishEditor);
     document.querySelectorAll('[data-announcement]').forEach(button => {
       button.addEventListener('click', () => announcementAction(button.dataset.announcement));
+    });
+    document.querySelectorAll('[data-comeback]').forEach(button => {
+      button.addEventListener('click', () => comebackAction(button.dataset.comeback));
     });
     let resizeTimer = null;
     window.addEventListener('resize', () => {

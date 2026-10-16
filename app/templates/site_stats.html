@@ -165,6 +165,20 @@
         <p class="stats-editor-status" id="announcementStatus" role="status" aria-live="polite"></p>
       </section>
 
+      <section class="stats-card stats-card--wide" id="comebackCard" hidden>
+        <div class="stats-card__head">
+          <div><h2>Come-back email</h2><p>A short personal check-in for members who haven’t opened OmniTrackr in 30 days: what’s coming up and still waiting in their library. At most one every 60 days, none after two without a visit, and nothing is sent until you press Start.</p></div>
+          <div class="stats-announce__actions">
+            <a class="site-btn site-btn--ghost site-btn--sm" href="/site-stats/comeback-preview" target="_blank" rel="noopener">Preview</a>
+            <button type="button" class="site-btn site-btn--ghost site-btn--sm" data-comeback="test">Send a test to me</button>
+            <button type="button" class="site-btn site-btn--primary site-btn--sm" data-comeback="start" id="comebackStart">Start sending</button>
+            <button type="button" class="site-btn site-btn--ghost site-btn--sm" data-comeback="pause" id="comebackPause" hidden>Pause</button>
+          </div>
+        </div>
+        <dl class="stats-list" id="comebackList"></dl>
+        <p class="stats-editor-status" id="comebackStatus" role="status" aria-live="polite"></p>
+      </section>
+
       <section class="stats-card stats-card--wide">
         <div class="stats-card__head"><div><h2>Newest members</h2><p>The 50 most recent accounts. Emails and library contents are never shown.</p></div></div>
         <div class="stats-table-wrap" id="recentMembers"></div>

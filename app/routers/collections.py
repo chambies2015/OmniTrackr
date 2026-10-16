@@ -162,7 +162,9 @@ def _moderator_site_insights(db: Session) -> dict:
         if item_count >= 5 and user_id in verified_user_ids
     }
     returned_user_ids = {
-        user_id for user_id, in db.query(models.User.id).filter(models.User.login_count >= 2).all()
+        # Sessions last 30 days, so a second visit day counts as a return as well as a second log-in.
+        user_id for user_id, in db.query(models.User.id).filter(
+            (models.User.login_count >= 2) | (models.User.visit_days >= 2)).all()
     }
     activation_counts = [
         ("registered", "Accounts created", total_users),

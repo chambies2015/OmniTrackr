@@ -12,7 +12,7 @@ from sqlalchemy.orm import Session
 
 from .. import crud, schemas, models, auth, email as email_utils, return_prompt as return_prompt_tokens
 from ..dependencies import get_db
-from .. import funnel, google_signin
+from .. import funnel, google_signin, visits
 from ..signup_rules import username_problem, username_taken
 
 router = APIRouter(prefix="/auth", tags=["auth"])
@@ -157,6 +157,11 @@ async def login(
     # login timestamp. The context is returned to this browser only and is not
     # stored as a page/session history.
     previous_login_at = user.last_login_at
+    if user.last_seen_on is not None:
+        # A visit on a still-open session counts as being here too.
+        seen_at = datetime.combine(user.last_seen_on, datetime.min.time())
+        if previous_login_at is None or seen_at > previous_login_at:
+            previous_login_at = seen_at
     if not user.login_count:
         funnel.record("first_login", request)
     days_away = None
@@ -176,6 +181,7 @@ async def login(
     # No page history, media titles, searches, or session-by-session event log is stored.
     user.last_login_at = now_utc
     user.login_count = (user.login_count or 0) + 1
+    visits.mark_login(user, now_utc)
     db.commit()
     
     access_token = auth.create_user_access_token(user)
@@ -228,6 +234,7 @@ def _sign_in_after_verification(request: Request, user: models.User, db: Session
         funnel.record("first_login", request)
     user.last_login_at = datetime.now(timezone.utc).replace(tzinfo=None)
     user.login_count = (user.login_count or 0) + 1
+    visits.mark_login(user, user.last_login_at)
     db.commit()
     db.refresh(user)
     response = JSONResponse(
@@ -596,6 +603,7 @@ async def google_callback(
         funnel.record("first_login", request)
     user.last_login_at = datetime.now(timezone.utc).replace(tzinfo=None)
     user.login_count = (user.login_count or 0) + 1
+    visits.mark_login(user, user.last_login_at)
     user.failed_login_attempts = 0
     user.locked_until = None
     db.commit()

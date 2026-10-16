@@ -274,6 +274,17 @@ def run_migrations():
                     conn.execute(text("UPDATE users SET login_count = 0 WHERE login_count IS NULL"))
                     conn.commit()
                     print("Added login_count column to users table")
+            if "last_seen_on" not in user_columns:
+                with engine.connect() as conn:
+                    conn.execute(text("ALTER TABLE users ADD COLUMN last_seen_on DATE"))
+                    conn.commit()
+                    print("Added last_seen_on column to users table")
+            if "visit_days" not in user_columns:
+                with engine.connect() as conn:
+                    conn.execute(text("ALTER TABLE users ADD COLUMN visit_days INTEGER DEFAULT 0"))
+                    conn.execute(text("UPDATE users SET visit_days = 0 WHERE visit_days IS NULL"))
+                    conn.commit()
+                    print("Added visit_days column to users table")
             if "google_sub" not in user_columns:
                 with engine.connect() as conn:
                     conn.execute(text("ALTER TABLE users ADD COLUMN google_sub VARCHAR"))
