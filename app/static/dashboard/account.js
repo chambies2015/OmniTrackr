@@ -815,6 +815,7 @@ async function loadFriendsList() {
           <button class="unfriend-btn" data-action="unfriend-user" data-friend-id="${friend.friend.id}" title="Unfriend">✕</button>
         </div>
       `).join('');
+      if (window.OmniTasteMatch) window.OmniTasteMatch.decorateFriends();
     }
   } catch (error) {
     console.error('Failed to load friends list:', error);

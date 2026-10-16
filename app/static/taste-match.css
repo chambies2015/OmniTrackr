@@ -1,0 +1,113 @@
+/* Taste Match panel on friend profiles and match chips in the friends list.
+   Scoped to .taste-match / .taste-chip; colors come from the app theme tokens. */
+.taste-match {
+  margin: 0 0 18px;
+  padding: 16px;
+  border: 1px solid var(--border, #dce1ec);
+  border-radius: var(--radius, 14px);
+  background: var(--surface-muted, #f7f8fc);
+  color: var(--fg, #232b3e);
+}
+.taste-match[hidden] { display: none; }
+.taste-match__loading { margin: 0; color: var(--fg-secondary, #606b80); font-size: 0.92rem; }
+.taste-match__head { display: flex; align-items: center; gap: 14px; }
+.taste-match__score {
+  --taste-score: 0;
+  flex: 0 0 auto;
+  display: grid;
+  place-items: center;
+  width: 68px;
+  height: 68px;
+  border-radius: 50%;
+  font-weight: 700;
+  font-size: 1.05rem;
+  color: var(--fg, #232b3e);
+  background:
+    radial-gradient(closest-side, var(--card-bg, #fff) 78%, transparent 80% 100%),
+    conic-gradient(var(--accent-solid, #6750c5) calc(var(--taste-score) * 1%), var(--accent-soft, #eeeafa) 0);
+}
+.taste-match__score--empty {
+  color: var(--fg-secondary, #606b80);
+  background:
+    radial-gradient(closest-side, var(--card-bg, #fff) 78%, transparent 80% 100%),
+    conic-gradient(var(--border, #dce1ec) 100%, var(--border, #dce1ec) 0);
+}
+.taste-match__intro { min-width: 0; }
+.taste-match__eyebrow {
+  margin: 0;
+  font-size: 0.72rem;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--primary, #6149bd);
+}
+.taste-match__tier { margin: 2px 0 0; font-size: 1.08rem; font-weight: 700; }
+.taste-match__summary { margin: 4px 0 0; font-size: 0.9rem; color: var(--fg-secondary, #606b80); }
+.taste-match__chips { display: flex; flex-wrap: wrap; gap: 6px; margin: 12px 0 0; }
+.taste-match__chip {
+  padding: 3px 10px;
+  border-radius: 999px;
+  font-size: 0.8rem;
+  background: var(--teal-soft, #e7f5f1);
+  color: var(--teal, #087c70);
+}
+.taste-match__section { margin-top: 14px; }
+.taste-match__heading { margin: 0 0 6px; font-size: 0.92rem; font-weight: 700; }
+.taste-match__list { list-style: none; margin: 0; padding: 0; display: grid; gap: 6px; }
+.taste-match__item {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 8px 10px;
+  border-radius: 10px;
+  background: var(--card-bg, #fff);
+  border: 1px solid var(--border, #dce1ec);
+}
+.taste-match__art { width: 32px; height: 46px; object-fit: cover; border-radius: 4px; flex: 0 0 auto; }
+.taste-match__copy { display: flex; flex-direction: column; min-width: 0; flex: 1 1 auto; }
+.taste-match__title { font-weight: 600; overflow-wrap: anywhere; }
+.taste-match__meta { font-size: 0.8rem; color: var(--fg-secondary, #606b80); overflow-wrap: anywhere; }
+.taste-match__ratings { font-size: 0.8rem; color: var(--fg-secondary, #606b80); white-space: nowrap; }
+.taste-match__add,
+.taste-match__added {
+  flex: 0 0 auto;
+  padding: 6px 10px;
+  border-radius: 8px;
+  font-size: 0.8rem;
+  font-weight: 600;
+  text-decoration: none;
+  white-space: nowrap;
+}
+.taste-match__add {
+  border: 0;
+  cursor: pointer;
+  background: var(--accent-solid, #6750c5);
+  color: var(--on-accent, #fff);
+}
+.taste-match__add:hover:not(:disabled) { background: var(--primary-hover, #543da9); }
+.taste-match__add:disabled { opacity: 0.7; cursor: progress; }
+.taste-match__added { color: var(--teal, #087c70); background: var(--teal-soft, #e7f5f1); }
+.taste-match__note { margin: 12px 0 0; font-size: 0.82rem; color: var(--fg-secondary, #606b80); }
+
+.taste-chip {
+  margin-left: 8px;
+  padding: 2px 9px;
+  border: 1px solid var(--border, #dce1ec);
+  border-radius: 999px;
+  font: inherit;
+  font-size: 0.75rem;
+  font-weight: 600;
+  cursor: pointer;
+  background: var(--accent-soft, #eeeafa);
+  color: var(--primary, #6149bd);
+  white-space: nowrap;
+}
+.taste-chip--best { background: var(--accent-solid, #6750c5); border-color: transparent; color: var(--on-accent, #fff); }
+
+@media (max-width: 520px) {
+  .taste-match { padding: 12px; }
+  .taste-match__score { width: 56px; height: 56px; font-size: 0.95rem; }
+  .taste-match__item { flex-wrap: wrap; }
+  .taste-match__ratings { white-space: normal; }
+  .taste-match__add, .taste-match__added { margin-left: 42px; }
+}
