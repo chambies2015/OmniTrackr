@@ -299,6 +299,28 @@ def google_signin_html(label: str) -> str:
     )
 
 
+def hero_signup_html(google: bool) -> str:
+    """The sign-up buttons in the homepage hero.
+
+    With Google sign-in on, a visitor can make an account in one tap from the top of
+    the page; the email button opens the sign-up form in a pop-up (public-landing.js).
+    """
+    arrow = '<svg class="lp-icon" aria-hidden="true"><use href="#i-arrow"/></svg>'
+    if not google:
+        return (
+            '<div class="lp-cta-row">'
+            f'<button type="button" class="lp-btn lp-btn--primary" data-action="show-register-form" data-hero-signup>Create a free library {arrow}</button>'
+            '<a class="lp-btn lp-btn--ghost" href="/demo">Try it—no account needed</a></div>'
+        )
+    return (
+        '<div class="lp-cta-row lp-cta-row--signup">'
+        f'<a class="lp-btn lp-btn--google" href="/auth/google/start" rel="nofollow" data-google-signin data-hero-signup>{GOOGLE_G_SVG}'
+        '<span>Continue with Google</span></a>'
+        f'<button type="button" class="lp-btn lp-btn--primary" data-action="show-register-form" data-hero-signup>Sign up with email {arrow}</button></div>'
+        '<p class="lp-hero__demo">Not ready yet? <a href="/demo">Try the demo</a>, no account needed.</p>'
+    )
+
+
 def public_root_html(html: str, request: Request | None = None) -> str:
     """Return the standalone public landing experience without the private app shell.
 
@@ -336,6 +358,7 @@ def public_root_html(html: str, request: Request | None = None) -> str:
         from . import google_signin
         for form, label in (("login", "Log in with Google"), ("register", "Sign up with Google")):
             page = page.replace(f"<!--GOOGLE_SIGNIN:{form}-->", google_signin_html(label) if google_signin.configured() else "", 1)
+        page = page.replace("<!--HERO_SIGNUP-->", hero_signup_html(google_signin.configured()), 1)
         return apply_site_chrome(page, login_action=True)
 
     landing_marker = "  <!-- Landing Page -->"
