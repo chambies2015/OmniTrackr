@@ -36,6 +36,7 @@ REJECTIONS = (
     ("verification_link_expired", "Expired or invalid verification link"),
 )
 GUEST = (
+    ("hero_signup_clicked", "Sign-up button at the top of the homepage pressed"),
     ("title_search_used", "Guest searched for a title on the homepage"),
     ("guest_pick_added", "Guest saved a title"),
     ("pick_used", "Pick for me suggestion asked for"),
@@ -61,7 +62,7 @@ GOOGLE = (
 )
 SERVER_EVENTS = {name for name, _ in STEPS + REJECTIONS + GUEST + GOOGLE}
 # Events a browser may report; everything else is recorded on the server only.
-CLIENT_EVENTS = {"signup_form_opened", "signup_rejected_invalid", "guest_pick_added", "guest_list_signup", "share_clicked",
+CLIENT_EVENTS = {"signup_form_opened", "hero_signup_clicked", "signup_rejected_invalid", "guest_pick_added", "guest_list_signup", "share_clicked",
                  "recap_kofi_clicked", "title_search_used", "pick_used", "pick_saved", "liked_saved",
                  "calendar_subscribe_clicked", "tier_list_started", "tier_list_exported",
                  "daily_shared"}

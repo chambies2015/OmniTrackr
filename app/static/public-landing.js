@@ -6,6 +6,59 @@
  * transfer size and prevents anonymous visitors from receiving dashboard code.
  */
 (function () {
+  // Sign-up and log-in buttons open the form card in a pop-up instead of scrolling
+  // past the whole page to it. The card is moved (not copied) so auth.js keeps
+  // working on the same elements, and goes back to its section when the pop-up closes.
+  var authHome = null;
+
+  function authDialog() {
+    var dialog = document.getElementById('authDialog');
+    return dialog && typeof dialog.showModal === 'function' ? dialog : null;
+  }
+
+  function openAuthDialog() {
+    var dialog = authDialog();
+    var slot = dialog && dialog.querySelector('[data-auth-dialog-slot]');
+    var card = document.querySelector('.lp-auth__card');
+    if (!dialog || !slot || !card) return false;
+    if (dialog.open) return true;
+    if (!authHome) authHome = {parent: card.parentNode, next: card.nextSibling};
+    slot.appendChild(card);
+    try {
+      dialog.showModal();
+    } catch (error) {
+      returnAuthCard();
+      return false;
+    }
+    document.body.style.overflow = 'hidden';
+    return true;
+  }
+
+  function returnAuthCard() {
+    var card = document.querySelector('.lp-auth__card');
+    if (authHome && card && card.parentNode !== authHome.parent) authHome.parent.insertBefore(card, authHome.next);
+    document.body.style.overflow = '';
+  }
+
+  function closeAuthDialog() {
+    var dialog = authDialog();
+    if (dialog && dialog.open) dialog.close();
+  }
+
+  var dialogElement = authDialog();
+  if (dialogElement) {
+    dialogElement.addEventListener('close', returnAuthCard);
+    // A click on the dimmed backdrop lands on the dialog itself.
+    dialogElement.addEventListener('click', function (event) {
+      if (event.target === dialogElement) closeAuthDialog();
+    });
+  }
+  window.OmniAuthDialog = {open: openAuthDialog, close: closeAuthDialog};
+
+  function report(event) {
+    if (typeof window.reportFunnelEvent === 'function') window.reportFunnelEvent(event);
+  }
+
   function showForm(action) {
     if (action === 'show-register-form' && typeof window.showRegisterForm === 'function') {
       window.showRegisterForm();
@@ -41,7 +94,13 @@
       const actionName = action.dataset.action;
       if (actionName === 'show-register-form' || actionName === 'show-login-form') {
         event.preventDefault();
+        if (action.hasAttribute && action.hasAttribute('data-hero-signup')) report('hero_signup_clicked');
         showForm(actionName);
+        return;
+      }
+      if (actionName === 'close-auth-dialog') {
+        event.preventDefault();
+        closeAuthDialog();
         return;
       }
       if (actionName === 'close-screenshot-modal') {
@@ -49,6 +108,20 @@
         closePreview();
         return;
       }
+    }
+
+    if (event.target.closest('a[data-hero-signup]')) report('hero_signup_clicked');
+
+    const toggle = event.target.closest('[data-password-toggle]');
+    if (toggle) {
+      const field = document.getElementById(toggle.dataset.passwordToggle);
+      if (field) {
+        const show = field.type === 'password';
+        field.type = show ? 'text' : 'password';
+        toggle.textContent = show ? 'Hide' : 'Show';
+        toggle.setAttribute('aria-pressed', String(show));
+      }
+      return;
     }
 
     const preview = event.target.closest('[data-screenshot-src]');
