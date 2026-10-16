@@ -748,6 +748,20 @@ for route in calendar_router.router.routes:
         bind_rate_limited_endpoint(route, rate_limited_calendar_member)
 app.include_router(calendar_router.router)
 
+from .routers import taste_match as taste_match_router
+rate_limited_taste_overview = limiter.limit("30/minute")(taste_match_router.friends_overview)
+rate_limited_taste_match = limiter.limit("60/minute")(taste_match_router.friend_match)
+rate_limited_taste_add = limiter.limit("30/minute")(taste_match_router.add_friend_pick)
+for route in taste_match_router.router.routes:
+    path = getattr(route, "path", None)
+    if path == "/api/taste-match/friends":
+        bind_rate_limited_endpoint(route, rate_limited_taste_overview)
+    elif path == "/api/taste-match/friends/{friend_id}":
+        bind_rate_limited_endpoint(route, rate_limited_taste_match)
+    elif path == "/api/taste-match/friends/{friend_id}/add":
+        bind_rate_limited_endpoint(route, rate_limited_taste_add)
+app.include_router(taste_match_router.router)
+
 
 @app.get("/", tags=["root"])
 @app.head("/", tags=["root"])

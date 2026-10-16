@@ -52,6 +52,8 @@ GUEST = (
     ("daily_played", "Daily puzzle: a game started"),
     ("daily_solved", "Daily puzzle: solved"),
     ("daily_shared", "Daily puzzle: result shared"),
+    ("taste_match_viewed", "Taste Match opened with a friend"),
+    ("taste_match_saved", "Taste Match: a friend's favorite saved to the library"),
 )
 GOOGLE = (
     ("google_signin_started", "Google button pressed"),
