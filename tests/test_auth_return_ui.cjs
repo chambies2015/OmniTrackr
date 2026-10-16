@@ -611,3 +611,20 @@ test('signing up from an invite link sends the invite token once', async () => {
     assert.equal('invite' in sent, false, search);
   }
 });
+
+test('Daily, Pick for me, tier list, "If you liked" and dashboard-card destinations come back after login', async () => {
+  for (const destination of ['/daily', '/daily/12', '/pick', '/tier-list', '/if-you-liked/the-dark-knight',
+    '/#challenge', '/#release-calendar']) {
+    const s = setup({ search: nextQuery(destination) });
+    s.context.initAuth();
+    await s.context.login('reader', 'password');
+    assert.deepEqual(s.redirects, [destination], destination);
+  }
+  for (const destination of ['/daily/0', '/daily/x', '/daily/', '/pick/x', '/if-you-liked/', '/if-you-liked/A',
+    '/if-you-liked/a/b', '/#other', '/#challenge\n', '//daily']) {
+    const s = setup({ search: nextQuery(destination) });
+    s.context.initAuth();
+    await s.context.login('reader', 'password');
+    assert.deepEqual(s.redirects, ['/'], destination);
+  }
+});

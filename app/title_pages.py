@@ -117,6 +117,25 @@ class TitleGroup:
         return title_path(self.kind, self.title, self.year)
 
 
+def _scan_all_titles(db: Session, kind: str, model, base: str, year: Optional[int]) -> list:
+    """Rows whose title slugifies to `base`, checked over titles and years only.
+
+    Loading whole rows for this scan made every unknown slug (a mistyped link, or a guest
+    importing a Pick for me title nobody tracks yet) read up to 20,000 full library rows.
+    """
+    year_column = model.release_date if kind == "game" else model.year
+    ids = []
+    for row_id, title, year_value in (_visible_rows(db, kind, model)
+                                      .with_entities(model.id, model.title, year_column).limit(20000).all()):
+        if kind == "game":
+            row_year = year_value.year if year_value else None
+        else:
+            row_year = year_value or None
+        if row_year == year and slugify(title or "") == base:
+            ids.append(row_id)
+    return db.query(model).filter(model.id.in_(ids)).order_by(model.id).all() if ids else []
+
+
 def find(db: Session, kind: str, slug: str) -> Optional[TitleGroup]:
     """Every library entry (any member) that this slug names."""
     if kind not in KINDS or not re.fullmatch(r"[a-z0-9-]{1,130}", slug or ""):
@@ -138,8 +157,7 @@ def find(db: Session, kind: str, slug: str) -> Optional[TitleGroup]:
                 if slugify(row.title or "") == base and item_year(kind, row) == year]
         if not rows and len(longest) >= 2:
             # Accented titles ("Pokémon") don't contain their ASCII slug words; scan without the filter.
-            rows = [row for row in _visible_rows(db, kind, model).limit(20000).all()
-                    if slugify(row.title or "") == base and item_year(kind, row) == year]
+            rows = _scan_all_titles(db, kind, model, base, year)
         if rows:
             names = Counter((row.title or "").strip() for row in rows)
             display = names.most_common(1)[0][0]

@@ -25,7 +25,7 @@ from sqlalchemy.orm import Session
 from . import models
 from . import release_radar as radar
 from .digest import app_url
-from .for_you import RADAR_LABELS, _matches, normalize_title, owned_titles, radar_pool
+from .for_you import RADAR_LABELS, LibraryMatcher, normalize_title, owned_titles, radar_pool
 from .release_alerts import item_link
 
 PAST_DAYS = 14
@@ -176,13 +176,13 @@ def public_events(pool: list[dict], feed: str, today: date) -> list[dict]:
 def member_events(db: Session, user_id: int, pool: list[dict], today: date) -> list[dict]:
     """Releases connected to a member's library: the title itself, a new season or a sequel."""
     owned = owned_titles(db, user_id, ("movies", "tv-shows", "anime", "video-games"))
-    library = [title for titles in owned.values() for title in titles]
+    matcher = LibraryMatcher(title for titles in owned.values() for title in titles)
     found = []
     for item in pool:
         if not _in_range(item, today) or not (item.get("title") or "").strip():
             continue
         names = [item["title"]] + ([item["alt_title"]] if item.get("alt_title") else [])
-        hit = next((title for title in library if any(_matches(title, name) for name in names)), None)
+        hit = matcher.find(names)
         if hit is None:
             continue
         reason = "In your library" if normalize_title(hit) == normalize_title(item["title"]) else f"Because you track {hit}"

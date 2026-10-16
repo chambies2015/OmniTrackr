@@ -134,13 +134,30 @@ def collection_links(db: Session) -> dict[str, str]:
                 .filter(models.User.username == EDITOR_USERNAME, models.Collection.is_public == True)
                 .all())
     except Exception:
+        db.rollback()  # Keep the session usable for the rest of the request.
         return {}
     names = {collection["name"] for collection in COLLECTIONS}
     return {name: f"/collections/public/{collection_id}" for collection_id, name in rows if name in names}
 
 
+_details_cache: dict = {"index": None, "details": None}
+
+
 def title_details(index: list[dict]) -> dict[str, dict]:
-    """{pick id: {"url", "image"}} for picks that already have a public title page."""
+    """{pick id: {"url", "image"}} for picks that already have a public title page.
+
+    The search index is rebuilt at most every few minutes and every page with a pick
+    asks for this, so the answer is kept until a new index object arrives.
+    """
+    cached = _details_cache
+    if cached["index"] is index and cached["details"] is not None:
+        return cached["details"]
+    details = _build_title_details(index)
+    cached["index"], cached["details"] = index, details
+    return details
+
+
+def _build_title_details(index: list[dict]) -> dict[str, dict]:
     by_slug = {(entry["kind"], entry["slug"]): entry for entry in index}
     by_base: dict[tuple[str, str], dict] = {}
     for entry in index:
