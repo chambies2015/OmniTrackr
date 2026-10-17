@@ -255,6 +255,19 @@ def _challenge_section(challenge: dict | None, base: str) -> tuple[str, list[str
     return html, text
 
 
+def _badge_section(badge: dict | None, base: str) -> tuple[str, list[str]]:
+    """'Closest badge' line: the started badge nearest its next tier; empty when none is close."""
+    if not badge:
+        return "", []
+    url = f"{base}/#badges"
+    line = (f'{badge["action"]} to earn {badge["name"]} {badge["tier_name"].lower()} '
+            f'({badge["count"]} of {badge["target"]} so far).')
+    html = ('<h2 style="font-size:17px;color:#1f1640;margin:24px 0 8px">Your next badge</h2>'
+            f'<p style="color:#3b3557;font-size:14px;line-height:1.6;margin:0">{escape(badge["emoji"])} {escape(line)}</p>'
+            f'<p style="margin:8px 0 0"><a href="{escape(url, quote=True)}" style="color:#6d28d9;font-weight:700">See your badges</a></p>')
+    return html, [f"Your next badge: {line} {url}", ""]
+
+
 def invite_nudge_due(user_id: int, now: datetime) -> bool:
     """About once a month per member (a different week for each), never every week."""
     return now.isocalendar().week % 4 == user_id % 4
@@ -262,9 +275,10 @@ def invite_nudge_due(user_id: int, now: datetime) -> bool:
 
 def build_digest(username: str, report: dict, unsubscribe_url: str, spotlight: dict | None = None,
                  ask: dict | None = None, invite: bool = False, goals: list | None = None,
-                 goals_year: int | None = None, challenge: dict | None = None) -> tuple[str, str, str] | None:
-    """(subject, html, text) or None when there is nothing to send. `spotlight`, `ask`, `invite`, `goals`
-    and `challenge` never force a send."""
+                 goals_year: int | None = None, challenge: dict | None = None,
+                 badge: dict | None = None) -> tuple[str, str, str] | None:
+    """(subject, html, text) or None when there is nothing to send. `spotlight`, `ask`, `invite`, `goals`,
+    `challenge` and `badge` never force a send."""
     matches, popular = report["matches"], report["popular"]
     if not matches and not popular:
         return None
@@ -295,6 +309,10 @@ def build_digest(username: str, report: dict, unsubscribe_url: str, spotlight: d
     if challenge_html:
         sections.append(challenge_html)
         text += challenge_text
+    badge_html, badge_text = _badge_section(badge, base)
+    if badge_html:
+        sections.append(badge_html)
+        text += badge_text
     spotlight_html, spotlight_text = _spotlight_section(spotlight, base)
     if spotlight_html:
         sections.append(spotlight_html)
@@ -443,8 +461,14 @@ async def send_due_digests(session_factory, client=None, now: datetime | None = 
             except Exception:
                 db.rollback()
                 challenge = None  # Optional, like the ask above.
+            try:
+                from .badges import digest_line
+                badge = digest_line(db, user)
+            except Exception:
+                db.rollback()
+                badge = None  # Optional, like the ask above.
             built = build_digest(user.username, report, unsubscribe_url, spotlight, ask, invite,
-                                 member_goals, now.year, challenge)
+                                 member_goals, now.year, challenge, badge)
             if built is None:
                 stats["skipped"] += 1
                 continue

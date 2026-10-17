@@ -1,0 +1,103 @@
+/* Dashboard trophy case (Oct 2026): badges with bronze, silver and gold tiers. */
+.badge-case {
+  background:
+    radial-gradient(420px 180px at 100% 0%, rgba(245, 158, 11, .12), transparent 70%),
+    var(--card-bg);
+  border: 1px solid var(--border);
+  border-radius: 18px;
+  box-shadow: var(--shadow-sm, none);
+  margin: 0 0 18px;
+  padding: 18px 20px;
+}
+.badge-case[hidden], .badge-case [hidden] { display: none; }
+.badge-case__header { align-items: flex-start; display: flex; flex-wrap: wrap; gap: 12px; justify-content: space-between; margin-bottom: 14px; }
+.badge-case__eyebrow { color: var(--teal, #14b8a6); font-size: .65rem; font-weight: 700; letter-spacing: .08em; margin: 0 0 5px; text-transform: uppercase; }
+.badge-case h2 { color: var(--fg); font-size: 1rem; font-weight: 600; letter-spacing: -.02em; margin: 0; }
+.badge-case__summary { color: var(--fg); font-size: .84rem; line-height: 1.5; margin: 4px 0 0; opacity: .75; }
+.badge-case__shelf { align-items: center; display: flex; flex-wrap: wrap; gap: 4px; }
+.badge-case__more { color: var(--fg); font-size: .78rem; font-weight: 700; margin-left: 4px; opacity: .7; }
+.badge-case__subhead { color: var(--fg); font-size: .74rem; font-weight: 700; letter-spacing: .06em; margin: 0 0 8px; opacity: .7; text-transform: uppercase; }
+
+/* Medal: a metal ring around the badge's emoji. Locked medals are grey and dashed. */
+.badge-medal {
+  --medal-ring: conic-gradient(from 210deg, #8b8aa3, #d7d5e6, #8b8aa3);
+  align-items: center; background: var(--medal-ring); border-radius: 50%; box-sizing: border-box; display: inline-flex;
+  flex: 0 0 auto; height: 44px; justify-content: center; padding: 3px; position: relative; width: 44px;
+}
+.badge-medal::before { background: var(--surface-muted, rgba(0, 0, 0, .06)); border-radius: 50%; content: ""; inset: 3px; position: absolute; }
+.badge-medal__glyph { font-size: 1.25rem; line-height: 1; position: relative; }
+.badge-medal--sm { height: 30px; padding: 2px; width: 30px; }
+.badge-medal--sm::before { inset: 2px; }
+.badge-medal--sm .badge-medal__glyph { font-size: .85rem; }
+.badge-medal--lg { height: 58px; width: 58px; }
+.badge-medal--lg .badge-medal__glyph { font-size: 1.6rem; }
+.badge-medal--bronze { --medal-ring: conic-gradient(from 210deg, #9a5b2e, #f0b483, #b06a36, #f6c79e, #9a5b2e); }
+.badge-medal--silver { --medal-ring: conic-gradient(from 210deg, #8e97a8, #f4f6fa, #a7b0c0, #ffffff, #8e97a8); }
+.badge-medal--gold { --medal-ring: conic-gradient(from 210deg, #b7791f, #fde68a, #d69e2e, #fff3c4, #b7791f); box-shadow: 0 0 18px rgba(245, 158, 11, .35); }
+.badge-medal--locked { background: transparent; border: 2px dashed var(--border); padding: 0; }
+.badge-medal--locked::before { inset: 0; }
+.badge-medal--locked .badge-medal__glyph { filter: grayscale(1); opacity: .45; }
+
+.badge-bar { background: color-mix(in srgb, var(--fg) 12%, transparent); border-radius: 999px; display: block; height: 6px; overflow: hidden; width: 100%; }
+.badge-bar__fill { background: linear-gradient(90deg, var(--accent-solid, #7c3aed), var(--teal, #14b8a6)); border-radius: inherit; display: block; height: 100%; transition: width .4s ease; }
+
+.badge-case__next { display: grid; gap: 10px; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); list-style: none; margin: 0 0 12px; padding: 0; }
+.badge-next { align-items: center; background: var(--surface-muted, rgba(255, 255, 255, .34)); border: 1px solid var(--border); border-radius: 14px; display: flex; gap: 12px; padding: 10px 12px; }
+.badge-next__copy { display: grid; flex: 1; gap: 6px; min-width: 0; }
+.badge-next__head { align-items: baseline; display: flex; gap: 8px; justify-content: space-between; }
+.badge-next__head strong { color: var(--fg); font-size: .92rem; }
+.badge-next__tier { color: var(--fg); font-size: .72rem; font-weight: 700; letter-spacing: .04em; opacity: .65; text-transform: uppercase; white-space: nowrap; }
+.badge-next__foot { color: var(--fg); display: flex; flex-wrap: wrap; font-size: .78rem; gap: 2px 10px; justify-content: space-between; opacity: .8; }
+.badge-next__hint { color: var(--fg); }
+a.badge-next__hint { color: var(--teal, #0f766e); font-weight: 600; text-decoration: underline; text-underline-offset: 2px; }
+
+.badge-case__grid { display: grid; gap: 10px; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); list-style: none; margin: 0 0 12px; padding: 0; }
+.badge-tile { align-items: center; background: var(--surface-muted, rgba(255, 255, 255, .34)); border: 1px solid var(--border); border-radius: 14px; display: flex; flex-direction: column; gap: 5px; padding: 14px 10px 12px; position: relative; text-align: center; }
+.badge-tile .badge-medal { margin-bottom: 4px; }
+.badge-tile__name { color: var(--fg); font-size: .88rem; }
+.badge-tile__tier { color: var(--fg); font-size: .7rem; font-weight: 700; letter-spacing: .06em; opacity: .65; text-transform: uppercase; }
+.badge-tile--gold .badge-tile__tier { color: #b7791f; opacity: 1; }
+.badge-tile__count { color: var(--fg); font-size: .74rem; line-height: 1.35; opacity: .75; }
+.badge-tile .badge-bar { margin-top: 2px; }
+.badge-tile--locked .badge-tile__name { opacity: .7; }
+.badge-tile--new { border-color: rgba(245, 158, 11, .7); box-shadow: 0 0 0 3px rgba(245, 158, 11, .15); }
+.badge-tile--new::after { background: #f59e0b; border-radius: 999px; color: #1f1300; content: "New"; font-size: .62rem; font-weight: 800; letter-spacing: .04em; padding: 2px 7px; position: absolute; right: 8px; top: 8px; text-transform: uppercase; }
+
+.badge-pips { display: inline-flex; gap: 4px; }
+.badge-pip { background: color-mix(in srgb, var(--fg) 18%, transparent); border-radius: 50%; height: 7px; width: 7px; }
+.badge-pip--bronze { background: #c47a43; }
+.badge-pip--silver { background: #b8c0cf; }
+.badge-pip--gold { background: #e0a526; }
+
+.badge-case__celebration { align-items: center; background: linear-gradient(110deg, rgba(245, 158, 11, .16), rgba(124, 58, 237, .14)); border: 1px solid rgba(245, 158, 11, .5); border-radius: 14px; display: flex; flex-wrap: wrap; gap: 10px 14px; margin: 0 0 14px; padding: 12px 14px; }
+.badge-case__celebration-medals { display: flex; }
+.badge-case__celebration-medals .badge-medal + .badge-medal { margin-left: -10px; }
+.badge-case__celebration-medals .badge-medal { animation: badge-pop .5s ease both; }
+.badge-case__celebration-copy { display: grid; flex: 1; gap: 2px; min-width: 180px; }
+.badge-case__celebration-copy strong { color: var(--fg); font-size: 1rem; }
+.badge-case__celebration-copy span { color: var(--fg); font-size: .84rem; opacity: .8; }
+@keyframes badge-pop { 0% { opacity: 0; transform: scale(.6); } 70% { transform: scale(1.12); } 100% { opacity: 1; transform: scale(1); } }
+@media (prefers-reduced-motion: reduce) {
+  .badge-case__celebration-medals .badge-medal { animation: none; }
+  .badge-bar__fill { transition: none; }
+}
+
+.badge-case__footer { align-items: center; display: flex; flex-wrap: wrap; gap: 6px 12px; }
+.badge-case__link { align-items: center; background: transparent; border: 0; color: var(--fg); cursor: pointer; display: inline-flex; font: inherit; font-size: .84rem; min-height: 36px; opacity: .8; padding: 0 4px; text-decoration: underline; text-underline-offset: 2px; }
+.badge-case__link:hover { opacity: 1; }
+.badge-case__link--strong { font-weight: 700; opacity: 1; }
+.badge-case button:focus-visible, .badge-case a:focus-visible { outline: 3px solid var(--teal, #14b8a6); outline-offset: 2px; }
+.badge-case .visually-hidden { border: 0; clip: rect(0 0 0 0); height: 1px; margin: -1px; overflow: hidden; padding: 0; position: absolute; white-space: nowrap; width: 1px; }
+
+@media (max-width: 560px) {
+  .badge-case { padding: 16px; }
+  .badge-case__grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+}
+
+/* Public profile: earned badges, a row of medals with their tier. */
+.profile-badges { display: flex; flex-wrap: wrap; gap: 10px; list-style: none; margin: 0; padding: 0; }
+.profile-badge { align-items: center; background: rgba(255, 255, 255, .04); border: 1px solid rgba(139, 92, 246, .28); border-radius: 999px; display: inline-flex; gap: 10px; padding: 5px 14px 5px 5px; }
+.profile-badge .badge-medal::before { background: #15122b; }
+.profile-badge__copy { display: grid; line-height: 1.25; }
+.profile-badge__copy strong { font-size: .9rem; }
+.profile-badge__copy small { font-size: .74rem; opacity: .72; }

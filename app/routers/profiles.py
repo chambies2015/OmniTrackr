@@ -122,6 +122,21 @@ def _stats_html(view) -> str:
             f'<div class="profile-stats">{tiles}</div></section>')
 
 
+def _badges_html(view) -> str:
+    if not view.badges:
+        return ""
+    items = "".join(
+        f'<li class="profile-badge" title="{_e(badge["label"])}">'
+        f'<span class="badge-medal badge-medal--{_e(badge["tier_name"].lower())}" aria-hidden="true">'
+        f'<span class="badge-medal__glyph">{_e(badge["emoji"])}</span></span>'
+        f'<span class="profile-badge__copy"><strong>{_e(badge["name"])}</strong>'
+        f'<small>{_e(badge["tier_name"])} · {_e(badge["label"])}</small></span></li>'
+        for badge in view.badges
+    )
+    return (f'<section class="title-section" aria-labelledby="profile-badges"><h2 id="profile-badges">Badges</h2>'
+            f'<ul class="profile-badges">{items}</ul></section>')
+
+
 def _favorites_html(view) -> str:
     if not view.favorites:
         return ""
@@ -188,7 +203,7 @@ def render(view, *, signed_in: bool, is_owner: bool) -> str:
         + (f". {lead}" if lead else "."), 158)
     robots = "index, follow" if view.indexable else "noindex, follow"
     card_url = f"{SITE_URL}{view.path}/card.png"
-    body = "".join([_stats_html(view), _favorites_html(view), _reviews_html(view), _collections_html(view)])
+    body = "".join([_stats_html(view), _badges_html(view), _favorites_html(view), _reviews_html(view), _collections_html(view)])
     if not body:
         body = f'<p class="title-empty">{_e(name)} hasn\'t shared anything here yet.</p>'
     owner_note = ('<p class="profile-owner-note">This is your public profile. Change what it shows from '
@@ -221,6 +236,7 @@ def render(view, *, signed_in: bool, is_owner: bool) -> str:
   <link rel="stylesheet" href="/static/fonts.css?v=20261009-fonts-1">
   <link rel="stylesheet" href="/static/title-page.css?v={TITLE_CSS_VERSION}">
   <link rel="stylesheet" href="/static/profile-page.css?v={CSS_VERSION}">
+  <link rel="stylesheet" href="/static/badges.css?v=20261017-badges-1">
   <script src="/static/share.js?v=20261004-share-1" defer></script>
 </head>
 <body class="site title-page profile-page">
