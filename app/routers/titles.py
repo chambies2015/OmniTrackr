@@ -793,14 +793,16 @@ def sitemap_entries(db: Session, limit: int = 500) -> list[str]:
     candidates = title_pages.reviewed_titles(db)
     for kind in title_pages.KINDS:
         candidates += [dict(item) for item in title_pages.popular(db, kind, limit=150, min_members=title_pages.INDEX_MIN_MEMBERS)]
+    groups = {kind: title_pages.find_many(db, kind, [c["url"].rsplit("/", 1)[1] for c in candidates if c["kind"] == kind])
+              for kind in title_pages.KINDS}
     for candidate in candidates:
         if candidate["url"] in seen or len(paths) >= limit:
             continue
         seen.add(candidate["url"])
-        group = title_pages.find(db, candidate["kind"], candidate["url"].rsplit("/", 1)[1])
+        group = groups[candidate["kind"]].get(candidate["url"].rsplit("/", 1)[1])
         if group is None:
             continue
-        summary = title_pages.summarize(db, group)
+        summary = title_pages.summarize(db, group, page_sections=False)
         metadata, _ = title_metadata.cached(db, title_metadata.cache_key(group.kind, group.normalized, group.year))
         if title_pages.is_indexable(summary, metadata):
             paths.append(group.path)
@@ -825,7 +827,7 @@ async def warm_metadata(session_factory, client, batch: int = 8) -> int:
             _, fresh = title_metadata.cached(db, key)
             if fresh:
                 continue
-            creator = title_pages.summarize(db, group).get("creator")
+            creator = title_pages.summarize(db, group, page_sections=False).get("creator")
             await title_metadata.get_or_fetch(db, client, group.kind, group.normalized, group.title, group.year, creator, wait=20)
             fetched += 1
             await asyncio.sleep(2)  # Be gentle with Wikipedia and friends.

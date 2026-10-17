@@ -3,7 +3,7 @@ SQLAlchemy models for the OmniTrackr API.
 Defines the User, Movie, TV Show, Anime, and Video Game ORM models.
 """
 from sqlalchemy import Column, Integer, String, Boolean, Float, ForeignKey, Date, DateTime, UniqueConstraint, LargeBinary, Text, Index
-from sqlalchemy.orm import relationship
+from sqlalchemy.orm import deferred, relationship
 from datetime import datetime, timedelta
 from .database import Base
 
@@ -57,7 +57,9 @@ class User(Base):
     
     # Profile picture
     profile_picture_url = Column(String, nullable=True)
-    profile_picture_data = Column(LargeBinary, nullable=True)
+    # Deferred: up to a few hundred KB, read only when the picture itself is served.
+    # Every signed-in request loads the member's row, and friend lists load many.
+    profile_picture_data = deferred(Column(LargeBinary, nullable=True))
     profile_picture_mime_type = Column(String, nullable=True)
     
     movies = relationship("Movie", back_populates="owner", cascade="all, delete-orphan")

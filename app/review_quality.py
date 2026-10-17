@@ -4,8 +4,11 @@ Public review quality checks.
 These checks only control public discovery surfaces. They do not mutate or delete
 stored user reviews.
 """
+import hashlib
 import re
-from dataclasses import dataclass
+import threading
+from collections import OrderedDict
+from dataclasses import dataclass, replace
 
 
 URL_PATTERN = re.compile(r"(?:https?://|www\.)[^\s<]+", re.IGNORECASE)
@@ -86,6 +89,29 @@ def evaluate_public_review(
 ) -> ReviewQuality:
     """Evaluate public usefulness without changing the user's saved review."""
     text = str(review_text or "").strip()
+    # Public feeds, the homepage and the sitemap re-check every public review on each
+    # build; the result depends only on the text and the two limits, so reuse it.
+    key = (hashlib.blake2b(text.encode("utf-8", "surrogatepass"), digest_size=16).digest(),
+           community_min_chars, search_min_chars)
+    with _evaluated_lock:
+        cached = _evaluated.get(key)
+        if cached is not None:
+            _evaluated.move_to_end(key)
+    if cached is None:
+        cached = _evaluate(text, community_min_chars, search_min_chars)
+        with _evaluated_lock:
+            _evaluated[key] = cached
+            if len(_evaluated) > _EVALUATED_MAX:
+                _evaluated.popitem(last=False)
+    return replace(cached, checks=dict(cached.checks))
+
+
+_EVALUATED_MAX = 20_000  # a few MB; far more public reviews than the site has
+_evaluated: "OrderedDict[tuple, ReviewQuality]" = OrderedDict()
+_evaluated_lock = threading.Lock()
+
+
+def _evaluate(text: str, community_min_chars: int, search_min_chars: int) -> ReviewQuality:
     words = WORD_PATTERN.findall(text)
     sentence_count = len(SENTENCE_END_PATTERN.findall(text))
     safe = is_public_review_safe(text)

@@ -2,6 +2,8 @@
 from __future__ import annotations
 
 import asyncio
+import os
+from collections import OrderedDict
 from html import escape
 from urllib.parse import urljoin
 
@@ -28,6 +30,15 @@ IMAGE_CONCURRENCY = 6
 IMAGE_QUEUE_SECONDS = 10.0
 IMAGE_FETCH_SECONDS = 20.0
 _image_slots: asyncio.Semaphore | None = None
+# One visitor may hold only this many of the shared slots, so a single client firing
+# requests can't keep everyone else's exports waiting.
+IMAGE_SLOTS_PER_CLIENT = 2
+_client_slots: dict[str, list] = {}  # client -> [semaphore, requests using it]
+# Recently fetched posters, kept in memory: templates and popular titles reuse the same
+# images, so most exports need no outgoing fetch at all.
+IMAGE_CACHE_BYTES = 16 * 1024 * 1024
+_image_cache: "OrderedDict[str, tuple[str, bytes]]" = OrderedDict()
+_image_cache_size = 0
 
 
 def _slots() -> asyncio.Semaphore:
@@ -35,6 +46,49 @@ def _slots() -> asyncio.Semaphore:
     if _image_slots is None:
         _image_slots = asyncio.Semaphore(IMAGE_CONCURRENCY)
     return _image_slots
+
+
+def _client_key(request) -> str:
+    try:
+        from ..main import client_address
+        return client_address(request)
+    except Exception:
+        client = getattr(request, "client", None)
+        return getattr(client, "host", None) or "unknown"
+
+
+def _image_cache_enabled() -> bool:
+    # Tests reuse poster URLs with different upstream answers.
+    return os.getenv("TESTING", "").lower() != "true"
+
+
+def _cached_image(url: str):
+    entry = _image_cache.get(url) if _image_cache_enabled() else None
+    if entry is not None:
+        _image_cache.move_to_end(url)
+    return entry
+
+
+def _remember_image(url: str, media_type: str, body: bytes) -> None:
+    global _image_cache_size
+    if not _image_cache_enabled() or len(body) > IMAGE_CACHE_BYTES // 8:
+        return
+    previous = _image_cache.pop(url, None)
+    if previous is not None:
+        _image_cache_size -= len(previous[1])
+    _image_cache[url] = (media_type, body)
+    _image_cache_size += len(body)
+    while _image_cache_size > IMAGE_CACHE_BYTES and _image_cache:
+        _, (_, dropped) = _image_cache.popitem(last=False)
+        _image_cache_size -= len(dropped)
+
+
+def _image_response(media_type: str, body: bytes) -> Response:
+    return Response(content=body, media_type=media_type, headers={
+        "Cache-Control": "public, max-age=86400",
+        "X-Content-Type-Options": "nosniff",
+        "Content-Security-Policy": "default-src 'none'",
+    })
 
 
 def _e(value) -> str:
@@ -186,24 +240,46 @@ async def tier_list_image(request: Request, url: str = Query(..., max_length=100
     """
     if not tier_list.image_allowed(url):
         raise HTTPException(400, "Image host not allowed")
+    cached = _cached_image(url)
+    if cached is not None:
+        return _image_response(*cached)
     client = getattr(request.app.state, "external_api_client", None)
     if client is None:
         raise HTTPException(503, "Images unavailable")
-    slots = _slots()
+    key = _client_key(request)
+    mine = _client_slots.setdefault(key, [asyncio.Semaphore(IMAGE_SLOTS_PER_CLIENT), 0])
+    mine[1] += 1
     try:
-        await asyncio.wait_for(slots.acquire(), timeout=IMAGE_QUEUE_SECONDS)
-    except asyncio.TimeoutError:
-        raise HTTPException(503, "Images are busy, try again in a moment")
-    try:
-        # A whole fetch, redirects included, gets a hard deadline so a trickling host can't hold a slot.
-        return await asyncio.wait_for(_fetch_image(client, url), timeout=IMAGE_FETCH_SECONDS)
-    except asyncio.TimeoutError:
-        raise HTTPException(504, "Image took too long")
+        deadline = asyncio.get_running_loop().time() + IMAGE_QUEUE_SECONDS
+        try:
+            await asyncio.wait_for(mine[0].acquire(), timeout=IMAGE_QUEUE_SECONDS)
+        except asyncio.TimeoutError:
+            raise HTTPException(503, "Images are busy, try again in a moment")
+        try:
+            slots = _slots()
+            try:
+                remaining = max(0.0, deadline - asyncio.get_running_loop().time())
+                await asyncio.wait_for(slots.acquire(), timeout=remaining)
+            except asyncio.TimeoutError:
+                raise HTTPException(503, "Images are busy, try again in a moment")
+            try:
+                # A whole fetch, redirects included, gets a hard deadline so a trickling host can't hold a slot.
+                media_type, body = await asyncio.wait_for(_fetch_image(client, url), timeout=IMAGE_FETCH_SECONDS)
+            except asyncio.TimeoutError:
+                raise HTTPException(504, "Image took too long")
+            finally:
+                slots.release()
+        finally:
+            mine[0].release()
     finally:
-        slots.release()
+        mine[1] -= 1
+        if mine[1] == 0 and _client_slots.get(key) is mine:
+            del _client_slots[key]
+    _remember_image(url, media_type, body)
+    return _image_response(media_type, body)
 
 
-async def _fetch_image(client, url: str) -> Response:
+async def _fetch_image(client, url: str) -> tuple[str, bytes]:
     current = url
     try:
         for _ in range(MAX_REDIRECTS + 1):
@@ -226,11 +302,7 @@ async def _fetch_image(client, url: str) -> Response:
                     body.extend(chunk)
                     if len(body) > tier_list.IMAGE_MAX_BYTES:
                         raise HTTPException(413, "Image too large")
-                return Response(content=bytes(body), media_type=media_type, headers={
-                    "Cache-Control": "public, max-age=86400",
-                    "X-Content-Type-Options": "nosniff",
-                    "Content-Security-Policy": "default-src 'none'",
-                })
+                return media_type, bytes(body)
         raise HTTPException(404, "Too many redirects")
     except HTTPException:
         raise

@@ -207,16 +207,11 @@ def get_friends(db: Session, user_id: int) -> List[models.User]:
         )
     ).all()
     
-    friends = []
-    for friendship in friendships:
-        if friendship.user1_id == user_id:
-            friend = get_user_by_id(db, friendship.user2_id)
-        else:
-            friend = get_user_by_id(db, friendship.user1_id)
-        if friend:
-            friends.append(friend)
-    
-    return friends
+    friend_ids = [friendship.user2_id if friendship.user1_id == user_id else friendship.user1_id
+                  for friendship in friendships]
+    # One query for every friend instead of one each, in the same order as before.
+    users = {user.id: user for user in db.query(models.User).filter(models.User.id.in_(friend_ids))} if friend_ids else {}
+    return [users[friend_id] for friend_id in friend_ids if friend_id in users]
 
 
 def are_friends(db: Session, user1_id: int, user2_id: int) -> bool:

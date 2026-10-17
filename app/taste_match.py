@@ -13,7 +13,7 @@ from __future__ import annotations
 
 from typing import Any, Iterable, Optional
 
-from sqlalchemy.orm import Session
+from sqlalchemy.orm import Session, load_only
 
 from . import models
 from .for_you import CREATOR_FIELD, IMAGE_FIELD, LIBRARY, PRIVATE_FLAG, _safe_image, normalize_title
@@ -56,21 +56,46 @@ def _row(category: str, entry) -> dict[str, Any]:
     }
 
 
+def _columns(category: str) -> list:
+    """Only what _row() reads; reviews and notes can be long and are never shown."""
+    model = LIBRARY[category][0]
+    names = {"user_id", "title", "rating", DONE_FIELD[category], IMAGE_FIELD[category],
+             "release_date" if category == "video-games" else "year"}
+    if CREATOR_FIELD.get(category):
+        names.add(CREATOR_FIELD[category])
+    return [getattr(model, name) for name in sorted(names)]
+
+
+def libraries(db: Session, categories_by_user: dict[int, Iterable[str]]) -> dict[int, dict[str, dict[str, dict]]]:
+    """library() for several members, with one query per category instead of one per member and category."""
+    result: dict[int, dict[str, dict[str, dict]]] = {user_id: {} for user_id in categories_by_user}
+    for category in LIBRARY:
+        user_ids = [user_id for user_id, categories in categories_by_user.items() if category in categories]
+        if not user_ids:
+            continue
+        for user_id in user_ids:
+            result[user_id][category] = {}
+        model = LIBRARY[category][0]
+        for start in range(0, len(user_ids), 500):
+            chunk = user_ids[start:start + 500]
+            for entry in (db.query(model).options(load_only(*_columns(category)))
+                          .filter(model.user_id.in_(chunk)).order_by(model.user_id, model.id)):
+                key = normalize_title(entry.title)
+                if not key:
+                    continue
+                rows = result[entry.user_id][category]
+                row = _row(category, entry)
+                if key not in rows or (rows[key]["rating"] is None and row["rating"] is not None):
+                    rows[key] = row
+    # Keep each member's categories in the order asked for, as library() did.
+    return {user_id: {category: result[user_id][category] for category in categories if category in result[user_id]}
+            for user_id, categories in categories_by_user.items()}
+
+
 def library(db: Session, user_id: int, categories: Iterable[str]) -> dict[str, dict[str, dict]]:
     """category -> normalized title -> one row per title (a rated duplicate wins)."""
-    result: dict[str, dict[str, dict]] = {}
-    for category in categories:
-        model = LIBRARY[category][0]
-        rows: dict[str, dict] = {}
-        for entry in db.query(model).filter(model.user_id == user_id).all():
-            key = normalize_title(entry.title)
-            if not key:
-                continue
-            row = _row(category, entry)
-            if key not in rows or (rows[key]["rating"] is None and row["rating"] is not None):
-                rows[key] = row
-        result[category] = rows
-    return result
+    categories = list(categories)
+    return libraries(db, {user_id: categories})[user_id]
 
 
 def shared_categories(friend: models.User) -> list[str]:
@@ -165,10 +190,12 @@ def match(db: Session, viewer: models.User, friend: models.User) -> dict:
 def friend_scores(db: Session, viewer: models.User, friends: list[models.User]) -> list[dict]:
     """A compact score for each friend, for the friends list."""
     mine = library(db, viewer.id, LIBRARY)
+    friends = friends[:FRIENDS_LIMIT]
+    theirs = libraries(db, {friend.id: shared_categories(friend) for friend in friends})
     scores = []
-    for friend in friends[:FRIENDS_LIMIT]:
+    for friend in friends:
         categories = shared_categories(friend)
-        result = compare(mine, library(db, friend.id, categories), categories)
+        result = compare(mine, theirs[friend.id], categories)
         scores.append({"friend_id": friend.id, "score": result["score"], "tier": result["tier"],
                        "shared_count": result["shared_count"]})
     return scores

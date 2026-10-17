@@ -3,6 +3,7 @@ Entry point for the OmniTrackr API.
 Provides CRUD endpoints for managing movies and TV shows.
 """
 import asyncio
+import hashlib
 import os
 import re
 import httpx
@@ -11,6 +12,7 @@ from fastapi import FastAPI, Depends, HTTPException, Request
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import FileResponse, Response, RedirectResponse
 from fastapi.staticfiles import StaticFiles
+from starlette.concurrency import run_in_threadpool
 from starlette.middleware.gzip import GZipMiddleware
 from starlette.exceptions import HTTPException as StarletteHTTPException
 from fastapi.exception_handlers import http_exception_handler
@@ -18,7 +20,7 @@ from slowapi import Limiter, _rate_limit_exceeded_handler
 from slowapi.errors import RateLimitExceeded
 from slowapi.middleware import SlowAPIMiddleware
 from slowapi.util import get_remote_address
-from sqlalchemy.orm import Session
+from sqlalchemy.orm import Session, undefer
 
 from .integer_bounds import PositiveDatabaseId, SQL_INTEGER_MAX
 from . import crud, schemas, models, dashboard_assets
@@ -325,6 +327,20 @@ def hero_signup_html(google: bool) -> str:
     )
 
 
+def _warm_homepage_sections() -> None:
+    """Rebuild the homepage's cached database sections when they are due, off the event loop.
+
+    Each rebuild reads every public review and the most popular titles (seconds on a
+    large library). Run inline, it stalled every other request while it ran.
+    """
+    from . import guest_picks, landing_proof
+    for section in (guest_picks.homepage_section, landing_proof.homepage_section):
+        try:
+            section()
+        except Exception:
+            pass  # public_root_html() leaves the section out, as before.
+
+
 def public_root_html(html: str, request: Request | None = None) -> str:
     """Return the standalone public landing experience without the private app shell.
 
@@ -409,11 +425,12 @@ app.add_middleware(
 @app.get("/profile-pictures/{user_id}")
 async def serve_profile_picture(
     user_id: PositiveDatabaseId,
+    request: Request,
     viewer: models.User | None = Depends(get_optional_current_user),
     db: Session = Depends(get_db),
 ):
     """Serve profile pictures from database."""
-    user = crud.get_user_by_id(db, user_id)
+    user = db.query(models.User).options(undefer(models.User.profile_picture_data)).filter(models.User.id == user_id).first()
     if not user or not user.is_active or not user.profile_picture_data:
         raise HTTPException(status_code=404, detail="Profile picture not found")
     own_or_friend = viewer is not None and (viewer.id == user.id or crud.are_friends(db, viewer.id, user.id))
@@ -422,7 +439,14 @@ async def serve_profile_picture(
         raise HTTPException(status_code=404, detail="Profile picture not found")
     
     mime_type = user.profile_picture_mime_type or "image/jpeg"
-    return Response(content=user.profile_picture_data, media_type=mime_type)
+    # Friends lists show the same pictures on every visit. The browser keeps its copy and
+    # asks each time (no-cache), so a new picture or lost access still shows at once,
+    # but an unchanged picture costs a 304 instead of the whole image.
+    etag = '"' + hashlib.blake2b(user.profile_picture_data, digest_size=16).hexdigest() + '"'
+    headers = {"ETag": etag, "Cache-Control": "private, no-cache", "Vary": "Cookie"}
+    if etag in [tag.strip() for tag in request.headers.get("if-none-match", "").split(",")]:
+        return Response(status_code=304, headers=headers)
+    return Response(content=user.profile_picture_data, media_type=mime_type, headers=headers)
 
 
 @app.get("/custom-tab-posters/{item_id}")
@@ -772,6 +796,7 @@ async def read_root(request: Request):
             html = file.read()
             authenticated_shell = bool(request.cookies.get(AUTH_COOKIE_NAME))
             if not authenticated_shell:
+                await run_in_threadpool(_warm_homepage_sections)
                 html = public_root_html(html, request)
                 if request.method == "GET" and "token" not in request.query_params:
                     funnel.record("landing_viewed", request)
