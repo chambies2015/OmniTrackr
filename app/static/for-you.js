@@ -113,7 +113,8 @@
     const date = new Date(`${iso}T12:00:00Z`);
     if (Number.isNaN(date.getTime())) return 'Date to be announced';
     const today = new Date();
-    const days = Math.round((date - Date.UTC(today.getUTCFullYear(), today.getUTCMonth(), today.getUTCDate(), 12)) / 86400000);
+    // Release dates are calendar days, so count from the member's own date, not UTC's.
+    const days = Math.round((date - Date.UTC(today.getFullYear(), today.getMonth(), today.getDate(), 12)) / 86400000);
     const label = date.toLocaleDateString('en-US', { month: 'short', day: 'numeric', timeZone: 'UTC' });
     if (days === 0) return `Today · ${label}`;
     if (days === 1) return `Tomorrow · ${label}`;

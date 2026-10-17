@@ -375,6 +375,8 @@ window.saveMovieEdit = async function (btn) {
     editingRowElement = null;
     enableAllRowButtons('movieTable');
     loadMovies();
+  } else {
+    await showLibrarySaveError(res);
   }
 };
 
@@ -384,6 +386,20 @@ window.cancelMovieEdit = function () {
   enableAllRowButtons('movieTable');
   loadMovies();
 };
+
+// A rejected inline edit keeps the row open; say why instead of doing nothing.
+async function showLibrarySaveError(res) {
+  let detail = '';
+  try {
+    const body = await res.json();
+    if (typeof body.detail === 'string') detail = body.detail;
+    else if (Array.isArray(body.detail) && body.detail[0]?.msg) {
+      const field = (body.detail[0].loc || []).slice(-1)[0];
+      detail = field ? `${field}: ${body.detail[0].msg}` : body.detail[0].msg;
+    }
+  } catch (_) { /* fall back to the generic message */ }
+  alert(detail ? `Could not save changes. ${detail}` : 'Could not save changes. Check the fields and try again.');
+}
 
 // TV Show functions
 let isLoadingTVShows = false;
@@ -1202,6 +1218,8 @@ window.saveVideoGameEdit = async function (btn) {
     editingRowElement = null;
     enableAllRowButtons('videoGameTable');
     loadVideoGames();
+  } else {
+    await showLibrarySaveError(res);
   }
 };
 
@@ -1528,6 +1546,8 @@ window.saveMusicEdit = async function (btn) {
     editingRowElement = null;
     enableAllRowButtons('musicTable');
     loadMusic();
+  } else {
+    await showLibrarySaveError(res);
   }
 };
 
@@ -1848,6 +1868,8 @@ window.saveBookEdit = async function (btn) {
     editingRowElement = null;
     enableAllRowButtons('bookTable');
     loadBooks();
+  } else {
+    await showLibrarySaveError(res);
   }
 };
 
@@ -1933,6 +1955,8 @@ window.saveAnimeEdit = async function (btn) {
     editingRowElement = null;
     enableAllRowButtons('animeTable');
     loadAnime();
+  } else {
+    await showLibrarySaveError(res);
   }
 };
 
@@ -2018,6 +2042,8 @@ window.saveTVEdit = async function (btn) {
     editingRowElement = null;
     enableAllRowButtons('tvShowTable');
     loadTVShows();
+  } else {
+    await showLibrarySaveError(res);
   }
 };
 
@@ -2614,7 +2640,20 @@ function loadStatistics() {
   document.getElementById('statsContent').style.display = 'block';
   loadMonthlyReplay();
   loadTasteprint(false);
-  if (!categoryStatsCache['library-insights']) {
+  // Library edits since the last visit should show here: drop cached numbers and
+  // reload any section that is already open.
+  Object.keys(categoryStatsCache).forEach(key => { delete categoryStatsCache[key]; });
+  let insightsOpen = false;
+  Object.entries({
+    'library-insights': 'libraryInsights', movies: 'movies', 'tv-shows': 'tvShows', anime: 'anime',
+    'video-games': 'videoGames', music: 'music', books: 'books',
+  }).forEach(([category, idPrefix]) => {
+    const content = document.getElementById(`${idPrefix}StatsContent`);
+    if (!content || !isElementShown(content)) return;
+    if (category === 'library-insights') insightsOpen = true;
+    loadCategoryStatistics(category);
+  });
+  if (!insightsOpen) {
     toggleCategoryAccordion('library-insights');
   }
 }

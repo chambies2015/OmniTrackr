@@ -28,7 +28,30 @@ def create_friend_request(db: Session, sender_id: int, receiver_id: int) -> Opti
         models.FriendRequest.status == "pending"
     ).first()
     
+    if existing and existing.expires_at and existing.expires_at < datetime.utcnow():
+        existing.status = "expired"
+        db.commit()
+        existing = None
+
+    if existing and existing.sender_id == receiver_id:
+        # They already asked us: sending one back means yes, so accept theirs.
+        return accept_friend_request(db, existing.id, sender_id)
+
     if existing:
+        # The receiver may have dismissed the notification, which was the only
+        # place to answer it; bring it back so the request isn't stuck.
+        has_notification = db.query(models.Notification.id).filter(
+            models.Notification.friend_request_id == existing.id,
+            models.Notification.user_id == receiver_id,
+        ).first()
+        if not has_notification:
+            create_notification(
+                db=db,
+                user_id=receiver_id,
+                type="friend_request_received",
+                message=f"{get_user_by_id(db, sender_id).username} sent you a friend request",
+                friend_request_id=existing.id
+            )
         raise ValueError("Friend request already exists")
     
     friend_request = models.FriendRequest(
@@ -158,6 +181,11 @@ def cancel_friend_request(db: Session, request_id: int, user_id: int) -> Optiona
     if friend_request.status != "pending":
         raise ValueError("Friend request is not pending")
     
+    # Remove the receiver's Accept/Deny notification for a request that no longer exists.
+    db.query(models.Notification).filter(
+        models.Notification.friend_request_id == request_id,
+        models.Notification.user_id == friend_request.receiver_id,
+    ).delete(synchronize_session=False)
     friend_request.status = "cancelled"
     db.commit()
     

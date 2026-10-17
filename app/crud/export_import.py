@@ -275,6 +275,12 @@ def import_custom_tabs(db: Session, user_id: int, custom_tabs_data: List[dict]) 
                     if remaining[identity]:
                         remaining[identity] -= 1
                         continue
+                    # A field removed after an item was saved can linger in that item's values;
+                    # drop it rather than rejecting the whole item.
+                    known_keys = {field.key for field in tab_create.fields}
+                    item_create = item_create.model_copy(update={"field_values": {
+                        key: value for key, value in (item_create.field_values or {}).items() if key in known_keys
+                    }})
                     item_result, error_msg = custom_tabs.create_custom_tab_item(db, user_id, tab_id, item_create)
                     if error_msg:
                         errors.append(f"Error importing item '{item_data.get('title', 'unknown')}' in tab '{tab_data['name']}': {error_msg}")

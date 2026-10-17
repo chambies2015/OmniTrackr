@@ -253,7 +253,8 @@ function displayCategoryRatingDistribution(distribution, idPrefix) {
   const counts = Object.values(distribution).map(Number);
   const maxCount = counts.length > 0 ? Math.max(...counts) : 1;
   
-  for (let rating = 1; rating <= 10; rating++) {
+  // Ratings under 0.5 land in the 0 bucket; show that bar only when it is used.
+  for (let rating = distribution['0'] ? 0 : 1; rating <= 10; rating++) {
     const count = distribution[rating.toString()] || 0;
     const percentage = maxCount > 0 ? (count / maxCount) * 100 : 0;
     
