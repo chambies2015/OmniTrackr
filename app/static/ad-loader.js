@@ -14,6 +14,7 @@
       /^\/reviews\/\d+$/.test(window.location.pathname) ||
       /^\/titles\/(movie|tv|anime|game|album|book)\/[a-z0-9-]{1,130}$/.test(window.location.pathname) ||
       /^\/if-you-liked\/[a-z0-9-]{1,80}$/.test(window.location.pathname) ||
+      /^\/in-order\/[a-z0-9-]{1,80}$/.test(window.location.pathname) ||
       /^\/release-radar(\/(movies|tv|anime|games)(\/[a-z0-9-]{4,20})?)?$/.test(window.location.pathname);
   }
 
