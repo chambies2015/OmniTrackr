@@ -344,6 +344,27 @@ def _if_you_liked_html(group) -> str:
             f'<a class="site-btn site-btn--ghost" href="{_e(if_you_liked.path(slug))}">If you liked {_e(guide["anchor"]["title"])} →</a></section>')
 
 
+def _in_order_html(group) -> str:
+    """Where this title sits in the "In order" guides that include it."""
+    from .. import in_order
+    found = in_order.for_title(group.kind, group.title, getattr(group, "year", None))
+    if not found:
+        return ""
+    cards = []
+    for slug, item in found[:2]:
+        guide = in_order.guide(slug)
+        first = guide["orders"][0]
+        where = (f'#{first["ids"].index(item["id"]) + 1} of {len(first["ids"])} in the order we recommend'
+                 if item["id"] in first["ids"] else f'one of {len(guide["entries"])} entries')
+        also = "the other orders, what you can skip" if len(guide["orders"]) > 1 else "what you can skip"
+        cards.append(f'<p>{_e(group.title)} is {_e(where)} in our {_e(guide["name"])} guide, which also covers '
+                     f'{also} and where to start.</p>'
+                     f'<a class="site-btn site-btn--ghost" href="{_e(in_order.path(slug))}#{_e(in_order.anchor_id(item))}">'
+                     f'{_e(guide["name"])} in order →</a>')
+    return (f'<section class="title-section title-in-order" aria-labelledby="in-order-title"><h2 id="in-order-title">Part of a series? Here is the order</h2>'
+            f'{"".join(cards)}</section>')
+
+
 def _links_html(metadata: dict) -> str:
     links = metadata.get("links") or []
     if not links:
@@ -406,7 +427,7 @@ def render(group, summary: dict, metadata: Optional[dict], indexable: bool, sign
         # Our own content first: member reviews and stats, then collections and "also track".
         _community_html(group, summary), _write_review_html(group, summary, signed_in, take),
         _trailer_html(group, metadata), _about_html(group, summary, metadata),
-        _if_you_liked_html(group), _collections_html(summary), _related_html(summary), _gallery_html(group, metadata), _tracks_html(metadata),
+        _if_you_liked_html(group), _in_order_html(group), _collections_html(summary), _related_html(summary), _gallery_html(group, metadata), _tracks_html(metadata),
     ])
     og_image = f'<meta property="og:image" content="{_e(image)}">' if image else ""
     ad_loader = ('<script src="/static/ad-loader.js" defer></script>'
@@ -690,6 +711,10 @@ def import_guest_list(
             # An OmniTrackr Daily answer no member tracks yet.
             from .. import daily
             curated = daily.find_answer(item.kind, item.slug)
+        if group is None and curated is None:
+            # An entry saved from an "In order" guide that no member tracks yet.
+            from .. import in_order
+            curated = in_order.find(item.kind, item.slug)
         if group is None and curated is None:
             missing += 1
             continue
