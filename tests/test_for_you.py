@@ -129,7 +129,8 @@ def test_starter_picks_include_upcoming_radar_titles(authenticated_client, db_se
     upcoming = authenticated_client.get("/api/for-you/starter-picks").json()["upcoming"]
     assert upcoming[0]["title"] == "Big Upcoming Game"
     assert upcoming[0]["window"] == radar.current_window("games", TODAY).slug
-    assert upcoming[0]["url"].startswith("/release-radar/games#item-")
+    # Sep 29 features October's page, so a September item links to its own month.
+    assert upcoming[0]["url"] == f"/release-radar/games/{radar.current_window('games', TODAY).slug}#item-g1"
 
 
 def test_starter_picks_require_login(client):
