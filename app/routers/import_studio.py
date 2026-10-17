@@ -2,7 +2,7 @@
 import json
 from typing import Literal
 
-from fastapi import APIRouter, Depends, File, Form, HTTPException, UploadFile
+from fastapi import APIRouter, Depends, File, Form, HTTPException, Request, UploadFile
 from fastapi.responses import Response
 from sqlalchemy.orm import Session
 
@@ -45,6 +45,7 @@ def _parse_or_400(content: bytes, source: str, category: str | None, mapping: di
 
 @router.post("/preview/")
 async def preview_import(
+    request: Request = None,
     file: UploadFile = File(...),
     source: str = Form("auto"),
     category: str | None = Form(None),
@@ -65,6 +66,7 @@ async def preview_import(
 
 @router.post("/apply/")
 async def apply_import(
+    request: Request = None,
     file: UploadFile = File(...),
     fingerprint_confirmation: str = Form(...),
     source: str = Form("auto"),

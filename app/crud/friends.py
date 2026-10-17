@@ -17,7 +17,7 @@ from .statistics import get_watch_statistics, get_rating_statistics
 
 def create_friend_request(db: Session, sender_id: int, receiver_id: int) -> Optional[models.FriendRequest]:
     """Create a new friend request."""
-    if are_friends(db, sender_id, receiver_id):
+    if are_friends(db, sender_id, receiver_id, include_deactivated=True):
         raise ValueError("Users are already friends")
     
     existing = db.query(models.FriendRequest).filter(
@@ -241,14 +241,18 @@ def get_friends(db: Session, user_id: int) -> List[models.User]:
             friend = get_user_by_id(db, friendship.user2_id)
         else:
             friend = get_user_by_id(db, friendship.user1_id)
-        if friend:
+        if friend and friend.is_active:
             friends.append(friend)
     
     return friends
 
 
-def are_friends(db: Session, user1_id: int, user2_id: int) -> bool:
-    """Check if two users are friends."""
+def are_friends(db: Session, user1_id: int, user2_id: int, include_deactivated: bool = False) -> bool:
+    """Check if two users are friends.
+
+    A deactivated member's friendships are kept so reactivating restores them,
+    but until then friends can't read their library.
+    """
     user1 = min(user1_id, user2_id)
     user2 = max(user1_id, user2_id)
     
@@ -256,8 +260,14 @@ def are_friends(db: Session, user1_id: int, user2_id: int) -> bool:
         models.Friendship.user1_id == user1,
         models.Friendship.user2_id == user2
     ).first()
-    
-    return friendship is not None
+    if friendship is None:
+        return False
+    if include_deactivated:
+        return True
+    active = db.query(func.count(models.User.id)).filter(
+        models.User.id.in_((user1, user2)), models.User.is_active.is_(True)
+    ).scalar()
+    return active == (1 if user1 == user2 else 2)
 
 
 def remove_friendship(db: Session, user_id: int, friend_id: int) -> bool:
@@ -487,10 +497,67 @@ def get_friend_statistics(db: Session, friend_id: int) -> Optional[dict]:
     
     # Return compact statistics (watch and rating stats only)
     watch_stats = get_watch_statistics(db, friend_id)
-    rating_stats = get_rating_statistics(db, friend_id)
+    hidden = [entry for entry in _FRIEND_STAT_CATEGORIES if getattr(friend, entry[0] + "_private", False)]
+    if hidden:
+        # Private categories must not show up through stats either.
+        watch_stats = _without_categories(watch_stats, hidden)
+        rating_stats = _visible_rating_statistics(db, friend_id, hidden)
+    else:
+        rating_stats = get_rating_statistics(db, friend_id)
     
     return {
         "watch_stats": watch_stats,
         "rating_stats": rating_stats
     }
 
+
+
+# (privacy prefix, watch-stat suffix, model, finished column, label in rating lists)
+_FRIEND_STAT_CATEGORIES = (
+    ("movies", "movies", "Movie", "watched", "Movie"),
+    ("tv_shows", "tv_shows", "TVShow", "watched", "TV Show"),
+    ("anime", "anime", "Anime", "watched", "Anime"),
+    ("video_games", "video_games", "VideoGame", "played", "Video Game"),
+    ("music", "music", "Music", "listened", "Music"),
+    ("books", "books", "Book", "read", "Book"),
+)
+
+
+def _without_categories(watch_stats: dict, hidden) -> dict:
+    stats = dict(watch_stats)
+    for _, suffix, _, _, _ in hidden:
+        for key in [key for key in stats if key.endswith("_" + suffix) and key != "total_items"]:
+            stats[key] = 0
+    total = sum(stats["total_" + entry[1]] for entry in _FRIEND_STAT_CATEGORIES)
+    done = sum(stats[f"{finished}_{suffix}"] for _, suffix, _, finished, _ in _FRIEND_STAT_CATEGORIES)
+    stats.update(total_items=total, watched_items=done, unwatched_items=total - done,
+                 completion_percentage=round((done / total * 100) if total > 0 else 0, 1))
+    return stats
+
+
+def _visible_rating_statistics(db: Session, user_id: int, hidden) -> dict:
+    from .statistics import _rating_bucket
+    rated = []
+    for entry in _FRIEND_STAT_CATEGORIES:
+        if entry in hidden:
+            continue
+        model = getattr(models, entry[2])
+        rows = db.query(model.title, model.rating).filter(model.user_id == user_id, model.rating.isnot(None)).all()
+        rated.extend({"title": title, "type": entry[4], "rating": rating} for title, rating in rows)
+    if not rated:
+        return {"average_rating": 0, "total_rated_items": 0, "rating_distribution": {},
+                "highest_rated": [], "lowest_rated": []}
+    ratings = [row["rating"] for row in rated]
+    distribution = {}
+    for bucket in range(0, 11):
+        count = sum(1 for rating in ratings if _rating_bucket(rating) == bucket)
+        if count:
+            distribution[str(bucket)] = count
+    highest, lowest = max(ratings), min(ratings)
+    return {
+        "average_rating": round(sum(ratings) / len(ratings), 1),
+        "total_rated_items": len(ratings),
+        "rating_distribution": distribution,
+        "highest_rated": [row for row in rated if row["rating"] == highest][:5],
+        "lowest_rated": [row for row in rated if row["rating"] == lowest][:5],
+    }

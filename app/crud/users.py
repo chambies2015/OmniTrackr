@@ -63,13 +63,13 @@ def get_user_by_email(db: Session, email: str) -> Optional[models.User]:
 
 
 def get_user_by_username_or_email(db: Session, username_or_email: str) -> Optional[models.User]:
-    """Get user by username or email (exact match first, then a unique case-insensitive one)."""
-    user = db.query(models.User).filter(
-        or_(
-            models.User.username == username_or_email,
-            models.User.email == username_or_email
-        )
-    ).first()
+    """Get user by username or email: an exact username, then an exact email, then a unique case-insensitive match.
+
+    An older account's email may equal someone else's username, and an
+    unordered OR match could then resolve sign-in to the wrong account.
+    """
+    user = (db.query(models.User).filter(models.User.username == username_or_email).first()
+            or db.query(models.User).filter(models.User.email == username_or_email).order_by(models.User.id).first())
     if user is None and username_or_email:
         needle = username_or_email.strip().lower()
         user = _unique_case_insensitive(

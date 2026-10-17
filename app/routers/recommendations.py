@@ -91,11 +91,14 @@ def _serialize_submission(entry: models.RecommendationSubmission) -> dict:
 
 
 def _get_by_token(db: Session, token: str, lock: bool = False) -> models.RecommendationRequest:
-    query = db.query(models.RecommendationRequest).filter(
+    query = db.query(models.RecommendationRequest).join(
+        models.User, models.User.id == models.RecommendationRequest.owner_id,
+    ).filter(
         models.RecommendationRequest.public_token == token,
+        models.User.is_active.is_(True),  # A deactivated member's postcards go quiet.
     )
     if lock:
-        query = query.with_for_update()
+        query = query.with_for_update(of=models.RecommendationRequest)
     postcard = query.first()
     if not postcard:
         raise HTTPException(status_code=404, detail="Recommendation Postcard not found")

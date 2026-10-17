@@ -641,19 +641,23 @@ class ExportData(BaseModel):
     progress_checkpoints: List[dict] = Field(default_factory=list, description="Private episode and reading checkpoints")
     export_metadata: dict = Field(..., description="Export metadata including timestamp and version")
     
+# Far above any real library, but keeps one request from queueing millions of row writes.
+MAX_IMPORT_LIST_ITEMS = 20000
+
+
 class ImportData(BaseModel):
     """Schema for importing data into OmniTrackr"""
     model_config = ConfigDict(from_attributes=True)
 
-    movies: List[MovieImport] = Field(default=[], description="Movies to import")
-    tv_shows: List[TVShowImport] = Field(default=[], description="TV shows to import")
-    anime: List[AnimeImport] = Field(default=[], description="Anime to import")
-    video_games: List[VideoGameImport] = Field(default=[], description="Video games to import")
-    music: List[MusicImport] = Field(default=[], description="Music to import")
-    books: List[BookImport] = Field(default=[], description="Books to import")
-    custom_tabs: List[dict] = Field(default=[], description="Custom tabs to import (optional for backward compatibility)")
-    activities: List[ActivityEntryImport] = Field(default=[], description="Activity journal entries (optional for backward compatibility)")
-    collections: List[dict] = Field(default=[], description="Collections to restore privately (optional for backward compatibility)")
+    movies: List[MovieImport] = Field(default=[], max_length=MAX_IMPORT_LIST_ITEMS, description="Movies to import")
+    tv_shows: List[TVShowImport] = Field(default=[], max_length=MAX_IMPORT_LIST_ITEMS, description="TV shows to import")
+    anime: List[AnimeImport] = Field(default=[], max_length=MAX_IMPORT_LIST_ITEMS, description="Anime to import")
+    video_games: List[VideoGameImport] = Field(default=[], max_length=MAX_IMPORT_LIST_ITEMS, description="Video games to import")
+    music: List[MusicImport] = Field(default=[], max_length=MAX_IMPORT_LIST_ITEMS, description="Music to import")
+    books: List[BookImport] = Field(default=[], max_length=MAX_IMPORT_LIST_ITEMS, description="Books to import")
+    custom_tabs: List[dict] = Field(default=[], max_length=MAX_IMPORT_LIST_ITEMS, description="Custom tabs to import (optional for backward compatibility)")
+    activities: List[ActivityEntryImport] = Field(default=[], max_length=MAX_IMPORT_LIST_ITEMS, description="Activity journal entries (optional for backward compatibility)")
+    collections: List[dict] = Field(default=[], max_length=MAX_IMPORT_LIST_ITEMS, description="Collections to restore privately (optional for backward compatibility)")
     progress_checkpoints: List[dict] = Field(default_factory=list, max_length=10000, description="Checkpoints to restore only where no saved progress exists")
     
 class ImportResult(BaseModel):
