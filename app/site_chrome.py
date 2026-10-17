@@ -14,20 +14,23 @@ from __future__ import annotations
 import re
 from html import escape
 
-SITE_CSS_VERSION = "20261017-supporters-2"
+SITE_CSS_VERSION = "20261017-editorial-1"
 SITE_JS_VERSION = "20261016-reader-1"
 
 # (key, label, href) in display order. The first NAV_PRIMARY entries stay
 # visible on tablets; everything is always available in the compact menu.
+# The header leads with the written guides, which are what a visitor can read
+# without an account; member directories (reviews, collections) and the FAQ
+# stay one click away in the footer.
 NAV_ITEMS = (
-    ("release-radar", "Release Radar", "/release-radar"),
     ("discover", "Discover", "/discover"),
-    ("reviews", "Public reviews", "/reviews"),
-    ("collections", "Collections", "/collections/explore"),
+    ("in-order", "In order", "/in-order"),
+    ("if-you-liked", "If you liked", "/if-you-liked"),
+    ("daily", "Daily", "/daily"),
+    ("release-radar", "Release Radar", "/release-radar"),
     ("guides", "Guides", "/guides"),
-    ("faq", "FAQ", "/faq"),
 )
-NAV_PRIMARY = 2
+NAV_PRIMARY = 3
 
 FOOTER_GROUPS = (
     ("Explore", (
@@ -59,7 +62,7 @@ FOOTER_GROUPS = (
         ("About", "/about"),
         ("What's new", "/changelog"),
         ("Contact", "/contact"),
-        ("Content quality", "/content-quality"),
+        ("Editorial standards", "/content-quality"),
         ("Ads & affiliates", "/advertising"),
         ("Privacy", "/privacy"),
         ("Terms", "/terms"),

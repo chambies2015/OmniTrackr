@@ -9,14 +9,14 @@ from fastapi.responses import RedirectResponse
 from pydantic import BaseModel, Field
 from sqlalchemy.orm import Session
 
-from .. import daily, funnel, pick, title_pages, title_search
+from .. import daily, funnel, if_you_liked, in_order, pick, title_pages, title_search
 from ..auth import AUTH_COOKIE_NAME
 from ..dependencies import get_current_user, get_db
 from ..progress import lock_progress_owner
 from .discover import page
 
 router = APIRouter(tags=["daily"])
-CSS_VERSION = "20261015-daily-1"
+CSS_VERSION = "20261017-daily-2"
 JS_VERSION = "20261015-daily-1"
 GUEST_LIST_JS = "/static/guest-list.js?v=20261012-hero-search-1"
 DESCRIPTION = ("OmniTrackr Daily is a free guessing game: one movie, TV show, anime, video game, book or album a day, "
@@ -80,7 +80,7 @@ def _tool(number: int, signed_in: bool, view: dict) -> str:
 
 
 GUIDE = (
-    '<section class="editorial dy-guide"><h2>How to play</h2>'
+    '<section class="editorial dy-guide" id="how-to-play"><h2>How to play</h2>'
     '<p>Every day there is one title to guess. It can be a movie, a TV show, an anime, a video game, a book or an '
     'album, and the game tells you which before you start. You get one clue to begin with. Each wrong guess, or each '
     'skip, reveals the next clue, and the clues go from vague to obvious: the first is usually the year and the kind of '
@@ -100,9 +100,36 @@ GUIDE = (
     'is the fastest way from a genre to a single title.</li>'
     '<li><strong>Play the archive.</strong> Missed a day? Every past puzzle can still be played, and its page explains '
     'the answer, all six clues and why the title is worth your time.</li></ul>'
-    '<p>Every puzzle is written by hand by OmniTrackr\'s editors, and no clue contains a word from the answer. If you '
-    'think a clue is wrong, <a href="/contact">tell us</a> and we will fix it.</p></section>'
+    '<p>Every puzzle is written for OmniTrackr with AI assistance, and no clue contains a word from the answer. If you think a clue is wrong, <a href="/contact">tell us</a> and we will fix '
+    'it.</p></section>'
 )
+
+
+# Past puzzle pages keep the rules short and point at the full guide on /daily, so
+# each page is mostly about its own answer rather than repeating the same text.
+PAST_GUIDE = (
+    '<section class="editorial dy-guide dy-guide--short"><h2>How to play</h2>'
+    '<p>Guess the title from the first clue. Each wrong guess or skip reveals the next one, and you have six tries. '
+    'Capitals, punctuation and a leading "The" do not matter. The <a href="/daily#how-to-play">full rules and tips</a> '
+    'are on today\'s puzzle. Puzzles are written for OmniTrackr with AI assistance.</p></section>'
+)
+
+
+def _related_guides(entry: dict) -> str:
+    """Links to the written guides that cover this answer (inside the spoiler, since they name it)."""
+    links = []
+    liked = if_you_liked.for_title(entry["kind"], entry["title"])
+    if liked:
+        links.append(f'<li><a href="{_e(if_you_liked.path(liked))}">If you liked {_e(entry["title"])}</a>: what to '
+                     'watch, play, read or hear next.</li>')
+    for slug, _ in in_order.for_title(entry["kind"], entry["title"], entry.get("year")):
+        guide = in_order.guide(slug)
+        if guide:
+            links.append(f'<li><a href="{_e(in_order.path(slug))}">{_e(guide["name"])} in order</a>: where this '
+                         'fits and what to start next.</li>')
+    if not links:
+        return ''
+    return f'<h3>Read more</h3><ul class="dy-related">{"".join(links)}</ul>'
 
 
 def _recent(numbers: list[int], limit: int = 7) -> str:
@@ -168,10 +195,15 @@ def daily_today(request: Request):
 def daily_archive(request: Request):
     numbers = daily.archive_numbers()
     if numbers:
+        # The first clue is what every player sees before guessing, so it gives each
+        # entry something to go on without spoiling the answer.
         rows = "".join(
             f'<li><a href="/daily/{n}">Puzzle #{n}</a><span>{_e(_day(n))} · '
-            f'{_e(daily.KIND_ARTICLE[daily.puzzle(n)["kind"]])}</span></li>' for n in numbers)
-        body = f'<ul class="dy-archive-list dy-archive-list--full">{rows}</ul>'
+            f'{_e(daily.KIND_ARTICLE[daily.puzzle(n)["kind"]])}</span>'
+            f'<q class="dy-archive-clue">{_e(daily.puzzle(n)["clues"][0])}</q></li>' for n in numbers)
+        body = (f'<h2>{len(numbers)} past puzzle{"s" if len(numbers) != 1 else ""}</h2>'
+                '<p>Newest first, each with the first clue it started from.</p>'
+                f'<ul class="dy-archive-list dy-archive-list--full">{rows}</ul>')
     else:
         body = '<p>The first puzzle is still running. Finished puzzles appear here the next day.</p>'
     content = (
@@ -180,10 +212,19 @@ def daily_archive(request: Request):
         'title is worth your time. Answers are hidden until you choose to see them.</p>'
         '<p><a class="button" href="/daily">Play today\'s puzzle</a></p></header>'
         f'<section class="editorial dy-archive">{body}</section>'
+        '<section class="editorial dy-guide"><h2>About the puzzles</h2>'
+        '<p>Every puzzle is one title: a movie, TV show, anime, video game, book or album, and the page says which before '
+        'you start. Six clues go from vague to obvious, usually starting with the year and the kind of story and ending '
+        'with the characters or the people who made it. The answers range across decades and countries on purpose, from '
+        'recent hits to older favourites worth finding.</p>'
+        '<p>Old puzzles are worth playing even when you have missed the day: your result for each one is kept in this '
+        'browser, so you can work through the archive at your own pace. Once you have finished, the answer comes with a '
+        'short note on why the title is worth your time and, where there is one, a link to a guide on what to try next.</p>'
+        '</section>'
     )
     return _respond(page("OmniTrackr Daily archive: every past puzzle", "Every past OmniTrackr Daily puzzle, playable "
                          "again, with its answer, six clues and a note from the editors.", "/daily/archive", content,
-                         indexable=bool(numbers)))
+                         indexable=bool(numbers), head=f'<link rel="stylesheet" href="/static/daily.css?v={CSS_VERSION}">'))
 
 
 @router.get("/daily/{number}", include_in_schema=False)
@@ -217,9 +258,10 @@ def daily_past(number: int, request: Request, db: Session = Depends(get_db)):
         + _tool(number, signed_in, view)
         + '<section class="editorial dy-answer"><details data-daily-spoiler><summary>Show the answer and all six clues</summary>'
         f'<h2>The answer: {_e(entry["title"])}</h2><p class="muted">{_e(meta)}</p>'
-        f'<p>{_e(entry["note"])}</p><h3>The six clues</h3><ol>{clues}</ol>{title_link}</details></section>'
+        f'<p>{_e(entry["note"])}</p><h3>The six clues</h3><ol>{clues}</ol>{title_link}{_related_guides(entry)}'
+        '</details></section>'
         + f'<nav class="dy-pager" aria-label="Other puzzles">{"".join(nav)}</nav>'
-        + GUIDE + _cta(signed_in)
+        + PAST_GUIDE + _cta(signed_in)
     )
     path = f"/daily/{canonical}"
     response = page(f"OmniTrackr Daily #{number}: guess {view['kind_label']} from six clues",

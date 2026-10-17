@@ -465,13 +465,13 @@ class TestSEOEndpoints:
         content = response.text
         assert "- Media tracker setup checklist: https://omnitrackr.xyz/media-tracker-checklist" in content
         assert "- Sample library: https://omnitrackr.xyz/sample-library" in content
-        assert "- Content Quality Policy: https://omnitrackr.xyz/content-quality" in content
+        assert "- Editorial Standards: https://omnitrackr.xyz/content-quality" in content
         assert "- HTML Site Map: https://omnitrackr.xyz/site-map" in content
         assert "a demo library at https://omnitrackr.xyz/demo" in content
         assert "a sample media library at https://omnitrackr.xyz/sample-library" in content
         assert "https://omnitrackr.xyz/media-tracker-checklist" in content
         assert "a human-readable site map at https://omnitrackr.xyz/site-map" in content
-        assert "content quality standards at https://omnitrackr.xyz/content-quality" in content
+        assert "editorial standards at https://omnitrackr.xyz/content-quality" in content
         assert "## Quality and Advertising Boundaries" in content
         assert "private authenticated app shell" in content
         assert "standalone review detail pages require longer review text" in content
@@ -689,7 +689,6 @@ class TestSecurityMiddleware:
         """Legal and support pages remain useful without becoming search inventory."""
         utility_paths = [
             "/advertising",
-            "/content-quality",
             "/site-map",
         ]
 
@@ -734,7 +733,7 @@ class TestSecurityMiddleware:
             "/": "Free Media Tracker",
             "/about": "Free Media Tracking App",
             "/advertising": "Advertising Policy",
-            "/content-quality": "Content Quality Policy",
+            "/content-quality": "Editorial Standards",
             "/site-map": "Site Map",
             "/faq": "OmniTrackr FAQ",
             "/guides": "Track Media, Reviews, Stats",
@@ -852,18 +851,18 @@ class TestSecurityMiddleware:
                 target_response = client.get(target)
                 assert target_response.status_code < 400, f"{page} links to broken internal URL {href}"
 
-    def test_about_page_explains_user_control_and_maintenance(self, client):
+    def test_about_page_explains_who_runs_it_and_how_it_is_paid_for(self, client):
         """About page should show trust and maintenance signals for visitors."""
         response = client.get("/about")
 
         assert response.status_code == 200
         content = response.text
-        assert "What Is OmniTrackr?" in content
-        assert "Built Around User Control" in content
-        assert "A Maintained Live App" in content
-        assert "private tracking separate from public discovery" in content
-        assert "Data portability is part of the product philosophy" in content
-        assert "not a static landing page or a placeholder project" in content
+        assert "What OmniTrackr is" in content
+        assert "What you can read without an account" in content
+        assert "Who runs it" in content
+        assert "How it is paid for" in content
+        assert "Your library stays yours" in content
+        assert "written with AI assistance" in content
         hrefs = extract_hrefs(content)
         assert "/guides" in hrefs
         assert "/compare" in hrefs
@@ -1033,7 +1032,7 @@ class TestSecurityMiddleware:
         assert "Private Notes vs Public Reviews" in content
         assert "Before and After Examples" in content
         assert "Quality Checklist Before Publishing" in content
-        assert "Public review quality also helps OmniTrackr avoid becoming a thin review directory" in content
+        assert "a stranger can decide whether a movie, show, anime, game, album or book is for them" in content
         assert '"@type": "HowTo"' in content
         hrefs = extract_hrefs(content)
         assert "/reviews" in hrefs
@@ -1236,7 +1235,7 @@ class TestSecurityMiddleware:
         assert "Recent Security and Quality Improvements" in content
         assert "Recent Content Improvements" in content
         assert "Release Verification" in content
-        assert '"dateModified": "2026-09-24"' in content
+        assert '"dateModified": "2026-10-17"' in content
         assert "September 2026: Activation and Trust Baseline" in content
         assert "existing launchpad, Weekly playback, Library pulse, and moderator insights" in content
         assert "public reviews API default to favor substantial reviews" in content
@@ -1374,7 +1373,7 @@ class TestSecurityMiddleware:
         assert "No deceptive placement" in content
         assert "Light by default" in content
         assert "Ads should not be placed inside private account forms" in content
-        assert "The mixed landing and authenticated app shell are also kept out of the ad-loader allowlist" in content
+        assert "Signed-in members do not see ads anywhere on the site" in content
         assert "How Placements Are Reviewed" in content
         assert "Public pages should remain readable when ads are unavailable" in content
         assert "Google-certified consent management platform" in content
@@ -1390,45 +1389,42 @@ class TestSecurityMiddleware:
         assert ("https", "support.google.com", "/adsense/answer/13554116") in href_parts
         assert ("https", "adssettings.google.com", "/") in href_parts
 
-    def test_content_quality_policy_explains_originality_and_review_standards(self, client):
-        """Content quality policy should explain how OmniTrackr avoids thin public content."""
+    def test_editorial_standards_explain_how_guides_are_written_and_reviews_are_kept_useful(self, client):
+        """The editorial standards page tells readers how guides are made and what member reviews need."""
         response = client.get("/content-quality")
 
         assert response.status_code == 200
         content = response.text
-        assert "Content Quality Policy" in content
-        assert "Original Public Content Standards" in content
-        assert "Public Review Quality" in content
-        assert "User-Generated Content Safeguards" in content
-        assert "Content OmniTrackr Should Avoid" in content
-        assert "Maintenance and Review Process" in content
-        assert '"dateModified": "2026-09-24"' in content
-        assert "scraped summaries, or generic filler" in content
-        assert "Public review pages for empty reviews, one-word notes, or private account data" in content
-        assert "Reviews that contain obvious URLs, email addresses, phone-number-like contact details, or promotional phrases" in content
-        assert "Review directory pages stay ad-free" in content
-        assert "without exposing review text or reporter identity" in content
-        assert "Machine-readable files such as ads.txt, sellers.json, llms.txt, and the AI summary endpoint" in content
-        assert "Thin pages should be improved, noindexed, or removed from public discovery" in content
+        assert "Editorial Standards" in content
+        for heading in ("Who writes the guides", "How facts are checked", "How picks are chosen", "Spoilers",
+                        "Corrections and updates", "Member reviews and collections", "What we do not publish"):
+            assert heading in content, heading
+        assert '"dateModified": "2026-10-17"' in content
+        assert "written with AI assistance under the site owner's direction" in content
+        assert "No studio, publisher, platform or advertiser pays to appear in a guide" in content
+        assert "Reviews that contain links, email addresses, phone numbers or promotional wording" in content
+        assert "Plot summaries, reviews or descriptions copied from other sites or databases" in content
         hrefs = extract_hrefs(content)
         assert "/sample-library" in hrefs
         assert "/review-guidelines" in hrefs
         assert "/advertising" in hrefs
+        assert "/contact" in hrefs
 
-    def test_site_map_groups_public_pages_for_reviewers_and_crawlers(self, client):
+    def test_site_map_groups_public_pages_for_readers(self, client):
         """HTML site map should expose the full public content inventory with context."""
         response = client.get("/site-map")
 
         assert response.status_code == 200
         content = response.text
         assert "OmniTrackr Site Map" in content
-        assert '"dateModified": "2026-07-05"' in content
+        assert '"dateModified": "2026-10-17"' in content
+        assert "Guides to Read" in content
+        assert "Play and Explore" in content
         assert "Core Product Pages" in content
         assert "Category Tracker Guides" in content
         assert "Workflows, Reviews, and Comparisons" in content
         assert "Trust, Policies, and Support" in content
-        assert "A human-readable directory for visitors, reviewers, and crawlers" in content
-        assert "Pages that are only useful for authenticated app actions or developer tooling should stay out of public search inventory" in content
+        assert "starting with the guides you can read without an account" in content
         hrefs = extract_hrefs(content)
         for path in (
             "/media-tracking",

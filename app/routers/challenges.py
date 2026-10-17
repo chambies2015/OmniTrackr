@@ -154,7 +154,7 @@ def _method(published: str) -> str:
     stamp = datetime.strptime(published, "%Y-%m-%d").strftime("%B %d, %Y").replace(" 0", " ")
     return ('<section class="editorial"><p class="muted">Prepared by <a href="/about">OmniTrackr</a> with AI assistance and '
             f'reviewed against the linked Discover edition. Published {_e(stamp)}. '
-            '<a href="/contact">Send a correction</a> · <a href="/content-quality">Content quality policy</a></p></section>')
+            '<a href="/contact">Send a correction</a> · <a href="/content-quality">Editorial standards</a></p></section>')
 
 
 def _archive(exclude: str) -> str:

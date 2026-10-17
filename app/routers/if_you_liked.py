@@ -26,7 +26,7 @@ GUEST_LIST_JS = "/static/guest-list.js?v=20261012-hero-search-1"
 SITE = "https://omnitrackr.xyz"
 FIRST_PUBLISHED = "2026-10-16"
 HUB_TITLE = "If you liked it: what to watch, play and read next"
-HUB_DESCRIPTION = ("Finished something you loved? Hand-written guides to what to watch, play, read or hear next "
+HUB_DESCRIPTION = ("Finished something you loved? Guides to what to watch, play, read or hear next "
                    "after Interstellar, Stranger Things, Breaking Bad, Jujutsu Kaisen, Frieren and more.")
 GROUP_HEADINGS = {"movie": "After a movie", "tv": "After a TV show", "anime": "After an anime",
                   "game": "After a game", "book": "After a book", "album": "After an album"}
@@ -172,14 +172,14 @@ def guide_content(slug: str, entry: dict, details: dict, anchor_url, signed_in: 
         '</div></section>',
         '<section id="method" class="guide-sources yl-method" aria-labelledby="method-heading">',
         '<h2 id="method-heading">How we chose</h2>',
-        f'<p>Prepared by OmniTrackr with AI assistance and reviewed by the editors. We started from what makes {_e(anchor["title"])} '
+        f'<p>Prepared by OmniTrackr with AI assistance. We started from what makes {_e(anchor["title"])} '
         'work for the people who love it, then looked for titles that share at least one of those qualities, '
         'deliberately across formats, because a game or a book can carry the same feeling in a different way. '
         'Facts were checked against public sources; the comparisons and caveats are editorial opinion.</p>',
         '<p>These picks are not rankings, sponsored placements or anyone\'s private ratings. Running times, episode counts and '
         'availability vary by edition and region. Links go to OmniTrackr title pages, not shops.</p>',
         f'<p class="muted">First published {_e(_long_date(FIRST_PUBLISHED))}. Checked {_e(_long_date(reviewed))}. '
-        '<a href="/contact">Suggest a pick or send a correction</a> · <a href="/content-quality">Content quality policy</a> · '
+        '<a href="/contact">Suggest a pick or send a correction</a> · <a href="/content-quality">Editorial standards</a> · '
         '<a href="/pick">Pick for me</a></p></section></article>',
     ])
     return "".join(parts)
@@ -227,7 +227,7 @@ def if_you_liked_index(request: Request, db: Session = Depends(get_db)):
                       f'<ul class="yl-cards">{"".join(cards)}</ul></section>')
     content = (
         '<header class="hero"><p class="eyebrow">IF YOU LIKED</p><h1>Loved it? Here is what to try next.</h1>'
-        '<p>Hand-written guides to what to watch, play, read or hear after a title you loved. Each one names what made it '
+        '<p>Guides to what to watch, play, read or hear after a title you loved. Each one names what made it '
         'work, then picks things that share it, across movies, shows, anime, games, books and music.</p></header>'
         + "".join(groups)
         + '<section class="editorial yl-why"><h2>Why mix formats?</h2><p>The feeling you are chasing after a great story is rarely tied to '
