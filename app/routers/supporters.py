@@ -1,6 +1,7 @@
 """Ko-fi supporter tier: the Ko-fi webhook, the member's supporter settings, and admin linking."""
 from __future__ import annotations
 
+from html import escape
 from typing import Optional
 
 from fastapi import APIRouter, Depends, HTTPException, Request, Response
@@ -12,6 +13,70 @@ from ..admin_access import is_site_admin
 from ..dependencies import get_current_user, get_db
 
 router = APIRouter(tags=["supporters"])
+
+
+def _e(value) -> str:
+    return escape(str(value), quote=True)
+
+
+# ---------------------------------------------------------------- /supporters page sections
+
+def _money(value: float) -> str:
+    return f"${value:,.0f}" if float(value).is_integer() else f"${value:,.2f}"
+
+
+def _goal_html(db: Session) -> str:
+    progress = supporters.goal_progress(db)
+    if progress is None:
+        return ""
+    percent = progress["percent"]
+    return (
+        '<section class="support-goal" aria-labelledby="goal-heading">'
+        f'<div class="support-goal__head"><h2 id="goal-heading">{_e(progress["month"])}\'s hosting</h2>'
+        f'<p><strong>{percent}%</strong> of {_e(_money(progress["goal"]))} covered</p></div>'
+        f'<div class="support-goal__bar" role="progressbar" aria-label="Hosting covered this month" aria-valuemin="0" '
+        f'aria-valuemax="100" aria-valuenow="{percent}"><span class="support-goal__fill support-goal__fill--{percent // 5 * 5}"></span></div>'
+        '<p class="support-goal__note">Servers, the database, email and title data. Anything past the goal goes into new features.</p>'
+        '</section>'
+    )
+
+
+def _wall_entry(entry: dict) -> str:
+    classes = ["support-wall__name"]
+    if entry["accent"]:
+        classes.append(f"support-wall__name--{entry['accent']}")
+    if not entry["active"]:
+        classes.append("support-wall__name--past")
+    mark = "★" if entry["founding"] else "♥"
+    since = entry["since"]
+    title = ("Founding supporter" if entry["founding"] else "Supporter") + (f" since {since:%B} {since.year}" if since else "")
+    if not entry["active"]:
+        title += " (past)"
+    name = f'<span class="support-wall__mark" aria-hidden="true">{mark}</span>{_e(entry["name"])}'
+    if entry["path"]:
+        return f'<li><a class="{" ".join(classes)}" href="{_e(entry["path"])}" title="{_e(title)}">{name}</a></li>'
+    return f'<li><span class="{" ".join(classes)}" title="{_e(title)}">{name}</span></li>'
+
+
+def _wall_html(db: Session) -> str:
+    entries = supporters.wall(db)
+    if not entries:
+        return ('<p class="support-wall__empty">No names here yet. Supporters can add theirs from '
+                '<a href="/#supporter">Account → Supporter</a>, and the first few will be founding supporters.</p>')
+    return f'<ul class="support-wall__list">{"".join(_wall_entry(entry) for entry in entries)}</ul>'
+
+
+def _count_html(db: Session) -> str:
+    count = supporters.active_count(db)
+    if count < 3:  # a tiny number reads as a ghost town; the wall says thanks instead
+        return ""
+    return f'<p class="support-hero__count"><strong>{count}</strong> members support OmniTrackr right now.</p>'
+
+
+def page_sections(db: Session) -> dict:
+    """Live parts of /supporters: the hosting goal, the supporter count and the wall. All text is escaped."""
+    return {"<!--SUPPORTERS_GOAL-->": _goal_html(db), "<!--SUPPORTERS_COUNT-->": _count_html(db),
+            "<!--SUPPORTERS_WALL-->": _wall_html(db)}
 
 
 def _no_store(response: Response) -> None:
@@ -36,6 +101,7 @@ async def kofi_webhook(request: Request, db: Session = Depends(get_db)):
 
 class SupporterSettingsUpdate(BaseModel):
     show_badge: Optional[bool] = None
+    on_wall: Optional[bool] = None
     accent: Optional[str] = Field(None, max_length=16)
 
 
