@@ -56,7 +56,11 @@ def _visible(user: models.User, public: bool) -> list[str]:
 
 
 def _title_key(category: str, item_id, title: str) -> tuple:
-    return (category, item_id) if item_id is not None else (category, " ".join((title or "").lower().split()))
+    # Deleting a title clears its journal item_id and gives its moment a negative one;
+    # key both by title then so one finish still counts once.
+    if item_id is not None and item_id > 0:
+        return (category, item_id)
+    return (category, " ".join((title or "").lower().split()))
 
 
 def _year_bounds(year: int) -> tuple[datetime, datetime]:

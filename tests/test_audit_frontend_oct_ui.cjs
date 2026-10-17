@@ -21,13 +21,15 @@ for (const [name, prefix, idKey, category, nullable] of [
   ['Book', 'book', 'bookId', 'books', ['genre']],
 ]) {
   for (const rating of ['', '0']) test(name + ' edit sends cleared nullable fields and preserves rating ' + (rating || 'empty'), async () => {
-    let packet;
+    let packet, reported = null;
     const context = vm.createContext({window: {}, editingRowId: 7, API_BASE: '',
       document: {getElementById: id => ({value: id.endsWith('-rating') ? rating : id.endsWith('-title') ? 'Title' : '', checked: false})},
       authenticatedFetch: async (url, options) => { packet = {url, data: JSON.parse(options.body)}; return {ok: false}; },
+      showLibrarySaveError: async res => { reported = res; },
     });
     vm.runInContext(part('window.save' + name + 'Edit =', 'window.cancel' + name + 'Edit ='), context);
     await context.window['save' + name + 'Edit']({dataset: {[idKey]: '7'}});
+    assert.deepEqual(reported, {ok: false}, 'a rejected save is reported to the member');
     assert.equal(packet.url, '/' + category + '/7');
     assert.equal(packet.data.rating, rating === '' ? null : 0);
     nullable.forEach(key => assert.equal(packet.data[key], null, key));

@@ -125,13 +125,16 @@ def _optional_integer(value: str, field: str) -> int | None:
     return int(number)
 
 
-def _rating(value: str, five_point: bool = False) -> float | None:
+def _rating(value: str, five_point: bool = False, zero_is_unrated: bool = False) -> float | None:
     if not value:
         return None
     try:
         rating = float(value)
     except (TypeError, ValueError):
         raise ValueError("Rating must be a number.") from None
+    # Goodreads, StoryGraph and MyAnimeList export 0 for titles the member never rated.
+    if zero_is_unrated and rating == 0:
+        return None
     maximum = 5 if five_point else 10
     if not math.isfinite(rating) or not 0 <= rating <= maximum:
         raise ValueError(f"Rating must be between 0 and {maximum}.")
@@ -303,7 +306,7 @@ def _source_row(source: str, row: dict[str, str], category_override: str | None,
             "title": title, "author": field("creator", "author", "author l-f") or "Unknown author",
             "year": _integer(field("year", "year published", "original publication year")),
             "genre": field("genre", "genre", "genres") or None,
-            "rating": _rating(field("rating", "my rating"), five_point=True),
+            "rating": _rating(field("rating", "my rating"), five_point=True, zero_is_unrated=True),
             "read": completed,
             "review": field("review", "my review") or None, "review_public": False,
         }
@@ -319,7 +322,7 @@ def _source_row(source: str, row: dict[str, str], category_override: str | None,
             "title": title, "author": field("creator", "authors", "author") or "Unknown author",
             "year": _integer(field("year", "year", "year published")),
             "genre": field("genre", "genre", "genres") or None,
-            "rating": _rating(field("rating", "star rating"), five_point=True),
+            "rating": _rating(field("rating", "star rating"), five_point=True, zero_is_unrated=True),
             "read": completed,
             "review": field("review", "review") or None, "review_public": False,
         }
@@ -330,7 +333,7 @@ def _source_row(source: str, row: dict[str, str], category_override: str | None,
         "title": title, "year": _integer(field("year", "series start")),
         "seasons": _optional_integer(field("seasons", "seasons"), "Seasons"),
         "episodes": _optional_integer(field("episodes", "series episodes"), "Episodes"),
-        "rating": _rating(field("rating", "my score")),
+        "rating": _rating(field("rating", "my score"), zero_is_unrated=True),
         "watched": _truthy(field("status", "my status")),
         "review": field("review", "my comments", "comments") or None,
         "review_public": False,

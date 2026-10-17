@@ -75,7 +75,10 @@ def library_page(
     model, schema, _, completion_field, fields = CATEGORIES[category]
     query = db.query(model).filter(model.user_id == current_user.id)
     if search:
-        query = query.filter(or_(*(getattr(model, field).ilike(f"%{search}%") for field in fields)))
+        needle = search.lower()
+        query = query.filter(or_(*(
+            func.lower(getattr(model, field)).contains(needle, autoescape=True) for field in fields
+        )))
     completed = getattr(model, completion_field)
     if completion == "finished":
         query = query.filter(completed.is_(True))
@@ -101,7 +104,8 @@ def library_page(
     sort_field = "release_date" if category == "video-games" and sort_by == "year" else sort_by
     if sort_field in {"rating", "year", "release_date"} and hasattr(model, sort_field):
         column = getattr(model, sort_field)
-        query = query.order_by(column.desc() if order.lower() == "desc" else column.asc())
+        # Unrated or undated titles go last both ways, as on Postgres a plain DESC lists NULLs first.
+        query = query.order_by((column.desc() if order.lower() == "desc" else column.asc()).nullslast())
     # Stable tie breaking prevents missing/duplicated rows on adjacent pages.
     query = query.order_by(model.id)
     offset = min(offset, ((total - 1) // limit) * limit) if total else 0

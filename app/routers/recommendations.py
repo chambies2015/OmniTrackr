@@ -260,6 +260,9 @@ async def list_invitations(
         postcard = invitation.request
         if _state(postcard) != "open":
             continue
+        if not crud.are_friends(db, current_user.id, postcard.owner_id):
+            # Answering is refused once the friendship ends, so don't list it.
+            continue
         responded = db.query(models.RecommendationSubmission.id).filter(
             models.RecommendationSubmission.request_id == postcard.id,
             models.RecommendationSubmission.recommender_user_id == current_user.id,
