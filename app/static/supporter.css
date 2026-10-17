@@ -1,0 +1,27 @@
+/* Account → Supporter extras (badge preview, extra colors, locked gold) and the one-time thank-you card. */
+.supporter-accent__swatch--emerald { background: #34d399; }
+.supporter-accent__swatch--coral { background: #fb7185; }
+.supporter-accent__swatch--gold { background: #eab308; box-shadow: 0 0 0 2px rgba(234, 179, 8, .35); }
+.supporter-accent--locked { cursor: not-allowed; opacity: .5; }
+.supporter-accent__hint { flex-basis: 100%; margin: 8px 0 0; }
+
+.supporter-preview { margin: 4px 0 12px; }
+.supporter-preview__badge { --badge: 139, 92, 246; background: rgba(var(--badge), .16); border: 1px solid rgba(var(--badge), .55); border-radius: 999px; color: var(--fg, #f1effc); display: inline-block; font-size: .85rem; font-weight: 600; padding: 4px 12px; }
+.supporter-preview__badge--teal { --badge: 45, 212, 191; }
+.supporter-preview__badge--amber { --badge: 245, 158, 11; }
+.supporter-preview__badge--rose { --badge: 244, 114, 182; }
+.supporter-preview__badge--sky { --badge: 56, 189, 248; }
+.supporter-preview__badge--emerald { --badge: 52, 211, 153; }
+.supporter-preview__badge--coral { --badge: 251, 113, 133; }
+.supporter-preview__badge--gold { --badge: 234, 179, 8; }
+.supporter-preview__badge--founding { background: linear-gradient(120deg, rgba(234, 179, 8, .22), rgba(var(--badge), .16)); border-color: rgba(234, 179, 8, .6); }
+
+.supporter-welcome { animation: supporter-welcome-in .35s ease-out; background: var(--card-bg, #15122b); border: 1px solid rgba(139, 92, 246, .55); border-radius: 16px; bottom: 20px; box-shadow: 0 24px 60px rgba(0, 0, 0, .45); color: var(--fg, #f1effc); max-width: 360px; padding: 18px 20px; position: fixed; right: 20px; z-index: 2000; }
+.supporter-welcome strong { display: block; font-size: 1.05rem; margin-bottom: 6px; }
+.supporter-welcome p { color: var(--fg-secondary, #aaa6cb); font-size: .92rem; line-height: 1.5; margin: 0 0 14px; }
+.supporter-welcome__actions { align-items: center; display: flex; gap: 12px; }
+.supporter-welcome__close { background: none; border: 0; color: var(--fg-secondary, #aaa6cb); cursor: pointer; font: inherit; padding: 6px; }
+.supporter-welcome__close:hover { color: var(--fg, #f1effc); }
+@keyframes supporter-welcome-in { from { opacity: 0; transform: translateY(12px); } to { opacity: 1; transform: none; } }
+@media (prefers-reduced-motion: reduce) { .supporter-welcome { animation: none; } }
+@media (max-width: 520px) { .supporter-welcome { left: 12px; max-width: none; right: 12px; bottom: 12px; } }

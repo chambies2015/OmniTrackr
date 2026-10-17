@@ -13,8 +13,14 @@ matching a verified OmniTrackr email. Payments that match nobody wait, keyed by 
 hash of the payer's email, and are linked when a member with that email opens
 their supporter settings, or by an admin by hand.
 
-Perks are cosmetic only (badge, profile accent). ``is_ad_free`` is the hook for
-an ad-free experience once ads run for signed-in members.
+Perks are cosmetic only (badge, profile accent, a place on the supporter wall).
+``is_ad_free`` is the hook for an ad-free experience once ads run for signed-in
+members.
+
+Supporter levels are counted, never stored: anyone whose support started
+before ``FOUNDING_BEFORE`` is a founding supporter, and "months supported" is
+the number of perk payments linked to the member. Founding supporters and
+anyone past ``GOLD_MONTHS`` unlock the gold accent.
 """
 from __future__ import annotations
 
@@ -39,7 +45,11 @@ MONTHLY_DAYS = 31
 DONATION_DAYS = 30
 # Ko-fi payment types that grant perks. Shop orders and commissions are recorded only.
 PERK_TYPES = {"donation", "subscription"}
-ACCENTS = ("violet", "teal", "amber", "rose", "sky")
+BASE_ACCENTS = ("violet", "teal", "amber", "rose", "sky", "emerald", "coral")
+ACCENTS = BASE_ACCENTS + ("gold",)
+GOLD_MONTHS = 6
+FOUNDING_BEFORE = datetime(2027, 1, 1)
+WALL_LIMIT = 150
 CODE_RE = re.compile(r"\bOT-(\d{1,10})-([0-9a-f]{6})\b", re.IGNORECASE)
 
 
@@ -102,12 +112,36 @@ def is_ad_free(db: Session, user) -> bool:
     return user is not None and is_active(get_supporter(db, user.id))
 
 
+def is_founding(supporter: Optional[models.Supporter]) -> bool:
+    return bool(supporter and supporter.since and supporter.since < FOUNDING_BEFORE)
+
+
+def months_supported(db: Session, user_id: int) -> int:
+    """How many perk payments (a month of membership or a one-time tip each) this member has made."""
+    return int(db.query(func.count(models.KofiPayment.id))
+               .filter(models.KofiPayment.user_id == user_id, models.KofiPayment.kind.in_(PERK_TYPES))
+               .scalar() or 0)
+
+
+def unlocked_accents(supporter: Optional[models.Supporter], months: int) -> tuple:
+    if is_founding(supporter) or months >= GOLD_MONTHS:
+        return ACCENTS
+    return BASE_ACCENTS
+
+
+def level_label(founding: bool, months: int) -> str:
+    """The badge text: "Founding supporter", or "Supporter" with the months once there are a few."""
+    label = "Founding supporter" if founding else "Supporter"
+    return f"{label} · {months} months" if months >= 2 else label
+
+
 def public_badge(db: Session, user_id: int) -> Optional[dict]:
     """What a public page may show about this member's support, or None."""
     supporter = get_supporter(db, user_id)
     if not is_active(supporter) or not supporter.show_badge:
         return None
-    return {"since": supporter.since, "accent": supporter.accent if supporter.accent in ACCENTS else None}
+    return {"since": supporter.since, "accent": supporter.accent if supporter.accent in ACCENTS else None,
+            "founding": is_founding(supporter), "months": months_supported(db, user_id)}
 
 
 def public_badges(db: Session, user_ids) -> dict:
@@ -119,7 +153,8 @@ def public_badges(db: Session, user_ids) -> dict:
             .filter(models.Supporter.user_id.in_(ids), models.Supporter.active_until > _now(),
                     models.Supporter.show_badge.is_(True)).all())
     return {row.user_id: {"accent": row.accent if row.accent in ACCENTS else None,
-                          "since": f"{row.since:%B} {row.since.year}" if row.since else None} for row in rows}
+                          "since": f"{row.since:%B} {row.since.year}" if row.since else None,
+                          "founding": is_founding(row)} for row in rows}
 
 
 def chip_html(badge: Optional[dict]) -> str:
@@ -127,7 +162,8 @@ def chip_html(badge: Optional[dict]) -> str:
     if not badge:
         return ""
     since = badge.get("since")
-    title = f"Supporting OmniTrackr on Ko-fi since {since}" if since else "Supports OmniTrackr on Ko-fi"
+    who = "Founding supporter of OmniTrackr" if badge.get("founding") else "Supporting OmniTrackr"
+    title = f"{who} on Ko-fi since {since}" if since else "Supports OmniTrackr on Ko-fi"
     accent = badge.get("accent")
     accent_class = f" supporter-chip--{accent}" if accent in ACCENTS else ""
     return (f'<a class="supporter-chip{accent_class}" href="/supporters" title="{html.escape(title)}">'
@@ -187,8 +223,16 @@ def link_payment(db: Session, message_id: str, user) -> models.KofiPayment:
 def status_payload(db: Session, user) -> dict:
     supporter = get_supporter(db, user.id)
     active = is_active(supporter)
+    months = months_supported(db, user.id) if supporter else 0
+    founding = is_founding(supporter)
     return {
         "active": active,
+        "founding": founding,
+        "months": months,
+        "level": level_label(founding, months) if supporter else None,
+        "on_wall": bool(supporter and supporter.on_wall),
+        "unlocked_accents": list(unlocked_accents(supporter, months)) if active else [],
+        "gold_months": GOLD_MONTHS,
         "since": supporter.since.isoformat() if supporter and supporter.since else None,
         "active_until": supporter.active_until.isoformat() if supporter and supporter.active_until else None,
         "monthly": bool(supporter and supporter.monthly),
@@ -207,16 +251,79 @@ def save_settings(db: Session, user, changes: dict) -> models.Supporter:
         raise PermissionError("Supporter settings unlock after your first Ko-fi support.")
     if "show_badge" in changes and changes["show_badge"] is not None:
         supporter.show_badge = bool(changes["show_badge"])
+    if "on_wall" in changes and changes["on_wall"] is not None:
+        supporter.on_wall = bool(changes["on_wall"])
     if "accent" in changes:
         accent = changes["accent"] or None
         if accent is not None and accent not in ACCENTS:
             raise ValueError("Pick one of the listed accent colors.")
         if accent is not None and not is_active(supporter):
             raise PermissionError("Accent colors are a perk for current supporters.")
+        if accent is not None and accent not in unlocked_accents(supporter, months_supported(db, user.id)):
+            raise PermissionError(f"Gold unlocks for founding supporters and after {GOLD_MONTHS} months of support.")
         supporter.accent = accent
     db.commit()
     db.refresh(supporter)
     return supporter
+
+
+# ---------------------------------------------------------------- supporters page
+
+def wall(db: Session, limit: int = WALL_LIMIT) -> list[dict]:
+    """Members who chose to be thanked by name on /supporters: current supporters first, longest first."""
+    from .public_profiles import enabled_profile_paths, profile_path  # avoids a circular import
+
+    now = _now()
+    rows = (db.query(models.Supporter, models.User)
+            .join(models.User, models.User.id == models.Supporter.user_id)
+            .filter(models.Supporter.on_wall.is_(True), models.User.is_active == True)
+            .order_by(models.Supporter.since, models.Supporter.id).limit(limit).all())
+    paths = enabled_profile_paths(db, [user.id for _, user in rows])
+    entries = []
+    for supporter, user in rows:
+        active = is_active(supporter, now)
+        entries.append({
+            "name": user.username, "path": paths.get(user.id), "active": active,
+            "founding": is_founding(supporter), "since": supporter.since,
+            "accent": supporter.accent if active and supporter.accent in ACCENTS else None,
+        })
+    entries.sort(key=lambda entry: not entry["active"])
+    return entries
+
+
+def monthly_goal() -> Optional[float]:
+    """The monthly hosting goal in US dollars, from ``KOFI_MONTHLY_GOAL``. Unset hides the meter."""
+    try:
+        goal = float((os.getenv("KOFI_MONTHLY_GOAL") or "").strip().lstrip("$"))
+    except ValueError:
+        return None
+    return goal if 0 < goal < 1_000_000 else None
+
+
+def _amount(value: Optional[str]) -> float:
+    try:
+        amount = float((value or "").replace(",", ""))
+    except ValueError:
+        return 0.0
+    return amount if 0 < amount < 100_000 else 0.0
+
+
+def goal_progress(db: Session, now: Optional[datetime] = None) -> Optional[dict]:
+    """This calendar month's Ko-fi payments (US dollars) against the goal, or None when no goal is set."""
+    goal = monthly_goal()
+    if goal is None:
+        return None
+    now = now or _now()
+    start = datetime(now.year, now.month, 1)
+    amounts = (db.query(models.KofiPayment.amount)
+               .filter(models.KofiPayment.received_at >= start,
+                       func.coalesce(func.upper(models.KofiPayment.currency), "USD") == "USD").all())
+    raised = sum(_amount(amount) for (amount,) in amounts)
+    return {"goal": goal, "raised": raised, "percent": min(100, int(raised * 100 / goal)), "month": f"{now:%B}"}
+
+
+def active_count(db: Session) -> int:
+    return int(db.query(func.count(models.Supporter.id)).filter(models.Supporter.active_until > _now()).scalar() or 0)
 
 
 # ---------------------------------------------------------------- webhook

@@ -15,7 +15,7 @@ from pydantic import BaseModel, Field
 from sqlalchemy.orm import Session
 
 from ..integer_bounds import PositiveDatabaseId
-from .. import models, public_profiles
+from .. import models, public_profiles, supporters
 from ..auth import AUTH_COOKIE_NAME
 from ..csp import strict_html_response
 from ..dependencies import get_current_user, get_db
@@ -23,7 +23,7 @@ from ..site_chrome import apply_site_chrome
 
 router = APIRouter(tags=["profiles"])
 SITE_URL = os.getenv("SITE_URL", "https://omnitrackr.xyz").rstrip("/")
-CSS_VERSION = "20261008-supporters-1"
+CSS_VERSION = "20261017-supporters-2"
 TITLE_CSS_VERSION = "20261009-take-1"
 
 
@@ -89,9 +89,13 @@ def _supporter_html(view) -> str:
     if not view.supporter:
         return ""
     since = view.supporter.get("since")
-    title = f"Supporting OmniTrackr on Ko-fi since {since:%B} {since.year}" if since else "Supports OmniTrackr on Ko-fi"
-    return (f'<a class="profile-supporter" href="/supporters" title="{_e(title)}">'
-            '<span aria-hidden="true">♥</span> Supporter</a>')
+    founding = bool(view.supporter.get("founding"))
+    who = "Founding supporter of OmniTrackr" if founding else "Supporting OmniTrackr"
+    title = f"{who} on Ko-fi since {since:%B} {since.year}" if since else "Supports OmniTrackr on Ko-fi"
+    label = supporters.level_label(founding, int(view.supporter.get("months") or 0))
+    classes = "profile-supporter profile-supporter--founding" if founding else "profile-supporter"
+    return (f'<a class="{classes}" href="/supporters" title="{_e(title)}">'
+            f'<span aria-hidden="true">{"★" if founding else "♥"}</span> {_e(label)}</a>')
 
 
 def _hero_class(view) -> str:

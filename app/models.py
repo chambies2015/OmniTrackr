@@ -847,6 +847,8 @@ class Supporter(Base):
     monthly = Column(Boolean, nullable=False, default=False)
     show_badge = Column(Boolean, nullable=False, default=True)
     accent = Column(String(16), nullable=True)
+    # Opt-in: thanked by username on the public /supporters wall (added Oct 2026, default off).
+    on_wall = Column(Boolean, nullable=False, default=False)
     updated_at = Column(DateTime, nullable=False, default=datetime.utcnow, onupdate=datetime.utcnow)
 
 

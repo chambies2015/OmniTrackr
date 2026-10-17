@@ -28,7 +28,7 @@ def test_title_page_marks_supporters_reviews(client, db_session):
     html = client.get(PAGE).text
     assert html.count(CHIP) == 1
     assert ('<a class="supporter-chip supporter-chip--teal" href="/supporters" '
-            'title="Supporting OmniTrackr on Ko-fi since October 2026"><span aria-hidden="true">♥</span> Supporter</a>') in html
+            'title="Founding supporter of OmniTrackr on Ko-fi since October 2026"><span aria-hidden="true">♥</span> Supporter</a>') in html
 
 
 def test_lapsed_or_hidden_badges_stay_off(client, db_session):
@@ -46,7 +46,7 @@ def test_review_directory_and_feed_carry_the_badge(client, db_session):
     db_session.commit()
     assert '<a class="supporter-chip" href="/supporters"' in client.get("/reviews").text
     feed = {r["username"]: r["supporter"] for r in client.get("/api/public/review-feed").json()["reviews"]}
-    assert feed == {"fan": {"accent": None, "since": "October 2026"}, "plain": None}
+    assert feed == {"fan": {"accent": None, "since": "October 2026", "founding": True}, "plain": None}
 
 
 def test_review_page_shows_the_badge_in_the_byline(client, db_session):
