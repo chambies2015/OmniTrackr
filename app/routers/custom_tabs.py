@@ -4,6 +4,7 @@ Custom Tab endpoints for the OmniTrackr API.
 import io
 import json
 from typing import List, Optional
+from fastapi.concurrency import run_in_threadpool
 from fastapi import APIRouter, Depends, HTTPException, UploadFile, File, Request
 from fastapi.responses import Response
 from sqlalchemy.orm import Session
@@ -250,59 +251,65 @@ async def upload_custom_tab_item_poster(
         )
     
     try:
-        image = Image.open(io.BytesIO(file_content))
-        width, height = image.size
-        if width <= 0 or height <= 0 or width * height > MAX_IMAGE_PIXELS:
-            raise HTTPException(status_code=400, detail="Image dimensions are too large")
-        image.verify()
-        image = Image.open(io.BytesIO(file_content))
+        def encode() -> bytes:
+            # Decoding and re-encoding take up to a second of CPU; keep it off the event loop.
+            image = Image.open(io.BytesIO(file_content))
+            width, height = image.size
+            if width <= 0 or height <= 0 or width * height > MAX_IMAGE_PIXELS:
+                raise HTTPException(status_code=400, detail="Image dimensions are too large")
+            image.verify()
+            image = Image.open(io.BytesIO(file_content))
         
-        if image.mode == 'RGBA':
-            pass
-        elif image.mode in ('LA', 'P'):
-            image = image.convert('RGBA')
-        elif image.mode == 'L':
-            image = image.convert('RGB')
-        elif image.mode not in ('RGB', 'RGBA'):
-            image = image.convert('RGB')
-        
-        max_size = (512, 512)
-        if image.size[0] > max_size[0] or image.size[1] > max_size[1]:
-            image.thumbnail(max_size, Image.Resampling.LANCZOS)
-        
-        mime_type = "image/webp"
-        
-        max_target_size = 200 * 1024
-        quality = 80
-        image_data = None
-        
-        for attempt in range(3):
-            output = io.BytesIO()
-            
-            save_kwargs = {
-                'format': 'WEBP',
-                'quality': quality,
-                'method': 6,
-                'lossless': False
-            }
-            
             if image.mode == 'RGBA':
-                image.save(output, **save_kwargs)
-            else:
-                image.save(output, **save_kwargs)
-            
-            image_data = output.getvalue()
-            
-            if len(image_data) <= max_target_size or attempt >= 2:
-                break
-            
-            quality = max(60, quality - 10)
+                pass
+            elif image.mode in ('LA', 'P'):
+                image = image.convert('RGBA')
+            elif image.mode == 'L':
+                image = image.convert('RGB')
+            elif image.mode not in ('RGB', 'RGBA'):
+                image = image.convert('RGB')
         
-        if len(image_data) > 300 * 1024:
-            output = io.BytesIO()
-            image.save(output, format='WEBP', quality=70, method=6, lossless=False)
-            image_data = output.getvalue()
+            max_size = (512, 512)
+            if image.size[0] > max_size[0] or image.size[1] > max_size[1]:
+                image.thumbnail(max_size, Image.Resampling.LANCZOS)
         
+        
+            max_target_size = 200 * 1024
+            quality = 80
+            image_data = None
+        
+            for attempt in range(3):
+                output = io.BytesIO()
+            
+                save_kwargs = {
+                    'format': 'WEBP',
+                    'quality': quality,
+                    'method': 6,
+                    'lossless': False
+                }
+            
+                if image.mode == 'RGBA':
+                    image.save(output, **save_kwargs)
+                else:
+                    image.save(output, **save_kwargs)
+            
+                image_data = output.getvalue()
+            
+                if len(image_data) <= max_target_size or attempt >= 2:
+                    break
+            
+                quality = max(60, quality - 10)
+        
+            if len(image_data) > 300 * 1024:
+                output = io.BytesIO()
+                image.save(output, format='WEBP', quality=70, method=6, lossless=False)
+                image_data = output.getvalue()
+        
+            return image_data
+
+        image_data = await run_in_threadpool(encode)
+        mime_type = "image/webp"
+
         poster_url = f"/custom-tab-posters/{item_id}"
         updated_item = crud.update_custom_tab_item_poster(
             db,

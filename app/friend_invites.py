@@ -73,7 +73,7 @@ def befriend(db: Session, inviter, invitee, joined: bool) -> bool:
     """Make the two friends and tell the inviter. Returns False when they already were."""
     if inviter.id == invitee.id:
         raise ValueError("That's your own invite link.")
-    if are_friends(db, inviter.id, invitee.id):
+    if are_friends(db, inviter.id, invitee.id, include_deactivated=True):
         return False
     _clear_requests(db, inviter.id, invitee.id)
     create_friendship(db, min(inviter.id, invitee.id), max(inviter.id, invitee.id))

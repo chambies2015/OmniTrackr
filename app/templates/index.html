@@ -1556,8 +1556,8 @@
         <div id="resetPasswordForm" class="auth-form">
           <form id="resetPasswordFormElement">
             <p class="auth-helper-text">Enter your new password below.</p>
-            <input type="password" id="newPassword" placeholder="New Password" required minlength="6">
-            <input type="password" id="confirmNewPassword" placeholder="Confirm New Password" required minlength="6">
+            <input type="password" id="newPassword" placeholder="New Password" required minlength="8">
+            <input type="password" id="confirmNewPassword" placeholder="Confirm New Password" required minlength="8">
             <button type="submit">Reset Password</button>
           </form>
         </div>
@@ -1598,7 +1598,7 @@
     </form>
   </dialog>
   <script src="./credentials.js"></script>
-  <script src="./auth.js?v=20261017-bughunt-1"></script>
+  <script src="./auth.js?v=20261017-security-1"></script>
   <script src="/static/import-studio.js?v=20261011-imdb-storygraph"></script>
   <script src="/static/progress.js?v=20260922-progress"></script>
   <script src="./app.js"></script>
@@ -1685,11 +1685,11 @@
               <input type="password" id="currentPassword" placeholder="Current password" required>
             </div>
             <div>
-              <input type="password" id="accountNewPassword" placeholder="New password (min 6 characters)" minlength="6"
+              <input type="password" id="accountNewPassword" placeholder="New password (min 8 characters)" minlength="8"
                 required>
             </div>
             <div>
-              <input type="password" id="accountConfirmNewPassword" placeholder="Confirm new password" minlength="6"
+              <input type="password" id="accountConfirmNewPassword" placeholder="Confirm new password" minlength="8"
                 required>
             </div>
             <button type="submit" class="action-btn">Change Password</button>

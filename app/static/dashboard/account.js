@@ -327,8 +327,8 @@ window.changePassword = async function (event) {
     return;
   }
 
-  if (newPassword.length < 6) {
-    errorEl.textContent = 'Password must be at least 6 characters';
+  if (newPassword.length < 8) {
+    errorEl.textContent = 'Password must be at least 8 characters';
     errorEl.style.display = 'block';
     return;
   }

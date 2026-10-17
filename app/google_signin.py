@@ -27,7 +27,7 @@ from urllib.parse import urlencode
 
 import jwt
 from itsdangerous import BadSignature, SignatureExpired, URLSafeTimedSerializer
-from sqlalchemy import func
+from sqlalchemy import case, func
 from sqlalchemy.orm import Session
 
 from . import auth, models
@@ -252,7 +252,9 @@ def find_or_create_user(db: Session, profile: dict) -> tuple[models.User, str]:
     else:
         user = (db.query(models.User)
                 .filter(func.lower(models.User.email) == profile["email"].lower())
-                .order_by(models.User.id).first())
+                # A capitalised copy someone else registered must not win over the real account.
+                .order_by(case((models.User.email == profile["email"], 0), else_=1),
+                          case((models.User.is_verified.is_(True), 0), else_=1), models.User.id).first())
         if user is not None:
             if not user.is_active:
                 raise SignInError("deactivated")  # Leave a deactivated account exactly as it was.

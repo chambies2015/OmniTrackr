@@ -13,7 +13,7 @@ from sqlalchemy.orm import Session
 from .. import crud, schemas, models, auth, email as email_utils, return_prompt as return_prompt_tokens
 from ..dependencies import get_db
 from .. import funnel, google_signin, visits
-from ..signup_rules import username_problem, username_taken
+from ..signup_rules import email_problem, email_taken, username_problem, username_taken
 
 router = APIRouter(prefix="/auth", tags=["auth"])
 
@@ -36,12 +36,17 @@ async def register(
         funnel.record("signup_rejected_username_invalid", request)
         raise HTTPException(status_code=400, detail=problem)
 
+    problem = email_problem(user.email)
+    if problem:
+        funnel.record("signup_rejected_email_invalid", request)
+        raise HTTPException(status_code=400, detail=problem)
+
     is_valid, error_msg = auth.validate_password_strength(user.password, user.username, user.email)
     if not is_valid:
         funnel.record("signup_rejected_password", request)
         raise HTTPException(status_code=400, detail=error_msg)
     
-    if crud.get_user_by_email(db, user.email):
+    if email_taken(db, user.email):
         funnel.record("signup_rejected_email_taken", request)
         raise HTTPException(status_code=400, detail="Email already registered. Log in, or reset your password if you forgot it.")
     if username_taken(db, user.username):

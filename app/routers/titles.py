@@ -40,6 +40,12 @@ def _e(value) -> str:
     return escape(str(value if value is not None else ""), quote=True)
 
 
+def _script_json(data) -> str:
+    """JSON for an inline <script> block: no "<", ">" or "&" that HTML could read as markup."""
+    return (json.dumps(data, ensure_ascii=False)
+            .replace("&", "\\u0026").replace("<", "\\u003c").replace(">", "\\u003e"))
+
+
 def _pretty_date(value: Optional[str]) -> Optional[str]:
     if not value:
         return None
@@ -156,7 +162,7 @@ def _json_ld(group, summary: dict, metadata: dict, canonical: str, image: Option
         {"@type": "ListItem", "position": 2, "name": "Titles", "item": f"{SITE_URL}/titles"},
         {"@type": "ListItem", "position": 3, "name": group.title, "item": canonical},
     ]}
-    dump = lambda data: json.dumps(data, ensure_ascii=False).replace("</", "<\\/")
+    dump = _script_json
     return (f'<script type="application/ld+json">{dump(item)}</script>\n'
             f'<script type="application/ld+json">{dump(breadcrumbs)}</script>')
 
@@ -742,7 +748,7 @@ def titles_index(request: Request, db: Session = Depends(get_db)):
                  "mainEntity": {"@type": "ItemList", "itemListElement": [
                      {"@type": "ListItem", "position": position, "name": item["title"], "url": SITE_URL + item["url"]}
                      for position, item in enumerate(listed[:100], start=1)]}}
-    item_list_json = json.dumps(item_list, ensure_ascii=False).replace("</", "<\\/")
+    item_list_json = _script_json(item_list)
     structured = f'<script type="application/ld+json">{item_list_json}</script>' if listed else ""
     page = f"""<!DOCTYPE html>
 <html lang="en">

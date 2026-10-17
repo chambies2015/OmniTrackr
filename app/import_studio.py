@@ -198,12 +198,15 @@ def _read_csv(content: bytes) -> tuple[list[dict[str, str]], set[str]]:
     reader = csv.DictReader(io.StringIO(text), dialect=dialect)
     if not reader.fieldnames:
         raise ValueError("The CSV file does not contain a header row.")
+    rows = []
     try:
-        rows = [_normalized_row(row) for row in reader]
+        for row in reader:
+            # Stop at the cap: a file of millions of one-letter rows fits in 5 MB.
+            if len(rows) >= MAX_IMPORT_ROWS:
+                raise ValueError(f"Imports are limited to {MAX_IMPORT_ROWS:,} rows at a time.")
+            rows.append(_normalized_row(row))
     except csv.Error as exc:
         raise ValueError("The CSV could not be read. Check its quoting and column lengths.") from exc
-    if len(rows) > MAX_IMPORT_ROWS:
-        raise ValueError(f"Imports are limited to {MAX_IMPORT_ROWS:,} rows at a time.")
     return rows, {_header(name) for name in reader.fieldnames}
 
 
