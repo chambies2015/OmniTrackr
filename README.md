@@ -23,6 +23,7 @@ Live site: [https://www.omnitrackr.xyz/](https://www.omnitrackr.xyz/)
 - View statistics for completion, ratings, years, directors, genres, TV/anime season data, music, books, and high-level library insights.
 - Return after three days to an optional Welcome Back Deck that composes the existing Next Up, unfinished-library, reflection, and journal signals without creating another permanent dashboard panel.
 - Browse **Release Radar** (`/release-radar`): upcoming movies, TV premieres, the anime season, and new games, with calculated Radar notes, aggregate library counts, and one-click tracking into a private Release Radar collection. No database schema changes.
+- Read **In order** guides (`/in-order`): the best order through Star Wars, The Witcher, Dune, Monogatari, Zelda and more, across films, series, books and games. Members see their progress from their own library and can add the entries they are missing in one click. No database schema changes.
 - Use public content pages for onboarding and discovery: `/about`, `/guides`, `/compare`, `/use-cases`, `/demo`, `/media-tracking`, `/tv-show-tracker`, `/game-tracker`, `/changelog`, `/roadmap`, `/privacy`, `/terms`, and `/contact`.
 - Run with SQLite locally or PostgreSQL in production.
 

@@ -749,6 +749,17 @@ app.include_router(pick_router.router)
 from .routers import if_you_liked as if_you_liked_router
 app.include_router(if_you_liked_router.router)
 
+from .routers import in_order as in_order_router
+rate_limited_order_progress = limiter.limit("60/minute")(in_order_router.in_order_progress)
+rate_limited_order_add = limiter.limit("30/minute")(in_order_router.in_order_add)
+for route in in_order_router.router.routes:
+    path = getattr(route, "path", None)
+    if path == "/api/in-order/{slug}/progress":
+        bind_rate_limited_endpoint(route, rate_limited_order_progress)
+    elif path == "/api/in-order/{slug}/add":
+        bind_rate_limited_endpoint(route, rate_limited_order_add)
+app.include_router(in_order_router.router)
+
 from .routers import tier_list as tier_list_router
 rate_limited_tier_templates = limiter.limit("60/minute")(tier_list_router.tier_list_templates)
 rate_limited_tier_library = limiter.limit("30/minute")(tier_list_router.tier_list_library)
