@@ -58,6 +58,28 @@ def username_taken(db: Session, username: str, exclude_user_id: Optional[int] = 
     return bool(query.scalar())
 
 
+EMAIL_RE = re.compile(r"[^@\s]+@[^@\s]+")
+
+
+def email_problem(email: str) -> Optional[str]:
+    """Why a new email address can't be used, or None.
+
+    Usernames can't contain "@", so requiring one here also keeps a new
+    email from matching someone else's username at sign-in.
+    """
+    if len(email) > 254 or not EMAIL_RE.fullmatch(email):
+        return "Enter a valid email address."
+    return None
+
+
+def email_taken(db: Session, email: str, exclude_user_id: Optional[int] = None) -> bool:
+    """Taken if any account already uses it, ignoring capitals."""
+    query = db.query(func.count()).select_from(_users()).filter(func.lower(_users().email) == email.lower())
+    if exclude_user_id is not None:
+        query = query.filter(_users().id != exclude_user_id)
+    return bool(query.scalar())
+
+
 def _users():
     from .models import User
     return User

@@ -17,7 +17,7 @@ from .statistics import get_watch_statistics, get_rating_statistics
 
 def create_friend_request(db: Session, sender_id: int, receiver_id: int) -> Optional[models.FriendRequest]:
     """Create a new friend request."""
-    if are_friends(db, sender_id, receiver_id):
+    if are_friends(db, sender_id, receiver_id, include_deactivated=True):
         raise ValueError("Users are already friends")
     
     existing = db.query(models.FriendRequest).filter(
@@ -213,14 +213,18 @@ def get_friends(db: Session, user_id: int) -> List[models.User]:
             friend = get_user_by_id(db, friendship.user2_id)
         else:
             friend = get_user_by_id(db, friendship.user1_id)
-        if friend:
+        if friend and friend.is_active:
             friends.append(friend)
     
     return friends
 
 
-def are_friends(db: Session, user1_id: int, user2_id: int) -> bool:
-    """Check if two users are friends."""
+def are_friends(db: Session, user1_id: int, user2_id: int, include_deactivated: bool = False) -> bool:
+    """Check if two users are friends.
+
+    A deactivated member's friendships are kept so reactivating restores them,
+    but until then friends can't read their library.
+    """
     user1 = min(user1_id, user2_id)
     user2 = max(user1_id, user2_id)
     
@@ -228,8 +232,14 @@ def are_friends(db: Session, user1_id: int, user2_id: int) -> bool:
         models.Friendship.user1_id == user1,
         models.Friendship.user2_id == user2
     ).first()
-    
-    return friendship is not None
+    if friendship is None:
+        return False
+    if include_deactivated:
+        return True
+    active = db.query(func.count(models.User.id)).filter(
+        models.User.id.in_((user1, user2)), models.User.is_active.is_(True)
+    ).scalar()
+    return active == (1 if user1 == user2 else 2)
 
 
 def remove_friendship(db: Session, user_id: int, friend_id: int) -> bool:

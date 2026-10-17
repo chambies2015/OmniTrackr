@@ -23,7 +23,7 @@ async def send_friend_request(
     """Send a friend request to another user by username."""
     # Find the receiver by username
     receiver = crud.get_user_by_username(db, request_data.receiver_username)
-    if not receiver:
+    if not receiver or not receiver.is_active:
         raise HTTPException(status_code=404, detail="User not found")
     
     if receiver.id == current_user.id:

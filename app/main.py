@@ -492,6 +492,9 @@ rate_limited_profile_picture = limiter.limit("10/minute")(upload_profile_picture
 for route in account.router.routes:
     if hasattr(route, 'path') and route.path == "/account/profile-picture" and hasattr(route, 'methods') and 'POST' in route.methods:
         bind_rate_limited_endpoint(route, rate_limited_profile_picture)
+    # Each of these checks the current password, so a stolen session can't use them to guess it.
+    elif getattr(route, "path", None) in ("/account/username", "/account/email", "/account/password", "/account/deactivate"):
+        bind_rate_limited_endpoint(route, limiter.limit("10/minute")(route.endpoint))
 
 app.include_router(account.router)
 app.include_router(friends.router)
@@ -518,6 +521,9 @@ app.include_router(next_up.router)
 app.include_router(completion_moments.router)
 app.include_router(activity.router)
 app.include_router(progress.router)
+for route in import_studio.router.routes:
+    if getattr(route, "path", None) in ("/import-studio/preview/", "/import-studio/apply/"):
+        bind_rate_limited_endpoint(route, limiter.limit("30/minute")(route.endpoint))
 app.include_router(import_studio.router)
 from .routers.recommendations import submit_public_recommendation
 rate_limited_recommendation = limiter.limit("5/hour")(submit_public_recommendation)
@@ -545,7 +551,13 @@ for route in collections.router.routes:
 app.include_router(collections.router)
 app.include_router(discover.router)
 app.include_router(release_radar.router)
+for route in export_import.router.routes:
+    if getattr(route, "path", None) in ("/import/", "/import/file/"):
+        bind_rate_limited_endpoint(route, limiter.limit("10/hour")(route.endpoint))
 app.include_router(export_import.router)
+for route in custom_tabs.router.routes:
+    if getattr(route, "path", None) == "/custom-tabs/{tab_id}/items/{item_id}/poster":
+        bind_rate_limited_endpoint(route, limiter.limit("30/minute")(route.endpoint))
 app.include_router(custom_tabs.router)
 
 # Rate-limit the metadata proxy endpoints before including the router.

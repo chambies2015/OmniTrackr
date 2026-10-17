@@ -131,7 +131,8 @@ def apply_site_chrome(html: str, *, login_action: bool = False) -> str:
         return html
     html = NAV_MARKER.sub(lambda m: site_nav(m.group(1), login_action=login_action), html, count=1)
     html = html.replace(FOOTER_MARKER, site_footer(), 1)
-    if "/static/site.css" not in html and "</head>" in html:
+    # Match the tag itself: review text quoting the path must not stop the stylesheet loading.
+    if 'href="/static/site.css' not in html and "</head>" in html:
         html = html.replace("</head>", site_assets() + "\n</head>", 1)
     return html
 

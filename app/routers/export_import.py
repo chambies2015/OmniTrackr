@@ -3,7 +3,8 @@ Export/Import endpoints for the OmniTrackr API.
 """
 import json
 from datetime import date, datetime
-from fastapi import APIRouter, Depends, HTTPException, UploadFile, File
+from fastapi import APIRouter, Depends, HTTPException, Request, UploadFile, File
+from fastapi.concurrency import run_in_threadpool
 from pydantic import ValidationError
 from sqlalchemy import func
 from sqlalchemy.orm import Session, selectinload
@@ -303,12 +304,18 @@ async def export_data(
 
 
 @router.post("/import/", response_model=schemas.ImportResult)
-async def import_data(
+def import_data(
     import_data: schemas.ImportData,
+    request: Request = None,
     current_user: models.User = Depends(get_current_user),
     db: Session = Depends(get_db)
 ):
     """Import movies, TV shows, anime, video games, music, books, and custom tabs from JSON data"""
+    # A plain def runs in the threadpool, so a large restore never stalls other visitors.
+    return _run_import(import_data, current_user, db)
+
+
+def _run_import(import_data: schemas.ImportData, current_user: models.User, db: Session) -> schemas.ImportResult:
     movies_created, movies_updated, movie_errors = crud.import_movies(db, current_user.id, import_data.movies)
     tv_shows_created, tv_shows_updated, tv_show_errors = crud.import_tv_shows(db, current_user.id, import_data.tv_shows)
     anime_created, anime_updated, anime_errors = crud.import_anime(db, current_user.id, import_data.anime)
@@ -350,6 +357,7 @@ async def import_data(
 @router.post("/import/file/", response_model=schemas.ImportResult)
 async def import_from_file(
     file: UploadFile = File(...),
+    request: Request = None,
     current_user: models.User = Depends(get_current_user),
     db: Session = Depends(get_db)
 ):
@@ -370,7 +378,7 @@ async def import_from_file(
 
         # Reuse the body endpoint's schema and import behavior for native backups.
         import_payload = schemas.ImportData.model_validate(data)
-        return await import_data(import_payload, current_user, db)
+        return await run_in_threadpool(_run_import, import_payload, current_user, db)
 
     except HTTPException:
         # Preserve intentional client errors instead of masking them as a 500.

@@ -2,6 +2,7 @@
 Account management endpoints for the OmniTrackr API.
 """
 import io
+from fastapi.concurrency import run_in_threadpool
 from fastapi import APIRouter, Depends, HTTPException, UploadFile, File, Request, Response, status
 from fastapi.encoders import jsonable_encoder
 from fastapi.responses import JSONResponse
@@ -54,6 +55,7 @@ async def record_visit(response: Response, current_user: models.User = Depends(g
 @router.put("/username", response_model=schemas.User)
 async def change_username(
     username_change: schemas.UsernameChange,
+    request: Request = None,
     current_user: models.User = Depends(get_current_user),
     db: Session = Depends(get_db)
 ):
@@ -93,6 +95,7 @@ async def change_username(
 @router.put("/email", response_model=dict)
 async def change_email(
     email_change: schemas.EmailChange,
+    request: Request = None,
     current_user: models.User = Depends(get_current_user),
     db: Session = Depends(get_db)
 ):
@@ -100,8 +103,11 @@ async def change_email(
     if not _password_confirmed(current_user, email_change.password):
         raise HTTPException(status_code=401, detail="Incorrect password")
     
-    existing_user = crud.get_user_by_email(db, email_change.new_email)
-    if existing_user and existing_user.id != current_user.id:
+    from ..signup_rules import email_problem, email_taken
+    problem = email_problem(email_change.new_email)
+    if problem:
+        raise HTTPException(status_code=400, detail=problem)
+    if email_taken(db, email_change.new_email, exclude_user_id=current_user.id):
         raise HTTPException(status_code=400, detail="Email already registered")
     
     email_change_token = email_utils.generate_email_change_token(current_user.email, email_change.new_email)
@@ -127,6 +133,7 @@ async def change_email(
 @router.put("/password", response_model=dict)
 async def change_password(
     password_change: schemas.PasswordChange,
+    request: Request = None,
     current_user: models.User = Depends(get_current_user),
     db: Session = Depends(get_db)
 ):
@@ -169,6 +176,11 @@ async def update_privacy_settings(
     
     if updated_user is None:
         raise HTTPException(status_code=404, detail="User not found")
+
+    # Shared recaps are snapshots; rebuild them so a newly private category leaves the public link too.
+    from .. import year_in_review
+    for share in db.query(models.YearInReviewShare).filter_by(user_id=updated_user.id).all():
+        year_in_review.save_share(db, updated_user, share.year)
     
     return crud.get_privacy_settings(db, current_user.id)
 
@@ -271,62 +283,67 @@ async def upload_profile_picture(
         )
     
     try:
-        image = Image.open(io.BytesIO(file_content))
-        width, height = image.size
-        if width <= 0 or height <= 0 or width * height > MAX_IMAGE_PIXELS:
-            raise HTTPException(status_code=400, detail="Image dimensions are too large")
-        image.verify()
-        image = Image.open(io.BytesIO(file_content))
+        def encode() -> bytes:
+            # Decoding and re-encoding take up to a second of CPU; keep it off the event loop.
+            image = Image.open(io.BytesIO(file_content))
+            width, height = image.size
+            if width <= 0 or height <= 0 or width * height > MAX_IMAGE_PIXELS:
+                raise HTTPException(status_code=400, detail="Image dimensions are too large")
+            image.verify()
+            image = Image.open(io.BytesIO(file_content))
         
-        # WebP supports transparency, so preserve RGBA if present
-        if image.mode == 'RGBA':
-            pass
-        elif image.mode in ('LA', 'P'):
-            image = image.convert('RGBA')
-        elif image.mode == 'L':
-            image = image.convert('RGB')
-        elif image.mode not in ('RGB', 'RGBA'):
-            image = image.convert('RGB')
+            # WebP supports transparency, so preserve RGBA if present
+            if image.mode == 'RGBA':
+                pass
+            elif image.mode in ('LA', 'P'):
+                image = image.convert('RGBA')
+            elif image.mode == 'L':
+                image = image.convert('RGB')
+            elif image.mode not in ('RGB', 'RGBA'):
+                image = image.convert('RGB')
         
-        # Resize if image is too large (max 512x512 for profile pictures - optimized size)
-        max_size = (512, 512)
-        if image.size[0] > max_size[0] or image.size[1] > max_size[1]:
-            image.thumbnail(max_size, Image.Resampling.LANCZOS)
+            # Resize if image is too large (max 512x512 for profile pictures - optimized size)
+            max_size = (512, 512)
+            if image.size[0] > max_size[0] or image.size[1] > max_size[1]:
+                image.thumbnail(max_size, Image.Resampling.LANCZOS)
         
-        # Always convert to WebP for best compression (typically 25-35% smaller than JPEG)
+        
+            # Save optimized image to memory with adaptive quality
+            max_target_size = 200 * 1024  # Target: 200KB max
+            quality = 80
+            image_data = None
+        
+            for attempt in range(3):  # Try up to 3 quality levels
+                output = io.BytesIO()
+            
+                save_kwargs = {
+                    'format': 'WEBP',
+                    'quality': quality,
+                    'method': 6,  # Best compression method (slower but smaller)
+                    'lossless': False
+                }
+            
+                # If image has transparency, ensure we preserve it
+                image.save(output, **save_kwargs)
+            
+                image_data = output.getvalue()
+            
+                if len(image_data) <= max_target_size or attempt >= 2:
+                    break
+            
+                quality = max(60, quality - 10)  # Don't go below 60
+        
+            # If still too large after optimization, use more aggressive compression
+            if len(image_data) > 300 * 1024:  # Still over 300KB after quality 60
+                output = io.BytesIO()
+                image.save(output, format='WEBP', quality=40, method=6, lossless=False)
+                image_data = output.getvalue()
+        
+            return image_data
+
+        image_data = await run_in_threadpool(encode)
         mime_type = "image/webp"
-        
-        # Save optimized image to memory with adaptive quality
-        max_target_size = 200 * 1024  # Target: 200KB max
-        quality = 80
-        image_data = None
-        
-        for attempt in range(3):  # Try up to 3 quality levels
-            output = io.BytesIO()
-            
-            save_kwargs = {
-                'format': 'WEBP',
-                'quality': quality,
-                'method': 6,  # Best compression method (slower but smaller)
-                'lossless': False
-            }
-            
-            # If image has transparency, ensure we preserve it
-            image.save(output, **save_kwargs)
-            
-            image_data = output.getvalue()
-            
-            if len(image_data) <= max_target_size or attempt >= 2:
-                break
-            
-            quality = max(60, quality - 10)  # Don't go below 60
-        
-        # If still too large after optimization, use more aggressive compression
-        if len(image_data) > 300 * 1024:  # Still over 300KB after quality 60
-            output = io.BytesIO()
-            image.save(output, format='WEBP', quality=40, method=6, lossless=False)
-            image_data = output.getvalue()
-        
+
         # Update database with image data, MIME type, and virtual URL
         profile_picture_url = f"/profile-pictures/{current_user.id}"
         updated_user = crud.update_profile_picture(
@@ -369,6 +386,7 @@ async def reset_profile_picture(
 @router.post("/deactivate", response_model=dict)
 async def deactivate_account(
     deactivate: schemas.AccountDeactivate,
+    request: Request = None,
     current_user: models.User = Depends(get_current_user),
     db: Session = Depends(get_db)
 ):

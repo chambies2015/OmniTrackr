@@ -1071,8 +1071,8 @@ async def explore_collections(
         "SELECT_MUSIC": "selected" if category == "music" else "",
         "SELECT_BOOKS": "selected" if category == "books" else "",
     }
-    for key, value in values.items():
-        template = template.replace("{{" + key + "}}", value)
+    # One pass, so a name or description containing "{{KEY}}" is never filled in a second time.
+    template = re.sub(r"\{\{([A-Z_]+)\}\}", lambda match: values.get(match.group(1), match.group(0)), template)
     gallery_is_indexable = not normalized_query and not category and len(cards) >= PUBLIC_COLLECTION_GALLERY_MIN
     if not gallery_is_indexable:
         template = template.replace(
@@ -1153,10 +1153,10 @@ async def public_collection(collection_id: PositiveDatabaseId, request: Request,
                 {"@type": "ListItem", "position": position, "item": {"@type": "CreativeWork", "name": item["title"]}}
                 for position, item in enumerate(items, 1)
             ],
-        }, ensure_ascii=True).replace("<", "\\u003c"),
+        }, ensure_ascii=True).replace("&", "\\u0026").replace("<", "\\u003c").replace(">", "\\u003e"),
     }
-    for key, value in values.items():
-        template = template.replace("{{" + key + "}}", value)
+    # One pass, so a name or description containing "{{KEY}}" is never filled in a second time.
+    template = re.sub(r"\{\{([A-Z_]+)\}\}", lambda match: values.get(match.group(1), match.group(0)), template)
     response = strict_html_response(template)
     response.headers["X-Robots-Tag"] = "index, follow" if approved else "noindex, follow"
     response.headers["Cache-Control"] = "private, no-cache, must-revalidate"
