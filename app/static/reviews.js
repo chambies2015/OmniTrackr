@@ -141,13 +141,14 @@ function reviewText(tag, className, value) {
   return element;
 }
 
-const SUPPORTER_ACCENTS = new Set(['teal', 'amber', 'rose', 'sky']);
+const SUPPORTER_ACCENTS = new Set(['teal', 'amber', 'rose', 'sky', 'emerald', 'coral', 'gold']);
 
 function supporterChip(badge) {
   const chip = reviewText('a', 'supporter-chip', '');
   if (SUPPORTER_ACCENTS.has(badge.accent)) chip.classList.add(`supporter-chip--${badge.accent}`);
   chip.href = '/supporters';
-  chip.title = badge.since ? `Supporting OmniTrackr on Ko-fi since ${badge.since}` : 'Supports OmniTrackr on Ko-fi';
+  const who = badge.founding ? 'Founding supporter of OmniTrackr' : 'Supporting OmniTrackr';
+  chip.title = badge.since ? `${who} on Ko-fi since ${badge.since}` : 'Supports OmniTrackr on Ko-fi';
   const heart = reviewText('span', '', '♥');
   heart.setAttribute('aria-hidden', 'true');
   chip.append(heart, ' Supporter');

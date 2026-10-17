@@ -789,6 +789,7 @@ def run_migrations():
 
     add_library_added_at_columns()
     add_notification_link_column()
+    add_supporter_wall_column()
 
 
 def add_notification_link_column():
@@ -805,6 +806,22 @@ def add_notification_link_column():
             print("Added link column to notifications table")
     except Exception as e:
         print(f"Migration warning (notification link): {e}")
+
+
+def add_supporter_wall_column():
+    """Add the opt-in supporter wall flag. Existing supporters start off the wall (FALSE)."""
+    try:
+        inspector = inspect(engine)
+        if not inspector.has_table("supporters"):
+            return
+        if "on_wall" in {col["name"] for col in inspector.get_columns("supporters")}:
+            return
+        with engine.connect() as conn:
+            conn.execute(text("ALTER TABLE supporters ADD COLUMN on_wall BOOLEAN NOT NULL DEFAULT FALSE"))
+            conn.commit()
+            print("Added on_wall column to supporters table")
+    except Exception as e:
+        print(f"Migration warning (supporter wall): {e}")
 
 
 LIBRARY_TABLES = ("movies", "tv_shows", "anime", "video_games", "music", "books")

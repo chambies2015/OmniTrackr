@@ -46,6 +46,7 @@ GUEST = (
     ("guest_list_imported", "Saved titles moved into a new library"),
     ("share_clicked", "Share button used on a public page"),
     ("recap_kofi_clicked", "Ko-fi link opened from Year in Review"),
+    ("supporters_kofi_clicked", "Ko-fi link opened from the supporters page"),
     ("calendar_subscribe_clicked", "Release calendar subscribe button used"),
     ("tier_list_started", "Tier list: a title ranked"),
     ("tier_list_exported", "Tier list: image saved or shared"),
@@ -65,7 +66,7 @@ GOOGLE = (
 SERVER_EVENTS = {name for name, _ in STEPS + REJECTIONS + GUEST + GOOGLE}
 # Events a browser may report; everything else is recorded on the server only.
 CLIENT_EVENTS = {"signup_form_opened", "hero_signup_clicked", "signup_rejected_invalid", "guest_pick_added", "guest_list_signup", "share_clicked",
-                 "recap_kofi_clicked", "title_search_used", "pick_used", "pick_saved", "liked_saved",
+                 "recap_kofi_clicked", "supporters_kofi_clicked", "title_search_used", "pick_used", "pick_saved", "liked_saved",
                  "calendar_subscribe_clicked", "tier_list_started", "tier_list_exported",
                  "daily_shared"}
 

@@ -271,11 +271,14 @@ def apply_public_search_policy(html: str, template_name: str) -> tuple[str, bool
     return html, False
 
 
-def strict_template_response(template_name: str, request: Request | None = None):
+def strict_template_response(template_name: str, request: Request | None = None, replacements: dict | None = None):
     html_file = os.path.join(os.path.dirname(__file__), "templates", template_name)
     if os.path.exists(html_file):
         with open(html_file, "r", encoding="utf-8") as file:
-            html, indexable = apply_public_search_policy(apply_site_chrome(file.read()), template_name)
+            source = file.read()
+            for marker, value in (replacements or {}).items():
+                source = source.replace(marker, value)
+            html, indexable = apply_public_search_policy(apply_site_chrome(source), template_name)
             html = inject_adsense_account_meta(html)
             response = strict_html_response(inject_public_ad_loader(html, template_name, request))
             response.headers["Vary"] = "Cookie"
@@ -1063,8 +1066,8 @@ async def contact_page(request: Request):
 
 
 @app.get("/supporters", tags=["public"])
-async def supporters_page(request: Request):
-    response = strict_template_response("supporters.html", request)
+def supporters_page(request: Request, db: Session = Depends(get_db)):
+    response = strict_template_response("supporters.html", request, replacements=supporters.page_sections(db))
     if response:
         return response
     raise HTTPException(status_code=404, detail="Page not found")

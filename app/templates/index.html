@@ -60,6 +60,7 @@
   <link rel="stylesheet" href="/static/dialog-theme.css?v=20260924-visual-4">
   <link rel="stylesheet" href="/static/taste-match.css?v=20261016-taste-match-1">
   <link rel="stylesheet" href="/static/dashboard-2026.css?v=20261017-bughunt-1">
+  <link rel="stylesheet" href="/static/supporter.css?v=20261017-supporters-2">
   <script src="./preauth.js?v=20261010-audit-preauth-1"></script>
   <style>
     html.authenticated #landingPage{display:none}
@@ -1605,7 +1606,7 @@
   <script src="/static/for-you.js?v=20261017-bughunt-1"></script>
   <script src="/static/title-links.js?v=20261008-speed-1"></script>
   <script src="/static/public-profile.js?v=20261002-profiles-1"></script>
-  <script src="/static/supporter.js?v=20261008-supporters-1"></script>
+  <script src="/static/supporter.js?v=20261017-supporters-2"></script>
   <script src="/static/goals.js?v=20261010-goal-reached-1"></script>
   <script src="/static/challenges.js?v=20261011-challenge-2"></script>
   <script src="/static/taste-match.js?v=20261016-taste-match-1"></script>
@@ -1834,8 +1835,10 @@
         <!-- Supporter Section -->
         <div class="account-section" id="supporterSection">
           <h3>Supporter</h3>
-          <p class="info-text" id="supporterStatus">OmniTrackr is free. Supporting it on Ko-fi adds a badge beside your public reviews and an
-            accent color to your public profile. <a href="/supporters" target="_blank" rel="noopener">What supporters get</a></p>
+          <p class="info-text" id="supporterStatus">OmniTrackr is free. Supporting it on Ko-fi adds a badge beside your public reviews, an
+            accent color for your public profile and a spot on the supporter wall. Support that starts before 2027 makes you a founding
+            supporter for good. <a href="/supporters" target="_blank" rel="noopener">What supporters get</a></p>
+          <p class="supporter-preview" id="supporterPreview" hidden><span class="supporter-preview__badge" id="supporterPreviewBadge"></span></p>
           <p class="profile-settings__link">Your supporter code: <code id="supporterCode">-</code>
             <button type="button" class="profile-settings__copy" id="supporterCopyCode">Copy code</button></p>
           <p class="info-text">Perks switch on by themselves when you use your OmniTrackr email on Ko-fi. If you use another email,
@@ -1848,6 +1851,15 @@
                 <span>Show the Supporter badge on my public profile and reviews</span>
                 <div class="toggle-container">
                   <input type="checkbox" id="supporterShowBadge" class="toggle-switch">
+                  <span class="toggle-slider"></span>
+                </div>
+              </label>
+            </div>
+            <div class="privacy-toggle-item">
+              <label for="supporterOnWall" class="toggle-label">
+                <span>Thank me by username on the <a href="/supporters#wall-heading" target="_blank" rel="noopener">supporter wall</a></span>
+                <div class="toggle-container">
+                  <input type="checkbox" id="supporterOnWall" class="toggle-switch">
                   <span class="toggle-slider"></span>
                 </div>
               </label>
