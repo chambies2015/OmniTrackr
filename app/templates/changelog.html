@@ -26,12 +26,10 @@
   <meta name="twitter:description" content="Product, security, privacy, SEO, and public content updates for OmniTrackr.">
   <meta name="twitter:image" content="https://omnitrackr.xyz/omnitrackr_vortex.png">
   <meta name="twitter:image:alt" content="OmniTrackr changelog">
-  <link rel="preconnect" href="https://fonts.googleapis.com">
-  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@700;800&family=Inter:wght@400;500;600&display=swap"
-    rel="stylesheet">
-  <link rel="stylesheet" href="/styles.css">
-  <link rel="stylesheet" href="/static/public-reader.css?v=20260928-site-2">
+  <link rel="preload" href="/static/fonts/poppins-700-latin.woff2" as="font" type="font/woff2" crossorigin>
+  <link rel="preload" href="/static/fonts/poppins-800-latin.woff2" as="font" type="font/woff2" crossorigin>
+  <link rel="stylesheet" href="/static/fonts.css?v=20261009-fonts-1">
+  <link rel="stylesheet" href="/static/public-reader.css?v=20261016-reader-1">
 
   <script type="application/ld+json">
   {
@@ -65,15 +63,111 @@
         <p>See what has changed in your library and which new controls are available. Each update explains what you can do and how it affects your existing tracking.</p>
       </section>
 
-      <section class="privacy-section" aria-labelledby="october-discover-2026-heading">
-        <h2 id="october-discover-2026-heading">October 1, 2026: Stay with the Strange</h2>
-        <p>The October Discover Monthly Edition follows uncertainty across six media types without turning the list into a Halloween checklist.</p>
+      <section class="privacy-section" aria-labelledby="daily-2026-heading">
+        <h2 id="daily-2026-heading">October 15, 2026: OmniTrackr Daily</h2>
+        <p><a href="/daily">OmniTrackr Daily</a> is a new free guessing game: one movie, TV show, anime, game, book or album a day, guessed from six clues.</p>
         <ul>
-          <li>Compare a meditative film, limited horror series, episodic anime, conversational adventure game, double album, and classic novel by the kind of attention each asks for.</li>
-          <li>Read an original reason, practical starting point, candid content and pacing caveat, and first-party source for every pick.</li>
-          <li>Browse the September edition from the new monthly archive instead of replacing it.</li>
-          <li>Preview exact library matches and save any subset to a private collection without changing an existing rating, review, completion state, or progress record.</li>
-          <li>Publish stable article metadata and sitemap dates for both authored editions.</li>
+          <li>Every wrong guess or skip reveals a clue that is a little easier than the last. You have six tries.</li>
+          <li>Share your result as a row of squares that does not give the answer away, and keep a daily streak going.</li>
+          <li>When the game ends, read the editors' note on the title and add it to your library, or save it to your list before signing up.</li>
+          <li>Every past puzzle stays playable in the <a href="/daily/archive">archive</a>, with its answer and clues behind a spoiler.</li>
+          <li>Your games and streak are kept only in your browser. Nothing about how you play is sent to your account.</li>
+        </ul>
+      </section>
+
+      <section class="privacy-section" aria-labelledby="tier-list-2026-heading">
+        <h2 id="tier-list-2026-heading">October 15, 2026: Tier List Maker</h2>
+        <p>Rank anything from S to D with the new <a href="/tier-list">tier list maker</a>, then save it as an image to share.</p>
+        <ul>
+          <li>Start from a ready-made set, like this season's anime, the titles members track most, or the editors' picks, or search for titles and add any title by name.</li>
+          <li>Drag titles into tiers with a mouse, or tap a title and choose its tier on a phone. Rename any tier.</li>
+          <li>Members can turn their own ratings into a tier list in one click. Your library is not changed.</li>
+          <li>Boards are saved only in your browser. No account is needed, and nothing about your list is sent to OmniTrackr.</li>
+        </ul>
+      </section>
+
+      <section class="privacy-section" aria-labelledby="release-calendar-2026-heading">
+        <h2 id="release-calendar-2026-heading">October 13, 2026: Release Dates in Your Calendar</h2>
+        <p>Release Radar dates can now live in the calendar you already use, and they update on their own.</p>
+        <ul>
+          <li>Every <a href="/release-radar">Release Radar</a> page has Google Calendar, Apple Calendar and Outlook buttons. Subscribe to the highlights, or to just movies, TV premieres, the anime season or games. No account needed.</li>
+          <li>Members can turn on a private calendar from the "Coming up for you" card. It lists only new seasons, sequels and release days connected to titles in their library.</li>
+          <li>The private calendar shows titles and dates only. Ratings, notes and anything else in your library stay private. You can get a new address or turn it off at any time, and the old address stops working straight away.</li>
+          <li>Nothing in your existing library changes.</li>
+        </ul>
+      </section>
+
+      <section class="privacy-section" aria-labelledby="pick-for-me-2026-heading">
+        <h2 id="pick-for-me-2026-heading">October 12, 2026: Pick for Me</h2>
+        <p>Can't decide what to start? The new <a href="/pick">Pick for me</a> page suggests one title at a time.</p>
+        <ul>
+          <li>Choose a format, or leave it on Anything, and get one movie, TV show, anime, game, book or album with the reason it was chosen and a caveat to read first.</li>
+          <li>Every pick comes from OmniTrackr's own Discover trails, monthly editions and editors' collections. Nothing is based on anyone's private library.</li>
+          <li>Members can add a pick to their library in one tap. It is added as not started, and a title you already have is never changed.</li>
+          <li>Visitors can save picks to a list without an account. The list moves into the new library at first log-in.</li>
+          <li>Today's pick on the dashboard now has a "Find something new" link for when your own list runs dry.</li>
+        </ul>
+      </section>
+
+      <section class="privacy-section" aria-labelledby="hero-search-2026-heading">
+        <h2 id="hero-search-2026-heading">October 12, 2026: Search Before You Sign Up</h2>
+        <p>The homepage now opens with a search box, so you can start your list before making an account.</p>
+        <ul>
+          <li>Type a movie, show, anime, game, album or book you love and tap a result to put it on your list.</li>
+          <li>The search covers titles OmniTrackr members already track. It never shows who tracks them, and categories members keep private are left out.</li>
+          <li>Your list stays in your browser until you create a free account. It moves into your new library the first time you log in.</li>
+        </ul>
+      </section>
+
+      <section class="privacy-section" aria-labelledby="challenge-email-2026-heading">
+        <h2 id="challenge-email-2026-heading">October 12, 2026: Your Challenge in the Weekly Email</h2>
+        <p>The weekly email now includes this month's challenge.</p>
+        <ul>
+          <li>If you've taken the challenge, the email shows how many steps you've done, how many days are left, and the next step.</li>
+          <li>If you haven't, there's a short line about this month's challenge with a link to take it. This line stops appearing in the last week of the month.</li>
+          <li>The challenge never triggers an email by itself. Quiet weeks stay quiet.</li>
+          <li>Year in Review now ends with a short note about how OmniTrackr is paid for. Supporters see a thank-you instead.</li>
+        </ul>
+      </section>
+
+      <section class="privacy-section" aria-labelledby="switch-2026-heading">
+        <h2 id="switch-2026-heading">October 11, 2026: Bring Your IMDb and StoryGraph History</h2>
+        <p>The Import Studio now reads IMDb and The StoryGraph exports, alongside Letterboxd, Goodreads, and MyAnimeList.</p>
+        <ul>
+          <li>An IMDb ratings, watchlist, or list file fills Movies, TV Shows, and Games in one go. Rated titles are marked watched, and episode ratings are listed rather than imported.</li>
+          <li>A StoryGraph file brings your books, with quarter-star ratings kept: 4.25 stars becomes 8.5/10.</li>
+          <li>The preview now says which format it recognized. As before, nothing is saved until you confirm, and titles you already track are never overwritten.</li>
+          <li>A new <a href="/switch">switching guide</a> shows where each service keeps its export and what comes across.</li>
+        </ul>
+      </section>
+
+      <section class="privacy-section" aria-labelledby="challenges-2026-heading">
+        <h2 id="challenges-2026-heading">October 10, 2026: Monthly Challenges</h2>
+        <p>Each month now has a small, optional challenge with three steps, starting with October's "Stay with the strange".</p>
+        <ul>
+          <li>Choose <strong>Take the challenge</strong> on your dashboard. Progress fills in from what you mark finished that month, including anything you finished before joining.</li>
+          <li>When every step is done you get a notification and can share a card that shows the challenge and its steps, never your titles.</li>
+          <li>There are no streaks or rankings. You can skip a month or leave a challenge at any time, and your library is never changed. Each challenge has a written guide at <a href="/challenges">omnitrackr.xyz/challenges</a>.</li>
+        </ul>
+      </section>
+
+      <section class="privacy-section" aria-labelledby="push-2026-heading">
+        <h2 id="push-2026-heading">October 10, 2026: Notifications on Your Phone and Desktop</h2>
+        <p>Your OmniTrackr notifications can now reach you even when the site is closed.</p>
+        <ul>
+          <li>Open the notification bell and choose <strong>Turn on</strong> to get friend requests, takes, goals reached and release day alerts on that device.</li>
+          <li>It works in Chrome, Edge, Firefox and Safari, and in the installed app. On iPhone and iPad, add OmniTrackr to your Home Screen first.</li>
+          <li>It is off until you turn it on, it can be turned off from the same place, and signing out stops notifications on that device. Messages are encrypted for your device.</li>
+        </ul>
+      </section>
+
+      <section class="privacy-section" aria-labelledby="release-day-2026-heading">
+        <h2 id="release-day-2026-heading">October 10, 2026: Know the Day It Comes Out</h2>
+        <p>OmniTrackr now tells you when something connected to your library is released.</p>
+        <ul>
+          <li>On release day you get a notification for titles you track on <a href="/release-radar">Release Radar</a>, and for new seasons and sequels of shows, anime, films, and games already in your library.</li>
+          <li>Several releases on the same day arrive as one notification, and each release is announced only once, even if you dismiss it.</li>
+          <li>Alerts appear in the notification bell inside OmniTrackr. Nothing is emailed or shared, and your library is not changed.</li>
         </ul>
       </section>
 

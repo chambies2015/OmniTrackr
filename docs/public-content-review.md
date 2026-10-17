@@ -1,5 +1,67 @@
 # Public content review — September 17, 2026
 
+## Follow-up — October 16, 2026: all ten Discover trails are full guides
+
+The seven remaining short trails (Notice the details, Small adventures, Clever
+mysteries, Found family, Weather and windows, Make something, Distant futures)
+are now complete decision guides like the first three: a comparison table,
+three analysis sections, two notes per pick, two related trails and a dated
+source list. That adds roughly 5,900 words of original editorial text. Adding a
+trail to `GUIDES` makes it indexable, lists it in the sitemap with its review
+date, gives it Article structured data and an "In-depth guide" label on
+`/discover`. No ad placement, catalog title, saved-title metadata or user data
+changed. Discover guides stay outside the ad loader.
+
+Source links were checked on October 16. Six official pages could not be read
+from the review environment (robots rules or blocking) and were kept because
+they are the official pages the trails already cite: Brian Eno's shop, Lauryn
+Hill, Phoebe Bridgers, BBC Programmes, Ursula K. Le Guin, and the Peacock and
+Netflix listings vary by region. Three trail sources were replaced in the guide
+source list with pages that could be read: the Independent Cinema Office for
+Knives Out, the New Zealand Film Commission for Hunt for the Wilderpeople, and
+the Warner Bros. Discovery announcement for Scavengers Reign.
+
+## Follow-up — October 12, 2026: category tracker guides indexed
+
+Dan chose to let search engines index the six category tracker guides
+(`/movie-tracker`, `/tv-show-tracker`, `/anime-tracker`, `/game-tracker`,
+`/book-tracker`, `/music-tracker`) and `/use-cases`, and to list them in the
+sitemap. They match real search demand ("anime tracker", "game backlog
+tracker"). They stay outside `AD_ELIGIBLE_TEMPLATES`, so ad inventory is
+unchanged. Templates, checklist, statistics guide, roadmap and changelog keep
+`noindex, follow`. This supersedes the October 8 note below for those seven pages.
+
+## Follow-up — October 8, 2026: AdSense reviewer pass
+
+Reviewed the public site from the code as an AdSense reviewer would reach it
+(the live site and AdSense account were not reachable from the review
+environment). Three code-side gaps were fixed; the account-side steps are in
+`docs/adsense-account-checklist.md`.
+
+- **Ads and the consent message were blocked by our own CSP.** Google supports
+  only a strict nonce-based CSP for AdSense
+  (https://support.google.com/adsense/answer/16283098). The previous allowlist
+  admitted `adsbygoogle.js` but blocked the frames, ad-quality requests, and
+  Privacy & messaging (CMP) scripts it loads. Pages that carry the ad loader now
+  get `script-src 'nonce-…' 'strict-dynamic'` with Google's fallbacks, open
+  `frame-src`/`connect-src` to https, and a nonce on every script tag. All other
+  pages keep the existing strict policy unchanged.
+- **Trust pages were noindexed.** `/privacy`, `/terms`, and `/contact` are now
+  indexable (still outside the sitemap), so crawlers see the same site identity
+  visitors do. The source-checked `/compare` page is indexable and in the sitemap.
+  Overlapping category guides, templates, checklist, roadmap, and changelog keep
+  their `noindex, follow` policy.
+- **Empty directories read as "under construction".** With no qualifying member
+  content, `/collections/explore`, `/reviews`, and `/titles` said "opening soon"
+  or "being curated" while linked from the main navigation. They now show the
+  authored Discover guides and latest monthly edition instead. Indexing rules for
+  those directories are unchanged.
+
+No database, user data, ad placement, or ad-eligibility change is part of this
+release. Live verification still needed after deploy: open an ad-eligible page
+signed out and confirm the browser console shows no CSP violations from
+googlesyndication, doubleclick, adtrafficquality, or fundingchoicesmessages.
+
 ## Follow-up — September 24, 2026: public guide reading paths
 
 Reorganized `/guides` around starting a library, importing a list, saving a

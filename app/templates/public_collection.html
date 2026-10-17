@@ -16,11 +16,10 @@
   <meta property="og:site_name" content="OmniTrackr">
   {{OG_IMAGE}}
   <script type="application/ld+json">{{STRUCTURED_DATA}}</script>
-  <link rel="preconnect" href="https://fonts.googleapis.com">
-  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@700;800&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="/styles.css">
-  <link rel="stylesheet" href="/static/collections-public.css?v=20260928-site-2">
+  <link rel="preload" href="/static/fonts/poppins-700-latin.woff2" as="font" type="font/woff2" crossorigin>
+  <link rel="preload" href="/static/fonts/poppins-800-latin.woff2" as="font" type="font/woff2" crossorigin>
+  <link rel="stylesheet" href="/static/fonts.css?v=20261009-fonts-1">
+  <link rel="stylesheet" href="/static/collections-public.css?v=20261004-share-1">
 </head>
 <body class="site collections-page">
   <!--SITE_NAV:collections-->
@@ -31,7 +30,7 @@
         <div><p class="share-eyebrow">Shared collection · {{COUNT}} titles</p>
           <h1>{{TITLE}}</h1>
           <p class="share-intro">{{INTRO}}</p>
-          <div class="share-metrics"><span>{{VIEWS}} readers</span><span id="collectionHelpfulCount">{{HELPFUL}} found this helpful</span></div>
+          <div class="share-metrics"><span>{{VIEWS}} readers</span><span id="collectionHelpfulCount">{{HELPFUL}} found this helpful</span><button type="button" class="site-btn site-btn--ghost site-btn--sm share-button" data-share data-share-title="{{TITLE}} · an OmniTrackr collection">Share</button></div>
         </div>
         {{COVER}}
       </header>
@@ -40,7 +39,7 @@
         <ol class="collection-list">{{ITEMS}}</ol>
         <div class="collection-actions" data-collection-id="{{COLLECTION_ID}}">
           <button type="button" data-collection-action="helpful">Helpful</button>
-          <a href="/collections/public/{{COLLECTION_ID}}/save">Save a private copy</a>
+          <a rel="nofollow" href="/collections/public/{{COLLECTION_ID}}/save">Save a private copy</a>
           <button type="button" data-collection-action="show-report">Report</button>
           <p class="collection-actions__status" id="collectionActionStatus" role="status" aria-live="polite"></p>
         </div>
@@ -50,10 +49,11 @@
           <button type="submit">Send report</button>
         </form>
       </section>
-      <footer class="share-footer">Enjoyed this point of view? <a href="/#landing-auth">Create a private library</a> and make a collection of your own.</footer>
+      <footer class="share-footer">Enjoyed this point of view? <a href="/#signup">Create a private library</a> and make a collection of your own.</footer>
     </div>
   </main>
   <!--SITE_FOOTER-->
   <script src="/static/public-collections.js?v=20260922-collection-save" defer></script>
+  <script src="/static/share.js?v=20261004-share-1" defer></script>
 </body>
 </html>

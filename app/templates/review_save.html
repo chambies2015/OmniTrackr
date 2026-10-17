@@ -7,7 +7,7 @@
   <meta name="description" content="Preview a title from the OmniTrackr community before adding it to your own library.">
   <title>{{TITLE}}</title>
   <link rel="icon" href="/omnitrackr_favicon.ico">
-  <link rel="stylesheet" href="/styles.css?v=20260922-review-discovery">
+  <link rel="stylesheet" href="/static/public-legacy.css?v=20261004-legacy-1">
   <link rel="stylesheet" href="/static/review-save.css?v=20260928-site-2">
   <script src="/static/review-save.js?v=20260922-review-discovery" defer></script>
 </head>
@@ -29,7 +29,7 @@
         <div class="review-save-actions">
           <button id="reviewSaveConfirm" type="button" hidden>Add title to my library</button>
           <a id="reviewSaveOpen" class="review-save-primary" href="/" hidden>Open your title →</a>
-          <a id="reviewSaveSignin" class="review-save-primary" href="{{SIGNIN_URL}}" hidden>Sign in or create an account →</a>
+          <a id="reviewSaveSignin" class="review-save-primary" rel="nofollow" href="{{SIGNIN_URL}}" hidden>Sign in or create an account →</a>
           <button id="reviewSaveRetry" class="review-save-secondary" type="button" hidden>Check my library again</button>
         </div>
         <p class="review-save-footnote">A new title starts unfinished and unrated. The reviewer’s opinion remains credited to them.</p>

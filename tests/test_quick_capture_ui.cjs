@@ -5,7 +5,7 @@ const fs = require('node:fs');
 const path = require('node:path');
 const vm = require('node:vm');
 
-const source = fs.readFileSync(path.join(__dirname, '../app/static/app.js'), 'utf8');
+const source = require('./helpers/dashboard_source.cjs');
 const categories = ['movies', 'tv-shows', 'anime', 'video-games', 'music', 'books'];
 const settle = () => new Promise(resolve => setImmediate(resolve));
 const ok = payload => ({ ok: true, status: 200, json: async () => payload });

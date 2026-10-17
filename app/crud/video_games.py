@@ -69,10 +69,5 @@ def update_video_game(db: Session, user_id: int, game_id: int, video_game_update
 
 
 def delete_video_game(db: Session, user_id: int, game_id: int) -> Optional[models.VideoGame]:
-    db_video_game = get_video_game_by_id(db, user_id, game_id)
-    if db_video_game is None:
-        return None
-    db.delete(db_video_game)
-    db.commit()
-    return db_video_game
-
+    from ..library_lifecycle import delete_owned_media
+    return delete_owned_media(db, user_id, "video-games", game_id)

@@ -66,3 +66,6 @@
   .collection-entry > img { display: none; }
 }
 @media (prefers-reduced-motion: reduce) { .collection-tile { transition: none; } }
+.collection-entry h2 a { color: var(--site-text) !important; text-decoration: none; }
+.collection-entry h2 a:hover { color: var(--site-violet-soft) !important; text-decoration: underline; }
+.share-metrics .share-button { margin-left: auto; min-height: 32px; padding: 0 14px; }

@@ -4,7 +4,7 @@ const fs = require('node:fs');
 const path = require('node:path');
 const vm = require('node:vm');
 
-const source = fs.readFileSync(path.join(__dirname, '../app/static/app.js'), 'utf8');
+const source = require('./helpers/dashboard_source.cjs');
 const authSource = fs.readFileSync(path.join(__dirname, '../app/static/auth.js'), 'utf8');
 const panelStart = source.indexOf('function positionFriendsPanel()');
 const panelEnd = source.indexOf('\nlet activeCompletionMomentId', panelStart);

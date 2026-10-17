@@ -62,3 +62,19 @@ async def get_current_user(
     
     return user
 
+
+
+async def get_optional_current_user(
+    request: Request,
+    token: Optional[str] = Depends(oauth2_scheme),
+    db: Session = Depends(get_db),
+) -> Optional[models.User]:
+    """Resolve a viewer for privacy-aware public resources without requiring login."""
+    if not token and not request.cookies.get(auth.AUTH_COOKIE_NAME):
+        return None
+    try:
+        return await get_current_user(request, token, db)
+    except HTTPException as exc:
+        if exc.status_code == status.HTTP_401_UNAUTHORIZED:
+            return None
+        raise

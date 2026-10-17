@@ -159,6 +159,11 @@ def test_directory_requires_standalone_content_before_indexing(client, db_sessio
     assert item.title in thin.text
     item.review = STANDALONE
     db_session.commit()
+    lonely = client.get("/reviews")  # one standalone review is not yet a directory worth indexing
+    assert lonely.headers["x-robots-tag"] == "noindex, follow"
+    add_review(db_session, author, title="Second Story")
+    add_review(db_session, author, title="Third Story")
+    db_session.commit()
     qualified = client.get("/reviews")
     assert '<meta name="robots" content="index, follow, max-image-preview:large">' in qualified.text
     assert "x-robots-tag" not in qualified.headers
@@ -181,7 +186,7 @@ def test_feed_uses_joined_queries_without_per_review_lookups(client, db_session,
         assert len(client.get("/api/public/review-feed", params={"limit": 40}).json()["reviews"]) == 40
     finally:
         event.remove(db_session.bind, "before_cursor_execute", capture)
-    assert len(queries) == 6
+    assert len(queries) == 7  # includes one batched supporter-badge lookup for the whole page
 
 
 @pytest.mark.parametrize("params", [{"q": "x" * 101}, {"limit": 41}, {"offset": -1}, {"category": "unknown"}])
@@ -343,3 +348,22 @@ def test_community_review_is_saveable_without_linking_to_unavailable_detail(clie
     assert f'href="/reviews/{item.id}/save?category=movie"' in page
     assert client.get(f"/reviews/{item.id}/save?category=movie").status_code == 200
     assert 'data-review-report="true"' in page
+
+
+def test_review_ads_need_substantial_writing(client, db_session, members):
+    author, _ = members
+    short = add_review(db_session, author, title="Short Standalone")
+    long_text = STANDALONE + " " + " ".join([
+        "The second viewing made the structure clearer, especially how each quiet scene sets up a later payoff.",
+        "Its supporting cast is strong, and the editing gives every argument room to breathe before cutting away.",
+        "I noticed new details in the background of the apartment scenes, which made the world feel even richer.",
+        "If you liked slow, observant dramas with a hopeful streak, this is an easy one to recommend to friends.",
+        "The cinematography favors patient wide shots, and the color palette shifts gently as the seasons change.",
+        "By the last scene I cared about every member of the family, which is rare for a film this restrained.",
+    ])
+    long = add_review(db_session, author, title="Long Standalone", text=long_text)
+    db_session.commit()
+    short_page = client.get(f"/reviews/{short.id}?category=movie")
+    assert '<meta name="robots" content="index, follow, max-image-preview:large">' in short_page.text
+    assert "/static/ad-loader.js" not in short_page.text  # indexed, but too short to carry ads
+    assert "/static/ad-loader.js" in client.get(f"/reviews/{long.id}?category=movie").text

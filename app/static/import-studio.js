@@ -19,6 +19,10 @@ const importStudioCategories = {
   anime: ['Anime', 'Watched', 'Not watched'], 'video-games': ['Games', 'Played', 'Not played'],
   music: ['Music', 'Listened', 'Not listened'], books: ['Books', 'Read', 'Not read']
 };
+const importStudioSources = {
+  letterboxd: 'a Letterboxd export', goodreads: 'a Goodreads export', myanimelist: 'a MyAnimeList export',
+  imdb: 'an IMDb export', storygraph: 'a StoryGraph export', generic: 'a generic spreadsheet'
+};
 
 function importStudioElement(tag, text, className) {
   const node = document.createElement(tag);
@@ -234,7 +238,11 @@ function renderImportStudioPreview(data, focusId) {
   const summary = importStudioElement('div', undefined, 'import-studio__summary');
   summary.append(importStudioMetric(data.total_rows, 'Rows read'), importStudioMetric(data.ready_count, 'Ready to import'),
     importStudioMetric(data.duplicate_count, 'Duplicates skipped'), importStudioMetric(data.invalid_count, 'Rows needing attention'));
-  results.append(summary, importStudioElement('p', 'Review the values from your file below. Notes stay private. Filtering this preview does not change which ready rows will be imported.', 'info-text'));
+  results.appendChild(summary);
+  if (importStudioSources[data.detected_source]) {
+    results.appendChild(importStudioElement('p', `Read as ${importStudioSources[data.detected_source]}.`, 'info-text import-studio__source'));
+  }
+  results.append(importStudioElement('p', 'Review the values from your file below. Notes stay private. Filtering this preview does not change which ready rows will be imported.', 'info-text'));
   const controls = importStudioElement('div', undefined, 'import-studio__review-controls');
   const label = importStudioElement('label');
   label.appendChild(importStudioElement('span', 'Review rows'));

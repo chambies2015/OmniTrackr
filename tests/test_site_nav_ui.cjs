@@ -27,6 +27,7 @@ function setup() {
   const document = {
     addEventListener: (name, handler) => { listeners[name] = handler; },
     querySelectorAll: s => (s === 'details.site-menu[open]' && menu.open ? [menu] : []),
+    querySelector: () => null,  // no long-form guide on this page, so the reading rail stays off
   };
   vm.runInContext(script, vm.createContext({document}));
   return {listeners, menu, summary, link, outside, click: target => listeners.click({target})};

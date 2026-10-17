@@ -18,7 +18,26 @@ from . import models, schemas
 
 MAX_IMPORT_BYTES = 5 * 1024 * 1024
 MAX_IMPORT_ROWS = 5000
-SUPPORTED_SOURCES = {"auto", "letterboxd", "goodreads", "myanimelist", "generic"}
+SUPPORTED_SOURCES = {"auto", "letterboxd", "goodreads", "myanimelist", "imdb", "storygraph", "generic"}
+SOURCE_LABELS = {
+    "letterboxd": "Letterboxd", "goodreads": "Goodreads", "myanimelist": "MyAnimeList",
+    "imdb": "IMDb", "storygraph": "The StoryGraph", "generic": "Generic CSV / spreadsheet",
+}
+# IMDb "Title Type" values, compared with spaces and punctuation removed so both the
+# current export ("TV Mini Series") and the older one ("tvMiniSeries") are understood.
+IMDB_TITLE_TYPES = {
+    "movie": "movies", "tvmovie": "movies", "short": "movies", "tvshort": "movies",
+    "tvspecial": "movies", "video": "movies",
+    "tvseries": "tv-shows", "tvminiseries": "tv-shows",
+    "videogame": "video-games",
+}
+IMDB_SKIPPED_TYPES = {
+    "tvepisode": "IMDb episode ratings aren't imported. Add the series instead.",
+    "podcastepisode": "IMDb podcast entries aren't a supported category.",
+    "podcastseries": "IMDb podcast entries aren't a supported category.",
+    "musicvideo": "IMDb music videos aren't a supported category.",
+}
+STORYGRAPH_FINISHED = {"read"}
 CATEGORY_ALIASES = {
     "movie": "movies", "movies": "movies", "film": "movies", "films": "movies",
     "tv": "tv-shows", "show": "tv-shows", "shows": "tv-shows", "tv show": "tv-shows",
@@ -106,13 +125,16 @@ def _optional_integer(value: str, field: str) -> int | None:
     return int(number)
 
 
-def _rating(value: str, five_point: bool = False) -> float | None:
+def _rating(value: str, five_point: bool = False, zero_is_unrated: bool = False) -> float | None:
     if not value:
         return None
     try:
         rating = float(value)
     except (TypeError, ValueError):
         raise ValueError("Rating must be a number.") from None
+    # Goodreads, StoryGraph and MyAnimeList export 0 for titles the member never rated.
+    if zero_is_unrated and rating == 0:
+        return None
     maximum = 5 if five_point else 10
     if not math.isfinite(rating) or not 0 <= rating <= maximum:
         raise ValueError(f"Rating must be between 0 and {maximum}.")
@@ -151,6 +173,10 @@ def _detect_source(headers: set[str]) -> str:
         return "goodreads"
     if "series_title" in headers and ({"my_score", "my_status"} & headers):
         return "myanimelist"
+    if {"const", "title_type"}.issubset(headers) and "title" in headers:
+        return "imdb"
+    if {"title", "authors", "read_status"}.issubset(headers):
+        return "storygraph"
     if "title" in headers or "name" in headers:
         return "generic"
     raise ValueError("Could not find a title column or recognize this export format.")
@@ -172,12 +198,15 @@ def _read_csv(content: bytes) -> tuple[list[dict[str, str]], set[str]]:
     reader = csv.DictReader(io.StringIO(text), dialect=dialect)
     if not reader.fieldnames:
         raise ValueError("The CSV file does not contain a header row.")
+    rows = []
     try:
-        rows = [_normalized_row(row) for row in reader]
+        for row in reader:
+            # Stop at the cap: a file of millions of one-letter rows fits in 5 MB.
+            if len(rows) >= MAX_IMPORT_ROWS:
+                raise ValueError(f"Imports are limited to {MAX_IMPORT_ROWS:,} rows at a time.")
+            rows.append(_normalized_row(row))
     except csv.Error as exc:
         raise ValueError("The CSV could not be read. Check its quoting and column lengths.") from exc
-    if len(rows) > MAX_IMPORT_ROWS:
-        raise ValueError(f"Imports are limited to {MAX_IMPORT_ROWS:,} rows at a time.")
     return rows, {_header(name) for name in reader.fieldnames}
 
 
@@ -221,43 +250,95 @@ def _generic_row(row: dict[str, str], category_override: str | None, mapping: di
     return category, data
 
 
+def _imdb_row(row: dict[str, str], mapping: dict[str, str]) -> tuple[str, dict[str, Any]]:
+    """IMDb ratings, watchlist and list exports share one layout across movies, TV and games."""
+    def field(target: str, *aliases: str) -> str:
+        return _field(row, mapping, target, *aliases)
+
+    title = field("title", "title")
+    if not title:
+        raise ValueError("Title is required.")
+    raw_type = field("category", "title type")
+    kind = re.sub(r"[^a-z]", "", raw_type.lower())
+    if kind in IMDB_SKIPPED_TYPES:
+        raise ValueError(IMDB_SKIPPED_TYPES[kind])
+    category = IMDB_TITLE_TYPES.get(kind) or CATEGORY_ALIASES.get(_clean(raw_type).lower())
+    if not category:
+        raise ValueError(f"IMDb title type \"{raw_type or 'blank'}\" isn't a supported category.")
+    rating = _rating(field("rating", "your rating"))
+    # A rated title has been seen; watchlist and list rows without a rating stay unfinished.
+    completed = _truthy(field("status")) if "status" in mapping else rating is not None or bool(_first(row, "date rated"))
+    review = field("review", "description") or None
+    common = {"title": title, "rating": rating, "review": review, "review_public": False}
+    if category == "video-games":
+        release = field("release_date", "release date") or ("" if "release_date" in mapping else field("year", "year"))
+        return category, {**common, "release_date": _date(release), "genres": field("genre", "genres") or None, "played": completed}
+    year = _integer(field("year", "year"))
+    if category == "movies":
+        return category, {**common, "director": field("creator", "directors", "director") or "Unknown director",
+                          "year": year, "watched": completed}
+    return category, {**common, "year": year, "seasons": None, "episodes": None, "watched": completed}
+
+
 def _source_row(source: str, row: dict[str, str], category_override: str | None, mapping: dict[str, str]) -> tuple[str, dict[str, Any]]:
     if source == "generic":
         return _generic_row(row, category_override, mapping)
-    # Keep supported source adapters' existing mapping behavior without mutating
-    # the original row or letting one mapping overwrite another one's source.
-    row = {**row, **{target: row[source_name] for target, source_name in mapping.items()}}
+    def field(target: str, *aliases: str) -> str:
+        return _field(row, mapping, target, *aliases)
+
     if source == "letterboxd":
-        title = _first(row, "name")
+        title = field("title", "name")
         if not title:
             raise ValueError("Name is required.")
+        completed = (_truthy(field("status")) if "status" in mapping else
+                     not (_first(row, "position") and not _first(row, "date", "watched date")))
         return "movies", {
-            "title": title, "director": "Unknown director", "year": _integer(_first(row, "year")),
-            "rating": _rating(_first(row, "rating"), five_point=True),
-            "watched": False if _first(row, "position") and not _first(row, "date", "watched date") else True,
-            "review": None, "review_public": False,
+            "title": title, "director": field("creator", "director") or "Unknown director",
+            "year": _integer(field("year", "year")),
+            "rating": _rating(field("rating", "rating"), five_point=True),
+            "watched": completed,
+            "review": field("review", "review", "notes") or None, "review_public": False,
         }
     if source == "goodreads":
-        title = _first(row, "title")
+        title = field("title", "title")
         if not title:
             raise ValueError("Title is required.")
+        completed = (_truthy(field("status")) if "status" in mapping else
+                     _completed_status(_first(row, "exclusive shelf")) or bool(_first(row, "date read")))
         return "books", {
-            "title": title, "author": _first(row, "author", "author l-f") or "Unknown author",
-            "year": _integer(_first(row, "year published", "original publication year")),
-            "genre": None, "rating": _rating(_first(row, "my rating"), five_point=True),
-            "read": _completed_status(_first(row, "exclusive shelf")) or bool(_first(row, "date read")),
-            "review": _first(row, "my review") or None, "review_public": False,
+            "title": title, "author": field("creator", "author", "author l-f") or "Unknown author",
+            "year": _integer(field("year", "year published", "original publication year")),
+            "genre": field("genre", "genre", "genres") or None,
+            "rating": _rating(field("rating", "my rating"), five_point=True, zero_is_unrated=True),
+            "read": completed,
+            "review": field("review", "my review") or None, "review_public": False,
         }
-    title = _first(row, "series title")
+    if source == "imdb":
+        return _imdb_row(row, mapping)
+    if source == "storygraph":
+        title = field("title", "title")
+        if not title:
+            raise ValueError("Title is required.")
+        completed = (_truthy(field("status")) if "status" in mapping else
+                     _clean(_first(row, "read status")).lower() in STORYGRAPH_FINISHED)
+        return "books", {
+            "title": title, "author": field("creator", "authors", "author") or "Unknown author",
+            "year": _integer(field("year", "year", "year published")),
+            "genre": field("genre", "genre", "genres") or None,
+            "rating": _rating(field("rating", "star rating"), five_point=True, zero_is_unrated=True),
+            "read": completed,
+            "review": field("review", "review") or None, "review_public": False,
+        }
+    title = field("title", "series title")
     if not title:
         raise ValueError("Series title is required.")
-    start = _first(row, "series start")
     return "anime", {
-        "title": title, "year": _integer(start), "seasons": None,
-        "episodes": _optional_integer(_first(row, "series episodes"), "Episodes"),
-        "rating": _rating(_first(row, "my score")),
-        "watched": _completed_status(_first(row, "my status")),
-        "review": _first(row, "my comments", "comments") or None,
+        "title": title, "year": _integer(field("year", "series start")),
+        "seasons": _optional_integer(field("seasons", "seasons"), "Seasons"),
+        "episodes": _optional_integer(field("episodes", "series episodes"), "Episodes"),
+        "rating": _rating(field("rating", "my score"), zero_is_unrated=True),
+        "watched": _truthy(field("status", "my status")),
+        "review": field("review", "my comments", "comments") or None,
         "review_public": False,
     }
 

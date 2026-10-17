@@ -5,6 +5,7 @@ from typing import List, Optional
 from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session
 
+from ..integer_bounds import PositiveDatabaseId
 from .. import crud, schemas, models
 from ..dependencies import get_db, get_current_user
 
@@ -24,7 +25,7 @@ async def list_anime(
 
 @router.get("/{anime_id}", response_model=schemas.Anime)
 async def get_anime(
-    anime_id: int,
+    anime_id: PositiveDatabaseId,
     current_user: models.User = Depends(get_current_user),
     db: Session = Depends(get_db)
 ):
@@ -45,7 +46,7 @@ async def create_anime(
 
 @router.put("/{anime_id}", response_model=schemas.Anime)
 async def update_anime(
-    anime_id: int,
+    anime_id: PositiveDatabaseId,
     anime: schemas.AnimeUpdate,
     current_user: models.User = Depends(get_current_user),
     db: Session = Depends(get_db)
@@ -58,7 +59,7 @@ async def update_anime(
 
 @router.delete("/{anime_id}", response_model=schemas.Anime)
 async def delete_anime(
-    anime_id: int,
+    anime_id: PositiveDatabaseId,
     current_user: models.User = Depends(get_current_user),
     db: Session = Depends(get_db)
 ):

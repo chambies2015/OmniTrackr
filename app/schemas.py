@@ -6,6 +6,8 @@ from typing import Optional, List, Literal
 from datetime import datetime
 from pydantic import BaseModel, ConfigDict, Field, field_validator
 
+from .integer_bounds import SQL_INTEGER_MAX
+
 
 def validate_public_url(value: Optional[str]) -> Optional[str]:
     """Allow only http(s) URLs or same-origin absolute paths for image/link fields."""
@@ -32,6 +34,7 @@ class UserBase(BaseModel):
 class UserCreate(UserBase):
     """Schema for user registration."""
     password: str = Field(..., min_length=6, max_length=128, description="User password (min 6 characters)")
+    invite: Optional[str] = Field(None, max_length=64, description="Friend invite token from a /join link")
 
 
 class UserLogin(BaseModel):
@@ -49,7 +52,8 @@ class User(UserBase):
     is_verified: bool = False
     created_at: Optional[datetime] = None
     profile_picture_url: Optional[str] = None
-    
+    has_password: bool = True
+
 class UserUpdate(BaseModel):
     """Schema for updating user information."""
     username: Optional[str] = Field(None, min_length=3, max_length=50)
@@ -59,7 +63,7 @@ class UserUpdate(BaseModel):
 
 class PasswordChange(BaseModel):
     """Schema for changing password."""
-    current_password: str = Field(..., description="Current password for verification")
+    current_password: str = Field("", description="Current password (not needed while an account made with Google has none)")
     new_password: str = Field(..., min_length=6, max_length=128, description="New password (min 6 characters)")
 
 
@@ -72,13 +76,13 @@ class PasswordReset(BaseModel):
 class EmailChange(BaseModel):
     """Schema for changing email address."""
     new_email: str = Field(..., description="New email address")
-    password: str = Field(..., description="Current password for verification")
+    password: str = Field("", description="Current password (not needed while an account made with Google has none)")
 
 
 class UsernameChange(BaseModel):
     """Schema for changing username."""
     new_username: str = Field(..., min_length=3, max_length=50, description="New username")
-    password: str = Field(..., description="Current password for verification")
+    password: str = Field("", description="Current password (not needed while an account made with Google has none)")
 
 
 class AccountDeactivate(BaseModel):
@@ -139,6 +143,15 @@ class FriendRequestCreate(BaseModel):
     receiver_username: str = Field(..., min_length=3, max_length=50, description="Username of the user to send friend request to")
 
 
+class SocialUser(BaseModel):
+    """Identity shared with other members, without account contact details."""
+    model_config = ConfigDict(from_attributes=True)
+
+    id: int
+    username: str
+    profile_picture_url: Optional[str] = None
+
+
 class FriendRequestResponse(BaseModel):
     """Schema for friend request responses."""
     model_config = ConfigDict(from_attributes=True)
@@ -146,8 +159,8 @@ class FriendRequestResponse(BaseModel):
     id: int
     sender_id: int
     receiver_id: int
-    sender: Optional[User] = None
-    receiver: Optional[User] = None
+    sender: Optional[SocialUser] = None
+    receiver: Optional[SocialUser] = None
     status: str
     created_at: datetime
     expires_at: datetime
@@ -162,7 +175,7 @@ class FriendshipResponse(BaseModel):
     model_config = ConfigDict(from_attributes=True)
 
     id: int
-    friend: User
+    friend: SocialUser
     created_at: datetime
     
 class NotificationResponse(BaseModel):
@@ -173,6 +186,7 @@ class NotificationResponse(BaseModel):
     type: str
     message: str
     friend_request_id: Optional[int] = None
+    link: Optional[str] = None
     created_at: datetime
     read_at: Optional[datetime] = None
     
@@ -217,6 +231,28 @@ class TokenData(BaseModel):
 # Movie & TV Show Schemas
 # ============================================================================
 
+class MediaWriteValidation(BaseModel):
+    """Patch omission is valid; erasing a title or a required privacy flag is not."""
+
+    @field_validator("title", "review_public", check_fields=False)
+    @classmethod
+    def required_media_value(cls, value):
+        if value is None:
+            raise ValueError("This field cannot be null")
+        if isinstance(value, str) and not value.strip():
+            raise ValueError("Title cannot be empty")
+        return value
+
+
+class RequiredUpdateValues(BaseModel):
+    @field_validator("name", "source_type", "allow_uploads", "fields", "field_values", check_fields=False)
+    @classmethod
+    def reject_null_update(cls, value):
+        if value is None:
+            raise ValueError("This field cannot be null")
+        return value
+
+
 class MovieBase(BaseModel):
     title: str = Field(..., description="Title of the movie or book")
     director: str = Field(..., description="Director or author")
@@ -226,20 +262,20 @@ class MovieBase(BaseModel):
     )
     watched: Optional[bool] = Field(False, description="Whether it has been watched/read")
     review: Optional[str] = Field(None, description="Optional review/notes for the entry")
-    review_public: Optional[bool] = Field(False, description="Show this review on the public reviews page")
+    review_public: bool = Field(False, description="Show this review on the public reviews page")
     poster_url: Optional[str] = Field(None, description="URL of the movie poster")
 
     _validate_poster_url = field_validator("poster_url")(validate_public_url)
 
 
-class MovieCreate(MovieBase):
-    pass
+class MovieCreate(MovieBase, MediaWriteValidation):
+    year: int = Field(..., ge=0, le=9999)
 
 
-class MovieUpdate(BaseModel):
+class MovieUpdate(MediaWriteValidation):
     title: Optional[str] = None
     director: Optional[str] = None
-    year: Optional[int] = Field(None, ge=0)
+    year: Optional[int] = Field(None, ge=0, le=9999)
     rating: Optional[float] = Field(None, ge=0, le=10)
     watched: Optional[bool] = None
     review: Optional[str] = None
@@ -253,6 +289,7 @@ class Movie(MovieBase):
     model_config = ConfigDict(from_attributes=True)
 
     id: int
+    added_at: Optional[datetime] = None
     # Stored/imported catalog metadata can be incomplete. Creation stays strict.
     director: Optional[str] = None
     year: Optional[int] = Field(None, ge=0)
@@ -266,21 +303,23 @@ class TVShowBase(BaseModel):
     rating: Optional[float] = Field(None, ge=0, le=10, description="Rating out of 10 (0-10.0, one decimal place)")
     watched: Optional[bool] = Field(False, description="Whether it has been watched")
     review: Optional[str] = Field(None, description="Optional review/notes for the entry")
-    review_public: Optional[bool] = Field(False, description="Show this review on the public reviews page")
+    review_public: bool = Field(False, description="Show this review on the public reviews page")
     poster_url: Optional[str] = Field(None, description="URL of the TV show poster")
 
     _validate_poster_url = field_validator("poster_url")(validate_public_url)
 
 
-class TVShowCreate(TVShowBase):
-    pass
+class TVShowCreate(TVShowBase, MediaWriteValidation):
+    year: int = Field(..., ge=0, le=9999)
+    seasons: Optional[int] = Field(None, ge=0, le=SQL_INTEGER_MAX)
+    episodes: Optional[int] = Field(None, ge=0, le=SQL_INTEGER_MAX)
 
 
-class TVShowUpdate(BaseModel):
+class TVShowUpdate(MediaWriteValidation):
     title: Optional[str] = None
-    year: Optional[int] = Field(None, ge=0)
-    seasons: Optional[int] = Field(None, ge=0)
-    episodes: Optional[int] = Field(None, ge=0)
+    year: Optional[int] = Field(None, ge=0, le=9999)
+    seasons: Optional[int] = Field(None, ge=0, le=SQL_INTEGER_MAX)
+    episodes: Optional[int] = Field(None, ge=0, le=SQL_INTEGER_MAX)
     rating: Optional[float] = Field(None, ge=0, le=10)
     watched: Optional[bool] = None
     review: Optional[str] = None
@@ -294,6 +333,7 @@ class TVShow(TVShowBase):
     model_config = ConfigDict(from_attributes=True)
 
     id: int
+    added_at: Optional[datetime] = None
     year: Optional[int] = Field(None, ge=0)
 
 
@@ -305,21 +345,23 @@ class AnimeBase(BaseModel):
     rating: Optional[float] = Field(None, ge=0, le=10, description="Rating out of 10 (0-10.0, one decimal place)")
     watched: Optional[bool] = Field(False, description="Whether it has been watched")
     review: Optional[str] = Field(None, description="Optional review/notes for the entry")
-    review_public: Optional[bool] = Field(False, description="Show this review on the public reviews page")
+    review_public: bool = Field(False, description="Show this review on the public reviews page")
     poster_url: Optional[str] = Field(None, description="URL of the anime poster")
 
     _validate_poster_url = field_validator("poster_url")(validate_public_url)
 
 
-class AnimeCreate(AnimeBase):
-    pass
+class AnimeCreate(AnimeBase, MediaWriteValidation):
+    year: int = Field(..., ge=0, le=9999)
+    seasons: Optional[int] = Field(None, ge=0, le=SQL_INTEGER_MAX)
+    episodes: Optional[int] = Field(None, ge=0, le=SQL_INTEGER_MAX)
 
 
-class AnimeUpdate(BaseModel):
+class AnimeUpdate(MediaWriteValidation):
     title: Optional[str] = None
-    year: Optional[int] = Field(None, ge=0)
-    seasons: Optional[int] = Field(None, ge=0)
-    episodes: Optional[int] = Field(None, ge=0)
+    year: Optional[int] = Field(None, ge=0, le=9999)
+    seasons: Optional[int] = Field(None, ge=0, le=SQL_INTEGER_MAX)
+    episodes: Optional[int] = Field(None, ge=0, le=SQL_INTEGER_MAX)
     rating: Optional[float] = Field(None, ge=0, le=10)
     watched: Optional[bool] = None
     review: Optional[str] = None
@@ -333,6 +375,7 @@ class Anime(AnimeBase):
     model_config = ConfigDict(from_attributes=True)
 
     id: int
+    added_at: Optional[datetime] = None
     year: Optional[int] = Field(None, ge=0)
 
 
@@ -343,7 +386,7 @@ class VideoGameBase(BaseModel):
     rating: Optional[float] = Field(None, ge=0, le=10, description="Rating out of 10 (0-10.0, one decimal place)")
     played: Optional[bool] = Field(False, description="Whether it has been played")
     review: Optional[str] = Field(None, description="Optional review/notes for the entry")
-    review_public: Optional[bool] = Field(False, description="Show this review on the public reviews page")
+    review_public: bool = Field(False, description="Show this review on the public reviews page")
     cover_art_url: Optional[str] = Field(None, description="URL of the video game cover art")
     rawg_link: Optional[str] = Field(None, description="RAWG game page URL")
 
@@ -351,11 +394,11 @@ class VideoGameBase(BaseModel):
     _validate_rawg_link = field_validator("rawg_link")(validate_public_url)
 
 
-class VideoGameCreate(VideoGameBase):
+class VideoGameCreate(VideoGameBase, MediaWriteValidation):
     pass
 
 
-class VideoGameUpdate(BaseModel):
+class VideoGameUpdate(MediaWriteValidation):
     title: Optional[str] = None
     release_date: Optional[datetime] = None
     genres: Optional[str] = None
@@ -374,6 +417,7 @@ class VideoGame(VideoGameBase):
     model_config = ConfigDict(from_attributes=True)
 
     id: int
+    added_at: Optional[datetime] = None
 
 
 class MusicBase(BaseModel):
@@ -384,20 +428,20 @@ class MusicBase(BaseModel):
     rating: Optional[float] = Field(None, ge=0, le=10, description="Rating out of 10 (0-10.0, one decimal place)")
     listened: Optional[bool] = Field(False, description="Whether it has been listened to")
     review: Optional[str] = Field(None, description="Optional review/notes for the entry")
-    review_public: Optional[bool] = Field(False, description="Show this review on the public reviews page")
+    review_public: bool = Field(False, description="Show this review on the public reviews page")
     cover_art_url: Optional[str] = Field(None, description="URL of the album cover art")
 
     _validate_cover_art_url = field_validator("cover_art_url")(validate_public_url)
 
 
-class MusicCreate(MusicBase):
-    pass
+class MusicCreate(MusicBase, MediaWriteValidation):
+    year: int = Field(..., ge=0, le=9999)
 
 
-class MusicUpdate(BaseModel):
+class MusicUpdate(MediaWriteValidation):
     title: Optional[str] = None
     artist: Optional[str] = None
-    year: Optional[int] = Field(None, ge=0)
+    year: Optional[int] = Field(None, ge=0, le=9999)
     genre: Optional[str] = None
     rating: Optional[float] = Field(None, ge=0, le=10)
     listened: Optional[bool] = None
@@ -412,6 +456,7 @@ class Music(MusicBase):
     model_config = ConfigDict(from_attributes=True)
 
     id: int
+    added_at: Optional[datetime] = None
     artist: Optional[str] = None
     year: Optional[int] = Field(None, ge=0)
 
@@ -424,20 +469,20 @@ class BookBase(BaseModel):
     rating: Optional[float] = Field(None, ge=0, le=10, description="Rating out of 10 (0-10.0, one decimal place)")
     read: Optional[bool] = Field(False, description="Whether it has been read")
     review: Optional[str] = Field(None, description="Optional review/notes for the entry")
-    review_public: Optional[bool] = Field(False, description="Show this review on the public reviews page")
+    review_public: bool = Field(False, description="Show this review on the public reviews page")
     cover_art_url: Optional[str] = Field(None, description="URL of the book cover art")
 
     _validate_cover_art_url = field_validator("cover_art_url")(validate_public_url)
 
 
-class BookCreate(BookBase):
-    pass
+class BookCreate(BookBase, MediaWriteValidation):
+    year: int = Field(..., ge=0, le=9999)
 
 
-class BookUpdate(BaseModel):
+class BookUpdate(MediaWriteValidation):
     title: Optional[str] = None
     author: Optional[str] = None
-    year: Optional[int] = Field(None, ge=0)
+    year: Optional[int] = Field(None, ge=0, le=9999)
     genre: Optional[str] = None
     rating: Optional[float] = Field(None, ge=0, le=10)
     read: Optional[bool] = None
@@ -452,6 +497,7 @@ class Book(BookBase):
     model_config = ConfigDict(from_attributes=True)
 
     id: int
+    added_at: Optional[datetime] = None
     author: Optional[str] = None
     year: Optional[int] = Field(None, ge=0)
 
@@ -466,7 +512,7 @@ ACTIVITY_ACTIONS = {"started", "progressed", "completed", "revisited", "noted"}
 
 class ActivityEntryCreate(BaseModel):
     category: str
-    item_id: int = Field(..., ge=1)
+    item_id: int = Field(..., ge=1, le=SQL_INTEGER_MAX)
     action: str = "noted"
     note: Optional[str] = Field(None, max_length=500)
     occurred_at: Optional[datetime] = None
@@ -530,7 +576,7 @@ class ActivityEntry(BaseModel):
 
 class ActivityEntryImport(BaseModel):
     category: str
-    item_id: Optional[int] = Field(None, ge=1)
+    item_id: Optional[int] = Field(None, ge=1, le=SQL_INTEGER_MAX)
     title: str = Field(..., min_length=1, max_length=500)
     action: str
     note: Optional[str] = Field(None, max_length=500)
@@ -543,6 +589,42 @@ class ActivityEntryImport(BaseModel):
 
 
 # Export/Import schemas
+class LibraryImportAddedAt(BaseModel):
+    """Optional add date carried by a backup file. Missing means unknown."""
+    added_at: Optional[datetime] = None
+
+
+class MovieImport(MovieBase, MediaWriteValidation, LibraryImportAddedAt):
+    director: Optional[str] = Field(...)
+    year: Optional[int] = Field(..., ge=0, le=9999)
+
+
+class TVShowImport(TVShowBase, MediaWriteValidation, LibraryImportAddedAt):
+    year: Optional[int] = Field(..., ge=0, le=9999)
+    seasons: Optional[int] = Field(None, ge=0, le=SQL_INTEGER_MAX)
+    episodes: Optional[int] = Field(None, ge=0, le=SQL_INTEGER_MAX)
+
+
+class AnimeImport(AnimeBase, MediaWriteValidation, LibraryImportAddedAt):
+    year: Optional[int] = Field(..., ge=0, le=9999)
+    seasons: Optional[int] = Field(None, ge=0, le=SQL_INTEGER_MAX)
+    episodes: Optional[int] = Field(None, ge=0, le=SQL_INTEGER_MAX)
+
+
+class MusicImport(MusicBase, MediaWriteValidation, LibraryImportAddedAt):
+    artist: Optional[str] = Field(...)
+    year: Optional[int] = Field(..., ge=0, le=9999)
+
+
+class BookImport(BookBase, MediaWriteValidation, LibraryImportAddedAt):
+    author: Optional[str] = Field(...)
+    year: Optional[int] = Field(..., ge=0, le=9999)
+
+
+class VideoGameImport(VideoGameCreate, LibraryImportAddedAt):
+    pass
+
+
 class ExportData(BaseModel):
     """Schema for exporting all data from OmniTrackr"""
     model_config = ConfigDict(from_attributes=True)
@@ -559,19 +641,23 @@ class ExportData(BaseModel):
     progress_checkpoints: List[dict] = Field(default_factory=list, description="Private episode and reading checkpoints")
     export_metadata: dict = Field(..., description="Export metadata including timestamp and version")
     
+# Far above any real library, but keeps one request from queueing millions of row writes.
+MAX_IMPORT_LIST_ITEMS = 20000
+
+
 class ImportData(BaseModel):
     """Schema for importing data into OmniTrackr"""
     model_config = ConfigDict(from_attributes=True)
 
-    movies: List[MovieCreate] = Field(default=[], description="Movies to import")
-    tv_shows: List[TVShowCreate] = Field(default=[], description="TV shows to import")
-    anime: List[AnimeCreate] = Field(default=[], description="Anime to import")
-    video_games: List[VideoGameCreate] = Field(default=[], description="Video games to import")
-    music: List[MusicCreate] = Field(default=[], description="Music to import")
-    books: List[BookCreate] = Field(default=[], description="Books to import")
-    custom_tabs: List[dict] = Field(default=[], description="Custom tabs to import (optional for backward compatibility)")
-    activities: List[ActivityEntryImport] = Field(default=[], description="Activity journal entries (optional for backward compatibility)")
-    collections: List[dict] = Field(default=[], description="Collections to restore privately (optional for backward compatibility)")
+    movies: List[MovieImport] = Field(default=[], max_length=MAX_IMPORT_LIST_ITEMS, description="Movies to import")
+    tv_shows: List[TVShowImport] = Field(default=[], max_length=MAX_IMPORT_LIST_ITEMS, description="TV shows to import")
+    anime: List[AnimeImport] = Field(default=[], max_length=MAX_IMPORT_LIST_ITEMS, description="Anime to import")
+    video_games: List[VideoGameImport] = Field(default=[], max_length=MAX_IMPORT_LIST_ITEMS, description="Video games to import")
+    music: List[MusicImport] = Field(default=[], max_length=MAX_IMPORT_LIST_ITEMS, description="Music to import")
+    books: List[BookImport] = Field(default=[], max_length=MAX_IMPORT_LIST_ITEMS, description="Books to import")
+    custom_tabs: List[dict] = Field(default=[], max_length=MAX_IMPORT_LIST_ITEMS, description="Custom tabs to import (optional for backward compatibility)")
+    activities: List[ActivityEntryImport] = Field(default=[], max_length=MAX_IMPORT_LIST_ITEMS, description="Activity journal entries (optional for backward compatibility)")
+    collections: List[dict] = Field(default=[], max_length=MAX_IMPORT_LIST_ITEMS, description="Collections to restore privately (optional for backward compatibility)")
     progress_checkpoints: List[dict] = Field(default_factory=list, max_length=10000, description="Checkpoints to restore only where no saved progress exists")
     
 class ImportResult(BaseModel):
@@ -852,7 +938,7 @@ class CustomTabFieldCreate(BaseModel):
     label: str = Field(..., min_length=1, max_length=100, description="Field label for display")
     field_type: str = Field(..., description="Field type: text, number, date, boolean, rating, review, status")
     required: bool = Field(False, description="Whether field is required")
-    order: int = Field(0, ge=0, description="Display order")
+    order: int = Field(0, ge=0, le=SQL_INTEGER_MAX, description="Display order")
 
 
 class CustomTabField(CustomTabFieldCreate):
@@ -860,6 +946,7 @@ class CustomTabField(CustomTabFieldCreate):
 
     id: int
     tab_id: int
+    order: int = Field(0, ge=0, description="Display order")
 
 
 class CustomTabCreate(BaseModel):
@@ -869,7 +956,7 @@ class CustomTabCreate(BaseModel):
     fields: List[CustomTabFieldCreate] = Field(default=[], max_length=30, description="Field definitions")
 
 
-class CustomTabUpdate(BaseModel):
+class CustomTabUpdate(RequiredUpdateValues):
     name: Optional[str] = Field(None, min_length=1, max_length=100)
     source_type: Optional[str] = None
     allow_uploads: Optional[bool] = None
@@ -896,7 +983,7 @@ class CustomTabItemCreate(BaseModel):
     _validate_poster_url = field_validator("poster_url")(validate_public_url)
 
 
-class CustomTabItemUpdate(BaseModel):
+class CustomTabItemUpdate(RequiredUpdateValues):
     title: Optional[str] = Field(None, min_length=1, max_length=500)
     field_values: Optional[dict] = None
     poster_url: Optional[str] = Field(None, max_length=2000)
@@ -923,7 +1010,7 @@ NEXT_UP_CATEGORIES = {"movies", "tv-shows", "anime", "video-games", "music", "bo
 
 class NextUpItemCreate(BaseModel):
     category: str = Field(..., description="Library category for the queued item")
-    item_id: int = Field(..., ge=1, description="ID of the existing library item")
+    item_id: int = Field(..., ge=1, le=SQL_INTEGER_MAX, description="ID of the existing library item")
 
     @field_validator("category")
     @classmethod
@@ -935,7 +1022,7 @@ class NextUpItemCreate(BaseModel):
 
 
 class NextUpItemMove(BaseModel):
-    position: int = Field(..., ge=0, description="Zero-based queue position")
+    position: int = Field(..., ge=0, le=SQL_INTEGER_MAX, description="Zero-based queue position")
 
 
 class NextUpItem(BaseModel):
@@ -1014,7 +1101,7 @@ class RecommendationFriendSubmissionCreate(BaseModel):
 
 
 class RecommendationInviteCreate(BaseModel):
-    friend_id: int = Field(..., ge=1)
+    friend_id: int = Field(..., ge=1, le=SQL_INTEGER_MAX)
 
 
 class RecommendationTriage(BaseModel):
@@ -1051,6 +1138,23 @@ class CompletionMoment(BaseModel):
     takeaway: Optional[str] = None
     favorite: bool = False
     completed_at: datetime
+    # Whether the library entry already has a written review (the finish modal then
+    # skips its "share a review" step instead of offering to overwrite it).
+    has_review: Optional[bool] = None
+
+
+class CompletionReview(BaseModel):
+    """A review written from the finish modal, saved onto the finished library entry."""
+    review: str = Field(..., min_length=1, max_length=10000)
+    public: bool = False
+
+    @field_validator("review")
+    @classmethod
+    def normalize_review(cls, value: str) -> str:
+        value = value.strip()
+        if not value:
+            raise ValueError("Write a few words first")
+        return value
 
 
 # ============================================================================
@@ -1092,7 +1196,7 @@ class CollectionItemCreate(NextUpItemCreate):
 
 
 class CollectionItemMove(BaseModel):
-    position: int = Field(..., ge=0)
+    position: int = Field(..., ge=0, le=SQL_INTEGER_MAX)
 
 
 class CollectionItemUpdate(BaseModel):

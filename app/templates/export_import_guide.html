@@ -20,10 +20,9 @@
   <meta name="twitter:card" content="summary">
   <meta name="twitter:title" content="Export & Import Guide">
   <meta name="twitter:description" content="Back up and move your media library, reviews, ratings, privacy choices, and custom tabs with OmniTrackr JSON export and import.">
-  <link rel="preconnect" href="https://fonts.googleapis.com">
-  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@700;800&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="/styles.css">
+  <link rel="preload" href="/static/fonts/poppins-700-latin.woff2" as="font" type="font/woff2" crossorigin>
+  <link rel="preload" href="/static/fonts/poppins-800-latin.woff2" as="font" type="font/woff2" crossorigin>
+  <link rel="stylesheet" href="/static/fonts.css?v=20261009-fonts-1">
   <style>
     body { min-height: 100vh; padding: 20px; }
     .content-wrapper { max-width: 1040px; margin: 0 auto; }
@@ -60,7 +59,7 @@
     "inLanguage": "en-US"
   }
   </script>
-  <link rel="stylesheet" href="/static/public-reader.css?v=20260928-site-2">
+  <link rel="stylesheet" href="/static/public-reader.css?v=20261016-reader-1">
 </head>
 
 <body class="public-reader site">
@@ -112,8 +111,10 @@
       <section class="content-section" aria-labelledby="sources-heading">
         <h2 id="sources-heading">What the Import Studio Understands</h2>
         <ul>
-          <li><strong>Letterboxd-style CSV:</strong> <code>Name</code>, <code>Year</code>, and <code>Rating</code> become movie details. Ratings use a five-point input scale and are doubled: 3.5 becomes 7/10. A positioned watchlist row without a watched date or date remains unwatched; other supported rows are marked watched. The adapter does not import review text or turn repeated diary visits into journal entries.</li>
+          <li><strong>Letterboxd-style CSV:</strong> <code>Name</code>, <code>Year</code>, and <code>Rating</code> become movie details. Ratings use a five-point input scale and are doubled: 3.5 becomes 7/10. A positioned watchlist row without a watched date or date remains unwatched; other supported rows are marked watched. Text in a <code>Review</code> column, such as the one in Letterboxd's reviews file, becomes a private note. Repeated diary visits are not turned into journal entries.</li>
           <li><strong>Goodreads-style CSV:</strong> <code>Title</code>, <code>Author</code>, <code>Year Published</code>, <code>My Rating</code>, and <code>My Review</code> become book details. Ratings are doubled: 4 becomes 8/10. A <code>read</code> value in <code>Exclusive Shelf</code> or a nonempty <code>Date Read</code> marks the book read. The date itself, custom shelves, and reading history are not imported.</li>
+          <li><strong>IMDb ratings, watchlist, or list CSV:</strong> <code>Title</code>, <code>Title Type</code>, <code>Year</code>, <code>Your Rating</code>, and <code>Directors</code> are read. <code>Title Type</code> decides the category: movies, TV movies, shorts, specials, and videos become movies; TV series and mini series become TV shows; video games become games. IMDb ratings already use a ten-point scale, so 8 stays 8/10. A rated title is marked watched or played, while an unrated watchlist row stays unfinished. Episode, podcast, and music video rows are listed as needing attention and are not imported. IMDb files anime as TV series, so anime arrives in TV Shows.</li>
+          <li><strong>The StoryGraph CSV:</strong> <code>Title</code>, <code>Authors</code>, <code>Read Status</code>, <code>Star Rating</code>, and <code>Review</code> become book details. Star ratings are doubled, including quarter stars: 4.25 becomes 8.5/10. Only a <code>read</code> status marks the book read; to-read, currently reading, and did-not-finish books stay unread. The export has no publication year, so imported books have no year until you add one. Moods, pace, tags, and reading dates are not imported.</li>
           <li><strong>MyAnimeList-style CSV:</strong> <code>series_title</code>, <code>series_episodes</code>, <code>my_score</code>, <code>my_status</code>, <code>series_start</code>, and <code>my_comments</code> become anime details. Scores use the ten-point scale. This accepts CSV columns, not a native MyAnimeList XML file. Episode totals describe the series; they do not set your current episode.</li>
           <li><strong>Generic spreadsheets:</strong> choose one of OmniTrackr's six categories or include a category column. Familiar headings such as title, creator, year, rating, status, review, genre, seasons, episodes, and release date are recognized automatically.</li>
         </ul>
@@ -210,7 +211,7 @@ A Quiet Engine,Neve Holt,2025,0,true,Finished but not for me
 
       <section class="content-section" aria-labelledby="related-heading">
         <h2 id="related-heading">Related Pages</h2>
-        <p>For more context, visit the <a href="/media-tracking">media tracking hub</a>, read the <a href="/guides">how-to guides</a>, try the <a href="/demo">demo library</a>, use the <a href="/tracking-templates">tracking templates</a>, or review OmniTrackr's <a href="/privacy">privacy policy</a>.</p>
+        <p>Coming from another service? The <a href="/switch">switching guide</a> shows where each service keeps its export and what to check after importing. For more context, visit the <a href="/media-tracking">media tracking hub</a>, read the <a href="/guides">how-to guides</a>, try the <a href="/demo">demo library</a>, use the <a href="/tracking-templates">tracking templates</a>, or review OmniTrackr's <a href="/privacy">privacy policy</a>.</p>
       </section>
     </main>
   </div>

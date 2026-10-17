@@ -5,8 +5,9 @@ from datetime import datetime
 from typing import List
 from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session, joinedload
-from sqlalchemy import and_, or_
+from sqlalchemy import and_, func, or_
 
+from ..integer_bounds import PositiveDatabaseId
 from .. import crud, schemas, models
 from ..dependencies import get_db, get_current_user
 
@@ -22,7 +23,13 @@ async def send_friend_request(
     """Send a friend request to another user by username."""
     # Find the receiver by username
     receiver = crud.get_user_by_username(db, request_data.receiver_username)
-    if not receiver:
+    if receiver is None:
+        # Usernames are unique regardless of case, so "Alice" should find "alice".
+        matches = db.query(models.User).filter(
+            func.lower(models.User.username) == (request_data.receiver_username or "").strip().lower()
+        ).limit(2).all()
+        receiver = matches[0] if len(matches) == 1 else None
+    if not receiver or not receiver.is_active:
         raise HTTPException(status_code=404, detail="User not found")
     
     if receiver.id == current_user.id:
@@ -53,7 +60,7 @@ async def get_friend_requests(
 
 @router.post("/requests/{request_id}/accept", response_model=schemas.FriendRequestResponse)
 async def accept_friend_request(
-    request_id: int,
+    request_id: PositiveDatabaseId,
     current_user: models.User = Depends(get_current_user),
     db: Session = Depends(get_db)
 ):
@@ -70,7 +77,7 @@ async def accept_friend_request(
 
 @router.post("/requests/{request_id}/deny", response_model=schemas.FriendRequestResponse)
 async def deny_friend_request(
-    request_id: int,
+    request_id: PositiveDatabaseId,
     current_user: models.User = Depends(get_current_user),
     db: Session = Depends(get_db)
 ):
@@ -87,7 +94,7 @@ async def deny_friend_request(
 
 @router.delete("/requests/{request_id}", response_model=dict)
 async def cancel_friend_request(
-    request_id: int,
+    request_id: PositiveDatabaseId,
     current_user: models.User = Depends(get_current_user),
     db: Session = Depends(get_db)
 ):
@@ -129,7 +136,7 @@ async def get_friends(
 
 @router.delete("/{friend_id}", response_model=dict)
 async def unfriend_user(
-    friend_id: int,
+    friend_id: PositiveDatabaseId,
     current_user: models.User = Depends(get_current_user),
     db: Session = Depends(get_db)
 ):
@@ -142,7 +149,7 @@ async def unfriend_user(
 
 @router.get("/{friend_id}/profile", response_model=schemas.FriendProfileSummary)
 async def get_friend_profile(
-    friend_id: int,
+    friend_id: PositiveDatabaseId,
     current_user: models.User = Depends(get_current_user),
     db: Session = Depends(get_db)
 ):
@@ -160,7 +167,7 @@ async def get_friend_profile(
 
 @router.get("/{friend_id}/movies", response_model=schemas.FriendMoviesResponse)
 async def get_friend_movies(
-    friend_id: int,
+    friend_id: PositiveDatabaseId,
     current_user: models.User = Depends(get_current_user),
     db: Session = Depends(get_db)
 ):
@@ -183,7 +190,7 @@ async def get_friend_movies(
 
 @router.get("/{friend_id}/tv-shows", response_model=schemas.FriendTVShowsResponse)
 async def get_friend_tv_shows(
-    friend_id: int,
+    friend_id: PositiveDatabaseId,
     current_user: models.User = Depends(get_current_user),
     db: Session = Depends(get_db)
 ):
@@ -206,7 +213,7 @@ async def get_friend_tv_shows(
 
 @router.get("/{friend_id}/anime", response_model=schemas.FriendAnimeResponse)
 async def get_friend_anime(
-    friend_id: int,
+    friend_id: PositiveDatabaseId,
     current_user: models.User = Depends(get_current_user),
     db: Session = Depends(get_db)
 ):
@@ -229,7 +236,7 @@ async def get_friend_anime(
 
 @router.get("/{friend_id}/video-games", response_model=schemas.FriendVideoGamesResponse)
 async def get_friend_video_games(
-    friend_id: int,
+    friend_id: PositiveDatabaseId,
     current_user: models.User = Depends(get_current_user),
     db: Session = Depends(get_db)
 ):
@@ -252,7 +259,7 @@ async def get_friend_video_games(
 
 @router.get("/{friend_id}/music", response_model=schemas.FriendMusicResponse)
 async def get_friend_music(
-    friend_id: int,
+    friend_id: PositiveDatabaseId,
     current_user: models.User = Depends(get_current_user),
     db: Session = Depends(get_db)
 ):
@@ -271,7 +278,7 @@ async def get_friend_music(
 
 @router.get("/{friend_id}/books", response_model=schemas.FriendBooksResponse)
 async def get_friend_books(
-    friend_id: int,
+    friend_id: PositiveDatabaseId,
     current_user: models.User = Depends(get_current_user),
     db: Session = Depends(get_db)
 ):
@@ -290,7 +297,7 @@ async def get_friend_books(
 
 @router.get("/{friend_id}/statistics", response_model=schemas.FriendStatisticsResponse)
 async def get_friend_statistics(
-    friend_id: int,
+    friend_id: PositiveDatabaseId,
     current_user: models.User = Depends(get_current_user),
     db: Session = Depends(get_db)
 ):

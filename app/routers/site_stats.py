@@ -11,10 +11,11 @@ from datetime import date, datetime, timedelta, timezone
 from pathlib import Path
 
 from fastapi import APIRouter, Depends, HTTPException, Query, Request, Response
-from sqlalchemy import func
+from pydantic import BaseModel, Field
+from sqlalchemy import func, or_
 from sqlalchemy.orm import Session
 
-from .. import editorial_collections, models, release_radar
+from .. import editorial_collections, funnel, google_signin, models, release_radar
 from ..admin_access import is_site_admin
 from ..csp import strict_html_response
 from ..dependencies import get_current_user, get_db
@@ -64,6 +65,12 @@ def _counts_between(db: Session, column, start: datetime, end: datetime | None =
     if end is not None:
         query = query.filter(column < end)
     return int(query.scalar() or 0)
+
+
+def _active_since(db: Session, start: datetime) -> int:
+    """Members who logged in or opened OmniTrackr on a still-open session since `start`."""
+    return int(db.query(func.count(models.User.id)).filter(or_(
+        models.User.last_login_at >= start, models.User.last_seen_on >= start.date())).scalar() or 0)
 
 
 def _traffic(db: Session, days: int, today: date) -> dict:
@@ -151,6 +158,91 @@ def _library_additions(db: Session, days: int, today: date) -> list[dict]:
     ]
 
 
+def _funnel(db: Session, days: int, today: date) -> dict:
+    """Sign-up funnel counters for the range (see app/funnel.py)."""
+    table = models.SiteTrafficDaily
+    start = today - timedelta(days=days - 1)
+    counts = dict(db.query(table.key, func.sum(table.count)).filter(
+        table.kind == "funnel", table.day >= start).group_by(table.key).all())
+    return funnel.summary({key: int(value or 0) for key, value in counts.items()})
+
+
+def _retention(db: Session) -> dict:
+    """Opt-in counts for features that bring members back."""
+    return {
+        "weekly_email_subscribers": int(db.query(func.count(models.EmailDigestSubscription.id)).scalar() or 0),
+        "public_profiles": int(db.query(func.count(models.PublicProfile.id)).filter(models.PublicProfile.enabled == True).scalar() or 0),
+    }
+
+
+def _count(query) -> int:
+    return int(query.scalar() or 0)
+
+
+def _growth(db: Session, days: int, now: datetime) -> dict:
+    """This month's growth features: invite links, Ko-fi supporters, weekly email, release calendars and "ask a friend"."""
+    start = now - timedelta(days=days)
+    signup = models.FriendInviteSignup
+    supporter = models.Supporter
+    payment = models.KofiPayment
+    return {
+        "invites": {
+            "links": _count(db.query(func.count(models.FriendInvite.id))),
+            "new_links": _counts_between(db, models.FriendInvite.created_at, start),
+            "signups": _counts_between(db, signup.created_at, start),
+            "friends_made": _counts_between(db, signup.completed_at, start),
+            "awaiting_verification": _count(db.query(func.count(signup.id)).filter(signup.completed_at.is_(None))),
+        },
+        "supporters": {
+            "active": _count(db.query(func.count(supporter.id)).filter(supporter.active_until > now)),
+            "monthly": _count(db.query(func.count(supporter.id)).filter(supporter.active_until > now, supporter.monthly == True)),
+            "all_time": _count(db.query(func.count(supporter.id))),
+            "new": _counts_between(db, supporter.since, start),
+            "payments": _counts_between(db, payment.received_at, start),
+            "unlinked_payments": _count(db.query(func.count(payment.id)).filter(payment.user_id.is_(None))),
+        },
+        "weekly_email": {
+            "subscribers": _count(db.query(func.count(models.EmailDigestSubscription.id))),
+            "new": _counts_between(db, models.EmailDigestSubscription.created_at, start),
+        },
+        "calendar": {
+            "feeds": _count(db.query(func.count(models.CalendarFeed.id))),
+            "new": _counts_between(db, models.CalendarFeed.created_at, start),
+            "refreshed_7d": _count(db.query(func.count(models.CalendarFeed.id))
+                                   .filter(models.CalendarFeed.last_fetched_at >= now - timedelta(days=7))),
+        },
+        "takes": {
+            "asked": _counts_between(db, models.TakeRequest.created_at, start),
+            "answered": _counts_between(db, models.TakeResponse.created_at, start),
+        },
+    }
+
+
+def _announcement_status(db: Session) -> dict | None:
+    try:
+        from .. import announcements
+        return announcements.status(db)
+    except Exception:
+        db.rollback()
+        return None
+
+
+def _comeback_status(db: Session) -> dict | None:
+    try:
+        from .. import comeback
+        return comeback.status(db)
+    except Exception:
+        db.rollback()
+        return None
+
+
+def _title_details(db: Session) -> dict:
+    """How many title pages have their public facts cached (filled in by a background job)."""
+    counts = dict(db.query(models.TitleMetadata.status, func.count(models.TitleMetadata.id))
+                  .group_by(models.TitleMetadata.status).all())
+    return {"found": int(counts.get("ok", 0)), "not_found": int(counts.get("miss", 0)), "errors": int(counts.get("error", 0))}
+
+
 def _system() -> dict:
     database_url = os.getenv("DATABASE_URL", "")
     radar = []
@@ -176,6 +268,7 @@ def _system() -> dict:
             {"name": "OMDb (movie/TV posters)", "configured": bool(os.getenv("OMDB_API_KEY"))},
             {"name": "RAWG (games + Release Radar games)", "configured": bool(os.getenv("RAWG_API_KEY"))},
             {"name": "Email (verification + resets)", "configured": bool(os.getenv("MAIL_USERNAME") and os.getenv("MAIL_PASSWORD"))},
+            {"name": "Google sign-in", "configured": google_signin.configured()},
             {"name": "Amazon Associates tag", "configured": bool(os.getenv("AMAZON_ASSOCIATES_TAG"))},
             {"name": "AdSense publisher id", "configured": bool(os.getenv("ADSENSE_PUBLISHER_ID", "pub-7271682066779719"))},
             {"name": "Traffic counting", "configured": RECORDER.enabled},
@@ -201,11 +294,10 @@ async def site_stats_overview(
     now = datetime.now(timezone.utc).replace(tzinfo=None)
     today = now.date()
     insights = _moderator_site_insights(db)
-    last_login = models.User.last_login_at
     members = {
-        "active_24_hours": _counts_between(db, last_login, now - timedelta(hours=24)),
-        "active_7_days": _counts_between(db, last_login, now - timedelta(days=7)),
-        "active_30_days": _counts_between(db, last_login, now - timedelta(days=30)),
+        "active_24_hours": _active_since(db, now - timedelta(hours=24)),
+        "active_7_days": _active_since(db, now - timedelta(days=7)),
+        "active_30_days": _active_since(db, now - timedelta(days=30)),
         "new_today": _counts_between(db, models.User.created_at, datetime.combine(today, datetime.min.time())),
         "new_in_range": _counts_between(db, models.User.created_at, now - timedelta(days=days)),
         "new_previous_range": _counts_between(
@@ -220,10 +312,15 @@ async def site_stats_overview(
         "signups": _signups(db, days, today),
         "journal_activity": _library_additions(db, days, today),
         "traffic": _traffic(db, days, today),
+        "funnel": _funnel(db, days, today),
+        "retention": _retention(db),
+        "growth": _growth(db, days, now),
         "popular_titles": _popular_titles(db),
         "insights": insights,
-        "system": _system(),
+        "system": {**_system(), "title_details": _title_details(db)},
         "editor_collections": editorial_collections.status(db),
+        "announcement": _announcement_status(db),
+        "comeback": _comeback_status(db),
     }
 
 
@@ -243,3 +340,107 @@ async def publish_editor_collections(
     except ValueError as error:
         db.rollback()
         raise HTTPException(status_code=409, detail=str(error))
+
+
+class FunnelEvent(BaseModel):
+    event: str = Field(..., max_length=40)
+
+
+@router.post("/api/funnel", status_code=204, include_in_schema=False)
+async def record_funnel_event(payload: FunnelEvent, request: Request):
+    """Browser-side sign-up moments (whitelisted names only; nothing about the visitor is stored)."""
+    if payload.event in funnel.CLIENT_EVENTS:
+        funnel.record(payload.event, request)
+    return Response(status_code=204)
+
+
+# ---------------------------------------------------------------- "What's new" email
+
+class AnnouncementAction(BaseModel):
+    action: str = Field(..., pattern="^(start|pause|test)$")
+
+
+@router.get("/site-stats/announcement-preview", include_in_schema=False)
+async def announcement_preview(request: Request, current_user: models.User = Depends(get_current_user),
+                               db: Session = Depends(get_db)):
+    """The update email exactly as the owner would receive it (nothing is sent)."""
+    from fastapi.responses import HTMLResponse
+    from .. import announcements
+    from ..for_you import radar_pool
+    _require_admin(current_user)
+    try:
+        pool = radar_pool(None, getattr(request.app.state, "external_api_client", None))
+    except Exception:
+        pool = None
+    subject, html, _text, _url = announcements.email_for(db, current_user, pool)
+    banner = (f'<div style="font:14px Arial,sans-serif;background:#fef3c7;color:#78350f;padding:10px 16px">'
+              f'Preview only. Subject: <strong>{subject.replace("<", "&lt;")}</strong></div>')
+    response = HTMLResponse(html.replace(
+        '<div style="max-width:560px', banner + '<div style="max-width:560px', 1))
+    response.headers["Content-Security-Policy"] = "default-src 'none'; img-src https: data:; style-src 'unsafe-inline'; frame-ancestors 'none'"
+    _no_store(response)
+    return response
+
+
+@router.post("/api/site-stats/announcement")
+async def announcement_action(payload: AnnouncementAction, request: Request, response: Response,
+                              current_user: models.User = Depends(get_current_user), db: Session = Depends(get_db)):
+    from .. import announcements
+    _require_admin(current_user)
+    _no_store(response)
+    if payload.action == "test":
+        if not announcements.mail_configured():
+            raise HTTPException(status_code=409, detail="Email isn't configured on this server.")
+        try:
+            await announcements.send_test(db, current_user, getattr(request.app.state, "external_api_client", None))
+        except Exception as error:
+            raise HTTPException(status_code=502, detail=f"The test email couldn't be sent: {error}")
+        return {**announcements.status(db), "message": f"Test sent to {current_user.email}."}
+    announcements.set_status(db, "sending" if payload.action == "start" else "paused")
+    return announcements.status(db)
+
+
+# ---------------------------------------------------------------- come-back email
+
+class ComebackAction(BaseModel):
+    action: str = Field(..., pattern="^(start|pause|test)$")
+
+
+@router.get("/site-stats/comeback-preview", include_in_schema=False)
+async def comeback_preview(request: Request, current_user: models.User = Depends(get_current_user),
+                           db: Session = Depends(get_db)):
+    """The come-back email as the owner would receive it (nothing is sent)."""
+    from fastapi.responses import HTMLResponse
+    from .. import comeback
+    from ..for_you import radar_pool
+    _require_admin(current_user)
+    try:
+        pool = radar_pool(None, getattr(request.app.state, "external_api_client", None))
+    except Exception:
+        pool = None
+    subject, html, _text, _url = comeback.email_for(db, current_user, pool)
+    banner = (f'<div style="font:14px Arial,sans-serif;background:#fef3c7;color:#78350f;padding:10px 16px">'
+              f'Preview only, filled in from your own library. Subject: <strong>{subject.replace("&", "&amp;").replace("<", "&lt;")}</strong></div>')
+    response = HTMLResponse(html.replace(
+        '<div style="max-width:560px', banner + '<div style="max-width:560px', 1))
+    response.headers["Content-Security-Policy"] = "default-src 'none'; img-src https: data:; style-src 'unsafe-inline'; frame-ancestors 'none'"
+    _no_store(response)
+    return response
+
+
+@router.post("/api/site-stats/comeback")
+async def comeback_action(payload: ComebackAction, request: Request, response: Response,
+                          current_user: models.User = Depends(get_current_user), db: Session = Depends(get_db)):
+    from .. import comeback
+    _require_admin(current_user)
+    _no_store(response)
+    if payload.action == "test":
+        if not comeback.mail_configured():
+            raise HTTPException(status_code=409, detail="Email isn't configured on this server.")
+        try:
+            await comeback.send_test(db, current_user, getattr(request.app.state, "external_api_client", None))
+        except Exception as error:
+            raise HTTPException(status_code=502, detail=f"The test email couldn't be sent: {error}")
+        return {**comeback.status(db), "message": f"Test sent to {current_user.email}."}
+    comeback.set_status(db, "sending" if payload.action == "start" else "paused")
+    return comeback.status(db)
