@@ -61,7 +61,7 @@ async def change_username(
 ):
     """Change username (requires password confirmation)."""
     if not _password_confirmed(current_user, username_change.password):
-        raise HTTPException(status_code=401, detail="Incorrect password")
+        raise HTTPException(status_code=400, detail="Incorrect password")
     
     from ..signup_rules import username_problem, username_taken
     if username_change.new_username != current_user.username:
@@ -101,7 +101,7 @@ async def change_email(
 ):
     """Change email address (requires password + sends verification email to new address)."""
     if not _password_confirmed(current_user, email_change.password):
-        raise HTTPException(status_code=401, detail="Incorrect password")
+        raise HTTPException(status_code=400, detail="Incorrect password")
     
     from ..signup_rules import email_problem, email_taken
     problem = email_problem(email_change.new_email)
@@ -139,7 +139,7 @@ async def change_password(
 ):
     """Change password (requires current password)."""
     if not _password_confirmed(current_user, password_change.current_password):
-        raise HTTPException(status_code=401, detail="Incorrect current password")
+        raise HTTPException(status_code=400, detail="Incorrect current password")
     
     is_valid, error_msg = auth.validate_password_strength(
         password_change.new_password, current_user.username, current_user.email)
@@ -395,7 +395,7 @@ async def deactivate_account(
         # Reactivating later needs a password, so an account made with Google chooses one first.
         raise HTTPException(status_code=400, detail="Set a password under Change Password first. You'll need it to reactivate your account later.")
     if not auth.verify_password(deactivate.password, current_user.hashed_password):
-        raise HTTPException(status_code=401, detail="Incorrect password")
+        raise HTTPException(status_code=400, detail="Incorrect password")
     
     deactivated_user = crud.deactivate_user(db, current_user.id)
     if deactivated_user is None:

@@ -399,7 +399,7 @@ async def radar_hub(request: Request, db: Session = Depends(get_db)):
     tracked_html = ""
     if most_tracked:
         rows = "".join(
-            f'<li><a href="/release-radar/{i["category"]}#item-{escape(i["key"], quote=True)}">{escape(i["title"])}</a>'
+            f'<li><a href="{radar.item_path(i)}#item-{escape(i["key"], quote=True)}">{escape(i["title"])}</a>'
             f' <span class="muted">{escape(radar.CATEGORY_SINGULAR[i["category"]])} · {count} {"library" if count == 1 else "libraries"}</span></li>'
             for count, i in most_tracked
         )
@@ -641,7 +641,7 @@ def home_strip_html(client=None, today: Optional[date] = None) -> str:
         art = (f'<img src="{escape(item["image"], quote=True)}" alt="" width="200" height="300" loading="lazy" decoding="async" referrerpolicy="no-referrer">'
                if item.get("image") else f'<span class="lp-radar-card__initial" aria-hidden="true">{escape(item["title"][:1].upper())}</span>')
         cards.append(
-            f'<li><a class="lp-radar-card" href="/release-radar/{item["category"]}#item-{escape(item["key"], quote=True)}">'
+            f'<li><a class="lp-radar-card" href="{radar.item_path(item)}#item-{escape(item["key"], quote=True)}">'
             f'<span class="lp-radar-card__art">{art}<span class="lp-radar-card__type">{labels[item["category"]]}</span></span>'
             f'<span class="lp-radar-card__date"><time datetime="{item["date"]}">{_format_day(item["date"])}</time></span>'
             f'<span class="lp-radar-card__title">{escape(item["title"])}</span></a></li>'

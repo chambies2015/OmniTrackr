@@ -214,14 +214,14 @@ def test_google_member_sets_a_password_without_a_current_one(client, google, db_
     user = _user(db_session, "newfan@gmail.com")
     assert user.password_set is True and user.has_password
     # From now on the password is needed like for everyone else.
-    assert client.put("/account/username", json={"new_username": "riley_again"}).status_code == 401
+    assert client.put("/account/username", json={"new_username": "riley_again"}).status_code == 400
     login = client.post("/auth/login", data={"username": "riley_reads", "password": "lanterns over the bay"})
     assert login.status_code == 200
 
 
 def test_password_members_still_need_their_password(authenticated_client):
     response = authenticated_client.put("/account/username", json={"new_username": "someone_new"})
-    assert response.status_code == 401
+    assert response.status_code == 400
     assert authenticated_client.get("/account/me").json()["has_password"] is True
 
 

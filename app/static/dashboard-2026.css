@@ -153,7 +153,7 @@ body.app-shell .library-add-panel .collapsible-header h2,
 body.app-shell .library-add-panel .collapsible-header h2 * { background: none !important; -webkit-text-fill-color: currentColor; text-shadow: none; }
 body.app-shell .library-add-toggle { color: var(--fg); font-family: Poppins, Inter, sans-serif; font-size: 1.05rem; padding-inline: 4px; }
 body.app-shell .library-add-toggle > span:first-child::before { color: var(--primary); content: "+"; font-weight: 700; margin-right: 10px; }
-body.app-shell .stats-page-heading { margin-bottom: 20px; }
+body.app-shell .stats-page-heading { display: block; margin-bottom: 20px; }
 body.app-shell .stats-page-heading__eyebrow { color: var(--teal); font-size: .74rem; font-weight: 700; letter-spacing: .14em; margin: 0 0 6px; text-transform: uppercase; }
 body.app-shell .stats-page-heading h2 { color: var(--fg); font-size: 1.6rem; margin: 0; }
 

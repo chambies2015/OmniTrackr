@@ -28,7 +28,30 @@ def create_friend_request(db: Session, sender_id: int, receiver_id: int) -> Opti
         models.FriendRequest.status == "pending"
     ).first()
     
+    if existing and existing.expires_at and existing.expires_at < datetime.utcnow():
+        existing.status = "expired"
+        db.commit()
+        existing = None
+
+    if existing and existing.sender_id == receiver_id:
+        # They already asked us: sending one back means yes, so accept theirs.
+        return accept_friend_request(db, existing.id, sender_id)
+
     if existing:
+        # The receiver may have dismissed the notification, which was the only
+        # place to answer it; bring it back so the request isn't stuck.
+        has_notification = db.query(models.Notification.id).filter(
+            models.Notification.friend_request_id == existing.id,
+            models.Notification.user_id == receiver_id,
+        ).first()
+        if not has_notification:
+            create_notification(
+                db=db,
+                user_id=receiver_id,
+                type="friend_request_received",
+                message=f"{get_user_by_id(db, sender_id).username} sent you a friend request",
+                friend_request_id=existing.id
+            )
         raise ValueError("Friend request already exists")
     
     friend_request = models.FriendRequest(
@@ -158,6 +181,11 @@ def cancel_friend_request(db: Session, request_id: int, user_id: int) -> Optiona
     if friend_request.status != "pending":
         raise ValueError("Friend request is not pending")
     
+    # Remove the receiver's Accept/Deny notification for a request that no longer exists.
+    db.query(models.Notification).filter(
+        models.Notification.friend_request_id == request_id,
+        models.Notification.user_id == friend_request.receiver_id,
+    ).delete(synchronize_session=False)
     friend_request.status = "cancelled"
     db.commit()
     
@@ -469,10 +497,67 @@ def get_friend_statistics(db: Session, friend_id: int) -> Optional[dict]:
     
     # Return compact statistics (watch and rating stats only)
     watch_stats = get_watch_statistics(db, friend_id)
-    rating_stats = get_rating_statistics(db, friend_id)
+    hidden = [entry for entry in _FRIEND_STAT_CATEGORIES if getattr(friend, entry[0] + "_private", False)]
+    if hidden:
+        # Private categories must not show up through stats either.
+        watch_stats = _without_categories(watch_stats, hidden)
+        rating_stats = _visible_rating_statistics(db, friend_id, hidden)
+    else:
+        rating_stats = get_rating_statistics(db, friend_id)
     
     return {
         "watch_stats": watch_stats,
         "rating_stats": rating_stats
     }
 
+
+
+# (privacy prefix, watch-stat suffix, model, finished column, label in rating lists)
+_FRIEND_STAT_CATEGORIES = (
+    ("movies", "movies", "Movie", "watched", "Movie"),
+    ("tv_shows", "tv_shows", "TVShow", "watched", "TV Show"),
+    ("anime", "anime", "Anime", "watched", "Anime"),
+    ("video_games", "video_games", "VideoGame", "played", "Video Game"),
+    ("music", "music", "Music", "listened", "Music"),
+    ("books", "books", "Book", "read", "Book"),
+)
+
+
+def _without_categories(watch_stats: dict, hidden) -> dict:
+    stats = dict(watch_stats)
+    for _, suffix, _, _, _ in hidden:
+        for key in [key for key in stats if key.endswith("_" + suffix) and key != "total_items"]:
+            stats[key] = 0
+    total = sum(stats["total_" + entry[1]] for entry in _FRIEND_STAT_CATEGORIES)
+    done = sum(stats[f"{finished}_{suffix}"] for _, suffix, _, finished, _ in _FRIEND_STAT_CATEGORIES)
+    stats.update(total_items=total, watched_items=done, unwatched_items=total - done,
+                 completion_percentage=round((done / total * 100) if total > 0 else 0, 1))
+    return stats
+
+
+def _visible_rating_statistics(db: Session, user_id: int, hidden) -> dict:
+    from .statistics import _rating_bucket
+    rated = []
+    for entry in _FRIEND_STAT_CATEGORIES:
+        if entry in hidden:
+            continue
+        model = getattr(models, entry[2])
+        rows = db.query(model.title, model.rating).filter(model.user_id == user_id, model.rating.isnot(None)).all()
+        rated.extend({"title": title, "type": entry[4], "rating": rating} for title, rating in rows)
+    if not rated:
+        return {"average_rating": 0, "total_rated_items": 0, "rating_distribution": {},
+                "highest_rated": [], "lowest_rated": []}
+    ratings = [row["rating"] for row in rated]
+    distribution = {}
+    for bucket in range(0, 11):
+        count = sum(1 for rating in ratings if _rating_bucket(rating) == bucket)
+        if count:
+            distribution[str(bucket)] = count
+    highest, lowest = max(ratings), min(ratings)
+    return {
+        "average_rating": round(sum(ratings) / len(ratings), 1),
+        "total_rated_items": len(ratings),
+        "rating_distribution": distribution,
+        "highest_rated": [row for row in rated if row["rating"] == highest][:5],
+        "lowest_rated": [row for row in rated if row["rating"] == lowest][:5],
+    }

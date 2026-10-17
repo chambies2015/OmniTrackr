@@ -31,9 +31,10 @@ def item_link(item: dict) -> str:
     category = item["category"]
     if category not in radar.CATEGORY_ORDER:
         return "/release-radar"
+    path = radar.item_path(item)
     if SAFE_KEY.match(item.get("key") or ""):
-        return f"/release-radar/{category}#item-{item['key']}"
-    return f"/release-radar/{category}"
+        return f"{path}#item-{item['key']}"
+    return path
 
 
 def out_today(pool: list[dict], today: date) -> list[dict]:

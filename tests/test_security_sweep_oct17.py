@@ -180,3 +180,17 @@ def test_collection_name_cannot_pull_in_a_later_template_value(client, db_sessio
     assert "{{STRUCTURED_DATA}}" in response.text
     # The JSON-LD appears once, in its own script, never inside an attribute.
     assert response.text.count('"@context"') == 1
+
+
+def test_friend_statistics_leave_out_private_categories(client, db_session):
+    reader = member(db_session, "statreader")
+    friend = member(db_session, "statfriend", books_private=True)
+    db_session.add(models.Friendship(user1_id=min(reader.id, friend.id), user2_id=max(reader.id, friend.id)))
+    db_session.add(models.Movie(user_id=friend.id, title="Open Film", rating=7, watched=True))
+    db_session.add(models.Book(user_id=friend.id, title="Hidden Diary", rating=10, read=True))
+    db_session.commit()
+    stats = signed_in(client, reader).get(f"/friends/{friend.id}/statistics").json()
+    assert "Hidden Diary" not in str(stats)
+    assert stats["watch_stats"]["total_books"] == 0 and stats["watch_stats"]["total_items"] == 1
+    assert stats["rating_stats"]["total_rated_items"] == 1
+    assert stats["rating_stats"]["highest_rated"] == [{"title": "Open Film", "type": "Movie", "rating": 7}]

@@ -327,8 +327,8 @@ window.changePassword = async function (event) {
     return;
   }
 
-  if (newPassword.length < 6) {
-    errorEl.textContent = 'Password must be at least 6 characters';
+  if (newPassword.length < 8) {
+    errorEl.textContent = 'Password must be at least 8 characters';
     errorEl.style.display = 'block';
     return;
   }
@@ -906,8 +906,12 @@ window.sendFriendRequest = async function (event) {
     });
 
     if (response.ok) {
-      successEl.textContent = `Friend request sent to ${username}!`;
+      const sent = await response.json().catch(() => ({}));
+      // Sending a request back to someone who already asked accepts theirs.
+      const accepted = sent.status === 'accepted';
+      successEl.textContent = accepted ? `You and ${username} are now friends!` : `Friend request sent to ${username}!`;
       successEl.style.display = 'block';
+      if (accepted) loadFriendsList();
       document.getElementById('friendRequestForm').reset();
       if (typeof scheduleLibraryLaunchpadRefresh === 'function') scheduleLibraryLaunchpadRefresh(false);
       setTimeout(() => {

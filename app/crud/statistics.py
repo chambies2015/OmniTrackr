@@ -7,6 +7,11 @@ from sqlalchemy import func
 from .. import models
 
 
+def _rating_bucket(rating) -> int:
+    """Whole-star bucket for the rating chart, rounding halves up (7.5 -> 8, 8.5 -> 9)."""
+    return int(float(rating) + 0.5)
+
+
 def get_watch_statistics(db: Session, user_id: int) -> dict:
     """Get overall watch statistics"""
     total_movies = db.query(models.Movie).filter(models.Movie.user_id == user_id).count()
@@ -105,7 +110,7 @@ def get_rating_statistics(db: Session, user_id: int) -> dict:
     
     distribution = {}
     for i in range(0, 11):
-        count = sum(1 for rating in all_ratings if round(rating) == i)
+        count = sum(1 for rating in all_ratings if _rating_bucket(rating) == i)
         if count > 0:
             distribution[str(i)] = count
     
@@ -309,7 +314,7 @@ def get_movie_statistics(db: Session, user_id: int) -> dict:
         avg_rating = round(sum(movie_ratings) / len(movie_ratings), 1)
         distribution = {}
         for i in range(0, 11):
-            count = sum(1 for rating in movie_ratings if round(rating) == i)
+            count = sum(1 for rating in movie_ratings if _rating_bucket(rating) == i)
             if count > 0:
                 distribution[str(i)] = count
         
@@ -387,7 +392,7 @@ def get_tv_show_statistics(db: Session, user_id: int) -> dict:
         avg_rating = round(sum(tv_ratings) / len(tv_ratings), 1)
         distribution = {}
         for i in range(0, 11):
-            count = sum(1 for rating in tv_ratings if round(rating) == i)
+            count = sum(1 for rating in tv_ratings if _rating_bucket(rating) == i)
             if count > 0:
                 distribution[str(i)] = count
         
@@ -494,7 +499,7 @@ def get_anime_statistics(db: Session, user_id: int) -> dict:
         avg_rating = round(sum(anime_ratings) / len(anime_ratings), 1)
         distribution = {}
         for i in range(0, 11):
-            count = sum(1 for rating in anime_ratings if round(rating) == i)
+            count = sum(1 for rating in anime_ratings if _rating_bucket(rating) == i)
             if count > 0:
                 distribution[str(i)] = count
         
@@ -607,7 +612,7 @@ def get_video_game_statistics(db: Session, user_id: int) -> dict:
         avg_rating = round(sum(video_game_ratings) / len(video_game_ratings), 1)
         distribution = {}
         for i in range(0, 11):
-            count = sum(1 for rating in video_game_ratings if round(rating) == i)
+            count = sum(1 for rating in video_game_ratings if _rating_bucket(rating) == i)
             if count > 0:
                 distribution[str(i)] = count
         
@@ -711,7 +716,7 @@ def get_music_statistics(db: Session, user_id: int) -> dict:
         avg_rating = round(sum(music_ratings) / len(music_ratings), 1)
         distribution = {}
         for i in range(0, 11):
-            count = sum(1 for rating in music_ratings if round(rating) == i)
+            count = sum(1 for rating in music_ratings if _rating_bucket(rating) == i)
             if count > 0:
                 distribution[str(i)] = count
         
@@ -791,7 +796,7 @@ def get_books_statistics(db: Session, user_id: int) -> dict:
         avg_rating = round(sum(book_ratings) / len(book_ratings), 1)
         distribution = {}
         for i in range(0, 11):
-            count = sum(1 for rating in book_ratings if round(rating) == i)
+            count = sum(1 for rating in book_ratings if _rating_bucket(rating) == i)
             if count > 0:
                 distribution[str(i)] = count
         

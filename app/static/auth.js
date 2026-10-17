@@ -360,6 +360,10 @@ async function authenticatedFetch(url, options = {}) {
 
 // Turn any API error body into one sentence a person can act on.
 function authErrorMessage(body, fallback) {
+    // Rate limits answer {"error": "Rate limit exceeded: ..."} with no detail.
+    if (body && typeof body.error === 'string' && /rate limit/i.test(body.error)) {
+        return 'Too many attempts. Please wait a minute and try again.';
+    }
     const detail = body && body.detail;
     if (typeof detail === 'string' && detail.trim()) return detail;
     if (Array.isArray(detail) && detail.length) {
@@ -475,7 +479,8 @@ async function login(username, password) {
     });
 
     if (!response.ok) {
-        const error = await response.json();
+        const error = await response.json().catch(() => ({}));
+        if (response.status === 429) throw new Error(authErrorMessage(error, 'Too many attempts. Please wait a minute and try again.'));
         // Check if it's an email verification error (403)
         if (response.status === 403) {
             const errorMsg = error.detail || 'Please verify your email address before logging in.';
@@ -956,8 +961,8 @@ function setupAuthHandlers() {
                 displayAuthSuccess('If that email is registered, you will receive a password reset link. Please check your email.');
                 document.getElementById('forgotPasswordFormElement').reset();
             } else {
-                const error = await response.json();
-                displayAuthError(error.detail || 'Failed to send reset link');
+                const error = await response.json().catch(() => ({}));
+                displayAuthError(authErrorMessage(error, 'Failed to send reset link'));
             }
         } catch (error) {
             displayAuthError('Failed to send reset link. Please try again.');
@@ -975,8 +980,8 @@ function setupAuthHandlers() {
             return;
         }
 
-        if (newPassword.length < 6) {
-            displayAuthError('Password must be at least 6 characters');
+        if (newPassword.length < 8) {
+            displayAuthError('Password must be at least 8 characters');
             return;
         }
 
@@ -1006,10 +1011,11 @@ function setupAuthHandlers() {
                 setTimeout(() => {
                     window.history.replaceState({}, document.title, window.location.pathname);
                     showLoginForm();
+                    displayAuthSuccess(data.message);
                 }, 2000);
             } else {
-                const error = await response.json();
-                displayAuthError(error.detail || 'Failed to reset password');
+                const error = await response.json().catch(() => ({}));
+                displayAuthError(authErrorMessage(error, 'Failed to reset password'));
             }
         } catch (error) {
             displayAuthError('Failed to reset password. Please try again.');
@@ -1214,11 +1220,21 @@ async function handleEmailChangeVerification(token) {
         // Clean URL
         window.history.replaceState({}, document.title, window.location.pathname);
     } else {
-        // User not logged in, show auth modal with success message
+        // Not logged in here: the link still has to be confirmed with the server.
         showAuthModal();
         revealAuthCard();
-        displayAuthSuccess('✅ Email changed successfully! Please log in with your new email.');
         showLoginForm();
+        try {
+            const response = await fetch(`${AUTH_API_BASE}/auth/verify-email?token=${encodeURIComponent(token)}`, { credentials: 'same-origin' });
+            const data = await response.json().catch(() => ({}));
+            if (response.ok) {
+                displayAuthSuccess('✅ Email changed successfully! Please log in with your new email.');
+            } else {
+                displayAuthError(typeof data.detail === 'string' ? data.detail : 'Email change verification failed');
+            }
+        } catch (error) {
+            displayAuthError('Failed to verify email change. Please try again.');
+        }
         window.history.replaceState({}, document.title, window.location.pathname);
     }
 }
@@ -1247,6 +1263,13 @@ async function handleEmailVerification(token) {
                 window.location.assign(consumeDiscoverAuthReturn());
                 return;
             }
+            if (isAuthenticated() && document.getElementById('mainContainer')) {
+                // Already signed in here (e.g. the link was opened again): stay in the library.
+                hideAuthModal();
+                showMainUI();
+                updateUserDisplay();
+                return;
+            }
             showLoginForm();
             displayAuthSuccess('Email verified! Log in to open your library.');
             const loginField = document.getElementById('loginUsername');
@@ -1254,10 +1277,15 @@ async function handleEmailVerification(token) {
             const passwordField = document.getElementById('loginPassword');
             if (passwordField) passwordField.focus();
         } else {
-            displayAuthError(data.detail || 'Email verification failed');
+            const message = data.detail || 'Email verification failed';
+            displayAuthError(message);
             setTimeout(() => {
                 window.history.replaceState({}, document.title, window.location.pathname);
                 showLoginForm();
+                // showLoginForm clears messages; keep the reason and offer a fresh link.
+                displayAuthError(message);
+                const resend = document.getElementById('resendVerificationContainer');
+                if (resend) resend.style.display = 'block';
             }, 3000);
         }
     } catch (error) {

@@ -293,6 +293,20 @@ async function handleAddCustomTabItem(tab) {
   }
 }
 
+// Lookup results only fill fields this tab defines and the member left empty;
+// the server rejects keys a tab doesn't have, which used to block the whole add.
+function applyMetadataField(tab, fieldValues, key, value) {
+  const field = (tab.fields || []).find(f => f.key === key);
+  if (!field) return;
+  const current = fieldValues[key];
+  if (current !== undefined && current !== null && current !== '') return;
+  if ((field.field_type === 'number' || field.field_type === 'rating') && !Number.isFinite(Number(value))) return;
+  if (field.field_type === 'rating' && (Number(value) < 0 || Number(value) > 10)) return;
+  if (field.field_type === 'date' && !/^\d{4}-\d{2}-\d{2}$/.test(String(value))) return;
+  if (field.field_type === 'boolean') return;
+  fieldValues[key] = value;
+}
+
 async function fetchMetadataForCustomTab(tab, title, fieldValues, posterUrl, posterFile = null) {
   try {
     let metadataFetched = false;
@@ -311,8 +325,8 @@ async function fetchMetadataForCustomTab(tab, title, fieldValues, posterUrl, pos
           if (data.Response === 'True' && data.Poster && data.Poster !== 'N/A') {
             posterUrl = posterUrl || data.Poster;
             if (data.Title) fieldValues.title = data.Title;
-            if (data.Year) fieldValues.year = parseInt(data.Year);
-            if (data.Director && data.Director !== 'N/A') fieldValues.director = data.Director;
+            if (data.Year) applyMetadataField(tab, fieldValues, 'year', parseInt(data.Year));
+            if (data.Director && data.Director !== 'N/A') applyMetadataField(tab, fieldValues, 'director', data.Director);
             metadataFetched = true;
           }
         }
@@ -337,9 +351,9 @@ async function fetchMetadataForCustomTab(tab, title, fieldValues, posterUrl, pos
             if (posterUrlFromApi) {
               posterUrl = posterUrl || posterUrlFromApi;
               if (anime.title) fieldValues.title = anime.title;
-              if (anime.year) fieldValues.year = anime.year;
-              if (anime.seasons) fieldValues.seasons = anime.seasons;
-              if (anime.episodes) fieldValues.episodes = anime.episodes;
+              if (anime.year) applyMetadataField(tab, fieldValues, 'year', anime.year);
+              if (anime.seasons) applyMetadataField(tab, fieldValues, 'seasons', anime.seasons);
+              if (anime.episodes) applyMetadataField(tab, fieldValues, 'episodes', anime.episodes);
               metadataFetched = true;
             }
           }
@@ -364,12 +378,12 @@ async function fetchMetadataForCustomTab(tab, title, fieldValues, posterUrl, pos
             if (game.background_image) {
               posterUrl = posterUrl || game.background_image;
               if (game.name) fieldValues.title = game.name;
-              if (game.released) fieldValues.release_date = game.released;
+              if (game.released) applyMetadataField(tab, fieldValues, 'release_date', game.released);
               if (game.genres && game.genres.length > 0) {
-                fieldValues.genres = game.genres.map(g => g.name).join(', ');
+                applyMetadataField(tab, fieldValues, 'genres', game.genres.map(g => g.name).join(', '));
               }
               if (game.slug) {
-                fieldValues.rawg_link = `https://rawg.io/games/${game.slug}`;
+                applyMetadataField(tab, fieldValues, 'rawg_link', `https://rawg.io/games/${game.slug}`);
               }
               metadataFetched = true;
             }

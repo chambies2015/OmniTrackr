@@ -196,7 +196,7 @@ def _radar_card(item: dict, reason: str = "") -> dict:
         "details": item.get("details", [])[:2],
         "window": item.get("window"),
         "key": item["key"],
-        "url": f"/release-radar/{item['category']}#item-{item['key']}",
+        "url": f"{radar.item_path(item)}#item-{item['key']}",
         "reason": reason,
         "source": "radar",
     }

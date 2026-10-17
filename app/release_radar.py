@@ -154,6 +154,17 @@ def parse_window(category: str, slug: str, today: Optional[date] = None) -> Opti
 # Normalization helpers
 # ---------------------------------------------------------------------------
 
+def item_path(item: dict, today: Optional[date] = None) -> str:
+    """The Release Radar page listing this item: the category page shows the featured
+    period, so items from another period link to their own period's page."""
+    category = item["category"]
+    path = f"/release-radar/{category}"
+    slug = item.get("window")
+    if slug and slug != featured_window(category, today).slug and parse_window(category, slug, today):
+        path += f"/{slug}"
+    return path
+
+
 def _clean_text(value: Any, limit: int = 160) -> str:
     if value is None:
         return ""

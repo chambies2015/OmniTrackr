@@ -5,7 +5,7 @@ from datetime import datetime
 from typing import List
 from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session, joinedload
-from sqlalchemy import and_, or_
+from sqlalchemy import and_, func, or_
 
 from ..integer_bounds import PositiveDatabaseId
 from .. import crud, schemas, models
@@ -23,6 +23,12 @@ async def send_friend_request(
     """Send a friend request to another user by username."""
     # Find the receiver by username
     receiver = crud.get_user_by_username(db, request_data.receiver_username)
+    if receiver is None:
+        # Usernames are unique regardless of case, so "Alice" should find "alice".
+        matches = db.query(models.User).filter(
+            func.lower(models.User.username) == (request_data.receiver_username or "").strip().lower()
+        ).limit(2).all()
+        receiver = matches[0] if len(matches) == 1 else None
     if not receiver or not receiver.is_active:
         raise HTTPException(status_code=404, detail="User not found")
     
