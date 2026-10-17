@@ -222,6 +222,10 @@ def starter_picks(db: Session, user_id: int, today: Optional[date] = None, clien
     today = today or radar.today_utc()
     owned = owned_titles(db, user_id)
     total = sum(len(titles) for titles in owned.values())
+    if total >= STARTER_GOAL:
+        # The dashboard shows quick start only below the goal and discards the picks
+        # otherwise; ranking every member's titles for them took most of the request.
+        return {"library_total": total, "goal": STARTER_GOAL, "popular": [], "upcoming": []}
     popular = []
     for category in LIBRARY:
         popular.extend(popular_titles(db, category, exclude_user_id=user_id, limit=6))

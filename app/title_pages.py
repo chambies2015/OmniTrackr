@@ -11,9 +11,10 @@ import re
 import unicodedata
 from collections import Counter
 from dataclasses import dataclass, field
+from functools import lru_cache
 from typing import Optional
 
-from sqlalchemy import func
+from sqlalchemy import func, or_
 from sqlalchemy.orm import Session
 
 from . import models
@@ -44,6 +45,7 @@ def normalize(title: str) -> str:
     return " ".join((title or "").strip().casefold().split())
 
 
+@lru_cache(maxsize=16384)
 def slugify(text: str) -> str:
     text = unicodedata.normalize("NFKD", text or "").encode("ascii", "ignore").decode("ascii").lower()
     text = re.sub(r"[^a-z0-9]+", "-", text).strip("-")
@@ -165,6 +167,62 @@ def find(db: Session, kind: str, slug: str) -> Optional[TitleGroup]:
     return None
 
 
+def _slug_candidates(slug: str) -> list[tuple[str, Optional[int]]]:
+    """The (title slug, year) pairs a URL slug can name, in the order find() tries them."""
+    base, separator, year_suffix = slug.rpartition("-")
+    pairs = [(slug, None)]
+    if base and separator and len(year_suffix) == 4 and year_suffix.isdigit():
+        pairs.insert(0, (base, int(year_suffix)))
+    return [(base, year) for base, year in pairs if any(base.split("-"))]
+
+
+def find_many(db: Session, kind: str, slugs) -> dict[str, TitleGroup]:
+    """find() for many slugs of one kind, reading titles and years once instead of once per slug.
+
+    The sitemap checks hundreds of titles; one find() each scanned the library tables
+    hundreds of times.
+    """
+    if kind not in KINDS:
+        return {}
+    plans = {slug: _slug_candidates(slug) for slug in dict.fromkeys(slugs)
+             if re.fullmatch(r"[a-z0-9-]{1,130}", slug or "")}
+    wanted = {pair for pairs in plans.values() for pair in pairs}
+    if not wanted:
+        return {}
+    model = KINDS[kind][0]
+    years = {year for _, year in wanted}
+    year_column = model.release_date if kind == "game" else model.year
+    query = _visible_rows(db, kind, model).with_entities(model.id, model.title, year_column)
+    if kind != "game":
+        # A year of 0 counts as no year (item_year), so it can only match a yearless slug.
+        known = [year for year in years if year is not None]
+        query = query.filter(or_(model.year.in_(known), model.year.is_(None), model.year == 0) if None in years
+                             else model.year.in_(known))
+    ids_by_pair: dict = {}
+    for row_id, title, year_value in query.order_by(model.id):
+        row_year = (year_value.year if year_value else None) if kind == "game" else (year_value or None)
+        if row_year not in years:
+            continue
+        pair = (slugify(title or ""), row_year)
+        if pair in wanted:
+            ids_by_pair.setdefault(pair, []).append(row_id)
+    needed = sorted({row_id for ids in ids_by_pair.values() for row_id in ids})
+    rows_by_id = {}
+    for start in range(0, len(needed), 1000):
+        chunk = needed[start:start + 1000]
+        rows_by_id.update({row.id: row for row in db.query(model).filter(model.id.in_(chunk))})
+    groups = {}
+    for slug, pairs in plans.items():
+        for pair in pairs:
+            rows = [rows_by_id[row_id] for row_id in ids_by_pair.get(pair, ()) if row_id in rows_by_id]
+            if rows:
+                names = Counter((row.title or "").strip() for row in rows)
+                display = names.most_common(1)[0][0]
+                groups[slug] = TitleGroup(kind, display, pair[1], normalize(display), rows)
+                break
+    return groups
+
+
 def _public_reviews(db: Session, kind: str, items: list) -> list[dict]:
     from .routers.reviews import _current_state_hides_review
     _, review_category, _, _, _ = KINDS[kind]
@@ -265,8 +323,12 @@ def _safe_image(url) -> Optional[str]:
     return None
 
 
-def summarize(db: Session, group: TitleGroup) -> dict:
-    """Member data for a title page (aggregates only, never who tracks it)."""
+def summarize(db: Session, group: TitleGroup, *, page_sections: bool = True) -> dict:
+    """Member data for a title page (aggregates only, never who tracks it).
+
+    page_sections=False skips the collections and "also tracked" lists, which only the
+    page itself shows. The sitemap checks hundreds of titles and needs neither.
+    """
     kind = group.kind
     editors = {uid for uid, in _editor_ids(db).all()}
     member_items = [item for item in group.items if item.user_id not in editors]
@@ -296,8 +358,8 @@ def summarize(db: Session, group: TitleGroup) -> dict:
         "image": images.most_common(1)[0][0] if images else None,
         "reviews": reviews,
         "search_ready_reviews": sum(1 for review in reviews if review["search_ready"]),
-        "collections": _collections_featuring(db, kind, group.items),
-        "related": _related(db, kind, group),
+        "collections": _collections_featuring(db, kind, group.items) if page_sections else [],
+        "related": _related(db, kind, group) if page_sections else [],
     }
 
 

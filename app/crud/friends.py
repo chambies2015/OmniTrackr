@@ -235,16 +235,11 @@ def get_friends(db: Session, user_id: int) -> List[models.User]:
         )
     ).all()
     
-    friends = []
-    for friendship in friendships:
-        if friendship.user1_id == user_id:
-            friend = get_user_by_id(db, friendship.user2_id)
-        else:
-            friend = get_user_by_id(db, friendship.user1_id)
-        if friend and friend.is_active:
-            friends.append(friend)
-    
-    return friends
+    friend_ids = [friendship.user2_id if friendship.user1_id == user_id else friendship.user1_id
+                  for friendship in friendships]
+    # One query for every friend instead of one each, in the same order as before.
+    users = {user.id: user for user in db.query(models.User).filter(models.User.id.in_(friend_ids))} if friend_ids else {}
+    return [users[friend_id] for friend_id in friend_ids if friend_id in users and users[friend_id].is_active]
 
 
 def are_friends(db: Session, user1_id: int, user2_id: int, include_deactivated: bool = False) -> bool:
@@ -308,11 +303,26 @@ def create_notification(db: Session, user_id: int, type: str, message: str, frie
     return notification
 
 
-def get_notifications(db: Session, user_id: int) -> List[models.Notification]:
-    """Get all notifications for a user (newest first)."""
-    return db.query(models.Notification).filter(
+def get_notifications(db: Session, user_id: int, limit: Optional[int] = None,
+                      unread_limit: int = 0) -> List[models.Notification]:
+    """Notifications for a user, newest first.
+
+    With a limit: the newest `limit`, plus up to `unread_limit` older unread ones, so a
+    long-ignored bell still lists every pending friend request without sending thousands.
+    """
+    query = db.query(models.Notification).filter(
         models.Notification.user_id == user_id
-    ).order_by(desc(models.Notification.created_at), desc(models.Notification.id)).all()
+    ).order_by(desc(models.Notification.created_at), desc(models.Notification.id))
+    if limit is None:
+        return query.all()
+    newest = query.limit(limit).all()
+    if len(newest) < limit or unread_limit <= 0:
+        return newest
+    shown = [notification.id for notification in newest]
+    older_unread = query.filter(
+        models.Notification.read_at.is_(None), models.Notification.id.notin_(shown)
+    ).limit(unread_limit).all()
+    return newest + older_unread
 
 
 def get_unread_notification_count(db: Session, user_id: int) -> int:
