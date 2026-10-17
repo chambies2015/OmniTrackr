@@ -261,3 +261,37 @@ def test_image_proxy_caps_each_visitor_and_reuses_posters(monkeypatch):
     asyncio.run(run())
     assert max(upstream.peak.values()) <= tier_list_router.IMAGE_SLOTS_PER_CLIENT
     assert tier_list_router._client_slots == {}
+
+
+# ---------------------------------------------------------------- notifications and custom tabs
+
+def test_bell_lists_newest_notifications_and_every_older_unread(authenticated_client, db_session, monkeypatch):
+    from datetime import datetime, timedelta
+    from app.routers import notifications as notifications_router
+    monkeypatch.setattr(notifications_router, "NOTIFICATION_LIST_LIMIT", 5)
+    monkeypatch.setattr(notifications_router, "NOTIFICATION_UNREAD_LIMIT", 10)
+    me, start = _me(db_session), datetime(2026, 1, 1)
+    for n in range(20):
+        db_session.add(models.Notification(user_id=me.id, type="note", message=f"n{n}",
+                                           created_at=start + timedelta(minutes=n),
+                                           read_at=None if n in (2, 7) else start))
+    db_session.commit()
+    messages = [row["message"] for row in authenticated_client.get("/notifications").json()]
+    assert messages == ["n19", "n18", "n17", "n16", "n15", "n7", "n2"]
+    assert len(crud.get_notifications(db_session, me.id)) == 20  # no limit: everything, as before
+
+
+def test_custom_tab_lists_skip_poster_bytes_but_posters_still_serve(authenticated_client, db_session):
+    me = _me(db_session)
+    tab = models.CustomTab(user_id=me.id, name="Podcasts", slug="podcasts")
+    db_session.add(tab)
+    db_session.flush()
+    item = models.CustomTabItem(tab_id=tab.id, title="Show", poster_data=b"\x89PNGposter", poster_mime_type="image/png",
+                                poster_url=None)
+    db_session.add(item)
+    db_session.commit()
+    db_session.expire_all()
+    listed = crud.get_custom_tab_items(db_session, me.id, tab.id)
+    assert [i.title for i in listed] == ["Show"] and "poster_data" in inspect(listed[0]).unloaded
+    poster = authenticated_client.get(f"/custom-tab-posters/{item.id}")
+    assert poster.status_code == 200 and poster.content == b"\x89PNGposter"

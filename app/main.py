@@ -458,6 +458,7 @@ async def serve_custom_tab_poster(
     """Serve a custom-tab poster only to the owner of that private tab."""
     item = (
         db.query(models.CustomTabItem)
+        .options(undefer(models.CustomTabItem.poster_data))
         .join(models.CustomTab, models.CustomTabItem.tab_id == models.CustomTab.id)
         .filter(
             models.CustomTabItem.id == item_id,

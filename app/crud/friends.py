@@ -293,11 +293,26 @@ def create_notification(db: Session, user_id: int, type: str, message: str, frie
     return notification
 
 
-def get_notifications(db: Session, user_id: int) -> List[models.Notification]:
-    """Get all notifications for a user (newest first)."""
-    return db.query(models.Notification).filter(
+def get_notifications(db: Session, user_id: int, limit: Optional[int] = None,
+                      unread_limit: int = 0) -> List[models.Notification]:
+    """Notifications for a user, newest first.
+
+    With a limit: the newest `limit`, plus up to `unread_limit` older unread ones, so a
+    long-ignored bell still lists every pending friend request without sending thousands.
+    """
+    query = db.query(models.Notification).filter(
         models.Notification.user_id == user_id
-    ).order_by(desc(models.Notification.created_at), desc(models.Notification.id)).all()
+    ).order_by(desc(models.Notification.created_at), desc(models.Notification.id))
+    if limit is None:
+        return query.all()
+    newest = query.limit(limit).all()
+    if len(newest) < limit or unread_limit <= 0:
+        return newest
+    shown = [notification.id for notification in newest]
+    older_unread = query.filter(
+        models.Notification.read_at.is_(None), models.Notification.id.notin_(shown)
+    ).limit(unread_limit).all()
+    return newest + older_unread
 
 
 def get_unread_notification_count(db: Session, user_id: int) -> int:

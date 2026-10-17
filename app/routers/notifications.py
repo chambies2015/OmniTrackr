@@ -11,6 +11,8 @@ from .. import crud, schemas, models, web_push
 from ..dependencies import get_db, get_current_user
 
 router = APIRouter(prefix="/notifications", tags=["notifications"])
+NOTIFICATION_LIST_LIMIT = 200
+NOTIFICATION_UNREAD_LIMIT = 300
 
 
 @router.get("", response_model=List[schemas.NotificationResponse])
@@ -18,8 +20,13 @@ async def get_notifications(
     current_user: models.User = Depends(get_current_user),
     db: Session = Depends(get_db)
 ):
-    """Get all notifications for the current user (newest first)."""
-    notifications = crud.get_notifications(db, current_user.id)
+    """The current user's notifications, newest first.
+
+    The bell lists the newest NOTIFICATION_LIST_LIMIT, plus older ones still unread,
+    instead of every notification ever received.
+    """
+    notifications = crud.get_notifications(db, current_user.id, limit=NOTIFICATION_LIST_LIMIT,
+                                           unread_limit=NOTIFICATION_UNREAD_LIMIT)
     return [schemas.NotificationResponse.model_validate(notif) for notif in notifications]
 
 

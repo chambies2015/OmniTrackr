@@ -722,7 +722,8 @@ class CustomTabItem(Base):
     title = Column(String, nullable=False, index=True)
     field_values = Column(Text, nullable=True)
     poster_url = Column(String, nullable=True)
-    poster_data = Column(LargeBinary, nullable=True)
+    # Deferred like profile pictures: a tab's list can hold thousands of items and never shows the bytes.
+    poster_data = deferred(Column(LargeBinary, nullable=True))
     poster_mime_type = Column(String, nullable=True)
     created_at = Column(DateTime, default=datetime.utcnow)
     
