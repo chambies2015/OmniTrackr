@@ -157,3 +157,6 @@ body.site :is(a, button, summary, input, select, textarea):focus-visible { outli
 .supporter-chip--amber { --chip-accent: 245, 158, 11; }
 .supporter-chip--rose { --chip-accent: 244, 114, 182; }
 .supporter-chip--sky { --chip-accent: 56, 189, 248; }
+.supporter-chip--emerald { --chip-accent: 52, 211, 153; }
+.supporter-chip--coral { --chip-accent: 251, 113, 133; }
+.supporter-chip--gold { --chip-accent: 234, 179, 8; }

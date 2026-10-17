@@ -189,7 +189,7 @@ def test_profile_shows_badge_and_accent_only_while_active(client, db_session):
     post(client, payment())
     client.put("/api/supporter", headers=headers_for(user), json={"accent": "rose"})
     page = client.get("/u/jo").text
-    assert 'class="profile-supporter"' in page and "profile-hero--accent-rose" in page
+    assert 'class="profile-supporter profile-supporter--founding"' in page and "profile-hero--accent-rose" in page
 
     client.put("/api/supporter", headers=headers_for(user), json={"show_badge": False})
     assert "profile-supporter" not in client.get("/u/jo").text
