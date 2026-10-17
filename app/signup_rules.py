@@ -58,16 +58,14 @@ def username_taken(db: Session, username: str, exclude_user_id: Optional[int] = 
     return bool(query.scalar())
 
 
-EMAIL_RE = re.compile(r"[^@\s]+@[^@\s]+")
-
-
 def email_problem(email: str) -> Optional[str]:
     """Why a new email address can't be used, or None.
 
     Usernames can't contain "@", so requiring one here also keeps a new
     email from matching someone else's username at sign-in.
     """
-    if len(email) > 254 or not EMAIL_RE.fullmatch(email):
+    local, _, domain = email.partition("@")
+    if len(email) > 254 or not local or not domain or "@" in domain or any(ch.isspace() for ch in email):
         return "Enter a valid email address."
     return None
 
