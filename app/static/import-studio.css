@@ -1,0 +1,74 @@
+/* Import Studio additions: where-to-find-your-export links and the AniList username fetch. */
+.import-studio__sources {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin: 0 0 16px;
+}
+
+.import-studio__sources a {
+  display: inline-flex;
+  align-items: center;
+  min-height: 36px;
+  padding: 6px 12px;
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  color: var(--fg);
+  font-size: 0.82rem;
+  font-weight: 600;
+  text-decoration: none;
+}
+
+.import-studio__sources a:hover,
+.import-studio__sources a:focus-visible {
+  border-color: var(--primary);
+  color: var(--primary);
+}
+
+.import-studio__anilist {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: end;
+  gap: 8px 12px;
+  margin: 14px 0;
+  padding: 14px;
+  border: 1px dashed var(--border);
+  border-radius: 10px;
+}
+
+.import-studio__anilist label {
+  display: flex;
+  flex-direction: column;
+  gap: 7px;
+  min-width: 0;
+  color: var(--fg);
+  font-size: 0.86rem;
+  font-weight: 600;
+}
+
+.import-studio__anilist input {
+  width: 100%;
+  min-height: 44px;
+  padding: 11px 12px;
+  border: 1px solid rgba(102, 126, 234, 0.3);
+  border-radius: 8px;
+  background: var(--bg);
+  color: var(--fg);
+  font: inherit;
+}
+
+.import-studio__anilist .action-btn {
+  min-height: 44px;
+  margin: 0;
+}
+
+.import-studio__anilist .info-text {
+  grid-column: 1 / -1;
+  margin: 0;
+}
+
+@media (max-width: 560px) {
+  .import-studio__anilist {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}

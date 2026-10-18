@@ -4,22 +4,22 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <meta name="description" content="Move your ratings from IMDb, Letterboxd, Goodreads, The StoryGraph, or MyAnimeList into OmniTrackr. Where each export lives, what transfers, how ratings convert, and what to check afterward.">
+  <meta name="description" content="Move your ratings from Letterboxd, IMDb, Goodreads, The StoryGraph, MyAnimeList, AniList, Kitsu, or Trakt into OmniTrackr. Where each export lives, what transfers, how ratings convert, and what to check afterward.">
   <meta name="robots" content="index, follow, max-image-preview:large">
   <meta name="author" content="OmniTrackr">
-  <title>Switch to OmniTrackr - Move Your IMDb, Letterboxd, Goodreads and StoryGraph History</title>
+  <title>Switch to OmniTrackr - Import Letterboxd, IMDb, Goodreads, MyAnimeList, AniList and Trakt</title>
   <link rel="canonical" href="https://omnitrackr.xyz/switch">
   <link rel="icon" type="image/x-icon" href="/omnitrackr_favicon.ico">
   <meta property="og:type" content="article">
   <meta property="og:url" content="https://omnitrackr.xyz/switch">
   <meta property="og:title" content="Switch to OmniTrackr Without Starting Over">
-  <meta property="og:description" content="Step-by-step exports for IMDb, Letterboxd, Goodreads, The StoryGraph, and MyAnimeList, with rating conversion and a preview before anything is saved.">
+  <meta property="og:description" content="Step-by-step exports for Letterboxd, IMDb, Goodreads, The StoryGraph, MyAnimeList, AniList, Kitsu, and Trakt, with rating conversion and a preview before anything is saved.">
   <meta property="og:image" content="https://omnitrackr.xyz/omnitrackr_vortex.png">
   <meta property="og:image:alt" content="Switching guide for OmniTrackr">
   <meta property="og:site_name" content="OmniTrackr">
   <meta name="twitter:card" content="summary">
   <meta name="twitter:title" content="Switch to OmniTrackr Without Starting Over">
-  <meta name="twitter:description" content="Bring years of IMDb, Letterboxd, Goodreads, StoryGraph, and MyAnimeList ratings into one tracker, previewed before anything is saved.">
+  <meta name="twitter:description" content="Bring years of Letterboxd, IMDb, Goodreads, StoryGraph, MyAnimeList, AniList, and Trakt history into one tracker, previewed before anything is saved.">
   <link rel="preload" href="/static/fonts/poppins-700-latin.woff2" as="font" type="font/woff2" crossorigin>
   <link rel="preload" href="/static/fonts/poppins-800-latin.woff2" as="font" type="font/woff2" crossorigin>
   <link rel="stylesheet" href="/static/fonts.css?v=20261009-fonts-1">
@@ -45,6 +45,10 @@
     .guide-jump { display: flex; flex-wrap: wrap; gap: 8px 20px; margin: 24px 0 36px; }
     .guide-jump a { padding: 8px 0; }
     .guide-updated { font-size: .9rem; }
+    .switch-cta { display: flex; flex-wrap: wrap; align-items: center; gap: 12px 18px; margin: 0 0 36px; padding: 18px 20px; border: 1px solid var(--border); border-radius: 12px; background: var(--bg); }
+    .switch-cta p { flex: 1 1 260px; margin: 0; color: var(--fg-secondary); }
+    .switch-cta a { display: inline-flex; align-items: center; min-height: 44px; padding: 10px 18px; border-radius: 999px; background: var(--primary); color: #fff; font-weight: 700; text-decoration: none; }
+    .switch-cta a:focus-visible { outline: 3px solid var(--fg); outline-offset: 3px; }
     .back-link { display: inline-block; margin-bottom: 30px; color: var(--primary); text-decoration: none; font-weight: 500; }
   </style>
   <script type="application/ld+json">
@@ -52,13 +56,13 @@
     "@context": "https://schema.org",
     "@type": "HowTo",
     "name": "Move your media history to OmniTrackr",
-    "description": "Export your ratings from IMDb, Letterboxd, Goodreads, The StoryGraph, or MyAnimeList and preview them in OmniTrackr's Import Studio before saving.",
-    "dateModified": "2026-10-11",
+    "description": "Export your ratings from Letterboxd, IMDb, Goodreads, The StoryGraph, MyAnimeList, AniList, Kitsu, or Trakt and preview them in OmniTrackr's Import Studio before saving.",
+    "dateModified": "2026-10-18",
     "inLanguage": "en-US",
     "mainEntityOfPage": "https://omnitrackr.xyz/switch",
     "publisher": { "@type": "Organization", "name": "OmniTrackr", "url": "https://omnitrackr.xyz" },
     "step": [
-      { "@type": "HowToStep", "name": "Download your export", "text": "Request the CSV export from the service you use now and keep the original file." },
+      { "@type": "HowToStep", "name": "Download your export", "text": "Request the export from the service you use now and keep the original file. ZIP, CSV, XML, and JSON exports are read as they come." },
       { "@type": "HowToStep", "name": "Open the Import Studio", "text": "Create a free OmniTrackr account and open Account Settings, then Import Studio." },
       { "@type": "HowToStep", "name": "Preview the file", "text": "Choose the file and select Preview import. Nothing is saved during the preview." },
       { "@type": "HowToStep", "name": "Check and confirm", "text": "Check converted ratings and completion, then confirm. Duplicates and rows needing attention are skipped." }
@@ -77,7 +81,7 @@
       <header class="content-header">
         <h1>Switch to OmniTrackr Without Starting Over</h1>
         <p>Your ratings already live somewhere. This guide shows where each service keeps its export, what comes across, and what to check before anything is saved.</p>
-        <p class="guide-updated">By OmniTrackr · Updated <time datetime="2026-10-11">October 11, 2026</time></p>
+        <p class="guide-updated">By OmniTrackr · Updated <time datetime="2026-10-18">October 18, 2026</time></p>
       </header>
       <nav class="guide-jump" aria-label="On this page">
         <a href="#glance-heading">At a glance</a>
@@ -85,10 +89,17 @@
         <a href="#letterboxd-heading">Letterboxd</a>
         <a href="#goodreads-heading">Goodreads</a>
         <a href="#storygraph-heading">The StoryGraph</a>
-        <a href="#mal-heading">MyAnimeList</a>
+        <a href="#mal-heading">MyAnimeList and Kitsu</a>
+        <a href="#anilist-heading">AniList</a>
+        <a href="#trakt-heading">Trakt</a>
         <a href="#other-heading">Other services</a>
         <a href="#after-heading">After importing</a>
       </nav>
+
+      <div class="switch-cta">
+        <p>Have your export ready? Create a free account and the Import Studio opens as soon as you are in. You see every title before anything is saved.</p>
+        <a href="/?start=import#landing-auth" rel="nofollow">Start importing</a>
+      </div>
 
       <section class="content-section" aria-labelledby="why-heading">
         <h2 id="why-heading">Why People Switch, and Why They Hesitate</h2>
@@ -106,10 +117,12 @@
             </thead>
             <tbody>
               <tr><th scope="row">IMDb</th><td>Movies, TV shows, and games, by title type</td><td>Already out of 10: 8 stays 8/10</td><td>The title has your rating</td></tr>
-              <tr><th scope="row">Letterboxd</th><td>Movies</td><td>Stars doubled: 3.5 becomes 7/10</td><td>The row is not an unwatched watchlist entry</td></tr>
+              <tr><th scope="row">Letterboxd</th><td>Movies, from the whole ZIP</td><td>Stars doubled: 3.5 becomes 7/10</td><td>It is in your watched films, diary, ratings, or reviews</td></tr>
               <tr><th scope="row">Goodreads</th><td>Books</td><td>Stars doubled: 4 becomes 8/10</td><td>Shelf is <code>read</code> or a read date exists</td></tr>
               <tr><th scope="row">The StoryGraph</th><td>Books</td><td>Stars doubled, quarters kept: 4.25 becomes 8.5/10</td><td>Read status is <code>read</code></td></tr>
-              <tr><th scope="row">MyAnimeList</th><td>Anime</td><td>Already out of 10</td><td>Status is completed</td></tr>
+              <tr><th scope="row">MyAnimeList or Kitsu</th><td>Anime, and manga as books</td><td>Already out of 10</td><td>Status is completed</td></tr>
+              <tr><th scope="row">AniList</th><td>Anime, and manga as books</td><td>Read on a 10-point scale, decimals kept</td><td>Status is completed or rewatching</td></tr>
+              <tr><th scope="row">Trakt</th><td>Movies and TV shows</td><td>Already out of 10</td><td>A movie was watched or rated; a show had every aired episode watched, or was rated</td></tr>
               <tr><th scope="row">A spreadsheet</th><td>Any of the six categories</td><td>Read as out of 10</td><td>Your completion column says so</td></tr>
             </tbody>
           </table>
@@ -142,13 +155,14 @@
 
       <section class="content-section" aria-labelledby="letterboxd-heading">
         <h2 id="letterboxd-heading">From Letterboxd</h2>
-        <p>Letterboxd's export is a ZIP archive that holds several CSV files. Extract it first; the Import Studio reads a CSV, not the ZIP itself.</p>
+        <p>Letterboxd's export is a ZIP archive that holds several CSV files. Upload the ZIP as it is; the Import Studio reads the files that matter and combines them into one entry per film.</p>
         <ol>
           <li>Open Settings on the Letterboxd website, go to the data section, and export your data. <a href="https://letterboxd.com/user/exportdata/">Letterboxd's export page</a> describes the files.</li>
-          <li>Extract the archive and pick the file you want. <code>ratings.csv</code> or <code>watched.csv</code> brings what you have seen, and <code>watchlist.csv</code> brings what you plan to watch.</li>
-          <li>Preview it in the Import Studio. Half stars carry over: 3.5 stars becomes 7/10.</li>
+          <li>Choose the downloaded ZIP in the Import Studio and select <strong>Preview import</strong>. There is no need to extract it.</li>
+          <li>Check a few films. Half stars carry over: 3.5 stars becomes 7/10.</li>
         </ol>
-        <p>Watchlist rows stay unwatched. If you import <code>reviews.csv</code>, the review text arrives as a private note on the movie. Repeated diary entries for the same film are not turned into separate journal entries, and likes, lists, and tags stay on Letterboxd.</p>
+        <p>A film you logged in your diary, rated, reviewed, or marked watched arrives watched. Your current rating wins over older diary ratings, and your latest review text arrives as a private note. Films that are only on your watchlist arrive unwatched, ready for Next Up. Entries in the archive's deleted folder, likes, lists, and tags stay on Letterboxd, and repeated diary entries for the same film are not turned into separate journal entries.</p>
+        <p>You can still upload a single CSV from the archive. A file named <code>watchlist.csv</code> keeps its films unwatched.</p>
       </section>
 
       <section class="content-section" aria-labelledby="goodreads-heading">
@@ -175,13 +189,43 @@
 
       <section class="content-section" aria-labelledby="mal-heading">
         <h2 id="mal-heading">From MyAnimeList</h2>
-        <p>MyAnimeList's own export is an XML file, which the Import Studio does not read. Convert it to CSV first, keeping columns such as <code>series_title</code>, <code>series_episodes</code>, <code>my_score</code>, <code>my_status</code>, and <code>series_start</code>. Many community tools and spreadsheet programs can do that conversion.</p>
-        <p>Scores already use a ten-point scale and stay as they are. A completed status marks the series watched. The episode count describes the whole series; it does not set the episode you are on, so set your place after importing.</p>
+        <p>MyAnimeList's export is an XML file, usually compressed as <code>.xml.gz</code>. The Import Studio reads it as downloaded, compressed or not. Kitsu can export your library in the same MyAnimeList XML format, and it is read the same way.</p>
+        <ol>
+          <li>On MyAnimeList, open the list export page from your profile settings and export your anime list, your manga list, or both.</li>
+          <li>Choose the downloaded file in the Import Studio and select <strong>Preview import</strong>.</li>
+        </ol>
+        <p>Scores already use a ten-point scale and stay as they are. A completed status marks the series watched, or the manga read. Manga arrives in Books. Your comments become a private note. The episode count describes the whole series; it does not set the episode you are on, so set your place after importing.</p>
+        <p>The XML file has no release years. A title you already track is still recognized as a duplicate, because a title with no year matches the same title in your library whatever its year. Older CSV conversions of a MyAnimeList list still work too.</p>
+      </section>
+
+      <section class="content-section" aria-labelledby="anilist-heading">
+        <h2 id="anilist-heading">From AniList</h2>
+        <p>AniList does not hand out an export file, so the Import Studio asks AniList for your lists instead. Type your AniList username under <strong>On AniList? No file needed</strong> and select <strong>Fetch my AniList lists</strong>. Your browser reads your public anime and manga lists from AniList and the usual preview opens. Nothing is saved until you confirm.</p>
+        <ul>
+          <li><strong>Your list has to be public.</strong> If AniList says the list is private, make it visible in your AniList settings for a moment, or use a MyAnimeList-format XML export made with a community tool.</li>
+          <li><strong>Scores keep their decimals.</strong> They are read on AniList's ten-point decimal scale whichever scoring system you display, so 85/100 becomes 8.5/10.</li>
+          <li><strong>Completed and rewatching mean finished.</strong> Planning, watching, paused, and dropped titles arrive unfinished.</li>
+          <li><strong>Manga, light novels, and one-shots arrive as books,</strong> and your AniList notes become private notes. English titles are used where AniList has one.</li>
+        </ul>
+      </section>
+
+      <section class="content-section" aria-labelledby="trakt-heading">
+        <h2 id="trakt-heading">From Trakt</h2>
+        <p>Trakt's data export is a ZIP of JSON files. Upload the ZIP as it is, or any one of its JSON files.</p>
+        <ol>
+          <li>On the Trakt website, open your settings and find the data section, then request an export of your data.</li>
+          <li>Download the archive once Trakt has prepared it and choose it in the Import Studio.</li>
+        </ol>
+        <ul>
+          <li><strong>Watched history and ratings come across.</strong> A watched or rated movie arrives watched, with your rating out of ten.</li>
+          <li><strong>Shows count as finished only when they are.</strong> A show is marked watched when you rated it or when every aired episode is in your history. Shows you are partway through arrive unfinished.</li>
+          <li><strong>Your watchlist arrives unwatched.</strong> Collections and custom lists are left out, since owning a copy or listing a title is not the same as watching it. Episode and season ratings are not imported.</li>
+        </ul>
       </section>
 
       <section class="content-section" aria-labelledby="other-heading">
-        <h2 id="other-heading">From Trakt, a Spreadsheet, or Anything Else</h2>
-        <p>There is no dedicated Trakt adapter yet, and some services only export JSON. If you can get your history into a CSV, choose <strong>Generic CSV / spreadsheet</strong> in the Import Studio. Pick one category for the whole file, or add a <code>category</code> column for a mixed library.</p>
+        <h2 id="other-heading">From a Spreadsheet, or Anything Else</h2>
+        <p>If your history lives somewhere else, get it into a CSV and choose <strong>Generic CSV / spreadsheet</strong> in the Import Studio. Pick one category for the whole file, or add a <code>category</code> column for a mixed library.</p>
         <p>If your columns have personal names like "Thing" or "My verdict", open the mapping panel and pair them with OmniTrackr's fields. A generic rating is read as out of ten, so double five-star scores before importing. The <a href="/tracking-templates">tracking templates</a> give you a ready layout for each category, and the <a href="/export-import-guide">export and import guide</a> walks through worked examples with expected results.</p>
       </section>
 
@@ -190,11 +234,15 @@
         <ol>
           <li>Create a free account and open <strong>Account Settings → Import Studio</strong>.</li>
           <li>Leave the format on <strong>Detect automatically</strong>, or pick your service from the list.</li>
-          <li>Choose your CSV and select <strong>Preview import</strong>. The preview says which format it recognized.</li>
+          <li>Choose your export file, ZIP, CSV, XML, or JSON, and select <strong>Preview import</strong>. The preview says which format it recognized.</li>
           <li>Look at the totals for ready, duplicate, and needing-attention rows, then page through a few rows and compare the rating and finished state with your original service.</li>
           <li>Confirm when it looks right. All ready rows are saved together, or none are if something goes wrong.</li>
         </ol>
-        <p>Each file can hold up to 5,000 rows and 5 MB. A very long history can be split into several files and imported one after another; titles saved by an earlier file are recognized as duplicates.</p>
+        <p>Each file can hold up to 5,000 titles and 5 MB. A very long history can be split into several files and imported one after another; titles saved by an earlier file are recognized as duplicates.</p>
+        <div class="switch-cta">
+          <p>Ready? Sign up free and you land straight in the Import Studio.</p>
+          <a href="/?start=import#landing-auth" rel="nofollow">Start importing</a>
+        </div>
       </section>
 
       <section class="content-section" aria-labelledby="after-heading">
@@ -217,7 +265,7 @@
 
       <section class="content-section" aria-labelledby="method-heading">
         <h2 id="method-heading">How This Guide Was Checked</h2>
-        <p>This guide was prepared by OmniTrackr. The import behavior described here was checked against the Import Studio's supported formats on <time datetime="2026-10-11">October 11, 2026</time>. Menu names on other services change often, so the export steps describe where to look rather than promising exact button labels. If something here no longer matches, please tell us through <a href="/contact">Contact</a>. Our <a href="/content-quality">content-quality policy</a> explains how corrections are handled.</p>
+        <p>This guide was prepared by OmniTrackr. The import behavior described here was checked against the Import Studio's supported formats on <time datetime="2026-10-18">October 18, 2026</time>. Menu names on other services change often, so the export steps describe where to look rather than promising exact button labels. If something here no longer matches, please tell us through <a href="/contact">Contact</a>. Our <a href="/content-quality">content-quality policy</a> explains how corrections are handled.</p>
       </section>
 
       <section class="content-section" aria-labelledby="related-heading">

@@ -200,7 +200,7 @@
           <article class="lp-card"><span class="lp-card__icon"><svg class="lp-icon" aria-hidden="true"><use href="#i-radar"/></svg></span><h3>Never miss a release</h3><p>The <a href="/release-radar">Release Radar</a> lists new movies, TV premieres, the anime season, and upcoming games. Track anything in one click.</p></article>
           <article class="lp-card"><span class="lp-card__icon"><svg class="lp-icon" aria-hidden="true"><use href="#i-mail"/></svg></span><h3>Ask for one thoughtful pick</h3><p>Send an expiring Recommendation Postcard to a friend or a guest link. Replies wait in a private inbox until you decide what to keep.</p></article>
           <article class="lp-card"><span class="lp-card__icon"><svg class="lp-icon" aria-hidden="true"><use href="#i-lock"/></svg></span><h3>Control the audience</h3><p>Keep categories private, choose what friends can see, and never turn a personal journal into a social obligation.</p></article>
-          <article class="lp-card lp-card--full"><span class="lp-card__icon"><svg class="lp-icon" aria-hidden="true"><use href="#i-swap"/></svg></span><h3>Bring it in. Take it out.</h3><p>Preview migrations from IMDb, Letterboxd, Goodreads, StoryGraph, MyAnimeList, or a spreadsheet before anything changes—and export your library and journal whenever you want. <a href="/switch">See how switching works</a>.</p></article>
+          <article class="lp-card lp-card--full"><span class="lp-card__icon"><svg class="lp-icon" aria-hidden="true"><use href="#i-swap"/></svg></span><h3>Bring it in. Take it out.</h3><p>Upload your Letterboxd, IMDb, Goodreads, StoryGraph, MyAnimeList, Kitsu, or Trakt export as it comes, or fetch your AniList by username, and preview it before anything changes—and export your library and journal whenever you want. <a href="/switch">See how switching works</a>.</p></article>
         </div>
       </div>
     </section>
@@ -238,7 +238,7 @@
         </div>
         <div class="faq-container"><div class="faq-item"><button class="faq-question" aria-expanded="false" aria-controls="faq-answer-1"><span>Is OmniTrackr free?</span><span class="faq-icon">+</span></button><div class="faq-answer" id="faq-answer-1"><p>Yes. Create an account and use the tracker without a subscription or credit card.</p></div></div>
         <div class="faq-item"><button class="faq-question" aria-expanded="false" aria-controls="faq-answer-2"><span>Can I keep my library private?</span><span class="faq-icon">+</span></button><div class="faq-answer" id="faq-answer-2"><p>Yes. Your activity journal and weekly playback stay inside your account and never carry ads. Public reviews are an opt-in choice on individual items, and category privacy controls let you decide what friends can see.</p></div></div>
-        <div class="faq-item"><button class="faq-question" aria-expanded="false" aria-controls="faq-answer-3"><span>Can I bring an existing library?</span><span class="faq-icon">+</span></button><div class="faq-answer" id="faq-answer-3"><p>Yes. Preview an IMDb, Letterboxd, Goodreads, StoryGraph, MyAnimeList, or generic spreadsheet import without changing existing records. You can also export your OmniTrackr collection and journal as JSON whenever you want.</p></div></div>
+        <div class="faq-item"><button class="faq-question" aria-expanded="false" aria-controls="faq-answer-3"><span>Can I bring an existing library?</span><span class="faq-icon">+</span></button><div class="faq-answer" id="faq-answer-3"><p>Yes. Upload your Letterboxd ZIP, IMDb, Goodreads or StoryGraph CSV, MyAnimeList or Kitsu XML, or Trakt export, or fetch a public AniList list, and preview it without changing existing records. <a href="/?start=import#landing-auth" rel="nofollow">Sign up and import</a>. You can also export your OmniTrackr collection and journal as JSON whenever you want.</p></div></div>
         <div class="faq-item"><button class="faq-question" aria-expanded="false" aria-controls="faq-answer-4"><span>What can I track?</span><span class="faq-icon">+</span></button><div class="faq-answer" id="faq-answer-4"><p>Movies, TV shows, anime, video games, music, books, and custom collections such as comics, podcasts, or board games.</p></div></div>
         <div class="faq-item"><button class="faq-question" aria-expanded="false" aria-controls="faq-answer-5"><span>Can someone recommend something without an account?</span><span class="faq-icon">+</span></button><div class="faq-answer" id="faq-answer-5"><p>Yes. You can create an expiring, unlisted Recommendation Postcard with selected media types and a reply limit. A guest can answer through that link, but nothing is added to your library until you explicitly accept it.</p></div></div></div>
       </div>
@@ -253,7 +253,7 @@
           <ul class="lp-auth__list">
             <li><svg class="lp-icon" aria-hidden="true"><use href="#i-check"/></svg>Six media types plus your own custom tabs</li>
             <li><svg class="lp-icon" aria-hidden="true"><use href="#i-check"/></svg>Private journal, checkpoints, and statistics</li>
-            <li><svg class="lp-icon" aria-hidden="true"><use href="#i-check"/></svg>Import from IMDb, Letterboxd, Goodreads, StoryGraph, or MyAnimeList</li>
+            <li><svg class="lp-icon" aria-hidden="true"><use href="#i-check"/></svg>Import from Letterboxd, IMDb, Goodreads, StoryGraph, MyAnimeList, AniList, or Trakt</li>
             <li><svg class="lp-icon" aria-hidden="true"><use href="#i-check"/></svg>Free, with a full JSON export any time</li>
           </ul>
         </div>
@@ -275,7 +275,7 @@
   <dialog id="authDialog" class="lp-auth-dialog" aria-labelledby="authTitle"><button type="button" class="lp-auth-dialog__close" data-action="close-auth-dialog" aria-label="Close">×</button><div class="lp-auth-dialog__slot" data-auth-dialog-slot></div></dialog>
   <div id="screenshotModal" class="screenshot-modal" data-close-on-backdrop="screenshot"><button class="screenshot-modal-close" data-action="close-screenshot-modal" aria-label="Close image preview">×</button><img id="screenshotModalImage" class="screenshot-modal-content" alt=""><div id="screenshotModalCaption" class="screenshot-modal-caption"></div></div>
   <script src="/credentials.js"></script>
-  <script src="/auth.js?v=20261017-badges-1"></script>
+  <script src="/auth.js?v=20261018-import-1"></script>
   <script src="/static/public-landing.js?v=20261016-signup-1" defer></script>
   <script src="/static/guest-list.js?v=20261012-hero-search-1" defer></script>
   <script src="/static/title-search.js?v=20261012-hero-search-1" defer></script>
