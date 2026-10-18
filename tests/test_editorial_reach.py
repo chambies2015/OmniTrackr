@@ -96,7 +96,7 @@ def test_guides_disclose_ai_assistance_without_claiming_hand_writing(client, pat
 
 def test_monthly_edition_discloses_ai_assistance(client):
     html = client.get("/discover/monthly/october-2026").text
-    assert "prepared by OmniTrackr with AI assistance" in html and 'href="/content-quality"' in html
+    assert "prepared by OmniTrackr with AI assistance and reviewed by the site owner" in html and 'href="/content-quality"' in html
 
 
 def test_daily_archive_has_its_styles_and_first_clues(client, on_day):
