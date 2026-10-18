@@ -4,7 +4,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <meta name="description" content="Browse OmniTrackr's public site map for media tracking guides, sample library pages, public reviews, privacy, content quality, advertising, and support resources.">
+  <meta name="description" content="Every public OmniTrackr page in one place: franchise order guides, If you liked guides, Discover guides, the Daily puzzle, tracking help, policies and support.">
   <meta name="robots" content="index, follow, max-image-preview:large">
   <meta name="author" content="OmniTrackr">
   <title>Site Map - OmniTrackr Public Pages and Guides</title>
@@ -29,7 +29,7 @@
   <link rel="preload" href="/static/fonts/poppins-700-latin.woff2" as="font" type="font/woff2" crossorigin>
   <link rel="preload" href="/static/fonts/poppins-800-latin.woff2" as="font" type="font/woff2" crossorigin>
   <link rel="stylesheet" href="/static/fonts.css?v=20261009-fonts-1">
-  <link rel="stylesheet" href="/static/public-reader.css?v=20261016-reader-1">
+  <link rel="stylesheet" href="/static/public-reader.css?v=20261017-reader-2">
   <script type="application/ld+json">
   {
     "@context": "https://schema.org",
@@ -37,7 +37,7 @@
     "name": "OmniTrackr Site Map",
     "description": "A public directory of OmniTrackr guides, sample pages, reviews, trust resources, and category trackers.",
     "url": "https://omnitrackr.xyz/site-map",
-    "dateModified": "2026-07-05",
+    "dateModified": "2026-10-17",
     "inLanguage": "en-US",
     "isPartOf": { "@type": "WebSite", "name": "OmniTrackr", "url": "https://omnitrackr.xyz" }
   }
@@ -53,27 +53,32 @@
 
       <header class="public-header">
         <h1>OmniTrackr Site Map</h1>
-        <p>A human-readable directory for visitors, reviewers, and crawlers.</p>
+        <p>Every public page on OmniTrackr in one place, starting with the guides you can read without an account.</p>
       </header>
 
-      <section class="public-section" aria-labelledby="why-heading">
-        <h2 id="why-heading">Why This Page Exists</h2>
-        <p>OmniTrackr has grown beyond a single app shell. The public site now includes category guides, practical tracking templates, public review guidance, a demo library, a sample media library, comparison content, privacy information, content quality standards, and support pages. This directory gives people and crawlers one clear place to understand the full public surface.</p>
-        <p>The site map is also a quality signal for maintenance. If a page is public, it should have a purpose, a route, a canonical URL, metadata, navigation, and enough context to help someone decide whether OmniTrackr is worth trying. Pages that are only useful for authenticated app actions or developer tooling should stay out of public search inventory.</p>
-        <p>For new visitors, the directory is meant to reduce guessing. Someone comparing media trackers can start with the comparison page, then jump to the sample library and category guides. Someone checking privacy can move from the Privacy Policy to review guidelines, content quality standards, and advertising disclosures. Someone returning after a release can use the changelog and roadmap to see whether the app is actively maintained.</p>
+      <section class="public-section" aria-labelledby="read-heading">
+        <h2 id="read-heading">Guides to Read</h2>
+        <p>The written guides are free to read and do not need an account. Each one is dated and gives a reason and a caveat for every pick. The <a href="/content-quality">editorial standards</a> explain how they are written and checked.</p>
+        <div class="directory-groups"><!--GUIDE_DIRECTORY--></div>
       </section>
 
-      <section class="public-section" aria-labelledby="how-heading">
-        <h2 id="how-heading">How to Use This Directory</h2>
-        <p>If you are deciding whether to create an account, start with the demo library, sample library, and media tracking hub. Those pages explain the product without asking you to expose personal data. If you already know what you want to organize, jump directly to a category tracker guide for movies, TV, anime, games, music, or books.</p>
-        <p>If you are evaluating site quality, the trust and policy pages show how OmniTrackr separates private account content from public review content, how public pages avoid thin scraped material, and how ad placement is intended to stay outside sensitive account workflows. The XML sitemap remains available for crawlers, but this human-readable site map gives each public route enough surrounding context to be understood by a person.</p>
+      <section class="public-section" aria-labelledby="play-heading">
+        <h2 id="play-heading">Play and Explore</h2>
+        <div class="directory-grid">
+          <a class="directory-card" href="/daily"><h3>OmniTrackr Daily</h3><p>Guess the movie, show, anime, game, book or album from six clues. A new puzzle every day.</p></a>
+          <a class="directory-card" href="/daily/archive"><h3>Daily archive</h3><p>Every past puzzle, still playable, with its answer kept hidden until you ask for it.</p></a>
+          <a class="directory-card" href="/pick"><h3>Pick for me</h3><p>Can't decide what to start? Get one title at a time, with a reason to try it and a caveat to read first.</p></a>
+          <a class="directory-card" href="/tier-list"><h3>Tier list maker</h3><p>Rank movies, shows, anime, games or books from S to D and save the board as an image.</p></a>
+          <a class="directory-card" href="/challenges"><h3>Monthly challenges</h3><p>One small, opt-in challenge each month across six media types, with a written guide to what counts and where to start.</p></a>
+          <a class="directory-card" href="/release-radar"><h3>Release Radar</h3><p>Upcoming movies, TV premieres, the anime season and new games, with one-click tracking.</p></a>
+        </div>
       </section>
 
       <section class="public-section" aria-labelledby="core-heading">
         <h2 id="core-heading">Core Product Pages</h2>
         <div class="directory-grid">
           <a class="directory-card" href="/"><h3>Home</h3><p>The public landing page and app entry point for new and returning users.</p></a>
-          <a class="directory-card" href="/about"><h3>About</h3><p>What OmniTrackr is, how it is maintained, and why user control matters.</p></a>
+          <a class="directory-card" href="/about"><h3>About</h3><p>What OmniTrackr is, who runs it, how the guides are made and how the site is paid for.</p></a>
           <a class="directory-card" href="/demo"><h3>Demo Library</h3><p>A preview of the tracking workflow without exposing real user libraries.</p></a>
           <a class="directory-card" href="/sample-library"><h3>Sample Library</h3><p>Fictional records that show statuses, review choices, privacy decisions, and statistics context.</p></a>
           <a class="directory-card" href="/media-tracking"><h3>Tracking Hub</h3><p>A central guide for organizing backlogs, ratings, reviews, exports, and statistics.</p></a>
@@ -99,17 +104,12 @@
           <a class="directory-card" href="/tracking-templates"><h3>Tracking Templates</h3><p>Rating scales, review prompts, backlog cleanup steps, and privacy checklists.</p></a>
           <a class="directory-card" href="/media-tracker-checklist"><h3>Setup Checklist</h3><p>A first-session plan for categories, ratings, reviews, privacy, exports, and cleanup habits.</p></a>
           <a class="directory-card" href="/review-guidelines"><h3>Review Guidelines</h3><p>How to turn quick notes into useful public reviews while keeping private notes private.</p></a>
-          <a class="directory-card" href="/pick"><h3>Pick for me</h3><p>Can't decide what to start? Get one movie, show, anime, game, book or album at a time, with a reason to try it and a caveat to read first.</p></a>
-          <a class="directory-card" href="/if-you-liked"><h3>If you liked…</h3><p>Loved Interstellar, Stranger Things or Frieren? Hand-written guides to what to watch, play, read or hear next, across formats.</p></a>
-          <a class="directory-card" href="/in-order"><h3>Franchises in order</h3><p>Star Wars, The Witcher, Dune, Monogatari, Zelda and more: release order, story order and where to start, with your progress if you track them.</p></a>
-          <a class="directory-card" href="/challenges"><h3>Monthly challenges</h3><p>One small, opt-in challenge each month across six media types, with a written guide to what counts and where to start.</p></a>
-          <a class="directory-card" href="/release-radar"><h3>Release Radar</h3><p>Upcoming movies, TV premieres, the anime season, and new games, refreshed every few hours with one-click tracking.</p></a>
-          <a class="directory-card" href="/reviews"><h3>Public Reviews</h3><p>Opt-in public reviews from user libraries and curated fallback context when none are available.</p></a>
+          <a class="directory-card" href="/reviews"><h3>Public Reviews</h3><p>Reviews members chose to make public, with a length and quality floor before they appear.</p></a>
           <a class="directory-card" href="/collections/explore"><h3>Community Collections</h3><p>Reviewed member lists that connect movies, shows, anime, games, albums, and books through one idea.</p></a>
           <a class="directory-card" href="/media-statistics"><h3>Media Statistics</h3><p>Completion patterns, rating distribution, review coverage, and category-specific insights.</p></a>
           <a class="directory-card" href="/switch"><h3>Switch From Another Tracker</h3><p>Move IMDb, Letterboxd, Goodreads, StoryGraph, and MyAnimeList history with a preview first.</p></a>
           <a class="directory-card" href="/export-import-guide"><h3>Export and Import</h3><p>Data portability, backups, JSON exports, import safety, and user ownership.</p></a>
-          <a class="directory-card" href="/compare"><h3>Compare</h3><p>How OmniTrackr compares with spreadsheets, single-category trackers, and scattered notes.</p></a>
+          <a class="directory-card" href="/compare"><h3>Compare</h3><p>OmniTrackr next to IMDb, Letterboxd, Trakt and Goodreads, and where each one is the better fit.</p></a>
           <a class="directory-card" href="/use-cases"><h3>Use Cases</h3><p>Examples for families, completionists, seasonal watchers, readers, collectors, and friends.</p></a>
         </div>
       </section>
@@ -119,19 +119,16 @@
         <div class="directory-grid">
           <a class="directory-card" href="/privacy"><h3>Privacy Policy</h3><p>Account data, cookies, analytics, advertising disclosures, exports, and deletion context.</p></a>
           <a class="directory-card" href="/terms"><h3>Terms</h3><p>Service terms for account use, content ownership, acceptable use, and availability.</p></a>
-          <a class="directory-card" href="/advertising"><h3>Advertising Policy</h3><p>Where ads may appear, where they should not appear, and how placements stay readable.</p></a>
-          <a class="directory-card" href="/content-quality"><h3>Content Quality</h3><p>Originality, review standards, anti-thin-content rules, and maintenance expectations.</p></a>
+          <a class="directory-card" href="/advertising"><h3>Ads and Affiliates</h3><p>Where ads may appear, where they never do, and how affiliate links are marked.</p></a>
+          <a class="directory-card" href="/supporters"><h3>Supporters</h3><p>The readers who help pay for hosting on Ko-fi, and what supporters get.</p></a>
+          <a class="directory-card" href="/content-quality"><h3>Editorial Standards</h3><p>How guides are written and fact-checked, spoiler rules, corrections, and the rules for member reviews.</p></a>
           <a class="directory-card" href="/faq"><h3>FAQ</h3><p>Answers about media categories, privacy, exports, public reviews, friends, and ads.</p></a>
           <a class="directory-card" href="/contact"><h3>Contact</h3><p>Support paths for bugs, account questions, data requests, and public review concerns.</p></a>
-          <a class="directory-card" href="/changelog"><h3>Changelog</h3><p>Recent quality, security, content, and SEO improvements shipped for the app.</p></a>
+          <a class="directory-card" href="/changelog"><h3>Changelog</h3><p>Every release: new guides, features, fixes and security updates.</p></a>
           <a class="directory-card" href="/roadmap"><h3>Roadmap</h3><p>Planned improvements and product direction for tracking, portability, reviews, and trust.</p></a>
         </div>
       </section>
 
-      <section class="public-section" aria-labelledby="maintenance-heading">
-        <h2 id="maintenance-heading">Maintenance Notes</h2>
-        <p>This page should change when public routes change. A new guide, policy page, or major public feature should be added here, linked from navigation, included in the XML sitemap when appropriate, and covered by tests that check metadata and crawlable content. That keeps public discovery aligned with the real product instead of leaving hidden pages, stale links, or isolated content that reviewers cannot easily find.</p>
-      </section>
     </main>
   </div>
   <!--SITE_FOOTER-->

@@ -31,8 +31,14 @@ def monthly_for(slug):
     return MONTHLY_EDITIONS[slug]
 
 
+# Sections that share this layout but have their own item in the site header.
+NAV_SECTIONS = (("/in-order", "in-order"), ("/if-you-liked", "if-you-liked"), ("/daily", "daily"))
+
+
 def page(title, description, path, content, *, indexable=True, structured_data=None, head=''):
-    html = apply_site_chrome((Path(__file__).parents[1] / "templates" / "discover.html").read_text(encoding="utf-8"))
+    template = (Path(__file__).parents[1] / "templates" / "discover.html").read_text(encoding="utf-8")
+    nav = next((key for prefix, key in NAV_SECTIONS if path == prefix or path.startswith(prefix + "/")), "discover")
+    html = apply_site_chrome(template.replace("<!--SITE_NAV:discover-->", f"<!--SITE_NAV:{nav}-->", 1))
     robots = "index, follow, max-image-preview:large" if indexable else "noindex, follow"
     for key, value in {"TITLE": escape(title), "DESCRIPTION": escape(description, quote=True), "PATH": path, "ROBOTS": robots, "CONTENT": content}.items():
         html = html.replace("{{" + key + "}}", value)
@@ -106,7 +112,7 @@ def discover_index():
     liked_card = (
         '<section class="editorial challenge-promo"><p class="eyebrow">IF YOU LIKED</p>'
         '<h2>Just finished something you loved?</h2>'
-        f'<p>Hand-written guides to what to try next, across formats: {liked_links}.</p>'
+        f'<p>Guides to what to try next, across formats: {liked_links}.</p>'
         '<a class="button" href="/if-you-liked">See every guide →</a></section>'
     )
     archive = (
@@ -133,7 +139,7 @@ def detail_content(trail, back_path, back_label, api_path, published, essay=None
     if essay:
         essay_section = f'<section class="editorial edition-essay"><h2>{escape(essay["title"])}</h2><p>{escape(essay["body"])}</p></section>'
     signin = '/?next=' + quote('/discover/' + api_path + '#save-picks', safe='') + '#landing-auth'
-    return f'<header class="hero"><a href="{back_path}">← {escape(back_label)}</a><p class="eyebrow">{escape(trail["tag"])}</p><h1>{escape(trail["name"])}</h1><p>{escape(trail["intro"])}</p><a class="save-jump" href="#save-picks">Save picks to your library ↓</a></header>{essay_section}<section class="editorial"><h2>Choose your starting point</h2><p>{escape(trail["guide"])}</p></section><div class="picks">{items}</div><section class="editorial"><h2>Take something with you</h2><p>{escape(trail["prompt"])}</p><p class="muted">Editorial suggestions · Published {escape(published)}. Source links are informational, not affiliate links. Availability varies by region.</p></section><section id="save-picks" class="save-panel" data-trail="{escape(api_path, quote=True)}"><h2>Make this collection yours</h2><p>Preview your library matches, then select the titles you want in a private collection. Existing ratings, reviews and progress are preserved.</p><button id="preview" type="button">Preview saving</button><a id="signin" rel="nofollow" href="{escape(signin, quote=True)}" hidden>Sign in or create an account to continue here →</a><form id="saveForm" hidden><fieldset id="choices"><legend>Titles to save</legend></fieldset><button id="save" type="submit">Save selected picks</button></form><p id="status" role="status" aria-live="polite"></p><noscript><p>Enable JavaScript to preview and save picks. You can read every recommendation without it.</p></noscript></section>'
+    return f'<header class="hero"><a href="{back_path}">← {escape(back_label)}</a><p class="eyebrow">{escape(trail["tag"])}</p><h1>{escape(trail["name"])}</h1><p>{escape(trail["intro"])}</p><a class="save-jump" href="#save-picks">Save picks to your library ↓</a></header>{essay_section}<section class="editorial"><h2>Choose your starting point</h2><p>{escape(trail["guide"])}</p></section><div class="picks">{items}</div><section class="editorial"><h2>Take something with you</h2><p>{escape(trail["prompt"])}</p><p class="muted">Editorial suggestions, prepared by OmniTrackr and reviewed by the site owner · Published {escape(published)}. Source links are informational, not affiliate links. Availability varies by region. <a href="/contact">Send a correction</a> · <a href="/content-quality">Editorial standards</a></p></section><section id="save-picks" class="save-panel" data-trail="{escape(api_path, quote=True)}"><h2>Make this collection yours</h2><p>Preview your library matches, then select the titles you want in a private collection. Existing ratings, reviews and progress are preserved.</p><button id="preview" type="button">Preview saving</button><a id="signin" rel="nofollow" href="{escape(signin, quote=True)}" hidden>Sign in or create an account to continue here →</a><form id="saveForm" hidden><fieldset id="choices"><legend>Titles to save</legend></fieldset><button id="save" type="submit">Save selected picks</button></form><p id="status" role="status" aria-live="polite"></p><noscript><p>Enable JavaScript to preview and save picks. You can read every recommendation without it.</p></noscript></section>'
 
 
 def paragraphs(values):
@@ -195,9 +201,9 @@ def guide_content(slug, trail, guide):
     parts.extend([
         '</div></section><section id="guide-sources" class="guide-sources" aria-labelledby="sources-heading">',
         '<h2 id="sources-heading">Sources &amp; editorial method</h2>',
-        '<div id="editorial-method"><p>Prepared by OmniTrackr with AI assistance. Factual context was checked against the official sources below; comparisons, mood descriptions, and suggested starting points are editorial interpretations.</p>',
+        '<div id="editorial-method"><p>Prepared by OmniTrackr and reviewed by the site owner before publishing. Factual context was checked against the official sources below; comparisons, mood descriptions, and suggested starting points are editorial interpretations.</p>',
         '<p>Reading and game time varies by person; suggested stopping points are ways to begin, rather than promises about completion time. Source links are informational, not affiliate links. Availability varies by region.</p>',
-        f'<p class="muted">First published September 8, 2026. Guide expanded and sources checked {escape(reviewed)}. <a href="/contact">Send a correction</a> · <a href="/content-quality">Content quality policy</a></p></div><ol>',
+        f'<p class="muted">First published September 8, 2026. Guide expanded and sources checked {escape(reviewed)}. <a href="/contact">Send a correction</a> · <a href="/content-quality">Editorial standards</a></p></div><ol>',
     ])
     for source in guide['sources']:
         parts.append(f'<li id="source-{escape(source["key"], quote=True)}"><a href="{escape(source["url"], quote=True)}" target="_blank" rel="noopener noreferrer">{escape(source["label"])} ↗</a><p>{escape(source["supports"])}</p></li>')
