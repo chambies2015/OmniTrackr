@@ -240,7 +240,7 @@ def test_concurrent_csv_applies_only_create_one_copy(tmp_path, monkeypatch):
     with factory() as db:
         user_id = new_user(db).id
     content = b"title,director,year\nConcurrent,Creator,2020\n"
-    digest = fingerprint(content, "generic", "movies", "")
+    digest = fingerprint(content, "generic", "movies", "", "library.csv")
     first_classified = threading.Event()
     second_classified = threading.Event()
     order_lock = threading.Lock()

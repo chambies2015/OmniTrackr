@@ -292,6 +292,22 @@ test('demo signup opens registration and login returns only to the fixed first-t
   assert.equal(s.context.consumeDiscoverAuthReturn(), '/');
 });
 
+test('import intent opens registration and returns new members to the Import Studio', async () => {
+  const s = setup({ search: '?start=import' });
+  s.context.initAuth();
+  assert.equal(s.elements.get('registerForm').style.display, 'block');
+  assert.deepEqual(JSON.parse(s.storage.get(demoKey)), { source: 'import', created_at: now });
+  await s.context.login('reader', 'password');
+  assert.deepEqual(s.redirects, ['/?start=import']);
+  assert.equal(s.storage.has(demoKey), false);
+  for (const search of ['?start=Import', '?start=import&start=demo', '?start=imports']) {
+    const other = setup({ search, knownMember: true });
+    other.context.initAuth();
+    await other.context.login('reader', 'password');
+    assert.deepEqual(other.redirects, ['/'], search);
+  }
+});
+
 test('demo intent survives registration and same-tab verification without carrying sample data', async () => {
   const signup = setup({ search: '?start=demo' });
   signup.context.initAuth();

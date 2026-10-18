@@ -1,4 +1,4 @@
-/* Private, preview-first CSV migration. Files and previews live only in this page. */
+/* Private, preview-first library migration. Files and previews live only in this page. */
 let importStudioPreview = null;
 let importStudioContext = null;
 let importStudioController = null;
@@ -21,8 +21,17 @@ const importStudioCategories = {
 };
 const importStudioSources = {
   letterboxd: 'a Letterboxd export', goodreads: 'a Goodreads export', myanimelist: 'a MyAnimeList export',
-  imdb: 'an IMDb export', storygraph: 'a StoryGraph export', generic: 'a generic spreadsheet'
+  imdb: 'an IMDb export', storygraph: 'a StoryGraph export', trakt: 'a Trakt export',
+  anilist: 'your AniList lists', generic: 'a generic spreadsheet'
 };
+// Exports that are read by their own layout; column mapping only applies to spreadsheets.
+const IMPORT_STUDIO_STRUCTURED = /\.(zip|xml|gz|json)$/i;
+const ANILIST_QUERY = `query ($name: String, $type: MediaType) {
+  MediaListCollection(userName: $name, type: $type) {
+    lists { name entries { status score(format: POINT_10_DECIMAL) notes
+      media { id format episodes seasonYear startDate { year } title { english romaji } } } }
+  }
+}`;
 
 function importStudioElement(tag, text, className) {
   const node = document.createElement(tag);
@@ -166,6 +175,12 @@ async function inspectImportStudioFile() {
     updateImportStudioControls();
     return;
   }
+  if (IMPORT_STUDIO_STRUCTURED.test(snapshot.file.name || '')) {
+    importStudioInspecting = false;
+    mapping.appendChild(importStudioElement('p', 'This export is read by its own layout, so no column mapping is needed.', 'info-text'));
+    updateImportStudioControls();
+    return;
+  }
   importStudioInspecting = true;
   updateImportStudioControls();
   const current = () => generation === importStudioFileGeneration && snapshot.file === importStudioSnapshot().file && snapshot.account === importStudioAccountKey();
@@ -196,7 +211,7 @@ async function inspectImportStudioFile() {
 }
 
 function buildImportStudioFormData(includeConfirmation = false, snapshot = importStudioSnapshot()) {
-  if (!snapshot.file) throw new Error('Choose a CSV or TSV file first.');
+  if (!snapshot.file) throw new Error('Choose an export file first.');
   const body = new FormData();
   body.append('file', snapshot.file);
   body.append('source', snapshot.source);
@@ -274,14 +289,14 @@ function renderImportStudioPreview(data, focusId) {
   const table = importStudioElement('table', undefined, 'import-studio__table');
   table.appendChild(importStudioElement('caption', 'Proposed import values'));
   const head = importStudioElement('thead'), headRow = importStudioElement('tr');
-  for (const title of ['CSV row', 'Title', 'Outcome', 'Values from your file']) {
+  for (const title of ['Row', 'Title', 'Outcome', 'Values from your file']) {
     const th = importStudioElement('th', title); th.scope = 'col'; headRow.appendChild(th);
   }
   head.appendChild(headRow); table.appendChild(head);
   const body = importStudioElement('tbody');
   for (const item of data.preview || []) {
     const row = importStudioElement('tr');
-    const number = importStudioElement('td', item.row); number.dataset.label = 'CSV row';
+    const number = importStudioElement('td', item.row); number.dataset.label = 'Row';
     const title = importStudioElement('th', item.title); title.scope = 'row';
     title.appendChild(importStudioElement('span', importStudioCategories[item.category]?.[0] || 'Unrecognized category', 'import-studio__category'));
     const outcome = importStudioElement('td', undefined, 'import-studio__outcome'); outcome.dataset.label = 'Outcome';
@@ -433,6 +448,82 @@ async function downloadImportTemplate() {
     if (account === importStudioAccountKey()) document.getElementById('importStudioStatus').textContent = error.message;
   }
 }
+
+async function fetchAniListCollection(name, type, signal) {
+  const response = await fetch('https://graphql.anilist.co', {
+    method: 'POST', signal, credentials: 'omit', cache: 'no-store',
+    headers: {'Content-Type': 'application/json', Accept: 'application/json'},
+    body: JSON.stringify({query: ANILIST_QUERY, variables: {name, type}})
+  });
+  let data = null;
+  try { data = await response.json(); } catch (_) { /* Reported below. */ }
+  const message = data?.errors?.[0]?.message || '';
+  if (response.status === 404 || /not found/i.test(message)) throw new Error(`AniList has no user named ${name}.`);
+  if (/private/i.test(message)) throw new Error('That AniList list is private. Make it public in AniList settings, or export it as XML instead.');
+  if (response.status === 429) throw new Error('AniList is busy right now. Try again in a minute.');
+  if (!response.ok || !data?.data) throw new Error('AniList could not be reached. Try again shortly.');
+  return data.data.MediaListCollection || {lists: []};
+}
+
+async function fetchAniListImport() {
+  if (importStudioApplying || importStudioController) return;
+  const input = document.getElementById('importStudioAniListUser');
+  const button = document.getElementById('importStudioAniListButton');
+  const status = document.getElementById('importStudioStatus');
+  const name = (input?.value || '').trim().replace(/^@/, '');
+  if (!/^[A-Za-z0-9_-]{2,40}$/.test(name)) {
+    status.textContent = 'Enter your AniList username (letters, numbers, dashes or underscores).';
+    input?.focus();
+    return;
+  }
+  const account = importStudioAccountKey();
+  const controller = new AbortController();
+  const timeout = window.setTimeout(() => controller.abort(), 30000);
+  if (button) button.disabled = true;
+  status.textContent = `Fetching ${name}'s public AniList lists…`;
+  try {
+    const anime = await fetchAniListCollection(name, 'ANIME', controller.signal);
+    const manga = await fetchAniListCollection(name, 'MANGA', controller.signal);
+    if (account !== importStudioAccountKey()) return;
+    // The lists become an ordinary file, so preview, confirmation and save work as for any export.
+    const json = JSON.stringify({source: 'anilist', user: name, anime, manga});
+    const transfer = new DataTransfer();
+    transfer.items.add(new File([json], `anilist-${name}.json`, {type: 'application/json'}));
+    document.getElementById('importStudioFile').files = transfer.files;
+    const source = document.getElementById('importStudioSource');
+    if (source) source.value = 'anilist';
+    await inspectImportStudioFile();
+    await previewLibraryImport();
+  } catch (error) {
+    if (account === importStudioAccountKey()) {
+      status.textContent = error.name === 'AbortError' ? 'AniList took too long to answer. Try again shortly.' : error.message;
+    }
+  } finally {
+    window.clearTimeout(timeout);
+    if (button) button.disabled = false;
+  }
+}
+
+function openImportStudioFromStart() {
+  // Links such as /?start=import (the switching guide, signup) land members in the importer.
+  if (typeof openLaunchpadImport === 'function') openLaunchpadImport();
+}
+
+let importStudioStartRequested = false;
+try {
+  const params = new URLSearchParams(window.location.search || '');
+  importStudioStartRequested = window.location.pathname === '/' && params.getAll('start').length === 1 && params.get('start') === 'import';
+} catch (_) { importStudioStartRequested = false; }
+
+document.addEventListener('DOMContentLoaded', () => {
+  document.getElementById('importStudioAniListButton')?.addEventListener('click', fetchAniListImport);
+  document.getElementById('importStudioAniListUser')?.addEventListener('keydown', event => {
+    if (event.key === 'Enter') { event.preventDefault(); fetchAniListImport(); }
+  });
+});
+window.addEventListener('load', () => {
+  if (importStudioStartRequested && typeof hasStoredAuth === 'function' && hasStoredAuth()) openImportStudioFromStart();
+});
 
 window.OmniImportStudio = {reset: clearImportStudioSession, refresh: null, openCategory: null, canOpenCategory: null};
 window.addEventListener('pagehide', clearImportStudioSession);

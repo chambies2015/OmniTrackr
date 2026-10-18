@@ -12,6 +12,8 @@ const DISCOVER_AUTH_RETURN_TTL = 24 * 60 * 60 * 1000;
 let discoverAuthReturnContext = null;
 const DEMO_START_KEY = 'omnitrackr_demo_start';
 let demoStartContext = null;
+// Where a newcomer was headed before signing up: the demo, or importing an existing library.
+const START_INTENTS = ['demo', 'import'];
 // Authentication is also used by the standalone public landing page, which
 // intentionally does not load the much larger private dashboard bundle.
 const AUTH_IS_LOCAL = (location.protocol === 'file:' || location.origin === 'null' || location.origin === '');
@@ -90,10 +92,10 @@ function captureDiscoverAuthReturn() {
 
 function consumeDiscoverAuthReturn() {
     const path = getDiscoverAuthReturn();
-    const startDemo = getDemoStartIntent();
+    const start = getStartIntent();
     clearDiscoverAuthReturn();
     clearDemoStartIntent();
-    return path || (startDemo ? '/?start=demo' : '/');
+    return path || (start ? `/?start=${start}` : '/');
 }
 
 function clearDemoStartIntent() {
@@ -106,18 +108,22 @@ function clearDemoStartIntent() {
 }
 
 function getDemoStartIntent() {
+    return getStartIntent() !== null;
+}
+
+function getStartIntent() {
     try {
         const context = demoStartContext || JSON.parse(sessionStorage.getItem(DEMO_START_KEY));
         const now = Date.now();
-        if (context?.source === 'demo' && Number.isFinite(context.created_at)
+        if (START_INTENTS.includes(context?.source) && Number.isFinite(context.created_at)
             && context.created_at <= now && now - context.created_at < DISCOVER_AUTH_RETURN_TTL) {
-            return true;
+            return context.source;
         }
     } catch (error) {
         // Ignore expired, malformed, or unavailable session state.
     }
     clearDemoStartIntent();
-    return false;
+    return null;
 }
 
 // A friend's /join link sends visitors to /?invite=<token>#signup; signing up from
@@ -169,11 +175,11 @@ function captureDemoStartIntent() {
     if (!params.has('start')) return;
     clearDemoStartIntent();
     const values = params.getAll('start');
-    if (values.length !== 1 || values[0] !== 'demo' || getDiscoverAuthReturn()
+    if (values.length !== 1 || !START_INTENTS.includes(values[0]) || getDiscoverAuthReturn()
         || ['token', 'reset_token', 'email_verified', 'password_reset', 'email_change_token', 'email_change']
             .some(key => params.has(key))) return;
     // This is navigation-only state: no demo titles, notes, or credentials cross over.
-    demoStartContext = { source: 'demo', created_at: Date.now() };
+    demoStartContext = { source: values[0], created_at: Date.now() };
     try {
         sessionStorage.setItem(DEMO_START_KEY, JSON.stringify(demoStartContext));
     } catch (error) {
@@ -1165,7 +1171,7 @@ function initAuth() {
             showRegisterForm();
             return;
         }
-        if (urlParams.getAll('start').length === 1 && urlParams.get('start') === 'demo'
+        if (urlParams.getAll('start').length === 1 && START_INTENTS.includes(urlParams.get('start'))
             && getDemoStartIntent() && !getDiscoverAuthReturn()) {
             showRegisterForm();
             return;

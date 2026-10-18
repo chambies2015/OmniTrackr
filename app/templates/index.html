@@ -61,6 +61,7 @@
   <link rel="stylesheet" href="/static/taste-match.css?v=20261016-taste-match-1">
   <link rel="stylesheet" href="/static/supporter.css?v=20261017-supporters-2">
   <link rel="stylesheet" href="/static/badges.css?v=20261017-badges-1">
+  <link rel="stylesheet" href="/static/import-studio.css?v=20261018-formats-1">
   <link rel="stylesheet" href="/static/dashboard-2026.css?v=20261017-bughunt-1">
   <script src="./preauth.js?v=20261010-audit-preauth-1"></script>
   <style>
@@ -186,7 +187,7 @@
         "name": "Can I export my data?",
         "acceptedAnswer": {
           "@type": "Answer",
-          "text": "Yes. Export your movies, TV shows, anime, video games, music, books, collections, and private journal as a JSON backup. The Import Studio can also preview IMDb, Letterboxd, Goodreads, StoryGraph, MyAnimeList, and generic CSV migrations without overwriting existing library records."
+          "text": "Yes. Export your movies, TV shows, anime, video games, music, books, collections, and private journal as a JSON backup. The Import Studio can also preview Letterboxd, IMDb, Goodreads, StoryGraph, MyAnimeList, AniList, Kitsu, Trakt, and generic CSV migrations without overwriting existing library records."
         }
       },
       {
@@ -449,7 +450,7 @@
         <div id="libraryLaunchpadStarterPaths" class="library-launchpad__categories" hidden>
           <button type="button" class="library-launchpad__category" data-action="launchpad-import">Bring an existing list</button>
           <a class="library-launchpad__category" href="/discover">Browse Discover</a>
-          <p class="library-launchpad__path-hint">Import Studio reads IMDb, Letterboxd, Goodreads, StoryGraph, and MyAnimeList exports, and lets you preview them before importing. Existing records are not overwritten.</p>
+          <p class="library-launchpad__path-hint">Import Studio reads Letterboxd, IMDb, Goodreads, StoryGraph, MyAnimeList, AniList, Kitsu, and Trakt exports as they come, ZIP files included, and lets you preview them before importing. Existing records are not overwritten.</p>
         </div>
       </div>
       <div id="libraryLaunchpadSteps" class="library-launchpad__steps" aria-live="polite"></div>
@@ -1619,8 +1620,8 @@
     </form>
   </dialog>
   <script src="./credentials.js"></script>
-  <script src="./auth.js?v=20261017-badges-1"></script>
-  <script src="/static/import-studio.js?v=20261011-imdb-storygraph"></script>
+  <script src="./auth.js?v=20261018-import-1"></script>
+  <script src="/static/import-studio.js?v=20261018-formats-1"></script>
   <script src="/static/progress.js?v=20260922-progress"></script>
   <script src="./app.js"></script>
   <script src="/static/for-you.js?v=20261017-bughunt-1"></script>
@@ -1927,7 +1928,15 @@
         <div class="account-section import-studio" id="importStudio">
           <div class="import-studio__eyebrow">Bring your history with you</div>
           <h3>Import Studio</h3>
-          <p class="info-text">Preview an IMDb, Letterboxd, Goodreads, StoryGraph, MyAnimeList, or generic CSV before anything is saved. Existing records are never overwritten: matches and repeated rows are skipped.</p>
+          <p class="info-text">Bring your history from Letterboxd, IMDb, Goodreads, The StoryGraph, MyAnimeList, AniList, Kitsu, Trakt, or any spreadsheet. Upload the export file as it comes, ZIP included, and preview it before anything is saved. Existing records are never overwritten: matches and repeated rows are skipped.</p>
+          <div class="import-studio__sources" aria-label="Where to find your export">
+            <a href="/switch#letterboxd-heading" target="_blank" rel="noopener noreferrer">Letterboxd ZIP</a>
+            <a href="/switch#imdb-heading" target="_blank" rel="noopener noreferrer">IMDb CSV</a>
+            <a href="/switch#goodreads-heading" target="_blank" rel="noopener noreferrer">Goodreads CSV</a>
+            <a href="/switch#storygraph-heading" target="_blank" rel="noopener noreferrer">StoryGraph CSV</a>
+            <a href="/switch#mal-heading" target="_blank" rel="noopener noreferrer">MyAnimeList / Kitsu XML</a>
+            <a href="/switch#trakt-heading" target="_blank" rel="noopener noreferrer">Trakt ZIP or JSON</a>
+          </div>
           <form id="importStudioForm" data-submit-action="preview-library-import">
             <div class="import-studio__controls">
               <label>
@@ -1935,10 +1944,12 @@
                 <select id="importStudioSource" data-change-action="import-studio-options">
                   <option value="auto">Detect automatically</option>
                   <option value="imdb">IMDb ratings, watchlist or list CSV</option>
-                  <option value="letterboxd">Letterboxd CSV</option>
+                  <option value="letterboxd">Letterboxd ZIP or CSV</option>
                   <option value="goodreads">Goodreads CSV</option>
                   <option value="storygraph">The StoryGraph CSV</option>
-                  <option value="myanimelist">MyAnimeList CSV</option>
+                  <option value="myanimelist">MyAnimeList or Kitsu XML / CSV</option>
+                  <option value="trakt">Trakt ZIP or JSON</option>
+                  <option value="anilist">AniList (fetched by username)</option>
                   <option value="generic">Generic CSV / spreadsheet</option>
                 </select>
               </label>
@@ -1955,9 +1966,18 @@
                 </select>
               </label>
               <label class="import-studio__file-label">
-                <span>CSV or TSV file · up to 5 MB / 5,000 rows</span>
-                <input id="importStudioFile" type="file" accept=".csv,.tsv,text/csv,text/tab-separated-values" required data-change-action="import-studio-file">
+                <span>Export file (CSV, ZIP, XML or JSON) · up to 5 MB / 5,000 titles</span>
+                <input id="importStudioFile" type="file" accept=".csv,.tsv,.zip,.xml,.gz,.json,text/csv,text/tab-separated-values,application/zip,application/json,text/xml" required data-change-action="import-studio-file">
               </label>
+            </div>
+
+            <div class="import-studio__anilist">
+              <label>
+                <span>On AniList? No file needed</span>
+                <input id="importStudioAniListUser" type="text" inputmode="text" autocomplete="off" autocapitalize="off" spellcheck="false" maxlength="40" placeholder="AniList username">
+              </label>
+              <button type="button" class="action-btn" id="importStudioAniListButton">Fetch my AniList lists</button>
+              <p class="info-text">Reads your public anime and manga lists straight from AniList, then shows the same preview. Nothing is saved until you confirm.</p>
             </div>
 
             <details class="import-studio__mapping" id="importStudioMappingPanel">

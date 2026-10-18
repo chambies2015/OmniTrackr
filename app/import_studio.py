@@ -13,16 +13,19 @@ from typing import Any, Iterable
 from pydantic import ValidationError
 from sqlalchemy.orm import Session
 
-from . import models, schemas
+from . import import_formats, models, schemas
 
 
 MAX_IMPORT_BYTES = 5 * 1024 * 1024
 MAX_IMPORT_ROWS = 5000
-SUPPORTED_SOURCES = {"auto", "letterboxd", "goodreads", "myanimelist", "imdb", "storygraph", "generic"}
+SUPPORTED_SOURCES = {"auto", "letterboxd", "goodreads", "myanimelist", "imdb", "storygraph", "trakt", "anilist", "generic"}
 SOURCE_LABELS = {
     "letterboxd": "Letterboxd", "goodreads": "Goodreads", "myanimelist": "MyAnimeList",
-    "imdb": "IMDb", "storygraph": "The StoryGraph", "generic": "Generic CSV / spreadsheet",
+    "imdb": "IMDb", "storygraph": "The StoryGraph", "trakt": "Trakt", "anilist": "AniList",
+    "generic": "Generic CSV / spreadsheet",
 }
+# Placeholders the importers use when an export has no creator; they match any creator.
+UNKNOWN_CREATORS = {"", "unknown director", "unknown artist", "unknown author"}
 # IMDb "Title Type" values, compared with spaces and punctuation removed so both the
 # current export ("TV Mini Series") and the older one ("tvMiniSeries") are understood.
 IMDB_TITLE_TYPES = {
@@ -72,9 +75,12 @@ class ParsedRow:
     error: str | None = None
 
 
-def fingerprint(content: bytes, source: str = "", category: str = "", mapping_json: str = "") -> str:
+def fingerprint(content: bytes, source: str = "", category: str = "", mapping_json: str = "", filename: str = "") -> str:
     """Bind confirmation to both the file bytes and the selected interpretation."""
     options = f"\0{source}\0{category}\0{mapping_json}".encode("utf-8")
+    if filename:
+        # A file's name can change how it is read (a Letterboxd watchlist.csv).
+        options += f"\0{filename}".encode("utf-8")
     return hashlib.sha256(content + options).hexdigest()
 
 
@@ -280,7 +286,8 @@ def _imdb_row(row: dict[str, str], mapping: dict[str, str]) -> tuple[str, dict[s
     return category, {**common, "year": year, "seasons": None, "episodes": None, "watched": completed}
 
 
-def _source_row(source: str, row: dict[str, str], category_override: str | None, mapping: dict[str, str]) -> tuple[str, dict[str, Any]]:
+def _source_row(source: str, row: dict[str, str], category_override: str | None, mapping: dict[str, str],
+                watchlist: bool = False) -> tuple[str, dict[str, Any]]:
     if source == "generic":
         return _generic_row(row, category_override, mapping)
     def field(target: str, *aliases: str) -> str:
@@ -291,7 +298,7 @@ def _source_row(source: str, row: dict[str, str], category_override: str | None,
         if not title:
             raise ValueError("Name is required.")
         completed = (_truthy(field("status")) if "status" in mapping else
-                     not (_first(row, "position") and not _first(row, "date", "watched date")))
+                     not watchlist and not (_first(row, "position") and not _first(row, "date", "watched date")))
         return "movies", {
             "title": title, "director": field("creator", "director") or "Unknown director",
             "year": _integer(field("year", "year")),
@@ -348,10 +355,13 @@ def parse_csv(
     requested_source: str = "auto",
     generic_category: str | None = None,
     column_mapping: dict[str, str] | None = None,
+    filename: str = "",
 ) -> tuple[str, list[ParsedRow]]:
     source = _clean(requested_source).lower() or "auto"
     if source not in SUPPORTED_SOURCES:
         raise ValueError("Unsupported import source.")
+    if import_formats.is_structured(content, filename):
+        return _parse_structured(content, filename, source)
     category_override = None
     if generic_category:
         category_override = CATEGORY_ALIASES.get(_clean(generic_category).lower())
@@ -374,20 +384,45 @@ def parse_csv(
             raise ValueError("Mapped CSV columns were not found: " + ", ".join(sorted(missing)) + ".")
         headers.update(normalized_mapping.keys())
     detected = _detect_source(headers) if source == "auto" else source
+    watchlist = detected == "letterboxd" and import_formats.letterboxd_csv_name(filename) == "watchlist.csv"
     parsed: list[ParsedRow] = []
     for number, row in enumerate(rows, start=2):
         try:
-            category, data = _source_row(detected, row, category_override, normalized_mapping)
+            category, data = _source_row(detected, row, category_override, normalized_mapping, watchlist)
             validated = SCHEMA_BY_CATEGORY[category](**data)
             parsed.append(ParsedRow(number, category, validated.title, validated.model_dump()))
         except ValueError as exc:
             title = _field(row, normalized_mapping, "title", "title", "name", "series title") or f"Row {number}"
-            if isinstance(exc, ValidationError):
-                message = "; ".join(f"{'.'.join(str(part) for part in error['loc'])}: {error['msg']}" for error in exc.errors())
-            else:
-                message = str(exc)
-            parsed.append(ParsedRow(number, None, title, None, message))
+            parsed.append(ParsedRow(number, None, title, None, _error_message(exc)))
     return detected, parsed
+
+
+def _parse_structured(content: bytes, filename: str, source: str) -> tuple[str, list[ParsedRow]]:
+    """Read a ZIP, XML or JSON export; its layout decides the source and categories."""
+    if len(content) > MAX_IMPORT_BYTES:
+        raise ValueError("Import files must be 5 MB or smaller.")
+    detected, rows = import_formats.read_structured(content, filename)
+    if source not in {"auto", "generic", detected}:
+        raise ValueError(f"This file looks like a {SOURCE_LABELS[detected]} export. Choose {SOURCE_LABELS[detected]} or Detect automatically.")
+    if not rows:
+        raise ValueError(f"No titles were found in this {SOURCE_LABELS[detected]} export.")
+    if len(rows) > MAX_IMPORT_ROWS:
+        raise ValueError(f"Imports are limited to {MAX_IMPORT_ROWS:,} titles at a time.")
+    parsed: list[ParsedRow] = []
+    for number, row in enumerate(rows, start=1):
+        try:
+            category, data = _generic_row(row, None, {})
+            validated = SCHEMA_BY_CATEGORY[category](**data)
+            parsed.append(ParsedRow(number, category, validated.title, validated.model_dump()))
+        except ValueError as exc:
+            parsed.append(ParsedRow(number, None, row.get("title") or f"Entry {number}", None, _error_message(exc)))
+    return detected, parsed
+
+
+def _error_message(exc: ValueError) -> str:
+    if isinstance(exc, ValidationError):
+        return "; ".join(f"{'.'.join(str(part) for part in error['loc'])}: {error['msg']}" for error in exc.errors())
+    return str(exc)
 
 
 def _identity(category: str, data: dict[str, Any]) -> tuple[Any, ...]:
@@ -404,8 +439,34 @@ def _identity(category: str, data: dict[str, Any]) -> tuple[Any, ...]:
     return title, _clean(data.get("author")).casefold()
 
 
-def _existing_identities(db: Session, user_id: int) -> dict[str, set[tuple[Any, ...]]]:
-    existing: dict[str, set[tuple[Any, ...]]] = {category: set() for category in MODEL_BY_CATEGORY}
+def _unknown(identity: tuple[Any, ...]) -> bool:
+    """A blank year or placeholder creator can't tell two same-titled entries apart."""
+    second = identity[1]
+    return second == 0 if isinstance(second, int) else second in UNKNOWN_CREATORS
+
+
+class _Identities:
+    """Known entries per category; an entry missing its year or creator matches any same title."""
+
+    def __init__(self) -> None:
+        self.exact: set[tuple[Any, ...]] = set()
+        self.by_title: dict[str, set[Any]] = {}
+
+    def add(self, identity: tuple[Any, ...]) -> None:
+        self.exact.add(identity)
+        self.by_title.setdefault(identity[0], set()).add(identity[1])
+
+    def __contains__(self, identity: tuple[Any, ...]) -> bool:
+        if identity in self.exact:
+            return True
+        seconds = self.by_title.get(identity[0])
+        if not seconds:
+            return False
+        return _unknown(identity) or any(_unknown((identity[0], second)) for second in seconds)
+
+
+def _existing_identities(db: Session, user_id: int) -> dict[str, _Identities]:
+    existing = {category: _Identities() for category in MODEL_BY_CATEGORY}
     for category, model in MODEL_BY_CATEGORY.items():
         for item in db.query(model).filter(model.user_id == user_id).all():
             data = {column.name: getattr(item, column.name) for column in model.__table__.columns}

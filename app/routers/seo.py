@@ -487,7 +487,7 @@ OmniTrackr is a free web application for tracking and organizing movies, TV show
 - Music tracker guide: {base_url}/music-tracker
 - Media statistics guide: {base_url}/media-statistics
 - Export and import guide: {base_url}/export-import-guide
-- Switching guide (IMDb, Letterboxd, Goodreads, StoryGraph, MyAnimeList): {base_url}/switch
+- Switching guide (Letterboxd, IMDb, Goodreads, StoryGraph, MyAnimeList, Kitsu, AniList, Trakt): {base_url}/switch
 - Media tracker setup checklist: {base_url}/media-tracker-checklist
 - Media tracking templates: {base_url}/tracking-templates
 - Media review guidelines: {base_url}/review-guidelines
