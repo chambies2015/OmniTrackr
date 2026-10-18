@@ -192,13 +192,14 @@ app.add_middleware(SiteTrafficMiddleware)
 
 ENVIRONMENT = os.getenv("ENVIRONMENT", "development").lower()
 
-# Trust pages (privacy, terms, contact) stay indexable so search and ad
+# Trust pages (privacy, terms, contact, editorial standards) stay indexable so search and ad
 # reviewers see the same site identity a visitor does; they are still left out
 # of the sitemap. The source-checked comparison is original reference content.
 INDEXABLE_PUBLIC_TEMPLATES = {
     "about.html",
     "compare.html",
     "contact.html",
+    "content_quality.html",
     "demo.html",
     "export_import_guide.html",
     "faq.html",
@@ -371,6 +372,13 @@ def public_root_html(html: str, request: Request | None = None) -> str:
             except Exception:
                 picks_html = ""  # The homepage never depends on this section.
             page = page.replace("<!--GUEST_PICKS-->", picks_html, 1)
+        if "<!--LATEST_GUIDES-->" in page:
+            try:
+                from . import editorial_index
+                guides_html = editorial_index.homepage_section()
+            except Exception:
+                guides_html = ""  # The homepage never depends on this section.
+            page = page.replace("<!--LATEST_GUIDES-->", guides_html, 1)
         if "<!--COMMUNITY_PROOF-->" in page:
             try:
                 from . import landing_proof
@@ -889,7 +897,9 @@ async def content_quality_page(request: Request):
 
 @app.get("/site-map", tags=["public"])
 async def site_map_page(request: Request):
-    response = strict_template_response("site_map.html", request)
+    from . import editorial_index
+    response = strict_template_response("site_map.html", request,
+                                        {"<!--GUIDE_DIRECTORY-->": editorial_index.directory_html()})
     if response:
         return response
     raise HTTPException(status_code=404, detail="Page not found")

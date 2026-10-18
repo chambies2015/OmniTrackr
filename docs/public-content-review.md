@@ -1,5 +1,47 @@
 # Public content review — September 17, 2026
 
+## Follow-up — October 17, 2026: point the site at its writing, and speak to readers
+
+An audit of every public page (sitemap URLs plus linked trust pages, 80 in all,
+measured from server-rendered HTML) found the written guides were in good shape
+but hard to reach, and several trust pages were written to an AdSense reviewer
+rather than to a reader.
+
+- **Navigation.** The header led with Release Radar, Public reviews and
+  Collections, which are often empty or thin for a new site, while the 22
+  ad-eligible In order and If you liked guides were linked only from the footer.
+  The header now leads with Discover, In order, If you liked and Daily; reviews,
+  collections and the FAQ stay in the footer. The homepage gains a server-rendered
+  "New from the guides" section (`app/editorial_index.py`) with the newest guides
+  and their checked dates, and the HTML site map lists every guide.
+- **Reviewer-directed copy.** About talked about "CSP handling, sitemap coverage,
+  robots.txt rules", the content policy addressed "reviewers, search engines" and
+  "thin app shells", and the site map called itself a directory for "crawlers".
+  Google's helpful-content guidance treats text written for search engines as a
+  negative signal. About now says what the site is, what can be read without an
+  account, who runs it, how guides are written, and how it is paid for. The
+  content policy is now reader-facing **Editorial standards** (same URL), now
+  indexable but still outside the sitemap like the other trust pages.
+- **Disclosure consistency.** Some guides said "reviewed by the editors" and the
+  Daily said puzzles are "written by hand", while the policy says guides are
+  written with AI assistance and do not claim a human review team. User-facing
+  copy now says "with AI assistance" everywhere, including monthly editions and
+  past puzzles, and no longer says "hand-written". Dan confirmed on October 18
+  that he reviews the guides, so the guides, About and Editorial standards say
+  they are reviewed by the site owner before publishing. Dan also reviewed the
+  Daily puzzles and asked for the AI-assistance lines to be removed, so pages
+  now credit OmniTrackr and the site owner's review only.
+- **Daily archive.** `/daily/archive` was indexed with about 16 words of listing
+  text and did not load its stylesheet. It now loads it, shows each puzzle's
+  first clue (already public) and explains the puzzles. Past puzzle pages keep
+  the rules to one paragraph (the full rules stay on `/daily`) so each page is
+  mostly its own answer, and link the If you liked / In order guide about the
+  answer inside the spoiler.
+
+No database, user data, ad placement or ad eligibility change. Live check after
+deploy: the homepage shows "New from the guides", and `/about` and
+`/content-quality` read as described.
+
 ## Follow-up — October 16, 2026: all ten Discover trails are full guides
 
 The seven remaining short trails (Notice the details, Small adventures, Clever

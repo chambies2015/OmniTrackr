@@ -28,7 +28,7 @@ GUEST_LIST_JS = "/static/guest-list.js?v=20261012-hero-search-1"
 SITE = "https://omnitrackr.xyz"
 FIRST_PUBLISHED = "2026-10-17"
 HUB_TITLE = "Franchises in order: what to watch, read and play first"
-HUB_DESCRIPTION = ("Hand-written guides to the best order for Star Wars, The Witcher, The Lord of the Rings, Harry Potter, "
+HUB_DESCRIPTION = ("Guides to the best order for Star Wars, The Witcher, The Lord of the Rings, Harry Potter, "
                    "Dune, Alien, Monogatari, Fate, Zelda and more, across films, series, books and games.")
 FORMAT_PLURALS = {"movie": "films", "tv": "series", "anime": "anime", "game": "games", "book": "books", "album": "albums"}
 MAX_ADD = 40
@@ -214,7 +214,7 @@ def guide_content(slug: str, entry: dict, details: dict, signed_in: bool) -> str
         '</div></section>',
         '<section id="method" class="guide-sources io-method" aria-labelledby="method-heading">',
         '<h2 id="method-heading">How we chose</h2>',
-        f'<p>Prepared by OmniTrackr with AI assistance and reviewed by the editors. We listed the entries most people mean by '
+        f'<p>Prepared by OmniTrackr and reviewed by the site owner before publishing. We listed the entries most people mean by '
         f'"{_e(entry["name"])}", checked release years and story placement against public sources, and marked as optional the '
         'side stories that are not needed to follow the main story. The recommended order is editorial opinion: it is the order '
         'we would hand a friend starting from nothing.</p>',
@@ -222,7 +222,7 @@ def guide_content(slug: str, entry: dict, details: dict, signed_in: bool) -> str
         'region. Links go to OmniTrackr title pages, not shops. Your progress is worked out from your own library each time you '
         'open the page; nothing about it is shared.</p>',
         f'<p class="muted">First published {_e(_long_date(FIRST_PUBLISHED))}. Checked {_e(_long_date(reviewed))}. '
-        '<a href="/contact">Suggest a franchise or send a correction</a> · <a href="/content-quality">Content quality policy</a> · '
+        '<a href="/contact">Suggest a franchise or send a correction</a> · <a href="/content-quality">Editorial standards</a> · '
         '<a href="/if-you-liked">If you liked guides</a></p></section></article>',
     ])
     return "".join(parts)
@@ -262,7 +262,7 @@ def in_order_index(request: Request):
         )
     content = (
         '<header class="hero"><p class="eyebrow">IN ORDER</p><h1>Every franchise, in the right order.</h1>'
-        '<p>Release order, story order, or the order that keeps every twist intact? Hand-written guides to the best way through '
+        '<p>Release order, story order, or the order that keeps every twist intact? Guides to the best way through '
         'the biggest franchises, across films, series, anime, books and games, with what you can safely skip.</p></header>'
         f'<ul class="io-cards">{"".join(cards)}</ul>'
         '<section class="editorial io-why"><h2>Why the order matters</h2><p>Stories that grow over decades are rarely told in order. '

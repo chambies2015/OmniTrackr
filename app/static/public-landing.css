@@ -406,3 +406,23 @@ body.lp #landingPage { background: none; display: block; min-height: 0; padding:
 .lp .lp-auth__card .auth-password input { padding-right: 76px; width: 100%; }
 .lp .lp-auth__card .auth-form .auth-password__toggle { background: transparent; border: 0; border-radius: 8px; box-shadow: none; color: var(--lp-violet-soft); cursor: pointer; font: 600 .88rem Inter, sans-serif; margin: 0; padding: 8px 10px; position: absolute; right: 8px; top: 7px; width: auto; }
 .lp .lp-auth__card .auth-form .auth-password__toggle:hover { background: rgba(255, 255, 255, .08); box-shadow: none; filter: none; }
+
+/* New from the guides: the latest written guides, server rendered. */
+.lp-reads { padding-top: 0; }
+.lp-reads .lp-section-head--row p:not(.lp-eyebrow) { color: var(--lp-muted); margin: 10px 0 0; max-width: 640px; }
+.lp-reads__grid { display: grid; gap: 16px; grid-template-columns: repeat(3, minmax(0, 1fr)); list-style: none; margin: 0; padding: 0; }
+.lp-reads__card a { background: var(--lp-surface); border: 1px solid var(--lp-border); border-radius: var(--lp-radius); color: var(--lp-text); display: flex; flex-direction: column; gap: 10px; height: 100%; padding: 22px 22px 20px; position: relative; text-decoration: none; transition: border-color .15s ease, background .15s ease, transform .15s ease; }
+.lp-reads__card a::before { background: var(--lp-reads-accent, var(--lp-violet)); border-radius: 0 0 4px 4px; content: ""; height: 3px; left: 22px; position: absolute; top: 0; width: 44px; }
+.lp-reads__card a:hover { background: var(--lp-surface-2); border-color: var(--lp-border-strong); transform: translateY(-2px); }
+.lp-reads__card--in-order { --lp-reads-accent: var(--lp-teal); }
+.lp-reads__card--if-you-liked { --lp-reads-accent: #f472b6; }
+.lp-reads__card--monthly { --lp-reads-accent: #fbbf24; }
+.lp-reads__kind { color: var(--lp-reads-accent, var(--lp-violet-soft)); font-size: .72rem; font-weight: 700; letter-spacing: .12em; text-transform: uppercase; }
+.lp-reads__card strong { font: 700 1.12rem/1.3 Poppins, Inter, sans-serif; letter-spacing: -.01em; }
+.lp-reads__summary { color: var(--lp-muted); display: -webkit-box; font-size: .94rem; line-height: 1.55; overflow: hidden; -webkit-box-orient: vertical; -webkit-line-clamp: 4; }
+.lp-reads__date { color: var(--lp-soft); font-size: .8rem; margin-top: auto; opacity: .8; padding-top: 4px; }
+.lp-reads__more { display: flex; flex-wrap: wrap; gap: 10px 22px; margin: 22px 0 0; }
+.lp-reads__more a { color: var(--lp-violet-soft); font-weight: 600; text-underline-offset: 4px; }
+@media (max-width: 1080px) { .lp-reads__grid { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
+@media (max-width: 640px) { .lp-reads__grid { grid-template-columns: 1fr; } }
+@media (prefers-reduced-motion: reduce) { .lp-reads__card a { transition: none; } .lp-reads__card a:hover { transform: none; } }

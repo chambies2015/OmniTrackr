@@ -137,7 +137,7 @@ GUIDANCE = (
     'private ratings. Picks are random within the format you choose, and the page avoids repeating a recent pick until it '
     'runs out of others.</p>'
     '<p class="muted">Availability varies by region. Source links are informational, not affiliate links. '
-    '<a href="/content-quality">Content quality policy</a> · <a href="/discover">Browse every Discover trail</a></p></section>'
+    '<a href="/content-quality">Editorial standards</a> · <a href="/discover">Browse every Discover trail</a></p></section>'
 )
 
 

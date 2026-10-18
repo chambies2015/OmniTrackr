@@ -38,7 +38,9 @@ single most useful thing to check before applying again.
    Request indexing, on these pages: `/`, `/discover`, the three Discover guides
    (`/discover/one-evening-well-spent`, `/discover/finding-your-feet`,
    `/discover/beautifully-strange-worlds`), `/discover/monthly/october-2026`,
-   `/guides`, `/media-tracking`, `/compare`, and `/about`.
+   `/guides`, `/media-tracking`, `/compare`, `/about`, `/content-quality`
+   (now the reader-facing editorial standards), `/in-order`, `/in-order/star-wars`,
+   `/if-you-liked`, and `/if-you-liked/interstellar`.
 4. If most of these show "Discovered/Crawled – currently not indexed", wait
    until they are indexed before you apply again. If you apply sooner, the
    result will probably be another "low value content" rejection.
@@ -84,3 +86,9 @@ authored Discover guides and monthly editions, because they are reviewed and
 cite their sources. Since October 16, 2026 all ten Discover trails are full,
 indexed guides. Keep adding one monthly edition each month, and give Google a
 few weeks to index the new guides before requesting another review.
+
+Since October 17, 2026 the header menu and the homepage lead with these guides
+(Discover, In order, If you liked, Daily), and the About and Editorial standards
+pages speak to readers about who runs the site, how guides are written with AI
+assistance and checked, and how the site is paid for. A reviewer who lands on the
+homepage now reaches the written guides in one click.
