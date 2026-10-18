@@ -23,7 +23,9 @@ READER_TEMPLATES = (
 
 def test_dashboard_loads_the_new_theme_last():
     links = re.findall(r'<link rel="stylesheet" href="([^"]+)"', INDEX.split("</head>")[0])
-    assert links[-1].startswith("/static/dashboard-2026.css?v=")
+    # Only the accessibility layer (contrast, focus, tap targets) follows the theme.
+    assert links[-2].startswith("/static/dashboard-2026.css?v=")
+    assert links[-1].startswith("/static/a11y.css?v=")
 
 
 def test_dashboard_uses_the_vortex_mark_and_a_grouped_footer():
