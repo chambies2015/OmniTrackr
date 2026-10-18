@@ -254,6 +254,7 @@ function clearAuth({ preserveReturn = false } = {}) {
     window.resetForYou?.();
     window.resetYearGoals?.();
     window.resetMonthlyChallenge?.();
+    window.resetBadges?.();
     if (!preserveReturn) clearDiscoverAuthReturn();
     clearDemoStartIntent();
     try {
@@ -579,6 +580,7 @@ function showAuthModal() {
     window.resetForYou?.();
     window.resetYearGoals?.();
     window.resetMonthlyChallenge?.();
+    window.resetBadges?.();
     
     // Hide footer for logged-in view when showing landing page
     const mainFooter = document.getElementById('mainFooter');
@@ -628,6 +630,7 @@ function showMainUI() {
     window.refreshForYou?.();
     window.refreshYearGoals?.();
     window.refreshMonthlyChallenge?.();
+    window.refreshBadges?.();
     if (typeof updateNotificationCount === 'function') {
         updateNotificationCount();
         // Set up interval to refresh notification count every 30 seconds

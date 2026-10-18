@@ -60,6 +60,7 @@
   <link rel="stylesheet" href="/static/dialog-theme.css?v=20260924-visual-4">
   <link rel="stylesheet" href="/static/taste-match.css?v=20261016-taste-match-1">
   <link rel="stylesheet" href="/static/supporter.css?v=20261017-supporters-2">
+  <link rel="stylesheet" href="/static/badges.css?v=20261017-badges-1">
   <link rel="stylesheet" href="/static/dashboard-2026.css?v=20261017-bughunt-1">
   <script src="./preauth.js?v=20261010-audit-preauth-1"></script>
   <style>
@@ -602,6 +603,25 @@
         <button id="monthlyChallengeDismiss" type="button" class="month-challenge__link" data-challenge-action="dismiss">Not this month</button>
         <button id="monthlyChallengeLeave" type="button" class="month-challenge__link" data-challenge-action="leave" hidden>Leave challenge</button>
         <p id="monthlyChallengeStatus" class="month-challenge__status" role="status" aria-live="polite"></p>
+      </div>
+    </section>
+
+    <section id="badgeCase" class="badge-case" aria-labelledby="badgeCaseTitle" hidden>
+      <div class="badge-case__header">
+        <div>
+          <p class="badge-case__eyebrow">Badges</p>
+          <h2 id="badgeCaseTitle">Your trophy case</h2>
+          <p id="badgeCaseSummary" class="badge-case__summary"></p>
+        </div>
+        <div id="badgeCaseShelf" class="badge-case__shelf" role="img" aria-label="Badges you've earned" hidden></div>
+      </div>
+      <div id="badgeCaseCelebration" class="badge-case__celebration" role="status" hidden></div>
+      <h3 id="badgeCaseNextTitle" class="badge-case__subhead">Closest next</h3>
+      <ul id="badgeCaseNext" class="badge-case__next"></ul>
+      <ul id="badgeCaseGrid" class="badge-case__grid" hidden></ul>
+      <div class="badge-case__footer">
+        <button id="badgeCaseToggle" type="button" class="badge-case__link badge-case__link--strong" data-badge-action="toggle" aria-expanded="false" aria-controls="badgeCaseGrid">See all badges</button>
+        <button type="button" class="badge-case__link" data-badge-action="hide">Hide</button>
       </div>
     </section>
 
@@ -1599,7 +1619,7 @@
     </form>
   </dialog>
   <script src="./credentials.js"></script>
-  <script src="./auth.js?v=20261017-in-order-1"></script>
+  <script src="./auth.js?v=20261017-badges-1"></script>
   <script src="/static/import-studio.js?v=20261011-imdb-storygraph"></script>
   <script src="/static/progress.js?v=20260922-progress"></script>
   <script src="./app.js"></script>
@@ -1609,6 +1629,7 @@
   <script src="/static/supporter.js?v=20261017-supporters-2"></script>
   <script src="/static/goals.js?v=20261010-goal-reached-1"></script>
   <script src="/static/challenges.js?v=20261011-challenge-2"></script>
+  <script src="/static/badges.js?v=20261017-badges-1"></script>
   <script src="/static/taste-match.js?v=20261016-taste-match-1"></script>
   <script src="/static/push.js?v=20261011-push-2" defer></script>
   <script src="/static/year-in-review-entry.js?v=20261008-recap-1" defer></script>

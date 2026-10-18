@@ -744,6 +744,17 @@ for route in challenges_router.router.routes:
         bind_rate_limited_endpoint(route, rate_limited_challenge_card)
 app.include_router(challenges_router.router)
 
+from .routers import badges as badges_router
+rate_limited_badges_list = limiter.limit("120/minute")(badges_router.list_badges)
+rate_limited_badges_seen = limiter.limit("30/minute")(badges_router.badges_seen)
+for route in badges_router.router.routes:
+    path, methods = getattr(route, "path", None), getattr(route, "methods", set())
+    if path == "/api/badges" and "GET" in methods:
+        bind_rate_limited_endpoint(route, rate_limited_badges_list)
+    elif path == "/api/badges/seen" and "POST" in methods:
+        bind_rate_limited_endpoint(route, rate_limited_badges_seen)
+app.include_router(badges_router.router)
+
 from .routers import pick as pick_router
 rate_limited_pick_add = limiter.limit("30/minute")(pick_router.add_pick)
 rate_limited_pick_pool = limiter.limit("60/minute")(pick_router.pick_pool)

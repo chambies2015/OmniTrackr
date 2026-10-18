@@ -1021,3 +1021,22 @@ class WebPushKey(Base):
     id = Column(Integer, primary_key=True)
     private_pem = Column(Text, nullable=False)
     created_at = Column(DateTime, nullable=False, default=datetime.utcnow)
+
+
+class UserBadge(Base):
+    """The highest tier a member has reached on one badge track, e.g. Bookworm silver (Oct 2026).
+
+    A new table only. Counts are never stored: they come from the library, so a
+    badge always matches it. A tier only ever goes up; ``seen_at`` is set once the
+    dashboard celebration is dismissed.
+    """
+    __tablename__ = "user_badges"
+
+    id = Column(Integer, primary_key=True, index=True)
+    user_id = Column(Integer, ForeignKey("users.id", ondelete="CASCADE"), nullable=False, index=True)
+    badge = Column(String(24), nullable=False)
+    tier = Column(Integer, nullable=False)
+    earned_at = Column(DateTime, nullable=False, default=datetime.utcnow)
+    seen_at = Column(DateTime, nullable=True)
+
+    __table_args__ = (UniqueConstraint("user_id", "badge", name="uq_user_badge"),)

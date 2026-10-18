@@ -13,14 +13,14 @@ from __future__ import annotations
 
 import re
 import unicodedata
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from typing import Optional
 from urllib.parse import quote
 
 from sqlalchemy import case, func
 from sqlalchemy.orm import Session
 
-from . import friend_invites, models, supporters, title_pages
+from . import badges, friend_invites, models, supporters, title_pages
 from .review_quality import evaluate_public_review, is_public_review_safe
 
 BIO_MAX_CHARS = 280
@@ -273,6 +273,7 @@ class ProfileView:
     collections: list
     supporter: Optional[dict] = None
     friends_brought: int = 0
+    badges: list = field(default_factory=list)
 
     @property
     def path(self) -> str:
@@ -299,6 +300,8 @@ def build(db: Session, user: models.User, profile: models.PublicProfile) -> Prof
         supporter=supporters.public_badge(db, user.id),
         # A count only (never who): shown with the library stats the member chose to share.
         friends_brought=friend_invites.friends_brought(db, user.id) if profile.show_stats else 0,
+        # Shown with the library stats, never revealing a shelf the member keeps private.
+        badges=badges.public_badges(db, user) if profile.show_stats and not user.statistics_private else [],
     )
 
 
