@@ -259,6 +259,7 @@ function clearAuth({ preserveReturn = false } = {}) {
     window.resetSiteStatsLink?.();
     window.resetForYou?.();
     window.resetYearGoals?.();
+    window.resetInstallCard?.();
     window.resetMonthlyChallenge?.();
     window.resetBadges?.();
     if (!preserveReturn) clearDiscoverAuthReturn();
@@ -585,6 +586,7 @@ function showAuthModal() {
     window.resetSiteStatsLink?.();
     window.resetForYou?.();
     window.resetYearGoals?.();
+    window.resetInstallCard?.();
     window.resetMonthlyChallenge?.();
     window.resetBadges?.();
     
@@ -637,6 +639,7 @@ function showMainUI() {
     window.refreshYearGoals?.();
     window.refreshMonthlyChallenge?.();
     window.refreshBadges?.();
+    window.refreshInstallCard?.();
     if (typeof updateNotificationCount === 'function') {
         updateNotificationCount();
         // Set up interval to refresh notification count every 30 seconds
