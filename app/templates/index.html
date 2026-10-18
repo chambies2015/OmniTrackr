@@ -63,6 +63,7 @@
   <link rel="stylesheet" href="/static/badges.css?v=20261017-badges-1">
   <link rel="stylesheet" href="/static/import-studio.css?v=20261018-formats-1">
   <link rel="stylesheet" href="/static/dashboard-2026.css?v=20261017-bughunt-1">
+  <link rel="stylesheet" href="/static/a11y.css?v=20261018-a11y-1">
   <script src="./preauth.js?v=20261010-audit-preauth-1"></script>
   <style>
     html.authenticated #landingPage{display:none}
@@ -303,7 +304,8 @@
 </head>
 
 <body class="dark-mode app-shell" data-active-tab="movies">
-  <div class="account-toolbar" role="group" aria-label="Account controls">
+  <a class="skip-link" href="#mainContainer" id="skipToLibrary">Skip to your library</a>
+  <div class="account-toolbar" role="region" aria-label="Account controls">
   <button id="showFriendsSidebar" class="sidebar-toggle-floating" type="button" title="Friends"
     aria-label="Friends" aria-expanded="false" aria-controls="friendsSidebar" hidden>
     <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="1.7" aria-hidden="true"><circle cx="9" cy="8" r="3"/><path d="M3 20v-2a6 6 0 0 1 12 0v2M16 5a3 3 0 0 1 0 6M21 20v-2a6 6 0 0 0-3-5.2"/></svg>
@@ -362,7 +364,7 @@
   </aside>
 
   <main class="container" id="mainContainer">
-    <header class="header" role="banner">
+    <header class="header">
       <div class="app-brand">
         <span class="app-brand__mark" aria-hidden="true"><img src="/vortex-still.webp" alt="" width="40" height="40"></span>
         <div><p class="app-title" role="heading" aria-level="1">OmniTrackr</p><p class="app-brand__caption">Your media, remembered.</p></div>
@@ -371,7 +373,7 @@
         <label class="sr-only" for="librarySearchInput">Find anything in your library</label>
         <div class="library-search__field">
           <span aria-hidden="true">⌕</span>
-          <input id="librarySearchInput" type="search" maxlength="200" autocomplete="off" placeholder="Find anything in your library…" aria-controls="librarySearchResults" aria-expanded="false">
+          <input id="librarySearchInput" type="search" maxlength="200" autocomplete="off" placeholder="Find anything in your library…" role="combobox" aria-autocomplete="list" aria-controls="librarySearchResults" aria-expanded="false">
           <kbd aria-hidden="true">Ctrl K</kbd>
         </div>
         <div id="librarySearchResults" class="library-search__results" role="listbox" aria-label="Library search results" aria-live="polite" hidden></div>
@@ -1673,10 +1675,10 @@
           <h3>Change Username</h3>
           <form id="changeUsernameForm" data-submit-action="change-username">
             <div>
-              <input type="text" id="newUsername" placeholder="New username" minlength="3" maxlength="50" required>
+              <input type="text" id="newUsername" aria-label="New username" autocomplete="username" autocapitalize="none" spellcheck="false" placeholder="New username" minlength="3" maxlength="50" required>
             </div>
             <div>
-              <input type="password" id="usernamePassword" placeholder="Current password" required>
+              <input type="password" id="usernamePassword" aria-label="Current password, to change your username" autocomplete="current-password" placeholder="Current password" required>
             </div>
             <button type="submit" class="action-btn">Change Username</button>
             <div id="usernameError" class="error-message"></div>
@@ -1689,10 +1691,10 @@
           <h3>Change Email</h3>
           <form id="changeEmailForm" data-submit-action="change-email">
             <div>
-              <input type="email" id="newEmail" placeholder="New email address" required>
+              <input type="email" id="newEmail" aria-label="New email address" autocomplete="email" placeholder="New email address" required>
             </div>
             <div>
-              <input type="password" id="emailPassword" placeholder="Current password" required>
+              <input type="password" id="emailPassword" aria-label="Current password, to change your email" autocomplete="current-password" placeholder="Current password" required>
             </div>
             <button type="submit" class="action-btn">Change Email</button>
             <div id="emailError" class="error-message"></div>
@@ -1705,14 +1707,14 @@
           <h3>Change Password</h3>
           <form id="changePasswordForm" data-submit-action="change-password">
             <div>
-              <input type="password" id="currentPassword" placeholder="Current password" required>
+              <input type="password" id="currentPassword" aria-label="Current password" autocomplete="current-password" placeholder="Current password" required>
             </div>
             <div>
-              <input type="password" id="accountNewPassword" placeholder="New password (min 8 characters)" minlength="8"
+              <input type="password" id="accountNewPassword" aria-label="New password, at least 8 characters" autocomplete="new-password" placeholder="New password (min 8 characters)" minlength="8"
                 required>
             </div>
             <div>
-              <input type="password" id="accountConfirmNewPassword" placeholder="Confirm new password" minlength="8"
+              <input type="password" id="accountConfirmNewPassword" aria-label="Confirm new password" autocomplete="new-password" placeholder="Confirm new password" minlength="8"
                 required>
             </div>
             <button type="submit" class="action-btn">Change Password</button>
@@ -2111,7 +2113,7 @@
       <div id="friendRequestError" class="error-message" style="display: none;"></div>
       <form id="friendRequestForm" data-submit-action="send-friend-request">
         <div>
-          <input type="text" id="friendRequestUsername" placeholder="Enter username" minlength="3" maxlength="50"
+          <input type="text" id="friendRequestUsername" aria-label="Friend's username" autocomplete="off" autocapitalize="none" spellcheck="false" placeholder="Enter username" minlength="3" maxlength="50"
             required>
         </div>
         <button type="submit" class="action-btn">Send Request</button>
@@ -2397,7 +2399,7 @@
           <button type="button" data-action="quick-capture-manual">Enter manually →</button>
         </div>
         <div id="quickCaptureStatus" class="quick-capture-status" role="status" aria-live="polite" aria-atomic="true">Search every shelf. Results appear as each source responds.</div>
-        <div id="quickCaptureResults" class="quick-capture-results" aria-label="Metadata search results"></div>
+        <div id="quickCaptureResults" class="quick-capture-results" role="region" aria-label="Metadata search results"></div>
       </div>
     </div>
   </div>

@@ -94,6 +94,7 @@ body.site :is(a, button, summary, input, select, textarea):focus-visible { outli
 .site-footer__col h2 { color: var(--site-text); font: 700 .78rem var(--site-font); letter-spacing: .12em; margin: 0 0 4px; text-transform: uppercase; }
 .site-footer__col a { color: var(--site-muted); font-size: .92rem; text-decoration: none; }
 .site-footer__col a:hover { color: #fff; }
+@media (pointer: coarse) { .site-footer__col { gap: 0; } .site-footer__col h2 { margin-bottom: 6px; } .site-footer__col a { align-items: center; display: flex; min-height: 44px; } }
 
 /* ---------- Responsive ---------- */
 @media (max-width: 1080px) {

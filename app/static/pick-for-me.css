@@ -26,7 +26,7 @@
   padding: 8px 16px;
 }
 .pf-chip span:hover { background: var(--site-surface-2); color: #fff; }
-.pf-chip input:checked + span { background: var(--site-violet); border-color: var(--site-violet); color: #fff; }
+.pf-chip input:checked + span { background: #7c3aed; border-color: #7c3aed; color: #fff; }
 .pf-chip input:focus-visible + span { outline: 3px solid var(--site-violet-soft); outline-offset: 3px; }
 .pf-go { flex: 0 0 auto; min-height: 48px; }
 
