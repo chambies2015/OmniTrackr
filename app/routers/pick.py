@@ -15,7 +15,7 @@ from ..progress import lock_progress_owner
 from .discover import page
 
 router = APIRouter(tags=["pick"])
-CSS_VERSION = "20261012-pick-1"
+CSS_VERSION = "20261018-a11y-1"
 JS_VERSION = "20261012-pick-1"
 GUEST_LIST_JS = "/static/guest-list.js?v=20261012-hero-search-1"
 DESCRIPTION = ("Can't decide what to watch, play or read? Pick for me suggests one movie, TV show, anime, game, "

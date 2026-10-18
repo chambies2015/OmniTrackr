@@ -1,7 +1,7 @@
 """Dashboard script bundle.
 
 The signed-in dashboard script lives in app/static/dashboard/ as a few modules
-(core, library, account, social, home, custom-tabs) plus lazy chunks under
+(a11y, core, library, account, social, home, custom-tabs) plus lazy chunks under
 dashboard/lazy/. Rarely used features (statistics, friend profiles, collections,
 the custom tab manager and so on) are left out of the first download and
 fetched when first used, or quietly once the page is idle.
@@ -27,6 +27,7 @@ DASHBOARD_DIR = Path(__file__).resolve().parent / "static" / "dashboard"
 LAZY_BASE_URL = "/static/dashboard/lazy/"
 
 EAGER_MODULES = (
+    "a11y.js",
     "core.js",
     "library.js",
     "account.js",

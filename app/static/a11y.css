@@ -1,0 +1,59 @@
+/* Accessibility and phone polish for the signed-in dashboard. Loaded last; it
+   only adjusts colour contrast, focus, tap target sizes and a few small-screen
+   widths on existing hooks, so layout and behaviour stay as they are. */
+
+/* ---------- Skip link: hidden until a keyboard user tabs to it ---------- */
+body.app-shell .skip-link {
+  background: var(--accent-solid); border-radius: 0 0 10px 10px; color: var(--on-accent, #fff);
+  font-weight: 700; left: 16px; padding: 12px 18px; position: fixed; text-decoration: none;
+  top: 0; transform: translateY(-120%); z-index: 10000;
+}
+body.app-shell .skip-link:focus { transform: none; }
+
+/* Containers that take focus from script (an opened dialog, the skip link
+   target) do not need a ring of their own: the next Tab lands on a control. */
+body.app-shell :is(.modal-content, .tab-content, .modal-overlay)[tabindex="-1"]:focus { outline: none; }
+
+/* ---------- Contrast: white text on violet needs at least 4.5:1 ---------- */
+body.app-shell.dark-mode { --accent-solid: #7c3aed; }
+body.app-shell .quick-capture-trigger,
+body.app-shell .todays-pick button.action-btn:first-of-type,
+body.app-shell .account-toolbar .site-stats-link,
+body.app-shell .for-you-item__add {
+  background: linear-gradient(135deg, #7c3aed, #9333ea);
+}
+
+/* Light mode: teal and dimmed text that read too faint on white. */
+body.app-shell:not(.dark-mode) :is(.activity-recap__eyebrow, .activity-create__eyebrow, .activity-timeline__eyebrow, .postcards-eyebrow, .todays-pick__eyebrow, .next-up-queue__eyebrow) { color: #0f766e; }
+body.app-shell:not(.dark-mode) .library-launchpad__step-action { border-color: #0f766e; color: #0f766e; }
+/* A step with its own action button is the next thing to do, so it is not dimmed. */
+body.app-shell .library-launchpad__step:has(.library-launchpad__step-action) { opacity: 1; }
+body.app-shell:not(.dark-mode) :is(.library-launchpad__dismiss, .todays-pick__category, .badge-next__tier, .badge-next__foot) { color: var(--fg-secondary); opacity: 1; }
+body.app-shell:not(.dark-mode) a.badge-next__hint { color: #0f766e; }
+body.app-shell:not(.dark-mode) .stats-subsection .content-muted { color: var(--fg-secondary); opacity: 1; }
+body.app-shell:not(.dark-mode) .postcards-hero {
+  background: radial-gradient(circle at 85% 20%, rgba(20, 184, 166, .12), transparent 30%), linear-gradient(145deg, #f1ecff, #e9f6f4);
+  border-color: var(--border);
+}
+body.app-shell:not(.dark-mode) .postcards-hero h2 { color: var(--fg); }
+body.app-shell:not(.dark-mode) .postcards-privacy { border-color: rgba(15, 118, 110, .35); color: #0f766e; }
+
+/* ---------- Forms in dialogs: a visible ring and full-width fields ---------- */
+body.app-shell .modal-content :is(input, select, textarea):focus-visible { outline: 3px solid var(--primary); outline-offset: 2px; }
+body.app-shell .account-section form input:not([type="checkbox"]):not([type="radio"]):not([type="file"]) { box-sizing: border-box; max-width: 100%; width: 100%; }
+
+/* ---------- Touch screens: tap targets of at least 44px ---------- */
+@media (pointer: coarse) {
+  body.app-shell .app-footer nav { gap: 0; }
+  body.app-shell .app-footer a:not(.app-footer__brand) { align-items: center; display: flex; min-height: 44px; }
+  body.app-shell :is(.library-launchpad__dismiss, .library-launchpad__step-action, a.badge-next__hint) {
+    align-items: center; display: inline-flex; min-height: 44px;
+  }
+  body.app-shell .library-launchpad__step-action { padding-inline: 14px; }
+  body.app-shell .modal-content .modal-close { min-height: 44px; min-width: 44px; }
+}
+
+/* ---------- Phones: dialogs use the full width and stay on screen ---------- */
+@media (max-width: 600px) {
+  body.app-shell .modal-overlay .modal-content { box-sizing: border-box; margin-inline: auto; max-width: calc(100vw - 16px); }
+}
