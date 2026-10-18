@@ -862,7 +862,7 @@ class TestSecurityMiddleware:
         assert "Who runs it" in content
         assert "How it is paid for" in content
         assert "Your library stays yours" in content
-        assert "written with AI assistance" in content
+        assert "reviewed by the site owner before it is published" in content
         hrefs = extract_hrefs(content)
         assert "/guides" in hrefs
         assert "/compare" in hrefs
@@ -1400,7 +1400,7 @@ class TestSecurityMiddleware:
                         "Corrections and updates", "Member reviews and collections", "What we do not publish"):
             assert heading in content, heading
         assert '"dateModified": "2026-10-17"' in content
-        assert "The site owner reads and reviews each guide before it is published" in content
+        assert "the site owner reads and reviews each one before it is published" in content
         assert "No studio, publisher, platform or advertiser pays to appear in a guide" in content
         assert "Reviews that contain links, email addresses, phone numbers or promotional wording" in content
         assert "Plot summaries, reviews or descriptions copied from other sites or databases" in content

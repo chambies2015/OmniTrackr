@@ -214,7 +214,7 @@ def guide_content(slug: str, entry: dict, details: dict, signed_in: bool) -> str
         '</div></section>',
         '<section id="method" class="guide-sources io-method" aria-labelledby="method-heading">',
         '<h2 id="method-heading">How we chose</h2>',
-        f'<p>Prepared by OmniTrackr with AI assistance and reviewed by the site owner before publishing. We listed the entries most people mean by '
+        f'<p>Prepared by OmniTrackr and reviewed by the site owner before publishing. We listed the entries most people mean by '
         f'"{_e(entry["name"])}", checked release years and story placement against public sources, and marked as optional the '
         'side stories that are not needed to follow the main story. The recommended order is editorial opinion: it is the order '
         'we would hand a friend starting from nothing.</p>',

@@ -28,8 +28,9 @@ rather than to a reader.
   copy now says "with AI assistance" everywhere, including monthly editions and
   past puzzles, and no longer says "hand-written". Dan confirmed on October 18
   that he reviews the guides, so the guides, About and Editorial standards say
-  they are reviewed by the site owner before publishing (Daily puzzles are not
-  claimed as reviewed).
+  they are reviewed by the site owner before publishing. Dan also reviewed the
+  Daily puzzles and asked for the AI-assistance lines to be removed, so pages
+  now credit OmniTrackr and the site owner's review only.
 - **Daily archive.** `/daily/archive` was indexed with about 16 words of listing
   text and did not load its stylesheet. It now loads it, shows each puzzle's
   first clue (already public) and explains the puzzles. Past puzzle pages keep

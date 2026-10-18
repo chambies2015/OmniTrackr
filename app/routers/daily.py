@@ -100,7 +100,7 @@ GUIDE = (
     'is the fastest way from a genre to a single title.</li>'
     '<li><strong>Play the archive.</strong> Missed a day? Every past puzzle can still be played, and its page explains '
     'the answer, all six clues and why the title is worth your time.</li></ul>'
-    '<p>Every puzzle is written for OmniTrackr with AI assistance, and no clue contains a word from the answer. If you think a clue is wrong, <a href="/contact">tell us</a> and we will fix '
+    '<p>Every puzzle is reviewed by the site owner, and no clue contains a word from the answer. If you think a clue is wrong, <a href="/contact">tell us</a> and we will fix '
     'it.</p></section>'
 )
 
@@ -111,7 +111,7 @@ PAST_GUIDE = (
     '<section class="editorial dy-guide dy-guide--short"><h2>How to play</h2>'
     '<p>Guess the title from the first clue. Each wrong guess or skip reveals the next one, and you have six tries. '
     'Capitals, punctuation and a leading "The" do not matter. The <a href="/daily#how-to-play">full rules and tips</a> '
-    'are on today\'s puzzle. Puzzles are written for OmniTrackr with AI assistance.</p></section>'
+    'are on today\'s puzzle.</p></section>'
 )
 
 

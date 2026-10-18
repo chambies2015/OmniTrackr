@@ -172,7 +172,7 @@ def guide_content(slug: str, entry: dict, details: dict, anchor_url, signed_in: 
         '</div></section>',
         '<section id="method" class="guide-sources yl-method" aria-labelledby="method-heading">',
         '<h2 id="method-heading">How we chose</h2>',
-        f'<p>Prepared by OmniTrackr with AI assistance and reviewed by the site owner before publishing. We started from what makes {_e(anchor["title"])} '
+        f'<p>Prepared by OmniTrackr and reviewed by the site owner before publishing. We started from what makes {_e(anchor["title"])} '
         'work for the people who love it, then looked for titles that share at least one of those qualities, '
         'deliberately across formats, because a game or a book can carry the same feeling in a different way. '
         'Facts were checked against public sources; the comparisons and caveats are editorial opinion.</p>',

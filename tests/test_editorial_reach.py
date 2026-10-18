@@ -75,7 +75,7 @@ def test_site_map_links_every_guide(client):
 
 def test_trust_pages_speak_to_readers(client):
     about = client.get("/about").text
-    assert "Who runs it" in about and "written with AI assistance" in about and "ko-fi.com/omnitrackr" in about
+    assert "Who runs it" in about and "reviewed by the site owner" in about and "ko-fi.com/omnitrackr" in about
     standards = client.get("/content-quality")
     assert "<h1>Editorial Standards</h1>" in standards.text
     assert 'content="index, follow' in standards.text and "x-robots-tag" not in standards.headers
@@ -87,16 +87,17 @@ def test_trust_pages_speak_to_readers(client):
 
 @pytest.mark.parametrize("path", ["/in-order/star-wars", "/if-you-liked/interstellar", "/in-order",
                                   "/if-you-liked", "/discover", "/daily"])
-def test_guides_disclose_ai_assistance_without_claiming_hand_writing(client, path):
+def test_guides_say_who_reviews_them_without_claiming_hand_writing(client, path):
     html = client.get(path).text
     assert "Hand-written" not in html and "reviewed by the editors" not in html and "written by hand" not in html
+    assert "AI assistance" not in html
     if path.count("/") == 2 or path == "/daily":
-        assert "AI assistance" in html
+        assert "reviewed by the site owner" in html
 
 
-def test_monthly_edition_discloses_ai_assistance(client):
+def test_monthly_edition_says_who_reviews_it(client):
     html = client.get("/discover/monthly/october-2026").text
-    assert "prepared by OmniTrackr with AI assistance and reviewed by the site owner" in html and 'href="/content-quality"' in html
+    assert "prepared by OmniTrackr and reviewed by the site owner" in html and 'href="/content-quality"' in html
 
 
 def test_daily_archive_has_its_styles_and_first_clues(client, on_day):
