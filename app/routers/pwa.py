@@ -13,6 +13,7 @@ from ..site_chrome import message_page
 router = APIRouter(tags=["pwa"])
 STATIC_DIR = os.path.join(os.path.dirname(__file__), "..", "static")
 ICON_VERSION = "20261003-pwa-1"
+SCREENSHOT_VERSION = "20261018-install-card-1"
 
 MANIFEST = {
     "id": "/",
@@ -30,7 +31,22 @@ MANIFEST = {
         {"src": f"/static/icons/icon-512.png?v={ICON_VERSION}", "sizes": "512x512", "type": "image/png", "purpose": "any"},
         {"src": f"/static/icons/maskable-512.png?v={ICON_VERSION}", "sizes": "512x512", "type": "image/png", "purpose": "maskable"},
     ],
+    # Screenshots give Android and desktop Chrome their richer install sheet.
+    "screenshots": [
+        {"src": f"/static/screenshots/app-library-wide.webp?v={SCREENSHOT_VERSION}", "sizes": "1280x800",
+         "type": "image/webp", "form_factor": "wide", "label": "Your library as a poster shelf"},
+        {"src": f"/static/screenshots/app-release-radar-narrow.webp?v={SCREENSHOT_VERSION}", "sizes": "358x799",
+         "type": "image/webp", "form_factor": "narrow", "label": "Release Radar for the titles you track"},
+    ],
+    # Opening the app again focuses the window that is already open instead of stacking new ones.
+    "launch_handler": {"client_mode": ["navigate-existing", "auto"]},
     "shortcuts": [
+        {"name": "My library", "short_name": "Library", "url": "/?utm_source=app_shortcut",
+         "description": "Open your library"},
+        {"name": "Daily game", "short_name": "Daily", "url": "/daily?utm_source=app_shortcut",
+         "description": "Guess today's title"},
+        {"name": "Pick for me", "short_name": "Pick", "url": "/pick?utm_source=app_shortcut",
+         "description": "Let OmniTrackr choose what to watch, play or read next"},
         {"name": "Release Radar", "url": "/release-radar?utm_source=app", "description": "What's coming out soon"},
         {"name": "Popular titles", "url": "/titles?utm_source=app", "description": "Most-tracked titles on OmniTrackr"},
     ],

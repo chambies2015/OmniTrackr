@@ -47,7 +47,7 @@
   <link rel="manifest" href="/manifest.webmanifest">
   <link rel="apple-touch-icon" href="/static/icons/apple-touch-icon.png?v=20261003-pwa-1">
   <meta name="apple-mobile-web-app-title" content="OmniTrackr">
-  <script src="/static/pwa.js?v=20261008-ios-1" defer></script>
+  <script src="/static/pwa.js?v=20261018-install-card-1" defer></script>
   <link rel="preload" href="./styles.css?v=20261013-calendar-1" as="style">
   <link rel="preload" href="/static/fonts/poppins-700-latin.woff2" as="font" type="font/woff2" crossorigin>
   <link rel="preload" href="/static/fonts/poppins-800-latin.woff2" as="font" type="font/woff2" crossorigin>
@@ -62,7 +62,7 @@
   <link rel="stylesheet" href="/static/supporter.css?v=20261017-supporters-2">
   <link rel="stylesheet" href="/static/badges.css?v=20261017-badges-1">
   <link rel="stylesheet" href="/static/import-studio.css?v=20261018-formats-1">
-  <link rel="stylesheet" href="/static/dashboard-2026.css?v=20261017-bughunt-1">
+  <link rel="stylesheet" href="/static/dashboard-2026.css?v=20261018-install-card-1">
   <link rel="stylesheet" href="/static/a11y.css?v=20261018-a11y-1">
   <script src="./preauth.js?v=20261010-audit-preauth-1"></script>
   <style>
@@ -571,6 +571,19 @@
         <button id="nextUpQueueToggle" type="button" class="next-up-queue__toggle" data-action="toggle-next-up" aria-controls="nextUpQueueItems" aria-expanded="false" hidden>Manage queue</button>
       </div>
       <div id="nextUpQueueItems" class="next-up-queue__items" aria-live="polite"></div>
+    </section>
+
+    <section id="installAppCard" class="install-card" aria-labelledby="installAppCardTitle" hidden>
+      <img class="install-card__icon" src="/static/icons/icon-192.png?v=20261003-pwa-1" alt="" width="56" height="56" loading="lazy" decoding="async">
+      <div class="install-card__copy">
+        <p class="install-card__eyebrow">Get the app</p>
+        <h2 id="installAppCardTitle">Keep your library on your home screen</h2>
+        <p id="installAppCardSummary" class="install-card__summary"></p>
+      </div>
+      <div class="install-card__actions">
+        <button id="installAppCardInstall" type="button" class="action-btn">Install app</button>
+        <button id="installAppCardDismiss" type="button" class="install-card__dismiss">Not now</button>
+      </div>
     </section>
 
     <section id="yearGoals" class="year-goals" aria-labelledby="yearGoalsTitle" hidden>
@@ -1622,7 +1635,7 @@
     </form>
   </dialog>
   <script src="./credentials.js"></script>
-  <script src="./auth.js?v=20261018-import-1"></script>
+  <script src="./auth.js?v=20261018-install-card-1"></script>
   <script src="/static/import-studio.js?v=20261018-formats-1"></script>
   <script src="/static/progress.js?v=20260922-progress"></script>
   <script src="./app.js"></script>
