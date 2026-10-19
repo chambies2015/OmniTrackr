@@ -620,6 +620,15 @@ def _default_cache_dir() -> Optional[Path]:
     return Path(configured or os.path.join(tempfile.gettempdir(), "omnitrackr-release-radar"))
 
 
+_event_loop: Optional[asyncio.AbstractEventLoop] = None
+
+
+def bind_event_loop(loop: Optional[asyncio.AbstractEventLoop]) -> None:
+    """Remember the server's event loop so threadpool requests can start background fetches on it."""
+    global _event_loop
+    _event_loop = loop
+
+
 class RadarCache:
     def __init__(self, cache_dir: Optional[Path] = None):
         self.entries: dict[str, dict] = {}
@@ -694,9 +703,20 @@ class RadarCache:
         return task
 
     def warm(self, client: httpx.AsyncClient, window: Window) -> None:
-        """Start a background fetch for an uncached period without waiting for it."""
+        """Start a background fetch for an uncached period without waiting for it.
+
+        Safe to call from a threadpool request: the fetch is handed to the server's
+        event loop (see bind_event_loop), or skipped when there is none.
+        """
         entry = self.peek(window)
         if entry is None or (not entry.get("fetched_at") and time.time() - entry.get("failed_at", 0) >= 300):
+            try:
+                asyncio.get_running_loop()
+            except RuntimeError:
+                loop = _event_loop
+                if loop is not None and loop.is_running() and not loop.is_closed():
+                    loop.call_soon_threadsafe(self._start_refresh, client, window)
+                return
             self._start_refresh(client, window)
 
     async def get(self, client: httpx.AsyncClient, window: Window, *, wait: Optional[float] = None) -> Optional[dict]:

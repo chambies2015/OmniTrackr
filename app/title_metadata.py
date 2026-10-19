@@ -26,6 +26,7 @@ from typing import Optional
 
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
+from starlette.concurrency import run_in_threadpool
 
 from . import models
 
@@ -616,19 +617,24 @@ _locks: dict[str, asyncio.Lock] = {}
 async def get_or_fetch(db: Session, client, category: str, normalized_title: str, display_title: str,
                        year: Optional[int], creator: Optional[str] = None, wait: float = 8.0) -> Optional[dict]:
     key = cache_key(category, normalized_title, year)
-    data, fresh = cached(db, key)
+    # Database work runs in the threadpool: on the event loop, waiting for a pooled
+    # connection would stall every other request.
+    data, fresh = await run_in_threadpool(cached, db, key)
     if fresh or client is None:
         return data
     lock = _locks.setdefault(key, asyncio.Lock())
     if lock.locked():
         return data
     async with lock:
+        # End the read transaction first, so this request doesn't keep a pooled
+        # connection busy for the seconds the outside lookup can take.
+        await run_in_threadpool(db.rollback)
         try:
             result = await asyncio.wait_for(fetch(client, category, display_title, year, creator), timeout=wait)
-            store(db, key, result or None, "ok" if result else "miss")
+            await run_in_threadpool(store, db, key, result or None, "ok" if result else "miss")
             return result or data
         except Exception:
-            store(db, key, None, "error")
+            await run_in_threadpool(store, db, key, None, "error")
             return data
         finally:
             _locks.pop(key, None)

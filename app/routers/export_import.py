@@ -252,7 +252,7 @@ def _import_collections(db: Session, user_id: int, payloads: list[dict]) -> tupl
 
 
 @router.get("/export/", response_model=schemas.ExportData)
-async def export_data(
+def export_data(
     current_user: models.User = Depends(get_current_user),
     db: Session = Depends(get_db)
 ):

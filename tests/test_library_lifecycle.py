@@ -103,7 +103,6 @@ def test_delete_cleans_references_but_preserves_history(authenticated_client, db
 
 @pytest.mark.parametrize("kind", ["next_up", "helpful", "report"])
 def test_deletion_serializes_with_reference_writes(tmp_path, monkeypatch, kind):
-    import asyncio
     import threading
     from concurrent.futures import ThreadPoolExecutor
     from types import SimpleNamespace
@@ -154,11 +153,11 @@ def test_deletion_serializes_with_reference_writes(tmp_path, monkeypatch, kind):
     def write():
         with factory() as db:
             if kind == "next_up":
-                return asyncio.run(next_up.add_next_up(schemas.NextUpItemCreate(category="movies", item_id=item_id), SimpleNamespace(id=user_id), db))
+                return next_up.add_next_up(schemas.NextUpItemCreate(category="movies", item_id=item_id), SimpleNamespace(id=user_id), db)
             request = Request({"type": "http", "headers": [], "client": ("testclient", 1234), "path": "/"})
             if kind == "helpful":
-                return asyncio.run(reviews.mark_review_helpful("movie", item_id, request, db))
-            return asyncio.run(reviews.report_public_review("movie", item_id, schemas.PublicReviewReportCreate(reason="spam"), request, db))
+                return reviews.mark_review_helpful("movie", item_id, request, db)
+            return reviews.report_public_review("movie", item_id, schemas.PublicReviewReportCreate(reason="spam"), request, db)
 
     def delete():
         with factory() as db:

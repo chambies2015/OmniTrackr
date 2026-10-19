@@ -4,9 +4,9 @@ Contains security headers and bot filtering middleware.
 """
 import re
 import os
-from contextlib import contextmanager
 from urllib.parse import urlsplit
 
+from starlette.concurrency import run_in_threadpool
 from starlette.middleware.base import BaseHTTPMiddleware
 from starlette.requests import Request
 from starlette.responses import Response as StarletteResponse
@@ -331,7 +331,7 @@ class UploadAuthenticationMiddleware:
             return await self.app(scope, receive, send)
         from fastapi import HTTPException
         from . import auth
-        from .dependencies import get_current_user, get_db, oauth2_scheme
+        from .dependencies import get_current_user, get_db, oauth2_scheme, session_scope
 
         request = Request(scope, receive=receive)
         try:
@@ -341,8 +341,9 @@ class UploadAuthenticationMiddleware:
             # Use the same database provider as the route, including isolated
             # database overrides. Authentication checks revocation and activity.
             provider = request.app.dependency_overrides.get(get_db, get_db)
-            with contextmanager(provider)() as db:
-                await get_current_user(request, token, db)
+            async with session_scope(provider) as db:
+                # Off the event loop, like every other database read.
+                await run_in_threadpool(get_current_user, request, token, db)
         except HTTPException as exc:
             from starlette.responses import JSONResponse
             return await JSONResponse({"detail": exc.detail}, status_code=exc.status_code,

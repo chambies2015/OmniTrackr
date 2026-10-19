@@ -29,6 +29,7 @@ SCAN_LIMIT = 60000
 
 _lock = threading.Lock()
 _cache: dict = {}
+_build_locks: dict = {}
 
 
 def _scan(db: Session, kind: str) -> list[dict]:
@@ -139,17 +140,32 @@ def build(db: Session, kind: str) -> dict:
 
 
 def chart(db: Session, kind: str) -> dict:
-    """The cached chart for one kind (rebuilt at most every CACHE_SECONDS)."""
+    """The cached chart for one kind (rebuilt at most every CACHE_SECONDS).
+
+    Every title page asks for its kind's chart, so only one request rebuilds an
+    expired chart; the others keep using the previous one meanwhile (or, before the
+    first build, wait for it rather than starting their own).
+    """
     if kind not in title_pages.KINDS:
         raise KeyError(kind)
     with _lock:
         cached = _cache.get(kind)
         if cached and time.monotonic() - cached[0] < CACHE_SECONDS:
             return cached[1]
-    data = build(db, kind)
-    with _lock:
-        _cache[kind] = (time.monotonic(), data)
-    return data
+        builder = _build_locks.setdefault(kind, threading.Lock())
+    if not builder.acquire(blocking=cached is None):
+        return cached[1]  # Another request is already rebuilding this chart.
+    try:
+        with _lock:
+            current = _cache.get(kind)
+            if current and current is not cached and time.monotonic() - current[0] < CACHE_SECONDS:
+                return current[1]  # Built while this request waited.
+        data = build(db, kind)
+        with _lock:
+            _cache[kind] = (time.monotonic(), data)
+        return data
+    finally:
+        builder.release()
 
 
 def rank_of(db: Session, kind: str, path: str) -> Optional[dict]:

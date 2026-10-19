@@ -1,5 +1,4 @@
 """New title writers share the owner transaction used by audited media deletion."""
-import asyncio
 import threading
 from concurrent.futures import ThreadPoolExecutor
 from datetime import datetime
@@ -129,9 +128,9 @@ def test_title_writer_response_survives_deletion_immediately_after_commit(title_
             )
             assert result["review_url"] == f"/reviews/{item_id}?category=movie"
         else:
-            result = asyncio.run(completion_moments.save_completion_review(
+            result = completion_moments.save_completion_review(
                 moment_id, schemas.CompletionReview(review=LONG_REVIEW, public=True), user, db,
-            ))
+            )
             assert result["review_url"] == f"/reviews/{item_id}?category=movie"
             assert result["title_url"] == "/titles/movie/interstellar-2014"
     with factory() as db:

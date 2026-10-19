@@ -77,6 +77,8 @@ run_migrations()
 @asynccontextmanager
 async def lifespan(application: FastAPI):
     """Own pooled network resources and lightweight startup maintenance."""
+    from . import release_radar as radar_data
+    radar_data.bind_event_loop(asyncio.get_running_loop())
     application.state.external_api_client = httpx.AsyncClient(
         timeout=httpx.Timeout(12.0, connect=5.0),
         limits=httpx.Limits(max_connections=20, max_keepalive_connections=10),
@@ -434,7 +436,7 @@ app.add_middleware(
 
 # Profile pictures live in the database; /profile-pictures/ keeps them clear of the /static/ mount.
 @app.get("/profile-pictures/{user_id}")
-async def serve_profile_picture(
+def serve_profile_picture(
     user_id: PositiveDatabaseId,
     request: Request,
     viewer: models.User | None = Depends(get_optional_current_user),
@@ -461,7 +463,7 @@ async def serve_profile_picture(
 
 
 @app.get("/custom-tab-posters/{item_id}")
-async def serve_custom_tab_poster(
+def serve_custom_tab_poster(
     item_id: PositiveDatabaseId,
     current_user: models.User = Depends(get_current_user),
     db: Session = Depends(get_db),
@@ -1108,7 +1110,7 @@ def supporters_page(request: Request, db: Session = Depends(get_db)):
 # Public endpoint for user count
 @app.get("/api/user-count", response_model=schemas.UserCount, tags=["public"])
 @limiter.limit("30/minute")  # Rate limit: 30 requests per minute per IP
-async def get_user_count(request: Request, db: Session = Depends(get_db)):
+def get_user_count(request: Request, db: Session = Depends(get_db)):
     """Get total number of active user accounts. Public endpoint for landing page."""
     try:
         count = db.query(models.User).filter(models.User.is_active == True).count()

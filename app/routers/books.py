@@ -13,7 +13,7 @@ router = APIRouter(prefix="/books", tags=["books"])
 
 
 @router.get("/", response_model=List[schemas.Book])
-async def list_books(
+def list_books(
     search: Optional[str] = None,
     sort_by: Optional[str] = None,
     order: Optional[str] = None,
@@ -24,7 +24,7 @@ async def list_books(
 
 
 @router.get("/{book_id}", response_model=schemas.Book)
-async def get_book(
+def get_book(
     book_id: PositiveDatabaseId,
     current_user: models.User = Depends(get_current_user),
     db: Session = Depends(get_db)
@@ -36,7 +36,7 @@ async def get_book(
 
 
 @router.post("/", response_model=schemas.Book, status_code=201)
-async def create_book(
+def create_book(
     book: schemas.BookCreate,
     current_user: models.User = Depends(get_current_user),
     db: Session = Depends(get_db)
@@ -45,7 +45,7 @@ async def create_book(
 
 
 @router.put("/{book_id}", response_model=schemas.Book)
-async def update_book(
+def update_book(
     book_id: PositiveDatabaseId,
     book: schemas.BookUpdate,
     current_user: models.User = Depends(get_current_user),
@@ -58,7 +58,7 @@ async def update_book(
 
 
 @router.delete("/{book_id}", response_model=schemas.Book)
-async def delete_book(
+def delete_book(
     book_id: PositiveDatabaseId,
     current_user: models.User = Depends(get_current_user),
     db: Session = Depends(get_db)

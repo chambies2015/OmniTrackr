@@ -77,7 +77,7 @@ async def register(
 
 
 @router.post("/login", response_model=schemas.Token)
-async def login(
+def login(
     form_data: OAuth2PasswordRequestForm = Depends(),
     request: Request = None,
     db: Session = Depends(get_db)
@@ -253,7 +253,7 @@ def _sign_in_after_verification(request: Request, user: models.User, db: Session
 
 
 @router.get("/verify-email")
-async def verify_email(token: str, request: Request = None, db: Session = Depends(get_db)):
+def verify_email(token: str, request: Request = None, db: Session = Depends(get_db)):
     """Verify user email with token (handles both initial verification and email change)."""
     # First, try regular email verification (most common case)
     try:
@@ -423,7 +423,7 @@ async def request_password_reset(
 
 
 @router.post("/reset-password")
-async def reset_password(payload: schemas.PasswordReset, db: Session = Depends(get_db)):
+def reset_password(payload: schemas.PasswordReset, db: Session = Depends(get_db)):
     """Reset password with valid token."""
     token = payload.token
     new_password = payload.new_password
@@ -466,7 +466,7 @@ async def reset_password(payload: schemas.PasswordReset, db: Session = Depends(g
 
 
 @router.post("/reactivate", response_model=schemas.User)
-async def reactivate_account_public(
+def reactivate_account_public(
     reactivate: schemas.AccountReactivate,
     request: Request,
     db: Session = Depends(get_db)

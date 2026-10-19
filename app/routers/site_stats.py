@@ -278,7 +278,7 @@ def _system() -> dict:
 
 
 @router.get("/api/site-stats/overview")
-async def site_stats_overview(
+def site_stats_overview(
     response: Response,
     days: int = Query(30, ge=7, le=90),
     current_user: models.User = Depends(get_current_user),
@@ -361,7 +361,7 @@ class AnnouncementAction(BaseModel):
 
 
 @router.get("/site-stats/announcement-preview", include_in_schema=False)
-async def announcement_preview(request: Request, current_user: models.User = Depends(get_current_user),
+def announcement_preview(request: Request, current_user: models.User = Depends(get_current_user),
                                db: Session = Depends(get_db)):
     """The update email exactly as the owner would receive it (nothing is sent)."""
     from fastapi.responses import HTMLResponse
@@ -407,7 +407,7 @@ class ComebackAction(BaseModel):
 
 
 @router.get("/site-stats/comeback-preview", include_in_schema=False)
-async def comeback_preview(request: Request, current_user: models.User = Depends(get_current_user),
+def comeback_preview(request: Request, current_user: models.User = Depends(get_current_user),
                            db: Session = Depends(get_db)):
     """The come-back email as the owner would receive it (nothing is sent)."""
     from fastapi.responses import HTMLResponse

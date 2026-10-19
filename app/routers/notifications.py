@@ -16,7 +16,7 @@ NOTIFICATION_UNREAD_LIMIT = 300
 
 
 @router.get("", response_model=List[schemas.NotificationResponse])
-async def get_notifications(
+def get_notifications(
     current_user: models.User = Depends(get_current_user),
     db: Session = Depends(get_db)
 ):
@@ -31,7 +31,7 @@ async def get_notifications(
 
 
 @router.get("/count", response_model=schemas.NotificationCount)
-async def get_notification_count(
+def get_notification_count(
     current_user: models.User = Depends(get_current_user),
     db: Session = Depends(get_db)
 ):
@@ -55,14 +55,14 @@ class PushEndpoint(BaseModel):
 
 
 @router.get("/push/key")
-async def push_public_key(current_user: models.User = Depends(get_current_user), db: Session = Depends(get_db)):
+def push_public_key(current_user: models.User = Depends(get_current_user), db: Session = Depends(get_db)):
     """The key this device subscribes with, and whether this member has any device turned on."""
     devices = db.query(models.PushSubscription).filter(models.PushSubscription.user_id == current_user.id).count()
     return {"public_key": web_push.public_key(db), "devices": devices}
 
 
 @router.post("/push/subscription")
-async def save_push_subscription(body: PushSubscriptionIn, current_user: models.User = Depends(get_current_user),
+def save_push_subscription(body: PushSubscriptionIn, current_user: models.User = Depends(get_current_user),
                                  db: Session = Depends(get_db)):
     """Turn on phone/desktop notifications for the device that sent this subscription."""
     if not web_push.valid_endpoint(body.endpoint):
@@ -79,7 +79,7 @@ async def save_push_subscription(body: PushSubscriptionIn, current_user: models.
 
 
 @router.post("/push/subscription/remove")
-async def remove_push_subscription(body: PushEndpoint, current_user: models.User = Depends(get_current_user),
+def remove_push_subscription(body: PushEndpoint, current_user: models.User = Depends(get_current_user),
                                    db: Session = Depends(get_db)):
     """Turn off notifications for one device (also called when signing out)."""
     removed = web_push.remove_subscription(db, current_user.id, body.endpoint)
@@ -87,7 +87,7 @@ async def remove_push_subscription(body: PushEndpoint, current_user: models.User
 
 
 @router.delete("/{notification_id}", response_model=dict)
-async def dismiss_notification(
+def dismiss_notification(
     notification_id: PositiveDatabaseId,
     current_user: models.User = Depends(get_current_user),
     db: Session = Depends(get_db)

@@ -13,7 +13,7 @@ router = APIRouter(prefix="/tv-shows", tags=["tv-shows"])
 
 
 @router.get("/", response_model=List[schemas.TVShow])
-async def list_tv_shows(
+def list_tv_shows(
     search: Optional[str] = None,
     sort_by: Optional[str] = None,
     order: Optional[str] = None,
@@ -24,7 +24,7 @@ async def list_tv_shows(
 
 
 @router.get("/{tv_show_id}", response_model=schemas.TVShow)
-async def get_tv_show(
+def get_tv_show(
     tv_show_id: PositiveDatabaseId,
     current_user: models.User = Depends(get_current_user),
     db: Session = Depends(get_db)
@@ -36,7 +36,7 @@ async def get_tv_show(
 
 
 @router.post("/", response_model=schemas.TVShow, status_code=201)
-async def create_tv_show(
+def create_tv_show(
     tv_show: schemas.TVShowCreate,
     current_user: models.User = Depends(get_current_user),
     db: Session = Depends(get_db)
@@ -45,7 +45,7 @@ async def create_tv_show(
 
 
 @router.put("/{tv_show_id}", response_model=schemas.TVShow)
-async def update_tv_show(
+def update_tv_show(
     tv_show_id: PositiveDatabaseId,
     tv_show: schemas.TVShowUpdate,
     current_user: models.User = Depends(get_current_user),
@@ -58,7 +58,7 @@ async def update_tv_show(
 
 
 @router.delete("/{tv_show_id}", response_model=schemas.TVShow)
-async def delete_tv_show(
+def delete_tv_show(
     tv_show_id: PositiveDatabaseId,
     current_user: models.User = Depends(get_current_user),
     db: Session = Depends(get_db)

@@ -13,7 +13,7 @@ router = APIRouter(prefix="/video-games", tags=["video-games"])
 
 
 @router.get("/", response_model=List[schemas.VideoGame])
-async def list_video_games(
+def list_video_games(
     search: Optional[str] = None,
     sort_by: Optional[str] = None,
     order: Optional[str] = None,
@@ -24,7 +24,7 @@ async def list_video_games(
 
 
 @router.get("/{game_id}", response_model=schemas.VideoGame)
-async def get_video_game(
+def get_video_game(
     game_id: PositiveDatabaseId,
     current_user: models.User = Depends(get_current_user),
     db: Session = Depends(get_db)
@@ -36,7 +36,7 @@ async def get_video_game(
 
 
 @router.post("/", response_model=schemas.VideoGame, status_code=201)
-async def create_video_game(
+def create_video_game(
     video_game: schemas.VideoGameCreate,
     current_user: models.User = Depends(get_current_user),
     db: Session = Depends(get_db)
@@ -45,7 +45,7 @@ async def create_video_game(
 
 
 @router.put("/{game_id}", response_model=schemas.VideoGame)
-async def update_video_game(
+def update_video_game(
     game_id: PositiveDatabaseId,
     video_game: schemas.VideoGameUpdate,
     current_user: models.User = Depends(get_current_user),
@@ -58,7 +58,7 @@ async def update_video_game(
 
 
 @router.delete("/{game_id}", response_model=schemas.VideoGame)
-async def delete_video_game(
+def delete_video_game(
     game_id: PositiveDatabaseId,
     current_user: models.User = Depends(get_current_user),
     db: Session = Depends(get_db)

@@ -651,7 +651,7 @@ def _copy_media_for_user(
 
 
 @router.get("/", response_model=List[schemas.Collection])
-async def list_collections(
+def list_collections(
     current_user: models.User = Depends(get_current_user),
     db: Session = Depends(get_db),
 ):
@@ -663,7 +663,7 @@ async def list_collections(
 
 
 @router.post("/", response_model=schemas.Collection, status_code=status.HTTP_201_CREATED)
-async def create_collection(
+def create_collection(
     payload: schemas.CollectionCreate,
     current_user: models.User = Depends(get_current_user),
     db: Session = Depends(get_db),
@@ -681,7 +681,7 @@ async def create_collection(
 
 
 @router.patch("/{collection_id}", response_model=schemas.Collection)
-async def update_collection(
+def update_collection(
     collection_id: PositiveDatabaseId,
     payload: schemas.CollectionUpdate,
     current_user: models.User = Depends(get_current_user),
@@ -728,7 +728,7 @@ async def update_collection(
 
 
 @router.get("/moderation/queue")
-async def collection_moderation_queue(
+def collection_moderation_queue(
     current_user: models.User = Depends(get_current_user),
     db: Session = Depends(get_db),
 ):
@@ -741,7 +741,7 @@ async def collection_moderation_queue(
 
 
 @router.get("/moderation/insights")
-async def collection_moderator_insights(
+def collection_moderator_insights(
     current_user: models.User = Depends(get_current_user),
     db: Session = Depends(get_db),
 ):
@@ -751,7 +751,7 @@ async def collection_moderator_insights(
 
 
 @router.patch("/{collection_id}/moderation", response_model=schemas.Collection)
-async def moderate_collection(
+def moderate_collection(
     collection_id: PositiveDatabaseId,
     payload: schemas.CollectionModerationUpdate,
     current_user: models.User = Depends(get_current_user),
@@ -780,7 +780,7 @@ async def moderate_collection(
 
 
 @router.get("/{collection_id}/moderation/reports")
-async def collection_moderation_reports(
+def collection_moderation_reports(
     collection_id: PositiveDatabaseId,
     current_user: models.User = Depends(get_current_user),
     db: Session = Depends(get_db),
@@ -995,7 +995,7 @@ def _public_collection_or_404(db: Session, collection_id: int, *, lock=False) ->
 
 
 @router.get("/explore")
-async def explore_collections(
+def explore_collections(
     request: Request,
     q: str = "",
     category: str = "",
@@ -1087,7 +1087,7 @@ async def explore_collections(
 
 
 @router.get("/public/{collection_id}")
-async def public_collection(collection_id: PositiveDatabaseId, request: Request, db: Session = Depends(get_db)):
+def public_collection(collection_id: PositiveDatabaseId, request: Request, db: Session = Depends(get_db)):
     """Render the deliberately limited public view of an explicitly shared shelf."""
     collection = _public_collection_or_404(db, collection_id)
     template = apply_site_chrome((Path(__file__).parents[1] / "templates" / "public_collection.html").read_text(encoding="utf-8"))
@@ -1165,7 +1165,7 @@ async def public_collection(collection_id: PositiveDatabaseId, request: Request,
 
 
 @router.post("/public/{collection_id}/helpful")
-async def mark_collection_helpful(collection_id: PositiveDatabaseId, request: Request, db: Session = Depends(get_db)):
+def mark_collection_helpful(collection_id: PositiveDatabaseId, request: Request, db: Session = Depends(get_db)):
     collection = _public_collection_or_404(db, collection_id)
     visitor_hash, visitor_token, _ = _visitor_identity(request)
     existing = db.query(models.CollectionReaction.id).filter(
@@ -1192,7 +1192,7 @@ async def mark_collection_helpful(collection_id: PositiveDatabaseId, request: Re
 
 
 @router.post("/public/{collection_id}/report", status_code=status.HTTP_201_CREATED)
-async def report_collection(
+def report_collection(
     collection_id: PositiveDatabaseId,
     payload: schemas.CollectionReportCreate,
     request: Request,
@@ -1262,7 +1262,7 @@ async def report_collection(
 
 
 @router.delete("/{collection_id}", status_code=status.HTTP_204_NO_CONTENT)
-async def delete_collection(
+def delete_collection(
     collection_id: PositiveDatabaseId,
     current_user: models.User = Depends(get_current_user),
     db: Session = Depends(get_db),
@@ -1273,7 +1273,7 @@ async def delete_collection(
 
 
 @router.post("/{collection_id}/items", response_model=schemas.CollectionItem, status_code=status.HTTP_201_CREATED)
-async def add_collection_item(
+def add_collection_item(
     collection_id: PositiveDatabaseId,
     payload: schemas.CollectionItemCreate,
     current_user: models.User = Depends(get_current_user),
@@ -1319,7 +1319,7 @@ async def add_collection_item(
 
 
 @router.patch("/{collection_id}/items/{item_id}", response_model=schemas.CollectionItem)
-async def update_collection_item(
+def update_collection_item(
     collection_id: PositiveDatabaseId,
     item_id: PositiveDatabaseId,
     payload: schemas.CollectionItemUpdate,
@@ -1343,7 +1343,7 @@ async def update_collection_item(
 
 
 @router.put("/{collection_id}/items/{item_id}/position", response_model=List[schemas.CollectionItem])
-async def move_collection_item(
+def move_collection_item(
     collection_id: PositiveDatabaseId,
     item_id: PositiveDatabaseId,
     payload: schemas.CollectionItemMove,
@@ -1369,7 +1369,7 @@ async def move_collection_item(
 
 
 @router.delete("/{collection_id}/items/{item_id}", status_code=status.HTTP_204_NO_CONTENT)
-async def remove_collection_item(
+def remove_collection_item(
     collection_id: PositiveDatabaseId,
     item_id: PositiveDatabaseId,
     current_user: models.User = Depends(get_current_user),

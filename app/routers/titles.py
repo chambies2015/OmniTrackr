@@ -14,6 +14,7 @@ from fastapi import APIRouter, Depends, HTTPException, Query, Request, Response
 from pydantic import BaseModel, Field, field_validator
 from sqlalchemy import func
 from sqlalchemy.orm import Session
+from starlette.concurrency import run_in_threadpool
 
 from .. import models, pick, supporters, title_charts, title_metadata, title_pages, title_search
 from ..auth import AUTH_COOKIE_NAME
@@ -125,11 +126,16 @@ def _take_for(db: Session, token: Optional[str], group):
     return take, asker
 
 
-async def _load(request: Request, db: Session, kind: str, slug: str):
+def _find_and_summarize(db: Session, kind: str, slug: str):
     group = title_pages.find(db, kind, slug)
+    return (group, title_pages.summarize(db, group)) if group is not None else (None, None)
+
+
+async def _load(request: Request, db: Session, kind: str, slug: str):
+    # Database reads run in the threadpool, never on the event loop (see dependencies.get_current_user).
+    group, summary = await run_in_threadpool(_find_and_summarize, db, kind, slug)
     if group is None:
         return None, None, None
-    summary = title_pages.summarize(db, group)
     client = getattr(request.app.state, "external_api_client", None)
     metadata = await title_metadata.get_or_fetch(
         db, client, kind, group.normalized, group.title, group.year, _metadata_creator(kind, summary))
@@ -538,10 +544,13 @@ async def title_page(kind: str, slug: str, request: Request, db: Session = Depen
         keep = f"?take={token}" if token and TAKE_TOKEN.fullmatch(token) else ""
         return RedirectResponse(group.path + keep, status_code=301)
     indexable = title_pages.is_indexable(summary, metadata)
-    summary["chart_rank"] = title_charts.rank_of(db, kind, group.path)
     signed_in = bool(request.cookies.get(AUTH_COOKIE_NAME))
-    take = _take_for(db, token, group)
-    response = strict_html_response(render(group, summary, metadata, indexable, signed_in, take))
+
+    def finish():
+        summary["chart_rank"] = title_charts.rank_of(db, kind, group.path)
+        return render(group, summary, metadata, indexable, signed_in, _take_for(db, token, group))
+
+    response = strict_html_response(await run_in_threadpool(finish))
     response.headers["Cache-Control"] = "private, no-store" if signed_in or token else "public, max-age=600"
     response.headers["Vary"] = "Cookie"
     if not indexable or token:
@@ -1021,21 +1030,30 @@ async def warm_metadata(session_factory, client, batch: int = 8) -> int:
     """Fetch facts for titles that are likely to get traffic but aren't cached yet."""
     db = session_factory()
     fetched = 0
-    try:
-        candidates = title_pages.reviewed_titles(db)
+
+    def candidates_of():
+        found = title_pages.reviewed_titles(db)
         for kind in title_pages.KINDS:
-            candidates += title_pages.popular(db, kind, limit=60, min_members=2)
-        for candidate in candidates:
+            found += title_pages.popular(db, kind, limit=60, min_members=2)
+        return found
+
+    def stale_group(candidate):
+        group = title_pages.find(db, candidate["kind"], candidate["url"].rsplit("/", 1)[1])
+        if group is None:
+            return None, None
+        _, fresh = title_metadata.cached(db, title_metadata.cache_key(group.kind, group.normalized, group.year))
+        if fresh:
+            return None, None
+        return group, title_pages.summarize(db, group, page_sections=False).get("creator")
+
+    try:
+        # Database reads run in the threadpool so this background task never stalls page requests.
+        for candidate in await run_in_threadpool(candidates_of):
             if fetched >= batch:
                 break
-            group = title_pages.find(db, candidate["kind"], candidate["url"].rsplit("/", 1)[1])
+            group, creator = await run_in_threadpool(stale_group, candidate)
             if group is None:
                 continue
-            key = title_metadata.cache_key(group.kind, group.normalized, group.year)
-            _, fresh = title_metadata.cached(db, key)
-            if fresh:
-                continue
-            creator = title_pages.summarize(db, group, page_sections=False).get("creator")
             await title_metadata.get_or_fetch(db, client, group.kind, group.normalized, group.title, group.year, creator, wait=20)
             fetched += 1
             await asyncio.sleep(2)  # Be gentle with Wikipedia and friends.

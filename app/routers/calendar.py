@@ -4,6 +4,7 @@ from __future__ import annotations
 import asyncio
 
 from fastapi import APIRouter, Depends, HTTPException, Request, Response
+from starlette.concurrency import run_in_threadpool
 from sqlalchemy.orm import Session
 
 from .. import release_calendar as calendar
@@ -65,11 +66,11 @@ async def release_radar_section_calendar(feed: str, request: Request):
 
 @router.api_route("/calendar/u/feed-{token}.ics", methods=["GET", "HEAD"], include_in_schema=False)
 async def member_calendar(token: str, request: Request, db: Session = Depends(get_db)):
-    user = calendar.member_for_token(db, token)
+    user = await run_in_threadpool(calendar.member_for_token, db, token)
     if user is None:
         raise HTTPException(404, "This calendar address is no longer active")
     pool = await _pool(request, radar.CATEGORY_ORDER)
-    events = calendar.member_events(db, user.id, pool, radar.today_utc())
+    events = await run_in_threadpool(calendar.member_events, db, user.id, pool, radar.today_utc())
     body = calendar.build_ics("OmniTrackr: my releases",
                               "New releases, seasons and sequels connected to your OmniTrackr library.", events)
     return _ics_response(body, "omnitrackr-my-releases.ics", "private, max-age=1800", private=True)
