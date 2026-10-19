@@ -994,11 +994,110 @@ def _public_collection_or_404(db: Session, collection_id: int, *, lock=False) ->
     return collection
 
 
+GALLERY_SORTS = ("helpful", "newest", "popular")
+RELATED_COLLECTIONS_LIMIT = 4
+RELATED_CANDIDATE_LIMIT = 60
+
+
+def _gallery_order(sort: str) -> tuple:
+    published = func.coalesce(models.Collection.published_at, models.Collection.created_at)
+    if sort == "newest":
+        return (published.desc(), models.Collection.id.desc())
+    if sort == "popular":
+        return (models.Collection.view_count.desc(), models.Collection.helpful_count.desc(), models.Collection.id.desc())
+    return (models.Collection.helpful_count.desc(), published.desc(), models.Collection.id.desc())
+
+
+def _curator_credits(db: Session, collections: list[models.Collection]) -> dict[int, tuple[str, str]]:
+    """{user_id: (name, link)} for curators who already show their collections on a public profile.
+
+    Anyone else stays an anonymous "OmniTrackr member": a credit never reveals more than
+    the member's own profile already does.
+    """
+    from ..editorial_collections import EDITOR_USERNAME
+    from ..public_profiles import profile_path
+    owner_ids = {collection.user_id for collection in collections}
+    if not owner_ids:
+        return {}
+    rows = db.query(models.User, models.PublicProfile).outerjoin(
+        models.PublicProfile, models.PublicProfile.user_id == models.User.id
+    ).filter(models.User.id.in_(owner_ids), models.User.is_active == True).all()
+    credits = {}
+    for user, profile in rows:
+        if user.username == EDITOR_USERNAME:
+            credits[user.id] = ("OmniTrackr editors", "/about")
+        elif profile is not None and profile.enabled and profile.show_collections:
+            credits[user.id] = (user.username, profile_path(user))
+    return credits
+
+
+def _credit_html(credit: tuple[str, str] | None) -> str:
+    if not credit:
+        return "an OmniTrackr member"
+    name, link = credit
+    return f'<a href="{escape(link, quote=True)}">{escape(name)}</a>'
+
+
+def _gallery_card(collection: models.Collection, items: list[dict], credit: tuple[str, str] | None) -> str:
+    cover = collection.cover_url or next((item["artwork_url"] for item in items if item["artwork_url"]), "")
+    image = (
+        f'<img src="{escape(cover, quote=True)}" alt="" loading="lazy" referrerpolicy="no-referrer">'
+        if cover else '<span class="collection-tile__placeholder" aria-hidden="true">✦</span>'
+    )
+    categories = " · ".join(dict.fromkeys(item["category_label"] for item in items))
+    return (
+        '<article class="collection-tile">'
+        f'<a class="collection-tile__art" href="/collections/public/{collection.id}" tabindex="-1" aria-hidden="true">{image}</a>'
+        '<div class="collection-tile__copy">'
+        f'<p>{escape(categories)}</p><h2><a href="/collections/public/{collection.id}">{escape(collection.name)}</a></h2>'
+        f'<span>{len(items)} picks · {collection.helpful_count or 0} helpful</span>'
+        f'<span class="collection-tile__curator">By {_credit_html(credit)}</span>'
+        f'<p class="collection-tile__intro">{escape((collection.description or "")[:180])}</p>'
+        '</div></article>'
+    )
+
+
+def _title_identities(items: list[dict]) -> set[tuple[str, str]]:
+    return {(item["category"], " ".join(item["title"].casefold().split())) for item in items}
+
+
+def _related_collections(db: Session, collection: models.Collection, items: list[dict]) -> list[tuple]:
+    """Other discoverable collections that share titles or media types with this one."""
+    candidates = db.query(models.Collection).options(selectinload(models.Collection.items)).join(
+        models.User, models.Collection.user_id == models.User.id
+    ).filter(
+        models.Collection.id != collection.id,
+        models.Collection.is_public == True,
+        models.Collection.moderation_status != "rejected",
+        models.User.is_active == True,
+    ).order_by(*_gallery_order("helpful")).limit(RELATED_CANDIDATE_LIMIT).all()
+    if not candidates:
+        return []
+    media_lookup = _media_lookup_for_collections(db, candidates)
+    titles = _title_identities(items)
+    categories = {item["category"] for item in items}
+    scored = []
+    for rank, candidate in enumerate(candidates):
+        if not _collection_is_discoverable(candidate, db, media_lookup):
+            continue
+        candidate_items = _available_items(candidate, db, candidate.user_id, media_lookup)
+        if len(candidate_items) < PUBLIC_COLLECTION_MIN_ITEMS:
+            continue
+        shared_titles = len(titles & _title_identities(candidate_items))
+        shared_categories = len(categories & {item["category"] for item in candidate_items})
+        same_curator = candidate.user_id == collection.user_id
+        # Candidates arrive most-helpful first, so rank breaks ties in that order.
+        scored.append(((-shared_titles, -int(same_curator), -shared_categories, rank), candidate, candidate_items))
+    scored.sort(key=lambda entry: entry[0])
+    return [(candidate, candidate_items) for _, candidate, candidate_items in scored[:RELATED_COLLECTIONS_LIMIT]]
+
+
 @router.get("/explore")
 def explore_collections(
     request: Request,
     q: str = "",
     category: str = "",
+    sort: str = "helpful",
     db: Session = Depends(get_db),
 ):
     """Render the automatically quality-gated public collection directory."""
@@ -1017,39 +1116,25 @@ def explore_collections(
         )
     if category in CATEGORIES:
         query = query.filter(models.Collection.items.any(models.CollectionItem.category == category))
-    collections = query.order_by(
-        models.Collection.helpful_count.desc(),
-        models.Collection.published_at.desc(),
-    ).limit(500).all()
+    sort = sort if sort in GALLERY_SORTS else "helpful"
+    collections = query.order_by(*_gallery_order(sort)).limit(500).all()
     media_lookup = _media_lookup_for_collections(db, collections)
-    cards = []
+    shown = []
     for collection in collections:
         if not _collection_is_discoverable(collection, db, media_lookup):
             continue
         items = _available_items(collection, db, collection.user_id, media_lookup)
         if len(items) < PUBLIC_COLLECTION_MIN_ITEMS:
             continue
-        cover = collection.cover_url or next((item["artwork_url"] for item in items if item["artwork_url"]), "")
-        image = (
-            f'<img src="{escape(cover, quote=True)}" alt="" loading="lazy" referrerpolicy="no-referrer">'
-            if cover else '<span class="collection-tile__placeholder" aria-hidden="true">✦</span>'
-        )
-        categories = " · ".join(dict.fromkeys(item["category_label"] for item in items))
-        cards.append(
-            '<article class="collection-tile">'
-            f'<a class="collection-tile__art" href="/collections/public/{collection.id}">{image}</a>'
-            '<div class="collection-tile__copy">'
-            f'<p>{escape(categories)}</p><h2><a href="/collections/public/{collection.id}">{escape(collection.name)}</a></h2>'
-            f'<span>{len(items)} picks · {collection.helpful_count or 0} helpful</span>'
-            f'<p class="collection-tile__intro">{escape((collection.description or "")[:180])}</p>'
-            '</div></article>'
-        )
-        if len(cards) >= 48:
+        shown.append((collection, items))
+        if len(shown) >= 48:
             break
+    credits = _curator_credits(db, [collection for collection, _ in shown])
+    cards = [_gallery_card(collection, items, credits.get(collection.user_id)) for collection, items in shown]
     template = apply_site_chrome((Path(__file__).parents[1] / "templates" / "collection_gallery.html").read_text(encoding="utf-8"))
     if cards:
         gallery_content = "".join(cards)
-    elif normalized_query or category:
+    elif normalized_query or category or sort != "helpful":
         gallery_content = '<div class="collection-gallery__empty"><h2>No collections found</h2><p>Try a different search or media type.</p></div>'
     else:
         gallery_content = editorial_picks(
@@ -1070,10 +1155,13 @@ def explore_collections(
         "SELECT_VIDEO_GAMES": "selected" if category == "video-games" else "",
         "SELECT_MUSIC": "selected" if category == "music" else "",
         "SELECT_BOOKS": "selected" if category == "books" else "",
+        "SORT_HELPFUL": "selected" if sort == "helpful" else "",
+        "SORT_NEWEST": "selected" if sort == "newest" else "",
+        "SORT_POPULAR": "selected" if sort == "popular" else "",
     }
     # One pass, so a name or description containing "{{KEY}}" is never filled in a second time.
     template = re.sub(r"\{\{([A-Z_]+)\}\}", lambda match: values.get(match.group(1), match.group(0)), template)
-    gallery_is_indexable = not normalized_query and not category and len(cards) >= PUBLIC_COLLECTION_GALLERY_MIN
+    gallery_is_indexable = not normalized_query and not category and sort == "helpful" and len(cards) >= PUBLIC_COLLECTION_GALLERY_MIN
     if not gallery_is_indexable:
         template = template.replace(
             '<meta name="robots" content="index, follow">',
@@ -1124,6 +1212,20 @@ def public_collection(collection_id: PositiveDatabaseId, request: Request, db: S
     )
     description = (collection.description or "").strip()
     approved = _approval_is_current(collection, db, media_lookup)
+    related = _related_collections(db, collection, items)
+    credits = _curator_credits(db, [collection] + [candidate for candidate, _ in related])
+    credit = credits.get(collection.user_id)
+    updated = collection.approved_at or collection.published_at or collection.created_at
+    author = {"@type": "Organization", "name": "OmniTrackr editors"} if credit and credit[1] == "/about" else (
+        {"@type": "Person", "name": credit[0], "url": f"https://omnitrackr.xyz{credit[1]}"} if credit else None
+    )
+    related_html = (
+        '<section class="related-collections" aria-labelledby="related-collections-title">'
+        '<h2 id="related-collections-title">More collections to explore</h2>'
+        '<div class="collection-gallery">'
+        + "".join(_gallery_card(candidate, candidate_items, credits.get(candidate.user_id)) for candidate, candidate_items in related)
+        + '</div><p class="related-collections__more"><a href="/collections/explore">Browse every collection →</a></p></section>'
+    ) if related else ""
     cover = collection.cover_url or next((item["artwork_url"] for item in items if item["artwork_url"]), "")
     values = {
         "TITLE": escape(collection.name),
@@ -1135,6 +1237,11 @@ def public_collection(collection_id: PositiveDatabaseId, request: Request, db: S
         "VIEWS": str(collection.view_count or 0),
         "HELPFUL": str(collection.helpful_count or 0),
         "COLLECTION_ID": str(collection.id),
+        "CURATOR": _credit_html(credit),
+        "AUTHOR": escape(credit[0] if credit else "OmniTrackr member", quote=True),
+        "UPDATED_ISO": updated.date().isoformat() if updated else "",
+        "UPDATED": f"{updated:%B} {updated.day}, {updated.year}" if updated else "",
+        "RELATED": related_html,
         "ROBOTS": "index, follow" if approved else "noindex, follow",
         "COVER": (
             f'<img class="share-cover" src="{escape(cover, quote=True)}" alt="" referrerpolicy="no-referrer">'
@@ -1149,6 +1256,8 @@ def public_collection(collection_id: PositiveDatabaseId, request: Request, db: S
             "name": collection.name,
             "description": description,
             "numberOfItems": len(items),
+            **({"author": author} if author else {}),
+            **({"dateModified": updated.date().isoformat()} if updated else {}),
             "itemListElement": [
                 {"@type": "ListItem", "position": position, "item": {"@type": "CreativeWork", "name": item["title"]}}
                 for position, item in enumerate(items, 1)
