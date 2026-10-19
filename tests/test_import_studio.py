@@ -264,7 +264,7 @@ class TestImportStudio:
 
         guide = client.get("/export-import-guide")
         assert guide.status_code == 200
-        assert "How Import Helps: Two Paths with Different Jobs" in guide.text
+        assert "Two ways in: migration and restore" in guide.text
         assert "Letterboxd" in guide.text
         assert "Goodreads" in guide.text
         assert "MyAnimeList" in guide.text

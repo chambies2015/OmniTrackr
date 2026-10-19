@@ -24,87 +24,88 @@ COLLECTIONS = [
     {
         "name": "Mind-Bending Sci-Fi Worth a Second Watch",
         "description": (
-            "These are the science fiction films that reward a rewatch, because the first viewing is spent keeping up "
-            "and the second is spent noticing how carefully everything was set up. Some are big studio spectacles, "
-            "others were made for the price of a used car, but each one trusts you to think alongside it. "
-            "Start anywhere, and leave a free evening afterwards for the conversation it will start."
+            "Science fiction films that get better the second time. On a first viewing you are busy keeping up; on "
+            "the second you start to see how much was set up in the opening scenes. Some are big studio spectacles and "
+            "one, Primer, was made for the price of a used car. All of them expect you to do some of the thinking. "
+            "Start anywhere, and leave a free evening afterwards for the argument about the ending."
         ),
         "items": [
             ("movies", "Interstellar", 2014, "Christopher Nolan", "The docking scene alone is worth it, but the father-daughter story is what stays with you."),
-            ("movies", "Arrival", 2016, "Denis Villeneuve", "A first-contact film about language and grief. The ending reframes everything that came before it."),
+            ("movies", "Arrival", 2016, "Denis Villeneuve", "A first-contact film about language and grief. The ending changes how you see everything before it."),
             ("movies", "Inception", 2010, "Christopher Nolan", "A heist movie with dream logic. Watch the rules being explained in the first hour; they all come back."),
-            ("movies", "Ex Machina", 2014, "Alex Garland", "Three people, one house, and a quiet question about who is testing whom."),
-            ("movies", "Blade Runner 2049", 2017, "Denis Villeneuve", "Slow, enormous and gorgeous. Works even if you haven't seen the original, though it's richer if you have."),
+            ("movies", "Ex Machina", 2014, "Alex Garland", "Three people, one house, and a slowly growing doubt about who is testing whom."),
+            ("movies", "Blade Runner 2049", 2017, "Denis Villeneuve", "Slow, enormous and gorgeous. Works even if you haven't seen the original, though it means more if you have."),
             ("movies", "Primer", 2004, "Shane Carruth", "Made on a tiny budget and famously dense. Keep a notepad handy, and don't feel bad about pausing."),
-            ("movies", "Annihilation", 2018, "Alex Garland", "Beautiful and unsettling in equal measure; the final act is best seen with the sound up."),
-            ("movies", "Everything Everywhere All at Once", 2022, "Daniel Kwan and Daniel Scheinert", "Absurd, loud and unexpectedly tender. It is, underneath everything, a film about a family."),
+            ("movies", "Annihilation", 2018, "Alex Garland", "Gorgeous and deeply unsettling. See the final act with the sound turned up."),
+            ("movies", "Everything Everywhere All at Once", 2022, "Daniel Kwan and Daniel Scheinert", "Absurd and loud, and more tender than you expect. Under all the chaos, it is a film about a family."),
         ],
     },
     {
         "name": "Anime Gateways: Where to Start",
         "description": (
-            "If you have been meaning to try anime but never knew where to begin, start here. Every pick on this "
-            "list is complete or has a satisfying first season, is easy to find with English subtitles or a dub, "
-            "and shows a different side of what the medium does well: action, comedy, slow-burn fantasy and pure style. "
-            "Pick the one whose note sounds most like you and give it three episodes before you decide."
+            "For anyone who has meant to try anime and never knew where to begin. Every pick on this list is either "
+            "complete or has a first season that ends well, and all of them are easy to find with English subtitles or "
+            "a dub. Between them they cover action, comedy, slow-burn fantasy and a lot of style, plus one Studio "
+            "Ghibli film you can finish in an evening. Pick the one whose note sounds most like you and give it three "
+            "episodes before you decide."
         ),
         "items": [
             ("anime", "Fullmetal Alchemist: Brotherhood", 2009, None, "The safest first pick there is: a complete story with a real ending and no filler."),
             ("anime", "Cowboy Bebop", 1998, None, "Jazz, bounty hunters and space noir. Mostly standalone episodes, so it's easy to dip into."),
-            ("anime", "Frieren: Beyond Journey's End", 2023, None, "A fantasy that begins after the heroes have already won. Gentle, funny and quietly moving."),
-            ("anime", "Mob Psycho 100", 2016, None, "Wild animation wrapped around a very kind story about a boy who would rather be ordinary."),
+            ("anime", "Frieren: Beyond Journey's End", 2023, None, "A fantasy that begins after the heroes have already won. Gentle and funny, and it gets to you when you least expect it."),
+            ("anime", "Mob Psycho 100", 2016, None, "Wild animation wrapped around a very kind story about a boy who would like to be ordinary."),
             ("anime", "Jujutsu Kaisen", 2020, None, "Modern action at its sharpest, with fights that are choreographed like dance numbers."),
             ("anime", "Attack on Titan", 2013, None, "Starts as survival horror and keeps changing shape. Commit to it; it gets bigger every season."),
-            ("anime", "Spirited Away", 2001, None, "A feature film, not a series, and a perfect one-evening introduction to Studio Ghibli."),
+            ("anime", "Spirited Away", 2001, None, "A single feature film, so it makes an easy one-evening introduction to Studio Ghibli."),
         ],
     },
     {
         "name": "Prestige TV You Can Actually Finish",
         "description": (
             "Great television is easy to start and hard to finish, so this list sticks to series with a clear shape: "
-            "limited runs, short seasons, or shows that ended exactly when they meant to. Each one respects your time, "
-            "and none of them will leave you waiting years for a cliffhanger to resolve. Most can be finished over a few "
-            "weekends; a couple will take a month of evenings and are worth every one of them."
+            "limited runs, short seasons, or shows that ended when they meant to. Chernobyl is five episodes. Fleabag is "
+            "twelve half-hours. True Detective's first season is a complete story on its own. Most of these can be "
+            "finished over a few weekends. Breaking Bad and Dark will take a month of evenings, and both are worth it."
         ),
         "items": [
             ("tv-shows", "Chernobyl", 2019, None, "Five episodes, and among the tensest television ever made. The third episode is hard to forget."),
-            ("tv-shows", "Band of Brothers", 2001, None, "Ten episodes following one company through the Second World War, told with enormous care."),
+            ("tv-shows", "Band of Brothers", 2001, None, "Ten episodes that follow one company through the Second World War, made with obvious care for the men it portrays."),
             ("tv-shows", "Fleabag", 2016, None, "Two short seasons, twelve half-hours, and a fourth wall that becomes part of the story."),
             ("tv-shows", "True Detective", 2014, None, "The first season stands entirely on its own. Two detectives, one case, seventeen years apart."),
-            ("tv-shows", "Breaking Bad", 2008, None, "The long one on this list, but it builds with rare discipline right to its final scene."),
+            ("tv-shows", "Breaking Bad", 2008, None, "The long one on this list, but it was plotted with rare discipline right to its final scene."),
             ("tv-shows", "Dark", 2017, None, "A German time-travel mystery planned from start to finish across three seasons. Keep track of the family trees."),
             ("tv-shows", "Severance", 2022, None, "An office satire that turns into a mystery box. Short seasons, and every episode ends with a hook."),
-            ("tv-shows", "The Bear", 2022, None, "Half-hour episodes that feel like a double shift in a restaurant kitchen, in the best possible way."),
+            ("tv-shows", "The Bear", 2022, None, "Half-hour episodes that feel like working a double shift in a restaurant kitchen. Stressful, and very good."),
         ],
     },
     {
         "name": "Cozy Games for Slow Evenings",
         "description": (
-            "Not every game needs to test your reflexes. These are the ones to reach for after a long day: low pressure, "
-            "gentle music, and loops that feel good in twenty-minute sessions or three-hour ones. Nothing here punishes you "
-            "for walking away, and several are just as good played on a sofa next to someone watching. "
+            "Games to reach for after a long day. The pressure is low, the music is gentle, and the loops feel good in "
+            "twenty-minute sessions or three-hour ones. Nothing here punishes you for walking away. Several work well "
+            "with someone watching from the other end of the sofa, and A Short Hike can be finished in a single evening. "
             "Most run happily on modest hardware and handhelds, too."
         ),
         "items": [
             ("video-games", "Stardew Valley", 2016, None, "The farming game that started a genre revival. Plant, fish, befriend the town, repeat happily."),
-            ("video-games", "A Short Hike", 2019, None, "A small island, a mountain to climb, and about two hours of pure charm. A perfect single-evening game."),
+            ("video-games", "A Short Hike", 2019, None, "A small island, a mountain to climb, and about two hours of wandering. It fits neatly into one evening."),
             ("video-games", "Unpacking", 2021, None, "You unpack boxes across a life's worth of homes, and somehow tell a whole story without a word."),
-            ("video-games", "Spiritfarer", 2020, None, "A management game about ferrying spirits to the afterlife. Warm, sad and beautifully drawn."),
-            ("video-games", "Animal Crossing: New Horizons", 2020, None, "An island that runs on real time. Best in short daily visits rather than long binges."),
-            ("video-games", "Dorfromantik", 2022, None, "Place hexagon tiles, grow a peaceful countryside, and try to beat your last score. Endlessly calming."),
+            ("video-games", "Spiritfarer", 2020, None, "A management game about ferrying spirits to the afterlife. Sad and warm by turns, and beautifully drawn."),
+            ("video-games", "Animal Crossing: New Horizons", 2020, None, "An island that runs on real time. It works best in short daily visits; long binges wear it out."),
+            ("video-games", "Dorfromantik", 2022, None, "Place hexagon tiles, grow a peaceful countryside, and try to beat your last score. Very hard to get stressed playing it."),
             ("video-games", "Night in the Woods", 2017, None, "A small-town story about coming home and not fitting anymore, with great writing and music."),
         ],
     },
     {
         "name": "Read It, Then Watch It",
         "description": (
-            "Books that became memorable films or series, paired so you can do both and argue about which was better. "
-            "Each pair shows something different about adaptation: what a screen can add, what only a page can do, and "
-            "what gets lost or found in between. Read first if you can, since most of these books hold surprises the "
-            "adaptations give away in their opening minutes."
+            "Four books and the films or series made from them, paired so you can do both and argue about which was "
+            "better. Villeneuve's Dune covers only about the first half of the novel. The Coens' No Country for Old Men "
+            "follows the book remarkably closely. Normal People got twelve half-hour episodes to work with. Read first "
+            "if you can, since most of these books hold surprises the adaptations give away in their opening minutes."
         ),
         "items": [
-            ("books", "Dune", 1965, "Frank Herbert", "Dense but rewarding. The appendices and glossary are worth keeping a finger in."),
+            ("books", "Dune", 1965, "Frank Herbert", "Dense, and worth the effort. Keep a finger in the appendices and glossary."),
             ("movies", "Dune", 2021, "Denis Villeneuve", "Covers roughly the first half of the novel, and the scale of the desert finally matches the book."),
             ("books", "The Martian", 2011, "Andy Weir", "Science problems as page-turners, told with a very funny narrator."),
             ("movies", "The Martian", 2015, "Ridley Scott", "A faithful, crowd-pleasing adaptation that keeps the book's humor intact."),
@@ -117,19 +118,19 @@ COLLECTIONS = [
     {
         "name": "Albums for Late-Night Focus",
         "description": (
-            "Records that work as a backdrop for reading, writing or thinking late at night, but also reward close "
-            "listening when you give them your full attention. The list moves from ambient pieces with no vocals at all "
-            "to warmer, more personal albums for when the work is done. Play them front to back; every one of these was "
-            "made as a whole album rather than a collection of singles."
+            "Records to put on while you read, write or think late at night, which also hold up when you stop and "
+            "listen properly. The list starts with ambient records by Brian Eno and Aphex Twin that have no vocals at "
+            "all, and ends with Frank Ocean and Sufjan Stevens, warmer and more personal, for when the work is done. "
+            "Play them front to back. Each one was made to be heard as a whole album."
         ),
         "items": [
             ("music", "Ambient 1: Music for Airports", 1978, "Brian Eno", "The record that named ambient music. Designed to be ignored or listened to closely, and it works both ways."),
-            ("music", "Selected Ambient Works 85-92", 1992, "Aphex Twin", "Warm, hazy electronic pieces that sound like a memory of a club rather than the club itself."),
+            ("music", "Selected Ambient Works 85-92", 1992, "Aphex Twin", "Warm, hazy electronic pieces that sound like a club you half remember the next morning."),
             ("music", "Promises", 2021, "Floating Points, Pharoah Sanders & The London Symphony Orchestra", "One piece in nine movements, built from a single repeating phrase that slowly blooms."),
             ("music", "Mezzanine", 1998, "Massive Attack", "Dark, heavy and hypnotic trip-hop, best heard on good headphones."),
             ("music", "Kid A", 2000, "Radiohead", "The band's sharp turn toward electronics. Cold on the surface and surprisingly emotional underneath."),
             ("music", "In Rainbows", 2007, "Radiohead", "Radiohead at their warmest. A good one for when the focus session turns into winding down."),
-            ("music", "Blonde", 2016, "Frank Ocean", "Sparse, drifting and personal; it rewards a quiet room more than any playlist shuffle."),
+            ("music", "Blonde", 2016, "Frank Ocean", "Sparse, drifting and personal. Play it in a silent room, in order, and never on shuffle."),
             ("music", "Carrie & Lowell", 2015, "Sufjan Stevens", "Hushed and heartbreaking, mostly just voice and guitar. Save it for the very end of the night."),
         ],
     },

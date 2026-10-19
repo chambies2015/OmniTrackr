@@ -322,7 +322,7 @@ def hero_signup_html(google: bool) -> str:
         return (
             '<div class="lp-cta-row">'
             f'<button type="button" class="lp-btn lp-btn--primary" data-action="show-register-form" data-hero-signup>Create a free library {arrow}</button>'
-            '<a class="lp-btn lp-btn--ghost" href="/demo">Try it—no account needed</a></div>'
+            '<a class="lp-btn lp-btn--ghost" href="/demo">Try it without an account</a></div>'
         )
     return (
         '<div class="lp-cta-row lp-cta-row--signup">'

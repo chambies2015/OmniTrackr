@@ -202,7 +202,7 @@ def guide_content(slug, trail, guide):
         ])
     parts.extend([
         '</div></section><section class="editorial guide-reflection"><h2>Take something with you</h2>',
-        f'<p>{escape(trail["prompt"])}</p><p>Keep a short note about what drew you in and whether it suited the time you had. That is more useful for your next choice than treating this list as a checklist.</p></section>',
+        f'<p>{escape(trail["prompt"])}</p><p>Keep a short note about what drew you in and whether it suited the time you had. You do not need to finish the whole list; the note will help more next time you pick.</p></section>',
         '<section id="related-trails" class="guide-related" aria-labelledby="related-heading"><p class="eyebrow">FOLLOW ANOTHER THREAD</p><h2 id="related-heading">Where to go next</h2><div class="guide-related-grid">',
     ])
     for related in guide['related']:
@@ -212,7 +212,7 @@ def guide_content(slug, trail, guide):
         '</div></section><section id="guide-sources" class="guide-sources" aria-labelledby="sources-heading">',
         '<h2 id="sources-heading">Sources &amp; editorial method</h2>',
         '<div id="editorial-method"><p>Prepared by OmniTrackr and reviewed by the site owner before publishing. Factual context was checked against the official sources below; comparisons, mood descriptions, and suggested starting points are editorial interpretations.</p>',
-        '<p>Reading and game time varies by person; suggested stopping points are ways to begin, rather than promises about completion time. Source links are informational, not affiliate links. Availability varies by region.</p>',
+        '<p>Reading and game time varies by person; suggested stopping points are places to begin and say nothing about how long a title takes to finish. Source links are informational, not affiliate links. Availability varies by region.</p>',
         f'<p class="muted">First published September 8, 2026. Guide expanded and sources checked {escape(reviewed)}. <a href="/contact">Send a correction</a> · <a href="/content-quality">Editorial standards</a></p></div><ol>',
     ])
     for source in guide['sources']:

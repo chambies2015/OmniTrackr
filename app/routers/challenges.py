@@ -196,7 +196,7 @@ def challenges_index(db: Session = Depends(get_db)):
     content = (
         '<header class="hero"><p class="eyebrow">ONE SMALL CHALLENGE A MONTH</p><h1>Monthly challenges</h1>'
         '<p>Each month OmniTrackr sets three small steps across movies, TV, anime, games, music and books. They are written to '
-        'nudge you toward something new, not to make you watch more. Join from your dashboard, and your progress fills in from '
+        'nudge you toward something new. None of them asks you to watch more than usual. Join from your dashboard, and your progress fills in from '
         'what you already track.</p></header>'
         + feature
         + _archive(current if feature else "")

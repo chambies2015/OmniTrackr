@@ -35,7 +35,7 @@ function renderRecommendationRequests(postcards) {
   container.replaceChildren();
   if (!postcards.length) {
     const empty = postcardElement('div', 'postcards-empty');
-    empty.append(postcardElement('strong', '', 'No postcards sent yet.'), postcardElement('span', '', 'Ask a focused question above—the best prompts are about a mood, moment, or specific curiosity.'));
+    empty.append(postcardElement('strong', '', 'No postcards sent yet.'), postcardElement('span', '', 'Ask a question above. Specific ones get better answers, like "a short game for a rainy Sunday".'));
     container.appendChild(empty);
     return;
   }

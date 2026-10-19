@@ -27,7 +27,7 @@ function renderCollections(collections) {
   if (!collections.length) {
     const empty = document.createElement('p');
     empty.className = 'collections-empty';
-    empty.textContent = 'Start with a feeling, a theme, or a future plan. Then add anything from your library — including anime.';
+    empty.textContent = 'Name it after a mood, a theme, or a plan, then add anything from your library, anime included.';
     container.appendChild(empty);
     return;
   }
