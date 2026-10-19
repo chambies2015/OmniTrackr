@@ -197,10 +197,13 @@ def pick_pool(request: Request, response: Response, db: Session = Depends(get_db
     return {"picks": _pool_rows(details, pick.collection_links(db))}
 
 
+SAVE_EVENTS = {"pick": "pick_saved", "if-you-liked": "liked_saved", "seasonal": "seasonal_saved"}
+
+
 class PickAdd(BaseModel):
     id: str = Field(..., min_length=3, max_length=160)
-    # Where the button was: Pick for me itself, or an "If you liked" guide (counted separately on Site stats).
-    source: Literal["pick", "if-you-liked"] = "pick"
+    # Where the button was: Pick for me itself, an "If you liked" guide or a seasonal hub (counted separately on Site stats).
+    source: Literal["pick", "if-you-liked", "seasonal"] = "pick"
 
 
 @router.post("/api/pick/add")
@@ -220,5 +223,5 @@ def add_pick(payload: PickAdd, request: Request, response: Response,
     }
     db.commit()
     if state == "created":
-        funnel.record("liked_saved" if payload.source == "if-you-liked" else "pick_saved", request)
+        funnel.record(SAVE_EVENTS[payload.source], request)
     return result

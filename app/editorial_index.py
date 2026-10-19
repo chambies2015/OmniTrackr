@@ -1,8 +1,8 @@
 """Every written guide on the public site, in one list.
 
-The Discover guides, monthly editions, "In order" and "If you liked" guides are
-the pages a visitor can read in full without an account. They live in four
-catalogs; this module gathers them so the homepage (and anything else that
+The Discover guides, monthly editions, "In order" and "If you liked" guides and
+the seasonal hubs are the pages a visitor can read in full without an account.
+They live in five catalogs; this module gathers them so the homepage (and anything else that
 wants "the latest reading") links to them without knowing each catalog's shape.
 """
 from __future__ import annotations
@@ -16,6 +16,7 @@ SECTION_LABELS = {
     "monthly": "Monthly edition",
     "in-order": "In order",
     "if-you-liked": "If you liked",
+    "seasonal": "Seasonal",
 }
 
 
@@ -51,9 +52,16 @@ def _if_you_liked() -> list[dict]:
             for slug, guide in GUIDES.items()]
 
 
+def _seasonal() -> list[dict]:
+    from .seasonal_guides import SEASONS
+    return [{"section": "seasonal", "href": entry["path"], "name": f"{entry['name']} picks",
+             "summary": entry["summary"], "updated": entry["reviewed"]}
+            for entry in SEASONS.values()]
+
+
 def entries() -> list[dict]:
     """Every guide, newest first (ties keep catalog order)."""
-    pieces = _discover() + _monthly() + _in_order() + _if_you_liked()
+    pieces = _discover() + _monthly() + _in_order() + _if_you_liked() + _seasonal()
     return sorted(pieces, key=lambda piece: piece["updated"], reverse=True)
 
 
@@ -114,6 +122,7 @@ SECTION_ORDER = (
     ("if-you-liked", "If you liked…", "/if-you-liked"),
     ("discover", "Discover guides", "/discover"),
     ("monthly", "Monthly editions", "/discover"),
+    ("seasonal", "Seasonal picks", "/halloween"),
 )
 
 

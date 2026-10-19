@@ -1,8 +1,8 @@
 """Pick for me: one curated suggestion for visitors who can't decide what to start.
 
 The pool is the editors' own writing that already ships with the site: the
-Discover trails, the monthly editions, the starter public collections and the
-"If you liked..." guides. Every
+Discover trails, the monthly editions, the starter public collections, the
+"If you liked..." guides and the seasonal hubs. Every
 pick carries the reason it was chosen, so the page never shows a bare title.
 Nothing here reads or reveals anyone's library; the only database reads are the
 cached title index (for artwork and title page links) and the editors' public
@@ -79,6 +79,9 @@ def _build() -> list[dict]:
             keep(_entry(title_pages.LIBRARY_TO_KIND[category], title, year, creator, note, None, collection["name"], None))
     from .if_you_liked import pool_sources
     for item, label, url in pool_sources():
+        keep(_entry(item["kind"], item["title"], item["year"], item["creator"], item["why"], item["caveat"], label, url))
+    from .seasonal import pool_sources as seasonal_sources
+    for item, label, url in seasonal_sources():
         keep(_entry(item["kind"], item["title"], item["year"], item["creator"], item["why"], item["caveat"], label, url))
     order = {kind: index for index, kind in enumerate(KIND_ORDER)}
     return sorted(found.values(), key=lambda e: (order[e["kind"]], e["title"].casefold()))

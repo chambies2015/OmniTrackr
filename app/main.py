@@ -781,6 +781,17 @@ for route in in_order_router.router.routes:
         bind_rate_limited_endpoint(route, rate_limited_order_add)
 app.include_router(in_order_router.router)
 
+from .routers import seasonal as seasonal_router
+rate_limited_seasonal_progress = limiter.limit("60/minute")(seasonal_router.seasonal_progress)
+rate_limited_seasonal_add = limiter.limit("30/minute")(seasonal_router.seasonal_add)
+for route in seasonal_router.router.routes:
+    path = getattr(route, "path", None)
+    if path == "/api/seasonal/{slug}/progress":
+        bind_rate_limited_endpoint(route, rate_limited_seasonal_progress)
+    elif path == "/api/seasonal/{slug}/add":
+        bind_rate_limited_endpoint(route, rate_limited_seasonal_add)
+app.include_router(seasonal_router.router)
+
 from .routers import tier_list as tier_list_router
 rate_limited_tier_templates = limiter.limit("60/minute")(tier_list_router.tier_list_templates)
 rate_limited_tier_library = limiter.limit("30/minute")(tier_list_router.tier_list_library)

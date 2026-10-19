@@ -261,6 +261,7 @@ function clearAuth({ preserveReturn = false } = {}) {
     window.resetYearGoals?.();
     window.resetInstallCard?.();
     window.resetMonthlyChallenge?.();
+    window.resetSeasonCard?.();
     window.resetBadges?.();
     if (!preserveReturn) clearDiscoverAuthReturn();
     clearDemoStartIntent();
@@ -588,6 +589,7 @@ function showAuthModal() {
     window.resetYearGoals?.();
     window.resetInstallCard?.();
     window.resetMonthlyChallenge?.();
+    window.resetSeasonCard?.();
     window.resetBadges?.();
     
     // Hide footer for logged-in view when showing landing page
@@ -638,6 +640,7 @@ function showMainUI() {
     window.refreshForYou?.();
     window.refreshYearGoals?.();
     window.refreshMonthlyChallenge?.();
+    window.refreshSeasonCard?.();
     window.refreshBadges?.();
     window.refreshInstallCard?.();
     if (typeof updateNotificationCount === 'function') {
