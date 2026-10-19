@@ -59,6 +59,7 @@ async function updateNotificationCount() {
     const response = await authenticatedFetch(`${API_BASE}/notifications/count`);
     if (response.ok) {
       const data = await response.json();
+      window.setAppIconBadge?.(data.count);
       const notificationDot = document.getElementById('notificationDot');
 
       if (!notificationDot) {
