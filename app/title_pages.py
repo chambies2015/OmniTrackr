@@ -36,6 +36,9 @@ COMPLETE_FIELD = {"movie": "watched", "tv": "watched", "anime": "watched", "game
 IMAGE_FIELD = {"movie": "poster_url", "tv": "poster_url", "anime": "poster_url", "game": "cover_art_url",
                "album": "cover_art_url", "book": "cover_art_url"}
 MIN_RATINGS_SHOWN = 3
+SPREAD_MIN_RATINGS = 5  # A breakdown of three ratings would all but show each member's score.
+# (label, lowest rating in the band), highest band first; ratings are out of 10.
+RATING_BANDS = (("9 to 10", 9.0), ("8 to 8.9", 8.0), ("7 to 7.9", 7.0), ("5 to 6.9", 5.0), ("Below 5", 0.0))
 INDEX_MIN_MEMBERS = 3
 REVIEW_MIN_CHARS = 80
 REVIEW_DETAIL_MIN_CHARS = 240
@@ -354,6 +357,7 @@ def summarize(db: Session, group: TitleGroup, *, page_sections: bool = True) -> 
         "finished": finished,
         "rated": len(ratings),
         "average_rating": average,
+        "spread": rating_spread(ratings),
         "creator": creator,
         "image": images.most_common(1)[0][0] if images else None,
         "reviews": reviews,
@@ -361,6 +365,22 @@ def summarize(db: Session, group: TitleGroup, *, page_sections: bool = True) -> 
         "collections": _collections_featuring(db, kind, group.items) if page_sections else [],
         "related": _related(db, kind, group) if page_sections else [],
     }
+
+
+def rating_spread(ratings: list) -> Optional[list[dict]]:
+    """How member ratings split across RATING_BANDS, once enough members have rated."""
+    if len(ratings) < SPREAD_MIN_RATINGS:
+        return None
+    counts = Counter()
+    for rating in ratings:
+        for label, low in RATING_BANDS:
+            if rating >= low:
+                counts[label] += 1
+                break
+        else:
+            counts[RATING_BANDS[-1][0]] += 1
+    return [{"label": label, "count": counts[label], "percent": round(100 * counts[label] / len(ratings))}
+            for label, _ in RATING_BANDS]
 
 
 def is_indexable(summary: dict, metadata: Optional[dict]) -> bool:

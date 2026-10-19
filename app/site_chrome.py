@@ -45,6 +45,7 @@ FOOTER_GROUPS = (
         ("Public reviews", "/reviews"),
         ("Collections", "/collections/explore"),
         ("Popular titles", "/titles"),
+        ("Member charts", "/titles/movie"),
         ("Interactive demo", "/demo"),
         ("Sample library", "/sample-library"),
     )),

@@ -15,7 +15,7 @@ from pydantic import BaseModel, Field, field_validator
 from sqlalchemy import func
 from sqlalchemy.orm import Session
 
-from .. import models, pick, supporters, title_metadata, title_pages, title_search
+from .. import models, pick, supporters, title_charts, title_metadata, title_pages, title_search
 from ..auth import AUTH_COOKIE_NAME
 from ..csp import strict_html_response
 from ..dependencies import get_current_user, get_db
@@ -24,7 +24,7 @@ from ..site_chrome import apply_site_chrome, editorial_picks, message_page
 
 router = APIRouter(tags=["titles"])
 SITE_URL = os.getenv("SITE_URL", "https://omnitrackr.xyz").rstrip("/")
-CSS_VERSION = "20261009-kofi-1"
+CSS_VERSION = "20261018-charts-1"
 JS_VERSION = "20261009-kofi-1"
 SCHEMA_TYPES = {"movie": "Movie", "tv": "TVSeries", "anime": "TVSeries", "game": "VideoGame", "album": "MusicAlbum", "book": "Book"}
 CREATOR_SCHEMA = {"movie": "director", "album": "byArtist", "book": "author"}
@@ -33,7 +33,17 @@ KIND_PLURALS = {"movie": "Movies", "tv": "TV shows", "anime": "Anime", "game": "
 GUEST_LIST_MAX = 30
 TAKE_DAYS = 60
 TAKE_TOKEN = re.compile(r"[A-Za-z0-9_-]{16,64}")
+FINISHED_LABEL = {"movie": "watched", "tv": "watched", "anime": "watched", "game": "played", "album": "heard", "book": "read"}
 VERBS = {"movie": "watched", "tv": "watched", "anime": "watched", "game": "played", "album": "listened to", "book": "read"}
+
+
+def _singular(kind: str) -> str:
+    label = title_pages.KINDS[kind][3]
+    return label if kind == "tv" else label.lower()
+
+
+def _plural(kind: str) -> str:
+    return KIND_PLURALS[kind] if kind == "tv" else KIND_PLURALS[kind].lower()
 
 
 def _e(value) -> str:
@@ -160,7 +170,8 @@ def _json_ld(group, summary: dict, metadata: dict, canonical: str, image: Option
     breadcrumbs = {"@context": "https://schema.org", "@type": "BreadcrumbList", "itemListElement": [
         {"@type": "ListItem", "position": 1, "name": "Home", "item": f"{SITE_URL}/"},
         {"@type": "ListItem", "position": 2, "name": "Titles", "item": f"{SITE_URL}/titles"},
-        {"@type": "ListItem", "position": 3, "name": group.title, "item": canonical},
+        {"@type": "ListItem", "position": 3, "name": KIND_PLURALS[group.kind], "item": f"{SITE_URL}/titles/{group.kind}"},
+        {"@type": "ListItem", "position": 4, "name": group.title, "item": canonical},
     ]}
     dump = _script_json
     return (f'<script type="application/ld+json">{dump(item)}</script>\n'
@@ -263,8 +274,32 @@ def _community_html(group, summary: dict) -> str:
         reviews = (f'<p class="title-empty">No public reviews yet. <a href="#write-review">Be the first to review '
                    f'{_e(group.title)}</a>.</p>')
     return (f'<section class="title-section" aria-labelledby="community-title"><h2 id="community-title">On OmniTrackr</h2>'
-            f'<div class="title-stats">{"".join(tiles)}</div>'
+            f'<div class="title-stats">{"".join(tiles)}</div>{_spread_html(group, summary)}'
             f'<h3 class="title-subhead">Member reviews</h3><div class="title-reviews">{reviews}</div></section>')
+
+
+def _rank_html(group, summary: dict) -> str:
+    rank = summary.get("chart_rank")
+    if not rank:
+        return ""
+    return (f'<a class="title-rank" href="/titles/{_e(group.kind)}#rank-{_e(rank["rank"])}">'
+            f'<strong>#{_e(rank["rank"])}</strong> highest-rated {_e(_singular(group.kind))} on OmniTrackr '
+            f'<span aria-hidden="true">→</span></a>')
+
+
+def _spread_html(group, summary: dict) -> str:
+    """How member ratings split across bands (only once enough members have rated)."""
+    spread = summary.get("spread")
+    if not spread:
+        return ""
+    rows = "".join(
+        f'<li><span class="title-spread__label">{_e(band["label"])}</span>'
+        f'<span class="title-spread__bar"><span style="--w:{max(band["percent"], 1 if band["count"] else 0)}%"></span></span>'
+        f'<span class="title-spread__value">{_e(band["percent"])}%</span></li>' for band in spread)
+    return (f'<h3 class="title-subhead" id="spread-title">How members rate {_e(group.title)}</h3>'
+            f'<ul class="title-spread" aria-labelledby="spread-title">{rows}</ul>'
+            f'<p class="title-spread__note">From {_e(summary["rated"])} member ratings out of 10, one per member. '
+            f'<a href="/titles/{_e(group.kind)}">See the {_e(_plural(group.kind))} chart</a>.</p>')
 
 
 def _write_review_html(group, summary: dict, signed_in: bool, take=None) -> str:
@@ -466,9 +501,10 @@ def render(group, summary: dict, metadata: Optional[dict], indexable: bool, sign
       <div class="site-wrap title-hero__inner">
         {poster}
         <div class="title-hero__copy">
-          <nav class="title-crumbs" aria-label="Breadcrumb"><a href="/titles">Titles</a> <span aria-hidden="true">/</span> <a href="/titles#{_e(group.kind)}">{_e(KIND_PLURALS[group.kind])}</a></nav>
+          <nav class="title-crumbs" aria-label="Breadcrumb"><a href="/titles">Titles</a> <span aria-hidden="true">/</span> <a href="/titles/{_e(group.kind)}">{_e(KIND_PLURALS[group.kind])}</a></nav>
           <h1>{_e(group.title)}{f' <span class="title-hero__year">{_e(group.year)}</span>' if group.year else ''}</h1>
           <p class="title-hero__meta">{_e(meta_line)}</p>
+          {_rank_html(group, summary)}
           {f'<p class="title-hero__lead">{_e(lead[:1].upper() + lead[1:])}</p>' if lead else ''}
           <div class="title-hero__chips">{genres}</div>
           {_scores_html(summary, metadata)}
@@ -502,6 +538,7 @@ async def title_page(kind: str, slug: str, request: Request, db: Session = Depen
         keep = f"?take={token}" if token and TAKE_TOKEN.fullmatch(token) else ""
         return RedirectResponse(group.path + keep, status_code=301)
     indexable = title_pages.is_indexable(summary, metadata)
+    summary["chart_rank"] = title_charts.rank_of(db, kind, group.path)
     signed_in = bool(request.cookies.get(AUTH_COOKIE_NAME))
     take = _take_for(db, token, group)
     response = strict_html_response(render(group, summary, metadata, indexable, signed_in, take))
@@ -756,7 +793,9 @@ def titles_index(request: Request, db: Session = Depends(get_db)):
             cards += (f'<a class="title-related" href="{_e(item["url"])}"><span class="title-related__art">{art}</span>'
                       f'<strong>{_e(item["title"])}</strong><small>{_e(item["members"])} members{_e(year)}</small></a>')
         sections.append(f'<section class="title-section" id="{kind}" aria-labelledby="{kind}-heading">'
-                        f'<h2 id="{kind}-heading">{_e(KIND_PLURALS[kind])}</h2><div class="title-related-grid">{cards}</div></section>')
+                        f'<div class="title-section__head"><h2 id="{kind}-heading">{_e(KIND_PLURALS[kind])}</h2>'
+                        f'<a href="/titles/{kind}">Highest-rated {_e(_plural(kind))} <span aria-hidden="true">→</span></a></div>'
+                        f'<div class="title-related-grid">{cards}</div></section>')
     if not sections:
         sections.append(editorial_picks(
             "Looking for something to start?",
@@ -814,6 +853,144 @@ def titles_index(request: Request, db: Session = Depends(get_db)):
     response = strict_html_response(apply_site_chrome(page))
     response.headers["Cache-Control"] = "public, max-age=900"
     if not index_directory:
+        response.headers["X-Robots-Tag"] = "noindex, follow"
+    return response
+
+
+def _chart_entry_html(entry: dict) -> str:
+    art = (f'<img src="{_e(entry["image"])}" alt="" loading="lazy" width="72" height="108">' if entry.get("image")
+           else f'<span>{_e(entry["title"][:1].upper())}</span>')
+    meta = " · ".join(filter(None, [str(entry["year"]) if entry.get("year") else None, entry.get("creator")]))
+    counts = (f'{entry["rated"]} member ratings · {entry["members"]} tracking · '
+              f'{entry["finished"]} {FINISHED_LABEL[entry["kind"]]} it')
+    quote = ""
+    if entry.get("quote"):
+        q = entry["quote"]
+        who = (f'<a href="{_e(q["profile_url"])}">{_e(q["username"])}</a>' if q.get("profile_url") else _e(q["username"]))
+        quote = (f'<blockquote class="title-chart__quote"><p>“{_e(q["text"])}”</p>'
+                 f'<footer>{who} · <a href="{_e(q["url"])}">full review</a></footer></blockquote>')
+    return (f'<li class="title-chart__entry" id="rank-{entry["rank"]}">'
+            f'<span class="title-chart__rank" aria-label="Rank {entry["rank"]}">{entry["rank"]}</span>'
+            f'<a class="title-chart__art" href="{_e(entry["url"])}" tabindex="-1" aria-hidden="true">{art}</a>'
+            f'<div class="title-chart__body"><h3><a href="{_e(entry["url"])}">{_e(entry["title"])}</a></h3>'
+            f'{f"<p class=title-chart__meta>{_e(meta)}</p>" if meta else ""}'
+            f'<p class="title-chart__counts">{_e(counts)}</p>{quote}</div>'
+            f'<span class="title-chart__score"><strong>{_e(entry["average"])}</strong><small>/10</small></span></li>')
+
+
+@router.get("/titles/{kind}", include_in_schema=False)
+def title_chart(kind: str, request: Request, db: Session = Depends(get_db)):
+    """Member charts: the highest-rated and most-tracked titles of one kind."""
+    if kind not in title_pages.KINDS:
+        raise HTTPException(404, "Unknown title type")
+    data = title_charts.chart(db, kind)
+    plural, singular = _plural(kind), _singular(kind)
+    signed_in = bool(request.cookies.get(AUTH_COOKIE_NAME))
+    canonical = f"{SITE_URL}/titles/{kind}"
+    heading = f"The highest-rated {plural} on OmniTrackr"
+    ranked = data["ranked"]
+    description = (f"The {len(ranked)} {plural} OmniTrackr members rate highest, from {data['ratings']} member ratings, "
+                   "with what members wrote about them." if ranked else
+                   f"The {plural} OmniTrackr members rate highest and track most, updated as members rate what they finish.")
+    pills = "".join(
+        f'<a class="site-chip{" title-chart__pill--on" if other == kind else ""}" href="/titles/{other}"'
+        f'{" aria-current=page" if other == kind else ""}>{_e(KIND_PLURALS[other])}</a>' for other in title_pages.KINDS)
+    if ranked:
+        chart_html = (f'<section class="title-section" aria-labelledby="chart-heading"><h2 id="chart-heading">Top {len(ranked)} by member rating</h2>'
+                      f'<ol class="title-chart">{"".join(_chart_entry_html(entry) for entry in ranked)}</ol></section>')
+    else:
+        chart_html = (f'<section class="title-section"><h2>Not enough ratings to chart yet</h2>'
+                      f'<p class="title-empty">A {_e(singular)} joins this chart once {title_charts.CHART_MIN_RATINGS} members '
+                      f'have rated it. Rate the {_e(plural)} you have finished and they will start to appear here.</p></section>')
+    tracked = ""
+    if data["tracked"]:
+        cards = ""
+        for entry in data["tracked"]:
+            art = (f'<img src="{_e(entry["image"])}" alt="" loading="lazy">' if entry.get("image")
+                   else f'<span>{_e(entry["title"][:1].upper())}</span>')
+            year = f" · {entry['year']}" if entry.get("year") else ""
+            cards += (f'<a class="title-related" href="{_e(entry["url"])}"><span class="title-related__art">{art}</span>'
+                      f'<strong>{_e(entry["title"])}</strong><small>{_e(entry["members"])} members{_e(year)}</small></a>')
+        tracked = (f'<section class="title-section" aria-labelledby="tracked-heading"><h2 id="tracked-heading">Most tracked {_e(plural)}</h2>'
+                   f'<div class="title-related-grid">{cards}</div></section>')
+    mean = f" The average member rating across every {_e(singular)} is {_e(data['mean'])} out of 10." if data["mean"] is not None else ""
+    method = (
+        '<section class="title-section title-chart__method" aria-labelledby="method-heading"><h2 id="method-heading">How this chart works</h2>'
+        f'<p>Every rating here comes from an OmniTrackr member who rated a {_e(singular)} in their own library, out of 10. '
+        f'Each member counts once per title, and a {_e(singular)} needs at least {title_charts.CHART_MIN_RATINGS} member ratings '
+        'to chart.</p>'
+        '<p>Titles are ranked by a weighted average rather than a plain one. A title with only a few ratings is pulled '
+        'toward the typical rating until more members weigh in, so a handful of perfect scores does not automatically '
+        f'outrank dozens of high ones.{mean}</p>'
+        '<p>Members who keep a category private are never counted, our editors\' account is left out, and the chart never '
+        'shows who rated what. Quotes come from reviews members chose to make public. The chart refreshes every few minutes.</p>'
+        '</section>')
+    if signed_in:
+        cta = ('<section class="title-section title-write"><h2>Move a favorite up the chart</h2>'
+               '<p class="title-write__lead">Rate the titles you have finished in your library and your ratings count here.</p>'
+               '<div class="title-write__actions"><a class="site-btn site-btn--primary" href="/">Open my library</a></div></section>')
+    else:
+        cta = ('<section class="title-section title-write"><h2>Make your ratings count</h2>'
+               f'<p class="title-write__lead">Track the {_e(plural)} you watch, play, read and listen to, rate them out of 10, '
+               'and your ratings help decide what tops these charts. Free, and your library stays private unless you share it.</p>'
+               '<div class="title-write__actions"><a class="site-btn site-btn--primary" href="/#signup">Create a free account</a>'
+               '<a class="site-btn site-btn--ghost" href="/titles">Browse popular titles</a></div></section>')
+    indexable = data["indexable"]
+    robots = "index, follow" if indexable else "noindex, follow"
+    structured = ""
+    if ranked:
+        item_list = {"@context": "https://schema.org", "@type": "ItemList", "name": heading, "url": canonical,
+                     "numberOfItems": len(ranked), "itemListOrder": "https://schema.org/ItemListOrderDescending",
+                     "itemListElement": [{"@type": "ListItem", "position": entry["rank"], "name": entry["title"],
+                                          "url": SITE_URL + entry["url"]} for entry in ranked]}
+        structured = f'<script type="application/ld+json">{_script_json(item_list)}</script>'
+    breadcrumbs = {"@context": "https://schema.org", "@type": "BreadcrumbList", "itemListElement": [
+        {"@type": "ListItem", "position": 1, "name": "Home", "item": f"{SITE_URL}/"},
+        {"@type": "ListItem", "position": 2, "name": "Titles", "item": f"{SITE_URL}/titles"},
+        {"@type": "ListItem", "position": 3, "name": KIND_PLURALS[kind], "item": canonical}]}
+    structured += f'<script type="application/ld+json">{_script_json(breadcrumbs)}</script>'
+    page = f"""<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>{_e(f"Highest-rated {plural} by OmniTrackr members")}</title>
+  <meta name="description" content="{_e(_excerpt(description, 158))}">
+  <meta name="robots" content="{robots}">
+  <link rel="canonical" href="{_e(canonical)}">
+  <meta property="og:title" content="{_e(heading)}">
+  <meta property="og:description" content="{_e(_excerpt(description, 200))}">
+  <meta property="og:type" content="website">
+  <meta property="og:url" content="{_e(canonical)}">
+  <meta property="og:site_name" content="OmniTrackr">
+  <meta property="og:image" content="{SITE_URL}/omnitrackr_vortex.png">
+  <meta name="twitter:card" content="summary">
+  <link rel="icon" type="image/x-icon" href="/omnitrackr_favicon.ico">
+  <link rel="preload" href="/static/fonts/poppins-700-latin.woff2" as="font" type="font/woff2" crossorigin>
+  <link rel="preload" href="/static/fonts/poppins-800-latin.woff2" as="font" type="font/woff2" crossorigin>
+  <link rel="stylesheet" href="/static/fonts.css?v=20261009-fonts-1">
+  <link rel="stylesheet" href="/static/title-page.css?v={CSS_VERSION}">
+  {structured}
+</head>
+<body class="site title-page">
+  <!--SITE_NAV:-->
+  <main>
+    <section class="site-hero"><div class="site-wrap">
+      <nav class="title-crumbs" aria-label="Breadcrumb"><a href="/titles">Titles</a> <span aria-hidden="true">/</span> {_e(KIND_PLURALS[kind])}</nav>
+      <p class="site-eyebrow">Member charts</p>
+      <h1>{_e(heading)}</h1>
+      <p>{_e(description)}</p>
+      <nav class="title-chart__pills" aria-label="Charts by type">{pills}</nav>
+    </div></section>
+    <div class="site-wrap title-body">{chart_html}{cta}{tracked}{method}</div>
+  </main>
+  <!--SITE_FOOTER-->
+</body>
+</html>"""
+    response = strict_html_response(apply_site_chrome(page))
+    response.headers["Cache-Control"] = "private, no-store" if signed_in else "public, max-age=600"
+    response.headers["Vary"] = "Cookie"
+    if not indexable:
         response.headers["X-Robots-Tag"] = "noindex, follow"
     return response
 
