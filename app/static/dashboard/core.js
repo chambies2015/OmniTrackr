@@ -591,7 +591,7 @@ function getReviewQualityMessage(reviewText) {
 }
 
 function reviewQualityHintHtml(inputId) {
-  return `<p class="review-quality-hint"><span class="review-quality-count" data-review-counter-for="${escapeHtml(inputId)}">0/${PUBLIC_REVIEW_MIN_CHARS} characters - add context for the community feed</span>. Search-ready reviews use 240+ characters, 35+ words, complete thoughts, varied language, and no links or contact details. <a href="/review-guidelines" target="_blank" rel="noopener noreferrer">Review guide</a></p>`;
+  return `<p class="review-quality-hint"><span class="review-quality-count" data-review-counter-for="${escapeHtml(inputId)}">0/${PUBLIC_REVIEW_MIN_CHARS} characters - add context for the community feed</span>. To be shown in search, a public review needs 240+ characters and 35+ words, in complete sentences with varied wording and no links or contact details. <a href="/review-guidelines" target="_blank" rel="noopener noreferrer">Review guide</a></p>`;
 }
 
 function setupReviewQualityCounter(textarea) {

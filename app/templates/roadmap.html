@@ -45,73 +45,73 @@
       <a href="/" class="back-link">Back to OmniTrackr</a>
       <header class="public-header">
         <h1>OmniTrackr Roadmap</h1>
-        <p>A public view of what recently improved, what is being refined now, and what is planned next for the media tracker.</p>
+        <p>What shipped recently, what is being worked on now, and what might come next.</p>
       </header>
 
       <section class="public-section" aria-labelledby="shipped-heading">
-        <h2 id="shipped-heading">Recently Shipped</h2>
-        <p>OmniTrackr has moved beyond a simple private list. The latest release work focuses on making the public side useful before signup while keeping the logged-in tracker safe, fast, and familiar for existing users. Visitors can now read practical guides, compare tracking options, preview a sample library, understand privacy controls, and browse public reviews that users intentionally share.</p>
+        <h2 id="shipped-heading">Recently shipped</h2>
+        <p>Most recent work has gone into the public side of the site, the part you can read without an account. You can now read guides, compare OmniTrackr with other trackers, try a sample library, see how privacy works, and browse reviews that members chose to publish. The signed-in tracker works the way it did before.</p>
         <div class="roadmap-grid">
-          <div class="roadmap-card"><h3>Public Guide Library</h3><p>Guides now explain movie, TV, anime, game, music, book, statistics, export, template, and review workflows in crawlable pages.</p></div>
-          <div class="roadmap-card"><h3>Automated Review Quality and Safety</h3><p>Community and search-ready tiers now share one quality engine, while signed-browser reports can temporarily unlist an exact review version without deleting it or creating a manual queue.</p></div>
-          <div class="roadmap-card"><h3>Automated Collection Discovery</h3><p>Published collections now use one readiness result across the editor, gallery, search metadata, and sitemap, with version-bound reports and self-service recovery instead of a human queue.</p></div>
-          <div class="roadmap-card"><h3>Ad and Privacy Transparency</h3><p>Advertising and privacy pages explain where ads may appear, how Google ads use cookies, and why private account areas stay separate.</p></div>
-          <div class="roadmap-card"><h3>Security and SEO Cleanup</h3><p>Recent work tightened CSP handling, removed unsafe inline requirements, improved metadata, and kept generated API docs out of search results.</p></div>
-          <div class="roadmap-card"><h3>Activation and Trust Baseline</h3><p>The existing moderator health view now shows aggregate first-session milestones, while analytics stays out of the private dashboard.</p></div>
-          <div class="roadmap-card"><h3>Welcome Back Deck</h3><p>Activated members returning after a real absence now get one private, dismissible route back into Next Up, unfinished titles, reflections, and recent journal activity.</p></div>
+          <div class="roadmap-card"><h3>Public guide library</h3><p>There are guides for tracking movies, TV, anime, games, music, and books, plus statistics, exports, templates, and reviews.</p></div>
+          <div class="roadmap-card"><h3>Automated review quality and safety</h3><p>One set of checks decides whether a review is shown in the community list and in search. Reports can hide a specific version of a review for a while, and the review itself is never deleted.</p></div>
+          <div class="roadmap-card"><h3>Automated collection discovery</h3><p>The editor, the gallery, and search all use the same check to decide whether a published collection is ready. If a report hides a collection, editing it runs the check again.</p></div>
+          <div class="roadmap-card"><h3>Ad and privacy transparency</h3><p>The advertising and privacy pages say where ads can appear, how Google ads use cookies, and why there are no ads inside your account.</p></div>
+          <div class="roadmap-card"><h3>Security and SEO cleanup</h3><p>A stricter content security policy, no more unsafe inline scripts, better page metadata, and the API docs kept out of search results.</p></div>
+          <div class="roadmap-card"><h3>First-session numbers</h3><p>The moderator view shows site-wide counts of how many new accounts save a first title. None of this tracking runs in your private dashboard.</p></div>
+          <div class="roadmap-card"><h3>Welcome Back Deck</h3><p>If you come back after a while away, the dashboard shows one card you can dismiss, with your Next Up list, unfinished titles, and recent journal entries.</p></div>
         </div>
       </section>
 
       <section class="public-section" aria-labelledby="now-heading">
         <h2 id="now-heading">Now</h2>
-        <p>Current priorities are deliberately practical. The goal is to learn from the new activation baseline, finish first-session reliability work, and preserve the workflows existing users already rely on.</p>
+        <p>Right now the work is about making the first visit go smoothly without changing anything existing members rely on.</p>
         <ul>
-          <li>Monitor the path from verified account to first title, five saved titles, and a later return.</li>
-          <li>Reduce save and import friction where the aggregate milestones show a meaningful drop.</li>
-          <li>Keep account, privacy, export, and advertising language aligned with production behavior.</li>
-          <li>Keep ads limited to public informational pages so the private tracking dashboard does not become cluttered.</li>
+          <li>Watch how many new accounts get from sign-up to a first title, then to five titles, then to a second visit.</li>
+          <li>Fix the save and import steps where a lot of people give up.</li>
+          <li>Make sure the account, privacy, export, and advertising pages describe what the site actually does.</li>
+          <li>Keep ads on public guide pages only, never in the tracking dashboard.</li>
         </ul>
-        <p>Current work also emphasizes content quality. Public pages should answer real tracking questions instead of acting as empty search pages. Category guides, review guidance, comparison pages, and demo content are being expanded so visitors can learn something useful even before they decide to register.</p>
+        <p>The guides are being expanded too. Each public page should answer a question someone actually has about tracking or about what to watch, play, or read, whether or not they ever register.</p>
       </section>
 
       <section class="public-section" aria-labelledby="next-heading">
         <h2 id="next-heading">Next</h2>
-        <p>The Welcome Back candidate has shipped by composing existing dashboard signals rather than creating another workflow. The next feature decision will follow its anonymous aggregate use alongside the established activation path.</p>
+        <p>The Welcome Back Deck reuses cards the dashboard already had. What comes next depends partly on how many people use it, counted anonymously.</p>
         <ul>
-          <li>Refine the existing import templates and launchpad where first-session evidence shows friction.</li>
-          <li>Improve statistics with trends, rating coverage, backlog progress, and clearer category comparisons.</li>
-          <li>Measure search-ready review and collection coverage plus automated-report health before expanding public discovery or advertising inventory.</li>
+          <li>Improve the import templates and the first-visit checklist where new members get stuck.</li>
+          <li>Add trends, rating coverage, and backlog progress to statistics, and make categories easier to compare.</li>
+          <li>Check how many reviews and collections pass the quality checks, and how reports are working, before showing more of them publicly or adding ad space.</li>
         </ul>
       </section>
 
       <section class="public-section" aria-labelledby="later-heading">
         <h2 id="later-heading">Later</h2>
-        <p>Longer-term ideas stay focused on portability, control, and useful context. OmniTrackr should help users remember why something mattered, not just store a title and rating.</p>
+        <p>Longer-term ideas are about remembering why you added something and why you liked it, and keeping your data easy to take with you.</p>
         <ul>
           <li>More flexible recommendation notes, including who recommended an item and why it was added.</li>
-          <li>More public profile controls for people who want to share selected lists safely.</li>
-          <li>Optional richer metadata for custom tabs while preserving exportability and privacy.</li>
+          <li>More public profile settings for people who want to share some lists and not others.</li>
+          <li>Optional extra fields for custom tabs, still included in exports and still private by default.</li>
           <li>More ways to summarize a year of watching, reading, playing, and listening across all categories.</li>
         </ul>
       </section>
 
       <section class="public-section" aria-labelledby="stability-heading">
-        <h2 id="stability-heading">Stability and Release Guardrails</h2>
-        <p>Because OmniTrackr is already live, roadmap work has to protect existing accounts and media libraries. Public-content updates should not require destructive migrations, reset user settings, remove saved entries, or change private/public review decisions without the user's intent.</p>
-        <p>Recent verification covers account flows, authentication, CRUD endpoints for each media category, import/export, friend and privacy behavior, statistics, public reviews, SEO routes, static security checks, and content-security-policy behavior. That testing focus keeps growth work tied to the real product instead of only the marketing pages.</p>
+        <h2 id="stability-heading">Stability and release guardrails</h2>
+        <p>People already keep years of history here, so updates add to what exists and leave it alone otherwise. They should not require destructive migrations, reset settings, remove saved entries, or make a private review public.</p>
+        <p>Recent verification covers account flows, authentication, CRUD endpoints for each media category, import/export, friend and privacy behavior, statistics, public reviews, SEO routes, static security checks, and the content security policy. Every release runs these tests before it goes live.</p>
       </section>
 
       <section class="public-section" aria-labelledby="quality-review-heading">
-        <h2 id="quality-review-heading">How Roadmap Items Are Chosen</h2>
-        <p>Roadmap ideas are evaluated against two questions: will this make everyday tracking easier, and can it ship without putting existing user data at risk? A feature that looks impressive but complicates privacy, exports, or account stability is less valuable than a smaller improvement that users can trust immediately.</p>
-        <p>Public-page work follows the same rule. A new guide should answer a real tracking question, link to related resources, and stay useful even if the visitor never creates an account. That keeps the site from becoming a collection of empty search pages and gives returning users a clearer place to find product changes.</p>
-        <p>For the current release, that means prioritizing review quality, stronger public examples, clearer privacy and advertising disclosures, and regression tests that protect the live tracker while the public content surface grows.</p>
+        <h2 id="quality-review-heading">How roadmap items are chosen</h2>
+        <p>Each idea gets two questions: will it make everyday tracking easier, and can it ship without putting anyone's data at risk? A big feature that complicates privacy or exports loses to a small one that works on day one.</p>
+        <p>New guides follow the same rule. A guide should answer a real question, link to related pages, and be worth reading for someone who never creates an account.</p>
+        <p>For now that means better reviews, better public examples, plainer privacy and advertising pages, and tests that catch anything that would break the tracker.</p>
       </section>
 
       <section class="public-section" aria-labelledby="why-heading">
-        <h2 id="why-heading">Why Publish This?</h2>
-        <p>A roadmap shows where OmniTrackr is heading: a practical, privacy-aware tracker for many kinds of media, and free guides worth reading even if you never sign up. That matters for people deciding whether to trust a new tracker with their history, ratings, reviews, and private notes.</p>
-        <p>The roadmap is not a promise that every idea will ship in exactly this order. It is a transparent product note about what the app is optimizing for: useful public resources, portable user data, safer sharing, stronger review quality, and a calmer advertising approach.</p>
+        <h2 id="why-heading">Why publish this?</h2>
+        <p>If you're deciding whether to trust a new tracker with your history, ratings, and private notes, it helps to see what it is working on.</p>
+        <p>This is not a promise that every idea will ship in exactly this order. Plans change when something turns out to be harder, or less wanted, than expected.</p>
         <p>See what has already changed in the <a href="/changelog">changelog</a>, preview the <a href="/demo">demo library</a>, or compare OmniTrackr with other tracking methods on the <a href="/compare">comparison page</a>.</p>
       </section>
     </main>

@@ -37,7 +37,7 @@
         const result = await response.json();
         document.getElementById('collectionHelpfulCount').textContent = `${result.count} found this helpful`;
         button.textContent = 'Marked helpful';
-        setStatus('Thanks—your feedback helps thoughtful collections stand out.');
+        setStatus('Thanks for the feedback.');
       }
     } catch (error) {
       button.disabled = false;
@@ -55,7 +55,7 @@
       });
       if (!response.ok) throw new Error('report');
       reportForm.hidden = true;
-      setStatus('Report received. Thank you for helping keep public collections useful.');
+      setStatus('Report received. Thank you.');
     } catch (error) {
       submit.disabled = false;
       setStatus('The report could not be sent. Please try again.');

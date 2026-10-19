@@ -127,7 +127,7 @@ GUIDANCE = (
     'only deciding yes or no, and "no" just means another pick.</p>'
     '<p>Start with the time you actually have. A movie or an album fits one evening; a book, a season of TV or an anime '
     'series asks for a few sittings; a game can be either, depending on how you play it. Then read the caveat before the '
-    'reason. If the caveat describes something you are not in the mood for tonight, skip it without guilt.</p>'
+    'reason. If the caveat describes something you are not in the mood for tonight, skip it.</p>'
     '<p>Finally, give your pick a fair start: twenty minutes of a film, one episode of a show, the first chapter of a book '
     'or the first hour of a game. Saving it to a list also helps, because a pick you are not ready for tonight can still '
     'be the right one next weekend.</p></section>'

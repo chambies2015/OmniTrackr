@@ -135,13 +135,13 @@ def build_tasteprint(db: Session, user: models.User, category_value: str | None)
             detail = f"Your scores use the scale broadly, averaging {average:.1f}/10."
         elif average >= 8.2:
             value = "Enthusiastic curator"
-            detail = f"Your rated picks average {average:.1f}/10—you tend to keep what works for you."
+            detail = f"Your rated picks average {average:.1f}/10, so most of what you rate is something you liked."
         elif average < 6.8:
             value = "Discerning rater"
-            detail = f"Your {len(ratings)} ratings average {average:.1f}/10, with praise earned carefully."
+            detail = f"Your {len(ratings)} ratings average {average:.1f}/10, so a high score from you means something."
         else:
             value = "Measured rater"
-            detail = f"Your ratings cluster around a considered {average:.1f}/10 average."
+            detail = f"Most of your ratings sit near your {average:.1f}/10 average."
         insights.append(_insight("rating", "Rating personality", value, detail, len(ratings)))
 
     decade_records: dict[int, list[dict[str, Any]]] = defaultdict(list)

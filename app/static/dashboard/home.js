@@ -360,7 +360,7 @@ function renderReturnDeck(payload, context) {
   renderReturnDeckReleased(payload.released_while_away);
   const days = Number(payload.days_away) || Number(context.days_away);
   document.getElementById('returnDeckSummary').textContent =
-    `It has been ${days} or more days since your previous visit. Here are a few useful ways back in—nothing new to manage.`;
+    `It has been ${days} or more days since your previous visit. Here are a few places to pick up where you left off.`;
   const recap = payload.recap || {};
   const recapParts = [];
   if (recap.entry_count) recapParts.push(`${recap.entry_count} journal moment${recap.entry_count === 1 ? '' : 's'}`);
@@ -587,7 +587,7 @@ function renderLibraryLaunchpad(insights, firstWeek = null) {
   } else if (total === 1) {
     summary.textContent = 'Your first title is saved. Add a rating or private note using Edit in your library, or use Next up to put it on your shortlist.';
   } else if (completed) {
-    summary.textContent = `${completed} finished so far. Add a rating or note when you want your library to tell a clearer story.`;
+    summary.textContent = `${completed} finished so far. Add a rating or a note to remember why you liked them.`;
   } else {
     summary.textContent = 'Your library is taking shape. Mark progress, add a rating, or leave a note when a detail is worth remembering.';
   }
