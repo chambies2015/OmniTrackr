@@ -7,6 +7,7 @@
     '/review-guidelines',
     '/sample-library',
     '/media-tracking',
+    '/halloween',
   ]);
 
   function isAdEligiblePath() {

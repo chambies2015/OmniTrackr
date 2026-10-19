@@ -63,6 +63,7 @@
   <link rel="stylesheet" href="/static/badges.css?v=20261017-badges-1">
   <link rel="stylesheet" href="/static/import-studio.css?v=20261018-formats-1">
   <link rel="stylesheet" href="/static/dashboard-2026.css?v=20261018-install-card-1">
+  <link rel="stylesheet" href="/static/seasonal-card.css?v=20261019-halloween-1">
   <link rel="stylesheet" href="/static/a11y.css?v=20261018-a11y-1">
   <script src="./preauth.js?v=20261010-audit-preauth-1"></script>
   <style>
@@ -619,6 +620,17 @@
         <button id="monthlyChallengeDismiss" type="button" class="month-challenge__link" data-challenge-action="dismiss">Not this month</button>
         <button id="monthlyChallengeLeave" type="button" class="month-challenge__link" data-challenge-action="leave" hidden>Leave challenge</button>
         <p id="monthlyChallengeStatus" class="month-challenge__status" role="status" aria-live="polite"></p>
+      </div>
+    </section>
+
+    <section id="seasonCard" class="season-card" aria-labelledby="seasonCardTitle" hidden>
+      <p id="seasonCardEyebrow" class="season-card__eyebrow">This season</p>
+      <h2 id="seasonCardTitle">The seasonal hub is open</h2>
+      <p id="seasonCardSummary" class="season-card__summary"></p>
+      <nav id="seasonCardShelves" class="season-card__shelves" aria-label="Shelves"></nav>
+      <div class="season-card__actions">
+        <a id="seasonCardOpen" class="season-card__open" href="/halloween">Open the hub</a>
+        <button id="seasonCardDismiss" type="button" class="season-card__dismiss">Hide until next year</button>
       </div>
     </section>
 
@@ -1635,7 +1647,7 @@
     </form>
   </dialog>
   <script src="./credentials.js"></script>
-  <script src="./auth.js?v=20261018-install-card-1"></script>
+  <script src="./auth.js?v=20261019-halloween-1"></script>
   <script src="/static/import-studio.js?v=20261018-formats-1"></script>
   <script src="/static/progress.js?v=20260922-progress"></script>
   <script src="./app.js"></script>
@@ -1645,6 +1657,7 @@
   <script src="/static/supporter.js?v=20261017-supporters-2"></script>
   <script src="/static/goals.js?v=20261010-goal-reached-1"></script>
   <script src="/static/challenges.js?v=20261011-challenge-2"></script>
+  <script src="/static/seasonal-card.js?v=20261019-halloween-1"></script>
   <script src="/static/badges.js?v=20261017-badges-1"></script>
   <script src="/static/taste-match.js?v=20261016-taste-match-1"></script>
   <script src="/static/push.js?v=20261011-push-2" defer></script>
