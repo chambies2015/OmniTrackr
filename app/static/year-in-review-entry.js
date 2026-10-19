@@ -11,7 +11,7 @@
       if (!season || !season.year) return;
       const link = document.getElementById('yearInReviewBannerLink');
       const title = document.getElementById('yearInReviewBannerTitle');
-      if (link) link.href = season.url;
+      if (link) link.href = `${season.url}#story`;
       if (title) title.textContent = `Your ${season.year} in media is ready`;
       banner.hidden = false;
     })

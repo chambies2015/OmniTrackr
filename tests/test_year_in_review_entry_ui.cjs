@@ -29,7 +29,7 @@ test('December shows the banner for this year', async () => {
   const { nodes, requests } = await run('2026-12-03T12:00:00', { year: 2026, url: '/year-in-review/2026' });
   assert.equal(requests.length, 1);
   assert.equal(nodes.yearInReviewBanner.hidden, false);
-  assert.equal(nodes.yearInReviewBannerLink.href, '/year-in-review/2026');
+  assert.equal(nodes.yearInReviewBannerLink.href, '/year-in-review/2026#story');
   assert.match(nodes.yearInReviewBannerTitle.textContent, /2026/);
 });
 

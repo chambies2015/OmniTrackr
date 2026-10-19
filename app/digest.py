@@ -268,6 +268,29 @@ def _badge_section(badge: dict | None, base: str) -> tuple[str, list[str]]:
     return html, [f"Your next badge: {line} {url}", ""]
 
 
+def recap_line(db: Session, user_id: int, today: date) -> dict | None:
+    """In December and January, the member's Year in Review when they finished something that year."""
+    from . import year_in_review
+    year = year_in_review.season_year(today)
+    if year is None:
+        return None
+    finished = sum(year_in_review.finished_counts(db, user_id, year).values())
+    return {"year": year, "finished": finished} if finished else None
+
+
+def _recap_section(recap: dict | None, base: str) -> tuple[str, list[str]]:
+    if not recap:
+        return "", []
+    year, finished = int(recap["year"]), int(recap["finished"])
+    url = f"{base}/year-in-review/{year}#story"
+    line = (f"You finished {finished} title{'s' if finished != 1 else ''} in {year}. Your recap is ready to play "
+            "through, with a story image you can post.")
+    html = (f'<h2 style="font-size:17px;color:#1f1640;margin:24px 0 8px">Your {year} in review</h2>'
+            f'<p style="color:#3b3557;font-size:14px;line-height:1.6;margin:0">{escape(line)}</p>'
+            f'<p style="margin:8px 0 0"><a href="{escape(url, quote=True)}" style="color:#6d28d9;font-weight:700">Play your year</a></p>')
+    return html, [f"Your {year} in review: {line} {url}", ""]
+
+
 def invite_nudge_due(user_id: int, now: datetime) -> bool:
     """About once a month per member (a different week for each), never every week."""
     return now.isocalendar().week % 4 == user_id % 4
@@ -276,9 +299,9 @@ def invite_nudge_due(user_id: int, now: datetime) -> bool:
 def build_digest(username: str, report: dict, unsubscribe_url: str, spotlight: dict | None = None,
                  ask: dict | None = None, invite: bool = False, goals: list | None = None,
                  goals_year: int | None = None, challenge: dict | None = None,
-                 badge: dict | None = None) -> tuple[str, str, str] | None:
+                 badge: dict | None = None, recap: dict | None = None) -> tuple[str, str, str] | None:
     """(subject, html, text) or None when there is nothing to send. `spotlight`, `ask`, `invite`, `goals`,
-    `challenge` and `badge` never force a send."""
+    `challenge`, `badge` and `recap` never force a send."""
     matches, popular = report["matches"], report["popular"]
     if not matches and not popular:
         return None
@@ -289,6 +312,10 @@ def build_digest(username: str, report: dict, unsubscribe_url: str, spotlight: d
         subject = f"This month on Release Radar: {popular[0]['title']} and more"
     sections = []
     text = [f"Hi {username},", ""]
+    recap_html, recap_text = _recap_section(recap, base)
+    if recap_html:
+        sections.append(recap_html)
+        text += recap_text
     if matches:
         sections.append('<h2 style="font-size:17px;color:#1f1640;margin:24px 0 4px">From your library</h2>'
                         f'<table role="presentation" width="100%" cellspacing="0" cellpadding="0">{_rows(matches, base)}</table>')
@@ -467,8 +494,13 @@ async def send_due_digests(session_factory, client=None, now: datetime | None = 
             except Exception:
                 db.rollback()
                 badge = None  # Optional, like the ask above.
+            try:
+                recap = recap_line(db, user.id, now.date())
+            except Exception:
+                db.rollback()
+                recap = None  # Optional, like the ask above.
             built = build_digest(user.username, report, unsubscribe_url, spotlight, ask, invite,
-                                 member_goals, now.year, challenge, badge)
+                                 member_goals, now.year, challenge, badge, recap)
             if built is None:
                 stats["skipped"] += 1
                 continue

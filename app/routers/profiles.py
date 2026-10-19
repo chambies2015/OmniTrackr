@@ -183,7 +183,7 @@ def _bio_html(bio: Optional[str]) -> str:
     return "".join(f'<p class="profile-hero__bio">{_e(part)}</p>' for part in bio.split("\n") if part.strip())
 
 
-def render(view, *, signed_in: bool, is_owner: bool) -> str:
+def render(view, *, signed_in: bool, is_owner: bool, recap_url: Optional[str] = None, recap_year: Optional[int] = None) -> str:
     user, profile = view.user, view.profile
     canonical = SITE_URL + view.path
     name = user.username
@@ -213,6 +213,8 @@ def render(view, *, signed_in: bool, is_owner: bool) -> str:
            '<p>OmniTrackr is free. Build your library, rate what you finish and share a profile like this one.</p></div>'
            '<a class="site-btn site-btn--primary" href="/#signup">Start tracking free</a></section>')
     chips = "".join(f'<span class="site-chip">{_e(bit)}</span>' for bit in summary_bits)
+    recap_link = (f' <a class="site-btn site-btn--primary site-btn--sm" href="{_e(recap_url)}#story">'
+                  f'▶ {_e(name)}\'s {_e(recap_year)} in review</a>' if recap_url and recap_year else "")
     page = f"""<!DOCTYPE html>
 <html lang="en">
 <head>
@@ -252,7 +254,7 @@ def render(view, *, signed_in: bool, is_owner: bool) -> str:
           <p class="profile-hero__meta">{_e(since)}</p>
           {_bio_html(profile.bio)}
           <div class="title-hero__chips">{chips}</div>
-          <p class="profile-hero__actions"><button type="button" class="site-btn site-btn--ghost site-btn--sm" data-share data-share-title="{_e(name)} on OmniTrackr">Share profile</button></p>
+          <p class="profile-hero__actions"><button type="button" class="site-btn site-btn--ghost site-btn--sm" data-share data-share-title="{_e(name)} on OmniTrackr">Share profile</button>{recap_link}</p>
           {owner_note}
         </div>
       </div>
@@ -279,12 +281,26 @@ def _profile_response(request: Request, db: Session, user: Optional[models.User]
     view = public_profiles.build(db, user, profile)
     signed_in = bool(request.cookies.get(AUTH_COOKIE_NAME))
     is_owner = signed_in and _viewer_id(request, db) == user.id
-    response = strict_html_response(render(view, signed_in=signed_in, is_owner=is_owner))
+    recap_url, recap_year = _season_recap(db, user.id)
+    response = strict_html_response(render(view, signed_in=signed_in, is_owner=is_owner,
+                                           recap_url=recap_url, recap_year=recap_year))
     response.headers["Cache-Control"] = "private, no-store" if signed_in else "public, max-age=300"
     response.headers["Vary"] = "Cookie"
     if not view.indexable:
         response.headers["X-Robots-Tag"] = "noindex, follow"
     return response
+
+
+def _season_recap(db: Session, user_id: int) -> tuple[Optional[str], Optional[int]]:
+    """In December and January, the member's shared Year in Review for the season, if they shared one."""
+    from .. import year_in_review
+    try:
+        year = year_in_review.season_year()
+        share = year_in_review.get_share(db, user_id, year) if year else None
+    except Exception:
+        db.rollback()
+        return None, None
+    return (year_in_review.share_path(share), year) if share else (None, None)
 
 
 def _viewer_id(request: Request, db: Session) -> Optional[int]:
