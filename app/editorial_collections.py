@@ -3,7 +3,9 @@
 The site owner publishes them once from the Site stats page. They live in a
 dedicated editors account (never a member's library), are ordinary public
 collections, and can be edited, unpublished or deleted like any other.
-Publishing is idempotent: a collection whose name already exists is skipped.
+Publishing is idempotent: a collection whose name already exists is skipped,
+though its wording is brought up to date when it still reads exactly as an
+earlier release published it (see refresh_copy).
 """
 from __future__ import annotations
 
@@ -136,6 +138,118 @@ COLLECTIONS = [
     },
 ]
 
+# Wording that earlier releases published. Copy refreshes replace text that still matches one of these
+# exactly, so a collection already live picks up rewritten copy while anything edited by hand stays as it is.
+RETIRED_DESCRIPTIONS = {
+    "Mind-Bending Sci-Fi Worth a Second Watch": [
+        (
+            "These are the science fiction films that reward a rewatch, because the first viewing is spent "
+            "keeping up and the second is spent noticing how carefully everything was set up. Some are big "
+            "studio spectacles, others were made for the price of a used car, but each one trusts you to think "
+            "alongside it. Start anywhere, and leave a free evening afterwards for the conversation it will "
+            "start."
+        ),
+    ],
+    "Anime Gateways: Where to Start": [
+        (
+            "If you have been meaning to try anime but never knew where to begin, start here. Every pick on this "
+            "list is complete or has a satisfying first season, is easy to find with English subtitles or a dub, "
+            "and shows a different side of what the medium does well: action, comedy, slow-burn fantasy and pure "
+            "style. Pick the one whose note sounds most like you and give it three episodes before you decide."
+        ),
+    ],
+    "Prestige TV You Can Actually Finish": [
+        (
+            "Great television is easy to start and hard to finish, so this list sticks to series with a clear "
+            "shape: limited runs, short seasons, or shows that ended exactly when they meant to. Each one "
+            "respects your time, and none of them will leave you waiting years for a cliffhanger to resolve. "
+            "Most can be finished over a few weekends; a couple will take a month of evenings and are worth "
+            "every one of them."
+        ),
+    ],
+    "Cozy Games for Slow Evenings": [
+        (
+            "Not every game needs to test your reflexes. These are the ones to reach for after a long day: low "
+            "pressure, gentle music, and loops that feel good in twenty-minute sessions or three-hour ones. "
+            "Nothing here punishes you for walking away, and several are just as good played on a sofa next to "
+            "someone watching. Most run happily on modest hardware and handhelds, too."
+        ),
+    ],
+    "Read It, Then Watch It": [
+        (
+            "Books that became memorable films or series, paired so you can do both and argue about which was "
+            "better. Each pair shows something different about adaptation: what a screen can add, what only a "
+            "page can do, and what gets lost or found in between. Read first if you can, since most of these "
+            "books hold surprises the adaptations give away in their opening minutes."
+        ),
+    ],
+    "Albums for Late-Night Focus": [
+        (
+            "Records that work as a backdrop for reading, writing or thinking late at night, but also reward "
+            "close listening when you give them your full attention. The list moves from ambient pieces with no "
+            "vocals at all to warmer, more personal albums for when the work is done. Play them front to back; "
+            "every one of these was made as a whole album rather than a collection of singles."
+        ),
+    ],
+}
+# (collection name, category, title) -> earlier curator notes.
+RETIRED_NOTES = {
+    ("Mind-Bending Sci-Fi Worth a Second Watch", "movies", "Arrival"): [
+        "A first-contact film about language and grief. The ending reframes everything that came before it.",
+    ],
+    ("Mind-Bending Sci-Fi Worth a Second Watch", "movies", "Ex Machina"): [
+        "Three people, one house, and a quiet question about who is testing whom.",
+    ],
+    ("Mind-Bending Sci-Fi Worth a Second Watch", "movies", "Blade Runner 2049"): [
+        "Slow, enormous and gorgeous. Works even if you haven't seen the original, though it's richer if you have.",
+    ],
+    ("Mind-Bending Sci-Fi Worth a Second Watch", "movies", "Annihilation"): [
+        "Beautiful and unsettling in equal measure; the final act is best seen with the sound up.",
+    ],
+    ("Mind-Bending Sci-Fi Worth a Second Watch", "movies", "Everything Everywhere All at Once"): [
+        "Absurd, loud and unexpectedly tender. It is, underneath everything, a film about a family.",
+    ],
+    ("Anime Gateways: Where to Start", "anime", "Frieren: Beyond Journey's End"): [
+        "A fantasy that begins after the heroes have already won. Gentle, funny and quietly moving.",
+    ],
+    ("Anime Gateways: Where to Start", "anime", "Mob Psycho 100"): [
+        "Wild animation wrapped around a very kind story about a boy who would rather be ordinary.",
+    ],
+    ("Anime Gateways: Where to Start", "anime", "Spirited Away"): [
+        "A feature film, not a series, and a perfect one-evening introduction to Studio Ghibli.",
+    ],
+    ("Prestige TV You Can Actually Finish", "tv-shows", "Band of Brothers"): [
+        "Ten episodes following one company through the Second World War, told with enormous care.",
+    ],
+    ("Prestige TV You Can Actually Finish", "tv-shows", "Breaking Bad"): [
+        "The long one on this list, but it builds with rare discipline right to its final scene.",
+    ],
+    ("Prestige TV You Can Actually Finish", "tv-shows", "The Bear"): [
+        "Half-hour episodes that feel like a double shift in a restaurant kitchen, in the best possible way.",
+    ],
+    ("Cozy Games for Slow Evenings", "video-games", "A Short Hike"): [
+        "A small island, a mountain to climb, and about two hours of pure charm. A perfect single-evening game.",
+    ],
+    ("Cozy Games for Slow Evenings", "video-games", "Spiritfarer"): [
+        "A management game about ferrying spirits to the afterlife. Warm, sad and beautifully drawn.",
+    ],
+    ("Cozy Games for Slow Evenings", "video-games", "Animal Crossing: New Horizons"): [
+        "An island that runs on real time. Best in short daily visits rather than long binges.",
+    ],
+    ("Cozy Games for Slow Evenings", "video-games", "Dorfromantik"): [
+        "Place hexagon tiles, grow a peaceful countryside, and try to beat your last score. Endlessly calming.",
+    ],
+    ("Read It, Then Watch It", "books", "Dune"): [
+        "Dense but rewarding. The appendices and glossary are worth keeping a finger in.",
+    ],
+    ("Albums for Late-Night Focus", "music", "Selected Ambient Works 85-92"): [
+        "Warm, hazy electronic pieces that sound like a memory of a club rather than the club itself.",
+    ],
+    ("Albums for Late-Night Focus", "music", "Blonde"): [
+        "Sparse, drifting and personal; it rewards a quiet room more than any playlist shuffle.",
+    ],
+}
+
 MODEL_FOR = {
     "movies": models.Movie, "tv-shows": models.TVShow, "anime": models.Anime,
     "video-games": models.VideoGame, "music": models.Music, "books": models.Book,
@@ -155,6 +269,7 @@ def status(db: Session) -> dict:
         "published": sum(1 for name in names if name in existing),
         "names": names,
         "published_names": [name for name in names if name in existing],
+        "outdated_names": [change["name"] for change in _copy_changes(db, editor)] if editor else [],
     }
 
 
@@ -175,6 +290,64 @@ def _editor_account(db: Session) -> models.User:
         editor.is_verified = True
         editor.is_active = True
     return editor
+
+
+# ---------------------------------------------------------------- copy refresh
+
+def _copy_changes(db: Session, editor: models.User) -> list[dict]:
+    """Published editor text that still reads exactly as an earlier release wrote it."""
+    # A member could hold the editors username; their collections are never ours to rewrite.
+    if (editor.email or "").lower() != EDITOR_EMAIL:
+        return []
+    published = {collection.name: collection
+                 for collection in db.query(models.Collection).filter_by(user_id=editor.id).all()}
+    changes = []
+    for spec in COLLECTIONS:
+        collection = published.get(spec["name"])
+        if collection is None:
+            continue
+        description = None
+        if (collection.description or "").strip() in RETIRED_DESCRIPTIONS.get(spec["name"], ()):
+            description = spec["description"]
+        current_notes = {(category, title): note for category, title, _, _, note in spec["items"]}
+        notes = []
+        for item in collection.items:
+            model = MODEL_FOR.get(item.category)
+            entry = db.get(model, item.item_id) if model else None
+            if entry is None or entry.user_id != editor.id:
+                continue
+            retired = RETIRED_NOTES.get((spec["name"], item.category, entry.title), ())
+            if (item.curator_note or "").strip() in retired:
+                notes.append((item, current_notes[(item.category, entry.title)]))
+        if description is not None or notes:
+            changes.append({"name": spec["name"], "collection": collection, "description": description, "notes": notes})
+    return changes
+
+
+def refresh_copy(db: Session) -> list[str]:
+    """Bring published editor collections up to the current wording. Returns the names updated.
+
+    Only the editors account is touched, and only text that still matches a retired version word for
+    word, so hand edits, member collections and saved copies in members' libraries are left alone.
+    """
+    from .routers.collections import _apply_automated_readiness
+
+    editor = db.query(models.User).filter_by(username=EDITOR_USERNAME).first()
+    if editor is None:
+        return []
+    updated = []
+    for change in _copy_changes(db, editor):
+        collection = change["collection"]
+        if change["description"] is not None:
+            collection.description = change["description"]
+        for item, note in change["notes"]:
+            item.curator_note = note
+        db.flush()
+        _apply_automated_readiness(collection, db)
+        updated.append(change["name"])
+    if updated:
+        db.commit()
+    return updated
 
 
 # ---------------------------------------------------------------- artwork (best effort)
@@ -277,4 +450,5 @@ async def publish(db: Session, client=None, lookup_artwork: bool = True) -> dict
         created.append({"name": spec["name"], "listed": _collection_is_discoverable(collection, db),
                         "with_artwork": sum(1 for image in artwork if image), "items": len(spec["items"])})
     db.commit()
-    return {"created": created, "skipped": skipped, "status": status(db)}
+    updated = refresh_copy(db)
+    return {"created": created, "skipped": skipped, "updated": updated, "status": status(db)}
