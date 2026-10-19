@@ -2,11 +2,13 @@ name: Python Tests
 permissions:
   contents: read
 
+# Monthly work lands on branches named after the month (October-Updates,
+# November-Updates, ...), so '*-Updates' covers every future month too.
 on:
   push:
-    branches: [ main, develop ]
+    branches: [ main, develop, '*-Updates' ]
   pull_request:
-    branches: [ main, develop ]
+    branches: [ main, develop, '*-Updates' ]
 
 jobs:
   test:

@@ -671,9 +671,13 @@
       list.appendChild(row);
     });
     const all = info.published >= info.available;
-    $('editorPublish').hidden = all;
+    const outdated = (info.outdated_names || []).length;
+    $('editorPublish').hidden = all && !outdated;
+    $('editorPublish').textContent = all ? 'Update wording' : 'Publish collections';
     $('editorSummary').textContent = all
-      ? `All ${info.available} starter collections are live on the public Collections page. Edit or unpublish them like any other collection.`
+      ? (outdated
+        ? `All ${info.available} starter collections are live. ${outdated} still use${outdated === 1 ? 's' : ''} older wording; updating changes only text nobody has edited since.`
+        : `All ${info.available} starter collections are live on the public Collections page. Edit or unpublish them like any other collection.`)
       : `${info.published} of ${info.available} starter collections published. Publishing adds them to the public Collections page under an editors account (not your library).`;
   }
 
@@ -689,9 +693,11 @@
       const listed = result.created.filter(item => item.listed).length;
       const art = result.created.reduce((sum, item) => sum + item.with_artwork, 0);
       const items = result.created.reduce((sum, item) => sum + item.items, 0);
+      const updated = (result.updated || []).length;
+      const wording = updated ? ` Updated the wording on ${updated} collection${updated === 1 ? '' : 's'}.` : '';
       status.textContent = result.created.length
-        ? `Published ${result.created.length} collection${result.created.length === 1 ? '' : 's'} (${listed} listed publicly, cover art found for ${art} of ${items} titles).`
-        : 'Everything was already published.';
+        ? `Published ${result.created.length} collection${result.created.length === 1 ? '' : 's'} (${listed} listed publicly, cover art found for ${art} of ${items} titles).${wording}`
+        : (updated ? wording.trim() : 'Everything was already published.');
       if (state.data) {
         state.data.editor_collections = result.status;
         renderEditor(state.data);
@@ -700,7 +706,8 @@
       status.textContent = `Could not publish: ${error.message}`;
     } finally {
       button.disabled = false;
-      button.textContent = 'Publish collections';
+      if (state.data) renderEditor(state.data);
+      else button.textContent = 'Publish collections';
     }
   }
 

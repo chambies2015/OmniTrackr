@@ -77,7 +77,7 @@ run_migrations()
 @asynccontextmanager
 async def lifespan(application: FastAPI):
     """Own pooled network resources and lightweight startup maintenance."""
-    from . import release_radar as radar_data
+    from . import editorial_collections, release_radar as radar_data
     radar_data.bind_event_loop(asyncio.get_running_loop())
     application.state.external_api_client = httpx.AsyncClient(
         timeout=httpx.Timeout(12.0, connect=5.0),
@@ -94,6 +94,16 @@ async def lifespan(application: FastAPI):
             db.close()
     except Exception as e:
         print(f"Error expiring friend requests on startup: {e}")
+    try:
+        db = SessionLocal()
+        try:
+            refreshed = editorial_collections.refresh_copy(db)
+            if refreshed:
+                print(f"Updated wording on {len(refreshed)} editor collections on startup")
+        finally:
+            db.close()
+    except Exception as e:
+        print(f"Error updating editor collection wording on startup: {e}")
 
     digest_task = None
     title_task = None
