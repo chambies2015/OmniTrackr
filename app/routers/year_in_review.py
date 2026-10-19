@@ -29,6 +29,10 @@ FIRST_TRACKED_NOTE = {
           "so this year's recap covers the autumn. Next year's will cover all twelve months.",
 }
 _CARDS = _CardCache(size=96)
+STORY_JS_VERSION = "20261019-story-1"
+CREATOR_NOUNS = {"movies": "movie", "music": "album", "books": "book"}
+SHELF_NOUNS = {"movies": ("movie", "movies"), "tv-shows": ("show", "shows"), "anime": ("anime", "anime"),
+               "video-games": ("game", "games"), "music": ("album", "albums"), "books": ("book", "books")}
 
 
 def _e(value) -> str:
@@ -116,6 +120,14 @@ def own_card(year: int, request: Request, user: models.User = Depends(get_curren
     return _png_response(user.id, user.username, recap, private=True)
 
 
+@router.get("/api/year-in-review/{year}/story.png", include_in_schema=False)
+def own_story(year: int, request: Request, user: models.User = Depends(get_current_user), db: Session = Depends(get_db)):
+    """The owner's vertical story image, built from shareable data only, like the card."""
+    _valid_year(year)
+    recap = year_in_review.build(db, user, year, public=True)
+    return _png_response(user.id, user.username, recap, private=True, story=True)
+
+
 # ---------------------------------------------------------------- shared HTML
 
 def _stat_tiles(recap: dict, *, private: bool) -> str:
@@ -149,7 +161,37 @@ def _highlights(recap: dict) -> str:
     if last:
         bits.append(f'<div class="recap-highlight"><span>Latest finish</span><strong>{_e(last["title"])}</strong>'
                     f'<small>{_e(last["label"])} · {_e(last["month"])}</small></div>')
+    streak = recap.get("longest_streak") or 0
+    if streak >= 2:
+        bits.append(f'<div class="recap-highlight"><span>Longest streak</span><strong>{_e(_plural(streak, "day"))} in a row</strong>'
+                    f'<small>{_e(_plural(recap.get("active_days") or 0, "active day"))} in all</small></div>')
+    creator = recap.get("top_creator")
+    if creator:
+        bits.append(f'<div class="recap-highlight"><span>Top {_e(creator["role"])}</span><strong>{_e(creator["name"])}</strong>'
+                    f'<small>{_e(_plural(creator["count"], CREATOR_NOUNS.get(creator["category"], "title")))} finished</small></div>')
+    ratings = recap.get("ratings")
+    if ratings:
+        bits.append(f'<div class="recap-highlight"><span>Rating style</span><strong>{_e(ratings["style"])}</strong>'
+                    f'<small>{_e(_rating(ratings["average"]))}/10 average over {_e(_plural(ratings["count"], "rating"))}</small></div>')
     return f'<div class="recap-highlights">{"".join(bits)}</div>' if bits else ""
+
+
+def _persona(recap: dict) -> str:
+    persona = recap.get("persona")
+    if not persona:
+        return ""
+    return (f'<section class="recap-persona" aria-labelledby="recap-persona"><p class="site-eyebrow">Your {_e(recap.get("year"))} type</p>'
+            f'<h2 id="recap-persona">{_e(persona["name"])}</h2><p>{_e(persona["line"])}</p></section>')
+
+
+def _badges(recap: dict) -> str:
+    rows = recap.get("badges") or []
+    if not rows:
+        return ""
+    items = "".join(f'<li><span aria-hidden="true">{_e(row["emoji"])}</span><strong>{_e(row["name"])}</strong>'
+                    f'<small>{_e(row["tier_name"])}</small></li>' for row in rows)
+    return (f'<section class="title-section" aria-labelledby="recap-badges"><h2 id="recap-badges">Badges earned this year</h2>'
+            f'<ul class="recap-badges">{items}</ul></section>')
 
 
 def _goals(recap: dict) -> str:
@@ -214,8 +256,10 @@ def _body(recap: dict, *, private: bool) -> str:
                 'and they will show up here.</p>')
     parts = [
         f'<div class="recap-stats">{_stat_tiles(recap, private=private)}</div>',
+        _persona(recap),
         _highlights(recap),
         _goals(recap),
+        _badges(recap),
         _title_list(recap.get("top_rated", []), "Highest rated finishes", "recap-top"),
         _title_list(recap.get("favorites", []), "Marked as favorites", "recap-favorites"),
         _categories(recap),
@@ -227,10 +271,103 @@ def _body(recap: dict, *, private: bool) -> str:
     return "".join(parts)
 
 
+# ---------------------------------------------------------------- story mode
+
+def _slide(kind: str, eyebrow: str, big: str, line: str = "", extra: str = "") -> str:
+    return (f'<section class="recap-slide recap-slide--{_e(kind)}" data-slide="{_e(kind)}">'
+            f'<p class="recap-slide__eyebrow">{_e(eyebrow)}</p><p class="recap-slide__big">{_e(big)}</p>'
+            + (f'<p class="recap-slide__line">{_e(line)}</p>' if line else "") + extra + '</section>')
+
+
+def story_slides(recap: dict, name: str, *, closing: str) -> list[str]:
+    """Tap-through slides for the year, one fact each. Slides without data are left out."""
+    year = recap.get("year", "")
+    slides = [_slide("intro", f"OmniTrackr · {year} in review", f"{name}'s {year} in media",
+                     "Tap or press the right arrow to step through your year.")]
+    finished = recap.get("finished_total") or 0
+    shelves = [c for c in recap.get("categories", []) if c.get("finished")]
+    breakdown = "".join(
+        f'<li><b>{_e(c["finished"])}</b> {_e(SHELF_NOUNS.get(c["category"], ("title", "titles"))[c["finished"] != 1])}</li>'
+        for c in shelves)
+    slides.append(_slide("finished", "This year you finished", str(finished), _plural(finished, "title").split(" ", 1)[1],
+                         f'<ul class="recap-slide__chips">{breakdown}</ul>' if len(shelves) > 1 else ""))
+    top = recap.get("top_category")
+    if top and len(shelves) > 1:
+        share = round(100 * top["finished"] / finished) if finished else 0
+        slides.append(_slide("top", "Your most finished shelf", top["label"], f"{share}% of everything you finished."))
+    busiest = recap.get("busiest_month")
+    counts = recap.get("months") or []
+    if busiest and any(counts):
+        peak = max(counts)
+        bars = "".join(
+            f'<li class="{"is-peak" if count == peak else ""}"><small>{datetime(2000, index + 1, 1).strftime("%b")[0]}</small>'
+            f'<span class="recap-bar" style="height: {max(4, round(100 * count / peak)) if count else 0}%"></span></li>'
+            for index, count in enumerate(counts))
+        slides.append(_slide("month", "Your busiest month", busiest["month"], f'{_plural(busiest["count"], "journal moment")} logged.',
+                             f'<ol class="recap-slide__months" aria-hidden="true">{bars}</ol>'))
+    streak = recap.get("longest_streak") or 0
+    if streak >= 2:
+        slides.append(_slide("streak", "Longest streak", _plural(streak, "day"),
+                             f'in a row with something logged, out of {_plural(recap.get("active_days") or 0, "active day")}.'))
+    rated = recap.get("top_rated") or []
+    if rated:
+        rows = "".join(f'<li><strong>{_e(row["title"])}</strong><span>{_e(row["label"])} · {_e(_rating(row["rating"]))}/10</span></li>'
+                       for row in rated[1:3])
+        slides.append(_slide("rated", "Your highest rated finish", rated[0]["title"],
+                             f'{rated[0]["label"]} · {_rating(rated[0]["rating"])}/10',
+                             f'<ol class="recap-slide__list" start="2">{rows}</ol>' if rows else ""))
+    ratings = recap.get("ratings")
+    if ratings:
+        tens = f' {_plural(ratings["tens"], "perfect ten")}.' if ratings.get("tens") else ""
+        slides.append(_slide("ratings", "Your rating style", ratings["style"],
+                             f'{_rating(ratings["average"])}/10 average across {_plural(ratings["count"], "rating")}.{tens} {ratings["detail"]}'))
+    creator = recap.get("top_creator")
+    if creator:
+        slides.append(_slide("creator", f'Your top {creator["role"]}', creator["name"],
+                             f'{_plural(creator["count"], CREATOR_NOUNS.get(creator["category"], "title"))} finished this year.'))
+    goals = recap.get("goals") or []
+    if goals:
+        reached = sum(1 for goal in goals if goal["done"] >= goal["target"])
+        rows = "".join(f'<li><strong>{_e(goal["done"])} of {_e(goal["target"])}</strong><span>{_e(goal["noun"])}</span></li>' for goal in goals[:4])
+        slides.append(_slide("goals", f"Your {year} goals", f"{reached} of {len(goals)} reached",
+                             "", f'<ul class="recap-slide__list">{rows}</ul>'))
+    badges = recap.get("badges") or []
+    if badges:
+        rows = "".join(f'<li><span aria-hidden="true">{_e(row["emoji"])}</span> {_e(row["name"])} <small>{_e(row["tier_name"])}</small></li>'
+                       for row in badges[:6])
+        slides.append(_slide("badges", "Badges earned", str(len(badges)), "", f'<ul class="recap-slide__chips">{rows}</ul>'))
+    persona = recap.get("persona")
+    if persona:
+        slides.append(_slide("persona", f"Your {year} type", persona["name"], persona["line"]))
+    slides.append(f'<section class="recap-slide recap-slide--end" data-slide="end">{closing}</section>')
+    return slides
+
+
+def _story(recap: dict, name: str, *, closing: str) -> str:
+    if recap.get("is_empty"):
+        return ""
+    slides = "".join(story_slides(recap, name, closing=closing))
+    return f"""<div class="recap-story" data-recap-story role="dialog" aria-modal="true" aria-label="{_e(name)}'s {_e(recap.get('year'))} in review" hidden>
+    <div class="recap-story__frame">
+      <div class="recap-story__bars" data-story-bars></div>
+      <button type="button" class="recap-story__close" data-story-close aria-label="Close">×</button>
+      <div class="recap-story__slides" aria-live="polite">{slides}</div>
+      <button type="button" class="recap-story__nav recap-story__nav--prev" data-story-prev aria-label="Previous"></button>
+      <button type="button" class="recap-story__nav recap-story__nav--next" data-story-next aria-label="Next"></button>
+    </div>
+  </div>"""
+
+
+def _play_button() -> str:
+    return '<button type="button" class="site-btn site-btn--primary" data-story-open hidden>▶ Play your year</button>'
+
+
 def _page(*, title: str, description: str, canonical: str, card_url: str, eyebrow: str, heading: str,
-          lead: str, actions: str, body: str, extra: str = "", script: bool = False) -> str:
+          lead: str, actions: str, body: str, extra: str = "", script: bool = False, story: str = "") -> str:
     scripts = (f'<script src="/static/year-in-review.js?v={ASSET_VERSION}" defer></script>' if script
                else '<script src="/static/share.js?v=20261004-share-1" defer></script>')
+    if story:
+        scripts += f'\n  <script src="/static/year-in-review-story.js?v={STORY_JS_VERSION}" defer></script>'
     page = f"""<!DOCTYPE html>
 <html lang="en">
 <head>
@@ -254,7 +391,7 @@ def _page(*, title: str, description: str, canonical: str, card_url: str, eyebro
   <link rel="stylesheet" href="/static/fonts.css?v=20261009-fonts-1">
   <link rel="stylesheet" href="/static/title-page.css?v={TITLE_CSS_VERSION}">
   <link rel="stylesheet" href="/static/profile-page.css?v=20261004-share-1">
-  <link rel="stylesheet" href="/static/year-in-review.css?v={ASSET_VERSION}">
+  <link rel="stylesheet" href="/static/year-in-review.css?v={STORY_JS_VERSION}">
   {scripts}
 </head>
 <body class="site title-page profile-page recap-page">
@@ -275,6 +412,7 @@ def _page(*, title: str, description: str, canonical: str, card_url: str, eyebro
       {body}
     </div>
   </main>
+  {story}
   <!--SITE_FOOTER-->
 </body>
 </html>"""
@@ -355,10 +493,19 @@ def recap_page(year: int, request: Request, db: Session = Depends(get_db)):
           <button type="button" class="site-btn site-btn--primary" data-recap-share>{'Update shared recap' if state['shared'] else 'Create share link'}</button>
           <button type="button" class="site-btn site-btn--ghost" data-recap-copy{'' if state['shared'] else ' hidden'}>Copy link</button>
           <a class="site-btn site-btn--ghost" href="/api/year-in-review/{year}/card.png" download="omnitrackr-{year}-in-review.png">Download card</a>
+          <a class="site-btn site-btn--ghost" href="/api/year-in-review/{year}/story.png" download="omnitrackr-{year}-story.png">Download story image</a>
           <button type="button" class="site-btn site-btn--ghost" data-recap-unshare{'' if state['shared'] else ' hidden'}>Stop sharing</button>
         </div>
         <img class="recap-share__card" src="/api/year-in-review/{year}/card.png" alt="Your {year} in review card" width="600" height="315" loading="lazy">
       </section>"""
+    closing = (f'<p class="recap-slide__eyebrow">That was your {year}</p><p class="recap-slide__big">Pass it on</p>'
+               '<p class="recap-slide__line">The story image is sized for Instagram, TikTok and WhatsApp stories. '
+               'It shows only shelves you haven\'t made private.</p>'
+               f'<p class="recap-slide__actions"><button type="button" class="site-btn site-btn--primary" data-story-share-image '
+               f'data-src="/api/year-in-review/{year}/story.png" data-filename="omnitrackr-{year}-story.png">Share story image</button>'
+               f'<a class="site-btn site-btn--ghost" href="/api/year-in-review/{year}/story.png" download="omnitrackr-{year}-story.png">Save image</a>'
+               '<button type="button" class="site-btn site-btn--ghost" data-story-close>See the full recap</button></p>'
+               '<p class="recap-slide__status" data-story-status aria-live="polite"></p>')
     html = _page(
         title=f"Your {year} in review · OmniTrackr",
         description="Your private Year in Review on OmniTrackr.",
@@ -367,9 +514,10 @@ def recap_page(year: int, request: Request, db: Session = Depends(get_db)):
         eyebrow="Year in Review · private to you",
         heading=f"Your {year} in media{so_far}",
         lead=_summary(recap) + ".",
-        actions=f'<span class="recap-years">{years}</span>',
+        actions=_play_button() + f'<span class="recap-years">{years}</span>',
         body=_body(recap, private=True) + share_box + ("" if recap.get("is_empty") else _support_box(db, user, year)),
         script=True,
+        story=_story(year_in_review.build(db, user, year, public=True), user.username, closing=closing),
     )
     response = strict_html_response(html)
     response.headers["Cache-Control"] = "private, no-store"
@@ -385,11 +533,22 @@ def shared_recap(token: str, request: Request, db: Session = Depends(get_db)):
     name = share.owner.username
     signed_in = bool(request.cookies.get(AUTH_COOKIE_NAME))
     canonical = SITE_URL + year_in_review.share_path(share)
-    cta = ("" if signed_in else
+    cta = (f'<section class="profile-cta site-card"><div><h2>See your own {share.year} in review</h2>'
+           '<p>Yours is ready on OmniTrackr, built from what you finished this year.</p></div>'
+           f'<a class="site-btn site-btn--primary" href="/year-in-review/{share.year}">Open my recap</a></section>'
+           if signed_in else
            f'<section class="profile-cta site-card"><div><h2>Make your own {share.year} in review</h2>'
            '<p>OmniTrackr is a free tracker for movies, shows, anime, games, music and books. '
            'Log what you finish and get a recap like this one every December.</p></div>'
            '<a class="site-btn site-btn--primary" href="/#signup">Start tracking free</a></section>')
+    action = (f'<a class="site-btn site-btn--primary" href="/year-in-review/{share.year}">Open my recap</a>' if signed_in
+              else '<a class="site-btn site-btn--primary" href="/#signup">Start tracking free</a>')
+    closing = (f'<p class="recap-slide__eyebrow">Your turn</p><p class="recap-slide__big">What did your {share.year} look like?</p>'
+               '<p class="recap-slide__line">OmniTrackr is free. Track movies, shows, anime, games, music and books, '
+               'and get a recap like this one every December.</p>'
+               f'<p class="recap-slide__actions">{action}'
+               f'<button type="button" class="site-btn site-btn--ghost" data-share data-share-title="{_e(name)}\'s {share.year} in review">Share this recap</button>'
+               '<button type="button" class="site-btn site-btn--ghost" data-story-close>See the full recap</button></p>')
     html = _page(
         title=f"{name}'s {share.year} in review · OmniTrackr",
         description=f"{name}'s {share.year} in media on OmniTrackr: {_summary(recap)}.",
@@ -398,9 +557,10 @@ def shared_recap(token: str, request: Request, db: Session = Depends(get_db)):
         eyebrow=f"Year in Review · {share.year}",
         heading=f"{name}'s {share.year} in media",
         lead=_summary(recap) + ".",
-        actions=(f'<button type="button" class="site-btn site-btn--ghost site-btn--sm" data-share '
+        actions=(_play_button() + f'<button type="button" class="site-btn site-btn--ghost site-btn--sm" data-share '
                  f'data-share-title="{_e(name)}\'s {share.year} in review">Share</button>'),
         body=_body(recap, private=False) + cta,
+        story=_story(recap, name, closing=closing),
     )
     response = strict_html_response(html)
     response.headers["Cache-Control"] = "private, no-store" if signed_in else "public, max-age=300"
@@ -415,6 +575,14 @@ def shared_card(token: str, request: Request, db: Session = Depends(get_db)):
     if share is None:
         raise HTTPException(status_code=404, detail="This recap isn't shared anymore")
     return _png_response(share.user_id, share.owner.username, year_in_review.snapshot(share))
+
+
+@router.get("/recap/{token}/story.png", include_in_schema=False)
+def shared_story(token: str, request: Request, db: Session = Depends(get_db)):
+    share = year_in_review.find_share(db, token)
+    if share is None:
+        raise HTTPException(status_code=404, detail="This recap isn't shared anymore")
+    return _png_response(share.user_id, share.owner.username, year_in_review.snapshot(share), story=True)
 
 
 # ---------------------------------------------------------------- share card
@@ -477,13 +645,133 @@ def render_card(username: str, recap: dict) -> bytes:
     return buffer.getvalue()
 
 
-def _png_response(user_id: int, username: str, recap: dict, *, private: bool = False):
-    fingerprint = hashlib.sha256(json.dumps([username, recap], sort_keys=True, default=str).encode("utf-8")).hexdigest()[:16]
+def _wrap(draw, text: str, font, width: int, lines: int) -> list[str]:
+    words, out, current = (text or "").split(), [], ""
+    for word in words:
+        trial = f"{current} {word}".strip()
+        if draw.textlength(trial, font=font) <= width or not current:
+            current = trial
+            continue
+        out.append(current)
+        current = word
+        if len(out) == lines:
+            break
+    if current and len(out) < lines:
+        out.append(current)
+    if len(out) == lines and " ".join(out) != " ".join(words):
+        out[-1] = _fit(draw, out[-1] + " …", font, width)
+    return [_fit(draw, line, font, width) for line in out]
+
+
+def render_story(username: str, recap: dict) -> bytes:
+    """A 1080x1920 image for Instagram, TikTok and WhatsApp stories."""
+    from PIL import Image, ImageDraw
+    width, height = 1080, 1920
+    image = Image.new("RGB", (width, height), (11, 10, 24))
+    glow = Image.new("RGB", (width, height), (11, 10, 24))
+    glow_draw = ImageDraw.Draw(glow)
+    for step in range(22, 0, -1):
+        mix = (1 - step / 22) * 0.6
+        radius = step * 40
+        glow_draw.ellipse((width - 120 - radius, -60 - radius, width - 120 + radius, -60 + radius),
+                          fill=(int(11 + 113 * mix), int(10 + 48 * mix), int(24 + 213 * mix)))
+    for step in range(16, 0, -1):
+        mix = (1 - step / 16) * 0.35
+        radius = step * 36
+        glow_draw.ellipse((40 - radius, height - 200 - radius, 40 + radius, height - 200 + radius),
+                          fill=(int(11 + 34 * mix), int(10 + 202 * mix), int(24 + 167 * mix)))
+    image = Image.blend(image, glow, 0.85)
+    draw = ImageDraw.Draw(image)
+    draw.rounded_rectangle((48, 48, width - 48, height - 48), radius=40, outline=(60, 52, 110), width=3)
+    left, inner = 110, width - 220
+    white, soft, teal, violet, muted = (245, 243, 255), (214, 209, 240), (94, 234, 212), (196, 181, 253), (167, 160, 199)
+
+    year = recap.get("year", "")
+    draw.text((left, 140), f"OMNITRACKR · {year} IN REVIEW", font=_font(34, bold=True), fill=violet)
+    name_font = _font(92, bold=True)
+    draw.text((left, 200), _fit(draw, username, name_font, inner), font=name_font, fill=white)
+
+    y = 360
+    persona = recap.get("persona")
+    if persona:
+        box_font, line_font = _font(64, bold=True), _font(34)
+        lines = _wrap(draw, persona["line"], line_font, inner - 80, 2)
+        box_height = 170 + 46 * len(lines)
+        draw.rounded_rectangle((left - 20, y, width - left + 20, y + box_height), radius=32, fill=(36, 28, 78),
+                               outline=(124, 58, 237), width=3)
+        draw.text((left + 20, y + 30), f"Your {year} type", font=_font(30, bold=True), fill=teal)
+        draw.text((left + 20, y + 74), _fit(draw, persona["name"], box_font, inner - 40), font=box_font, fill=white)
+        for index, line in enumerate(lines):
+            draw.text((left + 20, y + 160 + index * 46), line, font=line_font, fill=soft)
+        y += box_height + 70
+    else:
+        y += 40
+
+    finished = str(recap.get("finished_total", 0))
+    big = _font(220, bold=True)
+    draw.text((left - 8, y), finished, font=big, fill=white)
+    draw.text((left, y + 250), "titles finished" if finished != "1" else "title finished", font=_font(46, bold=True), fill=teal)
+    y += 360
+
+    tiles = []
+    top = recap.get("top_category")
+    if top:
+        tiles.append(("Most finished", top["label"]))
+    busiest = recap.get("busiest_month")
+    if busiest:
+        tiles.append(("Busiest month", busiest["month"]))
+    streak = recap.get("longest_streak") or 0
+    if streak >= 2:
+        tiles.append(("Longest streak", f"{streak} days"))
+    ratings = recap.get("ratings")
+    if ratings:
+        tiles.append(("Rating style", ratings["style"]))
+    creator = recap.get("top_creator")
+    if creator and len(tiles) < 4:
+        tiles.append((f"Top {creator['role']}", creator["name"]))
+    if not tiles and recap.get("library_total"):
+        tiles.append(("In the library", str(recap["library_total"])))
+    label_font, value_font = _font(28), _font(44, bold=True)
+    column = (inner - 40) // 2
+    for index, (label, value) in enumerate(tiles[:4]):
+        x = left + (index % 2) * (column + 40)
+        ty = y + (index // 2) * 160
+        draw.text((x, ty), label.upper(), font=label_font, fill=muted)
+        draw.text((x, ty + 44), _fit(draw, value, value_font, column), font=value_font, fill=white)
+    y += 160 * ((min(len(tiles), 4) + 1) // 2) + 40
+
+    rated = recap.get("top_rated") or []
+    picks = rated[:3] if rated else (recap.get("favorites") or [])[:3]
+    if picks and y < height - 420:
+        draw.text((left, y), "TOP RATED" if rated else "FAVORITES", font=label_font, fill=muted)
+        y += 52
+        row_font, score_font = _font(40, bold=True), _font(36, bold=True)
+        for index, row in enumerate(picks):
+            if y > height - 300:
+                break
+            score = f"{_rating(row['rating'])}/10" if row.get("rating") is not None else ""
+            score_width = draw.textlength(score, font=score_font) if score else 0
+            draw.text((left, y), f"{index + 1}", font=row_font, fill=violet)
+            draw.text((left + 60, y), _fit(draw, row["title"], row_font, inner - 100 - score_width), font=row_font, fill=white)
+            if score:
+                draw.text((width - left - score_width, y + 4), score, font=score_font, fill=teal)
+            y += 70
+
+    host = SITE_URL.replace("https://", "").replace("http://", "")
+    draw.text((left, height - 190), host, font=_font(40, bold=True), fill=white)
+    draw.text((left, height - 136), "Make your own Year in Review, free", font=_font(32), fill=muted)
+    buffer = io.BytesIO()
+    image.save(buffer, format="PNG", optimize=True)
+    return buffer.getvalue()
+
+
+def _png_response(user_id: int, username: str, recap: dict, *, private: bool = False, story: bool = False):
+    fingerprint = hashlib.sha256(json.dumps([username, recap, story], sort_keys=True, default=str).encode("utf-8")).hexdigest()[:16]
     key = (user_id, fingerprint)
     png = _CARDS.get(key)
     if png is None:
         try:
-            png = render_card(username, recap)
+            png = (render_story if story else render_card)(username, recap)
         except Exception:
             raise HTTPException(status_code=404, detail="Card unavailable")
         _CARDS.put(key, png)

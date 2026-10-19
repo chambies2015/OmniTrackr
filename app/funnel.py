@@ -48,6 +48,8 @@ GUEST = (
     ("guest_list_imported", "Saved titles moved into a new library"),
     ("share_clicked", "Share button used on a public page"),
     ("recap_kofi_clicked", "Ko-fi link opened from Year in Review"),
+    ("recap_story_played", "Year in Review story opened"),
+    ("recap_story_shared", "Year in Review story image saved or shared"),
     ("supporters_kofi_clicked", "Ko-fi link opened from the supporters page"),
     ("calendar_subscribe_clicked", "Release calendar subscribe button used"),
     ("tier_list_started", "Tier list: a title ranked"),
@@ -71,7 +73,7 @@ CLIENT_EVENTS = {"signup_form_opened", "hero_signup_clicked", "signup_rejected_i
                  "recap_kofi_clicked", "supporters_kofi_clicked", "title_search_used", "pick_used", "pick_saved", "liked_saved",
                  "order_saved", "seasonal_saved",
                  "calendar_subscribe_clicked", "tier_list_started", "tier_list_exported",
-                 "daily_shared"}
+                 "daily_shared", "recap_story_played", "recap_story_shared"}
 
 
 def record(event: str, request=None) -> bool:

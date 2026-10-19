@@ -12,7 +12,7 @@ left out, and notes, reviews and journal text are never included.
 from __future__ import annotations
 
 import secrets
-from datetime import date, datetime
+from datetime import date, datetime, timedelta
 from typing import Optional
 
 from sqlalchemy import case, func
@@ -33,6 +33,23 @@ CATEGORIES = {
 ADD_DATES_FIRST_YEAR = 2026
 TOP_FINISHES_LIMIT = 5
 FAVORITES_LIMIT = 6
+MIN_RATINGS = 3
+PERSONA_MIN_FINISHES = 3
+# Shelves with a creator field: category -> (model, field, what to call the person)
+CREATORS = {
+    "movies": (models.Movie, "director", "director"),
+    "music": (models.Music, "artist", "artist"),
+    "books": (models.Book, "author", "author"),
+}
+# Persona when one shelf is most of the year's finishes: (name, line with {n} finishes)
+SHELF_PERSONAS = {
+    "movies": ("The Movie Night Regular", "{n} movies finished. The couch knows your shape by now."),
+    "tv-shows": ("The Binger", "{n} shows finished. One more episode was always the plan."),
+    "anime": ("The Anime Marathoner", "{n} anime finished, openings unskipped."),
+    "video-games": ("The Quest Finisher", "{n} games played through to the end."),
+    "music": ("The Crate Digger", "{n} albums listened to, start to finish."),
+    "books": ("The Bookworm", "{n} books read. Your bookmark worked overtime."),
+}
 
 
 def season_year(today: Optional[date] = None) -> Optional[int]:
@@ -90,15 +107,17 @@ def _finishes(db: Session, user_id: int, year: int, visible: list[str]) -> tuple
         key = _title_key(entry.category, entry.item_id, entry.title)
         finished.setdefault(key, {
             "category": entry.category, "title": entry.title, "rating": entry.rating,
-            "finished_at": entry.occurred_at, "favorite": False,
+            "finished_at": entry.occurred_at, "favorite": False, "item_id": entry.item_id,
         })
     for moment in moments:
         key = _title_key(moment.category, moment.item_id, moment.title)
         row = finished.setdefault(key, {
             "category": moment.category, "title": moment.title, "rating": moment.rating,
-            "finished_at": moment.completed_at, "favorite": False,
+            "finished_at": moment.completed_at, "favorite": False, "item_id": moment.item_id,
         })
         row["favorite"] = row["favorite"] or bool(moment.favorite)
+        if row.get("item_id") is None:
+            row["item_id"] = moment.item_id
         if row["rating"] is None:
             row["rating"] = moment.rating
     return entries, finished
@@ -118,6 +137,12 @@ def build(db: Session, user: models.User, year: int, *, public: bool = False) ->
     start, end = _year_bounds(year)
     visible = _visible(user, public)
     entries, finished = _finishes(db, user.id, year, visible)
+    moment_days = [row[0] for row in db.query(models.CompletionMoment.completed_at).filter(
+        models.CompletionMoment.user_id == user.id,
+        models.CompletionMoment.completed_at >= start,
+        models.CompletionMoment.completed_at < end,
+        models.CompletionMoment.category.in_(visible),
+    ).all()]
 
     categories = []
     for key in visible:
@@ -177,6 +202,13 @@ def build(db: Session, user: models.User, year: int, *, public: bool = False) ->
         "is_empty": not (finished_total or entries or library_total),
     }
     recap["goals"] = _goals(db, user, year, finished, public)
+    days = {entry.occurred_at.date() for entry in entries} | {moment.date() for moment in moment_days if moment}
+    recap["active_days"] = len(days)
+    recap["longest_streak"] = _longest_streak(days)
+    recap["ratings"] = _rating_style(ordered)
+    recap["top_creator"] = _top_creator(db, user.id, ordered)
+    recap["badges"] = _badges(db, user, year, public)
+    recap["persona"] = persona(recap)
     if not public:
         recap["reflections_total"] = sum(1 for entry in entries if (entry.note or "").strip())
     return recap
@@ -194,6 +226,101 @@ def _goals(db: Session, user: models.User, year: int, finished: dict, public: bo
     except Exception:
         db.rollback()
         return []
+
+
+def _longest_streak(days: set) -> int:
+    """Most days in a row with at least one journal moment or finish."""
+    best = 0
+    for day in days:
+        if day - timedelta(days=1) in days:
+            continue
+        run = 1
+        while day + timedelta(days=run) in days:
+            run += 1
+        best = max(best, run)
+    return best
+
+
+def _rating_style(ordered: list[dict]) -> Optional[dict]:
+    """How the member rated what they finished this year; None below MIN_RATINGS ratings."""
+    ratings = [float(row["rating"]) for row in ordered if row["rating"] is not None]
+    if len(ratings) < MIN_RATINGS:
+        return None
+    average = round(sum(ratings) / len(ratings), 1)
+    if average >= 8.5:
+        style, detail = "Easy to please", "Most of what you finished, you loved."
+    elif average < 6.5:
+        style, detail = "Tough critic", "A high score from you had to be earned."
+    else:
+        style, detail = "Fair judge", "You used the whole scale and meant it."
+    return {"average": average, "count": len(ratings), "style": style, "detail": detail,
+            "tens": sum(1 for value in ratings if value >= 10)}
+
+
+def _top_creator(db: Session, user_id: int, ordered: list[dict]) -> Optional[dict]:
+    """The director, artist or author behind the most finishes this year, when at least two share one."""
+    tally: dict[str, dict] = {}
+    for category, (model, field, noun) in CREATORS.items():
+        ids = [row["item_id"] for row in ordered if row["category"] == category and (row.get("item_id") or 0) > 0]
+        if not ids:
+            continue
+        for (name,) in db.query(getattr(model, field)).filter(model.user_id == user_id, model.id.in_(ids)).all():
+            name = " ".join((name or "").split())
+            if not name:
+                continue
+            row = tally.setdefault(f"{category}:{name.lower()}", {
+                "name": name, "category": category, "label": CATEGORIES[category][1], "role": noun, "count": 0})
+            row["count"] += 1
+    best = max(tally.values(), key=lambda row: row["count"], default=None)
+    return best if best and best["count"] >= 2 else None
+
+
+def _badges(db: Session, user: models.User, year: int, public: bool) -> list[dict]:
+    """Badge tiers reached during the year. Optional: never breaks the recap."""
+    from . import badges
+    try:
+        public_keys = {row["key"] for row in badges.public_badges(db, user)} if public else None
+        start, end = _year_bounds(year)
+        rows = db.query(models.UserBadge).filter(
+            models.UserBadge.user_id == user.id,
+            models.UserBadge.earned_at >= start, models.UserBadge.earned_at < end,
+        ).all()
+    except Exception:
+        db.rollback()
+        return []
+    out = []
+    for row in rows:
+        track = badges.BY_KEY.get(row.badge)
+        if track is None or not 1 <= (row.tier or 0) <= len(badges.TIERS):
+            continue
+        if public_keys is not None and row.badge not in public_keys:
+            continue
+        out.append({"name": track["name"], "emoji": track["emoji"], "tier": row.tier,
+                    "tier_name": badges.TIERS[row.tier - 1]})
+    out.sort(key=lambda row: (-row["tier"], row["name"]))
+    return out
+
+
+def persona(recap: dict) -> Optional[dict]:
+    """A one-line label for the year, picked from the recap's own numbers. None for a quiet year."""
+    finished = recap.get("finished_total") or 0
+    if finished < PERSONA_MIN_FINISHES:
+        return None
+    shelves = [c for c in recap.get("categories", []) if c.get("finished")]
+    if len(shelves) >= 4:
+        name, line = "The Omnivore", f"You finished something in {len(shelves)} different shelves. Nothing was off the menu."
+        return {"key": "omnivore", "name": name, "line": line}
+    top = recap.get("top_category")
+    if top and top["finished"] / finished >= 0.6:
+        name, line = SHELF_PERSONAS[top["category"]]
+        return {"key": top["category"], "name": name, "line": line.format(n=top["finished"])}
+    if (recap.get("longest_streak") or 0) >= 7:
+        return {"key": "regular", "name": "The Regular",
+                "line": f"Your longest run was {recap['longest_streak']} days in a row with something logged."}
+    ratings = recap.get("ratings") or {}
+    if ratings.get("style") == "Tough critic":
+        return {"key": "critic", "name": "The Critic", "line": f"Your finishes averaged {ratings['average']:g}/10. You don't hand out tens."}
+    return {"key": "mixer", "name": "The Mixtape", "line": f"You split your year between {len(shelves)} shelves and kept it moving."}
 
 
 # ---------------------------------------------------------------- sharing
