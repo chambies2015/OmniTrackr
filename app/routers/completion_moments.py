@@ -54,7 +54,7 @@ def _parse_month(month: str | None) -> tuple[datetime, datetime]:
 
 
 @router.post("/", response_model=schemas.CompletionMoment)
-async def create_completion_moment(
+def create_completion_moment(
     payload: schemas.CompletionMomentCreate,
     current_user: models.User = Depends(get_current_user),
     db: Session = Depends(get_db),
@@ -94,7 +94,7 @@ REVIEW_CATEGORY = {"movies": "movie", "tv-shows": "tv_show", "anime": "anime", "
 
 
 @router.post("/{moment_id}/review", response_model=dict)
-async def save_completion_review(
+def save_completion_review(
     moment_id: PositiveDatabaseId,
     payload: schemas.CompletionReview,
     current_user: models.User = Depends(get_current_user),
@@ -136,7 +136,7 @@ async def save_completion_review(
 
 
 @router.patch("/{moment_id}", response_model=schemas.CompletionMoment)
-async def update_completion_moment(
+def update_completion_moment(
     moment_id: PositiveDatabaseId,
     payload: schemas.CompletionMomentUpdate,
     current_user: models.User = Depends(get_current_user),
@@ -156,7 +156,7 @@ async def update_completion_moment(
 
 
 @router.get("/replay/", response_model=dict)
-async def get_monthly_replay(
+def get_monthly_replay(
     month: str | None = Query(None, description="Calendar month in YYYY-MM format"),
     current_user: models.User = Depends(get_current_user),
     db: Session = Depends(get_db),

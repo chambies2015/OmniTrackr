@@ -715,7 +715,7 @@ def reviews_index(
 
 
 @router.get("/reviews/{review_id}")
-async def review_detail(
+def review_detail(
     request: Request,
     review_id: PositiveDatabaseId,
     category: Optional[str] = Query(None, description="Category: movie, tv_show, anime, video_game, music, or book"),
@@ -724,7 +724,7 @@ async def review_detail(
     """Serve the public review detail page."""
     if category:
         try:
-            review = await get_public_review(review_id=review_id, category=category, db=db)
+            review = get_public_review(review_id=review_id, category=category, db=db)
             if not _review_is_standalone(review):
                 return strict_html_response(_not_found_review_html(), status_code=404)
             more = []
@@ -838,7 +838,7 @@ def get_public_review_feed(
 
 
 @router.get("/api/public/reviews/{review_id}", response_model=dict, tags=["public"])
-async def get_public_review(
+def get_public_review(
     review_id: PositiveDatabaseId,
     category: str = Query(..., description="Category: movie, tv_show, anime, video_game, music, or book"),
     db: Session = Depends(get_db)
@@ -1053,7 +1053,7 @@ def _locked_public_feedback_item(db, model, review_id):
 
 
 @router.post("/api/public/reviews/{category}/{review_id}/helpful", include_in_schema=False)
-async def mark_review_helpful(category: str, review_id: PositiveDatabaseId, request: Request, db: Session = Depends(get_db)):
+def mark_review_helpful(category: str, review_id: PositiveDatabaseId, request: Request, db: Session = Depends(get_db)):
     """One mark per browser; the writer hears about it at milestones, never per click."""
     model_cls = CATEGORY_MODELS.get(category)
     if not model_cls:
@@ -1100,7 +1100,7 @@ async def mark_review_helpful(category: str, review_id: PositiveDatabaseId, requ
     status_code=status.HTTP_201_CREATED,
     tags=["public"],
 )
-async def report_public_review(
+def report_public_review(
     category: str,
     review_id: PositiveDatabaseId,
     payload: schemas.PublicReviewReportCreate,

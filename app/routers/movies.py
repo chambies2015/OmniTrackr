@@ -13,7 +13,7 @@ router = APIRouter(prefix="/movies", tags=["movies"])
 
 
 @router.get("/", response_model=List[schemas.Movie])
-async def list_movies(
+def list_movies(
     search: Optional[str] = None,
     sort_by: Optional[str] = None,
     order: Optional[str] = None,
@@ -24,7 +24,7 @@ async def list_movies(
 
 
 @router.get("/{movie_id}", response_model=schemas.Movie)
-async def get_movie(
+def get_movie(
     movie_id: PositiveDatabaseId,
     current_user: models.User = Depends(get_current_user),
     db: Session = Depends(get_db)
@@ -36,7 +36,7 @@ async def get_movie(
 
 
 @router.post("/", response_model=schemas.Movie, status_code=201)
-async def create_movie(
+def create_movie(
     movie: schemas.MovieCreate,
     current_user: models.User = Depends(get_current_user),
     db: Session = Depends(get_db)
@@ -45,7 +45,7 @@ async def create_movie(
 
 
 @router.put("/{movie_id}", response_model=schemas.Movie)
-async def update_movie(
+def update_movie(
     movie_id: PositiveDatabaseId,
     movie: schemas.MovieUpdate,
     current_user: models.User = Depends(get_current_user),
@@ -58,7 +58,7 @@ async def update_movie(
 
 
 @router.delete("/{movie_id}", response_model=schemas.Movie)
-async def delete_movie(
+def delete_movie(
     movie_id: PositiveDatabaseId,
     current_user: models.User = Depends(get_current_user),
     db: Session = Depends(get_db)

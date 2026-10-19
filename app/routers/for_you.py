@@ -26,7 +26,7 @@ def _client(request: Request):
 
 
 @router.get("/api/for-you/starter-picks")
-async def get_starter_picks(request: Request, response: Response, user=Depends(get_current_user), db: Session = Depends(get_db)):
+def get_starter_picks(request: Request, response: Response, user=Depends(get_current_user), db: Session = Depends(get_db)):
     _private(response)
     return for_you.starter_picks(db, user.id, client=_client(request))
 
@@ -61,7 +61,7 @@ def add_starter_pick(selection: StarterAdd, response: Response, user=Depends(get
 
 
 @router.get("/api/for-you/coming-up")
-async def get_coming_up(request: Request, response: Response, user=Depends(get_current_user), db: Session = Depends(get_db)):
+def get_coming_up(request: Request, response: Response, user=Depends(get_current_user), db: Session = Depends(get_db)):
     _private(response)
     report = for_you.coming_up(db, user.id, client=_client(request))
     report["email"] = _email_state(db, user.id)

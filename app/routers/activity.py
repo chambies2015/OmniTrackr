@@ -78,7 +78,7 @@ def record_completion_activity(db: Session, user_id: int, category: str, item) -
 
 
 @router.get("/", response_model=list[schemas.ActivityEntry])
-async def list_activity(
+def list_activity(
     category: str | None = Query(None),
     action: str | None = Query(None),
     limit: int = Query(50, ge=1, le=100),
@@ -102,7 +102,7 @@ async def list_activity(
 
 
 @router.post("/", response_model=schemas.ActivityEntry, status_code=status.HTTP_201_CREATED)
-async def create_activity(
+def create_activity(
     payload: schemas.ActivityEntryCreate,
     current_user: models.User = Depends(get_current_user),
     db: Session = Depends(get_db),
@@ -129,7 +129,7 @@ async def create_activity(
 
 
 @router.patch("/{entry_id}", response_model=schemas.ActivityEntry)
-async def update_activity(
+def update_activity(
     entry_id: PositiveDatabaseId,
     payload: schemas.ActivityEntryUpdate,
     current_user: models.User = Depends(get_current_user),
@@ -152,7 +152,7 @@ async def update_activity(
 
 
 @router.delete("/{entry_id}", status_code=status.HTTP_204_NO_CONTENT)
-async def delete_activity(
+def delete_activity(
     entry_id: PositiveDatabaseId,
     current_user: models.User = Depends(get_current_user),
     db: Session = Depends(get_db),
@@ -169,7 +169,7 @@ async def delete_activity(
 
 
 @router.get("/weekly/", response_model=dict)
-async def weekly_recap(
+def weekly_recap(
     offset: int = Query(0, ge=0, le=52),
     tz_offset_minutes: int = Query(0, ge=-840, le=840),
     current_user: models.User = Depends(get_current_user),

@@ -13,7 +13,7 @@ router = APIRouter(prefix="/anime", tags=["anime"])
 
 
 @router.get("/", response_model=List[schemas.Anime])
-async def list_anime(
+def list_anime(
     search: Optional[str] = None,
     sort_by: Optional[str] = None,
     order: Optional[str] = None,
@@ -24,7 +24,7 @@ async def list_anime(
 
 
 @router.get("/{anime_id}", response_model=schemas.Anime)
-async def get_anime(
+def get_anime(
     anime_id: PositiveDatabaseId,
     current_user: models.User = Depends(get_current_user),
     db: Session = Depends(get_db)
@@ -36,7 +36,7 @@ async def get_anime(
 
 
 @router.post("/", response_model=schemas.Anime, status_code=201)
-async def create_anime(
+def create_anime(
     anime: schemas.AnimeCreate,
     current_user: models.User = Depends(get_current_user),
     db: Session = Depends(get_db)
@@ -45,7 +45,7 @@ async def create_anime(
 
 
 @router.put("/{anime_id}", response_model=schemas.Anime)
-async def update_anime(
+def update_anime(
     anime_id: PositiveDatabaseId,
     anime: schemas.AnimeUpdate,
     current_user: models.User = Depends(get_current_user),
@@ -58,7 +58,7 @@ async def update_anime(
 
 
 @router.delete("/{anime_id}", response_model=schemas.Anime)
-async def delete_anime(
+def delete_anime(
     anime_id: PositiveDatabaseId,
     current_user: models.User = Depends(get_current_user),
     db: Session = Depends(get_db)

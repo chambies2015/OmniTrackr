@@ -13,7 +13,7 @@ router = APIRouter(prefix="/music", tags=["music"])
 
 
 @router.get("/", response_model=List[schemas.Music])
-async def list_music(
+def list_music(
     search: Optional[str] = None,
     sort_by: Optional[str] = None,
     order: Optional[str] = None,
@@ -24,7 +24,7 @@ async def list_music(
 
 
 @router.get("/{music_id}", response_model=schemas.Music)
-async def get_music(
+def get_music(
     music_id: PositiveDatabaseId,
     current_user: models.User = Depends(get_current_user),
     db: Session = Depends(get_db)
@@ -36,7 +36,7 @@ async def get_music(
 
 
 @router.post("/", response_model=schemas.Music, status_code=201)
-async def create_music(
+def create_music(
     music: schemas.MusicCreate,
     current_user: models.User = Depends(get_current_user),
     db: Session = Depends(get_db)
@@ -45,7 +45,7 @@ async def create_music(
 
 
 @router.put("/{music_id}", response_model=schemas.Music)
-async def update_music(
+def update_music(
     music_id: PositiveDatabaseId,
     music: schemas.MusicUpdate,
     current_user: models.User = Depends(get_current_user),
@@ -58,7 +58,7 @@ async def update_music(
 
 
 @router.delete("/{music_id}", response_model=schemas.Music)
-async def delete_music(
+def delete_music(
     music_id: PositiveDatabaseId,
     current_user: models.User = Depends(get_current_user),
     db: Session = Depends(get_db)

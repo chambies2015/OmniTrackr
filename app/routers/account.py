@@ -37,7 +37,7 @@ async def get_current_account(current_user: models.User = Depends(get_current_us
 
 
 @router.post("/visit", include_in_schema=False)
-async def record_visit(response: Response, current_user: models.User = Depends(get_current_user),
+def record_visit(response: Response, current_user: models.User = Depends(get_current_user),
                        db: Session = Depends(get_db)):
     """Count today as a visit day; the first visit after 3+ days away offers the Welcome Back Deck."""
     from .. import return_prompt, visits
@@ -53,7 +53,7 @@ async def record_visit(response: Response, current_user: models.User = Depends(g
 
 
 @router.put("/username", response_model=schemas.User)
-async def change_username(
+def change_username(
     username_change: schemas.UsernameChange,
     request: Request = None,
     current_user: models.User = Depends(get_current_user),
@@ -131,7 +131,7 @@ async def change_email(
 
 
 @router.put("/password", response_model=dict)
-async def change_password(
+def change_password(
     password_change: schemas.PasswordChange,
     request: Request = None,
     current_user: models.User = Depends(get_current_user),
@@ -166,7 +166,7 @@ async def change_password(
 
 
 @router.put("/privacy", response_model=schemas.PrivacySettings)
-async def update_privacy_settings(
+def update_privacy_settings(
     privacy_update: schemas.PrivacySettingsUpdate,
     current_user: models.User = Depends(get_current_user),
     db: Session = Depends(get_db)
@@ -186,7 +186,7 @@ async def update_privacy_settings(
 
 
 @router.get("/privacy", response_model=schemas.PrivacySettings)
-async def get_privacy_settings(
+def get_privacy_settings(
     current_user: models.User = Depends(get_current_user),
     db: Session = Depends(get_db)
 ):
@@ -200,7 +200,7 @@ async def get_privacy_settings(
 
 
 @router.put("/tab-visibility", response_model=schemas.TabVisibility)
-async def update_tab_visibility(
+def update_tab_visibility(
     tab_visibility_update: schemas.TabVisibilityUpdate,
     current_user: models.User = Depends(get_current_user),
     db: Session = Depends(get_db)
@@ -215,7 +215,7 @@ async def update_tab_visibility(
 
 
 @router.get("/tab-visibility", response_model=schemas.TabVisibility)
-async def get_tab_visibility(
+def get_tab_visibility(
     current_user: models.User = Depends(get_current_user),
     db: Session = Depends(get_db)
 ):
@@ -370,7 +370,7 @@ async def upload_profile_picture(
 
 
 @router.delete("/profile-picture", response_model=schemas.User)
-async def reset_profile_picture(
+def reset_profile_picture(
     current_user: models.User = Depends(get_current_user),
     db: Session = Depends(get_db)
 ):
@@ -384,7 +384,7 @@ async def reset_profile_picture(
 
 
 @router.post("/deactivate", response_model=dict)
-async def deactivate_account(
+def deactivate_account(
     deactivate: schemas.AccountDeactivate,
     request: Request = None,
     current_user: models.User = Depends(get_current_user),
@@ -407,7 +407,7 @@ async def deactivate_account(
 
 
 @router.post("/reactivate", response_model=schemas.User)
-async def reactivate_account(
+def reactivate_account(
     current_user: models.User = Depends(get_current_user),
     db: Session = Depends(get_db)
 ):

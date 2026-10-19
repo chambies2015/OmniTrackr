@@ -9,6 +9,7 @@ from pathlib import Path
 from typing import Optional
 
 from fastapi import APIRouter, Depends, HTTPException, Request, Response
+from starlette.concurrency import run_in_threadpool
 from pydantic import BaseModel, Field
 from sqlalchemy import func
 from sqlalchemy.orm import Session
@@ -344,7 +345,8 @@ async def radar_hub(request: Request, db: Session = Depends(get_db)):
     windows = {c: radar.featured_window(c, today) for c in radar.CATEGORY_ORDER}
     entries = dict(zip(windows, await asyncio.gather(*(radar.CACHE.get(_client(request), w) for w in windows.values()))))
     items_by_category = {c: (entries[c] or {}).get("items", []) for c in radar.CATEGORY_ORDER}
-    counts = {c: library_counts(db, c, items) for c, items in items_by_category.items()}
+    # Database reads run in the threadpool, never on the event loop (see dependencies.get_current_user).
+    counts = await run_in_threadpool(lambda: {c: library_counts(db, c, items) for c, items in items_by_category.items()})
     total = sum(len(items) for items in items_by_category.values())
 
     # The two-week strip can straddle a month or season boundary: add the
@@ -362,8 +364,9 @@ async def radar_hub(request: Request, db: Session = Depends(get_db)):
             # Warm the next period in the background so the strip fills in.
             radar.CACHE.warm(_client(request), other)
     soon = [i for items in strip_pool.values() for i in radar.upcoming_within(items, today, 14)]
-    extra_counts = {c: library_counts(db, c, [i for i in soon if i["category"] == c and i["key"] not in counts[c]])
-                    for c in radar.CATEGORY_ORDER}
+    extra_counts = await run_in_threadpool(lambda: {
+        c: library_counts(db, c, [i for i in soon if i["category"] == c and i["key"] not in counts[c]])
+        for c in radar.CATEGORY_ORDER})
     for c in radar.CATEGORY_ORDER:
         counts[c].update(extra_counts[c])
     # Keep the two-week strip varied: at most five per category.
@@ -443,7 +446,7 @@ def radar_jump(to: str = ""):
 async def _category_page(request: Request, db: Session, category: str, window: radar.Window):
     entry = await radar.CACHE.get(_client(request), window)
     items = (entry or {}).get("items", [])
-    counts = library_counts(db, category, items)
+    counts = await run_in_threadpool(library_counts, db, category, items)
     canonical = _category_path(category, window)
     return_path = canonical
     notes = radar.radar_notes(category, items, window)

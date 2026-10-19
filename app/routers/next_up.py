@@ -57,7 +57,7 @@ def _get_owned_entry(db: Session, user_id: int, queue_id: int) -> models.NextUpI
 
 
 @router.get("/", response_model=List[schemas.NextUpItem])
-async def list_next_up(
+def list_next_up(
     current_user: models.User = Depends(get_current_user),
     db: Session = Depends(get_db),
 ):
@@ -69,7 +69,7 @@ async def list_next_up(
 
 
 @router.post("/", response_model=schemas.NextUpItem, status_code=status.HTTP_201_CREATED)
-async def add_next_up(
+def add_next_up(
     payload: schemas.NextUpItemCreate,
     current_user: models.User = Depends(get_current_user),
     db: Session = Depends(get_db),
@@ -107,7 +107,7 @@ async def add_next_up(
 
 
 @router.put("/{queue_id}/position", response_model=List[schemas.NextUpItem])
-async def move_next_up(
+def move_next_up(
     queue_id: PositiveDatabaseId,
     payload: schemas.NextUpItemMove,
     current_user: models.User = Depends(get_current_user),
@@ -129,7 +129,7 @@ async def move_next_up(
 
 
 @router.delete("/{queue_id}", status_code=status.HTTP_204_NO_CONTENT)
-async def remove_next_up(
+def remove_next_up(
     queue_id: PositiveDatabaseId,
     current_user: models.User = Depends(get_current_user),
     db: Session = Depends(get_db),

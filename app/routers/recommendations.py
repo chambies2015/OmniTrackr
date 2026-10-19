@@ -172,7 +172,7 @@ def _add_submission(
 
 
 @router.post("/requests/", status_code=status.HTTP_201_CREATED)
-async def create_request(
+def create_request(
     payload: schemas.RecommendationRequestCreate,
     current_user: models.User = Depends(get_current_user),
     db: Session = Depends(get_db),
@@ -202,7 +202,7 @@ async def create_request(
 
 
 @router.get("/requests/")
-async def list_requests(
+def list_requests(
     current_user: models.User = Depends(get_current_user),
     db: Session = Depends(get_db),
 ):
@@ -213,7 +213,7 @@ async def list_requests(
 
 
 @router.post("/requests/{request_id}/close")
-async def close_request(
+def close_request(
     request_id: PositiveDatabaseId,
     current_user: models.User = Depends(get_current_user),
     db: Session = Depends(get_db),
@@ -225,7 +225,7 @@ async def close_request(
 
 
 @router.post("/requests/{request_id}/invite", status_code=status.HTTP_201_CREATED)
-async def invite_friend(
+def invite_friend(
     request_id: PositiveDatabaseId,
     payload: schemas.RecommendationInviteCreate,
     current_user: models.User = Depends(get_current_user),
@@ -251,7 +251,7 @@ async def invite_friend(
 
 
 @router.get("/invitations/")
-async def list_invitations(
+def list_invitations(
     current_user: models.User = Depends(get_current_user),
     db: Session = Depends(get_db),
 ):
@@ -282,7 +282,7 @@ async def list_invitations(
 
 
 @router.post("/requests/{request_id}/respond", status_code=status.HTTP_201_CREATED)
-async def respond_as_friend(
+def respond_as_friend(
     request_id: PositiveDatabaseId,
     payload: schemas.RecommendationFriendSubmissionCreate,
     current_user: models.User = Depends(get_current_user),
@@ -313,7 +313,7 @@ async def respond_as_friend(
 
 
 @router.get("/inbox/")
-async def list_inbox(
+def list_inbox(
     current_user: models.User = Depends(get_current_user),
     db: Session = Depends(get_db),
 ):
@@ -350,7 +350,7 @@ def _new_library_item(user_id: int, category: str, title: str):
 
 
 @router.post("/submissions/{submission_id}/triage")
-async def triage_submission(
+def triage_submission(
     submission_id: PositiveDatabaseId,
     payload: schemas.RecommendationTriage,
     current_user: models.User = Depends(get_current_user),
@@ -412,12 +412,12 @@ async def triage_submission(
 
 
 @router.get("/public/{token}")
-async def get_public_request(token: str, db: Session = Depends(get_db)):
+def get_public_request(token: str, db: Session = Depends(get_db)):
     return _public_postcard(_get_by_token(db, token))
 
 
 @router.post("/public/{token}", status_code=status.HTTP_201_CREATED)
-async def submit_public_recommendation(
+def submit_public_recommendation(
     token: str,
     payload: schemas.RecommendationSubmissionCreate,
     request: Request,
