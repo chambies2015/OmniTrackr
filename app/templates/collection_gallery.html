@@ -17,7 +17,7 @@
   <link rel="preload" href="/static/fonts/poppins-800-latin.woff2" as="font" type="font/woff2" crossorigin>
   <link rel="stylesheet" href="/static/fonts.css?v=20261009-fonts-1">
   <link rel="stylesheet" href="/static/public-legacy.css?v=20261004-legacy-1">
-  <link rel="stylesheet" href="/static/collections-public.css?v=20261004-share-1">
+  <link rel="stylesheet" href="/static/collections-public.css?v=20261019-lists-1">
 </head>
 <body class="dark-mode site collections-page">
   <!--SITE_NAV:collections-->
@@ -30,6 +30,9 @@
         <input type="search" name="q" maxlength="80" value="{{QUERY}}" placeholder="Search a theme or description" aria-label="Search collections">
         <select name="category" aria-label="Filter by media type">
           <option value="" {{SELECT_ALL}}>All media</option><option value="movies" {{SELECT_MOVIES}}>Movies</option><option value="tv-shows" {{SELECT_TV_SHOWS}}>TV shows</option><option value="anime" {{SELECT_ANIME}}>Anime</option><option value="video-games" {{SELECT_VIDEO_GAMES}}>Video games</option><option value="music" {{SELECT_MUSIC}}>Music</option><option value="books" {{SELECT_BOOKS}}>Books</option>
+        </select>
+        <select name="sort" aria-label="Sort collections">
+          <option value="helpful" {{SORT_HELPFUL}}>Most helpful</option><option value="newest" {{SORT_NEWEST}}>Newest</option><option value="popular" {{SORT_POPULAR}}>Most read</option>
         </select>
         <button type="submit">Explore</button>
       </form>
