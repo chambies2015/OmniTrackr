@@ -7,6 +7,7 @@ from app import daily, editorial_index, site_chrome, title_search
 from app.discover_guides import GUIDES as DISCOVER_GUIDES
 from app.if_you_liked_guides import GUIDES as LIKED_GUIDES
 from app.in_order_guides import GUIDES as ORDER_GUIDES
+from app.seasonal_guides import SEASONS
 
 
 @pytest.fixture(autouse=True)
@@ -33,11 +34,11 @@ def header(html):
 
 def test_editorial_index_lists_every_guide_newest_first():
     pieces = editorial_index.entries()
-    assert len(pieces) == len(DISCOVER_GUIDES) + len(LIKED_GUIDES) + len(ORDER_GUIDES) + 2  # + monthly editions
+    assert len(pieces) == len(DISCOVER_GUIDES) + len(LIKED_GUIDES) + len(ORDER_GUIDES) + 2 + len(SEASONS)  # + monthly editions and seasonal hubs
     dates = [piece["updated"] for piece in pieces]
     assert dates == sorted(dates, reverse=True)
     latest = editorial_index.latest(6)
-    assert len(latest) == 6 and len({piece["section"] for piece in latest}) == 4
+    assert len(latest) == 6 and len({piece["section"] for piece in latest}) == 5
 
 
 def test_header_leads_with_the_guides(client):

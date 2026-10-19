@@ -174,7 +174,7 @@ def test_hub_is_linked_from_the_sitemap_guides_and_discover(client, in_season):
     assert 'href="/halloween"' in client.get("/discover").text
     assert "/halloween" in client.get("/llms.txt").text
     loader = (Path(__file__).parents[1] / "app" / "static" / "ad-loader.js").read_text(encoding="utf-8")
-    assert "'/halloween'" in loader
+    assert "/^\\/halloween$/" in loader
 
 
 def test_dashboard_has_the_season_card_and_hooks():
