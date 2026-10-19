@@ -297,6 +297,10 @@ def _database_parts(db: Session) -> list[str]:
             sitemap_parts.append(f"<url><loc>{base_url}/titles</loc><changefreq>weekly</changefreq><priority>0.7</priority></url>")
         for path in title_paths:
             sitemap_parts.append(f"<url><loc>{base_url}{path}</loc><changefreq>weekly</changefreq><priority>0.65</priority></url>")
+        # Member charts join once enough titles have member ratings to rank (see title_charts).
+        from .. import title_charts
+        for path in title_charts.indexable_paths(db):
+            sitemap_parts.append(f"<url><loc>{base_url}{path}</loc><changefreq>daily</changefreq><priority>0.7</priority></url>")
     except Exception:
         pass
     # Public profiles join only when the member opted in and the page has original content.

@@ -51,6 +51,15 @@ def offline_release_radar(monkeypatch):
     monkeypatch.setattr(release_radar, "CACHE", release_radar.RadarCache(None))
 
 
+@pytest.fixture(autouse=True)
+def fresh_title_charts():
+    """Member charts are cached per process; each test starts from its own database."""
+    from app import title_charts
+    title_charts.clear_cache()
+    yield
+    title_charts.clear_cache()
+
+
 @pytest.fixture(scope="function")
 def db_session():
     """Create a fresh database for each test."""
