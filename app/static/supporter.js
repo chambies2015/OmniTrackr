@@ -91,7 +91,7 @@
         locked = true;
         label.classList.add('supporter-accent--locked');
       }
-      input.addEventListener('change', () => renderPreview(status, accent));
+      input.addEventListener('change', () => { renderPreview(status, accent); tintBanners(accent); });
       const swatch = document.createElement('span');
       swatch.className = `supporter-accent__swatch supporter-accent__swatch--${accent || 'none'}`;
       swatch.setAttribute('aria-hidden', 'true');
@@ -108,6 +108,54 @@
     }
   }
 
+  const BANNER_NAMES = { aurora: 'Aurora', filmstrip: 'Film strip', pixels: 'Pixels', pages: 'Pages', vinyl: 'Vinyl', stars: 'Stars' };
+
+  // Banner swatches take the accent color that's picked right now, like the profile will.
+  function tintBanners(accent) {
+    const box = $('supporterBanners');
+    if (!box) return;
+    Array.from(box.classList).filter(name => name.startsWith('supporter-banners--accent-'))
+      .forEach(name => box.classList.remove(name));
+    if (accent && ACCENT_NAME.test(accent)) box.classList.add(`supporter-banners--accent-${accent}`);
+  }
+
+  function renderBanners(status) {
+    const box = $('supporterBanners');
+    if (!box) return;
+    box.querySelectorAll('label, .supporter-accent__hint').forEach(node => node.remove());
+    const options = [null].concat(Array.isArray(status.banners) ? status.banners.filter(b => ACCENT_NAME.test(b)) : []);
+    options.forEach(banner => {
+      const label = document.createElement('label');
+      label.className = 'supporter-banner';
+      const input = document.createElement('input');
+      input.type = 'radio';
+      input.name = 'supporterBanner';
+      input.value = banner || '';
+      input.checked = (status.banner || null) === banner;
+      input.disabled = !status.active;
+      const swatch = document.createElement('span');
+      swatch.className = banner ? 'supporter-banner__swatch' : 'supporter-banner__swatch supporter-banner__swatch--none';
+      swatch.setAttribute('aria-hidden', 'true');
+      if (banner) {
+        // The art is drawn at profile size and scaled down, so the preview matches the real banner.
+        const art = document.createElement('span');
+        art.className = `supporter-banner__art profile-banner profile-banner--${banner}`;
+        swatch.appendChild(art);
+      }
+      const text = document.createElement('span');
+      text.textContent = banner ? (BANNER_NAMES[banner] || banner) : 'None';
+      label.append(input, swatch, text);
+      box.appendChild(label);
+    });
+    if (!status.active) {
+      const hint = document.createElement('p');
+      hint.className = 'info-text supporter-accent__hint';
+      hint.textContent = 'Banners come back on when your support does.';
+      box.appendChild(hint);
+    }
+    tintBanners(status.accent);
+  }
+
   function apply(status) {
     loaded = status;
     $('supporterCode').textContent = status.code || '-';
@@ -122,6 +170,7 @@
     $('supporterShowBadge').checked = status.show_badge !== false;
     if ($('supporterOnWall')) $('supporterOnWall').checked = status.on_wall === true;
     renderAccents(status);
+    renderBanners(status);
     renderPreview(status, status.accent);
   }
 
@@ -147,6 +196,8 @@
     if ($('supporterOnWall')) body.on_wall = $('supporterOnWall').checked;
     const picked = document.querySelector('input[name="supporterAccent"]:checked');
     if (loaded.active && picked) body.accent = picked.value || null;
+    const banner = document.querySelector('input[name="supporterBanner"]:checked');
+    if (loaded.active && banner) body.banner = banner.value || null;
     saving = true;
     $('supporterSave').disabled = true;
     try {
@@ -222,13 +273,13 @@
     const title = document.createElement('strong');
     title.textContent = status.founding ? '★ You\'re a founding supporter!' : '♥ Your supporter perks are on!';
     const text = document.createElement('p');
-    text.textContent = 'Thank you for keeping OmniTrackr running. Pick your profile color and choose whether to join the supporter wall.';
+    text.textContent = 'Thank you for keeping OmniTrackr running. Pick a profile color and banner, and choose whether to join the supporter wall.';
     const actions = document.createElement('div');
     actions.className = 'supporter-welcome__actions';
     const pick = document.createElement('button');
     pick.type = 'button';
     pick.className = 'action-btn';
-    pick.textContent = 'Pick my color';
+    pick.textContent = 'Style my profile';
     const close = document.createElement('button');
     close.type = 'button';
     close.className = 'supporter-welcome__close';

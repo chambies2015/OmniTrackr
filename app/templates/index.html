@@ -59,7 +59,8 @@
   <link rel="stylesheet" href="/static/library-shelf.css?v=20261016-shelf-1">
   <link rel="stylesheet" href="/static/dialog-theme.css?v=20260924-visual-4">
   <link rel="stylesheet" href="/static/taste-match.css?v=20261016-taste-match-1">
-  <link rel="stylesheet" href="/static/supporter.css?v=20261017-supporters-2">
+  <link rel="stylesheet" href="/static/supporter.css?v=20261020-looks-1">
+  <link rel="stylesheet" href="/static/profile-banners.css?v=20261020-looks-1">
   <link rel="stylesheet" href="/static/badges.css?v=20261017-badges-1">
   <link rel="stylesheet" href="/static/import-studio.css?v=20261018-formats-1">
   <link rel="stylesheet" href="/static/seasonal-card.css?v=20261019-halloween-1">
@@ -1655,7 +1656,8 @@
   <script src="/static/for-you.js?v=20261017-bughunt-1"></script>
   <script src="/static/title-links.js?v=20261008-speed-1"></script>
   <script src="/static/public-profile.js?v=20261002-profiles-1"></script>
-  <script src="/static/supporter.js?v=20261017-supporters-2"></script>
+  <script src="/static/supporter.js?v=20261020-looks-1"></script>
+  <script src="/static/profile-showcase.js?v=20261020-looks-1"></script>
   <script src="/static/goals.js?v=20261010-goal-reached-1"></script>
   <script src="/static/challenges.js?v=20261011-challenge-2"></script>
   <script src="/static/seasonal-card.js?v=20261019-halloween-1"></script>
@@ -1881,13 +1883,25 @@
             <div id="profileError" class="error-message" role="alert"></div>
             <div id="profileSuccess" class="success-message" role="status"></div>
           </form>
+          <div class="profile-showcase-settings" id="profileShowcase">
+            <h4>Showcase</h4>
+            <p class="info-text" id="profileShowcaseHint">Pin up to 3 titles from your library to the top of your profile.</p>
+            <ol class="showcase-picks" id="profileShowcaseList"></ol>
+            <div class="form-group">
+              <label for="profileShowcaseSearch">Add a title</label>
+              <input type="text" inputmode="search" enterkeyhint="search" id="profileShowcaseSearch" placeholder="Search your library" autocomplete="off" maxlength="80">
+            </div>
+            <ul class="showcase-results" id="profileShowcaseResults"></ul>
+            <div id="profileShowcaseError" class="error-message" role="alert"></div>
+            <div id="profileShowcaseSuccess" class="success-message" role="status"></div>
+          </div>
         </div>
 
         <!-- Supporter Section -->
         <div class="account-section" id="supporterSection">
           <h3>Supporter</h3>
           <p class="info-text" id="supporterStatus">OmniTrackr is free. Supporting it on Ko-fi adds a badge beside your public reviews, an
-            accent color for your public profile and a spot on the supporter wall. Support that starts before 2027 makes you a founding
+            accent color and a banner for your public profile, six showcase spots instead of three, and a spot on the supporter wall. Support that starts before 2027 makes you a founding
             supporter for good. <a href="/supporters" target="_blank" rel="noopener">What supporters get</a></p>
           <p class="supporter-preview" id="supporterPreview" hidden><span class="supporter-preview__badge" id="supporterPreviewBadge"></span></p>
           <p class="profile-settings__link">Your supporter code: <code id="supporterCode">-</code>
@@ -1917,6 +1931,9 @@
             </div>
             <fieldset class="profile-settings__parts" id="supporterAccents">
               <legend>Profile accent color</legend>
+            </fieldset>
+            <fieldset class="profile-settings__parts supporter-banners" id="supporterBanners">
+              <legend>Profile banner</legend>
             </fieldset>
             <button type="submit" class="action-btn" id="supporterSave">Save supporter settings</button>
           </form>

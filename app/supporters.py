@@ -13,7 +13,8 @@ matching a verified OmniTrackr email. Payments that match nobody wait, keyed by 
 hash of the payer's email, and are linked when a member with that email opens
 their supporter settings, or by an admin by hand.
 
-Perks are cosmetic only (badge, profile accent, a place on the supporter wall).
+Perks are cosmetic only (badge, profile accent, a profile banner, six showcase
+spots instead of three, a place on the supporter wall).
 ``is_ad_free`` is the hook for an ad-free experience once ads run for signed-in
 members.
 
@@ -47,6 +48,8 @@ DONATION_DAYS = 30
 PERK_TYPES = {"donation", "subscription"}
 BASE_ACCENTS = ("violet", "teal", "amber", "rose", "sky", "emerald", "coral")
 ACCENTS = BASE_ACCENTS + ("gold",)
+# Banner art drawn in CSS across the top of the public profile, tinted by the accent.
+BANNERS = ("aurora", "filmstrip", "pixels", "pages", "vinyl", "stars")
 GOLD_MONTHS = 6
 FOUNDING_BEFORE = datetime(2027, 1, 1)
 WALL_LIMIT = 150
@@ -141,6 +144,7 @@ def public_badge(db: Session, user_id: int) -> Optional[dict]:
     if not is_active(supporter) or not supporter.show_badge:
         return None
     return {"since": supporter.since, "accent": supporter.accent if supporter.accent in ACCENTS else None,
+            "banner": supporter.banner if supporter.banner in BANNERS else None,
             "founding": is_founding(supporter), "months": months_supported(db, user_id)}
 
 
@@ -239,6 +243,8 @@ def status_payload(db: Session, user) -> dict:
         "show_badge": supporter.show_badge if supporter else True,
         "accent": (supporter.accent if supporter and supporter.accent in ACCENTS else None),
         "accents": list(ACCENTS),
+        "banner": (supporter.banner if supporter and supporter.banner in BANNERS else None),
+        "banners": list(BANNERS),
         "ad_free": active,
         "code": supporter_code(user.id),
         "kofi_url": KOFI_URL,
@@ -262,6 +268,13 @@ def save_settings(db: Session, user, changes: dict) -> models.Supporter:
         if accent is not None and accent not in unlocked_accents(supporter, months_supported(db, user.id)):
             raise PermissionError(f"Gold unlocks for founding supporters and after {GOLD_MONTHS} months of support.")
         supporter.accent = accent
+    if "banner" in changes:
+        banner = changes["banner"] or None
+        if banner is not None and banner not in BANNERS:
+            raise ValueError("Pick one of the listed banners.")
+        if banner is not None and not is_active(supporter):
+            raise PermissionError("Profile banners are a perk for current supporters.")
+        supporter.banner = banner
     db.commit()
     db.refresh(supporter)
     return supporter

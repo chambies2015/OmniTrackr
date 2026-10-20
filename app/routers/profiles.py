@@ -23,7 +23,7 @@ from ..site_chrome import apply_site_chrome
 
 router = APIRouter(tags=["profiles"])
 SITE_URL = os.getenv("SITE_URL", "https://omnitrackr.xyz").rstrip("/")
-CSS_VERSION = "20261017-supporters-2"
+CSS_VERSION = "20261020-looks-1"
 TITLE_CSS_VERSION = "20261009-take-1"
 
 
@@ -54,7 +54,7 @@ class ProfileSettingsUpdate(BaseModel):
 @router.get("/api/profile/settings")
 def profile_settings(response: Response, user: models.User = Depends(get_current_user), db: Session = Depends(get_db)):
     response.headers["Cache-Control"] = "private, no-store"
-    return public_profiles.settings_payload(user, public_profiles.get_settings(db, user.id))
+    return public_profiles.settings_payload(user, public_profiles.get_settings(db, user.id), db)
 
 
 @router.put("/api/profile/settings")
@@ -73,7 +73,37 @@ def update_profile_settings(
         db.rollback()
         raise HTTPException(status_code=422, detail=str(error))
     _CARD_CACHE.clear_user(user.id)
-    return public_profiles.settings_payload(user, profile)
+    return public_profiles.settings_payload(user, profile, db)
+
+
+class ShowcasePick(BaseModel):
+    category: str = Field(..., max_length=16)
+    id: PositiveDatabaseId
+
+
+class ShowcaseUpdate(BaseModel):
+    items: list[ShowcasePick] = Field(default_factory=list, max_length=public_profiles.SUPPORTER_SHOWCASE_LIMIT)
+
+
+@router.get("/api/profile/showcase/search")
+def showcase_search(response: Response, q: str = "", user: models.User = Depends(get_current_user),
+                    db: Session = Depends(get_db)):
+    """Titles from the member's own library to pin to their profile."""
+    response.headers["Cache-Control"] = "private, no-store"
+    return {"results": public_profiles.showcase_search(db, user, q[:200])}
+
+
+@router.put("/api/profile/showcase")
+def update_showcase(payload: ShowcaseUpdate, response: Response, user: models.User = Depends(get_current_user),
+                    db: Session = Depends(get_db)):
+    response.headers["Cache-Control"] = "private, no-store"
+    try:
+        items = public_profiles.save_showcase(db, user, [pick.model_dump() for pick in payload.items])
+    except public_profiles.ShowcaseError as error:
+        db.rollback()
+        raise HTTPException(status_code=422, detail=str(error))
+    _CARD_CACHE.clear_user(user.id)
+    return {"showcase": items, "showcase_limit": public_profiles.showcase_limit(db, user)}
 
 
 # ---------------------------------------------------------------- page
@@ -105,7 +135,43 @@ def _hero_class(view) -> str:
         classes += " profile-hero--supporter"
     if accent:
         classes += f" profile-hero--accent-{accent}"
+    if (view.supporter or {}).get("banner") in supporters.BANNERS:
+        classes += " profile-hero--has-banner"
     return classes
+
+
+def _banner_html(view) -> str:
+    banner = (view.supporter or {}).get("banner")
+    if banner not in supporters.BANNERS:
+        return ""
+    return f'<div class="profile-banner profile-banner--{banner}" aria-hidden="true"></div>'
+
+
+def _showcase_html(view) -> str:
+    if not view.showcase:
+        return ""
+    cards = ""
+    for item in view.showcase:
+        art = (f'<img src="{_e(item["image"])}" alt="" loading="lazy">' if item.get("image")
+               else f'<span>{_e(item["title"][:1].upper())}</span>')
+        year = f' · {item["year"]}' if item.get("year") else ""
+        rating = (f' · <span class="profile-rating">{_e(_rating(item["rating"]))}/10</span>'
+                  if item.get("rating") is not None else "")
+        cards += (f'<a class="profile-showcase__item" href="{_e(item["url"])}"><span class="profile-showcase__art">{art}</span>'
+                  f'<strong>{_e(item["title"])}</strong><small>{_e(item["label"])}{_e(year)}{rating}</small></a>')
+    return (f'<section class="title-section profile-showcase" aria-labelledby="profile-showcase">'
+            f'<h2 id="profile-showcase">Showcase</h2><div class="profile-showcase__grid">{cards}</div></section>')
+
+
+def _owner_note_html(view, is_owner: bool) -> str:
+    if not is_owner:
+        return ""
+    note = ('This is your public profile. Change what it shows and pin titles to your showcase from '
+            '<a href="/#public-profile">Account → Public profile</a>.')
+    if not view.supporting:
+        note += (' Supporters can also add a banner, pick an accent color and pin six titles. '
+                 '<a href="/supporters">See what supporting gets you</a>.')
+    return f'<p class="profile-owner-note">{note}</p>'
 
 
 def _stats_html(view) -> str:
@@ -205,11 +271,10 @@ def render(view, *, signed_in: bool, is_owner: bool, recap_url: Optional[str] = 
         + (f". {lead}" if lead else "."), 158)
     robots = "index, follow" if view.indexable else "noindex, follow"
     card_url = f"{SITE_URL}{view.path}/card.png"
-    body = "".join([_stats_html(view), _badges_html(view), _favorites_html(view), _reviews_html(view), _collections_html(view)])
+    body = "".join([_showcase_html(view), _stats_html(view), _badges_html(view), _favorites_html(view), _reviews_html(view), _collections_html(view)])
     if not body:
         body = f'<p class="title-empty">{_e(name)} hasn\'t shared anything here yet.</p>'
-    owner_note = ('<p class="profile-owner-note">This is your public profile. Change what it shows from '
-                  '<a href="/#public-profile">Account → Public profile</a>.</p>' if is_owner else "")
+    owner_note = _owner_note_html(view, is_owner)
     cta = ("" if signed_in else
            '<section class="profile-cta site-card"><div><h2>Track your own movies, shows, games, music and books</h2>'
            '<p>OmniTrackr is free. Build your library, rate what you finish and share a profile like this one.</p></div>'
@@ -240,6 +305,7 @@ def render(view, *, signed_in: bool, is_owner: bool, recap_url: Optional[str] = 
   <link rel="stylesheet" href="/static/fonts.css?v=20261009-fonts-1">
   <link rel="stylesheet" href="/static/title-page.css?v={TITLE_CSS_VERSION}">
   <link rel="stylesheet" href="/static/profile-page.css?v={CSS_VERSION}">
+  <link rel="stylesheet" href="/static/profile-banners.css?v={CSS_VERSION}">
   <link rel="stylesheet" href="/static/badges.css?v=20261017-badges-1">
   <script src="/static/share.js?v=20261004-share-1" defer></script>
 </head>
@@ -247,6 +313,7 @@ def render(view, *, signed_in: bool, is_owner: bool, recap_url: Optional[str] = 
   <!--SITE_NAV:-->
   <main>
     <section class="{_e(_hero_class(view))}">
+      {_banner_html(view)}
       <div class="site-wrap profile-hero__inner">
         {_avatar_html(user)}
         <div class="profile-hero__copy">
@@ -381,9 +448,16 @@ def _fit(draw, text: str, font, width: int) -> str:
     return text.rstrip() + "…"
 
 
+# Accent colors for the share card, matching profile-page.css.
+CARD_ACCENTS = {"violet": (139, 92, 246), "teal": (45, 212, 191), "amber": (245, 158, 11), "rose": (244, 114, 182),
+                "sky": (56, 189, 248), "emerald": (52, 211, 153), "coral": (251, 113, 133), "gold": (234, 179, 8)}
+
+
 def render_card(view) -> bytes:
     from PIL import Image, ImageDraw
     width, height = 1200, 630
+    supporter = view.supporter or {}
+    glow_rgb = CARD_ACCENTS.get(supporter.get("accent")) or ((234, 179, 8) if supporter.get("founding") else (124, 58, 237))
     image = Image.new("RGB", (width, height), (11, 10, 24))
     draw = ImageDraw.Draw(image)
     # Soft violet glow in the corner, drawn as concentric translucent circles.
@@ -391,8 +465,8 @@ def render_card(view) -> bytes:
     glow_draw = ImageDraw.Draw(glow)
     for step in range(18, 0, -1):
         radius = step * 34
-        shade = (int(11 + (124 - 11) * (1 - step / 18) * 0.55), int(10 + (58 - 10) * (1 - step / 18) * 0.55),
-                 int(24 + (237 - 24) * (1 - step / 18) * 0.55))
+        mix = (1 - step / 18) * 0.55
+        shade = (int(11 + (glow_rgb[0] - 11) * mix), int(10 + (glow_rgb[1] - 10) * mix), int(24 + (glow_rgb[2] - 24) * mix))
         glow_draw.ellipse((width - 160 - radius, -120 - radius, width - 160 + radius, -120 + radius), fill=shade)
     image = Image.blend(image, glow, 0.85)
     draw = ImageDraw.Draw(image)
@@ -405,6 +479,16 @@ def render_card(view) -> bytes:
     sub = _font(30)
     since = f"Member since {view.user.created_at:%B} {view.user.created_at.year}" if view.user.created_at else "OmniTrackr member"
     draw.text((86, 248), since, font=sub, fill=(167, 160, 199))
+    if supporter:
+        founding = bool(supporter.get("founding"))
+        label = supporters.level_label(founding, int(supporter.get("months") or 0))
+        pill_font = _font(24, bold=True)
+        pill_rgb = (234, 179, 8) if founding else glow_rgb
+        text_width = draw.textlength(label, font=pill_font)
+        left = width - 84 - text_width - 40
+        draw.rounded_rectangle((left, 74, width - 84, 118), radius=22, outline=pill_rgb, width=2,
+                               fill=tuple(int(c * 0.22 + 15) for c in pill_rgb))
+        draw.text((left + 20, 82), label, font=pill_font, fill=(245, 243, 255))
 
     y = 320
     if view.stats:
@@ -420,10 +504,12 @@ def render_card(view) -> bytes:
             draw.text((x, y + 60), label, font=label_font, fill=(94, 234, 212))
             x += block
         y += 130
-    favorite_titles = [item["title"] for item in view.favorites[:4]]
+    picks = view.showcase or view.favorites
+    favorite_titles = [item["title"] for item in picks[:4]]
     if favorite_titles:
         fav_font = _font(28)
-        draw.text((84, y), _fit(draw, "Favorites: " + " · ".join(favorite_titles), fav_font, width - 168), font=fav_font, fill=(214, 209, 240))
+        heading = "Showcase: " if view.showcase else "Favorites: "
+        draw.text((84, y), _fit(draw, heading + " · ".join(favorite_titles), fav_font, width - 168), font=fav_font, fill=(214, 209, 240))
     elif view.profile.bio:
         bio_font = _font(28)
         draw.text((84, y), _fit(draw, " ".join(view.profile.bio.split()), bio_font, width - 168), font=bio_font, fill=(214, 209, 240))
@@ -444,6 +530,7 @@ def _card_response(db: Session, user: Optional[models.User]):
     fingerprint = hashlib.sha256(repr((
         user.username, user.created_at, profile.bio,
         [(r["label"], r["total"]) for r in view.stats], [f["title"] for f in view.favorites[:4]],
+        [f["title"] for f in view.showcase[:4]], sorted((view.supporter or {}).items(), key=str),
     )).encode("utf-8")).hexdigest()[:16]
     key = (user.id, fingerprint)
     png = _CARD_CACHE.get(key)

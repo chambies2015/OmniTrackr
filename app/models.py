@@ -850,6 +850,23 @@ class EmailOptOut(Base):
     created_at = Column(DateTime, nullable=False, default=datetime.utcnow)
 
 
+class ProfileShowcaseItem(Base):
+    """A library title a member pinned to the top of their public profile (Oct 2026). A new table only.
+
+    ``category`` is a library category key ("movies", "books", ...) and ``item_id`` the row in
+    that category's table. A pin whose title was deleted or whose category went private is
+    skipped when the profile is shown, so nothing here can expose a hidden shelf.
+    """
+    __tablename__ = "profile_showcase_items"
+
+    id = Column(Integer, primary_key=True, index=True)
+    user_id = Column(Integer, ForeignKey("users.id", ondelete="CASCADE"), nullable=False, index=True)
+    category = Column(String(16), nullable=False)
+    item_id = Column(Integer, nullable=False)
+    position = Column(Integer, nullable=False, default=0)
+    created_at = Column(DateTime, nullable=False, default=datetime.utcnow)
+
+
 class Supporter(Base):
     """A member who has supported OmniTrackr on Ko-fi (Oct 2026).
 
@@ -868,6 +885,8 @@ class Supporter(Base):
     accent = Column(String(16), nullable=True)
     # Opt-in: thanked by username on the public /supporters wall (added Oct 2026, default off).
     on_wall = Column(Boolean, nullable=False, default=False)
+    # Optional banner art across the top of the public profile (added Oct 2026, default none).
+    banner = Column(String(24), nullable=True)
     updated_at = Column(DateTime, nullable=False, default=datetime.utcnow, onupdate=datetime.utcnow)
 
 

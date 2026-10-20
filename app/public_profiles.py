@@ -28,6 +28,10 @@ FAVORITE_MIN_RATING = 8
 FAVORITES_LIMIT = 12
 REVIEWS_LIMIT = 8
 COLLECTIONS_LIMIT = 6
+# Titles a member can pin to the top of their profile. Supporters get twice as many.
+SHOWCASE_LIMIT = 3
+SUPPORTER_SHOWCASE_LIMIT = 6
+SHOWCASE_SEARCH_LIMIT = 12
 # Usernames made of these characters get a readable /u/<username> address.
 # (Kept in step with PUBLIC_PROFILE_PATH in middleware.py, which lets these through the bot filter.)
 HANDLE_RE = re.compile(r"[A-Za-z0-9_-][A-Za-z0-9_.-]{0,49}")
@@ -48,6 +52,10 @@ SETTINGS_FIELDS = ("enabled", "show_stats", "show_favorites", "show_reviews", "s
 
 class BioError(ValueError):
     """Raised when a bio cannot be shown publicly."""
+
+
+class ShowcaseError(ValueError):
+    """Raised when a showcase pick is not one of the member's own shareable titles."""
 
 
 def clean_bio(value: Optional[str]) -> Optional[str]:
@@ -73,8 +81,12 @@ def get_settings(db: Session, user_id: int) -> Optional[models.PublicProfile]:
     return db.query(models.PublicProfile).filter(models.PublicProfile.user_id == user_id).first()
 
 
-def settings_payload(user: models.User, profile: Optional[models.PublicProfile]) -> dict:
-    return {
+def settings_payload(user: models.User, profile: Optional[models.PublicProfile], db: Optional[Session] = None) -> dict:
+    showcase = {}
+    if db is not None:
+        showcase = {"showcase": showcase_items(db, user), "showcase_limit": showcase_limit(db, user),
+                    "showcase_supporter_limit": SUPPORTER_SHOWCASE_LIMIT}
+    return {**showcase,
         "enabled": bool(profile and profile.enabled),
         "bio": (profile.bio if profile else None) or "",
         "show_stats": profile.show_stats if profile else True,
@@ -101,6 +113,83 @@ def save_settings(db: Session, user: models.User, changes: dict) -> models.Publi
     db.commit()
     db.refresh(profile)
     return profile
+
+
+# ---------------------------------------------------------------- showcase
+
+def showcase_limit(db: Session, user: models.User) -> int:
+    return SUPPORTER_SHOWCASE_LIMIT if supporters.is_active(supporters.get_supporter(db, user.id)) else SHOWCASE_LIMIT
+
+
+def _showcase_entry(category: str, item) -> dict:
+    kind = CATEGORIES[category][0]
+    return {
+        "category": category, "id": item.id, "kind": kind, "label": title_pages.KINDS[kind][3],
+        "title": item.title.strip(), "year": title_pages.item_year(kind, item), "rating": item.rating,
+        "image": title_pages._safe_image(getattr(item, title_pages.IMAGE_FIELD[kind], None)),
+        "url": title_pages.path_for_item(kind, item),
+    }
+
+
+def showcase_items(db: Session, user: models.User, limit: Optional[int] = None) -> list[dict]:
+    """The member's pinned titles in order. Pins in private categories or for deleted titles are skipped."""
+    visible = set(_visible_categories(user))
+    pins = (db.query(models.ProfileShowcaseItem).filter(models.ProfileShowcaseItem.user_id == user.id)
+            .order_by(models.ProfileShowcaseItem.position, models.ProfileShowcaseItem.id).all())
+    shown = []
+    for pin in pins:
+        if pin.category not in visible:
+            continue
+        model = _model(pin.category)
+        item = db.query(model).filter(model.id == pin.item_id, model.user_id == user.id).first()
+        if item is None or not (item.title or "").strip():
+            continue
+        shown.append(_showcase_entry(pin.category, item))
+        if limit is not None and len(shown) >= limit:
+            break
+    return shown
+
+
+def showcase_search(db: Session, user: models.User, query: str = "") -> list[dict]:
+    """Titles from the member's own shareable shelves to pick from: matches for ``query``, or their top rated."""
+    words = " ".join((query or "").split())[:80]
+    pattern = "%" + words.replace("\\", "\\\\").replace("%", "\\%").replace("_", "\\_") + "%"
+    found = []
+    for category in _visible_categories(user):
+        model = _model(category)
+        rows = db.query(model).filter(model.user_id == user.id, func.trim(model.title) != "")
+        if words:
+            rows = rows.filter(model.title.ilike(pattern, escape="\\"))
+        rows = rows.order_by(model.rating.is_(None), model.rating.desc(), model.id.desc()).limit(SHOWCASE_SEARCH_LIMIT)
+        found.extend(_showcase_entry(category, item) for item in rows.all())
+    found.sort(key=lambda entry: (entry["rating"] is None, -(entry["rating"] or 0), entry["title"].casefold()))
+    return found[:SHOWCASE_SEARCH_LIMIT]
+
+
+def save_showcase(db: Session, user: models.User, picks: list) -> list[dict]:
+    """Replace the member's pins with ``picks`` ([{"category", "id"}, ...] in order)."""
+    limit = showcase_limit(db, user)
+    if len(picks) > limit:
+        raise ShowcaseError(f"You can pin up to {limit} titles.")
+    visible = set(_visible_categories(user))
+    seen, rows = set(), []
+    for position, pick in enumerate(picks):
+        category, item_id = pick.get("category"), pick.get("id")
+        if category not in CATEGORIES or not isinstance(item_id, int) or isinstance(item_id, bool):
+            raise ShowcaseError("Pick titles from your own library.")
+        if category not in visible:
+            raise ShowcaseError(f"{CATEGORIES[category][2]} are private, so they can't go on your profile.")
+        if (category, item_id) in seen:
+            continue
+        model = _model(category)
+        if db.query(model.id).filter(model.id == item_id, model.user_id == user.id).first() is None:
+            raise ShowcaseError("Pick titles from your own library.")
+        seen.add((category, item_id))
+        rows.append(models.ProfileShowcaseItem(user_id=user.id, category=category, item_id=item_id, position=position))
+    db.query(models.ProfileShowcaseItem).filter(models.ProfileShowcaseItem.user_id == user.id).delete()
+    db.add_all(rows)
+    db.commit()
+    return showcase_items(db, user)
 
 
 def profile_path(user: models.User) -> str:
@@ -273,6 +362,8 @@ class ProfileView:
     reviews: list
     collections: list
     supporter: Optional[dict] = None
+    showcase: list = field(default_factory=list)
+    supporting: bool = False  # current supporter, even with the badge hidden (owner hints only)
     friends_brought: int = 0
     badges: list = field(default_factory=list)
 
@@ -303,6 +394,8 @@ def build(db: Session, user: models.User, profile: models.PublicProfile) -> Prof
         reviews=_reviews(db, user) if profile.show_reviews else [],
         collections=_collections(db, user) if profile.show_collections else [],
         supporter=supporters.public_badge(db, user.id),
+        showcase=showcase_items(db, user, limit=showcase_limit(db, user)),
+        supporting=supporters.is_active(supporters.get_supporter(db, user.id)),
         # A count only (never who): shown with the library stats the member chose to share.
         friends_brought=friend_invites.friends_brought(db, user.id) if profile.show_stats else 0,
         # Shown with the library stats, never revealing a shelf the member keeps private.

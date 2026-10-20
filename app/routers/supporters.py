@@ -103,6 +103,7 @@ class SupporterSettingsUpdate(BaseModel):
     show_badge: Optional[bool] = None
     on_wall: Optional[bool] = None
     accent: Optional[str] = Field(None, max_length=16)
+    banner: Optional[str] = Field(None, max_length=24)
 
 
 @router.get("/api/supporter")
