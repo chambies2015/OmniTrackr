@@ -644,3 +644,18 @@ test('Daily, Pick for me, tier list, "If you liked" and dashboard-card destinati
     assert.deepEqual(s.redirects, ['/'], destination);
   }
 });
+
+test('signing in from a shared list link returns to that list', async () => {
+  for (const destination of ['/lists', '/lists/42', '/lists/join/AbC_dEf-1234567890xyz']) {
+    const s = setup({ search: nextQuery(destination) });
+    s.context.initAuth();
+    await s.context.login('reader', 'password');
+    assert.deepEqual(s.redirects, [destination]);
+  }
+  for (const destination of ['/lists/0', '/lists/join/short', '/lists/42/extra', '/lists/join/AbC_dEf-1234567890xyz?x=1', '//evil/lists']) {
+    const other = setup({ search: nextQuery(destination) });
+    other.context.initAuth();
+    await other.context.login('reader', 'password');
+    assert.deepEqual(other.redirects, ['/'], destination);
+  }
+});
