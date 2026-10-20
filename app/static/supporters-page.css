@@ -71,3 +71,9 @@ a.support-wall__name:hover { background: rgba(var(--wall-accent), .22); }
 .support-wall__name--gold { --wall-accent: 234, 179, 8; }
 .support-wall__name--past { --wall-accent: 170, 166, 203; opacity: .75; }
 .support-wall__empty { background: var(--site-surface); border: 1px dashed var(--site-border-strong); border-radius: 14px; padding: 18px; }
+.support-banners { --profile-accent: 139, 92, 246; gap: 6px; }
+.support-banner { border: 1px solid var(--site-border-strong); border-radius: 8px; display: inline-block; height: 30px; overflow: hidden; width: 30%; }
+.support-banner.profile-banner--stars { --profile-accent: 56, 189, 248; }
+.support-shelf { gap: 5px; }
+.support-shelf span { aspect-ratio: 2 / 3; background: linear-gradient(160deg, rgba(139, 92, 246, .75), rgba(45, 212, 191, .35)); border: 1px solid var(--site-border-strong); border-radius: 4px; display: inline-block; height: 30px; }
+.support-shelf span:nth-child(n + 4) { background: linear-gradient(160deg, rgba(234, 179, 8, .8), rgba(244, 114, 182, .4)); }

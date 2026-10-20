@@ -44,3 +44,28 @@
 .profile-supporter:hover { background: rgba(var(--profile-accent), .22); }
 .profile-supporter--founding { background: linear-gradient(120deg, rgba(234, 179, 8, .2), rgba(var(--profile-accent), .16)); border-color: rgba(234, 179, 8, .6); }
 .profile-supporter--founding span { color: #facc15; }
+/* Showcase: titles the member pinned to the top of their profile. */
+.profile-showcase__grid { display: grid; gap: 18px; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); }
+.profile-showcase__item { color: var(--site-text); display: grid; gap: 6px; text-decoration: none; }
+.profile-showcase__art { align-items: center; aspect-ratio: 2 / 3; background: linear-gradient(160deg, #3b2a7a, #141630); border: 1px solid var(--site-border-strong); border-radius: 14px; box-shadow: 0 16px 36px rgba(0, 0, 0, .35); color: var(--site-violet-soft); display: flex; font: 800 2.2rem var(--site-display); justify-content: center; overflow: hidden; transition: transform .15s ease, border-color .15s ease; }
+.profile-showcase__art img { height: 100%; object-fit: cover; width: 100%; }
+.profile-showcase__item strong { font-size: .95rem; line-height: 1.3; }
+.profile-showcase__item small { color: var(--site-muted); font-size: .8rem; }
+.profile-showcase__item:hover .profile-showcase__art { border-color: rgba(196, 181, 253, .55); transform: translateY(-3px); }
+.profile-page:has(.profile-hero--supporter) .profile-showcase__art { border-color: rgba(var(--profile-accent), .45); box-shadow: 0 0 0 1px rgba(var(--profile-accent), .15), 0 16px 36px rgba(0, 0, 0, .35); }
+.profile-page:has(.profile-hero--supporter) .profile-showcase h2::after { background: rgb(var(--profile-accent)); border-radius: 999px; content: ""; display: inline-block; height: 8px; margin-left: 10px; vertical-align: middle; width: 8px; }
+.profile-page { --profile-accent: 139, 92, 246; }
+.profile-page:has(.profile-hero--accent-teal) { --profile-accent: 45, 212, 191; }
+.profile-page:has(.profile-hero--accent-amber) { --profile-accent: 245, 158, 11; }
+.profile-page:has(.profile-hero--accent-rose) { --profile-accent: 244, 114, 182; }
+.profile-page:has(.profile-hero--accent-sky) { --profile-accent: 56, 189, 248; }
+.profile-page:has(.profile-hero--accent-emerald) { --profile-accent: 52, 211, 153; }
+.profile-page:has(.profile-hero--accent-coral) { --profile-accent: 251, 113, 133; }
+.profile-page:has(.profile-hero--accent-gold) { --profile-accent: 234, 179, 8; }
+@media (max-width: 640px) { .profile-showcase__grid { gap: 12px; grid-template-columns: repeat(3, minmax(0, 1fr)); } }
+
+/* Room for the supporter banner (art lives in profile-banners.css). */
+.profile-hero--has-banner { position: relative; }
+.profile-hero--has-banner .profile-hero__inner { position: relative; }
+.profile-hero--has-banner .profile-hero__inner.site-wrap { padding-top: 148px; }
+@media (max-width: 640px) { .profile-hero--has-banner .profile-hero__inner.site-wrap { padding-top: 112px; } }
