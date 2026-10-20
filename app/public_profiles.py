@@ -230,7 +230,7 @@ def _reviews(db: Session, user: models.User) -> list[dict]:
             if not quality.safe or not quality.community_ready or _current_state_hides_review(states.get(item.id), review_category, item):
                 continue
             reviews.append({
-                "id": item.id, "category": review_category, "label": label, "title": item.title.strip(),
+                "id": item.id, "category": review_category, "label": label, "title": item.title.strip(), "user_id": user.id,
                 "rating": item.rating, "review": item.review.strip(), "search_ready": quality.search_ready,
                 "url": f"/reviews/{item.id}?category={review_category}",
                 "title_url": title_pages.path_for_item(kind, item),
@@ -242,7 +242,8 @@ def _reviews(db: Session, user: models.User) -> list[dict]:
         if identity not in seen:
             seen.add(identity)
             unique.append(review)
-    return unique[:REVIEWS_LIMIT]
+    from .review_spoilers import attach
+    return attach(db, unique[:REVIEWS_LIMIT])
 
 
 def _collections(db: Session, user: models.User) -> list[dict]:

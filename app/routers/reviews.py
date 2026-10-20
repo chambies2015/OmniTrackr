@@ -18,7 +18,7 @@ from sqlalchemy import and_, func
 from sqlalchemy.exc import IntegrityError
 
 from ..integer_bounds import PositiveDatabaseId
-from .. import affiliate, models, schemas
+from .. import affiliate, models, review_spoilers, schemas
 from ..site_chrome import apply_site_chrome, editorial_picks, message_page
 from ..auth import AUTH_COOKIE_NAME
 from ..csp import strict_html_response
@@ -344,8 +344,7 @@ def _review_card_html(review: dict) -> str:
             <p class="review-item-meta">{_escape(_review_meta(review))}</p>
           </div>
         </div>
-        <p class="review-preview">{_escape(preview)}</p>
-        {expanded_text}
+        {review_spoilers.wrap(review, f'<p class="review-preview">{_escape(preview)}</p>{expanded_text}')}
         <div class="review-meta">
           <span class="review-author">By {_author_html(review)}</span>
           {rating_html}
@@ -421,10 +420,11 @@ def _reviews_item_list_json_ld(reviews: list[dict], category: Optional[str] = No
                 "@type": "Review",
                 "name": f"{review.get('title')} {CATEGORY_LABELS.get(review.get('category'), 'Media')} Review",
                 "author": {"@type": "Person", "name": review.get("username")},
-                "reviewBody": review.get("review"),
                 "itemReviewed": _review_item_reviewed_json_ld(review),
             },
         }
+        if not review.get("spoilers"):
+            review_item["item"]["reviewBody"] = review.get("review")
         if standalone:
             review_item["url"] = review_url
             review_item["item"]["url"] = review_url
@@ -538,6 +538,8 @@ def _review_detail_html(review: dict, more_reviews: Optional[list] = None, helpf
     category_label = CATEGORY_LABELS.get(review.get("category"), "Media")
     title = f"{review.get('title')} {category_label} Review by {review.get('username')} - OmniTrackr"
     review_excerpt = (review.get("review") or "").strip().replace("\n", " ")
+    if review.get("spoilers"):
+        review_excerpt = "This review contains spoilers."
     rating = review.get("rating")
     rating_text = f"{rating}/10 " if rating is not None else ""
     description = f"Read {review.get('username')}'s {rating_text}review of {review.get('title')} on OmniTrackr: {review_excerpt}"
@@ -588,10 +590,11 @@ def _review_detail_html(review: dict, more_reviews: Optional[list] = None, helpf
         "@type": "Review",
         "url": canonical_url,
         "headline": title,
-        "reviewBody": review.get("review"),
         "author": {"@type": "Person", "name": review.get("username")},
         "itemReviewed": item_reviewed,
     }
+    if not review.get("spoilers"):
+        json_ld["reviewBody"] = review.get("review")
     if rating is not None:
         json_ld["reviewRating"] = {"@type": "Rating", "ratingValue": rating, "bestRating": 10, "worstRating": 1}
 
@@ -632,8 +635,8 @@ def _review_detail_html(review: dict, more_reviews: Optional[list] = None, helpf
   <link rel="preload" href="/static/fonts/poppins-800-latin.woff2" as="font" type="font/woff2" crossorigin>
   <link rel="stylesheet" href="/static/fonts.css?v=20261009-fonts-1">
   <link rel="stylesheet" href="/static/public-legacy.css?v=20261004-legacy-1">
-  <link rel="stylesheet" href="/static/reviews.css?v=20261002-profiles-1">
-  <link rel="stylesheet" href="/static/review-detail.css?v=20261007-helpful-1">
+  <link rel="stylesheet" href="/static/reviews.css?v=20261020-spoilers-1">
+  <link rel="stylesheet" href="/static/review-detail.css?v=20261020-spoilers-1">
   <script type="application/ld+json">{_safe_json_ld(json_ld)}</script>
   <script type="application/ld+json">{_safe_json_ld(breadcrumb_json_ld)}</script>
   <script src="/static/review_report.js?v=20261007-helpful-1" defer></script>
@@ -658,7 +661,7 @@ def _review_detail_html(review: dict, more_reviews: Optional[list] = None, helpf
       </header>
       <div class="site-wrap review-body">
         <div class="review-main">
-          <section class="review-content" aria-label="Review">{_escape(review.get("review"))}</section>
+          {review_spoilers.wrap(review, f'<section class="review-content" aria-label="Review">{_escape(review.get("review"))}</section>')}
           {_helpful_html(review, helpful_count)}
         </div>
         <aside class="review-aside" aria-label="Keep this title">
@@ -825,6 +828,7 @@ def _public_review_feed(db, category, q, limit, offset, min_chars=PUBLIC_REVIEW_
     )
     reviews = prefix[offset:offset + limit]
     _attach_supporter_badges(db, reviews)
+    review_spoilers.attach(db, reviews)
     return {"reviews": reviews, "has_more": len(prefix) > offset + limit, "next_offset": offset + len(reviews)}
 
 
@@ -891,7 +895,7 @@ def get_public_review(
     if not user or not user.is_active:
         raise HTTPException(status_code=404, detail="Review not found")
 
-    return _serialize_public_review(category, item, user, quality)
+    return review_spoilers.attach(db, [_serialize_public_review(category, item, user, quality)])[0]
 
 
 def _saveable_review(db, review_id, category, *, lock=False):

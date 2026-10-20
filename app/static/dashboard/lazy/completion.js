@@ -82,6 +82,8 @@ async function openCompletionMoment(category, itemId) {
     if (text) { text.value = ''; text.oninput = updateCompletionReviewMeter; }
     const visibility = document.getElementById('completionReviewPublic');
     if (visibility) visibility.checked = true;
+    const spoilers = document.getElementById('completionReviewSpoilers');
+    if (spoilers) spoilers.checked = false;
     if (result) { result.hidden = true; result.replaceChildren(); }
     const save = document.getElementById('completionRitualSave');
     if (save) save.dataset.action = 'save-completion-ritual';
@@ -101,11 +103,11 @@ function closeCompletionRitual() {
   activeCompletionCategory = null;
 }
 
-async function saveCompletionReview(momentId, review, isPublic) {
+async function saveCompletionReview(momentId, review, isPublic, spoilers) {
   const response = await authenticatedFetch(`${API_BASE}/completion-moments/${momentId}/review`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ review, public: isPublic }),
+    body: JSON.stringify({ review, public: isPublic, spoilers: Boolean(spoilers) }),
   });
   if (response.status === 409) return { conflict: true };
   if (!response.ok) throw new Error('Unable to save review');
@@ -136,7 +138,9 @@ async function saveCompletionRitual() {
     }
     let result;
     try {
-      result = await saveCompletionReview(momentId, review, document.getElementById('completionReviewPublic').checked);
+      const spoilerBox = document.getElementById('completionReviewSpoilers');
+      result = await saveCompletionReview(momentId, review, document.getElementById('completionReviewPublic').checked,
+        Boolean(spoilerBox && spoilerBox.checked));
     } catch (error) {
       alert('Your reflection was saved, but the review could not be. Your text is still here; please try again.');
       return;

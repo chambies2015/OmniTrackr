@@ -212,11 +212,20 @@ function createReviewCard(review) {
   card.appendChild(header);
   const fullText = review.review.trim();
   const long = fullText.length > 420;
-  card.appendChild(reviewText('p', 'review-preview', long ? `${fullText.slice(0, 417).trimEnd()}…` : fullText));
+  // Reviews marked as containing spoilers stay folded until the reader opens them.
+  let body = card;
+  if (review.spoilers === true) {
+    body = reviewText('details', 'review-spoiler', '');
+    const summary = reviewText('summary', '', ' This review gives away plot details. Show it');
+    summary.prepend(reviewText('span', 'review-spoiler__tag', 'Spoilers'));
+    body.appendChild(summary);
+    card.appendChild(body);
+  }
+  body.appendChild(reviewText('p', 'review-preview', long ? `${fullText.slice(0, 417).trimEnd()}…` : fullText));
   if (long && !isStandalone) {
     const details = reviewText('details', 'review-full-text', '');
     details.append(reviewText('summary', '', 'Read full review'), reviewText('p', '', fullText));
-    card.appendChild(details);
+    body.appendChild(details);
   }
   const meta = reviewText('div', 'review-meta', '');
   const author = reviewText('span', 'review-author', `By ${review.username || 'Community member'}`);

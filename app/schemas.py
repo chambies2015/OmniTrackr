@@ -1147,6 +1147,7 @@ class CompletionReview(BaseModel):
     """A review written from the finish modal, saved onto the finished library entry."""
     review: str = Field(..., min_length=1, max_length=10000)
     public: bool = False
+    spoilers: bool = False
 
     @field_validator("review")
     @classmethod
