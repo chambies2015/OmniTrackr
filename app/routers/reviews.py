@@ -216,6 +216,17 @@ def _review_is_standalone(review: dict) -> bool:
     ).search_ready
 
 
+def _review_is_indexable(review: dict) -> bool:
+    """A review's own page joins search only when the review can carry the page alone.
+
+    Shorter standalone reviews keep their page, so shared links still work, and they
+    still appear in listings, on title pages and on profiles beside other writing. On
+    their own page a 40-word review sits under several hundred words of shared layout
+    and other members' excerpts, which reads as thin content (AdSense, Oct 2026).
+    """
+    return _review_is_standalone(review) and word_count(review.get("review")) >= AD_MIN_REVIEW_WORDS
+
+
 def _review_content_hash(category: str, item_id: int, review_text: str | None) -> str:
     normalized = " ".join(str(review_text or "").split())
     return hashlib.sha256(f"{category}:{item_id}:{normalized}".encode("utf-8")).hexdigest()
@@ -533,6 +544,7 @@ def _review_detail_html(review: dict, more_reviews: Optional[list] = None, helpf
     if len(description) > 158:
         description = f"{description[:155].rstrip()}..."
     canonical_url = f"{SITE_URL}/reviews/{review['id']}?category={review['category']}"
+    robots = "index, follow, max-image-preview:large" if _review_is_indexable(review) else "noindex, follow"
     image_url = _absolute_url(_review_image(review))
     rating_html = f'<div class="review-rating-large">Rating: {_escape(rating)}/10</div>' if rating is not None else ""
 
@@ -600,7 +612,7 @@ def _review_detail_html(review: dict, more_reviews: Optional[list] = None, helpf
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <meta name="google-adsense-account" content="{_escape(ADSENSE_ACCOUNT)}">
   <meta name="description" content="{_escape(description)}">
-  <meta name="robots" content="index, follow, max-image-preview:large">
+  <meta name="robots" content="{robots}">
   <title>{_escape(title)}</title>
   <link rel="canonical" href="{_escape(canonical_url)}">
   <link rel="icon" type="image/x-icon" href="/omnitrackr_favicon.ico">
@@ -737,7 +749,10 @@ def review_detail(
             _attach_supporter_badges(db, [review])
             helpful = review_helpful_counts(db, [(review["category"], review["id"])]).get((review["category"], int(review["id"])), 0)
             page = apply_site_chrome(_review_detail_html(review, more, helpful))
-            return strict_html_response(_inject_ad_loader_for_review_detail(page, request, review))
+            response = strict_html_response(_inject_ad_loader_for_review_detail(page, request, review))
+            if not _review_is_indexable(review):
+                response.headers["X-Robots-Tag"] = "noindex, follow"
+            return response
         except HTTPException:
             return strict_html_response(_not_found_review_html(), status_code=404)
 

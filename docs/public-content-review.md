@@ -1,5 +1,33 @@
 # Public content review — September 17, 2026
 
+## Follow-up — October 20, 2026: thin-page audit
+
+Crawled every public URL the site links to, plus the sitemap, twice: once with an
+empty database and once with sample members, reviews, profiles and collections.
+For each page the crawl recorded the status code, robots meta, X-Robots-Tag,
+canonical, sitemap membership, and how much of the main text no other page shares.
+Almost everything was already handled: empty directories, Release Radar, title
+pages without member reviews, query-string variants, share links and 404s are
+noindex or canonicalised, and no indexed page shares a title or meta description
+with another. Two page types still let thin pages into search:
+
+- **Review pages with short reviews.** A review became indexable and joined the
+  sitemap at 35 words and 240 characters. On its own page that review sits under
+  roughly 450 words of shared layout and four excerpts from other reviews, so about
+  a tenth of the page was its own. A review's page is now indexed and listed in the
+  sitemap only at 150 words, the same bar ads already used
+  (`reviews._review_is_indexable`). Shorter reviews keep their page, so shared
+  links work, and still appear in listings, on title pages and on profiles. The
+  `/reviews` listings still count them toward their three-review threshold.
+- **Profiles with a bio and favorites only.** A profile counted as indexable with
+  any bio (two characters was enough) and six titles rated 8 or higher. That page
+  is a list of names. Profiles are now indexable only with a search-ready review or
+  a discoverable collection.
+
+No user data, page URL, visibility setting or ad placement changed. The live site
+could not be reached from the audit environment, so after deploy, check in Search
+Console that short review pages drop out over the following weeks.
+
 ## Follow-up — October 17, 2026: point the site at its writing, and speak to readers
 
 An audit of every public page (sitemap URLs plus linked trust pages, 80 in all,

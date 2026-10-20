@@ -15,7 +15,7 @@ from sqlalchemy import and_, func
 from .. import models, release_radar
 from ..dependencies import get_db
 from ..discover_guides import GUIDES
-from ..review_quality import MIN_INDEXED_LISTING_REVIEWS, evaluate_public_review
+from ..review_quality import AD_MIN_REVIEW_WORDS, MIN_INDEXED_LISTING_REVIEWS, evaluate_public_review, word_count
 from .collections import _approval_is_current, _media_lookup_for_collections
 from .reviews import _current_state_hides_review
 
@@ -103,6 +103,10 @@ def _database_parts(db: Session) -> list[str]:
                 and not _current_state_hides_review(state_map.get(item.id), category, item)
             ]
 
+        def page_worthy(items):
+            # Review pages are listed only when the review carries the page alone (see reviews._review_is_indexable).
+            return [item for item in items if word_count(item.review) >= AD_MIN_REVIEW_WORDS]
+
         search_ready_total = 0
         for category, model_cls in REVIEW_CATEGORY_MODELS:
             category_candidates = db.query(model_cls).filter(
@@ -123,32 +127,32 @@ def _database_parts(db: Session) -> list[str]:
         movie_reviews = db.query(models.Movie).filter(
             public_detail_review_filter(models.Movie)
         ).limit(review_limit // 6).all()
-        movie_reviews = visible_search_ready("movie", movie_reviews)
+        movie_reviews = page_worthy(visible_search_ready("movie", movie_reviews))
         
         tv_reviews = db.query(models.TVShow).filter(
             public_detail_review_filter(models.TVShow)
         ).limit(review_limit // 6).all()
-        tv_reviews = visible_search_ready("tv_show", tv_reviews)
+        tv_reviews = page_worthy(visible_search_ready("tv_show", tv_reviews))
         
         anime_reviews = db.query(models.Anime).filter(
             public_detail_review_filter(models.Anime)
         ).limit(review_limit // 6).all()
-        anime_reviews = visible_search_ready("anime", anime_reviews)
+        anime_reviews = page_worthy(visible_search_ready("anime", anime_reviews))
         
         vg_reviews = db.query(models.VideoGame).filter(
             public_detail_review_filter(models.VideoGame)
         ).limit(review_limit // 6).all()
-        vg_reviews = visible_search_ready("video_game", vg_reviews)
+        vg_reviews = page_worthy(visible_search_ready("video_game", vg_reviews))
 
         music_reviews = db.query(models.Music).filter(
             public_detail_review_filter(models.Music)
         ).limit(review_limit // 6).all()
-        music_reviews = visible_search_ready("music", music_reviews)
+        music_reviews = page_worthy(visible_search_ready("music", music_reviews))
 
         book_reviews = db.query(models.Book).filter(
             public_detail_review_filter(models.Book)
         ).limit(review_limit // 6).all()
-        book_reviews = visible_search_ready("book", book_reviews)
+        book_reviews = page_worthy(visible_search_ready("book", book_reviews))
         
         for review in movie_reviews:
             sitemap_parts.append(f"""  <url>

@@ -364,6 +364,10 @@ def test_review_ads_need_substantial_writing(client, db_session, members):
     long = add_review(db_session, author, title="Long Standalone", text=long_text)
     db_session.commit()
     short_page = client.get(f"/reviews/{short.id}?category=movie")
-    assert '<meta name="robots" content="index, follow, max-image-preview:large">' in short_page.text
-    assert "/static/ad-loader.js" not in short_page.text  # indexed, but too short to carry ads
-    assert "/static/ad-loader.js" in client.get(f"/reviews/{long.id}?category=movie").text
+    # Too short to carry its own page: it still loads, but without ads and outside search.
+    assert short_page.status_code == 200
+    assert '<meta name="robots" content="noindex, follow">' in short_page.text
+    assert "/static/ad-loader.js" not in short_page.text
+    long_page = client.get(f"/reviews/{long.id}?category=movie")
+    assert '<meta name="robots" content="index, follow, max-image-preview:large">' in long_page.text
+    assert "/static/ad-loader.js" in long_page.text
