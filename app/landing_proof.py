@@ -42,7 +42,7 @@ def round_down(count: int) -> str:
 def pick_reviews(reviews: list[dict]) -> list[dict]:
     """Newest standalone reviews, one per member, preferring a mix of media types."""
     chosen, members, categories = [], set(), set()
-    standalone = [r for r in reviews if r.get("search_ready") and (r.get("title") or "").strip()]
+    standalone = [r for r in reviews if r.get("search_ready") and not r.get("spoilers") and (r.get("title") or "").strip()]
     for prefer_new_category in (True, False):
         for review in standalone:
             if len(chosen) >= MAX_REVIEWS:

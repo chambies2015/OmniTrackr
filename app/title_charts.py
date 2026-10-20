@@ -100,7 +100,8 @@ def _quotes(db: Session, kind: str, ranked: list[dict]) -> None:
         items = candidates.get(entry["url"])
         if not items:
             continue
-        reviews = title_pages._public_reviews(db, kind, items)
+        # A chart quote is a teaser, so a review marked as containing spoilers never supplies it.
+        reviews = [review for review in title_pages._public_reviews(db, kind, items) if not review.get("spoilers")]
         if reviews:
             review = reviews[0]
             text = " ".join(review["review"].split())

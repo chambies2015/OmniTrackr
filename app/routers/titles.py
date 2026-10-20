@@ -16,7 +16,7 @@ from sqlalchemy import func
 from sqlalchemy.orm import Session
 from starlette.concurrency import run_in_threadpool
 
-from .. import models, pick, supporters, title_charts, title_metadata, title_pages, title_search
+from .. import models, pick, review_spoilers, supporters, title_charts, title_metadata, title_pages, title_search
 from ..auth import AUTH_COOKIE_NAME
 from ..csp import strict_html_response
 from ..dependencies import get_current_user, get_db
@@ -25,8 +25,8 @@ from ..site_chrome import apply_site_chrome, editorial_picks, message_page
 
 router = APIRouter(tags=["titles"])
 SITE_URL = os.getenv("SITE_URL", "https://omnitrackr.xyz").rstrip("/")
-CSS_VERSION = "20261020-title-reviews-1"
-JS_VERSION = "20261009-kofi-1"
+CSS_VERSION = "20261020-spoilers-1"
+JS_VERSION = "20261020-spoilers-1"
 SCHEMA_TYPES = {"movie": "Movie", "tv": "TVSeries", "anime": "TVSeries", "game": "VideoGame", "album": "MusicAlbum", "book": "Book"}
 CREATOR_SCHEMA = {"movie": "director", "album": "byArtist", "book": "author"}
 CREATOR_LABEL = {"movie": "Director", "album": "Artist", "book": "Author"}
@@ -167,7 +167,7 @@ def _json_ld(group, summary: dict, metadata: dict, canonical: str, image: Option
     if summary.get("average_rating") is not None:
         item["aggregateRating"] = {"@type": "AggregateRating", "ratingValue": summary["average_rating"],
                                    "ratingCount": summary["rated"], "bestRating": 10, "worstRating": 0}
-    reviews = [r for r in summary["reviews"] if r["search_ready"]][:3]
+    reviews = [r for r in summary["reviews"] if r["search_ready"] and not r.get("spoilers")][:3]
     if reviews:
         item["review"] = [{"@type": "Review", "author": {"@type": "Person", "name": r["username"]},
                            "reviewBody": _excerpt(r["review"], 500), "url": SITE_URL + r["url"],
@@ -275,8 +275,9 @@ def _review_card_html(review: dict, top: bool = False) -> str:
     read = (f'<a class="title-review__more" href="{_e(review["url"])}">Read the full review <span aria-hidden="true">→</span></a>'
             if review["search_ready"] else "")
     count = _helpful_label(helpful) if helpful else ""
+    body = review_spoilers.wrap(review, f'<p>{_e(text)}</p>{read}')
     return (f'<article class="title-review"><header><strong>{author}{supporters.chip_html(review.get("supporter"))}</strong>{rating}</header>'
-            f'{badge}<p>{_e(text)}</p>{read}'
+            f'{badge}{body}'
             f'<footer class="title-review__actions"><div class="review-helpful" data-review-helpful data-category="{_e(review["category"])}" '
             f'data-review-id="{_e(review["id"])}"><button type="button" class="site-btn site-btn--ghost site-btn--sm review-helpful__button" '
             f'aria-pressed="false">👍 Helpful</button><span class="review-helpful__count" aria-live="polite">{_e(count)}</span></div>'
@@ -367,6 +368,7 @@ def _write_review_html(group, summary: dict, signed_in: bool, take=None) -> str:
             '<label class="title-write__rating" for="titleReviewRating"><span>Rating <small>(optional, out of 10)</small></span>'
             '<input id="titleReviewRating" name="rating" type="number" min="0" max="10" step="0.1" inputmode="decimal"></label>'
             '<label class="title-write__public"><input id="titleReviewPublic" name="public" type="checkbox" checked> Show it on this page</label>'
+            '<label class="title-write__public"><input id="titleReviewSpoilers" name="spoilers" type="checkbox"> Contains spoilers</label>'
             '</div>'
             '<p class="title-write__note">Saving adds the title to your library if it isn\'t there yet. You can edit or hide the review any time.</p>'
             '<button type="submit" class="site-btn site-btn--primary">Save review</button>'
@@ -638,6 +640,8 @@ class TitleReview(BaseModel):
     review: str = Field(..., min_length=1, max_length=10000)
     rating: Optional[float] = Field(None, ge=0, le=10)
     public: bool = True
+    # None leaves an existing spoiler flag alone (older pages that predate the checkbox).
+    spoilers: Optional[bool] = None
     # The review text the composer loaded; a mismatch means it was edited elsewhere since.
     expected_review: str = Field("", max_length=10000)
     # Present when the member arrived through a friend's "what did you think?" link.
@@ -714,8 +718,9 @@ def my_title_review(kind: str, slug: str, response: Response, user=Depends(get_c
         raise HTTPException(404, "Title not found")
     item = _own_item(db, user, group)
     if item is None:
-        return {"in_library": False, "review": "", "rating": None, "public": True}
-    return {"in_library": True, "review": item.review or "", "rating": item.rating, "public": bool(item.review_public)}
+        return {"in_library": False, "review": "", "rating": None, "public": True, "spoilers": False}
+    return {"in_library": True, "review": item.review or "", "rating": item.rating, "public": bool(item.review_public),
+            "spoilers": review_spoilers.is_flagged(db, title_pages.KINDS[kind][1], item)}
 
 
 @router.put("/api/titles/{kind}/{slug}/review")
@@ -739,6 +744,9 @@ def save_title_review(kind: str, slug: str, payload: TitleReview, request: Reque
     item.review_public = payload.public
     if payload.rating is not None:
         item.rating = round(payload.rating, 1)
+    if payload.spoilers is not None:
+        db.flush()
+        review_spoilers.set_flag(db, title_pages.KINDS[kind][1], item, payload.spoilers)
     item_id = item.id
     db.commit()
     quality = evaluate_public_review(payload.review, PUBLIC_REVIEW_MIN_CHARS, PUBLIC_REVIEW_DETAIL_MIN_CHARS)

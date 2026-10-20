@@ -266,6 +266,8 @@ def _public_reviews(db: Session, kind: str, items: list) -> list[dict]:
     profiles = enabled_profile_paths(db, [review["user_id"] for review in reviews])
     from .supporters import public_badges
     badges = public_badges(db, [review["user_id"] for review in reviews])
+    from .review_spoilers import attach
+    attach(db, reviews)
     for review in reviews:
         review["profile_url"] = profiles.get(review["user_id"])
         review["supporter"] = badges.get(review["user_id"])

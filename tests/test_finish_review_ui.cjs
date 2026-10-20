@@ -34,7 +34,7 @@ function setup(routes) {
 const moment = (hasReview) => ({ status: 200, body: { id: 7, title: 'Arrival', takeaway: null, favorite: false, has_review: hasReview } });
 
 test('modal markup has the review step, privacy choice and live counter', () => {
-  for (const id of ['completionReviewStep', 'completionReviewText', 'completionReviewPublic', 'completionReviewCount', 'completionReviewResult', 'completionRitualSave']) {
+  for (const id of ['completionReviewStep', 'completionReviewText', 'completionReviewPublic', 'completionReviewSpoilers', 'completionReviewCount', 'completionReviewResult', 'completionRitualSave']) {
     assert.match(html, new RegExp(`id="${id}"`), id);
   }
   assert.match(html, /id="completionReviewStep"[^>]*hidden/);
@@ -80,7 +80,7 @@ test('public review is posted, linked and the library refreshed', async () => {
   assert.equal(s.get('completionRitualSave').textContent, 'Save reflection and review');
   await s.context.saveCompletionRitual();
   const post = s.calls.find(c => c.url === '/completion-moments/7/review');
-  assert.deepEqual(post.body, { review: 'A patient, moving film about language and grief.', public: true });
+  assert.deepEqual(post.body, { review: 'A patient, moving film about language and grief.', public: true, spoilers: false });
   const result = s.get('completionReviewResult');
   assert.equal(result.hidden, false);
   assert.equal(result.children[1].href, '/reviews/3?category=movie');
@@ -118,4 +118,21 @@ test('only on-site review links are rendered', () => {
   const s = setup(() => ({ status: 200 }));
   s.context.showCompletionResult({ text: 'x', link: 'https://evil.example', linkText: 'See' });
   assert.equal(s.get('completionReviewResult').children.length, 1);
+});
+
+test('the spoiler box is sent with the review and cleared for the next title', async () => {
+  const s = setup(url => {
+    if (url.endsWith('/completion-moments/')) return moment(false);
+    if (url.endsWith('/review')) return { status: 200, body: { public: true, listed: true, standalone: false } };
+    return { status: 200, body: {} };
+  });
+  await s.context.openCompletionMoment('movies', 3);
+  assert.equal(s.get('completionReviewSpoilers').checked, false);
+  s.get('completionReviewText').value = 'The last scene reveals who sent the signal.';
+  s.get('completionReviewSpoilers').checked = true;
+  await s.context.saveCompletionRitual();
+  const post = s.calls.find(c => c.url === '/completion-moments/7/review');
+  assert.equal(post.body.spoilers, true);
+  await s.context.openCompletionMoment('movies', 4);
+  assert.equal(s.get('completionReviewSpoilers').checked, false);
 });

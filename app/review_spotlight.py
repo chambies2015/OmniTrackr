@@ -22,7 +22,8 @@ _cache = {"at": 0.0, "value": None}
 
 def choose(reviews: list[dict], weekly_marks: dict) -> dict | None:
     """Pure selection rule (see module docstring). `reviews` are newest first."""
-    standalone = [r for r in reviews if r.get("search_ready") and (r.get("title") or "").strip()]
+    # The spotlight quotes the review to people who did not ask to read it, so spoilers are left out.
+    standalone = [r for r in reviews if r.get("search_ready") and not r.get("spoilers") and (r.get("title") or "").strip()]
     if not standalone:
         return None
     marked = [r for r in standalone if weekly_marks.get((r["category"], int(r["id"])), 0) > 0]

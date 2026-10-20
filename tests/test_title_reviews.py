@@ -38,7 +38,7 @@ def test_members_get_the_form(authenticated_client, db_session):
 def test_review_adds_the_title_and_publishes(authenticated_client, db_session):
     add_movie(db_session, member(db_session, "a"), poster_url="https://img.example/p.jpg", review="their private notes")
     db_session.commit()
-    assert authenticated_client.get(f"{API}/my-review").json() == {"in_library": False, "review": "", "rating": None, "public": True}
+    assert authenticated_client.get(f"{API}/my-review").json() == {"in_library": False, "review": "", "rating": None, "public": True, "spoilers": False}
 
     response = authenticated_client.put(f"{API}/review", json={"review": f"  {LONG_REVIEW}  ", "rating": 8.66, "public": True})
     assert response.status_code == 200
@@ -47,7 +47,7 @@ def test_review_adds_the_title_and_publishes(authenticated_client, db_session):
     mine = db_session.query(models.Movie).filter_by(user_id=_me(db_session).id).one()
     assert (mine.review, mine.rating, mine.review_public, mine.poster_url) == (LONG_REVIEW, 8.7, True, "https://img.example/p.jpg")
     assert data["review_url"] == f"/reviews/{mine.id}?category=movie"
-    assert authenticated_client.get(f"{API}/my-review").json() == {"in_library": True, "review": LONG_REVIEW, "rating": 8.7, "public": True}
+    assert authenticated_client.get(f"{API}/my-review").json() == {"in_library": True, "review": LONG_REVIEW, "rating": 8.7, "public": True, "spoilers": False}
 
     # The review now shows on the page and makes it indexable.
     authenticated_client.cookies.clear()

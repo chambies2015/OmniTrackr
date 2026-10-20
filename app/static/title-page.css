@@ -196,3 +196,11 @@
   .title-chart__score { grid-column: 3; justify-self: start; padding: 4px 10px; }
   .title-spread li { grid-template-columns: 64px minmax(0, 1fr) 40px; gap: 8px; }
 }
+
+.review-spoiler { border: 1px dashed rgba(251, 191, 36, .45); border-radius: 12px; padding: 0 12px; }
+.review-spoiler > summary { align-items: center; color: var(--site-muted); cursor: pointer; display: flex; flex-wrap: wrap; font-size: .88rem; gap: 8px; list-style: none; padding: 10px 0; }
+.review-spoiler > summary::-webkit-details-marker { display: none; }
+.review-spoiler > summary:hover, .review-spoiler > summary:focus-visible { color: var(--site-text); }
+.review-spoiler[open] > summary { border-bottom: 1px solid var(--site-border); margin-bottom: 10px; }
+.review-spoiler[open] { padding-bottom: 12px; }
+.review-spoiler__tag { background: rgba(251, 191, 36, .16); border-radius: 999px; color: #fcd34d; font-size: .72rem; font-weight: 700; letter-spacing: .04em; padding: 3px 9px; text-transform: uppercase; }
