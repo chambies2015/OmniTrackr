@@ -15,7 +15,7 @@ from pydantic import BaseModel, Field
 from sqlalchemy.orm import Session
 
 from ..integer_bounds import PositiveDatabaseId
-from .. import models, public_profiles, supporters
+from .. import models, public_profiles, review_spoilers, supporters
 from ..auth import AUTH_COOKIE_NAME
 from ..csp import strict_html_response
 from ..dependencies import get_current_user, get_db
@@ -160,8 +160,10 @@ def _reviews_html(view) -> str:
         rating = f'<span class="title-review__rating">{_e(_rating(review["rating"]))}/10</span>' if review["rating"] is not None else ""
         cards += (f'<article class="title-review"><header><a class="profile-review__title" href="{_e(review["title_url"])}">'
                   f'{_e(review["title"])}</a><span class="site-chip">{_e(review["label"])}</span>{rating}</header>'
-                  f'<p>{_e(_excerpt(review["review"], 360))}</p>'
-                  f'<a href="{_e(review["url"])}">Read the full review <span aria-hidden="true">→</span></a></article>')
+                  + review_spoilers.wrap(review, f'<p>{_e(_excerpt(review["review"], 360))}</p>'
+                                  # Short reviews have no page of their own, so there is nothing to link to.
+                                  + (f'<a href="{_e(review["url"])}">Read the full review <span aria-hidden="true">→</span></a>'
+                                     if review["search_ready"] else "")) + '</article>')
     return (f'<section class="title-section" aria-labelledby="profile-reviews"><h2 id="profile-reviews">Reviews</h2>'
             f'<div class="title-reviews">{cards}</div></section>')
 

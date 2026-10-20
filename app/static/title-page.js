@@ -113,6 +113,7 @@
       }
       if (data.in_library && data.rating !== null && data.rating !== undefined) reviewForm.elements.rating.value = data.rating;
       if (data.in_library) reviewForm.elements.public.checked = data.review ? Boolean(data.public) : true;
+      if (reviewForm.elements.spoilers) reviewForm.elements.spoilers.checked = Boolean(data.spoilers);
       reviewForm.querySelector('.title-write__meter').textContent = reviewHint(reviewForm.elements.review.value);
       submit.disabled = false;
     } catch (error) {
@@ -145,6 +146,7 @@
         headers: { ...authHeaders(), 'Content-Type': 'application/json' },
         body: JSON.stringify({
           review, rating, public: reviewForm.elements.public.checked,
+          ...(reviewForm.elements.spoilers ? { spoilers: reviewForm.elements.spoilers.checked } : {}),
           expected_review: reviewForm.dataset.expected || '', take: reviewForm.dataset.take || null,
         }),
       });

@@ -488,6 +488,25 @@ class ReviewReaction(Base):
     )
 
 
+class ReviewSpoiler(Base):
+    """A member marked their review of one library entry as containing spoilers (Oct 2026).
+
+    A new table only: library tables are untouched. user_id guards against a reused
+    item id inheriting someone else's flag.
+    """
+    __tablename__ = "review_spoilers"
+
+    id = Column(Integer, primary_key=True, index=True)
+    category = Column(String, nullable=False)
+    item_id = Column(Integer, nullable=False)
+    user_id = Column(Integer, ForeignKey("users.id", ondelete="CASCADE"), nullable=False, index=True)
+    created_at = Column(DateTime, nullable=False, default=datetime.utcnow)
+
+    __table_args__ = (
+        UniqueConstraint("category", "item_id", name="uq_review_spoiler_item"),
+    )
+
+
 class PublicReviewState(Base):
     """Automated report state for one exact version of an opt-in public review."""
     __tablename__ = "public_review_states"

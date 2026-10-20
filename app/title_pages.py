@@ -255,10 +255,19 @@ def _public_reviews(db: Session, kind: str, items: list) -> list[dict]:
             "url": f"/reviews/{item.id}?category={review_category}",
         })
     reviews.sort(key=lambda r: (not r["search_ready"], -len(r["review"])))
+    if reviews:
+        # Readers' "helpful" marks lead the page; ties keep the longer, standalone reviews first.
+        from .routers.reviews import review_helpful_counts
+        counts = review_helpful_counts(db, [(review_category, r["id"]) for r in reviews])
+        for review in reviews:
+            review["helpful"] = counts.get((review_category, review["id"]), 0)
+        reviews.sort(key=lambda r: -r["helpful"])
     from .public_profiles import enabled_profile_paths
     profiles = enabled_profile_paths(db, [review["user_id"] for review in reviews])
     from .supporters import public_badges
     badges = public_badges(db, [review["user_id"] for review in reviews])
+    from .review_spoilers import attach
+    attach(db, reviews)
     for review in reviews:
         review["profile_url"] = profiles.get(review["user_id"])
         review["supporter"] = badges.get(review["user_id"])

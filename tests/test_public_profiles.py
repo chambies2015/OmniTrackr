@@ -378,3 +378,16 @@ def test_duplicate_library_entries_show_once(db_session):
     view = public_profiles.build(db_session, user, enable(db_session, user))
     assert [f["title"] for f in view.favorites] == ["Interstellar"]
     assert len(view.reviews) == 1
+
+
+def test_short_reviews_on_profiles_do_not_link_to_a_missing_page(client, db_session):
+    user = member(db_session, "shortwriter")
+    short = models.Movie(user_id=user.id, title="Arrival", director="Denis Villeneuve", year=2016, rating=9, watched=True,
+                         review="A slow start, but the docking scene and the score carried me through to a moving final act.",
+                         review_public=True)
+    db_session.add(short)
+    db_session.commit()
+    enable(db_session, user)
+    html = client.get("/u/shortwriter").text
+    assert "A slow start, but the docking scene" in html
+    assert f"/reviews/{short.id}?category=movie" not in html

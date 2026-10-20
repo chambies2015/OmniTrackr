@@ -5,7 +5,7 @@ from typing import Dict, List, Tuple, Type
 from fastapi import APIRouter, Depends, HTTPException, Query, status
 from sqlalchemy.orm import Session
 
-from .. import models, schemas, title_pages
+from .. import models, review_spoilers, schemas, title_pages
 from ..integer_bounds import PositiveDatabaseId
 from ..review_quality import AD_MIN_REVIEW_WORDS, evaluate_public_review
 from .reviews import PUBLIC_REVIEW_DETAIL_MIN_CHARS, PUBLIC_REVIEW_MIN_CHARS
@@ -116,6 +116,8 @@ def save_completion_review(
         raise HTTPException(status_code=409, detail="This title already has a review. Edit it from your library.")
     item.review = payload.review
     item.review_public = payload.public
+    if payload.spoilers:
+        review_spoilers.set_flag(db, REVIEW_CATEGORY[moment.category], item, True)
     item_id = item.id
     category = moment.category
     quality = evaluate_public_review(payload.review, PUBLIC_REVIEW_MIN_CHARS, PUBLIC_REVIEW_DETAIL_MIN_CHARS)
