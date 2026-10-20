@@ -105,3 +105,69 @@ def test_finish_flow_links_to_the_title_page(authenticated_client, db_session):
     moment = authenticated_client.post("/completion-moments/", json={"category": "movies", "item_id": private.id}).json()
     result = authenticated_client.post(f"/completion-moments/{moment['id']}/review", json={"review": review, "public": False}).json()
     assert result["title_url"] is None
+
+
+# ---------------------------------------------------------------- the review section (Oct 20)
+
+SHORT_REVIEW = "A slow start, but the docking scene and the score carried me through to a moving final act."
+
+
+def _helpful(db, item, marks):
+    for n in range(marks):
+        db.add(models.ReviewReaction(category="movie", item_id=item.id, visitor_hash=f"v{item.id}-{n}"))
+
+
+def test_short_reviews_show_in_full_without_a_dead_link(client, db_session):
+    short = add_movie(db_session, member(db_session, "a"), review=SHORT_REVIEW, review_public=True)
+    db_session.commit()
+    html = client.get(PAGE).text
+    assert SHORT_REVIEW in html
+    # Short reviews have no page of their own, so the card must not link to one.
+    assert f'/reviews/{short.id}?category=movie' not in html
+    assert f'data-review-helpful data-category="movie" data-review-id="{short.id}"' in html
+    assert f'data-review-report="true" data-category="movie" data-review-id="{short.id}"' in html
+    assert "/static/review_report.js" in html
+
+
+def test_long_reviews_link_to_their_page(client, db_session):
+    long = add_movie(db_session, member(db_session, "a"), review=LONG_REVIEW, review_public=True)
+    db_session.commit()
+    html = client.get(PAGE).text
+    assert f'href="/reviews/{long.id}?category=movie">Read the full review' in html
+
+
+def test_most_helpful_reviews_lead(client, db_session):
+    plain = add_movie(db_session, member(db_session, "a"), review=LONG_REVIEW + " Longer.", review_public=True)
+    liked = add_movie(db_session, member(db_session, "b"), review=SHORT_REVIEW, review_public=True)
+    _helpful(db_session, liked, 3)
+    db_session.commit()
+    html = client.get(PAGE).text
+    section = html[html.index('id="community-title"'):]
+    assert section.index(SHORT_REVIEW) < section.index("Interstellar works because")
+    assert "Most helpful" in html and "3 people found this helpful" in html
+    assert f'/reviews/{plain.id}?category=movie' in html
+
+
+def test_one_mark_is_not_most_helpful(client, db_session):
+    liked = add_movie(db_session, member(db_session, "a"), review=SHORT_REVIEW, review_public=True)
+    _helpful(db_session, liked, 1)
+    db_session.commit()
+    html = client.get(PAGE).text
+    assert "1 person found this helpful" in html and "Most helpful" not in html
+
+
+def test_extra_reviews_sit_behind_show_more(client, db_session):
+    for n in range(8):
+        add_movie(db_session, member(db_session, f"m{n}"), review=f"{SHORT_REVIEW} Note {n}.", review_public=True)
+    db_session.commit()
+    html = client.get(PAGE).text
+    assert html.count('<article class="title-review">') == 8
+    assert "<summary>Show 2 more reviews</summary>" in html
+    assert html.index('class="title-reviews-more"') > html.index('<article class="title-review">')
+
+
+def test_six_or_fewer_reviews_have_no_show_more(client, db_session):
+    for n in range(6):
+        add_movie(db_session, member(db_session, f"m{n}"), review=f"{SHORT_REVIEW} Note {n}.", review_public=True)
+    db_session.commit()
+    assert "title-reviews-more" not in client.get(PAGE).text

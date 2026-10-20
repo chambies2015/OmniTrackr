@@ -161,7 +161,9 @@ def _reviews_html(view) -> str:
         cards += (f'<article class="title-review"><header><a class="profile-review__title" href="{_e(review["title_url"])}">'
                   f'{_e(review["title"])}</a><span class="site-chip">{_e(review["label"])}</span>{rating}</header>'
                   f'<p>{_e(_excerpt(review["review"], 360))}</p>'
-                  f'<a href="{_e(review["url"])}">Read the full review <span aria-hidden="true">→</span></a></article>')
+                  # Short reviews have no page of their own, so there is nothing to link to.
+                  + (f'<a href="{_e(review["url"])}">Read the full review <span aria-hidden="true">→</span></a>'
+                     if review["search_ready"] else "") + '</article>')
     return (f'<section class="title-section" aria-labelledby="profile-reviews"><h2 id="profile-reviews">Reviews</h2>'
             f'<div class="title-reviews">{cards}</div></section>')
 
