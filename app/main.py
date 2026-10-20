@@ -861,6 +861,23 @@ for route in taste_match_router.router.routes:
         bind_rate_limited_endpoint(route, rate_limited_taste_add)
 app.include_router(taste_match_router.router)
 
+from .routers import shared_lists as shared_lists_router
+rate_limited_list_create = limiter.limit("20/hour")(shared_lists_router.create_list)
+rate_limited_list_join = limiter.limit("30/minute")(shared_lists_router.join_list)
+rate_limited_list_item = limiter.limit("60/minute")(shared_lists_router.add_item)
+rate_limited_list_member = limiter.limit("30/minute")(shared_lists_router.add_member)
+for route in shared_lists_router.router.routes:
+    path, methods = getattr(route, "path", None), getattr(route, "methods", set())
+    if path == "/api/lists" and "POST" in methods:
+        bind_rate_limited_endpoint(route, rate_limited_list_create)
+    elif path == "/api/lists/join/{token}":
+        bind_rate_limited_endpoint(route, rate_limited_list_join)
+    elif path == "/api/lists/{list_id}/items" and "POST" in methods:
+        bind_rate_limited_endpoint(route, rate_limited_list_item)
+    elif path == "/api/lists/{list_id}/members" and "POST" in methods:
+        bind_rate_limited_endpoint(route, rate_limited_list_member)
+app.include_router(shared_lists_router.router)
+
 
 @app.get("/", tags=["root"])
 @app.head("/", tags=["root"])

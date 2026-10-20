@@ -59,6 +59,9 @@ GUEST = (
     ("daily_shared", "Daily puzzle: result shared"),
     ("taste_match_viewed", "Taste Match opened with a friend"),
     ("taste_match_saved", "Taste Match: a friend's favorite saved to the library"),
+    ("shared_list_created", "Shared list created"),
+    ("shared_list_link_opened", "Shared list link opened by a visitor without an account"),
+    ("shared_list_joined", "Someone joined a shared list through its link"),
 )
 GOOGLE = (
     ("google_signin_started", "Google button pressed"),
