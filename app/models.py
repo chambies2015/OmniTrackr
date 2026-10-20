@@ -1078,3 +1078,76 @@ class UserBadge(Base):
     seen_at = Column(DateTime, nullable=True)
 
     __table_args__ = (UniqueConstraint("user_id", "badge", name="uq_user_badge"),)
+
+
+class SharedList(Base):
+    """A list a few members build together, e.g. a couple's watchlist (Oct 2026).
+
+    New tables only. Items are title references (kind, title, year, art), not
+    library rows, so nobody's library is read or changed by the list itself.
+    ``token`` is the join link; resetting it retires the old link.
+    """
+    __tablename__ = "shared_lists"
+
+    id = Column(Integer, primary_key=True, index=True)
+    owner_id = Column(Integer, ForeignKey("users.id", ondelete="CASCADE"), nullable=False, index=True)
+    name = Column(String(80), nullable=False)
+    description = Column(String(300), nullable=True)
+    token = Column(String(32), unique=True, nullable=False, index=True)
+    created_at = Column(DateTime, nullable=False, default=datetime.utcnow)
+    updated_at = Column(DateTime, nullable=False, default=datetime.utcnow)
+
+    members = relationship("SharedListMember", cascade="all, delete-orphan", back_populates="shared_list")
+    items = relationship("SharedListItem", cascade="all, delete-orphan", back_populates="shared_list")
+
+
+class SharedListMember(Base):
+    """Someone who can see and add to a shared list. The owner has a row too."""
+    __tablename__ = "shared_list_members"
+
+    id = Column(Integer, primary_key=True, index=True)
+    list_id = Column(Integer, ForeignKey("shared_lists.id", ondelete="CASCADE"), nullable=False, index=True)
+    user_id = Column(Integer, ForeignKey("users.id", ondelete="CASCADE"), nullable=False, index=True)
+    joined_at = Column(DateTime, nullable=False, default=datetime.utcnow)
+    # When the member last opened the list; titles added after it count as new for them.
+    seen_at = Column(DateTime, nullable=True)
+
+    shared_list = relationship("SharedList", back_populates="members")
+
+    __table_args__ = (UniqueConstraint("list_id", "user_id", name="uq_shared_list_member"),)
+
+
+class SharedListItem(Base):
+    """One title on a shared list, with who added it and, once done, who marked it."""
+    __tablename__ = "shared_list_items"
+
+    id = Column(Integer, primary_key=True, index=True)
+    list_id = Column(Integer, ForeignKey("shared_lists.id", ondelete="CASCADE"), nullable=False, index=True)
+    added_by_id = Column(Integer, ForeignKey("users.id", ondelete="SET NULL"), nullable=True, index=True)
+    kind = Column(String(10), nullable=False)
+    title = Column(String(200), nullable=False)
+    normalized = Column(String(200), nullable=False)
+    year = Column(Integer, nullable=True)
+    slug = Column(String(140), nullable=True)
+    image = Column(String(500), nullable=True)
+    note = Column(String(200), nullable=True)
+    created_at = Column(DateTime, nullable=False, default=datetime.utcnow)
+    done_at = Column(DateTime, nullable=True)
+    done_by_id = Column(Integer, ForeignKey("users.id", ondelete="SET NULL"), nullable=True)
+
+    shared_list = relationship("SharedList", back_populates="items")
+    votes = relationship("SharedListVote", cascade="all, delete-orphan")
+
+    __table_args__ = (UniqueConstraint("list_id", "kind", "normalized", name="uq_shared_list_title"),)
+
+
+class SharedListVote(Base):
+    """A member saying "I'm in" for a title, so the list can put the most wanted first."""
+    __tablename__ = "shared_list_votes"
+
+    id = Column(Integer, primary_key=True, index=True)
+    item_id = Column(Integer, ForeignKey("shared_list_items.id", ondelete="CASCADE"), nullable=False, index=True)
+    user_id = Column(Integer, ForeignKey("users.id", ondelete="CASCADE"), nullable=False, index=True)
+    created_at = Column(DateTime, nullable=False, default=datetime.utcnow)
+
+    __table_args__ = (UniqueConstraint("item_id", "user_id", name="uq_shared_list_vote"),)
