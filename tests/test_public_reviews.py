@@ -1182,7 +1182,7 @@ class TestPublicReviews:
         restored = client.get(f"/api/public/reviews/{movie.id}?category=movie")
         assert restored.status_code == 200
         assert restored.json()["review"] == revised
-        assert f"/reviews/{movie.id}?category=movie" in client.get("/sitemap.xml").text
+        assert "Automatically Moderated Movie" in client.get("/reviews?category=movie").text
 
         client.cookies.delete(VISITOR_COOKIE)
         new_version_report = client.post(endpoint, json={"reason": "other"})

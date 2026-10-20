@@ -286,9 +286,13 @@ class ProfileView:
 
     @property
     def indexable(self) -> bool:
-        """Only profiles with real, original content are offered to search engines."""
+        """Only profiles with original member writing are offered to search engines.
+
+        A short bio over a grid of rated titles is mostly a list of names, so it no
+        longer counts on its own (AdSense "low value content", Oct 2026).
+        """
         search_ready_review = any(review["search_ready"] for review in self.reviews)
-        return bool(search_ready_review or self.collections or (self.profile.bio and len(self.favorites) >= 6))
+        return bool(search_ready_review or self.collections)
 
 
 def build(db: Session, user: models.User, profile: models.PublicProfile) -> ProfileView:

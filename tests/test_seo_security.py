@@ -282,7 +282,13 @@ class TestSEOEndpoints:
                     "This standalone review gives search visitors enough context to understand the movie before "
                     "clicking into the app. It covers the setup, the pacing, the emotional tone, the kind of viewer "
                     "who would enjoy it, how the rating was earned, and whether it feels worth revisiting later. "
-                    "That additional detail makes the review page more useful than a short personal note."
+                    "That additional detail makes the review page more useful than a short personal note. "
+                    "The opening act sets up the family conflict quickly, then slows down to let the lead actor "
+                    "show doubt without explaining it. The middle stretch drags for ten minutes or so, mostly "
+                    "because one subplot about a rival never pays off. The score is sparse and works best in the "
+                    "night scenes, where it carries the tension the script leaves unsaid. I watched it twice, "
+                    "and the second time the final scene landed harder because the small early details made sense. "
+                    "It is a good pick for a quiet evening with someone who likes slow dramas."
                 ),
                 review_public=True,
             ),
