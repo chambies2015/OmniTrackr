@@ -6,7 +6,6 @@ from typing import Optional
 from urllib.parse import quote
 
 from fastapi import APIRouter, Depends, HTTPException, Request, Response
-from fastapi.responses import RedirectResponse
 from pydantic import BaseModel, Field, field_validator
 from sqlalchemy.orm import Session
 
@@ -113,9 +112,17 @@ class Vote(BaseModel):
 
 # ------------------------------------------------------------------ pages
 
-def _sign_in_redirect(path: str) -> RedirectResponse:
-    response = RedirectResponse(f"/?next={quote(path, safe='')}#landing-auth", status_code=303)
+def _sign_in_page(path: str):
+    """A page asking signed-out visitors to log in; its links bring them back to `path` afterwards."""
+    from ..csp import strict_html_response
+    from ..site_chrome import message_page
+    back = quote(path, safe="")
+    response = strict_html_response(message_page(
+        "Log in to see your shared lists", "Log in to see your shared lists",
+        "Shared lists are lists you build with friends. Log in and you'll come straight back here.",
+        actions=(("Log in", f"/?next={back}#landing-auth"), ("Create a free account", f"/?next={back}#signup"))))
     _private(response)
+    response.headers["Vary"] = "Cookie"
     return response
 
 
@@ -133,7 +140,7 @@ def _shell(title: str, path: str, content: str, member: bool = True):
 @router.get("/lists", include_in_schema=False)
 def lists_page(user=Depends(get_optional_current_user)):
     if user is None:
-        return _sign_in_redirect("/lists")
+        return _sign_in_page("/lists")
     content = (
         '<header class="hero sl-hero"><p class="eyebrow">SHARED LISTS</p>'
         '<h1>Lists you build together</h1>'
@@ -159,7 +166,7 @@ def lists_page(user=Depends(get_optional_current_user)):
 @router.get("/lists/{list_id}", include_in_schema=False)
 def list_page(list_id: PositiveDatabaseId, user=Depends(get_optional_current_user), db: Session = Depends(get_db)):
     if user is None:
-        return _sign_in_redirect(f"/lists/{list_id}")
+        return _sign_in_page(f"/lists/{list_id}")
     try:
         shared, _ = shared_lists.get_for_member(db, list_id, user)
     except shared_lists.ListError:
