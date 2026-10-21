@@ -452,7 +452,7 @@
       if (person.owner) item.appendChild(el('span', 'sl-tag', 'Made the list'));
       if (data.is_owner && !person.owner) {
         item.appendChild(button('Remove', 'sl-action sl-action--quiet', event => {
-          if (window.confirm && !window.confirm(`Remove ${person.username} from this list? The titles they added stay.`)) return;
+          if (window.confirm && !window.confirm(`Remove ${person.username} from this list? The titles they added stay. The list gets a new join link so the old one can't bring them back.`)) return;
           act(event.currentTarget, () => api(`/api/lists/${listId()}/members/${person.id}`, { method: 'DELETE' }));
         }));
       }

@@ -21,6 +21,10 @@ from ..dependencies import get_db, get_current_user
 
 router = APIRouter(prefix="/custom-tabs", tags=["custom-tabs"])
 
+# Only the formats the signature check lets through, so Pillow never runs its TIFF,
+# EPS or PDF decoders on an upload.
+UPLOAD_FORMATS = ("JPEG", "PNG", "GIF", "WEBP")
+
 MAX_IMAGE_UPLOAD_BYTES = 5 * 1024 * 1024
 MAX_IMAGE_PIXELS = 20_000_000
 
@@ -253,12 +257,12 @@ async def upload_custom_tab_item_poster(
     try:
         def encode() -> bytes:
             # Decoding and re-encoding take up to a second of CPU; keep it off the event loop.
-            image = Image.open(io.BytesIO(file_content))
+            image = Image.open(io.BytesIO(file_content), formats=UPLOAD_FORMATS)
             width, height = image.size
             if width <= 0 or height <= 0 or width * height > MAX_IMAGE_PIXELS:
                 raise HTTPException(status_code=400, detail="Image dimensions are too large")
             image.verify()
-            image = Image.open(io.BytesIO(file_content))
+            image = Image.open(io.BytesIO(file_content), formats=UPLOAD_FORMATS)
         
             if image.mode == 'RGBA':
                 pass

@@ -170,6 +170,13 @@ def test_xml_with_entity_declarations_is_refused():
         parse_csv(hostile.encode(), filename="list.xml")
 
 
+def test_entity_declarations_after_a_long_comment_are_refused_too():
+    padded = ('<?xml version="1.0"?><!--' + "x" * 10000 + '--><!DOCTYPE myanimelist [<!ENTITY a "aaaa">]>'
+              "<myanimelist><anime><series_title>&a;</series_title></anime></myanimelist>")
+    with pytest.raises(ValueError, match="document type"):
+        parse_csv(padded.encode(), filename="list.xml")
+
+
 def test_trakt_export_zip_reads_history_ratings_and_watchlist_only():
     content = build_zip({
         "watched-movies.json": json.dumps(TRAKT_WATCHED_MOVIES),

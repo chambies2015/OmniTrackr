@@ -240,7 +240,8 @@ def _anilist_rows(document: dict[str, Any]) -> list[Row]:
 # MyAnimeList-format XML: MyAnimeList itself, Kitsu, and AniList converters.
 
 def _mal_rows(text: str) -> list[Row]:
-    if re.search(r"<!(DOCTYPE|ENTITY)", text[:4096], re.IGNORECASE):
+    # Anywhere in the file: comments or whitespace can push a declaration far past the start.
+    if re.search(r"<!(DOCTYPE|ENTITY)", text, re.IGNORECASE):
         raise ValueError("XML files with document type declarations aren't accepted.")
     try:
         root = ElementTree.fromstring(text)

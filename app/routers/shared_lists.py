@@ -17,7 +17,7 @@ from .discover import page
 
 router = APIRouter(tags=["shared-lists"])
 CSS_VERSION = "20261020-lists-1"
-JS_VERSION = "20261020-lists-1"
+JS_VERSION = "20261021-lists-2"
 DESCRIPTION = ("Build a watchlist, reading queue or backlog together with friends. Everyone adds titles, says which "
                "ones they're in for, and marks them done.")
 
