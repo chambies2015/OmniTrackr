@@ -995,6 +995,7 @@ def _public_collection_or_404(db: Session, collection_id: int, *, lock=False) ->
 
 
 GALLERY_SORTS = ("helpful", "newest", "popular")
+GALLERY_BATCH = 100  # Gallery candidates read per query (see explore_collections)
 RELATED_COLLECTIONS_LIMIT = 4
 RELATED_CANDIDATE_LIMIT = 60
 
@@ -1117,17 +1118,23 @@ def explore_collections(
     if category in CATEGORIES:
         query = query.filter(models.Collection.items.any(models.CollectionItem.category == category))
     sort = sort if sort in GALLERY_SORTS else "helpful"
-    collections = query.order_by(*_gallery_order(sort)).limit(500).all()
-    media_lookup = _media_lookup_for_collections(db, collections)
+    ordered = query.order_by(*_gallery_order(sort))
     shown = []
-    for collection in collections:
-        if not _collection_is_discoverable(collection, db, media_lookup):
-            continue
-        items = _available_items(collection, db, collection.user_id, media_lookup)
-        if len(items) < PUBLIC_COLLECTION_MIN_ITEMS:
-            continue
-        shown.append((collection, items))
-        if len(shown) >= 48:
+    # The first 500 candidates in batches: the gallery usually fills from the first one,
+    # so the rest (and every title in them) are never loaded.
+    for start in range(0, 500, GALLERY_BATCH):
+        collections = ordered.offset(start).limit(GALLERY_BATCH).all()
+        media_lookup = _media_lookup_for_collections(db, collections)
+        for collection in collections:
+            if not _collection_is_discoverable(collection, db, media_lookup):
+                continue
+            items = _available_items(collection, db, collection.user_id, media_lookup)
+            if len(items) < PUBLIC_COLLECTION_MIN_ITEMS:
+                continue
+            shown.append((collection, items))
+            if len(shown) >= 48:
+                break
+        if len(shown) >= 48 or len(collections) < GALLERY_BATCH:
             break
     credits = _curator_credits(db, [collection for collection, _ in shown])
     cards = [_gallery_card(collection, items, credits.get(collection.user_id)) for collection, items in shown]

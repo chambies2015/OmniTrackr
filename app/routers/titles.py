@@ -6,6 +6,8 @@ import json
 import os
 import re
 import secrets
+import threading
+import time
 from datetime import date, datetime, timedelta
 from html import escape
 from typing import Optional
@@ -827,8 +829,35 @@ def search_titles(request: Request, response: Response, q: str = Query("", max_l
     return {"results": title_search.search(title_search.index(db), q)}
 
 
+TITLES_INDEX_CACHE_SECONDS = 10 * 60
+_titles_index_cache: dict = {"at": 0.0, "page": None}
+_titles_index_lock = threading.Lock()
+
+
 @router.get("/titles", include_in_schema=False)
 def titles_index(request: Request, db: Session = Depends(get_db)):
+    """The /titles directory, rebuilt at most every TITLES_INDEX_CACHE_SECONDS.
+
+    It is the same for every visitor, and counting members per title across all six
+    library tables takes most of a second.
+    """
+    if os.getenv("TESTING", "").lower() == "true":  # Tests change data between requests.
+        page, index_directory = _titles_index_page(db)
+    else:
+        with _titles_index_lock:
+            if (_titles_index_cache["page"] is None
+                    or time.monotonic() - _titles_index_cache["at"] >= TITLES_INDEX_CACHE_SECONDS):
+                _titles_index_cache["page"] = _titles_index_page(db)
+                _titles_index_cache["at"] = time.monotonic()
+            page, index_directory = _titles_index_cache["page"]
+    response = strict_html_response(page)
+    response.headers["Cache-Control"] = "public, max-age=900"
+    if not index_directory:
+        response.headers["X-Robots-Tag"] = "noindex, follow"
+    return response
+
+
+def _titles_index_page(db: Session) -> tuple[str, bool]:
     sections, total, listed = [], 0, []
     for kind in title_pages.KINDS:
         items = title_pages.popular(db, kind, limit=18)
@@ -901,11 +930,7 @@ def titles_index(request: Request, db: Session = Depends(get_db)):
   <!--SITE_FOOTER-->
 </body>
 </html>"""
-    response = strict_html_response(apply_site_chrome(page))
-    response.headers["Cache-Control"] = "public, max-age=900"
-    if not index_directory:
-        response.headers["X-Robots-Tag"] = "noindex, follow"
-    return response
+    return apply_site_chrome(page), index_directory
 
 
 def _chart_entry_html(entry: dict) -> str:
@@ -1052,7 +1077,9 @@ def sitemap_entries(db: Session, limit: int = 500) -> list[str]:
     candidates = title_pages.reviewed_titles(db)
     for kind in title_pages.KINDS:
         candidates += [dict(item) for item in title_pages.popular(db, kind, limit=150, min_members=title_pages.INDEX_MIN_MEMBERS)]
-    groups = {kind: title_pages.find_many(db, kind, [c["url"].rsplit("/", 1)[1] for c in candidates if c["kind"] == kind])
+    # Only reviewed rows: a title page is indexable only with a search-ready public review.
+    groups = {kind: title_pages.find_many(db, kind, [c["url"].rsplit("/", 1)[1] for c in candidates if c["kind"] == kind],
+                                          reviewed_only=True)
               for kind in title_pages.KINDS}
     for candidate in candidates:
         if candidate["url"] in seen or len(paths) >= limit:

@@ -186,8 +186,9 @@ def test_feed_uses_joined_queries_without_per_review_lookups(client, db_session,
         assert len(client.get("/api/public/review-feed", params={"limit": 40}).json()["reviews"]) == 40
     finally:
         event.remove(db_session.bind, "before_cursor_execute", capture)
-    # Includes one batched supporter-badge lookup and one batched spoiler-flag lookup for the whole page.
-    assert len(queries) == 8
+    # Includes one batched supporter-badge lookup and one batched spoiler-flag lookup for the whole page,
+    # plus one query per category on the page that loads its rows (the scan reads only the columns it checks).
+    assert len(queries) == 9
 
 
 @pytest.mark.parametrize("params", [{"q": "x" * 101}, {"limit": 41}, {"offset": -1}, {"category": "unknown"}])
