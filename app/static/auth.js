@@ -280,7 +280,9 @@ function isAuthenticated() {
 }
 
 function canRecoverCookieSession() {
-    return getUser.storageBlocked && !Object.hasOwn(getUser, 'current')
+    // The server only sends the private shell for a signed-in cookie, so recover the member when
+    // browser storage is denied or was emptied while the cookie lived on (Safari clears it after a week).
+    return !Object.hasOwn(getUser, 'current') && (getUser.storageBlocked || !getUser())
         && document.documentElement?.dataset?.publicShell !== 'true'
         && Boolean(document.getElementById('mainContainer'));
 }
@@ -1180,6 +1182,11 @@ function initAuth() {
             showRegisterForm();
             return;
         }
+        // "I have an account" buttons: open the log-in form even on a browser that hasn't signed in before.
+        if (window.location.hash === '#login') {
+            showLoginForm();
+            return;
+        }
         if (urlParams.getAll('start').length === 1 && START_INTENTS.includes(urlParams.get('start'))
             && getDemoStartIntent() && !getDiscoverAuthReturn()) {
             showRegisterForm();
@@ -1322,12 +1329,11 @@ if (document.readyState === 'loading') {
     initAuth();
 }
 
-// "Start tracking" links elsewhere point at /#signup; follow them on the homepage too.
+// "Start tracking" links elsewhere point at /#signup (and log-in buttons at /#login); follow them on the homepage too.
 if (typeof window.addEventListener === 'function') window.addEventListener('hashchange', () => {
-    if (window.location.hash === '#signup' && document.documentElement.dataset.publicShell === 'true'
-        && document.getElementById('registerForm')) {
-        showRegisterForm();
-    }
+    if (document.documentElement.dataset.publicShell !== 'true' || !document.getElementById('registerForm')) return;
+    if (window.location.hash === '#signup') showRegisterForm();
+    else if (window.location.hash === '#login') showLoginForm();
 });
 
 // Other tabs can replace or clear a session. Re-read their stored identity instead

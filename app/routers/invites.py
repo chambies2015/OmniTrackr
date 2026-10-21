@@ -72,7 +72,7 @@ def join_page(token: str, request: Request, db: Session = Depends(get_db)):
             f"and get a Taste Match: your shared favorites, your biggest disagreements and what to try next.",
             eyebrow="You're invited",
             actions=(("Join for free", f"/?invite={token}#signup"),
-                     ("I already have an account", f"/?next={quote(f'/join/{token}', safe='')}#landing-auth")),
+                     ("I already have an account", f"/?next={quote(f'/join/{token}', safe='')}#login")),
         )
         # Every sign-up button on the page (header and footer too) carries the invite.
         page = page.replace('href="/#signup"', f'href="/?invite={token}#signup"')

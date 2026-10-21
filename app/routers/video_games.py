@@ -8,6 +8,7 @@ from sqlalchemy.orm import Session
 from ..integer_bounds import PositiveDatabaseId
 from .. import crud, schemas, models
 from ..dependencies import get_db, get_current_user
+from .activity import record_finished_on_add
 
 router = APIRouter(prefix="/video-games", tags=["video-games"])
 
@@ -41,7 +42,7 @@ def create_video_game(
     current_user: models.User = Depends(get_current_user),
     db: Session = Depends(get_db)
 ):
-    return crud.create_video_game(db, current_user.id, video_game)
+    return record_finished_on_add(db, current_user.id, "video-games", crud.create_video_game(db, current_user.id, video_game))
 
 
 @router.put("/{game_id}", response_model=schemas.VideoGame)

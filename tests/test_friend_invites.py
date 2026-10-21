@@ -49,7 +49,7 @@ def test_join_page_for_visitors(authenticated_client, db_session):
     assert page.status_code == 200
     assert "testuser invited you to OmniTrackr" in page.text
     assert f'href="/?invite={token}#signup"' in page.text and 'href="/#signup"' not in page.text
-    assert f'href="/?next=%2Fjoin%2F{token}#landing-auth"' in page.text
+    assert f'href="/?next=%2Fjoin%2F{token}#login"' in page.text
     assert "data-join-accept" not in page.text
     assert page.headers["x-robots-tag"] == "noindex, nofollow" and page.headers["cache-control"] == "private, no-store"
     for bad in ("short", "x" * 20, token + "!"):

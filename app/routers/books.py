@@ -8,6 +8,7 @@ from sqlalchemy.orm import Session
 from ..integer_bounds import PositiveDatabaseId
 from .. import crud, schemas, models
 from ..dependencies import get_db, get_current_user
+from .activity import record_finished_on_add
 
 router = APIRouter(prefix="/books", tags=["books"])
 
@@ -41,7 +42,7 @@ def create_book(
     current_user: models.User = Depends(get_current_user),
     db: Session = Depends(get_db)
 ):
-    return crud.create_book(db, current_user.id, book)
+    return record_finished_on_add(db, current_user.id, "books", crud.create_book(db, current_user.id, book))
 
 
 @router.put("/{book_id}", response_model=schemas.Book)

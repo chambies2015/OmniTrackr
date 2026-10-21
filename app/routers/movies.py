@@ -8,6 +8,7 @@ from sqlalchemy.orm import Session
 from ..integer_bounds import PositiveDatabaseId
 from .. import crud, schemas, models
 from ..dependencies import get_db, get_current_user
+from .activity import record_finished_on_add
 
 router = APIRouter(prefix="/movies", tags=["movies"])
 
@@ -41,7 +42,7 @@ def create_movie(
     current_user: models.User = Depends(get_current_user),
     db: Session = Depends(get_db)
 ):
-    return crud.create_movie(db, current_user.id, movie)
+    return record_finished_on_add(db, current_user.id, "movies", crud.create_movie(db, current_user.id, movie))
 
 
 @router.put("/{movie_id}", response_model=schemas.Movie)

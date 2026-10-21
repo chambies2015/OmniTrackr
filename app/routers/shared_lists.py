@@ -120,7 +120,7 @@ def _sign_in_page(path: str):
     response = strict_html_response(message_page(
         "Log in to see your shared lists", "Log in to see your shared lists",
         "Shared lists are lists you build with friends. Log in and you'll come straight back here.",
-        actions=(("Log in", f"/?next={back}#landing-auth"), ("Create a free account", f"/?next={back}#signup"))))
+        actions=(("Log in", f"/?next={back}#login"), ("Create a free account", f"/?next={back}#signup"))))
     _private(response)
     response.headers["Vary"] = "Cookie"
     return response
@@ -234,7 +234,7 @@ def join_page(token: str, request: Request, user=Depends(get_optional_current_us
         funnel.record("shared_list_link_opened", request)
         next_path = quote(path, safe="")
         actions = (f'<a class="button" href="/?next={next_path}#signup">Sign up free to join</a>'
-                   f'<a class="button button--ghost" href="/?next={next_path}#landing-auth">I have an account</a>'
+                   f'<a class="button button--ghost" href="/?next={next_path}#login">I have an account</a>'
                    '<p class="sl-muted sl-join__small">OmniTrackr is a free tracker for movies, shows, anime, games, '
                    'books and music. Once you\'re in, this link brings you straight back here.</p>')
     content = (

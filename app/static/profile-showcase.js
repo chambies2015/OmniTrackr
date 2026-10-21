@@ -78,6 +78,9 @@
     const node = $('profileShowcaseHint');
     if (!node) return;
     let text = `Pin up to ${limit} titles from your library to the top of your profile. ${picks.length} of ${limit} pinned.`;
+    if (picks.length > limit) {
+      text = `Pin up to ${limit} titles from your library to the top of your profile. You have ${picks.length} pinned from when you supported; your profile shows the first ${limit}.`;
+    }
     if (limit < supporterLimit) text += ` Supporters can pin ${supporterLimit}.`;
     node.textContent = text;
   }

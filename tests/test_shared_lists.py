@@ -180,7 +180,7 @@ def test_outsiders_see_nothing(authenticated_client, db_session):
     _as(authenticated_client, None)
     page = authenticated_client.get(f"/lists/{list_id}", follow_redirects=False)
     assert page.status_code == 200 and "Log in to see your shared lists" in page.text
-    assert f'href="/?next=%2Flists%2F{list_id}#landing-auth"' in page.text
+    assert f'href="/?next=%2Flists%2F{list_id}#login"' in page.text
     assert f'href="/?next=%2Flists%2F{list_id}#signup"' in page.text
 
 
@@ -283,5 +283,5 @@ def test_pages_for_members(authenticated_client, db_session):
     assert 'href="/">My library</a>' in page.text and "Start tracking</a>" not in page.text
     _as(authenticated_client, None)
     response = authenticated_client.get("/lists", follow_redirects=False)
-    assert response.status_code == 200 and 'href="/?next=%2Flists#landing-auth"' in response.text
+    assert response.status_code == 200 and 'href="/?next=%2Flists#login"' in response.text
     assert response.headers["cache-control"] == "private, no-store"

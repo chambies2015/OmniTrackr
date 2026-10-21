@@ -33,6 +33,8 @@ async function loadNotifications() {
           actionButtons = '<a class="notification-action-btn" href="/#challenge">See your challenge</a>';
         } else if (notif.type === 'badge_earned' && notif.link === '/#badges') {
           actionButtons = '<a class="notification-action-btn" href="/#badges">See your badges</a>';
+        } else if (String(notif.type || '').startsWith('shared_list_') && /^\/lists\/[1-9]\d{0,9}$/.test(notif.link || '')) {
+          actionButtons = `<a class="notification-action-btn" href="${escapeHtml(notif.link)}">Open the list</a>`;
         } else if (notif.type === 'release_day' && /^\/release-radar(\/(movies|tv|anime|games)(\/[a-z0-9-]{4,20})?(#item-[A-Za-z0-9_-]+)?)?$/.test(notif.link || '')) {
           actionButtons = `<a class="notification-action-btn" href="${escapeHtml(notif.link)}">See it on Release Radar</a>`;
         }

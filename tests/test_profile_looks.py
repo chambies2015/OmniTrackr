@@ -75,6 +75,27 @@ def test_a_lapsed_supporter_shows_their_first_three_pins(client, db_session):
     assert [item["title"] for item in view.showcase] == ["Film 0", "Film 1", "Film 2"]
 
 
+def test_a_lapsed_supporter_can_still_remove_and_reorder_extra_pins(client, db_session):
+    user = member(db_session, "lapsed")
+    db_session.add_all([models.Movie(user_id=user.id, title=f"Film {i}", director="x", year=2000 + i, rating=7)
+                        for i in range(7)])
+    db_session.add(models.Supporter(user_id=user.id, since=datetime(2026, 1, 1), active_until=datetime(2026, 2, 1)))
+    db_session.commit()
+    ids = [m.id for m in db_session.query(models.Movie).filter(models.Movie.user_id == user.id).order_by(models.Movie.id)]
+    for position, item_id in enumerate(ids[:6]):
+        db_session.add(models.ProfileShowcaseItem(user_id=user.id, category="movies", item_id=item_id, position=position))
+    db_session.commit()
+    pins = lambda chosen: {"items": [{"category": "movies", "id": i} for i in chosen]}
+    removed = client.put("/api/profile/showcase", headers=headers_for(user), json=pins(ids[1:6]))
+    assert removed.status_code == 200 and [p["title"] for p in removed.json()["showcase"]][0] == "Film 1"
+    reordered = client.put("/api/profile/showcase", headers=headers_for(user), json=pins(ids[5:0:-1]))
+    assert reordered.status_code == 200 and reordered.json()["showcase"][0]["title"] == "Film 5"
+    # Swapping in a title that wasn't pinned, or growing past what they had, waits for support again.
+    assert client.put("/api/profile/showcase", headers=headers_for(user), json=pins(ids[2:6] + [ids[6]])).status_code == 422
+    assert client.put("/api/profile/showcase", headers=headers_for(user), json=pins(ids[:6])).status_code == 422
+    assert client.put("/api/profile/showcase", headers=headers_for(user), json=pins(ids[1:4])).status_code == 200
+
+
 def test_only_your_own_titles_can_be_pinned(client, db_session):
     owner = member(db_session, "owner")
     other = member(db_session, "other")
