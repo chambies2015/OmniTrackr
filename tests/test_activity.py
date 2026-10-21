@@ -17,7 +17,7 @@ class TestActivityJournal:
     def test_manual_entry_weekly_recap_and_delete_preserve_library(
         self, authenticated_client, db_session, test_movie_data
     ):
-        movie = authenticated_client.post("/movies/", json=test_movie_data).json()
+        movie = authenticated_client.post("/movies/", json={**test_movie_data, "watched": False}).json()
         created = authenticated_client.post(
             "/activity/",
             json={
@@ -93,7 +93,7 @@ class TestActivityJournal:
     def test_filters_validation_auth_and_ownership(
         self, authenticated_client, db_session, test_movie_data
     ):
-        movie = authenticated_client.post("/movies/", json=test_movie_data).json()
+        movie = authenticated_client.post("/movies/", json={**test_movie_data, "watched": False}).json()
         assert authenticated_client.post(
             "/activity/", json={"category": "books", "item_id": movie["id"], "action": "started"}
         ).status_code == 404
@@ -119,7 +119,7 @@ class TestActivityJournal:
     def test_export_is_versioned_and_old_imports_remain_valid(
         self, authenticated_client, test_movie_data
     ):
-        movie = authenticated_client.post("/movies/", json=test_movie_data).json()
+        movie = authenticated_client.post("/movies/", json={**test_movie_data, "watched": False}).json()
         authenticated_client.post(
             "/activity/",
             json={"category": "movies", "item_id": movie["id"], "action": "revisited"},

@@ -28,7 +28,7 @@ from ..site_chrome import apply_site_chrome, editorial_picks, message_page
 router = APIRouter(tags=["titles"])
 SITE_URL = os.getenv("SITE_URL", "https://omnitrackr.xyz").rstrip("/")
 CSS_VERSION = "20261020-spoilers-1"
-JS_VERSION = "20261020-spoilers-1"
+JS_VERSION = "20261021-bugs-1"
 SCHEMA_TYPES = {"movie": "Movie", "tv": "TVSeries", "anime": "TVSeries", "game": "VideoGame", "album": "MusicAlbum", "book": "Book"}
 CREATOR_SCHEMA = {"movie": "director", "album": "byArtist", "book": "author"}
 CREATOR_LABEL = {"movie": "Director", "album": "Artist", "book": "Author"}

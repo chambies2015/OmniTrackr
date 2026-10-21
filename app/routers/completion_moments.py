@@ -81,7 +81,13 @@ def create_completion_moment(
             rating=item.rating,
         )
         db.add(moment)
-        record_completion_activity(db, current_user.id, payload.category, item)
+        # A title added as already finished has its journal entry from that moment.
+        logged = db.query(models.ActivityEntry.id).filter(
+            models.ActivityEntry.user_id == current_user.id, models.ActivityEntry.category == payload.category,
+            models.ActivityEntry.item_id == item.id, models.ActivityEntry.action == "completed",
+            models.ActivityEntry.source == "automatic").first()
+        if logged is None:
+            record_completion_activity(db, current_user.id, payload.category, item)
         db.flush()
     result = {**_serialize(moment), "has_review": bool((item.review or "").strip())}
     db.commit()

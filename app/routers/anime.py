@@ -8,6 +8,7 @@ from sqlalchemy.orm import Session
 from ..integer_bounds import PositiveDatabaseId
 from .. import crud, schemas, models
 from ..dependencies import get_db, get_current_user
+from .activity import record_finished_on_add
 
 router = APIRouter(prefix="/anime", tags=["anime"])
 
@@ -41,7 +42,7 @@ def create_anime(
     current_user: models.User = Depends(get_current_user),
     db: Session = Depends(get_db)
 ):
-    return crud.create_anime(db, current_user.id, anime)
+    return record_finished_on_add(db, current_user.id, "anime", crud.create_anime(db, current_user.id, anime))
 
 
 @router.put("/{anime_id}", response_model=schemas.Anime)

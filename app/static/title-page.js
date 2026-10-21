@@ -88,6 +88,14 @@
     return `/?next=${encodeURIComponent(`${window.location.pathname}${query}#write-review`)}#landing-auth`;
   }
 
+  // A member who already tracks this title shouldn't be offered "Add to my library".
+  function markInLibrary() {
+    const add = document.querySelector('[data-title-add]');
+    if (!add) return;
+    add.textContent = '✓ In your library';
+    add.disabled = true;
+  }
+
   async function loadOwnReview() {
     const submit = reviewForm.querySelector('[type="submit"]');
     submit.disabled = true;
@@ -106,6 +114,7 @@
       }
       if (!response.ok) throw new Error('load failed');
       const data = await response.json();
+      if (data.in_library) markInLibrary();
       if (data.in_library && data.review) {
         reviewForm.elements.review.value = data.review;
         reviewForm.dataset.expected = data.review;

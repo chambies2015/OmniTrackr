@@ -77,6 +77,23 @@ def record_completion_activity(db: Session, user_id: int, category: str, item) -
     return entry
 
 
+# The finished flag on each library table, by journal category.
+DONE_FIELDS = {"movies": "watched", "tv-shows": "watched", "anime": "watched",
+               "video-games": "played", "music": "listened", "books": "read"}
+
+
+def record_finished_on_add(db: Session, user_id: int, category: str, item):
+    """A title added as already finished counts as finished today, like ticking it off later does.
+
+    Goals, the monthly challenge and Year in Review count journal finishes, so without
+    this an "Add" with Watched ticked never showed up in any of them.
+    """
+    if getattr(item, DONE_FIELDS[category], False):
+        record_completion_activity(db, user_id, category, item)
+        db.commit()
+    return item
+
+
 @router.get("/", response_model=list[schemas.ActivityEntry])
 def list_activity(
     category: str | None = Query(None),

@@ -22,6 +22,7 @@ function setup({ search = '', pathname = '/', publicShell = true, storage = new 
   };
   const context = vm.createContext({
     URLSearchParams,
+    AbortController,
     Date: { now: () => now },
     location,
     window: { location, history: { replaceState() {} } },
@@ -47,10 +48,13 @@ function setup({ search = '', pathname = '/', publicShell = true, storage = new 
     },
     fetch: async (url, options) => {
       requests.push({ url, options });
+      // The private shell checks its cookie when storage holds no member; these cookies have expired.
+      if (url === '/account/me') return { ok: false, status: 401, json: async () => null };
       return { ok: true, json: async () => ({ user: { id: 1, username: 'reader' } }) };
     },
     confirm: () => true,
     setTimeout: callback => callback(),
+    clearTimeout() {},
   });
   vm.runInContext(source, context);
   context.setupAuthHandlers = () => {};
@@ -486,13 +490,13 @@ test('a current-page collection return still works when session storage is unava
 test('an expired cookie selecting the legacy root shell still returns login to the collection preview', async () => {
   const destination = '/collections/public/42/save';
   const s = setup({ search: nextQuery(destination), publicShell: false });
-  s.context.initAuth();
+  await s.context.initAuth();
   assert.equal(s.context.modalCalls, 1);
   assert.equal(s.context.mainUICalls || 0, 0);
   assert.equal(s.context.getDiscoverAuthReturn(), destination);
   await s.context.login('reader', 'password');
   assert.deepEqual(s.redirects, [destination]);
-  assert.deepEqual(s.requests.map(request => request.url), ['/auth/login']);
+  assert.deepEqual(s.requests.map(request => request.url), ['/account/me', '/auth/login']);
 });
 
 test('a legacy-shell 401 clears stale credentials while retaining the chosen save destination', async () => {
@@ -574,6 +578,20 @@ test('"Log in" links from other pages keep the log-in form', () => {
   s.context.window.location.hash = '#landing-auth';
   s.context.initAuth();
   assert.notEqual(s.elements.get('registerForm')?.style.display, 'block');
+});
+
+test('"I have an account" buttons open the log-in form on a new browser and still return afterwards', async () => {
+  for (const destination of ['/lists/join/AbC_dEf-1234567890', '/join/AbC_dEf-1234567890', '/lists']) {
+    const s = setup({ search: nextQuery(destination) });
+    s.context.window.location.hash = '#login';
+    let shown = 0;
+    s.context.showLoginForm = () => { shown += 1; };
+    s.context.initAuth();
+    assert.equal(shown, 1, destination);
+    assert.notEqual(s.elements.get('registerForm')?.style.display, 'block', destination);
+    await s.context.login('reader', 'password');
+    assert.deepEqual(s.redirects, [destination]);
+  }
 });
 
 test('signing in from a title page returns to its review form', async () => {

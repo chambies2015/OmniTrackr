@@ -156,3 +156,22 @@ test('read-denied storage remains usable after cookie recovery even when writes 
   await h.context.initAuth();assert.equal(h.context.isAuthenticated(),true);assert.equal(h.context.getUser().id,7);
   await h.context.authenticatedFetch('/movies/');assert.equal(h.requests.at(-1).url,'/movies/');
 });
+
+test('a signed-in cookie with emptied storage reopens the dashboard instead of the sign-in box',async()=>{
+  // Safari drops script-written storage after a week away but keeps the HttpOnly session cookie.
+  const h=harness({dashboard:true,readDenied:false,writeDenied:false,sessionDenied:false});
+  await h.context.initAuth();
+  assert.deepEqual(h.requests.map(request=>request.url),['/account/me']);
+  assert.equal(h.context.getUser().id,7);assert.equal(h.context.mainShown,1);assert.equal(h.context.authShown,undefined);
+  assert.equal(JSON.parse(h.local.get('omnitrackr_user')).id,7);
+});
+
+test('emptied storage with an expired cookie still lands on sign-in, and logout never recovers',async()=>{
+  const h=harness({dashboard:true,readDenied:false,writeDenied:false,sessionDenied:false});
+  h.setFetch(async()=>({ok:false,status:401,json:async()=>null}));
+  await h.context.initAuth();assert.equal(h.context.mainShown,undefined);assert.equal(h.context.authShown,1);
+  const out=harness({dashboard:true,readDenied:false,writeDenied:false,sessionDenied:false});
+  await out.context.logout();const before=out.requests.length;
+  await assert.rejects(out.context.authenticatedFetch('/movies/'),/Not authenticated/);
+  assert.equal(out.requests.length,before);
+});

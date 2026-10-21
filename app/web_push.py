@@ -70,6 +70,10 @@ TITLES = {
     "badge_earned": "New badge",
     "release_day": "Out today",
     "review_helpful": "Your review helped someone",
+    "shared_list_added": "You're on a shared list",
+    "shared_list_joined": "Someone joined your shared list",
+    "shared_list_item": "New on a shared list",
+    "friend_invite_accepted": "A friend joined",
 }
 
 

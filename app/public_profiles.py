@@ -179,7 +179,13 @@ def save_showcase(db: Session, user: models.User, picks: list) -> list[dict]:
     """Replace the member's pins with ``picks`` ([{"category", "id"}, ...] in order)."""
     limit = showcase_limit(db, user)
     if len(picks) > limit:
-        raise ShowcaseError(f"You can pin up to {limit} titles.")
+        # A supporter whose support lapsed keeps their extra pins (the page shows the first
+        # few); they can still take pins off or reorder them, just not add new ones.
+        current = {(pin.category, pin.item_id) for pin in db.query(models.ProfileShowcaseItem).filter(
+            models.ProfileShowcaseItem.user_id == user.id)}
+        chosen = {(pick.get("category"), pick.get("id")) for pick in picks}
+        if not chosen <= current or len(picks) > len(current):
+            raise ShowcaseError(f"You can pin up to {limit} titles.")
     visible = set(_visible_categories(user))
     seen, rows = set(), []
     for position, pick in enumerate(picks):
