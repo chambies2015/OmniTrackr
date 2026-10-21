@@ -787,16 +787,22 @@ def _serialize_public_review(category, item, user, quality):
     return review
 
 
-def _eligible_public_reviews(db, category, q, min_chars):
-    """Stream joined rows; review quality and moderation run before pagination."""
+def _eligible_review_keys(db, category, q, min_chars):
+    """Yield (sort key, category, item id, quality) for every review the feed may show.
+
+    Only the columns the checks need are read; whole rows are loaded later for the one
+    page being shown. Building every public review as an ORM object (with its writer and
+    report state) took most of a /reviews request.
+    """
+    state = models.PublicReviewState
     for cat, model in CATEGORY_MODELS.items():
         if category and cat != category:
             continue
-        rows = db.query(model, models.User, models.PublicReviewState).join(
+        rows = db.query(model.id, model.title, model.review, state.suspended_at, state.content_hash).join(
             models.User, model.user_id == models.User.id,
-        ).outerjoin(models.PublicReviewState, and_(
-            models.PublicReviewState.category == cat,
-            models.PublicReviewState.item_id == model.id,
+        ).outerjoin(state, and_(
+            state.category == cat,
+            state.item_id == model.id,
         )).filter(
             models.User.is_active == True,
             model.review_public == True,
@@ -805,15 +811,29 @@ def _eligible_public_reviews(db, category, q, min_chars):
         )
         if q:
             rows = rows.filter(func.lower(model.title).contains(q.lower(), autoescape=True))
-        for item, user, review_state in rows.yield_per(200):
-            if not (item.title or "").strip():
+        for row in rows.yield_per(500):
+            if not (row.title or "").strip():
                 continue
-            quality = evaluate_public_review(item.review, PUBLIC_REVIEW_MIN_CHARS, PUBLIC_REVIEW_DETAIL_MIN_CHARS)
+            quality = evaluate_public_review(row.review, PUBLIC_REVIEW_MIN_CHARS, PUBLIC_REVIEW_DETAIL_MIN_CHARS)
             if not quality.safe or (min_chars >= PUBLIC_REVIEW_MIN_CHARS and not quality.community_ready):
                 continue
-            if _current_state_hides_review(review_state, cat, item):
+            if _current_state_hides_review(row, cat, row):  # The row carries the state's columns.
                 continue
-            yield _serialize_public_review(cat, item, user, quality)
+            yield (not quality.search_ready, -row.id, cat), cat, row.id, quality
+
+
+def _load_reviews(db, keys) -> dict:
+    """{(category, item id): (item, writer)} for the given reviews, one query per category."""
+    ids_by_category: dict = {}
+    for cat, item_id in keys:
+        ids_by_category.setdefault(cat, []).append(item_id)
+    loaded = {}
+    for cat, ids in ids_by_category.items():
+        model = CATEGORY_MODELS[cat]
+        for item, user in db.query(model, models.User).join(models.User, model.user_id == models.User.id).filter(
+                model.id.in_(ids)):
+            loaded[(cat, item.id)] = (item, user)
+    return loaded
 
 
 def _public_review_feed(db, category, q, limit, offset, min_chars=PUBLIC_REVIEW_MIN_CHARS):
@@ -823,10 +843,13 @@ def _public_review_feed(db, category, q, limit, offset, min_chars=PUBLIC_REVIEW_
     # Keeping only this page's prefix bounds memory while evaluating every candidate.
     prefix = heapq.nsmallest(
         offset + limit + 1,
-        _eligible_public_reviews(db, category, q.strip(), min_chars),
-        key=lambda review: (not review["search_ready"], -review["id"], review["category"]),
+        _eligible_review_keys(db, category, q.strip(), min_chars),
+        key=lambda entry: entry[0],
     )
-    reviews = prefix[offset:offset + limit]
+    page = prefix[offset:offset + limit]
+    loaded = _load_reviews(db, [(cat, item_id) for _, cat, item_id, _ in page])
+    reviews = [_serialize_public_review(cat, *loaded[(cat, item_id)], quality)
+               for _, cat, item_id, quality in page if (cat, item_id) in loaded]
     _attach_supporter_badges(db, reviews)
     review_spoilers.attach(db, reviews)
     return {"reviews": reviews, "has_more": len(prefix) > offset + limit, "next_offset": offset + len(reviews)}

@@ -14,7 +14,7 @@ from dataclasses import dataclass, field
 from functools import lru_cache
 from typing import Optional
 
-from sqlalchemy import func, or_
+from sqlalchemy import and_, func, literal, or_
 from sqlalchemy.orm import Session
 
 from . import models
@@ -179,11 +179,14 @@ def _slug_candidates(slug: str) -> list[tuple[str, Optional[int]]]:
     return [(base, year) for base, year in pairs if any(base.split("-"))]
 
 
-def find_many(db: Session, kind: str, slugs) -> dict[str, TitleGroup]:
+def find_many(db: Session, kind: str, slugs, reviewed_only: bool = False) -> dict[str, TitleGroup]:
     """find() for many slugs of one kind, reading titles and years once instead of once per slug.
 
     The sitemap checks hundreds of titles; one find() each scanned the library tables
-    hundreds of times.
+    hundreds of times. reviewed_only=True puts only the rows with a public review long
+    enough to be search-ready in each group, which is all is_indexable() looks at; a
+    popular title otherwise loads thousands of whole rows only to count them. Which
+    title a slug names is still decided from every row, as find() does.
     """
     if kind not in KINDS:
         return {}
@@ -195,21 +198,27 @@ def find_many(db: Session, kind: str, slugs) -> dict[str, TitleGroup]:
     model = KINDS[kind][0]
     years = {year for _, year in wanted}
     year_column = model.release_date if kind == "game" else model.year
-    query = _visible_rows(db, kind, model).with_entities(model.id, model.title, year_column)
+    # SQL trim() strips only spaces, so this flags every row Python's strip() would pass.
+    reviewed = and_(model.review_public == True, func.length(func.trim(model.review)) >= REVIEW_DETAIL_MIN_CHARS)
+    query = _visible_rows(db, kind, model).with_entities(model.id, model.title, year_column,
+                                                         reviewed if reviewed_only else literal(True))
     if kind != "game":
         # A year of 0 counts as no year (item_year), so it can only match a yearless slug.
         known = [year for year in years if year is not None]
         query = query.filter(or_(model.year.in_(known), model.year.is_(None), model.year == 0) if None in years
                              else model.year.in_(known))
     ids_by_pair: dict = {}
-    for row_id, title, year_value in query.order_by(model.id):
+    load = set()
+    for row_id, title, year_value, wanted_row in query.order_by(model.id):
         row_year = (year_value.year if year_value else None) if kind == "game" else (year_value or None)
         if row_year not in years:
             continue
         pair = (slugify(title or ""), row_year)
         if pair in wanted:
             ids_by_pair.setdefault(pair, []).append(row_id)
-    needed = sorted({row_id for ids in ids_by_pair.values() for row_id in ids})
+            if wanted_row:
+                load.add(row_id)
+    needed = sorted(load)
     rows_by_id = {}
     for start in range(0, len(needed), 1000):
         chunk = needed[start:start + 1000]
@@ -218,6 +227,8 @@ def find_many(db: Session, kind: str, slugs) -> dict[str, TitleGroup]:
     for slug, pairs in plans.items():
         for pair in pairs:
             rows = [rows_by_id[row_id] for row_id in ids_by_pair.get(pair, ()) if row_id in rows_by_id]
+            if reviewed_only and pair in ids_by_pair and not rows:
+                break  # The slug names this title, which has no search-ready review.
             if rows:
                 names = Counter((row.title or "").strip() for row in rows)
                 display = names.most_common(1)[0][0]
@@ -226,7 +237,12 @@ def find_many(db: Session, kind: str, slugs) -> dict[str, TitleGroup]:
     return groups
 
 
-def _public_reviews(db: Session, kind: str, items: list) -> list[dict]:
+def _public_reviews(db: Session, kind: str, items: list, decorate: bool = True) -> list[dict]:
+    """Public reviews among `items`, best first.
+
+    decorate=False leaves out helpful counts, profile links, supporter badges and spoiler
+    flags (four more queries) for callers that only count the reviews, like the sitemap.
+    """
     from .routers.reviews import _current_state_hides_review
     _, review_category, _, _, _ = KINDS[kind]
     ids = [item.id for item in items if item.review_public and (item.review or "").strip()]
@@ -235,7 +251,9 @@ def _public_reviews(db: Session, kind: str, items: list) -> list[dict]:
         return []
     states = {s.item_id: s for s in db.query(models.PublicReviewState).filter(
         models.PublicReviewState.category == review_category, models.PublicReviewState.item_id.in_(ids)).all()}
-    users = {u.id: u for u in db.query(models.User).filter(models.User.id.in_([i.user_id for i in items])).all()}
+    # Only the reviewers: a popular title has thousands of rows but a handful of public reviews.
+    reviewer_ids = {item.user_id for item in items if item.review_public and (item.review or "").strip()}
+    users = {u.id: u for u in db.query(models.User).filter(models.User.id.in_(reviewer_ids)).all()}
     reviews = []
     for item in items:
         if item.id not in ids or len((item.review or "").strip()) < REVIEW_MIN_CHARS:
@@ -255,6 +273,8 @@ def _public_reviews(db: Session, kind: str, items: list) -> list[dict]:
             "url": f"/reviews/{item.id}?category={review_category}",
         })
     reviews.sort(key=lambda r: (not r["search_ready"], -len(r["review"])))
+    if not decorate:
+        return reviews
     if reviews:
         # Readers' "helpful" marks lead the page; ties keep the longer, standalone reviews first.
         from .routers.reviews import review_helpful_counts
@@ -275,19 +295,25 @@ def _public_reviews(db: Session, kind: str, items: list) -> list[dict]:
 
 
 def _collections_featuring(db: Session, kind: str, items: list) -> list[dict]:
-    from .routers.collections import _collection_is_discoverable
+    from sqlalchemy.orm import selectinload
+    from .routers.collections import _collection_is_discoverable, _media_lookup_for_collections
     library_category = KINDS[kind][2]
-    rows = db.query(models.Collection).join(
+    rows = db.query(models.Collection).options(selectinload(models.Collection.items)).join(
         models.CollectionItem, models.CollectionItem.collection_id == models.Collection.id
     ).filter(
         models.Collection.is_public == True,
         models.CollectionItem.category == library_category,
         models.CollectionItem.item_id.in_([item.id for item in items]),
     ).distinct().limit(12).all()
+    # Each check reads the collection's titles; look them all up at once, not one query per title.
+    try:
+        media = _media_lookup_for_collections(db, rows)
+    except Exception:
+        media = None
     featured = []
     for collection in rows:
         try:
-            if not _collection_is_discoverable(collection, db):
+            if not _collection_is_discoverable(collection, db, media):
                 continue
         except Exception:
             continue
@@ -315,10 +341,17 @@ def _related(db: Session, kind: str, group: TitleGroup, limit: int = 8) -> list[
                 continue
             counts[(other_kind, name)] = members
             samples[(other_kind, name)] = sample_id
-    related = []
-    for (other_kind, name), members in counts.most_common(limit * 2):
+    top = counts.most_common(limit * 2)
+    wanted: dict = {}
+    for key, _ in top:
+        wanted.setdefault(key[0], []).append(samples[key])
+    loaded = {}
+    for other_kind, ids in wanted.items():
         model = KINDS[other_kind][0]
-        item = db.get(model, samples[(other_kind, name)])
+        loaded.update({(other_kind, item.id): item for item in db.query(model).filter(model.id.in_(ids))})
+    related = []
+    for (other_kind, name), members in top:
+        item = loaded.get((other_kind, samples[(other_kind, name)]))
         if item is None:
             continue
         related.append({"kind": other_kind, "label": KINDS[other_kind][3], "title": item.title.strip(),
@@ -338,8 +371,9 @@ def _safe_image(url) -> Optional[str]:
 def summarize(db: Session, group: TitleGroup, *, page_sections: bool = True) -> dict:
     """Member data for a title page (aggregates only, never who tracks it).
 
-    page_sections=False skips the collections and "also tracked" lists, which only the
-    page itself shows. The sitemap checks hundreds of titles and needs neither.
+    page_sections=False skips the collections and "also tracked" lists and the review
+    decorations (helpful counts, profile links, badges, spoiler flags), which only the
+    page itself shows. The sitemap checks hundreds of titles and needs none of them.
     """
     kind = group.kind
     editors = {uid for uid, in _editor_ids(db).all()}
@@ -360,7 +394,7 @@ def summarize(db: Session, group: TitleGroup, *, page_sections: bool = True) -> 
         creator = names.most_common(1)[0][0] if names else None
     images = Counter(_safe_image(getattr(item, IMAGE_FIELD[kind], None)) for item in group.items)
     images.pop(None, None)
-    reviews = _public_reviews(db, kind, group.items)
+    reviews = _public_reviews(db, kind, group.items, decorate=page_sections)
     return {
         "members": members,
         "finished": finished,
@@ -418,9 +452,13 @@ def popular(db: Session, kind: str, limit: int = 24, min_members: int = 2) -> li
     rows = db.query(normalized, members, func.min(model.id)).filter(
         model.user_id.in_(_shareable_ids(db, kind)), ~model.user_id.in_(_editor_ids(db)),
     ).group_by(normalized).having(members >= min_members).order_by(members.desc(), normalized).limit(limit).all()
+    samples = {}
+    sample_ids = [sample_id for _, _, sample_id in rows]
+    for start in range(0, len(sample_ids), 1000):
+        samples.update({item.id: item for item in db.query(model).filter(model.id.in_(sample_ids[start:start + 1000]))})
     results = []
     for name, count, sample_id in rows:
-        item = db.get(model, sample_id)
+        item = samples.get(sample_id)
         if item is None or not (item.title or "").strip():
             continue
         results.append({"kind": kind, "label": KINDS[kind][3], "title": item.title.strip(),

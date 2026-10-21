@@ -75,8 +75,12 @@ def test_summary_without_page_sections_keeps_every_count(db_session):
     full = title_pages.summarize(db_session, group)
     light = title_pages.summarize(db_session, group, page_sections=False)
     assert light["related"] == [] and light["collections"] == []
-    assert {k: v for k, v in light.items() if k not in ("related", "collections")} == \
-           {k: v for k, v in full.items() if k not in ("related", "collections")}
+    page_only = ("related", "collections", "reviews")
+    assert {k: v for k, v in light.items() if k not in page_only} == \
+           {k: v for k, v in full.items() if k not in page_only}
+    # Reviews skip the page-only decorations (helpful counts, profile links, badges, spoiler flags) since Oct 21.
+    decorations = ("helpful", "profile_url", "supporter", "spoilers")
+    assert light["reviews"] == [{k: v for k, v in review.items() if k not in decorations} for review in full["reviews"]]
     assert title_pages.is_indexable(light, None) == title_pages.is_indexable(full, None) is True
 
 

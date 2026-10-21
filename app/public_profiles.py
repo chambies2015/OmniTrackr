@@ -136,12 +136,21 @@ def showcase_items(db: Session, user: models.User, limit: Optional[int] = None) 
     visible = set(_visible_categories(user))
     pins = (db.query(models.ProfileShowcaseItem).filter(models.ProfileShowcaseItem.user_id == user.id)
             .order_by(models.ProfileShowcaseItem.position, models.ProfileShowcaseItem.id).all())
+    # One query per category rather than one per pin.
+    wanted: dict = {}
+    for pin in pins:
+        if pin.category in visible:
+            wanted.setdefault(pin.category, set()).add(pin.item_id)
+    found = {}
+    for category, ids in wanted.items():
+        model = _model(category)
+        found.update({(category, item.id): item for item in
+                      db.query(model).filter(model.id.in_(ids), model.user_id == user.id)})
     shown = []
     for pin in pins:
         if pin.category not in visible:
             continue
-        model = _model(pin.category)
-        item = db.query(model).filter(model.id == pin.item_id, model.user_id == user.id).first()
+        item = found.get((pin.category, pin.item_id))
         if item is None or not (item.title or "").strip():
             continue
         shown.append(_showcase_entry(pin.category, item))
@@ -336,13 +345,20 @@ def _reviews(db: Session, user: models.User) -> list[dict]:
 
 
 def _collections(db: Session, user: models.User) -> list[dict]:
-    from .routers.collections import _collection_is_discoverable
+    from sqlalchemy.orm import selectinload
+    from .routers.collections import _collection_is_discoverable, _media_lookup_for_collections
     shown = []
-    for collection in db.query(models.Collection).filter(
+    rows = db.query(models.Collection).options(selectinload(models.Collection.items)).filter(
         models.Collection.user_id == user.id, models.Collection.is_public == True,
-    ).order_by(models.Collection.id.desc()).limit(40).all():
+    ).order_by(models.Collection.id.desc()).limit(40).all()
+    # Each check reads the collection's titles; look them all up at once, not one query per title.
+    try:
+        media = _media_lookup_for_collections(db, rows)
+    except Exception:
+        media = None
+    for collection in rows:
         try:
-            if not _collection_is_discoverable(collection, db):
+            if not _collection_is_discoverable(collection, db, media):
                 continue
         except Exception:
             continue
@@ -403,15 +419,43 @@ def build(db: Session, user: models.User, profile: models.PublicProfile) -> Prof
     )
 
 
+def _may_be_indexable(db: Session, user_ids: set) -> set:
+    """The members among `user_ids` with a public review long enough to be search-ready, or a public collection.
+
+    ProfileView.indexable needs one or the other, so anyone else can be skipped without
+    building their profile (about 35 queries each).
+    """
+    if not user_ids:
+        return set()
+    found = {uid for uid, in db.query(models.Collection.user_id).filter(
+        models.Collection.user_id.in_(user_ids), models.Collection.is_public == True).distinct()}
+    for model, _, _, _, _ in title_pages.KINDS.values():
+        # SQL trim() strips only spaces, so this keeps everyone Python's strip() would.
+        found.update(uid for uid, in db.query(model.user_id).filter(
+            model.user_id.in_(user_ids), model.review_public == True,
+            func.length(func.trim(model.review)) >= title_pages.REVIEW_DETAIL_MIN_CHARS).distinct())
+    return found
+
+
+def _indexable(db: Session, user: models.User, profile: models.PublicProfile) -> bool:
+    """ProfileView.indexable without building the parts of the page it doesn't look at."""
+    if profile.show_reviews and any(review["search_ready"] for review in _reviews(db, user)):
+        return True
+    return bool(profile.show_collections and _collections(db, user))
+
+
 def sitemap_paths(db: Session, limit: int = 300) -> list[str]:
     paths = []
     rows = db.query(models.User, models.PublicProfile).join(
         models.PublicProfile, models.PublicProfile.user_id == models.User.id,
     ).filter(models.PublicProfile.enabled == True, models.User.is_active == True).order_by(
         models.PublicProfile.updated_at.desc()).limit(limit * 3).all()
+    candidates = _may_be_indexable(db, {user.id for user, _ in rows})
     for user, profile in rows:
+        if user.id not in candidates:
+            continue
         try:
-            if build(db, user, profile).indexable:
+            if _indexable(db, user, profile):
                 paths.append(profile_path(user))
         except Exception:
             continue
