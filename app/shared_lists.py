@@ -197,6 +197,9 @@ def remove_member(db: Session, shared: models.SharedList, user, member_id: int) 
         db.query(models.SharedListVote).filter(models.SharedListVote.user_id == member_id,
                                                models.SharedListVote.item_id.in_(item_ids)).delete(synchronize_session=False)
     db.delete(member)
+    if member_id != user.id:
+        # Someone the owner removed still has the join link; a new one keeps them out.
+        shared.token = secrets.token_urlsafe(16)
     db.commit()
 
 

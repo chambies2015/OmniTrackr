@@ -130,6 +130,28 @@ def test_reset_link_retires_the_old_one(authenticated_client, db_session):
     assert authenticated_client.get(f"/lists/join/{fresh}").status_code == 200
 
 
+def test_removing_someone_retires_the_link_they_had(authenticated_client, db_session):
+    list_id = _new_list(authenticated_client)
+    old = _token(authenticated_client, list_id)
+    owner, sam, kim = _me(db_session), member(db_session, "sam"), member(db_session, "kim")
+    db_session.commit()
+    for person in (sam, kim):
+        _as(authenticated_client, person)
+        assert authenticated_client.post(f"/api/lists/join/{old}").json()["joined"] is True
+
+    # Leaving on your own keeps the link as it was.
+    assert authenticated_client.delete(f"/api/lists/{list_id}/members/{kim.id}").status_code == 204
+    _as(authenticated_client, owner)
+    assert _token(authenticated_client, list_id) == old
+
+    assert authenticated_client.delete(f"/api/lists/{list_id}/members/{sam.id}").status_code == 204
+    fresh = _token(authenticated_client, list_id)
+    assert fresh != old
+    _as(authenticated_client, sam)
+    assert authenticated_client.post(f"/api/lists/join/{old}").status_code == 404
+    assert authenticated_client.get(f"/api/lists/{list_id}").status_code == 404
+
+
 def test_invite_friends_only(authenticated_client, db_session):
     owner = _me(db_session)
     friend, stranger = member(db_session, "alex"), member(db_session, "stranger")
