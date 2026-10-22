@@ -94,7 +94,7 @@
     if (button) button.disabled = true;
     try {
       await setWeekly(true);
-      if (status) status.textContent = 'Weekly email on. Your first one arrives within a day if something you track is coming up; every email has a one-click unsubscribe.';
+      if (status) status.textContent = 'Weekly email on. Your first one arrives within a day if something you track is coming up or a friend added something new; every email has a one-click unsubscribe.';
     } catch (error) {
       if (status) status.textContent = error.message;
     } finally {
