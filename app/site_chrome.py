@@ -39,6 +39,7 @@ FOOTER_GROUPS = (
         ("Daily puzzle", "/daily"),
         ("Pick for me", "/pick"),
         ("If you liked…", "/if-you-liked"),
+        ("Best of 2026", "/best-of"),
         ("Franchises in order", "/in-order"),
         ("Tier list maker", "/tier-list"),
         ("Monthly challenge", "/challenges"),

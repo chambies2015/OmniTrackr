@@ -1,9 +1,10 @@
 """Every written guide on the public site, in one list.
 
-The Discover guides, monthly editions, "In order" and "If you liked" guides and
-the seasonal hubs are the pages a visitor can read in full without an account.
-They live in five catalogs; this module gathers them so the homepage (and anything else that
-wants "the latest reading") links to them without knowing each catalog's shape.
+The Discover guides, monthly editions, "In order" and "If you liked" guides, the
+seasonal hubs and the best-of-the-year lists are the pages a visitor can read in
+full without an account. They live in six catalogs; this module gathers them so the
+homepage (and anything else that wants "the latest reading") links to them without
+knowing each catalog's shape.
 """
 from __future__ import annotations
 
@@ -17,6 +18,7 @@ SECTION_LABELS = {
     "in-order": "In order",
     "if-you-liked": "If you liked",
     "seasonal": "Seasonal",
+    "best-of": "Best of the year",
 }
 
 
@@ -59,9 +61,17 @@ def _seasonal() -> list[dict]:
             for entry in SEASONS.values()]
 
 
+def _best_of() -> list[dict]:
+    from . import best_of
+    from .best_of_guides import GUIDES
+    return [{"section": "best-of", "href": best_of.path(slug), "name": guide["name"],
+             "summary": guide["summary"], "updated": guide["reviewed"]}
+            for slug, guide in GUIDES.items()]
+
+
 def entries() -> list[dict]:
     """Every guide, newest first (ties keep catalog order)."""
-    pieces = _discover() + _monthly() + _in_order() + _if_you_liked() + _seasonal()
+    pieces = _discover() + _monthly() + _in_order() + _if_you_liked() + _seasonal() + _best_of()
     return sorted(pieces, key=lambda piece: piece["updated"], reverse=True)
 
 
@@ -123,6 +133,7 @@ SECTION_ORDER = (
     ("discover", "Discover guides", "/discover"),
     ("monthly", "Monthly editions", "/discover"),
     ("seasonal", "Seasonal picks", "/halloween"),
+    ("best-of", "Best of the year", "/best-of"),
 )
 
 
