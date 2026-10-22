@@ -7,7 +7,7 @@ from sqlalchemy import func
 from sqlalchemy.orm import Session
 
 from ..integer_bounds import PositiveDatabaseId
-from .. import models, schemas
+from .. import diary, models, schemas
 from ..progress import lock_progress_owner
 from ..dependencies import get_current_user, get_db
 
@@ -226,6 +226,20 @@ def weekly_recap(
         "highlights": [_serialize(entry) for entry in entries[:5]],
         "offset": offset,
     }
+
+
+@router.get("/diary/", response_model=dict)
+def diary_month(
+    month: str | None = Query(None, max_length=7),
+    tz_offset_minutes: int = Query(0, ge=-840, le=840),
+    current_user: models.User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+):
+    """One calendar month of what the member finished or revisited."""
+    try:
+        return diary.month_view(db, current_user.id, month, tz_offset_minutes)
+    except ValueError as exc:
+        raise HTTPException(status_code=422, detail=str(exc)) from exc
 
 
 def import_activity_entries(

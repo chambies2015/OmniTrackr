@@ -11,7 +11,7 @@ class TestActivityJournal:
         assert 'data-switch-tab="activity"' in page.text
         assert 'id="activity-tab"' in page.text
         assert 'data-submit-action="create-activity"' in page.text
-        assert "No public profile · No ads" in page.text
+        assert "Private by default · No ads" in page.text
         assert "/activity" not in authenticated_client.get("/sitemap.xml").text
 
     def test_manual_entry_weekly_recap_and_delete_preserve_library(

@@ -7,7 +7,9 @@ Nothing about a member is public until they switch their profile on. Even then:
 - only public collections that pass the collection checks are listed,
 - email, friends, notes, progress and unrated items are never shown. The one
   social number is how many people joined through the member's invite link
-  (a count, never who), shown only alongside the library stats.
+  (a count, never who), shown only alongside the library stats,
+- the diary of recent finishes and revisits (dates and titles, never notes) is
+  off until the member switches it on.
 """
 from __future__ import annotations
 
@@ -20,7 +22,7 @@ from urllib.parse import quote
 from sqlalchemy import case, func
 from sqlalchemy.orm import Session
 
-from . import badges, friend_invites, models, supporters, title_pages
+from . import badges, diary, friend_invites, models, supporters, title_pages
 from .review_quality import evaluate_public_review, is_public_review_safe
 
 BIO_MAX_CHARS = 280
@@ -47,7 +49,7 @@ CATEGORIES = {
     "books": ("book", "books_private", "Books", "read"),
 }
 REVIEW_CATEGORY_TO_LIBRARY = {review: library for _, (_, review, library, _, _) in title_pages.KINDS.items()}
-SETTINGS_FIELDS = ("enabled", "show_stats", "show_favorites", "show_reviews", "show_collections")
+SETTINGS_FIELDS = ("enabled", "show_stats", "show_favorites", "show_reviews", "show_collections", "show_diary")
 
 
 class BioError(ValueError):
@@ -93,6 +95,7 @@ def settings_payload(user: models.User, profile: Optional[models.PublicProfile],
         "show_favorites": profile.show_favorites if profile else True,
         "show_reviews": profile.show_reviews if profile else True,
         "show_collections": profile.show_collections if profile else True,
+        "show_diary": bool(profile and profile.show_diary),
         "url": profile_path(user),
         "bio_max_chars": BIO_MAX_CHARS,
         "private_categories": [CATEGORIES[c][2] for c in CATEGORIES if getattr(user, CATEGORIES[c][1], False)],
@@ -388,6 +391,7 @@ class ProfileView:
     supporting: bool = False  # current supporter, even with the badge hidden (owner hints only)
     friends_brought: int = 0
     badges: list = field(default_factory=list)
+    diary: list = field(default_factory=list)
 
     @property
     def path(self) -> str:
@@ -422,6 +426,7 @@ def build(db: Session, user: models.User, profile: models.PublicProfile) -> Prof
         friends_brought=friend_invites.friends_brought(db, user.id) if profile.show_stats else 0,
         # Shown with the library stats, never revealing a shelf the member keeps private.
         badges=badges.public_badges(db, user) if profile.show_stats and not user.statistics_private else [],
+        diary=diary.public_entries(db, user, _visible_categories(user)) if profile.show_diary else [],
     )
 
 
