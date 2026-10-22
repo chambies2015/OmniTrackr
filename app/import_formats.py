@@ -13,6 +13,7 @@ import json
 import posixpath
 import re
 import zipfile
+from datetime import datetime
 from typing import Any
 from xml.etree import ElementTree
 
@@ -134,6 +135,44 @@ def letterboxd_csv_name(filename: str) -> str | None:
         if base == name or re.fullmatch(rf"{stem}(\s*\(\d+\))?\.csv", base):
             return name
     return None
+
+
+def _letterboxd_diary_rows(text: str) -> list[dict[str, Any]]:
+    """Dated diary visits from diary.csv: {"title", "year", "date", "rewatch", "rating"}."""
+    visits = []
+    for row in csv.DictReader(io.StringIO(text)):
+        title = (row.get("Name") or "").strip()
+        try:
+            watched = datetime.strptime((row.get("Watched Date") or "").strip(), "%Y-%m-%d").date()
+        except ValueError:
+            continue
+        if not title:
+            continue
+        year = _number(row.get("Year"))
+        rating = _score(row.get("Rating"), 2)
+        visits.append({
+            "title": title, "year": int(year) if year else None, "date": watched,
+            "rewatch": (row.get("Rewatch") or "").strip().lower() == "yes",
+            "rating": float(rating) if rating else None,
+        })
+    visits.sort(key=lambda visit: visit["date"])
+    return visits
+
+
+def letterboxd_diary(content: bytes, filename: str) -> list[dict[str, Any]]:
+    """The dated visits in a Letterboxd export ZIP or its diary.csv, or [] for anything else."""
+    try:
+        if content[:4] == b"PK\x03\x04":
+            for name, data in _zip_files(content).items():
+                parts = [part.lower() for part in name.split("/")]
+                if parts[-1] == "diary.csv" and not LETTERBOXD_SKIPPED_FOLDERS & set(parts[:-1]):
+                    return _letterboxd_diary_rows(_decode(data))
+            return []
+        if letterboxd_csv_name(filename) == "diary.csv":
+            return _letterboxd_diary_rows(_decode(content))
+    except (ValueError, csv.Error):
+        return []
+    return []
 
 
 # ---------------------------------------------------------------------------
