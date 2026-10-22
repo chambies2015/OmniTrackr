@@ -4,10 +4,10 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <meta name="theme-color" content="#0b0a18">
-  <meta name="description" content="OmniTrackr is a free private media journal for movies, TV, anime, games, music, and books. Keep ratings, reviews, progress, and backups together.">
+  <meta name="description" content="Free tracker for movies, TV, anime, games, music and books. Rate and review what you finish, keep a watch diary, rank tier lists and import from Letterboxd or Goodreads.">
   <meta name="robots" content="index, follow, max-image-preview:large">
   <meta name="google-adsense-account" content="ca-pub-7271682066779719">
-  <title>OmniTrackr | Free Media Tracker &amp; Personal Media Journal</title>
+  <title>OmniTrackr: Free Media Tracker for Movies, TV, Anime, Games &amp; Books</title>
   <link rel="canonical" href="https://omnitrackr.xyz/">
   <link rel="icon" type="image/x-icon" href="/omnitrackr_favicon.ico">
   <link rel="manifest" href="/manifest.webmanifest">
@@ -18,18 +18,23 @@
   <link rel="preload" href="/static/fonts/poppins-800-latin.woff2" as="font" type="font/woff2" crossorigin>
   <link rel="stylesheet" href="/static/fonts.css?v=20261009-fonts-1">
   <link rel="stylesheet" href="/static/public-legacy.css?v=20261004-legacy-1">
-  <link rel="stylesheet" href="/static/public-landing.css?v=20261017-reads-1">
+  <link rel="stylesheet" href="/static/public-landing.css?v=20261022-home-1">
   <meta property="og:type" content="website">
   <meta property="og:url" content="https://omnitrackr.xyz/">
-  <meta property="og:title" content="OmniTrackr — One private home for your media life">
-  <meta property="og:description" content="Track, rate, review, and revisit movies, shows, anime, games, music, and books in one personal library.">
-  <meta property="og:image" content="https://omnitrackr.xyz/omnitrackr_vortex.png">
+  <meta property="og:title" content="OmniTrackr: every movie, show, game and book in one library">
+  <meta property="og:description" content="A free tracker for movies, TV, anime, games, music and books, with a watch diary, badges, tier lists, shared lists and a Year in Review.">
+  <meta property="og:image" content="https://omnitrackr.xyz/static/og/home-1200x630.png">
+  <meta property="og:image:width" content="1200">
+  <meta property="og:image:height" content="630">
+  <meta property="og:image:alt" content="OmniTrackr: every movie, show, game and book in one library">
   <meta property="og:site_name" content="OmniTrackr">
+  <meta property="og:locale" content="en_US">
   <meta name="twitter:card" content="summary_large_image">
-  <meta name="twitter:title" content="OmniTrackr — One private home for your media life">
-  <meta name="twitter:description" content="Keep your media history, notes, progress, and backups together.">
+  <meta name="twitter:title" content="OmniTrackr: every movie, show, game and book in one library">
+  <meta name="twitter:description" content="A free tracker for movies, TV, anime, games, music and books, with a watch diary, badges, tier lists and a Year in Review.">
+  <meta name="twitter:image" content="https://omnitrackr.xyz/static/og/home-1200x630.png">
   <script type="application/ld+json">
-  {"@context":"https://schema.org","@type":"SoftwareApplication","name":"OmniTrackr","url":"https://omnitrackr.xyz/","applicationCategory":"EntertainmentApplication","operatingSystem":"Web","description":"A free personal media tracker for movies, TV shows, anime, video games, music, and books.","offers":{"@type":"Offer","price":"0","priceCurrency":"USD"},"featureList":["Six media categories","Expiring Recommendation Postcards with an owner-controlled inbox","Private cross-media activity journal","Weekly media recap","Private Tasteprint with locally rendered share card","Ratings and personal reviews","Statistics and progress tracking","Privacy controls","Preview-first IMDb, Letterboxd, Goodreads, StoryGraph, MyAnimeList, and spreadsheet migration","JSON backup export and restore"]}
+  {"@context":"https://schema.org","@type":"SoftwareApplication","name":"OmniTrackr","url":"https://omnitrackr.xyz/","applicationCategory":"EntertainmentApplication","operatingSystem":"Web","description":"A free personal media tracker for movies, TV shows, anime, video games, music, and books.","offers":{"@type":"Offer","price":"0","priceCurrency":"USD"},"featureList":["Movies, TV shows, anime, video games, music and books in one library","Ratings and reviews","Watch, read and play diary with rewatch counts","Year in Review story and share image","Badges with bronze, silver and gold tiers","Shared lists built with friends","Taste Match between friends","Tier list maker","Yearly goals and monthly challenges","Release Radar and calendar feeds","Category privacy controls","Imports from Letterboxd, IMDb, Goodreads, StoryGraph, MyAnimeList, Kitsu, Trakt and AniList","JSON export"]}
   </script>
   <script type="application/ld+json">
   {"@context":"https://schema.org","@type":"WebSite","name":"OmniTrackr","alternateName":["Omni Trackr","OmniTrackr media tracker"],"url":"https://omnitrackr.xyz/","description":"A free media tracker and personal media journal for movies, TV shows, anime, video games, music, and books.","inLanguage":"en-US","publisher":{"@type":"Organization","name":"OmniTrackr","url":"https://omnitrackr.xyz/"}}
@@ -66,9 +71,9 @@
     <section class="landing-hero lp-hero" aria-labelledby="hero-title">
       <div class="lp-wrap lp-hero__grid">
         <div class="lp-hero__copy">
-          <p class="lp-eyebrow">Your media history, in one place</p>
-          <h1 id="hero-title" class="lp-title">Remember more than <span class="lp-title__accent">the title.</span></h1>
-          <p class="lp-lead">Movies, TV, anime, games, music, and books in one private library, with the ratings, notes, and progress that make each one yours.</p>
+          <p class="lp-eyebrow">Free media tracker</p>
+          <h1 id="hero-title" class="lp-title">Every movie, show, game and book. <span class="lp-title__accent">One library.</span></h1>
+          <p class="lp-lead">Track what you watch, play, read and listen to, rate it, and keep a diary of every rewatch. Anime and albums fit in too, and it costs nothing.</p>
           <form class="lp-search" role="search" action="/titles" method="get" data-title-search>
             <label class="lp-search__label" for="lpSearchInput">What have you watched, played or read lately?</label>
             <div class="lp-search__field">
@@ -80,6 +85,7 @@
             <div class="lp-search__bar" data-guest-bar hidden><p class="lp-search__count" data-guest-count></p><button type="button" class="lp-btn lp-btn--primary lp-btn--small" data-action="show-register-form">Save my list, free <svg class="lp-icon" aria-hidden="true"><use href="#i-arrow"/></svg></button></div>
           </form>
           <!--HERO_SIGNUP-->
+          <!--HERO_PROOF-->
           <ul class="lp-trust" aria-label="What you get">
             <li><svg class="lp-icon" aria-hidden="true"><use href="#i-check"/></svg>Free, no credit card</li>
             <li><svg class="lp-icon" aria-hidden="true"><use href="#i-check"/></svg>Private by default</li>
@@ -188,42 +194,126 @@
       </div>
     </section>
 
-    <section class="lp-section lp-features" aria-labelledby="features-title">
+    <section id="features" class="lp-section lp-features" aria-labelledby="features-title">
       <div class="lp-wrap">
         <div class="lp-section-head">
-          <p class="lp-eyebrow">Built around ownership</p>
-          <h2 id="features-title">What you get</h2>
+          <p class="lp-eyebrow">Inside your account</p>
+          <h2 id="features-title">What your library can do</h2>
+          <p>All of it is free. Your library starts private, and you decide what friends or the public get to see.</p>
         </div>
-        <div class="lp-bento">
-          <article class="lp-card lp-card--wide"><span class="lp-card__icon"><svg class="lp-icon" aria-hidden="true"><use href="#i-journal"/></svg></span><h3>A timeline that is yours</h3><p>Log starts, progress, finishes, revisits, and private notes across every media type, then look back through one chronological journal.</p></article>
-          <article class="lp-card"><span class="lp-card__icon"><svg class="lp-icon" aria-hidden="true"><use href="#i-print"/></svg></span><h3>Meet your Tasteprint</h3><p>A private summary of what you finish, how you rate, and which eras and creators you return to. You can make a share card from it, rendered on your device.</p></article>
-          <article class="lp-card"><span class="lp-card__icon"><svg class="lp-icon" aria-hidden="true"><use href="#i-radar"/></svg></span><h3>Never miss a release</h3><p>The <a href="/release-radar">Release Radar</a> lists new movies, TV premieres, the anime season, and upcoming games. Track anything in one click.</p></article>
-          <article class="lp-card"><span class="lp-card__icon"><svg class="lp-icon" aria-hidden="true"><use href="#i-mail"/></svg></span><h3>Ask a friend for a pick</h3><p>Send an expiring Recommendation Postcard to a friend or a guest link. Replies wait in a private inbox until you decide what to keep.</p></article>
-          <article class="lp-card"><span class="lp-card__icon"><svg class="lp-icon" aria-hidden="true"><use href="#i-lock"/></svg></span><h3>Control the audience</h3><p>Keep categories private and choose what friends can see. Nothing is public unless you make it public.</p></article>
-          <article class="lp-card lp-card--full"><span class="lp-card__icon"><svg class="lp-icon" aria-hidden="true"><use href="#i-swap"/></svg></span><h3>Bring it in. Take it out.</h3><p>Upload your Letterboxd, IMDb, Goodreads, StoryGraph, MyAnimeList, Kitsu, or Trakt export as it comes, or fetch your AniList by username, and preview it before anything changes. You can export your library and journal whenever you want. <a href="/switch">See how switching works</a>.</p></article>
+        <div class="lp-tour">
+          <article class="lp-feature lp-feature--wide">
+            <div class="lp-vignette lp-vg-diary" aria-hidden="true">
+              <div class="lp-vg-diary__head"><strong>October</strong><span>7 finished · 3 rewatches</span></div>
+              <ol class="lp-vg-diary__grid">
+                <li></li><li></li><li></li><li class="is-film"></li><li></li><li></li><li class="is-book"></li>
+                <li></li><li class="is-anime"></li><li></li><li></li><li class="is-film is-today"></li><li></li><li></li>
+                <li class="is-game"></li><li></li><li></li><li class="is-tv"></li><li></li><li class="is-music"></li><li></li>
+              </ol>
+              <p class="lp-vg-row"><span class="lp-vg-dot is-film"></span><strong>Arrival</strong><em>3rd watch · 9.0</em></p>
+            </div>
+            <h3>A diary of every watch, read and replay</h3>
+            <p>Each finish and rewatch lands on a calendar with a count beside it, so you can see that October was your third time through Arrival. Keep the diary to yourself or put it on your profile.</p>
+          </article>
+          <article class="lp-feature">
+            <div class="lp-vignette lp-vg-recap" aria-hidden="true">
+              <span class="lp-vg-recap__year">2026</span>
+              <strong class="lp-vg-recap__big">148</strong>
+              <span class="lp-vg-recap__unit">titles finished</span>
+              <span class="lp-vg-recap__bars"><i></i><i></i><i></i><i></i><i></i><i></i></span>
+            </div>
+            <h3>Your year as a story</h3>
+            <p>Year in Review turns your finishes, favourites and top ratings into slides and a story image you can post. Categories you keep private stay out of it.</p>
+          </article>
+          <article class="lp-feature">
+            <div class="lp-vignette lp-vg-badges" aria-hidden="true">
+              <span class="lp-vg-medal is-gold"><svg class="lp-icon"><use href="#i-book"/></svg></span>
+              <span class="lp-vg-medal is-silver"><svg class="lp-icon"><use href="#i-film"/></svg></span>
+              <span class="lp-vg-medal is-bronze"><svg class="lp-icon"><use href="#i-game"/></svg></span>
+              <span class="lp-vg-progress"><span>Bookworm</span><i></i><small>22 of 25 for silver</small></span>
+            </div>
+            <h3>Badges in bronze, silver and gold</h3>
+            <p>Earn them for books read, games played, days visited, reviews written and more. The trophy case shows which one you're closest to next.</p>
+          </article>
+          <article class="lp-feature">
+            <div class="lp-vignette lp-vg-list" aria-hidden="true">
+              <p class="lp-vg-list__title">Movie night <span class="lp-vg-faces"><b>J</b><b>M</b><b>+2</b></span></p>
+              <p class="lp-vg-row"><span class="lp-vg-dot is-film"></span><strong>Past Lives</strong><em class="lp-vg-pill">3 in</em></p>
+              <p class="lp-vg-row"><span class="lp-vg-dot is-anime"></span><strong>Perfect Blue</strong><em class="lp-vg-pill">2 in</em></p>
+              <p class="lp-vg-row"><span class="lp-vg-dot is-film"></span><strong>Heat</strong><em class="lp-vg-pill is-done">Done</em></p>
+            </div>
+            <h3>Lists you build with friends</h3>
+            <p>Start a watchlist for movie night or a book club, send the join link, and see who said they're in on each title.</p>
+          </article>
+          <article class="lp-feature">
+            <div class="lp-vignette lp-vg-match" aria-hidden="true">
+              <span class="lp-vg-match__face">You</span>
+              <span class="lp-vg-match__score"><strong>86%</strong><small>taste match</small></span>
+              <span class="lp-vg-match__face is-friend">Sam</span>
+            </div>
+            <h3>Compare your taste with a friend's</h3>
+            <p>Taste Match scores how closely your ratings agree on the titles you've both finished, then lists what they loved that you haven't tried yet.</p>
+          </article>
+          <article class="lp-feature">
+            <div class="lp-vignette lp-vg-tiers" aria-hidden="true">
+              <p><b class="t-s">S</b><i></i><i></i></p>
+              <p><b class="t-a">A</b><i></i><i></i><i></i></p>
+              <p><b class="t-b">B</b><i></i></p>
+            </div>
+            <h3>Rank anything from S to D</h3>
+            <p>Drag titles into tiers, from your library or a starter template, and save the board as an image. The <a href="/tier-list">tier list maker</a> works without an account too.</p>
+          </article>
+          <article class="lp-feature">
+            <div class="lp-vignette lp-vg-goal" aria-hidden="true">
+              <span class="lp-vg-ring"><strong>37</strong><small>of 52 books</small></span>
+            </div>
+            <h3>Goals and monthly challenges</h3>
+            <p>Set a yearly goal, like 52 books or 100 films, and pick up the <a href="/challenges">monthly challenge</a>. Both track themselves from what you finish.</p>
+          </article>
+          <article class="lp-feature">
+            <div class="lp-vignette lp-vg-privacy" aria-hidden="true">
+              <p class="lp-vg-row"><svg class="lp-icon"><use href="#i-lock"/></svg><strong>Books</strong><em class="lp-vg-switch"></em></p>
+              <p class="lp-vg-row"><svg class="lp-icon"><use href="#i-lock"/></svg><strong>Games</strong><em class="lp-vg-switch is-on"></em></p>
+              <p class="lp-vg-row"><svg class="lp-icon"><use href="#i-lock"/></svg><strong>Diary</strong><em class="lp-vg-switch"></em></p>
+            </div>
+            <h3>Private until you say otherwise</h3>
+            <p>Hide whole categories from friends, keep your journal and notes to yourself, and publish a review only when you choose to. There are no ads inside your library.</p>
+          </article>
+          <article class="lp-feature lp-feature--full">
+            <div class="lp-vignette lp-vg-import" aria-hidden="true">
+              <span class="lp-vg-chips"><b>Letterboxd</b><b>IMDb</b><b>Goodreads</b><b>StoryGraph</b><b>MyAnimeList</b><b>AniList</b><b>Kitsu</b><b>Trakt</b></span>
+              <svg class="lp-icon lp-vg-import__arrow"><use href="#i-arrow"/></svg>
+              <span class="lp-vg-import__home"><img src="/vortex-still.webp" alt="" width="28" height="28" loading="lazy" decoding="async">OmniTrackr</span>
+            </div>
+            <div class="lp-feature__copy">
+              <h3>Bring your history with you</h3>
+              <p>Upload your Letterboxd, IMDb, Goodreads, StoryGraph, MyAnimeList, Kitsu or Trakt export as it comes, or fetch an AniList list by username. You get a preview before anything is added, and you can export your whole library as JSON whenever you want. <a href="/switch">See how switching works</a>.</p>
+            </div>
+          </article>
         </div>
       </div>
     </section>
 
-    <section class="lp-section lp-section--tight" aria-labelledby="discovery-title">
+    <section class="lp-section lp-section--tight lp-tryout" aria-labelledby="discovery-title">
       <div class="lp-wrap">
-        <div class="lp-discovery">
+        <div class="lp-section-head lp-section-head--row">
           <div>
-            <p class="lp-eyebrow">Find something before you sign up</p>
-            <h2 id="discovery-title">Browse picks without an account</h2>
-            <p>Explore movies, shows, anime, games, albums, and books connected by an idea. Each recommendation explains why it fits, what to expect, and when to choose something else.</p>
-            <a class="lp-btn lp-btn--light" href="/discover">Find your next pick</a>
+            <p class="lp-eyebrow">No account needed</p>
+            <h2 id="discovery-title">Things to try right now</h2>
           </div>
-          <div class="lp-discovery__aside">
-            <strong>A few places to start</strong>
-            <ul class="lp-discovery__starts">
-              <li><a href="/discover/one-evening-well-spent">I have an evening to myself <span aria-hidden="true">→</span></a></li>
-              <li><a href="/discover/finding-your-feet">I’m in the mood for a fresh start <span aria-hidden="true">→</span></a></li>
-              <li><a href="/discover/beautifully-strange-worlds">Take me somewhere strange <span aria-hidden="true">→</span></a></li>
-            </ul>
-            <p>Want what is new instead? The <a href="/release-radar">Release Radar</a> shows what comes out this month. Or see what other members thought in <a href="/reviews">public reviews</a>, rank your favourites with the <a href="/tier-list">tier list maker</a>, or try today's <a href="/daily">guess-the-title puzzle</a>. None of it needs an account.</p>
-          </div>
+          <a class="lp-link-arrow" href="/discover">Browse every guide <svg class="lp-icon" aria-hidden="true"><use href="#i-arrow"/></svg></a>
         </div>
+        <ul class="lp-try-grid">
+          <li><a class="lp-try" href="/daily"><span class="lp-try__kicker">Daily game</span><strong>Guess the title</strong><span>A new puzzle every day, in six guesses or fewer</span></a></li>
+          <li><a class="lp-try" href="/tier-list"><span class="lp-try__kicker">Tool</span><strong>Tier list maker</strong><span>Rank movies, games or anything else and save the image</span></a></li>
+          <!--SEASON_LINK-->
+          <li><a class="lp-try" href="/in-order"><span class="lp-try__kicker">Guides</span><strong>Franchises in order</strong><span>Star Wars, The Witcher, Zelda and more, in the order to watch or play them</span></a></li>
+          <li><a class="lp-try" href="/if-you-liked"><span class="lp-try__kicker">Guides</span><strong>If you liked…</strong><span>Picks across formats for the thing you just finished</span></a></li>
+          <li><a class="lp-try" href="/pick"><span class="lp-try__kicker">Tool</span><strong>Pick for me</strong><span>Can't decide? Get one suggestion at a time</span></a></li>
+          <li><a class="lp-try" href="/release-radar"><span class="lp-try__kicker">Calendar</span><strong>Release Radar</strong><span>New movies, TV premieres, the anime season and upcoming games</span></a></li>
+          <li><a class="lp-try" href="/reviews"><span class="lp-try__kicker">Community</span><strong>Member reviews</strong><span>What people on OmniTrackr thought, spoilers tagged</span></a></li>
+        </ul>
+        <p class="lp-try-more">Or follow a Discover trail: <a href="/discover/one-evening-well-spent">an evening to yourself</a>, <a href="/discover/finding-your-feet">a fresh start</a> or <a href="/discover/beautifully-strange-worlds">somewhere strange</a>.</p>
       </div>
     </section>
 

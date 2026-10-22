@@ -1317,11 +1317,11 @@ class TestSecurityMiddleware:
 
         assert response.status_code == 200
         content = response.text
-        assert "Your media history, in one place" in content
+        assert "Free media tracker" in content
         visible = re.sub(r"<[^>]+>", "", content)
-        assert "Remember more than the title." in visible
+        assert "Every movie, show, game and book. One library." in visible
         assert "From recommendation to a memory you can revisit" in content
-        assert "Browse picks without an account" in content
+        assert "Things to try right now" in content
         assert "A few honest answers" in content
         hrefs = extract_hrefs(content)
         assert "/guides" in hrefs

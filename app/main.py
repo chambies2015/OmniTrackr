@@ -343,6 +343,23 @@ def hero_signup_html(google: bool) -> str:
     )
 
 
+def season_link_html() -> str:
+    """The seasonal hub tile in the homepage's no-account row: the running season, else the next one."""
+    from datetime import datetime
+    from . import seasonal
+    from .seasonal_guides import SEASONS
+    today = datetime.utcnow().date()
+    slug = seasonal.current(today)
+    if slug is None:
+        def next_start(entry):
+            start, _ = seasonal._bounds(entry, today.year)
+            return start if start >= today else seasonal._bounds(entry, today.year + 1)[0]
+        slug = min(SEASONS, key=lambda key: next_start(SEASONS[key]))
+    entry = SEASONS[slug]
+    return (f'<li><a class="lp-try" href="{entry["path"]}"><span class="lp-try__kicker">Seasonal</span>'
+            f'<strong>{entry["name"]} picks</strong><span>Films, shows, games and books for the season</span></a></li>')
+
+
 def _warm_homepage_sections() -> None:
     """Rebuild the homepage's cached database sections when they are due, off the event loop.
 
@@ -350,7 +367,7 @@ def _warm_homepage_sections() -> None:
     large library). Run inline, it stalled every other request while it ran.
     """
     from . import guest_picks, landing_proof
-    for section in (guest_picks.homepage_section, landing_proof.homepage_section):
+    for section in (guest_picks.homepage_section, landing_proof.homepage_section, landing_proof.hero_section):
         try:
             section()
         except Exception:
@@ -398,6 +415,15 @@ def public_root_html(html: str, request: Request | None = None) -> str:
             except Exception:
                 proof_html = ""  # The homepage never depends on this section.
             page = page.replace("<!--COMMUNITY_PROOF-->", proof_html, 1)
+        if "<!--HERO_PROOF-->" in page:
+            try:
+                from . import landing_proof
+                hero_proof = landing_proof.hero_section()
+            except Exception:
+                hero_proof = ""  # The homepage never depends on this line.
+            page = page.replace("<!--HERO_PROOF-->", hero_proof, 1)
+        if "<!--SEASON_LINK-->" in page:
+            page = page.replace("<!--SEASON_LINK-->", season_link_html(), 1)
         from . import google_signin
         for form, label in (("login", "Log in with Google"), ("register", "Sign up with Google")):
             page = page.replace(f"<!--GOOGLE_SIGNIN:{form}-->", google_signin_html(label) if google_signin.configured() else "", 1)
