@@ -246,7 +246,8 @@ def best_of_index():
 def best_of_year(year: int):
     if year not in best_of.years():
         raise HTTPException(404, "No best-of lists for that year")
-    return RedirectResponse(f"{best_of.BASE_PATH}#bo-{year}", status_code=301)
+    # A fixed target: the hub lists every year, so nothing from the request goes into the Location header.
+    return RedirectResponse(best_of.BASE_PATH, status_code=301)
 
 
 @router.get(best_of.BASE_PATH + "/{year}/{fmt}", include_in_schema=False)

@@ -102,7 +102,7 @@ def test_unknown_lists_are_not_found(client, path):
 
 def test_year_path_points_at_the_hub(client):
     response = client.get("/best-of/2026", follow_redirects=False)
-    assert response.status_code == 301 and response.headers["location"] == "/best-of#bo-2026"
+    assert response.status_code == 301 and response.headers["location"] == "/best-of"
 
 
 def test_hub_lists_every_guide(client):
