@@ -40,3 +40,9 @@ test('the card only links to this site and hides per member, season and year', (
     delete global.getUser;
   }
 });
+
+test('progress and the card speak for whichever season is running', () => {
+  assert.equal(hub.progressText({ total: 24, tracked: 0, done: 0 }, 'Holiday'),
+    'None of the 24 picks are in your library yet. Add a shelf to start your Holiday list.');
+  assert.match(hub.progressText({ total: 24, tracked: 0, done: 0 }), /start your seasonal list\.$/);
+});

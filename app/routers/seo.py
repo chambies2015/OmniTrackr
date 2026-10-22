@@ -60,6 +60,7 @@ CORE_SITEMAP_PATHS = (
     ("/if-you-liked", "monthly", "0.75"),
     ("/in-order", "monthly", "0.75"),
     ("/halloween", "weekly", "0.75"),
+    ("/holidays", "weekly", "0.75"),
     ("/daily", "daily", "0.8"),
     ("/movie-tracker", "monthly", "0.75"),
     ("/tv-show-tracker", "monthly", "0.75"),
@@ -535,7 +536,7 @@ OmniTrackr is a free web application for tracking and organizing movies, TV show
 Public reviews are available at {base_url}/reviews and individual review pages at {base_url}/reviews/[id]?category=[category]. OmniTrackr also publishes evergreen guidance at {base_url}/faq, {base_url}/guides, {base_url}/media-tracking, {base_url}/compare, {base_url}/use-cases, {base_url}/movie-tracker, {base_url}/tv-show-tracker, {base_url}/anime-tracker, {base_url}/game-tracker, {base_url}/music-tracker, {base_url}/book-tracker, {base_url}/media-statistics, {base_url}/export-import-guide, {base_url}/media-tracker-checklist, {base_url}/tracking-templates, and {base_url}/review-guidelines, a demo library at {base_url}/demo, a sample media library at {base_url}/sample-library, a human-readable site map at {base_url}/site-map, product updates at {base_url}/changelog and {base_url}/roadmap, ad transparency at {base_url}/advertising, and editorial standards at {base_url}/content-quality.
 Release Radar at {base_url}/release-radar lists upcoming movies (Wikidata), TV premieres (TVmaze), the current anime season (AniList), and new video games (RAWG), refreshed every few hours, with one-click tracking for members.
 "If you liked" guides at {base_url}/if-you-liked recommend what to watch, play, read or hear after a well-loved title (for example {base_url}/if-you-liked/interstellar), across formats, with why each pick fits and a caveat.
-Seasonal picks at {base_url}/halloween sort horror and spooky movies, shows, anime, games, books and music by fright level, from family-friendly to properly frightening, with a caveat for each.
+Seasonal picks at {base_url}/halloween sort horror and spooky movies, shows, anime, games, books and music by fright level, from family-friendly to properly frightening, with a caveat for each. Holiday picks at {base_url}/holidays cover Thanksgiving, Christmas and winter in the same six formats, sorted by festive level, from snowy stories with no holiday at all to full tinsel.
 "In order" guides at {base_url}/in-order give the best order to watch, read and play a franchise (for example {base_url}/in-order/star-wars), with release order, story order, what each entry adds and what is optional.
 Pick for me at {base_url}/pick suggests one editorially chosen movie, TV show, anime, game, book or album at a time, with the reason it was chosen and a caveat.
 OmniTrackr Daily at {base_url}/daily is a free daily guessing game: one movie, TV show, anime, game, book or album a day, guessed from six clues, with past puzzles, answers and editors' notes at {base_url}/daily/archive.

@@ -43,7 +43,7 @@ GUEST = (
     ("pick_saved", "Pick for me suggestion saved to a list or library"),
     ("liked_saved", "If you liked guide: a pick saved to a list or library"),
     ("order_saved", "In order guide: entries saved to a list or library"),
-    ("seasonal_saved", "Seasonal hub (Halloween): a pick saved to a list or library"),
+    ("seasonal_saved", "Seasonal hubs (Halloween, Holiday): a pick saved to a list or library"),
     ("guest_list_signup", "Guest with saved titles opened sign-up"),
     ("guest_list_imported", "Saved titles moved into a new library"),
     ("share_clicked", "Share button used on a public page"),

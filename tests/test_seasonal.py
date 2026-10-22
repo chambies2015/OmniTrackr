@@ -1,4 +1,4 @@
-"""Seasonal hubs (/halloween): hand-written picks by fright level, member progress and the dashboard card (Oct 2026)."""
+"""Seasonal hubs (/halloween, /holidays): hand-written picks by level, member progress and the dashboard card (Oct 2026)."""
 import re
 from datetime import date
 from pathlib import Path
@@ -10,6 +10,7 @@ from app.auth import AUTH_COOKIE_NAME
 from app.seasonal_guides import SEASONS
 
 HALLOWEEN = SEASONS["halloween"]
+HOLIDAYS = SEASONS["holidays"]
 
 
 @pytest.fixture(autouse=True)
@@ -41,6 +42,9 @@ def test_every_season_is_complete_and_substantial():
         for value in entry["window"]:
             date(2026, *map(int, value.split("-")))
         assert [value for value, _, _ in entry["scale"]] == [1, 2, 3, 4, 5]
+        for field in ("card_cta", "scale_name", "scale_eyebrow", "scale_heading", "plan_label", "plan_heading", "related_heading"):
+            assert entry[field], (slug, field)
+        assert all(month in {f"{number:02d}" for number in range(1, 13)} for month in entry["related_months"])
         assert len(entry["faq"]) >= 4 and len(entry["nights"]) >= 4
         seen = set()
         for shelf in entry["shelves"]:
@@ -48,7 +52,7 @@ def test_every_season_is_complete_and_substantial():
             # One pick in every format OmniTrackr tracks, per shelf.
             assert sorted(item["kind"] for item in shelf["picks"]) == sorted(title_pages.KINDS)
             for item in shelf["picks"]:
-                assert 1 <= item["fright"] <= 5 and 1800 < item["year"] < 2030
+                assert 1 <= item["level"] <= 5 and 1800 < item["year"] < 2030
                 assert item["title"] and item["time"] and item["why"] and item["note"] and item["caveat"]
                 key = (item["kind"], title_pages.slugify(item["title"]))
                 assert key not in seen
@@ -183,3 +187,82 @@ def test_dashboard_has_the_season_card_and_hooks():
     assert 'id="seasonCard"' in index and "/static/seasonal-card.js" in index and "/static/seasonal-card.css" in index
     auth = (root / "static" / "auth.js").read_text(encoding="utf-8")
     assert "window.refreshSeasonCard?.()" in auth and auth.count("window.resetSeasonCard?.()") == 2
+
+
+# ---------------------------------------------------------------- the holiday hub (Nov to Dec)
+
+def test_seasons_never_overlap_and_holidays_follow_halloween():
+    day = date(2026, 1, 1)
+    while day.year == 2026:
+        assert sum(seasonal.in_window(entry, day) for entry in SEASONS.values()) <= 1, day
+        day = date.fromordinal(day.toordinal() + 1)
+    assert seasonal.current(date(2026, 11, 2)) == "halloween" and seasonal.current(date(2026, 11, 3)) == "holidays"
+    assert seasonal.current(date(2026, 11, 26)) == "holidays" and seasonal.current(date(2026, 12, 31)) == "holidays"
+    assert seasonal.current(date(2027, 1, 1)) is None
+    assert seasonal.days_left(HOLIDAYS, date(2026, 12, 25)) == 6
+
+
+def test_holidays_do_not_repeat_halloween():
+    spooky = {(item["kind"], title_pages.slugify(item["title"])) for item in seasonal.picks(HALLOWEEN)}
+    assert not spooky & {(item["kind"], title_pages.slugify(item["title"])) for item in seasonal.picks(HOLIDAYS)}
+
+
+def test_every_holiday_pick_can_be_saved():
+    for item in seasonal.picks(HOLIDAYS):
+        pooled = seasonal.pool_entry(item)
+        assert pooled is not None, item["title"]
+        assert pick.find_id(pooled["id"]) is pooled
+    elf = pick.find("movie", "elf-2003")
+    assert elf["source_label"] == "Holiday picks" and elf["source_url"] == "/holidays#deck-the-halls"
+
+
+def test_holiday_hub_reads_without_an_account(client):
+    response = client.get("/holidays")
+    assert response.status_code == 200
+    html = response.text
+    assert '<link rel="canonical" href="https://omnitrackr.xyz/holidays">' in html
+    assert "<h1>The holidays, as festive as you like</h1>" in html
+    assert 'data-season-theme="holiday"' in html
+    for shelf in HOLIDAYS["shelves"]:
+        assert f'id="{shelf["key"]}"' in html
+    assert html.count("Save to my list") == 24
+    assert "Festive 5 of 5 · Full tinsel" in html and "FESTIVE 1 TO 2" in html
+    assert "How festive is it?" in html and "Five kinds of holiday break" in html and "Plan your break" in html
+    assert "Fright" not in html and "Halloween night" not in html
+    assert 'href="/halloween"' in html and "More for the season" in html
+    assert '"FAQPage"' in html and "/static/ad-loader.js" in html
+
+
+def test_halloween_links_on_to_the_holidays(client):
+    assert 'href="/holidays"' in client.get("/halloween").text
+
+
+def test_holiday_related_links_follow_the_calendar():
+    from app.routers.seasonal import _related
+    november = _related("holidays", HOLIDAYS, date(2026, 11, 10))
+    assert 'href="/challenges/' in november and "December 2026 challenge" not in november
+    december = _related("holidays", HOLIDAYS, date(2026, 12, 10))
+    assert "November 2026 challenge" in december and "December 2026 challenge" in december
+
+
+def test_member_adds_holiday_picks_and_the_card_shows_them(authenticated_client, db_session, monkeypatch):
+    monkeypatch.setattr(seasonal, "current", lambda today=None: "holidays")
+    html = authenticated_client.get("/holidays").text
+    assert 'data-season-progress="holidays" data-season-name="Holiday"' in html
+    ids = [seasonal.pool_entry(item)["id"] for item in HOLIDAYS["shelves"][3]["picks"]]
+    body = authenticated_client.post("/api/seasonal/holidays/add", json={"ids": ids}).json()
+    assert len(body["added"]) == 6 and body["progress"]["tracked"] == 6
+    card = authenticated_client.get("/api/seasonal/current").json()
+    assert card["season"] == "holidays" and card["theme"] == "holiday" and card["cta"] == "Find your festive level"
+    assert card["tracked"] == 6 and card["total"] == 24
+    user = db_session.query(models.User).filter_by(username="testuser").one()
+    book = db_session.query(models.Book).filter_by(user_id=user.id, title="The Polar Express").one()
+    assert book.author == "Chris Van Allsburg" and not book.read
+
+
+def test_holiday_hub_is_linked_from_the_sitemap_and_loader(client):
+    assert "https://omnitrackr.xyz/holidays</loc>" in client.get("/sitemap.xml").text
+    assert 'href="/holidays"' in client.get("/site-map").text
+    assert "/holidays" in client.get("/llms.txt").text
+    loader = (Path(__file__).parents[1] / "app" / "static" / "ad-loader.js").read_text(encoding="utf-8")
+    assert "/^\\/holidays$/" in loader
