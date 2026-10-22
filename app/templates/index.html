@@ -48,11 +48,11 @@
   <link rel="apple-touch-icon" href="/static/icons/apple-touch-icon.png?v=20261003-pwa-1">
   <meta name="apple-mobile-web-app-title" content="OmniTrackr">
   <script src="/static/pwa.js?v=20261018-install-card-1" defer></script>
-  <link rel="preload" href="./styles.css?v=20261013-calendar-1" as="style">
+  <link rel="preload" href="./styles.css?v=20261022-diary-1" as="style">
   <link rel="preload" href="/static/fonts/poppins-700-latin.woff2" as="font" type="font/woff2" crossorigin>
   <link rel="preload" href="/static/fonts/poppins-800-latin.woff2" as="font" type="font/woff2" crossorigin>
   <link rel="stylesheet" href="/static/fonts.css?v=20261009-fonts-1">
-  <link rel="stylesheet" href="./styles.css?v=20261013-calendar-1">
+  <link rel="stylesheet" href="./styles.css?v=20261022-diary-1">
   <link rel="stylesheet" href="/static/progress.css?v=20260922-progress">
   <link rel="stylesheet" href="/static/app-theme.css?v=20260924-friends-panel-2">
   <link rel="stylesheet" href="/static/library-theme.css?v=20261017-bughunt-1">
@@ -1175,9 +1175,27 @@
         <div>
           <p class="activity-hero__eyebrow">Private across every media type</p>
           <h2>Your Activity Journal</h2>
-          <p>Remember what you started, where you made progress, and what stayed with you. Entries are visible only inside your account.</p>
+          <p>Remember what you started, where you made progress, and what stayed with you. Entries are visible only inside your account, unless you choose to show your diary of finishes and rewatches on your public profile.</p>
         </div>
-        <span class="activity-hero__privacy">No public profile · No ads</span>
+        <span class="activity-hero__privacy">Private by default · No ads</span>
+      </section>
+
+      <section class="activity-diary" aria-labelledby="activityDiaryTitle">
+        <div class="activity-diary__header">
+          <div>
+            <p class="activity-diary__eyebrow">Diary</p>
+            <h3 id="activityDiaryTitle">This month</h3>
+            <p id="activityDiaryStats" class="activity-diary__stats"></p>
+          </div>
+          <div class="activity-diary__controls">
+            <button type="button" class="action-btn secondary" id="activityDiaryOlder" data-action="activity-diary-older" aria-label="Previous month">←</button>
+            <button type="button" class="action-btn secondary" id="activityDiaryToday" data-action="activity-diary-today">This month</button>
+            <button type="button" class="action-btn secondary" id="activityDiaryNewer" data-action="activity-diary-newer" aria-label="Next month">→</button>
+          </div>
+        </div>
+        <div class="activity-diary__weekdays" aria-hidden="true"><span>Mon</span><span>Tue</span><span>Wed</span><span>Thu</span><span>Fri</span><span>Sat</span><span>Sun</span></div>
+        <div id="activityDiaryGrid" class="activity-diary__grid"></div>
+        <div id="activityDiaryDay" class="activity-diary__day" aria-live="polite"></div>
       </section>
 
       <section class="activity-recap" aria-labelledby="activityRecapTitle">
@@ -1215,7 +1233,7 @@
           <label>Moment
             <select id="activityAction" required>
               <option value="started">Started</option><option value="progressed">Made progress</option>
-              <option value="completed">Finished</option><option value="revisited">Revisited</option>
+              <option value="completed">Finished</option><option value="revisited">Revisited (rewatch, reread, replay)</option>
               <option value="noted">Added a note</option>
             </select>
           </label>
@@ -1650,12 +1668,12 @@
   </dialog>
   <script src="./credentials.js"></script>
   <script src="./auth.js?v=20261021-bugs-1"></script>
-  <script src="/static/import-studio.js?v=20261018-formats-1"></script>
+  <script src="/static/import-studio.js?v=20261022-diary-1"></script>
   <script src="/static/progress.js?v=20260922-progress"></script>
   <script src="./app.js"></script>
   <script src="/static/for-you.js?v=20261017-bughunt-1"></script>
   <script src="/static/title-links.js?v=20261008-speed-1"></script>
-  <script src="/static/public-profile.js?v=20261002-profiles-1"></script>
+  <script src="/static/public-profile.js?v=20261022-diary-1"></script>
   <script src="/static/supporter.js?v=20261020-looks-1"></script>
   <script src="/static/profile-showcase.js?v=20261021-bugs-1"></script>
   <script src="/static/goals.js?v=20261010-goal-reached-1"></script>
@@ -1877,6 +1895,7 @@
               <label class="profile-settings__check"><input type="checkbox" id="profileShowFavorites"> Favorites (titles you rated 8 or higher)</label>
               <label class="profile-settings__check"><input type="checkbox" id="profileShowReviews"> Public reviews</label>
               <label class="profile-settings__check"><input type="checkbox" id="profileShowCollections"> Public collections</label>
+              <label class="profile-settings__check"><input type="checkbox" id="profileShowDiary"> Diary: dates of your recent finishes and rewatches (your journal notes stay private)</label>
             </fieldset>
             <p class="info-text profile-settings__private" id="profilePrivateNote" hidden></p>
             <button type="submit" class="action-btn" id="profileSave">Save public profile</button>

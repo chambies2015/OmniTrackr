@@ -10,7 +10,7 @@ class Node {
 
 function setup(fetchImpl) {
   const ids = ['publicProfileForm', 'profileEnabled', 'profileBio', 'profileBioCount', 'profileShowStats', 'profileShowFavorites',
-    'profileShowReviews', 'profileShowCollections', 'profilePrivateNote', 'profileSave', 'profileError', 'profileSuccess',
+    'profileShowReviews', 'profileShowCollections', 'profileShowDiary', 'profilePrivateNote', 'profileSave', 'profileError', 'profileSuccess',
     'profileLinkRow', 'profileLink', 'profileCopyLink', 'publicProfileSection'];
   const nodes = Object.fromEntries(ids.map(id => [id, new Node(id)]));
   global.document = { readyState: 'complete', getElementById: id => nodes[id] || null, addEventListener() {} };
@@ -30,13 +30,16 @@ test('settings fill the form and show the link only when enabled', () => {
   assert.equal(nodes.profileEnabled.checked, true);
   assert.equal(nodes.profileBio.value, 'Hi <b>there</b>');
   assert.equal(nodes.profileShowFavorites.checked, false);
+  // The diary is opt-in: missing or false leaves it unticked, only true ticks it.
+  assert.equal(nodes.profileShowDiary.checked, false);
   assert.equal(nodes.profileLinkRow.hidden, false);
   assert.equal(nodes.profileLink.href, '/u/dan');
   assert.equal(nodes.profileLink.textContent, 'omnitrackr.xyz/u/dan');
   assert.match(nodes.profilePrivateNote.textContent, /Books/);
   assert.match(nodes.profilePrivateNote.textContent, /statistics are private/);
   assert.equal(nodes.profileBioCount.textContent, '15/280');
-  module.apply({ ...SETTINGS, enabled: false, private_categories: [], statistics_private: false });
+  module.apply({ ...SETTINGS, show_diary: true, enabled: false, private_categories: [], statistics_private: false });
+  assert.equal(nodes.profileShowDiary.checked, true);
   assert.equal(nodes.profileLinkRow.hidden, true);
   assert.equal(nodes.profilePrivateNote.hidden, true);
 });
@@ -61,7 +64,7 @@ test('save sends every field and shows the server error text as plain text', asy
   assert.equal(sent.url, '/api/profile/settings');
   assert.equal(sent.options.method, 'PUT');
   const body = JSON.parse(sent.options.body);
-  assert.deepEqual(Object.keys(body).sort(), ['bio', 'enabled', 'show_collections', 'show_favorites', 'show_reviews', 'show_stats']);
+  assert.deepEqual(Object.keys(body).sort(), ['bio', 'enabled', 'show_collections', 'show_diary', 'show_favorites', 'show_reviews', 'show_stats']);
   assert.equal(nodes.profileError.textContent, 'Bios can\'t include links <a>');
   assert.equal(nodes.profileSave.disabled, false);
 });

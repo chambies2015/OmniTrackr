@@ -6,7 +6,8 @@ from fastapi import APIRouter, Depends, File, Form, HTTPException, Request, Uplo
 from fastapi.responses import Response
 from sqlalchemy.orm import Session
 
-from .. import models
+from .. import diary, models
+from ..import_formats import letterboxd_diary
 from ..dependencies import get_current_user, get_db
 from ..progress import lock_progress_owner
 from ..import_formats import STRUCTURED_EXTENSIONS
@@ -62,7 +63,15 @@ async def preview_import(
     mapping = _mapping_or_400(mapping_json)
     detected, rows = _parse_or_400(content, source, category, mapping, file.filename)
     digest = fingerprint(content, source, category or "", mapping_json, file.filename)
-    return summarize(detected, digest, classify_rows(db, current_user.id, rows), status_filter, offset, limit)
+    summary = summarize(detected, digest, classify_rows(db, current_user.id, rows), status_filter, offset, limit)
+    return {**summary, "diary_count": len(_diary_plan(db, current_user.id, detected, content, file.filename))}
+
+
+def _diary_plan(db: Session, user_id: int, detected: str, content: bytes, filename: str) -> list[dict]:
+    """Letterboxd diary visits not yet in the member's journal. Other sources have no dated visits."""
+    if detected != "letterboxd":
+        return []
+    return diary.plan_letterboxd_import(db, user_id, letterboxd_diary(content, filename))
 
 
 @router.post("/apply/")
@@ -92,7 +101,15 @@ async def apply_import(
     except Exception as exc:
         db.rollback()
         raise HTTPException(status_code=500, detail="Nothing was imported because the batch could not be saved.") from exc
-    return {**result, "detected_source": detected}
+    diary_created = 0
+    try:
+        # After the titles are saved, so each visit can link to its film in the library.
+        diary_created = diary.save_letterboxd_import(
+            db, current_user.id, _diary_plan(db, current_user.id, detected, content, file.filename))
+    except Exception:
+        # The titles are already saved; a diary that can't be added never undoes them.
+        db.rollback()
+    return {**result, "detected_source": detected, "diary_created": diary_created}
 
 
 @router.get("/template/{category}/")

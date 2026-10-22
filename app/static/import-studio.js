@@ -99,7 +99,7 @@ function updateImportStudioControls() {
   const preview = document.getElementById('importStudioPreviewButton');
   const apply = document.getElementById('importStudioApplyButton');
   if (preview) preview.disabled = busy || importStudioInspecting || importStudioApplying;
-  if (apply) apply.disabled = busy || importStudioApplying || !importStudioPreview?.ready_count || !importStudioMatches(importStudioContext);
+  if (apply) apply.disabled = busy || importStudioApplying || !importStudioHasWork(importStudioPreview) || !importStudioMatches(importStudioContext);
   document.querySelectorAll('#importStudioForm input, #importStudioForm select').forEach(el => { el.disabled = importStudioApplying; });
   for (const id of ['importStudioConfirmButton', 'importStudioCancelButton']) {
     const el = document.getElementById(id);
@@ -245,6 +245,15 @@ function renderImportStudioValues(item) {
   return box;
 }
 
+// A Letterboxd export can bring diary dates even when every film is already in the library.
+function importStudioHasWork(preview) {
+  return Boolean(preview && (preview.ready_count || preview.diary_count));
+}
+
+function importStudioDiaryText(count) {
+  return `${count} Letterboxd diary ${count === 1 ? 'date' : 'dates'} will be added to your Journal: first watches as Finished, rewatches as Revisited. Your diary calendar fills in with them.`;
+}
+
 function renderImportStudioPreview(data, focusId) {
   const results = document.getElementById('importStudioResults');
   if (!results) return;
@@ -257,6 +266,7 @@ function renderImportStudioPreview(data, focusId) {
   if (importStudioSources[data.detected_source]) {
     results.appendChild(importStudioElement('p', `Read as ${importStudioSources[data.detected_source]}.`, 'info-text import-studio__source'));
   }
+  if (data.diary_count) results.appendChild(importStudioElement('p', importStudioDiaryText(data.diary_count), 'info-text import-studio__diary'));
   results.append(importStudioElement('p', 'Review the values from your file below. Notes stay private. Filtering this preview does not change which ready rows will be imported.', 'info-text'));
   const controls = importStudioElement('div', undefined, 'import-studio__review-controls');
   const label = importStudioElement('label');
@@ -330,7 +340,7 @@ async function loadImportStudioPreview(offset = 0, filter = 'all', focusId) {
     if (!data.fingerprint || !Array.isArray(data.preview)) throw new Error('The preview response was incomplete.');
     importStudioPreview = data; importStudioContext = snapshot; importStudioFilter = filter;
     renderImportStudioPreview(data, focusId);
-    status.textContent = `Preview complete: ${data.ready_count} ready, ${data.duplicate_count} duplicates, ${data.invalid_count} needing attention. Nothing has been saved.`;
+    status.textContent = `Preview complete: ${data.ready_count} ready, ${data.duplicate_count} duplicates, ${data.invalid_count} needing attention${data.diary_count ? `, ${data.diary_count} diary dates` : ''}. Nothing has been saved.`;
   } catch (error) {
     if (current() && error.name !== 'AbortError') {
       status.textContent = `${error.message} Your file and options are still here. Try Preview import again.`;
@@ -360,9 +370,11 @@ function filterImportStudioPreview(filter) {
 }
 
 function applyLibraryImport() {
-  if (importStudioApplying || importStudioController || !importStudioPreview?.ready_count) return;
+  if (importStudioApplying || importStudioController || !importStudioHasWork(importStudioPreview)) return;
   if (!importStudioMatches(importStudioContext)) { resetImportStudioPreview(); return; }
-  document.getElementById('importStudioConfirmSummary').textContent = `Import all ${importStudioPreview.ready_count} ready rows? ${importStudioPreview.duplicate_count} duplicates and ${importStudioPreview.invalid_count} invalid rows will be skipped. Existing entries will keep their values. Imported notes stay private.`;
+  const diaryCount = importStudioPreview.diary_count || 0;
+  const diaryText = diaryCount ? ` ${diaryCount} diary ${diaryCount === 1 ? 'date' : 'dates'} will be added to your Journal.` : '';
+  document.getElementById('importStudioConfirmSummary').textContent = `Import all ${importStudioPreview.ready_count} ready rows?${diaryText} ${importStudioPreview.duplicate_count} duplicates and ${importStudioPreview.invalid_count} invalid rows will be skipped. Existing entries will keep their values. Imported notes stay private.`;
   document.getElementById('importStudioConfirm').hidden = false;
   document.getElementById('importStudioConfirmButton').focus();
 }
@@ -380,6 +392,7 @@ function renderImportStudioCompletion(data) {
   heading.tabIndex = -1;
   const summary = importStudioElement('div', undefined, 'import-studio__summary');
   summary.append(importStudioMetric(data.created_count, 'Titles added'), importStudioMetric(data.duplicate_count, 'Duplicates kept'), importStudioMetric(data.invalid_count, 'Rows skipped'));
+  if (data.diary_created) summary.appendChild(importStudioMetric(data.diary_created, 'Diary dates added'));
   results.append(heading, summary);
   if (data.invalid_count) results.appendChild(importStudioElement('p', 'Your source file is still selected. Preview again and choose Needs attention to review skipped rows. Fix those rows in your file, then choose the corrected file and preview it.', 'info-text'));
   const actions = importStudioElement('div', undefined, 'import-studio__actions');
@@ -399,7 +412,7 @@ function renderImportStudioCompletion(data) {
 }
 
 async function confirmLibraryImport() {
-  if (document.getElementById('importStudioConfirm').hidden || importStudioApplying || importStudioController || !importStudioPreview?.ready_count) return;
+  if (document.getElementById('importStudioConfirm').hidden || importStudioApplying || importStudioController || !importStudioHasWork(importStudioPreview)) return;
   if (!importStudioMatches(importStudioContext)) { resetImportStudioPreview(); return; }
   const snapshot = importStudioContext;
   const body = buildImportStudioFormData(true, snapshot);
@@ -418,7 +431,7 @@ async function confirmLibraryImport() {
     importStudioPreview = null; importStudioContext = null;
     document.getElementById('importStudioConfirm').hidden = true;
     renderImportStudioCompletion(data);
-    status.textContent = `Import complete: ${data.created_count} added, ${data.duplicate_count} duplicates skipped, ${data.invalid_count} invalid rows skipped.`;
+    status.textContent = `Import complete: ${data.created_count} added, ${data.duplicate_count} duplicates skipped, ${data.invalid_count} invalid rows skipped${data.diary_created ? `, ${data.diary_created} diary dates added to your Journal` : ''}.`;
     try { Promise.resolve(window.OmniImportStudio.refresh?.(data.by_category || {})).catch(() => {}); } catch (_) { /* A refresh cannot turn a completed import into a failed save. */ }
   } catch (error) {
     if (current() && error.name !== 'AbortError') {

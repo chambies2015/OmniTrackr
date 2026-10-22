@@ -23,7 +23,7 @@ from ..site_chrome import apply_site_chrome
 
 router = APIRouter(tags=["profiles"])
 SITE_URL = os.getenv("SITE_URL", "https://omnitrackr.xyz").rstrip("/")
-CSS_VERSION = "20261020-looks-1"
+CSS_VERSION = "20261022-diary-1"
 TITLE_CSS_VERSION = "20261009-take-1"
 
 
@@ -49,6 +49,7 @@ class ProfileSettingsUpdate(BaseModel):
     show_favorites: Optional[bool] = None
     show_reviews: Optional[bool] = None
     show_collections: Optional[bool] = None
+    show_diary: Optional[bool] = None
 
 
 @router.get("/api/profile/settings")
@@ -168,6 +169,8 @@ def _owner_note_html(view, is_owner: bool) -> str:
         return ""
     note = ('This is your public profile. Change what it shows and pin titles to your showcase from '
             '<a href="/#public-profile">Account → Public profile</a>.')
+    if not view.profile.show_diary:
+        note += ' You can also show your diary of recent finishes and rewatches there.'
     if not view.supporting:
         note += (' Supporters can also add a banner, pick an accent color and pin six titles. '
                  '<a href="/supporters">See what supporting gets you</a>.')
@@ -216,6 +219,32 @@ def _favorites_html(view) -> str:
                   f'<span class="profile-rating">{_e(_rating(item["rating"]))}/10</span></small></a>')
     return (f'<section class="title-section" aria-labelledby="profile-favorites"><h2 id="profile-favorites">Favorites</h2>'
             f'<div class="title-related-grid">{cards}</div></section>')
+
+
+def _diary_html(view) -> str:
+    if not view.diary:
+        return ""
+    months, current = "", None
+    rows = ""
+    for entry in view.diary:
+        heading = f"{entry['date']:%B %Y}"
+        if heading != current:
+            if current is not None:
+                months += f'<h3 class="profile-diary__month">{_e(current)}</h3><ol class="profile-diary__list">{rows}</ol>'
+            current, rows = heading, ""
+        art = (f'<img src="{_e(entry["image"])}" alt="" loading="lazy">' if entry.get("image")
+               else f'<span>{_e(entry["title"][:1].upper())}</span>')
+        repeat = (f' · <span class="profile-diary__again">↻ {_e(entry["visit_label"])}</span>' if entry["repeat"] else "")
+        rating = (f' · <span class="profile-rating">{_e(_rating(entry["rating"]))}/10</span>'
+                  if entry.get("rating") is not None else "")
+        rows += (f'<li class="profile-diary__row"><time class="profile-diary__day" datetime="{entry["date"].isoformat()}">'
+                 f'<strong>{entry["date"].day}</strong><small>{entry["date"]:%a}</small></time>'
+                 f'<a class="profile-diary__art" href="{_e(entry["url"])}" tabindex="-1" aria-hidden="true">{art}</a>'
+                 f'<span class="profile-diary__copy"><a href="{_e(entry["url"])}">{_e(entry["title"])}</a>'
+                 f'<small>{_e(entry["label"])}{repeat}{rating}</small></span></li>')
+    months += f'<h3 class="profile-diary__month">{_e(current)}</h3><ol class="profile-diary__list">{rows}</ol>'
+    return (f'<section class="title-section profile-diary" aria-labelledby="profile-diary"><h2 id="profile-diary">Diary</h2>'
+            f'<p class="profile-diary__intro">What {_e(view.user.username)} finished and went back to lately.</p>{months}</section>')
 
 
 def _reviews_html(view) -> str:
@@ -271,7 +300,7 @@ def render(view, *, signed_in: bool, is_owner: bool, recap_url: Optional[str] = 
         + (f". {lead}" if lead else "."), 158)
     robots = "index, follow" if view.indexable else "noindex, follow"
     card_url = f"{SITE_URL}{view.path}/card.png"
-    body = "".join([_showcase_html(view), _stats_html(view), _badges_html(view), _favorites_html(view), _reviews_html(view), _collections_html(view)])
+    body = "".join([_showcase_html(view), _stats_html(view), _badges_html(view), _favorites_html(view), _diary_html(view), _reviews_html(view), _collections_html(view)])
     if not body:
         body = f'<p class="title-empty">{_e(name)} hasn\'t shared anything here yet.</p>'
     owner_note = _owner_note_html(view, is_owner)

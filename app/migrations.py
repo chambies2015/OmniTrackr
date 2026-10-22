@@ -791,6 +791,7 @@ def run_migrations():
     add_notification_link_column()
     add_supporter_wall_column()
     add_supporter_banner_column()
+    add_public_diary_column()
 
 
 def add_notification_link_column():
@@ -839,6 +840,22 @@ def add_supporter_banner_column():
             print("Added banner column to supporters table")
     except Exception as e:
         print(f"Migration warning (supporter banner): {e}")
+
+
+def add_public_diary_column():
+    """Add the opt-in public diary flag. Existing profiles start with it off (FALSE), so they look the same."""
+    try:
+        inspector = inspect(engine)
+        if not inspector.has_table("public_profiles"):
+            return
+        if "show_diary" in {col["name"] for col in inspector.get_columns("public_profiles")}:
+            return
+        with engine.connect() as conn:
+            conn.execute(text("ALTER TABLE public_profiles ADD COLUMN show_diary BOOLEAN NOT NULL DEFAULT FALSE"))
+            conn.commit()
+            print("Added show_diary column to public_profiles table")
+    except Exception as e:
+        print(f"Migration warning (public diary): {e}")
 
 
 LIBRARY_TABLES = ("movies", "tv_shows", "anime", "video_games", "music", "books")

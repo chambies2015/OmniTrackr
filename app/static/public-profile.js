@@ -8,6 +8,7 @@
     show_favorites: 'profileShowFavorites',
     show_reviews: 'profileShowReviews',
     show_collections: 'profileShowCollections',
+    show_diary: 'profileShowDiary',
   };
   const $ = id => document.getElementById(id);
   const apiBase = () => (typeof API_BASE === 'string' ? API_BASE : '');
@@ -55,7 +56,10 @@
     loaded = settings;
     $('profileEnabled').checked = !!settings.enabled;
     $('profileBio').value = settings.bio || '';
-    Object.entries(FIELDS).forEach(([field, id]) => { $(id).checked = settings[field] !== false; });
+    // The diary is opt-in, so only an explicit true ticks it; the other sections default to shown.
+    Object.entries(FIELDS).forEach(([field, id]) => {
+      $(id).checked = field === 'show_diary' ? settings[field] === true : settings[field] !== false;
+    });
     showLink(settings);
     updateCount();
     const notes = [];
