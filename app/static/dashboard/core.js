@@ -739,6 +739,8 @@ function handleDelegatedClick(event) {
     'add-next-up': () => addToNextUp(target.dataset.nextUpCategory, Number(target.dataset.nextUpItemId)),
     'move-next-up': () => moveNextUp(Number(target.dataset.nextUpId), Number(target.dataset.nextUpPosition)),
     'remove-next-up': () => removeNextUp(Number(target.dataset.nextUpId)),
+    'finish-next-up': () => finishNextUp(Number(target.dataset.nextUpId)),
+    'clear-finished-next-up': clearFinishedNextUp,
     'begin-completion-ritual': () => openCompletionMoment(target.dataset.completionCategory, Number(target.dataset.completionItemId)),
     'close-completion-ritual': closeCompletionRitual,
     'save-completion-ritual': saveCompletionRitual,

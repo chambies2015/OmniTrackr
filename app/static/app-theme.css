@@ -118,6 +118,8 @@ body.app-shell .next-up-queue__item { background: var(--surface-muted); border-c
 body.app-shell .next-up-queue__position { background: var(--accent-soft); color: var(--primary); }
 body.app-shell :is(.next-up-queue__open, .return-deck__open) { color: var(--teal); border-color: var(--border); }
 body.app-shell .next-up-queue__remove { color: var(--danger); }
+body.app-shell .next-up-queue__done { background: var(--teal); border-color: var(--teal); color: var(--card-bg); }
+body.app-shell .next-up-queue__done:hover:not(:disabled) { filter: brightness(1.08); }
 body.app-shell :is(.next-up-queue__controls button, .library-pulse__insights, .next-up-queue__toggle, .todays-pick__another) { min-height: 40px; }
 body.app-shell .todays-pick__choice { border-color: var(--teal); }
 body.app-shell .todays-pick__filter select { background: var(--field-bg); color: var(--fg); border-color: var(--border); border-radius: 8px; min-height: 40px; }

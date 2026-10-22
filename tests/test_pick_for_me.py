@@ -169,3 +169,24 @@ def test_dashboard_todays_pick_links_to_something_new(client):
     index = (Path(__file__).parents[1] / "app" / "templates" / "index.html").read_text(encoding="utf-8")
     start = index.index('id="todaysPick"')
     assert 'href="/pick"' in index[start:index.index("</section>", start)]
+
+
+def test_member_can_line_a_pick_up_in_next_up(authenticated_client, db_session):
+    first = authenticated_client.post("/api/pick/add", json={"id": "movie/arrival-2016"}).json()
+    assert first["next_up"] is None
+    assert authenticated_client.get("/next-up/").json() == []
+    queued = authenticated_client.post("/api/pick/add", json={"id": "movie/arrival-2016", "next_up": True}).json()
+    assert queued["state"] == "existing" and queued["next_up"] == "queued"
+    assert [item["title"] for item in authenticated_client.get("/next-up/").json()] == ["Arrival"]
+    again = authenticated_client.post("/api/pick/add", json={"id": "movie/arrival-2016", "next_up": True}).json()
+    assert again["next_up"] == "already_queued"
+    assert len(authenticated_client.get("/next-up/").json()) == 1
+
+
+def test_a_finished_title_is_not_queued_from_pick_for_me(authenticated_client, db_session):
+    user = db_session.query(models.User).filter_by(username="testuser").one()
+    db_session.add(models.Book(user_id=user.id, title="Piranesi", author="Susanna Clarke", year=2020, read=True))
+    db_session.commit()
+    body = authenticated_client.post("/api/pick/add", json={"id": "book/piranesi-2020", "next_up": True}).json()
+    assert body["state"] == "existing" and body["next_up"] == "finished"
+    assert authenticated_client.get("/next-up/").json() == []
