@@ -150,3 +150,42 @@ def homepage_section(session_factory=None) -> str:
 def clear_cache() -> None:
     with _lock:
         _cache["at"], _cache["html"] = 0.0, None
+        _counts_cache["at"], _counts_cache["counts"] = 0.0, None
+
+
+_counts_cache = {"at": 0.0, "counts": None}
+
+
+def hero_proof_html(counts: dict) -> str:
+    """One line under the hero buttons, shown only once the numbers are worth saying."""
+    members, titles = counts.get("members", 0), counts.get("titles", 0)
+    if members < MIN_MEMBERS_SHOWN:
+        return ""
+    line = f"<strong>{round_down(members)}</strong> members"
+    if titles >= 100:
+        line += f" have tracked <strong>{round_down(titles)}</strong> titles here"
+    else:
+        line += " keep their lists here"
+    return f'<p class="lp-hero__proof">{line}.</p>'
+
+
+def hero_section(session_factory=None) -> str:
+    """Cached hero proof line (refreshed every 10 minutes; never raises)."""
+    now = time.monotonic()
+    with _lock:
+        counts = _counts_cache["counts"]
+        fresh = counts is not None and now - _counts_cache["at"] < CACHE_SECONDS
+    if not fresh:
+        try:
+            if session_factory is None:
+                from .database import SessionLocal as session_factory
+            db = session_factory()
+            try:
+                counts = stats(db)
+            finally:
+                db.close()
+        except Exception:
+            counts = counts or {}
+        with _lock:
+            _counts_cache["at"], _counts_cache["counts"] = now, counts
+    return hero_proof_html(counts or {})
