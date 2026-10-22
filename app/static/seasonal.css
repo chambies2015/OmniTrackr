@@ -1,4 +1,4 @@
-/* Seasonal hubs (/halloween). Builds on discover.css and if-you-liked.css.
+/* Seasonal hubs (/halloween, /holidays). Builds on discover.css and if-you-liked.css.
    Each season sets its colors on [data-season-theme]; the layout is shared. */
 .sn-hub {
   --sn-accent: #2dd4bf;
@@ -11,6 +11,15 @@
   --sn-accent-soft: #fed7aa;
   --sn-accent-ink: #1c0a02;
   --sn-glow: rgba(249, 115, 22, .22);
+}
+
+.sn-hub[data-season-theme="holiday"] {
+  --sn-accent: #fbbf24;
+  --sn-accent-soft: #fde68a;
+  --sn-accent-ink: #1f1300;
+  --sn-glow: rgba(251, 191, 36, .18);
+  --sn-berry: #f87171;
+  --sn-pine: #22c55e;
 }
 
 .sn-hub .eyebrow { color: var(--sn-accent); }
@@ -36,7 +45,40 @@
   width: 180px;
   z-index: 0;
 }
-.sn-hub:not([data-season-theme="halloween"]) .sn-hero__moon { display: none; }
+.sn-hub:not([data-season-theme="halloween"]):not([data-season-theme="holiday"]) .sn-hero__moon { display: none; }
+
+/* Holiday hero: the same corner holds a wreath of lights, with a light fall of snow across the header. */
+.sn-hub[data-season-theme="holiday"] .sn-hero__moon {
+  background:
+    radial-gradient(circle at 50% 8%, #fde68a 0 5px, transparent 6px),
+    radial-gradient(circle at 92% 50%, #f87171 0 5px, transparent 6px),
+    radial-gradient(circle at 50% 92%, #fde68a 0 5px, transparent 6px),
+    radial-gradient(circle at 8% 50%, #f87171 0 5px, transparent 6px),
+    radial-gradient(circle at 21% 21%, #fde68a 0 4px, transparent 5px),
+    radial-gradient(circle at 79% 21%, #f87171 0 4px, transparent 5px),
+    radial-gradient(circle at 79% 79%, #fde68a 0 4px, transparent 5px),
+    radial-gradient(circle at 21% 79%, #f87171 0 4px, transparent 5px),
+    radial-gradient(circle, transparent 0 52%, #15803d 53%, #166534 66%, #14532d 70%, transparent 71%);
+  box-shadow: none;
+  filter: drop-shadow(0 0 22px rgba(251, 191, 36, .35));
+  opacity: .4;
+}
+.sn-hub[data-season-theme="holiday"] .sn-hero::before {
+  background-image:
+    radial-gradient(circle at 23% 31%, rgba(255, 255, 255, .6) 0 1.5px, transparent 2.5px),
+    radial-gradient(circle at 71% 64%, rgba(255, 255, 255, .4) 0 1px, transparent 2px),
+    radial-gradient(circle at 48% 12%, rgba(255, 255, 255, .5) 0 2px, transparent 3px),
+    radial-gradient(circle at 86% 83%, rgba(255, 255, 255, .3) 0 1px, transparent 2px);
+  background-size: 137px 149px, 89px 103px, 211px 197px, 61px 71px;
+  content: "";
+  inset: 0;
+  -webkit-mask-image: linear-gradient(to bottom, #000 0, transparent 85%);
+  mask-image: linear-gradient(to bottom, #000 0, transparent 85%);
+  opacity: .5;
+  pointer-events: none;
+  position: absolute;
+  z-index: 0;
+}
 
 /* Fright meter: five marks, filled up to the level. */
 .sn-fright { align-items: center; color: #e7e3f7; display: flex; flex-wrap: wrap; font-size: .88rem; gap: 6px 10px; margin: 2px 0 0; }
@@ -44,6 +86,10 @@
 .sn-fright__mark { background: rgba(255, 255, 255, .14); border-radius: 50% 50% 45% 45%; display: inline-block; height: 12px; width: 12px; }
 .sn-fright__mark--on { background: var(--sn-accent); box-shadow: 0 0 8px var(--sn-glow); }
 .sn-fright--5 .sn-fright__mark--on { background: #f43f5e; }
+.sn-hub[data-season-theme="holiday"] .sn-fright__mark { border-radius: 50%; }
+.sn-hub[data-season-theme="holiday"] .sn-fright__mark--on:nth-child(even) { background: var(--sn-berry); }
+.sn-hub[data-season-theme="holiday"] .sn-fright--5 .sn-fright__mark--on { background: var(--sn-accent); box-shadow: 0 0 10px rgba(251, 191, 36, .55); }
+.sn-hub[data-season-theme="holiday"] .sn-fright--5 .sn-fright__mark--on:nth-child(even) { background: var(--sn-berry); box-shadow: 0 0 10px rgba(248, 113, 113, .55); }
 
 .sn-scale { margin: 36px 0 44px; }
 .sn-scale__list { display: grid; gap: 10px; grid-template-columns: repeat(5, minmax(0, 1fr)); list-style: none; margin: 18px 0 0; padding: 0; }
@@ -85,7 +131,8 @@
   font-weight: 800;
   justify-content: center;
 }
-.sn-hub:not([data-season-theme="halloween"]) .sn-pick__art--letter { background: rgba(124, 58, 237, .35); }
+.sn-hub[data-season-theme="holiday"] .sn-pick__art--letter { background: linear-gradient(160deg, rgba(220, 38, 38, .45), rgba(21, 128, 61, .55)); }
+.sn-hub:not([data-season-theme="halloween"]):not([data-season-theme="holiday"]) .sn-pick__art--letter { background: rgba(124, 58, 237, .35); }
 .sn-pick .eyebrow { margin-bottom: 6px; }
 .sn-pick h3 { color: #fff; font-family: var(--site-display); font-size: 1.35rem; line-height: 1.3; margin: 0 0 6px; }
 .sn-pick__time { color: #c3c8dd !important; font-size: .88rem; margin: 6px 0 0; }

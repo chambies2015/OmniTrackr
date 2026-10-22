@@ -1,4 +1,4 @@
-"""Helpers for the seasonal hubs (/halloween), whose writing lives in seasonal_guides.py.
+"""Helpers for the seasonal hubs (/halloween, /holidays), whose writing lives in seasonal_guides.py.
 
 Every pick joins the Pick for me pool (pick.py), so saving reuses the same paths:
 members add a pick through POST /api/pick/add, and visitors keep it in their
@@ -33,7 +33,7 @@ def anchor_id(item: dict) -> str:
     return "pick-" + title_pages.slugify(item["title"])
 
 
-def fright_label(entry: dict, level: int) -> str:
+def level_label(entry: dict, level: int) -> str:
     return next(name for value, name, _ in entry["scale"] if value == level)
 
 

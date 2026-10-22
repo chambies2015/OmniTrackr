@@ -1,4 +1,4 @@
-"""Seasonal hubs (/halloween), plus each member's progress and the dashboard card.
+"""Seasonal hubs (/halloween, /holidays), plus each member's progress and the dashboard card.
 
 The hub reads completely without scripts or an account. Members add one pick or
 a whole shelf to their library (title, year and creator only) and see which picks
@@ -22,8 +22,8 @@ from ..seasonal_guides import SEASONS
 from .discover import page
 
 router = APIRouter(tags=["seasonal"])
-CSS_VERSION = "20261019-halloween-1"
-JS_VERSION = "20261019-halloween-1"
+CSS_VERSION = "20261022-holidays-1"
+JS_VERSION = "20261022-holidays-1"
 GUEST_LIST_JS = "/static/guest-list.js?v=20261012-hero-search-1"
 SITE = "https://omnitrackr.xyz"
 MAX_ADD = 30
@@ -57,12 +57,12 @@ def _meta_line(item: dict) -> str:
     return " · ".join(parts)
 
 
-def _fright(entry: dict, level: int) -> str:
-    label = seasonal.fright_label(entry, level)
+def _level(entry: dict, level: int) -> str:
+    label = seasonal.level_label(entry, level)
     marks = "".join(f'<span class="sn-fright__mark{" sn-fright__mark--on" if index <= level else ""}"></span>'
                     for index in range(1, 6))
     return (f'<p class="sn-fright sn-fright--{level}"><span class="sn-fright__marks" aria-hidden="true">{marks}</span>'
-            f'<span>Fright {level} of 5 · {_e(label)}</span></p>')
+            f'<span>{_e(entry["scale_name"])} {level} of 5 · {_e(label)}</span></p>')
 
 
 def _save_button(entry: dict, signed_in: bool) -> str:
@@ -88,7 +88,7 @@ def _pick_html(entry: dict, item: dict, details: dict, signed_in: bool) -> str:
     return (
         f'<article class="pick sn-pick" id="{_e(seasonal.anchor_id(item))}" data-season-pick="{pick_id}">'
         f'<div class="sn-pick__head">{art}<div><p class="eyebrow">{_e(_meta_line(item))}</p>'
-        f'<h3>{_e(item["title"])}</h3>{_fright(entry, item["fright"])}'
+        f'<h3>{_e(item["title"])}</h3>{_level(entry, item["level"])}'
         f'<p class="sn-pick__time">{_e(item["time"])}</p></div></div>'
         f'<p class="sn-pick__why">{_e(item["why"])}</p><p>{_e(item["note"])}</p>'
         f'<p class="caveat"><strong>Before you start:</strong> {_e(item["caveat"])}</p>'
@@ -102,10 +102,10 @@ def _shelf_html(entry: dict, shelf: dict, details: dict, signed_in: bool) -> str
     ids = [pooled["id"] for pooled in (seasonal.pool_entry(item) for item in shelf["picks"]) if pooled]
     shelf_action = (f'<button type="button" class="button button--ghost sn-shelf__all" data-season-add-shelf="{_e(" ".join(ids))}">'
                     f'Add all {len(ids)} to my library</button>' if signed_in else "")
-    levels = [item["fright"] for item in shelf["picks"]]
+    levels = [item["level"] for item in shelf["picks"]]
     parts = [
         f'<section class="sn-shelf sn-shelf--{_e(shelf["key"])}" id="{_e(shelf["key"])}" aria-labelledby="shelf-{_e(shelf["key"])}">',
-        f'<header class="sn-shelf__head"><p class="eyebrow">FRIGHT {min(levels)} TO {max(levels)}</p>',
+        f'<header class="sn-shelf__head"><p class="eyebrow">{_e(entry["scale_name"].upper())} {min(levels)} TO {max(levels)}</p>',
         f'<h2 id="shelf-{_e(shelf["key"])}">{_e(shelf["name"])}</h2><p class="sn-shelf__tagline">{_e(shelf["tagline"])}</p>',
         f'<div class="sn-shelf__intro">{_paragraphs(shelf["intro"])}</div>{shelf_action}',
         '<p class="sn-shelf__status" data-season-shelf-status role="status" aria-live="polite"></p></header>',
@@ -133,37 +133,42 @@ def _head(signed_in: bool) -> str:
     return head
 
 
-def _related(today: date) -> str:
+def _related(slug: str, entry: dict, today: date) -> str:
     from ..discover_catalog import MONTHLY_EDITIONS
     links = []
-    edition = f"october-{today.year}"
-    if edition in MONTHLY_EDITIONS:
-        links.append((f"/discover/monthly/{edition}", MONTHLY_EDITIONS[edition]["name"],
-                      "The quieter side of October: six unsettling works that skip the jump scares."))
-    month = f"{today.year}-10"
-    if month in challenges.public_months(today):
-        links.append((f"/challenges/{challenges.slug_for(month)}", f"The {challenges.month_label(month)} challenge",
-                      challenges.CHALLENGES[month]["tagline"]))
+    public = challenges.public_months(today)
+    for number in entry["related_months"]:
+        name = date(today.year, int(number), 1).strftime("%B").lower()
+        edition = f"{name}-{today.year}"
+        if edition in MONTHLY_EDITIONS:
+            note = entry["edition_notes"].get(number) or "This month's Discover edition: six picks around one idea, across formats."
+            links.append((f"/discover/monthly/{edition}", MONTHLY_EDITIONS[edition]["name"], note))
+        month = f"{today.year}-{number}"
+        if month in public:
+            links.append((f"/challenges/{challenges.slug_for(month)}", f"The {challenges.month_label(month)} challenge",
+                          challenges.CHALLENGES[month]["tagline"]))
+    links.extend((other["path"], f"{other['name']} picks", other["card"])
+                 for other_slug, other in SEASONS.items() if other_slug != slug)
     links.extend([
         ("/if-you-liked", "If you liked…", "What to watch, play and read after a title you loved, across every format."),
-        ("/pick", "Pick for me", "Still undecided? Get one suggestion at a time, including these Halloween picks."),
+        ("/pick", "Pick for me", f"Still undecided? Get one suggestion at a time, including these {entry['name']} picks."),
     ])
     cards = "".join(f'<article><h3><a href="{_e(href)}">{_e(name)}</a></h3><p>{_e(text)}</p></article>'
                     for href, name, text in links)
     return ('<section class="guide-related" aria-labelledby="related-heading"><p class="eyebrow">MORE TO READ</p>'
-            f'<h2 id="related-heading">More for October</h2><div class="guide-related-grid">{cards}</div></section>')
+            f'<h2 id="related-heading">{_e(entry["related_heading"])}</h2><div class="guide-related-grid">{cards}</div></section>')
 
 
 def hub_content(slug: str, entry: dict, details: dict, signed_in: bool, today: date) -> str:
     items = seasonal.picks(entry)
     formats = sorted({item["kind"] for item in items}, key=list(title_pages.KINDS).index)
     jump = "".join(f'<a href="#{_e(shelf["key"])}">{_e(shelf["name"])}</a>' for shelf in entry["shelves"])
-    progress = ('<section class="sn-progress" data-season-progress="' + _e(slug) + '" aria-labelledby="sn-progress-title" hidden>'
+    progress = ('<section class="sn-progress" data-season-progress="' + _e(slug) + '" data-season-name="' + _e(entry["name"]) + '" aria-labelledby="sn-progress-title" hidden>'
                 f'<p class="eyebrow">YOUR {_e(entry["name"].upper())}</p><h2 id="sn-progress-title" data-season-progress-title>Your progress</h2>'
                 f'<div class="sn-meter" role="progressbar" aria-valuemin="0" aria-valuemax="{len(items)}" aria-valuenow="0" '
                 'aria-labelledby="sn-progress-title" data-season-meter><span class="sn-meter__fill" data-season-meter-fill></span></div>'
                 '<p class="sn-progress__text" data-season-progress-text></p></section>') if signed_in else ""
-    scale = "".join(f'<li>{_fright(entry, value)}<span class="sn-scale__text">{_e(text)}</span></li>'
+    scale = "".join(f'<li>{_level(entry, value)}<span class="sn-scale__text">{_e(text)}</span></li>'
                     for value, _, text in entry["scale"])
     nights = "".join(f'<li><h3>{_e(night["name"])}</h3><p>{_e(night["plan"])}</p></li>' for night in entry["nights"])
     faq = "".join(f'<details class="sn-faq__item"><summary>{_e(question)}</summary><p>{_e(answer)}</p></details>'
@@ -177,11 +182,11 @@ def hub_content(slug: str, entry: dict, details: dict, signed_in: bool, today: d
         '<p class="guide-byline">By <a href="/about">OmniTrackr</a> · Updated ',
         f'<time datetime="{_e(reviewed)}">{_e(_long_date(reviewed))}</time> · '
         f'{len(items)} picks across {_e(", ".join(FORMAT_PLURALS[kind] for kind in formats))}</p>',
-        f'<nav class="guide-jump" aria-label="Shelves">{jump}<a href="#plan">Plan your night</a><a href="#faq">Questions</a></nav></header>',
+        f'<nav class="guide-jump" aria-label="Shelves">{jump}<a href="#plan">{_e(entry["plan_label"])}</a><a href="#faq">Questions</a></nav></header>',
         progress,
         f'<div class="guide-intro">{_paragraphs(entry["intro"])}</div>',
-        '<section class="sn-scale" aria-labelledby="scale-heading"><p class="eyebrow">THE FRIGHT SCALE</p>',
-        f'<h2 id="scale-heading">How scary is it?</h2><ol class="sn-scale__list">{scale}</ol></section>',
+        f'<section class="sn-scale" aria-labelledby="scale-heading"><p class="eyebrow">{_e(entry["scale_eyebrow"])}</p>',
+        f'<h2 id="scale-heading">{_e(entry["scale_heading"])}</h2><ol class="sn-scale__list">{scale}</ol></section>',
     ]
     if not signed_in:
         parts.append('<p class="yl-section-intro sn-guest-note">Save any pick to a list as you go, no account needed. '
@@ -189,10 +194,10 @@ def hub_content(slug: str, entry: dict, details: dict, signed_in: bool, today: d
     parts.extend(_shelf_html(entry, shelf, details, signed_in) for shelf in entry["shelves"])
     parts.extend([
         _guest_bar(signed_in),
-        f'<section id="plan" class="editorial sn-plan" aria-labelledby="plan-heading"><p class="eyebrow">PLAN YOUR NIGHT</p>'
-        f'<h2 id="plan-heading">Five kinds of Halloween night</h2><ul class="sn-nights">{nights}</ul></section>',
+        f'<section id="plan" class="editorial sn-plan" aria-labelledby="plan-heading"><p class="eyebrow">{_e(entry["plan_label"].upper())}</p>'
+        f'<h2 id="plan-heading">{_e(entry["plan_heading"])}</h2><ul class="sn-nights">{nights}</ul></section>',
         f'<section id="faq" class="editorial sn-faq" aria-labelledby="faq-heading"><h2 id="faq-heading">Questions</h2>{faq}</section>',
-        _related(today),
+        _related(slug, entry, today),
         '<section class="guide-sources yl-method" aria-labelledby="method-heading"><h2 id="method-heading">How we chose</h2>',
         _paragraphs(entry["method"]),
         f'<p class="muted">First published {_e(_long_date(entry["published"]))}. Checked {_e(_long_date(reviewed))}. '
@@ -263,7 +268,7 @@ def seasonal_current(request: Request, response: Response, user=Depends(get_curr
     progress = seasonal.progress(db, user.id, slug)
     return {
         "season": slug, "name": entry["name"], "theme": entry["theme"], "path": entry["path"],
-        "year": date.today().year, "card": entry["card"], "days_left": seasonal.days_left(entry),
+        "year": date.today().year, "card": entry["card"], "cta": entry["card_cta"], "days_left": seasonal.days_left(entry),
         "shelves": [{"key": shelf["key"], "name": shelf["name"], "tagline": shelf["tagline"]} for shelf in entry["shelves"]],
         "total": progress["total"], "tracked": progress["tracked"], "done": progress["done"],
     }

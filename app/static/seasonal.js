@@ -1,4 +1,4 @@
-// Seasonal hubs (/halloween). Members add one pick or a whole shelf through
+// Seasonal hubs (/halloween, /holidays). Members add one pick or a whole shelf through
 // POST /api/seasonal/<slug>/add and see which picks they already have; visitors
 // save picks to the browser-only guest list, which guest-list.js toggles on the
 // same click. Server text is only ever set as textContent.
@@ -26,11 +26,11 @@
     return typeof value === 'string' && /^\/(?!\/)/.test(value) ? value : null;
   }
 
-  function progressText(progress) {
+  function progressText(progress, name) {
     const total = progress.total || 0;
     const tracked = progress.tracked || 0;
     const done = progress.done || 0;
-    if (!tracked) return `None of the ${total} picks are in your library yet. Add a shelf to start your Halloween list.`;
+    if (!tracked) return `None of the ${total} picks are in your library yet. Add a shelf to start your ${name || 'seasonal'} list.`;
     const finished = done ? ` You've finished ${done}.` : ' Mark one finished when you get to it.';
     if (tracked === total) return `All ${total} picks are in your library.${finished}`;
     return `${tracked} of ${total} picks are in your library.${finished}`;
@@ -73,7 +73,7 @@
       const fill = panel.querySelector('[data-season-meter-fill]');
       if (fill) fill.style.width = `${percent(progress)}%`;
       const text = panel.querySelector('[data-season-progress-text]');
-      if (text) text.textContent = progressText(progress);
+      if (text) text.textContent = progressText(progress, panel.dataset.seasonName);
     }
     markPicks(progress);
   }

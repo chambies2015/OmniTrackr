@@ -1,4 +1,4 @@
-// Dashboard: the seasonal hub card ("The Halloween hub is open"), shown only while
+// Dashboard: the seasonal hub card ("The Halloween hub is open", "The Holiday hub is open"), shown only while
 // a season is running and until the member hides it for the year. Progress is
 // counted from the member's own library by GET /api/seasonal/current.
 // Everything is built with DOM APIs; server text is only ever set as textContent.
@@ -63,7 +63,7 @@
     $('seasonCardSummary').textContent = summaryText(data);
     const open = $('seasonCardOpen');
     open.href = path;
-    open.textContent = data.tracked ? 'Pick up where you left off' : 'Find your fright level';
+    open.textContent = data.tracked ? 'Pick up where you left off' : String(data.cta || 'Open the hub');
     const shelves = $('seasonCardShelves');
     shelves.replaceChildren();
     (data.shelves || []).forEach(shelf => {
