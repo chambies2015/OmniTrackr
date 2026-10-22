@@ -419,7 +419,7 @@ SEASONS = {
             "is useful for about a week. The season actually runs from the Thanksgiving weekend to New Year's Day, and it "
             "is full of very different evenings: a table of relatives who agree on nothing, a houseful of children with "
             "days off school, a quiet night when you have had enough tinsel for one year, a long trip home.",
-            "So this hub is sorted by the kind of time you have, not by how famous a title is. There are four shelves, "
+            "So this hub is sorted by the kind of time you have. There are four shelves, "
             "and each has one pick in every format OmniTrackr tracks: a film, a series, an anime, a game, a book and an "
             "album. Every pick has a festive level from one to five, so you can tell at a glance whether it is wall-to-wall "
             "Christmas or simply cold outside, along with a note on how much time it takes and a caveat that lists what "
@@ -441,9 +441,10 @@ SEASONS = {
                 "name": "Around the table",
                 "tagline": "For Thanksgiving and the long weekend with family.",
                 "intro": [
-                    "For a lot of people in the United States, the Thanksgiving weekend is where the season starts, and it "
-                    "has its own kind of evening: full, a bit tired, with three generations in one room trying to agree on "
-                    "something to put on. These six are about food, family and getting home, with very little tinsel.",
+                    "For a lot of people in the United States, the Thanksgiving weekend is where the season starts, "
+                    "and it has its own kind of evening: full, a bit tired, with three generations in one room trying "
+                    "to agree on something to put on. Most of these six are about a meal or a trip home, and none of "
+                    "them has much tinsel.",
                     "Most of them sit at one to three on the festive scale, so they work just as well for a Canadian "
                     "Thanksgiving in October, a Friendsgiving, or any long dinner with people you love and occasionally "
                     "argue with.",
@@ -451,64 +452,70 @@ SEASONS = {
                 "picks": [
                     {"kind": "movie", "title": "Planes, Trains and Automobiles", "year": 1987, "creator": "John Hughes", "level": 3,
                      "time": "One film, about an hour and a half",
-                     "why": "Neal Page, a tightly wound advertising executive played by Steve Martin, only wants to get from "
-                            "New York to Chicago in time for Thanksgiving dinner. Every flight, train and rental car fails him, "
-                            "and he keeps ending up beside Del Griffith, a talkative shower-curtain-ring salesman played by John "
-                            "Candy. It is one of the funniest road comedies ever made, and by the end it is also one of the kindest.",
-                     "note": "The perfect film for the night before you travel, or the night you arrive and need to laugh about "
-                             "the journey. The shared motel room is the scene everyone quotes.",
+                     "why": "Neal Page, a tightly wound advertising executive played by Steve Martin, only wants to "
+                            "get from New York to Chicago in time for Thanksgiving dinner. Every flight, train and "
+                            "rental car fails him, and he keeps ending up beside Del Griffith, a talkative "
+                            "shower-curtain-ring salesman played by John Candy. It is very funny, and the last few "
+                            "minutes are kinder than the rest of the film prepares you for.",
+                     "note": "The perfect film for the night before you travel, or the night you arrive and need to "
+                             "laugh about the journey. The shared motel room is the scene everyone quotes.",
                      "caveat": "Rated R in the US, almost entirely for one long, very sweary rant at a car rental desk. "
-                               "Otherwise mild, and the ending may catch you off guard."},
+                               "Otherwise mild."},
                     {"kind": "tv", "title": "Friends", "year": 1994, "creator": "David Crane and Marta Kauffman", "level": 2,
                      "time": "Ten seasons; the Thanksgiving episodes stand alone",
-                     "why": "Friends made a Thanksgiving episode almost every year it was on the air, and together they work "
-                            "as a small festival of their own: a dinner that goes wrong in every possible way, a game of touch "
-                            "football that gets far too competitive, a trifle with a layer of beef in it, and a flashback episode "
-                            "where everyone confesses their worst Thanksgiving. Even people who are tired of the show tend to "
-                            "make an exception for these.",
-                     "note": "Start with The One with All the Thanksgivings in the fifth season, then The One Where Ross Got "
-                             "High in the sixth. Neither needs much context, which makes them good for a room of relatives.",
-                     "caveat": "Some jokes have aged badly, especially about weight and sexuality, and the flashback episode "
-                               "leans on them. It is a long series if you get pulled back in."},
+                     "why": "Friends made a Thanksgiving episode almost every year it was on the air, and together "
+                            "they work as a small festival of their own: a dinner that goes wrong in every possible "
+                            "way, a game of touch football that gets far too competitive, a trifle with a layer of "
+                            "beef in it, and a flashback episode where everyone confesses their worst Thanksgiving.",
+                     "note": "Start with The One with All the Thanksgivings in the fifth season, then The One Where "
+                             "Ross Got High in the sixth. Neither needs much context, which makes them good for a "
+                             "room of relatives.",
+                     "caveat": "Some jokes have aged badly, especially about weight and sexuality, and the flashback "
+                               "episode leans on them. It is a long series if you get pulled back in."},
                     {"kind": "anime", "title": "Sweetness and Lightning", "year": 2016, "creator": "TMS Entertainment", "level": 1,
                      "time": "Twelve episodes, each built around one meal",
-                     "why": "Kohei Inuzuka is a high-school maths teacher raising his small daughter Tsumugi alone after his "
-                            "wife's death, and he cannot cook. When one of his students offers the kitchen of her mother's "
-                            "restaurant, the three of them start making proper dinners together, one dish an episode. It is a "
-                            "gentle show about grief, appetite and the way a shared meal makes a home feel like one again.",
-                     "note": "Watch an episode before you cook and you may end up making the same dish; the recipes are simple "
-                             "and real. One or two episodes at a time suits it best.",
-                     "caveat": "The early episodes deal openly with a parent's death and a child's grief. Otherwise suitable "
-                               "for all ages."},
+                     "why": "Kohei Inuzuka is a high-school maths teacher raising his small daughter Tsumugi alone "
+                            "after his wife's death, and he cannot cook. When one of his students offers the kitchen "
+                            "of her mother's restaurant, the three of them start making proper dinners together, one "
+                            "dish an episode. It is a show about grief and food, and about a father learning that a "
+                            "home needs people eating at the same table.",
+                     "note": "Watch an episode before you cook and you may end up making the same dish; the recipes "
+                             "are simple and real. One or two episodes at a time suits it best.",
+                     "caveat": "The early episodes deal openly with a parent's death and a child's grief. Otherwise "
+                               "suitable for all ages."},
                     {"kind": "game", "title": "Overcooked! 2", "year": 2018, "creator": "Ghost Town Games", "level": 1,
                      "time": "Short levels, a few minutes each",
-                     "why": "Up to four players run a kitchen together, chopping, cooking, plating and washing up against the "
-                            "clock while the kitchen itself refuses to sit still: counters slide apart, floors move and things "
-                            "catch fire. It only works if everyone talks, which is why it is the best game for a family that has "
-                            "just eaten together and still has energy to spend.",
-                     "note": "Pair a patient adult with a younger player. Running the sink is a good job for a guest who has "
-                             "never played a video game, and they will be cheered as loudly as anyone.",
-                     "caveat": "Can turn loud and competitive, and the later levels are hard. It plays online too, but it is "
-                               "best on one sofa."},
+                     "why": "Up to four players run a kitchen together, chopping, cooking, plating and washing up "
+                            "against the clock while the kitchen itself refuses to sit still: counters slide apart, "
+                            "floors move and things catch fire. It only works if everyone talks, which is why it is "
+                            "the best game for a family that has just eaten together and still has energy to spend.",
+                     "note": "Pair a patient adult with a younger player. Running the sink is a good job for a guest "
+                             "who has never played a video game, and they will be cheered as loudly as anyone.",
+                     "caveat": "Can turn loud and competitive, and the later levels are hard. It plays online too, "
+                               "but it is best on one sofa."},
                     {"kind": "book", "title": "Little Women", "year": 1868, "creator": "Louisa May Alcott", "level": 3,
                      "time": "A long novel, best spread over the season",
-                     "why": "It opens with Jo complaining that Christmas won't be Christmas without any presents, and within a "
-                            "few pages the four March sisters have given their Christmas breakfast to a poorer family down the "
-                            "road. Alcott follows Meg, Jo, Beth and Amy through a few years of growing up in Massachusetts during "
-                            "the Civil War, and her sense of family, money worries and generosity suits a season spent with "
-                            "relatives better than any other book here.",
-                     "note": "Read the first part over Thanksgiving and save the end for the slow days after Christmas. If you "
-                             "know one of the films, the novel's quieter middle chapters are a pleasure of their own.",
-                     "caveat": "Beth's illness is famously sad. Some of the moralising feels old-fashioned, and editions "
-                               "differ: some include the sequel, Good Wives, and some stop halfway, so check what you have."},
+                     "why": "It opens with Jo complaining that Christmas won't be Christmas without any presents, and "
+                            "within a few pages the four March sisters have given their Christmas breakfast to a "
+                            "poorer family down the road. Alcott follows Meg, Jo, Beth and Amy through a few years of "
+                            "growing up in Massachusetts during the Civil War, and of all the books here it suits a "
+                            "season with relatives best: the sisters squabble, borrow from each other and make up by "
+                            "the end of the chapter.",
+                     "note": "Read the first part over Thanksgiving and save the end for the slow days after "
+                             "Christmas. If you know one of the films, the novel's middle chapters, which the films "
+                             "tend to rush, are the best part.",
+                     "caveat": "Beth's illness is famously sad. Some of the moralising feels old-fashioned, and "
+                               "editions differ: some include the sequel, Good Wives, and some stop halfway, so check "
+                               "what you have."},
                     {"kind": "album", "title": "The Last Waltz", "year": 1978, "creator": "The Band", "level": 2,
                      "time": "A long live album, over two hours",
-                     "why": "On Thanksgiving Day 1976, The Band played their farewell concert at the Winterland Ballroom in San "
-                            "Francisco, and the audience was served a turkey dinner before the show. Bob Dylan, Joni Mitchell, "
-                            "Van Morrison and Neil Young were among the guests who joined them on stage. The album is a big, "
-                            "warm, slightly ragged party record, which is exactly what you want while dishes go round the table.",
-                     "note": "Put it on as people arrive and let it run through the meal. Martin Scorsese's film of the night "
-                             "is a separate thing, and well worth a look later in the weekend.",
+                     "why": "On Thanksgiving Day 1976, The Band played their farewell concert at the Winterland "
+                            "Ballroom in San Francisco, and the audience was served a turkey dinner before the show. "
+                            "Bob Dylan, Joni Mitchell, Van Morrison and Neil Young were among the guests who joined "
+                            "them on stage. The album is loud and loose and sounds like a party, which suits a table "
+                            "where the dishes are going round.",
+                     "note": "Put it on as people arrive and let it run through the meal. Martin Scorsese's film of "
+                             "the night is a separate thing, and well worth a look later in the weekend.",
                      "caveat": "Loose and very much a concert recording, with long songs and a few rough edges. Nothing to "
                                "worry about for content."},
                 ],
@@ -528,65 +535,67 @@ SEASONS = {
                 "picks": [
                     {"kind": "movie", "title": "Elf", "year": 2003, "creator": "Jon Favreau", "level": 5,
                      "time": "One film, about an hour and a half",
-                     "why": "Buddy was raised at the North Pole by elves. At thirty, a good deal taller than everyone around "
-                            "him, he learns that he is human and travels to New York to find his real father, a grumpy publisher "
-                            "of children's books who is on Santa's naughty list. Will Ferrell plays Buddy with complete "
-                            "sincerity, and that is why the film works: he is never in on the joke, so you laugh with him "
-                            "rather than at him.",
-                     "note": "A good way to open the season with a mixed-age group. The stop-motion animals at the North Pole "
-                             "are a fond nod to the television specials of the 1960s.",
+                     "why": "Buddy was raised at the North Pole by elves. At thirty, a good deal taller than everyone "
+                            "around him, he learns that he is human and travels to New York to find his real father, "
+                            "a grumpy publisher of children's books who is on Santa's naughty list. Will Ferrell "
+                            "plays Buddy with complete sincerity. Buddy never realises he is in a comedy, and the "
+                            "film is funnier for it.",
+                     "note": "A good way to open the season with a mixed-age group. The stop-motion animals at the "
+                             "North Pole are a fond nod to the television specials of the 1960s.",
                      "caveat": "Mild rude humour, including one belch that goes on for a very long time. Suitable for most ages."},
                     {"kind": "tv", "title": "Dash & Lily", "year": 2020, "creator": "Joe Tracz", "level": 5,
                      "time": "Eight half-hour episodes, two evenings",
-                     "why": "In the weeks before Christmas in New York, Lily, who adores the holidays, leaves a red notebook of "
-                            "dares on a shelf at the Strand bookstore, and Dash, who can't stand them, picks it up. They write "
-                            "back and forth across the city without meeting. Based on Rachel Cohn and David Levithan's novel "
-                            "Dash & Lily's Book of Dares, it is a short, sweet romance with New York at its most twinkly.",
+                     "why": "In the weeks before Christmas in New York, Lily, who adores the holidays, leaves a red "
+                            "notebook of dares on a shelf at the Strand bookstore, and Dash, who can't stand them, "
+                            "picks it up. They write back and forth across the city without meeting. Based on Rachel "
+                            "Cohn and David Levithan's novel Dash & Lily's Book of Dares, it is a short, sweet "
+                            "romance with New York at its most twinkly.",
                      "note": "Eight short episodes make two perfect evenings in December. If you enjoy it, the novel spends "
                              "more time on each of the dares.",
-                     "caveat": "There is only one season, but it ends on a satisfying note. Teenage romance and mild language; "
-                               "fine for teens and up."},
+                     "caveat": "There is only one season, but it ends on a satisfying note. Teenage romance and mild "
+                               "language; fine for teens and up."},
                     {"kind": "anime", "title": "Tokyo Godfathers", "year": 2003, "creator": "Satoshi Kon", "level": 4,
                      "time": "One film, about an hour and a half",
-                     "why": "On Christmas Eve in Tokyo, three homeless people (a middle-aged drinker with a past, a former drag "
-                            "queen and a teenage runaway) find a baby abandoned among the rubbish and decide to return her to "
-                            "her parents themselves. A chain of coincidences follows that would feel like a fairy tale anywhere "
-                            "else, and that is the point: it is a Christmas miracle story told from the bottom of the city.",
-                     "note": "A good film for adults who want something festive that isn't sugary. Satoshi Kon's other films "
-                             "are much stranger; this is his warmest and the easiest place to start.",
+                     "why": "On Christmas Eve in Tokyo, three homeless people (a middle-aged drinker with a past, a "
+                            "former drag queen and a teenage runaway) find a baby abandoned among the rubbish and "
+                            "decide to return her to her parents themselves. What follows is a chain of unlikely "
+                            "coincidences, the kind a Christmas miracle story needs, happening to people the rest of "
+                            "the city walks past.",
+                     "note": "A good film for adults who want something festive that isn't sugary. Satoshi Kon's "
+                             "other films are much stranger; this is his warmest and the easiest place to start.",
                      "caveat": "Some violence, heavy drinking and homelessness shown plainly, and dated jokes about Hana, a "
                                "trans woman, though the film treats her with real affection. Not for young children."},
                     {"kind": "game", "title": "Animal Crossing: New Horizons", "year": 2020, "creator": "Nintendo", "level": 4,
                      "time": "Ten minutes a day, all season long",
-                     "why": "You move to a desert island and slowly turn it into a village of friendly animal neighbours, in "
-                            "real time and on the real calendar. In December the island changes with you: festive decorations "
-                            "and recipes arrive, trees drop ornaments when you shake them, and Toy Day comes on Christmas Eve. "
-                            "Because it runs on your clock, it is the one pick here you can visit for a few minutes every day "
-                            "of the season.",
+                     "why": "You move to a desert island and slowly turn it into a village of friendly animal "
+                            "neighbours, in real time and on the real calendar. In December the island changes with "
+                            "you: festive decorations and recipes arrive, trees drop ornaments when you shake them, "
+                            "and Toy Day comes on Christmas Eve. Because it runs on your clock, it is the one pick "
+                            "here you can visit for a few minutes every day of the season.",
                      "note": "Start in November so your island is settled by December. Visiting a friend's or relative's "
-                             "island is part of the fun, and a gentle way to keep in touch with someone far away.",
+                             "island is part of the fun, and an easy way to keep in touch with someone far away.",
                      "caveat": "Nintendo Switch only, and visiting islands over the internet needs a paid Nintendo Switch "
                                "Online membership. Very slow by design."},
                     {"kind": "book", "title": "A Christmas Carol", "year": 1843, "creator": "Charles Dickens", "level": 5,
                      "time": "A short novel, an evening or two",
-                     "why": "Ebenezer Scrooge, a miser who hates Christmas, is visited on Christmas Eve by the ghost of his old "
-                            "business partner and then by three spirits who show him his past, his present and the future he "
-                            "is heading for. It has been adapted so often that most people know the plot without having read "
-                            "it, which is a shame: Dickens is funnier and darker than nearly every adaptation, and the whole "
-                            "thing is short enough to finish in a single evening.",
-                     "note": "Read it aloud over five nights. It is divided into five short parts that Dickens called staves, "
-                             "and he performed it to audiences himself for years. The Muppet version on the Everyone on the "
-                             "sofa shelf makes a surprisingly faithful companion.",
+                     "why": "Ebenezer Scrooge, a miser who hates Christmas, is visited on Christmas Eve by the ghost "
+                            "of his old business partner and then by three spirits who show him his past, his present "
+                            "and the future he is heading for. It has been adapted so often that most people know the "
+                            "plot without having read it. Read it anyway. Dickens is funnier and darker than nearly "
+                            "every adaptation, and the book is short enough to finish in one evening.",
+                     "note": "Read it aloud over five nights. It is divided into five short parts that Dickens called "
+                             "staves, and he performed it to audiences himself for years. The Muppet version on the "
+                             "Everyone on the sofa shelf makes a surprisingly faithful companion.",
                      "caveat": "Victorian prose takes a few pages to settle into. The Ghost of Christmas Yet to Come is "
                                "genuinely grim, and Tiny Tim's illness may upset younger listeners."},
                     {"kind": "album", "title": "Merry Christmas", "year": 1994, "creator": "Mariah Carey", "level": 5,
                      "time": "Ten songs, under an hour",
-                     "why": "Most people know one song from this album, and it has climbed back to the top of the charts most "
-                            "Decembers in recent years. The rest is better than its reputation: big gospel-inflected carols, "
-                            "a 1960s-style wall of sound and a singer at the height of her powers, clearly having a wonderful "
-                            "time. It is the most festive record you can put on without a trace of irony.",
-                     "note": "Save All I Want for Christmas Is You for when the room needs lifting. O Holy Night and Jesus Oh "
-                             "What a Wonderful Child show what the album is really about.",
+                     "why": "Most people know one song from this album, and it has climbed back to the top of the "
+                            "charts most Decembers in recent years. The rest is better than its reputation: big "
+                            "gospel-inflected carols, a 1960s-style wall of sound and a singer at the height of her "
+                            "powers, clearly having a wonderful time. Nobody on it is being ironic about Christmas.",
+                     "note": "Save All I Want for Christmas Is You for when the room needs lifting. O Holy Night and "
+                             "Jesus Oh What a Wonderful Child show what the album is really about.",
                      "caveat": "Several of the carols are religious. Unashamedly loud and sentimental, which is either the "
                                "point or the problem."},
                 ],
@@ -598,73 +607,76 @@ SEASONS = {
                 "intro": [
                     "Not everybody celebrates Christmas, and even people who love it can reach the middle of December and "
                     "want something else. These six have snow, ice, long nights and remote places, and almost no holiday at "
-                    "all. They are for the stretch of the season when you want to feel the winter rather than decorate it.",
+                    "all. They are for the part of the season when you want the cold outside and nothing to decorate.",
                     "Everything here sits at one or two on the festive scale. Several are also good company for the quiet "
                     "days between Christmas and New Year, when nobody is quite sure what day it is.",
                 ],
                 "picks": [
                     {"kind": "movie", "title": "Fargo", "year": 1996, "creator": "Joel and Ethan Coen", "level": 1,
                      "time": "One film, about an hour and a half",
-                     "why": "A Minneapolis car salesman, badly in debt, hires two criminals to kidnap his own wife so that her "
-                            "wealthy father will pay the ransom. Nothing goes to plan. The case lands with Marge Gunderson, a "
-                            "heavily pregnant police chief from Brainerd who is polite, patient and much sharper than anyone "
-                            "gives her credit for. The snow is so white in places that it swallows the horizon.",
-                     "note": "Watch it on a cold night with something hot to drink. Frances McDormand won an Oscar for Marge, "
-                             "and her quiet scenes with her husband are the warmest in the film.",
-                     "caveat": "Sudden, bloody violence, including a famous scene with a woodchipper, and plenty of swearing. "
-                               "Not a family film."},
+                     "why": "A Minneapolis car salesman, badly in debt, hires two criminals to kidnap his own wife so "
+                            "that her wealthy father will pay the ransom. Nothing goes to plan. The case lands with "
+                            "Marge Gunderson, a heavily pregnant police chief from Brainerd who is polite to everyone "
+                            "and much sharper than any of them notice. The snow is so white in places that it "
+                            "swallows the horizon.",
+                     "note": "Watch it on a cold night with something hot to drink. Frances McDormand won an Oscar "
+                             "for Marge, and her scenes at home with her husband, Norm, are the warmest in the film.",
+                     "caveat": "Sudden, bloody violence, including a famous scene with a woodchipper, and plenty of "
+                               "swearing. Not a family film."},
                     {"kind": "tv", "title": "Northern Exposure", "year": 1990, "creator": "Joshua Brand and John Falsey", "level": 2,
                      "time": "Six seasons; the first has only eight episodes",
-                     "why": "Joel Fleischman, a New York doctor whose medical school was paid for by the state of Alaska, is "
-                            "sent to work off the debt in Cicely, a tiny town of philosophers, a former astronaut and the "
-                            "occasional moose. It is one of the gentlest and most thoughtful shows ever made for network "
-                            "television, and its long winters, radio monologues and odd local rituals make perfect company for "
-                            "dark evenings.",
-                     "note": "Start at the beginning. Chris, the town's DJ, delivers the show's heart in his morning broadcasts, "
-                             "so don't skip them.",
-                     "caveat": "Hard to find on streaming in some regions, and some home releases replaced the original music "
-                               "for licensing reasons. A few dated attitudes."},
+                     "why": "Joel Fleischman, a New York doctor whose medical school was paid for by the state of "
+                            "Alaska, is sent to work off the debt in Cicely, a tiny town of philosophers, a former "
+                            "astronaut and the occasional moose. Not much happens in most episodes. People argue "
+                            "about books, the town DJ reads philosophy on air and the winter lasts for months, which "
+                            "makes it good company on dark evenings.",
+                     "note": "Start at the beginning, and don't skip Chris's morning broadcasts. They are the heart "
+                             "of the show.",
+                     "caveat": "Hard to find on streaming in some regions, and some home releases replaced the "
+                               "original music for licensing reasons. A few dated attitudes."},
                     {"kind": "anime", "title": "A Place Further than the Universe", "year": 2018, "creator": "Madhouse", "level": 1,
                      "time": "Thirteen episodes",
-                     "why": "Mari is a high-school student who keeps meaning to do something bold and never does. Then she meets "
-                            "Shirase, who has been saving for years to go to Antarctica, where her mother disappeared on an "
-                            "expedition. With two more friends they talk their way onto a civilian research trip. It is funny, "
-                            "warm and full of cold, and by the end it is one of the most moving anime of its decade.",
-                     "note": "The early episodes are about getting there, and the ship's crossing of the Southern Ocean is a "
-                             "highlight. Keep tissues near for the last two episodes.",
-                     "caveat": "Grief is central to the story. Otherwise there is very little to worry about; good for teens "
-                               "and up."},
+                     "why": "Mari is a high-school student who keeps meaning to do something bold and never does. "
+                            "Then she meets Shirase, who has been saving for years to go to Antarctica, where her "
+                            "mother disappeared on an expedition. With two more friends they talk their way onto a "
+                            "civilian research trip. It is funny the whole way there, and the episodes in Antarctica "
+                            "hit hard.",
+                     "note": "The early episodes are about getting there, and the ship's crossing of the Southern "
+                             "Ocean is a highlight. Keep tissues near for the last two episodes.",
+                     "caveat": "Grief is central to the story. Otherwise there is very little to worry about; good "
+                               "for teens and up."},
                     {"kind": "game", "title": "Celeste", "year": 2018, "creator": "Maddy Makes Games", "level": 1,
                      "time": "A game of about eight to ten hours",
-                     "why": "Madeline climbs Celeste Mountain, a huge, snowy and slightly haunted peak, while dealing with an "
-                            "anxiety that takes the shape of a second version of herself. The jumping is precise and difficult, "
-                            "but the game is generous: you restart instantly after every fall, and nothing punishes you for "
-                            "trying again. It is a game about not giving up that never makes you feel stupid for failing.",
-                     "note": "If a chapter gets too hard, Assist Mode lets you slow the game down or skip the hardest parts, "
-                             "without judgement. The strawberries are entirely optional.",
-                     "caveat": "Hard platforming and many deaths are part of the design. Deals openly with anxiety and panic "
-                               "attacks."},
+                     "why": "Madeline climbs Celeste Mountain, a snowy and slightly haunted peak, while dealing with "
+                            "an anxiety that takes the shape of a second version of herself. The jumping is precise "
+                            "and difficult, but the game is generous: you restart instantly after every fall, and "
+                            "nothing punishes you for trying again. It is a game about not giving up that never makes "
+                            "you feel stupid for failing.",
+                     "note": "If a chapter gets too hard, Assist Mode lets you slow the game down or skip the hardest "
+                             "parts, without judgement. The strawberries are entirely optional.",
+                     "caveat": "Hard platforming and many deaths are part of the design. Deals openly with anxiety "
+                               "and panic attacks."},
                     {"kind": "book", "title": "The Bear and the Nightingale", "year": 2017, "creator": "Katherine Arden", "level": 1,
                      "time": "A novel of around three hundred pages",
-                     "why": "Vasya grows up in a village at the edge of a great forest in medieval Russia, where winter takes "
-                            "up most of the year and the family sleeps on top of the stove to keep warm. She can see the "
-                            "household spirits her neighbours leave bread for, and when a new priest arrives and forbids the "
-                            "old offerings, the spirits weaken and something hungry stirs in the woods. It reads like a fairy "
-                            "tale told beside the fire, with frost on every page.",
-                     "note": "Read it in the darkest weeks of the year. The first third is slow and folkloric; once Vasya meets "
-                             "the frost king Morozko, the pace picks up and rarely lets go.",
+                     "why": "Vasya grows up in a village at the edge of a great forest in medieval Russia, where "
+                            "winter takes up most of the year and the family sleeps on top of the stove to keep warm. "
+                            "She can see the household spirits her neighbours leave bread for, and when a new priest "
+                            "arrives and forbids the old offerings, the spirits weaken and something hungry stirs in "
+                            "the woods. It reads like a fairy tale told beside the fire, with frost on every page.",
+                     "note": "Read it in the darkest weeks of the year. The first third is slow and folkloric; once "
+                             "Vasya meets the frost king Morozko, the pace picks up and rarely lets go.",
                      "caveat": "The first of a trilogy, though it ends well on its own. Some frightening creatures, deaths, "
                                "religious conflict and a young woman pushed towards marriage or a convent."},
                     {"kind": "album", "title": "Vespertine", "year": 2001, "creator": "Björk", "level": 1,
                      "time": "Twelve songs, just under an hour",
-                     "why": "Björk made this album as a record for staying indoors in winter, and it sounds like it: music "
-                            "boxes, harp, a choir from Greenland and tiny, crackling beats built partly from small "
-                            "household sounds, down to footsteps in snow. It is intimate and hushed where her other records are loud, "
-                            "and it rewards being played quietly in a warm room while the weather does its worst outside.",
-                     "note": "Listen with headphones the first time so you can hear the small sounds. Hidden Place and Pagan "
-                             "Poetry are good ways in before playing it from start to finish.",
-                     "caveat": "Several songs are frankly sensual, and Cocoon in particular is very intimate. Otherwise nothing "
-                               "to warn about."},
+                     "why": "Björk made this album as a record for staying indoors in winter, and it sounds like it: "
+                            "music boxes, harp, a choir from Greenland and tiny, crackling beats built partly from "
+                            "small household sounds, down to footsteps in snow. It is much softer than her other "
+                            "records. Play it at low volume in a warm room while the weather does its worst outside.",
+                     "note": "Listen with headphones the first time so you can hear the small sounds. Hidden Place "
+                             "and Pagan Poetry are good ways in before playing it from start to finish.",
+                     "caveat": "Several songs are frankly sensual, and Cocoon in particular is very intimate. "
+                               "Otherwise nothing to warn about."},
                 ],
             },
             {
@@ -674,68 +686,70 @@ SEASONS = {
                 "intro": [
                     "Holiday breaks are the one time many families spend days in the same room, and finding something that "
                     "a six-year-old, a teenager and a grandparent will all enjoy is a real challenge. These six were picked "
-                    "to survive that room. They are warm without being sickly, and each has something in it for the adults.",
+                    "to survive that room. None of them is sickly, and each has something in it for the adults.",
                     "Festive levels vary across the shelf. Each caveat says exactly what might be too much for younger "
                     "children, and anything with a sad stretch is flagged.",
                 ],
                 "picks": [
                     {"kind": "movie", "title": "The Muppet Christmas Carol", "year": 1992, "creator": "Brian Henson", "level": 5,
                      "time": "One film, about an hour and a half",
-                     "why": "Michael Caine plays Scrooge completely straight, as if he were in a serious period drama, while "
-                            "Kermit plays Bob Cratchit and Gonzo, as Charles Dickens himself, narrates with Rizzo the Rat. That "
-                            "combination is why it works for everyone: children get the Muppets and the slapstick, and adults "
-                            "get an adaptation that keeps a surprising amount of Dickens's own words.",
-                     "note": "Pair it with the book on the Deck the halls shelf. Some versions cut the song When Love Is Gone; "
-                             "look for one that includes it if you want the whole film.",
+                     "why": "Michael Caine plays Scrooge completely straight, as if he were in a serious period "
+                            "drama, while Kermit plays Bob Cratchit and Gonzo, as Charles Dickens himself, narrates "
+                            "with Rizzo the Rat. Children get the Muppets and the slapstick. Adults get an adaptation "
+                            "that keeps a surprising amount of Dickens's own words.",
+                     "note": "Pair it with the book on the Deck the halls shelf. Some versions cut the song When Love "
+                             "Is Gone; look for one that includes it if you want the whole film.",
                      "caveat": "The Ghost of Christmas Yet to Come can frighten small children, and Tiny Tim's fate is sad "
                                "for a scene or two. Otherwise suitable for all ages."},
                     {"kind": "tv", "title": "Bluey", "year": 2018, "creator": "Joe Brumm", "level": 2,
                      "time": "Most episodes run seven minutes and stand alone",
-                     "why": "Bluey is a six-year-old Blue Heeler puppy in Brisbane who turns everything into a game, with her "
-                            "little sister Bingo and two parents who actually join in. The episodes are short, funny and often "
-                            "quietly moving, and the parents play so well that adults watching sometimes come away a little more "
-                            "patient. The Christmas episodes, Verandah Santa and the longer Christmas Swim, are favourites.",
-                     "note": "Watch with children and see who laughs more. Verandah Santa is a very Australian Christmas, with "
-                             "heat, cousins and a family game that gets out of hand.",
-                     "caveat": "A few episodes deal gently with growing up and loss, and some are known for making parents "
+                     "why": "Bluey is a six-year-old Blue Heeler puppy in Brisbane who turns everything into a game, "
+                            "with her little sister Bingo and her parents, Bandit and Chilli, who play along. The "
+                            "episodes are short and funny, and a surprising number of them end with a lump in your "
+                            "throat. Adults watching may come away with a few new games. The Christmas episodes, "
+                            "Verandah Santa and the longer Christmas Swim, are favourites.",
+                     "note": "Watch with children and see who laughs more. Verandah Santa is a very Australian "
+                             "Christmas, with heat, cousins and a family game that gets out of hand.",
+                     "caveat": "A few episodes touch on growing up and loss, and some are known for making parents "
                                "cry. Suitable for all ages."},
                     {"kind": "anime", "title": "Wolf Children", "year": 2012, "creator": "Mamoru Hosoda", "level": 1,
                      "time": "One film, about two hours",
-                     "why": "Hana, a university student in Tokyo, falls in love with a man who can turn into a wolf. After he "
-                            "dies, she moves to the countryside to raise their two children, Yuki and Ame, who are not sure "
-                            "whether they want to grow up human or wolf. Its best-loved scene is a joyful run through fresh "
-                            "snow, and the whole film is about what parents give children so that they can choose their own way.",
-                     "note": "Best for children around ten and up, with adults alongside. Many families find it opens up real "
-                             "conversations afterwards about growing up and leaving home.",
-                     "caveat": "The father's death and a dangerous storm are upsetting, and parents may find the ending harder "
-                               "than their children do. Close to two hours long."},
+                     "why": "Hana, a university student in Tokyo, falls in love with a man who can turn into a wolf. "
+                            "After he dies, she moves to the countryside to raise their two children, Yuki and Ame, "
+                            "who are not sure whether they want to grow up human or wolf. Its best-loved scene is a "
+                            "joyful run through fresh snow, and the film is about a mother letting each child choose "
+                            "a different life.",
+                     "note": "Best for children around ten and up, with adults alongside. Leave time afterwards for "
+                             "questions about growing up and leaving home.",
+                     "caveat": "The father's death and a dangerous storm are upsetting, and parents may find the "
+                               "ending harder than their children do. Close to two hours long."},
                     {"kind": "game", "title": "Super Mario Bros. Wonder", "year": 2023, "creator": "Nintendo", "level": 1,
                      "time": "A game of around twelve hours, in short levels",
-                     "why": "Up to four players run and jump through the Flower Kingdom together, and when someone touches a "
-                            "Wonder Flower the level turns strange: pipes start crawling like caterpillars, the music changes "
-                            "and the whole stage rearranges itself. It is the most playful Mario in years and the easiest to "
-                            "share with players of different ages, because nobody gets left behind for long.",
+                     "why": "Up to four players run and jump through the Flower Kingdom together, and when someone "
+                            "touches a Wonder Flower the level turns strange: pipes start crawling like caterpillars, "
+                            "the music changes and the whole stage rearranges itself. Players of different ages can "
+                            "share it, because nobody gets left behind for long.",
                      "note": "Give younger or newer players Yoshi or Nabbit, who take no damage from enemies. Experienced "
                              "players can race ahead and come back to help.",
                      "caveat": "Nintendo Switch only. Up to four players on one console; online play is more limited. No "
                                "content concerns."},
                     {"kind": "book", "title": "The Polar Express", "year": 1985, "creator": "Chris Van Allsburg", "level": 5,
                      "time": "A picture book, about ten minutes aloud",
-                     "why": "On Christmas Eve a boy who is starting to doubt Santa hears a train stop outside his house, "
-                            "steaming in the snow, and climbs aboard for the North Pole. Van Allsburg's dark, glowing "
-                            "pictures won the Caldecott Medal, and the story ends with a sleigh bell that only believers can "
-                            "hear. It is short enough to read every year and strange enough that older readers keep noticing "
-                            "new things.",
-                     "note": "Read it aloud on Christmas Eve with the lights low. A small bell on a string makes a good prop for "
-                             "the last page.",
+                     "why": "On Christmas Eve a boy who is starting to doubt Santa hears a train stop outside his "
+                            "house, steaming in the snow, and climbs aboard for the North Pole. Van Allsburg's dark, "
+                            "glowing pictures won the Caldecott Medal, and the story ends with a sleigh bell that "
+                            "only believers can hear. It is short enough to read every year and strange enough that "
+                            "older readers keep noticing new things.",
+                     "note": "Read it aloud on Christmas Eve with the lights low. A small bell on a string makes a "
+                             "good prop for the last page.",
                      "caveat": "None for content. The pictures are soft and shadowy, which a few very young children find a "
                                "little spooky."},
                     {"kind": "album", "title": "A Charlie Brown Christmas", "year": 1965, "creator": "Vince Guaraldi Trio", "level": 4,
                      "time": "A short album, well under an hour",
-                     "why": "Pianist Vince Guaraldi's jazz trio wrote and played the music for the 1965 Peanuts television "
-                            "special, and the soundtrack has become one of the best-selling jazz albums of all time. Christmas "
-                            "Time Is Here, sung by a children's choir, is wistful in a way few carols are, and Linus and Lucy "
-                            "will get even reluctant relatives moving.",
+                     "why": "Pianist Vince Guaraldi's jazz trio wrote and played the music for the 1965 Peanuts "
+                            "television special, and the soundtrack has become one of the best-selling jazz albums of "
+                            "all time. Christmas Time Is Here, sung by a children's choir, is wistful in a way few "
+                            "carols are, and Linus and Lucy will get even reluctant relatives moving.",
                      "note": "Put it on while you decorate or wrap presents, then watch the special itself, which is only "
                              "about twenty-five minutes long.",
                      "caveat": "None. Some editions add bonus tracks and alternate takes, so the running order varies."},
@@ -744,9 +758,10 @@ SEASONS = {
         ],
         "nights": [
             {"name": "Thanksgiving weekend with family",
-             "plan": "Planes, Trains and Automobiles on Wednesday night for whoever has made it home. The Last Waltz through "
-                     "dinner on Thursday, and Overcooked! 2 once the plates are cleared and someone needs to work off the pie. "
-                     "Keep the Friends Thanksgiving episodes for Friday, when nobody wants to leave the sofa."},
+             "plan": "Planes, Trains and Automobiles on Wednesday night for whoever has made it home. The Last Waltz "
+                     "through dinner on Thursday, and Overcooked! 2 once the plates are cleared and someone needs to "
+                     "work off the pie. Keep the Friends Thanksgiving episodes for Friday, when nobody wants to leave "
+                     "the sofa."},
             {"name": "Christmas Eve with children",
              "plan": "The Polar Express read aloud after dinner, then The Muppet Christmas Carol, or a couple of Bluey's "
                      "Christmas episodes for the youngest. A Charlie Brown Christmas while the adults wrap, and Super Mario "
@@ -756,9 +771,9 @@ SEASONS = {
                      "Place Further than the Universe, Celeste when you want a challenge, and Vespertine when the house has "
                      "finally gone quiet."},
             {"name": "All in from the first of December",
-             "plan": "Elf to open the month, Dash & Lily across the first weekend and A Christmas Carol read one stave a night. "
-                     "Animal Crossing for a few minutes every day, Mariah Carey while the tree goes up, and Tokyo Godfathers "
-                     "on Christmas Eve once the children are asleep."},
+             "plan": "Elf to open the month, Dash & Lily across the first weekend and A Christmas Carol read one "
+                     "stave a night. Animal Crossing for a few minutes every day, Mariah Carey while the tree goes "
+                     "up, and Tokyo Godfathers on Christmas Eve once the children are asleep."},
             {"name": "A long journey home",
              "plan": "Download Sweetness and Lightning and Tokyo Godfathers before you leave, and pack Little Women or The "
                      "Bear and the Nightingale for the waiting room. Save Planes, Trains and Automobiles for the night you "
@@ -780,9 +795,9 @@ SEASONS = {
              "players, and The Polar Express takes about ten minutes to read aloud. Each caveat says what might be too much "
              "for small children."),
             ("How does the festive scale work?",
-             "It runs from one, just wintry with no holiday to speak of, to five, full tinsel. We set each level ourselves "
-             "by asking how much of the work is about the season rather than simply set during it. It is not an age "
-             "rating; the caveats cover content."),
+             "It runs from one, just wintry with no holiday to speak of, to five, full tinsel. We set each level "
+             "ourselves by asking how much of the work is about the season. A story that only happens to take place "
+             "at Christmas scores lower than one about Christmas. It is not an age rating; the caveats cover content."),
             ("Are there holiday games to play with family far away?",
              "Animal Crossing: New Horizons lets friends and family visit each other's islands over the internet with a "
              "Nintendo Switch Online membership, which is a lovely way to swap presents across a distance. Overcooked! 2 "
