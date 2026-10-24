@@ -2,7 +2,7 @@
 
 The pool is the editors' own writing that already ships with the site: the
 Discover trails, the monthly editions, the starter public collections, the
-"If you liked..." guides and the seasonal hubs. Every
+"If you liked..." guides, the seasonal hubs and the best-of-the-year lists. Every
 pick carries the reason it was chosen, so the page never shows a bare title.
 Nothing here reads or reveals anyone's library; the only database reads are the
 cached title index (for artwork and title page links) and the editors' public
@@ -82,6 +82,9 @@ def _build() -> list[dict]:
         keep(_entry(item["kind"], item["title"], item["year"], item["creator"], item["why"], item["caveat"], label, url))
     from .seasonal import pool_sources as seasonal_sources
     for item, label, url in seasonal_sources():
+        keep(_entry(item["kind"], item["title"], item["year"], item["creator"], item["why"], item["caveat"], label, url))
+    from .best_of import pool_sources as best_of_sources
+    for item, label, url in best_of_sources():
         keep(_entry(item["kind"], item["title"], item["year"], item["creator"], item["why"], item["caveat"], label, url))
     order = {kind: index for index, kind in enumerate(KIND_ORDER)}
     return sorted(found.values(), key=lambda e: (order[e["kind"]], e["title"].casefold()))

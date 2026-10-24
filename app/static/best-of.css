@@ -1,0 +1,25 @@
+/* "Best of the year" guides. Builds on discover.css and if-you-liked.css (yl-* pick, card and bar styles). */
+.bo-formats { align-items: center; display: flex; flex-wrap: wrap; gap: 8px; margin: 0 0 30px; }
+.bo-formats__label { color: #c3c8dd; font-size: .9rem; font-weight: 700; margin-right: 4px; }
+.bo-formats a, .bo-formats [aria-current] {
+  align-items: center;
+  border: 1px solid var(--site-border);
+  border-radius: 999px;
+  display: inline-flex;
+  font-size: .88rem;
+  min-height: 44px;
+  padding: 10px 14px;
+  text-decoration: none;
+}
+.bo-formats a { background: var(--site-surface); }
+.bo-formats a:hover { background: var(--site-surface-2); color: #fff; }
+.bo-formats [aria-current] { background: rgba(20, 184, 166, .18); border-color: rgba(20, 184, 166, .6); color: #fff; font-weight: 700; }
+.bo-pick__released { color: #a7f3d0 !important; font-size: .88rem; margin: 0; }
+.bo-also, .bo-coming { margin-top: 40px; }
+.bo-also ul { display: grid; gap: 12px; list-style: none; margin: 16px 0 0; padding: 0; }
+.bo-also li { border-left: 2px solid var(--site-violet); color: #d7dbee; padding: 2px 0 2px 16px; }
+.bo-also strong { color: #fff; }
+.bo-coming p + p { margin-top: 12px; }
+.bo-sources { margin: 10px 0 18px; padding-left: 20px; }
+.bo-sources li { margin: 6px 0; }
+.guide-sources h3 { color: #fff; font-size: 1.05rem; margin: 22px 0 6px; }
