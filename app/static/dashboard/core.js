@@ -193,7 +193,7 @@ function renderLibraryPager(category, page, loading = false, error = '') {
 // A friendly panel in place of an empty table: add a first title, or clear the filters
 // that hid everything. It only clicks the library's existing Add and Clear buttons.
 function renderLibraryEmptyState(table, state) {
-  const panel = table.closest('.library-panel');
+  const panel = table.closest?.('.library-panel');
   if (!panel) return;
   panel.dataset.libraryState = state;
   let box = panel.querySelector('.library-empty');
