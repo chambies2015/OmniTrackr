@@ -152,27 +152,49 @@
     }
   }
 
+  async function postPick(id, nextUp) {
+    const response = await fetch('/api/pick/add', {
+      method: 'POST', credentials: 'same-origin', headers: authHeaders(),
+      body: JSON.stringify(nextUp ? { id, next_up: true } : { id }),
+    });
+    if (response.status === 401) {
+      window.location.href = `/?next=${encodeURIComponent('/pick')}#landing-auth`;
+      return null;
+    }
+    if (!response.ok) throw new Error(String(response.status));
+    return response.json();
+  }
+
   async function addToLibrary(card, button) {
     button.disabled = true;
     setStatus(card, 'Adding…');
     try {
-      const response = await fetch('/api/pick/add', {
-        method: 'POST', credentials: 'same-origin', headers: authHeaders(),
-        body: JSON.stringify({ id: button.dataset.pickAdd }),
-      });
-      if (response.status === 401) {
-        window.location.href = `/?next=${encodeURIComponent('/pick')}#landing-auth`;
-        return;
-      }
-      if (!response.ok) throw new Error(String(response.status));
-      const result = await response.json();
+      const result = await postPick(button.dataset.pickAdd, false);
+      if (!result) return;
       const href = safeUrl(result.library_url) || '/';
       button.textContent = result.state === 'created' ? 'Added ✓' : 'In your library ✓';
       setStatus(card, result.state === 'created' ? `Added “${result.title}” to your library.` : `“${result.title}” is already in your library.`,
         { label: 'Open it', href });
+      const queue = el('button', 'pf-card__queue', 'Put it Next Up');
+      queue.type = 'button';
+      queue.dataset.pickQueue = button.dataset.pickAdd;
+      const status = card.querySelector('[data-pick-status]');
+      if (status) { status.appendChild(document.createTextNode(' ')); status.appendChild(queue); }
     } catch (error) {
       button.disabled = false;
       setStatus(card, 'Could not add this pick. Try again in a moment.');
+    }
+  }
+
+  async function addToNextUp(card, button) {
+    button.disabled = true;
+    try {
+      const result = await postPick(button.dataset.pickQueue, true);
+      if (!result) return;
+      button.textContent = result.next_up === 'finished' ? 'Already finished' : 'In your Next Up ✓';
+    } catch (error) {
+      button.disabled = false;
+      button.textContent = 'Try Next Up again';
     }
   }
 
@@ -251,6 +273,7 @@
       if (target.hasAttribute('data-pick-again')) pickNew();
       else if (target.hasAttribute('data-pick-share')) sharePick(card, current);
       else if (target.dataset.pickAdd) addToLibrary(card, target);
+      else if (target.dataset.pickQueue) addToNextUp(card, target);
       else if (target.dataset.guestKind) {
         // guest-list.js toggles the list on the same click; report only a save.
         setTimeout(() => { if (target.getAttribute('aria-pressed') === 'true') report('pick_saved'); }, 0);

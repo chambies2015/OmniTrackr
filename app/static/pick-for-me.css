@@ -66,6 +66,20 @@
 .pf-card__link { font-weight: 600; }
 .pf-card__status { color: #c7d2fe; margin: 14px 0 0; min-height: 1.4em; }
 .pf-card__status:empty { margin: 0; min-height: 0; }
+.pf-card__queue {
+  background: transparent;
+  border: 1px solid var(--site-border-strong);
+  border-radius: 999px;
+  color: inherit;
+  cursor: pointer;
+  font: inherit;
+  font-weight: 600;
+  margin-left: 4px;
+  min-height: 36px;
+  padding: 4px 14px;
+}
+.pf-card__queue:hover:not(:disabled) { background: var(--site-surface-2); color: #fff; }
+.pf-card__queue:disabled { cursor: default; opacity: .85; }
 
 .pf-bar {
   align-items: center;

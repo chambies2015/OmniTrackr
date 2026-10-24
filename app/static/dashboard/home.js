@@ -1007,6 +1007,14 @@ function renderNextUpQueue(items) {
     toggle.textContent = dailyDashboardState.expanded ? 'Show less' : `Manage queue (${items.length})`;
     toggle.setAttribute('aria-expanded', String(dailyDashboardState.expanded));
   }
+  const finishedCount = items.filter(item => item.finished || !item.available).length;
+  const clearFinished = document.getElementById('nextUpQueueClearFinished');
+  if (clearFinished) {
+    clearFinished.hidden = !finishedCount;
+    clearFinished.disabled = dailyDashboardState.mutationPending;
+    clearFinished.textContent = `Clear finished (${finishedCount})`;
+  }
+  syncNextUpButtons();
   container.setAttribute('aria-busy', String(dailyDashboardState.mutationPending));
   container.replaceChildren();
   if (!items.length) {
@@ -1016,22 +1024,45 @@ function renderNextUpQueue(items) {
   } else {
     shown.forEach((item, index) => {
       const row = document.createElement('div');
-      row.className = `next-up-queue__item${item.available ? '' : ' is-unavailable'}`;
+      row.className = `next-up-queue__item${item.available ? '' : ' is-unavailable'}${item.finished ? ' is-finished' : ''}`;
       row.dataset.nextUpRowId = String(item.id);
       const order = document.createElement('span');
       order.className = 'next-up-queue__order';
-      order.textContent = String(index + 1);
+      order.textContent = item.finished ? '✓' : String(index + 1);
+      const cover = document.createElement(item.image ? 'img' : 'span');
+      cover.className = 'next-up-queue__cover';
+      if (item.image) {
+        cover.src = item.image;
+        cover.alt = '';
+        cover.loading = 'lazy';
+        cover.decoding = 'async';
+        cover.referrerPolicy = 'no-referrer';
+      } else {
+        cover.setAttribute('aria-hidden', 'true');
+        cover.textContent = (item.title || '?').trim().charAt(0).toUpperCase() || '?';
+      }
       const copy = document.createElement('div');
       copy.className = 'next-up-queue__copy';
       const title = document.createElement('strong');
       title.textContent = item.title;
       const meta = document.createElement('span');
-      meta.textContent = item.available ? item.category_label : 'This library item was deleted';
+      meta.textContent = !item.available ? 'This library item was deleted' : item.finished ? `${item.category_label} · Finished` : item.category_label;
       copy.append(title, meta);
       if (typeof window !== 'undefined') window.OmniProgress?.appendSummary(copy, item);
       const controls = document.createElement('div');
       controls.className = 'next-up-queue__controls';
       if (item.available) {
+        if (!item.finished) {
+          const done = document.createElement('button');
+          done.type = 'button';
+          done.className = 'next-up-queue__done';
+          done.dataset.action = 'finish-next-up';
+          done.dataset.nextUpId = item.id;
+          done.disabled = dailyDashboardState.mutationPending;
+          done.textContent = 'Done';
+          done.setAttribute('aria-label', `Mark ${item.title} finished and take it off Next Up`);
+          controls.appendChild(done);
+        }
         const open = document.createElement('button');
         open.type = 'button';
         open.className = 'next-up-queue__open';
@@ -1042,8 +1073,18 @@ function renderNextUpQueue(items) {
         open.textContent = 'Open';
         open.setAttribute('aria-label', `Open ${item.title}`);
         controls.appendChild(open);
-        if (typeof window !== 'undefined') window.OmniProgress?.appendAction(controls, item);
+        if (typeof window !== 'undefined' && !item.finished) window.OmniProgress?.appendAction(controls, item);
       }
+      const top = document.createElement('button');
+      top.type = 'button';
+      top.className = 'next-up-queue__icon-button';
+      top.dataset.action = 'move-next-up';
+      top.dataset.nextUpId = item.id;
+      top.dataset.nextUpPosition = 0;
+      top.dataset.nextUpDirection = 'top';
+      top.disabled = dailyDashboardState.mutationPending;
+      top.setAttribute('aria-label', `Move ${item.title} to the top`);
+      top.textContent = '⤒';
       const up = document.createElement('button');
       up.type = 'button';
       up.className = 'next-up-queue__icon-button';
@@ -1072,14 +1113,41 @@ function renderNextUpQueue(items) {
       remove.disabled = dailyDashboardState.mutationPending;
       remove.setAttribute('aria-label', `Remove ${item.title} from Next Up`);
       remove.textContent = 'Remove';
-      if (dailyDashboardState.expanded) controls.append(up, down);
+      if (dailyDashboardState.expanded) {
+        // "To the top" only appears where it does more than the up arrow.
+        if (index > 1) controls.append(top);
+        controls.append(up, down);
+      }
       controls.appendChild(remove);
-      row.append(order, copy, controls);
+      row.append(order, cover, copy, controls);
       container.appendChild(row);
     });
   }
   queueElement.removeAttribute('hidden');
   restoreNextUpQueueFocus(focus);
+}
+
+function nextUpQueuedKeys() {
+  return new Set(dailyDashboardState.items.filter(item => item.available).map(item => `${item.category}:${item.item_id}`));
+}
+
+// Library rows say when a title is already lined up, so "Next up" never leads to a dead end.
+function syncNextUpButtons(root = document) {
+  if (!root?.querySelectorAll) return;
+  const queued = nextUpQueuedKeys();
+  root.querySelectorAll('[data-action="add-next-up"]').forEach(button => {
+    const inQueue = queued.has(`${button.dataset.nextUpCategory}:${button.dataset.nextUpItemId}`);
+    button.textContent = inQueue ? 'In Next Up ✓' : 'Next up';
+    button.dataset.nextUpQueued = String(inQueue);
+  });
+}
+
+function showNextUpQueue() {
+  const queueElement = document.getElementById('nextUpQueue');
+  if (!queueElement || queueElement.hidden) return false;
+  queueElement.scrollIntoView?.({ behavior: 'smooth', block: 'center' });
+  document.getElementById('nextUpQueueSummary')?.focus?.();
+  return true;
 }
 
 async function refreshNextUpQueue(shouldContinue = () => true) {
@@ -1101,6 +1169,7 @@ async function addToNextUp(category, itemId) {
   if (!category || !Number.isInteger(itemId) || itemId < 1) return;
   const session = dailyDashboardSessionKey();
   if (!session) return;
+  if (nextUpQueuedKeys().has(`${category}:${itemId}`) && showNextUpQueue()) return;
   try {
     const response = await authenticatedFetch(`${API_BASE}/next-up/`, {
       method: 'POST',
@@ -1192,6 +1261,67 @@ async function removeNextUp(queueId) {
       }
     }
   }
+}
+
+// Shared wrapper for queue changes that the server answers before the panel re-renders.
+async function runNextUpMutation(request, onSuccess, failureMessage) {
+  const session = dailyDashboardSessionKey();
+  if (!session || dailyDashboardState.mutationPending) return;
+  dailyDashboardState.mutationPending = true;
+  const mutation = ++dailyDashboardState.mutationRequest;
+  refreshNextUpQueue.request = (refreshNextUpQueue.request || 0) + 1;
+  const toggle = document.getElementById('nextUpQueueToggle');
+  if (toggle) toggle.disabled = true;
+  document.getElementById('nextUpQueueItems')?.setAttribute('aria-busy', 'true');
+  try {
+    const response = await request();
+    if (!response.ok) throw new Error('Next Up request failed');
+    const result = await response.json();
+    if (session !== dailyDashboardSessionKey()) return;
+    dailyDashboardState.mutationPending = false;
+    refreshNextUpQueue.request = (refreshNextUpQueue.request || 0) + 1;
+    await onSuccess(result);
+  } catch (error) {
+    if (session === dailyDashboardSessionKey()) alert(failureMessage);
+  } finally {
+    if (session === dailyDashboardSessionKey() && mutation === dailyDashboardState.mutationRequest) {
+      dailyDashboardState.mutationPending = false;
+      if (toggle) toggle.disabled = false;
+      document.getElementById('nextUpQueueItems')?.setAttribute('aria-busy', 'false');
+      if (dailyDashboardState.refreshAfterMutation) {
+        dailyDashboardState.refreshAfterMutation = false;
+        await refreshNextUpQueue();
+      }
+    }
+  }
+}
+
+function finishNextUp(queueId) {
+  if (!Number.isInteger(queueId) || queueId < 1) return;
+  return runNextUpMutation(
+    () => authenticatedFetch(`${API_BASE}/next-up/${queueId}/finish`, { method: 'POST' }),
+    async result => {
+      renderNextUpQueue(dailyDashboardState.items.filter(item => item.id !== queueId));
+      // Same reflection the library opens when a title is first ticked off.
+      if (!result.was_finished && typeof openCompletionMoment === 'function') openCompletionMoment(result.category, result.item_id);
+      if (currentTab === result.category) libraryPageConfig(result.category)?.[2]?.();
+      dailyDashboardState.refreshAfterMutation = false;
+      await Promise.all([refreshNextUpQueue(), refreshLibraryPulse(), refreshTodaysPick()]);
+    },
+    'Could not mark that title finished. Please try again.',
+  );
+}
+
+function clearFinishedNextUp() {
+  return runNextUpMutation(
+    () => authenticatedFetch(`${API_BASE}/next-up/clear-finished`, { method: 'POST' }),
+    async items => {
+      renderNextUpQueue(items);
+      refreshLibraryPulse();
+      refreshTodaysPick();
+    },
+    'Could not clear finished titles. Please try again.',
+  );
 }
 
 async function refreshLibraryLaunchpad() {

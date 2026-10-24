@@ -48,13 +48,13 @@
   <link rel="apple-touch-icon" href="/static/icons/apple-touch-icon.png?v=20261003-pwa-1">
   <meta name="apple-mobile-web-app-title" content="OmniTrackr">
   <script src="/static/pwa.js?v=20261018-install-card-1" defer></script>
-  <link rel="preload" href="./styles.css?v=20261022-diary-1" as="style">
+  <link rel="preload" href="./styles.css?v=20261022-next-up-1" as="style">
   <link rel="preload" href="/static/fonts/poppins-700-latin.woff2" as="font" type="font/woff2" crossorigin>
   <link rel="preload" href="/static/fonts/poppins-800-latin.woff2" as="font" type="font/woff2" crossorigin>
   <link rel="stylesheet" href="/static/fonts.css?v=20261009-fonts-1">
-  <link rel="stylesheet" href="./styles.css?v=20261022-diary-1">
+  <link rel="stylesheet" href="./styles.css?v=20261022-next-up-1">
   <link rel="stylesheet" href="/static/progress.css?v=20260922-progress">
-  <link rel="stylesheet" href="/static/app-theme.css?v=20260924-friends-panel-2">
+  <link rel="stylesheet" href="/static/app-theme.css?v=20261022-next-up-1">
   <link rel="stylesheet" href="/static/library-theme.css?v=20261017-bughunt-1">
   <link rel="stylesheet" href="/static/library-shelf.css?v=20261016-shelf-1">
   <link rel="stylesheet" href="/static/dialog-theme.css?v=20260924-visual-4">
@@ -571,7 +571,10 @@
           <h2 id="nextUpQueueTitle">Next Up</h2>
           <p id="nextUpQueueSummary" class="next-up-queue__summary"></p>
         </div>
-        <button id="nextUpQueueToggle" type="button" class="next-up-queue__toggle" data-action="toggle-next-up" aria-controls="nextUpQueueItems" aria-expanded="false" hidden>Manage queue</button>
+        <div class="next-up-queue__actions">
+          <button id="nextUpQueueClearFinished" type="button" class="next-up-queue__toggle next-up-queue__clear" data-action="clear-finished-next-up" hidden>Clear finished</button>
+          <button id="nextUpQueueToggle" type="button" class="next-up-queue__toggle" data-action="toggle-next-up" aria-controls="nextUpQueueItems" aria-expanded="false" hidden>Manage queue</button>
+        </div>
       </div>
       <div id="nextUpQueueItems" class="next-up-queue__items" aria-live="polite"></div>
     </section>

@@ -8,15 +8,16 @@ from fastapi import APIRouter, Depends, HTTPException, Query, Request, Response
 from pydantic import BaseModel, Field
 from sqlalchemy.orm import Session
 
-from .. import funnel, pick, title_search
+from .. import funnel, pick, title_pages, title_search
 from ..auth import AUTH_COOKIE_NAME
 from ..dependencies import get_current_user, get_db
 from ..progress import lock_progress_owner
+from . import next_up
 from .discover import page
 
 router = APIRouter(tags=["pick"])
-CSS_VERSION = "20261018-a11y-1"
-JS_VERSION = "20261012-pick-1"
+CSS_VERSION = "20261022-next-up-1"
+JS_VERSION = "20261022-next-up-1"
 GUEST_LIST_JS = "/static/guest-list.js?v=20261012-hero-search-1"
 DESCRIPTION = ("Can't decide what to watch, play or read? Pick for me suggests one movie, TV show, anime, game, "
                "book or album at a time, with a reason to try it and a caveat to consider first.")
@@ -204,6 +205,8 @@ class PickAdd(BaseModel):
     id: str = Field(..., min_length=3, max_length=160)
     # Where the button was: Pick for me itself, an "If you liked" guide or a seasonal hub (counted separately on Site stats).
     source: Literal["pick", "if-you-liked", "seasonal"] = "pick"
+    # Also line it up in the member's Next Up queue (skipped when it is already finished).
+    next_up: bool = False
 
 
 @router.post("/api/pick/add")
@@ -217,9 +220,16 @@ def add_pick(payload: PickAdd, request: Request, response: Response,
     lock_progress_owner(db, user.id)
     image = pick.title_details(title_search.index(db)).get(entry["id"], {}).get("image")
     state, record = pick.add_to_library(db, user, entry, image)
+    queued = None
+    if payload.next_up:
+        if getattr(record, title_pages.COMPLETE_FIELD[entry["kind"]], False):
+            queued = "finished"
+        else:
+            queued = "queued" if next_up.enqueue(db, user.id, entry["category"], record.id) else "already_queued"
     result = {
         "state": state, "title": record.title, "category": entry["category"],
         "library_url": f"/?library_category={entry['category']}&library_item={record.id}",
+        "next_up": queued,
     }
     db.commit()
     if state == "created":

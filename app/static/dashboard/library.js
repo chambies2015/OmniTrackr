@@ -2572,6 +2572,7 @@ function enhanceLibraryCards(tableId) {
       });
       actions.appendChild(button);
     }
+    syncNextUpButtons(actions);
     groupRowActions(actions);
   });
 }

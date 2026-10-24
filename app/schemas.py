@@ -1034,6 +1034,15 @@ class NextUpItem(BaseModel):
     position: int
     available: bool = True
     progress: Optional[dict] = None
+    finished: bool = False
+    image: Optional[str] = None
+
+
+class NextUpFinished(BaseModel):
+    category: str
+    item_id: int
+    title: str
+    was_finished: bool
 
 
 class ReturnPromptEngagement(BaseModel):
