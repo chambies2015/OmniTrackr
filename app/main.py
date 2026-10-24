@@ -907,6 +907,23 @@ for route in shared_lists_router.router.routes:
         bind_rate_limited_endpoint(route, rate_limited_list_member)
 app.include_router(shared_lists_router.router)
 
+from .routers import friend_recs as friend_recs_router
+rate_limited_rec_send = limiter.limit("30/hour")(friend_recs_router.send_recommendation)
+rate_limited_rec_link = limiter.limit("30/hour")(friend_recs_router.share_link)
+rate_limited_rec_claim = limiter.limit("30/hour")(friend_recs_router.claim_link)
+rate_limited_rec_page = limiter.limit("60/minute")(friend_recs_router.link_page)
+for route in friend_recs_router.router.routes:
+    path, methods = getattr(route, "path", None), getattr(route, "methods", set())
+    if path == "/api/friend-recs" and "POST" in methods:
+        bind_rate_limited_endpoint(route, rate_limited_rec_send)
+    elif path == "/api/friend-recs/link":
+        bind_rate_limited_endpoint(route, rate_limited_rec_link)
+    elif path == "/api/friend-recs/claim/{token}":
+        bind_rate_limited_endpoint(route, rate_limited_rec_claim)
+    elif path == "/r/{token}":
+        bind_rate_limited_endpoint(route, rate_limited_rec_page)
+app.include_router(friend_recs_router.router)
+
 
 @app.get("/", tags=["root"])
 @app.head("/", tags=["root"])
