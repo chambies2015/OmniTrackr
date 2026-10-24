@@ -13,29 +13,32 @@
   <meta property="og:title" content="Community Collections | OmniTrackr">
   <meta property="og:description" content="Ideas worth following across every kind of media, curated by OmniTrackr members.">
   <meta property="og:url" content="https://omnitrackr.xyz/collections/explore">
-  <link rel="preconnect" href="https://fonts.googleapis.com">
-  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@700;800&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="/styles.css">
-  <link rel="stylesheet" href="/static/collections-public.css?v=20260928-site-2">
+  <link rel="preload" href="/static/fonts/poppins-700-latin.woff2" as="font" type="font/woff2" crossorigin>
+  <link rel="preload" href="/static/fonts/poppins-800-latin.woff2" as="font" type="font/woff2" crossorigin>
+  <link rel="stylesheet" href="/static/fonts.css?v=20261009-fonts-1">
+  <link rel="stylesheet" href="/static/public-legacy.css?v=20261004-legacy-1">
+  <link rel="stylesheet" href="/static/collections-public.css?v=20261019-lists-1">
 </head>
 <body class="dark-mode site collections-page">
   <!--SITE_NAV:collections-->
   <main>
     <section class="gallery-hero site-hero"><div class="site-wrap">
-      <p class="gallery-hero__eyebrow site-eyebrow">Made by people, not an algorithm</p>
-      <h1>Ideas worth following across every medium.</h1>
-      <p>Browse collections that connect films, series, anime, games, albums, and books through one considered point of view. Only substantial collections that pass the automatic discovery checks appear here.</p>
+      <p class="gallery-hero__eyebrow site-eyebrow">Made by OmniTrackr members</p>
+      <h1>Collections that mix films, games, books, and more.</h1>
+      <p>Browse collections that connect films, series, anime, games, albums, and books around one theme. A collection only shows up here once it is long enough and passes the automatic discovery checks.</p>
       <form class="gallery-filter" method="get" action="/collections/explore">
         <input type="search" name="q" maxlength="80" value="{{QUERY}}" placeholder="Search a theme or description" aria-label="Search collections">
         <select name="category" aria-label="Filter by media type">
           <option value="" {{SELECT_ALL}}>All media</option><option value="movies" {{SELECT_MOVIES}}>Movies</option><option value="tv-shows" {{SELECT_TV_SHOWS}}>TV shows</option><option value="anime" {{SELECT_ANIME}}>Anime</option><option value="video-games" {{SELECT_VIDEO_GAMES}}>Video games</option><option value="music" {{SELECT_MUSIC}}>Music</option><option value="books" {{SELECT_BOOKS}}>Books</option>
         </select>
+        <select name="sort" aria-label="Sort collections">
+          <option value="helpful" {{SORT_HELPFUL}}>Most helpful</option><option value="newest" {{SORT_NEWEST}}>Newest</option><option value="popular" {{SORT_POPULAR}}>Most read</option>
+        </select>
         <button type="submit">Explore</button>
       </form>
     </div></section>
     <div class="site-wrap gallery-body">
-    <p class="gallery-summary">{{COUNT}} approved collection(s)</p>
+    <p class="gallery-summary">{{COUNT}}</p>
     <section class="collection-gallery" aria-label="Approved community collections">{{COLLECTIONS}}</section>
     <footer class="gallery-footer"><span>Curated by OmniTrackr members · Reviewed before discovery</span><span><a href="/content-quality">Content standards</a> · <a href="/contact">Contact</a> · <a href="/privacy">Privacy</a></span></footer>
     </div>

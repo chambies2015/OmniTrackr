@@ -26,10 +26,9 @@
   <meta name="twitter:description" content="Rating scales, review prompts, backlog cleanup, and category templates for your media library.">
   <meta name="twitter:image" content="https://omnitrackr.xyz/omnitrackr_vortex.png">
   <meta name="twitter:image:alt" content="OmniTrackr media tracking templates">
-  <link rel="preconnect" href="https://fonts.googleapis.com">
-  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@700;800&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="/styles.css">
+  <link rel="preload" href="/static/fonts/poppins-700-latin.woff2" as="font" type="font/woff2" crossorigin>
+  <link rel="preload" href="/static/fonts/poppins-800-latin.woff2" as="font" type="font/woff2" crossorigin>
+  <link rel="stylesheet" href="/static/fonts.css?v=20261009-fonts-1">
   <style>
     body { min-height: 100vh; padding: 20px; }
     .public-wrapper { max-width: 1080px; margin: 0 auto; }
@@ -72,7 +71,7 @@
     "isPartOf": { "@type": "WebSite", "name": "OmniTrackr", "url": "https://omnitrackr.xyz" }
   }
   </script>
-  <link rel="stylesheet" href="/static/public-reader.css?v=20260928-site-2">
+  <link rel="stylesheet" href="/static/public-reader.css?v=20261017-reader-2">
 </head>
 
 <body class="public-reader site">
@@ -83,32 +82,32 @@
 <a href="/" class="back-link">Back to OmniTrackr</a>
       <header class="public-header">
         <h1>Media Tracking Templates</h1>
-        <p>Use these practical templates to organize ratings, reviews, backlogs, watchlists, privacy choices, and exports before or after creating an OmniTrackr account.</p>
+        <p>Templates you can copy for ratings, reviews, backlogs, watchlists, privacy choices, and exports. Use them before or after you create an OmniTrackr account.</p>
       </header>
       <details class="reader-contents">
         <summary>On this page</summary>
         <nav aria-label="On this page">
-          <a href="#quick-start-heading">Quick Start Template</a>
-          <a href="#rating-heading">Rating Scale Template</a>
-          <a href="#category-heading">Category Field Templates</a>
-          <a href="#review-heading">Review Prompt Template</a>
-          <a href="#cleanup-heading">Backlog Cleanup Template</a>
-          <a href="#privacy-heading">Privacy and Sharing Template</a>
-          <a href="#next-heading">Next Steps</a>
+          <a href="#quick-start-heading">Quick start template</a>
+          <a href="#rating-heading">Rating scale template</a>
+          <a href="#category-heading">Category field templates</a>
+          <a href="#review-heading">Review prompt template</a>
+          <a href="#cleanup-heading">Backlog cleanup template</a>
+          <a href="#privacy-heading">Privacy and sharing template</a>
+          <a href="#next-heading">Next steps</a>
         </nav>
       </details>
 
 
       <section class="public-section" aria-labelledby="quick-start-heading">
-        <h2 id="quick-start-heading">Quick Start Template</h2>
-        <p>A strong media library starts with a few stable rules. The goal is not to capture every possible detail. The goal is to make each entry useful when you revisit it months later. Start with these fields, then add category-specific details only where they help.</p>
+        <h2 id="quick-start-heading">Quick start template</h2>
+        <p>Start with a few rules you'll stick to. You don't need every possible detail, just enough that an entry still makes sense when you come back to it months later. Begin with these fields, and add category-specific details only where you'll actually use them.</p>
         <div class="template-table-wrap" tabindex="0" role="region" aria-label="Tracking template table">
           <table class="template-table">
             <thead>
               <tr>
                 <th>Field</th>
-                <th>Use It For</th>
-                <th>Good Default</th>
+                <th>Use it for</th>
+                <th>Good default</th>
               </tr>
             </thead>
             <tbody>
@@ -135,7 +134,7 @@
               <tr>
                 <td>Privacy</td>
                 <td>Deciding what friends or visitors can see.</td>
-                <td>Keep private by default, then make only polished reviews public.</td>
+                <td>Keep private by default, and make a review public only once it's finished.</td>
               </tr>
             </tbody>
           </table>
@@ -143,19 +142,19 @@
       </section>
 
       <section class="public-section" aria-labelledby="rating-heading">
-        <h2 id="rating-heading">Rating Scale Template</h2>
-        <p>Ratings are most useful when they mean the same thing every time. Before importing old lists or adding a large backlog, write a short rating key. This keeps statistics easier to read and prevents every decent item from becoming the same score.</p>
+        <h2 id="rating-heading">Rating scale template</h2>
+        <p>A rating should mean the same thing every time you give it. Before importing old lists or adding a large backlog, write a short rating key. Your statistics will be easier to read, and every decent title won't end up with the same 7.</p>
         <div class="template-grid">
           <div class="template-card"><h3>10</h3><p>A personal favorite. You would strongly recommend it and expect to revisit it.</p></div>
           <div class="template-card"><h3>8-9</h3><p>Excellent. It has clear strengths and only small issues for your taste.</p></div>
           <div class="template-card"><h3>6-7</h3><p>Worthwhile but uneven. You liked parts of it, but the recommendation depends on the person.</p></div>
-          <div class="template-card"><h3>4-5</h3><p>Mixed or disappointing. Useful to record, but not something you would broadly recommend.</p></div>
+          <div class="template-card"><h3>4-5</h3><p>Mixed or disappointing. Worth logging, but not something you'd recommend to most people.</p></div>
           <div class="template-card"><h3>1-3</h3><p>A poor fit or unfinished for a reason. Add a note so future-you remembers why.</p></div>
         </div>
       </section>
 
       <section class="public-section" aria-labelledby="category-heading">
-        <h2 id="category-heading">Category Field Templates</h2>
+        <h2 id="category-heading">Category field templates</h2>
         <p>Different media types need different context. A movie list can stay compact, while TV shows and games often need progress notes. Use these field ideas when deciding what belongs in your library.</p>
         <div class="template-grid">
           <div class="template-card"><h3>Movies</h3><p>Track title, year, watched status, director or collection notes, rating, rewatch value, and a short review.</p></div>
@@ -168,8 +167,8 @@
       </section>
 
       <section class="public-section" aria-labelledby="review-heading">
-        <h2 id="review-heading">Review Prompt Template</h2>
-        <p>A useful review does not need to be long. It needs enough context to explain the score. OmniTrackr public reviews work best when they are specific, readable, and written for another person who is deciding what to watch, play, read, or hear next.</p>
+        <h2 id="review-heading">Review prompt template</h2>
+        <p>A review doesn't need to be long. It needs enough context to explain the score. The best OmniTrackr public reviews give specific details and are written for someone deciding what to watch, play, read, or listen to next.</p>
         <ul class="template-list">
           <li>What did this item do especially well?</li>
           <li>What kind of person would enjoy it most?</li>
@@ -181,30 +180,30 @@
       </section>
 
       <section class="public-section" aria-labelledby="cleanup-heading">
-        <h2 id="cleanup-heading">Backlog Cleanup Template</h2>
-        <p>Backlogs become stressful when every item has the same priority. Use a cleanup pass every few months. The point is to make the list easier to act on, not to make it bigger.</p>
+        <h2 id="cleanup-heading">Backlog cleanup template</h2>
+        <p>A backlog gets stressful when everything on it has the same priority. Go through it every few months and aim to come out with a shorter list you can pick from.</p>
         <ol class="template-list">
           <li>Move anything you no longer care about to dropped, removed, or archived.</li>
           <li>Mark the next three items you genuinely want to start.</li>
           <li>Add one reason beside each high-priority item so the choice is easy later.</li>
           <li>Separate short items from long commitments.</li>
-          <li>Export a backup after major cleanup so your library stays portable.</li>
+          <li>Export a backup after a big cleanup so you have a copy of the result.</li>
         </ol>
       </section>
 
       <section class="public-section" aria-labelledby="privacy-heading">
-        <h2 id="privacy-heading">Privacy and Sharing Template</h2>
-        <p>Not every media note needs to be public. A good library can include private comfort watches, abandoned books, half-finished albums, and messy first impressions. Leaving Public Review unchecked keeps item notes off public review pages, but friends can read them if the category is shared. Keep that category private too, or use your private journal or checkpoint reminders for personal context.</p>
+        <h2 id="privacy-heading">Privacy and sharing template</h2>
+        <p>Not every note needs to be public. Your library can include private comfort watches, abandoned books, half-finished albums, and messy first impressions. Leaving Public Review unchecked keeps item notes off public review pages, but friends can read them if the category is shared. Keep that category private too, or use your private journal or checkpoint reminders for personal context.</p>
         <ul class="template-list">
           <li>Keep draft reviews private until they include enough context to help another reader.</li>
           <li>Share category summaries with friends only when you are comfortable with that category being visible.</li>
-          <li>Use public reviews for polished recommendations, not every quick note.</li>
+          <li>Save public reviews for recommendations you've written up properly. Quick notes can stay private.</li>
           <li>Review privacy settings after imports, large edits, or major account changes.</li>
         </ul>
       </section>
 
       <section class="public-section" aria-labelledby="next-heading">
-        <h2 id="next-heading">Next Steps</h2>
+        <h2 id="next-heading">Next steps</h2>
         <p>After choosing a template, try the <a href="/demo">demo library</a>, read the <a href="/media-tracking">media tracking hub</a>, compare OmniTrackr with <a href="/compare">spreadsheets and single-category trackers</a>, or learn how to keep backups in the <a href="/export-import-guide">export and import guide</a>.</p>
       </section>
     </main>

@@ -74,6 +74,34 @@
     }
   }
 
+  async function markHelpful(box) {
+    const button = box.querySelector('.review-helpful__button');
+    const count = box.querySelector('.review-helpful__count');
+    if (!button || button.disabled) return;
+    button.disabled = true;
+    try {
+      const response = await fetch(
+        `/api/public/reviews/${encodeURIComponent(box.dataset.category)}/${encodeURIComponent(box.dataset.reviewId)}/helpful`,
+        { method: 'POST', credentials: 'same-origin' },
+      );
+      const result = await response.json().catch(() => ({}));
+      if (!response.ok) throw new Error(result.detail || 'That did not go through. Please try again.');
+      button.setAttribute('aria-pressed', 'true');
+      button.textContent = '👍 Marked helpful';
+      if (count) count.textContent = result.label || '';
+    } catch (error) {
+      if (count) count.textContent = error.message || 'That did not go through. Please try again.';
+      button.disabled = false;
+    }
+  }
+
+  document.addEventListener('click', (event) => {
+    const button = event.target.closest && event.target.closest('.review-helpful__button');
+    if (!button) return;
+    const box = button.closest('[data-review-helpful]');
+    if (box) markHelpful(box);
+  });
+
   document.addEventListener('submit', (event) => {
     const form = event.target.closest('[data-review-report]');
     if (!form) return;

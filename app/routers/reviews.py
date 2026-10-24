@@ -17,12 +17,14 @@ from sqlalchemy.orm import Session
 from sqlalchemy import and_, func
 from sqlalchemy.exc import IntegrityError
 
-from .. import affiliate, models, schemas
-from ..site_chrome import apply_site_chrome, message_page
+from ..integer_bounds import PositiveDatabaseId
+from .. import affiliate, models, review_spoilers, schemas
+from ..site_chrome import apply_site_chrome, editorial_picks, message_page
 from ..auth import AUTH_COOKIE_NAME
 from ..csp import strict_html_response
+from ..progress import lock_progress_owner
 from ..dependencies import get_current_user, get_db
-from ..review_quality import evaluate_public_review
+from ..review_quality import AD_MIN_REVIEW_WORDS, MIN_INDEXED_LISTING_REVIEWS, evaluate_public_review, word_count
 from ..visitor_identity import set_visitor_cookie, visitor_identity
 
 router = APIRouter(tags=["reviews"])
@@ -214,6 +216,17 @@ def _review_is_standalone(review: dict) -> bool:
     ).search_ready
 
 
+def _review_is_indexable(review: dict) -> bool:
+    """A review's own page joins search only when the review can carry the page alone.
+
+    Shorter standalone reviews keep their page, so shared links still work, and they
+    still appear in listings, on title pages and on profiles beside other writing. On
+    their own page a 40-word review sits under several hundred words of shared layout
+    and other members' excerpts, which reads as thin content (AdSense, Oct 2026).
+    """
+    return _review_is_standalone(review) and word_count(review.get("review")) >= AD_MIN_REVIEW_WORDS
+
+
 def _review_content_hash(category: str, item_id: int, review_text: str | None) -> str:
     normalized = " ".join(str(review_text or "").split())
     return hashlib.sha256(f"{category}:{item_id}:{normalized}".encode("utf-8")).hexdigest()
@@ -331,14 +344,13 @@ def _review_card_html(review: dict) -> str:
             <p class="review-item-meta">{_escape(_review_meta(review))}</p>
           </div>
         </div>
-        <p class="review-preview">{_escape(preview)}</p>
-        {expanded_text}
+        {review_spoilers.wrap(review, f'<p class="review-preview">{_escape(preview)}</p>{expanded_text}')}
         <div class="review-meta">
-          <span class="review-author">By {_escape(review.get("username"))}</span>
+          <span class="review-author">By {_author_html(review)}</span>
           {rating_html}
         </div>
         <div class="review-card-actions">
-          <a class="review-save-link" href="/reviews/{review['id']}/save?category={_escape(review['category'])}" aria-label="Save {_escape(review.get('title'))} to my library">Save to my library</a>
+          <a class="review-save-link" rel="nofollow" href="/reviews/{review['id']}/save?category={_escape(review['category'])}" aria-label="Save {_escape(review.get('title'))} to my library">Save to my library</a>
           {detail_link}
         </div>
         {report_html}
@@ -408,10 +420,11 @@ def _reviews_item_list_json_ld(reviews: list[dict], category: Optional[str] = No
                 "@type": "Review",
                 "name": f"{review.get('title')} {CATEGORY_LABELS.get(review.get('category'), 'Media')} Review",
                 "author": {"@type": "Person", "name": review.get("username")},
-                "reviewBody": review.get("review"),
                 "itemReviewed": _review_item_reviewed_json_ld(review),
             },
         }
+        if not review.get("spoilers"):
+            review_item["item"]["reviewBody"] = review.get("review")
         if standalone:
             review_item["url"] = review_url
             review_item["item"]["url"] = review_url
@@ -463,8 +476,10 @@ def _noindex_empty_review_category(page: str) -> str:
     return page
 
 
-def _inject_ad_loader_for_review_detail(page: str, request: Request) -> str:
+def _inject_ad_loader_for_review_detail(page: str, request: Request, review: dict | None = None) -> str:
     if request.cookies.get(AUTH_COOKIE_NAME):
+        return page
+    if review is not None and word_count(review.get("review")) < AD_MIN_REVIEW_WORDS:
         return page
     if "/static/ad-loader.js" in page or "</head>" not in page:
         return page
@@ -479,16 +494,59 @@ def _not_found_review_html() -> str:
     )
 
 
-def _review_detail_html(review: dict, more_reviews: Optional[list] = None) -> str:
+def _author_html(review: dict) -> str:
+    """The reviewer's name, linked to their public profile when they have switched one on."""
+    name = _escape(review.get("username"))
+    url = review.get("profile_url")
+    if isinstance(url, str) and url.startswith("/u/"):
+        name = f'<a class="review-author-link" href="{_escape(url)}">{name}</a>'
+    from ..supporters import chip_html
+    return name + chip_html(review.get("supporter"))
+
+
+def _attach_supporter_badges(db: Session, reviews: list) -> None:
+    """Mark reviews by current Ko-fi supporters who show their badge. Optional: never blocks a page."""
+    try:
+        from ..supporters import public_badges
+        badges = public_badges(db, [review.get("user_id") for review in reviews])
+    except Exception:
+        return
+    for review in reviews:
+        review["supporter"] = badges.get(review.get("user_id"))
+
+
+def _attach_profile_urls(db: Session, reviews: list) -> None:
+    try:
+        from ..public_profiles import enabled_profile_paths
+        paths = enabled_profile_paths(db, [review.get("user_id") for review in reviews])
+    except Exception:
+        return
+    for review in reviews:
+        if review.get("user_id") in paths:
+            review["profile_url"] = paths[review["user_id"]]
+
+
+def _title_page_link(review: dict) -> str:
+    from ..title_pages import path_for_review_category
+    path = path_for_review_category(review.get("category"), review.get("title") or "", review.get("year"), review.get("release_date"))
+    if not path:
+        return ""
+    return f'<p class="review-title-link"><a href="{_escape(path)}">Trailer, details and more reviews of {_escape(review.get("title"))} <span aria-hidden="true">→</span></a></p>'
+
+
+def _review_detail_html(review: dict, more_reviews: Optional[list] = None, helpful_count: int = 0) -> str:
     category_label = CATEGORY_LABELS.get(review.get("category"), "Media")
     title = f"{review.get('title')} {category_label} Review by {review.get('username')} - OmniTrackr"
     review_excerpt = (review.get("review") or "").strip().replace("\n", " ")
+    if review.get("spoilers"):
+        review_excerpt = "This review contains spoilers."
     rating = review.get("rating")
     rating_text = f"{rating}/10 " if rating is not None else ""
     description = f"Read {review.get('username')}'s {rating_text}review of {review.get('title')} on OmniTrackr: {review_excerpt}"
     if len(description) > 158:
         description = f"{description[:155].rstrip()}..."
     canonical_url = f"{SITE_URL}/reviews/{review['id']}?category={review['category']}"
+    robots = "index, follow, max-image-preview:large" if _review_is_indexable(review) else "noindex, follow"
     image_url = _absolute_url(_review_image(review))
     rating_html = f'<div class="review-rating-large">Rating: {_escape(rating)}/10</div>' if rating is not None else ""
 
@@ -532,10 +590,11 @@ def _review_detail_html(review: dict, more_reviews: Optional[list] = None) -> st
         "@type": "Review",
         "url": canonical_url,
         "headline": title,
-        "reviewBody": review.get("review"),
         "author": {"@type": "Person", "name": review.get("username")},
         "itemReviewed": item_reviewed,
     }
+    if not review.get("spoilers"):
+        json_ld["reviewBody"] = review.get("review")
     if rating is not None:
         json_ld["reviewRating"] = {"@type": "Rating", "ratingValue": rating, "bestRating": 10, "worstRating": 1}
 
@@ -556,7 +615,7 @@ def _review_detail_html(review: dict, more_reviews: Optional[list] = None) -> st
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <meta name="google-adsense-account" content="{_escape(ADSENSE_ACCOUNT)}">
   <meta name="description" content="{_escape(description)}">
-  <meta name="robots" content="index, follow, max-image-preview:large">
+  <meta name="robots" content="{robots}">
   <title>{_escape(title)}</title>
   <link rel="canonical" href="{_escape(canonical_url)}">
   <link rel="icon" type="image/x-icon" href="/omnitrackr_favicon.ico">
@@ -572,15 +631,16 @@ def _review_detail_html(review: dict, more_reviews: Optional[list] = None) -> st
   <meta name="twitter:description" content="{_escape(description)}">
   <meta name="twitter:image" content="{_escape(image_url)}">
   <meta name="twitter:image:alt" content="{_escape(review.get("title"))} review artwork">
-  <link rel="preconnect" href="https://fonts.googleapis.com">
-  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@700;800&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="/styles.css?v=20260917-review-safety-v1">
-  <link rel="stylesheet" href="/static/reviews.css?v=20260928-site-1">
-  <link rel="stylesheet" href="/static/review-detail.css?v=20260928-site-1">
+  <link rel="preload" href="/static/fonts/poppins-700-latin.woff2" as="font" type="font/woff2" crossorigin>
+  <link rel="preload" href="/static/fonts/poppins-800-latin.woff2" as="font" type="font/woff2" crossorigin>
+  <link rel="stylesheet" href="/static/fonts.css?v=20261009-fonts-1">
+  <link rel="stylesheet" href="/static/public-legacy.css?v=20261004-legacy-1">
+  <link rel="stylesheet" href="/static/reviews.css?v=20261020-spoilers-1">
+  <link rel="stylesheet" href="/static/review-detail.css?v=20261020-spoilers-1">
   <script type="application/ld+json">{_safe_json_ld(json_ld)}</script>
   <script type="application/ld+json">{_safe_json_ld(breadcrumb_json_ld)}</script>
-  <script src="/static/review_report.js?v=20260917-review-safety-v1" defer></script>
+  <script src="/static/review_report.js?v=20261007-helpful-1" defer></script>
+  <script src="/static/share.js?v=20261004-share-1" defer></script>
 </head>
 <body class="dark-mode site review-page">
   <!--SITE_NAV:reviews-->
@@ -593,18 +653,22 @@ def _review_detail_html(review: dict, more_reviews: Optional[list] = None) -> st
           <div class="review-header-info">
             <nav class="review-crumbs" aria-label="Breadcrumb"><a href="/reviews">Public reviews</a><span aria-hidden="true">/</span><a href="/reviews?category={_escape(category)}">{_escape(CATEGORY_LABELS.get(category, category))}</a></nav>
             <h1>{_escape(review.get("title"))}</h1>
-            <div class="review-hero__meta">{rating_html}<span class="review-byline">Reviewed by <strong>{_escape(review.get("username"))}</strong></span></div>
+            {_title_page_link(review)}
+            <div class="review-hero__meta">{rating_html}<span class="review-byline">Reviewed by <strong>{_author_html(review)}</strong></span><button type="button" class="site-btn site-btn--ghost site-btn--sm review-share" data-share data-share-title="{_escape(review.get("title"))} review on OmniTrackr">Share</button></div>
             <div class="review-meta-info">{details_html}</div>
           </div>
         </div>
       </header>
       <div class="site-wrap review-body">
-        <section class="review-content" aria-label="Review">{_escape(review.get("review"))}</section>
+        <div class="review-main">
+          {review_spoilers.wrap(review, f'<section class="review-content" aria-label="Review">{_escape(review.get("review"))}</section>')}
+          {_helpful_html(review, helpful_count)}
+        </div>
         <aside class="review-aside" aria-label="Keep this title">
           <p class="site-eyebrow">Sounds like your kind of thing?</p>
           <h2>Keep it for later</h2>
           <p class="review-save-note">Save it to your own private library. You preview any existing match before confirming.</p>
-          <a class="review-save-link site-btn site-btn--primary" href="/reviews/{review['id']}/save?category={_escape(category)}">Save to my library</a>
+          <a class="review-save-link site-btn site-btn--primary" rel="nofollow" href="/reviews/{review['id']}/save?category={_escape(category)}">Save to my library</a>
           {_review_affiliate_html(review)}
           {_review_report_html(review)}
         </aside>
@@ -636,12 +700,17 @@ def reviews_index(
         page = page.replace(chip, chip[:-1] + ' aria-current="page">', 1)
     feed = _public_review_feed(db, category, q, 20, 0)
     reviews = feed["reviews"]
+    _attach_profile_urls(db, reviews)
     if reviews:
         cards = "\n".join(_review_card_html(review) for review in reviews)
     elif q:
         cards = '<section class="no-reviews"><h2>No matching reviews yet</h2><p>Try another title or choose All Categories.</p></section>'
     else:
-        cards = '<section class="no-reviews"><h2>Community reviews are being curated</h2><p>Thoughtful public reviews will appear here as members share them.</p></section>'
+        cards = editorial_picks(
+            "Start with an editorial guide",
+            "No member has shared a public review in this section yet. These OmniTrackr guides compare films, "
+            "series, anime, games, albums, and books, and explain who each pick suits.",
+        )
     replacements = {
         "SERVER_REVIEWS": cards, "CATEGORY": _escape(category or ""), "QUERY": _escape(q),
         "NEXT_OFFSET": str(feed["next_offset"]), "HAS_MORE": str(feed["has_more"]).lower(),
@@ -650,7 +719,8 @@ def reviews_index(
     page = re.sub(r"\{\{(SERVER_REVIEWS|CATEGORY|QUERY|NEXT_OFFSET|HAS_MORE)\}\}", lambda match: replacements[match[1]], page)
     page = _inject_reviews_item_list_json_ld(page, reviews, category)
     page = _apply_category_review_context(page, category)
-    noindex = bool(q) or not any(_review_is_standalone(review) for review in reviews)
+    standalone = sum(1 for review in reviews if _review_is_standalone(review))
+    noindex = bool(q) or standalone < MIN_INDEXED_LISTING_REVIEWS
     if noindex:
         page = _noindex_empty_review_category(page)
     response = strict_html_response(page)
@@ -660,16 +730,16 @@ def reviews_index(
 
 
 @router.get("/reviews/{review_id}")
-async def review_detail(
+def review_detail(
     request: Request,
-    review_id: int,
+    review_id: PositiveDatabaseId,
     category: Optional[str] = Query(None, description="Category: movie, tv_show, anime, video_game, music, or book"),
     db: Session = Depends(get_db)
 ):
     """Serve the public review detail page."""
     if category:
         try:
-            review = await get_public_review(review_id=review_id, category=category, db=db)
+            review = get_public_review(review_id=review_id, category=category, db=db)
             if not _review_is_standalone(review):
                 return strict_html_response(_not_found_review_html(), status_code=404)
             more = []
@@ -678,8 +748,14 @@ async def review_detail(
                 more = [item for item in feed if item["id"] != review["id"]][:4]
             except Exception:
                 more = []  # Related reviews are optional; never block the page.
-            page = apply_site_chrome(_review_detail_html(review, more))
-            return strict_html_response(_inject_ad_loader_for_review_detail(page, request))
+            _attach_profile_urls(db, [review])
+            _attach_supporter_badges(db, [review])
+            helpful = review_helpful_counts(db, [(review["category"], review["id"])]).get((review["category"], int(review["id"])), 0)
+            page = apply_site_chrome(_review_detail_html(review, more, helpful))
+            response = strict_html_response(_inject_ad_loader_for_review_detail(page, request, review))
+            if not _review_is_indexable(review):
+                response.headers["X-Robots-Tag"] = "noindex, follow"
+            return response
         except HTTPException:
             return strict_html_response(_not_found_review_html(), status_code=404)
 
@@ -711,16 +787,22 @@ def _serialize_public_review(category, item, user, quality):
     return review
 
 
-def _eligible_public_reviews(db, category, q, min_chars):
-    """Stream joined rows; review quality and moderation run before pagination."""
+def _eligible_review_keys(db, category, q, min_chars):
+    """Yield (sort key, category, item id, quality) for every review the feed may show.
+
+    Only the columns the checks need are read; whole rows are loaded later for the one
+    page being shown. Building every public review as an ORM object (with its writer and
+    report state) took most of a /reviews request.
+    """
+    state = models.PublicReviewState
     for cat, model in CATEGORY_MODELS.items():
         if category and cat != category:
             continue
-        rows = db.query(model, models.User, models.PublicReviewState).join(
+        rows = db.query(model.id, model.title, model.review, state.suspended_at, state.content_hash).join(
             models.User, model.user_id == models.User.id,
-        ).outerjoin(models.PublicReviewState, and_(
-            models.PublicReviewState.category == cat,
-            models.PublicReviewState.item_id == model.id,
+        ).outerjoin(state, and_(
+            state.category == cat,
+            state.item_id == model.id,
         )).filter(
             models.User.is_active == True,
             model.review_public == True,
@@ -729,15 +811,29 @@ def _eligible_public_reviews(db, category, q, min_chars):
         )
         if q:
             rows = rows.filter(func.lower(model.title).contains(q.lower(), autoescape=True))
-        for item, user, review_state in rows.yield_per(200):
-            if not (item.title or "").strip():
+        for row in rows.yield_per(500):
+            if not (row.title or "").strip():
                 continue
-            quality = evaluate_public_review(item.review, PUBLIC_REVIEW_MIN_CHARS, PUBLIC_REVIEW_DETAIL_MIN_CHARS)
+            quality = evaluate_public_review(row.review, PUBLIC_REVIEW_MIN_CHARS, PUBLIC_REVIEW_DETAIL_MIN_CHARS)
             if not quality.safe or (min_chars >= PUBLIC_REVIEW_MIN_CHARS and not quality.community_ready):
                 continue
-            if _current_state_hides_review(review_state, cat, item):
+            if _current_state_hides_review(row, cat, row):  # The row carries the state's columns.
                 continue
-            yield _serialize_public_review(cat, item, user, quality)
+            yield (not quality.search_ready, -row.id, cat), cat, row.id, quality
+
+
+def _load_reviews(db, keys) -> dict:
+    """{(category, item id): (item, writer)} for the given reviews, one query per category."""
+    ids_by_category: dict = {}
+    for cat, item_id in keys:
+        ids_by_category.setdefault(cat, []).append(item_id)
+    loaded = {}
+    for cat, ids in ids_by_category.items():
+        model = CATEGORY_MODELS[cat]
+        for item, user in db.query(model, models.User).join(models.User, model.user_id == models.User.id).filter(
+                model.id.in_(ids)):
+            loaded[(cat, item.id)] = (item, user)
+    return loaded
 
 
 def _public_review_feed(db, category, q, limit, offset, min_chars=PUBLIC_REVIEW_MIN_CHARS):
@@ -747,10 +843,15 @@ def _public_review_feed(db, category, q, limit, offset, min_chars=PUBLIC_REVIEW_
     # Keeping only this page's prefix bounds memory while evaluating every candidate.
     prefix = heapq.nsmallest(
         offset + limit + 1,
-        _eligible_public_reviews(db, category, q.strip(), min_chars),
-        key=lambda review: (not review["search_ready"], -review["id"], review["category"]),
+        _eligible_review_keys(db, category, q.strip(), min_chars),
+        key=lambda entry: entry[0],
     )
-    reviews = prefix[offset:offset + limit]
+    page = prefix[offset:offset + limit]
+    loaded = _load_reviews(db, [(cat, item_id) for _, cat, item_id, _ in page])
+    reviews = [_serialize_public_review(cat, *loaded[(cat, item_id)], quality)
+               for _, cat, item_id, quality in page if (cat, item_id) in loaded]
+    _attach_supporter_badges(db, reviews)
+    review_spoilers.attach(db, reviews)
     return {"reviews": reviews, "has_more": len(prefix) > offset + limit, "next_offset": offset + len(reviews)}
 
 
@@ -759,7 +860,7 @@ def get_public_reviews(
     db: Session = Depends(get_db),
     category: Optional[str] = Query(None, description="Filter by category"),
     limit: int = Query(20, ge=1, le=100),
-    offset: int = Query(0, ge=0),
+    offset: int = Query(0, ge=0, le=2147483647),
     min_chars: int = Query(PUBLIC_REVIEW_MIN_CHARS, ge=1, le=2000),
     q: str = Query("", max_length=100),
 ):
@@ -773,14 +874,14 @@ def get_public_review_feed(
     category: Optional[str] = Query(None, description="Filter by category"),
     q: str = Query("", max_length=100),
     limit: int = Query(20, ge=1, le=40),
-    offset: int = Query(0, ge=0),
+    offset: int = Query(0, ge=0, le=2147483647),
 ):
     return _public_review_feed(db, category, q, limit, offset)
 
 
 @router.get("/api/public/reviews/{review_id}", response_model=dict, tags=["public"])
-async def get_public_review(
-    review_id: int,
+def get_public_review(
+    review_id: PositiveDatabaseId,
     category: str = Query(..., description="Category: movie, tv_show, anime, video_game, music, or book"),
     db: Session = Depends(get_db)
 ):
@@ -817,7 +918,7 @@ async def get_public_review(
     if not user or not user.is_active:
         raise HTTPException(status_code=404, detail="Review not found")
 
-    return _serialize_public_review(category, item, user, quality)
+    return review_spoilers.attach(db, [_serialize_public_review(category, item, user, quality)])[0]
 
 
 def _saveable_review(db, review_id, category, *, lock=False):
@@ -861,7 +962,7 @@ def _existing_review_title(db, user_id, review):
 
 @router.get("/reviews/{review_id}/save")
 def review_save_page(
-    review_id: int, category: str = Query(...), db: Session = Depends(get_db),
+    review_id: PositiveDatabaseId, category: str = Query(...), db: Session = Depends(get_db),
 ):
     try:
         review = _saveable_review(db, review_id, category)
@@ -888,7 +989,7 @@ def review_save_page(
 
 @router.get("/api/public/reviews/{review_id}/save-preview")
 def review_save_preview(
-    review_id: int, response: Response, category: str = Query(...),
+    review_id: PositiveDatabaseId, response: Response, category: str = Query(...),
     user=Depends(get_current_user), db: Session = Depends(get_db),
 ):
     response.headers["Cache-Control"] = "private, no-store"
@@ -907,12 +1008,12 @@ class ReviewSaveSelection(BaseModel):
 
 @router.post("/api/public/reviews/{review_id}/save")
 def save_review_title(
-    review_id: int, selection: ReviewSaveSelection, response: Response,
+    review_id: PositiveDatabaseId, selection: ReviewSaveSelection, response: Response,
     category: str = Query(...), user=Depends(get_current_user), db: Session = Depends(get_db),
 ):
     response.headers["Cache-Control"] = "private, no-store"
-    # Match Discover's lock so simultaneous saves and retries serialize per account.
-    db.query(models.User).filter(models.User.id == user.id).with_for_update().first()
+    # Serialize saves with deletion of a reused owned title on every database.
+    lock_progress_owner(db, user.id)
     try:
         review = _saveable_review(db, review_id, category, lock=True)
         if selection.version != _review_save_version(review):
@@ -934,14 +1035,116 @@ def save_review_title(
         raise
 
 
+# ---------------------------------------------------------------- "Helpful" marks (Oct 2026)
+
+HELPFUL_MILESTONES = (1, 3, 10, 25, 50, 100, 250, 500, 1000)
+
+
+def review_helpful_counts(db: Session, keys) -> dict:
+    """{(category, item_id): count} for the given reviews, in one query."""
+    keys = [(category, int(item_id)) for category, item_id in keys]
+    if not keys:
+        return {}
+    ids_by_category: dict = {}
+    for category, item_id in keys:
+        ids_by_category.setdefault(category, set()).add(item_id)
+    counts = {}
+    table = models.ReviewReaction
+    for category, ids in ids_by_category.items():
+        rows = db.query(table.item_id, func.count(table.id)).filter(
+            table.category == category, table.item_id.in_(sorted(ids))).group_by(table.item_id).all()
+        counts.update({(category, item_id): int(count) for item_id, count in rows})
+    return counts
+
+
+def _helpful_label(count: int) -> str:
+    if count <= 0:
+        return "Be the first to mark this helpful"
+    return "1 person found this helpful" if count == 1 else f"{count} people found this helpful"
+
+
+def _helpful_html(review: dict, count: int) -> str:
+    return (
+        f'<div class="review-helpful" data-review-helpful data-category="{_escape(review["category"])}" '
+        f'data-review-id="{_escape(review["id"])}">'
+        '<button type="button" class="site-btn site-btn--ghost site-btn--sm review-helpful__button" '
+        'aria-pressed="false">👍 Helpful</button>'
+        f'<span class="review-helpful__count" aria-live="polite">{_escape(_helpful_label(count))}</span></div>'
+    )
+
+
+def _signed_in_user_id(request: Request) -> Optional[int]:
+    from ..auth import decode_access_token
+    token = request.cookies.get(AUTH_COOKIE_NAME)
+    payload = decode_access_token(token) if token else None
+    uid = payload.get("uid") if isinstance(payload, dict) else None
+    return uid if isinstance(uid, int) else None
+
+
+def _locked_public_feedback_item(db, model, review_id):
+    """Lock the media owner before checking whether feedback still has a target."""
+    owner_id = db.query(model.user_id).filter(model.id == review_id).scalar()
+    if owner_id is None:
+        return None
+    lock_progress_owner(db, owner_id)
+    return db.query(model).join(models.User, model.user_id == models.User.id).filter(
+        model.id == review_id, model.user_id == owner_id,
+        model.review_public == True, model.review.isnot(None),
+        models.User.is_active == True,
+    ).populate_existing().with_for_update().first()
+
+
+@router.post("/api/public/reviews/{category}/{review_id}/helpful", include_in_schema=False)
+def mark_review_helpful(category: str, review_id: PositiveDatabaseId, request: Request, db: Session = Depends(get_db)):
+    """One mark per browser; the writer hears about it at milestones, never per click."""
+    model_cls = CATEGORY_MODELS.get(category)
+    if not model_cls:
+        raise HTTPException(status_code=400, detail="Invalid category")
+    item = _locked_public_feedback_item(db, model_cls, review_id)
+    quality = evaluate_public_review(item.review if item else None, PUBLIC_REVIEW_MIN_CHARS, PUBLIC_REVIEW_DETAIL_MIN_CHARS)
+    if not item or not quality.community_ready:
+        raise HTTPException(status_code=404, detail="Review not found")
+    state_row = db.query(models.PublicReviewState).filter(
+        models.PublicReviewState.category == category, models.PublicReviewState.item_id == review_id).first()
+    if _current_state_hides_review(state_row, category, item):
+        raise HTTPException(status_code=404, detail="Review not found")
+    if _signed_in_user_id(request) == item.user_id:
+        raise HTTPException(status_code=403, detail="You can't mark your own review as helpful.")
+
+    visitor_hash, visitor_token, _ = visitor_identity(request)
+    table = models.ReviewReaction
+    already = db.query(table.id).filter(table.category == category, table.item_id == review_id,
+                                        table.visitor_hash == visitor_hash).first()
+    if not already:
+        db.add(table(category=category, item_id=review_id, visitor_hash=visitor_hash))
+        try:
+            db.flush()
+            count = review_helpful_counts(db, [(category, review_id)]).get((category, review_id), 0)
+            if count in HELPFUL_MILESTONES:
+                who = "Someone" if count == 1 else f"{count} people"
+                verb = "found" if count == 1 else "have found"
+                db.add(models.Notification(
+                    user_id=item.user_id, type="review_helpful",
+                    message=f'{who} {verb} your review of "{item.title}" helpful. Thanks for writing it!',
+                ))
+            db.commit()
+        except IntegrityError:
+            db.rollback()
+    count = review_helpful_counts(db, [(category, review_id)]).get((category, review_id), 0)
+    response = JSONResponse({"helpful": True, "count": count, "label": _helpful_label(count)})
+    response.headers["Cache-Control"] = "no-store"
+    set_visitor_cookie(response, visitor_token)
+    return response
+
+
 @router.post(
     "/api/public/reviews/{category}/{review_id}/report",
     status_code=status.HTTP_201_CREATED,
     tags=["public"],
 )
-async def report_public_review(
+def report_public_review(
     category: str,
-    review_id: int,
+    review_id: PositiveDatabaseId,
     payload: schemas.PublicReviewReportCreate,
     request: Request,
     db: Session = Depends(get_db),
@@ -950,26 +1153,21 @@ async def report_public_review(
     model_cls = CATEGORY_MODELS.get(category)
     if not model_cls:
         raise HTTPException(status_code=400, detail="Invalid category")
-    item = db.query(model_cls).join(models.User, model_cls.user_id == models.User.id).filter(
-        model_cls.id == review_id,
-        model_cls.review_public == True,
-        model_cls.review.isnot(None),
-        models.User.is_active == True,
-    ).first()
+    item = _locked_public_feedback_item(db, model_cls, review_id)
     quality = evaluate_public_review(
         item.review if item else None, PUBLIC_REVIEW_MIN_CHARS, PUBLIC_REVIEW_DETAIL_MIN_CHARS
     )
     if not item or not quality.community_ready:
         raise HTTPException(status_code=404, detail="Review not found")
 
-    current_hash = _review_content_hash(category, item.id, item.review)
+    current_hash = _review_content_hash(category, review_id, item.review)
     visitor_hash, visitor_token, _ = visitor_identity(request)
     duplicate = False
     newly_unlisted = False
     try:
         state_row = db.query(models.PublicReviewState).filter(
             models.PublicReviewState.category == category,
-            models.PublicReviewState.item_id == item.id,
+            models.PublicReviewState.item_id == review_id,
         ).first()
         if state_row and state_row.content_hash == current_hash and state_row.suspended_at:
             raise HTTPException(status_code=404, detail="Review not found")
@@ -977,7 +1175,7 @@ async def report_public_review(
             state_row = models.PublicReviewState(
                 user_id=item.user_id,
                 category=category,
-                item_id=item.id,
+                item_id=review_id,
                 content_hash=current_hash,
                 report_count=0,
             )
@@ -1030,7 +1228,7 @@ async def report_public_review(
         duplicate = True
         current_state = db.query(models.PublicReviewState).filter(
             models.PublicReviewState.category == category,
-            models.PublicReviewState.item_id == item.id,
+            models.PublicReviewState.item_id == review_id,
         ).first()
         newly_unlisted = _current_state_hides_review(current_state, category, item)
 

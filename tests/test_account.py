@@ -207,7 +207,7 @@ class TestAccountEndpoints:
             }
         )
         
-        assert response.status_code == 401
+        assert response.status_code == 400
         assert "password" in response.json()["detail"].lower()
     
     def test_change_username_duplicate(self, authenticated_client, client, test_user_data, db_session):
@@ -260,7 +260,7 @@ class TestAccountEndpoints:
             }
         )
         
-        assert response.status_code == 401
+        assert response.status_code == 400
         assert "password" in response.json()["detail"].lower()
     
     def test_change_email_duplicate(self, authenticated_client, client, test_user_data, db_session):
@@ -331,7 +331,7 @@ class TestAccountEndpoints:
             }
         )
         
-        assert response.status_code == 401
+        assert response.status_code == 400
         assert "password" in response.json()["detail"].lower()
     
     def test_change_password_short_new_password(self, authenticated_client, test_user_data):
@@ -381,7 +381,7 @@ class TestAccountEndpoints:
             }
         )
         
-        assert response.status_code == 401
+        assert response.status_code == 400
         assert "password" in response.json()["detail"].lower()
     
     def test_reactivate_account_success(self, authenticated_client, test_user_data, db_session):
@@ -718,8 +718,8 @@ class TestProfilePictureEndpoints:
             files={"file": ("large.jpg", img_bytes, "image/jpeg")}
         )
         
-        assert response.status_code == 400
-        assert "exceeds 5MB" in response.json()["detail"]
+        assert response.status_code == 413
+        assert response.json()["detail"] == "Request body too large"
     
     def test_upload_profile_picture_png(self, authenticated_client):
         """Test uploading PNG image."""

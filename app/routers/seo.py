@@ -3,20 +3,33 @@ SEO endpoints for the OmniTrackr API.
 """
 import os
 import json
+import threading
+import time
 from datetime import datetime
 from fastapi import APIRouter, Depends, Request
 from fastapi.responses import Response
+from starlette.concurrency import run_in_threadpool
 from sqlalchemy.orm import Session, selectinload
 from sqlalchemy import and_, func
 
 from .. import models, release_radar
 from ..dependencies import get_db
 from ..discover_guides import GUIDES
-from ..review_quality import evaluate_public_review
+from ..review_quality import AD_MIN_REVIEW_WORDS, MIN_INDEXED_LISTING_REVIEWS, evaluate_public_review, word_count
 from .collections import _approval_is_current, _media_lookup_for_collections
 from .reviews import _current_state_hides_review
 
 router = APIRouter(tags=["seo"])
+SITEMAP_CACHE_SECONDS = 15 * 60
+_sitemap_cache = {"at": 0.0, "parts": None}
+_sitemap_lock = threading.Lock()
+
+
+def _sitemap_cache_enabled() -> bool:
+    # Tests change data between requests and expect the sitemap to follow at once.
+    return os.getenv("TESTING", "").lower() != "true"
+
+
 PUBLIC_REVIEW_MIN_CHARS = int(os.getenv("PUBLIC_REVIEW_MIN_CHARS", "80"))
 PUBLIC_REVIEW_DETAIL_MIN_CHARS = int(os.getenv("PUBLIC_REVIEW_DETAIL_MIN_CHARS", "240"))
 REVIEW_CATEGORY_MODELS = (
@@ -35,53 +48,36 @@ CORE_SITEMAP_PATHS = (
     ("/about", "monthly", "0.7"),
     ("/faq", "monthly", "0.7"),
     ("/guides", "monthly", "0.75"),
+    ("/compare", "monthly", "0.7"),
     ("/demo", "monthly", "0.8"),
     ("/media-tracking", "monthly", "0.85"),
     ("/export-import-guide", "monthly", "0.75"),
+    ("/switch", "monthly", "0.75"),
     ("/review-guidelines", "monthly", "0.75"),
     ("/sample-library", "monthly", "0.8"),
+    ("/pick", "weekly", "0.7"),
+    ("/tier-list", "monthly", "0.7"),
+    ("/if-you-liked", "monthly", "0.75"),
+    ("/best-of", "weekly", "0.75"),
+    ("/in-order", "monthly", "0.75"),
+    ("/halloween", "weekly", "0.75"),
+    ("/holidays", "weekly", "0.75"),
+    ("/daily", "daily", "0.8"),
+    ("/movie-tracker", "monthly", "0.75"),
+    ("/tv-show-tracker", "monthly", "0.75"),
+    ("/anime-tracker", "monthly", "0.75"),
+    ("/game-tracker", "monthly", "0.75"),
+    ("/book-tracker", "monthly", "0.75"),
+    ("/music-tracker", "monthly", "0.75"),
+    ("/use-cases", "monthly", "0.7"),
 )
 
 
-@router.get("/sitemap.xml")
-async def get_sitemap(request: Request = None, db: Session = Depends(get_db)):
-    """Generate and serve sitemap.xml for SEO."""
+def _database_parts(db: Session) -> list[str]:
+    """Sitemap entries that come from member data: reviews, collections, guides, title pages, profiles."""
     base_url = os.getenv("SITE_URL", "https://omnitrackr.xyz")
     today = datetime.now().strftime('%Y-%m-%d')
-    sitemap_parts = ['<?xml version="1.0" encoding="UTF-8"?>', '<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">']
-    for path, changefreq, priority in CORE_SITEMAP_PATHS:
-        sitemap_parts.append(
-            f"  <url><loc>{base_url}{path}</loc><changefreq>{changefreq}</changefreq>"
-            f"<priority>{priority}</priority></url>"
-        )
-    
-    # Release Radar pages are listed only when their cached data makes them
-    # indexable (a cold cache is warmed in the background for the next crawl).
-    radar_client = getattr(request.app.state, "external_api_client", None) if request else None
-    featured_total = 0
-    radar_parts = []
-    for radar_category in release_radar.CATEGORY_ORDER:
-        featured = release_radar.featured_window(radar_category)
-        for window in release_radar.allowed_windows(radar_category):
-            if window.start < featured.start:
-                continue
-            cached = release_radar.CACHE.peek(window)
-            count = len(cached.get("items", [])) if cached else 0
-            if window == featured:
-                featured_total += count
-                if cached is None and radar_client is not None:
-                    release_radar.CACHE.warm(radar_client, window)
-            if count >= release_radar.MIN_INDEXABLE_ITEMS:
-                path = f"/release-radar/{radar_category}" if window == featured else f"/release-radar/{radar_category}/{window.slug}"
-                changefreq, priority = ("daily", "0.8") if window == featured else ("weekly", "0.6")
-                radar_parts.append(
-                    f"  <url><loc>{base_url}{path}</loc><lastmod>{today}</lastmod>"
-                    f"<changefreq>{changefreq}</changefreq><priority>{priority}</priority></url>"
-                )
-    if featured_total >= release_radar.MIN_INDEXABLE_ITEMS:
-        sitemap_parts.append(f"  <url><loc>{base_url}/release-radar</loc><lastmod>{today}</lastmod><changefreq>daily</changefreq><priority>0.85</priority></url>")
-    sitemap_parts.extend(radar_parts)
-
+    sitemap_parts = []
     try:
         user_query = db.query(models.User.id).filter(models.User.is_active == True)
         public_detail_review_filter = lambda model_cls: and_(
@@ -109,13 +105,18 @@ async def get_sitemap(request: Request = None, db: Session = Depends(get_db)):
                 and not _current_state_hides_review(state_map.get(item.id), category, item)
             ]
 
-        review_directory_ready = False
+        def page_worthy(items):
+            # Review pages are listed only when the review carries the page alone (see reviews._review_is_indexable).
+            return [item for item in items if word_count(item.review) >= AD_MIN_REVIEW_WORDS]
+
+        search_ready_total = 0
         for category, model_cls in REVIEW_CATEGORY_MODELS:
             category_candidates = db.query(model_cls).filter(
                 public_detail_review_filter(model_cls)
             ).limit(200).all()
-            if visible_search_ready(category, category_candidates):
-                review_directory_ready = True
+            ready_count = len(visible_search_ready(category, category_candidates))
+            search_ready_total += ready_count
+            if ready_count >= MIN_INDEXED_LISTING_REVIEWS:
                 sitemap_parts.append(f"""  <url>
     <loc>{base_url}/reviews?category={category}</loc>
     <lastmod>{today}</lastmod>
@@ -128,32 +129,32 @@ async def get_sitemap(request: Request = None, db: Session = Depends(get_db)):
         movie_reviews = db.query(models.Movie).filter(
             public_detail_review_filter(models.Movie)
         ).limit(review_limit // 6).all()
-        movie_reviews = visible_search_ready("movie", movie_reviews)
+        movie_reviews = page_worthy(visible_search_ready("movie", movie_reviews))
         
         tv_reviews = db.query(models.TVShow).filter(
             public_detail_review_filter(models.TVShow)
         ).limit(review_limit // 6).all()
-        tv_reviews = visible_search_ready("tv_show", tv_reviews)
+        tv_reviews = page_worthy(visible_search_ready("tv_show", tv_reviews))
         
         anime_reviews = db.query(models.Anime).filter(
             public_detail_review_filter(models.Anime)
         ).limit(review_limit // 6).all()
-        anime_reviews = visible_search_ready("anime", anime_reviews)
+        anime_reviews = page_worthy(visible_search_ready("anime", anime_reviews))
         
         vg_reviews = db.query(models.VideoGame).filter(
             public_detail_review_filter(models.VideoGame)
         ).limit(review_limit // 6).all()
-        vg_reviews = visible_search_ready("video_game", vg_reviews)
+        vg_reviews = page_worthy(visible_search_ready("video_game", vg_reviews))
 
         music_reviews = db.query(models.Music).filter(
             public_detail_review_filter(models.Music)
         ).limit(review_limit // 6).all()
-        music_reviews = visible_search_ready("music", music_reviews)
+        music_reviews = page_worthy(visible_search_ready("music", music_reviews))
 
         book_reviews = db.query(models.Book).filter(
             public_detail_review_filter(models.Book)
         ).limit(review_limit // 6).all()
-        book_reviews = visible_search_ready("book", book_reviews)
+        book_reviews = page_worthy(visible_search_ready("book", book_reviews))
         
         for review in movie_reviews:
             sitemap_parts.append(f"""  <url>
@@ -203,7 +204,7 @@ async def get_sitemap(request: Request = None, db: Session = Depends(get_db)):
     <priority>0.6</priority>
   </url>""")
 
-        if review_directory_ready:
+        if search_ready_total >= MIN_INDEXED_LISTING_REVIEWS:
             sitemap_parts.append(
                 f"  <url><loc>{base_url}/reviews</loc><changefreq>daily</changefreq>"
                 "<priority>0.8</priority></url>"
@@ -240,12 +241,33 @@ async def get_sitemap(request: Request = None, db: Session = Depends(get_db)):
         pass
     
     from ..discover_catalog import MONTHLY_EDITIONS
-    sitemap_parts.append(f"<url><loc>{base_url}/discover</loc></url>")
+    sitemap_parts.append(f"<url><loc>{base_url}/discover</loc><changefreq>weekly</changefreq><priority>0.8</priority></url>")
     for slug, edition in MONTHLY_EDITIONS.items():
         sitemap_parts.append(
             f"<url><loc>{base_url}/discover/monthly/{slug}</loc>"
             f"<lastmod>{edition['published_date']}</lastmod>"
             "<changefreq>monthly</changefreq><priority>0.75</priority></url>"
+        )
+    # Monthly challenge guides that have started; future months stay unpublished.
+    from .. import challenges
+    challenge_months = challenges.public_months()
+    if challenge_months:
+        sitemap_parts.append(f"<url><loc>{base_url}/challenges</loc><changefreq>monthly</changefreq><priority>0.7</priority></url>")
+    for month in challenge_months:
+        sitemap_parts.append(
+            f"<url><loc>{base_url}/challenges/{challenges.slug_for(month)}</loc>"
+            f"<lastmod>{challenges.CHALLENGES[month]['published']}</lastmod>"
+            "<changefreq>monthly</changefreq><priority>0.7</priority></url>"
+        )
+    # OmniTrackr Daily: the archive and each finished puzzle (today's answer stays off the sitemap).
+    from .. import daily
+    daily_numbers = daily.archive_numbers()
+    if daily_numbers:
+        sitemap_parts.append(f"<url><loc>{base_url}/daily/archive</loc><changefreq>daily</changefreq><priority>0.6</priority></url>")
+    for number in daily_numbers:
+        sitemap_parts.append(
+            f"<url><loc>{base_url}/daily/{number}</loc><lastmod>{daily.date_for(number).isoformat()}</lastmod>"
+            "<changefreq>yearly</changefreq><priority>0.5</priority></url>"
         )
     # Only the completed editorial guides join the search inventory. Shorter
     # trails remain available to readers without being submitted for indexing.
@@ -255,6 +277,116 @@ async def get_sitemap(request: Request = None, db: Session = Depends(get_db)):
             f"<lastmod>{guide['reviewed']}</lastmod>"
             "<changefreq>monthly</changefreq><priority>0.75</priority></url>"
         )
+    # "If you liked" guides: hand-written, complete pages.
+    from .. import if_you_liked
+    from ..if_you_liked_guides import GUIDES as LIKED_GUIDES
+    for slug, guide in LIKED_GUIDES.items():
+        sitemap_parts.append(
+            f"<url><loc>{base_url}{if_you_liked.path(slug)}</loc>"
+            f"<lastmod>{guide['reviewed']}</lastmod>"
+            "<changefreq>monthly</changefreq><priority>0.75</priority></url>"
+        )
+    # Best-of-the-year lists: hand-written, complete pages, updated through the year.
+    from .. import best_of
+    from ..best_of_guides import GUIDES as BEST_OF_GUIDES
+    for slug, guide in BEST_OF_GUIDES.items():
+        sitemap_parts.append(
+            f"<url><loc>{base_url}{best_of.path(slug)}</loc>"
+            f"<lastmod>{guide['reviewed']}</lastmod>"
+            "<changefreq>weekly</changefreq><priority>0.75</priority></url>"
+        )
+    # "In order" guides: hand-written, complete pages.
+    from .. import in_order
+    from ..in_order_guides import GUIDES as ORDER_GUIDES
+    for slug, guide in ORDER_GUIDES.items():
+        sitemap_parts.append(
+            f"<url><loc>{base_url}{in_order.path(slug)}</loc>"
+            f"<lastmod>{guide['reviewed']}</lastmod>"
+            "<changefreq>monthly</changefreq><priority>0.75</priority></url>"
+        )
+    # Title pages join only when they have real substance (see title_pages.is_indexable).
+    try:
+        from .titles import sitemap_entries
+        from .. import title_pages
+        title_paths = sitemap_entries(db)
+        if len(title_pages.reviewed_titles(db)) >= 8:
+            sitemap_parts.append(f"<url><loc>{base_url}/titles</loc><changefreq>weekly</changefreq><priority>0.7</priority></url>")
+        for path in title_paths:
+            sitemap_parts.append(f"<url><loc>{base_url}{path}</loc><changefreq>weekly</changefreq><priority>0.65</priority></url>")
+        # Member charts join once enough titles have member ratings to rank (see title_charts).
+        from .. import title_charts
+        for path in title_charts.indexable_paths(db):
+            sitemap_parts.append(f"<url><loc>{base_url}{path}</loc><changefreq>daily</changefreq><priority>0.7</priority></url>")
+    except Exception:
+        pass
+    # Public profiles join only when the member opted in and the page has original content.
+    try:
+        from .. import public_profiles
+        for path in public_profiles.sitemap_paths(db):
+            sitemap_parts.append(f"<url><loc>{base_url}{path}</loc><changefreq>weekly</changefreq><priority>0.4</priority></url>")
+    except Exception:
+        pass
+    return sitemap_parts
+
+
+def _cached_database_parts(db: Session) -> list[str]:
+    """The member-data entries, rebuilt at most every SITEMAP_CACHE_SECONDS.
+
+    Building them reads every public review and checks hundreds of title pages, and
+    crawlers fetch the sitemap often. One request rebuilds at a time; others wait for
+    it rather than starting their own.
+    """
+    if not _sitemap_cache_enabled():
+        return _database_parts(db)
+    with _sitemap_lock:
+        now = time.monotonic()
+        if _sitemap_cache["parts"] is None or now - _sitemap_cache["at"] >= SITEMAP_CACHE_SECONDS:
+            _sitemap_cache["parts"] = _database_parts(db)
+            _sitemap_cache["at"] = time.monotonic()
+        return _sitemap_cache["parts"]
+
+
+@router.get("/sitemap.xml")
+async def get_sitemap(request: Request = None, db: Session = Depends(get_db)):
+    """Generate and serve sitemap.xml for SEO."""
+    base_url = os.getenv("SITE_URL", "https://omnitrackr.xyz")
+    today = datetime.now().strftime('%Y-%m-%d')
+    sitemap_parts = ['<?xml version="1.0" encoding="UTF-8"?>', '<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">']
+    for path, changefreq, priority in CORE_SITEMAP_PATHS:
+        sitemap_parts.append(
+            f"  <url><loc>{base_url}{path}</loc><changefreq>{changefreq}</changefreq>"
+            f"<priority>{priority}</priority></url>"
+        )
+    
+    # Release Radar pages are listed only when their cached data makes them
+    # indexable (a cold cache is warmed in the background for the next crawl).
+    radar_client = getattr(request.app.state, "external_api_client", None) if request else None
+    featured_total = 0
+    radar_parts = []
+    for radar_category in release_radar.CATEGORY_ORDER:
+        featured = release_radar.featured_window(radar_category)
+        for window in release_radar.allowed_windows(radar_category):
+            if window.start < featured.start:
+                continue
+            cached = release_radar.CACHE.peek(window)
+            count = len(cached.get("items", [])) if cached else 0
+            if window == featured:
+                featured_total += count
+                if cached is None and radar_client is not None:
+                    release_radar.CACHE.warm(radar_client, window)
+            if count >= release_radar.MIN_INDEXABLE_ITEMS and release_radar.INDEX_CATEGORY_PAGES:
+                path = f"/release-radar/{radar_category}" if window == featured else f"/release-radar/{radar_category}/{window.slug}"
+                changefreq, priority = ("daily", "0.8") if window == featured else ("weekly", "0.6")
+                radar_parts.append(
+                    f"  <url><loc>{base_url}{path}</loc><lastmod>{today}</lastmod>"
+                    f"<changefreq>{changefreq}</changefreq><priority>{priority}</priority></url>"
+                )
+    if featured_total >= release_radar.MIN_INDEXABLE_ITEMS:
+        sitemap_parts.append(f"  <url><loc>{base_url}/release-radar</loc><lastmod>{today}</lastmod><changefreq>daily</changefreq><priority>0.85</priority></url>")
+    sitemap_parts.extend(radar_parts)
+
+    # Off the event loop: building these entries reads the database for seconds on a cold cache.
+    sitemap_parts.extend(await run_in_threadpool(_cached_database_parts, db))
     sitemap_parts.append("</urlset>")
     sitemap = "\n".join(sitemap_parts)
     
@@ -375,6 +507,7 @@ OmniTrackr is a free web application for tracking and organizing movies, TV show
 - Music tracker guide: {base_url}/music-tracker
 - Media statistics guide: {base_url}/media-statistics
 - Export and import guide: {base_url}/export-import-guide
+- Switching guide (Letterboxd, IMDb, Goodreads, StoryGraph, MyAnimeList, Kitsu, AniList, Trakt): {base_url}/switch
 - Media tracker setup checklist: {base_url}/media-tracker-checklist
 - Media tracking templates: {base_url}/tracking-templates
 - Media review guidelines: {base_url}/review-guidelines
@@ -386,7 +519,7 @@ OmniTrackr is a free web application for tracking and organizing movies, TV show
 - Contact: {base_url}/contact
 - Privacy Policy: {base_url}/privacy
 - Advertising Policy: {base_url}/advertising
-- Content Quality Policy: {base_url}/content-quality
+- Editorial Standards: {base_url}/content-quality
 - HTML Site Map: {base_url}/site-map
 - Public Reviews: {base_url}/reviews
 - Community Collections: {base_url}/collections/explore
@@ -410,8 +543,15 @@ OmniTrackr is a free web application for tracking and organizing movies, TV show
 - Books: Reviews and ratings for books
 
 ## Public Content
-Public reviews are available at {base_url}/reviews and individual review pages at {base_url}/reviews/[id]?category=[category]. OmniTrackr also publishes evergreen guidance at {base_url}/faq, {base_url}/guides, {base_url}/media-tracking, {base_url}/compare, {base_url}/use-cases, {base_url}/movie-tracker, {base_url}/tv-show-tracker, {base_url}/anime-tracker, {base_url}/game-tracker, {base_url}/music-tracker, {base_url}/book-tracker, {base_url}/media-statistics, {base_url}/export-import-guide, {base_url}/media-tracker-checklist, {base_url}/tracking-templates, and {base_url}/review-guidelines, a demo library at {base_url}/demo, a sample media library at {base_url}/sample-library, a human-readable site map at {base_url}/site-map, product updates at {base_url}/changelog and {base_url}/roadmap, ad transparency at {base_url}/advertising, and content quality standards at {base_url}/content-quality.
+Public reviews are available at {base_url}/reviews and individual review pages at {base_url}/reviews/[id]?category=[category]. OmniTrackr also publishes evergreen guidance at {base_url}/faq, {base_url}/guides, {base_url}/media-tracking, {base_url}/compare, {base_url}/use-cases, {base_url}/movie-tracker, {base_url}/tv-show-tracker, {base_url}/anime-tracker, {base_url}/game-tracker, {base_url}/music-tracker, {base_url}/book-tracker, {base_url}/media-statistics, {base_url}/export-import-guide, {base_url}/media-tracker-checklist, {base_url}/tracking-templates, and {base_url}/review-guidelines, a demo library at {base_url}/demo, a sample media library at {base_url}/sample-library, a human-readable site map at {base_url}/site-map, product updates at {base_url}/changelog and {base_url}/roadmap, ad transparency at {base_url}/advertising, and editorial standards at {base_url}/content-quality.
 Release Radar at {base_url}/release-radar lists upcoming movies (Wikidata), TV premieres (TVmaze), the current anime season (AniList), and new video games (RAWG), refreshed every few hours, with one-click tracking for members.
+"If you liked" guides at {base_url}/if-you-liked recommend what to watch, play, read or hear after a well-loved title (for example {base_url}/if-you-liked/interstellar), across formats, with why each pick fits and a caveat.
+Seasonal picks at {base_url}/halloween sort horror and spooky movies, shows, anime, games, books and music by fright level, from family-friendly to properly frightening, with a caveat for each. Holiday picks at {base_url}/holidays cover Thanksgiving, Christmas and winter in the same six formats, sorted by festive level, from snowy stories with no holiday at all to full tinsel.
+"In order" guides at {base_url}/in-order give the best order to watch, read and play a franchise (for example {base_url}/in-order/star-wars), with release order, story order, what each entry adds and what is optional.
+Best-of-the-year lists at {base_url}/best-of pick the best new movies, TV shows, anime, games and books of each year (for example {base_url}/best-of/2026/movies), with release details, why each pick made the list, a caveat and the sources checked.
+Pick for me at {base_url}/pick suggests one editorially chosen movie, TV show, anime, game, book or album at a time, with the reason it was chosen and a caveat.
+OmniTrackr Daily at {base_url}/daily is a free daily guessing game: one movie, TV show, anime, game, book or album a day, guessed from six clues, with past puzzles, answers and editors' notes at {base_url}/daily/archive.
+The tier list maker at {base_url}/tier-list ranks movies, TV shows, anime, games, books or albums from S to D in the browser and saves the board as an image; boards are never stored on the server.
 
 Automatically qualified member collections are browsable at {base_url}/collections/explore. Share-ready collections that miss the stricter discovery checks remain available only by direct link and stay outside the search index. Version-bound reports can temporarily unlist a collection without deleting it.
 

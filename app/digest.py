@@ -21,6 +21,9 @@ from . import release_radar as radar
 from .for_you import coming_up
 
 SEND_EVERY = timedelta(days=7) - timedelta(hours=1)
+# Weeks with no news from the member's own library are skipped, except for a short
+# "popular this month" round-up at most this often.
+ROUNDUP_EVERY = timedelta(days=28) - timedelta(hours=1)
 CHECK_EVERY_SECONDS = 3600
 FIRST_CHECK_DELAY_SECONDS = 180
 
@@ -78,6 +81,37 @@ def unsubscribe_token(db: Session, token: str) -> bool:
     return bool(removed)
 
 
+# ---------------------------------------------------------------- one-click opt-in links (emails only)
+
+SUBSCRIBE_LINK_MAX_AGE = 60 * 24 * 3600  # links in an email stay valid for 60 days
+
+
+def _subscribe_serializer():
+    from itsdangerous import URLSafeTimedSerializer
+    from .email import SECRET_KEY
+    return URLSafeTimedSerializer(SECRET_KEY, salt="weekly-email-subscribe")
+
+
+def subscribe_link_token(user_id: int) -> str:
+    """Signed, member-specific link token. Opening it only shows a confirm button."""
+    return _subscribe_serializer().dumps({"u": int(user_id)})
+
+
+def user_id_from_subscribe_token(token: str) -> int | None:
+    if not token or len(token) > 300:
+        return None
+    try:
+        data = _subscribe_serializer().loads(token, max_age=SUBSCRIBE_LINK_MAX_AGE)
+    except Exception:
+        return None
+    uid = data.get("u") if isinstance(data, dict) else None
+    return uid if isinstance(uid, int) and not isinstance(uid, bool) and uid > 0 else None
+
+
+def subscribe_link(user_id: int) -> str:
+    return f"{app_url()}/email/weekly/subscribe?token={subscribe_link_token(user_id)}"
+
+
 # ---------------------------------------------------------------- email content
 
 def _day(iso: str | None) -> str:
@@ -104,33 +138,354 @@ def _rows(cards: list[dict], base: str) -> str:
     return "".join(rows)
 
 
-def build_digest(username: str, report: dict, unsubscribe_url: str) -> tuple[str, str, str] | None:
-    """(subject, html, text) or None when there is nothing to send."""
+def _spotlight_section(review: dict | None, base: str) -> tuple[str, list[str]]:
+    """'Review of the week' block (html, text lines); empty when there is none."""
+    if not review:
+        return "", []
+    text = " ".join((review.get("review") or "").split())
+    excerpt = text if len(text) <= 260 else text[:260].rsplit(" ", 1)[0] + "…"
+    url = f"{base}/reviews/{int(review['id'])}?category={review['category']}"
+    html = (
+        '<h2 style="font-size:17px;color:#1f1640;margin:24px 0 8px">Review of the week</h2>'
+        '<div style="border-left:3px solid #7c3aed;padding:2px 0 2px 14px">'
+        f'<a href="{escape(url, quote=True)}" style="color:#1f1640;font-weight:700;text-decoration:none;font-size:15px">{escape(review.get("title") or "")}</a>'
+        f'<div style="color:#3b3557;font-size:14px;line-height:1.6;margin-top:4px">{escape(excerpt)}</div>'
+        f'<div style="color:#8a86a3;font-size:13px;margin-top:6px">by {escape(review.get("username") or "a member")} · '
+        f'<a href="{escape(url, quote=True)}" style="color:#6d28d9">Read the review</a></div></div>'
+    )
+    return html, ["Review of the week:", f"{review.get('title')} by {review.get('username')}: {excerpt}", url, ""]
+
+
+def _ask_section(ask: dict | None, base: str) -> tuple[str, list[str]]:
+    """'Ask a friend' block for a title the member finished recently; empty when there is none."""
+    if not ask:
+        return "", []
+    url = f"{base}{ask['path']}#ask-friend"
+    html = (
+        '<h2 style="font-size:17px;color:#1f1640;margin:24px 0 8px">What did your friends think?</h2>'
+        f'<p style="color:#3b3557;font-size:14px;line-height:1.6;margin:0">You finished <strong>{escape(ask["title"])}</strong> recently. '
+        'Send a friend a link and their review shows up on the title page, with a note to you when it does.</p>'
+        f'<p style="margin:8px 0 0"><a href="{escape(url, quote=True)}" style="color:#6d28d9;font-weight:700">Ask a friend for their take</a></p>'
+    )
+    return html, [f"What did your friends think of {ask['title']}? Ask them for their take: {url}", ""]
+
+
+def _invite_section(invite: bool, base: str) -> tuple[str, list[str]]:
+    """'Bring a friend' block for members with no friends yet; empty otherwise."""
+    if not invite:
+        return "", []
+    url = f"{base}/#invite-friends"
+    html = (
+        '<h2 style="font-size:17px;color:#1f1640;margin:24px 0 8px">Better with a friend</h2>'
+        '<p style="color:#3b3557;font-size:14px;line-height:1.6;margin:0">See what your friends are watching, playing and reading. '
+        'Send them your invite link and you become friends as soon as they join.</p>'
+        f'<p style="margin:8px 0 0"><a href="{escape(url, quote=True)}" style="color:#6d28d9;font-weight:700">Get my invite link</a></p>'
+    )
+    return html, [f"Better with a friend: send your invite link and you become friends when they join: {url}", ""]
+
+
+def _goals_section(goals: list | None, year: int | None, base: str) -> tuple[str, list[str]]:
+    """'Your <year> goals' progress lines; empty when the member has set none."""
+    if not goals or not year:
+        return "", []
+    rows = "".join(
+        f'<li style="margin:0 0 4px">{escape(goal["summary"])}</li>' for goal in goals)
+    url = f"{base}/#goals"
+    html = (
+        f'<h2 style="font-size:17px;color:#1f1640;margin:24px 0 8px">Your {int(year)} goals</h2>'
+        f'<ul style="color:#3b3557;font-size:14px;line-height:1.6;margin:0;padding-left:18px">{rows}</ul>'
+        f'<p style="margin:8px 0 0"><a href="{escape(url, quote=True)}" style="color:#6d28d9;font-weight:700">See your goals</a></p>'
+    )
+    return html, [f"Your {int(year)} goals:"] + [f"- {goal['summary']}" for goal in goals] + [url, ""]
+
+
+def challenge_line(db: Session, user_id: int, today: date) -> dict | None:
+    """This month's challenge for the weekly email: progress when joined, an invitation otherwise.
+
+    None when there is nothing useful to say: the challenge is already complete, the month
+    is nearly over for someone who hasn't joined, or the month has no curated challenge.
+    """
+    from . import challenges
+    month = challenges.month_key(today)
+    left = challenges.days_left(month, today)
+    entry = challenges.get_entry(db, user_id, month)
+    challenge = challenges.challenge_for(month)
+    if entry is None:
+        if not challenges.is_curated(month) or left < 7:
+            return None
+        return {"joined": False, "name": challenge["name"], "tagline": challenge["tagline"],
+                "month_name": challenges.MONTH_NAMES[today.month - 1], "days_left": left,
+                "total_steps": len(challenge["steps"])}
+    steps = challenges.progress(db, user_id, month)
+    if entry.completed_at is not None or not steps or all(step["done"] for step in steps) or left <= 0:
+        return None
+    upcoming = next(step for step in steps if not step["done"])
+    return {"joined": True, "name": challenge["name"], "days_left": left,
+            "done_steps": sum(1 for step in steps if step["done"]), "total_steps": len(steps),
+            "next": upcoming["label"], "next_count": upcoming["count"], "next_target": upcoming["target"]}
+
+
+STEP_WORDS = {1: "one", 2: "two", 3: "three", 4: "four", 5: "five"}
+
+
+def _challenge_section(challenge: dict | None, base: str) -> tuple[str, list[str]]:
+    """'This month's challenge' block; empty when there is none."""
+    if not challenge:
+        return "", []
+    url = f"{base}/#challenge"
+    days = f'{challenge["days_left"]} day{"" if challenge["days_left"] == 1 else "s"} left'
+    if challenge["joined"]:
+        next_step = challenge["next"]
+        if challenge["next_target"] > 1:
+            next_step += f' ({challenge["next_count"]} of {challenge["next_target"]})'
+        summary = f'{challenge["done_steps"]} of {challenge["total_steps"]} steps done, {days}.'
+        body = (f'<p style="color:#3b3557;font-size:14px;line-height:1.6;margin:0"><strong>{escape(challenge["name"])}</strong>: '
+                f'{escape(summary)}<br>Next up: {escape(next_step)}.</p>')
+        link_label = "See your challenge"
+        text = [f"This month's challenge, {challenge['name']}: {summary} Next up: {next_step}. {url}", ""]
+    else:
+        count = challenge["total_steps"]
+        steps = f'{STEP_WORDS.get(count, str(count))} small step{"" if count == 1 else "s"}'.capitalize()
+        body = (f'<p style="color:#3b3557;font-size:14px;line-height:1.6;margin:0"><strong>{escape(challenge["name"])}</strong>: '
+                f'{escape(challenge["tagline"])} {escape(steps)}, {escape(days)}, and anything you finished this month already counts.</p>')
+        link_label = f'Take the {challenge["month_name"]} challenge'
+        text = [f"This month's challenge, {challenge['name']}: {challenge['tagline']} {days}. {url}", ""]
+    html = ('<h2 style="font-size:17px;color:#1f1640;margin:24px 0 8px">This month\'s challenge</h2>' + body +
+            f'<p style="margin:8px 0 0"><a href="{escape(url, quote=True)}" style="color:#6d28d9;font-weight:700">{escape(link_label)}</a></p>')
+    return html, text
+
+
+def _badge_section(badge: dict | None, base: str) -> tuple[str, list[str]]:
+    """'Closest badge' line: the started badge nearest its next tier; empty when none is close."""
+    if not badge:
+        return "", []
+    url = f"{base}/#badges"
+    line = (f'{badge["action"]} to earn {badge["name"]} {badge["tier_name"].lower()} '
+            f'({badge["count"]} of {badge["target"]} so far).')
+    html = ('<h2 style="font-size:17px;color:#1f1640;margin:24px 0 8px">Your next badge</h2>'
+            f'<p style="color:#3b3557;font-size:14px;line-height:1.6;margin:0">{escape(badge["emoji"])} {escape(line)}</p>'
+            f'<p style="margin:8px 0 0"><a href="{escape(url, quote=True)}" style="color:#6d28d9;font-weight:700">See your badges</a></p>')
+    return html, [f"Your next badge: {line} {url}", ""]
+
+
+def recap_line(db: Session, user_id: int, today: date) -> dict | None:
+    """In December and January, the member's Year in Review when they finished something that year."""
+    from . import year_in_review
+    year = year_in_review.season_year(today)
+    if year is None:
+        return None
+    finished = sum(year_in_review.finished_counts(db, user_id, year).values())
+    return {"year": year, "finished": finished} if finished else None
+
+
+def _recap_section(recap: dict | None, base: str) -> tuple[str, list[str]]:
+    if not recap:
+        return "", []
+    year, finished = int(recap["year"]), int(recap["finished"])
+    url = f"{base}/year-in-review/{year}#story"
+    line = (f"You finished {finished} title{'s' if finished != 1 else ''} in {year}. Your recap is ready to play "
+            "through, with a story image you can post.")
+    html = (f'<h2 style="font-size:17px;color:#1f1640;margin:24px 0 8px">Your {year} in review</h2>'
+            f'<p style="color:#3b3557;font-size:14px;line-height:1.6;margin:0">{escape(line)}</p>'
+            f'<p style="margin:8px 0 0"><a href="{escape(url, quote=True)}" style="color:#6d28d9;font-weight:700">Play your year</a></p>')
+    return html, [f"Your {year} in review: {line} {url}", ""]
+
+
+# ---------------------------------------------------------------- friend activity
+
+FRIEND_WINDOW = timedelta(days=7)
+FRIENDS_SHOWN = 4
+TITLES_PER_FRIEND = 2
+DONE_WORD = {"watched": "watched", "played": "played", "listened": "listened", "read": "read"}
+
+
+def friend_activity(db: Session, user_id: int, now: datetime) -> list[dict]:
+    """What the member's friends added to their libraries in the last week.
+
+    Uses only what friends can already open from the Friends panel: active friends,
+    categories they have not made private, and each title's added date, rating and
+    finished flag. Completion moments and the Activity Journal stay private.
+    """
+    from sqlalchemy import func, or_
+    from . import title_pages
+    pairs = db.query(models.Friendship.user1_id, models.Friendship.user2_id).filter(
+        or_(models.Friendship.user1_id == user_id, models.Friendship.user2_id == user_id)).all()
+    ids = {a if b == user_id else b for a, b in pairs} - {user_id}
+    if not ids:
+        return []
+    friends = {friend.id: friend for friend in db.query(models.User).filter(
+        models.User.id.in_(ids), models.User.is_active.is_(True)).all()}
+    since = now - FRIEND_WINDOW
+    counts: dict[int, int] = {}
+    visible_kinds: dict[int, list[str]] = {}
+    for kind, (model, _review, library, _label, _extra) in title_pages.KINDS.items():
+        flag = library.replace("-", "_") + "_private"
+        visible = [fid for fid, friend in friends.items() if not getattr(friend, flag, False)]
+        if not visible:
+            continue
+        rows = db.query(model.user_id, func.count(model.id)).filter(
+            *_recently_added(model, visible, since, now)).group_by(model.user_id).all()
+        for fid, count in rows:
+            counts[fid] = counts.get(fid, 0) + count
+            visible_kinds.setdefault(fid, []).append(kind)
+    activity = []
+    for fid in sorted(counts, key=lambda fid: (-counts[fid], friends[fid].username.lower())):
+        titles = _friend_picks(db, fid, visible_kinds[fid], since, now) if len(activity) < FRIENDS_SHOWN else []
+        activity.append({"username": friends[fid].username, "count": counts[fid], "titles": titles})
+    return activity
+
+
+def _recently_added(model, user_ids, since: datetime, now: datetime) -> tuple:
+    from sqlalchemy import func
+    return (model.user_id.in_(user_ids), model.added_at >= since, model.added_at <= now,
+            model.title.isnot(None), func.trim(model.title) != "")
+
+
+def _friend_picks(db: Session, friend_id: int, kinds: list[str], since: datetime, now: datetime) -> list[dict]:
+    """A friend's best few additions this week: rated first, then finished, then newest."""
+    from . import title_pages
+    picks = []
+    for kind in kinds:
+        model, _review, _library, label, _extra = title_pages.KINDS[kind]
+        done_field = title_pages.COMPLETE_FIELD[kind]
+        done = getattr(model, done_field)
+        for item in db.query(model).filter(*_recently_added(model, [friend_id], since, now)).order_by(
+                model.rating.desc().nullslast(), done.desc(), model.added_at.desc(), model.id.desc()
+        ).limit(TITLES_PER_FRIEND).all():
+            finished = bool(getattr(item, done_field))
+            picks.append((item.rating is not None, item.rating or 0, finished, item.added_at, item.id,
+                          kind, item, label, DONE_WORD[done_field] if finished else None))
+    titles = []
+    for *_order, kind, item, label, done_word in sorted(picks, key=lambda pick: pick[:5], reverse=True)[:TITLES_PER_FRIEND]:
+        path = title_pages.path_for_item(kind, item)
+        if title_pages.find(db, kind, path.rsplit("/", 1)[1]) is None:
+            path = None  # no public title page yet
+        titles.append({"title": item.title.strip(), "label": label, "done": done_word,
+                       "rating": item.rating, "path": path})
+    return titles
+
+
+def _and_list(parts: list[str]) -> str:
+    return parts[0] if len(parts) == 1 else ", ".join(parts[:-1]) + " and " + parts[-1]
+
+
+def _friend_title(entry: dict) -> str:
+    details = [entry["label"]]
+    if entry["done"]:
+        details.append(entry["done"])
+    if entry["rating"] is not None:
+        details.append(f'{entry["rating"]:g}/10')
+    return f'{entry["title"]} ({", ".join(details)})'
+
+
+def _friends_section(activity: list | None, base: str) -> tuple[str, list[str]]:
+    """'New on your friends' shelves' block; empty when no friend added anything this week."""
+    if not activity:
+        return "", []
+    shown = activity[:FRIENDS_SHOWN]
+    rows, text = [], ["New on your friends' shelves:"]
+    for friend in shown:
+        parts_html, parts_text = [], []
+        for entry in friend["titles"]:
+            label = _friend_title(entry)
+            parts_text.append(label)
+            if entry["path"]:
+                link = escape(base + entry["path"], quote=True)
+                parts_html.append(f'<a href="{link}" style="color:#1f1640;font-weight:700;text-decoration:none">'
+                                  f'{escape(entry["title"])}</a>{escape(label[len(entry["title"]):])}')
+            else:
+                parts_html.append(f'<strong>{escape(entry["title"])}</strong>{escape(label[len(entry["title"]):])}')
+        extra = friend["count"] - len(friend["titles"])
+        if extra > 0:
+            more = f'{extra} more title{"s" if extra != 1 else ""}'
+            parts_html.append(escape(more))
+            parts_text.append(more)
+        rows.append(f'<li style="margin:0 0 6px"><strong>{escape(friend["username"])}</strong> added '
+                    + _and_list(parts_html) + '</li>')
+        text.append(f'- {friend["username"]} added ' + _and_list(parts_text))
+    others = len(activity) - len(shown)
+    note = ""
+    if others > 0:
+        line = f'{others} more friend{"s" if others != 1 else ""} added titles too.'
+        note = f'<p style="color:#5b5675;font-size:13px;margin:4px 0 0">{escape(line)}</p>'
+        text.append(line)
+    html = ('<h2 style="font-size:17px;color:#1f1640;margin:24px 0 8px">New on your friends\' shelves</h2>'
+            f'<ul style="color:#3b3557;font-size:14px;line-height:1.6;margin:0;padding-left:18px">{"".join(rows)}</ul>' + note)
+    return html, text + [""]
+
+
+def invite_nudge_due(user_id: int, now: datetime) -> bool:
+    """About once a month per member (a different week for each), never every week."""
+    return now.isocalendar().week % 4 == user_id % 4
+
+
+def build_digest(username: str, report: dict, unsubscribe_url: str, spotlight: dict | None = None,
+                 ask: dict | None = None, invite: bool = False, goals: list | None = None,
+                 goals_year: int | None = None, challenge: dict | None = None,
+                 badge: dict | None = None, recap: dict | None = None,
+                 friends: list | None = None) -> tuple[str, str, str] | None:
+    """(subject, html, text) or None when there is nothing to send. `spotlight`, `ask`, `invite`, `goals`,
+    `challenge`, `badge` and `recap` never force a send; friend activity can."""
     matches, popular = report["matches"], report["popular"]
-    if not matches and not popular:
+    if not matches and not popular and not friends:
         return None
     base = app_url()
     if matches:
         subject = f"Coming up for you: {matches[0]['title']}" + (f" and {len(matches) - 1} more" if len(matches) > 1 else "")
+    elif friends:
+        subject = f"New on your friends' shelves: {friends[0]['username']} added {friends[0]['titles'][0]['title']}"
     else:
-        subject = f"This week on Release Radar: {popular[0]['title']} and more"
+        subject = f"This month on Release Radar: {popular[0]['title']} and more"
     sections = []
     text = [f"Hi {username},", ""]
+    recap_html, recap_text = _recap_section(recap, base)
+    if recap_html:
+        sections.append(recap_html)
+        text += recap_text
     if matches:
         sections.append('<h2 style="font-size:17px;color:#1f1640;margin:24px 0 4px">From your library</h2>'
                         f'<table role="presentation" width="100%" cellspacing="0" cellpadding="0">{_rows(matches, base)}</table>')
         text.append("From your library:")
         text += [f"- {c['title']} ({c['label']}, {_day(c.get('date'))}) - {c['reason']}" for c in matches]
         text.append("")
+    friends_html, friends_text = _friends_section(friends, base)
+    if friends_html:
+        sections.append(friends_html)
+        text += friends_text
     if popular:
         sections.append('<h2 style="font-size:17px;color:#1f1640;margin:24px 0 4px">Popular this month</h2>'
                         f'<table role="presentation" width="100%" cellspacing="0" cellpadding="0">{_rows(popular[:5], base)}</table>')
         text.append("Popular this month:")
         text += [f"- {c['title']} ({c['label']}, {_day(c.get('date'))})" for c in popular[:5]]
         text.append("")
+    goals_html, goals_text = _goals_section(goals, goals_year, base)
+    if goals_html:
+        sections.append(goals_html)
+        text += goals_text
+    challenge_html, challenge_text = _challenge_section(challenge, base)
+    if challenge_html:
+        sections.append(challenge_html)
+        text += challenge_text
+    badge_html, badge_text = _badge_section(badge, base)
+    if badge_html:
+        sections.append(badge_html)
+        text += badge_text
+    spotlight_html, spotlight_text = _spotlight_section(spotlight, base)
+    if spotlight_html:
+        sections.append(spotlight_html)
+        text += spotlight_text
+    ask_html, ask_text = _ask_section(ask, base)
+    if ask_html:
+        sections.append(ask_html)
+        text += ask_text
+    invite_html, invite_text = _invite_section(invite and not ask_html, base)
+    if invite_html:
+        sections.append(invite_html)
+        text += invite_text
     text += [f"See everything: {base}/release-radar", "",
              "You get this because you turned on the weekly email in OmniTrackr.",
              f"Unsubscribe with one click: {unsubscribe_url}"]
+    intro = "here is what is on the way." if matches or popular else "here is what your friends added this week."
     html = (
         '<html><body style="margin:0;background:#f4f2fb;font-family:Arial,Helvetica,sans-serif">'
         '<div style="max-width:560px;margin:0 auto;padding:24px">'
@@ -138,7 +493,7 @@ def build_digest(username: str, report: dict, unsubscribe_url: str) -> tuple[str
         '<div style="font-size:12px;letter-spacing:2px;color:#99f6e4;text-transform:uppercase">OmniTrackr weekly</div>'
         '<div style="font-size:22px;font-weight:700;margin-top:6px">Coming up for you</div></div>'
         '<div style="background:#fff;border-radius:0 0 14px 14px;padding:8px 24px 24px">'
-        f'<p style="color:#1f1640;font-size:15px">Hi {escape(username)}, here is what is on the way.</p>'
+        f'<p style="color:#1f1640;font-size:15px">Hi {escape(username)}, {intro}</p>'
         + "".join(sections) +
         f'<p style="margin:26px 0 8px"><a href="{escape(base, quote=True)}/release-radar" '
         'style="background:#7c3aed;color:#fff;padding:12px 20px;border-radius:999px;text-decoration:none;font-weight:700">'
@@ -150,16 +505,32 @@ def build_digest(username: str, report: dict, unsubscribe_url: str) -> tuple[str
     return subject, html, "\n".join(text)
 
 
+def recent_finish(db: Session, user_id: int, now: datetime) -> dict | None:
+    """The member's latest finish in the last three weeks that has a public title page."""
+    from . import title_pages
+    moments = db.query(models.CompletionMoment).filter(
+        models.CompletionMoment.user_id == user_id,
+        models.CompletionMoment.completed_at >= now - timedelta(days=21),
+    ).order_by(models.CompletionMoment.completed_at.desc()).limit(5).all()
+    for moment in moments:
+        kind = title_pages.LIBRARY_TO_KIND.get(moment.category)
+        model = title_pages.KINDS[kind][0] if kind else None
+        item = db.query(model).filter(model.id == moment.item_id, model.user_id == user_id).first() if model else None
+        if item is None or not (item.title or "").strip():
+            continue
+        path = title_pages.path_for_item(kind, item)
+        if title_pages.find(db, kind, path.rsplit("/", 1)[1]) is not None:
+            return {"title": item.title.strip(), "path": path}
+    return None
+
+
 async def _send(to: str, subject: str, html: str, unsubscribe_url: str) -> None:
-    from fastapi_mail import FastMail, MessageSchema, MessageType
-    from .email import conf
-    message = MessageSchema(
-        subject=subject, recipients=[to], body=html, subtype=MessageType.html,
-        headers={
-            "List-Unsubscribe": f"<{unsubscribe_url}>",
-            "List-Unsubscribe-Post": "List-Unsubscribe=One-Click",
-        },
-    )
+    from fastapi_mail import FastMail
+    from .email import conf, html_message
+    message = html_message(subject, [to], html, headers={
+        "List-Unsubscribe": f"<{unsubscribe_url}>",
+        "List-Unsubscribe-Post": "List-Unsubscribe=One-Click",
+    })
     await asyncio.wait_for(FastMail(conf).send_message(message), timeout=30.0)
 
 
@@ -177,20 +548,43 @@ async def send_due_digests(session_factory, client=None, now: datetime | None = 
         sent_today = db.query(models.EmailDigestSubscription).filter(
             models.EmailDigestSubscription.last_sent_at >= now - timedelta(hours=24)
         ).count()
-        allowance = daily_limit() - sent_today
+        # Both email schedulers draw from the same rolling daily budget.
+        from .announcements import shared_cap
+        sent_campaign = db.query(models.EmailCampaignSend).filter(
+            models.EmailCampaignSend.sent_at >= now - timedelta(hours=24)
+        ).count()
+        allowance = min(daily_limit() - sent_today, shared_cap() - sent_today - sent_campaign)
         due = db.query(models.EmailDigestSubscription).filter(
             (models.EmailDigestSubscription.last_checked_at.is_(None))
             | (models.EmailDigestSubscription.last_checked_at <= now - SEND_EVERY)
         ).order_by(models.EmailDigestSubscription.last_checked_at.asc().nullsfirst(),
                    models.EmailDigestSubscription.id).all()
         pool = None
+        spotlight = None
+        try:
+            from .review_spotlight import build as build_spotlight
+            spotlight = build_spotlight(db, now)
+        except Exception:
+            db.rollback()
+            spotlight = None  # The weekly email never depends on it.
         for subscription in due:
             if allowance <= 0:
                 stats["limited"] += 1
                 continue
             user = db.query(models.User).filter_by(id=subscription.user_id).first()
-            subscription.last_checked_at = now
-            db.commit()  # Mark first so an overlapping run can never send twice.
+            # Another process may have loaded this same due list. Claim with
+            # a conditional update rather than writing a stale ORM snapshot.
+            previous_checked_at = subscription.last_checked_at
+            claimed = db.query(models.EmailDigestSubscription).filter(
+                models.EmailDigestSubscription.id == subscription.id,
+                (models.EmailDigestSubscription.last_checked_at.is_(None))
+                | (models.EmailDigestSubscription.last_checked_at <= now - SEND_EVERY),
+            ).update({models.EmailDigestSubscription.last_checked_at: now}, synchronize_session=False)
+            db.commit()
+            if not claimed:
+                stats["skipped"] += 1
+                continue
+            db.refresh(subscription)
             if user is None or not user.is_active or not user.is_verified or not user.email:
                 stats["skipped"] += 1
                 continue
@@ -198,20 +592,83 @@ async def send_due_digests(session_factory, client=None, now: datetime | None = 
                 from .for_you import radar_pool
                 pool = radar_pool(today, client)
             report = coming_up(db, user.id, today=today, pool=pool)
+            try:
+                friends = friend_activity(db, user.id, now)
+            except Exception:
+                db.rollback()
+                friends = []  # The weekly email never depends on it.
+            if not report["matches"] and not friends and subscription.last_sent_at and subscription.last_sent_at > now - ROUNDUP_EVERY:
+                stats["skipped"] += 1  # a quiet week: no news from their library, round-up sent recently
+                continue
             unsubscribe_url = f"{app_url()}/email/unsubscribe?token={subscription.token}"
-            built = build_digest(user.username, report, unsubscribe_url)
+            try:
+                ask = recent_finish(db, user.id, now)
+            except Exception:
+                db.rollback()
+                ask = None  # The weekly email never depends on it.
+            invite = False
+            if ask is None and invite_nudge_due(user.id, now):
+                try:
+                    from .friend_invites import has_friends
+                    invite = not has_friends(db, user.id)
+                except Exception:
+                    db.rollback()  # Optional, like the ask above.
+            try:
+                from .goals import progress as goal_progress
+                member_goals = goal_progress(db, user, now.year, today=now.date())
+            except Exception:
+                db.rollback()
+                member_goals = []  # Optional, like the ask above.
+            try:
+                challenge = challenge_line(db, user.id, now.date())
+            except Exception:
+                db.rollback()
+                challenge = None  # Optional, like the ask above.
+            try:
+                from .badges import digest_line
+                badge = digest_line(db, user)
+            except Exception:
+                db.rollback()
+                badge = None  # Optional, like the ask above.
+            try:
+                recap = recap_line(db, user.id, now.date())
+            except Exception:
+                db.rollback()
+                recap = None  # Optional, like the ask above.
+            built = build_digest(user.username, report, unsubscribe_url, spotlight, ask, invite,
+                                 member_goals, now.year, challenge, badge, recap, friends)
             if built is None:
                 stats["skipped"] += 1
                 continue
             subject, html, _text = built
+            # Reserve under a cross-process lock before awaiting the provider.
+            # Other schedulers count this in-flight send against the shared cap.
+            from .email_quota import lock_email_budget
+            lock_email_budget(db)
+            sent_digest = db.query(models.EmailDigestSubscription).filter(
+                models.EmailDigestSubscription.last_sent_at >= now - timedelta(hours=24)
+            ).count()
+            sent_campaign = db.query(models.EmailCampaignSend).filter(
+                models.EmailCampaignSend.sent_at >= now - timedelta(hours=24)
+            ).count()
+            if sent_digest >= daily_limit() or sent_digest + sent_campaign >= shared_cap():
+                subscription.last_checked_at = previous_checked_at
+                db.commit()
+                stats["limited"] += 1
+                continue
+            previous_sent_at = subscription.last_sent_at
+            subscription.last_sent_at = now
+            db.commit()
             try:
                 await sender(user.email, subject, html, unsubscribe_url)
             except Exception as error:  # One bad address must not stop the rest.
                 print(f"Weekly email to user {user.id} failed: {error}")
+                # Preserve the existing failed-send retry semantics without
+                # consuming a successful-send allowance.
+                subscription.last_sent_at = previous_sent_at
+                db.commit()
                 stats["failed"] += 1
                 continue
-            subscription.last_sent_at = now
-            db.commit()
             allowance -= 1
             stats["sent"] += 1
         return stats
@@ -234,6 +691,15 @@ async def digest_loop(app) -> None:
                             await radar.CACHE.get(client, window, wait=20)
                         except Exception:
                             pass
+            try:
+                from .for_you import radar_pool
+                from .release_alerts import send_due_alerts
+                today = radar.today_utc()
+                alerts = await asyncio.to_thread(send_due_alerts, SessionLocal, radar_pool(today), today)
+                if alerts["members"]:
+                    print(f"Release day alerts: {alerts}")
+            except Exception as error:  # Never blocks the weekly email.
+                print(f"Release day alerts failed: {error}")
             stats = await send_due_digests(SessionLocal, client)
             if stats["sent"] or stats["failed"]:
                 print(f"Weekly emails: {stats}")

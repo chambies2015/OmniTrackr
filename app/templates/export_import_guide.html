@@ -20,10 +20,9 @@
   <meta name="twitter:card" content="summary">
   <meta name="twitter:title" content="Export & Import Guide">
   <meta name="twitter:description" content="Back up and move your media library, reviews, ratings, privacy choices, and custom tabs with OmniTrackr JSON export and import.">
-  <link rel="preconnect" href="https://fonts.googleapis.com">
-  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@700;800&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="/styles.css">
+  <link rel="preload" href="/static/fonts/poppins-700-latin.woff2" as="font" type="font/woff2" crossorigin>
+  <link rel="preload" href="/static/fonts/poppins-800-latin.woff2" as="font" type="font/woff2" crossorigin>
+  <link rel="stylesheet" href="/static/fonts.css?v=20261009-fonts-1">
   <style>
     body { min-height: 100vh; padding: 20px; }
     .content-wrapper { max-width: 1040px; margin: 0 auto; }
@@ -60,7 +59,7 @@
     "inLanguage": "en-US"
   }
   </script>
-  <link rel="stylesheet" href="/static/public-reader.css?v=20260928-site-2">
+  <link rel="stylesheet" href="/static/public-reader.css?v=20261017-reader-2">
 </head>
 
 <body class="public-reader site">
@@ -71,7 +70,7 @@
 <a href="/media-tracking" class="back-link">Back to Media Tracking Hub</a>
       <header class="content-header">
         <h1>Export &amp; Import Guide</h1>
-        <p>Bring an existing media history into OmniTrackr without surrendering control of the library you already built.</p>
+        <p>Bring your media history into OmniTrackr from another tracker or a spreadsheet, and keep your own backup copy while you do.</p>
         <p class="guide-updated">By OmniTrackr · Updated <time datetime="2026-09-24">September 24, 2026</time></p>
       </header>
       <nav class="guide-jump" aria-label="On this page">
@@ -83,37 +82,39 @@
       </nav>
 
       <section class="content-section" aria-labelledby="why-heading">
-        <h2 id="why-heading">Why Data Portability Matters</h2>
-        <p>A personal media library becomes more valuable over time. Ratings, reviews, recommendations, status choices, and cover art represent many small decisions. If that data is trapped in one account with no export path, the tracker becomes risky to rely on.</p>
-        <p>OmniTrackr includes JSON export and import so users can keep a copy of their own library. That fits the app's privacy model: the collection belongs to the user, and the app should make it practical to back up or move that data.</p>
-        <p>Portability also helps people try a tracker with less anxiety. If you know your media history can be exported, it is easier to invest time writing better reviews, organizing a backlog, or cleaning up old lists. A good tracker should make your library more useful without making it feel locked away.</p>
+        <h2 id="why-heading">Why you should be able to take your data with you</h2>
+        <p>The longer you track, the more you'd lose if the library disappeared. Every rating, review, recommendation, status, and cover is a small decision you made. If all of that sits in one account with no way to export it, you're one shutdown away from losing it.</p>
+        <p>OmniTrackr has JSON export and import so you can keep a copy of your own library. That follows from how the app treats privacy: the collection is yours, so backing it up or moving it should be easy.</p>
+        <p>Knowing you can leave also makes it easier to start. If your history can be exported, you can spend an evening writing reviews, sorting a backlog, or cleaning up old lists without worrying that the work is stuck here. You can download all of it as a file whenever you like.</p>
       </section>
 
       <section class="content-section" aria-labelledby="export-heading">
-        <h2 id="export-heading">What an Export Includes</h2>
+        <h2 id="export-heading">What an export includes</h2>
         <p>JSON exports include movies, TV shows, anime, video games, music, custom tabs, and books, along with your private journal, collections, and saved episode or reading checkpoints. Entries include titles, creators, years, ratings, completion, reviews, public-review choices, artwork URLs, and category-specific details.</p>
-        <p>A regular export is useful before major account changes, after large import sessions, or any time a user wants an offline backup of their media history.</p>
+        <p>Export before big account changes, after a large import, or whenever you want an offline copy of your history.</p>
         <ul>
-          <li><strong>Core categories:</strong> movies, TV shows, anime, video games, music, and books are exported as separate lists so category-specific fields remain understandable.</li>
-          <li><strong>Review context:</strong> review text and rating fields travel with the entry, which helps preserve why an item mattered instead of only saving its title.</li>
-          <li><strong>Privacy choices:</strong> public-review flags appear in the backup. Restored collections are private, and a restore does not republish them. Check an entry's current sharing setting before intentionally making it public.</li>
-          <li><strong>Artwork references:</strong> poster and cover URLs are included when available, but users should remember those images may come from third-party sources that can change over time.</li>
-          <li><strong>Custom tabs:</strong> flexible custom lists are included so specialized collections do not disappear during a backup.</li>
+          <li><strong>Core categories:</strong> movies, TV shows, anime, video games, music, and books are exported as separate lists, so each category's own fields stay readable.</li>
+          <li><strong>Review context:</strong> review text and rating fields are saved with the entry, so the backup records what you thought of a title as well as its name.</li>
+          <li><strong>Privacy choices:</strong> public-review flags appear in the backup. Restored collections are private, and a restore does not republish them. Check an entry's current sharing setting before you make it public again.</li>
+          <li><strong>Artwork references:</strong> poster and cover URLs are included when available. Those images may be hosted by third parties, and the links can change or break.</li>
+          <li><strong>Custom tabs:</strong> your custom lists are included, so collections outside the six built-in categories are backed up too.</li>
           <li><strong>Saved place and context:</strong> journal entries, collection notes, and progress checkpoints belong in a JSON backup. A checkpoint is restored only when its library edition can be matched unambiguously and no saved checkpoint already exists.</li>
         </ul>
       </section>
 
       <section class="content-section" aria-labelledby="import-heading">
-        <h2 id="import-heading">How Import Helps: Two Paths with Different Jobs</h2>
-        <p>OmniTrackr keeps migration separate from backup restoration. The Import Studio accepts CSV or TSV files from another tracker or spreadsheet and only creates records that are not already in your library. JSON restore accepts an OmniTrackr backup and can update matching records because the backup already uses OmniTrackr's own field structure.</p>
-        <p>That distinction is intentional. A third-party CSV may omit a director, publication year, or release date, so it should never be trusted to replace a richer record you already maintain. The studio classifies matches as duplicates and leaves the existing version untouched.</p>
+        <h2 id="import-heading">Two ways in: migration and restore</h2>
+        <p>OmniTrackr keeps migration separate from backup restoration. The Import Studio accepts export files from another tracker, such as a Letterboxd or Trakt ZIP, a MyAnimeList XML file, or any CSV spreadsheet, and only creates records that are not already in your library. JSON restore accepts an OmniTrackr backup and can update matching records because the backup already uses OmniTrackr's own field structure.</p>
+        <p>The two are kept apart on purpose. A CSV from another service may be missing a director, publication year, or release date, so it should never overwrite a more complete record you already have. The studio marks matches as duplicates and leaves your existing version alone.</p>
       </section>
 
       <section class="content-section" aria-labelledby="sources-heading">
-        <h2 id="sources-heading">What the Import Studio Understands</h2>
+        <h2 id="sources-heading">What the Import Studio understands</h2>
         <ul>
-          <li><strong>Letterboxd-style CSV:</strong> <code>Name</code>, <code>Year</code>, and <code>Rating</code> become movie details. Ratings use a five-point input scale and are doubled: 3.5 becomes 7/10. A positioned watchlist row without a watched date or date remains unwatched; other supported rows are marked watched. The adapter does not import review text or turn repeated diary visits into journal entries.</li>
+          <li><strong>Letterboxd-style CSV:</strong> <code>Name</code>, <code>Year</code>, and <code>Rating</code> become movie details. Ratings use a five-point input scale and are doubled: 3.5 becomes 7/10. A positioned watchlist row without a watched date or date remains unwatched; other supported rows are marked watched. Text in a <code>Review</code> column, such as the one in Letterboxd's reviews file, becomes a private note. Rows in Letterboxd's <code>diary.csv</code> with a <code>Watched Date</code> also become private Journal entries on that date, and rows marked <code>Rewatch</code> are logged as rewatches.</li>
           <li><strong>Goodreads-style CSV:</strong> <code>Title</code>, <code>Author</code>, <code>Year Published</code>, <code>My Rating</code>, and <code>My Review</code> become book details. Ratings are doubled: 4 becomes 8/10. A <code>read</code> value in <code>Exclusive Shelf</code> or a nonempty <code>Date Read</code> marks the book read. The date itself, custom shelves, and reading history are not imported.</li>
+          <li><strong>IMDb ratings, watchlist, or list CSV:</strong> <code>Title</code>, <code>Title Type</code>, <code>Year</code>, <code>Your Rating</code>, and <code>Directors</code> are read. <code>Title Type</code> decides the category: movies, TV movies, shorts, specials, and videos become movies; TV series and mini series become TV shows; video games become games. IMDb ratings already use a ten-point scale, so 8 stays 8/10. A rated title is marked watched or played, while an unrated watchlist row stays unfinished. Episode, podcast, and music video rows are listed as needing attention and are not imported. IMDb files anime as TV series, so anime arrives in TV Shows.</li>
+          <li><strong>The StoryGraph CSV:</strong> <code>Title</code>, <code>Authors</code>, <code>Read Status</code>, <code>Star Rating</code>, and <code>Review</code> become book details. Star ratings are doubled, including quarter stars: 4.25 becomes 8.5/10. Only a <code>read</code> status marks the book read; to-read, currently reading, and did-not-finish books stay unread. The export has no publication year, so imported books have no year until you add one. Moods, pace, tags, and reading dates are not imported.</li>
           <li><strong>MyAnimeList-style CSV:</strong> <code>series_title</code>, <code>series_episodes</code>, <code>my_score</code>, <code>my_status</code>, <code>series_start</code>, and <code>my_comments</code> become anime details. Scores use the ten-point scale. This accepts CSV columns, not a native MyAnimeList XML file. Episode totals describe the series; they do not set your current episode.</li>
           <li><strong>Generic spreadsheets:</strong> choose one of OmniTrackr's six categories or include a category column. Familiar headings such as title, creator, year, rating, status, review, genre, seasons, episodes, and release date are recognized automatically.</li>
         </ul>
@@ -123,7 +124,7 @@
       </section>
 
       <section class="content-section" aria-labelledby="examples-heading">
-        <h2 id="examples-heading">Worked Examples: Check the Meaning, Not Just the Count</h2>
+        <h2 id="examples-heading">Worked examples: check what each row says</h2>
         <p>These titles, creators, and notes are fictional. Copy a small sample into a text file to see how the preview works before bringing over a large history. Preview alone never saves the examples.</p>
 
         <h3>A music file that keeps listening status</h3>
@@ -150,28 +151,28 @@ A Quiet Engine,Neve Holt,2025,0,true,Finished but not for me
           <li>Row 4 is ready and unrated. Row 5 is ready with an explicit <strong>0/10</strong> rating. In a generic spreadsheet, zero is a score; leave the cell blank when you mean unrated.</li>
           <li>Row 6 needs a title. Fix it in the file and preview again, or import the three ready rows and bring the corrected entry over later.</li>
         </ol>
-        <p>Keep a copy of the original file while cleaning it. Missing values and source-specific placeholders can mean different things across services; compare the converted rating and completion with your original record before confirming. Non-numeric or out-of-range ratings need correction rather than being silently changed to a valid score.</p>
+        <p>Keep a copy of the original file while cleaning it. Missing values and source-specific placeholders can mean different things across services; compare the converted rating and completion with your original record before confirming. Non-numeric or out-of-range ratings need fixing in the file; the importer won't quietly change them to a valid score.</p>
         <p>For game release dates, use a full date such as <code>2024-06-15</code> when you know it. For TV and anime, <code>seasons</code> and <code>episodes</code> are totals, not progress. CSV import does not create episode, page, or chapter checkpoints; set your place after importing, or restore saved checkpoints from an OmniTrackr JSON backup.</p>
       </section>
 
       <section class="content-section" aria-labelledby="preview-heading">
-        <h2 id="preview-heading">Preview First, Then Decide</h2>
+        <h2 id="preview-heading">Preview first, then decide</h2>
         <ol>
           <li>Open Account Settings and find the Import Studio.</li>
           <li>Select the original service or let OmniTrackr detect it from the headers.</li>
           <li>Choose the file and map unusual columns if necessary.</li>
           <li>Preview the batch. No database writes happen during this step.</li>
           <li>Review ready, duplicate, and invalid totals. Filter by outcome and page through the file to inspect rows beyond the first page.</li>
-          <li>Check the converted rating, completion, and private review or note for the rows you plan to import. A successful parse is not proof that the chosen columns mean what you intended.</li>
+          <li>Check the converted rating, completion, and private review or note for the rows you plan to import. A file can parse cleanly and still put the wrong column in a field.</li>
           <li>Confirm only when the preview looks right. The exact file and mapping must still match the preview.</li>
         </ol>
         <p>The confirmed batch is atomic: all ready rows are created together, or none are created if saving fails. Duplicate and invalid rows remain unchanged. Imported review text is private by default, and the studio does not call external artwork services while processing the file.</p>
-        <p>Imports are limited to 5 MB and 5,000 rows per batch. This keeps the preview understandable and prevents one accidental export from overwhelming an account. Larger histories can be split into dated or category-specific files.</p>
+        <p>Imports are limited to 5 MB and 5,000 rows per batch. That keeps the preview short enough to read and stops one wrong file from flooding an account. Larger histories can be split into dated or category-specific files.</p>
         <p>After a successful import, the results stay visible so you can check how many titles were created and how many were skipped. Use the category action, such as <strong>Open Books</strong>, to visit that library. If a connection drops before you receive a result, preview the same file again: titles that were saved will be classified as duplicates instead of being overwritten.</p>
       </section>
 
       <section class="content-section" aria-labelledby="duplicates-heading">
-        <h2 id="duplicates-heading">What Counts as a Duplicate?</h2>
+        <h2 id="duplicates-heading">What counts as a duplicate?</h2>
         <p>The studio checks both your existing library and earlier valid rows in the same file. It compares records within each category using these details:</p>
         <ul>
           <li><strong>Movies, TV, and anime:</strong> title and year.</li>
@@ -184,33 +185,33 @@ A Quiet Engine,Neve Holt,2025,0,true,Finished but not for me
       </section>
 
       <section class="content-section" aria-labelledby="habits-heading">
-        <h2 id="habits-heading">A Good Backup Habit</h2>
+        <h2 id="habits-heading">A good backup habit</h2>
         <ol>
           <li>Export after adding a large batch of media.</li>
           <li>Export before testing a major import file.</li>
           <li>Keep dated copies so you can return to an older state if needed.</li>
           <li>Store backups somewhere separate from the browser or device you use every day.</li>
-          <li>Review imports before assuming every record matched exactly as expected.</li>
+          <li>Check imported records instead of assuming every one matched.</li>
         </ol>
         <p>A simple naming pattern helps too. For example, use a date in the filename so you can tell which backup came before a major cleanup or import. If you keep multiple backups, keep the newest copy and at least one older copy from before big changes.</p>
       </section>
 
       <section class="content-section" aria-labelledby="not-included-heading">
-        <h2 id="not-included-heading">What to Remember About Backups</h2>
+        <h2 id="not-included-heading">What to remember about backups</h2>
         <p class="reader-note">CSV imports do not opt reviews into public review pages. Friends can still read imported notes if you share that category. Check category privacy before importing personal text; use your private journal or checkpoint reminders for context that should stay visible only to you.</p>
-        <p>An export is a useful copy of your library data, but it is not a replacement for account security. Keep your password safe, verify your email, and store backup files somewhere only you can access. JSON files are readable data files, so treat them like personal documents if they include private reviews, ratings, or notes.</p>
-        <p>Exports are also snapshots. If you add ten new reviews after downloading a file, those new reviews are not inside the old export. Download another backup after meaningful changes, especially after updating public review choices or finishing a large backlog cleanup.</p>
+        <p>An export is a copy of your library data. It doesn't protect your account. Keep your password safe, verify your email, and store backup files somewhere only you can access. JSON files are readable data files, so treat them like personal documents if they include private reviews, ratings, or notes.</p>
+        <p>Exports are also snapshots. If you add ten new reviews after downloading a file, those new reviews are not inside the old export. Download another backup after big changes, especially after changing which reviews are public or finishing a large backlog cleanup.</p>
       </section>
 
       <section class="content-section" aria-labelledby="trust-heading">
-        <h2 id="trust-heading">Why This Matters for Choosing a Tracker</h2>
-        <p>Media trackers become part of a routine. People use them to remember recommendations, decide what to start next, revisit favorites, write annual summaries, and compare ratings across categories. Export and import are important because they lower the risk of building that history in one place.</p>
-        <p>OmniTrackr is designed around the idea that useful tracking should still be portable. You can organize your library, write private or public reviews, use statistics, and share selectively with friends while still keeping a backup path for your own records.</p>
+        <h2 id="trust-heading">What to look for when choosing a tracker</h2>
+        <p>Media trackers become part of a routine. People use them to remember recommendations, decide what to start next, revisit favorites, write annual summaries, and compare ratings across categories. If that history lives in one place, you want a way to get it out, and export and import give you one.</p>
+        <p>OmniTrackr was built so you can always take your records with you. You can organize your library, write private or public reviews, use statistics, and share some categories with friends, and still download a backup of all of it.</p>
       </section>
 
       <section class="content-section" aria-labelledby="related-heading">
-        <h2 id="related-heading">Related Pages</h2>
-        <p>For more context, visit the <a href="/media-tracking">media tracking hub</a>, read the <a href="/guides">how-to guides</a>, try the <a href="/demo">demo library</a>, use the <a href="/tracking-templates">tracking templates</a>, or review OmniTrackr's <a href="/privacy">privacy policy</a>.</p>
+        <h2 id="related-heading">Related pages</h2>
+        <p>Coming from another service? The <a href="/switch">switching guide</a> shows where each service keeps its export and what to check after importing. For more context, visit the <a href="/media-tracking">media tracking hub</a>, read the <a href="/guides">how-to guides</a>, try the <a href="/demo">demo library</a>, use the <a href="/tracking-templates">tracking templates</a>, or review OmniTrackr's <a href="/privacy">privacy policy</a>.</p>
       </section>
     </main>
   </div>

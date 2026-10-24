@@ -70,6 +70,25 @@ def owned_titles(db: Session, user_id: int, categories: Iterable[str] = LIBRARY)
 
 # ---------------------------------------------------------------- starter picks
 
+PRIVATE_FLAG = {"movies": "movies_private", "tv-shows": "tv_shows_private", "anime": "anime_private",
+                "video-games": "video_games_private", "music": "music_private", "books": "books_private"}
+
+
+def _shareable_ids(db: Session, category: str):
+    """Active members who haven't made this category private (private shelves never feed suggestions)."""
+    flag = getattr(models.User, PRIVATE_FLAG[category])
+    return db.query(models.User.id).filter(models.User.is_active == True, flag == False)
+
+
+def _title_page(category: str, entry) -> Optional[str]:
+    """The public title page for a popular pick (it exists because 2+ members track it)."""
+    try:
+        from . import title_pages
+        return title_pages.path_for_item(title_pages.LIBRARY_TO_KIND[category], entry)
+    except Exception:
+        return None
+
+
 def popular_titles(db: Session, category: str, exclude_user_id: int | None = None, limit: int = 8) -> list[dict]:
     """Titles saved by at least two members, with metadata from the most complete entry."""
     model, fields = LIBRARY[category]
@@ -77,7 +96,8 @@ def popular_titles(db: Session, category: str, exclude_user_id: int | None = Non
     members = func.count(func.distinct(model.user_id))
     # The editors account curates collections; it isn't a member, so it never makes a title "popular".
     editors = db.query(models.User.id).filter(models.User.username == EDITOR_USERNAME)
-    query = (db.query(normalized, members).filter(~model.user_id.in_(editors))
+    shareable = _shareable_ids(db, category)
+    query = (db.query(normalized, members).filter(~model.user_id.in_(editors), model.user_id.in_(shareable))
              .group_by(normalized).having(members >= POPULAR_MIN_MEMBERS))
     rows = query.order_by(members.desc(), normalized).limit(limit * 3).all()
     if not rows:
@@ -88,7 +108,7 @@ def popular_titles(db: Session, category: str, exclude_user_id: int | None = Non
     counts = {name: int(count) for name, count in rows if name and name not in owned}
     if not counts:
         return []
-    candidates = db.query(model).filter(normalized.in_(list(counts))).all()
+    candidates = db.query(model).filter(normalized.in_(list(counts)), model.user_id.in_(_shareable_ids(db, category))).all()
     best: dict[str, object] = {}
     image_field = IMAGE_FIELD[category]
     for entry in candidates:
@@ -114,6 +134,7 @@ def popular_titles(db: Session, category: str, exclude_user_id: int | None = Non
             "image": _safe_image(getattr(entry, image_field, None)),
             "members": count,
             "source": "popular",
+            "url": _title_page(category, entry),
         })
         if len(picks) >= limit:
             break
@@ -127,7 +148,9 @@ def popular_entry_payload(db: Session, category: str, title: str) -> Optional[di
         return None
     model, fields = LIBRARY[category]
     normalized = _normalized_column(model)
-    entries = db.query(model).filter(normalized == title.strip().lower()).all()
+    entries = db.query(model).filter(normalized == title.strip().lower(), model.user_id.in_(_shareable_ids(db, category))).all()
+    if not entries:
+        return None
     image_field = IMAGE_FIELD[category]
     entries.sort(key=lambda entry: (bool(_safe_image(getattr(entry, image_field, None))),
                                     sum(bool(getattr(entry, f, None)) for f in fields)), reverse=True)
@@ -173,7 +196,7 @@ def _radar_card(item: dict, reason: str = "") -> dict:
         "details": item.get("details", [])[:2],
         "window": item.get("window"),
         "key": item["key"],
-        "url": f"/release-radar/{item['category']}#item-{item['key']}",
+        "url": f"{radar.item_path(item)}#item-{item['key']}",
         "reason": reason,
         "source": "radar",
     }
@@ -199,6 +222,10 @@ def starter_picks(db: Session, user_id: int, today: Optional[date] = None, clien
     today = today or radar.today_utc()
     owned = owned_titles(db, user_id)
     total = sum(len(titles) for titles in owned.values())
+    if total >= STARTER_GOAL:
+        # The dashboard shows quick start only below the goal and discards the picks
+        # otherwise; ranking every member's titles for them took most of the request.
+        return {"library_total": total, "goal": STARTER_GOAL, "popular": [], "upcoming": []}
     popular = []
     for category in LIBRARY:
         popular.extend(popular_titles(db, category, exclude_user_id=user_id, limit=6))
@@ -220,12 +247,42 @@ def _matches(library_title: str, radar_title: str) -> bool:
     return theirs.startswith(mine + " ")
 
 
+class LibraryMatcher:
+    """Finds the first library title that _matches() a radar title, without comparing every pair.
+
+    _matches() only accepts an exact normalized title or a whole-word prefix of the radar
+    title, so each radar name needs one lookup per word instead of one per library title.
+    A large library (thousands of imported titles) against a full Release Radar pool
+    otherwise costs millions of comparisons on every request.
+    """
+
+    def __init__(self, titles: Iterable):
+        self._first: dict[str, tuple[int, object]] = {}
+        for position, entry in enumerate(titles):
+            title = entry[-1] if isinstance(entry, tuple) else entry
+            key = normalize_title(title)
+            if len(key) >= 4 and key not in self._first:
+                self._first[key] = (position, entry)
+
+    def find(self, names: Iterable[str]):
+        """The earliest library entry (in the order given) matching any of the names, or None."""
+        best = None
+        for name in names:
+            words = normalize_title(name).split()
+            for size in range(1, len(words) + 1):
+                hit = self._first.get(" ".join(words[:size]))
+                if hit is not None and (best is None or hit[0] < best[0]):
+                    best = hit
+        return best[1] if best else None
+
+
 def coming_up(db: Session, user_id: int, today: Optional[date] = None, client=None,
               pool: Optional[list[dict]] = None) -> dict:
     today = today or radar.today_utc()
     pool = radar_pool(today, client) if pool is None else pool
     owned = owned_titles(db, user_id, ("movies", "tv-shows", "anime", "video-games"))
     library = [(category, title) for category, titles in owned.items() for title in titles]
+    matcher = LibraryMatcher(library)
     start, end = today - timedelta(days=7), today + timedelta(days=60)
     matches = []
     matched_keys = set()
@@ -237,7 +294,7 @@ def coming_up(db: Session, user_id: int, today: Optional[date] = None, client=No
         if not (start <= day <= end):
             continue
         names = [item["title"]] + ([item["alt_title"]] if item.get("alt_title") else [])
-        hit = next(((cat, title) for cat, title in library if any(_matches(title, name) for name in names)), None)
+        hit = matcher.find(names)
         if hit is None:
             continue
         same = normalize_title(hit[1]) == normalize_title(item["title"])
@@ -251,4 +308,53 @@ def coming_up(db: Session, user_id: int, today: Optional[date] = None, client=No
         "library_total": len(library),
         "matches": matches[:12],
         "popular": popular,
+    }
+
+
+# ---------------------------------------------------------------- first weeks
+
+NEW_MEMBER_DAYS = 30
+
+
+def _review_target(db: Session, user_id: int) -> Optional[dict]:
+    """A title from the member's library that has a public title page to review on, finished ones first."""
+    from . import title_pages
+    candidates = []
+    for kind, (model, *_rest) in title_pages.KINDS.items():
+        finished = getattr(model, title_pages.COMPLETE_FIELD[kind])
+        rows = (db.query(model).filter(model.user_id == user_id, model.title.isnot(None))
+                .order_by(finished.desc(), model.id.desc()).limit(3).all())
+        candidates += [(bool(getattr(row, title_pages.COMPLETE_FIELD[kind])), row.id, kind, row) for row in rows]
+    candidates.sort(key=lambda c: (not c[0], -c[1]))
+    for _, _, kind, item in candidates[:8]:
+        if not (item.title or "").strip():
+            continue
+        path = title_pages.path_for_item(kind, item)
+        if title_pages.find(db, kind, path.rsplit("/", 1)[1]) is not None:
+            return {"title": item.title.strip(), "path": path}
+    return None
+
+
+def first_week(db: Session, user, now: Optional[datetime] = None) -> dict:
+    """The social steps of the library launchpad, for members who joined in the last NEW_MEMBER_DAYS days."""
+    from . import digest
+    now = now or datetime.utcnow()
+    if not user.created_at or user.created_at < now - timedelta(days=NEW_MEMBER_DAYS):
+        return {"show": False}
+    friend = (db.query(models.Friendship.id).filter((models.Friendship.user1_id == user.id)
+                                                     | (models.Friendship.user2_id == user.id)).first() is not None
+              or db.query(models.FriendRequest.id).filter(models.FriendRequest.sender_id == user.id,
+                                                          models.FriendRequest.status == "pending").first() is not None)
+    public_review = any(
+        db.query(model.id).filter(model.user_id == user.id, model.review_public.is_(True),
+                                  func.length(func.trim(model.review)) > 0).first() is not None
+        for model, _ in LIBRARY.values())
+    return {
+        "show": True,
+        "friend": friend,
+        "public_review": public_review,
+        "review_target": None if public_review else _review_target(db, user.id),
+        "weekly_email": digest.subscription_for(db, user.id) is not None,
+        "email_available": digest.mail_configured(),
+        "verified": bool(user.is_verified),
     }

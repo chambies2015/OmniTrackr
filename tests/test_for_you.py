@@ -129,7 +129,8 @@ def test_starter_picks_include_upcoming_radar_titles(authenticated_client, db_se
     upcoming = authenticated_client.get("/api/for-you/starter-picks").json()["upcoming"]
     assert upcoming[0]["title"] == "Big Upcoming Game"
     assert upcoming[0]["window"] == radar.current_window("games", TODAY).slug
-    assert upcoming[0]["url"].startswith("/release-radar/games#item-")
+    # Sep 29 features October's page, so a September item links to its own month.
+    assert upcoming[0]["url"] == f"/release-radar/games/{radar.current_window('games', TODAY).slug}#item-g1"
 
 
 def test_starter_picks_require_login(client):
@@ -355,6 +356,99 @@ def test_every_editor_collection_passes_the_public_quality_bar():
         assert all(len(item[4]) >= 40 for item in spec["items"]), spec["name"]
 
 
+def _published_editor_collections(db):
+    asyncio.run(editorial_collections.publish(db, lookup_artwork=False))
+    editor = db.query(models.User).filter_by(username=editorial_collections.EDITOR_USERNAME).one()
+    return editor, {c.name: c for c in db.query(models.Collection).filter_by(user_id=editor.id).all()}
+
+
+def _item_titled(db, collection, category, title):
+    for item in collection.items:
+        entry = db.get(editorial_collections.MODEL_FOR[item.category], item.item_id)
+        if item.category == category and entry.title == title:
+            return item
+    raise AssertionError(title)
+
+
+def test_published_editor_collections_pick_up_rewritten_wording(db_session):
+    _, published = _published_editor_collections(db_session)
+    scifi = published["Mind-Bending Sci-Fi Worth a Second Watch"]
+    anime = published["Anime Gateways: Where to Start"]
+    old_scifi = editorial_collections.RETIRED_DESCRIPTIONS[scifi.name][0]
+    old_note = editorial_collections.RETIRED_NOTES[(scifi.name, "movies", "Arrival")][0]
+    # Roll the live rows back to how the earlier release published them; Anime keeps a hand edit.
+    scifi.description = old_scifi
+    _item_titled(db_session, scifi, "movies", "Arrival").curator_note = old_note
+    anime.description = "Our own intro, edited by hand."
+    _item_titled(db_session, anime, "anime", "Spirited Away").curator_note = "A hand-written note we want kept."
+    db_session.commit()
+    assert editorial_collections.status(db_session)["outdated_names"] == [scifi.name]
+
+    assert editorial_collections.refresh_copy(db_session) == [scifi.name]
+
+    db_session.expire_all()
+    spec = {c["name"]: c for c in editorial_collections.COLLECTIONS}
+    assert scifi.description == spec[scifi.name]["description"]
+    assert _item_titled(db_session, scifi, "movies", "Arrival").curator_note.startswith("A first-contact film")
+    assert _item_titled(db_session, scifi, "movies", "Arrival").curator_note != old_note
+    assert scifi.moderation_status == "approved"
+    assert anime.description == "Our own intro, edited by hand."
+    assert _item_titled(db_session, anime, "anime", "Spirited Away").curator_note == "A hand-written note we want kept."
+    assert editorial_collections.refresh_copy(db_session) == []
+    assert editorial_collections.status(db_session)["outdated_names"] == []
+
+
+def test_wording_refresh_never_touches_member_collections(db_session):
+    _published_editor_collections(db_session)
+    name = "Mind-Bending Sci-Fi Worth a Second Watch"
+    old_text = editorial_collections.RETIRED_DESCRIPTIONS[name][0]
+    reader = member(db_session, "reader")
+    copy = models.Collection(user_id=reader.id, name=name, description=old_text, is_public=True)
+    db_session.add(copy)
+    db_session.commit()
+
+    editorial_collections.refresh_copy(db_session)
+    db_session.refresh(copy)
+    assert copy.description == old_text
+
+
+def test_wording_refresh_skips_an_editors_username_held_by_a_member(db_session):
+    name = "Mind-Bending Sci-Fi Worth a Second Watch"
+    old_text = editorial_collections.RETIRED_DESCRIPTIONS[name][0]
+    squatter = models.User(username=editorial_collections.EDITOR_USERNAME, email="squatter@example.com", hashed_password="keep")
+    db_session.add(squatter)
+    db_session.flush()
+    theirs = models.Collection(user_id=squatter.id, name=name, description=old_text, is_public=True)
+    db_session.add(theirs)
+    db_session.commit()
+
+    assert editorial_collections.refresh_copy(db_session) == []
+    assert editorial_collections.status(db_session)["outdated_names"] == []
+    db_session.refresh(theirs)
+    assert theirs.description == old_text
+
+
+def test_publish_button_also_updates_wording(authenticated_client, db_session, monkeypatch):
+    monkeypatch.setenv("ADMIN_USERNAMES", "testuser")
+    _, published = _published_editor_collections(db_session)
+    cozy = published["Cozy Games for Slow Evenings"]
+    cozy.description = editorial_collections.RETIRED_DESCRIPTIONS[cozy.name][0]
+    db_session.commit()
+
+    result = authenticated_client.post("/api/site-stats/editor-collections").json()
+    assert result["created"] == [] and result["updated"] == [cozy.name]
+    assert result["status"]["outdated_names"] == []
+
+
+def test_retired_wording_lines_up_with_current_collections():
+    current = {c["name"]: c for c in editorial_collections.COLLECTIONS}
+    for name, versions in editorial_collections.RETIRED_DESCRIPTIONS.items():
+        assert name in current and current[name]["description"] not in versions
+    for (name, category, title), versions in editorial_collections.RETIRED_NOTES.items():
+        notes = {(item[0], item[1]): item[4] for item in current[name]["items"]}
+        assert (category, title) in notes and notes[(category, title)] not in versions
+
+
 def test_artwork_lookup_is_best_effort(monkeypatch):
     class Boom:
         async def get(self, *args, **kwargs):
@@ -363,3 +457,18 @@ def test_artwork_lookup_is_best_effort(monkeypatch):
     monkeypatch.setenv("OMDB_API_KEY", "k")
     assert asyncio.run(editorial_collections._artwork(Boom(), "movies", "Arrival", 2016, None)) is None
     assert asyncio.run(editorial_collections._artwork(None, "books", "Dune", 1965, "Frank Herbert")) is None
+
+
+def test_quiet_weeks_are_skipped_except_a_monthly_roundup(db_session, pinned_today, monkeypatch):
+    casual = member(db_session, "casual")  # nothing in their library is on the schedule
+    db_session.commit()
+    digest.subscribe(db_session, casual.id)
+    popular = [{"title": "Big Game", "label": "Game", "date": None, "url": "/release-radar/games#g", "category": "games"}]
+    monkeypatch.setattr(for_you, "upcoming_popular", lambda *a, **k: list(popular))
+    seed_cache({})
+    start = datetime(2026, 9, 29, 12)
+    sent = run_digests(now=start)[1]
+    assert len(sent) == 1 and sent[0][1].startswith("This month on Release Radar")   # first round-up
+    for weeks in (1, 2, 3):
+        assert run_digests(now=start + timedelta(weeks=weeks))[1] == []               # quiet weeks: nothing
+    assert len(run_digests(now=start + timedelta(weeks=4))[1]) == 1                  # next monthly round-up

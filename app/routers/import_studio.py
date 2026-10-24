@@ -2,12 +2,15 @@
 import json
 from typing import Literal
 
-from fastapi import APIRouter, Depends, File, Form, HTTPException, UploadFile
+from fastapi import APIRouter, Depends, File, Form, HTTPException, Request, UploadFile
 from fastapi.responses import Response
 from sqlalchemy.orm import Session
 
-from .. import models
+from .. import diary, models
+from ..import_formats import letterboxd_diary
 from ..dependencies import get_current_user, get_db
+from ..progress import lock_progress_owner
+from ..import_formats import STRUCTURED_EXTENSIONS
 from ..import_studio import MAX_IMPORT_BYTES, apply_classified, classify_rows, fingerprint, parse_csv, summarize
 
 
@@ -15,8 +18,8 @@ router = APIRouter(prefix="/import-studio", tags=["import-studio"])
 
 
 async def _read_upload(file: UploadFile) -> bytes:
-    if not file.filename or not file.filename.lower().endswith((".csv", ".tsv")):
-        raise HTTPException(status_code=400, detail="Choose a CSV or TSV file.")
+    if not file.filename or not file.filename.lower().endswith((".csv", ".tsv", *STRUCTURED_EXTENSIONS)):
+        raise HTTPException(status_code=400, detail="Choose a CSV, TSV, ZIP, XML or JSON export file.")
     content = await file.read(MAX_IMPORT_BYTES + 1)
     if not content:
         raise HTTPException(status_code=400, detail="The selected file is empty.")
@@ -35,15 +38,16 @@ def _mapping_or_400(mapping_json: str) -> dict[str, str]:
     return value
 
 
-def _parse_or_400(content: bytes, source: str, category: str | None, mapping: dict[str, str]):
+def _parse_or_400(content: bytes, source: str, category: str | None, mapping: dict[str, str], filename: str):
     try:
-        return parse_csv(content, source, category, mapping)
+        return parse_csv(content, source, category, mapping, filename)
     except ValueError as exc:
         raise HTTPException(status_code=400, detail=str(exc)) from exc
 
 
 @router.post("/preview/")
 async def preview_import(
+    request: Request = None,
     file: UploadFile = File(...),
     source: str = Form("auto"),
     category: str | None = Form(None),
@@ -57,13 +61,22 @@ async def preview_import(
     """Parse a migration file and report every outcome without writing data."""
     content = await _read_upload(file)
     mapping = _mapping_or_400(mapping_json)
-    detected, rows = _parse_or_400(content, source, category, mapping)
-    digest = fingerprint(content, source, category or "", mapping_json)
-    return summarize(detected, digest, classify_rows(db, current_user.id, rows), status_filter, offset, limit)
+    detected, rows = _parse_or_400(content, source, category, mapping, file.filename)
+    digest = fingerprint(content, source, category or "", mapping_json, file.filename)
+    summary = summarize(detected, digest, classify_rows(db, current_user.id, rows), status_filter, offset, limit)
+    return {**summary, "diary_count": len(_diary_plan(db, current_user.id, detected, content, file.filename))}
+
+
+def _diary_plan(db: Session, user_id: int, detected: str, content: bytes, filename: str) -> list[dict]:
+    """Letterboxd diary visits not yet in the member's journal. Other sources have no dated visits."""
+    if detected != "letterboxd":
+        return []
+    return diary.plan_letterboxd_import(db, user_id, letterboxd_diary(content, filename))
 
 
 @router.post("/apply/")
 async def apply_import(
+    request: Request = None,
     file: UploadFile = File(...),
     fingerprint_confirmation: str = Form(...),
     source: str = Form("auto"),
@@ -74,21 +87,29 @@ async def apply_import(
 ):
     """Atomically create only the rows that a matching preview marked ready."""
     content = await _read_upload(file)
-    digest = fingerprint(content, source, category or "", mapping_json)
+    digest = fingerprint(content, source, category or "", mapping_json, file.filename)
     if digest != fingerprint_confirmation:
         raise HTTPException(status_code=409, detail="The file changed after preview. Preview it again before importing.")
     mapping = _mapping_or_400(mapping_json)
-    detected, rows = _parse_or_400(content, source, category, mapping)
+    detected, rows = _parse_or_400(content, source, category, mapping, file.filename)
     try:
-        # Serialize confirmed imports for this account in production PostgreSQL.
-        # Reclassify after the lock: another completed import may add duplicates.
-        db.query(models.User).filter(models.User.id == current_user.id).with_for_update().one()
+        # Reserve SQLite's write transaction too; FOR UPDATE alone is ignored
+        # there. Reclassify only after another same-owner import has committed.
+        lock_progress_owner(db, current_user.id)
         classified = classify_rows(db, current_user.id, rows)
         result = apply_classified(db, current_user.id, classified)
     except Exception as exc:
         db.rollback()
         raise HTTPException(status_code=500, detail="Nothing was imported because the batch could not be saved.") from exc
-    return {**result, "detected_source": detected}
+    diary_created = 0
+    try:
+        # After the titles are saved, so each visit can link to its film in the library.
+        diary_created = diary.save_letterboxd_import(
+            db, current_user.id, _diary_plan(db, current_user.id, detected, content, file.filename))
+    except Exception:
+        # The titles are already saved; a diary that can't be added never undoes them.
+        db.rollback()
+    return {**result, "detected_source": detected, "diary_created": diary_created}
 
 
 @router.get("/template/{category}/")

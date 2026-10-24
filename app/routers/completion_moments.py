@@ -5,7 +5,11 @@ from typing import Dict, List, Tuple, Type
 from fastapi import APIRouter, Depends, HTTPException, Query, status
 from sqlalchemy.orm import Session
 
-from .. import models, schemas
+from .. import models, review_spoilers, schemas, title_pages
+from ..integer_bounds import PositiveDatabaseId
+from ..review_quality import AD_MIN_REVIEW_WORDS, evaluate_public_review
+from .reviews import PUBLIC_REVIEW_DETAIL_MIN_CHARS, PUBLIC_REVIEW_MIN_CHARS
+from ..progress import lock_progress_owner
 from ..dependencies import get_current_user, get_db
 from .activity import record_completion_activity
 
@@ -50,11 +54,12 @@ def _parse_month(month: str | None) -> tuple[datetime, datetime]:
 
 
 @router.post("/", response_model=schemas.CompletionMoment)
-async def create_completion_moment(
+def create_completion_moment(
     payload: schemas.CompletionMomentCreate,
     current_user: models.User = Depends(get_current_user),
     db: Session = Depends(get_db),
 ):
+    lock_progress_owner(db, current_user.id)
     model, _, done_field = CATEGORIES[payload.category]
     item = db.query(model).filter(model.id == payload.item_id, model.user_id == current_user.id).first()
     if not item:
@@ -76,15 +81,71 @@ async def create_completion_moment(
             rating=item.rating,
         )
         db.add(moment)
-        record_completion_activity(db, current_user.id, payload.category, item)
-        db.commit()
-        db.refresh(moment)
-    return _serialize(moment)
+        # A title added as already finished has its journal entry from that moment.
+        logged = db.query(models.ActivityEntry.id).filter(
+            models.ActivityEntry.user_id == current_user.id, models.ActivityEntry.category == payload.category,
+            models.ActivityEntry.item_id == item.id, models.ActivityEntry.action == "completed",
+            models.ActivityEntry.source == "automatic").first()
+        if logged is None:
+            record_completion_activity(db, current_user.id, payload.category, item)
+        db.flush()
+    result = {**_serialize(moment), "has_review": bool((item.review or "").strip())}
+    db.commit()
+    return result
+
+
+# Public review URLs use the singular API categories.
+REVIEW_CATEGORY = {"movies": "movie", "tv-shows": "tv_show", "anime": "anime", "video-games": "video_game",
+                   "music": "music", "books": "book"}
+
+
+@router.post("/{moment_id}/review", response_model=dict)
+def save_completion_review(
+    moment_id: PositiveDatabaseId,
+    payload: schemas.CompletionReview,
+    current_user: models.User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+):
+    """Save a review written right after finishing. Never replaces an existing review."""
+    lock_progress_owner(db, current_user.id)
+    moment = db.query(models.CompletionMoment).filter(
+        models.CompletionMoment.id == moment_id,
+        models.CompletionMoment.user_id == current_user.id,
+    ).first()
+    if not moment:
+        raise HTTPException(status_code=404, detail="Completion moment not found")
+    model, _, _ = CATEGORIES[moment.category]
+    item = db.query(model).filter(model.id == moment.item_id, model.user_id == current_user.id).first()
+    if not item:
+        raise HTTPException(status_code=404, detail="Library item not found")
+    if (item.review or "").strip():
+        raise HTTPException(status_code=409, detail="This title already has a review. Edit it from your library.")
+    item.review = payload.review
+    item.review_public = payload.public
+    if payload.spoilers:
+        review_spoilers.set_flag(db, REVIEW_CATEGORY[moment.category], item, True)
+    item_id = item.id
+    category = moment.category
+    quality = evaluate_public_review(payload.review, PUBLIC_REVIEW_MIN_CHARS, PUBLIC_REVIEW_DETAIL_MIN_CHARS)
+    standalone = payload.public and quality.search_ready
+    result = {
+        "public": payload.public,
+        "word_count": quality.word_count,
+        "listed": payload.public and quality.community_ready,
+        "standalone": standalone,
+        "substantial": quality.word_count >= AD_MIN_REVIEW_WORDS,
+        "review_url": f"/reviews/{item_id}?category={REVIEW_CATEGORY[category]}" if standalone else None,
+        # Listed reviews also appear on the title's public page.
+        "title_url": (title_pages.path_for_item(title_pages.LIBRARY_TO_KIND[category], item)
+                      if payload.public and quality.community_ready and category in title_pages.LIBRARY_TO_KIND else None),
+    }
+    db.commit()
+    return result
 
 
 @router.patch("/{moment_id}", response_model=schemas.CompletionMoment)
-async def update_completion_moment(
-    moment_id: int,
+def update_completion_moment(
+    moment_id: PositiveDatabaseId,
     payload: schemas.CompletionMomentUpdate,
     current_user: models.User = Depends(get_current_user),
     db: Session = Depends(get_db),
@@ -103,7 +164,7 @@ async def update_completion_moment(
 
 
 @router.get("/replay/", response_model=dict)
-async def get_monthly_replay(
+def get_monthly_replay(
     month: str | None = Query(None, description="Calendar month in YYYY-MM format"),
     current_user: models.User = Depends(get_current_user),
     db: Session = Depends(get_db),

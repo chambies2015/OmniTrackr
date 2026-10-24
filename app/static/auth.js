@@ -12,12 +12,14 @@ const DISCOVER_AUTH_RETURN_TTL = 24 * 60 * 60 * 1000;
 let discoverAuthReturnContext = null;
 const DEMO_START_KEY = 'omnitrackr_demo_start';
 let demoStartContext = null;
+// Where a newcomer was headed before signing up: the demo, or importing an existing library.
+const START_INTENTS = ['demo', 'import'];
 // Authentication is also used by the standalone public landing page, which
 // intentionally does not load the much larger private dashboard bundle.
 const AUTH_IS_LOCAL = (location.protocol === 'file:' || location.origin === 'null' || location.origin === '');
 const AUTH_API_BASE = AUTH_IS_LOCAL ? 'http://127.0.0.1:8000' : '';
 
-// Keep a visitor's chosen Discover, review, or collection save page through
+// Keep a visitor's chosen Discover, review, title, or collection page through
 // same-tab registration and email verification. Returning only opens a preview;
 // saving always requires the visitor's explicit confirmation on that page.
 function validateDiscoverAuthReturn(value) {
@@ -29,6 +31,16 @@ function validateDiscoverAuthReturn(value) {
     if (review && review[0] === value && Number(review[1]) <= 2147483647) return value;
     const radar = value.match(/^\/release-radar(?:\/(?:movies|tv|anime|games)(?:\/(?:\d{4}-\d{2}|(?:winter|spring|summer|fall)-\d{4}))?)?$/);
     if (radar && radar[0] === value) return value;
+    const title = value.match(/^\/titles\/(?:movie|tv|anime|game|album|book)\/[a-z0-9-]{1,130}(?:\?take=[A-Za-z0-9_-]{16,64})?#write-review$/);
+    if (title && title[0] === value) return value;
+    const invite = value.match(/^\/join\/[A-Za-z0-9_-]{16,32}$/);
+    if (invite && invite[0] === value) return value;
+    // Shared lists: the list's join link, the member's lists and one list.
+    const sharedList = value.match(/^\/lists(?:\/join\/[A-Za-z0-9_-]{16,32}|\/[1-9]\d{0,9})?$/);
+    if (sharedList && sharedList[0] === value) return value;
+    // Daily, Pick for me, tier lists, "If you liked" and "In order" guides and the dashboard cards they link to.
+    const tool = value.match(/^(?:\/daily(?:\/[1-9]\d{0,4})?|\/pick|\/tier-list|\/if-you-liked\/[a-z0-9-]{1,80}|\/in-order\/[a-z0-9-]{1,80}|\/#challenge|\/#release-calendar)$/);
+    if (tool && tool[0] === value) return value;
     const collection = value.match(/^\/collections\/public\/([1-9]\d{0,9})\/save$/);
     return collection && collection[0] === value && Number(collection[1]) <= 2147483647 ? value : null;
 }
@@ -83,10 +95,10 @@ function captureDiscoverAuthReturn() {
 
 function consumeDiscoverAuthReturn() {
     const path = getDiscoverAuthReturn();
-    const startDemo = getDemoStartIntent();
+    const start = getStartIntent();
     clearDiscoverAuthReturn();
     clearDemoStartIntent();
-    return path || (startDemo ? '/?start=demo' : '/');
+    return path || (start ? `/?start=${start}` : '/');
 }
 
 function clearDemoStartIntent() {
@@ -99,18 +111,60 @@ function clearDemoStartIntent() {
 }
 
 function getDemoStartIntent() {
+    return getStartIntent() !== null;
+}
+
+function getStartIntent() {
     try {
         const context = demoStartContext || JSON.parse(sessionStorage.getItem(DEMO_START_KEY));
         const now = Date.now();
-        if (context?.source === 'demo' && Number.isFinite(context.created_at)
+        if (START_INTENTS.includes(context?.source) && Number.isFinite(context.created_at)
             && context.created_at <= now && now - context.created_at < DISCOVER_AUTH_RETURN_TTL) {
-            return true;
+            return context.source;
         }
     } catch (error) {
         // Ignore expired, malformed, or unavailable session state.
     }
     clearDemoStartIntent();
-    return false;
+    return null;
+}
+
+// A friend's /join link sends visitors to /?invite=<token>#signup; signing up from
+// this tab sends the token along so the two become friends once the email is verified.
+const FRIEND_INVITE_KEY = 'omnitrackr_friend_invite';
+
+function validFriendInvite(value) {
+    return typeof value === 'string' && /^[A-Za-z0-9_-]{16,32}$/.test(value) ? value : null;
+}
+
+function captureFriendInvite() {
+    if (window.location.pathname !== '/') return;
+    const values = new URLSearchParams(window.location.search).getAll('invite');
+    const token = values.length === 1 ? validFriendInvite(values[0]) : null;
+    if (!token) return;
+    try {
+        sessionStorage.setItem(FRIEND_INVITE_KEY, token);
+    } catch (error) {
+        // The invite still applies while this page stays open.
+    }
+    window.omnitrackrFriendInvite = token;
+}
+
+function getFriendInvite() {
+    try {
+        return validFriendInvite(window.omnitrackrFriendInvite) || validFriendInvite(sessionStorage.getItem(FRIEND_INVITE_KEY));
+    } catch (error) {
+        return validFriendInvite(window.omnitrackrFriendInvite);
+    }
+}
+
+function clearFriendInvite() {
+    window.omnitrackrFriendInvite = null;
+    try {
+        sessionStorage.removeItem(FRIEND_INVITE_KEY);
+    } catch (error) {
+        // Nothing stored.
+    }
 }
 
 function captureDemoStartIntent() {
@@ -124,11 +178,11 @@ function captureDemoStartIntent() {
     if (!params.has('start')) return;
     clearDemoStartIntent();
     const values = params.getAll('start');
-    if (values.length !== 1 || values[0] !== 'demo' || getDiscoverAuthReturn()
+    if (values.length !== 1 || !START_INTENTS.includes(values[0]) || getDiscoverAuthReturn()
         || ['token', 'reset_token', 'email_verified', 'password_reset', 'email_change_token', 'email_change']
             .some(key => params.has(key))) return;
     // This is navigation-only state: no demo titles, notes, or credentials cross over.
-    demoStartContext = { source: 'demo', created_at: Date.now() };
+    demoStartContext = { source: values[0], created_at: Date.now() };
     try {
         sessionStorage.setItem(DEMO_START_KEY, JSON.stringify(demoStartContext));
     } catch (error) {
@@ -140,23 +194,65 @@ function captureDemoStartIntent() {
 // Token Management
 // ============================================================================
 
+// Remembers that this browser has signed in before (kept after logging out), so the
+// homepage can offer "Log in" first to members and "Create account" first to newcomers.
+const KNOWN_MEMBER_KEY = 'omnitrackr_known_member';
+
 function saveAuthData(token, user) {
-    localStorage.removeItem(TOKEN_KEY);
-    localStorage.setItem(USER_KEY, JSON.stringify(user));
+    // The cookie is authoritative. Keep this tab usable if browser storage is denied,
+    // and never reuse a legacy token that could not be removed during a new login.
+    getUser.current = user;
+    recoverCookieSession.generation = (recoverCookieSession.generation || 0) + 1;
+    let needsFallback = Boolean(getUser.storageBlocked);
+    try { localStorage.removeItem(TOKEN_KEY); } catch (_) { needsFallback = true; }
+    try { localStorage.setItem(USER_KEY, JSON.stringify(user)); } catch (_) { needsFallback = true; }
+    try { localStorage.setItem(KNOWN_MEMBER_KEY, '1'); } catch (_) { /* optional */ }
+    if (!needsFallback) delete getUser.current;
+    try {
+        if (needsFallback) sessionStorage.setItem('omnitrackr_session_user', JSON.stringify(user));
+        else sessionStorage.removeItem('omnitrackr_session_user');
+    } catch (_) { /* The in-memory user and HttpOnly cookie still work. */ }
+}
+
+function knownMember() {
+    if (getUser()) return true;
+    try {
+        return Boolean(localStorage.getItem(KNOWN_MEMBER_KEY) || localStorage.getItem(TOKEN_KEY));
+    } catch (_) { return false; }
 }
 
 function getToken() {
-    return localStorage.getItem(TOKEN_KEY);
+    if (Object.hasOwn(getUser, 'current') || getSessionAuthUser()) return null;
+    try { return localStorage.getItem(TOKEN_KEY); }
+    catch (_) { getUser.storageBlocked = true; return null; }
+}
+
+function getSessionAuthUser() {
+    try {
+        const user = JSON.parse(sessionStorage.getItem('omnitrackr_session_user') || 'null');
+        return user && typeof user === 'object' && !Array.isArray(user) ? user : null;
+    } catch (_) { return null; }
 }
 
 function getUser() {
-    const userStr = localStorage.getItem(USER_KEY);
-    return userStr ? JSON.parse(userStr) : null;
+    if (Object.hasOwn(getUser, 'current')) return getUser.current;
+    const fallback = getSessionAuthUser();
+    if (fallback) return fallback;
+    try {
+        const value = JSON.parse(localStorage.getItem(USER_KEY) || 'null');
+        return value && typeof value === 'object' && !Array.isArray(value) ? value : null;
+    } catch (_) { getUser.storageBlocked = true; return null; }
 }
 
 function clearAuth({ preserveReturn = false } = {}) {
-    localStorage.removeItem(TOKEN_KEY);
-    localStorage.removeItem(USER_KEY);
+    // Clear the authoritative in-memory state even if persisted values cannot be removed.
+    if (typeof getUser === 'function') getUser.current = null;
+    if (typeof recoverCookieSession === 'function') {
+        recoverCookieSession.generation = (recoverCookieSession.generation || 0) + 1;
+    }
+    try { sessionStorage.removeItem('omnitrackr_session_user'); } catch (_) {}
+    try { localStorage.removeItem(TOKEN_KEY); } catch (_) {}
+    try { localStorage.removeItem(USER_KEY); } catch (_) {}
     // Storage events do not fire in this tab, including when a background request expires.
     window.OmniProgress?.reset();
     window.OmniImportStudio?.reset();
@@ -165,6 +261,11 @@ function clearAuth({ preserveReturn = false } = {}) {
     window.resetFriendsPanel?.();
     window.resetSiteStatsLink?.();
     window.resetForYou?.();
+    window.resetYearGoals?.();
+    window.resetInstallCard?.();
+    window.resetMonthlyChallenge?.();
+    window.resetSeasonCard?.();
+    window.resetBadges?.();
     if (!preserveReturn) clearDiscoverAuthReturn();
     clearDemoStartIntent();
     try {
@@ -178,12 +279,58 @@ function isAuthenticated() {
     return !!getUser() || !!getToken();
 }
 
+function canRecoverCookieSession() {
+    // The server only sends the private shell for a signed-in cookie, so recover the member when
+    // browser storage is denied or was emptied while the cookie lived on (Safari clears it after a week).
+    return !Object.hasOwn(getUser, 'current') && (getUser.storageBlocked || !getUser())
+        && document.documentElement?.dataset?.publicShell !== 'true'
+        && Boolean(document.getElementById('mainContainer'));
+}
+
+function recoverCookieSession() {
+    if (!canRecoverCookieSession()) return Promise.resolve(false);
+    if (recoverCookieSession.pending) return recoverCookieSession.pending;
+    const generation = recoverCookieSession.generation || 0;
+    const controller = new AbortController();
+    let timeout;
+    const pending = (async () => {
+        try {
+            const user = await Promise.race([
+                (async () => {
+                    const response = await fetch(`${AUTH_API_BASE}/account/me`, {
+                        credentials: 'same-origin', cache: 'no-store', signal: controller.signal,
+                    });
+                    if (!response.ok) return null;
+                    return response.json();
+                })(),
+                new Promise((_, reject) => {
+                    timeout = setTimeout(() => { controller.abort(); reject(new Error('Session recovery timed out')); }, 10000);
+                }),
+            ]);
+            if (generation !== (recoverCookieSession.generation || 0)) return false;
+            if (!user || !Number.isSafeInteger(user.id) || user.id < 1 || typeof user.username !== 'string') return false;
+            saveAuthData(null, user);
+            return true;
+        } catch (_) { return false; }
+        finally { clearTimeout(timeout); }
+    })();
+    recoverCookieSession.pending = pending;
+    pending.finally(() => {
+        if (recoverCookieSession.pending === pending) recoverCookieSession.pending = null;
+    });
+    return pending;
+}
+
 //  ============================================================================
 // Authenticated Fetch Wrapper
 // ============================================================================
 
 async function authenticatedFetch(url, options = {}) {
-    const token = getToken();
+    let token = getToken();
+    if (!isAuthenticated() && canRecoverCookieSession()) {
+        await recoverCookieSession();
+        token = getToken();
+    }
 
     if (!isAuthenticated()) {
         showAuthModal();
@@ -225,27 +372,112 @@ async function authenticatedFetch(url, options = {}) {
 // Authentication API Calls
 // ============================================================================
 
+// Turn any API error body into one sentence a person can act on.
+function authErrorMessage(body, fallback) {
+    // Rate limits answer {"error": "Rate limit exceeded: ..."} with no detail.
+    if (body && typeof body.error === 'string' && /rate limit/i.test(body.error)) {
+        return 'Too many attempts. Please wait a minute and try again.';
+    }
+    const detail = body && body.detail;
+    if (typeof detail === 'string' && detail.trim()) return detail;
+    if (Array.isArray(detail) && detail.length) {
+        const first = detail[0] || {};
+        const field = Array.isArray(first.loc) ? String(first.loc[first.loc.length - 1] || '') : '';
+        const labels = { email: 'Email', username: 'Username', password: 'Password' };
+        const label = labels[field] || 'This field';
+        if (first.type === 'string_too_short' || /at least/i.test(first.msg || '')) {
+            const min = first.ctx && first.ctx.min_length;
+            return `${label} is too short${min ? ` (at least ${min} characters)` : ''}.`;
+        }
+        if (first.type === 'string_too_long' || /at most/i.test(first.msg || '')) {
+            const max = first.ctx && first.ctx.max_length;
+            return `${label} is too long${max ? ` (at most ${max} characters)` : ''}.`;
+        }
+        if (first.type === 'missing') return `${label} is required.`;
+        return `${label}: ${String(first.msg || 'please check this field').replace(/^Value error, /, '')}`;
+    }
+    return fallback;
+}
+
+// Anonymous sign-up funnel counters (see /site-stats). Never blocks anything.
+const reportedFunnelEvents = new Set();
+function reportFunnelEvent(event) {
+    if (reportedFunnelEvents.has(event)) return;
+    reportedFunnelEvents.add(event);
+    try {
+        // A beacon never delays the page or navigation.
+        if (typeof navigator !== 'undefined' && typeof navigator.sendBeacon === 'function' && typeof Blob === 'function') {
+            navigator.sendBeacon('/api/funnel', new Blob([JSON.stringify({ event })], { type: 'application/json' }));
+        }
+    } catch (error) { /* analytics only */ }
+}
+window.reportFunnelEvent = reportFunnelEvent;
+
+const USERNAME_PATTERN = /^[A-Za-z0-9][A-Za-z0-9_.-]{2,29}$/;
+
+// Mirrors app/signup_rules.py so most mistakes are caught before the round trip.
+function signupProblem(email, username, password, confirmPassword) {
+    if (!email || !email.includes('@')) return 'Enter the email address you want to use.';
+    const trimmed = (username || '').trim();
+    if (trimmed.length < 3 || trimmed.length > 30) return 'Usernames need 3–30 characters.';
+    if (!USERNAME_PATTERN.test(trimmed)) return 'Usernames can use letters, numbers, dots, dashes or underscores, and must start with a letter or number.';
+    if ((password || '').length < 8) return 'Use at least 8 characters for your password.';
+    if (password !== confirmPassword) return "The two passwords don't match.";
+    return null;
+}
+
+// A username taken from the start of the email address ("sam.lee@…" → "sam.lee"),
+// or '' when nothing usable is left. The server still checks it is free.
+function suggestUsername(email) {
+    let base = String(email || '').split('@')[0].split('+')[0].replace(/[^A-Za-z0-9_.-]/g, '').replace(/^[^A-Za-z0-9]+/, '').slice(0, 30);
+    if (base.length && base.length < 3) base = `${base}${'123'.slice(0, 3 - base.length)}`;
+    return USERNAME_PATTERN.test(base) ? base : '';
+}
+
+// Fill the username from the email until the visitor types their own.
+function setupUsernameSuggestion() {
+    const email = document.getElementById('registerEmail');
+    const username = document.getElementById('registerUsername');
+    if (!email || !username) return;
+    username.addEventListener('input', () => { username.dataset.edited = username.value ? 'true' : ''; });
+    email.addEventListener('input', () => {
+        if (username.dataset.edited === 'true') return;
+        username.value = suggestUsername(email.value);
+    });
+}
+
 async function register(email, username, password) {
+    const invite = getFriendInvite();
     const response = await fetch(`${AUTH_API_BASE}/auth/register`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ email, username, password })
+        body: JSON.stringify(invite ? { email, username, password, invite } : { email, username, password })
     });
 
     if (!response.ok) {
-        const error = await response.json();
-        throw new Error(error.detail || 'Registration failed');
+        const error = await response.json().catch(() => ({}));
+        throw new Error(authErrorMessage(error, 'Something went wrong creating your account. Please try again.'));
     }
 
-    const user = await response.json();
-
-    // Show success message about email verification
-    displayAuthSuccess('Registration successful! Please check your email to verify your account. You can login once verified.');
-    
-    // Clear form
+    await response.json();
+    clearFriendInvite();
     document.getElementById('registerFormElement').reset();
-    
-    // Don't auto-redirect - let user read the message and click back to login manually
+    showVerificationSent(email);
+}
+
+// After sign-up: switch to the log-in form with the email filled in and the resend button ready.
+function showVerificationSent(email) {
+    showLoginForm(false);
+    document.getElementById('authTitle').textContent = 'Check your inbox';
+    setAuthContext('One last step before your library opens.');
+    const loginField = document.getElementById('loginUsername');
+    if (loginField) loginField.value = email;
+    let saved = 0;
+    try { saved = (JSON.parse(localStorage.getItem('omnitrackr_guest_list') || '[]') || []).length; } catch (error) { saved = 0; }
+    const keep = saved ? ` Your ${saved} saved title${saved === 1 ? '' : 's'} will be added to your library when you log in.` : '';
+    displayAuthSuccess(`Almost there! We sent a link to ${email}. Open it to activate your account (it works for 48 hours), then log in here.${keep} No email after a few minutes? Check spam, or resend it below.`);
+    const resend = document.getElementById('resendVerificationContainer');
+    if (resend) resend.style.display = 'block';
 }
 
 async function login(username, password) {
@@ -261,7 +493,8 @@ async function login(username, password) {
     });
 
     if (!response.ok) {
-        const error = await response.json();
+        const error = await response.json().catch(() => ({}));
+        if (response.status === 429) throw new Error(authErrorMessage(error, 'Too many attempts. Please wait a minute and try again.'));
         // Check if it's an email verification error (403)
         if (response.status === 403) {
             const errorMsg = error.detail || 'Please verify your email address before logging in.';
@@ -306,6 +539,10 @@ async function login(username, password) {
 
 async function logout() {
     if (confirm('Are you sure you want to logout?')) {
+        // Stop this member's phone/desktop notifications on this device first.
+        if (window.omniPush && typeof window.omniPush.forgetDevice === 'function') {
+            await window.omniPush.forgetDevice();
+        }
         try {
             await fetch(`${AUTH_API_BASE}/auth/logout`, {
                 method: 'POST',
@@ -354,6 +591,11 @@ function showAuthModal() {
     window.resetFriendsPanel?.();
     window.resetSiteStatsLink?.();
     window.resetForYou?.();
+    window.resetYearGoals?.();
+    window.resetInstallCard?.();
+    window.resetMonthlyChallenge?.();
+    window.resetSeasonCard?.();
+    window.resetBadges?.();
     
     // Hide footer for logged-in view when showing landing page
     const mainFooter = document.getElementById('mainFooter');
@@ -401,6 +643,11 @@ function showMainUI() {
     }
     window.refreshSiteStatsLink?.();
     window.refreshForYou?.();
+    window.refreshYearGoals?.();
+    window.refreshMonthlyChallenge?.();
+    window.refreshSeasonCard?.();
+    window.refreshBadges?.();
+    window.refreshInstallCard?.();
     if (typeof updateNotificationCount === 'function') {
         updateNotificationCount();
         // Set up interval to refresh notification count every 30 seconds
@@ -420,32 +667,53 @@ function showLoginForm(scroll = true) {
     document.getElementById('resetPasswordForm').style.display = 'none';
     document.getElementById('resendVerificationContainer').style.display = 'none';
     document.getElementById('authTitle').textContent = 'Log in to OmniTrackr';
+    setAuthContext('Welcome back. Pick up where you left off.');
     document.getElementById('authError').textContent = '';
     document.getElementById('authSuccess').style.display = 'none';
     const reactivateContainer = document.getElementById('reactivateContainer');
     if (reactivateContainer) {
         reactivateContainer.style.display = 'none';
     }
-    if (scroll && document.getElementById('landingPage').style.display === 'block') {
-        setTimeout(() => {
-            document.querySelector('.landing-auth').scrollIntoView({ behavior: 'smooth', block: 'center' });
-        }, 100);
-    }
+    if (scroll) revealAuthCard();
 }
 
-function showRegisterForm(scroll = true) {
+// The line under the form title, when the page has one.
+function setAuthContext(text) {
+    const context = document.querySelector('.auth-container .auth-context');
+    if (context) context.textContent = text;
+}
+
+// Bring the form card into view: in a pop-up on the homepage (public-landing.js),
+// otherwise by scrolling to the sign-up section.
+function revealAuthCard() {
+    if (!landingVisible()) return;
+    if (window.OmniAuthDialog && window.OmniAuthDialog.open()) return;
+    setTimeout(() => {
+        document.querySelector('.landing-auth')?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    }, 100);
+}
+
+function landingVisible() {
+    const landing = document.getElementById('landingPage');
+    if (!landing) return false;
+    if (typeof getComputedStyle !== 'function') return landing.style.display === 'block';
+    return getComputedStyle(landing).display !== 'none';
+}
+
+function showRegisterForm(scroll = true, { report = true } = {}) {
+    if (report) reportFunnelEvent('signup_form_opened');
+    try {
+        if ((JSON.parse(localStorage.getItem('omnitrackr_guest_list') || '[]') || []).length) reportFunnelEvent('guest_list_signup');
+    } catch (error) { /* no saved list */ }
     document.getElementById('loginForm').style.display = 'none';
     document.getElementById('registerForm').style.display = 'block';
     document.getElementById('forgotPasswordForm').style.display = 'none';
     document.getElementById('resetPasswordForm').style.display = 'none';
     document.getElementById('authTitle').textContent = 'Create your free account';
+    setAuthContext('Free, private by default, and ready in under a minute.');
     document.getElementById('authError').textContent = '';
     document.getElementById('authSuccess').style.display = 'none';
-    if (scroll && document.getElementById('landingPage').style.display === 'block') {
-        setTimeout(() => {
-            document.querySelector('.landing-auth').scrollIntoView({ behavior: 'smooth', block: 'center' });
-        }, 100);
-    }
+    if (scroll) revealAuthCard();
 }
 
 function showForgotPasswordForm(scroll = true) {
@@ -456,11 +724,7 @@ function showForgotPasswordForm(scroll = true) {
     document.getElementById('authTitle').textContent = 'Reset Password';
     document.getElementById('authError').textContent = '';
     document.getElementById('authSuccess').style.display = 'none';
-    if (scroll && document.getElementById('landingPage').style.display === 'block') {
-        setTimeout(() => {
-            document.querySelector('.landing-auth').scrollIntoView({ behavior: 'smooth', block: 'center' });
-        }, 100);
-    }
+    if (scroll) revealAuthCard();
 }
 
 function showResetPasswordForm(resetToken = null, scroll = true) {
@@ -474,11 +738,7 @@ function showResetPasswordForm(resetToken = null, scroll = true) {
     if (resetToken) {
         document.getElementById('resetPasswordFormElement').dataset.resetToken = resetToken;
     }
-    if (scroll && document.getElementById('landingPage').style.display === 'block') {
-        setTimeout(() => {
-            document.querySelector('.landing-auth').scrollIntoView({ behavior: 'smooth', block: 'center' });
-        }, 100);
-    }
+    if (scroll) revealAuthCard();
 }
 
 function updateUserDisplay() {
@@ -651,28 +911,35 @@ function setupAuthHandlers() {
         }
     });
 
+    document.getElementById('registerFormElement').addEventListener('focusin', () => reportFunnelEvent('signup_form_opened'));
+    setupUsernameSuggestion();
+
     // Register form submission
     document.getElementById('registerFormElement').addEventListener('submit', async (e) => {
         e.preventDefault();
-        const email = document.getElementById('registerEmail').value;
-        const username = document.getElementById('registerUsername').value;
+        const email = document.getElementById('registerEmail').value.trim();
+        const username = document.getElementById('registerUsername').value.trim();
         const password = document.getElementById('registerPassword').value;
-        const confirmPassword = document.getElementById('registerConfirmPassword').value;
+        // The homepage form has a show-password button instead of a second password box.
+        const confirmField = document.getElementById('registerConfirmPassword');
+        const confirmPassword = confirmField ? confirmField.value : password;
 
-        if (password !== confirmPassword) {
-            displayAuthError('Passwords do not match');
+        const problem = signupProblem(email, username, password, confirmPassword);
+        if (problem) {
+            reportFunnelEvent('signup_rejected_invalid');
+            displayAuthError(problem);
             return;
         }
 
-        if (password.length < 6) {
-            displayAuthError('Password must be at least 6 characters');
-            return;
-        }
-
+        const button = e.target.querySelector('button[type="submit"]');
+        const label = button ? button.textContent : '';
+        if (button) { button.disabled = true; button.textContent = 'Creating your account…'; }
         try {
             await register(email, username, password);
         } catch (error) {
             displayAuthError(error.message);
+        } finally {
+            if (button) { button.disabled = false; button.textContent = label; }
         }
     });
 
@@ -714,8 +981,8 @@ function setupAuthHandlers() {
                 displayAuthSuccess('If that email is registered, you will receive a password reset link. Please check your email.');
                 document.getElementById('forgotPasswordFormElement').reset();
             } else {
-                const error = await response.json();
-                displayAuthError(error.detail || 'Failed to send reset link');
+                const error = await response.json().catch(() => ({}));
+                displayAuthError(authErrorMessage(error, 'Failed to send reset link'));
             }
         } catch (error) {
             displayAuthError('Failed to send reset link. Please try again.');
@@ -733,8 +1000,8 @@ function setupAuthHandlers() {
             return;
         }
 
-        if (newPassword.length < 6) {
-            displayAuthError('Password must be at least 6 characters');
+        if (newPassword.length < 8) {
+            displayAuthError('Password must be at least 8 characters');
             return;
         }
 
@@ -764,10 +1031,11 @@ function setupAuthHandlers() {
                 setTimeout(() => {
                     window.history.replaceState({}, document.title, window.location.pathname);
                     showLoginForm();
+                    displayAuthSuccess(data.message);
                 }, 2000);
             } else {
-                const error = await response.json();
-                displayAuthError(error.detail || 'Failed to reset password');
+                const error = await response.json().catch(() => ({}));
+                displayAuthError(authErrorMessage(error, 'Failed to reset password'));
             }
         } catch (error) {
             displayAuthError('Failed to reset password. Please try again.');
@@ -785,13 +1053,69 @@ function setupAuthHandlers() {
 // Initialization
 // ============================================================================
 
+// ============================================================================
+// Sign in with Google
+// ============================================================================
+
+// /auth/google/callback sends people back with ?google_error=<code>. Each code has
+// its own sentence here, so no text from the address bar is ever shown.
+const GOOGLE_ERRORS = {
+    cancelled: 'Google sign-in was cancelled. Try again, or use your email below.',
+    expired: 'That Google sign-in took too long or was opened in another tab. Please try again.',
+    failed: "Google sign-in didn't work this time. Please try again, or use your email below.",
+    unverified: "Google hasn't verified that email address yet, so it can't be used. Use your email below instead.",
+    deactivated: 'This account is deactivated. Log in with your password to reactivate it, or reset your password first.',
+    unavailable: "Google sign-in isn't available right now. Use your email below.",
+};
+
+function googleErrorMessage(code) {
+    return Object.hasOwn(GOOGLE_ERRORS, code) ? GOOGLE_ERRORS[code] : GOOGLE_ERRORS.failed;
+}
+
+function setupGoogleSignIn() {
+    // A friend's invite link travels with the visitor to Google and back.
+    if (typeof document.querySelectorAll !== 'function') return;
+    document.querySelectorAll('[data-google-signin]').forEach(link => {
+        link.addEventListener('click', () => {
+            const invite = getFriendInvite();
+            link.href = invite ? `/auth/google/start?invite=${encodeURIComponent(invite)}` : '/auth/google/start';
+        });
+    });
+}
+
+// The callback already set the session cookie; learn who signed in, then open the
+// library (or the page the visitor was on before signing up) like a password login.
+async function finishGoogleSignIn() {
+    try {
+        const response = await fetch(`${AUTH_API_BASE}/account/me`, { credentials: 'same-origin', cache: 'no-store' });
+        const user = response.ok ? await response.json() : null;
+        if (!user || !Number.isSafeInteger(user.id) || user.id < 1 || typeof user.username !== 'string') {
+            throw new Error('No session');
+        }
+        saveAuthData(null, user);
+        clearFriendInvite();
+        try { sessionStorage.removeItem(RETURN_PROMPT_KEY); } catch (_) { /* optional */ }
+        window.location.replace(consumeDiscoverAuthReturn());
+    } catch (_) {
+        window.history.replaceState({}, document.title, window.location.pathname);
+        showAuthModal();
+        displayAuthError(GOOGLE_ERRORS.failed);
+    }
+}
+
 function initAuth() {
     captureDiscoverAuthReturn();
+    captureFriendInvite();
     captureDemoStartIntent();
     setupAuthHandlers();
+    setupGoogleSignIn();
 
     // Check URL parameters for email verification or password reset
     const urlParams = new URLSearchParams(window.location.search);
+
+    if (urlParams.get('signed_in') === 'google' && document.documentElement.dataset.publicShell !== 'true') {
+        return finishGoogleSignIn();
+    }
     const verifyToken = urlParams.get('token');
     const resetToken = urlParams.get('reset_token');
     const emailVerified = urlParams.get('email_verified');
@@ -814,10 +1138,7 @@ function initAuth() {
     // Handle password reset
     if (resetToken) {
         showAuthModal();
-        // Scroll to auth section
-        setTimeout(() => {
-            document.querySelector('.landing-auth').scrollIntoView({ behavior: 'smooth', block: 'center' });
-        }, 100);
+        revealAuthCard();
         showResetPasswordForm(resetToken);
         return;
     }
@@ -825,10 +1146,7 @@ function initAuth() {
     // Handle successful verification redirect
     if (emailVerified === 'true' && !verifyToken) {
         showAuthModal();
-        // Scroll to auth section
-        setTimeout(() => {
-            document.querySelector('.landing-auth').scrollIntoView({ behavior: 'smooth', block: 'center' });
-        }, 100);
+        revealAuthCard();
         displayAuthSuccess('✅ Email verified successfully! You can now log in.');
         showLoginForm();
         // Clean URL
@@ -839,10 +1157,7 @@ function initAuth() {
     // Handle successful password reset redirect
     if (passwordReset === 'true') {
         showAuthModal();
-        // Scroll to auth section
-        setTimeout(() => {
-            document.querySelector('.landing-auth').scrollIntoView({ behavior: 'smooth', block: 'center' });
-        }, 100);
+        revealAuthCard();
         displayAuthSuccess('✅ Password reset successfully! You can now log in with your new password.');
         showLoginForm();
         // Clean URL
@@ -855,12 +1170,49 @@ function initAuth() {
     // private UI; stale localStorage must not reveal it on the public shell.
     if (document.documentElement.dataset.publicShell === 'true') {
         showAuthModal();
-        if (urlParams.getAll('start').length === 1 && urlParams.get('start') === 'demo'
-            && getDemoStartIntent() && !getDiscoverAuthReturn()) showRegisterForm();
+        if (urlParams.has('google_error')) {
+            if (knownMember()) showLoginForm(false);
+            else showRegisterForm(false, { report: false });
+            displayAuthError(googleErrorMessage(urlParams.get('google_error')));
+            window.history.replaceState({}, document.title, window.location.pathname + '#landing-auth');
+            revealAuthCard();
+            return;
+        }
+        if (window.location.hash === '#signup') {
+            showRegisterForm();
+            return;
+        }
+        // "I have an account" buttons: open the log-in form even on a browser that hasn't signed in before.
+        if (window.location.hash === '#login') {
+            showLoginForm();
+            return;
+        }
+        if (urlParams.getAll('start').length === 1 && START_INTENTS.includes(urlParams.get('start'))
+            && getDemoStartIntent() && !getDiscoverAuthReturn()) {
+            showRegisterForm();
+            return;
+        }
+        // Newcomers who scroll to the bottom find the sign-up form, not a log-in box.
+        // Counted as "opened" only once they start filling it in.
+        // "Log in" links from other pages arrive as /#landing-auth (without a return path).
+        if (window.location.hash === '#landing-auth' && !urlParams.has('next')) return;
+        if (!knownMember()) showRegisterForm(false, { report: false });
         return;
     }
 
     if (!isAuthenticated()) {
+        if (canRecoverCookieSession()) {
+            return recoverCookieSession().then(recovered => {
+                if (!recovered) { if (!isAuthenticated()) showAuthModal(); return; }
+                showMainUI();
+                updateUserDisplay();
+                // Main-library requests await the same recovery in authenticatedFetch.
+                // These optional startup readers initially skipped a missing stored user.
+                for (const name of ['loadCustomTabs', 'openDashboardTargetFromLocation', 'bootstrapReturnDeck']) {
+                    try { Promise.resolve(window[name]?.()).catch(() => {}); } catch (_) { /* optional */ }
+                }
+            });
+        }
         showAuthModal();
     } else {
         showMainUI();
@@ -893,21 +1245,28 @@ async function handleEmailChangeVerification(token) {
         // Clean URL
         window.history.replaceState({}, document.title, window.location.pathname);
     } else {
-        // User not logged in, show auth modal with success message
+        // Not logged in here: the link still has to be confirmed with the server.
         showAuthModal();
-        setTimeout(() => {
-            document.querySelector('.landing-auth').scrollIntoView({ behavior: 'smooth', block: 'center' });
-        }, 100);
-        displayAuthSuccess('✅ Email changed successfully! Please log in with your new email.');
+        revealAuthCard();
         showLoginForm();
+        try {
+            const response = await fetch(`${AUTH_API_BASE}/auth/verify-email?token=${encodeURIComponent(token)}`, { credentials: 'same-origin' });
+            const data = await response.json().catch(() => ({}));
+            if (response.ok) {
+                displayAuthSuccess('✅ Email changed successfully! Please log in with your new email.');
+            } else {
+                displayAuthError(typeof data.detail === 'string' ? data.detail : 'Email change verification failed');
+            }
+        } catch (error) {
+            displayAuthError('Failed to verify email change. Please try again.');
+        }
         window.history.replaceState({}, document.title, window.location.pathname);
     }
 }
 
 async function handleEmailVerification(token) {
     showAuthModal();
-    // Scroll to auth section
-    document.querySelector('.landing-auth').scrollIntoView({ behavior: 'smooth', block: 'center' });
+    revealAuthCard();
     document.getElementById('authTitle').textContent = 'Email Verification';
     document.getElementById('loginForm').style.display = 'none';
     document.getElementById('registerForm').style.display = 'none';
@@ -917,22 +1276,41 @@ async function handleEmailVerification(token) {
     displayAuthSuccess('Verifying your email...');
     
     try {
-        const response = await fetch(`${AUTH_API_BASE}/auth/verify-email?token=${encodeURIComponent(token)}`);
+        const response = await fetch(`${AUTH_API_BASE}/auth/verify-email?token=${encodeURIComponent(token)}`, { credentials: 'same-origin' });
         const data = await response.json();
         
         if (response.ok) {
-            displayAuthSuccess(data.message + ' Redirecting to login...');
-            
-            // Clear URL parameters and show login after 3 seconds
-            setTimeout(() => {
-                window.history.replaceState({}, document.title, window.location.pathname);
-                showLoginForm();
-            }, 3000);
+            window.history.replaceState({}, document.title, window.location.pathname);
+            if (data.signed_in && data.user) {
+                // Same browser that signed up: the server already set the session cookie.
+                saveAuthData(null, data.user);
+                displayAuthSuccess('Email verified. Opening your library…');
+                window.location.assign(consumeDiscoverAuthReturn());
+                return;
+            }
+            if (isAuthenticated() && document.getElementById('mainContainer')) {
+                // Already signed in here (e.g. the link was opened again): stay in the library.
+                hideAuthModal();
+                showMainUI();
+                updateUserDisplay();
+                return;
+            }
+            showLoginForm();
+            displayAuthSuccess('Email verified! Log in to open your library.');
+            const loginField = document.getElementById('loginUsername');
+            if (loginField && data.login_hint) loginField.value = data.login_hint;
+            const passwordField = document.getElementById('loginPassword');
+            if (passwordField) passwordField.focus();
         } else {
-            displayAuthError(data.detail || 'Email verification failed');
+            const message = data.detail || 'Email verification failed';
+            displayAuthError(message);
             setTimeout(() => {
                 window.history.replaceState({}, document.title, window.location.pathname);
                 showLoginForm();
+                // showLoginForm clears messages; keep the reason and offer a fresh link.
+                displayAuthError(message);
+                const resend = document.getElementById('resendVerificationContainer');
+                if (resend) resend.style.display = 'block';
             }, 3000);
         }
     } catch (error) {
@@ -950,3 +1328,20 @@ if (document.readyState === 'loading') {
 } else {
     initAuth();
 }
+
+// "Start tracking" links elsewhere point at /#signup (and log-in buttons at /#login); follow them on the homepage too.
+if (typeof window.addEventListener === 'function') window.addEventListener('hashchange', () => {
+    if (document.documentElement.dataset.publicShell !== 'true' || !document.getElementById('registerForm')) return;
+    if (window.location.hash === '#signup') showRegisterForm();
+    else if (window.location.hash === '#login') showLoginForm();
+});
+
+// Other tabs can replace or clear a session. Re-read their stored identity instead
+// of retaining this tab's fallback user after a cross-tab sign-in or logout.
+if (typeof window.addEventListener === 'function') window.addEventListener('storage', event => {
+    if (event.key !== null && event.key !== USER_KEY && event.key !== TOKEN_KEY) return;
+    delete getUser.current;
+    getUser.storageBlocked = false;
+    recoverCookieSession.generation = (recoverCookieSession.generation || 0) + 1;
+    try { sessionStorage.removeItem('omnitrackr_session_user'); } catch (_) {}
+});

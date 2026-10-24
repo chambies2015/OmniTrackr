@@ -4,7 +4,7 @@
 
 <h1 align="center">OmniTrackr</h1>
 
-OmniTrackr is a free multi-user media tracker for movies, TV shows, anime, video games, music, and books. It combines private personal tracking, ratings, reviews, statistics, friends, public review pages, and JSON export/import in one browser-based dashboard.
+OmniTrackr is a free multi-user media tracker for movies, TV shows, anime, video games, music, and books. It runs in the browser and covers private tracking, ratings, reviews, statistics, friends, public review pages, and JSON export/import.
 
 Live site: [https://www.omnitrackr.xyz/](https://www.omnitrackr.xyz/)
 
@@ -21,12 +21,14 @@ Live site: [https://www.omnitrackr.xyz/](https://www.omnitrackr.xyz/)
 - Build ordered cross-media collections with curator notes and artwork, publish them by choice, and automatically qualify substantial, safe collections for the public gallery.
 - Export and import JSON for built-in categories and custom tabs.
 - View statistics for completion, ratings, years, directors, genres, TV/anime season data, music, books, and high-level library insights.
-- Return after three days to an optional Welcome Back Deck that composes the existing Next Up, unfinished-library, reflection, and journal signals without creating another permanent dashboard panel.
+- Members who return after three or more days away see a dismissible Welcome Back Deck built from their Next Up list, unfinished titles, reflections, and recent journal entries.
 - Browse **Release Radar** (`/release-radar`): upcoming movies, TV premieres, the anime season, and new games, with calculated Radar notes, aggregate library counts, and one-click tracking into a private Release Radar collection. No database schema changes.
+- Earn **badges** in a dashboard trophy case: 17 badges (Bookworm, Cinephile, Critic, Regular and more), each with bronze, silver and gold tiers counted from your own library, a "closest next" list, a bell notification for each new tier, earned badges on your public profile and your next badge in the weekly email. One new table (`user_badges`); nothing existing changes.
+- Read **In order** guides (`/in-order`): the best order through Star Wars, The Witcher, Dune, Monogatari, Zelda and more, across films, series, books and games. Members see their progress from their own library and can add the entries they are missing in one click. No database schema changes.
 - Use public content pages for onboarding and discovery: `/about`, `/guides`, `/compare`, `/use-cases`, `/demo`, `/media-tracking`, `/tv-show-tracker`, `/game-tracker`, `/changelog`, `/roadmap`, `/privacy`, `/terms`, and `/contact`.
 - Run with SQLite locally or PostgreSQL in production.
 
-## Tech Stack
+## Tech stack
 
 Backend:
 
@@ -53,7 +55,7 @@ Deployment:
 - Render PostgreSQL
 - Environment-based configuration
 
-## Built-In Media Categories
+## Built-in media categories
 
 OmniTrackr includes first-class CRUD flows for:
 
@@ -72,7 +74,7 @@ Metadata sources:
 - iTunes Search API for music metadata.
 - Open Library API for book metadata.
 
-## Public Pages And SEO
+## Public pages and SEO
 
 The public site is more than a login screen. These pages help visitors, search engines, and policy reviewers understand what OmniTrackr provides:
 
@@ -91,7 +93,7 @@ The public site is more than a login screen. These pages help visitors, search e
 
 SEO/security support includes sitemap, robots.txt, llms.txt, structured data, canonical links, page-specific metadata, favicon/image endpoints, and CSP nonce handling for public pages.
 
-## Account And Privacy
+## Account and privacy
 
 Users can:
 
@@ -105,9 +107,9 @@ Users can:
 
 Public reviews are opt-in per item. A review is not public just because it exists in a user's private library. Community-ready reviews can appear in the browse feed; the stricter search-ready tier alone receives a detail URL, structured review data, sitemap inclusion, prominent ordering, or ad eligibility. Signed-browser reports are rate limited, deduplicated, and automatically unlist an exact review version after three independent reports. The review is never deleted, and a substantive author edit starts a clean version.
 
-Collections are also private by default. Publishing requires at least 300 characters of context and three available titles. A shared collection enters the gallery, search metadata, and sitemap only when the same deterministic readiness result also finds a meaningful title, sufficient words and complete thoughts, varied language, and no obvious links, contact details, promotional bait, or placeholder text. Three independent signed-browser reports temporarily unlist one exact collection version; editing creates a clean version and reruns the checks without a routine moderator queue.
+Collections are also private by default. Publishing requires at least 300 characters of context and three available titles. A shared collection enters the gallery, search metadata, and sitemap only when the same deterministic readiness check also finds a real title, enough words in complete sentences, varied language, and no obvious links, contact details, promotional bait, or placeholder text. Three independent signed-browser reports temporarily unlist one exact collection version; editing creates a clean version and reruns the checks without a routine moderator queue.
 
-## Friends And Notifications
+## Friends and notifications
 
 The friends system supports:
 
@@ -119,7 +121,7 @@ The friends system supports:
 
 Friend profile access respects the other user's privacy settings.
 
-## Custom Tabs
+## Custom tabs
 
 Custom tabs let users create additional collection types beyond the six built-in categories.
 
@@ -135,7 +137,7 @@ Supported custom-tab features include:
 
 Example uses include comics, podcasts, board games, collectibles, or niche watchlists.
 
-## Export And Import
+## Export and import
 
 OmniTrackr exports user data as JSON with export metadata and lists for:
 
@@ -149,7 +151,7 @@ OmniTrackr exports user data as JSON with export metadata and lists for:
 
 Import supports backward-compatible JSON files and smart update behavior to reduce duplicates where matching records already exist.
 
-## Security Notes
+## Security notes
 
 Current security measures include:
 
@@ -166,7 +168,7 @@ Current security measures include:
 - Data isolation by authenticated user.
 - Tests covering public-page CSP, URL handling, review rendering, static JS safety, and endpoint access patterns.
 
-## Local Development
+## Local development
 
 Requirements:
 
@@ -206,7 +208,7 @@ Open:
 http://127.0.0.1:8000/
 ```
 
-## Environment Variables
+## Environment variables
 
 Core:
 
@@ -231,6 +233,14 @@ Email:
 | `MAIL_SERVER` | SMTP host. |
 | `MAIL_STARTTLS` | Usually `True`. |
 | `MAIL_SSL_TLS` | Usually `False` for STARTTLS. |
+
+Sign in with Google (optional; the button stays hidden until both are set):
+
+| Variable | Purpose |
+| --- | --- |
+| `GOOGLE_CLIENT_ID` | OAuth client ID of a "Web application" client in Google Cloud Console. |
+| `GOOGLE_CLIENT_SECRET` | That client's secret. |
+| `GOOGLE_REDIRECT_URI` | Optional. Defaults to `APP_URL` + `/auth/google/callback`; add exactly this address under "Authorized redirect URIs". |
 
 External metadata:
 
@@ -272,7 +282,7 @@ Run the full test suite:
 .\.venv\Scripts\python.exe -m pytest
 ```
 
-Useful focused runs:
+Focused runs:
 
 ```powershell
 .\.venv\Scripts\python.exe -m pytest tests\test_seo_security.py
@@ -297,7 +307,7 @@ node --test $uiTests
 - `API_SETUP_GUIDE.md` and `EMAIL_SETUP.md` contain the two integration-specific setup guides.
 - The public `/changelog`, `/roadmap`, `/privacy`, and `/advertising` pages describe user-visible behavior and policy.
 
-## Deployment Notes
+## Deployment notes
 
 For Render:
 
@@ -312,7 +322,7 @@ For Render:
 
 Database migrations are handled by the app startup migration helper in `app/migrations.py`.
 
-## API Overview
+## API overview
 
 Authenticated API areas include:
 

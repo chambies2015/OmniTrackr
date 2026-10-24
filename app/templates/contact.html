@@ -22,12 +22,10 @@
   <meta name="twitter:url" content="https://omnitrackr.xyz/contact">
   <meta name="twitter:title" content="Contact OmniTrackr">
   <meta name="twitter:description" content="Get support, send feedback, report issues, or contribute to OmniTrackr.">
-  <link rel="preconnect" href="https://fonts.googleapis.com">
-  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@700;800&family=Inter:wght@400;500;600&display=swap"
-    rel="stylesheet">
-  <link rel="stylesheet" href="/styles.css">
-  <link rel="stylesheet" href="/static/public-reader.css?v=20260928-site-2">
+  <link rel="preload" href="/static/fonts/poppins-700-latin.woff2" as="font" type="font/woff2" crossorigin>
+  <link rel="preload" href="/static/fonts/poppins-800-latin.woff2" as="font" type="font/woff2" crossorigin>
+  <link rel="stylesheet" href="/static/fonts.css?v=20261009-fonts-1">
+  <link rel="stylesheet" href="/static/public-reader.css?v=20261017-reader-2">
 
   <script type="application/ld+json">
   {
@@ -58,12 +56,12 @@
 
       <header class="privacy-header">
         <h1>Contact</h1>
-        <p>Get in touch with the OmniTrackr team</p>
+        <p>How to reach OmniTrackr with questions, bug reports, and requests</p>
       </header>
 
       <section class="privacy-section" aria-labelledby="get-in-touch-heading">
-        <h2 id="get-in-touch-heading">Get In Touch</h2>
-        <p>We welcome questions, feedback, and support requests. Use the channels below depending on what you need. We do our best to respond to emails in a timely manner.</p>
+        <h2 id="get-in-touch-heading">Get in touch</h2>
+        <p>Questions, feedback, and support requests are all welcome. Pick the channel below that fits what you need. Every email gets read, and we reply as soon as we can.</p>
         <div class="contact-info">
           <p><strong>Email:</strong> <a href="mailto:omnitrackr@gmail.com">omnitrackr@gmail.com</a></p>
           <p><strong>Website:</strong> <a href="https://omnitrackr.xyz">https://omnitrackr.xyz</a></p>
@@ -72,7 +70,7 @@
       </section>
 
       <section class="privacy-section" aria-labelledby="support-heading">
-        <h2 id="support-heading">Support Channels</h2>
+        <h2 id="support-heading">Support channels</h2>
         <p>For account issues, bugs, or how-to questions, email us at <a href="mailto:omnitrackr@gmail.com">omnitrackr@gmail.com</a>. For quick tips and step-by-step help, see our <a href="/guides">How-To Guides</a> and <a href="/faq">FAQ</a>. For privacy or data questions, review our <a href="/privacy">Privacy Policy</a>.</p>
         <ul>
           <li><strong>Account access:</strong> mention whether the problem is registration, verification, login, password reset, or account settings.</li>
@@ -80,12 +78,12 @@
           <li><strong>Import or export:</strong> include the file type and any visible error message, but avoid sending private exports unless requested for troubleshooting.</li>
           <li><strong>Public reviews:</strong> include the review category and whether the issue is visibility, formatting, search, or privacy.</li>
         </ul>
-        <p>Support requests are handled with the goal of protecting account integrity. We may ask follow-up questions to verify account ownership before discussing private library details, data exports, deletion requests, or account access problems.</p>
+        <p>We won't hand account details to someone who can't show the account is theirs. We may ask follow-up questions to verify account ownership before discussing private library details, data exports, deletion requests, or account access problems.</p>
       </section>
 
       <section class="privacy-section" aria-labelledby="open-source-heading">
-        <h2 id="open-source-heading">Open Source and Community</h2>
-        <p>OmniTrackr is developed in the open. You can find the project on GitHub, report issues, suggest features, or contribute code. Our GitHub repository is the right place for technical discussions and pull requests.</p>
+        <h2 id="open-source-heading">Open source and community</h2>
+        <p>OmniTrackr is developed in the open. You can find the project on GitHub, report issues, suggest features, or contribute code. Technical discussions and pull requests belong in the GitHub repository.</p>
         <ul>
           <li><strong>GitHub:</strong> <a href="https://github.com/chambies2015/OmniTrackr" target="_blank" rel="noopener noreferrer">github.com/chambies2015/OmniTrackr</a></li>
           <li><strong>LinkedIn:</strong> <a href="https://www.linkedin.com/in/d-g-c/" target="_blank" rel="noopener noreferrer">LinkedIn profile</a></li>
@@ -94,34 +92,34 @@
       </section>
 
       <section class="privacy-section" aria-labelledby="report-heading">
-        <h2 id="report-heading">Report Issues</h2>
+        <h2 id="report-heading">Report issues</h2>
         <p>If you find a bug or security concern, please email us or open an issue on GitHub with a clear description and steps to reproduce. For security-sensitive issues, we prefer email so we can address them before public disclosure.</p>
         <p>Helpful bug reports usually include the device type, browser, route, action taken, and whether the issue repeats after refreshing. For security-sensitive reports, include enough detail to reproduce the concern without publicly sharing exploit steps or another user's private data.</p>
         <p>For display or layout issues, screenshots are helpful when they do not reveal private account information. For data issues, describe the affected media category and action instead of sending full private notes, exported libraries, or credentials in the first message.</p>
       </section>
 
       <section class="privacy-section" aria-labelledby="response-expectations-heading">
-        <h2 id="response-expectations-heading">What Happens After You Contact Us</h2>
-        <p>Support messages are reviewed with account safety in mind. If a request involves private library data, account deletion, exports, email changes, or public review visibility, we may ask for confirmation from the account email before taking action. That extra step helps prevent someone else from changing or exposing your media history.</p>
-        <p>For bug reports, the most useful outcome is a reproducible path. We may ask whether the issue happens after signing out and back in, whether it affects one media category or all categories, and whether the same problem appears on another browser. Those details help separate display bugs from account-specific data issues.</p>
-        <p>For feature ideas, we compare requests against OmniTrackr's core goals: private cross-media tracking, data portability, useful statistics, safer public reviews, and a calm public site. Ideas that protect existing users and improve everyday tracking are easier to prioritize than changes that would make the app harder to understand.</p>
+        <h2 id="response-expectations-heading">What happens after you contact us</h2>
+        <p>We check who is asking before changing anything. If a request involves private library data, account deletion, exports, email changes, or public review visibility, we may ask for confirmation from the account email before taking action. That extra step helps prevent someone else from changing or exposing your media history.</p>
+        <p>With a bug report, what we most need is a way to make the bug happen again. We may ask whether the issue happens after signing out and back in, whether it affects one media category or all categories, and whether the same problem appears on another browser. The answers tell us whether it's a display bug or a problem with the data in one account.</p>
+        <p>Feature ideas get weighed against what OmniTrackr is for: private tracking across media types, data you can take with you, statistics worth looking at, safer public reviews, and a public site without clutter. An idea that improves everyday tracking without risk to existing users moves up the list faster than one that would make the app harder to understand.</p>
       </section>
 
       <section class="privacy-section" aria-labelledby="data-requests-heading">
-        <h2 id="data-requests-heading">Privacy and Data Requests</h2>
+        <h2 id="data-requests-heading">Privacy and data requests</h2>
         <p>You can contact OmniTrackr about account deletion, data export questions, privacy settings, advertising disclosures, or concerns about public review visibility. The app includes account controls and export tools, but email is available when you need help with a request that is not covered by the in-app settings.</p>
         <p>Before requesting deletion, consider exporting a backup from your account if you want a personal copy of your media history. Account deletion and deactivation requests should come from the email address associated with the account so ownership can be verified.</p>
-        <p>If your concern involves a public review, include whether the review is a movie, TV show, anime, video game, music, or book entry. Public review visibility is controlled per entry, so the fastest path is usually to identify the exact item and whether you want it updated, made private, or removed.</p>
+        <p>If your concern involves a public review, include whether the review is a movie, TV show, anime, video game, music, or book entry. Public review visibility is set per entry, so it's quickest if you name the exact item and whether you want it updated, made private, or removed.</p>
       </section>
 
       <section class="privacy-section" aria-labelledby="faq-contact-heading">
-        <h2 id="faq-contact-heading">Frequently Asked Questions</h2>
+        <h2 id="faq-contact-heading">Frequently asked questions</h2>
         <h3>How do I reset my password?</h3>
         <p>Use the "Forgot password" link on the sign-in page. You will receive an email with instructions to set a new password.</p>
         <h3>Can I delete my account?</h3>
         <p>Yes. You can deactivate your account in account settings. For full deletion of your data, contact us by email.</p>
         <h3>Do you offer paid features?</h3>
-        <p>OmniTrackr is free to use. We offer an optional Ko-fi page if you want to support the project financially.</p>
+        <p>OmniTrackr is free to use. If you want to support the project, <a href="/supporters">Ko-fi supporters</a> get a profile badge and a few cosmetic extras.</p>
         <h3>Where can I read about privacy and terms?</h3>
         <p>See our <a href="/privacy">Privacy Policy</a> and <a href="/terms">Terms &amp; Conditions</a> for full details.</p>
       </section>

@@ -69,10 +69,5 @@ def update_movie(db: Session, user_id: int, movie_id: int, movie_update: schemas
 
 
 def delete_movie(db: Session, user_id: int, movie_id: int) -> Optional[models.Movie]:
-    db_movie = get_movie_by_id(db, user_id, movie_id)
-    if db_movie is None:
-        return None
-    db.delete(db_movie)
-    db.commit()
-    return db_movie
-
+    from ..library_lifecycle import delete_owned_media
+    return delete_owned_media(db, user_id, "movies", movie_id)

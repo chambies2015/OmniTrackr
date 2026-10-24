@@ -2,6 +2,12 @@ fastapi==0.141.1
 uvicorn[standard]==0.53.0
 sqlalchemy==2.0.53
 pydantic==2.13.5
+# Security floors for packages FastAPI/uvicorn pull in (see the October dependency check)
+starlette>=1.6.0
+h11>=0.16.0
+anyio>=4.14.2
+idna>=3.15
+pydantic-settings>=2.14.2
 
 # PostgreSQL
 psycopg2-binary==2.9.10

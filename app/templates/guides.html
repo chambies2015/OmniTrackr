@@ -4,7 +4,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <meta name="description" content="Start a media library, import an existing list, save your place, or share selectively. Practical OmniTrackr guides with examples and a no-account demo.">
+  <meta name="description" content="Start a media library, import an existing list, save your place, or share selectively. Step-by-step OmniTrackr guides with examples and a no-account demo.">
   <meta name="robots" content="index, follow, max-image-preview:large">
   <meta name="author" content="OmniTrackr">
   <title>OmniTrackr Guides - Track Media, Reviews, Stats, Friends & Export</title>
@@ -26,11 +26,9 @@
   <meta name="twitter:description" content="Start a library, import a list, save your place, or choose what to share. Practical steps and a no-account demo.">
   <meta name="twitter:image" content="https://omnitrackr.xyz/omnitrackr_vortex.png">
   <meta name="twitter:image:alt" content="OmniTrackr guides">
-  <link rel="preconnect" href="https://fonts.googleapis.com">
-  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@700;800&family=Inter:wght@400;500;600&display=swap"
-    rel="stylesheet">
-  <link rel="stylesheet" href="/styles.css">
+  <link rel="preload" href="/static/fonts/poppins-700-latin.woff2" as="font" type="font/woff2" crossorigin>
+  <link rel="preload" href="/static/fonts/poppins-800-latin.woff2" as="font" type="font/woff2" crossorigin>
+  <link rel="stylesheet" href="/static/fonts.css?v=20261009-fonts-1">
   <style>
     body { min-height: 100vh; padding: 20px; }
     .privacy-wrapper { max-width: 1000px; margin: 0 auto; }
@@ -100,7 +98,7 @@
     ]
   }
   </script>
-  <link rel="stylesheet" href="/static/public-reader.css?v=20260928-site-2">
+  <link rel="stylesheet" href="/static/public-reader.css?v=20261017-reader-2">
 </head>
 
 <body class="public-reader site">
@@ -111,9 +109,9 @@
 <a href="/" class="back-link">Back to OmniTrackr</a>
 
       <header class="privacy-header">
-        <p class="reader-kicker">A useful next step</p>
+        <p class="reader-kicker">Pick a task</p>
         <h1>How-To Guides</h1>
-        <p>Start with the thing you want to do. Learn the few controls you need, then return to your movies, shows, anime, games, music, and books.</p>
+        <p>Start with what you're trying to do. Each guide covers the few controls you need, so you can get back to your movies, shows, anime, games, music, and books.</p>
         <p>By OmniTrackr · Updated <time datetime="2026-09-24">September 24, 2026</time>.</p>
         <div class="reader-actions">
           <a href="/demo">Try the demo — no account needed</a>
@@ -156,13 +154,13 @@
 
       <section class="privacy-section" aria-labelledby="getting-started-heading">
         <p class="reader-kicker">Start a library</p>
-        <h2 id="getting-started-heading">Getting Started: Save One Title</h2>
+        <h2 id="getting-started-heading">Getting started: save one title</h2>
         <ol>
           <li><strong>Try the workflow or create an account.</strong> The <a href="/demo">interactive demo</a> uses fictional entries and needs no account. To keep your own library, sign up with your email and a password, verify your email, then sign in.</li>
           <li><strong>Choose a category and add a title.</strong> Open Movies, TV Shows, Anime, Video Games, Music, or Books. Open the category's Add form and enter a title. Use title search where available, then check the returned details: editions and similarly named titles can differ.</li>
           <li><strong>Save what you know.</strong> Leave the rating blank if you have not formed an opinion. Check Watched, Played, Listened, or Read only when you want to record completion. Save the entry; use Edit later when you have more to add.</li>
         </ol>
-        <p class="reader-note">A useful first library can be just three titles: something you finished, something you are partway through, and something you want to try. Completion, rating, and saved progress describe different things.</p>
+        <p class="reader-note">Your first library can be just three titles: something you finished, something you are partway through, and something you want to try. Completion, rating, and saved progress describe different things.</p>
         <div class="reader-actions">
           <a href="/media-tracker-checklist">Follow the setup checklist</a>
           <a href="/discover">Find a title in Discover</a>
@@ -171,12 +169,12 @@
 
       <section class="privacy-section" aria-labelledby="import-export-heading">
         <p class="reader-kicker">Bring an existing list</p>
-        <h2 id="import-export-heading">Import and Export: Choose the Right File</h2>
+        <h2 id="import-export-heading">Import and export: choose the right file</h2>
         <p>A CSV from another tracker is a migration source. An OmniTrackr JSON export is a backup. Keep the original source file and export a backup before making a large change.</p>
         <ol>
-          <li><strong>Open Import Studio in account settings.</strong> Choose a supported CSV or TSV source, or a generic spreadsheet. Start with a small sample and preview it. Opening the importer or previewing a file does not save titles.</li>
+          <li><strong>Open Import Studio in account settings.</strong> Choose the export file from your old service (Letterboxd and Trakt ZIPs, MyAnimeList XML, and IMDb, Goodreads, or StoryGraph CSVs are all read as they come), fetch a public AniList list by username, or use a generic spreadsheet. Start with a small sample and preview it. Opening the importer or previewing a file does not save titles.</li>
           <li><strong>Check what each row means.</strong> Inspect converted ratings, completion, and notes. Imported reviews are not published to public review pages, but friends can read them if you share that category. Use the row filter and page controls to review every outcome. Fix unexpected results in your file and preview again.</li>
-          <li><strong>Confirm all ready rows when satisfied.</strong> Filtering the preview does not select rows for import. Matching records are skipped by the CSV importer rather than overwritten, so use Edit when you intend to correct an existing entry. Compare the imported titles, completion, and ratings afterward.</li>
+          <li><strong>Confirm all ready rows when satisfied.</strong> Filtering the preview does not select rows for import. Matching records are skipped by the CSV importer, never overwritten, so use Edit when you intend to correct an existing entry. Compare the imported titles, completion, and ratings afterward.</li>
         </ol>
         <p class="reader-note">JSON restore is a separate workflow and can update matching records. JSON backups include progress checkpoints and their private reminders; protect those files. CSV import does not create saved episode, page, or chapter checkpoints.</p>
         <div class="reader-actions">
@@ -187,7 +185,7 @@
 
       <section class="privacy-section" aria-labelledby="tracking-heading">
         <p class="reader-kicker">Resume a title</p>
-        <h2 id="tracking-heading">Tracking Media: Save Your Place</h2>
+        <h2 id="tracking-heading">Tracking media: save your place</h2>
         <ol>
           <li><strong>Find the saved title.</strong> Use your library search, or open a title shown in Continue or Next Up. On phones and tablets, More details expands the library card; View review opens the longer note or review.</li>
           <li><strong>Choose Update progress.</strong> TV shows and anime accept the last episode watched, with an optional season. Books accept the last page or chapter read. Add a Private reminder if you need context for next time.</li>
@@ -203,7 +201,7 @@
 
       <section class="privacy-section" aria-labelledby="social-heading">
         <p class="reader-kicker">Share selectively</p>
-        <h2 id="social-heading">Social Features and Friends: Choose an Audience</h2>
+        <h2 id="social-heading">Social features and friends: choose an audience</h2>
         <ol>
           <li><strong>Choose which categories friends may view.</strong> Review the category privacy controls in account settings. Open Friends, then Add Friend to send a request by username. Accept incoming requests through the notification bell.</li>
           <li><strong>Review each public review separately.</strong> The Public Review checkbox is in an item's Add or Edit form. Leave it unchecked to keep the review off public review pages; friends can still read it when its category is shared. Select it only for a review you intend to publish, subject to the site's review-quality and moderation rules.</li>
@@ -211,13 +209,13 @@
         </ol>
         <p class="reader-note">Hiding a tab is a layout preference, not a privacy setting. Category privacy, individual public reviews, and collection publishing are separate decisions. Saved progress checkpoints and their reminders stay private.</p>
         <div class="reader-actions">
-          <a href="/review-guidelines">Write a useful public review</a>
+          <a href="/review-guidelines">Write a public review people can use</a>
           <a href="/privacy">Read the privacy policy</a>
         </div>
       </section>
 
       <section class="privacy-section" aria-labelledby="library-filters-heading">
-        <h2 id="library-filters-heading">Find the Right Part of Your Library</h2>
+        <h2 id="library-filters-heading">Find the right part of your library</h2>
         <p>Use the completion buttons below a category's search and sort controls to show all titles, unfinished titles, or completed titles. Labels fit the category: for example, Books has Not read and Read. Add <strong>Unrated</strong> to find blank ratings; a score of zero still counts as rated. These filters cover the whole library, including titles on later pages, and combine with search and sorting.</p>
         <h3>Example: books you finished but haven't rated</h3>
         <p>Open Books, choose <strong>Read</strong>, then check <strong>Unrated</strong>. Edit a matching book when you are ready to rate it; after saving a score, it leaves this view because it is now rated. You can try this with a fictional book in the <a href="/demo">interactive demo</a>.</p>
@@ -225,38 +223,38 @@
       </section>
 
       <section class="privacy-section" aria-labelledby="reviews-heading">
-        <h2 id="reviews-heading">Ratings and Reviews</h2>
-        <p>OmniTrackr ratings use a 0–10 scale. A blank rating means unrated; zero is an actual score. Choose a convention you can repeat: for example, 5 for mixed feelings, 7 for something you enjoyed, and 9 for a personal favorite. These are suggested anchors, not rules about what a work deserves. If you previously used five stars, doubling a score is a simple conversion, but leave uncertain scores blank instead of inventing precision.</p>
-        <p>The Public Review checkbox belongs to each item's Add or Edit form. Leave it unchecked to keep the review off public review pages. Friends can still read reviews and notes in a category you share with them. Checking it opts that review into public sharing, subject to the site's review-quality and moderation rules; it is not a promise of immediate publication. Category privacy and tab visibility are separate controls, not substitutes for checking the review's audience.</p>
-        <p>For example, “Watch with Sam next Friday” belongs in your private journal or a checkpoint reminder if you want it visible only to you. A public review should instead explain a useful judgment: “The slower first half gives the final decision weight; a good fit if you enjoy character conversations more than action.” Avoid personal details and mark spoilers. The <a href="/review-guidelines">review guide</a> has fuller before-and-after examples.</p>
+        <h2 id="reviews-heading">Ratings and reviews</h2>
+        <p>OmniTrackr ratings use a 0–10 scale. A blank rating means unrated; zero is an actual score. Pick a scale you can stick to: for example, 5 for mixed feelings, 7 for something you enjoyed, and 9 for a personal favorite. These are only suggestions for your own scale. Nobody is grading the work itself. If you previously used five stars, doubling a score is a simple conversion, but leave uncertain scores blank instead of inventing precision.</p>
+        <p>The Public Review checkbox belongs to each item's Add or Edit form. Leave it unchecked to keep the review off public review pages. Friends can still read reviews and notes in a category you share with them. Checking it opts that review into public sharing, subject to the site's review-quality and moderation rules, so it may not appear right away. Category privacy and tab visibility are separate controls, and neither one decides who can read a particular review.</p>
+        <p>For example, “Watch with Sam next Friday” belongs in your private journal or a checkpoint reminder if you want it visible only to you. A public review should say what you thought and why: “The slower first half gives the final decision weight; a good fit if you enjoy character conversations more than action.” Avoid personal details and mark spoilers. The <a href="/review-guidelines">review guide</a> has fuller before-and-after examples.</p>
       </section>
 
       <section class="privacy-section" aria-labelledby="statistics-heading">
         <h2 id="statistics-heading">Statistics</h2>
-        <p>The Statistics tab shows overview numbers and charts: how many items you've added per category, average ratings, and trends. Use it to see which categories you use most, how your ratings distribute, and how your activity has grown. The dashboard updates as you add or edit entries.</p>
+        <p>The Statistics tab shows overview numbers and charts: how many items you've added per category, average ratings, and trends. Use it to see which categories you use most, how your ratings are spread out, and how your activity has grown. The dashboard updates as you add or edit entries.</p>
       </section>
 
       <section class="privacy-section" aria-labelledby="tips-heading">
         <h2 id="tips-heading">Tips</h2>
         <ul>
           <li>Add items soon after you finish them so you don't forget.</li>
-          <li>Use consistent rating scales to make statistics more meaningful.</li>
-          <li>Choose Public Review only on entries you intentionally want to share.</li>
+          <li>Rate on the same scale every time so your statistics compare like with like.</li>
+          <li>Choose Public Review only on entries you want strangers to read.</li>
           <li>Export periodically as a backup.</li>
           <li>Adjust privacy per category so friends see only what you're comfortable sharing.</li>
         </ul>
       </section>
 
       <section class="privacy-section" aria-labelledby="guide-library-heading">
-        <h2 id="guide-library-heading">Guide Library</h2>
-        <p>Go deeper when you need a particular workflow. These guides are public, so you can read them before creating an account.</p>
+        <h2 id="guide-library-heading">Guide library</h2>
+        <p>Longer guides for specific tasks. They're all public, so you can read them before you create an account.</p>
 
         <div class="guide-directory-group">
           <h3>Plan your library</h3>
           <div class="guide-grid">
             <a class="guide-card" href="/media-tracking"><h4>Media Tracking Hub</h4><p>A map of watchlists, backlogs, reviews, privacy, exports, and statistics.</p></a>
             <a class="guide-card" href="/media-tracker-checklist"><h4>Setup Checklist</h4><p>Choose categories, rating habits, privacy settings, and a first-week routine.</p></a>
-            <a class="guide-card" href="/tracking-templates"><h4>Tracking Templates</h4><p>Reusable rating scales, review prompts, and backlog cleanup steps.</p></a>
+            <a class="guide-card" href="/tracking-templates"><h4>Tracking Templates</h4><p>Rating scales, review prompts, and backlog cleanup steps to copy.</p></a>
             <a class="guide-card" href="/sample-library"><h4>Sample Library</h4><p>A fictional library with example records, notes, and privacy choices.</p></a>
           </div>
         </div>
@@ -276,9 +274,10 @@
         <div class="guide-directory-group">
           <h3>Maintain and share your history</h3>
           <div class="guide-grid">
+            <a class="guide-card" href="/switch"><h4>Switch From Another Tracker</h4><p>Where IMDb, Letterboxd, Goodreads, StoryGraph, and MyAnimeList keep their exports, and what comes across.</p></a>
             <a class="guide-card" href="/export-import-guide"><h4>Export and Import</h4><p>CSV migration, duplicate handling, worked examples, and JSON backups.</p></a>
             <a class="guide-card" href="/media-statistics"><h4>Media Statistics</h4><p>Completion, rating distribution, review coverage, and category patterns.</p></a>
-            <a class="guide-card" href="/review-guidelines"><h4>Review Guidelines</h4><p>Useful public reviews with prompts, examples, and privacy checks.</p></a>
+            <a class="guide-card" href="/review-guidelines"><h4>Review Guidelines</h4><p>How to write public reviews, with prompts, examples, and privacy checks.</p></a>
             <a class="guide-card" href="/faq"><h4>FAQ</h4><p>Answers about accounts, tracking, sharing, exports, and advertising.</p></a>
           </div>
         </div>

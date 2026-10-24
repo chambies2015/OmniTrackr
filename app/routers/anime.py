@@ -5,14 +5,16 @@ from typing import List, Optional
 from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session
 
+from ..integer_bounds import PositiveDatabaseId
 from .. import crud, schemas, models
 from ..dependencies import get_db, get_current_user
+from .activity import record_finished_on_add
 
 router = APIRouter(prefix="/anime", tags=["anime"])
 
 
 @router.get("/", response_model=List[schemas.Anime])
-async def list_anime(
+def list_anime(
     search: Optional[str] = None,
     sort_by: Optional[str] = None,
     order: Optional[str] = None,
@@ -23,8 +25,8 @@ async def list_anime(
 
 
 @router.get("/{anime_id}", response_model=schemas.Anime)
-async def get_anime(
-    anime_id: int,
+def get_anime(
+    anime_id: PositiveDatabaseId,
     current_user: models.User = Depends(get_current_user),
     db: Session = Depends(get_db)
 ):
@@ -35,17 +37,17 @@ async def get_anime(
 
 
 @router.post("/", response_model=schemas.Anime, status_code=201)
-async def create_anime(
+def create_anime(
     anime: schemas.AnimeCreate,
     current_user: models.User = Depends(get_current_user),
     db: Session = Depends(get_db)
 ):
-    return crud.create_anime(db, current_user.id, anime)
+    return record_finished_on_add(db, current_user.id, "anime", crud.create_anime(db, current_user.id, anime))
 
 
 @router.put("/{anime_id}", response_model=schemas.Anime)
-async def update_anime(
-    anime_id: int,
+def update_anime(
+    anime_id: PositiveDatabaseId,
     anime: schemas.AnimeUpdate,
     current_user: models.User = Depends(get_current_user),
     db: Session = Depends(get_db)
@@ -57,8 +59,8 @@ async def update_anime(
 
 
 @router.delete("/{anime_id}", response_model=schemas.Anime)
-async def delete_anime(
-    anime_id: int,
+def delete_anime(
+    anime_id: PositiveDatabaseId,
     current_user: models.User = Depends(get_current_user),
     db: Session = Depends(get_db)
 ):

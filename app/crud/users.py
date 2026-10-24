@@ -4,7 +4,7 @@ User CRUD operations for the OmniTrackr API.
 from typing import Optional
 from datetime import datetime, timezone
 from sqlalchemy.orm import Session, load_only
-from sqlalchemy import or_
+from sqlalchemy import func, or_
 
 from .. import models, schemas
 
@@ -48,19 +48,34 @@ def get_user_by_id_auth(db: Session, user_id: int) -> Optional[models.User]:
     ).filter(models.User.id == user_id).first()
 
 
+def _unique_case_insensitive(db: Session, *conditions) -> Optional[models.User]:
+    """The one member matching regardless of case; None when there is no single match."""
+    matches = db.query(models.User).filter(or_(*conditions)).limit(2).all()
+    return matches[0] if len(matches) == 1 else None
+
+
 def get_user_by_email(db: Session, email: str) -> Optional[models.User]:
-    """Get user by email."""
-    return db.query(models.User).filter(models.User.email == email).first()
+    """Get user by email (exact match first, then a unique case-insensitive one)."""
+    user = db.query(models.User).filter(models.User.email == email).first()
+    if user is None and email:
+        user = _unique_case_insensitive(db, func.lower(models.User.email) == email.strip().lower())
+    return user
 
 
 def get_user_by_username_or_email(db: Session, username_or_email: str) -> Optional[models.User]:
-    """Get user by username or email (optimized single query)."""
-    return db.query(models.User).filter(
-        or_(
-            models.User.username == username_or_email,
-            models.User.email == username_or_email
+    """Get user by username or email: an exact username, then an exact email, then a unique case-insensitive match.
+
+    An older account's email may equal someone else's username, and an
+    unordered OR match could then resolve sign-in to the wrong account.
+    """
+    user = (db.query(models.User).filter(models.User.username == username_or_email).first()
+            or db.query(models.User).filter(models.User.email == username_or_email).order_by(models.User.id).first())
+    if user is None and username_or_email:
+        needle = username_or_email.strip().lower()
+        user = _unique_case_insensitive(
+            db, func.lower(models.User.username) == needle, func.lower(models.User.email) == needle,
         )
-    ).first()
+    return user
 
 
 def get_user_by_id(db: Session, user_id: int) -> Optional[models.User]:
@@ -99,7 +114,7 @@ def update_user(db: Session, user_id: int, user_update: schemas.UserUpdate) -> O
     
     if 'email' in update_dict and update_dict['email'] != db_user.email:
         existing_user = get_user_by_email(db, update_dict['email'])
-        if existing_user:
+        if existing_user and existing_user.id != db_user.id:
             raise ValueError("Email already registered")
         db_user.email = update_dict['email']
     

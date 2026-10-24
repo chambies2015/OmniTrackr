@@ -1,0 +1,489 @@
+"""Public title pages: which titles get one, and what OmniTrackr knows about each.
+
+A title is identified by its kind, normalized title and year, e.g.
+/titles/movie/interstellar-2014. Pages are built on request from the members'
+libraries (counts, average rating when enough members rated it, public reviews),
+public collections, Release Radar, and cached public facts (title_metadata).
+"""
+from __future__ import annotations
+
+import re
+import unicodedata
+from collections import Counter
+from dataclasses import dataclass, field
+from functools import lru_cache
+from typing import Optional
+
+from sqlalchemy import and_, func, literal, or_
+from sqlalchemy.orm import Session
+
+from . import models
+from .editorial_collections import EDITOR_USERNAME
+from .review_quality import AD_MIN_REVIEW_WORDS, evaluate_public_review, word_count
+
+# URL kind -> (model, review category, library category, label, creator field)
+KINDS = {
+    "movie": (models.Movie, "movie", "movies", "Movie", "director"),
+    "tv": (models.TVShow, "tv_show", "tv-shows", "TV show", None),
+    "anime": (models.Anime, "anime", "anime", "Anime", None),
+    "game": (models.VideoGame, "video_game", "video-games", "Video game", None),
+    "album": (models.Music, "music", "music", "Album", "artist"),
+    "book": (models.Book, "book", "books", "Book", "author"),
+}
+REVIEW_TO_KIND = {review: kind for kind, (_, review, _, _, _) in KINDS.items()}
+LIBRARY_TO_KIND = {library: kind for kind, (_, _, library, _, _) in KINDS.items()}
+COMPLETE_FIELD = {"movie": "watched", "tv": "watched", "anime": "watched", "game": "played", "album": "listened", "book": "read"}
+IMAGE_FIELD = {"movie": "poster_url", "tv": "poster_url", "anime": "poster_url", "game": "cover_art_url",
+               "album": "cover_art_url", "book": "cover_art_url"}
+MIN_RATINGS_SHOWN = 3
+SPREAD_MIN_RATINGS = 5  # A breakdown of three ratings would all but show each member's score.
+# (label, lowest rating in the band), highest band first; ratings are out of 10.
+RATING_BANDS = (("9 to 10", 9.0), ("8 to 8.9", 8.0), ("7 to 7.9", 7.0), ("5 to 6.9", 5.0), ("Below 5", 0.0))
+INDEX_MIN_MEMBERS = 3
+REVIEW_MIN_CHARS = 80
+REVIEW_DETAIL_MIN_CHARS = 240
+
+
+def normalize(title: str) -> str:
+    return " ".join((title or "").strip().casefold().split())
+
+
+@lru_cache(maxsize=16384)
+def slugify(text: str) -> str:
+    text = unicodedata.normalize("NFKD", text or "").encode("ascii", "ignore").decode("ascii").lower()
+    text = re.sub(r"[^a-z0-9]+", "-", text).strip("-")
+    return text[:120] or "title"
+
+
+def title_slug(title: str, year: Optional[int]) -> str:
+    base = slugify(title)
+    return f"{base}-{year}" if year else base
+
+
+def title_path(kind: str, title: str, year: Optional[int]) -> str:
+    return f"/titles/{kind}/{title_slug(title, year)}"
+
+
+def item_year(kind: str, item) -> Optional[int]:
+    if kind == "game":
+        return item.release_date.year if getattr(item, "release_date", None) else None
+    return getattr(item, "year", None) or None
+
+
+def path_for_item(kind: str, item) -> str:
+    return title_path(kind, item.title or "", item_year(kind, item))
+
+
+def path_for_review_category(category: str, title: str, year=None, release_date=None) -> Optional[str]:
+    kind = REVIEW_TO_KIND.get(category)
+    if not kind or not (title or "").strip():
+        return None
+    if kind == "game" and release_date:
+        year = int(str(release_date)[:4]) if str(release_date)[:4].isdigit() else None
+    return title_path(kind, title, year)
+
+
+def _editor_ids(db: Session):
+    return db.query(models.User.id).filter(models.User.username == EDITOR_USERNAME)
+
+
+def _active_ids(db: Session):
+    return db.query(models.User.id).filter(models.User.is_active == True)
+
+
+# A member who made a category private ("not visible to anyone") never feeds that
+# category's public pages, counts, or "also track" suggestions.
+PRIVATE_FLAG = {"movie": "movies_private", "tv": "tv_shows_private", "anime": "anime_private",
+                "game": "video_games_private", "album": "music_private", "book": "books_private"}
+
+
+def _shareable_ids(db: Session, kind: str):
+    flag = getattr(models.User, PRIVATE_FLAG[kind])
+    return db.query(models.User.id).filter(models.User.is_active == True, flag == False)
+
+
+def _visible_rows(db: Session, kind: str, model):
+    """Library rows that may appear on public pages: shareable members, plus any review the member chose to publish."""
+    from sqlalchemy import or_
+    return db.query(model).filter(model.user_id.in_(_active_ids(db))).filter(or_(
+        model.user_id.in_(_shareable_ids(db, kind)), model.review_public == True))
+
+
+@dataclass
+class TitleGroup:
+    kind: str
+    title: str
+    year: Optional[int]
+    normalized: str
+    items: list = field(default_factory=list)
+
+    @property
+    def path(self) -> str:
+        return title_path(self.kind, self.title, self.year)
+
+
+def _scan_all_titles(db: Session, kind: str, model, base: str, year: Optional[int]) -> list:
+    """Rows whose title slugifies to `base`, checked over titles and years only.
+
+    Loading whole rows for this scan made every unknown slug (a mistyped link, or a guest
+    importing a Pick for me title nobody tracks yet) read up to 20,000 full library rows.
+    """
+    year_column = model.release_date if kind == "game" else model.year
+    ids = []
+    for row_id, title, year_value in (_visible_rows(db, kind, model)
+                                      .with_entities(model.id, model.title, year_column).limit(20000).all()):
+        if kind == "game":
+            row_year = year_value.year if year_value else None
+        else:
+            row_year = year_value or None
+        if row_year == year and slugify(title or "") == base:
+            ids.append(row_id)
+    return db.query(model).filter(model.id.in_(ids)).order_by(model.id).all() if ids else []
+
+
+def find(db: Session, kind: str, slug: str) -> Optional[TitleGroup]:
+    """Every library entry (any member) that this slug names."""
+    if kind not in KINDS or not re.fullmatch(r"[a-z0-9-]{1,130}", slug or ""):
+        return None
+    model = KINDS[kind][0]
+    base, separator, year_suffix = slug.rpartition("-")
+    candidates_slugs = [(slug, None)]
+    if base and separator and len(year_suffix) == 4 and year_suffix.isdigit():
+        candidates_slugs.insert(0, (base, int(year_suffix)))
+    for base, year in candidates_slugs:
+        words = [w for w in base.split("-") if w]
+        if not words:
+            continue
+        query = _visible_rows(db, kind, model)
+        longest = max(words, key=len)
+        if len(longest) >= 2:
+            query = query.filter(func.lower(model.title).contains(longest))
+        rows = [row for row in query.limit(2000).all()
+                if slugify(row.title or "") == base and item_year(kind, row) == year]
+        if not rows and len(longest) >= 2:
+            # Accented titles ("Pokémon") don't contain their ASCII slug words; scan without the filter.
+            rows = _scan_all_titles(db, kind, model, base, year)
+        if rows:
+            names = Counter((row.title or "").strip() for row in rows)
+            display = names.most_common(1)[0][0]
+            return TitleGroup(kind, display, year, normalize(display), rows)
+    return None
+
+
+def _slug_candidates(slug: str) -> list[tuple[str, Optional[int]]]:
+    """The (title slug, year) pairs a URL slug can name, in the order find() tries them."""
+    base, separator, year_suffix = slug.rpartition("-")
+    pairs = [(slug, None)]
+    if base and separator and len(year_suffix) == 4 and year_suffix.isdigit():
+        pairs.insert(0, (base, int(year_suffix)))
+    return [(base, year) for base, year in pairs if any(base.split("-"))]
+
+
+def find_many(db: Session, kind: str, slugs, reviewed_only: bool = False) -> dict[str, TitleGroup]:
+    """find() for many slugs of one kind, reading titles and years once instead of once per slug.
+
+    The sitemap checks hundreds of titles; one find() each scanned the library tables
+    hundreds of times. reviewed_only=True puts only the rows with a public review long
+    enough to be search-ready in each group, which is all is_indexable() looks at; a
+    popular title otherwise loads thousands of whole rows only to count them. Which
+    title a slug names is still decided from every row, as find() does.
+    """
+    if kind not in KINDS:
+        return {}
+    plans = {slug: _slug_candidates(slug) for slug in dict.fromkeys(slugs)
+             if re.fullmatch(r"[a-z0-9-]{1,130}", slug or "")}
+    wanted = {pair for pairs in plans.values() for pair in pairs}
+    if not wanted:
+        return {}
+    model = KINDS[kind][0]
+    years = {year for _, year in wanted}
+    year_column = model.release_date if kind == "game" else model.year
+    # SQL trim() strips only spaces, so this flags every row Python's strip() would pass.
+    reviewed = and_(model.review_public == True, func.length(func.trim(model.review)) >= REVIEW_DETAIL_MIN_CHARS)
+    query = _visible_rows(db, kind, model).with_entities(model.id, model.title, year_column,
+                                                         reviewed if reviewed_only else literal(True))
+    if kind != "game":
+        # A year of 0 counts as no year (item_year), so it can only match a yearless slug.
+        known = [year for year in years if year is not None]
+        query = query.filter(or_(model.year.in_(known), model.year.is_(None), model.year == 0) if None in years
+                             else model.year.in_(known))
+    ids_by_pair: dict = {}
+    load = set()
+    for row_id, title, year_value, wanted_row in query.order_by(model.id):
+        row_year = (year_value.year if year_value else None) if kind == "game" else (year_value or None)
+        if row_year not in years:
+            continue
+        pair = (slugify(title or ""), row_year)
+        if pair in wanted:
+            ids_by_pair.setdefault(pair, []).append(row_id)
+            if wanted_row:
+                load.add(row_id)
+    needed = sorted(load)
+    rows_by_id = {}
+    for start in range(0, len(needed), 1000):
+        chunk = needed[start:start + 1000]
+        rows_by_id.update({row.id: row for row in db.query(model).filter(model.id.in_(chunk))})
+    groups = {}
+    for slug, pairs in plans.items():
+        for pair in pairs:
+            rows = [rows_by_id[row_id] for row_id in ids_by_pair.get(pair, ()) if row_id in rows_by_id]
+            if reviewed_only and pair in ids_by_pair and not rows:
+                break  # The slug names this title, which has no search-ready review.
+            if rows:
+                names = Counter((row.title or "").strip() for row in rows)
+                display = names.most_common(1)[0][0]
+                groups[slug] = TitleGroup(kind, display, pair[1], normalize(display), rows)
+                break
+    return groups
+
+
+def _public_reviews(db: Session, kind: str, items: list, decorate: bool = True) -> list[dict]:
+    """Public reviews among `items`, best first.
+
+    decorate=False leaves out helpful counts, profile links, supporter badges and spoiler
+    flags (four more queries) for callers that only count the reviews, like the sitemap.
+    """
+    from .routers.reviews import _current_state_hides_review
+    _, review_category, _, _, _ = KINDS[kind]
+    ids = [item.id for item in items if item.review_public and (item.review or "").strip()]
+    items = sorted(items, key=lambda item: -len((item.review or "").strip()))
+    if not ids:
+        return []
+    states = {s.item_id: s for s in db.query(models.PublicReviewState).filter(
+        models.PublicReviewState.category == review_category, models.PublicReviewState.item_id.in_(ids)).all()}
+    # Only the reviewers: a popular title has thousands of rows but a handful of public reviews.
+    reviewer_ids = {item.user_id for item in items if item.review_public and (item.review or "").strip()}
+    users = {u.id: u for u in db.query(models.User).filter(models.User.id.in_(reviewer_ids)).all()}
+    reviews = []
+    for item in items:
+        if item.id not in ids or len((item.review or "").strip()) < REVIEW_MIN_CHARS:
+            continue
+        user = users.get(item.user_id)
+        if user is None or not user.is_active:
+            continue
+        quality = evaluate_public_review(item.review, REVIEW_MIN_CHARS, REVIEW_DETAIL_MIN_CHARS)
+        if not quality.safe or not quality.community_ready or _current_state_hides_review(states.get(item.id), review_category, item):
+            continue
+        if any(existing["user_id"] == user.id for existing in reviews):
+            continue  # One review per member on a title page.
+        reviews.append({
+            "user_id": user.id,
+            "id": item.id, "category": review_category, "username": user.username, "rating": item.rating,
+            "review": item.review.strip(), "search_ready": quality.search_ready,
+            "url": f"/reviews/{item.id}?category={review_category}",
+        })
+    reviews.sort(key=lambda r: (not r["search_ready"], -len(r["review"])))
+    if not decorate:
+        return reviews
+    if reviews:
+        # Readers' "helpful" marks lead the page; ties keep the longer, standalone reviews first.
+        from .routers.reviews import review_helpful_counts
+        counts = review_helpful_counts(db, [(review_category, r["id"]) for r in reviews])
+        for review in reviews:
+            review["helpful"] = counts.get((review_category, review["id"]), 0)
+        reviews.sort(key=lambda r: -r["helpful"])
+    from .public_profiles import enabled_profile_paths
+    profiles = enabled_profile_paths(db, [review["user_id"] for review in reviews])
+    from .supporters import public_badges
+    badges = public_badges(db, [review["user_id"] for review in reviews])
+    from .review_spoilers import attach
+    attach(db, reviews)
+    for review in reviews:
+        review["profile_url"] = profiles.get(review["user_id"])
+        review["supporter"] = badges.get(review["user_id"])
+    return reviews
+
+
+def _collections_featuring(db: Session, kind: str, items: list) -> list[dict]:
+    from sqlalchemy.orm import selectinload
+    from .routers.collections import _collection_is_discoverable, _media_lookup_for_collections
+    library_category = KINDS[kind][2]
+    rows = db.query(models.Collection).options(selectinload(models.Collection.items)).join(
+        models.CollectionItem, models.CollectionItem.collection_id == models.Collection.id
+    ).filter(
+        models.Collection.is_public == True,
+        models.CollectionItem.category == library_category,
+        models.CollectionItem.item_id.in_([item.id for item in items]),
+    ).distinct().limit(12).all()
+    # Each check reads the collection's titles; look them all up at once, not one query per title.
+    try:
+        media = _media_lookup_for_collections(db, rows)
+    except Exception:
+        media = None
+    featured = []
+    for collection in rows:
+        try:
+            if not _collection_is_discoverable(collection, db, media):
+                continue
+        except Exception:
+            continue
+        featured.append({"name": collection.name, "url": f"/collections/public/{collection.id}",
+                         "description": (collection.description or "")[:180]})
+    return featured[:6]
+
+
+def _related(db: Session, kind: str, group: TitleGroup, limit: int = 8) -> list[dict]:
+    """Titles most often tracked by the same members (any kind), excluding the editors account."""
+    shareable = {uid for uid, in _shareable_ids(db, kind).all()}
+    member_ids = {item.user_id for item in group.items if item.user_id in shareable}
+    editors = {uid for uid, in _editor_ids(db).all()}
+    member_ids -= editors
+    if len(member_ids) < 2:
+        return []
+    counts: Counter = Counter()
+    samples: dict = {}
+    for other_kind, (model, _, _, label, _) in KINDS.items():
+        normalized = func.lower(func.trim(model.title))
+        rows = db.query(normalized, func.count(func.distinct(model.user_id)), func.min(model.id)).filter(
+            model.user_id.in_(member_ids), model.user_id.in_(_shareable_ids(db, other_kind))).group_by(normalized).having(func.count(func.distinct(model.user_id)) >= 2).all()
+        for name, members, sample_id in rows:
+            if not name or (other_kind == kind and name == group.normalized):
+                continue
+            counts[(other_kind, name)] = members
+            samples[(other_kind, name)] = sample_id
+    top = counts.most_common(limit * 2)
+    wanted: dict = {}
+    for key, _ in top:
+        wanted.setdefault(key[0], []).append(samples[key])
+    loaded = {}
+    for other_kind, ids in wanted.items():
+        model = KINDS[other_kind][0]
+        loaded.update({(other_kind, item.id): item for item in db.query(model).filter(model.id.in_(ids))})
+    related = []
+    for (other_kind, name), members in top:
+        item = loaded.get((other_kind, samples[(other_kind, name)]))
+        if item is None:
+            continue
+        related.append({"kind": other_kind, "label": KINDS[other_kind][3], "title": item.title.strip(),
+                        "year": item_year(other_kind, item), "url": path_for_item(other_kind, item),
+                        "image": _safe_image(getattr(item, IMAGE_FIELD[other_kind], None)), "shared": members})
+        if len(related) >= limit:
+            break
+    return related
+
+
+def _safe_image(url) -> Optional[str]:
+    if isinstance(url, str) and url.startswith(("https://", "http://")) and url != "N/A" and len(url) < 1000:
+        return url
+    return None
+
+
+def summarize(db: Session, group: TitleGroup, *, page_sections: bool = True) -> dict:
+    """Member data for a title page (aggregates only, never who tracks it).
+
+    page_sections=False skips the collections and "also tracked" lists and the review
+    decorations (helpful counts, profile links, badges, spoiler flags), which only the
+    page itself shows. The sitemap checks hundreds of titles and needs none of them.
+    """
+    kind = group.kind
+    editors = {uid for uid, in _editor_ids(db).all()}
+    member_items = [item for item in group.items if item.user_id not in editors]
+    members = len({item.user_id for item in member_items})
+    finished = len({item.user_id for item in member_items if getattr(item, COMPLETE_FIELD[kind], False)})
+    # One rating per member even if they saved the title twice.
+    per_member: dict = {}
+    for item in sorted(member_items, key=lambda entry: entry.id):
+        if item.rating is not None:
+            per_member[item.user_id] = item.rating
+    ratings = list(per_member.values())
+    average = round(sum(ratings) / len(ratings), 1) if len(ratings) >= MIN_RATINGS_SHOWN else None
+    creator_field = KINDS[kind][4]
+    creator = None
+    if creator_field:
+        names = Counter((getattr(item, creator_field) or "").strip() for item in group.items if getattr(item, creator_field, None))
+        creator = names.most_common(1)[0][0] if names else None
+    images = Counter(_safe_image(getattr(item, IMAGE_FIELD[kind], None)) for item in group.items)
+    images.pop(None, None)
+    reviews = _public_reviews(db, kind, group.items, decorate=page_sections)
+    return {
+        "members": members,
+        "finished": finished,
+        "rated": len(ratings),
+        "average_rating": average,
+        "spread": rating_spread(ratings),
+        "creator": creator,
+        "image": images.most_common(1)[0][0] if images else None,
+        "reviews": reviews,
+        "search_ready_reviews": sum(1 for review in reviews if review["search_ready"]),
+        "collections": _collections_featuring(db, kind, group.items) if page_sections else [],
+        "related": _related(db, kind, group) if page_sections else [],
+    }
+
+
+def rating_spread(ratings: list) -> Optional[list[dict]]:
+    """How member ratings split across RATING_BANDS, once enough members have rated."""
+    if len(ratings) < SPREAD_MIN_RATINGS:
+        return None
+    counts = Counter()
+    for rating in ratings:
+        for label, low in RATING_BANDS:
+            if rating >= low:
+                counts[label] += 1
+                break
+        else:
+            counts[RATING_BANDS[-1][0]] += 1
+    return [{"label": label, "count": counts[label], "percent": round(100 * counts[label] / len(ratings))}
+            for label, _ in RATING_BANDS]
+
+
+def is_indexable(summary: dict, metadata: Optional[dict]) -> bool:
+    """Offered to search engines (and eligible for ads) only with original member writing.
+
+    Facts and descriptions borrowed from Wikipedia, TVmaze and others are useful to
+    visitors but aren't ours; a page needs at least one substantial public member
+    review before it counts as OmniTrackr content (AdSense "low value content").
+    """
+    return summary["search_ready_reviews"] >= 1
+
+
+def is_ad_eligible(summary: dict, metadata: Optional[dict]) -> bool:
+    """Ads need more than a single short review: enough member writing to carry the page."""
+    if not is_indexable(summary, metadata):
+        return False
+    written = sum(word_count(review["review"]) for review in summary["reviews"] if review["search_ready"])
+    return written >= AD_MIN_REVIEW_WORDS
+
+
+def popular(db: Session, kind: str, limit: int = 24, min_members: int = 2) -> list[dict]:
+    """Titles tracked by the most members, for the /titles index and the sitemap."""
+    model = KINDS[kind][0]
+    normalized = func.lower(func.trim(model.title))
+    members = func.count(func.distinct(model.user_id))
+    rows = db.query(normalized, members, func.min(model.id)).filter(
+        model.user_id.in_(_shareable_ids(db, kind)), ~model.user_id.in_(_editor_ids(db)),
+    ).group_by(normalized).having(members >= min_members).order_by(members.desc(), normalized).limit(limit).all()
+    samples = {}
+    sample_ids = [sample_id for _, _, sample_id in rows]
+    for start in range(0, len(sample_ids), 1000):
+        samples.update({item.id: item for item in db.query(model).filter(model.id.in_(sample_ids[start:start + 1000]))})
+    results = []
+    for name, count, sample_id in rows:
+        item = samples.get(sample_id)
+        if item is None or not (item.title or "").strip():
+            continue
+        results.append({"kind": kind, "label": KINDS[kind][3], "title": item.title.strip(),
+                        "year": item_year(kind, item), "url": path_for_item(kind, item), "members": int(count),
+                        "image": _safe_image(getattr(item, IMAGE_FIELD[kind], None)), "normalized": name})
+    return results
+
+
+def reviewed_titles(db: Session, limit: int = 300) -> list[dict]:
+    """Titles with at least one search-ready public review."""
+    results = []
+    for kind, (model, review_category, _, label, _) in KINDS.items():
+        rows = db.query(model).filter(
+            model.user_id.in_(_active_ids(db)), model.review_public == True, model.review.isnot(None),
+            func.length(func.trim(model.review)) >= REVIEW_DETAIL_MIN_CHARS,
+        ).limit(limit).all()
+        seen = set()
+        for item in rows:
+            if not (item.title or "").strip():
+                continue
+            if not evaluate_public_review(item.review, REVIEW_MIN_CHARS, REVIEW_DETAIL_MIN_CHARS).search_ready:
+                continue
+            path = path_for_item(kind, item)
+            if path in seen:
+                continue
+            seen.add(path)
+            results.append({"kind": kind, "title": item.title.strip(), "year": item_year(kind, item), "url": path})
+    return results

@@ -5,14 +5,16 @@ from typing import List, Optional
 from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session
 
+from ..integer_bounds import PositiveDatabaseId
 from .. import crud, schemas, models
 from ..dependencies import get_db, get_current_user
+from .activity import record_finished_on_add
 
 router = APIRouter(prefix="/movies", tags=["movies"])
 
 
 @router.get("/", response_model=List[schemas.Movie])
-async def list_movies(
+def list_movies(
     search: Optional[str] = None,
     sort_by: Optional[str] = None,
     order: Optional[str] = None,
@@ -23,8 +25,8 @@ async def list_movies(
 
 
 @router.get("/{movie_id}", response_model=schemas.Movie)
-async def get_movie(
-    movie_id: int,
+def get_movie(
+    movie_id: PositiveDatabaseId,
     current_user: models.User = Depends(get_current_user),
     db: Session = Depends(get_db)
 ):
@@ -35,17 +37,17 @@ async def get_movie(
 
 
 @router.post("/", response_model=schemas.Movie, status_code=201)
-async def create_movie(
+def create_movie(
     movie: schemas.MovieCreate,
     current_user: models.User = Depends(get_current_user),
     db: Session = Depends(get_db)
 ):
-    return crud.create_movie(db, current_user.id, movie)
+    return record_finished_on_add(db, current_user.id, "movies", crud.create_movie(db, current_user.id, movie))
 
 
 @router.put("/{movie_id}", response_model=schemas.Movie)
-async def update_movie(
-    movie_id: int,
+def update_movie(
+    movie_id: PositiveDatabaseId,
     movie: schemas.MovieUpdate,
     current_user: models.User = Depends(get_current_user),
     db: Session = Depends(get_db)
@@ -57,8 +59,8 @@ async def update_movie(
 
 
 @router.delete("/{movie_id}", response_model=schemas.Movie)
-async def delete_movie(
-    movie_id: int,
+def delete_movie(
+    movie_id: PositiveDatabaseId,
     current_user: models.User = Depends(get_current_user),
     db: Session = Depends(get_db)
 ):

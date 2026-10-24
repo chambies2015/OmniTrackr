@@ -7,7 +7,7 @@
   <meta name="description" content="Choose titles from a shared OmniTrackr collection and preview your private copy before saving.">
   <title>{{TITLE}}</title>
   <link rel="icon" href="/omnitrackr_favicon.ico">
-  <link rel="stylesheet" href="/styles.css?v=20260922-collection-save">
+  <link rel="stylesheet" href="/static/public-legacy.css?v=20261004-legacy-1">
   <link rel="stylesheet" href="/static/collection-save.css?v=20260928-site-2">
   <script src="/static/collection-save.js?v=20260922-collection-save" defer></script>
 </head>
@@ -34,7 +34,7 @@
         <div class="collection-save-actions">
           <button id="collectionSaveConfirm" type="button" hidden>Save my private collection</button>
           <a id="collectionSaveOpen" class="collection-save-primary" href="/" hidden>Open your saved collection →</a>
-          <a id="collectionSaveSignin" class="collection-save-primary" href="{{SIGNIN_URL}}" hidden>Sign in or create an account →</a>
+          <a id="collectionSaveSignin" class="collection-save-primary" rel="nofollow" href="{{SIGNIN_URL}}" hidden>Sign in or create an account →</a>
           <button id="collectionSaveRetry" class="collection-save-secondary" type="button" hidden>Check my library again</button>
         </div>
         <p class="collection-save-footnote">Your copy is private and can be edited independently. The curator’s personal ratings, reviews and progress are never copied.</p>

@@ -119,7 +119,8 @@ class TrafficRecorder:
             self._visitor_day = day
             self._visitor_salt = secrets.token_bytes(16)
             self._seen = set()
-        forwarded = request.headers.get("x-forwarded-for", "")
+        # Render (behind Cloudflare) passes the visitor's address in True-Client-IP.
+        forwarded = request.headers.get("true-client-ip") or request.headers.get("x-forwarded-for", "")
         ip = forwarded.split(",")[0].strip() if forwarded else (request.client.host if request.client else "")
         digest = hashlib.sha256(self._visitor_salt + ip.encode() + b"|" + user_agent.encode()).digest()[:12]
         if digest in self._seen:

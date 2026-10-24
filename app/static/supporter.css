@@ -1,0 +1,64 @@
+/* Account → Supporter extras (badge preview, extra colors, locked gold) and the one-time thank-you card. */
+.supporter-accent__swatch--emerald { background: #34d399; }
+.supporter-accent__swatch--coral { background: #fb7185; }
+.supporter-accent__swatch--gold { background: #eab308; box-shadow: 0 0 0 2px rgba(234, 179, 8, .35); }
+.supporter-accent--locked { cursor: not-allowed; opacity: .5; }
+.supporter-accent__hint { flex-basis: 100%; margin: 8px 0 0; }
+
+.supporter-preview { margin: 4px 0 12px; }
+.supporter-preview__badge { --badge: 139, 92, 246; background: rgba(var(--badge), .16); border: 1px solid rgba(var(--badge), .55); border-radius: 999px; color: var(--fg, #f1effc); display: inline-block; font-size: .85rem; font-weight: 600; padding: 4px 12px; }
+.supporter-preview__badge--teal { --badge: 45, 212, 191; }
+.supporter-preview__badge--amber { --badge: 245, 158, 11; }
+.supporter-preview__badge--rose { --badge: 244, 114, 182; }
+.supporter-preview__badge--sky { --badge: 56, 189, 248; }
+.supporter-preview__badge--emerald { --badge: 52, 211, 153; }
+.supporter-preview__badge--coral { --badge: 251, 113, 133; }
+.supporter-preview__badge--gold { --badge: 234, 179, 8; }
+.supporter-preview__badge--founding { background: linear-gradient(120deg, rgba(234, 179, 8, .22), rgba(var(--badge), .16)); border-color: rgba(234, 179, 8, .6); }
+
+.supporter-welcome { animation: supporter-welcome-in .35s ease-out; background: var(--card-bg, #15122b); border: 1px solid rgba(139, 92, 246, .55); border-radius: 16px; bottom: 20px; box-shadow: 0 24px 60px rgba(0, 0, 0, .45); color: var(--fg, #f1effc); max-width: 360px; padding: 18px 20px; position: fixed; right: 20px; z-index: 2000; }
+.supporter-welcome strong { display: block; font-size: 1.05rem; margin-bottom: 6px; }
+.supporter-welcome p { color: var(--fg-secondary, #aaa6cb); font-size: .92rem; line-height: 1.5; margin: 0 0 14px; }
+.supporter-welcome__actions { align-items: center; display: flex; gap: 12px; }
+.supporter-welcome__close { background: none; border: 0; color: var(--fg-secondary, #aaa6cb); cursor: pointer; font: inherit; padding: 6px; }
+.supporter-welcome__close:hover { color: var(--fg, #f1effc); }
+@keyframes supporter-welcome-in { from { opacity: 0; transform: translateY(12px); } to { opacity: 1; transform: none; } }
+@media (prefers-reduced-motion: reduce) { .supporter-welcome { animation: none; } }
+@media (max-width: 520px) { .supporter-welcome { left: 12px; max-width: none; right: 12px; bottom: 12px; } }
+
+/* Account → Supporter: profile banner picker (art from profile-banners.css). */
+.supporter-banners { --profile-accent: 139, 92, 246; grid-template-columns: repeat(auto-fill, minmax(118px, 1fr)); }
+.supporter-banners legend { grid-column: 1 / -1; }
+.supporter-banners--accent-teal { --profile-accent: 45, 212, 191; }
+.supporter-banners--accent-amber { --profile-accent: 245, 158, 11; }
+.supporter-banners--accent-rose { --profile-accent: 244, 114, 182; }
+.supporter-banners--accent-sky { --profile-accent: 56, 189, 248; }
+.supporter-banners--accent-emerald { --profile-accent: 52, 211, 153; }
+.supporter-banners--accent-coral { --profile-accent: 251, 113, 133; }
+.supporter-banners--accent-gold { --profile-accent: 234, 179, 8; }
+.supporter-banner { cursor: pointer; display: grid; font-size: .85rem; gap: 6px; position: relative; }
+.supporter-banner input { height: 1px; opacity: 0; position: absolute; width: 1px; }
+.supporter-banner__swatch { background-color: #0b0a18; border: 2px solid rgba(127, 127, 127, .32); border-radius: 10px; display: block; height: 52px; overflow: hidden; position: relative; }
+.supporter-banner__art { display: block; height: 172px; left: 0; position: absolute; top: 0; transform: scale(.3); transform-origin: 0 0; width: 400px; }
+.supporter-banner__swatch--none { background: repeating-linear-gradient(135deg, rgba(255, 255, 255, .06) 0 6px, transparent 6px 12px), #15122b; }
+.supporter-banner input:checked + .supporter-banner__swatch { border-color: rgb(var(--profile-accent)); box-shadow: 0 0 0 3px rgba(var(--profile-accent), .3); }
+.supporter-banner input:focus-visible + .supporter-banner__swatch { outline: 3px solid #c4b5fd; outline-offset: 2px; }
+.supporter-banner input:disabled + .supporter-banner__swatch { opacity: .45; }
+.supporter-banner:has(input:disabled) { cursor: not-allowed; }
+
+/* Account → Public profile: showcase picker. */
+.profile-showcase-settings { border-top: 1px solid rgba(127, 127, 127, .25); margin-top: 18px; padding-top: 14px; }
+.profile-showcase-settings h4 { font-size: 1rem; margin: 0 0 4px; }
+.profile-showcase-settings .form-group { margin: 12px 0 0; }
+.showcase-picks, .showcase-results { display: grid; gap: 8px; list-style: none; margin: 8px 0 0; padding: 0; }
+.showcase-picks:empty { display: none; }
+.showcase-row { align-items: center; background: rgba(127, 127, 127, .08); border: 1px solid rgba(127, 127, 127, .25); border-radius: 10px; display: grid; gap: 10px; grid-template-columns: 32px minmax(0, 1fr) auto; padding: 6px 8px; }
+.showcase-row__art { background: linear-gradient(160deg, #3b2a7a, #141630); border-radius: 5px; height: 46px; object-fit: cover; width: 32px; }
+.showcase-row__copy { display: grid; min-width: 0; }
+.showcase-row__copy strong { font-size: .9rem; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.showcase-row__copy small { font-size: .78rem; opacity: .72; }
+.showcase-row__actions { display: flex; gap: 4px; }
+.showcase-row__actions button { background: rgba(127, 127, 127, .1); border: 1px solid rgba(127, 127, 127, .32); border-radius: 8px; color: inherit; cursor: pointer; font: inherit; font-size: .82rem; min-height: 32px; min-width: 32px; padding: 4px 10px; }
+.showcase-row__actions button:hover:not(:disabled) { background: rgba(139, 92, 246, .22); border-color: rgba(139, 92, 246, .6); }
+.showcase-row__actions button:disabled { cursor: default; opacity: .4; }
+.showcase-results__empty { font-size: .85rem; opacity: .72; padding: 4px 2px; }

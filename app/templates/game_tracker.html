@@ -26,11 +26,9 @@
   <meta name="twitter:description" content="Track video game backlogs, played status, genres, ratings, reviews, and gaming statistics with OmniTrackr.">
   <meta name="twitter:image" content="https://omnitrackr.xyz/omnitrackr_vortex.png">
   <meta name="twitter:image:alt" content="OmniTrackr game tracker">
-  <link rel="preconnect" href="https://fonts.googleapis.com">
-  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@700;800&family=Inter:wght@400;500;600&display=swap"
-    rel="stylesheet">
-  <link rel="stylesheet" href="/styles.css">
+  <link rel="preload" href="/static/fonts/poppins-700-latin.woff2" as="font" type="font/woff2" crossorigin>
+  <link rel="preload" href="/static/fonts/poppins-800-latin.woff2" as="font" type="font/woff2" crossorigin>
+  <link rel="stylesheet" href="/static/fonts.css?v=20261009-fonts-1">
   <style>
     body { min-height: 100vh; padding: 20px; }
     .privacy-wrapper { max-width: 1040px; margin: 0 auto; }
@@ -62,7 +60,7 @@
     "inLanguage": "en-US"
   }
   </script>
-  <link rel="stylesheet" href="/static/public-reader.css?v=20260928-site-2">
+  <link rel="stylesheet" href="/static/public-reader.css?v=20261017-reader-2">
 </head>
 
 <body class="public-reader site">
@@ -79,26 +77,26 @@
       <details class="reader-contents">
         <summary>On this page</summary>
         <nav aria-label="On this page">
-          <a href="#why-heading">Why Track Video Games?</a>
-          <a href="#backlog-heading">A Better Backlog Workflow</a>
-          <a href="#completion-heading">Completion, Platforms, and Play Style</a>
-          <a href="#review-heading">What to Put in a Game Review</a>
-          <a href="#stats-heading">Using Game Statistics</a>
-          <a href="#cleanup-heading">Game Backlog Cleanup Checklist</a>
-          <a href="#privacy-heading">Sharing a Game Library</a>
-          <a href="#related-heading">Related Pages</a>
+          <a href="#why-heading">Why track video games?</a>
+          <a href="#backlog-heading">A better way to handle the backlog</a>
+          <a href="#completion-heading">Completion, platforms, and play style</a>
+          <a href="#review-heading">What to put in a game review</a>
+          <a href="#stats-heading">Using game statistics</a>
+          <a href="#cleanup-heading">Game backlog cleanup checklist</a>
+          <a href="#privacy-heading">Sharing a game library</a>
+          <a href="#related-heading">Related pages</a>
         </nav>
       </details>
 
 
       <section class="privacy-section" aria-labelledby="why-heading">
-        <h2 id="why-heading">Why Track Video Games?</h2>
-        <p>Game libraries get messy quickly. A single player might have wishlisted games, unfinished games, completed campaigns, multiplayer staples, subscription discoveries, old favorites, and games abandoned after an hour. Storefront libraries show ownership, but they do not always show what you played, what you finished, what you actually liked, or why you stopped.</p>
-        <p>OmniTrackr gives games a home beside the rest of your media collection. That matters because games often compete with movies, shows, anime, books, and music for the same free time. A game tracker helps you choose deliberately instead of buying more while forgetting what is already waiting.</p>
+        <h2 id="why-heading">Why track video games?</h2>
+        <p>Game libraries get messy quickly. A single player might have wishlisted games, unfinished games, completed campaigns, multiplayer staples, subscription discoveries, old favorites, and games abandoned after an hour. Storefront libraries show ownership, but they don't show what you played, what you finished, what you liked, or why you stopped.</p>
+        <p>OmniTrackr keeps games in the same library as the rest of your media. Games compete with movies, shows, anime, books, and music for the same evenings, so it helps to see them together. A list of what's already waiting also makes it harder to buy three more games in the next sale.</p>
       </section>
 
       <section class="privacy-section" aria-labelledby="backlog-heading">
-        <h2 id="backlog-heading">A Better Backlog Workflow</h2>
+        <h2 id="backlog-heading">A better way to handle the backlog</h2>
         <ol>
           <li>Add games when you start them, finish them, or decide they belong in your backlog.</li>
           <li>Use played status to separate unplayed, in-progress, completed, and abandoned games.</li>
@@ -106,48 +104,48 @@
           <li>Rate after enough playtime to understand the mechanics, pacing, and replay value.</li>
           <li>Write a review when a game is worth recommending, warning about, or remembering clearly.</li>
         </ol>
-        <p>This workflow keeps the backlog from becoming a guilt list. The point is not to finish everything. The point is to know what you have, what you are choosing, and what no longer deserves attention.</p>
-        <p>A healthy backlog also distinguishes ownership from intent. A game in a subscription library, a sale purchase, a multiplayer invite, and a carefully chosen single-player campaign do not need the same priority. Notes and status help you remember why a game was added before the next sale adds more noise.</p>
+        <p>A backlog shouldn't turn into a guilt list. You don't have to finish everything. You just want to know what you have, what you're playing next, and what you can stop thinking about.</p>
+        <p>Owning a game isn't the same as wanting to play it. A game in a subscription library, a sale purchase, a multiplayer invite, and a single-player campaign you've been waiting for don't all need the same priority. A short note and the played status remind you why you added each game before the next sale buries it.</p>
       </section>
 
       <section class="privacy-section" aria-labelledby="completion-heading">
-        <h2 id="completion-heading">Completion, Platforms, and Play Style</h2>
-        <p>Finishing a game can mean different things depending on the genre. Completing a short narrative game, reaching credits in a role-playing game, clearing a roguelike milestone, or deciding a multiplayer game is no longer part of your rotation are all valid tracking moments. A useful game tracker should leave room for those differences.</p>
-        <p>Platform context can matter too, even when the core title is the same. A game may be better on handheld, stronger with friends, weaker on older hardware, or more satisfying with accessibility settings. Review notes are the right place to capture the version of the experience you actually had.</p>
+        <h2 id="completion-heading">Completion, platforms, and play style</h2>
+        <p>Finishing a game can mean different things depending on the genre. Completing a short narrative game, reaching credits in a role-playing game, clearing a roguelike milestone, or deciding a multiplayer game is no longer part of your rotation can all count as done. Your tracker should let each of those count.</p>
+        <p>The platform can make a difference too, even for the same game. A game may be better on handheld, stronger with friends, weaker on older hardware, or more satisfying with accessibility settings. Review notes are where you record the version you actually played.</p>
       </section>
 
       <section class="privacy-section" aria-labelledby="review-heading">
-        <h2 id="review-heading">What to Put in a Game Review</h2>
-        <p>Good game reviews usually benefit from specifics: controls, difficulty, pacing, performance, art direction, story, level design, multiplayer experience, and whether the game respects the player's time. A five-star rating might say you loved it, but a review can explain whether you loved the combat, the world, the co-op loop, or the quiet exploration.</p>
-        <p>For long games, review notes can also capture where the experience changed. A game may start slowly and become excellent, or begin strong and become repetitive. Keeping that context helps future-you make better choices when deciding whether to return for downloadable content, sequels, or similar recommendations.</p>
-        <p>Public game reviews are strongest when they explain player fit. Mention whether the game suits completionists, casual sessions, co-op groups, story-focused players, competitive players, or people who only have short windows to play.</p>
+        <h2 id="review-heading">What to put in a game review</h2>
+        <p>Good game reviews get specific: controls, difficulty, pacing, performance, art direction, story, level design, multiplayer experience, and whether the game respects the player's time. A five-star rating might say you loved it, but a review can explain whether you loved the combat, the world, the co-op loop, or the quiet exploration.</p>
+        <p>For long games, review notes can also capture where the experience changed. A game may start slowly and become excellent, or begin strong and become repetitive. If you write that down, you'll know later whether to come back for downloadable content, try a sequel, or look for something similar.</p>
+        <p>Public game reviews work best when they say who the game is for. Mention whether the game suits completionists, casual sessions, co-op groups, story-focused players, competitive players, or people who only have short windows to play.</p>
       </section>
 
       <section class="privacy-section" aria-labelledby="stats-heading">
-        <h2 id="stats-heading">Using Game Statistics</h2>
-        <p>Game statistics help reveal patterns that storefronts rarely show clearly. You might notice that your highest-rated games are shorter, that you abandon open-world games more often than expected, or that certain genres dominate your backlog. Those patterns can guide future purchases and help you avoid buying games you are unlikely to finish.</p>
+        <h2 id="stats-heading">Using game statistics</h2>
+        <p>Game statistics show patterns that storefronts don't. You might notice that your highest-rated games are shorter, that you abandon open-world games more often than expected, or that certain genres dominate your backlog. Knowing that, you can skip buying games you probably won't finish.</p>
       </section>
 
       <section class="privacy-section" aria-labelledby="cleanup-heading">
-        <h2 id="cleanup-heading">Game Backlog Cleanup Checklist</h2>
-        <p>A game backlog becomes easier to manage when every entry has a next decision. Keep games you actively want to play, mark finished games honestly, and move abandoned games out of the mental queue. A tracker should reduce pressure, not turn entertainment into homework.</p>
+        <h2 id="cleanup-heading">Game backlog cleanup checklist</h2>
+        <p>A game backlog is easier to manage when you know what you'll do with each entry. Keep the games you want to play, mark finished games honestly, and stop counting abandoned games as things you still owe yourself. Games are for fun, and the list shouldn't feel like homework.</p>
         <ul>
           <li>Mark games you are actively playing before adding more sale purchases.</li>
           <li>Add a short private note for games you paused so you know whether to restart or continue.</li>
           <li>Rate only after enough playtime to judge mechanics, pacing, performance, and difficulty.</li>
-          <li>Write public reviews for games where your experience can help another player choose wisely.</li>
+          <li>Write public reviews for games where your experience would help another player decide.</li>
         </ul>
-        <p>This cleanup habit is especially useful for subscription libraries and seasonal sales, where ownership can grow faster than actual play time.</p>
+        <p>This helps most with subscription libraries and seasonal sales, where you can end up owning far more than you have time to play.</p>
       </section>
 
       <section class="privacy-section" aria-labelledby="privacy-heading">
-        <h2 id="privacy-heading">Sharing a Game Library</h2>
-        <p>Game lists can be fun to share with friends, especially when you want co-op recommendations or want to compare favorites. OmniTrackr privacy controls let you choose whether your video game library and statistics are visible. You can keep your full backlog private while still making finished reviews public when they are useful to other people.</p>
-        <p>That keeps the backlog honest. Private notes can be blunt about why you bounced off a game, while public reviews can be polished enough to help someone else decide whether it fits their taste.</p>
+        <h2 id="privacy-heading">Sharing a game library</h2>
+        <p>Game lists can be fun to share with friends, especially when you want co-op recommendations or want to compare favorites. OmniTrackr privacy controls let you choose whether your video game library and statistics are visible. You can keep your full backlog private and still publish finished reviews for other people to read.</p>
+        <p>Because the backlog is private, you can be honest in it. Private notes can be blunt about why you bounced off a game, and a public review can be tidied up for someone deciding whether the game fits their taste.</p>
       </section>
 
       <section class="privacy-section" aria-labelledby="related-heading">
-        <h2 id="related-heading">Related Pages</h2>
+        <h2 id="related-heading">Related pages</h2>
         <p>For other tracking workflows, read the <a href="/tv-show-tracker">TV show tracker guide</a>, the broader <a href="/use-cases">media tracking use cases</a>, or the <a href="/compare">media tracker comparison page</a>.</p>
       </section>
 

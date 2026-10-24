@@ -19,6 +19,7 @@ body.public-reader {
 }
 .public-reader a { color: var(--site-violet-soft); text-decoration-color: rgba(196, 181, 253, .45); text-underline-offset: 4px; }
 .public-reader a:hover { color: #fff; text-decoration-color: currentColor; }
+.public-reader .faq-answer a { text-decoration-line: underline; } /* in-text links must not rely on color alone */
 .public-reader .reader-skip { background: #fff; border: 0; border-radius: 8px; color: #140f2e; font-weight: 700; left: 16px; padding: 10px 16px; position: absolute; top: -100px; z-index: 100; }
 .public-reader .reader-skip:focus { top: 12px; }
 
@@ -156,3 +157,81 @@ body.public-reader {
 .public-reader .faq-answer p { margin: 0 0 10px; }
 .public-reader .contact-info { margin-top: 20px; }
 .public-reader .last-updated { border-top: 1px solid var(--site-border); color: var(--site-muted); font-size: .9rem; margin-top: 32px; padding-top: 20px; }
+
+/* Reading aids (site.js): time to read, progress and the "On this page" rail. */
+.public-reader .reader-meta,
+.public-reader :is(.privacy-header, .public-header, .content-header) .reader-meta { color: var(--site-muted); font-size: .86rem; letter-spacing: .01em; margin: 6px 0 0; }
+.public-reader .reader-progress {
+  background: linear-gradient(90deg, var(--site-violet), var(--site-teal));
+  height: 3px;
+  left: 0;
+  pointer-events: none;
+  position: fixed;
+  right: 0;
+  top: 0;
+  transform: scaleX(0);
+  transform-origin: 0 50%;
+  z-index: 70;
+}
+.public-reader .reader-contents a[aria-current="location"] { color: #fff; }
+
+@media (min-width: 1100px) {
+  .public-reader .reader-shell:has(.reader-main > .reader-contents) { max-width: 1180px; }
+  .public-reader .reader-main:has(> .reader-contents) {
+    align-items: start;
+    column-gap: clamp(40px, 5vw, 72px);
+    display: grid;
+    grid-template-columns: minmax(0, 800px) 240px;
+    justify-content: space-between;
+  }
+  .public-reader .reader-main:has(> .reader-contents) > * { grid-column: 1; }
+  .public-reader .reader-main > .reader-contents {
+    background: none;
+    border: 0;
+    border-left: 1px solid var(--site-border);
+    border-radius: 0;
+    grid-column: 2;
+    grid-row: 2 / span 80;
+    margin: 0;
+    max-height: calc(100vh - 120px);
+    overflow-y: auto;
+    padding: 0 0 0 4px;
+    position: sticky;
+    top: 96px;
+  }
+  .public-reader .reader-main > .reader-contents > summary {
+    color: var(--site-muted);
+    cursor: default;
+    font-size: .72rem;
+    font-weight: 700;
+    letter-spacing: .14em;
+    list-style: none;
+    padding: 0 0 10px 16px;
+    pointer-events: none;
+    text-transform: uppercase;
+  }
+  .public-reader .reader-main > .reader-contents > summary::-webkit-details-marker { display: none; }
+  .public-reader .reader-main > .reader-contents nav { display: grid; gap: 2px; grid-template-columns: 1fr; padding: 0; }
+  .public-reader .reader-main > .reader-contents a {
+    border-left: 2px solid transparent;
+    color: var(--site-muted);
+    font-size: .86rem;
+    line-height: 1.45;
+    margin-left: -5px;
+    padding: 7px 10px 7px 17px;
+    transition: color .15s ease, border-color .15s ease;
+  }
+  .public-reader .reader-main > .reader-contents a:hover { color: var(--site-text); }
+  .public-reader .reader-main > .reader-contents a[aria-current="location"] { border-left-color: var(--site-teal); color: #fff; font-weight: 600; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .public-reader .reader-main > .reader-contents a { transition: none; }
+}
+
+/* Site map: every written guide, grouped by section. */
+.public-reader .directory-groups { display: grid; gap: 14px 28px; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); margin: 22px 0 32px; }
+.public-reader .directory-group h3 { font-size: 1.02rem; margin: 0 0 10px; }
+.public-reader .directory-group h3 a { color: var(--site-text); text-decoration: none; }
+.public-reader .directory-group h3 a:hover { text-decoration: underline; text-underline-offset: 4px; }
+.public-reader .directory-group ul { display: grid; gap: 6px; list-style: none; margin: 0; padding: 0; }
+.public-reader .directory-group li a { color: var(--site-soft); font-size: .95rem; }

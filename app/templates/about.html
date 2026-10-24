@@ -4,7 +4,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <meta name="description" content="Learn about OmniTrackr, a free media tracker for movies, shows, anime, games, music, and books with reviews, stats, friends, privacy, and export.">
+  <meta name="description" content="OmniTrackr is a free, independent media tracker and a library of free guides. Who runs it, how the guides are written and checked, and how the site is paid for.">
   <meta name="robots" content="index, follow, max-image-preview:large">
   <meta name="author" content="OmniTrackr">
   <title>About OmniTrackr - Free Media Tracking App</title>
@@ -26,23 +26,21 @@
   <meta name="twitter:description" content="Learn how OmniTrackr helps you track movies, shows, anime, games, music, and books.">
   <meta name="twitter:image" content="https://omnitrackr.xyz/omnitrackr_vortex.png">
   <meta name="twitter:image:alt" content="OmniTrackr media tracking app">
-  <link rel="preconnect" href="https://fonts.googleapis.com">
-  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@700;800&family=Inter:wght@400;500;600&display=swap"
-    rel="stylesheet">
-  <link rel="stylesheet" href="/styles.css">
-  <link rel="stylesheet" href="/static/public-reader.css?v=20260928-site-2">
+  <link rel="preload" href="/static/fonts/poppins-700-latin.woff2" as="font" type="font/woff2" crossorigin>
+  <link rel="preload" href="/static/fonts/poppins-800-latin.woff2" as="font" type="font/woff2" crossorigin>
+  <link rel="stylesheet" href="/static/fonts.css?v=20261009-fonts-1">
+  <link rel="stylesheet" href="/static/public-reader.css?v=20261017-reader-2">
 
   <script type="application/ld+json">
   {
     "@context": "https://schema.org",
     "@type": "AboutPage",
     "name": "About OmniTrackr",
-    "description": "OmniTrackr is a free media tracking app for movies, TV shows, anime, video games, music, and books.",
+    "description": "OmniTrackr is a free, independent media tracker for movies, TV shows, anime, video games, music and books, with free guides to what to watch, play, read and hear next.",
     "url": "https://omnitrackr.xyz/about",
     "inLanguage": "en-US",
     "isPartOf": { "@type": "WebSite", "name": "OmniTrackr", "url": "https://omnitrackr.xyz" },
-    "dateModified": "2026-02-05",
+    "dateModified": "2026-10-17",
     "publisher": { "@type": "Organization", "name": "OmniTrackr", "url": "https://omnitrackr.xyz" }
   }
   </script>
@@ -57,63 +55,48 @@
 
       <header class="privacy-header">
         <h1>About OmniTrackr</h1>
-        <p>Your personal media tracking companion</p>
+        <p>A free, independent tracker for everything you watch, play, read and hear, and a library of free guides to what to try next.</p>
       </header>
 
       <section class="privacy-section" aria-labelledby="mission-heading">
-        <h2 id="mission-heading">What Is OmniTrackr?</h2>
-        <p>OmniTrackr is a free web application that helps you track, rate, and organize everything you watch, play, and read. Instead of juggling spreadsheets or forgetting what you've seen, you keep one central place for your movies, TV shows, anime, video games, music, and books.</p>
-        <p>Whether you want to remember what to watch next, compare your tastes with friends, or simply see your viewing and reading stats over time, OmniTrackr gives you the tools without locking you into a single platform or device.</p>
-        <p>The project exists because media habits rarely stay inside one app. A streaming service can remember one catalog, a storefront can remember purchases, and a notes app can hold loose recommendations, but none of those give a complete personal history. OmniTrackr is designed around the whole library: what you plan to try, what you finished, what you loved, what you dropped, and what you would recommend later.</p>
+        <h2 id="mission-heading">What OmniTrackr is</h2>
+        <p>OmniTrackr keeps movies, TV shows, anime, video games, albums and books in one private library. You can rate them, write notes and reviews, save the episode or page you stopped at, and see how your taste changes over time. It runs in the browser on any device, it is free, and you can export everything whenever you like.</p>
+        <p>It exists because media habits rarely stay inside one app. A streaming service remembers its own catalog, a storefront remembers purchases, and a notes app holds loose recommendations from friends. None of them gives you the whole picture: what you meant to try, what you finished, what you loved, what you dropped and what you would hand to a friend. OmniTrackr is built around that whole picture.</p>
       </section>
 
-      <section class="privacy-section" aria-labelledby="track-heading">
-        <h2 id="track-heading">What You Can Track</h2>
-        <p>OmniTrackr supports six media categories, each with fields tailored to that type:</p>
+      <section class="privacy-section" aria-labelledby="read-heading">
+        <h2 id="read-heading">What you can read without an account</h2>
+        <p>Most of the public site is written for people who will never sign up, and that is fine. Everything below is free to read:</p>
         <ul>
-          <li><strong>Movies</strong> — Title, director, year, rating, watched status, and reviews</li>
-          <li><strong>TV Shows</strong> — Series title, seasons, episodes, rating, and progress</li>
-          <li><strong>Anime</strong> — Title, seasons, episodes, rating, and watch status</li>
-          <li><strong>Video Games</strong> — Title, release date, genres, rating, and played status</li>
-          <li><strong>Music</strong> — Albums, artists, and your ratings</li>
-          <li><strong>Books</strong> — Titles, authors, and reading progress</li>
+          <li><strong><a href="/in-order">In order</a></strong> guides walk through long franchises such as Star Wars, The Witcher, Dune and Zelda. Each gives more than one order, says who each one suits and recommends one.</li>
+          <li><strong><a href="/if-you-liked">If you liked</a></strong> guides start from one favourite and suggest what to try next in other formats, with a caveat for every pick.</li>
+          <li><strong><a href="/discover">Discover</a></strong> guides connect a film, a show, a game, an album and a book through one idea, compare them by pace and commitment, and link the sources used to check the facts. A monthly edition on the <a href="/discover">Discover page</a> adds a new theme each month.</li>
+          <li><strong><a href="/daily">OmniTrackr Daily</a></strong> is a guess-the-title puzzle with a new movie, show, anime, game, book or album every day. Past puzzles stay playable, with the answer and a short note on why the title is worth your time.</li>
+          <li><strong><a href="/release-radar">Release Radar</a></strong> lists what comes out this month, and <a href="/guides">the how-to guides</a> explain tracking, importing from other services and backing up a library. If you are choosing a tracker, <a href="/compare">our comparison</a> sets OmniTrackr next to IMDb, Letterboxd, Trakt and Goodreads and says where each one is the better fit.</li>
         </ul>
-        <p>Posters and cover art are fetched automatically where possible (e.g. via OMDB, Jikan, RAWG, iTunes, Open Library), so your collection looks clear and recognizable at a glance.</p>
-      </section>
-
-      <section class="privacy-section" aria-labelledby="features-heading">
-        <h2 id="features-heading">Key Features</h2>
-        <ul>
-          <li><strong>Ratings and reviews</strong> — Rate items and write detailed reviews; you can choose to make reviews public for others to read.</li>
-          <li><strong>Statistics dashboard</strong> — See totals, averages, and breakdowns by category and over time.</li>
-          <li><strong>Friends and privacy</strong> — Add friends and control what they can see (per category and per tab).</li>
-          <li><strong>Export and import</strong> — Export your data as JSON and import it elsewhere so you stay in control.</li>
-          <li><strong>Custom tabs</strong> — Create extra tabs for anything that doesn't fit the default categories.</li>
-        </ul>
-      </section>
-
-      <section class="privacy-section" aria-labelledby="trust-heading">
-        <h2 id="trust-heading">Built Around User Control</h2>
-        <p>OmniTrackr keeps private tracking separate from public discovery. Your account can hold unfinished notes, private ratings, friend-only visibility settings, and full-library exports. Public reviews are shared only when users intentionally mark individual entries public, and the public pages explain how that sharing works before someone signs up.</p>
-        <p>Data portability is part of the product philosophy. Export and import support exists so a media history is not trapped in one interface. That is especially important for long-term tracking, where a library can represent years of watching, reading, playing, and listening.</p>
-      </section>
-
-      <section class="privacy-section" aria-labelledby="maintained-heading">
-        <h2 id="maintained-heading">A Maintained Live App</h2>
-        <p>OmniTrackr is not a static landing page or a placeholder project. Recent updates improved public guides, review quality controls, privacy and advertising disclosures, dependency security, CSP handling, sitemap coverage, robots.txt rules, and generated API documentation indexing. Those maintenance details matter because the app serves real users and stores user-created libraries.</p>
-        <p>The logged-in tracker remains the center of the product, but the public site now gives visitors useful information before registration: demos, comparisons, guide pages, review guidelines, export explanations, and a roadmap. That public content helps people decide whether OmniTrackr fits their habits without needing to create an account first.</p>
-      </section>
-
-      <section class="privacy-section" aria-labelledby="why-heading">
-        <h2 id="why-heading">Why Track Your Media?</h2>
-        <p>Tracking what you watch, play, and read helps you remember what you loved, avoid repeats, and discover patterns in your tastes. It also makes it easier to get recommendations from friends and to share your own picks. OmniTrackr is built for people who take their media habits seriously but don't want to depend on a single streaming service or app store to remember for them.</p>
-        <p>Tracking also protects context. A rating alone may not explain why a movie worked, why a game lost momentum, why a show was worth finishing, or why a book should be recommended to one friend but not another. Notes and reviews keep those decisions visible when memory gets fuzzy.</p>
       </section>
 
       <section class="privacy-section" aria-labelledby="who-heading">
-        <h2 id="who-heading">Who OmniTrackr Is For</h2>
-        <p>OmniTrackr is for anyone who wants a single, flexible place to track multiple types of media. It suits casual viewers who want a simple watchlist, serious collectors who care about stats and reviews, and groups of friends who like to compare lists and recommendations. Because it runs in the browser and supports export, it works across devices and keeps your data portable.</p>
-        <p>It is also useful for people who move between formats. Someone might watch an adaptation after reading a book, play a game because they liked a soundtrack, or start an anime because a friend compared it to a favorite show. Keeping those categories in one account makes those taste connections easier to notice.</p>
+        <h2 id="who-heading">Who runs it</h2>
+        <p>OmniTrackr is an independent project run by one person. It is not part of a studio, publisher, streaming service or media company, and nobody pays to be included in a guide or to be ranked higher in one.</p>
+        <p>Every guide is reviewed by the site owner before it is published. Release years, cast, creators and story order are checked against public and official sources, and the Discover guides link every source they use. Opinions about mood, pace and who a title suits are labelled as editorial opinion, never presented as facts or as first-hand experience. Every guide shows the date it was last checked. The <a href="/content-quality">editorial standards</a> page explains the rules in full.</p>
+        <p>If something is wrong, out of date or spoils more than it should, <a href="/contact">tell us</a>. Corrections are made on the page itself and the checked date moves forward.</p>
+      </section>
+
+      <section class="privacy-section" aria-labelledby="money-heading">
+        <h2 id="money-heading">How it is paid for</h2>
+        <p>OmniTrackr has no paywall: every tracking feature is free and stays free. Hosting is paid for in two ways: advertising on some public guide pages, and readers who choose to <a href="https://ko-fi.com/omnitrackr" target="_blank" rel="noopener noreferrer">support the site on Ko-fi</a>. Signed-in members do not see ads, and ads never appear inside a private library. The <a href="/advertising">ads and affiliates</a> page lists where ads can appear and how affiliate links are labelled, and the <a href="/supporters">supporters page</a> thanks the people who chip in.</p>
+      </section>
+
+      <section class="privacy-section" aria-labelledby="trust-heading">
+        <h2 id="trust-heading">Your library stays yours</h2>
+        <p>Libraries are private by default. A review becomes public only when you tick Public Review on that one entry, and you choose separately what friends can see in each category. Your personal information is not sold, and nothing in your library is shared with advertisers; the <a href="/privacy">privacy policy</a> has the detail.</p>
+        <p>You can export your library and journal as a file at any time and import it again later, so years of history are never trapped here. If you are coming from another service, the <a href="/switch">switching guide</a> shows how to bring your lists with you.</p>
+      </section>
+
+      <section class="privacy-section" aria-labelledby="changes-heading">
+        <h2 id="changes-heading">How it changes</h2>
+        <p>OmniTrackr is updated most weeks. <a href="/changelog">What's new</a> lists every release, and the <a href="/roadmap">roadmap</a> says what is being considered next. Updates are additive: a new feature never removes or rewrites what is already in your library.</p>
       </section>
     </main>
   </div>

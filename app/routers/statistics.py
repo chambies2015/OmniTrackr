@@ -25,7 +25,7 @@ LIBRARY_CATEGORIES = [
 
 
 @router.get("/tasteprint/", response_model=dict)
-async def get_tasteprint(
+def get_tasteprint(
     response: Response,
     categories: str | None = Query(None, max_length=120),
     current_user: models.User = Depends(get_current_user),
@@ -131,7 +131,7 @@ def _library_item_count(db: Session, user_id: int) -> int:
 
 
 @router.get("/today/", response_model=dict)
-async def get_todays_pick(
+def get_todays_pick(
     response: Response,
     offset: int = Query(0, ge=0, le=2147483647),
     category: str | None = Query(None, max_length=20),
@@ -185,7 +185,7 @@ async def get_todays_pick(
 
 
 @router.get("/", response_model=schemas.StatisticsDashboard)
-async def get_statistics_dashboard(
+def get_statistics_dashboard(
     current_user: models.User = Depends(get_current_user),
     db: Session = Depends(get_db)
 ):
@@ -205,7 +205,7 @@ async def get_statistics_dashboard(
 
 
 @router.get("/insights/", response_model=dict)
-async def get_library_insights(
+def get_library_insights(
     current_user: models.User = Depends(get_current_user),
     db: Session = Depends(get_db)
 ):
@@ -318,7 +318,7 @@ async def get_library_insights(
 
 
 @router.get("/pulse/", response_model=dict)
-async def get_library_pulse(
+def get_library_pulse(
     current_user: models.User = Depends(get_current_user),
     db: Session = Depends(get_db)
 ):
@@ -392,8 +392,33 @@ async def get_library_pulse(
     }
 
 
+def _released_while_away(request: Request, db: Session, user_id: int, days_away: int) -> list[dict]:
+    """Release Radar titles connected to the member's library that came out while they were away."""
+    try:
+        from datetime import date as _date
+        from ..for_you import coming_up, radar_pool
+        from .. import release_radar
+        today = release_radar.today_utc()
+        pool = radar_pool(today, getattr(request.app.state, "external_api_client", None))
+        if not pool:
+            return []  # No Release Radar data cached yet; skip the library lookups.
+        start = today - timedelta(days=max(days_away, 7))
+        released = []
+        for card in coming_up(db, user_id, today=today, pool=pool)["matches"]:
+            try:
+                day = _date.fromisoformat(card.get("date") or "")
+            except ValueError:
+                continue
+            if start <= day <= today:
+                released.append({"title": card["title"], "label": card["label"], "date": card["date"],
+                                 "url": card["url"], "reason": card.get("reason")})
+        return released[:3]
+    except Exception:
+        return []  # Optional; the deck works without it.
+
+
 @router.get("/return-deck/", response_model=dict)
-async def get_return_deck(
+def get_return_deck(
     response: Response,
     request: Request,
     days_away: int | None = Query(None, ge=3, le=90),
@@ -415,8 +440,8 @@ async def get_return_deck(
     if library_item_count < 5:
         return {"eligible": False, "library_item_count": library_item_count}
 
-    today = await get_todays_pick(Response(), 0, None, current_user, db)
-    pulse = await get_library_pulse(current_user, db)
+    today = get_todays_pick(Response(), 0, None, current_user, db)
+    pulse = get_library_pulse(current_user, db)
     primary = today.get("pick")
     alternatives = [
         item for item in pulse["continue_items"]
@@ -458,6 +483,7 @@ async def get_return_deck(
         "eligible": True,
         "library_item_count": library_item_count,
         "days_away": days_away,
+        "released_while_away": _released_while_away(request, db, current_user.id, days_away),
         "primary": primary,
         "alternative": alternatives[0] if alternatives else None,
         "reflection": reflection_items[0] if reflection_items else None,
@@ -471,7 +497,7 @@ async def get_return_deck(
 
 
 @router.post("/return-deck/engagement", response_model=dict)
-async def record_return_deck_engagement(
+def record_return_deck_engagement(
     payload: schemas.ReturnPromptEngagement,
     request: Request,
     current_user: models.User = Depends(get_current_user),
@@ -528,7 +554,7 @@ async def record_return_deck_engagement(
 
 
 @router.get("/watch/", response_model=schemas.WatchStatistics)
-async def get_watch_statistics(
+def get_watch_statistics(
     current_user: models.User = Depends(get_current_user),
     db: Session = Depends(get_db)
 ):
@@ -538,7 +564,7 @@ async def get_watch_statistics(
 
 
 @router.get("/ratings/", response_model=schemas.RatingStatistics)
-async def get_rating_statistics(
+def get_rating_statistics(
     current_user: models.User = Depends(get_current_user),
     db: Session = Depends(get_db)
 ):
@@ -548,7 +574,7 @@ async def get_rating_statistics(
 
 
 @router.get("/years/", response_model=schemas.YearStatistics)
-async def get_year_statistics(
+def get_year_statistics(
     current_user: models.User = Depends(get_current_user),
     db: Session = Depends(get_db)
 ):
@@ -558,7 +584,7 @@ async def get_year_statistics(
 
 
 @router.get("/directors/", response_model=schemas.DirectorStatistics)
-async def get_director_statistics(
+def get_director_statistics(
     current_user: models.User = Depends(get_current_user),
     db: Session = Depends(get_db)
 ):
@@ -568,7 +594,7 @@ async def get_director_statistics(
 
 
 @router.get("/movies/", response_model=schemas.MovieStatistics)
-async def get_movie_statistics(
+def get_movie_statistics(
     current_user: models.User = Depends(get_current_user),
     db: Session = Depends(get_db)
 ):
@@ -583,7 +609,7 @@ async def get_movie_statistics(
 
 
 @router.get("/tv-shows/", response_model=schemas.TVShowStatistics)
-async def get_tv_show_statistics(
+def get_tv_show_statistics(
     current_user: models.User = Depends(get_current_user),
     db: Session = Depends(get_db)
 ):
@@ -598,7 +624,7 @@ async def get_tv_show_statistics(
 
 
 @router.get("/anime/", response_model=schemas.AnimeStatistics)
-async def get_anime_statistics(
+def get_anime_statistics(
     current_user: models.User = Depends(get_current_user),
     db: Session = Depends(get_db)
 ):
@@ -613,7 +639,7 @@ async def get_anime_statistics(
 
 
 @router.get("/video-games/", response_model=schemas.VideoGameStatistics)
-async def get_video_game_statistics(
+def get_video_game_statistics(
     current_user: models.User = Depends(get_current_user),
     db: Session = Depends(get_db)
 ):
@@ -628,7 +654,7 @@ async def get_video_game_statistics(
 
 
 @router.get("/music/", response_model=schemas.MusicStatistics)
-async def get_music_statistics(
+def get_music_statistics(
     current_user: models.User = Depends(get_current_user),
     db: Session = Depends(get_db)
 ):
@@ -642,7 +668,7 @@ async def get_music_statistics(
 
 
 @router.get("/books/", response_model=schemas.BookStatistics)
-async def get_books_statistics(
+def get_books_statistics(
     current_user: models.User = Depends(get_current_user),
     db: Session = Depends(get_db)
 ):

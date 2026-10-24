@@ -3,7 +3,7 @@ const { test } = require('node:test');
 const assert = require('node:assert/strict');
 const fs = require('node:fs');
 const vm = require('node:vm');
-const source = fs.readFileSync(require('node:path').join(__dirname, '../app/static/app.js'), 'utf8');
+const source = require('./helpers/dashboard_source.cjs');
 
 function setup() {
   const elements = new Map();

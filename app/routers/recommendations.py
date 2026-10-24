@@ -8,7 +8,9 @@ from sqlalchemy import func
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
 
+from ..integer_bounds import PositiveDatabaseId
 from .. import crud, models, schemas
+from ..progress import lock_progress_owner
 from ..dependencies import get_current_user, get_db
 
 router = APIRouter(prefix="/recommendations", tags=["recommendations"])
@@ -89,11 +91,14 @@ def _serialize_submission(entry: models.RecommendationSubmission) -> dict:
 
 
 def _get_by_token(db: Session, token: str, lock: bool = False) -> models.RecommendationRequest:
-    query = db.query(models.RecommendationRequest).filter(
+    query = db.query(models.RecommendationRequest).join(
+        models.User, models.User.id == models.RecommendationRequest.owner_id,
+    ).filter(
         models.RecommendationRequest.public_token == token,
+        models.User.is_active.is_(True),  # A deactivated member's postcards go quiet.
     )
     if lock:
-        query = query.with_for_update()
+        query = query.with_for_update(of=models.RecommendationRequest)
     postcard = query.first()
     if not postcard:
         raise HTTPException(status_code=404, detail="Recommendation Postcard not found")
@@ -167,7 +172,7 @@ def _add_submission(
 
 
 @router.post("/requests/", status_code=status.HTTP_201_CREATED)
-async def create_request(
+def create_request(
     payload: schemas.RecommendationRequestCreate,
     current_user: models.User = Depends(get_current_user),
     db: Session = Depends(get_db),
@@ -197,7 +202,7 @@ async def create_request(
 
 
 @router.get("/requests/")
-async def list_requests(
+def list_requests(
     current_user: models.User = Depends(get_current_user),
     db: Session = Depends(get_db),
 ):
@@ -208,8 +213,8 @@ async def list_requests(
 
 
 @router.post("/requests/{request_id}/close")
-async def close_request(
-    request_id: int,
+def close_request(
+    request_id: PositiveDatabaseId,
     current_user: models.User = Depends(get_current_user),
     db: Session = Depends(get_db),
 ):
@@ -220,8 +225,8 @@ async def close_request(
 
 
 @router.post("/requests/{request_id}/invite", status_code=status.HTTP_201_CREATED)
-async def invite_friend(
-    request_id: int,
+def invite_friend(
+    request_id: PositiveDatabaseId,
     payload: schemas.RecommendationInviteCreate,
     current_user: models.User = Depends(get_current_user),
     db: Session = Depends(get_db),
@@ -246,7 +251,7 @@ async def invite_friend(
 
 
 @router.get("/invitations/")
-async def list_invitations(
+def list_invitations(
     current_user: models.User = Depends(get_current_user),
     db: Session = Depends(get_db),
 ):
@@ -257,6 +262,9 @@ async def list_invitations(
     for invitation in invitations:
         postcard = invitation.request
         if _state(postcard) != "open":
+            continue
+        if not crud.are_friends(db, current_user.id, postcard.owner_id):
+            # Answering is refused once the friendship ends, so don't list it.
             continue
         responded = db.query(models.RecommendationSubmission.id).filter(
             models.RecommendationSubmission.request_id == postcard.id,
@@ -274,8 +282,8 @@ async def list_invitations(
 
 
 @router.post("/requests/{request_id}/respond", status_code=status.HTTP_201_CREATED)
-async def respond_as_friend(
-    request_id: int,
+def respond_as_friend(
+    request_id: PositiveDatabaseId,
     payload: schemas.RecommendationFriendSubmissionCreate,
     current_user: models.User = Depends(get_current_user),
     db: Session = Depends(get_db),
@@ -305,7 +313,7 @@ async def respond_as_friend(
 
 
 @router.get("/inbox/")
-async def list_inbox(
+def list_inbox(
     current_user: models.User = Depends(get_current_user),
     db: Session = Depends(get_db),
 ):
@@ -342,12 +350,13 @@ def _new_library_item(user_id: int, category: str, title: str):
 
 
 @router.post("/submissions/{submission_id}/triage")
-async def triage_submission(
-    submission_id: int,
+def triage_submission(
+    submission_id: PositiveDatabaseId,
     payload: schemas.RecommendationTriage,
     current_user: models.User = Depends(get_current_user),
     db: Session = Depends(get_db),
 ):
+    lock_progress_owner(db, current_user.id)
     entry = db.query(models.RecommendationSubmission).join(models.RecommendationRequest).filter(
         models.RecommendationSubmission.id == submission_id,
         models.RecommendationRequest.owner_id == current_user.id,
@@ -392,22 +401,23 @@ async def triage_submission(
 
     entry.status = "accepted"
     entry.accepted_item_id = item.id
-    db.commit()
-    return {
+    result = {
         "status": entry.status,
         "library_changed": created,
         "item_id": item.id,
         "queued": queued,
     }
+    db.commit()
+    return result
 
 
 @router.get("/public/{token}")
-async def get_public_request(token: str, db: Session = Depends(get_db)):
+def get_public_request(token: str, db: Session = Depends(get_db)):
     return _public_postcard(_get_by_token(db, token))
 
 
 @router.post("/public/{token}", status_code=status.HTTP_201_CREATED)
-async def submit_public_recommendation(
+def submit_public_recommendation(
     token: str,
     payload: schemas.RecommendationSubmissionCreate,
     request: Request,

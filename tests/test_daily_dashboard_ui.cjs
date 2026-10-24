@@ -3,7 +3,7 @@ const assert = require('node:assert/strict');
 const fs = require('node:fs');
 const path = require('node:path');
 const vm = require('node:vm');
-const source = fs.readFileSync(path.join(__dirname, '../app/static/app.js'), 'utf8');
+const source = require('./helpers/dashboard_source.cjs');
 
 function deferred() { let resolve; const promise = new Promise(done => { resolve = done; }); return { promise, resolve }; }
 function response(data, status = 200) { return { ok: status >= 200 && status < 300, status, json: async () => data }; }
@@ -357,4 +357,51 @@ test('journal Open library retains category navigation instead of requiring a po
   const card = source.slice(source.indexOf('function buildActivityCard('), source.indexOf('async function loadActivityTimeline('));
   assert.match(card, /open\.dataset\.action = 'activity-open-library'/);
   assert.match(source, /'pulse-open-item': \(\) => openDashboardItem\(target\)/);
+});
+
+test('Next Up rows offer Done for unfinished titles, mark finished ones, and count them for clearing', () => {
+  const s = setup(), items = queue(4);
+  items[0].image = 'https://img.example/cover.jpg';
+  items[1].finished = true;
+  s.context.renderNextUpQueue(items);
+  const rows = s.get('nextUpQueueItems').children;
+  assert.equal(rows[0].children[1].tagName, 'img');
+  assert.equal(rows[0].children[1].src, 'https://img.example/cover.jpg');
+  assert.equal(rows[2].children[1].textContent, 'T');
+  assert.deepEqual(rows[0].querySelectorAll('button').map(button => button.dataset.action), ['finish-next-up', 'pulse-open-item', 'remove-next-up']);
+  assert.deepEqual(rows[1].querySelectorAll('button').map(button => button.dataset.action), ['pulse-open-item', 'remove-next-up']);
+  assert.match(rows[1].textContent, /Finished/);
+  assert.equal(s.get('nextUpQueueClearFinished').hidden, false);
+  assert.equal(s.get('nextUpQueueClearFinished').textContent, 'Clear finished (1)');
+  s.context.toggleNextUpQueue();
+  assert.equal(s.action('move-next-up', 600, 'top'), undefined);
+  assert.equal(s.action('move-next-up', 601, 'top'), undefined);
+  assert.equal(s.action('move-next-up', 603, 'top').dataset.nextUpPosition, 0);
+  s.context.renderNextUpQueue(queue(2));
+  assert.equal(s.get('nextUpQueueClearFinished').hidden, true);
+});
+
+test('Done takes the title off the queue and opens the completion reflection once', async () => {
+  const s = setup(), items = queue(3), opened = [];
+  s.context.openCompletionMoment = (category, itemId) => opened.push([category, itemId]);
+  s.context.renderNextUpQueue(items);
+  s.context.authenticatedFetch = async (url, options) => {
+    s.requests.push({ url, options });
+    if (options?.method === 'POST') return response({ category: 'books', item_id: 42, title: 'Title 1', was_finished: false });
+    return response(items.slice(1));
+  };
+  await s.context.finishNextUp(600);
+  assert.ok(s.requests.some(request => request.url === '/next-up/600/finish' && request.options.method === 'POST'));
+  assert.deepEqual(opened, [['books', 42]]);
+  assert.deepEqual(s.get('nextUpQueueItems').children.map(row => row.dataset.nextUpRowId), ['601', '602']);
+  assert.equal(vm.runInContext('dailyDashboardState.mutationPending', s.context), false);
+
+  s.context.authenticatedFetch = async () => response({ category: 'books', item_id: 43, title: 'Title 2', was_finished: true });
+  await s.context.finishNextUp(601);
+  assert.equal(opened.length, 1);
+
+  s.context.authenticatedFetch = async () => response({}, 500);
+  await s.context.finishNextUp(602);
+  assert.match(s.alerts.at(-1), /Could not mark that title finished/);
+  assert.equal(vm.runInContext('dailyDashboardState.mutationPending', s.context), false);
 });
