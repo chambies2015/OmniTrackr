@@ -665,6 +665,39 @@ class TakeResponse(Base):
     __table_args__ = (UniqueConstraint("request_id", "responder_id", name="uq_take_response_responder"),)
 
 
+class FriendRecommendation(Base):
+    """"You'd love this": one member recommends a title to a friend, or through a share link.
+
+    A row with a recipient sits in that friend's inbox. A row without one is a share link
+    (/r/<token>) for someone not on OmniTrackr yet; whoever opens it while signed in gets a
+    copy in their own inbox (``source_id`` points back at the link). ``details`` holds only
+    public facts about the title (never the sender's rating, review or notes).
+    """
+    __tablename__ = "friend_recommendations"
+
+    id = Column(Integer, primary_key=True, index=True)
+    sender_id = Column(Integer, ForeignKey("users.id", ondelete="CASCADE"), nullable=False, index=True)
+    recipient_id = Column(Integer, ForeignKey("users.id", ondelete="CASCADE"), nullable=True, index=True)
+    token = Column(String(48), unique=True, nullable=True, index=True)
+    source_id = Column(Integer, ForeignKey("friend_recommendations.id", ondelete="SET NULL"), nullable=True, index=True)
+    category = Column(String, nullable=False)
+    title = Column(String, nullable=False)
+    details = Column(Text, nullable=False, default="{}")
+    image = Column(String, nullable=True)
+    title_path = Column(String, nullable=True)
+    note = Column(String, nullable=True)
+    status = Column(String, nullable=False, default="pending", index=True)
+    item_id = Column(Integer, nullable=True)
+    created_at = Column(DateTime, nullable=False, default=datetime.utcnow, index=True)
+    acted_at = Column(DateTime, nullable=True)
+    expires_at = Column(DateTime, nullable=True)
+
+    __table_args__ = (
+        Index("ix_friend_recommendations_inbox", "recipient_id", "status", "created_at"),
+        UniqueConstraint("source_id", "recipient_id", name="uq_friend_recommendation_claim"),
+    )
+
+
 class FriendInvite(Base):
     """A member's reusable invite link (/join/<token>): whoever joins or accepts through it becomes their friend."""
     __tablename__ = "friend_invites"
