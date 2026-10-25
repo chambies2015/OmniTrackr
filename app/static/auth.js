@@ -263,6 +263,7 @@ function clearAuth({ preserveReturn = false } = {}) {
     window.resetForYou?.();
     window.resetYearGoals?.();
     window.resetFriendRecs?.();
+    window.resetFriendFeed?.();
     window.resetInstallCard?.();
     window.resetMonthlyChallenge?.();
     window.resetSeasonCard?.();
@@ -594,6 +595,7 @@ function showAuthModal() {
     window.resetForYou?.();
     window.resetYearGoals?.();
     window.resetFriendRecs?.();
+    window.resetFriendFeed?.();
     window.resetInstallCard?.();
     window.resetMonthlyChallenge?.();
     window.resetSeasonCard?.();
@@ -647,6 +649,7 @@ function showMainUI() {
     window.refreshForYou?.();
     window.refreshYearGoals?.();
     window.refreshFriendRecs?.();
+    window.refreshFriendFeed?.();
     window.refreshMonthlyChallenge?.();
     window.refreshSeasonCard?.();
     window.refreshBadges?.();

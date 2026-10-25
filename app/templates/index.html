@@ -66,6 +66,7 @@
   <link rel="stylesheet" href="/static/import-studio.css?v=20261018-formats-1">
   <link rel="stylesheet" href="/static/seasonal-card.css?v=20261022-holidays-1">
   <link rel="stylesheet" href="/static/friend-recs.css?v=20261024-friend-recs-1">
+  <link rel="stylesheet" href="/static/friends-feed.css?v=20261025-friends-feed-1">
   <link rel="stylesheet" href="/static/dashboard-2026.css?v=20261018-install-card-1">
   <link rel="stylesheet" href="/static/a11y.css?v=20261018-a11y-1">
   <script src="./preauth.js?v=20261010-audit-preauth-1"></script>
@@ -361,6 +362,7 @@
           aria-label="Close friends">×</button>
       </div>
       <button id="sendFriendRequestBtn" class="action-btn">+ Add Friend</button>
+      <button type="button" class="friends-feed-link" data-switch-tab="friends-feed">See what friends are up to</button>
     </div>
     <div id="friendsList" class="friends-list" role="region" aria-label="Friends list" tabindex="0">
       <p class="no-friends">No friends yet</p>
@@ -399,6 +401,7 @@
       </div>
       <div class="library-nav__group library-nav__group--tools" role="group" aria-label="Personal tools and custom libraries">
         <span class="library-nav__label" aria-hidden="true">Your space</span>
+        <button class="tab" data-switch-tab="friends-feed">Friends feed<span id="friendsFeedDot" class="ffeed-dot" hidden><span class="sr-only"> (new updates)</span></span></button>
         <button class="tab" data-switch-tab="activity">Journal</button>
         <button class="tab" data-switch-tab="recommendations">Postcards</button>
         <button class="tab" data-switch-tab="collections">Collections</button>
@@ -1198,6 +1201,31 @@
       </div>
     </div>
 
+    <!-- Friends Feed Tab Content -->
+    <div id="friends-feed-tab" class="tab-content">
+      <section class="ffeed" aria-labelledby="friendsFeedTitle">
+        <header class="ffeed__head">
+          <div class="ffeed__intro">
+            <p class="ffeed__eyebrow">From your friends</p>
+            <h2 id="friendsFeedTitle">Friends feed</h2>
+            <p class="ffeed__lede">What your friends added, finished, rated and reviewed in the last 30 days. Cheer them on, or put a title on your own Next Up in one tap.</p>
+          </div>
+          <div class="ffeed__side">
+            <button id="friendsFeedAddFriend" type="button" class="action-btn">+ Add a friend</button>
+            <label class="ffeed__share">
+              <input type="checkbox" id="friendsFeedSharing" checked>
+              <span>Share my updates with friends</span>
+            </label>
+            <p class="ffeed__share-hint">Friends only see categories you haven't made private.</p>
+          </div>
+        </header>
+        <div id="friendsFeedFilters" class="ffeed__filters" role="group" aria-label="Show in the feed"></div>
+        <p id="friendsFeedStatus" class="ffeed__status" role="status" aria-live="polite"></p>
+        <ol id="friendsFeedList" class="ffeed__list" aria-label="Friends' recent updates"></ol>
+        <button id="friendsFeedMore" type="button" class="ffeed__more" hidden>Show older updates</button>
+      </section>
+    </div>
+
     <!-- Private Activity Journal Tab Content -->
     <div id="activity-tab" class="tab-content">
       <section class="activity-hero">
@@ -1696,7 +1724,7 @@
     </form>
   </dialog>
   <script src="./credentials.js"></script>
-  <script src="./auth.js?v=20261024-friend-recs-1"></script>
+  <script src="./auth.js?v=20261025-friends-feed-1"></script>
   <script src="/static/import-studio.js?v=20261022-diary-1"></script>
   <script src="/static/progress.js?v=20260922-progress"></script>
   <script src="./app.js"></script>
@@ -1711,6 +1739,7 @@
   <script src="/static/badges.js?v=20261017-badges-1"></script>
   <script src="/static/taste-match.js?v=20261016-taste-match-1"></script>
   <script src="/static/friend-recs.js?v=20261024-friend-recs-1"></script>
+  <script src="/static/friends-feed.js?v=20261025-friends-feed-1"></script>
   <script src="/static/push.js?v=20261011-push-2" defer></script>
   <script src="/static/year-in-review-entry.js?v=20261019-story-1" defer></script>
   <script src="/static/guest-list.js?v=20261012-hero-search-1"></script>

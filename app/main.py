@@ -924,6 +924,17 @@ for route in friend_recs_router.router.routes:
         bind_rate_limited_endpoint(route, rate_limited_rec_page)
 app.include_router(friend_recs_router.router)
 
+from .routers import friend_feed as friend_feed_router
+rate_limited_feed_cheer = limiter.limit("120/hour")(friend_feed_router.cheer)
+rate_limited_feed_save = limiter.limit("60/hour")(friend_feed_router.save)
+for route in friend_feed_router.router.routes:
+    path, methods = getattr(route, "path", None), getattr(route, "methods", set())
+    if path == "/api/friend-feed/cheer":
+        bind_rate_limited_endpoint(route, rate_limited_feed_cheer)
+    elif path == "/api/friend-feed/save":
+        bind_rate_limited_endpoint(route, rate_limited_feed_save)
+app.include_router(friend_feed_router.router)
+
 
 @app.get("/", tags=["root"])
 @app.head("/", tags=["root"])
