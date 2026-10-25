@@ -161,6 +161,7 @@ function renderLibraryPager(category, page, loading = false, error = '') {
     ? `${page.total} ${page.total === 1 ? 'title' : 'titles'}${filtered ? (page.total === 1 ? ' matches your view' : ' match your view') : ' in this library'}.`
     : filtered ? 'No titles match. Try another search or clear your filters.'
       : 'Your library is ready for its first title. Use Add anything to get started.');
+  if (!loading) renderLibraryEmptyState(table, error ? 'error' : page.total ? 'ready' : filtered ? 'no-match' : 'empty');
   let pager = document.getElementById(`${tableId}Pager`);
   if (!pager) {
     pager = document.createElement('nav');
@@ -187,6 +188,45 @@ function renderLibraryPager(category, page, loading = false, error = '') {
     });
     pager.appendChild(button);
   }
+}
+
+// A friendly panel in place of an empty table: add a first title, or clear the filters
+// that hid everything. It only clicks the library's existing Add and Clear buttons.
+function renderLibraryEmptyState(table, state) {
+  const panel = table.closest?.('.library-panel');
+  if (!panel) return;
+  panel.dataset.libraryState = state;
+  let box = panel.querySelector('.library-empty');
+  if (!box) {
+    box = document.createElement('div');
+    box.className = 'library-empty';
+    box.innerHTML = '<span class="library-empty__art" aria-hidden="true"></span>'
+      + '<h3 class="library-empty__title"></h3><p class="library-empty__text"></p>'
+      + '<button type="button" class="library-empty__action"></button>';
+    box.querySelector('button').addEventListener('click', () => {
+      if (panel.dataset.libraryState === 'no-match') {
+        panel.querySelector('.library-filter-reset')?.click();
+        return;
+      }
+      const toggle = panel.closest('.library-section')?.querySelector('.library-add-toggle');
+      if (!toggle) return;
+      if (toggle.getAttribute('aria-expanded') !== 'true') toggle.click();
+      toggle.scrollIntoView({ behavior: 'smooth', block: 'start' });
+      const field = document.getElementById(toggle.getAttribute('aria-controls'))?.querySelector('input');
+      setTimeout(() => field?.focus({ preventScroll: true }), 300);
+    });
+    panel.querySelector('.library-table-wrap')?.before(box);
+  }
+  box.hidden = !['empty', 'no-match'].includes(state);
+  if (box.hidden) return;
+  const name = (panel.querySelector('.library-heading h2')?.textContent || 'library').trim().toLowerCase();
+  const addLabel = panel.closest('.library-section')?.querySelector('.library-add-toggle > span')?.textContent.trim() || 'Add a title';
+  const [title, text, action] = state === 'no-match'
+    ? ['No titles match', 'Nothing in your view fits that search and these filters. Try another word or clear them.', 'Clear search & filters']
+    : [`Your ${name} shelf is empty`, 'Add your first title to rate it, review it and keep track of what comes next.', addLabel];
+  box.querySelector('.library-empty__title').textContent = title;
+  box.querySelector('.library-empty__text').textContent = text;
+  box.querySelector('.library-empty__action').textContent = action;
 }
 
 async function fetchLibraryPage(url) {

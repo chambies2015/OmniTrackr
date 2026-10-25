@@ -57,6 +57,7 @@
   <link rel="stylesheet" href="/static/app-theme.css?v=20261022-next-up-1">
   <link rel="stylesheet" href="/static/library-theme.css?v=20261017-bughunt-1">
   <link rel="stylesheet" href="/static/library-shelf.css?v=20261016-shelf-1">
+  <link rel="stylesheet" href="/static/library-refresh.css?v=20261024-library-refresh-1">
   <link rel="stylesheet" href="/static/dialog-theme.css?v=20260924-visual-4">
   <link rel="stylesheet" href="/static/taste-match.css?v=20261016-taste-match-1">
   <link rel="stylesheet" href="/static/supporter.css?v=20261020-looks-1">
@@ -728,9 +729,11 @@
             <option value="year-asc">Year (Oldest → Newest)</option>
             <option value="year-desc">Year (Newest → Oldest)</option>
           </select>
-          <button id="loadMovies" class="action-btn library-utility">Refresh</button>
-          <button id="exportMovies" class="action-btn library-utility">Export Data</button>
-          <button id="importMovies" class="action-btn library-utility">Import Data</button>
+          <div class="library-utilities" role="group" aria-label="Library data">
+            <button id="loadMovies" class="action-btn library-utility">Refresh</button>
+            <button id="exportMovies" class="action-btn library-utility">Export Data</button>
+            <button id="importMovies" class="action-btn library-utility">Import Data</button>
+          </div>
         </div>
         <input type="file" id="importFile" accept=".json" style="display: none;">
         <div id="movieTableFilters" class="library-filters" aria-label="Library filters"></div>
@@ -815,9 +818,11 @@
             <option value="year-asc">Year (Oldest → Newest)</option>
             <option value="year-desc">Year (Newest → Oldest)</option>
           </select>
-          <button id="loadTVShows" class="action-btn library-utility">Refresh</button>
-          <button id="exportTVShows" class="action-btn library-utility">Export Data</button>
-          <button id="importTVShows" class="action-btn library-utility">Import Data</button>
+          <div class="library-utilities" role="group" aria-label="Library data">
+            <button id="loadTVShows" class="action-btn library-utility">Refresh</button>
+            <button id="exportTVShows" class="action-btn library-utility">Export Data</button>
+            <button id="importTVShows" class="action-btn library-utility">Import Data</button>
+          </div>
         </div>
         <input type="file" id="importTVFile" accept=".json" style="display: none;">
         <div id="tvShowTableFilters" class="library-filters" aria-label="Library filters"></div>
@@ -903,9 +908,11 @@
             <option value="year-asc">Year (Oldest → Newest)</option>
             <option value="year-desc">Year (Newest → Oldest)</option>
           </select>
-          <button id="loadAnime" class="action-btn library-utility">Refresh</button>
-          <button id="exportAnime" class="action-btn library-utility">Export Data</button>
-          <button id="importAnime" class="action-btn library-utility">Import Data</button>
+          <div class="library-utilities" role="group" aria-label="Library data">
+            <button id="loadAnime" class="action-btn library-utility">Refresh</button>
+            <button id="exportAnime" class="action-btn library-utility">Export Data</button>
+            <button id="importAnime" class="action-btn library-utility">Import Data</button>
+          </div>
         </div>
         <input type="file" id="importAnimeFile" accept=".json" style="display: none;">
         <div id="animeTableFilters" class="library-filters" aria-label="Library filters"></div>
@@ -991,9 +998,11 @@
             <option value="year-asc">Year (Oldest → Newest)</option>
             <option value="year-desc">Year (Newest → Oldest)</option>
           </select>
-          <button id="loadMusic" class="action-btn library-utility">Refresh</button>
-          <button id="exportMusic" class="action-btn library-utility">Export Data</button>
-          <button id="importMusic" class="action-btn library-utility">Import Data</button>
+          <div class="library-utilities" role="group" aria-label="Library data">
+            <button id="loadMusic" class="action-btn library-utility">Refresh</button>
+            <button id="exportMusic" class="action-btn library-utility">Export Data</button>
+            <button id="importMusic" class="action-btn library-utility">Import Data</button>
+          </div>
         </div>
         <input type="file" id="importMusicFile" accept=".json" style="display: none;">
         <div id="musicTableFilters" class="library-filters" aria-label="Library filters"></div>
@@ -1078,9 +1087,11 @@
             <option value="year-asc">Year (Oldest → Newest)</option>
             <option value="year-desc">Year (Newest → Oldest)</option>
           </select>
-          <button id="loadBooks" class="action-btn library-utility">Refresh</button>
-          <button id="exportBooks" class="action-btn library-utility">Export Data</button>
-          <button id="importBooks" class="action-btn library-utility">Import Data</button>
+          <div class="library-utilities" role="group" aria-label="Library data">
+            <button id="loadBooks" class="action-btn library-utility">Refresh</button>
+            <button id="exportBooks" class="action-btn library-utility">Export Data</button>
+            <button id="importBooks" class="action-btn library-utility">Import Data</button>
+          </div>
         </div>
         <input type="file" id="importBookFile" accept=".json" style="display: none;">
         <div id="bookTableFilters" class="library-filters" aria-label="Library filters"></div>
@@ -1157,9 +1168,11 @@
             <option value="release_date-asc">Release Date (Oldest → Newest)</option>
             <option value="release_date-desc">Release Date (Newest → Oldest)</option>
           </select>
-          <button id="loadVideoGames" class="action-btn library-utility">Refresh</button>
-          <button id="exportVideoGames" class="action-btn library-utility">Export Data</button>
-          <button id="importVideoGames" class="action-btn library-utility">Import Data</button>
+          <div class="library-utilities" role="group" aria-label="Library data">
+            <button id="loadVideoGames" class="action-btn library-utility">Refresh</button>
+            <button id="exportVideoGames" class="action-btn library-utility">Export Data</button>
+            <button id="importVideoGames" class="action-btn library-utility">Import Data</button>
+          </div>
         </div>
         <input type="file" id="importVideoGameFile" accept=".json" style="display: none;">
         <div id="videoGameTableFilters" class="library-filters" aria-label="Library filters"></div>
