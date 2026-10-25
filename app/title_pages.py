@@ -12,6 +12,7 @@ import unicodedata
 from collections import Counter
 from dataclasses import dataclass, field
 from functools import lru_cache
+from datetime import datetime, timedelta
 from typing import Optional
 
 from sqlalchemy import and_, func, literal, or_
@@ -40,6 +41,8 @@ SPREAD_MIN_RATINGS = 5  # A breakdown of three ratings would all but show each m
 # (label, lowest rating in the band), highest band first; ratings are out of 10.
 RATING_BANDS = (("9 to 10", 9.0), ("8 to 8.9", 8.0), ("7 to 7.9", 7.0), ("5 to 6.9", 5.0), ("Below 5", 0.0))
 INDEX_MIN_MEMBERS = 3
+RECENT_DAYS = 30
+RECENT_MIN_MEMBERS = 2  # "1 member added it this month" points at one person; wait for two.
 REVIEW_MIN_CHARS = 80
 REVIEW_DETAIL_MIN_CHARS = 240
 
@@ -362,6 +365,36 @@ def _related(db: Session, kind: str, group: TitleGroup, limit: int = 8) -> list[
     return related
 
 
+def more_from_creator(db: Session, kind: str, creator: str, exclude: str, limit: int = 8) -> list[dict]:
+    """Other titles by the same director, artist or author that members track, most tracked first."""
+    creator_field = KINDS[kind][4]
+    name = " ".join((creator or "").split()).casefold()
+    if not creator_field or not name:
+        return []
+    model = KINDS[kind][0]
+    normalized = func.lower(func.trim(model.title))
+    members = func.count(func.distinct(model.user_id))
+    try:
+        rows = db.query(normalized, members, func.min(model.id)).filter(
+            func.lower(func.trim(getattr(model, creator_field))) == name,
+            model.user_id.in_(_shareable_ids(db, kind)), ~model.user_id.in_(_editor_ids(db)),
+        ).group_by(normalized).order_by(members.desc(), normalized).limit(limit + 1).all()
+    except Exception:
+        db.rollback()
+        return []
+    ids = [sample_id for title, _, sample_id in rows if title and title != exclude][:limit]
+    loaded = {item.id: item for item in db.query(model).filter(model.id.in_(ids))} if ids else {}
+    results = []
+    for sample_id in ids:
+        item = loaded.get(sample_id)
+        if item is None or not (item.title or "").strip():
+            continue
+        results.append({"kind": kind, "label": KINDS[kind][3], "title": item.title.strip(),
+                        "year": item_year(kind, item), "url": path_for_item(kind, item),
+                        "image": _safe_image(getattr(item, IMAGE_FIELD[kind], None))})
+    return results
+
+
 def _safe_image(url) -> Optional[str]:
     if isinstance(url, str) and url.startswith(("https://", "http://")) and url != "N/A" and len(url) < 1000:
         return url
@@ -395,6 +428,8 @@ def summarize(db: Session, group: TitleGroup, *, page_sections: bool = True) -> 
     images = Counter(_safe_image(getattr(item, IMAGE_FIELD[kind], None)) for item in group.items)
     images.pop(None, None)
     reviews = _public_reviews(db, kind, group.items, decorate=page_sections)
+    since = datetime.utcnow() - timedelta(days=RECENT_DAYS)
+    recent = len({item.user_id for item in member_items if getattr(item, "added_at", None) and item.added_at >= since})
     return {
         "members": members,
         "finished": finished,
@@ -407,6 +442,8 @@ def summarize(db: Session, group: TitleGroup, *, page_sections: bool = True) -> 
         "search_ready_reviews": sum(1 for review in reviews if review["search_ready"]),
         "collections": _collections_featuring(db, kind, group.items) if page_sections else [],
         "related": _related(db, kind, group) if page_sections else [],
+        "recent_members": recent if recent >= RECENT_MIN_MEMBERS else 0,
+        "by_creator": more_from_creator(db, kind, creator, group.normalized) if page_sections and creator else [],
     }
 
 

@@ -27,8 +27,8 @@ from ..site_chrome import apply_site_chrome, editorial_picks, message_page
 
 router = APIRouter(tags=["titles"])
 SITE_URL = os.getenv("SITE_URL", "https://omnitrackr.xyz").rstrip("/")
-CSS_VERSION = "20261020-spoilers-1"
-JS_VERSION = "20261021-bugs-1"
+CSS_VERSION = "20261025-title-refresh-1"
+JS_VERSION = "20261025-title-refresh-1"
 SCHEMA_TYPES = {"movie": "Movie", "tv": "TVSeries", "anime": "TVSeries", "game": "VideoGame", "album": "MusicAlbum", "book": "Book"}
 CREATOR_SCHEMA = {"movie": "director", "album": "byArtist", "book": "author"}
 CREATOR_LABEL = {"movie": "Director", "album": "Artist", "book": "Author"}
@@ -317,7 +317,7 @@ def _community_html(group, summary: dict) -> str:
         reviews = (f'<p class="title-empty">No public reviews yet. <a href="#write-review">Be the first to review '
                    f'{_e(group.title)}</a>.</p>')
     return (f'<section class="title-section" aria-labelledby="community-title"><h2 id="community-title">On OmniTrackr</h2>'
-            f'<div class="title-stats">{"".join(tiles)}</div>{_spread_html(group, summary)}'
+            f'{_verdict_html(group, summary)}<div class="title-stats">{"".join(tiles)}</div>{_spread_html(group, summary)}'
             f'<h3 class="title-subhead">Member reviews</h3>{reviews}</section>')
 
 
@@ -343,6 +343,105 @@ def _spread_html(group, summary: dict) -> str:
             f'<ul class="title-spread" aria-labelledby="spread-title">{rows}</ul>'
             f'<p class="title-spread__note">From {_e(summary["rated"])} member ratings out of 10, one per member. '
             f'<a href="/titles/{_e(group.kind)}">See the {_e(_plural(group.kind))} chart</a>.</p>')
+
+
+def _percent(part: int, whole: int) -> int:
+    return round(100 * part / whole) if whole else 0
+
+
+def _verdict_html(group, summary: dict) -> str:
+    """A few plain sentences drawn from member data: what OmniTrackr members make of this title."""
+    title, verb = group.title, VERBS[group.kind]
+    sentences = []
+    if summary.get("average_rating") is not None:
+        line = f"Members rate {title} {summary['average_rating']}/10 on average across {summary['rated']} ratings"
+        spread = summary.get("spread")
+        if spread:
+            high = sum(band["count"] for band in spread if band["label"] in ("9 to 10", "8 to 8.9"))
+            line += f", and {_percent(high, summary['rated'])}% of them gave it 8 or more"
+        sentences.append(line + ".")
+        rank = summary.get("chart_rank")
+        if rank:
+            sentences.append(f"That makes it the #{rank['rank']} highest-rated {_singular(group.kind)} on OmniTrackr "
+                             f"out of {rank['of']} on the chart.")
+    members, finished = summary["members"], summary["finished"]
+    if members >= title_pages.INDEX_MIN_MEMBERS:
+        rest = members - finished
+        line = f"{finished} of the {members} members tracking it have {verb} it ({_percent(finished, members)}%)"
+        sentences.append(line + (f"; the other {rest} {'has' if rest == 1 else 'have'} it on their list." if rest else "."))
+    if summary.get("recent_members"):
+        sentences.append(f"{summary['recent_members']} members added it to their library in the last "
+                         f"{title_pages.RECENT_DAYS} days.")
+    written = len(summary["reviews"])
+    if written:
+        sentences.append(f"{written} member{'s have' if written != 1 else ' has'} shared a public review below.")
+    if len(sentences) < 2:
+        return ""
+    return (f'<div class="title-verdict"><p class="title-verdict__label">The member verdict</p>'
+            f'<p>{_e(" ".join(sentences))}</p></div>')
+
+
+GLANCE_FACTS = ("Running time", "Episode length", "Episodes", "Seasons", "Average playtime", "Pages", "Length",
+                "Tracks", "Studio", "Network", "Platforms")
+
+
+def _glance_html(group, summary: dict, metadata: dict, signed_in: bool) -> str:
+    """The sidebar summary: member numbers first, then the few facts people check before starting."""
+    rows = []
+    average = summary.get("average_rating")
+    if average is not None:
+        rows.append(f'<div class="title-glance__score" style="--score:{_e(round(float(average) * 10))}">'
+                    f'<span class="title-glance__ring" aria-hidden="true"><strong>{_e(average)}</strong></span>'
+                    f'<span><b>Member score</b><small>{_e(summary["rated"])} ratings out of 10</small></span></div>')
+    members, finished = summary["members"], summary["finished"]
+    if members >= title_pages.INDEX_MIN_MEMBERS:
+        share = _percent(finished, members)
+        rows.append(f'<div class="title-glance__meter"><span><b>{share}%</b> have {_e(VERBS[group.kind])} it</span>'
+                    f'<span class="title-glance__bar"><span style="--w:{share}%"></span></span>'
+                    f'<small>{_e(finished)} of {_e(members)} members tracking it</small></div>')
+    facts = []
+    rank = summary.get("chart_rank")
+    if rank:
+        facts.append(("Member chart", f'<a href="/titles/{_e(group.kind)}#rank-{_e(rank["rank"])}">#{_e(rank["rank"])} of {_e(rank["of"])} {_e(_plural(group.kind))}</a>'))
+    if summary.get("recent_members"):
+        facts.append(("Recently added", f'{_e(summary["recent_members"])} members in the last {title_pages.RECENT_DAYS} days'))
+    release = _pretty_date(metadata.get("release_date")) or (str(group.year) if group.year else None)
+    if release:
+        facts.append(("Released" if group.kind not in ("tv", "anime") else "Premiered", _e(release)))
+    if summary.get("creator") and group.kind in CREATOR_LABEL:
+        facts.append((CREATOR_LABEL[group.kind], _e(summary["creator"])))
+    found = {fact["label"]: fact["value"] for fact in metadata.get("facts") or [] if fact.get("value")}
+    facts += [(label, _e(found[label])) for label in GLANCE_FACTS if label in found][:3]
+    if _genres(metadata):
+        facts.append(("Genres", _e(", ".join(_genres(metadata)[:3]))))
+    if not rows and not facts:
+        return ""
+    fact_html = "".join(f"<div><dt>{_e(label)}</dt><dd>{value}</dd></div>" for label, value in facts)
+    if signed_in:
+        cta = ('<a class="site-btn site-btn--ghost title-glance__cta" href="#write-review">Rate and review it</a>')
+    else:
+        cta = (f'<div class="title-glance__join"><strong>Track {_e(group.title)} with OmniTrackr</strong>'
+               '<p>One free library for movies, shows, anime, games, music and books, with ratings, reviews and friends.</p>'
+               '<a class="site-btn site-btn--primary title-glance__cta" href="/#signup">Start your free library</a></div>')
+    return (f'<aside class="title-glance" aria-labelledby="glance-title"><h2 id="glance-title">At a glance</h2>'
+            f'{"".join(rows)}{f"<dl>{fact_html}</dl>" if fact_html else ""}{cta}</aside>')
+
+
+def _by_creator_html(group, summary: dict) -> str:
+    items = summary.get("by_creator") or []
+    creator = summary.get("creator")
+    if not items or not creator:
+        return ""
+    return (f'<section class="title-section" aria-labelledby="creator-title"><h2 id="creator-title">More from {_e(creator)}</h2>'
+            f'<div class="title-related-grid">{_related_cards(items)}</div></section>')
+
+
+def _section_nav(sections: list[tuple[str, str, str]]) -> str:
+    """Jump links to the sections this page actually has."""
+    links = "".join(f'<a href="#{_e(anchor)}">{_e(label)}</a>' for html, anchor, label in sections if html)
+    if links.count("<a ") < 3:
+        return ""
+    return f'<nav class="title-tabs" aria-label="On this page"><div class="site-wrap title-tabs__inner">{links}</div></nav>'
 
 
 def _write_review_html(group, summary: dict, signed_in: bool, take=None) -> str:
@@ -396,16 +495,21 @@ def _collections_html(summary: dict) -> str:
     return f'<section class="title-section" aria-labelledby="collections-title"><h2 id="collections-title">In public collections</h2><div class="title-collections">{cards}</div></section>'
 
 
-def _related_html(summary: dict) -> str:
-    if not summary["related"]:
-        return ""
+def _related_cards(items: list) -> str:
     cards = ""
-    for item in summary["related"]:
+    for item in items:
         art = (f'<img src="{_e(item["image"])}" alt="" loading="lazy">' if item.get("image")
                else f'<span>{_e(item["title"][:1].upper())}</span>')
         year = f' · {item["year"]}' if item.get("year") else ""
         cards += (f'<a class="title-related" href="{_e(item["url"])}"><span class="title-related__art">{art}</span>'
                   f'<strong>{_e(item["title"])}</strong><small>{_e(item["label"])}{_e(year)}</small></a>')
+    return cards
+
+
+def _related_html(summary: dict) -> str:
+    if not summary["related"]:
+        return ""
+    cards = _related_cards(summary["related"])
     return f'<section class="title-section" aria-labelledby="related-title"><h2 id="related-title">Members who track this also track</h2><div class="title-related-grid">{cards}</div></section>'
 
 
@@ -505,12 +609,23 @@ def render(group, summary: dict, metadata: Optional[dict], indexable: bool, sign
     reviews_link = (f'<a class="site-btn site-btn--ghost" href="#community-title">Read {len(summary["reviews"])} member review'
                     f'{"s" if len(summary["reviews"]) != 1 else ""}</a>' if summary["reviews"]
                     else '<a class="site-btn site-btn--ghost" href="#write-review">Write the first review</a>')
-    body = "".join([
-        # Our own content first: member reviews and stats, then collections and "also track".
-        _community_html(group, summary), _write_review_html(group, summary, signed_in, take),
-        _trailer_html(group, metadata), _about_html(group, summary, metadata),
-        _if_you_liked_html(group), _in_order_html(group), _collections_html(summary), _related_html(summary), _gallery_html(group, metadata), _tracks_html(metadata),
-    ])
+    # Our own content first: member reviews and stats, then collections and "also track".
+    sections = [
+        (_community_html(group, summary), "community-title", "Reviews"),
+        (_write_review_html(group, summary, signed_in, take), "write-review", "Write a review"),
+        (_trailer_html(group, metadata), "trailer-title", "Trailer"),
+        (_about_html(group, summary, metadata), "about-title", "About"),
+        (_if_you_liked_html(group), "liked-title", "What to try next"),
+        (_in_order_html(group), "in-order-title", "Series order"),
+        (_collections_html(summary), "collections-title", "Collections"),
+        (_related_html(summary), "related-title", "Members also track"),
+        (_by_creator_html(group, summary), "creator-title", f"More from {summary.get('creator') or ''}".strip()),
+        (_gallery_html(group, metadata), "gallery-title", "Screenshots" if group.kind == "game" else "Images"),
+        (_tracks_html(metadata), "tracks-title", "Track list"),
+    ]
+    body = "".join(html for html, _, _ in sections)
+    nav = _section_nav([section for section in sections if section[1] != "write-review"])
+    glance = _glance_html(group, summary, metadata, signed_in)
     og_image = f'<meta property="og:image" content="{_e(image)}">' if image else ""
     ad_loader = ('<script src="/static/ad-loader.js" defer></script>'
                  if indexable and not signed_in and title_pages.is_ad_eligible(summary, metadata) else "")
@@ -563,8 +678,12 @@ def render(group, summary: dict, metadata: Optional[dict], indexable: bool, sign
         </div>
       </div>
     </section>
-    <div class="site-wrap title-body">
-      {body}
+    {nav}
+    <div class="site-wrap title-body{' title-body--glance' if glance else ''}">
+      {glance}
+      <div class="title-main">
+        {body}
+      </div>
       {_sources_html(metadata)}
     </div>
   </main>
