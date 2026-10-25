@@ -27,6 +27,8 @@ async function loadNotifications() {
           actionButtons = '<button class="notification-action-btn" data-action="open-recommendation-postcards">Open Postcards</button>';
         } else if (notif.type === 'friend_recommendation' && notif.link === '/#friend-recs') {
           actionButtons = '<a class="notification-action-btn" href="/#friend-recs">See it</a>';
+        } else if (notif.type === 'friend_feed_cheer' && notif.link === '/#friends-feed') {
+          actionButtons = '<a class="notification-action-btn" href="/#friends-feed">Open your friends feed</a>';
         } else if (notif.type === 'take_received' && /^\/titles\/[a-z]+\/[a-z0-9-]+#community-title$/.test(notif.link || '')) {
           actionButtons = `<a class="notification-action-btn" href="${escapeHtml(notif.link)}">Read their take</a>`;
         } else if (notif.type === 'goal_reached' && notif.link === '/#goals') {

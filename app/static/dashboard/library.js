@@ -43,6 +43,8 @@ function switchTab(tabName) {
     return loadMusic();
   } else if (tabName === 'books') {
     return loadBooks();
+  } else if (tabName === 'friends-feed') {
+    window.OmniFriendFeed?.load();
   } else if (tabName === 'activity') {
     loadActivityJournal();
   } else if (tabName === 'recommendations') {

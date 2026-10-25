@@ -1186,3 +1186,54 @@ class SharedListVote(Base):
     created_at = Column(DateTime, nullable=False, default=datetime.utcnow)
 
     __table_args__ = (UniqueConstraint("item_id", "user_id", name="uq_shared_list_vote"),)
+
+
+class FriendFeedEvent(Base):
+    """A member finished, rated or reviewed a title already in their library (Oct 2026).
+
+    New table only: library tables are untouched. Rows are written as the change is
+    saved (see friend_feed.py) and only ever shown to friends while the library entry
+    still says so and its category isn't private. Adds need no row: they come from
+    each entry's added_at.
+    """
+    __tablename__ = "friend_feed_events"
+
+    id = Column(Integer, primary_key=True, index=True)
+    user_id = Column(Integer, ForeignKey("users.id", ondelete="CASCADE"), nullable=False, index=True)
+    category = Column(String(16), nullable=False)
+    item_id = Column(Integer, nullable=False)
+    kind = Column(String(10), nullable=False)  # finished, rated, reviewed
+    created_at = Column(DateTime, nullable=False, default=datetime.utcnow, index=True)
+
+    __table_args__ = (Index("ix_friend_feed_events_item", "user_id", "category", "item_id"),)
+
+
+class FriendFeedCheer(Base):
+    """A friend cheered one title on a member's feed. One per friend and title, and it stays."""
+    __tablename__ = "friend_feed_cheers"
+
+    id = Column(Integer, primary_key=True, index=True)
+    user_id = Column(Integer, ForeignKey("users.id", ondelete="CASCADE"), nullable=False, index=True)
+    owner_id = Column(Integer, ForeignKey("users.id", ondelete="CASCADE"), nullable=False, index=True)
+    category = Column(String(16), nullable=False)
+    item_id = Column(Integer, nullable=False)
+    created_at = Column(DateTime, nullable=False, default=datetime.utcnow)
+
+    __table_args__ = (
+        UniqueConstraint("user_id", "category", "item_id", name="uq_friend_feed_cheer"),
+        Index("ix_friend_feed_cheers_item", "owner_id", "category", "item_id"),
+    )
+
+
+class FriendFeedSetting(Base):
+    """Whether a member's updates appear in their friends' feeds. No row means they do.
+
+    ``changed_at`` is when sharing was last switched; after switching back on, only
+    updates from then on are shown, so nothing done while it was off resurfaces.
+    """
+    __tablename__ = "friend_feed_settings"
+
+    id = Column(Integer, primary_key=True, index=True)
+    user_id = Column(Integer, ForeignKey("users.id", ondelete="CASCADE"), nullable=False, unique=True)
+    sharing = Column(Boolean, nullable=False, default=True)
+    changed_at = Column(DateTime, nullable=False, default=datetime.utcnow)
