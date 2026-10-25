@@ -35,6 +35,7 @@ CREATOR_LABEL = {"movie": "Director", "album": "Artist", "book": "Author"}
 KIND_PLURALS = {"movie": "Movies", "tv": "TV shows", "anime": "Anime", "game": "Games", "album": "Albums", "book": "Books"}
 GUEST_LIST_MAX = 30
 TAKE_DAYS = 60
+FRIEND_RECS_VERSION = "20261024-friend-recs-1"
 TAKE_TOKEN = re.compile(r"[A-Za-z0-9_-]{16,64}")
 FINISHED_LABEL = {"movie": "watched", "tv": "watched", "anime": "watched", "game": "played", "album": "heard", "book": "read"}
 VERBS = {"movie": "watched", "tv": "watched", "anime": "watched", "game": "played", "album": "listened to", "book": "read"}
@@ -498,6 +499,9 @@ def render(group, summary: dict, metadata: Optional[dict], indexable: bool, sign
     ask = (f'<button type="button" class="site-btn site-btn--ghost" id="ask-friend" data-take-ask '
            f'data-title-kind="{_e(group.kind)}" data-title-slug="{_e(group.path.rsplit("/", 1)[1])}" '
            f'data-take-title="{_e(group.title)}">Ask a friend for their take</button>' if signed_in else "")
+    recommend = (f'<button type="button" class="site-btn site-btn--ghost" data-friend-rec-open '
+                 f'data-rec-kind="{_e(group.kind)}" data-rec-slug="{_e(group.path.rsplit("/", 1)[1])}" '
+                 f'data-rec-title="{_e(group.title)}">Recommend to a friend</button>' if signed_in else "")
     reviews_link = (f'<a class="site-btn site-btn--ghost" href="#community-title">Read {len(summary["reviews"])} member review'
                     f'{"s" if len(summary["reviews"]) != 1 else ""}</a>' if summary["reviews"]
                     else '<a class="site-btn site-btn--ghost" href="#write-review">Write the first review</a>')
@@ -534,6 +538,7 @@ def render(group, summary: dict, metadata: Optional[dict], indexable: bool, sign
   <script src="/static/share.js?v=20261004-share-1" defer></script>
   <script src="/static/review_report.js?v=20261020-title-reviews-1" defer></script>
   {'' if signed_in else '<script src="/static/guest-list.js?v=20261012-hero-search-1" defer></script>'}
+  {f'<link rel="stylesheet" href="/static/friend-recs.css?v={FRIEND_RECS_VERSION}"><script src="/static/friend-recs.js?v={FRIEND_RECS_VERSION}" defer></script>' if signed_in else ''}
   {ad_loader}
   {_json_ld(group, summary, metadata, canonical, image)}
 </head>
@@ -552,7 +557,7 @@ def render(group, summary: dict, metadata: Optional[dict], indexable: bool, sign
           {f'<p class="title-hero__lead">{_e(lead[:1].upper() + lead[1:])}</p>' if lead else ''}
           <div class="title-hero__chips">{genres}</div>
           {_scores_html(summary, metadata)}
-          <div class="title-hero__actions">{track}{reviews_link}{ask}<button type="button" class="site-btn site-btn--ghost" data-share data-share-title="{_e(group.title + year)} on OmniTrackr">Share</button></div>
+          <div class="title-hero__actions">{track}{reviews_link}{recommend}{ask}<button type="button" class="site-btn site-btn--ghost" data-share data-share-title="{_e(group.title + year)} on OmniTrackr">Share</button></div>
           <p class="title-hero__status" role="status" aria-live="polite"></p>
           {_links_html(metadata)}
         </div>

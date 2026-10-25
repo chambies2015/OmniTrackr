@@ -65,6 +65,7 @@
   <link rel="stylesheet" href="/static/badges.css?v=20261017-badges-1">
   <link rel="stylesheet" href="/static/import-studio.css?v=20261018-formats-1">
   <link rel="stylesheet" href="/static/seasonal-card.css?v=20261022-holidays-1">
+  <link rel="stylesheet" href="/static/friend-recs.css?v=20261024-friend-recs-1">
   <link rel="stylesheet" href="/static/dashboard-2026.css?v=20261018-install-card-1">
   <link rel="stylesheet" href="/static/a11y.css?v=20261018-a11y-1">
   <script src="./preauth.js?v=20261010-audit-preauth-1"></script>
@@ -412,6 +413,18 @@
     </nav>
 
     <p id="libraryNavigationStatus" role="status" aria-live="polite" aria-atomic="true" hidden></p>
+
+    <section id="friendRecs" class="friend-recs" aria-labelledby="friendRecsTitle" hidden>
+      <div class="friend-recs__header">
+        <div>
+          <p class="friend-recs__eyebrow">From your friends</p>
+          <h2 id="friendRecsTitle">Recommended for you</h2>
+          <p id="friendRecsSummary" class="friend-recs__summary"></p>
+        </div>
+        <button id="friendRecsMore" type="button" class="friend-recs__more" aria-controls="friendRecsItems" aria-expanded="false" hidden>Show all</button>
+      </div>
+      <ul id="friendRecsItems" class="friend-recs__items" aria-live="polite"></ul>
+    </section>
 
     <section id="starterPicks" class="for-you-card starter-picks" aria-labelledby="starterPicksTitle" hidden>
       <div class="for-you-card__head">
@@ -1683,7 +1696,7 @@
     </form>
   </dialog>
   <script src="./credentials.js"></script>
-  <script src="./auth.js?v=20261021-bugs-1"></script>
+  <script src="./auth.js?v=20261024-friend-recs-1"></script>
   <script src="/static/import-studio.js?v=20261022-diary-1"></script>
   <script src="/static/progress.js?v=20260922-progress"></script>
   <script src="./app.js"></script>
@@ -1697,6 +1710,7 @@
   <script src="/static/seasonal-card.js?v=20261022-holidays-1"></script>
   <script src="/static/badges.js?v=20261017-badges-1"></script>
   <script src="/static/taste-match.js?v=20261016-taste-match-1"></script>
+  <script src="/static/friend-recs.js?v=20261024-friend-recs-1"></script>
   <script src="/static/push.js?v=20261011-push-2" defer></script>
   <script src="/static/year-in-review-entry.js?v=20261019-story-1" defer></script>
   <script src="/static/guest-list.js?v=20261012-hero-search-1"></script>
