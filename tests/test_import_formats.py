@@ -107,10 +107,12 @@ ANILIST = {
 
 
 def build_zip(files):
+    # A fixed timestamp keeps the bytes identical between calls; writestr(name) stamps the
+    # current time, so a preview and an apply built a second apart got different fingerprints.
     buffer = io.BytesIO()
     with zipfile.ZipFile(buffer, "w") as archive:
         for name, text in files.items():
-            archive.writestr(name, text)
+            archive.writestr(zipfile.ZipInfo(name, date_time=(2024, 1, 1, 0, 0, 0)), text)
     return buffer.getvalue()
 
 
