@@ -239,4 +239,41 @@
     const ask = event.target.closest && event.target.closest('[data-take-ask]');
     if (ask) askFriend(ask);
   });
+
+  // ---------- "On this page" tabs: sit under the sticky header, mark the section in view ----------
+  function setupTabs() {
+    const tabs = document.querySelector('.title-tabs');
+    if (!tabs || typeof tabs.querySelectorAll !== 'function') return;
+    const header = document.querySelector('.site-header');
+    const place = () => {
+      const height = header ? Math.round(header.getBoundingClientRect().height) : 0;
+      document.documentElement.style.setProperty('--title-tabs-top', `${height}px`);
+    };
+    place();
+    window.addEventListener('resize', place);
+    if (typeof IntersectionObserver !== 'function') return;
+    const links = new Map();
+    tabs.querySelectorAll('a[href^="#"]').forEach(link => {
+      const heading = document.getElementById(link.getAttribute('href').slice(1));
+      const section = heading && (heading.closest('section') || heading);
+      if (section) links.set(section, link);
+    });
+    const visible = new Set();
+    const observer = new IntersectionObserver(entries => {
+      entries.forEach(entry => (entry.isIntersecting ? visible.add(entry.target) : visible.delete(entry.target)));
+      let current = null;
+      links.forEach((link, section) => { if (!current && visible.has(section)) current = link; });
+      links.forEach(link => {
+        if (link === current) {
+          link.setAttribute('aria-current', 'true');
+          const strip = link.parentElement;
+          if (strip.scrollWidth > strip.clientWidth) strip.scrollTo({ left: link.offsetLeft - 16, behavior: 'smooth' });
+        } else {
+          link.removeAttribute('aria-current');
+        }
+      });
+    }, { rootMargin: '-35% 0px -55% 0px' });
+    links.forEach((link, section) => observer.observe(section));
+  }
+  if (typeof document.getElementById === 'function') setupTabs();
 })();
