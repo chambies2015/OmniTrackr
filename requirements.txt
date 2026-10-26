@@ -32,7 +32,7 @@ httpx==0.28.1
 pytest-cov==6.0.0
 
 # Image processing
-Pillow==12.3.0
+Pillow==13.0.0
 
 # Rate limiting
 slowapi==0.1.9
