@@ -196,6 +196,8 @@ def remove_member(db: Session, shared: models.SharedList, user, member_id: int) 
         # Their "I'm in"s go with them; the titles they added stay, still credited to them.
         db.query(models.SharedListVote).filter(models.SharedListVote.user_id == member_id,
                                                models.SharedListVote.item_id.in_(item_ids)).delete(synchronize_session=False)
+    from . import clubs
+    clubs.forget_member(db, shared.id, member_id)
     db.delete(member)
     if member_id != user.id:
         # Someone the owner removed still has the join link; a new one keeps them out.
@@ -298,6 +300,8 @@ def update_item(db: Session, shared: models.SharedList, user, item, done: Option
 def remove_item(db: Session, shared: models.SharedList, user, item) -> None:
     if item.added_by_id != user.id and shared.owner_id != user.id:
         raise ListError("Only whoever added a title, or the list's owner, can take it off.", 403)
+    from . import clubs
+    clubs.item_removed(db, item)
     db.delete(item)
     db.commit()
 
@@ -392,10 +396,13 @@ def detail(db: Session, shared: models.SharedList, member: models.SharedListMemb
         "join_url": join_url(shared),
         "open": [serialize(i) for i in open_items], "done": [serialize(i) for i in done_items],
     }
+    from . import clubs
+    result["club"] = clubs.detail(db, shared, member, viewer)
     member.seen_at = _now()
     db.query(models.Notification).filter(
         models.Notification.user_id == viewer.id, models.Notification.link == f"/lists/{shared.id}",
-        models.Notification.type.in_(("shared_list_item", "shared_list_joined", "shared_list_added")),
+        models.Notification.type.in_(("shared_list_item", "shared_list_joined", "shared_list_added",
+                                       "club_pick", "club_post")),
         models.Notification.read_at.is_(None)).update({"read_at": _now()}, synchronize_session=False)
     db.commit()
     return result
@@ -407,6 +414,7 @@ def overview(db: Session, user) -> list[dict]:
                    .join(models.SharedList, models.SharedList.id == models.SharedListMember.list_id)
                    .filter(models.SharedListMember.user_id == user.id)
                    .order_by(models.SharedList.updated_at.desc(), models.SharedList.id.desc()).all())
+    from . import clubs
     results = []
     for member, shared in memberships:
         rows = _member_rows(db, shared.id)
@@ -420,12 +428,14 @@ def overview(db: Session, user) -> list[dict]:
             "members": [_person(u, user) for _, u in rows],
             "open_count": len(open_items), "done_count": len(items) - len(open_items), "new_count": new,
             "covers": [{"title": i.title, "image": i.image} for i in open_items[:4]],
+            "club": clubs.summary(db, shared.id),
         })
     return results
 
 
 def preview(db: Session, shared: models.SharedList) -> dict:
     """What a join link shows before someone joins: names and titles, never anyone's library."""
+    from . import clubs
     rows = _member_rows(db, shared.id)
     owner = next((user for member, user in rows if user.id == shared.owner_id), None)
     items = (db.query(models.SharedListItem).filter_by(list_id=shared.id)
@@ -439,4 +449,5 @@ def preview(db: Session, shared: models.SharedList) -> dict:
         "items": [{"title": i.title, "year": i.year, "label": KIND_LABELS[i.kind], "image": i.image}
                   for i in items[:PREVIEW_ITEMS]],
         "full": len(rows) >= MEMBERS_MAX,
+        "club": clubs.summary(db, shared.id),
     }

@@ -16,10 +16,10 @@ from ..progress import lock_progress_owner
 from .discover import page
 
 router = APIRouter(tags=["shared-lists"])
-CSS_VERSION = "20261020-lists-1"
-JS_VERSION = "20261021-lists-2"
-DESCRIPTION = ("Build a watchlist, reading queue or backlog together with friends. Everyone adds titles, says which "
-               "ones they're in for, and marks them done.")
+CSS_VERSION = "20261026-clubs-1"
+JS_VERSION = "20261026-clubs-1"
+DESCRIPTION = ("Build a watchlist, reading queue or backlog together with friends, or run it as a watch club: "
+               "pick one title, finish it by a date and talk it over.")
 
 
 def _e(value) -> str:
@@ -142,10 +142,12 @@ def lists_page(user=Depends(get_optional_current_user)):
     if user is None:
         return _sign_in_page("/lists")
     content = (
-        '<header class="hero sl-hero"><p class="eyebrow">SHARED LISTS</p>'
+        '<header class="hero sl-hero"><p class="eyebrow">SHARED LISTS AND WATCH CLUBS</p>'
         '<h1>Lists you build together</h1>'
         '<p>A watchlist for the two of you, an anime queue for the group chat, a book club shortlist. Everyone adds '
-        'titles, says which ones they\'re in for, and marks them done when you get to them.</p></header>'
+        'titles, says which ones they\'re in for, and marks them done when you get to them.</p>'
+        '<p class="sl-hero__club">Want a club? Pick one title from any list, set a finish-by date, and everyone '
+        'checks in and talks it over once they\'re done. Spoilers stay hidden until you finish.</p></header>'
         '<section class="sl-app" id="sharedLists" data-view="index" aria-live="polite">'
         '<form class="sl-create" data-list-create>'
         '<h2>Start a list</h2>'
@@ -200,7 +202,10 @@ def _preview_html(info: dict) -> str:
               + (f'<p class="sl-muted">and {more} more.</p>' if more > 0 else '')) if covers else (
         '<p class="sl-muted">Nothing on it yet, so you can add the first title.</p>')
     people = ", ".join(_e(name) for name in info["members"])
-    return (f'<div class="sl-preview"><p class="sl-preview__who">In it so far: {people}</p>'
+    club = info.get("club")
+    club_html = (f'<p class="sl-preview__club"><span>Club pick right now</span> <strong>{_e(club["title"])}</strong> '
+                 f'<small>{_e(club["label"])} · finish by {_e(club["ends_label"])}</small></p>') if club else ''
+    return (f'<div class="sl-preview">{club_html}<p class="sl-preview__who">In it so far: {people}</p>'
             + (f'<p class="sl-preview__about">{_e(info["description"])}</p>' if info["description"] else '')
             + titles + '</div>')
 
@@ -237,13 +242,18 @@ def join_page(token: str, request: Request, user=Depends(get_optional_current_us
                    f'<a class="button button--ghost" href="/?next={next_path}#login">I have an account</a>'
                    '<p class="sl-muted sl-join__small">OmniTrackr is a free tracker for movies, shows, anime, games, '
                    'books and music. Once you\'re in, this link brings you straight back here.</p>')
+    lead = (f'{_e(owner)} is building this list on OmniTrackr and wants you in on it. '
+            'Add what you\'d like to watch, read or play, say which titles you\'re in for, and see what everyone '
+            'else picked.')
+    if info.get("club"):
+        lead = (f'{_e(owner)} runs this as a watch club on OmniTrackr. Right now everyone is on '
+                f'{_e(info["club"]["title"])}. Join, say how far you\'ve got, and talk it over when you finish. '
+                'Spoilers stay hidden until you\'re done.')
     content = (
         '<section class="sl-join" id="sharedLists" data-view="join">'
         f'<p class="eyebrow">{_e(owner)} INVITED YOU</p>'
         f'<h1>Join “{_e(info["name"])}”</h1>'
-        f'<p class="sl-join__lead">{_e(owner)} is building this list on OmniTrackr and wants you in on it. '
-        'Add what you\'d like to watch, read or play, say which titles you\'re in for, and see what everyone '
-        'else picked.</p>'
+        f'<p class="sl-join__lead">{lead}</p>'
         f'<div class="sl-join__actions">{actions}</div>'
         f'{_preview_html(info)}</section>'
     )
@@ -319,6 +329,12 @@ def list_link(list_id: PositiveDatabaseId, response: Response, options: LinkOpti
             shared_lists.reset_link(db, shared, user)
         except shared_lists.ListError as error:
             _fail(error)
+    from .. import clubs
+    club = clubs.summary(db, shared.id)
+    if club:
+        return {"url": shared_lists.join_url(shared),
+                "text": f'Join our watch club "{shared.name}" on OmniTrackr. We\'re all on {club["title"]} '
+                        f'until {club["ends_label"]}, then we talk it over.'}
     return {"url": shared_lists.join_url(shared),
             "text": f'Join our list "{shared.name}" on OmniTrackr. Add what you want to watch, read or play, '
                     "and we'll pick from it together."}

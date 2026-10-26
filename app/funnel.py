@@ -62,6 +62,8 @@ GUEST = (
     ("shared_list_created", "Shared list created"),
     ("shared_list_link_opened", "Shared list link opened by a visitor without an account"),
     ("shared_list_joined", "Someone joined a shared list through its link"),
+    ("club_pick_started", "Watch club: a club pick started on a shared list"),
+    ("club_post", "Watch club: a post in a club pick's discussion"),
     ("friend_rec_sent", "Recommend to a friend: a title sent to friends"),
     ("friend_rec_link_opened", "Recommend to a friend: link opened by a visitor without an account"),
     ("friend_rec_claimed", "Recommend to a friend: link saved into someone's inbox"),
