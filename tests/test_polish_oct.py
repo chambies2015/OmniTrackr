@@ -40,7 +40,7 @@ def test_poster_tiles_reserve_their_space():
 def test_dependency_security_floors():
     requirements = Path("requirements.txt").read_text(encoding="utf-8")
     assert "starlette>=1.6.0" in requirements and "h11>=0.16.0" in requirements
-    assert "python-multipart==0.0.31" in requirements and "Pillow==12.3.0" in requirements
+    assert "python-multipart==0.0.31" in requirements and "Pillow==13.0.0" in requirements
 
 
 def test_dead_code_and_unused_files_are_gone():

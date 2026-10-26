@@ -1,4 +1,6 @@
 """Recommend to a friend: send a title with a note, the friend adds it in one tap, or share a join link."""
+import json
+
 from app import auth, models
 from app.crud.friends import create_friendship
 from tests.test_title_pages import add_movie, member
@@ -64,7 +66,10 @@ def test_send_to_a_friend_and_add_to_library_and_next_up(authenticated_client, d
     assert item["year"] == 2014 and item["creator"] == "Christopher Nolan" and item["in_library"] is False
     assert item["image"] == "https://img.example.com/interstellar.jpg"
     # The sender's rating and review never travel with the recommendation.
-    assert "My private thoughts" not in inbox.text and "9.5" not in inbox.text
+    # created_at is left out of the check: its fractional seconds can contain "9.5".
+    shared = json.dumps([{k: v for k, v in it.items() if k != "created_at"} for it in data["items"]])
+    assert "My private thoughts" not in shared and "9.5" not in shared
+    assert not {"rating", "review"} & set(item)
 
     added = authenticated_client.post(f"/api/friend-recs/{item['id']}/add", json={"next_up": True})
     assert added.status_code == 200, added.text
