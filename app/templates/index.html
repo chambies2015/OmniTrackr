@@ -67,6 +67,7 @@
   <link rel="stylesheet" href="/static/seasonal-card.css?v=20261022-holidays-1">
   <link rel="stylesheet" href="/static/friend-recs.css?v=20261024-friend-recs-1">
   <link rel="stylesheet" href="/static/friends-feed.css?v=20261025-friends-feed-1">
+  <link rel="stylesheet" href="/static/dashboard-home.css?v=20261026-home-board-1">
   <link rel="stylesheet" href="/static/dashboard-2026.css?v=20261018-install-card-1">
   <link rel="stylesheet" href="/static/a11y.css?v=20261018-a11y-1">
   <script src="./preauth.js?v=20261010-audit-preauth-1"></script>
@@ -483,45 +484,6 @@
       </div>
     </section>
 
-    <section id="comingUp" class="for-you-card coming-up" aria-labelledby="comingUpTitle" hidden>
-      <div class="for-you-card__head">
-        <div>
-          <p class="for-you-card__eyebrow">Release Radar</p>
-          <h2 id="comingUpTitle">Coming up for you</h2>
-          <p id="comingUpSummary" class="for-you-card__summary"></p>
-        </div>
-        <div class="coming-up__tools">
-          <button type="button" id="comingUpCalendarButton" class="coming-up__calendar-btn" aria-expanded="false" aria-controls="releaseCalendarPanel">Add to my calendar</button>
-          <label id="comingUpEmail" class="coming-up__email" hidden>
-            <input type="checkbox" id="comingUpEmailToggle">
-            <span>Email me this weekly</span>
-          </label>
-        </div>
-      </div>
-      <div id="releaseCalendarPanel" class="release-calendar" hidden>
-        <p class="release-calendar__text"><strong>Your private release calendar.</strong> New seasons, sequels and release days connected to your library appear in the calendar you already use and update on their own. Only you have this address, and it shows titles and dates, nothing else from your library.</p>
-        <div class="release-calendar__actions">
-          <a id="releaseCalendarGoogle" class="release-calendar__link release-calendar__link--primary" href="#" target="_blank" rel="noopener">Google Calendar</a>
-          <a id="releaseCalendarApple" class="release-calendar__link" href="#">Apple Calendar</a>
-          <a id="releaseCalendarOutlook" class="release-calendar__link" href="#" target="_blank" rel="noopener">Outlook</a>
-          <button type="button" id="releaseCalendarCopy" class="release-calendar__link">Copy address</button>
-        </div>
-        <div class="release-calendar__manage">
-          <button type="button" id="releaseCalendarReset" class="release-calendar__quiet">Get a new address</button>
-          <button type="button" id="releaseCalendarOff" class="release-calendar__quiet">Turn off</button>
-        </div>
-        <p id="releaseCalendarStatus" class="release-calendar__status" role="status" aria-live="polite"></p>
-      </div>
-      <div class="weekly-invite" data-weekly-invite="coming-up" hidden>
-        <p class="weekly-invite__text"><strong>Get a weekly heads-up.</strong> A short email when something you track has a new episode, season or release, plus what your friends added that week. Quiet weeks are skipped (just a monthly round-up), and every email has a one-click unsubscribe.</p>
-        <div class="weekly-invite__actions">
-          <button type="button" class="action-btn weekly-invite__yes" data-weekly-action="subscribe">Email me weekly</button>
-          <button type="button" class="weekly-invite__no" data-weekly-action="dismiss">Not now</button>
-        </div>
-      </div>
-      <div id="comingUpList" class="for-you-grid for-you-grid--wide"></div>
-      <p id="comingUpStatus" class="for-you-card__status" role="status" aria-live="polite"></p>
-    </section>
 
     <section id="returnDeck" class="return-deck" aria-labelledby="returnDeckTitle" hidden>
       <div class="return-deck__header">
@@ -537,145 +499,194 @@
       <div id="returnDeckRecap" class="return-deck__recap"></div>
     </section>
 
-    <div class="daily-dashboard">
-    <section id="libraryPulse" class="library-pulse" aria-labelledby="libraryPulseTitle" hidden>
-      <div class="library-pulse__header">
-        <div>
-          <p class="library-pulse__eyebrow">Right where you left off</p>
-          <h2 id="libraryPulseTitle">Continue</h2>
-        </div>
-        <button type="button" class="library-pulse__insights" data-action="launchpad-open-insights">View insights</button>
-      </div>
-      <div id="libraryPulseContinue" class="library-pulse__list library-pulse__continue"></div>
-      <details id="libraryPulseReflections" class="library-pulse__reflections" hidden>
-        <summary>Make it memorable <span id="libraryPulseReflectionCount"></span></summary>
-        <p>Add a rating or a few words while you still remember it.</p>
-        <div id="libraryPulseReflect" class="library-pulse__list"></div>
-      </details>
-    </section>
+    <!-- Home board: daily cards and badges in the main column, goals and extras in the rail.
+         The rail turns into a swipeable row on phones (dashboard-home.css). -->
+    <div class="home-board">
+      <div class="home-board__main">
+        <div class="daily-dashboard">
+        <section id="libraryPulse" class="library-pulse" aria-labelledby="libraryPulseTitle" hidden>
+          <div class="library-pulse__header">
+            <div>
+              <p class="library-pulse__eyebrow">Right where you left off</p>
+              <h2 id="libraryPulseTitle">Continue</h2>
+            </div>
+            <button type="button" class="library-pulse__insights" data-action="launchpad-open-insights">View insights</button>
+          </div>
+          <div id="libraryPulseContinue" class="library-pulse__list library-pulse__continue"></div>
+          <details id="libraryPulseReflections" class="library-pulse__reflections" hidden>
+            <summary>Make it memorable <span id="libraryPulseReflectionCount"></span></summary>
+            <p>Add a rating or a few words while you still remember it.</p>
+            <div id="libraryPulseReflect" class="library-pulse__list"></div>
+          </details>
+        </section>
 
-    <section id="todaysPick" class="todays-pick" aria-labelledby="todaysPickTitle" hidden>
-      <div class="todays-pick__copy">
-        <h2 id="todaysPickTitle">Today’s pick</h2>
-        <label class="todays-pick__filter" for="todaysPickFilter">Choose from
-          <select id="todaysPickFilter" data-change-action="pick-category">
-            <option value="">All media</option>
-            <option value="movies">Movies</option>
-            <option value="tv-shows">TV shows</option>
-            <option value="anime">Anime</option>
-            <option value="video-games">Games</option>
-            <option value="music">Music</option>
-            <option value="books">Books</option>
-          </select>
-        </label>
-        <p id="todaysPickReason" class="todays-pick__reason"></p>
+        <section id="todaysPick" class="todays-pick" aria-labelledby="todaysPickTitle" hidden>
+          <div class="todays-pick__copy">
+            <h2 id="todaysPickTitle">Today’s pick</h2>
+            <label class="todays-pick__filter" for="todaysPickFilter">Choose from
+              <select id="todaysPickFilter" data-change-action="pick-category">
+                <option value="">All media</option>
+                <option value="movies">Movies</option>
+                <option value="tv-shows">TV shows</option>
+                <option value="anime">Anime</option>
+                <option value="video-games">Games</option>
+                <option value="music">Music</option>
+                <option value="books">Books</option>
+              </select>
+            </label>
+            <p id="todaysPickReason" class="todays-pick__reason"></p>
+          </div>
+          <div class="todays-pick__choice">
+            <span id="todaysPickCategory" class="todays-pick__category"></span>
+            <strong id="todaysPickName" aria-live="polite"></strong>
+          </div>
+          <div class="todays-pick__actions">
+            <button id="todaysPickOpen" type="button" class="action-btn todays-pick__open" data-action="open-todays-pick">Open it</button>
+            <button id="todaysPickAnother" type="button" class="todays-pick__another" data-action="try-another-pick">Try another</button>
+            <a class="todays-pick__new" href="/pick">Find something new</a>
+          </div>
+        </section>
+        </div>
+
+        <section id="nextUpQueue" class="next-up-queue" aria-labelledby="nextUpQueueTitle" hidden>
+          <div class="next-up-queue__header">
+            <div>
+              <h2 id="nextUpQueueTitle">Next Up</h2>
+              <p id="nextUpQueueSummary" class="next-up-queue__summary"></p>
+            </div>
+            <div class="next-up-queue__actions">
+              <button id="nextUpQueueClearFinished" type="button" class="next-up-queue__toggle next-up-queue__clear" data-action="clear-finished-next-up" hidden>Clear finished</button>
+              <button id="nextUpQueueToggle" type="button" class="next-up-queue__toggle" data-action="toggle-next-up" aria-controls="nextUpQueueItems" aria-expanded="false" hidden>Manage queue</button>
+            </div>
+          </div>
+          <div id="nextUpQueueItems" class="next-up-queue__items" aria-live="polite"></div>
+        </section>
+
+        <section id="comingUp" class="for-you-card coming-up" aria-labelledby="comingUpTitle" hidden>
+          <div class="for-you-card__head">
+            <div>
+              <p class="for-you-card__eyebrow">Release Radar</p>
+              <h2 id="comingUpTitle">Coming up for you</h2>
+              <p id="comingUpSummary" class="for-you-card__summary"></p>
+            </div>
+            <div class="coming-up__tools">
+              <button type="button" id="comingUpCalendarButton" class="coming-up__calendar-btn" aria-expanded="false" aria-controls="releaseCalendarPanel">Add to my calendar</button>
+              <label id="comingUpEmail" class="coming-up__email" hidden>
+                <input type="checkbox" id="comingUpEmailToggle">
+                <span>Email me this weekly</span>
+              </label>
+            </div>
+          </div>
+          <div id="releaseCalendarPanel" class="release-calendar" hidden>
+            <p class="release-calendar__text"><strong>Your private release calendar.</strong> New seasons, sequels and release days connected to your library appear in the calendar you already use and update on their own. Only you have this address, and it shows titles and dates, nothing else from your library.</p>
+            <div class="release-calendar__actions">
+              <a id="releaseCalendarGoogle" class="release-calendar__link release-calendar__link--primary" href="#" target="_blank" rel="noopener">Google Calendar</a>
+              <a id="releaseCalendarApple" class="release-calendar__link" href="#">Apple Calendar</a>
+              <a id="releaseCalendarOutlook" class="release-calendar__link" href="#" target="_blank" rel="noopener">Outlook</a>
+              <button type="button" id="releaseCalendarCopy" class="release-calendar__link">Copy address</button>
+            </div>
+            <div class="release-calendar__manage">
+              <button type="button" id="releaseCalendarReset" class="release-calendar__quiet">Get a new address</button>
+              <button type="button" id="releaseCalendarOff" class="release-calendar__quiet">Turn off</button>
+            </div>
+            <p id="releaseCalendarStatus" class="release-calendar__status" role="status" aria-live="polite"></p>
+          </div>
+          <div class="weekly-invite" data-weekly-invite="coming-up" hidden>
+            <p class="weekly-invite__text"><strong>Get a weekly heads-up.</strong> A short email when something you track has a new episode, season or release, plus what your friends added that week. Quiet weeks are skipped (just a monthly round-up), and every email has a one-click unsubscribe.</p>
+            <div class="weekly-invite__actions">
+              <button type="button" class="action-btn weekly-invite__yes" data-weekly-action="subscribe">Email me weekly</button>
+              <button type="button" class="weekly-invite__no" data-weekly-action="dismiss">Not now</button>
+            </div>
+          </div>
+          <div id="comingUpList" class="for-you-grid for-you-grid--wide"></div>
+          <p id="comingUpStatus" class="for-you-card__status" role="status" aria-live="polite"></p>
+        </section>
+
+        <section id="badgeCase" class="badge-case" aria-labelledby="badgeCaseTitle" hidden>
+          <div class="badge-case__header">
+            <div>
+              <p class="badge-case__eyebrow">Badges</p>
+              <h2 id="badgeCaseTitle">Your trophy case</h2>
+              <p id="badgeCaseSummary" class="badge-case__summary"></p>
+            </div>
+            <div id="badgeCaseShelf" class="badge-case__shelf" role="img" aria-label="Badges you've earned" hidden></div>
+          </div>
+          <div id="badgeCaseCelebration" class="badge-case__celebration" role="status" hidden></div>
+          <h3 id="badgeCaseNextTitle" class="badge-case__subhead">Closest next</h3>
+          <ul id="badgeCaseNext" class="badge-case__next"></ul>
+          <ul id="badgeCaseGrid" class="badge-case__grid" hidden></ul>
+          <div class="badge-case__footer">
+            <button id="badgeCaseToggle" type="button" class="badge-case__link badge-case__link--strong" data-badge-action="toggle" aria-expanded="false" aria-controls="badgeCaseGrid">See all badges</button>
+            <button type="button" class="badge-case__link" data-badge-action="hide">Hide</button>
+          </div>
+        </section>
       </div>
-      <div class="todays-pick__choice">
-        <span id="todaysPickCategory" class="todays-pick__category"></span>
-        <strong id="todaysPickName" aria-live="polite"></strong>
-      </div>
-      <div class="todays-pick__actions">
-        <button id="todaysPickOpen" type="button" class="action-btn todays-pick__open" data-action="open-todays-pick">Open it</button>
-        <button id="todaysPickAnother" type="button" class="todays-pick__another" data-action="try-another-pick">Try another</button>
-        <a class="todays-pick__new" href="/pick">Find something new</a>
-      </div>
-    </section>
+
+      <aside class="home-board__rail" aria-labelledby="homeBoardRailTitle">
+        <p id="homeBoardRailTitle" class="home-board__rail-title">Goals and extras</p>
+        <div class="home-board__rail-cards">
+          <section id="seasonCard" class="season-card" aria-labelledby="seasonCardTitle" hidden>
+            <p id="seasonCardEyebrow" class="season-card__eyebrow">This season</p>
+            <h2 id="seasonCardTitle">The seasonal hub is open</h2>
+            <p id="seasonCardSummary" class="season-card__summary"></p>
+            <nav id="seasonCardShelves" class="season-card__shelves" aria-label="Shelves"></nav>
+            <div class="season-card__actions">
+              <a id="seasonCardOpen" class="season-card__open" href="/halloween">Open the hub</a>
+              <button id="seasonCardDismiss" type="button" class="season-card__dismiss">Hide until next year</button>
+            </div>
+          </section>
+
+          <section id="monthlyChallenge" class="month-challenge" aria-labelledby="monthlyChallengeTitle" hidden>
+            <div class="month-challenge__header">
+              <p id="monthlyChallengeEyebrow" class="month-challenge__eyebrow">Monthly challenge</p>
+              <h2 id="monthlyChallengeTitle">This month's challenge</h2>
+              <p id="monthlyChallengeSummary" class="month-challenge__summary"></p>
+            </div>
+            <div id="monthlyChallengeCelebration" class="month-challenge__celebration" role="status" hidden></div>
+            <ol id="monthlyChallengeSteps" class="month-challenge__steps"></ol>
+            <div class="month-challenge__footer">
+              <button id="monthlyChallengeJoin" type="button" class="action-btn" data-challenge-action="join">Take the challenge</button>
+              <a id="monthlyChallengeGuide" class="month-challenge__link" href="/challenges" hidden>Read the guide</a>
+              <button id="monthlyChallengeDismiss" type="button" class="month-challenge__link" data-challenge-action="dismiss">Not this month</button>
+              <button id="monthlyChallengeLeave" type="button" class="month-challenge__link" data-challenge-action="leave" hidden>Leave challenge</button>
+              <p id="monthlyChallengeStatus" class="month-challenge__status" role="status" aria-live="polite"></p>
+            </div>
+          </section>
+
+          <section id="yearGoals" class="year-goals" aria-labelledby="yearGoalsTitle" hidden>
+            <div class="year-goals__header">
+              <div>
+                <p class="year-goals__eyebrow">Yearly goals</p>
+                <h2 id="yearGoalsTitle">Your goals</h2>
+                <p id="yearGoalsSummary" class="year-goals__summary"></p>
+              </div>
+              <div id="yearGoalsYears" class="year-goals__years" role="group" aria-label="Goal year" hidden></div>
+            </div>
+            <div id="yearGoalsCelebration" class="year-goals__celebration" role="status" hidden></div>
+            <ul id="yearGoalsList" class="year-goals__list" hidden></ul>
+            <div id="yearGoalsFormSlot"></div>
+            <div class="year-goals__footer">
+              <button id="yearGoalsAdd" type="button" class="action-btn year-goals__add">Set a goal</button>
+              <button id="yearGoalsDismiss" type="button" class="year-goals__dismiss">Not now</button>
+              <p id="yearGoalsStatus" class="year-goals__status" role="status" aria-live="polite"></p>
+            </div>
+          </section>
+
+          <section id="installAppCard" class="install-card" aria-labelledby="installAppCardTitle" hidden>
+            <img class="install-card__icon" src="/static/icons/icon-192.png?v=20261003-pwa-1" alt="" width="56" height="56" loading="lazy" decoding="async">
+            <div class="install-card__copy">
+              <p class="install-card__eyebrow">Get the app</p>
+              <h2 id="installAppCardTitle">Keep your library on your home screen</h2>
+              <p id="installAppCardSummary" class="install-card__summary"></p>
+            </div>
+            <div class="install-card__actions">
+              <button id="installAppCardInstall" type="button" class="action-btn">Install app</button>
+              <button id="installAppCardDismiss" type="button" class="install-card__dismiss">Not now</button>
+            </div>
+          </section>
+        </div>
+      </aside>
     </div>
-
-    <section id="nextUpQueue" class="next-up-queue" aria-labelledby="nextUpQueueTitle" hidden>
-      <div class="next-up-queue__header">
-        <div>
-          <h2 id="nextUpQueueTitle">Next Up</h2>
-          <p id="nextUpQueueSummary" class="next-up-queue__summary"></p>
-        </div>
-        <div class="next-up-queue__actions">
-          <button id="nextUpQueueClearFinished" type="button" class="next-up-queue__toggle next-up-queue__clear" data-action="clear-finished-next-up" hidden>Clear finished</button>
-          <button id="nextUpQueueToggle" type="button" class="next-up-queue__toggle" data-action="toggle-next-up" aria-controls="nextUpQueueItems" aria-expanded="false" hidden>Manage queue</button>
-        </div>
-      </div>
-      <div id="nextUpQueueItems" class="next-up-queue__items" aria-live="polite"></div>
-    </section>
-
-    <section id="installAppCard" class="install-card" aria-labelledby="installAppCardTitle" hidden>
-      <img class="install-card__icon" src="/static/icons/icon-192.png?v=20261003-pwa-1" alt="" width="56" height="56" loading="lazy" decoding="async">
-      <div class="install-card__copy">
-        <p class="install-card__eyebrow">Get the app</p>
-        <h2 id="installAppCardTitle">Keep your library on your home screen</h2>
-        <p id="installAppCardSummary" class="install-card__summary"></p>
-      </div>
-      <div class="install-card__actions">
-        <button id="installAppCardInstall" type="button" class="action-btn">Install app</button>
-        <button id="installAppCardDismiss" type="button" class="install-card__dismiss">Not now</button>
-      </div>
-    </section>
-
-    <section id="yearGoals" class="year-goals" aria-labelledby="yearGoalsTitle" hidden>
-      <div class="year-goals__header">
-        <div>
-          <p class="year-goals__eyebrow">Yearly goals</p>
-          <h2 id="yearGoalsTitle">Your goals</h2>
-          <p id="yearGoalsSummary" class="year-goals__summary"></p>
-        </div>
-        <div id="yearGoalsYears" class="year-goals__years" role="group" aria-label="Goal year" hidden></div>
-      </div>
-      <div id="yearGoalsCelebration" class="year-goals__celebration" role="status" hidden></div>
-      <ul id="yearGoalsList" class="year-goals__list" hidden></ul>
-      <div id="yearGoalsFormSlot"></div>
-      <div class="year-goals__footer">
-        <button id="yearGoalsAdd" type="button" class="action-btn year-goals__add">Set a goal</button>
-        <button id="yearGoalsDismiss" type="button" class="year-goals__dismiss">Not now</button>
-        <p id="yearGoalsStatus" class="year-goals__status" role="status" aria-live="polite"></p>
-      </div>
-    </section>
-
-    <section id="monthlyChallenge" class="month-challenge" aria-labelledby="monthlyChallengeTitle" hidden>
-      <div class="month-challenge__header">
-        <p id="monthlyChallengeEyebrow" class="month-challenge__eyebrow">Monthly challenge</p>
-        <h2 id="monthlyChallengeTitle">This month's challenge</h2>
-        <p id="monthlyChallengeSummary" class="month-challenge__summary"></p>
-      </div>
-      <div id="monthlyChallengeCelebration" class="month-challenge__celebration" role="status" hidden></div>
-      <ol id="monthlyChallengeSteps" class="month-challenge__steps"></ol>
-      <div class="month-challenge__footer">
-        <button id="monthlyChallengeJoin" type="button" class="action-btn" data-challenge-action="join">Take the challenge</button>
-        <a id="monthlyChallengeGuide" class="month-challenge__link" href="/challenges" hidden>Read the guide</a>
-        <button id="monthlyChallengeDismiss" type="button" class="month-challenge__link" data-challenge-action="dismiss">Not this month</button>
-        <button id="monthlyChallengeLeave" type="button" class="month-challenge__link" data-challenge-action="leave" hidden>Leave challenge</button>
-        <p id="monthlyChallengeStatus" class="month-challenge__status" role="status" aria-live="polite"></p>
-      </div>
-    </section>
-
-    <section id="seasonCard" class="season-card" aria-labelledby="seasonCardTitle" hidden>
-      <p id="seasonCardEyebrow" class="season-card__eyebrow">This season</p>
-      <h2 id="seasonCardTitle">The seasonal hub is open</h2>
-      <p id="seasonCardSummary" class="season-card__summary"></p>
-      <nav id="seasonCardShelves" class="season-card__shelves" aria-label="Shelves"></nav>
-      <div class="season-card__actions">
-        <a id="seasonCardOpen" class="season-card__open" href="/halloween">Open the hub</a>
-        <button id="seasonCardDismiss" type="button" class="season-card__dismiss">Hide until next year</button>
-      </div>
-    </section>
-
-    <section id="badgeCase" class="badge-case" aria-labelledby="badgeCaseTitle" hidden>
-      <div class="badge-case__header">
-        <div>
-          <p class="badge-case__eyebrow">Badges</p>
-          <h2 id="badgeCaseTitle">Your trophy case</h2>
-          <p id="badgeCaseSummary" class="badge-case__summary"></p>
-        </div>
-        <div id="badgeCaseShelf" class="badge-case__shelf" role="img" aria-label="Badges you've earned" hidden></div>
-      </div>
-      <div id="badgeCaseCelebration" class="badge-case__celebration" role="status" hidden></div>
-      <h3 id="badgeCaseNextTitle" class="badge-case__subhead">Closest next</h3>
-      <ul id="badgeCaseNext" class="badge-case__next"></ul>
-      <ul id="badgeCaseGrid" class="badge-case__grid" hidden></ul>
-      <div class="badge-case__footer">
-        <button id="badgeCaseToggle" type="button" class="badge-case__link badge-case__link--strong" data-badge-action="toggle" aria-expanded="false" aria-controls="badgeCaseGrid">See all badges</button>
-        <button type="button" class="badge-case__link" data-badge-action="hide">Hide</button>
-      </div>
-    </section>
-
-
 
     <!-- Movies Tab Content -->
     <div id="movies-tab" class="tab-content active library-section">

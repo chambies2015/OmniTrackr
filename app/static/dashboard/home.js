@@ -1634,9 +1634,29 @@ function initLandingPageEnhancements() {
   fetchUserCount();
 }
 
+// Phone home board: the rail's cards appear one by one as their data loads, and
+// a snapping row stays on whichever card showed first. Hold it at the first card
+// until the member swipes or uses the row themselves.
+function keepHomeRailAtStart() {
+  const rail = document.querySelector('.home-board__rail-cards');
+  if (!rail || typeof MutationObserver === 'undefined') return;
+  let touched = false;
+  const touch = () => { touched = true; };
+  ['pointerdown', 'wheel', 'keydown', 'focusin'].forEach(type => rail.addEventListener(type, touch, { passive: true }));
+  const reset = () => {
+    if (touched || !rail.scrollLeft) return;
+    rail.scrollLeft = 0;
+  };
+  new MutationObserver(() => {
+    reset();
+    requestAnimationFrame(reset);
+  }).observe(rail, { attributes: true, attributeFilter: ['hidden'], childList: true, subtree: true });
+}
+
 // Call on DOMContentLoaded
 document.addEventListener('DOMContentLoaded', function() {
   initLandingPageEnhancements();
+  keepHomeRailAtStart();
 });
 
 // Also call when landing page becomes visible (after login/logout)
