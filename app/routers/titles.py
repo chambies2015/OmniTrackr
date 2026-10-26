@@ -18,7 +18,7 @@ from sqlalchemy import func
 from sqlalchemy.orm import Session
 from starlette.concurrency import run_in_threadpool
 
-from .. import models, pick, review_spoilers, supporters, title_charts, title_metadata, title_pages, title_search
+from .. import models, pick, review_spoilers, supporters, title_charts, title_metadata, title_pages, title_search, where_to_watch
 from ..auth import AUTH_COOKIE_NAME
 from ..csp import strict_html_response
 from ..dependencies import get_current_user, get_db
@@ -27,7 +27,7 @@ from ..site_chrome import apply_site_chrome, editorial_picks, message_page
 
 router = APIRouter(tags=["titles"])
 SITE_URL = os.getenv("SITE_URL", "https://omnitrackr.xyz").rstrip("/")
-CSS_VERSION = "20261025-title-refresh-1"
+CSS_VERSION = "20261026-where-to-watch-1"
 JS_VERSION = "20261025-title-refresh-1"
 SCHEMA_TYPES = {"movie": "Movie", "tv": "TVSeries", "anime": "TVSeries", "game": "VideoGame", "album": "MusicAlbum", "book": "Book"}
 CREATOR_SCHEMA = {"movie": "director", "album": "byArtist", "book": "author"}
@@ -142,6 +142,8 @@ async def _load(request: Request, db: Session, kind: str, slug: str):
     client = getattr(request.app.state, "external_api_client", None)
     metadata = await title_metadata.get_or_fetch(
         db, client, kind, group.normalized, group.title, group.year, _metadata_creator(kind, summary))
+    summary["where"] = await where_to_watch.get_or_fetch(
+        db, client, kind, group.normalized, group.title, group.year, metadata, wait=4)
     return group, summary, metadata
 
 
@@ -253,6 +255,43 @@ def _about_html(group, summary: dict, metadata: dict) -> str:
         return ""
     return (f'<section class="title-section title-about" aria-labelledby="about-title"><h2 id="about-title">About {_e(group.title)}</h2>'
             f'{description}<dl class="title-facts">{facts}</dl></section>')
+
+
+WHERE_HEADINGS = {"game": "Where to play {title}"}
+
+
+def _where_html(group, summary: dict) -> str:
+    """Services that stream, rent, sell or first aired the title, with the credits the data needs."""
+    where = summary.get("where") or {}
+    if not where.get("groups"):
+        return ""
+    rows = []
+    for entry in where["groups"]:
+        chips = []
+        for provider in entry["providers"]:
+            logo = (f'<img src="{_e(provider["logo"])}" alt="" width="28" height="28" loading="lazy">'
+                    if provider.get("logo") else f'<span class="title-where__mono" aria-hidden="true">{_e(provider["name"][:1].upper())}</span>')
+            inner = f'{logo}<span>{_e(provider["name"])}</span>'
+            chips.append(f'<li><a class="title-where__provider" href="{_e(provider["url"])}" target="_blank" rel="noopener nofollow">{inner}</a></li>'
+                         if provider.get("url") else f'<li><span class="title-where__provider">{inner}</span></li>')
+        rows.append(f'<div class="title-where__group"><h3>{_e(entry["label"])}</h3><ul>{"".join(chips)}</ul></div>')
+    heading = WHERE_HEADINGS.get(group.kind, "Where to watch {title}").format(title=group.title)
+    notes = []
+    if where.get("region"):
+        checked = _pretty_date(where.get("fetched")) or where.get("fetched") or ""
+        notes.append(f'<p class="title-where__note">Showing {_e(where["region"])} availability, checked {_e(checked)}. Services change their catalogues often.</p>')
+    credits = where.get("credits") or []
+    if credits:
+        named = ", ".join(f'<a href="{_e(c["url"])}" rel="noopener">{_e(c["name"])}</a>' for c in credits)
+        tmdb = " This product uses the TMDB API but is not endorsed or certified by TMDB." if where.get("justwatch") else ""
+        notes.append(f'<p class="title-where__note">Data from {named}.{tmdb}</p>')
+    more = ""
+    if group.kind in where_to_watch.VIDEO_KINDS:
+        more = (f'<a class="title-where__more" href="{_e(where.get("link") or where_to_watch.justwatch_search(group.title))}" '
+                f'target="_blank" rel="noopener nofollow">Compare every service{" on JustWatch" if not where.get("link") else ""} ↗</a>')
+    return (f'<section class="title-section title-where" aria-labelledby="where-title"><h2 id="where-title">{_e(heading)}</h2>'
+            f'<div class="title-where__groups">{"".join(rows)}</div>{more}'
+            f'{"".join(notes)}</section>')
 
 
 def _tracks_html(metadata: dict) -> str:
@@ -412,6 +451,10 @@ def _glance_html(group, summary: dict, metadata: dict, signed_in: bool) -> str:
         facts.append((CREATOR_LABEL[group.kind], _e(summary["creator"])))
     found = {fact["label"]: fact["value"] for fact in metadata.get("facts") or [] if fact.get("value")}
     facts += [(label, _e(found[label])) for label in GLANCE_FACTS if label in found][:3]
+    services = where_to_watch.names(summary.get("where"))
+    if services:
+        facts.append(("Where to play" if group.kind == "game" else "Where to watch",
+                      f'<a href="#where-title">{_e(", ".join(services))}</a>'))
     if _genres(metadata):
         facts.append(("Genres", _e(", ".join(_genres(metadata)[:3]))))
     if not rows and not facts:
@@ -581,6 +624,9 @@ def render(group, summary: dict, metadata: Optional[dict], indexable: bool, sign
         description_bits.append(f"{len(summary['reviews'])} member review{'s' if len(summary['reviews']) != 1 else ''}")
     if summary["members"]:
         description_bits.append(f"tracked by {summary['members']} OmniTrackr member{'s' if summary['members'] != 1 else ''}")
+    streaming = where_to_watch.stream_names(summary.get("where"), limit=2)
+    if streaming and group.kind in where_to_watch.VIDEO_KINDS:
+        description_bits.append("where to watch it (" + " and ".join(streaming) + ")")
     if metadata.get("trailer"):
         description_bits.append("trailer")
     meta_description = _excerpt(", ".join(description_bits) + ".", 158)
@@ -614,6 +660,7 @@ def render(group, summary: dict, metadata: Optional[dict], indexable: bool, sign
         (_community_html(group, summary), "community-title", "Reviews"),
         (_write_review_html(group, summary, signed_in, take), "write-review", "Write a review"),
         (_trailer_html(group, metadata), "trailer-title", "Trailer"),
+        (_where_html(group, summary), "where-title", "Where to play" if group.kind == "game" else "Where to watch"),
         (_about_html(group, summary, metadata), "about-title", "About"),
         (_if_you_liked_html(group), "liked-title", "What to try next"),
         (_in_order_html(group), "in-order-title", "Series order"),
@@ -946,6 +993,35 @@ def import_guest_list(
     return {"added": added, "existing": existing, "missing": missing}
 
 
+@router.get("/api/where-to-watch")
+async def where_to_watch_lookup(request: Request, response: Response,
+                                kind: str = Query(..., max_length=10),
+                                title: str = Query(..., min_length=1, max_length=300),
+                                year: Optional[int] = Query(None, ge=1800, le=2200),
+                                user=Depends(get_current_user), db: Session = Depends(get_db)):
+    """Where a library title streams or sells, for the member's own rows (works for private libraries too)."""
+    response.headers["Cache-Control"] = "private, no-store"
+    if kind not in where_to_watch.KINDS:
+        raise HTTPException(404, "Not available for this kind of title")
+    display = " ".join(title.split())
+    normalized = title_pages.normalize(display)
+    if not normalized:
+        raise HTTPException(422, "A title is required")
+    client = getattr(request.app.state, "external_api_client", None)
+    metadata = await title_metadata.get_or_fetch(db, client, kind, normalized, display, year)
+    where = await where_to_watch.get_or_fetch(db, client, kind, normalized, display, year, metadata, wait=8) or {}
+    return {
+        "kind": kind,
+        "title": display,
+        "groups": where.get("groups") or [],
+        "region": where.get("region"),
+        "fetched": where.get("fetched"),
+        "credits": where.get("credits") or [],
+        "tmdb_notice": bool(where.get("justwatch")),
+        "more": (where.get("link") or where_to_watch.justwatch_search(display)) if kind in where_to_watch.VIDEO_KINDS else None,
+    }
+
+
 @router.get("/api/titles/search")
 def search_titles(request: Request, response: Response, q: str = Query("", max_length=200), db: Session = Depends(get_db)):
     """Homepage search over titles members track; anyone can use it, no account needed."""
@@ -1235,6 +1311,8 @@ async def warm_metadata(session_factory, client, batch: int = 8) -> int:
         if group is None:
             return None, None
         _, fresh = title_metadata.cached(db, title_metadata.cache_key(group.kind, group.normalized, group.year))
+        if fresh and group.kind in where_to_watch.KINDS:
+            _, fresh = where_to_watch.cached(db, where_to_watch.cache_key(group.kind, group.normalized, group.year))
         if fresh:
             return None, None
         return group, title_pages.summarize(db, group, page_sections=False).get("creator")
@@ -1247,7 +1325,9 @@ async def warm_metadata(session_factory, client, batch: int = 8) -> int:
             group, creator = await run_in_threadpool(stale_group, candidate)
             if group is None:
                 continue
-            await title_metadata.get_or_fetch(db, client, group.kind, group.normalized, group.title, group.year, creator, wait=20)
+            metadata = await title_metadata.get_or_fetch(db, client, group.kind, group.normalized, group.title, group.year,
+                                                         creator, wait=20)
+            await where_to_watch.get_or_fetch(db, client, group.kind, group.normalized, group.title, group.year, metadata, wait=20)
             fetched += 1
             await asyncio.sleep(2)  # Be gentle with Wikipedia and friends.
     finally:

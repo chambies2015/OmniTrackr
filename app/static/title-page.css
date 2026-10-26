@@ -262,3 +262,15 @@
   .title-verdict { padding: 16px; }
   .title-verdict p { font-size: .98rem; }
 }
+
+/* Where to watch / play */
+.title-where__groups { display: grid; gap: 18px; }
+.title-where__group h3 { color: var(--site-muted); font-size: .78rem; font-weight: 700; letter-spacing: .08em; margin: 0 0 8px; text-transform: uppercase; }
+.title-where__group ul { display: flex; flex-wrap: wrap; gap: 8px; list-style: none; margin: 0; padding: 0; }
+.title-where__provider { align-items: center; background: var(--site-surface); border: 1px solid var(--site-border); border-radius: 999px; color: var(--site-text); display: inline-flex; font-size: .92rem; font-weight: 600; gap: 9px; min-height: 44px; padding: 6px 16px 6px 6px; text-decoration: none; }
+a.title-where__provider:hover, a.title-where__provider:focus-visible { border-color: var(--site-violet-soft); }
+.title-where__provider img, .title-where__mono { border-radius: 8px; flex-shrink: 0; height: 30px; width: 30px; }
+.title-where__mono { align-items: center; background: var(--site-violet-soft); color: var(--site-bg); display: inline-flex; font-weight: 800; justify-content: center; }
+.title-where__more { color: var(--site-violet-soft); display: inline-block; font-weight: 600; margin-top: 18px; }
+.title-where__note { color: var(--site-muted); font-size: .82rem; line-height: 1.55; margin: 10px 0 0; }
+.title-where__note a { color: inherit; }

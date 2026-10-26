@@ -684,6 +684,7 @@ rate_limited_guest_import = limiter.limit("10/minute")(titles.import_guest_list)
 rate_limited_title_review = limiter.limit("20/minute")(titles.save_title_review)
 rate_limited_take_ask = limiter.limit("20/minute")(titles.ask_for_takes)
 rate_limited_title_search = limiter.limit("60/minute")(titles.search_titles)
+rate_limited_where_to_watch = limiter.limit("30/minute")(titles.where_to_watch_lookup)
 for route in titles.router.routes:
     if getattr(route, "path", None) == "/api/guest-list/import":
         bind_rate_limited_endpoint(route, rate_limited_guest_import)
@@ -693,6 +694,8 @@ for route in titles.router.routes:
         bind_rate_limited_endpoint(route, rate_limited_take_ask)
     elif getattr(route, "path", None) == "/api/titles/search":
         bind_rate_limited_endpoint(route, rate_limited_title_search)
+    elif getattr(route, "path", None) == "/api/where-to-watch":
+        bind_rate_limited_endpoint(route, rate_limited_where_to_watch)
 app.include_router(titles.router)
 
 rate_limited_profile_card = limiter.limit("30/minute")(profiles.profile_card)
