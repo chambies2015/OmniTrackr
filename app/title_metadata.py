@@ -579,12 +579,13 @@ async def fetch(client, category: str, title: str, year: Optional[int], creator:
 
 # ---------------------------------------------------------------- cache
 
-def cached(db: Session, key: str) -> tuple[Optional[dict], bool]:
+def cached(db: Session, key: str, freshness: Optional[dict] = None) -> tuple[Optional[dict], bool]:
     """(data, is_fresh). data is None for unknown or failed lookups."""
     row = db.query(models.TitleMetadata).filter_by(key=key).first()
     if row is None:
         return None, False
-    fresh = datetime.utcnow() - row.fetched_at < FRESH.get(row.status, FRESH["error"])
+    freshness = freshness or FRESH
+    fresh = datetime.utcnow() - row.fetched_at < freshness.get(row.status, freshness["error"])
     data = None
     if row.status == "ok" and row.data:
         try:

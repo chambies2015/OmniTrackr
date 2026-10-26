@@ -48,10 +48,140 @@
     return privacy;
   }
 
+  // Where to watch (or play): a "More" menu entry that asks the server, so it works for private libraries too.
+  const WHERE_KINDS = { movie: 'watch', tv: 'watch', anime: 'watch', game: 'play' };
+  let whereDialog = null;
+
+  function el(tag, className, text) {
+    const node = document.createElement(tag);
+    if (className) node.className = className;
+    if (text !== undefined) node.textContent = text;
+    return node;
+  }
+
+  function safeUrl(url) {
+    return typeof url === 'string' && /^https:\/\//.test(url) ? url : '';
+  }
+
+  function ensureWhereDialog() {
+    if (whereDialog) return whereDialog;
+    const dialog = el('dialog', 'progress-dialog where-dialog');
+    dialog.setAttribute('aria-labelledby', 'whereDialogTitle');
+    const header = el('div', 'progress-dialog__header');
+    const heading = el('div');
+    heading.append(el('p', 'progress-dialog__eyebrow', 'Where to watch'), el('h2'));
+    heading.lastChild.id = 'whereDialogTitle';
+    const close = el('button', 'progress-dialog__close', '×');
+    close.type = 'button';
+    close.setAttribute('aria-label', 'Close');
+    close.addEventListener('click', () => dialog.close());
+    header.append(heading, close);
+    const body = el('div', 'where-dialog__body');
+    body.setAttribute('aria-live', 'polite');
+    dialog.append(header, body);
+    dialog.addEventListener('click', event => { if (event.target === dialog) dialog.close(); });
+    document.body.appendChild(dialog);
+    whereDialog = dialog;
+    return dialog;
+  }
+
+  function prettyDate(value) {
+    const match = String(value || '').match(/^(\d{4})-(\d{2})-(\d{2})$/);
+    if (!match) return 'recently';
+    const day = new Date(Date.UTC(Number(match[1]), Number(match[2]) - 1, Number(match[3])));
+    return day.toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric', timeZone: 'UTC' });
+  }
+
+  function renderWhere(body, data, kind) {
+    body.replaceChildren();
+    const groups = Array.isArray(data.groups) ? data.groups : [];
+    if (!groups.length) {
+      body.appendChild(el('p', 'progress-dialog__hint',
+        kind === 'game' ? 'We could not find stores for this game yet.' : 'We could not find streaming services for this title yet.'));
+    }
+    groups.forEach(group => {
+      const section = el('div', 'where-dialog__group');
+      section.appendChild(el('h3', '', group.label));
+      const list = el('ul');
+      (group.providers || []).forEach(provider => {
+        const item = el('li');
+        const url = safeUrl(provider.url);
+        const chip = el(url ? 'a' : 'span', 'where-dialog__provider');
+        if (url) { chip.href = url; chip.target = '_blank'; chip.rel = 'noopener nofollow'; }
+        const logo = safeUrl(provider.logo);
+        if (logo) {
+          const img = el('img');
+          img.src = logo; img.alt = ''; img.width = 28; img.height = 28;
+          chip.appendChild(img);
+        }
+        chip.appendChild(el('span', '', provider.name));
+        item.appendChild(chip);
+        list.appendChild(item);
+      });
+      section.appendChild(list);
+      body.appendChild(section);
+    });
+    const more = safeUrl(data.more);
+    if (more) {
+      const link = el('a', 'where-dialog__more', 'Compare every service ↗');
+      link.href = more; link.target = '_blank'; link.rel = 'noopener nofollow';
+      body.appendChild(link);
+    }
+    const notes = [];
+    if (data.region && groups.length) notes.push(`Showing ${data.region} availability, checked ${prettyDate(data.fetched)}.`);
+    const credits = (data.credits || []).map(credit => credit.name).filter(Boolean);
+    if (credits.length) notes.push(`Data from ${credits.join(', ')}.`);
+    if (data.tmdb_notice) notes.push('This product uses the TMDB API but is not endorsed or certified by TMDB.');
+    if (notes.length) body.appendChild(el('p', 'progress-dialog__hint where-dialog__note', notes.join(' ')));
+  }
+
+  async function openWhere(kind, title, yearValue) {
+    const dialog = ensureWhereDialog();
+    dialog.querySelector('.progress-dialog__eyebrow').textContent = `Where to ${WHERE_KINDS[kind]}`;
+    dialog.querySelector('#whereDialogTitle').textContent = title;
+    const body = dialog.querySelector('.where-dialog__body');
+    body.replaceChildren(el('p', 'progress-dialog__hint', 'Checking services…'));
+    if (!dialog.open) {
+      if (typeof dialog.showModal === 'function') dialog.showModal(); else dialog.setAttribute('open', '');
+    }
+    const match = String(yearValue || '').match(/^(\d{4})/);
+    const params = new URLSearchParams({ kind, title });
+    if (match && Number(match[1]) > 0) params.set('year', match[1]);
+    try {
+      const options = typeof authFetchOptions === 'function' ? authFetchOptions() : { credentials: 'same-origin' };
+      const response = await fetch(`${typeof API_BASE === 'string' ? API_BASE : ''}/api/where-to-watch?${params}`, options);
+      if (!response.ok) throw new Error(String(response.status));
+      if (dialog.querySelector('#whereDialogTitle').textContent !== title) return;
+      renderWhere(body, await response.json(), kind);
+    } catch (error) {
+      body.replaceChildren(el('p', 'progress-dialog__hint', 'Could not check right now. Please try again in a minute.'));
+    }
+  }
+
+  function addWhereButton(row, kind, title, yearValue) {
+    const panel = row.querySelector('.row-menu__panel');
+    if (!panel || panel.querySelector('.where-to-watch-btn')) return;
+    const button = el('button', 'action-btn where-to-watch-btn', `Where to ${WHERE_KINDS[kind]}`);
+    button.type = 'button';
+    button.addEventListener('click', () => {
+      const menu = button.closest('details');
+      if (menu) menu.open = false;
+      openWhere(kind, title, yearValue);
+    });
+    panel.insertBefore(button, panel.firstChild);
+  }
+
   async function linkRows(tableId) {
     const [kind, buttonSelector, titleKey, yearKey, privateKey] = TABLES[tableId];
     const table = document.getElementById(tableId);
     if (!table) return;
+    if (WHERE_KINDS[kind]) {
+      table.querySelectorAll('tbody tr').forEach(row => {
+        const button = row.querySelector(buttonSelector);
+        const title = button && button.dataset[titleKey];
+        if (title) addWhereButton(row, kind, title.trim(), button.dataset[yearKey]);
+      });
+    }
     const settings = await loadPrivacy();
     if (settings[privateKey]) return;
     table.querySelectorAll('tbody tr').forEach(row => {
@@ -88,8 +218,8 @@
     if (event.target && event.target.id === 'privacySettingsForm') privacy = null;
   }, true);
 
-  if (typeof window !== 'undefined') window.OmniTitleLinks = { slugify, titlePath };
-  if (typeof module !== 'undefined' && module.exports) module.exports = { slugify, titlePath };
+  if (typeof window !== 'undefined') window.OmniTitleLinks = { slugify, titlePath, openWhere };
+  if (typeof module !== 'undefined' && module.exports) module.exports = { slugify, titlePath, renderWhere, safeUrl };
   if (typeof document !== 'undefined' && document.documentElement && document.documentElement.dataset.publicShell !== 'true') {
     if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', watch);
     else watch();
