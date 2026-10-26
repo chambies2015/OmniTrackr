@@ -1,0 +1,299 @@
+/* Home board refresh: the cards above the library sit in two columns instead of
+   one long stack. Continue, Today's pick, Next Up and Coming up share the main
+   column with the trophy case; the season hub, monthly challenge, goals and
+   install card share a narrower rail, which turns into a swipeable row on phones.
+   Visual only: every card keeps its ids, hidden flags and handlers. Selectors
+   start at .home-board so they win over the older card rules without !important. */
+
+body.app-shell {
+  --home-gap: 18px;
+  --home-radius: 20px;
+  --home-rail: 360px;
+  --home-bar: linear-gradient(180deg, #a78bfa, #7c3aed);
+  --home-card-tint: linear-gradient(180deg, rgba(124, 58, 237, .035), transparent 140px);
+}
+body.app-shell.dark-mode {
+  --home-card-tint: linear-gradient(180deg, rgba(255, 255, 255, .045), rgba(255, 255, 255, .012) 160px);
+}
+
+/* ---------- Layout ---------- */
+body.app-shell .home-board {
+  align-items: start;
+  display: grid;
+  gap: var(--home-gap) 22px;
+  grid-template-columns: minmax(0, 1fr) var(--home-rail);
+  margin: 4px 0 26px;
+}
+body.app-shell .home-board__main,
+body.app-shell .home-board__rail-cards { display: flex; flex-direction: column; gap: var(--home-gap); min-width: 0; }
+body.app-shell .home-board__rail { min-width: 0; }
+
+/* Columns collapse when one side has nothing to show. */
+body.app-shell .home-board__main:not(:has(section:not([hidden]))),
+body.app-shell .home-board__rail:not(:has(.home-board__rail-cards > section:not([hidden]))) { display: none; }
+body.app-shell .home-board:not(:has(.home-board__rail-cards > section:not([hidden]))),
+body.app-shell .home-board:not(:has(.home-board__main section:not([hidden]))) { grid-template-columns: minmax(0, 1fr); }
+body.app-shell .home-board:not(:has(.home-board__main section:not([hidden]))) .home-board__rail-cards {
+  display: grid; grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
+}
+body.app-shell .home-board:not(:has(section:not([hidden]))) { display: none; }
+
+/* The board belongs next to the libraries, not over Journal, Statistics and friends. */
+body.app-shell:is([data-active-tab="statistics"], [data-active-tab="collections"], [data-active-tab="activity"],
+  [data-active-tab="recommendations"], [data-active-tab="friends-feed"]) .home-board { display: none; }
+
+body.app-shell .home-board__rail-title {
+  align-items: center;
+  color: var(--fg-secondary);
+  display: flex;
+  font-size: .7rem;
+  font-weight: 700;
+  gap: 8px;
+  justify-content: space-between;
+  letter-spacing: .1em;
+  margin: 0 4px 10px;
+  text-transform: uppercase;
+}
+
+/* ---------- One card language ---------- */
+body.app-shell .home-board :is(.daily-dashboard, .next-up-queue, .coming-up, .season-card, .month-challenge, .year-goals, .badge-case, .install-card) {
+  border-radius: var(--home-radius);
+  box-shadow: var(--shadow-sm);
+  margin: 0;
+}
+body.app-shell .home-board :is(.next-up-queue, .coming-up, .month-challenge, .year-goals) {
+  background: var(--home-card-tint), var(--card-bg);
+  border: 1px solid var(--border);
+}
+body.app-shell .home-board .daily-dashboard:has(> section:not([hidden])) {
+  background: var(--home-card-tint), var(--card-bg);
+  border: 1px solid var(--border);
+  overflow: hidden;
+}
+
+/* Main column headings carry the same colour bar as the library headings. */
+body.app-shell .home-board__main :is(#libraryPulseTitle, #nextUpQueueTitle, #comingUpTitle, #todaysPickTitle, #badgeCaseTitle) {
+  align-items: center;
+  display: inline-flex;
+  font-family: Poppins, Inter, system-ui, sans-serif;
+  font-size: 1.12rem;
+  font-weight: 600;
+  gap: 10px;
+}
+body.app-shell .home-board__main :is(#libraryPulseTitle, #nextUpQueueTitle, #comingUpTitle, #todaysPickTitle, #badgeCaseTitle)::before {
+  background: var(--home-bar);
+  border-radius: 999px;
+  content: "";
+  flex: none;
+  height: 18px;
+  width: 4px;
+}
+body.app-shell .home-board__main #nextUpQueueTitle::before,
+body.app-shell .home-board__main #todaysPickTitle::before { background: linear-gradient(180deg, #5eead4, #0d9488); }
+body.app-shell .home-board__main #badgeCaseTitle::before { background: linear-gradient(180deg, #fcd34d, #d97706); }
+
+/* Rail headings are a step smaller. */
+body.app-shell .home-board__rail :is(.season-card, .month-challenge, .year-goals, .install-card) h2 {
+  font-family: Poppins, Inter, system-ui, sans-serif;
+  font-size: 1.02rem;
+  font-weight: 600;
+  letter-spacing: -.015em;
+  line-height: 1.3;
+}
+body.app-shell .home-board :is(.month-challenge__eyebrow, .year-goals__eyebrow, .badge-case__eyebrow, .install-card__eyebrow, .library-pulse__eyebrow, .for-you-card__eyebrow) {
+  font-size: .66rem;
+  font-weight: 700;
+  letter-spacing: .1em;
+}
+
+/* Quiet text actions look like the library's light buttons rather than underlined links. */
+body.app-shell .home-board :is(.month-challenge__link, .year-goals__dismiss, .badge-case__link, .install-card__dismiss, .season-card__dismiss) {
+  border-radius: 999px;
+  color: var(--fg-secondary);
+  font-size: .8rem;
+  font-weight: 600;
+  min-height: 36px;
+  opacity: 1;
+  padding: 0 10px;
+  text-decoration: none;
+}
+body.app-shell .home-board :is(.month-challenge__link, .year-goals__dismiss, .badge-case__link, .install-card__dismiss, .season-card__dismiss):hover {
+  background: var(--surface-hover);
+  color: var(--fg);
+}
+body.app-shell .home-board .badge-case__link--strong { color: var(--primary); }
+body.app-shell .home-board :is(.month-challenge__footer, .year-goals__footer, .badge-case__footer, .season-card__actions) { gap: 6px 4px; }
+
+/* Primary buttons are pills, as on the library and title pages. */
+body.app-shell .home-board :is(#monthlyChallengeJoin, #yearGoalsAdd, #installAppCardInstall, .todays-pick__open, .season-card__open) {
+  border-radius: 999px;
+  min-height: 40px;
+  padding: 0 18px;
+}
+body.app-shell .home-board :is(#monthlyChallengeJoin, #yearGoalsAdd, #installAppCardInstall) {
+  background: linear-gradient(135deg, #8b5cf6, #a855f7);
+  border: 0;
+  color: #fff;
+}
+
+/* ---------- Continue and Today's pick ---------- */
+body.app-shell .home-board .daily-dashboard .library-pulse { padding: 20px 22px 14px; }
+body.app-shell .home-board .library-pulse__header { margin-bottom: 14px; }
+body.app-shell .home-board .library-pulse__item { border-radius: 14px; transition: border-color .15s ease, transform .15s ease; }
+body.app-shell .home-board .library-pulse__item:hover { transform: translateY(-1px); }
+body.app-shell .home-board .daily-dashboard .library-pulse__progress-row { border-radius: 14px; }
+body.app-shell .home-board .library-pulse__insights {
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  font-size: .8rem;
+  padding: 0 14px;
+}
+body.app-shell .home-board .progress-update { border-radius: 999px; font-size: .8rem; font-weight: 600; }
+body.app-shell .home-board .daily-dashboard .todays-pick {
+  background: linear-gradient(110deg, rgba(20, 184, 166, .10), rgba(124, 58, 237, .08) 70%), var(--surface-muted);
+  border: 0;
+  border-radius: 0;
+  border-top: 1px solid var(--border);
+  padding: 18px 22px 20px;
+}
+body.app-shell .home-board .daily-dashboard > .todays-pick:first-child { border-top: 0; }
+body.app-shell .home-board .todays-pick__choice strong { font-family: Poppins, Inter, system-ui, sans-serif; font-size: 1.1rem; font-weight: 600; }
+body.app-shell .home-board .todays-pick__filter select { border-radius: 999px; padding-inline: 14px 30px; }
+body.app-shell .home-board .todays-pick__open { background: linear-gradient(135deg, #8b5cf6, #a855f7); border: 0; color: #fff; }
+body.app-shell .home-board :is(.todays-pick__another, .todays-pick__new) { border-radius: 999px; padding: 0 12px; min-height: 40px; }
+body.app-shell .home-board :is(.todays-pick__another, .todays-pick__new):hover { background: var(--surface-hover); text-decoration: none; }
+
+/* ---------- Next Up ---------- */
+body.app-shell .home-board .next-up-queue { padding: 20px 22px; }
+body.app-shell .home-board .next-up-queue__header { margin-bottom: 14px; }
+body.app-shell .home-board .next-up-queue__summary { color: var(--fg-secondary); opacity: 1; }
+body.app-shell .home-board .next-up-queue__toggle { border-color: var(--border); border-radius: 999px; font-weight: 600; min-height: 38px; padding: 0 14px; }
+body.app-shell .home-board .next-up-queue__toggle[aria-expanded="true"] { background: var(--accent-soft); border-color: transparent; color: var(--primary); }
+body.app-shell .home-board .next-up-queue__items { gap: 8px; }
+body.app-shell .home-board .next-up-queue__item {
+  border-radius: 14px;
+  grid-template-columns: 24px 44px minmax(0, 1fr) auto;
+  padding: 10px 14px 10px 12px;
+  transition: border-color .15s ease;
+}
+body.app-shell .home-board .next-up-queue__item:hover { border-color: color-mix(in srgb, var(--primary) 45%, var(--border)); }
+body.app-shell .home-board .next-up-queue__cover { border-radius: 8px; box-shadow: var(--lib-cover-shadow, 0 4px 12px rgba(0, 0, 0, .2)); width: 44px; }
+body.app-shell .home-board .next-up-queue__order { font-size: .74rem; height: 24px; width: 24px; }
+body.app-shell .home-board .next-up-queue__copy strong { font-weight: 600; }
+body.app-shell .home-board .next-up-queue__copy span { color: var(--fg-secondary); opacity: 1; }
+body.app-shell .home-board .next-up-queue__copy .progress-checkpoint { color: var(--teal); }
+body.app-shell .home-board .next-up-queue__controls { gap: 4px; }
+body.app-shell .home-board .next-up-queue__controls button {
+  border-radius: 999px;
+  font-size: .78rem;
+  font-weight: 600;
+  min-height: 34px;
+  padding: 0 12px;
+}
+body.app-shell .home-board .next-up-queue__controls .next-up-queue__icon-button { min-width: 34px; padding: 0; }
+body.app-shell .home-board .next-up-queue__open { background: transparent; }
+body.app-shell .home-board .next-up-queue__remove { background: transparent; border-color: transparent; }
+body.app-shell .home-board .next-up-queue__remove:hover:not(:disabled) { background: color-mix(in srgb, var(--danger) 12%, transparent); border-color: transparent; }
+body.app-shell .home-board .next-up-queue__controls .progress-update { background: var(--teal-soft); border-color: transparent; }
+
+/* ---------- Coming up ---------- */
+body.app-shell .home-board .coming-up { padding: 20px 22px; }
+body.app-shell .home-board .coming-up .for-you-grid--wide { grid-template-columns: repeat(auto-fill, minmax(190px, 1fr)); }
+body.app-shell .home-board :is(.coming-up__calendar-btn, .release-calendar__link) { border-radius: 999px; }
+
+/* ---------- Badges ---------- */
+body.app-shell .home-board .badge-case { padding: 20px 22px; }
+body.app-shell .home-board .badge-next { border-radius: 14px; }
+body.app-shell .home-board .badge-case__celebration { border-radius: 16px; }
+
+/* ---------- Rail cards ---------- */
+body.app-shell .home-board__rail :is(.season-card, .month-challenge, .year-goals, .install-card) { padding: 18px; }
+
+/* Season hub: the shelves become a row of chips. */
+body.app-shell .home-board__rail .season-card h2 { font-size: 1.18rem; }
+body.app-shell .home-board__rail .season-card__summary { font-size: .84rem; line-height: 1.5; }
+body.app-shell .home-board__rail .season-card__shelves { display: flex; flex-wrap: wrap; gap: 6px; margin: 12px 0 14px; }
+body.app-shell .home-board__rail .season-card__shelf {
+  background: color-mix(in srgb, var(--season-accent) 10%, var(--card-bg));
+  border-color: color-mix(in srgb, var(--season-accent) 40%, transparent);
+  align-items: center;
+  border-radius: 999px;
+  display: inline-flex;
+  min-height: 34px;
+  padding: 0 13px;
+}
+body.app-shell .home-board__rail .season-card__shelf strong { font-size: .8rem; font-weight: 600; line-height: 1.2; }
+body.app-shell .home-board__rail .season-card__shelf span { display: none; }
+body.app-shell .home-board__rail .season-card__open { font-size: .88rem; }
+
+/* Monthly challenge and goals. */
+body.app-shell .home-board__rail .month-challenge__step { border-radius: 12px; padding: 8px 10px; }
+body.app-shell .home-board__rail .month-challenge__label { font-size: .86rem; line-height: 1.35; }
+body.app-shell .home-board__rail .month-challenge__mark { flex-basis: 22px; height: 22px; width: 22px; }
+body.app-shell .home-board__rail .year-goals__list { grid-template-columns: minmax(0, 1fr); }
+body.app-shell .home-board__rail :is(.year-goals__celebration, .month-challenge__celebration) { border-radius: 14px; }
+
+/* Install card stacks: icon and copy, then the buttons. */
+body.app-shell .home-board__rail .install-card { align-items: start; grid-template-columns: auto minmax(0, 1fr); }
+body.app-shell .home-board__rail .install-card__icon { height: 48px; width: 48px; }
+body.app-shell .home-board__rail .install-card__actions { grid-column: 1 / -1; justify-content: flex-start; }
+
+/* ---------- Tablet: rail drops under the main column as a two-up grid ---------- */
+@media (max-width: 1100px) {
+  body.app-shell .home-board { grid-template-columns: minmax(0, 1fr); }
+  body.app-shell .home-board__rail-cards { display: grid; grid-template-columns: repeat(auto-fill, minmax(300px, 1fr)); align-items: start; }
+}
+
+/* ---------- Phone: rail becomes a swipeable row ---------- */
+@media (max-width: 640px) {
+  body.app-shell { --home-gap: 14px; --home-radius: 18px; }
+  body.app-shell .home-board { margin-bottom: 20px; }
+  body.app-shell .home-board__rail-title::after {
+    content: "Swipe →";
+    display: none;
+    font-size: .7rem;
+    font-weight: 600;
+    letter-spacing: 0;
+    opacity: .8;
+    text-transform: none;
+  }
+  /* The hint only shows when there is more than one card to swipe through. */
+  body.app-shell .home-board__rail-title:has(+ .home-board__rail-cards > section:not([hidden]) ~ section:not([hidden]))::after { display: inline; }
+  body.app-shell .home-board .home-board__rail-cards {
+    align-items: start;
+    display: grid;
+    gap: 12px;
+    grid-auto-columns: min(86%, 340px);
+    grid-auto-flow: column;
+    grid-template-columns: none;
+    margin-inline: -16px;
+    overflow-x: auto;
+    overscroll-behavior-x: contain;
+    padding: 2px 16px 10px;
+    scroll-padding-inline: 16px;
+    scroll-snap-type: x mandatory;
+    scrollbar-width: none;
+  }
+  body.app-shell .home-board .home-board__rail-cards::-webkit-scrollbar { display: none; }
+  body.app-shell .home-board .home-board__rail-cards > section { scroll-snap-align: start; }
+  /* Only one card: no need to swipe. */
+  body.app-shell .home-board .home-board__rail-cards:not(:has(> section:not([hidden]) ~ section:not([hidden]))) { grid-auto-columns: 100%; }
+
+  body.app-shell .home-board .daily-dashboard .library-pulse,
+  body.app-shell .home-board .daily-dashboard .todays-pick,
+  body.app-shell .home-board :is(.next-up-queue, .coming-up, .badge-case) { padding: 16px; }
+  body.app-shell .home-board__main :is(#libraryPulseTitle, #nextUpQueueTitle, #comingUpTitle, #todaysPickTitle, #badgeCaseTitle) { font-size: 1.04rem; }
+
+  /* Next Up: cover and title on top, all buttons on one row under them. */
+  body.app-shell .home-board .next-up-queue__item { grid-template-columns: 22px 38px minmax(0, 1fr); padding: 10px; }
+  body.app-shell .home-board .next-up-queue__cover { width: 38px; }
+  body.app-shell .home-board .next-up-queue__controls { grid-column: 1 / -1; flex-wrap: wrap; }
+  body.app-shell .home-board .next-up-queue__controls button { font-size: .74rem; min-height: 40px; min-width: 40px; padding: 0 9px; }
+  body.app-shell .home-board .next-up-queue__remove { margin-left: auto; }
+  body.app-shell .home-board .next-up-queue__actions { justify-content: flex-start; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  body.app-shell .home-board :is(.library-pulse__item, .next-up-queue__item) { transition: none; }
+  body.app-shell .home-board .library-pulse__item:hover { transform: none; }
+}
