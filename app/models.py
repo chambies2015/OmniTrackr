@@ -1134,6 +1134,7 @@ class SharedList(Base):
 
     members = relationship("SharedListMember", cascade="all, delete-orphan", back_populates="shared_list")
     items = relationship("SharedListItem", cascade="all, delete-orphan", back_populates="shared_list")
+    rounds = relationship("ClubRound", cascade="all, delete-orphan")
 
 
 class SharedListMember(Base):
@@ -1186,6 +1187,58 @@ class SharedListVote(Base):
     created_at = Column(DateTime, nullable=False, default=datetime.utcnow)
 
     __table_args__ = (UniqueConstraint("item_id", "user_id", name="uq_shared_list_vote"),)
+
+
+class ClubRound(Base):
+    """One club pick on a shared list: everyone gets to a title by a date, then talks it over (Oct 2026).
+
+    New tables only. The title is copied from the list item when the pick starts,
+    so taking the item off the list later leaves the club's history readable.
+    A list has at most one round with no ``ended_at`` at a time.
+    """
+    __tablename__ = "club_rounds"
+
+    id = Column(Integer, primary_key=True, index=True)
+    list_id = Column(Integer, ForeignKey("shared_lists.id", ondelete="CASCADE"), nullable=False, index=True)
+    item_id = Column(Integer, ForeignKey("shared_list_items.id", ondelete="SET NULL"), nullable=True)
+    started_by_id = Column(Integer, ForeignKey("users.id", ondelete="SET NULL"), nullable=True)
+    kind = Column(String(10), nullable=False)
+    title = Column(String(200), nullable=False)
+    year = Column(Integer, nullable=True)
+    slug = Column(String(140), nullable=True)
+    image = Column(String(500), nullable=True)
+    ends_on = Column(Date, nullable=False)
+    started_at = Column(DateTime, nullable=False, default=datetime.utcnow)
+    ended_at = Column(DateTime, nullable=True)
+
+    progress = relationship("ClubProgress", cascade="all, delete-orphan")
+    posts = relationship("ClubPost", cascade="all, delete-orphan")
+
+
+class ClubProgress(Base):
+    """Where one member is with a club pick: started or finished, with an optional 1-10 score."""
+    __tablename__ = "club_progress"
+
+    id = Column(Integer, primary_key=True, index=True)
+    round_id = Column(Integer, ForeignKey("club_rounds.id", ondelete="CASCADE"), nullable=False, index=True)
+    user_id = Column(Integer, ForeignKey("users.id", ondelete="CASCADE"), nullable=False, index=True)
+    status = Column(String(10), nullable=False)  # started, finished
+    score = Column(Integer, nullable=True)
+    updated_at = Column(DateTime, nullable=False, default=datetime.utcnow)
+
+    __table_args__ = (UniqueConstraint("round_id", "user_id", name="uq_club_progress"),)
+
+
+class ClubPost(Base):
+    """A message in a club pick's discussion. Spoiler posts stay folded until the reader finishes."""
+    __tablename__ = "club_posts"
+
+    id = Column(Integer, primary_key=True, index=True)
+    round_id = Column(Integer, ForeignKey("club_rounds.id", ondelete="CASCADE"), nullable=False, index=True)
+    user_id = Column(Integer, ForeignKey("users.id", ondelete="CASCADE"), nullable=False, index=True)
+    body = Column(String(1000), nullable=False)
+    spoiler = Column(Boolean, nullable=False, default=False)
+    created_at = Column(DateTime, nullable=False, default=datetime.utcnow)
 
 
 class FriendFeedEvent(Base):

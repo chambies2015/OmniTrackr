@@ -907,6 +907,17 @@ for route in shared_lists_router.router.routes:
         bind_rate_limited_endpoint(route, rate_limited_list_member)
 app.include_router(shared_lists_router.router)
 
+from .routers import clubs as clubs_router
+rate_limited_club_start = limiter.limit("20/hour")(clubs_router.start_pick)
+rate_limited_club_post = limiter.limit("30/minute")(clubs_router.add_post)
+for route in clubs_router.router.routes:
+    path, methods = getattr(route, "path", None), getattr(route, "methods", set())
+    if path == "/api/lists/{list_id}/club" and "POST" in methods:
+        bind_rate_limited_endpoint(route, rate_limited_club_start)
+    elif path == "/api/lists/{list_id}/club/{round_id}/posts" and "POST" in methods:
+        bind_rate_limited_endpoint(route, rate_limited_club_post)
+app.include_router(clubs_router.router)
+
 from .routers import friend_recs as friend_recs_router
 rate_limited_rec_send = limiter.limit("30/hour")(friend_recs_router.send_recommendation)
 rate_limited_rec_link = limiter.limit("30/hour")(friend_recs_router.share_link)

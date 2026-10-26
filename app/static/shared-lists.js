@@ -147,7 +147,7 @@
       empty.appendChild(el('p', null, 'Start one above, then send the link to whoever you watch, read or play with. '
         + "They can join even if they don't have an account yet."));
       const ideas = el('ul', 'sl-ideas');
-      ['Date night movies', 'Group chat anime queue', 'Book club shortlist', 'Co-op games to try']
+      ['Date night movies', 'Group chat anime queue', 'Sunday movie club', 'Book club shortlist', 'Co-op games to try']
         .forEach(idea => {
           const item = el('li');
           item.appendChild(button(idea, 'sl-chip', () => {
@@ -177,6 +177,13 @@
       if (list.new_count) title.appendChild(el('span', 'sl-new', `${list.new_count} new`));
       body.appendChild(title);
       if (list.description) body.appendChild(el('p', 'sl-card__about', list.description));
+      if (list.club) {
+        const club = el('p', 'sl-card__club');
+        club.appendChild(el('span', 'sl-card__club-label', 'Club pick'));
+        club.appendChild(el('strong', null, list.club.title));
+        club.appendChild(el('span', null, dueText(list.club.days_left, list.club.ends_label)));
+        body.appendChild(club);
+      }
       const meta = el('p', 'sl-card__meta');
       meta.appendChild(avatars(list.members, true));
       const counts = [`${list.open_count} to go`];
@@ -190,9 +197,34 @@
     holder.appendChild(grid);
   }
 
+  function dueText(daysLeft, label) {
+    if (daysLeft < 0) return `Was due ${label}`;
+    if (daysLeft === 0) return 'Finish by today';
+    if (daysLeft === 1) return 'Finish by tomorrow';
+    return `Finish by ${label} · ${daysLeft} days left`;
+  }
+
+  function ago(iso) {
+    const minutes = Math.round((Date.now() - new Date(iso).getTime()) / 60000);
+    if (minutes < 1) return 'just now';
+    if (minutes < 60) return `${minutes}m ago`;
+    const hours = Math.round(minutes / 60);
+    if (hours < 24) return `${hours}h ago`;
+    const days = Math.round(hours / 24);
+    if (days < 30) return `${days}d ago`;
+    return new Date(iso).toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' });
+  }
+
+  function isoDay(offset) {
+    const day = new Date();
+    day.setDate(day.getDate() + offset);
+    const pad = value => String(value).padStart(2, '0');
+    return `${day.getFullYear()}-${pad(day.getMonth() + 1)}-${pad(day.getDate())}`;
+  }
+
   // ------------------------------------------------------------------ one list
 
-  const state = { data: null, filter: 'all', addPanel: null };
+  const state = { data: null, filter: 'all', addPanel: null, composers: {}, pastOpen: {} };
 
   function listId() {
     return root.dataset.listId;
@@ -390,7 +422,314 @@
     output.appendChild(el('span', 'sl-pick__label', 'Tonight:'));
     output.appendChild(el('strong', null, choice.title));
     if (choice.votes.length) output.appendChild(el('span', 'sl-muted', `${names(choice.votes)} ${choice.votes.length === 1 && !choice.votes[0].you ? 'is' : 'are'} in`));
+    if (!state.data.club.current) {
+      output.appendChild(button('Make it our club pick', 'sl-action', () => {
+        const select = document.getElementById('slClubItem');
+        if (!select) return;
+        select.value = String(choice.id);
+        select.closest('.sl-club').scrollIntoView({ block: 'start', behavior: 'smooth' });
+        select.focus();
+      }));
+    }
     output.hidden = false;
+  }
+
+
+  // ------------------------------------------------------------------ watch club
+
+  function clubStart(data) {
+    const panel = el('section', 'sl-club sl-club--start');
+    panel.setAttribute('aria-labelledby', 'slClubTitle');
+    panel.appendChild(el('p', 'sl-club__eyebrow', 'WATCH CLUB'));
+    panel.appendChild(el('h2', null, 'Pick one to do together')).id = 'slClubTitle';
+    panel.appendChild(el('p', 'sl-muted', 'Choose a title, set a finish-by date, and everyone checks in as they go. '
+      + 'Once you finish, talk it over here. Spoilers stay hidden from anyone who isn\'t done yet.'));
+    if (!data.open.length) {
+      panel.appendChild(el('p', 'sl-empty-line', 'Add a title to the list first, then make it the club pick.'));
+      return panel;
+    }
+    const form = el('form', 'sl-club__form');
+    const itemLabel = el('label', null, 'Title');
+    itemLabel.htmlFor = 'slClubItem';
+    const select = el('select');
+    select.id = 'slClubItem';
+    data.open.forEach(item => {
+      const option = el('option', null, `${item.title}${item.year ? ` (${item.year})` : ''}${item.votes.length > 1 ? ` · ${item.votes.length} in` : ''}`);
+      option.value = String(item.id);
+      select.appendChild(option);
+    });
+    const dateLabel = el('label', null, 'Finish by');
+    dateLabel.htmlFor = 'slClubDate';
+    const date = el('input');
+    Object.assign(date, { id: 'slClubDate', type: 'date', min: isoDay(1), max: isoDay(data.club.max_days), value: isoDay(7), required: true });
+    const quick = el('div', 'sl-club__quick');
+    [['3 days', 3], ['1 week', 7], ['2 weeks', 14], ['1 month', 30]].forEach(([label, days]) => {
+      quick.appendChild(button(label, 'sl-chip sl-chip--small', () => { date.value = isoDay(days); }));
+    });
+    const submit = el('button', 'button button--small', 'Start the club pick');
+    submit.type = 'submit';
+    const fields = el('div', 'sl-club__fields');
+    const left = el('div');
+    left.append(itemLabel, select);
+    const right = el('div');
+    right.append(dateLabel, date);
+    fields.append(left, right);
+    form.append(fields, quick, submit);
+    form.addEventListener('submit', event => {
+      event.preventDefault();
+      act(submit, async () => {
+        const result = await api(`/api/lists/${listId()}/club`, { method: 'POST', body: { item_id: Number(select.value), ends_on: date.value } });
+        flashStatus(`${result.title} is the club pick. Everyone in the list gets a heads-up.`);
+      });
+    });
+    panel.appendChild(form);
+    return panel;
+  }
+
+  function postItem(post, roundId, live) {
+    const item = el('li', post.new ? 'sl-post sl-post--new' : 'sl-post');
+    const head = el('p', 'sl-post__head');
+    if (post.author) head.appendChild(avatar(post.author, true));
+    head.appendChild(el('strong', null, post.author ? (post.author.you ? 'You' : post.author.username) : 'Someone'));
+    head.appendChild(el('span', 'sl-muted', ago(post.at)));
+    if (post.spoiler) head.appendChild(el('span', 'sl-spoiler-tag', 'Spoilers'));
+    if (post.new) head.appendChild(el('span', 'sl-new', 'New'));
+    item.appendChild(head);
+    const body = el('p', 'sl-post__body', post.body);
+    if (post.folded) {
+      body.hidden = true;
+      const reveal = button('Show it anyway', 'sl-action sl-action--quiet', () => { body.hidden = false; fold.remove(); });
+      const fold = el('p', 'sl-post__fold');
+      fold.appendChild(el('span', null, 'Hidden until you finish.'));
+      fold.appendChild(reveal);
+      item.appendChild(fold);
+    }
+    item.appendChild(body);
+    if (post.can_delete) {
+      const remove = button('Delete', 'sl-action sl-action--quiet sl-post__delete', event => {
+        if (window.confirm && !window.confirm('Delete this post?')) return;
+        act(event.currentTarget, () => api(`/api/lists/${listId()}/club/${roundId}/posts/${post.id}`, { method: 'DELETE' }));
+      });
+      remove.setAttribute('aria-label', 'Delete this post');
+      item.appendChild(remove);
+    }
+    if (!live) item.classList.add('sl-post--past');
+    return item;
+  }
+
+  function composer(round) {
+    // Built once per pick and moved into each new render, so a half-written post survives a refresh.
+    if (state.composers[round.id]) return state.composers[round.id];
+    const form = el('form', 'sl-compose');
+    const label = el('label', 'sl-visually-hidden', 'Write a post');
+    label.htmlFor = `slPost${round.id}`;
+    const text = el('textarea');
+    Object.assign(text, { id: `slPost${round.id}`, maxLength: 1000, rows: 3, required: true,
+      placeholder: 'What did you think? How far in are you?' });
+    const row = el('div', 'sl-compose__row');
+    const spoilerLabel = el('label', 'sl-check');
+    const spoiler = el('input');
+    spoiler.type = 'checkbox';
+    spoilerLabel.append(spoiler, el('span', null, 'Has spoilers'));
+    const submit = el('button', 'button button--small', 'Post');
+    submit.type = 'submit';
+    row.append(spoilerLabel, submit);
+    form.append(label, text, row);
+    form.addEventListener('submit', event => {
+      event.preventDefault();
+      act(submit, async () => {
+        await api(`/api/lists/${listId()}/club/${round.id}/posts`, { method: 'POST', body: { body: text.value, spoiler: spoiler.checked } });
+        text.value = '';
+        spoiler.checked = false;
+        submit.disabled = false;
+      });
+    });
+    state.composers[round.id] = form;
+    return form;
+  }
+
+  function clubCurrent(round) {
+    const panel = el('section', 'sl-club');
+    panel.setAttribute('aria-labelledby', 'slClubTitle');
+    const top = el('div', 'sl-club__top');
+    const art = poster(round);
+    art.classList.add('sl-club__poster');
+    top.appendChild(art);
+    const info = el('div', 'sl-club__info');
+    info.appendChild(el('p', 'sl-club__eyebrow', 'CLUB PICK'));
+    const heading = el('h2', 'sl-club__title');
+    heading.id = 'slClubTitle';
+    if (round.url) {
+      const link = el('a', null, round.title);
+      link.href = round.url;
+      heading.appendChild(link);
+    } else {
+      heading.textContent = round.title;
+    }
+    info.appendChild(heading);
+    info.appendChild(el('p', 'sl-item__meta', [round.label, round.year].filter(Boolean).join(' · ')));
+    const due = el('p', round.days_left < 0 ? 'sl-club__due sl-club__due--late' : 'sl-club__due', dueText(round.days_left, round.ends_label));
+    info.appendChild(due);
+    const tally = [`${round.finished_count} of ${round.members.length} ${round.done_word}`];
+    if (round.average !== null) tally.push(`club score ${round.average}/10`);
+    info.appendChild(el('p', 'sl-club__tally', tally.join(' · ')));
+    if (round.started_by) info.appendChild(el('p', 'sl-item__credit', `Picked by ${round.started_by.you ? 'you' : round.started_by.username}`));
+    top.appendChild(info);
+    panel.appendChild(top);
+
+    // Where am I?
+    const mine = el('div', 'sl-club__mine');
+    mine.appendChild(el('p', 'sl-club__label', 'Where are you?'));
+    const choices = el('div', 'sl-segment');
+    choices.setAttribute('role', 'group');
+    choices.setAttribute('aria-label', 'Your progress');
+    [[null, 'Not started'], ['started', 'Started'], ['finished', `${(round.done_word || 'finished').replace(/^./, c => c.toUpperCase())} it`]].forEach(([value, label]) => {
+      const on = round.me.status === value;
+      const choice = button(label, on ? 'sl-segment__option sl-segment__option--on' : 'sl-segment__option', event => {
+        if (on) return;
+        act(event.currentTarget, () => api(`/api/lists/${listId()}/club/${round.id}/progress`, { method: 'PUT', body: { status: value, score: null } }));
+      });
+      choice.setAttribute('aria-pressed', on ? 'true' : 'false');
+      choices.appendChild(choice);
+    });
+    mine.appendChild(choices);
+    if (round.me.status === 'finished') {
+      const scoreRow = el('div', 'sl-club__score');
+      const scoreLabel = el('label', null, 'Your score');
+      scoreLabel.htmlFor = 'slClubScore';
+      const score = el('select');
+      score.id = 'slClubScore';
+      const none = el('option', null, 'No score');
+      none.value = '';
+      score.appendChild(none);
+      for (let value = 10; value >= 1; value -= 1) {
+        const option = el('option', null, `${value} / 10`);
+        option.value = String(value);
+        score.appendChild(option);
+      }
+      score.value = round.me.score ? String(round.me.score) : '';
+      score.addEventListener('change', () => act(score, () => api(`/api/lists/${listId()}/club/${round.id}/progress`, {
+        method: 'PUT', body: { status: 'finished', score: score.value ? Number(score.value) : null } })));
+      scoreRow.append(scoreLabel, score);
+      mine.appendChild(scoreRow);
+    }
+    panel.appendChild(mine);
+
+    const people = el('ul', 'sl-club__people');
+    people.setAttribute('aria-label', 'Everyone in the club');
+    round.members.forEach(person => {
+      const row = el('li', `sl-club__person sl-club__person--${person.status || 'none'}`);
+      row.appendChild(avatar(person, true));
+      row.appendChild(el('span', 'sl-club__name', person.you ? 'You' : person.username));
+      const pill = el('span', 'sl-club__pill', person.status === 'finished' ? 'Done' : person.status === 'started' ? 'On it' : 'Not yet');
+      row.appendChild(pill);
+      if (person.score) row.appendChild(el('span', 'sl-club__person-score', `${person.score}/10`));
+      people.appendChild(row);
+    });
+    panel.appendChild(people);
+
+    const talk = el('div', 'sl-talk');
+    talk.appendChild(el('h3', null, round.posts.length ? `Talk (${round.posts.length})` : 'Talk'));
+    if (!round.posts.length) {
+      talk.appendChild(el('p', 'sl-muted', 'No posts yet. Say how it\'s going, or what you thought once you finish.'));
+    } else {
+      const list = el('ul', 'sl-posts');
+      round.posts.forEach(post => list.appendChild(postItem(post, round.id, true)));
+      talk.appendChild(list);
+    }
+    talk.appendChild(composer(round));
+    panel.appendChild(talk);
+
+    if (round.can_run) {
+      const run = el('details', 'sl-club__run');
+      run.appendChild(el('summary', null, 'Run this pick'));
+      const form = el('form', 'sl-row');
+      const date = el('input');
+      Object.assign(date, { type: 'date', min: isoDay(1), max: isoDay(state.data.club.max_days), value: round.ends_on, required: true });
+      date.setAttribute('aria-label', 'New finish-by date');
+      const save = el('button', 'sl-action', 'Move the date');
+      save.type = 'submit';
+      form.append(date, save);
+      form.addEventListener('submit', event => {
+        event.preventDefault();
+        act(save, () => api(`/api/lists/${listId()}/club/${round.id}`, { method: 'PATCH', body: { ends_on: date.value } }));
+      });
+      run.appendChild(form);
+      const actions = el('div', 'sl-row sl-club__run-actions');
+      actions.appendChild(button('Wrap it up', 'button button--small', event => {
+        if (window.confirm && !window.confirm(`Wrap up ${round.title}? It's marked done on the list and moves to past picks, so you can start the next one.`)) return;
+        act(event.currentTarget, async () => {
+          await api(`/api/lists/${listId()}/club/${round.id}/finish`, { method: 'POST' });
+          flashStatus(`${round.title} is wrapped up. Pick the next one whenever you're ready.`);
+        });
+      }));
+      if (!round.posts.length) {
+        actions.appendChild(button('Drop this pick', 'sl-action sl-action--quiet', event => {
+          if (window.confirm && !window.confirm('Drop this pick? It won\'t show up in past picks.')) return;
+          act(event.currentTarget, () => api(`/api/lists/${listId()}/club/${round.id}`, { method: 'DELETE' }));
+        }));
+      }
+      run.appendChild(actions);
+      panel.appendChild(run);
+    }
+    return panel;
+  }
+
+  function clubHistory(past) {
+    const section = el('details', 'sl-section sl-done sl-past');
+    section.open = Object.values(state.pastOpen).some(Boolean);
+    section.appendChild(el('summary', null, `Past club picks (${past.length})`));
+    const list = el('ul', 'sl-past__list');
+    past.forEach(round => {
+      const item = el('li', 'sl-past__item');
+      const art = poster(round);
+      item.appendChild(art);
+      const body = el('div', 'sl-past__body');
+      const heading = el('h3', 'sl-item__title');
+      if (round.url) {
+        const link = el('a', null, round.title);
+        link.href = round.url;
+        heading.appendChild(link);
+      } else {
+        heading.textContent = round.title;
+      }
+      body.appendChild(heading);
+      const facts = [`${round.finished_count} ${round.done_word} it`];
+      if (round.average !== null) facts.push(`club score ${round.average}/10`);
+      if (round.my_score) facts.push(`you gave it ${round.my_score}`);
+      facts.push(`wrapped up ${ago(round.ended_at)}`);
+      body.appendChild(el('p', 'sl-item__meta', facts.join(' · ')));
+      if (round.post_count) {
+        const holder = el('div');
+        const toggle = button(`Read the talk (${round.post_count})`, 'sl-action', async () => {
+          if (holder.childElementCount) {
+            holder.replaceChildren();
+            state.pastOpen[round.id] = false;
+            toggle.textContent = `Read the talk (${round.post_count})`;
+            return;
+          }
+          toggle.disabled = true;
+          try {
+            const data = await api(`/api/lists/${listId()}/club/${round.id}/posts`);
+            const posts = el('ul', 'sl-posts');
+            data.posts.forEach(post => posts.appendChild(postItem(post, round.id, false)));
+            holder.replaceChildren(posts);
+            state.pastOpen[round.id] = true;
+            toggle.textContent = 'Hide the talk';
+          } catch (error) {
+            flashStatus(error.message);
+          }
+          toggle.disabled = false;
+        });
+        body.appendChild(toggle);
+        body.appendChild(holder);
+        if (state.pastOpen[round.id]) toggle.click();
+      }
+      item.appendChild(body);
+      list.appendChild(item);
+    });
+    section.appendChild(list);
+    return section;
   }
 
   function invitePanel() {
@@ -503,7 +842,7 @@
     const openSettings = root.querySelector('.sl-settings[open]') !== null;
     document.title = `${data.name} | OmniTrackr`;
     const head = el('header', 'sl-head');
-    head.appendChild(el('p', 'eyebrow', 'SHARED LIST'));
+    head.appendChild(el('p', 'eyebrow', data.club.current || data.club.past.length ? 'WATCH CLUB' : 'SHARED LIST'));
     head.appendChild(el('h1', null, data.name));
     if (data.description) head.appendChild(el('p', 'sl-head__about', data.description));
     const who = el('p', 'sl-head__who');
@@ -519,6 +858,8 @@
     const layout = el('div', data.members.length === 1 ? 'sl-layout sl-layout--solo' : 'sl-layout');
     const main = el('div', 'sl-main');
     const side = el('aside', 'sl-side');
+
+    main.appendChild(data.club.current ? clubCurrent(data.club.current) : clubStart(data));
 
     // Built once and moved into each new render, so typing during a refresh isn't lost.
     if (!state.addPanel) state.addPanel = addPanel();
@@ -575,6 +916,7 @@
       doneSection.appendChild(list);
       main.appendChild(doneSection);
     }
+    if (data.club.past.length) main.appendChild(clubHistory(data.club.past));
 
     side.appendChild(invitePanel());
     const settings = settingsPanel();
