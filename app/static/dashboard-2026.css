@@ -111,6 +111,9 @@ body.app-shell .row-menu__panel {
   background: var(--card-bg); border: 1px solid var(--border); border-radius: 12px; box-shadow: var(--shadow-lg);
   display: grid; gap: 2px; min-width: 168px; padding: 6px; position: fixed; z-index: 80;
 }
+/* The actions cell is sticky with its own z-index, so each row's cell stacks on its own:
+   lift the one holding an open menu so the panel draws over the rows below it. */
+body.app-shell td:has(details.row-menu[open]) { z-index: 30; }
 body.app-shell .row-menu__panel button.action-btn {
   background: none; border: 0; border-radius: 8px; box-shadow: none; color: var(--fg); justify-content: flex-start;
   margin: 0; min-height: 36px; padding: 0 12px; text-align: left; width: 100%;

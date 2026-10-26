@@ -55,3 +55,8 @@ def test_phone_rail_swipes_and_starts_at_the_first_card():
     assert "grid-auto-flow: column" in phone and "scroll-snap-type: x mandatory" in phone
     assert "function keepHomeRailAtStart()" in APP_JS
     assert "keepHomeRailAtStart();" in APP_JS
+
+
+def test_open_row_menu_draws_over_the_next_row():
+    theme = (ROOT / "app" / "static" / "dashboard-2026.css").read_text(encoding="utf-8")
+    assert "body.app-shell td:has(details.row-menu[open]) { z-index: 30; }" in theme
