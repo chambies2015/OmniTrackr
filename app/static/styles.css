@@ -6855,3 +6855,9 @@ body.app-shell .month-challenge__status { color: var(--teal); }
 .release-calendar__quiet:hover { opacity: 1; text-decoration: underline; }
 .release-calendar__status { color: var(--fg); font-size: 0.85rem; margin: 0; opacity: 0.85; }
 .release-calendar__status:empty { display: none; }
+
+/* Taste quiz entry points (the quiz itself is /taste-quiz). */
+.starter-picks__quiz { color: var(--fg); font-size: 0.92rem; margin: 6px 0 0; opacity: 0.9; }
+.starter-picks__quiz a { color: #a78bfa; font-weight: 700; }
+.library-launchpad__category--quiz { background: linear-gradient(135deg, #7c3aed, #0d9488); border-color: transparent; color: #fff; text-decoration: none; }
+.library-launchpad__category--quiz:hover, .library-launchpad__category--quiz:focus-visible { background: linear-gradient(135deg, #6d28d9, #0f766e); color: #fff; }

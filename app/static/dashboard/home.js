@@ -583,7 +583,7 @@ function renderLibraryLaunchpad(insights, firstWeek = null) {
   } else if (!total) {
     summary.textContent = demoStartGuidance
       ? 'Make it yours: use Add Anything to search for your first real title. Your demo practice stays separate from this private library.'
-      : 'Start with one title you love, bring an existing list, or browse Discover for an idea. You only need one title to begin.';
+      : 'Start with the 1-minute taste quiz, add one title you love, or bring an existing list. You only need one title to begin.';
   } else if (total === 1) {
     summary.textContent = 'Your first title is saved. Add a rating or private note using Edit in your library, or use Next up to put it on your shortlist.';
   } else if (completed) {

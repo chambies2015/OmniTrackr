@@ -812,6 +812,20 @@ for route in pick_router.router.routes:
         bind_rate_limited_endpoint(route, rate_limited_pick_pool)
 app.include_router(pick_router.router)
 
+from .routers import taste_quiz as taste_quiz_router
+rate_limited_quiz_art = limiter.limit("60/minute")(taste_quiz_router.taste_quiz_art)
+rate_limited_quiz_suggestions = limiter.limit("20/minute")(taste_quiz_router.taste_quiz_suggestions)
+rate_limited_quiz_save = limiter.limit("10/minute")(taste_quiz_router.taste_quiz_save)
+for route in taste_quiz_router.router.routes:
+    path = getattr(route, "path", None)
+    if path == "/api/taste-quiz/art/{kind}/{slug}":
+        bind_rate_limited_endpoint(route, rate_limited_quiz_art)
+    elif path == "/api/taste-quiz/suggestions":
+        bind_rate_limited_endpoint(route, rate_limited_quiz_suggestions)
+    elif path == "/api/taste-quiz/save":
+        bind_rate_limited_endpoint(route, rate_limited_quiz_save)
+app.include_router(taste_quiz_router.router)
+
 from .routers import if_you_liked as if_you_liked_router
 app.include_router(if_you_liked_router.router)
 

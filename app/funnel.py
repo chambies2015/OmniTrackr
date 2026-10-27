@@ -68,6 +68,10 @@ GUEST = (
     ("friend_rec_link_opened", "Recommend to a friend: link opened by a visitor without an account"),
     ("friend_rec_claimed", "Recommend to a friend: link saved into someone's inbox"),
     ("friend_rec_added", "Recommend to a friend: a recommendation added to a library"),
+    ("quiz_started", "Taste quiz started"),
+    ("quiz_finished", "Taste quiz finished"),
+    ("quiz_imported", "Taste quiz answers saved before sign-up moved into a new library"),
+    ("quiz_saved", "Taste quiz: a suggested pick saved to a list or library"),
 )
 GOOGLE = (
     ("google_signin_started", "Google button pressed"),
@@ -82,7 +86,7 @@ CLIENT_EVENTS = {"signup_form_opened", "hero_signup_clicked", "signup_rejected_i
                  "recap_kofi_clicked", "supporters_kofi_clicked", "title_search_used", "pick_used", "pick_saved", "liked_saved",
                  "order_saved", "seasonal_saved",
                  "calendar_subscribe_clicked", "tier_list_started", "tier_list_exported",
-                 "daily_shared", "recap_story_played", "recap_story_shared"}
+                 "daily_shared", "recap_story_played", "recap_story_shared", "quiz_started", "quiz_saved"}
 
 
 def record(event: str, request=None) -> bool:

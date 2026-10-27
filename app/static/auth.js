@@ -480,6 +480,18 @@ function showVerificationSent(email) {
     displayAuthSuccess(`Almost there! We sent a link to ${email}. Open it to activate your account (it works for 48 hours), then log in here.${keep} No email after a few minutes? Check spam, or resend it below.`);
     const resend = document.getElementById('resendVerificationContainer');
     if (resend) resend.style.display = 'block';
+    // Waiting for the email is a good minute to start the library: quiz answers move in at first log-in.
+    const success = document.getElementById('authSuccess');
+    if (success && typeof document.createElement === 'function' && typeof success.appendChild === 'function') {
+        const tip = document.createElement('p');
+        tip.className = 'auth-quiz-tip';
+        tip.append('While you wait: ');
+        const link = document.createElement('a');
+        link.href = '/taste-quiz';
+        link.textContent = 'take the 1-minute taste quiz';
+        tip.append(link, '. Your answers are added to your library when you log in.');
+        success.appendChild(tip);
+    }
 }
 
 async function login(username, password) {
