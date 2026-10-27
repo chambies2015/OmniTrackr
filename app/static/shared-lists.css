@@ -6,6 +6,8 @@
 .sl-optional { color: var(--site-muted); font-weight: 500; }
 .sl-status, .sl-flash { color: var(--site-teal-soft); font-size: .92rem; margin: 8px 0 0; min-height: 1.4em; }
 .sl-loading { color: var(--site-muted); }
+/* Holds the footer below the fold until the list draws, so the page doesn't jump. */
+.sl-app[data-view="list"]:has(> .sl-loading) { min-height: 100vh; }
 .sl-back { margin: 26px 0 0; }
 .sl-back a { font-size: .92rem; text-decoration: none; }
 .sl-row { align-items: center; display: flex; flex-wrap: wrap; gap: 8px; }

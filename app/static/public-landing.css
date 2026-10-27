@@ -450,7 +450,7 @@ body.lp #landingPage { background: none; display: block; min-height: 0; padding:
 .lp-vg-list .lp-vg-dot { height: 18px; width: 13px; }
 .lp-vg-list__title { align-items: center; display: flex; font: 700 .9rem Poppins, sans-serif; justify-content: space-between; }
 .lp-vg-faces { display: flex; }
-.lp-vg-faces b { align-items: center; background: #5b21b6; border: 2px solid #14112a; border-radius: 50%; display: flex; font: 700 .64rem Inter, sans-serif; height: 24px; justify-content: center; margin-left: -6px; width: 24px; }
+.lp-vg-faces b { align-items: center; background: #5b21b6; border: 2px solid #14112a; border-radius: 50%; color: #f5f3ff; display: flex; font: 700 .64rem Inter, sans-serif; height: 24px; justify-content: center; margin-left: -6px; width: 24px; }
 .lp-vg-faces b:nth-child(2) { background: #0f766e; } .lp-vg-faces b:nth-child(3) { background: #374151; }
 .lp-vg-row .lp-vg-pill { background: rgba(139, 92, 246, .22); border-radius: 99px; color: var(--lp-violet-soft); font-weight: 600; padding: 2px 8px; }
 .lp-vg-row .lp-vg-pill.is-done { background: rgba(45, 212, 191, .18); color: #5eead4; }

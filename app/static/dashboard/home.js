@@ -1367,6 +1367,7 @@ async function refreshLibraryPulse(shouldContinue = () => true) {
 
 const dashboardLayoutRefreshes = new Set();
 let scheduledDashboardLayoutRefresh = null;
+let firstDashboardLayoutBatchRan = false;
 
 function waitForDashboardLayoutRefreshes() {
   // Initial producers have settled: capture their running and scheduled batches
@@ -1391,12 +1392,17 @@ function scheduleLibraryLaunchpadRefresh(refreshDecisionCards = true) {
     launchpadDecisionRefreshRequested = false;
     const launchpadRequest = refreshLibraryLaunchpad();
     const queueRequest = refreshNextUpQueue();
-    window.refreshYearGoals?.();
-    window.refreshMonthlyChallenge?.();
-    window.refreshSeasonCard?.();
-    window.refreshBadges?.();
+    // The first batch reuses the cards auth.js just requested; later ones fetch fresh.
+    const cardRequests = (!firstDashboardLayoutBatchRan && window.dashboardHomeCards) || [
+      window.refreshYearGoals?.(),
+      window.refreshMonthlyChallenge?.(),
+      window.refreshSeasonCard?.(),
+      window.refreshBadges?.(),
+    ];
+    firstDashboardLayoutBatchRan = true;
+    window.dashboardHomeCards = null;
     if (shouldRefreshDecisionCards) refreshDashboardDecisionCards();
-    Promise.allSettled([launchpadRequest, queueRequest, decisionCardsRefreshPromise]).then(batch.resolve);
+    Promise.allSettled([launchpadRequest, queueRequest, decisionCardsRefreshPromise, ...cardRequests]).then(batch.resolve);
   }, 250);
 }
 
