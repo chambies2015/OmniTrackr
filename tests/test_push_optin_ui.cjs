@@ -23,6 +23,7 @@ function setup({permission = 'default', grant = 'granted', subscribed = false, p
   const text = {textContent: ''};
   const button = {id: 'pushOptInBtn', hidden: false, disabled: false, textContent: ''};
   const bell = {id: 'notificationBell'};
+  const more = {id: 'pushSettingsBtn', hidden: true, textContent: '', setAttribute() {}};
   const dialog = {opened: false, showModal() { this.opened = true; }};
   let subscription = null;
   const makeSubscription = key => ({
@@ -53,7 +54,7 @@ function setup({permission = 'default', grant = 'granted', subscribed = false, p
   if (push) window.Notification = Notification;
   const document = {
     readyState: 'loading',
-    getElementById: id => ({pushOptIn: box, pushOptInText: text, pushOptInBtn: button, installAppDialog: dialog}[id] || null),
+    getElementById: id => ({pushOptIn: box, pushOptInText: text, pushOptInBtn: button, pushSettingsBtn: more, installAppDialog: dialog}[id] || null),
     addEventListener: (name, fn) => { docListeners[name] = fn; },
   };
   const authenticatedFetch = async (url, options = {}) => {
@@ -62,13 +63,13 @@ function setup({permission = 'default', grant = 'granted', subscribed = false, p
     return {ok: true, async json() { return url.endsWith('/key') ? {public_key: KEY, devices: 0} : {enabled: true}; }};
   };
   const context = vm.createContext({
-    window, document, navigator, Notification, authenticatedFetch, setTimeout, clearTimeout, Promise, Uint8Array,
+    window, document, navigator, Notification, authenticatedFetch, setTimeout, clearTimeout, Promise, Uint8Array, Intl,
     isAuthenticated: () => signedIn, API_BASE: '',
   });
   vm.runInContext(script, context);
   const element = el => ({closest: sel => (sel === `#${el.id}` ? el : null)});
   const click = target => docListeners.click({target: element(target), preventDefault() {}, stopPropagation() {}});
-  return {box, text, button, bell, dialog, calls, click, winListeners, window, current: () => subscription};
+  return {box, text, button, more, bell, dialog, calls, click, winListeners, window, current: () => subscription};
 }
 
 test('the bell offers to turn notifications on, then subscribes and tells the server', async () => {
@@ -81,8 +82,11 @@ test('the bell offers to turn notifications on, then subscribes and tells the se
   assert.equal(ui.calls[2][1], true);
   assert.equal(ui.calls[3][1], '/notifications/push/subscription');
   assert.equal(ui.calls[3][2].endpoint, 'https://fcm.googleapis.com/fcm/send/device-1');
+  // Sent along so quiet hours follow this device's clock.
+  assert.equal(ui.calls[3][2].time_zone, Intl.DateTimeFormat().resolvedOptions().timeZone);
   assert.equal(ui.box.dataset.state, 'on');
   assert.equal(ui.button.textContent, 'Turn off');
+  assert.equal(ui.more.hidden, false);  // "Choose what to get" shows once it's on.
 });
 
 test('turning off removes the device on the server and in the browser', async () => {

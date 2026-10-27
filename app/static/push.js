@@ -1,4 +1,5 @@
-// Dashboard: turn phone/desktop notifications on or off for this device, from the bell.
+// Dashboard: turn phone/desktop notifications on or off for this device, from the bell,
+// and choose which kinds are pushed and when to keep quiet.
 // Server text is only ever set as textContent.
 (function () {
   'use strict';
@@ -35,6 +36,14 @@
       : await fetch(`${apiBase()}${path}`, { credentials: 'same-origin', ...request });
     if (!response.ok) throw new Error(`Request failed (${response.status})`);
     return response.json();
+  }
+
+  function timeZone() {
+    try { return Intl.DateTimeFormat().resolvedOptions().timeZone || null; } catch (error) { return null; }
+  }
+
+  function subscriptionBody(subscription) {
+    return JSON.stringify({ ...subscription.toJSON(), time_zone: timeZone() });
   }
 
   function keyBytes(base64url) {
@@ -77,6 +86,9 @@
       blocked: ['Notifications are blocked for OmniTrackr in this browser’s settings.', ''],
       install: ['On iPhone and iPad, add OmniTrackr to your Home Screen to get notifications.', 'Show me how'],
     }[state];
+    const more = $('pushSettingsBtn');
+    if (more) more.hidden = state !== 'on';
+    if (state !== 'on') closeSettings();
     if (!copy) {
       box.hidden = true;
       return;
@@ -117,7 +129,7 @@
       subscription = null;
     }
     subscription = subscription || await reg.pushManager.subscribe({ userVisibleOnly: true, applicationServerKey: key });
-    await api('/notifications/push/subscription', { method: 'POST', body: JSON.stringify(subscription.toJSON()) });
+    await api('/notifications/push/subscription', { method: 'POST', body: subscriptionBody(subscription) });
     render('on');
   }
 
@@ -147,7 +159,7 @@
         await subscription.unsubscribe();
         return;
       }
-      await api('/notifications/push/subscription', { method: 'POST', body: JSON.stringify(subscription.toJSON()) });
+      await api('/notifications/push/subscription', { method: 'POST', body: subscriptionBody(subscription) });
     } catch (error) { /* tried again next visit */ }
   }
 
@@ -169,9 +181,157 @@
     } catch (error) { /* signing out continues */ }
   }
 
+  // ------------------------------------------------ what gets pushed, and quiet hours
+
+  function hourLabel(hour) {
+    try {
+      return new Date(2000, 0, 1, hour).toLocaleTimeString([], { hour: 'numeric' });
+    } catch (error) {
+      return `${hour}:00`;
+    }
+  }
+
+  function make(tag, props = {}, children = []) {
+    const node = document.createElement(tag);
+    Object.entries(props).forEach(([name, value]) => {
+      if (name === 'text') node.textContent = value;
+      else if (name.startsWith('aria-')) node.setAttribute(name, value);
+      else node[name] = value;
+    });
+    children.forEach(child => node.appendChild(child));
+    return node;
+  }
+
+  function hourSelect(name, value, label) {
+    const select = make('select', { name, className: 'push-settings__hour', 'aria-label': label });
+    for (let hour = 0; hour < 24; hour += 1) {
+      select.appendChild(make('option', { value: String(hour), text: hourLabel(hour), selected: hour === value }));
+    }
+    return select;
+  }
+
+  function settingRow(input, name, hint) {
+    return make('label', { className: 'push-settings__row' }, [
+      input,
+      make('span', { className: 'push-settings__label' }, [
+        make('span', { className: 'push-settings__name', text: name }),
+        make('span', { className: 'push-settings__hint', text: hint }),
+      ]),
+    ]);
+  }
+
+  function buildSettings(form, settings) {
+    form.textContent = '';
+    form.appendChild(make('p', { className: 'push-settings__title', text: 'Send to my devices' }));
+    settings.topics.forEach(topic => {
+      form.appendChild(settingRow(make('input', { type: 'checkbox', name: 'topic', value: topic.key, checked: !!topic.on }),
+        topic.label, topic.hint));
+    });
+    const quiet = settings.quiet_hours || { on: true, start: 22, end: 8 };
+    form.appendChild(make('div', { className: 'push-settings__quiet' }, [
+      settingRow(make('input', { type: 'checkbox', name: 'quiet_hours', checked: !!quiet.on }), 'Quiet hours',
+        'Anything that comes in is held, then sent as one catch-up when they end.'),
+      make('div', { className: 'push-settings__hours' }, [
+        make('span', { text: 'From' }), hourSelect('quiet_start', quiet.start, 'Quiet from'),
+        make('span', { text: 'to' }), hourSelect('quiet_end', quiet.end, 'Quiet until'),
+      ]),
+    ]));
+    form.appendChild(make('p', { className: 'push-settings__foot' }, [
+      make('span', { text: 'The bell still lists everything. ' }),
+      make('span', { id: 'pushSettingsStatus', className: 'push-settings__status', role: 'status' }),
+    ]));
+    syncHours(form);
+  }
+
+  function syncHours(form) {
+    const on = form.querySelector('input[name="quiet_hours"]').checked;
+    form.querySelectorAll('.push-settings__hour').forEach(select => { select.disabled = !on; });
+  }
+
+  function readSettings(form) {
+    const topics = {};
+    form.querySelectorAll('input[name="topic"]').forEach(input => { topics[input.value] = input.checked; });
+    const body = {
+      topics,
+      quiet_hours: form.querySelector('input[name="quiet_hours"]').checked,
+      quiet_start: Number(form.querySelector('select[name="quiet_start"]').value),
+      quiet_end: Number(form.querySelector('select[name="quiet_end"]').value),
+    };
+    const zone = timeZone();
+    if (zone) body.time_zone = zone;
+    return body;
+  }
+
+  function setStatus(message) {
+    const status = $('pushSettingsStatus');
+    if (status) status.textContent = message;
+  }
+
+  let saving = Promise.resolve();
+
+  function saveSettings() {
+    const form = $('pushSettings');
+    if (!form) return saving;
+    syncHours(form);
+    const body = JSON.stringify(readSettings(form));
+    setStatus('Saving…');
+    // One save at a time, in the order the switches were flipped.
+    saving = saving.then(() => api('/notifications/push/settings', { method: 'PUT', body }))
+      .then(() => setStatus('Saved.'))
+      .catch(() => setStatus('That didn’t save. Please try again.'));
+    return saving;
+  }
+
+  function closeSettings() {
+    const form = $('pushSettings');
+    const more = $('pushSettingsBtn');
+    const dropdown = $('notificationDropdown');
+    if (form) form.hidden = true;
+    if (more) {
+      more.setAttribute('aria-expanded', 'false');
+      more.textContent = 'Choose what to get';
+    }
+    if (dropdown) dropdown.classList.remove('push-settings-open');
+  }
+
+  async function openSettings() {
+    const form = $('pushSettings');
+    const more = $('pushSettingsBtn');
+    const dropdown = $('notificationDropdown');
+    if (!form || !more) return;
+    if (!form.hidden) {
+      closeSettings();
+      return;
+    }
+    more.disabled = true;
+    try {
+      buildSettings(form, await api('/notifications/push/settings'));
+      form.hidden = false;
+      more.setAttribute('aria-expanded', 'true');
+      more.textContent = 'Back to notifications';
+      if (dropdown) dropdown.classList.add('push-settings-open');
+    } catch (error) {
+      const text = $('pushOptInText');
+      if (text) text.textContent = 'Your settings didn’t load. Please try again.';
+    } finally {
+      more.disabled = false;
+    }
+  }
+
+  document.addEventListener('change', event => {
+    if (event.target.closest && event.target.closest('#pushSettings')) saveSettings();
+  });
+
   document.addEventListener('click', async event => {
     if (event.target.closest && event.target.closest('#notificationBell')) {
+      closeSettings();
       refresh();
+      return;
+    }
+    if (event.target.closest && event.target.closest('#pushSettingsBtn')) {
+      event.preventDefault();
+      event.stopPropagation();
+      openSettings();
       return;
     }
     const button = event.target.closest && event.target.closest('#pushOptInBtn');
@@ -197,7 +357,7 @@
     }
   });
 
-  window.omniPush = { refresh, forgetDevice };
+  window.omniPush = { refresh, forgetDevice, openSettings, saveSettings };
 
   if (document.readyState === 'complete') sync();
   else window.addEventListener('load', sync);

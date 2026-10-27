@@ -48,11 +48,11 @@
   <link rel="apple-touch-icon" href="/static/icons/apple-touch-icon.png?v=20261003-pwa-1">
   <meta name="apple-mobile-web-app-title" content="OmniTrackr">
   <script src="/static/pwa.js?v=20261018-install-card-1" defer></script>
-  <link rel="preload" href="./styles.css?v=20261022-next-up-1" as="style">
+  <link rel="preload" href="./styles.css?v=20261027-push-1" as="style">
   <link rel="preload" href="/static/fonts/poppins-700-latin.woff2" as="font" type="font/woff2" crossorigin>
   <link rel="preload" href="/static/fonts/poppins-800-latin.woff2" as="font" type="font/woff2" crossorigin>
   <link rel="stylesheet" href="/static/fonts.css?v=20261009-fonts-1">
-  <link rel="stylesheet" href="./styles.css?v=20261022-next-up-1">
+  <link rel="stylesheet" href="./styles.css?v=20261027-push-1">
   <link rel="stylesheet" href="/static/progress.css?v=20260922-progress">
   <link rel="stylesheet" href="/static/app-theme.css?v=20261022-next-up-1">
   <link rel="stylesheet" href="/static/library-theme.css?v=20261017-bughunt-1">
@@ -331,8 +331,13 @@
       <p class="no-notifications">No notifications</p>
     </div>
     <div id="pushOptIn" class="notification-push" hidden>
-      <p id="pushOptInText" class="notification-push__text"></p>
-      <button id="pushOptInBtn" type="button" class="notification-action-btn notification-push__btn"></button>
+      <div class="notification-push__row">
+        <p id="pushOptInText" class="notification-push__text"></p>
+        <button id="pushOptInBtn" type="button" class="notification-action-btn notification-push__btn"></button>
+      </div>
+      <button id="pushSettingsBtn" type="button" class="notification-push__more" aria-expanded="false"
+        aria-controls="pushSettings" hidden>Choose what to get</button>
+      <form id="pushSettings" class="push-settings" aria-label="Notification settings" hidden></form>
     </div>
   </div>
   <button id="userDisplay" class="user-display-btn" role="button" aria-label="Open account settings">
@@ -1752,7 +1757,7 @@
   <script src="/static/taste-match.js?v=20261016-taste-match-1"></script>
   <script src="/static/friend-recs.js?v=20261024-friend-recs-1"></script>
   <script src="/static/friends-feed.js?v=20261025-friends-feed-1"></script>
-  <script src="/static/push.js?v=20261011-push-2" defer></script>
+  <script src="/static/push.js?v=20261027-push-3" defer></script>
   <script src="/static/year-in-review-entry.js?v=20261019-story-1" defer></script>
   <script src="/static/guest-list.js?v=20261012-hero-search-1"></script>
 
