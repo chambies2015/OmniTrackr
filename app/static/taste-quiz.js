@@ -70,12 +70,18 @@
   }
 
   function safeImage(url) {
-    return typeof url === 'string' && /^https?:\/\//.test(url) ? url : null;
+    if (typeof url !== 'string') return null;
+    try {
+      const parsed = new URL(url);
+      return parsed.protocol === 'https:' || parsed.protocol === 'http:' ? parsed.href : null;
+    } catch (error) {
+      return null;
+    }
   }
 
-  function art(item, className) {
+  // image is passed on its own: for deck cards it comes from the art API, never from page data.
+  function art(item, className, image) {
     const box = el('div', `${className} tq-art--${item.kind}`);
-    const image = safeImage(item.image);
     if (image) {
       const img = el('img');
       img.src = image; img.alt = ''; img.loading = 'lazy'; img.decoding = 'async';
@@ -93,7 +99,8 @@
   function setupQuiz(root) {
     let deck = [];
     try { deck = JSON.parse(document.getElementById('tasteQuizDeck').textContent || '[]'); } catch (error) { deck = []; }
-    deck = deck.filter(card => card && ID.test(card.id) && KINDS.has(card.kind)).map(card => ({ ...card, image: null }));
+    deck = deck.filter(card => card && ID.test(card.id) && KINDS.has(card.kind));
+    const covers = new Map();
     if (!deck.length) return;
     const signedIn = root.dataset.signedIn === 'true';
     const screens = {};
@@ -124,7 +131,7 @@
     // Artwork comes from the API, never from the page, and only for deck cards.
     function loadArt(card, onImage) {
       if (!card) return;
-      if (card.image) { if (onImage) onImage(); return; }
+      if (covers.has(card.id)) { if (onImage) onImage(); return; }
       if (artRequested.has(card.id)) return;
       artRequested.add(card.id);
       fetch(`/api/taste-quiz/art/${card.id}`, { headers: { Accept: 'application/json' } })
@@ -132,7 +139,7 @@
         .then(data => {
           const image = safeImage(data && data.image);
           if (!image) return;
-          card.image = image;
+          covers.set(card.id, image);
           if (order[position] === card && !screens.play.hidden) renderCard();
           if (onImage) onImage();
         })
@@ -144,7 +151,7 @@
       const holder = find('[data-tq-card]');
       holder.replaceChildren();
       if (!card) return;
-      holder.appendChild(art(card, 'tq-card__art'));
+      holder.appendChild(art(card, 'tq-card__art', covers.get(card.id)));
       const text = el('div', 'tq-card__text');
       text.appendChild(el('p', 'tq-card__meta', [card.label, card.year, card.creator].filter(Boolean).join(' · ')));
       text.appendChild(el('h2', 'tq-card__title', card.title));
@@ -202,9 +209,9 @@
         .sort((a, b) => (state.answers[a.id] === 'loved' ? 0 : 1) - (state.answers[b.id] === 'loved' ? 0 : 1)).slice(0, 8);
       favorites.forEach(card => {
         const item = el('div', 'tq-shelf__item');
-        const cover = art(card, 'tq-shelf__art');
+        const cover = art(card, 'tq-shelf__art', covers.get(card.id));
         item.appendChild(cover);
-        if (!card.image) loadArt(card, () => { if (cover.isConnected) cover.replaceWith(art(card, 'tq-shelf__art')); });
+        if (!covers.has(card.id)) loadArt(card, () => { if (cover.isConnected) cover.replaceWith(art(card, 'tq-shelf__art', covers.get(card.id))); });
         item.appendChild(el('span', 'tq-shelf__label', state.answers[card.id] === 'loved' ? '♥ Loved' : 'Liked'));
         item.title = card.title;
         box.appendChild(item);
@@ -254,7 +261,7 @@
       find('[data-tq-picks-title]').hidden = !picks.length;
       picks.forEach(pick => {
         const item = el('li', 'tq-pick');
-        item.appendChild(art(pick, 'tq-pick__art'));
+        item.appendChild(art(pick, 'tq-pick__art', safeImage(pick.image)));
         const body = el('div', 'tq-pick__body');
         body.appendChild(el('p', 'tq-pick__because', `Because you ${pick.because_answer === 'loved' ? 'loved' : pick.because_answer === 'want' ? 'want to try' : 'liked'} ${pick.because}`));
         const heading = el('h4', 'tq-pick__title');
