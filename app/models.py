@@ -1082,6 +1082,26 @@ class PushSubscription(Base):
     failure_count = Column(Integer, nullable=False, default=0)
 
 
+class PushPreference(Base):
+    """Which notifications a member wants pushed to their devices, and their quiet hours (Oct 2026).
+
+    A new table only. Members without a row get the defaults in web_push.TOPICS.
+    ``topics`` holds only the switches the member changed (JSON); ``held_since`` marks
+    pushes held back during quiet hours, sent as one catch-up when the hours end.
+    The bell is unaffected by anything here.
+    """
+    __tablename__ = "push_preferences"
+
+    user_id = Column(Integer, ForeignKey("users.id", ondelete="CASCADE"), primary_key=True)
+    topics = Column(String(400), nullable=True)
+    quiet_hours = Column(Boolean, nullable=False, default=True)
+    quiet_start = Column(Integer, nullable=False, default=22)
+    quiet_end = Column(Integer, nullable=False, default=8)
+    time_zone = Column(String(64), nullable=True)
+    held_since = Column(DateTime, nullable=True)
+    updated_at = Column(DateTime, nullable=False, default=datetime.utcnow)
+
+
 class WebPushKey(Base):
     """The site's own Web Push signing key (VAPID), created once on first use (Oct 2026).
 
@@ -1239,6 +1259,21 @@ class ClubPost(Base):
     body = Column(String(1000), nullable=False)
     spoiler = Column(Boolean, nullable=False, default=False)
     created_at = Column(DateTime, nullable=False, default=datetime.utcnow)
+
+
+class ClubReminder(Base):
+    """A finish-by nudge already sent to one member for one club pick (Oct 2026).
+
+    New table only; it just keeps the nudge to once per member per pick.
+    """
+    __tablename__ = "club_reminders"
+
+    id = Column(Integer, primary_key=True, index=True)
+    round_id = Column(Integer, ForeignKey("club_rounds.id", ondelete="CASCADE"), nullable=False, index=True)
+    user_id = Column(Integer, ForeignKey("users.id", ondelete="CASCADE"), nullable=False)
+    sent_at = Column(DateTime, nullable=False, default=datetime.utcnow)
+
+    __table_args__ = (UniqueConstraint("round_id", "user_id", name="uq_club_reminder"),)
 
 
 class FriendFeedEvent(Base):

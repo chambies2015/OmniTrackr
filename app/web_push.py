@@ -1,9 +1,11 @@
 """Phone and desktop notifications (Web Push) for the bell's notifications.
 
-Members opt in per device from the notification bell. Every notification the
-app already creates (friend requests, takes, goal reached, release day alerts
-and so on) is then also pushed to that member's devices, so it reaches them
-with the site closed. Nothing here changes how the bell works.
+Members opt in per device from the notification bell. Notifications the app
+already creates (release days, club picks, friend recommendations and so on)
+are then also pushed to that member's devices, so they reach them with the site
+closed. Members choose which kinds are pushed and can set quiet hours; the
+defaults push only the few that are worth a buzz. Nothing here changes how the
+bell works.
 
 Implemented with the standard libraries the app already ships (cryptography,
 PyJWT, httpx) rather than a new dependency:
@@ -24,8 +26,9 @@ import re
 import threading
 import time
 from concurrent.futures import ThreadPoolExecutor
-from datetime import datetime
+from datetime import datetime, timedelta
 from typing import Optional
+from zoneinfo import ZoneInfo
 from urllib.parse import urlsplit
 
 import httpx
@@ -74,7 +77,41 @@ TITLES = {
     "shared_list_joined": "Someone joined your shared list",
     "shared_list_item": "New on a shared list",
     "friend_invite_accepted": "A friend joined",
+    "friend_recommendation": "A friend thinks you'd love this",
+    "friend_recommendation_added": "Your recommendation landed",
+    "club_pick": "New club pick",
+    "club_post": "New in your watch club",
+    "club_due_soon": "Club pick due soon",
+    "friend_feed_cheer": "A friend cheered you on",
+    "push_enabled": "Notifications are on",
+    "held": "While you were away",
 }
+
+# What members can switch on or off for their devices: (key, label, hint, on by default, types).
+# The defaults stay quiet: things you'd want to hear about now are on; chatter and
+# things you'll see next time you open OmniTrackr anyway are off.
+TOPICS = (
+    ("releases", "Out today", "Release days for titles, new seasons and sequels you track.", True,
+     ("release_day",)),
+    ("clubs", "Watch club picks", "A new pick on your shared lists, and a nudge two days before it's due.", True,
+     ("club_pick", "club_due_soon", "shared_list_added")),
+    ("recommendations", "Friend recommendations", "When a friend sends you something, or answers when you ask.", True,
+     ("friend_recommendation", "friend_recommendation_added", "recommendation_received",
+      "recommendation_invitation", "take_received")),
+    ("friends", "Friend requests", "New requests, and friends who accept or join from your invite.", True,
+     ("friend_request_received", "friend_request_accepted", "friend_invite_accepted")),
+    ("club_talk", "Club talk and list updates", "New posts about a club pick, people joining and titles added.", False,
+     ("club_post", "shared_list_joined", "shared_list_item")),
+    ("milestones", "Cheers, badges and goals", "Cheers, helpful votes, badges, goals and challenges.", False,
+     ("friend_feed_cheer", "review_helpful", "goal_reached", "badge_earned", "challenge_complete")),
+)
+TOPIC_KEYS = tuple(topic[0] for topic in TOPICS)
+TOPIC_FOR_TYPE = {kind: topic[0] for topic in TOPICS for kind in topic[4]}
+# Pushed whatever the switches say: the confirmation that push works, and notices about the member's own content.
+ALWAYS_PUSHED = {"push_enabled", "review_unlisted", "collection_unlisted"}
+# Anything new that isn't listed above follows the quietest switch until it's given a home.
+FALLBACK_TOPIC = "milestones"
+TIME_ZONE = re.compile(r"^[A-Za-z][A-Za-z0-9_+\-]*(/[A-Za-z0-9_+\-]+){0,2}$")
 
 
 # ---------------------------------------------------------------- encoding
@@ -257,6 +294,115 @@ def remove_subscription(db: Session, user_id: int, endpoint: str) -> bool:
     return bool(count)
 
 
+# ---------------------------------------------------------------- preferences
+
+def topic_of(kind: str) -> Optional[str]:
+    """The switch that decides whether this notification type is pushed (None: always pushed)."""
+    if kind in ALWAYS_PUSHED:
+        return None
+    return TOPIC_FOR_TYPE.get(kind, FALLBACK_TOPIC)
+
+
+def chosen_topics(pref: Optional[models.PushPreference]) -> dict[str, bool]:
+    chosen = {key: default for key, _, _, default, _ in TOPICS}
+    if pref is not None and pref.topics:
+        try:
+            saved = json.loads(pref.topics)
+        except (TypeError, ValueError):
+            saved = {}
+        if isinstance(saved, dict):
+            chosen.update({key: value for key, value in saved.items() if key in chosen and isinstance(value, bool)})
+    return chosen
+
+
+def wants(pref: Optional[models.PushPreference], kind: str) -> bool:
+    topic = topic_of(kind)
+    return topic is None or chosen_topics(pref)[topic]
+
+
+def zone(name: Optional[str]) -> Optional[ZoneInfo]:
+    if not isinstance(name, str) or not name or len(name) > 64 or not TIME_ZONE.match(name):
+        return None
+    try:
+        return ZoneInfo(name)
+    except Exception:
+        return None
+
+
+def in_quiet_hours(pref: Optional[models.PushPreference], now: Optional[datetime] = None) -> bool:
+    """Whether it's within the member's quiet hours where they are. Unknown time zone: never quiet."""
+    if pref is None or not pref.quiet_hours or pref.quiet_start == pref.quiet_end:
+        return False
+    tz = zone(pref.time_zone)
+    if tz is None:
+        return False
+    now = now or datetime.utcnow()
+    hour = now.replace(tzinfo=ZoneInfo("UTC")).astimezone(tz).hour
+    start, end = pref.quiet_start, pref.quiet_end
+    return start <= hour < end if start < end else hour >= start or hour < end
+
+
+def quiet_started_at(pref: models.PushPreference, now: datetime) -> datetime:
+    """When (UTC) the quiet hours the member is in right now began; everything since was held back."""
+    tz = zone(pref.time_zone) or ZoneInfo("UTC")
+    local = now.replace(tzinfo=ZoneInfo("UTC")).astimezone(tz)
+    start = local.replace(hour=pref.quiet_start, minute=0, second=0, microsecond=0)
+    if start > local:
+        start -= timedelta(days=1)
+    return start.astimezone(ZoneInfo("UTC")).replace(tzinfo=None)
+
+
+def get_preference(db: Session, user_id: int) -> models.PushPreference:
+    """The member's row, made with the defaults when they have none yet (not committed)."""
+    pref = db.get(models.PushPreference, user_id)
+    if pref is None:
+        pref = models.PushPreference(user_id=user_id, quiet_hours=True, quiet_start=22, quiet_end=8)
+        db.add(pref)
+    return pref
+
+
+def settings_for(pref: Optional[models.PushPreference]) -> dict:
+    chosen = chosen_topics(pref)
+    return {
+        "topics": [{"key": key, "label": label, "hint": hint, "on": chosen[key]}
+                   for key, label, hint, _, _ in TOPICS],
+        "quiet_hours": {"on": True if pref is None else bool(pref.quiet_hours),
+                        "start": 22 if pref is None else pref.quiet_start,
+                        "end": 8 if pref is None else pref.quiet_end},
+        "time_zone": None if pref is None else pref.time_zone,
+    }
+
+
+def save_settings(db: Session, user_id: int, topics: Optional[dict] = None, quiet_hours: Optional[bool] = None,
+                  quiet_start: Optional[int] = None, quiet_end: Optional[int] = None,
+                  time_zone: Optional[str] = None, _retry: bool = True) -> models.PushPreference:
+    pref = get_preference(db, user_id)
+    if topics:
+        chosen = chosen_topics(pref)
+        chosen.update({key: bool(value) for key, value in topics.items() if key in chosen})
+        changed = {key: value for key, value in chosen.items()
+                   if value != next(topic[3] for topic in TOPICS if topic[0] == key)}
+        pref.topics = json.dumps(changed, separators=(",", ":")) if changed else None
+    if quiet_hours is not None:
+        pref.quiet_hours = bool(quiet_hours)
+    if quiet_start is not None:
+        pref.quiet_start = quiet_start
+    if quiet_end is not None:
+        pref.quiet_end = quiet_end
+    if time_zone is not None and zone(time_zone) is not None:
+        pref.time_zone = time_zone
+    pref.updated_at = datetime.utcnow()
+    try:
+        db.commit()
+    except IntegrityError:
+        # The page-load sync made the row at the same moment; apply the change to that one.
+        db.rollback()
+        if not _retry:
+            raise
+        return save_settings(db, user_id, topics, quiet_hours, quiet_start, quiet_end, time_zone, _retry=False)
+    return pref
+
+
 # ---------------------------------------------------------------- sending
 
 def safe_link(link: Optional[str]) -> str:
@@ -293,45 +439,126 @@ def send_one(http: httpx.Client, key: ec.EllipticCurvePrivateKey, row: models.Pu
         return 0
 
 
-def deliver(db: Session, messages: list[tuple[int, str, str, Optional[str]]],
-            http: Optional[httpx.Client] = None) -> dict:
-    """Push each (user_id, type, message, link) to that member's devices.
+def _send_to(db: Session, http: httpx.Client, key, rows: list[models.PushSubscription], payload: bytes,
+             stats: dict) -> None:
+    for row in rows:
+        if row in db.deleted:
+            continue
+        status = send_one(http, key, row, payload)
+        if 200 <= status < 300:
+            row.last_success_at, row.failure_count = datetime.utcnow(), 0
+            stats["sent"] += 1
+        elif status in (404, 410) or row.failure_count + 1 >= MAX_FAILURES:
+            db.delete(row)
+            stats["removed"] += 1
+        else:
+            row.failure_count += 1
+            stats["failed"] += 1
 
-    Gone subscriptions (404/410) are removed; one that keeps failing is dropped
-    after a few tries. Returns counts for logging and tests.
-    """
-    stats = {"sent": 0, "removed": 0, "failed": 0}
-    user_ids = {user_id for user_id, *_ in messages}
-    if not user_ids:
-        return stats
+
+def _devices(db: Session, user_ids) -> dict[int, list[models.PushSubscription]]:
     rows = (db.query(models.PushSubscription)
             .join(models.User, models.User.id == models.PushSubscription.user_id)
             .filter(models.PushSubscription.user_id.in_(user_ids), models.User.is_active == True)
             .all())
-    if not rows:
-        return stats
     devices: dict[int, list[models.PushSubscription]] = {}
     for row in rows:
         devices.setdefault(row.user_id, []).append(row)
+    return devices
+
+
+def deliver(db: Session, messages: list[tuple[int, str, str, Optional[str]]],
+            http: Optional[httpx.Client] = None, now: Optional[datetime] = None) -> dict:
+    """Push each (user_id, type, message, link) to that member's devices.
+
+    Types the member switched off are skipped, and during their quiet hours the
+    message is held for the catch-up (see send_held). Gone subscriptions
+    (404/410) are removed; one that keeps failing is dropped after a few tries.
+    Returns counts for logging and tests.
+    """
+    stats = {"sent": 0, "removed": 0, "failed": 0, "muted": 0, "held": 0}
+    user_ids = {user_id for user_id, *_ in messages}
+    if not user_ids:
+        return stats
+    devices = _devices(db, user_ids)
+    if not devices:
+        return stats
+    prefs = {pref.user_id: pref for pref in
+             db.query(models.PushPreference).filter(models.PushPreference.user_id.in_(devices)).all()}
+    now = now or datetime.utcnow()
     key = signing_key(db)
     owns_client = http is None
     http = http or httpx.Client(timeout=REQUEST_TIMEOUT, follow_redirects=False)
     try:
         for user_id, kind, message, link in messages:
-            payload = payload_for(kind, message, link)
-            for row in devices.get(user_id, []):
-                if row in db.deleted:
-                    continue
-                status = send_one(http, key, row, payload)
-                if 200 <= status < 300:
-                    row.last_success_at, row.failure_count = datetime.utcnow(), 0
-                    stats["sent"] += 1
-                elif status in (404, 410) or row.failure_count + 1 >= MAX_FAILURES:
-                    db.delete(row)
-                    stats["removed"] += 1
-                else:
-                    row.failure_count += 1
-                    stats["failed"] += 1
+            if user_id not in devices:
+                continue
+            pref = prefs.get(user_id)
+            if not wants(pref, kind):
+                stats["muted"] += 1
+                continue
+            if kind != "push_enabled" and in_quiet_hours(pref, now):
+                if pref.held_since is None:
+                    pref.held_since = quiet_started_at(pref, now)
+                stats["held"] += 1
+                continue
+            _send_to(db, http, key, devices[user_id], payload_for(kind, message, link), stats)
+        db.commit()
+    finally:
+        if owns_client:
+            http.close()
+    return stats
+
+
+HELD_SHOWN = 2
+
+
+def held_payload(notifications: list[models.Notification]) -> bytes:
+    """One catch-up message for what came in during quiet hours."""
+    if len(notifications) == 1:
+        only = notifications[0]
+        return payload_for(only.type or "", only.message or "", only.link)
+    lines = [(item.message or "").strip() for item in notifications[:HELD_SHOWN]]
+    rest = len(notifications) - HELD_SHOWN
+    body = " · ".join(line for line in lines if line)
+    if rest > 0:
+        body += f" (and {rest} more in the bell)"
+    return payload_for("held", body, "/")
+
+
+def send_held(db: Session, http: Optional[httpx.Client] = None, now: Optional[datetime] = None) -> dict:
+    """Once a member's quiet hours end, send one catch-up for what was held (still unread, still wanted)."""
+    stats = {"sent": 0, "removed": 0, "failed": 0, "members": 0}
+    now = now or datetime.utcnow()
+    waiting = [pref for pref in db.query(models.PushPreference).filter(models.PushPreference.held_since.isnot(None))
+               if not in_quiet_hours(pref, now)]
+    if not waiting:
+        return stats
+    devices = _devices(db, [pref.user_id for pref in waiting])
+    key = signing_key(db) if devices else None
+    owns_client = http is None
+    http = http or httpx.Client(timeout=REQUEST_TIMEOUT, follow_redirects=False)
+    try:
+        for pref in waiting:
+            since = pref.held_since
+            # Claim the catch-up so a second worker running this at the same moment skips it.
+            claimed = (db.query(models.PushPreference)
+                       .filter(models.PushPreference.user_id == pref.user_id,
+                               models.PushPreference.held_since == since)
+                       .update({"held_since": None}, synchronize_session=False))
+            db.commit()
+            if not claimed or pref.user_id not in devices:
+                continue
+            unread = (db.query(models.Notification)
+                      .filter(models.Notification.user_id == pref.user_id, models.Notification.created_at >= since,
+                              models.Notification.read_at.is_(None))
+                      .order_by(models.Notification.created_at.desc(), models.Notification.id.desc())
+                      .limit(50).all())
+            unread = [item for item in unread if wants(pref, item.type or "") and item.type != "push_enabled"]
+            if not unread:
+                continue
+            _send_to(db, http, key, devices[pref.user_id], held_payload(unread), stats)
+            stats["members"] += 1
         db.commit()
     finally:
         if owns_client:
@@ -367,6 +594,39 @@ def _run(bind, messages) -> None:
 def submit(bind, messages) -> None:
     """Hand a committed batch to the background sender (tests replace this)."""
     _EXECUTOR.submit(_run, bind, messages)
+
+
+CHECK_EVERY_SECONDS = 15 * 60
+FIRST_CHECK_DELAY_SECONDS = 240
+
+
+def _hourly_jobs(session_factory) -> dict:
+    """Catch-ups after quiet hours, and club finish-by nudges (which reach the bell too)."""
+    from . import clubs
+    db = session_factory()
+    try:
+        nudged = clubs.send_due_reminders(db)
+        held = send_held(db)
+        return {"club_reminders": nudged, "caught_up": held["members"]}
+    finally:
+        db.close()
+
+
+async def push_loop(app) -> None:
+    """Background task started with the app; never raises."""
+    import asyncio
+    from .database import SessionLocal
+    await asyncio.sleep(FIRST_CHECK_DELAY_SECONDS)
+    while True:
+        try:
+            stats = await asyncio.to_thread(_hourly_jobs, SessionLocal)
+            if stats["club_reminders"] or stats["caught_up"]:
+                logger.info("Push catch-up and club reminders: %s", stats)
+        except asyncio.CancelledError:
+            raise
+        except Exception:
+            logger.exception("Push catch-up check failed")
+        await asyncio.sleep(CHECK_EVERY_SECONDS)
 
 
 @event.listens_for(Session, "after_flush")

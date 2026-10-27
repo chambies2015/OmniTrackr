@@ -198,13 +198,13 @@ def pick_pool(request: Request, response: Response, db: Session = Depends(get_db
     return {"picks": _pool_rows(details, pick.collection_links(db))}
 
 
-SAVE_EVENTS = {"pick": "pick_saved", "if-you-liked": "liked_saved", "seasonal": "seasonal_saved"}
+SAVE_EVENTS = {"pick": "pick_saved", "if-you-liked": "liked_saved", "seasonal": "seasonal_saved", "taste-quiz": "quiz_saved"}
 
 
 class PickAdd(BaseModel):
     id: str = Field(..., min_length=3, max_length=160)
     # Where the button was: Pick for me itself, an "If you liked" guide or a seasonal hub (counted separately on Site stats).
-    source: Literal["pick", "if-you-liked", "seasonal"] = "pick"
+    source: Literal["pick", "if-you-liked", "seasonal", "taste-quiz"] = "pick"
     # Also line it up in the member's Next Up queue (skipped when it is already finished).
     next_up: bool = False
 

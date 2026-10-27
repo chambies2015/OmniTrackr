@@ -117,12 +117,16 @@ async def lifespan(application: FastAPI):
     comeback_task = None
     if comeback.enabled_for_process():
         comeback_task = asyncio.create_task(comeback.comeback_loop(application))
+    from . import web_push
+    push_task = None
+    if web_push.dispatch_enabled():
+        push_task = asyncio.create_task(web_push.push_loop(application))
     if os.getenv("TESTING", "").lower() != "true":
         title_task = asyncio.create_task(titles.warm_loop(application))
     try:
         yield
     finally:
-        for task in (digest_task, title_task, announcement_task, comeback_task):
+        for task in (digest_task, title_task, announcement_task, comeback_task, push_task):
             if task is not None:
                 task.cancel()
         await application.state.external_api_client.aclose()
@@ -811,6 +815,20 @@ for route in pick_router.router.routes:
     elif getattr(route, "path", None) == "/api/pick/pool":
         bind_rate_limited_endpoint(route, rate_limited_pick_pool)
 app.include_router(pick_router.router)
+
+from .routers import taste_quiz as taste_quiz_router
+rate_limited_quiz_art = limiter.limit("60/minute")(taste_quiz_router.taste_quiz_art)
+rate_limited_quiz_suggestions = limiter.limit("20/minute")(taste_quiz_router.taste_quiz_suggestions)
+rate_limited_quiz_save = limiter.limit("10/minute")(taste_quiz_router.taste_quiz_save)
+for route in taste_quiz_router.router.routes:
+    path = getattr(route, "path", None)
+    if path == "/api/taste-quiz/art/{kind}/{slug}":
+        bind_rate_limited_endpoint(route, rate_limited_quiz_art)
+    elif path == "/api/taste-quiz/suggestions":
+        bind_rate_limited_endpoint(route, rate_limited_quiz_suggestions)
+    elif path == "/api/taste-quiz/save":
+        bind_rate_limited_endpoint(route, rate_limited_quiz_save)
+app.include_router(taste_quiz_router.router)
 
 from .routers import if_you_liked as if_you_liked_router
 app.include_router(if_you_liked_router.router)

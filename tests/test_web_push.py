@@ -255,7 +255,7 @@ def test_deliver_encrypts_for_each_device_and_prunes_gone_ones(db_session):
     with httpx.Client(transport=httpx.MockTransport(handler)) as http:
         stats = web_push.deliver(db_session, [(user.id, "release_day", "Out today: Dune (Movie), from your library.",
                                                "/release-radar/movies#item-dune")], http=http)
-    assert stats == {"sent": 1, "removed": 1, "failed": 0}
+    assert stats == {"sent": 1, "removed": 1, "failed": 0, "muted": 0, "held": 0}
     fcm = next(request for request in seen if "fcm" in request.url.host)
     assert fcm.headers["Content-Encoding"] == "aes128gcm"
     assert fcm.headers["TTL"] == str(web_push.TTL_SECONDS)
@@ -282,7 +282,8 @@ def test_deliver_skips_deactivated_members_and_repeated_failures(db_session):
 
     with httpx.Client(transport=httpx.MockTransport(handler)) as http:
         for _ in range(web_push.MAX_FAILURES):
-            web_push.deliver(db_session, [(active.id, "x", "hi", None), (gone.id, "x", "hi", None)], http=http)
+            web_push.deliver(db_session, [(active.id, "friend_request_received", "hi", None),
+                                          (gone.id, "friend_request_received", "hi", None)], http=http)
     assert len(calls) == web_push.MAX_FAILURES  # Only the active member's device was tried.
     assert db_session.query(models.PushSubscription).filter_by(user_id=active.id).count() == 0
 
