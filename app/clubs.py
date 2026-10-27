@@ -184,6 +184,48 @@ def delete_post(db: Session, shared: models.SharedList, picked: models.ClubRound
     db.commit()
 
 
+REMIND_DAYS_BEFORE = 2
+
+
+def send_due_reminders(db: Session, today: Optional[date] = None) -> int:
+    """Nudge members who haven't finished a club pick that's due within two days. Once per member per pick.
+
+    Picks started less than two days ago are skipped: everyone just heard about them.
+    Returns how many members were nudged.
+    """
+    today = today or _today()
+    started_before = datetime.combine(today, datetime.min.time()) - timedelta(days=REMIND_DAYS_BEFORE)
+    rounds = (db.query(models.ClubRound, models.SharedList)
+              .join(models.SharedList, models.SharedList.id == models.ClubRound.list_id)
+              .filter(models.ClubRound.ended_at.is_(None), models.ClubRound.ends_on > today,
+                      models.ClubRound.ends_on <= today + timedelta(days=REMIND_DAYS_BEFORE),
+                      models.ClubRound.started_at <= started_before)
+              .all())
+    nudged = 0
+    for picked, shared in rounds:
+        finished = {user_id for user_id, in db.query(models.ClubProgress.user_id).filter(
+            models.ClubProgress.round_id == picked.id, models.ClubProgress.status == "finished")}
+        reminded = {user_id for user_id, in db.query(models.ClubReminder.user_id).filter(
+            models.ClubReminder.round_id == picked.id)}
+        verb = DONE_WORD.get(picked.kind, "finished")
+        for member, _ in _member_rows(db, shared.id):
+            if member.user_id in finished or member.user_id in reminded:
+                continue
+            try:
+                db.add(models.ClubReminder(round_id=picked.id, user_id=member.user_id))
+                _notify(db, member.user_id, "club_due_soon",
+                        f'Finish by {_when(picked.ends_on)}: {picked.title}, the club pick in "{shared.name}". '
+                        f"Mark it {verb} when you're done.",
+                        f"/lists/{shared.id}")
+                db.commit()
+            except Exception:
+                # Another worker nudged this member first (unique constraint).
+                db.rollback()
+                continue
+            nudged += 1
+    return nudged
+
+
 def forget_member(db: Session, list_id: int, user_id: int) -> None:
     """Someone left the list: their progress goes with them, their posts stay. Does not commit."""
     round_ids = [round_id for round_id, in db.query(models.ClubRound.id).filter_by(list_id=list_id)]
