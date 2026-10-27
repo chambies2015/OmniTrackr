@@ -4,7 +4,7 @@ import re
 
 import pytest
 
-from app import funnel, models, pick, taste_quiz, title_pages, title_search
+from app import funnel, models, pick, taste_quiz, title_metadata, title_pages, title_search
 
 
 @pytest.fixture(autouse=True)
@@ -154,12 +154,24 @@ def test_suggestions_skip_titles_already_in_the_library(authenticated_client, db
     assert "Better Call Saul" not in {row["title"] for row in data["suggestions"]}
 
 
-def test_art_lookup_only_answers_for_deck_cards(client):
+def test_art_lookup_only_answers_for_deck_cards(client, monkeypatch):
+    calls = []
+
+    async def fake_fetch(_client, category, title, year, creator=None):
+        calls.append((category, title, year))
+        return {"poster": "https://img.example.com/interstellar.jpg"} if title == "Interstellar" else {}
+
+    monkeypatch.setattr(title_metadata, "fetch", fake_fetch)
     assert client.get("/api/taste-quiz/art/movie/not-a-card").status_code == 404
     response = client.get("/api/taste-quiz/art/movie/interstellar-2014")
     assert response.status_code == 200
-    assert response.json() == {"image": None}
-    assert response.headers["cache-control"] == "no-store"
+    assert response.json() == {"image": "https://img.example.com/interstellar.jpg"}
+    assert response.headers["cache-control"] == "public, max-age=86400"
+    # Cached after the first lookup.
+    assert client.get("/api/taste-quiz/art/movie/interstellar-2014").json()["image"] == "https://img.example.com/interstellar.jpg"
+    assert calls == [("movie", "Interstellar", 2014)]
+    missing = client.get("/api/taste-quiz/art/game/hades-2020")
+    assert missing.json() == {"image": None} and missing.headers["cache-control"] == "no-store"
 
 
 def test_cached_member_artwork_is_used(client, db_session):
