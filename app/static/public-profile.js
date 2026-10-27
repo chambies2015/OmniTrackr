@@ -50,6 +50,12 @@
       link.href = path;
       link.textContent = absoluteUrl(path).replace(/^https?:\/\//, '');
     }
+    const widgetsRow = $('profileWidgetsRow');
+    const widgetsLink = $('profileWidgetsLink');
+    if (widgetsRow && widgetsLink) {
+      widgetsRow.hidden = row.hidden;
+      if (path) widgetsLink.href = `${path}/widgets`;
+    }
   }
 
   function apply(settings) {

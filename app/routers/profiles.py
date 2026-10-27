@@ -15,7 +15,7 @@ from pydantic import BaseModel, Field
 from sqlalchemy.orm import Session
 
 from ..integer_bounds import PositiveDatabaseId
-from .. import models, public_profiles, review_spoilers, supporters
+from .. import models, profile_widgets, public_profiles, review_spoilers, supporters
 from ..auth import AUTH_COOKIE_NAME
 from ..csp import strict_html_response
 from ..dependencies import get_current_user, get_db
@@ -74,6 +74,7 @@ def update_profile_settings(
         db.rollback()
         raise HTTPException(status_code=422, detail=str(error))
     _CARD_CACHE.clear_user(user.id)
+    profile_widgets.CACHE.clear_user(user.id)
     return public_profiles.settings_payload(user, profile, db)
 
 
@@ -104,6 +105,7 @@ def update_showcase(payload: ShowcaseUpdate, response: Response, user: models.Us
         db.rollback()
         raise HTTPException(status_code=422, detail=str(error))
     _CARD_CACHE.clear_user(user.id)
+    profile_widgets.CACHE.clear_user(user.id)
     return {"showcase": items, "showcase_limit": public_profiles.showcase_limit(db, user)}
 
 
@@ -168,7 +170,8 @@ def _owner_note_html(view, is_owner: bool) -> str:
     if not is_owner:
         return ""
     note = ('This is your public profile. Change what it shows and pin titles to your showcase from '
-            '<a href="/#public-profile">Account → Public profile</a>.')
+            '<a href="/#public-profile">Account → Public profile</a>. '
+            f'<a href="{_e(view.path)}/widgets">Get widgets</a> to show it on your blog, forum or GitHub.')
     if not view.profile.show_diary:
         note += ' You can also show your diary of recent finishes and rewatches there.'
     if not view.supporting:
