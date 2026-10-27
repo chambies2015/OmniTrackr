@@ -13,7 +13,7 @@ from .. import challenges, models
 from ..auth import AUTH_COOKIE_NAME
 from ..csp import strict_html_response
 from ..dependencies import get_current_user, get_db
-from ..discover_catalog import MONTHLY_EDITIONS
+from ..discover_catalog import published_editions
 from .collections import CATEGORIES
 from .profiles import _CardCache
 
@@ -117,7 +117,7 @@ def _counts_line(counts: dict) -> str:
 
 def _edition_section(step: dict) -> str:
     slug = step.get("edition")
-    edition = MONTHLY_EDITIONS.get(slug)
+    edition = published_editions().get(slug)
     if not edition:
         return ""
     items = "".join(
@@ -127,6 +127,17 @@ def _edition_section(step: dict) -> str:
     return (f'<section class="editorial challenge-edition"><h2>The six picks that count for step one</h2>'
             f'<p>{_e(edition["guide"])}</p><ul>{items}</ul>'
             f'<p><a href="/discover/monthly/{_e(slug)}">Read the full {_e(edition["name"])} edition →</a></p></section>')
+
+
+def _companion_section(challenge: dict) -> str:
+    """The month's Discover edition, for a challenge that pairs with one without a step about it."""
+    slug = challenge.get("edition")
+    edition = published_editions().get(slug)
+    if not edition or any(step.get("edition") == slug for step in challenge["steps"]):
+        return ""
+    return (f'<section class="editorial challenge-edition"><h2>Reading for the month</h2>'
+            f'<p>{_e(edition["intro"])}</p>'
+            f'<p><a href="/discover/monthly/{_e(slug)}">Read the {_e(edition["name"])} edition →</a></p></section>')
 
 
 def _cta(month: str, current: bool) -> str:
@@ -238,7 +249,7 @@ def challenge_detail(slug: str, db: Session = Depends(get_db)):
         f'<p>{_e(step["detail"])}</p></article>'
         for index, step in enumerate(challenge["steps"], 1)
     )
-    edition = "".join(_edition_section(step) for step in challenge["steps"] if step["kind"] == "edition")
+    edition = "".join(_edition_section(step) for step in challenge["steps"] if step["kind"] == "edition") + _companion_section(challenge)
     reflection = (f'<section class="editorial"><h2>Something to think about</h2><p>{_e(challenge["reflection"])}</p></section>'
                   if challenge.get("reflection") else "")
     content = (

@@ -463,22 +463,27 @@ def rating_spread(ratings: list) -> Optional[list[dict]]:
             for label, _ in RATING_BANDS]
 
 
+def member_words(summary: dict) -> int:
+    """Words of original member writing on the page: search-ready public reviews only."""
+    return sum(word_count(review["review"]) for review in summary["reviews"] if review["search_ready"])
+
+
 def is_indexable(summary: dict, metadata: Optional[dict]) -> bool:
     """Offered to search engines (and eligible for ads) only with original member writing.
 
     Facts and descriptions borrowed from Wikipedia, TVmaze and others are useful to
-    visitors but aren't ours; a page needs at least one substantial public member
-    review before it counts as OmniTrackr content (AdSense "low value content").
+    visitors but aren't ours; a page needs enough public member review text to carry it
+    before it counts as OmniTrackr content (AdSense "low value content"). Since Oct 27
+    that is the same 150 words that index a standalone review page: one 40-word review
+    under a borrowed description and a list of streaming links is mostly someone else's
+    page. Shorter reviews still show on the page; it just stays out of search.
     """
-    return summary["search_ready_reviews"] >= 1
+    return summary["search_ready_reviews"] >= 1 and member_words(summary) >= AD_MIN_REVIEW_WORDS
 
 
 def is_ad_eligible(summary: dict, metadata: Optional[dict]) -> bool:
-    """Ads need more than a single short review: enough member writing to carry the page."""
-    if not is_indexable(summary, metadata):
-        return False
-    written = sum(word_count(review["review"]) for review in summary["reviews"] if review["search_ready"])
-    return written >= AD_MIN_REVIEW_WORDS
+    """Ads go only on pages search engines are offered: enough member writing to carry the page."""
+    return is_indexable(summary, metadata)
 
 
 def popular(db: Session, kind: str, limit: int = 24, min_members: int = 2) -> list[dict]:

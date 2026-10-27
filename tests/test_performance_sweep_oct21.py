@@ -39,7 +39,9 @@ def test_sitemap_lists_reviewed_titles_only(client, db_session):
     for user in (a, b, c):
         add_movie(db_session, user, "Heat", 1995, rating=9)
         add_movie(db_session, user, "Ronin", 1998, rating=8)
-    add_movie(db_session, a, "Heat", 1995, review=GOOD_REVIEW, review_public=True)
+    # Three short reviews add up to enough member writing to index the page (Oct 27).
+    for user in (a, b, c):
+        add_movie(db_session, user, "Heat", 1995, review=GOOD_REVIEW, review_public=True)
     db_session.commit()
     paths = titles_router.sitemap_entries(db_session)
     assert "/titles/movie/heat-1995" in paths and "/titles/movie/ronin-1998" not in paths

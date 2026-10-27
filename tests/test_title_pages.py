@@ -156,15 +156,21 @@ def test_suspended_reviews_stay_hidden(db_session):
     assert summary["reviews"] == []
 
 
+def _written(words, ready=True):
+    return {"review": "word " * words, "search_ready": ready}
+
+
 @pytest.mark.parametrize("summary,metadata,expected", [
-    ({"search_ready_reviews": 1, "reviews": [1], "members": 1, "collections": []}, None, True),
+    ({"search_ready_reviews": 1, "reviews": [_written(150)], "members": 1, "collections": []}, None, True),
     ({"search_ready_reviews": 0, "reviews": [], "members": 5, "collections": []}, None, False),
     # Borrowed descriptions, member counts, short reviews or collections alone aren't enough (Oct 5, AdSense).
     ({"search_ready_reviews": 0, "reviews": [], "members": 3, "collections": []}, {"description": "x"}, False),
     ({"search_ready_reviews": 0, "reviews": [], "members": 1, "collections": []}, {"description": "x"}, False),
-    ({"search_ready_reviews": 0, "reviews": [1], "members": 1, "collections": []}, {"description": "x"}, False),
+    ({"search_ready_reviews": 0, "reviews": [_written(200, False)], "members": 1, "collections": []}, {"description": "x"}, False),
     ({"search_ready_reviews": 0, "reviews": [], "members": 1, "collections": [1]}, {"description": "x"}, False),
-    ({"search_ready_reviews": 2, "reviews": [1, 2], "members": 9, "collections": [1]}, {"description": "x"}, True),
+    ({"search_ready_reviews": 2, "reviews": [_written(80), _written(80)], "members": 9, "collections": [1]}, {"description": "x"}, True),
+    # One short review under a borrowed description is mostly someone else's page (Oct 27).
+    ({"search_ready_reviews": 1, "reviews": [_written(60)], "members": 4, "collections": [1]}, {"description": "x"}, False),
 ])
 def test_indexing_needs_real_substance(summary, metadata, expected):
     assert title_pages.is_indexable(summary, metadata) is expected
@@ -290,11 +296,13 @@ def test_titles_directory(client, db_session):
 
 
 def test_sitemap_lists_only_indexable_titles(client, db_session):
-    add_movie(db_session, member(db_session, "writer"), review=LONG_REVIEW, review_public=True)
+    add_movie(db_session, member(db_session, "writer"), review=ESSAY, review_public=True)
+    add_movie(db_session, member(db_session, "brief"), title="Arrival", year=2016, review=LONG_REVIEW, review_public=True)
     add_movie(db_session, member(db_session, "lonely"), title="Obscure", year=1990)
     db_session.commit()
     sitemap = client.get("/sitemap.xml").text
     assert "/titles/movie/interstellar-2014" in sitemap
+    assert "/titles/movie/arrival-2016" not in sitemap
     assert "/titles/movie/obscure-1990" not in sitemap
 
 
@@ -584,13 +592,27 @@ def test_metadata_without_reviews_is_not_indexed_or_monetized(client, db_session
     assert "/titles/movie/interstellar-2014" not in client.get("/sitemap.xml").text
 
 
-def test_a_single_short_review_indexes_the_page_without_ads(client, db_session):
+def test_a_single_short_review_shows_but_keeps_the_page_out_of_search(client, db_session):
+    # Oct 27: a short review under a borrowed description isn't enough of our own text to index.
     add_movie(db_session, member(db_session, "writer"), review=LONG_REVIEW, review_public=True, rating=9, watched=True)
     db_session.commit()
     seed_metadata(db_session)
     response = client.get("/titles/movie/interstellar-2014")
-    assert '<meta name="robots" content="index, follow' in response.text
+    assert response.status_code == 200
+    assert "time-dilation planet" in response.text
+    assert response.headers["x-robots-tag"] == "noindex, follow"
     assert "/static/ad-loader.js" not in response.text
+    assert "/titles/movie/interstellar-2014" not in client.get("/sitemap.xml").text
+
+
+def test_short_reviews_from_several_members_add_up(client, db_session):
+    for name in ("w1", "w2", "w3"):
+        add_movie(db_session, member(db_session, name), review=LONG_REVIEW, review_public=True, rating=9, watched=True)
+    db_session.commit()
+    seed_metadata(db_session)
+    response = client.get("/titles/movie/interstellar-2014")
+    assert '<meta name="robots" content="index, follow' in response.text
+    assert "/static/ad-loader.js" in response.text
     assert "/titles/movie/interstellar-2014" in client.get("/sitemap.xml").text
 
 

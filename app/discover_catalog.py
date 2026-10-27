@@ -1,4 +1,7 @@
 """Versioned editorial recommendations. No user content or ratings are published here."""
+from datetime import date, datetime
+from typing import Optional
+
 TRAILS = {
     "finding-your-feet": {
         "name": "Finding your feet", "tag": "BEGIN AGAIN",
@@ -287,4 +290,50 @@ MONTHLY_EDITIONS = {
              "source": "https://www.penguinrandomhouse.com/books/321924/the-haunting-of-hill-house-by-shirley-jackson-introduction-by-laura-miller/9781101530641/"},
         ],
     },
+    "november-2026": {
+        "name": "November 2026: The long way round", "tag": "THE MONTHLY EDITION",
+        "published": "November 2026",
+        "published_date": "2026-11-01",
+        "intro": "Six older works that take their time getting where they are going. A slow train to Tokyo, a detective who already knows who did it, a four-year walk through the Land of the Dead. Every one of them was made before 2000, and every one is better for not hurrying.",
+        "essay_title": "Arriving late is still arriving",
+        "essay": "November is when the year's new releases get loudest and the best-of lists start appearing, this site's included. This edition goes the other way. All six picks were made before 2000, and each one takes a route that looks inefficient at first. Ozu's camera hardly moves. Columbo tells you the killer in the first ten minutes. Stevens the butler drives across England to see a woman he never managed to speak plainly to, twenty years too late. None of these detours is wasted. The pleasure is in how the story gets there, and in what you notice when nothing is rushing you along. It pairs with this month's challenge, which asks you to finish something from before 2000 and spend some time on paper.",
+        "guide": "Choose by the shape of your evening. Tokyo Story and Kind of Blue each take one sitting and reward your full attention. A Columbo episode is a feature-length mystery you can drop in and out of, and Cowboy Bebop comes in 26 sessions that mostly stand alone. Grim Fandango is a long adventure to play over several weekends, and The Remains of the Day is a short novel that is easy to start and hard to put down.",
+        "prompt": "Which of this month's picks felt most like its own time, and which felt as if it could have been made last year?",
+        "items": [
+            {"key": "tokyo-story", "category": "movies", "title": "Tokyo Story", "meta": {"director": "Yasujir\u014d Ozu", "year": 1953},
+             "why": "An elderly couple travel from the coast to visit their grown children in Tokyo, and find that everyone is kind to them and nobody quite has time. Ozu keeps his camera low and still and lets scenes run, so the small hurts land slowly: a trip to a spa to get them out of the way, a widowed daughter-in-law who turns out to be the most generous person in the film. Watch it when you can sit with something quiet for two hours.",
+             "caveat": "A slow, dialogue-led family drama in Japanese with subtitles. It deals with ageing, neglect and death, and the ending is sad rather than consoling.",
+             "source": "https://criterionchannel.com/tokyo-story"},
+            {"key": "columbo", "category": "tv-shows", "title": "Columbo", "meta": {"year": 1971},
+             "why": "Almost every episode opens with the murder, so you know who did it before the rumpled lieutenant arrives. What follows is a long, polite siege: Peter Falk's Columbo keeps coming back with one more question until a confident, wealthy killer talks themselves into a corner. Taking the long way round is the whole point. Start with any episode from the 1970s seasons; they barely depend on each other.",
+             "caveat": "Episodes run roughly 75 to 100 minutes and move at a 1970s pace. Every story is built around a murder, though the violence is mild by modern standards. Streaming availability varies by region.",
+             "source": "https://tv.apple.com/us/show/columbo/umc.cmc.tlqu4d3qgskmhwd0qw5868tw"},
+            {"key": "cowboy-bebop", "category": "anime", "title": "Cowboy Bebop", "meta": {"year": 1998},
+             "why": "A broke crew of bounty hunters drift around the solar system on a battered ship, chasing bounties they mostly fail to collect. Most of the 26 sessions are self-contained, mixing noir, westerns, comedy and Yoko Kanno's jazz-heavy score, while the characters' pasts slowly catch up with them. It suits this month because it wanders on purpose: the detours turn out to be the show.",
+             "caveat": "Made for adults, with gun violence, drug use, death and a melancholy ending. A few episodes are pure comedy and can feel out of step with the rest. Availability varies by region.",
+             "source": "https://store.crunchyroll.com/products/cowboy-bebop-the-complete-series-25th-anniversary-bd-special-edition-704400107627.html"},
+            {"key": "grim-fandango", "category": "video-games", "title": "Grim Fandango", "meta": {},
+             "why": "Manny Calavera sells travel packages to the newly dead, and takes the slow route himself when he follows one wronged client across the Land of the Dead. The journey takes four in-game years, told in four acts, each a year apart, mixing film noir with Mexican Day of the Dead imagery. It is a point-and-click adventure, so you progress by talking and solving puzzles rather than by reflexes. The 2015 remaster by Double Fine adds an orchestral score and modern controls.",
+             "caveat": "A 1998 puzzle adventure, and some of its puzzles are obscure enough that many players reach for a hint guide. It involves death, crime and smoking throughout, with a dark sense of humour.",
+             "source": "https://doublefine.itch.io/grim-fandango-remastered"},
+            {"key": "kind-of-blue", "category": "music", "title": "Kind of Blue", "meta": {"artist": "Miles Davis", "year": 1959},
+             "why": "Miles Davis gave his sextet, including John Coltrane, Cannonball Adderley and Bill Evans, sketches built on scales rather than fast chord changes, and recorded most of it in very few takes. The result is jazz with room in it: solos that take their time to find their way, and space between the notes. Listen once from start to finish, then again for one player at a time.",
+             "caveat": "Five long, mostly calm instrumental tracks, about 45 minutes in all. If you want lyrics or a strong beat, it may drift into background music.",
+             "source": "https://www.milesdavis.com/albums/kind-of-blue/"},
+            {"key": "remains-of-the-day", "category": "books", "title": "The Remains of the Day", "meta": {"author": "Kazuo Ishiguro", "year": 1989},
+             "why": "In 1956 Stevens, an ageing English butler, takes a few days off to drive across the West Country to see a former colleague. On the way he looks back over decades of service to a lord whose politics he never questioned. Ishiguro has him tell the story in careful, formal prose, so what matters most is in what he avoids saying. It won the Booker Prize in 1989, and at around 250 pages it is the ideal book for this month's challenge.",
+             "caveat": "Very restrained, with little outward action. It deals with regret, loneliness and an employer's sympathy for fascism before the Second World War.",
+             "source": "https://www.faber.co.uk/product/9780571258246-the-remains-of-the-day/"},
+        ],
+    },
 }
+
+
+def published_editions(today: Optional[date] = None) -> dict:
+    """Editions whose publish date has come, oldest first.
+
+    An edition can be written ahead of its month and goes live on its own date:
+    until then it has no page, no sitemap entry and no links (Oct 27, 2026).
+    """
+    day = (today or datetime.utcnow().date()).isoformat()
+    return {slug: edition for slug, edition in MONTHLY_EDITIONS.items() if edition["published_date"] <= day}

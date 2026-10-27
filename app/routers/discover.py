@@ -12,7 +12,7 @@ from .. import models
 from ..csp import strict_html_response
 from ..site_chrome import apply_site_chrome
 from ..dependencies import get_current_user, get_db
-from ..discover_catalog import MONTHLY_EDITIONS, TRAILS
+from ..discover_catalog import TRAILS, published_editions
 from ..discover_guides import GUIDES
 from .collections import CATEGORIES
 
@@ -26,9 +26,10 @@ def trail_for(slug):
 
 
 def monthly_for(slug):
-    if slug not in MONTHLY_EDITIONS:
+    editions = published_editions()
+    if slug not in editions:
         raise HTTPException(404, "Monthly edition not found")
-    return MONTHLY_EDITIONS[slug]
+    return editions[slug]
 
 
 # Sections that share this layout but have their own item in the site header.
@@ -90,12 +91,13 @@ def discover_index():
         '<button id="trail-reset" type="button" class="filter-reset">Clear filters</button></div>'
         '<p id="trail-results" class="muted" role="status" aria-live="polite" aria-atomic="true"></p></section>'
     )
-    edition_slug, edition = next(reversed(MONTHLY_EDITIONS.items()))
+    editions = published_editions()
+    edition_slug, edition = next(reversed(editions.items()))
     edition_card = f'<section class="monthly-feature"><div><p class="eyebrow">{escape(edition["tag"])}</p><h2>{escape(edition["name"])}</h2><p>{escape(edition["intro"])}</p><p class="muted">{escape(edition["published"])} · Six media types · Six carefully chosen places to start</p></div><a class="button" href="/discover/monthly/{edition_slug}">Read this edition →</a></section>'
     archive_items = ''.join(
         f'<li><a href="/discover/monthly/{escape(slug, quote=True)}">{escape(item["name"])}</a>'
         f'<span>{escape(item["intro"])}</span></li>'
-        for slug, item in reversed(list(MONTHLY_EDITIONS.items()))
+        for slug, item in reversed(list(editions.items()))
         if slug != edition_slug
     )
     from .. import challenges

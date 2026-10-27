@@ -1,5 +1,38 @@
 # Public content review — September 17, 2026
 
+## Follow-up — October 27, 2026: fresh crawl after the late-October features
+
+Crawled the sitemap and every followed link again (140 pages with an empty database,
+170 with sample members and reviews), covering what shipped since October 20: best-of
+lists, the holiday hub, the title page refresh, where to watch, shared lists and clubs,
+friend recommendation links, tier lists and the dashboard refresh. Shared lists, club
+pages, recommendation links, invite and recap links are all signed-in or noindex. Every
+unknown slug returns a real 404 page. No indexed page shares a title or description
+with another. ads.txt, sellers.json, robots.txt and the privacy policy's Google ads
+section are unchanged and correct. Two things needed fixing:
+
+- **Title pages with one short review.** A title page became indexable and joined the
+  sitemap with one search-ready review, which can be about 40 words. Everything else on that page (description, facts, streaming links)
+  is borrowed from Wikipedia, TVmaze and others. Title pages now need 150 words of
+  search-ready member writing in total, the same bar review pages have used since
+  October 20 (`title_pages.is_indexable`). Several short reviews add up. Shorter
+  pages still load and still show their reviews; they are just noindex and out of
+  the sitemap. Ads already needed 150 words, so ad placement is unchanged.
+- **The monthly edition was about to go stale.** The November challenge was written,
+  but the newest Discover edition was October's. From November 1 a reviewer would
+  have found October billed as the current edition. The November 2026 edition, "The
+  long way round" (six pre-2000 picks that pair with the November challenge), is now
+  in `MONTHLY_EDITIONS`. Editions now publish on their `published_date`
+  (`discover_catalog.published_editions`): before that date an edition has no page,
+  sitemap entry, footer or homepage link, or Pick for Me entry, so future editions can
+  be written ahead and go live by themselves. The November challenge links the edition
+  once it is live.
+
+No user data, URL or ad placement changed. Source links for the November picks were
+found through search because the review environment can't open most sites: Criterion
+Channel, the Apple TV listing for Columbo, the Crunchyroll store, Double Fine's itch.io
+page, milesdavis.com and Faber. Check them once after November 1.
+
 ## Follow-up — October 20, 2026: thin-page audit
 
 Crawled every public URL the site links to, plus the sitemap, twice: once with an
