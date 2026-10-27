@@ -48,11 +48,11 @@
   <link rel="apple-touch-icon" href="/static/icons/apple-touch-icon.png?v=20261003-pwa-1">
   <meta name="apple-mobile-web-app-title" content="OmniTrackr">
   <script src="/static/pwa.js?v=20261018-install-card-1" defer></script>
-  <link rel="preload" href="./styles.css?v=20261027-push-1" as="style">
+  <link rel="preload" href="./styles.css?v=20261027-push-quiz-1" as="style">
   <link rel="preload" href="/static/fonts/poppins-700-latin.woff2" as="font" type="font/woff2" crossorigin>
   <link rel="preload" href="/static/fonts/poppins-800-latin.woff2" as="font" type="font/woff2" crossorigin>
   <link rel="stylesheet" href="/static/fonts.css?v=20261009-fonts-1">
-  <link rel="stylesheet" href="./styles.css?v=20261027-push-1">
+  <link rel="stylesheet" href="./styles.css?v=20261027-push-quiz-1">
   <link rel="stylesheet" href="/static/progress.css?v=20260922-progress">
   <link rel="stylesheet" href="/static/app-theme.css?v=20261022-next-up-1">
   <link rel="stylesheet" href="/static/library-theme.css?v=20261017-bughunt-1">
@@ -442,6 +442,7 @@
           <p class="for-you-card__eyebrow">Quick start</p>
           <h2 id="starterPicksTitle">Add a few favorites in one click</h2>
           <p id="starterPicksSummary" class="for-you-card__summary">Popular with OmniTrackr members and coming out soon. Tap Add on anything you've seen or want to see.</p>
+          <p class="starter-picks__quiz"><a href="/taste-quiz">Or take the 1-minute taste quiz</a>: rate a few well-known titles and get picks chosen for you.</p>
         </div>
         <div class="for-you-card__side">
           <p id="starterPicksProgress" class="starter-picks__progress" aria-live="polite"></p>
@@ -477,6 +478,7 @@
         <p id="libraryLaunchpadSummary">Loading your library progress…</p>
         <div id="libraryLaunchpadCategories" class="library-launchpad__categories" aria-label="Choose the first kind of media to track" hidden></div>
         <div id="libraryLaunchpadStarterPaths" class="library-launchpad__categories" hidden>
+          <a class="library-launchpad__category library-launchpad__category--quiz" href="/taste-quiz">Take the 1-minute taste quiz</a>
           <button type="button" class="library-launchpad__category" data-action="launchpad-import">Bring an existing list</button>
           <a class="library-launchpad__category" href="/discover">Browse Discover</a>
           <p class="library-launchpad__path-hint">Import Studio reads Letterboxd, IMDb, Goodreads, StoryGraph, MyAnimeList, AniList, Kitsu, and Trakt exports as they come, ZIP files included, and lets you preview them before importing. Existing records are not overwritten.</p>
@@ -1741,7 +1743,7 @@
     </form>
   </dialog>
   <script src="./credentials.js"></script>
-  <script src="./auth.js?v=20261025-friends-feed-1"></script>
+  <script src="./auth.js?v=20261027-taste-quiz-1"></script>
   <script src="/static/import-studio.js?v=20261022-diary-1"></script>
   <script src="/static/progress.js?v=20260922-progress"></script>
   <script src="./app.js"></script>
@@ -1760,6 +1762,7 @@
   <script src="/static/push.js?v=20261027-push-3" defer></script>
   <script src="/static/year-in-review-entry.js?v=20261019-story-1" defer></script>
   <script src="/static/guest-list.js?v=20261012-hero-search-1"></script>
+  <script src="/static/taste-quiz.js?v=20261027-taste-quiz-1" defer></script>
 
   <!-- Account Modal -->
   <div id="accountModal" class="modal-overlay" style="display: none;">
