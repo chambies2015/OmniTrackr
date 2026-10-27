@@ -240,9 +240,9 @@ def _database_parts(db: Session) -> list[str]:
     except Exception:
         pass
     
-    from ..discover_catalog import MONTHLY_EDITIONS
+    from ..discover_catalog import published_editions
     sitemap_parts.append(f"<url><loc>{base_url}/discover</loc><changefreq>weekly</changefreq><priority>0.8</priority></url>")
-    for slug, edition in MONTHLY_EDITIONS.items():
+    for slug, edition in published_editions().items():
         sitemap_parts.append(
             f"<url><loc>{base_url}/discover/monthly/{slug}</loc>"
             f"<lastmod>{edition['published_date']}</lastmod>"

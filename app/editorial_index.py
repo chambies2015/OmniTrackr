@@ -31,10 +31,10 @@ def _discover() -> list[dict]:
 
 
 def _monthly() -> list[dict]:
-    from .discover_catalog import MONTHLY_EDITIONS
+    from .discover_catalog import published_editions
     return [{"section": "monthly", "href": f"/discover/monthly/{slug}", "name": edition["name"],
              "summary": edition["intro"], "updated": edition["published_date"]}
-            for slug, edition in MONTHLY_EDITIONS.items()]
+            for slug, edition in published_editions().items()]
 
 
 def _in_order() -> list[dict]:

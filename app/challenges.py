@@ -23,7 +23,7 @@ from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
 
 from . import models, title_pages, year_in_review
-from .discover_catalog import MONTHLY_EDITIONS
+from .discover_catalog import MONTHLY_EDITIONS, published_editions
 
 SITE_URL = os.getenv("SITE_URL", "https://omnitrackr.xyz").rstrip("/")
 # Aggregate counts appear on public pages only once they stop pointing at individuals.
@@ -69,6 +69,7 @@ CHALLENGES: dict[str, dict] = {
         "name": "The long way round",
         "tagline": "Slow down with something older, something on paper and a short run of titles you choose yourself.",
         "published": "2026-10-10",
+        "edition": "november-2026",
         "intro": [
             "November is the month when evenings get long and recommendations get loud. Every service is pushing the newest release, and most best-of-the-year lists are already being drafted. This challenge pulls in the other direction. It asks you to finish something that has been around for a while, to spend some of your time with a book, and to keep a small, honest count of what you actually finished.",
             "Older works are not homework. A film from the 1970s or a game from the 1990s often moves at a different pace, trusts its audience with longer silences or leaves its rough edges in place. Coming back to the present afterwards tends to make newer work easier to judge. Anything you mark finished in November counts, whenever you joined.",
@@ -401,7 +402,7 @@ def payload(db: Session, user: models.User, today: Optional[date] = None) -> dic
         "name": challenge["name"],
         "tagline": challenge["tagline"],
         "url": f"/challenges/{slug_for(month)}" if is_curated(month) else None,
-        "edition_url": f"/discover/monthly/{edition}" if edition in MONTHLY_EDITIONS else None,
+        "edition_url": f"/discover/monthly/{edition}" if edition in published_editions() else None,
         "days_left": days_left(month, today),
         "joined": entry is not None,
         "steps": steps,

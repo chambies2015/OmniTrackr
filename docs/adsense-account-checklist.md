@@ -1,5 +1,28 @@
 # AdSense account checklist
 
+## October 27, 2026: what to do before the next review request
+
+The October 27 crawl found the code side in good shape (see
+`docs/public-content-review.md`). What's left happens in Google's dashboards:
+
+1. Deploy October-Updates, then do steps 1 and 2 below once (CSP errors, ads.txt,
+   www redirect) if they haven't been checked since October 8.
+2. On or after November 1, open `https://omnitrackr.xyz/discover/monthly/november-2026`
+   signed out. It should load with six picks. Click each "source" link once; if
+   any is dead, tell Claude and it will be swapped.
+3. In Search Console, resubmit `https://omnitrackr.xyz/sitemap.xml` and use URL
+   Inspection, then Request indexing, on the November edition, `/best-of`,
+   `/best-of/2026/movies`, `/holidays` and `/challenges/november-2026`.
+4. Search Console, Pages: note how many pages are indexed and how many say
+   "Crawled – currently not indexed". Short title pages will move to "Excluded by
+   'noindex' tag" over the next few weeks. That's expected.
+5. Make sure the consent message (step 4 below) is published. Without it, Google
+   can't serve ads to EEA and UK visitors.
+6. Request review around **November 23, 2026**, and only if most of the guide
+   pages from step 3 here and step 3 below show as indexed. If they don't, wait
+   another two weeks and check again. Each request made before Google has indexed
+   the guides has ended in the same "low value content" answer.
+
 The steps here can only be done in Google's dashboards. Do them in order
 after the October 8, 2026 reviewer-pass changes are deployed. Code-side
 context is in `docs/public-content-review.md`.

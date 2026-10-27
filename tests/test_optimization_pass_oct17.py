@@ -81,7 +81,8 @@ def test_summary_without_page_sections_keeps_every_count(db_session):
     # Reviews skip the page-only decorations (helpful counts, profile links, badges, spoiler flags) since Oct 21.
     decorations = ("helpful", "profile_url", "supporter", "spoilers")
     assert light["reviews"] == [{k: v for k, v in review.items() if k not in decorations} for review in full["reviews"]]
-    assert title_pages.is_indexable(light, None) == title_pages.is_indexable(full, None) is True
+    assert title_pages.member_words(light) == title_pages.member_words(full) > 0
+    assert title_pages.is_indexable(light, None) == title_pages.is_indexable(full, None)
 
 
 def test_sitemap_member_entries_are_reused_while_fresh(client, monkeypatch):

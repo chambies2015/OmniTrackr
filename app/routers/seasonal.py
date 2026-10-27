@@ -134,15 +134,16 @@ def _head(signed_in: bool) -> str:
 
 
 def _related(slug: str, entry: dict, today: date) -> str:
-    from ..discover_catalog import MONTHLY_EDITIONS
+    from ..discover_catalog import published_editions
+    editions = published_editions(today)
     links = []
     public = challenges.public_months(today)
     for number in entry["related_months"]:
         name = date(today.year, int(number), 1).strftime("%B").lower()
         edition = f"{name}-{today.year}"
-        if edition in MONTHLY_EDITIONS:
+        if edition in editions:
             note = entry["edition_notes"].get(number) or "This month's Discover edition: six picks around one idea, across formats."
-            links.append((f"/discover/monthly/{edition}", MONTHLY_EDITIONS[edition]["name"], note))
+            links.append((f"/discover/monthly/{edition}", editions[edition]["name"], note))
         month = f"{today.year}-{number}"
         if month in public:
             links.append((f"/challenges/{challenges.slug_for(month)}", f"The {challenges.month_label(month)} challenge",

@@ -181,12 +181,12 @@ def editorial_picks(heading: str, intro: str, *, limit: int = 6) -> str:
     a placeholder. Completed guides come first, then the latest monthly edition
     and the shorter trails. Every value is escaped.
     """
-    from .discover_catalog import MONTHLY_EDITIONS, TRAILS
+    from .discover_catalog import TRAILS, published_editions
     from .discover_guides import GUIDES
 
     picks = [(f"/discover/{slug}", TRAILS[slug]["name"], guide["summary"])
              for slug, guide in GUIDES.items() if slug in TRAILS]
-    for slug, edition in sorted(MONTHLY_EDITIONS.items(), key=lambda pair: pair[1]["published_date"], reverse=True)[:1]:
+    for slug, edition in sorted(published_editions().items(), key=lambda pair: pair[1]["published_date"], reverse=True)[:1]:
         picks.append((f"/discover/monthly/{slug}", edition["name"], edition["intro"]))
     picks.extend((f"/discover/{slug}", trail["name"], trail["intro"])
                  for slug, trail in TRAILS.items() if slug not in GUIDES)

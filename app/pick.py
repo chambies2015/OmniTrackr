@@ -23,7 +23,7 @@ from sqlalchemy import func
 from sqlalchemy.orm import Session
 
 from . import models, title_pages
-from .discover_catalog import MONTHLY_EDITIONS, TRAILS
+from .discover_catalog import TRAILS, published_editions
 from .editorial_collections import COLLECTIONS, EDITOR_USERNAME
 
 # Display order of the format chips and the pool list.
@@ -33,6 +33,7 @@ CREATOR_FIELD = {"movie": "director", "album": "artist", "book": "author"}
 CREATOR_META = ("director", "author", "artist")
 
 _pool: Optional[list[dict]] = None
+_pool_editions: tuple = ()
 
 
 def _entry(kind: str, title: str, year, creator, why: str, caveat, source_label: str, source_url) -> dict:
@@ -69,7 +70,7 @@ def _build() -> list[dict]:
             creator = next((item["meta"][k] for k in CREATOR_META if item["meta"].get(k)), None)
             keep(_entry(title_pages.LIBRARY_TO_KIND[item["category"]], item["title"], item["meta"].get("year"), creator,
                         item["why"], item.get("caveat"), trail["name"], f"/discover/{slug}"))
-    for slug, edition in MONTHLY_EDITIONS.items():
+    for slug, edition in published_editions().items():
         for item in edition["items"]:
             creator = next((item["meta"][k] for k in CREATOR_META if item["meta"].get(k)), None)
             keep(_entry(title_pages.LIBRARY_TO_KIND[item["category"]], item["title"], item["meta"].get("year"), creator,
@@ -91,10 +92,11 @@ def _build() -> list[dict]:
 
 
 def pool() -> list[dict]:
-    """Every curated pick, built once per process from the editorial content in code."""
-    global _pool
-    if _pool is None:
-        _pool = _build()
+    """Every curated pick, built from the editorial content in code once per set of published editions."""
+    global _pool, _pool_editions
+    editions = tuple(published_editions())
+    if _pool is None or _pool_editions != editions:
+        _pool, _pool_editions = _build(), editions
     return _pool
 
 
