@@ -511,3 +511,4 @@ body.lp #landingPage { background: none; display: block; min-height: 0; padding:
 @media (max-width: 420px) {
   .lp-try-grid { grid-template-columns: 1fr; }
 }
+.lp-radar-links { display: flex; flex-wrap: wrap; gap: 8px 22px; }

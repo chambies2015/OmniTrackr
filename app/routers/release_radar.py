@@ -70,9 +70,11 @@ def _category_path(category: str, window: Optional[radar.Window] = None) -> str:
 
 
 def _render(title: str, description: str, canonical: str, content: str, *, indexable: bool,
-            structured: Optional[dict] = None, ads: bool = False, refresh: bool = False) -> Response:
-    html = apply_site_chrome((Path(__file__).parents[1] / "templates" / "release_radar.html").read_text(encoding="utf-8"))
-    extra_head = '<meta name="google-adsense-account" content="ca-pub-7271682066779719">'
+            structured: Optional[dict] = None, ads: bool = False, refresh: bool = False, head: str = "",
+            nav: str = "release-radar") -> Response:
+    html = apply_site_chrome((Path(__file__).parents[1] / "templates" / "release_radar.html").read_text(encoding="utf-8")
+                             .replace("<!--SITE_NAV:release-radar-->", f"<!--SITE_NAV:{nav}-->", 1))
+    extra_head = '<meta name="google-adsense-account" content="ca-pub-7271682066779719">' + head
     if refresh:
         extra_head += '<meta http-equiv="refresh" content="45">'
     structured_html = ""
@@ -133,7 +135,8 @@ def _signin_href(path: str) -> str:
     return f"/?next={path}#landing-auth"
 
 
-def render_card(item: dict, count: int, return_path: str, *, compact: bool = False) -> str:
+def render_card(item: dict, count: int, return_path: str, *, compact: bool = False, trackable: bool = True,
+                title_path: str = "") -> str:
     category = item["category"]
     key = escape(item["key"], quote=True)
     title = escape(item["title"])
@@ -164,7 +167,10 @@ def render_card(item: dict, count: int, return_path: str, *, compact: bool = Fal
     add = (
         f'<a class="radar-add" data-radar-add="{key}" rel="nofollow" href="{escape(_signin_href(return_path), quote=True)}">'
         f'<span aria-hidden="true">+</span> Track this<span class="visually-hidden"> {title}</span></a>'
-    )
+    ) if trackable else ""
+    if title_path:
+        add += f'<a class="radar-title-link" href="{escape(title_path, quote=True)}">Title page<span class="visually-hidden">: {title}</span></a>'
+
     return (
         f'<article class="radar-card{" radar-card--compact" if compact else ""}" id="item-{key}" data-key="{key}" '
         f'data-category="{category}" data-window="{escape(item.get("window", ""), quote=True)}" data-genres="{escape("|".join(item["genres"]), quote=True)}" '
@@ -421,6 +427,8 @@ async def radar_hub(request: Request, db: Session = Depends(get_db)):
         '<p>New movies, TV premieres, the current anime season and upcoming games, side by side. '
         'Spot something you want to see, play or finish, and track it in one click.</p>'
         + (f'<p class="radar-hero__summary">{escape(summary)}</p>' if summary else "")
+        + '<p class="radar-hero__roundup"><a href="/new-this-week">Read this week\'s roundup</a>: what is out Monday to Sunday, '
+          'with what members finished. <a href="/new-this-week/archive">Past weeks</a></p>'
         + '</header>' + _category_tabs(None) + strip_html + _calendar_box(None) + tracked_html + "".join(sections) + _about_section(None)
     )
     indexable = total >= MIN_INDEXABLE_ITEMS
@@ -653,6 +661,7 @@ def home_strip_html(client=None, today: Optional[date] = None) -> str:
         '<section class="lp-section lp-radar" aria-labelledby="lp-radar-title"><div class="lp-wrap">'
         '<div class="lp-section-head lp-section-head--row"><div><p class="lp-eyebrow">Release Radar · updated every few hours</p>'
         '<h2 id="lp-radar-title">Coming out soon</h2></div>'
-        '<a class="lp-link-arrow" href="/release-radar">See everything coming out <span aria-hidden="true">→</span></a></div>'
+        '<span class="lp-radar-links"><a class="lp-link-arrow" href="/new-this-week">New this week <span aria-hidden="true">→</span></a>'
+        '<a class="lp-link-arrow" href="/release-radar">See everything coming out <span aria-hidden="true">→</span></a></span></div>'
         f'<ul class="lp-radar-rail">{"".join(cards)}</ul></div></section>'
     )

@@ -35,6 +35,7 @@ NAV_PRIMARY = 3
 FOOTER_GROUPS = (
     ("Explore", (
         ("Release Radar", "/release-radar"),
+        ("New this week", "/new-this-week"),
         ("Discover", "/discover"),
         ("Daily puzzle", "/daily"),
         ("Pick for me", "/pick"),
