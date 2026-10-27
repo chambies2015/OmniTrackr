@@ -5,7 +5,7 @@ from app import dashboard_assets
 from app.auth import AUTH_COOKIE_NAME
 
 STATIC = dashboard_assets.DASHBOARD_DIR.parent
-PAGE_SCRIPTS = ("auth.js", "import-studio.js", "progress.js", "for-you.js", "title-links.js",
+PAGE_SCRIPTS = ("auth.js", "import-studio.js", "progress.js", "episodes.js", "for-you.js", "title-links.js",
                 "public-profile.js", "supporter.js", "year-in-review-entry.js", "guest-list.js")
 LEXICAL = re.compile(r"^(?:let|const|var|class)\s+([A-Za-z_$][\w$]*)", re.MULTILINE)
 

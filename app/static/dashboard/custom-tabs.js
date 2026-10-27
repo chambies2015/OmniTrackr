@@ -958,7 +958,7 @@ async function refreshLibraryProgressView(payload, shouldContinue) {
   return libraryPageConfig(category)[2]();
 }
 
-window.OmniProgress?.configure({
+const progressOptions = {
   base: API_BASE,
   request: (...args) => authenticatedFetch(...args),
   sessionKey: () => {
@@ -978,7 +978,19 @@ window.OmniProgress?.configure({
     return Promise.allSettled([
       refreshNextUpQueue(shouldContinue), refreshLibraryPulse(shouldContinue),
       refreshLibraryProgressView(payload, shouldContinue),
+      refreshEpisodeRows(payload, shouldContinue),
     ]);
   },
-});
+};
+window.OmniProgress?.configure(progressOptions);
+window.OmniEpisodes?.configure(progressOptions);
+
+// A checkpoint saved from the progress dialog moves a show's bar and next
+// episode; one-tap episode saves already updated their rows in place.
+function refreshEpisodeRows(payload, shouldContinue) {
+  const category = payload?.category;
+  if (!['tv-shows', 'anime'].includes(category) || payload.episodes) return;
+  if (!shouldContinue() || currentTab !== category || editingRowId !== null || getLibraryFilters(category).hasProgress) return;
+  return libraryPageConfig(category)[2]();
+}
 
