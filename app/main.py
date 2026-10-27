@@ -598,6 +598,9 @@ app.include_router(statistics.router)
 app.include_router(next_up.router)
 app.include_router(completion_moments.router)
 app.include_router(activity.router)
+for route in progress.router.routes:
+    if getattr(route, "path", None) == "/progress/{category}/{item_id}/episodes":
+        bind_rate_limited_endpoint(route, limiter.limit("30/minute")(route.endpoint))
 app.include_router(progress.router)
 for route in import_studio.router.routes:
     if getattr(route, "path", None) in ("/import-studio/preview/", "/import-studio/apply/"):

@@ -6,7 +6,7 @@ from sqlalchemy import String, case, cast, func, or_
 from sqlalchemy.orm import Session
 
 from ..integer_bounds import PositiveDatabaseId
-from .. import models, schemas
+from .. import episodes, models, schemas
 from ..dependencies import get_current_user, get_db
 
 router = APIRouter(prefix="/library", tags=["library"])
@@ -110,8 +110,12 @@ def library_page(
     query = query.order_by(model.id)
     offset = min(offset, ((total - 1) // limit) * limit) if total else 0
     items = query.offset(offset).limit(limit).all()
-    return {"items": [schema.model_validate(item).model_dump() for item in items],
-            "total": total, "offset": offset, "limit": limit}
+    rows = [schema.model_validate(item).model_dump() for item in items]
+    if category in episodes.KINDS:
+        found = episodes.progress_map(db, current_user.id, category, items)
+        for row in rows:
+            row["episode_progress"] = found.get(row["id"])
+    return {"items": rows, "total": total, "offset": offset, "limit": limit}
 
 
 @router.get("/item/{category}/{item_id}")

@@ -308,6 +308,8 @@ function makeReturnDeckItem(item, label, detail, primary = false) {
   card.append(eyebrow, title, meta, button);
   if (typeof window !== 'undefined' && window.OmniProgress) {
     window.OmniProgress.appendSummary(card, item);
+    window.OmniEpisodes?.appendBar(card, item, { compact: true });
+    window.OmniEpisodes?.appendActions(card, item);
     window.OmniProgress.appendAction(card, item);
   }
   return card;
@@ -797,7 +799,10 @@ function renderLibraryPulseList(container, items, emptyMessage) {
     const prompts = Array.isArray(item.prompts) && item.prompts.length ? item.prompts.join(' · ') : item.status_label;
     meta.textContent = `${item.category_label} · ${prompts}`;
     copy.append(title, meta);
-    if (typeof window !== 'undefined') window.OmniProgress?.appendSummary(copy, item);
+    if (typeof window !== 'undefined') {
+      window.OmniProgress?.appendSummary(copy, item);
+      window.OmniEpisodes?.appendBar(copy, item, { compact: true });
+    }
     const action = document.createElement('span');
     action.className = 'library-pulse__item-action';
     action.textContent = 'Open →';
@@ -806,6 +811,7 @@ function renderLibraryPulseList(container, items, emptyMessage) {
       const row = document.createElement('div');
       row.className = 'library-pulse__progress-row';
       row.appendChild(button);
+      window.OmniEpisodes?.appendActions(row, item);
       window.OmniProgress.appendAction(row, item);
       container.appendChild(row);
     } else container.appendChild(button);
@@ -1048,7 +1054,10 @@ function renderNextUpQueue(items) {
       const meta = document.createElement('span');
       meta.textContent = !item.available ? 'This library item was deleted' : item.finished ? `${item.category_label} · Finished` : item.category_label;
       copy.append(title, meta);
-      if (typeof window !== 'undefined') window.OmniProgress?.appendSummary(copy, item);
+      if (typeof window !== 'undefined') {
+        window.OmniProgress?.appendSummary(copy, item);
+        if (item.available && !item.finished) window.OmniEpisodes?.appendBar(copy, item, { compact: true });
+      }
       const controls = document.createElement('div');
       controls.className = 'next-up-queue__controls';
       if (item.available) {
@@ -1073,7 +1082,10 @@ function renderNextUpQueue(items) {
         open.textContent = 'Open';
         open.setAttribute('aria-label', `Open ${item.title}`);
         controls.appendChild(open);
-        if (typeof window !== 'undefined' && !item.finished) window.OmniProgress?.appendAction(controls, item);
+        if (typeof window !== 'undefined' && !item.finished) {
+          window.OmniEpisodes?.appendActions(controls, item);
+          window.OmniProgress?.appendAction(controls, item);
+        }
       }
       const top = document.createElement('button');
       top.type = 'button';

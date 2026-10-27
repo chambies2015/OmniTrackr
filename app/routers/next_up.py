@@ -7,7 +7,7 @@ from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
 
 from ..integer_bounds import PositiveDatabaseId
-from .. import models, schemas, title_pages
+from .. import episodes, models, schemas, title_pages
 from ..progress import lock_progress_owner
 from ..dependencies import get_current_user, get_db
 from ..progress import get_checkpoint_map, serialize_checkpoint
@@ -53,6 +53,11 @@ def _serialize(entry: models.NextUpItem, db: Session, user_id: int, checkpoints=
     }
 
 
+def _with_episodes(db: Session, user_id: int, entries: list[dict]) -> list[dict]:
+    episodes.attach(db, user_id, entries, id_key="item_id")
+    return entries
+
+
 def _ordered_entries(db: Session, user_id: int) -> List[models.NextUpItem]:
     return db.query(models.NextUpItem).filter(
         models.NextUpItem.user_id == user_id,
@@ -94,7 +99,7 @@ def list_next_up(
 ):
     entries = _ordered_entries(db, current_user.id)
     checkpoints = get_checkpoint_map(db, current_user.id)
-    return [_serialize(entry, db, current_user.id, checkpoints) for entry in entries]
+    return _with_episodes(db, current_user.id, [_serialize(entry, db, current_user.id, checkpoints) for entry in entries])
 
 
 @router.post("/", response_model=schemas.NextUpItem, status_code=status.HTTP_201_CREATED)
@@ -152,7 +157,7 @@ def move_next_up(
         entry.position = position
     db.commit()
     checkpoints = get_checkpoint_map(db, current_user.id)
-    return [_serialize(entry, db, current_user.id, checkpoints) for entry in entries]
+    return _with_episodes(db, current_user.id, [_serialize(entry, db, current_user.id, checkpoints) for entry in entries])
 
 
 @router.post("/{queue_id}/finish", response_model=schemas.NextUpFinished)
@@ -202,7 +207,7 @@ def clear_finished_next_up(
     for position, entry in enumerate(kept):
         entry.position = position
     db.commit()
-    return [_serialize(entry, db, current_user.id, checkpoints) for entry in kept]
+    return _with_episodes(db, current_user.id, [_serialize(entry, db, current_user.id, checkpoints) for entry in kept])
 
 
 @router.delete("/{queue_id}", status_code=status.HTTP_204_NO_CONTENT)

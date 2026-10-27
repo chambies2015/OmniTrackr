@@ -457,6 +457,7 @@ async function loadTVShows() {
             <button class="action-btn delete-tv-btn" data-tv-id="${tvShow.id}">Delete</button>
           </td>
         `;
+        window.OmniEpisodes?.appendRow(tr.cells[1], { ...tvShow, category: 'tv-shows' });
         tbody.appendChild(tr);
 
         // Display cached poster or fetch new one
@@ -527,6 +528,7 @@ async function loadAnime() {
             <button class="action-btn delete-anime-btn" data-anime-id="${animeItem.id}">Delete</button>
           </td>
         `;
+        window.OmniEpisodes?.appendRow(tr.cells[1], { ...animeItem, category: 'anime' });
         tbody.appendChild(tr);
 
         // Display cached poster or fetch new one

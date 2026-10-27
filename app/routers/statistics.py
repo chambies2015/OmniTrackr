@@ -7,7 +7,7 @@ from sqlalchemy.orm import Session
 from sqlalchemy import and_, case, func, or_
 from sqlalchemy.exc import IntegrityError
 
-from .. import crud, schemas, models, return_prompt as return_prompt_tokens
+from .. import crud, episodes, schemas, models, return_prompt as return_prompt_tokens
 from ..dependencies import get_db, get_current_user
 from ..tasteprint import build_tasteprint
 from ..progress import get_checkpoint_map, serialize_checkpoint
@@ -161,6 +161,7 @@ def get_todays_pick(
 
     if queued:
         choice = queued[offset % len(queued)]
+        episodes.attach(db, current_user.id, [choice])
         choice["reason"] = f"#{(offset % len(queued)) + 1} in your private Next Up queue"
         choice["source"] = "next_up"
         return {"pick": choice, "candidate_count": len(queued)}
@@ -179,6 +180,7 @@ def get_todays_pick(
     choice = candidates[(datetime.now(timezone.utc).date().toordinal() + current_user.id + offset) % len(candidates)]
     if choice["category"] in {"tv-shows", "anime", "books"}:
         _attach_progress([choice], get_checkpoint_map(db, current_user.id))
+        episodes.attach(db, current_user.id, [choice])
     choice["reason"] = "A small, unfinished choice from your private library"
     choice["source"] = "library"
     return {"pick": choice, "candidate_count": len(candidates)}
@@ -383,9 +385,11 @@ def get_library_pulse(
     continue_items = [entry[2] for entry in progressed_items] + continue_items
     _attach_progress(continue_items, checkpoints)
     _attach_progress(reflection_items, checkpoints)
+    continue_items = continue_items[:6]
+    episodes.attach(db, current_user.id, continue_items + next_up_items)
 
     return {
-        "continue_items": continue_items[:6],
+        "continue_items": continue_items,
         "reflection_items": reflection_items[:6],
         "next_up_items": next_up_items,
         "generated_at": datetime.now().isoformat(),
