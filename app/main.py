@@ -598,6 +598,9 @@ app.include_router(statistics.router)
 app.include_router(next_up.router)
 app.include_router(completion_moments.router)
 app.include_router(activity.router)
+for route in progress.router.routes:
+    if getattr(route, "path", None) == "/progress/{category}/{item_id}/episodes":
+        bind_rate_limited_endpoint(route, limiter.limit("30/minute")(route.endpoint))
 app.include_router(progress.router)
 for route in import_studio.router.routes:
     if getattr(route, "path", None) in ("/import-studio/preview/", "/import-studio/apply/"):
@@ -715,6 +718,17 @@ for route in profiles.router.routes:
     elif route.path == "/api/profile/settings" and "PUT" in route.methods:
         bind_rate_limited_endpoint(route, rate_limited_profile_settings)
 app.include_router(profiles.router)
+
+from .routers import profile_widgets as profile_widgets_router
+# Widgets are embedded on other sites and fetched through their image proxies, so allow more.
+rate_limited_widget = limiter.limit("120/minute")(profile_widgets_router.widget)
+rate_limited_widget_by_id = limiter.limit("120/minute")(profile_widgets_router.widget_by_id)
+for route in profile_widgets_router.router.routes:
+    if getattr(route, "path", None) == "/u/{handle}/widget/{kind}.png":
+        bind_rate_limited_endpoint(route, rate_limited_widget)
+    elif getattr(route, "path", None) == "/u/id/{user_id:database_id}/widget/{kind}.png":
+        bind_rate_limited_endpoint(route, rate_limited_widget_by_id)
+app.include_router(profile_widgets_router.router)
 app.include_router(pwa.router)
 rate_limited_kofi_webhook = limiter.limit("60/minute")(supporters.kofi_webhook)
 for route in supporters.router.routes:

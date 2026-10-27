@@ -1034,6 +1034,7 @@ class NextUpItem(BaseModel):
     position: int
     available: bool = True
     progress: Optional[dict] = None
+    episode_progress: Optional[dict] = None
     finished: bool = False
     image: Optional[str] = None
 

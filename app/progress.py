@@ -151,6 +151,8 @@ def _write_progress(db, user_id, category, item_id, expected_revision, values):
         item = _owned_item(db, user_id, category, item_id, lock=True)
         query = _checkpoint_query(db, user_id, category, item_id)
         entry = query.populate_existing().with_for_update().first()
+        if callable(values):
+            values = values(entry)
         revision = entry.revision if entry else 0
         if revision != expected_revision:
             # A lost response may be retried once against the exact resulting
@@ -195,6 +197,28 @@ def save_progress(db: Session, user_id: int, category: str, item_id: int, payloa
     except ValueError as exc:
         raise HTTPException(422, str(exc)) from exc
     return _write_progress(db, user_id, category, item_id, payload.expected_revision, data.model_dump())
+
+
+class EpisodeWrite(BaseModel):
+    """Move a show's checkpoint to one episode, keeping the private reminder."""
+    model_config = ConfigDict(extra="forbid", strict=True)
+
+    expected_revision: Annotated[int, Field(ge=0, le=2147483646)]
+    season: Annotated[int, Field(ge=0, le=10000)] | None = None
+    episode: Annotated[int, Field(ge=1, le=1000000)]
+
+
+def save_episode(db: Session, user_id: int, category: str, item_id: int, payload: EpisodeWrite) -> dict:
+    if category not in ("tv-shows", "anime"):
+        raise HTTPException(422, "Episode tracking is available for TV shows and anime")
+
+    def values(entry):
+        # The reminder is read under the same lock as the write, so a note saved
+        # from another tab is kept rather than overwritten with a stale copy.
+        note = entry.note if entry is not None and entry.unit is not None else None
+        return {"unit": "episode", "position": payload.episode, "season": payload.season, "note": note}
+
+    return _write_progress(db, user_id, category, item_id, payload.expected_revision, values)
 
 
 def clear_progress(db: Session, user_id: int, category: str, item_id: int, payload: ProgressClear) -> dict:
