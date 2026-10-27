@@ -45,6 +45,7 @@ class User(Base):
     video_games_private = Column(Boolean, default=False, nullable=False)
     music_private = Column(Boolean, default=False, nullable=False)
     books_private = Column(Boolean, default=False, nullable=False)
+    manga_private = Column(Boolean, default=False, nullable=False)
     statistics_private = Column(Boolean, default=False, nullable=False)
     reviews_public = Column(Boolean, default=False, nullable=False)
     
@@ -54,6 +55,7 @@ class User(Base):
     video_games_visible = Column(Boolean, default=True, nullable=False)
     music_visible = Column(Boolean, default=True, nullable=False)
     books_visible = Column(Boolean, default=True, nullable=False)
+    manga_visible = Column(Boolean, default=True, nullable=False)
     
     # Profile picture
     profile_picture_url = Column(String, nullable=True)
@@ -68,6 +70,7 @@ class User(Base):
     video_games = relationship("VideoGame", back_populates="owner", cascade="all, delete-orphan")
     music = relationship("Music", back_populates="owner", cascade="all, delete-orphan")
     books = relationship("Book", back_populates="owner", cascade="all, delete-orphan")
+    manga = relationship("Manga", back_populates="owner", cascade="all, delete-orphan")
     # Friends relationships
     sent_friend_requests = relationship("FriendRequest", foreign_keys="FriendRequest.sender_id", back_populates="sender", cascade="all, delete-orphan")
     received_friend_requests = relationship("FriendRequest", foreign_keys="FriendRequest.receiver_id", back_populates="receiver", cascade="all, delete-orphan")
@@ -218,6 +221,28 @@ class Book(Base):
     # User relationship
     user_id = Column(Integer, ForeignKey("users.id"), nullable=False, index=True)
     owner = relationship("User", back_populates="books")
+
+
+class Manga(Base):
+    """Manga, manhwa and manhua series with user ownership."""
+    __tablename__ = "manga"
+
+    id = Column(Integer, primary_key=True, index=True)
+    title = Column(String, index=True)
+    author = Column(String, index=True, nullable=True)
+    year = Column(Integer, nullable=True)
+    genre = Column(String, nullable=True)
+    volumes = Column(Integer, nullable=True)
+    chapters = Column(Integer, nullable=True)
+    rating = Column(Float, nullable=True)
+    read = Column(Boolean, default=False)
+    review = Column(Text, nullable=True)
+    review_public = Column(Boolean, default=False, nullable=False)
+    cover_art_url = Column(String, nullable=True)
+    added_at = Column(DateTime, nullable=True, default=datetime.utcnow)
+
+    user_id = Column(Integer, ForeignKey("users.id"), nullable=False, index=True)
+    owner = relationship("User", back_populates="manga")
 
 
 class ProgressCheckpoint(Base):

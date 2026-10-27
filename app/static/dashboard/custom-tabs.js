@@ -941,12 +941,12 @@ document.addEventListener('DOMContentLoaded', () => {
 
 async function refreshLibraryProgressView(payload, shouldContinue) {
   const category = payload?.category;
-  if (!['tv-shows', 'anime', 'books'].includes(category)) return;
+  if (!['tv-shows', 'anime', 'books', 'manga'].includes(category)) return;
   const epoch = libraryBrowseEpoch;
   const current = () => epoch === libraryBrowseEpoch && shouldContinue()
     && currentTab === category && editingRowId === null && getLibraryFilters(category).hasProgress;
   if (!current()) return;
-  const busy = () => ({ 'tv-shows': isLoadingTVShows, anime: isLoadingAnime, books: isLoadingBooks })[category];
+  const busy = () => ({ 'tv-shows': isLoadingTVShows, anime: isLoadingAnime, books: isLoadingBooks, manga: isLoadingManga })[category];
   // Let an older read finish before requesting the post-save filtered view.
   // Calling the loader while it is busy would otherwise discard this refresh.
   const deadline = Date.now() + 10000;

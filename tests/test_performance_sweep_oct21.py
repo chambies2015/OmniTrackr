@@ -100,7 +100,7 @@ def test_profiles_without_writing_are_skipped_without_building_them(db_session):
     db_session.commit()
     with count_queries(db_session) as statements:
         assert public_profiles.sitemap_paths(db_session) == []
-    assert len(statements) <= 8  # The profile list, then one check per library table and collections.
+    assert len(statements) <= 9  # The profile list, then one check per library table and collections.
 
 
 # ---------------------------------------------------------------- profiles, title pages, gallery

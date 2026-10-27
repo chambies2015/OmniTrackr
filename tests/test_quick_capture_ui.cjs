@@ -6,7 +6,7 @@ const path = require('node:path');
 const vm = require('node:vm');
 
 const source = require('./helpers/dashboard_source.cjs');
-const categories = ['movies', 'tv-shows', 'anime', 'video-games', 'music', 'books'];
+const categories = ['movies', 'tv-shows', 'anime', 'video-games', 'music', 'books', 'manga'];
 const settle = () => new Promise(resolve => setImmediate(resolve));
 const ok = payload => ({ ok: true, status: 200, json: async () => payload });
 const deferred = () => {
@@ -17,7 +17,7 @@ const deferred = () => {
 
 function provider(url) {
   if (url.includes('/omdb?')) return url.includes('type=series') ? 'tv-shows' : 'movies';
-  return Object.entries({ anime: '/jikan?', 'video-games': '/rawg?', music: '/itunes?', books: '/openlibrary?' })
+  return Object.entries({ anime: '/jikan?', 'video-games': '/rawg?', music: '/itunes?', books: '/openlibrary?', manga: '/jikan-manga?' })
     .find(([, endpoint]) => url.includes(endpoint))?.[0];
 }
 
@@ -29,6 +29,7 @@ function payload(category, title) {
   if (category === 'anime') return { data: title ? [{ title, year: 2024, episodes: 12 }] : [] };
   if (category === 'video-games') return { results: title ? [{ name: title, released: '2024-01-01' }] : [] };
   if (category === 'music') return { results: title ? [{ collectionName: title, artistName: 'An Artist', releaseDate: '2024-01-01' }] : [] };
+  if (category === 'manga') return { results: title ? [{ title, author: 'A Mangaka', year: 2024, volumes: 3 }] : [] };
   return { docs: title ? [{ title, author_name: ['An Author'], first_publish_year: 2024 }] : [] };
 }
 
@@ -106,6 +107,7 @@ function setup() {
     'video-games': ['addVideoGameForm', 'videoGameForm', 'videoGameTitle', 'videoGamePlayed', 'videoGameGenres'],
     music: ['addMusicForm', 'musicForm', 'musicTitle', 'musicListened', 'musicArtist', 'musicYear', 'musicGenre'],
     books: ['addBookForm', 'bookForm', 'bookTitle', 'bookRead', 'bookAuthor', 'bookYear', 'bookGenre'],
+    manga: ['addMangaForm', 'mangaForm', 'mangaTitle', 'mangaRead', 'mangaAuthor', 'mangaYear', 'mangaGenre', 'mangaVolumes', 'mangaChapters'],
   };
   for (const [formId, contentPrefix, titleId, checkedId, ...fields] of Object.values(forms)) {
     const form = add(formId, 'form');
@@ -205,7 +207,7 @@ test('Quick Capture keeps an already expanded form open during title handoff', (
 test('a fast source becomes usable while other sources are still loading', async () => {
   const s = setup();
   const search = s.search('Dune');
-  assert.equal(s.requests.length, 6);
+  assert.equal(s.requests.length, 7);
   assert.equal(s.submit.disabled, false, 'a different query can be submitted while sources are pending');
   assert.equal(s.manual.disabled, false);
   s.respond('books', 'Dune novel');
@@ -241,8 +243,8 @@ test('later sources preserve the identity, focus, and action index of an already
   assert.equal(s.get('bookRead').checked, true);
   assert.deepEqual(s.opened, ['books']);
   assert.equal(s.get('quickCaptureModal').style.display, 'none');
-  assert.equal(s.requests.length, 6, 'choosing a match only prefills the existing form');
-  for (const category of ['tv-shows', 'video-games', 'music']) s.respond(category, null);
+  assert.equal(s.requests.length, 7, 'choosing a match only prefills the existing form');
+  for (const category of ['tv-shows', 'video-games', 'music', 'manga']) s.respond(category, null);
   await search;
 });
 
@@ -250,7 +252,7 @@ test('per-source timeouts keep successful matches and retry only the chosen fail
   const s = setup();
   const search = s.search();
   s.respond('movies', 'Dune film');
-  for (const category of ['tv-shows', 'anime', 'video-games', 'music']) s.respond(category, null);
+  for (const category of ['tv-shows', 'anime', 'video-games', 'music', 'manga']) s.respond(category, null);
   await settle();
   const movieButton = s.results()[0];
   s.advance(15000);
@@ -261,7 +263,7 @@ test('per-source timeouts keep successful matches and retry only the chosen fail
   assert.match(s.get('quickCaptureResults').textContent, /timed out|too long/i);
   const retry = s.context.retryQuickCaptureCategory('books');
   s.context.retryQuickCaptureCategory('books');
-  assert.equal(s.requests.length, 7, 'repeated clicks cannot duplicate an in-flight retry');
+  assert.equal(s.requests.length, 8, 'repeated clicks cannot duplicate an in-flight retry');
   assert.equal(s.requests.at(-1).category, 'books');
   assert.equal(s.retries()[0].disabled, true);
   s.respond('books', 'Recovered book', 1);
@@ -302,7 +304,7 @@ test('network, JSON, HTTP, and provider errors each offer a retry without erasin
     const s = setup();
     const search = s.search();
     s.respond('books', 'Still available');
-    for (const category of ['tv-shows', 'anime', 'video-games', 'music']) s.respond(category, null);
+    for (const category of ['tv-shows', 'anime', 'video-games', 'music', 'manga']) s.respond(category, null);
     fail(s.request('movies'));
     await search;
     assert.equal(s.results().length, 1);
@@ -318,7 +320,7 @@ test('all-source failure leaves explicit recovery and manual entry available', a
   const search = s.search();
   for (const request of s.requests) request.reject(new Error('Offline'));
   await search;
-  assert.equal(s.retries().length, 6);
+  assert.equal(s.retries().length, 7);
   assert.equal(s.results().length, 0);
   assert.equal(s.submit.disabled, false);
   assert.equal(s.manual.disabled, false);
@@ -397,7 +399,7 @@ test('changing category cancels pending sources and the next search uses only th
   s.context.selectQuickCaptureCategory('anime');
   assert.equal(s.requests.every(request => request.options.signal.aborted), true);
   const next = s.search('Frieren');
-  assert.equal(s.requests.length, 7);
+  assert.equal(s.requests.length, categories.length + 1);
   assert.equal(s.requests.at(-1).category, 'anime');
   s.respond('anime', 'Frieren', 1);
   await next;

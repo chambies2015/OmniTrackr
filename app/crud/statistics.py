@@ -26,9 +26,11 @@ def get_watch_statistics(db: Session, user_id: int) -> dict:
     listened_music = db.query(models.Music).filter(models.Music.user_id == user_id).filter(models.Music.listened == True).count()
     total_books = db.query(models.Book).filter(models.Book.user_id == user_id).count()
     read_books = db.query(models.Book).filter(models.Book.user_id == user_id).filter(models.Book.read == True).count()
+    total_manga = db.query(models.Manga).filter(models.Manga.user_id == user_id).count()
+    read_manga = db.query(models.Manga).filter(models.Manga.user_id == user_id).filter(models.Manga.read == True).count()
     
-    total_items = total_movies + total_tv_shows + total_anime + total_video_games + total_music + total_books
-    watched_items = watched_movies + watched_tv_shows + watched_anime + played_video_games + listened_music + read_books
+    total_items = total_movies + total_tv_shows + total_anime + total_video_games + total_music + total_books + total_manga
+    watched_items = watched_movies + watched_tv_shows + watched_anime + played_video_games + listened_music + read_books + read_manga
     
     return {
         "total_movies": total_movies,
@@ -49,6 +51,9 @@ def get_watch_statistics(db: Session, user_id: int) -> dict:
         "total_books": total_books,
         "read_books": read_books,
         "unread_books": total_books - read_books,
+        "total_manga": total_manga,
+        "read_manga": read_manga,
+        "unread_manga": total_manga - read_manga,
         "total_items": total_items,
         "watched_items": watched_items,
         "unwatched_items": total_items - watched_items,
@@ -94,7 +99,11 @@ def get_rating_statistics(db: Session, user_id: int) -> dict:
     ).filter(models.Book.rating.isnot(None)).all()
     book_ratings = [r[0] for r in book_ratings]
     
-    all_ratings = movie_ratings + tv_ratings + anime_ratings + video_game_ratings + music_ratings + book_ratings
+    manga_ratings = [r[0] for r in db.query(models.Manga.rating).filter(
+        models.Manga.user_id == user_id
+    ).filter(models.Manga.rating.isnot(None)).all()]
+    
+    all_ratings = movie_ratings + tv_ratings + anime_ratings + video_game_ratings + music_ratings + book_ratings + manga_ratings
     
     if not all_ratings:
         return {
@@ -124,6 +133,7 @@ def get_rating_statistics(db: Session, user_id: int) -> dict:
     highest_video_games = db.query(models.VideoGame).filter(models.VideoGame.user_id == user_id).filter(models.VideoGame.rating == highest_rating).limit(5).all()
     highest_music = db.query(models.Music).filter(models.Music.user_id == user_id).filter(models.Music.rating == highest_rating).limit(5).all()
     highest_books = db.query(models.Book).filter(models.Book.user_id == user_id).filter(models.Book.rating == highest_rating).limit(5).all()
+    highest_manga = db.query(models.Manga).filter(models.Manga.user_id == user_id).filter(models.Manga.rating == highest_rating).limit(5).all()
     highest_rated = [
         {"title": m.title, "type": "Movie", "rating": m.rating} for m in highest_movies
     ] + [
@@ -136,6 +146,8 @@ def get_rating_statistics(db: Session, user_id: int) -> dict:
         {"title": m.title, "type": "Music", "rating": m.rating} for m in highest_music
     ] + [
         {"title": b.title, "type": "Book", "rating": b.rating} for b in highest_books
+    ] + [
+        {"title": m.title, "type": "Manga", "rating": m.rating} for m in highest_manga
     ]
     
     # Find items with lowest rating
@@ -145,6 +157,7 @@ def get_rating_statistics(db: Session, user_id: int) -> dict:
     lowest_video_games = db.query(models.VideoGame).filter(models.VideoGame.user_id == user_id).filter(models.VideoGame.rating == lowest_rating).limit(5).all()
     lowest_music = db.query(models.Music).filter(models.Music.user_id == user_id).filter(models.Music.rating == lowest_rating).limit(5).all()
     lowest_books = db.query(models.Book).filter(models.Book.user_id == user_id).filter(models.Book.rating == lowest_rating).limit(5).all()
+    lowest_manga = db.query(models.Manga).filter(models.Manga.user_id == user_id).filter(models.Manga.rating == lowest_rating).limit(5).all()
     lowest_rated = [
         {"title": m.title, "type": "Movie", "rating": m.rating} for m in lowest_movies
     ] + [
@@ -157,6 +170,8 @@ def get_rating_statistics(db: Session, user_id: int) -> dict:
         {"title": m.title, "type": "Music", "rating": m.rating} for m in lowest_music
     ] + [
         {"title": b.title, "type": "Book", "rating": b.rating} for b in lowest_books
+    ] + [
+        {"title": m.title, "type": "Manga", "rating": m.rating} for m in lowest_manga
     ]
     
     return {
@@ -212,7 +227,12 @@ def get_year_statistics(db: Session, user_id: int) -> dict:
     ).group_by(models.Book.year).all()
     book_data = {str(year): count for year, count in book_years if year is not None}
     
-    all_years = set(movie_data.keys()) | set(tv_data.keys()) | set(anime_data.keys()) | set(video_game_data.keys()) | set(music_data.keys()) | set(book_data.keys())
+    manga_years = db.query(models.Manga.year, func.count(models.Manga.id)).filter(
+        models.Manga.user_id == user_id
+    ).group_by(models.Manga.year).all()
+    manga_data = {str(year): count for year, count in manga_years if year is not None}
+    
+    all_years = set(movie_data.keys()) | set(tv_data.keys()) | set(anime_data.keys()) | set(video_game_data.keys()) | set(music_data.keys()) | set(book_data.keys()) | set(manga_data.keys())
     all_years = sorted([int(year) for year in all_years])
     
     # Decade analysis
@@ -221,13 +241,14 @@ def get_year_statistics(db: Session, user_id: int) -> dict:
         decade = (year // 10) * 10
         decade_key = f"{decade}s"
         if decade_key not in decade_stats:
-            decade_stats[decade_key] = {"movies": 0, "tv_shows": 0, "anime": 0, "video_games": 0, "music": 0, "books": 0}
+            decade_stats[decade_key] = {"movies": 0, "tv_shows": 0, "anime": 0, "video_games": 0, "music": 0, "books": 0, "manga": 0}
         decade_stats[decade_key]["movies"] += movie_data.get(str(year), 0)
         decade_stats[decade_key]["tv_shows"] += tv_data.get(str(year), 0)
         decade_stats[decade_key]["anime"] += anime_data.get(str(year), 0)
         decade_stats[decade_key]["video_games"] += video_game_data.get(str(year), 0)
         decade_stats[decade_key]["music"] += music_data.get(str(year), 0)
         decade_stats[decade_key]["books"] += book_data.get(str(year), 0)
+        decade_stats[decade_key]["manga"] += manga_data.get(str(year), 0)
     
     return {
         "movies_by_year": movie_data,
@@ -236,6 +257,7 @@ def get_year_statistics(db: Session, user_id: int) -> dict:
         "video_games_by_year": video_game_data,
         "music_by_year": music_data,
         "books_by_year": book_data,
+        "manga_by_year": manga_data,
         "all_years": all_years,
         "decade_stats": decade_stats,
         "oldest_year": min(all_years) if all_years else None,
@@ -834,4 +856,74 @@ def get_books_statistics(db: Session, user_id: int) -> dict:
             "oldest_year": min(all_years) if all_years else None,
             "newest_year": max(all_years) if all_years else None
         }
+    }
+
+
+def get_manga_statistics(db: Session, user_id: int) -> dict:
+    """Get manga-specific statistics, including volume and chapter totals."""
+    items = db.query(models.Manga).filter(models.Manga.user_id == user_id).all()
+    total = len(items)
+    finished = [item for item in items if item.read]
+    ratings = [item.rating for item in items if item.rating is not None]
+
+    year_data = {}
+    for item in items:
+        if item.year:
+            year_data[str(item.year)] = year_data.get(str(item.year), 0) + 1
+    all_years = sorted(int(year) for year in year_data)
+    decade_stats = {}
+    for year in all_years:
+        decade_key = f"{(year // 10) * 10}s"
+        decade_stats[decade_key] = decade_stats.get(decade_key, 0) + year_data[str(year)]
+
+    distribution = {}
+    highest_rated, lowest_rated = [], []
+    if ratings:
+        for rating in ratings:
+            bucket = str(_rating_bucket(rating))
+            distribution[bucket] = distribution.get(bucket, 0) + 1
+        distribution = {str(i): distribution[str(i)] for i in range(0, 11) if str(i) in distribution}
+        highest, lowest = max(ratings), min(ratings)
+        highest_rated = [{"title": m.title, "type": "Manga", "rating": m.rating} for m in items if m.rating == highest][:5]
+        lowest_rated = [{"title": m.title, "type": "Manga", "rating": m.rating} for m in items if m.rating == lowest][:5]
+
+    genre_counts, read_genre_counts = {}, {}
+    for item in items:
+        for genre in (g.strip() for g in (item.genre or "").split(",")):
+            if genre:
+                genre_counts[genre] = genre_counts.get(genre, 0) + 1
+                if item.read:
+                    read_genre_counts[genre] = read_genre_counts.get(genre, 0) + 1
+    top = lambda counts: [{"genre": g, "count": c} for g, c in sorted(counts.items(), key=lambda x: x[1], reverse=True)[:10]]
+
+    return {
+        "watch_stats": {
+            "total_items": total,
+            "watched_items": len(finished),
+            "unwatched_items": total - len(finished),
+            "completion_percentage": round((len(finished) / total * 100) if total > 0 else 0, 1)
+        },
+        "rating_stats": {
+            "average_rating": round(sum(ratings) / len(ratings), 1) if ratings else 0,
+            "total_rated_items": len(ratings),
+            "rating_distribution": distribution,
+            "highest_rated": highest_rated,
+            "lowest_rated": lowest_rated
+        },
+        "year_stats": {
+            "items_by_year": year_data,
+            "all_years": all_years,
+            "decade_stats": decade_stats,
+            "oldest_year": min(all_years) if all_years else None,
+            "newest_year": max(all_years) if all_years else None
+        },
+        "genre_stats": {
+            "genre_distribution": genre_counts,
+            "top_genres": top(genre_counts),
+            "most_played_genres": top(read_genre_counts)
+        },
+        "total_volumes": sum(item.volumes or 0 for item in items),
+        "total_chapters": sum(item.chapters or 0 for item in items),
+        "volumes_read": sum(item.volumes or 0 for item in finished),
+        "chapters_read": sum(item.chapters or 0 for item in finished),
     }

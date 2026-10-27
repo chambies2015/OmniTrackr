@@ -33,14 +33,14 @@ function setup(dismissed = false) {
   return { context, get, opens: () => opens };
 }
 
-test('empty library exposes six existing add paths and discovery/import, not empty insights', () => {
+test('empty library exposes every existing add paths and discovery/import, not empty insights', () => {
   const { context, get } = setup();
   context.renderLibraryLaunchpad({ total_items: 0 });
   assert.equal(get('libraryLaunchpad').hidden, false);
   assert.equal(get('libraryLaunchpadStarterPaths').hidden, false);
   assert.equal(get('libraryLaunchpadInsights').hidden, true);
   assert.deepEqual(Array.from(get('libraryLaunchpadCategories').children, b => b.dataset.launchpadCategory),
-    ['movies', 'tv-shows', 'anime', 'video-games', 'music', 'books']);
+    ['movies', 'tv-shows', 'anime', 'video-games', 'music', 'books', 'manga']);
 });
 
 test('first save transitions to useful guidance and hides starter paths', () => {

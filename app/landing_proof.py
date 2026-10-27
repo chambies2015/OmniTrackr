@@ -21,7 +21,7 @@ _lock = threading.Lock()
 _cache = {"at": 0.0, "html": None}
 
 CATEGORY_LABELS = {"movie": "Movie", "tv_show": "TV show", "anime": "Anime", "video_game": "Game",
-                   "music": "Album", "book": "Book"}
+                   "music": "Album", "book": "Book", "manga": "Manga"}
 
 
 def _excerpt(text: str) -> str:
@@ -64,7 +64,7 @@ def stats(db) -> dict:
     members = db.query(func.count(models.User.id)).filter(
         models.User.is_active == True, models.User.is_verified == True).scalar() or 0  # noqa: E712
     titles = 0
-    for model in (models.Movie, models.TVShow, models.Anime, models.VideoGame, models.Music, models.Book):
+    for model in (models.Movie, models.TVShow, models.Anime, models.VideoGame, models.Music, models.Book, models.Manga):
         titles += db.query(func.count(model.id)).scalar() or 0
     return {"members": int(members), "titles": int(titles)}
 

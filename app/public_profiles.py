@@ -47,6 +47,7 @@ CATEGORIES = {
     "video-games": ("game", "video_games_private", "Games", "played"),
     "music": ("album", "music_private", "Albums", "listened"),
     "books": ("book", "books_private", "Books", "read"),
+    "manga": ("manga", "manga_private", "Manga", "read"),
 }
 REVIEW_CATEGORY_TO_LIBRARY = {review: library for _, (_, review, library, _, _) in title_pages.KINDS.items()}
 SETTINGS_FIELDS = ("enabled", "show_stats", "show_favorites", "show_reviews", "show_collections", "show_diary")

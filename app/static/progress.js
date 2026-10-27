@@ -1,7 +1,8 @@
 /* Private checkpoints. Drafts stay in memory; only explicit Save/Clear sends a write. */
 (() => {
   'use strict';
-  const supported = new Set(['tv-shows', 'anime', 'books']);
+  const supported = new Set(['tv-shows', 'anime', 'books', 'manga']);
+  const reading = new Set(['books', 'manga']);
   const drafts = new Map();
   let config = null;
   let active = null;
@@ -58,7 +59,7 @@
       season: el('progressSeason').value, note: el('progressNote').value };
   }
   function fieldsFromCheckpoint(checkpoint, category) {
-    return { unit: checkpoint?.unit || (category === 'books' ? 'page' : 'episode'),
+    return { unit: checkpoint?.unit || (category === 'books' ? 'page' : category === 'manga' ? 'chapter' : 'episode'),
       position: String(checkpoint?.position ?? ''), season: String(checkpoint?.season ?? ''), note: checkpoint?.note || '' };
   }
   function stash() {
@@ -107,7 +108,7 @@
     return active?.loaded && JSON.stringify(draftFromFields()) !== JSON.stringify(active.saved);
   }
   function syncLabels() {
-    const book = active?.category === 'books';
+    const book = reading.has(active?.category);
     el('progressUnitField').hidden = !book;
     el('progressSeasonField').hidden = book;
     el('progressPositionLabel').textContent = book
@@ -220,7 +221,7 @@
     if (!integer(draft.position) || Number(draft.position) < 1 || Number(draft.position) > 1000000) {
       status('Enter an episode, page or chapter from 1 to 1,000,000.'); el('progressPosition').focus(); return null;
     }
-    const book = active.category === 'books';
+    const book = reading.has(active.category);
     if (!book && (el('progressSeason').validity?.badInput
       || (draft.season !== '' && (!integer(draft.season) || Number(draft.season) > 10000)))) {
       status('Enter a season from 0 to 10,000, or leave it blank. Season 0 is for specials.'); el('progressSeason').focus(); return null;

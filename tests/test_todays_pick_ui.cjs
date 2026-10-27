@@ -14,7 +14,7 @@ function setup() {
     });
     return elements.get(id);
   };
-  const categories = ['movies', 'tv-shows', 'anime', 'video-games', 'music', 'books'];
+  const categories = ['movies', 'tv-shows', 'anime', 'video-games', 'music', 'books', 'manga'];
   const row = { classList: { add() {} }, focus() { this.focused = true; }, scrollIntoView() {} };
   const context = vm.createContext({
     document: {
@@ -28,7 +28,7 @@ function setup() {
     getTabButton: () => ({ style: {} }),
     switchTab: async tab => { context.openedTab = tab; },
     isLoadingMovies: false, isLoadingTVShows: false, isLoadingAnime: false,
-    isLoadingVideoGames: false, isLoadingMusic: false, isLoadingBooks: false,
+    isLoadingVideoGames: false, isLoadingMusic: false, isLoadingBooks: false, isLoadingManga: false,
     todaysPickOffset: 0, todaysPickCandidateCount: 0, todaysPickRequest: 0,
     todaysPickSelection: null, returnDeckActive: false,
     editingRowId: null,

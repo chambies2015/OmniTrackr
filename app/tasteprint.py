@@ -18,6 +18,7 @@ CATEGORIES = (
     {"key": "video-games", "label": "Video Games", "model": models.VideoGame, "done": "played", "year": "release_date", "creator": None, "private": "video_games_private", "visible": "video_games_visible"},
     {"key": "music", "label": "Music", "model": models.Music, "done": "listened", "year": "year", "creator": "artist", "private": "music_private", "visible": "music_visible"},
     {"key": "books", "label": "Books", "model": models.Book, "done": "read", "year": "year", "creator": "author", "private": "books_private", "visible": "books_visible"},
+    {"key": "manga", "label": "Manga", "model": models.Manga, "done": "read", "year": "year", "creator": "author", "private": "manga_private", "visible": "manga_visible"},
 )
 CATEGORY_BY_KEY = {category["key"]: category for category in CATEGORIES}
 MIN_ITEMS = 10

@@ -32,6 +32,7 @@ LIBRARY_MODELS = (
     ("video_games", "Video games", models.VideoGame),
     ("music", "Music", models.Music),
     ("books", "Books", models.Book),
+    ("manga", "Manga", models.Manga),
 )
 RADAR_LABELS = {"movies": "Movies", "tv": "TV", "anime": "Anime", "games": "Games"}
 

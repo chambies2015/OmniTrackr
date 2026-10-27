@@ -1,0 +1,153 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="description" content="Free manga tracker for manga, manhwa and manhua: track volumes and chapters, save your place, import from MyAnimeList or AniList, rate, review and see reading stats.">
+  <meta name="robots" content="index, follow, max-image-preview:large">
+  <meta name="author" content="OmniTrackr">
+  <title>Manga Tracker - Track Manga, Manhwa & Manhua Chapters, Volumes and Reviews</title>
+  <link rel="canonical" href="https://omnitrackr.xyz/manga-tracker">
+  <link rel="icon" type="image/x-icon" href="/omnitrackr_favicon.ico">
+  <meta property="og:type" content="article">
+  <meta property="og:url" content="https://omnitrackr.xyz/manga-tracker">
+  <meta property="og:title" content="Manga Tracker - Track Manga, Manhwa & Manhua Chapters and Volumes">
+  <meta property="og:description" content="A practical guide to tracking manga, manhwa and manhua: chapters, volumes, simulpubs, hiatuses, anime adaptations, reviews and reading stats.">
+  <meta property="og:image" content="https://omnitrackr.xyz/omnitrackr_vortex.png">
+  <meta property="og:image:alt" content="OmniTrackr manga tracker guide">
+  <meta property="og:site_name" content="OmniTrackr">
+  <meta name="twitter:card" content="summary">
+  <meta name="twitter:title" content="Manga Tracker">
+  <meta name="twitter:description" content="Track manga, manhwa and manhua by chapter and volume, next to the anime you watch, with OmniTrackr.">
+  <link rel="preload" href="/static/fonts/poppins-700-latin.woff2" as="font" type="font/woff2" crossorigin>
+  <link rel="preload" href="/static/fonts/poppins-800-latin.woff2" as="font" type="font/woff2" crossorigin>
+  <link rel="stylesheet" href="/static/fonts.css?v=20261009-fonts-1">
+  <style>
+    body { min-height: 100vh; padding: 20px; }
+    .content-wrapper { max-width: 1040px; margin: 0 auto; }
+    .content-container { background: var(--card-bg); border-radius: 16px; padding: 50px 40px; margin: 20px 0; box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3); border: 1px solid var(--border); color: var(--fg); line-height: 1.8; }
+    @media (max-width: 768px) { .content-container { padding: 30px 20px; margin: 10px 0; } }
+    .content-header { text-align: center; margin-bottom: 40px; padding-bottom: 20px; border-bottom: 2px solid var(--border); }
+    .content-header h1 { font-family: 'Poppins', sans-serif; font-size: 2.35rem; margin-bottom: 10px; color: var(--fg); }
+    .content-header p, .content-section p, .content-section li { color: var(--fg-secondary); }
+    .content-section { margin-bottom: 38px; }
+    .content-section h2 { font-family: 'Poppins', sans-serif; font-size: 1.75rem; margin-bottom: 15px; color: var(--primary); }
+    .content-section ul, .content-section ol { margin-left: 20px; margin-bottom: 15px; }
+    .content-section li { margin-bottom: 8px; }
+    .back-link { display: inline-block; margin-bottom: 30px; color: var(--primary); text-decoration: none; font-weight: 500; }
+  </style>
+  <script type="application/ld+json">
+  {
+    "@context": "https://schema.org",
+    "@type": "Article",
+    "headline": "Manga Tracker for Chapters, Volumes, Reviews and Statistics",
+    "description": "A guide to tracking manga, manhwa and manhua with OmniTrackr, including chapters, volumes, simulpubs, hiatuses, anime adaptations, reviews and statistics.",
+    "dateModified": "2026-10-27",
+    "author": { "@type": "Organization", "name": "OmniTrackr" },
+    "publisher": { "@type": "Organization", "name": "OmniTrackr", "url": "https://omnitrackr.xyz" },
+    "mainEntityOfPage": "https://omnitrackr.xyz/manga-tracker",
+    "inLanguage": "en-US"
+  }
+  </script>
+  <link rel="stylesheet" href="/static/public-reader.css?v=20261017-reader-2">
+</head>
+
+<body class="public-reader site">
+  <a class="reader-skip" href="#reader-main">Skip to guide</a>
+  <!--SITE_NAV:guides-->
+  <div class="reader-shell">
+    <main id="reader-main" tabindex="-1" class="reader-main content-container">
+<a href="/media-tracking" class="back-link">Back to Media Tracking Hub</a>
+      <header class="content-header">
+        <h1>Manga Tracker</h1>
+        <p>Track manga, manhwa and manhua by volume and chapter, save the exact chapter you stopped on, and keep every series next to the anime it became.</p>
+      </header>
+      <details class="reader-contents">
+        <summary>On this page</summary>
+        <nav aria-label="On this page">
+          <a href="#why-heading">Why manga needs its own shelf</a>
+          <a href="#start-heading">Start your manga shelf in a few minutes</a>
+          <a href="#chapters-heading">Chapters, volumes and simulpubs</a>
+          <a href="#formats-heading">Manhwa, manhua and webtoons</a>
+          <a href="#anime-heading">When the anime ends and the manga keeps going</a>
+          <a href="#hiatus-heading">Ongoing series, hiatuses and long runs</a>
+          <a href="#review-heading">Writing a manga review people can use</a>
+          <a href="#stats-heading">Manga statistics</a>
+          <a href="#privacy-heading">Privacy, backups and moving your list</a>
+          <a href="#related-heading">Related pages</a>
+        </nav>
+      </details>
+
+      <section class="content-section" aria-labelledby="why-heading">
+        <h2 id="why-heading">Why manga needs its own shelf</h2>
+        <p>A manga is not quite a book and not quite a TV show. It comes out in chapters like an episode, gets collected into volumes like a novel, and can run for decades. A single series might have a hundred chapters you read weekly on a phone, twenty volumes on a physical shelf, and a two-season anime that covers only part of the story. A general reading list flattens all of that into one line, and a TV tracker has no idea what a volume is.</p>
+        <p>OmniTrackr gives manga its own shelf with the fields that matter for it: the mangaka, the year serialization began, genres and demographics such as seinen or shoujo, the number of volumes and chapters, your rating, your review and a read status. The shelf sits beside your anime, books, films, shows, games and albums, so you can see that you loved both the manga and the anime of one series, or that you dropped the adaptation and finished the source instead.</p>
+      </section>
+
+      <section class="content-section" aria-labelledby="start-heading">
+        <h2 id="start-heading">Start your manga shelf in a few minutes</h2>
+        <ol>
+          <li>Open the <strong>Manga</strong> tab in your dashboard and choose <strong>Add Manga</strong>.</li>
+          <li>Type a title and press <strong>Search</strong>. Results come from MyAnimeList through the free Jikan API and fill in the mangaka, the first year of publication, genres, volume and chapter counts, and cover art. English and Japanese titles both work.</li>
+          <li>Tick <strong>Read</strong> only when you have finished the series, or when you have caught up with a series that has ended. For anything you are partway through, leave it unticked.</li>
+          <li>Choose <strong>Update progress</strong> on any saved series and enter the last chapter you finished. A private reminder such as "volume 9 is on the shelf, chapter 74 onwards is digital" is optional.</li>
+          <li>Already have a list elsewhere? The Import Studio reads a MyAnimeList XML export or fetches a public AniList profile by username, and both put manga on the manga shelf and light novels on the books shelf.</li>
+        </ol>
+        <p>If a search does not find a series, add it by hand. Only the title is required. Doujinshi, small-press comics and webcomics often have no database entry, and a title with a few notes is still worth keeping.</p>
+      </section>
+
+      <section class="content-section" aria-labelledby="chapters-heading">
+        <h2 id="chapters-heading">Chapters, volumes and simulpubs</h2>
+        <p>Most manga is published twice. Chapters first appear in a weekly or monthly magazine, and every so often a batch of chapters is gathered into a tankōbon volume, sometimes with redrawn pages, bonus art or author notes. English readers meet the same split: some read new chapters the day they come out through official simultaneous-publication services, and others wait for the printed volumes.</p>
+        <p>That is why the manga shelf stores both counts and why progress is saved by chapter. Chapter numbers stay the same whether you read digitally or in print, so a checkpoint keeps working if you switch formats halfway through. If you only read collected editions, you can still save a chapter: the first page of each volume lists the chapters it contains. The volume count is useful for collectors who want to see how many books a series takes up, and for anyone deciding whether a recommendation is a weekend or a year.</p>
+        <p>Bonus chapters, side stories and numbered half-chapters such as 45.5 are common. Save the main chapter you finished, and use the private reminder for anything unusual.</p>
+      </section>
+
+      <section class="content-section" aria-labelledby="formats-heading">
+        <h2 id="formats-heading">Manhwa, manhua and webtoons</h2>
+        <p>The manga shelf is meant for comics from Japan, Korea and China alike. Japanese manga usually reads right to left in black and white. Korean manhwa and Chinese manhua are often published in full colour, and many are vertical-scroll webtoons made for phones, where an episode is one long strip rather than a set of pages. They are counted in episodes or chapters too, so the same progress tool works.</p>
+        <p>Use the genre field to keep these apart if it helps. A tag such as "manhwa" or "webtoon" next to the genres lets you search your shelf for them later, and keeps your statistics honest when you want to know how much of your reading is Korean versus Japanese.</p>
+      </section>
+
+      <section class="content-section" aria-labelledby="anime-heading">
+        <h2 id="anime-heading">When the anime ends and the manga keeps going</h2>
+        <p>A very common reason to start a manga is that the anime stopped. Adaptations usually cover the opening arcs, and a second season may be years away or never come. The manga shelf and the anime shelf are separate on purpose, so you can track both: your anime entry keeps its own episode progress, and your manga entry starts at the chapter where the adaptation ends.</p>
+        <p>Before you jump in at that chapter, consider going back a little. Adaptations often skip side chapters, compress internal monologue or reorder scenes, and the first chapters after the cut can lean on details the anime left out. Many readers start one or two volumes early and find the overlap is worth it. When you finish, a note on how the two versions compare is one of the most useful things you can write in a review.</p>
+      </section>
+
+      <section class="content-section" aria-labelledby="hiatus-heading">
+        <h2 id="hiatus-heading">Ongoing series, hiatuses and long runs</h2>
+        <p>Plenty of the most popular manga are still running, and some have passed a thousand chapters. Others pause for months or years when an author is unwell. That makes "finished" an awkward idea. A practical rule: leave ongoing series unticked, save your latest chapter as a checkpoint, and add the series to <strong>Next up</strong> when a new volume is due. When a long hiatus starts, the private reminder is a good place to note where the story had reached, so you are not lost when it returns.</p>
+        <p>For very long series it helps to rate by arc in your notes rather than all at once. "The first two arcs are a 9, the middle sags, the final war is worth it" tells you much more in a year's time than a single number.</p>
+      </section>
+
+      <section class="content-section" aria-labelledby="review-heading">
+        <h2 id="review-heading">Writing a manga review people can use</h2>
+        <p>Manga reviews are most helpful when they talk about the things that are specific to comics. Is the art detailed or sketchy, and does it get better as the series goes on, as it often does? Are action scenes easy to follow across panels? Does the pacing drag in weekly-serialization filler, or does it read well in volumes? Say how far you read, especially for a long series, and whether the ending is complete or rushed.</p>
+        <p>It also helps to say who the series is for. Demographics such as shōnen, seinen, shōjo and josei describe the magazine a series ran in rather than who is allowed to enjoy it, so a sentence like "a quiet slice-of-life that works for adults who never read manga" is more useful than the label alone. Mention content that some readers want to know about first. Spoilers can be hidden behind a warning on public reviews.</p>
+        <p>To appear in OmniTrackr's public review feed, a review needs at least 80 characters, and a review with more than 240 characters and 35 words can have its own page. The <a href="/review-guidelines">review guidelines</a> explain what makes a review substantial.</p>
+      </section>
+
+      <section class="content-section" aria-labelledby="stats-heading">
+        <h2 id="stats-heading">Manga statistics</h2>
+        <p>The Statistics tab has a manga section with read and unread counts, your average rating, a rating spread, the years your series started and your most common genres. It also adds up volumes and chapters: how many sit on your shelf, and how many belong to series you have finished. Those numbers make it easy to see whether your list is mostly long shōnen runs or short complete stories, and whether the series you start are the ones you finish.</p>
+        <p>Manga also counts toward your yearly goals, your year-end recap, the Manga Reader badge and your public profile shelves, and finished series can be added to cross-media collections next to the anime, films and games they connect to.</p>
+      </section>
+
+      <section class="content-section" aria-labelledby="privacy-heading">
+        <h2 id="privacy-heading">Privacy, backups and moving your list</h2>
+        <p>Your manga shelf follows the same privacy rules as the rest of OmniTrackr. In Settings you can make manga private, so friends and public pages never see it, or hide the Manga tab if you do not read manga at all. Chapter checkpoints and their reminders are always private, even when a review is public.</p>
+        <p>Manga is included in your JSON backup and restore, and older backups without a manga section still import exactly as before. If you imported a MyAnimeList or AniList list before the manga shelf existed, those series were filed under Books. They stay there untouched, and importing the same list again will not add a second copy.</p>
+      </section>
+
+      <section class="content-section" aria-labelledby="related-heading">
+        <h2 id="related-heading">Related pages</h2>
+        <p>Read the <a href="/anime-tracker">anime tracker guide</a> for the screen side of the same series, the <a href="/book-tracker">book tracker guide</a> for light novels and prose, or the <a href="/export-import-guide">migration guide</a> to bring a MyAnimeList or AniList list across. For broader workflows, visit the <a href="/media-tracking">media tracking hub</a>, or browse <a href="/reviews?category=manga">manga reviews</a>.</p>
+      </section>
+    </main>
+  </div>
+  <!--SITE_FOOTER-->
+</body>
+
+</html>

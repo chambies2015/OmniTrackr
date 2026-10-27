@@ -162,7 +162,7 @@ def test_mal_xml_and_gzip_become_anime_and_books():
         assert items["Cowboy Bebop"].data["review"] == "See you, space cowboy."
         assert items["Frieren"].data["rating"] is None
         assert items["Frieren"].data["watched"] is False
-        assert items["Berserk"].category == "books"
+        assert items["Berserk"].category == "manga"
         assert items["Berserk"].data["read"] is False
 
 
@@ -218,7 +218,7 @@ def test_anilist_lists_become_anime_and_books_once_each():
     assert items["Attack on Titan"].data["year"] == 2013
     assert items["Attack on Titan"].data["watched"] is True
     assert items["Mushishi"].data["watched"] is False
-    assert items["Vagabond"].category == "books"
+    assert items["Vagabond"].category == "manga"
     assert items["Vagabond"].data["read"] is True
 
 

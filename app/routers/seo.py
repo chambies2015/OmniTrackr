@@ -39,6 +39,7 @@ REVIEW_CATEGORY_MODELS = (
     ("video_game", models.VideoGame),
     ("music", models.Music),
     ("book", models.Book),
+    ("manga", models.Manga),
 )
 # A sitemap is a recommendation, not an inventory dump. Supporting pages remain
 # reachable through navigation, while this list concentrates crawling on the
@@ -68,6 +69,7 @@ CORE_SITEMAP_PATHS = (
     ("/anime-tracker", "monthly", "0.75"),
     ("/game-tracker", "monthly", "0.75"),
     ("/book-tracker", "monthly", "0.75"),
+    ("/manga-tracker", "monthly", "0.75"),
     ("/music-tracker", "monthly", "0.75"),
     ("/use-cases", "monthly", "0.7"),
 )
@@ -155,6 +157,11 @@ def _database_parts(db: Session) -> list[str]:
             public_detail_review_filter(models.Book)
         ).limit(review_limit // 6).all()
         book_reviews = page_worthy(visible_search_ready("book", book_reviews))
+
+        manga_reviews = db.query(models.Manga).filter(
+            public_detail_review_filter(models.Manga)
+        ).limit(review_limit // 6).all()
+        manga_reviews = page_worthy(visible_search_ready("manga", manga_reviews))
         
         for review in movie_reviews:
             sitemap_parts.append(f"""  <url>
@@ -199,6 +206,14 @@ def _database_parts(db: Session) -> list[str]:
         for review in book_reviews:
             sitemap_parts.append(f"""  <url>
     <loc>{base_url}/reviews/{review.id}?category=book</loc>
+    <lastmod>{today}</lastmod>
+    <changefreq>monthly</changefreq>
+    <priority>0.6</priority>
+  </url>""")
+
+        for review in manga_reviews:
+            sitemap_parts.append(f"""  <url>
+    <loc>{base_url}/reviews/{review.id}?category=manga</loc>
     <lastmod>{today}</lastmod>
     <changefreq>monthly</changefreq>
     <priority>0.6</priority>
@@ -420,6 +435,7 @@ Disallow: /anime/
 Disallow: /video-games/
 Disallow: /music/
 Disallow: /books/
+Disallow: /manga/
 Disallow: /statistics/
 Disallow: /custom-tabs/
 Disallow: /export/
@@ -504,6 +520,7 @@ OmniTrackr is a free web application for tracking and organizing movies, TV show
 - Movie tracker guide: {base_url}/movie-tracker
 - Anime tracker guide: {base_url}/anime-tracker
 - Book tracker guide: {base_url}/book-tracker
+- Manga tracker guide: {base_url}/manga-tracker
 - Music tracker guide: {base_url}/music-tracker
 - Media statistics guide: {base_url}/media-statistics
 - Export and import guide: {base_url}/export-import-guide
@@ -525,7 +542,7 @@ OmniTrackr is a free web application for tracking and organizing movies, TV show
 - Community Collections: {base_url}/collections/explore
 
 ## Features
-- Track movies, TV shows, anime, video games, music, and books
+- Track movies, TV shows, anime, video games, music, books, and manga
 - Rate and review media with detailed reviews
 - Statistics dashboard with comprehensive analytics
 - Export/import data in JSON format
@@ -541,6 +558,7 @@ OmniTrackr is a free web application for tracking and organizing movies, TV show
 - Video Games: Reviews and ratings for video games
 - Music: Reviews and ratings for albums and artists
 - Books: Reviews and ratings for books
+- Manga: Reviews and ratings for manga, manhwa and manhua
 
 ## Public Content
 Public reviews are available at {base_url}/reviews and individual review pages at {base_url}/reviews/[id]?category=[category]. OmniTrackr also publishes evergreen guidance at {base_url}/faq, {base_url}/guides, {base_url}/media-tracking, {base_url}/compare, {base_url}/use-cases, {base_url}/movie-tracker, {base_url}/tv-show-tracker, {base_url}/anime-tracker, {base_url}/game-tracker, {base_url}/music-tracker, {base_url}/book-tracker, {base_url}/media-statistics, {base_url}/export-import-guide, {base_url}/media-tracker-checklist, {base_url}/tracking-templates, and {base_url}/review-guidelines, a demo library at {base_url}/demo, a sample media library at {base_url}/sample-library, a human-readable site map at {base_url}/site-map, product updates at {base_url}/changelog and {base_url}/roadmap, ad transparency at {base_url}/advertising, and editorial standards at {base_url}/content-quality.

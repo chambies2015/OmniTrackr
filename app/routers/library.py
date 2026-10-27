@@ -18,6 +18,7 @@ CATEGORIES = {
     "video-games": (models.VideoGame, schemas.VideoGame, "Game", "played", ("title", "genres")),
     "music": (models.Music, schemas.Music, "Album", "listened", ("title", "artist", "genre")),
     "books": (models.Book, schemas.Book, "Book", "read", ("title", "author", "genre")),
+    "manga": (models.Manga, schemas.Manga, "Manga", "read", ("title", "author", "genre")),
 }
 
 
@@ -67,9 +68,9 @@ def library_page(
     response.headers["Cache-Control"] = "private, no-store"
     if category not in CATEGORIES:
         raise HTTPException(status_code=404, detail="Unknown media category")
-    if has_progress and category not in {"tv-shows", "anime", "books"}:
+    if has_progress and category not in {"tv-shows", "anime", "books", "manga"}:
         raise HTTPException(
-            status_code=422, detail="Saved progress is available for TV shows, anime, and books",
+            status_code=422, detail="Saved progress is available for TV shows, anime, books, and manga",
             headers={"Cache-Control": "private, no-store"},
         )
     model, schema, _, completion_field, fields = CATEGORIES[category]

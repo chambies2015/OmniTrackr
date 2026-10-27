@@ -52,6 +52,11 @@ def get_all_books(db: Session, user_id: int) -> List[models.Book]:
     return db.query(models.Book).filter(models.Book.user_id == user_id).all()
 
 
+def get_all_manga(db: Session, user_id: int) -> List[models.Manga]:
+    """Get all manga for export"""
+    return db.query(models.Manga).filter(models.Manga.user_id == user_id).all()
+
+
 def get_all_custom_tabs_with_items(db: Session, user_id: int) -> List[dict]:
     """Get all custom tabs with their items for export"""
     import json
@@ -204,6 +209,10 @@ def find_book_by_title_and_author(db: Session, user_id: int, title: str, author:
 
 def import_books(db: Session, user_id: int, books) -> tuple[int, int, List[str]]:
     return _import_media(db, user_id, books, models.Book, ("title", "author", "year"), "book")
+
+
+def import_manga(db: Session, user_id: int, manga) -> tuple[int, int, List[str]]:
+    return _import_media(db, user_id, manga, models.Manga, ("title", "author", "year"), "manga")
 
 
 def import_custom_tabs(db: Session, user_id: int, custom_tabs_data: List[dict]) -> tuple[int, int, List[str]]:

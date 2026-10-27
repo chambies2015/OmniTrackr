@@ -21,7 +21,7 @@ function setup(fetch) {
   const context = vm.createContext({ document: { getElementById: get, createElement: make },
     API_BASE: '', authenticatedFetch: fetch, toggleCollapsible() {}, loadBooks() { loads++; } });
   const start = source.indexOf("document.getElementById('addBookForm').onsubmit =");
-  vm.runInContext(source.slice(start, source.indexOf('// Export/Import functions', start)), context);
+  vm.runInContext(source.slice(start, source.indexOf('async function searchMangaMetadata()', start)), context);
   return { get, submit, form, loads: () => loads, save: () => form.onsubmit({ preventDefault() {} }) };
 }
 

@@ -42,6 +42,7 @@ WIKIDATA_HINTS = {
     "anime": ("anime", "animated television series", "animated series"),
     "game": ("video game",),
     "book": ("novel", "book", "novella", "memoir", "short story collection", "non-fiction"),
+    "manga": ("manga", "manhwa", "manhua", "webtoon", "comic series", "comic book series"),
     "album": ("album",),
 }
 WIKIDATA_EXCLUDE = {
@@ -50,6 +51,7 @@ WIKIDATA_EXCLUDE = {
     "anime": ("episode", "season of", "film"),
     "game": ("series", "franchise", "soundtrack"),
     "book": ("film", "series of", "television"),
+    "manga": ("anime", "film", "episode", "chapter", "television", "video game"),
     "album": ("single", "song"),
 }
 # Wikidata properties shown as facts: (property, label, kind)
@@ -64,6 +66,7 @@ FACT_PROPERTIES = {
              ("P404", "Game mode", "item")),
     "book": (("P50", "Author", "item"), ("P123", "Publisher", "item"), ("P1104", "Pages", "number"),
              ("P179", "Series", "item")),
+    "manga": (("P50", "Author", "item"), ("P123", "Publisher", "item"), ("P1433", "Serialized in", "item")),
     "album": (("P175", "Artist", "item"), ("P264", "Record label", "item"), ("P2047", "Length", "minutes")),
 }
 SCORE_PUBLISHERS = {"Q105584": "Rotten Tomatoes", "Q150248": "Metacritic", "Q37312": "IMDb",
@@ -421,6 +424,34 @@ async def jikan_details(client, title: str, year: Optional[int]) -> dict:
     }
 
 
+async def jikan_manga_details(client, title: str, year: Optional[int]) -> dict:
+    data = await _get_json(client, "https://api.jikan.moe/v4/manga", {"q": title, "limit": 6, "sfw": "true"}) or {}
+    manga = None
+    for result in data.get("data", []):
+        names = [result.get("title"), result.get("title_english")] + [t.get("title") for t in result.get("titles") or []]
+        published = ((result.get("published") or {}).get("from") or "")[:4]
+        if any(_title_matches(title, name or "") for name in names) and (not year or published == str(year) or not published):
+            manga = result
+            break
+    if manga is None:
+        return {}
+    facts = []
+    for key, label in (("volumes", "Volumes"), ("chapters", "Chapters"), ("status", "Status"), ("type", "Format")):
+        if manga.get(key):
+            facts.append({"label": label, "value": str(manga[key])})
+    magazines = [m.get("name") for m in manga.get("serializations") or [] if m.get("name")]
+    if magazines:
+        facts.append({"label": "Serialized in", "value": ", ".join(magazines[:2])})
+    return {
+        "url": _https(manga.get("url")),
+        "released": ((manga.get("published") or {}).get("from") or "")[:10] or None,
+        "genres": [g.get("name") for g in (manga.get("genres") or []) + (manga.get("demographics") or []) if g.get("name")],
+        "poster": _https(((manga.get("images") or {}).get("jpg") or {}).get("large_image_url")),
+        "facts": facts,
+        "score": {"source": "MyAnimeList", "value": f"{manga['score']}/10"} if manga.get("score") else None,
+    }
+
+
 async def openlibrary_details(client, title: str, year: Optional[int], creator: Optional[str]) -> dict:
     params = {"title": title, "limit": 6, "fields": "key,title,author_name,first_publish_year,cover_i,number_of_pages_median,subject,ratings_average,ratings_count"}
     if creator:
@@ -500,6 +531,7 @@ async def fetch(client, category: str, title: str, year: Optional[int], creator:
         "anime": lambda: jikan_details(client, title, year),
         "game": lambda: rawg_details(client, title, year),
         "book": lambda: openlibrary_details(client, title, year, creator),
+        "manga": lambda: jikan_manga_details(client, title, year),
         "album": lambda: itunes_details(client, title, year, creator),
     }.get(category)
     wiki, extra = await asyncio.gather(
@@ -534,7 +566,8 @@ async def fetch(client, category: str, title: str, year: Optional[int], creator:
         sources.append({"name": "Wikidata", "url": f"https://www.wikidata.org/wiki/{wikidata['qid']}", "license": "CC0"})
     if wikidata.get("imdb_url"):
         links.append({"label": "IMDb", "url": wikidata["imdb_url"]})
-    extra_names = {"tv": "TVmaze", "anime": "MyAnimeList", "game": "RAWG", "book": "Open Library", "album": "Apple Music"}
+    extra_names = {"tv": "TVmaze", "anime": "MyAnimeList", "game": "RAWG", "book": "Open Library", "album": "Apple Music",
+                   "manga": "MyAnimeList"}
     if extra.get("url"):
         links.append({"label": extra_names[category], "url": extra["url"]})
         sources.append({"name": extra_names[category], "url": extra["url"],

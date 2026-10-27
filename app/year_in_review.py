@@ -28,6 +28,7 @@ CATEGORIES = {
     "video-games": (models.VideoGame, "Games", "played", "played", "video_games_private"),
     "music": (models.Music, "Albums", "listened", "listened to", "music_private"),
     "books": (models.Book, "Books", "read", "read", "books_private"),
+    "manga": (models.Manga, "Manga", "read", "read", "manga_private"),
 }
 # Add dates were first recorded in October 2026; earlier items have none.
 ADD_DATES_FIRST_YEAR = 2026
@@ -40,6 +41,7 @@ CREATORS = {
     "movies": (models.Movie, "director", "director"),
     "music": (models.Music, "artist", "artist"),
     "books": (models.Book, "author", "author"),
+    "manga": (models.Manga, "author", "mangaka"),
 }
 # Persona when one shelf is most of the year's finishes: (name, line with {n} finishes)
 SHELF_PERSONAS = {
@@ -49,6 +51,7 @@ SHELF_PERSONAS = {
     "video-games": ("The Quest Finisher", "{n} games played through to the end."),
     "music": ("The Crate Digger", "{n} albums listened to, start to finish."),
     "books": ("The Bookworm", "{n} books read. Your bookmark worked overtime."),
+    "manga": ("The Volume Hoarder", "{n} manga series read, right to left."),
 }
 
 

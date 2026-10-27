@@ -76,6 +76,15 @@ from .books import (
     delete_book,
 )
 
+# Manga CRUD operations
+from .manga import (
+    get_manga,
+    get_manga_by_id,
+    create_manga,
+    update_manga,
+    delete_manga,
+)
+
 # Export/Import operations
 from .export_import import (
     get_all_movies,
@@ -84,6 +93,7 @@ from .export_import import (
     get_all_video_games,
     get_all_music,
     get_all_books,
+    get_all_manga,
     get_all_custom_tabs_with_items,
     find_movie_by_title_and_director,
     find_tv_show_by_title_and_year,
@@ -97,6 +107,7 @@ from .export_import import (
     import_video_games,
     import_music,
     import_books,
+    import_manga,
     import_custom_tabs,
 )
 
@@ -112,6 +123,7 @@ from .statistics import (
     get_video_game_statistics,
     get_music_statistics,
     get_books_statistics,
+    get_manga_statistics,
 )
 
 # Friends, Friend Requests, Notifications, and Friend Profile operations
@@ -139,6 +151,7 @@ from .friends import (
     get_friend_video_games,
     get_friend_music,
     get_friend_books,
+    get_friend_manga,
     get_friend_statistics,
 )
 
@@ -212,6 +225,12 @@ __all__ = [
     "create_book",
     "update_book",
     "delete_book",
+    # Manga operations
+    "get_manga",
+    "get_manga_by_id",
+    "create_manga",
+    "update_manga",
+    "delete_manga",
     # Export/Import operations
     "get_all_movies",
     "get_all_tv_shows",
@@ -219,6 +238,7 @@ __all__ = [
     "get_all_video_games",
     "get_all_music",
     "get_all_books",
+    "get_all_manga",
     "get_all_custom_tabs_with_items",
     "find_movie_by_title_and_director",
     "find_tv_show_by_title_and_year",
@@ -232,6 +252,7 @@ __all__ = [
     "import_video_games",
     "import_music",
     "import_books",
+    "import_manga",
     "import_custom_tabs",
     # Statistics operations
     "get_watch_statistics",
@@ -244,6 +265,7 @@ __all__ = [
     "get_video_game_statistics",
     "get_music_statistics",
     "get_books_statistics",
+    "get_manga_statistics",
     # Friends operations
     "create_friend_request",
     "get_friend_request",
@@ -270,6 +292,7 @@ __all__ = [
     "get_friend_video_games",
     "get_friend_music",
     "get_friend_books",
+    "get_friend_manga",
     "get_friend_statistics",
     # Custom Tab operations
     "get_custom_tabs",

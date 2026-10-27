@@ -214,3 +214,62 @@ async def proxy_openlibrary_api(
         raise HTTPException(status_code=504, detail="Open Library API connection error - may be due to network issues or VPN blocking")
     except Exception:
         raise HTTPException(status_code=500, detail="Error fetching from Open Library API")
+
+
+def _jikan_person_name(name: str) -> str:
+    """MyAnimeList stores "Oda, Eiichiro"; readers know "Eiichiro Oda"."""
+    family, _, given = (name or "").partition(", ")
+    return f"{given} {family}".strip() if given else (name or "").strip()
+
+
+def normalize_jikan_manga(entry: dict) -> dict:
+    published = (entry.get("published") or {}).get("prop", {}).get("from", {}) or {}
+    images = (entry.get("images") or {}).get("jpg") or {}
+    genres = [genre.get("name") for genre in (entry.get("genres") or []) + (entry.get("demographics") or []) if genre.get("name")]
+    authors = [_jikan_person_name(author.get("name", "")) for author in entry.get("authors") or []]
+    return {
+        "mal_id": entry.get("mal_id"),
+        "title": entry.get("title_english") or entry.get("title") or "",
+        "original_title": entry.get("title") or "",
+        "type": entry.get("type") or "Manga",
+        "author": ", ".join(name for name in authors[:2] if name) or None,
+        "year": published.get("year"),
+        "genre": ", ".join(genres[:3]) or None,
+        "volumes": entry.get("volumes"),
+        "chapters": entry.get("chapters"),
+        "status": entry.get("status"),
+        "cover_art_url": images.get("large_image_url") or images.get("image_url"),
+    }
+
+
+@router.get("/api/proxy/jikan-manga")
+async def proxy_jikan_manga_api(
+    request: Request,
+    current_user: models.User = Depends(get_current_user),
+    query: str = Query(..., description="Manga, manhwa or manhua title to search", max_length=200)
+):
+    """Proxy endpoint for Jikan's manga search (MyAnimeList). No API key required.
+
+    Results come back already shaped for the manga form, safe-for-work only.
+    """
+    try:
+        response = await request.app.state.external_api_client.get(
+            "https://api.jikan.moe/v4/manga", params={"q": query[:200], "limit": 10, "sfw": "true"},
+        )
+        if response.status_code == 429:
+            raise HTTPException(status_code=429, detail="Jikan API rate limit reached")
+        response.raise_for_status()
+        entries = response.json().get("data") or []
+        return {"results": [normalize_jikan_manga(entry) for entry in entries if isinstance(entry, dict)]}
+    except HTTPException:
+        raise
+    except httpx.HTTPStatusError as e:
+        if e.response.status_code >= 500:
+            raise HTTPException(status_code=504, detail="Jikan API server error - may be due to network issues or VPN blocking")
+        raise HTTPException(status_code=e.response.status_code, detail="Jikan API request failed")
+    except httpx.TimeoutException:
+        raise HTTPException(status_code=504, detail="Jikan API request timeout - may be due to network issues or VPN blocking")
+    except httpx.TransportError:
+        raise HTTPException(status_code=504, detail="Jikan API connection error - may be due to network issues or VPN blocking")
+    except Exception:
+        raise HTTPException(status_code=500, detail="Error fetching from Jikan API")

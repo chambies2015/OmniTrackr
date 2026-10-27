@@ -17,7 +17,8 @@ const importStudioMappingFields = [
 const importStudioCategories = {
   movies: ['Movies', 'Watched', 'Not watched'], 'tv-shows': ['TV shows', 'Watched', 'Not watched'],
   anime: ['Anime', 'Watched', 'Not watched'], 'video-games': ['Games', 'Played', 'Not played'],
-  music: ['Music', 'Listened', 'Not listened'], books: ['Books', 'Read', 'Not read']
+  music: ['Music', 'Listened', 'Not listened'], books: ['Books', 'Read', 'Not read'],
+  manga: ['Manga', 'Read', 'Not read']
 };
 const importStudioSources = {
   letterboxd: 'a Letterboxd export', goodreads: 'a Goodreads export', myanimelist: 'a MyAnimeList export',
@@ -29,7 +30,7 @@ const IMPORT_STUDIO_STRUCTURED = /\.(zip|xml|gz|json)$/i;
 const ANILIST_QUERY = `query ($name: String, $type: MediaType) {
   MediaListCollection(userName: $name, type: $type) {
     lists { name entries { status score(format: POINT_10_DECIMAL) notes
-      media { id format episodes seasonYear startDate { year } title { english romaji } } } }
+      media { id format episodes chapters volumes seasonYear startDate { year } title { english romaji } } } }
   }
 }`;
 

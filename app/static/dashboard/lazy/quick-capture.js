@@ -87,6 +87,14 @@ function normalizeQuickCapturePayload(category, payload) {
       item
     ));
   }
+  if (category === 'manga') {
+    return (payload?.results || []).slice(0, 4).map(item => result(
+      item.title,
+      [item.author, item.year, item.volumes ? `${item.volumes} volumes` : ''].filter(Boolean).join(' · '),
+      item.cover_art_url || '',
+      item
+    ));
+  }
   if (category === 'books') {
     return (payload?.docs || []).slice(0, 4).map(item => {
       const coverId = item.cover_i || item.isbn?.[0];
@@ -129,7 +137,7 @@ async function fetchQuickCaptureCategory(category, query, signal) {
             : unavailable('unavailable');
         }
         const valid = category === 'movies' || category === 'tv-shows' ? typeof payload?.Title === 'string'
-          : Array.isArray(payload?.[{ anime: 'data', 'video-games': 'results', music: 'results', books: 'docs' }[category]]);
+          : Array.isArray(payload?.[{ anime: 'data', 'video-games': 'results', music: 'results', books: 'docs', manga: 'results' }[category]]);
         if (!valid) return unavailable('unavailable');
         return { category, results: normalizeQuickCapturePayload(category, payload), unavailable: false };
       } catch (_) {
@@ -149,7 +157,7 @@ function updateQuickCaptureStatus(search) {
   const status = document.getElementById('quickCaptureStatus');
   if (!status) return;
   if (search.manualRequested) {
-    status.textContent = 'Choose Movies, TV, Anime, Games, Music, or Books before continuing manually.';
+    status.textContent = 'Choose Movies, TV, Anime, Games, Music, Books, or Manga before continuing manually.';
     return;
   }
   const groups = Array.from(search.groups.values());
@@ -288,6 +296,7 @@ function prepareQuickCaptureDestination(category, title) {
     'video-games': { form: 'videoGameForm', title: 'videoGameTitle', completed: 'videoGamePlayed' },
     music: { form: 'musicForm', title: 'musicTitle', completed: 'musicListened' },
     books: { form: 'bookForm', title: 'bookTitle', completed: 'bookRead' },
+    manga: { form: 'mangaForm', title: 'mangaTitle', completed: 'mangaRead' },
   };
   const destination = destinations[category];
   if (!destination) return null;
@@ -298,6 +307,7 @@ function prepareQuickCaptureDestination(category, title) {
     'video-games': 'addVideoGameForm',
     music: 'addMusicForm',
     books: 'addBookForm',
+    manga: 'addMangaForm',
   }[category]);
   const hasDraft = form && Array.from(form.elements).some(field => {
     if (field.type === 'submit' || field.type === 'button') return false;
@@ -360,6 +370,13 @@ function applyQuickCaptureResult(index) {
     setQuickCaptureField('bookGenre', (data.subject || []).slice(0, 3).join(', '));
     const coverId = data.cover_i || data.isbn?.[0];
     if (coverId) destination.titleInput.dataset.coverArtUrl = `https://covers.openlibrary.org/b/id/${coverId}-L.jpg`;
+  } else if (item.category === 'manga') {
+    setQuickCaptureField('mangaAuthor', data.author || '');
+    setQuickCaptureField('mangaYear', data.year || '');
+    setQuickCaptureField('mangaGenre', data.genre || '');
+    setQuickCaptureField('mangaVolumes', data.volumes ?? '');
+    setQuickCaptureField('mangaChapters', data.chapters ?? '');
+    if (data.cover_art_url) destination.titleInput.dataset.coverArtUrl = data.cover_art_url;
   }
 
   closeQuickCapture();

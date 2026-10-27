@@ -25,7 +25,8 @@ LETTERBOXD_FILES = ("watched.csv", "diary.csv", "ratings.csv", "reviews.csv", "w
 LETTERBOXD_SKIPPED_FOLDERS = {"deleted", "orphaned", "lists", "likes"}
 MAL_FINISHED = {"completed", "2"}
 ANILIST_FINISHED = {"COMPLETED", "REPEATING"}
-ANILIST_BOOK_FORMATS = {"MANGA", "NOVEL", "ONE_SHOT"}
+# Light novels are books; manga, manhwa, manhua and one-shots go on the manga shelf.
+ANILIST_BOOK_FORMATS = {"NOVEL"}
 
 Row = dict[str, str]
 
@@ -59,12 +60,16 @@ def _score(value: Any, scale: float = 1.0) -> str:
 
 
 def _row(category: str, title: str, *, year: Any = "", creator: str = "", rating: str = "",
-         completed: bool = False, review: str = "", episodes: Any = "") -> Row:
-    return {
+         completed: bool = False, review: str = "", episodes: Any = "", chapters: Any = "", volumes: Any = "") -> Row:
+    row = {
         "category": category, "title": title.strip(), "year": _text(year), "creator": creator,
         "rating": rating, "completed": "yes" if completed else "no", "review": review.strip(),
         "episodes": _text(episodes) if _number(episodes) else "",
     }
+    if category == "manga":
+        row["chapters"] = _text(chapters) if _number(chapters) else ""
+        row["volumes"] = _text(volumes) if _number(volumes) else ""
+    return row
 
 
 def _gunzip(content: bytes) -> bytes:
@@ -267,8 +272,11 @@ def _anilist_rows(document: dict[str, Any]) -> list[Row]:
                 year = ((media.get("startDate") or {}).get("year")) or media.get("seasonYear") or ""
                 review = _text(entry.get("notes"))
                 rating = _score(entry.get("score"))
-                if key == "manga" or _text(media.get("format")).upper() in ANILIST_BOOK_FORMATS:
+                if _text(media.get("format")).upper() in ANILIST_BOOK_FORMATS:
                     rows.append(_row("books", title, year=year, rating=rating, completed=finished, review=review))
+                elif key == "manga":
+                    rows.append(_row("manga", title, year=year, rating=rating, completed=finished, review=review,
+                                     chapters=media.get("chapters"), volumes=media.get("volumes")))
                 else:
                     rows.append(_row("anime", title, year=year, rating=rating, completed=finished,
                                      review=review, episodes=media.get("episodes")))
@@ -305,7 +313,8 @@ def _mal_rows(text: str) -> list[Row]:
         elif node.tag == "manga":
             title = value(node, "manga_title")
             if title:
-                rows.append(_row("books", title, rating=rating, completed=status in MAL_FINISHED, review=review))
+                rows.append(_row("manga", title, rating=rating, completed=status in MAL_FINISHED, review=review,
+                                 chapters=value(node, "manga_chapters"), volumes=value(node, "manga_volumes")))
     return rows
 
 

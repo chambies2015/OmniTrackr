@@ -17,8 +17,8 @@ def test_refresh_loads_right_after_the_shelf_styles():
 
 
 def test_each_library_groups_its_data_tools_and_keeps_their_ids():
-    assert INDEX.count('<div class="library-utilities" role="group" aria-label="Library data">') == 6
-    for prefix in ("Movies", "TVShows", "Anime", "Music", "Books", "VideoGames"):
+    assert INDEX.count('<div class="library-utilities" role="group" aria-label="Library data">') == 7
+    for prefix in ("Movies", "TVShows", "Anime", "Music", "Books", "VideoGames", "Manga"):
         for action in ("load", "export", "import"):
             assert f'id="{action}{prefix}"' in INDEX
 
