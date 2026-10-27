@@ -374,7 +374,7 @@ def _glance_html(view, *, signed_in: bool, since: str) -> str:
     rows = "".join(f'<div><dt>{_e(label)}</dt><dd>{value}</dd></div>' for label, value in facts)
     join = ("" if signed_in else
             f'<div class="title-glance__join profile-glance__join"><strong>Keep a profile like {_e(name)}\'s</strong>'
-            '<p>Track movies, shows, anime, games, music and books in one free library. Rate what you finish and share it with one link.</p>'
+            '<p>Track everything you watch, play, read and hear in one free library. Rate what you finish and share it with one link.</p>'
             '<a class="site-btn site-btn--primary site-btn--sm title-glance__cta" href="/#signup" data-profile-join>Start tracking free</a>'
             '<a class="profile-glance__quiz" href="/taste-quiz">Or take the one-minute taste quiz <span aria-hidden="true">→</span></a></div>')
     return (f'<aside class="title-glance profile-glance" aria-labelledby="profile-glance"><h2 id="profile-glance">About {_e(name)}</h2>'
@@ -440,8 +440,8 @@ def render(view, *, signed_in: bool, is_owner: bool, recap_url: Optional[str] = 
     owner_note = _owner_note_html(view, is_owner)
     cta = ("" if signed_in else
            '<section class="profile-cta site-card"><div><p class="site-eyebrow">Free on OmniTrackr</p>'
-           '<h2>Track your own movies, shows, games, music and books</h2>'
-           '<p>Build your library, rate what you finish, keep a diary and share a profile like this one.</p></div>'
+           '<h2>Track everything you watch, play, read and hear</h2>'
+           '<p>Rate what you finish, keep a diary and share a profile like this one.</p></div>'
            '<div class="profile-cta__actions"><a class="site-btn site-btn--primary" href="/#signup" data-profile-join>Start tracking free</a>'
            '<a class="site-btn site-btn--ghost" href="/about">See how it works</a></div></section>')
     joinbar = ("" if signed_in else
