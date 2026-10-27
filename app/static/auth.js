@@ -658,13 +658,13 @@ function showMainUI() {
         loadFriendsList();
     }
     window.refreshSiteStatsLink?.();
-    window.refreshForYou?.();
-    window.refreshYearGoals?.();
+    // home.js waits for these home cards before showing the library, so it doesn't jump,
+    // and reuses them for its first refresh instead of asking a second time.
+    const homeCards = [window.refreshForYou?.(), window.refreshYearGoals?.()];
     window.refreshFriendRecs?.();
     window.refreshFriendFeed?.();
-    window.refreshMonthlyChallenge?.();
-    window.refreshSeasonCard?.();
-    window.refreshBadges?.();
+    homeCards.push(window.refreshMonthlyChallenge?.(), window.refreshSeasonCard?.(), window.refreshBadges?.());
+    window.dashboardHomeCards = homeCards;
     window.refreshInstallCard?.();
     if (typeof updateNotificationCount === 'function') {
         updateNotificationCount();

@@ -201,7 +201,7 @@
 .demo-button-quiet { background: var(--site-surface); border-color: var(--site-border-strong); color: var(--site-text); }
 .demo-button:disabled { background: var(--site-surface); border-color: var(--site-border); color: var(--site-muted) !important; box-shadow: none; }
 .demo-stats { background: linear-gradient(110deg, rgba(139, 92, 246, .14), rgba(45, 212, 191, .06)); border-color: var(--site-border); border-radius: 18px; }
-.demo-filters button[aria-pressed="true"] { background: var(--site-violet); border-color: var(--site-violet); color: #fff; }
+.demo-filters button[aria-pressed="true"] { background: #7c3aed; border-color: #7c3aed; color: #fff; }
 .demo-filters button:hover, .demo-quick-filters button:hover:not(:disabled) { background: var(--site-surface-2); }
 .demo-quick-filters, .demo-empty { background: var(--site-surface); border-color: var(--site-border); border-radius: 16px; }
 .demo-completion-filters button[aria-pressed="true"], .demo-extra-filters button[aria-pressed="true"] { background: rgba(139, 92, 246, .22); border-color: var(--site-violet); color: #fff; }

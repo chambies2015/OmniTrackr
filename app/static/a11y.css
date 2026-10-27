@@ -38,6 +38,17 @@ body.app-shell:not(.dark-mode) .postcards-hero {
 body.app-shell:not(.dark-mode) .postcards-hero h2 { color: var(--fg); }
 body.app-shell:not(.dark-mode) .postcards-privacy { border-color: rgba(15, 118, 110, .35); color: #0f766e; }
 
+/* Notification times and the account's verified line, in both themes. */
+body.app-shell .notification-time { color: var(--fg-secondary); opacity: 1; }
+body.app-shell #accountVerified.is-verified { color: #2e7d32; }
+body.app-shell #accountVerified.is-unverified { color: #c62828; }
+body.app-shell.dark-mode #accountVerified.is-verified { color: #81c784; }
+body.app-shell.dark-mode #accountVerified.is-unverified { color: #ef9a9a; }
+
+/* Diary days still to come: a dashed outline marks them instead of fading the date. */
+body.app-shell .activity-diary__cell.is-future { background: transparent; border-style: dashed; opacity: 1; }
+body.app-shell .activity-diary__cell.is-future .activity-diary__date { color: var(--fg-secondary); font-weight: 500; }
+
 /* ---------- Forms in dialogs: a visible ring and full-width fields ---------- */
 body.app-shell .modal-content :is(input, select, textarea):focus-visible { outline: 3px solid var(--primary); outline-offset: 2px; }
 body.app-shell .account-section form input:not([type="checkbox"]):not([type="radio"]):not([type="file"]) { box-sizing: border-box; max-width: 100%; width: 100%; }

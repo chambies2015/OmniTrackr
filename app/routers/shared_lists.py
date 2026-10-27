@@ -16,7 +16,7 @@ from ..progress import lock_progress_owner
 from .discover import page
 
 router = APIRouter(tags=["shared-lists"])
-CSS_VERSION = "20261026-clubs-1"
+CSS_VERSION = "20261027-a11y-speed-1"
 JS_VERSION = "20261026-clubs-1"
 DESCRIPTION = ("Build a watchlist, reading queue or backlog together with friends, or run it as a watch club: "
                "pick one title, finish it by a date and talk it over.")
@@ -180,10 +180,15 @@ def list_page(list_id: PositiveDatabaseId, user=Depends(get_optional_current_use
             actions=(("My shared lists", "/lists"), ("Go to my library", "/"))), status_code=404)
         _private(response)
         return response
+    # The back link and eyebrow match what shared-lists.js draws, so the heading stays put when it loads.
+    # The section isn't a live region because every vote redraws it; the status lines inside announce changes.
+    has_club = db.query(models.ClubRound.id).filter(models.ClubRound.list_id == shared.id).first() is not None
     content = (
-        f'<section class="sl-app" id="sharedLists" data-view="list" data-list-id="{shared.id}" aria-live="polite">'
-        f'<header class="sl-head"><h1 data-list-name>{_e(shared.name)}</h1></header>'
-        '<p class="sl-loading">Loading the list…</p>'
+        f'<section class="sl-app" id="sharedLists" data-view="list" data-list-id="{shared.id}">'
+        '<p class="sl-back"><a href="/lists">← All shared lists</a></p>'
+        f'<header class="sl-head"><p class="eyebrow">{"WATCH CLUB" if has_club else "SHARED LIST"}</p>'
+        f'<h1 data-list-name>{_e(shared.name)}</h1></header>'
+        '<p class="sl-loading" role="status">Loading the list…</p>'
         '<noscript><p>Shared lists need JavaScript.</p></noscript></section>'
     )
     return _shell(shared.name, f"/lists/{shared.id}", content)

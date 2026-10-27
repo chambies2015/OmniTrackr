@@ -192,8 +192,10 @@ window.loadAccountInfo = async function () {
       }
 
       // Email verification status
-      document.getElementById('accountVerified').textContent = user.is_verified ? '✓ Verified' : '✗ Not Verified';
-      document.getElementById('accountVerified').style.color = user.is_verified ? '#4caf50' : '#f44336';
+      const verified = document.getElementById('accountVerified');
+      verified.textContent = user.is_verified ? '✓ Verified' : '✗ Not Verified';
+      verified.classList.toggle('is-verified', Boolean(user.is_verified));
+      verified.classList.toggle('is-unverified', !user.is_verified);
       applyPasswordState(user.has_password !== false);
     } else {
       console.error('Failed to load account info');

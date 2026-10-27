@@ -70,13 +70,13 @@
   <link rel="stylesheet" href="/static/friends-feed.css?v=20261025-friends-feed-1">
   <link rel="stylesheet" href="/static/dashboard-home.css?v=20261026-home-board-1">
   <link rel="stylesheet" href="/static/dashboard-2026.css?v=20261026-home-board-1">
-  <link rel="stylesheet" href="/static/a11y.css?v=20261018-a11y-1">
+  <link rel="stylesheet" href="/static/a11y.css?v=20261027-a11y-speed-1">
   <script src="./preauth.js?v=20261010-audit-preauth-1"></script>
   <style>
     html.authenticated #landingPage{display:none}
     html.authenticated #mainContainer,
     html.authenticated #mainFooter{display:block}
-    html.dashboard-settling #movies-tab{visibility:hidden}
+    html.dashboard-settling :is(.home-board,#movies-tab,#mainFooter){visibility:hidden}
   </style>
 
   <!-- JSON-LD Structured Data -->
@@ -1743,7 +1743,7 @@
     </form>
   </dialog>
   <script src="./credentials.js"></script>
-  <script src="./auth.js?v=20261027-taste-quiz-1"></script>
+  <script src="./auth.js?v=20261027-a11y-speed-1"></script>
   <script src="/static/import-studio.js?v=20261022-diary-1"></script>
   <script src="/static/progress.js?v=20260922-progress"></script>
   <script src="./app.js"></script>
