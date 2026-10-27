@@ -13,6 +13,7 @@ from html import escape
 from typing import Literal
 
 from fastapi import APIRouter, Depends, HTTPException, Request, Response
+from fastapi.concurrency import run_in_threadpool
 from pydantic import BaseModel, Field
 from sqlalchemy.orm import Session
 
@@ -75,7 +76,7 @@ def _fallback_list(cards: list[dict]) -> str:
 @router.get("/taste-quiz", include_in_schema=False)
 def taste_quiz_page(request: Request, db: Session = Depends(get_db)):
     signed_in = bool(request.cookies.get(AUTH_COOKIE_NAME))
-    cards = taste_quiz.deck(db, title_search.index(db))
+    cards = taste_quiz.deck()
     formats = "".join(
         f'<label class="tq-chip"><input type="checkbox" name="kind" value="{kind}" checked><span>{_e(label)}</span></label>'
         for kind, label in taste_quiz.FORMAT_LABELS.items())
@@ -141,6 +142,11 @@ async def taste_quiz_art(kind: str, slug: str, request: Request, response: Respo
     card = taste_quiz.find(f"{kind}/{slug}")
     if card is None:
         raise HTTPException(404, "Not a quiz title")
+    # A member's cover or cached metadata first; an outside lookup only when neither exists.
+    image = await run_in_threadpool(lambda: taste_quiz.cached_art(db, card, taste_quiz._art_index(title_search.index(db))))
+    if image:
+        response.headers["Cache-Control"] = "public, max-age=86400"
+        return {"image": image}
     client = getattr(request.app.state, "external_api_client", None)
     data = await title_metadata.get_or_fetch(db, client, card["kind"], title_pages.normalize(card["title"]),
                                              card["title"], card["year"], card.get("creator"), wait=6)

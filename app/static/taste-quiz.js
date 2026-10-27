@@ -93,7 +93,7 @@
   function setupQuiz(root) {
     let deck = [];
     try { deck = JSON.parse(document.getElementById('tasteQuizDeck').textContent || '[]'); } catch (error) { deck = []; }
-    deck = deck.filter(card => card && ID.test(card.id) && KINDS.has(card.kind));
+    deck = deck.filter(card => card && ID.test(card.id) && KINDS.has(card.kind)).map(card => ({ ...card, image: null }));
     if (!deck.length) return;
     const signedIn = root.dataset.signedIn === 'true';
     const screens = {};
@@ -121,8 +121,11 @@
       return answerList(state.answers).length;
     }
 
-    function loadArt(card) {
-      if (!card || card.image || artRequested.has(card.id)) return;
+    // Artwork comes from the API, never from the page, and only for deck cards.
+    function loadArt(card, onImage) {
+      if (!card) return;
+      if (card.image) { if (onImage) onImage(); return; }
+      if (artRequested.has(card.id)) return;
       artRequested.add(card.id);
       fetch(`/api/taste-quiz/art/${card.id}`, { headers: { Accept: 'application/json' } })
         .then(response => (response.ok ? response.json() : null))
@@ -130,7 +133,8 @@
           const image = safeImage(data && data.image);
           if (!image) return;
           card.image = image;
-          if (order[position] === card) renderCard();
+          if (order[position] === card && !screens.play.hidden) renderCard();
+          if (onImage) onImage();
         })
         .catch(() => { /* the initial letter stays */ });
     }
@@ -198,7 +202,9 @@
         .sort((a, b) => (state.answers[a.id] === 'loved' ? 0 : 1) - (state.answers[b.id] === 'loved' ? 0 : 1)).slice(0, 8);
       favorites.forEach(card => {
         const item = el('div', 'tq-shelf__item');
-        item.appendChild(art(card, 'tq-shelf__art'));
+        const cover = art(card, 'tq-shelf__art');
+        item.appendChild(cover);
+        if (!card.image) loadArt(card, () => { if (cover.isConnected) cover.replaceWith(art(card, 'tq-shelf__art')); });
         item.appendChild(el('span', 'tq-shelf__label', state.answers[card.id] === 'loved' ? '♥ Loved' : 'Liked'));
         item.title = card.title;
         box.appendChild(item);

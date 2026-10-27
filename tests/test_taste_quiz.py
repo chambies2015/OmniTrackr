@@ -170,9 +170,11 @@ def test_cached_member_artwork_is_used(client, db_session):
         db_session.add(models.Anime(user_id=user.id, title="Attack on Titan", year=2013,
                                     poster_url="https://img.example.com/aot.jpg"))
     db_session.commit()
-    cards = _deck(client.get("/taste-quiz").text)
-    aot = next(card for card in cards if card["title"] == "Attack on Titan")
-    assert aot["image"] == "https://img.example.com/aot.jpg"
+    response = client.get("/api/taste-quiz/art/anime/attack-on-titan-2013")
+    assert response.json() == {"image": "https://img.example.com/aot.jpg"}
+    assert response.headers["cache-control"] == "public, max-age=86400"
+    # The page itself never carries artwork.
+    assert all("image" not in card for card in _deck(client.get("/taste-quiz").text))
 
 
 def test_quiz_events_are_counted_on_site_stats():

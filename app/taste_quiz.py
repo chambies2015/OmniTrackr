@@ -114,16 +114,14 @@ def cached_art(db: Session, card: dict, art: Optional[dict] = None) -> Optional[
     return title_pages._safe_image((data or {}).get("poster"))
 
 
-def deck(db: Session, index: list[dict]) -> list[dict]:
-    """The quiz cards with whatever artwork is already cached."""
-    art = _art_index(index)
+def deck() -> list[dict]:
+    """The quiz cards. Artwork loads separately (GET /api/taste-quiz/art/...)."""
     cards = []
     for card in DECK:
         guide = if_you_liked.guide(card["guide"]) if card.get("guide") else None
         cards.append({
             "id": card_id(card), "kind": card["kind"], "label": title_pages.KINDS[card["kind"]][3],
             "title": card["title"], "year": card["year"], "creator": card.get("creator"),
-            "image": cached_art(db, card, art),
             "guide": if_you_liked.path(card["guide"]) if guide else None,
         })
     return cards
