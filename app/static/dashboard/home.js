@@ -853,34 +853,6 @@ function renderLibraryPulse(pulse) {
   if (!skipRepeatedPick() && pickAddsNothing()) document.getElementById('todaysPick')?.setAttribute('hidden', '');
 }
 
-// Continue already lists the first unfinished titles, so Today's pick steps past
-// them to offer something different. A couple of skips at most per pick.
-
-function pickRepeatsContinue(pick) {
-  if (!pick) return false;
-  return Array.from(document.querySelectorAll('#libraryPulseContinue [data-pulse-item-id]')).some(
-    (item) => item.dataset.pulseTab === pick.category && item.dataset.pulseItemId === String(pick.id)
-  );
-}
-
-function skipRepeatedPick() {
-  const limit = Math.min(2, todaysPickCandidateCount - 1);
-  if (!pickRepeatsContinue(todaysPickSelection) || todaysPickSkips >= limit) {
-    todaysPickSkips = 0;
-    return false;
-  }
-  todaysPickSkips += 1;
-  todaysPickOffset = (todaysPickOffset + 1) % Math.max(todaysPickCandidateCount, 1);
-  refreshTodaysPick();
-  return true;
-}
-
-// With every candidate already listed in Continue, the pick has nothing new to add.
-function pickAddsNothing() {
-  if (!pickRepeatsContinue(todaysPickSelection) || document.getElementById('todaysPickFilter')?.value) return false;
-  return todaysPickCandidateCount <= document.querySelectorAll('#libraryPulseContinue [data-pulse-item-id]').length;
-}
-
 function renderTodaysPick(payload, { showEmpty = false } = {}) {
   const section = document.getElementById('todaysPick');
   const pick = payload?.pick;
@@ -906,6 +878,33 @@ function renderTodaysPick(payload, { showEmpty = false } = {}) {
     return;
   }
   section.removeAttribute('hidden');
+}
+
+// Continue already lists the first unfinished titles, so Today's pick steps past
+// them to offer something different. A couple of skips at most per pick.
+function pickRepeatsContinue(pick) {
+  if (!pick) return false;
+  return Array.from(document.querySelectorAll('#libraryPulseContinue [data-pulse-item-id]')).some(
+    (item) => item.dataset.pulseTab === pick.category && item.dataset.pulseItemId === String(pick.id)
+  );
+}
+
+function skipRepeatedPick() {
+  const limit = Math.min(2, todaysPickCandidateCount - 1);
+  if (!pickRepeatsContinue(todaysPickSelection) || todaysPickSkips >= limit) {
+    todaysPickSkips = 0;
+    return false;
+  }
+  todaysPickSkips += 1;
+  todaysPickOffset = (todaysPickOffset + 1) % Math.max(todaysPickCandidateCount, 1);
+  refreshTodaysPick();
+  return true;
+}
+
+// With every candidate already listed in Continue, the pick has nothing new to add.
+function pickAddsNothing() {
+  if (!pickRepeatsContinue(todaysPickSelection) || document.getElementById('todaysPickFilter')?.value) return false;
+  return todaysPickCandidateCount <= document.querySelectorAll('#libraryPulseContinue [data-pulse-item-id]').length;
 }
 
 async function refreshTodaysPick() {

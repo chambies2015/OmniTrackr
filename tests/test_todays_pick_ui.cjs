@@ -30,7 +30,7 @@ function setup() {
     isLoadingMovies: false, isLoadingTVShows: false, isLoadingAnime: false,
     isLoadingVideoGames: false, isLoadingMusic: false, isLoadingBooks: false, isLoadingManga: false, isLoadingPodcasts: false,
     todaysPickOffset: 0, todaysPickCandidateCount: 0, todaysPickRequest: 0,
-    todaysPickSelection: null, returnDeckActive: false,
+    todaysPickSelection: null, todaysPickSkips: 0, returnDeckActive: false,
     editingRowId: null,
     libraryPages: new Map(), libraryFilters: new Map(), renderLibraryFilters() {},
     libraryPageConfig: tab => [tab + 'Table', tab + 'Sort'],
@@ -84,4 +84,18 @@ test('Open it focuses the exact item ID in each media category', async () => {
     assert.ok(context.selector.includes(`data-next-up-category="${category}"`));
     assert.equal(row.focused, true);
   }
+});
+
+test('a pick already listed in Continue is skipped, at most twice in a row', () => {
+  const { context } = setup();
+  const shown = [{ dataset: { pulseTab: 'movies', pulseItemId: '7' } }];
+  context.document.querySelectorAll = selector => (selector.startsWith('#libraryPulseContinue') ? shown : []);
+  let refreshes = 0;
+  context.refreshTodaysPick = () => { refreshes += 1; };
+  const repeated = { pick: { id: 7, category: 'movies', title: 'Past Lives' }, candidate_count: 5 };
+  context.renderTodaysPick(repeated);
+  context.renderTodaysPick(repeated);
+  context.renderTodaysPick(repeated);
+  assert.equal(refreshes, 2);
+  assert.equal(context.todaysPickOffset, 2);
 });
