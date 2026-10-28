@@ -22,6 +22,7 @@ from .. import release_radar as radar
 from .. import weekly_roundup as roundup
 from ..dependencies import get_db
 from ..seasonal_guides import SEASONS
+from ..site_chrome import view_switch
 from . import release_radar as radar_pages
 
 router = APIRouter(tags=["new-this-week"])
@@ -435,7 +436,7 @@ async def roundup_week(slug: str, request: Request, db: Session = Depends(get_db
     if payload is None:
         if when != "current":
             raise HTTPException(404, "No roundup for that week")
-        content = ('<header class="hero radar-hero nw-hero"><p class="eyebrow">New this week</p>'
+        content = ('<header class="hero radar-hero nw-hero">' + view_switch("releases", "new-this-week") + '<p class="eyebrow">New this week</p>'
                    f'<h1>New this week: {_e(roundup.label(monday))}</h1></header>'
                    '<div class="radar-status" role="status"><strong>Gathering this week\'s releases right now.</strong> '
                    'This page refreshes itself in under a minute, or reload whenever you like.</div>' + _method_section())
@@ -462,6 +463,8 @@ async def roundup_week(slug: str, request: Request, db: Session = Depends(get_db
             if len(_page_cache) > 200:
                 _page_cache.clear()
             _page_cache[key] = (now, title, description, content, indexable, structured)
+    switch = view_switch("releases", "new-this-week" if when == "current" else "")
+    content = content.replace('<header class="hero radar-hero nw-hero">', '<header class="hero radar-hero nw-hero">' + switch, 1)
     response = radar_pages._render(title, description, roundup.path(monday), content, indexable=indexable,
                                    structured=structured, head=HEAD,
                                    ads=roundup.ROUNDUP_ADS and indexable)

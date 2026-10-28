@@ -176,7 +176,7 @@ def test_image_proxy_caps_the_size(client, upstream):
 
 def test_tier_list_is_linked_counted_and_in_the_sitemap(client):
     from app.site_chrome import FOOTER_GROUPS
-    assert ("Tier list maker", "/tier-list") in dict(FOOTER_GROUPS)["Explore"]
+    assert ("Tier list maker", "/tier-list") in dict(FOOTER_GROUPS)["Play"]
     assert {"tier_list_started", "tier_list_exported"} <= funnel.CLIENT_EVENTS
     assert {"tier_list_started", "tier_list_exported"} <= {item["event"] for item in funnel.summary({})["guest"]}
     assert "https://omnitrackr.xyz/tier-list</loc>" in client.get("/sitemap.xml").text

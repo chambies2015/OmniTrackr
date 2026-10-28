@@ -18,7 +18,7 @@ from .. import affiliate, models
 from .. import release_calendar
 from .. import release_radar as radar
 from ..csp import strict_html_response
-from ..site_chrome import apply_site_chrome
+from ..site_chrome import apply_site_chrome, view_switch
 from ..dependencies import get_current_user, get_db
 
 router = APIRouter()
@@ -422,13 +422,12 @@ async def radar_hub(request: Request, db: Session = Depends(get_db)):
 
     summary = " · ".join(f"{len(items_by_category[c])} {SUMMARY_LABELS[c]}" for c in radar.CATEGORY_ORDER if items_by_category[c])
     content = (
-        '<header class="hero radar-hero"><p class="eyebrow">Release Radar · updated every few hours</p>'
+        '<header class="hero radar-hero">' + view_switch("releases", "release-radar") + '<p class="eyebrow">Release Radar · updated every few hours</p>'
         '<h1>What is coming out, all in one place.</h1>'
         '<p>New movies, TV premieres, the current anime season and upcoming games, side by side. '
         'Spot something you want to see, play or finish, and track it in one click.</p>'
         + (f'<p class="radar-hero__summary">{escape(summary)}</p>' if summary else "")
-        + '<p class="radar-hero__roundup"><a href="/new-this-week">Read this week\'s roundup</a>: what is out Monday to Sunday, '
-          'with what members finished. <a href="/new-this-week/archive">Past weeks</a></p>'
+        + '<p class="radar-hero__roundup">Looking back instead? <a href="/new-this-week/archive">Every weekly roundup</a></p>'
         + '</header>' + _category_tabs(None) + strip_html + _calendar_box(None) + tracked_html + "".join(sections) + _about_section(None)
     )
     indexable = total >= MIN_INDEXABLE_ITEMS

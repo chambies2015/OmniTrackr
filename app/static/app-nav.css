@@ -153,6 +153,8 @@
 }
 .app-sheet__tab[aria-current="page"] { background: var(--accent-soft, rgba(139, 92, 246, .16)); border-color: var(--primary, #baa9fb); color: var(--primary, #baa9fb); }
 
+.app-sheet__group + .app-sheet__group { margin-top: 8px; }
+.app-sheet__group h4 { color: var(--fg-secondary, #a4aec2); font: 600 .74rem/1 Inter, system-ui, sans-serif; letter-spacing: .06em; margin: 6px 10px 4px; text-transform: uppercase; }
 .app-sheet__links { display: grid; gap: 2px 12px; grid-template-columns: repeat(2, minmax(0, 1fr)); }
 .app-sheet__links a { align-items: center; border-radius: 10px; color: var(--fg, #eef1f8); display: flex; font-size: .94rem; min-height: 44px; padding: 0 10px; text-decoration: none; }
 .app-sheet__links a:hover, .app-sheet__links a:focus-visible { background: var(--surface-hover, rgba(255, 255, 255, .06)); }
@@ -194,4 +196,57 @@
 }
 @media (prefers-reduced-motion: reduce) {
   .app-sheet[open] { animation: none; }
+}
+
+/* ---------- Explore menu (dashboard header, wider screens) ----------
+   Built from site_chrome.NAV_MENUS, so it always matches the public header. */
+.header__actions { align-items: center; display: flex; gap: 10px; justify-content: flex-end; }
+.app-explore { position: relative; }
+.app-explore > summary {
+  align-items: center;
+  border: 1px solid var(--border, rgba(255, 255, 255, .12));
+  border-radius: 10px;
+  color: var(--fg, #eef1f8);
+  cursor: pointer;
+  display: inline-flex;
+  font: 600 .9rem Inter, system-ui, sans-serif;
+  gap: 7px;
+  list-style: none;
+  min-height: 46px;
+  padding: 0 14px;
+}
+.app-explore > summary::-webkit-details-marker { display: none; }
+.app-explore > summary:hover, .app-explore[open] > summary { background: var(--surface-hover, rgba(255, 255, 255, .06)); }
+.app-explore[open] .site-dd__chev { transform: rotate(180deg); }
+.app-explore__panel {
+  background: var(--card-bg, #191f2c);
+  border: 1px solid var(--border, rgba(255, 255, 255, .12));
+  border-radius: 16px;
+  box-shadow: var(--shadow-lg, 0 24px 70px #00000066);
+  display: grid;
+  gap: 4px 18px;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  padding: 16px;
+  position: absolute;
+  right: 0;
+  top: calc(100% + 8px);
+  width: min(760px, calc(100vw - 48px));
+  z-index: 60;
+}
+.app-explore__group { display: grid; align-content: start; }
+.app-explore__group p { color: var(--fg-secondary, #a4aec2); font: 600 .72rem/1 Inter, system-ui, sans-serif; letter-spacing: .06em; margin: 4px 10px 8px; text-transform: uppercase; }
+.app-explore__group a { border-radius: 8px; color: var(--fg, #eef1f8); font-size: .9rem; padding: 8px 10px; text-decoration: none; }
+.app-explore__group a:hover, .app-explore__group a:focus-visible { background: var(--surface-hover, rgba(255, 255, 255, .06)); color: var(--primary, #baa9fb); }
+@media (max-width: 960px) {
+  .app-explore__panel { grid-template-columns: repeat(2, minmax(0, 1fr)); width: min(440px, calc(100vw - 48px)); }
+}
+@media (max-width: 1100px) {
+  .app-explore > summary > span { display: none; }
+}
+@media (max-width: 768px) {
+  .header .header__actions { grid-column: 2; grid-row: 1; }
+}
+/* On phones the More sheet carries the same links. */
+@media (max-width: 760px) {
+  body.has-app-dock .app-explore { display: none; }
 }
