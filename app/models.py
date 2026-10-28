@@ -1350,3 +1350,21 @@ class FriendFeedSetting(Base):
     user_id = Column(Integer, ForeignKey("users.id", ondelete="CASCADE"), nullable=False, unique=True)
     sharing = Column(Boolean, nullable=False, default=True)
     changed_at = Column(DateTime, nullable=False, default=datetime.utcnow)
+
+
+class WeeklyRoundup(Base):
+    """A saved "New this week" roundup: one row per week, keyed by its Monday (Oct 2026).
+
+    A new table only. ``payload`` is JSON: the week's Release Radar releases and
+    anonymous member totals for that week, never a member's name or review. A row is
+    rebuilt while its week is live and marked ``final`` a couple of days after, so
+    the archive keeps each week as it was even after Release Radar moves on.
+    """
+    __tablename__ = "weekly_roundups"
+
+    id = Column(Integer, primary_key=True, index=True)
+    week_start = Column(Date, nullable=False, unique=True, index=True)
+    payload = Column(Text, nullable=False)
+    final = Column(Boolean, nullable=False, default=False)
+    built_at = Column(DateTime, nullable=False, default=datetime.utcnow)
+    created_at = Column(DateTime, nullable=False, default=datetime.utcnow)

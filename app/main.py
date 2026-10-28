@@ -122,12 +122,15 @@ async def lifespan(application: FastAPI):
     push_task = None
     if web_push.dispatch_enabled():
         push_task = asyncio.create_task(web_push.push_loop(application))
+    roundup_task = None
     if os.getenv("TESTING", "").lower() != "true":
         title_task = asyncio.create_task(titles.warm_loop(application))
+        from .routers import weekly_roundup as weekly_roundup_router
+        roundup_task = asyncio.create_task(weekly_roundup_router.roundup_loop(application))
     try:
         yield
     finally:
-        for task in (digest_task, title_task, announcement_task, comeback_task, push_task):
+        for task in (digest_task, title_task, announcement_task, comeback_task, push_task, roundup_task):
             if task is not None:
                 task.cancel()
         await application.state.external_api_client.aclose()
@@ -855,6 +858,9 @@ app.include_router(if_you_liked_router.router)
 
 from .routers import best_of as best_of_router
 app.include_router(best_of_router.router)
+
+from .routers import weekly_roundup as weekly_roundup_router
+app.include_router(weekly_roundup_router.router)
 
 from .routers import in_order as in_order_router
 rate_limited_order_progress = limiter.limit("60/minute")(in_order_router.in_order_progress)
