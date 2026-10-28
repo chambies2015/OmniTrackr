@@ -7,7 +7,7 @@ function currentFriendRequest(friendId) {
   const generation = friendProfileGeneration;
   return () => currentFriendId === friendId && generation === friendProfileGeneration;
 }
-const FRIEND_PROFILE_SECTIONS = ['movies', 'tvShows', 'anime', 'videoGames', 'music', 'books', 'statistics'];
+const FRIEND_PROFILE_SECTIONS = ['movies', 'tvShows', 'anime', 'videoGames', 'music', 'books', 'manga', 'statistics'];
 function freshAccordionStates() {
   return Object.fromEntries(FRIEND_PROFILE_SECTIONS.map(section => [section, false]));
 }
@@ -18,6 +18,7 @@ let currentFriendAnime = [];
 let currentFriendVideoGames = [];
 let currentFriendMusic = [];
 let currentFriendBooks = [];
+let currentFriendManga = [];
 
 // Friend list errors go in the list container so the search box survives for the next friend.
 function showFriendListError(containerId, detail, fallback) {
@@ -51,6 +52,7 @@ window.closeFriendProfile = function () {
   currentFriendVideoGames = [];
   currentFriendMusic = [];
   currentFriendBooks = [];
+  currentFriendManga = [];
   accordionStates = freshAccordionStates();
   // Reset accordion states
   FRIEND_PROFILE_SECTIONS.forEach(section => {
@@ -62,7 +64,7 @@ window.closeFriendProfile = function () {
     }
   });
   ['friendMoviesListContainer', 'friendTVShowsListContainer', 'friendAnimeListContainer',
-    'friendVideoGamesListContainer', 'friendMusicListContainer', 'friendBooksListContainer', 'statisticsData']
+    'friendVideoGamesListContainer', 'friendMusicListContainer', 'friendBooksListContainer', 'friendMangaListContainer', 'statisticsData']
     .forEach(id => { const node = document.getElementById(id); if (node) node.innerHTML = ''; });
   // Clear search inputs
   const moviesSearch = document.getElementById('friendMoviesSearch');
@@ -73,7 +75,7 @@ window.closeFriendProfile = function () {
   if (tvShowsSearch) tvShowsSearch.value = '';
   if (animeSearch) animeSearch.value = '';
   if (videoGamesSearch) videoGamesSearch.value = '';
-  ['friendMusicSearch', 'friendBooksSearch'].forEach(id => {
+  ['friendMusicSearch', 'friendBooksSearch', 'friendMangaSearch'].forEach(id => {
     const input = document.getElementById(id);
     if (input) input.value = '';
   });
@@ -117,6 +119,7 @@ window.loadFriendProfile = async function (friendId) {
       updateVideoGamesSummary(profile);
       updateMusicSummary(profile);
       updateBooksSummary(profile);
+      updateMangaSummary(profile);
       updateStatisticsSummary(profile);
     } else {
       const error = await response.json();
@@ -194,6 +197,17 @@ function updateBooksSummary(profile) {
   }
 }
 
+function updateMangaSummary(profile) {
+  const summaryDiv = document.getElementById('mangaSummary');
+  if (!summaryDiv) return;
+  if (profile.manga_private) {
+    summaryDiv.innerHTML = '<p class="privacy-message">This user has made their manga private</p>';
+  } else {
+    const count = profile.manga_count || 0;
+    summaryDiv.innerHTML = `<p class="summary-text">${count} Manga series</p>`;
+  }
+}
+
 function updateStatisticsSummary(profile) {
   const summaryDiv = document.getElementById('statisticsSummary');
   if (profile.statistics_private) {
@@ -228,6 +242,8 @@ window.toggleAccordion = async function (section) {
       await loadFriendMusic(currentFriendId);
     } else if (section === 'books') {
       await loadFriendBooks(currentFriendId);
+    } else if (section === 'manga') {
+      await loadFriendManga(currentFriendId);
     } else if (section === 'statistics') {
       await loadFriendStatistics(currentFriendId);
     }
@@ -653,6 +669,35 @@ window.loadFriendBooks = async function (friendId) {
 window.filterFriendBooks = function () {
   const filtered = filterFriendShelf(currentFriendBooks, 'friendBooksSearch', ['title', 'author', 'year', 'genre', 'review']);
   renderFriendShelf('friendBooksListContainer', filtered, 'No books found', describeFriendBook);
+}
+
+const describeFriendManga = item => ({ creatorLabel: 'Mangaka', creator: item.author, doneLabel: 'Read', done: item.read });
+
+window.loadFriendManga = async function (friendId) {
+  const current = currentFriendRequest(friendId);
+  try {
+    const response = await authenticatedFetch(`${API_BASE}/friends/${friendId}/manga`);
+    if (!current()) return;
+    if (response.ok) {
+      const data = await response.json();
+      if (!current()) return;
+      currentFriendManga = data.manga || [];
+      renderFriendShelf('friendMangaListContainer', currentFriendManga, 'No manga yet', describeFriendManga);
+    } else {
+      const error = await response.json().catch(() => ({}));
+      if (!current()) return;
+      showFriendListError('friendMangaListContainer', error.detail, 'Failed to load manga');
+    }
+  } catch (error) {
+    if (!current()) return;
+    console.error('Failed to load friend manga:', error);
+    showFriendListError('friendMangaListContainer', '', 'Failed to load manga');
+  }
+}
+
+window.filterFriendManga = function () {
+  const filtered = filterFriendShelf(currentFriendManga, 'friendMangaSearch', ['title', 'author', 'year', 'genre', 'review']);
+  renderFriendShelf('friendMangaListContainer', filtered, 'No manga found', describeFriendManga);
 }
 
 window.loadFriendStatistics = async function (friendId) {

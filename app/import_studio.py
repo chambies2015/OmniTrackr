@@ -50,19 +50,23 @@ CATEGORY_ALIASES = {
     "video games": "video-games", "video-game": "video-games", "video-games": "video-games",
     "music": "music", "album": "music", "albums": "music",
     "book": "books", "books": "books",
+    "manga": "manga", "manhwa": "manga", "manhua": "manga", "webtoon": "manga", "webtoons": "manga",
 }
 CATEGORY_LABELS = {
     "movies": "Movies", "tv-shows": "TV Shows", "anime": "Anime",
     "video-games": "Video Games", "music": "Music", "books": "Books",
+    "manga": "Manga",
 }
 MODEL_BY_CATEGORY = {
     "movies": models.Movie, "tv-shows": models.TVShow, "anime": models.Anime,
     "video-games": models.VideoGame, "music": models.Music, "books": models.Book,
+    "manga": models.Manga,
 }
 SCHEMA_BY_CATEGORY = {
     "movies": schemas.MovieCreate, "tv-shows": schemas.TVShowCreate,
     "anime": schemas.AnimeCreate, "video-games": schemas.VideoGameCreate,
     "music": schemas.MusicCreate, "books": schemas.BookCreate,
+    "manga": schemas.MangaCreate,
 }
 
 
@@ -237,7 +241,7 @@ def _generic_row(row: dict[str, str], category_override: str | None, mapping: di
     year = _integer(field("year", "year", "release year", "year published", "original publication year")) if category != "video-games" else None
     rating = _rating(field("rating", "rating", "score", "my rating"))
     review = field("review", "review", "notes", "note", "my review") or None
-    completion_field = {"video-games": "played", "music": "listened", "books": "read"}.get(category, "watched")
+    completion_field = {"video-games": "played", "music": "listened", "books": "read", "manga": "read"}.get(category, "watched")
     completed = _truthy(field("status", "completed", completion_field, "status", "finished", "watched", "read", "played", "listened"))
     common = {"title": title, "rating": rating, "review": review, "review_public": False}
     if category == "movies":
@@ -251,6 +255,11 @@ def _generic_row(row: dict[str, str], category_override: str | None, mapping: di
         data = {**common, "release_date": _date(release), "genres": field("genre", "genres", "genre") or None, "played": completed}
     elif category == "music":
         data = {**common, "artist": field("creator", "artist", "creator") or "Unknown artist", "year": year, "genre": field("genre", "genre", "genres") or None, "listened": completed}
+    elif category == "manga":
+        data = {**common, "author": field("creator", "author", "mangaka", "creator") or None, "year": year,
+                "genre": field("genre", "genre", "genres") or None,
+                "volumes": _optional_integer(_first(row, "volumes"), "Volumes"),
+                "chapters": _optional_integer(_first(row, "chapters"), "Chapters"), "read": completed}
     else:
         data = {**common, "author": field("creator", "author", "creator") or "Unknown author", "year": year, "genre": field("genre", "genre", "genres") or None, "read": completed}
     return category, data
@@ -436,6 +445,8 @@ def _identity(category: str, data: dict[str, Any]) -> tuple[Any, ...]:
         return title, release.year if release else 0
     if category == "music":
         return title, _clean(data.get("artist")).casefold()
+    if category == "manga":
+        return title, _clean(data.get("author")).casefold()
     return title, _clean(data.get("author")).casefold()
 
 
@@ -476,12 +487,18 @@ def _existing_identities(db: Session, user_id: int) -> dict[str, _Identities]:
 
 def classify_rows(db: Session, user_id: int, rows: Iterable[ParsedRow]) -> list[dict[str, Any]]:
     identities = _existing_identities(db, user_id)
+    # Before the manga shelf, AniList and MyAnimeList manga were filed under Books.
+    # Re-importing those lists must not list the same series twice.
+    shelved_books = identities["books"].by_title
     classified: list[dict[str, Any]] = []
     for row in rows:
         if row.error or not row.category or not row.data:
             classified.append({"row": row.row, "category": None, "title": row.title, "status": "invalid", "reason": row.error})
             continue
         identity = _identity(row.category, row.data)
+        if row.category == "manga" and identity[0] in shelved_books:
+            classified.append({"row": row.row, "category": row.category, "title": row.title, "status": "duplicate", "reason": "Already on your Books shelf from an earlier import.", "data": row.data})
+            continue
         if identity in identities[row.category]:
             classified.append({"row": row.row, "category": row.category, "title": row.title, "status": "duplicate", "reason": "Already in this library or repeated in the file.", "data": row.data})
             continue

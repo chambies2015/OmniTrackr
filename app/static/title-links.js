@@ -12,6 +12,7 @@
     videoGameTable: ['game', '.edit-video-game-btn', 'gameTitle', 'gameReleaseDate', 'video_games_private'],
     musicTable: ['album', '.edit-music-btn', 'musicTitle', 'musicYear', 'music_private'],
     bookTable: ['book', '.edit-book-btn', 'bookTitle', 'bookYear', 'books_private'],
+    mangaTable: ['manga', '.edit-manga-btn', 'mangaTitle', 'mangaYear', 'manga_private'],
   };
   let privacy = null;
   let privacyRequest = null;

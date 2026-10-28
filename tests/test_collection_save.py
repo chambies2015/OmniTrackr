@@ -20,7 +20,7 @@ INTRO = (
     "watch, read, or play session as something to optimize. They are companions for a reflective weekend."
 )
 COMPLETION = {"movies": "watched", "tv-shows": "watched", "anime": "watched",
-              "video-games": "played", "music": "listened", "books": "read"}
+              "video-games": "played", "music": "listened", "books": "read", "manga": "read"}
 METADATA = {
     "movies": {"director": "A Director", "year": 2024, "poster_url": "https://example.test/movie.png"},
     "tv-shows": {"year": 2023, "seasons": 2, "episodes": 16, "poster_url": "https://example.test/tv.png"},
@@ -31,6 +31,8 @@ METADATA = {
               "cover_art_url": "https://example.test/album.png"},
     "books": {"author": "An Author", "year": 2019, "genre": "Fiction",
               "cover_art_url": "https://example.test/book.png"},
+    "manga": {"author": "A Mangaka", "year": 2018, "genre": "Seinen", "volumes": 12, "chapters": 98,
+              "cover_art_url": "https://example.test/manga.png"},
 }
 
 
@@ -152,18 +154,18 @@ def test_mixed_media_save_copies_public_metadata_only_and_preserves_existing_lib
     original = {column.name: getattr(existing, column.name) for column in models.Book.__table__.columns}
     sign_in(client, shelf.reader)
     payload = preview(client, shelf).json()
-    assert [row["existing"] for row in payload["items"]] == [False, False, False, False, False, True]
+    assert [row["existing"] for row in payload["items"]] == [category == "books" for category in collections.CATEGORIES]
     # Deliberately reversed input: the copy still follows the curator's order.
     response = save(client, shelf, payload["version"], [row["id"] for row in reversed(payload["items"])])
     assert response.status_code == 200
     assert_private_response(response)
     result = response.json()
-    assert result["created"] == 5 and result["reused"] == 1 and result["already_saved"] is False
+    assert result["created"] == len(collections.CATEGORIES) - 1 and result["reused"] == 1 and result["already_saved"] is False
     copied = db_session.get(models.Collection, result["collection_id"])
     assert copied.user_id == shelf.reader.id and copied.is_public is False
     assert copied.description == INTRO and copied.cover_url == shelf.source.cover_url
     assert copied.name != shelf.source.name
-    assert len(copied.items) == 6
+    assert len(copied.items) == len(collections.CATEGORIES)
     for position, entry in enumerate(copied.items):
         assert entry.position == position
         assert entry.category == list(collections.CATEGORIES)[position]
@@ -180,7 +182,7 @@ def test_mixed_media_save_copies_public_metadata_only_and_preserves_existing_lib
             assert getattr(item, COMPLETION[entry.category]) is False
     db_session.refresh(existing)
     assert original == {field: getattr(existing, field) for field in original}
-    assert reader_counts(db_session, shelf) == (1, (1, 1, 1, 1, 1, 1), 1)
+    assert reader_counts(db_session, shelf) == (1, (1,) * len(collections.CATEGORIES), 1)
 
 
 def test_same_title_different_edition_is_not_reused(client, db_session, shelf):
@@ -292,7 +294,7 @@ def test_source_withdrawal_is_checked_again_before_save(client, db_session, shel
         shelf.source.report_content_hash = collections._approval_content_hash(shelf.source, db_session)
         shelf.source.suspended_at = datetime.utcnow()
     if change == "too_few":
-        for item in list(shelf.media.values())[:4]:
+        for item in list(shelf.media.values())[:len(shelf.media) - 2]:
             db_session.delete(item)
     if change == "deleted": db_session.delete(shelf.source)
     db_session.commit()
@@ -387,7 +389,7 @@ def test_new_selection_or_source_version_creates_distinct_explicit_private_copy(
     updated = preview(client, shelf).json()
     changed_version = save(client, shelf, updated["version"], first_ids).json()
     assert changed_version["collection_id"] not in {first["collection_id"], changed_selection["collection_id"]}
-    assert reader_counts(db_session, shelf) == (3, (1, 0, 0, 0, 0, 1), 3)
+    assert reader_counts(db_session, shelf) == (3, (1, 0, 0, 0, 0, 1, 0), 3)
     original = db_session.get(models.Collection, first["collection_id"])
     assert original.items[0].curator_note != shelf.entries["movies"].curator_note
 
@@ -398,10 +400,10 @@ def test_deleted_copy_can_be_saved_again_without_deleting_library_titles(client,
     selected = [shelf.entries["movies"].id]
     first = save(client, shelf, payload["version"], selected).json()
     assert client.delete(f"/collections/{first['collection_id']}").status_code == 204
-    assert reader_counts(db_session, shelf) == (0, (1, 0, 0, 0, 0, 0), 0)
+    assert reader_counts(db_session, shelf) == (0, (1, 0, 0, 0, 0, 0, 0), 0)
     second = save(client, shelf, payload["version"], selected).json()
     assert second["already_saved"] is False and second["created"] == 0 and second["reused"] == 1
-    assert reader_counts(db_session, shelf) == (1, (1, 0, 0, 0, 0, 0), 1)
+    assert reader_counts(db_session, shelf) == (1, (1, 0, 0, 0, 0, 0, 0), 1)
 
 
 def test_source_deletion_does_not_delete_or_edit_the_private_copy(client, db_session, shelf):
@@ -416,7 +418,7 @@ def test_source_deletion_does_not_delete_or_edit_the_private_copy(client, db_ses
     copied = db_session.get(models.Collection, first["collection_id"])
     assert copied is not None and copied.is_public is False
     assert [(entry.category, entry.item_id, entry.curator_note) for entry in copied.items] == before
-    assert reader_counts(db_session, shelf) == (1, (1, 1, 1, 1, 1, 1), 1)
+    assert reader_counts(db_session, shelf) == (1, (1,) * len(collections.CATEGORIES), 1)
 
 
 def test_receipts_are_scoped_to_the_saving_account(client, db_session, shelf):
@@ -437,14 +439,14 @@ def test_receipts_are_scoped_to_the_saving_account(client, db_session, shelf):
 def test_legacy_copy_and_full_selection_share_retry_protection(client, db_session, shelf):
     sign_in(client, shelf.reader)
     legacy = client.post(f"/collections/public/{shelf.source.id}/copy")
-    assert legacy.status_code == 201 and len(legacy.json()["items"]) == 6
+    assert legacy.status_code == 201 and len(legacy.json()["items"]) == len(collections.CATEGORIES)
     collection_id = legacy.json()["id"]
     repeated = client.post(f"/collections/public/{shelf.source.id}/copy")
     assert repeated.status_code == 201 and repeated.json()["id"] == collection_id
     payload = preview(client, shelf).json()
     result = save(client, shelf, payload["version"], [row["id"] for row in payload["items"]]).json()
     assert result["collection_id"] == collection_id and result["already_saved"] is True
-    assert reader_counts(db_session, shelf) == (1, (1, 1, 1, 1, 1, 1), 1)
+    assert reader_counts(db_session, shelf) == (1, (1,) * len(collections.CATEGORIES), 1)
 
 
 def test_interrupted_save_rolls_back_all_new_media_collection_and_receipt(client, db_session, shelf, monkeypatch):

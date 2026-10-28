@@ -42,6 +42,7 @@ CATEGORIES: Dict[str, CategoryDetails] = {
     "video-games": (models.VideoGame, "Game"),
     "music": (models.Music, "Album"),
     "books": (models.Book, "Book"),
+    "manga": (models.Manga, "Manga"),
 }
 PUBLIC_COLLECTION_MIN_DESCRIPTION_CHARS = 300
 PUBLIC_COLLECTION_MIN_ITEMS = 3
@@ -55,6 +56,7 @@ ARTWORK_FIELDS = {
     "video-games": "cover_art_url",
     "music": "cover_art_url",
     "books": "cover_art_url",
+    "manga": "cover_art_url",
 }
 
 COPY_FIELDS = {
@@ -64,6 +66,7 @@ COPY_FIELDS = {
     "video-games": ("title", "release_date", "genres", "cover_art_url", "rawg_link"),
     "music": ("title", "artist", "year", "genre", "cover_art_url"),
     "books": ("title", "author", "year", "genre", "cover_art_url"),
+    "manga": ("title", "author", "year", "genre", "volumes", "chapters", "cover_art_url"),
 }
 
 
@@ -113,6 +116,7 @@ def _moderator_site_insights(db: Session) -> dict:
         ("video_games", "Video games", models.VideoGame, models.VideoGame.played),
         ("music", "Music", models.Music, models.Music.listened),
         ("books", "Books", models.Book, models.Book.read),
+        ("manga", "Manga", models.Manga, models.Manga.read),
     ]
     categories = []
     total_items = completed_items = rated_items = reviewed_items = public_reviews = 0
@@ -554,6 +558,7 @@ def _media_identity_key(media, category: str) -> tuple:
         "video-games": ("release_date",),
         "music": ("year", "artist"),
         "books": ("year", "author"),
+        "manga": ("year", "author"),
     }[category]
     values = [media.title.strip().casefold()]
     for field in identity_fields:
@@ -639,7 +644,7 @@ def _copy_media_for_user(
     values.update({"user_id": user_id, "rating": None, "review": None, "review_public": False})
     completion_field = {
         "movies": "watched", "tv-shows": "watched", "anime": "watched",
-        "video-games": "played", "music": "listened", "books": "read",
+        "video-games": "played", "music": "listened", "books": "read", "manga": "read",
     }[category]
     values[completion_field] = False
     copied = model(**values)
@@ -1162,6 +1167,7 @@ def explore_collections(
         "SELECT_VIDEO_GAMES": "selected" if category == "video-games" else "",
         "SELECT_MUSIC": "selected" if category == "music" else "",
         "SELECT_BOOKS": "selected" if category == "books" else "",
+        "SELECT_MANGA": "selected" if category == "manga" else "",
         "SORT_HELPFUL": "selected" if sort == "helpful" else "",
         "SORT_NEWEST": "selected" if sort == "newest" else "",
         "SORT_POPULAR": "selected" if sort == "popular" else "",

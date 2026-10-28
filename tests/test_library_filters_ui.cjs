@@ -14,6 +14,7 @@ const config = {
   'video-games': ['videoGameTable', 'videoGameSort', 'videoGameSearch', 'VideoGames'],
   music: ['musicTable', 'musicSort', 'musicSearch', 'Music'],
   books: ['bookTable', 'bookSort', 'bookSearch', 'Books'],
+  manga: ['mangaTable', 'mangaSort', 'mangaSearch', 'Manga'],
 };
 const plain = value => JSON.parse(JSON.stringify(value));
 const response = (items = [], total = items.length, offset = 0) => ({ ok: true, json: async () => ({ items, total, offset }) });
@@ -266,7 +267,7 @@ test('completion controls expose their selected state and only supported categor
     assert.equal(buttons.filter(button => button.getAttribute('aria-pressed') === 'true').length, 1);
     assert.equal(buttons.find(button => button.dataset.completion === 'all').getAttribute('aria-pressed'), 'true');
     const progress = host.querySelectorAll('[data-library-filter]').find(input => input.dataset.libraryFilter === 'hasProgress');
-    assert.equal(!!progress, ['tv-shows', 'anime', 'books'].includes(category), category);
+    assert.equal(!!progress, ['tv-shows', 'anime', 'books', 'manga'].includes(category), category);
     buttons.find(button => button.dataset.completion === 'finished').dispatch('click');
     assert.equal(s.context.getLibraryFilters(category).completion, 'finished');
     assert.equal(buttons.find(button => button.dataset.completion === 'finished').getAttribute('aria-pressed'), 'true');

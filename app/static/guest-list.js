@@ -8,7 +8,7 @@
   const MAX = 30;
   const KINDS = new Set(['movie', 'tv', 'anime', 'game', 'album', 'book']);
   const SLUG = /^[a-z0-9-]{1,130}$/;
-  const LOADERS = ['loadMovies', 'loadTVShows', 'loadAnime', 'loadVideoGames', 'loadMusic', 'loadBooks'];
+  const LOADERS = ['loadMovies', 'loadTVShows', 'loadAnime', 'loadVideoGames', 'loadMusic', 'loadBooks', 'loadManga'];
 
   function valid(item) {
     return item && KINDS.has(item.kind) && SLUG.test(item.slug || '') && typeof item.title === 'string';

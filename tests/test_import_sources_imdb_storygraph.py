@@ -102,7 +102,7 @@ def test_imdb_import_is_additive_and_skips_titles_already_tracked(authenticated_
         data={"source": "auto", "fingerprint_confirmation": first["fingerprint"]},
     )
     assert applied.status_code == 200
-    assert applied.json()["by_category"] == {"movies": 1, "tv-shows": 1, "anime": 0, "video-games": 1, "music": 0, "books": 0}
+    assert applied.json()["by_category"] == {"movies": 1, "tv-shows": 1, "anime": 0, "video-games": 1, "music": 0, "books": 0, "manga": 0}
 
     second = authenticated_client.post("/import-studio/preview/", files=upload("watchlist.csv", IMDB_WATCHLIST), data={"source": "auto"}).json()
     assert second["ready_count"] == 2 and second["duplicate_count"] == 1

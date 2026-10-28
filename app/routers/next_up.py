@@ -22,6 +22,7 @@ CATEGORIES: Dict[str, CategoryDetails] = {
     "video-games": (models.VideoGame, "Game"),
     "music": (models.Music, "Album"),
     "books": (models.Book, "Book"),
+    "manga": (models.Manga, "Manga"),
 }
 
 

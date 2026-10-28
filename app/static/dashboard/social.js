@@ -229,6 +229,18 @@ document.addEventListener('DOMContentLoaded', function () {
     } else if (e.target.classList.contains('cancel-book-btn')) {
       e.preventDefault();
       cancelBookEdit();
+    } else if (e.target.classList.contains('delete-manga-btn')) {
+      e.preventDefault();
+      deleteManga(parseInt(e.target.dataset.mangaId, 10));
+    } else if (e.target.classList.contains('edit-manga-btn')) {
+      e.preventDefault();
+      enableMangaEdit(e.target);
+    } else if (e.target.classList.contains('save-manga-btn')) {
+      e.preventDefault();
+      saveMangaEdit(e.target);
+    } else if (e.target.classList.contains('cancel-manga-btn')) {
+      e.preventDefault();
+      cancelMangaEdit();
     }
   });
 

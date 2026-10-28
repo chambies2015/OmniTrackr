@@ -27,6 +27,7 @@ LIBRARY = {
     "video-games": (models.VideoGame, "played"),
     "music": (models.Music, "listened"),
     "books": (models.Book, "read"),
+    "manga": (models.Manga, "read"),
 }
 
 # Each track: key, name, emoji, what is counted, the three tier targets, the "do more"
@@ -47,8 +48,10 @@ TRACKS = (
      "counts": "albums listened to", "next": "Listen to {n} more {noun}", "noun": ("album", "albums"), "shelf": "music"},
     {"key": "bookworm", "name": "Bookworm", "emoji": "📖", "metric": "books", "targets": (5, 25, 100),
      "counts": "books read", "next": "Read {n} more {noun}", "noun": ("book", "books"), "shelf": "books"},
+    {"key": "mangaka", "name": "Manga Reader", "emoji": "🗯️", "metric": "manga", "targets": (5, 25, 100),
+     "counts": "manga series read", "next": "Finish {n} more manga {noun}", "noun": ("series", "series"), "shelf": "manga"},
     {"key": "explorer", "name": "Explorer", "emoji": "🧭", "metric": "categories", "targets": (2, 4, 6),
-     "counts": "of the six categories tracked", "next": "Track something in {n} more {noun}",
+     "counts": "of the seven categories tracked", "next": "Track something in {n} more {noun}",
      "noun": ("category", "categories"), "shelf": None},
     {"key": "rater", "name": "Rater", "emoji": "⭐", "metric": "rated", "targets": (10, 50, 250),
      "counts": "titles rated", "next": "Rate {n} more {noun}", "noun": ("title", "titles"), "shelf": None},

@@ -32,7 +32,7 @@ def get_starter_picks(request: Request, response: Response, user=Depends(get_cur
 
 
 class StarterAdd(BaseModel):
-    category: Literal["movies", "tv-shows", "anime", "video-games", "music", "books"]
+    category: Literal["movies", "tv-shows", "anime", "video-games", "music", "books", "manga"]
     title: str = Field(min_length=1, max_length=200)
 
 

@@ -44,6 +44,7 @@ LAZY_CHUNKS = {
         "metadata-tv-anime-games.js",
         "metadata-music.js",
         "metadata-books.js",
+        "metadata-manga.js",
     ),
     "postcards": ("postcards.js",),
     "export-import": ("export-import.js",),

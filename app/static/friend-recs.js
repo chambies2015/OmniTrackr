@@ -8,7 +8,7 @@
   const NOTE_MAX = 280;
   const LOADERS = {
     movies: 'loadMovies', 'tv-shows': 'loadTVShows', anime: 'loadAnime',
-    'video-games': 'loadVideoGames', music: 'loadMusic', books: 'loadBooks',
+    'video-games': 'loadVideoGames', music: 'loadMusic', books: 'loadBooks', manga: 'loadManga',
   };
   const state = { source: null, friends: null, request: 0, items: [], expanded: false };
 

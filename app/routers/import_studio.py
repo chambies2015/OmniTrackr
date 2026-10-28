@@ -119,7 +119,7 @@ async def download_template(
 ):
     """Download a safe generic CSV starter for one built-in media category."""
     normalized = category.strip().lower()
-    if normalized not in {"movies", "tv-shows", "anime", "video-games", "music", "books"}:
+    if normalized not in {"movies", "tv-shows", "anime", "video-games", "music", "books", "manga"}:
         raise HTTPException(status_code=404, detail="Unknown media category.")
     columns = {
         "movies": "title,director,year,rating,watched,review\n",
@@ -128,6 +128,7 @@ async def download_template(
         "video-games": "title,release_date,genre,rating,played,review\n",
         "music": "title,artist,year,genre,rating,listened,review\n",
         "books": "title,author,year,genre,rating,read,review\n",
+        "manga": "title,author,year,genre,volumes,chapters,rating,read,review\n",
     }
     filename = f"omnitrackr-{normalized}-template.csv"
     return Response(

@@ -6,7 +6,8 @@ function categoryToId(category) {
     'video-games': 'videoGames',
     'library-insights': 'libraryInsights',
     'music': 'music',
-    'books': 'books'
+    'books': 'books',
+    'manga': 'manga'
   };
   return idMap[category] || category;
 }
@@ -63,7 +64,8 @@ async function loadCategoryStatistics(category) {
       'video-games': 'video-games',
       'library-insights': 'insights',
       'music': 'music',
-      'books': 'books'
+      'books': 'books',
+      'manga': 'manga'
     };
     
     const endpoint = categoryMap[category];
@@ -102,7 +104,7 @@ function displayCategoryStatistics(stats, category) {
   let html = '';
   
   html += '<div class="stats-subsection">';
-  const progressLabel = category === 'video-games' ? 'Play Progress' : category === 'music' ? 'Listen Progress' : category === 'books' ? 'Read Progress' : 'Watch Progress';
+  const progressLabel = category === 'video-games' ? 'Play Progress' : category === 'music' ? 'Listen Progress' : (category === 'books' || category === 'manga') ? 'Read Progress' : 'Watch Progress';
   html += `<h4>📈 ${progressLabel}</h4>`;
   html += '<div class="stats-grid">';
   html += `<div class="stat-card"><div class="stat-number">${stats.watch_stats.total_items}</div><div class="stat-label">Total Items</div></div>`;
@@ -114,7 +116,7 @@ function displayCategoryStatistics(stats, category) {
   } else if (category === 'music') {
     watchedLabel = 'Listened';
     unwatchedLabel = 'Unlistened';
-  } else if (category === 'books') {
+  } else if (category === 'books' || category === 'manga') {
     watchedLabel = 'Read';
     unwatchedLabel = 'Unread';
   }
@@ -170,13 +172,25 @@ function displayCategoryStatistics(stats, category) {
     html += '</div>';
   }
   
-  if (category === 'video-games' && stats.genre_stats) {
+  if (category === 'manga') {
     html += '<div class="stats-subsection">';
-    html += '<h4>🎮 Genre Analysis</h4>';
+    html += '<h4>📚 Volumes & Chapters</h4>';
+    html += '<div class="stats-grid">';
+    html += `<div class="stat-card"><div class="stat-number">${stats.volumes_read || 0}</div><div class="stat-label">Volumes in finished series</div></div>`;
+    html += `<div class="stat-card"><div class="stat-number">${stats.chapters_read || 0}</div><div class="stat-label">Chapters in finished series</div></div>`;
+    html += `<div class="stat-card"><div class="stat-number">${stats.total_volumes || 0}</div><div class="stat-label">Volumes on your shelf</div></div>`;
+    html += `<div class="stat-card"><div class="stat-number">${stats.total_chapters || 0}</div><div class="stat-label">Chapters on your shelf</div></div>`;
+    html += '</div>';
+    html += '</div>';
+  }
+
+  if ((category === 'video-games' || category === 'manga') && stats.genre_stats) {
+    html += '<div class="stats-subsection">';
+    html += `<h4>${category === 'manga' ? '🗯️' : '🎮'} Genre Analysis</h4>`;
     html += '<div class="genre-stats"><h5>Genre Distribution</h5><div id="genreBars' + idPrefix + '"></div></div>';
     html += '<div class="stats-grid-two">';
     html += '<div><h5>Top Genres</h5><div id="topGenresList' + idPrefix + '"></div></div>';
-    html += '<div><h5>Most Played Genres</h5><div id="mostPlayedGenresList' + idPrefix + '"></div></div>';
+    html += `<div><h5>Most ${category === 'manga' ? 'Read' : 'Played'} Genres</h5><div id="mostPlayedGenresList${idPrefix}"></div></div>`;
     html += '</div>';
     html += '</div>';
   }
@@ -197,7 +211,7 @@ function displayCategoryStatistics(stats, category) {
     displaySeasonsEpisodesStats(stats.seasons_episodes_stats, idPrefix);
   }
   
-  if (category === 'video-games' && stats.genre_stats) {
+  if ((category === 'video-games' || category === 'manga') && stats.genre_stats) {
     displayGenreStats(stats.genre_stats, idPrefix);
   }
 }
@@ -406,6 +420,7 @@ function displaySeasonsEpisodesStats(stats, idPrefix) {
 }
 
 function displayGenreStats(stats, idPrefix) {
+  const [one, many] = idPrefix === 'manga' ? ['series', 'series'] : ['game', 'games'];
   const genreBarsContainer = document.getElementById(`genreBars${idPrefix}`);
   const topGenresContainer = document.getElementById(`topGenresList${idPrefix}`);
   const mostPlayedContainer = document.getElementById(`mostPlayedGenresList${idPrefix}`);
@@ -444,7 +459,7 @@ function displayGenreStats(stats, idPrefix) {
         genreDiv.className = 'rated-item';
         genreDiv.innerHTML = `
           <div class="rated-item-title">${escapeHtml(genre.genre ?? '')}</div>
-          <div class="rated-item-rating">${genre.count} ${genre.count === 1 ? 'game' : 'games'}</div>
+          <div class="rated-item-rating">${genre.count} ${genre.count === 1 ? one : many}</div>
         `;
         topGenresContainer.appendChild(genreDiv);
       });
@@ -461,7 +476,7 @@ function displayGenreStats(stats, idPrefix) {
         genreDiv.className = 'rated-item';
         genreDiv.innerHTML = `
           <div class="rated-item-title">${escapeHtml(genre.genre ?? '')}</div>
-          <div class="rated-item-rating">${genre.count} ${genre.count === 1 ? 'game' : 'games'}</div>
+          <div class="rated-item-rating">${genre.count} ${genre.count === 1 ? one : many}</div>
         `;
         mostPlayedContainer.appendChild(genreDiv);
       });

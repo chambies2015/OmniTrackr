@@ -192,6 +192,7 @@ FINISHED = (
     (models.Anime, "watched", "Anime"),
     (models.VideoGame, "played", "Video game"),
     (models.Book, "read", "Book"),
+    (models.Manga, "read", "Manga"),
 )
 
 

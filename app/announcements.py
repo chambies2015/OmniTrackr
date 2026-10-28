@@ -147,7 +147,7 @@ def set_status(db: Session, new_status: str) -> models.EmailCampaign:
 
 def _library_count(db: Session, user_id: int) -> int:
     total = 0
-    for model in (models.Movie, models.TVShow, models.Anime, models.VideoGame, models.Music, models.Book):
+    for model in (models.Movie, models.TVShow, models.Anime, models.VideoGame, models.Music, models.Book, models.Manga):
         total += int(db.query(func.count(model.id)).filter(model.user_id == user_id).scalar() or 0)
     return total
 

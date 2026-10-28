@@ -34,7 +34,8 @@ BURST_MIN = 4  # This many plain adds by one friend on one day become a single "
 BURST_SHOWN = 6
 REVIEW_EXCERPT = 280
 DONE_FIELD = {"movies": "watched", "tv-shows": "watched", "anime": "watched",
-              "video-games": "played", "music": "listened", "books": "read"}
+              "video-games": "played", "music": "listened", "books": "read",
+              "manga": "read"}
 PRIVATE_FLAG = {category: category.replace("-", "_") + "_private" for category in LIBRARY}
 _CATEGORY_BY_MODEL = {model: category for category, (model, _fields) in LIBRARY.items()}
 KIND_RANK = {"added": 0, "rated": 1, "reviewed": 2, "finished": 3}

@@ -26,6 +26,7 @@ AMAZON_INDEX = {
     "games": ("videogames", ""),
     "music": ("popular", "album"),
     "books": ("stripbooks", ""),
+    "manga": ("stripbooks", "manga"),
 }
 CATEGORY_ALIASES = {
     "movie": "movies", "movies": "movies",
@@ -34,6 +35,7 @@ CATEGORY_ALIASES = {
     "video_game": "games", "video-games": "games", "games": "games",
     "music": "music",
     "book": "books", "books": "books",
+    "manga": "manga",
 }
 LINK_LABELS = {
     "movies": "Find it on Amazon",
@@ -42,6 +44,7 @@ LINK_LABELS = {
     "games": "Pre-order or buy on Amazon",
     "music": "Find it on Amazon",
     "books": "Find it on Amazon",
+    "manga": "Find the volumes on Amazon",
 }
 DEFAULT_DISCLOSURE = "As an Amazon Associate OmniTrackr earns from qualifying purchases. It never changes what we list."
 

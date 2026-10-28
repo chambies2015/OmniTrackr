@@ -43,6 +43,8 @@ function switchTab(tabName) {
     return loadMusic();
   } else if (tabName === 'books') {
     return loadBooks();
+  } else if (tabName === 'manga') {
+    return loadManga();
   } else if (tabName === 'friends-feed') {
     window.OmniFriendFeed?.load();
   } else if (tabName === 'activity') {
@@ -1884,6 +1886,173 @@ window.cancelBookEdit = function () {
   loadBooks();
 };
 
+let isLoadingManga = false;
+
+async function loadManga() {
+  if (isLoadingManga) {
+    return;
+  }
+
+  isLoadingManga = true;
+
+  try {
+    const search = document.getElementById('mangaSearch').value;
+    const sortVal = document.getElementById('mangaSort').value;
+    let sortField = '';
+    let order = '';
+    if (sortVal) {
+      const parts = sortVal.split('-');
+      sortField = parts[0];
+      order = parts[1] || '';
+    }
+    let url = `${API_BASE}/manga/?`;
+    if (search) url += `search=${encodeURIComponent(search)}&`;
+    if (sortField) url += `sort_by=${encodeURIComponent(sortField)}&`;
+    if (order) url += `order=${encodeURIComponent(order)}`;
+    const res = await fetchLibraryPage(url);
+    if (res.ok) {
+      const series = await res.json();
+      const tbody = document.querySelector('#mangaTable tbody');
+      tbody.innerHTML = '';
+      const countElem = document.getElementById('mangaCount');
+      if (countElem) countElem.textContent = `${res.total} Manga`;
+      series.forEach((manga) => {
+        const tr = document.createElement('tr');
+        tr.innerHTML = `
+          <td id="manga-poster-${manga.id}"></td>
+          <td>${escapeHtml(manga.title)}</td>
+          <td>${escapeHtml(manga.author ?? '')}</td>
+          <td>${manga.year ?? ''}</td>
+          <td>${manga.volumes ?? ''}</td>
+          <td>${manga.chapters ?? ''}</td>
+          <td>${manga.genre ? escapeHtml(manga.genre) : ''}</td>
+          <td>${manga.rating !== null && manga.rating !== undefined ? parseFloat(manga.rating).toFixed(1) + '/10' : ''}</td>
+          <td><span class="watched-icon ${manga.read ? 'watched' : 'unwatched'}">${manga.read ? '✓' : '✗'}</span></td>
+          <td class="review-cell">${getReviewCellContent(manga.review, manga.title, manga.author || '')}</td>
+          <td><span class="watched-icon ${manga.review_public ? 'watched' : 'unwatched'}">${manga.review_public ? '✓' : '✗'}</span></td>
+          <td>
+            <button class="action-btn edit-manga-btn" data-manga-id="${manga.id}" data-manga-title="${escapeHtml(manga.title)}" data-manga-author="${escapeHtml(manga.author ?? '')}" data-manga-year="${manga.year ?? ''}" data-manga-volumes="${manga.volumes ?? ''}" data-manga-chapters="${manga.chapters ?? ''}" data-manga-genre="${escapeHtml(manga.genre || '')}" data-manga-rating="${manga.rating ?? ''}" data-manga-read="${manga.read}" data-manga-review="${escapeHtml(manga.review || '')}" data-manga-review-public="${manga.review_public || false}">Edit</button>
+            <button type="button" class="action-btn" data-action="add-next-up" data-next-up-category="manga" data-next-up-item-id="${manga.id}">Next up</button>
+            <button type="button" class="action-btn" data-progress-category="manga" data-progress-item-id="${manga.id}" data-progress-title="${escapeHtml(manga.title)}">Update progress</button>
+            <button type="button" class="action-btn" data-action="open-collection-picker" data-collection-category="manga" data-collection-item-id="${manga.id}" data-collection-item-title="${escapeHtml(manga.title)}">Collect</button>
+            ${manga.read ? `<button type="button" class="action-btn" data-action="begin-completion-ritual" data-completion-category="manga" data-completion-item-id="${manga.id}">Reflect</button>` : ''}
+            <button class="action-btn delete-manga-btn" data-manga-id="${manga.id}">Delete</button>
+          </td>
+        `;
+        tbody.appendChild(tr);
+        if (manga.cover_art_url) displayMangaPoster(manga.id, manga.cover_art_url, manga.title);
+      });
+    }
+  } finally {
+    isLoadingManga = false;
+  }
+}
+
+function displayMangaPoster(id, posterUrl, title = null) {
+  const cell = document.getElementById(`manga-poster-${id}`);
+  if (!cell || !posterUrl) return;
+  const altText = title ? `${title} manga cover art` : 'Manga cover art';
+  const img = document.createElement('img');
+  img.src = posterUrl;
+  img.alt = altText;
+  img.style.width = '60px';
+  img.style.maxHeight = '90px';
+  img.style.objectFit = 'cover';
+  img.style.borderRadius = '4px';
+  img.loading = 'lazy';
+  img.onclick = () => showImagePopup(posterUrl, altText);
+  cell.innerHTML = '';
+  cell.appendChild(img);
+}
+
+async function deleteManga(id) {
+  if (!confirm('Are you sure you want to delete this manga?')) return;
+  const res = await authenticatedFetch(`${API_BASE}/manga/${id}`, { method: 'DELETE' });
+  if (res.ok) loadManga();
+}
+
+function mangaWholeNumber(value) {
+  if (value === '' || value === null || value === undefined) return null;
+  const number = parseInt(value, 10);
+  return Number.isNaN(number) || number < 0 ? null : number;
+}
+
+window.enableMangaEdit = function (btn) {
+  if (editingRowId !== null) return;
+  const id = parseInt(btn.dataset.mangaId, 10);
+  editingRowId = id;
+  const row = btn.closest('tr');
+  editingRowElement = row;
+  const data = btn.dataset;
+  const read = data.mangaRead === 'true';
+  row.cells[1].innerHTML = `<input type="text" id="edit-manga-title" value="${escapeHtml(data.mangaTitle || '')}">`;
+  row.cells[2].innerHTML = `<input type="text" id="edit-manga-author" value="${escapeHtml(data.mangaAuthor || '')}">`;
+  row.cells[3].innerHTML = `<input type="number" min="0" max="9999" id="edit-manga-year" value="${escapeHtml(data.mangaYear || '')}">`;
+  row.cells[4].innerHTML = `<input type="number" min="0" id="edit-manga-volumes" value="${escapeHtml(data.mangaVolumes || '')}">`;
+  row.cells[5].innerHTML = `<input type="number" min="0" id="edit-manga-chapters" value="${escapeHtml(data.mangaChapters || '')}">`;
+  row.cells[6].innerHTML = `<input type="text" id="edit-manga-genre" value="${escapeHtml(data.mangaGenre || '')}">`;
+  row.cells[7].innerHTML = `<input type="number" min="0" max="10" step="0.1" id="edit-manga-rating" value="${escapeHtml(data.mangaRating || '')}">`;
+  row.cells[8].innerHTML = `<input type="checkbox" id="edit-manga-read" ${read ? 'checked' : ''}>`;
+  row.cells[9].innerHTML = `<textarea id="edit-manga-review" class="review-textarea" data-review-quality-input>${escapeHtml(data.mangaReview || '')}</textarea>${reviewQualityHintHtml('edit-manga-review')}`;
+  const reviewTextarea = document.getElementById('edit-manga-review');
+  if (reviewTextarea) {
+    reviewTextarea.style.height = 'auto';
+    reviewTextarea.style.height = Math.max(60, reviewTextarea.scrollHeight) + 'px';
+    reviewTextarea.addEventListener('input', function () {
+      this.style.height = 'auto';
+      this.style.height = Math.max(60, this.scrollHeight) + 'px';
+    });
+    setupReviewQualityCounter(reviewTextarea);
+  }
+  row.cells[10].innerHTML = `<input type="checkbox" id="edit-manga-review-public" ${data.mangaReviewPublic === 'true' ? 'checked' : ''}>`;
+  row.cells[11].innerHTML = `
+    <button class="action-btn save-manga-btn" data-manga-id="${id}" data-was-complete="${read}" data-completion-category="manga">Save</button>
+    <button class="action-btn cancel-manga-btn">Cancel</button>
+  `;
+  disableOtherRowButtons(row, 'mangaTable');
+};
+
+window.saveMangaEdit = async function (btn) {
+  const id = parseInt(btn.dataset.mangaId, 10);
+  const read = document.getElementById('edit-manga-read').checked;
+  const ratingVal = document.getElementById('edit-manga-rating').value;
+  const updateData = {
+    title: document.getElementById('edit-manga-title').value,
+    author: document.getElementById('edit-manga-author').value.trim() || null,
+    year: mangaWholeNumber(document.getElementById('edit-manga-year').value),
+    volumes: mangaWholeNumber(document.getElementById('edit-manga-volumes').value),
+    chapters: mangaWholeNumber(document.getElementById('edit-manga-chapters').value),
+    genre: document.getElementById('edit-manga-genre').value || null,
+    read,
+    rating: ratingVal === '' ? null : parseFloat(ratingVal),
+    review: document.getElementById('edit-manga-review')?.value ?? '',
+    review_public: document.getElementById('edit-manga-review-public').checked,
+  };
+
+  const res = await authenticatedFetch(`${API_BASE}/manga/${id}`, {
+    method: 'PUT',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(updateData),
+  });
+
+  if (res.ok) {
+    if (btn.dataset.wasComplete !== 'true' && read) openCompletionMoment('manga', id);
+    editingRowId = null;
+    editingRowElement = null;
+    enableAllRowButtons('mangaTable');
+    loadManga();
+  } else {
+    await showLibrarySaveError(res);
+  }
+};
+
+window.cancelMangaEdit = function () {
+  editingRowId = null;
+  editingRowElement = null;
+  enableAllRowButtons('mangaTable');
+  loadManga();
+};
+
 async function deleteAnime(id) {
   if (!confirm('Are you sure you want to delete this anime?')) return;
   const res = await authenticatedFetch(`${API_BASE}/anime/${id}`, { method: 'DELETE' });
@@ -2518,6 +2687,90 @@ document.getElementById('addBookForm').onsubmit = async function (e) {
   }
 };
 
+// @lazy-chunk lazy/metadata-manga.js
+document.getElementById('searchMangaBtn').onclick = searchMangaMetadata;
+
+document.getElementById('mangaTitle').addEventListener('keypress', function(e) {
+  if (e.key === 'Enter') {
+    e.preventDefault();
+    searchMangaMetadata();
+  }
+});
+
+document.getElementById('addMangaForm').onsubmit = async function (e) {
+  e.preventDefault();
+  const form = document.getElementById('addMangaForm');
+  if (form.dataset.saving === 'true') return;
+  let status = document.getElementById('mangaSaveStatus');
+  if (!status) {
+    status = document.createElement('p');
+    status.id = 'mangaSaveStatus';
+    status.setAttribute('role', 'status');
+    form.appendChild(status);
+  }
+  status.textContent = '';
+  const titleInput = document.getElementById('mangaTitle');
+  const title = titleInput.value.trim();
+  if (!title) {
+    status.textContent = 'Please enter a manga title.';
+    titleInput.focus();
+    return;
+  }
+  const yearVal = document.getElementById('mangaYear').value.trim();
+  const year = yearVal ? parseInt(yearVal, 10) : null;
+  if (yearVal && (isNaN(year) || year < 0 || year > 9999)) {
+    status.textContent = 'Please enter a valid year, or leave it blank.';
+    document.getElementById('mangaYear').focus();
+    return;
+  }
+
+  const manga = {
+    title,
+    author: document.getElementById('mangaAuthor').value.trim() || null,
+    year,
+    volumes: mangaWholeNumber(document.getElementById('mangaVolumes').value),
+    chapters: mangaWholeNumber(document.getElementById('mangaChapters').value),
+    read: document.getElementById('mangaRead').checked,
+    review_public: document.getElementById('mangaReviewPublic').checked,
+  };
+  const genreVal = document.getElementById('mangaGenre').value;
+  if (genreVal) manga.genre = genreVal;
+  const ratingVal = document.getElementById('mangaRating').value;
+  if (ratingVal) manga.rating = parseFloat(ratingVal);
+  const reviewVal = document.getElementById('mangaReview').value;
+  if (reviewVal) manga.review = reviewVal;
+  if (titleInput.dataset.coverArtUrl) manga.cover_art_url = titleInput.dataset.coverArtUrl;
+
+  form.dataset.saving = 'true';
+  const submit = form.querySelector('button[type="submit"]');
+  if (submit) submit.disabled = true;
+  status.textContent = 'Saving your manga…';
+  try {
+    const response = await authenticatedFetch(`${API_BASE}/manga/`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(manga),
+    });
+    if (response.ok) {
+      status.textContent = '';
+      form.reset();
+      delete titleInput.dataset.coverArtUrl;
+      toggleCollapsible('mangaForm');
+      loadManga();
+    } else {
+      const errorData = await response.json().catch(() => ({ detail: 'Failed to add manga' }));
+      status.textContent = typeof errorData.detail === 'string' ? errorData.detail : 'Could not save this manga. Check the fields and try again.';
+    }
+  } catch (error) {
+    status.textContent = error.message === 'Session expired. Please login again.'
+      ? 'Your session expired. Sign in again before saving. Your form has not been cleared.'
+      : 'Could not confirm the save. Your form has not been cleared. Check your library before retrying to avoid a duplicate.';
+  } finally {
+    delete form.dataset.saving;
+    if (submit) submit.disabled = false;
+  }
+};
+
 // @lazy-chunk lazy/export-import.js
 function enhanceLibraryCards(tableId) {
   const table = document.getElementById(tableId);
@@ -2652,7 +2905,7 @@ function loadStatistics() {
   let insightsOpen = false;
   Object.entries({
     'library-insights': 'libraryInsights', movies: 'movies', 'tv-shows': 'tvShows', anime: 'anime',
-    'video-games': 'videoGames', music: 'music', books: 'books',
+    'video-games': 'videoGames', music: 'music', books: 'books', manga: 'manga',
   }).forEach(([category, idPrefix]) => {
     const content = document.getElementById(`${idPrefix}StatsContent`);
     if (!content || !isElementShown(content)) return;

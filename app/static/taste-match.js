@@ -7,7 +7,7 @@
   const state = { friendId: null, request: 0, data: null };
   const LOADERS = {
     movies: 'loadMovies', 'tv-shows': 'loadTVShows', anime: 'loadAnime',
-    'video-games': 'loadVideoGames', music: 'loadMusic', books: 'loadBooks',
+    'video-games': 'loadVideoGames', music: 'loadMusic', books: 'loadBooks', manga: 'loadManga',
   };
 
   const $ = id => document.getElementById(id);
