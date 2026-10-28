@@ -1008,6 +1008,9 @@ class CalendarFeed(Base):
     token = Column(String(64), nullable=False, unique=True, index=True)
     created_at = Column(DateTime, nullable=False, default=datetime.utcnow)
     last_fetched_at = Column(DateTime, nullable=True)
+    # Weekly episodes of unfinished shows (Oct 28). Feeds made before then keep
+    # their old contents (the migration adds FALSE); new feeds start with it on.
+    include_episodes = Column(Boolean, nullable=False, default=True)
 
 
 class KofiPayment(Base):

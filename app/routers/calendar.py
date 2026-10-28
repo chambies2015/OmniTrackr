@@ -3,10 +3,11 @@ from __future__ import annotations
 
 import asyncio
 
-from fastapi import APIRouter, Depends, HTTPException, Request, Response
+from fastapi import APIRouter, Body, Depends, HTTPException, Request, Response
 from starlette.concurrency import run_in_threadpool
 from sqlalchemy.orm import Session
 
+from .. import episode_calendar
 from .. import release_calendar as calendar
 from .. import release_radar as radar
 from ..dependencies import get_current_user, get_db
@@ -69,10 +70,13 @@ async def member_calendar(token: str, request: Request, db: Session = Depends(ge
     user = await run_in_threadpool(calendar.member_for_token, db, token)
     if user is None:
         raise HTTPException(404, "This calendar address is no longer active")
+    feed = await run_in_threadpool(calendar.feed_for, db, user.id)
+    include_episodes = bool(feed and feed.include_episodes is not False)
     pool = await _pool(request, radar.CATEGORY_ORDER)
-    events = await run_in_threadpool(calendar.member_events, db, user.id, pool, radar.today_utc())
-    body = calendar.build_ics("OmniTrackr: my releases",
-                              "New releases, seasons and sequels connected to your OmniTrackr library.", events)
+    events = await run_in_threadpool(calendar.member_feed_events, db, user, pool, radar.today_utc(), include_episodes)
+    description = ("New releases, seasons, sequels and episodes connected to your OmniTrackr library."
+                   if include_episodes else "New releases, seasons and sequels connected to your OmniTrackr library.")
+    body = calendar.build_ics("OmniTrackr: my releases", description, events)
     return _ics_response(body, "omnitrackr-my-releases.ics", "private, max-age=1800", private=True)
 
 
@@ -89,9 +93,21 @@ def get_calendar(response: Response, user=Depends(get_current_user), db: Session
 
 
 @router.post("/api/calendar")
-def turn_on_calendar(response: Response, user=Depends(get_current_user), db: Session = Depends(get_db)):
+def turn_on_calendar(request: Request, response: Response, user=Depends(get_current_user), db: Session = Depends(get_db)):
     _private(response)
-    calendar.enable(db, user.id)
+    feed = calendar.enable(db, user.id)
+    if feed.include_episodes:
+        episode_calendar.queue_member(request.app, user.id)
+    return calendar.state(db, user.id)
+
+
+@router.put("/api/calendar/episodes")
+def set_calendar_episodes(request: Request, response: Response, enabled: bool = Body(..., embed=True),
+                          user=Depends(get_current_user), db: Session = Depends(get_db)):
+    _private(response)
+    calendar.set_episodes(db, user.id, enabled)
+    if enabled:
+        episode_calendar.queue_member(request.app, user.id)
     return calendar.state(db, user.id)
 
 
