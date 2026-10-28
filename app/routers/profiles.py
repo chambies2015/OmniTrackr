@@ -3,6 +3,7 @@ from __future__ import annotations
 
 import hashlib
 import io
+import json
 import os
 import threading
 from collections import OrderedDict
@@ -15,7 +16,7 @@ from pydantic import BaseModel, Field
 from sqlalchemy.orm import Session
 
 from ..integer_bounds import PositiveDatabaseId
-from .. import models, profile_widgets, public_profiles, review_spoilers, supporters
+from .. import funnel, models, profile_widgets, public_profiles, review_spoilers, supporters
 from ..auth import AUTH_COOKIE_NAME
 from ..csp import strict_html_response
 from ..dependencies import get_current_user, get_db
@@ -23,7 +24,7 @@ from ..site_chrome import apply_site_chrome
 
 router = APIRouter(tags=["profiles"])
 SITE_URL = os.getenv("SITE_URL", "https://omnitrackr.xyz").rstrip("/")
-CSS_VERSION = "20261022-diary-1"
+CSS_VERSION = "20261027-refresh-1"
 TITLE_CSS_VERSION = "20261009-take-1"
 
 
@@ -183,13 +184,15 @@ def _owner_note_html(view, is_owner: bool) -> str:
 def _stats_html(view) -> str:
     if not view.stats:
         return ""
-    tiles = "".join(
-        f'<div class="profile-stat"><strong>{_e(row["total"])}</strong><span>{_e(row["label"])}</span>'
-        f'<small>{_e(row["finished"])} {_e(row["verb"])}</small>'
-        + (f'<small>avg <b class="profile-rating">{_e(row["average"])}/10</b></small>' if row["average"] is not None else "")
-        + "</div>"
-        for row in view.stats
-    )
+    tiles = ""
+    for row in view.stats:
+        done = round(100 * row["finished"] / row["total"]) if row["total"] else 0
+        tiles += (f'<div class="profile-stat profile-stat--{_e(row["category"])}"><strong>{_e(row["total"])}</strong>'
+                  f'<span>{_e(row["label"])}</span>'
+                  f'<span class="profile-stat__meter" title="{done}% {_e(row["verb"])}"><span style="--w:{done}%"></span></span>'
+                  f'<small>{_e(row["finished"])} {_e(row["verb"])}</small>'
+                  + (f'<small>avg <b class="profile-rating">{_e(row["average"])}/10</b></small>' if row["average"] is not None else "")
+                  + "</div>")
     return (f'<section class="title-section" aria-labelledby="profile-stats"><h2 id="profile-stats">Library</h2>'
             f'<div class="profile-stats">{tiles}</div></section>')
 
@@ -277,6 +280,133 @@ def _collections_html(view) -> str:
             f'<div class="title-collections">{cards}</div></section>')
 
 
+# Library categories in the taste-mix bar, in profile-page.css colors.
+MIX_COLORS = ("movies", "tv-shows", "anime", "video-games", "music", "books")
+SECTION_TABS = (("profile-showcase", "Showcase"), ("profile-stats", "Library"), ("profile-badges", "Badges"),
+                ("profile-favorites", "Favorites"), ("profile-diary", "Diary"), ("profile-reviews", "Reviews"),
+                ("profile-collections", "Collections"))
+
+
+def _plural(count: int, word: str) -> str:
+    return f"{count} {word}{'' if count == 1 else 's'}"
+
+
+def _wall_html(view) -> str:
+    """Posters from the member's showcase, favorites and diary behind the header (not with a supporter banner)."""
+    if (view.supporter or {}).get("banner") in supporters.BANNERS:
+        return ""
+    images = []
+    for item in [*view.showcase, *view.favorites, *view.diary]:
+        image = item.get("image")
+        if image and image not in images:
+            images.append(image)
+        if len(images) >= 10:
+            break
+    if len(images) < 3:
+        return ""
+    posters = "".join(f'<img src="{_e(image)}" alt="" decoding="async">' for image in images)
+    return f'<div class="profile-wall" aria-hidden="true">{posters}</div>'
+
+
+def _numbers_html(view) -> str:
+    """The headline numbers under the name. Only from what the member chose to show."""
+    tiles = []
+    if view.stats:
+        finished = sum(row["finished"] for row in view.stats)
+        tiles.append((f"{view.total_titles:,}", "titles tracked"))
+        tiles.append((f"{finished:,}", "finished"))
+        rated = sum(row["rated"] for row in view.stats if row["average"] is not None)
+        if rated:
+            average = sum(row["average"] * row["rated"] for row in view.stats if row["average"] is not None) / rated
+            tiles.append((f"{average:.1f}", "average rating"))
+    if view.reviews:
+        tiles.append((str(len(view.reviews)), "review" if len(view.reviews) == 1 else "reviews"))
+    if view.badges:
+        tiles.append((str(len(view.badges)), "badge" if len(view.badges) == 1 else "badges"))
+    if not tiles:
+        return ""
+    cells = "".join(f'<li class="profile-number"><strong>{_e(value)}</strong><span>{_e(label)}</span></li>'
+                    for value, label in tiles[:5])
+    return f'<ul class="profile-numbers" aria-label="At a glance">{cells}</ul>'
+
+
+def _tabs_html(body: str) -> str:
+    present = [(anchor, label) for anchor, label in SECTION_TABS if f'id="{anchor}"' in body]
+    if len(present) < 3:
+        return ""
+    links = "".join(f'<a href="#{anchor}">{label}</a>' for anchor, label in present)
+    return (f'<nav class="title-tabs profile-tabs" aria-label="On this page">'
+            f'<div class="site-wrap title-tabs__inner">{links}</div></nav>')
+
+
+def _mix_html(view) -> str:
+    if not view.stats or view.total_titles <= 0:
+        return ""
+    segments, legend = "", ""
+    for row in sorted(view.stats, key=lambda r: -r["total"]):
+        share = row["total"] * 100 / view.total_titles
+        tone = row["category"] if row["category"] in MIX_COLORS else "other"
+        segments += f'<span class="profile-mix__part profile-mix__part--{_e(tone)}" style="--w:{share:.2f}%"></span>'
+        legend += (f'<li><i class="profile-mix__dot profile-mix__part--{_e(tone)}" aria-hidden="true"></i>'
+                   f'{_e(row["label"])} <b>{round(share)}%</b></li>')
+    return (f'<div class="profile-mix"><p class="profile-glance__label">Taste mix</p>'
+            f'<div class="profile-mix__bar" aria-hidden="true">{segments}</div><ul class="profile-mix__legend">{legend}</ul></div>')
+
+
+def _glance_html(view, *, signed_in: bool, since: str) -> str:
+    name = view.user.username
+    # (label, html): plain values are escaped here.
+    facts = [("Member", _e(since.replace("Member since ", "Since ")))]
+    if view.stats:
+        top = max(view.stats, key=lambda r: r["total"])
+        facts.append(("Biggest shelf", _e(f'{top["label"]} · {top["total"]:,}')))
+    picks = view.showcase or view.favorites
+    top_pick = next((item for item in picks if item.get("rating") is not None), None)
+    if top_pick:
+        facts.append(("Top rated", f'<a href="{_e(top_pick["url"])}">{_e(top_pick["title"])}</a> '
+                                   f'<span class="profile-rating">{_e(_rating(top_pick["rating"]))}/10</span>'))
+    if view.diary:
+        latest = view.diary[0]
+        facts.append(("Latest finish", f'<a href="{_e(latest["url"])}">{_e(latest["title"])}</a> '
+                                       f'<small>{latest["date"]:%b} {latest["date"].day}</small>'))
+    if view.friends_brought:
+        facts.append(("Brought to OmniTrackr", _e(_plural(view.friends_brought, "friend"))))
+    rows = "".join(f'<div><dt>{_e(label)}</dt><dd>{value}</dd></div>' for label, value in facts)
+    join = ("" if signed_in else
+            f'<div class="title-glance__join profile-glance__join"><strong>Keep a profile like {_e(name)}\'s</strong>'
+            '<p>Track everything you watch, play, read and hear in one free library. Rate what you finish and share it with one link.</p>'
+            '<a class="site-btn site-btn--primary site-btn--sm title-glance__cta" href="/#signup" data-profile-join>Start tracking free</a>'
+            '<a class="profile-glance__quiz" href="/taste-quiz">Or take the one-minute taste quiz <span aria-hidden="true">→</span></a></div>')
+    return (f'<aside class="title-glance profile-glance" aria-labelledby="profile-glance"><h2 id="profile-glance">About {_e(name)}</h2>'
+            f'{_mix_html(view)}<dl>{rows}</dl>{join}</aside>')
+
+
+def _actions_html(view, *, signed_in: bool, is_owner: bool, recap_url, recap_year) -> str:
+    name = view.user.username
+    buttons = []
+    if not signed_in:
+        buttons.append('<a class="site-btn site-btn--primary site-btn--sm" href="/#signup" data-profile-join>Make your own profile, free</a>')
+    elif is_owner:
+        buttons.append('<a class="site-btn site-btn--primary site-btn--sm" href="/#public-profile">Edit profile</a>')
+    buttons.append(f'<button type="button" class="site-btn site-btn--ghost site-btn--sm" data-share '
+                   f'data-share-title="{_e(name)} on OmniTrackr">Share profile</button>')
+    if recap_url and recap_year:
+        buttons.append(f'<a class="site-btn site-btn--primary site-btn--sm" href="{_e(recap_url)}#story">'
+                       f'▶ {_e(name)}\'s {_e(recap_year)} in review</a>')
+    return f'<p class="profile-hero__actions">{"".join(buttons)}</p>'
+
+
+def _json_ld(view, canonical: str, description: str) -> str:
+    person = {"@type": "Person", "name": view.user.username, "alternateName": "@" + view.user.username, "url": canonical,
+              "description": description}
+    if view.user.profile_picture_data:
+        person["image"] = f"{SITE_URL}/profile-pictures/{view.user.id}"
+    data = {"@context": "https://schema.org", "@type": "ProfilePage", "url": canonical, "mainEntity": person}
+    if view.user.created_at:
+        data["dateCreated"] = view.user.created_at.date().isoformat()
+    return json.dumps(data, ensure_ascii=False).replace("<", "\\u003c")
+
+
 def _bio_html(bio: Optional[str]) -> str:
     if not bio:
         return ""
@@ -304,16 +434,24 @@ def render(view, *, signed_in: bool, is_owner: bool, recap_url: Optional[str] = 
     robots = "index, follow" if view.indexable else "noindex, follow"
     card_url = f"{SITE_URL}{view.path}/card.png"
     body = "".join([_showcase_html(view), _stats_html(view), _badges_html(view), _favorites_html(view), _diary_html(view), _reviews_html(view), _collections_html(view)])
+    tabs = _tabs_html(body)
     if not body:
         body = f'<p class="title-empty">{_e(name)} hasn\'t shared anything here yet.</p>'
     owner_note = _owner_note_html(view, is_owner)
     cta = ("" if signed_in else
-           '<section class="profile-cta site-card"><div><h2>Track your own movies, shows, games, music and books</h2>'
-           '<p>OmniTrackr is free. Build your library, rate what you finish and share a profile like this one.</p></div>'
-           '<a class="site-btn site-btn--primary" href="/#signup">Start tracking free</a></section>')
-    chips = "".join(f'<span class="site-chip">{_e(bit)}</span>' for bit in summary_bits)
-    recap_link = (f' <a class="site-btn site-btn--primary site-btn--sm" href="{_e(recap_url)}#story">'
-                  f'▶ {_e(name)}\'s {_e(recap_year)} in review</a>' if recap_url and recap_year else "")
+           '<section class="profile-cta site-card"><div><p class="site-eyebrow">Free on OmniTrackr</p>'
+           '<h2>Track everything you watch, play, read and hear</h2>'
+           '<p>Rate what you finish, keep a diary and share a profile like this one.</p></div>'
+           '<div class="profile-cta__actions"><a class="site-btn site-btn--primary" href="/#signup" data-profile-join>Start tracking free</a>'
+           '<a class="site-btn site-btn--ghost" href="/about">See how it works</a></div></section>')
+    joinbar = ("" if signed_in else
+               f'<div class="profile-joinbar" data-profile-joinbar><span>Like {_e(name)}\'s taste? Start your own library.</span>'
+               '<a class="site-btn site-btn--primary site-btn--sm" href="/#signup" data-profile-join>Join free</a></div>')
+    # Titles and reviews are in the headline numbers; the chips carry the rest.
+    chips = "".join(f'<span class="site-chip">{_e(bit)}</span>' for bit in summary_bits
+                    if not bit.endswith(("tracked", "review", "reviews")))
+    wall = _wall_html(view)
+    hero_class = _hero_class(view) + (" profile-hero--wall" if wall else "")
     page = f"""<!DOCTYPE html>
 <html lang="en">
 <head>
@@ -323,14 +461,20 @@ def render(view, *, signed_in: bool, is_owner: bool, recap_url: Optional[str] = 
   <meta name="description" content="{_e(meta_description)}">
   <meta name="robots" content="{robots}">
   <link rel="canonical" href="{_e(canonical)}">
+  <meta property="og:site_name" content="OmniTrackr">
   <meta property="og:title" content="{_e(name)} on OmniTrackr">
   <meta property="og:description" content="{_e(meta_description)}">
   <meta property="og:type" content="profile">
+  <meta property="profile:username" content="{_e(name)}">
   <meta property="og:url" content="{_e(canonical)}">
   <meta property="og:image" content="{_e(card_url)}">
   <meta property="og:image:width" content="1200">
   <meta property="og:image:height" content="630">
+  <meta property="og:image:alt" content="{_e(name)}'s OmniTrackr profile card">
   <meta name="twitter:card" content="summary_large_image">
+  <meta name="twitter:title" content="{_e(name)} on OmniTrackr">
+  <meta name="twitter:description" content="{_e(meta_description)}">
+  <meta name="twitter:image" content="{_e(card_url)}">
   <link rel="icon" type="image/x-icon" href="/omnitrackr_favicon.ico">
   <link rel="preload" href="/static/fonts/poppins-700-latin.woff2" as="font" type="font/woff2" crossorigin>
   <link rel="preload" href="/static/fonts/poppins-800-latin.woff2" as="font" type="font/woff2" crossorigin>
@@ -339,13 +483,16 @@ def render(view, *, signed_in: bool, is_owner: bool, recap_url: Optional[str] = 
   <link rel="stylesheet" href="/static/profile-page.css?v={CSS_VERSION}">
   <link rel="stylesheet" href="/static/profile-banners.css?v={CSS_VERSION}">
   <link rel="stylesheet" href="/static/badges.css?v=20261017-badges-1">
+  <script type="application/ld+json">{_json_ld(view, canonical, meta_description)}</script>
   <script src="/static/share.js?v=20261004-share-1" defer></script>
+  <script src="/static/profile-page.js?v={CSS_VERSION}" defer></script>
 </head>
-<body class="site title-page profile-page">
+<body class="site title-page profile-page{'' if signed_in else ' profile-page--guest'}">
   <!--SITE_NAV:-->
   <main>
-    <section class="{_e(_hero_class(view))}">
+    <section class="{_e(hero_class)}">
       {_banner_html(view)}
+      {wall}
       <div class="site-wrap profile-hero__inner">
         {_avatar_html(user)}
         <div class="profile-hero__copy">
@@ -354,17 +501,23 @@ def render(view, *, signed_in: bool, is_owner: bool, recap_url: Optional[str] = 
           {_supporter_html(view)}
           <p class="profile-hero__meta">{_e(since)}</p>
           {_bio_html(profile.bio)}
+          {_numbers_html(view)}
           <div class="title-hero__chips">{chips}</div>
-          <p class="profile-hero__actions"><button type="button" class="site-btn site-btn--ghost site-btn--sm" data-share data-share-title="{_e(name)} on OmniTrackr">Share profile</button>{recap_link}</p>
+          {_actions_html(view, signed_in=signed_in, is_owner=is_owner, recap_url=recap_url, recap_year=recap_year)}
           {owner_note}
         </div>
       </div>
     </section>
-    <div class="site-wrap title-body">
-      {body}
-      {cta}
+    {tabs}
+    <div class="site-wrap title-body title-body--glance profile-body">
+      <div class="title-main">
+        {body}
+        {cta}
+      </div>
+      {_glance_html(view, signed_in=signed_in, since=since)}
       <p class="title-sources">Members choose what their profile shows. Report a review or collection from its own page.</p>
     </div>
+    {joinbar}
   </main>
   <!--SITE_FOOTER-->
 </body>
@@ -382,6 +535,8 @@ def _profile_response(request: Request, db: Session, user: Optional[models.User]
     view = public_profiles.build(db, user, profile)
     signed_in = bool(request.cookies.get(AUTH_COOKIE_NAME))
     is_owner = signed_in and _viewer_id(request, db) == user.id
+    if not signed_in:
+        funnel.record("profile_link_opened", request)
     recap_url, recap_year = _season_recap(db, user.id)
     response = strict_html_response(render(view, signed_in=signed_in, is_owner=is_owner,
                                            recap_url=recap_url, recap_year=recap_year))
@@ -485,6 +640,35 @@ CARD_ACCENTS = {"violet": (139, 92, 246), "teal": (45, 212, 191), "amber": (245,
                 "sky": (56, 189, 248), "emerald": (52, 211, 153), "coral": (251, 113, 133), "gold": (234, 179, 8)}
 
 
+def _card_avatar(user: models.User, ring_rgb):
+    """(image, box, mask) for pasting the member's picture, or their initial, as a ringed circle on the card."""
+    from PIL import Image, ImageDraw, ImageOps
+    size, ring = 132, 4
+    tile = None
+    if user.profile_picture_data:
+        try:
+            with Image.open(io.BytesIO(user.profile_picture_data)) as picture:
+                tile = ImageOps.fit(picture.convert("RGB"), (size, size))
+        except Exception:
+            tile = None
+    if tile is None:
+        tile = Image.new("RGB", (size, size), (38, 30, 84))
+        draw = ImageDraw.Draw(tile)
+        initial = (user.username or "?")[:1].upper()
+        font = _font(64, bold=True)
+        box = draw.textbbox((0, 0), initial, font=font)
+        draw.text(((size - (box[2] - box[0])) / 2 - box[0], (size - (box[3] - box[1])) / 2 - box[1]), initial,
+                  font=font, fill=(196, 181, 253))
+    full = size + ring * 2
+    disc = Image.new("RGB", (full, full), ring_rgb)
+    inner = Image.new("L", (size, size), 0)
+    ImageDraw.Draw(inner).ellipse((0, 0, size - 1, size - 1), fill=255)
+    disc.paste(tile, (ring, ring), inner)
+    mask = Image.new("L", (full, full), 0)
+    ImageDraw.Draw(mask).ellipse((0, 0, full - 1, full - 1), fill=255)
+    return disc, (84, 140), mask
+
+
 def render_card(view) -> bytes:
     from PIL import Image, ImageDraw
     width, height = 1200, 630
@@ -506,11 +690,13 @@ def render_card(view) -> bytes:
 
     brand = _font(30, bold=True)
     draw.text((84, 78), "OmniTrackr", font=brand, fill=(196, 181, 253))
+    image.paste(*_card_avatar(view.user, glow_rgb))
+    draw = ImageDraw.Draw(image)
     name_font = _font(76, bold=True)
-    draw.text((84, 150), _fit(draw, view.user.username, name_font, width - 168), font=name_font, fill=(245, 243, 255))
+    draw.text((250, 150), _fit(draw, view.user.username, name_font, width - 334), font=name_font, fill=(245, 243, 255))
     sub = _font(30)
     since = f"Member since {view.user.created_at:%B} {view.user.created_at.year}" if view.user.created_at else "OmniTrackr member"
-    draw.text((86, 248), since, font=sub, fill=(167, 160, 199))
+    draw.text((252, 248), since, font=sub, fill=(167, 160, 199))
     if supporter:
         founding = bool(supporter.get("founding"))
         label = supporters.level_label(founding, int(supporter.get("months") or 0))
@@ -546,8 +732,14 @@ def render_card(view) -> bytes:
         bio_font = _font(28)
         draw.text((84, y), _fit(draw, " ".join(view.profile.bio.split()), bio_font, width - 168), font=bio_font, fill=(214, 209, 240))
     foot = _font(24)
+    invite_font = _font(24, bold=True)
+    invite = "Track yours free"
+    invite_width = draw.textlength(invite, font=invite_font) + 48
+    draw.rounded_rectangle((width - 84 - invite_width, height - 112, width - 84, height - 66), radius=23,
+                           fill=(124, 58, 237))
+    draw.text((width - 84 - invite_width + 24, height - 102), invite, font=invite_font, fill=(255, 255, 255))
     path_text = (SITE_URL.replace("https://", "").replace("http://", "") + view.path)
-    draw.text((84, height - 100), _fit(draw, path_text, foot, width - 168), font=foot, fill=(167, 160, 199))
+    draw.text((84, height - 100), _fit(draw, path_text, foot, width - 168 - invite_width - 24), font=foot, fill=(167, 160, 199))
 
     buffer = io.BytesIO()
     image.save(buffer, format="PNG", optimize=True)
@@ -561,6 +753,7 @@ def _card_response(db: Session, user: Optional[models.User]):
     view = public_profiles.build(db, user, profile)
     fingerprint = hashlib.sha256(repr((
         user.username, user.created_at, profile.bio,
+        hashlib.sha256(user.profile_picture_data or b"").hexdigest(),
         [(r["label"], r["total"]) for r in view.stats], [f["title"] for f in view.favorites[:4]],
         [f["title"] for f in view.showcase[:4]], sorted((view.supporter or {}).items(), key=str),
     )).encode("utf-8")).hexdigest()[:16]
