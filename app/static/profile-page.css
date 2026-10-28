@@ -42,6 +42,8 @@
 .profile-supporter { align-items: center; background: rgba(var(--profile-accent), .14); border: 1px solid rgba(var(--profile-accent), .5); border-radius: 999px; color: var(--site-text) !important; display: inline-flex; font-size: .82rem; font-weight: 600; gap: 6px; margin: 0 0 10px; padding: 4px 12px; text-decoration: none; }
 .profile-supporter span { color: rgb(var(--profile-accent)); }
 .profile-supporter:hover { background: rgba(var(--profile-accent), .22); }
+.profile-member { align-items: center; background: linear-gradient(120deg, rgba(var(--profile-accent), .28), rgba(244, 114, 182, .18)); border: 1px solid rgba(var(--profile-accent), .6); border-radius: 999px; color: var(--site-text) !important; display: inline-flex; font-size: .78rem; font-weight: 700; letter-spacing: .02em; margin: 0 0 10px; padding: 4px 11px; text-decoration: none; text-transform: uppercase; }
+.profile-member:hover { background: rgba(var(--profile-accent), .34); }
 .profile-supporter--founding { background: linear-gradient(120deg, rgba(234, 179, 8, .2), rgba(var(--profile-accent), .16)); border-color: rgba(234, 179, 8, .6); }
 .profile-supporter--founding span { color: #facc15; }
 /* Showcase: titles the member pinned to the top of their profile. */
