@@ -51,22 +51,23 @@ CATEGORY_ALIASES = {
     "music": "music", "album": "music", "albums": "music",
     "book": "books", "books": "books",
     "manga": "manga", "manhwa": "manga", "manhua": "manga", "webtoon": "manga", "webtoons": "manga",
+    "podcast": "podcasts", "podcasts": "podcasts",
 }
 CATEGORY_LABELS = {
     "movies": "Movies", "tv-shows": "TV Shows", "anime": "Anime",
     "video-games": "Video Games", "music": "Music", "books": "Books",
-    "manga": "Manga",
+    "manga": "Manga", "podcasts": "Podcasts",
 }
 MODEL_BY_CATEGORY = {
     "movies": models.Movie, "tv-shows": models.TVShow, "anime": models.Anime,
     "video-games": models.VideoGame, "music": models.Music, "books": models.Book,
-    "manga": models.Manga,
+    "manga": models.Manga, "podcasts": models.Podcast,
 }
 SCHEMA_BY_CATEGORY = {
     "movies": schemas.MovieCreate, "tv-shows": schemas.TVShowCreate,
     "anime": schemas.AnimeCreate, "video-games": schemas.VideoGameCreate,
     "music": schemas.MusicCreate, "books": schemas.BookCreate,
-    "manga": schemas.MangaCreate,
+    "manga": schemas.MangaCreate, "podcasts": schemas.PodcastCreate,
 }
 
 
@@ -241,7 +242,7 @@ def _generic_row(row: dict[str, str], category_override: str | None, mapping: di
     year = _integer(field("year", "year", "release year", "year published", "original publication year")) if category != "video-games" else None
     rating = _rating(field("rating", "rating", "score", "my rating"))
     review = field("review", "review", "notes", "note", "my review") or None
-    completion_field = {"video-games": "played", "music": "listened", "books": "read", "manga": "read"}.get(category, "watched")
+    completion_field = {"video-games": "played", "music": "listened", "books": "read", "manga": "read", "podcasts": "listened"}.get(category, "watched")
     completed = _truthy(field("status", "completed", completion_field, "status", "finished", "watched", "read", "played", "listened"))
     common = {"title": title, "rating": rating, "review": review, "review_public": False}
     if category == "movies":
@@ -260,6 +261,10 @@ def _generic_row(row: dict[str, str], category_override: str | None, mapping: di
                 "genre": field("genre", "genre", "genres") or None,
                 "volumes": _optional_integer(_first(row, "volumes"), "Volumes"),
                 "chapters": _optional_integer(_first(row, "chapters"), "Chapters"), "read": completed}
+    elif category == "podcasts":
+        data = {**common, "host": field("creator", "host", "creator", "author", "publisher") or None, "year": year,
+                "genre": field("genre", "genre", "genres") or None,
+                "episodes": _optional_integer(_first(row, "episodes"), "Episodes"), "listened": completed}
     else:
         data = {**common, "author": field("creator", "author", "creator") or "Unknown author", "year": year, "genre": field("genre", "genre", "genres") or None, "read": completed}
     return category, data
@@ -447,6 +452,8 @@ def _identity(category: str, data: dict[str, Any]) -> tuple[Any, ...]:
         return title, _clean(data.get("artist")).casefold()
     if category == "manga":
         return title, _clean(data.get("author")).casefold()
+    if category == "podcasts":
+        return title, _clean(data.get("host")).casefold()
     return title, _clean(data.get("author")).casefold()
 
 

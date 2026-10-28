@@ -76,7 +76,7 @@ def test_private_short_hidden_and_unknown_reviews_cannot_be_marked(client, db_se
     for item in (private, short, gone):
         assert mark(client, item).status_code == 404
     assert client.post("/api/public/reviews/movie/99999/helpful").status_code == 404
-    assert client.post("/api/public/reviews/podcast/1/helpful").status_code == 400
+    assert client.post("/api/public/reviews/comic/1/helpful").status_code == 400
     assert db_session.query(models.ReviewReaction).count() == 0
 
 

@@ -1,7 +1,7 @@
 /* Private checkpoints. Drafts stay in memory; only explicit Save/Clear sends a write. */
 (() => {
   'use strict';
-  const supported = new Set(['tv-shows', 'anime', 'books', 'manga']);
+  const supported = new Set(['tv-shows', 'anime', 'books', 'manga', 'podcasts']);
   const reading = new Set(['books', 'manga']);
   const drafts = new Map();
   let config = null;

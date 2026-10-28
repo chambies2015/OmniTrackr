@@ -32,7 +32,7 @@ function setup() {
   }
   const get = id => { if (!nodes.has(id)) nodes.set(id, new Element()); return nodes.get(id); };
   const tabs = new Map();
-  const categories = ['movies', 'tv-shows', 'anime', 'video-games', 'music', 'books', 'manga'];
+  const categories = ['movies', 'tv-shows', 'anime', 'video-games', 'music', 'books', 'manga', 'podcasts'];
   categories.forEach(category => tabs.set(category, new Element('button')));
   context = vm.createContext({
     Date, URLSearchParams, setTimeout, console, API_BASE: '',
@@ -41,7 +41,7 @@ function setup() {
     getToken: () => null, returnDeckActive: false,
     todaysPickRequest: 0, todaysPickSelection: null, todaysPickCandidateCount: 0, todaysPickOffset: 0,
     isLoadingMovies: false, isLoadingTVShows: false, isLoadingAnime: false,
-    isLoadingVideoGames: false, isLoadingMusic: false, isLoadingBooks: false, isLoadingManga: false,
+    isLoadingVideoGames: false, isLoadingMusic: false, isLoadingBooks: false, isLoadingManga: false, isLoadingPodcasts: false,
     LIBRARY_SEARCH_SOURCES: categories.map(tab => ({ tab, input: tab + 'Search' })),
     libraryPages: new Map(), libraryFilters: new Map(), renderLibraryFilters() {}, libraryPageConfig: tab => [tab + 'Table', tab + 'Sort'],
     getTabButton: tab => tabs.get(tab),

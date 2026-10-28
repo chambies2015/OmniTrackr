@@ -62,7 +62,7 @@ class TestRecommendationPostcards:
         assert public.headers["cache-control"] == "private, no-store"
 
         assert create_postcard(authenticated_client, prompt="too short").status_code == 422
-        assert create_postcard(authenticated_client, categories=["podcasts"]).status_code == 422
+        assert create_postcard(authenticated_client, categories=["comics"]).status_code == 422
 
     def test_open_postcard_limit_keeps_authenticated_storage_bounded(self, authenticated_client):
         for number in range(5):

@@ -30,10 +30,10 @@ FIRST_TRACKED_NOTE = {
 }
 _CARDS = _CardCache(size=96)
 STORY_JS_VERSION = "20261019-story-1"
-CREATOR_NOUNS = {"movies": "movie", "music": "album", "books": "book", "manga": "series"}
+CREATOR_NOUNS = {"movies": "movie", "music": "album", "books": "book", "manga": "series", "podcasts": "podcast"}
 SHELF_NOUNS = {"movies": ("movie", "movies"), "tv-shows": ("show", "shows"), "anime": ("anime", "anime"),
                "video-games": ("game", "games"), "music": ("album", "albums"), "books": ("book", "books"),
-               "manga": ("manga", "manga")}
+               "manga": ("manga", "manga"), "podcasts": ("podcast", "podcasts")}
 
 
 def _e(value) -> str:

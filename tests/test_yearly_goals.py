@@ -54,7 +54,7 @@ def test_set_edit_and_remove_a_goal_with_progress(authenticated_client):
 
 @pytest.mark.parametrize("path, body", [
     ("/api/goals/2025/books", {"target": 5}),
-    ("/api/goals/{year}/podcasts", {"target": 5}),
+    ("/api/goals/{year}/comics", {"target": 5}),
     ("/api/goals/{year}/books", {"target": 0}),
     ("/api/goals/{year}/books", {"target": 1001}),
 ])

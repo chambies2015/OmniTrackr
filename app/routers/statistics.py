@@ -22,6 +22,7 @@ LIBRARY_CATEGORIES = [
     {"key": "music", "label": "Album", "model": models.Music, "done": models.Music.listened, "status_label": "Not listened"},
     {"key": "books", "label": "Book", "model": models.Book, "done": models.Book.read, "status_label": "Not read"},
     {"key": "manga", "label": "Manga", "model": models.Manga, "done": models.Manga.read, "status_label": "Not read"},
+    {"key": "podcasts", "label": "Podcast", "model": models.Podcast, "done": models.Podcast.listened, "status_label": "Not listened"},
 ]
 
 
@@ -107,7 +108,7 @@ def _resolve_queue_pulse_items(
         for queue_item in queue_items
         if (queue_item.category, queue_item.item_id) in resolved
     ]
-    if any(item["category"] in {"tv-shows", "anime", "books", "manga"} for item in result):
+    if any(item["category"] in {"tv-shows", "anime", "books", "manga", "podcasts"} for item in result):
         _attach_progress(result, checkpoints if checkpoints is not None else get_checkpoint_map(db, user_id))
     return result
 
@@ -179,7 +180,7 @@ def get_todays_pick(
         return {"pick": None, "candidate_count": 0}
 
     choice = candidates[(datetime.now(timezone.utc).date().toordinal() + current_user.id + offset) % len(candidates)]
-    if choice["category"] in {"tv-shows", "anime", "books", "manga"}:
+    if choice["category"] in {"tv-shows", "anime", "books", "manga", "podcasts"}:
         _attach_progress([choice], get_checkpoint_map(db, current_user.id))
         episodes.attach(db, current_user.id, [choice])
     choice["reason"] = "A small, unfinished choice from your private library"
@@ -256,6 +257,12 @@ def get_library_insights(
             "label": "Manga",
             "model": models.Manga,
             "done_field": models.Manga.read,
+        },
+        {
+            "key": "podcasts",
+            "label": "Podcasts",
+            "model": models.Podcast,
+            "done_field": models.Podcast.listened,
         },
     ]
 
@@ -348,7 +355,7 @@ def get_library_pulse(
             model.user_id == current_user.id,
             category["done"] == False,
         )
-        if category["key"] in {"tv-shows", "anime", "books", "manga"}:
+        if category["key"] in {"tv-shows", "anime", "books", "manga", "podcasts"}:
             checkpoint = models.ProgressCheckpoint
             query = query.outerjoin(checkpoint, and_(
                 checkpoint.user_id == current_user.id,
@@ -708,4 +715,21 @@ def get_manga_statistics(
         total_chapters=stats["total_chapters"],
         volumes_read=stats["volumes_read"],
         chapters_read=stats["chapters_read"],
+    )
+
+
+@router.get("/podcasts/", response_model=schemas.PodcastStatistics)
+def get_podcast_statistics(
+    current_user: models.User = Depends(get_current_user),
+    db: Session = Depends(get_db)
+):
+    """Get podcast-specific statistics"""
+    stats = crud.get_podcast_statistics(db, current_user.id)
+    return schemas.PodcastStatistics(
+        watch_stats=schemas.CategoryWatchStatistics(**stats["watch_stats"]),
+        rating_stats=schemas.CategoryRatingStatistics(**stats["rating_stats"]),
+        year_stats=schemas.CategoryYearStatistics(**stats["year_stats"]),
+        genre_stats=schemas.GenreStatistics(**stats["genre_stats"]),
+        total_episodes=stats["total_episodes"],
+        episodes_listened=stats["episodes_listened"],
     )

@@ -15,7 +15,7 @@
   const main = document.getElementById('mainContainer');
   if (!dock || !sheet || !main) return;
 
-  const MEDIA_TABS = new Set(['movies', 'tv-shows', 'anime', 'video-games', 'music', 'books', 'manga']);
+  const MEDIA_TABS = new Set(['movies', 'tv-shows', 'anime', 'video-games', 'music', 'books', 'manga', 'podcasts']);
   const libraryButton = dock.querySelector('[data-dock="library"]');
   const homeButton = dock.querySelector('[data-dock="home"]');
   const moreButton = dock.querySelector('[data-dock="more"]');

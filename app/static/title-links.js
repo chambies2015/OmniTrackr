@@ -13,6 +13,7 @@
     musicTable: ['album', '.edit-music-btn', 'musicTitle', 'musicYear', 'music_private'],
     bookTable: ['book', '.edit-book-btn', 'bookTitle', 'bookYear', 'books_private'],
     mangaTable: ['manga', '.edit-manga-btn', 'mangaTitle', 'mangaYear', 'manga_private'],
+    podcastTable: ['podcast', '.edit-podcast-btn', 'podcastTitle', 'podcastYear', 'podcasts_private'],
   };
   let privacy = null;
   let privacyRequest = null;

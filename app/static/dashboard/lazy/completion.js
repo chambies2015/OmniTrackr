@@ -4,7 +4,7 @@ let completionSaving = false;
 const COMPLETION_RELOADERS = {
   movies: 'loadMovies', 'tv-shows': 'loadTVShows', anime: 'loadAnime',
   'video-games': 'loadVideoGames', music: 'loadMusic', books: 'loadBooks',
-  manga: 'loadManga',
+  manga: 'loadManga', podcasts: 'loadPodcasts',
 };
 
 function countReviewWords(text) {

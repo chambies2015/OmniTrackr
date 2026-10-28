@@ -522,6 +522,7 @@ function openLaunchpadAddItem(category = 'movies') {
     music: { form: 'musicForm', input: 'musicTitle' },
     books: { form: 'bookForm', input: 'bookTitle' },
     manga: { form: 'mangaForm', input: 'mangaTitle' },
+    podcasts: { form: 'podcastForm', input: 'podcastTitle' },
   };
   const destination = destinations[category] || destinations.movies;
   switchTab(category in destinations ? category : 'movies');
@@ -601,7 +602,7 @@ function renderLibraryLaunchpad(insights, firstWeek = null) {
     const choices = [
       ['movies', 'a movie'], ['tv-shows', 'a TV show'], ['anime', 'an anime'],
       ['video-games', 'a game'], ['music', 'an album'], ['books', 'a book'],
-      ['manga', 'a manga'],
+      ['manga', 'a manga'], ['podcasts', 'a podcast'],
     ];
     choices.forEach(([category, label]) => {
       const button = document.createElement('button');
@@ -809,7 +810,7 @@ function renderLibraryPulseList(container, items, emptyMessage) {
     action.className = 'library-pulse__item-action';
     action.textContent = 'Open →';
     button.append(copy, action);
-    if (typeof window !== 'undefined' && window.OmniProgress && ['tv-shows', 'anime', 'books', 'manga'].includes(item.category)) {
+    if (typeof window !== 'undefined' && window.OmniProgress && ['tv-shows', 'anime', 'books', 'manga', 'podcasts'].includes(item.category)) {
       const row = document.createElement('div');
       row.className = 'library-pulse__progress-row';
       row.appendChild(button);
@@ -928,7 +929,8 @@ async function openLibraryItem(pick, options = {}) {
     // Let an existing list request finish before changing its search input.
     const busy = () => ({ movies: isLoadingMovies, 'tv-shows': isLoadingTVShows,
       anime: isLoadingAnime, 'video-games': isLoadingVideoGames,
-      music: isLoadingMusic, books: isLoadingBooks, manga: isLoadingManga })[source.tab];
+      music: isLoadingMusic, books: isLoadingBooks, manga: isLoadingManga,
+      podcasts: isLoadingPodcasts })[source.tab];
     const deadline = Date.now() + 10000;
     while (busy() && Date.now() < deadline) {
       await new Promise(resolve => setTimeout(resolve, 50));
@@ -1487,6 +1489,17 @@ loadManga = async function (...args) {
   return result;
 };
 
+const loadPodcastsLibrary = loadPodcasts;
+loadPodcasts = async function (...args) {
+  const result = await loadPodcastsLibrary(...args);
+  enhanceLibraryCards('podcastTable');
+  if (!libraryPages.get('podcasts')?.browseOnly) {
+    invalidateLibrarySearchIndex();
+    scheduleLibraryLaunchpadRefresh();
+  }
+  return result;
+};
+
 // Import completion reuses the existing library and dashboard refresh paths.
 if (window.OmniImportStudio) {
   const activeImportLibraryLoads = new Map();
@@ -1511,6 +1524,7 @@ if (window.OmniImportStudio) {
   loadMusic = trackImportLibraryLoad('music', loadMusic);
   loadBooks = trackImportLibraryLoad('books', loadBooks);
   loadManga = trackImportLibraryLoad('manga', loadManga);
+  loadPodcasts = trackImportLibraryLoad('podcasts', loadPodcasts);
 
   const resetImportSession = window.OmniImportStudio.reset;
   window.OmniImportStudio.reset = (...args) => {

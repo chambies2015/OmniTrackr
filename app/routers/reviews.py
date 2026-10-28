@@ -44,6 +44,7 @@ CATEGORY_LABELS = {
     "music": "Music",
     "book": "Book",
     "manga": "Manga",
+    "podcast": "Podcast",
 }
 CATEGORY_MODELS = {
     "movie": models.Movie,
@@ -53,11 +54,12 @@ CATEGORY_MODELS = {
     "music": models.Music,
     "book": models.Book,
     "manga": models.Manga,
+    "podcast": models.Podcast,
 }
 LIBRARY_CATEGORIES = {
     "movie": "movies", "tv_show": "tv-shows", "anime": "anime",
     "video_game": "video-games", "music": "music", "book": "books",
-    "manga": "manga",
+    "manga": "manga", "podcast": "podcasts",
 }
 # These fields are already exposed in public reviews. Personal state is never copied.
 PUBLIC_METADATA_FIELDS = {
@@ -68,6 +70,7 @@ PUBLIC_METADATA_FIELDS = {
     "music": ("artist", "year", "cover_art_url"),
     "book": ("author", "year", "cover_art_url"),
     "manga": ("author", "year", "volumes", "chapters", "cover_art_url"),
+    "podcast": ("host", "year", "episodes", "cover_art_url"),
 }
 
 CATEGORY_REVIEW_CONTEXT = {
@@ -112,6 +115,12 @@ CATEGORY_REVIEW_CONTEXT = {
         "title": "Manga Reviews - OmniTrackr",
         "description": "Read public OmniTrackr manga, manhwa and manhua reviews with ratings, mangaka and year context, art, pacing, arcs worth reaching, and reread value.",
         "intro": "Browse public manga, manhwa and manhua reviews from OmniTrackr readers, including mangaka and year context, art, pacing, the arcs worth reaching, and reread value.",
+    },
+    "podcast": {
+        "plural": "Podcast",
+        "title": "Podcast Reviews - OmniTrackr",
+        "description": "Read public OmniTrackr podcast reviews with ratings, host context, where to start, episode length, and whether a show is worth catching up on.",
+        "intro": "Browse public podcast reviews from OmniTrackr listeners, including the host, where to start, how long episodes run, and whether a show is worth catching up on.",
     },
 }
 
@@ -276,7 +285,7 @@ def _absolute_url(path_or_url: str) -> str:
 def _review_affiliate_html(review: dict) -> str:
     """Optional, clearly labelled shopping link; empty unless an affiliate tag is configured."""
     category = review.get("category") or ""
-    creator = review.get("author") or review.get("artist") or review.get("director") or ""
+    creator = review.get("author") or review.get("artist") or review.get("director") or review.get("host") or ""
     links = affiliate.links_html(category, review.get("title") or "", creator, css_class="review-affiliate-links")
     if not links:
         return ""
@@ -298,6 +307,11 @@ def _review_meta(review: dict) -> str:
         details = [review.get("author") or "Unknown mangaka", str(review.get("year") or "Unknown year")]
         if review.get("volumes"):
             details.append(f"{review['volumes']} volume{'s' if review['volumes'] != 1 else ''}")
+        return " - ".join(details)
+    if category == "podcast":
+        details = [review.get("host") or "Unknown host", str(review.get("year") or "Unknown year")]
+        if review.get("episodes"):
+            details.append(f"{review['episodes']} episode{'s' if review['episodes'] != 1 else ''}")
         return " - ".join(details)
     if category in {"tv_show", "anime"}:
         details = [str(review.get("year") or "Unknown year")]
@@ -403,6 +417,13 @@ def _review_item_reviewed_json_ld(review: dict) -> dict:
             item["genre"] = "Manga"
         if review.get("author"):
             item["author"] = {"@type": "Person", "name": review["author"]}
+        if review.get("year"):
+            item["datePublished"] = str(review["year"])
+        return item
+    if category == "podcast":
+        item = {"@type": "PodcastSeries", "name": title}
+        if review.get("host"):
+            item["author"] = {"@type": "Person", "name": review["host"]}
         if review.get("year"):
             item["datePublished"] = str(review["year"])
         return item
@@ -588,6 +609,11 @@ def _review_detail_html(review: dict, more_reviews: Optional[list] = None, helpf
         if review.get("volumes"):
             detail_rows.append(("Volumes", review.get("volumes")))
         item_reviewed = {"@type": "Book", "name": review.get("title"), "genre": "Manga"}
+    elif category == "podcast":
+        detail_rows.extend([("Host", review.get("host") or "Unknown"), ("Started", review.get("year") or "N/A")])
+        if review.get("episodes"):
+            detail_rows.append(("Episodes", review.get("episodes")))
+        item_reviewed = {"@type": "PodcastSeries", "name": review.get("title")}
     else:
         detail_rows.append(("Year", review.get("year") or "N/A"))
         if review.get("seasons"):
@@ -755,7 +781,7 @@ def reviews_index(
 def review_detail(
     request: Request,
     review_id: PositiveDatabaseId,
-    category: Optional[str] = Query(None, description="Category: movie, tv_show, anime, video_game, music, book, or manga"),
+    category: Optional[str] = Query(None, description="Category: movie, tv_show, anime, video_game, music, book, manga, or podcast"),
     db: Session = Depends(get_db)
 ):
     """Serve the public review detail page."""
@@ -904,7 +930,7 @@ def get_public_review_feed(
 @router.get("/api/public/reviews/{review_id}", response_model=dict, tags=["public"])
 def get_public_review(
     review_id: PositiveDatabaseId,
-    category: str = Query(..., description="Category: movie, tv_show, anime, video_game, music, book, or manga"),
+    category: str = Query(..., description="Category: movie, tv_show, anime, video_game, music, book, manga, or podcast"),
     db: Session = Depends(get_db)
 ):
     """Get a specific public review by ID and category."""

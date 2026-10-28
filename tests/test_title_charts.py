@@ -61,7 +61,7 @@ def test_chart_page_lists_ranks_quotes_and_stays_out_of_search_while_thin(client
     assert "How this chart works" in html and "Create a free account" in html
     assert response.headers["X-Robots-Tag"] == "noindex, follow"
     assert '"@type": "ItemList"' in html or '"@type":"ItemList"' in html
-    assert client.get("/titles/podcast").status_code == 404
+    assert client.get("/titles/comic").status_code == 404
 
 
 def test_chart_page_is_indexed_and_in_sitemap_with_enough_titles(client, db_session):

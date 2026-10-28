@@ -95,6 +95,14 @@ function normalizeQuickCapturePayload(category, payload) {
       item
     ));
   }
+  if (category === 'podcasts') {
+    return (payload?.results || []).slice(0, 4).map(item => result(
+      item.title,
+      [item.host, item.episodes ? `${item.episodes} episodes` : ''].filter(Boolean).join(' · '),
+      item.cover_art_url || '',
+      item
+    ));
+  }
   if (category === 'books') {
     return (payload?.docs || []).slice(0, 4).map(item => {
       const coverId = item.cover_i || item.isbn?.[0];
@@ -137,7 +145,7 @@ async function fetchQuickCaptureCategory(category, query, signal) {
             : unavailable('unavailable');
         }
         const valid = category === 'movies' || category === 'tv-shows' ? typeof payload?.Title === 'string'
-          : Array.isArray(payload?.[{ anime: 'data', 'video-games': 'results', music: 'results', books: 'docs', manga: 'results' }[category]]);
+          : Array.isArray(payload?.[{ anime: 'data', 'video-games': 'results', music: 'results', books: 'docs', manga: 'results', podcasts: 'results' }[category]]);
         if (!valid) return unavailable('unavailable');
         return { category, results: normalizeQuickCapturePayload(category, payload), unavailable: false };
       } catch (_) {
@@ -157,7 +165,7 @@ function updateQuickCaptureStatus(search) {
   const status = document.getElementById('quickCaptureStatus');
   if (!status) return;
   if (search.manualRequested) {
-    status.textContent = 'Choose Movies, TV, Anime, Games, Music, Books, or Manga before continuing manually.';
+    status.textContent = 'Choose Movies, TV, Anime, Games, Music, Books, Manga, or Podcasts before continuing manually.';
     return;
   }
   const groups = Array.from(search.groups.values());
@@ -297,6 +305,7 @@ function prepareQuickCaptureDestination(category, title) {
     music: { form: 'musicForm', title: 'musicTitle', completed: 'musicListened' },
     books: { form: 'bookForm', title: 'bookTitle', completed: 'bookRead' },
     manga: { form: 'mangaForm', title: 'mangaTitle', completed: 'mangaRead' },
+    podcasts: { form: 'podcastForm', title: 'podcastTitle', completed: 'podcastListened' },
   };
   const destination = destinations[category];
   if (!destination) return null;
@@ -308,6 +317,7 @@ function prepareQuickCaptureDestination(category, title) {
     music: 'addMusicForm',
     books: 'addBookForm',
     manga: 'addMangaForm',
+    podcasts: 'addPodcastForm',
   }[category]);
   const hasDraft = form && Array.from(form.elements).some(field => {
     if (field.type === 'submit' || field.type === 'button') return false;
@@ -376,6 +386,11 @@ function applyQuickCaptureResult(index) {
     setQuickCaptureField('mangaGenre', data.genre || '');
     setQuickCaptureField('mangaVolumes', data.volumes ?? '');
     setQuickCaptureField('mangaChapters', data.chapters ?? '');
+    if (data.cover_art_url) destination.titleInput.dataset.coverArtUrl = data.cover_art_url;
+  } else if (item.category === 'podcasts') {
+    setQuickCaptureField('podcastHost', data.host || '');
+    setQuickCaptureField('podcastGenre', data.genre || '');
+    setQuickCaptureField('podcastEpisodes', data.episodes ?? '');
     if (data.cover_art_url) destination.titleInput.dataset.coverArtUrl = data.cover_art_url;
   }
 

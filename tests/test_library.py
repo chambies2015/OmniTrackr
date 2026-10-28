@@ -100,6 +100,7 @@ def test_exact_item_lookup_accepts_sparse_metadata_and_only_returns_owned_identi
         "anime": ("year", "seasons", "episodes"), "video-games": ("release_date", "genres"),
         "music": ("artist", "year", "genre"), "books": ("author", "year", "genre"),
         "manga": ("author", "year", "genre", "volumes", "chapters"),
+        "podcasts": ("host", "year", "genre", "episodes"),
     }[category]
     db_session.refresh(own)
     assert all(returned[field] is None and getattr(own, field) is None for field in nullable_fields)

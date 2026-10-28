@@ -30,12 +30,13 @@ LIBRARY = {
     "music": (models.Music, ("title", "artist", "year", "genre", "cover_art_url")),
     "books": (models.Book, ("title", "author", "year", "genre", "cover_art_url")),
     "manga": (models.Manga, ("title", "author", "year", "genre", "volumes", "chapters", "cover_art_url")),
+    "podcasts": (models.Podcast, ("title", "host", "year", "genre", "episodes", "cover_art_url")),
 }
-LABELS = {"movies": "Movie", "tv-shows": "TV show", "anime": "Anime", "video-games": "Game", "music": "Album", "books": "Book", "manga": "Manga"}
+LABELS = {"movies": "Movie", "tv-shows": "TV show", "anime": "Anime", "video-games": "Game", "music": "Album", "books": "Book", "manga": "Manga", "podcasts": "Podcast"}
 IMAGE_FIELD = {"movies": "poster_url", "tv-shows": "poster_url", "anime": "poster_url",
                "video-games": "cover_art_url", "music": "cover_art_url", "books": "cover_art_url",
-               "manga": "cover_art_url"}
-CREATOR_FIELD = {"movies": "director", "music": "artist", "books": "author", "manga": "author"}
+               "manga": "cover_art_url", "podcasts": "cover_art_url"}
+CREATOR_FIELD = {"movies": "director", "music": "artist", "books": "author", "manga": "author", "podcasts": "host"}
 RADAR_TO_LIBRARY = {"movies": "movies", "tv": "tv-shows", "anime": "anime", "games": "video-games"}
 RADAR_LABELS = {"movies": "Movie", "tv": "TV", "anime": "Anime", "games": "Game"}
 POPULAR_MIN_MEMBERS = 2
@@ -74,7 +75,7 @@ def owned_titles(db: Session, user_id: int, categories: Iterable[str] = LIBRARY)
 
 PRIVATE_FLAG = {"movies": "movies_private", "tv-shows": "tv_shows_private", "anime": "anime_private",
                 "video-games": "video_games_private", "music": "music_private", "books": "books_private",
-                "manga": "manga_private"}
+                "manga": "manga_private", "podcasts": "podcasts_private"}
 
 
 def _shareable_ids(db: Session, category: str):

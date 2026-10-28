@@ -30,19 +30,19 @@ SITE_URL = os.getenv("SITE_URL", "https://omnitrackr.xyz").rstrip("/")
 CSS_VERSION = "20261026-where-to-watch-1"
 JS_VERSION = "20261025-title-refresh-1"
 SCHEMA_TYPES = {"movie": "Movie", "tv": "TVSeries", "anime": "TVSeries", "game": "VideoGame", "album": "MusicAlbum", "book": "Book",
-                "manga": "Book"}
-CREATOR_SCHEMA = {"movie": "director", "album": "byArtist", "book": "author", "manga": "author"}
-CREATOR_LABEL = {"movie": "Director", "album": "Artist", "book": "Author", "manga": "Mangaka"}
+                "manga": "Book", "podcast": "PodcastSeries"}
+CREATOR_SCHEMA = {"movie": "director", "album": "byArtist", "book": "author", "manga": "author", "podcast": "author"}
+CREATOR_LABEL = {"movie": "Director", "album": "Artist", "book": "Author", "manga": "Mangaka", "podcast": "Host"}
 KIND_PLURALS = {"movie": "Movies", "tv": "TV shows", "anime": "Anime", "game": "Games", "album": "Albums", "book": "Books",
-                "manga": "Manga"}
+                "manga": "Manga", "podcast": "Podcasts"}
 GUEST_LIST_MAX = 30
 TAKE_DAYS = 60
 FRIEND_RECS_VERSION = "20261024-friend-recs-1"
 TAKE_TOKEN = re.compile(r"[A-Za-z0-9_-]{16,64}")
 FINISHED_LABEL = {"movie": "watched", "tv": "watched", "anime": "watched", "game": "played", "album": "heard", "book": "read",
-                  "manga": "read"}
+                  "manga": "read", "podcast": "heard"}
 VERBS = {"movie": "watched", "tv": "watched", "anime": "watched", "game": "played", "album": "listened to", "book": "read",
-         "manga": "read"}
+         "manga": "read", "podcast": "listened to"}
 
 
 def _singular(kind: str) -> str:

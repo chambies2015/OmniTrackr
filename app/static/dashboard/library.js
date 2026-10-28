@@ -45,6 +45,8 @@ function switchTab(tabName) {
     return loadBooks();
   } else if (tabName === 'manga') {
     return loadManga();
+  } else if (tabName === 'podcasts') {
+    return loadPodcasts();
   } else if (tabName === 'friends-feed') {
     window.OmniFriendFeed?.load();
   } else if (tabName === 'activity') {
@@ -2053,6 +2055,165 @@ window.cancelMangaEdit = function () {
   loadManga();
 };
 
+let isLoadingPodcasts = false;
+const podcastWholeNumber = value => mangaWholeNumber(value);
+
+async function loadPodcasts() {
+  if (isLoadingPodcasts) {
+    return;
+  }
+
+  isLoadingPodcasts = true;
+
+  try {
+    const search = document.getElementById('podcastSearch').value;
+    const sortVal = document.getElementById('podcastSort').value;
+    let sortField = '';
+    let order = '';
+    if (sortVal) {
+      const parts = sortVal.split('-');
+      sortField = parts[0];
+      order = parts[1] || '';
+    }
+    let url = `${API_BASE}/podcasts/?`;
+    if (search) url += `search=${encodeURIComponent(search)}&`;
+    if (sortField) url += `sort_by=${encodeURIComponent(sortField)}&`;
+    if (order) url += `order=${encodeURIComponent(order)}`;
+    const res = await fetchLibraryPage(url);
+    if (res.ok) {
+      const shows = await res.json();
+      const tbody = document.querySelector('#podcastTable tbody');
+      tbody.innerHTML = '';
+      const countElem = document.getElementById('podcastCount');
+      if (countElem) countElem.textContent = `${res.total} ${res.total === 1 ? 'Podcast' : 'Podcasts'}`;
+      shows.forEach((podcast) => {
+        const tr = document.createElement('tr');
+        tr.innerHTML = `
+          <td id="podcast-poster-${podcast.id}"></td>
+          <td>${escapeHtml(podcast.title)}</td>
+          <td>${escapeHtml(podcast.host ?? '')}</td>
+          <td>${podcast.year ?? ''}</td>
+          <td>${podcast.episodes ?? ''}</td>
+          <td>${podcast.genre ? escapeHtml(podcast.genre) : ''}</td>
+          <td>${podcast.rating !== null && podcast.rating !== undefined ? parseFloat(podcast.rating).toFixed(1) + '/10' : ''}</td>
+          <td><span class="watched-icon ${podcast.listened ? 'watched' : 'unwatched'}">${podcast.listened ? '✓' : '✗'}</span></td>
+          <td class="review-cell">${getReviewCellContent(podcast.review, podcast.title, podcast.host || '')}</td>
+          <td><span class="watched-icon ${podcast.review_public ? 'watched' : 'unwatched'}">${podcast.review_public ? '✓' : '✗'}</span></td>
+          <td>
+            <button class="action-btn edit-podcast-btn" data-podcast-id="${podcast.id}" data-podcast-title="${escapeHtml(podcast.title)}" data-podcast-host="${escapeHtml(podcast.host ?? '')}" data-podcast-year="${podcast.year ?? ''}" data-podcast-episodes="${podcast.episodes ?? ''}" data-podcast-genre="${escapeHtml(podcast.genre || '')}" data-podcast-rating="${podcast.rating ?? ''}" data-podcast-listened="${podcast.listened}" data-podcast-review="${escapeHtml(podcast.review || '')}" data-podcast-review-public="${podcast.review_public || false}">Edit</button>
+            <button type="button" class="action-btn" data-action="add-next-up" data-next-up-category="podcasts" data-next-up-item-id="${podcast.id}">Next up</button>
+            <button type="button" class="action-btn" data-progress-category="podcasts" data-progress-item-id="${podcast.id}" data-progress-title="${escapeHtml(podcast.title)}">Update progress</button>
+            <button type="button" class="action-btn" data-action="open-collection-picker" data-collection-category="podcasts" data-collection-item-id="${podcast.id}" data-collection-item-title="${escapeHtml(podcast.title)}">Collect</button>
+            ${podcast.listened ? `<button type="button" class="action-btn" data-action="begin-completion-ritual" data-completion-category="podcasts" data-completion-item-id="${podcast.id}">Reflect</button>` : ''}
+            <button class="action-btn delete-podcast-btn" data-podcast-id="${podcast.id}">Delete</button>
+          </td>
+        `;
+        tbody.appendChild(tr);
+        if (podcast.cover_art_url) displayPodcastPoster(podcast.id, podcast.cover_art_url, podcast.title);
+      });
+    }
+  } finally {
+    isLoadingPodcasts = false;
+  }
+}
+
+function displayPodcastPoster(id, posterUrl, title = null) {
+  const cell = document.getElementById(`podcast-poster-${id}`);
+  if (!cell || !posterUrl) return;
+  const altText = title ? `${title} podcast cover art` : 'Podcast cover art';
+  const img = document.createElement('img');
+  img.src = posterUrl;
+  img.alt = altText;
+  img.style.width = '60px';
+  img.style.maxHeight = '90px';
+  img.style.objectFit = 'cover';
+  img.style.borderRadius = '4px';
+  img.loading = 'lazy';
+  img.onclick = () => showImagePopup(posterUrl, altText);
+  cell.innerHTML = '';
+  cell.appendChild(img);
+}
+
+async function deletePodcast(id) {
+  if (!confirm('Are you sure you want to delete this podcast?')) return;
+  const res = await authenticatedFetch(`${API_BASE}/podcasts/${id}`, { method: 'DELETE' });
+  if (res.ok) loadPodcasts();
+}
+
+window.enablePodcastEdit = function (btn) {
+  if (editingRowId !== null) return;
+  const id = parseInt(btn.dataset.podcastId, 10);
+  editingRowId = id;
+  const row = btn.closest('tr');
+  editingRowElement = row;
+  const data = btn.dataset;
+  const listened = data.podcastListened === 'true';
+  row.cells[1].innerHTML = `<input type="text" id="edit-podcast-title" value="${escapeHtml(data.podcastTitle || '')}">`;
+  row.cells[2].innerHTML = `<input type="text" id="edit-podcast-host" value="${escapeHtml(data.podcastHost || '')}">`;
+  row.cells[3].innerHTML = `<input type="number" min="0" max="9999" id="edit-podcast-year" value="${escapeHtml(data.podcastYear || '')}">`;
+  row.cells[4].innerHTML = `<input type="number" min="0" id="edit-podcast-episodes" value="${escapeHtml(data.podcastEpisodes || '')}">`;
+  row.cells[5].innerHTML = `<input type="text" id="edit-podcast-genre" value="${escapeHtml(data.podcastGenre || '')}">`;
+  row.cells[6].innerHTML = `<input type="number" min="0" max="10" step="0.1" id="edit-podcast-rating" value="${escapeHtml(data.podcastRating || '')}">`;
+  row.cells[7].innerHTML = `<input type="checkbox" id="edit-podcast-listened" ${listened ? 'checked' : ''}>`;
+  row.cells[8].innerHTML = `<textarea id="edit-podcast-review" class="review-textarea" data-review-quality-input>${escapeHtml(data.podcastReview || '')}</textarea>${reviewQualityHintHtml('edit-podcast-review')}`;
+  const reviewTextarea = document.getElementById('edit-podcast-review');
+  if (reviewTextarea) {
+    reviewTextarea.style.height = 'auto';
+    reviewTextarea.style.height = Math.max(60, reviewTextarea.scrollHeight) + 'px';
+    reviewTextarea.addEventListener('input', function () {
+      this.style.height = 'auto';
+      this.style.height = Math.max(60, this.scrollHeight) + 'px';
+    });
+    setupReviewQualityCounter(reviewTextarea);
+  }
+  row.cells[9].innerHTML = `<input type="checkbox" id="edit-podcast-review-public" ${data.podcastReviewPublic === 'true' ? 'checked' : ''}>`;
+  row.cells[10].innerHTML = `
+    <button class="action-btn save-podcast-btn" data-podcast-id="${id}" data-was-complete="${listened}" data-completion-category="podcasts">Save</button>
+    <button class="action-btn cancel-podcast-btn">Cancel</button>
+  `;
+  disableOtherRowButtons(row, 'podcastTable');
+};
+
+window.savePodcastEdit = async function (btn) {
+  const id = parseInt(btn.dataset.podcastId, 10);
+  const listened = document.getElementById('edit-podcast-listened').checked;
+  const ratingVal = document.getElementById('edit-podcast-rating').value;
+  const updateData = {
+    title: document.getElementById('edit-podcast-title').value,
+    host: document.getElementById('edit-podcast-host').value.trim() || null,
+    year: podcastWholeNumber(document.getElementById('edit-podcast-year').value),
+    episodes: podcastWholeNumber(document.getElementById('edit-podcast-episodes').value),
+    genre: document.getElementById('edit-podcast-genre').value || null,
+    listened,
+    rating: ratingVal === '' ? null : parseFloat(ratingVal),
+    review: document.getElementById('edit-podcast-review')?.value ?? '',
+    review_public: document.getElementById('edit-podcast-review-public').checked,
+  };
+
+  const res = await authenticatedFetch(`${API_BASE}/podcasts/${id}`, {
+    method: 'PUT',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(updateData),
+  });
+
+  if (res.ok) {
+    if (btn.dataset.wasComplete !== 'true' && listened) openCompletionMoment('podcasts', id);
+    editingRowId = null;
+    editingRowElement = null;
+    enableAllRowButtons('podcastTable');
+    loadPodcasts();
+  } else {
+    await showLibrarySaveError(res);
+  }
+};
+
+window.cancelPodcastEdit = function () {
+  editingRowId = null;
+  editingRowElement = null;
+  enableAllRowButtons('podcastTable');
+  loadPodcasts();
+};
+
 async function deleteAnime(id) {
   if (!confirm('Are you sure you want to delete this anime?')) return;
   const res = await authenticatedFetch(`${API_BASE}/anime/${id}`, { method: 'DELETE' });
@@ -2771,6 +2932,89 @@ document.getElementById('addMangaForm').onsubmit = async function (e) {
   }
 };
 
+// @lazy-chunk lazy/metadata-podcasts.js
+document.getElementById('searchPodcastBtn').onclick = searchPodcastMetadata;
+
+document.getElementById('podcastTitle').addEventListener('keypress', function(e) {
+  if (e.key === 'Enter') {
+    e.preventDefault();
+    searchPodcastMetadata();
+  }
+});
+
+document.getElementById('addPodcastForm').onsubmit = async function (e) {
+  e.preventDefault();
+  const form = document.getElementById('addPodcastForm');
+  if (form.dataset.saving === 'true') return;
+  let status = document.getElementById('podcastSaveStatus');
+  if (!status) {
+    status = document.createElement('p');
+    status.id = 'podcastSaveStatus';
+    status.setAttribute('role', 'status');
+    form.appendChild(status);
+  }
+  status.textContent = '';
+  const titleInput = document.getElementById('podcastTitle');
+  const title = titleInput.value.trim();
+  if (!title) {
+    status.textContent = 'Please enter a podcast name.';
+    titleInput.focus();
+    return;
+  }
+  const yearVal = document.getElementById('podcastYear').value.trim();
+  const year = yearVal ? parseInt(yearVal, 10) : null;
+  if (yearVal && (isNaN(year) || year < 0 || year > 9999)) {
+    status.textContent = 'Please enter a valid year, or leave it blank.';
+    document.getElementById('podcastYear').focus();
+    return;
+  }
+
+  const podcast = {
+    title,
+    host: document.getElementById('podcastHost').value.trim() || null,
+    year,
+    episodes: podcastWholeNumber(document.getElementById('podcastEpisodes').value),
+    listened: document.getElementById('podcastListened').checked,
+    review_public: document.getElementById('podcastReviewPublic').checked,
+  };
+  const genreVal = document.getElementById('podcastGenre').value;
+  if (genreVal) podcast.genre = genreVal;
+  const ratingVal = document.getElementById('podcastRating').value;
+  if (ratingVal) podcast.rating = parseFloat(ratingVal);
+  const reviewVal = document.getElementById('podcastReview').value;
+  if (reviewVal) podcast.review = reviewVal;
+  if (titleInput.dataset.coverArtUrl) podcast.cover_art_url = titleInput.dataset.coverArtUrl;
+
+  form.dataset.saving = 'true';
+  const submit = form.querySelector('button[type="submit"]');
+  if (submit) submit.disabled = true;
+  status.textContent = 'Saving your podcast…';
+  try {
+    const response = await authenticatedFetch(`${API_BASE}/podcasts/`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(podcast),
+    });
+    if (response.ok) {
+      status.textContent = '';
+      form.reset();
+      delete titleInput.dataset.coverArtUrl;
+      toggleCollapsible('podcastForm');
+      loadPodcasts();
+    } else {
+      const errorData = await response.json().catch(() => ({ detail: 'Failed to add podcast' }));
+      status.textContent = typeof errorData.detail === 'string' ? errorData.detail : 'Could not save this podcast. Check the fields and try again.';
+    }
+  } catch (error) {
+    status.textContent = error.message === 'Session expired. Please login again.'
+      ? 'Your session expired. Sign in again before saving. Your form has not been cleared.'
+      : 'Could not confirm the save. Your form has not been cleared. Check your library before retrying to avoid a duplicate.';
+  } finally {
+    delete form.dataset.saving;
+    if (submit) submit.disabled = false;
+  }
+};
+
 // @lazy-chunk lazy/export-import.js
 function enhanceLibraryCards(tableId) {
   const table = document.getElementById(tableId);
@@ -2905,7 +3149,7 @@ function loadStatistics() {
   let insightsOpen = false;
   Object.entries({
     'library-insights': 'libraryInsights', movies: 'movies', 'tv-shows': 'tvShows', anime: 'anime',
-    'video-games': 'videoGames', music: 'music', books: 'books', manga: 'manga',
+    'video-games': 'videoGames', music: 'music', books: 'books', manga: 'manga', podcasts: 'podcasts',
   }).forEach(([category, idPrefix]) => {
     const content = document.getElementById(`${idPrefix}StatsContent`);
     if (!content || !isElementShown(content)) return;

@@ -9,6 +9,7 @@
   const LOADERS = {
     movies: 'loadMovies', 'tv-shows': 'loadTVShows', anime: 'loadAnime',
     'video-games': 'loadVideoGames', music: 'loadMusic', books: 'loadBooks', manga: 'loadManga',
+    podcasts: 'loadPodcasts',
   };
   const state = { source: null, friends: null, request: 0, items: [], expanded: false };
 
