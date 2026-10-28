@@ -65,7 +65,7 @@
   <link rel="stylesheet" href="/static/supporter.css?v=20261020-looks-1">
   <link rel="stylesheet" href="/static/profile-banners.css?v=20261020-looks-1">
   <link rel="stylesheet" href="/static/badges.css?v=20261017-badges-1">
-  <link rel="stylesheet" href="/static/import-studio.css?v=20261018-formats-1">
+  <link rel="stylesheet" href="/static/import-studio.css?v=20261028-export-1">
   <link rel="stylesheet" href="/static/seasonal-card.css?v=20261022-holidays-1">
   <link rel="stylesheet" href="/static/friend-recs.css?v=20261024-friend-recs-1">
   <link rel="stylesheet" href="/static/friends-feed.css?v=20261025-friends-feed-1">
@@ -2384,6 +2384,40 @@
             <a class="action-btn" href="/privacy" target="_blank" rel="noopener noreferrer">Privacy Policy</a>
             <a class="action-btn" href="/reviews" target="_blank" rel="noopener noreferrer">Public Reviews</a>
           </div>
+        </div>
+
+        <!-- Library exports in other services' formats -->
+        <div class="account-section export-studio" id="exportStudio">
+          <div class="import-studio__eyebrow">Take your library with you</div>
+          <h3>Export your library</h3>
+          <p class="info-text">Download everything you've logged here, whenever you like. The files include private notes and reviews, so keep them somewhere private.</p>
+          <div class="export-studio__options">
+            <div class="export-studio__option">
+              <h4>Full backup</h4>
+              <p>Every shelf, rating, review, journal entry, collection and custom tab, plus where you stopped. This is the file OmniTrackr can restore.</p>
+              <button type="button" class="action-btn" data-action="download-library-export" data-export-format="json">Download JSON backup</button>
+            </div>
+            <div class="export-studio__option">
+              <h4>Spreadsheets</h4>
+              <p>A ZIP of CSV files for Excel, Numbers or Google Sheets: your library, journal, collections, progress, and one file per custom tab.</p>
+              <button type="button" class="action-btn" data-action="download-library-export" data-export-format="spreadsheet">Download spreadsheets</button>
+            </div>
+            <div class="export-studio__option">
+              <h4>Letterboxd</h4>
+              <p>Your films in the layout Letterboxd's importer reads. Watched films keep their diary dates and rewatches. Ratings become half stars.</p>
+              <div class="export-studio__buttons">
+                <button type="button" class="action-btn" data-action="download-library-export" data-export-format="letterboxd">Watched films</button>
+                <button type="button" class="action-btn" data-action="download-library-export" data-export-format="letterboxd-watchlist">Watchlist</button>
+              </div>
+            </div>
+            <div class="export-studio__option">
+              <h4>Goodreads or The StoryGraph</h4>
+              <p>Your books in the Goodreads export layout, which both sites import. Finished books go on "read" and the rest on "to-read".</p>
+              <button type="button" class="action-btn" data-action="download-library-export" data-export-format="goodreads">Download books CSV</button>
+            </div>
+          </div>
+          <p class="export-studio__note">MyAnimeList and AniList match imports by their own ID numbers, which OmniTrackr doesn't keep, so there's no anime file for them yet. Your anime and manga are in the spreadsheets.</p>
+          <div id="exportStudioStatus" class="import-studio__status" role="status" aria-live="polite"></div>
         </div>
 
         <!-- Preview-first migration studio -->
