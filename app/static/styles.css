@@ -6995,6 +6995,10 @@ body.app-shell .month-challenge__status { color: var(--teal); }
 .release-calendar { background: linear-gradient(135deg, rgba(20, 184, 166, 0.12), rgba(139, 92, 246, 0.14)); border: 1px solid rgba(20, 184, 166, 0.35); border-radius: 14px; display: grid; gap: 12px; margin: 14px 0; padding: 14px 16px; }
 .release-calendar[hidden] { display: none; }
 .release-calendar__text { color: var(--fg); font-size: 0.92rem; line-height: 1.5; margin: 0; }
+.release-calendar__option { align-items: flex-start; color: var(--fg); cursor: pointer; display: flex; font-size: 0.9rem; gap: 8px; line-height: 1.45; }
+.release-calendar__option input { accent-color: #14b8a6; flex: none; height: 18px; margin: 1px 0 0; width: 18px; }
+.release-calendar__note { color: var(--fg); display: block; font-size: 0.82rem; opacity: 0.75; }
+.release-calendar__note:empty { display: none; }
 .release-calendar__actions, .release-calendar__manage { align-items: center; display: flex; flex-wrap: wrap; gap: 8px 10px; }
 .release-calendar__link { background: rgba(255, 255, 255, 0.06); border: 1px solid rgba(139, 92, 246, 0.35); border-radius: 999px; color: var(--fg); cursor: pointer; font: inherit; font-size: 0.85rem; font-weight: 600; padding: 7px 14px; text-decoration: none; }
 .release-calendar__link--primary { background: var(--accent-solid, #7c3aed); border-color: transparent; color: var(--on-accent, #fff); }

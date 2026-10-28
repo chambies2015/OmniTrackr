@@ -812,6 +812,7 @@ def run_migrations():
     add_supporter_wall_column()
     add_supporter_banner_column()
     add_public_diary_column()
+    add_calendar_episodes_column()
 
 
 def add_notification_link_column():
@@ -902,3 +903,23 @@ def add_library_added_at_columns():
     except Exception as e:
         print(f"Migration warning (added_at): {e}")
 
+
+
+def add_calendar_episodes_column():
+    """Add the weekly-episodes switch to private calendars.
+
+    Existing feeds get FALSE so the calendars people already subscribed to keep
+    showing exactly what they did; new feeds get TRUE from the model default.
+    """
+    try:
+        inspector = inspect(engine)
+        if not inspector.has_table("calendar_feeds"):
+            return
+        if "include_episodes" in {col["name"] for col in inspector.get_columns("calendar_feeds")}:
+            return
+        with engine.connect() as conn:
+            conn.execute(text("ALTER TABLE calendar_feeds ADD COLUMN include_episodes BOOLEAN NOT NULL DEFAULT FALSE"))
+            conn.commit()
+            print("Added include_episodes column to calendar_feeds table")
+    except Exception as e:
+        print(f"Migration warning (calendar episodes): {e}")

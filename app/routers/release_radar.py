@@ -216,7 +216,7 @@ def _calendar_box(category: Optional[str]) -> str:
         + f'<noscript>{button("Calendar address", links["url"], "file")}</noscript>'
         + '</div><p class="radar-calendar__member">Only want releases connected to what you track? '
         f'<a href="{escape(_signin_href("/release-radar"), quote=True)}" rel="nofollow" data-calendar-member>Members get a private calendar of their own</a>, '
-        'built from their library: new seasons, sequels and release days.</p>'
+        'built from their library: new seasons, sequels, release days and, if they like, every new episode of the shows they\'re watching.</p>'
         '<p class="radar-calendar__status" role="status" aria-live="polite" data-calendar-status></p></section>'
     )
 

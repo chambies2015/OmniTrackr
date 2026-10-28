@@ -74,13 +74,20 @@ def _fold(line: str) -> str:
 
 
 def _event_lines(event: dict, stamp: str) -> list[str]:
-    day = date.fromisoformat(event["date"])
+    if event.get("start"):
+        # A timed event in UTC; calendar apps show it in the reader's own time zone.
+        start = datetime.strptime(event["start"], "%Y-%m-%dT%H:%M:%SZ")
+        end = start + timedelta(minutes=event.get("minutes") or 30)
+        when = [f"DTSTART:{start.strftime('%Y%m%dT%H%M%SZ')}", f"DTEND:{end.strftime('%Y%m%dT%H%M%SZ')}"]
+    else:
+        day = date.fromisoformat(event["date"])
+        when = [f"DTSTART;VALUE=DATE:{day.strftime('%Y%m%d')}",
+                f"DTEND;VALUE=DATE:{(day + timedelta(days=1)).strftime('%Y%m%d')}"]
     lines = [
         "BEGIN:VEVENT",
         f"UID:{event['uid']}",
         f"DTSTAMP:{stamp}",
-        f"DTSTART;VALUE=DATE:{day.strftime('%Y%m%d')}",
-        f"DTEND;VALUE=DATE:{(day + timedelta(days=1)).strftime('%Y%m%d')}",
+        *when,
         f"SUMMARY:{_escape(event['summary'])}",
         f"DESCRIPTION:{_escape(event['description'])}",
         "TRANSP:TRANSPARENT",
@@ -173,8 +180,8 @@ def public_events(pool: list[dict], feed: str, today: date) -> list[dict]:
     return _sorted_events((item, "") for item in chosen)
 
 
-def member_events(db: Session, user_id: int, pool: list[dict], today: date) -> list[dict]:
-    """Releases connected to a member's library: the title itself, a new season or a sequel."""
+def member_matches(db: Session, user_id: int, pool: list[dict], today: date) -> list[tuple[dict, str]]:
+    """(Release Radar item, reason) for releases connected to a member's library."""
     owned = owned_titles(db, user_id, ("movies", "tv-shows", "anime", "video-games"))
     matcher = LibraryMatcher(title for titles in owned.values() for title in titles)
     found = []
@@ -187,7 +194,24 @@ def member_events(db: Session, user_id: int, pool: list[dict], today: date) -> l
             continue
         reason = "In your library" if normalize_title(hit) == normalize_title(item["title"]) else f"Because you track {hit}"
         found.append((item, reason))
-    return _sorted_events(found)[:MEMBER_LIMIT]
+    return found
+
+
+def member_events(db: Session, user_id: int, pool: list[dict], today: date) -> list[dict]:
+    """Releases connected to a member's library: the title itself, a new season or a sequel."""
+    return _sorted_events(member_matches(db, user_id, pool, today))[:MEMBER_LIMIT]
+
+
+def member_feed_events(db: Session, user: models.User, pool: list[dict], today: date,
+                       include_episodes: bool) -> list[dict]:
+    """The whole private feed: library releases, plus weekly episodes when the member asked for them."""
+    matches = member_matches(db, user.id, pool, today)
+    events = _sorted_events(matches)[:MEMBER_LIMIT]
+    if include_episodes:
+        from .episode_calendar import member_episode_events
+        premieres = {(normalize_title(item["title"]), item["date"]) for item, _ in matches}
+        events += member_episode_events(db, user, today, skip=premieres)
+    return events
 
 
 def pool_for(today: date, client=None) -> list[dict]:
@@ -222,6 +246,14 @@ def feed_for(db: Session, user_id: int) -> Optional[models.CalendarFeed]:
 
 def _new_token() -> str:
     return secrets.token_urlsafe(24)
+
+
+def set_episodes(db: Session, user_id: int, include: bool) -> models.CalendarFeed:
+    feed = enable(db, user_id)
+    feed.include_episodes = bool(include)
+    db.commit()
+    db.refresh(feed)
+    return feed
 
 
 def enable(db: Session, user_id: int) -> models.CalendarFeed:
@@ -260,11 +292,18 @@ def state(db: Session, user_id: int) -> dict:
     feed = feed_for(db, user_id)
     if feed is None:
         return {"enabled": False}
-    return {
+    include = feed.include_episodes is not False
+    result = {
         "enabled": True,
+        "include_episodes": include,
         "links": subscribe_links(member_feed_path(feed), "OmniTrackr: my releases"),
         "last_fetched_at": feed.last_fetched_at.isoformat() + "Z" if feed.last_fetched_at else None,
     }
+    if include:
+        from .episode_calendar import upcoming_count
+        user = db.get(models.User, user_id)
+        result["episodes_soon"] = upcoming_count(db, user, radar.today_utc()) if user else 0
+    return result
 
 
 def member_for_token(db: Session, token: str) -> Optional[models.User]:

@@ -86,3 +86,28 @@ test('a failed request shows the error and leaves the panel closed', async () =>
   assert.equal(nodes.comingUpStatus.textContent, 'Not authenticated');
   assert.equal(nodes.comingUpCalendarButton.disabled, false);
 });
+
+test('the episodes box reflects the setting and shows how many are coming', () => {
+  const { nodes, module } = setup([]);
+  nodes.releaseCalendarEpisodes = new Node('input');
+  nodes.releaseCalendarEpisodesNote = new Node('small');
+  module.renderCalendar({ enabled: true, include_episodes: true, episodes_soon: 3, links: LINKS });
+  assert.equal(nodes.releaseCalendarEpisodes.checked, true);
+  assert.equal(nodes.releaseCalendarEpisodesNote.textContent, '3 episodes airing in the next two weeks.');
+  module.renderCalendar({ enabled: true, include_episodes: false, links: LINKS });
+  assert.equal(nodes.releaseCalendarEpisodes.checked, false);
+  assert.equal(nodes.releaseCalendarEpisodesNote.textContent, '');
+});
+
+test('ticking the episodes box saves it, and a failure puts the box back', async () => {
+  const { nodes, module, calls } = setup([{ enabled: true, include_episodes: true, links: LINKS }, { ok: false, detail: 'Nope' }]);
+  nodes.releaseCalendarEpisodes = new Node('input');
+  nodes.releaseCalendarEpisodes.checked = true;
+  await module.saveCalendarEpisodes();
+  assert.deepEqual(calls, [['PUT', '/api/calendar/episodes']]);
+  assert.match(nodes.releaseCalendarStatus.textContent, /^Episodes on\./);
+  nodes.releaseCalendarEpisodes.checked = false;
+  await module.saveCalendarEpisodes();
+  assert.equal(nodes.releaseCalendarEpisodes.checked, true);
+  assert.equal(nodes.releaseCalendarStatus.textContent, 'Nope');
+});

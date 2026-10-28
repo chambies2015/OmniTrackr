@@ -342,6 +342,36 @@
       $('releaseCalendarOutlook').href = safe(links.outlook, 'https://outlook.live.com/');
     }
     button.textContent = links ? 'My calendar' : 'Add to my calendar';
+    const episodes = $('releaseCalendarEpisodes');
+    if (episodes) episodes.checked = Boolean(links && state.calendar.include_episodes);
+    const note = $('releaseCalendarEpisodesNote');
+    if (note) {
+      const soon = links && state.calendar.include_episodes ? Number(state.calendar.episodes_soon) || 0 : 0;
+      note.textContent = soon ? `${soon} episode${soon === 1 ? '' : 's'} airing in the next two weeks.` : '';
+    }
+  }
+
+  async function saveCalendarEpisodes() {
+    const toggle = $('releaseCalendarEpisodes');
+    if (!toggle) return;
+    const wanted = toggle.checked;
+    toggle.disabled = true;
+    try {
+      const response = await fetch(`${apiBase()}/api/calendar/episodes`, fetchOptions({
+        method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ enabled: wanted }),
+      }));
+      const data = await response.json().catch(() => ({}));
+      if (!response.ok) throw new Error(data.detail || 'Could not update your calendar. Please try again.');
+      renderCalendar(data);
+      calendarStatus(wanted
+        ? 'Episodes on. Each new episode gets its own entry, at the time it airs when the time is known. The first ones can take a few minutes to show up.'
+        : 'Episodes off. Your calendar goes back to premieres, new seasons and release days on its next refresh.');
+    } catch (error) {
+      toggle.checked = !wanted;
+      calendarStatus(error.message);
+    } finally {
+      toggle.disabled = false;
+    }
   }
 
   async function calendarRequest(method, path) {
@@ -470,6 +500,8 @@
     });
     const toggle = $('comingUpEmailToggle');
     if (toggle) toggle.addEventListener('change', saveEmail);
+    const episodes = $('releaseCalendarEpisodes');
+    if (episodes) episodes.addEventListener('change', saveCalendarEpisodes);
     const handlers = {
       comingUpCalendarButton: openCalendar, releaseCalendarCopy: copyCalendar,
       releaseCalendarReset: resetCalendar, releaseCalendarOff: turnOffCalendar,
@@ -482,7 +514,7 @@
   window.resetForYou = resetForYou;
   if (typeof module !== 'undefined' && module.exports) {
     module.exports = { friendlyDate, renderStarter, renderComingUp, renderInvites, acceptInvite, dismissInvite, state, STARTER_GOAL,
-      renderCalendar, openCalendar, copyCalendar, resetCalendar, turnOffCalendar };
+      renderCalendar, openCalendar, copyCalendar, resetCalendar, turnOffCalendar, saveCalendarEpisodes };
   } else if (document.readyState === 'loading') {
     document.addEventListener('DOMContentLoaded', init);
   } else {
