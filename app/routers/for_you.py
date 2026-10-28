@@ -75,16 +75,19 @@ def get_first_week(response: Response, user=Depends(get_current_user), db: Sessi
 
 
 def _email_state(db: Session, user_id: int) -> dict:
+    from ..announcements import opted_out
     subscription = digest.subscription_for(db, user_id)
     return {
         "enabled": subscription is not None,
+        "updates": not opted_out(db, user_id),
         "available": digest.mail_configured(),
         "last_sent_at": subscription.last_sent_at.isoformat() + "Z" if subscription and subscription.last_sent_at else None,
     }
 
 
 class EmailPreference(BaseModel):
-    enabled: bool
+    enabled: bool | None = None
+    updates: bool | None = None  # occasional product news and come-back check-ins
 
 
 @router.get("/api/for-you/email")
@@ -94,15 +97,21 @@ def get_email_preference(response: Response, user=Depends(get_current_user), db:
 
 
 @router.put("/api/for-you/email")
-def set_email_preference(preference: EmailPreference, response: Response,
+def set_email_preference(preference: EmailPreference, request: Request, response: Response,
                          user=Depends(get_current_user), db: Session = Depends(get_db)):
     _private(response)
     if preference.enabled:
         if not user.is_verified:
             raise HTTPException(400, "Verify your email address first, then turn on the weekly email.")
         digest.subscribe(db, user.id)
-    else:
+        # Fetch this member's episode dates now, so the first email can list them.
+        from ..episode_calendar import queue_member
+        queue_member(request.app, user.id)
+    elif preference.enabled is False:
         digest.unsubscribe_user(db, user.id)
+    if preference.updates is not None:
+        from ..announcements import opt_in, opt_out
+        (opt_in if preference.updates else opt_out)(db, user.id)
     return _email_state(db, user.id)
 
 
@@ -126,7 +135,7 @@ def unsubscribe_confirm(token: str = Query("", max_length=64), db: Session = Dep
     if not safe or not db.query(models.EmailDigestSubscription).filter_by(token=safe).first():
         return _unsubscribe_page("Unsubscribed", "You're not subscribed",
                                  "This link is no longer active, so no weekly email will be sent to you. "
-                                 "You can turn it on again any time from your library.")
+                                 "You can turn it on again any time from Account Settings.")
     return _unsubscribe_page("Unsubscribe", "Stop the weekly email?",
                              "Press the button to stop the weekly \"Coming up for you\" email. Nothing else about your account changes.",
                              token=safe, confirm=True)
@@ -136,7 +145,7 @@ def unsubscribe_confirm(token: str = Query("", max_length=64), db: Session = Dep
 def unsubscribe(token: str = Query("", max_length=64), db: Session = Depends(get_db)):
     digest.unsubscribe_token(db, token)
     return _unsubscribe_page("Unsubscribed", "You're unsubscribed",
-                             "You won't get the weekly email any more. You can turn it back on from your library whenever you like.")
+                             "You won't get the weekly email any more. You can turn it back on in Account Settings whenever you like.")
 
 
 # ---------------------------------------------------------------- one-click opt-in from an email
@@ -174,8 +183,8 @@ def weekly_subscribe_confirm(token: str = Query("", max_length=300), db: Session
                             "You'll get a short email when something you track has a release coming up. "
                             "Every email has a one-click unsubscribe.")
     return _weekly_page("Weekly email", "Get a weekly heads-up?",
-                        "Once a week, a short email lists new episodes, seasons, games and releases connected to what "
-                        "you track. Weeks with no news are skipped apart from a short monthly round-up, and every email has a one-click unsubscribe.",
+                        "Once a week, a short email lists new episodes of your shows, upcoming seasons, games and releases "
+                        "connected to what you track, and what your friends added. Weeks with no news are skipped apart from a short monthly round-up, and every email has a one-click unsubscribe.",
                         token=token, confirm=True)
 
 

@@ -811,11 +811,63 @@ window.resetProfilePicture = async function () {
   }
 }
 
+// Weekly email and occasional news, saved as soon as a toggle changes.
+function showEmailPreferences(prefs) {
+  const weekly = document.getElementById('weeklyEmailToggle');
+  const updates = document.getElementById('updatesEmailToggle');
+  if (!weekly || !updates) return;
+  weekly.checked = Boolean(prefs.enabled);
+  updates.checked = prefs.updates !== false;
+  weekly.dataset.unavailable = String(!prefs.available);
+  weekly.disabled = !prefs.available;
+  const status = document.getElementById('emailPreferencesStatus');
+  if (status) status.textContent = prefs.available ? '' : 'Email is not set up on this server, so the weekly email is paused.';
+}
+
+async function loadEmailPreferences() {
+  try {
+    const response = await authenticatedFetch(`${API_BASE}/api/for-you/email`);
+    if (response.ok) showEmailPreferences(await response.json());
+  } catch (error) {
+    console.error('Failed to load email preferences:', error);
+  }
+}
+
+async function saveEmailPreference(change) {
+  const status = document.getElementById('emailPreferencesStatus');
+  const toggles = ['weeklyEmailToggle', 'updatesEmailToggle'].map(id => document.getElementById(id));
+  toggles.forEach(toggle => { if (toggle) toggle.disabled = true; });
+  try {
+    const response = await authenticatedFetch(`${API_BASE}/api/for-you/email`, {
+      method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(change),
+    });
+    const data = await response.json().catch(() => ({}));
+    if (!response.ok) throw new Error(data.detail || 'Could not save that. Please try again.');
+    showEmailPreferences(data);
+    if (status && 'enabled' in change) {
+      status.textContent = data.enabled ? 'Weekly email on. Every one has a one-click unsubscribe.' : 'Weekly email off.';
+    } else if (status) {
+      status.textContent = data.updates ? 'Occasional news on.' : 'Occasional news off.';
+    }
+  } catch (error) {
+    await loadEmailPreferences();
+    if (status) status.textContent = error.message || 'Could not save that. Please try again.';
+  } finally {
+    toggles.forEach(toggle => { if (toggle) toggle.disabled = toggle.dataset.unavailable === 'true'; });
+  }
+}
+
+document.addEventListener('change', event => {
+  if (event.target.id === 'weeklyEmailToggle') saveEmailPreference({ enabled: event.target.checked });
+  else if (event.target.id === 'updatesEmailToggle') saveEmailPreference({ updates: event.target.checked });
+});
+
 // Update loadAccountInfo to also load privacy settings, tab visibility, and profile picture
 const originalLoadAccountInfo = window.loadAccountInfo;
 window.loadAccountInfo = async function () {
   await originalLoadAccountInfo();
   await loadPrivacySettings();
+  await loadEmailPreferences();
   await loadTabVisibility();
 
   // Load profile picture preview

@@ -36,6 +36,8 @@ MEMBER_EPISODE_LIMIT = 300
 DEFAULT_MINUTES = 30
 FRESH = {"ok": timedelta(hours=20), "ended": timedelta(days=14), "miss": timedelta(days=10), "error": timedelta(hours=6)}
 SWEEP_EVERY_SECONDS = 1800
+# The weekly email lists this week's episodes, so its members' shows are refreshed in the day before it goes out.
+DIGEST_LEAD = timedelta(days=6)
 SWEEP_BATCH = 120
 FIRST_SWEEP_DELAY_SECONDS = 300
 PAUSE = {"tv-shows": 1.0, "anime": 2.5}  # TVmaze allows ~20 calls / 10 s; AniList is slower.
@@ -296,18 +298,11 @@ def _event(category: str, item, schedule: dict, episode: dict, link: str) -> dic
     return event
 
 
-def member_episode_events(db: Session, user: models.User, today: date,
-                          skip: Iterable[tuple[str, str]] = ()) -> list[dict]:
-    """Episode events for a member's unfinished shows, from the cache only.
-
-    ``skip`` holds (normalized title, date) pairs the feed already has as a
-    Release Radar premiere, so a season opener isn't listed twice.
-    """
-    skip = set(skip)
+def _member_episodes(db: Session, user: models.User, today: date):
+    """(category, item, schedule, episode, link) for a member's unfinished shows, from the cache only."""
     shows = member_shows(db, user.id)
     schedules = cached_schedules(db, [airing_key(category, item.title, item.year) for category, item in shows])
     base = app_url()
-    events, seen = [], set()
     for category, item in shows:
         schedule = schedules.get(airing_key(category, item.title, item.year))
         if not schedule or schedule.get("source_id") is None:
@@ -323,15 +318,48 @@ def member_episode_events(db: Session, user: models.User, today: date,
                 day = date.fromisoformat(episode.get("date") or "")
             except ValueError:
                 continue
-            if not _in_window(day, today) or any((normalize_title(name), episode["date"]) in skip
-                                                  for name in (item.title, schedule.get("show") or "")):
-                continue
-            event = _event(category, item, schedule, episode, link)
-            if event["uid"] not in seen:
-                seen.add(event["uid"])
-                events.append(event)
+            if _in_window(day, today):
+                yield category, item, schedule, episode, link
+
+
+def member_episode_events(db: Session, user: models.User, today: date,
+                          skip: Iterable[tuple[str, str]] = ()) -> list[dict]:
+    """Episode events for a member's unfinished shows, from the cache only.
+
+    ``skip`` holds (normalized title, date) pairs the feed already has as a
+    Release Radar premiere, so a season opener isn't listed twice.
+    """
+    skip = set(skip)
+    events, seen = [], set()
+    for category, item, schedule, episode, link in _member_episodes(db, user, today):
+        if any((normalize_title(name), episode["date"]) in skip for name in (item.title, schedule.get("show") or "")):
+            continue
+        event = _event(category, item, schedule, episode, link)
+        if event["uid"] not in seen:
+            seen.add(event["uid"])
+            events.append(event)
     events.sort(key=lambda e: (e.get("start") or e["date"], e["summary"].lower()))
     return events[:MEMBER_EPISODE_LIMIT]
+
+
+def week_ahead(db: Session, user: models.User, today: date, days: int = 7) -> list[dict]:
+    """New episodes of a member's shows in the next week, one entry per show, for the weekly email."""
+    end = (today + timedelta(days=days - 1)).isoformat()
+    shows: dict[str, dict] = {}
+    for category, item, schedule, episode, link in _member_episodes(db, user, today):
+        if not today.isoformat() <= episode["date"] <= end:
+            continue
+        season = episode.get("season") if category == "tv-shows" else None
+        code = f"S{season}E{episode['number']}" if season else f"episode {episode['number']}"
+        key = f"{category}:{schedule.get('source_id')}"
+        show = shows.setdefault(key, {"title": schedule.get("show") or item.title.strip(), "category": category,
+                                      "url": link, "episodes": []})
+        if all(code != known["code"] for known in show["episodes"]):
+            show["episodes"].append({"code": code, "date": episode["date"], "name": episode.get("name") or ""})
+    found = sorted(shows.values(), key=lambda show: (min(e["date"] for e in show["episodes"]), show["title"].lower()))
+    for show in found:
+        show["episodes"].sort(key=lambda e: e["date"])
+    return found
 
 
 def upcoming_count(db: Session, user: models.User, today: date) -> int:
@@ -343,11 +371,20 @@ def upcoming_count(db: Session, user: models.User, today: date) -> int:
 # ---------------------------------------------------------------- refreshing
 
 def _subscribers(db: Session) -> list[int]:
-    return [user_id for user_id, in db.query(models.CalendarFeed.user_id).join(
+    """Members with episodes in their calendar, plus weekly-email members whose email goes out within a day."""
+    calendar = [user_id for user_id, in db.query(models.CalendarFeed.user_id).join(
         models.User, models.User.id == models.CalendarFeed.user_id).filter(
         models.CalendarFeed.include_episodes == True,  # noqa: E712
         models.User.is_active == True,  # noqa: E712
     ).all()]
+    digest_soon = datetime.utcnow() - DIGEST_LEAD
+    weekly = [user_id for user_id, in db.query(models.EmailDigestSubscription.user_id).join(
+        models.User, models.User.id == models.EmailDigestSubscription.user_id).filter(
+        models.User.is_active == True,  # noqa: E712
+        or_(models.EmailDigestSubscription.last_checked_at.is_(None),
+            models.EmailDigestSubscription.last_checked_at <= digest_soon),
+    ).all()]
+    return list(dict.fromkeys(calendar + weekly))
 
 
 def _stale_shows(db: Session, user_ids: list[int]) -> list[tuple[str, str, Optional[int]]]:

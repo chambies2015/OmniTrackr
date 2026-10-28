@@ -83,6 +83,12 @@ def opt_out(db: Session, user_id: int) -> bool:
     return True
 
 
+def opt_in(db: Session, user_id: int) -> bool:
+    removed = db.query(models.EmailOptOut).filter_by(user_id=user_id).delete(synchronize_session=False)
+    db.commit()
+    return bool(removed)
+
+
 def opted_out(db: Session, user_id: int) -> bool:
     return db.query(models.EmailOptOut.id).filter_by(user_id=user_id).first() is not None
 
