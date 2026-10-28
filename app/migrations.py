@@ -813,6 +813,7 @@ def run_migrations():
     add_supporter_banner_column()
     add_public_diary_column()
     add_calendar_episodes_column()
+    add_lookup_indexes()
 
 
 def add_notification_link_column():
@@ -923,3 +924,37 @@ def add_calendar_episodes_column():
             print("Added include_episodes column to calendar_feeds table")
     except Exception as e:
         print(f"Migration warning (calendar episodes): {e}")
+
+
+# (table, creator column) for the "More by" lists on title pages.
+CREATOR_COLUMNS = (("movies", "director"), ("music", "artist"), ("books", "author"),
+                   ("manga", "author"), ("podcasts", "host"))
+
+
+def add_lookup_indexes():
+    """Indexes for two lookups that read whole library tables (Oct 28 speed pass).
+
+    * Public reviews: the review feed, sitemap and profiles only ever want rows with
+      review_public set, a few percent of each table. A partial index covers just those.
+    * "More by this director/author" matches lower(trim(creator)); an index on that
+      expression turns a full table read into a lookup.
+
+    Indexes only: no table or row changes. IF NOT EXISTS makes each one run once.
+    """
+    try:
+        inspector = inspect(engine)
+        statements = []
+        for table in LIBRARY_TABLES:
+            if inspector.has_table(table):
+                statements.append(f"CREATE INDEX IF NOT EXISTS ix_{table}_public_reviews "
+                                  f"ON {table} (user_id) WHERE review_public = TRUE")
+        for table, column in CREATOR_COLUMNS:
+            if inspector.has_table(table):
+                statements.append(f"CREATE INDEX IF NOT EXISTS ix_{table}_{column}_lookup "
+                                  f"ON {table} (lower(trim({column})))")
+        for statement in statements:
+            with engine.connect() as conn:
+                conn.execute(text(statement))
+                conn.commit()
+    except Exception as e:
+        print(f"Migration warning (lookup indexes): {e}")

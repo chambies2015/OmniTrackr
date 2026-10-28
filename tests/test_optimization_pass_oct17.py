@@ -1,5 +1,6 @@
 """October speed pass: the faster paths return exactly what the slower ones did."""
 import asyncio
+import threading
 from contextlib import contextmanager
 
 from sqlalchemy import event, inspect
@@ -94,12 +95,17 @@ def test_sitemap_member_entries_are_reused_while_fresh(client, monkeypatch):
 
     monkeypatch.setattr(seo, "_database_parts", build)
     monkeypatch.setattr(seo, "_sitemap_cache_enabled", lambda: True)
-    monkeypatch.setattr(seo, "_sitemap_cache", {"at": 0.0, "parts": None})
+    monkeypatch.setattr(seo, "_sitemap_cache", {"at": 0.0, "parts": None, "refreshing": False})
     first = client.get("/sitemap.xml").text
     second = client.get("/sitemap.xml").text
     assert "build-1" in first and "build-1" in second and len(calls) == 1
     seo._sitemap_cache["at"] -= seo.SITEMAP_CACHE_SECONDS + 1
-    assert "build-2" in client.get("/sitemap.xml").text
+    # An expired copy is served at once while one rebuild runs in the background (Oct 28).
+    assert "build-1" in client.get("/sitemap.xml").text
+    for thread in threading.enumerate():
+        if thread.name == "sitemap-refresh":
+            thread.join(timeout=5)
+    assert "build-2" in client.get("/sitemap.xml").text and len(calls) == 2
 
 
 # ---------------------------------------------------------------- review quality

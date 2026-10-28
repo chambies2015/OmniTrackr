@@ -239,11 +239,10 @@ def _title_paths(db: Session, entries: list[Entry]) -> dict[tuple, Optional[str]
         wanted.setdefault(kind, {}).setdefault(path.rsplit("/", 1)[1], []).append(entry)
     paths = {}
     for kind, by_slug in wanted.items():
-        found = title_pages.find_many(db, kind, list(by_slug))
+        found = title_pages.paths_many(db, kind, list(by_slug))
         for slug, group_entries in by_slug.items():
-            group = found.get(slug)
             for entry in group_entries:
-                paths[(entry.category, entry.item.id)] = group.path if group is not None else None
+                paths[(entry.category, entry.item.id)] = found.get(slug)
     return paths
 
 
