@@ -25,7 +25,7 @@ CHROME_PAGES = {"/": "", "/discover": "discover", "/discover/finding-your-feet":
 
 def current_nav_key(html):
     header = html[html.index('<header class="site-header">'):html.index("</header>")]
-    match = re.search(r'class="site-nav__link [^"]*" href="([^"]+)" aria-current="page"', header)
+    match = re.search(r'class="site-nav__link" href="([^"]+)" aria-current="page"', header)
     return match.group(1) if match else ""
 
 
