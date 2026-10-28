@@ -2130,6 +2130,31 @@
           </form>
         </div>
 
+        <!-- Email Section -->
+        <div class="account-section" id="emailPreferences">
+          <h3>Emails</h3>
+          <p class="info-text">Account emails, like password resets, always go out. Everything else is up to you.</p>
+          <div class="privacy-toggle-item">
+            <label for="weeklyEmailToggle" class="toggle-label">
+              <span>Weekly email: new episodes of your shows, releases you track, what friends added and what's next in your queue</span>
+              <div class="toggle-container">
+                <input type="checkbox" id="weeklyEmailToggle" class="toggle-switch">
+                <span class="toggle-slider"></span>
+              </div>
+            </label>
+          </div>
+          <div class="privacy-toggle-item">
+            <label for="updatesEmailToggle" class="toggle-label">
+              <span>Occasional news: a what's-new email when we ship something big, and a check-in if you've been away a month</span>
+              <div class="toggle-container">
+                <input type="checkbox" id="updatesEmailToggle" class="toggle-switch">
+                <span class="toggle-slider"></span>
+              </div>
+            </label>
+          </div>
+          <p id="emailPreferencesStatus" class="info-text" role="status" aria-live="polite"></p>
+        </div>
+
         <!-- Change Password Section -->
         <div class="account-section">
           <h3>Change Password</h3>

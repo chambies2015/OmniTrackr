@@ -1141,6 +1141,13 @@ function renderNextUpQueue(items) {
   }
   queueElement.removeAttribute('hidden');
   restoreNextUpQueueFocus(focus);
+  // The weekly email's "Open Next Up" link lands on /#next-up.
+  if (typeof window !== 'undefined' && window.location?.hash === '#next-up') {
+    queueElement.scrollIntoView?.({ block: 'start' });
+    try {
+      window.history.replaceState(window.history.state, '', `${window.location.pathname}${window.location.search}`);
+    } catch (error) { /* keep the hash */ }
+  }
 }
 
 function nextUpQueuedKeys() {

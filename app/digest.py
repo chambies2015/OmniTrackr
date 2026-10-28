@@ -14,6 +14,7 @@ import secrets
 from datetime import date, datetime, timedelta
 from html import escape
 
+from sqlalchemy import or_
 from sqlalchemy.orm import Session
 
 from . import models
@@ -291,6 +292,95 @@ def _recap_section(recap: dict | None, base: str) -> tuple[str, list[str]]:
     return html, [f"Your {year} in review: {line} {url}", ""]
 
 
+# ---------------------------------------------------------------- episodes and Next Up
+
+EPISODE_SHOWS_SHOWN = 6
+
+
+def episodes_this_week(db: Session, user, today: date) -> list[dict]:
+    """New episodes of the member's unfinished shows in the next seven days, from the cached schedules."""
+    from .episode_calendar import week_ahead
+    return week_ahead(db, user, today)
+
+
+def _episode_line(show: dict) -> str:
+    episodes = show["episodes"]
+    first = episodes[0]
+    line = f"{first['code']} on {_day(first['date'])}"
+    if first["name"]:
+        line = f"{first['code']}, “{first['name']}”, on {_day(first['date'])}"
+    if len(episodes) > 1:
+        line += f" and {len(episodes) - 1} more this week"
+    return line[:1].upper() + line[1:]
+
+
+def _episodes_section(shows: list | None) -> tuple[str, list[str]]:
+    """'New episodes this week' block; empty when none of the member's shows has one."""
+    if not shows:
+        return "", []
+    shown = shows[:EPISODE_SHOWS_SHOWN]
+    rows, text = [], ["New episodes this week:"]
+    for show in shown:
+        line = _episode_line(show)
+        rows.append(
+            '<tr><td style="padding:10px 0;border-top:1px solid #e9e5f5">'
+            f'<a href="{escape(show["url"], quote=True)}" style="color:#1f1640;font-weight:700;text-decoration:none;font-size:15px">{escape(show["title"])}</a>'
+            f'<div style="color:#5b5675;font-size:13px">{escape(line)}</div></td></tr>'
+        )
+        text.append(f"- {show['title']}: {line}")
+    if len(shows) > len(shown):
+        others = len(shows) - len(shown)
+        rows.append('<tr><td style="padding:8px 0;border-top:1px solid #e9e5f5;color:#5b5675;font-size:13px">'
+                    f'Plus {others} more show{"s" if others != 1 else ""} on your list.</td></tr>')
+        text.append(f"Plus {others} more show{'s' if others != 1 else ''} on your list.")
+    text.append("")
+    html = ('<h2 style="font-size:17px;color:#1f1640;margin:24px 0 4px">New episodes this week</h2>'
+            f'<table role="presentation" width="100%" cellspacing="0" cellpadding="0">{"".join(rows)}</table>')
+    return html, text
+
+
+NEXT_UP_LABELS = {"movies": "Movie", "tv-shows": "TV show", "anime": "Anime", "video-games": "Game",
+                  "music": "Album", "books": "Book", "manga": "Manga", "podcasts": "Podcast"}
+
+
+def next_up_line(db: Session, user_id: int) -> dict | None:
+    """The first unfinished title in the member's Next Up queue, with how many wait behind it."""
+    from . import title_pages
+    entries = db.query(models.NextUpItem.category, models.NextUpItem.item_id).filter(
+        models.NextUpItem.user_id == user_id).order_by(models.NextUpItem.position, models.NextUpItem.id).limit(50).all()
+    wanted: dict[str, list[int]] = {}
+    for category, item_id in entries:
+        if category in NEXT_UP_LABELS and category in title_pages.LIBRARY_TO_KIND:
+            wanted.setdefault(category, []).append(item_id)
+    open_titles = {}
+    for category, ids in wanted.items():
+        kind = title_pages.LIBRARY_TO_KIND[category]
+        model, done = title_pages.KINDS[kind][0], getattr(title_pages.KINDS[kind][0], title_pages.COMPLETE_FIELD[kind])
+        for item_id, title in db.query(model.id, model.title).filter(
+                model.user_id == user_id, model.id.in_(ids), or_(done == False, done.is_(None))):  # noqa: E712
+            if (title or "").strip():
+                open_titles[(category, item_id)] = title.strip()
+    queue = [(category, item_id) for category, item_id in entries if (category, item_id) in open_titles]
+    if not queue:
+        return None
+    category, item_id = queue[0]
+    return {"title": open_titles[queue[0]], "label": NEXT_UP_LABELS[category], "waiting": len(queue) - 1}
+
+
+def _next_up_section(next_up: dict | None, base: str) -> tuple[str, list[str]]:
+    """'Next in your queue' nudge; empty when the queue is empty or all finished."""
+    if not next_up:
+        return "", []
+    url = f"{base}/#next-up"
+    waiting = next_up["waiting"]
+    after = f" {waiting} more {'title waits' if waiting == 1 else 'titles wait'} behind it." if waiting else ""
+    line = f"{next_up['title']} ({next_up['label']}) is at the top.{after}"
+    html = ('<h2 style="font-size:17px;color:#1f1640;margin:24px 0 8px">Next in your queue</h2>'
+            f'<p style="color:#3b3557;font-size:14px;line-height:1.6;margin:0">{escape(line)}</p>'
+            f'<p style="margin:8px 0 0"><a href="{escape(url, quote=True)}" style="color:#6d28d9;font-weight:700">Open Next Up</a></p>')
+    return html, [f"Next in your queue: {line} {url}", ""]
+
+
 # ---------------------------------------------------------------- friend activity
 
 FRIEND_WINDOW = timedelta(days=7)
@@ -423,15 +513,20 @@ def build_digest(username: str, report: dict, unsubscribe_url: str, spotlight: d
                  ask: dict | None = None, invite: bool = False, goals: list | None = None,
                  goals_year: int | None = None, challenge: dict | None = None,
                  badge: dict | None = None, recap: dict | None = None,
-                 friends: list | None = None) -> tuple[str, str, str] | None:
+                 friends: list | None = None, episodes: list | None = None,
+                 next_up: dict | None = None) -> tuple[str, str, str] | None:
     """(subject, html, text) or None when there is nothing to send. `spotlight`, `ask`, `invite`, `goals`,
-    `challenge`, `badge` and `recap` never force a send; friend activity can."""
+    `challenge`, `badge`, `recap` and `next_up` never force a send; friend activity and episodes can."""
     matches, popular = report["matches"], report["popular"]
-    if not matches and not popular and not friends:
+    if not matches and not popular and not friends and not episodes:
         return None
     base = app_url()
     if matches:
         subject = f"Coming up for you: {matches[0]['title']}" + (f" and {len(matches) - 1} more" if len(matches) > 1 else "")
+    elif episodes:
+        subject = f"New this week: {episodes[0]['title']} {episodes[0]['episodes'][0]['code']}"
+        if len(episodes) > 1:
+            subject += f" and {len(episodes) - 1} more show{'s' if len(episodes) > 2 else ''}"
     elif friends:
         subject = f"New on your friends' shelves: {friends[0]['username']} added {friends[0]['titles'][0]['title']}"
     else:
@@ -448,6 +543,14 @@ def build_digest(username: str, report: dict, unsubscribe_url: str, spotlight: d
         text.append("From your library:")
         text += [f"- {c['title']} ({c['label']}, {_day(c.get('date'))}) - {c['reason']}" for c in matches]
         text.append("")
+    episodes_html, episodes_text = _episodes_section(episodes)
+    if episodes_html:
+        sections.append(episodes_html)
+        text += episodes_text
+    next_up_html, next_up_text = _next_up_section(next_up, base)
+    if next_up_html:
+        sections.append(next_up_html)
+        text += next_up_text
     friends_html, friends_text = _friends_section(friends, base)
     if friends_html:
         sections.append(friends_html)
@@ -485,7 +588,12 @@ def build_digest(username: str, report: dict, unsubscribe_url: str, spotlight: d
     text += [f"See everything: {base}/release-radar", "",
              "You get this because you turned on the weekly email in OmniTrackr.",
              f"Unsubscribe with one click: {unsubscribe_url}"]
-    intro = "here is what is on the way." if matches or popular else "here is what your friends added this week."
+    if matches or popular:
+        intro = "here is what is on the way."
+    elif episodes:
+        intro = "here is what airs this week."
+    else:
+        intro = "here is what your friends added this week."
     html = (
         '<html><body style="margin:0;background:#f4f2fb;font-family:Arial,Helvetica,sans-serif">'
         '<div style="max-width:560px;margin:0 auto;padding:24px">'
@@ -597,7 +705,12 @@ async def send_due_digests(session_factory, client=None, now: datetime | None = 
             except Exception:
                 db.rollback()
                 friends = []  # The weekly email never depends on it.
-            if not report["matches"] and not friends and subscription.last_sent_at and subscription.last_sent_at > now - ROUNDUP_EVERY:
+            try:
+                episodes = episodes_this_week(db, user, today or radar.today_utc())
+            except Exception:
+                db.rollback()
+                episodes = []  # The weekly email never depends on it.
+            if not report["matches"] and not friends and not episodes and subscription.last_sent_at and subscription.last_sent_at > now - ROUNDUP_EVERY:
                 stats["skipped"] += 1  # a quiet week: no news from their library, round-up sent recently
                 continue
             unsubscribe_url = f"{app_url()}/email/unsubscribe?token={subscription.token}"
@@ -635,8 +748,13 @@ async def send_due_digests(session_factory, client=None, now: datetime | None = 
             except Exception:
                 db.rollback()
                 recap = None  # Optional, like the ask above.
+            try:
+                next_up = next_up_line(db, user.id)
+            except Exception:
+                db.rollback()
+                next_up = None  # Optional, like the ask above.
             built = build_digest(user.username, report, unsubscribe_url, spotlight, ask, invite,
-                                 member_goals, now.year, challenge, badge, recap, friends)
+                                 member_goals, now.year, challenge, badge, recap, friends, episodes, next_up)
             if built is None:
                 stats["skipped"] += 1
                 continue
