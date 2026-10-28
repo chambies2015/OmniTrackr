@@ -162,7 +162,7 @@ def _start_form(kind: str, slug: str, title: str, open_: bool) -> str:
 
 def _guest_prompt(path: str, verb: str) -> str:
     return (f'<div class="disc-guest"><p>Sign in to {verb}. It\'s free, and your library stays private.</p>'
-            f'<div class="disc-guest__actions"><a class="site-btn site-btn--primary" href="{_e(_sign_in(path))}">Sign in</a>'
+            f'<div class="disc-guest__actions"><a class="site-btn site-btn--primary" rel="nofollow" href="{_e(_sign_in(path))}">Sign in</a>'
             '<a class="site-btn site-btn--ghost" href="/#signup">Create a free account</a></div></div>')
 
 

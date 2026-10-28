@@ -58,6 +58,14 @@ ROLE_VERBS = {"Director": "directed", "Creator": "created", "Writer": "wrote", "
               "Studio": "made", "Developer": "developed", "Publisher": "published", "Network": "aired"}
 COMPANY_SUFFIX = re.compile(r"^(inc|ltd|llc|llp|co|corp|plc|gmbh|s\.?a|l\.?p|k\.?k)\.?$", re.IGNORECASE)
 SLUG = re.compile(r"[a-z0-9-]{1,130}")
+# What members type when they don't know or there isn't one name. A page for "Various" or
+# "Unknown" would lump unrelated titles together under a name that isn't anyone's.
+PLACEHOLDER_SLUGS = frozenset({
+    "title", "various", "various-artists", "various-authors", "various-directors", "va", "v-a", "unknown",
+    "unknown-artist", "unknown-author", "unknown-director", "unknown-host", "anonymous", "anon", "n-a", "na",
+    "none", "null", "tbd", "tba", "multiple", "multiple-artists", "multiple-authors", "others", "other", "misc",
+    "self", "me", "idk", "not-sure", "untitled", "no-one", "nobody",
+})
 MAX_WORKS = 60
 MIN_LINKED_WORKS = 2  # A page about one title says nothing its title page doesn't.
 INDEX_MIN_WORKS = 3
@@ -70,6 +78,11 @@ def name_slug(name: str) -> str:
     return title_pages.slugify(" ".join((name or "").split()))
 
 
+def is_real_name(name: str) -> bool:
+    slug = name_slug(name)
+    return bool(slug) and slug not in PLACEHOLDER_SLUGS
+
+
 def path(entity: str, name: str) -> str:
     return f"{PREFIX[entity]}/{name_slug(name)}"
 
@@ -80,7 +93,7 @@ def split_names(value: str, role: str) -> list[str]:
     if not value:
         return []
     if role in UNSPLIT_ROLES:
-        return [value[:200]]
+        return [value[:200]] if is_real_name(value) else []
     names: list[str] = []
     for part in value.split(", "):
         part = part.strip()
@@ -90,7 +103,7 @@ def split_names(value: str, role: str) -> list[str]:
             names[-1] = f"{names[-1]}, {part}"
         else:
             names.append(part)
-    return [name[:200] for name in dict.fromkeys(names) if name_slug(name) != "title"]
+    return [name[:200] for name in dict.fromkeys(names) if is_real_name(name)]
 
 
 def credits_in(kind: str, data: Optional[dict]) -> list[tuple[str, str, str]]:
@@ -216,6 +229,7 @@ def _collaborators(db: Session, entity: str, slug: str, keys: list[str], limit: 
     rows = (db.query(models.TitleCredit.entity, models.TitleCredit.slug, func.min(models.TitleCredit.name), shared)
             .filter(models.TitleCredit.metadata_key.in_(keys[:400]))
             .filter(~((models.TitleCredit.entity == entity) & (models.TitleCredit.slug == slug)))
+            .filter(~models.TitleCredit.slug.in_(PLACEHOLDER_SLUGS))
             .group_by(models.TitleCredit.entity, models.TitleCredit.slug)
             .order_by(shared.desc(), models.TitleCredit.slug).limit(limit * 3).all())
     people = [{"entity": e, "name": n, "url": f"{PREFIX[e]}/{s}", "shared": int(c)} for e, s, n, c in rows]
@@ -240,7 +254,7 @@ def _decorate_reviews(db: Session, reviews: list) -> None:
 
 
 def build(db: Session, entity: str, slug: str) -> Optional[Page]:
-    if entity not in PREFIX or not SLUG.fullmatch(slug or ""):
+    if entity not in PREFIX or not SLUG.fullmatch(slug or "") or slug in PLACEHOLDER_SLUGS:
         return None
     credits = (db.query(models.TitleCredit).filter(models.TitleCredit.entity == entity, models.TitleCredit.slug == slug)
                .limit(400).all())
@@ -360,7 +374,7 @@ def title_links(db: Session, kind: str, metadata: Optional[dict], creator: Optio
     for (entity, slug), name in candidates.items():
         if counts.get((entity, slug), 0) >= MIN_LINKED_WORKS:
             links[name] = f"{PREFIX[entity]}/{slug}"
-    if creator and kind in LIBRARY_ROLES:
+    if creator and kind in LIBRARY_ROLES and is_real_name(creator):
         slug = name_slug(creator)
         if creator_has_more or counts.get((PERSON, slug), 0) >= MIN_LINKED_WORKS:
             for name in split_names(creator, LIBRARY_ROLES[kind]) or [creator]:
@@ -380,6 +394,8 @@ def directory(db: Session, entity: str, per_role: int = 18) -> dict[str, list[di
                                     .filter(models.TitleCredit.entity == entity)
                                     .group_by(models.TitleCredit.role, models.TitleCredit.slug)
                                     .having(titles >= MIN_LINKED_WORKS).all()):
+        if slug in PLACEHOLDER_SLUGS:  # Credits indexed before the placeholder list existed.
+            continue
         by_role[role][slug] = int(count)
         spelled[slug][name] += 1
     if entity == PERSON:
@@ -396,8 +412,6 @@ def directory(db: Session, entity: str, per_role: int = 18) -> dict[str, list[di
             for _, name, count in rows:
                 for one in split_names(name or "", role):
                     slug = name_slug(one)
-                    if slug == "title":
-                        continue
                     by_role[role][slug] = max(by_role[role][slug], int(count))
                     spelled[slug][one.strip()] += 3
     result = {}
