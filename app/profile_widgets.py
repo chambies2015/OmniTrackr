@@ -51,6 +51,7 @@ CATEGORY_COLORS = {
     "music": ((250, 204, 21), (161, 98, 7)),
     "books": ((167, 139, 250), (109, 40, 217)),
     "manga": ((251, 113, 133), (190, 18, 60)),
+    "podcasts": ((56, 189, 248), (3, 105, 161)),
 }
 LABEL_TO_CATEGORY = {label: category for category, (_, label, _, _) in diary.CATEGORIES.items()}
 PALETTES = {

@@ -7,7 +7,8 @@ function categoryToId(category) {
     'library-insights': 'libraryInsights',
     'music': 'music',
     'books': 'books',
-    'manga': 'manga'
+    'manga': 'manga',
+    'podcasts': 'podcasts'
   };
   return idMap[category] || category;
 }
@@ -65,7 +66,8 @@ async function loadCategoryStatistics(category) {
       'library-insights': 'insights',
       'music': 'music',
       'books': 'books',
-      'manga': 'manga'
+      'manga': 'manga',
+      'podcasts': 'podcasts'
     };
     
     const endpoint = categoryMap[category];
@@ -104,7 +106,7 @@ function displayCategoryStatistics(stats, category) {
   let html = '';
   
   html += '<div class="stats-subsection">';
-  const progressLabel = category === 'video-games' ? 'Play Progress' : category === 'music' ? 'Listen Progress' : (category === 'books' || category === 'manga') ? 'Read Progress' : 'Watch Progress';
+  const progressLabel = category === 'video-games' ? 'Play Progress' : (category === 'music' || category === 'podcasts') ? 'Listen Progress' : (category === 'books' || category === 'manga') ? 'Read Progress' : 'Watch Progress';
   html += `<h4>📈 ${progressLabel}</h4>`;
   html += '<div class="stats-grid">';
   html += `<div class="stat-card"><div class="stat-number">${stats.watch_stats.total_items}</div><div class="stat-label">Total Items</div></div>`;
@@ -113,7 +115,7 @@ function displayCategoryStatistics(stats, category) {
   if (category === 'video-games') {
     watchedLabel = 'Played';
     unwatchedLabel = 'Unplayed';
-  } else if (category === 'music') {
+  } else if (category === 'music' || category === 'podcasts') {
     watchedLabel = 'Listened';
     unwatchedLabel = 'Unlistened';
   } else if (category === 'books' || category === 'manga') {
@@ -184,13 +186,23 @@ function displayCategoryStatistics(stats, category) {
     html += '</div>';
   }
 
-  if ((category === 'video-games' || category === 'manga') && stats.genre_stats) {
+  if (category === 'podcasts') {
     html += '<div class="stats-subsection">';
-    html += `<h4>${category === 'manga' ? '🗯️' : '🎮'} Genre Analysis</h4>`;
+    html += '<h4>🎧 Episodes</h4>';
+    html += '<div class="stats-grid">';
+    html += `<div class="stat-card"><div class="stat-number">${stats.episodes_listened || 0}</div><div class="stat-label">Episodes in shows marked listened</div></div>`;
+    html += `<div class="stat-card"><div class="stat-number">${stats.total_episodes || 0}</div><div class="stat-label">Episodes on your shelf</div></div>`;
+    html += '</div>';
+    html += '</div>';
+  }
+
+  if ((category === 'video-games' || category === 'manga' || category === 'podcasts') && stats.genre_stats) {
+    html += '<div class="stats-subsection">';
+    html += `<h4>${{ manga: '🗯️', podcasts: '🎙️' }[category] || '🎮'} Genre Analysis</h4>`;
     html += '<div class="genre-stats"><h5>Genre Distribution</h5><div id="genreBars' + idPrefix + '"></div></div>';
     html += '<div class="stats-grid-two">';
     html += '<div><h5>Top Genres</h5><div id="topGenresList' + idPrefix + '"></div></div>';
-    html += `<div><h5>Most ${category === 'manga' ? 'Read' : 'Played'} Genres</h5><div id="mostPlayedGenresList${idPrefix}"></div></div>`;
+    html += `<div><h5>Most ${{ manga: 'Read', podcasts: 'Listened' }[category] || 'Played'} Genres</h5><div id="mostPlayedGenresList${idPrefix}"></div></div>`;
     html += '</div>';
     html += '</div>';
   }
@@ -211,7 +223,7 @@ function displayCategoryStatistics(stats, category) {
     displaySeasonsEpisodesStats(stats.seasons_episodes_stats, idPrefix);
   }
   
-  if ((category === 'video-games' || category === 'manga') && stats.genre_stats) {
+  if ((category === 'video-games' || category === 'manga' || category === 'podcasts') && stats.genre_stats) {
     displayGenreStats(stats.genre_stats, idPrefix);
   }
 }
@@ -420,7 +432,7 @@ function displaySeasonsEpisodesStats(stats, idPrefix) {
 }
 
 function displayGenreStats(stats, idPrefix) {
-  const [one, many] = idPrefix === 'manga' ? ['series', 'series'] : ['game', 'games'];
+  const [one, many] = { manga: ['series', 'series'], podcasts: ['podcast', 'podcasts'] }[idPrefix] || ['game', 'games'];
   const genreBarsContainer = document.getElementById(`genreBars${idPrefix}`);
   const topGenresContainer = document.getElementById(`topGenresList${idPrefix}`);
   const mostPlayedContainer = document.getElementById(`mostPlayedGenresList${idPrefix}`);

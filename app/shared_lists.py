@@ -30,7 +30,7 @@ JOINED_MAX = 50
 MEMBERS_MAX = 12
 ITEMS_MAX = 300
 PREVIEW_ITEMS = 8
-KIND_LABELS = {"movie": "Movie", "tv": "TV show", "anime": "Anime", "game": "Game", "book": "Book", "album": "Album", "manga": "Manga"}
+KIND_LABELS = {"movie": "Movie", "tv": "TV show", "anime": "Anime", "game": "Game", "book": "Book", "album": "Album", "manga": "Manga", "podcast": "Podcast"}
 
 
 class ListError(Exception):

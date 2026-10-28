@@ -48,17 +48,17 @@
   <link rel="apple-touch-icon" href="/static/icons/apple-touch-icon.png?v=20261003-pwa-1">
   <meta name="apple-mobile-web-app-title" content="OmniTrackr">
   <script src="/static/pwa.js?v=20261018-install-card-1" defer></script>
-  <link rel="preload" href="./styles.css?v=20261027-push-quiz-1" as="style">
+  <link rel="preload" href="./styles.css?v=20261028-podcasts-1" as="style">
   <link rel="preload" href="/static/fonts/poppins-700-latin.woff2" as="font" type="font/woff2" crossorigin>
   <link rel="preload" href="/static/fonts/poppins-800-latin.woff2" as="font" type="font/woff2" crossorigin>
   <link rel="stylesheet" href="/static/fonts.css?v=20261009-fonts-1">
-  <link rel="stylesheet" href="./styles.css?v=20261027-push-quiz-1">
+  <link rel="stylesheet" href="./styles.css?v=20261028-podcasts-1">
   <link rel="stylesheet" href="/static/progress.css?v=20260922-progress">
   <link rel="stylesheet" href="/static/episodes.css?v=20261027-episodes-1">
   <link rel="stylesheet" href="/static/app-theme.css?v=20261022-next-up-1">
-  <link rel="stylesheet" href="/static/library-theme.css?v=20261017-bughunt-1">
-  <link rel="stylesheet" href="/static/library-shelf.css?v=20261016-shelf-1">
-  <link rel="stylesheet" href="/static/library-refresh.css?v=20261024-library-refresh-1">
+  <link rel="stylesheet" href="/static/library-theme.css?v=20261028-podcasts-1">
+  <link rel="stylesheet" href="/static/library-shelf.css?v=20261028-podcasts-1">
+  <link rel="stylesheet" href="/static/library-refresh.css?v=20261028-podcasts-1">
   <link rel="stylesheet" href="/static/dialog-theme.css?v=20260924-visual-4">
   <link rel="stylesheet" href="/static/where-to-watch.css?v=20261026-where-to-watch-1">
   <link rel="stylesheet" href="/static/taste-match.css?v=20261016-taste-match-1">
@@ -407,6 +407,7 @@
         <button class="tab" data-switch-tab="music">Music</button>
         <button class="tab" data-switch-tab="books">Books</button>
         <button class="tab" data-switch-tab="manga">Manga</button>
+        <button class="tab" data-switch-tab="podcasts">Podcasts</button>
       </div>
       <div class="library-nav__group library-nav__group--tools" role="group" aria-label="Personal tools and custom libraries">
         <span class="library-nav__label" aria-hidden="true">Your space</span>
@@ -543,6 +544,7 @@
                 <option value="music">Music</option>
                 <option value="books">Books</option>
                 <option value="manga">Manga</option>
+                <option value="podcasts">Podcasts</option>
               </select>
             </label>
             <p id="todaysPickReason" class="todays-pick__reason"></p>
@@ -1241,6 +1243,100 @@
       </div>
     </div>
 
+    <!-- Podcasts Tab Content -->
+    <div id="podcasts-tab" class="tab-content library-section">
+      <div class="card library-add-panel">
+        <div class="collapsible-header">
+          <h2><button type="button" class="library-add-toggle" aria-expanded="false" data-toggle-collapsible="podcastForm" aria-controls="podcastFormContent"><span>Add Podcast</span><span class="collapsible-icon" id="podcastFormIcon" aria-hidden="true">▼</span></button></h2>
+        </div>
+        <div class="collapsible-content" id="podcastFormContent" hidden>
+          <form id="addPodcastForm" class="library-add-form">
+            <div class="library-add-search">
+              <label class="library-field-label" for="podcastTitle">Title</label>
+              <input type="text" id="podcastTitle" placeholder="Podcast name" required>
+              <button type="button" id="searchPodcastBtn" class="action-btn library-search-button">Search</button>
+            </div>
+            <div class="library-add-field">
+              <label class="library-field-label" for="podcastHost">Host</label>
+              <input type="text" id="podcastHost" placeholder="Host or network (auto-filled from search)">
+            </div>
+            <div class="library-add-field">
+              <label class="library-field-label" for="podcastYear">Started</label>
+              <input type="number" id="podcastYear" min="0" max="9999" placeholder="Year it started">
+            </div>
+            <div class="library-add-field">
+              <label class="library-field-label" for="podcastGenre">Genre</label>
+              <input type="text" id="podcastGenre" placeholder="Genre">
+            </div>
+            <div class="library-add-field">
+              <label class="library-field-label" for="podcastEpisodes">Episodes</label>
+              <input type="number" id="podcastEpisodes" min="0" placeholder="Episodes">
+            </div>
+            <div class="library-add-field">
+              <label class="library-field-label" for="podcastRating">Your rating</label>
+              <input type="number" min="0" max="10" step="0.1" id="podcastRating" placeholder="Rating (0-10.0)">
+            </div>
+            <div class="library-add-check">
+              <label>Listened <input type="checkbox" id="podcastListened"></label>
+            </div>
+            <div class="library-add-field library-add-review">
+              <label class="library-field-label" for="podcastReview">Your review</label>
+              <textarea id="podcastReview" class="review-textarea" data-review-quality-input placeholder="Review (optional)" rows="1"></textarea>
+              <p class="review-quality-hint"><span class="review-quality-count" data-review-counter-for="podcastReview">0/80 characters - add context for the community feed</span>. To be shown in search, a public review needs 240+ characters and 35+ words, in complete sentences with varied wording and no links or contact details. <a href="/review-guidelines" target="_blank" rel="noopener noreferrer">Review guide</a></p>
+            </div>
+            <div class="library-add-check">
+              <label>Public Review <input type="checkbox" id="podcastReviewPublic"></label>
+            </div>
+            <button type="submit" class="action-btn">Add Podcast</button>
+          </form>
+        </div>
+      </div>
+      <div class="card library-panel">
+        <div class="library-heading">
+          <h2>Podcasts</h2>
+          <span id="podcastCount" class="library-count"></span>
+        </div>
+        <div class="library-toolbar">
+          <input type="text" id="podcastSearch" aria-label="Search this library" placeholder="Search by title, host, or genre"
+            class="library-filter-search">
+          <select id="podcastSort" aria-label="Sort this library" class="library-sort">
+            <option value="">Sort by...</option>
+            <option value="rating-asc">Rating (Low → High)</option>
+            <option value="rating-desc">Rating (High → Low)</option>
+            <option value="year-asc">Year (Oldest → Newest)</option>
+            <option value="year-desc">Year (Newest → Oldest)</option>
+          </select>
+          <div class="library-utilities" role="group" aria-label="Library data">
+            <button id="loadPodcasts" class="action-btn library-utility">Refresh</button>
+            <button id="exportPodcasts" class="action-btn library-utility">Export Data</button>
+            <button id="importPodcasts" class="action-btn library-utility">Import Data</button>
+          </div>
+        </div>
+        <input type="file" id="importPodcastFile" accept=".json" style="display: none;">
+        <div id="podcastTableFilters" class="library-filters" aria-label="Library filters"></div>
+        <div class="table-container library-table-wrap">
+          <table id="podcastTable" class="library-table">
+            <thead>
+              <tr>
+                <th>Cover Art</th>
+                <th>Title</th>
+                <th>Host</th>
+                <th>Started</th>
+                <th>Episodes</th>
+                <th>Genre</th>
+                <th>Rating</th>
+                <th>Listened</th>
+                <th>Review</th>
+                <th>Public</th>
+                <th>Actions</th>
+              </tr>
+            </thead>
+            <tbody></tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+
     <!-- Video Games Tab Content -->
     <div id="video-games-tab" class="tab-content library-section">
       <div class="card library-add-panel">
@@ -1403,7 +1499,7 @@
               <option value="movies">Movie</option><option value="tv-shows">TV show</option>
               <option value="anime">Anime</option><option value="video-games">Game</option>
               <option value="music">Album</option><option value="books">Book</option>
-              <option value="manga">Manga</option>
+              <option value="manga">Manga</option><option value="podcasts">Podcast</option>
             </select>
           </label>
           <label>Library item
@@ -1432,7 +1528,7 @@
           <div class="activity-timeline__filters">
             <select id="activityFilterCategory" data-change-action="activity-filter" aria-label="Filter journal by media type">
               <option value="">All media</option><option value="movies">Movies</option><option value="tv-shows">TV shows</option>
-              <option value="anime">Anime</option><option value="video-games">Games</option><option value="music">Albums</option><option value="books">Books</option><option value="manga">Manga</option>
+              <option value="anime">Anime</option><option value="video-games">Games</option><option value="music">Albums</option><option value="books">Books</option><option value="manga">Manga</option><option value="podcasts">Podcasts</option>
             </select>
             <select id="activityFilterAction" data-change-action="activity-filter" aria-label="Filter journal by moment">
               <option value="">All moments</option><option value="started">Started</option><option value="progressed">Progress</option>
@@ -1475,6 +1571,7 @@
               <label><input type="checkbox" name="recommendationCategory" value="music" checked> Albums</label>
               <label><input type="checkbox" name="recommendationCategory" value="books" checked> Books</label>
               <label><input type="checkbox" name="recommendationCategory" value="manga" checked> Manga</label>
+              <label><input type="checkbox" name="recommendationCategory" value="podcasts" checked> Podcasts</label>
             </div>
           </fieldset>
           <label>Reply window
@@ -1718,6 +1815,20 @@
             <div id="mangaStatsData"></div>
           </div>
         </div>
+
+        <!-- Podcasts Accordion Section -->
+        <div class="accordion-section">
+          <div class="accordion-header" data-toggle-category-accordion="podcasts">
+            <h3>🎙️ Podcasts</h3>
+            <span class="accordion-icon" id="podcastsStatsIcon">▶</span>
+          </div>
+          <div class="accordion-content" id="podcastsStatsContent" style="display: none;">
+            <div id="podcastsStatsLoading" style="text-align: center; padding: 20px; display: none;">
+              <div style="display: inline-block; width: 30px; height: 30px; border: 3px solid rgba(102, 126, 234, 0.2); border-top-color: var(--primary); border-radius: 50%; animation: spin 1s linear infinite;"></div>
+            </div>
+            <div id="podcastsStatsData"></div>
+          </div>
+        </div>
       </div>
 
     </div>
@@ -1862,12 +1973,12 @@
   </dialog>
   <script src="./credentials.js"></script>
   <script src="./auth.js?v=20261027-a11y-speed-1"></script>
-  <script src="/static/import-studio.js?v=20261027-manga-1"></script>
-  <script src="/static/progress.js?v=20261027-manga-1"></script>
+  <script src="/static/import-studio.js?v=20261028-podcasts-1"></script>
+  <script src="/static/progress.js?v=20261028-podcasts-1"></script>
   <script src="/static/episodes.js?v=20261027-episodes-1"></script>
   <script src="./app.js"></script>
-  <script src="/static/for-you.js?v=20261027-manga-1"></script>
-  <script src="/static/title-links.js?v=20261027-manga-1"></script>
+  <script src="/static/for-you.js?v=20261028-podcasts-1"></script>
+  <script src="/static/title-links.js?v=20261028-podcasts-1"></script>
   <script src="/static/public-profile.js?v=20261027-widgets-1"></script>
   <script src="/static/supporter.js?v=20261020-looks-1"></script>
   <script src="/static/profile-showcase.js?v=20261021-bugs-1"></script>
@@ -1875,13 +1986,13 @@
   <script src="/static/challenges.js?v=20261011-challenge-2"></script>
   <script src="/static/seasonal-card.js?v=20261022-holidays-1"></script>
   <script src="/static/badges.js?v=20261017-badges-1"></script>
-  <script src="/static/taste-match.js?v=20261027-manga-1"></script>
-  <script src="/static/friend-recs.js?v=20261027-manga-1"></script>
-  <script src="/static/friends-feed.js?v=20261027-manga-1"></script>
+  <script src="/static/taste-match.js?v=20261028-podcasts-1"></script>
+  <script src="/static/friend-recs.js?v=20261028-podcasts-1"></script>
+  <script src="/static/friends-feed.js?v=20261028-podcasts-1"></script>
   <script src="/static/push.js?v=20261027-push-3" defer></script>
   <script src="/static/year-in-review-entry.js?v=20261019-story-1" defer></script>
-  <script src="/static/guest-list.js?v=20261027-manga-1"></script>
-  <script src="/static/taste-quiz.js?v=20261027-manga-1" defer></script>
+  <script src="/static/guest-list.js?v=20261028-podcasts-1"></script>
+  <script src="/static/taste-quiz.js?v=20261028-podcasts-1" defer></script>
 
   <!-- Account Modal -->
   <div id="accountModal" class="modal-overlay" style="display: none;">
@@ -2056,6 +2167,15 @@
                 <span>Make Manga Private</span>
                 <div class="toggle-container">
                   <input type="checkbox" id="mangaPrivate" class="toggle-switch">
+                  <span class="toggle-slider"></span>
+                </div>
+              </label>
+            </div>
+            <div class="privacy-toggle-item">
+              <label for="podcastsPrivate" class="toggle-label">
+                <span>Make Podcasts Private</span>
+                <div class="toggle-container">
+                  <input type="checkbox" id="podcastsPrivate" class="toggle-switch">
                   <span class="toggle-slider"></span>
                 </div>
               </label>
@@ -2238,6 +2358,7 @@
                   <option value="music">Music</option>
                   <option value="books">Books</option>
                   <option value="manga">Manga</option>
+                  <option value="podcasts">Podcasts</option>
                 </select>
               </label>
               <label class="import-studio__file-label">
@@ -2276,6 +2397,7 @@
                   <option value="music">Music template</option>
                   <option value="books">Book template</option>
                   <option value="manga">Manga template</option>
+                  <option value="podcasts">Podcast template</option>
                 </select>
               </label>
               <button type="button" class="action-btn" data-action="download-import-template">Download template</button>
@@ -2360,6 +2482,15 @@
                 <span>Show Manga Tab</span>
                 <div class="toggle-container">
                   <input type="checkbox" id="mangaVisible" class="toggle-switch">
+                  <span class="toggle-slider"></span>
+                </div>
+              </label>
+            </div>
+            <div class="privacy-toggle-item">
+              <label for="podcastsVisible" class="toggle-label">
+                <span>Show Podcasts Tab</span>
+                <div class="toggle-container">
+                  <input type="checkbox" id="podcastsVisible" class="toggle-switch">
                   <span class="toggle-slider"></span>
                 </div>
               </label>
@@ -2573,6 +2704,24 @@
           </div>
         </div>
 
+        <!-- Podcasts Accordion Section -->
+        <div class="accordion-section">
+          <div class="accordion-header" data-toggle-accordion="podcasts">
+            <h3>Podcasts</h3>
+            <span class="accordion-icon" id="podcastsIcon">▼</span>
+          </div>
+          <div class="accordion-content" id="podcastsContent">
+            <div id="podcastsSummary" class="accordion-summary"></div>
+            <div id="podcastsList" class="accordion-full-content">
+              <div class="friend-search-container">
+                <input type="text" id="friendPodcastsSearch" class="friend-search-input"
+                  placeholder="Search podcasts by title, host, or genre..." data-friend-filter="Podcasts">
+              </div>
+              <div id="friendPodcastsListContainer"></div>
+            </div>
+          </div>
+        </div>
+
         <!-- Statistics Accordion Section -->
         <div class="accordion-section">
           <div class="accordion-header" data-toggle-accordion="statistics">
@@ -2676,6 +2825,19 @@
     </div>
   </div>
 
+  <!-- Podcast Search Results Modal -->
+  <div id="podcastSearchModal" class="modal-overlay" style="display: none;">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h2>Select Podcast</h2>
+        <button class="modal-close" data-action="close-podcast-search-modal" aria-label="Close podcast search">×</button>
+      </div>
+      <div class="modal-body">
+        <div id="podcastSearchResults" class="search-results-grid"></div>
+      </div>
+    </div>
+  </div>
+
   <!-- Universal Quick Capture Modal -->
   <div id="quickCaptureModal" class="modal-overlay quick-capture-overlay" style="display: none;" data-close-on-backdrop="quick-capture" role="dialog" aria-modal="true" aria-labelledby="quickCaptureTitle">
     <div class="modal-content quick-capture-modal" data-stop-propagation>
@@ -2683,7 +2845,7 @@
         <div>
           <p class="quick-capture-eyebrow">One search · every shelf</p>
           <h2 id="quickCaptureTitle">Add anything</h2>
-          <p>Search movies, shows, anime, games, albums, books, and manga together.</p>
+          <p>Search movies, shows, anime, games, albums, books, manga, and podcasts together.</p>
         </div>
         <button type="button" class="modal-close" data-action="close-quick-capture" aria-label="Close quick capture">×</button>
       </div>
@@ -2705,6 +2867,7 @@
               <button type="button" data-action="select-quick-capture-category" data-quick-category="music" aria-pressed="false">🎵 Music</button>
               <button type="button" data-action="select-quick-capture-category" data-quick-category="books" aria-pressed="false">📚 Books</button>
               <button type="button" data-action="select-quick-capture-category" data-quick-category="manga" aria-pressed="false">🗯️ Manga</button>
+              <button type="button" data-action="select-quick-capture-category" data-quick-category="podcasts" aria-pressed="false">🎙️ Podcasts</button>
             </div>
             <label class="quick-capture-intent" for="quickCaptureIntent"><span>Add as</span><select id="quickCaptureIntent"><option value="saved">Not completed / save for later</option><option value="completed">Completed</option></select></label>
           </div>

@@ -314,6 +314,25 @@ def get_friend_manga(
     return schemas.FriendMangaResponse(manga=manga, count=len(manga))
 
 
+@router.get("/{friend_id}/podcasts", response_model=schemas.FriendPodcastsResponse)
+def get_friend_podcasts(
+    friend_id: PositiveDatabaseId,
+    current_user: models.User = Depends(get_current_user),
+    db: Session = Depends(get_db)
+):
+    """Get friend's podcast list (if not private, requires friendship)."""
+    if not crud.are_friends(db, current_user.id, friend_id):
+        raise HTTPException(status_code=403, detail="You are not friends with this user")
+
+    podcasts = crud.get_friend_podcasts(db, friend_id)
+    if podcasts is None:
+        if crud.get_user_by_id(db, friend_id) is None:
+            raise HTTPException(status_code=404, detail="Friend not found")
+        raise HTTPException(status_code=403, detail="This user has made their podcasts private")
+
+    return schemas.FriendPodcastsResponse(podcasts=podcasts, count=len(podcasts))
+
+
 @router.get("/{friend_id}/statistics", response_model=schemas.FriendStatisticsResponse)
 def get_friend_statistics(
     friend_id: PositiveDatabaseId,

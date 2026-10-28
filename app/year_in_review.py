@@ -29,6 +29,7 @@ CATEGORIES = {
     "music": (models.Music, "Albums", "listened", "listened to", "music_private"),
     "books": (models.Book, "Books", "read", "read", "books_private"),
     "manga": (models.Manga, "Manga", "read", "read", "manga_private"),
+    "podcasts": (models.Podcast, "Podcasts", "listened", "listened to", "podcasts_private"),
 }
 # Add dates were first recorded in October 2026; earlier items have none.
 ADD_DATES_FIRST_YEAR = 2026
@@ -42,6 +43,7 @@ CREATORS = {
     "music": (models.Music, "artist", "artist"),
     "books": (models.Book, "author", "author"),
     "manga": (models.Manga, "author", "mangaka"),
+    "podcasts": (models.Podcast, "host", "host"),
 }
 # Persona when one shelf is most of the year's finishes: (name, line with {n} finishes)
 SHELF_PERSONAS = {
@@ -52,6 +54,7 @@ SHELF_PERSONAS = {
     "music": ("The Crate Digger", "{n} albums listened to, start to finish."),
     "books": ("The Bookworm", "{n} books read. Your bookmark worked overtime."),
     "manga": ("The Volume Hoarder", "{n} manga series read, right to left."),
+    "podcasts": ("The Commuter", "{n} podcasts heard all the way through."),
 }
 
 

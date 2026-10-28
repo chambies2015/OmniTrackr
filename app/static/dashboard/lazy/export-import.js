@@ -18,7 +18,7 @@ async function exportData() {
     document.body.removeChild(a);
     URL.revokeObjectURL(url);
 
-    alert(`Export successful! Exported ${data.export_metadata.total_movies} movies, ${data.export_metadata.total_tv_shows} TV shows, ${data.export_metadata.total_anime || 0} anime, ${data.export_metadata.total_video_games || 0} video games, ${data.export_metadata.total_music || 0} music, ${data.export_metadata.total_books || 0} books, ${data.export_metadata.total_manga || 0} manga, ${data.export_metadata.total_custom_tabs || 0} custom tabs, ${data.export_metadata.total_activities || 0} journal entries, and ${data.export_metadata.total_progress_checkpoints || 0} private progress checkpoints.`);
+    alert(`Export successful! Exported ${data.export_metadata.total_movies} movies, ${data.export_metadata.total_tv_shows} TV shows, ${data.export_metadata.total_anime || 0} anime, ${data.export_metadata.total_video_games || 0} video games, ${data.export_metadata.total_music || 0} music, ${data.export_metadata.total_books || 0} books, ${data.export_metadata.total_manga || 0} manga, ${data.export_metadata.total_podcasts || 0} podcasts, ${data.export_metadata.total_custom_tabs || 0} custom tabs, ${data.export_metadata.total_activities || 0} journal entries, and ${data.export_metadata.total_progress_checkpoints || 0} private progress checkpoints.`);
   } catch (error) {
     alert('Export failed: ' + error.message);
   }
@@ -56,6 +56,7 @@ async function importData(fileInput) {
     message += `Music: ${result.music_created || 0} created, ${result.music_updated || 0} updated\n`;
     message += `Books: ${result.books_created || 0} created, ${result.books_updated || 0} updated\n`;
     message += `Manga: ${result.manga_created || 0} created, ${result.manga_updated || 0} updated\n`;
+    message += `Podcasts: ${result.podcasts_created || 0} created, ${result.podcasts_updated || 0} updated\n`;
     message += `Custom Tabs: ${result.custom_tabs_created || 0} created, ${result.custom_tabs_updated || 0} updated`;
     message += `\nPrivate progress: ${result.progress_created || 0} restored, ${result.progress_skipped || 0} skipped. Existing or cleared checkpoints stay unchanged.`;
 
@@ -80,6 +81,8 @@ async function importData(fileInput) {
       loadBooks();
     } else if (currentTab === 'manga') {
       loadManga();
+    } else if (currentTab === 'podcasts') {
+      loadPodcasts();
     } else if (currentTab && currentTab.startsWith('custom-')) {
       const tabId = parseInt(currentTab.replace('custom-', ''));
       const tab = customTabs.find(t => t.id === tabId);

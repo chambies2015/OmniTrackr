@@ -106,7 +106,7 @@ class TestActivityJournal:
                 "occurred_at": (datetime.utcnow() + timedelta(days=1)).isoformat(),
             },
         ).status_code == 422
-        assert authenticated_client.get("/activity/?category=podcasts").status_code == 422
+        assert authenticated_client.get("/activity/?category=comics").status_code == 422
         assert db_session.query(models.ActivityEntry).count() == 0
 
     def test_journal_requires_authentication(self, client):

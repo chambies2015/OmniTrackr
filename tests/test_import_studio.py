@@ -215,7 +215,7 @@ class TestImportStudio:
         assert repeated.json()["duplicate_count"] == 6
 
     def test_invalid_rows_are_reported_without_blocking_valid_rows(self, authenticated_client, db_session):
-        content = "title,category,year\nValid Film,movie,2020\n,book,2021\nUnknown Thing,podcast,2022\n"
+        content = "title,category,year\nValid Film,movie,2020\n,book,2021\nUnknown Thing,comic,2022\n"
         preview = authenticated_client.post(
             "/import-studio/preview/", files=csv_upload("mixed.csv", content), data={"source": "generic"}
         )
@@ -272,7 +272,7 @@ class TestImportStudio:
 
     def test_filtered_pagination_reaches_every_error_and_keeps_confirmation(self, authenticated_client, db_session):
         content = "title,category,rating\n" + "".join(f"Film {index},movies,8\n" for index in range(130))
-        content += "Film 0,movies,4\nBroken rating,movies,nan\nMissing category,podcast,8\n"
+        content += "Film 0,movies,4\nBroken rating,movies,nan\nMissing category,comic,8\n"
         options = {"source": "generic"}
 
         def preview(**paging):

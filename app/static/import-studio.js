@@ -18,7 +18,7 @@ const importStudioCategories = {
   movies: ['Movies', 'Watched', 'Not watched'], 'tv-shows': ['TV shows', 'Watched', 'Not watched'],
   anime: ['Anime', 'Watched', 'Not watched'], 'video-games': ['Games', 'Played', 'Not played'],
   music: ['Music', 'Listened', 'Not listened'], books: ['Books', 'Read', 'Not read'],
-  manga: ['Manga', 'Read', 'Not read']
+  manga: ['Manga', 'Read', 'Not read'], podcasts: ['Podcasts', 'Listened', 'Not listened']
 };
 const importStudioSources = {
   letterboxd: 'a Letterboxd export', goodreads: 'a Goodreads export', myanimelist: 'a MyAnimeList export',

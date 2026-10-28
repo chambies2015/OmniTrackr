@@ -3,7 +3,7 @@
   'use strict';
   const panel = document.getElementById('reviewSavePanel');
   if (!panel) return;
-  const categories = {movie: 'movies', tv_show: 'tv-shows', anime: 'anime', video_game: 'video-games', music: 'music', book: 'books', manga: 'manga'};
+  const categories = {movie: 'movies', tv_show: 'tv-shows', anime: 'anime', video_game: 'video-games', music: 'music', book: 'books', manga: 'manga', podcast: 'podcasts'};
   const category = panel.dataset.category;
   const id = panel.dataset.reviewId;
   const title = document.getElementById('reviewSaveTitle');

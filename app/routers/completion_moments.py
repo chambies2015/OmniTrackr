@@ -24,6 +24,7 @@ CATEGORIES: Dict[str, CategoryDetails] = {
     "music": (models.Music, "Album", "listened"),
     "books": (models.Book, "Book", "read"),
     "manga": (models.Manga, "Manga", "read"),
+    "podcasts": (models.Podcast, "Podcast", "listened"),
 }
 
 
@@ -97,7 +98,8 @@ def create_completion_moment(
 
 # Public review URLs use the singular API categories.
 REVIEW_CATEGORY = {"movies": "movie", "tv-shows": "tv_show", "anime": "anime", "video-games": "video_game",
-                   "music": "music", "books": "book", "manga": "manga"}
+                   "music": "music", "books": "book", "manga": "manga",
+                   "podcasts": "podcast"}
 
 
 @router.post("/{moment_id}/review", response_model=dict)

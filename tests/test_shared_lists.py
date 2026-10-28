@@ -251,7 +251,7 @@ def test_add_to_my_library_is_a_copy(authenticated_client, db_session):
 def test_limits_and_validation(authenticated_client, db_session, monkeypatch):
     assert authenticated_client.post("/api/lists", json={"name": "   "}).status_code == 422
     list_id = _new_list(authenticated_client)
-    assert authenticated_client.post(f"/api/lists/{list_id}/items", json={"kind": "podcast", "title": "X"}).status_code == 400
+    assert authenticated_client.post(f"/api/lists/{list_id}/items", json={"kind": "comic", "title": "X"}).status_code == 400
     assert authenticated_client.post(f"/api/lists/{list_id}/items", json={"kind": "movie", "title": "  "}).status_code == 400
     monkeypatch.setattr(shared_lists, "OWNED_MAX", 1)
     assert authenticated_client.post("/api/lists", json={"name": "Another"}).status_code == 400

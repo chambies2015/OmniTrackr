@@ -43,6 +43,7 @@ WIKIDATA_HINTS = {
     "game": ("video game",),
     "book": ("novel", "book", "novella", "memoir", "short story collection", "non-fiction"),
     "manga": ("manga", "manhwa", "manhua", "webtoon", "comic series", "comic book series"),
+    "podcast": ("podcast",),
     "album": ("album",),
 }
 WIKIDATA_EXCLUDE = {
@@ -52,6 +53,7 @@ WIKIDATA_EXCLUDE = {
     "game": ("series", "franchise", "soundtrack"),
     "book": ("film", "series of", "television"),
     "manga": ("anime", "film", "episode", "chapter", "television", "video game"),
+    "podcast": ("episode", "film", "album"),
     "album": ("single", "song"),
 }
 # Wikidata properties shown as facts: (property, label, kind)
@@ -67,6 +69,7 @@ FACT_PROPERTIES = {
     "book": (("P50", "Author", "item"), ("P123", "Publisher", "item"), ("P1104", "Pages", "number"),
              ("P179", "Series", "item")),
     "manga": (("P50", "Author", "item"), ("P123", "Publisher", "item"), ("P1433", "Serialized in", "item")),
+    "podcast": (("P371", "Presented by", "item"), ("P123", "Publisher", "item"), ("P1113", "Episodes", "number")),
     "album": (("P175", "Artist", "item"), ("P264", "Record label", "item"), ("P2047", "Length", "minutes")),
 }
 SCORE_PUBLISHERS = {"Q105584": "Rotten Tomatoes", "Q150248": "Metacritic", "Q37312": "IMDb",
@@ -507,6 +510,31 @@ async def itunes_details(client, title: str, year: Optional[int], creator: Optio
     }
 
 
+async def itunes_podcast_details(client, title: str, year: Optional[int], creator: Optional[str]) -> dict:
+    data = await _get_json(client, "https://itunes.apple.com/search",
+                           {"term": title, "media": "podcast", "entity": "podcast", "limit": 8}) or {}
+    show = None
+    for result in data.get("results", []):
+        host = result.get("artistName", "")
+        if _title_matches(title, result.get("collectionName", "")) and (not creator or _norm(creator) in _norm(host) or _norm(host) in _norm(creator)):
+            show = result
+            break
+    if not show:
+        return {}
+    facts = [{"label": "Host", "value": show.get("artistName", "")}] if show.get("artistName") else []
+    if show.get("trackCount"):
+        facts.append({"label": "Episodes", "value": str(show["trackCount"])})
+    if show.get("releaseDate"):
+        facts.append({"label": "Latest episode", "value": show["releaseDate"][:10]})
+    art = show.get("artworkUrl600") or show.get("artworkUrl100")
+    return {
+        "url": _https(show.get("collectionViewUrl")),
+        "genres": [genre for genre in show.get("genres") or [] if genre != "Podcasts"][:3],
+        "poster": _https(art) if isinstance(art, str) else None,
+        "facts": facts,
+    }
+
+
 # ---------------------------------------------------------------- assembly
 
 async def _safe(coro, default=None):
@@ -532,6 +560,7 @@ async def fetch(client, category: str, title: str, year: Optional[int], creator:
         "game": lambda: rawg_details(client, title, year),
         "book": lambda: openlibrary_details(client, title, year, creator),
         "manga": lambda: jikan_manga_details(client, title, year),
+        "podcast": lambda: itunes_podcast_details(client, title, year, creator),
         "album": lambda: itunes_details(client, title, year, creator),
     }.get(category)
     wiki, extra = await asyncio.gather(
@@ -567,7 +596,7 @@ async def fetch(client, category: str, title: str, year: Optional[int], creator:
     if wikidata.get("imdb_url"):
         links.append({"label": "IMDb", "url": wikidata["imdb_url"]})
     extra_names = {"tv": "TVmaze", "anime": "MyAnimeList", "game": "RAWG", "book": "Open Library", "album": "Apple Music",
-                   "manga": "MyAnimeList"}
+                   "manga": "MyAnimeList", "podcast": "Apple Podcasts"}
     if extra.get("url"):
         links.append({"label": extra_names[category], "url": extra["url"]})
         sources.append({"name": extra_names[category], "url": extra["url"],

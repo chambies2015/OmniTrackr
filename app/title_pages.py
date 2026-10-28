@@ -31,12 +31,14 @@ KINDS = {
     "album": (models.Music, "music", "music", "Album", "artist"),
     "book": (models.Book, "book", "books", "Book", "author"),
     "manga": (models.Manga, "manga", "manga", "Manga", "author"),
+    "podcast": (models.Podcast, "podcast", "podcasts", "Podcast", "host"),
 }
 REVIEW_TO_KIND = {review: kind for kind, (_, review, _, _, _) in KINDS.items()}
 LIBRARY_TO_KIND = {library: kind for kind, (_, _, library, _, _) in KINDS.items()}
-COMPLETE_FIELD = {"movie": "watched", "tv": "watched", "anime": "watched", "game": "played", "album": "listened", "book": "read", "manga": "read"}
+COMPLETE_FIELD = {"movie": "watched", "tv": "watched", "anime": "watched", "game": "played", "album": "listened", "book": "read", "manga": "read", "podcast": "listened"}
 IMAGE_FIELD = {"movie": "poster_url", "tv": "poster_url", "anime": "poster_url", "game": "cover_art_url",
-               "album": "cover_art_url", "book": "cover_art_url", "manga": "cover_art_url"}
+               "album": "cover_art_url", "book": "cover_art_url", "manga": "cover_art_url",
+               "podcast": "cover_art_url"}
 MIN_RATINGS_SHOWN = 3
 SPREAD_MIN_RATINGS = 5  # A breakdown of three ratings would all but show each member's score.
 # (label, lowest rating in the band), highest band first; ratings are out of 10.
@@ -99,7 +101,7 @@ def _active_ids(db: Session):
 # category's public pages, counts, or "also track" suggestions.
 PRIVATE_FLAG = {"movie": "movies_private", "tv": "tv_shows_private", "anime": "anime_private",
                 "game": "video_games_private", "album": "music_private", "book": "books_private",
-                "manga": "manga_private"}
+                "manga": "manga_private", "podcast": "podcasts_private"}
 
 
 def _shareable_ids(db: Session, kind: str):

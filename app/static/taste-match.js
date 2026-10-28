@@ -8,6 +8,7 @@
   const LOADERS = {
     movies: 'loadMovies', 'tv-shows': 'loadTVShows', anime: 'loadAnime',
     'video-games': 'loadVideoGames', music: 'loadMusic', books: 'loadBooks', manga: 'loadManga',
+    podcasts: 'loadPodcasts',
   };
 
   const $ = id => document.getElementById(id);

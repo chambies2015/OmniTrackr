@@ -24,7 +24,7 @@ from ..site_chrome import apply_site_chrome
 
 router = APIRouter(tags=["profiles"])
 SITE_URL = os.getenv("SITE_URL", "https://omnitrackr.xyz").rstrip("/")
-CSS_VERSION = "20261028-manga-1"
+CSS_VERSION = "20261028-podcasts-1"
 TITLE_CSS_VERSION = "20261009-take-1"
 
 
@@ -281,7 +281,7 @@ def _collections_html(view) -> str:
 
 
 # Library categories in the taste-mix bar, in profile-page.css colors.
-MIX_COLORS = ("movies", "tv-shows", "anime", "video-games", "music", "books", "manga")
+MIX_COLORS = ("movies", "tv-shows", "anime", "video-games", "music", "books", "manga", "podcasts")
 SECTION_TABS = (("profile-showcase", "Showcase"), ("profile-stats", "Library"), ("profile-badges", "Badges"),
                 ("profile-favorites", "Favorites"), ("profile-diary", "Diary"), ("profile-reviews", "Reviews"),
                 ("profile-collections", "Collections"))

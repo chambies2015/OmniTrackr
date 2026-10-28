@@ -21,7 +21,7 @@ MAX_JSON_IMPORT_BYTES = 25 * 1024 * 1024
 COLLECTION_MEDIA_MODELS = {
     "movies": models.Movie, "tv-shows": models.TVShow, "anime": models.Anime,
     "video-games": models.VideoGame, "music": models.Music, "books": models.Book,
-    "manga": models.Manga,
+    "manga": models.Manga, "podcasts": models.Podcast,
 }
 COLLECTION_MATCH_FIELDS = {
     "movies": ("year", "director"),
@@ -31,6 +31,7 @@ COLLECTION_MATCH_FIELDS = {
     "music": ("year", "artist"),
     "books": ("year", "author"),
     "manga": ("year", "author"),
+    "podcasts": ("year", "host"),
 }
 
 
@@ -266,6 +267,7 @@ def export_data(
     music = crud.get_all_music(db, current_user.id)
     books = crud.get_all_books(db, current_user.id)
     manga = crud.get_all_manga(db, current_user.id)
+    podcasts = crud.get_all_podcasts(db, current_user.id)
     custom_tabs = crud.get_all_custom_tabs_with_items(db, current_user.id)
     activities = db.query(models.ActivityEntry).filter(
         models.ActivityEntry.user_id == current_user.id
@@ -286,6 +288,7 @@ def export_data(
         "total_music": len(music),
         "total_books": len(books),
         "total_manga": len(manga),
+        "total_podcasts": len(podcasts),
         "total_custom_tabs": len(custom_tabs),
         "total_activities": len(activities),
         "total_collections": len(collections),
@@ -300,6 +303,7 @@ def export_data(
         music=music,
         books=books,
         manga=manga,
+        podcasts=podcasts,
         custom_tabs=custom_tabs,
         activities=[serialize_activity(entry) for entry in activities],
         collections=collections,
@@ -315,7 +319,7 @@ def import_data(
     current_user: models.User = Depends(get_current_user),
     db: Session = Depends(get_db)
 ):
-    """Import movies, TV shows, anime, video games, music, books, manga, and custom tabs from JSON data"""
+    """Import movies, TV shows, anime, video games, music, books, manga, podcasts, and custom tabs from JSON data"""
     # A plain def runs in the threadpool, so a large restore never stalls other visitors.
     return _run_import(import_data, current_user, db)
 
@@ -328,12 +332,13 @@ def _run_import(import_data: schemas.ImportData, current_user: models.User, db: 
     music_created, music_updated, music_errors = crud.import_music(db, current_user.id, import_data.music)
     books_created, books_updated, book_errors = crud.import_books(db, current_user.id, import_data.books)
     manga_created, manga_updated, manga_errors = crud.import_manga(db, current_user.id, import_data.manga)
+    podcasts_created, podcasts_updated, podcast_errors = crud.import_podcasts(db, current_user.id, import_data.podcasts)
     custom_tabs_created, custom_tabs_updated, custom_tab_errors = crud.import_custom_tabs(db, current_user.id, import_data.custom_tabs)
     activities_created, activities_skipped = import_activity_entries(db, current_user.id, import_data.activities)
     collections_created, collections_skipped = _import_collections(db, current_user.id, import_data.collections)
     progress_created, progress_skipped = _import_progress(db, current_user.id, import_data.progress_checkpoints)
 
-    all_errors = movie_errors + tv_show_errors + anime_errors + video_game_errors + music_errors + book_errors + manga_errors + custom_tab_errors
+    all_errors = movie_errors + tv_show_errors + anime_errors + video_game_errors + music_errors + book_errors + manga_errors + podcast_errors + custom_tab_errors
 
     return schemas.ImportResult(
         movies_created=movies_created,
@@ -350,6 +355,8 @@ def _run_import(import_data: schemas.ImportData, current_user: models.User, db: 
         books_updated=books_updated,
         manga_created=manga_created,
         manga_updated=manga_updated,
+        podcasts_created=podcasts_created,
+        podcasts_updated=podcasts_updated,
         custom_tabs_created=custom_tabs_created,
         custom_tabs_updated=custom_tabs_updated,
         activities_created=activities_created,
@@ -382,7 +389,7 @@ async def import_from_file(
         # Validate the imported data structure
         # Note: 'anime', 'video_games', 'music', and 'books' are optional for backward compatibility with old export files
         if not isinstance(data, dict) or 'movies' not in data or 'tv_shows' not in data:
-            raise HTTPException(status_code=400, detail="Invalid file format. Expected 'movies' and 'tv_shows' arrays. 'anime', 'video_games', 'music', 'books', and 'manga' are optional for backward compatibility.")
+            raise HTTPException(status_code=400, detail="Invalid file format. Expected 'movies' and 'tv_shows' arrays. 'anime', 'video_games', 'music', 'books', 'manga', and 'podcasts' are optional for backward compatibility.")
 
         # Reuse the body endpoint's schema and import behavior for native backups.
         import_payload = schemas.ImportData.model_validate(data)

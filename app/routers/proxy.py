@@ -273,3 +273,55 @@ async def proxy_jikan_manga_api(
         raise HTTPException(status_code=504, detail="Jikan API connection error - may be due to network issues or VPN blocking")
     except Exception:
         raise HTTPException(status_code=500, detail="Error fetching from Jikan API")
+
+
+def normalize_itunes_podcast(entry: dict) -> dict:
+    genres = [genre for genre in entry.get("genres") or [] if isinstance(genre, str) and genre != "Podcasts"]
+    if not genres and entry.get("primaryGenreName") and entry.get("primaryGenreName") != "Podcasts":
+        genres = [entry["primaryGenreName"]]
+    episodes = entry.get("trackCount")
+    return {
+        "itunes_id": entry.get("collectionId") or entry.get("trackId"),
+        "title": entry.get("collectionName") or entry.get("trackName") or "",
+        "host": entry.get("artistName") or None,
+        "genre": ", ".join(genres[:3]) or None,
+        "episodes": episodes if isinstance(episodes, int) and episodes > 0 else None,
+        # Apple gives the date of the newest episode, not the year the show began.
+        "latest_episode": (entry.get("releaseDate") or "")[:10] or None,
+        "cover_art_url": entry.get("artworkUrl600") or entry.get("artworkUrl100"),
+        "url": entry.get("collectionViewUrl"),
+    }
+
+
+@router.get("/api/proxy/itunes-podcasts")
+async def proxy_itunes_podcast_api(
+    request: Request,
+    current_user: models.User = Depends(get_current_user),
+    query: str = Query(..., description="Podcast title or host to search", max_length=200)
+):
+    """Proxy endpoint for the Apple Podcasts directory (iTunes Search API). No API key required.
+
+    Results come back already shaped for the podcast form.
+    """
+    try:
+        response = await request.app.state.external_api_client.get(
+            "https://itunes.apple.com/search",
+            params={"term": query[:200], "media": "podcast", "entity": "podcast", "limit": 10},
+        )
+        if response.status_code == 429:
+            raise HTTPException(status_code=429, detail="iTunes API rate limit reached")
+        response.raise_for_status()
+        entries = response.json().get("results") or []
+        return {"results": [normalize_itunes_podcast(entry) for entry in entries if isinstance(entry, dict)]}
+    except HTTPException:
+        raise
+    except httpx.HTTPStatusError as e:
+        if e.response.status_code >= 500:
+            raise HTTPException(status_code=504, detail="iTunes API server error - may be due to network issues or VPN blocking")
+        raise HTTPException(status_code=e.response.status_code, detail="iTunes API request failed")
+    except httpx.TimeoutException:
+        raise HTTPException(status_code=504, detail="iTunes API request timeout - may be due to network issues or VPN blocking")
+    except httpx.TransportError:
+        raise HTTPException(status_code=504, detail="iTunes API connection error - may be due to network issues or VPN blocking")
+    except Exception:
+        raise HTTPException(status_code=500, detail="Error fetching from iTunes API")

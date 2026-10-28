@@ -10,9 +10,10 @@ from sqlalchemy.orm import Session
 from .integer_bounds import PositiveDatabaseId
 from . import models
 
-ProgressCategory = Literal["tv-shows", "anime", "books", "manga"]
+ProgressCategory = Literal["tv-shows", "anime", "books", "manga", "podcasts"]
 PositiveItemId = PositiveDatabaseId
-CATEGORIES = {"tv-shows": models.TVShow, "anime": models.Anime, "books": models.Book, "manga": models.Manga}
+CATEGORIES = {"tv-shows": models.TVShow, "anime": models.Anime, "books": models.Book, "manga": models.Manga,
+              "podcasts": models.Podcast}
 READING_CATEGORIES = {"books", "manga"}
 
 
@@ -52,14 +53,14 @@ def validate_checkpoint(category: str, payload: dict | CheckpointData) -> Checkp
     an imported revision, owner, item id, or update timestamp.
     """
     if not isinstance(category, str) or category not in CATEGORIES:
-        raise ValueError("Progress is available for TV shows, anime, books, and manga")
+        raise ValueError("Progress is available for TV shows, anime, books, manga, and podcasts")
     if isinstance(payload, CheckpointData):
         payload = payload.model_dump(include={"unit", "position", "season", "note"})
     data = CheckpointData.model_validate(payload)
     if category in READING_CATEGORIES and data.unit not in ("page", "chapter"):
         raise ValueError("Books and manga use a page or chapter checkpoint")
     if category not in READING_CATEGORIES and data.unit != "episode":
-        raise ValueError("TV shows and anime use an episode checkpoint")
+        raise ValueError("TV shows, anime and podcasts use an episode checkpoint")
     return data
 
 

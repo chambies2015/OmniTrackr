@@ -106,7 +106,7 @@ def test_only_popular_titles_can_be_added_this_way(authenticated_client, db_sess
     db_session.add(models.Movie(user_id=a.id, title="Niche", director="Y", year=1999))
     db_session.commit()
     assert authenticated_client.post("/api/for-you/starter-picks/add", json={"category": "movies", "title": "Niche"}).status_code == 404
-    assert authenticated_client.post("/api/for-you/starter-picks/add", json={"category": "podcasts", "title": "Niche"}).status_code == 422
+    assert authenticated_client.post("/api/for-you/starter-picks/add", json={"category": "comics", "title": "Niche"}).status_code == 422
 
 
 def test_editor_account_never_makes_a_title_popular(authenticated_client, db_session):

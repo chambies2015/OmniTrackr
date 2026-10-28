@@ -15,6 +15,7 @@ const LIBRARY_SEARCH_SOURCES = [
   { endpoint: '/music/', tab: 'music', label: 'Album', input: 'musicSearch', status: item => item.listened ? 'Listened' : 'Not listened' },
   { endpoint: '/books/', tab: 'books', label: 'Book', input: 'bookSearch', status: item => item.read ? 'Read' : 'Not read' },
   { endpoint: '/manga/', tab: 'manga', label: 'Manga', input: 'mangaSearch', status: item => item.read ? 'Read' : 'Not read' },
+  { endpoint: '/podcasts/', tab: 'podcasts', label: 'Podcast', input: 'podcastSearch', status: item => item.listened ? 'Listened' : 'Not listened' },
 ];
 let librarySearchIndex = [];
 let librarySearchIndexReady = false;
@@ -36,6 +37,7 @@ function libraryPageConfig(category) {
     'video-games': ['videoGameTable', 'videoGameSort', loadVideoGames],
     music: ['musicTable', 'musicSort', loadMusic], books: ['bookTable', 'bookSort', loadBooks],
     manga: ['mangaTable', 'mangaSort', loadManga],
+    podcasts: ['podcastTable', 'podcastSort', loadPodcasts],
   }[category];
 }
 
@@ -61,6 +63,7 @@ function renderLibraryFilters(category) {
       movies: ['Not watched', 'Watched'], 'tv-shows': ['Not finished', 'Finished'],
       anime: ['Not finished', 'Finished'], 'video-games': ['Not played', 'Played'],
       music: ['Not listened', 'Listened'], books: ['Not read', 'Read'], manga: ['Not read', 'Read'],
+      podcasts: ['Not listened', 'Listened'],
     }[category];
     const group = document.createElement('div');
     group.className = 'library-filter-completion';
@@ -74,7 +77,7 @@ function renderLibraryFilters(category) {
     }
     host.appendChild(group);
     const options = [['unrated', 'Unrated']];
-    if (['tv-shows', 'anime', 'books', 'manga'].includes(category)) options.push(['hasProgress', 'Has saved progress']);
+    if (['tv-shows', 'anime', 'books', 'manga', 'podcasts'].includes(category)) options.push(['hasProgress', 'Has saved progress']);
     for (const [key, labelText] of options) {
       const label = document.createElement('label');
       label.className = 'library-filter-option';
@@ -115,7 +118,7 @@ function applyLibraryFilters(category, changes, { clearSearch = false } = {}) {
   const next = { ...previous, ...changes };
   if (!['all', 'unfinished', 'finished'].includes(next.completion)) return false;
   next.unrated = !!next.unrated;
-  next.hasProgress = ['tv-shows', 'anime', 'books', 'manga'].includes(category) && !!next.hasProgress;
+  next.hasProgress = ['tv-shows', 'anime', 'books', 'manga', 'podcasts'].includes(category) && !!next.hasProgress;
   const source = LIBRARY_SEARCH_SOURCES.find(entry => entry.tab === category);
   if (clearSearch) document.getElementById(source.input).value = '';
   libraryFilters.set(category, next);
@@ -507,7 +510,7 @@ function setupLibrarySearch() {
 // Universal quick capture
 // ============================================================================
 
-const QUICK_CAPTURE_CATEGORY_ORDER = ['movies', 'tv-shows', 'anime', 'video-games', 'music', 'books', 'manga'];
+const QUICK_CAPTURE_CATEGORY_ORDER = ['movies', 'tv-shows', 'anime', 'video-games', 'music', 'books', 'manga', 'podcasts'];
 const QUICK_CAPTURE_CATEGORIES = {
   movies: { label: 'Movies', icon: '🎬', endpoint: query => `/api/proxy/omdb?title=${encodeURIComponent(query)}&type=movie` },
   'tv-shows': { label: 'TV shows', icon: '📺', endpoint: query => `/api/proxy/omdb?title=${encodeURIComponent(query)}&type=series` },
@@ -516,6 +519,7 @@ const QUICK_CAPTURE_CATEGORIES = {
   music: { label: 'Music', icon: '🎵', endpoint: query => `/api/proxy/itunes?query=${encodeURIComponent(query)}&entity=album` },
   books: { label: 'Books', icon: '📚', endpoint: query => `/api/proxy/openlibrary?query=${encodeURIComponent(query)}` },
   manga: { label: 'Manga', icon: '🗯️', endpoint: query => `/api/proxy/jikan-manga?query=${encodeURIComponent(query)}` },
+  podcasts: { label: 'Podcasts', icon: '🎙️', endpoint: query => `/api/proxy/itunes-podcasts?query=${encodeURIComponent(query)}` },
 };
 let quickCaptureCategory = 'all';
 let quickCaptureResults = [];
@@ -758,6 +762,7 @@ function handleDelegatedClick(event) {
     'close-music-search-modal': closeMusicSearchModal,
     'close-book-search-modal': closeBookSearchModal,
     'close-manga-search-modal': closeMangaSearchModal,
+    'close-podcast-search-modal': closePodcastSearchModal,
     'close-screenshot-modal': () => closeScreenshotModal(event),
     'export-data-dashboard': exportData,
     'apply-library-import': applyLibraryImport,
@@ -864,7 +869,7 @@ function handleDelegatedChange(event) {
 document.addEventListener('click', handleDelegatedClick);
 document.addEventListener('submit', handleDelegatedSubmit);
 document.addEventListener('change', handleDelegatedChange);
-const FRIEND_FILTERS = new Set(['Movies', 'TVShows', 'Anime', 'VideoGames', 'Music', 'Books', 'Manga']);
+const FRIEND_FILTERS = new Set(['Movies', 'TVShows', 'Anime', 'VideoGames', 'Music', 'Books', 'Manga', 'Podcasts']);
 document.addEventListener('input', event => {
   if (event.target.id === 'quickCaptureQuery') handleQuickCaptureQueryInput();
   const friendFilter = event.target.dataset?.friendFilter;

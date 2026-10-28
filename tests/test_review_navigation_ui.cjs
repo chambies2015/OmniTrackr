@@ -43,6 +43,7 @@ function setup(url = 'https://omnitrackr.xyz/?library_category=books&library_ite
     music: ['musicTable', 'musicSort', 'musicSearch'],
     books: ['bookTable', 'bookSort', 'bookSearch'],
     manga: ['mangaTable', 'mangaSort', 'mangaSearch'],
+    podcasts: ['podcastTable', 'podcastSort', 'podcastSearch'],
   };
   for (const [tab, [table, sort, search]] of Object.entries(config)) {
     element(table); element(sort).value = 'title-asc'; element(search).value = 'existing filter';
@@ -60,7 +61,7 @@ function setup(url = 'https://omnitrackr.xyz/?library_category=books&library_ite
     URL, URLSearchParams, API_BASE: '', Date, setTimeout,
     currentTab: 'movies', editingRowId: options.editingRowId ?? null,
     isLoadingMovies: false, isLoadingTVShows: false, isLoadingAnime: false,
-    isLoadingVideoGames: false, isLoadingMusic: false, isLoadingBooks: false, isLoadingManga: false,
+    isLoadingVideoGames: false, isLoadingMusic: false, isLoadingBooks: false, isLoadingManga: false, isLoadingPodcasts: false,
     libraryPages: new Map(), libraryFilters: new Map(), renderLibraryFilters() {},
     dashboardStartupLayoutReady: options.layoutReady || Promise.resolve(),
     dashboardTabVisibilityReady: options.visibilityReady || Promise.resolve(),
@@ -107,7 +108,7 @@ function setup(url = 'https://omnitrackr.xyz/?library_category=books&library_ite
 }
 
 test('every category open the exact owner-scoped item and consume identifiers while preserving unrelated URL state', async () => {
-  for (const category of ['movies', 'tv-shows', 'anime', 'video-games', 'music', 'books', 'manga']) {
+  for (const category of ['movies', 'tv-shows', 'anime', 'video-games', 'music', 'books', 'manga', 'podcasts']) {
     const s = setup(`https://omnitrackr.xyz/?source=review&library_category=${category}&library_item=42&keep=yes#library`);
     assert.equal(await s.context.openDashboardTargetFromLocation(), true);
     assert.deepEqual(s.requests, [{ url: `/library/item/${category}/42`, options: undefined }]);

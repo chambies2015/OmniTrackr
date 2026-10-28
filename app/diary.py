@@ -27,6 +27,7 @@ CATEGORIES = {
     "music": ("album", "Album", "Listened", "Relisten"),
     "books": ("book", "Book", "Read", "Reread"),
     "manga": ("manga", "Manga", "Read", "Reread"),
+    "podcasts": ("podcast", "Podcast", "Listened", "Relisten"),
 }
 PUBLIC_DIARY_LIMIT = 24
 # Letterboxd diary dates have no time of day. Noon UTC keeps the same calendar day

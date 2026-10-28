@@ -117,6 +117,7 @@
 .profile-stat--music, .profile-mix__part--music { --shelf: 251, 191, 36; }
 .profile-stat--books, .profile-mix__part--books { --shelf: 45, 212, 191; }
 .profile-stat--manga, .profile-mix__part--manga { --shelf: 249, 115, 22; }
+.profile-stat--podcasts, .profile-mix__part--podcasts { --shelf: 56, 189, 248; }
 .profile-mix__part--other { --shelf: 170, 166, 203; }
 
 /* About sidebar (layout and join box come from title-page.css's .title-glance). */

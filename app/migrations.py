@@ -245,6 +245,16 @@ def run_migrations():
                     conn.execute(text("ALTER TABLE users ADD COLUMN manga_visible BOOLEAN NOT NULL DEFAULT TRUE"))
                     conn.commit()
                     print("Added manga_visible column to users table")
+            if "podcasts_private" not in user_columns:
+                with engine.connect() as conn:
+                    conn.execute(text("ALTER TABLE users ADD COLUMN podcasts_private BOOLEAN NOT NULL DEFAULT FALSE"))
+                    conn.commit()
+                    print("Added podcasts_private column to users table")
+            if "podcasts_visible" not in user_columns:
+                with engine.connect() as conn:
+                    conn.execute(text("ALTER TABLE users ADD COLUMN podcasts_visible BOOLEAN NOT NULL DEFAULT TRUE"))
+                    conn.commit()
+                    print("Added podcasts_visible column to users table")
             if "profile_picture_url" not in user_columns:
                 with engine.connect() as conn:
                     conn.execute(text("ALTER TABLE users ADD COLUMN profile_picture_url VARCHAR"))
@@ -569,7 +579,7 @@ def run_migrations():
         # which public pages already treated as private, so keep it private.
         try:
             with engine.begin() as conn:
-                for table in ("movies", "tv_shows", "anime", "video_games", "music", "books", "manga"):
+                for table in ("movies", "tv_shows", "anime", "video_games", "music", "books", "manga", "podcasts"):
                     if inspector.has_table(table) and "review_public" in {
                         col["name"] for col in inspect(engine).get_columns(table)
                     }:
@@ -868,7 +878,7 @@ def add_public_diary_column():
         print(f"Migration warning (public diary): {e}")
 
 
-LIBRARY_TABLES = ("movies", "tv_shows", "anime", "video_games", "music", "books", "manga")
+LIBRARY_TABLES = ("movies", "tv_shows", "anime", "video_games", "music", "books", "manga", "podcasts")
 
 
 def add_library_added_at_columns():

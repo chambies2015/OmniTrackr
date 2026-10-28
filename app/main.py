@@ -46,6 +46,7 @@ from .routers import (
     music,
     books,
     manga,
+    podcasts,
     statistics,
     export_import,
     proxy,
@@ -240,6 +241,7 @@ INDEXABLE_PUBLIC_TEMPLATES = {
     "game_tracker.html",
     "book_tracker.html",
     "manga_tracker.html",
+    "podcast_tracker.html",
     "music_tracker.html",
     "use_cases.html",
 }
@@ -591,6 +593,7 @@ app.include_router(video_games.router)
 app.include_router(music.router)
 app.include_router(books.router)
 app.include_router(manga.router)
+app.include_router(podcasts.router)
 rate_limited_return_deck = limiter.limit("30/minute")(statistics.get_return_deck)
 rate_limited_return_engagement = limiter.limit("10/minute")(statistics.record_return_deck_engagement)
 for route in statistics.router.routes:
@@ -648,7 +651,7 @@ for route in custom_tabs.router.routes:
 app.include_router(custom_tabs.router)
 
 # Rate-limit the metadata proxy endpoints before including the router.
-from .routers.proxy import proxy_omdb_api, proxy_rawg_api, proxy_jikan_api, proxy_itunes_api, proxy_openlibrary_api, proxy_jikan_manga_api
+from .routers.proxy import proxy_omdb_api, proxy_rawg_api, proxy_jikan_api, proxy_itunes_api, proxy_openlibrary_api, proxy_jikan_manga_api, proxy_itunes_podcast_api
 
 rate_limited_omdb = limiter.limit("60/minute")(proxy_omdb_api)
 rate_limited_rawg = limiter.limit("60/minute")(proxy_rawg_api)
@@ -656,6 +659,7 @@ rate_limited_jikan = limiter.limit("60/minute")(proxy_jikan_api)
 rate_limited_itunes = limiter.limit("60/minute")(proxy_itunes_api)
 rate_limited_openlibrary = limiter.limit("60/minute")(proxy_openlibrary_api)
 rate_limited_jikan_manga = limiter.limit("60/minute")(proxy_jikan_manga_api)
+rate_limited_itunes_podcast = limiter.limit("60/minute")(proxy_itunes_podcast_api)
 
 for route in proxy.router.routes:
     if hasattr(route, 'path') and route.path == "/api/proxy/omdb":
@@ -670,6 +674,8 @@ for route in proxy.router.routes:
         bind_rate_limited_endpoint(route, rate_limited_openlibrary)
     elif hasattr(route, 'path') and route.path == "/api/proxy/jikan-manga":
         bind_rate_limited_endpoint(route, rate_limited_jikan_manga)
+    elif hasattr(route, 'path') and route.path == "/api/proxy/itunes-podcasts":
+        bind_rate_limited_endpoint(route, rate_limited_itunes_podcast)
 
 app.include_router(proxy.router)
 
@@ -1157,6 +1163,14 @@ async def book_tracker_page(request: Request):
 @app.get("/manga-tracker", tags=["public"])
 async def manga_tracker_page(request: Request):
     response = strict_template_response("manga_tracker.html", request)
+    if response:
+        return response
+    raise HTTPException(status_code=404, detail="Page not found")
+
+
+@app.get("/podcast-tracker", tags=["public"])
+async def podcast_tracker_page(request: Request):
+    response = strict_template_response("podcast_tracker.html", request)
     if response:
         return response
     raise HTTPException(status_code=404, detail="Page not found")

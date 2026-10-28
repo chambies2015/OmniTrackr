@@ -241,6 +241,18 @@ document.addEventListener('DOMContentLoaded', function () {
     } else if (e.target.classList.contains('cancel-manga-btn')) {
       e.preventDefault();
       cancelMangaEdit();
+    } else if (e.target.classList.contains('delete-podcast-btn')) {
+      e.preventDefault();
+      deletePodcast(parseInt(e.target.dataset.podcastId, 10));
+    } else if (e.target.classList.contains('edit-podcast-btn')) {
+      e.preventDefault();
+      enablePodcastEdit(e.target);
+    } else if (e.target.classList.contains('save-podcast-btn')) {
+      e.preventDefault();
+      savePodcastEdit(e.target);
+    } else if (e.target.classList.contains('cancel-podcast-btn')) {
+      e.preventDefault();
+      cancelPodcastEdit();
     }
   });
 

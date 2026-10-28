@@ -49,9 +49,9 @@ INBOX_LIMIT = 30
 INBOX_LINK = "/#friend-recs"
 COMPLETE_FIELD = {"movies": "watched", "tv-shows": "watched", "anime": "watched",
                   "video-games": "played", "music": "listened", "books": "read",
-                  "manga": "read"}
+                  "manga": "read", "podcasts": "listened"}
 VERB = {"movies": "watch", "tv-shows": "watch", "anime": "watch", "video-games": "play", "music": "hear", "books": "read",
-        "manga": "read"}
+        "manga": "read", "podcasts": "hear"}
 
 
 def _private(response: Response) -> None:

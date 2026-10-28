@@ -276,10 +276,10 @@ test('Continue, Next Up and Welcome Back integrate checkpoint actions without ne
   assert.ok(card.children.some(node => node.dataset.progressItemId === '42'));
 });
 
-test('private library has only four supported action entry points and versioned assets', () => {
-  assert.equal([...app.matchAll(/data-progress-category=/g)].length, 4);
-  for (const category of ['tv-shows', 'anime', 'books', 'manga']) assert.ok(app.includes(`data-progress-category="${category}"`));
-  assert.match(template, /progress\.js\?v=20261027-manga-1/);
+test('private library has only five supported action entry points and versioned assets', () => {
+  assert.equal([...app.matchAll(/data-progress-category=/g)].length, 5);
+  for (const category of ['tv-shows', 'anime', 'books', 'manga', 'podcasts']) assert.ok(app.includes(`data-progress-category="${category}"`));
+  assert.match(template, /progress\.js\?v=20261028-podcasts-1/);
   assert.match(template, /progress\.css\?v=20260922-progress/);
   assert.match(template, /<dialog id="progressDialog"[^>]*aria-labelledby="progressTitle"/);
 });

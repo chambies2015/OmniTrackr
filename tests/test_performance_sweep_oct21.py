@@ -100,7 +100,7 @@ def test_profiles_without_writing_are_skipped_without_building_them(db_session):
     db_session.commit()
     with count_queries(db_session) as statements:
         assert public_profiles.sitemap_paths(db_session) == []
-    assert len(statements) <= 9  # The profile list, then one check per library table and collections.
+    assert len(statements) <= 10  # The profile list, then one check per library table and collections.
 
 
 # ---------------------------------------------------------------- profiles, title pages, gallery
@@ -152,7 +152,7 @@ def test_review_feed_query_count_does_not_grow_with_reviews(db_session):
     assert len(feed["reviews"]) == 20 and feed["has_more"] is True
     assert [review["title"] for review in feed["reviews"]] == [f"Film {index}" for index in range(24, 4, -1)]
     assert {review["username"] for review in feed["reviews"]} == {f"critic{index}" for index in range(5, 25)}
-    assert len(statements) <= 10
+    assert len(statements) <= 11
 
 
 def test_review_feed_still_hides_suspended_reviews(db_session):

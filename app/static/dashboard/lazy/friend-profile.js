@@ -7,7 +7,7 @@ function currentFriendRequest(friendId) {
   const generation = friendProfileGeneration;
   return () => currentFriendId === friendId && generation === friendProfileGeneration;
 }
-const FRIEND_PROFILE_SECTIONS = ['movies', 'tvShows', 'anime', 'videoGames', 'music', 'books', 'manga', 'statistics'];
+const FRIEND_PROFILE_SECTIONS = ['movies', 'tvShows', 'anime', 'videoGames', 'music', 'books', 'manga', 'podcasts', 'statistics'];
 function freshAccordionStates() {
   return Object.fromEntries(FRIEND_PROFILE_SECTIONS.map(section => [section, false]));
 }
@@ -19,6 +19,7 @@ let currentFriendVideoGames = [];
 let currentFriendMusic = [];
 let currentFriendBooks = [];
 let currentFriendManga = [];
+let currentFriendPodcasts = [];
 
 // Friend list errors go in the list container so the search box survives for the next friend.
 function showFriendListError(containerId, detail, fallback) {
@@ -53,6 +54,7 @@ window.closeFriendProfile = function () {
   currentFriendMusic = [];
   currentFriendBooks = [];
   currentFriendManga = [];
+  currentFriendPodcasts = [];
   accordionStates = freshAccordionStates();
   // Reset accordion states
   FRIEND_PROFILE_SECTIONS.forEach(section => {
@@ -64,7 +66,7 @@ window.closeFriendProfile = function () {
     }
   });
   ['friendMoviesListContainer', 'friendTVShowsListContainer', 'friendAnimeListContainer',
-    'friendVideoGamesListContainer', 'friendMusicListContainer', 'friendBooksListContainer', 'friendMangaListContainer', 'statisticsData']
+    'friendVideoGamesListContainer', 'friendMusicListContainer', 'friendBooksListContainer', 'friendMangaListContainer', 'friendPodcastsListContainer', 'statisticsData']
     .forEach(id => { const node = document.getElementById(id); if (node) node.innerHTML = ''; });
   // Clear search inputs
   const moviesSearch = document.getElementById('friendMoviesSearch');
@@ -75,7 +77,7 @@ window.closeFriendProfile = function () {
   if (tvShowsSearch) tvShowsSearch.value = '';
   if (animeSearch) animeSearch.value = '';
   if (videoGamesSearch) videoGamesSearch.value = '';
-  ['friendMusicSearch', 'friendBooksSearch', 'friendMangaSearch'].forEach(id => {
+  ['friendMusicSearch', 'friendBooksSearch', 'friendMangaSearch', 'friendPodcastsSearch'].forEach(id => {
     const input = document.getElementById(id);
     if (input) input.value = '';
   });
@@ -120,6 +122,7 @@ window.loadFriendProfile = async function (friendId) {
       updateMusicSummary(profile);
       updateBooksSummary(profile);
       updateMangaSummary(profile);
+      updatePodcastsSummary(profile);
       updateStatisticsSummary(profile);
     } else {
       const error = await response.json();
@@ -208,6 +211,17 @@ function updateMangaSummary(profile) {
   }
 }
 
+function updatePodcastsSummary(profile) {
+  const summaryDiv = document.getElementById('podcastsSummary');
+  if (!summaryDiv) return;
+  if (profile.podcasts_private) {
+    summaryDiv.innerHTML = '<p class="privacy-message">This user has made their podcasts private</p>';
+  } else {
+    const count = profile.podcasts_count || 0;
+    summaryDiv.innerHTML = `<p class="summary-text">${count} ${count === 1 ? 'Podcast' : 'Podcasts'}</p>`;
+  }
+}
+
 function updateStatisticsSummary(profile) {
   const summaryDiv = document.getElementById('statisticsSummary');
   if (profile.statistics_private) {
@@ -244,6 +258,8 @@ window.toggleAccordion = async function (section) {
       await loadFriendBooks(currentFriendId);
     } else if (section === 'manga') {
       await loadFriendManga(currentFriendId);
+    } else if (section === 'podcasts') {
+      await loadFriendPodcasts(currentFriendId);
     } else if (section === 'statistics') {
       await loadFriendStatistics(currentFriendId);
     }
@@ -698,6 +714,35 @@ window.loadFriendManga = async function (friendId) {
 window.filterFriendManga = function () {
   const filtered = filterFriendShelf(currentFriendManga, 'friendMangaSearch', ['title', 'author', 'year', 'genre', 'review']);
   renderFriendShelf('friendMangaListContainer', filtered, 'No manga found', describeFriendManga);
+}
+
+const describeFriendPodcast = item => ({ creatorLabel: 'Host', creator: item.host, doneLabel: 'Listened', done: item.listened });
+
+window.loadFriendPodcasts = async function (friendId) {
+  const current = currentFriendRequest(friendId);
+  try {
+    const response = await authenticatedFetch(`${API_BASE}/friends/${friendId}/podcasts`);
+    if (!current()) return;
+    if (response.ok) {
+      const data = await response.json();
+      if (!current()) return;
+      currentFriendPodcasts = data.podcasts || [];
+      renderFriendShelf('friendPodcastsListContainer', currentFriendPodcasts, 'No podcasts yet', describeFriendPodcast);
+    } else {
+      const error = await response.json().catch(() => ({}));
+      if (!current()) return;
+      showFriendListError('friendPodcastsListContainer', error.detail, 'Failed to load podcasts');
+    }
+  } catch (error) {
+    if (!current()) return;
+    console.error('Failed to load friend podcasts:', error);
+    showFriendListError('friendPodcastsListContainer', '', 'Failed to load podcasts');
+  }
+}
+
+window.filterFriendPodcasts = function () {
+  const filtered = filterFriendShelf(currentFriendPodcasts, 'friendPodcastsSearch', ['title', 'host', 'year', 'genre', 'review']);
+  renderFriendShelf('friendPodcastsListContainer', filtered, 'No podcasts found', describeFriendPodcast);
 }
 
 window.loadFriendStatistics = async function (friendId) {

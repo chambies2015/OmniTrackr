@@ -483,7 +483,7 @@ test('the application refresh bridge invalidates imported library pages and resp
     scheduleLibraryLaunchpadRefresh: () => {scheduled++;},
     currentTab: 'books', editingRowId: null,
     loadMovies: async () => {}, loadTVShows: async () => {}, loadAnime: async () => {},
-    loadVideoGames: async () => {}, loadMusic: async () => {}, loadBooks: async () => {}, loadManga: async () => {},
+    loadVideoGames: async () => {}, loadMusic: async () => {}, loadBooks: async () => {}, loadManga: async () => {}, loadPodcasts: async () => {},
     libraryPageConfig: category => [null, null, () => {loaded.push(category);}],
     LIBRARY_SEARCH_SOURCES: [{tab: 'books', input: 'bookSearchInput'}],
     switchTab: category => {opened.push(category);},
@@ -517,7 +517,7 @@ function setupImportRefreshRace(category = 'books', bindControls = false) {
   const s = setup();
   const loaders = {
     movies: 'loadMovies', 'tv-shows': 'loadTVShows', anime: 'loadAnime',
-    'video-games': 'loadVideoGames', music: 'loadMusic', books: 'loadBooks', manga: 'loadManga',
+    'video-games': 'loadVideoGames', music: 'loadMusic', books: 'loadBooks', manga: 'loadManga', podcasts: 'loadPodcasts',
   };
   const pendingLoads = [], rendered = [];
   const loading = new Set();
@@ -543,7 +543,7 @@ function setupImportRefreshRace(category = 'books', bindControls = false) {
   });
   s.window.closeAccountModal = () => {};
   if (bindControls) {
-    for (const id of [...Object.values(loaders), 'movieSort', 'tvSort', 'animeSort', 'videoGameSort', 'musicSort', 'bookSort', 'mangaSort']) {
+    for (const id of [...Object.values(loaders), 'movieSort', 'tvSort', 'animeSort', 'videoGameSort', 'musicSort', 'bookSort', 'mangaSort', 'podcastSort']) {
       const control = s.document.createElement(id.startsWith('load') ? 'button' : 'select');
       control.id = id; s.document.body.append(control);
     }
@@ -556,7 +556,7 @@ function setupImportRefreshRace(category = 'books', bindControls = false) {
 }
 
 test('import refresh waits for a pre-import load and then fetches the updated library for every category', async () => {
-  for (const category of ['movies', 'tv-shows', 'anime', 'video-games', 'music', 'books', 'manga']) {
+  for (const category of ['movies', 'tv-shows', 'anime', 'video-games', 'music', 'books', 'manga', 'podcasts']) {
     const s = setupImportRefreshRace(category);
     const oldLoad = s.startLoad();
     await s.startLoad(); // An ignored duplicate must not replace the tracked load.
@@ -619,7 +619,7 @@ test('Refresh and sort controls enter the current loader wrapper instead of reta
   for (const [category, button, sort] of [
     ['movies', 'loadMovies', 'movieSort'], ['tv-shows', 'loadTVShows', 'tvSort'],
     ['anime', 'loadAnime', 'animeSort'], ['video-games', 'loadVideoGames', 'videoGameSort'],
-    ['music', 'loadMusic', 'musicSort'], ['books', 'loadBooks', 'bookSort'], ['manga', 'loadManga', 'mangaSort'],
+    ['music', 'loadMusic', 'musicSort'], ['books', 'loadBooks', 'bookSort'], ['manga', 'loadManga', 'mangaSort'], ['podcasts', 'loadPodcasts', 'podcastSort'],
   ]) {
     for (const [control, event] of [[button, 'click'], [sort, 'change']]) {
       const s = setupImportRefreshRace(category, true);

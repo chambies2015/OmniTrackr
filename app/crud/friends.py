@@ -383,6 +383,7 @@ def get_friend_profile_summary(db: Session, friend_id: int) -> Optional[schemas.
     music_count = None
     books_count = None
     manga_count = None
+    podcasts_count = None
     statistics_available = None
     
     if not friend.movies_private:
@@ -405,6 +406,9 @@ def get_friend_profile_summary(db: Session, friend_id: int) -> Optional[schemas.
 
     if not friend.manga_private:
         manga_count = db.query(models.Manga).filter(models.Manga.user_id == friend_id).count()
+
+    if not friend.podcasts_private:
+        podcasts_count = db.query(models.Podcast).filter(models.Podcast.user_id == friend_id).count()
     
     if not friend.statistics_private:
         statistics_available = True
@@ -418,6 +422,7 @@ def get_friend_profile_summary(db: Session, friend_id: int) -> Optional[schemas.
         music_count=music_count,
         books_count=books_count,
         manga_count=manga_count,
+        podcasts_count=podcasts_count,
         statistics_available=statistics_available,
         movies_private=friend.movies_private,
         tv_shows_private=friend.tv_shows_private,
@@ -426,6 +431,7 @@ def get_friend_profile_summary(db: Session, friend_id: int) -> Optional[schemas.
         music_private=friend.music_private,
         books_private=friend.books_private,
         manga_private=friend.manga_private,
+        podcasts_private=friend.podcasts_private,
         statistics_private=friend.statistics_private
     )
 
@@ -514,6 +520,18 @@ def get_friend_manga(db: Session, friend_id: int) -> Optional[List[models.Manga]
     return db.query(models.Manga).filter(models.Manga.user_id == friend_id).all()
 
 
+def get_friend_podcasts(db: Session, friend_id: int) -> Optional[List[models.Podcast]]:
+    """Get friend's podcast list (if not private)."""
+    friend = get_user_by_id(db, friend_id)
+    if friend is None:
+        return None
+
+    if friend.podcasts_private:
+        return None  # Data is private
+
+    return db.query(models.Podcast).filter(models.Podcast.user_id == friend_id).all()
+
+
 def get_friend_statistics(db: Session, friend_id: int) -> Optional[dict]:
     """Get friend's statistics (compact version, if not private)."""
     friend = get_user_by_id(db, friend_id)
@@ -549,6 +567,7 @@ _FRIEND_STAT_CATEGORIES = (
     ("music", "music", "Music", "listened", "Music"),
     ("books", "books", "Book", "read", "Book"),
     ("manga", "manga", "Manga", "read", "Manga"),
+    ("podcasts", "podcasts", "Podcast", "listened", "Podcast"),
 )
 
 

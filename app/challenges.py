@@ -34,6 +34,7 @@ FORMAT_NOUNS = {
     "movies": ("movie", "movies"), "tv-shows": ("TV show", "TV shows"), "anime": ("anime", "anime"),
     "video-games": ("game", "games"), "music": ("album", "albums"), "books": ("book", "books"),
     "manga": ("manga series", "manga series"),
+    "podcasts": ("podcast", "podcasts"),
 }
 
 # Curated challenges, keyed by month ("YYYY-MM"). Step kinds:
