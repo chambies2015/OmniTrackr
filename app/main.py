@@ -562,6 +562,8 @@ for route in auth.router.routes:
             bind_rate_limited_endpoint(route, limiter.limit("5/minute")(route.endpoint))
         elif route.path == "/auth/request-password-reset" and 'POST' in route.methods:
             bind_rate_limited_endpoint(route, limiter.limit("3/hour")(route.endpoint))
+        elif route.path == "/auth/reset-password" and 'POST' in route.methods:
+            bind_rate_limited_endpoint(route, limiter.limit("10/minute")(route.endpoint))
         elif route.path == "/auth/resend-verification" and 'POST' in route.methods:
             bind_rate_limited_endpoint(route, limiter.limit("3/hour")(route.endpoint))
         elif route.path == "/auth/reactivate" and 'POST' in route.methods:
@@ -582,6 +584,10 @@ for route in account.router.routes:
         bind_rate_limited_endpoint(route, limiter.limit("10/minute")(route.endpoint))
 
 app.include_router(account.router)
+# Each request notifies (and can push to) the receiver, so a script can't send one to every member.
+for route in friends.router.routes:
+    if getattr(route, "path", None) == "/friends/request" and "POST" in getattr(route, "methods", set()):
+        bind_rate_limited_endpoint(route, limiter.limit("60/hour")(route.endpoint))
 app.include_router(friends.router)
 app.include_router(notifications.router)
 from .routers import library

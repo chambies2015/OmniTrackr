@@ -24,7 +24,7 @@ router = APIRouter(tags=["discussions"])
 SITE_URL = os.getenv("SITE_URL", "https://omnitrackr.xyz").rstrip("/")
 ASSET_VERSION = "20261028-discussions-1"
 KIND_PLURALS = {"movie": "Movies", "tv": "TV shows", "anime": "Anime", "game": "Games", "album": "Albums", "book": "Books",
-                "manga": "Manga"}
+                "manga": "Manga", "podcast": "Podcasts"}
 
 
 def _e(value) -> str:
@@ -393,8 +393,10 @@ def thread_page(kind: str, slug: str, thread_id: PositiveDatabaseId,
             f'{opening}{replies_html}{composer}{back}</div>{_rules_aside()}</div>')
     # Hidden posts only reach their authors and moderators, so they never count towards indexing.
     indexable = title_path is not None and boards.is_indexable(thread, [r for r in replies if not r.hidden_at])
+    # A deleted opening post (older ones still have their text stored) must not live on in the description.
     description = (f"{thread.subject}: a discussion about {title} on OmniTrackr. "
-                   + ("Contains spoilers." if thread.spoiler else boards.plain_excerpt(thread.body, 110)))
+                   + ("" if thread.deleted_at else "Contains spoilers." if thread.spoiler
+                      else boards.plain_excerpt(thread.body, 110))).strip()
     structured = ""
     if not thread.deleted_at and not thread.hidden_at:
         posting = {

@@ -423,7 +423,7 @@ async def request_password_reset(
 
 
 @router.post("/reset-password")
-def reset_password(payload: schemas.PasswordReset, db: Session = Depends(get_db)):
+def reset_password(payload: schemas.PasswordReset, request: Request, db: Session = Depends(get_db)):
     """Reset password with valid token."""
     token = payload.token
     new_password = payload.new_password

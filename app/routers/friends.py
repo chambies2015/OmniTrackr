@@ -3,7 +3,7 @@ Friends endpoints for the OmniTrackr API.
 """
 from datetime import datetime
 from typing import List
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, Depends, HTTPException, Request
 from sqlalchemy.orm import Session, joinedload
 from sqlalchemy import and_, func, or_
 
@@ -17,6 +17,7 @@ router = APIRouter(prefix="/friends", tags=["friends"])
 @router.post("/request", response_model=schemas.FriendRequestResponse)
 def send_friend_request(
     request_data: schemas.FriendRequestCreate,
+    request: Request,
     current_user: models.User = Depends(get_current_user),
     db: Session = Depends(get_db)
 ):
