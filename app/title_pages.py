@@ -7,7 +7,10 @@ public collections, Release Radar, and cached public facts (title_metadata).
 """
 from __future__ import annotations
 
+import os
 import re
+import threading
+import time
 import unicodedata
 from collections import Counter
 from dataclasses import dataclass, field
@@ -15,7 +18,7 @@ from functools import lru_cache
 from datetime import datetime, timedelta
 from typing import Optional
 
-from sqlalchemy import and_, func, literal, or_
+from sqlalchemy import and_, event, func, or_
 from sqlalchemy.orm import Session
 
 from . import models
@@ -129,23 +132,122 @@ class TitleGroup:
         return title_path(self.kind, self.title, self.year)
 
 
-def _scan_all_titles(db: Session, kind: str, model, base: str, year: Optional[int]) -> list:
-    """Rows whose title slugifies to `base`, checked over titles and years only.
+# ---------------------------------------------------------------- slug index
 
-    Loading whole rows for this scan made every unknown slug (a mistyped link, or a guest
-    importing a Pick for me title nobody tracks yet) read up to 20,000 full library rows.
+SLUG_INDEX_REBUILD_SECONDS = 30 * 60
+
+
+def _year_column(kind: str, model):
+    return model.release_date if kind == "game" else model.year
+
+
+def _row_year(kind: str, value) -> Optional[int]:
+    if kind == "game":
+        return value.year if value else None
+    return value or None
+
+
+class SlugIndex:
+    """Which stored titles give each (title slug, year), per kind, kept in memory.
+
+    Matching a slug used to read every title of a kind and slugify it on each lookup:
+    a third of a second for one mistyped link, a second for the friends feed and most
+    of the sitemap's minute. With the index, a lookup asks the database for rows with
+    those exact titles (the title column is indexed). The titles are only candidates:
+    rows are still read through _visible_rows() and their slugs compared again, so a
+    stale entry can never put the wrong row on a page, and privacy and deactivation
+    apply at once.
+
+    New rows are read from the highest id seen. Renames and year edits saved through
+    this process are noted as they flush (see _note_library_flush). Anything else, such
+    as another process or a hand edit, shows up at the next rebuild.
     """
-    year_column = model.release_date if kind == "game" else model.year
-    ids = []
-    for row_id, title, year_value in (_visible_rows(db, kind, model)
-                                      .with_entities(model.id, model.title, year_column).limit(20000).all()):
-        if kind == "game":
-            row_year = year_value.year if year_value else None
-        else:
-            row_year = year_value or None
-        if row_year == year and slugify(title or "") == base:
-            ids.append(row_id)
-    return db.query(model).filter(model.id.in_(ids)).order_by(model.id).all() if ids else []
+
+    def __init__(self):
+        self._lock = threading.Lock()
+        self._kinds: dict = {}
+
+    def clear(self) -> None:
+        with self._lock:
+            self._kinds.clear()
+
+    @staticmethod
+    def _add(entry: dict, kind: str, title, year_value) -> None:
+        if title is not None:
+            entry["pairs"].setdefault((slugify(title), _row_year(kind, year_value)), set()).add(title)
+
+    def _build(self, db: Session, kind: str, top: int) -> dict:
+        model = KINDS[kind][0]
+        entry = {"pairs": {}, "max_id": top, "built": time.monotonic()}
+        for title, year_value in (db.query(model.title, _year_column(kind, model))
+                                  .filter(model.id <= top).distinct()):
+            self._add(entry, kind, title, year_value)
+        return entry
+
+    def titles(self, db: Session, kind: str, pairs) -> dict[tuple, set]:
+        model = KINDS[kind][0]
+        with self._lock:
+            entry = self._kinds.get(kind)
+            top = db.query(func.max(model.id)).scalar() or 0
+            if (entry is None or time.monotonic() - entry["built"] >= SLUG_INDEX_REBUILD_SECONDS
+                    or top < entry["max_id"]):
+                # The table shrank at the top (a deleted newest row, or a different database): start over.
+                entry = self._kinds[kind] = self._build(db, kind, top)
+            elif top > entry["max_id"]:
+                for title, year_value in (db.query(model.title, _year_column(kind, model))
+                                          .filter(model.id > entry["max_id"], model.id <= top)):
+                    self._add(entry, kind, title, year_value)
+                entry["max_id"] = top
+            return {pair: set(entry["pairs"][pair]) for pair in pairs if pair in entry["pairs"]}
+
+    def note(self, kind: str, title: Optional[str], year: Optional[int]) -> None:
+        with self._lock:
+            entry = self._kinds.get(kind)
+            if entry is not None and title is not None:
+                entry["pairs"].setdefault((slugify(title), year), set()).add(title)
+
+
+SLUG_INDEX = SlugIndex()
+_KIND_BY_MODEL = {model: kind for kind, (model, _, _, _, _) in KINDS.items()}
+
+
+@event.listens_for(Session, "after_flush")
+def _note_library_flush(session: Session, flush_context) -> None:
+    """Index new and edited library titles as soon as they are saved."""
+    try:
+        for obj in list(session.new) + list(session.dirty):
+            kind = _KIND_BY_MODEL.get(type(obj))
+            if kind is not None:
+                SLUG_INDEX.note(kind, obj.title, item_year(kind, obj))
+    except Exception:
+        pass  # The index is a shortcut; a failure here must never stop a save.
+
+
+def _candidate_rows(db: Session, kind: str, pairs, column, grouped: bool = False):
+    """(pair, title, column) for the visible rows with a title the index lists for these pairs.
+
+    grouped=True gives one row per stored title and year, with `column` an aggregate.
+    """
+    titles = SLUG_INDEX.titles(db, kind, pairs)
+    wanted = sorted({title for found in titles.values() for title in found})
+    model = KINDS[kind][0]
+    year_column = _year_column(kind, model)
+    for start in range(0, len(wanted), 500):
+        query = (_visible_rows(db, kind, model).with_entities(model.title, year_column, column)
+                 .filter(model.title.in_(wanted[start:start + 500])))
+        query = query.group_by(model.title, year_column) if grouped else query.order_by(model.id)
+        for title, year_value, value in query:
+            pair = (slugify(title or ""), _row_year(kind, year_value))
+            if pair in titles:
+                yield pair, title, value
+
+
+def _matching_rows(db: Session, kind: str, pairs) -> dict[tuple, list[tuple[int, str]]]:
+    """(id, title) of the visible rows whose title and year give each (slug, year) pair, oldest first."""
+    found: dict = {}
+    for pair, title, row_id in _candidate_rows(db, kind, pairs, KINDS[kind][0].id):
+        found.setdefault(pair, []).append((row_id, title))
+    return {pair: sorted(rows) for pair, rows in found.items()}
 
 
 def find(db: Session, kind: str, slug: str) -> Optional[TitleGroup]:
@@ -153,27 +255,15 @@ def find(db: Session, kind: str, slug: str) -> Optional[TitleGroup]:
     if kind not in KINDS or not re.fullmatch(r"[a-z0-9-]{1,130}", slug or ""):
         return None
     model = KINDS[kind][0]
-    base, separator, year_suffix = slug.rpartition("-")
-    candidates_slugs = [(slug, None)]
-    if base and separator and len(year_suffix) == 4 and year_suffix.isdigit():
-        candidates_slugs.insert(0, (base, int(year_suffix)))
-    for base, year in candidates_slugs:
-        words = [w for w in base.split("-") if w]
-        if not words:
-            continue
-        query = _visible_rows(db, kind, model)
-        longest = max(words, key=len)
-        if len(longest) >= 2:
-            query = query.filter(func.lower(model.title).contains(longest))
-        rows = [row for row in query.limit(2000).all()
-                if slugify(row.title or "") == base and item_year(kind, row) == year]
-        if not rows and len(longest) >= 2:
-            # Accented titles ("Pokémon") don't contain their ASCII slug words; scan without the filter.
-            rows = _scan_all_titles(db, kind, model, base, year)
-        if rows:
-            names = Counter((row.title or "").strip() for row in rows)
-            display = names.most_common(1)[0][0]
-            return TitleGroup(kind, display, year, normalize(display), rows)
+    pairs = _slug_candidates(slug)
+    matches = _matching_rows(db, kind, pairs)
+    for pair in pairs:
+        if matches.get(pair):
+            rows = db.query(model).filter(model.id.in_([row_id for row_id, _ in matches[pair]])).order_by(model.id).all()
+            if rows:
+                names = Counter((row.title or "").strip() for row in rows)
+                display = names.most_common(1)[0][0]
+                return TitleGroup(kind, display, pair[1], normalize(display), rows)
     return None
 
 
@@ -203,28 +293,15 @@ def find_many(db: Session, kind: str, slugs, reviewed_only: bool = False) -> dic
     if not wanted:
         return {}
     model = KINDS[kind][0]
-    years = {year for _, year in wanted}
-    year_column = model.release_date if kind == "game" else model.year
-    # SQL trim() strips only spaces, so this flags every row Python's strip() would pass.
-    reviewed = and_(model.review_public == True, func.length(func.trim(model.review)) >= REVIEW_DETAIL_MIN_CHARS)
-    query = _visible_rows(db, kind, model).with_entities(model.id, model.title, year_column,
-                                                         reviewed if reviewed_only else literal(True))
-    if kind != "game":
-        # A year of 0 counts as no year (item_year), so it can only match a yearless slug.
-        known = [year for year in years if year is not None]
-        query = query.filter(or_(model.year.in_(known), model.year.is_(None), model.year == 0) if None in years
-                             else model.year.in_(known))
-    ids_by_pair: dict = {}
-    load = set()
-    for row_id, title, year_value, wanted_row in query.order_by(model.id):
-        row_year = (year_value.year if year_value else None) if kind == "game" else (year_value or None)
-        if row_year not in years:
-            continue
-        pair = (slugify(title or ""), row_year)
-        if pair in wanted:
-            ids_by_pair.setdefault(pair, []).append(row_id)
-            if wanted_row:
-                load.add(row_id)
+    ids_by_pair = {pair: [row_id for row_id, _ in rows] for pair, rows in _matching_rows(db, kind, wanted).items()}
+    load = {row_id for ids in ids_by_pair.values() for row_id in ids}
+    if reviewed_only and load:
+        # SQL trim() strips only spaces, so this flags every row Python's strip() would pass.
+        reviewed = and_(model.review_public == True, func.length(func.trim(model.review)) >= REVIEW_DETAIL_MIN_CHARS)
+        ordered, load = sorted(load), set()
+        for start in range(0, len(ordered), 1000):
+            load.update(row_id for row_id, in db.query(model.id).filter(
+                model.id.in_(ordered[start:start + 1000]), reviewed))
     needed = sorted(load)
     rows_by_id = {}
     for start in range(0, len(needed), 1000):
@@ -242,6 +319,28 @@ def find_many(db: Session, kind: str, slugs, reviewed_only: bool = False) -> dic
                 groups[slug] = TitleGroup(kind, display, pair[1], normalize(display), rows)
                 break
     return groups
+
+
+def paths_many(db: Session, kind: str, slugs) -> dict[str, str]:
+    """The title page path each slug leads to, like find_many() but without loading the library rows.
+
+    The friends feed links every card to its title page; a popular title's group is
+    thousands of rows, and the feed only needs to know the page exists. Every title in a
+    group slugifies the same way, so the path follows from the matched (slug, year).
+    """
+    if kind not in KINDS:
+        return {}
+    plans = {slug: _slug_candidates(slug) for slug in dict.fromkeys(slugs)
+             if re.fullmatch(r"[a-z0-9-]{1,130}", slug or "")}
+    found = {pair for pair, _, _ in _candidate_rows(db, kind, {pair for pairs in plans.values() for pair in pairs},
+                                                    func.count(), grouped=True)}
+    paths = {}
+    for slug, pairs in plans.items():
+        for base, year in pairs:
+            if (base, year) in found:
+                paths[slug] = f"/titles/{kind}/{base}-{year}" if year else f"/titles/{kind}/{base}"
+                break
+    return paths
 
 
 def _public_reviews(db: Session, kind: str, items: list, decorate: bool = True) -> list[dict]:
@@ -327,6 +426,40 @@ def _collections_featuring(db: Session, kind: str, items: list) -> list[dict]:
         featured.append({"name": collection.name, "url": f"/collections/public/{collection.id}",
                          "description": (collection.description or "")[:180]})
     return featured[:6]
+
+
+# "Also tracked" and "more by" read most of the library for a popular title (a fifth of a
+# second each). They shift slowly, so each title's lists are kept for a few minutes.
+SECTION_CACHE_SECONDS = 10 * 60
+SECTION_CACHE_SIZE = 2000
+_section_cache: dict = {}
+_section_lock = threading.Lock()
+
+
+def _section_cache_enabled() -> bool:
+    # Tests change data between requests and expect the page to follow at once.
+    return os.getenv("TESTING", "").lower() != "true"
+
+
+def clear_section_cache() -> None:
+    with _section_lock:
+        _section_cache.clear()
+
+
+def _cached_section(key: tuple, build) -> list[dict]:
+    if not _section_cache_enabled():
+        return build()
+    now = time.monotonic()
+    with _section_lock:
+        hit = _section_cache.get(key)
+    if hit is not None and now - hit[0] < SECTION_CACHE_SECONDS:
+        return [dict(entry) for entry in hit[1]]
+    value = build()
+    with _section_lock:
+        if len(_section_cache) >= SECTION_CACHE_SIZE:
+            _section_cache.clear()
+        _section_cache[key] = (now, value)
+    return [dict(entry) for entry in value]
 
 
 def _related(db: Session, kind: str, group: TitleGroup, limit: int = 8) -> list[dict]:
@@ -445,9 +578,11 @@ def summarize(db: Session, group: TitleGroup, *, page_sections: bool = True) -> 
         "reviews": reviews,
         "search_ready_reviews": sum(1 for review in reviews if review["search_ready"]),
         "collections": _collections_featuring(db, kind, group.items) if page_sections else [],
-        "related": _related(db, kind, group) if page_sections else [],
+        "related": _cached_section(("related", group.path), lambda: _related(db, kind, group)) if page_sections else [],
         "recent_members": recent if recent >= RECENT_MIN_MEMBERS else 0,
-        "by_creator": more_from_creator(db, kind, creator, group.normalized) if page_sections and creator else [],
+        "by_creator": (_cached_section(("creator", group.path, creator),
+                                       lambda: more_from_creator(db, kind, creator, group.normalized))
+                       if page_sections and creator else []),
     }
 
 

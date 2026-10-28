@@ -80,7 +80,9 @@ def snapshot(engine, table):
     with engine.connect() as connection:
         return {
             "columns": [(column["name"], str(column["type"]), column["nullable"], column["default"], column["primary_key"]) for column in inspector.get_columns(table)],
-            "indexes": sorted((index["name"], tuple(index["column_names"]), index["unique"]) for index in inspector.get_indexes(table)),
+            # The lookup indexes from migrations.add_lookup_indexes are the one expected addition.
+            "indexes": sorted((index["name"], tuple(index["column_names"]), index["unique"]) for index in inspector.get_indexes(table)
+                              if not index["name"].endswith(("_public_reviews", "_lookup"))),
             "foreign_keys": [(tuple(key["constrained_columns"]), key["referred_table"], tuple(key["referred_columns"]), key["options"]) for key in inspector.get_foreign_keys(table)],
             "rows": [tuple(row) for row in connection.execute(text(f'SELECT * FROM "{table}" ORDER BY id'))],
         }
@@ -98,6 +100,23 @@ def test_fresh_schema_startup_preserves_rows_indexes_and_privacy(migration_engin
         migrations.run_migrations()
         assert {model.__tablename__: snapshot(engine, model.__tablename__) for model in MEDIA} == before
         assert not any(name.endswith("_old") for name in inspect(engine).get_table_names())
+    assert "Migration warning" not in capsys.readouterr().out
+
+
+def test_lookup_indexes_are_added_once_without_touching_rows(migration_engine, capsys):
+    engine = migration_engine
+    create_schema(engine)
+    before = {model.__tablename__: snapshot(engine, model.__tablename__)["rows"] for model in MEDIA}
+    for _ in range(2):
+        migrations.run_migrations()
+    with engine.connect() as connection:
+        names = {row[0] for row in connection.exec_driver_sql("SELECT name FROM sqlite_master WHERE type = 'index'")}
+    for model in MEDIA:
+        assert f"ix_{model.__tablename__}_public_reviews" in names
+    for table, column in migrations.CREATOR_COLUMNS:
+        if table in before:
+            assert f"ix_{table}_{column}_lookup" in names
+    assert {model.__tablename__: snapshot(engine, model.__tablename__)["rows"] for model in MEDIA} == before
     assert "Migration warning" not in capsys.readouterr().out
 
 

@@ -21,7 +21,7 @@ from .reviews import _current_state_hides_review
 
 router = APIRouter(tags=["seo"])
 SITEMAP_CACHE_SECONDS = 15 * 60
-_sitemap_cache = {"at": 0.0, "parts": None}
+_sitemap_cache = {"at": 0.0, "parts": None, "refreshing": False}
 _sitemap_lock = threading.Lock()
 
 
@@ -393,20 +393,45 @@ def _database_parts(db: Session) -> list[str]:
     return sitemap_parts
 
 
+def _refresh_database_parts() -> None:
+    """Rebuild the member-data entries on a worker thread with its own session."""
+    from ..database import SessionLocal
+
+    def run():
+        db = SessionLocal()
+        try:
+            parts = _database_parts(db)
+            with _sitemap_lock:
+                _sitemap_cache["parts"] = parts
+                _sitemap_cache["at"] = time.monotonic()
+        except Exception as error:
+            print(f"Sitemap refresh failed: {error}")
+        finally:
+            db.close()
+            with _sitemap_lock:
+                _sitemap_cache["refreshing"] = False
+
+    threading.Thread(target=run, name="sitemap-refresh", daemon=True).start()
+
+
 def _cached_database_parts(db: Session) -> list[str]:
     """The member-data entries, rebuilt at most every SITEMAP_CACHE_SECONDS.
 
-    Building them reads every public review and checks hundreds of title pages, and
-    crawlers fetch the sitemap often. One request rebuilds at a time; others wait for
-    it rather than starting their own.
+    Building them reads every public review and checks hundreds of title pages (half a
+    minute on a large library), and crawlers fetch the sitemap often. Only the first
+    request after a restart waits for a build. After that an expired copy is still
+    served while one rebuild runs on a worker thread, so a crawler never sits through it.
     """
     if not _sitemap_cache_enabled():
         return _database_parts(db)
     with _sitemap_lock:
-        now = time.monotonic()
-        if _sitemap_cache["parts"] is None or now - _sitemap_cache["at"] >= SITEMAP_CACHE_SECONDS:
+        if _sitemap_cache["parts"] is None:
             _sitemap_cache["parts"] = _database_parts(db)
             _sitemap_cache["at"] = time.monotonic()
+        elif (time.monotonic() - _sitemap_cache["at"] >= SITEMAP_CACHE_SECONDS
+              and not _sitemap_cache["refreshing"]):
+            _sitemap_cache["refreshing"] = True
+            _refresh_database_parts()
         return _sitemap_cache["parts"]
 
 

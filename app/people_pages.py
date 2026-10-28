@@ -199,8 +199,12 @@ def _key_parts(key: str) -> Optional[tuple[str, str, Optional[int]]]:
     return kind, normalized, int(year) if year.isdigit() else None
 
 
-def _library_credits(db: Session, slug: str) -> list[tuple[str, str, str, str]]:
-    """(kind, title slug, role, name as typed) from the creator field members fill in."""
+def _library_credits(db: Session, slug: str, memo: Optional[dict] = None) -> list[tuple[str, str, str, str]]:
+    """(kind, title slug, role, name as typed) from the creator field members fill in.
+
+    The sitemap builds a couple of hundred pages in a row; with a memo it reads each
+    kind's (creator, title, year) list once instead of once per page.
+    """
     words = [w for w in slug.split("-") if w]
     longest = max(words, key=len) if words else ""
     found = []
@@ -210,9 +214,15 @@ def _library_credits(db: Session, slug: str) -> list[tuple[str, str, str, str]]:
         query = (title_pages._visible_rows(db, kind, model)
                  .filter(~model.user_id.in_(title_pages._editor_ids(db)))
                  .with_entities(column, model.title, model.year))
-        if len(longest) >= 2:
-            query = query.filter(func.lower(column).contains(longest))
-        for creator, title, year in query.distinct().limit(3000):
+        if memo is not None:
+            if kind not in memo:
+                memo[kind] = query.distinct().all()
+            rows = [row for row in memo[kind] if len(longest) < 2 or longest in (row[0] or "").lower()]
+        else:
+            if len(longest) >= 2:
+                query = query.filter(func.lower(column).contains(longest))
+            rows = query.distinct().limit(3000)
+        for creator, title, year in rows:
             if not (title or "").strip():
                 continue
             for name in split_names(creator or "", role):
@@ -253,7 +263,8 @@ def _decorate_reviews(db: Session, reviews: list) -> None:
         review["profile_url"] = profiles.get(review["user_id"])
 
 
-def build(db: Session, entity: str, slug: str) -> Optional[Page]:
+def build(db: Session, entity: str, slug: str, memo: Optional[dict] = None) -> Optional[Page]:
+    """One person's or studio's page. ``memo`` (a dict the caller keeps) shares title lookups across pages."""
     if entity not in PREFIX or not SLUG.fullmatch(slug or "") or slug in PLACEHOLDER_SLUGS:
         return None
     credits = (db.query(models.TitleCredit).filter(models.TitleCredit.entity == entity, models.TitleCredit.slug == slug)
@@ -271,24 +282,34 @@ def build(db: Session, entity: str, slug: str) -> Optional[Page]:
         keys_by_title[(kind, title_slug)] = credit.metadata_key
         names[credit.name] += 1
     if entity == PERSON:
-        for kind, title_slug, role, name in _library_credits(db, slug):
+        library_memo = memo.setdefault("library", {}) if memo is not None else None
+        for kind, title_slug, role, name in _library_credits(db, slug, library_memo):
             wanted[(kind, title_slug)].add(role)
             names[name] += 3  # Members' own spelling wins over a database's.
     if not wanted:
         return None
     groups = {}
+    found = memo.setdefault("groups", {}) if memo is not None else {}
     for kind in title_pages.KINDS:
-        slugs = [s for k, s in wanted if k == kind]
+        slugs = [s for k, s in wanted if k == kind and (k, s) not in found]
         if slugs:
-            for title_slug, group in title_pages.find_many(db, kind, slugs).items():
-                groups[(kind, title_slug)] = group
+            matched = title_pages.find_many(db, kind, slugs)
+            for title_slug in slugs:
+                found[(kind, title_slug)] = matched.get(title_slug)
+    for kind in title_pages.KINDS:
+        for key in wanted:
+            if key[0] == kind and found.get(key) is not None:
+                groups[key] = found[key]
+    summaries = memo.setdefault("summaries", {}) if memo is not None else {}
     editors = {uid for uid, in title_pages._editor_ids(db).all()}
     works, seen = [], set()
     for key, group in groups.items():
         if group.path in seen:
             continue
         seen.add(group.path)
-        summary = title_pages.summarize(db, group, page_sections=False)
+        summary = summaries.get(group.path)
+        if summary is None:
+            summary = summaries[group.path] = title_pages.summarize(db, group, page_sections=False)
         per_member = {}
         for item in sorted(group.items, key=lambda entry: entry.id):
             if item.user_id not in editors and item.rating is not None:
@@ -428,6 +449,7 @@ def directory(db: Session, entity: str, per_role: int = 18) -> dict[str, list[di
 
 def sitemap_paths(db: Session, limit: int = 200) -> list[str]:
     paths = []
+    memo: dict = {}  # Pages share most of their titles; look each one up once.
     for entity in PREFIX:
         seen = set()
         for entries in directory(db, entity, per_role=40).values():
@@ -435,7 +457,7 @@ def sitemap_paths(db: Session, limit: int = 200) -> list[str]:
                 if entry["slug"] in seen or entry["titles"] < INDEX_MIN_WORKS or len(paths) >= limit:
                     continue
                 seen.add(entry["slug"])
-                page = build(db, entity, entry["slug"])
+                page = build(db, entity, entry["slug"], memo)
                 if page is not None and is_indexable(page):
                     paths.append(page.path)
     return paths
