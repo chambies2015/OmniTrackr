@@ -102,6 +102,18 @@
         </ul>
       </section>
 
+      <section class="content-section" aria-labelledby="formats-heading">
+        <h2 id="formats-heading">Spreadsheets, Letterboxd and Goodreads files</h2>
+        <p>The JSON backup is the file OmniTrackr restores from, but it isn't much use anywhere else. The export panel in Account Settings also makes three other kinds of file.</p>
+        <ul>
+          <li><strong>Spreadsheets.</strong> A ZIP of CSV files that open in Excel, Numbers or Google Sheets. <code>library.csv</code> has every title from every shelf in one sheet, with ratings out of 10. There are also files for your journal, your collections, where you stopped in each show or book, and one file for each custom tab. <code>library.csv</code> uses the same columns as the Import Studio's spreadsheet option, so you can import it into another OmniTrackr account.</li>
+          <li><strong>Letterboxd.</strong> Two CSV files for Letterboxd's importer: one for watched films and one for your watchlist. A film you logged twice in your journal becomes two diary entries, the second marked as a rewatch. Ratings are halved and rounded to the nearest half star, so a 7.3 becomes three and a half stars. Your review goes on the most recent watch only.</li>
+          <li><strong>Goodreads and The StoryGraph.</strong> Your books in the column layout of a Goodreads export, which The StoryGraph also imports. Finished books go on the "read" shelf with the date from your journal, and everything else on "to-read". Goodreads only takes whole stars, so ratings are rounded.</li>
+        </ul>
+        <p>There's no MyAnimeList or AniList file. Both sites match an imported list by their own ID numbers, which OmniTrackr doesn't store, so a list without them would mostly fail to import. Your anime and manga are in the spreadsheet export instead.</p>
+        <p>The spreadsheets put an apostrophe in front of any cell that starts with <code>=</code>, <code>+</code>, <code>-</code> or <code>@</code> so a spreadsheet app shows it as text and doesn't run it as a formula.</p>
+      </section>
+
       <section class="content-section" aria-labelledby="import-heading">
         <h2 id="import-heading">Two ways in: migration and restore</h2>
         <p>OmniTrackr keeps migration separate from backup restoration. The Import Studio accepts export files from another tracker, such as a Letterboxd or Trakt ZIP, a MyAnimeList XML file, or any CSV spreadsheet, and only creates records that are not already in your library. JSON restore accepts an OmniTrackr backup and can update matching records because the backup already uses OmniTrackr's own field structure.</p>

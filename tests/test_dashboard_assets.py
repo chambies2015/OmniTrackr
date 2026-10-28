@@ -54,7 +54,7 @@ def test_bundle_lists_every_chunk_before_the_modules_run():
     script, version = dashboard_assets.bundle()
     assert script.startswith(f'window.OmniDashboardChunks = {{"version":"{version}"')
     assert script.index("function placeholder(") < script.index("function libraryPageConfig(")
-    assert '"exports":["exportData","importData"]' in script
+    assert '"exports":["exportData","downloadLibraryExport","importData"]' in script
     for name in _lazy_files():
         assert f'"{name}"' in script
 
