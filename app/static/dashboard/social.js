@@ -31,6 +31,10 @@ async function loadNotifications() {
           actionButtons = '<a class="notification-action-btn" href="/#friends-feed">Open your friends feed</a>';
         } else if (notif.type === 'take_received' && /^\/titles\/[a-z]+\/[a-z0-9-]+#community-title$/.test(notif.link || '')) {
           actionButtons = `<a class="notification-action-btn" href="${escapeHtml(notif.link)}">Read their take</a>`;
+        } else if (notif.type === 'discussion_reply' && /^\/titles\/[a-z]+\/[a-z0-9-]+\/discussions\/[1-9]\d{0,9}$/.test(notif.link || '')) {
+          actionButtons = `<a class="notification-action-btn" href="${escapeHtml(notif.link)}#replies">Read the reply</a>`;
+        } else if (notif.type === 'discussion_report' && notif.link === '/discussions/moderation') {
+          actionButtons = '<a class="notification-action-btn" href="/discussions/moderation">Open reports</a>';
         } else if (notif.type === 'goal_reached' && notif.link === '/#goals') {
           actionButtons = '<a class="notification-action-btn" href="/#goals">See your goals</a>';
         } else if (notif.type === 'challenge_complete' && notif.link === '/#challenge') {

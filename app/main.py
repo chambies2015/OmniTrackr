@@ -712,6 +712,23 @@ for route in titles.router.routes:
         bind_rate_limited_endpoint(route, rate_limited_title_search)
     elif getattr(route, "path", None) == "/api/where-to-watch":
         bind_rate_limited_endpoint(route, rate_limited_where_to_watch)
+from .routers import title_discussions
+rate_limited_discussion_start = limiter.limit("10/hour")(title_discussions.start_thread)
+rate_limited_discussion_reply = limiter.limit("30/minute")(title_discussions.add_reply)
+rate_limited_discussion_edit = limiter.limit("30/minute")(title_discussions.edit_post)
+rate_limited_discussion_report = limiter.limit("20/hour")(title_discussions.report_post)
+for route in title_discussions.router.routes:
+    path, methods = getattr(route, "path", None), getattr(route, "methods", set())
+    if path == "/api/titles/{kind}/{slug}/discussions" and "POST" in methods:
+        bind_rate_limited_endpoint(route, rate_limited_discussion_start)
+    elif path == "/api/discussions/{thread_id}/replies":
+        bind_rate_limited_endpoint(route, rate_limited_discussion_reply)
+    elif path == "/api/discussions/{thread_id}" and "PATCH" in methods:
+        bind_rate_limited_endpoint(route, rate_limited_discussion_edit)
+    elif path == "/api/discussions/{thread_id}/report":
+        bind_rate_limited_endpoint(route, rate_limited_discussion_report)
+# Before titles.router: its /titles/{kind}/{slug} route must not shadow the board pages.
+app.include_router(title_discussions.router)
 app.include_router(titles.router)
 
 rate_limited_profile_card = limiter.limit("30/minute")(profiles.profile_card)
