@@ -663,6 +663,7 @@ def render(group, summary: dict, metadata: Optional[dict], indexable: bool, sign
     sections = [
         (_community_html(group, summary), "community-title", "Reviews"),
         (_write_review_html(group, summary, signed_in, take), "write-review", "Write a review"),
+        (summary.get("discussions_html", ""), "discussions-title", "Discussions"),
         (_trailer_html(group, metadata), "trailer-title", "Trailer"),
         (_where_html(group, summary), "where-title", "Where to play" if group.kind == "game" else "Where to watch"),
         (_about_html(group, summary, metadata), "about-title", "About"),
@@ -701,6 +702,7 @@ def render(group, summary: dict, metadata: Optional[dict], indexable: bool, sign
   <link rel="stylesheet" href="/static/fonts.css?v=20261009-fonts-1">
   <link rel="stylesheet" href="/static/title-page.css?v={CSS_VERSION}">
   <script src="/static/title-page.js?v={JS_VERSION}" defer></script>
+  <link rel="stylesheet" href="/static/discussions.css?v=20261028-discussions-1">
   <script src="/static/share.js?v=20261004-share-1" defer></script>
   <script src="/static/review_report.js?v=20261020-title-reviews-1" defer></script>
   {'' if signed_in else '<script src="/static/guest-list.js?v=20261012-hero-search-1" defer></script>'}
@@ -761,6 +763,8 @@ async def title_page(kind: str, slug: str, request: Request, db: Session = Depen
 
     def finish():
         summary["chart_rank"] = title_charts.rank_of(db, kind, group.path)
+        from .title_discussions import title_section_html
+        summary["discussions_html"] = title_section_html(db, group)
         return render(group, summary, metadata, indexable, signed_in, _take_for(db, token, group))
 
     response = strict_html_response(await run_in_threadpool(finish))

@@ -349,6 +349,14 @@ def _database_parts(db: Session) -> list[str]:
             sitemap_parts.append(f"<url><loc>{base_url}{path}</loc><changefreq>daily</changefreq><priority>0.7</priority></url>")
     except Exception:
         pass
+    # Title discussions join once a thread carries as much member writing as an indexed review.
+    try:
+        from .. import title_discussions
+        for path, active in title_discussions.sitemap_paths(db):
+            sitemap_parts.append(f"<url><loc>{base_url}{path}</loc><lastmod>{active.date().isoformat()}</lastmod>"
+                                 "<changefreq>weekly</changefreq><priority>0.5</priority></url>")
+    except Exception:
+        db.rollback()
     # Weekly roundups join once a week has enough releases and write-up (see weekly_roundup.is_indexable).
     try:
         from .. import weekly_roundup

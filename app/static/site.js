@@ -1,13 +1,16 @@
-/* Shared behaviour for the public site header: close the compact menu after a
-   choice, on an outside click, or with Escape (focus returns to its button). */
+/* Shared behaviour for the public site header: close a menu after a choice,
+   on an outside click, or with Escape (focus returns to its button), and keep
+   only one menu open at a time. */
 (function () {
+  const MENUS = 'details.site-menu[open], details.site-dd[open]';
+
   function openMenus() {
-    return document.querySelectorAll('details.site-menu[open]');
+    return document.querySelectorAll(MENUS);
   }
 
   document.addEventListener('click', function (event) {
     openMenus().forEach(function (menu) {
-      if (!menu.contains(event.target) || event.target.closest('.site-menu__panel a')) menu.open = false;
+      if (!menu.contains(event.target) || event.target.closest('.site-menu__panel a, .site-dd__panel a')) menu.open = false;
     });
   });
 
@@ -19,6 +22,18 @@
       if (summary) summary.focus();
     });
   });
+
+  // "toggle" does not bubble, so listen in the capture phase.
+  document.addEventListener('toggle', function (event) {
+    const menu = event.target;
+    if (!menu || !menu.matches || !menu.matches('details.site-menu, details.site-dd')) return;
+    if (menu.open) {
+      openMenus().forEach(function (other) { if (other !== menu) other.open = false; });
+    }
+    if (menu.matches('details.site-menu') && document.body) {
+      document.body.classList.toggle('site-menu-open', menu.open);
+    }
+  }, true);
 })();
 
 /* Long-form guides: a reading-time line under the title, a reading progress
