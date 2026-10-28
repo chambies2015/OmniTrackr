@@ -3,13 +3,13 @@ Export/Import endpoints for the OmniTrackr API.
 """
 import json
 from datetime import date, datetime
-from fastapi import APIRouter, Depends, HTTPException, Request, UploadFile, File
+from fastapi import APIRouter, Depends, HTTPException, Request, Response, UploadFile, File
 from fastapi.concurrency import run_in_threadpool
 from pydantic import ValidationError
 from sqlalchemy import func
 from sqlalchemy.orm import Session, selectinload
 
-from .. import crud, schemas, models
+from .. import crud, schemas, models, library_export
 from ..integer_bounds import SQL_INTEGER_MAX
 from ..dependencies import get_db, get_current_user
 from ..progress import CATEGORIES as PROGRESS_CATEGORIES, get_checkpoint_map, serialize_checkpoint, validate_checkpoint, stage_import_checkpoint, lock_progress_owner
@@ -309,6 +309,44 @@ def export_data(
         collections=collections,
         progress_checkpoints=progress_checkpoints,
         export_metadata=export_metadata
+    )
+
+
+@router.get("/export/{fmt}/")
+def export_format(
+    fmt: str,
+    request: Request = None,
+    current_user: models.User = Depends(get_current_user),
+    db: Session = Depends(get_db)
+):
+    """Download the library as a spreadsheet ZIP, or in the layout Letterboxd or Goodreads imports."""
+    if fmt not in library_export.FORMATS:
+        raise HTTPException(status_code=404, detail="Unknown export format.")
+    now = datetime.utcnow()
+    stamp = now.strftime("%Y-%m-%d")
+    if fmt == "spreadsheet":
+        journal = db.query(models.ActivityEntry).filter(
+            models.ActivityEntry.user_id == current_user.id
+        ).order_by(models.ActivityEntry.occurred_at.desc(), models.ActivityEntry.id.desc()).all()
+        content = library_export.spreadsheet_zip(
+            library_export.load_library(db, current_user.id), journal,
+            _export_collections(db, current_user.id), _export_progress(db, current_user.id),
+            crud.get_all_custom_tabs_with_items(db, current_user.id), now,
+        )
+        media_type, filename = "application/zip", f"omnitrackr-spreadsheets-{stamp}.zip"
+    elif fmt == "goodreads":
+        books = library_export.load_library(db, current_user.id, ["books"])["books"]
+        content = library_export.goodreads_csv(db, current_user.id, books).encode("utf-8")
+        media_type, filename = "text/csv; charset=utf-8", f"omnitrackr-goodreads-{stamp}.csv"
+    else:
+        movies = library_export.load_library(db, current_user.id, ["movies"])["movies"]
+        watchlist = fmt == "letterboxd-watchlist"
+        content = library_export.letterboxd_csv(db, current_user.id, movies, watchlist=watchlist).encode("utf-8")
+        media_type, filename = "text/csv; charset=utf-8", f"omnitrackr-{fmt}-{stamp}.csv"
+    return Response(
+        content=content,
+        media_type=media_type,
+        headers={"Content-Disposition": f'attachment; filename="{filename}"', "Cache-Control": "no-store"},
     )
 
 

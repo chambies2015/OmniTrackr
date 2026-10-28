@@ -24,6 +24,44 @@ async function exportData() {
   }
 }
 
+// Spreadsheet, Letterboxd and Goodreads files from the export panel in Account Settings.
+async function downloadLibraryExport(button) {
+  const format = button?.dataset.exportFormat;
+  const status = document.getElementById('exportStudioStatus');
+  if (!format) return;
+  if (format === 'json') {
+    await exportData();
+    return;
+  }
+  const label = button.textContent;
+  button.disabled = true;
+  button.textContent = 'Preparing…';
+  if (status) status.textContent = '';
+  try {
+    const response = await authenticatedFetch(`${API_BASE}/export/${encodeURIComponent(format)}/`);
+    if (!response.ok) {
+      throw new Error(response.status === 429 ? 'Too many downloads in the last hour. Try again later.' : 'The export could not be prepared.');
+    }
+    const disposition = response.headers.get('Content-Disposition') || '';
+    const match = disposition.match(/filename="([^"]+)"/);
+    const blob = await response.blob();
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.href = url;
+    link.download = match ? match[1] : `omnitrackr-${format}.${format === 'spreadsheet' ? 'zip' : 'csv'}`;
+    document.body.appendChild(link);
+    link.click();
+    link.remove();
+    URL.revokeObjectURL(url);
+    if (status) status.textContent = `Downloaded ${link.download}.`;
+  } catch (error) {
+    if (status) status.textContent = error.message;
+  } finally {
+    button.disabled = false;
+    button.textContent = label;
+  }
+}
+
 async function importData(fileInput) {
   const file = fileInput.files[0];
   if (!file) return;

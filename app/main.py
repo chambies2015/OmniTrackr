@@ -650,6 +650,8 @@ app.include_router(release_radar.router)
 for route in export_import.router.routes:
     if getattr(route, "path", None) in ("/import/", "/import/file/"):
         bind_rate_limited_endpoint(route, limiter.limit("10/hour")(route.endpoint))
+    elif getattr(route, "path", None) == "/export/{fmt}/":
+        bind_rate_limited_endpoint(route, limiter.limit("60/hour")(route.endpoint))
 app.include_router(export_import.router)
 for route in custom_tabs.router.routes:
     if getattr(route, "path", None) == "/custom-tabs/{tab_id}/items/{item_id}/poster":

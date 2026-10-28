@@ -765,6 +765,7 @@ function handleDelegatedClick(event) {
     'close-podcast-search-modal': closePodcastSearchModal,
     'close-screenshot-modal': () => closeScreenshotModal(event),
     'export-data-dashboard': exportData,
+    'download-library-export': () => downloadLibraryExport(target),
     'apply-library-import': applyLibraryImport,
     'confirm-library-import': confirmLibraryImport,
     'cancel-library-import': cancelLibraryImport,
