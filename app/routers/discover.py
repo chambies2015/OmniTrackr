@@ -34,7 +34,7 @@ def monthly_for(slug):
 
 # Sections that share this layout but have their own item in the site header.
 NAV_SECTIONS = (("/in-order", "in-order"), ("/if-you-liked", "if-you-liked"), ("/daily", "daily"), ("/lists", "lists"),
-                ("/pick", "pick"), ("/taste-quiz", "taste-quiz"), ("/tier-list", "tier-list"), ("/challenges", "challenges"),
+                ("/pick", "pick"), ("/tonight", "tonight"), ("/taste-quiz", "taste-quiz"), ("/tier-list", "tier-list"), ("/challenges", "challenges"),
                 ("/best-of", "best-of"), ("/new-this-week", "new-this-week"), ("/halloween", ""), ("/holidays", ""))
 
 

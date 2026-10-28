@@ -37,6 +37,7 @@ NAV_MENUS = (
     ("play", "Play", (
         ("daily", "Daily puzzle", "/daily", "One new guessing game every day"),
         ("pick", "Pick for me", "/pick", "Can't decide? Let us choose tonight's watch"),
+        ("tonight", "Group poll", "/tonight", "Let friends vote on what to watch tonight"),
         ("taste-quiz", "Taste quiz", "/taste-quiz", "Find out what kind of fan you are"),
         ("tier-list", "Tier list maker", "/tier-list", "Rank anything and share the image"),
         ("challenges", "Monthly challenge", "/challenges", "A themed goal that resets each month"),
@@ -67,6 +68,7 @@ FOOTER_GROUPS = (
         ("Release Radar", "/release-radar"),
         ("Daily puzzle", "/daily"),
         ("Pick for me", "/pick"),
+        ("Group poll", "/tonight"),
         ("Taste quiz", "/taste-quiz"),
         ("If you liked…", "/if-you-liked"),
         ("Franchises in order", "/in-order"),
