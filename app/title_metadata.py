@@ -668,6 +668,12 @@ def store(db: Session, key: str, data: Optional[dict], status: str) -> None:
             row.data = payload
             row.status = status
         row.fetched_at = datetime.utcnow()
+    if status == "ok" and data:
+        try:
+            from .people_pages import index_title
+            index_title(db, key, data)
+        except Exception as error:  # Credits are a nice-to-have; the facts must still save.
+            print(f"Could not index credits for {key}: {error}")
     try:
         db.commit()
     except IntegrityError:

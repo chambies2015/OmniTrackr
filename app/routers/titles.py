@@ -27,7 +27,7 @@ from ..site_chrome import apply_site_chrome, editorial_picks, message_page
 
 router = APIRouter(tags=["titles"])
 SITE_URL = os.getenv("SITE_URL", "https://omnitrackr.xyz").rstrip("/")
-CSS_VERSION = "20261026-where-to-watch-1"
+CSS_VERSION = "20261028-people-1"
 JS_VERSION = "20261025-title-refresh-1"
 SCHEMA_TYPES = {"movie": "Movie", "tv": "TVSeries", "anime": "TVSeries", "game": "VideoGame", "album": "MusicAlbum", "book": "Book",
                 "manga": "Book", "podcast": "PodcastSeries"}
@@ -254,11 +254,27 @@ def _about_html(group, summary: dict, metadata: dict) -> str:
                 if source.get("url") and source.get("name") else "")
         description = (f'<div class="title-description"><p>{_e(_lead_sentences(metadata["description"]))}{more}</p>'
                        f'{credit}</div>')
-    facts = "".join(f"<div><dt>{_e(label)}</dt><dd>{_e(value)}</dd></div>" for label, value in rows if value)
+    links = summary.get("credit_links") or {}
+    facts = "".join(f"<div><dt>{_e(label)}</dt><dd>{_fact_value_html(group.kind, label, value, links)}</dd></div>"
+                    for label, value in rows if value)
     if not description and not facts:
         return ""
     return (f'<section class="title-section title-about" aria-labelledby="about-title"><h2 id="about-title">About {_e(group.title)}</h2>'
             f'{description}<dl class="title-facts">{facts}</dl></section>')
+
+
+def _fact_value_html(kind: str, label: str, value, links: dict) -> str:
+    """A fact's value, with each credited name that has a people or studio page linked to it."""
+    from ..people_pages import FACT_ROLES, LIBRARY_ROLES, split_names
+    role = (FACT_ROLES.get(kind) or {}).get(label, (None, None))[1]
+    if role is None and label == CREATOR_LABEL.get(kind):
+        role = LIBRARY_ROLES.get(kind)
+    if not links or role is None:
+        return _e(value)
+    names = split_names(str(value), role)
+    if not any(name in links for name in names):
+        return _e(value)
+    return ", ".join(f'<a href="{_e(links[name])}">{_e(name)}</a>' if name in links else _e(name) for name in names)
 
 
 WHERE_HEADINGS = {"game": "Where to play {title}"}
@@ -479,7 +495,10 @@ def _by_creator_html(group, summary: dict) -> str:
     creator = summary.get("creator")
     if not items or not creator:
         return ""
-    return (f'<section class="title-section" aria-labelledby="creator-title"><h2 id="creator-title">More from {_e(creator)}</h2>'
+    link = (summary.get("credit_links") or {}).get(creator)
+    more = (f'<a href="{_e(link)}">Every {_e(creator)} title, ranked <span aria-hidden="true">→</span></a>' if link else "")
+    return (f'<section class="title-section" aria-labelledby="creator-title"><div class="title-section__head">'
+            f'<h2 id="creator-title">More from {_e(creator)}</h2>{more}</div>'
             f'<div class="title-related-grid">{_related_cards(items)}</div></section>')
 
 
@@ -765,6 +784,12 @@ async def title_page(kind: str, slug: str, request: Request, db: Session = Depen
         summary["chart_rank"] = title_charts.rank_of(db, kind, group.path)
         from .title_discussions import title_section_html
         summary["discussions_html"] = title_section_html(db, group)
+        from .. import people_pages
+        try:
+            summary["credit_links"] = people_pages.title_links(db, kind, metadata, summary.get("creator"),
+                                                               bool(summary.get("by_creator")))
+        except Exception:
+            db.rollback()  # The page still shows the names, just without links.
         return render(group, summary, metadata, indexable, signed_in, _take_for(db, token, group))
 
     response = strict_html_response(await run_in_threadpool(finish))
@@ -1132,6 +1157,7 @@ def _titles_index_page(db: Session) -> tuple[str, bool]:
       <p class="site-eyebrow">Titles</p>
       <h1>What OmniTrackr members are tracking</h1>
       <p>The most-tracked movies, shows, anime, games, books and albums on OmniTrackr. Every title has its details, trailer, scores and what members thought of it.</p>
+      <nav class="title-chart__pills" aria-label="Browse by credit"><a class="site-chip" href="/people">Directors, actors and authors</a><a class="site-chip" href="/studios">Studios and developers</a></nav>
     </div></section>
     <div class="site-wrap title-body">{"".join(sections)}</div>
   </main>
@@ -1343,6 +1369,16 @@ async def warm_metadata(session_factory, client, batch: int = 8) -> int:
     return fetched
 
 
+def _backfill_credits(session_factory) -> None:
+    """Credits for facts cached before the people and studio pages existed."""
+    from .. import people_pages
+    db = session_factory()
+    try:
+        people_pages.backfill(db)
+    finally:
+        db.close()
+
+
 async def warm_loop(app) -> None:
     from ..database import SessionLocal
     await asyncio.sleep(240)
@@ -1351,6 +1387,7 @@ async def warm_loop(app) -> None:
             client = getattr(app.state, "external_api_client", None)
             if client is not None:
                 await warm_metadata(SessionLocal, client)
+            await run_in_threadpool(_backfill_credits, SessionLocal)
         except asyncio.CancelledError:
             raise
         except Exception as error:

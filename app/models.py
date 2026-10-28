@@ -879,6 +879,27 @@ class TitleMetadata(Base):
     fetched_at = Column(DateTime, nullable=False, default=datetime.utcnow)
 
 
+class TitleCredit(Base):
+    """One person or company credited on a title, read from its cached public facts.
+
+    Rebuilt from title_metadata whenever a title's facts are stored, so the people
+    and studio pages can find every title someone worked on without re-reading
+    every cached blob. Never linked to a member.
+    """
+    __tablename__ = "title_credits"
+
+    id = Column(Integer, primary_key=True, index=True)
+    metadata_key = Column(String(300), nullable=False, index=True)
+    kind = Column(String(16), nullable=False)
+    entity = Column(String(8), nullable=False)  # person, studio
+    role = Column(String(32), nullable=False)
+    name = Column(String(200), nullable=False)
+    slug = Column(String(130), nullable=False)
+
+    __table_args__ = (Index("ix_title_credits_entity_slug", "entity", "slug"),
+                      UniqueConstraint("metadata_key", "entity", "role", "slug", name="uq_title_credit"))
+
+
 class PublicProfile(Base):
     """A member's opt-in public profile at /u/<username>.
 

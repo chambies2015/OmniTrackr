@@ -736,6 +736,8 @@ for route in title_discussions.router.routes:
 # Before titles.router: its /titles/{kind}/{slug} route must not shadow the board pages.
 app.include_router(title_discussions.router)
 app.include_router(titles.router)
+from .routers import people as people_router
+app.include_router(people_router.router)
 
 rate_limited_profile_card = limiter.limit("30/minute")(profiles.profile_card)
 rate_limited_profile_card_by_id = limiter.limit("30/minute")(profiles.profile_card_by_id)

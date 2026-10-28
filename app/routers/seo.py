@@ -349,6 +349,17 @@ def _database_parts(db: Session) -> list[str]:
             sitemap_parts.append(f"<url><loc>{base_url}{path}</loc><changefreq>daily</changefreq><priority>0.7</priority></url>")
     except Exception:
         pass
+    # People and studio pages join once members have rated and reviewed enough of the work (people_pages.is_indexable).
+    try:
+        from .. import people_pages
+        from .people import directory_is_indexable
+        for entity, directory_path in (("person", "/people"), ("studio", "/studios")):
+            if directory_is_indexable(db, entity):
+                sitemap_parts.append(f"<url><loc>{base_url}{directory_path}</loc><changefreq>weekly</changefreq><priority>0.6</priority></url>")
+        for path in people_pages.sitemap_paths(db):
+            sitemap_parts.append(f"<url><loc>{base_url}{path}</loc><changefreq>weekly</changefreq><priority>0.6</priority></url>")
+    except Exception:
+        db.rollback()
     # Title discussions join once a thread carries as much member writing as an indexed review.
     try:
         from .. import title_discussions
