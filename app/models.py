@@ -1368,3 +1368,63 @@ class WeeklyRoundup(Base):
     final = Column(Boolean, nullable=False, default=False)
     built_at = Column(DateTime, nullable=False, default=datetime.utcnow)
     created_at = Column(DateTime, nullable=False, default=datetime.utcnow)
+
+
+class TitleDiscussion(Base):
+    """A discussion thread on a public title page (/titles/<kind>/<slug>/discussions/<id>), Oct 2026.
+
+    New tables only. ``kind`` and ``slug`` are the title page's address; the title
+    itself is copied in so the thread stays readable if the page later changes or
+    goes away. ``hidden_at`` is set by enough member reports or by a moderator;
+    ``deleted_at`` when the author removes a thread that already has replies.
+    """
+    __tablename__ = "title_discussions"
+
+    id = Column(Integer, primary_key=True, index=True)
+    kind = Column(String(10), nullable=False)
+    slug = Column(String(140), nullable=False)
+    title = Column(String(200), nullable=False)
+    user_id = Column(Integer, ForeignKey("users.id", ondelete="CASCADE"), nullable=False, index=True)
+    subject = Column(String(140), nullable=False)
+    body = Column(Text, nullable=False)
+    spoiler = Column(Boolean, nullable=False, default=False)
+    reply_count = Column(Integer, nullable=False, default=0)
+    created_at = Column(DateTime, nullable=False, default=datetime.utcnow)
+    last_activity_at = Column(DateTime, nullable=False, default=datetime.utcnow)
+    edited_at = Column(DateTime, nullable=True)
+    locked_at = Column(DateTime, nullable=True)
+    hidden_at = Column(DateTime, nullable=True)
+    deleted_at = Column(DateTime, nullable=True)
+
+    replies = relationship("TitleDiscussionReply", cascade="all, delete-orphan")
+
+    __table_args__ = (Index("ix_title_discussions_page", "kind", "slug", "last_activity_at"),)
+
+
+class TitleDiscussionReply(Base):
+    """A reply in a title discussion. Spoiler replies stay folded until the reader opens them."""
+    __tablename__ = "title_discussion_replies"
+
+    id = Column(Integer, primary_key=True, index=True)
+    discussion_id = Column(Integer, ForeignKey("title_discussions.id", ondelete="CASCADE"), nullable=False, index=True)
+    user_id = Column(Integer, ForeignKey("users.id", ondelete="CASCADE"), nullable=False, index=True)
+    body = Column(Text, nullable=False)
+    spoiler = Column(Boolean, nullable=False, default=False)
+    created_at = Column(DateTime, nullable=False, default=datetime.utcnow)
+    edited_at = Column(DateTime, nullable=True)
+    hidden_at = Column(DateTime, nullable=True)
+
+
+class TitleDiscussionReport(Base):
+    """One member's report of a discussion thread or reply. One report per member per post."""
+    __tablename__ = "title_discussion_reports"
+
+    id = Column(Integer, primary_key=True, index=True)
+    target = Column(String(10), nullable=False)  # thread, reply
+    target_id = Column(Integer, nullable=False, index=True)
+    user_id = Column(Integer, ForeignKey("users.id", ondelete="CASCADE"), nullable=False, index=True)
+    reason = Column(String(20), nullable=False)
+    created_at = Column(DateTime, nullable=False, default=datetime.utcnow)
+    resolved_at = Column(DateTime, nullable=True)
+
+    __table_args__ = (UniqueConstraint("target", "target_id", "user_id", name="uq_title_discussion_report"),)
