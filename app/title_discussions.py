@@ -276,7 +276,10 @@ def delete_thread(db: Session, user, thread: models.TitleDiscussion) -> str:
     if thread.user_id != user.id and not is_moderator(user):
         raise DiscussionError(403, "Only the person who started this discussion can delete it.")
     if thread.reply_count:
+        # The subject stays so the replies still make sense, but the opening post itself is gone.
         thread.deleted_at = thread.deleted_at or _now()
+        thread.body = ""
+        _drop_reports(db, "thread", [thread.id])
         db.commit()
         return "cleared"
     _drop_reports(db, "thread", [thread.id])
