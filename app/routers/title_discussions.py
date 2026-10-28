@@ -3,6 +3,7 @@ from __future__ import annotations
 
 import json
 import os
+import re
 from html import escape
 from typing import Literal, Optional
 from urllib.parse import quote
@@ -203,6 +204,16 @@ def title_section_html(db: Session, group) -> str:
 
 # ---------------------------------------------------------------- pages
 
+LOCAL_BOARD_PATH = re.compile(r"/titles/(movie|tv|anime|game|album|book|manga)/[a-z0-9-]{1,140}/discussions(/[1-9][0-9]{0,9})?")
+
+
+def _moved(path: str) -> RedirectResponse:
+    """A permanent redirect to the canonical address, which is only ever one of our own board paths."""
+    if not LOCAL_BOARD_PATH.fullmatch(path):
+        raise HTTPException(404, "Not found")
+    return RedirectResponse(path, status_code=301)
+
+
 def _group_and_title(db: Session, kind: str, slug: str):
     group = title_pages.find(db, kind, slug)
     if group is not None and group.path.rsplit("/", 1)[1] != slug:
@@ -217,7 +228,7 @@ def board_page(kind: str, slug: str, page: int = Query(1, ge=1, le=1000),
         raise HTTPException(404, "Unknown title type")
     group, title = _group_and_title(db, kind, slug)
     if group is not None and title is None:
-        return RedirectResponse(boards.board_path(kind, group.path.rsplit("/", 1)[1]), status_code=301)
+        return _moved(boards.board_path(group.kind, group.path.rsplit("/", 1)[1]))
     count = boards.board_count(db, kind, slug)
     if group is None:
         first = boards.board_threads(db, kind, slug, limit=1)
@@ -323,7 +334,7 @@ def thread_page(kind: str, slug: str, thread_id: PositiveDatabaseId,
     except boards.DiscussionError as error:
         _fail(error)
     if thread.slug != slug:
-        return RedirectResponse(boards.thread_path(thread), status_code=301)
+        return _moved(boards.thread_path(thread))
     group = title_pages.find(db, kind, slug)
     title_path = group.path if group is not None and group.path.rsplit("/", 1)[1] == slug else None
     replies = boards.visible_replies(db, thread, user)

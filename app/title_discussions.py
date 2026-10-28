@@ -54,7 +54,7 @@ REPORT_REASONS = {
     "other": "Something else",
 }
 LINK = re.compile(r"(https?://|www\.)\S+", re.IGNORECASE)
-INLINE_SPOILER = re.compile(r"\|\|(.+?)\|\|")
+INLINE_SPOILER = re.compile(r"\|\|([^|\n]{1,500})\|\|")
 
 
 class DiscussionError(Exception):
@@ -79,7 +79,7 @@ def thread_path(thread: models.TitleDiscussion) -> str:
 def _clean(text: str) -> str:
     """Trim, normalise line endings and squeeze runs of blank lines."""
     text = (text or "").replace("\r\n", "\n").replace("\r", "\n").strip()
-    text = re.sub(r"[ \t]+\n", "\n", text)
+    text = "\n".join(line.rstrip(" \t") for line in text.split("\n"))
     return re.sub(r"\n{3,}", "\n\n", text)
 
 
