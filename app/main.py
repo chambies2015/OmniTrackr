@@ -143,7 +143,7 @@ async def lifespan(application: FastAPI):
 
 app = FastAPI(
     title="OmniTrackr API",
-    description="Manage your movies, TV shows, anime, video games, music, and books",
+    description="Manage your movies, TV shows, anime, video games, music, books, manga, and podcasts",
     version="0.1.0",
     lifespan=lifespan,
 )
