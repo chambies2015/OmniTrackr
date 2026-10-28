@@ -42,17 +42,18 @@ def test_editorial_index_lists_every_guide_newest_first():
     assert len(latest) == 6 and len({piece["section"] for piece in latest}) == 6
 
 
-def test_header_leads_with_the_guides(client):
+def test_header_menus_keep_the_guides_one_click_away(client):
     nav = header(client.get("/").text)
     for href in ("/discover", "/in-order", "/if-you-liked", "/daily"):
         assert f'href="{href}"' in nav
-    assert 'href="/collections/explore"' not in nav
-    assert [key for key, _, _ in site_chrome.NAV_ITEMS[:site_chrome.NAV_PRIMARY]] == ["discover", "in-order", "if-you-liked"]
+    menus = {key: [item[0] for item in items] for key, _, items in site_chrome.NAV_MENUS}
+    assert menus["explore"][0] == "discover"
+    assert menus["guides"][:2] == ["in-order", "if-you-liked"]
 
 
 @pytest.mark.parametrize("path, href", [("/in-order", "/in-order"), ("/in-order/star-wars", "/in-order"),
                                         ("/if-you-liked/interstellar", "/if-you-liked"), ("/daily", "/daily"),
-                                        ("/discover", "/discover"), ("/pick", "/discover")])
+                                        ("/discover", "/discover"), ("/pick", "/pick")])
 def test_each_section_marks_its_own_menu_item(client, path, href):
     nav = header(client.get(path).text)
     assert f'href="{href}" aria-current="page"' in nav

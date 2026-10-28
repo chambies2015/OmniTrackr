@@ -36,6 +36,6 @@ def test_coverless_titles_get_a_letter_tile():
 def test_guides_get_reading_aids(client):
     html = client.get("/movie-tracker").text
     assert "/static/public-reader.css?v=20261017-reader-2" in html
-    assert "/static/site.js?v=20261016-reader-1" in html
+    assert "/static/site.js?v=20261028-nav-1" in html
     script = (STATIC / "site.js").read_text(encoding="utf-8")
     assert "reader-progress" in script and "aria-current', 'location'" in script

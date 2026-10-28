@@ -33,18 +33,16 @@ def monthly_for(slug):
 
 
 # Sections that share this layout but have their own item in the site header.
-NAV_SECTIONS = (("/in-order", "in-order"), ("/if-you-liked", "if-you-liked"), ("/daily", "daily"), ("/lists", ""))
+NAV_SECTIONS = (("/in-order", "in-order"), ("/if-you-liked", "if-you-liked"), ("/daily", "daily"), ("/lists", "lists"),
+                ("/pick", "pick"), ("/taste-quiz", "taste-quiz"), ("/tier-list", "tier-list"), ("/challenges", "challenges"),
+                ("/best-of", "best-of"), ("/new-this-week", "new-this-week"), ("/halloween", ""), ("/holidays", ""))
 
 
 def page(title, description, path, content, *, indexable=True, structured_data=None, head='', member=False):
     template = (Path(__file__).parents[1] / "templates" / "discover.html").read_text(encoding="utf-8")
     nav = next((key for prefix, key in NAV_SECTIONS if path == prefix or path.startswith(prefix + "/")), "discover")
-    html = apply_site_chrome(template.replace("<!--SITE_NAV:discover-->", f"<!--SITE_NAV:{nav}-->", 1))
-    if member:
-        # Pages only signed-in members see: point the header at their library, not at signing up.
-        html = (html.replace('<a class="site-nav__login" href="/#landing-auth">Log in</a>', '', 1)
-                .replace('href="/#signup">Start tracking</a>', 'href="/">My library</a>', 1)
-                .replace('<a class="site-menu__login" href="/#landing-auth">Log in</a>', '<a class="site-menu__login" href="/">My library</a>', 1))
+    # Pages only signed-in members see point the header at their library, not at signing up.
+    html = apply_site_chrome(template.replace("<!--SITE_NAV:discover-->", f"<!--SITE_NAV:{nav}-->", 1), member=member)
     robots = "index, follow, max-image-preview:large" if indexable else "noindex, follow"
     for key, value in {"TITLE": escape(title), "DESCRIPTION": escape(description, quote=True), "PATH": path, "ROBOTS": robots, "CONTENT": content}.items():
         html = html.replace("{{" + key + "}}", value)

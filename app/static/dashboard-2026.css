@@ -130,7 +130,10 @@ body.app-shell:is([data-active-tab="statistics"], [data-active-tab="collections"
 
 /* ---------- Footer ---------- */
 body.app-shell #mainFooter.app-footer { text-align: left; border-top: 1px solid var(--border); color: var(--fg-secondary); margin: 48px auto 0; max-width: 1480px; padding: 36px 0 40px; }
-body.app-shell .app-footer__grid { display: grid; gap: 28px; grid-template-columns: minmax(0, 1.4fr) repeat(3, minmax(0, 1fr)); }
+body.app-shell .app-footer__grid { display: grid; gap: 28px; grid-template-columns: minmax(0, 1.4fr) repeat(4, minmax(0, 1fr)); }
+body.app-shell .app-footer__base { align-items: center; border-top: 1px solid var(--border); display: flex; flex-wrap: wrap; gap: 8px 24px; justify-content: space-between; margin-top: 28px; padding-top: 18px; }
+body.app-shell .app-footer .app-footer__base p { margin: 0; max-width: none; }
+body.app-shell .app-footer .app-footer__base nav { display: flex; flex-direction: row; flex-wrap: wrap; gap: 4px 20px; }
 body.app-shell .app-footer__brand { align-items: center; color: var(--fg); display: inline-flex; font: 700 1.05rem Poppins, Inter, sans-serif; gap: 10px; text-decoration: none; }
 body.app-shell .app-footer__brand img { border-radius: 50%; box-shadow: 0 0 16px rgba(168, 85, 247, .5); height: 26px; width: 26px; }
 body.app-shell .app-footer p { font-size: .88rem; line-height: 1.6; margin: 10px 0 0; max-width: 320px; }
