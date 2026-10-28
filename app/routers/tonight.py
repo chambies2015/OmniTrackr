@@ -129,8 +129,8 @@ def tonight_page(user=Depends(get_optional_current_user)):
             '<p>Stop scrolling through menus while everyone says "I don\'t mind." Make a quick poll from your '
             'watchlist, send the link to the group chat and let everyone vote. It works for games, books and albums '
             'too.</p>'
-            f'<div class="tn-hero__actions"><a class="button" href="/?next={back}#signup" data-tonight-signup>Make a poll, free</a>'
-            f'<a class="button button--ghost" href="/?next={back}#login">I have an account</a></div></header>'
+            f'<div class="tn-hero__actions"><a class="button" rel="nofollow" href="/?next={back}#signup" data-tonight-signup>Make a poll, free</a>'
+            f'<a class="button button--ghost" rel="nofollow" href="/?next={back}#login">I have an account</a></div></header>'
             f'<section class="tn-intro">{steps}{_sample()}</section>' + GUIDE)
         return _shell("Group poll: let friends vote on what to watch tonight", "/tonight", content, member=False,
                       indexable=True, structured_data={
@@ -230,8 +230,8 @@ def poll_page(token: str, request: Request, user=Depends(get_optional_current_us
             'like this one from your own watchlist.</p>'
             '<ul><li>Free, no credit card</li><li>Keep a Next Up queue so the winner doesn\'t get forgotten</li>'
             '<li>Import from Letterboxd, Goodreads, MyAnimeList and more</li></ul>'
-            f'<div class="tn-nudge__actions"><a class="button" href="{_e(join)}" data-tonight-signup>Join free</a>'
-            f'<a class="button button--ghost" href="/?next={back}#login">I have an account</a></div></aside>')
+            f'<div class="tn-nudge__actions"><a class="button" rel="nofollow" href="{_e(join)}" data-tonight-signup>Join free</a>'
+            f'<a class="button button--ghost" rel="nofollow" href="/?next={back}#login">I have an account</a></div></aside>')
     content = (
         f'<section class="tn-poll" id="tonightApp" data-view="poll" data-token="{_e(poll.token)}" '
         f'data-signed-in="{"1" if user is not None else "0"}">'

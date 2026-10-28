@@ -546,7 +546,7 @@ def _write_review_html(group, summary: dict, signed_in: bool, take=None) -> str:
         from urllib.parse import quote
         query = f"?take={take[0].token}" if take else ""
         signin = "/?next=" + quote(f"{group.path}{query}#write-review", safe="") + "#landing-auth"
-        action = (f'<div class="title-write__actions"><a class="site-btn site-btn--primary" href="{_e(signin)}">Sign in to write a review</a>'
+        action = (f'<div class="title-write__actions"><a class="site-btn site-btn--primary" rel="nofollow" href="{_e(signin)}">Sign in to write a review</a>'
                   '<a class="site-btn site-btn--ghost" href="/#signup">Create a free account</a></div>'
                   '<p class="title-write__note">Free, and your library stays private unless you choose to share a review.</p>')
     return (f'<section class="title-section title-write" id="write-review" aria-labelledby="write-review-title">'

@@ -1,5 +1,36 @@
 # Public content review — September 17, 2026
 
+## Follow-up — October 28, 2026: crawl after people pages, discussions, polls, manga and podcasts
+
+Crawled the sitemap and every followed link again (137 pages with an empty database, 435
+with fourteen sample members across all eight media types, public profiles and two
+discussion threads). The pages added since October 27 were mostly gated already: people
+and studio pages, discussion threads and weekly roundups each need member writing before
+they are indexed, discussion boards, polls and widgets are noindex, and no indexed page
+shares a title or description with another. Four things needed fixing:
+
+- **"Various" got a person page.** Members type "Various", "Various Artists" or "Unknown"
+  when there isn't one name. Those were treated as a person, so `/people/various` lumped
+  unrelated albums and books together and was indexed, linked from title pages and listed
+  in the sitemap. A short list of fill-in names (`people_pages.PLACEHOLDER_SLUGS`) now has
+  no page (404), no link and no directory or sitemap entry. Credits stored before the
+  change are skipped too. Library entries are not touched.
+- **Sign-in links were followed.** The "Sign in to write a review" link on title pages,
+  the discussion sign-in link and the group poll sign-up links had no `rel="nofollow"`,
+  so crawlers queued about fifty `/?next=` homepage variants. They now match the rest of
+  the site.
+- **Public copy still listed six media types.** About, FAQ, Contact, Guides, Use cases,
+  Compare, the homepage description and structured data, and llms.txt now name manga and
+  podcasts. About also lists the best-of lists, the holiday guide, monthly challenges and
+  the member pages (title pages, people pages, discussions), with a note that thin member
+  pages stay out of search.
+- **The privacy policy didn't cover the new public features.** It now lists manga and
+  podcast fields, discussion posts and group poll votes, and says that public reviews,
+  public profiles and discussion posts can be read by anyone and may appear in search.
+  Updated date: October 28, 2026.
+
+No user data, URL with real content, or ad placement changed.
+
 ## Follow-up — October 27, 2026: fresh crawl after the late-October features
 
 Crawled the sitemap and every followed link again (140 pages with an empty database,
