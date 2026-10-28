@@ -13,6 +13,7 @@ from .. import funnel, models, tonight_polls
 from ..dependencies import get_current_user, get_db, get_optional_current_user
 from ..integer_bounds import PositiveDatabaseId
 from ..visitor_identity import set_visitor_cookie, visitor_identity
+from ..site_chrome import view_switch
 from .discover import page
 
 router = APIRouter(tags=["tonight"])
@@ -124,7 +125,7 @@ def tonight_page(user=Depends(get_optional_current_user)):
     if user is None:
         back = quote("/tonight", safe="")
         content = (
-            '<header class="hero tn-hero"><p class="eyebrow">GROUP POLL</p>'
+            '<header class="hero tn-hero">' + view_switch("pick", "tonight") + '<p class="eyebrow">GROUP POLL</p>'
             '<h1>What are we watching tonight?</h1>'
             '<p>Stop scrolling through menus while everyone says "I don\'t mind." Make a quick poll from your '
             'watchlist, send the link to the group chat and let everyone vote. It works for games, books and albums '
@@ -143,7 +144,7 @@ def tonight_page(user=Depends(get_optional_current_user)):
                     f'{label}</option>' for value, label in ((1, "1 hour"), (3, "3 hours"), (6, "6 hours"),
                                                             (24, "1 day"), (72, "3 days")))
     content = (
-        '<header class="hero tn-hero"><p class="eyebrow">GROUP POLL</p>'
+        '<header class="hero tn-hero">' + view_switch("pick", "tonight") + '<p class="eyebrow">GROUP POLL</p>'
         '<h1>What are we watching tonight?</h1>'
         '<p>Pick a few titles, send the link to whoever you\'re watching with, and let them vote. Friends without '
         'an account can vote too.</p></header>'

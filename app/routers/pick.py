@@ -13,6 +13,7 @@ from ..auth import AUTH_COOKIE_NAME
 from ..dependencies import get_current_user, get_db
 from ..progress import lock_progress_owner
 from . import next_up
+from ..site_chrome import view_switch
 from .discover import page
 
 router = APIRouter(tags=["pick"])
@@ -161,7 +162,7 @@ def pick_page(request: Request,
                  '<div class="pf-bar" data-guest-bar hidden><p class="pf-bar__count" data-guest-count></p>'
                  '<a class="button" href="/#signup" data-pick-signup>Save my list, free →</a></div>')
     content = (
-        '<header class="hero pf-hero"><p class="eyebrow">PICK FOR ME</p>'
+        '<header class="hero pf-hero">' + view_switch("pick", "pick") + '<p class="eyebrow">PICK FOR ME</p>'
         '<h1>Can\'t decide what to start?</h1>'
         f'<p>{_e(intro)}</p></header>'
         f'<section class="pf-tool" id="pick-tool" data-signed-in="{"true" if signed_in else "false"}" aria-label="Pick for me">'

@@ -10,6 +10,20 @@
 (function () {
   'use strict';
 
+  // The header's Explore menu is a <details>: close it on a click elsewhere or Escape.
+  const explore = document.querySelector('.app-explore');
+  if (explore) {
+    document.addEventListener('click', (event) => {
+      if (explore.open && !explore.contains(event.target)) explore.open = false;
+    });
+    explore.addEventListener('keydown', (event) => {
+      if (event.key === 'Escape' && explore.open) {
+        explore.open = false;
+        explore.querySelector('summary').focus();
+      }
+    });
+  }
+
   const dock = document.getElementById('appDock');
   const sheet = document.getElementById('appMoreSheet');
   const main = document.getElementById('mainContainer');

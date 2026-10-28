@@ -23,7 +23,7 @@ from ..auth import AUTH_COOKIE_NAME
 from ..csp import strict_html_response
 from ..dependencies import get_current_user, get_db
 from ..progress import lock_progress_owner
-from ..site_chrome import apply_site_chrome, editorial_picks, message_page
+from ..site_chrome import apply_site_chrome, editorial_picks, message_page, view_switch
 
 router = APIRouter(tags=["titles"])
 SITE_URL = os.getenv("SITE_URL", "https://omnitrackr.xyz").rstrip("/")
@@ -1154,6 +1154,7 @@ def _titles_index_page(db: Session) -> tuple[str, bool]:
   <!--SITE_NAV:titles-->
   <main>
     <section class="site-hero"><div class="site-wrap">
+      {view_switch("titles", "titles")}
       <p class="site-eyebrow">Titles</p>
       <h1>What OmniTrackr members are tracking</h1>
       <p>The most-tracked movies, shows, anime, games, books and albums on OmniTrackr. Every title has its details, trailer, scores and what members thought of it.</p>
@@ -1283,9 +1284,10 @@ def title_chart(kind: str, request: Request, db: Session = Depends(get_db)):
   {structured}
 </head>
 <body class="site title-page">
-  <!--SITE_NAV:-->
+  <!--SITE_NAV:charts-->
   <main>
     <section class="site-hero"><div class="site-wrap">
+      {view_switch("titles", "charts")}
       <nav class="title-crumbs" aria-label="Breadcrumb"><a href="/titles">Titles</a> <span aria-hidden="true">/</span> {_e(KIND_PLURALS[kind])}</nav>
       <p class="site-eyebrow">Member charts</p>
       <h1>{_e(heading)}</h1>

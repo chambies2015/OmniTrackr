@@ -25,7 +25,7 @@ from sqlalchemy.orm import Session, undefer
 from .integer_bounds import PositiveDatabaseId, SQL_INTEGER_MAX
 from . import crud, schemas, models, dashboard_assets
 from .database import Base, SessionLocal, engine
-from .site_chrome import apply_site_chrome, message_page
+from .site_chrome import apply_app_chrome, apply_site_chrome, message_page
 from .csp import nonce_html_response, strict_html_response
 from .auth import AUTH_COOKIE_NAME
 from .migrations import run_migrations
@@ -1048,7 +1048,7 @@ async def read_root(request: Request):
     html_file = os.path.join(os.path.dirname(__file__), "templates", "index.html")
     if os.path.exists(html_file):
         with open(html_file, "r", encoding="utf-8") as file:
-            html = file.read()
+            html = apply_app_chrome(file.read())
             authenticated_shell = bool(request.cookies.get(AUTH_COOKIE_NAME))
             if not authenticated_shell:
                 await run_in_threadpool(_warm_homepage_sections)

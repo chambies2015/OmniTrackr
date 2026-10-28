@@ -15,7 +15,7 @@ import re
 from datetime import date
 from html import escape
 
-SITE_CSS_VERSION = "20261028-nav-1"
+SITE_CSS_VERSION = "20261028-simplify-1"
 SITE_JS_VERSION = "20261028-nav-1"
 SITE_NAV_JS_VERSION = "20261028-nav-1"
 # Pages holding this marker (the demo) skip site-nav.js, which reads the stored
@@ -30,14 +30,12 @@ NAV_MENUS = (
     ("explore", "Explore", (
         ("discover", "Discover", "/discover", "Trails that connect film, TV, games, books and more"),
         ("best-of", "Best of 2026", "/best-of", "The year's standouts, with why each one earned it"),
-        ("new-this-week", "New this week", "/new-this-week", "A short roundup of what just came out"),
-        ("release-radar", "Release Radar", "/release-radar", "Dates for upcoming movies, shows, anime and games"),
-        ("titles", "Popular titles", "/titles", "What members are tracking right now"),
+        ("release-radar", "Release Radar", "/release-radar", "Out this week and coming soon"),
+        ("titles", "Popular & top rated", "/titles", "Most tracked and highest rated"),
     )),
     ("play", "Play", (
         ("daily", "Daily puzzle", "/daily", "One new guessing game every day"),
-        ("pick", "Pick for me", "/pick", "Can't decide? Let us choose tonight's watch"),
-        ("tonight", "Group poll", "/tonight", "Let friends vote on what to watch tonight"),
+        ("pick", "Pick for me", "/pick", "One pick for you, or a vote with friends"),
         ("taste-quiz", "Taste quiz", "/taste-quiz", "Find out what kind of fan you are"),
         ("tier-list", "Tier list maker", "/tier-list", "Rank anything and share the image"),
         ("challenges", "Monthly challenge", "/challenges", "A themed goal that resets each month"),
@@ -53,25 +51,50 @@ NAV_MENUS = (
         ("reviews", "Member reviews", "/reviews", "Thoughtful reviews written by members"),
         ("collections", "Collections", "/collections/explore", "Themed lists people put together"),
         ("lists", "Shared lists & clubs", "/lists", "Plan what to watch or read with friends"),
-        ("charts", "Member charts", "/titles/movie", "The highest rated titles on OmniTrackr"),
         ("supporters", "Supporters", "/supporters", "The people who keep the site running"),
     )),
 )
 # Flat (key, label, href) view of every header entry, in menu order.
 NAV_ITEMS = tuple((key, label, href) for _, _, items in NAV_MENUS for key, label, href, _ in items)
 
+# Pages that are one view of a bigger header entry. They pass their own key and
+# the header marks the entry they belong to.
+NAV_ALIASES = {"tonight": "pick", "new-this-week": "release-radar", "charts": "titles"}
+
+# Pairs of pages that answer the same question in two ways. Each page in a pair
+# shows a small switch at the top so the two read as one feature.
+# group -> ((key, label, href, hint), ...)
+VIEW_SWITCHES = {
+    "pick": (
+        ("pick", "Just me", "/pick", "One pick, no scrolling"),
+        ("tonight", "With friends", "/tonight", "Everyone votes on a shortlist"),
+    ),
+    "releases": (
+        ("release-radar", "Coming up", "/release-radar", "Dates for the months ahead"),
+        ("new-this-week", "Out this week", "/new-this-week", "Monday to Sunday, with what members finished"),
+    ),
+    "titles": (
+        ("titles", "Most tracked", "/titles", "What members are adding now"),
+        ("charts", "Top rated", "/titles/movie", "Ranked by member ratings"),
+    ),
+}
+
 FOOTER_GROUPS = (
     ("Explore", (
         ("Discover", "/discover"),
         ("Best of 2026", "/best-of"),
-        ("New this week", "/new-this-week"),
         ("Release Radar", "/release-radar"),
+        ("New this week", "/new-this-week"),
+        ("Popular titles", "/titles"),
+        ("Member charts", "/titles/movie"),
+        ("Franchises in order", "/in-order"),
+        ("If you liked…", "/if-you-liked"),
+    )),
+    ("Play", (
         ("Daily puzzle", "/daily"),
         ("Pick for me", "/pick"),
         ("Group poll", "/tonight"),
         ("Taste quiz", "/taste-quiz"),
-        ("If you liked…", "/if-you-liked"),
-        ("Franchises in order", "/in-order"),
         ("Tier list maker", "/tier-list"),
         ("Monthly challenge", "/challenges"),
     )),
@@ -79,8 +102,6 @@ FOOTER_GROUPS = (
         ("Member reviews", "/reviews"),
         ("Collections", "/collections/explore"),
         ("Shared lists & clubs", "/lists"),
-        ("Popular titles", "/titles"),
-        ("Member charts", "/titles/movie"),
         ("Supporters", "/supporters"),
         ("Interactive demo", "/demo"),
         ("Sample library", "/sample-library"),
@@ -99,9 +120,7 @@ FOOTER_GROUPS = (
         ("About", "/about"),
         ("What's new", "/changelog"),
         ("Roadmap", "/roadmap"),
-        ("Contact", "/contact"),
         ("Editorial standards", "/content-quality"),
-        ("Ads & affiliates", "/advertising"),
         ("Site map", "/site-map"),
     )),
 )
@@ -123,8 +142,10 @@ def _brand() -> str:
 
 def _menu_items(items, active: str, *, with_blurb: bool) -> str:
     links = []
+    section = NAV_ALIASES.get(active, active)
     for key, label, href, blurb in items:
-        current = ' aria-current="page"' if key == active else ""
+        # A page that is one view of an entry marks it as the current section, not the current page.
+        current = ' aria-current="page"' if key == active else ' aria-current="true"' if key == section else ""
         detail = f'<span>{escape(blurb)}</span>' if with_blurb else ""
         links.append(f'<a class="site-nav__link" href="{href}"{current}><strong>{escape(label)}</strong>{detail}</a>')
     return "".join(links)
@@ -139,8 +160,9 @@ def site_nav(active: str = "", *, login_action: bool = False, member: bool = Fal
     """
     menus = []
     sheet = []
+    section = NAV_ALIASES.get(active, active)
     for key, title, items in NAV_MENUS:
-        holds_current = any(item[0] == active for item in items)
+        holds_current = any(item[0] == section for item in items)
         current_class = " is-current" if holds_current else ""
         menus.append(
             f'<details class="site-dd{current_class}" data-menu="{key}"><summary>{escape(title)}{_CHEVRON}</summary>'
@@ -175,6 +197,51 @@ def site_nav(active: str = "", *, login_action: bool = False, member: bool = Fal
         '</div></div></details>'
         '</div></nav></header>'
     )
+
+
+def view_switch(group: str, active: str) -> str:
+    """The two-way switch at the top of a paired page (see VIEW_SWITCHES)."""
+    links = []
+    for key, label, href, hint in VIEW_SWITCHES[group]:
+        current = ' aria-current="page"' if key == active else ""
+        links.append(f'<a class="site-switch__option" href="{href}"{current}>'
+                     f'<strong>{escape(label)}</strong><span>{escape(hint)}</span></a>')
+    return f'<nav class="site-switch" aria-label="Views">{"".join(links)}</nav>'
+
+
+# The signed-in dashboard (index.html) shows the same sections: an Explore menu
+# in its header on wider screens and a list in the phone "More" sheet.
+APP_EXPLORE_MARKER = "<!--APP_EXPLORE-->"
+APP_SHEET_EXPLORE_MARKER = "<!--APP_SHEET_EXPLORE-->"
+
+
+def app_explore_menu() -> str:
+    groups = "".join(
+        f'<div class="app-explore__group"><p>{escape(title)}</p>'
+        + "".join(f'<a href="{href}">{escape(label)}</a>' for _, label, href, _ in items)
+        + "</div>"
+        for _, title, items in NAV_MENUS
+    )
+    return ('<details class="app-explore"><summary aria-label="Explore OmniTrackr">'
+            '<svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="1.8" '
+            'stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="9"/>'
+            '<path d="m15.5 8.5-2 5-5 2 2-5z"/></svg><span>Explore</span>'
+            f'{_CHEVRON}</summary><div class="app-explore__panel">{groups}</div></details>')
+
+
+def app_sheet_explore() -> str:
+    return "".join(
+        f'<div class="app-sheet__group"><h4>{escape(title)}</h4><div class="app-sheet__links">'
+        + "".join(f'<a href="{href}">{escape(label)}</a>' for _, label, href, _ in items)
+        + "</div></div>"
+        for _, title, items in NAV_MENUS
+    )
+
+
+def apply_app_chrome(html: str) -> str:
+    """Fill the dashboard's Explore menu and phone sheet from NAV_MENUS."""
+    return (html.replace(APP_EXPLORE_MARKER, app_explore_menu(), 1)
+                .replace(APP_SHEET_EXPLORE_MARKER, app_sheet_explore(), 1))
 
 
 def site_footer() -> str:

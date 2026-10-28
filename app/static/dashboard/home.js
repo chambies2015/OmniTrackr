@@ -203,6 +203,7 @@ let todaysPickOffset = 0;
 let todaysPickCandidateCount = 0;
 let todaysPickRequest = 0;
 let todaysPickSelection = null;
+let todaysPickSkips = 0;
 let returnDeckActive = false;
 let returnDeckPending = false;
 let returnDeckBootstrapComplete = false;
@@ -849,6 +850,35 @@ function renderLibraryPulse(pulse) {
   const count = document.getElementById('libraryPulseReflectionCount');
   if (count) count.textContent = `(${reflectionItems.length})`;
   pulseElement.removeAttribute('hidden');
+  if (!skipRepeatedPick() && pickAddsNothing()) document.getElementById('todaysPick')?.setAttribute('hidden', '');
+}
+
+// Continue already lists the first unfinished titles, so Today's pick steps past
+// them to offer something different. A couple of skips at most per pick.
+
+function pickRepeatsContinue(pick) {
+  if (!pick) return false;
+  return Array.from(document.querySelectorAll('#libraryPulseContinue [data-pulse-item-id]')).some(
+    (item) => item.dataset.pulseTab === pick.category && item.dataset.pulseItemId === String(pick.id)
+  );
+}
+
+function skipRepeatedPick() {
+  const limit = Math.min(2, todaysPickCandidateCount - 1);
+  if (!pickRepeatsContinue(todaysPickSelection) || todaysPickSkips >= limit) {
+    todaysPickSkips = 0;
+    return false;
+  }
+  todaysPickSkips += 1;
+  todaysPickOffset = (todaysPickOffset + 1) % Math.max(todaysPickCandidateCount, 1);
+  refreshTodaysPick();
+  return true;
+}
+
+// With every candidate already listed in Continue, the pick has nothing new to add.
+function pickAddsNothing() {
+  if (!pickRepeatsContinue(todaysPickSelection) || document.getElementById('todaysPickFilter')?.value) return false;
+  return todaysPickCandidateCount <= document.querySelectorAll('#libraryPulseContinue [data-pulse-item-id]').length;
 }
 
 function renderTodaysPick(payload, { showEmpty = false } = {}) {
@@ -861,6 +891,11 @@ function renderTodaysPick(payload, { showEmpty = false } = {}) {
   }
   todaysPickSelection = pick || null;
   todaysPickCandidateCount = Number(payload?.candidate_count) || 0;
+  if (skipRepeatedPick()) return;
+  if (pickAddsNothing()) {
+    section.setAttribute('hidden', '');
+    return;
+  }
   document.getElementById('todaysPickName').textContent = pick?.title || 'Nothing unfinished here yet.';
   document.getElementById('todaysPickCategory').textContent = pick?.category_label || '';
   document.getElementById('todaysPickReason').textContent = pick?.reason || 'Choose another category or add a title to your library.';

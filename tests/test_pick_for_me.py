@@ -155,7 +155,7 @@ def test_a_guest_saved_pick_moves_into_the_new_library_even_if_nobody_tracks_it(
 
 def test_pick_is_linked_from_the_site_and_counted():
     from app.site_chrome import FOOTER_GROUPS
-    assert ("Pick for me", "/pick") in dict(FOOTER_GROUPS)["Explore"]
+    assert ("Pick for me", "/pick") in dict(FOOTER_GROUPS)["Play"]
     assert {"pick_used", "pick_saved"} <= funnel.CLIENT_EVENTS
     assert {"pick_used", "pick_saved"} <= {item["event"] for item in funnel.summary({})["guest"]}
 
