@@ -274,3 +274,7 @@ a.title-where__provider:hover, a.title-where__provider:focus-visible { border-co
 .title-where__more { color: var(--site-violet-soft); display: inline-block; font-weight: 600; margin-top: 18px; }
 .title-where__note { color: var(--site-muted); font-size: .82rem; line-height: 1.55; margin: 10px 0 0; }
 .title-where__note a { color: inherit; }
+
+/* Credited names that have a people or studio page. */
+.title-facts dd a { color: var(--site-violet-soft); text-decoration: none; }
+.title-facts dd a:hover { text-decoration: underline; text-underline-offset: 3px; }
