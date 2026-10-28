@@ -443,7 +443,7 @@ def lead_paragraphs(payload: dict, previous: Optional[dict], when: str) -> list[
         if category == "tv":
             new = sum(1 for i in releases(payload, "tv") if "New series" in i["badges"])
             if new and new < n:
-                text += f" ({new} of them brand-new {'series' if new != 1 else 'series'})"
+                text += f" ({new} of them new series)"
         parts.append(text)
     verb = "brought" if past else "brings"
     first = (f"The week of {label(monday)} {verb} {_join(parts)}: {_plural(total, 'release')} on Release Radar in all.")
@@ -492,16 +492,16 @@ def category_paragraphs(category: str, items: list[dict], counts: dict[str, int]
     sentences = []
     if category == "movies":
         director = _detail(lead, "Directed by ")
-        sentences.append(f"The most documented new film {is_} {lead['title']}"
-                         + (f", directed by {director}," if director else "")
-                         + f" which {'opened' if past else 'opens'} {_weekday(lead['date'])}.")
+        sentences.append(f"The most followed new film {is_} {lead['title']}"
+                         + (f", directed by {director}" if director else "")
+                         + f". It {'opened' if past else 'opens'} {_weekday(lead['date'])}.")
         others = [f"{i['title']}" + (f" ({_detail(i, 'Directed by ')})" if _detail(i, "Directed by ") else "") for i in top[1:]]
         if others:
             sentences.append(f"Also on the list: {_join(others)}.")
         undirected = sum(1 for i in items if not _detail(i, "Directed by "))
         if undirected and len(items) >= 4:
             sentences.append(f"{undirected} of the {len(items)} {'do' if undirected != 1 else 'does'} not have a director "
-                             "listed yet, usually a sign of a smaller or limited release, so check local listings.")
+                             "listed yet. Those are usually small or limited releases, so check local listings.")
     elif category == "tv":
         new = [i for i in items if "New series" in i["badges"]]
         returning = [i for i in items if "New series" not in i["badges"]]
@@ -530,9 +530,9 @@ def category_paragraphs(category: str, items: list[dict], counts: dict[str, int]
                              f"{_plural(len(fresh), 'is a new start', 'are new starts')}"
                              + (f", led by {_top(fresh, 1)[0]['title']}" if _top(fresh, 1)[0] is not lead else "") + ".")
         elif sequels:
-            sentences.append("Every premiere this week continues a story already under way, so it is a week for catching up.")
+            sentences.append("Every premiere this week continues a story that is already running.")
         else:
-            sentences.append("Every premiere this week is a new story, a good week to try something you have not seen.")
+            sentences.append("Every premiere this week is a new story, with no earlier season to catch up on first.")
         sources = Counter(_detail(i, "Adapted from ") for i in items if _detail(i, "Adapted from "))
         if sources:
             kind, n = sources.most_common(1)[0]
@@ -554,7 +554,7 @@ def category_paragraphs(category: str, items: list[dict], counts: dict[str, int]
     genres = Counter(g for i in items for g in i["genres"])
     common = [g.lower() for g, n in genres.most_common(2) if n >= 2]
     if common:
-        sentences.append(f"Most of the week leans {_join(common)}.")
+        sentences.append(f"The most common genres are {_join(common)}.")
     paragraphs = [" ".join(sentences)]
 
     tracked = sorted(((counts.get(i["key"], 0), i) for i in items if counts.get(i["key"])),
@@ -572,7 +572,7 @@ def member_paragraphs(members: dict, when: str) -> list[str]:
     paragraphs = []
     if members.get("finishers"):
         paragraphs.append(f"{_plural(members['finishers'], 'member')} logged at least one finish "
-                          f"{'that' if past else 'this'} week. Here is what more than one of them got to the end of.")
+                          f"{'that' if past else 'this'} week. The titles below were finished by at least two of them.")
     if finished:
         lead = finished[0]
         text = (f"The most finished title {'was' if past else 'is'} {lead['title']}, a {KIND_LABELS[lead['kind']]} "

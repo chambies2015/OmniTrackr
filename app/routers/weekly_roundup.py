@@ -192,7 +192,7 @@ def _members_section(payload: dict, when: str, paths: dict) -> str:
         f'<div class="nw-prose">{_paragraphs(text)}</div>'
         + (f'<div class="nw-members__grid">{lists}</div>' if lists else "")
         + '<p class="muted nw-small">Counted from members who keep that part of their library shareable. Only titles at least '
-          'two members finished or added are named, and no member is ever shown.</p></section>'
+          'two members finished or added are named, and member names are never shown.</p></section>'
     )
 
 
