@@ -58,6 +58,7 @@ CORE_SITEMAP_PATHS = (
     ("/review-guidelines", "monthly", "0.75"),
     ("/sample-library", "monthly", "0.8"),
     ("/pick", "weekly", "0.7"),
+    ("/tonight", "monthly", "0.6"),
     ("/tier-list", "monthly", "0.7"),
     ("/if-you-liked", "monthly", "0.75"),
     ("/best-of", "weekly", "0.75"),

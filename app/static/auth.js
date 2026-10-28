@@ -38,6 +38,9 @@ function validateDiscoverAuthReturn(value) {
     // Shared lists: the list's join link, the member's lists and one list.
     const sharedList = value.match(/^\/lists(?:\/join\/[A-Za-z0-9_-]{16,32}|\/[1-9]\d{0,9})?$/);
     if (sharedList && sharedList[0] === value) return value;
+    // Group polls: the poll page and the page that makes them.
+    const poll = value.match(/^\/tonight(?:\/[A-Za-z0-9_-]{16,32})?$/);
+    if (poll && poll[0] === value) return value;
     // Daily, Pick for me, tier lists, "If you liked" and "In order" guides and the dashboard cards they link to.
     const tool = value.match(/^(?:\/daily(?:\/[1-9]\d{0,4})?|\/pick|\/tier-list|\/if-you-liked\/[a-z0-9-]{1,80}|\/in-order\/[a-z0-9-]{1,80}|\/#challenge|\/#release-calendar)$/);
     if (tool && tool[0] === value) return value;

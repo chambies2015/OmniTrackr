@@ -882,6 +882,17 @@ app.include_router(if_you_liked_router.router)
 from .routers import best_of as best_of_router
 app.include_router(best_of_router.router)
 
+from .routers import tonight as tonight_router
+rate_limited_tonight_create = limiter.limit("10/minute")(tonight_router.create_poll)
+rate_limited_tonight_vote = limiter.limit("30/minute")(tonight_router.vote_poll)
+for route in tonight_router.router.routes:
+    path, methods = getattr(route, "path", None), getattr(route, "methods", set()) or set()
+    if path == "/api/tonight" and "POST" in methods:
+        bind_rate_limited_endpoint(route, rate_limited_tonight_create)
+    elif path == "/api/tonight/{token}/vote" and "PUT" in methods:
+        bind_rate_limited_endpoint(route, rate_limited_tonight_vote)
+app.include_router(tonight_router.router)
+
 from .routers import weekly_roundup as weekly_roundup_router
 app.include_router(weekly_roundup_router.router)
 

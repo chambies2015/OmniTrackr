@@ -1452,3 +1452,58 @@ class TitleDiscussionReport(Base):
     resolved_at = Column(DateTime, nullable=True)
 
     __table_args__ = (UniqueConstraint("target", "target_id", "user_id", name="uq_title_discussion_report"),)
+
+
+class TonightPoll(Base):
+    """A "what should we watch tonight?" poll a member shares by link (Oct 2026).
+
+    New tables only. Options copy the title (kind, name, year, art) when the poll is
+    made, so nothing here reads or changes anyone's library. Anyone with the link can
+    vote, members by account and visitors by their signed browser cookie.
+    """
+    __tablename__ = "tonight_polls"
+
+    id = Column(Integer, primary_key=True, index=True)
+    token = Column(String(32), nullable=False, unique=True, index=True)
+    owner_id = Column(Integer, ForeignKey("users.id", ondelete="CASCADE"), nullable=False, index=True)
+    question = Column(String(120), nullable=False)
+    created_at = Column(DateTime, nullable=False, default=datetime.utcnow)
+    closes_at = Column(DateTime, nullable=False)
+    # Set when the poll closes, early by the owner or on the first look after closes_at.
+    closed_at = Column(DateTime, nullable=True)
+    winner_id = Column(Integer, nullable=True)
+
+    options = relationship("TonightPollOption", cascade="all, delete-orphan", order_by="TonightPollOption.position")
+    votes = relationship("TonightPollVote", cascade="all, delete-orphan")
+
+
+class TonightPollOption(Base):
+    """One title on a poll, copied in when the poll was made."""
+    __tablename__ = "tonight_poll_options"
+
+    id = Column(Integer, primary_key=True, index=True)
+    poll_id = Column(Integer, ForeignKey("tonight_polls.id", ondelete="CASCADE"), nullable=False, index=True)
+    position = Column(Integer, nullable=False, default=0)
+    kind = Column(String(10), nullable=False)
+    title = Column(String(200), nullable=False)
+    year = Column(Integer, nullable=True)
+    slug = Column(String(140), nullable=True)
+    image = Column(String(500), nullable=True)
+
+
+class TonightPollVote(Base):
+    """One voter's choice. A member votes by account, a visitor by a keyed hash of their browser cookie."""
+    __tablename__ = "tonight_poll_votes"
+
+    id = Column(Integer, primary_key=True, index=True)
+    poll_id = Column(Integer, ForeignKey("tonight_polls.id", ondelete="CASCADE"), nullable=False, index=True)
+    option_id = Column(Integer, ForeignKey("tonight_poll_options.id", ondelete="CASCADE"), nullable=False, index=True)
+    user_id = Column(Integer, ForeignKey("users.id", ondelete="CASCADE"), nullable=True, index=True)
+    visitor = Column(String(64), nullable=True)
+    # The name a visitor typed so friends know who voted. Members show their username.
+    name = Column(String(30), nullable=True)
+    created_at = Column(DateTime, nullable=False, default=datetime.utcnow)
+    updated_at = Column(DateTime, nullable=False, default=datetime.utcnow)
+
+    __table_args__ = (UniqueConstraint("poll_id", "user_id", name="uq_tonight_vote_member"),
+                      UniqueConstraint("poll_id", "visitor", name="uq_tonight_vote_visitor"))

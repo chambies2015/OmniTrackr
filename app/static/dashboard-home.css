@@ -168,6 +168,7 @@ body.app-shell .home-board .next-up-queue { padding: 20px 22px; }
 body.app-shell .home-board .next-up-queue__header { margin-bottom: 14px; }
 body.app-shell .home-board .next-up-queue__summary { color: var(--fg-secondary); opacity: 1; }
 body.app-shell .home-board .next-up-queue__toggle { border-color: var(--border); border-radius: 999px; font-weight: 600; min-height: 38px; padding: 0 14px; }
+body.app-shell .home-board a.next-up-queue__poll { align-items: center; display: inline-flex; text-decoration: none; }
 body.app-shell .home-board .next-up-queue__toggle[aria-expanded="true"] { background: var(--accent-soft); border-color: transparent; color: var(--primary); }
 body.app-shell .home-board .next-up-queue__items { gap: 8px; }
 body.app-shell .home-board .next-up-queue__item {

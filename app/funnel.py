@@ -64,6 +64,11 @@ GUEST = (
     ("shared_list_joined", "Someone joined a shared list through its link"),
     ("club_pick_started", "Watch club: a club pick started on a shared list"),
     ("club_post", "Watch club: a post in a club pick's discussion"),
+    ("tonight_poll_created", "Group poll: a poll made"),
+    ("tonight_poll_link_opened", "Group poll: link opened by a visitor without an account"),
+    ("tonight_poll_guest_voted", "Group poll: a visitor without an account voted"),
+    ("tonight_poll_voted", "Group poll: a member voted"),
+    ("tonight_poll_signup_clicked", "Group poll: sign-up button pressed"),
     ("friend_rec_sent", "Recommend to a friend: a title sent to friends"),
     ("friend_rec_link_opened", "Recommend to a friend: link opened by a visitor without an account"),
     ("friend_rec_claimed", "Recommend to a friend: link saved into someone's inbox"),
@@ -89,7 +94,7 @@ CLIENT_EVENTS = {"signup_form_opened", "hero_signup_clicked", "signup_rejected_i
                  "order_saved", "seasonal_saved",
                  "calendar_subscribe_clicked", "tier_list_started", "tier_list_exported",
                  "daily_shared", "recap_story_played", "recap_story_shared", "quiz_started", "quiz_saved",
-                 "profile_signup_clicked"}
+                 "profile_signup_clicked", "tonight_poll_signup_clicked"}
 
 
 def record(event: str, request=None) -> bool:
