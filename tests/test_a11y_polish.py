@@ -39,7 +39,9 @@ def test_account_fields_have_names_and_autofill_hints():
         ("accountNewPassword", "new-password"), ("accountConfirmNewPassword", "new-password"),
     ):
         tag = re.search(rf'<input[^>]*id="{field_id}"[^>]*>', INDEX).group(0)
-        assert "aria-label=" in tag and f'autocomplete="{autocomplete}"' in tag
+        # A visible <label for> names the box; aria-label is the fallback.
+        named = "aria-label=" in tag or re.search(rf'<label[^>]*for="{field_id}"[^>]*>[^<]+</label>', INDEX)
+        assert named and f'autocomplete="{autocomplete}"' in tag
 
 
 def test_violet_buttons_keep_white_text_readable():

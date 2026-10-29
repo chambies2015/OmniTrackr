@@ -48,7 +48,7 @@
 
 /* Account → Public profile: showcase picker. */
 .profile-showcase-settings { border-top: 1px solid rgba(127, 127, 127, .25); margin-top: 18px; padding-top: 14px; }
-.profile-showcase-settings h4 { font-size: 1rem; margin: 0 0 4px; }
+.profile-showcase-settings :is(h4, h5) { font-size: 1rem; margin: 0 0 4px; }
 .profile-showcase-settings .form-group { margin: 12px 0 0; }
 .showcase-picks, .showcase-results { display: grid; gap: 8px; list-style: none; margin: 8px 0 0; padding: 0; }
 .showcase-picks:empty { display: none; }

@@ -91,7 +91,7 @@
   border-radius: 10px;
 }
 
-.export-studio__option h4 {
+.export-studio__option :is(h4, h5) {
   margin: 0;
   color: var(--fg);
   font-size: 0.95rem;

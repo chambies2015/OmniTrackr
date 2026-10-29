@@ -112,17 +112,8 @@
 
     if (event.target.closest('a[data-hero-signup]')) report('hero_signup_clicked');
 
-    const toggle = event.target.closest('[data-password-toggle]');
-    if (toggle) {
-      const field = document.getElementById(toggle.dataset.passwordToggle);
-      if (field) {
-        const show = field.type === 'password';
-        field.type = show ? 'text' : 'password';
-        toggle.textContent = show ? 'Hide' : 'Show';
-        toggle.setAttribute('aria-pressed', String(show));
-      }
-      return;
-    }
+    // Show/Hide password buttons are handled by auth.js, which every sign-in form loads.
+    if (event.target.closest('[data-password-toggle]')) return;
 
     const preview = event.target.closest('[data-screenshot-src]');
     if (preview) {

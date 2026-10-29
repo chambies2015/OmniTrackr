@@ -106,16 +106,12 @@ test('other sign-up buttons are not counted as hero clicks', () => {
   assert.deepEqual(ui.beacons, ['hero_signup_clicked']);
 });
 
-test('the password button shows and hides the password', () => {
+test('the landing script leaves password buttons to auth.js, so one click toggles once', () => {
   const ui = setupLanding();
   const toggle = element({ dataset: { passwordToggle: 'registerPassword' }, matches: s => s === '[data-password-toggle]' });
   ui.click(toggle);
-  assert.equal(ui.password.type, 'text');
-  assert.equal(toggle.textContent, 'Hide');
-  assert.equal(toggle.getAttribute('aria-pressed'), 'true');
-  ui.click(toggle);
   assert.equal(ui.password.type, 'password');
-  assert.equal(toggle.textContent, 'Show');
+  assert.deepEqual(ui.calls, []);
 });
 
 function loadAuth() {
