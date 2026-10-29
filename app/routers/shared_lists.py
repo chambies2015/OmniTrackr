@@ -9,7 +9,8 @@ from fastapi import APIRouter, Depends, HTTPException, Request, Response
 from pydantic import BaseModel, Field, field_validator
 from sqlalchemy.orm import Session
 
-from .. import funnel, models, shared_lists
+from .. import funnel, models, shared_lists, title_origins, title_pages
+from ..crud.friends import are_friends
 from ..dependencies import get_current_user, get_db, get_optional_current_user
 from ..integer_bounds import PositiveDatabaseId
 from ..progress import lock_progress_owner
@@ -449,9 +450,14 @@ def item_to_library(list_id: PositiveDatabaseId, item_id: PositiveDatabaseId, re
                     user=Depends(get_current_user), db: Session = Depends(get_db)):
     """Copy a title from the list into the member's own library (title, year and art only)."""
     _private(response)
-    _, item = _member_item(db, list_id, item_id, user)
+    shared, item = _member_item(db, list_id, item_id, user)
     lock_progress_owner(db, user.id)
     state, record = shared_lists.add_to_library(db, user, item)
+    if state == "created":
+        adder = db.get(models.User, item.added_by_id) if item.added_by_id and item.added_by_id != user.id else None
+        title_origins.prefill(db, user.id, title_pages.KINDS[item.kind][2], record.id,
+                              "friend" if adder is not None and are_friends(db, user.id, adder.id) else "other",
+                              friend=adder, note=f'From the shared list "{shared.name}"')
     title = record.title
     db.commit()
     return {"state": state, "title": title}

@@ -85,6 +85,8 @@ class User(Base):
     progress_checkpoints = relationship("ProgressCheckpoint", back_populates="owner", cascade="all, delete-orphan")
     library_tags = relationship("LibraryTag", back_populates="owner", cascade="all, delete-orphan")
     saved_library_views = relationship("SavedLibraryView", back_populates="owner", cascade="all, delete-orphan")
+    title_origins = relationship("TitleOrigin", back_populates="owner", cascade="all, delete-orphan",
+                                 foreign_keys="TitleOrigin.user_id")
     completion_moments = relationship("CompletionMoment", back_populates="owner", cascade="all, delete-orphan")
     activity_entries = relationship("ActivityEntry", back_populates="owner", cascade="all, delete-orphan")
     collections = relationship("Collection", back_populates="owner", cascade="all, delete-orphan")
@@ -1577,3 +1579,34 @@ class TonightPollVote(Base):
 
     __table_args__ = (UniqueConstraint("poll_id", "user_id", name="uq_tonight_vote_member"),
                       UniqueConstraint("poll_id", "visitor", name="uq_tonight_vote_visitor"))
+
+
+class TitleOrigin(Base):
+    """Why a member added one library record: who recommended it, or where they heard of it.
+
+    Private to the owner. It points at the record the way LibraryTag does. ``friend_id``
+    links a friend's account; ``who`` keeps the name as typed (or the friend's username
+    at the time), so the credit survives the friend leaving. ``who_key`` is the
+    casefolded ``who`` used to group and filter by recommender.
+    """
+    __tablename__ = "title_origins"
+
+    id = Column(Integer, primary_key=True, index=True)
+    user_id = Column(Integer, ForeignKey("users.id", ondelete="CASCADE"), nullable=False, index=True)
+    category = Column(String(16), nullable=False)
+    item_id = Column(Integer, nullable=False)
+    # friend, person, article, video, browsing or other.
+    source = Column(String(16), nullable=False)
+    friend_id = Column(Integer, ForeignKey("users.id", ondelete="SET NULL"), nullable=True, index=True)
+    who = Column(String(60), nullable=True)
+    who_key = Column(String(60), nullable=True)
+    note = Column(String(280), nullable=True)
+    created_at = Column(DateTime, nullable=False, default=datetime.utcnow)
+    updated_at = Column(DateTime, nullable=False, default=datetime.utcnow)
+
+    owner = relationship("User", back_populates="title_origins", foreign_keys=[user_id])
+
+    __table_args__ = (
+        UniqueConstraint("user_id", "category", "item_id", name="uq_title_origin_item"),
+        Index("ix_title_origins_user_who", "user_id", "who_key"),
+    )

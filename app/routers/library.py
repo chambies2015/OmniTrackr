@@ -9,7 +9,7 @@ from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
 
 from ..integer_bounds import PositiveDatabaseId
-from .. import episodes, models, schemas
+from .. import episodes, models, schemas, title_origins
 from ..dependencies import get_current_user, get_db
 
 router = APIRouter(prefix="/library", tags=["library"])
@@ -110,7 +110,7 @@ def library_page(
     limit: int = Query(50, ge=1, le=100), focus_id: int | None = Query(None, ge=1, le=2147483647),
     completion: Literal["all", "unfinished", "finished"] = Query("all"),
     unrated: bool = Query(False), has_progress: bool = Query(False),
-    tag: str = Query("", max_length=40),
+    tag: str = Query("", max_length=40), recommended_by: str = Query("", max_length=80),
     current_user: models.User = Depends(get_current_user), db: Session = Depends(get_db),
 ):
     response.headers["Cache-Control"] = "private, no-store"
@@ -155,6 +155,16 @@ def library_page(
             labels.item_id == model.id,
             labels.label_key == wanted_tag,
         ).exists())
+    wanted_who = title_origins.who_key(" ".join(recommended_by.split()))
+    if wanted_who:
+        origin = models.TitleOrigin
+        query = query.filter(db.query(origin.id).filter(
+            origin.user_id == current_user.id,
+            origin.category == category,
+            origin.item_id == model.id,
+            origin.source.in_(title_origins.PEOPLE),
+            origin.who_key == wanted_who,
+        ).exists())
     total = query.count()
     # A direct item navigation can surface an exact ID even among duplicate titles.
     if focus_id is not None:
@@ -174,8 +184,10 @@ def library_page(
         for row in rows:
             row["episode_progress"] = found.get(row["id"])
     labels = tags_for(db, current_user.id, category, [row["id"] for row in rows])
+    origins = title_origins.origins_for(db, current_user.id, category, [row["id"] for row in rows])
     for row in rows:
         row["tags"] = labels.get(row["id"], [])
+        row["origin"] = origins.get(row["id"])
     return {"items": rows, "total": total, "offset": offset, "limit": limit}
 
 
@@ -250,6 +262,83 @@ def set_item_tags(
     return {"tags": sorted(wanted.values(), key=str.casefold)}
 
 
+class OriginUpdate(BaseModel):
+    source: str = Field(..., max_length=16)
+    friend_id: int | None = Field(None, ge=1, le=2147483647)
+    who: str = Field("", max_length=200)
+    note: str = Field("", max_length=1000)
+
+
+def _owned_item(db: Session, user_id: int, category: str, item_id: int):
+    if category not in CATEGORIES:
+        raise HTTPException(404, "Unknown media category", headers=NO_STORE)
+    model = CATEGORIES[category][0]
+    if db.query(model.id).filter(model.id == item_id, model.user_id == user_id).first() is None:
+        raise HTTPException(404, "Library item not found", headers=NO_STORE)
+
+
+@router.get("/origins/{category}/{item_id}")
+def get_origin(
+    category: str, item_id: PositiveDatabaseId, response: Response,
+    current_user: models.User = Depends(get_current_user), db: Session = Depends(get_db),
+):
+    """Why the member added this title, or null when they haven't said."""
+    response.headers["Cache-Control"] = "private, no-store"
+    _owned_item(db, current_user.id, category, item_id)
+    return {"origin": title_origins.serialize(db, title_origins.get(db, current_user.id, category, item_id))}
+
+
+@router.put("/origins/{category}/{item_id}")
+def set_origin(
+    category: str, item_id: PositiveDatabaseId, body: OriginUpdate, response: Response,
+    current_user: models.User = Depends(get_current_user), db: Session = Depends(get_db),
+):
+    response.headers["Cache-Control"] = "private, no-store"
+    _owned_item(db, current_user.id, category, item_id)
+    try:
+        origin = title_origins.save(db, current_user.id, category, item_id, body.source,
+                                    friend_id=body.friend_id, who=body.who, note=body.note)
+        db.commit()
+    except title_origins.OriginError as error:
+        db.rollback()
+        raise HTTPException(422, str(error), headers=NO_STORE)
+    except IntegrityError:
+        db.rollback()
+        raise HTTPException(409, "This title changed in another tab. Reload and try again.", headers=NO_STORE)
+    db.refresh(origin)
+    return {"origin": title_origins.serialize(db, origin)}
+
+
+@router.delete("/origins/{category}/{item_id}", status_code=204)
+def clear_origin(
+    category: str, item_id: PositiveDatabaseId,
+    current_user: models.User = Depends(get_current_user), db: Session = Depends(get_db),
+):
+    _owned_item(db, current_user.id, category, item_id)
+    db.query(models.TitleOrigin).filter_by(
+        user_id=current_user.id, category=category, item_id=item_id,
+    ).delete(synchronize_session=False)
+    db.commit()
+    return Response(status_code=204, headers=NO_STORE)
+
+
+@router.get("/recommenders")
+def list_recommenders(
+    response: Response, category: str = Query("", max_length=16),
+    current_user: models.User = Depends(get_current_user), db: Session = Depends(get_db),
+):
+    """With a category: who recommended titles on that shelf, for the filter.
+
+    Without one: the member's best recommenders across every shelf.
+    """
+    response.headers["Cache-Control"] = "private, no-store"
+    if category:
+        if category not in CATEGORIES:
+            raise HTTPException(404, "Unknown media category", headers=NO_STORE)
+        return title_origins.shelf_people(db, current_user.id, category)
+    return title_origins.recommenders(db, current_user.id)
+
+
 class ViewFilters(BaseModel):
     search: str = Field("", max_length=500)
     sort: str = Field("", max_length=30)
@@ -257,6 +346,7 @@ class ViewFilters(BaseModel):
     unrated: bool = False
     has_progress: bool = False
     tag: str = Field("", max_length=40)
+    recommended_by: str = Field("", max_length=80)
 
 
 class ViewCreate(BaseModel):
@@ -304,6 +394,7 @@ def save_view(
         filters.has_progress = False
     filters.search = filters.search.strip()
     filters.tag = clean_tag(filters.tag) if filters.tag else ""
+    filters.recommended_by = title_origins.who_key(" ".join(filters.recommended_by.split()))
     stored = json.dumps(filters.model_dump(), separators=(",", ":"))
     key = name.casefold()
     views = models.SavedLibraryView
