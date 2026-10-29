@@ -22,7 +22,7 @@ from urllib.parse import quote
 from sqlalchemy import case, func
 from sqlalchemy.orm import Session
 
-from . import badges, diary, friend_invites, models, supporters, title_pages
+from . import badges, diary, friend_invites, models, supporters, time_spent, title_pages
 from .review_quality import evaluate_public_review, is_public_review_safe
 
 BIO_MAX_CHARS = 280
@@ -394,6 +394,7 @@ class ProfileView:
     friends_brought: int = 0
     badges: list = field(default_factory=list)
     diary: list = field(default_factory=list)
+    hours: int = 0  # estimated, from the shelves the member hasn't made private
 
     @property
     def path(self) -> str:
@@ -429,6 +430,7 @@ def build(db: Session, user: models.User, profile: models.PublicProfile) -> Prof
         # Shown with the library stats, never revealing a shelf the member keeps private.
         badges=badges.public_badges(db, user) if profile.show_stats and not user.statistics_private else [],
         diary=diary.public_entries(db, user, _visible_categories(user)) if profile.show_diary else [],
+        hours=time_spent.public_hours(db, user) if profile.show_stats and not user.statistics_private else 0,
     )
 
 

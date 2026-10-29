@@ -3144,6 +3144,7 @@ function loadStatistics() {
   document.getElementById('statsContent').style.display = 'block';
   loadMonthlyReplay();
   loadTasteprint(false);
+  loadTimeSpent();
   // Library edits since the last visit should show here: drop cached numbers and
   // reload any section that is already open.
   Object.keys(categoryStatsCache).forEach(key => { delete categoryStatsCache[key]; });

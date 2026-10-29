@@ -817,6 +817,7 @@ function handleDelegatedClick(event) {
     'tasteprint-refresh': () => loadTasteprint(true),
     'tasteprint-download': downloadTasteprint,
     'tasteprint-copy': copyTasteprintText,
+    'time-spent-download': downloadTimeSpent,
     'open-collection-picker': () => openCollectionPicker(target.dataset.collectionCategory, Number(target.dataset.collectionItemId), target.dataset.collectionItemTitle),
     'close-collection-picker': closeCollectionPicker,
     'open-collection-studio': () => openCollectionStudio(Number(target.dataset.collectionId)),

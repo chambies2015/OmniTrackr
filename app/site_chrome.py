@@ -96,6 +96,7 @@ FOOTER_GROUPS = (
         ("Group poll", "/tonight"),
         ("Taste quiz", "/taste-quiz"),
         ("Tier list maker", "/tier-list"),
+        ("Binge calculator", "/binge-calculator"),
         ("Monthly challenge", "/challenges"),
     )),
     ("Community", (

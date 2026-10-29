@@ -315,6 +315,8 @@ def _numbers_html(view) -> str:
         finished = sum(row["finished"] for row in view.stats)
         tiles.append((f"{view.total_titles:,}", "titles tracked"))
         tiles.append((f"{finished:,}", "finished"))
+        if view.hours:
+            tiles.append((f"{view.hours:,}", "est. hour" if view.hours == 1 else "est. hours"))
         rated = sum(row["rated"] for row in view.stats if row["average"] is not None)
         if rated:
             average = sum(row["average"] * row["rated"] for row in view.stats if row["average"] is not None) / rated
@@ -326,7 +328,7 @@ def _numbers_html(view) -> str:
     if not tiles:
         return ""
     cells = "".join(f'<li class="profile-number"><strong>{_e(value)}</strong><span>{_e(label)}</span></li>'
-                    for value, label in tiles[:5])
+                    for value, label in tiles[:6])
     return f'<ul class="profile-numbers" aria-label="At a glance">{cells}</ul>'
 
 
