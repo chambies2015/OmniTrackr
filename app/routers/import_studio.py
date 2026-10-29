@@ -2,11 +2,14 @@
 import json
 from typing import Literal
 
+import httpx
+
 from fastapi import APIRouter, Depends, File, Form, HTTPException, Request, UploadFile
 from fastapi.responses import Response
+from pydantic import BaseModel, Field
 from sqlalchemy.orm import Session
 
-from .. import diary, models
+from .. import diary, game_playtime, models, steam
 from ..import_formats import letterboxd_diary
 from ..dependencies import get_current_user, get_db
 from ..progress import lock_progress_owner
@@ -63,8 +66,10 @@ async def preview_import(
     mapping = _mapping_or_400(mapping_json)
     detected, rows = _parse_or_400(content, source, category, mapping, file.filename)
     digest = fingerprint(content, source, category or "", mapping_json, file.filename)
-    summary = summarize(detected, digest, classify_rows(db, current_user.id, rows), status_filter, offset, limit)
-    return {**summary, "diary_count": len(_diary_plan(db, current_user.id, detected, content, file.filename))}
+    classified = classify_rows(db, current_user.id, rows)
+    summary = summarize(detected, digest, classified, status_filter, offset, limit)
+    return {**summary, "diary_count": len(_diary_plan(db, current_user.id, detected, content, file.filename)),
+            "playtime_refresh_count": game_playtime.refreshable(db, current_user.id, classified)}
 
 
 def _diary_plan(db: Session, user_id: int, detected: str, content: bytes, filename: str) -> list[dict]:
@@ -137,3 +142,32 @@ async def download_template(
         media_type="text/csv; charset=utf-8",
         headers={"Content-Disposition": f'attachment; filename="{filename}"'},
     )
+
+
+class SteamProfileRequest(BaseModel):
+    profile: str = Field(..., min_length=1, max_length=200)
+
+
+@router.get("/steam/")
+async def steam_status(current_user: models.User = Depends(get_current_user)):
+    """Whether Steam import is set up here, so the Import Studio can hide it when it isn't."""
+    return {"enabled": steam.enabled()}
+
+
+@router.post("/steam/library/")
+async def steam_library(
+    payload: SteamProfileRequest,
+    request: Request = None,
+    current_user: models.User = Depends(get_current_user),
+):
+    """Read the member's owned games from Steam. Nothing is saved; the browser previews the result."""
+    if not steam.enabled():
+        raise HTTPException(status_code=503, detail="Steam import isn't set up on this site yet.")
+    client = getattr(request.app.state, "external_api_client", None) if request is not None else None
+    try:
+        if client is None:
+            async with httpx.AsyncClient(follow_redirects=False) as fallback:
+                return await steam.library(fallback, payload.profile)
+        return await steam.library(client, payload.profile)
+    except steam.SteamError as exc:
+        raise HTTPException(status_code=exc.status, detail=exc.detail) from exc

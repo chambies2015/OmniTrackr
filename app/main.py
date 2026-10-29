@@ -626,6 +626,9 @@ app.include_router(progress.router)
 for route in import_studio.router.routes:
     if getattr(route, "path", None) in ("/import-studio/preview/", "/import-studio/apply/"):
         bind_rate_limited_endpoint(route, limiter.limit("30/minute")(route.endpoint))
+    # Each call spends the site's Steam Web API quota (three requests to Steam).
+    elif getattr(route, "path", None) == "/import-studio/steam/library/":
+        bind_rate_limited_endpoint(route, limiter.limit("6/minute")(route.endpoint))
 app.include_router(import_studio.router)
 from .routers.recommendations import submit_public_recommendation
 rate_limited_recommendation = limiter.limit("5/hour")(submit_public_recommendation)

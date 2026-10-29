@@ -39,15 +39,18 @@ function renderTimeSpent() {
     return;
   }
   if (status) {
-    status.textContent = data.typical
+    const steam = data.measured
+      ? ` ${data.measured.toLocaleString()} game${data.measured === 1 ? '' : 's'} use${data.measured === 1 ? 's' : ''} your real hours from Steam.`
+      : '';
+    status.textContent = (data.typical
       ? `Counted ${data.titles.toLocaleString()} titles. ${data.typical.toLocaleString()} of them used a typical length because we don't have theirs yet.`
-      : `Counted ${data.titles.toLocaleString()} titles, all with their own lengths.`;
+      : `Counted ${data.titles.toLocaleString()} titles, all with their own lengths.`) + steam;
   }
   const rows = data.categories.filter(row => row.minutes > 0);
   const largest = Math.max(...rows.map(row => row.minutes), 1);
   const bars = rows.map(row => {
     const width = Math.max(2, (100 * row.minutes) / largest);
-    const titles = `${row.titles.toLocaleString()} title${row.titles === 1 ? '' : 's'}`;
+    const titles = `${row.titles.toLocaleString()} title${row.titles === 1 ? '' : 's'}${row.measured ? `, ${row.measured.toLocaleString()} from Steam` : ''}`;
     const thisYear = row.year_minutes ? `, ${formatTimeSpentHours(row.year_hours)} h finished in ${data.year}` : '';
     return `<li class="time-spent__row" title="${escapeHtml(`${row.label}: about ${formatTimeSpentHours(row.hours)} hours ${row.verb}, ${titles}${thisYear}`)}">
       <span class="time-spent__label">${escapeHtml(row.label)}</span>
@@ -69,7 +72,7 @@ function renderTimeSpent() {
   content.querySelectorAll('.time-spent__bar').forEach(bar => bar.style.setProperty('--w', `${bar.dataset.width}%`));
   if (method) {
     const defaults = rows.map(row => `<li><strong>${escapeHtml(row.label)}:</strong> ${escapeHtml(row.default_note)}${row.typical ? ` (used for ${row.typical.toLocaleString()} of yours)` : ''}.</li>`).join('');
-    method.innerHTML = `<p>Finished titles count in full. Shows, anime, books, manga and podcasts you're partway into count up to the episode, page or chapter you last saved. Everything else counts as zero, so rewatches and abandoned games aren't in here.</p>
+    method.innerHTML = `<p>Finished titles count in full. Shows, anime, books, manga and podcasts you're partway into count up to the episode, page or chapter you last saved. Everything else counts as zero, so rewatches and abandoned games aren't in here. Games you imported from Steam are the exception: they count the hours Steam recorded, finished or not.</p>
       <p>${escapeHtml(data.sources_note)} When we don't have a title's length, we use a typical one:</p>
       <ul>${defaults}</ul>
       <p>"This year" only counts titles with a finish date in ${data.year} from your journal or a completion note.</p>`;

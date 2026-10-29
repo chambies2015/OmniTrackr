@@ -91,6 +91,7 @@
         <a href="#mal-heading">MyAnimeList and Kitsu</a>
         <a href="#anilist-heading">AniList</a>
         <a href="#trakt-heading">Trakt</a>
+        <a href="#steam-heading">Steam</a>
         <a href="#other-heading">Other services</a>
         <a href="#after-heading">After importing</a>
       </nav>
@@ -122,6 +123,7 @@
               <tr><th scope="row">MyAnimeList or Kitsu</th><td>Anime, and manga on the manga shelf</td><td>Already out of 10</td><td>Status is completed</td></tr>
               <tr><th scope="row">AniList</th><td>Anime, manga on the manga shelf, light novels as books</td><td>Read on a 10-point scale, decimals kept</td><td>Status is completed or rewatching</td></tr>
               <tr><th scope="row">Trakt</th><td>Movies and TV shows</td><td>Already out of 10</td><td>A movie was watched or rated; a show had every aired episode watched, or was rated</td></tr>
+              <tr><th scope="row">Steam</th><td>Games, with your hours played</td><td>Steam has no ratings, so games arrive unrated</td><td>You played it for at least the time you choose (one hour unless you change it)</td></tr>
               <tr><th scope="row">A spreadsheet</th><td>Any of the eight categories</td><td>Read as out of 10</td><td>Your completion column says so</td></tr>
             </tbody>
           </table>
@@ -219,6 +221,22 @@
           <li><strong>Watched history and ratings come across.</strong> A watched or rated movie arrives watched, with your rating out of ten.</li>
           <li><strong>Shows count as finished only when they are.</strong> A show is marked watched when you rated it or when every aired episode is in your history. Shows you are partway through arrive unfinished.</li>
           <li><strong>Your watchlist arrives unwatched.</strong> Collections and custom lists are left out, since owning a copy or listing a title is not the same as watching it. Episode and season ratings are not imported.</li>
+        </ul>
+      </section>
+
+      <section class="content-section" aria-labelledby="steam-heading">
+        <h2 id="steam-heading">From Steam</h2>
+        <p>Steam has no export file, so there's nothing to download. Paste your Steam profile link and OmniTrackr reads your games from Steam, with the hours you've played each one.</p>
+        <ol>
+          <li>On Steam, open your profile, choose <strong>Edit Profile</strong>, then <strong>Privacy Settings</strong>, and set <strong>Game details</strong> to Public. Steam only shares a library when this is on. You can switch it back once the import is done.</li>
+          <li>Copy your profile's address from the browser. It looks like <code>steamcommunity.com/id/yourname</code> or <code>steamcommunity.com/profiles/</code> followed by 17 digits. The 17-digit number on its own works too.</li>
+          <li>In the Import Studio, paste it into the Steam box, choose how long you need to have played a game before it counts as played, and select <strong>Fetch my Steam games</strong>. The usual preview follows, and nothing is saved until you confirm.</li>
+        </ol>
+        <ul>
+          <li><strong>Your hours come across.</strong> They show up in Time spent on the Statistics tab, which uses them in place of an estimate for those games.</li>
+          <li><strong>Games you haven't touched go to your backlog.</strong> Anything under the playtime you chose arrives as not played, so a pile of sale purchases doesn't count as finished.</li>
+          <li><strong>Importing again is safe.</strong> Games you already track keep their entry, rating and review, and only their hours are refreshed. Run it again every so often to keep the hours current.</li>
+          <li><strong>What Steam doesn't share.</strong> Steam has no ratings, reviews or completion dates, so those stay blank until you add them. Free games appear only if you've played them.</li>
         </ul>
       </section>
 

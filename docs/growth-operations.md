@@ -461,6 +461,29 @@ in this environment; SQLite tests establish retry, isolation, and rollback
 behavior. No production database, existing account data, or schema was changed,
 and nothing was deployed.
 
+## Steam library import
+
+Steam has no export file, so the Import Studio fetches a member's games from the
+Steam Web API on the server and hands them to the browser as an ordinary import
+file. Preview, duplicate checks and confirmation work as for any other source.
+Hours played are kept in `game_playtimes` and used by Time spent.
+
+To turn it on:
+
+1. Sign in to Steam with the account that will own the key and open
+   https://steamcommunity.com/dev/apikey. Steam asks for a domain: enter
+   `omnitrackr.xyz`. The key is free. The account needs to have spent at least
+   $5 on Steam, which is Steam's rule for API keys.
+2. In Render, open the web service, then Environment, and add
+   `STEAM_WEB_API_KEY` with the key as its value. Save, and let Render redeploy.
+3. Sign in to OmniTrackr and open Account Settings, then Import Studio. The
+   "Games on Steam?" box should now show. Try it with a public profile.
+
+Without the variable the Steam box and the Steam format option stay hidden, and
+`/import-studio/steam/library/` answers 503. The key never leaves the server.
+Each fetch makes up to three calls to Steam and is limited to six a minute per
+visitor; Steam allows 100,000 calls a day per key.
+
 ## Cohesive library appearance
 
 The September 24, 2026 visual refresh gives the application a shared violet and

@@ -87,6 +87,7 @@ class User(Base):
     saved_library_views = relationship("SavedLibraryView", back_populates="owner", cascade="all, delete-orphan")
     title_origins = relationship("TitleOrigin", back_populates="owner", cascade="all, delete-orphan",
                                  foreign_keys="TitleOrigin.user_id")
+    game_playtimes = relationship("GamePlaytime", back_populates="owner", cascade="all, delete-orphan")
     completion_moments = relationship("CompletionMoment", back_populates="owner", cascade="all, delete-orphan")
     activity_entries = relationship("ActivityEntry", back_populates="owner", cascade="all, delete-orphan")
     collections = relationship("Collection", back_populates="owner", cascade="all, delete-orphan")
@@ -1617,4 +1618,29 @@ class TitleOrigin(Base):
     __table_args__ = (
         UniqueConstraint("user_id", "category", "item_id", name="uq_title_origin_item"),
         Index("ix_title_origins_user_who", "user_id", "who_key"),
+    )
+
+
+class GamePlaytime(Base):
+    """Minutes a member has really played one library game, as reported by a store.
+
+    Written by the Steam import and refreshed each time the member imports again. It
+    points at the record the way LibraryTag does (``item_id`` on the video games shelf).
+    ``external_id`` is the store's own id (a Steam app id), used for store links.
+    Time spent counts these minutes instead of an estimate.
+    """
+    __tablename__ = "game_playtimes"
+
+    id = Column(Integer, primary_key=True, index=True)
+    user_id = Column(Integer, ForeignKey("users.id", ondelete="CASCADE"), nullable=False, index=True)
+    item_id = Column(Integer, nullable=False)
+    source = Column(String(16), nullable=False, default="steam")
+    external_id = Column(String(32), nullable=True)
+    minutes = Column(Integer, nullable=False, default=0)
+    synced_at = Column(DateTime, nullable=False, default=datetime.utcnow)
+
+    owner = relationship("User", back_populates="game_playtimes")
+
+    __table_args__ = (
+        UniqueConstraint("user_id", "item_id", "source", name="uq_game_playtime_item_source"),
     )
