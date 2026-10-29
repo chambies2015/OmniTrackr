@@ -744,6 +744,7 @@ class ExportData(BaseModel):
     title_origins: List[dict] = Field(default_factory=list, description="Private notes on who recommended each title and why it was added")
     library_tags: List[dict] = Field(default_factory=list, description="Private tags, one entry per tagged title")
     saved_views: List[dict] = Field(default_factory=list, description="Saved shelf views: name and filters")
+    game_playtimes: List[dict] = Field(default_factory=list, description="Minutes played per game, from Steam imports")
     export_metadata: dict = Field(..., description="Export metadata including timestamp and version")
     
 # Far above any real library, but keeps one request from queueing millions of row writes.
@@ -769,6 +770,7 @@ class ImportData(BaseModel):
     title_origins: List[dict] = Field(default_factory=list, max_length=MAX_IMPORT_LIST_ITEMS, description="Why-I-added-it notes, restored only on titles that have none")
     library_tags: List[dict] = Field(default_factory=list, max_length=MAX_IMPORT_LIST_ITEMS, description="Tags added to matching titles alongside the ones they have")
     saved_views: List[dict] = Field(default_factory=list, max_length=200, description="Saved shelf views, restored when the name is free")
+    game_playtimes: List[dict] = Field(default_factory=list, max_length=MAX_IMPORT_LIST_ITEMS, description="Minutes played per game, restored on games that have none")
     
 class ImportResult(BaseModel):
     """Schema for import operation results"""
@@ -804,6 +806,8 @@ class ImportResult(BaseModel):
     tags_skipped: int = Field(default=0, description="Tags already on the title, over the limit, unmatched or invalid")
     views_created: int = Field(default=0, description="Number of saved views restored")
     views_skipped: int = Field(default=0, description="Saved views with a name already in use, over the limit or invalid")
+    playtimes_created: int = Field(default=0, description="Games given their backed-up playtime")
+    playtimes_skipped: int = Field(default=0, description="Playtime rows with no single matching game, or a game that already has playtime")
     errors: List[str] = Field(default=[], description="List of errors encountered during import")
     
 # Statistics schemas

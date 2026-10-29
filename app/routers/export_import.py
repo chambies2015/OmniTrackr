@@ -9,7 +9,7 @@ from pydantic import ValidationError
 from sqlalchemy import func
 from sqlalchemy.orm import Session, selectinload
 
-from .. import crud, schemas, models, library_export, title_origins
+from .. import crud, schemas, models, game_playtime, library_export, title_origins
 from ..integer_bounds import SQL_INTEGER_MAX
 from ..dependencies import get_db, get_current_user
 from ..progress import CATEGORIES as PROGRESS_CATEGORIES, get_checkpoint_map, serialize_checkpoint, validate_checkpoint, stage_import_checkpoint, lock_progress_owner
@@ -310,6 +310,43 @@ def _export_views(db: Session, user_id: int) -> list[dict]:
                                            if key != "id"}} for view in views]
 
 
+def _import_playtimes(db: Session, user_id: int, payloads: list[dict]) -> tuple[int, int]:
+    """Put backed-up Steam minutes on the one matching game. A game that already has some keeps them."""
+    if not payloads:
+        return 0, 0
+    created = skipped = 0
+    try:
+        lock_progress_owner(db, user_id)
+        have = {item_id for (item_id,) in db.query(models.GamePlaytime.item_id).filter(
+            models.GamePlaytime.user_id == user_id)}
+        for raw in payloads:
+            title = raw.get("title") if isinstance(raw, dict) else None
+            minutes = raw.get("minutes") if isinstance(raw, dict) else None
+            source = raw.get("source") if isinstance(raw, dict) else None
+            external_id = raw.get("external_id") if isinstance(raw, dict) else None
+            if (not isinstance(title, str) or not title.strip() or type(minutes) is not int or minutes < 0
+                    or source not in game_playtime.SOURCES):
+                skipped += 1
+                continue
+            model = models.VideoGame
+            query = db.query(model).filter(model.user_id == user_id, func.lower(model.title) == title.strip().lower())
+            query = _apply_import_identity(query, model, "video-games", raw)
+            matches = query.limit(2).all() if query is not None else []
+            if len(matches) != 1 or matches[0].id in have:
+                skipped += 1
+                continue
+            external = external_id if isinstance(external_id, str) and external_id.isdigit() and len(external_id) <= 32 else None
+            db.add(models.GamePlaytime(user_id=user_id, item_id=matches[0].id, source=source, external_id=external,
+                                       minutes=min(minutes, game_playtime.MAX_MINUTES)))
+            have.add(matches[0].id)
+            created += 1
+        db.commit()
+        return created, skipped
+    except Exception:
+        db.rollback()
+        raise
+
+
 def _import_tags(db: Session, user_id: int, payloads: list[dict]) -> tuple[int, int]:
     """Add backed-up tags to the one matching title, keeping the tags it already has."""
     if not payloads:
@@ -424,6 +461,7 @@ def export_data(
     origins = title_origins.export_rows(db, current_user.id, _exported_identity)
     library_tags = _export_tags(db, current_user.id)
     saved_views = _export_views(db, current_user.id)
+    playtimes = game_playtime.export_rows(db, current_user.id, _exported_identity)
 
     export_metadata = {
         "export_timestamp": datetime.now().isoformat(),
@@ -446,6 +484,7 @@ def export_data(
         "total_title_origins": len(origins),
         "total_tagged_titles": len(library_tags),
         "total_saved_views": len(saved_views),
+        "total_game_playtimes": len(playtimes),
     }
 
     return schemas.ExportData(
@@ -464,6 +503,7 @@ def export_data(
         title_origins=origins,
         library_tags=library_tags,
         saved_views=saved_views,
+        game_playtimes=playtimes,
         export_metadata=export_metadata
     )
 
@@ -491,6 +531,7 @@ def export_format(
             crud.get_all_custom_tabs_with_items(db, current_user.id), now,
             tags=library_export.tag_rows(db, current_user.id, library),
             origins=title_origins.export_rows(db, current_user.id, _exported_identity),
+            playtimes=game_playtime.export_rows(db, current_user.id),
         )
         media_type, filename = "application/zip", f"omnitrackr-spreadsheets-{stamp}.zip"
     elif fmt == "goodreads":
@@ -537,6 +578,7 @@ def _run_import(import_data: schemas.ImportData, current_user: models.User, db: 
     origins_created, origins_skipped = _import_origins(db, current_user.id, import_data.title_origins)
     tags_created, tags_skipped = _import_tags(db, current_user.id, import_data.library_tags)
     views_created, views_skipped = _import_views(db, current_user.id, import_data.saved_views)
+    playtimes_created, playtimes_skipped = _import_playtimes(db, current_user.id, import_data.game_playtimes)
 
     all_errors = movie_errors + tv_show_errors + anime_errors + video_game_errors + music_errors + book_errors + manga_errors + podcast_errors + custom_tab_errors
 
@@ -571,6 +613,8 @@ def _run_import(import_data: schemas.ImportData, current_user: models.User, db: 
         tags_skipped=tags_skipped,
         views_created=views_created,
         views_skipped=views_skipped,
+        playtimes_created=playtimes_created,
+        playtimes_skipped=playtimes_skipped,
         errors=all_errors
     )
 

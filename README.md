@@ -251,6 +251,7 @@ External metadata:
 | --- | --- |
 | `OMDB_API_KEY` | Optional movie/TV metadata and posters. |
 | `RAWG_API_KEY` | Optional video game metadata and cover art. Also powers the Release Radar games list. |
+| `STEAM_WEB_API_KEY` | Optional. Turns on Steam library import in the Import Studio. Without it the Steam box stays hidden. |
 | `TMDB_API_KEY` | Optional. A TMDB v3 API key or v4 read token. Turns on "Where to watch" streaming, rent and buy options (JustWatch data, credited on every page) for movies, TV and anime. Without it, TV and anime still show the service they were made for or stream on (TVmaze, MyAnimeList) and games show stores (RAWG). |
 | `WATCH_REGION` | Optional two-letter country for TMDB availability and the JustWatch link. Defaults to `US`. |
 

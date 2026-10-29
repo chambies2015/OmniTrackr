@@ -68,7 +68,7 @@
   <link rel="stylesheet" href="/static/profile-banners.css?v=20261028-members-1">
   <link rel="stylesheet" href="/static/badges.css?v=20261017-badges-1">
   <link rel="stylesheet" href="/static/time-spent.css?v=20261029-time-spent-1">
-  <link rel="stylesheet" href="/static/import-studio.css?v=20261029-account-1">
+  <link rel="stylesheet" href="/static/import-studio.css?v=20261030-steam-3">
   <link rel="stylesheet" href="/static/seasonal-card.css?v=20261022-holidays-1">
   <link rel="stylesheet" href="/static/memories.css?v=20261029-memories-1">
   <link rel="stylesheet" href="/static/friend-recs.css?v=20261024-friend-recs-1">
@@ -2098,7 +2098,7 @@
   </dialog>
   <script src="./credentials.js"></script>
   <script src="./auth.js?v=20261029-account-memories-1"></script>
-  <script src="/static/import-studio.js?v=20261028-podcasts-1"></script>
+  <script src="/static/import-studio.js?v=20261030-steam-1"></script>
   <script src="/static/progress.js?v=20261028-podcasts-1"></script>
   <script src="/static/episodes.js?v=20261027-episodes-1"></script>
   <script src="./app.js"></script>
@@ -2622,6 +2622,7 @@
                   <option value="myanimelist">MyAnimeList or Kitsu XML / CSV</option>
                   <option value="trakt">Trakt ZIP or JSON</option>
                   <option value="anilist">AniList (fetched by username)</option>
+                  <option value="steam" id="importStudioSteamOption" hidden disabled>Steam (fetched by profile)</option>
                   <option value="generic">Generic CSV / spreadsheet</option>
                 </select>
               </label>
@@ -2652,6 +2653,24 @@
               </label>
               <button type="button" class="action-btn" id="importStudioAniListButton">Fetch my AniList lists</button>
               <p class="info-text">Reads your public anime and manga lists straight from AniList, then shows the same preview. Nothing is saved until you confirm.</p>
+            </div>
+
+            <div class="import-studio__anilist import-studio__steam" id="importStudioSteam" hidden>
+              <label>
+                <span>Games on Steam? No file needed</span>
+                <input id="importStudioSteamProfile" type="text" inputmode="url" autocomplete="off" autocapitalize="off" spellcheck="false" maxlength="200" placeholder="Steam profile link or 17-digit ID">
+              </label>
+              <label>
+                <span>Mark a game played after</span>
+                <select id="importStudioSteamThreshold">
+                  <option value="1">Any playtime</option>
+                  <option value="60" selected>1 hour</option>
+                  <option value="300">5 hours</option>
+                  <option value="none">Never (all go to your backlog)</option>
+                </select>
+              </label>
+              <button type="button" class="action-btn" id="importStudioSteamButton">Fetch my Steam games</button>
+              <p class="info-text">Reads the games on your Steam profile and the hours you've played each one, then shows the same preview. Your profile's Game details must be public. Games already in your library keep their entry and get their hours updated. Your hours count toward Time spent on the Statistics tab. <a href="/switch#steam-heading" target="_blank" rel="noopener noreferrer">How Steam import works</a></p>
             </div>
 
             <details class="import-studio__mapping" id="importStudioMappingPanel">

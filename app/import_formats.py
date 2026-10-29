@@ -284,6 +284,43 @@ def _anilist_rows(document: dict[str, Any]) -> list[Row]:
 
 
 # ---------------------------------------------------------------------------
+# Steam: the document the browser builds from /import-studio/steam/library/.
+
+STEAM_DEFAULT_PLAYED_MINUTES = 60
+STEAM_MAX_MINUTES = 60 * 24 * 365 * 5
+
+
+def _steam_threshold(value: Any) -> int | None:
+    """Minutes of play that count as played. None marks nothing as played."""
+    if value is None:
+        return None
+    if type(value) is int and 1 <= value <= 6000:
+        return value
+    return STEAM_DEFAULT_PLAYED_MINUTES
+
+
+def _steam_rows(document: dict[str, Any]) -> list[Row]:
+    threshold = _steam_threshold(document.get("played_after_minutes", STEAM_DEFAULT_PLAYED_MINUTES))
+    rows: list[Row] = []
+    seen: set[int] = set()
+    games = document.get("games")
+    for game in games if isinstance(games, list) else []:
+        if not isinstance(game, dict):
+            continue
+        appid, title = game.get("appid"), _text(game.get("name"))
+        if type(appid) is not int or appid <= 0 or not title or appid in seen:
+            continue
+        seen.add(appid)
+        minutes = game.get("minutes")
+        minutes = min(minutes, STEAM_MAX_MINUTES) if type(minutes) is int and minutes > 0 else 0
+        row = _row("video-games", title, completed=threshold is not None and minutes >= threshold)
+        row["steam_appid"] = str(appid)
+        row["steam_minutes"] = str(minutes)
+        rows.append(row)
+    return rows
+
+
+# ---------------------------------------------------------------------------
 # MyAnimeList-format XML: MyAnimeList itself, Kitsu, and AniList converters.
 
 def _mal_rows(text: str) -> list[Row]:
@@ -388,7 +425,9 @@ def read_structured(content: bytes, filename: str) -> tuple[str, list[Row]]:
             raise ValueError("The JSON file could not be read.") from exc
         if isinstance(document, dict) and document.get("source") == "anilist":
             return "anilist", _anilist_rows(document)
+        if isinstance(document, dict) and document.get("source") == "steam":
+            return "steam", _steam_rows(document)
         if _looks_like_trakt(document):
             return "trakt", _trakt_rows([(name, document)])
-        raise ValueError("This JSON file isn't a Trakt or AniList export. To restore an OmniTrackr backup, use Import Data in your library instead.")
+        raise ValueError("This JSON file isn't a Trakt, AniList or Steam export. To restore an OmniTrackr backup, use Import Data in your library instead.")
     raise ValueError("This file isn't a format the Import Studio reads. Choose a CSV, TSV, ZIP, XML or JSON export.")

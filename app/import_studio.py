@@ -13,15 +13,15 @@ from typing import Any, Iterable
 from pydantic import ValidationError
 from sqlalchemy.orm import Session
 
-from . import import_formats, models, schemas
+from . import game_playtime, import_formats, models, schemas, steam
 
 
 MAX_IMPORT_BYTES = 5 * 1024 * 1024
 MAX_IMPORT_ROWS = 5000
-SUPPORTED_SOURCES = {"auto", "letterboxd", "goodreads", "myanimelist", "imdb", "storygraph", "trakt", "anilist", "generic"}
+SUPPORTED_SOURCES = {"auto", "letterboxd", "goodreads", "myanimelist", "imdb", "storygraph", "trakt", "anilist", "steam", "generic"}
 SOURCE_LABELS = {
     "letterboxd": "Letterboxd", "goodreads": "Goodreads", "myanimelist": "MyAnimeList",
-    "imdb": "IMDb", "storygraph": "The StoryGraph", "trakt": "Trakt", "anilist": "AniList",
+    "imdb": "IMDb", "storygraph": "The StoryGraph", "trakt": "Trakt", "anilist": "AniList", "steam": "Steam",
     "generic": "Generic CSV / spreadsheet",
 }
 # Placeholders the importers use when an export has no creator; they match any creator.
@@ -78,6 +78,8 @@ class ParsedRow:
     title: str
     data: dict[str, Any] | None
     error: str | None = None
+    # Facts kept beside the library record, such as Steam minutes played.
+    extra: dict[str, Any] | None = None
 
 
 def fingerprint(content: bytes, source: str = "", category: str = "", mapping_json: str = "", filename: str = "") -> str:
@@ -426,8 +428,14 @@ def _parse_structured(content: bytes, filename: str, source: str) -> tuple[str, 
     for number, row in enumerate(rows, start=1):
         try:
             category, data = _generic_row(row, None, {})
+            extra = None
+            if row.get("steam_appid"):
+                appid = int(row["steam_appid"])
+                data["cover_art_url"] = steam.cover_url(appid)
+                extra = {"source": "steam", "external_id": str(appid), "minutes": int(row.get("steam_minutes") or 0),
+                         "store_url": steam.store_url(appid)}
             validated = SCHEMA_BY_CATEGORY[category](**data)
-            parsed.append(ParsedRow(number, category, validated.title, validated.model_dump()))
+            parsed.append(ParsedRow(number, category, validated.title, validated.model_dump(), extra=extra))
         except ValueError as exc:
             parsed.append(ParsedRow(number, None, row.get("title") or f"Entry {number}", None, _error_message(exc)))
     return detected, parsed
@@ -507,19 +515,21 @@ def classify_rows(db: Session, user_id: int, rows: Iterable[ParsedRow]) -> list[
             classified.append({"row": row.row, "category": row.category, "title": row.title, "status": "duplicate", "reason": "Already on your Books shelf from an earlier import.", "data": row.data})
             continue
         if identity in identities[row.category]:
-            classified.append({"row": row.row, "category": row.category, "title": row.title, "status": "duplicate", "reason": "Already in this library or repeated in the file.", "data": row.data})
+            classified.append({"row": row.row, "category": row.category, "title": row.title, "status": "duplicate", "reason": "Already in this library or repeated in the file.", "data": row.data, "extra": row.extra})
             continue
         identities[row.category].add(identity)
-        classified.append({"row": row.row, "category": row.category, "title": row.title, "status": "ready", "reason": None, "data": row.data})
+        classified.append({"row": row.row, "category": row.category, "title": row.title, "status": "ready", "reason": None, "data": row.data, "extra": row.extra})
     return classified
 
 
-def _preview_values(data: dict[str, Any] | None) -> dict[str, Any] | None:
+def _preview_values(data: dict[str, Any] | None, extra: dict[str, Any] | None = None) -> dict[str, Any] | None:
     """Describe the CSV candidate, never the stored record it might duplicate."""
     if data is None:
         return None
     release = data.get("release_date")
     return {
+        "playtime_minutes": (extra or {}).get("minutes"),
+        "store_url": (extra or {}).get("store_url"),
         "creator": data.get("director") or data.get("artist") or data.get("author"),
         "year": data.get("year") if "year" in data else release.year if release else None,
         "release_date": release.date().isoformat() if release else None,
@@ -549,7 +559,8 @@ def summarize(
     filtered = [item for item in classified if status_filter == "all" or item["status"] == status_filter]
     offset = min(offset, len(filtered))
     preview = [
-        {**{key: value for key, value in item.items() if key != "data"}, "values": _preview_values(item.get("data"))}
+        {**{key: value for key, value in item.items() if key not in ("data", "extra")},
+         "values": _preview_values(item.get("data"), item.get("extra"))}
         for item in filtered[offset:offset + limit]
     ]
     return {
@@ -564,10 +575,15 @@ def summarize(
 def apply_classified(db: Session, user_id: int, classified: list[dict[str, Any]]) -> dict[str, Any]:
     created = {category: 0 for category in MODEL_BY_CATEGORY}
     ready = [item for item in classified if item["status"] == "ready"]
+    added = []
     try:
         for item in ready:
-            db.add(MODEL_BY_CATEGORY[item["category"]](**item["data"], user_id=user_id))
+            record = MODEL_BY_CATEGORY[item["category"]](**item["data"], user_id=user_id)
+            db.add(record)
+            added.append((item, record))
             created[item["category"]] += 1
+        playtime_count = game_playtime.save_from_import(
+            db, user_id, added, [item for item in classified if item["status"] == "duplicate"])
         db.commit()
     except Exception:
         db.rollback()
@@ -575,4 +591,5 @@ def apply_classified(db: Session, user_id: int, classified: list[dict[str, Any]]
     return {
         "created_count": len(ready), "duplicate_count": sum(item["status"] == "duplicate" for item in classified),
         "invalid_count": sum(item["status"] == "invalid" for item in classified), "by_category": created,
+        "playtime_count": playtime_count,
     }

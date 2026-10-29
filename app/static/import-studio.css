@@ -121,3 +121,31 @@
   line-height: 1.45;
   opacity: 0.85;
 }
+
+/* Steam: the profile box on its own row, then the played threshold beside the fetch button. */
+.import-studio__steam label:first-child {
+  grid-column: 1 / -1;
+}
+
+/* Global form and button rules add margins and top alignment; line the button up with the select. */
+.import-studio__steam label,
+.import-studio__steam select {
+  margin-bottom: 0;
+}
+
+.import-studio__steam .action-btn,
+body.app-shell .account-settings .account-section form .import-studio__steam .action-btn {
+  align-self: end;
+  margin-top: 0;
+}
+
+.import-studio__steam select {
+  width: 100%;
+  min-height: 44px;
+  padding: 10px 12px;
+  border: 1px solid rgba(102, 126, 234, 0.3);
+  border-radius: 8px;
+  background: var(--bg);
+  color: var(--fg);
+  font: inherit;
+}

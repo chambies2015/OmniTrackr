@@ -1,7 +1,8 @@
 """Estimated time spent on a member's library, from fields we already store.
 
-Nothing here is measured. Each title gets a length, then the member's own status
-and progress decide how much of it counts:
+Almost nothing here is measured: games imported from Steam count the minutes
+Steam reported (``game_playtime``), played or not. Every other title gets a
+length, then the member's own status and progress decide how much of it counts:
 
 * finished titles count in full,
 * unfinished shows, anime, books, manga and podcasts count up to the member's
@@ -31,7 +32,7 @@ from typing import Optional
 
 from sqlalchemy.orm import Session
 
-from . import episodes, models, title_metadata, title_pages, year_in_review
+from . import episodes, game_playtime, models, title_metadata, title_pages, year_in_review
 
 # Library category -> (URL kind, plural label, privacy flag on the user)
 CATEGORIES = {
@@ -230,13 +231,21 @@ def estimate(db: Session, user: models.User, categories: Optional[list[str]] = N
                                                   title_pages.item_year(kind, item)) for item in items}
         facts = _cached_facts(db, list(keys.values()))
         progress = episodes.progress_map(db, user.id, category, items) if category in episodes.KINDS else {}
+        played = game_playtime.minutes_by_game(db, user.id) if category == "video-games" else {}
 
         minutes = year_minutes = 0.0
-        counted = guessed = finished_count = 0
+        counted = guessed = finished_count = measured = 0
         for item in items:
             item_facts = facts.get(keys[item.id], {})
             item_progress = progress.get(item.id) or {}
-            if _done(category, item):
+            if played.get(item.id):
+                value, typical = float(played[item.id]), False
+                measured += 1
+                if _done(category, item):
+                    finished_count += 1
+                    if (category, item.id) in finished_this_year:
+                        year_minutes += value
+            elif _done(category, item):
                 value, typical = full_minutes(category, item, item_facts, item_progress.get("total"))
                 finished_count += 1
                 if (category, item.id) in finished_this_year:
@@ -253,7 +262,7 @@ def estimate(db: Session, user: models.User, categories: Optional[list[str]] = N
             "category": category, "label": label, "verb": VERBS[category],
             "minutes": round(minutes), "hours": round(minutes / 60, 1),
             "year_minutes": round(year_minutes), "year_hours": round(year_minutes / 60, 1),
-            "titles": counted, "finished": finished_count, "typical": guessed,
+            "titles": counted, "finished": finished_count, "typical": guessed, "measured": measured,
             "default_note": DEFAULTS[category],
         })
 
@@ -272,6 +281,7 @@ def estimate(db: Session, user: models.User, categories: Optional[list[str]] = N
         "year_hours": round(year_total / 60),
         "titles": titles,
         "typical": sum(row["typical"] for row in rows),
+        "measured": sum(row["measured"] for row in rows),
         "categories": rows,
         "comparison": comparison(total),
         "sources_note": SOURCES_NOTE,
