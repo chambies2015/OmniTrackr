@@ -306,3 +306,14 @@ def test_quick_capture_searches_every_core_type_without_writing_directly():
     assert "method: 'POST'" not in quick_capture
     assert "title.textContent = item.title" in quick_capture
     assert "quickCaptureController?.abort()" in quick_capture
+
+
+def test_strict_csp_lets_ga4_send_hits():
+    """GA4 sends hits to analytics.google.com, regional google-analytics hosts and, with
+    Google Signals, stats.g.doubleclick.net and www.google.com. Blocking any of them drops visits."""
+    from app.csp import build_csp
+
+    connect = next(part for part in build_csp("n").split("; ") if part.startswith("connect-src"))
+    for host in ("https://analytics.google.com", "https://*.analytics.google.com", "https://*.google-analytics.com",
+                 "https://stats.g.doubleclick.net", "https://www.google.com", "https://*.googletagmanager.com"):
+        assert host in connect.split()

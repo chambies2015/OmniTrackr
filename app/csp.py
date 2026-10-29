@@ -34,8 +34,12 @@ def build_csp(nonce: str | None = None, allow_inline_script: bool = False, allow
         f"style-src {' '.join(style_sources)}; "
         "font-src 'self' https://fonts.gstatic.com; "
         "img-src 'self' data: https: http:; "
+        # Analytics hosts follow Google's GA4 CSP guide: hits go to regional *.google-analytics.com and
+        # *.analytics.google.com endpoints, and with Google Signals to stats.g.doubleclick.net and www.google.com.
         # graphql.anilist.co: the Import Studio reads a member's public AniList lists from the browser.
-        "connect-src 'self' https://www.google-analytics.com https://www.googletagmanager.com https://graphql.anilist.co; "
+        "connect-src 'self' https://*.google-analytics.com https://analytics.google.com https://*.analytics.google.com "
+        "https://*.googletagmanager.com https://stats.g.doubleclick.net https://www.google.com "
+        "https://graphql.anilist.co; "
         "frame-src https://www.google.com https://www.youtube-nocookie.com; "
         "object-src 'none'; "
         "base-uri 'self'; "
