@@ -83,6 +83,8 @@ class User(Base):
     custom_tabs = relationship("CustomTab", back_populates="owner", cascade="all, delete-orphan")
     next_up_items = relationship("NextUpItem", back_populates="owner", cascade="all, delete-orphan")
     progress_checkpoints = relationship("ProgressCheckpoint", back_populates="owner", cascade="all, delete-orphan")
+    library_tags = relationship("LibraryTag", back_populates="owner", cascade="all, delete-orphan")
+    saved_library_views = relationship("SavedLibraryView", back_populates="owner", cascade="all, delete-orphan")
     completion_moments = relationship("CompletionMoment", back_populates="owner", cascade="all, delete-orphan")
     activity_entries = relationship("ActivityEntry", back_populates="owner", cascade="all, delete-orphan")
     collections = relationship("Collection", back_populates="owner", cascade="all, delete-orphan")
@@ -292,6 +294,50 @@ class ProgressCheckpoint(Base):
 
     __table_args__ = (
         UniqueConstraint("user_id", "category", "item_id", name="uq_progress_checkpoint_item"),
+    )
+
+
+class LibraryTag(Base):
+    """A private label on one library record, such as "comfort watch" or "with Sam".
+
+    It points at the record the same way NextUpItem does, so the media tables are
+    untouched. ``label_key`` is the casefolded label: "Cozy" and "cozy" are one tag.
+    """
+    __tablename__ = "library_tags"
+
+    id = Column(Integer, primary_key=True, index=True)
+    user_id = Column(Integer, ForeignKey("users.id"), nullable=False, index=True)
+    category = Column(String(16), nullable=False)
+    item_id = Column(Integer, nullable=False)
+    label = Column(String(32), nullable=False)
+    label_key = Column(String(32), nullable=False)
+    created_at = Column(DateTime, nullable=False, default=datetime.utcnow)
+
+    owner = relationship("User", back_populates="library_tags")
+
+    __table_args__ = (
+        UniqueConstraint("user_id", "category", "item_id", "label_key", name="uq_library_tag_item"),
+        Index("ix_library_tags_user_category_key", "user_id", "category", "label_key"),
+    )
+
+
+class SavedLibraryView(Base):
+    """A named search, sort and filter combination for one shelf. Private to its owner."""
+    __tablename__ = "saved_library_views"
+
+    id = Column(Integer, primary_key=True, index=True)
+    user_id = Column(Integer, ForeignKey("users.id"), nullable=False, index=True)
+    category = Column(String(16), nullable=False)
+    name = Column(String(40), nullable=False)
+    name_key = Column(String(40), nullable=False)
+    # JSON: search, sort, completion, unrated, has_progress, tag.
+    filters = Column(Text, nullable=False)
+    created_at = Column(DateTime, nullable=False, default=datetime.utcnow)
+
+    owner = relationship("User", back_populates="saved_library_views")
+
+    __table_args__ = (
+        UniqueConstraint("user_id", "category", "name_key", name="uq_saved_library_view_name"),
     )
 
 

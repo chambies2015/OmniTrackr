@@ -3074,6 +3074,7 @@ function enhanceLibraryCards(tableId) {
       actions.appendChild(button);
     }
     window.OmniFriendRecs?.decorate(actions, row);
+    window.OmniLibraryTags?.decorate(row, tableId);
     syncNextUpButtons(actions);
     groupRowActions(actions);
   });

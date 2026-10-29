@@ -31,7 +31,7 @@ def delete_owned_media(db: Session, user_id: int, category: str, item_id: int):
         if item is None:
             db.rollback()
             return None
-        for reference in (models.NextUpItem, models.ProgressCheckpoint):
+        for reference in (models.NextUpItem, models.ProgressCheckpoint, models.LibraryTag):
             db.query(reference).filter_by(user_id=user_id, category=category, item_id=item_id).delete(synchronize_session=False)
         owned_collections = db.query(models.Collection.id).filter(models.Collection.user_id == user_id)
         db.query(models.CollectionItem).filter(

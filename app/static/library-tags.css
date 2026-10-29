@@ -1,0 +1,127 @@
+/* Private tags on library titles and saved shelf views (library-tags.js). */
+
+/* ---------- Tag chips on rows and cards ---------- */
+.library-tags { display: flex; flex-wrap: wrap; gap: 4px; margin-top: 6px; }
+.library-tag {
+  align-items: center;
+  background: hsl(var(--shelf-hue, 262deg) 70% 55% / .14);
+  border: 1px solid hsl(var(--shelf-hue, 262deg) 60% 55% / .35);
+  border-radius: 999px;
+  color: inherit;
+  display: inline-flex;
+  font: inherit;
+  font-size: .72rem;
+  font-weight: 600;
+  gap: 4px;
+  line-height: 1.2;
+  max-width: 100%;
+  overflow: hidden;
+  padding: 3px 9px;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+button.library-tag { cursor: pointer; min-height: 24px; }
+button.library-tag:hover { background: hsl(var(--shelf-hue, 262deg) 70% 55% / .26); }
+button.library-tag:focus-visible { outline: 2px solid var(--primary, #7c5cff); outline-offset: 2px; }
+
+/* Shelf view clamps titles to two lines; a tagged card shows the full title and one row of chips. */
+body.app-shell.library-view-shelf .mobile-library td[data-card-field="title"]:has(.library-tags) {
+  -webkit-line-clamp: unset;
+  display: block;
+}
+body.app-shell.library-view-shelf .mobile-library .library-tags { flex-wrap: nowrap; overflow: hidden; }
+
+/* ---------- Saved views ---------- */
+body.app-shell .library-filters .library-views { align-items: center; display: flex; flex-basis: 100%; flex-wrap: wrap; gap: 6px 8px; }
+body.app-shell .library-filters .library-views[hidden] { display: none; }
+body.app-shell .library-filters .library-view {
+  align-items: stretch;
+  background: var(--card-bg);
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  display: inline-flex;
+  overflow: hidden;
+}
+body.app-shell .library-filters .library-view button {
+  background: transparent;
+  border: 0;
+  color: var(--fg);
+  cursor: pointer;
+  font: inherit;
+  font-size: .82rem;
+  min-height: 34px;
+}
+body.app-shell .library-filters .library-view__open { font-weight: 600; padding: 6px 4px 6px 14px; }
+body.app-shell .library-filters .library-view__open::before { content: "★ "; color: hsl(var(--shelf-hue, 262deg) 70% 60%); }
+body.app-shell .library-filters .library-view__delete { color: var(--fg-secondary) !important; font-size: 1rem !important; padding: 0 12px 0 6px; }
+body.app-shell .library-filters .library-view__delete:hover { color: var(--fg) !important; }
+body.app-shell .library-filters .library-view:has(.library-view__open[aria-pressed="true"]) { background: var(--accent-soft); border-color: var(--primary); }
+body.app-shell .library-filters .library-view button:focus-visible { outline: 2px solid var(--primary, #7c5cff); outline-offset: -2px; }
+body.app-shell .library-filters .library-view__save,
+body.app-shell .library-filters .library-view__cancel {
+  background: transparent;
+  border: 1px dashed var(--border);
+  border-radius: 999px;
+  color: var(--fg-secondary);
+  cursor: pointer;
+  font: inherit;
+  font-size: .82rem;
+  min-height: 34px;
+  padding: 6px 14px;
+}
+body.app-shell .library-filters .library-view__save:hover { border-color: var(--primary); color: var(--fg); }
+body.app-shell .library-filters .library-view__form { align-items: center; display: flex; flex-wrap: wrap; gap: 6px; }
+body.app-shell .library-filters .library-view__form .library-view__save { background: var(--accent-solid); border: 0; color: var(--on-accent); font-weight: 600; }
+body.app-shell .library-filters .library-view__form input {
+  background: var(--card-bg);
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  color: var(--fg);
+  font: inherit;
+  font-size: .85rem;
+  min-height: 34px;
+  padding: 6px 14px;
+  width: min(220px, 60vw);
+}
+body.app-shell .library-filters .library-view__status { color: var(--fg-secondary); font-size: .78rem; }
+
+/* ---------- Tag filter ---------- */
+body.app-shell .library-filters .library-filter-tag[hidden] { display: none !important; }
+body.app-shell .library-filters .library-filter-tag select {
+  background: transparent;
+  border: 0;
+  color: inherit;
+  font: inherit;
+  max-width: 260px;
+  min-height: 32px;
+  padding: 0 4px;
+  width: auto;
+}
+body.app-shell .library-filters .library-filter-tag:has(select option:checked:not([value=""])) { background: var(--accent-soft); border-color: var(--primary); }
+
+/* ---------- Tag editor dialog ---------- */
+.library-tags-dialog form { display: grid; gap: 10px; margin-top: 16px; }
+.library-tags-dialog label { color: inherit; font-size: .95rem; font-weight: 600; }
+.library-tags-current { display: flex; flex-wrap: wrap; gap: 6px; min-height: 30px; }
+.library-tags-current .progress-dialog__hint { align-self: center; }
+.library-tags-dialog .library-tag--edit { font-size: .85rem; padding: 2px 4px 2px 12px; }
+.library-tags-dialog .library-tag--edit button {
+  background: transparent;
+  border: 0;
+  color: inherit;
+  font-size: 1rem;
+  line-height: 1;
+  min-height: 28px;
+  min-width: 28px;
+  padding: 0 6px;
+}
+.library-tags-entry { display: flex; gap: 8px; }
+.library-tags-entry input { flex: 1; min-width: 0; }
+.library-tags-entry input::-webkit-calendar-picker-indicator { display: none !important; }
+.library-tags-suggest > div { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 6px; }
+.library-tags-dialog .library-tag--suggest { font-size: .8rem; min-height: 32px; padding: 4px 10px; }
+.library-tags-dialog .progress-dialog__status { margin: 4px 0; min-height: 1.4em; }
+
+@media (prefers-reduced-motion: reduce) {
+  .library-tag, .library-view button { transition: none; }
+}
