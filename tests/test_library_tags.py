@@ -119,7 +119,8 @@ def test_saved_views_round_trip(authenticated_client, db_session):
     assert view["name"] == "Cozy picks"
     # Movies have no saved progress, so that filter is dropped rather than refused.
     assert view["filters"] == {"search": "nolan", "sort": "rating-desc", "completion": "unfinished",
-                               "unrated": True, "has_progress": False, "tag": "Cozy"}
+                               "unrated": True, "has_progress": False, "tag": "Cozy",
+                               "recommended_by": ""}
     assert authenticated_client.get("/library/views/movies").json() == [view]
     assert authenticated_client.get("/library/views/books").json() == []
 

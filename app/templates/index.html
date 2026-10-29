@@ -60,6 +60,7 @@
   <link rel="stylesheet" href="/static/library-shelf.css?v=20261028-podcasts-1">
   <link rel="stylesheet" href="/static/library-refresh.css?v=20261028-podcasts-1">
   <link rel="stylesheet" href="/static/library-tags.css?v=20261028-tags-1">
+  <link rel="stylesheet" href="/static/title-origins.css?v=20261029-origins-1">
   <link rel="stylesheet" href="/static/dialog-theme.css?v=20260924-visual-4">
   <link rel="stylesheet" href="/static/where-to-watch.css?v=20261026-where-to-watch-1">
   <link rel="stylesheet" href="/static/taste-match.css?v=20261016-taste-match-1">
@@ -1443,6 +1444,12 @@
             <p class="ffeed__share-hint">Friends only see categories you haven't made private.</p>
           </div>
         </header>
+        <section id="bestRecommenders" class="best-recs" aria-labelledby="bestRecommendersTitle" hidden>
+          <p class="best-recs__eyebrow">Only you see this</p>
+          <h3 id="bestRecommendersTitle">Your best recommenders</h3>
+          <p id="bestRecommendersSummary" class="best-recs__summary"></p>
+          <ol id="bestRecommendersList" class="best-recs__list"></ol>
+        </section>
         <div id="friendsFeedFilters" class="ffeed__filters" role="group" aria-label="Show in the feed"></div>
         <p id="friendsFeedStatus" class="ffeed__status" role="status" aria-live="polite"></p>
         <ol id="friendsFeedList" class="ffeed__list" aria-label="Friends' recent updates"></ol>
@@ -2038,7 +2045,8 @@
   <script src="/static/progress.js?v=20261028-podcasts-1"></script>
   <script src="/static/episodes.js?v=20261027-episodes-1"></script>
   <script src="./app.js"></script>
-  <script src="/static/library-tags.js?v=20261028-tags-1"></script>
+  <script src="/static/library-tags.js?v=20261029-origins-1"></script>
+  <script src="/static/title-origins.js?v=20261029-origins-1"></script>
   <script src="/static/for-you.js?v=20261028-episodes-1"></script>
   <script src="/static/title-links.js?v=20261028-podcasts-1"></script>
   <script src="/static/public-profile.js?v=20261027-widgets-1"></script>

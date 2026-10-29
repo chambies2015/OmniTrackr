@@ -268,12 +268,12 @@
       search: document.getElementById(source.input).value.trim(),
       sort: document.getElementById(sortId).value,
       completion: filters.completion, unrated: !!filters.unrated,
-      has_progress: !!filters.hasProgress, tag: filters.tag || '',
+      has_progress: !!filters.hasProgress, tag: filters.tag || '', recommended_by: filters.recommendedBy || '',
     };
   }
-  const sameView = (a, b) => ['search', 'sort', 'completion', 'unrated', 'has_progress', 'tag']
-    .every(name => (name === 'tag' ? fold(a[name] || '') === fold(b[name] || '') : a[name] === b[name]));
-  const isDefault = view => sameView(view, { search: '', sort: '', completion: 'all', unrated: false, has_progress: false, tag: '' });
+  const sameView = (a, b) => ['search', 'sort', 'completion', 'unrated', 'has_progress', 'tag', 'recommended_by']
+    .every(name => (['tag', 'recommended_by'].includes(name) ? fold(a[name] || '') === fold(b[name] || '') : a[name] === b[name]));
+  const isDefault = view => sameView(view, { search: '', sort: '', completion: 'all', unrated: false, has_progress: false, tag: '', recommended_by: '' });
   function applyView(category, view) {
     if (typeof editingRowId !== 'undefined' && editingRowId !== null) {
       alert('Save or cancel your current edit before changing filters.');
@@ -287,7 +287,7 @@
     document.getElementById(source.input).value = view.filters.search;
     applyLibraryFilters(category, {
       completion: view.filters.completion, unrated: view.filters.unrated,
-      hasProgress: view.filters.has_progress, tag: view.filters.tag,
+      hasProgress: view.filters.has_progress, tag: view.filters.tag, recommendedBy: view.filters.recommended_by || '',
     });
   }
   async function saveView(category, name, status) {

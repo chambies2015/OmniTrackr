@@ -1,0 +1,151 @@
+/* Why I added it (title-origins.js): the line under a title, the editor and the best recommenders card. */
+
+/* ---------- Line under the title ---------- */
+.title-origin {
+  align-items: baseline;
+  color: var(--fg-secondary);
+  display: flex;
+  flex-wrap: wrap;
+  font-size: .76rem;
+  gap: 2px 8px;
+  line-height: 1.35;
+  margin-top: 5px;
+}
+.title-origin__who {
+  background: none;
+  border: 0;
+  color: inherit;
+  cursor: pointer;
+  font: inherit;
+  font-weight: 600;
+  min-height: 24px;
+  padding: 0;
+  text-decoration: underline dotted;
+  text-underline-offset: 3px;
+}
+.title-origin__who:hover { color: var(--fg); }
+.title-origin__who:focus-visible { outline: 2px solid var(--primary, #7c5cff); outline-offset: 2px; }
+.title-origin__note {
+  font-style: italic;
+  max-width: 100%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+body.app-shell.library-view-shelf .mobile-library td[data-card-field="title"]:has(.title-origin) {
+  -webkit-line-clamp: unset;
+  display: block;
+}
+
+/* ---------- Editor ---------- */
+.title-origin-dialog form { display: grid; gap: 10px; margin-top: 16px; }
+.title-origin-dialog label,
+.title-origin-dialog legend { color: inherit; font-size: .95rem; font-weight: 600; }
+.title-origin-sources { border: 0; margin: 0; padding: 0; }
+.title-origin-sources legend { margin-bottom: 8px; padding: 0; }
+.title-origin-sources__list { display: grid; gap: 6px; grid-template-columns: repeat(2, minmax(0, 1fr)); }
+.title-origin-dialog .title-origin-source {
+  align-items: center;
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  cursor: pointer;
+  display: flex;
+  font-size: .86rem;
+  font-weight: 500;
+  gap: 8px;
+  min-height: 40px;
+  padding: 6px 10px;
+}
+.title-origin-source:has(input:checked) { background: var(--accent-soft); border-color: var(--primary); }
+.title-origin-source:has(input:focus-visible) { outline: 2px solid var(--primary, #7c5cff); outline-offset: 2px; }
+.title-origin-dialog .title-origin-source input {
+  accent-color: var(--primary, #7c5cff);
+  flex: none;
+  height: 18px;
+  margin: 0;
+  min-height: 0;
+  padding: 0;
+  width: 18px;
+}
+.title-origin-friend, .title-origin-who { display: grid; gap: 6px; }
+.title-origin-friend[hidden], .title-origin-who[hidden] { display: none; }
+.title-origin-dialog select,
+.title-origin-dialog input[type="text"],
+.title-origin-dialog textarea { font: inherit; min-height: 40px; width: 100%; }
+.title-origin-dialog textarea { resize: vertical; }
+.title-origin-count { color: var(--fg-secondary); font-size: .78rem; margin: -4px 0 0; min-height: 1em; }
+.title-origin-dialog .progress-dialog__status { margin: 4px 0; min-height: 1.4em; }
+@media (max-width: 480px) {
+  .title-origin-sources__list { grid-template-columns: 1fr; }
+}
+
+/* ---------- "Recommended by" filter ---------- */
+body.app-shell .library-filters .library-filter-origin[hidden] { display: none !important; }
+body.app-shell .library-filters .library-filter-origin select {
+  background: transparent;
+  border: 0;
+  color: inherit;
+  font: inherit;
+  max-width: 220px;
+  min-height: 32px;
+  padding: 0 4px;
+  width: auto;
+}
+body.app-shell .library-filters .library-filter-origin:has(select option:checked:not([value=""])) { background: var(--accent-soft); border-color: var(--primary); }
+
+/* ---------- Best recommenders card ---------- */
+.best-recs {
+  background: var(--card-bg, #191f2c);
+  border: 1px solid var(--border);
+  border-radius: 16px;
+  margin: 0 0 16px;
+  padding: 18px 20px;
+}
+.best-recs[hidden] { display: none; }
+.best-recs__eyebrow { color: var(--primary, #7c5cff); font-size: .72rem; font-weight: 800; letter-spacing: .08em; margin: 0 0 4px; text-transform: uppercase; }
+.best-recs h3 { font-size: 1.1rem; margin: 0; }
+.best-recs__summary { color: var(--fg-secondary); font-size: .88rem; margin: 6px 0 0; max-width: 62ch; }
+.best-recs__list { display: grid; gap: 8px; list-style: none; margin: 14px 0 0; padding: 0; }
+.best-recs__list:empty { display: none; }
+.best-recs__person {
+  align-items: center;
+  border-top: 1px solid var(--border);
+  display: grid;
+  gap: 4px 12px;
+  grid-template-columns: 28px minmax(0, 1fr) auto auto;
+  padding-top: 8px;
+}
+.best-recs__person:first-child { border-top: 0; padding-top: 0; }
+.best-recs__rank {
+  align-items: center;
+  background: var(--accent-soft);
+  border-radius: 50%;
+  display: inline-flex;
+  font-size: .8rem;
+  font-weight: 700;
+  height: 28px;
+  justify-content: center;
+  width: 28px;
+}
+.best-recs__name { font-weight: 700; margin: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.best-recs__facts { color: var(--fg-secondary); font-size: .8rem; margin: 2px 0 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.best-recs__score { font-size: .9rem; font-variant-numeric: tabular-nums; font-weight: 700; white-space: nowrap; }
+.best-recs__open {
+  background: transparent;
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  color: var(--fg);
+  cursor: pointer;
+  font: inherit;
+  font-size: .8rem;
+  min-height: 34px;
+  padding: 4px 12px;
+  white-space: nowrap;
+}
+.best-recs__open:hover { border-color: var(--primary); }
+.best-recs__open:focus-visible { outline: 2px solid var(--primary, #7c5cff); outline-offset: 2px; }
+@media (max-width: 560px) {
+  .best-recs { padding: 16px; }
+  .best-recs__person { grid-template-columns: 28px minmax(0, 1fr) auto; }
+  .best-recs__open { grid-column: 2 / -1; justify-self: start; }
+}

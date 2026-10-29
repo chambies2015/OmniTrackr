@@ -49,6 +49,7 @@ function switchTab(tabName) {
     return loadPodcasts();
   } else if (tabName === 'friends-feed') {
     window.OmniFriendFeed?.load();
+    window.OmniTitleOrigins?.loadRecommenders();
   } else if (tabName === 'activity') {
     loadActivityJournal();
   } else if (tabName === 'recommendations') {
@@ -3075,6 +3076,7 @@ function enhanceLibraryCards(tableId) {
     }
     window.OmniFriendRecs?.decorate(actions, row);
     window.OmniLibraryTags?.decorate(row, tableId);
+    window.OmniTitleOrigins?.decorate(row, tableId);
     syncNextUpButtons(actions);
     groupRowActions(actions);
   });

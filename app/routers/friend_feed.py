@@ -16,7 +16,7 @@ from pydantic import BaseModel, Field
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
 
-from .. import friend_feed, models
+from .. import friend_feed, models, title_origins
 from ..dependencies import get_current_user, get_db
 from ..for_you import LIBRARY
 from ..integer_bounds import PositiveDatabaseId
@@ -130,6 +130,8 @@ def save(body: SaveBody, request: Request, response: Response, user=Depends(get_
         item = _new_item(user.id, body.category, _details(body.category, source))
         db.add(item)
         db.flush()
+        title_origins.prefill(db, user.id, body.category, item.id, "friend",
+                              friend=db.get(models.User, body.friend_id), note="Saved from the friends feed")
     queued = False
     if body.next_up and not getattr(item, COMPLETE_FIELD[body.category], False):
         queued = enqueue(db, user.id, body.category, item.id)

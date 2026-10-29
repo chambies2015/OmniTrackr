@@ -25,7 +25,7 @@ from sqlalchemy import func
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
 
-from .. import funnel, models, title_pages
+from .. import funnel, models, title_origins, title_pages
 from ..auth import AUTH_COOKIE_NAME
 from ..crud.friends import are_friends
 from ..csp import strict_html_response
@@ -350,6 +350,8 @@ def add_recommendation(rec_id: PositiveDatabaseId, request: Request, response: R
         item = _new_item(user.id, entry.category, details)
         db.add(item)
         db.flush()
+        title_origins.prefill(db, user.id, entry.category, item.id, "friend",
+                              friend=db.get(models.User, entry.sender_id), note=entry.note)
     queued = False
     if body and body.next_up and not getattr(item, COMPLETE_FIELD[entry.category], False):
         queued = enqueue(db, user.id, entry.category, item.id)

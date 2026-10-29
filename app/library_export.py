@@ -187,6 +187,7 @@ library.csv       Every title in your library, one row each, all categories toge
 journal.csv       Your journal: every start, finish, revisit and note, newest first.
 collections.csv   The titles in each of your collections, in the order you set.
 progress.csv      Where you stopped in shows, anime, books, manga and podcasts.
+why-added.csv     Who recommended each title, or where you heard of it, with your note.
 custom-tabs/      One file for each custom tab, with its own columns.
 
 library.csv uses the same columns as the Import Studio's spreadsheet option, so you can
@@ -200,7 +201,8 @@ These files hold your private notes and reviews. Keep them somewhere private.
 
 
 def spreadsheet_zip(library: dict[str, list[Any]], journal: list[models.ActivityEntry], collections: list[dict],
-                    progress: list[dict], custom_tabs: list[dict], now: datetime) -> bytes:
+                    progress: list[dict], custom_tabs: list[dict], now: datetime,
+                    origins: Iterable[dict] = ()) -> bytes:
     files = {
         "README.txt": README.format(when=now.strftime("%Y-%m-%d %H:%M")),
         "library.csv": _csv(LIBRARY_COLUMNS, library_rows(library), spreadsheet=True),
@@ -223,6 +225,13 @@ def spreadsheet_zip(library: dict[str, list[Any]], journal: list[models.Activity
             ["category", "title", "unit", "season", "position", "note", "updated_at"],
             ({"category": entry["category"], "title": entry["title"], **entry["checkpoint"],
               "updated_at": entry["updated_at"]} for entry in progress),
+            spreadsheet=True,
+        ),
+        "why-added.csv": _csv(
+            ["category", "title", "source", "who", "note", "updated_at"],
+            ({"category": entry["category"], "title": entry["title"], "source": entry["source"],
+              "who": entry["who"], "note": entry["note"], "updated_at": entry["updated_at"] or ""}
+             for entry in origins),
             spreadsheet=True,
         ),
         **_custom_tab_files(custom_tabs),

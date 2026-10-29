@@ -97,6 +97,9 @@ async function importData(fileInput) {
     message += `Podcasts: ${result.podcasts_created || 0} created, ${result.podcasts_updated || 0} updated\n`;
     message += `Custom Tabs: ${result.custom_tabs_created || 0} created, ${result.custom_tabs_updated || 0} updated`;
     message += `\nPrivate progress: ${result.progress_created || 0} restored, ${result.progress_skipped || 0} skipped. Existing or cleared checkpoints stay unchanged.`;
+    if (result.origins_created || result.origins_skipped) {
+      message += `\nWhy you added titles: ${result.origins_created || 0} restored, ${result.origins_skipped || 0} skipped. Titles that already had a note keep it.`;
+    }
 
     if (result.errors.length > 0) {
       message += `\n\nErrors:\n${result.errors.join('\n')}`;

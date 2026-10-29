@@ -741,6 +741,7 @@ class ExportData(BaseModel):
     activities: List[ActivityEntry] = Field(default=[], description="Private activity journal entries")
     collections: List[dict] = Field(default=[], description="Private cross-media collections and curator notes")
     progress_checkpoints: List[dict] = Field(default_factory=list, description="Private episode and reading checkpoints")
+    title_origins: List[dict] = Field(default_factory=list, description="Private notes on who recommended each title and why it was added")
     export_metadata: dict = Field(..., description="Export metadata including timestamp and version")
     
 # Far above any real library, but keeps one request from queueing millions of row writes.
@@ -763,6 +764,7 @@ class ImportData(BaseModel):
     activities: List[ActivityEntryImport] = Field(default=[], max_length=MAX_IMPORT_LIST_ITEMS, description="Activity journal entries (optional for backward compatibility)")
     collections: List[dict] = Field(default=[], max_length=MAX_IMPORT_LIST_ITEMS, description="Collections to restore privately (optional for backward compatibility)")
     progress_checkpoints: List[dict] = Field(default_factory=list, max_length=10000, description="Checkpoints to restore only where no saved progress exists")
+    title_origins: List[dict] = Field(default_factory=list, max_length=MAX_IMPORT_LIST_ITEMS, description="Why-I-added-it notes, restored only on titles that have none")
     
 class ImportResult(BaseModel):
     """Schema for import operation results"""
@@ -792,6 +794,8 @@ class ImportResult(BaseModel):
     collections_skipped: int = Field(default=0, description="Number of existing or invalid collections skipped")
     progress_created: int = Field(default=0, description="Number of private checkpoints restored")
     progress_skipped: int = Field(default=0, description="Existing, ambiguous, unavailable or invalid checkpoints skipped")
+    origins_created: int = Field(default=0, description="Number of why-I-added-it notes restored")
+    origins_skipped: int = Field(default=0, description="Existing, ambiguous, unavailable or invalid why-I-added-it notes skipped")
     errors: List[str] = Field(default=[], description="List of errors encountered during import")
     
 # Statistics schemas

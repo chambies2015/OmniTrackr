@@ -50,7 +50,7 @@ function libraryPageSignature(category) {
   const [, sortId] = libraryPageConfig(category);
   const filters = getLibraryFilters(category);
   return JSON.stringify([document.getElementById(source.input).value, document.getElementById(sortId).value,
-    filters.completion, filters.unrated, filters.hasProgress, filters.tag || '']);
+    filters.completion, filters.unrated, filters.hasProgress, filters.tag || '', filters.recommendedBy || '']);
 }
 
 function renderLibraryFilters(category) {
@@ -93,7 +93,7 @@ function renderLibraryFilters(category) {
     const reset = document.createElement('button');
     reset.type = 'button'; reset.className = 'library-filter-reset'; reset.textContent = 'Clear search & filters';
     reset.addEventListener('click', () => applyLibraryFilters(category,
-      { completion: 'all', unrated: false, hasProgress: false, tag: '' }, { clearSearch: true }));
+      { completion: 'all', unrated: false, hasProgress: false, tag: '', recommendedBy: '' }, { clearSearch: true }));
     host.appendChild(reset);
     const feedback = document.createElement('p');
     feedback.id = `${tableId}FilterStatus`; feedback.className = 'library-filter-status';
@@ -105,8 +105,9 @@ function renderLibraryFilters(category) {
   });
   host.querySelectorAll('[data-library-filter]').forEach(input => { input.checked = filters[input.dataset.libraryFilter]; });
   host.querySelector('.library-filter-reset').disabled = filters.completion === 'all' && !filters.unrated
-    && !filters.hasProgress && !filters.tag && !document.getElementById(source.input).value;
+    && !filters.hasProgress && !filters.tag && !filters.recommendedBy && !document.getElementById(source.input).value;
   window.OmniLibraryTags?.renderFilters(category, host);
+  window.OmniTitleOrigins?.renderFilters(category, host);
 }
 
 function applyLibraryFilters(category, changes, { clearSearch = false } = {}) {
@@ -122,6 +123,8 @@ function applyLibraryFilters(category, changes, { clearSearch = false } = {}) {
   next.hasProgress = ['tv-shows', 'anime', 'books', 'manga', 'podcasts'].includes(category) && !!next.hasProgress;
   // A tag filter (library-tags.js) is only present while one is chosen.
   if (typeof next.tag !== 'string' || !next.tag) delete next.tag;
+  // Likewise the "Recommended by" filter (title-origins.js).
+  if (typeof next.recommendedBy !== 'string' || !next.recommendedBy) delete next.recommendedBy;
   const source = LIBRARY_SEARCH_SOURCES.find(entry => entry.tab === category);
   if (clearSearch) document.getElementById(source.input).value = '';
   libraryFilters.set(category, next);
@@ -136,6 +139,7 @@ function resetLibraryBrowsing() {
   libraryBrowseEpoch++;
   libraryFilters.clear();
   window.OmniLibraryTags?.reset();
+  window.OmniTitleOrigins?.reset();
   libraryPages.clear();
   for (const source of LIBRARY_SEARCH_SOURCES) {
     const input = document.getElementById(source.input);
@@ -164,7 +168,7 @@ function renderLibraryPager(category, page, loading = false, error = '') {
   const feedback = document.getElementById(`${tableId}FilterStatus`);
   const source = LIBRARY_SEARCH_SOURCES.find(entry => entry.tab === category);
   const filters = getLibraryFilters(category);
-  const filtered = filters.completion !== 'all' || filters.unrated || filters.hasProgress || !!filters.tag
+  const filtered = filters.completion !== 'all' || filters.unrated || filters.hasProgress || !!filters.tag || !!filters.recommendedBy
     || !!document.getElementById(source.input).value;
   if (feedback) feedback.textContent = error || (loading ? 'Loading titles…' : page.total
     ? `${page.total} ${page.total === 1 ? 'title' : 'titles'}${filtered ? (page.total === 1 ? ' matches your view' : ' match your view') : ' in this library'}.`
@@ -256,6 +260,7 @@ async function fetchLibraryPage(url) {
   parsed.searchParams.set('unrated', String(filters.unrated));
   parsed.searchParams.set('has_progress', String(filters.hasProgress));
   if (filters.tag) parsed.searchParams.set('tag', filters.tag);
+  if (filters.recommendedBy) parsed.searchParams.set('recommended_by', filters.recommendedBy);
   if (page.focusId) parsed.searchParams.set('focus_id', String(page.focusId));
   renderLibraryPager(category, page, true);
   try {
@@ -269,6 +274,7 @@ async function fetchLibraryPage(url) {
     }
     page.offset = data.offset; page.total = data.total;
     globalThis.OmniLibraryTags?.remember(category, data.items);
+    globalThis.OmniTitleOrigins?.remember(category, data.items);
     const loadedKey = JSON.stringify([signature, data.offset]);
     page.browseOnly = page.loadedKey !== undefined && page.loadedKey !== loadedKey
       && Number(parsed.searchParams.get('offset')) === data.offset;

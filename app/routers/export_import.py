@@ -9,7 +9,7 @@ from pydantic import ValidationError
 from sqlalchemy import func
 from sqlalchemy.orm import Session, selectinload
 
-from .. import crud, schemas, models, library_export
+from .. import crud, schemas, models, library_export, title_origins
 from ..integer_bounds import SQL_INTEGER_MAX
 from ..dependencies import get_db, get_current_user
 from ..progress import CATEGORIES as PROGRESS_CATEGORIES, get_checkpoint_map, serialize_checkpoint, validate_checkpoint, stage_import_checkpoint, lock_progress_owner
@@ -181,6 +181,35 @@ def _import_progress(db: Session, user_id: int, payloads: list[dict]) -> tuple[i
         raise
 
 
+def _import_origins(db: Session, user_id: int, payloads: list[dict]) -> tuple[int, int]:
+    """Put back why-I-added-it notes on the one matching title. A title that already has one keeps it."""
+    if not payloads:
+        return 0, 0
+    created = skipped = 0
+    try:
+        lock_progress_owner(db, user_id)
+        for raw in payloads:
+            category = raw.get("category") if isinstance(raw, dict) else None
+            title = raw.get("title") if isinstance(raw, dict) else None
+            model = COLLECTION_MEDIA_MODELS.get(category) if isinstance(category, str) else None
+            if model is None or not isinstance(title, str) or not title.strip():
+                skipped += 1
+                continue
+            query = db.query(model).filter(model.user_id == user_id, func.lower(model.title) == title.strip().lower())
+            query = _apply_import_identity(query, model, category, raw)
+            matches = query.limit(2).all() if query is not None else []
+            if len(matches) == 1 and title_origins.import_row(db, user_id, category, matches[0].id, raw):
+                db.flush()
+                created += 1
+            else:
+                skipped += 1
+        db.commit()
+        return created, skipped
+    except Exception:
+        db.rollback()
+        raise
+
+
 def _import_collections(db: Session, user_id: int, payloads: list[dict]) -> tuple[int, int]:
     if payloads:
         lock_progress_owner(db, user_id)
@@ -274,6 +303,7 @@ def export_data(
     ).order_by(models.ActivityEntry.occurred_at.desc(), models.ActivityEntry.id.desc()).all()
     collections = _export_collections(db, current_user.id)
     progress_checkpoints = _export_progress(db, current_user.id)
+    origins = title_origins.export_rows(db, current_user.id, _exported_identity)
 
     export_metadata = {
         "export_timestamp": datetime.now().isoformat(),
@@ -293,6 +323,7 @@ def export_data(
         "total_activities": len(activities),
         "total_collections": len(collections),
         "total_progress_checkpoints": len(progress_checkpoints),
+        "total_title_origins": len(origins),
     }
 
     return schemas.ExportData(
@@ -308,6 +339,7 @@ def export_data(
         activities=[serialize_activity(entry) for entry in activities],
         collections=collections,
         progress_checkpoints=progress_checkpoints,
+        title_origins=origins,
         export_metadata=export_metadata
     )
 
@@ -332,6 +364,7 @@ def export_format(
             library_export.load_library(db, current_user.id), journal,
             _export_collections(db, current_user.id), _export_progress(db, current_user.id),
             crud.get_all_custom_tabs_with_items(db, current_user.id), now,
+            origins=title_origins.export_rows(db, current_user.id, _exported_identity),
         )
         media_type, filename = "application/zip", f"omnitrackr-spreadsheets-{stamp}.zip"
     elif fmt == "goodreads":
@@ -375,6 +408,7 @@ def _run_import(import_data: schemas.ImportData, current_user: models.User, db: 
     activities_created, activities_skipped = import_activity_entries(db, current_user.id, import_data.activities)
     collections_created, collections_skipped = _import_collections(db, current_user.id, import_data.collections)
     progress_created, progress_skipped = _import_progress(db, current_user.id, import_data.progress_checkpoints)
+    origins_created, origins_skipped = _import_origins(db, current_user.id, import_data.title_origins)
 
     all_errors = movie_errors + tv_show_errors + anime_errors + video_game_errors + music_errors + book_errors + manga_errors + podcast_errors + custom_tab_errors
 
@@ -403,6 +437,8 @@ def _run_import(import_data: schemas.ImportData, current_user: models.User, db: 
         collections_skipped=collections_skipped,
         progress_created=progress_created,
         progress_skipped=progress_skipped,
+        origins_created=origins_created,
+        origins_skipped=origins_skipped,
         errors=all_errors
     )
 
