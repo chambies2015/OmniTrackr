@@ -35,7 +35,8 @@ def test_pages_share_one_header_and_footer(client, path, active):
     assert "<!--SITE_" not in html
     assert html.count('<header class="site-header">') == 1
     assert html.count('<footer class="site-footer">') == 1
-    assert "/static/site.css?v=" in html and "/static/site.js?v=" in html
+    # Guide and policy pages carry site.css inline (reader_pages.py); the rest link it.
+    assert ("/static/site.css?v=" in html or '<style data-from="site.css"' in html) and "/static/site.js?v=" in html
     expected = dict((key, href) for key, _, href in site_chrome.NAV_ITEMS).get(active, "")
     assert current_nav_key(html) == expected
     footer = html[html.index('<footer class="site-footer">'):]
@@ -44,13 +45,15 @@ def test_pages_share_one_header_and_footer(client, path, active):
             assert f'href="{href}"' in footer
 
 
-def test_guide_pages_use_the_dark_reader_theme(client):
+def test_guide_pages_use_the_reader_theme(client):
     for path in GUIDE_PAGES:
         html = client.get(path).text
         assert '<body class="public-reader site">' in html, path
         assert 'class="reader-nav-wrap"' not in html and 'class="reader-footer"' not in html
     css = client.get("/static/public-reader.css").text
-    assert "var(--site-bg)" in css and "prefers-color-scheme" not in css
+    # Dark by default; the light theme only applies to pages reader_pages.py marks with data-reader.
+    assert "var(--site-bg)" in css
+    assert "html[data-reader]:not([data-theme=\"dark\"])" in css and 'html[data-reader][data-theme="light"]' in css
 
 
 def test_chrome_helper_is_idempotent_and_leaves_other_pages_alone():

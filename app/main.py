@@ -26,6 +26,7 @@ from .integer_bounds import PositiveDatabaseId, SQL_INTEGER_MAX
 from . import crud, schemas, models, dashboard_assets
 from .database import Base, SessionLocal, engine
 from .site_chrome import apply_app_chrome, apply_site_chrome, message_page
+from .reader_pages import enhance as enhance_reader_page
 from .csp import nonce_html_response, strict_html_response
 from .auth import AUTH_COOKIE_NAME
 from .migrations import run_migrations
@@ -306,7 +307,8 @@ def strict_template_response(template_name: str, request: Request | None = None,
             source = file.read()
             for marker, value in (replacements or {}).items():
                 source = source.replace(marker, value)
-            html, indexable = apply_public_search_policy(apply_site_chrome(source), template_name)
+            html, indexable = apply_public_search_policy(
+                enhance_reader_page(apply_site_chrome(source), template_name), template_name)
             html = inject_adsense_account_meta(html)
             response = strict_html_response(inject_public_ad_loader(html, template_name, request))
             response.headers["Vary"] = "Cookie"
