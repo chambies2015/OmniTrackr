@@ -15,6 +15,14 @@ their supporter settings, or by an admin by hand.
 
 Perks are cosmetic only (badge, profile accent, a profile banner, six showcase
 spots instead of three, a place on the supporter wall).
+
+Monthly members (Oct 28) get a few extras on top, by Ko-fi tier: a tier tag on
+the profile and three member banners for every tier, moving banners from
+Season Pass up, and gold plus the "Director's Cut" credits on the supporter
+wall at the top tier. Membership lasts ``MONTHLY_DAYS`` past each membership
+payment (``member_until``), so a cancelled membership winds down on its own. A
+member's tier comes from Ko-fi's ``tier_name``, or from the amount when the
+name is one we don't know.
 ``is_ad_free`` is the hook for an ad-free experience once ads run for signed-in
 members.
 
@@ -50,6 +58,19 @@ BASE_ACCENTS = ("violet", "teal", "amber", "rose", "sky", "emerald", "coral")
 ACCENTS = BASE_ACCENTS + ("gold",)
 # Banner art drawn in CSS across the top of the public profile, tinted by the accent.
 BANNERS = ("aurora", "filmstrip", "pixels", "pages", "vinyl", "stars")
+# Extra banners for monthly members of any tier.
+MEMBER_BANNERS = ("neon", "marquee", "comic")
+ALL_BANNERS = BANNERS + MEMBER_BANNERS
+# Ko-fi membership tiers, lowest first. Keep names and prices in step with ko-fi.com/omnitrackr/tiers;
+# a payment whose tier name isn't listed here is placed by its amount.
+TIERS = (
+    {"slug": "popcorn", "name": "Popcorn", "price": 3, "rank": 1},
+    {"slug": "season_pass", "name": "Season Pass", "price": 5, "rank": 2},
+    {"slug": "directors_cut", "name": "Director's Cut", "price": 10, "rank": 3},
+)
+TIERS_BY_SLUG = {tier["slug"]: tier for tier in TIERS}
+MOTION_RANK = 2  # moving banners
+CREDITS_RANK = 3  # gold right away and the credits on the wall
 GOLD_MONTHS = 6
 FOUNDING_BEFORE = datetime(2027, 1, 1)
 WALL_LIMIT = 150
@@ -110,6 +131,54 @@ def is_active(supporter: Optional[models.Supporter], now: Optional[datetime] = N
     return bool(supporter and supporter.active_until and supporter.active_until > (now or _now()))
 
 
+def _tier_key(name: str) -> str:
+    return re.sub(r"[^a-z0-9]", "", name.lower())
+
+
+def resolve_tier(tier_name: Optional[str], amount: Optional[str]) -> str:
+    """The tier slug for a membership payment: by Ko-fi tier name, else by amount."""
+    if tier_name:
+        key = _tier_key(tier_name)
+        for tier in TIERS:
+            if key in (_tier_key(tier["name"]), _tier_key(tier["slug"])):
+                return tier["slug"]
+    paid = _amount(amount)
+    best = TIERS[0]
+    for tier in TIERS:
+        if paid >= tier["price"]:
+            best = tier
+    return best["slug"]
+
+
+def is_member(supporter: Optional[models.Supporter], now: Optional[datetime] = None) -> bool:
+    """A monthly Ko-fi member right now (on top of being a supporter)."""
+    return bool(is_active(supporter, now) and supporter.member_until and supporter.member_until > (now or _now()))
+
+
+def member_tier(supporter: Optional[models.Supporter], now: Optional[datetime] = None) -> Optional[dict]:
+    """The member's tier, or None. Memberships from before tiers were tracked count as the first tier."""
+    if not is_member(supporter, now):
+        return None
+    return TIERS_BY_SLUG.get(supporter.tier or "", TIERS[0])
+
+
+def member_rank(supporter: Optional[models.Supporter], now: Optional[datetime] = None) -> int:
+    tier = member_tier(supporter, now)
+    return tier["rank"] if tier else 0
+
+
+def unlocked_banners(supporter: Optional[models.Supporter], now: Optional[datetime] = None) -> tuple:
+    if not is_active(supporter, now):
+        return ()
+    return ALL_BANNERS if is_member(supporter, now) else BANNERS
+
+
+def shown_banner(supporter: Optional[models.Supporter]) -> Optional[str]:
+    """The saved banner, if the member can still use it. A lapsed membership hides a member banner but keeps the choice."""
+    banner = supporter.banner if supporter else None
+    return banner if banner in unlocked_banners(supporter) else None
+
+
 def is_ad_free(db: Session, user) -> bool:
     """Whether this member should see no ads. Supporters get it while their perks are active."""
     return user is not None and is_active(get_supporter(db, user.id))
@@ -127,7 +196,7 @@ def months_supported(db: Session, user_id: int) -> int:
 
 
 def unlocked_accents(supporter: Optional[models.Supporter], months: int) -> tuple:
-    if is_founding(supporter) or months >= GOLD_MONTHS:
+    if is_founding(supporter) or months >= GOLD_MONTHS or member_rank(supporter) >= CREDITS_RANK:
         return ACCENTS
     return BASE_ACCENTS
 
@@ -143,9 +212,12 @@ def public_badge(db: Session, user_id: int) -> Optional[dict]:
     supporter = get_supporter(db, user_id)
     if not is_active(supporter) or not supporter.show_badge:
         return None
+    tier = member_tier(supporter)
+    banner = shown_banner(supporter)
     return {"since": supporter.since, "accent": supporter.accent if supporter.accent in ACCENTS else None,
-            "banner": supporter.banner if supporter.banner in BANNERS else None,
-            "founding": is_founding(supporter), "months": months_supported(db, user_id)}
+            "banner": banner, "founding": is_founding(supporter), "months": months_supported(db, user_id),
+            "tier": tier["name"] if tier else None,
+            "motion": bool(banner and supporter.banner_motion and tier and tier["rank"] >= MOTION_RANK)}
 
 
 def public_badges(db: Session, user_ids) -> dict:
@@ -184,7 +256,11 @@ def _grant(db: Session, user_id: int, payment: models.KofiPayment) -> models.Sup
     start = max(supporter.active_until or paid_at, paid_at)
     supporter.active_until = start + timedelta(days=days)
     supporter.since = min(supporter.since or paid_at, paid_at)
-    supporter.monthly = bool(payment.monthly)
+    if payment.monthly:
+        supporter.member_until = max(supporter.member_until or paid_at, paid_at) + timedelta(days=MONTHLY_DAYS)
+        supporter.tier = resolve_tier(payment.tier_name, payment.amount)
+    # A one-time tip from a current member leaves the membership as it is.
+    supporter.monthly = bool(supporter.member_until and supporter.member_until > paid_at)
     return supporter
 
 
@@ -224,9 +300,14 @@ def link_payment(db: Session, message_id: str, user) -> models.KofiPayment:
     return payment
 
 
+def tiers_url() -> str:
+    return f"{KOFI_URL.rstrip('/')}/tiers"
+
+
 def status_payload(db: Session, user) -> dict:
     supporter = get_supporter(db, user.id)
     active = is_active(supporter)
+    tier = member_tier(supporter)
     months = months_supported(db, user.id) if supporter else 0
     founding = is_founding(supporter)
     return {
@@ -243,8 +324,18 @@ def status_payload(db: Session, user) -> dict:
         "show_badge": supporter.show_badge if supporter else True,
         "accent": (supporter.accent if supporter and supporter.accent in ACCENTS else None),
         "accents": list(ACCENTS),
-        "banner": (supporter.banner if supporter and supporter.banner in BANNERS else None),
+        "banner": (supporter.banner if supporter and supporter.banner in ALL_BANNERS else None),
         "banners": list(BANNERS),
+        "member_banners": list(MEMBER_BANNERS),
+        "unlocked_banners": list(unlocked_banners(supporter)) if supporter else [],
+        "member": tier is not None,
+        "tier": tier["slug"] if tier else None,
+        "tier_name": tier["name"] if tier else None,
+        "member_until": supporter.member_until.isoformat() if tier and supporter.member_until else None,
+        "banner_motion": bool(supporter and supporter.banner_motion),
+        "can_animate": bool(tier and tier["rank"] >= MOTION_RANK),
+        "tiers": [dict(item) for item in TIERS],
+        "tiers_url": tiers_url(),
         "ad_free": active,
         "code": supporter_code(user.id),
         "kofi_url": KOFI_URL,
@@ -270,11 +361,18 @@ def save_settings(db: Session, user, changes: dict) -> models.Supporter:
         supporter.accent = accent
     if "banner" in changes:
         banner = changes["banner"] or None
-        if banner is not None and banner not in BANNERS:
+        if banner is not None and banner not in ALL_BANNERS:
             raise ValueError("Pick one of the listed banners.")
         if banner is not None and not is_active(supporter):
             raise PermissionError("Profile banners are a perk for current supporters.")
+        if banner in MEMBER_BANNERS and not is_member(supporter):
+            raise PermissionError("Neon, marquee and comic come with a monthly Ko-fi membership.")
         supporter.banner = banner
+    if "banner_motion" in changes and changes["banner_motion"] is not None:
+        motion = bool(changes["banner_motion"])
+        if motion and member_rank(supporter) < MOTION_RANK:
+            raise PermissionError("Moving banners come with the Season Pass and Director's Cut memberships.")
+        supporter.banner_motion = motion
     db.commit()
     db.refresh(supporter)
     return supporter
@@ -295,10 +393,12 @@ def wall(db: Session, limit: int = WALL_LIMIT) -> list[dict]:
     entries = []
     for supporter, user in rows:
         active = is_active(supporter, now)
+        tier = member_tier(supporter, now)
         entries.append({
             "name": user.username, "path": paths.get(user.id), "active": active,
             "founding": is_founding(supporter), "since": supporter.since,
             "accent": supporter.accent if active and supporter.accent in ACCENTS else None,
+            "tier": tier["name"] if tier else None, "credits": bool(tier and tier["rank"] >= CREDITS_RANK),
         })
     entries.sort(key=lambda entry: not entry["active"])
     return entries
@@ -372,7 +472,7 @@ def handle_webhook(db: Session, data: dict) -> dict:
     if monthly and kind == "donation":
         kind = "subscription"
     payment = models.KofiPayment(
-        message_id=message_id, kind=kind, monthly=monthly,
+        message_id=message_id, kind=kind, monthly=monthly, tier_name=_clip(data.get("tier_name"), 40) if monthly else None,
         amount=_clip(data.get("amount"), 16), currency=_clip(data.get("currency"), 8),
         email_hash=email_hash(data.get("email") if isinstance(data.get("email"), str) else None),
         from_name=_clip(data.get("from_name"), 80), received_at=_now(),
@@ -404,5 +504,5 @@ def unmatched_payments(db: Session, limit: int = 50) -> list[dict]:
     rows = (db.query(models.KofiPayment).filter(models.KofiPayment.user_id.is_(None))
             .order_by(models.KofiPayment.received_at.desc()).limit(limit).all())
     return [{"message_id": p.message_id, "kind": p.kind, "amount": p.amount, "currency": p.currency,
-             "monthly": p.monthly, "from_name": p.from_name, "received_at": p.received_at.isoformat()}
+             "monthly": p.monthly, "tier_name": p.tier_name, "from_name": p.from_name, "received_at": p.received_at.isoformat()}
             for p in rows]

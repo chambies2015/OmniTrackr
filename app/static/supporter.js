@@ -48,6 +48,7 @@
       const until = longDate(status.active_until);
       const who = status.founding ? 'Thank you for being a founding supporter of OmniTrackr' : 'Thank you for supporting OmniTrackr';
       const head = `${who}${since ? ` since ${since}` : ''}!`;
+      if (status.member && status.tier_name) return `${head} You're a ${status.tier_name} member, so your perks renew with your Ko-fi membership.`;
       if (status.monthly) return `${head} Your perks renew with your Ko-fi membership.`;
       return `${head}${until ? ` Your perks are on until ${until}.` : ''}`;
     }
@@ -108,7 +109,51 @@
     }
   }
 
-  const BANNER_NAMES = { aurora: 'Aurora', filmstrip: 'Film strip', pixels: 'Pixels', pages: 'Pages', vinyl: 'Vinyl', stars: 'Stars' };
+  const BANNER_NAMES = {
+    aurora: 'Aurora', filmstrip: 'Film strip', pixels: 'Pixels', pages: 'Pages', vinyl: 'Vinyl', stars: 'Stars',
+    neon: 'Neon', marquee: 'Marquee', comic: 'Comic',
+  };
+
+  const DAY_MS = 24 * 60 * 60 * 1000;
+
+  // The membership pitch, or what the member's tier adds. Null hides the box.
+  function membershipText(status) {
+    if (status.member) {
+      if (status.tier === 'directors_cut') return null;
+      if (status.tier === 'season_pass') {
+        return 'Your Season Pass includes the member banners and lets your banner move. Director\'s Cut adds gold and your name in the credits at the top of the supporter wall.';
+      }
+      return `Your ${status.tier_name || 'membership'} includes the neon, marquee and comic banners. Season Pass lets your banner move, and Director's Cut adds gold and a spot in the wall's credits.`;
+    }
+    if (status.active) {
+      const until = status.active_until ? new Date(status.active_until) : null;
+      const days = until && !Number.isNaN(until.getTime()) ? Math.ceil((until.getTime() - Date.now()) / DAY_MS) : null;
+      const ending = days !== null && days <= 7 ? `Your perks end in ${days <= 1 ? 'a day' : `${days} days`}. ` : '';
+      return `${ending}A monthly membership keeps your perks on without topping up, and adds three member banners. Tiers start at $3 a month.`;
+    }
+    return 'Monthly members also get neon, marquee and comic banners for their profile, and higher tiers add moving banners and gold. Tiers start at $3 a month.';
+  }
+
+  function renderMembership(status) {
+    const box = $('supporterMembership');
+    if (!box) return;
+    const text = membershipText(status);
+    box.hidden = !text;
+    if (!text) return;
+    $('supporterMembershipText').textContent = text;
+    const link = $('supporterTiersLink');
+    if (link && typeof status.tiers_url === 'string' && status.tiers_url.startsWith('https://ko-fi.com/')) link.href = status.tiers_url;
+    if (link) link.textContent = status.member ? 'Change tier on Ko-fi ↗' : 'See memberships ↗';
+  }
+
+  function renderMotion(status) {
+    const input = $('supporterMotion');
+    if (!input) return;
+    input.checked = status.banner_motion === true;
+    input.disabled = !status.can_animate;
+    const hint = $('supporterMotionHint');
+    if (hint) hint.hidden = !!status.can_animate;
+  }
 
   // Banner swatches take the accent color that's picked right now, like the profile will.
   function tintBanners(accent) {
@@ -123,7 +168,10 @@
     const box = $('supporterBanners');
     if (!box) return;
     box.querySelectorAll('label, .supporter-accent__hint').forEach(node => node.remove());
-    const options = [null].concat(Array.isArray(status.banners) ? status.banners.filter(b => ACCENT_NAME.test(b)) : []);
+    const memberBanners = Array.isArray(status.member_banners) ? status.member_banners.filter(b => ACCENT_NAME.test(b)) : [];
+    const unlocked = new Set(Array.isArray(status.unlocked_banners) ? status.unlocked_banners : []);
+    const options = [null].concat(Array.isArray(status.banners) ? status.banners.filter(b => ACCENT_NAME.test(b)) : [], memberBanners);
+    let lockedMember = false;
     options.forEach(banner => {
       const label = document.createElement('label');
       label.className = 'supporter-banner';
@@ -132,7 +180,12 @@
       input.name = 'supporterBanner';
       input.value = banner || '';
       input.checked = (status.banner || null) === banner;
-      input.disabled = !status.active;
+      input.disabled = !status.active || (banner !== null && !unlocked.has(banner));
+      if (status.active && input.disabled && memberBanners.includes(banner)) {
+        lockedMember = true;
+        label.classList.add('supporter-banner--locked');
+      }
+      if (memberBanners.includes(banner)) label.classList.add('supporter-banner--member');
       const swatch = document.createElement('span');
       swatch.className = banner ? 'supporter-banner__swatch' : 'supporter-banner__swatch supporter-banner__swatch--none';
       swatch.setAttribute('aria-hidden', 'true');
@@ -151,6 +204,11 @@
       const hint = document.createElement('p');
       hint.className = 'info-text supporter-accent__hint';
       hint.textContent = 'Banners come back on when your support does.';
+      box.appendChild(hint);
+    } else if (lockedMember) {
+      const hint = document.createElement('p');
+      hint.className = 'info-text supporter-accent__hint';
+      hint.textContent = 'Neon, marquee and comic come with a monthly membership.';
       box.appendChild(hint);
     }
     tintBanners(status.accent);
@@ -171,6 +229,8 @@
     if ($('supporterOnWall')) $('supporterOnWall').checked = status.on_wall === true;
     renderAccents(status);
     renderBanners(status);
+    renderMotion(status);
+    renderMembership(status);
     renderPreview(status, status.accent);
   }
 
@@ -198,6 +258,7 @@
     if (loaded.active && picked) body.accent = picked.value || null;
     const banner = document.querySelector('input[name="supporterBanner"]:checked');
     if (loaded.active && banner) body.banner = banner.value || null;
+    if (loaded.can_animate && $('supporterMotion')) body.banner_motion = $('supporterMotion').checked;
     saving = true;
     $('supporterSave').disabled = true;
     try {
@@ -325,7 +386,7 @@
   }
 
   window.SupporterSettings = { load, apply };
-  if (typeof module !== 'undefined' && module.exports) module.exports = { load, apply, statusText, showWelcome };
+  if (typeof module !== 'undefined' && module.exports) module.exports = { load, apply, statusText, showWelcome, membershipText };
   if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', init);
   else init();
 })();

@@ -24,7 +24,7 @@ from ..site_chrome import apply_site_chrome
 
 router = APIRouter(tags=["profiles"])
 SITE_URL = os.getenv("SITE_URL", "https://omnitrackr.xyz").rstrip("/")
-CSS_VERSION = "20261028-podcasts-1"
+CSS_VERSION = "20261028-members-1"
 TITLE_CSS_VERSION = "20261009-take-1"
 
 
@@ -128,8 +128,13 @@ def _supporter_html(view) -> str:
     title = f"{who} on Ko-fi since {since:%B} {since.year}" if since else "Supports OmniTrackr on Ko-fi"
     label = supporters.level_label(founding, int(view.supporter.get("months") or 0))
     classes = "profile-supporter profile-supporter--founding" if founding else "profile-supporter"
-    return (f'<a class="{classes}" href="/supporters" title="{_e(title)}">'
-            f'<span aria-hidden="true">{"★" if founding else "♥"}</span> {_e(label)}</a>')
+    badge = (f'<a class="{classes}" href="/supporters" title="{_e(title)}">'
+             f'<span aria-hidden="true">{"★" if founding else "♥"}</span> {_e(label)}</a>')
+    tier = view.supporter.get("tier")
+    if tier:
+        badge += (f' <a class="profile-member" href="/supporters#tiers-heading" title="Monthly {_e(tier)} member on Ko-fi">'
+                  f'{_e(tier)} member</a>')
+    return badge
 
 
 def _hero_class(view) -> str:
@@ -139,16 +144,17 @@ def _hero_class(view) -> str:
         classes += " profile-hero--supporter"
     if accent:
         classes += f" profile-hero--accent-{accent}"
-    if (view.supporter or {}).get("banner") in supporters.BANNERS:
+    if (view.supporter or {}).get("banner") in supporters.ALL_BANNERS:
         classes += " profile-hero--has-banner"
     return classes
 
 
 def _banner_html(view) -> str:
     banner = (view.supporter or {}).get("banner")
-    if banner not in supporters.BANNERS:
+    if banner not in supporters.ALL_BANNERS:
         return ""
-    return f'<div class="profile-banner profile-banner--{banner}" aria-hidden="true"></div>'
+    motion = " profile-banner--motion" if (view.supporter or {}).get("motion") else ""
+    return f'<div class="profile-banner profile-banner--{banner}{motion}" aria-hidden="true"></div>'
 
 
 def _showcase_html(view) -> str:
@@ -293,7 +299,7 @@ def _plural(count: int, word: str) -> str:
 
 def _wall_html(view) -> str:
     """Posters from the member's showcase, favorites and diary behind the header (not with a supporter banner)."""
-    if (view.supporter or {}).get("banner") in supporters.BANNERS:
+    if (view.supporter or {}).get("banner") in supporters.ALL_BANNERS:
         return ""
     images = []
     for item in [*view.showcase, *view.favorites, *view.diary]:

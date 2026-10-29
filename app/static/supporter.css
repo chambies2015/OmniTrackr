@@ -62,3 +62,11 @@
 .showcase-row__actions button:hover:not(:disabled) { background: rgba(139, 92, 246, .22); border-color: rgba(139, 92, 246, .6); }
 .showcase-row__actions button:disabled { cursor: default; opacity: .4; }
 .showcase-results__empty { font-size: .85rem; opacity: .72; padding: 4px 2px; }
+
+/* Account → Supporter: monthly membership pitch, locked member banners and the motion toggle (Oct 28). */
+.supporter-membership { background: linear-gradient(135deg, rgba(139, 92, 246, .14), rgba(244, 114, 182, .08)); border: 1px solid rgba(139, 92, 246, .4); border-radius: 12px; margin: 4px 0 14px; padding: 12px 14px; }
+.supporter-membership p { font-size: .92rem; line-height: 1.5; margin: 0 0 10px; }
+.supporter-banner--member .supporter-banner__swatch::after { background: rgba(11, 10, 24, .78); border-radius: 999px; color: #fde68a; content: "Member"; font-size: .64rem; font-weight: 700; letter-spacing: .06em; padding: 2px 6px; position: absolute; right: 4px; text-transform: uppercase; top: 4px; }
+.supporter-banner--locked { opacity: .6; }
+.supporter-motion__hint { display: block; font-size: .78rem; opacity: .72; }
+.supporter-motion__hint[hidden] { display: none; }

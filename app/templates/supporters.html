@@ -4,7 +4,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <meta name="description" content="OmniTrackr is free. Supporters on Ko-fi help keep it running and get a badge on their profile and reviews, profile colors and banners, a bigger profile showcase and a place on the supporter wall.">
+  <meta name="description" content="OmniTrackr is free. Supporters on Ko-fi help keep it running and get a badge on their profile and reviews, profile colors and banners, a bigger profile showcase and a place on the supporter wall. Monthly members get member banners and more.">
   <meta name="robots" content="noindex, follow">
   <title>Support OmniTrackr on Ko-fi</title>
   <link rel="canonical" href="https://omnitrackr.xyz/supporters">
@@ -13,8 +13,8 @@
   <link rel="preload" href="/static/fonts/poppins-800-latin.woff2" as="font" type="font/woff2" crossorigin>
   <link rel="stylesheet" href="/static/fonts.css?v=20261009-fonts-1">
   <link rel="stylesheet" href="/static/public-reader.css?v=20261017-reader-2">
-  <link rel="stylesheet" href="/static/supporters-page.css?v=20261020-looks-1">
-  <link rel="stylesheet" href="/static/profile-banners.css?v=20261020-looks-1">
+  <link rel="stylesheet" href="/static/supporters-page.css?v=20261028-members-1">
+  <link rel="stylesheet" href="/static/profile-banners.css?v=20261028-members-1">
   <script src="/static/supporters-page.js?v=20261017-supporters-1" defer></script>
 </head>
 
@@ -99,12 +99,24 @@
         <p>Perks are cosmetic. Nothing about your library, privacy settings or data changes, and you can hide the badge any time.</p>
       </section>
 
+      <section class="privacy-section support-members" aria-labelledby="tiers-heading">
+        <h2 id="tiers-heading">Monthly memberships</h2>
+        <p>Every membership includes all the supporter perks above for as long as it runs. Each tier adds a few extras of its own.</p>
+        <p class="support-perk__preview support-banners support-banners--members" aria-hidden="true">
+          <span class="support-banner profile-banner profile-banner--neon"></span><span
+            class="support-banner profile-banner profile-banner--marquee profile-banner--motion"></span><span
+            class="support-banner profile-banner profile-banner--comic"></span>
+        </p>
+        <!--SUPPORTERS_TIERS-->
+        <p class="support-members__note">Cancel on Ko-fi whenever you like. Your extras stay on until the month you paid for ends,
+          and your picks are saved for when you come back.</p>
+      </section>
+
       <section class="privacy-section" aria-labelledby="how-heading">
         <h2 id="how-heading">How it works</h2>
         <ul>
-          <li><strong>Monthly membership on Ko-fi:</strong> perks stay on while the membership is active. Every tier gets the same perks,
-            so pick what fits your budget.</li>
-          <li><strong>One-time support:</strong> each one turns perks on for 30 days.</li>
+          <li><strong>Monthly membership on Ko-fi:</strong> perks stay on while the membership is active, plus your tier's extras.</li>
+          <li><strong>One-time support:</strong> each one turns the supporter perks on for 30 days.</li>
         </ul>
         <p>Perks switch on automatically when you use the same email on Ko-fi as on OmniTrackr. If your emails differ, copy your
           supporter code from <a href="/#supporter">Account → Supporter</a> into your Ko-fi message. Then pick your color and
@@ -114,7 +126,7 @@
 
       <section class="privacy-section support-wall" aria-labelledby="wall-heading">
         <h2 id="wall-heading">Supporter wall</h2>
-        <p>Thank you to everyone who keeps OmniTrackr running. ★ marks a founding supporter.</p>
+        <p>Thank you to everyone who keeps OmniTrackr running. ★ marks a founding supporter. Director's Cut members get top billing.</p>
         <!--SUPPORTERS_WALL-->
       </section>
 

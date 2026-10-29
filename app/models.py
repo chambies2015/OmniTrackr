@@ -1040,6 +1040,12 @@ class Supporter(Base):
     on_wall = Column(Boolean, nullable=False, default=False)
     # Optional banner art across the top of the public profile (added Oct 2026, default none).
     banner = Column(String(24), nullable=True)
+    # Monthly Ko-fi membership (added Oct 28): the tier slug from the latest membership payment and
+    # when the membership runs out. NULL for one-time supporters.
+    tier = Column(String(24), nullable=True)
+    member_until = Column(DateTime, nullable=True)
+    # Season Pass and up can let their banner move. Off by default.
+    banner_motion = Column(Boolean, nullable=False, default=False)
     updated_at = Column(DateTime, nullable=False, default=datetime.utcnow, onupdate=datetime.utcnow)
 
 
@@ -1075,6 +1081,8 @@ class KofiPayment(Base):
     amount = Column(String(16), nullable=True)
     currency = Column(String(8), nullable=True)
     monthly = Column(Boolean, nullable=False, default=False)
+    # Ko-fi's tier name on membership payments (added Oct 28). NULL for tips and older rows.
+    tier_name = Column(String(40), nullable=True)
     email_hash = Column(String(64), nullable=True, index=True)
     from_name = Column(String(80), nullable=True)
     user_id = Column(Integer, ForeignKey("users.id", ondelete="SET NULL"), nullable=True, index=True)
