@@ -63,8 +63,8 @@
   <link rel="stylesheet" href="/static/dialog-theme.css?v=20260924-visual-4">
   <link rel="stylesheet" href="/static/where-to-watch.css?v=20261026-where-to-watch-1">
   <link rel="stylesheet" href="/static/taste-match.css?v=20261016-taste-match-1">
-  <link rel="stylesheet" href="/static/supporter.css?v=20261020-looks-1">
-  <link rel="stylesheet" href="/static/profile-banners.css?v=20261020-looks-1">
+  <link rel="stylesheet" href="/static/supporter.css?v=20261028-members-1">
+  <link rel="stylesheet" href="/static/profile-banners.css?v=20261028-members-1">
   <link rel="stylesheet" href="/static/badges.css?v=20261017-badges-1">
   <link rel="stylesheet" href="/static/import-studio.css?v=20261028-export-1">
   <link rel="stylesheet" href="/static/seasonal-card.css?v=20261022-holidays-1">
@@ -2042,7 +2042,7 @@
   <script src="/static/for-you.js?v=20261028-episodes-1"></script>
   <script src="/static/title-links.js?v=20261028-podcasts-1"></script>
   <script src="/static/public-profile.js?v=20261027-widgets-1"></script>
-  <script src="/static/supporter.js?v=20261020-looks-1"></script>
+  <script src="/static/supporter.js?v=20261028-members-1"></script>
   <script src="/static/profile-showcase.js?v=20261021-bugs-1"></script>
   <script src="/static/goals.js?v=20261010-goal-reached-1"></script>
   <script src="/static/challenges.js?v=20261011-challenge-2"></script>
@@ -2339,6 +2339,11 @@
           <p class="info-text" id="supporterStatus">OmniTrackr is free. Supporting it on Ko-fi adds a badge beside your public reviews, an
             accent color and a banner for your public profile, six showcase spots instead of three, and a spot on the supporter wall. Support that starts before 2027 makes you a founding
             supporter for good. <a href="/supporters" target="_blank" rel="noopener">What supporters get</a></p>
+          <div class="supporter-membership" id="supporterMembership" hidden>
+            <p id="supporterMembershipText"></p>
+            <a class="action-btn" id="supporterTiersLink" href="https://ko-fi.com/omnitrackr/tiers" target="_blank"
+              rel="noopener noreferrer">See memberships ↗</a>
+          </div>
           <p class="supporter-preview" id="supporterPreview" hidden><span class="supporter-preview__badge" id="supporterPreviewBadge"></span></p>
           <p class="profile-settings__link">Your supporter code: <code id="supporterCode">-</code>
             <button type="button" class="profile-settings__copy" id="supporterCopyCode">Copy code</button></p>
@@ -2371,6 +2376,15 @@
             <fieldset class="profile-settings__parts supporter-banners" id="supporterBanners">
               <legend>Profile banner</legend>
             </fieldset>
+            <div class="privacy-toggle-item" id="supporterMotionItem">
+              <label for="supporterMotion" class="toggle-label">
+                <span>Let my banner move <small class="supporter-motion__hint" id="supporterMotionHint">Season Pass and Director's Cut members</small></span>
+                <div class="toggle-container">
+                  <input type="checkbox" id="supporterMotion" class="toggle-switch">
+                  <span class="toggle-slider"></span>
+                </div>
+              </label>
+            </div>
             <button type="submit" class="action-btn" id="supporterSave">Save supporter settings</button>
           </form>
           <div id="supporterError" class="error-message" role="alert"></div>

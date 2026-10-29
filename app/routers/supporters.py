@@ -41,6 +41,31 @@ def _goal_html(db: Session) -> str:
     )
 
 
+# What each Ko-fi tier adds, on top of every supporter perk. Lower tiers' extras carry up.
+TIER_EXTRAS = {
+    "popcorn": ("A Popcorn member tag beside your badge", "Three member banners: neon, marquee and comic"),
+    "season_pass": ("Everything in Popcorn", "Moving banners: a slow sheen across yours, and the marquee bulbs chase"),
+    "directors_cut": ("Everything in Season Pass", "Gold for your profile from the first month",
+                      "Your name in the Director's Cut credits at the top of the wall"),
+}
+
+
+def _tiers_html() -> str:
+    url = supporters.tiers_url()
+    cards = []
+    for tier in supporters.TIERS:
+        extras = "".join(f"<li>{_e(line)}</li>" for line in TIER_EXTRAS.get(tier["slug"], ()))
+        cards.append(
+            f'<article class="support-tier support-tier--{_e(tier["slug"])}">'
+            f'<p class="support-tier__price"><strong>{_e(_money(tier["price"]))}</strong> a month</p>'
+            f'<h3>{_e(tier["name"])}</h3>'
+            f'<ul>{extras}</ul>'
+            f'<a class="site-btn site-btn--{"primary" if tier["rank"] == 2 else "ghost"}" data-kofi href="{_e(url)}" '
+            f'target="_blank" rel="noopener noreferrer">Join {_e(tier["name"])} ↗</a>'
+            '</article>')
+    return f'<div class="support-tiers">{"".join(cards)}</div>'
+
+
 def _wall_entry(entry: dict) -> str:
     classes = ["support-wall__name"]
     if entry["accent"]:
@@ -50,6 +75,8 @@ def _wall_entry(entry: dict) -> str:
     mark = "★" if entry["founding"] else "♥"
     since = entry["since"]
     title = ("Founding supporter" if entry["founding"] else "Supporter") + (f" since {since:%B} {since.year}" if since else "")
+    if entry.get("tier"):
+        title += f' · {entry["tier"]} member'
     if not entry["active"]:
         title += " (past)"
     name = f'<span class="support-wall__mark" aria-hidden="true">{mark}</span>{_e(entry["name"])}'
@@ -63,7 +90,16 @@ def _wall_html(db: Session) -> str:
     if not entries:
         return ('<p class="support-wall__empty">No names here yet. Supporters can add theirs from '
                 '<a href="/#supporter">Account → Supporter</a>, and the first few will be founding supporters.</p>')
-    return f'<ul class="support-wall__list">{"".join(_wall_entry(entry) for entry in entries)}</ul>'
+    credits = [entry for entry in entries if entry.get("credits")]
+    rest = [entry for entry in entries if not entry.get("credits")]
+    html = ""
+    if credits:
+        names = "".join(_wall_entry(entry) for entry in credits)
+        html += ('<div class="support-credits"><p class="support-credits__title">Director\'s Cut</p>'
+                 f'<ul class="support-wall__list support-credits__list">{names}</ul></div>')
+    if rest:
+        html += f'<ul class="support-wall__list">{"".join(_wall_entry(entry) for entry in rest)}</ul>'
+    return html
 
 
 def _count_html(db: Session) -> str:
@@ -74,9 +110,9 @@ def _count_html(db: Session) -> str:
 
 
 def page_sections(db: Session) -> dict:
-    """Live parts of /supporters: the hosting goal, the supporter count and the wall. All text is escaped."""
+    """Live parts of /supporters: the hosting goal, the supporter count, the membership tiers and the wall. All text is escaped."""
     return {"<!--SUPPORTERS_GOAL-->": _goal_html(db), "<!--SUPPORTERS_COUNT-->": _count_html(db),
-            "<!--SUPPORTERS_WALL-->": _wall_html(db)}
+            "<!--SUPPORTERS_TIERS-->": _tiers_html(), "<!--SUPPORTERS_WALL-->": _wall_html(db)}
 
 
 def _no_store(response: Response) -> None:
@@ -104,6 +140,7 @@ class SupporterSettingsUpdate(BaseModel):
     on_wall: Optional[bool] = None
     accent: Optional[str] = Field(None, max_length=16)
     banner: Optional[str] = Field(None, max_length=24)
+    banner_motion: Optional[bool] = None
 
 
 @router.get("/api/supporter")

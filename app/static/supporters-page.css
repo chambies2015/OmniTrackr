@@ -77,3 +77,22 @@ a.support-wall__name:hover { background: rgba(var(--wall-accent), .22); }
 .support-shelf { gap: 5px; }
 .support-shelf span { aspect-ratio: 2 / 3; background: linear-gradient(160deg, rgba(139, 92, 246, .75), rgba(45, 212, 191, .35)); border: 1px solid var(--site-border-strong); border-radius: 4px; display: inline-block; height: 30px; }
 .support-shelf span:nth-child(n + 4) { background: linear-gradient(160deg, rgba(234, 179, 8, .8), rgba(244, 114, 182, .4)); }
+
+/* Monthly membership tiers and the Director's Cut credits on the wall (Oct 28). */
+.support-banners--members { display: flex; margin: 0 0 18px; max-width: 520px; }
+.support-banners--members .support-banner { height: 44px; position: relative; }
+.support-tiers { display: grid; gap: 14px; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); margin: 0 0 16px; }
+.support-tier { background: var(--site-surface); border: 1px solid var(--site-border); border-radius: 14px; display: flex; flex-direction: column; gap: 4px; padding: 18px; }
+.support-tier h3 { font-size: 1.1rem !important; margin: 0 0 6px !important; }
+.support-tier__price { color: var(--site-soft); margin: 0 !important; }
+.support-tier__price strong { color: var(--site-text); font-size: 1.6rem; }
+.support-tier ul { flex: 1; font-size: .93rem; margin: 0 0 14px !important; padding-left: 1.1em !important; }
+.support-tier li { margin: 0 0 4px !important; }
+.support-tier .site-btn { align-self: flex-start; }
+.support-tier--season_pass { background: linear-gradient(160deg, rgba(139, 92, 246, .16), transparent 70%), var(--site-surface); border-color: rgba(139, 92, 246, .5); }
+.support-tier--directors_cut { background: linear-gradient(160deg, rgba(234, 179, 8, .12), transparent 70%), var(--site-surface); border-color: rgba(234, 179, 8, .35); }
+.support-members__note { color: var(--site-muted); font-size: .9rem; }
+.support-credits { border: 1px solid rgba(234, 179, 8, .35); border-radius: 14px; margin: 18px 0 0; padding: 14px 18px 18px; text-align: center; }
+.support-credits__title { color: #eab308 !important; font-size: .78rem; font-weight: 700; letter-spacing: .18em; margin: 0 !important; text-transform: uppercase; }
+.support-credits__list { justify-content: center; margin: 10px 0 0 !important; }
+.support-credits .support-wall__name { font-size: 1.05rem; padding: 8px 18px; }

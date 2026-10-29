@@ -811,6 +811,7 @@ def run_migrations():
     add_notification_link_column()
     add_supporter_wall_column()
     add_supporter_banner_column()
+    add_membership_columns()
     add_public_diary_column()
     add_calendar_episodes_column()
     add_lookup_indexes()
@@ -862,6 +863,34 @@ def add_supporter_banner_column():
             print("Added banner column to supporters table")
     except Exception as e:
         print(f"Migration warning (supporter banner): {e}")
+
+
+def add_membership_columns():
+    """Add Ko-fi membership tiers. Every new column is nullable or defaults off, so nothing changes for anyone.
+
+    Supporters already marked monthly keep membership extras until their current perks run out
+    (member_until = active_until); their next membership payment sets the real tier.
+    """
+    try:
+        inspector = inspect(engine)
+        with engine.connect() as conn:
+            if inspector.has_table("kofi_payments"):
+                if "tier_name" not in {col["name"] for col in inspector.get_columns("kofi_payments")}:
+                    conn.execute(text("ALTER TABLE kofi_payments ADD COLUMN tier_name VARCHAR(40)"))
+                    print("Added tier_name column to kofi_payments table")
+            if inspector.has_table("supporters"):
+                columns = {col["name"] for col in inspector.get_columns("supporters")}
+                if "tier" not in columns:
+                    conn.execute(text("ALTER TABLE supporters ADD COLUMN tier VARCHAR(24)"))
+                if "banner_motion" not in columns:
+                    conn.execute(text("ALTER TABLE supporters ADD COLUMN banner_motion BOOLEAN NOT NULL DEFAULT FALSE"))
+                if "member_until" not in columns:
+                    conn.execute(text("ALTER TABLE supporters ADD COLUMN member_until TIMESTAMP"))
+                    conn.execute(text("UPDATE supporters SET member_until = active_until WHERE monthly = TRUE"))
+                    print("Added membership columns to supporters table")
+            conn.commit()
+    except Exception as e:
+        print(f"Migration warning (memberships): {e}")
 
 
 def add_public_diary_column():
