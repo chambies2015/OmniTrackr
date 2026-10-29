@@ -1043,6 +1043,20 @@ for route in friend_feed_router.router.routes:
         bind_rate_limited_endpoint(route, rate_limited_feed_save)
 app.include_router(friend_feed_router.router)
 
+from .routers import follows as follows_router
+rate_limited_follow = limiter.limit("30/minute")(follows_router.follow)
+rate_limited_unfollow = limiter.limit("30/minute")(follows_router.unfollow)
+rate_limited_remove_follower = limiter.limit("30/minute")(follows_router.remove_follower)
+for route in follows_router.router.routes:
+    path, methods = getattr(route, "path", None), getattr(route, "methods", set())
+    if path == "/api/follows/{user_id:database_id}" and "POST" in methods:
+        bind_rate_limited_endpoint(route, rate_limited_follow)
+    elif path == "/api/follows/{user_id:database_id}" and "DELETE" in methods:
+        bind_rate_limited_endpoint(route, rate_limited_unfollow)
+    elif path == "/api/follows/followers/{user_id:database_id}":
+        bind_rate_limited_endpoint(route, rate_limited_remove_follower)
+app.include_router(follows_router.router)
+
 from .routers import binge_calculator as binge_calculator_router
 rate_limited_binge_length = limiter.limit("60/minute")(binge_calculator_router.binge_length)
 for route in binge_calculator_router.router.routes:

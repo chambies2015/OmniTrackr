@@ -107,6 +107,9 @@
 .profile-number:first-child { background: linear-gradient(160deg, rgba(var(--profile-accent), .32), rgba(11, 10, 24, .6)); border-color: rgba(var(--profile-accent), .6); }
 .profile-hero .title-hero__chips:empty { display: none; }
 .profile-hero__actions { display: flex; flex-wrap: wrap; gap: 10px; }
+.profile-follow[aria-pressed="true"]::before { content: "✓ "; }
+.profile-follow__status { color: var(--site-muted); flex-basis: 100%; font-size: .85rem; }
+.profile-follow__status:empty { display: none; }
 
 /* Library tiles: a colored edge per shelf and how much of it is finished. */
 .profile-stat { border-top: 3px solid rgb(var(--shelf, 139, 92, 246)); }

@@ -73,6 +73,7 @@
   <link rel="stylesheet" href="/static/memories.css?v=20261029-memories-1">
   <link rel="stylesheet" href="/static/friend-recs.css?v=20261024-friend-recs-1">
   <link rel="stylesheet" href="/static/friends-feed.css?v=20261025-friends-feed-1">
+  <link rel="stylesheet" href="/static/follows.css?v=20261029-follows-1">
   <link rel="stylesheet" href="/static/app-nav.css?v=20261028-simplify-1">
   <link rel="stylesheet" href="/static/auth-forms.css?v=20261029-account-1">
   <link rel="stylesheet" href="/static/account-settings.css?v=20261029-account-1">
@@ -1471,6 +1472,22 @@
         <ol id="friendsFeedList" class="ffeed__list" aria-label="Friends' recent updates"></ol>
         <button id="friendsFeedMore" type="button" class="ffeed__more" hidden>Show older updates</button>
       </section>
+      <section id="followingFeed" class="ffollow" aria-labelledby="followingFeedTitle">
+        <header class="ffollow__head">
+          <div>
+            <p class="ffeed__eyebrow">From public profiles</p>
+            <h2 id="followingFeedTitle">People you follow</h2>
+            <p class="ffeed__lede">New public reviews, collections and diary entries from members you follow, friends or not. You only see what their profile already shows everyone.</p>
+          </div>
+          <button id="followingRefresh" type="button" class="action-btn ffollow__refresh">Refresh</button>
+        </header>
+        <section id="followSuggestions" class="ffollow__suggest" aria-labelledby="followSuggestionsTitle" hidden>
+          <h3 id="followSuggestionsTitle">People you might follow</h3>
+          <ul id="followSuggestionsList" class="follow-people"></ul>
+        </section>
+        <p id="followingStatus" class="ffeed__status" role="status" aria-live="polite"></p>
+        <ol id="followingList" class="ffollow__list" aria-label="Updates from people you follow"></ol>
+      </section>
     </div>
 
     <!-- Private Activity Journal Tab Content -->
@@ -2118,6 +2135,7 @@
   <script src="/static/taste-match.js?v=20261028-podcasts-1"></script>
   <script src="/static/friend-recs.js?v=20261028-podcasts-1"></script>
   <script src="/static/friends-feed.js?v=20261028-podcasts-1"></script>
+  <script src="/static/follows.js?v=20261029-follows-1"></script>
   <script src="/static/push.js?v=20261027-push-3" defer></script>
   <script src="/static/year-in-review-entry.js?v=20261019-story-1" defer></script>
   <script src="/static/guest-list.js?v=20261028-podcasts-1"></script>
@@ -2240,6 +2258,24 @@
             <ul class="showcase-results" id="profileShowcaseResults"></ul>
             <div id="profileShowcaseError" class="error-message" role="alert"></div>
             <div id="profileShowcaseSuccess" class="success-message" role="status"></div>
+          </div>
+          <div class="follow-settings" id="followSettings" tabindex="-1" aria-labelledby="followSettingsTitle">
+            <h5 id="followSettingsTitle">Followers</h5>
+            <p class="info-text">Members can follow your public profile without being friends. Followers see only what your profile already shows everyone: never private categories, notes, progress or anything you share only with friends.</p>
+            <label class="profile-settings__check"><input type="checkbox" id="followAllow" checked> Let people follow my profile</label>
+            <label class="profile-settings__check"><input type="checkbox" id="followEmail" checked> Include people I follow in my weekly email</label>
+            <p class="info-text follow-settings__counts" id="followCounts"></p>
+            <h6>Your followers</h6>
+            <p class="info-text follow-settings__hint">Removing someone also stops them following you again.</p>
+            <ul class="follow-people" id="followFollowers"></ul>
+            <h6>You follow</h6>
+            <ul class="follow-people" id="followFollowing"></ul>
+            <div id="followRemovedWrap" hidden>
+              <h6>Removed followers</h6>
+              <ul class="follow-people" id="followRemoved"></ul>
+            </div>
+            <div id="followError" class="error-message" role="alert"></div>
+            <div id="followSuccess" class="success-message" role="status"></div>
           </div>
         </div>
 

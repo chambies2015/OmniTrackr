@@ -1618,3 +1618,49 @@ class TitleOrigin(Base):
         UniqueConstraint("user_id", "category", "item_id", name="uq_title_origin_item"),
         Index("ix_title_origins_user_who", "user_id", "who_key"),
     )
+
+
+class MemberFollow(Base):
+    """One member following another member's public profile (Oct 2026).
+
+    One-way and separate from friendship. A follower only ever sees what the
+    profile already shows anyone (see follows.py), so a row grants no access.
+    Rows are kept while either account is deactivated and simply hidden, so a
+    member who comes back within the reactivation window keeps their follows.
+    """
+    __tablename__ = "member_follows"
+
+    id = Column(Integer, primary_key=True, index=True)
+    follower_id = Column(Integer, ForeignKey("users.id", ondelete="CASCADE"), nullable=False, index=True)
+    followed_id = Column(Integer, ForeignKey("users.id", ondelete="CASCADE"), nullable=False, index=True)
+    created_at = Column(DateTime, nullable=False, default=datetime.utcnow, index=True)
+
+    __table_args__ = (
+        UniqueConstraint("follower_id", "followed_id", name="uq_member_follow"),
+    )
+
+
+class FollowSetting(Base):
+    """A member's follower settings. No row means the defaults (followers allowed, email section on)."""
+    __tablename__ = "follow_settings"
+
+    id = Column(Integer, primary_key=True, index=True)
+    user_id = Column(Integer, ForeignKey("users.id", ondelete="CASCADE"), nullable=False, unique=True, index=True)
+    allow_followers = Column(Boolean, nullable=False, default=True)
+    # The "From people you follow" section of the weekly email.
+    email_following = Column(Boolean, nullable=False, default=True)
+    updated_at = Column(DateTime, nullable=False, default=datetime.utcnow, onupdate=datetime.utcnow)
+
+
+class FollowBar(Base):
+    """A follower the member removed. They can't follow that member again until the member undoes it."""
+    __tablename__ = "follow_bars"
+
+    id = Column(Integer, primary_key=True, index=True)
+    owner_id = Column(Integer, ForeignKey("users.id", ondelete="CASCADE"), nullable=False, index=True)
+    barred_id = Column(Integer, ForeignKey("users.id", ondelete="CASCADE"), nullable=False, index=True)
+    created_at = Column(DateTime, nullable=False, default=datetime.utcnow)
+
+    __table_args__ = (
+        UniqueConstraint("owner_id", "barred_id", name="uq_follow_bar"),
+    )

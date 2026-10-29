@@ -50,6 +50,7 @@ function switchTab(tabName) {
   } else if (tabName === 'friends-feed') {
     window.OmniFriendFeed?.load();
     window.OmniTitleOrigins?.loadRecommenders();
+    window.OmniFollowing?.load();
   } else if (tabName === 'activity') {
     loadActivityJournal();
   } else if (tabName === 'recommendations') {

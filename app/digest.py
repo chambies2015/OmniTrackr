@@ -401,6 +401,37 @@ def _memories_section(found: list | None) -> tuple[str, list[str]]:
             f'<ul style="color:#3b3557;font-size:14px;line-height:1.6;margin:0;padding-left:20px">{items}</ul>')
     return html, ["This week in past years:"] + [f"- {line}" for line in lines] + [""]
 
+def following_line(db: Session, user, now: datetime) -> list[dict]:
+    from .follows import email_items
+    return email_items(db, user, now)
+
+
+def _following_text(item: dict) -> str:
+    rating = f" ({item['rating']:g}/10)" if item.get("rating") is not None else ""
+    if item["kind"] == "review":
+        return f"{item['username']} reviewed {item['title']}{rating}"
+    if item["kind"] == "collection":
+        return f"{item['username']} published a collection: {item['title']}"
+    verb = "revisited" if item.get("repeat") else "finished"
+    return f"{item['username']} {verb} {item['title']}{rating}"
+
+
+def _following_section(items: list | None, base: str) -> tuple[str, list[str]]:
+    """'From people you follow': public reviews, collections and diary entries. Never forces a send."""
+    if not items:
+        return "", []
+    rows, text = [], ["From people you follow:"]
+    for item in items:
+        line = _following_text(item)
+        rest = line[len(item["username"]):]
+        link = escape(base + item["url"], quote=True)
+        rows.append(f'<li style="margin:0 0 6px"><strong>{escape(item["username"])}</strong>'
+                    f'<a href="{link}" style="color:#1f1640;text-decoration:none">{escape(rest)}</a></li>')
+        text.append(f"- {line}: {base}{item['url']}")
+    html = ('<h2 style="font-size:17px;color:#1f1640;margin:24px 0 8px">From people you follow</h2>'
+            f'<ul style="color:#3b3557;font-size:14px;line-height:1.6;margin:0;padding-left:18px">{"".join(rows)}</ul>')
+    return html, text + [""]
+
 # ---------------------------------------------------------------- friend activity
 
 FRIEND_WINDOW = timedelta(days=7)
@@ -534,9 +565,10 @@ def build_digest(username: str, report: dict, unsubscribe_url: str, spotlight: d
                  goals_year: int | None = None, challenge: dict | None = None,
                  badge: dict | None = None, recap: dict | None = None,
                  friends: list | None = None, episodes: list | None = None,
-                 next_up: dict | None = None, past: list | None = None) -> tuple[str, str, str] | None:
+                 next_up: dict | None = None, past: list | None = None,
+                 following: list | None = None) -> tuple[str, str, str] | None:
     """(subject, html, text) or None when there is nothing to send. `spotlight`, `ask`, `invite`, `goals`,
-    `challenge`, `badge`, `recap`, `next_up` and `past` never force a send; friend activity and episodes can."""
+    `challenge`, `badge`, `recap`, `next_up`, `past` and `following` never force a send; friend activity and episodes can."""
     matches, popular = report["matches"], report["popular"]
     if not matches and not popular and not friends and not episodes:
         return None
@@ -575,6 +607,10 @@ def build_digest(username: str, report: dict, unsubscribe_url: str, spotlight: d
     if friends_html:
         sections.append(friends_html)
         text += friends_text
+    following_html, following_text = _following_section(following, base)
+    if following_html:
+        sections.append(following_html)
+        text += following_text
     past_html, past_text = _memories_section(past)
     if past_html:
         sections.append(past_html)
@@ -782,8 +818,14 @@ async def send_due_digests(session_factory, client=None, now: datetime | None = 
             except Exception:
                 db.rollback()
                 past = []  # Optional, like the ask above.
+            try:
+                following = following_line(db, user, now)
+            except Exception:
+                db.rollback()
+                following = []  # Optional, like the ask above.
             built = build_digest(user.username, report, unsubscribe_url, spotlight, ask, invite,
-                                 member_goals, now.year, challenge, badge, recap, friends, episodes, next_up, past)
+                                 member_goals, now.year, challenge, badge, recap, friends, episodes, next_up, past,
+                                 following)
             if built is None:
                 stats["skipped"] += 1
                 continue

@@ -555,13 +555,24 @@ def _attach_supporter_badges(db: Session, reviews: list) -> None:
 
 def _attach_profile_urls(db: Session, reviews: list) -> None:
     try:
+        from ..follows import accepting
         from ..public_profiles import enabled_profile_paths
         paths = enabled_profile_paths(db, [review.get("user_id") for review in reviews])
+        open_ids = accepting(db, paths)
     except Exception:
         return
     for review in reviews:
         if review.get("user_id") in paths:
             review["profile_url"] = paths[review["user_id"]]
+            review["followable"] = review["user_id"] in open_ids
+
+
+def _follow_link_html(review: dict) -> str:
+    """A small "Follow" link to the writer's profile, where the button lives. Only for profiles taking followers."""
+    url = review.get("profile_url")
+    if not review.get("followable") or not (isinstance(url, str) and url.startswith("/u/")):
+        return ""
+    return f'<a class="review-follow-link" href="{_escape(url)}#follow">Follow {_escape(review.get("username"))}</a>'
 
 
 def _title_page_link(review: dict) -> str:
@@ -684,7 +695,7 @@ def _review_detail_html(review: dict, more_reviews: Optional[list] = None, helpf
   <link rel="stylesheet" href="/static/fonts.css?v=20261009-fonts-1">
   <link rel="stylesheet" href="/static/public-legacy.css?v=20261004-legacy-1">
   <link rel="stylesheet" href="/static/reviews.css?v=20261020-spoilers-1">
-  <link rel="stylesheet" href="/static/review-detail.css?v=20261020-spoilers-1">
+  <link rel="stylesheet" href="/static/review-detail.css?v=20261029-follows-1">
   <script type="application/ld+json">{_safe_json_ld(json_ld)}</script>
   <script type="application/ld+json">{_safe_json_ld(breadcrumb_json_ld)}</script>
   <script src="/static/review_report.js?v=20261007-helpful-1" defer></script>
@@ -702,7 +713,7 @@ def _review_detail_html(review: dict, more_reviews: Optional[list] = None, helpf
             <nav class="review-crumbs" aria-label="Breadcrumb"><a href="/reviews">Public reviews</a><span aria-hidden="true">/</span><a href="/reviews?category={_escape(category)}">{_escape(CATEGORY_LABELS.get(category, category))}</a></nav>
             <h1>{_escape(review.get("title"))}</h1>
             {_title_page_link(review)}
-            <div class="review-hero__meta">{rating_html}<span class="review-byline">Reviewed by <strong>{_author_html(review)}</strong></span><button type="button" class="site-btn site-btn--ghost site-btn--sm review-share" data-share data-share-title="{_escape(review.get("title"))} review on OmniTrackr">Share</button></div>
+            <div class="review-hero__meta">{rating_html}<span class="review-byline">Reviewed by <strong>{_author_html(review)}</strong>{_follow_link_html(review)}</span><button type="button" class="site-btn site-btn--ghost site-btn--sm review-share" data-share data-share-title="{_escape(review.get("title"))} review on OmniTrackr">Share</button></div>
             <div class="review-meta-info">{details_html}</div>
           </div>
         </div>
