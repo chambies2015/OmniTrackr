@@ -49,7 +49,7 @@ LAZY_CHUNKS = {
     ),
     "postcards": ("postcards.js",),
     "export-import": ("export-import.js",),
-    "insights": ("statistics.js", "tasteprint.js"),
+    "insights": ("statistics.js", "tasteprint.js", "time-spent.js"),
     "completion": ("completion.js",),
     "friend-profile": ("friend-profile.js",),
     "activity-journal": ("activity-journal.js",),

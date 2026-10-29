@@ -1,0 +1,115 @@
+/* Binge calculator (/binge-calculator). Builds on discover.css (hero, eyebrow, button, editorial). */
+.bc-hero { padding-bottom: 28px; }
+.bc-tool {
+  background: radial-gradient(520px 300px at 100% 0%, rgba(251, 191, 36, .12), transparent 70%), var(--site-surface);
+  border: 1px solid var(--site-border);
+  border-radius: 24px;
+  display: grid;
+  gap: 28px;
+  grid-template-columns: minmax(0, 1.4fr) minmax(0, 1fr);
+  margin: 0 0 44px;
+  padding: clamp(18px, 3.5vw, 34px);
+}
+.bc-form { display: grid; gap: 18px; }
+.bc-form label, .bc-kind legend { color: #fff; display: grid; font-weight: 700; gap: 8px; }
+.bc-kind { border: 0; display: flex; flex-wrap: wrap; gap: 10px 20px; margin: 0; padding: 0; }
+.bc-kind legend { margin-bottom: 10px; }
+.bc-kind label, .bc-check { align-items: center; display: flex; font-weight: 500; gap: 8px; }
+.bc-check[hidden], .bc-fields[hidden] { display: none; }
+.bc-fields { display: grid; gap: 14px; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); }
+.bc-tool input[type="search"], .bc-tool input[type="number"], .bc-tool input[type="date"], .bc-tool select {
+  background: rgba(11, 10, 24, .7);
+  border: 1px solid var(--site-border-strong);
+  border-radius: 12px;
+  color: #fff;
+  color-scheme: dark;
+  font: inherit;
+  min-height: 46px;
+  padding: 10px 14px;
+  width: 100%;
+}
+.bc-tool input:focus-visible, .bc-tool select:focus-visible, .bc-tool button:focus-visible, .bc-use:focus-visible {
+  outline: 3px solid var(--site-violet-soft);
+  outline-offset: 2px;
+}
+.bc-search { position: relative; }
+.bc-search .muted { margin: 8px 0 0; }
+.bc-search__results {
+  background: #14122a;
+  border: 1px solid var(--site-border-strong);
+  border-radius: 14px;
+  display: grid;
+  left: 0;
+  margin-top: 6px;
+  overflow: hidden;
+  position: absolute;
+  right: 0;
+  z-index: 5;
+}
+.bc-search__results .muted { padding: 12px 14px; }
+.bc-search__result {
+  background: transparent;
+  border: 0;
+  border-bottom: 1px solid var(--site-border);
+  color: #fff;
+  cursor: pointer;
+  display: grid;
+  font: inherit;
+  gap: 2px;
+  padding: 11px 14px;
+  text-align: left;
+}
+.bc-search__result:hover, .bc-search__result:focus-visible { background: rgba(139, 92, 246, .18); }
+.bc-search__result span { color: var(--site-muted); font-size: .85rem; }
+.bc-result {
+  align-self: start;
+  background: rgba(11, 10, 24, .55);
+  border: 1px solid rgba(251, 191, 36, .4);
+  border-radius: 18px;
+  padding: 22px;
+}
+.bc-result p { color: #d9def0; line-height: 1.55; margin: 0 0 10px; }
+.bc-result .bc-result__name { color: var(--site-amber, #fbbf24); font-weight: 800; letter-spacing: .02em; }
+.bc-result .bc-result__total { color: #fff; font-size: 1.2rem; }
+.bc-result__total strong { font: 800 clamp(2.6rem, 6vw, 3.4rem)/1 var(--site-display); margin-right: 6px; }
+.bc-examples h2 { margin: 0 0 6px; }
+.bc-examples h3 { margin: 26px 0 10px; }
+.bc-list { display: grid; gap: 10px; list-style: none; margin: 0; padding: 0; }
+.bc-item {
+  align-items: center;
+  background: rgba(11, 10, 24, .45);
+  border: 1px solid var(--site-border);
+  border-radius: 14px;
+  display: grid;
+  gap: 10px 20px;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1.6fr);
+  padding: 14px 16px;
+}
+.bc-item h4 { font-size: 1rem; margin: 0; }
+.bc-item__title p { color: var(--site-muted); font-size: .85rem; line-height: 1.45; margin: 4px 0 0; }
+.bc-item__numbers { display: grid; gap: 8px; grid-template-columns: 1.5fr .9fr repeat(3, minmax(0, .9fr)); margin: 0; }
+.bc-item__numbers dt { color: var(--site-muted); font-size: .72rem; font-weight: 700; letter-spacing: .05em; text-transform: uppercase; }
+.bc-item__numbers dd { color: #d9def0; margin: 2px 0 0; }
+.bc-item__total dd { color: #fff; font-weight: 800; }
+.bc-use {
+  background: none;
+  border: 0;
+  color: #fff;
+  cursor: pointer;
+  font: inherit;
+  font-weight: 700;
+  padding: 0;
+  text-align: left;
+  text-decoration: underline;
+  text-decoration-color: rgba(251, 191, 36, .6);
+  text-underline-offset: 3px;
+}
+.bc-guide, .bc-faq { margin-top: 36px; }
+.bc-guide p + p { margin-top: 12px; }
+.bc-faq details { border-bottom: 1px solid var(--site-border); padding: 12px 0; }
+.bc-faq summary { color: #fff; cursor: pointer; font-weight: 700; }
+.bc-faq details p { margin-top: 8px; }
+@media (max-width: 820px) {
+  .bc-tool, .bc-item { grid-template-columns: 1fr; }
+  .bc-item__numbers { grid-template-columns: repeat(auto-fit, minmax(96px, 1fr)); }
+}

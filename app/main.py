@@ -1041,6 +1041,13 @@ for route in friend_feed_router.router.routes:
         bind_rate_limited_endpoint(route, rate_limited_feed_save)
 app.include_router(friend_feed_router.router)
 
+from .routers import binge_calculator as binge_calculator_router
+rate_limited_binge_length = limiter.limit("60/minute")(binge_calculator_router.binge_length)
+for route in binge_calculator_router.router.routes:
+    if getattr(route, "path", None) == "/api/binge-calculator/length":
+        bind_rate_limited_endpoint(route, rate_limited_binge_length)
+app.include_router(binge_calculator_router.router)
+
 
 @app.get("/", tags=["root"])
 @app.head("/", tags=["root"])

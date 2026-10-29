@@ -442,4 +442,5 @@ function initializeFriendsPanel() {
 
 // @lazy-chunk lazy/completion.js
 // @lazy-chunk lazy/tasteprint.js
+// @lazy-chunk lazy/time-spent.js
 // @lazy-chunk lazy/activity-journal.js

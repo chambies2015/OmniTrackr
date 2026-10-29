@@ -67,6 +67,7 @@
   <link rel="stylesheet" href="/static/supporter.css?v=20261020-looks-1">
   <link rel="stylesheet" href="/static/profile-banners.css?v=20261020-looks-1">
   <link rel="stylesheet" href="/static/badges.css?v=20261017-badges-1">
+  <link rel="stylesheet" href="/static/time-spent.css?v=20261029-time-spent-1">
   <link rel="stylesheet" href="/static/import-studio.css?v=20261028-export-1">
   <link rel="stylesheet" href="/static/seasonal-card.css?v=20261022-holidays-1">
   <link rel="stylesheet" href="/static/friend-recs.css?v=20261024-friend-recs-1">
@@ -1718,6 +1719,24 @@
             <footer><span>Built from patterns, not recommendations</span><strong>omnitrackr.xyz</strong></footer>
           </article>
           <p class="tasteprint__note">Only checked insights are drawn into the PNG or copied summary. The image is rendered on this device and is not uploaded to OmniTrackr.</p>
+        </section>
+        <section id="timeSpent" class="time-spent" aria-labelledby="timeSpentTitle">
+          <div class="time-spent__header">
+            <div>
+              <p class="time-spent__eyebrow">Estimated from your library</p>
+              <h3 id="timeSpentTitle">Time spent</h3>
+              <p>Roughly how long your finished titles took, plus what you've got through on the ones you're partway into.</p>
+            </div>
+            <div class="time-spent__actions">
+              <button type="button" class="action-btn" id="timeSpentDownload" data-action="time-spent-download" disabled>Download PNG</button>
+            </div>
+          </div>
+          <div id="timeSpentStatus" class="time-spent__status" role="status" aria-live="polite">Adding up your library…</div>
+          <div id="timeSpentContent"></div>
+          <details class="time-spent__method">
+            <summary>How this is counted</summary>
+            <div id="timeSpentMethod"></div>
+          </details>
         </section>
         <div class="accordion-section">
           <div class="accordion-header" data-toggle-category-accordion="library-insights">

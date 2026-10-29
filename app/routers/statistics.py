@@ -10,6 +10,7 @@ from sqlalchemy.exc import IntegrityError
 from .. import crud, episodes, schemas, models, return_prompt as return_prompt_tokens
 from ..dependencies import get_db, get_current_user
 from ..tasteprint import build_tasteprint
+from ..time_spent import estimate as estimate_time_spent
 from ..progress import get_checkpoint_map, serialize_checkpoint
 
 router = APIRouter(prefix="/statistics", tags=["statistics"])
@@ -186,6 +187,17 @@ def get_todays_pick(
     choice["reason"] = "A small, unfinished choice from your private library"
     choice["source"] = "library"
     return {"pick": choice, "candidate_count": len(candidates)}
+
+
+@router.get("/time-spent/", response_model=dict)
+def get_time_spent(
+    response: Response,
+    current_user: models.User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+):
+    """Estimated hours across the member's whole library, private categories included."""
+    response.headers["Cache-Control"] = "private, no-store"
+    return estimate_time_spent(db, current_user)
 
 
 @router.get("/", response_model=schemas.StatisticsDashboard)

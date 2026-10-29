@@ -60,6 +60,7 @@ CORE_SITEMAP_PATHS = (
     ("/pick", "weekly", "0.7"),
     ("/tonight", "monthly", "0.6"),
     ("/tier-list", "monthly", "0.7"),
+    ("/binge-calculator", "monthly", "0.7"),
     ("/if-you-liked", "monthly", "0.75"),
     ("/best-of", "weekly", "0.75"),
     ("/in-order", "monthly", "0.75"),
@@ -649,6 +650,7 @@ Best-of-the-year lists at {base_url}/best-of pick the best new movies, TV shows,
 Pick for me at {base_url}/pick suggests one editorially chosen movie, TV show, anime, game, book or album at a time, with the reason it was chosen and a caveat.
 OmniTrackr Daily at {base_url}/daily is a free daily guessing game: one movie, TV show, anime, game, book or album a day, guessed from six clues, with past puzzles, answers and editors' notes at {base_url}/daily/archive.
 The tier list maker at {base_url}/tier-list ranks movies, TV shows, anime, games, books or albums from S to D in the browser and saves the board as an image; boards are never stored on the server.
+The binge calculator at {base_url}/binge-calculator works out how many hours a TV show, anime or book series takes and the finish date at a chosen pace, with worked examples for long series.
 
 Automatically qualified member collections are browsable at {base_url}/collections/explore. Share-ready collections that miss the stricter discovery checks remain available only by direct link and stay outside the search index. Version-bound reports can temporarily unlist a collection without deleting it.
 
