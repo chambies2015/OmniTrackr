@@ -152,7 +152,7 @@ def _normalized_category(category: Optional[str]) -> Optional[str]:
 def _not_found_reviews_category_html() -> str:
     return message_page(
         "Review Category Not Found", "Review category not found",
-        "This review category is unavailable. Browse the public reviews directory to find movies, TV shows, anime, games, music, and books with substantial public review text.",
+        "This review category is unavailable. Browse the public reviews directory to find movies, TV shows, anime, games, music, books, manga, and podcasts with substantial public review text.",
         eyebrow="Public reviews", actions=(("Browse public reviews", "/reviews"), ("Go to the homepage", "/")),
     )
 
@@ -169,7 +169,7 @@ def _apply_category_review_context(page: str, category: Optional[str]) -> str:
         f"<title>{_escape(context['title'])}</title>",
     )
     page = page.replace(
-        '<meta name="description" content="Read public OmniTrackr reviews for movies, TV shows, anime, video games, music, and books. Discover ratings and recommendations from media fans.">',
+        '<meta name="description" content="Read public OmniTrackr reviews for movies, TV shows, anime, video games, music, books, manga, and podcasts. Discover ratings and recommendations from media fans.">',
         f'<meta name="description" content="{_escape(context["description"])}">',
     )
     page = page.replace(
@@ -187,7 +187,7 @@ def _apply_category_review_context(page: str, category: Optional[str]) -> str:
         f'<meta property="og:title" content="{_escape(context["title"])}">',
     )
     page = page.replace(
-        '<meta property="og:description" content="Read public reviews and ratings for movies, TV shows, anime, video games, music, and books from the OmniTrackr community.">',
+        '<meta property="og:description" content="Read public reviews and ratings for movies, TV shows, anime, video games, music, books, manga, and podcasts from the OmniTrackr community.">',
         f'<meta property="og:description" content="{_escape(context["description"])}">',
     )
     page = page.replace(
@@ -200,7 +200,7 @@ def _apply_category_review_context(page: str, category: Optional[str]) -> str:
         f'<meta name="twitter:title" content="{_escape(context["title"])}">',
     )
     page = page.replace(
-        '<meta name="twitter:description" content="Read public reviews and ratings for movies, shows, anime, games, music, and books.">',
+        '<meta name="twitter:description" content="Read public reviews and ratings for movies, shows, anime, games, music, books, manga, and podcasts.">',
         f'<meta name="twitter:description" content="{_escape(context["description"])}">',
     )
     page = page.replace(
@@ -209,7 +209,7 @@ def _apply_category_review_context(page: str, category: Optional[str]) -> str:
         1,
     )
     page = page.replace(
-        "Find your next favorite through the movies, shows, games, music, and books people are talking about.",
+        "Find your next favorite through the movies, shows, games, music, books, manga, and podcasts people are talking about.",
         _escape(context["intro"]),
         1,
     )
@@ -444,7 +444,7 @@ def _reviews_item_list_json_ld(reviews: list[dict], category: Optional[str] = No
     if normalized_category:
         page_url = f"{page_url}?category={normalized_category}"
     name = context["title"] if context else "Public Media Reviews - OmniTrackr"
-    description = context["description"] if context else "Public user reviews for movies, TV shows, anime, video games, music, and books."
+    description = context["description"] if context else "Public user reviews for movies, TV shows, anime, video games, music, books, manga, and podcasts."
 
     item_list = []
     search_ready_reviews = [review for review in reviews if _review_is_standalone(review)]

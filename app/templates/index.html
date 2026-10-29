@@ -7,7 +7,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=5.0, user-scalable=yes">
   <meta name="theme-color" content="#0b0a18">
   <meta name="description"
-    content="Track movies, TV shows, anime, video games, music, and books in one free media tracker. Rate, review, analyze stats, share with friends, and export your data.">
+    content="Track movies, TV shows, anime, video games, music, books, manga, and podcasts in one free media tracker. Rate, review, analyze stats, share with friends, and export your data.">
   <meta name="author" content="OmniTrackr">
   <meta name="robots" content="index, follow, max-image-preview:large">
   <meta name="language" content="English">
@@ -19,7 +19,7 @@
   <meta property="og:url" content="https://omnitrackr.xyz/">
   <meta property="og:title" content="OmniTrackr - Free Media Tracker for Movies, Shows, Games, Music & Books">
   <meta property="og:description"
-    content="Track movies, shows, anime, games, music, and books in one dashboard with reviews, stats, friends, privacy controls, and JSON export.">
+    content="Track movies, shows, anime, games, music, books, manga, and podcasts in one dashboard with reviews, stats, friends, privacy controls, and JSON export.">
   <meta property="og:image" content="https://omnitrackr.xyz/omnitrackr_vortex.png">
   <meta property="og:image:secure_url" content="https://omnitrackr.xyz/omnitrackr_vortex.png">
   <meta property="og:image:width" content="1200">
@@ -33,7 +33,7 @@
   <meta name="twitter:url" content="https://omnitrackr.xyz/">
   <meta name="twitter:title" content="OmniTrackr - Free Media Tracker">
   <meta name="twitter:description"
-    content="Track movies, shows, anime, games, music, and books with reviews, stats, friends, privacy controls, and export.">
+    content="Track movies, shows, anime, games, music, books, manga, and podcasts with reviews, stats, friends, privacy controls, and export.">
   <meta name="twitter:image" content="https://omnitrackr.xyz/omnitrackr_vortex.png">
   <meta name="twitter:image:alt" content="OmniTrackr media tracking dashboard">
   <meta name="twitter:site" content="@omnitrackr">
@@ -93,7 +93,7 @@
     "@context": "https://schema.org",
     "@type": "SoftwareApplication",
     "name": "OmniTrackr",
-    "description": "Track and organize your movies, TV shows, anime, video games, music, and books. Rate, review, and analyze your media collection with comprehensive statistics and beautiful posters.",
+    "description": "Track and organize your movies, TV shows, anime, video games, music, books, manga, and podcasts. Rate, review, and analyze your media collection with comprehensive statistics and beautiful posters.",
     "url": "https://omnitrackr.xyz",
     "applicationCategory": "EntertainmentApplication",
     "applicationSubCategory": "Media tracker",
@@ -106,7 +106,7 @@
       "priceCurrency": "USD"
     },
     "featureList": [
-      "Track Movies, TV Shows, Anime, Video Games, Music & Books",
+      "Track Movies, TV Shows, Anime, Games, Music, Books, Manga & Podcasts",
       "Statistics Dashboard",
       "Export/Import Data",
       "Automatic Posters",
@@ -150,7 +150,7 @@
     "@type": "WebSite",
     "name": "OmniTrackr",
     "url": "https://omnitrackr.xyz",
-    "description": "Track and organize your movies, TV shows, anime, video games, music, and books. Rate, review, and analyze your media collection with comprehensive statistics and beautiful posters."
+    "description": "Track and organize your movies, TV shows, anime, video games, music, books, manga, and podcasts. Rate, review, and analyze your media collection with comprehensive statistics and beautiful posters."
   }
   </script>
 
@@ -192,7 +192,7 @@
       },
       {
         "@type": "Question",
-        "name": "How do I add movies, TV shows, anime, video games, music, and books?",
+        "name": "How do I add movies, TV shows, anime, video games, music, books, manga, and podcasts?",
         "acceptedAnswer": {
           "@type": "Answer",
           "text": "Simply use the Add Movie, Add TV Show, Add Anime, Add Video Game, Add Music, or Add Book forms in your dashboard. Enter the title, year, and other details. The app will automatically fetch beautiful posters and cover art from the OMDB API (movies/TV shows), Jikan API (anime), RAWG API (video games), iTunes Search API (music), and Open Library API (books). Titles are automatically normalized to official names when metadata is fetched. You can also import your collection from JSON files."
@@ -203,7 +203,7 @@
         "name": "Can I export my data?",
         "acceptedAnswer": {
           "@type": "Answer",
-          "text": "Yes. Export your movies, TV shows, anime, video games, music, books, collections, and private journal as a JSON backup. The Import Studio can also preview Letterboxd, IMDb, Goodreads, StoryGraph, MyAnimeList, AniList, Kitsu, Trakt, and generic CSV migrations without overwriting existing library records."
+          "text": "Yes. Export your movies, TV shows, anime, video games, music, books, manga, podcasts, collections, and private journal as a JSON backup. The Import Studio can also preview Letterboxd, IMDb, Goodreads, StoryGraph, MyAnimeList, AniList, Kitsu, Trakt, and generic CSV migrations without overwriting existing library records."
         }
       },
       {
@@ -219,7 +219,7 @@
         "name": "What are privacy settings?",
         "acceptedAnswer": {
           "@type": "Answer",
-          "text": "Privacy settings allow you to control what friends can see. You can make your movies, TV shows, anime, video games, music, books, or statistics private. When enabled, even your friends won't be able to see that data - it's completely private to you. You can change these settings anytime in your account settings."
+          "text": "Privacy settings allow you to control what friends can see. You can make your movies, TV shows, anime, video games, music, books, manga, podcasts, or statistics private. When enabled, even your friends won't be able to see that data - it's completely private to you. You can change these settings anytime in your account settings."
         }
       },
       {
@@ -240,7 +240,7 @@
       },
       {
         "@type": "Question",
-        "name": "Can I rate movies, TV shows, anime, video games, music, and books with decimals?",
+        "name": "Can I rate movies, TV shows, anime, video games, music, books, manga, and podcasts with decimals?",
         "acceptedAnswer": {
           "@type": "Answer",
           "text": "Yes! You can rate any item from 0 to 10.0 with one decimal place precision (e.g., 7.5, 8.4, 9.2). The statistics dashboard will calculate averages and other metrics using these decimal ratings."
@@ -286,7 +286,7 @@
       {
         "@type": "HowToStep",
         "name": "Login to Your Dashboard",
-        "text": "Access tabs for Movies, TV Shows, Anime, Video Games, Music, Books, and Statistics. Hide tabs you don't use in settings."
+        "text": "Access tabs for Movies, TV Shows, Anime, Video Games, Music, Books, Manga, Podcasts, and Statistics. Hide tabs you don't use in settings."
       },
       {
         "@type": "HowToStep",
@@ -1635,7 +1635,7 @@
       <section class="collections-hero">
         <p class="collections-hero__eyebrow">Private by default · share only by choice</p>
         <h2>Collections</h2>
-        <p>Bring together movies, TV shows, anime, games, music, and books around any theme you like. When a collection is ready to share, add a few words about why you put it together, then publish it.</p>
+        <p>Bring together movies, TV shows, anime, games, music, books, manga, and podcasts around any theme you like. When a collection is ready to share, add a few words about why you put it together, then publish it.</p>
       </section>
       <section class="card collections-create">
         <h3>Create a collection</h3>
