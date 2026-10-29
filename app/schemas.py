@@ -742,6 +742,8 @@ class ExportData(BaseModel):
     collections: List[dict] = Field(default=[], description="Private cross-media collections and curator notes")
     progress_checkpoints: List[dict] = Field(default_factory=list, description="Private episode and reading checkpoints")
     title_origins: List[dict] = Field(default_factory=list, description="Private notes on who recommended each title and why it was added")
+    library_tags: List[dict] = Field(default_factory=list, description="Private tags, one entry per tagged title")
+    saved_views: List[dict] = Field(default_factory=list, description="Saved shelf views: name and filters")
     export_metadata: dict = Field(..., description="Export metadata including timestamp and version")
     
 # Far above any real library, but keeps one request from queueing millions of row writes.
@@ -765,6 +767,8 @@ class ImportData(BaseModel):
     collections: List[dict] = Field(default=[], max_length=MAX_IMPORT_LIST_ITEMS, description="Collections to restore privately (optional for backward compatibility)")
     progress_checkpoints: List[dict] = Field(default_factory=list, max_length=10000, description="Checkpoints to restore only where no saved progress exists")
     title_origins: List[dict] = Field(default_factory=list, max_length=MAX_IMPORT_LIST_ITEMS, description="Why-I-added-it notes, restored only on titles that have none")
+    library_tags: List[dict] = Field(default_factory=list, max_length=MAX_IMPORT_LIST_ITEMS, description="Tags added to matching titles alongside the ones they have")
+    saved_views: List[dict] = Field(default_factory=list, max_length=200, description="Saved shelf views, restored when the name is free")
     
 class ImportResult(BaseModel):
     """Schema for import operation results"""
@@ -796,6 +800,10 @@ class ImportResult(BaseModel):
     progress_skipped: int = Field(default=0, description="Existing, ambiguous, unavailable or invalid checkpoints skipped")
     origins_created: int = Field(default=0, description="Number of why-I-added-it notes restored")
     origins_skipped: int = Field(default=0, description="Existing, ambiguous, unavailable or invalid why-I-added-it notes skipped")
+    tags_created: int = Field(default=0, description="Number of tags added to titles")
+    tags_skipped: int = Field(default=0, description="Tags already on the title, over the limit, unmatched or invalid")
+    views_created: int = Field(default=0, description="Number of saved views restored")
+    views_skipped: int = Field(default=0, description="Saved views with a name already in use, over the limit or invalid")
     errors: List[str] = Field(default=[], description="List of errors encountered during import")
     
 # Statistics schemas

@@ -100,6 +100,12 @@ async function importData(fileInput) {
     if (result.origins_created || result.origins_skipped) {
       message += `\nWhy you added titles: ${result.origins_created || 0} restored, ${result.origins_skipped || 0} skipped. Titles that already had a note keep it.`;
     }
+    if (result.tags_created || result.tags_skipped) {
+      message += `\nTags: ${result.tags_created || 0} added, ${result.tags_skipped || 0} skipped. Tags already on a title stay.`;
+    }
+    if (result.views_created || result.views_skipped) {
+      message += `\nSaved views: ${result.views_created || 0} restored, ${result.views_skipped || 0} skipped because the name was taken, the shelf was full or the view didn't check out.`;
+    }
 
     if (result.errors.length > 0) {
       message += `\n\nErrors:\n${result.errors.join('\n')}`;

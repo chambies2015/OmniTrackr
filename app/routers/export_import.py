@@ -14,6 +14,7 @@ from ..integer_bounds import SQL_INTEGER_MAX
 from ..dependencies import get_db, get_current_user
 from ..progress import CATEGORIES as PROGRESS_CATEGORIES, get_checkpoint_map, serialize_checkpoint, validate_checkpoint, stage_import_checkpoint, lock_progress_owner
 from .activity import _serialize as serialize_activity, import_activity_entries
+from . import library as library_routes
 
 router = APIRouter(prefix="", tags=["export-import"])
 
@@ -283,6 +284,123 @@ def _import_collections(db: Session, user_id: int, payloads: list[dict]) -> tupl
     return created, skipped
 
 
+def _export_tags(db: Session, user_id: int) -> list[dict]:
+    """One entry per tagged title, with the fields an import uses to find the same edition."""
+    rows = db.query(models.LibraryTag.category, models.LibraryTag.item_id, models.LibraryTag.label).filter(
+        models.LibraryTag.user_id == user_id).order_by(models.LibraryTag.category, models.LibraryTag.item_id,
+                                                         models.LibraryTag.label_key).all()
+    wanted: dict[str, dict[int, list[str]]] = {}
+    for category, item_id, label in rows:
+        wanted.setdefault(category, {}).setdefault(item_id, []).append(label)
+    exported = []
+    for category, labels in wanted.items():
+        model = COLLECTION_MEDIA_MODELS.get(category)
+        if model is None:
+            continue
+        for media in db.query(model).filter(model.user_id == user_id, model.id.in_(list(labels))):
+            exported.append({"category": category, "title": media.title, **_exported_identity(media, category),
+                             "tags": labels[media.id]})
+    return exported
+
+
+def _export_views(db: Session, user_id: int) -> list[dict]:
+    views = db.query(models.SavedLibraryView).filter_by(user_id=user_id).order_by(
+        models.SavedLibraryView.category, models.SavedLibraryView.name_key).all()
+    return [{"category": view.category, **{key: value for key, value in library_routes.view_out(view).items()
+                                           if key != "id"}} for view in views]
+
+
+def _import_tags(db: Session, user_id: int, payloads: list[dict]) -> tuple[int, int]:
+    """Add backed-up tags to the one matching title, keeping the tags it already has."""
+    if not payloads:
+        return 0, 0
+    created = skipped = 0
+    try:
+        lock_progress_owner(db, user_id)
+        spelling = dict(db.query(models.LibraryTag.label_key, func.min(models.LibraryTag.label)).filter(
+            models.LibraryTag.user_id == user_id).group_by(models.LibraryTag.label_key).all())
+        for raw in payloads:
+            category = raw.get("category") if isinstance(raw, dict) else None
+            title = raw.get("title") if isinstance(raw, dict) else None
+            labels = raw.get("tags") if isinstance(raw, dict) else None
+            model = COLLECTION_MEDIA_MODELS.get(category) if isinstance(category, str) else None
+            if model is None or not isinstance(title, str) or not title.strip() or not isinstance(labels, list):
+                skipped += 1
+                continue
+            query = db.query(model).filter(model.user_id == user_id, func.lower(model.title) == title.strip().lower())
+            query = _apply_import_identity(query, model, category, raw)
+            matches = query.limit(2).all() if query is not None else []
+            if len(matches) != 1:
+                skipped += len(labels) or 1
+                continue
+            item_id = matches[0].id
+            have = {key for (key,) in db.query(models.LibraryTag.label_key).filter_by(
+                user_id=user_id, category=category, item_id=item_id)}
+            for raw_label in labels[:library_routes.TAGS_PER_ITEM * 2]:
+                try:
+                    label = library_routes.clean_tag(raw_label) if isinstance(raw_label, str) else ""
+                except HTTPException:
+                    label = ""
+                key = library_routes.tag_key(label) if label else ""
+                if not key or key in have or len(have) >= library_routes.TAGS_PER_ITEM:
+                    skipped += 1
+                    continue
+                label = spelling.setdefault(key, label)
+                db.add(models.LibraryTag(user_id=user_id, category=category, item_id=item_id, label=label,
+                                         label_key=key))
+                have.add(key)
+                created += 1
+            db.flush()
+        db.commit()
+        return created, skipped
+    except Exception:
+        db.rollback()
+        raise
+
+
+def _import_views(db: Session, user_id: int, payloads: list[dict]) -> tuple[int, int]:
+    """Restore saved views whose names are free, within each shelf's limit."""
+    if not payloads:
+        return 0, 0
+    created = skipped = 0
+    views = models.SavedLibraryView
+    try:
+        lock_progress_owner(db, user_id)
+        for raw in payloads:
+            category = raw.get("category") if isinstance(raw, dict) else None
+            name = " ".join(str(raw.get("name") or "").split()) if isinstance(raw, dict) else ""
+            if category not in library_routes.CATEGORIES or not name or len(name) > 40 or not name.isprintable():
+                skipped += 1
+                continue
+            try:
+                filters = library_routes.ViewFilters.model_validate(raw.get("filters") or {})
+                if filters.sort not in library_routes.SORTS:
+                    raise ValueError("unknown sort")
+                filters.tag = library_routes.clean_tag(filters.tag) if filters.tag else ""
+            except (ValidationError, ValueError, HTTPException):
+                skipped += 1
+                continue
+            if filters.has_progress and category not in library_routes.PROGRESS_CATEGORIES:
+                filters.has_progress = False
+            filters.search = filters.search.strip()
+            filters.recommended_by = title_origins.who_key(" ".join(filters.recommended_by.split()))
+            key = name.casefold()
+            existing = db.query(views.id).filter_by(user_id=user_id, category=category)
+            if existing.filter_by(name_key=key).first() is not None \
+                    or existing.count() >= library_routes.VIEWS_PER_SHELF:
+                skipped += 1
+                continue
+            db.add(views(user_id=user_id, category=category, name=name, name_key=key,
+                         filters=json.dumps(filters.model_dump(), separators=(",", ":"))))
+            db.flush()
+            created += 1
+        db.commit()
+        return created, skipped
+    except Exception:
+        db.rollback()
+        raise
+
+
 @router.get("/export/", response_model=schemas.ExportData)
 def export_data(
     current_user: models.User = Depends(get_current_user),
@@ -304,6 +422,8 @@ def export_data(
     collections = _export_collections(db, current_user.id)
     progress_checkpoints = _export_progress(db, current_user.id)
     origins = title_origins.export_rows(db, current_user.id, _exported_identity)
+    library_tags = _export_tags(db, current_user.id)
+    saved_views = _export_views(db, current_user.id)
 
     export_metadata = {
         "export_timestamp": datetime.now().isoformat(),
@@ -324,6 +444,8 @@ def export_data(
         "total_collections": len(collections),
         "total_progress_checkpoints": len(progress_checkpoints),
         "total_title_origins": len(origins),
+        "total_tagged_titles": len(library_tags),
+        "total_saved_views": len(saved_views),
     }
 
     return schemas.ExportData(
@@ -340,6 +462,8 @@ def export_data(
         collections=collections,
         progress_checkpoints=progress_checkpoints,
         title_origins=origins,
+        library_tags=library_tags,
+        saved_views=saved_views,
         export_metadata=export_metadata
     )
 
@@ -411,6 +535,8 @@ def _run_import(import_data: schemas.ImportData, current_user: models.User, db: 
     collections_created, collections_skipped = _import_collections(db, current_user.id, import_data.collections)
     progress_created, progress_skipped = _import_progress(db, current_user.id, import_data.progress_checkpoints)
     origins_created, origins_skipped = _import_origins(db, current_user.id, import_data.title_origins)
+    tags_created, tags_skipped = _import_tags(db, current_user.id, import_data.library_tags)
+    views_created, views_skipped = _import_views(db, current_user.id, import_data.saved_views)
 
     all_errors = movie_errors + tv_show_errors + anime_errors + video_game_errors + music_errors + book_errors + manga_errors + podcast_errors + custom_tab_errors
 
@@ -441,6 +567,10 @@ def _run_import(import_data: schemas.ImportData, current_user: models.User, db: 
         progress_skipped=progress_skipped,
         origins_created=origins_created,
         origins_skipped=origins_skipped,
+        tags_created=tags_created,
+        tags_skipped=tags_skipped,
+        views_created=views_created,
+        views_skipped=views_skipped,
         errors=all_errors
     )
 
