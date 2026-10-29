@@ -238,3 +238,30 @@ def test_binge_length_reads_the_cache_only(client, db_session):
     missing = client.get("/api/binge-calculator/length", params={"kind": "book", "title": "Nothing Cached"}).json()
     assert missing["pages"] is None
     assert client.get("/api/binge-calculator/length", params={"kind": "movie", "title": "Arrival"}).status_code == 400
+
+
+def test_public_hours_are_reused_for_a_few_minutes_but_follow_privacy(db_session, monkeypatch):
+    monkeypatch.setenv("TESTING", "false")
+    time_spent.clear_public_hours_cache()
+    user = _member(db_session, name="cached")
+    db_session.add(models.VideoGame(title="Hades", played=True, user_id=user.id))
+    db_session.commit()
+    calls = []
+    real = time_spent.estimate
+    monkeypatch.setattr(time_spent, "estimate", lambda *args, **kwargs: calls.append(1) or real(*args, **kwargs))
+    try:
+        assert time_spent.public_hours(db_session, user) == time_spent.GAME_HOURS
+        db_session.add(models.VideoGame(title="Celeste", played=True, user_id=user.id))
+        db_session.commit()
+        assert time_spent.public_hours(db_session, user) == time_spent.GAME_HOURS  # cached
+        assert len(calls) == 1
+        user.video_games_private = True
+        db_session.commit()
+        assert time_spent.public_hours(db_session, user) == 0  # a privacy change is a new key
+        clock = time_spent.time.monotonic() + time_spent.PUBLIC_HOURS_SECONDS + 1
+        monkeypatch.setattr(time_spent.time, "monotonic", lambda: clock)
+        user.video_games_private = False
+        db_session.commit()
+        assert time_spent.public_hours(db_session, user) == 2 * time_spent.GAME_HOURS  # expired
+    finally:
+        time_spent.clear_public_hours_cache()

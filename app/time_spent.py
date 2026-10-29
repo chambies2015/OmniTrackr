@@ -22,7 +22,10 @@ completion moment (the same dates Year in Review uses), in full.
 from __future__ import annotations
 
 import json
+import os
 import re
+import threading
+import time
 from datetime import date, timedelta
 from typing import Optional
 
@@ -275,9 +278,41 @@ def estimate(db: Session, user: models.User, categories: Optional[list[str]] = N
     }
 
 
+# Profile views reuse an estimate for a few minutes. The shelves counted are part of the key,
+# so making a shelf private takes effect on the next view; a new finish shows up within the TTL.
+PUBLIC_HOURS_SECONDS = 600
+PUBLIC_HOURS_SIZE = 4096
+_public_hours: dict[tuple, tuple[float, int]] = {}
+_public_hours_lock = threading.Lock()
+
+
+def _public_hours_cache_enabled() -> bool:
+    # Tests change data between requests and expect the page to follow at once.
+    return os.getenv("TESTING", "").lower() != "true"
+
+
+def clear_public_hours_cache() -> None:
+    with _public_hours_lock:
+        _public_hours.clear()
+
+
 def public_hours(db: Session, user: models.User) -> int:
     """Hours for the public profile, from the shelves the member hasn't made private."""
-    return estimate(db, user, visible_categories(user))["hours"]
+    categories = visible_categories(user)
+    if not _public_hours_cache_enabled():
+        return estimate(db, user, categories)["hours"]
+    key = (user.id, tuple(categories))
+    now = time.monotonic()
+    with _public_hours_lock:
+        hit = _public_hours.get(key)
+    if hit is not None and now - hit[0] < PUBLIC_HOURS_SECONDS:
+        return hit[1]
+    hours = estimate(db, user, categories)["hours"]
+    with _public_hours_lock:
+        if len(_public_hours) >= PUBLIC_HOURS_SIZE:
+            _public_hours.clear()
+        _public_hours[key] = (now, hours)
+    return hours
 
 
 # ---------------------------------------------------------------- plain-language comparisons
