@@ -56,7 +56,7 @@ EXAMPLES = {
     "harry-potter": {"name": "Harry Potter (all seven books)", "kind": "book", "words": 1084000,
                      "note": "About 1.08 million words across the series."},
     "the-lord-of-the-rings": {"name": "The Lord of the Rings", "kind": "book", "words": 480000,
-                              "note": "The three volumes, not counting The Hobbit."},
+                              "note": "The three volumes with their appendices, not counting The Hobbit."},
     "a-song-of-ice-and-fire": {"name": "A Song of Ice and Fire (five books)", "kind": "book", "words": 1770000,
                                "note": "The five published novels."},
     "the-wheel-of-time": {"name": "The Wheel of Time", "kind": "book", "words": 4400000,
