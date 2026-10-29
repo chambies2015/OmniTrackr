@@ -43,7 +43,6 @@
     .guide-jump { display: flex; flex-wrap: wrap; gap: 8px 20px; margin: 24px 0 36px; }
     .guide-jump a { padding: 8px 0; }
     .content-section { scroll-margin-top: 24px; }
-    .guide-updated { font-size: .9rem; }
     .back-link { display: inline-block; margin-bottom: 30px; color: var(--primary); text-decoration: none; font-weight: 500; }
   </style>
   <script type="application/ld+json">
@@ -52,14 +51,14 @@
     "@type": "Article",
     "headline": "Export and Import Guide for Portable Media Library Backups",
     "description": "Worked CSV examples, supported fields, rating conversion, duplicate rules, and preview-first migration, plus OmniTrackr JSON backups and restores.",
-    "dateModified": "2026-09-24",
+    "dateModified": "2026-10-29",
     "author": { "@type": "Organization", "name": "OmniTrackr" },
     "publisher": { "@type": "Organization", "name": "OmniTrackr", "url": "https://omnitrackr.xyz" },
     "mainEntityOfPage": "https://omnitrackr.xyz/export-import-guide",
     "inLanguage": "en-US"
   }
   </script>
-  <link rel="stylesheet" href="/static/public-reader.css?v=20261017-reader-2">
+  <link rel="stylesheet" href="/static/public-reader.css?v=20261029-reader-3">
 </head>
 
 <body class="public-reader site">
@@ -71,7 +70,6 @@
       <header class="content-header">
         <h1>Export &amp; Import Guide</h1>
         <p>Bring your media history into OmniTrackr from another tracker or a spreadsheet, and keep your own backup copy while you do.</p>
-        <p class="guide-updated">By OmniTrackr · Updated <time datetime="2026-09-24">September 24, 2026</time></p>
       </header>
       <nav class="guide-jump" aria-label="On this page">
         <a href="#sources-heading">Supported files</a>
@@ -93,12 +91,14 @@
         <p>JSON exports include movies, TV shows, anime, video games, music, custom tabs, and books, along with your private journal, collections, and saved episode or reading checkpoints. Entries include titles, creators, years, ratings, completion, reviews, public-review choices, artwork URLs, and category-specific details.</p>
         <p>Export before big account changes, after a large import, or whenever you want an offline copy of your history.</p>
         <ul>
-          <li><strong>Core categories:</strong> movies, TV shows, anime, video games, music, and books are exported as separate lists, so each category's own fields stay readable.</li>
+          <li><strong>Core categories:</strong> movies, TV shows, anime, video games, music, books, manga, and podcasts are exported as separate lists, so each category's own fields stay readable.</li>
           <li><strong>Review context:</strong> review text and rating fields are saved with the entry, so the backup records what you thought of a title as well as its name.</li>
           <li><strong>Privacy choices:</strong> public-review flags appear in the backup. Restored collections are private, and a restore does not republish them. Check an entry's current sharing setting before you make it public again.</li>
           <li><strong>Artwork references:</strong> poster and cover URLs are included when available. Those images may be hosted by third parties, and the links can change or break.</li>
-          <li><strong>Custom tabs:</strong> your custom lists are included, so collections outside the six built-in categories are backed up too.</li>
+          <li><strong>Custom tabs:</strong> your custom lists are included, so collections outside the eight built-in categories are backed up too.</li>
           <li><strong>Saved place and context:</strong> journal entries, collection notes, and progress checkpoints belong in a JSON backup. A checkpoint is restored only when its library edition can be matched unambiguously and no saved checkpoint already exists.</li>
+          <li><strong>Tags and saved views:</strong> your private tags and saved shelf views are in the backup too. A restore adds tags to the one title that matches, keeps any tags it already has, and stops at 10 tags per title. A saved view comes back only if no view on that shelf already has its name and the shelf has room for another.</li>
+          <li><strong>Why you added a title:</strong> who recommended it or where you heard about it, with your note. A restore only fills in titles that don't have a note yet.</li>
         </ul>
       </section>
 
@@ -106,7 +106,7 @@
         <h2 id="formats-heading">Spreadsheets, Letterboxd and Goodreads files</h2>
         <p>The JSON backup is the file OmniTrackr restores from, but it isn't much use anywhere else. The export panel in Account Settings also makes three other kinds of file.</p>
         <ul>
-          <li><strong>Spreadsheets.</strong> A ZIP of CSV files that open in Excel, Numbers or Google Sheets. <code>library.csv</code> has every title from every shelf in one sheet, with ratings out of 10. There are also files for your journal, your collections, where you stopped in each show or book, and one file for each custom tab. <code>library.csv</code> uses the same columns as the Import Studio's spreadsheet option, so you can import it into another OmniTrackr account.</li>
+          <li><strong>Spreadsheets.</strong> A ZIP of CSV files that open in Excel, Numbers or Google Sheets. <code>library.csv</code> has every title from every shelf in one sheet, with ratings out of 10. There are also files for your journal, your collections, where you stopped in each show or book, your tags (<code>tags.csv</code>), who recommended each title (<code>why-added.csv</code>), and one file for each custom tab. <code>library.csv</code> uses the same columns as the Import Studio's spreadsheet option, so you can import it into another OmniTrackr account.</li>
           <li><strong>Letterboxd.</strong> Two CSV files for Letterboxd's importer: one for watched films and one for your watchlist. A film you logged twice in your journal becomes two diary entries, the second marked as a rewatch. Ratings are halved and rounded to the nearest half star, so a 7.3 becomes three and a half stars. Your review goes on the most recent watch only.</li>
           <li><strong>Goodreads and The StoryGraph.</strong> Your books in the column layout of a Goodreads export, which The StoryGraph also imports. Finished books go on the "read" shelf with the date from your journal, and everything else on "to-read". Goodreads only takes whole stars, so ratings are rounded.</li>
         </ul>
@@ -128,7 +128,7 @@
           <li><strong>IMDb ratings, watchlist, or list CSV:</strong> <code>Title</code>, <code>Title Type</code>, <code>Year</code>, <code>Your Rating</code>, and <code>Directors</code> are read. <code>Title Type</code> decides the category: movies, TV movies, shorts, specials, and videos become movies; TV series and mini series become TV shows; video games become games. IMDb ratings already use a ten-point scale, so 8 stays 8/10. A rated title is marked watched or played, while an unrated watchlist row stays unfinished. Episode, podcast, and music video rows are listed as needing attention and are not imported. IMDb files anime as TV series, so anime arrives in TV Shows.</li>
           <li><strong>The StoryGraph CSV:</strong> <code>Title</code>, <code>Authors</code>, <code>Read Status</code>, <code>Star Rating</code>, and <code>Review</code> become book details. Star ratings are doubled, including quarter stars: 4.25 becomes 8.5/10. Only a <code>read</code> status marks the book read; to-read, currently reading, and did-not-finish books stay unread. The export has no publication year, so imported books have no year until you add one. Moods, pace, tags, and reading dates are not imported.</li>
           <li><strong>MyAnimeList-style CSV:</strong> <code>series_title</code>, <code>series_episodes</code>, <code>my_score</code>, <code>my_status</code>, <code>series_start</code>, and <code>my_comments</code> become anime details. Scores use the ten-point scale. This accepts CSV columns, not a native MyAnimeList XML file. Episode totals describe the series; they do not set your current episode.</li>
-          <li><strong>Generic spreadsheets:</strong> choose one of OmniTrackr's six categories or include a category column. Familiar headings such as title, creator, year, rating, status, review, genre, seasons, episodes, and release date are recognized automatically.</li>
+          <li><strong>Generic spreadsheets:</strong> choose one of OmniTrackr's eight categories or include a category column. Familiar headings such as title, creator, year, rating, status, review, genre, seasons, episodes, and release date are recognized automatically.</li>
         </ul>
         <p>When a spreadsheet uses personal headings such as “Thing,” “Maker,” or “My verdict,” open the optional mapping panel and pair those columns with OmniTrackr fields before previewing. Downloadable templates are available for every built-in category if you would rather copy data into a known layout.</p>
         <p>For personal headings, select the generic spreadsheet source. Mapping chooses which columns to read; it does not change the rating scale. A generic rating is already out of ten, so convert your own five-star scores before importing. Choose a single category for the whole file, or leave the category selection unset and supply a <code>category</code> column for a mixed library.</p>

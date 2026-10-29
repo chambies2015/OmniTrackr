@@ -17,7 +17,8 @@ class TestSelfHostedFonts:
     def test_public_pages_use_local_fonts(self, client):
         for path in PUBLIC_PATHS:
             html = client.get(path).text
-            assert "/static/fonts.css?v=" in html, path
+            # Guide and policy pages inline fonts.css (reader_pages.py); the others link it.
+            assert "/static/fonts.css?v=" in html or '<style data-from="fonts.css"' in html, path
             assert 'href="/static/fonts/poppins-800-latin.woff2" as="font" type="font/woff2" crossorigin' in html, path
             assert "fonts.googleapis.com" not in html, path
 

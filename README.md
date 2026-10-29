@@ -4,13 +4,13 @@
 
 <h1 align="center">OmniTrackr</h1>
 
-OmniTrackr is a free multi-user media tracker for movies, TV shows, anime, video games, music, and books. It runs in the browser and covers private tracking, ratings, reviews, statistics, friends, public review pages, and JSON export/import.
+OmniTrackr is a free multi-user media tracker for movies, TV shows, anime, video games, music, books, manga, and podcasts. It runs in the browser and covers private tracking, ratings, reviews, statistics, friends, public review pages, and JSON export/import.
 
 Live site: [https://www.omnitrackr.xyz/](https://www.omnitrackr.xyz/)
 
 ## Highlights
 
-- Track six built-in media categories: movies, TV shows, anime, video games, music, and books.
+- Track eight built-in media categories: movies, TV shows, anime, video games, music, books, manga, and podcasts.
 - Add ratings, long-form reviews, status fields, years, metadata, posters, cover art, and category-specific fields.
 - Choose which individual reviews are public.
 - Browse public reviews at `/reviews` and individual review detail pages.
@@ -66,13 +66,15 @@ OmniTrackr includes first-class CRUD flows for:
 - Video games: title, release date, genres, rating, played status, review, public-review toggle, cover art, RAWG link.
 - Music: title, artist, year, genre, rating, listened status, review, public-review toggle, cover art.
 - Books: title, author, year, genre, rating, read status, review, public-review toggle, cover art.
+- Manga: title, author, year, genre, volumes, chapters, rating, read status, review, public-review toggle, cover art.
+- Podcasts: title, host, year, genre, episodes, rating, listened status, review, public-review toggle, cover art.
 
 Metadata sources:
 
 - OMDB API for movie and TV metadata when configured.
-- Jikan API for anime metadata.
+- Jikan API for anime and manga metadata.
 - RAWG API for video game metadata when configured.
-- iTunes Search API for music metadata.
+- iTunes Search API for music and podcast metadata.
 - Open Library API for book metadata.
 
 ## Public pages and SEO
@@ -87,7 +89,7 @@ The public site is more than a login screen. These pages help visitors, search e
 - `/media-tracking` - hub linking the major guide pages.
 - `/tv-show-tracker` and `/game-tracker` - category-specific tracker guides.
 - `/reviews` - public user reviews when users choose to share individual reviews.
-- `/collections/explore` - automatically qualified, substantial member-curated collections spanning all six media types.
+- `/collections/explore` - automatically qualified, substantial member-curated collections spanning all eight media types.
 - `/changelog` - product, security, and content update history.
 - `/roadmap` - planned improvements.
 - `/privacy`, `/terms`, and `/contact` - policy and support pages.
@@ -124,7 +126,7 @@ Friend profile access respects the other user's privacy settings.
 
 ## Custom tabs
 
-Custom tabs let users create additional collection types beyond the six built-in categories.
+Custom tabs let users create additional collection types beyond the eight built-in categories.
 
 Supported custom-tab features include:
 
@@ -136,7 +138,7 @@ Supported custom-tab features include:
 - Searchable custom-tab item lists.
 - JSON export/import support.
 
-Example uses include comics, podcasts, board games, collectibles, or niche watchlists.
+Example uses include comics, board games, collectibles, or niche watchlists.
 
 ## Export and import
 

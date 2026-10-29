@@ -21,7 +21,7 @@
   --site-amber: #fbbf24;
   --site-radius: 18px;
   --site-wrap: 1180px;
-  --site-font: Inter, system-ui, -apple-system, "Segoe UI", sans-serif;
+  --site-font: Inter, "Inter Fallback", system-ui, -apple-system, "Segoe UI", sans-serif;
   --site-display: Poppins, Inter, system-ui, sans-serif;
 }
 

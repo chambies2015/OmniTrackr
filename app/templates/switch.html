@@ -57,7 +57,7 @@
     "@type": "HowTo",
     "name": "Move your media history to OmniTrackr",
     "description": "Export your ratings from Letterboxd, IMDb, Goodreads, The StoryGraph, MyAnimeList, AniList, Kitsu, or Trakt and preview them in OmniTrackr's Import Studio before saving.",
-    "dateModified": "2026-10-18",
+    "dateModified": "2026-10-29",
     "inLanguage": "en-US",
     "mainEntityOfPage": "https://omnitrackr.xyz/switch",
     "publisher": { "@type": "Organization", "name": "OmniTrackr", "url": "https://omnitrackr.xyz" },
@@ -69,7 +69,7 @@
     ]
   }
   </script>
-  <link rel="stylesheet" href="/static/public-reader.css?v=20261017-reader-2">
+  <link rel="stylesheet" href="/static/public-reader.css?v=20261029-reader-3">
 </head>
 
 <body class="public-reader site">
@@ -81,7 +81,6 @@
       <header class="content-header">
         <h1>Switch to OmniTrackr without starting over</h1>
         <p>Your ratings already live somewhere. This guide shows where each service keeps its export, what comes across, and what to check before anything is saved.</p>
-        <p class="guide-updated">By OmniTrackr · Updated <time datetime="2026-10-18">October 18, 2026</time></p>
       </header>
       <nav class="guide-jump" aria-label="On this page">
         <a href="#glance-heading">At a glance</a>
@@ -120,10 +119,10 @@
               <tr><th scope="row">Letterboxd</th><td>Movies, from the whole ZIP</td><td>Stars doubled: 3.5 becomes 7/10</td><td>It is in your watched films, diary, ratings, or reviews</td></tr>
               <tr><th scope="row">Goodreads</th><td>Books</td><td>Stars doubled: 4 becomes 8/10</td><td>Shelf is <code>read</code> or a read date exists</td></tr>
               <tr><th scope="row">The StoryGraph</th><td>Books</td><td>Stars doubled, quarters kept: 4.25 becomes 8.5/10</td><td>Read status is <code>read</code></td></tr>
-              <tr><th scope="row">MyAnimeList or Kitsu</th><td>Anime, and manga as books</td><td>Already out of 10</td><td>Status is completed</td></tr>
-              <tr><th scope="row">AniList</th><td>Anime, and manga as books</td><td>Read on a 10-point scale, decimals kept</td><td>Status is completed or rewatching</td></tr>
+              <tr><th scope="row">MyAnimeList or Kitsu</th><td>Anime, and manga on the manga shelf</td><td>Already out of 10</td><td>Status is completed</td></tr>
+              <tr><th scope="row">AniList</th><td>Anime, manga on the manga shelf, light novels as books</td><td>Read on a 10-point scale, decimals kept</td><td>Status is completed or rewatching</td></tr>
               <tr><th scope="row">Trakt</th><td>Movies and TV shows</td><td>Already out of 10</td><td>A movie was watched or rated; a show had every aired episode watched, or was rated</td></tr>
-              <tr><th scope="row">A spreadsheet</th><td>Any of the six categories</td><td>Read as out of 10</td><td>Your completion column says so</td></tr>
+              <tr><th scope="row">A spreadsheet</th><td>Any of the eight categories</td><td>Read as out of 10</td><td>Your completion column says so</td></tr>
             </tbody>
           </table>
         </div>
@@ -194,7 +193,7 @@
           <li>On MyAnimeList, open the list export page from your profile settings and export your anime list, your manga list, or both.</li>
           <li>Choose the downloaded file in the Import Studio and select <strong>Preview import</strong>.</li>
         </ol>
-        <p>Scores already use a ten-point scale and stay as they are. A completed status marks the series watched, or the manga read. Manga arrives in Books. Your comments become a private note. The episode count describes the whole series; it does not set the episode you are on, so set your place after importing.</p>
+        <p>Scores already use a ten-point scale and stay as they are. A completed status marks the series watched, or the manga read. Manga arrives on the Manga shelf, with your chapter and volume counts. Your comments become a private note. The episode count describes the whole series; it does not set the episode you are on, so set your place after importing.</p>
         <p>The XML file has no release years. A title you already track is still recognized as a duplicate, because a title with no year matches the same title in your library whatever its year. Older CSV conversions of a MyAnimeList list still work too.</p>
       </section>
 
@@ -205,7 +204,7 @@
           <li><strong>Your list has to be public.</strong> If AniList says the list is private, make it visible in your AniList settings for a moment, or use a MyAnimeList-format XML export made with a community tool.</li>
           <li><strong>Scores keep their decimals.</strong> They are read on AniList's ten-point decimal scale whichever scoring system you display, so 85/100 becomes 8.5/10.</li>
           <li><strong>Completed and rewatching mean finished.</strong> Planning, watching, paused, and dropped titles arrive unfinished.</li>
-          <li><strong>Manga, light novels, and one-shots arrive as books,</strong> and your AniList notes become private notes. English titles are used where AniList has one.</li>
+          <li><strong>Manga and one-shots arrive on the Manga shelf and light novels arrive as books,</strong> and your AniList notes become private notes. English titles are used where AniList has one.</li>
         </ul>
       </section>
 

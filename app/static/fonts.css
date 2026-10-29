@@ -3,6 +3,17 @@
    Each subset downloads only when a page uses characters in its unicode-range.
    Poppins (headings) is preloaded and uses font-display: optional, so a heading never
    re-wraps after the page is drawn; on a slow first visit it stays in the fallback font. */
+/* Arial resized to Inter's measurements. Text drawn before Inter arrives takes the
+   same space, so nothing moves when it swaps in. */
+@font-face {
+  font-family: 'Inter Fallback';
+  font-display: swap;
+  src: local('Arial'), local('ArialMT'), local('Liberation Sans'), local('Helvetica');
+  ascent-override: 90.44%;
+  descent-override: 22.52%;
+  line-gap-override: 0%;
+  size-adjust: 107.12%;
+}
 /* Inter 400 700 cyrillic-ext */
 @font-face {
   font-family: 'Inter';
