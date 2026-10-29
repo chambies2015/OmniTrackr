@@ -328,10 +328,12 @@ def export_format(
         journal = db.query(models.ActivityEntry).filter(
             models.ActivityEntry.user_id == current_user.id
         ).order_by(models.ActivityEntry.occurred_at.desc(), models.ActivityEntry.id.desc()).all()
+        library = library_export.load_library(db, current_user.id)
         content = library_export.spreadsheet_zip(
-            library_export.load_library(db, current_user.id), journal,
+            library, journal,
             _export_collections(db, current_user.id), _export_progress(db, current_user.id),
             crud.get_all_custom_tabs_with_items(db, current_user.id), now,
+            library_export.tag_rows(db, current_user.id, library),
         )
         media_type, filename = "application/zip", f"omnitrackr-spreadsheets-{stamp}.zip"
     elif fmt == "goodreads":

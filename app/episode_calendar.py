@@ -39,6 +39,7 @@ SWEEP_EVERY_SECONDS = 1800
 # The weekly email lists this week's episodes, so its members' shows are refreshed in the day before it goes out.
 DIGEST_LEAD = timedelta(days=6)
 SWEEP_BATCH = 120
+MAX_QUEUED = 3
 FIRST_SWEEP_DELAY_SECONDS = 300
 PAUSE = {"tv-shows": 1.0, "anime": 2.5}  # TVmaze allows ~20 calls / 10 s; AniList is slower.
 MODELS = {"tv-shows": models.TVShow, "anime": models.Anime}
@@ -387,17 +388,27 @@ def _subscribers(db: Session) -> list[int]:
     return list(dict.fromkeys(calendar + weekly))
 
 
+def _fetched(db: Session, keys: list[str]) -> dict[str, tuple[str, datetime]]:
+    """(status, fetched_at) for the cached keys, read in batches."""
+    found = {}
+    for start in range(0, len(keys), 500):
+        for key, status, fetched_at in db.query(
+                models.TitleMetadata.key, models.TitleMetadata.status, models.TitleMetadata.fetched_at,
+        ).filter(models.TitleMetadata.key.in_(keys[start:start + 500])):
+            found[key] = (status, fetched_at)
+    return found
+
+
 def _stale_shows(db: Session, user_ids: list[int]) -> list[tuple[str, str, Optional[int]]]:
-    wanted, seen = [], set()
+    shows = {}
     for user_id in user_ids:
         for category, item in member_shows(db, user_id):
-            key = airing_key(category, item.title, item.year)
-            if key in seen:
-                continue
-            seen.add(key)
-            if stale(db, key):
-                wanted.append((category, item.title, item.year))
-    return wanted
+            shows.setdefault(airing_key(category, item.title, item.year), (category, item.title, item.year))
+    # One cache read per 500 shows, not one per show: the sweep covers every subscriber every half hour.
+    fetched = _fetched(db, list(shows))
+    now = datetime.utcnow()
+    return [show for key, show in shows.items()
+            if key not in fetched or now - fetched[key][1] >= FRESH.get(fetched[key][0], FRESH["error"])]
 
 
 async def refresh_members(session_factory, client, user_ids: Optional[list[int]] = None,
@@ -428,6 +439,10 @@ def queue_member(app, user_id: int) -> None:
     """
     client = getattr(app.state, "external_api_client", None)
     if client is None or user_id in _queued or not enabled_for_process():
+        return
+    # Each refresh paces its own calls. Many at once would add up past TVmaze's limit,
+    # so past a few the member waits for the regular sweep instead.
+    if len(_queued) >= MAX_QUEUED:
         return
     from . import release_radar
     from .database import SessionLocal

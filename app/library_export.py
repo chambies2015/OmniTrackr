@@ -153,7 +153,8 @@ def _custom_tab_files(custom_tabs: list[dict]) -> dict[str, str]:
     for tab in custom_tabs:
         fields = sorted(tab.get("fields") or [], key=lambda field: field.get("order") or 0)
         keys = [field["key"] for field in fields if field.get("key")]
-        labels = {field["key"]: field.get("label") or field["key"] for field in fields if field.get("key")}
+        # Labels become the header row, which _csv() writes as typed.
+        labels = {field["key"]: _safe_cell(field.get("label") or field["key"]) for field in fields if field.get("key")}
         columns = ["title", *(labels[key] for key in keys), "poster_url"]
         # Two fields can share a label; the CSV header must stay unique.
         seen: dict[str, int] = {}
@@ -187,6 +188,7 @@ library.csv       Every title in your library, one row each, all categories toge
 journal.csv       Your journal: every start, finish, revisit and note, newest first.
 collections.csv   The titles in each of your collections, in the order you set.
 progress.csv      Where you stopped in shows, anime, books, manga and podcasts.
+tags.csv          Your private tags, one row per tag on a title.
 custom-tabs/      One file for each custom tab, with its own columns.
 
 library.csv uses the same columns as the Import Studio's spreadsheet option, so you can
@@ -199,8 +201,20 @@ These files hold your private notes and reviews. Keep them somewhere private.
 """
 
 
+def tag_rows(db: Session, user_id: int, library: dict[str, list[Any]]) -> list[dict[str, str]]:
+    titles = {(category, media.id): media.title or "" for category, items in library.items() for media in items}
+    rows = []
+    for category, item_id, label in db.query(
+            models.LibraryTag.category, models.LibraryTag.item_id, models.LibraryTag.label,
+    ).filter(models.LibraryTag.user_id == user_id).order_by(models.LibraryTag.category, models.LibraryTag.label_key):
+        if (category, item_id) in titles:
+            rows.append({"category": category, "title": titles[(category, item_id)], "tag": label})
+    return rows
+
+
 def spreadsheet_zip(library: dict[str, list[Any]], journal: list[models.ActivityEntry], collections: list[dict],
-                    progress: list[dict], custom_tabs: list[dict], now: datetime) -> bytes:
+                    progress: list[dict], custom_tabs: list[dict], now: datetime,
+                    tags: Iterable[dict[str, str]] = ()) -> bytes:
     files = {
         "README.txt": README.format(when=now.strftime("%Y-%m-%d %H:%M")),
         "library.csv": _csv(LIBRARY_COLUMNS, library_rows(library), spreadsheet=True),
@@ -225,6 +239,7 @@ def spreadsheet_zip(library: dict[str, list[Any]], journal: list[models.Activity
               "updated_at": entry["updated_at"]} for entry in progress),
             spreadsheet=True,
         ),
+        "tags.csv": _csv(["category", "title", "tag"], tags, spreadsheet=True),
         **_custom_tab_files(custom_tabs),
     }
     buffer = io.BytesIO()

@@ -92,8 +92,11 @@ def _event_lines(event: dict, stamp: str) -> list[str]:
         f"DESCRIPTION:{_escape(event['description'])}",
         "TRANSP:TRANSPARENT",
     ]
-    if event.get("url"):
-        lines.append(f"URL:{event['url']}")
+    url = event.get("url") or ""
+    # Links come partly from TVmaze and AniList. One with a line break or space in it
+    # could start a new property in the feed, so it is left out.
+    if url.startswith(("https://", "http://")) and url.isprintable() and not any(ch.isspace() for ch in url):
+        lines.append(f"URL:{url}")
     lines.append("END:VEVENT")
     return lines
 
