@@ -87,6 +87,7 @@ TITLES = {
     "friend_feed_cheer": "A friend cheered you on",
     "push_enabled": "Notifications are on",
     "held": "While you were away",
+    "memory": "On this day",
 }
 
 # What members can switch on or off for their devices: (key, label, hint, on by default, types).
@@ -108,6 +109,8 @@ TOPICS = (
      ("club_post", "shared_list_joined", "shared_list_item")),
     ("milestones", "Cheers, badges and goals", "Cheers, helpful votes, badges, goals and challenges.", False,
      ("friend_feed_cheer", "review_helpful", "goal_reached", "badge_earned", "challenge_complete")),
+    ("memories", "On this day", "Once a day, something you finished or started on this date in an earlier year.", False,
+     ("memory",)),
 )
 TOPIC_KEYS = tuple(topic[0] for topic in TOPICS)
 TOPIC_FOR_TYPE = {kind: topic[0] for topic in TOPICS for kind in topic[4]}
@@ -605,13 +608,19 @@ FIRST_CHECK_DELAY_SECONDS = 240
 
 
 def _hourly_jobs(session_factory) -> dict:
-    """Catch-ups after quiet hours, and club finish-by nudges (which reach the bell too)."""
-    from . import clubs
+    """Catch-ups after quiet hours, club finish-by nudges and On this day (which reach the bell too)."""
+    from . import clubs, memories
     db = session_factory()
     try:
         nudged = clubs.send_due_reminders(db)
         held = send_held(db)
-        return {"club_reminders": nudged, "caught_up": held["members"]}
+        try:
+            remembered = memories.send_due_pushes(db)
+        except Exception:
+            db.rollback()
+            logger.exception("On this day pushes failed")
+            remembered = 0
+        return {"club_reminders": nudged, "caught_up": held["members"], "memories": remembered}
     finally:
         db.close()
 
@@ -624,7 +633,7 @@ async def push_loop(app) -> None:
     while True:
         try:
             stats = await asyncio.to_thread(_hourly_jobs, SessionLocal)
-            if stats["club_reminders"] or stats["caught_up"]:
+            if stats["club_reminders"] or stats["caught_up"] or stats["memories"]:
                 logger.info("Push catch-up and club reminders: %s", stats)
         except asyncio.CancelledError:
             raise

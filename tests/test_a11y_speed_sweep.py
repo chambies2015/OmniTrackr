@@ -21,13 +21,14 @@ def test_dashboard_keeps_home_cards_library_and_footer_still_until_settled():
     assert "html.dashboard-settling :is(.home-board,#movies-tab,#mainFooter){visibility:hidden}" in index
     auth_js = _read(STATIC / "auth.js")
     assert "window.dashboardHomeCards = homeCards;" in auth_js
-    for card in ("refreshForYou", "refreshYearGoals", "refreshMonthlyChallenge", "refreshSeasonCard", "refreshBadges"):
+    for card in ("refreshForYou", "refreshYearGoals", "refreshMonthlyChallenge", "refreshSeasonCard", "refreshBadges",
+                 "refreshOnThisDay"):
         assert f"window.{card}?.()" in auth_js
     home_js = _read(STATIC / "dashboard" / "home.js")
     assert "...cardRequests]).then(batch.resolve)" in home_js
     # auth.js changed, so pages must ask browsers for the new copy.
-    assert "auth.js?v=20261028-tonight-1" in index
-    assert "auth.js?v=20261028-tonight-1" in _read(TEMPLATES / "public_landing.html")
+    assert "auth.js?v=20261029-memories-1" in index
+    assert "auth.js?v=20261029-memories-1" in _read(TEMPLATES / "public_landing.html")
 
 
 def test_shared_list_page_draws_its_heading_like_the_script_does(authenticated_client, db_session):

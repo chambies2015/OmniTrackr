@@ -70,6 +70,7 @@
   <link rel="stylesheet" href="/static/time-spent.css?v=20261029-time-spent-1">
   <link rel="stylesheet" href="/static/import-studio.css?v=20261028-export-1">
   <link rel="stylesheet" href="/static/seasonal-card.css?v=20261022-holidays-1">
+  <link rel="stylesheet" href="/static/memories.css?v=20261029-memories-1">
   <link rel="stylesheet" href="/static/friend-recs.css?v=20261024-friend-recs-1">
   <link rel="stylesheet" href="/static/friends-feed.css?v=20261025-friends-feed-1">
   <link rel="stylesheet" href="/static/app-nav.css?v=20261028-simplify-1">
@@ -564,6 +565,18 @@
           </div>
         </section>
         </div>
+
+        <section id="onThisDay" class="on-this-day" aria-labelledby="onThisDayTitle" hidden>
+          <div class="on-this-day__head">
+            <div>
+              <p class="on-this-day__eyebrow">On this day</p>
+              <h2 id="onThisDayTitle">From your past</h2>
+            </div>
+            <button id="onThisDayDismiss" type="button" class="on-this-day__dismiss">Hide for today</button>
+          </div>
+          <ul id="onThisDayList" class="on-this-day__list"></ul>
+          <p id="onThisDayStatus" class="on-this-day__status" role="status" aria-live="polite"></p>
+        </section>
 
         <section id="nextUpQueue" class="next-up-queue" aria-labelledby="nextUpQueueTitle" hidden>
           <div class="next-up-queue__header">
@@ -2059,7 +2072,7 @@
     </form>
   </dialog>
   <script src="./credentials.js"></script>
-  <script src="./auth.js?v=20261028-tonight-1"></script>
+  <script src="./auth.js?v=20261029-memories-1"></script>
   <script src="/static/import-studio.js?v=20261028-podcasts-1"></script>
   <script src="/static/progress.js?v=20261028-podcasts-1"></script>
   <script src="/static/episodes.js?v=20261027-episodes-1"></script>
@@ -2074,6 +2087,7 @@
   <script src="/static/goals.js?v=20261010-goal-reached-1"></script>
   <script src="/static/challenges.js?v=20261011-challenge-2"></script>
   <script src="/static/seasonal-card.js?v=20261022-holidays-1"></script>
+  <script src="/static/memories.js?v=20261029-memories-1"></script>
   <script src="/static/badges.js?v=20261017-badges-1"></script>
   <script src="/static/taste-match.js?v=20261028-podcasts-1"></script>
   <script src="/static/friend-recs.js?v=20261028-podcasts-1"></script>

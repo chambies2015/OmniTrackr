@@ -1443,6 +1443,7 @@ function scheduleLibraryLaunchpadRefresh(refreshDecisionCards = true) {
       window.refreshMonthlyChallenge?.(),
       window.refreshSeasonCard?.(),
       window.refreshBadges?.(),
+      window.refreshOnThisDay?.(),
     ];
     firstDashboardLayoutBatchRan = true;
     window.dashboardHomeCards = null;

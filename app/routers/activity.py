@@ -7,7 +7,7 @@ from sqlalchemy import func
 from sqlalchemy.orm import Session
 
 from ..integer_bounds import PositiveDatabaseId
-from .. import diary, models, schemas
+from .. import diary, memories, models, schemas
 from ..progress import lock_progress_owner
 from ..dependencies import get_current_user, get_db
 
@@ -290,3 +290,13 @@ def import_activity_entries(
         created += 1
     db.commit()
     return created, skipped
+
+
+@router.get("/on-this-day/", response_model=dict)
+def on_this_day(
+    tz_offset_minutes: int = Query(0, ge=-840, le=840),
+    current_user: models.User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+):
+    """What the member did on today's date in earlier years, six months ago and a month ago. Private."""
+    return memories.for_dashboard(db, current_user, tz_offset_minutes)
