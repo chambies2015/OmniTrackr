@@ -166,10 +166,15 @@ def _windows(column, spans: list[tuple[datetime, datetime]]):
     return or_(*[and_(column >= start, column < end) for start, end in spans])
 
 
-def collect(db: Session, user: models.User, today: date, to_utc: LocalToUtc, months: bool = True,
-            limit: int = CARD_LIMIT) -> list[dict]:
-    """Up to ``limit`` memories for ``today`` (the member's local date), oldest first, one per day."""
-    days = anchors(today, _earliest(db, user), months)
+def collect(db: Session, user: models.User, today, to_utc: LocalToUtc, months: bool = True,
+            limit: Optional[int] = CARD_LIMIT) -> list[dict]:
+    """Up to ``limit`` memories for ``today`` (the member's local date), oldest first, one per day.
+
+    ``today`` can also be a list of dates, so the weekly email reads a whole week in one pass.
+    """
+    earliest = _earliest(db, user)
+    days = [anchor for day in ([today] if isinstance(today, date) else today)
+            for anchor in anchors(day, earliest, months)]
     if not days:
         return []
     spans = []
@@ -283,7 +288,7 @@ def collect(db: Session, user: models.User, today: date, to_utc: LocalToUtc, mon
         picked.append(best)
     # Years ago first (oldest first), then six months, then a month.
     picked.sort(key=lambda row: (row["unit"] != "years", -row["ago"]))
-    return picked[:limit]
+    return picked if limit is None else picked[:limit]
 
 
 def activity_done_field(category: str) -> str:
@@ -306,12 +311,9 @@ def member_zone(db: Session, user_id: int) -> Optional[ZoneInfo]:
 def week_in_past_years(db: Session, user: models.User, today: date, limit: int = WEEK_LIMIT) -> list[dict]:
     """Finishes and revisits from the seven days ending today, in earlier years, for the weekly email."""
     to_utc = zone_converter(member_zone(db, user.id))
-    found = []
-    for back in range(7):
-        day = today - timedelta(days=back)
-        for memory in collect(db, user, day, to_utc, months=False, limit=CARD_LIMIT):
-            if memory["kind"] in ("finished", "revisited"):
-                found.append(memory)
+    week = [today - timedelta(days=back) for back in range(7)]
+    found = [memory for memory in collect(db, user, week, to_utc, months=False, limit=None)
+             if memory["kind"] in ("finished", "revisited")]
     found.sort(key=lambda row: (-row["ago"], row["occurred_at"]))
     return found[:limit]
 
@@ -321,6 +323,13 @@ def week_in_past_years(db: Session, user: models.User, today: date, limit: int =
 PUSH_TYPE = "memory"
 PUSH_FROM_HOUR = 9
 PUSH_UNTIL_HOUR = 21
+# Member id -> the local day they were last looked at. Stops a resend after the member deletes the day's
+# notification, and stops the 15-minute loop re-collecting for members with nothing to show that day.
+_pushed_on: dict[int, date] = {}
+
+
+def clear_push_marks() -> None:
+    _pushed_on.clear()
 
 
 def _push_message(memory: dict) -> str:
@@ -344,6 +353,8 @@ def send_due_pushes(db: Session, now: Optional[datetime] = None) -> int:
         local = now.replace(tzinfo=ZoneInfo("UTC")).astimezone(tz).replace(tzinfo=None) if tz else now
         if not PUSH_FROM_HOUR <= local.hour < PUSH_UNTIL_HOUR:
             continue
+        if _pushed_on.get(pref.user_id) == local.date():
+            continue
         user = db.get(models.User, pref.user_id)
         if user is None or not user.is_active:
             continue
@@ -364,6 +375,7 @@ def send_due_pushes(db: Session, now: Optional[datetime] = None) -> int:
             db.rollback()
             logger.exception("Could not collect memories for member %s", user.id)
             continue
+        _pushed_on[user.id] = local.date()
         if not found:
             continue
         db.add(models.Notification(user_id=user.id, type=PUSH_TYPE, message=_push_message(found[0])[:240],
