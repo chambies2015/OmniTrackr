@@ -88,6 +88,7 @@ TITLES = {
     "push_enabled": "Notifications are on",
     "held": "While you were away",
     "memory": "On this day",
+    "new_follower": "New follower",
 }
 
 # What members can switch on or off for their devices: (key, label, hint, on by default, types).
@@ -111,6 +112,8 @@ TOPICS = (
      ("friend_feed_cheer", "review_helpful", "goal_reached", "badge_earned", "challenge_complete")),
     ("memories", "On this day", "Once a day, something you finished or started on this date in an earlier year.", False,
      ("memory",)),
+    ("followers", "New followers", "When someone starts following your public profile.", False,
+     ("new_follower",)),
 )
 TOPIC_KEYS = tuple(topic[0] for topic in TOPICS)
 TOPIC_FOR_TYPE = {kind: topic[0] for topic in TOPICS for kind in topic[4]}

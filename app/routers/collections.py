@@ -1042,6 +1042,17 @@ def _curator_credits(db: Session, collections: list[models.Collection]) -> dict[
     return credits
 
 
+def _follow_credit_html(db: Session, user_id: int, credit: tuple[str, str] | None) -> str:
+    """" · Follow <name>" after a member curator's credit, when their profile takes followers."""
+    if not credit or not credit[1].startswith("/u/"):
+        return ""
+    from ..follows import accepting
+    if user_id not in accepting(db, [user_id]):
+        return ""
+    return (f' · <a class="collection-follow-link" href="{escape(credit[1], quote=True)}#follow">'
+            f'Follow {escape(credit[0])}</a>')
+
+
 def _credit_html(credit: tuple[str, str] | None) -> str:
     if not credit:
         return "an OmniTrackr member"
@@ -1256,7 +1267,7 @@ def public_collection(collection_id: PositiveDatabaseId, request: Request, db: S
         "VIEWS": str(collection.view_count or 0),
         "HELPFUL": str(collection.helpful_count or 0),
         "COLLECTION_ID": str(collection.id),
-        "CURATOR": _credit_html(credit),
+        "CURATOR": _credit_html(credit) + _follow_credit_html(db, collection.user_id, credit),
         "AUTHOR": escape(credit[0] if credit else "OmniTrackr member", quote=True),
         "UPDATED_ISO": updated.date().isoformat() if updated else "",
         "UPDATED": f"{updated:%B} {updated.day}, {updated.year}" if updated else "",

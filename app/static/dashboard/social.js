@@ -43,6 +43,8 @@ async function loadNotifications() {
           actionButtons = '<a class="notification-action-btn" href="/#badges">See your badges</a>';
         } else if (notif.type === 'memory' && notif.link === '/#on-this-day') {
           actionButtons = '<a class="notification-action-btn" href="/#on-this-day">Open On this day</a>';
+        } else if (notif.type === 'new_follower' && notif.link === '/#followers') {
+          actionButtons = '<a class="notification-action-btn" href="/#followers">See your followers</a>';
         } else if (String(notif.type || '').startsWith('shared_list_') && /^\/lists\/[1-9]\d{0,9}$/.test(notif.link || '')) {
           actionButtons = `<a class="notification-action-btn" href="${escapeHtml(notif.link)}">Open the list</a>`;
         } else if (notif.type === 'release_day' && /^\/release-radar(\/(movies|tv|anime|games)(\/[a-z0-9-]{4,20})?(#item-[A-Za-z0-9_-]+)?)?$/.test(notif.link || '')) {

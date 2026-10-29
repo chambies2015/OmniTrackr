@@ -65,10 +65,52 @@
     [actions, closing].forEach(node => { if (node) observer.observe(node); });
   }
 
+  // ---------- Follow button for signed-in visitors ----------
+  async function toggleFollow(button) {
+    if (button.disabled) return;
+    const id = button.dataset.follow;
+    const name = button.dataset.followName || 'them';
+    const following = button.getAttribute('aria-pressed') === 'true';
+    const status = document.querySelector('[data-follow-status]');
+    const say = text => { if (status) status.textContent = text; };
+    button.disabled = true;
+    say('');
+    try {
+      const response = await fetch(`/api/follows/${encodeURIComponent(id)}`, {
+        method: following ? 'DELETE' : 'POST', credentials: 'same-origin', headers: { Accept: 'application/json' },
+      });
+      if (response.status === 401) {
+        window.location.href = '/#login';
+        return;
+      }
+      let data = {};
+      try { data = await response.json(); } catch (error) { data = {}; }
+      if (!response.ok) {
+        say(typeof data.detail === 'string' ? data.detail : 'Something went wrong. Please try again.');
+        return;
+      }
+      const now = Boolean(data.following);
+      button.setAttribute('aria-pressed', String(now));
+      button.textContent = now ? 'Following' : 'Follow';
+      button.classList.toggle('site-btn--primary', !now);
+      button.classList.toggle('site-btn--ghost', now);
+      const count = document.querySelector('[data-follower-count]');
+      if (count && typeof data.followers === 'number') count.textContent = data.followers.toLocaleString();
+      say(now ? `You're following ${name}. Their public reviews, collections and diary show up in your Following feed.`
+        : `You stopped following ${name}.`);
+    } catch (error) {
+      say('Could not reach OmniTrackr. Check your connection and try again.');
+    } finally {
+      button.disabled = false;
+    }
+  }
+
   if (typeof document === 'undefined') return;
   document.addEventListener('click', event => {
     const link = event.target.closest && event.target.closest('[data-profile-join]');
     if (link) report('profile_signup_clicked');
+    const follow = event.target.closest && event.target.closest('button[data-follow]');
+    if (follow) toggleFollow(follow);
   });
   const start = () => { setupTabs(); setupJoinbar(); };
   if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', start);

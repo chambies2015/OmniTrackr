@@ -16,7 +16,7 @@ from pydantic import BaseModel, Field
 from sqlalchemy.orm import Session
 
 from ..integer_bounds import PositiveDatabaseId
-from .. import funnel, models, profile_widgets, public_profiles, review_spoilers, supporters
+from .. import follows, funnel, models, profile_widgets, public_profiles, review_spoilers, supporters
 from ..auth import AUTH_COOKIE_NAME
 from ..csp import strict_html_response
 from ..dependencies import get_current_user, get_db
@@ -24,7 +24,7 @@ from ..site_chrome import apply_site_chrome
 
 router = APIRouter(tags=["profiles"])
 SITE_URL = os.getenv("SITE_URL", "https://omnitrackr.xyz").rstrip("/")
-CSS_VERSION = "20261028-members-1"
+CSS_VERSION = "20261029-follows-1"
 TITLE_CSS_VERSION = "20261009-take-1"
 
 
@@ -361,7 +361,7 @@ def _mix_html(view) -> str:
             f'<div class="profile-mix__bar" aria-hidden="true">{segments}</div><ul class="profile-mix__legend">{legend}</ul></div>')
 
 
-def _glance_html(view, *, signed_in: bool, since: str) -> str:
+def _glance_html(view, *, signed_in: bool, since: str, follow_counts: Optional[dict] = None) -> str:
     name = view.user.username
     # (label, html): plain values are escaped here.
     facts = [("Member", _e(since.replace("Member since ", "Since ")))]
@@ -379,6 +379,10 @@ def _glance_html(view, *, signed_in: bool, since: str) -> str:
                                        f'<small>{latest["date"]:%b} {latest["date"].day}</small>'))
     if view.friends_brought:
         facts.append(("Brought to OmniTrackr", _e(_plural(view.friends_brought, "friend"))))
+    if follow_counts is not None:
+        facts.append(("Followers", f'<span data-follower-count>{follow_counts["followers"]:,}</span>'))
+        if follow_counts["following"]:
+            facts.append(("Following", _e(f'{follow_counts["following"]:,}')))
     rows = "".join(f'<div><dt>{_e(label)}</dt><dd>{value}</dd></div>' for label, value in facts)
     join = ("" if signed_in else
             f'<div class="title-glance__join profile-glance__join"><strong>Keep a profile like {_e(name)}\'s</strong>'
@@ -389,13 +393,31 @@ def _glance_html(view, *, signed_in: bool, since: str) -> str:
             f'{_mix_html(view)}<dl>{rows}</dl>{join}</aside>')
 
 
-def _actions_html(view, *, signed_in: bool, is_owner: bool, recap_url, recap_year) -> str:
+def _follow_html(view, *, signed_in: bool, is_owner: bool, followable: bool, following: bool) -> str:
+    if is_owner or not (followable or following):
+        return ""
+    name = view.user.username
+    if not signed_in:
+        return (f'<a id="follow" class="site-btn site-btn--ghost site-btn--sm" href="/#signup" data-profile-join '
+                f'aria-label="Sign up to follow {_e(name)}">Follow</a>')
+    tone = "ghost" if following else "primary"
+    return (f'<button type="button" id="follow" class="site-btn site-btn--{tone} site-btn--sm profile-follow" '
+            f'data-follow="{view.user.id}" data-follow-name="{_e(name)}" aria-pressed="{"true" if following else "false"}">'
+            f'{"Following" if following else "Follow"}</button>'
+            '<span class="profile-follow__status" role="status" aria-live="polite" data-follow-status></span>')
+
+
+def _actions_html(view, *, signed_in: bool, is_owner: bool, recap_url, recap_year,
+                  followable: bool = False, following: bool = False) -> str:
     name = view.user.username
     buttons = []
     if not signed_in:
         buttons.append('<a class="site-btn site-btn--primary site-btn--sm" href="/#signup" data-profile-join>Make your own profile, free</a>')
     elif is_owner:
         buttons.append('<a class="site-btn site-btn--primary site-btn--sm" href="/#public-profile">Edit profile</a>')
+    follow_button = _follow_html(view, signed_in=signed_in, is_owner=is_owner, followable=followable, following=following)
+    if follow_button:
+        buttons.append(follow_button)
     buttons.append(f'<button type="button" class="site-btn site-btn--ghost site-btn--sm" data-share '
                    f'data-share-title="{_e(name)} on OmniTrackr">Share profile</button>')
     if recap_url and recap_year:
@@ -421,7 +443,8 @@ def _bio_html(bio: Optional[str]) -> str:
     return "".join(f'<p class="profile-hero__bio">{_e(part)}</p>' for part in bio.split("\n") if part.strip())
 
 
-def render(view, *, signed_in: bool, is_owner: bool, recap_url: Optional[str] = None, recap_year: Optional[int] = None) -> str:
+def render(view, *, signed_in: bool, is_owner: bool, recap_url: Optional[str] = None, recap_year: Optional[int] = None,
+           followable: bool = False, following: bool = False, follow_counts: Optional[dict] = None) -> str:
     user, profile = view.user, view.profile
     canonical = SITE_URL + view.path
     name = user.username
@@ -511,7 +534,8 @@ def render(view, *, signed_in: bool, is_owner: bool, recap_url: Optional[str] = 
           {_bio_html(profile.bio)}
           {_numbers_html(view)}
           <div class="title-hero__chips">{chips}</div>
-          {_actions_html(view, signed_in=signed_in, is_owner=is_owner, recap_url=recap_url, recap_year=recap_year)}
+          {_actions_html(view, signed_in=signed_in, is_owner=is_owner, recap_url=recap_url, recap_year=recap_year,
+                         followable=followable, following=following)}
           {owner_note}
         </div>
       </div>
@@ -522,7 +546,7 @@ def render(view, *, signed_in: bool, is_owner: bool, recap_url: Optional[str] = 
         {body}
         {cta}
       </div>
-      {_glance_html(view, signed_in=signed_in, since=since)}
+      {_glance_html(view, signed_in=signed_in, since=since, follow_counts=follow_counts)}
       <p class="title-sources">Members choose what their profile shows. Report a review or collection from its own page.</p>
     </div>
     {joinbar}
@@ -542,12 +566,18 @@ def _profile_response(request: Request, db: Session, user: Optional[models.User]
         return RedirectResponse(canonical, status_code=301)
     view = public_profiles.build(db, user, profile)
     signed_in = bool(request.cookies.get(AUTH_COOKIE_NAME))
-    is_owner = signed_in and _viewer_id(request, db) == user.id
+    viewer_id = _viewer_id(request, db) if signed_in else None
+    is_owner = signed_in and viewer_id == user.id
     if not signed_in:
         funnel.record("profile_link_opened", request)
     recap_url, recap_year = _season_recap(db, user.id)
+    followable = user.id in follows.accepting(db, [user.id])
+    following = follows.is_following(db, viewer_id, user.id) if viewer_id and not is_owner else False
+    # Follower numbers are a social count, so they follow the member's "library counts" switch.
+    follow_counts = follows.counts(db, user.id) if view.stats else None
     response = strict_html_response(render(view, signed_in=signed_in, is_owner=is_owner,
-                                           recap_url=recap_url, recap_year=recap_year))
+                                           recap_url=recap_url, recap_year=recap_year, followable=followable,
+                                           following=following, follow_counts=follow_counts))
     response.headers["Cache-Control"] = "private, no-store" if signed_in else "public, max-age=300"
     response.headers["Vary"] = "Cookie"
     if not view.indexable:
