@@ -64,15 +64,17 @@
   <link rel="stylesheet" href="/static/dialog-theme.css?v=20260924-visual-4">
   <link rel="stylesheet" href="/static/where-to-watch.css?v=20261026-where-to-watch-1">
   <link rel="stylesheet" href="/static/taste-match.css?v=20261016-taste-match-1">
-  <link rel="stylesheet" href="/static/supporter.css?v=20261028-members-1">
+  <link rel="stylesheet" href="/static/supporter.css?v=20261029-account-1">
   <link rel="stylesheet" href="/static/profile-banners.css?v=20261028-members-1">
   <link rel="stylesheet" href="/static/badges.css?v=20261017-badges-1">
   <link rel="stylesheet" href="/static/time-spent.css?v=20261029-time-spent-1">
-  <link rel="stylesheet" href="/static/import-studio.css?v=20261028-export-1">
+  <link rel="stylesheet" href="/static/import-studio.css?v=20261029-account-1">
   <link rel="stylesheet" href="/static/seasonal-card.css?v=20261022-holidays-1">
   <link rel="stylesheet" href="/static/friend-recs.css?v=20261024-friend-recs-1">
   <link rel="stylesheet" href="/static/friends-feed.css?v=20261025-friends-feed-1">
   <link rel="stylesheet" href="/static/app-nav.css?v=20261028-simplify-1">
+  <link rel="stylesheet" href="/static/auth-forms.css?v=20261029-account-1">
+  <link rel="stylesheet" href="/static/account-settings.css?v=20261029-account-1">
   <link rel="stylesheet" href="/static/dashboard-home.css?v=20261028-tonight-1">
   <link rel="stylesheet" href="/static/dashboard-2026.css?v=20261028-nav-1">
   <link rel="stylesheet" href="/static/a11y.css?v=20261027-a11y-speed-1">
@@ -1961,65 +1963,88 @@
     <!-- Authentication Section -->
     <section class="landing-auth" id="landing-auth" aria-labelledby="authTitle">
       <div class="auth-container">
-        <h2 id="authTitle">Login to OmniTrackr</h2>
+        <h2 id="authTitle">Log in to OmniTrackr</h2>
         <p class="auth-context">Create a free account, or sign in to continue building your collection.</p>
-        <div id="authError"></div>
-        <div id="authSuccess"></div>
+        <div id="authError" role="alert"></div>
+        <div id="authSuccess" role="status"></div>
 
-        <!-- Login Form -->
-        <div id="loginForm" class="auth-form">
-          <form id="loginFormElement">
-            <input type="text" id="loginUsername" placeholder="Username or Email" required>
-            <input type="password" id="loginPassword" placeholder="Password" required>
-            <button type="submit">Login</button>
+        <div id="loginForm" class="auth-form"><!--GOOGLE_SIGNIN:login-->
+          <form id="loginFormElement" novalidate>
+            <div class="auth-field">
+              <label class="auth-field__label" for="loginUsername">Username or email</label>
+              <input type="text" id="loginUsername" autocomplete="username" autocapitalize="none" spellcheck="false" required aria-describedby="loginUsernameError">
+              <p class="auth-field__error" id="loginUsernameError" hidden></p>
+            </div>
+            <div class="auth-field">
+              <div class="auth-field__top"><label class="auth-field__label" for="loginPassword">Password</label><a id="showForgotPassword" class="auth-secondary-link" href="#forgot-password">Forgot password?</a></div>
+              <div class="auth-password"><input type="password" id="loginPassword" autocomplete="current-password" required aria-describedby="loginPasswordError"><button type="button" class="auth-password__toggle" data-password-toggle="loginPassword" aria-controls="loginPassword" aria-pressed="false">Show</button></div>
+              <p class="auth-field__error" id="loginPasswordError" hidden></p>
+            </div>
+            <button type="submit" class="auth-submit">Log in</button>
           </form>
-          <div id="resendVerificationContainer">
-            <p>Didn't receive the verification email?</p>
-            <button type="button" id="resendVerificationBtn" class="action-btn auth-full-button">
-              Resend Verification Email
-            </button>
+          <div id="resendVerificationContainer" class="auth-resend">
+            <p>Didn't get the verification email? We can send a new link.</p>
+            <div class="auth-field" id="resendVerificationEmailField" hidden>
+              <label class="auth-field__label" for="resendVerificationEmail">Email you signed up with</label>
+              <input type="email" id="resendVerificationEmail" autocomplete="email" autocapitalize="none" spellcheck="false">
+            </div>
+            <button type="button" id="resendVerificationBtn" class="action-btn auth-full-button">Resend verification email</button>
           </div>
-          <div class="auth-toggle">
-            Don't have an account? <a id="showRegister">Register</a><br>
-            <a id="showForgotPassword" class="auth-secondary-link">Forgot
-              Password?</a>
-          </div>
+          <p class="auth-toggle">New here? <a id="showRegister" href="#signup">Create a free account</a></p>
         </div>
-
-        <!-- Register Form -->
-        <div id="registerForm" class="auth-form">
-          <form id="registerFormElement">
-            <input type="email" id="registerEmail" placeholder="Email" required>
-            <input type="text" id="registerUsername" placeholder="Username" required>
-            <input type="password" id="registerPassword" placeholder="Password" required>
-            <input type="password" id="registerConfirmPassword" placeholder="Confirm Password" required>
-            <button type="submit">Register</button>
+        <div id="registerForm" class="auth-form"><!--GOOGLE_SIGNIN:register-->
+          <form id="registerFormElement" novalidate>
+            <div class="auth-field">
+              <label class="auth-field__label" for="registerEmail">Email</label>
+              <input type="email" id="registerEmail" autocomplete="email" autocapitalize="none" spellcheck="false" required aria-describedby="registerEmailHint registerEmailError">
+              <p class="auth-hint" id="registerEmailHint">We send one link to confirm it. No newsletters unless you turn them on.</p>
+              <p class="auth-field__error" id="registerEmailError" hidden></p>
+            </div>
+            <div class="auth-field">
+              <label class="auth-field__label" for="registerUsername">Username</label>
+              <input type="text" id="registerUsername" autocomplete="username" autocapitalize="none" spellcheck="false" minlength="3" maxlength="30" aria-describedby="registerUsernameHint registerUsernameError" required>
+              <p class="auth-hint" id="registerUsernameHint">Shown on anything you share. We suggest one from your email, and you can change it later.</p>
+              <p class="auth-field__error" id="registerUsernameError" hidden></p>
+            </div>
+            <div class="auth-field">
+              <label class="auth-field__label" for="registerPassword">Password</label>
+              <div class="auth-password"><input type="password" id="registerPassword" autocomplete="new-password" minlength="8" aria-describedby="registerPasswordHint registerPasswordStrength registerPasswordError" data-password-strength="registerPasswordStrength" required><button type="button" class="auth-password__toggle" data-password-toggle="registerPassword" aria-controls="registerPassword" aria-pressed="false">Show</button></div>
+              <p class="auth-hint" id="registerPasswordHint">At least 8 characters. A short phrase is easy to remember and hard to guess.</p>
+              <p class="auth-strength" id="registerPasswordStrength" hidden><span class="auth-strength__bar" aria-hidden="true"><span></span></span><span class="auth-strength__text"></span></p>
+              <p class="auth-field__error" id="registerPasswordError" hidden></p>
+            </div>
+            <button type="submit" class="auth-submit">Create free account</button>
+            <p class="auth-fineprint">Free for good, and your library stays private until you share it. Signing up means you agree to the <a href="/terms">terms</a> and <a href="/privacy">privacy policy</a>.</p>
           </form>
-          <div class="auth-toggle">
-            Already have an account? <a id="showLogin">Back to Login</a>
-          </div>
+          <p class="auth-toggle">Already have an account? <a id="showLogin" href="#login">Log in</a></p>
         </div>
-
-        <!-- Forgot Password Form -->
         <div id="forgotPasswordForm" class="auth-form">
-          <form id="forgotPasswordFormElement">
-            <p class="auth-helper-text">Enter your email address and we'll send you a link to
-              reset your password.</p>
-            <input type="email" id="forgotPasswordEmail" placeholder="Email Address" required>
-            <button type="submit">Send Reset Link</button>
+          <form id="forgotPasswordFormElement" novalidate>
+            <p class="auth-helper-text">Enter the email on your account and we'll send a link to choose a new password.</p>
+            <div class="auth-field">
+              <label class="auth-field__label" for="forgotPasswordEmail">Email</label>
+              <input type="email" id="forgotPasswordEmail" autocomplete="email" autocapitalize="none" spellcheck="false" required aria-describedby="forgotPasswordEmailError">
+              <p class="auth-field__error" id="forgotPasswordEmailError" hidden></p>
+            </div>
+            <button type="submit" class="auth-submit">Send reset link</button>
           </form>
-          <div class="auth-toggle">
-            <a id="backToLogin">Back to Login</a>
-          </div>
+          <p class="auth-toggle"><a id="backToLogin" href="#login">Back to log in</a></p>
         </div>
-
-        <!-- Reset Password Form (shown when accessing reset link) -->
         <div id="resetPasswordForm" class="auth-form">
-          <form id="resetPasswordFormElement">
-            <p class="auth-helper-text">Enter your new password below.</p>
-            <input type="password" id="newPassword" placeholder="New Password" required minlength="8">
-            <input type="password" id="confirmNewPassword" placeholder="Confirm New Password" required minlength="8">
-            <button type="submit">Reset Password</button>
+          <form id="resetPasswordFormElement" novalidate>
+            <p class="auth-helper-text">Choose a new password for your account.</p>
+            <div class="auth-field">
+              <label class="auth-field__label" for="newPassword">New password</label>
+              <div class="auth-password"><input type="password" id="newPassword" autocomplete="new-password" required minlength="8" aria-describedby="newPasswordStrength newPasswordError" data-password-strength="newPasswordStrength"><button type="button" class="auth-password__toggle" data-password-toggle="newPassword" aria-controls="newPassword" aria-pressed="false">Show</button></div>
+              <p class="auth-strength" id="newPasswordStrength" hidden><span class="auth-strength__bar" aria-hidden="true"><span></span></span><span class="auth-strength__text"></span></p>
+              <p class="auth-field__error" id="newPasswordError" hidden></p>
+            </div>
+            <div class="auth-field">
+              <label class="auth-field__label" for="confirmNewPassword">Type it again</label>
+              <div class="auth-password"><input type="password" id="confirmNewPassword" autocomplete="new-password" required minlength="8" aria-describedby="confirmNewPasswordError"><button type="button" class="auth-password__toggle" data-password-toggle="confirmNewPassword" aria-controls="confirmNewPassword" aria-pressed="false">Show</button></div>
+              <p class="auth-field__error" id="confirmNewPasswordError" hidden></p>
+            </div>
+            <button type="submit" class="auth-submit">Save new password</button>
           </form>
         </div>
       </div>
@@ -2059,7 +2084,7 @@
     </form>
   </dialog>
   <script src="./credentials.js"></script>
-  <script src="./auth.js?v=20261028-tonight-1"></script>
+  <script src="./auth.js?v=20261029-account-1"></script>
   <script src="/static/import-studio.js?v=20261028-podcasts-1"></script>
   <script src="/static/progress.js?v=20261028-podcasts-1"></script>
   <script src="/static/episodes.js?v=20261027-episodes-1"></script>
@@ -2069,7 +2094,8 @@
   <script src="/static/for-you.js?v=20261028-episodes-1"></script>
   <script src="/static/title-links.js?v=20261028-podcasts-1"></script>
   <script src="/static/public-profile.js?v=20261027-widgets-1"></script>
-  <script src="/static/supporter.js?v=20261028-members-1"></script>
+  <script src="/static/supporter.js?v=20261029-account-1"></script>
+  <script src="/static/account-settings.js?v=20261029-account-1" defer></script>
   <script src="/static/profile-showcase.js?v=20261021-bugs-1"></script>
   <script src="/static/goals.js?v=20261010-goal-reached-1"></script>
   <script src="/static/challenges.js?v=20261011-challenge-2"></script>
@@ -2086,233 +2112,76 @@
 
   <!-- Account Modal -->
   <div id="accountModal" class="modal-overlay" style="display: none;">
-    <div class="modal-content account-modal">
+    <div class="modal-content account-modal account-settings">
       <div class="modal-header">
-        <h2>Account Settings</h2>
-        <button class="modal-close" data-action="close-account-modal" aria-label="Close account settings">×</button>
+        <h2 id="accountSettingsTitle">Settings</h2>
+        <button class="modal-close" data-action="close-account-modal" aria-label="Close settings">×</button>
       </div>
 
-      <div class="modal-body">
-        <!-- Account Info Section -->
-        <div class="account-section">
-          <h3>Account Information</h3>
-          <div class="account-info">
+      <div class="modal-body account-settings__layout">
+        <nav class="account-nav" aria-label="Settings sections">
+          <ul class="account-nav__list">
+            <li><a class="account-nav__link" href="#settings-profile" data-settings-link="profile">Profile</a></li>
+            <li><a class="account-nav__link" href="#settings-signin" data-settings-link="signin">Sign-in</a></li>
+            <li><a class="account-nav__link" href="#settings-privacy" data-settings-link="privacy">Privacy</a></li>
+            <li><a class="account-nav__link" href="#settings-notifications" data-settings-link="notifications">Notifications</a></li>
+            <li><a class="account-nav__link" href="#settings-data" data-settings-link="data">Data and exports</a></li>
+            <li><a class="account-nav__link" href="#settings-membership" data-settings-link="membership">Supporter</a></li>
+            <li><a class="account-nav__link" href="#settings-danger" data-settings-link="danger">Danger zone</a></li>
+          </ul>
+        </nav>
+        <div class="account-settings__panels" id="accountSettingsPanels">
+        <section class="account-group" id="settings-profile" aria-labelledby="settings-profile-title" data-settings-group="profile" tabindex="-1">
+          <header class="account-group__header">
+            <h3 class="account-group__title" id="settings-profile-title">Profile</h3>
+            <p class="account-group__intro">What other people see when you share something.</p>
+          </header>
+        <div class="account-section account-section--summary">
+          <h4>Your account</h4>
+          <dl class="account-info">
             <div class="info-item">
-              <span class="info-label">Username:</span>
-              <span class="info-value" id="accountUsername">-</span>
+              <dt class="info-label">Username</dt>
+              <dd class="info-value" id="accountUsername">-</dd>
             </div>
             <div class="info-item">
-              <span class="info-label">Email:</span>
-              <span class="info-value" id="accountEmail">-</span>
+              <dt class="info-label">Email</dt>
+              <dd class="info-value" id="accountEmail">-</dd>
             </div>
             <div class="info-item">
-              <span class="info-label">Account Created:</span>
-              <span class="info-value" id="accountCreated">-</span>
+              <dt class="info-label">Member since</dt>
+              <dd class="info-value" id="accountCreated">-</dd>
             </div>
             <div class="info-item">
-              <span class="info-label">Email Verified:</span>
-              <span class="info-value" id="accountVerified">-</span>
+              <dt class="info-label">Email confirmed</dt>
+              <dd class="info-value" id="accountVerified">-</dd>
             </div>
-          </div>
+          </dl>
         </div>
 
-        <!-- Change Username Section -->
-        <div class="account-section">
-          <h3>Change Username</h3>
-          <form id="changeUsernameForm" data-submit-action="change-username">
-            <div>
-              <input type="text" id="newUsername" aria-label="New username" autocomplete="username" autocapitalize="none" spellcheck="false" placeholder="New username" minlength="3" maxlength="50" required>
+        <div class="account-section account-section--picture">
+          <h4>Profile picture</h4>
+          <div class="account-picture">
+            <div class="profile-picture-preview">
+              <img id="profilePicturePreview" class="profile-picture-preview-img" src="/static/default-avatar.svg"
+                alt="Your profile picture" data-fallback-src="/static/default-avatar.svg">
             </div>
-            <div>
-              <input type="password" id="usernamePassword" aria-label="Current password, to change your username" autocomplete="current-password" placeholder="Current password" required>
-            </div>
-            <button type="submit" class="action-btn">Change Username</button>
-            <div id="usernameError" class="error-message"></div>
-            <div id="usernameSuccess" class="success-message"></div>
-          </form>
-        </div>
-
-        <!-- Change Email Section -->
-        <div class="account-section">
-          <h3>Change Email</h3>
-          <form id="changeEmailForm" data-submit-action="change-email">
-            <div>
-              <input type="email" id="newEmail" aria-label="New email address" autocomplete="email" placeholder="New email address" required>
-            </div>
-            <div>
-              <input type="password" id="emailPassword" aria-label="Current password, to change your email" autocomplete="current-password" placeholder="Current password" required>
-            </div>
-            <button type="submit" class="action-btn">Change Email</button>
-            <div id="emailError" class="error-message"></div>
-            <div id="emailSuccess" class="success-message"></div>
-          </form>
-        </div>
-
-        <!-- Email Section -->
-        <div class="account-section" id="emailPreferences">
-          <h3>Emails</h3>
-          <p class="info-text">Account emails, like password resets, always go out. Everything else is up to you.</p>
-          <div class="privacy-toggle-item">
-            <label for="weeklyEmailToggle" class="toggle-label">
-              <span>Weekly email: new episodes of your shows, releases you track, what friends added and what's next in your queue</span>
-              <div class="toggle-container">
-                <input type="checkbox" id="weeklyEmailToggle" class="toggle-switch">
-                <span class="toggle-slider"></span>
-              </div>
-            </label>
-          </div>
-          <div class="privacy-toggle-item">
-            <label for="updatesEmailToggle" class="toggle-label">
-              <span>Occasional news: a what's-new email when we ship something big, and a check-in if you've been away a month</span>
-              <div class="toggle-container">
-                <input type="checkbox" id="updatesEmailToggle" class="toggle-switch">
-                <span class="toggle-slider"></span>
-              </div>
-            </label>
-          </div>
-          <p id="emailPreferencesStatus" class="info-text" role="status" aria-live="polite"></p>
-        </div>
-
-        <!-- Change Password Section -->
-        <div class="account-section">
-          <h3>Change Password</h3>
-          <form id="changePasswordForm" data-submit-action="change-password">
-            <div>
-              <input type="password" id="currentPassword" aria-label="Current password" autocomplete="current-password" placeholder="Current password" required>
-            </div>
-            <div>
-              <input type="password" id="accountNewPassword" aria-label="New password, at least 8 characters" autocomplete="new-password" placeholder="New password (min 8 characters)" minlength="8"
-                required>
-            </div>
-            <div>
-              <input type="password" id="accountConfirmNewPassword" aria-label="Confirm new password" autocomplete="new-password" placeholder="Confirm new password" minlength="8"
-                required>
-            </div>
-            <button type="submit" class="action-btn">Change Password</button>
-            <div id="passwordError" class="error-message"></div>
-            <div id="passwordSuccess" class="success-message"></div>
-          </form>
-        </div>
-
-        <!-- Profile Picture Section -->
-        <div class="account-section">
-          <h3>Profile Picture</h3>
-          <div class="profile-picture-preview">
-            <img id="profilePicturePreview" class="profile-picture-preview-img" src="/static/default-avatar.svg"
-              alt="Profile Preview" data-fallback-src="/static/default-avatar.svg">
-          </div>
-          <form id="profilePictureForm" enctype="multipart/form-data">
-            <div>
+            <form id="profilePictureForm" enctype="multipart/form-data">
               <input type="file" id="profilePictureInput" accept="image/jpeg,image/jpg,image/png,image/gif,image/webp"
-                style="display: none;" data-change-action="profile-picture-select">
-              <button type="button" class="action-btn"
-                data-click-target="profilePictureInput">Choose Image</button>
-              <button type="button" class="action-btn danger-btn" data-action="reset-profile-picture"
-                id="resetProfilePictureBtn" style="display: none;">Remove Picture</button>
-            </div>
-            <div id="profilePictureError" class="error-message"></div>
-            <div id="profilePictureSuccess" class="success-message"></div>
-            <p class="info-text" style="margin-top: 8px; font-size: 0.85rem;">Max file size: 5MB. Allowed formats: JPEG,
-              PNG, GIF, WebP</p>
-          </form>
+                hidden data-change-action="profile-picture-select">
+              <div class="account-actions">
+                <button type="button" class="action-btn" data-click-target="profilePictureInput">Choose image</button>
+                <button type="button" class="action-btn danger-btn" data-action="reset-profile-picture"
+                  id="resetProfilePictureBtn" style="display: none;">Remove picture</button>
+              </div>
+              <p class="account-field__hint">JPEG, PNG, GIF or WebP, up to 5 MB. Square pictures look best.</p>
+              <div id="profilePictureError" class="error-message"></div>
+              <div id="profilePictureSuccess" class="success-message"></div>
+            </form>
+          </div>
         </div>
 
-        <!-- Privacy Settings Section -->
-        <div class="account-section">
-          <h3>Privacy Settings</h3>
-          <p class="info-text">Control who can see your data. When enabled, your data is fully private and not visible
-            to anyone, including friends.</p>
-          <form id="privacySettingsForm" data-submit-action="update-privacy-settings">
-            <div class="privacy-toggle-item">
-              <label for="moviesPrivate" class="toggle-label">
-                <span>Make Movies Private</span>
-                <div class="toggle-container">
-                  <input type="checkbox" id="moviesPrivate" class="toggle-switch">
-                  <span class="toggle-slider"></span>
-                </div>
-              </label>
-            </div>
-            <div class="privacy-toggle-item">
-              <label for="tvShowsPrivate" class="toggle-label">
-                <span>Make TV Shows Private</span>
-                <div class="toggle-container">
-                  <input type="checkbox" id="tvShowsPrivate" class="toggle-switch">
-                  <span class="toggle-slider"></span>
-                </div>
-              </label>
-            </div>
-            <div class="privacy-toggle-item">
-              <label for="animePrivate" class="toggle-label">
-                <span>Make Anime Private</span>
-                <div class="toggle-container">
-                  <input type="checkbox" id="animePrivate" class="toggle-switch">
-                  <span class="toggle-slider"></span>
-                </div>
-              </label>
-            </div>
-            <div class="privacy-toggle-item">
-              <label for="videoGamesPrivate" class="toggle-label">
-                <span>Make Video Games Private</span>
-                <div class="toggle-container">
-                  <input type="checkbox" id="videoGamesPrivate" class="toggle-switch">
-                  <span class="toggle-slider"></span>
-                </div>
-              </label>
-            </div>
-            <div class="privacy-toggle-item">
-              <label for="musicPrivate" class="toggle-label">
-                <span>Make Music Private</span>
-                <div class="toggle-container">
-                  <input type="checkbox" id="musicPrivate" class="toggle-switch">
-                  <span class="toggle-slider"></span>
-                </div>
-              </label>
-            </div>
-            <div class="privacy-toggle-item">
-              <label for="booksPrivate" class="toggle-label">
-                <span>Make Books Private</span>
-                <div class="toggle-container">
-                  <input type="checkbox" id="booksPrivate" class="toggle-switch">
-                  <span class="toggle-slider"></span>
-                </div>
-              </label>
-            </div>
-            <div class="privacy-toggle-item">
-              <label for="mangaPrivate" class="toggle-label">
-                <span>Make Manga Private</span>
-                <div class="toggle-container">
-                  <input type="checkbox" id="mangaPrivate" class="toggle-switch">
-                  <span class="toggle-slider"></span>
-                </div>
-              </label>
-            </div>
-            <div class="privacy-toggle-item">
-              <label for="podcastsPrivate" class="toggle-label">
-                <span>Make Podcasts Private</span>
-                <div class="toggle-container">
-                  <input type="checkbox" id="podcastsPrivate" class="toggle-switch">
-                  <span class="toggle-slider"></span>
-                </div>
-              </label>
-            </div>
-            <div class="privacy-toggle-item">
-              <label for="statisticsPrivate" class="toggle-label">
-                <span>Make Statistics Private</span>
-                <div class="toggle-container">
-                  <input type="checkbox" id="statisticsPrivate" class="toggle-switch">
-                  <span class="toggle-slider"></span>
-                </div>
-              </label>
-            </div>
-            <button type="submit" class="action-btn">Save Privacy Settings</button>
-            <div id="privacyError" class="error-message"></div>
-            <div id="privacySuccess" class="success-message"></div>
-          </form>
-        </div>
-
-        <!-- Public Profile Section -->
         <div class="account-section" id="publicProfileSection">
-          <h3>Public profile</h3>
+          <h4>Public profile</h4>
           <p class="info-text">Off unless you switch it on. When it's on, anyone can see the parts you choose at your own
             page. Private categories, your email, friends, notes and progress are never shown.</p>
           <form id="publicProfileForm" novalidate>
@@ -2347,7 +2216,7 @@
             <div id="profileSuccess" class="success-message" role="status"></div>
           </form>
           <div class="profile-showcase-settings" id="profileShowcase">
-            <h4>Showcase</h4>
+            <h5>Showcase</h5>
             <p class="info-text" id="profileShowcaseHint">Pin up to 3 titles from your library to the top of your profile.</p>
             <ol class="showcase-picks" id="profileShowcaseList"></ol>
             <div class="form-group">
@@ -2360,111 +2229,343 @@
           </div>
         </div>
 
-        <!-- Supporter Section -->
-        <div class="account-section" id="supporterSection">
-          <h3>Supporter</h3>
-          <p class="info-text" id="supporterStatus">OmniTrackr is free. Supporting it on Ko-fi adds a badge beside your public reviews, an
-            accent color and a banner for your public profile, six showcase spots instead of three, and a spot on the supporter wall. Support that starts before 2027 makes you a founding
-            supporter for good. <a href="/supporters" target="_blank" rel="noopener">What supporters get</a></p>
-          <div class="supporter-membership" id="supporterMembership" hidden>
-            <p id="supporterMembershipText"></p>
-            <a class="action-btn" id="supporterTiersLink" href="https://ko-fi.com/omnitrackr/tiers" target="_blank"
-              rel="noopener noreferrer">See memberships ↗</a>
-          </div>
-          <p class="supporter-preview" id="supporterPreview" hidden><span class="supporter-preview__badge" id="supporterPreviewBadge"></span></p>
-          <p class="profile-settings__link">Your supporter code: <code id="supporterCode">-</code>
-            <button type="button" class="profile-settings__copy" id="supporterCopyCode">Copy code</button></p>
-          <p class="info-text">Perks switch on by themselves when you use your OmniTrackr email on Ko-fi. If you use another email,
-            paste this code into your Ko-fi message.</p>
-          <p><a class="action-btn supporter-kofi" id="supporterKofiLink" href="https://ko-fi.com/omnitrackr" target="_blank"
-              rel="noopener noreferrer">Support on Ko-fi ↗</a></p>
-          <form id="supporterForm" novalidate hidden>
-            <div class="privacy-toggle-item">
-              <label for="supporterShowBadge" class="toggle-label">
-                <span>Show the Supporter badge on my public profile and reviews</span>
-                <div class="toggle-container">
-                  <input type="checkbox" id="supporterShowBadge" class="toggle-switch">
-                  <span class="toggle-slider"></span>
-                </div>
-              </label>
-            </div>
-            <div class="privacy-toggle-item">
-              <label for="supporterOnWall" class="toggle-label">
-                <span>Thank me by username on the <a href="/supporters#wall-heading" target="_blank" rel="noopener">supporter wall</a></span>
-                <div class="toggle-container">
-                  <input type="checkbox" id="supporterOnWall" class="toggle-switch">
-                  <span class="toggle-slider"></span>
-                </div>
-              </label>
-            </div>
-            <fieldset class="profile-settings__parts" id="supporterAccents">
-              <legend>Profile accent color</legend>
-            </fieldset>
-            <fieldset class="profile-settings__parts supporter-banners" id="supporterBanners">
-              <legend>Profile banner</legend>
-            </fieldset>
-            <div class="privacy-toggle-item" id="supporterMotionItem">
-              <label for="supporterMotion" class="toggle-label">
-                <span>Let my banner move <small class="supporter-motion__hint" id="supporterMotionHint">Season Pass and Director's Cut members</small></span>
-                <div class="toggle-container">
-                  <input type="checkbox" id="supporterMotion" class="toggle-switch">
-                  <span class="toggle-slider"></span>
-                </div>
-              </label>
-            </div>
-            <button type="submit" class="action-btn" id="supporterSave">Save supporter settings</button>
-          </form>
-          <div id="supporterError" class="error-message" role="alert"></div>
-          <div id="supporterSuccess" class="success-message" role="status"></div>
-        </div>
+        </section>
 
-        <!-- Data & Privacy Dashboard Section -->
+        <section class="account-group" id="settings-signin" aria-labelledby="settings-signin-title" data-settings-group="signin" tabindex="-1">
+          <header class="account-group__header">
+            <h3 class="account-group__title" id="settings-signin-title">Sign-in</h3>
+            <p class="account-group__intro">How you log in. Each change asks for your current password.</p>
+          </header>
         <div class="account-section">
-          <h3>Your Data & Privacy Dashboard</h3>
-          <p class="info-text">A quick summary of backup, privacy, public review, and policy controls for your account. JSON backups include your private progress checkpoints and reminders. Restoring a backup keeps existing or cleared checkpoints unchanged and restores missing checkpoints only when their exact title and edition can be matched.</p>
-          <div class="account-info">
-            <div class="info-item">
-              <span class="info-label">Data Backup:</span>
-              <span class="info-value" id="dataDashboardBackup">Export available anytime</span>
+          <h4>Username</h4>
+          <form id="changeUsernameForm" data-submit-action="change-username">
+            <div class="account-field">
+              <label class="account-field__label" for="newUsername">New username</label>
+              <input type="text" id="newUsername" autocomplete="username" autocapitalize="none" spellcheck="false" minlength="3" maxlength="50" required>
             </div>
-            <div class="info-item">
-              <span class="info-label">Private Categories:</span>
-              <span class="info-value" id="dataDashboardPrivateCount">-</span>
+            <div class="account-field">
+              <label class="account-field__label" for="usernamePassword">Current password</label>
+              <div class="auth-password"><input type="password" id="usernamePassword" autocomplete="current-password" required><button type="button" class="auth-password__toggle" data-password-toggle="usernamePassword" aria-controls="usernamePassword" aria-pressed="false">Show</button></div>
             </div>
-            <div class="info-item">
-              <span class="info-label">Public Reviews:</span>
-              <span class="info-value" id="dataDashboardPublicReviews">Controlled per item</span>
+            <button type="submit" class="action-btn">Change username</button>
+            <div id="usernameError" class="error-message"></div>
+            <div id="usernameSuccess" class="success-message"></div>
+          </form>
+        </div>
+
+        <div class="account-section">
+          <h4>Email</h4>
+          <form id="changeEmailForm" data-submit-action="change-email">
+            <div class="account-field">
+              <label class="account-field__label" for="newEmail">New email address</label>
+              <input type="email" id="newEmail" autocomplete="email" autocapitalize="none" spellcheck="false" required>
             </div>
-            <div class="info-item">
-              <span class="info-label">Account Removal:</span>
-              <span class="info-value">Deactivate below; permanent deletion by request</span>
+            <div class="account-field">
+              <label class="account-field__label" for="emailPassword">Current password</label>
+              <div class="auth-password"><input type="password" id="emailPassword" autocomplete="current-password" required><button type="button" class="auth-password__toggle" data-password-toggle="emailPassword" aria-controls="emailPassword" aria-pressed="false">Show</button></div>
             </div>
+            <p class="account-field__hint">We send a link to the new address. Your email changes once you open it.</p>
+            <button type="submit" class="action-btn">Change email</button>
+            <div id="emailError" class="error-message"></div>
+            <div id="emailSuccess" class="success-message"></div>
+          </form>
+        </div>
+
+        <div class="account-section">
+          <h4>Password</h4>
+          <form id="changePasswordForm" data-submit-action="change-password">
+            <div class="account-field">
+              <label class="account-field__label" for="currentPassword">Current password</label>
+              <div class="auth-password"><input type="password" id="currentPassword" autocomplete="current-password" required><button type="button" class="auth-password__toggle" data-password-toggle="currentPassword" aria-controls="currentPassword" aria-pressed="false">Show</button></div>
+            </div>
+            <div class="account-field">
+              <label class="account-field__label" for="accountNewPassword">New password</label>
+              <div class="auth-password"><input type="password" id="accountNewPassword" autocomplete="new-password" minlength="8" aria-describedby="accountNewPasswordHint accountNewPasswordStrength" data-password-strength="accountNewPasswordStrength" required><button type="button" class="auth-password__toggle" data-password-toggle="accountNewPassword" aria-controls="accountNewPassword" aria-pressed="false">Show</button></div>
+              <p class="account-field__hint" id="accountNewPasswordHint">At least 8 characters. A short phrase is easy to remember and hard to guess.</p>
+              <p class="auth-strength" id="accountNewPasswordStrength" hidden><span class="auth-strength__bar" aria-hidden="true"><span></span></span><span class="auth-strength__text"></span></p>
+            </div>
+            <div class="account-field">
+              <label class="account-field__label" for="accountConfirmNewPassword">Type the new password again</label>
+              <div class="auth-password"><input type="password" id="accountConfirmNewPassword" autocomplete="new-password" minlength="8" required><button type="button" class="auth-password__toggle" data-password-toggle="accountConfirmNewPassword" aria-controls="accountConfirmNewPassword" aria-pressed="false">Show</button></div>
+            </div>
+            <button type="submit" class="action-btn">Change password</button>
+            <div id="passwordError" class="error-message"></div>
+            <div id="passwordSuccess" class="success-message"></div>
+          </form>
+        </div>
+        </section>
+
+        <section class="account-group" id="settings-privacy" aria-labelledby="settings-privacy-title" data-settings-group="privacy" tabindex="-1">
+          <header class="account-group__header">
+            <h3 class="account-group__title" id="settings-privacy-title">Privacy</h3>
+            <p class="account-group__intro">Who can see your shelves, and which shelves show up in your menu.</p>
+          </header>
+        <div class="account-section">
+          <h4>Private shelves</h4>
+          <p class="info-text">A private shelf is hidden from everyone, friends included, and left off your public profile. It still counts in your own statistics.</p>
+          <form id="privacySettingsForm" data-submit-action="update-privacy-settings">
+            <div class="account-toggle-grid">
+            <div class="privacy-toggle-item">
+              <label for="moviesPrivate" class="toggle-label">
+                <span class="toggle-label__text">Keep movies private</span>
+                <div class="toggle-container">
+                  <input type="checkbox" id="moviesPrivate" class="toggle-switch">
+                  <span class="toggle-slider"></span>
+                </div>
+              </label>
+            </div>
+            <div class="privacy-toggle-item">
+              <label for="tvShowsPrivate" class="toggle-label">
+                <span class="toggle-label__text">Keep TV shows private</span>
+                <div class="toggle-container">
+                  <input type="checkbox" id="tvShowsPrivate" class="toggle-switch">
+                  <span class="toggle-slider"></span>
+                </div>
+              </label>
+            </div>
+            <div class="privacy-toggle-item">
+              <label for="animePrivate" class="toggle-label">
+                <span class="toggle-label__text">Keep anime private</span>
+                <div class="toggle-container">
+                  <input type="checkbox" id="animePrivate" class="toggle-switch">
+                  <span class="toggle-slider"></span>
+                </div>
+              </label>
+            </div>
+            <div class="privacy-toggle-item">
+              <label for="videoGamesPrivate" class="toggle-label">
+                <span class="toggle-label__text">Keep video games private</span>
+                <div class="toggle-container">
+                  <input type="checkbox" id="videoGamesPrivate" class="toggle-switch">
+                  <span class="toggle-slider"></span>
+                </div>
+              </label>
+            </div>
+            <div class="privacy-toggle-item">
+              <label for="musicPrivate" class="toggle-label">
+                <span class="toggle-label__text">Keep music private</span>
+                <div class="toggle-container">
+                  <input type="checkbox" id="musicPrivate" class="toggle-switch">
+                  <span class="toggle-slider"></span>
+                </div>
+              </label>
+            </div>
+            <div class="privacy-toggle-item">
+              <label for="booksPrivate" class="toggle-label">
+                <span class="toggle-label__text">Keep books private</span>
+                <div class="toggle-container">
+                  <input type="checkbox" id="booksPrivate" class="toggle-switch">
+                  <span class="toggle-slider"></span>
+                </div>
+              </label>
+            </div>
+            <div class="privacy-toggle-item">
+              <label for="mangaPrivate" class="toggle-label">
+                <span class="toggle-label__text">Keep manga private</span>
+                <div class="toggle-container">
+                  <input type="checkbox" id="mangaPrivate" class="toggle-switch">
+                  <span class="toggle-slider"></span>
+                </div>
+              </label>
+            </div>
+            <div class="privacy-toggle-item">
+              <label for="podcastsPrivate" class="toggle-label">
+                <span class="toggle-label__text">Keep podcasts private</span>
+                <div class="toggle-container">
+                  <input type="checkbox" id="podcastsPrivate" class="toggle-switch">
+                  <span class="toggle-slider"></span>
+                </div>
+              </label>
+            </div>
+            <div class="privacy-toggle-item">
+              <label for="statisticsPrivate" class="toggle-label">
+                <span class="toggle-label__text">Keep statistics private</span>
+                <div class="toggle-container">
+                  <input type="checkbox" id="statisticsPrivate" class="toggle-switch">
+                  <span class="toggle-slider"></span>
+                </div>
+              </label>
+            </div>
+            </div>
+            <button type="submit" class="action-btn">Save privacy</button>
+            <div id="privacyError" class="error-message"></div>
+            <div id="privacySuccess" class="success-message"></div>
+          </form>
+        </div>
+
+        <div class="account-section">
+          <h4>Shelves in your menu</h4>
+          <p class="info-text">Hide the shelves you don't use. Nothing is deleted, and you can bring a shelf back any time.</p>
+          <form id="tabVisibilityForm" data-submit-action="update-tab-visibility">
+            <div class="account-toggle-grid">
+            <div class="privacy-toggle-item">
+              <label for="moviesVisible" class="toggle-label">
+                <span class="toggle-label__text">Show movies</span>
+                <div class="toggle-container">
+                  <input type="checkbox" id="moviesVisible" class="toggle-switch">
+                  <span class="toggle-slider"></span>
+                </div>
+              </label>
+            </div>
+            <div class="privacy-toggle-item">
+              <label for="tvShowsVisible" class="toggle-label">
+                <span class="toggle-label__text">Show TV shows</span>
+                <div class="toggle-container">
+                  <input type="checkbox" id="tvShowsVisible" class="toggle-switch">
+                  <span class="toggle-slider"></span>
+                </div>
+              </label>
+            </div>
+            <div class="privacy-toggle-item">
+              <label for="animeVisible" class="toggle-label">
+                <span class="toggle-label__text">Show anime</span>
+                <div class="toggle-container">
+                  <input type="checkbox" id="animeVisible" class="toggle-switch">
+                  <span class="toggle-slider"></span>
+                </div>
+              </label>
+            </div>
+            <div class="privacy-toggle-item">
+              <label for="videoGamesVisible" class="toggle-label">
+                <span class="toggle-label__text">Show video games</span>
+                <div class="toggle-container">
+                  <input type="checkbox" id="videoGamesVisible" class="toggle-switch">
+                  <span class="toggle-slider"></span>
+                </div>
+              </label>
+            </div>
+            <div class="privacy-toggle-item">
+              <label for="musicVisible" class="toggle-label">
+                <span class="toggle-label__text">Show music</span>
+                <div class="toggle-container">
+                  <input type="checkbox" id="musicVisible" class="toggle-switch">
+                  <span class="toggle-slider"></span>
+                </div>
+              </label>
+            </div>
+            <div class="privacy-toggle-item">
+              <label for="booksVisible" class="toggle-label">
+                <span class="toggle-label__text">Show books</span>
+                <div class="toggle-container">
+                  <input type="checkbox" id="booksVisible" class="toggle-switch">
+                  <span class="toggle-slider"></span>
+                </div>
+              </label>
+            </div>
+            <div class="privacy-toggle-item">
+              <label for="mangaVisible" class="toggle-label">
+                <span class="toggle-label__text">Show manga</span>
+                <div class="toggle-container">
+                  <input type="checkbox" id="mangaVisible" class="toggle-switch">
+                  <span class="toggle-slider"></span>
+                </div>
+              </label>
+            </div>
+            <div class="privacy-toggle-item">
+              <label for="podcastsVisible" class="toggle-label">
+                <span class="toggle-label__text">Show podcasts</span>
+                <div class="toggle-container">
+                  <input type="checkbox" id="podcastsVisible" class="toggle-switch">
+                  <span class="toggle-slider"></span>
+                </div>
+              </label>
+            </div>
+            </div>
+            <button type="submit" class="action-btn">Save menu</button>
+            <div id="tabVisibilityError" class="error-message"></div>
+            <div id="tabVisibilitySuccess" class="success-message"></div>
+          </form>
+        </div>
+        </section>
+
+        <section class="account-group" id="settings-notifications" aria-labelledby="settings-notifications-title" data-settings-group="notifications" tabindex="-1">
+          <header class="account-group__header">
+            <h3 class="account-group__title" id="settings-notifications-title">Notifications</h3>
+            <p class="account-group__intro">Choose what reaches your inbox and your devices.</p>
+          </header>
+        <div class="account-section" id="emailPreferences">
+          <h4>Email</h4>
+          <p class="info-text">Account emails, like password resets, always go out. Everything else is up to you, and every email has a one-click unsubscribe.</p>
+            <div class="privacy-toggle-item">
+              <label for="weeklyEmailToggle" class="toggle-label">
+                <span class="toggle-label__text">Weekly email<span class="toggle-label__hint">New episodes of your shows, releases you track, what friends added and what's next in your queue</span></span>
+                <div class="toggle-container">
+                  <input type="checkbox" id="weeklyEmailToggle" class="toggle-switch">
+                  <span class="toggle-slider"></span>
+                </div>
+              </label>
+            </div>
+            <div class="privacy-toggle-item">
+              <label for="updatesEmailToggle" class="toggle-label">
+                <span class="toggle-label__text">Occasional news<span class="toggle-label__hint">A what's-new email when something big ships, and a check-in if you've been away a month</span></span>
+                <div class="toggle-container">
+                  <input type="checkbox" id="updatesEmailToggle" class="toggle-switch">
+                  <span class="toggle-slider"></span>
+                </div>
+              </label>
+            </div>
+          <p id="emailPreferencesStatus" class="info-text" role="status" aria-live="polite"></p>
+        </div>
+
+        <div class="account-section">
+          <h4>Phone and browser notifications</h4>
+          <p class="info-text">Turn these on per device from the bell at the top of the page. You can pick topics there and set quiet hours.</p>
+          <div class="account-actions">
+            <button type="button" class="action-btn" data-settings-open-bell>Open notification settings</button>
           </div>
-          <div style="display: flex; flex-wrap: wrap; gap: 10px; margin-top: 14px;">
-            <button type="button" class="action-btn" data-action="export-data-dashboard">Export Data</button>
-            <a class="action-btn" href="/privacy" target="_blank" rel="noopener noreferrer">Privacy Policy</a>
-            <a class="action-btn" href="/reviews" target="_blank" rel="noopener noreferrer">Public Reviews</a>
+        </div>
+        </section>
+
+        <section class="account-group" id="settings-data" aria-labelledby="settings-data-title" data-settings-group="data" tabindex="-1">
+          <header class="account-group__header">
+            <h3 class="account-group__title" id="settings-data-title">Data and exports</h3>
+            <p class="account-group__intro">Your library is yours. Take it with you or bring it in from another site.</p>
+          </header>
+        <div class="account-section">
+          <h4>Your data at a glance</h4>
+          <p class="info-text">JSON backups include your private progress checkpoints and reminders. Restoring one only fills in checkpoints that are missing, and only when the title and edition match exactly.</p>
+          <dl class="account-info">
+            <div class="info-item">
+              <dt class="info-label">Backup</dt>
+              <dd class="info-value" id="dataDashboardBackup">Export available anytime</dd>
+            </div>
+            <div class="info-item">
+              <dt class="info-label">Private shelves</dt>
+              <dd class="info-value" id="dataDashboardPrivateCount">-</dd>
+            </div>
+            <div class="info-item">
+              <dt class="info-label">Public reviews</dt>
+              <dd class="info-value" id="dataDashboardPublicReviews">Controlled per item</dd>
+            </div>
+            <div class="info-item">
+              <dt class="info-label">Removing your account</dt>
+              <dd class="info-value">Deactivate under Danger zone; permanent deletion by request</dd>
+            </div>
+          </dl>
+          <div class="account-actions">
+            <button type="button" class="action-btn" data-action="export-data-dashboard">Export data</button>
+            <a class="action-btn" href="/privacy" target="_blank" rel="noopener noreferrer">Privacy policy</a>
+            <a class="action-btn" href="/reviews" target="_blank" rel="noopener noreferrer">Public reviews</a>
           </div>
         </div>
 
-        <!-- Library exports in other services' formats -->
         <div class="account-section export-studio" id="exportStudio">
           <div class="import-studio__eyebrow">Take your library with you</div>
-          <h3>Export your library</h3>
+          <h4>Export your library</h4>
           <p class="info-text">Download everything you've logged here, whenever you like. The files include private notes and reviews, so keep them somewhere private.</p>
           <div class="export-studio__options">
             <div class="export-studio__option">
-              <h4>Full backup</h4>
+              <h5>Full backup</h5>
               <p>Every shelf, rating, review, journal entry, collection and custom tab, plus where you stopped. This is the file OmniTrackr can restore.</p>
               <button type="button" class="action-btn" data-action="download-library-export" data-export-format="json">Download JSON backup</button>
             </div>
             <div class="export-studio__option">
-              <h4>Spreadsheets</h4>
+              <h5>Spreadsheets</h5>
               <p>A ZIP of CSV files for Excel, Numbers or Google Sheets: your library, journal, collections, progress, and one file per custom tab.</p>
               <button type="button" class="action-btn" data-action="download-library-export" data-export-format="spreadsheet">Download spreadsheets</button>
             </div>
             <div class="export-studio__option">
-              <h4>Letterboxd</h4>
+              <h5>Letterboxd</h5>
               <p>Your films in the layout Letterboxd's importer reads. Watched films keep their diary dates and rewatches. Ratings become half stars.</p>
               <div class="export-studio__buttons">
                 <button type="button" class="action-btn" data-action="download-library-export" data-export-format="letterboxd">Watched films</button>
@@ -2472,7 +2573,7 @@
               </div>
             </div>
             <div class="export-studio__option">
-              <h4>Goodreads or The StoryGraph</h4>
+              <h5>Goodreads or The StoryGraph</h5>
               <p>Your books in the Goodreads export layout, which both sites import. Finished books go on "read" and the rest on "to-read".</p>
               <button type="button" class="action-btn" data-action="download-library-export" data-export-format="goodreads">Download books CSV</button>
             </div>
@@ -2481,10 +2582,10 @@
           <div id="exportStudioStatus" class="import-studio__status" role="status" aria-live="polite"></div>
         </div>
 
-        <!-- Preview-first migration studio -->
+
         <div class="account-section import-studio" id="importStudio">
           <div class="import-studio__eyebrow">Bring your history with you</div>
-          <h3>Import Studio</h3>
+          <h4>Import Studio</h4>
           <p class="info-text">Bring your history from Letterboxd, IMDb, Goodreads, The StoryGraph, MyAnimeList, AniList, Kitsu, Trakt, or any spreadsheet. Upload the export file as it comes, ZIP included, and preview it before anything is saved. Existing records are never overwritten: matches and repeated rows are skipped.</p>
           <div class="import-studio__sources" aria-label="Where to find your export">
             <a href="/switch#letterboxd-heading" target="_blank" rel="noopener noreferrer">Letterboxd ZIP</a>
@@ -2569,7 +2670,7 @@
           </form>
           <div id="importStudioStatus" class="import-studio__status" role="status" aria-live="polite"></div>
           <section id="importStudioConfirm" class="import-studio__confirm" aria-labelledby="importStudioConfirmHeading" hidden>
-            <h4 id="importStudioConfirmHeading">Confirm your import</h4>
+            <h5 id="importStudioConfirmHeading">Confirm your import</h5>
             <p id="importStudioConfirmSummary"></p>
             <div class="import-studio__actions">
               <button id="importStudioConfirmButton" type="button" class="action-btn" data-action="confirm-library-import">Confirm import</button>
@@ -2580,103 +2681,94 @@
           <p class="import-studio__safety"><strong>Safety promise:</strong> preview performs no writes, imports are additive and atomic, imported reviews stay private, and artwork lookups are deferred until you visit the relevant library tab.</p>
         </div>
 
-        <!-- Tab Visibility Settings Section -->
-        <div class="account-section">
-          <h3>Tab Visibility</h3>
-          <p class="info-text">Customize which tabs you want to see in the main interface. Hidden tabs won't appear in
-            your navigation, but your data will still be saved.</p>
-          <form id="tabVisibilityForm" data-submit-action="update-tab-visibility">
+        </section>
+
+        <section class="account-group" id="settings-membership" aria-labelledby="settings-membership-title" data-settings-group="membership" tabindex="-1">
+          <header class="account-group__header">
+            <h3 class="account-group__title" id="settings-membership-title">Support OmniTrackr</h3>
+            <p class="account-group__intro">OmniTrackr is run by one person and paid for by supporters.</p>
+          </header>
+        <div class="account-section" id="supporterSection">
+          <h4>Your supporter perks</h4>
+          <p class="account-honest">Every tracking feature is free and stays free. Support pays for hosting, and the thank-yous are cosmetic.</p>
+          <ul class="supporter-tiers" id="supporterTiers" aria-label="Ways to support"></ul>
+          <p class="info-text" id="supporterStatus">OmniTrackr is free. Supporting it on Ko-fi adds a badge beside your public reviews, an
+            accent color and a banner for your public profile, six showcase spots instead of three, and a spot on the supporter wall. Support that starts before 2027 makes you a founding
+            supporter for good. <a href="/supporters" target="_blank" rel="noopener">What supporters get</a></p>
+          <div class="supporter-membership" id="supporterMembership" hidden>
+            <p id="supporterMembershipText"></p>
+            <a class="action-btn" id="supporterTiersLink" href="https://ko-fi.com/omnitrackr/tiers" target="_blank"
+              rel="noopener noreferrer">See memberships ↗</a>
+          </div>
+          <p class="supporter-preview" id="supporterPreview" hidden><span class="supporter-preview__badge" id="supporterPreviewBadge"></span></p>
+          <p class="profile-settings__link">Your supporter code: <code id="supporterCode">-</code>
+            <button type="button" class="profile-settings__copy" id="supporterCopyCode">Copy code</button></p>
+          <p class="info-text">Perks switch on by themselves when you use your OmniTrackr email on Ko-fi. If you use another email,
+            paste this code into your Ko-fi message.</p>
+          <p><a class="action-btn supporter-kofi" id="supporterKofiLink" href="https://ko-fi.com/omnitrackr" target="_blank"
+              rel="noopener noreferrer">Support on Ko-fi ↗</a></p>
+          <form id="supporterForm" novalidate hidden>
             <div class="privacy-toggle-item">
-              <label for="moviesVisible" class="toggle-label">
-                <span>Show Movies Tab</span>
+              <label for="supporterShowBadge" class="toggle-label">
+                <span>Show the Supporter badge on my public profile and reviews</span>
                 <div class="toggle-container">
-                  <input type="checkbox" id="moviesVisible" class="toggle-switch">
+                  <input type="checkbox" id="supporterShowBadge" class="toggle-switch">
                   <span class="toggle-slider"></span>
                 </div>
               </label>
             </div>
             <div class="privacy-toggle-item">
-              <label for="tvShowsVisible" class="toggle-label">
-                <span>Show TV Shows Tab</span>
+              <label for="supporterOnWall" class="toggle-label">
+                <span>Thank me by username on the <a href="/supporters#wall-heading" target="_blank" rel="noopener">supporter wall</a></span>
                 <div class="toggle-container">
-                  <input type="checkbox" id="tvShowsVisible" class="toggle-switch">
+                  <input type="checkbox" id="supporterOnWall" class="toggle-switch">
                   <span class="toggle-slider"></span>
                 </div>
               </label>
             </div>
-            <div class="privacy-toggle-item">
-              <label for="animeVisible" class="toggle-label">
-                <span>Show Anime Tab</span>
+            <fieldset class="profile-settings__parts" id="supporterAccents">
+              <legend>Profile accent color</legend>
+            </fieldset>
+            <fieldset class="profile-settings__parts supporter-banners" id="supporterBanners">
+              <legend>Profile banner</legend>
+            </fieldset>
+            <div class="privacy-toggle-item" id="supporterMotionItem">
+              <label for="supporterMotion" class="toggle-label">
+                <span>Let my banner move <small class="supporter-motion__hint" id="supporterMotionHint">Season Pass and Director's Cut members</small></span>
                 <div class="toggle-container">
-                  <input type="checkbox" id="animeVisible" class="toggle-switch">
+                  <input type="checkbox" id="supporterMotion" class="toggle-switch">
                   <span class="toggle-slider"></span>
                 </div>
               </label>
             </div>
-            <div class="privacy-toggle-item">
-              <label for="videoGamesVisible" class="toggle-label">
-                <span>Show Video Games Tab</span>
-                <div class="toggle-container">
-                  <input type="checkbox" id="videoGamesVisible" class="toggle-switch">
-                  <span class="toggle-slider"></span>
-                </div>
-              </label>
-            </div>
-            <div class="privacy-toggle-item">
-              <label for="musicVisible" class="toggle-label">
-                <span>Show Music Tab</span>
-                <div class="toggle-container">
-                  <input type="checkbox" id="musicVisible" class="toggle-switch">
-                  <span class="toggle-slider"></span>
-                </div>
-              </label>
-            </div>
-            <div class="privacy-toggle-item">
-              <label for="booksVisible" class="toggle-label">
-                <span>Show Books Tab</span>
-                <div class="toggle-container">
-                  <input type="checkbox" id="booksVisible" class="toggle-switch">
-                  <span class="toggle-slider"></span>
-                </div>
-              </label>
-            </div>
-            <div class="privacy-toggle-item">
-              <label for="mangaVisible" class="toggle-label">
-                <span>Show Manga Tab</span>
-                <div class="toggle-container">
-                  <input type="checkbox" id="mangaVisible" class="toggle-switch">
-                  <span class="toggle-slider"></span>
-                </div>
-              </label>
-            </div>
-            <div class="privacy-toggle-item">
-              <label for="podcastsVisible" class="toggle-label">
-                <span>Show Podcasts Tab</span>
-                <div class="toggle-container">
-                  <input type="checkbox" id="podcastsVisible" class="toggle-switch">
-                  <span class="toggle-slider"></span>
-                </div>
-              </label>
-            </div>
-            <button type="submit" class="action-btn">Save Tab Visibility</button>
-            <div id="tabVisibilityError" class="error-message"></div>
-            <div id="tabVisibilitySuccess" class="success-message"></div>
+            <button type="submit" class="action-btn" id="supporterSave">Save supporter settings</button>
           </form>
+          <div id="supporterError" class="error-message" role="alert"></div>
+          <div id="supporterSuccess" class="success-message" role="status"></div>
         </div>
 
-        <!-- Account Deactivation Section -->
+        </section>
+
+        <section class="account-group account-group--danger" id="settings-danger" aria-labelledby="settings-danger-title" data-settings-group="danger" tabindex="-1">
+          <header class="account-group__header">
+            <h3 class="account-group__title" id="settings-danger-title">Danger zone</h3>
+            <p class="account-group__intro">This one is hard to undo, so it asks twice.</p>
+          </header>
         <div class="account-section danger-section">
-          <h3>Account Deactivation</h3>
-          <p class="warning-text">Deactivating your account will hide it from the system. You can reactivate within 90
-            days. After that, self-service reactivation is unavailable; contact support if you need deletion assistance.</p>
+          <h4>Deactivate your account</h4>
+          <p class="warning-text">Your account and everything in it are hidden right away. Log in within 90 days to bring it all back. After that you can't reactivate it yourself; <a href="/contact" target="_blank" rel="noopener">contact us</a> if you want it deleted for good. Download a backup first if you might want your library later.</p>
           <form id="deactivateAccountForm" data-submit-action="deactivate-account">
-            <div>
-              <input type="password" id="deactivatePassword" placeholder="Enter your password to confirm" required>
+            <div class="account-field">
+              <label class="account-field__label" for="deactivatePassword">Password, to confirm</label>
+              <div class="auth-password"><input type="password" id="deactivatePassword" autocomplete="current-password" required><button type="button" class="auth-password__toggle" data-password-toggle="deactivatePassword" aria-controls="deactivatePassword" aria-pressed="false">Show</button></div>
             </div>
-            <button type="submit" class="action-btn danger-btn">Deactivate Account</button>
+            <button type="submit" class="action-btn danger-btn">Deactivate account</button>
             <div id="deactivateError" class="error-message"></div>
           </form>
         </div>
+        </section>
+        </div>
+        <p class="account-toast" id="accountToast" role="status" aria-live="polite" hidden></p>
       </div>
     </div>
   </div>

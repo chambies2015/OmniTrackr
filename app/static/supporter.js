@@ -146,6 +146,54 @@
     if (link) link.textContent = status.member ? 'Change tier on Ko-fi ↗' : 'See memberships ↗';
   }
 
+  // What each way of supporting adds, so the choice is clear before anyone goes to Ko-fi.
+  // Prices come from the server (supporters.TIERS); the wording matches /supporters.
+  const TIER_PERKS = {
+    popcorn: 'Member tag on your profile, plus the neon, marquee and comic banners',
+    season_pass: 'Everything in Popcorn, and your banner can move',
+    directors_cut: 'Everything in Season Pass, plus gold and your name in the credits at the top of the supporter wall',
+  };
+
+  function renderTiers(status) {
+    const list = $('supporterTiers');
+    if (!list) return;
+    list.replaceChildren();
+    const tip = document.createElement('li');
+    tip.className = 'supporter-tier';
+    const tipName = document.createElement('strong');
+    tipName.textContent = 'One-time tip';
+    const tipPrice = document.createElement('span');
+    tipPrice.className = 'supporter-tier__price';
+    tipPrice.textContent = 'Any amount';
+    const tipPerks = document.createElement('span');
+    tipPerks.className = 'supporter-tier__perks';
+    tipPerks.textContent = 'Supporter badge, accent color, banners and six showcase spots for 30 days';
+    tip.append(tipName, tipPrice, tipPerks);
+    list.appendChild(tip);
+    (Array.isArray(status.tiers) ? status.tiers : []).forEach(tier => {
+      if (!tier || typeof tier.slug !== 'string' || typeof tier.name !== 'string' || !Number.isFinite(tier.price)) return;
+      const item = document.createElement('li');
+      item.className = 'supporter-tier';
+      if (status.member && status.tier === tier.slug) item.classList.add('supporter-tier--current');
+      const name = document.createElement('strong');
+      name.textContent = tier.name;
+      const price = document.createElement('span');
+      price.className = 'supporter-tier__price';
+      price.textContent = `$${tier.price} a month`;
+      const perks = document.createElement('span');
+      perks.className = 'supporter-tier__perks';
+      perks.textContent = TIER_PERKS[tier.slug] || 'Monthly member extras';
+      item.append(name, price, perks);
+      if (item.classList.contains('supporter-tier--current')) {
+        const badge = document.createElement('span');
+        badge.className = 'supporter-tier__current';
+        badge.textContent = 'Your tier';
+        item.appendChild(badge);
+      }
+      list.appendChild(item);
+    });
+  }
+
   function renderMotion(status) {
     const input = $('supporterMotion');
     if (!input) return;
@@ -231,6 +279,7 @@
     renderBanners(status);
     renderMotion(status);
     renderMembership(status);
+    renderTiers(status);
     renderPreview(status, status.accent);
   }
 

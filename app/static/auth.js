@@ -420,15 +420,125 @@ window.reportFunnelEvent = reportFunnelEvent;
 
 const USERNAME_PATTERN = /^[A-Za-z0-9][A-Za-z0-9_.-]{2,29}$/;
 
+const EMAIL_PATTERN = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+
 // Mirrors app/signup_rules.py so most mistakes are caught before the round trip.
-function signupProblem(email, username, password, confirmPassword) {
-    if (!email || !email.includes('@')) return 'Enter the email address you want to use.';
+// Returns the field to point at and what to say, or null.
+function signupFieldProblem(email, username, password, confirmPassword) {
+    if (!email || !EMAIL_PATTERN.test(email)) return { field: 'registerEmail', message: 'Enter the email address you want to use, like name@example.com.' };
     const trimmed = (username || '').trim();
-    if (trimmed.length < 3 || trimmed.length > 30) return 'Usernames need 3–30 characters.';
-    if (!USERNAME_PATTERN.test(trimmed)) return 'Usernames can use letters, numbers, dots, dashes or underscores, and must start with a letter or number.';
-    if ((password || '').length < 8) return 'Use at least 8 characters for your password.';
-    if (password !== confirmPassword) return "The two passwords don't match.";
+    if (trimmed.length < 3 || trimmed.length > 30) return { field: 'registerUsername', message: 'Usernames need 3–30 characters.' };
+    if (!USERNAME_PATTERN.test(trimmed)) return { field: 'registerUsername', message: 'Usernames can use letters, numbers, dots, dashes or underscores, and must start with a letter or number.' };
+    if ((password || '').length < 8) return { field: 'registerPassword', message: 'Use at least 8 characters for your password.' };
+    if (password !== confirmPassword) return { field: 'registerConfirmPassword', message: "The two passwords don't match." };
     return null;
+}
+
+function signupProblem(email, username, password, confirmPassword) {
+    const problem = signupFieldProblem(email, username, password, confirmPassword);
+    return problem ? problem.message : null;
+}
+
+// Which sign-up box a server answer is about, so the message can sit under it.
+function signupFieldFor(message) {
+    const text = String(message || '').toLowerCase();
+    if (/password/.test(text)) return 'registerPassword';
+    if (/username/.test(text)) return 'registerUsername';
+    if (/e-?mail/.test(text)) return 'registerEmail';
+    return null;
+}
+
+// ----------------------------------------------------------------------------
+// Form helpers shared by the sign-in forms and account settings
+// ----------------------------------------------------------------------------
+
+// Show a message under one box. The box points at it with aria-describedby, so a
+// screen reader reads it when focus lands there. Returns false when the page has
+// no spot for it, so the caller can fall back to the message at the top.
+function showFieldError(fieldId, message, { focus = true } = {}) {
+    const field = document.getElementById(fieldId);
+    const slot = document.getElementById(`${fieldId}Error`);
+    if (!field || !slot) return false;
+    slot.textContent = message;
+    slot.hidden = false;
+    if (typeof field.setAttribute === 'function') field.setAttribute('aria-invalid', 'true');
+    if (focus && typeof field.focus === 'function') field.focus();
+    return true;
+}
+
+function clearFieldError(fieldId) {
+    const field = document.getElementById(fieldId);
+    const slot = document.getElementById(`${fieldId}Error`);
+    if (slot) { slot.textContent = ''; slot.hidden = true; }
+    if (field && typeof field.removeAttribute === 'function') field.removeAttribute('aria-invalid');
+}
+
+function clearFormErrors(form) {
+    if (!form || typeof form.querySelectorAll !== 'function') return;
+    form.querySelectorAll('[aria-invalid="true"]').forEach(field => clearFieldError(field.id));
+}
+
+// A rough guide while typing. The server's check (signup_rules.password_problem)
+// decides; this only warns early about the obvious cases it turns down.
+const GUESSABLE_PASSWORD = /^(password|passw0rd|p@ssw0rd|qwerty|qwertyuiop|letmein|welcome|iloveyou|admin|abc|omnitrackr|changeme|test)[0-9!.]*$/;
+
+function passwordStrength(password, { username = '', email = '' } = {}) {
+    const value = String(password || '');
+    if (!value) return { level: 0, text: '' };
+    if (value.length < 8) {
+        const left = 8 - value.length;
+        return { level: 1, text: `${left} more character${left === 1 ? '' : 's'} to go` };
+    }
+    const lowered = value.toLowerCase();
+    const name = String(username || '').trim().toLowerCase();
+    const mailbox = String(email || '').split('@')[0].trim().toLowerCase();
+    const sequence = '0123456789abcdefghijklmnopqrstuvwxyz';
+    if (GUESSABLE_PASSWORD.test(lowered) || new Set(lowered).size <= 2 || sequence.includes(lowered)
+        || (name.length >= 3 && lowered.includes(name) && lowered.length - name.length < 4)
+        || (mailbox.length >= 3 && lowered === mailbox)) {
+        return { level: 1, text: 'Easy to guess. Try a short phrase instead.' };
+    }
+    const kinds = [/[a-z]/, /[A-Z]/, /[0-9]/, /[^A-Za-z0-9]/].filter(kind => kind.test(value)).length;
+    if (value.length >= 16 || (value.length >= 12 && kinds >= 2)) return { level: 4, text: 'Strong' };
+    if (value.length >= 12 || kinds >= 3) return { level: 3, text: 'Good' };
+    return { level: 2, text: 'Okay. Longer is harder to guess.' };
+}
+
+function updatePasswordStrength(field) {
+    const meter = document.getElementById(field.dataset.passwordStrength);
+    if (!meter) return;
+    const username = document.getElementById('registerUsername');
+    const email = document.getElementById('registerEmail');
+    const result = passwordStrength(field.value, {
+        username: field.id === 'registerPassword' && username ? username.value : '',
+        email: field.id === 'registerPassword' && email ? email.value : '',
+    });
+    meter.hidden = result.level === 0;
+    meter.dataset.level = String(result.level);
+    const text = meter.querySelector('.auth-strength__text');
+    if (text) text.textContent = result.level ? `Strength: ${result.text}` : '';
+}
+
+let passwordHelpersReady = false;
+function setupPasswordHelpers() {
+    if (passwordHelpersReady || typeof document.addEventListener !== 'function') return;
+    passwordHelpersReady = true;
+    document.addEventListener('click', event => {
+        const toggle = event.target && event.target.closest ? event.target.closest('[data-password-toggle]') : null;
+        if (!toggle) return;
+        const field = document.getElementById(toggle.dataset.passwordToggle);
+        if (!field) return;
+        const show = field.type === 'password';
+        field.type = show ? 'text' : 'password';
+        toggle.textContent = show ? 'Hide' : 'Show';
+        toggle.setAttribute('aria-pressed', String(show));
+    });
+    document.addEventListener('input', event => {
+        const field = event.target;
+        if (!field || !field.id) return;
+        if (field.getAttribute && field.getAttribute('aria-invalid') === 'true') clearFieldError(field.id);
+        if (field.dataset && field.dataset.passwordStrength) updatePasswordStrength(field);
+    });
 }
 
 // A username taken from the start of the email address ("sam.lee@…" → "sam.lee"),
@@ -691,11 +801,18 @@ function showLoginForm(scroll = true) {
     setAuthContext('Welcome back. Pick up where you left off.');
     document.getElementById('authError').textContent = '';
     document.getElementById('authSuccess').style.display = 'none';
+    clearAuthFormErrors();
     const reactivateContainer = document.getElementById('reactivateContainer');
     if (reactivateContainer) {
         reactivateContainer.style.display = 'none';
     }
     if (scroll) revealAuthCard();
+}
+
+// Switching forms starts each one without old messages under its boxes.
+function clearAuthFormErrors() {
+    ['loginFormElement', 'registerFormElement', 'forgotPasswordFormElement', 'resetPasswordFormElement']
+        .forEach(id => clearFormErrors(document.getElementById(id)));
 }
 
 // The line under the form title, when the page has one.
@@ -734,6 +851,7 @@ function showRegisterForm(scroll = true, { report = true } = {}) {
     setAuthContext('Free, private by default, and ready in under a minute.');
     document.getElementById('authError').textContent = '';
     document.getElementById('authSuccess').style.display = 'none';
+    clearAuthFormErrors();
     if (scroll) revealAuthCard();
 }
 
@@ -742,9 +860,11 @@ function showForgotPasswordForm(scroll = true) {
     document.getElementById('registerForm').style.display = 'none';
     document.getElementById('forgotPasswordForm').style.display = 'block';
     document.getElementById('resetPasswordForm').style.display = 'none';
-    document.getElementById('authTitle').textContent = 'Reset Password';
+    document.getElementById('authTitle').textContent = 'Reset your password';
+    setAuthContext('It happens. We\'ll email you a link.');
     document.getElementById('authError').textContent = '';
     document.getElementById('authSuccess').style.display = 'none';
+    clearAuthFormErrors();
     if (scroll) revealAuthCard();
 }
 
@@ -753,9 +873,11 @@ function showResetPasswordForm(resetToken = null, scroll = true) {
     document.getElementById('registerForm').style.display = 'none';
     document.getElementById('forgotPasswordForm').style.display = 'none';
     document.getElementById('resetPasswordForm').style.display = 'block';
-    document.getElementById('authTitle').textContent = 'Reset Password';
+    document.getElementById('authTitle').textContent = 'Choose a new password';
+    setAuthContext('You\'ll use it the next time you log in.');
     document.getElementById('authError').textContent = '';
     document.getElementById('authSuccess').style.display = 'none';
+    clearAuthFormErrors();
     if (resetToken) {
         document.getElementById('resetPasswordFormElement').dataset.resetToken = resetToken;
     }
@@ -873,9 +995,21 @@ function setupAuthHandlers() {
     // Login form submission
     document.getElementById('loginFormElement').addEventListener('submit', async (e) => {
         e.preventDefault();
-        const username = document.getElementById('loginUsername').value;
+        const username = document.getElementById('loginUsername').value.trim();
         const password = document.getElementById('loginPassword').value;
+        clearFormErrors(e.target);
+        if (!username) {
+            if (!showFieldError('loginUsername', 'Enter your username or the email you signed up with.')) displayAuthError('Enter your username or email.');
+            return;
+        }
+        if (!password) {
+            if (!showFieldError('loginPassword', 'Enter your password.')) displayAuthError('Enter your password.');
+            return;
+        }
 
+        const button = e.target.querySelector('button[type="submit"]');
+        const label = button ? button.textContent : '';
+        if (button) { button.disabled = true; button.textContent = 'Logging in…'; }
         try {
             await login(username, password);
             // Hide resend button on successful login
@@ -888,22 +1022,27 @@ function setupAuthHandlers() {
             } else {
                 document.getElementById('resendVerificationContainer').style.display = 'none';
             }
+        } finally {
+            if (button) { button.disabled = false; button.textContent = label; }
         }
     });
 
-    // Resend verification email button
+    // Resend verification email button. A username can't receive mail, so ask for
+    // the email in a box right above the button instead of a browser prompt.
     document.getElementById('resendVerificationBtn').addEventListener('click', async () => {
-        const usernameOrEmail = document.getElementById('loginUsername').value;
-        
-        // Extract email - if it contains @, use it; otherwise we'll need to prompt
-        let email = usernameOrEmail;
-        if (!email || !email.includes('@')) {
-            // If username was entered, prompt for email
-            email = prompt('Please enter your email address to resend the verification email:');
-            if (!email || !email.includes('@')) {
-                displayAuthError('Please enter a valid email address.');
+        const usernameOrEmail = document.getElementById('loginUsername').value.trim();
+        const emailField = document.getElementById('resendVerificationEmail');
+        const emailBox = document.getElementById('resendVerificationEmailField');
+        let email = EMAIL_PATTERN.test(usernameOrEmail) ? usernameOrEmail : (emailField ? emailField.value.trim() : '');
+        if (!EMAIL_PATTERN.test(email)) {
+            if (emailBox && emailBox.hidden) {
+                emailBox.hidden = false;
+                if (emailField) emailField.focus();
                 return;
             }
+            displayAuthError('Enter the email address you signed up with, and we\'ll resend the link.');
+            if (emailField) emailField.focus();
+            return;
         }
 
         // Disable button while sending
@@ -928,7 +1067,7 @@ function setupAuthHandlers() {
         } finally {
             // Re-enable button
             btn.disabled = false;
-            btn.textContent = 'Resend Verification Email';
+            btn.textContent = 'Resend verification email';
         }
     });
 
@@ -945,10 +1084,11 @@ function setupAuthHandlers() {
         const confirmField = document.getElementById('registerConfirmPassword');
         const confirmPassword = confirmField ? confirmField.value : password;
 
-        const problem = signupProblem(email, username, password, confirmPassword);
+        clearFormErrors(e.target);
+        const problem = signupFieldProblem(email, username, password, confirmPassword);
         if (problem) {
             reportFunnelEvent('signup_rejected_invalid');
-            displayAuthError(problem);
+            if (!showFieldError(problem.field, problem.message)) displayAuthError(problem.message);
             return;
         }
 
@@ -958,7 +1098,9 @@ function setupAuthHandlers() {
         try {
             await register(email, username, password);
         } catch (error) {
-            displayAuthError(error.message);
+            // "That username is taken" belongs under the username box, and so on.
+            const field = signupFieldFor(error.message);
+            if (!field || !showFieldError(field, error.message)) displayAuthError(error.message);
         } finally {
             if (button) { button.disabled = false; button.textContent = label; }
         }
@@ -991,22 +1133,32 @@ function setupAuthHandlers() {
     // Forgot password form submission
     document.getElementById('forgotPasswordFormElement').addEventListener('submit', async (e) => {
         e.preventDefault();
-        const email = document.getElementById('forgotPasswordEmail').value;
+        const email = document.getElementById('forgotPasswordEmail').value.trim();
+        clearFormErrors(e.target);
+        if (!EMAIL_PATTERN.test(email)) {
+            if (!showFieldError('forgotPasswordEmail', 'Enter the email address on your account.')) displayAuthError('Enter the email address on your account.');
+            return;
+        }
 
+        const button = e.target.querySelector('button[type="submit"]');
+        const label = button ? button.textContent : '';
+        if (button) { button.disabled = true; button.textContent = 'Sending…'; }
         try {
             const response = await fetch(`${AUTH_API_BASE}/auth/request-password-reset?email=${encodeURIComponent(email)}`, {
                 method: 'POST',
             });
 
             if (response.ok) {
-                displayAuthSuccess('If that email is registered, you will receive a password reset link. Please check your email.');
+                displayAuthSuccess(`If ${email} has an account, a reset link is on its way. It can take a few minutes, so check spam too.`);
                 document.getElementById('forgotPasswordFormElement').reset();
             } else {
                 const error = await response.json().catch(() => ({}));
-                displayAuthError(authErrorMessage(error, 'Failed to send reset link'));
+                displayAuthError(authErrorMessage(error, "We couldn't send the reset link. Please try again."));
             }
         } catch (error) {
-            displayAuthError('Failed to send reset link. Please try again.');
+            displayAuthError("We couldn't send the reset link. Check your connection and try again.");
+        } finally {
+            if (button) { button.disabled = false; button.textContent = label; }
         }
     });
 
@@ -1016,13 +1168,14 @@ function setupAuthHandlers() {
         const newPassword = document.getElementById('newPassword').value;
         const confirmPassword = document.getElementById('confirmNewPassword').value;
 
-        if (newPassword !== confirmPassword) {
-            displayAuthError('Passwords do not match');
+        clearFormErrors(e.target);
+        if (newPassword.length < 8) {
+            if (!showFieldError('newPassword', 'Use at least 8 characters for your password.')) displayAuthError('Use at least 8 characters for your password.');
             return;
         }
 
-        if (newPassword.length < 8) {
-            displayAuthError('Password must be at least 8 characters');
+        if (newPassword !== confirmPassword) {
+            if (!showFieldError('confirmNewPassword', "The two passwords don't match.")) displayAuthError("The two passwords don't match.");
             return;
         }
 
@@ -1033,7 +1186,7 @@ function setupAuthHandlers() {
                      urlParams.get('token');
 
         if (!token) {
-            displayAuthError('Invalid reset link');
+            displayAuthError('This reset link is missing its code. Open the newest link from your email, or ask for a new one.');
             return;
         }
 
@@ -1056,10 +1209,11 @@ function setupAuthHandlers() {
                 }, 2000);
             } else {
                 const error = await response.json().catch(() => ({}));
-                displayAuthError(authErrorMessage(error, 'Failed to reset password'));
+                const message = authErrorMessage(error, "We couldn't save that password. The link may have expired, so ask for a new one if this keeps happening.");
+                if (!/password/i.test(message) || !showFieldError('newPassword', message)) displayAuthError(message);
             }
         } catch (error) {
-            displayAuthError('Failed to reset password. Please try again.');
+            displayAuthError("We couldn't save that password. Check your connection and try again.");
         }
     });
 
@@ -1129,6 +1283,7 @@ function initAuth() {
     captureFriendInvite();
     captureDemoStartIntent();
     setupAuthHandlers();
+    setupPasswordHelpers();
     setupGoogleSignIn();
 
     // Check URL parameters for email verification or password reset

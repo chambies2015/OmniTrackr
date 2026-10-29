@@ -195,6 +195,14 @@ window.closeAccountModal = function () {
   document.getElementById('changeEmailForm').reset();
   document.getElementById('changePasswordForm').reset();
   document.getElementById('deactivateAccountForm').reset();
+  // Put typed passwords back behind dots and empty the strength meter.
+  modal.querySelectorAll('[data-password-toggle]').forEach(toggle => {
+    const field = document.getElementById(toggle.dataset.passwordToggle);
+    if (field) field.type = 'password';
+    toggle.textContent = 'Show';
+    toggle.setAttribute('aria-pressed', 'false');
+  });
+  modal.querySelectorAll('.auth-strength').forEach(meter => { meter.hidden = true; });
 }
 
 window.loadAccountInfo = async function () {
@@ -219,7 +227,7 @@ window.loadAccountInfo = async function () {
 
       // Email verification status
       const verified = document.getElementById('accountVerified');
-      verified.textContent = user.is_verified ? '✓ Verified' : '✗ Not Verified';
+      verified.textContent = user.is_verified ? '✓ Confirmed' : '✗ Not confirmed yet';
       verified.classList.toggle('is-verified', Boolean(user.is_verified));
       verified.classList.toggle('is-unverified', !user.is_verified);
       applyPasswordState(user.has_password !== false);
@@ -239,14 +247,16 @@ function applyPasswordState(hasPassword) {
     if (!input) return;
     input.required = hasPassword;
     if (!hasPassword) input.value = '';
-    if (input.parentElement) input.parentElement.hidden = !hasPassword;
+    // Hide the label with the box, not only the box.
+    const field = input.closest('.account-field') || input.parentElement;
+    if (field) field.hidden = !hasPassword;
   });
   const form = document.getElementById('changePasswordForm');
   if (!form) return;
-  const heading = form.parentElement && form.parentElement.querySelector('h3');
-  if (heading) heading.textContent = hasPassword ? 'Change Password' : 'Set a Password';
+  const heading = form.parentElement && form.parentElement.querySelector('h3, h4');
+  if (heading) heading.textContent = hasPassword ? 'Password' : 'Set a password';
   const button = form.querySelector('button[type="submit"]');
-  if (button) button.textContent = hasPassword ? 'Change Password' : 'Set Password';
+  if (button) button.textContent = hasPassword ? 'Change password' : 'Set password';
   let note = document.getElementById('googlePasswordNote');
   if (!hasPassword && !note) {
     note = document.createElement('p');
@@ -350,13 +360,13 @@ window.changePassword = async function (event) {
   successEl.style.display = 'none';
 
   if (newPassword !== confirmPassword) {
-    errorEl.textContent = 'New passwords do not match';
+    errorEl.textContent = "The two new passwords don't match.";
     errorEl.style.display = 'block';
     return;
   }
 
   if (newPassword.length < 8) {
-    errorEl.textContent = 'Password must be at least 8 characters';
+    errorEl.textContent = 'Use at least 8 characters for your new password.';
     errorEl.style.display = 'block';
     return;
   }
