@@ -167,3 +167,8 @@
 .stats-kofi__form input { background: var(--site-surface-2); border: 1px solid var(--site-border-strong); border-radius: 8px; color: #fff; font: .88rem var(--site-font); min-height: 34px; padding: 0 10px; width: 180px; }
 .stats-kofi__form input:focus-visible { outline: 2px solid var(--stats-visitors); outline-offset: 1px; }
 @media (max-width: 560px) { .stats-kofi__form, .stats-kofi__form input { width: 100%; } .stats-kofi__form .site-btn { flex: 1; } }
+
+/* Traffic view switch (likely people / all requests) and funnel step notes */
+.stats-traffic-tools { align-items: center; display: flex; flex-wrap: wrap; gap: 12px; justify-content: flex-end; }
+.stats-step__label small { color: var(--site-muted, var(--site-soft)); display: block; font-size: .78rem; line-height: 1.35; margin-top: 2px; opacity: .8; }
+.stats-subhead--gap { margin-top: 22px; }

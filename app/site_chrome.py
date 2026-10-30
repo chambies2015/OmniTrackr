@@ -21,6 +21,7 @@ SITE_NAV_JS_VERSION = "20261030-errors-1"
 # Pages holding this marker (the demo) skip site-nav.js, which reads the stored
 # sign-in hint and calls the title search API; their search button stays a link.
 SANDBOX_MARKER = "<!--SITE_SANDBOX-->"
+VISIT_JS_VERSION = "20261030-people-1"
 
 # The header groups every public section into four menus. Each entry is
 # (key, label, href, one-line description); a page passes the key of its own
@@ -272,7 +273,8 @@ def site_footer() -> str:
 def site_assets(*, sandbox: bool = False) -> str:
     extras = "" if sandbox else f'<script src="/static/site-nav.js?v={SITE_NAV_JS_VERSION}" defer></script>'
     return (f'<link rel="stylesheet" href="/static/site.css?v={SITE_CSS_VERSION}">'
-            f'<script src="/static/site.js?v={SITE_JS_VERSION}" defer></script>{extras}')
+            f'<script src="/static/site.js?v={SITE_JS_VERSION}" defer></script>{extras}'
+            f'<script src="/static/visit.js?v={VISIT_JS_VERSION}" defer></script>')
 
 
 def apply_site_chrome(html: str, *, login_action: bool = False, member: bool = False) -> str:

@@ -406,10 +406,24 @@ function authErrorMessage(body, fallback) {
 }
 
 // Anonymous sign-up funnel counters (see /site-stats). Never blocks anything.
+// Funnel steps count once per visit (this tab's session), not once per page, so a
+// guest who opens sign-up on three pages is still one person starting to sign up.
 const reportedFunnelEvents = new Set();
+const FUNNEL_ONCE_PER_VISIT = new Set(['signup_form_opened', 'hero_signup_clicked', 'title_search_used', 'guest_pick_added', 'guest_list_signup']);
+const FUNNEL_SESSION_KEY = 'omnitrackr_funnel_sent';
+function funnelSentThisVisit(event) {
+    if (!FUNNEL_ONCE_PER_VISIT.has(event)) return false;
+    try {
+        const sent = JSON.parse(sessionStorage.getItem(FUNNEL_SESSION_KEY) || '[]');
+        if (Array.isArray(sent) && sent.includes(event)) return true;
+        sessionStorage.setItem(FUNNEL_SESSION_KEY, JSON.stringify([...(Array.isArray(sent) ? sent : []), event].slice(-20)));
+    } catch (error) { /* storage blocked: once per page instead */ }
+    return false;
+}
 function reportFunnelEvent(event) {
     if (reportedFunnelEvents.has(event)) return;
     reportedFunnelEvents.add(event);
+    if (funnelSentThisVisit(event)) return;
     try {
         // A beacon never delays the page or navigation.
         if (typeof navigator !== 'undefined' && typeof navigator.sendBeacon === 'function' && typeof Blob === 'function') {
@@ -851,18 +865,33 @@ function landingVisible() {
     return getComputedStyle(landing).display !== 'none';
 }
 
+function savedGuestTitles() {
+    try {
+        const list = JSON.parse(localStorage.getItem('omnitrackr_guest_list') || '[]');
+        return Array.isArray(list) ? list.length : 0;
+    } catch (error) {
+        return 0;
+    }
+}
+
+// "Started signing up": the email form opening or a Google sign-up button, once per visit.
+function reportSignupStart() {
+    reportFunnelEvent('signup_form_opened');
+    if (savedGuestTitles()) reportFunnelEvent('guest_list_signup');
+}
+
 function showRegisterForm(scroll = true, { report = true } = {}) {
     hideTwoFactorForm();
-    if (report) reportFunnelEvent('signup_form_opened');
-    try {
-        if ((JSON.parse(localStorage.getItem('omnitrackr_guest_list') || '[]') || []).length) reportFunnelEvent('guest_list_signup');
-    } catch (error) { /* no saved list */ }
+    if (report) reportSignupStart();
     document.getElementById('loginForm').style.display = 'none';
     document.getElementById('registerForm').style.display = 'block';
     document.getElementById('forgotPasswordForm').style.display = 'none';
     document.getElementById('resetPasswordForm').style.display = 'none';
     document.getElementById('authTitle').textContent = 'Create your free account';
-    setAuthContext('Free, private by default, and ready in under a minute.');
+    const saved = savedGuestTitles();
+    setAuthContext(saved
+        ? `Free and private by default. The ${saved === 1 ? 'title' : `${saved} titles`} you saved move${saved === 1 ? 's' : ''} into your library when you log in.`
+        : 'Free, private by default, and ready in under a minute.');
     document.getElementById('authError').textContent = '';
     document.getElementById('authSuccess').style.display = 'none';
     clearAuthFormErrors();
@@ -1087,7 +1116,7 @@ function setupAuthHandlers() {
         }
     });
 
-    document.getElementById('registerFormElement').addEventListener('focusin', () => reportFunnelEvent('signup_form_opened'));
+    document.getElementById('registerFormElement').addEventListener('focusin', () => reportSignupStart());
     setupUsernameSuggestion();
 
     // Register form submission
@@ -1411,6 +1440,7 @@ function setupGoogleSignIn() {
     if (typeof document.querySelectorAll !== 'function') return;
     document.querySelectorAll('[data-google-signin]').forEach(link => {
         link.addEventListener('click', () => {
+            if (link.hasAttribute('data-google-signup')) reportSignupStart();
             const invite = getFriendInvite();
             link.href = invite ? `/auth/google/start?invite=${encodeURIComponent(invite)}` : '/auth/google/start';
         });

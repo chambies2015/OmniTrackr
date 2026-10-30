@@ -7,12 +7,14 @@ const vm = require('node:vm');
 const source = fs.readFileSync(path.join(__dirname, '../app/static/auth.js'), 'utf8');
 const now = 1900000000000;
 
-function setup({ search = '', publicShell = false, me = { id: 7, username: 'Riley' }, session = new Map(), known = false } = {}) {
+function setup({ search = '', publicShell = false, me = { id: 7, username: 'Riley' }, session = new Map(), known = false, signup = false } = {}) {
   const replaced = [];
   const requests = [];
   const history = [];
   const elements = new Map();
-  const links = [{ href: '/auth/google/start', listeners: {}, addEventListener(type, fn) { this.listeners[type] = fn; } }];
+  const links = [{ href: '/auth/google/start', listeners: {}, addEventListener(type, fn) { this.listeners[type] = fn; },
+    hasAttribute: name => signup && name === 'data-google-signup' }];
+  const beacons = [];
   const local = new Map(known ? [['omnitrackr_known_member', '1']] : []);
   const location = {
     pathname: '/', search, protocol: 'https:', origin: 'https://omnitrackr.xyz',
@@ -49,6 +51,8 @@ function setup({ search = '', publicShell = false, me = { id: 7, username: 'Rile
       requests.push({ url, options });
       return me ? { ok: true, json: async () => me } : { ok: false, status: 401, json: async () => ({}) };
     },
+    navigator: { sendBeacon: (url, blob) => { beacons.push({ url, blob }); return true; } },
+    Blob: class { constructor(parts) { this.text = parts.join(''); } },
     confirm: () => true,
     setTimeout: callback => callback(),
   });
@@ -59,7 +63,7 @@ function setup({ search = '', publicShell = false, me = { id: 7, username: 'Rile
   context.showLoginForm = () => { context.form = 'login'; };
   context.showRegisterForm = () => { context.form = 'register'; };
   context.updateUserDisplay = () => {};
-  return { context, replaced, requests, history, elements, links, local, session };
+  return { context, replaced, requests, history, elements, links, local, session, beacons };
 }
 
 test('returning from Google saves the member and opens the library', async () => {
@@ -108,4 +112,26 @@ test('the Google button carries a friend invite along', () => {
   s.context.initAuth();
   s.links[0].listeners.click();
   assert.equal(s.links[0].href, '/auth/google/start?invite=abcdefghijklmnop1234');
+});
+
+test('a Google sign-up button counts as starting to sign up, once per visit', () => {
+  const session = new Map();
+  const s = setup({ publicShell: true, session, signup: true });
+  s.context.initAuth();
+  s.links[0].listeners.click();
+  s.links[0].listeners.click();
+  assert.deepEqual(s.beacons.map(beacon => JSON.parse(beacon.blob.text).event), ['signup_form_opened']);
+  assert.deepEqual(JSON.parse(session.get('omnitrackr_funnel_sent')), ['signup_form_opened']);
+  // A later page in the same visit doesn't count it again.
+  const next = setup({ publicShell: true, session, signup: true });
+  next.context.initAuth();
+  next.links[0].listeners.click();
+  assert.equal(next.beacons.length, 0);
+});
+
+test('the Google log-in button is not a sign-up', () => {
+  const s = setup({ publicShell: true });
+  s.context.initAuth();
+  s.links[0].listeners.click();
+  assert.equal(s.beacons.length, 0);
 });

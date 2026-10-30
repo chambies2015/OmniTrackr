@@ -62,6 +62,12 @@
     if (report.sent && report.sent.has(event)) return;
     report.sent = report.sent || new Set();
     report.sent.add(event);
+    // Same once-per-visit rule as reportFunnelEvent in auth.js (title pages don't load it).
+    try {
+      const sent = JSON.parse(sessionStorage.getItem('omnitrackr_funnel_sent') || '[]');
+      if (Array.isArray(sent) && sent.includes(event)) return;
+      sessionStorage.setItem('omnitrackr_funnel_sent', JSON.stringify([...(Array.isArray(sent) ? sent : []), event].slice(-20)));
+    } catch (error) { /* storage blocked: once per page instead */ }
     try {
         // A beacon never delays the page or navigation.
         if (typeof navigator !== 'undefined' && typeof navigator.sendBeacon === 'function' && typeof Blob === 'function') {
@@ -86,7 +92,7 @@
     });
     document.querySelectorAll('[data-guest-bar]').forEach(bar => { bar.hidden = list.length === 0; });
     document.querySelectorAll('[data-guest-count]').forEach(counter => {
-      counter.textContent = list.length ? `${countText(list.length)}. Create a free account to keep it.` : '';
+      counter.textContent = list.length ? `${countText(list.length)}. Sign up free to keep ${list.length === 1 ? 'it' : 'them'}.` : '';
     });
   }
 

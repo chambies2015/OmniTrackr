@@ -313,34 +313,45 @@ GOOGLE_G_SVG = (
 )
 
 
-def google_signin_html(label: str) -> str:
+def google_signin_html(label: str, signup: bool = False) -> str:
     """The "Sign up / Log in with Google" button shown above the email forms."""
+    marker = " data-google-signup" if signup else ""
     return (
-        f'<a class="auth-google" href="/auth/google/start" rel="nofollow" data-google-signin>{GOOGLE_G_SVG}'
+        f'<a class="auth-google" href="/auth/google/start" rel="nofollow" data-google-signin{marker}>{GOOGLE_G_SVG}'
         f'<span>{label}</span></a><p class="auth-or"><span>or use your email</span></p>'
     )
 
 
 def hero_signup_html(google: bool) -> str:
-    """The sign-up buttons in the homepage hero.
+    """The quieter sign-up row under the homepage search.
 
-    With Google sign-in on, a visitor can make an account in one tap from the top of
-    the page; the email button opens the sign-up form in a pop-up (public-landing.js).
+    Searching for a title and saving it is the hero's main action (the save bar then
+    offers sign-up); this row is for visitors who already know they want an account.
+    The email button opens the sign-up form in a pop-up (public-landing.js).
     """
-    arrow = '<svg class="lp-icon" aria-hidden="true"><use href="#i-arrow"/></svg>'
     if not google:
         return (
-            '<div class="lp-cta-row">'
-            f'<button type="button" class="lp-btn lp-btn--primary" data-action="show-register-form" data-hero-signup>Create a free library {arrow}</button>'
-            '<a class="lp-btn lp-btn--ghost" href="/demo">Try it without an account</a></div>'
+            '<p class="lp-hero__alt">Already sure? '
+            '<button type="button" class="lp-linkbtn" data-action="show-register-form" data-hero-signup>Create a free library</button>'
+            ' or <a href="/demo">try the demo</a> first.</p>'
         )
     return (
-        '<div class="lp-cta-row lp-cta-row--signup">'
-        f'<a class="lp-btn lp-btn--google" href="/auth/google/start" rel="nofollow" data-google-signin data-hero-signup>{GOOGLE_G_SVG}'
+        '<div class="lp-hero__alt"><span class="lp-hero__alt-label">Already sure?</span>'
+        f'<a class="lp-btn lp-btn--google lp-btn--compact" href="/auth/google/start" rel="nofollow" data-google-signin data-google-signup data-hero-signup>{GOOGLE_G_SVG}'
         '<span>Continue with Google</span></a>'
-        f'<button type="button" class="lp-btn lp-btn--primary" data-action="show-register-form" data-hero-signup>Sign up with email {arrow}</button></div>'
-        '<p class="lp-hero__demo">Not ready yet? <a href="/demo">Try the demo</a>, no account needed.</p>'
+        '<button type="button" class="lp-btn lp-btn--ghost lp-btn--compact" data-action="show-register-form" data-hero-signup>Sign up with email</button>'
+        '<a class="lp-hero__alt-demo" href="/demo">or try the demo</a></div>'
     )
+
+
+def savebar_signup_html(google: bool) -> str:
+    """Sign-up buttons on the bar that appears once a guest has saved a title."""
+    email = ('<button type="button" class="lp-btn lp-btn--primary lp-btn--small" data-action="show-register-form">'
+             f'{"Use email" if google else "Keep my list, free"}</button>')
+    if not google:
+        return email
+    return (f'<a class="lp-btn lp-btn--google lp-btn--small" href="/auth/google/start" rel="nofollow" data-google-signin data-google-signup>{GOOGLE_G_SVG}'
+            '<span><span class="lp-savebar__wide">Continue with </span>Google</span></a>' + email)
 
 
 def season_link_html() -> str:
@@ -425,9 +436,18 @@ def public_root_html(html: str, request: Request | None = None) -> str:
         if "<!--SEASON_LINK-->" in page:
             page = page.replace("<!--SEASON_LINK-->", season_link_html(), 1)
         from . import google_signin
+        google = google_signin.configured()
         for form, label in (("login", "Log in with Google"), ("register", "Sign up with Google")):
-            page = page.replace(f"<!--GOOGLE_SIGNIN:{form}-->", google_signin_html(label) if google_signin.configured() else "", 1)
-        page = page.replace("<!--HERO_SIGNUP-->", hero_signup_html(google_signin.configured()), 1)
+            page = page.replace(f"<!--GOOGLE_SIGNIN:{form}-->", google_signin_html(label, form == "register") if google else "", 1)
+        page = page.replace("<!--HERO_SIGNUP-->", hero_signup_html(google), 1)
+        page = page.replace("<!--SAVEBAR_SIGNUP-->", savebar_signup_html(google), 1)
+        if "<!--HERO_QUICK_PICKS-->" in page:
+            try:
+                from . import guest_picks
+                quick = guest_picks.hero_quick_picks()
+            except Exception:
+                quick = ""  # The homepage never depends on this row.
+            page = page.replace("<!--HERO_QUICK_PICKS-->", quick, 1)
         return apply_site_chrome(page, login_action=True)
 
     landing_marker = "  <!-- Landing Page -->"
@@ -709,9 +729,12 @@ for route in reviews.router.routes:
         bind_rate_limited_endpoint(route, rate_limited_review_report)
 app.include_router(reviews.router)
 rate_limited_funnel_event = limiter.limit("30/minute")(site_stats.record_funnel_event)
+rate_limited_page_visit = limiter.limit("60/minute")(site_stats.record_page_visit)
 for route in site_stats.router.routes:
     if getattr(route, "path", None) == "/api/funnel":
         bind_rate_limited_endpoint(route, rate_limited_funnel_event)
+    elif getattr(route, "path", None) == "/api/visit":
+        bind_rate_limited_endpoint(route, rate_limited_page_visit)
 app.include_router(site_stats.router)
 app.include_router(for_you.router)
 rate_limited_guest_import = limiter.limit("10/minute")(titles.import_guest_list)

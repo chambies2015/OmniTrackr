@@ -188,8 +188,7 @@ def _finish_login(user: models.User, request: Request, db: Session, now_utc: dat
         seen_at = datetime.combine(user.last_seen_on, datetime.min.time())
         if previous_login_at is None or seen_at > previous_login_at:
             previous_login_at = seen_at
-    if not user.login_count:
-        funnel.record("first_login", request)
+    funnel.record_first_login(user, request)
     days_away = None
     if previous_login_at:
         days_away = max(0, (now_utc - previous_login_at).days)
@@ -299,8 +298,7 @@ def _sign_in_after_verification(request: Request, user: models.User, db: Session
     if pending != user.id or not user.is_active:
         # A different browser (often the mail app's): log in as usual, with the email filled in.
         return {"message": message, "signed_in": False, "login_hint": user.email}
-    if not user.login_count:
-        funnel.record("first_login", request)
+    funnel.record_first_login(user, request)
     user.last_login_at = datetime.now(timezone.utc).replace(tzinfo=None)
     user.login_count = (user.login_count or 0) + 1
     visits.mark_login(user, user.last_login_at)
@@ -603,7 +601,10 @@ async def google_start(request: Request, invite: str | None = None):
     """Send the visitor to Google's account chooser (only when the owner configured it)."""
     if not google_signin.configured():
         return _google_failure("unavailable")
-    funnel.record("google_signin_started", request)
+    if request.headers.get("sec-fetch-user") == "?1":
+        # Only a click in a browser sends this; link checkers and scanners that
+        # follow the button's URL don't, and used to make up most of this count.
+        funnel.record("google_signin_started", request)
     state, cookie_value = google_signin.new_state(google_signin.valid_invite(invite),
                                                   google_signin.redirect_uri(request))
     response = _google_redirect(google_signin.authorize_url(state))
@@ -677,8 +678,7 @@ async def google_callback(
                                samesite="lax", secure=auth.ENVIRONMENT == "production", httponly=True)
         return response
 
-    if not user.login_count:
-        funnel.record("first_login", request)
+    funnel.record_first_login(user, request)
     user.last_login_at = datetime.now(timezone.utc).replace(tzinfo=None)
     user.login_count = (user.login_count or 0) + 1
     visits.mark_login(user, user.last_login_at)

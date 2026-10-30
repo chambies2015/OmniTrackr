@@ -15,7 +15,7 @@ from . import title_pages
 PICKS_LIMIT = 12
 CACHE_SECONDS = 600
 KIND_ORDER = ("movie", "tv", "anime", "game", "book", "album")
-_cache = {"at": 0.0, "html": ""}
+_cache = {"at": 0.0, "html": "", "quick": ""}
 _lock = threading.Lock()
 
 
@@ -54,35 +54,63 @@ def section_html(items: list[dict]) -> str:
         '<h2 id="lp-picks-title">Start your list in ten seconds</h2>'
         '<p class="lp-picks__lead">Tap anything you’ve seen, played or read, or want to. Popular with OmniTrackr members.</p></div></div>'
         f'<ul class="lp-picks__grid">{"".join(tiles)}</ul>'
-        '<div class="lp-picks__bar" data-guest-bar hidden><p class="lp-picks__count" data-guest-count role="status" aria-live="polite"></p>'
-        '<button type="button" class="lp-btn lp-btn--primary" data-action="show-register-form">Save my list, free '
-        '<svg class="lp-icon" aria-hidden="true"><use href="#i-arrow"/></svg></button></div>'
-        '</div></section>'
+        '</div></section>'  # The page's save bar (public_landing.html) offers sign-up once something is saved.
     )
 
 
-def homepage_section(session_factory=None) -> str:
-    """Cached HTML for the homepage (refreshed every 10 minutes; never raises)."""
+QUICK_PICKS = 4
+
+
+def quick_picks_html(items: list[dict]) -> str:
+    """A row of popular titles under the hero search: one tap saves one (guest-list.js)."""
+    if len(items) < QUICK_PICKS:
+        return ""
+    buttons = []
+    for item in items[:QUICK_PICKS]:
+        slug = item["url"].rsplit("/", 1)[1]
+        buttons.append(
+            f'<li><button type="button" class="lp-quick__pick" aria-pressed="false" data-guest-kind="{escape(item["kind"], quote=True)}" '
+            f'data-guest-slug="{escape(slug, quote=True)}" data-guest-title="{escape(item["title"], quote=True)}" '
+            f'aria-label="Save {escape(item["title"], quote=True)} ({escape(item["label"], quote=True)})">'
+            f'<span class="lp-quick__title">{escape(item["title"])}</span></button></li>'
+        )
+    return f'<div class="lp-quick"><p class="lp-quick__label">Or tap one</p><ul class="lp-quick__list">{"".join(buttons)}</ul></div>'
+
+
+
+def _cached(session_factory=None) -> dict:
+    """Both homepage blocks, rebuilt every 10 minutes from one query; never raises."""
     now = time.monotonic()
     with _lock:
-        if _cache["html"] is not None and now - _cache["at"] < CACHE_SECONDS and _cache["at"]:
-            return _cache["html"]
-    html = ""
+        if _cache["at"] and now - _cache["at"] < CACHE_SECONDS:
+            return _cache
+    section = quick = ""
     try:
         if session_factory is None:
             from .database import SessionLocal as session_factory
         db = session_factory()
         try:
-            html = section_html(picks(db))
+            items = picks(db)
+            section, quick = section_html(items), quick_picks_html(items)
         finally:
             db.close()
     except Exception:
-        html = ""
+        section = quick = ""
     with _lock:
-        _cache["at"], _cache["html"] = now, html
-    return html
+        _cache["at"], _cache["html"], _cache["quick"] = now, section, quick
+        return dict(_cache)
+
+
+def homepage_section(session_factory=None) -> str:
+    """Cached HTML for the homepage's "Start your list" section."""
+    return _cached(session_factory)["html"]
+
+
+def hero_quick_picks(session_factory=None) -> str:
+    """Cached HTML for the popular titles under the hero search."""
+    return _cached(session_factory)["quick"]
 
 
 def clear_cache() -> None:
     with _lock:
-        _cache["at"], _cache["html"] = 0.0, ""
+        _cache["at"], _cache["html"], _cache["quick"] = 0.0, "", ""
