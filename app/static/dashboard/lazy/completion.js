@@ -66,7 +66,7 @@ async function openCompletionMoment(category, itemId) {
       body: JSON.stringify({ category, item_id: itemId }),
     });
     if (response.status === 409) {
-      alert('Mark this item finished before adding a reflection.');
+      showNotice('Mark this item finished before adding a reflection.');
       return;
     }
     if (!response.ok) throw new Error('Unable to start reflection');
@@ -93,7 +93,7 @@ async function openCompletionMoment(category, itemId) {
     updateCompletionReviewMeter();
     document.getElementById('completionRitualModal').style.display = 'flex';
   } catch (error) {
-    alert('Could not open the finish ritual. Please try again.');
+    showNotice('Could not open the finish ritual. Please try again.');
   }
 }
 
@@ -143,7 +143,7 @@ async function saveCompletionRitual() {
       result = await saveCompletionReview(momentId, review, document.getElementById('completionReviewPublic').checked,
         Boolean(spoilerBox && spoilerBox.checked));
     } catch (error) {
-      alert('Your reflection was saved, but the review could not be. Your text is still here; please try again.');
+      showNotice('Your reflection was saved, but the review could not be. Your text is still here; please try again.');
       return;
     }
     if (result.conflict) {
@@ -160,7 +160,7 @@ async function saveCompletionRitual() {
     const skip = document.getElementById('completionRitualSkip');
     if (skip) skip.hidden = true;
   } catch (error) {
-    alert('Could not save your reflection. Please try again.');
+    showNotice('Could not save your reflection. Please try again.');
   } finally {
     completionSaving = false;
   }

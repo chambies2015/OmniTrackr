@@ -45,7 +45,7 @@ function setup() {
     LIBRARY_SEARCH_SOURCES: categories.map(tab => ({ tab, input: tab + 'Search' })),
     libraryPages: new Map(), libraryFilters: new Map(), renderLibraryFilters() {}, libraryPageConfig: tab => [tab + 'Table', tab + 'Sort'],
     getTabButton: tab => tabs.get(tab),
-    window: {}, alert: value => alerts.push(value),
+    window: {}, showNotice: value => alerts.push(value),
     document: {
       getElementById: get, createElement: tag => new Element(tag),
       querySelector: selector => { const match = selector.match(/data-next-up-category="([a-z-]+)".*data-next-up-item-id="(\d+)"/); const row = match && rows.get(`${match[1]}:${match[2]}`); return row ? { closest: () => row } : null; },

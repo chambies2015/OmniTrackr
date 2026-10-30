@@ -3,6 +3,8 @@
    loadRecommenders(); everything else stays in here. Only the owner ever sees it. */
 (() => {
   'use strict';
+  // The dashboard's corner notice (dashboard/notices.js), or a plain alert without it.
+  const notice = message => (typeof window.showNotice === 'function' ? window.showNotice(message) : window.alert(message));
   const TABLES = {
     movieTable: 'movies', tvShowTable: 'tv-shows', animeTable: 'anime', videoGameTable: 'video-games',
     musicTable: 'music', bookTable: 'books', mangaTable: 'manga', podcastTable: 'podcasts',
@@ -219,7 +221,7 @@
   }
   async function openEditor(category, id, title, trigger) {
     if (typeof editingRowId !== 'undefined' && editingRowId !== null) {
-      alert('Save or cancel your current edit first.');
+      notice('Save or cancel your current edit first.');
       return;
     }
     editor = editor || buildEditor();

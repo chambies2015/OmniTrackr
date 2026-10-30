@@ -2,7 +2,7 @@ async function searchMangaMetadata() {
   const titleInput = document.getElementById('mangaTitle');
   const title = titleInput.value.trim();
   if (!title) {
-    alert('Please enter a manga title to search.');
+    showNotice('Please enter a manga title to search.');
     return;
   }
 
@@ -18,21 +18,21 @@ async function searchMangaMetadata() {
       headers: { 'Accept': 'application/json' },
     });
     if (!res.ok) {
-      alert(res.status === 429 ? 'MyAnimeList search is busy. Please try again in a minute.'
+      showNotice(res.status === 429 ? 'MyAnimeList search is busy. Please try again in a minute.'
         : res.status === 504 ? 'Search request timed out. Please try again.' : 'Failed to search for manga. Please try again.');
       return;
     }
     const data = await res.json();
     const results = (data && data.results) || [];
     if (!results.length) {
-      alert('No results found. Try the original or English title, or fill in the details yourself.');
+      showNotice('No results found. Try the original or English title, or fill in the details yourself.');
     } else if (results.length === 1) {
       selectMangaResult(results[0]);
     } else {
       openMangaSearchModal(results);
     }
   } catch (error) {
-    alert(error.name === 'AbortError' ? 'Search request timed out. Please try again.' : 'Error searching for manga: ' + error.message);
+    showNotice(error.name === 'AbortError' ? 'Search request timed out. Please try again.' : 'Error searching for manga: ' + error.message);
   } finally {
     clearTimeout(timeoutId);
     searchBtn.disabled = false;

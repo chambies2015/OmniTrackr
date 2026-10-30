@@ -3,7 +3,7 @@ async function searchMusicMetadata() {
   const title = titleInput.value.trim();
   
   if (!title) {
-    alert('Please enter a music title to search.');
+    showNotice('Please enter a music title to search.');
     return;
   }
   
@@ -30,9 +30,9 @@ async function searchMusicMetadata() {
     } catch (fetchError) {
       clearTimeout(timeoutId);
       if (fetchError.name === 'AbortError') {
-        alert('Search request timed out. Please try again.');
+        showNotice('Search request timed out. Please try again.');
       } else {
-        alert('Network error: ' + fetchError.message);
+        showNotice("Couldn't reach the search service. Check your connection and try again.");
       }
       searchBtn.disabled = false;
       searchBtn.textContent = originalText;
@@ -41,13 +41,13 @@ async function searchMusicMetadata() {
     
     if (!res.ok) {
       if (res.status === 429) {
-        alert('iTunes API rate limit reached. Please try again later.');
+        showNotice('Music search is busy. Please try again in a minute.');
       } else if (res.status === 503) {
-        alert('iTunes API not available.');
+        showNotice('Music search is unavailable right now. You can still fill in the details yourself.');
       } else if (res.status === 504) {
-        alert('Search request timed out. Please try again.');
+        showNotice('Search request timed out. Please try again.');
       } else {
-        alert('Failed to search for music. Please try again.');
+        showNotice('Music search failed. Please try again.');
       }
       searchBtn.disabled = false;
       searchBtn.textContent = originalText;
@@ -57,7 +57,7 @@ async function searchMusicMetadata() {
     const data = await res.json();
     
     if (!data || !data.results || data.results.length === 0) {
-      alert('No results found. Please try a different search term.');
+      showNotice('No results for that search. Try a different spelling, or fill in the details yourself.');
       searchBtn.disabled = false;
       searchBtn.textContent = originalText;
       return;
@@ -76,7 +76,7 @@ async function searchMusicMetadata() {
     searchBtn.textContent = originalText;
   } catch (err) {
     console.error('Error searching music metadata:', err);
-    alert('An error occurred while searching. Please try again.');
+    showNotice('Music search failed. Please try again.');
     searchBtn.disabled = false;
     searchBtn.textContent = originalText;
   }

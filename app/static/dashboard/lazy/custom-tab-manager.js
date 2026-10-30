@@ -14,7 +14,7 @@ async function loadCustomTabsList() {
     
     const listContainer = document.getElementById('customTabsList');
     if (listContainer) {
-      listContainer.innerHTML = '<div class="custom-tab-list-status">Loading...</div>';
+      listContainer.innerHTML = '<div class="custom-tab-list-status custom-tab-list-status-muted">Loading your tabs…</div>';
     }
     
     const response = await fetch(`${API_BASE}/custom-tabs/`, authFetchOptions());
@@ -23,7 +23,7 @@ async function loadCustomTabsList() {
       const tabs = await response.json();
       if (listContainer) {
         if (tabs.length === 0) {
-          listContainer.innerHTML = '<div class="custom-tab-list-status custom-tab-list-status-muted">No custom tabs yet. Create your first one above!</div>';
+          listContainer.innerHTML = '<div class="custom-tab-list-status custom-tab-list-status-muted">No custom tabs yet. Make one for anything the built-in shelves don\'t cover, like board games or concerts.</div>';
         } else {
           listContainer.innerHTML = tabs.map(tab => {
             return `
@@ -45,14 +45,14 @@ async function loadCustomTabsList() {
       }
     } else {
       if (listContainer) {
-        listContainer.innerHTML = '<div class="custom-tab-list-status custom-tab-list-status-danger">Failed to load custom tabs</div>';
+        listContainer.innerHTML = '<div class="custom-tab-list-status custom-tab-list-status-danger">Your custom tabs didn\'t load. Close this window and open it again to retry.</div>';
       }
     }
   } catch (error) {
     console.error('Error loading custom tabs list:', error);
     const listContainer = document.getElementById('customTabsList');
     if (listContainer) {
-      listContainer.innerHTML = '<div class="custom-tab-list-status custom-tab-list-status-danger">Error loading custom tabs</div>';
+      listContainer.innerHTML = '<div class="custom-tab-list-status custom-tab-list-status-danger">Your custom tabs didn\'t load. Check your connection, then close this window and open it again.</div>';
     }
   }
 }
@@ -81,7 +81,7 @@ function addCustomTabField(fieldData = null) {
   
   const existingFields = Array.from(container.children).length;
   if (existingFields >= 30) {
-    alert('Maximum of 30 fields allowed per tab');
+    showNotice('A tab can have up to 30 fields.');
     return;
   }
   

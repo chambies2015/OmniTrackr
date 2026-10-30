@@ -6,7 +6,7 @@ async function deleteCustomTab(tabId) {
   
   try {
     if (!hasStoredAuth()) {
-      alert('You must be logged in to delete custom tabs');
+      showNotice('You must be logged in to delete custom tabs');
       return;
     }
     
@@ -28,12 +28,12 @@ async function deleteCustomTab(tabId) {
         switchTab('movies');
       }
     } else {
-      const errorData = await response.json().catch(() => ({ detail: 'Failed to delete custom tab' }));
-      alert(errorData.detail || 'Failed to delete custom tab');
+      const errorData = await response.json().catch(() => ({}));
+      showNotice(apiErrorText(errorData, 'Could not delete custom tab. Please try again.'));
     }
   } catch (error) {
     console.error('Error deleting custom tab:', error);
-    alert('Failed to delete custom tab. Please try again.');
+    showNotice('Could not delete custom tab. Please try again.');
   }
 }
 
@@ -59,13 +59,13 @@ function resetCustomTabFormState() {
 async function openEditCustomTab(tabId) {
   try {
     if (!hasStoredAuth()) {
-      alert('You must be logged in to edit custom tabs');
+      showNotice('You must be logged in to edit custom tabs');
       return;
     }
     const response = await fetch(`${API_BASE}/custom-tabs/${tabId}`, authFetchOptions());
     if (!response.ok) {
-      const errorData = await response.json().catch(() => ({ detail: 'Failed to load custom tab' }));
-      alert(errorData.detail || 'Failed to load custom tab');
+      const errorData = await response.json().catch(() => ({}));
+      showNotice(apiErrorText(errorData, 'Could not load custom tab. Please try again.'));
       return;
     }
     const tab = await response.json();
@@ -87,7 +87,7 @@ async function openEditCustomTab(tabId) {
     if (submitBtn) submitBtn.textContent = 'Update Tab';
   } catch (error) {
     console.error('Error loading custom tab for edit:', error);
-    alert('Failed to load custom tab. Please try again.');
+    showNotice('Could not load custom tab. Please try again.');
   }
 }
 

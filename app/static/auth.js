@@ -1399,6 +1399,12 @@ function initAuth() {
     }
 }
 
+// The dashboard's corner notices when they are loaded, a plain alert otherwise.
+function authNotice(message, tone) {
+    if (typeof showNotice === 'function') showNotice(message, tone);
+    else alert(message);
+}
+
 async function handleEmailChangeVerification(token) {
     // If user is logged in, show success message and reload account info
     if (isAuthenticated()) {
@@ -1407,7 +1413,7 @@ async function handleEmailChangeVerification(token) {
             const data = await response.json();
             
             if (response.ok) {
-                alert('✅ ' + (data.message || 'Email changed successfully!'));
+                authNotice(data.message || 'Your email address is updated.', 'success');
                 // Reload account info if modal is open
                 if (typeof loadAccountInfo === 'function') {
                     await loadAccountInfo();
@@ -1415,10 +1421,10 @@ async function handleEmailChangeVerification(token) {
                 // Update user display
                 updateUserDisplay();
             } else {
-                alert('❌ ' + (data.detail || 'Email change verification failed'));
+                authNotice(typeof data.detail === 'string' ? data.detail : 'That email change link did not work. Request a new one from Account settings.');
             }
         } catch (error) {
-            alert('❌ Failed to verify email change. Please try again.');
+            authNotice('Could not confirm your new email address. Please try again.');
         }
         
         // Clean URL

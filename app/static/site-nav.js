@@ -17,7 +17,9 @@
 
 /* Title search from the header: a dialog that looks up titles members track
    (GET /api/titles/search) and links to their pages. Results are drawn with
-   textContent only. Press "/" anywhere outside a text field to open it. */
+   textContent only. Press "/" anywhere outside a text field to open it. Other
+   links marked data-site-search-open (the not-found page) open it too, filled in
+   with their data-search-hint. */
 (function () {
   const trigger = document.querySelector('.site-search[data-site-search]');
   if (!trigger || typeof window.HTMLDialogElement !== 'function') return;
@@ -34,6 +36,7 @@
   let timer = null;
   let request = 0;
   let selected = -1;
+  let opener = trigger;
 
   function el(tag, className, text) {
     const node = document.createElement(tag);
@@ -167,23 +170,30 @@
       }
     });
     dialog.addEventListener('click', function (event) { if (event.target === dialog) dialog.close(); });
-    dialog.addEventListener('close', function () { trigger.focus(); });
+    dialog.addEventListener('close', function () { opener.focus(); });
   }
 
-  function open() {
+  function open(from, hint) {
     if (!dialog) build();
     if (dialog.open) return;
-    input.value = '';
-    starters();
+    opener = from || trigger;
+    const text = (hint || '').trim();
+    input.value = text;
+    if (text.length >= 2) search(text); else starters();
     dialog.showModal();
     input.focus();
   }
 
-  trigger.addEventListener('click', function (event) {
-    if (event.metaKey || event.ctrlKey || event.shiftKey || event.button === 1) return;
-    event.preventDefault();
-    open();
-  });
+  function bindOpener(link) {
+    link.addEventListener('click', function (event) {
+      if (event.metaKey || event.ctrlKey || event.shiftKey || event.button === 1) return;
+      event.preventDefault();
+      open(link, link.dataset.searchHint);
+    });
+  }
+
+  bindOpener(trigger);
+  document.querySelectorAll('[data-site-search-open]').forEach(bindOpener);
   document.addEventListener('keydown', function (event) {
     if (event.key !== '/' || event.metaKey || event.ctrlKey || event.altKey) return;
     const active = document.activeElement;

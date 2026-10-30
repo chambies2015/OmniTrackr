@@ -188,26 +188,26 @@ async function createRecommendationRequest(event) {
 
 async function copyRecommendationLink(sharePath) {
   const link = new URL(sharePath, location.origin).href;
-  try { await navigator.clipboard.writeText(link); alert('Guest link copied. It contains access to this one postcard only.'); }
+  try { await navigator.clipboard.writeText(link); showNotice('Guest link copied. It opens this one postcard only.', 'success'); }
   catch (error) { window.prompt('Copy this guest link:', link); }
 }
 
 async function closeRecommendationRequest(requestId) {
   if (!confirm('Close this postcard? Existing replies stay in your inbox, but the link will stop accepting new ones.')) return;
   const response = await authenticatedFetch(`${API_BASE}/recommendations/requests/${requestId}/close`, { method: 'POST' });
-  if (!response.ok) { alert(await recommendationError(response, 'Could not close the postcard.')); return; }
+  if (!response.ok) { showNotice(await recommendationError(response, 'Could not close the postcard.')); return; }
   loadRecommendationPostcards();
 }
 
 async function inviteRecommendationFriend(requestId) {
   const select = document.getElementById(`recommendationFriend-${requestId}`);
   const friendId = Number(select?.value);
-  if (!friendId) { alert('Choose a friend first.'); return; }
+  if (!friendId) { showNotice('Choose a friend first.'); return; }
   const response = await authenticatedFetch(`${API_BASE}/recommendations/requests/${requestId}/invite`, {
     method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ friend_id: friendId }),
   });
-  if (!response.ok) { alert(await recommendationError(response, 'Could not send the invitation.')); return; }
-  alert('Postcard invitation sent.');
+  if (!response.ok) { showNotice(await recommendationError(response, 'Could not send the invitation.')); return; }
+  showNotice('Postcard invitation sent.', 'success');
   loadRecommendationPostcards();
 }
 
@@ -215,7 +215,7 @@ async function triageRecommendation(submissionId, action) {
   const response = await authenticatedFetch(`${API_BASE}/recommendations/submissions/${submissionId}/triage`, {
     method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ action }),
   });
-  if (!response.ok) { alert(await recommendationError(response, 'Could not update that recommendation.')); return; }
+  if (!response.ok) { showNotice(await recommendationError(response, 'Could not update that recommendation.')); return; }
   librarySearchIndexReady = false;
   loadRecommendationPostcards();
 }

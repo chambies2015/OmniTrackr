@@ -117,10 +117,10 @@ window.dismissNotification = async function (notificationId) {
       loadNotifications();
       updateNotificationCount();
     } else {
-      alert('Failed to dismiss notification');
+      showNotice('Could not dismiss that notification. Please try again.');
     }
   } catch (error) {
-    alert('Failed to dismiss notification. Please try again.');
+    showNotice('Could not dismiss that notification. Please try again.');
   }
 }
 
