@@ -242,10 +242,9 @@ def _device_serializer() -> URLSafeTimedSerializer:
 
 
 def _device_marker(user: models.User, row: models.UserTwoFactor) -> str:
-    # A new password, turning two-factor off and on, or "forget remembered browsers"
-    # all change the marker, so every remembered browser asks for a code again.
-    material = f"{user.id}:{row.enabled_at.isoformat() if row.enabled_at else ''}:{row.trusted_epoch or 0}:" \
-               f"{auth.password_fingerprint(user.hashed_password)}"
+    # Turning two-factor off and on, or "forget remembered browsers", changes the
+    # marker, so every remembered browser asks for a code again.
+    material = f"{user.id}:{row.enabled_at.isoformat() if row.enabled_at else ''}:{row.trusted_epoch or 0}"
     return hmac.new(_derived_key(b"device"), material.encode("utf-8"), hashlib.sha256).hexdigest()[:32]
 
 
@@ -256,12 +255,21 @@ def remembered_device(value: Optional[str], user: models.User, row: models.UserT
         data = _device_serializer().loads(value, max_age=DEVICE_MAX_AGE_SECONDS)
     except (BadSignature, ValueError):
         return False
-    return (isinstance(data, dict) and data.get("uid") == user.id
-            and isinstance(data.get("m"), str) and hmac.compare_digest(data["m"], _device_marker(user, row)))
+    if not isinstance(data, dict) or data.get("uid") != user.id:
+        return False
+    marker, fingerprint = data.get("m"), data.get("pv")
+    # The cookie is signed, so "pv" is the password fingerprint from when it was set.
+    # A new password since then means the browser asks for a code again.
+    return (isinstance(marker, str) and isinstance(fingerprint, str)
+            and hmac.compare_digest(marker, _device_marker(user, row))
+            and hmac.compare_digest(fingerprint, auth.password_fingerprint(user.hashed_password)))
 
 
 def set_device_cookie(response, user: models.User, row: models.UserTwoFactor) -> None:
-    value = _device_serializer().dumps({"uid": int(user.id), "m": _device_marker(user, row)})
+    value = _device_serializer().dumps({
+        "uid": int(user.id), "m": _device_marker(user, row),
+        "pv": auth.password_fingerprint(user.hashed_password),
+    })
     response.set_cookie(key=DEVICE_COOKIE, value=value, max_age=DEVICE_MAX_AGE_SECONDS,
                         httponly=True, secure=auth.ENVIRONMENT == "production", samesite="lax",
                         path=COOKIE_PATH)
