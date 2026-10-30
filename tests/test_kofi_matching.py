@@ -313,3 +313,10 @@ def test_migration_adds_columns_and_keeps_existing_payments(monkeypatch, tmp_pat
     with engine.connect() as conn:
         row = conn.execute(text("SELECT message_id, email_hash, test, dismissed_at, user_id FROM kofi_payments")).one()
     assert tuple(row) == ("old", "abc", 0, None, None)
+
+
+def test_email_check_is_plain_string_work():
+    assert supporters.looks_like_email("fan@example.com")
+    assert not supporters.looks_like_email("fan")
+    assert not supporters.looks_like_email("a@b@c.com")
+    assert not supporters.looks_like_email("a@" + "!" * 5000)

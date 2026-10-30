@@ -420,7 +420,12 @@ def set_aside(db: Session, message_id: str, dismissed: bool) -> models.KofiPayme
 # ---------------------------------------------------------------- member claims
 
 def looks_like_email(value: str) -> bool:
-    return bool(re.fullmatch(r"[^@\s]+@[^@\s]+\.[^@\s]+", value or ""))
+    """One @, something before it, and a dot inside the part after it. String checks, no regex backtracking."""
+    value = value or ""
+    if len(value) > 254 or any(ch.isspace() for ch in value) or value.count("@") != 1:
+        return False
+    local, _, domain = value.partition("@")
+    return bool(local) and "." in domain.strip(".")
 
 
 def claim_token(user_id: int, email: str) -> str:
