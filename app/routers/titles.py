@@ -18,7 +18,7 @@ from sqlalchemy import func
 from sqlalchemy.orm import Session
 from starlette.concurrency import run_in_threadpool
 
-from .. import models, pick, review_spoilers, supporters, title_charts, title_metadata, title_pages, title_search, where_to_watch
+from .. import models, pick, review_spoilers, supporters, title_charts, title_metadata, title_pages, title_search, trending, where_to_watch
 from ..auth import AUTH_COOKIE_NAME
 from ..csp import strict_html_response
 from ..dependencies import get_current_user, get_db
@@ -27,7 +27,7 @@ from ..site_chrome import apply_site_chrome, editorial_picks, message_page, view
 
 router = APIRouter(tags=["titles"])
 SITE_URL = os.getenv("SITE_URL", "https://omnitrackr.xyz").rstrip("/")
-CSS_VERSION = "20261028-people-1"
+CSS_VERSION = "20261030-trending-1"
 JS_VERSION = "20261025-title-refresh-1"
 SCHEMA_TYPES = {"movie": "Movie", "tv": "TVSeries", "anime": "TVSeries", "game": "VideoGame", "album": "MusicAlbum", "book": "Book",
                 "manga": "Book", "podcast": "PodcastSeries", "audiobook": "Audiobook"}
@@ -381,12 +381,18 @@ def _community_html(group, summary: dict) -> str:
 
 
 def _rank_html(group, summary: dict) -> str:
+    badges = ""
     rank = summary.get("chart_rank")
-    if not rank:
-        return ""
-    return (f'<a class="title-rank" href="/titles/{_e(group.kind)}#rank-{_e(rank["rank"])}">'
-            f'<strong>#{_e(rank["rank"])}</strong> highest-rated {_e(_singular(group.kind))} on OmniTrackr '
-            f'<span aria-hidden="true">→</span></a>')
+    if rank:
+        badges += (f'<a class="title-rank" href="/titles/{_e(group.kind)}#rank-{_e(rank["rank"])}">'
+                   f'<strong>#{_e(rank["rank"])}</strong> highest-rated {_e(_singular(group.kind))} on OmniTrackr '
+                   f'<span aria-hidden="true">→</span></a>')
+    hot = summary.get("trending_rank")
+    if hot:
+        badges += (f'<a class="title-rank title-rank--trending" href="/trending/{_e(group.kind)}#rank-{_e(hot["rank"])}">'
+                   f'<strong>#{_e(hot["rank"])}</strong> trending {_e(_singular(group.kind))} this week '
+                   f'<span aria-hidden="true">→</span></a>')
+    return badges
 
 
 def _spread_html(group, summary: dict) -> str:
@@ -782,6 +788,7 @@ async def title_page(kind: str, slug: str, request: Request, db: Session = Depen
 
     def finish():
         summary["chart_rank"] = title_charts.rank_of(db, kind, group.path)
+        summary["trending_rank"] = trending.rank_of(db, kind, group.path)
         from .title_discussions import title_section_html
         summary["discussions_html"] = title_section_html(db, group)
         from .. import people_pages
