@@ -833,6 +833,59 @@
     }
   }
 
+  function renderWelcome(data) {
+    const info = data.welcome;
+    const card = $('welcomeCard');
+    if (!card) return;
+    card.hidden = !info;
+    if (!info) return;
+    const rows = [
+      ['Status', COMEBACK_STATES[info.status] || info.status],
+      ['Started', info.started_at ? `${dateTime(info.started_at)} (${number(info.joined_since_start)} members joined since)` : 'Not yet'],
+      ['Members due now', number(info.due_now)],
+      ...info.steps.map(step => [`${step.label}, last 30 days`, number(step.sent_30d)]),
+      [`Came back within ${info.came_back_window_days} days of one`, `${number(info.came_back)} of ${number(info.sent_30d)}`],
+      ['Daily limit', `${number(info.daily_limit)} (shares the daily email budget, so sign-up and reset emails always go out)`],
+    ];
+    if (!info.mail_configured) rows.push(['Email', 'NOT configured on this server: nothing can be sent']);
+    const list = $('welcomeList');
+    list.replaceChildren();
+    rows.forEach(([label, value]) => {
+      const row = el('div');
+      row.append(el('dt', '', label), el('dd', '', String(value)));
+      list.appendChild(row);
+    });
+    $('welcomeStart').hidden = info.status === 'sending';
+    $('welcomeStart').textContent = info.status === 'paused' ? 'Resume sending' : 'Start sending';
+    $('welcomePause').hidden = info.status !== 'sending';
+  }
+
+  async function welcomeAction(action) {
+    const status = $('welcomeStatus');
+    if (action === 'start' && !window.confirm('Turn on the welcome emails? Members who sign up from now on get three short emails in their first week, up to 20 a day. Nobody who already has an account gets them. You can pause any time.')) return;
+    const buttons = document.querySelectorAll('[data-welcome]');
+    buttons.forEach(button => { button.disabled = true; });
+    status.textContent = action === 'test' ? 'Sending all three to your email…' : 'Saving…';
+    try {
+      const response = await fetch('/api/site-stats/welcome', {
+        method: 'POST', credentials: 'same-origin',
+        headers: { ...authHeaders(), 'Content-Type': 'application/json' },
+        body: JSON.stringify({ action }),
+      });
+      const result = await response.json().catch(() => ({}));
+      if (!response.ok) throw new Error(result.detail || `HTTP ${response.status}`);
+      if (state.data) {
+        state.data.welcome = result;
+        renderWelcome(state.data);
+      }
+      status.textContent = result.message || (action === 'start' ? 'On. Members who join from now on get the first one a day after signing up.' : 'Paused. Nothing more will be sent until you resume.');
+    } catch (error) {
+      status.textContent = `Couldn't do that: ${error.message}`;
+    } finally {
+      buttons.forEach(button => { button.disabled = false; });
+    }
+  }
+
   function render(data) {
     state.data = data;
     $('statsUpdated').textContent = `Updated ${dateTime(data.generated_at)} · last ${data.days} days · signed in as ${data.viewer}`;
@@ -851,6 +904,7 @@
     renderEditor(data);
     renderAnnouncement(data);
     renderComeback(data);
+    renderWelcome(data);
   }
 
   // ---------------------------------------------------------------- report
@@ -875,6 +929,7 @@
       ...growthReport(data),
       data.announcement ? `What's new email: ${data.announcement.status}, ${number(data.announcement.sent)} sent, ${number(data.announcement.remaining)} still to send, ${number(data.announcement.opted_out)} unsubscribed from updates.` : '',
       data.comeback ? `Come-back email: ${data.comeback.status}, ${number(data.comeback.due_now)} members due now, ${number(data.comeback.sent_30d)} sent in 30 days, ${number(data.comeback.came_back)} came back within ${data.comeback.came_back_window_days} days of one.` : '',
+      data.welcome ? `Welcome emails: ${data.welcome.status}, ${number(data.welcome.sent_30d)} sent in 30 days, ${number(data.welcome.came_back)} came back within ${data.welcome.came_back_window_days} days of one.` : '',
       data.retention ? `Return features: ${number(data.retention.weekly_email_subscribers)} weekly email subscribers, ${number(data.retention.public_profiles)} public profiles on.` : '',
       '',
       `Libraries: ${number(insights.content.total_items)} titles (${insights.content.categories.map(category => `${category.label} ${number(category.total)}`).join(', ')}), ${number(insights.content.public_reviews)} public reviews, ${number(insights.content.custom_items)} custom-tab items.`,
@@ -974,6 +1029,9 @@
     });
     document.querySelectorAll('[data-comeback]').forEach(button => {
       button.addEventListener('click', () => comebackAction(button.dataset.comeback));
+    });
+    document.querySelectorAll('[data-welcome]').forEach(button => {
+      button.addEventListener('click', () => welcomeAction(button.dataset.welcome));
     });
     let resizeTimer = null;
     window.addEventListener('resize', () => {
