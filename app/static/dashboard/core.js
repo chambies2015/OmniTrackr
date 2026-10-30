@@ -115,7 +115,7 @@ function renderLibraryFilters(category) {
 function applyLibraryFilters(category, changes, { clearSearch = false } = {}) {
   if (!libraryPageConfig(category)) return false;
   if (editingRowId !== null) {
-    alert('Save or cancel your current edit before changing filters.');
+    showNotice('Save or cancel your current edit before changing filters.');
     return false;
   }
   const previous = getLibraryFilters(category);
@@ -197,7 +197,7 @@ function renderLibraryPager(category, page, loading = false, error = '') {
     button.type = 'button'; button.className = 'action-btn'; button.textContent = label;
     button.disabled = loading || (delta < 0 ? page.offset === 0 : page.offset + LIBRARY_PAGE_SIZE >= page.total);
     button.addEventListener('click', () => {
-      if (editingRowId !== null) { alert('Save or cancel your current edit before changing pages.'); return; }
+      if (editingRowId !== null) { showNotice('Save or cancel your current edit before changing pages.'); return; }
       page.offset = Math.max(0, page.offset + delta * LIBRARY_PAGE_SIZE);
       libraryPageConfig(category)[2]();
     });
@@ -219,6 +219,10 @@ function renderLibraryEmptyState(table, state) {
       + '<h3 class="library-empty__title"></h3><p class="library-empty__text"></p>'
       + '<button type="button" class="library-empty__action"></button>';
     box.querySelector('button').addEventListener('click', () => {
+      if (panel.dataset.libraryState === 'error') {
+        panel.querySelector('.library-utility[id^="load"]')?.click();
+        return;
+      }
       if (panel.dataset.libraryState === 'no-match') {
         panel.querySelector('.library-filter-reset')?.click();
         return;
@@ -232,13 +236,15 @@ function renderLibraryEmptyState(table, state) {
     });
     panel.querySelector('.library-table-wrap')?.before(box);
   }
-  box.hidden = !['empty', 'no-match'].includes(state);
+  box.hidden = !['empty', 'no-match', 'error'].includes(state);
   if (box.hidden) return;
   const name = (panel.querySelector('.library-heading h2')?.textContent || 'library').trim().toLowerCase();
   const addLabel = panel.closest('.library-section')?.querySelector('.library-add-toggle > span')?.textContent.trim() || 'Add a title';
-  const [title, text, action] = state === 'no-match'
-    ? ['No titles match', 'Nothing in your view fits that search and these filters. Try another word or clear them.', 'Clear search & filters']
-    : [`Your ${name} shelf is empty`, 'Add your first title to rate it, review it and keep track of what comes next.', addLabel];
+  const [title, text, action] = state === 'error'
+    ? [`Your ${name} didn't load`, 'Nothing is lost. This is usually a dropped connection or a busy server, so give it another go.', 'Try again']
+    : state === 'no-match'
+      ? ['No titles match', 'Nothing in your view fits that search and these filters. Try another word or clear them.', 'Clear search & filters']
+      : [`Your ${name} shelf is empty`, 'Add your first title to rate it, review it and keep track of what comes next.', addLabel];
   box.querySelector('.library-empty__title').textContent = title;
   box.querySelector('.library-empty__text').textContent = text;
   box.querySelector('.library-empty__action').textContent = action;

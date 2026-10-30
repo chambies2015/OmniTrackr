@@ -70,7 +70,7 @@ function setup() {
   context = vm.createContext({
     URL, URLSearchParams, Date, console, isLocal: false, API_BASE: '', location: { origin: 'https://omnitrackr.test' },
     editingRowId: null, currentTab: 'movies', window: { addEventListener() {} },
-    alert: message => alerts.push(message), setTimeout: callback => { timers.push(callback); return timers.length; },
+    showNotice: message => alerts.push(message), setTimeout: callback => { timers.push(callback); return timers.length; },
     document: {
       getElementById: id => nodes.get(id) || null, createElement: tag => new Element(tag), activeElement: null,
       querySelectorAll: selector => selector === '.pick-focused' ? [...rows.values()].filter(row => row.classes.has('pick-focused')) : [],

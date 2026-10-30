@@ -761,7 +761,7 @@ async function navigateLibraryTab(tabName) {
   const content = document.getElementById(`${tabName}-tab`);
   if (!session || !content || getTabButton(tabName)?.style.display === 'none') return false;
   if (editingRowId !== null) {
-    alert('Save or cancel your current edit before opening another category.');
+    showNotice('Save or cancel your current edit before opening another category.');
     return false;
   }
   const request = ++dailyDashboardState.openRequest;
@@ -948,7 +948,7 @@ async function openLibraryItem(pick, options = {}) {
   const startingTab = guarded ? currentTab : null;
   if (!canContinue(startingTab)) return false;
   if (editingRowId !== null) {
-    alert('Save or cancel your current edit before opening another title.');
+    showNotice('Save or cancel your current edit before opening another title.');
     return false;
   }
   const source = LIBRARY_SEARCH_SOURCES.find(entry => entry.tab === pick?.category);
@@ -1236,7 +1236,7 @@ async function addToNextUp(category, itemId) {
     });
     if (session !== dailyDashboardSessionKey()) return;
     if (response.status === 409) {
-      alert('That item is already in your Next Up queue.');
+      showNotice('That item is already in your Next Up queue.');
       return;
     }
     if (!response.ok) throw new Error('Unable to add queue item');
@@ -1246,7 +1246,7 @@ async function addToNextUp(category, itemId) {
     const queueRefresh = dailyDashboardState.mutationPending ? null : refreshNextUpQueue();
     await Promise.all([queueRefresh, refreshLibraryPulse(), refreshTodaysPick()]);
   } catch (error) {
-    if (session === dailyDashboardSessionKey()) alert('Could not add that item to Next Up. Please try again.');
+    if (session === dailyDashboardSessionKey()) showNotice('Could not add that item to Next Up. Please try again.');
   }
 }
 
@@ -1275,7 +1275,7 @@ async function moveNextUp(queueId, position) {
     refreshLibraryPulse();
     refreshTodaysPick();
   } catch (error) {
-    if (session === dailyDashboardSessionKey()) alert('Could not reorder Next Up. Please try again.');
+    if (session === dailyDashboardSessionKey()) showNotice('Could not reorder Next Up. Please try again.');
   } finally {
     if (session === dailyDashboardSessionKey() && mutation === dailyDashboardState.mutationRequest) {
       dailyDashboardState.mutationPending = false;
@@ -1307,7 +1307,7 @@ async function removeNextUp(queueId) {
     dailyDashboardState.refreshAfterMutation = false;
     await Promise.all([refreshNextUpQueue(), refreshLibraryPulse(), refreshTodaysPick()]);
   } catch (error) {
-    if (session === dailyDashboardSessionKey()) alert('Could not remove that item from Next Up. Please try again.');
+    if (session === dailyDashboardSessionKey()) showNotice('Could not remove that item from Next Up. Please try again.');
   } finally {
     if (session === dailyDashboardSessionKey() && mutation === dailyDashboardState.mutationRequest) {
       dailyDashboardState.mutationPending = false;
@@ -1340,7 +1340,7 @@ async function runNextUpMutation(request, onSuccess, failureMessage) {
     refreshNextUpQueue.request = (refreshNextUpQueue.request || 0) + 1;
     await onSuccess(result);
   } catch (error) {
-    if (session === dailyDashboardSessionKey()) alert(failureMessage);
+    if (session === dailyDashboardSessionKey()) showNotice(failureMessage);
   } finally {
     if (session === dailyDashboardSessionKey() && mutation === dailyDashboardState.mutationRequest) {
       dailyDashboardState.mutationPending = false;

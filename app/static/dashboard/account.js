@@ -311,7 +311,7 @@ window.changeUsername = async function (event) {
       } catch (storageError) {
         // The cookie session still works without storage.
       }
-      alert(`Username changed to ${updatedUser.username}. Use it the next time you log in.`);
+      showNoticeAfterReload(`Username changed to ${updatedUser.username}. Use it the next time you log in.`);
       location.reload();
     } else {
       const error = await response.json();
@@ -429,6 +429,7 @@ window.deactivateAccount = async function (event) {
 
     if (response.ok) {
       const data = await response.json();
+      // Signing out leaves the dashboard, so this one stays a blocking browser alert.
       alert(data.message || 'Account deactivated successfully. You will be logged out.');
       logout();
     } else {
@@ -1080,10 +1081,10 @@ window.acceptFriendRequest = async function (requestId) {
       updateNotificationCount();
     } else {
       const error = await response.json();
-      alert(error.detail || 'Failed to accept friend request');
+      showNotice(apiErrorText(error, 'Could not accept that friend request. Please try again.'));
     }
   } catch (error) {
-    alert('Failed to accept friend request. Please try again.');
+    showNotice('Could not accept that friend request. Please try again.');
   }
 }
 
@@ -1098,10 +1099,10 @@ window.denyFriendRequest = async function (requestId) {
       updateNotificationCount();
     } else {
       const error = await response.json();
-      alert(error.detail || 'Failed to deny friend request');
+      showNotice(apiErrorText(error, 'Could not deny that friend request. Please try again.'));
     }
   } catch (error) {
-    alert('Failed to deny friend request. Please try again.');
+    showNotice('Could not deny that friend request. Please try again.');
   }
 }
 
@@ -1119,10 +1120,10 @@ window.unfriendUser = async function (friendId) {
       loadFriendsList();
     } else {
       const error = await response.json();
-      alert(error.detail || 'Failed to unfriend user');
+      showNotice(apiErrorText(error, 'Could not remove that friend. Please try again.'));
     }
   } catch (error) {
-    alert('Failed to unfriend user. Please try again.');
+    showNotice('Could not remove that friend. Please try again.');
   }
 }
 

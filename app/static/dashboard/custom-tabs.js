@@ -167,7 +167,7 @@ function generateCustomTabFormFields(tab) {
 async function handleAddCustomTabItem(tab) {
   try {
     if (!hasStoredAuth()) {
-      alert('You must be logged in to add items');
+      showNotice('You must be logged in to add items');
       return;
     }
     
@@ -183,7 +183,7 @@ async function handleAddCustomTabItem(tab) {
     const title = titleInput.value.trim();
     
     if (!title) {
-      alert('Title is required');
+      showNotice('Enter a title first.');
       if (submitBtn) {
         submitBtn.disabled = false;
         submitBtn.textContent = originalBtnText;
@@ -192,7 +192,7 @@ async function handleAddCustomTabItem(tab) {
     }
     
     if (title.length > 500) {
-      alert('Title is too long (max 500 characters)');
+      showNotice('Titles can be up to 500 characters.');
       if (submitBtn) {
         submitBtn.disabled = false;
         submitBtn.textContent = originalBtnText;
@@ -274,15 +274,15 @@ async function handleAddCustomTabItem(tab) {
       
       loadCustomTabItems(tab);
     } else {
-      const errorData = await response.json().catch(() => ({ detail: 'Failed to add item' }));
-      alert(errorData.detail || 'Failed to add item');
+      const errorData = await response.json().catch(() => ({}));
+      showNotice(apiErrorText(errorData, 'Could not add that item. Please try again.'));
     }
   } catch (error) {
     if (error.message === 'Validation failed') {
       return;
     }
     console.error('Error adding custom tab item:', error);
-    alert('Failed to add item. Please try again.');
+    showNotice('Could not add that item. Please try again.');
   } finally {
     const titleInput = document.getElementById(`customTab${tab.id}Title`);
     const submitBtn = titleInput?.closest('form')?.querySelector('button[type="submit"]');
@@ -454,19 +454,19 @@ async function createCustomTabItemAfterMetadata(tab, title, fieldValues, posterU
       
       loadCustomTabItems(tab);
     } else {
-      const errorData = await response.json().catch(() => ({ detail: 'Failed to add item' }));
-      alert(errorData.detail || 'Failed to add item');
+      const errorData = await response.json().catch(() => ({}));
+      showNotice(apiErrorText(errorData, 'Could not add that item. Please try again.'));
     }
   } catch (createError) {
     console.error('Error creating item:', createError);
-    alert('Failed to add item. Please try again.');
+    showNotice('Could not add that item. Please try again.');
   }
 }
 
 async function uploadCustomTabPoster(tabId, itemId, file) {
   if (!hasStoredAuth()) return false;
   if (file.size > 5 * 1024 * 1024) {
-    alert('The poster must be 5 MB or smaller. Choose a smaller image and try again.');
+    showNotice('The poster must be 5 MB or smaller. Choose a smaller image and try again.');
     return false;
   }
   try {
@@ -476,46 +476,66 @@ async function uploadCustomTabPoster(tabId, itemId, file) {
     });
     if (!response.ok) {
       const error = await response.json().catch(() => ({}));
-      alert(typeof error.detail === 'string' ? error.detail : 'The item was saved, but its poster could not be uploaded. Please try again.');
+      showNotice(apiErrorText(error, 'The item was saved, but its poster could not be uploaded. Please try again.'));
       return false;
     }
     return true;
   } catch (error) {
     console.error('Error uploading poster:', error);
-    alert('The item was saved, but its poster could not be uploaded. Please try again.');
+    showNotice('The item was saved, but its poster could not be uploaded. Please try again.');
     return false;
   }
 }
 
+// One full-width row in a custom tab's table: loading, empty or failed, with an
+// optional button (Try again, Add an item).
+function setCustomTabStatus(tableBody, text, tone = '', action = null) {
+  if (!tableBody) return;
+  const row = document.createElement('tr');
+  const cell = document.createElement('td');
+  cell.colSpan = 100;
+  cell.className = `custom-tab-list-status${tone ? ` custom-tab-list-status-${tone}` : ''}`;
+  const message = document.createElement('span');
+  message.textContent = text;
+  cell.appendChild(message);
+  if (action) {
+    const button = document.createElement('button');
+    button.type = 'button';
+    button.className = 'action-btn custom-tab-list-status__action';
+    button.textContent = action.label;
+    button.addEventListener('click', action.run);
+    cell.appendChild(button);
+  }
+  row.appendChild(cell);
+  tableBody.replaceChildren(row);
+}
+
 async function loadCustomTabItems(tab) {
+  const tableBody = document.getElementById(`customTab${tab.id}TableBody`);
+  const retry = { label: 'Try again', run: () => loadCustomTabItems(tab) };
   try {
     if (!hasStoredAuth()) return;
-    
-    const tableBody = document.getElementById(`customTab${tab.id}TableBody`);
+
     if (tableBody) {
-      tableBody.innerHTML = '<tr><td colspan="100%" class="custom-tab-list-status">Loading...</td></tr>';
+      tableBody.setAttribute('aria-busy', 'true');
+      setCustomTabStatus(tableBody, 'Loading your items…', 'muted');
     }
-    
+
     const response = await fetch(`${API_BASE}/custom-tabs/${tab.id}/items`, authFetchOptions());
-    
+
     if (response.ok) {
       const items = await response.json();
       renderCustomTabItems(tab, items);
     } else if (response.status === 404) {
-      if (tableBody) {
-        tableBody.innerHTML = '<tr><td colspan="100%" class="custom-tab-list-status">Tab not found</td></tr>';
-      }
+      setCustomTabStatus(tableBody, 'This tab no longer exists. It may have been deleted on another device. Reload the page to update your tabs.');
     } else {
-      if (tableBody) {
-        tableBody.innerHTML = '<tr><td colspan="100%" class="custom-tab-list-status custom-tab-list-status-danger">Failed to load items</td></tr>';
-      }
+      setCustomTabStatus(tableBody, "Your items didn't load. Nothing is lost.", 'danger', retry);
     }
   } catch (error) {
     console.error('Error loading custom tab items:', error);
-    const tableBody = document.getElementById(`customTab${tab.id}TableBody`);
-    if (tableBody) {
-      tableBody.innerHTML = '<tr><td colspan="100%" class="custom-tab-list-status custom-tab-list-status-danger">Error loading items</td></tr>';
-    }
+    setCustomTabStatus(tableBody, "Your items didn't load. Check your connection and try again.", 'danger', retry);
+  } finally {
+    tableBody?.removeAttribute('aria-busy');
   }
 }
 
@@ -530,7 +550,7 @@ function renderCustomTabItems(tab, items) {
   
   if (items.length === 0) {
     tableHead.innerHTML = '';
-    tableBody.innerHTML = '<tr><td colspan="100%" class="custom-tab-list-status custom-tab-list-status-muted">No items yet. Add your first item above!</td></tr>';
+    setCustomTabStatus(tableBody, `Nothing in ${tab.name} yet. Add your first item with the form above.`, 'muted');
     return;
   }
   
@@ -624,7 +644,7 @@ async function deleteCustomTabItem(tabId, itemId) {
   
   try {
     if (!hasStoredAuth()) {
-      alert('You must be logged in to delete items');
+      showNotice('You must be logged in to delete items');
       return;
     }
     
@@ -639,12 +659,12 @@ async function deleteCustomTabItem(tabId, itemId) {
         loadCustomTabItems(tab);
       }
     } else {
-      const errorData = await response.json().catch(() => ({ detail: 'Failed to delete item' }));
-      alert(errorData.detail || 'Failed to delete item');
+      const errorData = await response.json().catch(() => ({}));
+      showNotice(apiErrorText(errorData, 'Could not delete that item. Please try again.'));
     }
   } catch (error) {
     console.error('Error deleting item:', error);
-    alert('Failed to delete item. Please try again.');
+    showNotice('Could not delete that item. Please try again.');
   }
 }
 
@@ -680,7 +700,7 @@ async function editCustomTabItem(tabId, itemId) {
   try {
     const response = await fetch(`${API_BASE}/custom-tabs/${tabId}/items/${itemId}`, authFetchOptions());
     if (!current()) return;
-    if (!response.ok) { alert('Failed to load item for editing'); return; }
+    if (!response.ok) { showNotice('Could not open that item for editing. Please try again.'); return; }
     const item = await response.json();
     if (!current()) return;
     // Every field belongs to this item, including its absent optional values.
@@ -714,7 +734,7 @@ async function editCustomTabItem(tabId, itemId) {
   } catch (error) {
     if (!current()) return;
     console.error('Error loading item for editing:', error);
-    alert('Failed to load item for editing');
+    showNotice('Could not open that item for editing. Please try again.');
   }
 }
 
@@ -724,7 +744,7 @@ async function handleUpdateCustomTabItem(tab, itemId) {
       || Number(form.dataset.editingItemId) !== itemId || form.reportValidity?.() === false) return;
   const titleInput = document.getElementById(`customTab${tab.id}Title`);
   const title = titleInput.value.trim();
-  if (!title || title.length > 500) { alert('Enter a title of 1 to 500 characters.'); return; }
+  if (!title || title.length > 500) { showNotice('Enter a title of 1 to 500 characters.'); return; }
   const submit = form.querySelector('button[type="submit"]');
   const fields = {};
   tab.fields.forEach(field => {
@@ -745,7 +765,7 @@ async function handleUpdateCustomTabItem(tab, itemId) {
     });
     if (!response.ok) {
       const error = await response.json().catch(() => ({}));
-      alert(typeof error.detail === 'string' ? error.detail : 'Failed to update item');
+      showNotice(apiErrorText(error, 'Could not update that item. Please try again.'));
       return;
     }
     // Keep the draft and file available if the artwork could not be uploaded.
@@ -754,7 +774,7 @@ async function handleUpdateCustomTabItem(tab, itemId) {
     await loadCustomTabItems(tab);
   } catch (error) {
     console.error('Error updating custom tab item:', error);
-    alert('Failed to update item. Your form has not been cleared. Please try again.');
+    showNotice('Could not update that item. Your form has not been cleared. Please try again.');
   } finally {
     delete form.dataset.savingItem;
     if (submit) {
@@ -774,7 +794,7 @@ function bindCustomTabForm() {
     
     try {
       if (!hasStoredAuth()) {
-        alert('You must be logged in to create custom tabs');
+        showNotice('You must be logged in to create custom tabs');
         return;
       }
       
@@ -787,7 +807,7 @@ function bindCustomTabForm() {
       
       const name = document.getElementById('customTabName').value.trim();
       if (!name) {
-        alert('Tab name is required');
+        showNotice('Enter a name for the tab.');
         if (submitBtn) {
           submitBtn.disabled = false;
           submitBtn.textContent = originalBtnText;
@@ -796,7 +816,7 @@ function bindCustomTabForm() {
       }
       
       if (name.length > 100) {
-        alert('Tab name is too long (max 100 characters)');
+        showNotice('Tab names can be up to 100 characters.');
         if (submitBtn) {
           submitBtn.disabled = false;
           submitBtn.textContent = originalBtnText;
@@ -807,7 +827,7 @@ function bindCustomTabForm() {
       const editingTabId = e.target.dataset.editingTabId;
       const existingTabsCount = customTabs.length;
       if (!editingTabId && existingTabsCount >= 20) {
-        alert('Maximum of 20 custom tabs allowed per user');
+        showNotice('You can have up to 20 custom tabs. Delete one to make room.');
         if (submitBtn) {
           submitBtn.disabled = false;
           submitBtn.textContent = originalBtnText;
@@ -834,7 +854,7 @@ function bindCustomTabForm() {
         if (!key || !label || !fieldType) continue;
         
         if (!/^[a-zA-Z_][a-zA-Z0-9_]*$/.test(key)) {
-          alert(`Field key "${key}" is invalid. Must start with a letter or underscore and contain only alphanumeric characters and underscores.`);
+          showNotice(`Field key "${key}" is invalid. Must start with a letter or underscore and contain only alphanumeric characters and underscores.`);
           if (submitBtn) {
             submitBtn.disabled = false;
             submitBtn.textContent = originalBtnText;
@@ -843,7 +863,7 @@ function bindCustomTabForm() {
         }
         
         if (fieldKeys.has(key)) {
-          alert(`Duplicate field key: "${key}". Each field key must be unique.`);
+          showNotice(`Duplicate field key: "${key}". Each field key must be unique.`);
           if (submitBtn) {
             submitBtn.disabled = false;
             submitBtn.textContent = originalBtnText;
@@ -856,7 +876,7 @@ function bindCustomTabForm() {
       }
       
       if (fields.length > 30) {
-        alert('Maximum of 30 fields allowed per tab');
+        showNotice('A tab can have up to 30 fields.');
         if (submitBtn) {
           submitBtn.disabled = false;
           submitBtn.textContent = originalBtnText;
@@ -879,14 +899,14 @@ function bindCustomTabForm() {
         resetCustomTabFormState();
         await loadCustomTabs();
         loadCustomTabsList();
-        alert(editingTabId ? 'Custom tab updated successfully!' : 'Custom tab created successfully!');
+        showNotice(editingTabId ? 'Custom tab updated.' : 'Custom tab created.', 'success');
       } else {
         const errorData = await response.json().catch(() => ({ detail: editingTabId ? 'Failed to update custom tab' : 'Failed to create custom tab' }));
-        alert(errorData.detail || (editingTabId ? 'Failed to update custom tab' : 'Failed to create custom tab'));
+        showNotice(apiErrorText(errorData, (editingTabId ? 'Could not update custom tab. Please try again.' : 'Could not create custom tab. Please try again.')));
       }
     } catch (error) {
       console.error('Error saving custom tab:', error);
-      alert('Failed to save custom tab. Please try again.');
+      showNotice('Could not save custom tab. Please try again.');
     } finally {
       const submitBtn = e.target.querySelector('button[type="submit"]');
       if (submitBtn) {
@@ -970,7 +990,7 @@ const progressOptions = {
   contextKey: () => currentTab,
   canOpen: () => {
     if (editingRowId === null) return true;
-    alert('Save or cancel your current title edit before updating progress.');
+    showNotice('Save or cancel your current title edit before updating progress.');
     return false;
   },
   onSaved: (payload, shouldContinue) => {

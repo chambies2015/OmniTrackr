@@ -3,7 +3,7 @@ async function searchMovieMetadata() {
   const title = titleInput.value.trim();
   
   if (!title) {
-    alert('Please enter a movie title to search.');
+    showNotice('Please enter a movie title to search.');
     return;
   }
   
@@ -30,9 +30,9 @@ async function searchMovieMetadata() {
     } catch (fetchError) {
       clearTimeout(timeoutId);
       if (fetchError.name === 'AbortError') {
-        alert('Search request timed out. Please try again.');
+        showNotice('Search request timed out. Please try again.');
       } else {
-        alert('Network error: ' + fetchError.message);
+        showNotice("Couldn't reach the search service. Check your connection and try again.");
       }
       searchBtn.disabled = false;
       searchBtn.textContent = originalText;
@@ -41,13 +41,13 @@ async function searchMovieMetadata() {
     
     if (!res.ok) {
       if (res.status === 429) {
-        alert('OMDB API rate limit reached. Please try again later.');
+        showNotice('Title search is busy. Please try again in a minute.');
       } else if (res.status === 503) {
-        alert('OMDB API not configured on server.');
+        showNotice('Title search is switched off right now. You can still fill in the details yourself.');
       } else if (res.status === 504) {
-        alert('Search request timed out. Please try again.');
+        showNotice('Search request timed out. Please try again.');
       } else {
-        alert('Failed to search for movie. Please try again.');
+        showNotice('Movie search failed. Please try again.');
       }
       searchBtn.disabled = false;
       searchBtn.textContent = originalText;
@@ -57,7 +57,7 @@ async function searchMovieMetadata() {
     const data = await res.json();
     
     if (data.Error) {
-      alert(`Movie not found: ${data.Error}`);
+      showNotice('No movie matched that title. Check the spelling, or fill in the details yourself.');
       searchBtn.disabled = false;
       searchBtn.textContent = originalText;
       return;
@@ -81,13 +81,13 @@ async function searchMovieMetadata() {
         titleInput.dataset.posterUrl = data.Poster;
       }
       
-      alert('Movie information loaded successfully!');
+      showNotice('Movie details filled in.', 'success');
     } else {
-      alert('No movie information found.');
+      showNotice('No movie matched that title. Check the spelling, or fill in the details yourself.');
     }
   } catch (err) {
     console.error('Error searching for movie:', err);
-    alert('Failed to search for movie. Please try again.');
+    showNotice('Movie search failed. Please try again.');
   } finally {
     searchBtn.disabled = false;
     searchBtn.textContent = originalText;

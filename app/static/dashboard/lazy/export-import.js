@@ -18,9 +18,9 @@ async function exportData() {
     document.body.removeChild(a);
     URL.revokeObjectURL(url);
 
-    alert(`Export successful! Exported ${data.export_metadata.total_movies} movies, ${data.export_metadata.total_tv_shows} TV shows, ${data.export_metadata.total_anime || 0} anime, ${data.export_metadata.total_video_games || 0} video games, ${data.export_metadata.total_music || 0} music, ${data.export_metadata.total_books || 0} books, ${data.export_metadata.total_manga || 0} manga, ${data.export_metadata.total_podcasts || 0} podcasts, ${data.export_metadata.total_audiobooks || 0} audiobooks, ${data.export_metadata.total_custom_tabs || 0} custom tabs, ${data.export_metadata.total_activities || 0} journal entries, and ${data.export_metadata.total_progress_checkpoints || 0} private progress checkpoints.`);
+    showNotice(`Export ready. It has ${data.export_metadata.total_movies} movies, ${data.export_metadata.total_tv_shows} TV shows, ${data.export_metadata.total_anime || 0} anime, ${data.export_metadata.total_video_games || 0} video games, ${data.export_metadata.total_music || 0} music, ${data.export_metadata.total_books || 0} books, ${data.export_metadata.total_manga || 0} manga, ${data.export_metadata.total_podcasts || 0} podcasts, ${data.export_metadata.total_audiobooks || 0} audiobooks, ${data.export_metadata.total_custom_tabs || 0} custom tabs, ${data.export_metadata.total_activities || 0} journal entries, and ${data.export_metadata.total_progress_checkpoints || 0} private progress checkpoints.`, 'success');
   } catch (error) {
-    alert('Export failed: ' + error.message);
+    showNotice('Could not export your library. Please try again.');
   }
 }
 
@@ -67,7 +67,7 @@ async function importData(fileInput) {
   if (!file) return;
 
   if (!file.name.endsWith('.json')) {
-    alert('Please select a JSON file.');
+    showNotice('Choose a .json file exported from OmniTrackr.');
     return;
   }
 
@@ -81,12 +81,12 @@ async function importData(fileInput) {
     });
 
     if (!response.ok) {
-      const errorData = await response.json();
-      throw new Error(errorData.detail || 'Import failed');
+      const errorData = await response.json().catch(() => ({}));
+      throw new Error(apiErrorText(errorData, 'The server could not read it.'));
     }
 
     const result = await response.json();
-    let message = `Import completed!\n`;
+    let message = `Import finished.\n`;
     message += `Movies: ${result.movies_created} created, ${result.movies_updated} updated\n`;
     message += `TV Shows: ${result.tv_shows_created} created, ${result.tv_shows_updated} updated\n`;
     message += `Anime: ${result.anime_created || 0} created, ${result.anime_updated || 0} updated\n`;
@@ -112,7 +112,7 @@ async function importData(fileInput) {
       message += `\n\nErrors:\n${result.errors.join('\n')}`;
     }
 
-    alert(message);
+    showNotice(message, result.errors.length ? 'info' : 'success');
 
     // Refresh the current tab
     if (currentTab === 'movies') {
@@ -148,7 +148,7 @@ async function importData(fileInput) {
     // Clear the file input
     fileInput.value = '';
   } catch (error) {
-    alert('Import failed: ' + error.message);
+    showNotice(`Could not import that file. ${error.message}`);
     fileInput.value = '';
   }
 }

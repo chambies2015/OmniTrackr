@@ -214,7 +214,7 @@ async function deleteActivityEntry(entryId) {
     if (!response.ok) throw new Error('Unable to remove journal entry');
     await Promise.all([loadActivityTimeline(true), loadActivityRecap(), loadActivityDiary()]);
   } catch (error) {
-    alert('Could not remove that journal entry. Please try again.');
+    showNotice('Could not remove that journal entry. Please try again.');
   }
 }
 

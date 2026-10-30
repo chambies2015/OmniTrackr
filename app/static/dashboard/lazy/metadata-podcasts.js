@@ -2,7 +2,7 @@ async function searchPodcastMetadata() {
   const titleInput = document.getElementById('podcastTitle');
   const title = titleInput.value.trim();
   if (!title) {
-    alert('Please enter a podcast name to search.');
+    showNotice('Please enter a podcast name to search.');
     return;
   }
 
@@ -18,21 +18,21 @@ async function searchPodcastMetadata() {
       headers: { 'Accept': 'application/json' },
     });
     if (!res.ok) {
-      alert(res.status === 429 ? 'Podcast search is busy. Please try again in a minute.'
+      showNotice(res.status === 429 ? 'Podcast search is busy. Please try again in a minute.'
         : res.status === 504 ? 'Search request timed out. Please try again.' : 'Failed to search for podcasts. Please try again.');
       return;
     }
     const data = await res.json();
     const results = (data && data.results) || [];
     if (!results.length) {
-      alert('No results found. Try the show name without "podcast", or fill in the details yourself.');
+      showNotice('No results found. Try the show name without "podcast", or fill in the details yourself.');
     } else if (results.length === 1) {
       selectPodcastResult(results[0]);
     } else {
       openPodcastSearchModal(results);
     }
   } catch (error) {
-    alert(error.name === 'AbortError' ? 'Search request timed out. Please try again.' : 'Error searching for podcasts: ' + error.message);
+    showNotice(error.name === 'AbortError' ? 'Search request timed out. Please try again.' : 'Error searching for podcasts: ' + error.message);
   } finally {
     clearTimeout(timeoutId);
     searchBtn.disabled = false;

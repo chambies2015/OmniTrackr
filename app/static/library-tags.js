@@ -3,6 +3,8 @@
    else stays in here. Tags and views are only ever visible to their owner. */
 (() => {
   'use strict';
+  // The dashboard's corner notice (dashboard/notices.js), or a plain alert without it.
+  const notice = message => (typeof window.showNotice === 'function' ? window.showNotice(message) : window.alert(message));
   const TABLES = {
     movieTable: 'movies', tvShowTable: 'tv-shows', animeTable: 'anime', videoGameTable: 'video-games',
     musicTable: 'music', bookTable: 'books', mangaTable: 'manga', podcastTable: 'podcasts',
@@ -203,7 +205,7 @@
   }
   async function openEditor(category, id, title, trigger) {
     if (typeof editingRowId !== 'undefined' && editingRowId !== null) {
-      alert('Save or cancel your current edit before changing tags.');
+      notice('Save or cancel your current edit before changing tags.');
       return;
     }
     editor = editor || buildEditor();
@@ -277,7 +279,7 @@
   const isDefault = view => sameView(view, { search: '', sort: '', completion: 'all', unrated: false, has_progress: false, tag: '', recommended_by: '' });
   function applyView(category, view) {
     if (typeof editingRowId !== 'undefined' && editingRowId !== null) {
-      alert('Save or cancel your current edit before changing filters.');
+      notice('Save or cancel your current edit before changing filters.');
       return;
     }
     const [, sortId] = libraryPageConfig(category);
@@ -312,7 +314,7 @@
     try {
       await request(`/views/${encodeURIComponent(category)}/${view.id}`, { method: 'DELETE' });
     } catch (error) {
-      if (error.message !== 'Saved view not found') { alert(error.message); return; }
+      if (error.message !== 'Saved view not found') { notice(error.message); return; }
     }
     views.set(category, (views.get(category) || []).filter(item => item.id !== view.id));
     renderFilters(category, document.getElementById(`${libraryPageConfig(category)[0]}Filters`));

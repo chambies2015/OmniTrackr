@@ -50,7 +50,7 @@ function customHarness() {
   }
   nodes.set('addCustomTab7Form', form);
   let response = async () => ({ok: true, json: async () => ({title: 'Sample', field_values: {}})});
-  const context = vm.createContext({window: {}, customTabs: [tab], API_BASE: '', console, alert: value => alerts.push(value),
+  const context = vm.createContext({window: {}, customTabs: [tab], API_BASE: '', console, showNotice: value => alerts.push(value),
     document: {getElementById: id => nodes.get(id), createElement: () => ({dataset: {}, remove() {this.removed = true;}})},
     hasStoredAuth: () => true, authFetchOptions: options => options || {}, fetch: (...args) => response(...args),
     isElementShown: () => true, toggleCollapsible() {}, loadCustomTabItems: async () => {},
@@ -132,7 +132,7 @@ function friendHarness() {
   const nodes = new Map(), alerts = [], requests = [];
   const get = id => {if (!nodes.has(id)) nodes.set(id, {innerHTML: '', textContent: '', value: '', style: {}, classList: {remove() {}, add() {}}}); return nodes.get(id);};
   let fetchImpl = async url => ({ok: true, json: async () => url === '/friends' ? [] : {username: 'Current'}});
-  const context = vm.createContext({API_BASE: '', console, alert: value => alerts.push(value),
+  const context = vm.createContext({API_BASE: '', console, showNotice: value => alerts.push(value),
     document: {getElementById: get}, escapeHtml: String,
     authenticatedFetch: (...args) => {requests.push(args[0]); return fetchImpl(...args);},
   });

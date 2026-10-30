@@ -80,4 +80,4 @@ def test_privacy_policy_covers_the_new_public_features(client):
     assert "<strong>Manga:</strong>" in html and "<strong>Podcasts:</strong>" in html
     assert "<strong>Title discussions:</strong>" in html and "<strong>Group polls:</strong>" in html
     assert "may appear in search results" in html
-    assert "Last Updated: October 28, 2026" in html
+    assert "Last Updated: October 30, 2026" in html

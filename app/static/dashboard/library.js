@@ -399,16 +399,9 @@ window.cancelMovieEdit = function () {
 
 // A rejected inline edit keeps the row open; say why instead of doing nothing.
 async function showLibrarySaveError(res) {
-  let detail = '';
-  try {
-    const body = await res.json();
-    if (typeof body.detail === 'string') detail = body.detail;
-    else if (Array.isArray(body.detail) && body.detail[0]?.msg) {
-      const field = (body.detail[0].loc || []).slice(-1)[0];
-      detail = field ? `${field}: ${body.detail[0].msg}` : body.detail[0].msg;
-    }
-  } catch (_) { /* fall back to the generic message */ }
-  alert(detail ? `Could not save changes. ${detail}` : 'Could not save changes. Check the fields and try again.');
+  const body = await res.json().catch(() => ({}));
+  const detail = apiErrorText(body, '');
+  showNotice(detail ? `Could not save changes. ${detail}` : 'Could not save changes. Check the fields and try again.');
 }
 
 // TV Show functions
@@ -2613,25 +2606,25 @@ document.getElementById('addMovieForm').onsubmit = async function (e) {
   
   const title = titleInput.value.trim();
   if (!title) {
-    alert('Please enter a movie title.');
+    showNotice('Please enter a movie title.');
     return;
   }
   
   const director = directorInput.value.trim();
   if (!director) {
-    alert('Please enter a director or click "Search" to auto-fill movie information.');
+    showNotice('Please enter a director or click "Search" to auto-fill movie information.');
     return;
   }
   
   const yearVal = yearInput.value.trim();
   if (!yearVal) {
-    alert('Please enter a year or click "Search" to auto-fill movie information.');
+    showNotice('Please enter a year or click "Search" to auto-fill movie information.');
     return;
   }
   
   const year = parseInt(yearVal, 10);
   if (isNaN(year) || year < 0) {
-    alert('Please enter a valid year.');
+    showNotice('Please enter a valid year.');
     return;
   }
   
@@ -2664,8 +2657,8 @@ document.getElementById('addMovieForm').onsubmit = async function (e) {
     }
     loadMovies();
   } else {
-    const errorData = await response.json().catch(() => ({ detail: 'Failed to add movie' }));
-    alert(errorData.detail || 'Failed to add movie');
+    const errorData = await response.json().catch(() => ({}));
+    showNotice(apiErrorText(errorData, 'Could not add that movie. Please try again.'));
   }
 };
 
@@ -2676,19 +2669,19 @@ document.getElementById('addTVShowForm').onsubmit = async function (e) {
   
   const title = titleInput.value.trim();
   if (!title) {
-    alert('Please enter a TV show title.');
+    showNotice('Please enter a TV show title.');
     return;
   }
   
   const yearVal = yearInput.value.trim();
   if (!yearVal) {
-    alert('Please enter a year or click "Search" to auto-fill TV show information.');
+    showNotice('Please enter a year or click "Search" to auto-fill TV show information.');
     return;
   }
   
   const year = parseInt(yearVal, 10);
   if (isNaN(year) || year < 0) {
-    alert('Please enter a valid year.');
+    showNotice('Please enter a valid year.');
     return;
   }
   
@@ -2724,8 +2717,8 @@ document.getElementById('addTVShowForm').onsubmit = async function (e) {
     }
     loadTVShows();
   } else {
-    const errorData = await response.json().catch(() => ({ detail: 'Failed to add TV show' }));
-    alert(errorData.detail || 'Failed to add TV show');
+    const errorData = await response.json().catch(() => ({}));
+    showNotice(apiErrorText(errorData, 'Could not add that TV show. Please try again.'));
   }
 };
 
@@ -2736,19 +2729,19 @@ document.getElementById('addAnimeForm').onsubmit = async function (e) {
   
   const title = titleInput.value.trim();
   if (!title) {
-    alert('Please enter an anime title.');
+    showNotice('Please enter an anime title.');
     return;
   }
   
   const yearVal = yearInput.value.trim();
   if (!yearVal) {
-    alert('Please enter a year or click "Search" to auto-fill anime information.');
+    showNotice('Please enter a year or click "Search" to auto-fill anime information.');
     return;
   }
   
   const year = parseInt(yearVal, 10);
   if (isNaN(year) || year < 0) {
-    alert('Please enter a valid year.');
+    showNotice('Please enter a valid year.');
     return;
   }
   
@@ -2785,8 +2778,8 @@ document.getElementById('addAnimeForm').onsubmit = async function (e) {
     toggleCollapsible('animeForm');
     loadAnime();
   } else {
-    const errorData = await response.json().catch(() => ({ detail: 'Failed to add anime' }));
-    alert(errorData.detail || 'Failed to add anime');
+    const errorData = await response.json().catch(() => ({}));
+    showNotice(apiErrorText(errorData, 'Could not add that anime. Please try again.'));
   }
 };
 
@@ -2796,7 +2789,7 @@ document.getElementById('addVideoGameForm').onsubmit = async function (e) {
   
   const title = titleInput.value.trim();
   if (!title) {
-    alert('Please enter a video game title.');
+    showNotice('Please enter a video game title.');
     return;
   }
   
@@ -2842,8 +2835,8 @@ document.getElementById('addVideoGameForm').onsubmit = async function (e) {
     toggleCollapsible('videoGameForm');
     loadVideoGames();
   } else {
-    const errorData = await response.json().catch(() => ({ detail: 'Failed to add video game' }));
-    alert(errorData.detail || 'Failed to add video game');
+    const errorData = await response.json().catch(() => ({}));
+    showNotice(apiErrorText(errorData, 'Could not add that video game. Please try again.'));
   }
 };
 
@@ -2865,25 +2858,25 @@ document.getElementById('addMusicForm').onsubmit = async function (e) {
   
   const title = titleInput.value.trim();
   if (!title) {
-    alert('Please enter a music title.');
+    showNotice('Please enter a music title.');
     return;
   }
   
   const artist = artistInput.value.trim();
   if (!artist) {
-    alert('Please enter an artist or click "Search" to auto-fill music information.');
+    showNotice('Please enter an artist or click "Search" to auto-fill music information.');
     return;
   }
   
   const yearVal = yearInput.value.trim();
   if (!yearVal) {
-    alert('Please enter a year or click "Search" to auto-fill music information.');
+    showNotice('Please enter a year or click "Search" to auto-fill music information.');
     return;
   }
   
   const year = parseInt(yearVal, 10);
   if (isNaN(year) || year < 0) {
-    alert('Please enter a valid year.');
+    showNotice('Please enter a valid year.');
     return;
   }
   
@@ -2919,8 +2912,8 @@ document.getElementById('addMusicForm').onsubmit = async function (e) {
     toggleCollapsible('musicForm');
     loadMusic();
   } else {
-    const errorData = await response.json().catch(() => ({ detail: 'Failed to add music' }));
-    alert(errorData.detail || 'Failed to add music');
+    const errorData = await response.json().catch(() => ({}));
+    showNotice(apiErrorText(errorData, 'Could not add that album. Please try again.'));
   }
 };
 
@@ -3016,7 +3009,7 @@ document.getElementById('addBookForm').onsubmit = async function (e) {
       toggleCollapsible('bookForm');
       loadBooks();
     } else {
-      const errorData = await response.json().catch(() => ({ detail: 'Failed to add book' }));
+      const errorData = await response.json().catch(() => ({}));
       status.textContent = typeof errorData.detail === 'string' ? errorData.detail : 'Could not save this book. Check the fields and try again.';
     }
   } catch (error) {
@@ -3100,7 +3093,7 @@ document.getElementById('addMangaForm').onsubmit = async function (e) {
       toggleCollapsible('mangaForm');
       loadManga();
     } else {
-      const errorData = await response.json().catch(() => ({ detail: 'Failed to add manga' }));
+      const errorData = await response.json().catch(() => ({}));
       status.textContent = typeof errorData.detail === 'string' ? errorData.detail : 'Could not save this manga. Check the fields and try again.';
     }
   } catch (error) {
@@ -3183,7 +3176,7 @@ document.getElementById('addPodcastForm').onsubmit = async function (e) {
       toggleCollapsible('podcastForm');
       loadPodcasts();
     } else {
-      const errorData = await response.json().catch(() => ({ detail: 'Failed to add podcast' }));
+      const errorData = await response.json().catch(() => ({}));
       status.textContent = typeof errorData.detail === 'string' ? errorData.detail : 'Could not save this podcast. Check the fields and try again.';
     }
   } catch (error) {

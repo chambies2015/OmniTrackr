@@ -15,9 +15,9 @@ import re
 from datetime import date
 from html import escape
 
-SITE_CSS_VERSION = "20261029-reader-1"
+SITE_CSS_VERSION = "20261030-errors-1"
 SITE_JS_VERSION = "20261028-nav-1"
-SITE_NAV_JS_VERSION = "20261028-nav-1"
+SITE_NAV_JS_VERSION = "20261030-errors-1"
 # Pages holding this marker (the demo) skip site-nav.js, which reads the stored
 # sign-in hint and calls the title search API; their search button stays a link.
 SANDBOX_MARKER = "<!--SITE_SANDBOX-->"
@@ -287,10 +287,12 @@ def apply_site_chrome(html: str, *, login_action: bool = False, member: bool = F
 
 
 def message_page(title: str, heading: str, message: str, *, eyebrow: str = "",
-                 actions: tuple[tuple[str, str], ...] = (("Go to the homepage", "/"),)) -> str:
+                 actions: tuple[tuple[str, str], ...] = (("Go to the homepage", "/"),),
+                 extra_html: str = "") -> str:
     """A small, fully styled page (not found, unavailable...) with the shared header and footer.
 
-    Every argument is escaped; `actions` are (label, href) pairs rendered as buttons.
+    Every argument is escaped except `extra_html`, which callers build from escaped
+    parts; `actions` are (label, href) pairs rendered as buttons.
     """
     buttons = "".join(
         f'<a class="site-btn {"site-btn--primary" if index == 0 else "site-btn--ghost"}" href="{escape(href, quote=True)}">{escape(label)}</a>'
@@ -311,6 +313,7 @@ def message_page(title: str, heading: str, message: str, *, eyebrow: str = "",
         '    <div class="site-message__orb" aria-hidden="true"><img src="/vortex-still.webp" alt="" width="160" height="160"></div>\n'
         f'    {kicker}<h1>{escape(heading)}</h1>\n    <p>{escape(message)}</p>\n'
         f'    <div class="site-message__actions">{buttons}</div>\n'
+        f'{extra_html}'
         '  </main>\n  <!--SITE_FOOTER-->\n</body>\n</html>'
     )
     return apply_site_chrome(page)

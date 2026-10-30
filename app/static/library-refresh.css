@@ -204,9 +204,11 @@ body.app-shell .library-section button.library-empty__action {
 body.app-shell .library-section button.library-empty__action:hover { filter: brightness(1.08); }
 body.app-shell .library-section button.library-empty__action:focus-visible { outline: 2px solid var(--primary); outline-offset: 3px; }
 body.app-shell .library-panel[data-library-state="no-match"] .library-empty__art { filter: saturate(.35); }
+body.app-shell .library-panel[data-library-state="error"] .library-empty { border-color: color-mix(in srgb, var(--danger) 45%, transparent); margin-bottom: 16px; }
+body.app-shell .library-panel[data-library-state="error"] .library-empty__art { filter: grayscale(1); opacity: .6; }
 /* The panel says it, so the table and the one-line status step aside (the status stays for screen readers). */
 body.app-shell .library-panel:is([data-library-state="empty"], [data-library-state="no-match"]) .library-table-wrap { display: none; }
-body.app-shell .library-panel:is([data-library-state="empty"], [data-library-state="no-match"]) .library-filter-status {
+body.app-shell .library-panel:is([data-library-state="empty"], [data-library-state="no-match"], [data-library-state="error"]) .library-filter-status {
   clip-path: inset(50%); height: 1px; margin: 0; overflow: hidden; position: absolute; white-space: nowrap; width: 1px;
 }
 body.app-shell .library-panel[data-library-state="empty"] .library-filters > :not(.library-filter-status) { display: none; }

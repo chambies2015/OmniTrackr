@@ -821,7 +821,15 @@ body.dark-mode .collection-readiness-checklist .is-ready { color: #5eead4; }
 }
 
 .custom-tab-list-status-danger {
-  color: #f44336;
+  color: var(--danger, #f44336);
+}
+
+.custom-tab-list-status > span {
+  display: block;
+}
+
+.custom-tab-list-status__action {
+  margin-top: 12px;
 }
 
 .custom-tab-list-item {
