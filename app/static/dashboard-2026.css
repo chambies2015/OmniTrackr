@@ -2,26 +2,8 @@
    deep violet night, Inter + Poppins, violet pill actions, teal eyebrows.
    Loaded last; it only re-skins existing hooks, so layout and behaviour stay put. */
 
+/* Colors live with the other tokens in app-theme.css; the night sky stays here. */
 body.app-shell.dark-mode {
-  --bg: #0b0a18;
-  --fg: #f1effc;
-  --fg-secondary: #aaa6cb;
-  --card-bg: #15122b;
-  --surface-muted: #110f24;
-  --surface-hover: #221c42;
-  --field-bg: #0f0d21;
-  --border: #2a2550;
-  --primary: #c4b5fd;
-  --primary-hover: #ddd6fe;
-  --accent-solid: #8b5cf6;
-  --on-accent: #ffffff;
-  --accent-soft: #241c49;
-  --teal: #5eead4;
-  --teal-soft: #123a37;
-  --danger: #fda4af;
-  --table-row-alt: #13102a;
-  --shadow-sm: 0 1px 0 rgba(255, 255, 255, .03) inset, 0 8px 24px rgba(0, 0, 0, .25);
-  --shadow-lg: 0 30px 80px rgba(0, 0, 0, .6);
   background:
     radial-gradient(1100px 520px at 88% -160px, rgba(124, 58, 237, .26), transparent 70%),
     radial-gradient(700px 420px at -10% 30%, rgba(45, 212, 191, .07), transparent 60%),
@@ -29,18 +11,12 @@ body.app-shell.dark-mode {
   background-attachment: fixed;
 }
 
-body.app-shell {
-  --primary: #6d28d9;
-  --primary-hover: #5b21b6;
-  --accent-solid: #7c3aed;
-  --accent-soft: #efe9ff;
-  -webkit-font-smoothing: antialiased;
-}
+body.app-shell { -webkit-font-smoothing: antialiased; }
 
-body.app-shell :is(h1, h2, h3, .library-heading h2, .for-you-card h2) { font-family: Poppins, Inter, system-ui, sans-serif; letter-spacing: -.015em; }
+body.app-shell :is(h1, h2, h3, .library-heading h2, .for-you-card h2) { font-family: var(--font-display); letter-spacing: -.015em; text-wrap: balance; }
 
 /* ---------- Header: vortex mark, roomy search, gradient capture button ---------- */
-body.app-shell .header { background: linear-gradient(180deg, rgba(255, 255, 255, .05), rgba(255, 255, 255, .02)), var(--card-bg); border-radius: 18px; }
+body.app-shell .header { background: linear-gradient(180deg, rgba(255, 255, 255, .05), rgba(255, 255, 255, .02)), var(--card-bg); border-radius: var(--radius-lg); }
 body.app-shell .app-brand__mark { background: none; border-radius: 50%; overflow: visible; }
 body.app-shell .app-brand__mark img { border-radius: 50%; box-shadow: 0 0 22px rgba(168, 85, 247, .55); display: block; height: 40px; width: 40px; }
 body.app-shell .header .app-title { font-family: Poppins, Inter, sans-serif; font-weight: 700; letter-spacing: -.02em; }
@@ -70,7 +46,7 @@ body.app-shell .tabs .tab.active {
 /* ---------- Cards and panels ---------- */
 body.app-shell .card,
 body.app-shell :is(.library-pulse, .todays-pick, .next-up-queue, .return-deck) {
-  border-radius: 18px;
+  border-radius: var(--radius-lg);
 }
 body.app-shell.dark-mode .card,
 body.app-shell.dark-mode :is(.library-pulse, .todays-pick, .next-up-queue) {
@@ -95,7 +71,7 @@ body.app-shell .library-table-wrap { border-radius: 14px; }
 body.app-shell .library-table thead th { font-size: .7rem; letter-spacing: .08em; text-transform: uppercase; color: var(--fg-secondary); }
 body.app-shell .library-table tbody tr { transition: background .15s ease; }
 body.app-shell .library-table td[data-card-field="title"] { font-weight: 600; }
-body.app-shell .library-table img { border-radius: 8px; }
+body.app-shell .library-table img { border-radius: var(--poster-radius); }
 
 /* Row actions: Edit stays visible; the rest live in a small "More" menu. */
 body.app-shell .row-actions { align-items: center; display: inline-flex; gap: 6px; position: relative; }
@@ -108,7 +84,7 @@ body.app-shell .row-menu > summary {
 body.app-shell .row-menu > summary::-webkit-details-marker { display: none; }
 body.app-shell .row-menu > summary:hover, body.app-shell .row-menu[open] > summary { background: var(--surface-hover); }
 body.app-shell .row-menu__panel {
-  background: var(--card-bg); border: 1px solid var(--border); border-radius: 12px; box-shadow: var(--shadow-lg);
+  background: var(--card-bg); border: 1px solid var(--border-strong); border-radius: var(--radius-md); box-shadow: var(--shadow-lg);
   display: grid; gap: 2px; min-width: 168px; padding: 6px; position: fixed; z-index: 80;
 }
 /* The actions cell is sticky with its own z-index, so each row's cell stacks on its own:
@@ -120,7 +96,14 @@ body.app-shell .row-menu__panel button.action-btn {
 }
 body.app-shell .row-menu__panel button.action-btn:hover { background: var(--surface-hover); }
 body.app-shell .row-menu__panel button.action-btn:is(.delete-btn, [class*="delete"]) { color: var(--danger); }
-body.app-shell .row-actions > button.action-btn { border-radius: 999px; min-height: 34px; }
+body.app-shell .row-actions > button.action-btn { border-radius: var(--radius-pill); min-height: var(--control-sm); }
+body.app-shell .library-section .row-actions > button.action-btn,
+body.app-shell .row-menu > summary { background: var(--surface-muted); border: 1px solid var(--border); color: var(--fg); font-size: var(--text-sm); }
+body.app-shell .library-section .row-actions > button.action-btn:hover { background: var(--surface-hover); filter: none; }
+/* The wide-table rule that sizes Edit (74px) also caught the menu rows and broke words in half. */
+body.app-shell .library-table td:last-child .row-menu__panel button.action-btn {
+  font-size: var(--text-sm); margin: 0; padding: 0 12px; white-space: nowrap; width: 100%;
+}
 
 /* ---------- Dashboard widgets only belong next to libraries ---------- */
 body.app-shell:is([data-active-tab="statistics"], [data-active-tab="collections"], [data-active-tab="activity"], [data-active-tab="recommendations"])
@@ -167,8 +150,11 @@ body.app-shell .stats-page-heading h2 { color: var(--fg); font-size: 1.6rem; mar
 body.app-shell.dark-mode :is(.card, .modal-content, .for-you-card) :is(input[type="text"], input[type="number"], input[type="search"], input[type="url"], input[type="email"], input[type="password"], input[type="date"], textarea, select):not(.library-filter-search) {
   background: var(--field-bg); border: 1px solid var(--border); color: var(--fg);
 }
+body.app-shell :is(.card, .modal-content) :is(input[type="text"], input[type="number"], input[type="search"], input[type="url"], input[type="email"], input[type="password"], input[type="date"], textarea, select):hover:not(:focus, :disabled) {
+  border-color: var(--border-strong);
+}
 body.app-shell :is(.card, .modal-content) :is(input[type="text"], input[type="number"], input[type="search"], input[type="url"], input[type="email"], input[type="password"], input[type="date"], textarea, select):focus {
-  border-color: var(--accent-solid); box-shadow: 0 0 0 3px color-mix(in srgb, var(--accent-solid) 25%, transparent);
+  border-color: var(--accent-solid); box-shadow: var(--ring);
 }
 body.app-shell .collections-hero__eyebrow { color: var(--teal); }
 
@@ -239,3 +225,27 @@ body.app-shell a.title-page-link:hover { color: #c4b5fd; text-decoration-color: 
 .supporter-accent__swatch--rose { background: #f472b6; }
 .supporter-accent__swatch--sky { background: #38bdf8; }
 .supporter-accent__swatch--none { border: 1px dashed rgba(255, 255, 255, .5); }
+
+/* ---------- Shared pieces: posters, chips, tables, pickers ----------
+   Sizes, corners and colors come from the tokens in app-theme.css. */
+
+/* Posters and covers get a hairline edge so dark art does not melt into a dark card. */
+body.app-shell :where(.library-table td[data-card-field="cover"] img, .for-you-item__art img, .next-up-queue__cover, .on-this-day__art img, .review-poster, .showcase-row__art img) {
+  outline: 1px solid var(--poster-edge); outline-offset: -1px;
+}
+body.app-shell :is(.for-you-item__art, .for-you-item__art img) { border-radius: var(--poster-radius); }
+
+/* Count chips and small labels share one pill. */
+body.app-shell :is(.library-count, .library-heading .library-count) { font-size: var(--text-xs); font-weight: 600; letter-spacing: .01em; }
+
+/* Tables: quieter header, a soft hover, and tabular numbers so years and scores line up. */
+body.app-shell .library-table { font-variant-numeric: tabular-nums; }
+body.app-shell .library-table thead th { font-weight: 600; }
+body.app-shell .library-pager { gap: var(--space-2); }
+body.app-shell .library-pager button.action-btn { min-height: var(--control-md); padding-inline: var(--space-4); }
+
+/* Add anything: the field draws the focus ring, so the input inside it stays bare. */
+body.app-shell .modal-content .quick-capture-search-field input[type="search"]:is(:hover, :focus, :focus-visible) { border: 0; box-shadow: none; outline: none; }
+
+/* Native selects match the text fields beside them. */
+body.app-shell :is(.card, .modal-content) select { cursor: pointer; }
