@@ -220,6 +220,23 @@ body.app-shell #mainFooter .footer-link:hover { color: var(--primary); transform
   body.app-shell .quick-capture-trigger { font-size: .74rem; padding-inline: 8px; }
   body.app-shell .account-toolbar :is(#toggleMode, #notificationBell, #userDisplay, #showFriendsSidebar, #logoutBtn) { padding-inline: 7px; }
 }
+/* Notices (dashboard/notices.js): short messages stacked in the bottom corner. */
+.app-notices { bottom: calc(20px + env(safe-area-inset-bottom, 0px)); display: flex; flex-direction: column; gap: 10px; max-width: min(420px, calc(100vw - 32px)); pointer-events: none; position: fixed; right: 20px; z-index: 13000; }
+.app-notice { align-items: flex-start; animation: app-notice-in .18s ease-out; background: var(--card-bg, #191f2c); border: 1px solid var(--border, #30394c); border-left: 4px solid var(--primary, #baa9fb); border-radius: 12px; box-shadow: var(--shadow-lg, 0 24px 70px #00000066); color: var(--fg, #edf0f7); display: flex; font: 500 .92rem/1.5 Inter, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; gap: 10px; padding: 12px 10px 12px 14px; pointer-events: auto; }
+.app-notice p { flex: 1; margin: 0; max-height: 50vh; overflow-y: auto; white-space: pre-line; overflow-wrap: anywhere; }
+.app-notice::before { flex: none; font-weight: 800; line-height: 1.5; }
+.app-notice--error { border-left-color: var(--danger, #ff9caa); }
+.app-notice--error::before { color: var(--danger, #ff9caa); content: "!"; }
+.app-notice--success { border-left-color: var(--teal, #8ad8c3); }
+.app-notice--success::before { color: var(--teal, #8ad8c3); content: "✓"; }
+.app-notice__close { background: none; border: 0; border-radius: 8px; color: var(--fg-secondary, #a4aec2); cursor: pointer; flex: none; font-size: 1.25rem; height: 32px; line-height: 1; margin: -5px 0; width: 32px; }
+.app-notice__close:hover { background: var(--surface-hover, #242c3d); color: var(--fg, #edf0f7); }
+@keyframes app-notice-in { from { opacity: 0; transform: translateY(8px); } }
+@media (max-width: 760px) {
+  .app-notices { left: 16px; max-width: none; right: 16px; }
+  body.has-app-dock .app-notices { bottom: calc(88px + env(safe-area-inset-bottom, 0px)); }
+}
 @media (prefers-reduced-motion: reduce) {
+  .app-notice { animation: none; }
   body.app-shell, body.app-shell *, body.app-shell *::before, body.app-shell *::after { animation: none !important; scroll-behavior: auto !important; transition: none !important; }
 }

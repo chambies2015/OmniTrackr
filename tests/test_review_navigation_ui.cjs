@@ -85,7 +85,7 @@ function setup(url = 'https://omnitrackr.xyz/?library_category=books&library_ite
     hasStoredAuth: () => options.authenticated !== false,
     getTabButton: tab => tabs.get(tab),
     libraryPageConfig: tab => config[tab],
-    alert: message => alerts.push(message),
+    showNotice: message => alerts.push(message),
     authenticatedFetch: async (requestUrl, requestOptions) => {
       requests.push({ url: requestUrl, options: requestOptions });
       return options.response || { ok: true, json: async () => options.item || { id: 42, title: 'My saved title' } };

@@ -3,7 +3,7 @@ async function searchBookMetadata() {
   const title = titleInput.value.trim();
   
   if (!title) {
-    alert('Please enter a book title to search.');
+    showNotice('Please enter a book title to search.');
     return;
   }
   
@@ -30,9 +30,9 @@ async function searchBookMetadata() {
     } catch (fetchError) {
       clearTimeout(timeoutId);
       if (fetchError.name === 'AbortError') {
-        alert('Search request timed out. Please try again.');
+        showNotice('Search request timed out. Please try again.');
       } else {
-        alert('Network error: ' + fetchError.message);
+        showNotice("Couldn't reach the search service. Check your connection and try again.");
       }
       searchBtn.disabled = false;
       searchBtn.textContent = originalText;
@@ -41,11 +41,11 @@ async function searchBookMetadata() {
     
     if (!res.ok) {
       if (res.status === 429) {
-        alert('Open Library API rate limit reached. Please try again later.');
+        showNotice('Book search is busy. Please try again in a minute.');
       } else if (res.status === 504) {
-        alert('Search request timed out. Please try again.');
+        showNotice('Search request timed out. Please try again.');
       } else {
-        alert('Failed to search for book. Please try again.');
+        showNotice('Book search failed. Please try again.');
       }
       searchBtn.disabled = false;
       searchBtn.textContent = originalText;
@@ -55,7 +55,7 @@ async function searchBookMetadata() {
     const data = await res.json();
     
     if (!data || !data.docs || data.docs.length === 0) {
-      alert('No results found. Please try a different search term.');
+      showNotice('No results for that search. Try a different spelling, or fill in the details yourself.');
       searchBtn.disabled = false;
       searchBtn.textContent = originalText;
       return;
@@ -73,7 +73,7 @@ async function searchBookMetadata() {
     searchBtn.textContent = originalText;
   } catch (error) {
     console.error('Error searching for book:', error);
-    alert('Error searching for book: ' + error.message);
+    showNotice('Book search failed. Please try again.');
     searchBtn.disabled = false;
     searchBtn.textContent = originalText;
   }

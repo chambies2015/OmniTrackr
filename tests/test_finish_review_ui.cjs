@@ -17,7 +17,7 @@ function setup(routes) {
   let reloads = 0;
   const context = vm.createContext({
     document: { getElementById: get, createElement: () => make(), createTextNode: text => ({ text }) },
-    API_BASE: '', alert: message => alerts.push(message), loadMonthlyReplay() {},
+    API_BASE: '', showNotice: message => alerts.push(message), loadMonthlyReplay() {},
     async authenticatedFetch(url, options) {
       calls.push({ url, body: options && options.body ? JSON.parse(options.body) : null });
       const route = routes(url, options);

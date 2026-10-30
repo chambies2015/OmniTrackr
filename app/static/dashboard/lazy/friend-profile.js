@@ -127,13 +127,13 @@ window.loadFriendProfile = async function (friendId) {
     } else {
       const error = await response.json();
       if (!current()) return;
-      alert(error.detail || 'Failed to load friend profile');
+      showNotice(apiErrorText(error, 'Could not load friend profile. Please try again.'));
       closeFriendProfile();
     }
   } catch (error) {
     if (!current()) return;
     console.error('Failed to load friend profile:', error);
-    alert('Failed to load friend profile');
+    showNotice('Could not load friend profile. Please try again.');
     closeFriendProfile();
   }
 }

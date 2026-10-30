@@ -30,7 +30,7 @@ async function createCollection(event) {
     event.target.reset();
     await loadCollections();
   } catch (error) {
-    alert('Could not create that collection. Please try again.');
+    showNotice('Could not create that collection. Please try again.');
   }
 }
 
@@ -157,12 +157,12 @@ async function addToCollection(collectionId) {
       method: 'POST', headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ category: collectionPickerTarget.category, item_id: collectionPickerTarget.itemId }),
     });
-    if (response.status === 409) { alert('That item is already in this collection.'); return; }
+    if (response.status === 409) { showNotice('That item is already in this collection.'); return; }
     if (!response.ok) throw new Error('Unable to add item');
     closeCollectionPicker();
     loadCollections();
   } catch (error) {
-    alert('Could not add that item to the collection. Please try again.');
+    showNotice('Could not add that item to the collection. Please try again.');
   }
 }
 
@@ -173,7 +173,7 @@ async function moveCollectionItem(collectionId, itemId, position) {
     });
     if (!response.ok) throw new Error('Unable to move item');
     loadCollections();
-  } catch (error) { alert('Could not reorder this collection. Please try again.'); }
+  } catch (error) { showNotice('Could not reorder this collection. Please try again.'); }
 }
 
 async function editCollectionItemNote(collectionId, itemId) {
@@ -183,7 +183,7 @@ async function editCollectionItemNote(collectionId, itemId) {
   const curatorNote = prompt('What should readers notice about this pick?', item.curator_note || '');
   if (curatorNote === null) return;
   if (curatorNote.length > 500) {
-    alert('Curator notes can be up to 500 characters.');
+    showNotice('Curator notes can be up to 500 characters.');
     return;
   }
   try {
@@ -192,7 +192,7 @@ async function editCollectionItemNote(collectionId, itemId) {
     });
     if (!response.ok) throw new Error('Unable to update note');
     loadCollections();
-  } catch (error) { alert('Could not save that curator note. Please try again.'); }
+  } catch (error) { showNotice('Could not save that curator note. Please try again.'); }
 }
 
 async function removeCollectionItem(collectionId, itemId) {
@@ -200,7 +200,7 @@ async function removeCollectionItem(collectionId, itemId) {
     const response = await authenticatedFetch(`${API_BASE}/collections/${collectionId}/items/${itemId}`, { method: 'DELETE' });
     if (!response.ok) throw new Error('Unable to remove item');
     loadCollections();
-  } catch (error) { alert('Could not remove that item. Please try again.'); }
+  } catch (error) { showNotice('Could not remove that item. Please try again.'); }
 }
 
 async function deleteCollection(collectionId) {
@@ -209,7 +209,7 @@ async function deleteCollection(collectionId) {
     const response = await authenticatedFetch(`${API_BASE}/collections/${collectionId}`, { method: 'DELETE' });
     if (!response.ok) throw new Error('Unable to delete collection');
     loadCollections();
-  } catch (error) { alert('Could not delete that collection. Please try again.'); }
+  } catch (error) { showNotice('Could not delete that collection. Please try again.'); }
 }
 
 // ============================================================================

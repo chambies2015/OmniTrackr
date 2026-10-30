@@ -3,7 +3,7 @@ async function searchTVShowMetadata() {
   const title = titleInput.value.trim();
   
   if (!title) {
-    alert('Please enter a TV show title to search.');
+    showNotice('Please enter a TV show title to search.');
     return;
   }
   
@@ -30,9 +30,9 @@ async function searchTVShowMetadata() {
     } catch (fetchError) {
       clearTimeout(timeoutId);
       if (fetchError.name === 'AbortError') {
-        alert('Search request timed out. Please try again.');
+        showNotice('Search request timed out. Please try again.');
       } else {
-        alert('Network error: ' + fetchError.message);
+        showNotice("Couldn't reach the search service. Check your connection and try again.");
       }
       searchBtn.disabled = false;
       searchBtn.textContent = originalText;
@@ -41,13 +41,13 @@ async function searchTVShowMetadata() {
     
     if (!res.ok) {
       if (res.status === 429) {
-        alert('OMDB API rate limit reached. Please try again later.');
+        showNotice('Title search is busy. Please try again in a minute.');
       } else if (res.status === 503) {
-        alert('OMDB API not configured on server.');
+        showNotice('Title search is switched off right now. You can still fill in the details yourself.');
       } else if (res.status === 504) {
-        alert('Search request timed out. Please try again.');
+        showNotice('Search request timed out. Please try again.');
       } else {
-        alert('Failed to search for TV show. Please try again.');
+        showNotice('TV show search failed. Please try again.');
       }
       searchBtn.disabled = false;
       searchBtn.textContent = originalText;
@@ -57,7 +57,7 @@ async function searchTVShowMetadata() {
     const data = await res.json();
     
     if (data.Error) {
-      alert(`TV show not found: ${data.Error}`);
+      showNotice('No TV show matched that title. Check the spelling, or fill in the details yourself.');
       searchBtn.disabled = false;
       searchBtn.textContent = originalText;
       return;
@@ -84,13 +84,13 @@ async function searchTVShowMetadata() {
         titleInput.dataset.posterUrl = data.Poster;
       }
       
-      alert('TV show information loaded successfully!');
+      showNotice('TV show details filled in.', 'success');
     } else {
-      alert('No TV show information found.');
+      showNotice('No TV show matched that title. Check the spelling, or fill in the details yourself.');
     }
   } catch (err) {
     console.error('Error searching for TV show:', err);
-    alert('Failed to search for TV show. Please try again.');
+    showNotice('TV show search failed. Please try again.');
   } finally {
     searchBtn.disabled = false;
     searchBtn.textContent = originalText;
@@ -102,7 +102,7 @@ async function searchAnimeMetadata() {
   const title = titleInput.value.trim();
   
   if (!title) {
-    alert('Please enter an anime title to search.');
+    showNotice('Please enter an anime title to search.');
     return;
   }
   
@@ -129,9 +129,9 @@ async function searchAnimeMetadata() {
     } catch (fetchError) {
       clearTimeout(timeoutId);
       if (fetchError.name === 'AbortError') {
-        alert('Search request timed out. Please try again.');
+        showNotice('Search request timed out. Please try again.');
       } else {
-        alert('Network error: ' + fetchError.message);
+        showNotice("Couldn't reach the search service. Check your connection and try again.");
       }
       searchBtn.disabled = false;
       searchBtn.textContent = originalText;
@@ -140,11 +140,11 @@ async function searchAnimeMetadata() {
     
     if (!res.ok) {
       if (res.status === 429) {
-        alert('Jikan API rate limit reached. Please try again later.');
+        showNotice('Anime search is busy. Please try again in a minute.');
       } else if (res.status === 504) {
-        alert('Search request timed out. Please try again.');
+        showNotice('Search request timed out. Please try again.');
       } else {
-        alert('Failed to search for anime. Please try again.');
+        showNotice('Anime search failed. Please try again.');
       }
       searchBtn.disabled = false;
       searchBtn.textContent = originalText;
@@ -177,13 +177,13 @@ async function searchAnimeMetadata() {
         titleInput.dataset.posterUrl = posterUrl;
       }
       
-      alert('Anime information loaded successfully!');
+      showNotice('Anime details filled in.', 'success');
     } else {
-      alert('No anime information found.');
+      showNotice('No anime matched that title. Check the spelling, or fill in the details yourself.');
     }
   } catch (err) {
     console.error('Error searching for anime:', err);
-    alert('Failed to search for anime. Please try again.');
+    showNotice('Anime search failed. Please try again.');
   } finally {
     searchBtn.disabled = false;
     searchBtn.textContent = originalText;
@@ -195,7 +195,7 @@ async function searchVideoGameMetadata() {
   const title = titleInput.value.trim();
   
   if (!title) {
-    alert('Please enter a video game title to search.');
+    showNotice('Please enter a video game title to search.');
     return;
   }
   
@@ -222,9 +222,9 @@ async function searchVideoGameMetadata() {
     } catch (fetchError) {
       clearTimeout(timeoutId);
       if (fetchError.name === 'AbortError') {
-        alert('Search request timed out. Please try again.');
+        showNotice('Search request timed out. Please try again.');
       } else {
-        alert('Network error: ' + fetchError.message);
+        showNotice("Couldn't reach the search service. Check your connection and try again.");
       }
       searchBtn.disabled = false;
       searchBtn.textContent = originalText;
@@ -233,13 +233,13 @@ async function searchVideoGameMetadata() {
     
     if (!res.ok) {
       if (res.status === 429) {
-        alert('RAWG API rate limit reached. Please try again later.');
+        showNotice('Game search is busy. Please try again in a minute.');
       } else if (res.status === 503) {
-        alert('RAWG API not configured on server.');
+        showNotice('Game search is switched off right now. You can still fill in the details yourself.');
       } else if (res.status === 504) {
-        alert('Search request timed out. Please try again.');
+        showNotice('Search request timed out. Please try again.');
       } else {
-        alert('Failed to search for video game. Please try again.');
+        showNotice('Game search failed. Please try again.');
       }
       searchBtn.disabled = false;
       searchBtn.textContent = originalText;
@@ -271,13 +271,13 @@ async function searchVideoGameMetadata() {
         titleInput.dataset.rawgLink = `https://rawg.io/games/${game.slug}`;
       }
       
-      alert('Video game information loaded successfully!');
+      showNotice('Game details filled in.', 'success');
     } else {
-      alert('No video game information found.');
+      showNotice('No game matched that title. Check the spelling, or fill in the details yourself.');
     }
   } catch (err) {
     console.error('Error searching for video game:', err);
-    alert('Failed to search for video game. Please try again.');
+    showNotice('Game search failed. Please try again.');
   } finally {
     searchBtn.disabled = false;
     searchBtn.textContent = originalText;
