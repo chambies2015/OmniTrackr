@@ -195,7 +195,7 @@ def test_owner_can_set_aside_and_restore_a_payment(client, db_session):
     post(client, payment())
     assert client.post("/api/supporters/set-aside", headers=headers_for(fan), json={"message_id": "msg-1"}).status_code == 403
     assert client.post("/api/supporters/set-aside", headers=headers_for(boss), json={"message_id": "msg-1"}).status_code == 200
-    assert client.get("/api/supporters/unmatched", headers=headers_for(boss)).json() == {"payments": [], "waiting": 0}
+    assert client.get("/api/supporters/unmatched", headers=headers_for(boss)).json() == {"payments": [], "waiting": 0, "tests": 0}
     client.post("/api/supporters/set-aside", headers=headers_for(boss), json={"message_id": "msg-1", "set_aside": False})
     assert client.get("/api/supporters/unmatched", headers=headers_for(boss)).json()["waiting"] == 1
 
@@ -206,6 +206,25 @@ def test_older_payment_from_the_kofi_sample_sender_is_flagged(client, db_session
     post(client, payment(from_name="Ko-fi Team"))
     [row] = client.get("/api/supporters/unmatched", headers=headers_for(boss)).json()["payments"]
     assert row["looks_like_test"] is True
+
+
+def test_test_pings_from_before_the_flag_are_left_out_without_changing_them(client, db_session, monkeypatch):
+    monkeypatch.setenv("KOFI_MONTHLY_GOAL", "100")
+    boss = member(db_session, "boss")
+    db_session.commit()
+    for message_id, name in (("old-1", "Ko-fi Team"), ("old-2", " jo example "), ("old-3", "Real Person")):
+        post(client, payment(message_id, from_name=name))
+    # What a row recorded before Oct 30 looks like: no new hashes and no test flag.
+    db_session.query(models.KofiPayment).update({"email_key": None, "transaction_hash": None, "test": False})
+    db_session.commit()
+
+    listed = client.get("/api/supporters/unmatched", headers=headers_for(boss)).json()
+    assert [p["message_id"] for p in listed["payments"]] == ["old-3"]
+    assert listed["waiting"] == 1 and listed["tests"] == 2
+    growth = client.get("/api/site-stats/overview", headers=headers_for(boss)).json()["growth"]["supporters"]
+    assert growth["unlinked_payments"] == 1 and growth["payments"] == 1
+    assert supporters.goal_progress(db_session)["raised"] == 5
+    assert stored(db_session, "old-1").test is False  # read as a test, never rewritten
 
 
 def test_site_stats_counts_only_payments_that_need_linking(client, db_session):

@@ -53,7 +53,7 @@ from datetime import datetime, timedelta
 from typing import Optional
 
 from itsdangerous import BadSignature, SignatureExpired, URLSafeTimedSerializer
-from sqlalchemy import func, or_
+from sqlalchemy import and_, func, not_, or_
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
 
@@ -90,6 +90,9 @@ CODE_RE = re.compile(r"\bOT[\s\-\u2010-\u2015_]*(\d{1,10})[\s\-\u2010-\u2015_]+(
 # Ko-fi's "Send a test" button posts this sample payment.
 TEST_TRANSACTION_ID = "00000000-1111-2222-3333-444444444444"
 TEST_NAMES = {"ko-fi team"}
+# Payments recorded before Oct 30 weren't checked for test pings on arrival. Ones from these sample
+# senders count as tests when read (the rows themselves are left as they are).
+LEGACY_TEST_NAMES = ("ko-fi team", "jo example")
 EXAMPLE_DOMAINS = {"example.com", "example.org", "example.net"}
 GMAIL_DOMAINS = {"gmail.com", "googlemail.com"}
 CLAIM_MAX_AGE = 3 * 24 * 3600
@@ -179,6 +182,15 @@ def is_test_payload(data: dict) -> bool:
 def looks_like_test(payment: models.KofiPayment) -> bool:
     """For the owner's list: flagged on arrival, or an older row from Ko-fi's sample sender."""
     return bool(payment.test or (payment.from_name or "").strip().lower() in TEST_NAMES)
+
+
+def is_test_payment():
+    """SQL for a Ko-fi test ping: flagged on arrival, or recorded before the flag existed (no new
+    hashes) by one of Ko-fi's sample senders."""
+    payment = models.KofiPayment
+    return or_(payment.test.is_(True),
+               and_(payment.email_key.is_(None), payment.transaction_hash.is_(None),
+                    func.lower(func.trim(func.coalesce(payment.from_name, ""))).in_(LEGACY_TEST_NAMES)))
 
 
 def _clip(value, limit: int) -> Optional[str]:
@@ -342,7 +354,7 @@ def _link(db: Session, payment: models.KofiPayment, user_id: int) -> None:
 
 def _waiting():
     """Payments still waiting for a member: not linked, not a Ko-fi test, not set aside by the owner."""
-    return (models.KofiPayment.user_id.is_(None), models.KofiPayment.test.is_(False),
+    return (models.KofiPayment.user_id.is_(None), not_(is_test_payment()),
             models.KofiPayment.dismissed_at.is_(None))
 
 
@@ -631,7 +643,7 @@ def goal_progress(db: Session, now: Optional[datetime] = None) -> Optional[dict]
     now = now or _now()
     start = datetime(now.year, now.month, 1)
     amounts = (db.query(models.KofiPayment.amount)
-               .filter(models.KofiPayment.received_at >= start, models.KofiPayment.test.is_(False),
+               .filter(models.KofiPayment.received_at >= start, not_(is_test_payment()),
                        func.coalesce(func.upper(models.KofiPayment.currency), "USD") == "USD").all())
     raised = sum(_amount(amount) for (amount,) in amounts)
     return {"goal": goal, "raised": raised, "percent": min(100, int(raised * 100 / goal)), "month": f"{now:%B}"}
@@ -781,6 +793,11 @@ def unmatched_payments(db: Session, limit: int = 50, email: Optional[str] = None
              "looks_like_test": looks_like_test(p), "claimed": p.claimed_by is not None,
              "suggestions": suggestions.get(p.id, [])}
             for p in rows]
+
+
+def test_count(db: Session) -> int:
+    """Ko-fi test pings recorded so far (kept out of every list and count)."""
+    return int(db.query(func.count(models.KofiPayment.id)).filter(is_test_payment()).scalar() or 0)
 
 
 def waiting_count(db: Session) -> int:

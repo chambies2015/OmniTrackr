@@ -500,7 +500,12 @@
 
   const kofi = { email: '' };
 
-  function kofiSummary(payments, waiting) {
+  function kofiSummary(payments, waiting, tests = 0) {
+    const testNote = tests ? ` ${number(tests)} Ko-fi test payment${tests === 1 ? '' : 's'} left out.` : '';
+    return kofiSummaryText(payments, waiting) + testNote;
+  }
+
+  function kofiSummaryText(payments, waiting) {
     if (kofi.email) {
       return payments.length
         ? `${payments.length} waiting payment${payments.length === 1 ? '' : 's'} came from ${kofi.email}.`
@@ -523,7 +528,7 @@
     const list = $('kofiList');
     if (!list) return;
     list.replaceChildren();
-    $('kofiSummary').textContent = kofiSummary(payments, extra.waiting ?? payments.length);
+    $('kofiSummary').textContent = kofiSummary(payments, extra.waiting ?? payments.length, extra.tests || 0);
     renderKofiMembers(extra.members);
     if (!payments.length) {
       list.appendChild(el('li', 'stats-kofi__empty', 'Nothing to link.'));

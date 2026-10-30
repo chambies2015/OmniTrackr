@@ -105,4 +105,5 @@ test('Ko-fi card summary counts what is waiting and says when only the newest ar
   assert.match(one, /^1 payment came in/);
   assert.doesNotMatch(one, /newest/);
   assert.match(stats.kofiSummary([{ message_id: 'a' }], 60), /^60 payments came in.*The newest 1 are shown/);
+  assert.match(stats.kofiSummary([], 0, 4), /linked to a member.* 4 Ko-fi test payments left out\.$/);
 });

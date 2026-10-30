@@ -201,7 +201,7 @@ def _growth(db: Session, days: int, now: datetime) -> dict:
             "monthly": _count(db.query(func.count(supporter.id)).filter(supporter.active_until > now, supporter.monthly == True)),
             "all_time": _count(db.query(func.count(supporter.id))),
             "new": _counts_between(db, supporter.since, start),
-            "payments": _count(db.query(func.count(payment.id)).filter(payment.received_at >= start, payment.test.is_(False))),
+            "payments": _count(db.query(func.count(payment.id)).filter(payment.received_at >= start, ~supporters.is_test_payment())),
             # Ko-fi test pings and payments the owner set aside don't need linking.
             "unlinked_payments": supporters.waiting_count(db),
         },

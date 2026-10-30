@@ -202,7 +202,8 @@ def unmatched(response: Response, email: str = Query("", max_length=254), user: 
     email = email.strip()
     if email and not supporters.looks_like_email(email):
         raise HTTPException(status_code=422, detail="Type a whole email address, like name@example.com")
-    result = {"payments": supporters.unmatched_payments(db, email=email or None), "waiting": supporters.waiting_count(db)}
+    result = {"payments": supporters.unmatched_payments(db, email=email or None), "waiting": supporters.waiting_count(db),
+              "tests": supporters.test_count(db)}
     if email:
         result["members"] = [_member_json(member) for member in supporters.members_with_email(db, email)]
     return result
