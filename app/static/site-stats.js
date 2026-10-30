@@ -456,6 +456,8 @@
     };
     fillList('signupIssues', data.funnel.issues);
     if ($('googleSignin')) fillList('googleSignin', data.funnel.google || []);
+    if ($('startFunnel') && data.funnel.start) drawSteps($('startFunnel'), data.funnel.start);
+    if ($('startPaths') && data.funnel.start_paths) fillList('startPaths', data.funnel.start_paths);
     const retention = data.retention || {};
     fillList('guestList', [
       ...data.funnel.guest,
@@ -1080,6 +1082,7 @@
       data.funnel ? `Sign-up issues: ${data.funnel.issues.filter(item => item.count).map(item => `${item.label} ${number(item.count)}`).join('; ') || 'none'}` : '',
       data.funnel ? `Guest lists: ${data.funnel.guest.map(item => `${item.label} ${number(item.count)}`).join('; ')}` : '',
       data.funnel && data.funnel.google ? `Google sign-in: ${data.funnel.google.map(item => `${item.label} ${number(item.count)}`).join('; ')}` : '',
+      data.funnel && data.funnel.start ? `Start page: ${data.funnel.start.map(step => `${step.label} ${number(step.count)}`).join(' → ')}; ${(data.funnel.start_paths || []).map(item => `${item.label} ${number(item.count)}`).join('; ')}` : '',
       ...growthReport(data),
       data.announcement ? `What's new email: ${data.announcement.status}, ${number(data.announcement.sent)} sent, ${number(data.announcement.remaining)} still to send, ${number(data.announcement.opted_out)} unsubscribed from updates.` : '',
       data.comeback ? `Come-back email: ${data.comeback.status}, ${number(data.comeback.due_now)} members due now, ${number(data.comeback.sent_30d)} sent in 30 days, ${number(data.comeback.came_back)} came back within ${data.comeback.came_back_window_days} days of one.` : '',

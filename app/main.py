@@ -30,7 +30,7 @@ from .migrations import run_migrations
 from .middleware import SecurityHeadersMiddleware, BotFilterMiddleware, CSRFProtectionMiddleware, RequestBodyLimitMiddleware, UploadAuthenticationMiddleware
 from .site_traffic import RECORDER as TRAFFIC_RECORDER, SiteTrafficMiddleware
 from . import digest as digest_emails
-from . import funnel
+from . import funnel, start_flow
 from .dependencies import get_db, get_current_user, get_optional_current_user
 from .routers import (
     auth,
@@ -918,6 +918,20 @@ for route in taste_quiz_router.router.routes:
         bind_rate_limited_endpoint(route, rate_limited_quiz_save)
 app.include_router(taste_quiz_router.router)
 
+from .routers import start as start_router
+rate_limited_start_save = limiter.limit("90/minute")(start_router.start_save)
+rate_limited_start_art = limiter.limit("60/minute")(start_router.start_art)
+rate_limited_start_undo = limiter.limit("30/minute")(start_router.start_undo)
+for route in start_router.router.routes:
+    path = getattr(route, "path", None)
+    if path == "/api/start/save":
+        bind_rate_limited_endpoint(route, rate_limited_start_save)
+    elif path == "/api/start/art/{kind}/{slug}":
+        bind_rate_limited_endpoint(route, rate_limited_start_art)
+    elif path == "/api/start/undo":
+        bind_rate_limited_endpoint(route, rate_limited_start_undo)
+app.include_router(start_router.router)
+
 from .routers import if_you_liked as if_you_liked_router
 app.include_router(if_you_liked_router.router)
 
@@ -1116,6 +1130,10 @@ async def read_root(request: Request):
         with open(html_file, "r", encoding="utf-8") as file:
             html = apply_app_chrome(file.read())
             authenticated_shell = bool(request.cookies.get(AUTH_COOKIE_NAME))
+            if (authenticated_shell and request.method == "GET" and not request.query_params
+                    and request.cookies.get(start_flow.COOKIE) == "1"):
+                # A new account's first visit: the start page, once (it clears the cookie).
+                return RedirectResponse("/start", status_code=303)
             if not authenticated_shell:
                 await run_in_threadpool(_warm_homepage_sections)
                 html = public_root_html(html, request)

@@ -413,6 +413,8 @@
   // ------------------------------------------------------------ after sign-up
   function signedInDashboard() {
     if (document.documentElement.dataset.publicShell === 'true') return false;
+    // The start page (/start) is only ever served to a signed-in member.
+    if (typeof document.getElementById === 'function' && document.getElementById('startFlow')) return true;
     if (!document.getElementById('mainContainer')) return false;
     try { return typeof getUser === 'function' && !!getUser(); } catch (error) { return false; }
   }
