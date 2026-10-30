@@ -21,6 +21,7 @@ import asyncio
 import json
 import os
 import re
+import unicodedata
 from datetime import datetime, timedelta
 from typing import Optional
 
@@ -34,6 +35,10 @@ USER_AGENT = "OmniTrackr/1.0 (https://omnitrackr.xyz; omnitrackr@gmail.com)"
 HEADERS = {"User-Agent": USER_AGENT, "Accept": "application/json"}
 TIMEOUT = 6.0
 FRESH = {"ok": timedelta(days=30), "miss": timedelta(days=3), "error": timedelta(hours=6)}
+# Found something, but a source was down or rate limited at the time: look again sooner.
+PARTIAL_FRESH = timedelta(days=1)
+# Misses saved before the matcher learned aliases and Wikipedia's "(2025 film)" pages get one more look.
+MATCHER_UPDATED = datetime(2026, 10, 31)
 
 # How each kind of title is described on Wikidata (matched against search descriptions).
 WIKIDATA_HINTS = {
@@ -104,7 +109,10 @@ def _strip_html(text: Optional[str]) -> str:
 
 
 def _norm(text: str) -> str:
-    return " ".join(re.sub(r"[^\w\s]", " ", (text or "").casefold()).split())
+    # "Pokémon" and "Pokemon", "Fast & Furious" and "Fast and Furious" are the same title.
+    text = unicodedata.normalize("NFKD", text or "").encode("ascii", "ignore").decode("ascii")
+    text = re.sub(r"\s&\s", " and ", text.casefold())
+    return " ".join(re.sub(r"[^\w\s]", " ", text).split())
 
 
 def _title_matches(wanted: str, found: str) -> bool:
@@ -114,14 +122,45 @@ def _title_matches(wanted: str, found: str) -> bool:
     return a == b or b.startswith(a + " ") or a.startswith(b + " ")
 
 
+class SourceUnavailable(Exception):
+    """A source was rate limited or down, which says nothing about whether it knows the title."""
+
+
 async def _get_json(client, url: str, params: Optional[dict] = None):
     response = await client.get(url, params=params, headers=HEADERS, timeout=TIMEOUT, follow_redirects=True)
+    if response.status_code == 429 or response.status_code >= 500:
+        raise SourceUnavailable(f"{url} answered {response.status_code}")
     if response.status_code != 200:
         return None
     return response.json()
 
 
 # ---------------------------------------------------------------- Wikidata / Wikipedia
+
+def _entry_names(entry: dict) -> list[str]:
+    """The label plus the alias the search matched on ("Dan Da Dan" is an alias of "Dandadan")."""
+    names = [entry.get("label") or ""]
+    match = entry.get("match") or {}
+    if match.get("type") == "alias" and match.get("text"):
+        names.append(match["text"])
+    names += [alias for alias in entry.get("aliases") or [] if isinstance(alias, str)]
+    return [name for name in dict.fromkeys(names) if name]
+
+
+def _years_in(text: str) -> set[int]:
+    return {int(found) for found in re.findall(r"\b(1[89]\d\d|20\d\d)\b", text or "")}
+
+
+def _describes(category: str, description: str, year: Optional[int]) -> bool:
+    """Whether a Wikidata or Wikipedia short description fits this kind of title (and year, when it names one)."""
+    description = (description or "").casefold()
+    if not any(hint in description for hint in WIKIDATA_HINTS[category]):
+        return False
+    if any(bad in description for bad in WIKIDATA_EXCLUDE[category]):
+        return False
+    years = _years_in(description)
+    return not (year and years and not any(abs(found - year) <= 1 for found in years))
+
 
 async def _wikidata_find(client, category: str, title: str, year: Optional[int]) -> Optional[str]:
     data = await _get_json(client, "https://www.wikidata.org/w/api.php", {
@@ -130,19 +169,14 @@ async def _wikidata_find(client, category: str, title: str, year: Optional[int])
     })
     candidates = []
     for entry in (data or {}).get("search", []):
-        description = (entry.get("description") or "").casefold()
-        label = entry.get("label") or ""
-        if not any(hint in description for hint in WIKIDATA_HINTS[category]):
+        description = entry.get("description") or ""
+        names = _entry_names(entry)
+        if not any(_title_matches(title, name) for name in names):
             continue
-        if any(bad in description for bad in WIKIDATA_EXCLUDE[category]):
-            continue
-        if not _title_matches(title, label) and _norm(label) != _norm(title):
-            continue
-        exact = _norm(label) == _norm(title)
-        years = {int(found) for found in re.findall(r"\b(1[89]\d\d|20\d\d)\b", description)}
-        year_hit = bool(year) and any(abs(found - year) <= 1 for found in years)
-        if year and years and not year_hit:
-            continue  # Same name, different year: a remake or a namesake.
+        if not _describes(category, description, year):
+            continue  # Wrong kind of thing, or same name in a different year: a remake or a namesake.
+        exact = any(_norm(name) == _norm(title) for name in names)
+        year_hit = bool(year) and any(abs(found - year) <= 1 for found in _years_in(description))
         candidates.append((year_hit, exact, entry["id"]))
     if not candidates:
         return None
@@ -150,6 +184,41 @@ async def _wikidata_find(client, category: str, title: str, year: Optional[int])
     if year and not candidates[0][0] and not candidates[0][1]:
         return None
     return candidates[0][2]
+
+
+# How Wikipedia names an article when the plain title belongs to something else: "Superman (2025 film)".
+WIKIPEDIA_QUALIFIERS = {
+    "movie": ("{year} film", "film"),
+    "tv": ("{year} TV series", "TV series"),
+    "anime": ("{year} TV series", "TV series"),
+    "game": ("{year} video game", "video game"),
+    "book": ("novel",),
+    "audiobook": ("novel",),
+    "manga": ("manga",),
+    "podcast": ("podcast",),
+    "album": ("album",),
+}
+
+
+async def _wikipedia_find(client, category: str, title: str, year: Optional[int]) -> Optional[str]:
+    """The Wikidata id behind a disambiguated Wikipedia article, for titles the search crowds out.
+
+    "Superman" brings back fifty comics, characters and older films before the 2025 one.
+    """
+    from urllib.parse import quote
+    for qualifier in WIKIPEDIA_QUALIFIERS.get(category, ()):
+        if "{year}" in qualifier and not year:
+            continue
+        page = f"{title} ({qualifier.format(year=year)})"
+        data = await _get_json(client, "https://en.wikipedia.org/api/rest_v1/page/summary/"
+                                       + quote(page.replace(" ", "_"), safe=""))
+        if not data or data.get("type") != "standard" or not data.get("wikibase_item"):
+            continue
+        if not _title_matches(title, re.sub(r"\s*\([^)]*\)$", "", data.get("title") or "")):
+            continue
+        if _describes(category, data.get("description") or "", year):
+            return data["wikibase_item"]
+    return None
 
 
 def _claims(entity: dict, prop: str) -> list:
@@ -563,17 +632,53 @@ async def itunes_audiobook_details(client, title: str, year: Optional[int], crea
 
 # ---------------------------------------------------------------- assembly
 
-async def _safe(coro, default=None):
+async def _safe(coro, troubles: Optional[list] = None):
     try:
         return await coro
-    except Exception:
-        return default if default is not None else {}
+    except Exception as error:
+        if troubles is not None:
+            troubles.append(error)
+        return {}
+
+
+# Retried once when nothing matched: "Arcane (Season 2)", "Breaking Bad Season 1", "In Rainbows [Deluxe]".
+_BRACKETS = re.compile(r"\s*[\(\[][^\)\]]*[\)\]]")
+_SEASON = re.compile(r"[\s:,-]+(season|series|part|cour)\s*\d+$", re.IGNORECASE)
+
+
+def simpler_title(category: str, title: str) -> Optional[str]:
+    """The title without edition notes or season numbers, if that changes it."""
+    simpler = _BRACKETS.sub("", title or "").strip()
+    if category in ("tv", "anime"):
+        simpler = _SEASON.sub("", simpler).strip()
+    simpler = simpler.rstrip(" -:,")
+    return simpler if simpler and _norm(simpler) != _norm(title) else None
 
 
 async def fetch(client, category: str, title: str, year: Optional[int], creator: Optional[str] = None) -> dict:
-    """Gather everything we can find. Returns {} when nothing matched."""
+    """Gather everything we can find. Returns {} when every source answered and none knows the title.
+
+    Raises SourceUnavailable when nothing was found but a source failed: that is worth
+    another look in hours, where a real "not found" waits days.
+    """
+    troubles: list = []
+    data = await _fetch_once(client, category, title, year, creator, troubles)
+    simpler = simpler_title(category, title)
+    if not data and not troubles and simpler:
+        data = await _fetch_once(client, category, simpler, year, creator, troubles)
+    if troubles and not data:
+        raise SourceUnavailable(str(troubles[0]))
+    if data and troubles:
+        data["partial"] = True
+    return data
+
+
+async def _fetch_once(client, category: str, title: str, year: Optional[int], creator: Optional[str],
+                      troubles: list) -> dict:
     async def wiki_part():
         qid = await _wikidata_find(client, category, title, year)
+        if not qid:
+            qid = await _wikipedia_find(client, category, title, year)
         if not qid:
             return {}
         facts = await wikidata_facts(client, category, qid)
@@ -591,7 +696,7 @@ async def fetch(client, category: str, title: str, year: Optional[int], creator:
         "album": lambda: itunes_details(client, title, year, creator),
     }.get(category)
     wiki, extra = await asyncio.gather(
-        _safe(wiki_part()), _safe(extra_source()) if extra_source else asyncio.sleep(0, result={}),
+        _safe(wiki_part(), troubles), _safe(extra_source(), troubles) if extra_source else asyncio.sleep(0, result={}),
     )
     wikidata = wiki.get("wikidata") or {}
     wikipedia = wiki.get("wikipedia") or {}
@@ -675,13 +780,18 @@ def cached(db: Session, key: str, freshness: Optional[dict] = None) -> tuple[Opt
     if row is None:
         return None, False
     freshness = freshness or FRESH
-    fresh = datetime.utcnow() - row.fetched_at < freshness.get(row.status, freshness["error"])
     data = None
     if row.status == "ok" and row.data:
         try:
             data = json.loads(row.data)
         except ValueError:
             data = None
+    limit = freshness.get(row.status, freshness["error"])
+    if isinstance(data, dict) and data.get("partial"):
+        limit = min(limit, PARTIAL_FRESH)
+    fresh = datetime.utcnow() - row.fetched_at < limit
+    if row.status == "miss" and row.fetched_at < MATCHER_UPDATED and not key.startswith("where:"):
+        fresh = False
     return data, fresh
 
 
@@ -731,6 +841,7 @@ async def get_or_fetch(db: Session, client, category: str, normalized_title: str
             await run_in_threadpool(store, db, key, result or None, "ok" if result else "miss")
             return result or data
         except Exception:
+            # Includes SourceUnavailable: a rate-limited source is tried again in hours, not days.
             await run_in_threadpool(store, db, key, None, "error")
             return data
         finally:

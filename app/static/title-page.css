@@ -281,3 +281,14 @@ a.title-where__provider:hover, a.title-where__provider:focus-visible { border-co
 /* Credited names that have a people or studio page. */
 .title-facts dd a { color: var(--site-violet-soft); text-decoration: none; }
 .title-facts dd a:hover { text-decoration: underline; text-underline-offset: 3px; }
+
+/* Overview, quick answers and genre matches (Oct 31) */
+.title-overview { color: var(--site-text); font-size: 1.06rem; }
+.title-overview a, .title-faq a { color: var(--site-violet-soft); text-decoration: none; }
+.title-overview a:hover, .title-faq a:hover { text-decoration: underline; text-underline-offset: 3px; }
+.title-section__lead { color: var(--site-muted); font-size: .9rem; margin: -6px 0 16px; }
+.title-faq__list { display: grid; gap: 0; max-width: 820px; }
+.title-faq__item { border-top: 1px solid var(--site-border); padding: 16px 0; }
+.title-faq__item:last-child { border-bottom: 1px solid var(--site-border); }
+.title-faq__item h3 { color: var(--site-text); font-size: 1rem; line-height: 1.4; margin: 0 0 6px; }
+.title-faq__item p { color: var(--site-soft); line-height: 1.65; margin: 0; }

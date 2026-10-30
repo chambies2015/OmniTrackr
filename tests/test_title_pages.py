@@ -483,11 +483,15 @@ def test_album_track_list_from_itunes():
     assert data["poster"] == "https://is1.mzstatic.com/a/600x600bb.jpg"
 
 
-def test_slow_or_broken_sources_just_mean_less_information():
+def test_slow_or_broken_sources_just_mean_less_information(db_session):
     class Broken:
         async def get(self, *args, **kwargs):
             raise RuntimeError("down")
-    assert asyncio.run(title_metadata.fetch(Broken(), "movie", "Interstellar", 2014)) == {}
+    with pytest.raises(title_metadata.SourceUnavailable):
+        asyncio.run(title_metadata.fetch(Broken(), "movie", "Interstellar", 2014))
+    # The page still renders; the lookup is saved as an error (hours), not "not found" (days).
+    assert asyncio.run(title_metadata.get_or_fetch(db_session, Broken(), "movie", "interstellar", "Interstellar", 2014)) is None
+    assert db_session.query(models.TitleMetadata).filter_by(key="movie:interstellar:2014").one().status == "error"
 
 
 # ---------------------------------------------------------------- cache
