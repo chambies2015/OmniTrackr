@@ -238,6 +238,15 @@ def _comeback_status(db: Session) -> dict | None:
         return None
 
 
+def _welcome_status(db: Session) -> dict | None:
+    try:
+        from .. import welcome_emails
+        return welcome_emails.status(db)
+    except Exception:
+        db.rollback()
+        return None
+
+
 def _title_details(db: Session) -> dict:
     """How many title pages have their public facts cached (filled in by a background job)."""
     counts = dict(db.query(models.TitleMetadata.status, func.count(models.TitleMetadata.id))
@@ -323,6 +332,7 @@ def site_stats_overview(
         "editor_collections": editorial_collections.status(db),
         "announcement": _announcement_status(db),
         "comeback": _comeback_status(db),
+        "welcome": _welcome_status(db),
     }
 
 
@@ -446,3 +456,49 @@ async def comeback_action(payload: ComebackAction, request: Request, response: R
         return {**comeback.status(db), "message": f"Test sent to {current_user.email}."}
     comeback.set_status(db, "sending" if payload.action == "start" else "paused")
     return comeback.status(db)
+
+
+# ---------------------------------------------------------------- welcome emails
+
+class WelcomeAction(BaseModel):
+    action: str = Field(..., pattern="^(start|pause|test)$")
+
+
+@router.get("/site-stats/welcome-preview", include_in_schema=False)
+def welcome_preview(step: int = Query(1, ge=1, le=3), current_user: models.User = Depends(get_current_user),
+                    db: Session = Depends(get_db)):
+    """One welcome email as the owner would receive it (nothing is sent)."""
+    from fastapi.responses import HTMLResponse
+    from .. import welcome_emails
+    _require_admin(current_user)
+    chosen = welcome_emails.step_for(step)
+    subject, html, _text, _url = welcome_emails.email_for(db, current_user, chosen)
+    others = " · ".join(
+        f'<a href="/site-stats/welcome-preview?step={other.number}" style="color:#78350f">{other.label}</a>'
+        if other.number != step else f"<strong>{other.label}</strong>" for other in welcome_emails.STEPS)
+    banner = (f'<div style="font:14px Arial,sans-serif;background:#fef3c7;color:#78350f;padding:10px 16px">'
+              f'Preview only, filled in from your own library. Subject: <strong>{subject.replace("&", "&amp;").replace("<", "&lt;")}</strong>'
+              f'<div style="margin-top:6px">{others}</div></div>')
+    response = HTMLResponse(html.replace(
+        '<div style="max-width:560px', banner + '<div style="max-width:560px', 1))
+    response.headers["Content-Security-Policy"] = "default-src 'none'; img-src https: data:; style-src 'unsafe-inline'; frame-ancestors 'none'"
+    _no_store(response)
+    return response
+
+
+@router.post("/api/site-stats/welcome")
+async def welcome_action(payload: WelcomeAction, response: Response,
+                         current_user: models.User = Depends(get_current_user), db: Session = Depends(get_db)):
+    from .. import welcome_emails
+    _require_admin(current_user)
+    _no_store(response)
+    if payload.action == "test":
+        if not welcome_emails.mail_configured():
+            raise HTTPException(status_code=409, detail="Email isn't configured on this server.")
+        try:
+            await welcome_emails.send_test(db, current_user)
+        except Exception as error:
+            raise HTTPException(status_code=502, detail=f"The test emails couldn't be sent: {error}")
+        return {**welcome_emails.status(db), "message": f"All three sent to {current_user.email}."}
+    welcome_emails.set_status(db, "sending" if payload.action == "start" else "paused")
+    return welcome_emails.status(db)

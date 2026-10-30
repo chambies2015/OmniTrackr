@@ -120,6 +120,10 @@ async def lifespan(application: FastAPI):
     comeback_task = None
     if comeback.enabled_for_process():
         comeback_task = asyncio.create_task(comeback.comeback_loop(application))
+    from . import welcome_emails
+    welcome_task = None
+    if welcome_emails.enabled_for_process():
+        welcome_task = asyncio.create_task(welcome_emails.welcome_loop(application))
     from . import web_push
     push_task = None
     if web_push.dispatch_enabled():
@@ -136,7 +140,8 @@ async def lifespan(application: FastAPI):
     try:
         yield
     finally:
-        for task in (digest_task, title_task, announcement_task, comeback_task, push_task, roundup_task, episode_task):
+        for task in (digest_task, title_task, announcement_task, comeback_task, welcome_task, push_task, roundup_task,
+                     episode_task):
             if task is not None:
                 task.cancel()
         await application.state.external_api_client.aclose()
