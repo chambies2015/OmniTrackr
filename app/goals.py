@@ -29,6 +29,7 @@ NOUNS = {
     "books": ("book", "books"),
     "manga": ("manga series", "manga series"),
     "podcasts": ("podcast", "podcasts"),
+    "audiobooks": ("audiobook", "audiobooks"),
 }
 ORDER = list(NOUNS)
 # Goal category -> verb for "Sam read 24 books in 2026".
@@ -36,12 +37,14 @@ VERBS = {
     ALL: "finished", "movies": "watched", "tv-shows": "watched", "anime": "watched",
     "video-games": "played", "music": "listened to", "books": "read", "manga": "read",
     "podcasts": "listened to",
+    "audiobooks": "listened to",
 }
 # Goal category -> the user's privacy flag for that shelf (the overall goal has none).
 PRIVACY = {
     "movies": "movies_private", "tv-shows": "tv_shows_private", "anime": "anime_private",
     "video-games": "video_games_private", "music": "music_private", "books": "books_private",
     "manga": "manga_private", "podcasts": "podcasts_private",
+    "audiobooks": "audiobooks_private",
 }
 MAX_TARGET = 1000
 SITE_URL = os.getenv("SITE_URL", "https://omnitrackr.xyz").rstrip("/")

@@ -29,6 +29,7 @@ LIBRARY = {
     "books": (models.Book, "read"),
     "manga": (models.Manga, "read"),
     "podcasts": (models.Podcast, "listened"),
+    "audiobooks": (models.Audiobook, "listened"),
 }
 
 # Each track: key, name, emoji, what is counted, the three tier targets, the "do more"
@@ -53,8 +54,10 @@ TRACKS = (
      "counts": "manga series read", "next": "Finish {n} more manga {noun}", "noun": ("series", "series"), "shelf": "manga"},
     {"key": "regular", "name": "Podcast Regular", "emoji": "🎙️", "metric": "podcasts", "targets": (5, 25, 100),
      "counts": "podcasts listened to", "next": "Listen to {n} more {noun}", "noun": ("podcast", "podcasts"), "shelf": "podcasts"},
+    {"key": "earful", "name": "All Ears", "emoji": "🔊", "metric": "audiobooks", "targets": (5, 25, 100),
+     "counts": "audiobooks finished", "next": "Finish {n} more {noun}", "noun": ("audiobook", "audiobooks"), "shelf": "audiobooks"},
     {"key": "explorer", "name": "Explorer", "emoji": "🧭", "metric": "categories", "targets": (2, 4, 6),
-     "counts": "of the eight categories tracked", "next": "Track something in {n} more {noun}",
+     "counts": "of the nine categories tracked", "next": "Track something in {n} more {noun}",
      "noun": ("category", "categories"), "shelf": None},
     {"key": "rater", "name": "Rater", "emoji": "⭐", "metric": "rated", "targets": (10, 50, 250),
      "counts": "titles rated", "next": "Rate {n} more {noun}", "noun": ("title", "titles"), "shelf": None},

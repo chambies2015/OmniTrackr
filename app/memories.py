@@ -42,6 +42,7 @@ VERBS = {
     "books": ("finished", "reread", "started reading"),
     "manga": ("finished", "reread", "started reading"),
     "podcasts": ("finished", "went back to", "started listening to"),
+    "audiobooks": ("finished", "went back to", "started listening to"),
 }
 # Which memory wins when one day has several.
 RANK = {"finished": 0, "revisited": 1, "started": 2, "noted": 3, "collection": 4, "joined": 5, "added": 6,

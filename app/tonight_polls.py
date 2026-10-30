@@ -42,10 +42,11 @@ SUGGESTIONS_MAX = 24
 MY_POLLS_SHOWN = 12
 NAMES_SHOWN = 12
 VERB = {"movie": "watch", "tv": "watch", "anime": "watch", "game": "play", "book": "read", "album": "play",
-        "manga": "read", "podcast": "play"}
+        "manga": "read", "podcast": "play", "audiobook": "play"}
 LIBRARY = {
     "movies": models.Movie, "tv-shows": models.TVShow, "anime": models.Anime, "video-games": models.VideoGame,
     "music": models.Music, "books": models.Book, "manga": models.Manga, "podcasts": models.Podcast,
+    "audiobooks": models.Audiobook,
 }
 
 

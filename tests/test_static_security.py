@@ -219,9 +219,9 @@ def test_app_review_forms_prompt_for_substantial_public_reviews():
     source = dashboard_assets.full_source()
     template = INDEX_HTML.read_text(encoding="utf-8")
 
-    assert template.count("data-review-quality-input") == 8
-    assert template.count("data-review-counter-for=") == 8
-    assert template.count("0/80 characters - add context for the community feed") == 8
+    assert template.count("data-review-quality-input") == 9
+    assert template.count("data-review-counter-for=") == 9
+    assert template.count("0/80 characters - add context for the community feed") == 9
     assert template.count('href="/review-guidelines"') >= 8
     assert 'class="review-quality-hint"' in source
     assert "const PUBLIC_REVIEW_MIN_CHARS = 80" in source
@@ -230,7 +230,7 @@ def test_app_review_forms_prompt_for_substantial_public_reviews():
     assert "Search-ready baseline met" in source
     assert "SEARCH_READY_REVIEW_MIN_CHARS = 240" in source
     assert "SEARCH_READY_REVIEW_MIN_WORDS = 35" in source
-    assert source.count("${reviewQualityHintHtml('edit-") == 8
+    assert source.count("${reviewQualityHintHtml('edit-") == 9
 
 
 def test_library_launchpad_is_client_side_and_uses_existing_insights():
@@ -295,9 +295,9 @@ def test_quick_capture_searches_every_core_type_without_writing_directly():
     assert 'id="quickCaptureButton"' in template
     assert 'id="quickCaptureModal"' in template
     assert 'data-submit-action="search-quick-capture"' in template
-    assert template.count('data-action="select-quick-capture-category"') == 9
-    assert "const QUICK_CAPTURE_CATEGORY_ORDER = ['movies', 'tv-shows', 'anime', 'video-games', 'music', 'books', 'manga', 'podcasts']" in quick_capture
-    for provider in ("omdb", "jikan", "rawg", "itunes", "openlibrary", "jikan-manga", "itunes-podcasts"):
+    assert template.count('data-action="select-quick-capture-category"') == 10
+    assert "const QUICK_CAPTURE_CATEGORY_ORDER = ['movies', 'tv-shows', 'anime', 'video-games', 'music', 'books', 'manga', 'podcasts', 'audiobooks']" in quick_capture
+    for provider in ("omdb", "jikan", "rawg", "itunes", "openlibrary", "jikan-manga", "itunes-podcasts", "itunes-audiobooks"):
         assert f"/api/proxy/{provider}" in quick_capture
     assert "function applyQuickCaptureResult" in quick_capture
     assert "prepareQuickCaptureDestination" in quick_capture

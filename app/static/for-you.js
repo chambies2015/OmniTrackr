@@ -7,7 +7,7 @@
   const LOADERS = {
     movies: 'loadMovies', 'tv-shows': 'loadTVShows', anime: 'loadAnime',
     'video-games': 'loadVideoGames', music: 'loadMusic', books: 'loadBooks', manga: 'loadManga',
-    podcasts: 'loadPodcasts',
+    podcasts: 'loadPodcasts', audiobooks: 'loadAudiobooks',
   };
   const RADAR_TO_LIBRARY = { movies: 'movies', tv: 'tv-shows', anime: 'anime', games: 'video-games' };
   const state = { request: 0, libraryTotal: 0, added: 0, busy: new Set(), email: {}, calendar: {} };

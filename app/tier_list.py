@@ -25,8 +25,8 @@ TEMPLATE_MAX_ITEMS = 30
 LIBRARY_MAX_ITEMS = 120
 CACHE_SECONDS = 600
 KIND_PLURALS = {"movie": "movies", "tv": "TV shows", "anime": "anime", "game": "video games",
-                "album": "albums", "book": "books", "manga": "manga", "podcast": "podcasts"}
-KIND_ORDER = ("movie", "tv", "anime", "game", "book", "manga", "album", "podcast")
+                "album": "albums", "book": "books", "manga": "manga", "podcast": "podcasts", "audiobook": "audiobooks"}
+KIND_ORDER = ("movie", "tv", "anime", "game", "book", "manga", "album", "podcast", "audiobook")
 
 # Poster and cover hosts the image proxy may fetch from (the host itself or a subdomain).
 IMAGE_HOSTS = (

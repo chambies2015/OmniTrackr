@@ -62,6 +62,11 @@ def get_all_podcasts(db: Session, user_id: int) -> List[models.Podcast]:
     return db.query(models.Podcast).filter(models.Podcast.user_id == user_id).all()
 
 
+def get_all_audiobooks(db: Session, user_id: int) -> List[models.Audiobook]:
+    """Get all audiobooks for export"""
+    return db.query(models.Audiobook).filter(models.Audiobook.user_id == user_id).all()
+
+
 def get_all_custom_tabs_with_items(db: Session, user_id: int) -> List[dict]:
     """Get all custom tabs with their items for export"""
     import json
@@ -222,6 +227,10 @@ def import_manga(db: Session, user_id: int, manga) -> tuple[int, int, List[str]]
 
 def import_podcasts(db: Session, user_id: int, podcasts) -> tuple[int, int, List[str]]:
     return _import_media(db, user_id, podcasts, models.Podcast, ("title", "host", "year"), "podcast")
+
+
+def import_audiobooks(db: Session, user_id: int, audiobooks) -> tuple[int, int, List[str]]:
+    return _import_media(db, user_id, audiobooks, models.Audiobook, ("title", "author", "year"), "audiobook")
 
 
 def import_custom_tabs(db: Session, user_id: int, custom_tabs_data: List[dict]) -> tuple[int, int, List[str]]:

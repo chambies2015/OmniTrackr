@@ -20,7 +20,8 @@ INTRO = (
     "watch, read, or play session as something to optimize. They are companions for a reflective weekend."
 )
 COMPLETION = {"movies": "watched", "tv-shows": "watched", "anime": "watched",
-              "video-games": "played", "music": "listened", "books": "read", "manga": "read", "podcasts": "listened"}
+              "video-games": "played", "music": "listened", "books": "read", "manga": "read", "podcasts": "listened",
+              "audiobooks": "listened"}
 METADATA = {
     "movies": {"director": "A Director", "year": 2024, "poster_url": "https://example.test/movie.png"},
     "tv-shows": {"year": 2023, "seasons": 2, "episodes": 16, "poster_url": "https://example.test/tv.png"},
@@ -35,6 +36,8 @@ METADATA = {
               "cover_art_url": "https://example.test/manga.png"},
     "podcasts": {"host": "A Host", "year": 2015, "genre": "Comedy", "episodes": 300,
                  "cover_art_url": "https://example.test/podcast.png"},
+    "audiobooks": {"author": "An Author", "narrator": "A Narrator", "year": 2017, "genre": "Fiction",
+                   "length_hours": 9.5, "cover_art_url": "https://example.test/audiobook.png"},
 }
 
 
@@ -391,7 +394,7 @@ def test_new_selection_or_source_version_creates_distinct_explicit_private_copy(
     updated = preview(client, shelf).json()
     changed_version = save(client, shelf, updated["version"], first_ids).json()
     assert changed_version["collection_id"] not in {first["collection_id"], changed_selection["collection_id"]}
-    assert reader_counts(db_session, shelf) == (3, (1, 0, 0, 0, 0, 1, 0, 0), 3)
+    assert reader_counts(db_session, shelf) == (3, (1, 0, 0, 0, 0, 1, 0, 0, 0), 3)
     original = db_session.get(models.Collection, first["collection_id"])
     assert original.items[0].curator_note != shelf.entries["movies"].curator_note
 
@@ -402,10 +405,10 @@ def test_deleted_copy_can_be_saved_again_without_deleting_library_titles(client,
     selected = [shelf.entries["movies"].id]
     first = save(client, shelf, payload["version"], selected).json()
     assert client.delete(f"/collections/{first['collection_id']}").status_code == 204
-    assert reader_counts(db_session, shelf) == (0, (1, 0, 0, 0, 0, 0, 0, 0), 0)
+    assert reader_counts(db_session, shelf) == (0, (1, 0, 0, 0, 0, 0, 0, 0, 0), 0)
     second = save(client, shelf, payload["version"], selected).json()
     assert second["already_saved"] is False and second["created"] == 0 and second["reused"] == 1
-    assert reader_counts(db_session, shelf) == (1, (1, 0, 0, 0, 0, 0, 0, 0), 1)
+    assert reader_counts(db_session, shelf) == (1, (1, 0, 0, 0, 0, 0, 0, 0, 0), 1)
 
 
 def test_source_deletion_does_not_delete_or_edit_the_private_copy(client, db_session, shelf):

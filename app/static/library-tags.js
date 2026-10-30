@@ -6,6 +6,7 @@
   const TABLES = {
     movieTable: 'movies', tvShowTable: 'tv-shows', animeTable: 'anime', videoGameTable: 'video-games',
     musicTable: 'music', bookTable: 'books', mangaTable: 'manga', podcastTable: 'podcasts',
+    audiobookTable: 'audiobooks',
   };
   const MAX_TAGS = 10;
   const MAX_LENGTH = 32;

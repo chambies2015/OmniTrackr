@@ -20,6 +20,7 @@ CATEGORIES = (
     {"key": "books", "label": "Books", "model": models.Book, "done": "read", "year": "year", "creator": "author", "private": "books_private", "visible": "books_visible"},
     {"key": "manga", "label": "Manga", "model": models.Manga, "done": "read", "year": "year", "creator": "author", "private": "manga_private", "visible": "manga_visible"},
     {"key": "podcasts", "label": "Podcasts", "model": models.Podcast, "done": "listened", "year": "year", "creator": "host", "private": "podcasts_private", "visible": "podcasts_visible"},
+    {"key": "audiobooks", "label": "Audiobooks", "model": models.Audiobook, "done": "listened", "year": "year", "creator": "author", "private": "audiobooks_private", "visible": "audiobooks_visible"},
 )
 CATEGORY_BY_KEY = {category["key"]: category for category in CATEGORIES}
 MIN_ITEMS = 10

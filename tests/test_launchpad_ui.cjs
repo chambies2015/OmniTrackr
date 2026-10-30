@@ -40,7 +40,7 @@ test('empty library exposes every existing add paths and discovery/import, not e
   assert.equal(get('libraryLaunchpadStarterPaths').hidden, false);
   assert.equal(get('libraryLaunchpadInsights').hidden, true);
   assert.deepEqual(Array.from(get('libraryLaunchpadCategories').children, b => b.dataset.launchpadCategory),
-    ['movies', 'tv-shows', 'anime', 'video-games', 'music', 'books', 'manga', 'podcasts']);
+    ['movies', 'tv-shows', 'anime', 'video-games', 'music', 'books', 'manga', 'podcasts', 'audiobooks']);
 });
 
 test('first save transitions to useful guidance and hides starter paths', () => {

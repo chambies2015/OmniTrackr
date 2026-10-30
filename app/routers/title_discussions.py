@@ -24,7 +24,7 @@ router = APIRouter(tags=["discussions"])
 SITE_URL = os.getenv("SITE_URL", "https://omnitrackr.xyz").rstrip("/")
 ASSET_VERSION = "20261028-discussions-1"
 KIND_PLURALS = {"movie": "Movies", "tv": "TV shows", "anime": "Anime", "game": "Games", "album": "Albums", "book": "Books",
-                "manga": "Manga", "podcast": "Podcasts"}
+                "manga": "Manga", "podcast": "Podcasts", "audiobook": "Audiobooks"}
 
 
 def _e(value) -> str:

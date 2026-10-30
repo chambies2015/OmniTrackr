@@ -225,7 +225,7 @@ body.app-shell .library-table .watched-icon.watched { background: var(--lib-done
 /* ---------- List view (wide screens) ---------- */
 @media (min-width: 1025px) {
   body.app-shell:not(.library-view-shelf) .library-table-wrap { border-radius: var(--lib-card-radius); }
-  body.app-shell:not(.library-view-shelf) :is(#movieTable, #tvShowTable, #animeTable, #videoGameTable, #musicTable, #bookTable, #mangaTable, #podcastTable).library-table :is(th, td) { padding: 12px 10px; }
+  body.app-shell:not(.library-view-shelf) :is(#movieTable, #tvShowTable, #animeTable, #videoGameTable, #musicTable, #bookTable, #mangaTable, #podcastTable, #audiobookTable).library-table :is(th, td) { padding: 12px 10px; }
   body.app-shell:not(.library-view-shelf) .library-table tbody tr:last-child td { border-bottom: 0; }
   body.app-shell:not(.library-view-shelf) .library-table td[data-card-field="cover"] img,
   body.app-shell:not(.library-view-shelf) .library-table td[data-card-field="cover"]:empty::after {
@@ -238,7 +238,7 @@ body.app-shell .library-table .watched-icon.watched { background: var(--lib-done
   body.app-shell:not(.library-view-shelf) #musicTable td[data-card-field="cover"] img,
   body.app-shell:not(.library-view-shelf) #musicTable td[data-card-field="cover"]:empty::after { height: 48px; }
   body.app-shell:not(.library-view-shelf) .library-table td[data-card-field="title"] { font-size: .92rem; }
-  body.app-shell:not(.library-view-shelf) :is(#movieTable, #tvShowTable, #animeTable, #videoGameTable, #musicTable, #bookTable, #mangaTable, #podcastTable).library-table td[data-card-field="rating"] { min-width: 76px; overflow-wrap: normal; white-space: nowrap; word-break: normal; }
+  body.app-shell:not(.library-view-shelf) :is(#movieTable, #tvShowTable, #animeTable, #videoGameTable, #musicTable, #bookTable, #mangaTable, #podcastTable, #audiobookTable).library-table td[data-card-field="rating"] { min-width: 76px; overflow-wrap: normal; white-space: nowrap; word-break: normal; }
   body.app-shell:not(.library-view-shelf) .library-table-wrap .library-pager { border-top: 1px solid var(--border); padding: 12px 16px; }
   body.app-shell:not(.library-view-shelf) .library-table tbody tr:hover td[data-card-field="title"] { color: var(--primary); }
   body.app-shell:not(.library-view-shelf) .library-table tbody tr:hover td:last-child { background: var(--surface-hover); }
@@ -297,7 +297,7 @@ body.app-shell .library-table .watched-icon.watched { background: var(--lib-done
   }
   body.app-shell.library-view-shelf .mobile-library tr:not(:has(input, textarea, select)) td[data-card-field="rating"]:empty::after { font-size: .78rem; }
   /* Finished titles get a badge on the cover; unfinished ones stay clean. */
-  body.app-shell.library-view-shelf :is(#movieTable, #tvShowTable, #animeTable, #videoGameTable, #musicTable, #bookTable, #mangaTable, #podcastTable).mobile-library tbody tr:not(:has(input, textarea, select)) td.library-cell[data-card-field="status"] {
+  body.app-shell.library-view-shelf :is(#movieTable, #tvShowTable, #animeTable, #videoGameTable, #musicTable, #bookTable, #mangaTable, #podcastTable, #audiobookTable).mobile-library tbody tr:not(:has(input, textarea, select)) td.library-cell[data-card-field="status"] {
     left: auto;
     position: absolute;
     right: 8px;
@@ -320,7 +320,7 @@ body.app-shell .library-table .watched-icon.watched { background: var(--lib-done
     gap: 4px 6px;
     padding-top: 4px !important;
   }
-  body.app-shell.library-view-shelf :is(#movieTable, #tvShowTable, #animeTable, #videoGameTable, #musicTable, #bookTable, #mangaTable, #podcastTable).mobile-library tbody tr td.library-cell[data-card-field="actions"] { box-shadow: none; }
+  body.app-shell.library-view-shelf :is(#movieTable, #tvShowTable, #animeTable, #videoGameTable, #musicTable, #bookTable, #mangaTable, #podcastTable, #audiobookTable).mobile-library tbody tr td.library-cell[data-card-field="actions"] { box-shadow: none; }
   body.app-shell.library-view-shelf .mobile-library tr:not(:has(input, textarea, select)) td[data-card-field="actions"] .row-actions { flex: 1 1 auto; gap: 6px; }
   body.app-shell.library-view-shelf .mobile-library tr:not(:has(input, textarea, select)) td[data-card-field="actions"] .row-actions > * { flex: 1 1 0; }
   body.app-shell.library-view-shelf .mobile-library tr:not(:has(input, textarea, select)) td[data-card-field="actions"] .row-actions > button.action-btn,
@@ -388,9 +388,9 @@ body.app-shell .library-table .watched-icon.watched { background: var(--lib-done
     padding-top: 4px;
   }
   /* Rating and status read as one line of chips, no stacked labels. */
-  body.app-shell :is(#movieTable, #tvShowTable, #animeTable, #videoGameTable, #musicTable, #bookTable, #mangaTable, #podcastTable).mobile-library tr:not(:has(input, textarea, select)) td.library-cell[data-card-field="status"]::before,
-  body.app-shell :is(#movieTable, #tvShowTable, #animeTable, #videoGameTable, #musicTable, #bookTable, #mangaTable, #podcastTable).mobile-library tr:not(:has(input, textarea, select)) td.library-cell[data-card-field="rating"]:empty::before { content: none; }
-  body.app-shell :is(#movieTable, #tvShowTable, #animeTable, #videoGameTable, #musicTable, #bookTable, #mangaTable, #podcastTable).mobile-library tr:not(:has(input, textarea, select)) td.library-cell[data-card-field="rating"]:not(:empty)::before {
+  body.app-shell :is(#movieTable, #tvShowTable, #animeTable, #videoGameTable, #musicTable, #bookTable, #mangaTable, #podcastTable, #audiobookTable).mobile-library tr:not(:has(input, textarea, select)) td.library-cell[data-card-field="status"]::before,
+  body.app-shell :is(#movieTable, #tvShowTable, #animeTable, #videoGameTable, #musicTable, #bookTable, #mangaTable, #podcastTable, #audiobookTable).mobile-library tr:not(:has(input, textarea, select)) td.library-cell[data-card-field="rating"]:empty::before { content: none; }
+  body.app-shell :is(#movieTable, #tvShowTable, #animeTable, #videoGameTable, #musicTable, #bookTable, #mangaTable, #podcastTable, #audiobookTable).mobile-library tr:not(:has(input, textarea, select)) td.library-cell[data-card-field="rating"]:not(:empty)::before {
     color: var(--lib-star); content: "★"; display: inline; font-size: inherit; margin: 0 5px 0 0; opacity: 1;
   }
   body.app-shell .library-table.mobile-library tr:not(:has(input, textarea, select)) td[data-card-field="rating"] {

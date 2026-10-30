@@ -10,11 +10,12 @@ from sqlalchemy.orm import Session
 from .integer_bounds import PositiveDatabaseId
 from . import models
 
-ProgressCategory = Literal["tv-shows", "anime", "books", "manga", "podcasts"]
+ProgressCategory = Literal["tv-shows", "anime", "books", "manga", "podcasts", "audiobooks"]
 PositiveItemId = PositiveDatabaseId
 CATEGORIES = {"tv-shows": models.TVShow, "anime": models.Anime, "books": models.Book, "manga": models.Manga,
-              "podcasts": models.Podcast}
+              "podcasts": models.Podcast, "audiobooks": models.Audiobook}
 READING_CATEGORIES = {"books", "manga"}
+CHAPTER_ONLY_CATEGORIES = {"audiobooks"}
 
 
 class CheckpointData(BaseModel):
@@ -53,13 +54,15 @@ def validate_checkpoint(category: str, payload: dict | CheckpointData) -> Checkp
     an imported revision, owner, item id, or update timestamp.
     """
     if not isinstance(category, str) or category not in CATEGORIES:
-        raise ValueError("Progress is available for TV shows, anime, books, manga, and podcasts")
+        raise ValueError("Progress is available for TV shows, anime, books, manga, podcasts and audiobooks")
     if isinstance(payload, CheckpointData):
         payload = payload.model_dump(include={"unit", "position", "season", "note"})
     data = CheckpointData.model_validate(payload)
     if category in READING_CATEGORIES and data.unit not in ("page", "chapter"):
         raise ValueError("Books and manga use a page or chapter checkpoint")
-    if category not in READING_CATEGORIES and data.unit != "episode":
+    if category in CHAPTER_ONLY_CATEGORIES and data.unit != "chapter":
+        raise ValueError("Audiobooks use a chapter checkpoint")
+    if category not in READING_CATEGORIES | CHAPTER_ONLY_CATEGORIES and data.unit != "episode":
         raise ValueError("TV shows, anime and podcasts use an episode checkpoint")
     return data
 

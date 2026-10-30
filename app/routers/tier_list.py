@@ -19,7 +19,7 @@ from .discover import page
 router = APIRouter(tags=["tier-list"])
 CSS_VERSION = "20261015-tier-1"
 JS_VERSION = "20261015-tier-1"
-GUEST_LIST_JS = "/static/guest-list.js?v=20261012-hero-search-1"
+GUEST_LIST_JS = "/static/guest-list.js?v=20261030-audiobooks-1"
 DESCRIPTION = ("Free tier list maker for movies, TV shows, anime, video games, books and albums. Start from a ready-made "
                "set or search any title, drag it from S to D, and save the finished list as an image. No account needed.")
 MAX_REDIRECTS = 3

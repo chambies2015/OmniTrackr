@@ -23,6 +23,7 @@ CATEGORIES: Dict[str, CategoryDetails] = {
     "books": (models.Book, "Book"),
     "manga": (models.Manga, "Manga"),
     "podcasts": (models.Podcast, "Podcast"),
+    "audiobooks": (models.Audiobook, "Audiobook"),
 }
 ACTION_LABELS = {
     "started": "Started",
@@ -82,7 +83,7 @@ def record_completion_activity(db: Session, user_id: int, category: str, item) -
 # The finished flag on each library table, by journal category.
 DONE_FIELDS = {"movies": "watched", "tv-shows": "watched", "anime": "watched",
                "video-games": "played", "music": "listened", "books": "read",
-               "manga": "read", "podcasts": "listened"}
+               "manga": "read", "podcasts": "listened", "audiobooks": "listened"}
 
 
 def record_finished_on_add(db: Session, user_id: int, category: str, item):

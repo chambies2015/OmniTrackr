@@ -29,7 +29,7 @@
   const main = document.getElementById('mainContainer');
   if (!dock || !sheet || !main) return;
 
-  const MEDIA_TABS = new Set(['movies', 'tv-shows', 'anime', 'video-games', 'music', 'books', 'manga', 'podcasts']);
+  const MEDIA_TABS = new Set(['movies', 'tv-shows', 'anime', 'video-games', 'music', 'books', 'manga', 'podcasts', 'audiobooks']);
   const libraryButton = dock.querySelector('[data-dock="library"]');
   const homeButton = dock.querySelector('[data-dock="home"]');
   const moreButton = dock.querySelector('[data-dock="more"]');

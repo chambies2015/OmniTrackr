@@ -7,7 +7,7 @@ function currentFriendRequest(friendId) {
   const generation = friendProfileGeneration;
   return () => currentFriendId === friendId && generation === friendProfileGeneration;
 }
-const FRIEND_PROFILE_SECTIONS = ['movies', 'tvShows', 'anime', 'videoGames', 'music', 'books', 'manga', 'podcasts', 'statistics'];
+const FRIEND_PROFILE_SECTIONS = ['movies', 'tvShows', 'anime', 'videoGames', 'music', 'books', 'manga', 'podcasts', 'audiobooks', 'statistics'];
 function freshAccordionStates() {
   return Object.fromEntries(FRIEND_PROFILE_SECTIONS.map(section => [section, false]));
 }
@@ -20,6 +20,7 @@ let currentFriendMusic = [];
 let currentFriendBooks = [];
 let currentFriendManga = [];
 let currentFriendPodcasts = [];
+let currentFriendAudiobooks = [];
 
 // Friend list errors go in the list container so the search box survives for the next friend.
 function showFriendListError(containerId, detail, fallback) {
@@ -55,6 +56,7 @@ window.closeFriendProfile = function () {
   currentFriendBooks = [];
   currentFriendManga = [];
   currentFriendPodcasts = [];
+  currentFriendAudiobooks = [];
   accordionStates = freshAccordionStates();
   // Reset accordion states
   FRIEND_PROFILE_SECTIONS.forEach(section => {
@@ -66,7 +68,7 @@ window.closeFriendProfile = function () {
     }
   });
   ['friendMoviesListContainer', 'friendTVShowsListContainer', 'friendAnimeListContainer',
-    'friendVideoGamesListContainer', 'friendMusicListContainer', 'friendBooksListContainer', 'friendMangaListContainer', 'friendPodcastsListContainer', 'statisticsData']
+    'friendVideoGamesListContainer', 'friendMusicListContainer', 'friendBooksListContainer', 'friendMangaListContainer', 'friendPodcastsListContainer', 'friendAudiobooksListContainer', 'statisticsData']
     .forEach(id => { const node = document.getElementById(id); if (node) node.innerHTML = ''; });
   // Clear search inputs
   const moviesSearch = document.getElementById('friendMoviesSearch');
@@ -77,7 +79,7 @@ window.closeFriendProfile = function () {
   if (tvShowsSearch) tvShowsSearch.value = '';
   if (animeSearch) animeSearch.value = '';
   if (videoGamesSearch) videoGamesSearch.value = '';
-  ['friendMusicSearch', 'friendBooksSearch', 'friendMangaSearch', 'friendPodcastsSearch'].forEach(id => {
+  ['friendMusicSearch', 'friendBooksSearch', 'friendMangaSearch', 'friendPodcastsSearch', 'friendAudiobooksSearch'].forEach(id => {
     const input = document.getElementById(id);
     if (input) input.value = '';
   });
@@ -123,6 +125,7 @@ window.loadFriendProfile = async function (friendId) {
       updateBooksSummary(profile);
       updateMangaSummary(profile);
       updatePodcastsSummary(profile);
+      updateAudiobooksSummary(profile);
       updateStatisticsSummary(profile);
     } else {
       const error = await response.json();
@@ -222,6 +225,17 @@ function updatePodcastsSummary(profile) {
   }
 }
 
+function updateAudiobooksSummary(profile) {
+  const summaryDiv = document.getElementById('audiobooksSummary');
+  if (!summaryDiv) return;
+  if (profile.audiobooks_private) {
+    summaryDiv.innerHTML = '<p class="privacy-message">This user has made their audiobooks private</p>';
+  } else {
+    const count = profile.audiobooks_count || 0;
+    summaryDiv.innerHTML = `<p class="summary-text">${count} ${count === 1 ? 'Audiobook' : 'Audiobooks'}</p>`;
+  }
+}
+
 function updateStatisticsSummary(profile) {
   const summaryDiv = document.getElementById('statisticsSummary');
   if (profile.statistics_private) {
@@ -260,6 +274,8 @@ window.toggleAccordion = async function (section) {
       await loadFriendManga(currentFriendId);
     } else if (section === 'podcasts') {
       await loadFriendPodcasts(currentFriendId);
+    } else if (section === 'audiobooks') {
+      await loadFriendAudiobooks(currentFriendId);
     } else if (section === 'statistics') {
       await loadFriendStatistics(currentFriendId);
     }
@@ -743,6 +759,35 @@ window.loadFriendPodcasts = async function (friendId) {
 window.filterFriendPodcasts = function () {
   const filtered = filterFriendShelf(currentFriendPodcasts, 'friendPodcastsSearch', ['title', 'host', 'year', 'genre', 'review']);
   renderFriendShelf('friendPodcastsListContainer', filtered, 'No podcasts found', describeFriendPodcast);
+}
+
+const describeFriendAudiobook = item => ({ creatorLabel: 'Author', creator: item.author, doneLabel: 'Listened', done: item.listened });
+
+window.loadFriendAudiobooks = async function (friendId) {
+  const current = currentFriendRequest(friendId);
+  try {
+    const response = await authenticatedFetch(`${API_BASE}/friends/${friendId}/audiobooks`);
+    if (!current()) return;
+    if (response.ok) {
+      const data = await response.json();
+      if (!current()) return;
+      currentFriendAudiobooks = data.audiobooks || [];
+      renderFriendShelf('friendAudiobooksListContainer', currentFriendAudiobooks, 'No audiobooks yet', describeFriendAudiobook);
+    } else {
+      const error = await response.json().catch(() => ({}));
+      if (!current()) return;
+      showFriendListError('friendAudiobooksListContainer', error.detail, 'Failed to load audiobooks');
+    }
+  } catch (error) {
+    if (!current()) return;
+    console.error('Failed to load friend audiobooks:', error);
+    showFriendListError('friendAudiobooksListContainer', '', 'Failed to load audiobooks');
+  }
+}
+
+window.filterFriendAudiobooks = function () {
+  const filtered = filterFriendShelf(currentFriendAudiobooks, 'friendAudiobooksSearch', ['title', 'author', 'narrator', 'year', 'genre', 'review']);
+  renderFriendShelf('friendAudiobooksListContainer', filtered, 'No audiobooks found', describeFriendAudiobook);
 }
 
 window.loadFriendStatistics = async function (friendId) {

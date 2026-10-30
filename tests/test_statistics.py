@@ -109,7 +109,7 @@ class TestStatisticsEndpoints:
         assert "review_coverage_percentage" in data
         assert "top_category" in data
         assert "most_complete_category" in data
-        assert len(data["categories"]) == 8
+        assert len(data["categories"]) == 9
 
     def test_library_insights_uses_one_aggregate_query_per_category(self, authenticated_client, db_session):
         statements = []
@@ -125,8 +125,8 @@ class TestStatisticsEndpoints:
             event.remove(db_session.bind, "before_cursor_execute", record_statement)
 
         assert response.status_code == 200
-        # One current-user lookup plus one aggregate for each of eight categories.
-        assert len(statements) <= 9
+        # One current-user lookup plus one aggregate for each of nine categories.
+        assert len(statements) <= 10
 
     def test_get_library_pulse_returns_current_user_actions(self, authenticated_client, test_movie_data, test_tv_show_data):
         """Pulse should return unfinished and missing-context items without mutating records."""
@@ -245,9 +245,9 @@ class TestStatisticsEndpoints:
 
         assert response.status_code == 200
         assert response.json()["eligible"] is True
-        # Authentication, eight-category aggregates, two batched queue resolutions,
+        # Authentication, nine-category aggregates, two batched queue resolutions,
         # and one owner-scoped checkpoint query stay constant as the queue grows.
-        assert len(statements) <= 25
+        assert len(statements) <= 27
 
     def test_return_deck_aggregates_activity_without_materializing_rows(
         self, authenticated_client, db_session, test_movie_data

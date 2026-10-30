@@ -9,7 +9,7 @@
   const KINDS = new Set(['movie', 'tv', 'anime', 'game']);
   const ID = /^(movie|tv|anime|game)\/[a-z0-9-]{1,130}$/;
   const FINISH_AFTER = 5;
-  const LOADERS = ['loadMovies', 'loadTVShows', 'loadAnime', 'loadVideoGames', 'loadMusic', 'loadBooks', 'loadManga', 'loadPodcasts'];
+  const LOADERS = ['loadMovies', 'loadTVShows', 'loadAnime', 'loadVideoGames', 'loadMusic', 'loadBooks', 'loadManga', 'loadPodcasts', 'loadAudiobooks'];
   const LABELS = { loved: 'Loved it', liked: 'Liked it', meh: 'Not for me', want: 'Want to' };
 
   // ------------------------------------------------------------ storage

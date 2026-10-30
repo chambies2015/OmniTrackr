@@ -181,7 +181,7 @@ def _cta_html(signed_in: bool, page) -> str:
                 '<div class="title-write__actions"><a class="site-btn site-btn--primary" href="/">Open my library</a></div></section>')
     return ('<section class="title-section title-write"><h2>Keep track of what you finish</h2>'
             f'<p class="title-write__lead">Make a free OmniTrackr library for movies, shows, anime, games, books, manga, '
-            f'podcasts and albums. Rate what you finish and your ratings count on pages like this one.</p>'
+            f'podcasts, audiobooks and albums. Rate what you finish and your ratings count on pages like this one.</p>'
             '<div class="title-write__actions"><a class="site-btn site-btn--primary" href="/#signup">Create a free account</a>'
             f'<a class="site-btn site-btn--ghost" href="{PEOPLE_PATHS[page.entity]}">Browse more {ENTITY_LABEL[page.entity].lower()}</a></div></section>')
 

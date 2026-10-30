@@ -47,6 +47,7 @@ class User(Base):
     books_private = Column(Boolean, default=False, nullable=False)
     manga_private = Column(Boolean, default=False, nullable=False)
     podcasts_private = Column(Boolean, default=False, nullable=False)
+    audiobooks_private = Column(Boolean, default=False, nullable=False)
     statistics_private = Column(Boolean, default=False, nullable=False)
     reviews_public = Column(Boolean, default=False, nullable=False)
     
@@ -58,6 +59,7 @@ class User(Base):
     books_visible = Column(Boolean, default=True, nullable=False)
     manga_visible = Column(Boolean, default=True, nullable=False)
     podcasts_visible = Column(Boolean, default=True, nullable=False)
+    audiobooks_visible = Column(Boolean, default=True, nullable=False)
     
     # Profile picture
     profile_picture_url = Column(String, nullable=True)
@@ -74,6 +76,7 @@ class User(Base):
     books = relationship("Book", back_populates="owner", cascade="all, delete-orphan")
     manga = relationship("Manga", back_populates="owner", cascade="all, delete-orphan")
     podcasts = relationship("Podcast", back_populates="owner", cascade="all, delete-orphan")
+    audiobooks = relationship("Audiobook", back_populates="owner", cascade="all, delete-orphan")
     # Friends relationships
     sent_friend_requests = relationship("FriendRequest", foreign_keys="FriendRequest.sender_id", back_populates="sender", cascade="all, delete-orphan")
     received_friend_requests = relationship("FriendRequest", foreign_keys="FriendRequest.receiver_id", back_populates="receiver", cascade="all, delete-orphan")
@@ -272,6 +275,28 @@ class Podcast(Base):
 
     user_id = Column(Integer, ForeignKey("users.id"), nullable=False, index=True)
     owner = relationship("User", back_populates="podcasts")
+
+
+class Audiobook(Base):
+    """Audiobooks with user ownership. Length is the full runtime in hours."""
+    __tablename__ = "audiobooks"
+
+    id = Column(Integer, primary_key=True, index=True)
+    title = Column(String, index=True)
+    author = Column(String, index=True, nullable=True)
+    narrator = Column(String, nullable=True)
+    year = Column(Integer, nullable=True)
+    genre = Column(String, nullable=True)
+    length_hours = Column(Float, nullable=True)
+    rating = Column(Float, nullable=True)
+    listened = Column(Boolean, default=False)
+    review = Column(Text, nullable=True)
+    review_public = Column(Boolean, default=False, nullable=False)
+    cover_art_url = Column(String, nullable=True)
+    added_at = Column(DateTime, nullable=True, default=datetime.utcnow)
+
+    user_id = Column(Integer, ForeignKey("users.id"), nullable=False, index=True)
+    owner = relationship("User", back_populates="audiobooks")
 
 
 class ProgressCheckpoint(Base):

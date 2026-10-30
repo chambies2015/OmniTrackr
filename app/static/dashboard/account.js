@@ -8,6 +8,7 @@ document.getElementById('loadMusic').addEventListener('click', () => loadMusic()
 document.getElementById('loadBooks').addEventListener('click', () => loadBooks());
 document.getElementById('loadManga').addEventListener('click', () => loadManga());
 document.getElementById('loadPodcasts').addEventListener('click', () => loadPodcasts());
+document.getElementById('loadAudiobooks').addEventListener('click', () => loadAudiobooks());
 
 // Automatic sorting and search
 document.getElementById('movieSort').addEventListener('change', () => loadMovies());
@@ -18,6 +19,7 @@ document.getElementById('musicSort').addEventListener('change', () => loadMusic(
 document.getElementById('bookSort').addEventListener('change', () => loadBooks());
 document.getElementById('mangaSort').addEventListener('change', () => loadManga());
 document.getElementById('podcastSort').addEventListener('change', () => loadPodcasts());
+document.getElementById('audiobookSort').addEventListener('change', () => loadAudiobooks());
 
 // Automatic search with debounce
 let movieSearchTimeout;
@@ -84,6 +86,14 @@ document.getElementById('podcastSearch').addEventListener('input', () => {
   }, 300);
 });
 
+let audiobookSearchTimeout;
+document.getElementById('audiobookSearch').addEventListener('input', () => {
+  clearTimeout(audiobookSearchTimeout);
+  audiobookSearchTimeout = setTimeout(() => {
+    loadAudiobooks();
+  }, 300);
+});
+
 // Export/Import event listeners
 document.getElementById('exportMovies').addEventListener('click', exportData);
 document.getElementById('exportTVShows').addEventListener('click', exportData);
@@ -93,6 +103,7 @@ document.getElementById('exportMusic').addEventListener('click', exportData);
 document.getElementById('exportBooks').addEventListener('click', exportData);
 document.getElementById('exportManga').addEventListener('click', exportData);
 document.getElementById('exportPodcasts').addEventListener('click', exportData);
+document.getElementById('exportAudiobooks').addEventListener('click', exportData);
 document.getElementById('importMovies').addEventListener('click', () => document.getElementById('importFile').click());
 document.getElementById('importTVShows').addEventListener('click', () => document.getElementById('importTVFile').click());
 document.getElementById('importAnime').addEventListener('click', () => document.getElementById('importAnimeFile').click());
@@ -101,6 +112,7 @@ document.getElementById('importMusic').addEventListener('click', () => document.
 document.getElementById('importBooks').addEventListener('click', () => document.getElementById('importBookFile').click());
 document.getElementById('importManga').addEventListener('click', () => document.getElementById('importMangaFile').click());
 document.getElementById('importPodcasts').addEventListener('click', () => document.getElementById('importPodcastFile').click());
+document.getElementById('importAudiobooks').addEventListener('click', () => document.getElementById('importAudiobookFile').click());
 document.getElementById('importFile').addEventListener('change', (e) => importData(e.target));
 document.getElementById('importTVFile').addEventListener('change', (e) => importData(e.target));
 document.getElementById('importAnimeFile').addEventListener('change', (e) => importData(e.target));
@@ -109,6 +121,7 @@ document.getElementById('importMusicFile').addEventListener('change', (e) => imp
 document.getElementById('importBookFile').addEventListener('change', (e) => importData(e.target));
 document.getElementById('importMangaFile').addEventListener('change', (e) => importData(e.target));
 document.getElementById('importPodcastFile').addEventListener('change', (e) => importData(e.target));
+document.getElementById('importAudiobookFile').addEventListener('change', (e) => importData(e.target));
 
 // Auto-resize textarea for movie review
 const movieReviewTextarea = document.getElementById('movieReview');
@@ -443,6 +456,7 @@ window.loadPrivacySettings = async function () {
       document.getElementById('booksPrivate').checked = privacy.books_private;
       document.getElementById('mangaPrivate').checked = !!privacy.manga_private;
       document.getElementById('podcastsPrivate').checked = !!privacy.podcasts_private;
+      document.getElementById('audiobooksPrivate').checked = !!privacy.audiobooks_private;
       document.getElementById('statisticsPrivate').checked = privacy.statistics_private;
       updateDataPrivacyDashboard(privacy);
     }
@@ -465,6 +479,7 @@ function updateDataPrivacyDashboard(privacy) {
     ['Books', privacy.books_private],
     ['Manga', privacy.manga_private],
     ['Podcasts', privacy.podcasts_private],
+    ['Audiobooks', privacy.audiobooks_private],
     ['Statistics', privacy.statistics_private],
   ].filter((entry) => entry[1]).map((entry) => entry[0]);
 
@@ -490,6 +505,7 @@ window.updatePrivacySettings = async function (event) {
   const booksPrivate = document.getElementById('booksPrivate').checked;
   const mangaPrivate = document.getElementById('mangaPrivate').checked;
   const podcastsPrivate = document.getElementById('podcastsPrivate').checked;
+  const audiobooksPrivate = document.getElementById('audiobooksPrivate').checked;
   const statisticsPrivate = document.getElementById('statisticsPrivate').checked;
 
   const errorDiv = document.getElementById('privacyError');
@@ -515,6 +531,7 @@ window.updatePrivacySettings = async function (event) {
         books_private: booksPrivate,
         manga_private: mangaPrivate,
         podcasts_private: podcastsPrivate,
+        audiobooks_private: audiobooksPrivate,
         statistics_private: statisticsPrivate
       })
     });
@@ -552,6 +569,7 @@ window.loadTabVisibility = async function () {
       document.getElementById('booksVisible').checked = tabVisibility.books_visible;
       document.getElementById('mangaVisible').checked = tabVisibility.manga_visible !== false;
       document.getElementById('podcastsVisible').checked = tabVisibility.podcasts_visible !== false;
+      document.getElementById('audiobooksVisible').checked = tabVisibility.audiobooks_visible !== false;
       // Update tab visibility in UI
       updateTabVisibilityUI(tabVisibility);
     }
@@ -566,7 +584,8 @@ window.loadTabVisibility = async function () {
       music_visible: true,
       books_visible: true,
       manga_visible: true,
-      podcasts_visible: true
+      podcasts_visible: true,
+      audiobooks_visible: true
     });
   }
 }
@@ -582,6 +601,7 @@ window.updateTabVisibility = async function (event) {
   const booksVisible = document.getElementById('booksVisible').checked;
   const mangaVisible = document.getElementById('mangaVisible').checked;
   const podcastsVisible = document.getElementById('podcastsVisible').checked;
+  const audiobooksVisible = document.getElementById('audiobooksVisible').checked;
 
   const errorDiv = document.getElementById('tabVisibilityError');
   const successDiv = document.getElementById('tabVisibilitySuccess');
@@ -605,7 +625,8 @@ window.updateTabVisibility = async function (event) {
         music_visible: musicVisible,
         books_visible: booksVisible,
         manga_visible: mangaVisible,
-        podcasts_visible: podcastsVisible
+        podcasts_visible: podcastsVisible,
+        audiobooks_visible: audiobooksVisible
       })
     });
 
@@ -665,6 +686,10 @@ function updateTabVisibilityUI(tabVisibility) {
   const podcastsTab = getTabButton('podcasts');
   if (podcastsTab) {
     podcastsTab.style.display = tabVisibility.podcasts_visible === false ? 'none' : '';
+  }
+  const audiobooksTab = getTabButton('audiobooks');
+  if (audiobooksTab) {
+    audiobooksTab.style.display = tabVisibility.audiobooks_visible === false ? 'none' : '';
   }
   
   // If current tab is hidden, switch to first visible tab

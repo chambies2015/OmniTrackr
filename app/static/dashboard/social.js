@@ -261,6 +261,18 @@ document.addEventListener('DOMContentLoaded', function () {
     } else if (e.target.classList.contains('cancel-podcast-btn')) {
       e.preventDefault();
       cancelPodcastEdit();
+    } else if (e.target.classList.contains('delete-audiobook-btn')) {
+      e.preventDefault();
+      deleteAudiobook(parseInt(e.target.dataset.audiobookId, 10));
+    } else if (e.target.classList.contains('edit-audiobook-btn')) {
+      e.preventDefault();
+      enableAudiobookEdit(e.target);
+    } else if (e.target.classList.contains('save-audiobook-btn')) {
+      e.preventDefault();
+      saveAudiobookEdit(e.target);
+    } else if (e.target.classList.contains('cancel-audiobook-btn')) {
+      e.preventDefault();
+      cancelAudiobookEdit();
     }
   });
 

@@ -18,7 +18,7 @@ from .discover import page
 router = APIRouter(tags=["daily"])
 CSS_VERSION = "20261017-daily-2"
 JS_VERSION = "20261015-daily-1"
-GUEST_LIST_JS = "/static/guest-list.js?v=20261012-hero-search-1"
+GUEST_LIST_JS = "/static/guest-list.js?v=20261030-audiobooks-1"
 DESCRIPTION = ("OmniTrackr Daily is a free guessing game: one movie, TV show, anime, video game, book or album a day, "
                "six clues that get easier, and six guesses. Share your score and keep your streak going.")
 SITE = "https://omnitrackr.xyz"

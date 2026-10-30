@@ -7,7 +7,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=5.0, user-scalable=yes">
   <meta name="theme-color" content="#0b0a18">
   <meta name="description"
-    content="Track movies, TV shows, anime, video games, music, books, manga, and podcasts in one free media tracker. Rate, review, analyze stats, share with friends, and export your data.">
+    content="Track movies, TV shows, anime, video games, music, books, manga, podcasts, and audiobooks in one free media tracker. Rate, review, analyze stats, share with friends, and export your data.">
   <meta name="author" content="OmniTrackr">
   <meta name="robots" content="index, follow, max-image-preview:large">
   <meta name="language" content="English">
@@ -19,7 +19,7 @@
   <meta property="og:url" content="https://omnitrackr.xyz/">
   <meta property="og:title" content="OmniTrackr - Free Media Tracker for Movies, Shows, Games, Music & Books">
   <meta property="og:description"
-    content="Track movies, shows, anime, games, music, books, manga, and podcasts in one dashboard with reviews, stats, friends, privacy controls, and JSON export.">
+    content="Track movies, shows, anime, games, music, books, manga, podcasts, and audiobooks in one dashboard with reviews, stats, friends, privacy controls, and JSON export.">
   <meta property="og:image" content="https://omnitrackr.xyz/omnitrackr_vortex.png">
   <meta property="og:image:secure_url" content="https://omnitrackr.xyz/omnitrackr_vortex.png">
   <meta property="og:image:width" content="1200">
@@ -33,7 +33,7 @@
   <meta name="twitter:url" content="https://omnitrackr.xyz/">
   <meta name="twitter:title" content="OmniTrackr - Free Media Tracker">
   <meta name="twitter:description"
-    content="Track movies, shows, anime, games, music, books, manga, and podcasts with reviews, stats, friends, privacy controls, and export.">
+    content="Track movies, shows, anime, games, music, books, manga, podcasts, and audiobooks with reviews, stats, friends, privacy controls, and export.">
   <meta name="twitter:image" content="https://omnitrackr.xyz/omnitrackr_vortex.png">
   <meta name="twitter:image:alt" content="OmniTrackr media tracking dashboard">
   <meta name="twitter:site" content="@omnitrackr">
@@ -56,9 +56,9 @@
   <link rel="stylesheet" href="/static/progress.css?v=20260922-progress">
   <link rel="stylesheet" href="/static/episodes.css?v=20261027-episodes-1">
   <link rel="stylesheet" href="/static/app-theme.css?v=20261022-next-up-1">
-  <link rel="stylesheet" href="/static/library-theme.css?v=20261028-podcasts-1">
-  <link rel="stylesheet" href="/static/library-shelf.css?v=20261028-podcasts-1">
-  <link rel="stylesheet" href="/static/library-refresh.css?v=20261028-podcasts-1">
+  <link rel="stylesheet" href="/static/library-theme.css?v=20261030-audiobooks-1">
+  <link rel="stylesheet" href="/static/library-shelf.css?v=20261030-audiobooks-1">
+  <link rel="stylesheet" href="/static/library-refresh.css?v=20261030-audiobooks-1">
   <link rel="stylesheet" href="/static/library-tags.css?v=20261028-tags-1">
   <link rel="stylesheet" href="/static/title-origins.css?v=20261029-origins-1">
   <link rel="stylesheet" href="/static/dialog-theme.css?v=20260924-visual-4">
@@ -94,7 +94,7 @@
     "@context": "https://schema.org",
     "@type": "SoftwareApplication",
     "name": "OmniTrackr",
-    "description": "Track and organize your movies, TV shows, anime, video games, music, books, manga, and podcasts. Rate, review, and analyze your media collection with comprehensive statistics and beautiful posters.",
+    "description": "Track and organize your movies, TV shows, anime, video games, music, books, manga, podcasts, and audiobooks. Rate, review, and analyze your media collection with comprehensive statistics and beautiful posters.",
     "url": "https://omnitrackr.xyz",
     "applicationCategory": "EntertainmentApplication",
     "applicationSubCategory": "Media tracker",
@@ -107,7 +107,7 @@
       "priceCurrency": "USD"
     },
     "featureList": [
-      "Track Movies, TV Shows, Anime, Games, Music, Books, Manga & Podcasts",
+      "Track Movies, TV Shows, Anime, Games, Music, Books, Manga, Podcasts & Audiobooks",
       "Statistics Dashboard",
       "Export/Import Data",
       "Automatic Posters",
@@ -151,7 +151,7 @@
     "@type": "WebSite",
     "name": "OmniTrackr",
     "url": "https://omnitrackr.xyz",
-    "description": "Track and organize your movies, TV shows, anime, video games, music, books, manga, and podcasts. Rate, review, and analyze your media collection with comprehensive statistics and beautiful posters."
+    "description": "Track and organize your movies, TV shows, anime, video games, music, books, manga, podcasts, and audiobooks. Rate, review, and analyze your media collection with comprehensive statistics and beautiful posters."
   }
   </script>
 
@@ -193,7 +193,7 @@
       },
       {
         "@type": "Question",
-        "name": "How do I add movies, TV shows, anime, video games, music, books, manga, and podcasts?",
+        "name": "How do I add movies, TV shows, anime, video games, music, books, manga, podcasts, and audiobooks?",
         "acceptedAnswer": {
           "@type": "Answer",
           "text": "Simply use the Add Movie, Add TV Show, Add Anime, Add Video Game, Add Music, or Add Book forms in your dashboard. Enter the title, year, and other details. The app will automatically fetch beautiful posters and cover art from the OMDB API (movies/TV shows), Jikan API (anime), RAWG API (video games), iTunes Search API (music), and Open Library API (books). Titles are automatically normalized to official names when metadata is fetched. You can also import your collection from JSON files."
@@ -204,7 +204,7 @@
         "name": "Can I export my data?",
         "acceptedAnswer": {
           "@type": "Answer",
-          "text": "Yes. Export your movies, TV shows, anime, video games, music, books, manga, podcasts, collections, and private journal as a JSON backup. The Import Studio can also preview Letterboxd, IMDb, Goodreads, StoryGraph, MyAnimeList, AniList, Kitsu, Trakt, and generic CSV migrations without overwriting existing library records."
+          "text": "Yes. Export your movies, TV shows, anime, video games, music, books, manga, podcasts, audiobooks, collections, and private journal as a JSON backup. The Import Studio can also preview Letterboxd, IMDb, Goodreads, StoryGraph, MyAnimeList, AniList, Kitsu, Trakt, and generic CSV migrations without overwriting existing library records."
         }
       },
       {
@@ -220,7 +220,7 @@
         "name": "What are privacy settings?",
         "acceptedAnswer": {
           "@type": "Answer",
-          "text": "Privacy settings allow you to control what friends can see. You can make your movies, TV shows, anime, video games, music, books, manga, podcasts, or statistics private. When enabled, even your friends won't be able to see that data - it's completely private to you. You can change these settings anytime in your account settings."
+          "text": "Privacy settings allow you to control what friends can see. You can make your movies, TV shows, anime, video games, music, books, manga, podcasts, audiobooks, or statistics private. When enabled, even your friends won't be able to see that data - it's completely private to you. You can change these settings anytime in your account settings."
         }
       },
       {
@@ -241,7 +241,7 @@
       },
       {
         "@type": "Question",
-        "name": "Can I rate movies, TV shows, anime, video games, music, books, manga, and podcasts with decimals?",
+        "name": "Can I rate movies, TV shows, anime, video games, music, books, manga, podcasts, and audiobooks with decimals?",
         "acceptedAnswer": {
           "@type": "Answer",
           "text": "Yes! You can rate any item from 0 to 10.0 with one decimal place precision (e.g., 7.5, 8.4, 9.2). The statistics dashboard will calculate averages and other metrics using these decimal ratings."
@@ -287,7 +287,7 @@
       {
         "@type": "HowToStep",
         "name": "Login to Your Dashboard",
-        "text": "Access tabs for Movies, TV Shows, Anime, Video Games, Music, Books, Manga, Podcasts, and Statistics. Hide tabs you don't use in settings."
+        "text": "Access tabs for Movies, TV Shows, Anime, Video Games, Music, Books, Manga, Podcasts, Audiobooks, and Statistics. Hide tabs you don't use in settings."
       },
       {
         "@type": "HowToStep",
@@ -419,6 +419,7 @@
         <button class="tab" data-switch-tab="books">Books</button>
         <button class="tab" data-switch-tab="manga">Manga</button>
         <button class="tab" data-switch-tab="podcasts">Podcasts</button>
+        <button class="tab" data-switch-tab="audiobooks">Audiobooks</button>
       </div>
       <div class="library-nav__group library-nav__group--tools" role="group" aria-label="Personal tools and custom libraries">
         <span class="library-nav__label" aria-hidden="true">Your space</span>
@@ -553,6 +554,7 @@
                 <option value="books">Books</option>
                 <option value="manga">Manga</option>
                 <option value="podcasts">Podcasts</option>
+                <option value="audiobooks">Audiobooks</option>
               </select>
             </label>
             <p id="todaysPickReason" class="todays-pick__reason"></p>
@@ -1362,6 +1364,107 @@
       </div>
     </div>
 
+    <!-- Audiobooks Tab Content -->
+    <div id="audiobooks-tab" class="tab-content library-section">
+      <div class="card library-add-panel">
+        <div class="collapsible-header">
+          <h2><button type="button" class="library-add-toggle" aria-expanded="false" data-toggle-collapsible="audiobookForm" aria-controls="audiobookFormContent"><span>Add Audiobook</span><span class="collapsible-icon" id="audiobookFormIcon" aria-hidden="true">▼</span></button></h2>
+        </div>
+        <div class="collapsible-content" id="audiobookFormContent" hidden>
+          <form id="addAudiobookForm" class="library-add-form">
+            <div class="library-add-search">
+              <label class="library-field-label" for="audiobookTitle">Title</label>
+              <input type="text" id="audiobookTitle" placeholder="Audiobook title" required>
+              <button type="button" id="searchAudiobookBtn" class="action-btn library-search-button">Search</button>
+            </div>
+            <div class="library-add-field">
+              <label class="library-field-label" for="audiobookAuthor">Author</label>
+              <input type="text" id="audiobookAuthor" placeholder="Author (auto-filled from search)">
+            </div>
+            <div class="library-add-field">
+              <label class="library-field-label" for="audiobookNarrator">Narrator</label>
+              <input type="text" id="audiobookNarrator" placeholder="Who reads it">
+            </div>
+            <div class="library-add-field">
+              <label class="library-field-label" for="audiobookYear">Year</label>
+              <input type="number" id="audiobookYear" min="0" max="9999" placeholder="Year">
+            </div>
+            <div class="library-add-field">
+              <label class="library-field-label" for="audiobookGenre">Genre</label>
+              <input type="text" id="audiobookGenre" placeholder="Genre">
+            </div>
+            <div class="library-add-field">
+              <label class="library-field-label" for="audiobookLength">Length (hours)</label>
+              <input type="number" id="audiobookLength" min="0" max="1000" step="0.01" placeholder="e.g. 16.2">
+            </div>
+            <div class="library-add-field">
+              <label class="library-field-label" for="audiobookRating">Your rating</label>
+              <input type="number" min="0" max="10" step="0.1" id="audiobookRating" placeholder="Rating (0-10.0)">
+            </div>
+            <div class="library-add-check">
+              <label>Listened <input type="checkbox" id="audiobookListened"></label>
+            </div>
+            <div class="library-add-field library-add-review">
+              <label class="library-field-label" for="audiobookReview">Your review</label>
+              <textarea id="audiobookReview" class="review-textarea" data-review-quality-input placeholder="Review (optional)" rows="1"></textarea>
+              <p class="review-quality-hint"><span class="review-quality-count" data-review-counter-for="audiobookReview">0/80 characters - add context for the community feed</span>. To be shown in search, a public review needs 240+ characters and 35+ words, in complete sentences with varied wording and no links or contact details. <a href="/review-guidelines" target="_blank" rel="noopener noreferrer">Review guide</a></p>
+            </div>
+            <div class="library-add-check">
+              <label>Public Review <input type="checkbox" id="audiobookReviewPublic"></label>
+            </div>
+            <button type="submit" class="action-btn">Add Audiobook</button>
+          </form>
+        </div>
+      </div>
+      <div class="card library-panel">
+        <div class="library-heading">
+          <h2>Audiobooks</h2>
+          <span id="audiobookCount" class="library-count"></span>
+        </div>
+        <div class="library-toolbar">
+          <input type="text" id="audiobookSearch" aria-label="Search this library" placeholder="Search by title, author, narrator, or genre"
+            class="library-filter-search">
+          <select id="audiobookSort" aria-label="Sort this library" class="library-sort">
+            <option value="">Sort by...</option>
+            <option value="rating-asc">Rating (Low → High)</option>
+            <option value="rating-desc">Rating (High → Low)</option>
+            <option value="year-asc">Year (Oldest → Newest)</option>
+            <option value="year-desc">Year (Newest → Oldest)</option>
+            <option value="length-asc">Length (Shortest first)</option>
+            <option value="length-desc">Length (Longest first)</option>
+          </select>
+          <div class="library-utilities" role="group" aria-label="Library data">
+            <button id="loadAudiobooks" class="action-btn library-utility">Refresh</button>
+            <button id="exportAudiobooks" class="action-btn library-utility">Export Data</button>
+            <button id="importAudiobooks" class="action-btn library-utility">Import Data</button>
+          </div>
+        </div>
+        <input type="file" id="importAudiobookFile" accept=".json" style="display: none;">
+        <div id="audiobookTableFilters" class="library-filters" aria-label="Library filters"></div>
+        <div class="table-container library-table-wrap">
+          <table id="audiobookTable" class="library-table">
+            <thead>
+              <tr>
+                <th>Cover Art</th>
+                <th>Title</th>
+                <th>Author</th>
+                <th>Narrator</th>
+                <th>Year</th>
+                <th>Length</th>
+                <th>Genre</th>
+                <th>Rating</th>
+                <th>Listened</th>
+                <th>Review</th>
+                <th>Public</th>
+                <th>Actions</th>
+              </tr>
+            </thead>
+            <tbody></tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+
     <!-- Video Games Tab Content -->
     <div id="video-games-tab" class="tab-content library-section">
       <div class="card library-add-panel">
@@ -1547,6 +1650,7 @@
               <option value="anime">Anime</option><option value="video-games">Game</option>
               <option value="music">Album</option><option value="books">Book</option>
               <option value="manga">Manga</option><option value="podcasts">Podcast</option>
+              <option value="audiobooks">Audiobook</option>
             </select>
           </label>
           <label>Library item
@@ -1575,7 +1679,7 @@
           <div class="activity-timeline__filters">
             <select id="activityFilterCategory" data-change-action="activity-filter" aria-label="Filter journal by media type">
               <option value="">All media</option><option value="movies">Movies</option><option value="tv-shows">TV shows</option>
-              <option value="anime">Anime</option><option value="video-games">Games</option><option value="music">Albums</option><option value="books">Books</option><option value="manga">Manga</option><option value="podcasts">Podcasts</option>
+              <option value="anime">Anime</option><option value="video-games">Games</option><option value="music">Albums</option><option value="books">Books</option><option value="manga">Manga</option><option value="podcasts">Podcasts</option><option value="audiobooks">Audiobooks</option>
             </select>
             <select id="activityFilterAction" data-change-action="activity-filter" aria-label="Filter journal by moment">
               <option value="">All moments</option><option value="started">Started</option><option value="progressed">Progress</option>
@@ -1619,6 +1723,7 @@
               <label><input type="checkbox" name="recommendationCategory" value="books" checked> Books</label>
               <label><input type="checkbox" name="recommendationCategory" value="manga" checked> Manga</label>
               <label><input type="checkbox" name="recommendationCategory" value="podcasts" checked> Podcasts</label>
+              <label><input type="checkbox" name="recommendationCategory" value="audiobooks" checked> Audiobooks</label>
             </div>
           </fieldset>
           <label>Reply window
@@ -1652,7 +1757,7 @@
       <section class="collections-hero">
         <p class="collections-hero__eyebrow">Private by default · share only by choice</p>
         <h2>Collections</h2>
-        <p>Bring together movies, TV shows, anime, games, music, books, manga, and podcasts around any theme you like. When a collection is ready to share, add a few words about why you put it together, then publish it.</p>
+        <p>Bring together movies, TV shows, anime, games, music, books, manga, podcasts, and audiobooks around any theme you like. When a collection is ready to share, add a few words about why you put it together, then publish it.</p>
       </section>
       <section class="card collections-create">
         <h3>Create a collection</h3>
@@ -1894,6 +1999,20 @@
             <div id="podcastsStatsData"></div>
           </div>
         </div>
+
+        <!-- Audiobooks Accordion Section -->
+        <div class="accordion-section">
+          <div class="accordion-header" data-toggle-category-accordion="audiobooks">
+            <h3>🎧 Audiobooks</h3>
+            <span class="accordion-icon" id="audiobooksStatsIcon">▶</span>
+          </div>
+          <div class="accordion-content" id="audiobooksStatsContent" style="display: none;">
+            <div id="audiobooksStatsLoading" style="text-align: center; padding: 20px; display: none;">
+              <div style="display: inline-block; width: 30px; height: 30px; border: 3px solid rgba(102, 126, 234, 0.2); border-top-color: var(--primary); border-radius: 50%; animation: spin 1s linear infinite;"></div>
+            </div>
+            <div id="audiobooksStatsData"></div>
+          </div>
+        </div>
       </div>
 
     </div>
@@ -2115,14 +2234,14 @@
   </dialog>
   <script src="./credentials.js"></script>
   <script src="./auth.js?v=20261029-account-memories-1"></script>
-  <script src="/static/import-studio.js?v=20261030-steam-1"></script>
-  <script src="/static/progress.js?v=20261028-podcasts-1"></script>
+  <script src="/static/import-studio.js?v=20261030-audiobooks-1"></script>
+  <script src="/static/progress.js?v=20261030-audiobooks-1"></script>
   <script src="/static/episodes.js?v=20261027-episodes-1"></script>
   <script src="./app.js"></script>
-  <script src="/static/library-tags.js?v=20261029-origins-1"></script>
-  <script src="/static/title-origins.js?v=20261029-origins-1"></script>
-  <script src="/static/for-you.js?v=20261028-episodes-1"></script>
-  <script src="/static/title-links.js?v=20261028-podcasts-1"></script>
+  <script src="/static/library-tags.js?v=20261030-audiobooks-1"></script>
+  <script src="/static/title-origins.js?v=20261030-audiobooks-1"></script>
+  <script src="/static/for-you.js?v=20261030-audiobooks-1"></script>
+  <script src="/static/title-links.js?v=20261030-audiobooks-1"></script>
   <script src="/static/public-profile.js?v=20261027-widgets-1"></script>
   <script src="/static/supporter.js?v=20261029-account-1"></script>
   <script src="/static/account-settings.js?v=20261029-account-1" defer></script>
@@ -2130,17 +2249,17 @@
   <script src="/static/goals.js?v=20261010-goal-reached-1"></script>
   <script src="/static/challenges.js?v=20261011-challenge-2"></script>
   <script src="/static/seasonal-card.js?v=20261022-holidays-1"></script>
-  <script src="/static/memories.js?v=20261029-memories-1"></script>
+  <script src="/static/memories.js?v=20261030-audiobooks-1"></script>
   <script src="/static/badges.js?v=20261017-badges-1"></script>
-  <script src="/static/taste-match.js?v=20261028-podcasts-1"></script>
-  <script src="/static/friend-recs.js?v=20261028-podcasts-1"></script>
-  <script src="/static/friends-feed.js?v=20261028-podcasts-1"></script>
+  <script src="/static/taste-match.js?v=20261030-audiobooks-1"></script>
+  <script src="/static/friend-recs.js?v=20261030-audiobooks-1"></script>
+  <script src="/static/friends-feed.js?v=20261030-audiobooks-1"></script>
   <script src="/static/follows.js?v=20261029-follows-1"></script>
   <script src="/static/push.js?v=20261027-push-3" defer></script>
   <script src="/static/year-in-review-entry.js?v=20261019-story-1" defer></script>
-  <script src="/static/guest-list.js?v=20261028-podcasts-1"></script>
-  <script src="/static/taste-quiz.js?v=20261028-podcasts-1" defer></script>
-  <script src="/static/app-nav.js?v=20261028-simplify-1" defer></script>
+  <script src="/static/guest-list.js?v=20261030-audiobooks-1"></script>
+  <script src="/static/taste-quiz.js?v=20261030-audiobooks-1" defer></script>
+  <script src="/static/app-nav.js?v=20261030-audiobooks-1" defer></script>
 
   <!-- Account Modal -->
   <div id="accountModal" class="modal-overlay" style="display: none;">
@@ -2428,6 +2547,15 @@
               </label>
             </div>
             <div class="privacy-toggle-item">
+              <label for="audiobooksPrivate" class="toggle-label">
+                <span class="toggle-label__text">Keep audiobooks private</span>
+                <div class="toggle-container">
+                  <input type="checkbox" id="audiobooksPrivate" class="toggle-switch">
+                  <span class="toggle-slider"></span>
+                </div>
+              </label>
+            </div>
+            <div class="privacy-toggle-item">
               <label for="statisticsPrivate" class="toggle-label">
                 <span class="toggle-label__text">Keep statistics private</span>
                 <div class="toggle-container">
@@ -2516,6 +2644,15 @@
                 <span class="toggle-label__text">Show podcasts</span>
                 <div class="toggle-container">
                   <input type="checkbox" id="podcastsVisible" class="toggle-switch">
+                  <span class="toggle-slider"></span>
+                </div>
+              </label>
+            </div>
+            <div class="privacy-toggle-item">
+              <label for="audiobooksVisible" class="toggle-label">
+                <span class="toggle-label__text">Show audiobooks</span>
+                <div class="toggle-container">
+                  <input type="checkbox" id="audiobooksVisible" class="toggle-switch">
                   <span class="toggle-slider"></span>
                 </div>
               </label>
@@ -2674,6 +2811,7 @@
                   <option value="books">Books</option>
                   <option value="manga">Manga</option>
                   <option value="podcasts">Podcasts</option>
+                  <option value="audiobooks">Audiobooks</option>
                 </select>
               </label>
               <label class="import-studio__file-label">
@@ -2731,6 +2869,7 @@
                   <option value="books">Book template</option>
                   <option value="manga">Manga template</option>
                   <option value="podcasts">Podcast template</option>
+                  <option value="audiobooks">Audiobook template</option>
                 </select>
               </label>
               <button type="button" class="action-btn" data-action="download-import-template">Download template</button>
@@ -3046,6 +3185,24 @@
           </div>
         </div>
 
+        <!-- Audiobooks Accordion Section -->
+        <div class="accordion-section">
+          <div class="accordion-header" data-toggle-accordion="audiobooks">
+            <h3>Audiobooks</h3>
+            <span class="accordion-icon" id="audiobooksIcon">▼</span>
+          </div>
+          <div class="accordion-content" id="audiobooksContent">
+            <div id="audiobooksSummary" class="accordion-summary"></div>
+            <div id="audiobooksList" class="accordion-full-content">
+              <div class="friend-search-container">
+                <input type="text" id="friendAudiobooksSearch" class="friend-search-input"
+                  placeholder="Search audiobooks by title, author, narrator, or genre..." data-friend-filter="Audiobooks">
+              </div>
+              <div id="friendAudiobooksListContainer"></div>
+            </div>
+          </div>
+        </div>
+
         <!-- Statistics Accordion Section -->
         <div class="accordion-section">
           <div class="accordion-header" data-toggle-accordion="statistics">
@@ -3162,6 +3319,19 @@
     </div>
   </div>
 
+  <!-- Audiobook Search Results Modal -->
+  <div id="audiobookSearchModal" class="modal-overlay" style="display: none;">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h2>Select Audiobook</h2>
+        <button class="modal-close" data-action="close-audiobook-search-modal" aria-label="Close audiobook search">×</button>
+      </div>
+      <div class="modal-body">
+        <div id="audiobookSearchResults" class="search-results-grid"></div>
+      </div>
+    </div>
+  </div>
+
   <!-- Universal Quick Capture Modal -->
   <div id="quickCaptureModal" class="modal-overlay quick-capture-overlay" style="display: none;" data-close-on-backdrop="quick-capture" role="dialog" aria-modal="true" aria-labelledby="quickCaptureTitle">
     <div class="modal-content quick-capture-modal" data-stop-propagation>
@@ -3169,7 +3339,7 @@
         <div>
           <p class="quick-capture-eyebrow">One search · every shelf</p>
           <h2 id="quickCaptureTitle">Add anything</h2>
-          <p>Search movies, shows, anime, games, albums, books, manga, and podcasts together.</p>
+          <p>Search movies, shows, anime, games, albums, books, manga, podcasts, and audiobooks together.</p>
         </div>
         <button type="button" class="modal-close" data-action="close-quick-capture" aria-label="Close quick capture">×</button>
       </div>
@@ -3192,6 +3362,7 @@
               <button type="button" data-action="select-quick-capture-category" data-quick-category="books" aria-pressed="false">📚 Books</button>
               <button type="button" data-action="select-quick-capture-category" data-quick-category="manga" aria-pressed="false">🗯️ Manga</button>
               <button type="button" data-action="select-quick-capture-category" data-quick-category="podcasts" aria-pressed="false">🎙️ Podcasts</button>
+              <button type="button" data-action="select-quick-capture-category" data-quick-category="audiobooks" aria-pressed="false">🎧 Audiobooks</button>
             </div>
             <label class="quick-capture-intent" for="quickCaptureIntent"><span>Add as</span><select id="quickCaptureIntent"><option value="saved">Not completed / save for later</option><option value="completed">Completed</option></select></label>
           </div>

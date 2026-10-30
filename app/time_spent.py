@@ -5,14 +5,14 @@ Steam reported (``game_playtime``), played or not. Every other title gets a
 length, then the member's own status and progress decide how much of it counts:
 
 * finished titles count in full,
-* unfinished shows, anime, books, manga and podcasts count up to the member's
-  saved checkpoint (episode, page or chapter),
+* unfinished shows, anime, books, manga, podcasts and audiobooks count up to
+  the member's saved checkpoint (episode, page or chapter),
 * anything else counts as zero.
 
 A title's length comes from the shared ``title_metadata`` cache when a title page
 has already looked it up (running time, episode length, page count, RAWG's
 average playtime, album length), from the member's own episode and chapter
-counts, and otherwise from a typical length for that kind of title. The result
+counts, an audiobook's own length, and otherwise from a typical length for that kind of title. The result
 says how many titles fell back to a typical length so the page can be honest
 about it. The cache is only read, never fetched, so this stays one batch of
 queries however large the library is.
@@ -44,9 +44,11 @@ CATEGORIES = {
     "books": ("book", "Books", "books_private"),
     "manga": ("manga", "Manga", "manga_private"),
     "podcasts": ("podcast", "Podcasts", "podcasts_private"),
+    "audiobooks": ("audiobook", "Audiobooks", "audiobooks_private"),
 }
 VERBS = {"movies": "watching", "tv-shows": "watching", "anime": "watching", "video-games": "playing",
-         "music": "listening", "books": "reading", "manga": "reading", "podcasts": "listening"}
+         "music": "listening", "books": "reading", "manga": "reading", "podcasts": "listening",
+         "audiobooks": "listening"}
 
 # Typical lengths used when neither the cache nor the member's own counts say.
 MOVIE_MINUTES = 115
@@ -63,6 +65,8 @@ MANGA_CHAPTERS_PER_VOLUME = 9
 MANGA_CHAPTERS = 50
 PODCAST_EPISODE_MINUTES = 45
 PODCAST_EPISODES = 10     # a podcast marked listened with no episode count
+AUDIOBOOK_HOURS = 10
+AUDIOBOOK_CHAPTER_MINUTES = 25
 # A typo like 30000 episodes shouldn't swamp the total.
 MAX_ITEM_MINUTES = 2000 * 60
 MAX_COUNT = 5000
@@ -76,6 +80,7 @@ DEFAULTS = {
     "books": f"{BOOK_PAGES} pages per book at about {round(60 / MINUTES_PER_PAGE)} pages an hour",
     "manga": f"{MANGA_CHAPTER_MINUTES} minutes per chapter, {MANGA_CHAPTERS} chapters if you left chapters blank",
     "podcasts": f"{PODCAST_EPISODE_MINUTES} minutes per episode",
+    "audiobooks": f"{AUDIOBOOK_HOURS} hours per audiobook if you left the length blank",
 }
 SOURCES_NOTE = ("Running times, episode lengths and page counts come from Wikidata, TVmaze, MyAnimeList and "
                 "Open Library, and game lengths from RAWG's average playtime, once a title page has looked them up.")
@@ -170,6 +175,11 @@ def full_minutes(category: str, item, facts: dict, layout_total: Optional[int] =
     if category == "podcasts":
         count = _clamp_count(getattr(item, "episodes", None))
         return min((count or PODCAST_EPISODES) * PODCAST_EPISODE_MINUTES, MAX_ITEM_MINUTES), True
+    if category == "audiobooks":
+        hours = getattr(item, "length_hours", None)
+        if hours and hours > 0:
+            return min(hours * 60, MAX_ITEM_MINUTES), False
+        return AUDIOBOOK_HOURS * 60, True
     return 0.0, True
 
 
@@ -191,6 +201,9 @@ def partial_minutes(category: str, item, facts: dict, watched_episodes: Optional
         return position * MANGA_CHAPTER_MINUTES, False
     if category == "podcasts" and checkpoint.unit == "episode":
         return position * PODCAST_EPISODE_MINUTES, True
+    if category == "audiobooks" and checkpoint.unit == "chapter":
+        full, _ = full_minutes(category, item, facts)
+        return min(position * AUDIOBOOK_CHAPTER_MINUTES, full), True
     return 0.0, False
 
 

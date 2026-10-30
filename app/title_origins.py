@@ -31,6 +31,7 @@ LIBRARY = {
     "anime": (models.Anime, "watched"), "video-games": (models.VideoGame, "played"),
     "music": (models.Music, "listened"), "books": (models.Book, "read"),
     "manga": (models.Manga, "read"), "podcasts": (models.Podcast, "listened"),
+    "audiobooks": (models.Audiobook, "listened"),
 }
 
 

@@ -23,8 +23,9 @@ CATEGORIES = {
     "books": (models.Book, schemas.Book, "Book", "read", ("title", "author", "genre")),
     "manga": (models.Manga, schemas.Manga, "Manga", "read", ("title", "author", "genre")),
     "podcasts": (models.Podcast, schemas.Podcast, "Podcast", "listened", ("title", "host", "genre")),
+    "audiobooks": (models.Audiobook, schemas.Audiobook, "Audiobook", "listened", ("title", "author", "narrator", "genre")),
 }
-PROGRESS_CATEGORIES = {"tv-shows", "anime", "books", "manga", "podcasts"}
+PROGRESS_CATEGORIES = {"tv-shows", "anime", "books", "manga", "podcasts", "audiobooks"}
 NO_STORE = {"Cache-Control": "private, no-store"}
 TAG_MAX_LENGTH = 32
 TAGS_PER_ITEM = 10
@@ -116,9 +117,9 @@ def library_page(
     response.headers["Cache-Control"] = "private, no-store"
     if category not in CATEGORIES:
         raise HTTPException(status_code=404, detail="Unknown media category")
-    if has_progress and category not in {"tv-shows", "anime", "books", "manga", "podcasts"}:
+    if has_progress and category not in {"tv-shows", "anime", "books", "manga", "podcasts", "audiobooks"}:
         raise HTTPException(
-            status_code=422, detail="Saved progress is available for TV shows, anime, books, manga, and podcasts",
+            status_code=422, detail="Saved progress is available for TV shows, anime, books, manga, podcasts and audiobooks",
             headers={"Cache-Control": "private, no-store"},
         )
     model, schema, _, completion_field, fields = CATEGORIES[category]

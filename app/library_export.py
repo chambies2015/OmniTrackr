@@ -29,14 +29,15 @@ FORMATS = ("spreadsheet", "letterboxd", "letterboxd-watchlist", "goodreads")
 CATEGORY_MODELS = {
     "movies": models.Movie, "tv-shows": models.TVShow, "anime": models.Anime,
     "video-games": models.VideoGame, "music": models.Music, "books": models.Book,
-    "manga": models.Manga, "podcasts": models.Podcast,
+    "manga": models.Manga, "podcasts": models.Podcast, "audiobooks": models.Audiobook,
 }
 # The column that says a title is finished, and the column holding its creator.
 COMPLETED_FIELD = {
     "movies": "watched", "tv-shows": "watched", "anime": "watched", "video-games": "played",
     "music": "listened", "books": "read", "manga": "read", "podcasts": "listened",
+    "audiobooks": "listened",
 }
-CREATOR_FIELD = {"movies": "director", "music": "artist", "books": "author", "manga": "author", "podcasts": "host"}
+CREATOR_FIELD = {"movies": "director", "music": "artist", "books": "author", "manga": "author", "podcasts": "host", "audiobooks": "author"}
 # Placeholders the importers write when a source has no creator.
 UNKNOWN_CREATORS = {"unknown director", "unknown artist", "unknown author"}
 LIBRARY_COLUMNS = [
@@ -187,7 +188,7 @@ library.csv       Every title in your library, one row each, all categories toge
                   Ratings are out of 10. "completed" means watched, read, played or listened.
 journal.csv       Your journal: every start, finish, revisit and note, newest first.
 collections.csv   The titles in each of your collections, in the order you set.
-progress.csv      Where you stopped in shows, anime, books, manga and podcasts.
+progress.csv      Where you stopped in shows, anime, books, manga, podcasts and audiobooks.
 tags.csv          Your private tags, one row per tag on a title.
 why-added.csv     Who recommended each title, or where you heard of it, with your note.
 playtime.csv      Hours played per game, from Steam imports.

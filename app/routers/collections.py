@@ -44,6 +44,7 @@ CATEGORIES: Dict[str, CategoryDetails] = {
     "books": (models.Book, "Book"),
     "manga": (models.Manga, "Manga"),
     "podcasts": (models.Podcast, "Podcast"),
+    "audiobooks": (models.Audiobook, "Audiobook"),
 }
 PUBLIC_COLLECTION_MIN_DESCRIPTION_CHARS = 300
 PUBLIC_COLLECTION_MIN_ITEMS = 3
@@ -59,6 +60,7 @@ ARTWORK_FIELDS = {
     "books": "cover_art_url",
     "manga": "cover_art_url",
     "podcasts": "cover_art_url",
+    "audiobooks": "cover_art_url",
 }
 
 COPY_FIELDS = {
@@ -70,6 +72,7 @@ COPY_FIELDS = {
     "books": ("title", "author", "year", "genre", "cover_art_url"),
     "manga": ("title", "author", "year", "genre", "volumes", "chapters", "cover_art_url"),
     "podcasts": ("title", "host", "year", "genre", "episodes", "cover_art_url"),
+    "audiobooks": ("title", "author", "narrator", "year", "genre", "length_hours", "cover_art_url"),
 }
 
 
@@ -121,6 +124,7 @@ def _moderator_site_insights(db: Session) -> dict:
         ("books", "Books", models.Book, models.Book.read),
         ("manga", "Manga", models.Manga, models.Manga.read),
         ("podcasts", "Podcasts", models.Podcast, models.Podcast.listened),
+        ("audiobooks", "Audiobooks", models.Audiobook, models.Audiobook.listened),
     ]
     categories = []
     total_items = completed_items = rated_items = reviewed_items = public_reviews = 0
@@ -564,6 +568,7 @@ def _media_identity_key(media, category: str) -> tuple:
         "books": ("year", "author"),
         "manga": ("year", "author"),
         "podcasts": ("year", "host"),
+        "audiobooks": ("year", "author"),
     }[category]
     values = [media.title.strip().casefold()]
     for field in identity_fields:
@@ -650,6 +655,7 @@ def _copy_media_for_user(
     completion_field = {
         "movies": "watched", "tv-shows": "watched", "anime": "watched",
         "video-games": "played", "music": "listened", "books": "read", "manga": "read", "podcasts": "listened",
+        "audiobooks": "listened",
     }[category]
     values[completion_field] = False
     copied = model(**values)
@@ -1185,6 +1191,7 @@ def explore_collections(
         "SELECT_BOOKS": "selected" if category == "books" else "",
         "SELECT_MANGA": "selected" if category == "manga" else "",
         "SELECT_PODCASTS": "selected" if category == "podcasts" else "",
+        "SELECT_AUDIOBOOKS": "selected" if category == "audiobooks" else "",
         "SORT_HELPFUL": "selected" if sort == "helpful" else "",
         "SORT_NEWEST": "selected" if sort == "newest" else "",
         "SORT_POPULAR": "selected" if sort == "popular" else "",

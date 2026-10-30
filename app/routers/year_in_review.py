@@ -30,10 +30,11 @@ FIRST_TRACKED_NOTE = {
 }
 _CARDS = _CardCache(size=96)
 STORY_JS_VERSION = "20261019-story-1"
-CREATOR_NOUNS = {"movies": "movie", "music": "album", "books": "book", "manga": "series", "podcasts": "podcast"}
+CREATOR_NOUNS = {"movies": "movie", "music": "album", "books": "book", "manga": "series", "podcasts": "podcast", "audiobooks": "audiobook"}
 SHELF_NOUNS = {"movies": ("movie", "movies"), "tv-shows": ("show", "shows"), "anime": ("anime", "anime"),
                "video-games": ("game", "games"), "music": ("album", "albums"), "books": ("book", "books"),
-               "manga": ("manga", "manga"), "podcasts": ("podcast", "podcasts")}
+               "manga": ("manga", "manga"), "podcasts": ("podcast", "podcasts"),
+               "audiobooks": ("audiobook", "audiobooks")}
 
 
 def _e(value) -> str:
@@ -391,7 +392,7 @@ def _page(*, title: str, description: str, canonical: str, card_url: str, eyebro
   <link rel="preload" href="/static/fonts/poppins-800-latin.woff2" as="font" type="font/woff2" crossorigin>
   <link rel="stylesheet" href="/static/fonts.css?v=20261009-fonts-1">
   <link rel="stylesheet" href="/static/title-page.css?v={TITLE_CSS_VERSION}">
-  <link rel="stylesheet" href="/static/profile-page.css?v=20261004-share-1">
+  <link rel="stylesheet" href="/static/profile-page.css?v=20261030-audiobooks-1">
   <link rel="stylesheet" href="/static/year-in-review.css?v={STORY_JS_VERSION}">
   {scripts}
 </head>
