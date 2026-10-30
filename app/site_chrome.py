@@ -15,7 +15,7 @@ import re
 from datetime import date
 from html import escape
 
-SITE_CSS_VERSION = "20261030-errors-1"
+SITE_CSS_VERSION = "20261030-trending-1"
 SITE_JS_VERSION = "20261028-nav-1"
 SITE_NAV_JS_VERSION = "20261030-errors-1"
 # Pages holding this marker (the demo) skip site-nav.js, which reads the stored
@@ -31,7 +31,7 @@ NAV_MENUS = (
         ("discover", "Discover", "/discover", "Trails that connect film, TV, games, books and more"),
         ("best-of", "Best of 2026", "/best-of", "The year's standouts, with why each one earned it"),
         ("release-radar", "Release Radar", "/release-radar", "Out this week and coming soon"),
-        ("titles", "Popular & top rated", "/titles", "Most tracked and highest rated"),
+        ("titles", "Popular & trending", "/titles", "Most tracked, trending now and top rated"),
     )),
     ("play", "Play", (
         ("daily", "Daily puzzle", "/daily", "One new guessing game every day"),
@@ -59,7 +59,7 @@ NAV_ITEMS = tuple((key, label, href) for _, _, items in NAV_MENUS for key, label
 
 # Pages that are one view of a bigger header entry. They pass their own key and
 # the header marks the entry they belong to.
-NAV_ALIASES = {"tonight": "pick", "new-this-week": "release-radar", "charts": "titles"}
+NAV_ALIASES = {"tonight": "pick", "new-this-week": "release-radar", "charts": "titles", "trending": "titles"}
 
 # Pairs of pages that answer the same question in two ways. Each page in a pair
 # shows a small switch at the top so the two read as one feature.
@@ -74,7 +74,8 @@ VIEW_SWITCHES = {
         ("new-this-week", "Out this week", "/new-this-week", "Monday to Sunday, with what members finished"),
     ),
     "titles": (
-        ("titles", "Most tracked", "/titles", "What members are adding now"),
+        ("titles", "Most tracked", "/titles", "On the most member lists"),
+        ("trending", "Trending", "/trending", "What members picked up this week"),
         ("charts", "Top rated", "/titles/movie", "Ranked by member ratings"),
     ),
 }
@@ -86,6 +87,7 @@ FOOTER_GROUPS = (
         ("Release Radar", "/release-radar"),
         ("New this week", "/new-this-week"),
         ("Popular titles", "/titles"),
+        ("Trending this week", "/trending"),
         ("Member charts", "/titles/movie"),
         ("Franchises in order", "/in-order"),
         ("If you liked…", "/if-you-liked"),

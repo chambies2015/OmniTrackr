@@ -167,6 +167,9 @@
 .title-rank { align-items: center; background: rgba(250, 204, 21, .12); border: 1px solid rgba(250, 204, 21, .4); border-radius: 999px; color: #fde68a; display: inline-flex; font-size: .88rem; gap: 6px; margin: 0 0 14px; padding: 5px 14px; text-decoration: none; }
 .title-rank strong { font: 800 1rem var(--site-display); }
 .title-rank:hover { background: rgba(250, 204, 21, .2); }
+.title-rank + .title-rank { margin-left: 8px; }
+.title-rank--trending { background: rgba(45, 212, 191, .1); border-color: rgba(45, 212, 191, .4); color: #99f6e4; }
+.title-rank--trending:hover { background: rgba(45, 212, 191, .18); }
 .title-spread { display: grid; gap: 8px; list-style: none; margin: 0; max-width: 560px; padding: 0; }
 .title-spread li { align-items: center; display: grid; gap: 12px; grid-template-columns: 76px minmax(0, 1fr) 44px; }
 .title-spread__label { color: var(--site-soft); font-size: .85rem; }
