@@ -1116,6 +1116,19 @@ class KofiPayment(Base):
     user_id = Column(Integer, ForeignKey("users.id", ondelete="SET NULL"), nullable=True, index=True)
     received_at = Column(DateTime, nullable=False, default=datetime.utcnow)
     linked_at = Column(DateTime, nullable=True)
+    # Added Oct 30, all nullable or off, so older rows read exactly as before.
+    # A second keyed hash of the payer's email with Gmail dots and "+tags" taken out, so
+    # j.doe+kofi@gmail.com still finds jdoe@gmail.com.
+    email_key = Column(String(64), nullable=True, index=True)
+    # Keyed hash of Ko-fi's transaction id (on the payer's receipt), for "I donated but don't see my badge".
+    transaction_hash = Column(String(64), nullable=True, index=True)
+    # Ko-fi's "Send a test" button. Recorded so the owner can see the webhook works, never linked or counted.
+    test = Column(Boolean, nullable=False, default=False)
+    # The site owner set it aside (a refund, a duplicate...). It stays recorded but leaves the "to link" list.
+    dismissed_at = Column(DateTime, nullable=True)
+    # A member who matched this payment's transaction id and asked for it; the owner confirms with one click.
+    claimed_by = Column(Integer, ForeignKey("users.id", ondelete="SET NULL"), nullable=True)
+    claimed_at = Column(DateTime, nullable=True)
 
 
 class YearlyGoal(Base):

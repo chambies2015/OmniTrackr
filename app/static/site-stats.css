@@ -166,4 +166,16 @@
 .stats-kofi__form { align-items: center; display: flex; flex-wrap: wrap; gap: 8px; }
 .stats-kofi__form input { background: var(--site-surface-2); border: 1px solid var(--site-border-strong); border-radius: 8px; color: #fff; font: .88rem var(--site-font); min-height: 34px; padding: 0 10px; width: 180px; }
 .stats-kofi__form input:focus-visible { outline: 2px solid var(--stats-visitors); outline-offset: 1px; }
-@media (max-width: 560px) { .stats-kofi__form, .stats-kofi__form input { width: 100%; } .stats-kofi__form .site-btn { flex: 1; } }
+.stats-kofi__tag { background: var(--site-surface-2); border: 1px solid var(--site-border-strong); border-radius: 999px; color: var(--site-muted); font-size: .72rem; font-weight: 600; margin-left: 8px; padding: 1px 8px; white-space: nowrap; }
+.stats-kofi__tag--claim { border-color: var(--stats-visitors); color: #fff; }
+.stats-kofi__picks { align-items: center; display: flex; flex-wrap: wrap; gap: 4px 8px; margin-top: 6px; }
+.stats-kofi__picks small { color: var(--site-muted); font-size: .76rem; margin-right: 6px; }
+.stats-kofi__aside { background: none; border: 0; color: var(--site-muted); cursor: pointer; font: .82rem var(--site-font); padding: 4px 2px; text-decoration: underline; text-underline-offset: 2px; }
+.stats-kofi__aside:hover, .stats-kofi__aside:focus-visible { color: #fff; }
+.stats-kofi__search { align-items: center; display: flex; flex-wrap: wrap; gap: 8px; margin: 0 0 12px; }
+.stats-kofi__search label { color: var(--site-muted); font-size: .84rem; }
+.stats-kofi__search input { background: var(--site-surface-2); border: 1px solid var(--site-border-strong); border-radius: 8px; color: #fff; font: .88rem var(--site-font); min-height: 34px; padding: 0 10px; width: 240px; }
+.stats-kofi__search input:focus-visible { outline: 2px solid var(--stats-visitors); outline-offset: 1px; }
+.stats-kofi__members { color: var(--site-muted); font-size: .86rem; margin: 0 0 10px; }
+.stats-kofi__members b { color: #fff; }
+@media (max-width: 560px) { .stats-kofi__form, .stats-kofi__form input, .stats-kofi__search input { width: 100%; } .stats-kofi__form .site-btn { flex: 1; } }

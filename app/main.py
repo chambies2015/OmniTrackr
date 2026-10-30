@@ -782,6 +782,9 @@ rate_limited_kofi_webhook = limiter.limit("60/minute")(supporters.kofi_webhook)
 for route in supporters.router.routes:
     if getattr(route, "path", None) == "/api/kofi/webhook" and "POST" in getattr(route, "methods", set()):
         bind_rate_limited_endpoint(route, rate_limited_kofi_webhook)
+    # Each claim can send an email to an address the member typed.
+    elif getattr(route, "path", None) == "/api/supporter/claim" and "POST" in getattr(route, "methods", set()):
+        bind_rate_limited_endpoint(route, limiter.limit("6/hour")(route.endpoint))
 app.include_router(supporters.router)
 
 rate_limited_recap_card = limiter.limit("30/minute")(year_in_review.shared_card)
