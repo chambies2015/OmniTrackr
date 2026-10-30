@@ -12,7 +12,7 @@ from sqlalchemy.orm import Session
 
 from .. import crud, schemas, models, auth, email as email_utils, return_prompt as return_prompt_tokens
 from ..dependencies import get_db
-from .. import funnel, google_signin, two_factor, visits
+from .. import funnel, google_signin, start_flow, two_factor, visits
 from ..signup_rules import email_problem, email_taken, username_problem, username_taken
 
 router = APIRouter(prefix="/auth", tags=["auth"])
@@ -189,6 +189,7 @@ def _finish_login(user: models.User, request: Request, db: Session, now_utc: dat
         if previous_login_at is None or seen_at > previous_login_at:
             previous_login_at = seen_at
     funnel.record_first_login(user, request)
+    first_visit = start_flow.wants_start(user)
     days_away = None
     if previous_login_at:
         days_away = max(0, (now_utc - previous_login_at).days)
@@ -225,6 +226,8 @@ def _finish_login(user: models.User, request: Request, db: Session, now_utc: dat
         }
     )
     auth.set_auth_cookie(response, access_token)
+    if first_visit:
+        start_flow.set_cookie(response, auth.ENVIRONMENT == "production")
     return response
 
 
@@ -299,6 +302,7 @@ def _sign_in_after_verification(request: Request, user: models.User, db: Session
         # A different browser (often the mail app's): log in as usual, with the email filled in.
         return {"message": message, "signed_in": False, "login_hint": user.email}
     funnel.record_first_login(user, request)
+    first_visit = start_flow.wants_start(user)
     user.last_login_at = datetime.now(timezone.utc).replace(tzinfo=None)
     user.login_count = (user.login_count or 0) + 1
     visits.mark_login(user, user.last_login_at)
@@ -311,6 +315,8 @@ def _sign_in_after_verification(request: Request, user: models.User, db: Session
     )
     auth.set_auth_cookie(response, auth.create_user_access_token(user))
     auth.clear_pending_signup_cookie(response)
+    if first_visit:
+        start_flow.set_cookie(response, auth.ENVIRONMENT == "production")
     return response
 
 
@@ -685,6 +691,7 @@ async def google_callback(
         return response
 
     funnel.record_first_login(user, request)
+    first_visit = start_flow.wants_start(user)
     user.last_login_at = datetime.now(timezone.utc).replace(tzinfo=None)
     user.login_count = (user.login_count or 0) + 1
     visits.mark_login(user, user.last_login_at)
@@ -696,6 +703,8 @@ async def google_callback(
     target = "/?signed_in=google&new=1" if outcome == "created" else "/?signed_in=google"
     response = _google_redirect(target)
     auth.set_auth_cookie(response, auth.create_user_access_token(user))
+    if first_visit:
+        start_flow.set_cookie(response, auth.ENVIRONMENT == "production")
     response.delete_cookie(key=google_signin.STATE_COOKIE, path=google_signin.STATE_COOKIE_PATH,
                            samesite="lax", secure=auth.ENVIRONMENT == "production", httponly=True)
     return response

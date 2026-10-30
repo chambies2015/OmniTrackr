@@ -109,6 +109,21 @@ GUEST = (
     ("profile_link_opened", "Public profile opened by a visitor without an account"),
     ("profile_signup_clicked", "Public profile: sign-up button pressed"),
 )
+# The start page new members land on after their first log-in (app/start_flow.py).
+# Each counts a member once: the first time it happens.
+START = (
+    ("start_opened", "Opened the start page"),
+    ("start_first_saved", "Saved a title there"),
+    ("start_reached_five", "Reached five titles"),
+    ("start_next_step", "Went on to a first-week step"),
+)
+START_PATHS = (
+    ("start_quick_add", "Used quick add"),
+    ("start_search", "Used search"),
+    ("start_import", "Opened the importer"),
+    ("start_quiz", "Opened the taste quiz"),
+    ("start_skipped", "Skipped to the library"),
+)
 GOOGLE = (
     ("google_signin_started", "Google button pressed (clicks in a browser)"),
     ("google_account_created", "New accounts made with Google"),
@@ -116,7 +131,7 @@ GOOGLE = (
     ("google_signin", "Log-ins with Google"),
     ("google_signin_failed", "Google sign-in that didn't finish"),
 )
-SERVER_EVENTS = {name for name, _ in STEPS + HOMEPAGE + RAW + REJECTIONS + GUEST + GOOGLE} - DERIVED_STEPS | {"signup_submitted", "email_verified"}
+SERVER_EVENTS = {name for name, _ in STEPS + HOMEPAGE + RAW + REJECTIONS + GUEST + GOOGLE + START + START_PATHS} - DERIVED_STEPS | {"signup_submitted", "email_verified"}
 # Events a browser may report; everything else is recorded on the server only.
 CLIENT_EVENTS = {"signup_form_opened", "hero_signup_clicked", "signup_rejected_invalid", "guest_pick_added", "guest_list_signup", "share_clicked",
                  "recap_kofi_clicked", "supporters_kofi_clicked", "title_search_used", "pick_used", "pick_saved", "liked_saved",
@@ -189,4 +204,6 @@ def summary(counts: dict[str, int]) -> dict:
         "issues": [{"event": name, "label": label, "count": int(counts.get(name, 0))} for name, label in REJECTIONS],
         "guest": [{"event": name, "label": label, "count": int(counts.get(name, 0))} for name, label in GUEST],
         "google": [{"event": name, "label": label, "count": int(counts.get(name, 0))} for name, label in GOOGLE],
+        "start": [{"event": name, "label": label, "count": count(name)} for name, label in START],
+        "start_paths": [{"event": name, "label": label, "count": count(name)} for name, label in START_PATHS],
     }

@@ -1752,3 +1752,25 @@ class UserTwoFactor(Base):
     recovery_codes_created_at = Column(DateTime, nullable=True)
     trusted_epoch = Column(Integer, nullable=False, default=0)
     created_at = Column(DateTime, nullable=False, default=datetime.utcnow)
+
+
+class MemberStart(Base):
+    """How a new member used the start page (/start) in their first session (Oct 2026).
+
+    A new table only; members without a row never saw the page. Each timestamp is
+    set once, the first time that step happens, so every Site stats counter for
+    the page counts a member at most once.
+    """
+    __tablename__ = "member_starts"
+
+    id = Column(Integer, primary_key=True, index=True)
+    user_id = Column(Integer, ForeignKey("users.id", ondelete="CASCADE"), nullable=False, unique=True, index=True)
+    opened_at = Column(DateTime, nullable=False, default=datetime.utcnow)
+    quick_add_at = Column(DateTime, nullable=True)
+    search_at = Column(DateTime, nullable=True)
+    import_at = Column(DateTime, nullable=True)
+    quiz_at = Column(DateTime, nullable=True)
+    first_saved_at = Column(DateTime, nullable=True)
+    reached_five_at = Column(DateTime, nullable=True)
+    next_step_at = Column(DateTime, nullable=True)
+    skipped_at = Column(DateTime, nullable=True)

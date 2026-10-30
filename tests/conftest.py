@@ -128,6 +128,8 @@ def authenticated_client(client, test_user_data, db_session):
     )
     assert login_response.status_code == 200
     token = login_response.json()["access_token"]
+    # A first log-in sends new accounts to /start once; most tests want the dashboard itself.
+    client.cookies.delete("omnitrackr_start")
     
     # Set authorization header for all requests
     client.headers = {"Authorization": f"Bearer {token}"}
