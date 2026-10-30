@@ -9,7 +9,10 @@
     show_reviews: 'profileShowReviews',
     show_collections: 'profileShowCollections',
     show_diary: 'profileShowDiary',
+    show_taste_match: 'profileShowTasteMatch',
   };
+  // Off unless the member ticks them.
+  const OPT_IN = new Set(['show_diary', 'show_taste_match']);
   const $ = id => document.getElementById(id);
   const apiBase = () => (typeof API_BASE === 'string' ? API_BASE : '');
   let loaded = null;
@@ -56,15 +59,23 @@
       widgetsRow.hidden = row.hidden;
       if (path) widgetsLink.href = `${path}/widgets`;
     }
+    const matchRow = $('profileMatchRow');
+    const matchLink = $('profileMatchLink');
+    if (matchRow && matchLink) {
+      const matchPath = settings && typeof settings.match_url === 'string' && settings.match_url.startsWith('/u/') ? settings.match_url : null;
+      matchRow.hidden = !(matchPath && settings.enabled && settings.show_taste_match);
+      if (matchPath) matchLink.href = matchPath;
+    }
   }
 
   function apply(settings) {
     loaded = settings;
     $('profileEnabled').checked = !!settings.enabled;
     $('profileBio').value = settings.bio || '';
-    // The diary is opt-in, so only an explicit true ticks it; the other sections default to shown.
+    // The diary and compare link are opt-in, so only an explicit true ticks them; the other sections default to shown.
     Object.entries(FIELDS).forEach(([field, id]) => {
-      $(id).checked = field === 'show_diary' ? settings[field] === true : settings[field] !== false;
+      const box = $(id);
+      if (box) box.checked = OPT_IN.has(field) ? settings[field] === true : settings[field] !== false;
     });
     showLink(settings);
     updateCount();
@@ -102,7 +113,7 @@
       return;
     }
     const body = { enabled: $('profileEnabled').checked, bio };
-    Object.entries(FIELDS).forEach(([field, id]) => { body[field] = $(id).checked; });
+    Object.entries(FIELDS).forEach(([field, id]) => { if ($(id)) body[field] = $(id).checked; });
     saving = true;
     $('profileSave').disabled = true;
     try {

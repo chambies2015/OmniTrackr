@@ -59,6 +59,11 @@ GUEST = (
     ("daily_shared", "Daily puzzle: result shared"),
     ("taste_match_viewed", "Taste Match opened with a friend"),
     ("taste_match_saved", "Taste Match: a friend's favorite saved to the library"),
+    ("compare_link_opened", "Compare tastes: a member's link opened by a visitor without an account"),
+    ("compare_finished", "Compare tastes: someone rated the deck and saw their score"),
+    ("compare_signup_clicked", "Compare tastes: sign-up button pressed after a result"),
+    ("compare_imported", "Compare tastes: answers saved before sign-up moved into a new library"),
+    ("compare_shared", "Compare tastes: a result or link shared"),
     ("shared_list_created", "Shared list created"),
     ("shared_list_link_opened", "Shared list link opened by a visitor without an account"),
     ("shared_list_joined", "Someone joined a shared list through its link"),
@@ -94,7 +99,7 @@ CLIENT_EVENTS = {"signup_form_opened", "hero_signup_clicked", "signup_rejected_i
                  "order_saved", "seasonal_saved",
                  "calendar_subscribe_clicked", "tier_list_started", "tier_list_exported",
                  "daily_shared", "recap_story_played", "recap_story_shared", "quiz_started", "quiz_saved",
-                 "profile_signup_clicked", "tonight_poll_signup_clicked"}
+                 "profile_signup_clicked", "tonight_poll_signup_clicked", "compare_signup_clicked", "compare_shared"}
 
 
 def record(event: str, request=None) -> bool:

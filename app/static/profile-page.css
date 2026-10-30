@@ -174,3 +174,5 @@
 /* Favorites: a denser poster grid than title pages use. */
 .profile-page .title-related-grid { grid-template-columns: repeat(auto-fill, minmax(124px, 1fr)); }
 @media (max-width: 640px) { .profile-page .title-related-grid { gap: 12px; grid-template-columns: repeat(3, minmax(0, 1fr)); } }
+/* Compare tastes button: teal so it reads apart from the violet sign-up button beside it. */
+.profile-compare.site-btn--primary { background: linear-gradient(135deg, #14b8a6, #0d9488); box-shadow: 0 10px 30px rgba(45, 212, 191, .28), inset 0 1px 0 rgba(255, 255, 255, .2); }
