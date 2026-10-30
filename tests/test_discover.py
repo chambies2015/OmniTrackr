@@ -68,8 +68,8 @@ def test_catalog_is_balanced_and_complete():
         assert len({item['category'] for item in items}) == len(items)
         assert all(item['why'] and item['caveat'] and item['source'] for item in items)
         all_categories.update(item['category'] for item in items)
-    # Trails and monthly editions are written for the six original formats; manga and podcasts came later.
-    editorial = set(CATEGORIES) - {"manga", "podcasts"}
+    # Trails and monthly editions are written for the six original formats; manga, podcasts and audiobooks came later.
+    editorial = set(CATEGORIES) - {"manga", "podcasts", "audiobooks"}
     assert all_categories == editorial
     assert len(MONTHLY_EDITIONS) >= 2
     assert [edition['published_date'] for edition in MONTHLY_EDITIONS.values()] == sorted(

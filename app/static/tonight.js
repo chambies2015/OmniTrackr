@@ -14,7 +14,8 @@
   if (!root) return;
 
   const KINDS = [['movie', 'Movie'], ['tv', 'TV show'], ['anime', 'Anime'], ['game', 'Game'], ['book', 'Book'],
-    ['album', 'Album'], ['manga', 'Manga'], ['podcast', 'Podcast']];
+    ['album', 'Album'], ['manga', 'Manga'], ['podcast', 'Podcast'],
+    ['audiobook', 'Audiobook']];
   const NAME_KEY = 'omnitrackr_poll_name';
 
   function el(tag, className, text) {

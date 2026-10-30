@@ -94,6 +94,15 @@ from .podcasts import (
     delete_podcast,
 )
 
+# Audiobook CRUD operations
+from .audiobooks import (
+    get_audiobooks,
+    get_audiobook_by_id,
+    create_audiobook,
+    update_audiobook,
+    delete_audiobook,
+)
+
 # Export/Import operations
 from .export_import import (
     get_all_movies,
@@ -104,6 +113,7 @@ from .export_import import (
     get_all_books,
     get_all_manga,
     get_all_podcasts,
+    get_all_audiobooks,
     get_all_custom_tabs_with_items,
     find_movie_by_title_and_director,
     find_tv_show_by_title_and_year,
@@ -119,6 +129,7 @@ from .export_import import (
     import_books,
     import_manga,
     import_podcasts,
+    import_audiobooks,
     import_custom_tabs,
 )
 
@@ -136,6 +147,7 @@ from .statistics import (
     get_books_statistics,
     get_manga_statistics,
     get_podcast_statistics,
+    get_audiobook_statistics,
 )
 
 # Friends, Friend Requests, Notifications, and Friend Profile operations
@@ -165,6 +177,7 @@ from .friends import (
     get_friend_books,
     get_friend_manga,
     get_friend_podcasts,
+    get_friend_audiobooks,
     get_friend_statistics,
 )
 
@@ -250,6 +263,12 @@ __all__ = [
     "create_podcast",
     "update_podcast",
     "delete_podcast",
+    # Audiobook operations
+    "get_audiobooks",
+    "get_audiobook_by_id",
+    "create_audiobook",
+    "update_audiobook",
+    "delete_audiobook",
     # Export/Import operations
     "get_all_movies",
     "get_all_tv_shows",
@@ -259,6 +278,7 @@ __all__ = [
     "get_all_books",
     "get_all_manga",
     "get_all_podcasts",
+    "get_all_audiobooks",
     "get_all_custom_tabs_with_items",
     "find_movie_by_title_and_director",
     "find_tv_show_by_title_and_year",
@@ -274,6 +294,7 @@ __all__ = [
     "import_books",
     "import_manga",
     "import_podcasts",
+    "import_audiobooks",
     "import_custom_tabs",
     # Statistics operations
     "get_watch_statistics",
@@ -288,6 +309,7 @@ __all__ = [
     "get_books_statistics",
     "get_manga_statistics",
     "get_podcast_statistics",
+    "get_audiobook_statistics",
     # Friends operations
     "create_friend_request",
     "get_friend_request",
@@ -316,6 +338,7 @@ __all__ = [
     "get_friend_books",
     "get_friend_manga",
     "get_friend_podcasts",
+    "get_friend_audiobooks",
     "get_friend_statistics",
     # Custom Tab operations
     "get_custom_tabs",

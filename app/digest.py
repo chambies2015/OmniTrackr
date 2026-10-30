@@ -340,7 +340,7 @@ def _episodes_section(shows: list | None) -> tuple[str, list[str]]:
 
 
 NEXT_UP_LABELS = {"movies": "Movie", "tv-shows": "TV show", "anime": "Anime", "video-games": "Game",
-                  "music": "Album", "books": "Book", "manga": "Manga", "podcasts": "Podcast"}
+                  "music": "Album", "books": "Book", "manga": "Manga", "podcasts": "Podcast", "audiobooks": "Audiobook"}
 
 
 def next_up_line(db: Session, user_id: int) -> dict | None:

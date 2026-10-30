@@ -103,6 +103,14 @@ function normalizeQuickCapturePayload(category, payload) {
       item
     ));
   }
+  if (category === 'audiobooks') {
+    return (payload?.results || []).slice(0, 4).map(item => result(
+      item.title,
+      [item.author, item.year].filter(Boolean).join(' · '),
+      item.cover_art_url || '',
+      item
+    ));
+  }
   if (category === 'books') {
     return (payload?.docs || []).slice(0, 4).map(item => {
       const coverId = item.cover_i || item.isbn?.[0];
@@ -145,7 +153,7 @@ async function fetchQuickCaptureCategory(category, query, signal) {
             : unavailable('unavailable');
         }
         const valid = category === 'movies' || category === 'tv-shows' ? typeof payload?.Title === 'string'
-          : Array.isArray(payload?.[{ anime: 'data', 'video-games': 'results', music: 'results', books: 'docs', manga: 'results', podcasts: 'results' }[category]]);
+          : Array.isArray(payload?.[{ anime: 'data', 'video-games': 'results', music: 'results', books: 'docs', manga: 'results', podcasts: 'results', audiobooks: 'results' }[category]]);
         if (!valid) return unavailable('unavailable');
         return { category, results: normalizeQuickCapturePayload(category, payload), unavailable: false };
       } catch (_) {
@@ -306,6 +314,7 @@ function prepareQuickCaptureDestination(category, title) {
     books: { form: 'bookForm', title: 'bookTitle', completed: 'bookRead' },
     manga: { form: 'mangaForm', title: 'mangaTitle', completed: 'mangaRead' },
     podcasts: { form: 'podcastForm', title: 'podcastTitle', completed: 'podcastListened' },
+    audiobooks: { form: 'audiobookForm', title: 'audiobookTitle', completed: 'audiobookListened' },
   };
   const destination = destinations[category];
   if (!destination) return null;
@@ -318,6 +327,7 @@ function prepareQuickCaptureDestination(category, title) {
     books: 'addBookForm',
     manga: 'addMangaForm',
     podcasts: 'addPodcastForm',
+    audiobooks: 'addAudiobookForm',
   }[category]);
   const hasDraft = form && Array.from(form.elements).some(field => {
     if (field.type === 'submit' || field.type === 'button') return false;
@@ -391,6 +401,11 @@ function applyQuickCaptureResult(index) {
     setQuickCaptureField('podcastHost', data.host || '');
     setQuickCaptureField('podcastGenre', data.genre || '');
     setQuickCaptureField('podcastEpisodes', data.episodes ?? '');
+    if (data.cover_art_url) destination.titleInput.dataset.coverArtUrl = data.cover_art_url;
+  } else if (item.category === 'audiobooks') {
+    setQuickCaptureField('audiobookAuthor', data.author || '');
+    setQuickCaptureField('audiobookYear', data.year || '');
+    setQuickCaptureField('audiobookGenre', data.genre || '');
     if (data.cover_art_url) destination.titleInput.dataset.coverArtUrl = data.cover_art_url;
   }
 

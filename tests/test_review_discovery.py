@@ -188,7 +188,7 @@ def test_feed_uses_joined_queries_without_per_review_lookups(client, db_session,
         event.remove(db_session.bind, "before_cursor_execute", capture)
     # Includes one batched supporter-badge lookup and one batched spoiler-flag lookup for the whole page,
     # plus one query per category on the page that loads its rows (the scan reads only the columns it checks).
-    assert len(queries) == 11
+    assert len(queries) == 12
 
 
 @pytest.mark.parametrize("params", [{"q": "x" * 101}, {"limit": 41}, {"offset": -1}, {"category": "unknown"}])
@@ -225,6 +225,8 @@ def test_save_copies_only_public_metadata_and_repeated_saves_reuse(client, db_se
         "book": {"author": "Author", "year": 2024, "genre": "Unexposed genre", "read": True},
         "manga": {"author": "Mangaka", "year": 2024, "genre": "Unexposed genre", "volumes": 3, "read": True},
         "podcast": {"host": "Host", "year": 2024, "genre": "Unexposed genre", "episodes": 40, "listened": True},
+        "audiobook": {"author": "Author", "narrator": "Narrator", "year": 2024, "genre": "Unexposed genre",
+                      "length_hours": 9.5, "listened": True},
     }[category]
     source = add_review(db_session, author, category, **fields)
     db_session.commit()
@@ -246,9 +248,9 @@ def test_save_copies_only_public_metadata_and_repeated_saves_reuse(client, db_se
     assert item.rating is None and item.review is None and item.review_public is False
     for field in reviews.PUBLIC_METADATA_FIELDS[category]:
         assert getattr(item, field) == getattr(source, field)
-    completion = {"movie": "watched", "tv_show": "watched", "anime": "watched", "video_game": "played", "music": "listened", "book": "read", "manga": "read", "podcast": "listened"}[category]
+    completion = {"movie": "watched", "tv_show": "watched", "anime": "watched", "video_game": "played", "music": "listened", "book": "read", "manga": "read", "podcast": "listened", "audiobook": "listened"}[category]
     assert getattr(item, completion) is False
-    if category in {"book", "music"}:
+    if category in {"book", "music", "audiobook"}:
         assert item.genre is None
     if category == "video_game":
         assert item.rawg_link is None

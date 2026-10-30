@@ -25,6 +25,7 @@ CATEGORIES: Dict[str, CategoryDetails] = {
     "books": (models.Book, "Book", "read"),
     "manga": (models.Manga, "Manga", "read"),
     "podcasts": (models.Podcast, "Podcast", "listened"),
+    "audiobooks": (models.Audiobook, "Audiobook", "listened"),
 }
 MAX_OPEN_POSTCARDS = 5
 
@@ -352,6 +353,8 @@ def _new_library_item(user_id: int, category: str, title: str):
         return models.Manga(**common, read=False)
     if category == "podcasts":
         return models.Podcast(**common, listened=False)
+    if category == "audiobooks":
+        return models.Audiobook(**common, listened=False)
     return models.Book(**common, author="Unknown author", read=False)
 
 

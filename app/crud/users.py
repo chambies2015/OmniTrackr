@@ -183,6 +183,8 @@ def update_privacy_settings(db: Session, user_id: int, privacy_settings: schemas
         db_user.manga_private = update_dict['manga_private']
     if 'podcasts_private' in update_dict:
         db_user.podcasts_private = update_dict['podcasts_private']
+    if 'audiobooks_private' in update_dict:
+        db_user.audiobooks_private = update_dict['audiobooks_private']
     if 'statistics_private' in update_dict:
         db_user.statistics_private = update_dict['statistics_private']
     
@@ -206,6 +208,7 @@ def get_privacy_settings(db: Session, user_id: int) -> Optional[schemas.PrivacyS
         books_private=db_user.books_private,
         manga_private=db_user.manga_private,
         podcasts_private=db_user.podcasts_private,
+        audiobooks_private=db_user.audiobooks_private,
         statistics_private=db_user.statistics_private
     )
 
@@ -234,6 +237,8 @@ def update_tab_visibility(db: Session, user_id: int, tab_visibility: schemas.Tab
         db_user.manga_visible = update_dict['manga_visible']
     if 'podcasts_visible' in update_dict:
         db_user.podcasts_visible = update_dict['podcasts_visible']
+    if 'audiobooks_visible' in update_dict:
+        db_user.audiobooks_visible = update_dict['audiobooks_visible']
     
     db.commit()
     db.refresh(db_user)
@@ -254,7 +259,8 @@ def get_tab_visibility(db: Session, user_id: int) -> Optional[schemas.TabVisibil
         music_visible=db_user.music_visible,
         books_visible=db_user.books_visible,
         manga_visible=db_user.manga_visible,
-        podcasts_visible=db_user.podcasts_visible
+        podcasts_visible=db_user.podcasts_visible,
+        audiobooks_visible=db_user.audiobooks_visible
     )
 
 

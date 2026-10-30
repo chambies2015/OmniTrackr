@@ -30,19 +30,19 @@ SITE_URL = os.getenv("SITE_URL", "https://omnitrackr.xyz").rstrip("/")
 CSS_VERSION = "20261028-people-1"
 JS_VERSION = "20261025-title-refresh-1"
 SCHEMA_TYPES = {"movie": "Movie", "tv": "TVSeries", "anime": "TVSeries", "game": "VideoGame", "album": "MusicAlbum", "book": "Book",
-                "manga": "Book", "podcast": "PodcastSeries"}
-CREATOR_SCHEMA = {"movie": "director", "album": "byArtist", "book": "author", "manga": "author", "podcast": "author"}
-CREATOR_LABEL = {"movie": "Director", "album": "Artist", "book": "Author", "manga": "Mangaka", "podcast": "Host"}
+                "manga": "Book", "podcast": "PodcastSeries", "audiobook": "Audiobook"}
+CREATOR_SCHEMA = {"movie": "director", "album": "byArtist", "book": "author", "manga": "author", "podcast": "author", "audiobook": "author"}
+CREATOR_LABEL = {"movie": "Director", "album": "Artist", "book": "Author", "manga": "Mangaka", "podcast": "Host", "audiobook": "Author"}
 KIND_PLURALS = {"movie": "Movies", "tv": "TV shows", "anime": "Anime", "game": "Games", "album": "Albums", "book": "Books",
-                "manga": "Manga", "podcast": "Podcasts"}
+                "manga": "Manga", "podcast": "Podcasts", "audiobook": "Audiobooks"}
 GUEST_LIST_MAX = 30
 TAKE_DAYS = 60
-FRIEND_RECS_VERSION = "20261024-friend-recs-1"
+FRIEND_RECS_VERSION = "20261030-audiobooks-1"
 TAKE_TOKEN = re.compile(r"[A-Za-z0-9_-]{16,64}")
 FINISHED_LABEL = {"movie": "watched", "tv": "watched", "anime": "watched", "game": "played", "album": "heard", "book": "read",
-                  "manga": "read", "podcast": "heard"}
+                  "manga": "read", "podcast": "heard", "audiobook": "heard"}
 VERBS = {"movie": "watched", "tv": "watched", "anime": "watched", "game": "played", "album": "listened to", "book": "read",
-         "manga": "read", "podcast": "listened to"}
+         "manga": "read", "podcast": "listened to", "audiobook": "listened to"}
 
 
 def _singular(kind: str) -> str:
@@ -724,7 +724,7 @@ def render(group, summary: dict, metadata: Optional[dict], indexable: bool, sign
   <link rel="stylesheet" href="/static/discussions.css?v=20261028-discussions-1">
   <script src="/static/share.js?v=20261004-share-1" defer></script>
   <script src="/static/review_report.js?v=20261020-title-reviews-1" defer></script>
-  {'' if signed_in else '<script src="/static/guest-list.js?v=20261012-hero-search-1" defer></script>'}
+  {'' if signed_in else '<script src="/static/guest-list.js?v=20261030-audiobooks-1" defer></script>'}
   {f'<link rel="stylesheet" href="/static/friend-recs.css?v={FRIEND_RECS_VERSION}"><script src="/static/friend-recs.js?v={FRIEND_RECS_VERSION}" defer></script>' if signed_in else ''}
   {ad_loader}
   {_json_ld(group, summary, metadata, canonical, image)}

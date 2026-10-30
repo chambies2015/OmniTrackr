@@ -53,7 +53,7 @@ function formatActivityDate(value) {
 }
 
 function activityIcon(category) {
-  return { movies: '🎬', 'tv-shows': '📺', anime: '🎌', 'video-games': '🎮', music: '🎵', books: '📚', manga: '🗯️', podcasts: '🎙️' }[category] || '•';
+  return { movies: '🎬', 'tv-shows': '📺', anime: '🎌', 'video-games': '🎮', music: '🎵', books: '📚', manga: '🗯️', podcasts: '🎙️', audiobooks: '🎧' }[category] || '•';
 }
 
 function buildActivityCard(entry) {
@@ -352,7 +352,7 @@ function renderActivityDiaryDay(data) {
       again.dataset.action = 'activity-diary-log-again';
       again.dataset.diaryCategory = entry.category;
       again.dataset.diaryItemId = String(entry.item_id);
-      again.textContent = { 'video-games': 'Log a replay', music: 'Log a relisten', books: 'Log a reread', manga: 'Log a reread', podcasts: 'Log a relisten' }[entry.category] || 'Log a rewatch';
+      again.textContent = { 'video-games': 'Log a replay', music: 'Log a relisten', books: 'Log a reread', manga: 'Log a reread', podcasts: 'Log a relisten', audiobooks: 'Log a relisten' }[entry.category] || 'Log a rewatch';
       row.appendChild(again);
     }
     list.appendChild(row);

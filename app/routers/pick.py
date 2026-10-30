@@ -19,7 +19,7 @@ from .discover import page
 router = APIRouter(tags=["pick"])
 CSS_VERSION = "20261022-next-up-1"
 JS_VERSION = "20261022-next-up-1"
-GUEST_LIST_JS = "/static/guest-list.js?v=20261012-hero-search-1"
+GUEST_LIST_JS = "/static/guest-list.js?v=20261030-audiobooks-1"
 DESCRIPTION = ("Can't decide what to watch, play or read? Pick for me suggests one movie, TV show, anime, game, "
                "book or album at a time, with a reason to try it and a caveat to consider first.")
 

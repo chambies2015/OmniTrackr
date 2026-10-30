@@ -1,0 +1,143 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="description" content="Free audiobook tracker: log what you listen to with the narrator and runtime, save the chapter you reached, rate the performance and count your listening hours.">
+  <meta name="robots" content="index, follow, max-image-preview:large">
+  <meta name="author" content="OmniTrackr">
+  <title>Audiobook Tracker - Track Narrators, Hours, Chapters and Reviews</title>
+  <link rel="canonical" href="https://omnitrackr.xyz/audiobook-tracker">
+  <link rel="icon" type="image/x-icon" href="/omnitrackr_favicon.ico">
+  <meta property="og:type" content="article">
+  <meta property="og:url" content="https://omnitrackr.xyz/audiobook-tracker">
+  <meta property="og:title" content="Audiobook Tracker - Narrators, Hours and Chapters">
+  <meta property="og:description" content="A guide to tracking audiobooks: narrators, runtimes, the chapter you reached, listening hours and reviews of the performance.">
+  <meta property="og:image" content="https://omnitrackr.xyz/omnitrackr_vortex.png">
+  <meta property="og:image:alt" content="OmniTrackr audiobook tracker guide">
+  <meta property="og:site_name" content="OmniTrackr">
+  <meta name="twitter:card" content="summary">
+  <meta name="twitter:title" content="Audiobook Tracker">
+  <meta name="twitter:description" content="Keep every audiobook you hear, who read it and how long it ran, next to your films, shows and books.">
+  <link rel="preload" href="/static/fonts/poppins-700-latin.woff2" as="font" type="font/woff2" crossorigin>
+  <link rel="preload" href="/static/fonts/poppins-800-latin.woff2" as="font" type="font/woff2" crossorigin>
+  <link rel="stylesheet" href="/static/fonts.css?v=20261009-fonts-1">
+  <style>
+    body { min-height: 100vh; padding: 20px; }
+    .content-wrapper { max-width: 1040px; margin: 0 auto; }
+    .content-container { background: var(--card-bg); border-radius: 16px; padding: 50px 40px; margin: 20px 0; box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3); border: 1px solid var(--border); color: var(--fg); line-height: 1.8; }
+    @media (max-width: 768px) { .content-container { padding: 30px 20px; margin: 10px 0; } }
+    .content-header { text-align: center; margin-bottom: 40px; padding-bottom: 20px; border-bottom: 2px solid var(--border); }
+    .content-header h1 { font-family: 'Poppins', sans-serif; font-size: 2.35rem; margin-bottom: 10px; color: var(--fg); }
+    .content-header p, .content-section p, .content-section li { color: var(--fg-secondary); }
+    .content-section { margin-bottom: 38px; }
+    .content-section h2 { font-family: 'Poppins', sans-serif; font-size: 1.75rem; margin-bottom: 15px; color: var(--primary); }
+    .content-section ul, .content-section ol { margin-left: 20px; margin-bottom: 15px; }
+    .content-section li { margin-bottom: 8px; }
+    .back-link { display: inline-block; margin-bottom: 30px; color: var(--primary); text-decoration: none; font-weight: 500; }
+  </style>
+  <script type="application/ld+json">
+  {
+    "@context": "https://schema.org",
+    "@type": "Article",
+    "headline": "Audiobook Tracker for Narrators, Listening Hours, Chapters and Reviews",
+    "description": "A guide to tracking audiobooks with OmniTrackr, including narrators, runtimes, chapter checkpoints, listening hours, reviews and statistics.",
+    "dateModified": "2026-10-30",
+    "author": { "@type": "Organization", "name": "OmniTrackr" },
+    "publisher": { "@type": "Organization", "name": "OmniTrackr", "url": "https://omnitrackr.xyz" },
+    "mainEntityOfPage": "https://omnitrackr.xyz/audiobook-tracker",
+    "inLanguage": "en-US"
+  }
+  </script>
+  <link rel="stylesheet" href="/static/public-reader.css?v=20261029-reader-3">
+</head>
+
+<body class="public-reader site">
+  <a class="reader-skip" href="#reader-main">Skip to guide</a>
+  <!--SITE_NAV:guides-->
+  <div class="reader-shell">
+    <main id="reader-main" tabindex="-1" class="reader-main content-container">
+<a href="/media-tracking" class="back-link">Back to Media Tracking Hub</a>
+      <header class="content-header">
+        <h1>Audiobook Tracker</h1>
+        <p>Log the audiobooks you listen to with the narrator and the runtime, save the chapter you reached, and see how many hours you have spent listening.</p>
+      </header>
+      <details class="reader-contents">
+        <summary>On this page</summary>
+        <nav aria-label="On this page">
+          <a href="#why-heading">Why audiobooks get their own shelf</a>
+          <a href="#start-heading">Add your first audiobook</a>
+          <a href="#narrator-heading">The narrator is half the book</a>
+          <a href="#progress-heading">Saving your place</a>
+          <a href="#hours-heading">Listening hours</a>
+          <a href="#review-heading">Writing an audiobook review</a>
+          <a href="#move-heading">Moving from a book shelf or another app</a>
+          <a href="#privacy-heading">Privacy and backups</a>
+          <a href="#related-heading">Related pages</a>
+        </nav>
+      </details>
+
+      <section class="content-section" aria-labelledby="why-heading">
+        <h2 id="why-heading">Why audiobooks get their own shelf</h2>
+        <p>You can log an audiobook as a book, and plenty of people do. The trouble starts when you want to know things a book shelf cannot answer. Who read it? How long was it? How many hours did you spend listening this year, apart from the paperbacks on your nightstand? A twelve-hour fantasy novel and a 300-page paperback count the same on a reading list, but they took a very different part of your week.</p>
+        <p>The Audiobooks tab in OmniTrackr has the fields a book shelf leaves out: the narrator, the full runtime in hours, and a chapter checkpoint. It also has the usual author, year, genre, rating, review and a listened status. It sits next to your Books tab, so you can keep the print copy of a series on one shelf and the ones you heard on the drive to work on the other.</p>
+      </section>
+
+      <section class="content-section" aria-labelledby="start-heading">
+        <h2 id="start-heading">Add your first audiobook</h2>
+        <ol>
+          <li>Open the <strong>Audiobooks</strong> tab in your dashboard and choose <strong>Add Audiobook</strong>.</li>
+          <li>Type the title, or the title and the author, and press <strong>Search</strong>. Results come from Apple Books, which carries most commercial audiobooks, including the ones you might own on Audible or borrow through Libby. Picking a result fills in the author, the year, a genre and the cover. The "(Unabridged)" tag Apple adds to titles is removed.</li>
+          <li>Apple does not publish narrators or runtimes through its search, so type those in. The runtime is printed on the audiobook's store page and in most listening apps. Enter it in hours: 16.5 for sixteen and a half hours.</li>
+          <li>Tick <strong>Listened</strong> when you reach the end.</li>
+        </ol>
+        <p>Only the title is required. If a search finds nothing, which happens with older library recordings, independent productions and some books from small publishers, fill in what you know and save it.</p>
+      </section>
+
+      <section class="content-section" aria-labelledby="narrator-heading">
+        <h2 id="narrator-heading">The narrator is half the book</h2>
+        <p>A good narrator can carry a slow book, and a mismatched one can sink a great one. Many listeners pick their next audiobook by narrator as often as by author. Keep the narrator on every entry and you can search your shelf by name later: the search box on the Audiobooks tab looks through titles, authors, narrators and genres.</p>
+        <p>For a full-cast production, list the lead readers separated by commas. For a book read by its author, put the author's name in both fields so a later search finds it either way.</p>
+      </section>
+
+      <section class="content-section" aria-labelledby="progress-heading">
+        <h2 id="progress-heading">Saving your place</h2>
+        <p>Your listening app remembers the exact second you stopped, but only inside that app, and only while the loan or the subscription lasts. Choose <strong>Update progress</strong> on an audiobook and save the chapter you reached. You can add a private note too, such as the timestamp, the app you were using or the library copy that is due back on Friday.</p>
+        <p>Saved chapters show up in Continue on your dashboard, next to the shows and books you are partway through, and the note stays private even if your review is public.</p>
+      </section>
+
+      <section class="content-section" aria-labelledby="hours-heading">
+        <h2 id="hours-heading">Listening hours</h2>
+        <p>The Statistics tab has an audiobook section with your finished and unfinished counts, average rating, rating spread, most common genres, and two hour totals: hours in the audiobooks you finished, and hours on the whole shelf. Your estimated time spent counts the full runtime of each finished audiobook. For one you are partway through, it counts about 25 minutes for each chapter you saved, and never more than the book's length. Audiobooks without a runtime fall back to a typical ten hours, and the time spent page says how many of yours used that guess, so fill in the runtime when you can.</p>
+        <p>Audiobooks also count toward yearly goals, your year-end recap, your public profile and the All Ears badge, which you earn after finishing 5, 25 and 100 audiobooks.</p>
+      </section>
+
+      <section class="content-section" aria-labelledby="review-heading">
+        <h2 id="review-heading">Writing an audiobook review</h2>
+        <p>An audiobook review covers two things: the book and the performance. A reader who already knows the book wants to hear about the second one. Did the narrator give each character a distinct voice? Were names and foreign words pronounced the way the author meant them? Did the pace suit the story, or did you end up listening at 1.5x speed to get through it? Mention any music, sound effects or a full cast, because some listeners love those and others avoid them.</p>
+        <p>Say whether the book works better heard or read. Dense nonfiction full of charts, poetry with unusual layouts, and fantasy with a big cast can be harder to follow by ear. Hide plot spoilers behind a warning on public reviews.</p>
+        <p>To appear in OmniTrackr's public review feed, a review needs at least 80 characters, and a review with more than 240 characters and 35 words can have its own page. The <a href="/review-guidelines">review guidelines</a> explain what makes a review substantial.</p>
+      </section>
+
+      <section class="content-section" aria-labelledby="move-heading">
+        <h2 id="move-heading">Moving from a book shelf or another app</h2>
+        <p>If you logged audiobooks on your Books tab before this shelf existed, they stay where they are. Nothing moves on its own. To move one, add it on the Audiobooks tab and delete the book entry, or keep both if you read the print edition too.</p>
+        <p>To bring in a longer list, use a spreadsheet. The Import Studio takes a CSV with an <code>audiobooks</code> category and columns for title, author, narrator, year, genre, length, rating, listened and review. Download the audiobook template there to see the layout. The length column accepts hours like <code>11.5</code> or a runtime like <code>11:30</code> or <code>11h 30m</code>. The import shows a preview first and never overwrites titles already on your shelf.</p>
+      </section>
+
+      <section class="content-section" aria-labelledby="privacy-heading">
+        <h2 id="privacy-heading">Privacy and backups</h2>
+        <p>The audiobook shelf follows the same privacy rules as the rest of OmniTrackr. In Settings you can make audiobooks private, so friends and public pages never see them, or hide the Audiobooks tab if you don't listen to them. Audiobooks are part of your JSON backup and restore, and backups made before the shelf existed still import exactly as before.</p>
+      </section>
+
+      <section class="content-section" aria-labelledby="related-heading">
+        <h2 id="related-heading">Related pages</h2>
+        <p>Read the <a href="/book-tracker">book tracker guide</a> for print and ebooks, the <a href="/podcast-tracker">podcast tracker guide</a> for shows you follow, or the <a href="/export-import-guide">export and import guide</a> to move a list across. For broader workflows, visit the <a href="/media-tracking">media tracking hub</a>, or browse <a href="/reviews?category=audiobook">audiobook reviews</a>.</p>
+      </section>
+    </main>
+  </div>
+  <!--SITE_FOOTER-->
+</body>
+
+</html>

@@ -15,7 +15,7 @@ function setup(category = 'books') {
   const pages = new Map([[category, { offset: 50, total: 51, focusId: 42, signature: 'existing view' }]]);
   const context = vm.createContext({
     Promise, API_BASE: '', libraryBrowseEpoch: 0, currentTab: category, editingRowId: null,
-    isLoadingTVShows: false, isLoadingAnime: false, isLoadingBooks: false, isLoadingManga: false, isLoadingPodcasts: false,
+    isLoadingTVShows: false, isLoadingAnime: false, isLoadingBooks: false, isLoadingManga: false, isLoadingPodcasts: false, isLoadingAudiobooks: false,
     Date: { now: () => now },
     setTimeout: (callback, delay) => { timers.push({ callback, delay }); },
     getLibraryFilters: key => filters.get(key) || { hasProgress: false },

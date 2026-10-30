@@ -27,7 +27,7 @@ POSTS_MAX = 500
 HISTORY_SHOWN = 12
 STATUSES = ("started", "finished")
 DONE_WORD = {"movie": "watched", "tv": "watched", "anime": "watched", "game": "played", "book": "read", "album": "heard",
-             "manga": "read", "podcast": "heard"}
+             "manga": "read", "podcast": "heard", "audiobook": "heard"}
 
 
 def _now() -> datetime:

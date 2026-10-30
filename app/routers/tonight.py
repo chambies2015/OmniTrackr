@@ -18,7 +18,7 @@ from .discover import page
 
 router = APIRouter(tags=["tonight"])
 CSS_VERSION = "20261028-tonight-1"
-JS_VERSION = "20261028-tonight-1"
+JS_VERSION = "20261030-audiobooks-1"
 DESCRIPTION = ("Can't agree on what to watch tonight? Make a quick poll from your watchlist, send the link to the "
                "group chat and let everyone vote. Free, and friends don't need an account to vote.")
 

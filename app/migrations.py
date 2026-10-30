@@ -255,6 +255,16 @@ def run_migrations():
                     conn.execute(text("ALTER TABLE users ADD COLUMN podcasts_visible BOOLEAN NOT NULL DEFAULT TRUE"))
                     conn.commit()
                     print("Added podcasts_visible column to users table")
+            if "audiobooks_private" not in user_columns:
+                with engine.connect() as conn:
+                    conn.execute(text("ALTER TABLE users ADD COLUMN audiobooks_private BOOLEAN NOT NULL DEFAULT FALSE"))
+                    conn.commit()
+                    print("Added audiobooks_private column to users table")
+            if "audiobooks_visible" not in user_columns:
+                with engine.connect() as conn:
+                    conn.execute(text("ALTER TABLE users ADD COLUMN audiobooks_visible BOOLEAN NOT NULL DEFAULT TRUE"))
+                    conn.commit()
+                    print("Added audiobooks_visible column to users table")
             if "profile_picture_url" not in user_columns:
                 with engine.connect() as conn:
                     conn.execute(text("ALTER TABLE users ADD COLUMN profile_picture_url VARCHAR"))
@@ -579,7 +589,7 @@ def run_migrations():
         # which public pages already treated as private, so keep it private.
         try:
             with engine.begin() as conn:
-                for table in ("movies", "tv_shows", "anime", "video_games", "music", "books", "manga", "podcasts"):
+                for table in ("movies", "tv_shows", "anime", "video_games", "music", "books", "manga", "podcasts", "audiobooks"):
                     if inspector.has_table(table) and "review_public" in {
                         col["name"] for col in inspect(engine).get_columns(table)
                     }:
@@ -909,7 +919,7 @@ def add_public_diary_column():
         print(f"Migration warning (public diary): {e}")
 
 
-LIBRARY_TABLES = ("movies", "tv_shows", "anime", "video_games", "music", "books", "manga", "podcasts")
+LIBRARY_TABLES = ("movies", "tv_shows", "anime", "video_games", "music", "books", "manga", "podcasts", "audiobooks")
 
 
 def add_library_added_at_columns():
@@ -957,7 +967,7 @@ def add_calendar_episodes_column():
 
 # (table, creator column) for the "More by" lists on title pages.
 CREATOR_COLUMNS = (("movies", "director"), ("music", "artist"), ("books", "author"),
-                   ("manga", "author"), ("podcasts", "host"))
+                   ("manga", "author"), ("podcasts", "host"), ("audiobooks", "author"))
 
 
 def add_lookup_indexes():

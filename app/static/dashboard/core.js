@@ -16,6 +16,7 @@ const LIBRARY_SEARCH_SOURCES = [
   { endpoint: '/books/', tab: 'books', label: 'Book', input: 'bookSearch', status: item => item.read ? 'Read' : 'Not read' },
   { endpoint: '/manga/', tab: 'manga', label: 'Manga', input: 'mangaSearch', status: item => item.read ? 'Read' : 'Not read' },
   { endpoint: '/podcasts/', tab: 'podcasts', label: 'Podcast', input: 'podcastSearch', status: item => item.listened ? 'Listened' : 'Not listened' },
+  { endpoint: '/audiobooks/', tab: 'audiobooks', label: 'Audiobook', input: 'audiobookSearch', status: item => item.listened ? 'Listened' : 'Not finished' },
 ];
 let librarySearchIndex = [];
 let librarySearchIndexReady = false;
@@ -38,6 +39,7 @@ function libraryPageConfig(category) {
     music: ['musicTable', 'musicSort', loadMusic], books: ['bookTable', 'bookSort', loadBooks],
     manga: ['mangaTable', 'mangaSort', loadManga],
     podcasts: ['podcastTable', 'podcastSort', loadPodcasts],
+    audiobooks: ['audiobookTable', 'audiobookSort', loadAudiobooks],
   }[category];
 }
 
@@ -63,7 +65,7 @@ function renderLibraryFilters(category) {
       movies: ['Not watched', 'Watched'], 'tv-shows': ['Not finished', 'Finished'],
       anime: ['Not finished', 'Finished'], 'video-games': ['Not played', 'Played'],
       music: ['Not listened', 'Listened'], books: ['Not read', 'Read'], manga: ['Not read', 'Read'],
-      podcasts: ['Not listened', 'Listened'],
+      podcasts: ['Not listened', 'Listened'], audiobooks: ['Not finished', 'Listened'],
     }[category];
     const group = document.createElement('div');
     group.className = 'library-filter-completion';
@@ -77,7 +79,7 @@ function renderLibraryFilters(category) {
     }
     host.appendChild(group);
     const options = [['unrated', 'Unrated']];
-    if (['tv-shows', 'anime', 'books', 'manga', 'podcasts'].includes(category)) options.push(['hasProgress', 'Has saved progress']);
+    if (['tv-shows', 'anime', 'books', 'manga', 'podcasts', 'audiobooks'].includes(category)) options.push(['hasProgress', 'Has saved progress']);
     for (const [key, labelText] of options) {
       const label = document.createElement('label');
       label.className = 'library-filter-option';
@@ -120,7 +122,7 @@ function applyLibraryFilters(category, changes, { clearSearch = false } = {}) {
   const next = { ...previous, ...changes };
   if (!['all', 'unfinished', 'finished'].includes(next.completion)) return false;
   next.unrated = !!next.unrated;
-  next.hasProgress = ['tv-shows', 'anime', 'books', 'manga', 'podcasts'].includes(category) && !!next.hasProgress;
+  next.hasProgress = ['tv-shows', 'anime', 'books', 'manga', 'podcasts', 'audiobooks'].includes(category) && !!next.hasProgress;
   // A tag filter (library-tags.js) is only present while one is chosen.
   if (typeof next.tag !== 'string' || !next.tag) delete next.tag;
   // Likewise the "Recommended by" filter (title-origins.js).
@@ -528,7 +530,7 @@ function setupLibrarySearch() {
 // Universal quick capture
 // ============================================================================
 
-const QUICK_CAPTURE_CATEGORY_ORDER = ['movies', 'tv-shows', 'anime', 'video-games', 'music', 'books', 'manga', 'podcasts'];
+const QUICK_CAPTURE_CATEGORY_ORDER = ['movies', 'tv-shows', 'anime', 'video-games', 'music', 'books', 'manga', 'podcasts', 'audiobooks'];
 const QUICK_CAPTURE_CATEGORIES = {
   movies: { label: 'Movies', icon: '🎬', endpoint: query => `/api/proxy/omdb?title=${encodeURIComponent(query)}&type=movie` },
   'tv-shows': { label: 'TV shows', icon: '📺', endpoint: query => `/api/proxy/omdb?title=${encodeURIComponent(query)}&type=series` },
@@ -538,6 +540,7 @@ const QUICK_CAPTURE_CATEGORIES = {
   books: { label: 'Books', icon: '📚', endpoint: query => `/api/proxy/openlibrary?query=${encodeURIComponent(query)}` },
   manga: { label: 'Manga', icon: '🗯️', endpoint: query => `/api/proxy/jikan-manga?query=${encodeURIComponent(query)}` },
   podcasts: { label: 'Podcasts', icon: '🎙️', endpoint: query => `/api/proxy/itunes-podcasts?query=${encodeURIComponent(query)}` },
+  audiobooks: { label: 'Audiobooks', icon: '🎧', endpoint: query => `/api/proxy/itunes-audiobooks?query=${encodeURIComponent(query)}` },
 };
 let quickCaptureCategory = 'all';
 let quickCaptureResults = [];
@@ -781,6 +784,7 @@ function handleDelegatedClick(event) {
     'close-book-search-modal': closeBookSearchModal,
     'close-manga-search-modal': closeMangaSearchModal,
     'close-podcast-search-modal': closePodcastSearchModal,
+    'close-audiobook-search-modal': closeAudiobookSearchModal,
     'close-screenshot-modal': () => closeScreenshotModal(event),
     'export-data-dashboard': exportData,
     'download-library-export': () => downloadLibraryExport(target),
@@ -889,7 +893,7 @@ function handleDelegatedChange(event) {
 document.addEventListener('click', handleDelegatedClick);
 document.addEventListener('submit', handleDelegatedSubmit);
 document.addEventListener('change', handleDelegatedChange);
-const FRIEND_FILTERS = new Set(['Movies', 'TVShows', 'Anime', 'VideoGames', 'Music', 'Books', 'Manga', 'Podcasts']);
+const FRIEND_FILTERS = new Set(['Movies', 'TVShows', 'Anime', 'VideoGames', 'Music', 'Books', 'Manga', 'Podcasts', 'Audiobooks']);
 document.addEventListener('input', event => {
   if (event.target.id === 'quickCaptureQuery') handleQuickCaptureQueryInput();
   const friendFilter = event.target.dataset?.friendFilter;

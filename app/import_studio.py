@@ -52,22 +52,23 @@ CATEGORY_ALIASES = {
     "book": "books", "books": "books",
     "manga": "manga", "manhwa": "manga", "manhua": "manga", "webtoon": "manga", "webtoons": "manga",
     "podcast": "podcasts", "podcasts": "podcasts",
+    "audiobook": "audiobooks", "audiobooks": "audiobooks", "audio book": "audiobooks",
 }
 CATEGORY_LABELS = {
     "movies": "Movies", "tv-shows": "TV Shows", "anime": "Anime",
     "video-games": "Video Games", "music": "Music", "books": "Books",
-    "manga": "Manga", "podcasts": "Podcasts",
+    "manga": "Manga", "podcasts": "Podcasts", "audiobooks": "Audiobooks",
 }
 MODEL_BY_CATEGORY = {
     "movies": models.Movie, "tv-shows": models.TVShow, "anime": models.Anime,
     "video-games": models.VideoGame, "music": models.Music, "books": models.Book,
-    "manga": models.Manga, "podcasts": models.Podcast,
+    "manga": models.Manga, "podcasts": models.Podcast, "audiobooks": models.Audiobook,
 }
 SCHEMA_BY_CATEGORY = {
     "movies": schemas.MovieCreate, "tv-shows": schemas.TVShowCreate,
     "anime": schemas.AnimeCreate, "video-games": schemas.VideoGameCreate,
     "music": schemas.MusicCreate, "books": schemas.BookCreate,
-    "manga": schemas.MangaCreate, "podcasts": schemas.PodcastCreate,
+    "manga": schemas.MangaCreate, "podcasts": schemas.PodcastCreate, "audiobooks": schemas.AudiobookCreate,
 }
 
 
@@ -136,6 +137,24 @@ def _optional_integer(value: str, field: str) -> int | None:
     if not math.isfinite(number) or number < 0 or not number.is_integer() or number > 2147483647:
         raise ValueError(f"{field} must be a non-negative whole number below 2,147,483,648.")
     return int(number)
+
+
+def _optional_hours(value: str) -> float | None:
+    """Audiobook length as hours ("11.5") or a runtime ("11:30" or "11h 30m")."""
+    value = _clean(value).lower()
+    if not value:
+        return None
+    match = re.fullmatch(r"(\d+)\s*(?::|h(?:ours?|rs?)?\s*)\s*(\d+)?\s*(?:m(?:in(?:utes?|s)?)?)?", value)
+    if match and (":" in value or "h" in value):
+        hours = int(match.group(1)) + int(match.group(2) or 0) / 60
+    else:
+        try:
+            hours = float(value)
+        except ValueError:
+            raise ValueError("Length must be hours, like 11.5 or 11:30.") from None
+    if not math.isfinite(hours) or hours < 0 or hours > 1000:
+        raise ValueError("Length must be between 0 and 1000 hours.")
+    return round(hours, 2)
 
 
 def _rating(value: str, five_point: bool = False, zero_is_unrated: bool = False) -> float | None:
@@ -244,7 +263,7 @@ def _generic_row(row: dict[str, str], category_override: str | None, mapping: di
     year = _integer(field("year", "year", "release year", "year published", "original publication year")) if category != "video-games" else None
     rating = _rating(field("rating", "rating", "score", "my rating"))
     review = field("review", "review", "notes", "note", "my review") or None
-    completion_field = {"video-games": "played", "music": "listened", "books": "read", "manga": "read", "podcasts": "listened"}.get(category, "watched")
+    completion_field = {"video-games": "played", "music": "listened", "books": "read", "manga": "read", "podcasts": "listened", "audiobooks": "listened"}.get(category, "watched")
     completed = _truthy(field("status", "completed", completion_field, "status", "finished", "watched", "read", "played", "listened"))
     common = {"title": title, "rating": rating, "review": review, "review_public": False}
     if category == "movies":
@@ -267,6 +286,11 @@ def _generic_row(row: dict[str, str], category_override: str | None, mapping: di
         data = {**common, "host": field("creator", "host", "creator", "author", "publisher") or None, "year": year,
                 "genre": field("genre", "genre", "genres") or None,
                 "episodes": _optional_integer(_first(row, "episodes"), "Episodes"), "listened": completed}
+    elif category == "audiobooks":
+        data = {**common, "author": field("creator", "author", "creator", "writer") or None, "year": year,
+                "narrator": field("narrator", "narrator", "narrated by", "read by") or None,
+                "genre": field("genre", "genre", "genres") or None,
+                "length_hours": _optional_hours(_first(row, "length_hours", "hours", "length")), "listened": completed}
     else:
         data = {**common, "author": field("creator", "author", "creator") or "Unknown author", "year": year, "genre": field("genre", "genre", "genres") or None, "read": completed}
     return category, data
@@ -462,6 +486,8 @@ def _identity(category: str, data: dict[str, Any]) -> tuple[Any, ...]:
         return title, _clean(data.get("author")).casefold()
     if category == "podcasts":
         return title, _clean(data.get("host")).casefold()
+    if category == "audiobooks":
+        return title, _clean(data.get("author")).casefold()
     return title, _clean(data.get("author")).casefold()
 
 

@@ -19,11 +19,11 @@ from . import models
 from .for_you import CREATOR_FIELD, IMAGE_FIELD, LIBRARY, PRIVATE_FLAG, _safe_image, normalize_title
 
 LABELS = {"movies": "Movies", "tv-shows": "TV shows", "anime": "Anime", "video-games": "Games",
-          "music": "Albums", "books": "Books", "manga": "Manga", "podcasts": "Podcasts"}
+          "music": "Albums", "books": "Books", "manga": "Manga", "podcasts": "Podcasts", "audiobooks": "Audiobooks"}
 ITEM_LABELS = {"movies": "Movie", "tv-shows": "TV show", "anime": "Anime", "video-games": "Game",
-               "music": "Album", "books": "Book", "manga": "Manga", "podcasts": "Podcast"}
+               "music": "Album", "books": "Book", "manga": "Manga", "podcasts": "Podcast", "audiobooks": "Audiobook"}
 DONE_FIELD = {"movies": "watched", "tv-shows": "watched", "anime": "watched", "video-games": "played",
-              "music": "listened", "books": "read", "manga": "read", "podcasts": "listened"}
+              "music": "listened", "books": "read", "manga": "read", "podcasts": "listened", "audiobooks": "listened"}
 MIN_RATED = 3          # shared titles both rated before a score is shown
 LOVED = 8.0            # a rating this high counts as a favorite
 DISAGREE = 3.0         # rating gap that counts as a real disagreement

@@ -45,6 +45,7 @@ CATEGORY_LABELS = {
     "book": "Book",
     "manga": "Manga",
     "podcast": "Podcast",
+    "audiobook": "Audiobook",
 }
 CATEGORY_MODELS = {
     "movie": models.Movie,
@@ -55,11 +56,12 @@ CATEGORY_MODELS = {
     "book": models.Book,
     "manga": models.Manga,
     "podcast": models.Podcast,
+    "audiobook": models.Audiobook,
 }
 LIBRARY_CATEGORIES = {
     "movie": "movies", "tv_show": "tv-shows", "anime": "anime",
     "video_game": "video-games", "music": "music", "book": "books",
-    "manga": "manga", "podcast": "podcasts",
+    "manga": "manga", "podcast": "podcasts", "audiobook": "audiobooks",
 }
 # These fields are already exposed in public reviews. Personal state is never copied.
 PUBLIC_METADATA_FIELDS = {
@@ -71,6 +73,7 @@ PUBLIC_METADATA_FIELDS = {
     "book": ("author", "year", "cover_art_url"),
     "manga": ("author", "year", "volumes", "chapters", "cover_art_url"),
     "podcast": ("host", "year", "episodes", "cover_art_url"),
+    "audiobook": ("author", "narrator", "year", "length_hours", "cover_art_url"),
 }
 
 CATEGORY_REVIEW_CONTEXT = {
@@ -122,6 +125,12 @@ CATEGORY_REVIEW_CONTEXT = {
         "description": "Read public OmniTrackr podcast reviews with ratings, host context, where to start, episode length, and whether a show is worth catching up on.",
         "intro": "Browse public podcast reviews from OmniTrackr listeners, including the host, where to start, how long episodes run, and whether a show is worth catching up on.",
     },
+    "audiobook": {
+        "plural": "Audiobook",
+        "title": "Audiobook Reviews - OmniTrackr",
+        "description": "Read public OmniTrackr audiobook reviews with ratings, author and narrator context, runtime, and whether the performance is worth the listen.",
+        "intro": "Browse public audiobook reviews from OmniTrackr listeners, including the author, the narrator, how long it runs, and whether the performance holds up.",
+    },
 }
 
 
@@ -145,6 +154,20 @@ def _json_number(value):
         return str(value)
 
 
+def _format_hours(hours) -> str:
+    """Runtime as "11 hr 20 min" for review cards."""
+    total = round(float(hours) * 60)
+    whole, minutes = divmod(total, 60)
+    if not whole:
+        return f"{minutes} min"
+    return f"{whole} hr {minutes} min" if minutes else f"{whole} hr"
+
+
+def _iso_duration(hours) -> str:
+    whole, minutes = divmod(round(float(hours) * 60), 60)
+    return f"PT{whole}H{minutes}M"
+
+
 def _normalized_category(category: Optional[str]) -> Optional[str]:
     return category if category in CATEGORY_REVIEW_CONTEXT else None
 
@@ -152,7 +175,7 @@ def _normalized_category(category: Optional[str]) -> Optional[str]:
 def _not_found_reviews_category_html() -> str:
     return message_page(
         "Review Category Not Found", "Review category not found",
-        "This review category is unavailable. Browse the public reviews directory to find movies, TV shows, anime, games, music, books, manga, and podcasts with substantial public review text.",
+        "This review category is unavailable. Browse the public reviews directory to find movies, TV shows, anime, games, music, books, manga, podcasts, and audiobooks with substantial public review text.",
         eyebrow="Public reviews", actions=(("Browse public reviews", "/reviews"), ("Go to the homepage", "/")),
     )
 
@@ -169,7 +192,7 @@ def _apply_category_review_context(page: str, category: Optional[str]) -> str:
         f"<title>{_escape(context['title'])}</title>",
     )
     page = page.replace(
-        '<meta name="description" content="Read public OmniTrackr reviews for movies, TV shows, anime, video games, music, books, manga, and podcasts. Discover ratings and recommendations from media fans.">',
+        '<meta name="description" content="Read public OmniTrackr reviews for movies, TV shows, anime, video games, music, books, manga, podcasts, and audiobooks. Discover ratings and recommendations from media fans.">',
         f'<meta name="description" content="{_escape(context["description"])}">',
     )
     page = page.replace(
@@ -187,7 +210,7 @@ def _apply_category_review_context(page: str, category: Optional[str]) -> str:
         f'<meta property="og:title" content="{_escape(context["title"])}">',
     )
     page = page.replace(
-        '<meta property="og:description" content="Read public reviews and ratings for movies, TV shows, anime, video games, music, books, manga, and podcasts from the OmniTrackr community.">',
+        '<meta property="og:description" content="Read public reviews and ratings for movies, TV shows, anime, video games, music, books, manga, podcasts, and audiobooks from the OmniTrackr community.">',
         f'<meta property="og:description" content="{_escape(context["description"])}">',
     )
     page = page.replace(
@@ -200,7 +223,7 @@ def _apply_category_review_context(page: str, category: Optional[str]) -> str:
         f'<meta name="twitter:title" content="{_escape(context["title"])}">',
     )
     page = page.replace(
-        '<meta name="twitter:description" content="Read public reviews and ratings for movies, shows, anime, games, music, books, manga, and podcasts.">',
+        '<meta name="twitter:description" content="Read public reviews and ratings for movies, shows, anime, games, music, books, manga, podcasts, and audiobooks.">',
         f'<meta name="twitter:description" content="{_escape(context["description"])}">',
     )
     page = page.replace(
@@ -209,7 +232,7 @@ def _apply_category_review_context(page: str, category: Optional[str]) -> str:
         1,
     )
     page = page.replace(
-        "Find your next favorite through the movies, shows, games, music, books, manga, and podcasts people are talking about.",
+        "Find your next favorite through the movies, shows, games, music, books, manga, podcasts, and audiobooks people are talking about.",
         _escape(context["intro"]),
         1,
     )
@@ -312,6 +335,13 @@ def _review_meta(review: dict) -> str:
         details = [review.get("host") or "Unknown host", str(review.get("year") or "Unknown year")]
         if review.get("episodes"):
             details.append(f"{review['episodes']} episode{'s' if review['episodes'] != 1 else ''}")
+        return " - ".join(details)
+    if category == "audiobook":
+        details = [review.get("author") or "Unknown author", str(review.get("year") or "Unknown year")]
+        if review.get("narrator"):
+            details.append(f"read by {review['narrator']}")
+        if review.get("length_hours"):
+            details.append(f"{_format_hours(review['length_hours'])}")
         return " - ".join(details)
     if category in {"tv_show", "anime"}:
         details = [str(review.get("year") or "Unknown year")]
@@ -427,6 +457,17 @@ def _review_item_reviewed_json_ld(review: dict) -> dict:
         if review.get("year"):
             item["datePublished"] = str(review["year"])
         return item
+    if category == "audiobook":
+        item = {"@type": "Audiobook", "name": title}
+        if review.get("author"):
+            item["author"] = {"@type": "Person", "name": review["author"]}
+        if review.get("narrator"):
+            item["readBy"] = {"@type": "Person", "name": review["narrator"]}
+        if review.get("length_hours"):
+            item["duration"] = _iso_duration(review["length_hours"])
+        if review.get("year"):
+            item["datePublished"] = str(review["year"])
+        return item
     item = {"@type": "TVSeries", "name": title}
     if review.get("year"):
         item["datePublished"] = str(review["year"])
@@ -444,7 +485,7 @@ def _reviews_item_list_json_ld(reviews: list[dict], category: Optional[str] = No
     if normalized_category:
         page_url = f"{page_url}?category={normalized_category}"
     name = context["title"] if context else "Public Media Reviews - OmniTrackr"
-    description = context["description"] if context else "Public user reviews for movies, TV shows, anime, video games, music, books, manga, and podcasts."
+    description = context["description"] if context else "Public user reviews for movies, TV shows, anime, video games, music, books, manga, podcasts, and audiobooks."
 
     item_list = []
     search_ready_reviews = [review for review in reviews if _review_is_standalone(review)]
@@ -625,6 +666,13 @@ def _review_detail_html(review: dict, more_reviews: Optional[list] = None, helpf
         if review.get("episodes"):
             detail_rows.append(("Episodes", review.get("episodes")))
         item_reviewed = {"@type": "PodcastSeries", "name": review.get("title")}
+    elif category == "audiobook":
+        detail_rows.extend([("Author", review.get("author") or "Unknown"), ("Year", review.get("year") or "N/A")])
+        if review.get("narrator"):
+            detail_rows.append(("Narrator", review.get("narrator")))
+        if review.get("length_hours"):
+            detail_rows.append(("Length", _format_hours(review.get("length_hours"))))
+        item_reviewed = {"@type": "Audiobook", "name": review.get("title")}
     else:
         detail_rows.append(("Year", review.get("year") or "N/A"))
         if review.get("seasons"):
@@ -693,7 +741,7 @@ def _review_detail_html(review: dict, more_reviews: Optional[list] = None, helpf
   <link rel="preload" href="/static/fonts/poppins-700-latin.woff2" as="font" type="font/woff2" crossorigin>
   <link rel="preload" href="/static/fonts/poppins-800-latin.woff2" as="font" type="font/woff2" crossorigin>
   <link rel="stylesheet" href="/static/fonts.css?v=20261009-fonts-1">
-  <link rel="stylesheet" href="/static/public-legacy.css?v=20261004-legacy-1">
+  <link rel="stylesheet" href="/static/public-legacy.css?v=20261030-audiobooks-1">
   <link rel="stylesheet" href="/static/reviews.css?v=20261020-spoilers-1">
   <link rel="stylesheet" href="/static/review-detail.css?v=20261029-follows-1">
   <script type="application/ld+json">{_safe_json_ld(json_ld)}</script>
@@ -792,7 +840,7 @@ def reviews_index(
 def review_detail(
     request: Request,
     review_id: PositiveDatabaseId,
-    category: Optional[str] = Query(None, description="Category: movie, tv_show, anime, video_game, music, book, manga, or podcast"),
+    category: Optional[str] = Query(None, description="Category: movie, tv_show, anime, video_game, music, book, manga, podcast, or audiobook"),
     db: Session = Depends(get_db)
 ):
     """Serve the public review detail page."""
@@ -941,7 +989,7 @@ def get_public_review_feed(
 @router.get("/api/public/reviews/{review_id}", response_model=dict, tags=["public"])
 def get_public_review(
     review_id: PositiveDatabaseId,
-    category: str = Query(..., description="Category: movie, tv_show, anime, video_game, music, book, manga, or podcast"),
+    category: str = Query(..., description="Category: movie, tv_show, anime, video_game, music, book, manga, podcast, or audiobook"),
     db: Session = Depends(get_db)
 ):
     """Get a specific public review by ID and category."""

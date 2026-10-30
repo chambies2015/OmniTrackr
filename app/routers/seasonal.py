@@ -24,7 +24,7 @@ from .discover import page
 router = APIRouter(tags=["seasonal"])
 CSS_VERSION = "20261022-holidays-1"
 JS_VERSION = "20261022-holidays-1"
-GUEST_LIST_JS = "/static/guest-list.js?v=20261012-hero-search-1"
+GUEST_LIST_JS = "/static/guest-list.js?v=20261030-audiobooks-1"
 SITE = "https://omnitrackr.xyz"
 MAX_ADD = 30
 FORMAT_PLURALS = {"movie": "movies", "tv": "TV shows", "anime": "anime", "game": "games", "book": "books", "album": "music"}

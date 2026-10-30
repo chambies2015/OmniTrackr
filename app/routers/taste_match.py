@@ -47,7 +47,7 @@ def friend_match(friend_id: PositiveDatabaseId, request: Request, response: Resp
 
 
 class TasteMatchAdd(BaseModel):
-    category: Literal["movies", "tv-shows", "anime", "video-games", "music", "books", "manga", "podcasts"]
+    category: Literal["movies", "tv-shows", "anime", "video-games", "music", "books", "manga", "podcasts", "audiobooks"]
     title: str = Field(min_length=1, max_length=200)
 
 

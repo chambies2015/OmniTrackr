@@ -8,6 +8,7 @@
   const TABLES = {
     movieTable: 'movies', tvShowTable: 'tv-shows', animeTable: 'anime', videoGameTable: 'video-games',
     musicTable: 'music', bookTable: 'books', mangaTable: 'manga', podcastTable: 'podcasts',
+    audiobookTable: 'audiobooks',
   };
   const SOURCES = [
     ['friend', 'A friend on OmniTrackr'],
@@ -26,7 +27,7 @@
   };
   const SHELF_NAMES = {
     movies: 'movies', 'tv-shows': 'TV shows', anime: 'anime', 'video-games': 'games',
-    music: 'music', books: 'books', manga: 'manga', podcasts: 'podcasts',
+    music: 'music', books: 'books', manga: 'manga', podcasts: 'podcasts', audiobooks: 'audiobooks',
   };
   const WHO_MAX = 60;
   const NOTE_MAX = 280;

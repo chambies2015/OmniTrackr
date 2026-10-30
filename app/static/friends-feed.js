@@ -9,17 +9,17 @@
   const LOADERS = {
     movies: 'loadMovies', 'tv-shows': 'loadTVShows', anime: 'loadAnime',
     'video-games': 'loadVideoGames', music: 'loadMusic', books: 'loadBooks', manga: 'loadManga',
-    podcasts: 'loadPodcasts',
+    podcasts: 'loadPodcasts', audiobooks: 'loadAudiobooks',
   };
   const VERBS = {
     movies: 'watched', 'tv-shows': 'watched', anime: 'watched',
     'video-games': 'played', music: 'listened to', books: 'read', manga: 'read',
-    podcasts: 'listened to',
+    podcasts: 'listened to', audiobooks: 'listened to',
   };
   const NOUN = {
     movies: 'a movie', 'tv-shows': 'a show', anime: 'an anime',
     'video-games': 'a game', music: 'an album', books: 'a book', manga: 'a manga',
-    podcasts: 'a podcast',
+    podcasts: 'a podcast', audiobooks: 'an audiobook',
   };
   const FILTERS = [
     ['all', 'Everything'],

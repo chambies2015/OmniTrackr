@@ -14,6 +14,7 @@
     bookTable: ['book', '.edit-book-btn', 'bookTitle', 'bookYear', 'books_private'],
     mangaTable: ['manga', '.edit-manga-btn', 'mangaTitle', 'mangaYear', 'manga_private'],
     podcastTable: ['podcast', '.edit-podcast-btn', 'podcastTitle', 'podcastYear', 'podcasts_private'],
+    audiobookTable: ['audiobook', '.edit-audiobook-btn', 'audiobookTitle', 'audiobookYear', 'audiobooks_private'],
   };
   let privacy = null;
   let privacyRequest = null;

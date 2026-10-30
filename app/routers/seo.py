@@ -41,6 +41,7 @@ REVIEW_CATEGORY_MODELS = (
     ("book", models.Book),
     ("manga", models.Manga),
     ("podcast", models.Podcast),
+    ("audiobook", models.Audiobook),
 )
 # A sitemap is a recommendation, not an inventory dump. Supporting pages remain
 # reachable through navigation, while this list concentrates crawling on the
@@ -74,6 +75,7 @@ CORE_SITEMAP_PATHS = (
     ("/book-tracker", "monthly", "0.75"),
     ("/manga-tracker", "monthly", "0.75"),
     ("/podcast-tracker", "monthly", "0.75"),
+    ("/audiobook-tracker", "monthly", "0.75"),
     ("/music-tracker", "monthly", "0.75"),
     ("/use-cases", "monthly", "0.7"),
 )
@@ -171,6 +173,11 @@ def _database_parts(db: Session) -> list[str]:
             public_detail_review_filter(models.Podcast)
         ).limit(review_limit // 6).all()
         podcast_reviews = page_worthy(visible_search_ready("podcast", podcast_reviews))
+
+        audiobook_reviews = db.query(models.Audiobook).filter(
+            public_detail_review_filter(models.Audiobook)
+        ).limit(review_limit // 6).all()
+        audiobook_reviews = page_worthy(visible_search_ready("audiobook", audiobook_reviews))
         
         for review in movie_reviews:
             sitemap_parts.append(f"""  <url>
@@ -231,6 +238,14 @@ def _database_parts(db: Session) -> list[str]:
         for review in podcast_reviews:
             sitemap_parts.append(f"""  <url>
     <loc>{base_url}/reviews/{review.id}?category=podcast</loc>
+    <lastmod>{today}</lastmod>
+    <changefreq>monthly</changefreq>
+    <priority>0.6</priority>
+  </url>""")
+
+        for review in audiobook_reviews:
+            sitemap_parts.append(f"""  <url>
+    <loc>{base_url}/reviews/{review.id}?category=audiobook</loc>
     <lastmod>{today}</lastmod>
     <changefreq>monthly</changefreq>
     <priority>0.6</priority>
@@ -512,6 +527,7 @@ Disallow: /music/
 Disallow: /books/
 Disallow: /manga/
 Disallow: /podcasts/
+Disallow: /audiobooks/
 Disallow: /statistics/
 Disallow: /custom-tabs/
 Disallow: /export/
@@ -581,7 +597,7 @@ async def get_llms_txt():
     llms_content = f"""# OmniTrackr - Media Collection Tracker
 
 ## About
-OmniTrackr is a free web application for tracking and organizing movies, TV shows, anime, video games, music, books, manga, and podcasts. Users can rate, review, and analyze their media collection with comprehensive statistics, beautiful posters and cover art, and social features.
+OmniTrackr is a free web application for tracking and organizing movies, TV shows, anime, video games, music, books, manga, podcasts, and audiobooks. Users can rate, review, and analyze their media collection with comprehensive statistics, beautiful posters and cover art, and social features.
 
 ## Key Pages
 - Home: {base_url}/
@@ -598,6 +614,7 @@ OmniTrackr is a free web application for tracking and organizing movies, TV show
 - Book tracker guide: {base_url}/book-tracker
 - Manga tracker guide: {base_url}/manga-tracker
 - Podcast tracker guide: {base_url}/podcast-tracker
+- Audiobook tracker guide: {base_url}/audiobook-tracker
 - Music tracker guide: {base_url}/music-tracker
 - Media statistics guide: {base_url}/media-statistics
 - Export and import guide: {base_url}/export-import-guide
@@ -619,7 +636,7 @@ OmniTrackr is a free web application for tracking and organizing movies, TV show
 - Community Collections: {base_url}/collections/explore
 
 ## Features
-- Track movies, TV shows, anime, video games, music, books, manga, and podcasts
+- Track movies, TV shows, anime, video games, music, books, manga, podcasts, and audiobooks
 - Rate and review media with detailed reviews
 - Statistics dashboard with comprehensive analytics
 - Export/import data in JSON format
@@ -637,6 +654,7 @@ OmniTrackr is a free web application for tracking and organizing movies, TV show
 - Books: Reviews and ratings for books
 - Manga: Reviews and ratings for manga, manhwa and manhua
 - Podcasts: Reviews and ratings for podcast shows
+- Audiobooks: Reviews and ratings for audiobooks, including the narrator
 
 ## Public Content
 Public reviews are available at {base_url}/reviews and individual review pages at {base_url}/reviews/[id]?category=[category]. OmniTrackr also publishes evergreen guidance at {base_url}/faq, {base_url}/guides, {base_url}/media-tracking, {base_url}/compare, {base_url}/use-cases, {base_url}/movie-tracker, {base_url}/tv-show-tracker, {base_url}/anime-tracker, {base_url}/game-tracker, {base_url}/music-tracker, {base_url}/book-tracker, {base_url}/media-statistics, {base_url}/export-import-guide, {base_url}/media-tracker-checklist, {base_url}/tracking-templates, and {base_url}/review-guidelines, a demo library at {base_url}/demo, a sample media library at {base_url}/sample-library, a human-readable site map at {base_url}/site-map, product updates at {base_url}/changelog and {base_url}/roadmap, ad transparency at {base_url}/advertising, and editorial standards at {base_url}/content-quality.

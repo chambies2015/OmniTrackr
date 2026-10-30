@@ -256,17 +256,17 @@ table.mobile-library .review-cell-preview {
 #mainFooter.landing-footer { box-sizing: border-box; width: 100%; margin-left: 0; margin-right: 0; }
 /* Library-only layout: preserve custom tables and existing row/edit handlers. */
 @media (min-width: 1025px) {
-  :is(#movieTable, #tvShowTable, #animeTable, #videoGameTable, #musicTable, #bookTable, #mangaTable, #podcastTable).mobile-library :is(th, td) {
+  :is(#movieTable, #tvShowTable, #animeTable, #videoGameTable, #musicTable, #bookTable, #mangaTable, #podcastTable, #audiobookTable).mobile-library :is(th, td) {
     width: auto; min-width: 80px; padding: 16px 12px; white-space: normal;
     overflow-wrap: anywhere; vertical-align: middle;
   }
-  :is(#movieTable, #tvShowTable, #animeTable, #videoGameTable, #musicTable, #bookTable, #mangaTable, #podcastTable).mobile-library :is(th, td):nth-child(2) {
+  :is(#movieTable, #tvShowTable, #animeTable, #videoGameTable, #musicTable, #bookTable, #mangaTable, #podcastTable, #audiobookTable).mobile-library :is(th, td):nth-child(2) {
     min-width: 220px; width: 22%; text-align: left; line-height: 1.5;
   }
-  :is(#movieTable, #tvShowTable, #animeTable, #videoGameTable, #musicTable, #bookTable, #mangaTable, #podcastTable).mobile-library [data-label="Review"] {
+  :is(#movieTable, #tvShowTable, #animeTable, #videoGameTable, #musicTable, #bookTable, #mangaTable, #podcastTable, #audiobookTable).mobile-library [data-label="Review"] {
     min-width: 240px; width: 25%; text-align: left; line-height: 1.5;
   }
-  :is(#movieTable, #tvShowTable, #animeTable, #videoGameTable, #musicTable, #bookTable, #mangaTable, #podcastTable).mobile-library :is(th, td):last-child {
+  :is(#movieTable, #tvShowTable, #animeTable, #videoGameTable, #musicTable, #bookTable, #mangaTable, #podcastTable, #audiobookTable).mobile-library :is(th, td):last-child {
     position: static; box-shadow: none; min-width: 216px; width: 216px; white-space: normal;
   }
   table.mobile-library td:last-child button.action-btn {
@@ -283,7 +283,7 @@ table.mobile-library .review-cell-preview {
   .mobile-library thead { position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); }
   .mobile-library tbody { display: grid; gap: 14px; padding: 6px; }
   .mobile-library tbody tr { display: grid; grid-template-columns: 68px minmax(0, 1fr) minmax(0, 1fr); gap: 10px 12px; padding: 16px; border: 1px solid var(--primary); border-radius: 14px; background: var(--card-bg); }
-  :is(#movieTable, #tvShowTable, #animeTable, #videoGameTable, #musicTable, #bookTable, #mangaTable, #podcastTable).mobile-library tbody tr td.library-cell { width: auto; min-width: 0; padding: 0; text-align: left; border: 0; overflow-wrap: anywhere; white-space: normal; }
+  :is(#movieTable, #tvShowTable, #animeTable, #videoGameTable, #musicTable, #bookTable, #mangaTable, #podcastTable, #audiobookTable).mobile-library tbody tr td.library-cell { width: auto; min-width: 0; padding: 0; text-align: left; border: 0; overflow-wrap: anywhere; white-space: normal; }
   .mobile-library td[data-card-field="cover"] { grid-column: 1; grid-row: 1 / 3; }
   .mobile-library td[data-card-field="title"] { grid-column: 2 / -1; grid-row: 1; font-size: 1.1rem; font-weight: 700; align-self: center; }
   .mobile-library td[data-card-field="rating"] { grid-column: 2; grid-row: 2; }
@@ -292,13 +292,13 @@ table.mobile-library .review-cell-preview {
   .mobile-library td[data-card-field="status"]::before,
   .mobile-library td[data-card-field="detail"]::before { content: attr(data-label); display: block; font-size: .75rem; font-weight: 700; color: var(--fg); opacity: .75; margin-bottom: 5px; }
   .mobile-library td[data-card-field="rating"]:empty::after { content: 'Not rated'; font-size: .85rem; }
-  :is(#movieTable, #tvShowTable, #animeTable, #videoGameTable, #musicTable, #bookTable, #mangaTable, #podcastTable).mobile-library td.library-cell::before { position: static; width: auto; white-space: normal; content: attr(data-label); }
-  :is(#movieTable, #tvShowTable, #animeTable, #videoGameTable, #musicTable, #bookTable, #mangaTable, #podcastTable).mobile-library td:is([data-card-field="cover"], [data-card-field="title"], [data-card-field="actions"])::before { content: none; }
+  :is(#movieTable, #tvShowTable, #animeTable, #videoGameTable, #musicTable, #bookTable, #mangaTable, #podcastTable, #audiobookTable).mobile-library td.library-cell::before { position: static; width: auto; white-space: normal; content: attr(data-label); }
+  :is(#movieTable, #tvShowTable, #animeTable, #videoGameTable, #musicTable, #bookTable, #mangaTable, #podcastTable, #audiobookTable).mobile-library td:is([data-card-field="cover"], [data-card-field="title"], [data-card-field="actions"])::before { content: none; }
   .mobile-library td[data-card-field="detail"] { display: none; grid-column: 1 / -1; }
   .mobile-library tr.card-expanded td[data-card-field="detail"],
   .mobile-library tr:has(input, textarea, select) td[data-card-field="detail"] { display: block; }
   .mobile-library td[data-card-field="actions"] { grid-column: 1 / -1; display: flex; flex-wrap: wrap; gap: 8px; padding-top: 8px !important; }
-  :is(#movieTable, #tvShowTable, #animeTable, #videoGameTable, #musicTable, #bookTable, #mangaTable, #podcastTable).mobile-library td:last-child { position: static; box-shadow: none; }
+  :is(#movieTable, #tvShowTable, #animeTable, #videoGameTable, #musicTable, #bookTable, #mangaTable, #podcastTable, #audiobookTable).mobile-library td:last-child { position: static; box-shadow: none; }
   .mobile-library td[data-card-field="actions"] button { min-height: 44px; margin: 0; flex: 1 1 auto; }
   table.mobile-library td.library-cell[data-card-field="actions"] button.action-btn { width: auto; min-width: 0; flex: 1 1 calc(50% - 4px); }
   .mobile-library .library-card-details { display: inline-block; color: var(--fg); background: transparent; border: 1px solid var(--primary); border-radius: 8px; padding: 8px 12px; font: inherit; cursor: pointer; }
@@ -2167,7 +2167,9 @@ body.dark-mode td {
 #mangaTable th,
 #mangaTable td,
 #podcastTable th,
-#podcastTable td {
+#podcastTable td,
+#audiobookTable th,
+#audiobookTable td {
   text-align: center;
 }
 

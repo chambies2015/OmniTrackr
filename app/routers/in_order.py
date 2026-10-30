@@ -24,7 +24,7 @@ from .discover import page
 router = APIRouter(tags=["in-order"])
 CSS_VERSION = "20261017-order-2"
 JS_VERSION = "20261017-order-2"
-GUEST_LIST_JS = "/static/guest-list.js?v=20261012-hero-search-1"
+GUEST_LIST_JS = "/static/guest-list.js?v=20261030-audiobooks-1"
 SITE = "https://omnitrackr.xyz"
 FIRST_PUBLISHED = "2026-10-17"
 HUB_TITLE = "Franchises in order: what to watch, read and play first"

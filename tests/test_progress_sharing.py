@@ -56,6 +56,7 @@ def shared_progress(db_session):
     for index, (category, model) in enumerate(CATEGORIES.items()):
         personal = ({"read": False, "author": "Élodie Автор"} if category in ("books", "manga")
                     else {"listened": False, "host": "Élodie Автор", "episodes": 40} if category == "podcasts"
+                    else {"listened": False, "author": "Élodie Автор", "length_hours": 12} if category == "audiobooks"
                     else {"watched": False, "seasons": 4, "episodes": 40})
         item = model(user_id=author.id, title=f"Épisode История {category}", year=2020 + index,
                      rating=8, review=REVIEW, review_public=True, **personal)
@@ -67,8 +68,8 @@ def shared_progress(db_session):
     db_session.commit()
     for category, item in items.items():
         save_progress(db_session, author.id, category, item.id, ProgressWrite(
-            unit="chapter" if category in ("books", "manga") else "episode", position=17,
-            season=None if category in ("books", "manga") else 0, note=f"{PRIVATE_NOTE} {category}", expected_revision=0,
+            unit="chapter" if category in ("books", "manga", "audiobooks") else "episode", position=17,
+            season=None if category in ("books", "manga", "audiobooks") else 0, note=f"{PRIVATE_NOTE} {category}", expected_revision=0,
         ))
     return SimpleNamespace(author=author, reader=reader, collection=collection, items=items)
 
@@ -101,7 +102,7 @@ def test_public_review_and_saved_title_exclude_private_progress(client, db_sessi
     copy = client.get(f"/progress/{category}/{saved.json()['item_id']}")
     assert copy.status_code == 200 and copy.json()["checkpoint"] is None
     assert db_session.query(models.ProgressCheckpoint).filter_by(user_id=shared_progress.reader.id).count() == 0
-    assert db_session.query(models.ProgressCheckpoint).filter_by(user_id=shared_progress.author.id).count() == 5
+    assert db_session.query(models.ProgressCheckpoint).filter_by(user_id=shared_progress.author.id).count() == 6
 
 
 def test_public_collection_copy_omits_author_progress_and_preserves_reader_progress(client, db_session, shared_progress):
@@ -125,7 +126,7 @@ def test_public_collection_copy_omits_author_progress_and_preserves_reader_progr
         "version": preview.json()["version"], "item_ids": [item["id"] for item in preview.json()["items"]],
     })
     assert saved.status_code == 200
-    assert saved.json()["created"] == 4 and saved.json()["reused"] == 1
+    assert saved.json()["created"] == 5 and saved.json()["reused"] == 1
     assert_no_checkpoint(saved.json())
     copied = db_session.get(models.Collection, saved.json()["collection_id"])
     assert not copied.is_public and copied.user_id == shelf.reader.id
@@ -135,7 +136,7 @@ def test_public_collection_copy_omits_author_progress_and_preserves_reader_progr
             assert item.item_id == existing.id and progress == saved_before
         else:
             assert progress["revision"] == 0 and progress["checkpoint"] is None
-    assert db_session.query(models.ProgressCheckpoint).filter_by(user_id=shelf.author.id).count() == 5
+    assert db_session.query(models.ProgressCheckpoint).filter_by(user_id=shelf.author.id).count() == 6
     assert db_session.query(models.ProgressCheckpoint).filter_by(user_id=shelf.reader.id).count() == 1
 
 
@@ -146,7 +147,7 @@ def test_backup_round_trip_restores_all_supported_media_privately(client, db_ses
     exported = client.get("/export/")
     assert exported.status_code == 200 and exported.headers["Cache-Control"] == "private, no-store"
     backup = exported.json()
-    assert len(backup["progress_checkpoints"]) == 5
+    assert len(backup["progress_checkpoints"]) == 6
     original = {row["category"]: row["checkpoint"] for row in backup["progress_checkpoints"]}
     assert set(original) == set(CATEGORIES)
     for row in backup["progress_checkpoints"]:
@@ -157,7 +158,7 @@ def test_backup_round_trip_restores_all_supported_media_privately(client, db_ses
     else:
         restored = client.post("/import/", json=backup)
     assert restored.status_code == 200
-    assert restored.json()["progress_created"] == 5 and restored.json()["progress_skipped"] == 0
+    assert restored.json()["progress_created"] == 6 and restored.json()["progress_skipped"] == 0
     assert restored.json()["errors"] == []
     for category, model in CATEGORIES.items():
         media = db_session.query(model).filter_by(user_id=shelf.reader.id).one()
@@ -170,4 +171,4 @@ def test_backup_round_trip_restores_all_supported_media_privately(client, db_ses
     assert not db_session.query(models.Collection).filter_by(user_id=shelf.reader.id).one().is_public
     repeated = client.post("/import/", json=backup)
     assert repeated.status_code == 200
-    assert repeated.json()["progress_created"] == 0 and repeated.json()["progress_skipped"] == 5
+    assert repeated.json()["progress_created"] == 0 and repeated.json()["progress_skipped"] == 6

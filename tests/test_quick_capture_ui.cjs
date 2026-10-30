@@ -6,7 +6,7 @@ const path = require('node:path');
 const vm = require('node:vm');
 
 const source = require('./helpers/dashboard_source.cjs');
-const categories = ['movies', 'tv-shows', 'anime', 'video-games', 'music', 'books', 'manga', 'podcasts'];
+const categories = ['movies', 'tv-shows', 'anime', 'video-games', 'music', 'books', 'manga', 'podcasts', 'audiobooks'];
 const settle = () => new Promise(resolve => setImmediate(resolve));
 const ok = payload => ({ ok: true, status: 200, json: async () => payload });
 const deferred = () => {
@@ -17,7 +17,7 @@ const deferred = () => {
 
 function provider(url) {
   if (url.includes('/omdb?')) return url.includes('type=series') ? 'tv-shows' : 'movies';
-  return Object.entries({ anime: '/jikan?', 'video-games': '/rawg?', music: '/itunes?', books: '/openlibrary?', manga: '/jikan-manga?', podcasts: '/itunes-podcasts?' })
+  return Object.entries({ anime: '/jikan?', 'video-games': '/rawg?', music: '/itunes?', books: '/openlibrary?', manga: '/jikan-manga?', podcasts: '/itunes-podcasts?', audiobooks: '/itunes-audiobooks?' })
     .find(([, endpoint]) => url.includes(endpoint))?.[0];
 }
 
@@ -31,6 +31,7 @@ function payload(category, title) {
   if (category === 'music') return { results: title ? [{ collectionName: title, artistName: 'An Artist', releaseDate: '2024-01-01' }] : [] };
   if (category === 'manga') return { results: title ? [{ title, author: 'A Mangaka', year: 2024, volumes: 3 }] : [] };
   if (category === 'podcasts') return { results: title ? [{ title, host: 'A Host', episodes: 40 }] : [] };
+  if (category === 'audiobooks') return { results: title ? [{ title, author: 'An Author', year: 2024 }] : [] };
   return { docs: title ? [{ title, author_name: ['An Author'], first_publish_year: 2024 }] : [] };
 }
 
@@ -110,6 +111,7 @@ function setup() {
     books: ['addBookForm', 'bookForm', 'bookTitle', 'bookRead', 'bookAuthor', 'bookYear', 'bookGenre'],
     manga: ['addMangaForm', 'mangaForm', 'mangaTitle', 'mangaRead', 'mangaAuthor', 'mangaYear', 'mangaGenre', 'mangaVolumes', 'mangaChapters'],
     podcasts: ['addPodcastForm', 'podcastForm', 'podcastTitle', 'podcastListened', 'podcastHost', 'podcastGenre', 'podcastEpisodes'],
+    audiobooks: ['addAudiobookForm', 'audiobookForm', 'audiobookTitle', 'audiobookListened', 'audiobookAuthor', 'audiobookYear', 'audiobookGenre'],
   };
   for (const [formId, contentPrefix, titleId, checkedId, ...fields] of Object.values(forms)) {
     const form = add(formId, 'form');
@@ -246,7 +248,7 @@ test('later sources preserve the identity, focus, and action index of an already
   assert.deepEqual(s.opened, ['books']);
   assert.equal(s.get('quickCaptureModal').style.display, 'none');
   assert.equal(s.requests.length, categories.length, 'choosing a match only prefills the existing form');
-  for (const category of ['tv-shows', 'video-games', 'music', 'manga', 'podcasts']) s.respond(category, null);
+  for (const category of ['tv-shows', 'video-games', 'music', 'manga', 'podcasts', 'audiobooks']) s.respond(category, null);
   await search;
 });
 
@@ -254,7 +256,7 @@ test('per-source timeouts keep successful matches and retry only the chosen fail
   const s = setup();
   const search = s.search();
   s.respond('movies', 'Dune film');
-  for (const category of ['tv-shows', 'anime', 'video-games', 'music', 'manga', 'podcasts']) s.respond(category, null);
+  for (const category of ['tv-shows', 'anime', 'video-games', 'music', 'manga', 'podcasts', 'audiobooks']) s.respond(category, null);
   await settle();
   const movieButton = s.results()[0];
   s.advance(15000);
@@ -306,7 +308,7 @@ test('network, JSON, HTTP, and provider errors each offer a retry without erasin
     const s = setup();
     const search = s.search();
     s.respond('books', 'Still available');
-    for (const category of ['tv-shows', 'anime', 'video-games', 'music', 'manga', 'podcasts']) s.respond(category, null);
+    for (const category of ['tv-shows', 'anime', 'video-games', 'music', 'manga', 'podcasts', 'audiobooks']) s.respond(category, null);
     fail(s.request('movies'));
     await search;
     assert.equal(s.results().length, 1);

@@ -4,12 +4,12 @@ body.dark-mode { --bg: #1e1e2f; --fg: #e0e0e0; --card-bg: #2c2c3e; --primary: #6
 [hidden], .is-hidden { display: none !important; }
 .sr-only { height: 1px; margin: -1px; overflow: hidden; padding: 0px; position: absolute; width: 1px; clip: rect(0px, 0px, 0px, 0px); white-space: nowrap; }
 @media (min-width: 1025px) {
-  :is(#movieTable, #tvShowTable, #animeTable, #videoGameTable, #musicTable, #bookTable, #mangaTable, #podcastTable).mobile-library :is(th, td) { width: auto; min-width: 80px; padding: 16px 12px; white-space: normal; overflow-wrap: anywhere; vertical-align: middle; }
-  :is(#movieTable, #tvShowTable, #animeTable, #videoGameTable, #musicTable, #bookTable, #mangaTable, #podcastTable).mobile-library :is(th, td):nth-child(2) { min-width: 220px; width: 22%; text-align: left; line-height: 1.5; }
-  :is(#movieTable, #tvShowTable, #animeTable, #videoGameTable, #musicTable, #bookTable, #mangaTable, #podcastTable).mobile-library :is(th, td):last-child { position: static; box-shadow: none; min-width: 216px; width: 216px; white-space: normal; }
+  :is(#movieTable, #tvShowTable, #animeTable, #videoGameTable, #musicTable, #bookTable, #mangaTable, #podcastTable, #audiobookTable).mobile-library :is(th, td) { width: auto; min-width: 80px; padding: 16px 12px; white-space: normal; overflow-wrap: anywhere; vertical-align: middle; }
+  :is(#movieTable, #tvShowTable, #animeTable, #videoGameTable, #musicTable, #bookTable, #mangaTable, #podcastTable, #audiobookTable).mobile-library :is(th, td):nth-child(2) { min-width: 220px; width: 22%; text-align: left; line-height: 1.5; }
+  :is(#movieTable, #tvShowTable, #animeTable, #videoGameTable, #musicTable, #bookTable, #mangaTable, #podcastTable, #audiobookTable).mobile-library :is(th, td):last-child { position: static; box-shadow: none; min-width: 216px; width: 216px; white-space: normal; }
 }
 @media (max-width: 1024px) {
-  :is(#movieTable, #tvShowTable, #animeTable, #videoGameTable, #musicTable, #bookTable, #mangaTable, #podcastTable).mobile-library td:is([data-card-field="cover"], [data-card-field="title"], [data-card-field="actions"])::before { content: none; }
+  :is(#movieTable, #tvShowTable, #animeTable, #videoGameTable, #musicTable, #bookTable, #mangaTable, #podcastTable, #audiobookTable).mobile-library td:is([data-card-field="cover"], [data-card-field="title"], [data-card-field="actions"])::before { content: none; }
   .mobile-library tr.card-expanded td[data-card-field="detail"], .mobile-library tr:has(input, textarea, select) td[data-card-field="detail"] { display: block; }
   .mobile-library tr:has(input, textarea, select) .library-card-details { display: none; }
 }

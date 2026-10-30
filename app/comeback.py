@@ -194,6 +194,7 @@ FINISHED = (
     (models.Book, "read", "Book"),
     (models.Manga, "read", "Manga"),
     (models.Podcast, "listened", "Podcast"),
+    (models.Audiobook, "listened", "Audiobook"),
 )
 
 

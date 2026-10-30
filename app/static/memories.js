@@ -7,7 +7,7 @@
   const state = { request: 0, data: null };
   const $ = id => document.getElementById(id);
   const apiBase = () => (typeof API_BASE === 'string' ? API_BASE : '');
-  const CATEGORIES = ['movies', 'tv-shows', 'anime', 'video-games', 'music', 'books', 'manga', 'podcasts'];
+  const CATEGORIES = ['movies', 'tv-shows', 'anime', 'video-games', 'music', 'books', 'manga', 'podcasts', 'audiobooks'];
 
   function fetchOptions(options = {}) {
     if (typeof authFetchOptions === 'function') return authFetchOptions(options);

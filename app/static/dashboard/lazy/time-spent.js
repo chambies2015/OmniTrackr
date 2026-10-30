@@ -72,7 +72,7 @@ function renderTimeSpent() {
   content.querySelectorAll('.time-spent__bar').forEach(bar => bar.style.setProperty('--w', `${bar.dataset.width}%`));
   if (method) {
     const defaults = rows.map(row => `<li><strong>${escapeHtml(row.label)}:</strong> ${escapeHtml(row.default_note)}${row.typical ? ` (used for ${row.typical.toLocaleString()} of yours)` : ''}.</li>`).join('');
-    method.innerHTML = `<p>Finished titles count in full. Shows, anime, books, manga and podcasts you're partway into count up to the episode, page or chapter you last saved. Everything else counts as zero, so rewatches and abandoned games aren't in here. Games you imported from Steam are the exception: they count the hours Steam recorded, finished or not.</p>
+    method.innerHTML = `<p>Finished titles count in full. Shows, anime, books, manga, podcasts and audiobooks you're partway into count up to the episode, page or chapter you last saved. Everything else counts as zero, so rewatches and abandoned games aren't in here. Games you imported from Steam are the exception: they count the hours Steam recorded, finished or not.</p>
       <p>${escapeHtml(data.sources_note)} When we don't have a title's length, we use a typical one:</p>
       <ul>${defaults}</ul>
       <p>"This year" only counts titles with a finish date in ${data.year} from your journal or a completion note.</p>`;

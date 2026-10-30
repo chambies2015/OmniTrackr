@@ -47,6 +47,8 @@ function switchTab(tabName) {
     return loadManga();
   } else if (tabName === 'podcasts') {
     return loadPodcasts();
+  } else if (tabName === 'audiobooks') {
+    return loadAudiobooks();
   } else if (tabName === 'friends-feed') {
     window.OmniFriendFeed?.load();
     window.OmniTitleOrigins?.loadRecommenders();
@@ -2209,6 +2211,183 @@ window.cancelPodcastEdit = function () {
   loadPodcasts();
 };
 
+let isLoadingAudiobooks = false;
+// Hours as typed ("16.25"), kept to two decimals; blank or invalid means unknown.
+const audiobookHours = (value) => {
+  const text = String(value ?? '').trim();
+  if (!text) return null;
+  const hours = Number(text);
+  return Number.isFinite(hours) && hours >= 0 && hours <= 1000 ? Math.round(hours * 100) / 100 : null;
+};
+const formatAudiobookLength = (hours) => {
+  if (hours === null || hours === undefined || hours === '') return '';
+  const total = Math.round(Number(hours) * 60);
+  if (!Number.isFinite(total) || total <= 0) return '';
+  const h = Math.floor(total / 60);
+  const m = total % 60;
+  if (!h) return `${m} min`;
+  return m ? `${h} hr ${m} min` : `${h} hr`;
+};
+
+async function loadAudiobooks() {
+  if (isLoadingAudiobooks) {
+    return;
+  }
+
+  isLoadingAudiobooks = true;
+
+  try {
+    const search = document.getElementById('audiobookSearch').value;
+    const sortVal = document.getElementById('audiobookSort').value;
+    let sortField = '';
+    let order = '';
+    if (sortVal) {
+      const parts = sortVal.split('-');
+      sortField = parts[0];
+      order = parts[1] || '';
+    }
+    let url = `${API_BASE}/audiobooks/?`;
+    if (search) url += `search=${encodeURIComponent(search)}&`;
+    if (sortField) url += `sort_by=${encodeURIComponent(sortField)}&`;
+    if (order) url += `order=${encodeURIComponent(order)}`;
+    const res = await fetchLibraryPage(url);
+    if (res.ok) {
+      const audiobooks = await res.json();
+      const tbody = document.querySelector('#audiobookTable tbody');
+      tbody.innerHTML = '';
+      const countElem = document.getElementById('audiobookCount');
+      if (countElem) countElem.textContent = `${res.total} ${res.total === 1 ? 'Audiobook' : 'Audiobooks'}`;
+      audiobooks.forEach((audiobook) => {
+        const tr = document.createElement('tr');
+        tr.innerHTML = `
+          <td id="audiobook-poster-${audiobook.id}"></td>
+          <td>${escapeHtml(audiobook.title)}</td>
+          <td>${escapeHtml(audiobook.author ?? '')}</td>
+          <td>${escapeHtml(audiobook.narrator ?? '')}</td>
+          <td>${audiobook.year ?? ''}</td>
+          <td>${escapeHtml(formatAudiobookLength(audiobook.length_hours))}</td>
+          <td>${audiobook.genre ? escapeHtml(audiobook.genre) : ''}</td>
+          <td>${audiobook.rating !== null && audiobook.rating !== undefined ? parseFloat(audiobook.rating).toFixed(1) + '/10' : ''}</td>
+          <td><span class="watched-icon ${audiobook.listened ? 'watched' : 'unwatched'}">${audiobook.listened ? '✓' : '✗'}</span></td>
+          <td class="review-cell">${getReviewCellContent(audiobook.review, audiobook.title, audiobook.author || '')}</td>
+          <td><span class="watched-icon ${audiobook.review_public ? 'watched' : 'unwatched'}">${audiobook.review_public ? '✓' : '✗'}</span></td>
+          <td>
+            <button class="action-btn edit-audiobook-btn" data-audiobook-id="${audiobook.id}" data-audiobook-title="${escapeHtml(audiobook.title)}" data-audiobook-author="${escapeHtml(audiobook.author ?? '')}" data-audiobook-narrator="${escapeHtml(audiobook.narrator ?? '')}" data-audiobook-year="${audiobook.year ?? ''}" data-audiobook-length="${audiobook.length_hours ?? ''}" data-audiobook-genre="${escapeHtml(audiobook.genre || '')}" data-audiobook-rating="${audiobook.rating ?? ''}" data-audiobook-listened="${audiobook.listened}" data-audiobook-review="${escapeHtml(audiobook.review || '')}" data-audiobook-review-public="${audiobook.review_public || false}">Edit</button>
+            <button type="button" class="action-btn" data-action="add-next-up" data-next-up-category="audiobooks" data-next-up-item-id="${audiobook.id}">Next up</button>
+            <button type="button" class="action-btn" data-progress-category="audiobooks" data-progress-item-id="${audiobook.id}" data-progress-title="${escapeHtml(audiobook.title)}">Update progress</button>
+            <button type="button" class="action-btn" data-action="open-collection-picker" data-collection-category="audiobooks" data-collection-item-id="${audiobook.id}" data-collection-item-title="${escapeHtml(audiobook.title)}">Collect</button>
+            ${audiobook.listened ? `<button type="button" class="action-btn" data-action="begin-completion-ritual" data-completion-category="audiobooks" data-completion-item-id="${audiobook.id}">Reflect</button>` : ''}
+            <button class="action-btn delete-audiobook-btn" data-audiobook-id="${audiobook.id}">Delete</button>
+          </td>
+        `;
+        tbody.appendChild(tr);
+        if (audiobook.cover_art_url) displayAudiobookPoster(audiobook.id, audiobook.cover_art_url, audiobook.title);
+      });
+    }
+  } finally {
+    isLoadingAudiobooks = false;
+  }
+}
+
+function displayAudiobookPoster(id, posterUrl, title = null) {
+  const cell = document.getElementById(`audiobook-poster-${id}`);
+  if (!cell || !posterUrl) return;
+  const altText = title ? `${title} audiobook cover art` : 'Audiobook cover art';
+  const img = document.createElement('img');
+  img.src = posterUrl;
+  img.alt = altText;
+  img.style.width = '60px';
+  img.style.maxHeight = '90px';
+  img.style.objectFit = 'cover';
+  img.style.borderRadius = '4px';
+  img.loading = 'lazy';
+  img.onclick = () => showImagePopup(posterUrl, altText);
+  cell.innerHTML = '';
+  cell.appendChild(img);
+}
+
+async function deleteAudiobook(id) {
+  if (!confirm('Are you sure you want to delete this audiobook?')) return;
+  const res = await authenticatedFetch(`${API_BASE}/audiobooks/${id}`, { method: 'DELETE' });
+  if (res.ok) loadAudiobooks();
+}
+
+window.enableAudiobookEdit = function (btn) {
+  if (editingRowId !== null) return;
+  const id = parseInt(btn.dataset.audiobookId, 10);
+  editingRowId = id;
+  const row = btn.closest('tr');
+  editingRowElement = row;
+  const data = btn.dataset;
+  const listened = data.audiobookListened === 'true';
+  row.cells[1].innerHTML = `<input type="text" id="edit-audiobook-title" value="${escapeHtml(data.audiobookTitle || '')}">`;
+  row.cells[2].innerHTML = `<input type="text" id="edit-audiobook-author" value="${escapeHtml(data.audiobookAuthor || '')}">`;
+  row.cells[3].innerHTML = `<input type="text" id="edit-audiobook-narrator" value="${escapeHtml(data.audiobookNarrator || '')}">`;
+  row.cells[4].innerHTML = `<input type="number" min="0" max="9999" id="edit-audiobook-year" value="${escapeHtml(data.audiobookYear || '')}">`;
+  row.cells[5].innerHTML = `<input type="number" min="0" max="1000" step="0.01" id="edit-audiobook-length" aria-label="Length in hours" value="${escapeHtml(data.audiobookLength || '')}">`;
+  row.cells[6].innerHTML = `<input type="text" id="edit-audiobook-genre" value="${escapeHtml(data.audiobookGenre || '')}">`;
+  row.cells[7].innerHTML = `<input type="number" min="0" max="10" step="0.1" id="edit-audiobook-rating" value="${escapeHtml(data.audiobookRating || '')}">`;
+  row.cells[8].innerHTML = `<input type="checkbox" id="edit-audiobook-listened" ${listened ? 'checked' : ''}>`;
+  row.cells[9].innerHTML = `<textarea id="edit-audiobook-review" class="review-textarea" data-review-quality-input>${escapeHtml(data.audiobookReview || '')}</textarea>${reviewQualityHintHtml('edit-audiobook-review')}`;
+  const reviewTextarea = document.getElementById('edit-audiobook-review');
+  if (reviewTextarea) {
+    reviewTextarea.style.height = 'auto';
+    reviewTextarea.style.height = Math.max(60, reviewTextarea.scrollHeight) + 'px';
+    reviewTextarea.addEventListener('input', function () {
+      this.style.height = 'auto';
+      this.style.height = Math.max(60, this.scrollHeight) + 'px';
+    });
+    setupReviewQualityCounter(reviewTextarea);
+  }
+  row.cells[10].innerHTML = `<input type="checkbox" id="edit-audiobook-review-public" ${data.audiobookReviewPublic === 'true' ? 'checked' : ''}>`;
+  row.cells[11].innerHTML = `
+    <button class="action-btn save-audiobook-btn" data-audiobook-id="${id}" data-was-complete="${listened}" data-completion-category="audiobooks">Save</button>
+    <button class="action-btn cancel-audiobook-btn">Cancel</button>
+  `;
+  disableOtherRowButtons(row, 'audiobookTable');
+};
+
+window.saveAudiobookEdit = async function (btn) {
+  const id = parseInt(btn.dataset.audiobookId, 10);
+  const listened = document.getElementById('edit-audiobook-listened').checked;
+  const ratingVal = document.getElementById('edit-audiobook-rating').value;
+  const updateData = {
+    title: document.getElementById('edit-audiobook-title').value,
+    author: document.getElementById('edit-audiobook-author').value.trim() || null,
+    narrator: document.getElementById('edit-audiobook-narrator').value.trim() || null,
+    year: mangaWholeNumber(document.getElementById('edit-audiobook-year').value),
+    length_hours: audiobookHours(document.getElementById('edit-audiobook-length').value),
+    genre: document.getElementById('edit-audiobook-genre').value || null,
+    listened,
+    rating: ratingVal === '' ? null : parseFloat(ratingVal),
+    review: document.getElementById('edit-audiobook-review')?.value ?? '',
+    review_public: document.getElementById('edit-audiobook-review-public').checked,
+  };
+
+  const res = await authenticatedFetch(`${API_BASE}/audiobooks/${id}`, {
+    method: 'PUT',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(updateData),
+  });
+
+  if (res.ok) {
+    if (btn.dataset.wasComplete !== 'true' && listened) openCompletionMoment('audiobooks', id);
+    editingRowId = null;
+    editingRowElement = null;
+    enableAllRowButtons('audiobookTable');
+    loadAudiobooks();
+  } else {
+    await showLibrarySaveError(res);
+  }
+};
+
+window.cancelAudiobookEdit = function () {
+  editingRowId = null;
+  editingRowElement = null;
+  enableAllRowButtons('audiobookTable');
+  loadAudiobooks();
+};
+
 async function deleteAnime(id) {
   if (!confirm('Are you sure you want to delete this anime?')) return;
   const res = await authenticatedFetch(`${API_BASE}/anime/${id}`, { method: 'DELETE' });
@@ -3010,6 +3189,97 @@ document.getElementById('addPodcastForm').onsubmit = async function (e) {
   }
 };
 
+// @lazy-chunk lazy/metadata-audiobooks.js
+document.getElementById('searchAudiobookBtn').onclick = searchAudiobookMetadata;
+
+document.getElementById('audiobookTitle').addEventListener('keypress', function(e) {
+  if (e.key === 'Enter') {
+    e.preventDefault();
+    searchAudiobookMetadata();
+  }
+});
+
+document.getElementById('addAudiobookForm').onsubmit = async function (e) {
+  e.preventDefault();
+  const form = document.getElementById('addAudiobookForm');
+  if (form.dataset.saving === 'true') return;
+  let status = document.getElementById('audiobookSaveStatus');
+  if (!status) {
+    status = document.createElement('p');
+    status.id = 'audiobookSaveStatus';
+    status.setAttribute('role', 'status');
+    form.appendChild(status);
+  }
+  status.textContent = '';
+  const titleInput = document.getElementById('audiobookTitle');
+  const title = titleInput.value.trim();
+  if (!title) {
+    status.textContent = 'Please enter an audiobook title.';
+    titleInput.focus();
+    return;
+  }
+  const yearVal = document.getElementById('audiobookYear').value.trim();
+  const year = yearVal ? parseInt(yearVal, 10) : null;
+  if (yearVal && (isNaN(year) || year < 0 || year > 9999)) {
+    status.textContent = 'Please enter a valid year, or leave it blank.';
+    document.getElementById('audiobookYear').focus();
+    return;
+  }
+  const lengthVal = document.getElementById('audiobookLength').value.trim();
+  const lengthHours = audiobookHours(lengthVal);
+  if (lengthVal && lengthHours === null) {
+    status.textContent = 'Please enter the length in hours, like 16.5, or leave it blank.';
+    document.getElementById('audiobookLength').focus();
+    return;
+  }
+
+  const audiobook = {
+    title,
+    author: document.getElementById('audiobookAuthor').value.trim() || null,
+    narrator: document.getElementById('audiobookNarrator').value.trim() || null,
+    year,
+    length_hours: lengthHours,
+    listened: document.getElementById('audiobookListened').checked,
+    review_public: document.getElementById('audiobookReviewPublic').checked,
+  };
+  const genreVal = document.getElementById('audiobookGenre').value;
+  if (genreVal) audiobook.genre = genreVal;
+  const ratingVal = document.getElementById('audiobookRating').value;
+  if (ratingVal) audiobook.rating = parseFloat(ratingVal);
+  const reviewVal = document.getElementById('audiobookReview').value;
+  if (reviewVal) audiobook.review = reviewVal;
+  if (titleInput.dataset.coverArtUrl) audiobook.cover_art_url = titleInput.dataset.coverArtUrl;
+
+  form.dataset.saving = 'true';
+  const submit = form.querySelector('button[type="submit"]');
+  if (submit) submit.disabled = true;
+  status.textContent = 'Saving your audiobook…';
+  try {
+    const response = await authenticatedFetch(`${API_BASE}/audiobooks/`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(audiobook),
+    });
+    if (response.ok) {
+      status.textContent = '';
+      form.reset();
+      delete titleInput.dataset.coverArtUrl;
+      toggleCollapsible('audiobookForm');
+      loadAudiobooks();
+    } else {
+      const errorData = await response.json().catch(() => ({ detail: 'Failed to add audiobook' }));
+      status.textContent = typeof errorData.detail === 'string' ? errorData.detail : 'Could not save this audiobook. Check the fields and try again.';
+    }
+  } catch (error) {
+    status.textContent = error.message === 'Session expired. Please login again.'
+      ? 'Your session expired. Sign in again before saving. Your form has not been cleared.'
+      : 'Could not confirm the save. Your form has not been cleared. Check your library before retrying to avoid a duplicate.';
+  } finally {
+    delete form.dataset.saving;
+    if (submit) submit.disabled = false;
+  }
+};
+
 // @lazy-chunk lazy/export-import.js
 function enhanceLibraryCards(tableId) {
   const table = document.getElementById(tableId);
@@ -3148,6 +3418,7 @@ function loadStatistics() {
   Object.entries({
     'library-insights': 'libraryInsights', movies: 'movies', 'tv-shows': 'tvShows', anime: 'anime',
     'video-games': 'videoGames', music: 'music', books: 'books', manga: 'manga', podcasts: 'podcasts',
+    audiobooks: 'audiobooks',
   }).forEach(([category, idPrefix]) => {
     const content = document.getElementById(`${idPrefix}StatsContent`);
     if (!content || !isElementShown(content)) return;

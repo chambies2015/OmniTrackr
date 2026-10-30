@@ -9,6 +9,7 @@ body.app-shell #musicTable { --shelf-hue: 38deg; }
 body.app-shell #bookTable { --shelf-hue: 152deg; }
 body.app-shell #mangaTable { --shelf-hue: 350deg; }
 body.app-shell #podcastTable { --shelf-hue: 199deg; }
+body.app-shell #audiobookTable { --shelf-hue: 84deg; }
 body.app-shell .library-table td[data-card-field="cover"] { --cover-hue: calc(var(--shelf-hue) + var(--cover-shift, 0) * 1deg); }
 
 /* A coverless title gets a lettered tile in a shade of its library's colour. */
@@ -23,7 +24,7 @@ body.app-shell .library-table td[data-card-field="cover"][data-initial]:not([dat
 }
 
 /* Header labels never break mid-word ("Watche d"). */
-body.app-shell :is(#movieTable, #tvShowTable, #animeTable, #videoGameTable, #musicTable, #bookTable, #mangaTable, #podcastTable).library-table thead th { overflow-wrap: normal; word-break: normal; hyphens: none; }
+body.app-shell :is(#movieTable, #tvShowTable, #animeTable, #videoGameTable, #musicTable, #bookTable, #mangaTable, #podcastTable, #audiobookTable).library-table thead th { overflow-wrap: normal; word-break: normal; hyphens: none; }
 
 /* Layout toggle beside the library count. */
 body.app-shell .library-heading__tools { align-items: center; display: flex; gap: 10px; }
@@ -84,7 +85,7 @@ body.app-shell .library-view-toggle button:focus-visible { outline: 2px solid va
     box-shadow: 0 14px 34px rgba(0, 0, 0, .28);
     transform: translateY(-2px);
   }
-  body.app-shell.library-view-shelf :is(#movieTable, #tvShowTable, #animeTable, #videoGameTable, #musicTable, #bookTable, #mangaTable, #podcastTable).mobile-library tbody tr td.library-cell {
+  body.app-shell.library-view-shelf :is(#movieTable, #tvShowTable, #animeTable, #videoGameTable, #musicTable, #bookTable, #mangaTable, #podcastTable, #audiobookTable).mobile-library tbody tr td.library-cell {
     border: 0;
     min-width: 0;
     overflow-wrap: anywhere;

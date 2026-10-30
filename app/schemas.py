@@ -102,6 +102,7 @@ class PrivacySettings(BaseModel):
     books_private: bool = Field(False, description="Make books private")
     manga_private: bool = Field(False, description="Make manga private")
     podcasts_private: bool = Field(False, description="Make podcasts private")
+    audiobooks_private: bool = Field(False, description="Make audiobooks private")
     statistics_private: bool = Field(False, description="Make statistics private")
     
 class PrivacySettingsUpdate(BaseModel):
@@ -114,6 +115,7 @@ class PrivacySettingsUpdate(BaseModel):
     books_private: Optional[bool] = None
     manga_private: Optional[bool] = None
     podcasts_private: Optional[bool] = None
+    audiobooks_private: Optional[bool] = None
     statistics_private: Optional[bool] = None
 
 
@@ -129,6 +131,7 @@ class TabVisibility(BaseModel):
     books_visible: bool = Field(True, description="Show Books tab")
     manga_visible: bool = Field(True, description="Show Manga tab")
     podcasts_visible: bool = Field(True, description="Show Podcasts tab")
+    audiobooks_visible: bool = Field(True, description="Show Audiobooks tab")
     
 class TabVisibilityUpdate(BaseModel):
     """Schema for updating tab visibility settings."""
@@ -140,6 +143,7 @@ class TabVisibilityUpdate(BaseModel):
     books_visible: Optional[bool] = None
     manga_visible: Optional[bool] = None
     podcasts_visible: Optional[bool] = None
+    audiobooks_visible: Optional[bool] = None
 
 
 # ============================================================================
@@ -594,11 +598,54 @@ class Podcast(PodcastBase):
     added_at: Optional[datetime] = None
 
 
+class AudiobookBase(BaseModel):
+    title: str = Field(..., description="Title of the audiobook")
+    author: Optional[str] = Field(None, description="Author")
+    narrator: Optional[str] = Field(None, description="Narrator or narrators")
+    year: Optional[int] = Field(None, ge=0, le=9999, description="Year the audiobook came out")
+    genre: Optional[str] = Field(None, description="Comma-separated genres")
+    length_hours: Optional[float] = Field(None, ge=0, le=1000, description="Full runtime in hours")
+    rating: Optional[float] = Field(None, ge=0, le=10, description="Rating out of 10 (0-10.0, one decimal place)")
+    listened: Optional[bool] = Field(False, description="Whether it has been listened to the end")
+    review: Optional[str] = Field(None, description="Optional review/notes for the entry")
+    review_public: bool = Field(False, description="Show this review on the public reviews page")
+    cover_art_url: Optional[str] = Field(None, description="URL of the cover art")
+
+    _validate_cover_art_url = field_validator("cover_art_url")(validate_public_url)
+
+
+class AudiobookCreate(AudiobookBase, MediaWriteValidation):
+    pass
+
+
+class AudiobookUpdate(MediaWriteValidation):
+    title: Optional[str] = None
+    author: Optional[str] = None
+    narrator: Optional[str] = None
+    year: Optional[int] = Field(None, ge=0, le=9999)
+    genre: Optional[str] = None
+    length_hours: Optional[float] = Field(None, ge=0, le=1000)
+    rating: Optional[float] = Field(None, ge=0, le=10)
+    listened: Optional[bool] = None
+    review: Optional[str] = None
+    review_public: Optional[bool] = None
+    cover_art_url: Optional[str] = None
+
+    _validate_cover_art_url = field_validator("cover_art_url")(validate_public_url)
+
+
+class Audiobook(AudiobookBase):
+    model_config = ConfigDict(from_attributes=True)
+
+    id: int
+    added_at: Optional[datetime] = None
+
+
 # ============================================================================
 # Private Activity Journal Schemas
 # ============================================================================
 
-ACTIVITY_CATEGORIES = {"movies", "tv-shows", "anime", "video-games", "music", "books", "manga", "podcasts"}
+ACTIVITY_CATEGORIES = {"movies", "tv-shows", "anime", "video-games", "music", "books", "manga", "podcasts", "audiobooks"}
 ACTIVITY_ACTIONS = {"started", "progressed", "completed", "revisited", "noted"}
 
 
@@ -725,6 +772,10 @@ class PodcastImport(PodcastBase, MediaWriteValidation, LibraryImportAddedAt):
     pass
 
 
+class AudiobookImport(AudiobookBase, MediaWriteValidation, LibraryImportAddedAt):
+    pass
+
+
 class ExportData(BaseModel):
     """Schema for exporting all data from OmniTrackr"""
     model_config = ConfigDict(from_attributes=True)
@@ -737,6 +788,7 @@ class ExportData(BaseModel):
     books: List[Book] = Field(..., description="List of all books")
     manga: List[Manga] = Field(default=[], description="List of all manga")
     podcasts: List[Podcast] = Field(default=[], description="List of all podcasts")
+    audiobooks: List[Audiobook] = Field(default=[], description="List of all audiobooks")
     custom_tabs: List[dict] = Field(default=[], description="List of all custom tabs with their items")
     activities: List[ActivityEntry] = Field(default=[], description="Private activity journal entries")
     collections: List[dict] = Field(default=[], description="Private cross-media collections and curator notes")
@@ -763,6 +815,7 @@ class ImportData(BaseModel):
     books: List[BookImport] = Field(default=[], max_length=MAX_IMPORT_LIST_ITEMS, description="Books to import")
     manga: List[MangaImport] = Field(default=[], max_length=MAX_IMPORT_LIST_ITEMS, description="Manga to import (optional for backward compatibility)")
     podcasts: List[PodcastImport] = Field(default=[], max_length=MAX_IMPORT_LIST_ITEMS, description="Podcasts to import (optional for backward compatibility)")
+    audiobooks: List[AudiobookImport] = Field(default=[], max_length=MAX_IMPORT_LIST_ITEMS, description="Audiobooks to import (optional for backward compatibility)")
     custom_tabs: List[dict] = Field(default=[], max_length=MAX_IMPORT_LIST_ITEMS, description="Custom tabs to import (optional for backward compatibility)")
     activities: List[ActivityEntryImport] = Field(default=[], max_length=MAX_IMPORT_LIST_ITEMS, description="Activity journal entries (optional for backward compatibility)")
     collections: List[dict] = Field(default=[], max_length=MAX_IMPORT_LIST_ITEMS, description="Collections to restore privately (optional for backward compatibility)")
@@ -792,6 +845,8 @@ class ImportResult(BaseModel):
     manga_updated: int = Field(default=0, description="Number of manga updated")
     podcasts_created: int = Field(default=0, description="Number of podcasts created")
     podcasts_updated: int = Field(default=0, description="Number of podcasts updated")
+    audiobooks_created: int = Field(default=0, description="Number of audiobooks created")
+    audiobooks_updated: int = Field(default=0, description="Number of audiobooks updated")
     custom_tabs_created: int = Field(default=0, description="Number of custom tabs created")
     custom_tabs_updated: int = Field(default=0, description="Number of custom tabs updated")
     activities_created: int = Field(default=0, description="Number of journal entries created")
@@ -837,6 +892,9 @@ class WatchStatistics(BaseModel):
     total_podcasts: int = Field(default=0, description="Total number of podcasts")
     listened_podcasts: int = Field(default=0, description="Number of listened podcasts")
     unlistened_podcasts: int = Field(default=0, description="Number of unlistened podcasts")
+    total_audiobooks: int = Field(default=0, description="Total number of audiobooks")
+    listened_audiobooks: int = Field(default=0, description="Number of finished audiobooks")
+    unlistened_audiobooks: int = Field(default=0, description="Number of unfinished audiobooks")
     total_items: int = Field(..., description="Total number of items")
     watched_items: int = Field(..., description="Number of watched/played/listened/read items")
     unwatched_items: int = Field(..., description="Number of unwatched/unplayed/unlistened/unread items")
@@ -869,6 +927,7 @@ class YearStatistics(BaseModel):
     books_by_year: dict = Field(..., description="Books count by year")
     manga_by_year: dict = Field(default_factory=dict, description="Manga count by year")
     podcasts_by_year: dict = Field(default_factory=dict, description="Podcast count by year")
+    audiobooks_by_year: dict = Field(default_factory=dict, description="Audiobook count by year")
     all_years: List[int] = Field(..., description="All years in the collection")
     decade_stats: dict = Field(..., description="Statistics by decade")
     oldest_year: Optional[int] = Field(None, description="Oldest year in collection")
@@ -1021,6 +1080,16 @@ class PodcastStatistics(BaseModel):
     episodes_listened: int = Field(0, description="Episodes across podcasts marked listened")
 
 
+class AudiobookStatistics(BaseModel):
+    """Schema for audiobook-specific statistics"""
+    watch_stats: CategoryWatchStatistics = Field(..., description="Listen statistics")
+    rating_stats: CategoryRatingStatistics = Field(..., description="Rating statistics")
+    year_stats: CategoryYearStatistics = Field(..., description="Year-based statistics")
+    genre_stats: GenreStatistics = Field(..., description="Genre statistics")
+    total_hours: float = Field(0, description="Hours across the library")
+    hours_listened: float = Field(0, description="Hours across audiobooks marked listened")
+
+
 # ============================================================================
 # Friend Profile Schemas
 # ============================================================================
@@ -1036,6 +1105,7 @@ class FriendProfileSummary(BaseModel):
     books_count: Optional[int] = Field(None, description="Number of books (if not private)")
     manga_count: Optional[int] = Field(None, description="Number of manga (if not private)")
     podcasts_count: Optional[int] = Field(None, description="Number of podcasts (if not private)")
+    audiobooks_count: Optional[int] = Field(None, description="Number of audiobooks (if not private)")
     statistics_available: Optional[bool] = Field(None, description="Whether statistics are available (if not private)")
     movies_private: bool = Field(..., description="Whether movies are private")
     tv_shows_private: bool = Field(..., description="Whether TV shows are private")
@@ -1045,6 +1115,7 @@ class FriendProfileSummary(BaseModel):
     books_private: bool = Field(..., description="Whether books are private")
     manga_private: bool = Field(False, description="Whether manga are private")
     podcasts_private: bool = Field(False, description="Whether podcasts are private")
+    audiobooks_private: bool = Field(False, description="Whether audiobooks are private")
     statistics_private: bool = Field(..., description="Whether statistics are private")
 
 
@@ -1094,6 +1165,12 @@ class FriendPodcastsResponse(BaseModel):
     """Schema for friend's podcast list."""
     podcasts: List[Podcast] = Field(..., description="List of friend's podcasts")
     count: int = Field(..., description="Total number of podcasts")
+
+
+class FriendAudiobooksResponse(BaseModel):
+    """Schema for friend's audiobook list."""
+    audiobooks: List[Audiobook] = Field(..., description="List of friend's audiobooks")
+    count: int = Field(..., description="Total number of audiobooks")
 
 
 class FriendStatisticsResponse(BaseModel):
@@ -1175,7 +1252,7 @@ class CustomTabItem(BaseModel):
 # Next Up Queue Schemas
 # ============================================================================
 
-NEXT_UP_CATEGORIES = {"movies", "tv-shows", "anime", "video-games", "music", "books", "manga", "podcasts"}
+NEXT_UP_CATEGORIES = {"movies", "tv-shows", "anime", "video-games", "music", "books", "manga", "podcasts", "audiobooks"}
 
 
 class NextUpItemCreate(BaseModel):
@@ -1226,7 +1303,7 @@ class ReturnPromptEngagement(BaseModel):
 # Recommendation Postcard Schemas
 # ============================================================================
 
-RECOMMENDATION_CATEGORIES = {"movies", "tv-shows", "anime", "video-games", "music", "books", "manga", "podcasts"}
+RECOMMENDATION_CATEGORIES = {"movies", "tv-shows", "anime", "video-games", "music", "books", "manga", "podcasts", "audiobooks"}
 
 
 class RecommendationRequestCreate(BaseModel):

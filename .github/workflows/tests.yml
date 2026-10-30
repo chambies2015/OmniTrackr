@@ -9,6 +9,8 @@ on:
     branches: [ main, develop, '*-Updates' ]
   pull_request:
     branches: [ main, develop, '*-Updates' ]
+  # Lets the suite be started by hand when GitHub drops a push or PR event.
+  workflow_dispatch:
 
 jobs:
   test:

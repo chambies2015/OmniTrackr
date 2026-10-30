@@ -7,12 +7,12 @@ from .progress import lock_progress_owner
 MEDIA_MODELS = {
     "movies": models.Movie, "tv-shows": models.TVShow, "anime": models.Anime,
     "video-games": models.VideoGame, "music": models.Music, "books": models.Book,
-    "manga": models.Manga, "podcasts": models.Podcast,
+    "manga": models.Manga, "podcasts": models.Podcast, "audiobooks": models.Audiobook,
 }
 REVIEW_CATEGORIES = {
     "movies": "movie", "tv-shows": "tv_show", "anime": "anime",
     "video-games": "video_game", "music": "music", "books": "book",
-    "manga": "manga", "podcasts": "podcast",
+    "manga": "manga", "podcasts": "podcast", "audiobooks": "audiobook",
 }
 
 
