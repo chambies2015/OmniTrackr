@@ -229,10 +229,7 @@ def _growth(db: Session, days: int, now: datetime) -> dict:
             # Ko-fi test pings and payments the owner set aside don't need linking.
             "unlinked_payments": supporters.waiting_count(db),
         },
-        "weekly_email": {
-            "subscribers": _count(db.query(func.count(models.EmailDigestSubscription.id))),
-            "new": _counts_between(db, models.EmailDigestSubscription.created_at, start),
-        },
+        "weekly_email": _weekly_email(db, days, now, start),
         "calendar": {
             "feeds": _count(db.query(func.count(models.CalendarFeed.id))),
             "new": _counts_between(db, models.CalendarFeed.created_at, start),
@@ -243,6 +240,28 @@ def _growth(db: Session, days: int, now: datetime) -> dict:
             "asked": _counts_between(db, models.TakeRequest.created_at, start),
             "answered": _counts_between(db, models.TakeResponse.created_at, start),
         },
+    }
+
+
+def _weekly_email(db: Session, days: int, now: datetime, start: datetime) -> dict:
+    """Weekly email in the range: subscribers, where members switched it on and off, how many were emailed."""
+    from .. import digest
+    table = models.SiteTrafficDaily
+    counts = dict(db.query(table.key, func.sum(table.count)).filter(
+        table.kind == "email", table.key.like("weekly_%"), table.day >= (now - timedelta(days=days - 1)).date(),
+    ).group_by(table.key).all())
+    by_place = lambda prefix: {source: int(counts.get(f"{prefix}{source}") or 0) for source in digest.SOURCES}
+    opted_in = by_place("weekly_on_")
+    opted_out = by_place("weekly_off_")
+    return {
+        "subscribers": _count(db.query(func.count(models.EmailDigestSubscription.id))),
+        "new": _counts_between(db, models.EmailDigestSubscription.created_at, start),
+        "opted_in_by_place": [{"place": digest.SOURCES[source], "count": opted_in[source]} for source in digest.SOURCES],
+        "opted_out": sum(opted_out.values()),
+        "opted_out_by_place": [{"place": digest.SOURCES[source], "count": opted_out[source]}
+                               for source in digest.SOURCES if source in digest.OFF_SOURCES],
+        "emailed": _counts_between(db, models.EmailDigestSubscription.last_sent_at, start),
+        "emailed_7d": _counts_between(db, models.EmailDigestSubscription.last_sent_at, now - timedelta(days=7)),
     }
 
 

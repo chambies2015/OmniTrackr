@@ -470,6 +470,7 @@
         <p class="weekly-invite__text"><strong>Get a weekly heads-up.</strong> A short email when something you track has a new episode, season or release, plus what your friends added that week. Quiet weeks are skipped (just a monthly round-up), and every email has a one-click unsubscribe.</p>
         <div class="weekly-invite__actions">
           <button type="button" class="action-btn weekly-invite__yes" data-weekly-action="subscribe">Email me weekly</button>
+          <a class="weekly-invite__preview" href="/email/weekly/preview" target="_blank" rel="noopener">See a sample</a>
           <button type="button" class="weekly-invite__no" data-weekly-action="dismiss">Not now</button>
         </div>
       </div>
@@ -636,6 +637,7 @@
             <p class="weekly-invite__text"><strong>Get a weekly heads-up.</strong> A short email when something you track has a new episode, season or release, plus what your friends added that week. Quiet weeks are skipped (just a monthly round-up), and every email has a one-click unsubscribe.</p>
             <div class="weekly-invite__actions">
               <button type="button" class="action-btn weekly-invite__yes" data-weekly-action="subscribe">Email me weekly</button>
+              <a class="weekly-invite__preview" href="/email/weekly/preview" target="_blank" rel="noopener">See a sample</a>
               <button type="button" class="weekly-invite__no" data-weekly-action="dismiss">Not now</button>
             </div>
           </div>
@@ -2163,6 +2165,7 @@
               <p class="auth-strength" id="registerPasswordStrength" hidden><span class="auth-strength__bar" aria-hidden="true"><span></span></span><span class="auth-strength__text"></span></p>
               <p class="auth-field__error" id="registerPasswordError" hidden></p>
             </div>
+            <label class="auth-check auth-check--weekly" for="registerWeekly"><input type="checkbox" id="registerWeekly"> <span>Email me once a week when something I track has a new episode or release. Quiet weeks are skipped, and one click turns it off.</span></label>
             <button type="submit" class="auth-submit">Create free account</button>
             <p class="auth-fineprint">Free for good, and your library stays private until you share it. Signing up means you agree to the <a href="/terms">terms</a> and <a href="/privacy">privacy policy</a>.</p>
           </form>
@@ -2774,6 +2777,7 @@
                   <span class="toggle-slider"></span>
                 </div>
               </label>
+              <p class="info-text toggle-note" id="weeklyEmailMeta" hidden><span id="weeklyEmailMetaText"></span> <a href="/email/weekly/preview" target="_blank" rel="noopener" id="weeklyEmailPreviewLink">See this week's email</a></p>
             </div>
             <div class="privacy-toggle-item">
               <label for="updatesEmailToggle" class="toggle-label">

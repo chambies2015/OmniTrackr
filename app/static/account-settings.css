@@ -251,6 +251,15 @@ body.app-shell .account-settings .privacy-toggle-item {
   margin: 0 0 8px;
 }
 
+body.app-shell .account-settings .toggle-note {
+  font-size: .85rem;
+  margin: 4px 2px 10px;
+}
+
+body.app-shell .account-settings .toggle-note a {
+  color: var(--accent, inherit);
+}
+
 .account-toggle-grid .privacy-toggle-item,
 body.app-shell .account-settings .account-toggle-grid .privacy-toggle-item {
   margin: 0;

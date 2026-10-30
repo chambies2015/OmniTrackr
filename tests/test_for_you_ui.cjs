@@ -148,7 +148,7 @@ test('accepting subscribes through the existing preference API', async () => {
   global.fetch = async (url, options) => { calls.push({ url, body: JSON.parse(options.body), method: options.method }); return { ok: true, json: async () => ({ enabled: true, available: true }) }; };
   module.renderComingUp({ library_total: 4, matches: [match], popular: [], email: { enabled: false, available: true } });
   await module.acceptInvite(nodes.invites['coming-up']);
-  assert.deepEqual(calls, [{ url: '/api/for-you/email', body: { enabled: true }, method: 'PUT' }]);
+  assert.deepEqual(calls, [{ url: '/api/for-you/email', body: { enabled: true, source: 'dashboard' }, method: 'PUT' }]);
   assert.equal(nodes.invites['coming-up'].hidden, true);
   assert.match(nodes.comingUpStatus.textContent, /Weekly email on/);
   assert.equal(nodes.comingUpEmailToggle.checked, true);
