@@ -79,6 +79,8 @@ body.app-shell .library-add-form .library-field-label {
 }
 body.app-shell .library-add-search > .library-field-label { margin-bottom: 0; }
 body.app-shell .library-add-review { grid-column: 1 / -1; }
+body.app-shell .library-add-check { align-self: end; }
+/* Checkboxes sit in a tile the size of a text field, so the form keeps one rhythm. */
 body.app-shell .library-add-check label {
   display: flex;
   justify-content: space-between;
@@ -86,9 +88,15 @@ body.app-shell .library-add-check label {
   min-height: 44px;
   gap: 12px;
   margin: 0;
-  color: var(--fg-secondary);
+  padding: 0 14px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  background: var(--field-bg);
+  color: var(--fg);
+  cursor: pointer;
   font-size: .9rem;
 }
+body.app-shell .library-add-check label:has(input:checked) { border-color: color-mix(in srgb, var(--accent-solid) 55%, var(--border)); background: var(--accent-soft); }
 body.app-shell .library-add-check input { width: 20px; height: 20px; accent-color: var(--accent-solid); }
 body.app-shell .library-section :is(.library-add-form, .library-toolbar) :is(input:not([type="checkbox"]), select, textarea) {
   width: 100%;
@@ -96,7 +104,7 @@ body.app-shell .library-section :is(.library-add-form, .library-toolbar) :is(inp
   min-height: 44px;
   margin: 0;
   border: 1px solid var(--border);
-  border-radius: 9px;
+  border-radius: var(--radius-md);
   padding: 11px 13px;
   background-color: var(--field-bg);
   color: var(--fg);
@@ -117,10 +125,10 @@ body.app-shell .library-section button.action-btn {
   margin: 0;
   padding: 9px 13px;
   border: 1px solid var(--border);
-  border-radius: 8px;
+  border-radius: var(--radius-pill);
   background: var(--card-bg);
   color: var(--fg-secondary);
-  font-size: .82rem;
+  font-size: var(--text-sm);
   font-weight: 600;
   box-shadow: none;
   transform: none;
@@ -173,8 +181,8 @@ body.app-shell .library-panel > .library-heading h2 {
   letter-spacing: -.025em;
 }
 body.app-shell .library-panel > .library-heading .library-count {
-  padding: 5px 10px;
-  border-radius: 6px;
+  padding: 5px 12px;
+  border-radius: var(--radius-pill);
   background: var(--surface-muted);
   color: var(--fg-secondary);
   font-size: .78rem;
@@ -207,14 +215,14 @@ body.app-shell .library-filter-completion {
   gap: 4px;
   padding: 4px;
   border: 1px solid var(--border);
-  border-radius: 10px;
+  border-radius: var(--radius-pill);
   background: var(--surface-muted);
 }
 body.app-shell .library-filters button {
   min-height: 40px;
   padding: 8px 12px;
   border: 1px solid transparent;
-  border-radius: 7px;
+  border-radius: var(--radius-pill);
   background: transparent;
   color: var(--fg-secondary);
   font: inherit;
@@ -259,7 +267,7 @@ body.app-shell .library-filter-status {
 }
 body.app-shell .library-table-wrap {
   border: 1px solid var(--border);
-  border-radius: 10px;
+  border-radius: var(--radius-md);
   background: var(--card-bg);
   box-shadow: none;
 }
@@ -309,7 +317,7 @@ body.app-shell .library-table td[data-card-field="cover"]:empty::after {
   padding: 6px;
   box-sizing: border-box;
   border: 1px solid var(--border);
-  border-radius: 5px;
+  border-radius: var(--poster-radius);
   background: var(--surface-muted);
   color: var(--fg-secondary);
   font-size: .68rem;
@@ -335,7 +343,7 @@ body.app-shell .library-table td :is(input:not([type="checkbox"]), textarea, sel
   background-color: var(--field-bg);
   border: 1px solid var(--border);
   color: var(--fg);
-  border-radius: 7px;
+  border-radius: var(--radius-sm);
   box-shadow: none;
 }
 body.app-shell .library-table td :is(input, textarea, select):focus-visible { outline: 2px solid var(--primary); outline-offset: 2px; }

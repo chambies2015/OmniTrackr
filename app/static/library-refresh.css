@@ -5,7 +5,7 @@
    input) are left out of the card rules below so editing looks as before. */
 
 body.app-shell {
-  --lib-card-radius: 16px;
+  --lib-card-radius: var(--radius-lg);
   --lib-cover-shadow: 0 6px 18px #1a22381f;
   --lib-lift-shadow: 0 18px 40px #1a223824;
   --lib-star: #c27c0e;
@@ -29,7 +29,7 @@ body.app-shell #music-tab { --shelf-hue: 38deg; }
 body.app-shell #books-tab { --shelf-hue: 152deg; }
 
 /* ---------- Panel and heading ---------- */
-body.app-shell .card.library-panel { border-radius: 20px; padding: 26px 28px 28px; }
+body.app-shell .card.library-panel { border-radius: var(--radius-lg); padding: 26px 28px 28px; }
 body.app-shell .library-panel > .library-heading { margin-bottom: 18px; }
 body.app-shell .library-panel > .library-heading h2 { align-items: center; display: inline-flex; gap: 12px; }
 body.app-shell .library-panel > .library-heading h2::before {
@@ -88,7 +88,8 @@ body.app-shell .library-section .library-panel > .library-toolbar select.library
   padding-left: 16px;
   padding-right: 40px;
 }
-body.app-shell .library-section .library-toolbar :is(input.library-filter-search, select.library-sort):hover { border-color: var(--fg-secondary); }
+body.app-shell .library-section .library-toolbar :is(input.library-filter-search, select.library-sort) { border-radius: var(--radius-pill); }
+body.app-shell .library-section .library-toolbar :is(input.library-filter-search, select.library-sort):hover { border-color: var(--border-strong); }
 body.app-shell .library-utilities {
   background: var(--surface-muted);
   border: 1px solid var(--border);
@@ -231,7 +232,7 @@ body.app-shell .library-table .watched-icon.watched { background: var(--lib-done
   body.app-shell:not(.library-view-shelf) .library-table tbody tr:last-child td { border-bottom: 0; }
   body.app-shell:not(.library-view-shelf) .library-table td[data-card-field="cover"] img,
   body.app-shell:not(.library-view-shelf) .library-table td[data-card-field="cover"]:empty::after {
-    border-radius: 8px;
+    border-radius: var(--poster-radius);
     box-shadow: var(--lib-cover-shadow);
     height: 72px;
     width: 48px;
@@ -375,7 +376,7 @@ body.app-shell .library-table .watched-icon.watched { background: var(--lib-done
   body.app-shell .library-table.mobile-library tr:not(:has(input, textarea, select)) td[data-card-field="cover"] { grid-row: 1 / 3; }
   body.app-shell .library-table.mobile-library tr:not(:has(input, textarea, select)) td[data-card-field="cover"] img,
   body.app-shell .library-table.mobile-library tr:not(:has(input, textarea, select)) td[data-card-field="cover"]:empty::after {
-    border-radius: 8px;
+    border-radius: var(--poster-radius);
     box-shadow: var(--lib-cover-shadow);
     height: 96px;
     width: 64px;

@@ -1,59 +1,115 @@
 /* The signed-in workspace shares one visual vocabulary. Public editorial pages
    keep their own presentation; existing layout and interaction hooks stay put. */
+/* Design tokens for the signed-in workspace. Colors change per theme; the type,
+   space, radius and motion scales are shared so every component sizes the same way.
+   Public pages use the same scale names in site.css. */
 body.app-shell {
   --bg: #f3f5f9;
   --fg: #232b3e;
-  --fg-secondary: #606b80;
+  --fg-secondary: #5d6880;
   --card-bg: #ffffff;
   --surface-muted: #f7f8fc;
   --surface-hover: #edf0f8;
   --field-bg: #ffffff;
   --border: #dce1ec;
-  --primary: #6149bd;
-  --primary-hover: #543da9;
-  --accent-solid: #6750c5;
+  --border-strong: #c3cadb;
+  --primary: #6d28d9;
+  --primary-hover: #5b21b6;
+  --accent-solid: #7c3aed;
   --on-accent: #ffffff;
-  --accent-soft: #eeeafa;
+  --accent-soft: #efe9ff;
   --teal: #087c70;
   --teal-soft: #e7f5f1;
+  --success: #0b7a55;
+  --success-soft: #e4f6ee;
+  --warning: #935400;
+  --warning-soft: #fdf1dc;
   --danger: #b63249;
+  --danger-soft: #fdecef;
   --table-row-alt: #f8f9fc;
-  --shadow-sm: 0 2px 8px #24314b05;
+  --shadow-sm: 0 1px 2px #1a22380d, 0 2px 8px #24314b08;
+  --shadow-md: 0 10px 30px #1a223817;
   --shadow-lg: 0 24px 70px #18223726;
-  --radius: 14px;
+  --poster-edge: #1a22381f;
+  --poster-shadow: 0 4px 12px #1a22381f;
+
+  --font-body: Inter, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+  --font-display: Poppins, Inter, system-ui, sans-serif;
+  --text-xs: .75rem;
+  --text-sm: .8125rem;
+  --text-md: .875rem;
+  --text-lg: 1rem;
+  --text-xl: 1.25rem;
+  --text-2xl: 1.5rem;
+  --text-3xl: 2rem;
+  --space-1: 4px;
+  --space-2: 8px;
+  --space-3: 12px;
+  --space-4: 16px;
+  --space-5: 20px;
+  --space-6: 24px;
+  --space-8: 32px;
+  --radius-sm: 8px;
+  --radius-md: 12px;
+  --radius-lg: 18px;
+  --radius-xl: 22px;
+  --radius-pill: 999px;
+  --radius: var(--radius-lg);
+  --poster-radius: 10px;
+  --control-sm: 34px;
+  --control-md: 40px;
+  --control-lg: 46px;
+  --ring: 0 0 0 3px color-mix(in srgb, var(--accent-solid) 28%, transparent);
+  --ease: cubic-bezier(.2, .8, .2, 1);
+  --dur-fast: .12s;
+  --dur: .2s;
+
   color-scheme: light;
   background: var(--bg);
   color: var(--fg);
-  font-family: Inter, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+  font-family: var(--font-body);
   font-size: 14px;
   padding: 20px 28px 0;
 }
 
+/* Deep violet night, matching the public site. */
 body.app-shell.dark-mode {
-  --bg: #10141d;
-  --fg: #edf0f7;
-  --fg-secondary: #a4aec2;
-  --card-bg: #191f2c;
-  --surface-muted: #151b27;
-  --surface-hover: #242c3d;
-  --field-bg: #131925;
-  --border: #30394c;
-  --primary: #baa9fb;
-  --primary-hover: #d0c3ff;
-  --accent-solid: #b6a2fa;
-  --on-accent: #211440;
-  --accent-soft: #2c2542;
-  --teal: #8ad8c3;
-  --teal-soft: #1b3535;
-  --danger: #ff9caa;
-  --table-row-alt: #1c2331;
-  --shadow-sm: 0 2px 8px #00000012;
-  --shadow-lg: 0 24px 70px #00000066;
+  --bg: #0b0a18;
+  --fg: #f1effc;
+  --fg-secondary: #aaa6cb;
+  --card-bg: #15122b;
+  --surface-muted: #110f24;
+  --surface-hover: #221c42;
+  --field-bg: #0f0d21;
+  --border: #2a2550;
+  --border-strong: #3d3670;
+  --primary: #c4b5fd;
+  --primary-hover: #ddd6fe;
+  --accent-solid: #7c3aed;
+  --on-accent: #ffffff;
+  --accent-soft: #241c49;
+  --teal: #5eead4;
+  --teal-soft: #123a37;
+  --success: #6ee7b7;
+  --success-soft: #0f2f29;
+  --warning: #fcd34d;
+  --warning-soft: #352a0d;
+  --danger: #fda4af;
+  --danger-soft: #3a1623;
+  --table-row-alt: #13102a;
+  --shadow-sm: 0 1px 0 rgba(255, 255, 255, .03) inset, 0 8px 24px rgba(0, 0, 0, .25);
+  --shadow-md: 0 14px 40px rgba(0, 0, 0, .4);
+  --shadow-lg: 0 30px 80px rgba(0, 0, 0, .6);
+  --poster-edge: rgba(255, 255, 255, .09);
+  --poster-shadow: 0 6px 18px rgba(0, 0, 0, .45);
+  --ring: 0 0 0 3px color-mix(in srgb, var(--accent-solid) 40%, transparent);
   color-scheme: dark;
 }
 
 body.app-shell :is(button, input, select, textarea) { font-family: inherit; }
 body.app-shell :is(button, a, input, select, textarea, summary):focus-visible { outline: 3px solid var(--primary); outline-offset: 3px; }
+body.app-shell :is(input[type="checkbox"], input[type="radio"], input[type="range"], progress) { accent-color: var(--accent-solid); }
+body.app-shell ::selection { background: color-mix(in srgb, var(--accent-solid) 30%, transparent); }
 body.app-shell input::placeholder, body.app-shell textarea::placeholder { color: var(--fg-secondary); opacity: 1; }
 body.app-shell :is(button, select):disabled { cursor: not-allowed; }
 body.app-shell .container,
@@ -62,7 +118,7 @@ body.app-shell .container.sidebar-hidden { padding: 0; width: 100%; max-width: 1
 /* A quiet account strip leaves the library search and capture action prominent. */
 body.app-shell .account-toolbar { width: 100%; max-width: 1480px; margin: 0 auto 16px; gap: 8px; }
 body.app-shell .account-toolbar :is(#toggleMode, #notificationBell, #userDisplay, #showFriendsSidebar, #logoutBtn) {
-  background: transparent; border: 1px solid transparent; border-radius: 9px;
+  background: transparent; border: 1px solid transparent; border-radius: var(--radius-pill);
   color: var(--fg-secondary); box-shadow: none; font-size: .8rem; font-weight: 500;
   min-height: 40px; padding: 8px 12px; transform: none;
 }
@@ -77,10 +133,10 @@ body.app-shell .app-brand { display: flex; align-items: center; gap: 12px; }
 body.app-shell .app-brand__mark { display: grid; place-items: center; width: 44px; height: 44px; flex: 0 0 auto; background: var(--accent-soft); color: var(--primary); border-radius: 13px; }
 body.app-shell .header .app-title { background: none; -webkit-text-fill-color: currentColor; color: var(--fg); filter: none; text-shadow: none; text-transform: none; font: 700 1.28rem/1.2 Inter, sans-serif; letter-spacing: -.04em; }
 body.app-shell .app-brand__caption { color: var(--fg-secondary); font-size: .7rem; margin: 5px 0 0; }
-body.app-shell .library-search__field { background: var(--field-bg); border-color: var(--border); box-shadow: none; color: var(--fg-secondary); border-radius: 10px; min-height: 46px; }
+body.app-shell .library-search__field { background: var(--field-bg); border-color: var(--border); box-shadow: none; color: var(--fg-secondary); border-radius: var(--radius-pill); min-height: var(--control-lg); }
 body.app-shell .library-search__field input, body.app-shell .library-search__field input:focus { background: transparent; color: var(--fg); box-shadow: none; border: 0; }
 body.app-shell .library-search__field input::placeholder { color: var(--fg-secondary); opacity: 1; }
-body.app-shell .library-search__field:focus-within { border-color: var(--primary); box-shadow: 0 0 0 3px var(--accent-soft); }
+body.app-shell .library-search__field:focus-within { border-color: var(--accent-solid); box-shadow: var(--ring); }
 body.app-shell .library-search kbd { background: var(--surface-muted); border-color: var(--border); color: var(--fg-secondary); }
 body.app-shell .library-search__results { border-color: var(--border); box-shadow: var(--shadow-lg); }
 body.app-shell .library-search__result:hover, body.app-shell .library-search__result:focus-visible { background: var(--accent-soft); }
@@ -93,7 +149,7 @@ body.app-shell .tabs { display: block; overflow: visible; border: 0; margin: 0 0
 body.app-shell .library-nav__group { display: flex; align-items: center; gap: 4px; overflow-x: auto; overscroll-behavior-x: contain; scrollbar-width: thin; scrollbar-color: var(--border) transparent; padding: 3px 0; }
 body.app-shell .library-nav__group--tools { border-top: 1px solid var(--border); margin-top: 3px; }
 body.app-shell .library-nav__label { flex: 0 0 86px; box-sizing: border-box; padding-left: 4px; color: var(--fg-secondary); font-size: .63rem; font-weight: 600; text-transform: uppercase; letter-spacing: .09em; }
-body.app-shell .tabs .tab { background: transparent; color: var(--fg-secondary); border: 1px solid transparent; border-radius: 8px; font-size: .83rem; font-weight: 500; min-height: 42px; padding: 9px 14px; }
+body.app-shell .tabs .tab { background: transparent; color: var(--fg-secondary); border: 1px solid transparent; border-radius: var(--radius-pill); font-size: .83rem; font-weight: 500; min-height: 42px; padding: 9px 14px; }
 body.app-shell .tabs .tab:hover { background: var(--surface-hover); color: var(--fg); }
 body.app-shell .tabs .tab.active { background: var(--accent-soft); color: var(--primary); border-color: color-mix(in srgb, var(--primary) 30%, var(--border)); font-weight: 700; box-shadow: inset 0 -2px var(--primary); }
 body.app-shell .tabs .library-nav__manage { margin-left: auto; color: var(--fg-secondary); font-size: .75rem; text-decoration: underline; text-underline-offset: 4px; }
@@ -122,11 +178,18 @@ body.app-shell .next-up-queue__done { background: var(--teal); border-color: var
 body.app-shell .next-up-queue__done:hover:not(:disabled) { filter: brightness(1.08); }
 body.app-shell :is(.next-up-queue__controls button, .library-pulse__insights, .next-up-queue__toggle, .todays-pick__another) { min-height: 40px; }
 body.app-shell .todays-pick__choice { border-color: var(--teal); }
-body.app-shell .todays-pick__filter select { background: var(--field-bg); color: var(--fg); border-color: var(--border); border-radius: 8px; min-height: 40px; }
+body.app-shell .todays-pick__filter select { background: var(--field-bg); color: var(--fg); border-color: var(--border); border-radius: var(--radius-md); min-height: var(--control-md); }
 body.app-shell :is(.daily-dashboard, .next-up-queue, .return-deck) .progress-checkpoint { color: var(--teal); }
 body.app-shell .progress-update { background: var(--teal-soft); border-color: var(--border); color: var(--teal); }
-body.app-shell button.action-btn { background: var(--accent-solid); color: var(--on-accent); border: 1px solid transparent; border-radius: 8px; box-shadow: none; font-weight: 600; transform: none; }
-body.app-shell button.action-btn:hover { box-shadow: none; transform: none; filter: brightness(.96); }
+/* One button shape everywhere: a pill that presses down slightly when clicked. */
+body.app-shell button.action-btn {
+  background: var(--accent-solid); color: var(--on-accent); border: 1px solid transparent; border-radius: var(--radius-pill);
+  box-shadow: none; font-weight: 600; transform: none;
+  transition: background-color var(--dur-fast) var(--ease), border-color var(--dur-fast) var(--ease), color var(--dur-fast) var(--ease), filter var(--dur-fast) var(--ease), transform var(--dur-fast) var(--ease);
+}
+body.app-shell button.action-btn:hover { box-shadow: none; transform: none; filter: brightness(.94); }
+body.app-shell.dark-mode button.action-btn:hover { filter: brightness(1.12); }
+body.app-shell button.action-btn:active:not(:disabled) { transform: translateY(1px); }
 body.app-shell button.action-btn:disabled { filter: none; opacity: .5; }
 body.app-shell :is(.todays-pick__open, .library-launchpad__primary) { margin: 0; }
 body.app-shell .library-launchpad__secondary { background: var(--surface-muted); color: var(--fg); border-color: var(--border); }
@@ -172,7 +235,7 @@ body.app-shell .friends-sidebar::before { content: none; }
 body.app-shell .friends-sidebar-header { flex: 0 0 auto; margin: 0; padding: 12px 16px 16px; background: var(--surface-muted); border-bottom: 1px solid var(--border); }
 body.app-shell .friends-panel-heading { display: flex; justify-content: space-between; align-items: center; gap: 12px; margin-bottom: 10px; }
 body.app-shell .friends-sidebar-header h2 { margin: 0; font-family: inherit; font-size: 1.05rem; color: var(--fg); }
-body.app-shell .sidebar-toggle-btn { width: 44px; height: 44px; border-radius: 8px; background: transparent; color: var(--fg-secondary); font-size: 1.5rem; }
+body.app-shell .sidebar-toggle-btn { width: 44px; height: 44px; border-radius: var(--radius-pill); background: transparent; color: var(--fg-secondary); font-size: 1.5rem; }
 body.app-shell .sidebar-toggle-btn:hover { background: var(--accent-soft); color: var(--primary); transform: none; }
 body.app-shell .friends-list { min-height: 0; flex: 0 1 auto; overflow-y: auto; overflow-x: hidden; overscroll-behavior: contain; padding: 12px; gap: 8px; }
 body.app-shell .friends-list .no-friends { margin: 0; padding: 16px 8px; color: var(--fg-secondary); }
@@ -192,7 +255,7 @@ body.app-shell #mainFooter .footer-link:hover { color: var(--primary); transform
 @media (max-width: 1100px) {
   body.app-shell .header { gap: 16px; padding: 18px; }
   body.app-shell .app-brand__caption { display: none; }
-  body.app-shell .app-brand__mark { width: 36px; height: 36px; border-radius: 10px; }
+  body.app-shell .app-brand__mark { width: 36px; height: 36px; }
 }
 @media (max-width: 768px) {
   body.app-shell { padding: 12px 16px 0; }
@@ -220,18 +283,19 @@ body.app-shell #mainFooter .footer-link:hover { color: var(--primary); transform
   body.app-shell .quick-capture-trigger { font-size: .74rem; padding-inline: 8px; }
   body.app-shell .account-toolbar :is(#toggleMode, #notificationBell, #userDisplay, #showFriendsSidebar, #logoutBtn) { padding-inline: 7px; }
 }
-/* Notices (dashboard/notices.js): short messages stacked in the bottom corner. */
+/* Notices (dashboard/notices.js): short messages stacked in the bottom corner.
+   Each tone gets a small round badge instead of a colored edge. */
 .app-notices { bottom: calc(20px + env(safe-area-inset-bottom, 0px)); display: flex; flex-direction: column; gap: 10px; max-width: min(420px, calc(100vw - 32px)); pointer-events: none; position: fixed; right: 20px; z-index: 13000; }
-.app-notice { align-items: flex-start; animation: app-notice-in .18s ease-out; background: var(--card-bg, #191f2c); border: 1px solid var(--border, #30394c); border-left: 4px solid var(--primary, #baa9fb); border-radius: 12px; box-shadow: var(--shadow-lg, 0 24px 70px #00000066); color: var(--fg, #edf0f7); display: flex; font: 500 .92rem/1.5 Inter, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; gap: 10px; padding: 12px 10px 12px 14px; pointer-events: auto; }
-.app-notice p { flex: 1; margin: 0; max-height: 50vh; overflow-y: auto; white-space: pre-line; overflow-wrap: anywhere; }
-.app-notice::before { flex: none; font-weight: 800; line-height: 1.5; }
-.app-notice--error { border-left-color: var(--danger, #ff9caa); }
-.app-notice--error::before { color: var(--danger, #ff9caa); content: "!"; }
-.app-notice--success { border-left-color: var(--teal, #8ad8c3); }
-.app-notice--success::before { color: var(--teal, #8ad8c3); content: "✓"; }
-.app-notice__close { background: none; border: 0; border-radius: 8px; color: var(--fg-secondary, #a4aec2); cursor: pointer; flex: none; font-size: 1.25rem; height: 32px; line-height: 1; margin: -5px 0; width: 32px; }
-.app-notice__close:hover { background: var(--surface-hover, #242c3d); color: var(--fg, #edf0f7); }
-@keyframes app-notice-in { from { opacity: 0; transform: translateY(8px); } }
+.app-notice { --notice-tone: var(--primary, #c4b5fd); --notice-soft: var(--accent-soft, #241c49); align-items: flex-start; animation: app-notice-in .22s var(--ease, ease-out); background: var(--card-bg, #15122b); border: 1px solid var(--border-strong, #3d3670); border-radius: var(--radius-md, 12px); box-shadow: var(--shadow-lg, 0 24px 70px #00000066); color: var(--fg, #f1effc); display: flex; font: 500 .92rem/1.5 var(--font-body, Inter, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif); gap: 12px; padding: 12px 10px 12px 12px; pointer-events: auto; }
+.app-notice p { flex: 1; margin: 0; max-height: 50vh; overflow-y: auto; padding-top: 1px; white-space: pre-line; overflow-wrap: anywhere; }
+.app-notice::before { align-items: center; background: var(--notice-soft); border-radius: 50%; color: var(--notice-tone); content: "i"; display: inline-flex; flex: none; font: 800 .8rem/1 var(--font-body, Inter, sans-serif); height: 24px; justify-content: center; width: 24px; }
+.app-notice--error { --notice-tone: var(--danger, #fda4af); --notice-soft: var(--danger-soft, #3a1623); }
+.app-notice--error::before { content: "!"; }
+.app-notice--success { --notice-tone: var(--success, #6ee7b7); --notice-soft: var(--success-soft, #0f2f29); }
+.app-notice--success::before { content: "✓"; }
+.app-notice__close { background: none; border: 0; border-radius: 50%; color: var(--fg-secondary, #aaa6cb); cursor: pointer; flex: none; font-size: 1.25rem; height: 32px; line-height: 1; margin: -4px 0; width: 32px; }
+.app-notice__close:hover { background: var(--surface-hover, #221c42); color: var(--fg, #f1effc); }
+@keyframes app-notice-in { from { opacity: 0; transform: translateY(10px) scale(.98); } }
 @media (max-width: 760px) {
   .app-notices { left: 16px; max-width: none; right: 16px; }
   body.has-app-dock .app-notices { bottom: calc(88px + env(safe-area-inset-bottom, 0px)); }
