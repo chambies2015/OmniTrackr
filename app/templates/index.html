@@ -2242,7 +2242,7 @@
   <script src="/static/title-origins.js?v=20261030-audiobooks-notices-1"></script>
   <script src="/static/for-you.js?v=20261030-audiobooks-1"></script>
   <script src="/static/title-links.js?v=20261030-audiobooks-1"></script>
-  <script src="/static/public-profile.js?v=20261027-widgets-1"></script>
+  <script src="/static/public-profile.js?v=20261030-compare-1"></script>
   <script src="/static/supporter.js?v=20261029-account-1"></script>
   <script src="/static/account-settings.js?v=20261029-account-1" defer></script>
   <script src="/static/profile-showcase.js?v=20261021-bugs-1"></script>
@@ -2259,6 +2259,7 @@
   <script src="/static/year-in-review-entry.js?v=20261019-story-1" defer></script>
   <script src="/static/guest-list.js?v=20261030-audiobooks-1"></script>
   <script src="/static/taste-quiz.js?v=20261030-audiobooks-1" defer></script>
+  <script src="/static/taste-compare.js?v=20261030-compare-1" defer></script>
   <script src="/static/app-nav.js?v=20261030-audiobooks-1" defer></script>
 
   <!-- Account Modal -->
@@ -2349,6 +2350,8 @@
               <button type="button" class="profile-settings__copy" id="profileCopyLink">Copy link</button></p>
             <p class="profile-settings__link" id="profileWidgetsRow" hidden>Put it on your blog, forum or GitHub:
               <a id="profileWidgetsLink" href="#" target="_blank" rel="noopener">Get profile widgets</a></p>
+            <p class="profile-settings__link" id="profileMatchRow" hidden>Your compare-tastes link:
+              <a id="profileMatchLink" href="#" target="_blank" rel="noopener">Open and share it</a></p>
             <div class="form-group">
               <label for="profileBio">Short bio <span class="profile-settings__count" id="profileBioCount">0/280</span></label>
               <textarea id="profileBio" maxlength="280" rows="3" placeholder="What do you love to watch, play, read or listen to?"></textarea>
@@ -2360,6 +2363,7 @@
               <label class="profile-settings__check"><input type="checkbox" id="profileShowReviews"> Public reviews</label>
               <label class="profile-settings__check"><input type="checkbox" id="profileShowCollections"> Public collections</label>
               <label class="profile-settings__check"><input type="checkbox" id="profileShowDiary"> Diary: dates of your recent finishes and rewatches (your journal notes stay private)</label>
+              <label class="profile-settings__check"><input type="checkbox" id="profileShowTasteMatch"> Let people compare tastes with me: a link where anyone can rate a few of your titles and see your ratings for them</label>
             </fieldset>
             <p class="info-text profile-settings__private" id="profilePrivateNote" hidden></p>
             <button type="submit" class="action-btn" id="profileSave">Save public profile</button>

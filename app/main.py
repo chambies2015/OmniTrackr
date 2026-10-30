@@ -977,6 +977,23 @@ for route in taste_match_router.router.routes:
         bind_rate_limited_endpoint(route, rate_limited_taste_add)
 app.include_router(taste_match_router.router)
 
+from .routers import taste_compare as taste_compare_router
+# The page and card are opened from shared links, so they get the same room as profile pages.
+TASTE_COMPARE_LIMITS = {
+    "/u/{handle}/match": "60/minute",
+    "/u/id/{user_id:database_id}/match": "60/minute",
+    "/u/{handle}/match/card.png": "60/minute",
+    "/u/id/{user_id:database_id}/match/card.png": "60/minute",
+    "/api/taste-match/u/{owner_id}/guess": "20/minute",
+    "/api/taste-match/u/{owner_id}": "30/minute",
+    "/api/taste-match/u/{owner_id}/answers": "10/minute",
+}
+for route in taste_compare_router.router.routes:
+    limit = TASTE_COMPARE_LIMITS.get(getattr(route, "path", None))
+    if limit:
+        bind_rate_limited_endpoint(route, limiter.limit(limit)(route.endpoint))
+app.include_router(taste_compare_router.router)
+
 from .routers import shared_lists as shared_lists_router
 rate_limited_list_create = limiter.limit("20/hour")(shared_lists_router.create_list)
 rate_limited_list_join = limiter.limit("30/minute")(shared_lists_router.join_list)

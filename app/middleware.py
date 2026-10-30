@@ -48,7 +48,7 @@ NOINDEX_PREFIXES = (
     "/year-in-review",
 )
 PUBLIC_WELL_KNOWN_PATHS = {"/.well-known/ai.txt"}
-PUBLIC_PROFILE_PATH = re.compile(r"^/u/(?:[A-Za-z0-9_-][A-Za-z0-9_.-]{0,49}|id/\d{1,10})(?:/card\.png|/widgets|/widget/(?:stats|recent|favorites)\.png)?/?$")
+PUBLIC_PROFILE_PATH = re.compile(r"^/u/(?:[A-Za-z0-9_-][A-Za-z0-9_.-]{0,49}|id/\d{1,10})(?:/card\.png|/widgets|/widget/(?:stats|recent|favorites)\.png|/match(?:/card\.png)?)?/?$")
 # Shared Year in Review links carry a random token that could contain a scanned word.
 PUBLIC_RECAP_PATH = re.compile(r"^/recap/[A-Za-z0-9_-]{8,32}(?:/(?:card|story)\.png)?/?$")
 

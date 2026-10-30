@@ -993,6 +993,8 @@ class PublicProfile(Base):
     show_collections = Column(Boolean, nullable=False, default=True)
     # Opt-in diary of recent finishes and revisits (added Oct 2026, default off).
     show_diary = Column(Boolean, nullable=False, default=False)
+    # Opt-in "compare tastes with me" link at /u/<name>/match (added Oct 2026, default off).
+    show_taste_match = Column(Boolean, nullable=False, default=False)
     created_at = Column(DateTime, nullable=False, default=datetime.utcnow)
     updated_at = Column(DateTime, nullable=False, default=datetime.utcnow, onupdate=datetime.utcnow)
 
