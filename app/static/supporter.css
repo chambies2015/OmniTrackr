@@ -70,3 +70,17 @@
 .supporter-banner--locked { opacity: .6; }
 .supporter-motion__hint { display: block; font-size: .78rem; opacity: .72; }
 .supporter-motion__hint[hidden] { display: none; }
+
+/* Account → Supporter: "Donated but don't see your badge?" */
+.supporter-claim { border-top: 1px solid var(--border, rgba(255, 255, 255, .1)); margin: 6px 0 14px; padding-top: 10px; }
+.supporter-claim summary { color: var(--primary); cursor: pointer; font-size: .92rem; font-weight: 600; }
+.supporter-claim[open] { display: grid; gap: 10px; }
+.supporter-claim p { line-height: 1.45; margin: 0; }
+.supporter-claim__form { display: grid; gap: 6px; }
+body.app-shell .account-settings .supporter-claim__form label { font-size: .88rem; font-weight: 600; margin: 0; }
+.supporter-claim__row { align-items: center; display: flex; flex-wrap: wrap; gap: 8px; }
+body.app-shell .account-settings .supporter-claim__row input { flex: 1 1 220px; margin: 0; max-width: 360px; }
+.supporter-claim__status:empty { display: none; }
+.supporter-claim__status { font-size: .9rem; }
+.supporter-claim__status--ok { color: var(--success, #34d399); }
+.supporter-claim__status--error { color: var(--danger, #f87171); }

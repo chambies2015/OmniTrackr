@@ -341,6 +341,8 @@ def verify_email(token: str, request: Request = None, db: Session = Depends(get_
         except Exception as e:  # Friendship from an invite is a bonus; verification already succeeded.
             db.rollback()
             print(f"Failed to complete friend invite: {e}")
+        from .. import supporters
+        supporters.link_after_verification(db, user)  # Ko-fi payments made before the account existed
 
         return _sign_in_after_verification(request, user, db, "Email verified successfully! You can now use all features.")
     except HTTPException:
@@ -647,6 +649,10 @@ async def google_callback(
         if problem.code != "cancelled":
             funnel.record("google_signin_failed", request)
         return _google_failure(problem.code)
+
+    if outcome in ("created", "linked"):
+        from .. import supporters
+        supporters.link_after_verification(db, user)  # a Google account proves the email, so waiting Ko-fi payments link
 
     if outcome == "created":
         funnel.record("signup_created", request)

@@ -16,7 +16,7 @@ from pydantic import BaseModel, Field
 from sqlalchemy import func, or_
 from sqlalchemy.orm import Session
 
-from .. import editorial_collections, funnel, google_signin, models, release_radar
+from .. import editorial_collections, funnel, google_signin, models, release_radar, supporters
 from ..admin_access import is_site_admin
 from ..csp import strict_html_response
 from ..dependencies import get_current_user, get_db
@@ -225,8 +225,9 @@ def _growth(db: Session, days: int, now: datetime) -> dict:
             "monthly": _count(db.query(func.count(supporter.id)).filter(supporter.active_until > now, supporter.monthly == True)),
             "all_time": _count(db.query(func.count(supporter.id))),
             "new": _counts_between(db, supporter.since, start),
-            "payments": _counts_between(db, payment.received_at, start),
-            "unlinked_payments": _count(db.query(func.count(payment.id)).filter(payment.user_id.is_(None))),
+            "payments": _count(db.query(func.count(payment.id)).filter(payment.received_at >= start, ~supporters.is_test_payment())),
+            # Ko-fi test pings and payments the owner set aside don't need linking.
+            "unlinked_payments": supporters.waiting_count(db),
         },
         "weekly_email": {
             "subscribers": _count(db.query(func.count(models.EmailDigestSubscription.id))),

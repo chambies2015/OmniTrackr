@@ -826,6 +826,7 @@ def run_migrations():
     add_taste_match_link_column()
     add_calendar_episodes_column()
     add_lookup_indexes()
+    add_kofi_matching_columns()
 
 
 def add_notification_link_column():
@@ -1014,3 +1015,36 @@ def add_lookup_indexes():
                 conn.commit()
     except Exception as e:
         print(f"Migration warning (lookup indexes): {e}")
+
+
+KOFI_MATCHING_COLUMNS = (
+    ("email_key", "VARCHAR(64)"),
+    ("transaction_hash", "VARCHAR(64)"),
+    ("test", "BOOLEAN NOT NULL DEFAULT FALSE"),
+    ("dismissed_at", "TIMESTAMP"),
+    ("claimed_by", "INTEGER REFERENCES users(id) ON DELETE SET NULL"),
+    ("claimed_at", "TIMESTAMP"),
+)
+
+
+def add_kofi_matching_columns():
+    """Add the Oct 30 Ko-fi matching columns. All nullable or FALSE, so every recorded payment stays as it was.
+
+    Older payments have no email_key or transaction_hash; they still match by the exact
+    email hash they always had.
+    """
+    try:
+        inspector = inspect(engine)
+        if not inspector.has_table("kofi_payments"):
+            return
+        columns = {col["name"] for col in inspector.get_columns("kofi_payments")}
+        with engine.connect() as conn:
+            for name, kind in KOFI_MATCHING_COLUMNS:
+                if name not in columns:
+                    conn.execute(text(f"ALTER TABLE kofi_payments ADD COLUMN {name} {kind}"))
+                    print(f"Added {name} column to kofi_payments table")
+            conn.execute(text("CREATE INDEX IF NOT EXISTS ix_kofi_payments_email_key ON kofi_payments (email_key)"))
+            conn.execute(text("CREATE INDEX IF NOT EXISTS ix_kofi_payments_transaction_hash ON kofi_payments (transaction_hash)"))
+            conn.commit()
+    except Exception as e:
+        print(f"Migration warning (Ko-fi matching): {e}")

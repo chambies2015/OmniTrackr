@@ -65,7 +65,7 @@
   <link rel="stylesheet" href="/static/dialog-theme.css?v=20260924-visual-4">
   <link rel="stylesheet" href="/static/where-to-watch.css?v=20261026-where-to-watch-1">
   <link rel="stylesheet" href="/static/taste-match.css?v=20261016-taste-match-1">
-  <link rel="stylesheet" href="/static/supporter.css?v=20261029-account-1">
+  <link rel="stylesheet" href="/static/supporter.css?v=20261030-claim-1">
   <link rel="stylesheet" href="/static/profile-banners.css?v=20261028-members-1">
   <link rel="stylesheet" href="/static/badges.css?v=20261017-badges-1">
   <link rel="stylesheet" href="/static/time-spent.css?v=20261029-time-spent-1">
@@ -2258,7 +2258,7 @@
   <script src="/static/for-you.js?v=20261030-audiobooks-1"></script>
   <script src="/static/title-links.js?v=20261030-audiobooks-1"></script>
   <script src="/static/public-profile.js?v=20261030-compare-1"></script>
-  <script src="/static/supporter.js?v=20261029-account-1"></script>
+  <script src="/static/supporter.js?v=20261030-claim-1"></script>
   <script src="/static/account-settings.js?v=20261029-account-1" defer></script>
   <script src="/static/two-factor.js?v=20261030-2fa-1" defer></script>
   <script src="/static/profile-showcase.js?v=20261021-bugs-1"></script>
@@ -3008,6 +3008,20 @@
             paste this code into your Ko-fi message.</p>
           <p><a class="action-btn supporter-kofi" id="supporterKofiLink" href="https://ko-fi.com/omnitrackr" target="_blank"
               rel="noopener noreferrer">Support on Ko-fi ↗</a></p>
+          <details class="supporter-claim" id="supporterClaim">
+            <summary>Donated but don't see your badge?</summary>
+            <p class="account-field__hint">Type the email you used on Ko-fi and we'll send that inbox a link to confirm it's yours.
+              No access to it any more? Paste the transaction ID from your Ko-fi receipt instead, and the site owner will confirm it, usually within a day.</p>
+            <form id="supporterClaimForm" class="supporter-claim__form" novalidate>
+              <label for="supporterClaimValue">Ko-fi email or transaction ID</label>
+              <div class="supporter-claim__row">
+                <input type="text" id="supporterClaimValue" autocomplete="email" autocapitalize="none" spellcheck="false" maxlength="254"
+                  placeholder="you@example.com">
+                <button type="submit" class="action-btn" id="supporterClaimSubmit">Find my payment</button>
+              </div>
+            </form>
+            <p class="supporter-claim__status" id="supporterClaimStatus" role="status" aria-live="polite"></p>
+          </details>
           <form id="supporterForm" novalidate hidden>
             <div class="privacy-toggle-item">
               <label for="supporterShowBadge" class="toggle-label">

@@ -98,3 +98,12 @@ test('Ko-fi payments to link read as name, amount, kind and day', () => {
   assert.deepEqual(stats.paymentLabel({ from_name: null, amount: null, currency: null, kind: null, monthly: false, received_at: null }),
     { name: 'Name not given', detail: 'Payment' });
 });
+
+test('Ko-fi card summary counts what is waiting and says when only the newest are shown', () => {
+  assert.match(stats.kofiSummary([], 0), /Every Ko-fi payment is linked/);
+  const one = stats.kofiSummary([{ message_id: 'a' }], 1);
+  assert.match(one, /^1 payment came in/);
+  assert.doesNotMatch(one, /newest/);
+  assert.match(stats.kofiSummary([{ message_id: 'a' }], 60), /^60 payments came in.*The newest 1 are shown/);
+  assert.match(stats.kofiSummary([], 0, 4), /linked to a member.* 4 Ko-fi test payments left out\.$/);
+});
