@@ -16,6 +16,8 @@ psycopg2-binary==2.9.10
 PyJWT==2.15.0
 cryptography==50.0.1
 bcrypt==4.2.1
+# QR codes for two-factor setup (pure Python, SVG output)
+qrcode==8.2
 python-multipart==0.0.31
 
 # Environment variables

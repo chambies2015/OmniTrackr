@@ -85,6 +85,23 @@ class UsernameChange(BaseModel):
     password: str = Field("", description="Current password (not needed while an account made with Google has none)")
 
 
+class TwoFactorLogin(BaseModel):
+    """The second sign-in step: an authenticator or recovery code."""
+    code: str = Field(..., min_length=1, max_length=32)
+    remember_device: bool = False
+
+
+class TwoFactorPassword(BaseModel):
+    """Starting two-factor setup asks for the current password (none for Google-only accounts)."""
+    password: str = Field("", max_length=128)
+
+
+class TwoFactorCode(BaseModel):
+    """Confirming setup, or a change that needs a fresh code (plus the password when there is one)."""
+    code: str = Field(..., min_length=1, max_length=32)
+    password: str = Field("", max_length=128)
+
+
 class AccountDeactivate(BaseModel):
     """Schema for deactivating account."""
     password: str = Field(..., description="Current password for confirmation")

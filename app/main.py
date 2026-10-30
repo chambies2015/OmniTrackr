@@ -557,6 +557,8 @@ for route in auth.router.routes:
             bind_rate_limited_endpoint(route, limiter.limit("3/hour")(route.endpoint))
         elif route.path == "/auth/reactivate" and 'POST' in route.methods:
             bind_rate_limited_endpoint(route, limiter.limit("5/minute")(route.endpoint))
+        elif route.path == "/auth/login/two-factor" and 'POST' in route.methods:
+            bind_rate_limited_endpoint(route, limiter.limit("10/minute")(route.endpoint))
         elif route.path in ("/auth/google/start", "/auth/google/callback") and 'GET' in route.methods:
             bind_rate_limited_endpoint(route, limiter.limit("20/minute")(route.endpoint))
 
@@ -573,6 +575,12 @@ for route in account.router.routes:
         bind_rate_limited_endpoint(route, limiter.limit("10/minute")(route.endpoint))
 
 app.include_router(account.router)
+# Two-factor settings check a password or code, so they get the same guessing limit.
+from .routers import two_factor as two_factor_router
+for route in two_factor_router.router.routes:
+    if "POST" in getattr(route, "methods", set()):
+        bind_rate_limited_endpoint(route, limiter.limit("10/minute")(route.endpoint))
+app.include_router(two_factor_router.router)
 # Each request notifies (and can push to) the receiver, so a script can't send one to every member.
 for route in friends.router.routes:
     if getattr(route, "path", None) == "/friends/request" and "POST" in getattr(route, "methods", set()):

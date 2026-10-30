@@ -12,7 +12,7 @@ from sqlalchemy.orm import Session
 
 from .. import crud, schemas, models, auth, email as email_utils, return_prompt as return_prompt_tokens
 from ..dependencies import get_db
-from .. import funnel, google_signin, visits
+from .. import funnel, google_signin, two_factor, visits
 from ..signup_rules import email_problem, email_taken, username_problem, username_taken
 
 router = APIRouter(prefix="/auth", tags=["auth"])
@@ -123,9 +123,16 @@ def login(
             headers={"WWW-Authenticate": "Bearer"},
         )
     
-    user.failed_login_attempts = 0
-    user.locked_until = None
-    db.commit()
+    needs_code = two_factor.code_needed(db, request, user)
+    if needs_code:
+        # Wrong codes count toward the same lockout, so a right password must not wipe them.
+        if user.locked_until and user.locked_until > now_utc:
+            remaining_minutes = max(1, int((user.locked_until - now_utc).total_seconds() / 60) + 1)
+            raise HTTPException(status_code=423, detail=f"Too many wrong codes. Try again in {remaining_minutes} minutes.")
+    else:
+        user.failed_login_attempts = 0
+        user.locked_until = None
+        db.commit()
     
     if not user.is_active:
         if user.deactivated_at:
@@ -158,6 +165,20 @@ def login(
             headers={"WWW-Authenticate": "Bearer"},
         )
 
+    if needs_code:
+        # The password was right; the session waits for the authenticator code.
+        response = JSONResponse(
+            content={"two_factor_required": True},
+            headers={"Cache-Control": "no-store, no-cache, must-revalidate, max-age=0", "Pragma": "no-cache", "Expires": "0"},
+        )
+        two_factor.set_challenge_cookie(response, two_factor.new_challenge(user, "password"))
+        return response
+
+    return _finish_login(user, request, db, now_utc)
+
+
+def _finish_login(user: models.User, request: Request, db: Session, now_utc: datetime, extra: dict | None = None):
+    """Record the sign-in and hand out the session (after the password, and the code when one is needed)."""
     # Derive the optional return moment before replacing the previous successful
     # login timestamp. The context is returned to this browser only and is not
     # stored as a page/session history.
@@ -197,7 +218,7 @@ def login(
         return_prompt=return_prompt,
     )
     response = JSONResponse(
-        content=jsonable_encoder(token_response),
+        content={**jsonable_encoder(token_response), **(extra or {})},
         headers={
             "Cache-Control": "no-store, no-cache, must-revalidate, max-age=0",
             "Pragma": "no-cache",
@@ -205,6 +226,49 @@ def login(
         }
     )
     auth.set_auth_cookie(response, access_token)
+    return response
+
+
+@router.post("/login/two-factor", response_model=schemas.Token)
+def login_two_factor(payload: schemas.TwoFactorLogin, request: Request, db: Session = Depends(get_db)):
+    """Second sign-in step: the code from the authenticator app, or a recovery code."""
+    challenge = two_factor.read_challenge(request.cookies.get(two_factor.CHALLENGE_COOKIE))
+    expired = HTTPException(status_code=401, detail="That sign-in timed out. Log in again to get a new code prompt.")
+    if challenge is None:
+        raise expired
+    user = crud.get_user_by_id_auth(db, challenge["uid"])
+    if (user is None or not user.is_active or not user.is_verified
+            or not secrets.compare_digest(challenge["pv"], auth.password_fingerprint(user.hashed_password))):
+        raise expired
+    row = two_factor.enabled_for(db, user)
+    now_utc = datetime.now(timezone.utc).replace(tzinfo=None)
+    if row is None:
+        # Two-factor was switched off after the password step; the password was already checked.
+        return _finish_login(user, request, db, now_utc)
+
+    if user.locked_until and user.locked_until > now_utc:
+        remaining_minutes = max(1, int((user.locked_until - now_utc).total_seconds() / 60) + 1)
+        raise HTTPException(status_code=423, detail=f"Too many wrong codes. Try again in {remaining_minutes} minutes.")
+
+    used = two_factor.check_code(row, payload.code)
+    if used is None:
+        # Wrong codes share the password lockout: five in a row pauses sign-in for 15 minutes.
+        user.failed_login_attempts = (user.failed_login_attempts or 0) + 1
+        if user.failed_login_attempts >= 5:
+            user.locked_until = now_utc + timedelta(minutes=15)
+        db.commit()
+        client_ip = request.client.host if request.client else "unknown"
+        print(f"SECURITY: Wrong two-factor code - User id: {user.id}, IP: {client_ip}, Attempts: {user.failed_login_attempts}")
+        raise HTTPException(status_code=401, detail="That code didn't work. Codes change every 30 seconds, so try the newest one.")
+
+    user.failed_login_attempts = 0
+    user.locked_until = None
+    db.commit()
+    extra = {"recovery_codes_left": two_factor.recovery_codes_left(row)} if used == "recovery" else None
+    response = _finish_login(user, request, db, now_utc, extra)
+    if payload.remember_device:
+        two_factor.set_device_cookie(response, user, row)
+    two_factor.clear_challenge_cookie(response)
     return response
 
 
@@ -496,7 +560,8 @@ def reactivate_account_public(
             user.locked_until = now_utc + timedelta(minutes=15)
         db.commit()
         raise invalid
-    if user.failed_login_attempts or user.locked_until:
+    # With two-factor on, wrong codes share this counter; only a right code clears it.
+    if (user.failed_login_attempts or user.locked_until) and two_factor.enabled_for(db, user) is None:
         user.failed_login_attempts = 0
         user.locked_until = None
         db.commit()
@@ -603,6 +668,14 @@ async def google_callback(
             print(f"Failed to complete friend invite: {e}")
     else:
         funnel.record("google_signin", request)
+
+    if two_factor.code_needed(db, request, user):
+        # Google vouched for the email; this account also wants its authenticator code.
+        response = _google_redirect("/?two_factor=1#landing-auth")
+        two_factor.set_challenge_cookie(response, two_factor.new_challenge(user, "google"))
+        response.delete_cookie(key=google_signin.STATE_COOKIE, path=google_signin.STATE_COOKIE_PATH,
+                               samesite="lax", secure=auth.ENVIRONMENT == "production", httponly=True)
+        return response
 
     if not user.login_count:
         funnel.record("first_login", request)

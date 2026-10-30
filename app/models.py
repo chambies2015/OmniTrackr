@@ -1715,3 +1715,25 @@ class FollowBar(Base):
     __table_args__ = (
         UniqueConstraint("owner_id", "barred_id", name="uq_follow_bar"),
     )
+
+
+class UserTwoFactor(Base):
+    """A member's optional two-factor sign-in with an authenticator app (Oct 2026).
+
+    A new table only; members without a row sign in exactly as before. A row with
+    no ``enabled_at`` is a setup that was started but not confirmed with a code.
+    ``secret_encrypted`` and ``recovery_codes`` (a JSON list of keyed hashes, one
+    removed per use) are handled in app/two_factor.py. Bumping ``trusted_epoch``
+    makes every remembered browser ask for a code again.
+    """
+    __tablename__ = "user_two_factor"
+
+    id = Column(Integer, primary_key=True, index=True)
+    user_id = Column(Integer, ForeignKey("users.id", ondelete="CASCADE"), nullable=False, unique=True, index=True)
+    secret_encrypted = Column(Text, nullable=False)
+    enabled_at = Column(DateTime, nullable=True)
+    last_used_step = Column(Integer, nullable=True)
+    recovery_codes = Column(Text, nullable=True)
+    recovery_codes_created_at = Column(DateTime, nullable=True)
+    trusted_epoch = Column(Integer, nullable=False, default=0)
+    created_at = Column(DateTime, nullable=False, default=datetime.utcnow)

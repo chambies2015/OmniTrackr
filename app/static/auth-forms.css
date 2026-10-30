@@ -273,3 +273,37 @@ body.dark-mode :is(.auth-container, .account-settings) {
   top: 50%;
   transform: translateY(-50%);
 }
+
+/* Two-factor code step, shown after a correct password or a Google sign-in. */
+#twoFactorForm {
+  display: none;
+}
+
+.auth-form .auth-field input.auth-code {
+  font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+  font-size: 1.25rem;
+  letter-spacing: .18em;
+  text-align: center;
+}
+
+.auth-check {
+  align-items: center;
+  color: var(--auth-muted);
+  cursor: pointer;
+  display: flex;
+  font-size: .9rem;
+  gap: 10px;
+  text-align: left;
+}
+
+.auth-check input {
+  accent-color: var(--auth-link);
+  flex: none;
+  height: 18px;
+  margin: 0;
+  width: 18px;
+}
+
+#twoFactorForm > .auth-toggle + .auth-toggle {
+  margin-top: 8px;
+}

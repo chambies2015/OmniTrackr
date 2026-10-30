@@ -75,8 +75,8 @@
   <link rel="stylesheet" href="/static/friends-feed.css?v=20261025-friends-feed-1">
   <link rel="stylesheet" href="/static/follows.css?v=20261029-follows-1">
   <link rel="stylesheet" href="/static/app-nav.css?v=20261028-simplify-1">
-  <link rel="stylesheet" href="/static/auth-forms.css?v=20261029-account-1">
-  <link rel="stylesheet" href="/static/account-settings.css?v=20261029-account-1">
+  <link rel="stylesheet" href="/static/auth-forms.css?v=20261030-2fa-1">
+  <link rel="stylesheet" href="/static/account-settings.css?v=20261030-2fa-1">
   <link rel="stylesheet" href="/static/dashboard-home.css?v=20261028-tonight-1">
   <link rel="stylesheet" href="/static/dashboard-2026.css?v=20261028-nav-1">
   <link rel="stylesheet" href="/static/a11y.css?v=20261027-a11y-speed-1">
@@ -2179,6 +2179,20 @@
           </form>
           <p class="auth-toggle"><a id="backToLogin" href="#login">Back to log in</a></p>
         </div>
+        <div id="twoFactorForm" class="auth-form">
+          <form id="twoFactorFormElement" novalidate>
+            <p class="auth-helper-text" id="twoFactorPrompt">Open your authenticator app and type the six-digit code it shows for OmniTrackr.</p>
+            <div class="auth-field">
+              <label class="auth-field__label" for="twoFactorCode" id="twoFactorCodeLabel">Six-digit code</label>
+              <input type="text" id="twoFactorCode" class="auth-code" inputmode="numeric" autocomplete="one-time-code" autocapitalize="none" spellcheck="false" maxlength="32" required aria-describedby="twoFactorCodeError">
+              <p class="auth-field__error" id="twoFactorCodeError" hidden></p>
+            </div>
+            <label class="auth-check" for="twoFactorRemember"><input type="checkbox" id="twoFactorRemember"> Don't ask again on this browser for 30 days</label>
+            <button type="submit" class="auth-submit">Continue</button>
+          </form>
+          <p class="auth-toggle"><a id="twoFactorUseRecovery" href="#recovery-code">Lost your phone? Use a recovery code</a></p>
+          <p class="auth-toggle"><a id="twoFactorBack" href="#login">Back to log in</a></p>
+        </div>
         <div id="resetPasswordForm" class="auth-form">
           <form id="resetPasswordFormElement" novalidate>
             <p class="auth-helper-text">Choose a new password for your account.</p>
@@ -2233,7 +2247,7 @@
     </form>
   </dialog>
   <script src="./credentials.js"></script>
-  <script src="./auth.js?v=20261030-notices-1"></script>
+  <script src="./auth.js?v=20261030-2fa-1"></script>
   <script src="/static/import-studio.js?v=20261030-audiobooks-1"></script>
   <script src="/static/progress.js?v=20261030-audiobooks-1"></script>
   <script src="/static/episodes.js?v=20261027-episodes-1"></script>
@@ -2245,6 +2259,7 @@
   <script src="/static/public-profile.js?v=20261027-widgets-1"></script>
   <script src="/static/supporter.js?v=20261029-account-1"></script>
   <script src="/static/account-settings.js?v=20261029-account-1" defer></script>
+  <script src="/static/two-factor.js?v=20261030-2fa-1" defer></script>
   <script src="/static/profile-showcase.js?v=20261021-bugs-1"></script>
   <script src="/static/goals.js?v=20261010-goal-reached-1"></script>
   <script src="/static/challenges.js?v=20261011-challenge-2"></script>
@@ -2403,7 +2418,7 @@
         <section class="account-group" id="settings-signin" aria-labelledby="settings-signin-title" data-settings-group="signin" tabindex="-1">
           <header class="account-group__header">
             <h3 class="account-group__title" id="settings-signin-title">Sign-in</h3>
-            <p class="account-group__intro">How you log in. Each change asks for your current password.</p>
+            <p class="account-group__intro">How you log in, and how to keep everyone else out. Each change asks for your current password.</p>
           </header>
         <div class="account-section">
           <h4>Username</h4>
@@ -2461,6 +2476,79 @@
             <div id="passwordError" class="error-message"></div>
             <div id="passwordSuccess" class="success-message"></div>
           </form>
+        </div>
+
+        <div class="account-section two-factor" id="twoFactorSection">
+          <div class="two-factor__head">
+            <h4>Two-factor sign-in</h4>
+            <span class="two-factor__badge" id="twoFactorBadge">Off</span>
+          </div>
+          <p class="info-text">After your password (or Google), we also ask for a six-digit code from an authenticator app on your phone, such as Google Authenticator, Microsoft Authenticator, 1Password, Authy or Aegis. Someone who gets hold of your password still can't open your library.</p>
+
+          <form id="twoFactorStartForm" class="two-factor__panel" data-two-factor-panel="off" novalidate>
+            <div class="account-field" data-two-factor-password>
+              <label class="account-field__label" for="twoFactorStartPassword">Current password</label>
+              <div class="auth-password"><input type="password" id="twoFactorStartPassword" autocomplete="current-password"><button type="button" class="auth-password__toggle" data-password-toggle="twoFactorStartPassword" aria-controls="twoFactorStartPassword" aria-pressed="false">Show</button></div>
+            </div>
+            <button type="submit" class="action-btn">Set up two-factor sign-in</button>
+          </form>
+
+          <form id="twoFactorEnableForm" class="two-factor__panel" data-two-factor-panel="setup" hidden novalidate>
+            <ol class="two-factor__steps">
+              <li>
+                <p class="two-factor__step-title">Scan this QR code with your authenticator app.</p>
+                <img id="twoFactorQr" class="two-factor__qr" alt="QR code to add OmniTrackr to an authenticator app" width="184" height="184">
+                <details class="two-factor__manual">
+                  <summary>Can't scan it?</summary>
+                  <p class="account-field__hint">Add an account in the app by hand and type this key. It's a time-based key.</p>
+                  <code id="twoFactorKey" class="two-factor__key"></code>
+                  <p class="account-field__hint"><a id="twoFactorAppLink" href="#">Or open it in an authenticator app on this device</a></p>
+                </details>
+              </li>
+              <li>
+                <label class="two-factor__step-title" for="twoFactorEnableCode">Type the six-digit code the app shows.</label>
+                <input type="text" id="twoFactorEnableCode" class="two-factor__code" inputmode="numeric" autocomplete="one-time-code" autocapitalize="none" spellcheck="false" maxlength="7" placeholder="123456">
+              </li>
+            </ol>
+            <div class="account-actions">
+              <button type="submit" class="action-btn">Turn on</button>
+              <button type="button" class="action-btn two-factor__quiet" data-two-factor-cancel>Cancel</button>
+            </div>
+          </form>
+
+          <div class="two-factor__panel" data-two-factor-panel="codes" hidden>
+            <h5>Save your recovery codes</h5>
+            <p class="account-field__hint">Lost your phone? Each code gets you in once, in place of an app code. This is the only time we show them, so put them in a password manager or print them.</p>
+            <ol class="two-factor__codes" id="twoFactorCodes"></ol>
+            <div class="account-actions">
+              <button type="button" class="action-btn two-factor__quiet" data-two-factor-copy>Copy</button>
+              <button type="button" class="action-btn two-factor__quiet" data-two-factor-download>Download as a text file</button>
+              <button type="button" class="action-btn" data-two-factor-done>I've saved them</button>
+            </div>
+          </div>
+
+          <div class="two-factor__panel" data-two-factor-panel="on" hidden>
+            <p class="two-factor__summary" id="twoFactorSummary"></p>
+            <form id="twoFactorManageForm" novalidate>
+              <p class="account-field__hint">To get new recovery codes or turn this off, enter a code from your app or a recovery code<span data-two-factor-password-hint>, plus your password</span>.</p>
+              <div class="account-field">
+                <label class="account-field__label" for="twoFactorManageCode">Code</label>
+                <input type="text" id="twoFactorManageCode" class="two-factor__code" autocomplete="one-time-code" autocapitalize="none" spellcheck="false" maxlength="32">
+              </div>
+              <div class="account-field" data-two-factor-password>
+                <label class="account-field__label" for="twoFactorManagePassword">Current password</label>
+                <div class="auth-password"><input type="password" id="twoFactorManagePassword" autocomplete="current-password"><button type="button" class="auth-password__toggle" data-password-toggle="twoFactorManagePassword" aria-controls="twoFactorManagePassword" aria-pressed="false">Show</button></div>
+              </div>
+              <div class="account-actions">
+                <button type="button" class="action-btn two-factor__quiet" data-two-factor-action="recovery-codes">Get new recovery codes</button>
+                <button type="button" class="action-btn danger-btn" data-two-factor-action="disable">Turn off two-factor</button>
+              </div>
+            </form>
+            <p class="account-field__hint two-factor__forget">Told a browser to skip the code and no longer use it? <button type="button" class="two-factor__link" data-two-factor-forget>Ask for a code on every browser again</button></p>
+          </div>
+
+          <div id="twoFactorError" class="error-message"></div>
+          <div id="twoFactorSuccess" class="success-message"></div>
         </div>
         </section>
 

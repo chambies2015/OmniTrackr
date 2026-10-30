@@ -640,6 +640,15 @@ async function login(username, password) {
     }
 
     const data = await response.json();
+    if (data && data.two_factor_required) {
+        showTwoFactorForm();
+        return;
+    }
+    finishLogin(data);
+}
+
+// A finished log-in (password, or password plus code): keep the member, then open the library.
+function finishLogin(data) {
     saveAuthData(data.access_token, data.user);
     try {
         if (
@@ -795,6 +804,7 @@ function showMainUI() {
 }
 
 function showLoginForm(scroll = true) {
+    hideTwoFactorForm();
     document.getElementById('loginForm').style.display = 'block';
     document.getElementById('registerForm').style.display = 'none';
     document.getElementById('forgotPasswordForm').style.display = 'none';
@@ -842,6 +852,7 @@ function landingVisible() {
 }
 
 function showRegisterForm(scroll = true, { report = true } = {}) {
+    hideTwoFactorForm();
     if (report) reportFunnelEvent('signup_form_opened');
     try {
         if ((JSON.parse(localStorage.getItem('omnitrackr_guest_list') || '[]') || []).length) reportFunnelEvent('guest_list_signup');
@@ -859,6 +870,7 @@ function showRegisterForm(scroll = true, { report = true } = {}) {
 }
 
 function showForgotPasswordForm(scroll = true) {
+    hideTwoFactorForm();
     document.getElementById('loginForm').style.display = 'none';
     document.getElementById('registerForm').style.display = 'none';
     document.getElementById('forgotPasswordForm').style.display = 'block';
@@ -872,6 +884,7 @@ function showForgotPasswordForm(scroll = true) {
 }
 
 function showResetPasswordForm(resetToken = null, scroll = true) {
+    hideTwoFactorForm();
     document.getElementById('loginForm').style.display = 'none';
     document.getElementById('registerForm').style.display = 'none';
     document.getElementById('forgotPasswordForm').style.display = 'none';
@@ -1232,6 +1245,149 @@ function setupAuthHandlers() {
 // ============================================================================
 
 // ============================================================================
+// Two-factor code step
+// ============================================================================
+
+// After a correct password (or Google), accounts with two-factor sign-in on are
+// asked for a code. The server keeps the half-finished sign-in in an HttpOnly
+// cookie for 10 minutes, so this form only sends the code.
+let twoFactorRecoveryMode = false;
+// Google already used the friend invite on the server, as finishGoogleSignIn assumes.
+let twoFactorFromGoogle = false;
+
+function hideTwoFactorForm() {
+    const form = document.getElementById('twoFactorForm');
+    if (form) form.style.display = 'none';
+}
+
+function setTwoFactorMode(recovery) {
+    twoFactorRecoveryMode = Boolean(recovery);
+    const prompt = document.getElementById('twoFactorPrompt');
+    const label = document.getElementById('twoFactorCodeLabel');
+    const input = document.getElementById('twoFactorCode');
+    const toggle = document.getElementById('twoFactorUseRecovery');
+    if (prompt) {
+        prompt.textContent = twoFactorRecoveryMode
+            ? 'Type one of the recovery codes you saved when you turned on two-factor sign-in. Each one works once. Lost those too? Email omnitrackr@gmail.com from the address on your account.'
+            : 'Open your authenticator app and type the six-digit code it shows for OmniTrackr.';
+    }
+    if (label) label.textContent = twoFactorRecoveryMode ? 'Recovery code' : 'Six-digit code';
+    if (input) {
+        input.value = '';
+        if (typeof input.setAttribute === 'function') {
+            input.setAttribute('inputmode', twoFactorRecoveryMode ? 'text' : 'numeric');
+            input.setAttribute('autocomplete', twoFactorRecoveryMode ? 'off' : 'one-time-code');
+            input.setAttribute('placeholder', twoFactorRecoveryMode ? 'xxxxx-xxxxx' : '123456');
+        }
+    }
+    if (toggle) toggle.textContent = twoFactorRecoveryMode ? 'Use a code from the app instead' : 'Lost your phone? Use a recovery code';
+    clearFieldError('twoFactorCode');
+}
+
+function showTwoFactorForm(scroll = true) {
+    ['loginForm', 'registerForm', 'forgotPasswordForm', 'resetPasswordForm', 'resendVerificationContainer'].forEach(id => {
+        const element = document.getElementById(id);
+        if (element) element.style.display = 'none';
+    });
+    const form = document.getElementById('twoFactorForm');
+    if (!form) return;
+    form.style.display = 'block';
+    document.getElementById('authTitle').textContent = 'Enter your code';
+    setAuthContext('Two-factor sign-in is on for this account.');
+    document.getElementById('authError').textContent = '';
+    document.getElementById('authSuccess').style.display = 'none';
+    setTwoFactorMode(false);
+    if (scroll) revealAuthCard();
+    const input = document.getElementById('twoFactorCode');
+    if (input && typeof input.focus === 'function') setTimeout(() => input.focus(), 0);
+}
+
+function twoFactorCodeProblem(code) {
+    if (!code) return twoFactorRecoveryMode ? 'Type one of your recovery codes.' : 'Type the six-digit code from your app.';
+    if (!twoFactorRecoveryMode && !/^\d{6}$/.test(code.replace(/\s+/g, ''))) {
+        return 'The code from your app is six digits. Lost your phone? Use a recovery code instead.';
+    }
+    return '';
+}
+
+async function submitTwoFactorCode(code, rememberDevice) {
+    const response = await fetch(`${AUTH_API_BASE}/auth/login/two-factor`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        credentials: 'same-origin',
+        body: JSON.stringify({ code, remember_device: Boolean(rememberDevice) }),
+    });
+    const data = await response.json().catch(() => ({}));
+    if (!response.ok) {
+        const error = new Error(authErrorMessage(data, response.status === 429
+            ? 'Too many attempts. Please wait a minute and try again.'
+            : "That code didn't work. Try the newest one."));
+        error.status = response.status;
+        throw error;
+    }
+    if (Number.isInteger(data.recovery_codes_left)) {
+        const left = data.recovery_codes_left;
+        const message = left === 0
+            ? 'You used your last recovery code. Open Settings, then Sign-in, and get a new set now.'
+            : `You used a recovery code. ${left} left. You can get a new set in Settings, under Sign-in.`;
+        try { sessionStorage.setItem('omnitrackr_pending_notice', JSON.stringify({ message, tone: left <= 2 ? 'error' : 'info' })); } catch (_) { /* optional */ }
+    }
+    if (twoFactorFromGoogle) clearFriendInvite();
+    finishLogin(data);
+}
+
+function setupTwoFactorHandlers() {
+    const formElement = document.getElementById('twoFactorFormElement');
+    if (!formElement || typeof formElement.addEventListener !== 'function') return;
+    formElement.addEventListener('submit', async (e) => {
+        e.preventDefault();
+        clearFormErrors(e.target);
+        const input = document.getElementById('twoFactorCode');
+        const code = (input ? input.value : '').trim();
+        const problem = twoFactorCodeProblem(code);
+        if (problem) {
+            if (!showFieldError('twoFactorCode', problem)) displayAuthError(problem);
+            return;
+        }
+        const remember = document.getElementById('twoFactorRemember');
+        const button = e.target.querySelector('button[type="submit"]');
+        const label = button ? button.textContent : '';
+        if (button) { button.disabled = true; button.textContent = 'Checking…'; }
+        try {
+            await submitTwoFactorCode(code, remember && remember.checked);
+        } catch (error) {
+            if (error.status === 401 && /timed out/i.test(error.message)) {
+                showLoginForm();
+                displayAuthError(error.message);
+            } else if (error.status === 401) {
+                if (!showFieldError('twoFactorCode', error.message)) displayAuthError(error.message);
+                if (input) input.value = '';
+            } else {
+                displayAuthError(error.message);
+            }
+        } finally {
+            if (button) { button.disabled = false; button.textContent = label; }
+        }
+    });
+    const toggle = document.getElementById('twoFactorUseRecovery');
+    if (toggle && typeof toggle.addEventListener === 'function') {
+        toggle.addEventListener('click', (e) => {
+            e.preventDefault();
+            setTwoFactorMode(!twoFactorRecoveryMode);
+            const input = document.getElementById('twoFactorCode');
+            if (input && typeof input.focus === 'function') input.focus();
+        });
+    }
+    const back = document.getElementById('twoFactorBack');
+    if (back && typeof back.addEventListener === 'function') {
+        back.addEventListener('click', (e) => {
+            e.preventDefault();
+            showLoginForm();
+        });
+    }
+}
+
+// ============================================================================
 // Sign in with Google
 // ============================================================================
 
@@ -1288,6 +1444,7 @@ function initAuth() {
     setupAuthHandlers();
     setupPasswordHelpers();
     setupGoogleSignIn();
+    setupTwoFactorHandlers();
 
     // Check URL parameters for email verification or password reset
     const urlParams = new URLSearchParams(window.location.search);
@@ -1349,6 +1506,13 @@ function initAuth() {
     // private UI; stale localStorage must not reveal it on the public shell.
     if (document.documentElement.dataset.publicShell === 'true') {
         showAuthModal();
+        // Google sign-in for an account with two-factor on comes back here for the code.
+        if (urlParams.get('two_factor') === '1') {
+            window.history.replaceState({}, document.title, window.location.pathname + '#landing-auth');
+            twoFactorFromGoogle = true;
+            showTwoFactorForm();
+            return;
+        }
         if (urlParams.has('google_error')) {
             if (knownMember()) showLoginForm(false);
             else showRegisterForm(false, { report: false });

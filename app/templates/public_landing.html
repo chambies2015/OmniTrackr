@@ -19,7 +19,7 @@
   <link rel="stylesheet" href="/static/fonts.css?v=20261009-fonts-1">
   <link rel="stylesheet" href="/static/public-legacy.css?v=20261030-audiobooks-1">
   <link rel="stylesheet" href="/static/public-landing.css?v=20261027-roundup-1">
-  <link rel="stylesheet" href="/static/auth-forms.css?v=20261029-account-1">
+  <link rel="stylesheet" href="/static/auth-forms.css?v=20261030-2fa-1">
   <meta property="og:type" content="website">
   <meta property="og:url" content="https://omnitrackr.xyz/">
   <meta property="og:title" content="OmniTrackr: every movie, show, game and book in one library">
@@ -415,6 +415,20 @@
           </form>
           <p class="auth-toggle"><a id="backToLogin" href="#login">Back to log in</a></p>
         </div>
+        <div id="twoFactorForm" class="auth-form">
+          <form id="twoFactorFormElement" novalidate>
+            <p class="auth-helper-text" id="twoFactorPrompt">Open your authenticator app and type the six-digit code it shows for OmniTrackr.</p>
+            <div class="auth-field">
+              <label class="auth-field__label" for="twoFactorCode" id="twoFactorCodeLabel">Six-digit code</label>
+              <input type="text" id="twoFactorCode" class="auth-code" inputmode="numeric" autocomplete="one-time-code" autocapitalize="none" spellcheck="false" maxlength="32" required aria-describedby="twoFactorCodeError">
+              <p class="auth-field__error" id="twoFactorCodeError" hidden></p>
+            </div>
+            <label class="auth-check" for="twoFactorRemember"><input type="checkbox" id="twoFactorRemember"> Don't ask again on this browser for 30 days</label>
+            <button type="submit" class="auth-submit">Continue</button>
+          </form>
+          <p class="auth-toggle"><a id="twoFactorUseRecovery" href="#recovery-code">Lost your phone? Use a recovery code</a></p>
+          <p class="auth-toggle"><a id="twoFactorBack" href="#login">Back to log in</a></p>
+        </div>
         <div id="resetPasswordForm" class="auth-form">
           <form id="resetPasswordFormElement" novalidate>
             <p class="auth-helper-text">Choose a new password for your account.</p>
@@ -441,7 +455,7 @@
   <dialog id="authDialog" class="lp-auth-dialog" aria-labelledby="authTitle"><button type="button" class="lp-auth-dialog__close" data-action="close-auth-dialog" aria-label="Close">×</button><div class="lp-auth-dialog__slot" data-auth-dialog-slot></div></dialog>
   <div id="screenshotModal" class="screenshot-modal" data-close-on-backdrop="screenshot"><button class="screenshot-modal-close" data-action="close-screenshot-modal" aria-label="Close image preview">×</button><img id="screenshotModalImage" class="screenshot-modal-content" alt=""><div id="screenshotModalCaption" class="screenshot-modal-caption"></div></div>
   <script src="/credentials.js"></script>
-  <script src="/auth.js?v=20261030-notices-1"></script>
+  <script src="/auth.js?v=20261030-2fa-1"></script>
   <script src="/static/public-landing.js?v=20261029-account-1" defer></script>
   <script src="/static/guest-list.js?v=20261030-audiobooks-1" defer></script>
   <script src="/static/title-search.js?v=20261012-hero-search-1" defer></script>

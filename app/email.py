@@ -528,3 +528,49 @@ async def send_email_change_verification_email(new_email: str, username: str, to
         print(f"Verification URL: {verification_url}")
         print(f"{'='*60}\n")
 
+
+
+async def send_two_factor_change_email(email: str, username: str, turned_on: bool):
+    """Tell the member two-factor sign-in was switched on or off, in case it wasn't them."""
+    settings_url = f"{APP_URL}/#settings-signin"
+    if turned_on:
+        subject = "Two-factor sign-in is on for your OmniTrackr account"
+        headline = "Two-factor sign-in is on"
+        body = ("From now on, logging in asks for a code from your authenticator app after your password. "
+                "Keep your recovery codes somewhere safe. Each one gets you in once if you lose your phone.")
+    else:
+        subject = "Two-factor sign-in is off for your OmniTrackr account"
+        headline = "Two-factor sign-in is off"
+        body = "Logging in now only needs your password (or Google). You can turn codes back on in Settings at any time."
+
+    html = f"""
+    <html>
+        <body style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
+            <div style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); padding: 30px; text-align: center;">
+                <h1 style="color: white; margin: 0;">{headline}</h1>
+            </div>
+            <div style="padding: 30px; background-color: #f9f9f9;">
+                <h2>Hi {_escape_html(username)},</h2>
+                <p>{body}</p>
+                <div style="text-align: center; margin: 30px 0;">
+                    <a href="{settings_url}"
+                       style="background-color: #667eea; color: white; padding: 15px 30px; text-decoration: none; border-radius: 5px; display: inline-block; font-weight: bold;">
+                        Open sign-in settings
+                    </a>
+                </div>
+                <hr style="border: none; border-top: 1px solid #ddd; margin: 30px 0;">
+                <p style="color: #666; font-size: 12px;">
+                    If you didn't make this change, reset your password right away and email omnitrackr@gmail.com.
+                </p>
+            </div>
+        </body>
+    </html>
+    """
+
+    message = html_message(subject, [email], html)
+    if conf.MAIL_USERNAME and conf.MAIL_PASSWORD:
+        import asyncio
+        fm = FastMail(conf)
+        await asyncio.wait_for(fm.send_message(message), timeout=30.0)
+    else:
+        print(f"INFO: Two-factor {'enabled' if turned_on else 'disabled'} notice for {email} (email not configured)")
