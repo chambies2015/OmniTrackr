@@ -76,8 +76,8 @@
   <link rel="stylesheet" href="/static/friends-feed.css?v=20261025-friends-feed-1">
   <link rel="stylesheet" href="/static/follows.css?v=20261029-follows-1">
   <link rel="stylesheet" href="/static/app-nav.css?v=20261028-simplify-1">
-  <link rel="stylesheet" href="/static/auth-forms.css?v=20261030-2fa-1">
-  <link rel="stylesheet" href="/static/account-settings.css?v=20261030-2fa-1">
+  <link rel="stylesheet" href="/static/auth-forms.css?v=20261030-passkeys-1">
+  <link rel="stylesheet" href="/static/account-settings.css?v=20261030-passkeys-1">
   <link rel="stylesheet" href="/static/dashboard-home.css?v=20261028-tonight-1">
   <link rel="stylesheet" href="/static/dashboard-2026.css?v=20261030-design-1">
   <link rel="stylesheet" href="/static/a11y.css?v=20261027-a11y-speed-1">
@@ -2122,7 +2122,7 @@
           <form id="loginFormElement" novalidate>
             <div class="auth-field">
               <label class="auth-field__label" for="loginUsername">Username or email</label>
-              <input type="text" id="loginUsername" autocomplete="username" autocapitalize="none" spellcheck="false" required aria-describedby="loginUsernameError">
+              <input type="text" id="loginUsername" autocomplete="username webauthn" autocapitalize="none" spellcheck="false" required aria-describedby="loginUsernameError">
               <p class="auth-field__error" id="loginUsernameError" hidden></p>
             </div>
             <div class="auth-field">
@@ -2131,6 +2131,7 @@
               <p class="auth-field__error" id="loginPasswordError" hidden></p>
             </div>
             <button type="submit" class="auth-submit">Log in</button>
+            <button type="button" class="auth-passkey" id="passkeyLoginButton" hidden><svg class="auth-passkey__icon" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="8" r="4"/><path d="M4 21v-1a6 6 0 0 1 9-5.2"/><circle cx="18" cy="16" r="2.5"/><path d="M18 18.5V22l1.5-1 1.5 1v-3.5"/></svg><span>Log in with a passkey</span></button>
           </form>
           <div id="resendVerificationContainer" class="auth-resend">
             <p>Didn't get the verification email? We can send a new link.</p>
@@ -2261,6 +2262,7 @@
   <script src="/static/supporter.js?v=20261030-claim-1"></script>
   <script src="/static/account-settings.js?v=20261029-account-1" defer></script>
   <script src="/static/two-factor.js?v=20261030-2fa-1" defer></script>
+  <script src="/static/passkeys.js?v=20261030-passkeys-1" defer></script>
   <script src="/static/profile-showcase.js?v=20261021-bugs-1"></script>
   <script src="/static/goals.js?v=20261010-goal-reached-1"></script>
   <script src="/static/challenges.js?v=20261011-challenge-2"></script>
@@ -2554,6 +2556,31 @@
 
           <div id="twoFactorError" class="error-message"></div>
           <div id="twoFactorSuccess" class="success-message"></div>
+        </div>
+
+        <div class="account-section passkeys" id="passkeySection">
+          <div class="two-factor__head">
+            <h4>Passkeys</h4>
+            <span class="two-factor__badge" id="passkeyBadge">None yet</span>
+          </div>
+          <p class="info-text">Log in with your fingerprint, face or device PIN instead of typing a password. A passkey is made by your phone, computer or password manager for this site only, so it can't be guessed or phished, and it skips the two-factor code. Your password and Google keep working too.</p>
+          <ul class="passkeys__list" id="passkeyList" hidden></ul>
+          <p class="account-field__hint passkeys__empty" id="passkeyEmpty">You haven't added a passkey yet. Add one on each device you log in from, or one that syncs through iCloud Keychain, Google Password Manager or 1Password.</p>
+          <form id="passkeyAddForm" class="passkeys__add" novalidate>
+            <div class="account-field">
+              <label class="account-field__label" for="passkeyName">Name <span class="passkeys__optional">(optional)</span></label>
+              <input type="text" id="passkeyName" maxlength="60" autocomplete="off" placeholder="Work laptop, iPhone, YubiKey…">
+            </div>
+            <div class="account-field" data-passkey-password>
+              <label class="account-field__label" for="passkeyAddPassword">Current password</label>
+              <div class="auth-password"><input type="password" id="passkeyAddPassword" autocomplete="current-password"><button type="button" class="auth-password__toggle" data-password-toggle="passkeyAddPassword" aria-controls="passkeyAddPassword" aria-pressed="false">Show</button></div>
+            </div>
+            <button type="submit" class="action-btn">Add a passkey</button>
+          </form>
+          <p class="account-field__hint" id="passkeyUnsupported" hidden>This browser can't make passkeys. Current versions of Safari, Chrome, Edge and Firefox can, on a phone or computer with a screen lock.</p>
+          <p class="account-field__hint" id="passkeyFull" hidden>That's the most passkeys an account can hold. Remove one you no longer use to add another.</p>
+          <div id="passkeyError" class="error-message"></div>
+          <div id="passkeySuccess" class="success-message"></div>
         </div>
         </section>
 

@@ -627,3 +627,115 @@ body.app-shell .account-settings button.action-btn.two-factor__quiet:hover {
     columns: 1;
   }
 }
+
+/* Passkeys */
+.passkeys [hidden] {
+  display: none !important;
+}
+
+.passkeys__list {
+  display: grid;
+  gap: 10px;
+  list-style: none;
+  margin: 0 0 16px;
+  padding: 0;
+}
+
+.passkeys__item {
+  align-items: center;
+  background: var(--surface-muted);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md, 12px);
+  display: grid;
+  gap: 6px 12px;
+  grid-template-columns: auto minmax(0, 1fr) auto;
+  padding: 12px 14px;
+}
+
+.passkeys__icon {
+  align-items: center;
+  background: var(--card-bg);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm, 8px);
+  color: var(--primary);
+  display: flex;
+  height: 38px;
+  justify-content: center;
+  width: 38px;
+}
+
+.passkeys__body {
+  display: grid;
+  gap: 2px;
+  min-width: 0;
+}
+
+.passkeys__name {
+  color: var(--fg);
+  font-size: .98rem;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.passkeys__meta {
+  color: var(--fg-secondary);
+  font-size: .82rem;
+  line-height: 1.4;
+}
+
+.passkeys__actions {
+  display: flex;
+  gap: 14px;
+}
+
+.passkeys__actions .two-factor__link {
+  text-decoration: none;
+}
+
+.passkeys__actions .two-factor__link:hover {
+  text-decoration: underline;
+}
+
+.passkeys__remove {
+  color: var(--danger);
+}
+
+.passkeys__editor {
+  border-top: 1px solid var(--border);
+  display: grid;
+  gap: 12px;
+  grid-column: 1 / -1;
+  margin-top: 6px;
+  padding-top: 12px;
+}
+
+.passkeys__editor-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+}
+
+.passkeys__add {
+  display: grid;
+  gap: 14px;
+}
+
+.passkeys__optional {
+  color: var(--fg-secondary);
+  font-weight: 400;
+}
+
+@media (max-width: 520px) {
+  .passkeys__item {
+    grid-template-columns: auto minmax(0, 1fr);
+  }
+
+  .passkeys__actions {
+    grid-column: 2;
+  }
+}
+
+.passkeys__empty {
+  margin: 0 0 14px;
+}
