@@ -697,7 +697,7 @@ def _length_answer(group, metadata: dict) -> tuple[str, str, str]:
         if not parts:
             return "", "", ""
         each = facts.get("Episode length", "")
-        each = re.sub(r"\s*per ep\.?$", "", each)
+        each = each.removesuffix(".").removesuffix(" per ep").strip()
         text = f"{title} has {_join(parts)}" + (f", about {each} each" if each else "") + "."
         html = (_e(text) + ' Work out a full binge, with breaks, in the <a href="/binge-calculator">binge calculator</a>.')
         return f"How many episodes does {title} have?", text, html

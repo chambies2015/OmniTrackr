@@ -214,7 +214,7 @@ async def _wikipedia_find(client, category: str, title: str, year: Optional[int]
                                        + quote(page.replace(" ", "_"), safe=""))
         if not data or data.get("type") != "standard" or not data.get("wikibase_item"):
             continue
-        if not _title_matches(title, re.sub(r"\s*\([^)]*\)$", "", data.get("title") or "")):
+        if not _title_matches(title, (data.get("title") or "").rpartition(" (")[0]):
             continue
         if _describes(category, data.get("description") or "", year):
             return data["wikibase_item"]
@@ -642,16 +642,18 @@ async def _safe(coro, troubles: Optional[list] = None):
 
 
 # Retried once when nothing matched: "Arcane (Season 2)", "Breaking Bad Season 1", "In Rainbows [Deluxe]".
-_BRACKETS = re.compile(r"\s*[\(\[][^\)\]]*[\)\]]")
-_SEASON = re.compile(r"[\s:,-]+(season|series|part|cour)\s*\d+$", re.IGNORECASE)
+# No nested or open-ended repeats: member titles are user text, and backtracking on them must stay linear.
+_BRACKETS = re.compile(r"[\(\[][^\(\)\[\]]*[\)\]]")
+SEASON_WORDS = {"season", "series", "part", "cour"}
 
 
 def simpler_title(category: str, title: str) -> Optional[str]:
     """The title without edition notes or season numbers, if that changes it."""
-    simpler = _BRACKETS.sub("", title or "").strip()
-    if category in ("tv", "anime"):
-        simpler = _SEASON.sub("", simpler).strip()
-    simpler = simpler.rstrip(" -:,")
+    title = (title or "")[:300]
+    words = _BRACKETS.sub(" ", title).split()
+    if category in ("tv", "anime") and len(words) > 2 and words[-1].isdigit() and words[-2].casefold().strip(":,-") in SEASON_WORDS:
+        words = words[:-2]
+    simpler = " ".join(words).rstrip(" -:,")
     return simpler if simpler and _norm(simpler) != _norm(title) else None
 
 
