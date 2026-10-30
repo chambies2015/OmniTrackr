@@ -1,6 +1,6 @@
 /* Trending pages (/trending). Builds on title-page.css: the chart rows reuse .title-chart. */
 .trending-page .sr-only { border: 0; clip: rect(0 0 0 0); height: 1px; margin: -1px; overflow: hidden; padding: 0; position: absolute; white-space: nowrap; width: 1px; }
-.site-hero .trend-updated { color: var(--site-muted); font-size: .85rem; margin: 6px 0 0; }
+.trending-page .site-hero p.trend-updated { color: var(--site-muted); font-size: .85rem; margin: 6px 0 0; }
 .trend-windows { margin-bottom: -8px; }
 
 .trend-writeup { background: linear-gradient(135deg, rgba(139, 92, 246, .12), rgba(45, 212, 191, .06)); border: 1px solid var(--site-border); border-radius: var(--site-radius); padding: 20px 24px; }
