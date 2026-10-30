@@ -52,7 +52,8 @@ CATEGORIES = {
     "audiobooks": ("audiobook", "audiobooks_private", "Audiobooks", "listened"),
 }
 REVIEW_CATEGORY_TO_LIBRARY = {review: library for _, (_, review, library, _, _) in title_pages.KINDS.items()}
-SETTINGS_FIELDS = ("enabled", "show_stats", "show_favorites", "show_reviews", "show_collections", "show_diary")
+SETTINGS_FIELDS = ("enabled", "show_stats", "show_favorites", "show_reviews", "show_collections", "show_diary",
+                   "show_taste_match")
 
 
 class BioError(ValueError):
@@ -99,7 +100,9 @@ def settings_payload(user: models.User, profile: Optional[models.PublicProfile],
         "show_reviews": profile.show_reviews if profile else True,
         "show_collections": profile.show_collections if profile else True,
         "show_diary": bool(profile and profile.show_diary),
+        "show_taste_match": bool(profile and profile.show_taste_match),
         "url": profile_path(user),
+        "match_url": profile_path(user) + "/match",
         "bio_max_chars": BIO_MAX_CHARS,
         "private_categories": [CATEGORIES[c][2] for c in CATEGORIES if getattr(user, CATEGORIES[c][1], False)],
         "statistics_private": bool(user.statistics_private),

@@ -24,7 +24,7 @@ from ..site_chrome import apply_site_chrome
 
 router = APIRouter(tags=["profiles"])
 SITE_URL = os.getenv("SITE_URL", "https://omnitrackr.xyz").rstrip("/")
-CSS_VERSION = "20261030-audiobooks-1"
+CSS_VERSION = "20261030-compare-1"
 TITLE_CSS_VERSION = "20261009-take-1"
 
 
@@ -51,6 +51,7 @@ class ProfileSettingsUpdate(BaseModel):
     show_reviews: Optional[bool] = None
     show_collections: Optional[bool] = None
     show_diary: Optional[bool] = None
+    show_taste_match: Optional[bool] = None
 
 
 @router.get("/api/profile/settings")
@@ -411,6 +412,9 @@ def _actions_html(view, *, signed_in: bool, is_owner: bool, recap_url, recap_yea
                   followable: bool = False, following: bool = False) -> str:
     name = view.user.username
     buttons = []
+    if view.profile.show_taste_match:
+        buttons.append(f'<a class="site-btn site-btn--primary site-btn--sm profile-compare" href="{_e(public_profiles.profile_path(view.user))}/match">'
+                       f'{"Your compare link" if is_owner else "Compare tastes"}</a>')
     if not signed_in:
         buttons.append('<a class="site-btn site-btn--primary site-btn--sm" href="/#signup" data-profile-join>Make your own profile, free</a>')
     elif is_owner:
