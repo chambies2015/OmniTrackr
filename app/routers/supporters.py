@@ -4,13 +4,16 @@ from __future__ import annotations
 from html import escape
 from typing import Optional
 
-from fastapi import APIRouter, Depends, HTTPException, Request, Response
+from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException, Query, Request, Response
 from pydantic import BaseModel, Field
+from sqlalchemy import func
 from sqlalchemy.orm import Session
 
-from .. import models, public_profiles, supporters
+from .. import email as email_utils, models, public_profiles, supporters
 from ..admin_access import is_site_admin
+from ..csp import strict_html_response
 from ..dependencies import get_current_user, get_db
+from ..site_chrome import message_page
 
 router = APIRouter(tags=["supporters"])
 
@@ -178,15 +181,44 @@ def _require_admin(user: models.User) -> None:
 
 class LinkPayment(BaseModel):
     message_id: str = Field(..., min_length=1, max_length=80)
-    username: str = Field(..., min_length=1, max_length=80)
+    username: str = Field(..., min_length=1, max_length=254)
+
+
+class SetAsidePayment(BaseModel):
+    message_id: str = Field(..., min_length=1, max_length=80)
+    set_aside: bool = True
+
+
+def _member_json(member: models.User) -> dict:
+    return {"username": member.username, "verified": bool(member.is_verified)}
 
 
 @router.get("/api/supporters/unmatched")
-def unmatched(response: Response, user: models.User = Depends(get_current_user), db: Session = Depends(get_db)):
-    """Ko-fi payments that could not be tied to a member automatically."""
+def unmatched(response: Response, email: str = Query("", max_length=254), user: models.User = Depends(get_current_user),
+              db: Session = Depends(get_db)):
+    """Ko-fi payments that could not be tied to a member automatically. ``email`` narrows them to one payer."""
     _no_store(response)
     _require_admin(user)
-    return {"payments": supporters.unmatched_payments(db)}
+    email = email.strip()
+    if email and not supporters.looks_like_email(email):
+        raise HTTPException(status_code=422, detail="Type a whole email address, like name@example.com")
+    result = {"payments": supporters.unmatched_payments(db, email=email or None), "waiting": supporters.waiting_count(db),
+              "tests": supporters.test_count(db)}
+    if email:
+        result["members"] = [_member_json(member) for member in supporters.members_with_email(db, email)]
+    return result
+
+
+def _find_member(db: Session, who: str) -> Optional[models.User]:
+    """A member by username (an @ in front is fine) or by email."""
+    who = who.strip()
+    if supporters.looks_like_email(who):
+        exact = db.query(models.User).filter(func.lower(models.User.email) == who.lower()).limit(2).all()
+        if len(exact) == 1:
+            return exact[0]
+        same_inbox = supporters.members_with_email(db, who)
+        return same_inbox[0] if len(same_inbox) == 1 else None
+    return db.query(models.User).filter(models.User.username == who.lstrip("@")).first()
 
 
 @router.post("/api/supporters/link")
@@ -194,9 +226,9 @@ def link(payload: LinkPayment, response: Response, user: models.User = Depends(g
          db: Session = Depends(get_db)):
     _no_store(response)
     _require_admin(user)
-    member = db.query(models.User).filter(models.User.username == payload.username).first()
+    member = _find_member(db, payload.username)
     if member is None:
-        raise HTTPException(status_code=404, detail="No member with that username")
+        raise HTTPException(status_code=404, detail="No member with that username or email")
     try:
         supporters.link_payment(db, payload.message_id, member)
     except LookupError as error:
@@ -204,3 +236,102 @@ def link(payload: LinkPayment, response: Response, user: models.User = Depends(g
     except ValueError as error:
         raise HTTPException(status_code=409, detail=str(error))
     return {"linked": True, "username": member.username, "profile": public_profiles.profile_path(member)}
+
+
+@router.post("/api/supporters/set-aside")
+def set_aside(payload: SetAsidePayment, response: Response, user: models.User = Depends(get_current_user),
+              db: Session = Depends(get_db)):
+    """Take a payment off the "to link" list (a refund or a duplicate), or put it back."""
+    _no_store(response)
+    _require_admin(user)
+    try:
+        supporters.set_aside(db, payload.message_id, payload.set_aside)
+    except LookupError as error:
+        raise HTTPException(status_code=404, detail=str(error))
+    except ValueError as error:
+        raise HTTPException(status_code=409, detail=str(error))
+    return {"set_aside": payload.set_aside}
+
+
+# ---------------------------------------------------------------- "I donated but don't see my badge"
+
+class ClaimPayment(BaseModel):
+    value: str = Field(..., min_length=3, max_length=254)
+
+
+CLAIM_EMAIL_SENT = ("If a Ko-fi payment from that address is waiting, we've emailed it a link. Open it to switch your "
+                    "perks on. Nothing after a few minutes? Check spam, or try the transaction ID from your Ko-fi receipt.")
+
+
+async def _send_claim(email: str, username: str, token: str) -> None:
+    try:
+        await email_utils.send_kofi_claim_email(email, username, f"{email_utils.APP_URL}/supporter/claim?token={token}")
+    except Exception as error:  # the member sees the same reply either way
+        print(f"Failed to send Ko-fi claim email: {error}")
+
+
+@router.post("/api/supporter/claim")
+def claim(payload: ClaimPayment, request: Request, background: BackgroundTasks, response: Response,
+          user: models.User = Depends(get_current_user), db: Session = Depends(get_db)):
+    """Find a Ko-fi payment that didn't link: by the Ko-fi email (confirmed by email) or by transaction ID."""
+    _no_store(response)
+    value = payload.value.strip()
+    if supporters.looks_like_email(value):
+        result = supporters.claim_by_email(db, user, value)
+        if "linked" in result:
+            if result["linked"]:
+                return {"status": "linked", "message": "Found it. Your supporter perks are on. Thank you!",
+                        "supporter": supporters.status_payload(db, user)}
+            return {"status": "none", "message": "Nothing from your OmniTrackr email is waiting. If you used another "
+                    "email on Ko-fi, type that one, or the transaction ID from your Ko-fi receipt."}
+        if result["send"]:
+            background.add_task(_send_claim, value, user.username, supporters.claim_token(user.id, value))
+        return {"status": "email_sent", "message": CLAIM_EMAIL_SENT}
+    if not supporters.claim_by_transaction(db, user, value):
+        raise HTTPException(status_code=404, detail="We couldn't find a waiting payment with that transaction ID. "
+                            "Ko-fi can take a minute to tell us about a new payment, and payments from before Oct 30 "
+                            "can only be found by email.")
+    return {"status": "claimed", "message": "Found it. The site owner confirms transaction-ID claims by hand, "
+            "usually within a day, and your perks switch on then."}
+
+
+def _claim_page(heading: str, message: str, token: str = "", confirm: bool = False):
+    # On the confirm step the button below is the only call to action.
+    actions = () if confirm else (("Open my supporter settings", "/#supporter"), ("See supporter perks", "/supporters"))
+    page = message_page("Ko-fi support", heading, message, eyebrow="Ko-fi support", actions=actions)
+    if confirm:
+        # A button, so a mail app scanning the link can't confirm on someone's behalf.
+        form = (f'<form method="post" action="/supporter/claim?token={escape(token, quote=True)}" class="site-message__actions">'
+                '<button class="site-btn site-btn--primary" type="submit">Yes, link my Ko-fi payment</button></form>')
+        page = page.replace('<div class="site-message__actions">', form + '<div class="site-message__actions">', 1)
+    response = strict_html_response(page)
+    _no_store(response)
+    return response
+
+
+EXPIRED = ("This link has expired", "Links work for 3 days. Ask for a new one from Account → Supporter → "
+           "\u201cI donated but don't see my badge\u201d.")
+
+
+@router.get("/supporter/claim", include_in_schema=False)
+def claim_confirm_page(token: str = Query("", max_length=400), db: Session = Depends(get_db)):
+    data = supporters.read_claim_token(token)
+    member = db.get(models.User, data["u"]) if data else None
+    if member is None or not member.is_active:
+        return _claim_page(*EXPIRED)
+    return _claim_page("Link this Ko-fi payment?",
+                       f"Your Ko-fi payment will be linked to the OmniTrackr account @{member.username}, and its "
+                       "supporter perks switch on right away.", token=token, confirm=True)
+
+
+@router.post("/supporter/claim", include_in_schema=False)
+def claim_confirm(token: str = Query("", max_length=400), db: Session = Depends(get_db)):
+    result = supporters.confirm_claim(db, token)
+    if result is None:
+        return _claim_page(*EXPIRED)
+    member, linked = result
+    if not linked:
+        return _claim_page("Already linked", f"There's nothing left to link for this email. If @{member.username} "
+                           "still doesn't show the supporter badge, write to us from the Contact page.")
+    return _claim_page("Thank you!", f"Your Ko-fi support is linked to @{member.username} and the supporter perks are on. "
+                       "Pick a profile accent and banner in Account → Supporter.")

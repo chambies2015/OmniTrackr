@@ -436,7 +436,7 @@
         { label: 'Monthly members (now)', count: supporters.monthly },
         { label: 'New supporters', count: supporters.new },
         { label: 'Ko-fi payments received', count: supporters.payments },
-        { label: 'Payments not linked to a member (now)', count: supporters.unlinked_payments },
+        { label: 'Payments waiting to be linked (now)', count: supporters.unlinked_payments },
         { label: 'Supporters (all time)', count: supporters.all_time },
       ],
       growthEmail: [
@@ -498,13 +498,38 @@
     };
   }
 
-  function renderKofiPayments(payments) {
+  const kofi = { email: '' };
+
+  function kofiSummary(payments, waiting, tests = 0) {
+    const testNote = tests ? ` ${number(tests)} Ko-fi test payment${tests === 1 ? '' : 's'} left out.` : '';
+    return kofiSummaryText(payments, waiting) + testNote;
+  }
+
+  function kofiSummaryText(payments, waiting) {
+    if (kofi.email) {
+      return payments.length
+        ? `${payments.length} waiting payment${payments.length === 1 ? '' : 's'} came from ${kofi.email}.`
+        : `No waiting payment came from ${kofi.email}. Ko-fi test pings and linked payments aren't listed.`;
+    }
+    if (!payments.length) return 'Every Ko-fi payment is linked to a member. Payments without a supporter code or matching email will show up here.';
+    const shown = waiting > payments.length ? ` The newest ${payments.length} are shown.` : '';
+    return `${number(waiting)} payment${waiting === 1 ? '' : 's'} came in without a supporter code or a matching verified email.${shown} ` +
+      'Press a suggested member to link in one click, or type a username or email. Perks count from the day you link, so nobody loses days.';
+  }
+
+  function kofiButton(text, className, onClick) {
+    const button = el('button', className, text);
+    button.type = 'button';
+    button.addEventListener('click', onClick);
+    return button;
+  }
+
+  function renderKofiPayments(payments, extra = {}) {
     const list = $('kofiList');
     if (!list) return;
     list.replaceChildren();
-    $('kofiSummary').textContent = payments.length
-      ? `${payments.length} payment${payments.length === 1 ? '' : 's'} came in without a supporter code or a matching verified email. Type the member's username to switch their perks on.`
-      : 'Every Ko-fi payment is linked to a member. Payments without a supporter code or matching email will show up here.';
+    $('kofiSummary').textContent = kofiSummary(payments, extra.waiting ?? payments.length, extra.tests || 0);
+    renderKofiMembers(extra.members);
     if (!payments.length) {
       list.appendChild(el('li', 'stats-kofi__empty', 'Nothing to link.'));
       return;
@@ -513,57 +538,104 @@
       const label = paymentLabel(payment);
       const row = el('li');
       const info = el('div', 'stats-kofi__info');
-      info.append(el('b', '', label.name), el('span', '', label.detail));
+      const name = el('b', '', label.name);
+      if (payment.looks_like_test) name.appendChild(el('span', 'stats-kofi__tag', 'Looks like a Ko-fi test'));
+      if (payment.claimed) name.appendChild(el('span', 'stats-kofi__tag stats-kofi__tag--claim', 'Claimed by a member'));
+      info.append(name, el('span', '', label.detail));
+      const suggestions = Array.isArray(payment.suggestions) ? payment.suggestions : [];
+      if (suggestions.length) {
+        const picks = el('div', 'stats-kofi__picks');
+        suggestions.forEach(member => {
+          const pick = kofiButton(`Link to @${member.username}`, 'site-btn site-btn--primary site-btn--sm',
+            () => linkPayment(payment.message_id, member.username, label.name, pick));
+          pick.title = member.reason || '';
+          picks.append(pick, el('small', '', member.reason || ''));
+        });
+        info.appendChild(picks);
+      }
       const form = el('form', 'stats-kofi__form');
-      form.dataset.messageId = payment.message_id;
       const input = el('input');
       input.type = 'text';
       input.name = 'username';
-      input.placeholder = 'Member username';
+      input.placeholder = 'Username or email';
       input.autocomplete = 'off';
       input.spellcheck = false;
-      input.maxLength = 80;
+      input.maxLength = 254;
       input.required = true;
-      input.setAttribute('aria-label', `Username to link the payment from ${label.name} to`);
-      const button = el('button', 'site-btn site-btn--primary site-btn--sm', 'Link');
+      input.setAttribute('aria-label', `Username or email to link the payment from ${label.name} to`);
+      const button = el('button', 'site-btn site-btn--ghost site-btn--sm', 'Link');
       button.type = 'submit';
-      form.append(input, button);
+      const aside = kofiButton('Set aside', 'stats-kofi__aside', () => setAside(payment.message_id, label.name, true, aside));
+      aside.title = 'For a refund, a duplicate or a test. It stays recorded but leaves this list.';
+      form.append(input, button, aside);
       form.addEventListener('submit', event => {
         event.preventDefault();
-        linkPayment(form, label.name);
+        const who = input.value.trim();
+        if (who) linkPayment(payment.message_id, who, label.name, button);
       });
       row.append(info, form);
       list.appendChild(row);
     });
   }
 
+  function renderKofiMembers(members) {
+    const box = $('kofiMembers');
+    if (!box) return;
+    box.replaceChildren();
+    box.hidden = !kofi.email;
+    if (!kofi.email) return;
+    if (!Array.isArray(members) || !members.length) {
+      box.textContent = `No member account uses ${kofi.email} (case, Gmail dots and "+tags" aside).`;
+      return;
+    }
+    box.append(`Member${members.length === 1 ? '' : 's'} with this email: `);
+    members.forEach((member, index) => {
+      if (index) box.append(', ');
+      box.append(el('b', '', `@${member.username}`), member.verified ? '' : ' (not verified)');
+    });
+  }
+
   async function loadKofiPayments() {
     if (!$('kofiList')) return;
+    const query = kofi.email ? `?email=${encodeURIComponent(kofi.email)}` : '';
     try {
-      const response = await fetch('/api/supporters/unmatched', { credentials: 'same-origin', headers: authHeaders() });
-      if (!response.ok) throw new Error(`HTTP ${response.status}`);
-      renderKofiPayments((await response.json()).payments || []);
+      const response = await fetch(`/api/supporters/unmatched${query}`, { credentials: 'same-origin', headers: authHeaders() });
+      const result = await response.json().catch(() => ({}));
+      if (!response.ok) throw new Error(typeof result.detail === 'string' ? result.detail : `HTTP ${response.status}`);
+      renderKofiPayments(result.payments || [], result);
     } catch (error) {
-      $('kofiStatus').textContent = 'Could not load Ko-fi payments. Press Refresh to try again.';
+      $('kofiStatus').textContent = kofi.email
+        ? `Could not search: ${error.message}`
+        : 'Could not load Ko-fi payments. Press Refresh to try again.';
     }
   }
 
-  async function linkPayment(form, name) {
+  function searchKofi(email) {
+    kofi.email = (email || '').trim();
+    $('kofiSearchClear').hidden = !kofi.email;
+    $('kofiStatus').textContent = '';
+    loadKofiPayments();
+  }
+
+  async function postKofi(path, body) {
+    const response = await fetch(path, {
+      method: 'POST',
+      credentials: 'same-origin',
+      headers: { ...authHeaders(), 'Content-Type': 'application/json' },
+      body: JSON.stringify(body),
+    });
+    const result = await response.json().catch(() => ({}));
+    if (!response.ok) throw new Error(typeof result.detail === 'string' ? result.detail : `HTTP ${response.status}`);
+    return result;
+  }
+
+  async function linkPayment(messageId, who, name, button) {
     const status = $('kofiStatus');
-    const username = form.username.value.trim().replace(/^@/, '');
-    if (!username) return;
-    if (!window.confirm(`Link the Ko-fi payment from ${name} to @${username}? Their supporter perks switch on right away.`)) return;
-    const button = form.querySelector('button');
+    const target = who.includes('@') && !who.startsWith('@') ? who : `@${who.replace(/^@/, '')}`;
+    if (!window.confirm(`Link the Ko-fi payment from ${name} to ${target}? Their supporter perks switch on right away and they get a note saying so.`)) return;
     button.disabled = true;
     try {
-      const response = await fetch('/api/supporters/link', {
-        method: 'POST',
-        credentials: 'same-origin',
-        headers: { ...authHeaders(), 'Content-Type': 'application/json' },
-        body: JSON.stringify({ message_id: form.dataset.messageId, username }),
-      });
-      const result = await response.json().catch(() => ({}));
-      if (!response.ok) throw new Error(typeof result.detail === 'string' ? result.detail : `HTTP ${response.status}`);
+      const result = await postKofi('/api/supporters/link', { message_id: messageId, username: who });
       status.textContent = `Linked to @${result.username}. Their supporter perks are on.`;
       await load();
     } catch (error) {
@@ -571,6 +643,34 @@
     } finally {
       button.disabled = false;
     }
+  }
+
+  async function setAside(messageId, name, setIt, button) {
+    const status = $('kofiStatus');
+    if (button) button.disabled = true;
+    try {
+      await postKofi('/api/supporters/set-aside', { message_id: messageId, set_aside: setIt });
+      status.replaceChildren(setIt ? `Set aside the payment from ${name}. ` : `Put the payment from ${name} back on the list.`);
+      if (setIt) status.appendChild(kofiButton('Undo', 'stats-kofi__aside', () => setAside(messageId, name, false)));
+      await load();
+    } catch (error) {
+      status.textContent = `Could not change it: ${error.message}`;
+    } finally {
+      if (button) button.disabled = false;
+    }
+  }
+
+  function bindKofiSearch() {
+    const form = $('kofiSearch');
+    if (!form) return;
+    form.addEventListener('submit', event => {
+      event.preventDefault();
+      searchKofi($('kofiSearchEmail').value);
+    });
+    $('kofiSearchClear').addEventListener('click', () => {
+      $('kofiSearchEmail').value = '';
+      searchKofi('');
+    });
   }
 
   function renderLibraries(data) {
@@ -1024,6 +1124,7 @@
     $('statsRefresh').addEventListener('click', load);
     $('statsCopy').addEventListener('click', copyReport);
     $('editorPublish')?.addEventListener('click', publishEditor);
+    bindKofiSearch();
     document.querySelectorAll('[data-announcement]').forEach(button => {
       button.addEventListener('click', () => announcementAction(button.dataset.announcement));
     });
@@ -1046,7 +1147,7 @@
   }
 
   if (typeof module !== 'undefined' && module.exports) {
-    module.exports = { buildReport, growthRows, paymentLabel, niceMax, delta, percent };
+    module.exports = { buildReport, growthRows, paymentLabel, kofiSummary, niceMax, delta, percent };
   } else if (document.readyState === 'loading') {
     document.addEventListener('DOMContentLoaded', init);
   } else {

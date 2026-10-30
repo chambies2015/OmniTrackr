@@ -9,9 +9,19 @@ extends that member's supporter perks:
 
 A payment is tied to a member by the supporter code from Account → Supporter
 written in the Ko-fi message (``OT-<id>-<check>``), or by the payer's Ko-fi email
-matching a verified OmniTrackr email. Payments that match nobody wait, keyed by a
-hash of the payer's email, and are linked when a member with that email opens
-their supporter settings, or by an admin by hand.
+matching a verified OmniTrackr email (ignoring case, Gmail dots and "+tags").
+Payments that match nobody wait, keyed by hashes of the payer's email and of
+Ko-fi's transaction id, and are linked:
+
+* when a member with that email verifies it or opens their supporter settings,
+* when a member proves the Ko-fi email is theirs from a confirmation email
+  ("I donated but don't see my badge" in Account → Supporter),
+* when the site owner links it from Site stats, in one click when a member's
+  email or a transaction-id claim points at it.
+
+Perks for a payment linked late count from the day it's linked, so nobody loses
+days to the wait, while the supporter date (and founding status) goes back to the
+payment. Ko-fi's "Send a test" pings are recorded but never linked or counted.
 
 Perks are cosmetic only (badge, profile accent, a profile banner, six showcase
 spots instead of three, a place on the supporter wall).
@@ -42,7 +52,8 @@ import re
 from datetime import datetime, timedelta
 from typing import Optional
 
-from sqlalchemy import func
+from itsdangerous import BadSignature, SignatureExpired, URLSafeTimedSerializer
+from sqlalchemy import and_, func, not_, or_
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
 
@@ -74,7 +85,18 @@ CREDITS_RANK = 3  # gold right away and the credits on the wall
 GOLD_MONTHS = 6
 FOUNDING_BEFORE = datetime(2027, 1, 1)
 WALL_LIMIT = 150
-CODE_RE = re.compile(r"\bOT-(\d{1,10})-([0-9a-f]{6})\b", re.IGNORECASE)
+# Hyphens, spaces or dashes between the parts: people retype the code as often as they paste it.
+CODE_RE = re.compile(r"\bOT[\s\-\u2010-\u2015_]*(\d{1,10})[\s\-\u2010-\u2015_]+([0-9a-f]{6})\b", re.IGNORECASE)
+# Ko-fi's "Send a test" button posts this sample payment.
+TEST_TRANSACTION_ID = "00000000-1111-2222-3333-444444444444"
+TEST_NAMES = {"ko-fi team"}
+# Payments recorded before Oct 30 weren't checked for test pings on arrival. Ones from these sample
+# senders count as tests when read (the rows themselves are left as they are).
+LEGACY_TEST_NAMES = ("ko-fi team", "jo example")
+EXAMPLE_DOMAINS = {"example.com", "example.org", "example.net"}
+GMAIL_DOMAINS = {"gmail.com", "googlemail.com"}
+CLAIM_MAX_AGE = 3 * 24 * 3600
+LATE_LINK = timedelta(hours=12)
 
 
 class WebhookError(Exception):
@@ -114,6 +136,61 @@ def email_hash(email: Optional[str]) -> Optional[str]:
     if not email:
         return None
     return hmac.new(SECRET_KEY.encode(), f"kofi-email:{email}".encode(), hashlib.sha256).hexdigest()
+
+
+def canonical_email(email: Optional[str]) -> Optional[str]:
+    """The address mail actually reaches: lower case, no "+tag", and for Gmail no dots."""
+    email = (email or "").strip().lower()
+    local, at, domain = email.rpartition("@")
+    if not at or not local or not domain:
+        return None
+    local = local.split("+", 1)[0]
+    if domain in GMAIL_DOMAINS:
+        local, domain = local.replace(".", ""), "gmail.com"
+    return f"{local}@{domain}" if local else None
+
+
+def email_key(email: Optional[str]) -> Optional[str]:
+    canonical = canonical_email(email)
+    if not canonical:
+        return None
+    return hmac.new(SECRET_KEY.encode(), f"kofi-email-key:{canonical}".encode(), hashlib.sha256).hexdigest()
+
+
+def transaction_hash(transaction_id: Optional[str]) -> Optional[str]:
+    value = (transaction_id or "").strip().lower()
+    if not value or len(value) > 120:
+        return None
+    return hmac.new(SECRET_KEY.encode(), f"kofi-tx:{value}".encode(), hashlib.sha256).hexdigest()
+
+
+def _email_matches(payment: models.KofiPayment, email: Optional[str]) -> bool:
+    exact, key = email_hash(email), email_key(email)
+    return bool((exact and payment.email_hash == exact) or (key and payment.email_key == key))
+
+
+def is_test_payload(data: dict) -> bool:
+    """Ko-fi's "Send a test" ping: its sample transaction id, or the sample sender at an example.com address."""
+    txid = data.get("kofi_transaction_id")
+    if isinstance(txid, str) and txid.strip() == TEST_TRANSACTION_ID:
+        return True
+    email = data.get("email") if isinstance(data.get("email"), str) else ""
+    name = data.get("from_name") if isinstance(data.get("from_name"), str) else ""
+    return email.strip().lower().rpartition("@")[2] in EXAMPLE_DOMAINS and name.strip().lower() in TEST_NAMES
+
+
+def looks_like_test(payment: models.KofiPayment) -> bool:
+    """For the owner's list: flagged on arrival, or an older row from Ko-fi's sample sender."""
+    return bool(payment.test or (payment.from_name or "").strip().lower() in TEST_NAMES)
+
+
+def is_test_payment():
+    """SQL for a Ko-fi test ping: flagged on arrival, or recorded before the flag existed (no new
+    hashes) by one of Ko-fi's sample senders."""
+    payment = models.KofiPayment
+    return or_(payment.test.is_(True),
+               and_(payment.email_key.is_(None), payment.transaction_hash.is_(None),
+                    func.lower(func.trim(func.coalesce(payment.from_name, ""))).in_(LEGACY_TEST_NAMES)))
 
 
 def _clip(value, limit: int) -> Optional[str]:
@@ -249,18 +326,22 @@ def chip_html(badge: Optional[dict]) -> str:
 def _grant(db: Session, user_id: int, payment: models.KofiPayment) -> models.Supporter:
     supporter = get_supporter(db, user_id)
     paid_at = payment.received_at or _now()
+    # A payment linked late (unmatched email, claimed later) still gets its full days, counted from
+    # now, while the supporter date goes back to when they paid.
+    now = _now()
+    start_at = now if now - paid_at > LATE_LINK else paid_at
     days = MONTHLY_DAYS if payment.monthly else DONATION_DAYS
     if supporter is None:
-        supporter = models.Supporter(user_id=user_id, since=paid_at, active_until=paid_at, show_badge=True)
+        supporter = models.Supporter(user_id=user_id, since=paid_at, active_until=start_at, show_badge=True)
         db.add(supporter)
-    start = max(supporter.active_until or paid_at, paid_at)
+    start = max(supporter.active_until or start_at, start_at)
     supporter.active_until = start + timedelta(days=days)
     supporter.since = min(supporter.since or paid_at, paid_at)
     if payment.monthly:
-        supporter.member_until = max(supporter.member_until or paid_at, paid_at) + timedelta(days=MONTHLY_DAYS)
+        supporter.member_until = max(supporter.member_until or start_at, start_at) + timedelta(days=MONTHLY_DAYS)
         supporter.tier = resolve_tier(payment.tier_name, payment.amount)
     # A one-time tip from a current member leaves the membership as it is.
-    supporter.monthly = bool(supporter.member_until and supporter.member_until > paid_at)
+    supporter.monthly = bool(supporter.member_until and supporter.member_until > start_at)
     return supporter
 
 
@@ -271,21 +352,56 @@ def _link(db: Session, payment: models.KofiPayment, user_id: int) -> None:
         _grant(db, user_id, payment)
 
 
-def link_pending_by_email(db: Session, user) -> int:
+def _waiting():
+    """Payments still waiting for a member: not linked, not a Ko-fi test, not set aside by the owner."""
+    return (models.KofiPayment.user_id.is_(None), not_(is_test_payment()),
+            models.KofiPayment.dismissed_at.is_(None))
+
+
+def _waiting_for_email(db: Session, email: Optional[str]) -> list[models.KofiPayment]:
+    exact, key = email_hash(email), email_key(email)
+    matches = [models.KofiPayment.email_hash == exact] if exact else []
+    if key:
+        matches.append(models.KofiPayment.email_key == key)
+    if not matches:
+        return []
+    return (db.query(models.KofiPayment).filter(*_waiting(), or_(*matches))
+            .order_by(models.KofiPayment.received_at, models.KofiPayment.id).all())
+
+
+def _thank(db: Session, user_id: int, linked: int) -> None:
+    """An in-app note when payments are linked after the fact, so the member knows where the perks came from."""
+    if not linked:
+        return
+    from .crud.friends import create_notification  # avoids a circular import
+
+    what = "Your Ko-fi support is" if linked == 1 else f"Your {linked} Ko-fi payments are"
+    create_notification(db, user_id, "supporter_linked",
+                        f"{what} now linked to your account. Thank you! Your supporter perks are on.",
+                        link="/#supporter")
+
+
+def link_pending_by_email(db: Session, user, notify: bool = False) -> int:
     """Link waiting payments made with this member's (verified) email. Returns how many."""
     if user is None or not user.is_verified:
         return 0
-    key = email_hash(user.email)
-    if not key:
-        return 0
-    pending = (db.query(models.KofiPayment)
-               .filter(models.KofiPayment.user_id.is_(None), models.KofiPayment.email_hash == key)
-               .order_by(models.KofiPayment.received_at, models.KofiPayment.id).all())
+    pending = _waiting_for_email(db, user.email)
     for payment in pending:
         _link(db, payment, user.id)
     if pending:
         db.commit()
+        if notify:
+            _thank(db, user.id, len(pending))
     return len(pending)
+
+
+def link_after_verification(db: Session, user) -> None:
+    """Hook for email verification and Google sign-in. Never lets a Ko-fi hiccup break signing in."""
+    try:
+        link_pending_by_email(db, user, notify=True)
+    except Exception as error:  # pragma: no cover - defensive
+        db.rollback()
+        print(f"Ko-fi linking after verification failed: {error}")
 
 
 def link_payment(db: Session, message_id: str, user) -> models.KofiPayment:
@@ -297,7 +413,105 @@ def link_payment(db: Session, message_id: str, user) -> models.KofiPayment:
         raise ValueError("That payment is already linked")
     _link(db, payment, user.id)
     db.commit()
+    _thank(db, user.id, 1)
     return payment
+
+
+def set_aside(db: Session, message_id: str, dismissed: bool) -> models.KofiPayment:
+    """Admin: take a waiting payment off the "to link" list (a refund, a duplicate), or put it back."""
+    payment = db.query(models.KofiPayment).filter(models.KofiPayment.message_id == message_id).first()
+    if payment is None:
+        raise LookupError("Payment not found")
+    if payment.user_id is not None:
+        raise ValueError("That payment is already linked")
+    payment.dismissed_at = _now() if dismissed else None
+    db.commit()
+    return payment
+
+
+# ---------------------------------------------------------------- member claims
+
+def looks_like_email(value: str) -> bool:
+    """One @, something before it, and a dot inside the part after it. String checks, no regex backtracking."""
+    value = value or ""
+    if len(value) > 254 or any(ch.isspace() for ch in value) or value.count("@") != 1:
+        return False
+    local, _, domain = value.partition("@")
+    return bool(local) and "." in domain.strip(".")
+
+
+def claim_token(user_id: int, email: str) -> str:
+    """A signed link for the confirmation email. It carries hashes only, never the address."""
+    return _claim_serializer().dumps({"u": user_id, "h": email_hash(email), "k": email_key(email)})
+
+
+def read_claim_token(token: str) -> Optional[dict]:
+    try:
+        data = _claim_serializer().loads(token or "", max_age=CLAIM_MAX_AGE)
+    except (BadSignature, SignatureExpired):
+        return None
+    if not isinstance(data, dict) or not isinstance(data.get("u"), int):
+        return None
+    return data
+
+
+def _claim_serializer() -> URLSafeTimedSerializer:
+    return URLSafeTimedSerializer(SECRET_KEY, salt="kofi-claim")
+
+
+def claim_by_email(db: Session, user, email: str) -> dict:
+    """Step one of a claim by Ko-fi email. Returns {"linked": n} or {"send": bool}.
+
+    The member's own verified address links at once. Any other address gets a
+    confirmation email only when a payment from it is waiting; the reply to the
+    member reads the same either way, so nobody can check who has donated.
+    """
+    if canonical_email(email) and canonical_email(email) == canonical_email(user.email) and user.is_verified:
+        return {"linked": link_pending_by_email(db, user, notify=False)}
+    return {"send": bool(_waiting_for_email(db, email))}
+
+
+def confirm_claim(db: Session, token: str) -> Optional[tuple]:
+    """Step two: the link in the confirmation email was opened. Returns (member, linked count) or None."""
+    data = read_claim_token(token)
+    if data is None:
+        return None
+    user = db.get(models.User, data["u"])
+    if user is None or not user.is_active:
+        return None
+    matches = []
+    if data.get("h"):
+        matches.append(models.KofiPayment.email_hash == data["h"])
+    if data.get("k"):
+        matches.append(models.KofiPayment.email_key == data["k"])
+    if not matches:
+        return None
+    pending = (db.query(models.KofiPayment).filter(*_waiting(), or_(*matches))
+               .order_by(models.KofiPayment.received_at, models.KofiPayment.id).all())
+    for payment in pending:
+        _link(db, payment, user.id)
+    if pending:
+        db.commit()
+        _thank(db, user.id, len(pending))
+    return user, len(pending)
+
+
+def claim_by_transaction(db: Session, user, transaction_id: str) -> bool:
+    """A member says a payment is theirs by its Ko-fi transaction id. The owner confirms it in Site stats.
+
+    The id can show up on public Ko-fi pages, so it flags the payment rather than linking it.
+    """
+    key = transaction_hash(transaction_id)
+    if not key:
+        return False
+    payment = (db.query(models.KofiPayment)
+               .filter(*_waiting(), models.KofiPayment.transaction_hash == key).first())
+    if payment is None:
+        return False
+    payment.claimed_by = user.id
+    payment.claimed_at = _now()
+    db.commit()
+    return True
 
 
 def tiers_url() -> str:
@@ -429,7 +643,7 @@ def goal_progress(db: Session, now: Optional[datetime] = None) -> Optional[dict]
     now = now or _now()
     start = datetime(now.year, now.month, 1)
     amounts = (db.query(models.KofiPayment.amount)
-               .filter(models.KofiPayment.received_at >= start,
+               .filter(models.KofiPayment.received_at >= start, not_(is_test_payment()),
                        func.coalesce(func.upper(models.KofiPayment.currency), "USD") == "USD").all())
     raised = sum(_amount(amount) for (amount,) in amounts)
     return {"goal": goal, "raised": raised, "percent": min(100, int(raised * 100 / goal)), "month": f"{now:%B}"}
@@ -471,25 +685,18 @@ def handle_webhook(db: Session, data: dict) -> dict:
     monthly = kind == "subscription" or data.get("is_subscription_payment") is True
     if monthly and kind == "donation":
         kind = "subscription"
+    email = data.get("email").strip() if isinstance(data.get("email"), str) else None
+    txid = data.get("kofi_transaction_id")
     payment = models.KofiPayment(
         message_id=message_id, kind=kind, monthly=monthly, tier_name=_clip(data.get("tier_name"), 40) if monthly else None,
         amount=_clip(data.get("amount"), 16), currency=_clip(data.get("currency"), 8),
-        email_hash=email_hash(data.get("email") if isinstance(data.get("email"), str) else None),
-        from_name=_clip(data.get("from_name"), 80), received_at=_now(),
+        email_hash=email_hash(email), email_key=email_key(email),
+        transaction_hash=transaction_hash(txid if isinstance(txid, str) else None),
+        test=is_test_payload(data), from_name=_clip(data.get("from_name"), 80), received_at=_now(),
     )
     db.add(payment)
 
-    user = None
-    code_id = user_id_from_text(data.get("message") if isinstance(data.get("message"), str) else None)
-    if code_id is not None:
-        user = db.get(models.User, code_id)
-    if user is None and payment.email_hash:
-        email = data["email"].strip().lower()
-        candidates = (db.query(models.User)
-                      .filter(models.User.is_verified == True, func.lower(models.User.email) == email)
-                      .limit(2).all())
-        if len(candidates) == 1:
-            user = candidates[0]
+    user = None if payment.test else _match(db, data, email)
     if user is not None:
         _link(db, payment, user.id)
     try:
@@ -500,9 +707,99 @@ def handle_webhook(db: Session, data: dict) -> dict:
     return {"status": "recorded", "linked": user is not None}
 
 
-def unmatched_payments(db: Session, limit: int = 50) -> list[dict]:
-    rows = (db.query(models.KofiPayment).filter(models.KofiPayment.user_id.is_(None))
-            .order_by(models.KofiPayment.received_at.desc()).limit(limit).all())
+def _match(db: Session, data: dict, email: Optional[str]):
+    """The member a new payment belongs to: a supporter code anywhere the payer could type it, else one verified email."""
+    for field in ("message", "from_name"):
+        code_id = user_id_from_text(data.get(field) if isinstance(data.get(field), str) else None)
+        user = db.get(models.User, code_id) if code_id is not None else None
+        if user is not None:
+            return user
+    if not email:
+        return None
+    candidates = (db.query(models.User)
+                  .filter(models.User.is_verified == True, func.lower(models.User.email) == email.lower())
+                  .limit(2).all())
+    if len(candidates) == 1:
+        return candidates[0]
+    if candidates:
+        return None
+    candidates = members_with_email(db, email, verified_only=True)
+    return candidates[0] if len(candidates) == 1 else None
+
+
+def members_with_email(db: Session, email: str, verified_only: bool = False, limit: int = 5) -> list:
+    """Active members whose email reaches the same inbox (case, Gmail dots and "+tags" aside)."""
+    canonical = canonical_email(email)
+    if not canonical:
+        return []
+    domain = canonical.rpartition("@")[2]
+    domains = GMAIL_DOMAINS if domain == "gmail.com" else {domain}
+    query = db.query(models.User).filter(models.User.is_active == True,
+                                         or_(*[func.lower(models.User.email).like(f"%@{d}") for d in domains]))
+    if verified_only:
+        query = query.filter(models.User.is_verified == True)
+    found = [user for user in query.order_by(models.User.id).all() if canonical_email(user.email) == canonical]
+    return found[:limit]
+
+
+def _suggestions(db: Session, payments: list) -> dict:
+    """For the owner's list: members who could be each payer, by email (verified or not) or by name. Keyed by payment id."""
+    if not payments:
+        return {}
+    exact = {p.email_hash for p in payments if p.email_hash}
+    keys = {p.email_key for p in payments if p.email_key}
+    names = {(p.from_name or "").strip().lower() for p in payments if p.from_name}
+    claimers = {p.claimed_by for p in payments if p.claimed_by}
+    by_hash, by_key, by_name, by_id = {}, {}, {}, {}
+    rows = db.query(models.User.id, models.User.username, models.User.email, models.User.is_verified).filter(
+        models.User.is_active == True).all()
+    for row in rows:
+        member = {"username": row.username, "verified": bool(row.is_verified)}
+        if row.id in claimers:
+            by_id[row.id] = member
+        if exact and email_hash(row.email) in exact:
+            by_hash.setdefault(email_hash(row.email), []).append(member)
+        if keys and email_key(row.email) in keys:
+            by_key.setdefault(email_key(row.email), []).append(member)
+        if row.username and row.username.lower() in names:
+            by_name.setdefault(row.username.lower(), []).append(member)
+    result = {}
+    for payment in payments:
+        seen, picks = set(), []
+        candidates = [("claimed it with the transaction id", [by_id[payment.claimed_by]] if payment.claimed_by in by_id else []),
+                      ("same email", by_hash.get(payment.email_hash, [])),
+                      ("same inbox", by_key.get(payment.email_key, [])),
+                      ("same name", by_name.get((payment.from_name or "").strip().lower(), []))]
+        for reason, members in candidates:
+            for member in members:
+                if member["username"] not in seen:
+                    seen.add(member["username"])
+                    picks.append({**member, "reason": reason if member["verified"] or reason.startswith("claimed")
+                                  else f"{reason}, not verified"})
+        result[payment.id] = picks[:3]
+    return result
+
+
+def unmatched_payments(db: Session, limit: int = 50, email: Optional[str] = None) -> list[dict]:
+    """Waiting payments for the owner, newest first, with likely members. With an email, only that payer's."""
+    query = db.query(models.KofiPayment).filter(*_waiting())
+    if email:
+        exact, key = email_hash(email), email_key(email)
+        query = query.filter(or_(models.KofiPayment.email_hash == exact, models.KofiPayment.email_key == key))
+    rows = query.order_by(models.KofiPayment.received_at.desc()).limit(limit).all()
+    suggestions = _suggestions(db, rows)
     return [{"message_id": p.message_id, "kind": p.kind, "amount": p.amount, "currency": p.currency,
-             "monthly": p.monthly, "tier_name": p.tier_name, "from_name": p.from_name, "received_at": p.received_at.isoformat()}
+             "monthly": p.monthly, "tier_name": p.tier_name, "from_name": p.from_name, "received_at": p.received_at.isoformat(),
+             "looks_like_test": looks_like_test(p), "claimed": p.claimed_by is not None,
+             "suggestions": suggestions.get(p.id, [])}
             for p in rows]
+
+
+def test_count(db: Session) -> int:
+    """Ko-fi test pings recorded so far (kept out of every list and count)."""
+    return int(db.query(func.count(models.KofiPayment.id)).filter(is_test_payment()).scalar() or 0)
+
+
+def waiting_count(db: Session) -> int:
+    """Payments the owner still needs to look at: not linked, not a test, not set aside."""
+    return int(db.query(func.count(models.KofiPayment.id)).filter(*_waiting()).scalar() or 0)

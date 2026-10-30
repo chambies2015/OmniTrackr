@@ -574,3 +574,42 @@ async def send_two_factor_change_email(email: str, username: str, turned_on: boo
         await asyncio.wait_for(fm.send_message(message), timeout=30.0)
     else:
         print(f"INFO: Two-factor {'enabled' if turned_on else 'disabled'} notice for {email} (email not configured)")
+
+
+async def send_kofi_claim_email(email: str, username: str, confirm_url: str):
+    """Ask the owner of a Ko-fi email to confirm that a payment from it belongs to this OmniTrackr account."""
+    html = f"""
+    <html>
+        <body style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
+            <div style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); padding: 30px; text-align: center;">
+                <h1 style="color: white; margin: 0;">Link your Ko-fi support</h1>
+            </div>
+            <div style="padding: 30px; background-color: #f9f9f9;">
+                <p>Hi,</p>
+                <p>The OmniTrackr member <strong>@{_escape_html(username)}</strong> asked to link a Ko-fi payment made with
+                this email address to their account. If that's you, press the button and your supporter perks switch on.</p>
+                <div style="text-align: center; margin: 30px 0;">
+                    <a href="{confirm_url}"
+                       style="background-color: #667eea; color: white; padding: 15px 30px; text-decoration: none; border-radius: 5px; display: inline-block; font-weight: bold;">
+                        Link my Ko-fi payment
+                    </a>
+                </div>
+                <p>Or copy and paste this link into your browser:</p>
+                <p style="word-break: break-all; color: #667eea;">{confirm_url}</p>
+                <p>The link works for 3 days.</p>
+                <hr style="border: none; border-top: 1px solid #ddd; margin: 30px 0;">
+                <p style="color: #666; font-size: 12px;">
+                    If you didn't ask for this, ignore this email and nothing changes.
+                </p>
+            </div>
+        </body>
+    </html>
+    """
+
+    message = html_message("Link your Ko-fi support to OmniTrackr", [email], html)
+    if conf.MAIL_USERNAME and conf.MAIL_PASSWORD:
+        import asyncio
+        fm = FastMail(conf)
+        await asyncio.wait_for(fm.send_message(message), timeout=30.0)
+    else:
+        print(f"INFO: Ko-fi claim link for @{username}: {confirm_url} (email not configured)")

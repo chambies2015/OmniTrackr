@@ -331,6 +331,54 @@
     }
   }
 
+  // "Donated but don't see your badge?": a Ko-fi email gets a confirmation link; a transaction ID waits for the owner.
+  function claimStatus(text, tone) {
+    const node = $('supporterClaimStatus');
+    if (!node) return;
+    node.textContent = text || '';
+    node.className = `supporter-claim__status${tone ? ` supporter-claim__status--${tone}` : ''}`;
+  }
+
+  let claiming = false;
+
+  async function claim(event) {
+    event.preventDefault();
+    const input = $('supporterClaimValue');
+    const value = input.value.trim();
+    if (claiming) return;
+    if (value.length < 3) {
+      claimStatus('Type the email you used on Ko-fi, or the transaction ID from your receipt.', 'error');
+      input.focus();
+      return;
+    }
+    claiming = true;
+    $('supporterClaimSubmit').disabled = true;
+    claimStatus('Looking…');
+    try {
+      const response = await fetch(`${apiBase()}/api/supporter/claim`, fetchOptions({
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ value }),
+      }));
+      const data = await response.json().catch(() => ({}));
+      if (response.status === 429) {
+        claimStatus('That was a lot of tries. Wait an hour and try again, or write to us from the Contact page.', 'error');
+        return;
+      }
+      if (!response.ok) {
+        claimStatus(typeof data.detail === 'string' ? data.detail : 'Could not look that up. Please try again.', 'error');
+        return;
+      }
+      claimStatus(data.message || '', data.status === 'none' ? '' : 'ok');
+      if (data.supporter) apply(data.supporter);
+    } catch (error) {
+      claimStatus('Could not look that up. Check your connection and try again.', 'error');
+    } finally {
+      claiming = false;
+      $('supporterClaimSubmit').disabled = false;
+    }
+  }
+
   async function copyCode() {
     if (!loaded || !loaded.code) return;
     try {
@@ -428,6 +476,7 @@
     if (!$('supporterSection')) return;
     $('supporterForm').addEventListener('submit', save);
     $('supporterCopyCode').addEventListener('click', copyCode);
+    if ($('supporterClaimForm')) $('supporterClaimForm').addEventListener('submit', claim);
     wrapAccountLoader();
     setTimeout(openFromHash, 600);
     if (window.location.hash !== '#supporter') setTimeout(() => checkWelcome(), 2500);
@@ -435,7 +484,7 @@
   }
 
   window.SupporterSettings = { load, apply };
-  if (typeof module !== 'undefined' && module.exports) module.exports = { load, apply, statusText, showWelcome, membershipText };
+  if (typeof module !== 'undefined' && module.exports) module.exports = { load, apply, statusText, showWelcome, membershipText, claim };
   if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', init);
   else init();
 })();
