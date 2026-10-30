@@ -740,6 +740,8 @@ for route in title_discussions.router.routes:
 # Before titles.router: its /titles/{kind}/{slug} route must not shadow the board pages.
 app.include_router(title_discussions.router)
 app.include_router(titles.router)
+from .routers import trending as trending_router
+app.include_router(trending_router.router)
 from .routers import people as people_router
 app.include_router(people_router.router)
 

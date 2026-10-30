@@ -366,6 +366,13 @@ def _database_parts(db: Session) -> list[str]:
             sitemap_parts.append(f"<url><loc>{base_url}{path}</loc><changefreq>daily</changefreq><priority>0.7</priority></url>")
     except Exception:
         pass
+    # Trending pages join once enough titles are named for the period (see trending.indexable_paths).
+    try:
+        from .. import trending
+        for path in trending.indexable_paths(db):
+            sitemap_parts.append(f"<url><loc>{base_url}{path}</loc><changefreq>daily</changefreq><priority>0.7</priority></url>")
+    except Exception:
+        db.rollback()
     # People and studio pages join once members have rated and reviewed enough of the work (people_pages.is_indexable).
     try:
         from .. import people_pages
@@ -663,6 +670,7 @@ Release Radar at {base_url}/release-radar lists upcoming movies (Wikidata), TV p
 Seasonal picks at {base_url}/halloween sort horror and spooky movies, shows, anime, games, books and music by fright level, from family-friendly to properly frightening, with a caveat for each. Holiday picks at {base_url}/holidays cover Thanksgiving, Christmas and winter in the same six formats, sorted by festive level, from snowy stories with no holiday at all to full tinsel.
 "In order" guides at {base_url}/in-order give the best order to watch, read and play a franchise (for example {base_url}/in-order/star-wars), with release order, story order, what each entry adds and what is optional.
 Weekly release roundups at {base_url}/new-this-week (archive at {base_url}/new-this-week/archive) list each week's new movies, TV premieres, anime and games from Release Radar, with a short write-up calculated from that data and anonymous totals of what OmniTrackr members finished that week. Past weeks are kept unchanged.
+Trending charts at {base_url}/trending (and {base_url}/trending/month, plus one per format such as {base_url}/trending/movie) rank the titles OmniTrackr members added, started and finished most in the last 7 or 30 days, compared with the period before. They use anonymous totals only and name a title once at least two members picked it up.
 
 Best-of-the-year lists at {base_url}/best-of pick the best new movies, TV shows, anime, games and books of each year (for example {base_url}/best-of/2026/movies), with release details, why each pick made the list, a caveat and the sources checked.
 Pick for me at {base_url}/pick suggests one editorially chosen movie, TV show, anime, game, book or album at a time, with the reason it was chosen and a caveat.

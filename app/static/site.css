@@ -175,6 +175,7 @@ body.site .site-finder__field input:focus-visible { outline: none; }
 .site-dd__panel a[aria-current="true"] strong { color: var(--site-violet-soft); }
 @media (max-width: 520px) {
   .site-switch { display: grid; grid-template-columns: 1fr 1fr; width: 100%; }
+  .site-switch:has(> :nth-child(3)) { grid-template-columns: repeat(3, 1fr); }
   .site-switch__option span { display: none; }
   .site-switch__option { align-content: center; padding: 8px 12px; text-align: center; }
 }
