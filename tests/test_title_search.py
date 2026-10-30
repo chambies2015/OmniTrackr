@@ -101,7 +101,9 @@ def test_homepage_hero_has_the_search(client):
     start = html.index('class="landing-hero')
     hero = html[start:html.index("</section>", start)]
     assert "data-title-search" in hero and 'id="lpSearchInput"' in hero and 'action="/titles"' in hero
-    assert "data-guest-bar" in hero and 'data-action="show-register-form"' in hero
+    assert 'class="lp-search__go"' in hero and 'data-action="show-register-form"' in hero
+    # Saving opens the page-wide save bar, which carries sign-up.
+    assert 'class="lp-savebar" data-guest-bar hidden' in html
     assert '/static/title-search.js?v=' in html and '/static/guest-list.js?v=' in html
 
 

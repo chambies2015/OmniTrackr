@@ -11,8 +11,8 @@
   <link rel="stylesheet" href="/static/fonts.css?v=20261009-fonts-1">
   <link rel="stylesheet" href="/static/site.css?v=20261028-simplify-1">
   <script src="/static/site.js?v=20261028-nav-1" defer></script>
-  <link rel="stylesheet" href="/static/site-stats.css?v=20261030-kofi-match-1">
-  <script src="/static/site-stats.js?v=20261030-kofi-match-2" defer></script>
+  <link rel="stylesheet" href="/static/site-stats.css?v=20261030-people-kofi-1">
+  <script src="/static/site-stats.js?v=20261030-people-kofi-1" defer></script>
 </head>
 <body class="site stats-page">
   <header class="site-header">
@@ -55,10 +55,16 @@
 
       <section class="stats-card stats-card--wide">
         <div class="stats-card__head">
-          <div><h2>Traffic</h2><p id="trafficNote">Human page views and estimated unique visitors per day.</p></div>
-          <div class="stats-legend" aria-hidden="true">
-            <span><i class="stats-key stats-key--views"></i>Page views</span>
-            <span><i class="stats-key stats-key--visitors"></i>Visitors</span>
+          <div><h2>Traffic</h2><p id="trafficNote">Page views and estimated unique visitors per day.</p></div>
+          <div class="stats-traffic-tools">
+            <div class="stats-range" role="group" aria-label="Which traffic to show">
+              <button type="button" data-traffic-view="human" aria-pressed="true">Likely people</button>
+              <button type="button" data-traffic-view="all" aria-pressed="false">All requests</button>
+            </div>
+            <div class="stats-legend" aria-hidden="true">
+              <span><i class="stats-key stats-key--views"></i>Page views</span>
+              <span><i class="stats-key stats-key--visitors"></i>Visitors</span>
+            </div>
           </div>
         </div>
         <div class="stats-chart" id="trafficChart"></div>
@@ -67,7 +73,7 @@
 
       <div class="stats-grid">
         <section class="stats-card"><div class="stats-card__head"><div><h2>Top pages</h2><p>Where visitors spend their views.</p></div></div><div class="stats-bars" id="topPages"></div></section>
-        <section class="stats-card"><div class="stats-card__head"><div><h2>Traffic sources</h2><p>Sites that sent visitors (first page of a visit).</p></div></div><div class="stats-bars" id="trafficSources"></div></section>
+        <section class="stats-card"><div class="stats-card__head"><div><h2>Traffic sources</h2><p id="sourcesNote">Sites that sent visitors (first page of a visit).</p></div></div><div class="stats-bars" id="trafficSources"></div></section>
       </div>
 
       <div class="stats-grid">
@@ -89,8 +95,10 @@
       </div>
 
       <section class="stats-card stats-card--wide">
-        <div class="stats-card__head"><div><h2>Sign-up funnel</h2><p>How visitors move through sign-up in this range. Anonymous daily counts, starting with this update.</p></div></div>
+        <div class="stats-card__head"><div><h2>Sign-up funnel</h2><p>How people move through sign-up in this range. Each step is counted once, in one place; steps that can happen by email or with Google add both together.</p></div></div>
         <div class="stats-funnel" id="signupFunnel"></div>
+        <h3 class="stats-subhead stats-subhead--gap">Homepage: search, save, sign up</h3>
+        <div class="stats-funnel" id="homepageFunnel"></div>
         <div class="stats-grid stats-grid--inner">
           <div><h3 class="stats-subhead">Where sign-ups stall</h3><dl class="stats-list" id="signupIssues"></dl></div>
           <div><h3 class="stats-subhead">Guest lists &amp; return features</h3><dl class="stats-list" id="guestList"></dl></div>

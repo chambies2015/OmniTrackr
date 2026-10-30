@@ -18,7 +18,7 @@
   <link rel="preload" href="/static/fonts/poppins-800-latin.woff2" as="font" type="font/woff2" crossorigin>
   <link rel="stylesheet" href="/static/fonts.css?v=20261009-fonts-1">
   <link rel="stylesheet" href="/static/public-legacy.css?v=20261030-audiobooks-1">
-  <link rel="stylesheet" href="/static/public-landing.css?v=20261027-roundup-1">
+  <link rel="stylesheet" href="/static/public-landing.css?v=20261030-hero-search-1">
   <link rel="stylesheet" href="/static/auth-forms.css?v=20261030-2fa-1">
   <meta property="og:type" content="website">
   <meta property="og:url" content="https://omnitrackr.xyz/">
@@ -74,16 +74,17 @@
         <div class="lp-hero__copy">
           <p class="lp-eyebrow">Free media tracker</p>
           <h1 id="hero-title" class="lp-title">Every movie, show, game and book. <span class="lp-title__accent">One library.</span></h1>
-          <p class="lp-lead">Track what you watch, play, read and listen to, rate it, and keep a diary of every rewatch. Anime and albums fit in too, and it costs nothing.</p>
-          <form class="lp-search" role="search" action="/titles" method="get" data-title-search>
-            <label class="lp-search__label" for="lpSearchInput">What have you watched, played or read lately?</label>
+          <p class="lp-lead">Rate what you finish, keep a diary of every rewatch, and see your year at a glance. Anime, albums and podcasts fit in too. It's free.</p>
+          <form class="lp-search lp-search--hero" role="search" action="/titles" method="get" data-title-search>
+            <label class="lp-search__label" for="lpSearchInput">Start with something you loved</label>
             <div class="lp-search__field">
               <svg class="lp-icon lp-search__icon" aria-hidden="true"><use href="#i-search"/></svg>
-              <input id="lpSearchInput" class="lp-search__input" type="search" name="q" placeholder="Try Interstellar, Frieren or Hades" autocomplete="off" spellcheck="false" maxlength="80" aria-describedby="lpSearchHint" aria-controls="lpSearchResults">
+              <input id="lpSearchInput" class="lp-search__input" type="search" name="q" placeholder="Try Interstellar or Hades" autocomplete="off" spellcheck="false" maxlength="80" aria-describedby="lpSearchHint" aria-controls="lpSearchResults">
+              <button type="submit" class="lp-search__go">Search</button>
             </div>
-            <p class="lp-search__hint" id="lpSearchHint">Tap a result to start your list. No account needed.</p>
+            <!--HERO_QUICK_PICKS-->
+            <p class="lp-search__hint" id="lpSearchHint">Tap a title to save it. You only need an account when you want to keep your list.</p>
             <div class="lp-search__results" id="lpSearchResults" aria-live="polite" hidden></div>
-            <div class="lp-search__bar" data-guest-bar hidden><p class="lp-search__count" data-guest-count></p><button type="button" class="lp-btn lp-btn--primary lp-btn--small" data-action="show-register-form">Save my list, free <svg class="lp-icon" aria-hidden="true"><use href="#i-arrow"/></svg></button></div>
           </form>
           <!--HERO_SIGNUP-->
           <!--HERO_PROOF-->
@@ -451,13 +452,19 @@
     </section>
 
     <!--SITE_FOOTER-->
+    <div class="lp-savebar" data-guest-bar hidden>
+      <div class="lp-wrap lp-savebar__inner">
+        <p class="lp-savebar__count" data-guest-count role="status" aria-live="polite"></p>
+        <div class="lp-savebar__actions"><!--SAVEBAR_SIGNUP--></div>
+      </div>
+    </div>
   </main>
   <dialog id="authDialog" class="lp-auth-dialog" aria-labelledby="authTitle"><button type="button" class="lp-auth-dialog__close" data-action="close-auth-dialog" aria-label="Close">×</button><div class="lp-auth-dialog__slot" data-auth-dialog-slot></div></dialog>
   <div id="screenshotModal" class="screenshot-modal" data-close-on-backdrop="screenshot"><button class="screenshot-modal-close" data-action="close-screenshot-modal" aria-label="Close image preview">×</button><img id="screenshotModalImage" class="screenshot-modal-content" alt=""><div id="screenshotModalCaption" class="screenshot-modal-caption"></div></div>
   <script src="/credentials.js"></script>
-  <script src="/auth.js?v=20261030-2fa-1"></script>
-  <script src="/static/public-landing.js?v=20261029-account-1" defer></script>
-  <script src="/static/guest-list.js?v=20261030-audiobooks-1" defer></script>
-  <script src="/static/title-search.js?v=20261012-hero-search-1" defer></script>
+  <script src="/auth.js?v=20261030-funnel-1"></script>
+  <script src="/static/public-landing.js?v=20261030-hero-search-1" defer></script>
+  <script src="/static/guest-list.js?v=20261030-hero-search-1" defer></script>
+  <script src="/static/title-search.js?v=20261030-hero-search-2" defer></script>
 </body>
 </html>

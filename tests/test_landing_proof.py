@@ -118,7 +118,8 @@ def counted(recorder, event):
 def test_visitor_homepage_views_are_counted(client, recorder):
     client.get("/")
     assert counted(recorder, "landing_viewed") == 1
-    assert funnel.STEPS[0][0] == "landing_viewed"
+    # The funnel starts from people (the page's own visit report); every load stays as a comparison.
+    assert funnel.STEPS[0][0] == "landing_seen" and funnel.RAW[0][0] == "landing_viewed"
 
 
 def test_members_heads_bots_and_link_clicks_are_not_counted(client, recorder):

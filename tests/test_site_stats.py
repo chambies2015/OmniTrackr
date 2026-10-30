@@ -312,3 +312,112 @@ def test_dashboard_link_is_hidden_until_the_server_confirms_admin():
 def test_site_stats_paths_are_not_blocked_by_the_bot_filter(client):
     # The bot filter blocks anything containing "/admin", so the page lives at /site-stats.
     assert client.get("/site-stats").status_code == 200
+
+
+# ---------------------------------------------------------------- likely people
+
+def test_scanner_tags_are_not_stored_as_written():
+    payload = "'>\"></script><svg/onload=confirm('xsss-utm_source18')>"
+    assert traffic_source(make_request("/", query=f"utm_source={payload}")) == site_traffic.BAD_TAG
+    assert site_traffic.source_for("Ko-fi Newsletter", "") == "ko-fi newsletter"
+    assert site_traffic.source_for("", "https://www.reddit.com/r/movies") == "reddit.com"
+
+
+def test_page_reports_count_people_and_skip_bots_reloads_and_crawlers(db_session, monkeypatch):
+    recorder = TrafficRecorder(session_factory=TestingSessionLocal)
+    recorder.enabled = True
+    now = [1000.0]
+    monkeypatch.setattr(site_traffic.time, "monotonic", lambda: now[0])
+    same_site = {"Sec-Fetch-Site": "same-origin"}
+    assert recorder.record_person(make_request("/api/visit", method="POST", headers=same_site), "/", "", "Reddit")
+    assert not recorder.record_person(make_request("/api/visit", method="POST", headers=same_site), "/", "", "")  # reload
+    now[0] += site_traffic.HUMAN_REPEAT_SECONDS + 1
+    assert recorder.record_person(make_request("/api/visit", method="POST", headers=same_site), "/", "", "")
+    assert recorder.record_person(make_request("/api/visit", method="POST"), "/reviews/", "https://omnitrackr.xyz/", "")
+    # Not people: a bot, another site posting in, a Googlebot address, odd paths.
+    assert not recorder.record_person(make_request("/api/visit", method="POST", headers={"User-Agent": "HeadlessChrome/120"}), "/faq")
+    assert not recorder.record_person(make_request("/api/visit", method="POST", headers={"Sec-Fetch-Site": "cross-site"}), "/faq")
+    assert not recorder.record_person(make_request("/api/visit", method="POST", client=("66.249.66.1", 1)), "/faq")
+    assert not recorder.record_person(make_request("/api/visit", method="POST", headers={"True-Client-IP": "66.249.66.1"}), "/faq")
+    for path in ("faq", "//evil.example/x", "/api/x", "/static/site.css"):
+        assert not recorder.record_person(make_request("/api/visit", method="POST", client=("198.51.100.7", 1)), path)
+    recorder.flush()
+    db_session.expire_all()
+    rows = {(row.kind, row.key): row.count for row in db_session.query(models.SiteTrafficDaily).all()}
+    assert rows[("human_total", "views")] == 3 and rows[("human_total", "visitors")] == 1
+    assert rows[("human_page", "/")] == 2 and rows[("human_page", "/reviews")] == 1
+    assert rows[("human_source", "reddit")] == 1 and rows[("human_source", "(direct)")] == 1
+    assert rows[("human_device", "desktop")] == 3 and rows[("human_audience", "guest")] == 3
+    assert rows[("funnel", "landing_seen")] == 1  # once per person per day
+    # The all-requests counters are untouched by page reports.
+    assert ("total", "views") not in rows
+    assert not any("198.51" in key or "Mozilla" in key for _, key in rows)
+
+
+def test_one_person_cannot_flood_the_people_counts(monkeypatch):
+    recorder = TrafficRecorder()
+    recorder.enabled = True
+    clock = [0.0]
+    monkeypatch.setattr(site_traffic.time, "monotonic", lambda: clock[0])
+    counted = 0
+    for index in range(site_traffic.HUMAN_MAX_VIEWS_PER_DAY + 20):
+        clock[0] += 1
+        counted += recorder.record_person(make_request("/api/visit", method="POST"), f"/titles/movie/x-{index}")
+    assert counted == site_traffic.HUMAN_MAX_VIEWS_PER_DAY
+
+
+def test_members_on_the_homepage_are_not_counted_as_landing_visitors():
+    recorder = TrafficRecorder()
+    recorder.enabled = True
+    assert recorder.record_person(make_request("/api/visit", method="POST", cookies={"omnitrackr_session": "x"}), "/")
+    assert not any(key == "landing_seen" for (_, kind, key) in recorder._pending if kind == "funnel")
+    assert any(kind == "human_audience" and key == "member" for (_, kind, key) in recorder._pending)
+
+
+def test_visit_endpoint_feeds_the_recorder_and_never_fails(client, monkeypatch):
+    recorder = TrafficRecorder(session_factory=TestingSessionLocal)
+    recorder.enabled = True
+    monkeypatch.setattr(site_traffic, "RECORDER", recorder)
+    from app.routers import site_stats
+    monkeypatch.setattr(site_stats, "RECORDER", recorder)
+    headers = {"User-Agent": BROWSER_UA}
+    assert client.post("/api/visit", json={"path": "/reviews", "referrer": "", "utm": ""}, headers=headers).status_code == 204
+    assert client.post("/api/visit", json={"path": "x" * 400}, headers=headers).status_code == 422
+    assert client.post("/api/visit", json={"path": "/faq"}, headers={"User-Agent": "curl/8"}).status_code == 204
+    pages = {key for (_, kind, key) in recorder._pending if kind == "human_page"}
+    assert pages == {"/reviews"}
+
+
+def test_public_pages_and_the_dashboard_load_the_visit_report(client):
+    assert '/static/visit.js?v=' in client.get("/").text
+    assert '/static/visit.js?v=' in client.get("/faq").text
+    assert '/static/visit.js?v=' in (ROOT / "app" / "templates" / "index.html").read_text(encoding="utf-8")
+    script = (ROOT / "app" / "static" / "visit.js").read_text(encoding="utf-8")
+    assert "navigator.webdriver" in script and "visibilityState" in script and "/api/visit" in script
+
+
+def test_overview_splits_people_from_all_requests(authenticated_client, admin_env, db_session):
+    admin_env.setenv("ADMIN_USERNAMES", "testuser")
+    today = date.today()
+    db_session.add_all([
+        models.SiteTrafficDaily(day=today, kind="total", key="views", count=500),
+        models.SiteTrafficDaily(day=today, kind="total", key="visitors", count=400),
+        models.SiteTrafficDaily(day=today, kind="source", key="(direct)", count=380),
+        models.SiteTrafficDaily(day=today, kind="human_total", key="views", count=30),
+        models.SiteTrafficDaily(day=today, kind="human_total", key="visitors", count=12),
+        models.SiteTrafficDaily(day=today, kind="human_source", key="google.com", count=9),
+        models.SiteTrafficDaily(day=today, kind="human_page", key="/", count=20),
+    ])
+    db_session.commit()
+    traffic = authenticated_client.get("/api/site-stats/overview?days=30").json()["traffic"]
+    assert traffic["totals"] == {"views": 500, "visitors": 400}  # all requests, as before
+    assert traffic["sources"] == [{"key": "(direct)", "count": 380}]
+    human = traffic["human"]
+    assert human["totals"] == {"views": 30, "visitors": 12} and human["tracking_since"] == today.isoformat()
+    assert human["sources"] == [{"key": "google.com", "count": 9}] and human["top_pages"] == [{"key": "/", "count": 20}]
+    assert len(human["series"]) == 30
+
+
+def test_site_stats_page_renders_sources_as_text_only():
+    script = (ROOT / "app" / "static" / "site-stats.js").read_text(encoding="utf-8")
+    assert "innerHTML" not in script and "insertAdjacentHTML" not in script and "outerHTML" not in script

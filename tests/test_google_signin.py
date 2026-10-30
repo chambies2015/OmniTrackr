@@ -64,8 +64,10 @@ def test_button_is_hidden_until_configured(client):
 
 def test_button_shows_on_both_forms_once_configured(client, google):
     page = client.get("/").text
-    # The log-in form, the sign-up form and the homepage hero.
-    assert page.count('href="/auth/google/start"') == 3
+    # The log-in form, the sign-up form, the homepage hero and the save bar.
+    assert page.count('href="/auth/google/start"') == 4
+    # Every sign-up button (not the log-in one) counts as starting to sign up.
+    assert page.count("data-google-signup") == 3
     assert "Sign up with Google" in page and "Log in with Google" in page
 
 
@@ -73,7 +75,7 @@ def test_hero_offers_google_and_email_sign_up_once_configured(client, google):
     page = client.get("/").text
     assert "HERO_SIGNUP" not in page
     assert "Continue with Google" in page and "Sign up with email" in page
-    assert 'class="lp-btn lp-btn--google" href="/auth/google/start" rel="nofollow" data-google-signin data-hero-signup' in page
+    assert 'href="/auth/google/start" rel="nofollow" data-google-signin data-google-signup data-hero-signup' in page
     assert 'href="/demo"' in page
 
 
@@ -287,3 +289,20 @@ def test_google_returns_visitors_to_the_host_they_started_on(client, google, mon
 def test_code_exchange_uses_the_same_return_address(client, google, db_session):
     _sign_in(client, google)
     assert google["return_to"] == "https://omnitrackr.xyz/auth/google/callback"
+
+
+def test_google_button_presses_count_only_real_clicks(client, google, monkeypatch):
+    from app.site_traffic import RECORDER
+    monkeypatch.setattr(RECORDER, "enabled", True)
+    monkeypatch.setattr(RECORDER, "flush_due", lambda: False)
+    RECORDER._pending.clear()
+
+    def presses():
+        return sum(count for (_, kind, key), count in RECORDER._pending.items()
+                   if kind == "funnel" and key == "google_signin_started")
+
+    client.get("/auth/google/start", follow_redirects=False)  # a link checker following the URL
+    assert presses() == 0
+    client.get("/auth/google/start", follow_redirects=False, headers={"Sec-Fetch-User": "?1"})
+    assert presses() == 1
+    RECORDER._pending.clear()

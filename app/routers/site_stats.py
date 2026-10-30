@@ -5,6 +5,7 @@ The page shell at /site-stats contains no data; the numbers come from
 """
 from __future__ import annotations
 
+import asyncio
 import os
 import time
 from datetime import date, datetime, timedelta, timezone
@@ -76,46 +77,69 @@ def _active_since(db: Session, start: datetime) -> int:
         models.User.last_login_at >= start, models.User.last_seen_on >= start.date())).scalar() or 0)
 
 
+TRAFFIC_KINDS = {
+    # set: (totals kind, {breakdown name: kind})
+    "all": ("total", {"page": "page", "source": "source", "device": "device", "audience": "audience"}),
+    "human": ("human_total", {"page": "human_page", "source": "human_source",
+                              "device": "human_device", "audience": "human_audience"}),
+}
+
+
 def _traffic(db: Session, days: int, today: date) -> dict:
+    """Page views and visitors twice over: every request ("all") and likely people ("human").
+
+    The top-level keys stay the "all" numbers, as before; "human" holds the same shape.
+    """
     table = models.SiteTrafficDaily
     start = today - timedelta(days=days - 1)
     previous_start = start - timedelta(days=days)
     rows = db.query(table.day, table.kind, table.key, table.count).filter(table.day >= previous_start).all()
-    first_day = db.query(func.min(table.day)).scalar()
+    first_day = db.query(func.min(table.day)).filter(table.kind == "total").scalar()
+    first_human_day = db.query(func.min(table.day)).filter(table.kind == "human_total").scalar()
 
-    series = {start + timedelta(days=offset): {"views": 0, "visitors": 0} for offset in range(days)}
-    current_totals = {"views": 0, "visitors": 0}
-    previous_totals = {"views": 0, "visitors": 0}
-    breakdowns: dict[str, dict[str, int]] = {"page": {}, "source": {}, "device": {}, "audience": {}}
+    sets = {}
+    for name, (total_kind, breakdown_kinds) in TRAFFIC_KINDS.items():
+        sets[name] = {
+            "total_kind": total_kind,
+            "kinds": {kind: label for label, kind in breakdown_kinds.items()},
+            "series": {start + timedelta(days=offset): {"views": 0, "visitors": 0} for offset in range(days)},
+            "current": {"views": 0, "visitors": 0},
+            "previous": {"views": 0, "visitors": 0},
+            "breakdowns": {label: {} for label in breakdown_kinds},
+        }
     for day, kind, key, count in rows:
         in_current = day >= start
-        if kind == "total" and key in current_totals:
-            if in_current:
-                current_totals[key] += count
-                if day in series:
-                    series[day][key] += count
-            else:
-                previous_totals[key] += count
-        elif kind in breakdowns and in_current:
-            breakdowns[kind][key] = breakdowns[kind].get(key, 0) + count
+        for data in sets.values():
+            if kind == data["total_kind"] and key in data["current"]:
+                if in_current:
+                    data["current"][key] += count
+                    if day in data["series"]:
+                        data["series"][day][key] += count
+                else:
+                    data["previous"][key] += count
+            elif kind in data["kinds"] and in_current:
+                bucket = data["breakdowns"][data["kinds"][kind]]
+                bucket[key] = bucket.get(key, 0) + count
 
-    def top(kind: str, limit: int) -> list[dict]:
-        ordered = sorted(breakdowns[kind].items(), key=lambda pair: (-pair[1], pair[0]))
-        return [{"key": key, "count": count} for key, count in ordered[:limit]]
+    def shaped(data: dict, since) -> dict:
+        def top(name: str, limit: int) -> list[dict]:
+            ordered = sorted(data["breakdowns"][name].items(), key=lambda pair: (-pair[1], pair[0]))
+            return [{"key": key, "count": count} for key, count in ordered[:limit]]
 
-    today_row = series.get(today, {"views": 0, "visitors": 0})
-    return {
-        "tracking_since": first_day.isoformat() if first_day else None,
-        "enabled": RECORDER.enabled,
-        "today": today_row,
-        "totals": current_totals,
-        "previous_totals": previous_totals,
-        "series": [{"date": day.isoformat(), **values} for day, values in sorted(series.items())],
-        "top_pages": top("page", 15),
-        "sources": top("source", 12),
-        "devices": top("device", 5),
-        "audience": top("audience", 3),
-    }
+        return {
+            "tracking_since": since.isoformat() if since else None,
+            "today": data["series"].get(today, {"views": 0, "visitors": 0}),
+            "totals": data["current"],
+            "previous_totals": data["previous"],
+            "series": [{"date": day.isoformat(), **values} for day, values in sorted(data["series"].items())],
+            "top_pages": top("page", 15),
+            "sources": top("source", 12),
+            "devices": top("device", 5),
+            "audience": top("audience", 3),
+        }
+
+    return {**shaped(sets["all"], first_day), "enabled": RECORDER.enabled,
+            "human": shaped(sets["human"], first_human_day)}
 
 
 def _popular_titles(db: Session, limit: int = 12) -> list[dict]:
@@ -358,6 +382,23 @@ async def publish_editor_collections(
 
 class FunnelEvent(BaseModel):
     event: str = Field(..., max_length=40)
+
+
+class PageVisit(BaseModel):
+    path: str = Field(..., max_length=300)
+    referrer: str = Field("", max_length=500)
+    utm: str = Field("", max_length=120)
+
+
+@router.post("/api/visit", status_code=204, include_in_schema=False)
+async def record_page_visit(payload: PageVisit, request: Request):
+    """A page reporting that a person opened it (static/visit.js); feeds the "likely people" counts."""
+    try:
+        if RECORDER.record_person(request, payload.path, payload.referrer, payload.utm) and RECORDER.flush_due():
+            asyncio.get_running_loop().create_task(asyncio.to_thread(RECORDER.flush))
+    except Exception:
+        pass  # Analytics must never fail a page.
+    return Response(status_code=204)
 
 
 @router.post("/api/funnel", status_code=204, include_in_schema=False)

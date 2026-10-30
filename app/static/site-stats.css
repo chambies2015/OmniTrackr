@@ -179,3 +179,8 @@
 .stats-kofi__members { color: var(--site-muted); font-size: .86rem; margin: 0 0 10px; }
 .stats-kofi__members b { color: #fff; }
 @media (max-width: 560px) { .stats-kofi__form, .stats-kofi__form input, .stats-kofi__search input { width: 100%; } .stats-kofi__form .site-btn { flex: 1; } }
+
+/* Traffic view switch (likely people / all requests) and funnel step notes */
+.stats-traffic-tools { align-items: center; display: flex; flex-wrap: wrap; gap: 12px; justify-content: flex-end; }
+.stats-step__label small { color: var(--site-muted, var(--site-soft)); display: block; font-size: .78rem; line-height: 1.35; margin-top: 2px; opacity: .8; }
+.stats-subhead--gap { margin-top: 22px; }

@@ -7,7 +7,7 @@
   const COLORS = { views: '#8b5cf6', visitors: '#0d9488' };
   const DEVICE_COLORS = { desktop: '#8b5cf6', mobile: '#0d9488', tablet: '#d97706' };
   const AUDIENCE_COLORS = { guest: '#8b5cf6', member: '#0d9488' };
-  const state = { days: 30, data: null, loading: false };
+  const state = { days: 30, data: null, loading: false, trafficView: null };
 
   const $ = id => document.getElementById(id);
   const number = value => Number(value || 0).toLocaleString('en-US');
@@ -322,12 +322,35 @@
     return card;
   }
 
+  // "Likely people" once those counts exist; before that, every request.
+  function peopleCounted(traffic) {
+    return Boolean(traffic.human && traffic.human.tracking_since);
+  }
+
+  function trafficView(traffic) {
+    if (state.trafficView) return state.trafficView;
+    return peopleCounted(traffic) ? 'human' : 'all';
+  }
+
+  function trafficSet(traffic, view = trafficView(traffic)) {
+    return view === 'human' && traffic.human ? traffic.human : traffic;
+  }
+
   function renderKpis(data) {
     const { traffic, members, insights, days } = data;
     const range = `vs previous ${days} days`;
+    const people = peopleCounted(traffic);
+    const shown = people ? traffic.human : traffic;
+    const since = shown.tracking_since;
+    // Only compare with the previous range when it was counted the same way.
+    const comparable = since && shown.previous_totals.views > 0;
     $('statsKpis').replaceChildren(
-      kpi('Visitors', number(traffic.totals.visitors), traffic.tracking_since ? range : 'counting starts after deploy', traffic.tracking_since ? delta(traffic.totals.visitors, traffic.previous_totals.visitors) : null),
-      kpi('Page views', number(traffic.totals.views), `${number(traffic.today.views)} today`, traffic.tracking_since ? delta(traffic.totals.views, traffic.previous_totals.views) : null),
+      kpi(people ? 'Visitors (people)' : 'Visitors', number(shown.totals.visitors),
+        people ? `${number(traffic.totals.visitors)} in all requests` : (since ? range : 'counting starts after deploy'),
+        comparable ? delta(shown.totals.visitors, shown.previous_totals.visitors) : null),
+      kpi(people ? 'Page views (people)' : 'Page views', number(shown.totals.views),
+        people ? `${number(traffic.totals.views)} in all requests · ${number(shown.today.views)} today` : `${number(shown.today.views)} today`,
+        comparable ? delta(shown.totals.views, shown.previous_totals.views) : null),
       kpi('New members', number(members.new_in_range), range, delta(members.new_in_range, members.new_previous_range)),
       kpi('Total members', number(insights.users.total), `${number(insights.users.verified)} verified · ${number(members.new_today)} joined today`),
       kpi('Active members', number(members.active_7_days), `logged in this week · ${number(members.active_24_hours)} today · ${number(members.active_30_days)} this month`),
@@ -336,14 +359,21 @@
   }
 
   function renderTraffic(data) {
-    const { traffic } = data;
+    const view = trafficView(data.traffic);
+    const traffic = trafficSet(data.traffic, view);
+    const enabled = data.traffic.enabled;
+    document.querySelectorAll('[data-traffic-view]').forEach(button => {
+      button.setAttribute('aria-pressed', String(button.dataset.trafficView === view));
+    });
     const dates = traffic.series.map(day => day.date);
     const since = traffic.tracking_since ? `Counting since ${dayOnly(traffic.tracking_since)}.` : 'Counting starts once this update is deployed.';
-    $('trafficNote').textContent = `Human page views and estimated unique visitors per day. ${since}`;
+    $('trafficNote').textContent = view === 'human'
+      ? `Pages a person opened in a real browser tab, and estimated people per day. Bots, scanners, crawlers and repeat reloads are left out. ${since}`
+      : `Every page the server sent to something that doesn't call itself a bot, scanners and scripts included. ${since}`;
     lineChart($('trafficChart'), dates, [
       { key: 'views', label: 'Page views', shortLabel: 'Views', color: COLORS.views, values: traffic.series.map(day => day.views) },
       { key: 'visitors', label: 'Visitors', color: COLORS.visitors, values: traffic.series.map(day => day.visitors) },
-    ], traffic.enabled ? 'No visits recorded in this range yet. Numbers appear within a minute of the first visit.' : 'Traffic counting is turned off (SITE_TRAFFIC_TRACKING).', { partialLast: true });
+    ], enabled ? 'No visits recorded in this range yet. Numbers appear within a minute of the first visit.' : 'Traffic counting is turned off (SITE_TRAFFIC_TRACKING).', { partialLast: true });
     $('trafficTable').replaceChildren(table(['Day', 'Page views', 'Visitors'], traffic.series.slice().reverse().map(day => [shortDate(day.date), number(day.views), number(day.visitors)])));
     bars($('topPages'), traffic.top_pages, 'No page views recorded yet.');
     bars($('trafficSources'), traffic.sources, 'No outside visits recorded yet.', key => (key === '(direct)' ? 'Direct / bookmarks / apps' : key));
@@ -378,15 +408,20 @@
     });
   }
 
-  function renderSignupFunnel(data) {
-    const container = $('signupFunnel');
-    if (!container || !data.funnel) return;
+  // Ranges from before people were counted start from every homepage load instead.
+  function funnelSteps(funnel) {
+    const steps = funnel.steps.slice();
+    const seen = steps.find(step => step.event === 'landing_seen');
+    const loads = (funnel.raw || []).find(item => item.event === 'landing_viewed');
+    if (seen && !seen.count && loads && loads.count) {
+      steps[steps.indexOf(seen)] = { event: 'landing_viewed', label: 'Homepage loads, all requests', count: loads.count,
+        detail: 'People were not counted separately yet in this range' };
+    }
+    return steps;
+  }
+
+  function drawSteps(container, steps) {
     container.replaceChildren();
-    // Ranges from before the visitor step existed fall back to all "/" page views.
-    const counted = data.funnel.steps.some(step => step.event === 'landing_viewed' && step.count > 0);
-    const homeViews = (data.traffic.top_pages.find(page => page.key === '/') || {}).count || 0;
-    const steps = counted ? data.funnel.steps.slice()
-      : [{ label: 'Homepage views (all, incl. members)', count: homeViews }, ...data.funnel.steps.filter(step => step.event !== 'landing_viewed')];
     const first = Math.max(...steps.map(step => step.count), 1);
     steps.forEach((step, index) => {
       const row = el('div', 'stats-step');
@@ -398,9 +433,18 @@
       const rate = index && previous ? `${Math.round((step.count / previous) * 100)}%` : '';
       const value = el('div', 'stats-step__value');
       value.append(el('b', '', number(step.count)), el('span', '', rate));
-      row.append(el('div', 'stats-step__label', step.label), track, value);
+      const label = el('div', 'stats-step__label', step.label);
+      if (step.detail) label.appendChild(el('small', '', step.detail));
+      row.append(label, track, value);
       container.appendChild(row);
     });
+  }
+
+  function renderSignupFunnel(data) {
+    const container = $('signupFunnel');
+    if (!container || !data.funnel) return;
+    drawSteps(container, funnelSteps(data.funnel));
+    if ($('homepageFunnel') && data.funnel.homepage) drawSteps($('homepageFunnel'), data.funnel.homepage);
     const fillList = (id, items) => {
       const list = $(id);
       list.replaceChildren();
@@ -1011,10 +1055,19 @@
   function buildReport(data) {
     const { traffic, members, insights, days } = data;
     const list = items => items.map(item => `${item.key} (${number(item.count)})`).join(', ') || 'none yet';
+    const people = traffic.human;
+    const peopleLines = people && people.tracking_since ? [
+      `Traffic, likely people (pages opened in a real browser tab; bots, scanners and reloads left out): ${number(people.totals.visitors)} visitors, ${number(people.totals.views)} page views (previous ${days} days: ${number(people.previous_totals.visitors)} visitors, ${number(people.previous_totals.views)} views). Counting since ${people.tracking_since}.`,
+      `People, top pages: ${list(people.top_pages.slice(0, 10))}`,
+      `People, sources: ${list(people.sources.slice(0, 10))}`,
+      `People, devices: ${list(people.devices)} · Audience: ${list(people.audience)}`,
+      '',
+    ] : [];
     const lines = [
       `OmniTrackr site stats — last ${days} days (generated ${dateTime(data.generated_at)})`,
       '',
-      `Traffic: ${number(traffic.totals.visitors)} visitors, ${number(traffic.totals.views)} page views (previous ${days} days: ${number(traffic.previous_totals.visitors)} visitors, ${number(traffic.previous_totals.views)} views). Counting since ${traffic.tracking_since || 'not started'}.`,
+      ...peopleLines,
+      `Traffic${peopleLines.length ? ', all requests (bots and scanners included)' : ''}: ${number(traffic.totals.visitors)} visitors, ${number(traffic.totals.views)} page views (previous ${days} days: ${number(traffic.previous_totals.visitors)} visitors, ${number(traffic.previous_totals.views)} views). Counting since ${traffic.tracking_since || 'not started'}.`,
       `Top pages: ${list(traffic.top_pages.slice(0, 10))}`,
       `Sources: ${list(traffic.sources.slice(0, 10))}`,
       `Devices: ${list(traffic.devices)} · Audience: ${list(traffic.audience)}`,
@@ -1022,7 +1075,8 @@
       `Members: ${number(insights.users.total)} total, ${number(insights.users.verified)} verified, ${number(members.new_in_range)} new (previous ${days} days: ${number(members.new_previous_range)}).`,
       `Active (logged in or visited): ${number(members.active_24_hours)} in 24h, ${number(members.active_7_days)} in 7 days, ${number(members.active_30_days)} in 30 days.`,
       `Journey: ${insights.activation.map(stage => `${stage.label} ${number(stage.count)}`).join(' → ')}`,
-      data.funnel ? `Sign-up funnel: ${data.funnel.steps.map(step => `${step.label} ${number(step.count)}`).join(' → ')}` : '',
+      data.funnel ? `Sign-up funnel: ${funnelSteps(data.funnel).map(step => `${step.label} ${number(step.count)}${step.detail ? ` (${step.detail})` : ''}`).join(' → ')}` : '',
+      data.funnel && data.funnel.homepage ? `Homepage path: ${data.funnel.homepage.map(step => `${step.label} ${number(step.count)}`).join(' → ')}` : '',
       data.funnel ? `Sign-up issues: ${data.funnel.issues.filter(item => item.count).map(item => `${item.label} ${number(item.count)}`).join('; ') || 'none'}` : '',
       data.funnel ? `Guest lists: ${data.funnel.guest.map(item => `${item.label} ${number(item.count)}`).join('; ')}` : '',
       data.funnel && data.funnel.google ? `Google sign-in: ${data.funnel.google.map(item => `${item.label} ${number(item.count)}`).join('; ')}` : '',
@@ -1121,6 +1175,12 @@
         load();
       });
     });
+    document.querySelectorAll('[data-traffic-view]').forEach(button => {
+      button.addEventListener('click', () => {
+        state.trafficView = button.dataset.trafficView;
+        if (state.data) renderTraffic(state.data);
+      });
+    });
     $('statsRefresh').addEventListener('click', load);
     $('statsCopy').addEventListener('click', copyReport);
     $('editorPublish')?.addEventListener('click', publishEditor);
@@ -1147,7 +1207,7 @@
   }
 
   if (typeof module !== 'undefined' && module.exports) {
-    module.exports = { buildReport, growthRows, paymentLabel, kofiSummary, niceMax, delta, percent };
+    module.exports = { buildReport, growthRows, paymentLabel, kofiSummary, niceMax, delta, percent, funnelSteps, trafficSet };
   } else if (document.readyState === 'loading') {
     document.addEventListener('DOMContentLoaded', init);
   } else {

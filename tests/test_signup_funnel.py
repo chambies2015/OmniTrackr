@@ -180,9 +180,44 @@ def test_site_stats_shows_the_funnel(client, db_session, monkeypatch):
     db_session.commit()
     data = site_stats._funnel(db_session, 30, date.today())
     steps = {step["event"]: step["count"] for step in data["steps"]}
-    assert steps["signup_form_opened"] == 9 and steps["signup_created"] == 2 and steps["email_verified"] == 0
+    assert steps["signup_form_opened"] == 9 and steps["signup_created"] == 2 and steps["account_confirmed"] == 0
     assert {item["event"]: item["count"] for item in data["issues"]}["signup_rejected_password"] == 3
     assert site_stats._retention(db_session) == {"weekly_email_subscribers": 0, "public_profiles": 0}
+
+
+def test_email_and_google_sign_ups_add_up_instead_of_disagreeing():
+    # The Oct 30 report: 1 email form sent, 4 Google accounts, 5 accounts, 1 email verified.
+    data = funnel.summary({"landing_seen": 300, "landing_viewed": 2246, "signup_form_opened": 13,
+                           "signup_submitted": 1, "signup_created": 5, "google_account_created": 4,
+                           "email_verified": 1, "first_login": 5})
+    steps = {step["event"]: step for step in data["steps"]}
+    assert [step["event"] for step in data["steps"]] == [
+        "landing_seen", "signup_form_opened", "signup_sent", "signup_created", "account_confirmed", "first_login"]
+    assert steps["signup_sent"]["count"] == 5 and steps["signup_sent"]["detail"] == "1 email form, 4 with Google"
+    assert steps["signup_created"]["count"] == 5 and steps["signup_created"]["detail"] == "1 by email, 4 with Google"
+    assert steps["account_confirmed"]["count"] == 5
+    assert "2,246 homepage loads" in steps["landing_seen"]["detail"]
+    counts = [step["count"] for step in data["steps"][2:]]
+    assert counts == sorted(counts, reverse=True)  # no step bigger than the one before it
+    assert [item["event"] for item in data["homepage"]] == [
+        "landing_seen", "title_search_used", "guest_pick_added", "guest_list_signup", "guest_list_imported"]
+    assert data["raw"] == [{"event": "landing_viewed", "label": "Homepage loads, all requests", "count": 2246}]
+
+
+def test_derived_steps_are_never_recorded_as_events(client, recorder):
+    assert not ({"signup_sent", "account_confirmed"} & funnel.SERVER_EVENTS)
+    assert {"signup_submitted", "email_verified", "landing_seen", "landing_viewed"} <= funnel.SERVER_EVENTS
+
+
+def test_first_log_in_only_counts_new_accounts(client, db_session, recorder):
+    from datetime import datetime, timedelta
+    register(client)
+    user = db_session.query(models.User).filter_by(username="newfan").one()
+    user.is_verified = True
+    user.created_at = datetime.utcnow() - timedelta(days=400)  # an old member who never logged in since
+    db_session.commit()
+    assert client.post("/auth/login", data={"username": "newfan", "password": "tea on the porch"}).status_code == 200
+    assert counted(recorder, "first_login") == 0
 
 
 # ---------------------------------------------------------------- verification email
@@ -238,8 +273,30 @@ def test_homepage_picks_section(db_session):
     assert len(items) == 6
     html = guest_picks.section_html(items)
     assert 'data-guest-slug="interstellar-2014"' in html and "Start your list" in html
-    assert 'data-action="show-register-form"' in html
+    assert "data-guest-bar" not in html  # the page's one save bar offers sign-up
     assert guest_picks.section_html(items[:5]) == ""  # too few to be worth showing
+
+
+def test_hero_quick_picks_save_in_one_tap(db_session):
+    seed_popular(db_session)
+    items = guest_picks.picks(db_session)
+    html = guest_picks.quick_picks_html(items)
+    assert html.count('class="lp-quick__pick"') == guest_picks.QUICK_PICKS
+    assert 'data-guest-kind="movie"' in html and 'aria-pressed="false"' in html
+    assert guest_picks.quick_picks_html(items[:3]) == ""
+    evil = [{**items[0], "title": '<img src=x onerror=alert(1)>'}] * 4
+    assert "<img" not in guest_picks.quick_picks_html(evil)
+
+
+def test_homepage_has_one_save_bar_with_sign_up(client, db_session, monkeypatch):
+    seed_popular(db_session)
+    guest_picks.clear_cache()
+    page = client.get("/").text
+    assert page.count("data-guest-bar") == 1 and 'class="lp-savebar"' in page
+    bar = page[page.index('class="lp-savebar"'):]
+    bar = bar[:bar.index("</main>")]
+    assert 'data-guest-count' in bar and 'data-action="show-register-form"' in bar
+    assert "SAVEBAR_SIGNUP" not in page and "HERO_QUICK_PICKS" not in page
 
 
 def test_homepage_includes_picks(client, db_session, monkeypatch):
