@@ -274,8 +274,13 @@ def _welcome_status(db: Session) -> dict | None:
 
 
 def _title_details(db: Session) -> dict:
-    """How many title pages have their public facts cached (filled in by a background job)."""
+    """How many title pages have their public facts cached (filled in by a background job).
+
+    Where-to-watch lookups share the table under "where:" keys. They are left out: a film
+    that streams nowhere is a normal answer, not a title page missing its details.
+    """
     counts = dict(db.query(models.TitleMetadata.status, func.count(models.TitleMetadata.id))
+                  .filter(~models.TitleMetadata.key.startswith("where:"))
                   .group_by(models.TitleMetadata.status).all())
     return {"found": int(counts.get("ok", 0)), "not_found": int(counts.get("miss", 0)), "errors": int(counts.get("error", 0))}
 

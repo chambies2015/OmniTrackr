@@ -187,20 +187,30 @@ class SlugIndex:
         return entry
 
     def titles(self, db: Session, kind: str, pairs) -> dict[tuple, set]:
-        model = KINDS[kind][0]
         with self._lock:
-            entry = self._kinds.get(kind)
-            top = db.query(func.max(model.id)).scalar() or 0
-            if (entry is None or time.monotonic() - entry["built"] >= SLUG_INDEX_REBUILD_SECONDS
-                    or top < entry["max_id"]):
-                # The table shrank at the top (a deleted newest row, or a different database): start over.
-                entry = self._kinds[kind] = self._build(db, kind, top)
-            elif top > entry["max_id"]:
-                for title, year_value in (db.query(model.title, _year_column(kind, model))
-                                          .filter(model.id > entry["max_id"], model.id <= top)):
-                    self._add(entry, kind, title, year_value)
-                entry["max_id"] = top
+            entry = self._current(db, kind)
             return {pair: set(entry["pairs"][pair]) for pair in pairs if pair in entry["pairs"]}
+
+    def years(self, db: Session, kind: str, base: str) -> list[tuple]:
+        """Every (title slug, year) pair stored under this title slug, whatever the year."""
+        with self._lock:
+            return [pair for pair in self._current(db, kind)["pairs"] if pair[0] == base]
+
+    def _current(self, db: Session, kind: str) -> dict:
+        """This kind's entry, built or caught up with the table first. Call with the lock held."""
+        model = KINDS[kind][0]
+        entry = self._kinds.get(kind)
+        top = db.query(func.max(model.id)).scalar() or 0
+        if (entry is None or time.monotonic() - entry["built"] >= SLUG_INDEX_REBUILD_SECONDS
+                or top < entry["max_id"]):
+            # The table shrank at the top (a deleted newest row, or a different database): start over.
+            entry = self._kinds[kind] = self._build(db, kind, top)
+        elif top > entry["max_id"]:
+            for title, year_value in (db.query(model.title, _year_column(kind, model))
+                                      .filter(model.id > entry["max_id"], model.id <= top)):
+                self._add(entry, kind, title, year_value)
+            entry["max_id"] = top
+        return entry
 
     def note(self, kind: str, title: Optional[str], year: Optional[int]) -> None:
         with self._lock:
@@ -343,6 +353,37 @@ def paths_many(db: Session, kind: str, slugs) -> dict[str, str]:
                 paths[slug] = f"/titles/{kind}/{base}-{year}" if year else f"/titles/{kind}/{base}"
                 break
     return paths
+
+
+MOVED_YEAR_SPAN = 2
+
+
+def moved_path(db: Session, kind: str, slug: str) -> Optional[str]:
+    """Where an old title page link points now, when exactly one title fits it.
+
+    A page's address comes from the title and year members saved. When the only member
+    with a title fixes its year (or the year was a typo in a shared link), the old
+    address would 404 even though the title is still tracked. A slug without a year
+    finds a title stored with one, and a year a little off finds the right one, but
+    only when no other title could be meant.
+    """
+    if kind not in KINDS or not re.fullmatch(r"[a-z0-9-]{1,130}", slug or ""):
+        return None
+    base, separator, year_suffix = slug.rpartition("-")
+    wanted: set = set()
+    if base and separator and len(year_suffix) == 4 and year_suffix.isdigit():
+        year = int(year_suffix)
+        wanted.update(pair for pair in SLUG_INDEX.years(db, kind, base)
+                      if pair[1] is None or abs(pair[1] - year) <= MOVED_YEAR_SPAN)
+    wanted.update(SLUG_INDEX.years(db, kind, slug))  # "blade-runner-2049" saved with its year, 2017
+    if not wanted:
+        return None
+    found = {pair for pair, _, _ in _candidate_rows(db, kind, wanted, func.count(), grouped=True)}
+    if len(found) != 1:
+        return None
+    title_slug_part, year = found.pop()
+    path = f"/titles/{kind}/{title_slug_part}-{year}" if year else f"/titles/{kind}/{title_slug_part}"
+    return None if path == f"/titles/{kind}/{slug}" else path
 
 
 def _public_reviews(db: Session, kind: str, items: list, decorate: bool = True) -> list[dict]:
@@ -531,6 +572,86 @@ def more_from_creator(db: Session, kind: str, creator: str, exclude: str, limit:
         results.append({"kind": kind, "label": KINDS[kind][3], "title": item.title.strip(),
                         "year": item_year(kind, item), "url": path_for_item(kind, item),
                         "image": _safe_image(getattr(item, IMAGE_FIELD[kind], None))})
+    return results
+
+
+SIMILAR_MIN_SHARED = 2
+GENRE_SUFFIXES = (" film", " video game", " television series", " television program", " novel", " music", " anime")
+
+
+def genre_key(genre) -> str:
+    """"Science fiction film" and "Science Fiction" are one genre for matching."""
+    text = " ".join(str(genre or "").casefold().replace("-", " ").split())
+    for suffix in GENRE_SUFFIXES:
+        if text.endswith(suffix) and len(text) > len(suffix) + 2:
+            text = text[: -len(suffix)]
+    return text
+
+
+def _genre_pool(db: Session, kind: str) -> list[dict]:
+    """Every title of this kind with cached facts, with its genres, read from the metadata cache."""
+    import json
+    pool = []
+    rows = (db.query(models.TitleMetadata.key, models.TitleMetadata.data)
+            .filter(models.TitleMetadata.key.startswith(f"{kind}:"), models.TitleMetadata.status == "ok"))
+    for key, data in rows:
+        _, normalized, year = (key.split(":", 2) + ["", ""])[:3]
+        try:
+            genres = (json.loads(data) or {}).get("genres") or [] if data else []
+        except ValueError:
+            continue
+        keys = sorted({genre_key(genre) for genre in genres if genre_key(genre)})
+        if normalized and keys:
+            pool.append({"normalized": normalized, "year": int(year) if year.isdigit() else None, "genres": keys})
+    return pool
+
+
+def similar_titles(db: Session, group: TitleGroup, genres: list, exclude=(), limit: int = 8) -> list[dict]:
+    """Titles of the same kind that share the most genres with this one, among titles members track.
+
+    Only titles whose facts are already cached can match, so this costs two small
+    queries, never an outside lookup. Each result says which genres it shares.
+    """
+    wanted = {genre_key(genre) for genre in genres or [] if genre_key(genre)}
+    if not wanted:
+        return []
+    need = min(SIMILAR_MIN_SHARED, len(wanted))
+    order = list(dict.fromkeys(genre_key(genre) for genre in genres if genre_key(genre)))
+    labels = {genre_key(genre): str(genre) for genre in reversed(list(genres))}
+    pool = _cached_section(("genre-pool", group.kind), lambda: _genre_pool(db, group.kind))
+    scored = []
+    for entry in pool:
+        if entry["normalized"] == group.normalized and entry["year"] == group.year:
+            continue
+        shared = [genre for genre in order if genre in entry["genres"]]
+        if len(shared) >= need:
+            scored.append((len(shared) / len(set(entry["genres"]) | wanted), shared, entry))
+    if not scored:
+        return []
+    skip = set(exclude) | {group.path}
+    pairs = {(slugify(entry["normalized"]), entry["year"]): (score, shared) for score, shared, entry in scored}
+    kind = group.kind
+    model = KINDS[kind][0]
+    members: Counter = Counter()
+    names: dict = {}
+    for pair, title, count in _candidate_rows(db, kind, set(pairs), func.count(func.distinct(model.user_id)), grouped=True):
+        members[pair] += count
+        if count >= names.get(pair, ("", -1))[1]:
+            names[pair] = ((title or "").strip(), count)
+    images = {pair: image for pair, _, image in _candidate_rows(db, kind, set(members), func.max(getattr(model, IMAGE_FIELD[kind])),
+                                                                 grouped=True) if _safe_image(image)}
+    ranked = sorted(members, key=lambda pair: (-pairs[pair][0], -len(pairs[pair][1]), -members[pair], pair))
+    results = []
+    for pair in ranked:
+        title = names[pair][0]
+        url = title_path(kind, title, pair[1])
+        if not title or url in skip:
+            continue
+        results.append({"kind": kind, "label": KINDS[kind][3], "title": title, "year": pair[1], "url": url,
+                        "image": _safe_image(images.get(pair)), "members": members[pair],
+                        "shared": [labels.get(genre, genre.capitalize()) for genre in pairs[pair][1]]})
+        if len(results) >= limit:
+            break
     return results
 
 
