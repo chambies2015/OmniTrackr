@@ -445,3 +445,185 @@ body.app-shell .account-settings .toggle-switch:focus-visible {
     scroll-behavior: smooth;
   }
 }
+
+/* Two-factor sign-in */
+.two-factor [hidden] {
+  display: none !important;
+}
+
+.two-factor__head {
+  align-items: center;
+  display: flex;
+  gap: 10px;
+  justify-content: space-between;
+  margin-bottom: 8px;
+}
+
+body.app-shell .account-settings .two-factor__head h4 {
+  margin: 0;
+}
+
+.two-factor__badge {
+  background: var(--surface-muted);
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  color: var(--fg-secondary);
+  font-size: .78rem;
+  font-weight: 700;
+  letter-spacing: .02em;
+  padding: 3px 10px;
+}
+
+.two-factor__badge.is-on {
+  background: var(--teal-soft);
+  border-color: transparent;
+  color: var(--teal);
+}
+
+.two-factor__panel {
+  display: grid;
+  gap: 14px;
+  margin-top: 14px;
+}
+
+.two-factor__steps {
+  display: grid;
+  gap: 18px;
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+
+.two-factor__steps li {
+  display: grid;
+  gap: 10px;
+  justify-items: start;
+}
+
+.two-factor__step-title {
+  color: var(--fg);
+  font-size: .95rem;
+  font-weight: 600;
+  margin: 0;
+}
+
+.two-factor__qr {
+  background: #ffffff;
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  height: 184px;
+  padding: 8px;
+  width: 184px;
+}
+
+.two-factor__manual summary {
+  color: var(--primary);
+  cursor: pointer;
+  font-size: .9rem;
+  font-weight: 600;
+}
+
+.two-factor__manual[open] {
+  display: grid;
+  gap: 8px;
+}
+
+body.app-shell .account-settings .two-factor__manual p {
+  line-height: 1.45;
+  margin: 0;
+}
+
+.two-factor__key {
+  background: var(--surface-muted);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  color: var(--fg);
+  font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+  font-size: .95rem;
+  letter-spacing: .06em;
+  padding: 8px 10px;
+  display: block;
+  justify-self: start;
+  user-select: all;
+  word-break: break-all;
+}
+
+body.app-shell .account-settings input.two-factor__code {
+  font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+  font-size: 1.15rem;
+  letter-spacing: .14em;
+  max-width: 16ch;
+}
+
+#twoFactorManageForm {
+  display: grid;
+  gap: 14px;
+}
+
+body.app-shell .account-settings #twoFactorEnableForm input.two-factor__code {
+  max-width: 16ch;
+}
+
+body.app-shell .account-settings #twoFactorManageForm input.two-factor__code {
+  max-width: 22ch;
+}
+
+.two-factor__codes {
+  background: var(--surface-muted);
+  border: 1px dashed var(--border);
+  border-radius: 12px;
+  columns: 2;
+  column-gap: 24px;
+  font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+  font-size: 1rem;
+  letter-spacing: .04em;
+  margin: 0;
+  padding: 14px 18px 14px 40px;
+}
+
+.two-factor__codes li {
+  color: var(--fg);
+  padding: 3px 0;
+  user-select: all;
+}
+
+.two-factor__summary {
+  color: var(--fg);
+  margin: 0;
+}
+
+.two-factor__summary.is-warning {
+  color: var(--danger);
+}
+
+body.app-shell .account-settings button.action-btn.two-factor__quiet {
+  background: transparent;
+  border-color: var(--border);
+  color: var(--fg);
+}
+
+body.app-shell .account-settings button.action-btn.two-factor__quiet:hover {
+  background: var(--surface-hover);
+}
+
+.two-factor__link {
+  background: none;
+  border: 0;
+  color: var(--primary);
+  cursor: pointer;
+  font: inherit;
+  font-weight: 600;
+  padding: 0;
+  text-decoration: underline;
+}
+
+.two-factor__forget {
+  border-top: 1px solid var(--border);
+  padding-top: 12px;
+}
+
+@media (max-width: 520px) {
+  .two-factor__codes {
+    columns: 1;
+  }
+}
