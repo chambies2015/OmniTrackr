@@ -3,6 +3,7 @@ from __future__ import annotations
 
 import csv
 import hashlib
+import html
 import io
 import math
 import re
@@ -18,10 +19,12 @@ from . import game_playtime, import_formats, models, schemas, steam
 
 MAX_IMPORT_BYTES = 5 * 1024 * 1024
 MAX_IMPORT_ROWS = 5000
-SUPPORTED_SOURCES = {"auto", "letterboxd", "goodreads", "myanimelist", "imdb", "storygraph", "trakt", "anilist", "steam", "generic"}
+SUPPORTED_SOURCES = {"auto", "letterboxd", "goodreads", "myanimelist", "imdb", "storygraph", "trakt", "anilist", "steam",
+                     "spotify", "opml", "rateyourmusic", "libib", "generic"}
 SOURCE_LABELS = {
     "letterboxd": "Letterboxd", "goodreads": "Goodreads", "myanimelist": "MyAnimeList",
     "imdb": "IMDb", "storygraph": "The StoryGraph", "trakt": "Trakt", "anilist": "AniList", "steam": "Steam",
+    "spotify": "Spotify", "opml": "podcast app (OPML)", "rateyourmusic": "Rate Your Music", "libib": "Libib",
     "generic": "Generic CSV / spreadsheet",
 }
 # Placeholders the importers use when an export has no creator; they match any creator.
@@ -41,6 +44,17 @@ IMDB_SKIPPED_TYPES = {
     "musicvideo": "IMDb music videos aren't a supported category.",
 }
 STORYGRAPH_FINISHED = {"read"}
+# Sources whose export is never a spreadsheet, with what to choose instead.
+FILE_ONLY_SOURCES = {
+    "spotify": "Spotify's library comes as YourLibrary.json or the ZIP it arrives in. Choose that file instead.",
+    "opml": "Podcast apps export subscriptions as an OPML file. Choose the .opml or .xml file instead.",
+}
+# Libib's item types, and the statuses it gives a finished item.
+LIBIB_TYPES = {"book": "books", "books": "books", "movie": "movies", "movies": "movies",
+               "music": "music", "videogame": "video-games", "videogames": "video-games", "game": "video-games"}
+LIBIB_FINISHED = {"completed", "complete", "finished"}
+# Rate Your Music's ownership codes: n none, o owned, u used to own, w wishlist, d digital.
+RYM_WISHLIST = {"w"}
 CATEGORY_ALIASES = {
     "movie": "movies", "movies": "movies", "film": "movies", "films": "movies",
     "tv": "tv-shows", "show": "tv-shows", "shows": "tv-shows", "tv show": "tv-shows",
@@ -209,6 +223,10 @@ def _detect_source(headers: set[str]) -> str:
         return "imdb"
     if {"title", "authors", "read_status"}.issubset(headers):
         return "storygraph"
+    if {"rym_album", "title", "rating"}.issubset(headers):
+        return "rateyourmusic"
+    if {"item_type", "title"}.issubset(headers) and ({"ean_isbn13", "upc_isbn10", "creators"} & headers):
+        return "libib"
     if "title" in headers or "name" in headers:
         return "generic"
     raise ValueError("Could not find a title column or recognize this export format.")
@@ -326,10 +344,85 @@ def _imdb_row(row: dict[str, str], mapping: dict[str, str]) -> tuple[str, dict[s
     return category, {**common, "year": year, "seasons": None, "episodes": None, "watched": completed}
 
 
+def _rym_row(row: dict[str, str], mapping: dict[str, str]) -> tuple[str, dict[str, Any]]:
+    """A Rate Your Music catalog export: one album per row, ratings already out of 10."""
+    def field(target: str, *aliases: str) -> str:
+        return html.unescape(_field(row, mapping, target, *aliases))
+
+    title = field("title", "title")
+    if not title:
+        raise ValueError("Title is required.")
+    # Solo artists are split into first and last names; bands put the whole name in Last Name.
+    artist = field("creator", "artist") or " ".join(
+        part for part in (html.unescape(_first(row, "first name")), html.unescape(_first(row, "last name"))) if part)
+    rating = _rating(field("rating", "rating"), zero_is_unrated=True)
+    if "status" in mapping:
+        completed = _truthy(field("status"))
+    else:
+        # Rated means heard. An unrated album you own counts too; the wishlist does not.
+        ownership = _clean(_first(row, "ownership")).lower()
+        completed = rating is not None or ownership not in RYM_WISHLIST | {"", "n"}
+    return "music", {
+        "title": title, "artist": artist or "Unknown artist",
+        "year": _integer(field("year", "release date", "release_date", "year")),
+        "genre": field("genre", "genre") or None,
+        "rating": rating, "listened": completed,
+        "review": field("review", "review") or None, "review_public": False,
+    }
+
+
+def _loose_date(value: str) -> datetime | None:
+    """A full date when the export has one, else January 1 of the year it names, else nothing."""
+    if not value:
+        return None
+    try:
+        return _date(value)
+    except ValueError:
+        found = re.search(r"\b(1[5-9]\d\d|2\d\d\d)\b", value)
+        return datetime(int(found.group(1)), 1, 1) if found else None
+
+
+def _libib_row(row: dict[str, str], mapping: dict[str, str]) -> tuple[str, dict[str, Any]]:
+    """A Libib library export, which mixes books, films, music and games in one file."""
+    def field(target: str, *aliases: str) -> str:
+        return _field(row, mapping, target, *aliases)
+
+    title = field("title", "title")
+    if not title:
+        raise ValueError("Title is required.")
+    raw_type = field("category", "item type")
+    category = LIBIB_TYPES.get(re.sub(r"[^a-z]", "", raw_type.lower())) or CATEGORY_ALIASES.get(_clean(raw_type).lower())
+    if not category:
+        raise ValueError(f"Libib item type \"{raw_type or 'blank'}\" isn't a supported category.")
+    named = " ".join(part for part in (_first(row, "first name"), _first(row, "last name")) if part)
+    creator = field("creator", "creators") or named
+    # Libib lists several creators in one cell; the first is the main author or artist.
+    creator = (named or creator.split(",")[0]).strip() if creator else ""
+    completed = (_truthy(field("status")) if "status" in mapping else
+                 _clean(_first(row, "status")).lower() in LIBIB_FINISHED or bool(_first(row, "completed")))
+    rating = _rating(field("rating", "rating"), five_point=True, zero_is_unrated=True)
+    review = field("review", "review", "notes") or None
+    common = {"title": title, "rating": rating, "review": review, "review_public": False}
+    published = _loose_date(field("release_date", "publish date"))
+    year = _integer(field("year", "year")) if "year" in mapping else (published.year if published else 0)
+    if category == "video-games":
+        return category, {**common, "release_date": published, "genres": None, "played": completed}
+    if category == "movies":
+        # Libib's creators for a film are usually cast, so the director is left for you to add.
+        return category, {**common, "director": "Unknown director", "year": year, "watched": completed}
+    if category == "music":
+        return category, {**common, "artist": creator or "Unknown artist", "year": year, "genre": None, "listened": completed}
+    return category, {**common, "author": creator or "Unknown author", "year": year, "genre": None, "read": completed}
+
+
 def _source_row(source: str, row: dict[str, str], category_override: str | None, mapping: dict[str, str],
                 watchlist: bool = False) -> tuple[str, dict[str, Any]]:
     if source == "generic":
         return _generic_row(row, category_override, mapping)
+    if source == "rateyourmusic":
+        return _rym_row(row, mapping)
+    if source == "libib":
+        return _libib_row(row, mapping)
     def field(target: str, *aliases: str) -> str:
         return _field(row, mapping, target, *aliases)
 
@@ -424,6 +517,8 @@ def parse_csv(
             raise ValueError("Mapped CSV columns were not found: " + ", ".join(sorted(missing)) + ".")
         headers.update(normalized_mapping.keys())
     detected = _detect_source(headers) if source == "auto" else source
+    if detected in FILE_ONLY_SOURCES:
+        raise ValueError(FILE_ONLY_SOURCES[detected])
     watchlist = detected == "letterboxd" and import_formats.letterboxd_csv_name(filename) == "watchlist.csv"
     parsed: list[ParsedRow] = []
     for number, row in enumerate(rows, start=2):

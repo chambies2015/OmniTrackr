@@ -24,10 +24,12 @@ const importStudioCategories = {
 const importStudioSources = {
   letterboxd: 'a Letterboxd export', goodreads: 'a Goodreads export', myanimelist: 'a MyAnimeList export',
   imdb: 'an IMDb export', storygraph: 'a StoryGraph export', trakt: 'a Trakt export',
-  anilist: 'your AniList lists', steam: 'your Steam library', generic: 'a generic spreadsheet'
+  anilist: 'your AniList lists', steam: 'your Steam library', spotify: 'a Spotify library export',
+  opml: 'a podcast app subscription file', rateyourmusic: 'a Rate Your Music export', libib: 'a Libib export',
+  generic: 'a generic spreadsheet'
 };
 // Exports that are read by their own layout; column mapping only applies to spreadsheets.
-const IMPORT_STUDIO_STRUCTURED = /\.(zip|xml|gz|json)$/i;
+const IMPORT_STUDIO_STRUCTURED = /\.(zip|xml|gz|json|opml)$/i;
 const ANILIST_QUERY = `query ($name: String, $type: MediaType) {
   MediaListCollection(userName: $name, type: $type) {
     lists { name entries { status score(format: POINT_10_DECIMAL) notes

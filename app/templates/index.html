@@ -2278,7 +2278,7 @@
   </dialog>
   <script src="./credentials.js"></script>
   <script src="./auth.js?v=20261101-so-far-1"></script>
-  <script src="/static/import-studio.js?v=20261030-audiobooks-1"></script>
+  <script src="/static/import-studio.js?v=20261031-sources-1"></script>
   <script src="/static/progress.js?v=20261030-audiobooks-1"></script>
   <script src="/static/episodes.js?v=20261031-episodes-2"></script>
   <script src="./app.js"></script>
@@ -2926,7 +2926,7 @@
         <div class="account-section import-studio" id="importStudio">
           <div class="import-studio__eyebrow">Bring your history with you</div>
           <h4>Import Studio</h4>
-          <p class="info-text">Bring your history from Letterboxd, IMDb, Goodreads, The StoryGraph, MyAnimeList, AniList, Kitsu, Trakt, or any spreadsheet. Upload the export file as it comes, ZIP included, and preview it before anything is saved. Existing records are never overwritten: matches and repeated rows are skipped.</p>
+          <p class="info-text">Bring your history from Letterboxd, IMDb, Goodreads, The StoryGraph, MyAnimeList, AniList, Kitsu, Trakt, Spotify, Rate Your Music, Libib, your podcast app, or any spreadsheet. Upload the export file as it comes, ZIP included, and preview it before anything is saved. Existing records are never overwritten: matches and repeated rows are skipped.</p>
           <div class="import-studio__sources" aria-label="Where to find your export">
             <a href="/switch#letterboxd-heading" target="_blank" rel="noopener noreferrer">Letterboxd ZIP</a>
             <a href="/switch#imdb-heading" target="_blank" rel="noopener noreferrer">IMDb CSV</a>
@@ -2934,6 +2934,10 @@
             <a href="/switch#storygraph-heading" target="_blank" rel="noopener noreferrer">StoryGraph CSV</a>
             <a href="/switch#mal-heading" target="_blank" rel="noopener noreferrer">MyAnimeList / Kitsu XML</a>
             <a href="/switch#trakt-heading" target="_blank" rel="noopener noreferrer">Trakt ZIP or JSON</a>
+            <a href="/switch/spotify" target="_blank" rel="noopener noreferrer">Spotify ZIP or JSON</a>
+            <a href="/switch/podcast-apps" target="_blank" rel="noopener noreferrer">Podcast app OPML</a>
+            <a href="/switch/rate-your-music" target="_blank" rel="noopener noreferrer">Rate Your Music CSV</a>
+            <a href="/switch/libib" target="_blank" rel="noopener noreferrer">Libib CSV</a>
           </div>
           <form id="importStudioForm" data-submit-action="preview-library-import">
             <div class="import-studio__controls">
@@ -2947,6 +2951,10 @@
                   <option value="storygraph">The StoryGraph CSV</option>
                   <option value="myanimelist">MyAnimeList or Kitsu XML / CSV</option>
                   <option value="trakt">Trakt ZIP or JSON</option>
+                  <option value="spotify">Spotify account data ZIP or YourLibrary.json</option>
+                  <option value="opml">Podcast app subscriptions (OPML)</option>
+                  <option value="rateyourmusic">Rate Your Music CSV</option>
+                  <option value="libib">Libib CSV</option>
                   <option value="anilist">AniList (fetched by username)</option>
                   <option value="steam" id="importStudioSteamOption" hidden disabled>Steam (fetched by profile)</option>
                   <option value="generic">Generic CSV / spreadsheet</option>
@@ -2968,8 +2976,8 @@
                 </select>
               </label>
               <label class="import-studio__file-label">
-                <span>Export file (CSV, ZIP, XML or JSON) · up to 5 MB / 5,000 titles</span>
-                <input id="importStudioFile" type="file" accept=".csv,.tsv,.zip,.xml,.gz,.json,text/csv,text/tab-separated-values,application/zip,application/json,text/xml" required data-change-action="import-studio-file">
+                <span>Export file (CSV, ZIP, XML, OPML or JSON) · up to 5 MB / 5,000 titles</span>
+                <input id="importStudioFile" type="file" accept=".csv,.tsv,.zip,.xml,.gz,.json,.opml,text/csv,text/tab-separated-values,application/zip,application/json,text/xml,text/x-opml" required data-change-action="import-studio-file">
               </label>
             </div>
 
