@@ -22,7 +22,7 @@ router = APIRouter(prefix="/import-studio", tags=["import-studio"])
 
 async def _read_upload(file: UploadFile) -> bytes:
     if not file.filename or not file.filename.lower().endswith((".csv", ".tsv", *STRUCTURED_EXTENSIONS)):
-        raise HTTPException(status_code=400, detail="Choose a CSV, TSV, ZIP, XML or JSON export file.")
+        raise HTTPException(status_code=400, detail="Choose a CSV, TSV, ZIP, XML, OPML or JSON export file.")
     content = await file.read(MAX_IMPORT_BYTES + 1)
     if not content:
         raise HTTPException(status_code=400, detail="The selected file is empty.")

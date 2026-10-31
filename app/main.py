@@ -219,6 +219,8 @@ INDEXABLE_PUBLIC_TEMPLATES = {
     "review_guidelines.html",
     "sample_library.html",
     "switch.html",
+    # One "Switch from X" guide per service the Import Studio reads (app/switch_guides.py).
+    "switch_source.html",
     "privacy.html",
     "reviews.html",
     "terms.html",
@@ -286,7 +288,8 @@ def apply_public_search_policy(html: str, template_name: str) -> tuple[str, bool
     return html, False
 
 
-def strict_template_response(template_name: str, request: Request | None = None, replacements: dict | None = None):
+def strict_template_response(template_name: str, request: Request | None = None, replacements: dict | None = None,
+                             reader_page=None):
     html_file = os.path.join(os.path.dirname(__file__), "templates", template_name)
     if os.path.exists(html_file):
         with open(html_file, "r", encoding="utf-8") as file:
@@ -294,7 +297,7 @@ def strict_template_response(template_name: str, request: Request | None = None,
             for marker, value in (replacements or {}).items():
                 source = source.replace(marker, value)
             html, indexable = apply_public_search_policy(
-                enhance_reader_page(apply_site_chrome(source), template_name), template_name)
+                enhance_reader_page(apply_site_chrome(source), template_name, reader_page), template_name)
             html = inject_adsense_account_meta(html)
             response = strict_html_response(inject_public_ad_loader(html, template_name, request))
             response.headers["Vary"] = "Cookie"
@@ -1351,6 +1354,19 @@ async def export_import_guide_page(request: Request):
 @app.get("/switch", tags=["public"])
 async def switch_page(request: Request):
     response = strict_template_response("switch.html", request)
+    if response:
+        return response
+    raise HTTPException(status_code=404, detail="Page not found")
+
+
+@app.get("/switch/{slug}", tags=["public"])
+async def switch_source_page(slug: str, request: Request):
+    from .switch_pages import render
+    found = render(slug)
+    if found is None:
+        raise HTTPException(status_code=404, detail="Page not found")
+    replacements, reader_page = found
+    response = strict_template_response("switch_source.html", request, replacements, reader_page)
     if response:
         return response
     raise HTTPException(status_code=404, detail="Page not found")

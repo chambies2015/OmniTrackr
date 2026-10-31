@@ -19,7 +19,7 @@ from xml.etree import ElementTree
 
 
 MAX_EXPANDED_BYTES = 40 * 1024 * 1024
-STRUCTURED_EXTENSIONS = (".zip", ".xml", ".gz", ".json")
+STRUCTURED_EXTENSIONS = (".zip", ".xml", ".gz", ".json", ".opml")
 LETTERBOXD_FILES = ("watched.csv", "diary.csv", "ratings.csv", "reviews.csv", "watchlist.csv")
 # Archive folders holding entries the member removed, or lists and likes that are not history.
 LETTERBOXD_SKIPPED_FOLDERS = {"deleted", "orphaned", "lists", "likes"}
@@ -36,7 +36,7 @@ def is_structured(content: bytes, filename: str) -> bool:
     if name.endswith(STRUCTURED_EXTENSIONS):
         return True
     head = content[:64].lstrip(b"\xef\xbb\xbf \t\r\n")
-    return content[:4] == b"PK\x03\x04" or content[:2] == b"\x1f\x8b" or head.startswith((b"<?xml", b"<myanimelist"))
+    return content[:4] == b"PK\x03\x04" or content[:2] == b"\x1f\x8b" or head.startswith((b"<?xml", b"<myanimelist", b"<opml"))
 
 
 def _number(value: Any) -> float | None:
@@ -321,18 +321,100 @@ def _steam_rows(document: dict[str, Any]) -> list[Row]:
 
 
 # ---------------------------------------------------------------------------
-# MyAnimeList-format XML: MyAnimeList itself, Kitsu, and AniList converters.
+# Spotify: YourLibrary.json from the "Account data" download, alone or in its ZIP.
 
-def _mal_rows(text: str) -> list[Row]:
+# Saving this many songs from one album says you know the album, not just a single.
+SPOTIFY_LIKED_SONGS_PER_ALBUM = 3
+
+
+def _spotify_items(document: dict[str, Any], key: str) -> list[dict[str, Any]]:
+    items = document.get(key)
+    return [item for item in items if isinstance(item, dict)] if isinstance(items, list) else []
+
+
+def _looks_like_spotify(document: Any) -> bool:
+    if not isinstance(document, dict):
+        return False
+    albums = _spotify_items(document, "albums")[:20]
+    tracks = _spotify_items(document, "tracks")[:20]
+    shows = _spotify_items(document, "shows")[:20]
+    return (any("album" in item and "artist" in item for item in albums + tracks)
+            or any("name" in item and "publisher" in item for item in shows))
+
+
+def _spotify_rows(document: dict[str, Any]) -> list[Row]:
+    albums: dict[tuple[str, str], tuple[str, str]] = {}
+    for item in _spotify_items(document, "albums"):
+        title, artist = _text(item.get("album")), _text(item.get("artist"))
+        if title:
+            albums.setdefault((title.casefold(), artist.casefold()), (title, artist))
+    liked: dict[tuple[str, str], set[str]] = {}
+    names: dict[tuple[str, str], tuple[str, str]] = {}
+    for item in _spotify_items(document, "tracks"):
+        title, artist, track = _text(item.get("album")), _text(item.get("artist")), _text(item.get("track"))
+        if not title:
+            continue
+        key = (title.casefold(), artist.casefold())
+        liked.setdefault(key, set()).add(track.casefold() or _text(item.get("uri")))
+        names.setdefault(key, (title, artist))
+    for key, songs in liked.items():
+        if len(songs) >= SPOTIFY_LIKED_SONGS_PER_ALBUM:
+            albums.setdefault(key, names[key])
+    # Saved albums and albums you kept liking songs from have been listened to.
+    rows = [_row("music", title, creator=artist, completed=True) for title, artist in albums.values()]
+    shows: set[str] = set()
+    for item in _spotify_items(document, "shows"):
+        name = _text(item.get("name"))
+        if name and name.casefold() not in shows:
+            shows.add(name.casefold())
+            # A followed show is ongoing, so it arrives as one you're still listening to.
+            rows.append(_row("podcasts", name, creator=_text(item.get("publisher"))))
+    return rows
+
+
+def _spotify_from_zip(files: dict[str, bytes]) -> list[Row] | None:
+    for name, data in files.items():
+        if posixpath.basename(name).lower() == "yourlibrary.json":
+            try:
+                document = json.loads(_decode(data))
+            except json.JSONDecodeError as exc:
+                raise ValueError("YourLibrary.json in this ZIP could not be read.") from exc
+            if isinstance(document, dict):
+                return _spotify_rows(document)
+    return None
+
+
+# ---------------------------------------------------------------------------
+# XML: MyAnimeList-format lists, and OPML subscription files from podcast apps.
+
+def _xml_root(text: str) -> ElementTree.Element:
     # Anywhere in the file: comments or whitespace can push a declaration far past the start.
     if re.search(r"<!(DOCTYPE|ENTITY)", text, re.IGNORECASE):
         raise ValueError("XML files with document type declarations aren't accepted.")
     try:
-        root = ElementTree.fromstring(text)
+        return ElementTree.fromstring(text)
     except ElementTree.ParseError as exc:
         raise ValueError("The XML file could not be read.") from exc
+
+
+def _opml_rows(root: ElementTree.Element) -> list[Row]:
+    """Every feed in a podcast app's subscription export. Episode outlines are skipped."""
+    rows: list[Row] = []
+    seen: set[str] = set()
+    for node in root.iter("outline"):
+        if not _text(node.get("xmlUrl")) or _text(node.get("type")).lower() in {"podcast-episode", "episode"}:
+            continue
+        title = _text(node.get("title") or node.get("text"))
+        if not title or title.casefold() in seen:
+            continue
+        seen.add(title.casefold())
+        rows.append(_row("podcasts", title, creator=_text(node.get("author") or node.get("itunes:author"))))
+    return rows
+
+
+def _mal_rows(root: ElementTree.Element) -> list[Row]:
     if root.tag != "myanimelist":
-        raise ValueError("This XML file isn't a MyAnimeList-format list export.")
+        raise ValueError("This XML file isn't a MyAnimeList-format list or an OPML podcast export.")
 
     def value(node: ElementTree.Element, name: str) -> str:
         return _text(node.findtext(name))
@@ -405,6 +487,9 @@ def read_structured(content: bytes, filename: str) -> tuple[str, list[Row]]:
         rows = _letterboxd_from_zip(files)
         if rows is not None:
             return "letterboxd", rows
+        rows = _spotify_from_zip(files)
+        if rows is not None:
+            return "spotify", rows
         documents = []
         for member, data in files.items():
             if member.lower().endswith(".json"):
@@ -414,10 +499,13 @@ def read_structured(content: bytes, filename: str) -> tuple[str, list[Row]]:
                     continue
         if any(_looks_like_trakt(document) for _, document in documents):
             return "trakt", _trakt_rows(documents)
-        raise ValueError("This ZIP doesn't contain a Letterboxd or Trakt export. Extract it and choose the CSV inside instead.")
+        raise ValueError("This ZIP doesn't contain a Letterboxd, Trakt or Spotify export. Extract it and choose the CSV inside instead.")
     text = _decode(content).lstrip()
     if text.startswith("<"):
-        return "myanimelist", _mal_rows(text)
+        root = _xml_root(text)
+        if root.tag == "opml":
+            return "opml", _opml_rows(root)
+        return "myanimelist", _mal_rows(root)
     if text.startswith(("{", "[")):
         try:
             document = json.loads(text)
@@ -427,7 +515,9 @@ def read_structured(content: bytes, filename: str) -> tuple[str, list[Row]]:
             return "anilist", _anilist_rows(document)
         if isinstance(document, dict) and document.get("source") == "steam":
             return "steam", _steam_rows(document)
+        if _looks_like_spotify(document):
+            return "spotify", _spotify_rows(document)
         if _looks_like_trakt(document):
             return "trakt", _trakt_rows([(name, document)])
-        raise ValueError("This JSON file isn't a Trakt, AniList or Steam export. To restore an OmniTrackr backup, use Import Data in your library instead.")
-    raise ValueError("This file isn't a format the Import Studio reads. Choose a CSV, TSV, ZIP, XML or JSON export.")
+        raise ValueError("This JSON file isn't a Trakt, Spotify, AniList or Steam export. To restore an OmniTrackr backup, use Import Data in your library instead.")
+    raise ValueError("This file isn't a format the Import Studio reads. Choose a CSV, TSV, ZIP, XML, OPML or JSON export.")

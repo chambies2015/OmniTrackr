@@ -347,6 +347,14 @@ def _database_parts(db: Session) -> list[str]:
             f"<lastmod>{guide['reviewed']}</lastmod>"
             "<changefreq>weekly</changefreq><priority>0.75</priority></url>"
         )
+    # "Switch from X" guides: one hand-written page per service the Import Studio reads.
+    from .. import switch_guides
+    for slug, guide in switch_guides.GUIDES.items():
+        sitemap_parts.append(
+            f"<url><loc>{base_url}{switch_guides.path(slug)}</loc>"
+            f"<lastmod>{guide['reviewed']}</lastmod>"
+            "<changefreq>monthly</changefreq><priority>0.7</priority></url>"
+        )
     # "In order" guides: hand-written, complete pages.
     from .. import in_order
     from ..in_order_guides import GUIDES as ORDER_GUIDES
@@ -630,7 +638,7 @@ OmniTrackr is a free web application for tracking and organizing movies, TV show
 - Music tracker guide: {base_url}/music-tracker
 - Media statistics guide: {base_url}/media-statistics
 - Export and import guide: {base_url}/export-import-guide
-- Switching guide (Letterboxd, IMDb, Goodreads, StoryGraph, MyAnimeList, Kitsu, AniList, Trakt): {base_url}/switch
+- Switching guide (Letterboxd, IMDb, Goodreads, StoryGraph, MyAnimeList, Kitsu, AniList, Trakt, Steam, Spotify, podcast apps, Rate Your Music, Libib): {base_url}/switch, with one page per service such as {base_url}/switch/letterboxd and {base_url}/switch/spotify
 - Media tracker setup checklist: {base_url}/media-tracker-checklist
 - Media tracking templates: {base_url}/tracking-templates
 - Media review guidelines: {base_url}/review-guidelines

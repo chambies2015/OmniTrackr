@@ -34,7 +34,8 @@ class ReaderPage:
     name: str
     section: str  # "guides" or "about"; "tools" for OTHER_PAGES
     blurb: str
-    related: tuple[str, ...]
+    related: tuple  # template names, OTHER_PAGES keys, or ReaderPage objects
+    parent: tuple[str, str] | None = None  # (label, path) between the section and this page
 
 
 SECTIONS = {"guides": ("Guides", "/guides"), "about": ("About", "/about")}
@@ -201,6 +202,8 @@ def _crumbs(page: ReaderPage) -> list[tuple[str, str]]:
     label, href = SECTIONS[page.section]
     if href != page.path:
         trail.append((label, href))
+    if page.parent:
+        trail.append(page.parent)
     trail.append((page.name, page.path))
     return trail
 
@@ -297,7 +300,7 @@ def _contents(sections: list[tuple[str, str]], changelog: bool) -> str:
 def _related(page: ReaderPage, lead: str) -> str:
     cards = []
     for name in page.related:
-        other = PAGES.get(name) or OTHER_PAGES[name]
+        other = name if isinstance(name, ReaderPage) else PAGES.get(name) or OTHER_PAGES[name]
         kind = KINDS[other.section]
         cards.append(f'<a class="reader-related__card" href="{other.path}"><span class="reader-related__kind">{kind}</span>'
                      f'<strong>{escape(other.name)}</strong><span>{escape(other.blurb)}</span></a>')
@@ -308,8 +311,9 @@ def _related(page: ReaderPage, lead: str) -> str:
             '      </section>\n    ')
 
 
-def enhance(html: str, template_name: str) -> str:
-    page = PAGES.get(template_name)
+def enhance(html: str, template_name: str, page: ReaderPage | None = None) -> str:
+    """Add the shared layout. ``page`` describes a page drawn from a shared template."""
+    page = page or PAGES.get(template_name)
     if page is None:
         return html
     found = _MAIN.search(html)

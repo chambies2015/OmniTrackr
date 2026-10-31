@@ -225,7 +225,7 @@ def test_anilist_lists_become_anime_and_books_once_each():
 def test_a_chosen_source_that_does_not_match_the_file_is_explained():
     with pytest.raises(ValueError, match="looks like a Letterboxd export"):
         parse_csv(letterboxd_zip(), "goodreads", filename="export.zip")
-    with pytest.raises(ValueError, match="Letterboxd or Trakt"):
+    with pytest.raises(ValueError, match="Letterboxd, Trakt or Spotify"):
         parse_csv(build_zip({"notes.csv": "a,b\n1,2\n"}), filename="other.zip")
 
 
@@ -274,4 +274,4 @@ def test_unsupported_upload_types_are_refused(authenticated_client):
         "/import-studio/preview/", files={"file": ("list.pdf", b"%PDF-1.4", "application/pdf")}, data={"source": "auto"},
     )
     assert response.status_code == 400
-    assert "ZIP, XML or JSON" in response.json()["detail"]
+    assert "ZIP, XML, OPML or JSON" in response.json()["detail"]
