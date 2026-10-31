@@ -19,6 +19,8 @@ bcrypt==4.2.1
 # QR codes for two-factor setup (pure Python, SVG output)
 qrcode==8.2
 python-multipart==0.0.31
+# Reads uploaded XML exports (MyAnimeList lists, podcast OPML) without entity expansion
+defusedxml==0.7.1
 
 # Environment variables
 python-dotenv==1.2.2

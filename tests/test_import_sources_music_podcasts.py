@@ -216,6 +216,7 @@ def test_opml_upload_is_accepted_by_extension(authenticated_client):
 # "Switch from X" guides
 
 import re  # noqa: E402
+from html.parser import HTMLParser  # noqa: E402
 
 from app import switch_guides  # noqa: E402
 
@@ -223,7 +224,20 @@ SLUGS = sorted(switch_guides.GUIDES)
 
 
 def _json_ld(html):
-    return [json.loads(block) for block in re.findall(r'<script type="application/ld\+json"[^>]*>(.*?)</script>', html, re.S)]
+    opener, blocks = '<script type="application/ld+json"', []
+    for chunk in html.split(opener)[1:]:
+        body = chunk[chunk.index(">") + 1:]
+        blocks.append(json.loads(body[:body.index("</script>")]))
+    return blocks
+
+
+class _Words(HTMLParser):
+    def __init__(self):
+        super().__init__()
+        self.count = 0
+
+    def handle_data(self, data):
+        self.count += len(data.split())
 
 
 @pytest.mark.parametrize("slug", SLUGS)
@@ -248,8 +262,9 @@ def test_each_switch_guide_is_a_complete_indexable_page(client, slug):
     assert len(faq["mainEntity"]) >= 3
     assert all("<" not in question["acceptedAnswer"]["text"] for question in faq["mainEntity"])
     # Enough of its own words to stand on its own.
-    words = len(re.sub(r"<[^>]+>", " ", html[html.index('id="reader-main"'):html.index("</main>")]).split())
-    assert words >= 600, words
+    counter = _Words()
+    counter.feed(html[html.index('id="reader-main"'):html.index("</main>")])
+    assert counter.count >= 600, counter.count
 
 
 def test_switch_guides_link_to_each_other_and_from_the_hub(client):

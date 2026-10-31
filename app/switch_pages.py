@@ -2,9 +2,9 @@
 from __future__ import annotations
 
 import json
-import re
 from datetime import date
-from html import escape, unescape
+from html import escape
+from html.parser import HTMLParser
 
 from .reader_pages import ReaderPage
 from .switch_guides import GUIDES, path, short_name
@@ -18,9 +18,21 @@ def _e(value: str) -> str:
     return escape(value, quote=True)
 
 
+class _TextOnly(HTMLParser):
+    def __init__(self) -> None:
+        super().__init__(convert_charrefs=True)
+        self.parts: list[str] = []
+
+    def handle_data(self, data: str) -> None:
+        self.parts.append(data)
+
+
 def _text(fragment: str) -> str:
     """Plain text of the trusted inline HTML used in answers, for structured data."""
-    return unescape(re.sub(r"<[^>]+>", "", fragment))
+    parser = _TextOnly()
+    parser.feed(fragment)
+    parser.close()
+    return "".join(parser.parts)
 
 
 def reader_page(slug: str, *, with_related: bool = True) -> ReaderPage:
@@ -137,10 +149,12 @@ def _content(slug: str, guide: dict) -> str:
     return "".join(sections)
 
 
-def render(slug: str) -> tuple[dict[str, str], ReaderPage] | None:
-    guide = GUIDES.get(slug)
-    if guide is None:
+def render(requested: str) -> tuple[dict[str, str], ReaderPage] | None:
+    # Draw the page from the catalog's own key so nothing from the URL reaches the HTML.
+    slug = next((known for known in GUIDES if known == requested), None)
+    if slug is None:
         return None
+    guide = GUIDES[slug]
     replacements = {
         "{{TITLE}}": _e(guide["title"]),
         "{{DESCRIPTION}}": _e(guide["description"]),

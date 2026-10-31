@@ -17,6 +17,9 @@ from datetime import datetime
 from typing import Any
 from xml.etree import ElementTree
 
+from defusedxml import DefusedXmlException
+from defusedxml import ElementTree as SafeElementTree
+
 
 MAX_EXPANDED_BYTES = 40 * 1024 * 1024
 STRUCTURED_EXTENSIONS = (".zip", ".xml", ".gz", ".json", ".opml")
@@ -392,7 +395,9 @@ def _xml_root(text: str) -> ElementTree.Element:
     if re.search(r"<!(DOCTYPE|ENTITY)", text, re.IGNORECASE):
         raise ValueError("XML files with document type declarations aren't accepted.")
     try:
-        return ElementTree.fromstring(text)
+        return SafeElementTree.fromstring(text)
+    except DefusedXmlException as exc:
+        raise ValueError("XML files with document type declarations aren't accepted.") from exc
     except ElementTree.ParseError as exc:
         raise ValueError("The XML file could not be read.") from exc
 
