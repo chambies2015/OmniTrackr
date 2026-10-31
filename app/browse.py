@@ -223,6 +223,7 @@ def _default_cache_dir() -> Optional[Path]:
     return Path(configured or os.path.join(tempfile.gettempdir(), "omnitrackr-browse"))
 
 
+CHART_FILES = {"manga": "chart-manga.json", "podcasts": "chart-podcasts.json", "audiobooks": "chart-audiobooks.json"}
 _event_loop: Optional[asyncio.AbstractEventLoop] = None
 
 
@@ -251,7 +252,9 @@ class ChartCache:
         self.cache_dir = cache_dir
 
     def _disk_path(self, kind: str) -> Optional[Path]:
-        return self.cache_dir / f"chart-{kind}.json" if self.cache_dir else None
+        # Only the three fixed file names ever reach the disk; the URL kind picks one, it never spells one.
+        name = CHART_FILES.get(kind)
+        return self.cache_dir / name if self.cache_dir and name else None
 
     def _load_disk(self, kind: str) -> Optional[dict]:
         disk = self._disk_path(kind)

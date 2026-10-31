@@ -398,3 +398,10 @@ def test_guest_list_import_finds_shelf_picks(authenticated_client, db_session):
     assert db_session.query(models.Podcast).filter_by(user_id=user.id).one().host == "Roman Mars"
     assert browse.find("podcast", "99-percent-invisible")[1]["key"] == "99-percent-invisible"
     assert browse.find("movie", "death-note-2003") is None
+
+
+def test_disk_cache_only_ever_writes_the_three_fixed_files(tmp_path):
+    cache = browse.ChartCache(tmp_path)
+    assert cache._disk_path("manga") == tmp_path / "chart-manga.json"
+    assert cache._disk_path("../etc/passwd") is None
+    assert cache.peek("../etc/passwd") is None
