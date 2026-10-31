@@ -1,5 +1,35 @@
 # Public content review — September 17, 2026
 
+## Follow-up — October 31, 2026: landing pages Google sends people to
+
+Measured the live pages first (Playwright, desktop 1366 px and a throttled Pixel 7)
+and read every sitemap URL's head. Layout shift was already near zero and every
+sitemap URL was indexable with a unique title and description. What needed work:
+
+- **Game covers were full-size uploads.** RAWG serves covers and screenshots at
+  1920 or 3840 px (one was 4 MB) and the radar, reviews and homepage draw them at
+  120 to 200 px. `app/image_sizes.py` swaps them for RAWG's own resized copies
+  (`/media/resize/420/-/...`, 640 for title page posters, 1280 for backdrops) in
+  `<img>` tags only, and large MyAnimeList covers for the 64 px review thumbnails.
+  It runs on finished HTML in `app/html_finish.py`, because several routers fill
+  in their lists after the header is applied. Image bytes loaded on desktop: Release
+  Radar 6,305 KB to 696 KB, the games page 6,999 KB to 238 KB, Reviews 2,489 KB
+  to 543 KB, the homepage 1,982 KB to 977 KB. Library data is untouched.
+- **93 indexed pages had no breadcrumb data.** `app/page_breadcrumbs.py` adds a
+  BreadcrumbList to indexed pages that lack one: Home, the section hub, then the
+  page, named from its title. Noindex pages and pages with their own are skipped.
+- **Section hubs had no sign-up prompt of their own.** Release Radar, Discover,
+  the guides, franchise orders, best-of and "If you liked" hubs now end with a
+  short prompt above the footer (`site_chrome.JOIN_PROMPTS`). Pages that already
+  ask in their own words, and signed-in members, don't get it.
+- **Release Radar cards didn't link to title pages.** Cards for releases members
+  track now link to the title page, as the weekly roundups already did.
+- Descriptions on the homepage, Tier list and Discover were 180 to 210
+  characters and got cut off in results; they are now under 160. The Reviews and
+  Release Radar titles are shorter.
+
+Release Radar category pages stay noindex (October decision above).
+
 ## Follow-up — October 28, 2026: crawl after people pages, discussions, polls, manga and podcasts
 
 Crawled the sitemap and every followed link again (137 pages with an empty database, 435

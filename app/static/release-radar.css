@@ -56,7 +56,7 @@
 .radar-add[aria-disabled="true"] { cursor: default; }
 .radar-add.is-saved { background: rgba(20, 184, 166, .22); color: #a7f3d0 !important; }
 .radar-add.is-busy { opacity: .7; }
-.radar-source, .affiliate-link { color: #c7d2fe !important; font-size: .8rem; }
+.radar-source, .radar-title-link, .affiliate-link { color: #c7d2fe !important; font-size: .8rem; }
 .affiliate-links { display: inline-flex; gap: 10px; }
 .affiliate-disclosure { color: #aab3cc; font-size: .82rem; margin-top: 14px; }
 .radar-card--compact .radar-card__meta:nth-of-type(n+3) { display: none; }

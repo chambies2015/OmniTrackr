@@ -15,7 +15,7 @@ from collections import Counter, defaultdict
 
 from sqlalchemy.orm import Session
 
-from . import title_pages
+from . import image_sizes, title_pages
 
 CACHE_SECONDS = 600
 FAILURE_RETRY_SECONDS = 60
@@ -129,6 +129,6 @@ def search(entries: list[dict], text: str, limit: int = RESULT_LIMIT) -> list[di
     scored.sort(key=lambda row: row[:4])
     return [
         {"kind": e["kind"], "label": e["label"], "title": e["title"], "year": e["year"], "slug": e["slug"],
-         "url": f"/titles/{e['kind']}/{e['slug']}", "image": e["image"]}
+         "url": f"/titles/{e['kind']}/{e['slug']}", "image": image_sizes.sized(e["image"], 200)}
         for *_, e in scored[:limit]
     ]

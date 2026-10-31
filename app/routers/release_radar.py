@@ -127,6 +127,34 @@ def library_counts(db: Session, category: str, items: list[dict]) -> dict[str, i
             for i in items if (i["save"].get("title") or "").strip().lower() in by_title}
 
 
+def title_page_paths(db: Session, items: list[dict], counts: dict[str, int]) -> dict[str, str]:
+    """{release key: title page path} for releases already in a member's library.
+
+    Only titles members track can have a title page, so the lookup is limited to
+    those. Linking the cards gives Google a path from the Release Radar pages to the
+    title pages, the same way the weekly roundups already do.
+    """
+    from .. import title_pages
+    from .weekly_roundup import _release_slug
+    wanted: dict[str, dict[str, str]] = {}
+    for item in items:
+        if counts.get(item["key"]):
+            try:
+                kind, slug = _release_slug(item)
+            except (KeyError, TypeError, ValueError):
+                continue
+            wanted.setdefault(kind, {})[item["key"]] = slug
+    found = {}
+    for kind, by_key in wanted.items():
+        try:
+            paths = title_pages.paths_many(db, kind, set(by_key.values()))
+        except Exception:
+            db.rollback()
+            continue
+        found.update({key: paths[slug] for key, slug in by_key.items() if slug in paths})
+    return found
+
+
 # ---------------------------------------------------------------------------
 # HTML fragments
 # ---------------------------------------------------------------------------
@@ -375,6 +403,9 @@ async def radar_hub(request: Request, db: Session = Depends(get_db)):
         for c in radar.CATEGORY_ORDER})
     for c in radar.CATEGORY_ORDER:
         counts[c].update(extra_counts[c])
+    links = await run_in_threadpool(lambda: title_page_paths(
+        db, [i for items in strip_pool.values() for i in items],
+        {key: n for c in radar.CATEGORY_ORDER for key, n in counts[c].items()}))
     # Keep the two-week strip varied: at most five per category.
     per_category: dict[str, int] = {}
     strip = []
@@ -392,7 +423,8 @@ async def radar_hub(request: Request, db: Session = Depends(get_db)):
         upcoming = [i for i in items if not i["date"] or i["date"] >= today.isoformat()] or items
         top = sorted(upcoming, key=lambda i: -i["popularity"])[:6]
         top.sort(key=lambda i: (i["date"] or "9999", -i["popularity"]))
-        cards = "".join(render_card(i, counts[category].get(i["key"], 0), "/release-radar", compact=True) for i in top)
+        cards = "".join(render_card(i, counts[category].get(i["key"], 0), "/release-radar", compact=True,
+                                    title_path=links.get(i["key"], "")) for i in top)
         status = _status_message(entries[category], category) if not items else ""
         sections.append(
             f'<section class="radar-section" aria-labelledby="radar-{category}"><div class="radar-section__head">'
@@ -416,7 +448,8 @@ async def radar_hub(request: Request, db: Session = Depends(get_db)):
 
     strip_html = ""
     if strip:
-        strip_cards = "".join(render_card(i, counts[i["category"]].get(i["key"], 0), "/release-radar", compact=True) for i in strip)
+        strip_cards = "".join(render_card(i, counts[i["category"]].get(i["key"], 0), "/release-radar", compact=True,
+                                          title_path=links.get(i["key"], "")) for i in strip)
         strip_html = (f'<section class="radar-section radar-section--soon" aria-labelledby="radar-soon"><div class="radar-section__head">'
                       f'<h2 id="radar-soon">Out in the next two weeks</h2></div><div class="radar-grid">{strip_cards}</div></section>')
 
@@ -431,7 +464,7 @@ async def radar_hub(request: Request, db: Session = Depends(get_db)):
         + '</header>' + _category_tabs(None) + strip_html + _calendar_box(None) + tracked_html + "".join(sections) + _about_section(None)
     )
     indexable = total >= MIN_INDEXABLE_ITEMS
-    title = f"Release Radar: new movies, TV, anime and games for {windows['movies'].label}"
+    title = f"{windows['movies'].label} releases: movies, TV, anime and games"
     description = "Upcoming movie releases, TV premieres, this season's anime and new video games in one calendar, with one-click tracking."
     structured = _structured(title, "/release-radar", strip or [i for c in radar.CATEGORY_ORDER for i in items_by_category[c][:6]])
     warming = any(entries[c] is None for c in radar.CATEGORY_ORDER)
@@ -454,12 +487,13 @@ async def _category_page(request: Request, db: Session, category: str, window: r
     entry = await radar.CACHE.get(_client(request), window)
     items = (entry or {}).get("items", [])
     counts = await run_in_threadpool(library_counts, db, category, items)
+    links = await run_in_threadpool(title_page_paths, db, items, counts)
     canonical = _category_path(category, window)
     return_path = canonical
     notes = radar.radar_notes(category, items, window)
     groups = "".join(
         f'<section class="radar-week" aria-label="{escape(label, quote=True)}"><h2 class="radar-week__title">{escape(label)}</h2>'
-        f'<div class="radar-grid">{"".join(render_card(i, counts.get(i["key"], 0), return_path) for i in group)}</div></section>'
+        f'<div class="radar-grid">{"".join(render_card(i, counts.get(i["key"], 0), return_path, title_path=links.get(i["key"], "")) for i in group)}</div></section>'
         for label, group in _group_by_week(items)
     )
     title = SEO_TITLES[category].format(label=window.label)

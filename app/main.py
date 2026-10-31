@@ -29,6 +29,7 @@ from .auth import AUTH_COOKIE_NAME
 from .migrations import run_migrations
 from .middleware import SecurityHeadersMiddleware, BotFilterMiddleware, CSRFProtectionMiddleware, RequestBodyLimitMiddleware, UploadAuthenticationMiddleware
 from .site_traffic import RECORDER as TRAFFIC_RECORDER, SiteTrafficMiddleware
+from .html_finish import HtmlFinishMiddleware
 from . import digest as digest_emails
 from . import funnel, start_flow
 from .dependencies import get_db, get_current_user, get_optional_current_user
@@ -195,6 +196,8 @@ def bind_rate_limited_endpoint(route, endpoint) -> None:
 app.add_middleware(RequestBodyLimitMiddleware)
 app.add_middleware(UploadAuthenticationMiddleware)
 app.add_middleware(CSRFProtectionMiddleware)
+# Inside GZip so it sees plain HTML: poster-sized game covers and breadcrumb data.
+app.add_middleware(HtmlFinishMiddleware)
 app.add_middleware(GZipMiddleware, minimum_size=500)
 app.add_middleware(SecurityHeadersMiddleware)
 app.add_middleware(BotFilterMiddleware)

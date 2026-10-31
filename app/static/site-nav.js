@@ -9,6 +9,7 @@
     member = Boolean(window.localStorage.getItem('omnitrackr_user') || window.localStorage.getItem('omnitrackr_token'));
   } catch (_) { return; }
   if (!member) return;
+  document.querySelectorAll('[data-guest-only]').forEach(function (el) { el.hidden = true; });
   document.querySelectorAll('.site-header').forEach(function (header) {
     header.classList.add('is-member');
     header.querySelectorAll('.site-nav__library, .site-menu__library').forEach(function (link) { link.hidden = false; });
