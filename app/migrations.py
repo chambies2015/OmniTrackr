@@ -827,6 +827,7 @@ def run_migrations():
     add_calendar_episodes_column()
     add_lookup_indexes()
     add_kofi_matching_columns()
+    fold_unreadable_traffic_sources()
 
 
 def add_notification_link_column():
@@ -1048,3 +1049,56 @@ def add_kofi_matching_columns():
             conn.commit()
     except Exception as e:
         print(f"Migration warning (Ko-fi matching): {e}")
+
+
+# Characters that never appear in a campaign tag or a referring host, only in what
+# scanners put into utm_source (script tags, event handlers, quotes).
+UNREADABLE_SOURCE_CHARS = frozenset('<>"\'`&;/\\=(){}')
+
+
+def unreadable_traffic_source(key: str, bad_tag: str) -> bool:
+    """True for a stored source label written before utm_source was checked on the way in."""
+    if key in (bad_tag, "(direct)"):
+        return False
+    return any(ch in UNREADABLE_SOURCE_CHARS for ch in key)
+
+
+def fold_unreadable_traffic_sources():
+    """Fold source labels that scanners wrote into Site stats under the one "(unreadable tag)" row.
+
+    Since Oct 30 2026 a utm_source that isn't a plain word is counted under that label as it
+    arrives (site_traffic.SAFE_TAG). Rows from before then still carry the raw text, for example
+    a script tag that a scanner put in the address. The Site stats page prints every label as
+    text, so they were never a risk there, but a stored probe string has no business staying in
+    the database. Visit counts are kept: a label's count moves to the "(unreadable tag)" row for
+    the same day.
+    """
+    try:
+        from .site_traffic import BAD_TAG
+        inspector = inspect(engine)
+        if not inspector.has_table("site_traffic_daily"):
+            return
+        folded = 0
+        with engine.connect() as conn:
+            rows = conn.execute(text(
+                "SELECT id, day, kind, key, count FROM site_traffic_daily WHERE kind IN ('source', 'human_source')"
+            )).fetchall()
+            for row in rows:
+                if not unreadable_traffic_source(row.key or "", BAD_TAG):
+                    continue
+                existing = conn.execute(text(
+                    "SELECT id FROM site_traffic_daily WHERE day = :day AND kind = :kind AND key = :key AND id != :id"
+                ), {"day": row.day, "kind": row.kind, "key": BAD_TAG, "id": row.id}).first()
+                if existing is None:
+                    conn.execute(text("UPDATE site_traffic_daily SET key = :key WHERE id = :id"),
+                                 {"key": BAD_TAG, "id": row.id})
+                else:
+                    conn.execute(text("UPDATE site_traffic_daily SET count = count + :count WHERE id = :target"),
+                                 {"count": int(row.count or 0), "target": existing.id})
+                    conn.execute(text("DELETE FROM site_traffic_daily WHERE id = :id"), {"id": row.id})
+                folded += 1
+            conn.commit()
+        if folded:
+            print(f"Folded {folded} unreadable traffic source label(s) into {BAD_TAG!r}")
+    except Exception as e:
+        print(f"Migration warning (traffic sources): {e}")
