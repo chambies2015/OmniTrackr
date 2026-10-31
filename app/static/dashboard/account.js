@@ -858,6 +858,22 @@ function showEmailPreferences(prefs) {
   weekly.disabled = !prefs.available;
   const status = document.getElementById('emailPreferencesStatus');
   if (status) status.textContent = prefs.available ? '' : 'Email is not set up on this server, so the weekly email is paused.';
+  const meta = document.getElementById('weeklyEmailMeta');
+  const metaText = document.getElementById('weeklyEmailMetaText');
+  const previewLink = document.getElementById('weeklyEmailPreviewLink');
+  if (meta && metaText) {
+    meta.hidden = !prefs.available;
+    if (prefs.enabled && prefs.last_sent_at) {
+      const when = new Date(prefs.last_sent_at);
+      metaText.textContent = Number.isNaN(when.getTime()) ? 'On.'
+        : `Last sent ${when.toLocaleDateString(undefined, { month: 'short', day: 'numeric' })}.`;
+    } else if (prefs.enabled) {
+      metaText.textContent = 'On. The first one comes when something you track is new.';
+    } else {
+      metaText.textContent = 'Off.';
+    }
+    if (previewLink) previewLink.textContent = prefs.enabled ? "See this week's email" : 'See what it would say';
+  }
 }
 
 async function loadEmailPreferences() {
@@ -875,7 +891,8 @@ async function saveEmailPreference(change) {
   toggles.forEach(toggle => { if (toggle) toggle.disabled = true; });
   try {
     const response = await authenticatedFetch(`${API_BASE}/api/for-you/email`, {
-      method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(change),
+      method: 'PUT', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify('enabled' in change ? { ...change, source: 'account' } : change),
     });
     const data = await response.json().catch(() => ({}));
     if (!response.ok) throw new Error(data.detail || 'Could not save that. Please try again.');

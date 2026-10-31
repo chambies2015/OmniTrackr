@@ -684,7 +684,7 @@ async function enableLaunchpadWeeklyEmail(button) {
   if (button) button.disabled = true;
   try {
     const response = await authenticatedFetch(`${API_BASE}/api/for-you/email`, {
-      method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ enabled: true }),
+      method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ enabled: true, source: 'first_week' }),
     });
     const data = await response.json().catch(() => ({}));
     if (!response.ok) throw new Error(data.detail || 'Could not turn on the weekly email. Please try again.');

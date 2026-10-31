@@ -65,6 +65,15 @@ async def register(
         except Exception as e:  # An invite never blocks sign-up.
             db.rollback()
             print(f"Failed to record friend invite: {e}")
+    if user.weekly_email:
+        # The box on the sign-up form. Nothing is sent until the address is verified
+        # (the weekly sender skips unverified accounts), so this only records the choice.
+        try:
+            from .. import digest
+            digest.subscribe(db, db_user.id, source="signup")
+        except Exception as e:
+            db.rollback()
+            print(f"Failed to turn on the weekly email at sign-up: {e}")
     
     try:
         await email_utils.send_verification_email(user.email, user.username, verification_token)

@@ -11,7 +11,7 @@ from __future__ import annotations
 import asyncio
 import os
 import secrets
-from datetime import date, datetime, timedelta
+from datetime import date, datetime, timedelta, timezone
 from html import escape
 
 from sqlalchemy import or_
@@ -58,19 +58,52 @@ def subscription_for(db: Session, user_id: int):
     return db.query(models.EmailDigestSubscription).filter_by(user_id=user_id).first()
 
 
-def subscribe(db: Session, user_id: int):
+# Where a member turned the weekly email on or off. Site stats counts each switch by place
+# (anonymous daily totals, like the sign-up funnel) so the owner can see which prompt works.
+SOURCES = {
+    "signup": "the sign-up form",
+    "start": "the start page",
+    "first_week": "first-week steps",
+    "dashboard": "the library home",
+    "account": "Account settings",
+    "email_link": "a link in an email",
+}
+OFF_SOURCES = {"account", "dashboard", "email_link"}
+
+
+def record_switch(on: bool, source: str | None) -> bool:
+    """Count one opt-in or opt-out in the daily traffic counters (kind "email"). Never raises."""
+    if source not in SOURCES:
+        return False
+    try:
+        from .site_traffic import RECORDER
+        if not RECORDER.enabled:
+            return False
+        day = datetime.now(timezone.utc).date()
+        with RECORDER._lock:
+            RECORDER._pending[(day, "email", f"weekly_{'on' if on else 'off'}_{source}")] += 1
+            RECORDER._events += 1
+        return True
+    except Exception:
+        return False
+
+
+def subscribe(db: Session, user_id: int, source: str | None = None):
     existing = subscription_for(db, user_id)
     if existing:
         return existing
     row = models.EmailDigestSubscription(user_id=user_id, token=secrets.token_urlsafe(32))
     db.add(row)
     db.commit()
+    record_switch(True, source)
     return row
 
 
-def unsubscribe_user(db: Session, user_id: int) -> bool:
+def unsubscribe_user(db: Session, user_id: int, source: str | None = None) -> bool:
     removed = db.query(models.EmailDigestSubscription).filter_by(user_id=user_id).delete()
     db.commit()
+    if removed:
+        record_switch(False, source)
     return bool(removed)
 
 
@@ -79,6 +112,8 @@ def unsubscribe_token(db: Session, token: str) -> bool:
         return False
     removed = db.query(models.EmailDigestSubscription).filter_by(token=token).delete()
     db.commit()
+    if removed:
+        record_switch(False, "email_link")
     return bool(removed)
 
 
@@ -704,6 +739,89 @@ async def _send(to: str, subject: str, html: str, unsubscribe_url: str) -> None:
 
 # ---------------------------------------------------------------- scheduler
 
+QUIET_WEEK = "quiet-week"  # compose() result when the member would get nothing this week
+
+
+def compose(db: Session, user, now: datetime, pool=None, spotlight=None, today: date | None = None,
+            unsubscribe_url: str = "", client=None, quiet_ok: bool = True):
+    """Build this week's email for one member: (subject, html, text), None when there is nothing
+    at all to say, or QUIET_WEEK when a round-up went out recently and nothing new came up.
+    The member's weekly preview page calls this with quiet_ok=False so it always shows something."""
+    subscription = subscription_for(db, user.id)
+    if not unsubscribe_url and subscription:
+        unsubscribe_url = f"{app_url()}/email/unsubscribe?token={subscription.token}"
+    if pool is None:
+        from .for_you import radar_pool
+        pool = radar_pool(today, client)
+    report = coming_up(db, user.id, today=today, pool=pool)
+    try:
+        friends = friend_activity(db, user.id, now)
+    except Exception:
+        db.rollback()
+        friends = []  # The weekly email never depends on it.
+    try:
+        episodes = episodes_this_week(db, user, today or radar.today_utc())
+    except Exception:
+        db.rollback()
+        episodes = []  # The weekly email never depends on it.
+    if quiet_ok and not report["matches"] and not friends and not episodes:
+        last_sent_at = subscription.last_sent_at if subscription else None
+        if last_sent_at and last_sent_at > now - ROUNDUP_EVERY:
+            return QUIET_WEEK
+    try:
+        ask = recent_finish(db, user.id, now)
+    except Exception:
+        db.rollback()
+        ask = None  # The weekly email never depends on it.
+    invite = False
+    if ask is None and invite_nudge_due(user.id, now):
+        try:
+            from .friend_invites import has_friends
+            invite = not has_friends(db, user.id)
+        except Exception:
+            db.rollback()  # Optional, like the ask above.
+    try:
+        from .goals import progress as goal_progress
+        member_goals = goal_progress(db, user, now.year, today=now.date())
+    except Exception:
+        db.rollback()
+        member_goals = []  # Optional, like the ask above.
+    try:
+        challenge = challenge_line(db, user.id, now.date())
+    except Exception:
+        db.rollback()
+        challenge = None  # Optional, like the ask above.
+    try:
+        from .badges import digest_line
+        badge = digest_line(db, user)
+    except Exception:
+        db.rollback()
+        badge = None  # Optional, like the ask above.
+    try:
+        recap = recap_line(db, user.id, now.date())
+    except Exception:
+        db.rollback()
+        recap = None  # Optional, like the ask above.
+    try:
+        next_up = next_up_line(db, user.id)
+    except Exception:
+        db.rollback()
+        next_up = None  # Optional, like the ask above.
+    try:
+        past = memories_line(db, user, today or now.date())
+    except Exception:
+        db.rollback()
+        past = []  # Optional, like the ask above.
+    try:
+        following = following_line(db, user, now)
+    except Exception:
+        db.rollback()
+        following = []  # Optional, like the ask above.
+    return build_digest(user.username, report, unsubscribe_url, spotlight, ask, invite,
+                        member_goals, now.year, challenge, badge, recap, friends, episodes, next_up, past,
+                        following)
+
+
 async def send_due_digests(session_factory, client=None, now: datetime | None = None, sender=_send,
                            today: date | None = None) -> dict:
     """Send every digest that is due, within the daily limit. Returns counters."""
@@ -756,76 +874,15 @@ async def send_due_digests(session_factory, client=None, now: datetime | None = 
             if user is None or not user.is_active or not user.is_verified or not user.email:
                 stats["skipped"] += 1
                 continue
-            if pool is None:
+            if pool is None:  # built once, shared by every member in this run
                 from .for_you import radar_pool
                 pool = radar_pool(today, client)
-            report = coming_up(db, user.id, today=today, pool=pool)
-            try:
-                friends = friend_activity(db, user.id, now)
-            except Exception:
-                db.rollback()
-                friends = []  # The weekly email never depends on it.
-            try:
-                episodes = episodes_this_week(db, user, today or radar.today_utc())
-            except Exception:
-                db.rollback()
-                episodes = []  # The weekly email never depends on it.
-            if not report["matches"] and not friends and not episodes and subscription.last_sent_at and subscription.last_sent_at > now - ROUNDUP_EVERY:
+            unsubscribe_url = f"{app_url()}/email/unsubscribe?token={subscription.token}"
+            built = compose(db, user, now, pool=pool, spotlight=spotlight, today=today,
+                            unsubscribe_url=unsubscribe_url, client=client)
+            if built is QUIET_WEEK:
                 stats["skipped"] += 1  # a quiet week: no news from their library, round-up sent recently
                 continue
-            unsubscribe_url = f"{app_url()}/email/unsubscribe?token={subscription.token}"
-            try:
-                ask = recent_finish(db, user.id, now)
-            except Exception:
-                db.rollback()
-                ask = None  # The weekly email never depends on it.
-            invite = False
-            if ask is None and invite_nudge_due(user.id, now):
-                try:
-                    from .friend_invites import has_friends
-                    invite = not has_friends(db, user.id)
-                except Exception:
-                    db.rollback()  # Optional, like the ask above.
-            try:
-                from .goals import progress as goal_progress
-                member_goals = goal_progress(db, user, now.year, today=now.date())
-            except Exception:
-                db.rollback()
-                member_goals = []  # Optional, like the ask above.
-            try:
-                challenge = challenge_line(db, user.id, now.date())
-            except Exception:
-                db.rollback()
-                challenge = None  # Optional, like the ask above.
-            try:
-                from .badges import digest_line
-                badge = digest_line(db, user)
-            except Exception:
-                db.rollback()
-                badge = None  # Optional, like the ask above.
-            try:
-                recap = recap_line(db, user.id, now.date())
-            except Exception:
-                db.rollback()
-                recap = None  # Optional, like the ask above.
-            try:
-                next_up = next_up_line(db, user.id)
-            except Exception:
-                db.rollback()
-                next_up = None  # Optional, like the ask above.
-            try:
-                past = memories_line(db, user, today or now.date())
-            except Exception:
-                db.rollback()
-                past = []  # Optional, like the ask above.
-            try:
-                following = following_line(db, user, now)
-            except Exception:
-                db.rollback()
-                following = []  # Optional, like the ask above.
-            built = build_digest(user.username, report, unsubscribe_url, spotlight, ask, invite,
-                                 member_goals, now.year, challenge, badge, recap, friends, episodes, next_up, past,
-                                 following)
             if built is None:
                 stats["skipped"] += 1
                 continue

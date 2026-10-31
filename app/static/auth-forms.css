@@ -304,6 +304,16 @@ body.dark-mode :is(.auth-container, .account-settings) {
   width: 18px;
 }
 
+.auth-check--weekly {
+  align-items: flex-start;
+  line-height: 1.45;
+  margin: 2px 0 14px;
+}
+
+.auth-check--weekly input {
+  margin-top: 2px;
+}
+
 #twoFactorForm > .auth-toggle + .auth-toggle {
   margin-top: 8px;
 }
