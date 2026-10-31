@@ -90,6 +90,7 @@ TITLES = {
     "push_enabled": "Notifications are on",
     "held": "While you were away",
     "memory": "On this day",
+    "year_so_far": "Your year so far",
     "new_follower": "New follower",
 }
 
@@ -112,8 +113,9 @@ TOPICS = (
      ("discussion_reply", "discussion_report")),
     ("club_talk", "Club talk and list updates", "New posts about a club pick, people joining and titles added.", False,
      ("club_post", "shared_list_joined", "shared_list_item")),
-    ("milestones", "Cheers, badges and goals", "Cheers, helpful votes, badges, goals and challenges.", False,
-     ("friend_feed_cheer", "review_helpful", "goal_reached", "badge_earned", "challenge_complete")),
+    ("milestones", "Cheers, badges and goals", "Cheers, helpful votes, badges, goals and challenges, "
+     "plus one look at your year so far each November.", False,
+     ("friend_feed_cheer", "review_helpful", "goal_reached", "badge_earned", "challenge_complete", "year_so_far")),
     ("memories", "On this day", "Once a day, something you finished or started on this date in an earlier year.", False,
      ("memory",)),
     ("followers", "New followers", "When someone starts following your public profile.", False,
@@ -654,8 +656,9 @@ FIRST_CHECK_DELAY_SECONDS = 240
 
 
 def _hourly_jobs(session_factory) -> dict:
-    """Catch-ups after quiet hours, club finish-by nudges, On this day (which reach the bell too) and away reminders."""
-    from . import clubs, memories, push_nudges
+    """Catch-ups after quiet hours, club finish-by nudges, On this day (which reach the bell too), away reminders
+    and the November year-so-far push."""
+    from . import clubs, memories, push_nudges, year_so_far
     db = session_factory()
     try:
         nudged = clubs.send_due_reminders(db)
@@ -672,7 +675,14 @@ def _hourly_jobs(session_factory) -> dict:
             db.rollback()
             logger.exception("Away reminders failed")
             away = 0
-        return {"club_reminders": nudged, "caught_up": held["members"], "memories": remembered, "away": away}
+        try:
+            so_far = year_so_far.send_pushes(db)["sent"]
+        except Exception:
+            db.rollback()
+            logger.exception("Year so far pushes failed")
+            so_far = 0
+        return {"club_reminders": nudged, "caught_up": held["members"], "memories": remembered, "away": away,
+                "year_so_far": so_far}
     finally:
         db.close()
 
