@@ -285,6 +285,8 @@
       const next = event.target.closest?.('[data-guide-next]');
       if (next && !next.disabled) chooseEpisode(next);
       if (event.target.closest?.('[data-guide-checkpoint]')) openCheckpoint();
+      const offer = event.target.closest?.('[data-guide-push]');
+      if (offer && !offer.disabled) offerPush(offer);
     });
     document.body.appendChild(dialog);
     return dialog;
@@ -338,6 +340,7 @@
     edit.dataset.guideCheckpoint = 'true';
     actions.appendChild(edit);
     body.appendChild(actions);
+    appendPushOffer(body, progress);
 
     if (!seasons.length) {
       body.appendChild(make('p', 'progress-dialog__privacy', 'We couldn\'t find an episode list for this title yet. Add its number of episodes when you edit it, and a grid will appear here. The button above still moves you one episode at a time.'));
@@ -392,6 +395,42 @@
     }
     source.append('Your place in a show is private and never changes its rating, review or finished status.');
     body.appendChild(source);
+  }
+  // Offer phone/desktop notifications for new episodes while the show is unfinished and this device is off.
+  function pushState() {
+    try { return window.omniPush && typeof window.omniPush.state === 'function' ? window.omniPush.state() : undefined; } catch (_) { return undefined; }
+  }
+  function appendPushOffer(body, progress) {
+    if (!progress || progress.percent === 100 || !progress.next) return;
+    const state = pushState();
+    if (state === undefined) return;
+    if (state === null) {
+      // Not checked yet on this page: ask, then draw the offer once if this device turns out to be off.
+      const current = guide;
+      Promise.resolve(window.omniPush.refresh()).then(() => { if (guide === current && pushState() === 'off') renderGuide(); }).catch(() => {});
+      return;
+    }
+    if (state !== 'off') return;
+    const offer = make('p', 'progress-dialog__hint episode-dialog__push');
+    offer.dataset.episodePush = 'true';
+    const button = make('button', 'episode-dialog__push-btn', 'Get a notification when a new episode is out');
+    button.type = 'button';
+    button.dataset.guidePush = 'true';
+    offer.append(button, make('span', '', ' On this device, even when OmniTrackr is closed. Turn it off any time from the bell.'));
+    body.appendChild(offer);
+  }
+  async function offerPush(button) {
+    const offer = button.closest?.('[data-episode-push]') || button;
+    button.disabled = true;
+    let state;
+    try { state = await window.omniPush.turnOn(); } catch (_) { state = 'off'; }
+    const says = {
+      on: 'Done. New episodes of your shows will show up on this device.',
+      blocked: 'Notifications are blocked for OmniTrackr in this browser’s settings.',
+    }[state];
+    if (says) offer.replaceChildren(make('span', '', says));
+    else if (state === 'install') { /* the Add to Home Screen steps are open */ }
+    else button.disabled = false;
   }
   async function load(statusText) {
     if (!guide) return;

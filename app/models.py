@@ -1286,6 +1286,40 @@ class WebPushKey(Base):
     created_at = Column(DateTime, nullable=False, default=datetime.utcnow)
 
 
+class EpisodeAlert(Base):
+    """A new-episode notification already sent: one row per member and episode (Oct 2026).
+
+    A new table only. ``episode_key`` names the episode the way the episode
+    calendar cache does (source and id, season and number), so a member is told
+    about an episode once even if the air time moves or the app restarts.
+    """
+    __tablename__ = "episode_alerts"
+
+    id = Column(Integer, primary_key=True, index=True)
+    user_id = Column(Integer, ForeignKey("users.id", ondelete="CASCADE"), nullable=False, index=True)
+    episode_key = Column(String(80), nullable=False)
+    title = Column(String(200), nullable=False)
+    aired_on = Column(Date, nullable=False)
+    created_at = Column(DateTime, nullable=False, default=datetime.utcnow)
+
+    __table_args__ = (UniqueConstraint("user_id", "episode_key", name="uq_episode_alert"),)
+
+
+class PushNudge(Base):
+    """A reminder pushed to a member who had been away for a while (Oct 2026).
+
+    A new table only. Nothing is shown in the bell for these; the rows exist so
+    a member gets at most one every couple of weeks and none at all once two
+    went unanswered.
+    """
+    __tablename__ = "push_nudges"
+
+    id = Column(Integer, primary_key=True, index=True)
+    user_id = Column(Integer, ForeignKey("users.id", ondelete="CASCADE"), nullable=False, index=True)
+    kind = Column(String(24), nullable=False)
+    sent_at = Column(DateTime, nullable=False, default=datetime.utcnow)
+
+
 class UserBadge(Base):
     """The highest tier a member has reached on one badge track, e.g. Bookworm silver (Oct 2026).
 

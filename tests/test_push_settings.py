@@ -59,10 +59,11 @@ CHICAGO_MORNING = datetime(2026, 10, 27, 14, 0)
 
 def test_quiet_defaults_push_only_what_is_worth_a_buzz():
     chosen = {topic["key"]: topic["on"] for topic in web_push.settings_for(None)["topics"]}
-    assert chosen == {"releases": True, "clubs": True, "recommendations": True, "friends": True,
+    assert chosen == {"releases": True, "episodes": True, "clubs": True, "recommendations": True, "friends": True,
                       "discussions": True, "club_talk": False, "milestones": False, "memories": False,
-                      "followers": False}
+                      "followers": False, "reminders": True}
     assert web_push.wants(None, "release_day") and web_push.wants(None, "club_pick")
+    assert web_push.wants(None, "episode_today") and web_push.wants(None, "away_nudge")
     assert web_push.wants(None, "friend_recommendation") and web_push.wants(None, "club_due_soon")
     assert not web_push.wants(None, "club_post") and not web_push.wants(None, "friend_feed_cheer")
     # Something new nobody has filed yet stays quiet; the push confirmation always goes.
@@ -71,7 +72,7 @@ def test_quiet_defaults_push_only_what_is_worth_a_buzz():
 
 
 def test_every_notification_type_has_a_push_title_and_a_home():
-    types = {"release_day", "club_pick", "club_post", "club_due_soon", "friend_recommendation",
+    types = {"release_day", "episode_today", "away_nudge", "club_pick", "club_post", "club_due_soon", "friend_recommendation",
              "friend_recommendation_added", "recommendation_received", "take_received", "friend_request_received",
              "shared_list_item", "friend_feed_cheer", "badge_earned", "push_enabled", "discussion_reply",
              "discussion_report"}

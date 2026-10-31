@@ -49,11 +49,11 @@
   <meta name="apple-mobile-web-app-title" content="OmniTrackr">
   <script src="/static/pwa.js?v=20261018-install-card-1" defer></script>
   <script src="/static/visit.js?v=20261030-people-1" defer></script>
-  <link rel="preload" href="./styles.css?v=20261030-design-1" as="style">
+  <link rel="preload" href="./styles.css?v=20261031-push-1" as="style">
   <link rel="preload" href="/static/fonts/poppins-700-latin.woff2" as="font" type="font/woff2" crossorigin>
   <link rel="preload" href="/static/fonts/poppins-800-latin.woff2" as="font" type="font/woff2" crossorigin>
   <link rel="stylesheet" href="/static/fonts.css?v=20261009-fonts-1">
-  <link rel="stylesheet" href="./styles.css?v=20261030-design-1">
+  <link rel="stylesheet" href="./styles.css?v=20261031-push-1">
   <link rel="stylesheet" href="/static/progress.css?v=20260922-progress">
   <link rel="stylesheet" href="/static/episodes.css?v=20261027-episodes-1">
   <link rel="stylesheet" href="/static/app-theme.css?v=20261030-design-1">
@@ -2255,7 +2255,7 @@
   <script src="./auth.js?v=20261030-start-1"></script>
   <script src="/static/import-studio.js?v=20261030-audiobooks-1"></script>
   <script src="/static/progress.js?v=20261030-audiobooks-1"></script>
-  <script src="/static/episodes.js?v=20261027-episodes-1"></script>
+  <script src="/static/episodes.js?v=20261031-episodes-2"></script>
   <script src="./app.js"></script>
   <script src="/static/library-tags.js?v=20261030-audiobooks-notices-1"></script>
   <script src="/static/title-origins.js?v=20261030-audiobooks-notices-1"></script>
@@ -2263,7 +2263,7 @@
   <script src="/static/title-links.js?v=20261030-audiobooks-1"></script>
   <script src="/static/public-profile.js?v=20261030-compare-1"></script>
   <script src="/static/supporter.js?v=20261030-claim-1"></script>
-  <script src="/static/account-settings.js?v=20261029-account-1" defer></script>
+  <script src="/static/account-settings.js?v=20261031-account-2" defer></script>
   <script src="/static/two-factor.js?v=20261030-2fa-1" defer></script>
   <script src="/static/passkeys.js?v=20261030-passkeys-1" defer></script>
   <script src="/static/profile-showcase.js?v=20261021-bugs-1"></script>
@@ -2276,7 +2276,7 @@
   <script src="/static/friend-recs.js?v=20261030-audiobooks-1"></script>
   <script src="/static/friends-feed.js?v=20261030-audiobooks-1"></script>
   <script src="/static/follows.js?v=20261029-follows-1"></script>
-  <script src="/static/push.js?v=20261027-push-3" defer></script>
+  <script src="/static/push.js?v=20261031-push-4" defer></script>
   <script src="/static/year-in-review-entry.js?v=20261019-story-1" defer></script>
   <script src="/static/guest-list.js?v=20261031-browse-1"></script>
   <script src="/static/taste-quiz.js?v=20261030-audiobooks-1" defer></script>
@@ -2818,12 +2818,16 @@
           <p id="emailPreferencesStatus" class="info-text" role="status" aria-live="polite"></p>
         </div>
 
-        <div class="account-section">
+        <div class="account-section" id="devicePush">
           <h4>Phone and browser notifications</h4>
-          <p class="info-text">Turn these on per device from the bell at the top of the page. You can pick topics there and set quiet hours.</p>
-          <div class="account-actions">
-            <button type="button" class="action-btn" data-settings-open-bell>Open notification settings</button>
+          <p class="info-text">New episodes of your shows, release days, club picks and friend requests, on this device even when OmniTrackr is closed. Each device is turned on separately, and the bell at the top of the page has the same switches.</p>
+          <div id="accountPush" class="notification-push account-push" hidden>
+            <div class="notification-push__row">
+              <p id="accountPushText" class="notification-push__text"></p>
+              <button id="accountPushBtn" type="button" class="notification-action-btn notification-push__btn"></button>
+            </div>
           </div>
+          <form id="accountPushSettings" class="push-settings account-push-settings" aria-label="Notification settings" hidden></form>
         </div>
         </section>
 

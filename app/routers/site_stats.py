@@ -240,6 +240,30 @@ def _growth(db: Session, days: int, now: datetime) -> dict:
             "asked": _counts_between(db, models.TakeRequest.created_at, start),
             "answered": _counts_between(db, models.TakeResponse.created_at, start),
         },
+        "push": _push(db, days, now, start),
+    }
+
+
+def _push(db: Session, days: int, now: datetime, start: datetime) -> dict:
+    """Phone and browser notifications: devices turned on, members reached lately, pushes sent by kind."""
+    from .. import web_push
+    device = models.PushSubscription
+    table = models.SiteTrafficDaily
+    counts = db.query(table.key, func.sum(table.count)).filter(
+        table.kind == "push", table.key.like("sent_%"), table.day >= (now - timedelta(days=days - 1)).date(),
+    ).group_by(table.key).all()
+    titles = {**web_push.TITLES, "held": "Catch-up after quiet hours"}
+    by_kind = sorted(({"kind": titles.get(key[5:], key[5:].replace("_", " ")), "count": int(total or 0)}
+                      for key, total in counts if total), key=lambda row: -row["count"])
+    return {
+        "members": _count(db.query(func.count(func.distinct(device.user_id)))),
+        "devices": _count(db.query(func.count(device.id))),
+        "new_devices": _counts_between(db, device.created_at, start),
+        "reached_7d": _count(db.query(func.count(func.distinct(device.user_id)))
+                             .filter(device.last_success_at >= now - timedelta(days=7))),
+        "sent": sum(row["count"] for row in by_kind),
+        "sent_by_kind": by_kind[:8],
+        "away_reminders": _counts_between(db, models.PushNudge.sent_at, start),
     }
 
 

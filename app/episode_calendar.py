@@ -372,7 +372,12 @@ def upcoming_count(db: Session, user: models.User, today: date) -> int:
 # ---------------------------------------------------------------- refreshing
 
 def _subscribers(db: Session) -> list[int]:
-    """Members with episodes in their calendar, plus weekly-email members whose email goes out within a day."""
+    """Members whose shows need fresh schedules.
+
+    Those with episodes in their calendar, those who get new episodes pushed to a
+    device, and weekly-email members whose email goes out within a day.
+    """
+    from . import web_push
     calendar = [user_id for user_id, in db.query(models.CalendarFeed.user_id).join(
         models.User, models.User.id == models.CalendarFeed.user_id).filter(
         models.CalendarFeed.include_episodes == True,  # noqa: E712
@@ -385,7 +390,8 @@ def _subscribers(db: Session) -> list[int]:
         or_(models.EmailDigestSubscription.last_checked_at.is_(None),
             models.EmailDigestSubscription.last_checked_at <= digest_soon),
     ).all()]
-    return list(dict.fromkeys(calendar + weekly))
+    pushed = web_push.members_wanting(db, "episode_today")
+    return list(dict.fromkeys(calendar + pushed + weekly))
 
 
 def _fetched(db: Session, keys: list[str]) -> dict[str, tuple[str, datetime]]:
