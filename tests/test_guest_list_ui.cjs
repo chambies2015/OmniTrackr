@@ -37,7 +37,7 @@ test('adding, de-duplicating and removing titles', () => {
 
 test('bad or tampered entries are ignored', () => {
   const { api, store } = setup();
-  store.set(api.KEY, JSON.stringify([{ kind: 'movie', slug: '../../etc', title: 'x' }, { kind: 'podcast', slug: 'a', title: 'x' },
+  store.set(api.KEY, JSON.stringify([{ kind: 'movie', slug: '../../etc', title: 'x' }, { kind: 'comic', slug: 'a', title: 'x' },
     { kind: 'book', slug: 'dune-1965', title: 'Dune' }]));
   assert.deepEqual(api.read().map(item => item.slug), ['dune-1965']);
   store.set(api.KEY, 'not json');

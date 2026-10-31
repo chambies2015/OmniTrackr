@@ -452,3 +452,5 @@ body.app-shell .library-table .watched-icon.watched { background: var(--lib-done
   body.app-shell .library-table tbody,
   body.app-shell .library-filters :is(button, label) { transition: none; }
 }
+body.app-shell .library-empty__browse { color: var(--text-muted, inherit); font-size: .9rem; margin-top: 4px; text-decoration: underline; text-underline-offset: 3px; }
+body.app-shell .library-empty__browse[hidden] { display: none; }
