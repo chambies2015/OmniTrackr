@@ -4,7 +4,7 @@ const fs = require('node:fs');
 const path = require('node:path');
 const vm = require('node:vm');
 
-const source = fs.readFileSync(path.join(__dirname, '../app/static/app.js'), 'utf8');
+const source = require('./helpers/dashboard_source.cjs');
 const progressIntegration = source.slice(source.indexOf('async function refreshLibraryProgressView('));
 const tick = async () => { for (let i = 0; i < 8; i++) await Promise.resolve(); };
 
@@ -15,7 +15,7 @@ function setup(category = 'books') {
   const pages = new Map([[category, { offset: 50, total: 51, focusId: 42, signature: 'existing view' }]]);
   const context = vm.createContext({
     Promise, API_BASE: '', libraryBrowseEpoch: 0, currentTab: category, editingRowId: null,
-    isLoadingTVShows: false, isLoadingAnime: false, isLoadingBooks: false,
+    isLoadingTVShows: false, isLoadingAnime: false, isLoadingBooks: false, isLoadingManga: false, isLoadingPodcasts: false, isLoadingAudiobooks: false,
     Date: { now: () => now },
     setTimeout: (callback, delay) => { timers.push({ callback, delay }); },
     getLibraryFilters: key => filters.get(key) || { hasProgress: false },

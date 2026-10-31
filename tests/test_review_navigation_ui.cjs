@@ -4,7 +4,7 @@ const assert = require('node:assert/strict');
 const fs = require('node:fs');
 const path = require('node:path');
 const vm = require('node:vm');
-const source = fs.readFileSync(path.join(__dirname, '../app/static/app.js'), 'utf8');
+const source = require('./helpers/dashboard_source.cjs');
 const settle = () => new Promise(resolve => setImmediate(resolve));
 function deferred() {
   let resolve;
@@ -42,6 +42,9 @@ function setup(url = 'https://omnitrackr.xyz/?library_category=books&library_ite
     'video-games': ['videoGameTable', 'videoGameSort', 'videoGameSearch'],
     music: ['musicTable', 'musicSort', 'musicSearch'],
     books: ['bookTable', 'bookSort', 'bookSearch'],
+    manga: ['mangaTable', 'mangaSort', 'mangaSearch'],
+    podcasts: ['podcastTable', 'podcastSort', 'podcastSearch'],
+    audiobooks: ['audiobookTable', 'audiobookSort', 'audiobookSearch'],
   };
   for (const [tab, [table, sort, search]] of Object.entries(config)) {
     element(table); element(sort).value = 'title-asc'; element(search).value = 'existing filter';
@@ -59,7 +62,7 @@ function setup(url = 'https://omnitrackr.xyz/?library_category=books&library_ite
     URL, URLSearchParams, API_BASE: '', Date, setTimeout,
     currentTab: 'movies', editingRowId: options.editingRowId ?? null,
     isLoadingMovies: false, isLoadingTVShows: false, isLoadingAnime: false,
-    isLoadingVideoGames: false, isLoadingMusic: false, isLoadingBooks: false,
+    isLoadingVideoGames: false, isLoadingMusic: false, isLoadingBooks: false, isLoadingManga: false, isLoadingPodcasts: false, isLoadingAudiobooks: false,
     libraryPages: new Map(), libraryFilters: new Map(), renderLibraryFilters() {},
     dashboardStartupLayoutReady: options.layoutReady || Promise.resolve(),
     dashboardTabVisibilityReady: options.visibilityReady || Promise.resolve(),
@@ -83,7 +86,7 @@ function setup(url = 'https://omnitrackr.xyz/?library_category=books&library_ite
     hasStoredAuth: () => options.authenticated !== false,
     getTabButton: tab => tabs.get(tab),
     libraryPageConfig: tab => config[tab],
-    alert: message => alerts.push(message),
+    showNotice: message => alerts.push(message),
     authenticatedFetch: async (requestUrl, requestOptions) => {
       requests.push({ url: requestUrl, options: requestOptions });
       return options.response || { ok: true, json: async () => options.item || { id: 42, title: 'My saved title' } };
@@ -105,8 +108,8 @@ function setup(url = 'https://omnitrackr.xyz/?library_category=books&library_ite
   return { context, requests, elements, listeners, windowListeners, history, rows, tabs, loads, alerts, options, status };
 }
 
-test('all six categories open the exact owner-scoped item and consume identifiers while preserving unrelated URL state', async () => {
-  for (const category of ['movies', 'tv-shows', 'anime', 'video-games', 'music', 'books']) {
+test('every category open the exact owner-scoped item and consume identifiers while preserving unrelated URL state', async () => {
+  for (const category of ['movies', 'tv-shows', 'anime', 'video-games', 'music', 'books', 'manga', 'podcasts', 'audiobooks']) {
     const s = setup(`https://omnitrackr.xyz/?source=review&library_category=${category}&library_item=42&keep=yes#library`);
     assert.equal(await s.context.openDashboardTargetFromLocation(), true);
     assert.deepEqual(s.requests, [{ url: `/library/item/${category}/42`, options: undefined }]);

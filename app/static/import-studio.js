@@ -1,4 +1,4 @@
-/* Private, preview-first CSV migration. Files and previews live only in this page. */
+/* Private, preview-first library migration. Files and previews live only in this page. */
 let importStudioPreview = null;
 let importStudioContext = null;
 let importStudioController = null;
@@ -17,8 +17,23 @@ const importStudioMappingFields = [
 const importStudioCategories = {
   movies: ['Movies', 'Watched', 'Not watched'], 'tv-shows': ['TV shows', 'Watched', 'Not watched'],
   anime: ['Anime', 'Watched', 'Not watched'], 'video-games': ['Games', 'Played', 'Not played'],
-  music: ['Music', 'Listened', 'Not listened'], books: ['Books', 'Read', 'Not read']
+  music: ['Music', 'Listened', 'Not listened'], books: ['Books', 'Read', 'Not read'],
+  manga: ['Manga', 'Read', 'Not read'], podcasts: ['Podcasts', 'Listened', 'Not listened'],
+  audiobooks: ['Audiobooks', 'Listened', 'Not finished']
 };
+const importStudioSources = {
+  letterboxd: 'a Letterboxd export', goodreads: 'a Goodreads export', myanimelist: 'a MyAnimeList export',
+  imdb: 'an IMDb export', storygraph: 'a StoryGraph export', trakt: 'a Trakt export',
+  anilist: 'your AniList lists', steam: 'your Steam library', generic: 'a generic spreadsheet'
+};
+// Exports that are read by their own layout; column mapping only applies to spreadsheets.
+const IMPORT_STUDIO_STRUCTURED = /\.(zip|xml|gz|json)$/i;
+const ANILIST_QUERY = `query ($name: String, $type: MediaType) {
+  MediaListCollection(userName: $name, type: $type) {
+    lists { name entries { status score(format: POINT_10_DECIMAL) notes
+      media { id format episodes chapters volumes seasonYear startDate { year } title { english romaji } } } }
+  }
+}`;
 
 function importStudioElement(tag, text, className) {
   const node = document.createElement(tag);
@@ -86,7 +101,7 @@ function updateImportStudioControls() {
   const preview = document.getElementById('importStudioPreviewButton');
   const apply = document.getElementById('importStudioApplyButton');
   if (preview) preview.disabled = busy || importStudioInspecting || importStudioApplying;
-  if (apply) apply.disabled = busy || importStudioApplying || !importStudioPreview?.ready_count || !importStudioMatches(importStudioContext);
+  if (apply) apply.disabled = busy || importStudioApplying || !importStudioHasWork(importStudioPreview) || !importStudioMatches(importStudioContext);
   document.querySelectorAll('#importStudioForm input, #importStudioForm select').forEach(el => { el.disabled = importStudioApplying; });
   for (const id of ['importStudioConfirmButton', 'importStudioCancelButton']) {
     const el = document.getElementById(id);
@@ -120,6 +135,7 @@ function clearImportStudioSession() {
   importStudioApplying = false;
   importStudioInspecting = false;
   importStudioFileGeneration++;
+  importStudioSteamDocument = null;
   resetImportStudioPreview();
   const file = document.getElementById('importStudioFile');
   if (file) file.value = '';
@@ -162,6 +178,12 @@ async function inspectImportStudioFile() {
     updateImportStudioControls();
     return;
   }
+  if (IMPORT_STUDIO_STRUCTURED.test(snapshot.file.name || '')) {
+    importStudioInspecting = false;
+    mapping.appendChild(importStudioElement('p', 'This export is read by its own layout, so no column mapping is needed.', 'info-text'));
+    updateImportStudioControls();
+    return;
+  }
   importStudioInspecting = true;
   updateImportStudioControls();
   const current = () => generation === importStudioFileGeneration && snapshot.file === importStudioSnapshot().file && snapshot.account === importStudioAccountKey();
@@ -192,7 +214,7 @@ async function inspectImportStudioFile() {
 }
 
 function buildImportStudioFormData(includeConfirmation = false, snapshot = importStudioSnapshot()) {
-  if (!snapshot.file) throw new Error('Choose a CSV or TSV file first.');
+  if (!snapshot.file) throw new Error('Choose an export file first.');
   const body = new FormData();
   body.append('file', snapshot.file);
   body.append('source', snapshot.source);
@@ -215,15 +237,39 @@ function renderImportStudioValues(item) {
   const labels = importStudioCategories[item.category] || ['', 'Finished', 'Not finished'];
   const facts = [value.creator, value.release_date || (value.year || null),
     value.rating == null ? 'Not rated' : `${value.rating}/10`, value.completed ? labels[1] : labels[2],
-    value.genre, value.seasons == null ? null : `${value.seasons} seasons`, value.episodes == null ? null : `${value.episodes} episodes`].filter(value => value !== null && value !== undefined && value !== '');
+    value.genre, value.seasons == null ? null : `${value.seasons} seasons`, value.episodes == null ? null : `${value.episodes} episodes`,
+    value.playtime_minutes == null ? null : value.playtime_minutes > 0
+      ? `${(value.playtime_minutes / 60).toLocaleString(undefined, {maximumFractionDigits: 1})} h played` : 'Never launched on Steam'].filter(value => value !== null && value !== undefined && value !== '');
   box.appendChild(importStudioElement('p', facts.join(' · ')));
+  if (value.store_url && /^https:\/\/store\.steampowered\.com\/app\/\d+\/$/.test(value.store_url)) {
+    const link = importStudioElement('a', 'Steam store page');
+    link.href = value.store_url; link.target = '_blank'; link.rel = 'noopener noreferrer';
+    box.appendChild(link);
+  }
   if (value.review) {
     const note = importStudioElement('details');
     note.append(importStudioElement('summary', 'Private note'), importStudioElement('p', value.review, 'import-studio__note'));
     box.appendChild(note);
   }
-  if (item.status === 'duplicate') box.appendChild(importStudioElement('p', 'From your file; the existing library entry will be kept.', 'info-text'));
+  if (item.status === 'duplicate') {
+    box.appendChild(importStudioElement('p', value.playtime_minutes != null
+      ? 'Already in your library. The entry is kept and its hours from Steam are updated.'
+      : 'From your file; the existing library entry will be kept.', 'info-text'));
+  }
   return box;
+}
+
+// A Letterboxd export can bring diary dates even when every film is already in the library.
+function importStudioHasWork(preview) {
+  return Boolean(preview && (preview.ready_count || preview.diary_count || preview.playtime_refresh_count));
+}
+
+function importStudioPlaytimeText(count) {
+  return `${count} ${count === 1 ? 'game' : 'games'} already in your library will get ${count === 1 ? 'its' : 'their'} hours from Steam updated. Nothing else about ${count === 1 ? 'it' : 'them'} changes.`;
+}
+
+function importStudioDiaryText(count) {
+  return `${count} Letterboxd diary ${count === 1 ? 'date' : 'dates'} will be added to your Journal: first watches as Finished, rewatches as Revisited. Your diary calendar fills in with them.`;
 }
 
 function renderImportStudioPreview(data, focusId) {
@@ -234,7 +280,13 @@ function renderImportStudioPreview(data, focusId) {
   const summary = importStudioElement('div', undefined, 'import-studio__summary');
   summary.append(importStudioMetric(data.total_rows, 'Rows read'), importStudioMetric(data.ready_count, 'Ready to import'),
     importStudioMetric(data.duplicate_count, 'Duplicates skipped'), importStudioMetric(data.invalid_count, 'Rows needing attention'));
-  results.append(summary, importStudioElement('p', 'Review the values from your file below. Notes stay private. Filtering this preview does not change which ready rows will be imported.', 'info-text'));
+  results.appendChild(summary);
+  if (importStudioSources[data.detected_source]) {
+    results.appendChild(importStudioElement('p', `Read as ${importStudioSources[data.detected_source]}.`, 'info-text import-studio__source'));
+  }
+  if (data.diary_count) results.appendChild(importStudioElement('p', importStudioDiaryText(data.diary_count), 'info-text import-studio__diary'));
+  if (data.playtime_refresh_count) results.appendChild(importStudioElement('p', importStudioPlaytimeText(data.playtime_refresh_count), 'info-text import-studio__diary'));
+  results.append(importStudioElement('p', 'Review the values from your file below. Notes stay private. Filtering this preview does not change which ready rows will be imported.', 'info-text'));
   const controls = importStudioElement('div', undefined, 'import-studio__review-controls');
   const label = importStudioElement('label');
   label.appendChild(importStudioElement('span', 'Review rows'));
@@ -266,14 +318,14 @@ function renderImportStudioPreview(data, focusId) {
   const table = importStudioElement('table', undefined, 'import-studio__table');
   table.appendChild(importStudioElement('caption', 'Proposed import values'));
   const head = importStudioElement('thead'), headRow = importStudioElement('tr');
-  for (const title of ['CSV row', 'Title', 'Outcome', 'Values from your file']) {
+  for (const title of ['Row', 'Title', 'Outcome', 'Values from your file']) {
     const th = importStudioElement('th', title); th.scope = 'col'; headRow.appendChild(th);
   }
   head.appendChild(headRow); table.appendChild(head);
   const body = importStudioElement('tbody');
   for (const item of data.preview || []) {
     const row = importStudioElement('tr');
-    const number = importStudioElement('td', item.row); number.dataset.label = 'CSV row';
+    const number = importStudioElement('td', item.row); number.dataset.label = 'Row';
     const title = importStudioElement('th', item.title); title.scope = 'row';
     title.appendChild(importStudioElement('span', importStudioCategories[item.category]?.[0] || 'Unrecognized category', 'import-studio__category'));
     const outcome = importStudioElement('td', undefined, 'import-studio__outcome'); outcome.dataset.label = 'Outcome';
@@ -307,7 +359,7 @@ async function loadImportStudioPreview(offset = 0, filter = 'all', focusId) {
     if (!data.fingerprint || !Array.isArray(data.preview)) throw new Error('The preview response was incomplete.');
     importStudioPreview = data; importStudioContext = snapshot; importStudioFilter = filter;
     renderImportStudioPreview(data, focusId);
-    status.textContent = `Preview complete: ${data.ready_count} ready, ${data.duplicate_count} duplicates, ${data.invalid_count} needing attention. Nothing has been saved.`;
+    status.textContent = `Preview complete: ${data.ready_count} ready, ${data.duplicate_count} duplicates, ${data.invalid_count} needing attention${data.diary_count ? `, ${data.diary_count} diary dates` : ''}${data.playtime_refresh_count ? `, ${data.playtime_refresh_count} games' hours to refresh` : ''}. Nothing has been saved.`;
   } catch (error) {
     if (current() && error.name !== 'AbortError') {
       status.textContent = `${error.message} Your file and options are still here. Try Preview import again.`;
@@ -337,9 +389,14 @@ function filterImportStudioPreview(filter) {
 }
 
 function applyLibraryImport() {
-  if (importStudioApplying || importStudioController || !importStudioPreview?.ready_count) return;
+  if (importStudioApplying || importStudioController || !importStudioHasWork(importStudioPreview)) return;
   if (!importStudioMatches(importStudioContext)) { resetImportStudioPreview(); return; }
-  document.getElementById('importStudioConfirmSummary').textContent = `Import all ${importStudioPreview.ready_count} ready rows? ${importStudioPreview.duplicate_count} duplicates and ${importStudioPreview.invalid_count} invalid rows will be skipped. Existing entries will keep their values. Imported notes stay private.`;
+  const diaryCount = importStudioPreview.diary_count || 0;
+  const diaryText = diaryCount ? ` ${diaryCount} diary ${diaryCount === 1 ? 'date' : 'dates'} will be added to your Journal.` : '';
+  const refreshCount = importStudioPreview.playtime_refresh_count || 0;
+  const refreshText = refreshCount ? ` ${importStudioPlaytimeText(refreshCount)}` : '';
+  const lead = importStudioPreview.ready_count ? `Import all ${importStudioPreview.ready_count} ready rows?` : 'No new titles to add.';
+  document.getElementById('importStudioConfirmSummary').textContent = `${lead}${diaryText}${refreshText} ${importStudioPreview.duplicate_count} duplicates and ${importStudioPreview.invalid_count} invalid rows will be skipped. Existing entries will keep their values. Imported notes stay private.`;
   document.getElementById('importStudioConfirm').hidden = false;
   document.getElementById('importStudioConfirmButton').focus();
 }
@@ -357,6 +414,8 @@ function renderImportStudioCompletion(data) {
   heading.tabIndex = -1;
   const summary = importStudioElement('div', undefined, 'import-studio__summary');
   summary.append(importStudioMetric(data.created_count, 'Titles added'), importStudioMetric(data.duplicate_count, 'Duplicates kept'), importStudioMetric(data.invalid_count, 'Rows skipped'));
+  if (data.diary_created) summary.appendChild(importStudioMetric(data.diary_created, 'Diary dates added'));
+  if (data.playtime_count) summary.appendChild(importStudioMetric(data.playtime_count, 'Games with Steam hours saved'));
   results.append(heading, summary);
   if (data.invalid_count) results.appendChild(importStudioElement('p', 'Your source file is still selected. Preview again and choose Needs attention to review skipped rows. Fix those rows in your file, then choose the corrected file and preview it.', 'info-text'));
   const actions = importStudioElement('div', undefined, 'import-studio__actions');
@@ -376,7 +435,7 @@ function renderImportStudioCompletion(data) {
 }
 
 async function confirmLibraryImport() {
-  if (document.getElementById('importStudioConfirm').hidden || importStudioApplying || importStudioController || !importStudioPreview?.ready_count) return;
+  if (document.getElementById('importStudioConfirm').hidden || importStudioApplying || importStudioController || !importStudioHasWork(importStudioPreview)) return;
   if (!importStudioMatches(importStudioContext)) { resetImportStudioPreview(); return; }
   const snapshot = importStudioContext;
   const body = buildImportStudioFormData(true, snapshot);
@@ -395,7 +454,7 @@ async function confirmLibraryImport() {
     importStudioPreview = null; importStudioContext = null;
     document.getElementById('importStudioConfirm').hidden = true;
     renderImportStudioCompletion(data);
-    status.textContent = `Import complete: ${data.created_count} added, ${data.duplicate_count} duplicates skipped, ${data.invalid_count} invalid rows skipped.`;
+    status.textContent = `Import complete: ${data.created_count} added, ${data.duplicate_count} duplicates skipped, ${data.invalid_count} invalid rows skipped${data.diary_created ? `, ${data.diary_created} diary dates added to your Journal` : ''}.`;
     try { Promise.resolve(window.OmniImportStudio.refresh?.(data.by_category || {})).catch(() => {}); } catch (_) { /* A refresh cannot turn a completed import into a failed save. */ }
   } catch (error) {
     if (current() && error.name !== 'AbortError') {
@@ -425,6 +484,180 @@ async function downloadImportTemplate() {
     if (account === importStudioAccountKey()) document.getElementById('importStudioStatus').textContent = error.message;
   }
 }
+
+async function fetchAniListCollection(name, type, signal) {
+  const response = await fetch('https://graphql.anilist.co', {
+    method: 'POST', signal, credentials: 'omit', cache: 'no-store',
+    headers: {'Content-Type': 'application/json', Accept: 'application/json'},
+    body: JSON.stringify({query: ANILIST_QUERY, variables: {name, type}})
+  });
+  let data = null;
+  try { data = await response.json(); } catch (_) { /* Reported below. */ }
+  const message = data?.errors?.[0]?.message || '';
+  if (response.status === 404 || /not found/i.test(message)) throw new Error(`AniList has no user named ${name}.`);
+  if (/private/i.test(message)) throw new Error('That AniList list is private. Make it public in AniList settings, or export it as XML instead.');
+  if (response.status === 429) throw new Error('AniList is busy right now. Try again in a minute.');
+  if (!response.ok || !data?.data) throw new Error('AniList could not be reached. Try again shortly.');
+  return data.data.MediaListCollection || {lists: []};
+}
+
+async function fetchAniListImport() {
+  if (importStudioApplying || importStudioController) return;
+  const input = document.getElementById('importStudioAniListUser');
+  const button = document.getElementById('importStudioAniListButton');
+  const status = document.getElementById('importStudioStatus');
+  const name = (input?.value || '').trim().replace(/^@/, '');
+  if (!/^[A-Za-z0-9_-]{2,40}$/.test(name)) {
+    status.textContent = 'Enter your AniList username (letters, numbers, dashes or underscores).';
+    input?.focus();
+    return;
+  }
+  const account = importStudioAccountKey();
+  const controller = new AbortController();
+  const timeout = window.setTimeout(() => controller.abort(), 30000);
+  if (button) button.disabled = true;
+  status.textContent = `Fetching ${name}'s public AniList lists…`;
+  try {
+    const anime = await fetchAniListCollection(name, 'ANIME', controller.signal);
+    const manga = await fetchAniListCollection(name, 'MANGA', controller.signal);
+    if (account !== importStudioAccountKey()) return;
+    // The lists become an ordinary file, so preview, confirmation and save work as for any export.
+    const json = JSON.stringify({source: 'anilist', user: name, anime, manga});
+    const transfer = new DataTransfer();
+    transfer.items.add(new File([json], `anilist-${name}.json`, {type: 'application/json'}));
+    document.getElementById('importStudioFile').files = transfer.files;
+    const source = document.getElementById('importStudioSource');
+    if (source) source.value = 'anilist';
+    await inspectImportStudioFile();
+    await previewLibraryImport();
+  } catch (error) {
+    if (account === importStudioAccountKey()) {
+      status.textContent = error.name === 'AbortError' ? 'AniList took too long to answer. Try again shortly.' : error.message;
+    }
+  } finally {
+    window.clearTimeout(timeout);
+    if (button) button.disabled = false;
+  }
+}
+
+// The last Steam library fetched in this page, so changing the played threshold rebuilds the file without asking Steam again.
+let importStudioSteamDocument = null;
+let importStudioSteamChecked = false;
+
+function importStudioSteamThreshold() {
+  const value = document.getElementById('importStudioSteamThreshold')?.value || '60';
+  return value === 'none' ? null : Number(value);
+}
+
+async function previewImportStudioSteam(document_) {
+  const json = JSON.stringify({...document_, played_after_minutes: importStudioSteamThreshold()});
+  const transfer = new DataTransfer();
+  transfer.items.add(new File([json], `steam-${document_.steam_id}.json`, {type: 'application/json'}));
+  document.getElementById('importStudioFile').files = transfer.files;
+  const source = document.getElementById('importStudioSource');
+  if (source) source.value = 'steam';
+  await inspectImportStudioFile();
+  await previewLibraryImport();
+}
+
+async function fetchSteamImport() {
+  if (importStudioApplying || importStudioController) return;
+  const input = document.getElementById('importStudioSteamProfile');
+  const button = document.getElementById('importStudioSteamButton');
+  const status = document.getElementById('importStudioStatus');
+  const profile = (input?.value || '').trim();
+  if (!profile) {
+    status.textContent = 'Paste your Steam profile link (steamcommunity.com/id/… or /profiles/…) or your 17-digit Steam ID.';
+    input?.focus();
+    return;
+  }
+  const account = importStudioAccountKey();
+  const controller = new AbortController();
+  const timeout = window.setTimeout(() => controller.abort(), 30000);
+  if (button) button.disabled = true;
+  status.textContent = 'Fetching your Steam games…';
+  try {
+    const response = await authenticatedFetch(`${API_BASE}/import-studio/steam/library/`, {
+      method: 'POST', signal: controller.signal, cache: 'no-store',
+      headers: {'Content-Type': 'application/json'}, body: JSON.stringify({profile})
+    });
+    let data = null;
+    try { data = await response.json(); } catch (_) { /* Reported below. */ }
+    if (account !== importStudioAccountKey()) return;
+    if (response.status === 429) throw new Error('Too many Steam lookups in a row. Wait a minute and try again.');
+    if (!response.ok || !Array.isArray(data?.games)) {
+      throw new Error(typeof data?.detail === 'string' ? data.detail : 'Steam could not be reached. Try again shortly.');
+    }
+    importStudioSteamDocument = data;
+    await previewImportStudioSteam(data);
+    if (data.truncated && account === importStudioAccountKey()) {
+      status.textContent += ` Only your ${data.games.length.toLocaleString()} most played games are included.`;
+    }
+  } catch (error) {
+    if (account === importStudioAccountKey()) {
+      status.textContent = error.name === 'AbortError' ? 'Steam took too long to answer. Try again shortly.' : error.message;
+    }
+  } finally {
+    window.clearTimeout(timeout);
+    if (button) button.disabled = false;
+  }
+}
+
+function changeSteamThreshold() {
+  const file = document.getElementById('importStudioFile')?.files?.[0];
+  if (!importStudioSteamDocument || importStudioApplying || importStudioController) return;
+  if (!file || file.name !== `steam-${importStudioSteamDocument.steam_id}.json`) return;
+  previewImportStudioSteam(importStudioSteamDocument);
+}
+
+async function revealSteamImport() {
+  if (importStudioSteamChecked || typeof hasStoredAuth !== 'function' || !hasStoredAuth()) return;
+  importStudioSteamChecked = true;
+  try {
+    const response = await authenticatedFetch(`${API_BASE}/import-studio/steam/`, {cache: 'no-store'});
+    const data = response.ok ? await response.json() : null;
+    if (!data?.enabled) return;
+    const box = document.getElementById('importStudioSteam');
+    const option = document.getElementById('importStudioSteamOption');
+    if (box) box.hidden = false;
+    if (option) { option.hidden = false; option.disabled = false; }
+  } catch (_) {
+    importStudioSteamChecked = false;  // Try again next time the studio is shown.
+  }
+}
+
+function openImportStudioFromStart() {
+  // Links such as /?start=import (the switching guide, signup) land members in the importer.
+  if (typeof openLaunchpadImport === 'function') openLaunchpadImport();
+}
+
+let importStudioStartRequested = false;
+try {
+  const params = new URLSearchParams(window.location.search || '');
+  importStudioStartRequested = window.location.pathname === '/' && params.getAll('start').length === 1 && params.get('start') === 'import';
+} catch (_) { importStudioStartRequested = false; }
+
+document.addEventListener('DOMContentLoaded', () => {
+  document.getElementById('importStudioAniListButton')?.addEventListener('click', fetchAniListImport);
+  document.getElementById('importStudioAniListUser')?.addEventListener('keydown', event => {
+    if (event.key === 'Enter') { event.preventDefault(); fetchAniListImport(); }
+  });
+  document.getElementById('importStudioSteamButton')?.addEventListener('click', fetchSteamImport);
+  document.getElementById('importStudioSteamThreshold')?.addEventListener('change', changeSteamThreshold);
+  document.getElementById('importStudioSteamProfile')?.addEventListener('keydown', event => {
+    if (event.key === 'Enter') { event.preventDefault(); fetchSteamImport(); }
+  });
+  // Ask whether Steam is set up only once the Import Studio is on screen.
+  const studio = document.getElementById('importStudio');
+  if (studio && 'IntersectionObserver' in window) {
+    new IntersectionObserver(entries => {
+      if (entries.some(entry => entry.isIntersecting)) revealSteamImport();
+    }).observe(studio);
+  }
+});
+window.addEventListener('load', () => {
+  if (importStudioStartRequested && typeof hasStoredAuth === 'function' && hasStoredAuth()) openImportStudioFromStart();
+});
 
 window.OmniImportStudio = {reset: clearImportStudioSession, refresh: null, openCategory: null, canOpenCategory: null};
 window.addEventListener('pagehide', clearImportStudioSession);

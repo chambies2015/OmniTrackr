@@ -1,0 +1,143 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="description" content="Free podcast tracker: keep the shows you follow, save the episode you stopped on, mark limited series finished, rate, review and see listening stats.">
+  <meta name="robots" content="index, follow, max-image-preview:large">
+  <meta name="author" content="OmniTrackr">
+  <title>Podcast Tracker - Track Shows, Episodes, Backlogs and Reviews</title>
+  <link rel="canonical" href="https://omnitrackr.xyz/podcast-tracker">
+  <link rel="icon" type="image/x-icon" href="/omnitrackr_favicon.ico">
+  <meta property="og:type" content="article">
+  <meta property="og:url" content="https://omnitrackr.xyz/podcast-tracker">
+  <meta property="og:title" content="Podcast Tracker - Track Shows, Episodes and Backlogs">
+  <meta property="og:description" content="A guide to tracking podcasts: ongoing shows, limited series, the episode you stopped on, backlogs, reviews and listening stats.">
+  <meta property="og:image" content="https://omnitrackr.xyz/omnitrackr_vortex.png">
+  <meta property="og:image:alt" content="OmniTrackr podcast tracker guide">
+  <meta property="og:site_name" content="OmniTrackr">
+  <meta name="twitter:card" content="summary">
+  <meta name="twitter:title" content="Podcast Tracker">
+  <meta name="twitter:description" content="Keep every podcast you follow, and the episode you stopped on, next to your films, shows and books.">
+  <link rel="preload" href="/static/fonts/poppins-700-latin.woff2" as="font" type="font/woff2" crossorigin>
+  <link rel="preload" href="/static/fonts/poppins-800-latin.woff2" as="font" type="font/woff2" crossorigin>
+  <link rel="stylesheet" href="/static/fonts.css?v=20261009-fonts-1">
+  <style>
+    body { min-height: 100vh; padding: 20px; }
+    .content-wrapper { max-width: 1040px; margin: 0 auto; }
+    .content-container { background: var(--card-bg); border-radius: 16px; padding: 50px 40px; margin: 20px 0; box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3); border: 1px solid var(--border); color: var(--fg); line-height: 1.8; }
+    @media (max-width: 768px) { .content-container { padding: 30px 20px; margin: 10px 0; } }
+    .content-header { text-align: center; margin-bottom: 40px; padding-bottom: 20px; border-bottom: 2px solid var(--border); }
+    .content-header h1 { font-family: 'Poppins', sans-serif; font-size: 2.35rem; margin-bottom: 10px; color: var(--fg); }
+    .content-header p, .content-section p, .content-section li { color: var(--fg-secondary); }
+    .content-section { margin-bottom: 38px; }
+    .content-section h2 { font-family: 'Poppins', sans-serif; font-size: 1.75rem; margin-bottom: 15px; color: var(--primary); }
+    .content-section ul, .content-section ol { margin-left: 20px; margin-bottom: 15px; }
+    .content-section li { margin-bottom: 8px; }
+    .back-link { display: inline-block; margin-bottom: 30px; color: var(--primary); text-decoration: none; font-weight: 500; }
+  </style>
+  <script type="application/ld+json">
+  {
+    "@context": "https://schema.org",
+    "@type": "Article",
+    "headline": "Podcast Tracker for Shows, Episodes, Reviews and Statistics",
+    "description": "A guide to tracking podcasts with OmniTrackr, including ongoing shows, limited series, episode checkpoints, backlogs, reviews and statistics.",
+    "dateModified": "2026-10-28",
+    "author": { "@type": "Organization", "name": "OmniTrackr" },
+    "publisher": { "@type": "Organization", "name": "OmniTrackr", "url": "https://omnitrackr.xyz" },
+    "mainEntityOfPage": "https://omnitrackr.xyz/podcast-tracker",
+    "inLanguage": "en-US"
+  }
+  </script>
+  <link rel="stylesheet" href="/static/public-reader.css?v=20261029-reader-3">
+</head>
+
+<body class="public-reader site">
+  <a class="reader-skip" href="#reader-main">Skip to guide</a>
+  <!--SITE_NAV:guides-->
+  <div class="reader-shell">
+    <main id="reader-main" tabindex="-1" class="reader-main content-container">
+<a href="/media-tracking" class="back-link">Back to Media Tracking Hub</a>
+      <header class="content-header">
+        <h1>Podcast Tracker</h1>
+        <p>Keep a list of the podcasts you follow, save the episode you stopped on, and rate the shows worth passing on to a friend.</p>
+      </header>
+      <details class="reader-contents">
+        <summary>On this page</summary>
+        <nav aria-label="On this page">
+          <a href="#why-heading">Why track podcasts at all</a>
+          <a href="#start-heading">Start your podcast shelf</a>
+          <a href="#finished-heading">What "listened" means for a show that never ends</a>
+          <a href="#progress-heading">Saving your place in a long back catalogue</a>
+          <a href="#backlog-heading">Keeping the backlog small</a>
+          <a href="#review-heading">Writing a podcast review people can use</a>
+          <a href="#stats-heading">Podcast statistics</a>
+          <a href="#privacy-heading">Privacy and backups</a>
+          <a href="#related-heading">Related pages</a>
+        </nav>
+      </details>
+
+      <section class="content-section" aria-labelledby="why-heading">
+        <h2 id="why-heading">Why track podcasts at all</h2>
+        <p>Your podcast app knows what you subscribe to, but it forgets a show the moment you unsubscribe, it has no idea that a true-crime series you loved led you to a documentary and a book, and it cannot tell a friend which three episodes of a 600-episode show are the place to start. Switch apps and the history is usually gone.</p>
+        <p>OmniTrackr gives podcasts their own shelf with these fields: the host or network, the year the show started, genres, the episode count, your rating, your review and a listened status. The shelf sits next to your films, TV, anime, games, albums, books and manga, so a podcast about a film can live in the same collection as the film.</p>
+      </section>
+
+      <section class="content-section" aria-labelledby="start-heading">
+        <h2 id="start-heading">Start your podcast shelf</h2>
+        <ol>
+          <li>Open the <strong>Podcasts</strong> tab in your dashboard and choose <strong>Add Podcast</strong>.</li>
+          <li>Type the show's name and press <strong>Search</strong>. Results come from the Apple Podcasts directory, which lists most public shows, including ones you hear on Spotify or elsewhere. Picking a result fills in the host, genres, episode count and cover art.</li>
+          <li>Apple only reports when the newest episode came out, so the year the show started is left for you to fill in. It is optional.</li>
+          <li>Tick <strong>Listened</strong> when you have finished a limited series or caught up with an ongoing one.</li>
+          <li>Choose <strong>Update progress</strong> on any saved show and enter the episode you reached. Shows that run in seasons can save a season too.</li>
+        </ol>
+        <p>If a search finds nothing, add the show by hand. Only the name is required. Paid feeds, live radio shows and private feeds from a course or a club often have no directory entry.</p>
+      </section>
+
+      <section class="content-section" aria-labelledby="finished-heading">
+        <h2 id="finished-heading">What "listened" means for a show that never ends</h2>
+        <p>Podcasts come in two shapes. A limited series, such as a six-part investigation, has an ending, and "listened" means the same thing it does for a film. A weekly interview or news show has no ending, and most people never hear every episode.</p>
+        <p>For ongoing shows, tick <strong>Listened</strong> when you are caught up, and untick it if you fall behind and want the show back on your list. If you dip in and out and do not care about the back catalogue, rate the show and leave it unticked. Your rating and review still count, and the show still appears on your profile.</p>
+      </section>
+
+      <section class="content-section" aria-labelledby="progress-heading">
+        <h2 id="progress-heading">Saving your place in a long back catalogue</h2>
+        <p>Starting an established podcast from episode one is a common project, and it can take months. Save the episode number you reached with <strong>Update progress</strong>, and add a private note if the numbering is odd: bonus episodes, "part 2" episodes that share a number, or a feed that was renumbered after a network change. The note stays private even when your review is public.</p>
+        <p>The checkpoint is separate from your podcast app's own position, so it keeps working if you change apps, and it shows up in Continue on your dashboard next to the TV shows and books you are partway through.</p>
+      </section>
+
+      <section class="content-section" aria-labelledby="backlog-heading">
+        <h2 id="backlog-heading">Keeping the backlog small</h2>
+        <p>Podcasts pile up faster than anything else on a media list because they are free and new episodes arrive on their own. A few habits help. Put the one or two shows you are working through in <strong>Next up</strong> so they come first. Keep shows you sample on the shelf unticked with a short note on why you stopped, so you do not try them again by accident. And when a show has gone a season without you missing it, delete it or give it a rating and move on.</p>
+      </section>
+
+      <section class="content-section" aria-labelledby="review-heading">
+        <h2 id="review-heading">Writing a podcast review people can use</h2>
+        <p>The most useful thing a podcast review can say is where to start. Name an episode or a season for a newcomer, and say whether the order matters. Then describe the format: one host or a panel, scripted or conversational, twenty minutes or three hours, and how much of each episode is ads or tangents.</p>
+        <p>Say how much you heard. "I have heard about forty of the 300 episodes" helps a reader weigh your opinion. For narrative series, say whether the ending pays off, and hide spoilers behind a warning on public reviews.</p>
+        <p>To appear in OmniTrackr's public review feed, a review needs at least 80 characters, and a review with more than 240 characters and 35 words can have its own page. The <a href="/review-guidelines">review guidelines</a> explain what makes a review substantial.</p>
+      </section>
+
+      <section class="content-section" aria-labelledby="stats-heading">
+        <h2 id="stats-heading">Podcast statistics</h2>
+        <p>The Statistics tab has a podcast section with listened and unlistened counts, your average rating, a rating spread, your most common genres and the episode count across your shelf. Podcasts also count toward yearly goals, your year-end recap, the Podcast Regular badge and your public profile, and they can go into collections with films, shows and books.</p>
+      </section>
+
+      <section class="content-section" aria-labelledby="privacy-heading">
+        <h2 id="privacy-heading">Privacy and backups</h2>
+        <p>The podcast shelf follows the same privacy rules as the rest of OmniTrackr. In Settings you can make podcasts private, so friends and public pages never see them, or hide the Podcasts tab if you do not listen to podcasts. Podcasts are included in your JSON backup and restore, and older backups without a podcast section still import exactly as before. The Import Studio also takes a CSV with a <code>podcasts</code> category; download the podcast template there to see the columns.</p>
+      </section>
+
+      <section class="content-section" aria-labelledby="related-heading">
+        <h2 id="related-heading">Related pages</h2>
+        <p>Looking for a show? <a href="/browse/podcasts">Browse podcasts worth subscribing to</a>: thirty-nine shows sorted by what you want from the next hour, plus the current Apple Podcasts chart. Any of them joins your library in one tap.</p>
+        <p>Read the <a href="/music-tracker">music tracker guide</a> for albums, the <a href="/audiobook-tracker">audiobook tracker guide</a> for audiobooks, or the <a href="/export-import-guide">export and import guide</a> to move a list across. For broader workflows, visit the <a href="/media-tracking">media tracking hub</a>, or browse <a href="/reviews?category=podcast">podcast reviews</a>.</p>
+      </section>
+    </main>
+  </div>
+  <!--SITE_FOOTER-->
+</body>
+
+</html>

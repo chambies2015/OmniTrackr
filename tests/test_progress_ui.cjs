@@ -5,7 +5,7 @@ const path = require('node:path');
 const vm = require('node:vm');
 const script = fs.readFileSync(path.join(__dirname, '../app/static/progress.js'), 'utf8');
 const template = fs.readFileSync(path.join(__dirname, '../app/templates/index.html'), 'utf8');
-const app = fs.readFileSync(path.join(__dirname, '../app/static/app.js'), 'utf8');
+const app = require('./helpers/dashboard_source.cjs');
 const tick = async () => { for (let i = 0; i < 12; i++) await Promise.resolve(); };
 function deferred() { let resolve, reject; const promise = new Promise((a, b) => { resolve = a; reject = b; }); return { promise, resolve, reject }; }
 function checkpoint(overrides = {}) { return { unit: 'episode', position: 7, season: 2, note: 'Remember this detail', revision: 1, updated_at: '2026-09-22T12:00:00Z', ...overrides }; }
@@ -276,10 +276,10 @@ test('Continue, Next Up and Welcome Back integrate checkpoint actions without ne
   assert.ok(card.children.some(node => node.dataset.progressItemId === '42'));
 });
 
-test('private library has only three supported action entry points and versioned assets', () => {
-  assert.equal([...app.matchAll(/data-progress-category=/g)].length, 3);
-  for (const category of ['tv-shows', 'anime', 'books']) assert.ok(app.includes(`data-progress-category="${category}"`));
-  assert.match(template, /progress\.js\?v=20260922-progress/);
+test('private library has only six supported action entry points and versioned assets', () => {
+  assert.equal([...app.matchAll(/data-progress-category=/g)].length, 6);
+  for (const category of ['tv-shows', 'anime', 'books', 'manga', 'podcasts', 'audiobooks']) assert.ok(app.includes(`data-progress-category="${category}"`));
+  assert.match(template, /progress\.js\?v=20261030-audiobooks-1/);
   assert.match(template, /progress\.css\?v=20260922-progress/);
   assert.match(template, /<dialog id="progressDialog"[^>]*aria-labelledby="progressTitle"/);
 });

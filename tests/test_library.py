@@ -99,6 +99,9 @@ def test_exact_item_lookup_accepts_sparse_metadata_and_only_returns_owned_identi
         "movies": ("director", "year"), "tv-shows": ("year", "seasons", "episodes"),
         "anime": ("year", "seasons", "episodes"), "video-games": ("release_date", "genres"),
         "music": ("artist", "year", "genre"), "books": ("author", "year", "genre"),
+        "manga": ("author", "year", "genre", "volumes", "chapters"),
+        "podcasts": ("host", "year", "genre", "episodes"),
+        "audiobooks": ("author", "narrator", "year", "genre", "length_hours"),
     }[category]
     db_session.refresh(own)
     assert all(returned[field] is None and getattr(own, field) is None for field in nullable_fields)

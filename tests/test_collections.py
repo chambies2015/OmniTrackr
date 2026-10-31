@@ -111,7 +111,7 @@ class TestCollections:
         self, authenticated_client, db_session, test_movie_data, monkeypatch
     ):
         monkeypatch.setenv("COLLECTION_MODERATOR_USERNAMES", "testuser")
-        assert authenticated_client.post("/movies/", json=test_movie_data).status_code == 201
+        assert authenticated_client.post("/movies/", json={**test_movie_data, "watched": False}).status_code == 201
         assert authenticated_client.post("/auth/register", json={
             "email": "new-reader@example.com",
             "username": "newreader",

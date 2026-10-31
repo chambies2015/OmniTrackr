@@ -1,0 +1,30 @@
+/* Profile widgets page (/u/<username>/widgets). Builds on site.css, title-page.css and profile-page.css. */
+.widgets-hero__inner.site-wrap { padding-bottom: 36px; padding-top: 44px; }
+.widgets-hero .site-eyebrow a { color: inherit; text-decoration: none; }
+.widgets-hero .site-eyebrow a:hover { text-decoration: underline; }
+.widgets-hero h1 { font: 800 clamp(1.9rem, 4vw, 2.8rem)/1.08 var(--site-display); letter-spacing: -.03em; margin: 0 0 10px; overflow-wrap: anywhere; }
+.widget-theme { background: var(--site-surface); border: 1px solid var(--site-border); border-radius: 999px; display: inline-flex; gap: 4px; margin-top: 8px; padding: 4px; }
+.widget-theme__btn { background: transparent; border: 0; border-radius: 999px; color: var(--site-muted); cursor: pointer; font: 600 .9rem var(--site-font); min-height: 36px; padding: 6px 16px; }
+.widget-theme__btn.is-active { background: var(--site-violet); color: #fff; }
+.widget-theme__btn:focus-visible { outline: 2px solid var(--site-teal); outline-offset: 2px; }
+.widget-card { min-width: 0; }
+.widget-card__blurb { color: var(--site-muted); margin: -4px 0 14px; }
+.widget-preview { min-width: 0; background: repeating-conic-gradient(rgba(255, 255, 255, .03) 0 25%, transparent 0 50%) 0 0 / 20px 20px; border: 1px dashed var(--site-border-strong); border-radius: 16px; padding: 16px; }
+.widget-preview img { display: block; height: auto; max-width: 720px; width: 100%; }
+.widgets-page.is-light .widget-preview { background-color: #f4f2ff; }
+.widget-codes { margin-top: 14px; }
+.widget-codes summary { color: var(--site-violet-soft); cursor: pointer; font-weight: 600; min-height: 32px; padding: 4px 0; }
+.widget-code { margin-top: 12px; }
+.widget-code label { display: block; margin-bottom: 6px; }
+.widget-code label small { color: var(--site-muted); margin-left: 6px; }
+.widget-code__row { align-items: flex-start; display: flex; gap: 10px; }
+.widget-code__row textarea, .widget-code__row input { background: rgba(0, 0, 0, .3); border: 1px solid var(--site-border-strong); border-radius: 10px; color: var(--site-soft); flex: 1; font: .82rem/1.45 ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; min-width: 0; padding: 10px 12px; resize: vertical; }
+.widget-code__row input { min-height: 40px; }
+.widget-code__row textarea:focus, .widget-code__row input:focus { border-color: var(--site-violet); outline: none; }
+.widget-missing p { margin: 0 0 6px; }
+.widget-missing ul { margin: 0; padding-left: 18px; }
+@media (max-width: 640px) {
+  .widget-preview { padding: 10px; }
+  .widget-code__row { flex-direction: column; }
+  .widget-code__row .site-btn { align-self: flex-end; }
+}

@@ -4,7 +4,7 @@ const assert = require('node:assert/strict');
 const fs = require('node:fs');
 const path = require('node:path');
 const vm = require('node:vm');
-const source = fs.readFileSync(path.join(__dirname, '../app/static/app.js'), 'utf8');
+const source = require('./helpers/dashboard_source.cjs');
 const authSource = fs.readFileSync(path.join(__dirname, '../app/static/auth.js'), 'utf8');
 const defaults = { completion: 'all', unrated: false, hasProgress: false };
 const config = {
@@ -14,6 +14,9 @@ const config = {
   'video-games': ['videoGameTable', 'videoGameSort', 'videoGameSearch', 'VideoGames'],
   music: ['musicTable', 'musicSort', 'musicSearch', 'Music'],
   books: ['bookTable', 'bookSort', 'bookSearch', 'Books'],
+  manga: ['mangaTable', 'mangaSort', 'mangaSearch', 'Manga'],
+  podcasts: ['podcastTable', 'podcastSort', 'podcastSearch', 'Podcasts'],
+  audiobooks: ['audiobookTable', 'audiobookSort', 'audiobookSearch', 'Audiobooks'],
 };
 const plain = value => JSON.parse(JSON.stringify(value));
 const response = (items = [], total = items.length, offset = 0) => ({ ok: true, json: async () => ({ items, total, offset }) });
@@ -67,7 +70,7 @@ function setup() {
   context = vm.createContext({
     URL, URLSearchParams, Date, console, isLocal: false, API_BASE: '', location: { origin: 'https://omnitrackr.test' },
     editingRowId: null, currentTab: 'movies', window: { addEventListener() {} },
-    alert: message => alerts.push(message), setTimeout: callback => { timers.push(callback); return timers.length; },
+    showNotice: message => alerts.push(message), setTimeout: callback => { timers.push(callback); return timers.length; },
     document: {
       getElementById: id => nodes.get(id) || null, createElement: tag => new Element(tag), activeElement: null,
       querySelectorAll: selector => selector === '.pick-focused' ? [...rows.values()].filter(row => row.classes.has('pick-focused')) : [],
@@ -266,7 +269,7 @@ test('completion controls expose their selected state and only supported categor
     assert.equal(buttons.filter(button => button.getAttribute('aria-pressed') === 'true').length, 1);
     assert.equal(buttons.find(button => button.dataset.completion === 'all').getAttribute('aria-pressed'), 'true');
     const progress = host.querySelectorAll('[data-library-filter]').find(input => input.dataset.libraryFilter === 'hasProgress');
-    assert.equal(!!progress, ['tv-shows', 'anime', 'books'].includes(category), category);
+    assert.equal(!!progress, ['tv-shows', 'anime', 'books', 'manga', 'podcasts', 'audiobooks'].includes(category), category);
     buttons.find(button => button.dataset.completion === 'finished').dispatch('click');
     assert.equal(s.context.getLibraryFilters(category).completion, 'finished');
     assert.equal(buttons.find(button => button.dataset.completion === 'finished').getAttribute('aria-pressed'), 'true');

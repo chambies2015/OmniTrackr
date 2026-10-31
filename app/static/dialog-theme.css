@@ -2,7 +2,9 @@
    Geometry, visibility, scrolling, and native dialog behavior stay with their
    existing component styles. */
 body.app-shell .modal-overlay:not(.image-popup-overlay) {
-  background: rgb(12 17 27 / 64%);
+  background: rgb(8 7 18 / 62%);
+  -webkit-backdrop-filter: blur(6px);
+  backdrop-filter: blur(6px);
 }
 
 body.app-shell .modal-content,
@@ -10,10 +12,15 @@ body.app-shell .progress-dialog {
   background: var(--card-bg);
   color: var(--fg);
   border: 1px solid var(--border);
-  border-radius: var(--radius);
+  border-radius: var(--radius-xl);
   box-shadow: var(--shadow-lg);
   font-family: inherit;
 }
+
+/* Dialogs settle in instead of popping. `scale` composes with any centering
+   transform a dialog already uses; reduced motion turns it off in app-theme.css. */
+body.app-shell .modal-overlay:not(.image-popup-overlay) > .modal-content { animation: app-dialog-in var(--dur) var(--ease); }
+@keyframes app-dialog-in { from { opacity: 0; scale: .97; } }
 
 body.app-shell .modal-body,
 body.app-shell .quick-capture-body {
@@ -53,7 +60,7 @@ body.app-shell .progress-dialog .progress-dialog__close {
   background: transparent;
   color: var(--fg-secondary);
   border-color: transparent;
-  border-radius: 8px;
+  border-radius: var(--radius-pill);
   box-shadow: none;
   flex-shrink: 0;
 }
@@ -72,7 +79,7 @@ body.app-shell .progress-dialog :is(input, select, textarea) {
   background: var(--field-bg);
   color: var(--fg);
   border-color: var(--border);
-  border-radius: 8px;
+  border-radius: var(--radius-md);
   box-shadow: none;
   font-family: inherit;
 }
@@ -91,8 +98,8 @@ body.app-shell .progress-dialog select option {
 
 body.app-shell .modal-content :is(input, select, textarea):focus,
 body.app-shell .progress-dialog :is(input, select, textarea):focus {
-  border-color: var(--primary);
-  box-shadow: none;
+  border-color: var(--accent-solid);
+  box-shadow: var(--ring);
 }
 
 body.app-shell .modal-content :is(button, a, input, select, textarea, summary):focus-visible,
@@ -106,6 +113,7 @@ body.app-shell .progress-dialog .progress-dialog__save {
   background: var(--accent-solid);
   color: var(--on-accent);
   border-color: var(--accent-solid);
+  border-radius: var(--radius-pill);
   box-shadow: none;
   font-family: inherit;
   font-weight: 650;
@@ -273,13 +281,16 @@ body.app-shell .quick-capture-header .quick-capture-eyebrow {
 body.app-shell .quick-capture-search-field {
   background: var(--field-bg);
   border-color: var(--border);
-  border-radius: 10px;
+  border-radius: var(--radius-pill);
+  padding-left: 12px;
 }
 
 body.app-shell .quick-capture-search-field:focus-within {
-  border-color: var(--primary);
-  box-shadow: 0 0 0 2px var(--accent-soft);
+  border-color: var(--accent-solid);
+  box-shadow: var(--ring);
 }
+
+body.app-shell .quick-capture-search-field .action-btn { border-radius: var(--radius-pill); }
 
 body.app-shell .quick-capture-search-field > span {
   color: var(--fg-secondary);

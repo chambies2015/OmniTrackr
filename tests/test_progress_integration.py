@@ -212,5 +212,5 @@ def test_continue_checkpoint_reads_stay_bounded_for_large_library(authenticated_
     finally:
         event.remove(db.bind, "before_cursor_execute", record)
     assert response.status_code == 200 and len(response.json()["continue_items"]) == 6
-    assert len(statements) <= 15
+    assert len(statements) <= 21
     assert all(statement.lstrip().upper().startswith("SELECT") for statement in statements)

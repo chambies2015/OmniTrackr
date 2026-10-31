@@ -4,13 +4,13 @@
 
 <h1 align="center">OmniTrackr</h1>
 
-OmniTrackr is a free multi-user media tracker for movies, TV shows, anime, video games, music, and books. It combines private personal tracking, ratings, reviews, statistics, friends, public review pages, and JSON export/import in one browser-based dashboard.
+OmniTrackr is a free multi-user media tracker for movies, TV shows, anime, video games, music, books, manga, and podcasts. It runs in the browser and covers private tracking, ratings, reviews, statistics, friends, public review pages, and JSON export/import.
 
 Live site: [https://www.omnitrackr.xyz/](https://www.omnitrackr.xyz/)
 
 ## Highlights
 
-- Track six built-in media categories: movies, TV shows, anime, video games, music, and books.
+- Track eight built-in media categories: movies, TV shows, anime, video games, music, books, manga, and podcasts.
 - Add ratings, long-form reviews, status fields, years, metadata, posters, cover art, and category-specific fields.
 - Choose which individual reviews are public.
 - Browse public reviews at `/reviews` and individual review detail pages.
@@ -21,12 +21,15 @@ Live site: [https://www.omnitrackr.xyz/](https://www.omnitrackr.xyz/)
 - Build ordered cross-media collections with curator notes and artwork, publish them by choice, and automatically qualify substantial, safe collections for the public gallery.
 - Export and import JSON for built-in categories and custom tabs.
 - View statistics for completion, ratings, years, directors, genres, TV/anime season data, music, books, and high-level library insights.
-- Return after three days to an optional Welcome Back Deck that composes the existing Next Up, unfinished-library, reflection, and journal signals without creating another permanent dashboard panel.
+- Members who return after three or more days away see a dismissible Welcome Back Deck built from their Next Up list, unfinished titles, reflections, and recent journal entries.
 - Browse **Release Radar** (`/release-radar`): upcoming movies, TV premieres, the anime season, and new games, with calculated Radar notes, aggregate library counts, and one-click tracking into a private Release Radar collection. No database schema changes.
+- Earn **badges** in a dashboard trophy case: 17 badges (Bookworm, Cinephile, Critic, Regular and more), each with bronze, silver and gold tiers counted from your own library, a "closest next" list, a bell notification for each new tier, earned badges on your public profile and your next badge in the weekly email. One new table (`user_badges`); nothing existing changes.
+- Note **why you added a title**: who recommended it (a friend's account or any name) or where you heard of it, with a private note. Titles saved from a friend's recommendation, the friends feed or a shared list are filled in automatically. Shelves filter by recommender, saved views remember it, the friends feed ranks your best recommenders by how you rated their picks, and the notes are in the JSON backup and spreadsheet export. One new table (`title_origins`).
+- Read **In order** guides (`/in-order`): the best order through Star Wars, The Witcher, Dune, Monogatari, Zelda and more, across films, series, books and games. Members see their progress from their own library and can add the entries they are missing in one click. No database schema changes.
 - Use public content pages for onboarding and discovery: `/about`, `/guides`, `/compare`, `/use-cases`, `/demo`, `/media-tracking`, `/tv-show-tracker`, `/game-tracker`, `/changelog`, `/roadmap`, `/privacy`, `/terms`, and `/contact`.
 - Run with SQLite locally or PostgreSQL in production.
 
-## Tech Stack
+## Tech stack
 
 Backend:
 
@@ -53,7 +56,7 @@ Deployment:
 - Render PostgreSQL
 - Environment-based configuration
 
-## Built-In Media Categories
+## Built-in media categories
 
 OmniTrackr includes first-class CRUD flows for:
 
@@ -63,16 +66,18 @@ OmniTrackr includes first-class CRUD flows for:
 - Video games: title, release date, genres, rating, played status, review, public-review toggle, cover art, RAWG link.
 - Music: title, artist, year, genre, rating, listened status, review, public-review toggle, cover art.
 - Books: title, author, year, genre, rating, read status, review, public-review toggle, cover art.
+- Manga: title, author, year, genre, volumes, chapters, rating, read status, review, public-review toggle, cover art.
+- Podcasts: title, host, year, genre, episodes, rating, listened status, review, public-review toggle, cover art.
 
 Metadata sources:
 
 - OMDB API for movie and TV metadata when configured.
-- Jikan API for anime metadata.
+- Jikan API for anime and manga metadata.
 - RAWG API for video game metadata when configured.
-- iTunes Search API for music metadata.
+- iTunes Search API for music and podcast metadata.
 - Open Library API for book metadata.
 
-## Public Pages And SEO
+## Public pages and SEO
 
 The public site is more than a login screen. These pages help visitors, search engines, and policy reviewers understand what OmniTrackr provides:
 
@@ -84,14 +89,14 @@ The public site is more than a login screen. These pages help visitors, search e
 - `/media-tracking` - hub linking the major guide pages.
 - `/tv-show-tracker` and `/game-tracker` - category-specific tracker guides.
 - `/reviews` - public user reviews when users choose to share individual reviews.
-- `/collections/explore` - automatically qualified, substantial member-curated collections spanning all six media types.
+- `/collections/explore` - automatically qualified, substantial member-curated collections spanning all eight media types.
 - `/changelog` - product, security, and content update history.
 - `/roadmap` - planned improvements.
 - `/privacy`, `/terms`, and `/contact` - policy and support pages.
 
 SEO/security support includes sitemap, robots.txt, llms.txt, structured data, canonical links, page-specific metadata, favicon/image endpoints, and CSP nonce handling for public pages.
 
-## Account And Privacy
+## Account and privacy
 
 Users can:
 
@@ -105,9 +110,9 @@ Users can:
 
 Public reviews are opt-in per item. A review is not public just because it exists in a user's private library. Community-ready reviews can appear in the browse feed; the stricter search-ready tier alone receives a detail URL, structured review data, sitemap inclusion, prominent ordering, or ad eligibility. Signed-browser reports are rate limited, deduplicated, and automatically unlist an exact review version after three independent reports. The review is never deleted, and a substantive author edit starts a clean version.
 
-Collections are also private by default. Publishing requires at least 300 characters of context and three available titles. A shared collection enters the gallery, search metadata, and sitemap only when the same deterministic readiness result also finds a meaningful title, sufficient words and complete thoughts, varied language, and no obvious links, contact details, promotional bait, or placeholder text. Three independent signed-browser reports temporarily unlist one exact collection version; editing creates a clean version and reruns the checks without a routine moderator queue.
+Collections are also private by default. Publishing requires at least 300 characters of context and three available titles. A shared collection enters the gallery, search metadata, and sitemap only when the same deterministic readiness check also finds a real title, enough words in complete sentences, varied language, and no obvious links, contact details, promotional bait, or placeholder text. Three independent signed-browser reports temporarily unlist one exact collection version; editing creates a clean version and reruns the checks without a routine moderator queue.
 
-## Friends And Notifications
+## Friends and notifications
 
 The friends system supports:
 
@@ -119,9 +124,9 @@ The friends system supports:
 
 Friend profile access respects the other user's privacy settings.
 
-## Custom Tabs
+## Custom tabs
 
-Custom tabs let users create additional collection types beyond the six built-in categories.
+Custom tabs let users create additional collection types beyond the eight built-in categories.
 
 Supported custom-tab features include:
 
@@ -133,9 +138,9 @@ Supported custom-tab features include:
 - Searchable custom-tab item lists.
 - JSON export/import support.
 
-Example uses include comics, podcasts, board games, collectibles, or niche watchlists.
+Example uses include comics, board games, collectibles, or niche watchlists.
 
-## Export And Import
+## Export and import
 
 OmniTrackr exports user data as JSON with export metadata and lists for:
 
@@ -149,7 +154,7 @@ OmniTrackr exports user data as JSON with export metadata and lists for:
 
 Import supports backward-compatible JSON files and smart update behavior to reduce duplicates where matching records already exist.
 
-## Security Notes
+## Security notes
 
 Current security measures include:
 
@@ -166,7 +171,7 @@ Current security measures include:
 - Data isolation by authenticated user.
 - Tests covering public-page CSP, URL handling, review rendering, static JS safety, and endpoint access patterns.
 
-## Local Development
+## Local development
 
 Requirements:
 
@@ -206,7 +211,7 @@ Open:
 http://127.0.0.1:8000/
 ```
 
-## Environment Variables
+## Environment variables
 
 Core:
 
@@ -232,12 +237,38 @@ Email:
 | `MAIL_STARTTLS` | Usually `True`. |
 | `MAIL_SSL_TLS` | Usually `False` for STARTTLS. |
 
+Sign in with Google (optional; the button stays hidden until both are set):
+
+| Variable | Purpose |
+| --- | --- |
+| `GOOGLE_CLIENT_ID` | OAuth client ID of a "Web application" client in Google Cloud Console. |
+| `GOOGLE_CLIENT_SECRET` | That client's secret. |
+| `GOOGLE_REDIRECT_URI` | Optional. Defaults to `APP_URL` + `/auth/google/callback`; add exactly this address under "Authorized redirect URIs". |
+
+Passkeys (optional; sign-in with a fingerprint, face or device PIN works out of the box on the site's own domain):
+
+| Variable | Purpose |
+| --- | --- |
+| `PASSKEY_RP_ID` | Optional. The domain passkeys are tied to. Defaults to the site's host without `www.` (`omnitrackr.xyz`), so one passkey works on both `omnitrackr.xyz` and `www.omnitrackr.xyz`. Changing it later invalidates every passkey members have made. |
+| `PASSKEY_ORIGINS` | Optional. Extra allowed origins, comma separated, such as a staging host. The site's own `https://` hosts (from `APP_URL` and `SITE_URL`) are always allowed. |
+
+Phone and browser notifications (Web Push; nothing to set up, members turn them on per device from the bell or Settings):
+
+| Variable | Purpose |
+| --- | --- |
+| `VAPID_PRIVATE_KEY` | Optional. The site's push signing key, as a PEM or a base64url P-256 scalar. When unset, a key is made on first use and kept in the `web_push_keys` table, which is all one server needs. Browsers tie every subscription to this key, so once members have turned notifications on it must not change. |
+| `VAPID_SUBJECT` | Optional. A `mailto:` or `https://` address push services can contact about the sender. Defaults to `mailto:` + `MAIL_FROM`. |
+| `WEB_PUSH` | Optional. `off` stops all pushes (the bell keeps working). |
+
 External metadata:
 
 | Variable | Purpose |
 | --- | --- |
 | `OMDB_API_KEY` | Optional movie/TV metadata and posters. |
 | `RAWG_API_KEY` | Optional video game metadata and cover art. Also powers the Release Radar games list. |
+| `STEAM_WEB_API_KEY` | Optional. Turns on Steam library import in the Import Studio. Without it the Steam box stays hidden. |
+| `TMDB_API_KEY` | Optional. A TMDB v3 API key or v4 read token. Turns on "Where to watch" streaming, rent and buy options (JustWatch data, credited on every page) for movies, TV and anime. Without it, TV and anime still show the service they were made for or stream on (TVmaze, MyAnimeList) and games show stores (RAWG). |
+| `WATCH_REGION` | Optional two-letter country for TMDB availability and the JustWatch link. Defaults to `US`. |
 
 Public content and ads:
 
@@ -272,7 +303,7 @@ Run the full test suite:
 .\.venv\Scripts\python.exe -m pytest
 ```
 
-Useful focused runs:
+Focused runs:
 
 ```powershell
 .\.venv\Scripts\python.exe -m pytest tests\test_seo_security.py
@@ -297,7 +328,7 @@ node --test $uiTests
 - `API_SETUP_GUIDE.md` and `EMAIL_SETUP.md` contain the two integration-specific setup guides.
 - The public `/changelog`, `/roadmap`, `/privacy`, and `/advertising` pages describe user-visible behavior and policy.
 
-## Deployment Notes
+## Deployment notes
 
 For Render:
 
@@ -312,7 +343,7 @@ For Render:
 
 Database migrations are handled by the app startup migration helper in `app/migrations.py`.
 
-## API Overview
+## API overview
 
 Authenticated API areas include:
 

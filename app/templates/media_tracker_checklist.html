@@ -26,11 +26,9 @@
   <meta name="twitter:description" content="Plan your first OmniTrackr library with a category, rating, review, privacy, and backup checklist.">
   <meta name="twitter:image" content="https://omnitrackr.xyz/omnitrackr_vortex.png">
   <meta name="twitter:image:alt" content="OmniTrackr media tracker checklist">
-  <link rel="preconnect" href="https://fonts.googleapis.com">
-  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@700;800&family=Inter:wght@400;500;600&display=swap"
-    rel="stylesheet">
-  <link rel="stylesheet" href="/styles.css">
+  <link rel="preload" href="/static/fonts/poppins-700-latin.woff2" as="font" type="font/woff2" crossorigin>
+  <link rel="preload" href="/static/fonts/poppins-800-latin.woff2" as="font" type="font/woff2" crossorigin>
+  <link rel="stylesheet" href="/static/fonts.css?v=20261009-fonts-1">
   <style>
     body { min-height: 100vh; padding: 20px; }
     .public-wrapper { max-width: 1040px; margin: 0 auto; }
@@ -69,7 +67,7 @@
     "publisher": { "@type": "Organization", "name": "OmniTrackr", "url": "https://omnitrackr.xyz" }
   }
   </script>
-  <link rel="stylesheet" href="/static/public-reader.css?v=20260928-site-2">
+  <link rel="stylesheet" href="/static/public-reader.css?v=20261029-reader-3">
 </head>
 
 <body class="public-reader site">
@@ -81,54 +79,54 @@
 
       <header class="public-header">
         <h1>Media Tracker Setup Checklist</h1>
-        <p>A practical first-session plan for turning scattered watchlists, reading notes, game backlogs, albums, and ratings into a library you can actually maintain.</p>
+        <p>A plan for your first session: turn scattered watchlists, reading notes, game backlogs, albums, and ratings into a library you'll keep up with.</p>
       </header>
       <details class="reader-contents">
         <summary>On this page</summary>
         <nav aria-label="On this page">
-          <a href="#why-heading">Why Start With a Checklist?</a>
-          <a href="#category-heading">1. Choose Your Active Categories</a>
-          <a href="#rating-heading">2. Define Your Rating Scale Before Adding Everything</a>
-          <a href="#starter-heading">3. Add a Starter Library, Not Your Entire History</a>
-          <a href="#reviews-heading">4. Separate Private Notes From Public Reviews</a>
-          <a href="#privacy-heading">5. Check Privacy, Friends, and Export Habits</a>
-          <a href="#first-week-heading">First-Week Cleanup Checklist</a>
+          <a href="#why-heading">Why start with a checklist?</a>
+          <a href="#category-heading">1. Choose your active categories</a>
+          <a href="#rating-heading">2. Define your rating scale before adding everything</a>
+          <a href="#starter-heading">3. Add a starter library first</a>
+          <a href="#reviews-heading">4. Keep private notes and public reviews apart</a>
+          <a href="#privacy-heading">5. Check privacy, friends, and exports</a>
+          <a href="#first-week-heading">First-week cleanup checklist</a>
         </nav>
       </details>
 
 
       <section class="public-section" aria-labelledby="why-heading">
-        <h2 id="why-heading">Why Start With a Checklist?</h2>
-        <p>A media tracker works best when it reflects how you already watch, play, read, and listen. If you import every old title, mark every category public, and rate everything with no pattern, the library can become noisy before it becomes useful. A short setup checklist prevents that. It helps you decide which categories matter now, which records belong in the first pass, how ratings should mean something, and how public reviews should differ from private memory notes.</p>
-        <p>OmniTrackr supports movies, TV shows, anime, video games, music, and books in one account, so the setup process should be flexible. A completionist can start with every category. A casual user might begin with movies and games. Someone preparing for friend recommendations might focus on favorites, ratings, and polished public reviews. The goal is not to fill every field immediately; the goal is to create a library that still feels readable a month later.</p>
+        <h2 id="why-heading">Why start with a checklist?</h2>
+        <p>A media tracker works best when it follows how you already watch, play, read, and listen. If you import every old title, make every category public, and rate things without a consistent scale, the library turns into noise before you get anything out of it. A short checklist heads that off. You decide which categories to start with, which records go in first, what your ratings mean, and how a public review differs from a private note to yourself.</p>
+        <p>OmniTrackr supports movies, TV shows, anime, video games, music, books, manga, podcasts, and audiobooks in one account, and there's no single right way to set it up. A completionist can start with every category. A casual user might begin with movies and games. If you mainly want to swap recommendations with friends, start with favorites, ratings, and a few finished public reviews. You don't have to fill in every field on day one. Aim for a library you can still read a month from now.</p>
       </section>
 
       <section class="public-section" aria-labelledby="category-heading">
-        <h2 id="category-heading">1. Choose Your Active Categories</h2>
-        <p>Start by choosing the categories you will actually maintain this week. OmniTrackr can handle all six media types, but your first session should stay focused enough to finish. Pick one primary category, one optional secondary category, and leave the rest for later unless you already have clean lists ready.</p>
+        <h2 id="category-heading">1. Choose your active categories</h2>
+        <p>Start with the categories you'll keep up with this week. OmniTrackr handles all nine media types, but keep your first session small enough to finish. Pick one primary category, one optional secondary category, and leave the rest for later unless you already have clean lists ready.</p>
         <div class="checklist-grid">
           <div class="checklist-card"><h3>Movies</h3><p>Best for fast wins. Add watched favorites, recent theater visits, rewatches, and titles you keep recommending.</p></div>
-          <div class="checklist-card"><h3>TV and Anime</h3><p>Best when episode or season memory matters. Add paused, active, completed, and dropped shows with short status notes.</p></div>
+          <div class="checklist-card"><h3>TV and Anime</h3><p>Best when you need to remember which episode or season you're on. Add paused, active, completed, and dropped shows with short status notes.</p></div>
           <div class="checklist-card"><h3>Games</h3><p>Best for backlog triage. Track platform, completion status, replay value, and whether a game is still worth returning to.</p></div>
-          <div class="checklist-card"><h3>Music and Books</h3><p>Best for slower impressions. Track albums, rereads, relistens, authors, artists, and mood-specific recommendations.</p></div>
+          <div class="checklist-card"><h3>Music and Books</h3><p>Best for things that take a while to sink in. Track albums, rereads, relistens, authors, artists, and recommendations for a particular mood.</p></div>
         </div>
       </section>
 
       <section class="public-section" aria-labelledby="rating-heading">
-        <h2 id="rating-heading">2. Define Your Rating Scale Before Adding Everything</h2>
-        <p>Ratings become more useful when they are consistent. Before adding a large collection, decide what a 5, 7, 8.5, and 10 mean to you. OmniTrackr supports decimal ratings, so you do not need to force a good-but-flawed title into the same score as a personal favorite. Write the scale down once, then use it while adding your first batch.</p>
+        <h2 id="rating-heading">2. Define your rating scale before adding everything</h2>
+        <p>Ratings only mean something if you give them the same way every time. Before adding a large collection, decide what a 5, 7, 8.5, and 10 mean to you. OmniTrackr supports decimal ratings, so you do not need to force a good-but-flawed title into the same score as a personal favorite. Write the scale down once, then use it while adding your first batch.</p>
         <ul>
-          <li><strong>5.0:</strong> average or mixed, useful to remember but not a strong recommendation.</li>
+          <li><strong>5.0:</strong> average or mixed, worth remembering but not something you'd push on anyone.</li>
           <li><strong>7.0:</strong> good, worth recommending to someone with the right taste.</li>
           <li><strong>8.5:</strong> excellent, memorable, and likely to survive a second look.</li>
-          <li><strong>10.0:</strong> personal landmark, not necessarily flawless but deeply important to you.</li>
+          <li><strong>10.0:</strong> a personal all-time favorite. It may have flaws, but it means a lot to you.</li>
         </ul>
-        <p>After the first week, check your statistics and rating distribution. If everything is rated above 8, your scale may be more like a favorites list than a full history. That is fine if intentional, but it helps to know what the data represents.</p>
+        <p>After the first week, check your statistics and rating distribution. If everything is rated above 8, your library may be closer to a favorites list than a full history. That's fine if it's what you want, but it's good to know what the numbers are measuring.</p>
       </section>
 
       <section class="public-section" aria-labelledby="starter-heading">
-        <h2 id="starter-heading">3. Add a Starter Library, Not Your Entire History</h2>
-        <p>A good starter library is small enough to finish and varied enough to test the workflow. Add ten to twenty items across your active categories. Include a favorite, a disappointment, something currently in progress, something you plan to start, and one item you would recommend publicly. This gives the dashboard enough data to make ratings, status, search, and statistics meaningful without turning setup into a chore.</p>
+        <h2 id="starter-heading">3. Add a starter library first</h2>
+        <p>Leave your full history for later. A starter library should be small enough to finish in one sitting and mixed enough to try out each part of the tracker. Add ten to twenty items across your active categories. Include a favorite, a disappointment, something currently in progress, something you plan to start, and one item you would recommend publicly. That gives ratings, status, search, and statistics enough to work with, and setup doesn't drag on.</p>
         <ol>
           <li>Add the title, year or release date, and category-specific fields you know.</li>
           <li>Let OmniTrackr fetch available poster or cover art when supported.</li>
@@ -139,27 +137,27 @@
       </section>
 
       <section class="public-section" aria-labelledby="reviews-heading">
-        <h2 id="reviews-heading">4. Separate Private Notes From Public Reviews</h2>
+        <h2 id="reviews-heading">4. Keep private notes and public reviews apart</h2>
         <p class="reader-note">Leaving Public Review unchecked keeps an item's text off public review pages. Friends can still read it if the category is shared. Keep both controls private for personal item notes, or use your private journal or a checkpoint reminder.</p>
-        <p>Private notes can be messy. They can include spoilers, personal context, unfinished thoughts, or reminders that only make sense to you. Public reviews should be different. A public review should help another person understand the recommendation, the audience fit, and the reason behind the score. OmniTrackr supports opt-in public reviews, and the public review feed favors substantial review text so shared pages stay useful rather than becoming a thin list of one-word reactions.</p>
-        <p>Use this rule of thumb: if the note only helps future you, keep it private. If it helps a stranger decide whether a movie, show, anime, game, album, or book fits their taste, polish it into a public review. That boundary protects privacy and improves the public browsing experience.</p>
+        <p>Private notes can be messy. They can include spoilers, personal context, unfinished thoughts, or reminders that only make sense to you. Public reviews are for someone else. A public review should tell another person what you're recommending, who it suits, and why you gave the score you did. Public reviews in OmniTrackr are opt-in, and the public review feed favors longer review text, so the shared pages don't fill up with one-word reactions.</p>
+        <p>Use this rule of thumb: if the note only helps future you, keep it private. If it helps a stranger decide whether a movie, show, anime, game, album, or book fits their taste, tidy it up into a public review. Keeping that line keeps your private thoughts private and makes the public pages better to read.</p>
       </section>
 
       <section class="public-section" aria-labelledby="privacy-heading">
-        <h2 id="privacy-heading">5. Check Privacy, Friends, and Export Habits</h2>
-        <p>Before inviting friends or making reviews public, check your privacy settings. Decide which categories friends can see and whether statistics should be visible. Many users prefer to share completed favorites while keeping in-progress experiments private. That balance lets OmniTrackr support discovery without making the account feel exposed.</p>
-        <p>Export is part of setup too. After your first useful batch, export your data as JSON so you know where the backup option lives. You do not need to export every day, but a regular backup habit reinforces that the library belongs to you. It also makes future cleanup safer because you can review your own data outside the app if needed.</p>
+        <h2 id="privacy-heading">5. Check privacy, friends, and exports</h2>
+        <p>Before inviting friends or making reviews public, check your privacy settings. Decide which categories friends can see and whether statistics should be visible. Many users share finished favorites and keep in-progress experiments private. Friends can still find things to watch or read, and your account doesn't feel exposed.</p>
+        <p>Export is part of setup too. After your first real batch of entries, export your data as JSON so you know where the backup option is. You don't need to export every day, but a regular backup means you always have your own copy. It also makes later cleanup safer, since you can look through your data outside the app if you need to.</p>
       </section>
 
       <section class="public-section" aria-labelledby="first-week-heading">
-        <h2 id="first-week-heading">First-Week Cleanup Checklist</h2>
+        <h2 id="first-week-heading">First-week cleanup checklist</h2>
         <ul>
           <li>Search for duplicate titles or inconsistent years.</li>
           <li>Check whether ratings still match your written scale.</li>
-          <li>Convert one private note into a useful public review if you want to share it.</li>
-          <li>Hide or postpone categories you are not actively maintaining.</li>
+          <li>Turn one private note into a public review if you want to share it.</li>
+          <li>Hide or put off categories you aren't keeping up with.</li>
           <li>Review statistics to see whether your starter library reflects your actual taste.</li>
-          <li>Export a backup after the library feels worth keeping.</li>
+          <li>Export a backup once the library feels worth keeping.</li>
         </ul>
         <p>For more help, compare workflows on the <a href="/media-tracking">media tracking hub</a>, use the <a href="/tracking-templates">tracking templates</a>, browse the <a href="/sample-library">sample library</a>, or read the <a href="/review-guidelines">review guidelines</a>.</p>
       </section>

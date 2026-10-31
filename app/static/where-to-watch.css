@@ -1,0 +1,12 @@
+/* "Where to watch / play" dialog opened from a library row's More menu. */
+.where-dialog__body { margin-top: 16px; }
+.where-dialog__group { margin-top: 16px; }
+.where-dialog__group:first-child { margin-top: 0; }
+.where-dialog__group h3 { margin: 0 0 8px; color: #bacfce; font-size: .76rem; font-weight: 700; letter-spacing: .08em; text-transform: uppercase; }
+.where-dialog__group ul { display: flex; flex-wrap: wrap; gap: 8px; margin: 0; padding: 0; list-style: none; }
+.where-dialog__provider { display: inline-flex; align-items: center; gap: 8px; min-height: 42px; padding: 6px 14px 6px 6px; border: 1px solid #41655f; border-radius: 999px; background: #213b3c; color: #f1f8f6; font-weight: 600; text-decoration: none; }
+.where-dialog__provider:not(:has(img)) { padding-left: 14px; }
+a.where-dialog__provider:hover, a.where-dialog__provider:focus-visible { border-color: #87e3c6; }
+.where-dialog__provider img { width: 28px; height: 28px; border-radius: 7px; }
+.where-dialog .where-dialog__more { display: inline-block; margin-top: 18px; color: #9ae2c6; font-weight: 600; }
+.where-dialog__note { margin: 14px 0 0; font-size: .8rem; }

@@ -105,9 +105,9 @@ class TestTasteprint:
         db_session.add(models.Movie(user_id=user.id, title="A", director="B", year=2000, watched=True))
         db_session.commit()
 
-        invalid = authenticated_client.get("/statistics/tasteprint/?categories=movies,podcasts")
+        invalid = authenticated_client.get("/statistics/tasteprint/?categories=movies,comics")
         assert invalid.status_code == 400
-        assert "podcasts" in invalid.json()["detail"]
+        assert "comics" in invalid.json()["detail"]
 
         empty = authenticated_client.get("/statistics/tasteprint/?categories=")
         assert empty.status_code == 200

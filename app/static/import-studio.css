@@ -1,0 +1,151 @@
+/* Import Studio additions: where-to-find-your-export links and the AniList username fetch. */
+.import-studio__sources {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin: 0 0 16px;
+}
+
+.import-studio__sources a {
+  display: inline-flex;
+  align-items: center;
+  min-height: 36px;
+  padding: 6px 12px;
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  color: var(--fg);
+  font-size: 0.82rem;
+  font-weight: 600;
+  text-decoration: none;
+}
+
+.import-studio__sources a:hover,
+.import-studio__sources a:focus-visible {
+  border-color: var(--primary);
+  color: var(--primary);
+}
+
+.import-studio__anilist {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: end;
+  gap: 8px 12px;
+  margin: 14px 0;
+  padding: 14px;
+  border: 1px dashed var(--border);
+  border-radius: 10px;
+}
+
+.import-studio__anilist label {
+  display: flex;
+  flex-direction: column;
+  gap: 7px;
+  min-width: 0;
+  color: var(--fg);
+  font-size: 0.86rem;
+  font-weight: 600;
+}
+
+.import-studio__anilist input {
+  width: 100%;
+  min-height: 44px;
+  padding: 11px 12px;
+  border: 1px solid rgba(102, 126, 234, 0.3);
+  border-radius: 8px;
+  background: var(--bg);
+  color: var(--fg);
+  font: inherit;
+}
+
+.import-studio__anilist .action-btn {
+  min-height: 44px;
+  margin: 0;
+}
+
+.import-studio__anilist .info-text {
+  grid-column: 1 / -1;
+  margin: 0;
+}
+
+@media (max-width: 560px) {
+  .import-studio__anilist {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
+
+/* Export panel: one card per file format. */
+.export-studio__options {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+  gap: 12px;
+  margin: 14px 0;
+}
+
+.export-studio__option {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  min-width: 0;
+  padding: 14px;
+  border: 1px solid var(--border);
+  border-radius: 10px;
+}
+
+.export-studio__option :is(h4, h5) {
+  margin: 0;
+  color: var(--fg);
+  font-size: 0.95rem;
+}
+
+.export-studio__option p {
+  flex: 1;
+  margin: 0;
+  color: var(--muted, var(--fg));
+  font-size: 0.84rem;
+  line-height: 1.45;
+}
+
+.export-studio__buttons {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.export-studio__option .action-btn {
+  align-self: flex-start;
+}
+
+.export-studio__note {
+  margin: 0 0 8px;
+  font-size: 0.82rem;
+  line-height: 1.45;
+  opacity: 0.85;
+}
+
+/* Steam: the profile box on its own row, then the played threshold beside the fetch button. */
+.import-studio__steam label:first-child {
+  grid-column: 1 / -1;
+}
+
+/* Global form and button rules add margins and top alignment; line the button up with the select. */
+.import-studio__steam label,
+.import-studio__steam select {
+  margin-bottom: 0;
+}
+
+.import-studio__steam .action-btn,
+body.app-shell .account-settings .account-section form .import-studio__steam .action-btn {
+  align-self: end;
+  margin-top: 0;
+}
+
+.import-studio__steam select {
+  width: 100%;
+  min-height: 44px;
+  padding: 10px 12px;
+  border: 1px solid rgba(102, 126, 234, 0.3);
+  border-radius: 8px;
+  background: var(--bg);
+  color: var(--fg);
+  font: inherit;
+}

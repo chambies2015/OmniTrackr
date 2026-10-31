@@ -20,10 +20,9 @@
   <meta name="twitter:card" content="summary">
   <meta name="twitter:title" content="Movie Tracker">
   <meta name="twitter:description" content="Track movies, watchlists, ratings, reviews, posters, privacy, and movie statistics with OmniTrackr.">
-  <link rel="preconnect" href="https://fonts.googleapis.com">
-  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@700;800&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="/styles.css">
+  <link rel="preload" href="/static/fonts/poppins-700-latin.woff2" as="font" type="font/woff2" crossorigin>
+  <link rel="preload" href="/static/fonts/poppins-800-latin.woff2" as="font" type="font/woff2" crossorigin>
+  <link rel="stylesheet" href="/static/fonts.css?v=20261009-fonts-1">
   <style>
     body { min-height: 100vh; padding: 20px; }
     .content-wrapper { max-width: 1040px; margin: 0 auto; }
@@ -52,7 +51,7 @@
     "inLanguage": "en-US"
   }
   </script>
-  <link rel="stylesheet" href="/static/public-reader.css?v=20260928-site-2">
+  <link rel="stylesheet" href="/static/public-reader.css?v=20261029-reader-3">
 </head>
 
 <body class="public-reader site">
@@ -63,30 +62,30 @@
 <a href="/media-tracking" class="back-link">Back to Media Tracking Hub</a>
       <header class="content-header">
         <h1>Movie Tracker</h1>
-        <p>Build a movie watchlist that preserves ratings, reviews, posters, watched status, privacy choices, and long-term taste history.</p>
+        <p>Keep a movie watchlist with ratings, reviews, posters, watched status, and privacy settings, and build up a record of your taste over the years.</p>
       </header>
       <details class="reader-contents">
         <summary>On this page</summary>
         <nav aria-label="On this page">
-          <a href="#why-heading">Why Track Movies Outside a Streaming App?</a>
-          <a href="#workflow-heading">A Practical Movie Tracking Workflow</a>
-          <a href="#watchlist-heading">Watchlists, Rewatches, and Recommendations</a>
-          <a href="#review-heading">What Makes a Movie Review Useful?</a>
-          <a href="#stats-heading">Using Movie Statistics</a>
-          <a href="#privacy-heading">Privacy for Movie Lists and Reviews</a>
-          <a href="#related-heading">Related Pages</a>
+          <a href="#why-heading">Why track movies outside a streaming app?</a>
+          <a href="#workflow-heading">A simple movie tracking routine</a>
+          <a href="#watchlist-heading">Watchlists, rewatches, and recommendations</a>
+          <a href="#review-heading">What makes a movie review worth reading?</a>
+          <a href="#stats-heading">Using movie statistics</a>
+          <a href="#privacy-heading">Privacy for movie lists and reviews</a>
+          <a href="#related-heading">Related pages</a>
         </nav>
       </details>
 
 
       <section class="content-section" aria-labelledby="why-heading">
-        <h2 id="why-heading">Why Track Movies Outside a Streaming App?</h2>
-        <p>Streaming services remember only part of your movie life. They usually know what you watched on that service, but not what you saw in theaters, borrowed from a library, watched at a friend's house, or added because someone recommended it. They also change catalogs often, so a watchlist inside one service can disappear or become less useful over time.</p>
-        <p>OmniTrackr keeps the movie record separate from the platform. That means a film can stay in your history even if it leaves a streaming catalog. You can keep a planned watchlist, mark films as watched, write notes about why a movie worked, and compare movie ratings beside TV shows, games, books, music, and anime.</p>
+        <h2 id="why-heading">Why track movies outside a streaming app?</h2>
+        <p>Streaming services remember only part of your movie life. They usually know what you watched on that service, but not what you saw in theaters, borrowed from a library, watched at a friend's house, or added because someone recommended it. They also change catalogs often, so a watchlist inside one service can lose titles without warning.</p>
+        <p>OmniTrackr keeps your movie record separate from any platform, so a film stays in your history after it leaves a streaming catalog. You can keep a planned watchlist, mark films as watched, write notes about why a movie worked, and compare movie ratings beside TV shows, games, books, music, and anime.</p>
       </section>
 
       <section class="content-section" aria-labelledby="workflow-heading">
-        <h2 id="workflow-heading">A Practical Movie Tracking Workflow</h2>
+        <h2 id="workflow-heading">A simple movie tracking routine</h2>
         <ol>
           <li>Add movies when they are recommended, when you start a watchlist, or right after watching.</li>
           <li>Record the year and director when available so remakes, sequels, and similarly named films stay clear.</li>
@@ -94,36 +93,36 @@
           <li>Add a rating after the movie has settled enough for the score to mean something.</li>
           <li>Write a review when you want to remember pacing, performances, visuals, themes, or rewatch value.</li>
         </ol>
-        <p>This does not have to become a chore. A useful movie tracker should help you decide what to watch next and remember what was worth recommending, not force you to catalog every detail like a database administrator.</p>
-        <p>For older watchlists, a simple cleanup pass helps. Move movies you no longer care about out of the active backlog, rate films you clearly remember, and add review notes only where the memory is strong enough to be useful. A smaller honest watchlist is better than a huge list that no longer reflects what you actually want to watch.</p>
+        <p>None of this has to become a chore. You only need enough detail to pick what to watch next and to remember which films you'd recommend. Nobody is asking you to catalog every credit like a database administrator.</p>
+        <p>If you have an old watchlist, clean it up once. Move movies you no longer care about out of the active backlog, rate the films you clearly remember, and add review notes only where you still remember enough to say something. A short watchlist you'll actually work through beats a huge one full of titles you stopped wanting years ago.</p>
       </section>
 
       <section class="content-section" aria-labelledby="watchlist-heading">
-        <h2 id="watchlist-heading">Watchlists, Rewatches, and Recommendations</h2>
-        <p>Movie tracking works best when the watchlist is not treated as a promise. Some movies are serious plans, some are casual recommendations, and some are ideas saved for the right mood. OmniTrackr gives you enough structure to keep those titles visible without turning every recommendation into an obligation.</p>
-        <p>Rewatches are also worth noting. A movie can be technically excellent but not something you want to revisit, while a comfort favorite may become more valuable over time. Review notes can capture whether a film has rewatch value, whether it works better with friends, or whether it depends on a specific mood.</p>
+        <h2 id="watchlist-heading">Watchlists, rewatches, and recommendations</h2>
+        <p>Your watchlist doesn't have to be a to-do list. Some movies are firm plans, some are casual recommendations, and some are saved for the right mood. OmniTrackr keeps all of them in view, and nothing happens if a title sits there for a year.</p>
+        <p>Rewatches are also worth noting. A movie can be technically excellent and still not something you want to see twice, while a comfort favorite can get better every time you put it on. Review notes can capture whether a film has rewatch value, whether it works better with friends, or whether it depends on a specific mood.</p>
       </section>
 
       <section class="content-section" aria-labelledby="review-heading">
-        <h2 id="review-heading">What Makes a Movie Review Useful?</h2>
-        <p>A strong movie review is specific. Instead of only saying a film was good, write what made it work: direction, acting, pacing, score, cinematography, tone, ending, or how well it fit your mood. If a movie is technically impressive but hard to recommend, that distinction is worth saving.</p>
-        <p>OmniTrackr lets users choose which reviews become public. Public movie reviews are most useful when they help someone decide whether the film fits their taste, not when they try to summarize the entire plot. A short review can still be valuable when it explains who might enjoy the movie and why.</p>
-        <p>Good public movie reviews also avoid pretending one score explains everything. A horror fan, a documentary viewer, and someone looking for a quiet drama may all need different context. Notes about intensity, pacing, genre expectations, and spoiler sensitivity make a review more useful than a generic recommendation.</p>
+        <h2 id="review-heading">What makes a movie review worth reading?</h2>
+        <p>A good movie review is specific. Instead of only saying a film was good, write what made it work: direction, acting, pacing, score, cinematography, tone, ending, or how well it fit your mood. If a movie is technically impressive but hard to recommend, write that down too.</p>
+        <p>OmniTrackr lets you choose which reviews become public. A public movie review should help someone decide whether the film fits their taste, and a plot summary doesn't do that. A short review is fine if it says who might enjoy the movie and why.</p>
+        <p>A score on its own doesn't tell a reader much. A horror fan, a documentary viewer, and someone looking for a quiet drama each want to know different things. A line about intensity, pacing, genre expectations, or spoiler sensitivity tells them more than "you should see this."</p>
       </section>
 
       <section class="content-section" aria-labelledby="stats-heading">
-        <h2 id="stats-heading">Using Movie Statistics</h2>
-        <p>Movie statistics can reveal patterns that are hard to notice from memory alone. You might learn that you rate older films higher, that certain directors appear often in your favorites, or that your watchlist is full of one genre even though your highest ratings come from another. These patterns make future recommendations and watchlist cleanup more intentional.</p>
-        <p>Movie stats become more valuable when they sit beside other media. If your favorite films are slow dramas but your favorite TV shows are lighter comfort watches, that tells you something about when each format works for you. OmniTrackr keeps those comparisons in one place.</p>
+        <h2 id="stats-heading">Using movie statistics</h2>
+        <p>Movie statistics can reveal patterns that are hard to notice from memory alone. You might learn that you rate older films higher, that certain directors appear often in your favorites, or that your watchlist is full of one genre even though your highest ratings come from another. Once you can see that, it gets easier to pick what to watch and what to cut from the watchlist.</p>
+        <p>Movie stats get more interesting next to your other media. If your favorite films are slow dramas but your favorite TV shows are lighter comfort watches, that tells you something about when each format works for you. OmniTrackr keeps those comparisons in one place.</p>
       </section>
 
       <section class="content-section" aria-labelledby="privacy-heading">
-        <h2 id="privacy-heading">Privacy for Movie Lists and Reviews</h2>
-        <p>Movie taste can be personal. Some users want to share favorite reviews, while others want their full watch history private. OmniTrackr separates private collection data from intentionally public reviews so users can keep rough notes, unfinished watchlists, and personal ratings inside their account.</p>
+        <h2 id="privacy-heading">Privacy for movie lists and reviews</h2>
+        <p>Movie taste can be personal. Some people want to share their favorite reviews, and others want their whole watch history kept private. In OmniTrackr your collection is private and a review only goes public when you publish it, so rough notes, unfinished watchlists, and personal ratings stay inside your account.</p>
       </section>
 
       <section class="content-section" aria-labelledby="related-heading">
-        <h2 id="related-heading">Related Pages</h2>
+        <h2 id="related-heading">Related pages</h2>
         <p>For broader workflows, visit the <a href="/media-tracking">media tracking hub</a>, compare OmniTrackr with other options on the <a href="/compare">tracker comparison page</a>, improve review quality with the <a href="/review-guidelines">review guidelines</a>, or browse <a href="/reviews">public media reviews</a>.</p>
       </section>
     </main>

@@ -6,10 +6,11 @@
   const STARTER_GOAL = 5;
   const LOADERS = {
     movies: 'loadMovies', 'tv-shows': 'loadTVShows', anime: 'loadAnime',
-    'video-games': 'loadVideoGames', music: 'loadMusic', books: 'loadBooks',
+    'video-games': 'loadVideoGames', music: 'loadMusic', books: 'loadBooks', manga: 'loadManga',
+    podcasts: 'loadPodcasts', audiobooks: 'loadAudiobooks',
   };
   const RADAR_TO_LIBRARY = { movies: 'movies', tv: 'tv-shows', anime: 'anime', games: 'video-games' };
-  const state = { request: 0, libraryTotal: 0, added: 0, busy: new Set() };
+  const state = { request: 0, libraryTotal: 0, added: 0, busy: new Set(), email: {}, calendar: {} };
 
   const $ = id => document.getElementById(id);
   const apiBase = () => (typeof API_BASE === 'string' ? API_BASE : '');
@@ -46,12 +47,75 @@
     $('starterPicks').hidden = true;
   }
 
+  // ---------------------------------------------------------- weekly email invite
+  // Offered where members are engaged: once Quick start reaches its goal, and on the
+  // "Coming up for you" card. Always opt-in; "Not now" hides it on this device.
+
+  function weeklyKey() {
+    return storageKey().replace('starter_picks_hidden', 'weekly_invite_hidden');
+  }
+
+  function weeklyDismissed() {
+    try { return localStorage.getItem(weeklyKey()) === '1'; } catch (error) { return false; }
+  }
+
+  function canInvite() {
+    return Boolean(state.email.available) && !state.email.enabled && !weeklyDismissed();
+  }
+
+  function renderInvites() {
+    const find = selector => (typeof document.querySelector === 'function' ? document.querySelector(selector) : null);
+    const starter = find('[data-weekly-invite="starter"]');
+    const comingUp = find('[data-weekly-invite="coming-up"]');
+    const starterSection = $('starterPicks');
+    const showStarter = canInvite() && Boolean(starterSection && !starterSection.hidden)
+      && state.libraryTotal + state.added >= STARTER_GOAL;
+    if (starter) starter.hidden = !showStarter;
+    if (comingUp) comingUp.hidden = !canInvite() || showStarter;
+    const wrap = $('comingUpEmail');
+    if (wrap) wrap.hidden = !state.email.enabled && (!state.email.available || canInvite());
+    const toggle = $('comingUpEmailToggle');
+    if (toggle) toggle.checked = Boolean(state.email.enabled);
+  }
+
+  async function setWeekly(enabled) {
+    const response = await fetch(`${apiBase()}/api/for-you/email`, fetchOptions({
+      method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ enabled, source: 'dashboard' }),
+    }));
+    const data = await response.json().catch(() => ({}));
+    if (!response.ok) throw new Error(data.detail || 'Could not update the weekly email. Please try again.');
+    state.email = { ...state.email, ...data };
+    return data;
+  }
+
+  async function acceptInvite(invite) {
+    const where = invite.dataset.weeklyInvite;
+    const status = where === 'starter' ? $('starterPicksStatus') : $('comingUpStatus');
+    const button = invite.querySelector('[data-weekly-action="subscribe"]');
+    if (button) button.disabled = true;
+    try {
+      await setWeekly(true);
+      if (status) status.textContent = 'Weekly email on. Your first one arrives within a day if something you track is coming up or a friend added something new; every email has a one-click unsubscribe.';
+    } catch (error) {
+      if (status) status.textContent = error.message;
+    } finally {
+      if (button) button.disabled = false;
+      renderInvites();
+    }
+  }
+
+  function dismissInvite() {
+    try { localStorage.setItem(weeklyKey(), '1'); } catch (error) { /* session-only */ }
+    renderInvites();
+  }
+
   function friendlyDate(iso) {
     if (!iso) return 'Date to be announced';
     const date = new Date(`${iso}T12:00:00Z`);
     if (Number.isNaN(date.getTime())) return 'Date to be announced';
     const today = new Date();
-    const days = Math.round((date - Date.UTC(today.getUTCFullYear(), today.getUTCMonth(), today.getUTCDate(), 12)) / 86400000);
+    // Release dates are calendar days, so count from the member's own date, not UTC's.
+    const days = Math.round((date - Date.UTC(today.getFullYear(), today.getMonth(), today.getDate(), 12)) / 86400000);
     const label = date.toLocaleDateString('en-US', { month: 'short', day: 'numeric', timeZone: 'UTC' });
     if (days === 0) return `Today · ${label}`;
     if (days === 1) return `Tomorrow · ${label}`;
@@ -130,6 +194,7 @@
     if (!progress) return;
     progress.textContent = total >= STARTER_GOAL ? `${total} titles saved — nice start!` : `${total} of ${STARTER_GOAL} titles saved`;
     progress.classList.toggle('is-done', total >= STARTER_GOAL);
+    renderInvites();
   }
 
   async function postJson(path, body) {
@@ -177,6 +242,7 @@
       popular.appendChild(itemCard({
         image: pick.image, title: pick.title, meta,
         note: `Saved by ${pick.members} members`,
+        link: typeof pick.url === 'string' && pick.url.startsWith('/titles/') ? pick.url : null,
         action: addButton('Add', () => addPopular(pick)),
       }));
     });
@@ -205,7 +271,7 @@
     }
     const summary = $('comingUpSummary');
     if (matches.length) {
-      summary.textContent = `${matches.length} new release${matches.length === 1 ? '' : 's'} connected to titles you track.`;
+      summary.textContent = `${matches.length} new release${matches.length === 1 ? '' : 's'} connected to titles you track. We'll send you a notification on the day each one comes out.`;
     } else {
       summary.textContent = "Nothing from your library is on the schedule right now. Here's what's popular instead.";
     }
@@ -225,11 +291,8 @@
   }
 
   function renderEmail(email) {
-    const wrap = $('comingUpEmail');
-    const toggle = $('comingUpEmailToggle');
-    if (!wrap || !toggle) return;
-    wrap.hidden = !email.available && !email.enabled;
-    toggle.checked = Boolean(email.enabled);
+    state.email = email || {};
+    renderInvites();
   }
 
   async function saveEmail(event) {
@@ -238,7 +301,7 @@
     toggle.disabled = true;
     try {
       const response = await fetch(`${apiBase()}/api/for-you/email`, fetchOptions({
-        method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ enabled: toggle.checked }),
+        method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ enabled: toggle.checked, source: 'dashboard' }),
       }));
       const data = await response.json().catch(() => ({}));
       if (!response.ok) {
@@ -246,6 +309,7 @@
         status.textContent = data.detail || 'Could not update the weekly email. Please try again.';
       } else {
         toggle.checked = Boolean(data.enabled);
+        state.email = { ...state.email, ...data };
         status.textContent = data.enabled
           ? 'Weekly email on. Your first one arrives within a day; every email has a one-click unsubscribe.'
           : 'Weekly email off.';
@@ -256,6 +320,130 @@
     } finally {
       toggle.disabled = false;
     }
+  }
+
+  // ---------------------------------------------------------- private release calendar
+
+  function calendarStatus(text) {
+    const status = $('releaseCalendarStatus');
+    if (status) status.textContent = text;
+  }
+
+  function renderCalendar(data) {
+    state.calendar = data || {};
+    const panel = $('releaseCalendarPanel');
+    const button = $('comingUpCalendarButton');
+    if (!panel || !button) return;
+    const links = state.calendar.enabled ? (state.calendar.links || {}) : null;
+    const safe = (url, prefix) => (typeof url === 'string' && url.startsWith(prefix) ? url : '#');
+    if (links) {
+      $('releaseCalendarGoogle').href = safe(links.google, 'https://calendar.google.com/');
+      $('releaseCalendarApple').href = safe(links.webcal, 'webcal://');
+      $('releaseCalendarOutlook').href = safe(links.outlook, 'https://outlook.live.com/');
+    }
+    button.textContent = links ? 'My calendar' : 'Add to my calendar';
+    const episodes = $('releaseCalendarEpisodes');
+    if (episodes) episodes.checked = Boolean(links && state.calendar.include_episodes);
+    const note = $('releaseCalendarEpisodesNote');
+    if (note) {
+      const soon = links && state.calendar.include_episodes ? Number(state.calendar.episodes_soon) || 0 : 0;
+      note.textContent = soon ? `${soon} episode${soon === 1 ? '' : 's'} airing in the next two weeks.` : '';
+    }
+  }
+
+  async function saveCalendarEpisodes() {
+    const toggle = $('releaseCalendarEpisodes');
+    if (!toggle) return;
+    const wanted = toggle.checked;
+    toggle.disabled = true;
+    try {
+      const response = await fetch(`${apiBase()}/api/calendar/episodes`, fetchOptions({
+        method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ enabled: wanted }),
+      }));
+      const data = await response.json().catch(() => ({}));
+      if (!response.ok) throw new Error(data.detail || 'Could not update your calendar. Please try again.');
+      renderCalendar(data);
+      calendarStatus(wanted
+        ? 'Episodes on. Each new episode gets its own entry, at the time it airs when the time is known. The first ones can take a few minutes to show up.'
+        : 'Episodes off. Your calendar goes back to premieres, new seasons and release days on its next refresh.');
+    } catch (error) {
+      toggle.checked = !wanted;
+      calendarStatus(error.message);
+    } finally {
+      toggle.disabled = false;
+    }
+  }
+
+  async function calendarRequest(method, path) {
+    const response = await fetch(`${apiBase()}${path}`, fetchOptions({ method }));
+    const data = await response.json().catch(() => ({}));
+    if (!response.ok) throw new Error(data.detail || 'Could not update your calendar. Please try again.');
+    return data;
+  }
+
+  async function openCalendar() {
+    const panel = $('releaseCalendarPanel');
+    const button = $('comingUpCalendarButton');
+    if (!panel || !button) return;
+    if (!panel.hidden) {
+      panel.hidden = true;
+      button.setAttribute('aria-expanded', 'false');
+      return;
+    }
+    button.disabled = true;
+    try {
+      renderCalendar(await calendarRequest('POST', '/api/calendar'));
+      panel.hidden = false;
+      button.setAttribute('aria-expanded', 'true');
+      calendarStatus('');
+    } catch (error) {
+      calendarStatus(error.message);
+      const status = $('comingUpStatus');
+      if (status) status.textContent = error.message;
+    } finally {
+      button.disabled = false;
+    }
+  }
+
+  async function copyCalendar() {
+    const url = state.calendar && state.calendar.links && state.calendar.links.url;
+    if (!url) return;
+    try {
+      await navigator.clipboard.writeText(url);
+      calendarStatus('Address copied. In your calendar app, choose "Add calendar from URL" or "Subscribe" and paste it.');
+    } catch (error) {
+      calendarStatus(`Paste this address into your calendar app: ${url}`);
+    }
+  }
+
+  async function resetCalendar() {
+    try {
+      renderCalendar(await calendarRequest('POST', '/api/calendar/reset'));
+      calendarStatus('New address ready. The old one has stopped working, so add this one to your calendar again.');
+    } catch (error) {
+      calendarStatus(error.message);
+    }
+  }
+
+  async function turnOffCalendar() {
+    try {
+      renderCalendar(await calendarRequest('DELETE', '/api/calendar'));
+      $('releaseCalendarPanel').hidden = true;
+      $('comingUpCalendarButton').setAttribute('aria-expanded', 'false');
+      const status = $('comingUpStatus');
+      if (status) status.textContent = 'Calendar turned off. Its address no longer works; you can remove it from your calendar app.';
+    } catch (error) {
+      calendarStatus(error.message);
+    }
+  }
+
+  function openCalendarFromLink() {
+    if (window.location.hash !== '#release-calendar' || state.calendarLinkHandled) return;
+    const section = $('comingUp');
+    if (!section || section.hidden) return;
+    state.calendarLinkHandled = true;
+    section.scrollIntoView({ block: 'start' });
+    if ($('releaseCalendarPanel').hidden) openCalendar();
   }
 
   async function getJson(path) {
@@ -270,6 +458,7 @@
     try {
       const comingUp = await getJson('/api/for-you/coming-up');
       if (request !== state.request) return;
+      state.email = comingUp.email || {};
       let starterShown = false;
       // Starter picks count every category; coming-up counts only radar ones, so ask separately.
       if (!starterDismissed()) {
@@ -286,6 +475,8 @@
       }
       // While quick start is showing its own release picks, only show real library matches here.
       renderComingUp(starterShown ? { ...comingUp, popular: [] } : comingUp);
+      renderInvites();
+      openCalendarFromLink();
     } catch (error) {
       // Suggestions are optional; the library works without them.
     }
@@ -300,15 +491,30 @@
     document.addEventListener('click', event => {
       const target = event.target.closest && event.target.closest('[data-for-you-action="dismiss-starter"]');
       if (target) dismissStarter();
+      const weekly = event.target.closest && event.target.closest('[data-weekly-action]');
+      if (weekly) {
+        const invite = weekly.closest('[data-weekly-invite]');
+        if (weekly.dataset.weeklyAction === 'subscribe' && invite) acceptInvite(invite);
+        if (weekly.dataset.weeklyAction === 'dismiss') dismissInvite();
+      }
     });
     const toggle = $('comingUpEmailToggle');
     if (toggle) toggle.addEventListener('change', saveEmail);
+    const episodes = $('releaseCalendarEpisodes');
+    if (episodes) episodes.addEventListener('change', saveCalendarEpisodes);
+    const handlers = {
+      comingUpCalendarButton: openCalendar, releaseCalendarCopy: copyCalendar,
+      releaseCalendarReset: resetCalendar, releaseCalendarOff: turnOffCalendar,
+    };
+    Object.entries(handlers).forEach(([id, handler]) => { const node = $(id); if (node) node.addEventListener('click', handler); });
+    window.addEventListener('hashchange', () => { state.calendarLinkHandled = false; openCalendarFromLink(); });
   }
 
   window.refreshForYou = refreshForYou;
   window.resetForYou = resetForYou;
   if (typeof module !== 'undefined' && module.exports) {
-    module.exports = { friendlyDate, renderStarter, renderComingUp, state, STARTER_GOAL };
+    module.exports = { friendlyDate, renderStarter, renderComingUp, renderInvites, acceptInvite, dismissInvite, state, STARTER_GOAL,
+      renderCalendar, openCalendar, copyCalendar, resetCalendar, turnOffCalendar, saveCalendarEpisodes };
   } else if (document.readyState === 'loading') {
     document.addEventListener('DOMContentLoaded', init);
   } else {

@@ -9,11 +9,24 @@ stored numbers cannot be linked back to anyone.
 Counters are buffered in memory and written in one small batch about once a
 minute, so page loads never wait on the database. A restart loses at most that
 minute of counts (and restarts the day's visitor de-duplication).
+
+Two sets of counters are kept side by side:
+
+- "All requests" (kinds total/page/source/device/audience): every HTML page the
+  server sends to something that doesn't call itself a bot. Scanners and
+  scripts that pretend to be browsers land here too.
+- "Likely people" (kinds human_total/human_page/...): counted only when the page
+  itself reports in from a real, visible browser tab (POST /api/visit, sent by
+  static/visit.js). On top of needing JavaScript, a report is dropped when it
+  comes from a known crawler network, from another site, from a browser driven
+  by automation, or repeats the same page within a few seconds, and each
+  visitor's daily count is capped.
 """
 from __future__ import annotations
 
 import asyncio
 import hashlib
+import ipaddress
 import os
 import re
 import secrets
@@ -42,6 +55,51 @@ MAX_KEY_LENGTH = 200
 MAX_SEEN_VISITORS = 250_000
 MAX_PENDING_KEYS = 20_000
 AUTH_COOKIE_NAME = "omnitrackr_session"
+# A campaign tag is a short plain word; anything else (scanners put script tags in
+# utm_source) is counted under one label instead of being stored as written.
+SAFE_TAG = re.compile(r"[a-z0-9][a-z0-9 ._+-]{0,59}")
+BAD_TAG = "(unreadable tag)"
+# "Likely people" limits: the same page again within this many seconds is a reload
+# or a script, and nobody reads more than this many pages in a day.
+HUMAN_REPEAT_SECONDS = 10
+HUMAN_MAX_VIEWS_PER_DAY = 300
+# Crawlers that run JavaScript and so could report in like a browser: Googlebot,
+# Bingbot and Meta's link preview fetcher. More can be added with
+# SITE_TRAFFIC_BOT_NETWORKS (comma-separated, e.g. "192.0.2.0/24,2001:db8::/32").
+CRAWLER_NETWORKS = (
+    "66.249.64.0/19", "2001:4860:4801::/48",
+    "40.77.167.0/24", "157.55.39.0/24", "207.46.13.0/24", "52.167.144.0/24", "13.66.139.0/24",
+    "31.13.24.0/21", "66.220.144.0/20", "69.63.176.0/20", "69.171.224.0/19", "173.252.64.0/18",
+    "2a03:2880::/32",
+)
+
+
+def _networks(values) -> tuple:
+    networks = []
+    for value in values:
+        try:
+            networks.append(ipaddress.ip_network(value.strip(), strict=False))
+        except ValueError:
+            continue
+    return tuple(networks)
+
+
+_CRAWLERS = _networks(CRAWLER_NETWORKS + tuple(
+    item for item in os.getenv("SITE_TRAFFIC_BOT_NETWORKS", "").split(",") if item.strip()))
+
+
+def crawler_address(ip: str) -> bool:
+    try:
+        address = ipaddress.ip_address(ip)
+    except ValueError:
+        return False
+    return any(address.version == network.version and address in network for network in _CRAWLERS)
+
+
+def client_ip(request: Request) -> str:
+    # Render (behind Cloudflare) passes the visitor's address in True-Client-IP.
+    forwarded = request.headers.get("true-client-ip") or request.headers.get("x-forwarded-for", "")
+    return forwarded.split(",")[0].strip() if forwarded else (request.client.host if request.client else "")
 
 
 def _utc_today():
@@ -61,12 +119,21 @@ def classify_device(user_agent: str) -> str:
     return "desktop"
 
 
-def traffic_source(request: Request) -> str | None:
-    """Where the visit came from, or None for navigation inside the site."""
-    utm = parse_qs(request.url.query).get("utm_source")
-    if utm and utm[0].strip():
-        return _clean(utm[0].strip().lower(), 60)
-    referer = request.headers.get("referer", "").strip()
+def clean_path(path: str) -> str:
+    if len(path) > 1:
+        path = path.rstrip("/") or "/"
+    return _clean(path)
+
+
+def source_for(utm: str | None, referer: str | None) -> str | None:
+    """Where a visit came from: its utm_source tag, else the referring site.
+
+    None means navigation inside the site; "(direct)" means no referrer at all.
+    """
+    tag = (utm or "").strip().lower()
+    if tag:
+        return tag if SAFE_TAG.fullmatch(tag) else BAD_TAG
+    referer = (referer or "").strip()
     if not referer:
         return "(direct)"
     host = (urlsplit(referer).hostname or "").lower()
@@ -78,6 +145,25 @@ def traffic_source(request: Request) -> str | None:
     if host in INTERNAL_HOSTS or host == site_host or host.endswith(".omnitrackr.xyz"):
         return None
     return _clean(host, 60)
+
+
+def traffic_source(request: Request) -> str | None:
+    """Where the visit came from, or None for navigation inside the site."""
+    utm = parse_qs(request.url.query).get("utm_source")
+    return source_for(utm[0] if utm else "", request.headers.get("referer", ""))
+
+
+def human_problem(request: Request) -> str | None:
+    """Why a page's "I was opened" report can't count as a person, or None if it can."""
+    user_agent = request.headers.get("user-agent", "")
+    if not user_agent or BOT_PATTERN.search(user_agent):
+        return "bot"
+    site = request.headers.get("sec-fetch-site", "")
+    if site and site != "same-origin":
+        return "other site"
+    if crawler_address(client_ip(request)):
+        return "crawler network"
+    return None
 
 
 def should_count(request: Request, status_code: int, content_type: str) -> bool:
@@ -112,16 +198,24 @@ class TrafficRecorder:
         self._visitor_day = None
         self._visitor_salt = b""
         self._seen: set[bytes] = set()
+        # Likely-people visitors today: digest -> [views, last page, when, homepage counted].
+        self._people: dict[bytes, list] = {}
 
     # -- recording ---------------------------------------------------------
-    def _visitor_is_new(self, day, request: Request, user_agent: str) -> bool:
+    def _roll_day(self, day) -> None:
         if day != self._visitor_day:
             self._visitor_day = day
             self._visitor_salt = secrets.token_bytes(16)
             self._seen = set()
-        forwarded = request.headers.get("x-forwarded-for", "")
-        ip = forwarded.split(",")[0].strip() if forwarded else (request.client.host if request.client else "")
-        digest = hashlib.sha256(self._visitor_salt + ip.encode() + b"|" + user_agent.encode()).digest()[:12]
+            self._people = {}
+
+    def _digest(self, request: Request, user_agent: str, scope: bytes = b"") -> bytes:
+        ip = client_ip(request)
+        return hashlib.sha256(self._visitor_salt + scope + ip.encode() + b"|" + user_agent.encode()).digest()[:12]
+
+    def _visitor_is_new(self, day, request: Request, user_agent: str) -> bool:
+        self._roll_day(day)
+        digest = self._digest(request, user_agent)
         if digest in self._seen:
             return False
         if len(self._seen) < MAX_SEEN_VISITORS:
@@ -150,6 +244,46 @@ class TrafficRecorder:
                 pending[(day, "source", source)] += 1
             if self._visitor_is_new(day, request, user_agent):
                 pending[(day, "total", "visitors")] += 1
+            self._events += 1
+        return True
+
+    def record_person(self, request: Request, path: str, referrer: str = "", utm: str = "") -> bool:
+        """Count a page view reported by the page itself (see the module docstring)."""
+        if not self.enabled or human_problem(request):
+            return False
+        path = (path or "").split("?", 1)[0].split("#", 1)[0]
+        if not path.startswith("/") or path.startswith("//") or path.startswith(EXCLUDED_PREFIXES):
+            return False
+        path = clean_path(path)
+        user_agent = request.headers.get("user-agent", "")
+        member = AUTH_COOKIE_NAME in request.cookies
+        source = source_for(utm, referrer)
+        day = _utc_today()
+        now = time.monotonic()
+        with self._lock:
+            if len(self._pending) >= MAX_PENDING_KEYS:
+                return False
+            self._roll_day(day)
+            digest = self._digest(request, user_agent, b"person|")
+            state = self._people.get(digest)
+            pending = self._pending
+            if state is None:
+                state = [0, "", 0.0, False]
+                if len(self._people) < MAX_SEEN_VISITORS:
+                    self._people[digest] = state
+                pending[(day, "human_total", "visitors")] += 1
+            elif state[0] >= HUMAN_MAX_VIEWS_PER_DAY or (state[1] == path and now - state[2] < HUMAN_REPEAT_SECONDS):
+                return False
+            state[0], state[1], state[2] = state[0] + 1, path, now
+            pending[(day, "human_total", "views")] += 1
+            pending[(day, "human_page", path)] += 1
+            pending[(day, "human_device", classify_device(user_agent))] += 1
+            pending[(day, "human_audience", "member" if member else "guest")] += 1
+            if source:
+                pending[(day, "human_source", source)] += 1
+            if path == "/" and not member and not state[3]:
+                state[3] = True
+                pending[(day, "funnel", "landing_seen")] += 1  # one per person per day
             self._events += 1
         return True
 

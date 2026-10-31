@@ -26,11 +26,9 @@
   <meta name="twitter:description" content="Choose a media tracker by your routine, understand the tradeoffs, and preview an existing library before importing.">
   <meta name="twitter:image" content="https://omnitrackr.xyz/omnitrackr_vortex.png">
   <meta name="twitter:image:alt" content="OmniTrackr comparison guide">
-  <link rel="preconnect" href="https://fonts.googleapis.com">
-  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@700;800&family=Inter:wght@400;500;600&display=swap"
-    rel="stylesheet">
-  <link rel="stylesheet" href="/styles.css">
+  <link rel="preload" href="/static/fonts/poppins-700-latin.woff2" as="font" type="font/woff2" crossorigin>
+  <link rel="preload" href="/static/fonts/poppins-800-latin.woff2" as="font" type="font/woff2" crossorigin>
+  <link rel="stylesheet" href="/static/fonts.css?v=20261009-fonts-1">
   <style>
     body { min-height: 100vh; padding: 20px; }
     .privacy-wrapper { max-width: 1040px; margin: 0 auto; }
@@ -84,17 +82,7 @@
     "isPartOf": { "@type": "WebSite", "name": "OmniTrackr", "url": "https://omnitrackr.xyz" }
   }
   </script>
-  <script type="application/ld+json">
-  {
-    "@context": "https://schema.org",
-    "@type": "BreadcrumbList",
-    "itemListElement": [
-      { "@type": "ListItem", "position": 1, "name": "Home", "item": "https://omnitrackr.xyz/" },
-      { "@type": "ListItem", "position": 2, "name": "Compare", "item": "https://omnitrackr.xyz/compare" }
-    ]
-  }
-  </script>
-  <link rel="stylesheet" href="/static/public-reader.css?v=20260928-site-2">
+  <link rel="stylesheet" href="/static/public-reader.css?v=20261029-reader-3">
 </head>
 
 <body class="public-reader site">
@@ -108,7 +96,6 @@
         <p class="reader-kicker">Choose your tracking routine</p>
         <h1>Media Tracker Comparison</h1>
         <p>Find a home for your media history that fits how you actually watch, read, listen, and play.</p>
-        <p>By OmniTrackr &middot; Updated <time datetime="2026-09-24">September 24, 2026</time></p>
       </header>
 
       <nav class="reader-jump" aria-label="On this page">
@@ -120,13 +107,13 @@
       </nav>
 
       <section class="privacy-section" aria-labelledby="why-compare-heading">
-        <h2 id="why-compare-heading">Start with the Job You Need Done</h2>
-        <p>A good tracker should make a repeated task easier: finding your next book, remembering where you stopped in a show, or recalling why a film stayed with you. Moving years of history will not help if that everyday task becomes harder.</p>
-        <p>OmniTrackr brings movies, TV, anime, games, music, and books into one library. That is useful when you move between formats. If a film discussion community or automatic playback logging is the main reason you track, keep that requirement at the center of your choice. You can use OmniTrackr alongside another service without rebuilding your entire history.</p>
+        <h2 id="why-compare-heading">Start with what you need it for</h2>
+        <p>Pick a tracker for the thing you do every week: finding your next book, remembering where you stopped in a show, or recalling why a film stayed with you. Moving years of history will not help if that everyday task becomes harder.</p>
+        <p>OmniTrackr brings movies, TV, anime, games, music, books, manga, podcasts, and audiobooks into one library, which helps if you switch between formats a lot. If a film discussion community or automatic playback logging is the main reason you track, choose based on that first. You can use OmniTrackr alongside another service without rebuilding your entire history.</p>
       </section>
 
       <section class="privacy-section" aria-labelledby="table-heading">
-        <h2 id="table-heading">Compare the Everyday Use</h2>
+        <h2 id="table-heading">Compare the everyday use</h2>
         <p>The middle column summarizes documented features. The final column is our editorial advice about fit, not a ranking. On a narrow screen, scroll the table sideways to read every column.</p>
         <div class="comparison-table-wrap" role="region" aria-label="Media tracker comparison" tabindex="0">
           <table class="comparison-table">
@@ -171,7 +158,7 @@
               </tr>
               <tr>
                 <th scope="row">OmniTrackr</th>
-                <td>Six media categories, ratings, notes with category sharing controls, private journal entries, progress checkpoints for TV, anime, and books, collections, and JSON backups. <a href="/demo">Try the interactive demo</a>.</td>
+                <td>Nine media categories, ratings, notes with category sharing controls, private journal entries, progress checkpoints for TV, anime, books, manga, podcasts, and audiobooks, collections, and JSON backups. <a href="/demo">Try the interactive demo</a>.</td>
                 <td>You want one place to choose what is next and remember experiences across formats, and are comfortable updating your own progress.</td>
               </tr>
             </tbody>
@@ -180,58 +167,58 @@
       </section>
 
       <section class="privacy-section" aria-labelledby="decision-heading">
-        <h2 id="decision-heading">Test a Routine Before Moving a History</h2>
+        <h2 id="decision-heading">Test a routine before moving your history</h2>
         <h3>If you mostly lose track of recommendations</h3>
-        <p>Save three things you might start next, then return a few days later. Can you find them quickly and choose one? In OmniTrackr, <strong>Next Up</strong> gives a short list a deliberate order. A huge imported backlog is less useful if it hides those three choices.</p>
+        <p>Save three things you might start next, then return a few days later. Can you find them quickly and choose one? In OmniTrackr, <strong>Next Up</strong> lets you put a short list in the order you want. A huge imported backlog doesn't help if those three get lost in it.</p>
         <h3>If you forget where you left off</h3>
         <p>Try saving an episode or book page in the demo, then look at the checkpoint on that sample title's card. In your own library, recent unfinished checkpoints also appear in <strong>Continue</strong>. OmniTrackr checkpoints are manual reminders. If you need progress to follow your player automatically, evaluate a compatible Trakt integration instead.</p>
-        <h3>If you want to remember what mattered</h3>
-        <p>Write one sentence about something you finished. Decide whether it belongs in a private journal, a review, or a collection you deliberately share. OmniTrackr separates those choices; the <a href="/guides#social-heading">sharing guide</a> explains how to check them.</p>
-        <p class="reader-note">A useful trial is one ordinary week, not a complete migration. Keep your existing tracker while testing the new routine. Decide which service holds your main record so that two lists do not quietly diverge.</p>
+        <h3>If you want to remember what stuck with you</h3>
+        <p>Write one sentence about something you finished. Decide whether it belongs in a private journal, a review, or a collection you choose to share. OmniTrackr separates those choices; the <a href="/guides#social-heading">sharing guide</a> explains how to check them.</p>
+        <p class="reader-note">Try it for one ordinary week before you migrate everything. Keep your existing tracker while you test the new routine, and decide which service holds your main record so the two lists don't drift apart.</p>
       </section>
 
       <section class="privacy-section" aria-labelledby="limits-heading">
-        <h2 id="limits-heading">Where OmniTrackr Has Limits</h2>
+        <h2 id="limits-heading">Where OmniTrackr has limits</h2>
         <ul>
           <li><strong>No automatic account sync:</strong> importing a file is a one-time action. Later changes on Letterboxd, Goodreads, Trakt, or another service do not flow into OmniTrackr automatically.</li>
           <li><strong>Manual progress:</strong> OmniTrackr does not connect to your streaming player to log viewing. Current episode, page, or chapter reminders must be updated by you.</li>
-          <li><strong>A migration is not a full copy of a service:</strong> supported CSV fields become library records. Social connections, custom source shelves, likes, and a complete source diary are not recreated.</li>
+          <li><strong>A migration is not a full copy of a service:</strong> supported CSV fields become library records. Social connections, custom source shelves, and likes are not recreated. A Letterboxd diary is the exception: its dated entries come over to your Journal.</li>
           <li><strong>Duplicate matching is simple:</strong> the studio checks title and year for movies, TV, and anime; title and release year for games; title and artist for music; and title and author for books. It does not reconcile alternate titles or identify book editions by ISBN.</li>
         </ul>
         <p>If those limits remove the feature you value most, keep the specialist tool for that job. OmniTrackr can still hold a smaller selection of favorites, current titles, and next choices across your other categories.</p>
       </section>
 
       <section class="privacy-section" aria-labelledby="migration-heading">
-        <h2 id="migration-heading">Bring an Existing List with the Import Studio</h2>
-        <p>You do not need to type an existing library again. In <strong>Account Settings &rarr; Import Studio</strong>, a file preview shows what would be added before you confirm. The studio accepts UTF-8 CSV or TSV, up to 5 MB and 5,000 rows per batch.</p>
+        <h2 id="migration-heading">Bring an existing list with the Import Studio</h2>
+        <p>You do not need to type an existing library again. In <strong>Account Settings &rarr; Import Studio</strong>, a file preview shows what would be added before you confirm. The studio accepts the export file a service gives you, including ZIP, CSV, XML, and JSON exports, up to 5 MB and 5,000 titles per batch.</p>
         <ol>
-          <li><strong>Keep the original export.</strong> Make a working copy for any changes. For a Letterboxd export, extract the ZIP first and choose a supported film CSV from it; do not upload the ZIP. <a href="https://letterboxd.com/user/exportdata/">Letterboxd's export page</a> describes the files it provides.</li>
-          <li><strong>Choose a supported source.</strong> The studio understands Letterboxd-style, Goodreads-style, and MyAnimeList-style CSV columns. MyAnimeList XML is not accepted. For a spreadsheet, choose <strong>Generic CSV / spreadsheet</strong>, select a media category, and map your columns if their names differ. Category templates are available in the studio.</li>
+          <li><strong>Keep the original export.</strong> Make a working copy for any changes. A Letterboxd or Trakt export can be uploaded as the ZIP it arrives in. <a href="https://letterboxd.com/user/exportdata/">Letterboxd's export page</a> describes the files it provides.</li>
+          <li><strong>Choose a supported source.</strong> The studio understands Letterboxd, IMDb, Goodreads, StoryGraph, MyAnimeList, Kitsu, and Trakt exports, and can fetch a public AniList list by username. For a spreadsheet, choose <strong>Generic CSV / spreadsheet</strong>, select a media category, and map your columns if their names differ. Category templates are available in the studio.</li>
           <li><strong>Preview a small batch.</strong> Select <strong>Preview import</strong>. This step does not save records. Inspect ready, duplicate, and invalid rows, including later pages of the results. Check the year, rating, and completion state against your original list.</li>
-          <li><strong>Check what transfers.</strong> Letterboxd and Goodreads adapters double five-point ratings: 3.5 becomes 7/10. Generic CSV ratings already use a ten-point scale. Letterboxd review text and diary visits are not imported; Goodreads review text is supported, but custom shelves and reading dates are not preserved.</li>
+          <li><strong>Check what transfers.</strong> Letterboxd, Goodreads, and StoryGraph adapters double five-point ratings: 3.5 becomes 7/10. IMDb, MyAnimeList, AniList, Trakt, and generic CSV ratings already use a ten-point scale. Review text comes over as a private note, and Letterboxd diary dates and rewatches arrive in your private Journal. Custom shelves and reading dates are not preserved.</li>
           <li><strong>Confirm the batch.</strong> Confirmation imports all ready rows in that preview, skipping duplicate and invalid rows. Existing records keep their values. Imported review text is not published to public review pages, but friends can read it if you share the category. To import a smaller selection, reduce the file and preview it again.</li>
           <li><strong>Check the result in your library.</strong> Review the created and skipped counts, open the relevant category, and set any current progress reminders. Download an OmniTrackr JSON backup after you are satisfied with the result.</li>
         </ol>
-        <p>There is no dedicated IMDb or Trakt adapter. If you have a CSV from another source, use the generic option and check every mapped field in the preview; do not assume its status or rating values have the same meaning. Missing years and different spellings can also prevent duplicate matches.</p>
+        <p>Each supported service is covered step by step in the <a href="/switch">switching guide</a>. If you have a CSV from another source, use the generic option and check every mapped field in the preview; do not assume its status or rating values have the same meaning. Missing years and different spellings can also prevent duplicate matches.</p>
         <p class="reader-note"><strong>CSV migration and JSON restore are different.</strong> The Import Studio only adds new records. Restoring an OmniTrackr JSON backup can update matching library records. Use the <a href="/export-import-guide">export and import guide</a> for worked examples, matching rules, and backup details before restoring a file.</p>
       </section>
 
       <section class="privacy-section" aria-labelledby="method-heading">
-        <h2 id="method-heading">Sources and How We Compared</h2>
-        <p>This guide was prepared with AI assistance for OmniTrackr, the maker of one of the tools being compared. Named product features were checked against the official pages linked above on <time datetime="2026-09-24">September 24, 2026</time>. OmniTrackr's import details were checked against its supported formats and current preview workflow. Our <a href="/content-quality">content-quality policy</a> explains how we approach sources and corrections.</p>
-        <p>The recommendations are our editorial judgment about common routines, not benchmark results or a claim that one tool is best for everyone. This is not an exhaustive feature or pricing comparison. Other services can change their features, export formats, and plans; check the linked documentation before making a choice. Send corrections through <a href="/contact">Contact</a>.</p>
+        <h2 id="method-heading">Sources and how we compared</h2>
+        <p>This guide was prepared by OmniTrackr, the maker of one of the tools being compared. Named product features were checked against the official pages linked above on <time datetime="2026-09-24">September 24, 2026</time>. OmniTrackr's import details were checked against its supported formats and current preview workflow. Our <a href="/content-quality">content-quality policy</a> explains how we approach sources and corrections.</p>
+        <p>The recommendations are our editorial judgment about common routines. We didn't run benchmarks, and we aren't claiming one tool is best for everyone. This is not an exhaustive feature or pricing comparison. Other services can change their features, export formats, and plans; check the linked documentation before making a choice. Send corrections through <a href="/contact">Contact</a>.</p>
       </section>
 
       <section class="privacy-section" aria-labelledby="related-heading">
-        <h2 id="related-heading">Take the Next Useful Step</h2>
-        <p>Explore the demo before creating an account, or follow the import guide if you already have a list. For something new to add, <a href="/release-radar">Release Radar</a><a href="/discover">Discover</a> offers editorial starting points across media.</p>
+        <h2 id="related-heading">Where to go next</h2>
+        <p>Explore the demo before creating an account, or follow the import guide if you already have a list. For something new to add, <a href="/release-radar">Release Radar</a> and <a href="/discover">Discover</a> offer editorial starting points across media.</p>
         <div class="reader-actions">
           <a href="/demo">Try the interactive demo</a>
+          <a href="/switch">Switch from another tracker</a>
           <a href="/export-import-guide">Plan your import</a>
           <a href="/guides">Find a getting-started guide</a>
         </div>
       </section>
-
 </main>
   </div>
   <!--SITE_FOOTER-->

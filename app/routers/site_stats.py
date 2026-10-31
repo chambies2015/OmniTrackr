@@ -5,16 +5,18 @@ The page shell at /site-stats contains no data; the numbers come from
 """
 from __future__ import annotations
 
+import asyncio
 import os
 import time
 from datetime import date, datetime, timedelta, timezone
 from pathlib import Path
 
 from fastapi import APIRouter, Depends, HTTPException, Query, Request, Response
-from sqlalchemy import func
+from pydantic import BaseModel, Field
+from sqlalchemy import func, or_
 from sqlalchemy.orm import Session
 
-from .. import editorial_collections, models, release_radar
+from .. import editorial_collections, funnel, google_signin, models, release_radar, supporters
 from ..admin_access import is_site_admin
 from ..csp import strict_html_response
 from ..dependencies import get_current_user, get_db
@@ -31,6 +33,9 @@ LIBRARY_MODELS = (
     ("video_games", "Video games", models.VideoGame),
     ("music", "Music", models.Music),
     ("books", "Books", models.Book),
+    ("manga", "Manga", models.Manga),
+    ("podcasts", "Podcasts", models.Podcast),
+    ("audiobooks", "Audiobooks", models.Audiobook),
 )
 RADAR_LABELS = {"movies": "Movies", "tv": "TV", "anime": "Anime", "games": "Games"}
 
@@ -66,46 +71,75 @@ def _counts_between(db: Session, column, start: datetime, end: datetime | None =
     return int(query.scalar() or 0)
 
 
+def _active_since(db: Session, start: datetime) -> int:
+    """Members who logged in or opened OmniTrackr on a still-open session since `start`."""
+    return int(db.query(func.count(models.User.id)).filter(or_(
+        models.User.last_login_at >= start, models.User.last_seen_on >= start.date())).scalar() or 0)
+
+
+TRAFFIC_KINDS = {
+    # set: (totals kind, {breakdown name: kind})
+    "all": ("total", {"page": "page", "source": "source", "device": "device", "audience": "audience"}),
+    "human": ("human_total", {"page": "human_page", "source": "human_source",
+                              "device": "human_device", "audience": "human_audience"}),
+}
+
+
 def _traffic(db: Session, days: int, today: date) -> dict:
+    """Page views and visitors twice over: every request ("all") and likely people ("human").
+
+    The top-level keys stay the "all" numbers, as before; "human" holds the same shape.
+    """
     table = models.SiteTrafficDaily
     start = today - timedelta(days=days - 1)
     previous_start = start - timedelta(days=days)
     rows = db.query(table.day, table.kind, table.key, table.count).filter(table.day >= previous_start).all()
-    first_day = db.query(func.min(table.day)).scalar()
+    first_day = db.query(func.min(table.day)).filter(table.kind == "total").scalar()
+    first_human_day = db.query(func.min(table.day)).filter(table.kind == "human_total").scalar()
 
-    series = {start + timedelta(days=offset): {"views": 0, "visitors": 0} for offset in range(days)}
-    current_totals = {"views": 0, "visitors": 0}
-    previous_totals = {"views": 0, "visitors": 0}
-    breakdowns: dict[str, dict[str, int]] = {"page": {}, "source": {}, "device": {}, "audience": {}}
+    sets = {}
+    for name, (total_kind, breakdown_kinds) in TRAFFIC_KINDS.items():
+        sets[name] = {
+            "total_kind": total_kind,
+            "kinds": {kind: label for label, kind in breakdown_kinds.items()},
+            "series": {start + timedelta(days=offset): {"views": 0, "visitors": 0} for offset in range(days)},
+            "current": {"views": 0, "visitors": 0},
+            "previous": {"views": 0, "visitors": 0},
+            "breakdowns": {label: {} for label in breakdown_kinds},
+        }
     for day, kind, key, count in rows:
         in_current = day >= start
-        if kind == "total" and key in current_totals:
-            if in_current:
-                current_totals[key] += count
-                if day in series:
-                    series[day][key] += count
-            else:
-                previous_totals[key] += count
-        elif kind in breakdowns and in_current:
-            breakdowns[kind][key] = breakdowns[kind].get(key, 0) + count
+        for data in sets.values():
+            if kind == data["total_kind"] and key in data["current"]:
+                if in_current:
+                    data["current"][key] += count
+                    if day in data["series"]:
+                        data["series"][day][key] += count
+                else:
+                    data["previous"][key] += count
+            elif kind in data["kinds"] and in_current:
+                bucket = data["breakdowns"][data["kinds"][kind]]
+                bucket[key] = bucket.get(key, 0) + count
 
-    def top(kind: str, limit: int) -> list[dict]:
-        ordered = sorted(breakdowns[kind].items(), key=lambda pair: (-pair[1], pair[0]))
-        return [{"key": key, "count": count} for key, count in ordered[:limit]]
+    def shaped(data: dict, since) -> dict:
+        def top(name: str, limit: int) -> list[dict]:
+            ordered = sorted(data["breakdowns"][name].items(), key=lambda pair: (-pair[1], pair[0]))
+            return [{"key": key, "count": count} for key, count in ordered[:limit]]
 
-    today_row = series.get(today, {"views": 0, "visitors": 0})
-    return {
-        "tracking_since": first_day.isoformat() if first_day else None,
-        "enabled": RECORDER.enabled,
-        "today": today_row,
-        "totals": current_totals,
-        "previous_totals": previous_totals,
-        "series": [{"date": day.isoformat(), **values} for day, values in sorted(series.items())],
-        "top_pages": top("page", 15),
-        "sources": top("source", 12),
-        "devices": top("device", 5),
-        "audience": top("audience", 3),
-    }
+        return {
+            "tracking_since": since.isoformat() if since else None,
+            "today": data["series"].get(today, {"views": 0, "visitors": 0}),
+            "totals": data["current"],
+            "previous_totals": data["previous"],
+            "series": [{"date": day.isoformat(), **values} for day, values in sorted(data["series"].items())],
+            "top_pages": top("page", 15),
+            "sources": top("source", 12),
+            "devices": top("device", 5),
+            "audience": top("audience", 3),
+        }
+
+    return {**shaped(sets["all"], first_day), "enabled": RECORDER.enabled,
+            "human": shaped(sets["human"], first_human_day)}
 
 
 def _popular_titles(db: Session, limit: int = 12) -> list[dict]:
@@ -151,6 +185,149 @@ def _library_additions(db: Session, days: int, today: date) -> list[dict]:
     ]
 
 
+def _funnel(db: Session, days: int, today: date) -> dict:
+    """Sign-up funnel counters for the range (see app/funnel.py)."""
+    table = models.SiteTrafficDaily
+    start = today - timedelta(days=days - 1)
+    counts = dict(db.query(table.key, func.sum(table.count)).filter(
+        table.kind == "funnel", table.day >= start).group_by(table.key).all())
+    return funnel.summary({key: int(value or 0) for key, value in counts.items()})
+
+
+def _retention(db: Session) -> dict:
+    """Opt-in counts for features that bring members back."""
+    return {
+        "weekly_email_subscribers": int(db.query(func.count(models.EmailDigestSubscription.id)).scalar() or 0),
+        "public_profiles": int(db.query(func.count(models.PublicProfile.id)).filter(models.PublicProfile.enabled == True).scalar() or 0),
+    }
+
+
+def _count(query) -> int:
+    return int(query.scalar() or 0)
+
+
+def _growth(db: Session, days: int, now: datetime) -> dict:
+    """This month's growth features: invite links, Ko-fi supporters, weekly email, release calendars and "ask a friend"."""
+    start = now - timedelta(days=days)
+    signup = models.FriendInviteSignup
+    supporter = models.Supporter
+    payment = models.KofiPayment
+    return {
+        "invites": {
+            "links": _count(db.query(func.count(models.FriendInvite.id))),
+            "new_links": _counts_between(db, models.FriendInvite.created_at, start),
+            "signups": _counts_between(db, signup.created_at, start),
+            "friends_made": _counts_between(db, signup.completed_at, start),
+            "awaiting_verification": _count(db.query(func.count(signup.id)).filter(signup.completed_at.is_(None))),
+        },
+        "supporters": {
+            "active": _count(db.query(func.count(supporter.id)).filter(supporter.active_until > now)),
+            "monthly": _count(db.query(func.count(supporter.id)).filter(supporter.active_until > now, supporter.monthly == True)),
+            "all_time": _count(db.query(func.count(supporter.id))),
+            "new": _counts_between(db, supporter.since, start),
+            "payments": _count(db.query(func.count(payment.id)).filter(payment.received_at >= start, ~supporters.is_test_payment())),
+            # Ko-fi test pings and payments the owner set aside don't need linking.
+            "unlinked_payments": supporters.waiting_count(db),
+        },
+        "weekly_email": _weekly_email(db, days, now, start),
+        "calendar": {
+            "feeds": _count(db.query(func.count(models.CalendarFeed.id))),
+            "new": _counts_between(db, models.CalendarFeed.created_at, start),
+            "refreshed_7d": _count(db.query(func.count(models.CalendarFeed.id))
+                                   .filter(models.CalendarFeed.last_fetched_at >= now - timedelta(days=7))),
+        },
+        "takes": {
+            "asked": _counts_between(db, models.TakeRequest.created_at, start),
+            "answered": _counts_between(db, models.TakeResponse.created_at, start),
+        },
+        "push": _push(db, days, now, start),
+    }
+
+
+def _push(db: Session, days: int, now: datetime, start: datetime) -> dict:
+    """Phone and browser notifications: devices turned on, members reached lately, pushes sent by kind."""
+    from .. import web_push
+    device = models.PushSubscription
+    table = models.SiteTrafficDaily
+    counts = db.query(table.key, func.sum(table.count)).filter(
+        table.kind == "push", table.key.like("sent_%"), table.day >= (now - timedelta(days=days - 1)).date(),
+    ).group_by(table.key).all()
+    titles = {**web_push.TITLES, "held": "Catch-up after quiet hours"}
+    by_kind = sorted(({"kind": titles.get(key[5:], key[5:].replace("_", " ")), "count": int(total or 0)}
+                      for key, total in counts if total), key=lambda row: -row["count"])
+    return {
+        "members": _count(db.query(func.count(func.distinct(device.user_id)))),
+        "devices": _count(db.query(func.count(device.id))),
+        "new_devices": _counts_between(db, device.created_at, start),
+        "reached_7d": _count(db.query(func.count(func.distinct(device.user_id)))
+                             .filter(device.last_success_at >= now - timedelta(days=7))),
+        "sent": sum(row["count"] for row in by_kind),
+        "sent_by_kind": by_kind[:8],
+        "away_reminders": _counts_between(db, models.PushNudge.sent_at, start),
+    }
+
+
+def _weekly_email(db: Session, days: int, now: datetime, start: datetime) -> dict:
+    """Weekly email in the range: subscribers, where members switched it on and off, how many were emailed."""
+    from .. import digest
+    table = models.SiteTrafficDaily
+    counts = dict(db.query(table.key, func.sum(table.count)).filter(
+        table.kind == "email", table.key.like("weekly_%"), table.day >= (now - timedelta(days=days - 1)).date(),
+    ).group_by(table.key).all())
+    by_place = lambda prefix: {source: int(counts.get(f"{prefix}{source}") or 0) for source in digest.SOURCES}
+    opted_in = by_place("weekly_on_")
+    opted_out = by_place("weekly_off_")
+    return {
+        "subscribers": _count(db.query(func.count(models.EmailDigestSubscription.id))),
+        "new": _counts_between(db, models.EmailDigestSubscription.created_at, start),
+        "opted_in_by_place": [{"place": digest.SOURCES[source], "count": opted_in[source]} for source in digest.SOURCES],
+        "opted_out": sum(opted_out.values()),
+        "opted_out_by_place": [{"place": digest.SOURCES[source], "count": opted_out[source]}
+                               for source in digest.SOURCES if source in digest.OFF_SOURCES],
+        "emailed": _counts_between(db, models.EmailDigestSubscription.last_sent_at, start),
+        "emailed_7d": _counts_between(db, models.EmailDigestSubscription.last_sent_at, now - timedelta(days=7)),
+    }
+
+
+def _announcement_status(db: Session) -> dict | None:
+    try:
+        from .. import announcements
+        return announcements.status(db)
+    except Exception:
+        db.rollback()
+        return None
+
+
+def _comeback_status(db: Session) -> dict | None:
+    try:
+        from .. import comeback
+        return comeback.status(db)
+    except Exception:
+        db.rollback()
+        return None
+
+
+def _welcome_status(db: Session) -> dict | None:
+    try:
+        from .. import welcome_emails
+        return welcome_emails.status(db)
+    except Exception:
+        db.rollback()
+        return None
+
+
+def _title_details(db: Session) -> dict:
+    """How many title pages have their public facts cached (filled in by a background job).
+
+    Where-to-watch lookups share the table under "where:" keys. They are left out: a film
+    that streams nowhere is a normal answer, not a title page missing its details.
+    """
+    counts = dict(db.query(models.TitleMetadata.status, func.count(models.TitleMetadata.id))
+                  .filter(~models.TitleMetadata.key.startswith("where:"))
+                  .group_by(models.TitleMetadata.status).all())
+    return {"found": int(counts.get("ok", 0)), "not_found": int(counts.get("miss", 0)), "errors": int(counts.get("error", 0))}
+
+
 def _system() -> dict:
     database_url = os.getenv("DATABASE_URL", "")
     radar = []
@@ -176,6 +353,7 @@ def _system() -> dict:
             {"name": "OMDb (movie/TV posters)", "configured": bool(os.getenv("OMDB_API_KEY"))},
             {"name": "RAWG (games + Release Radar games)", "configured": bool(os.getenv("RAWG_API_KEY"))},
             {"name": "Email (verification + resets)", "configured": bool(os.getenv("MAIL_USERNAME") and os.getenv("MAIL_PASSWORD"))},
+            {"name": "Google sign-in", "configured": google_signin.configured()},
             {"name": "Amazon Associates tag", "configured": bool(os.getenv("AMAZON_ASSOCIATES_TAG"))},
             {"name": "AdSense publisher id", "configured": bool(os.getenv("ADSENSE_PUBLISHER_ID", "pub-7271682066779719"))},
             {"name": "Traffic counting", "configured": RECORDER.enabled},
@@ -185,7 +363,7 @@ def _system() -> dict:
 
 
 @router.get("/api/site-stats/overview")
-async def site_stats_overview(
+def site_stats_overview(
     response: Response,
     days: int = Query(30, ge=7, le=90),
     current_user: models.User = Depends(get_current_user),
@@ -201,11 +379,10 @@ async def site_stats_overview(
     now = datetime.now(timezone.utc).replace(tzinfo=None)
     today = now.date()
     insights = _moderator_site_insights(db)
-    last_login = models.User.last_login_at
     members = {
-        "active_24_hours": _counts_between(db, last_login, now - timedelta(hours=24)),
-        "active_7_days": _counts_between(db, last_login, now - timedelta(days=7)),
-        "active_30_days": _counts_between(db, last_login, now - timedelta(days=30)),
+        "active_24_hours": _active_since(db, now - timedelta(hours=24)),
+        "active_7_days": _active_since(db, now - timedelta(days=7)),
+        "active_30_days": _active_since(db, now - timedelta(days=30)),
         "new_today": _counts_between(db, models.User.created_at, datetime.combine(today, datetime.min.time())),
         "new_in_range": _counts_between(db, models.User.created_at, now - timedelta(days=days)),
         "new_previous_range": _counts_between(
@@ -220,10 +397,16 @@ async def site_stats_overview(
         "signups": _signups(db, days, today),
         "journal_activity": _library_additions(db, days, today),
         "traffic": _traffic(db, days, today),
+        "funnel": _funnel(db, days, today),
+        "retention": _retention(db),
+        "growth": _growth(db, days, now),
         "popular_titles": _popular_titles(db),
         "insights": insights,
-        "system": _system(),
+        "system": {**_system(), "title_details": _title_details(db)},
         "editor_collections": editorial_collections.status(db),
+        "announcement": _announcement_status(db),
+        "comeback": _comeback_status(db),
+        "welcome": _welcome_status(db),
     }
 
 
@@ -243,3 +426,170 @@ async def publish_editor_collections(
     except ValueError as error:
         db.rollback()
         raise HTTPException(status_code=409, detail=str(error))
+
+
+class FunnelEvent(BaseModel):
+    event: str = Field(..., max_length=40)
+
+
+class PageVisit(BaseModel):
+    path: str = Field(..., max_length=300)
+    referrer: str = Field("", max_length=500)
+    utm: str = Field("", max_length=120)
+
+
+@router.post("/api/visit", status_code=204, include_in_schema=False)
+async def record_page_visit(payload: PageVisit, request: Request):
+    """A page reporting that a person opened it (static/visit.js); feeds the "likely people" counts."""
+    try:
+        if RECORDER.record_person(request, payload.path, payload.referrer, payload.utm) and RECORDER.flush_due():
+            asyncio.get_running_loop().create_task(asyncio.to_thread(RECORDER.flush))
+    except Exception:
+        pass  # Analytics must never fail a page.
+    return Response(status_code=204)
+
+
+@router.post("/api/funnel", status_code=204, include_in_schema=False)
+async def record_funnel_event(payload: FunnelEvent, request: Request):
+    """Browser-side sign-up moments (whitelisted names only; nothing about the visitor is stored)."""
+    if payload.event in funnel.CLIENT_EVENTS:
+        funnel.record(payload.event, request)
+    return Response(status_code=204)
+
+
+# ---------------------------------------------------------------- "What's new" email
+
+class AnnouncementAction(BaseModel):
+    action: str = Field(..., pattern="^(start|pause|test)$")
+
+
+@router.get("/site-stats/announcement-preview", include_in_schema=False)
+def announcement_preview(request: Request, current_user: models.User = Depends(get_current_user),
+                               db: Session = Depends(get_db)):
+    """The update email exactly as the owner would receive it (nothing is sent)."""
+    from fastapi.responses import HTMLResponse
+    from .. import announcements
+    from ..for_you import radar_pool
+    _require_admin(current_user)
+    try:
+        pool = radar_pool(None, getattr(request.app.state, "external_api_client", None))
+    except Exception:
+        pool = None
+    subject, html, _text, _url = announcements.email_for(db, current_user, pool)
+    banner = (f'<div style="font:14px Arial,sans-serif;background:#fef3c7;color:#78350f;padding:10px 16px">'
+              f'Preview only. Subject: <strong>{subject.replace("<", "&lt;")}</strong></div>')
+    response = HTMLResponse(html.replace(
+        '<div style="max-width:560px', banner + '<div style="max-width:560px', 1))
+    response.headers["Content-Security-Policy"] = "default-src 'none'; img-src https: data:; style-src 'unsafe-inline'; frame-ancestors 'none'"
+    _no_store(response)
+    return response
+
+
+@router.post("/api/site-stats/announcement")
+async def announcement_action(payload: AnnouncementAction, request: Request, response: Response,
+                              current_user: models.User = Depends(get_current_user), db: Session = Depends(get_db)):
+    from .. import announcements
+    _require_admin(current_user)
+    _no_store(response)
+    if payload.action == "test":
+        if not announcements.mail_configured():
+            raise HTTPException(status_code=409, detail="Email isn't configured on this server.")
+        try:
+            await announcements.send_test(db, current_user, getattr(request.app.state, "external_api_client", None))
+        except Exception as error:
+            raise HTTPException(status_code=502, detail=f"The test email couldn't be sent: {error}")
+        return {**announcements.status(db), "message": f"Test sent to {current_user.email}."}
+    announcements.set_status(db, "sending" if payload.action == "start" else "paused")
+    return announcements.status(db)
+
+
+# ---------------------------------------------------------------- come-back email
+
+class ComebackAction(BaseModel):
+    action: str = Field(..., pattern="^(start|pause|test)$")
+
+
+@router.get("/site-stats/comeback-preview", include_in_schema=False)
+def comeback_preview(request: Request, current_user: models.User = Depends(get_current_user),
+                           db: Session = Depends(get_db)):
+    """The come-back email as the owner would receive it (nothing is sent)."""
+    from fastapi.responses import HTMLResponse
+    from .. import comeback
+    from ..for_you import radar_pool
+    _require_admin(current_user)
+    try:
+        pool = radar_pool(None, getattr(request.app.state, "external_api_client", None))
+    except Exception:
+        pool = None
+    subject, html, _text, _url = comeback.email_for(db, current_user, pool)
+    banner = (f'<div style="font:14px Arial,sans-serif;background:#fef3c7;color:#78350f;padding:10px 16px">'
+              f'Preview only, filled in from your own library. Subject: <strong>{subject.replace("&", "&amp;").replace("<", "&lt;")}</strong></div>')
+    response = HTMLResponse(html.replace(
+        '<div style="max-width:560px', banner + '<div style="max-width:560px', 1))
+    response.headers["Content-Security-Policy"] = "default-src 'none'; img-src https: data:; style-src 'unsafe-inline'; frame-ancestors 'none'"
+    _no_store(response)
+    return response
+
+
+@router.post("/api/site-stats/comeback")
+async def comeback_action(payload: ComebackAction, request: Request, response: Response,
+                          current_user: models.User = Depends(get_current_user), db: Session = Depends(get_db)):
+    from .. import comeback
+    _require_admin(current_user)
+    _no_store(response)
+    if payload.action == "test":
+        if not comeback.mail_configured():
+            raise HTTPException(status_code=409, detail="Email isn't configured on this server.")
+        try:
+            await comeback.send_test(db, current_user, getattr(request.app.state, "external_api_client", None))
+        except Exception as error:
+            raise HTTPException(status_code=502, detail=f"The test email couldn't be sent: {error}")
+        return {**comeback.status(db), "message": f"Test sent to {current_user.email}."}
+    comeback.set_status(db, "sending" if payload.action == "start" else "paused")
+    return comeback.status(db)
+
+
+# ---------------------------------------------------------------- welcome emails
+
+class WelcomeAction(BaseModel):
+    action: str = Field(..., pattern="^(start|pause|test)$")
+
+
+@router.get("/site-stats/welcome-preview", include_in_schema=False)
+def welcome_preview(step: int = Query(1, ge=1, le=3), current_user: models.User = Depends(get_current_user),
+                    db: Session = Depends(get_db)):
+    """One welcome email as the owner would receive it (nothing is sent)."""
+    from fastapi.responses import HTMLResponse
+    from .. import welcome_emails
+    _require_admin(current_user)
+    chosen = welcome_emails.step_for(step)
+    subject, html, _text, _url = welcome_emails.email_for(db, current_user, chosen)
+    others = " · ".join(
+        f'<a href="/site-stats/welcome-preview?step={other.number}" style="color:#78350f">{other.label}</a>'
+        if other.number != step else f"<strong>{other.label}</strong>" for other in welcome_emails.STEPS)
+    banner = (f'<div style="font:14px Arial,sans-serif;background:#fef3c7;color:#78350f;padding:10px 16px">'
+              f'Preview only, filled in from your own library. Subject: <strong>{subject.replace("&", "&amp;").replace("<", "&lt;")}</strong>'
+              f'<div style="margin-top:6px">{others}</div></div>')
+    response = HTMLResponse(html.replace(
+        '<div style="max-width:560px', banner + '<div style="max-width:560px', 1))
+    response.headers["Content-Security-Policy"] = "default-src 'none'; img-src https: data:; style-src 'unsafe-inline'; frame-ancestors 'none'"
+    _no_store(response)
+    return response
+
+
+@router.post("/api/site-stats/welcome")
+async def welcome_action(payload: WelcomeAction, response: Response,
+                         current_user: models.User = Depends(get_current_user), db: Session = Depends(get_db)):
+    from .. import welcome_emails
+    _require_admin(current_user)
+    _no_store(response)
+    if payload.action == "test":
+        if not welcome_emails.mail_configured():
+            raise HTTPException(status_code=409, detail="Email isn't configured on this server.")
+        try:
+            await welcome_emails.send_test(db, current_user)
+        except Exception as error:
+            raise HTTPException(status_code=502, detail=f"The test emails couldn't be sent: {error}")
+        return {**welcome_emails.status(db), "message": f"All three sent to {current_user.email}."}
+    welcome_emails.set_status(db, "sending" if payload.action == "start" else "paused")
+    return welcome_emails.status(db)

@@ -4,7 +4,7 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <meta name="google-adsense-account" content="ca-pub-7271682066779719">
-  <meta name="description" content="Read public OmniTrackr reviews for movies, TV shows, anime, video games, music, and books. Discover ratings and recommendations from media fans.">
+  <meta name="description" content="Read public OmniTrackr reviews for movies, TV shows, anime, video games, music, books, manga, podcasts, and audiobooks. Discover ratings and recommendations from media fans.">
   <meta name="robots" content="index, follow, max-image-preview:large">
   <meta name="author" content="OmniTrackr">
   <title>Public Media Reviews for Movies, Shows, Games, Music & Books - OmniTrackr</title>
@@ -13,7 +13,7 @@
   <meta property="og:type" content="website">
   <meta property="og:url" content="https://omnitrackr.xyz/reviews">
   <meta property="og:title" content="Public Media Reviews - OmniTrackr">
-  <meta property="og:description" content="Read public reviews and ratings for movies, TV shows, anime, video games, music, and books from the OmniTrackr community.">
+  <meta property="og:description" content="Read public reviews and ratings for movies, TV shows, anime, video games, music, books, manga, podcasts, and audiobooks from the OmniTrackr community.">
   <meta property="og:image" content="https://omnitrackr.xyz/omnitrackr_vortex.png">
   <meta property="og:image:alt" content="OmniTrackr public media reviews">
   <meta property="og:site_name" content="OmniTrackr">
@@ -21,20 +21,20 @@
   <meta name="twitter:card" content="summary_large_image">
   <meta name="twitter:url" content="https://omnitrackr.xyz/reviews">
   <meta name="twitter:title" content="Public Media Reviews - OmniTrackr">
-  <meta name="twitter:description" content="Read public reviews and ratings for movies, shows, anime, games, music, and books.">
+  <meta name="twitter:description" content="Read public reviews and ratings for movies, shows, anime, games, music, books, manga, podcasts, and audiobooks.">
   <meta name="twitter:image" content="https://omnitrackr.xyz/omnitrackr_vortex.png">
   <meta name="twitter:image:alt" content="OmniTrackr public media reviews">
-  <link rel="preconnect" href="https://fonts.googleapis.com">
-  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@700;800&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="/styles.css?v=20260924-daily-dashboard-v4">
-  <link rel="stylesheet" href="/static/reviews.css?v=20260928-site-1">
+  <link rel="preload" href="/static/fonts/poppins-700-latin.woff2" as="font" type="font/woff2" crossorigin>
+  <link rel="preload" href="/static/fonts/poppins-800-latin.woff2" as="font" type="font/woff2" crossorigin>
+  <link rel="stylesheet" href="/static/fonts.css?v=20261009-fonts-1">
+  <link rel="stylesheet" href="/static/public-legacy.css?v=20261030-audiobooks-1">
+  <link rel="stylesheet" href="/static/reviews.css?v=20261020-spoilers-1">
   <script type="application/ld+json" id="server-review-item-list">
   {
     "@context": "https://schema.org",
     "@type": "CollectionPage",
     "name": "Public Reviews - OmniTrackr",
-    "description": "Discover thoughtful reviews and insights from the OmniTrackr community. Explore reviews for movies, TV shows, anime, video games, music, and books shared by our users.",
+    "description": "Discover thoughtful reviews and insights from the OmniTrackr community. Explore reviews for movies, TV shows, anime, video games, music, books, manga, podcasts, and audiobooks shared by our users.",
     "url": "https://omnitrackr.xyz/reviews",
     "inLanguage": "en-US",
     "isPartOf": { "@type": "WebSite", "name": "OmniTrackr", "url": "https://omnitrackr.xyz" },
@@ -45,11 +45,11 @@
 <body class="dark-mode reviews-page site">
   <a class="reviews-skip-link site-skip" href="#community-reviews">Skip to reviews</a>
   <!--SITE_NAV:reviews-->
-  <header class="reviews-header site-hero">
+  <section class="reviews-header site-hero" aria-label="Find a review">
     <div class="site-wrap">
-      <p class="reviews-eyebrow site-eyebrow">A good recommendation starts with a real opinion</p>
+      <p class="reviews-eyebrow site-eyebrow">Reviews written by OmniTrackr members</p>
       <h1>Public Reviews</h1>
-      <p>Find your next favorite through the movies, shows, games, music, and books people are talking about.</p>
+      <p>Read what members thought of the movies, shows, games, music, books, manga, podcasts, and audiobooks they finished, and find something to try next.</p>
       <form id="reviewFilters" class="review-filters" action="/reviews" method="get" role="search" aria-label="Find public reviews">
         <div class="review-search-field">
           <label for="reviewSearch">Search by title</label>
@@ -79,13 +79,13 @@
         <a href="/reviews?category=book">Books</a>
       </nav>
     </div>
-  </header>
+  </section>
   <div class="reviews-wrapper site-wrap">
     <main>
       <section id="community-reviews" aria-labelledby="community-reviews-heading">
         <div class="reviews-section-heading">
           <h2 id="community-reviews-heading">From the community</h2>
-          <a href="/review-guidelines">What makes a useful review?</a>
+          <a href="/review-guidelines">What makes a good review?</a>
         </div>
         <div id="reviewFeedStatus" class="review-feed-status" role="status" aria-live="polite" aria-atomic="true"></div>
         <div id="reviewsContainer" class="reviews-grid" data-hydrated="true" data-category="{{CATEGORY}}" data-query="{{QUERY}}" data-next-offset="{{NEXT_OFFSET}}" data-has-more="{{HAS_MORE}}">
@@ -100,18 +100,18 @@
       <aside class="reviews-guide" aria-labelledby="reviews-guide-heading">
         <div>
           <p class="site-eyebrow">Share what you thought</p>
-          <h2 id="reviews-guide-heading">Your perspective could be someone’s next favorite.</h2>
+          <h2 id="reviews-guide-heading">Write a review someone else can use.</h2>
           <p>Keep personal notes in your library, and choose which reviews to share. Tell readers what stood out, who would enjoy it, and why.</p>
         </div>
         <div class="reviews-guide__actions">
-          <a class="site-btn site-btn--primary" href="/#landing-auth">Start your library</a>
+          <a class="site-btn site-btn--primary" href="/#signup">Start your library</a>
           <a class="site-btn site-btn--ghost" href="/review-guidelines">Read the review guide <span aria-hidden="true">→</span></a>
         </div>
       </aside>
     </main>
   </div>
   <!--SITE_FOOTER-->
-  <script src="/static/review_report.js?v=20260917-review-safety-v1" defer></script>
-  <script src="/static/reviews.js?v=20260928-site-1" defer></script>
+  <script src="/static/review_report.js?v=20261007-helpful-1" defer></script>
+  <script src="/static/reviews.js?v=20261020-spoilers-1" defer></script>
 </body>
 </html>

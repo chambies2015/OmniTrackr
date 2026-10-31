@@ -5,7 +5,7 @@ const fs = require('node:fs');
 const path = require('node:path');
 const vm = require('node:vm');
 
-const source = fs.readFileSync(path.join(__dirname, '../app/static/app.js'), 'utf8');
+const source = require('./helpers/dashboard_source.cjs');
 const returnDeckSource = source.slice(
   source.indexOf("const LAUNCHPAD_DISMISS_KEY"),
   source.indexOf('function isLibraryLaunchpadDismissed'),
@@ -166,6 +166,10 @@ test('eligible startup suppresses fallback cards while the deck is pending and a
   assert.equal(context.todayRefreshes || 0, 0);
   assert.equal(context.pulseRefreshes || 0, 0);
 
+  // The visit day is recorded first, then the deck is requested.
+  while (!resolveDeck) await new Promise(resolve => setImmediate(resolve));
+  assert.equal(await context.refreshDashboardDecisionCards(), false);
+  assert.equal(context.todayRefreshes || 0, 0);
   resolveDeck({
     ok: true,
     json: async () => ({
@@ -193,4 +197,38 @@ test('ineligible startup requests each fallback card exactly once', async () => 
   assert.equal(await context.scheduledDecisionRefresh, true);
   assert.equal(context.todayRefreshes, 1);
   assert.equal(context.pulseRefreshes, 1);
+});
+
+test('a visit after days away on an open session stores the deck context', async () => {
+  const { context, requests, storage } = setup();
+  context.authenticatedFetch = async (url, options = {}) => {
+    requests.push({ url, options });
+    if (url === '/account/visit') {
+      return {
+        ok: true,
+        json: async () => ({ return_prompt: { eligible: true, days_away: 12, engagement_token: 'signed-return-token-that-is-long-enough' } }),
+      };
+    }
+    return { ok: true, json: async () => ({ eligible: false, library_item_count: 0 }) };
+  };
+  await context.bootstrapReturnDeck();
+  assert.equal(requests[0].url, '/account/visit');
+  assert.equal(requests[0].options.method, 'POST');
+  assert.ok(requests.some(request => request.url.includes('/return-deck/?days_away=12')));
+  assert.equal(storage.has('omnitrackr_return_prompt'), false); // ineligible deck clears it again
+});
+
+test('a visit never replaces a deck context from the log-in', async () => {
+  const prompt = activeContext({ days_away: 5 });
+  const { context, requests } = setup(prompt);
+  context.authenticatedFetch = async (url, options = {}) => {
+    requests.push({ url, options });
+    if (url === '/account/visit') {
+      return { ok: true, json: async () => ({ return_prompt: { eligible: true, days_away: 30, engagement_token: 'another-signed-token-that-is-long-enough' } }) };
+    }
+    return { ok: true, json: async () => ({ eligible: false, library_item_count: 0 }) };
+  };
+  await context.bootstrapReturnDeck();
+  const deck = requests.find(request => request.url.includes('/return-deck/?'));
+  assert.match(deck.url, /days_away=5/);
 });

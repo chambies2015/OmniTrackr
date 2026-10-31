@@ -5,14 +5,16 @@ from typing import List, Optional
 from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session
 
+from ..integer_bounds import PositiveDatabaseId
 from .. import crud, schemas, models
 from ..dependencies import get_db, get_current_user
+from .activity import record_finished_on_add
 
 router = APIRouter(prefix="/tv-shows", tags=["tv-shows"])
 
 
 @router.get("/", response_model=List[schemas.TVShow])
-async def list_tv_shows(
+def list_tv_shows(
     search: Optional[str] = None,
     sort_by: Optional[str] = None,
     order: Optional[str] = None,
@@ -23,8 +25,8 @@ async def list_tv_shows(
 
 
 @router.get("/{tv_show_id}", response_model=schemas.TVShow)
-async def get_tv_show(
-    tv_show_id: int,
+def get_tv_show(
+    tv_show_id: PositiveDatabaseId,
     current_user: models.User = Depends(get_current_user),
     db: Session = Depends(get_db)
 ):
@@ -35,17 +37,17 @@ async def get_tv_show(
 
 
 @router.post("/", response_model=schemas.TVShow, status_code=201)
-async def create_tv_show(
+def create_tv_show(
     tv_show: schemas.TVShowCreate,
     current_user: models.User = Depends(get_current_user),
     db: Session = Depends(get_db)
 ):
-    return crud.create_tv_show(db, current_user.id, tv_show)
+    return record_finished_on_add(db, current_user.id, "tv-shows", crud.create_tv_show(db, current_user.id, tv_show))
 
 
 @router.put("/{tv_show_id}", response_model=schemas.TVShow)
-async def update_tv_show(
-    tv_show_id: int,
+def update_tv_show(
+    tv_show_id: PositiveDatabaseId,
     tv_show: schemas.TVShowUpdate,
     current_user: models.User = Depends(get_current_user),
     db: Session = Depends(get_db)
@@ -57,8 +59,8 @@ async def update_tv_show(
 
 
 @router.delete("/{tv_show_id}", response_model=schemas.TVShow)
-async def delete_tv_show(
-    tv_show_id: int,
+def delete_tv_show(
+    tv_show_id: PositiveDatabaseId,
     current_user: models.User = Depends(get_current_user),
     db: Session = Depends(get_db)
 ):

@@ -6,7 +6,9 @@ from fastapi import APIRouter, Depends, HTTPException, Query, Response, status
 from sqlalchemy import func
 from sqlalchemy.orm import Session
 
-from .. import models, schemas
+from ..integer_bounds import PositiveDatabaseId
+from .. import diary, memories, models, schemas
+from ..progress import lock_progress_owner
 from ..dependencies import get_current_user, get_db
 
 router = APIRouter(prefix="/activity", tags=["activity"])
@@ -19,6 +21,9 @@ CATEGORIES: Dict[str, CategoryDetails] = {
     "video-games": (models.VideoGame, "Game"),
     "music": (models.Music, "Album"),
     "books": (models.Book, "Book"),
+    "manga": (models.Manga, "Manga"),
+    "podcasts": (models.Podcast, "Podcast"),
+    "audiobooks": (models.Audiobook, "Audiobook"),
 }
 ACTION_LABELS = {
     "started": "Started",
@@ -75,12 +80,30 @@ def record_completion_activity(db: Session, user_id: int, category: str, item) -
     return entry
 
 
+# The finished flag on each library table, by journal category.
+DONE_FIELDS = {"movies": "watched", "tv-shows": "watched", "anime": "watched",
+               "video-games": "played", "music": "listened", "books": "read",
+               "manga": "read", "podcasts": "listened", "audiobooks": "listened"}
+
+
+def record_finished_on_add(db: Session, user_id: int, category: str, item):
+    """A title added as already finished counts as finished today, like ticking it off later does.
+
+    Goals, the monthly challenge and Year in Review count journal finishes, so without
+    this an "Add" with Watched ticked never showed up in any of them.
+    """
+    if getattr(item, DONE_FIELDS[category], False):
+        record_completion_activity(db, user_id, category, item)
+        db.commit()
+    return item
+
+
 @router.get("/", response_model=list[schemas.ActivityEntry])
-async def list_activity(
+def list_activity(
     category: str | None = Query(None),
     action: str | None = Query(None),
     limit: int = Query(50, ge=1, le=100),
-    offset: int = Query(0, ge=0),
+    offset: int = Query(0, ge=0, le=2147483647),
     current_user: models.User = Depends(get_current_user),
     db: Session = Depends(get_db),
 ):
@@ -100,11 +123,12 @@ async def list_activity(
 
 
 @router.post("/", response_model=schemas.ActivityEntry, status_code=status.HTTP_201_CREATED)
-async def create_activity(
+def create_activity(
     payload: schemas.ActivityEntryCreate,
     current_user: models.User = Depends(get_current_user),
     db: Session = Depends(get_db),
 ):
+    lock_progress_owner(db, current_user.id)
     item = _media_item(db, current_user.id, payload.category, payload.item_id)
     if not item:
         raise HTTPException(status_code=404, detail="Library item not found")
@@ -126,8 +150,8 @@ async def create_activity(
 
 
 @router.patch("/{entry_id}", response_model=schemas.ActivityEntry)
-async def update_activity(
-    entry_id: int,
+def update_activity(
+    entry_id: PositiveDatabaseId,
     payload: schemas.ActivityEntryUpdate,
     current_user: models.User = Depends(get_current_user),
     db: Session = Depends(get_db),
@@ -149,8 +173,8 @@ async def update_activity(
 
 
 @router.delete("/{entry_id}", status_code=status.HTTP_204_NO_CONTENT)
-async def delete_activity(
-    entry_id: int,
+def delete_activity(
+    entry_id: PositiveDatabaseId,
     current_user: models.User = Depends(get_current_user),
     db: Session = Depends(get_db),
 ):
@@ -166,7 +190,7 @@ async def delete_activity(
 
 
 @router.get("/weekly/", response_model=dict)
-async def weekly_recap(
+def weekly_recap(
     offset: int = Query(0, ge=0, le=52),
     tz_offset_minutes: int = Query(0, ge=-840, le=840),
     current_user: models.User = Depends(get_current_user),
@@ -208,28 +232,46 @@ async def weekly_recap(
     }
 
 
+@router.get("/diary/", response_model=dict)
+def diary_month(
+    month: str | None = Query(None, max_length=7),
+    tz_offset_minutes: int = Query(0, ge=-840, le=840),
+    current_user: models.User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+):
+    """One calendar month of what the member finished or revisited."""
+    try:
+        return diary.month_view(db, current_user.id, month, tz_offset_minutes)
+    except ValueError as exc:
+        raise HTTPException(status_code=422, detail=str(exc)) from exc
+
+
 def import_activity_entries(
     db: Session, user_id: int, entries: list[schemas.ActivityEntryImport]
 ) -> tuple[int, int]:
     """Import optional journal snapshots after media import, skipping exact duplicates."""
+    if entries:
+        lock_progress_owner(db, user_id)
     created = skipped = 0
     for incoming in entries:
         model, _ = CATEGORIES[incoming.category]
-        item = None
-        if incoming.item_id:
-            item = db.query(model).filter(model.id == incoming.item_id, model.user_id == user_id).first()
-        if item is None:
-            item = db.query(model).filter(
-                model.user_id == user_id,
-                func.lower(func.trim(model.title)) == incoming.title.strip().lower(),
-            ).order_by(model.id).first()
+        # Backup IDs belong to the source account. Only a unique owned title
+        # can bind the snapshot to the destination's library.
+        title = incoming.title.strip()
+        matches = db.query(model).filter(
+            model.user_id == user_id,
+            func.lower(func.trim(model.title)) == title.lower(),
+        ).limit(2).all()
+        item = matches[0] if len(matches) == 1 else None
         occurred_at = _naive_utc(incoming.occurred_at)
         duplicate = db.query(models.ActivityEntry.id).filter(
             models.ActivityEntry.user_id == user_id,
             models.ActivityEntry.category == incoming.category,
-            models.ActivityEntry.title == incoming.title,
+            models.ActivityEntry.title == title,
             models.ActivityEntry.action == incoming.action,
             models.ActivityEntry.occurred_at == occurred_at,
+            models.ActivityEntry.note == incoming.note,
+            models.ActivityEntry.rating == incoming.rating,
         ).first()
         if duplicate:
             skipped += 1
@@ -238,13 +280,24 @@ def import_activity_entries(
             user_id=user_id,
             category=incoming.category,
             item_id=item.id if item else None,
-            title=incoming.title.strip(),
+            title=title,
             action=incoming.action,
             note=incoming.note,
             rating=incoming.rating,
             source="import",
             occurred_at=occurred_at,
         ))
+        db.flush()
         created += 1
     db.commit()
     return created, skipped
+
+
+@router.get("/on-this-day/", response_model=dict)
+def on_this_day(
+    tz_offset_minutes: int = Query(0, ge=-840, le=840),
+    current_user: models.User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+):
+    """What the member did on today's date in earlier years, six months ago and a month ago. Private."""
+    return memories.for_dashboard(db, current_user, tz_offset_minutes)

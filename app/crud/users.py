@@ -4,7 +4,7 @@ User CRUD operations for the OmniTrackr API.
 from typing import Optional
 from datetime import datetime, timezone
 from sqlalchemy.orm import Session, load_only
-from sqlalchemy import or_
+from sqlalchemy import func, or_
 
 from .. import models, schemas
 
@@ -48,19 +48,34 @@ def get_user_by_id_auth(db: Session, user_id: int) -> Optional[models.User]:
     ).filter(models.User.id == user_id).first()
 
 
+def _unique_case_insensitive(db: Session, *conditions) -> Optional[models.User]:
+    """The one member matching regardless of case; None when there is no single match."""
+    matches = db.query(models.User).filter(or_(*conditions)).limit(2).all()
+    return matches[0] if len(matches) == 1 else None
+
+
 def get_user_by_email(db: Session, email: str) -> Optional[models.User]:
-    """Get user by email."""
-    return db.query(models.User).filter(models.User.email == email).first()
+    """Get user by email (exact match first, then a unique case-insensitive one)."""
+    user = db.query(models.User).filter(models.User.email == email).first()
+    if user is None and email:
+        user = _unique_case_insensitive(db, func.lower(models.User.email) == email.strip().lower())
+    return user
 
 
 def get_user_by_username_or_email(db: Session, username_or_email: str) -> Optional[models.User]:
-    """Get user by username or email (optimized single query)."""
-    return db.query(models.User).filter(
-        or_(
-            models.User.username == username_or_email,
-            models.User.email == username_or_email
+    """Get user by username or email: an exact username, then an exact email, then a unique case-insensitive match.
+
+    An older account's email may equal someone else's username, and an
+    unordered OR match could then resolve sign-in to the wrong account.
+    """
+    user = (db.query(models.User).filter(models.User.username == username_or_email).first()
+            or db.query(models.User).filter(models.User.email == username_or_email).order_by(models.User.id).first())
+    if user is None and username_or_email:
+        needle = username_or_email.strip().lower()
+        user = _unique_case_insensitive(
+            db, func.lower(models.User.username) == needle, func.lower(models.User.email) == needle,
         )
-    ).first()
+    return user
 
 
 def get_user_by_id(db: Session, user_id: int) -> Optional[models.User]:
@@ -99,7 +114,7 @@ def update_user(db: Session, user_id: int, user_update: schemas.UserUpdate) -> O
     
     if 'email' in update_dict and update_dict['email'] != db_user.email:
         existing_user = get_user_by_email(db, update_dict['email'])
-        if existing_user:
+        if existing_user and existing_user.id != db_user.id:
             raise ValueError("Email already registered")
         db_user.email = update_dict['email']
     
@@ -164,6 +179,12 @@ def update_privacy_settings(db: Session, user_id: int, privacy_settings: schemas
         db_user.music_private = update_dict['music_private']
     if 'books_private' in update_dict:
         db_user.books_private = update_dict['books_private']
+    if 'manga_private' in update_dict:
+        db_user.manga_private = update_dict['manga_private']
+    if 'podcasts_private' in update_dict:
+        db_user.podcasts_private = update_dict['podcasts_private']
+    if 'audiobooks_private' in update_dict:
+        db_user.audiobooks_private = update_dict['audiobooks_private']
     if 'statistics_private' in update_dict:
         db_user.statistics_private = update_dict['statistics_private']
     
@@ -185,6 +206,9 @@ def get_privacy_settings(db: Session, user_id: int) -> Optional[schemas.PrivacyS
         video_games_private=db_user.video_games_private,
         music_private=db_user.music_private,
         books_private=db_user.books_private,
+        manga_private=db_user.manga_private,
+        podcasts_private=db_user.podcasts_private,
+        audiobooks_private=db_user.audiobooks_private,
         statistics_private=db_user.statistics_private
     )
 
@@ -209,6 +233,12 @@ def update_tab_visibility(db: Session, user_id: int, tab_visibility: schemas.Tab
         db_user.music_visible = update_dict['music_visible']
     if 'books_visible' in update_dict:
         db_user.books_visible = update_dict['books_visible']
+    if 'manga_visible' in update_dict:
+        db_user.manga_visible = update_dict['manga_visible']
+    if 'podcasts_visible' in update_dict:
+        db_user.podcasts_visible = update_dict['podcasts_visible']
+    if 'audiobooks_visible' in update_dict:
+        db_user.audiobooks_visible = update_dict['audiobooks_visible']
     
     db.commit()
     db.refresh(db_user)
@@ -227,7 +257,10 @@ def get_tab_visibility(db: Session, user_id: int) -> Optional[schemas.TabVisibil
         anime_visible=db_user.anime_visible,
         video_games_visible=db_user.video_games_visible,
         music_visible=db_user.music_visible,
-        books_visible=db_user.books_visible
+        books_visible=db_user.books_visible,
+        manga_visible=db_user.manga_visible,
+        podcasts_visible=db_user.podcasts_visible,
+        audiobooks_visible=db_user.audiobooks_visible
     )
 
 

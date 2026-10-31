@@ -1,7 +1,10 @@
 /* Private checkpoints. Drafts stay in memory; only explicit Save/Clear sends a write. */
 (() => {
   'use strict';
-  const supported = new Set(['tv-shows', 'anime', 'books']);
+  const supported = new Set(['tv-shows', 'anime', 'books', 'manga', 'podcasts', 'audiobooks']);
+  const reading = new Set(['books', 'manga']);
+  // Audiobooks save the chapter you reached; there is no page or season.
+  const chapterOnly = new Set(['audiobooks']);
   const drafts = new Map();
   let config = null;
   let active = null;
@@ -19,12 +22,13 @@
     try { return config?.sessionKey() || null; } catch (_) { return null; }
   }
   function contextKey() { return config?.contextKey?.() ?? ''; }
-  function summary(checkpoint) {
+  function summary(checkpoint, category) {
     if (!checkpoint || !Number.isInteger(checkpoint.position) || checkpoint.position < 1) return '';
     if (checkpoint.unit === 'episode') {
       const season = checkpoint.season === 0 ? 'Specials, ' : Number.isInteger(checkpoint.season) ? `Season ${checkpoint.season}, ` : '';
       return `Last watched · ${season}${season ? 'episode' : 'Episode'} ${checkpoint.position}`;
     }
+    if (checkpoint.unit === 'chapter' && chapterOnly.has(category)) return `Last heard · Chapter ${checkpoint.position}`;
     if (checkpoint.unit === 'page' || checkpoint.unit === 'chapter') {
       return `Last read · ${checkpoint.unit === 'page' ? 'Page' : 'Chapter'} ${checkpoint.position}`;
     }
@@ -36,7 +40,7 @@
     span.className = 'progress-checkpoint';
     span.dataset.progressSummaryCategory = item.category;
     span.dataset.progressSummaryItemId = String(item.item_id ?? item.id);
-    span.textContent = summary(item.progress);
+    span.textContent = summary(item.progress, item.category);
     span.hidden = !span.textContent;
     container.appendChild(span);
   }
@@ -58,7 +62,7 @@
       season: el('progressSeason').value, note: el('progressNote').value };
   }
   function fieldsFromCheckpoint(checkpoint, category) {
-    return { unit: checkpoint?.unit || (category === 'books' ? 'page' : 'episode'),
+    return { unit: checkpoint?.unit || (category === 'books' ? 'page' : category === 'manga' || chapterOnly.has(category) ? 'chapter' : 'episode'),
       position: String(checkpoint?.position ?? ''), season: String(checkpoint?.season ?? ''), note: checkpoint?.note || '' };
   }
   function stash() {
@@ -107,10 +111,11 @@
     return active?.loaded && JSON.stringify(draftFromFields()) !== JSON.stringify(active.saved);
   }
   function syncLabels() {
-    const book = active?.category === 'books';
+    const book = reading.has(active?.category);
+    const chapters = chapterOnly.has(active?.category);
     el('progressUnitField').hidden = !book;
-    el('progressSeasonField').hidden = book;
-    el('progressPositionLabel').textContent = book
+    el('progressSeasonField').hidden = book || chapters;
+    el('progressPositionLabel').textContent = chapters ? 'Last chapter you heard' : book
       ? `Last read ${el('progressUnit').value === 'chapter' ? 'chapter' : 'page'}` : 'Last watched episode';
   }
   function render() {
@@ -134,7 +139,7 @@
     el('progressReload').hidden = !(active.retry || active.conflict || active.loadError);
     el('progressReload').disabled = !!active.busy;
     el('progressCurrent').textContent = active.checkpoint
-      ? `Saved: ${summary(active.checkpoint)}` : 'No saved checkpoint yet.';
+      ? `Saved: ${summary(active.checkpoint, active.category)}` : 'No saved checkpoint yet.';
     el('progressCurrent').hidden = !active.loaded;
   }
   async function request(method, body) {
@@ -195,7 +200,7 @@
       if (method !== 'GET') {
         document.querySelectorAll('[data-progress-summary-category]').forEach(node => {
           if (node.dataset.progressSummaryCategory === item.category && Number(node.dataset.progressSummaryItemId) === item.itemId) {
-            node.textContent = summary(payload.checkpoint); node.hidden = !node.textContent;
+            node.textContent = summary(payload.checkpoint, item.category); node.hidden = !node.textContent;
           }
         });
         const stillCurrent = () => lifecycle === requestLifecycle && sessionKey() === requestSession && contextKey() === requestContext;
@@ -220,15 +225,16 @@
     if (!integer(draft.position) || Number(draft.position) < 1 || Number(draft.position) > 1000000) {
       status('Enter an episode, page or chapter from 1 to 1,000,000.'); el('progressPosition').focus(); return null;
     }
-    const book = active.category === 'books';
-    if (!book && (el('progressSeason').validity?.badInput
+    const book = reading.has(active.category);
+    const chapters = chapterOnly.has(active.category);
+    if (!book && !chapters && (el('progressSeason').validity?.badInput
       || (draft.season !== '' && (!integer(draft.season) || Number(draft.season) > 10000)))) {
       status('Enter a season from 0 to 10,000, or leave it blank. Season 0 is for specials.'); el('progressSeason').focus(); return null;
     }
     if (draft.note.length > 300) { status('Keep your private reminder to 300 characters.'); el('progressNote').focus(); return null; }
     if (book && !['page', 'chapter'].includes(draft.unit)) return null;
-    return { expected_revision: active.revision, unit: book ? draft.unit : 'episode', position: Number(draft.position),
-      season: book || draft.season === '' ? null : Number(draft.season), note: draft.note.trim() || null };
+    return { expected_revision: active.revision, unit: chapters ? 'chapter' : book ? draft.unit : 'episode', position: Number(draft.position),
+      season: book || chapters || draft.season === '' ? null : Number(draft.season), note: draft.note.trim() || null };
   }
   function mutate(method, payload) {
     if (!active || !checkSession() || active.busy || active.conflict || active.missing || !active.loaded) return;

@@ -11,17 +11,18 @@ const now = 1900000000000;
 const ttl = 24 * 60 * 60 * 1000;
 const nextQuery = destination => `?next=${encodeURIComponent(destination)}`;
 
-function setup({ search = '', pathname = '/', publicShell = true, storage = new Map(), blockedStorage = false } = {}) {
+function setup({ search = '', pathname = '/', publicShell = true, storage = new Map(), blockedStorage = false, knownMember = false } = {}) {
   const redirects = [];
   const requests = [];
   const elements = new Map();
-  const local = new Map();
+  const local = new Map(knownMember ? [['omnitrackr_known_member', '1']] : []);
   const location = {
     pathname, search, protocol: 'https:', origin: 'https://omnitrackr.xyz',
     assign: destination => redirects.push(destination), reload() {},
   };
   const context = vm.createContext({
     URLSearchParams,
+    AbortController,
     Date: { now: () => now },
     location,
     window: { location, history: { replaceState() {} } },
@@ -47,10 +48,13 @@ function setup({ search = '', pathname = '/', publicShell = true, storage = new 
     },
     fetch: async (url, options) => {
       requests.push({ url, options });
+      // The private shell checks its cookie when storage holds no member; these cookies have expired.
+      if (url === '/account/me') return { ok: false, status: 401, json: async () => null };
       return { ok: true, json: async () => ({ user: { id: 1, username: 'reader' } }) };
     },
     confirm: () => true,
     setTimeout: callback => callback(),
+    clearTimeout() {},
   });
   vm.runInContext(source, context);
   context.setupAuthHandlers = () => {};
@@ -292,6 +296,22 @@ test('demo signup opens registration and login returns only to the fixed first-t
   assert.equal(s.context.consumeDiscoverAuthReturn(), '/');
 });
 
+test('import intent opens registration and returns new members to the Import Studio', async () => {
+  const s = setup({ search: '?start=import' });
+  s.context.initAuth();
+  assert.equal(s.elements.get('registerForm').style.display, 'block');
+  assert.deepEqual(JSON.parse(s.storage.get(demoKey)), { source: 'import', created_at: now });
+  await s.context.login('reader', 'password');
+  assert.deepEqual(s.redirects, ['/?start=import']);
+  assert.equal(s.storage.has(demoKey), false);
+  for (const search of ['?start=Import', '?start=import&start=demo', '?start=imports']) {
+    const other = setup({ search, knownMember: true });
+    other.context.initAuth();
+    await other.context.login('reader', 'password');
+    assert.deepEqual(other.redirects, ['/'], search);
+  }
+});
+
 test('demo intent survives registration and same-tab verification without carrying sample data', async () => {
   const signup = setup({ search: '?start=demo' });
   signup.context.initAuth();
@@ -310,7 +330,7 @@ test('review, Discover, and collection return destinations take precedence over 
     for (const stored of [false, true]) {
       const storage = new Map([[demoKey, JSON.stringify({ source: 'demo', created_at: now })]]);
       if (stored) storage.set(returnKey, JSON.stringify({ path: destination, created_at: now }));
-      const s = setup({ search: stored ? '?start=demo' : `${nextQuery(destination)}&start=demo`, storage });
+      const s = setup({ search: stored ? '?start=demo' : `${nextQuery(destination)}&start=demo`, storage, knownMember: true });
       s.context.initAuth();
       assert.equal(s.elements.has('registerForm'), false);
       await s.context.login('reader', 'password');
@@ -335,7 +355,7 @@ test('demo intent never overrides verification or password-recovery forms', asyn
 test('malformed or repeated demo starts cannot retain stale intent or choose a redirect', async () => {
   for (const search of ['?start=', '?start=Demo', '?start=demo%0A', '?start=//evil.example', '?start=demo&start=demo', '?start=demo&next=//evil.example']) {
     const storage = new Map([[demoKey, JSON.stringify({ source: 'demo', created_at: now })]]);
-    const s = setup({ search, storage });
+    const s = setup({ search, storage, knownMember: true });
     s.context.initAuth();
     assert.notEqual(s.elements.get('registerForm')?.style.display, 'block', search);
     await s.context.login('reader', 'password');
@@ -470,13 +490,13 @@ test('a current-page collection return still works when session storage is unava
 test('an expired cookie selecting the legacy root shell still returns login to the collection preview', async () => {
   const destination = '/collections/public/42/save';
   const s = setup({ search: nextQuery(destination), publicShell: false });
-  s.context.initAuth();
+  await s.context.initAuth();
   assert.equal(s.context.modalCalls, 1);
   assert.equal(s.context.mainUICalls || 0, 0);
   assert.equal(s.context.getDiscoverAuthReturn(), destination);
   await s.context.login('reader', 'password');
   assert.deepEqual(s.redirects, [destination]);
-  assert.deepEqual(s.requests.map(request => request.url), ['/auth/login']);
+  assert.deepEqual(s.requests.map(request => request.url), ['/account/me', '/auth/login']);
 });
 
 test('a legacy-shell 401 clears stale credentials while retaining the chosen save destination', async () => {
@@ -524,4 +544,136 @@ test('explicit logout clears a collection destination retained during expired-se
   await s.context.logout();
   assert.equal(s.context.getDiscoverAuthReturn(), null);
   assert.equal(s.storage.has(returnKey), false);
+});
+
+
+test('newcomers see the sign-up form at the bottom of the homepage; returning members see log-in', () => {
+  const newcomer = setup();
+  newcomer.context.initAuth();
+  assert.equal(newcomer.elements.get('registerForm').style.display, 'block');
+  const member = setup({ knownMember: true });
+  member.context.initAuth();
+  assert.notEqual(member.elements.get('registerForm')?.style.display, 'block');
+});
+
+test('the default sign-up form is not counted as opened until someone uses it', () => {
+  const s = setup();
+  const beacons = [];
+  s.context.navigator = { sendBeacon: (url, blob) => { beacons.push(url); return true; } };
+  s.context.Blob = function Blob() {};
+  s.context.initAuth();
+  assert.equal(beacons.length, 0);
+  s.context.showRegisterForm();
+  assert.equal(beacons.length, 1);
+});
+
+test('a successful login marks the browser as a returning member', async () => {
+  const s = setup();
+  await s.context.login('reader', 'password');
+  assert.equal(s.context.knownMember(), true);
+});
+
+test('"Log in" links from other pages keep the log-in form', () => {
+  const s = setup();
+  s.context.window.location.hash = '#landing-auth';
+  s.context.initAuth();
+  assert.notEqual(s.elements.get('registerForm')?.style.display, 'block');
+});
+
+test('"I have an account" buttons open the log-in form on a new browser and still return afterwards', async () => {
+  for (const destination of ['/lists/join/AbC_dEf-1234567890', '/join/AbC_dEf-1234567890', '/lists']) {
+    const s = setup({ search: nextQuery(destination) });
+    s.context.window.location.hash = '#login';
+    let shown = 0;
+    s.context.showLoginForm = () => { shown += 1; };
+    s.context.initAuth();
+    assert.equal(shown, 1, destination);
+    assert.notEqual(s.elements.get('registerForm')?.style.display, 'block', destination);
+    await s.context.login('reader', 'password');
+    assert.deepEqual(s.redirects, [destination]);
+  }
+});
+
+test('signing in from a title page returns to its review form', async () => {
+  for (const destination of ['/titles/movie/interstellar-2014#write-review', '/titles/album/in-rainbows-2007#write-review',
+    '/titles/movie/interstellar-2014?take=AbC_dEf-1234567890xyz#write-review']) {
+    const s = setup({ search: nextQuery(destination) });
+    s.context.initAuth();
+    await s.context.login('reader', 'password');
+    assert.deepEqual(s.redirects, [destination]);
+  }
+  for (const destination of [
+    '/titles/movie/interstellar-2014', '/titles/movie/interstellar-2014#other', '/titles/film/interstellar-2014#write-review',
+    '/titles/movie/Interstellar#write-review', '/titles/movie/../../account#write-review', '/titles/movie/#write-review',
+    '//evil.example/titles/movie/x#write-review', '/titles/movie/x#write-review\n',
+    '/titles/movie/x?take=short#write-review', '/titles/movie/x?take=AbC_dEf-1234567890xyz&next=//evil#write-review',
+    '/titles/movie/x?take=AbC_dEf-1234567890xyz',
+  ]) {
+    const s = setup({ search: nextQuery(destination) });
+    s.context.initAuth();
+    await s.context.login('reader', 'password');
+    assert.deepEqual(s.redirects, ['/'], destination);
+  }
+});
+
+test('signing in from a friend invite returns to the invite page', async () => {
+  const s = setup({ search: nextQuery('/join/AbC_dEf-1234567890xyz') });
+  s.context.initAuth();
+  await s.context.login('reader', 'password');
+  assert.deepEqual(s.redirects, ['/join/AbC_dEf-1234567890xyz']);
+  for (const destination of ['/join/short', '/join/AbC_dEf-1234567890xyz/extra', '/join/AbC_dEf-1234567890xyz?x=1', '//evil/join/AbC_dEf-1234567890xyz']) {
+    const other = setup({ search: nextQuery(destination) });
+    other.context.initAuth();
+    await other.context.login('reader', 'password');
+    assert.deepEqual(other.redirects, ['/'], destination);
+  }
+});
+
+test('signing up from an invite link sends the invite token once', async () => {
+  const token = 'AbC_dEf-1234567890xyz';
+  const s = setup({ search: `?invite=${token}` });
+  s.context.initAuth();
+  await s.context.register('reader@example.com', 'reader', 'secret-password');
+  const body = JSON.parse(s.requests.find(r => r.url.endsWith('/auth/register')).options.body);
+  assert.equal(body.invite, token);
+  assert.equal(s.storage.has('omnitrackr_friend_invite'), false);  // used up
+  for (const search of ['?invite=bad', `?invite=${token}&invite=${token}`, '']) {
+    const plain = setup({ search });
+    plain.context.initAuth();
+    await plain.context.register('reader@example.com', 'reader', 'secret-password');
+    const sent = JSON.parse(plain.requests.find(r => r.url.endsWith('/auth/register')).options.body);
+    assert.equal('invite' in sent, false, search);
+  }
+});
+
+test('Daily, Pick for me, tier list, "If you liked" and dashboard-card destinations come back after login', async () => {
+  for (const destination of ['/daily', '/daily/12', '/pick', '/tier-list', '/if-you-liked/the-dark-knight',
+    '/#challenge', '/#release-calendar']) {
+    const s = setup({ search: nextQuery(destination) });
+    s.context.initAuth();
+    await s.context.login('reader', 'password');
+    assert.deepEqual(s.redirects, [destination], destination);
+  }
+  for (const destination of ['/daily/0', '/daily/x', '/daily/', '/pick/x', '/if-you-liked/', '/if-you-liked/A',
+    '/if-you-liked/a/b', '/#other', '/#challenge\n', '//daily']) {
+    const s = setup({ search: nextQuery(destination) });
+    s.context.initAuth();
+    await s.context.login('reader', 'password');
+    assert.deepEqual(s.redirects, ['/'], destination);
+  }
+});
+
+test('signing in from a shared list link returns to that list', async () => {
+  for (const destination of ['/lists', '/lists/42', '/lists/join/AbC_dEf-1234567890xyz']) {
+    const s = setup({ search: nextQuery(destination) });
+    s.context.initAuth();
+    await s.context.login('reader', 'password');
+    assert.deepEqual(s.redirects, [destination]);
+  }
+  for (const destination of ['/lists/0', '/lists/join/short', '/lists/42/extra', '/lists/join/AbC_dEf-1234567890xyz?x=1', '//evil/lists']) {
+    const other = setup({ search: nextQuery(destination) });
+    other.context.initAuth();
+    await other.context.login('reader', 'password');
+    assert.deepEqual(other.redirects, ['/'], destination);
+  }
 });

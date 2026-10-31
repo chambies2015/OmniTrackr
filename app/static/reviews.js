@@ -141,6 +141,20 @@ function reviewText(tag, className, value) {
   return element;
 }
 
+const SUPPORTER_ACCENTS = new Set(['teal', 'amber', 'rose', 'sky', 'emerald', 'coral', 'gold']);
+
+function supporterChip(badge) {
+  const chip = reviewText('a', 'supporter-chip', '');
+  if (SUPPORTER_ACCENTS.has(badge.accent)) chip.classList.add(`supporter-chip--${badge.accent}`);
+  chip.href = '/supporters';
+  const who = badge.founding ? 'Founding supporter of OmniTrackr' : 'Supporting OmniTrackr';
+  chip.title = badge.since ? `${who} on Ko-fi since ${badge.since}` : 'Supports OmniTrackr on Ko-fi';
+  const heart = reviewText('span', '', '♥');
+  heart.setAttribute('aria-hidden', 'true');
+  chip.append(heart, ' Supporter');
+  return chip;
+}
+
 function reviewImageUrl(value) {
   if (typeof value !== 'string') return '/static/poster-placeholder.svg';
   if (value.startsWith('/') && !value.startsWith('//') && !value.includes('\\')) return value;
@@ -198,20 +212,32 @@ function createReviewCard(review) {
   card.appendChild(header);
   const fullText = review.review.trim();
   const long = fullText.length > 420;
-  card.appendChild(reviewText('p', 'review-preview', long ? `${fullText.slice(0, 417).trimEnd()}…` : fullText));
+  // Reviews marked as containing spoilers stay folded until the reader opens them.
+  let body = card;
+  if (review.spoilers === true) {
+    body = reviewText('details', 'review-spoiler', '');
+    const summary = reviewText('summary', '', ' This review gives away plot details. Show it');
+    summary.prepend(reviewText('span', 'review-spoiler__tag', 'Spoilers'));
+    body.appendChild(summary);
+    card.appendChild(body);
+  }
+  body.appendChild(reviewText('p', 'review-preview', long ? `${fullText.slice(0, 417).trimEnd()}…` : fullText));
   if (long && !isStandalone) {
     const details = reviewText('details', 'review-full-text', '');
     details.append(reviewText('summary', '', 'Read full review'), reviewText('p', '', fullText));
-    card.appendChild(details);
+    body.appendChild(details);
   }
   const meta = reviewText('div', 'review-meta', '');
-  meta.appendChild(reviewText('span', 'review-author', `By ${review.username || 'Community member'}`));
+  const author = reviewText('span', 'review-author', `By ${review.username || 'Community member'}`);
+  if (review.supporter) author.appendChild(supporterChip(review.supporter));
+  meta.appendChild(author);
   if (review.rating !== null && review.rating !== undefined) {
     meta.appendChild(reviewText('span', 'review-rating', `Rating: ${review.rating}/10`));
   }
   card.appendChild(meta);
   const actions = reviewText('div', 'review-card-actions', '');
   const save = reviewText('a', 'review-save-link', 'Save to my library');
+  save.rel = 'nofollow';
   save.href = `/reviews/${encodeURIComponent(review.id)}/save?category=${encodeURIComponent(review.category)}`;
   save.setAttribute('aria-label', `Save ${review.title} to my library`);
   actions.appendChild(save);

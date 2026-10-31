@@ -3,7 +3,7 @@ const { test } = require('node:test');
 const assert = require('node:assert/strict');
 const fs = require('node:fs');
 const vm = require('node:vm');
-const source = fs.readFileSync(require('node:path').join(__dirname, '../app/static/app.js'), 'utf8');
+const source = require('./helpers/dashboard_source.cjs');
 
 function setup() {
   const elements = new Map();
@@ -14,7 +14,7 @@ function setup() {
     });
     return elements.get(id);
   };
-  const categories = ['movies', 'tv-shows', 'anime', 'video-games', 'music', 'books'];
+  const categories = ['movies', 'tv-shows', 'anime', 'video-games', 'music', 'books', 'manga', 'podcasts', 'audiobooks'];
   const row = { classList: { add() {} }, focus() { this.focused = true; }, scrollIntoView() {} };
   const context = vm.createContext({
     document: {
@@ -28,9 +28,9 @@ function setup() {
     getTabButton: () => ({ style: {} }),
     switchTab: async tab => { context.openedTab = tab; },
     isLoadingMovies: false, isLoadingTVShows: false, isLoadingAnime: false,
-    isLoadingVideoGames: false, isLoadingMusic: false, isLoadingBooks: false,
+    isLoadingVideoGames: false, isLoadingMusic: false, isLoadingBooks: false, isLoadingManga: false, isLoadingPodcasts: false, isLoadingAudiobooks: false,
     todaysPickOffset: 0, todaysPickCandidateCount: 0, todaysPickRequest: 0,
-    todaysPickSelection: null, returnDeckActive: false,
+    todaysPickSelection: null, todaysPickSkips: 0, returnDeckActive: false,
     editingRowId: null,
     libraryPages: new Map(), libraryFilters: new Map(), renderLibraryFilters() {},
     libraryPageConfig: tab => [tab + 'Table', tab + 'Sort'],
@@ -84,4 +84,18 @@ test('Open it focuses the exact item ID in each media category', async () => {
     assert.ok(context.selector.includes(`data-next-up-category="${category}"`));
     assert.equal(row.focused, true);
   }
+});
+
+test('a pick already listed in Continue is skipped, at most twice in a row', () => {
+  const { context } = setup();
+  const shown = [{ dataset: { pulseTab: 'movies', pulseItemId: '7' } }];
+  context.document.querySelectorAll = selector => (selector.startsWith('#libraryPulseContinue') ? shown : []);
+  let refreshes = 0;
+  context.refreshTodaysPick = () => { refreshes += 1; };
+  const repeated = { pick: { id: 7, category: 'movies', title: 'Past Lives' }, candidate_count: 5 };
+  context.renderTodaysPick(repeated);
+  context.renderTodaysPick(repeated);
+  context.renderTodaysPick(repeated);
+  assert.equal(refreshes, 2);
+  assert.equal(context.todaysPickOffset, 2);
 });

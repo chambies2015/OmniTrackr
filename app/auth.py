@@ -46,17 +46,24 @@ def verify_password(plain_password: str, hashed_password: str) -> bool:
         return False
 
 
-def validate_password_strength(password: str) -> tuple[bool, str]:
+def validate_password_strength(password: str, username: str = "", email: str = "") -> tuple[bool, str]:
     """
-    Validate password strength.
-    
+    Validate a newly chosen password.
+
+    Follows current guidance (NIST SP 800-63B): a minimum length and a check
+    against common passwords, instead of symbol/uppercase rules that push people
+    toward predictable passwords. Existing passwords are never re-checked.
+
     Returns:
         (is_valid, error_message)
     """
+    from .signup_rules import password_problem
     if len(password.encode("utf-8")) > 72:
         return False, "Password must be no more than 72 UTF-8 bytes long"
     if ENVIRONMENT != "production":
         return True, ""
+    problem = password_problem(password, username, email)
+    return (False, problem) if problem else (True, "")
     if len(password) < 8:
         return False, "Password must be at least 8 characters long"
     if len(password) > 128:
@@ -79,17 +86,22 @@ def get_password_hash(password: str) -> str:
 
 
 def hash_token(token: str) -> str:
-    """Hash a token for secure storage."""
-    salt = bcrypt.gensalt()
-    return bcrypt.hashpw(token.encode('utf-8'), salt).decode('utf-8')
+    """Bind every byte of a signed reset credential, including its signature."""
+    return "sha256$" + hashlib.sha256(token.encode("utf-8")).hexdigest()
 
 
 def verify_token_hash(token: str, hashed_token: str) -> bool:
-    """Verify a token against its hash using constant-time comparison."""
+    """Check current verifiers and unambiguous legacy bcrypt verifiers."""
     try:
-        return bcrypt.checkpw(token.encode('utf-8'), hashed_token.encode('utf-8'))
-    except Exception:
-        return False
+        if hashed_token.startswith("sha256$"):
+            return hmac.compare_digest(hash_token(token), hashed_token)
+        # bcrypt ignored the suffix of older long credentials. Those links
+        # must be reissued because the stored verifier cannot bind every byte.
+        if hashed_token.startswith(("$2a$", "$2b$", "$2y$")) and len(token.encode("utf-8")) <= 72:
+            return bcrypt.checkpw(token.encode("utf-8"), hashed_token.encode("utf-8"))
+    except (TypeError, ValueError, AttributeError):
+        pass
+    return False
 
 
 def create_access_token(data: dict, expires_delta: Optional[timedelta] = None) -> str:
@@ -149,6 +161,48 @@ def set_auth_cookie(response, access_token: str) -> None:
         samesite="lax",
         path="/",
     )
+
+
+# Marks the browser that created an account, so opening the verification link in that
+# same browser can sign the new member straight in (no second password entry).
+# The cookie alone grants nothing: it only counts together with a valid
+# verification token for the same account.
+PENDING_SIGNUP_COOKIE = "omnitrackr_pending_signup"
+PENDING_SIGNUP_MAX_AGE_SECONDS = 48 * 3600
+
+
+def _pending_signup_serializer():
+    from itsdangerous import URLSafeTimedSerializer
+    return URLSafeTimedSerializer(SECRET_KEY, salt="pending-signup")
+
+
+def set_pending_signup_cookie(response, user_id: int) -> None:
+    response.set_cookie(
+        key=PENDING_SIGNUP_COOKIE,
+        value=_pending_signup_serializer().dumps({"uid": int(user_id)}),
+        max_age=PENDING_SIGNUP_MAX_AGE_SECONDS,
+        httponly=True,
+        secure=ENVIRONMENT == "production",
+        samesite="lax",
+        path="/auth",
+    )
+
+
+def clear_pending_signup_cookie(response) -> None:
+    response.delete_cookie(key=PENDING_SIGNUP_COOKIE, path="/auth", samesite="lax",
+                           secure=ENVIRONMENT == "production", httponly=True)
+
+
+def pending_signup_user_id(value: Optional[str]) -> Optional[int]:
+    """The account id this browser just created, or None if absent, expired or tampered."""
+    if not value or len(value) > 512:
+        return None
+    try:
+        data = _pending_signup_serializer().loads(value, max_age=PENDING_SIGNUP_MAX_AGE_SECONDS)
+        uid = data.get("uid") if isinstance(data, dict) else None
+        return uid if isinstance(uid, int) and uid > 0 else None
+    except Exception:
+        return None
 
 
 def decode_access_token(token: str) -> Optional[dict]:

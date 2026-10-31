@@ -12,12 +12,14 @@ const DISCOVER_AUTH_RETURN_TTL = 24 * 60 * 60 * 1000;
 let discoverAuthReturnContext = null;
 const DEMO_START_KEY = 'omnitrackr_demo_start';
 let demoStartContext = null;
+// Where a newcomer was headed before signing up: the demo, or importing an existing library.
+const START_INTENTS = ['demo', 'import'];
 // Authentication is also used by the standalone public landing page, which
 // intentionally does not load the much larger private dashboard bundle.
 const AUTH_IS_LOCAL = (location.protocol === 'file:' || location.origin === 'null' || location.origin === '');
 const AUTH_API_BASE = AUTH_IS_LOCAL ? 'http://127.0.0.1:8000' : '';
 
-// Keep a visitor's chosen Discover, review, or collection save page through
+// Keep a visitor's chosen Discover, review, title, or collection page through
 // same-tab registration and email verification. Returning only opens a preview;
 // saving always requires the visitor's explicit confirmation on that page.
 function validateDiscoverAuthReturn(value) {
@@ -29,6 +31,19 @@ function validateDiscoverAuthReturn(value) {
     if (review && review[0] === value && Number(review[1]) <= 2147483647) return value;
     const radar = value.match(/^\/release-radar(?:\/(?:movies|tv|anime|games)(?:\/(?:\d{4}-\d{2}|(?:winter|spring|summer|fall)-\d{4}))?)?$/);
     if (radar && radar[0] === value) return value;
+    const title = value.match(/^\/titles\/(?:movie|tv|anime|game|album|book)\/[a-z0-9-]{1,130}(?:\?take=[A-Za-z0-9_-]{16,64})?#write-review$/);
+    if (title && title[0] === value) return value;
+    const invite = value.match(/^\/join\/[A-Za-z0-9_-]{16,32}$/);
+    if (invite && invite[0] === value) return value;
+    // Shared lists: the list's join link, the member's lists and one list.
+    const sharedList = value.match(/^\/lists(?:\/join\/[A-Za-z0-9_-]{16,32}|\/[1-9]\d{0,9})?$/);
+    if (sharedList && sharedList[0] === value) return value;
+    // Group polls: the poll page and the page that makes them.
+    const poll = value.match(/^\/tonight(?:\/[A-Za-z0-9_-]{16,32})?$/);
+    if (poll && poll[0] === value) return value;
+    // Daily, Pick for me, the start page, tier lists, "If you liked" and "In order" guides and the dashboard cards they link to.
+    const tool = value.match(/^(?:\/daily(?:\/[1-9]\d{0,4})?|\/pick|\/start|\/tier-list|\/if-you-liked\/[a-z0-9-]{1,80}|\/in-order\/[a-z0-9-]{1,80}|\/#challenge|\/#release-calendar)$/);
+    if (tool && tool[0] === value) return value;
     const collection = value.match(/^\/collections\/public\/([1-9]\d{0,9})\/save$/);
     return collection && collection[0] === value && Number(collection[1]) <= 2147483647 ? value : null;
 }
@@ -83,10 +98,10 @@ function captureDiscoverAuthReturn() {
 
 function consumeDiscoverAuthReturn() {
     const path = getDiscoverAuthReturn();
-    const startDemo = getDemoStartIntent();
+    const start = getStartIntent();
     clearDiscoverAuthReturn();
     clearDemoStartIntent();
-    return path || (startDemo ? '/?start=demo' : '/');
+    return path || (start ? `/?start=${start}` : '/');
 }
 
 function clearDemoStartIntent() {
@@ -99,18 +114,60 @@ function clearDemoStartIntent() {
 }
 
 function getDemoStartIntent() {
+    return getStartIntent() !== null;
+}
+
+function getStartIntent() {
     try {
         const context = demoStartContext || JSON.parse(sessionStorage.getItem(DEMO_START_KEY));
         const now = Date.now();
-        if (context?.source === 'demo' && Number.isFinite(context.created_at)
+        if (START_INTENTS.includes(context?.source) && Number.isFinite(context.created_at)
             && context.created_at <= now && now - context.created_at < DISCOVER_AUTH_RETURN_TTL) {
-            return true;
+            return context.source;
         }
     } catch (error) {
         // Ignore expired, malformed, or unavailable session state.
     }
     clearDemoStartIntent();
-    return false;
+    return null;
+}
+
+// A friend's /join link sends visitors to /?invite=<token>#signup; signing up from
+// this tab sends the token along so the two become friends once the email is verified.
+const FRIEND_INVITE_KEY = 'omnitrackr_friend_invite';
+
+function validFriendInvite(value) {
+    return typeof value === 'string' && /^[A-Za-z0-9_-]{16,32}$/.test(value) ? value : null;
+}
+
+function captureFriendInvite() {
+    if (window.location.pathname !== '/') return;
+    const values = new URLSearchParams(window.location.search).getAll('invite');
+    const token = values.length === 1 ? validFriendInvite(values[0]) : null;
+    if (!token) return;
+    try {
+        sessionStorage.setItem(FRIEND_INVITE_KEY, token);
+    } catch (error) {
+        // The invite still applies while this page stays open.
+    }
+    window.omnitrackrFriendInvite = token;
+}
+
+function getFriendInvite() {
+    try {
+        return validFriendInvite(window.omnitrackrFriendInvite) || validFriendInvite(sessionStorage.getItem(FRIEND_INVITE_KEY));
+    } catch (error) {
+        return validFriendInvite(window.omnitrackrFriendInvite);
+    }
+}
+
+function clearFriendInvite() {
+    window.omnitrackrFriendInvite = null;
+    try {
+        sessionStorage.removeItem(FRIEND_INVITE_KEY);
+    } catch (error) {
+        // Nothing stored.
+    }
 }
 
 function captureDemoStartIntent() {
@@ -124,11 +181,11 @@ function captureDemoStartIntent() {
     if (!params.has('start')) return;
     clearDemoStartIntent();
     const values = params.getAll('start');
-    if (values.length !== 1 || values[0] !== 'demo' || getDiscoverAuthReturn()
+    if (values.length !== 1 || !START_INTENTS.includes(values[0]) || getDiscoverAuthReturn()
         || ['token', 'reset_token', 'email_verified', 'password_reset', 'email_change_token', 'email_change']
             .some(key => params.has(key))) return;
     // This is navigation-only state: no demo titles, notes, or credentials cross over.
-    demoStartContext = { source: 'demo', created_at: Date.now() };
+    demoStartContext = { source: values[0], created_at: Date.now() };
     try {
         sessionStorage.setItem(DEMO_START_KEY, JSON.stringify(demoStartContext));
     } catch (error) {
@@ -140,23 +197,65 @@ function captureDemoStartIntent() {
 // Token Management
 // ============================================================================
 
+// Remembers that this browser has signed in before (kept after logging out), so the
+// homepage can offer "Log in" first to members and "Create account" first to newcomers.
+const KNOWN_MEMBER_KEY = 'omnitrackr_known_member';
+
 function saveAuthData(token, user) {
-    localStorage.removeItem(TOKEN_KEY);
-    localStorage.setItem(USER_KEY, JSON.stringify(user));
+    // The cookie is authoritative. Keep this tab usable if browser storage is denied,
+    // and never reuse a legacy token that could not be removed during a new login.
+    getUser.current = user;
+    recoverCookieSession.generation = (recoverCookieSession.generation || 0) + 1;
+    let needsFallback = Boolean(getUser.storageBlocked);
+    try { localStorage.removeItem(TOKEN_KEY); } catch (_) { needsFallback = true; }
+    try { localStorage.setItem(USER_KEY, JSON.stringify(user)); } catch (_) { needsFallback = true; }
+    try { localStorage.setItem(KNOWN_MEMBER_KEY, '1'); } catch (_) { /* optional */ }
+    if (!needsFallback) delete getUser.current;
+    try {
+        if (needsFallback) sessionStorage.setItem('omnitrackr_session_user', JSON.stringify(user));
+        else sessionStorage.removeItem('omnitrackr_session_user');
+    } catch (_) { /* The in-memory user and HttpOnly cookie still work. */ }
+}
+
+function knownMember() {
+    if (getUser()) return true;
+    try {
+        return Boolean(localStorage.getItem(KNOWN_MEMBER_KEY) || localStorage.getItem(TOKEN_KEY));
+    } catch (_) { return false; }
 }
 
 function getToken() {
-    return localStorage.getItem(TOKEN_KEY);
+    if (Object.hasOwn(getUser, 'current') || getSessionAuthUser()) return null;
+    try { return localStorage.getItem(TOKEN_KEY); }
+    catch (_) { getUser.storageBlocked = true; return null; }
+}
+
+function getSessionAuthUser() {
+    try {
+        const user = JSON.parse(sessionStorage.getItem('omnitrackr_session_user') || 'null');
+        return user && typeof user === 'object' && !Array.isArray(user) ? user : null;
+    } catch (_) { return null; }
 }
 
 function getUser() {
-    const userStr = localStorage.getItem(USER_KEY);
-    return userStr ? JSON.parse(userStr) : null;
+    if (Object.hasOwn(getUser, 'current')) return getUser.current;
+    const fallback = getSessionAuthUser();
+    if (fallback) return fallback;
+    try {
+        const value = JSON.parse(localStorage.getItem(USER_KEY) || 'null');
+        return value && typeof value === 'object' && !Array.isArray(value) ? value : null;
+    } catch (_) { getUser.storageBlocked = true; return null; }
 }
 
 function clearAuth({ preserveReturn = false } = {}) {
-    localStorage.removeItem(TOKEN_KEY);
-    localStorage.removeItem(USER_KEY);
+    // Clear the authoritative in-memory state even if persisted values cannot be removed.
+    if (typeof getUser === 'function') getUser.current = null;
+    if (typeof recoverCookieSession === 'function') {
+        recoverCookieSession.generation = (recoverCookieSession.generation || 0) + 1;
+    }
+    try { sessionStorage.removeItem('omnitrackr_session_user'); } catch (_) {}
+    try { localStorage.removeItem(TOKEN_KEY); } catch (_) {}
+    try { localStorage.removeItem(USER_KEY); } catch (_) {}
     // Storage events do not fire in this tab, including when a background request expires.
     window.OmniProgress?.reset();
     window.OmniImportStudio?.reset();
@@ -165,6 +264,14 @@ function clearAuth({ preserveReturn = false } = {}) {
     window.resetFriendsPanel?.();
     window.resetSiteStatsLink?.();
     window.resetForYou?.();
+    window.resetYearGoals?.();
+    window.resetFriendRecs?.();
+    window.resetFriendFeed?.();
+    window.resetInstallCard?.();
+    window.resetMonthlyChallenge?.();
+    window.resetSeasonCard?.();
+    window.resetOnThisDay?.();
+    window.resetBadges?.();
     if (!preserveReturn) clearDiscoverAuthReturn();
     clearDemoStartIntent();
     try {
@@ -178,12 +285,58 @@ function isAuthenticated() {
     return !!getUser() || !!getToken();
 }
 
+function canRecoverCookieSession() {
+    // The server only sends the private shell for a signed-in cookie, so recover the member when
+    // browser storage is denied or was emptied while the cookie lived on (Safari clears it after a week).
+    return !Object.hasOwn(getUser, 'current') && (getUser.storageBlocked || !getUser())
+        && document.documentElement?.dataset?.publicShell !== 'true'
+        && Boolean(document.getElementById('mainContainer'));
+}
+
+function recoverCookieSession() {
+    if (!canRecoverCookieSession()) return Promise.resolve(false);
+    if (recoverCookieSession.pending) return recoverCookieSession.pending;
+    const generation = recoverCookieSession.generation || 0;
+    const controller = new AbortController();
+    let timeout;
+    const pending = (async () => {
+        try {
+            const user = await Promise.race([
+                (async () => {
+                    const response = await fetch(`${AUTH_API_BASE}/account/me`, {
+                        credentials: 'same-origin', cache: 'no-store', signal: controller.signal,
+                    });
+                    if (!response.ok) return null;
+                    return response.json();
+                })(),
+                new Promise((_, reject) => {
+                    timeout = setTimeout(() => { controller.abort(); reject(new Error('Session recovery timed out')); }, 10000);
+                }),
+            ]);
+            if (generation !== (recoverCookieSession.generation || 0)) return false;
+            if (!user || !Number.isSafeInteger(user.id) || user.id < 1 || typeof user.username !== 'string') return false;
+            saveAuthData(null, user);
+            return true;
+        } catch (_) { return false; }
+        finally { clearTimeout(timeout); }
+    })();
+    recoverCookieSession.pending = pending;
+    pending.finally(() => {
+        if (recoverCookieSession.pending === pending) recoverCookieSession.pending = null;
+    });
+    return pending;
+}
+
 //  ============================================================================
 // Authenticated Fetch Wrapper
 // ============================================================================
 
 async function authenticatedFetch(url, options = {}) {
-    const token = getToken();
+    let token = getToken();
+    if (!isAuthenticated() && canRecoverCookieSession()) {
+        await recoverCookieSession();
+        token = getToken();
+    }
 
     if (!isAuthenticated()) {
         showAuthModal();
@@ -225,27 +378,252 @@ async function authenticatedFetch(url, options = {}) {
 // Authentication API Calls
 // ============================================================================
 
+// Turn any API error body into one sentence a person can act on.
+function authErrorMessage(body, fallback) {
+    // Rate limits answer {"error": "Rate limit exceeded: ..."} with no detail.
+    if (body && typeof body.error === 'string' && /rate limit/i.test(body.error)) {
+        return 'Too many attempts. Please wait a minute and try again.';
+    }
+    const detail = body && body.detail;
+    if (typeof detail === 'string' && detail.trim()) return detail;
+    if (Array.isArray(detail) && detail.length) {
+        const first = detail[0] || {};
+        const field = Array.isArray(first.loc) ? String(first.loc[first.loc.length - 1] || '') : '';
+        const labels = { email: 'Email', username: 'Username', password: 'Password' };
+        const label = labels[field] || 'This field';
+        if (first.type === 'string_too_short' || /at least/i.test(first.msg || '')) {
+            const min = first.ctx && first.ctx.min_length;
+            return `${label} is too short${min ? ` (at least ${min} characters)` : ''}.`;
+        }
+        if (first.type === 'string_too_long' || /at most/i.test(first.msg || '')) {
+            const max = first.ctx && first.ctx.max_length;
+            return `${label} is too long${max ? ` (at most ${max} characters)` : ''}.`;
+        }
+        if (first.type === 'missing') return `${label} is required.`;
+        return `${label}: ${String(first.msg || 'please check this field').replace(/^Value error, /, '')}`;
+    }
+    return fallback;
+}
+
+// Anonymous sign-up funnel counters (see /site-stats). Never blocks anything.
+// Funnel steps count once per visit (this tab's session), not once per page, so a
+// guest who opens sign-up on three pages is still one person starting to sign up.
+const reportedFunnelEvents = new Set();
+const FUNNEL_ONCE_PER_VISIT = new Set(['signup_form_opened', 'hero_signup_clicked', 'title_search_used', 'guest_pick_added', 'guest_list_signup']);
+const FUNNEL_SESSION_KEY = 'omnitrackr_funnel_sent';
+function funnelSentThisVisit(event) {
+    if (!FUNNEL_ONCE_PER_VISIT.has(event)) return false;
+    try {
+        const sent = JSON.parse(sessionStorage.getItem(FUNNEL_SESSION_KEY) || '[]');
+        if (Array.isArray(sent) && sent.includes(event)) return true;
+        sessionStorage.setItem(FUNNEL_SESSION_KEY, JSON.stringify([...(Array.isArray(sent) ? sent : []), event].slice(-20)));
+    } catch (error) { /* storage blocked: once per page instead */ }
+    return false;
+}
+function reportFunnelEvent(event) {
+    if (reportedFunnelEvents.has(event)) return;
+    reportedFunnelEvents.add(event);
+    if (funnelSentThisVisit(event)) return;
+    try {
+        // A beacon never delays the page or navigation.
+        if (typeof navigator !== 'undefined' && typeof navigator.sendBeacon === 'function' && typeof Blob === 'function') {
+            navigator.sendBeacon('/api/funnel', new Blob([JSON.stringify({ event })], { type: 'application/json' }));
+        }
+    } catch (error) { /* analytics only */ }
+}
+window.reportFunnelEvent = reportFunnelEvent;
+
+const USERNAME_PATTERN = /^[A-Za-z0-9][A-Za-z0-9_.-]{2,29}$/;
+
+const EMAIL_PATTERN = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+
+// Mirrors app/signup_rules.py so most mistakes are caught before the round trip.
+// Returns the field to point at and what to say, or null.
+function signupFieldProblem(email, username, password, confirmPassword) {
+    if (!email || !EMAIL_PATTERN.test(email)) return { field: 'registerEmail', message: 'Enter the email address you want to use, like name@example.com.' };
+    const trimmed = (username || '').trim();
+    if (trimmed.length < 3 || trimmed.length > 30) return { field: 'registerUsername', message: 'Usernames need 3–30 characters.' };
+    if (!USERNAME_PATTERN.test(trimmed)) return { field: 'registerUsername', message: 'Usernames can use letters, numbers, dots, dashes or underscores, and must start with a letter or number.' };
+    if ((password || '').length < 8) return { field: 'registerPassword', message: 'Use at least 8 characters for your password.' };
+    if (password !== confirmPassword) return { field: 'registerConfirmPassword', message: "The two passwords don't match." };
+    return null;
+}
+
+function signupProblem(email, username, password, confirmPassword) {
+    const problem = signupFieldProblem(email, username, password, confirmPassword);
+    return problem ? problem.message : null;
+}
+
+// Which sign-up box a server answer is about, so the message can sit under it.
+function signupFieldFor(message) {
+    const text = String(message || '').toLowerCase();
+    if (/password/.test(text)) return 'registerPassword';
+    if (/username/.test(text)) return 'registerUsername';
+    if (/e-?mail/.test(text)) return 'registerEmail';
+    return null;
+}
+
+// ----------------------------------------------------------------------------
+// Form helpers shared by the sign-in forms and account settings
+// ----------------------------------------------------------------------------
+
+// Show a message under one box. The box points at it with aria-describedby, so a
+// screen reader reads it when focus lands there. Returns false when the page has
+// no spot for it, so the caller can fall back to the message at the top.
+function showFieldError(fieldId, message, { focus = true } = {}) {
+    const field = document.getElementById(fieldId);
+    const slot = document.getElementById(`${fieldId}Error`);
+    if (!field || !slot) return false;
+    slot.textContent = message;
+    slot.hidden = false;
+    if (typeof field.setAttribute === 'function') field.setAttribute('aria-invalid', 'true');
+    if (focus && typeof field.focus === 'function') field.focus();
+    return true;
+}
+
+function clearFieldError(fieldId) {
+    const field = document.getElementById(fieldId);
+    const slot = document.getElementById(`${fieldId}Error`);
+    if (slot) { slot.textContent = ''; slot.hidden = true; }
+    if (field && typeof field.removeAttribute === 'function') field.removeAttribute('aria-invalid');
+}
+
+function clearFormErrors(form) {
+    if (!form || typeof form.querySelectorAll !== 'function') return;
+    form.querySelectorAll('[aria-invalid="true"]').forEach(field => clearFieldError(field.id));
+}
+
+// A rough guide while typing. The server's check (signup_rules.password_problem)
+// decides; this only warns early about the obvious cases it turns down.
+const GUESSABLE_PASSWORD = /^(password|passw0rd|p@ssw0rd|qwerty|qwertyuiop|letmein|welcome|iloveyou|admin|abc|omnitrackr|changeme|test)[0-9!.]*$/;
+
+function passwordStrength(password, { username = '', email = '' } = {}) {
+    const value = String(password || '');
+    if (!value) return { level: 0, text: '' };
+    if (value.length < 8) {
+        const left = 8 - value.length;
+        return { level: 1, text: `${left} more character${left === 1 ? '' : 's'} to go` };
+    }
+    const lowered = value.toLowerCase();
+    const name = String(username || '').trim().toLowerCase();
+    const mailbox = String(email || '').split('@')[0].trim().toLowerCase();
+    const sequence = '0123456789abcdefghijklmnopqrstuvwxyz';
+    if (GUESSABLE_PASSWORD.test(lowered) || new Set(lowered).size <= 2 || sequence.includes(lowered)
+        || (name.length >= 3 && lowered.includes(name) && lowered.length - name.length < 4)
+        || (mailbox.length >= 3 && lowered === mailbox)) {
+        return { level: 1, text: 'Easy to guess. Try a short phrase instead.' };
+    }
+    const kinds = [/[a-z]/, /[A-Z]/, /[0-9]/, /[^A-Za-z0-9]/].filter(kind => kind.test(value)).length;
+    if (value.length >= 16 || (value.length >= 12 && kinds >= 2)) return { level: 4, text: 'Strong' };
+    if (value.length >= 12 || kinds >= 3) return { level: 3, text: 'Good' };
+    return { level: 2, text: 'Okay. Longer is harder to guess.' };
+}
+
+function updatePasswordStrength(field) {
+    const meter = document.getElementById(field.dataset.passwordStrength);
+    if (!meter) return;
+    const username = document.getElementById('registerUsername');
+    const email = document.getElementById('registerEmail');
+    const result = passwordStrength(field.value, {
+        username: field.id === 'registerPassword' && username ? username.value : '',
+        email: field.id === 'registerPassword' && email ? email.value : '',
+    });
+    meter.hidden = result.level === 0;
+    meter.dataset.level = String(result.level);
+    const text = meter.querySelector('.auth-strength__text');
+    if (text) text.textContent = result.level ? `Strength: ${result.text}` : '';
+}
+
+let passwordHelpersReady = false;
+function setupPasswordHelpers() {
+    if (passwordHelpersReady || typeof document.addEventListener !== 'function') return;
+    passwordHelpersReady = true;
+    document.addEventListener('click', event => {
+        const toggle = event.target && event.target.closest ? event.target.closest('[data-password-toggle]') : null;
+        if (!toggle) return;
+        const field = document.getElementById(toggle.dataset.passwordToggle);
+        if (!field) return;
+        const show = field.type === 'password';
+        field.type = show ? 'text' : 'password';
+        toggle.textContent = show ? 'Hide' : 'Show';
+        toggle.setAttribute('aria-pressed', String(show));
+    });
+    document.addEventListener('input', event => {
+        const field = event.target;
+        if (!field || !field.id) return;
+        if (field.getAttribute && field.getAttribute('aria-invalid') === 'true') clearFieldError(field.id);
+        if (field.dataset && field.dataset.passwordStrength) updatePasswordStrength(field);
+    });
+}
+
+// A username taken from the start of the email address ("sam.lee@…" → "sam.lee"),
+// or '' when nothing usable is left. The server still checks it is free.
+function suggestUsername(email) {
+    let base = String(email || '').split('@')[0].split('+')[0].replace(/[^A-Za-z0-9_.-]/g, '').replace(/^[^A-Za-z0-9]+/, '').slice(0, 30);
+    if (base.length && base.length < 3) base = `${base}${'123'.slice(0, 3 - base.length)}`;
+    return USERNAME_PATTERN.test(base) ? base : '';
+}
+
+// Fill the username from the email until the visitor types their own.
+function setupUsernameSuggestion() {
+    const email = document.getElementById('registerEmail');
+    const username = document.getElementById('registerUsername');
+    if (!email || !username) return;
+    username.addEventListener('input', () => { username.dataset.edited = username.value ? 'true' : ''; });
+    email.addEventListener('input', () => {
+        if (username.dataset.edited === 'true') return;
+        username.value = suggestUsername(email.value);
+    });
+}
+
 async function register(email, username, password) {
+    const invite = getFriendInvite();
+    const weeklyBox = document.getElementById('registerWeekly');
+    const payload = { email, username, password };
+    if (invite) payload.invite = invite;
+    if (weeklyBox && weeklyBox.checked) payload.weekly_email = true;
     const response = await fetch(`${AUTH_API_BASE}/auth/register`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ email, username, password })
+        body: JSON.stringify(payload)
     });
 
     if (!response.ok) {
-        const error = await response.json();
-        throw new Error(error.detail || 'Registration failed');
+        const error = await response.json().catch(() => ({}));
+        throw new Error(authErrorMessage(error, 'Something went wrong creating your account. Please try again.'));
     }
 
-    const user = await response.json();
-
-    // Show success message about email verification
-    displayAuthSuccess('Registration successful! Please check your email to verify your account. You can login once verified.');
-    
-    // Clear form
+    await response.json();
+    clearFriendInvite();
     document.getElementById('registerFormElement').reset();
-    
-    // Don't auto-redirect - let user read the message and click back to login manually
+    showVerificationSent(email);
+}
+
+// After sign-up: switch to the log-in form with the email filled in and the resend button ready.
+function showVerificationSent(email) {
+    showLoginForm(false);
+    document.getElementById('authTitle').textContent = 'Check your inbox';
+    setAuthContext('One last step before your library opens.');
+    const loginField = document.getElementById('loginUsername');
+    if (loginField) loginField.value = email;
+    let saved = 0;
+    try { saved = (JSON.parse(localStorage.getItem('omnitrackr_guest_list') || '[]') || []).length; } catch (error) { saved = 0; }
+    const keep = saved ? ` Your ${saved} saved title${saved === 1 ? '' : 's'} will be added to your library when you log in.` : '';
+    displayAuthSuccess(`Almost there! We sent a link to ${email}. Open it to activate your account (it works for 48 hours), then log in here.${keep} No email after a few minutes? Check spam, or resend it below.`);
+    const resend = document.getElementById('resendVerificationContainer');
+    if (resend) resend.style.display = 'block';
+    // Waiting for the email is a good minute to start the library: quiz answers move in at first log-in.
+    const success = document.getElementById('authSuccess');
+    if (success && typeof document.createElement === 'function' && typeof success.appendChild === 'function') {
+        const tip = document.createElement('p');
+        tip.className = 'auth-quiz-tip';
+        tip.append('While you wait: ');
+        const link = document.createElement('a');
+        link.href = '/taste-quiz';
+        link.textContent = 'take the 1-minute taste quiz';
+        tip.append(link, '. Your answers are added to your library when you log in.');
+        success.appendChild(tip);
+    }
 }
 
 async function login(username, password) {
@@ -261,7 +639,8 @@ async function login(username, password) {
     });
 
     if (!response.ok) {
-        const error = await response.json();
+        const error = await response.json().catch(() => ({}));
+        if (response.status === 429) throw new Error(authErrorMessage(error, 'Too many attempts. Please wait a minute and try again.'));
         // Check if it's an email verification error (403)
         if (response.status === 403) {
             const errorMsg = error.detail || 'Please verify your email address before logging in.';
@@ -279,6 +658,15 @@ async function login(username, password) {
     }
 
     const data = await response.json();
+    if (data && data.two_factor_required) {
+        showTwoFactorForm();
+        return;
+    }
+    finishLogin(data);
+}
+
+// A finished log-in (password, or password plus code): keep the member, then open the library.
+function finishLogin(data) {
     saveAuthData(data.access_token, data.user);
     try {
         if (
@@ -306,6 +694,10 @@ async function login(username, password) {
 
 async function logout() {
     if (confirm('Are you sure you want to logout?')) {
+        // Stop this member's phone/desktop notifications on this device first.
+        if (window.omniPush && typeof window.omniPush.forgetDevice === 'function') {
+            await window.omniPush.forgetDevice();
+        }
         try {
             await fetch(`${AUTH_API_BASE}/auth/logout`, {
                 method: 'POST',
@@ -354,6 +746,14 @@ function showAuthModal() {
     window.resetFriendsPanel?.();
     window.resetSiteStatsLink?.();
     window.resetForYou?.();
+    window.resetYearGoals?.();
+    window.resetFriendRecs?.();
+    window.resetFriendFeed?.();
+    window.resetInstallCard?.();
+    window.resetMonthlyChallenge?.();
+    window.resetSeasonCard?.();
+    window.resetOnThisDay?.();
+    window.resetBadges?.();
     
     // Hide footer for logged-in view when showing landing page
     const mainFooter = document.getElementById('mainFooter');
@@ -400,7 +800,15 @@ function showMainUI() {
         loadFriendsList();
     }
     window.refreshSiteStatsLink?.();
-    window.refreshForYou?.();
+    // home.js waits for these home cards before showing the library, so it doesn't jump,
+    // and reuses them for its first refresh instead of asking a second time.
+    const homeCards = [window.refreshForYou?.(), window.refreshYearGoals?.()];
+    window.refreshFriendRecs?.();
+    window.refreshFriendFeed?.();
+    homeCards.push(window.refreshMonthlyChallenge?.(), window.refreshSeasonCard?.(), window.refreshBadges?.(),
+        window.refreshOnThisDay?.());
+    window.dashboardHomeCards = homeCards;
+    window.refreshInstallCard?.();
     if (typeof updateNotificationCount === 'function') {
         updateNotificationCount();
         // Set up interval to refresh notification count every 30 seconds
@@ -414,71 +822,115 @@ function showMainUI() {
 }
 
 function showLoginForm(scroll = true) {
+    hideTwoFactorForm();
     document.getElementById('loginForm').style.display = 'block';
     document.getElementById('registerForm').style.display = 'none';
     document.getElementById('forgotPasswordForm').style.display = 'none';
     document.getElementById('resetPasswordForm').style.display = 'none';
     document.getElementById('resendVerificationContainer').style.display = 'none';
     document.getElementById('authTitle').textContent = 'Log in to OmniTrackr';
+    setAuthContext('Welcome back. Pick up where you left off.');
     document.getElementById('authError').textContent = '';
     document.getElementById('authSuccess').style.display = 'none';
+    clearAuthFormErrors();
     const reactivateContainer = document.getElementById('reactivateContainer');
     if (reactivateContainer) {
         reactivateContainer.style.display = 'none';
     }
-    if (scroll && document.getElementById('landingPage').style.display === 'block') {
-        setTimeout(() => {
-            document.querySelector('.landing-auth').scrollIntoView({ behavior: 'smooth', block: 'center' });
-        }, 100);
+    if (scroll) revealAuthCard();
+}
+
+// Switching forms starts each one without old messages under its boxes.
+function clearAuthFormErrors() {
+    ['loginFormElement', 'registerFormElement', 'forgotPasswordFormElement', 'resetPasswordFormElement']
+        .forEach(id => clearFormErrors(document.getElementById(id)));
+}
+
+// The line under the form title, when the page has one.
+function setAuthContext(text) {
+    const context = document.querySelector('.auth-container .auth-context');
+    if (context) context.textContent = text;
+}
+
+// Bring the form card into view: in a pop-up on the homepage (public-landing.js),
+// otherwise by scrolling to the sign-up section.
+function revealAuthCard() {
+    if (!landingVisible()) return;
+    if (window.OmniAuthDialog && window.OmniAuthDialog.open()) return;
+    setTimeout(() => {
+        document.querySelector('.landing-auth')?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    }, 100);
+}
+
+function landingVisible() {
+    const landing = document.getElementById('landingPage');
+    if (!landing) return false;
+    if (typeof getComputedStyle !== 'function') return landing.style.display === 'block';
+    return getComputedStyle(landing).display !== 'none';
+}
+
+function savedGuestTitles() {
+    try {
+        const list = JSON.parse(localStorage.getItem('omnitrackr_guest_list') || '[]');
+        return Array.isArray(list) ? list.length : 0;
+    } catch (error) {
+        return 0;
     }
 }
 
-function showRegisterForm(scroll = true) {
+// "Started signing up": the email form opening or a Google sign-up button, once per visit.
+function reportSignupStart() {
+    reportFunnelEvent('signup_form_opened');
+    if (savedGuestTitles()) reportFunnelEvent('guest_list_signup');
+}
+
+function showRegisterForm(scroll = true, { report = true } = {}) {
+    hideTwoFactorForm();
+    if (report) reportSignupStart();
     document.getElementById('loginForm').style.display = 'none';
     document.getElementById('registerForm').style.display = 'block';
     document.getElementById('forgotPasswordForm').style.display = 'none';
     document.getElementById('resetPasswordForm').style.display = 'none';
     document.getElementById('authTitle').textContent = 'Create your free account';
+    const saved = savedGuestTitles();
+    setAuthContext(saved
+        ? `Free and private by default. The ${saved === 1 ? 'title' : `${saved} titles`} you saved move${saved === 1 ? 's' : ''} into your library when you log in.`
+        : 'Free, private by default, and ready in under a minute.');
     document.getElementById('authError').textContent = '';
     document.getElementById('authSuccess').style.display = 'none';
-    if (scroll && document.getElementById('landingPage').style.display === 'block') {
-        setTimeout(() => {
-            document.querySelector('.landing-auth').scrollIntoView({ behavior: 'smooth', block: 'center' });
-        }, 100);
-    }
+    clearAuthFormErrors();
+    if (scroll) revealAuthCard();
 }
 
 function showForgotPasswordForm(scroll = true) {
+    hideTwoFactorForm();
     document.getElementById('loginForm').style.display = 'none';
     document.getElementById('registerForm').style.display = 'none';
     document.getElementById('forgotPasswordForm').style.display = 'block';
     document.getElementById('resetPasswordForm').style.display = 'none';
-    document.getElementById('authTitle').textContent = 'Reset Password';
+    document.getElementById('authTitle').textContent = 'Reset your password';
+    setAuthContext('It happens. We\'ll email you a link.');
     document.getElementById('authError').textContent = '';
     document.getElementById('authSuccess').style.display = 'none';
-    if (scroll && document.getElementById('landingPage').style.display === 'block') {
-        setTimeout(() => {
-            document.querySelector('.landing-auth').scrollIntoView({ behavior: 'smooth', block: 'center' });
-        }, 100);
-    }
+    clearAuthFormErrors();
+    if (scroll) revealAuthCard();
 }
 
 function showResetPasswordForm(resetToken = null, scroll = true) {
+    hideTwoFactorForm();
     document.getElementById('loginForm').style.display = 'none';
     document.getElementById('registerForm').style.display = 'none';
     document.getElementById('forgotPasswordForm').style.display = 'none';
     document.getElementById('resetPasswordForm').style.display = 'block';
-    document.getElementById('authTitle').textContent = 'Reset Password';
+    document.getElementById('authTitle').textContent = 'Choose a new password';
+    setAuthContext('You\'ll use it the next time you log in.');
     document.getElementById('authError').textContent = '';
     document.getElementById('authSuccess').style.display = 'none';
+    clearAuthFormErrors();
     if (resetToken) {
         document.getElementById('resetPasswordFormElement').dataset.resetToken = resetToken;
     }
-    if (scroll && document.getElementById('landingPage').style.display === 'block') {
-        setTimeout(() => {
-            document.querySelector('.landing-auth').scrollIntoView({ behavior: 'smooth', block: 'center' });
-        }, 100);
-    }
+    if (scroll) revealAuthCard();
 }
 
 function updateUserDisplay() {
@@ -592,9 +1044,21 @@ function setupAuthHandlers() {
     // Login form submission
     document.getElementById('loginFormElement').addEventListener('submit', async (e) => {
         e.preventDefault();
-        const username = document.getElementById('loginUsername').value;
+        const username = document.getElementById('loginUsername').value.trim();
         const password = document.getElementById('loginPassword').value;
+        clearFormErrors(e.target);
+        if (!username) {
+            if (!showFieldError('loginUsername', 'Enter your username or the email you signed up with.')) displayAuthError('Enter your username or email.');
+            return;
+        }
+        if (!password) {
+            if (!showFieldError('loginPassword', 'Enter your password.')) displayAuthError('Enter your password.');
+            return;
+        }
 
+        const button = e.target.querySelector('button[type="submit"]');
+        const label = button ? button.textContent : '';
+        if (button) { button.disabled = true; button.textContent = 'Logging in…'; }
         try {
             await login(username, password);
             // Hide resend button on successful login
@@ -607,22 +1071,27 @@ function setupAuthHandlers() {
             } else {
                 document.getElementById('resendVerificationContainer').style.display = 'none';
             }
+        } finally {
+            if (button) { button.disabled = false; button.textContent = label; }
         }
     });
 
-    // Resend verification email button
+    // Resend verification email button. A username can't receive mail, so ask for
+    // the email in a box right above the button instead of a browser prompt.
     document.getElementById('resendVerificationBtn').addEventListener('click', async () => {
-        const usernameOrEmail = document.getElementById('loginUsername').value;
-        
-        // Extract email - if it contains @, use it; otherwise we'll need to prompt
-        let email = usernameOrEmail;
-        if (!email || !email.includes('@')) {
-            // If username was entered, prompt for email
-            email = prompt('Please enter your email address to resend the verification email:');
-            if (!email || !email.includes('@')) {
-                displayAuthError('Please enter a valid email address.');
+        const usernameOrEmail = document.getElementById('loginUsername').value.trim();
+        const emailField = document.getElementById('resendVerificationEmail');
+        const emailBox = document.getElementById('resendVerificationEmailField');
+        let email = EMAIL_PATTERN.test(usernameOrEmail) ? usernameOrEmail : (emailField ? emailField.value.trim() : '');
+        if (!EMAIL_PATTERN.test(email)) {
+            if (emailBox && emailBox.hidden) {
+                emailBox.hidden = false;
+                if (emailField) emailField.focus();
                 return;
             }
+            displayAuthError('Enter the email address you signed up with, and we\'ll resend the link.');
+            if (emailField) emailField.focus();
+            return;
         }
 
         // Disable button while sending
@@ -647,32 +1116,42 @@ function setupAuthHandlers() {
         } finally {
             // Re-enable button
             btn.disabled = false;
-            btn.textContent = 'Resend Verification Email';
+            btn.textContent = 'Resend verification email';
         }
     });
+
+    document.getElementById('registerFormElement').addEventListener('focusin', () => reportSignupStart());
+    setupUsernameSuggestion();
 
     // Register form submission
     document.getElementById('registerFormElement').addEventListener('submit', async (e) => {
         e.preventDefault();
-        const email = document.getElementById('registerEmail').value;
-        const username = document.getElementById('registerUsername').value;
+        const email = document.getElementById('registerEmail').value.trim();
+        const username = document.getElementById('registerUsername').value.trim();
         const password = document.getElementById('registerPassword').value;
-        const confirmPassword = document.getElementById('registerConfirmPassword').value;
+        // The homepage form has a show-password button instead of a second password box.
+        const confirmField = document.getElementById('registerConfirmPassword');
+        const confirmPassword = confirmField ? confirmField.value : password;
 
-        if (password !== confirmPassword) {
-            displayAuthError('Passwords do not match');
+        clearFormErrors(e.target);
+        const problem = signupFieldProblem(email, username, password, confirmPassword);
+        if (problem) {
+            reportFunnelEvent('signup_rejected_invalid');
+            if (!showFieldError(problem.field, problem.message)) displayAuthError(problem.message);
             return;
         }
 
-        if (password.length < 6) {
-            displayAuthError('Password must be at least 6 characters');
-            return;
-        }
-
+        const button = e.target.querySelector('button[type="submit"]');
+        const label = button ? button.textContent : '';
+        if (button) { button.disabled = true; button.textContent = 'Creating your account…'; }
         try {
             await register(email, username, password);
         } catch (error) {
-            displayAuthError(error.message);
+            // "That username is taken" belongs under the username box, and so on.
+            const field = signupFieldFor(error.message);
+            if (!field || !showFieldError(field, error.message)) displayAuthError(error.message);
+        } finally {
+            if (button) { button.disabled = false; button.textContent = label; }
         }
     });
 
@@ -703,22 +1182,32 @@ function setupAuthHandlers() {
     // Forgot password form submission
     document.getElementById('forgotPasswordFormElement').addEventListener('submit', async (e) => {
         e.preventDefault();
-        const email = document.getElementById('forgotPasswordEmail').value;
+        const email = document.getElementById('forgotPasswordEmail').value.trim();
+        clearFormErrors(e.target);
+        if (!EMAIL_PATTERN.test(email)) {
+            if (!showFieldError('forgotPasswordEmail', 'Enter the email address on your account.')) displayAuthError('Enter the email address on your account.');
+            return;
+        }
 
+        const button = e.target.querySelector('button[type="submit"]');
+        const label = button ? button.textContent : '';
+        if (button) { button.disabled = true; button.textContent = 'Sending…'; }
         try {
             const response = await fetch(`${AUTH_API_BASE}/auth/request-password-reset?email=${encodeURIComponent(email)}`, {
                 method: 'POST',
             });
 
             if (response.ok) {
-                displayAuthSuccess('If that email is registered, you will receive a password reset link. Please check your email.');
+                displayAuthSuccess(`If ${email} has an account, a reset link is on its way. It can take a few minutes, so check spam too.`);
                 document.getElementById('forgotPasswordFormElement').reset();
             } else {
-                const error = await response.json();
-                displayAuthError(error.detail || 'Failed to send reset link');
+                const error = await response.json().catch(() => ({}));
+                displayAuthError(authErrorMessage(error, "We couldn't send the reset link. Please try again."));
             }
         } catch (error) {
-            displayAuthError('Failed to send reset link. Please try again.');
+            displayAuthError("We couldn't send the reset link. Check your connection and try again.");
+        } finally {
+            if (button) { button.disabled = false; button.textContent = label; }
         }
     });
 
@@ -728,13 +1217,14 @@ function setupAuthHandlers() {
         const newPassword = document.getElementById('newPassword').value;
         const confirmPassword = document.getElementById('confirmNewPassword').value;
 
-        if (newPassword !== confirmPassword) {
-            displayAuthError('Passwords do not match');
+        clearFormErrors(e.target);
+        if (newPassword.length < 8) {
+            if (!showFieldError('newPassword', 'Use at least 8 characters for your password.')) displayAuthError('Use at least 8 characters for your password.');
             return;
         }
 
-        if (newPassword.length < 6) {
-            displayAuthError('Password must be at least 6 characters');
+        if (newPassword !== confirmPassword) {
+            if (!showFieldError('confirmNewPassword', "The two passwords don't match.")) displayAuthError("The two passwords don't match.");
             return;
         }
 
@@ -745,7 +1235,7 @@ function setupAuthHandlers() {
                      urlParams.get('token');
 
         if (!token) {
-            displayAuthError('Invalid reset link');
+            displayAuthError('This reset link is missing its code. Open the newest link from your email, or ask for a new one.');
             return;
         }
 
@@ -764,13 +1254,15 @@ function setupAuthHandlers() {
                 setTimeout(() => {
                     window.history.replaceState({}, document.title, window.location.pathname);
                     showLoginForm();
+                    displayAuthSuccess(data.message);
                 }, 2000);
             } else {
-                const error = await response.json();
-                displayAuthError(error.detail || 'Failed to reset password');
+                const error = await response.json().catch(() => ({}));
+                const message = authErrorMessage(error, "We couldn't save that password. The link may have expired, so ask for a new one if this keeps happening.");
+                if (!/password/i.test(message) || !showFieldError('newPassword', message)) displayAuthError(message);
             }
         } catch (error) {
-            displayAuthError('Failed to reset password. Please try again.');
+            displayAuthError("We couldn't save that password. Check your connection and try again.");
         }
     });
 
@@ -785,13 +1277,215 @@ function setupAuthHandlers() {
 // Initialization
 // ============================================================================
 
+// ============================================================================
+// Two-factor code step
+// ============================================================================
+
+// After a correct password (or Google), accounts with two-factor sign-in on are
+// asked for a code. The server keeps the half-finished sign-in in an HttpOnly
+// cookie for 10 minutes, so this form only sends the code.
+let twoFactorRecoveryMode = false;
+// Google already used the friend invite on the server, as finishGoogleSignIn assumes.
+let twoFactorFromGoogle = false;
+
+function hideTwoFactorForm() {
+    const form = document.getElementById('twoFactorForm');
+    if (form) form.style.display = 'none';
+}
+
+function setTwoFactorMode(recovery) {
+    twoFactorRecoveryMode = Boolean(recovery);
+    const prompt = document.getElementById('twoFactorPrompt');
+    const label = document.getElementById('twoFactorCodeLabel');
+    const input = document.getElementById('twoFactorCode');
+    const toggle = document.getElementById('twoFactorUseRecovery');
+    if (prompt) {
+        prompt.textContent = twoFactorRecoveryMode
+            ? 'Type one of the recovery codes you saved when you turned on two-factor sign-in. Each one works once. Lost those too? Email omnitrackr@gmail.com from the address on your account.'
+            : 'Open your authenticator app and type the six-digit code it shows for OmniTrackr.';
+    }
+    if (label) label.textContent = twoFactorRecoveryMode ? 'Recovery code' : 'Six-digit code';
+    if (input) {
+        input.value = '';
+        if (typeof input.setAttribute === 'function') {
+            input.setAttribute('inputmode', twoFactorRecoveryMode ? 'text' : 'numeric');
+            input.setAttribute('autocomplete', twoFactorRecoveryMode ? 'off' : 'one-time-code');
+            input.setAttribute('placeholder', twoFactorRecoveryMode ? 'xxxxx-xxxxx' : '123456');
+        }
+    }
+    if (toggle) toggle.textContent = twoFactorRecoveryMode ? 'Use a code from the app instead' : 'Lost your phone? Use a recovery code';
+    clearFieldError('twoFactorCode');
+}
+
+function showTwoFactorForm(scroll = true) {
+    ['loginForm', 'registerForm', 'forgotPasswordForm', 'resetPasswordForm', 'resendVerificationContainer'].forEach(id => {
+        const element = document.getElementById(id);
+        if (element) element.style.display = 'none';
+    });
+    const form = document.getElementById('twoFactorForm');
+    if (!form) return;
+    form.style.display = 'block';
+    document.getElementById('authTitle').textContent = 'Enter your code';
+    setAuthContext('Two-factor sign-in is on for this account.');
+    document.getElementById('authError').textContent = '';
+    document.getElementById('authSuccess').style.display = 'none';
+    setTwoFactorMode(false);
+    if (scroll) revealAuthCard();
+    const input = document.getElementById('twoFactorCode');
+    if (input && typeof input.focus === 'function') setTimeout(() => input.focus(), 0);
+}
+
+function twoFactorCodeProblem(code) {
+    if (!code) return twoFactorRecoveryMode ? 'Type one of your recovery codes.' : 'Type the six-digit code from your app.';
+    if (!twoFactorRecoveryMode && !/^\d{6}$/.test(code.replace(/\s+/g, ''))) {
+        return 'The code from your app is six digits. Lost your phone? Use a recovery code instead.';
+    }
+    return '';
+}
+
+async function submitTwoFactorCode(code, rememberDevice) {
+    const response = await fetch(`${AUTH_API_BASE}/auth/login/two-factor`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        credentials: 'same-origin',
+        body: JSON.stringify({ code, remember_device: Boolean(rememberDevice) }),
+    });
+    const data = await response.json().catch(() => ({}));
+    if (!response.ok) {
+        const error = new Error(authErrorMessage(data, response.status === 429
+            ? 'Too many attempts. Please wait a minute and try again.'
+            : "That code didn't work. Try the newest one."));
+        error.status = response.status;
+        throw error;
+    }
+    if (Number.isInteger(data.recovery_codes_left)) {
+        const left = data.recovery_codes_left;
+        const message = left === 0
+            ? 'You used your last recovery code. Open Settings, then Sign-in, and get a new set now.'
+            : `You used a recovery code. ${left} left. You can get a new set in Settings, under Sign-in.`;
+        try { sessionStorage.setItem('omnitrackr_pending_notice', JSON.stringify({ message, tone: left <= 2 ? 'error' : 'info' })); } catch (_) { /* optional */ }
+    }
+    if (twoFactorFromGoogle) clearFriendInvite();
+    finishLogin(data);
+}
+
+function setupTwoFactorHandlers() {
+    const formElement = document.getElementById('twoFactorFormElement');
+    if (!formElement || typeof formElement.addEventListener !== 'function') return;
+    formElement.addEventListener('submit', async (e) => {
+        e.preventDefault();
+        clearFormErrors(e.target);
+        const input = document.getElementById('twoFactorCode');
+        const code = (input ? input.value : '').trim();
+        const problem = twoFactorCodeProblem(code);
+        if (problem) {
+            if (!showFieldError('twoFactorCode', problem)) displayAuthError(problem);
+            return;
+        }
+        const remember = document.getElementById('twoFactorRemember');
+        const button = e.target.querySelector('button[type="submit"]');
+        const label = button ? button.textContent : '';
+        if (button) { button.disabled = true; button.textContent = 'Checking…'; }
+        try {
+            await submitTwoFactorCode(code, remember && remember.checked);
+        } catch (error) {
+            if (error.status === 401 && /timed out/i.test(error.message)) {
+                showLoginForm();
+                displayAuthError(error.message);
+            } else if (error.status === 401) {
+                if (!showFieldError('twoFactorCode', error.message)) displayAuthError(error.message);
+                if (input) input.value = '';
+            } else {
+                displayAuthError(error.message);
+            }
+        } finally {
+            if (button) { button.disabled = false; button.textContent = label; }
+        }
+    });
+    const toggle = document.getElementById('twoFactorUseRecovery');
+    if (toggle && typeof toggle.addEventListener === 'function') {
+        toggle.addEventListener('click', (e) => {
+            e.preventDefault();
+            setTwoFactorMode(!twoFactorRecoveryMode);
+            const input = document.getElementById('twoFactorCode');
+            if (input && typeof input.focus === 'function') input.focus();
+        });
+    }
+    const back = document.getElementById('twoFactorBack');
+    if (back && typeof back.addEventListener === 'function') {
+        back.addEventListener('click', (e) => {
+            e.preventDefault();
+            showLoginForm();
+        });
+    }
+}
+
+// ============================================================================
+// Sign in with Google
+// ============================================================================
+
+// /auth/google/callback sends people back with ?google_error=<code>. Each code has
+// its own sentence here, so no text from the address bar is ever shown.
+const GOOGLE_ERRORS = {
+    cancelled: 'Google sign-in was cancelled. Try again, or use your email below.',
+    expired: 'That Google sign-in took too long or was opened in another tab. Please try again.',
+    failed: "Google sign-in didn't work this time. Please try again, or use your email below.",
+    unverified: "Google hasn't verified that email address yet, so it can't be used. Use your email below instead.",
+    deactivated: 'This account is deactivated. Log in with your password to reactivate it, or reset your password first.',
+    unavailable: "Google sign-in isn't available right now. Use your email below.",
+};
+
+function googleErrorMessage(code) {
+    return Object.hasOwn(GOOGLE_ERRORS, code) ? GOOGLE_ERRORS[code] : GOOGLE_ERRORS.failed;
+}
+
+function setupGoogleSignIn() {
+    // A friend's invite link travels with the visitor to Google and back.
+    if (typeof document.querySelectorAll !== 'function') return;
+    document.querySelectorAll('[data-google-signin]').forEach(link => {
+        link.addEventListener('click', () => {
+            if (link.hasAttribute('data-google-signup')) reportSignupStart();
+            const invite = getFriendInvite();
+            link.href = invite ? `/auth/google/start?invite=${encodeURIComponent(invite)}` : '/auth/google/start';
+        });
+    });
+}
+
+// The callback already set the session cookie; learn who signed in, then open the
+// library (or the page the visitor was on before signing up) like a password login.
+async function finishGoogleSignIn() {
+    try {
+        const response = await fetch(`${AUTH_API_BASE}/account/me`, { credentials: 'same-origin', cache: 'no-store' });
+        const user = response.ok ? await response.json() : null;
+        if (!user || !Number.isSafeInteger(user.id) || user.id < 1 || typeof user.username !== 'string') {
+            throw new Error('No session');
+        }
+        saveAuthData(null, user);
+        clearFriendInvite();
+        try { sessionStorage.removeItem(RETURN_PROMPT_KEY); } catch (_) { /* optional */ }
+        window.location.replace(consumeDiscoverAuthReturn());
+    } catch (_) {
+        window.history.replaceState({}, document.title, window.location.pathname);
+        showAuthModal();
+        displayAuthError(GOOGLE_ERRORS.failed);
+    }
+}
+
 function initAuth() {
     captureDiscoverAuthReturn();
+    captureFriendInvite();
     captureDemoStartIntent();
     setupAuthHandlers();
+    setupPasswordHelpers();
+    setupGoogleSignIn();
+    setupTwoFactorHandlers();
 
     // Check URL parameters for email verification or password reset
     const urlParams = new URLSearchParams(window.location.search);
+
+    if (urlParams.get('signed_in') === 'google' && document.documentElement.dataset.publicShell !== 'true') {
+        return finishGoogleSignIn();
+    }
     const verifyToken = urlParams.get('token');
     const resetToken = urlParams.get('reset_token');
     const emailVerified = urlParams.get('email_verified');
@@ -814,10 +1508,7 @@ function initAuth() {
     // Handle password reset
     if (resetToken) {
         showAuthModal();
-        // Scroll to auth section
-        setTimeout(() => {
-            document.querySelector('.landing-auth').scrollIntoView({ behavior: 'smooth', block: 'center' });
-        }, 100);
+        revealAuthCard();
         showResetPasswordForm(resetToken);
         return;
     }
@@ -825,10 +1516,7 @@ function initAuth() {
     // Handle successful verification redirect
     if (emailVerified === 'true' && !verifyToken) {
         showAuthModal();
-        // Scroll to auth section
-        setTimeout(() => {
-            document.querySelector('.landing-auth').scrollIntoView({ behavior: 'smooth', block: 'center' });
-        }, 100);
+        revealAuthCard();
         displayAuthSuccess('✅ Email verified successfully! You can now log in.');
         showLoginForm();
         // Clean URL
@@ -839,10 +1527,7 @@ function initAuth() {
     // Handle successful password reset redirect
     if (passwordReset === 'true') {
         showAuthModal();
-        // Scroll to auth section
-        setTimeout(() => {
-            document.querySelector('.landing-auth').scrollIntoView({ behavior: 'smooth', block: 'center' });
-        }, 100);
+        revealAuthCard();
         displayAuthSuccess('✅ Password reset successfully! You can now log in with your new password.');
         showLoginForm();
         // Clean URL
@@ -855,17 +1540,67 @@ function initAuth() {
     // private UI; stale localStorage must not reveal it on the public shell.
     if (document.documentElement.dataset.publicShell === 'true') {
         showAuthModal();
-        if (urlParams.getAll('start').length === 1 && urlParams.get('start') === 'demo'
-            && getDemoStartIntent() && !getDiscoverAuthReturn()) showRegisterForm();
+        // Google sign-in for an account with two-factor on comes back here for the code.
+        if (urlParams.get('two_factor') === '1') {
+            window.history.replaceState({}, document.title, window.location.pathname + '#landing-auth');
+            twoFactorFromGoogle = true;
+            showTwoFactorForm();
+            return;
+        }
+        if (urlParams.has('google_error')) {
+            if (knownMember()) showLoginForm(false);
+            else showRegisterForm(false, { report: false });
+            displayAuthError(googleErrorMessage(urlParams.get('google_error')));
+            window.history.replaceState({}, document.title, window.location.pathname + '#landing-auth');
+            revealAuthCard();
+            return;
+        }
+        if (window.location.hash === '#signup') {
+            showRegisterForm();
+            return;
+        }
+        // "I have an account" buttons: open the log-in form even on a browser that hasn't signed in before.
+        if (window.location.hash === '#login') {
+            showLoginForm();
+            return;
+        }
+        if (urlParams.getAll('start').length === 1 && START_INTENTS.includes(urlParams.get('start'))
+            && getDemoStartIntent() && !getDiscoverAuthReturn()) {
+            showRegisterForm();
+            return;
+        }
+        // Newcomers who scroll to the bottom find the sign-up form, not a log-in box.
+        // Counted as "opened" only once they start filling it in.
+        // "Log in" links from other pages arrive as /#landing-auth (without a return path).
+        if (window.location.hash === '#landing-auth' && !urlParams.has('next')) return;
+        if (!knownMember()) showRegisterForm(false, { report: false });
         return;
     }
 
     if (!isAuthenticated()) {
+        if (canRecoverCookieSession()) {
+            return recoverCookieSession().then(recovered => {
+                if (!recovered) { if (!isAuthenticated()) showAuthModal(); return; }
+                showMainUI();
+                updateUserDisplay();
+                // Main-library requests await the same recovery in authenticatedFetch.
+                // These optional startup readers initially skipped a missing stored user.
+                for (const name of ['loadCustomTabs', 'openDashboardTargetFromLocation', 'bootstrapReturnDeck']) {
+                    try { Promise.resolve(window[name]?.()).catch(() => {}); } catch (_) { /* optional */ }
+                }
+            });
+        }
         showAuthModal();
     } else {
         showMainUI();
         updateUserDisplay();
     }
+}
+
+// The dashboard's corner notices when they are loaded, a plain alert otherwise.
+function authNotice(message, tone) {
+    if (typeof showNotice === 'function') showNotice(message, tone);
+    else alert(message);
 }
 
 async function handleEmailChangeVerification(token) {
@@ -876,7 +1611,7 @@ async function handleEmailChangeVerification(token) {
             const data = await response.json();
             
             if (response.ok) {
-                alert('✅ ' + (data.message || 'Email changed successfully!'));
+                authNotice(data.message || 'Your email address is updated.', 'success');
                 // Reload account info if modal is open
                 if (typeof loadAccountInfo === 'function') {
                     await loadAccountInfo();
@@ -884,30 +1619,37 @@ async function handleEmailChangeVerification(token) {
                 // Update user display
                 updateUserDisplay();
             } else {
-                alert('❌ ' + (data.detail || 'Email change verification failed'));
+                authNotice(typeof data.detail === 'string' ? data.detail : 'That email change link did not work. Request a new one from Account settings.');
             }
         } catch (error) {
-            alert('❌ Failed to verify email change. Please try again.');
+            authNotice('Could not confirm your new email address. Please try again.');
         }
         
         // Clean URL
         window.history.replaceState({}, document.title, window.location.pathname);
     } else {
-        // User not logged in, show auth modal with success message
+        // Not logged in here: the link still has to be confirmed with the server.
         showAuthModal();
-        setTimeout(() => {
-            document.querySelector('.landing-auth').scrollIntoView({ behavior: 'smooth', block: 'center' });
-        }, 100);
-        displayAuthSuccess('✅ Email changed successfully! Please log in with your new email.');
+        revealAuthCard();
         showLoginForm();
+        try {
+            const response = await fetch(`${AUTH_API_BASE}/auth/verify-email?token=${encodeURIComponent(token)}`, { credentials: 'same-origin' });
+            const data = await response.json().catch(() => ({}));
+            if (response.ok) {
+                displayAuthSuccess('✅ Email changed successfully! Please log in with your new email.');
+            } else {
+                displayAuthError(typeof data.detail === 'string' ? data.detail : 'Email change verification failed');
+            }
+        } catch (error) {
+            displayAuthError('Failed to verify email change. Please try again.');
+        }
         window.history.replaceState({}, document.title, window.location.pathname);
     }
 }
 
 async function handleEmailVerification(token) {
     showAuthModal();
-    // Scroll to auth section
-    document.querySelector('.landing-auth').scrollIntoView({ behavior: 'smooth', block: 'center' });
+    revealAuthCard();
     document.getElementById('authTitle').textContent = 'Email Verification';
     document.getElementById('loginForm').style.display = 'none';
     document.getElementById('registerForm').style.display = 'none';
@@ -917,22 +1659,41 @@ async function handleEmailVerification(token) {
     displayAuthSuccess('Verifying your email...');
     
     try {
-        const response = await fetch(`${AUTH_API_BASE}/auth/verify-email?token=${encodeURIComponent(token)}`);
+        const response = await fetch(`${AUTH_API_BASE}/auth/verify-email?token=${encodeURIComponent(token)}`, { credentials: 'same-origin' });
         const data = await response.json();
         
         if (response.ok) {
-            displayAuthSuccess(data.message + ' Redirecting to login...');
-            
-            // Clear URL parameters and show login after 3 seconds
-            setTimeout(() => {
-                window.history.replaceState({}, document.title, window.location.pathname);
-                showLoginForm();
-            }, 3000);
+            window.history.replaceState({}, document.title, window.location.pathname);
+            if (data.signed_in && data.user) {
+                // Same browser that signed up: the server already set the session cookie.
+                saveAuthData(null, data.user);
+                displayAuthSuccess('Email verified. Opening your library…');
+                window.location.assign(consumeDiscoverAuthReturn());
+                return;
+            }
+            if (isAuthenticated() && document.getElementById('mainContainer')) {
+                // Already signed in here (e.g. the link was opened again): stay in the library.
+                hideAuthModal();
+                showMainUI();
+                updateUserDisplay();
+                return;
+            }
+            showLoginForm();
+            displayAuthSuccess('Email verified! Log in to open your library.');
+            const loginField = document.getElementById('loginUsername');
+            if (loginField && data.login_hint) loginField.value = data.login_hint;
+            const passwordField = document.getElementById('loginPassword');
+            if (passwordField) passwordField.focus();
         } else {
-            displayAuthError(data.detail || 'Email verification failed');
+            const message = data.detail || 'Email verification failed';
+            displayAuthError(message);
             setTimeout(() => {
                 window.history.replaceState({}, document.title, window.location.pathname);
                 showLoginForm();
+                // showLoginForm clears messages; keep the reason and offer a fresh link.
+                displayAuthError(message);
+                const resend = document.getElementById('resendVerificationContainer');
+                if (resend) resend.style.display = 'block';
             }, 3000);
         }
     } catch (error) {
@@ -950,3 +1711,20 @@ if (document.readyState === 'loading') {
 } else {
     initAuth();
 }
+
+// "Start tracking" links elsewhere point at /#signup (and log-in buttons at /#login); follow them on the homepage too.
+if (typeof window.addEventListener === 'function') window.addEventListener('hashchange', () => {
+    if (document.documentElement.dataset.publicShell !== 'true' || !document.getElementById('registerForm')) return;
+    if (window.location.hash === '#signup') showRegisterForm();
+    else if (window.location.hash === '#login') showLoginForm();
+});
+
+// Other tabs can replace or clear a session. Re-read their stored identity instead
+// of retaining this tab's fallback user after a cross-tab sign-in or logout.
+if (typeof window.addEventListener === 'function') window.addEventListener('storage', event => {
+    if (event.key !== null && event.key !== USER_KEY && event.key !== TOKEN_KEY) return;
+    delete getUser.current;
+    getUser.storageBlocked = false;
+    recoverCookieSession.generation = (recoverCookieSession.generation || 0) + 1;
+    try { sessionStorage.removeItem('omnitrackr_session_user'); } catch (_) {}
+});

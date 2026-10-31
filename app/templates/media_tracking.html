@@ -19,10 +19,9 @@
   <meta name="twitter:card" content="summary">
   <meta name="twitter:title" content="Media Tracking Hub">
   <meta name="twitter:description" content="Guides for watchlists, backlogs, reviews, privacy, exports, and statistics.">
-  <link rel="preconnect" href="https://fonts.googleapis.com">
-  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@700;800&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="/styles.css">
+  <link rel="preload" href="/static/fonts/poppins-700-latin.woff2" as="font" type="font/woff2" crossorigin>
+  <link rel="preload" href="/static/fonts/poppins-800-latin.woff2" as="font" type="font/woff2" crossorigin>
+  <link rel="stylesheet" href="/static/fonts.css?v=20261009-fonts-1">
   <style>
     body { min-height: 100vh; padding: 20px; }
     .public-wrapper { max-width: 1080px; margin: 0 auto; }
@@ -43,7 +42,7 @@
     .back-link { display: inline-block; margin-bottom: 30px; color: var(--primary); text-decoration: none; font-weight: 500; }
     .visual-walkthrough { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 18px; }
     .visual-card { background: rgba(255, 255, 255, 0.035); border: 1px solid var(--border); border-radius: 12px; margin: 0; overflow: hidden; }
-    .visual-card img { display: block; width: 100%; aspect-ratio: 16 / 10; object-fit: cover; object-position: top; }
+    .visual-card img { display: block; width: 100%; height: auto; aspect-ratio: 16 / 10; object-fit: cover; object-position: top; }
     .visual-card figcaption { padding: 17px 18px 19px; }
     .visual-card h3 { margin: 0 0 8px; }
     .visual-card p { margin: 0; }
@@ -64,7 +63,7 @@
     "isPartOf": { "@type": "WebSite", "name": "OmniTrackr", "url": "https://omnitrackr.xyz" }
   }
   </script>
-  <link rel="stylesheet" href="/static/public-reader.css?v=20260928-site-2">
+  <link rel="stylesheet" href="/static/public-reader.css?v=20261029-reader-3">
 </head>
 
 <body class="public-reader site">
@@ -75,67 +74,67 @@
 <a href="/" class="back-link">Back to OmniTrackr</a>
       <header class="public-header">
         <h1>Media Tracking Hub</h1>
-        <p>Guides for building a useful personal library across movie watchlists, TV progress, seasonal anime, game backlogs, albums, books, reviews, privacy, exports, and statistics.</p>
+        <p>Every OmniTrackr guide in one place: movie watchlists, TV progress, seasonal anime, game backlogs, albums, books, reviews, privacy, exports, and statistics.</p>
       </header>
       <details class="reader-contents">
         <summary>On this page</summary>
         <nav aria-label="On this page">
-          <a href="#visual-tour-heading">A Visual Tour of the Tracker</a>
-          <a href="#first-session-heading">Make Your First Ten Minutes Count</a>
-          <a href="#decision-heading">Choose Without Making It a Project</a>
-          <a href="#hub-heading">Start Here</a>
-          <a href="#why-heading">Worked Example: Turn a Scattered List Into a Shortlist</a>
-          <a href="#choose-heading">Choose a Workflow</a>
-          <a href="#audit-heading">A Monthly Media Library Audit</a>
-          <a href="#starter-plan-heading">A Starter Plan for New Libraries</a>
-          <a href="#quality-heading">What Good Tracking Content Includes</a>
+          <a href="#visual-tour-heading">A visual tour of the tracker</a>
+          <a href="#first-session-heading">Your first ten minutes</a>
+          <a href="#decision-heading">Picking what to start next</a>
+          <a href="#hub-heading">Start here</a>
+          <a href="#why-heading">Worked example: turn a scattered list into a shortlist</a>
+          <a href="#choose-heading">Choose a workflow</a>
+          <a href="#audit-heading">A monthly library audit</a>
+          <a href="#starter-plan-heading">A starter plan for new libraries</a>
+          <a href="#quality-heading">What a good entry includes</a>
         </nav>
       </details>
 
 
       <section class="public-section" aria-labelledby="visual-tour-heading">
-        <h2 id="visual-tour-heading">A Visual Tour of the Tracker</h2>
-        <p>These product captures show the actual decisions a media tracker should support: keeping a cross-media library readable, learning from its history, choosing what is visible, and sharing only when it helps. They use interface examples rather than a real member's library.</p>
+        <h2 id="visual-tour-heading">A visual tour of the tracker</h2>
+        <p>These screenshots walk through the four things you'll do most in OmniTrackr: keep a library across media types, look back at what you've finished, pick what other people can see, and share with friends if you want to. The data in them is made up, not a real member's library.</p>
         <div class="visual-walkthrough">
           <figure class="visual-card">
-            <img src="https://github.com/user-attachments/assets/3ebb53c7-5cc3-4225-a028-2b3eb5dfbdb7" alt="OmniTrackr dashboard showing a media form, library table, category navigation, search, and sorting controls" loading="lazy" decoding="async">
-            <figcaption><h3>1. Keep the record together</h3><p>Start with a title and the few fields that make it useful later. Categories keep their own details while search, sorting, status, ratings, and notes stay in one library.</p></figcaption>
+            <img src="/static/tour/tour-library-1280.webp" srcset="/static/tour/tour-library-640.webp 640w, /static/tour/tour-library-1280.webp 1280w, /static/tour/tour-library-1920.webp 1920w" sizes="(max-width: 680px) calc(100vw - 40px), 540px" width="1280" height="651" alt="OmniTrackr dashboard showing a media form, library table, category navigation, search, and sorting controls" loading="lazy" decoding="async">
+            <figcaption><h3>1. Keep the record together</h3><p>Start with a title and the few fields you'll want later. Each category has its own details, but search, sorting, status, ratings, and notes all work across one library.</p></figcaption>
           </figure>
           <figure class="visual-card">
-            <img src="https://github.com/user-attachments/assets/fd49c269-5402-46d8-a5c2-921fa48520f9" alt="OmniTrackr statistics dashboard showing completion, ratings, and category insights" loading="lazy" decoding="async">
-            <figcaption><h3>2. Find a pattern, not just a count</h3><p>Statistics become useful once a small library is established: check completion, rating coverage, repeat favorites, and the categories that need attention.</p></figcaption>
+            <img src="/static/tour/tour-statistics-1280.webp" srcset="/static/tour/tour-statistics-640.webp 640w, /static/tour/tour-statistics-1280.webp 1280w, /static/tour/tour-statistics-1920.webp 1920w" sizes="(max-width: 680px) calc(100vw - 40px), 540px" width="1280" height="651" alt="OmniTrackr statistics dashboard showing completion, ratings, and category insights" loading="lazy" decoding="async">
+            <figcaption><h3>2. Look for patterns in the numbers</h3><p>Once you have a few dozen entries, the statistics page starts to say something: how much you finish, how much you've rated, which creators you keep coming back to, and which categories are falling behind.</p></figcaption>
           </figure>
           <figure class="visual-card">
-            <img src="https://github.com/user-attachments/assets/f2debd1d-23bc-4c15-baac-f457c562d72a" alt="OmniTrackr privacy controls for selecting visibility across media categories" loading="lazy" decoding="async">
-            <figcaption><h3>3. Decide the audience deliberately</h3><p>A media history can be personal. Keep categories private, share a finished review only when it is useful, and avoid mistaking a tracking habit for a public performance.</p></figcaption>
+            <img src="/static/tour/tour-privacy-1280.webp" srcset="/static/tour/tour-privacy-640.webp 640w, /static/tour/tour-privacy-1280.webp 1280w, /static/tour/tour-privacy-1920.webp 1920w" sizes="(max-width: 680px) calc(100vw - 40px), 540px" width="1280" height="649" alt="OmniTrackr privacy controls for selecting visibility across media categories" loading="lazy" decoding="async">
+            <figcaption><h3>3. Choose who can see what</h3><p>What you watch and read can be personal. Keep whole categories private, publish a review only when you have something to say, and remember that tracking for yourself doesn't have to be public.</p></figcaption>
           </figure>
           <figure class="visual-card">
-            <img src="https://github.com/user-attachments/assets/8abbd7a1-c81e-48aa-878b-624e3042ca22" alt="OmniTrackr friends interface for optional media recommendations and shared collections" loading="lazy" decoding="async">
-            <figcaption><h3>4. Add people only when they add context</h3><p>Friends and public reviews are optional layers. They can make a recommendation easier to remember, while the library and private notes remain the core record.</p></figcaption>
+            <img src="/static/tour/tour-friends-1280.webp" srcset="/static/tour/tour-friends-640.webp 640w, /static/tour/tour-friends-1280.webp 1280w, /static/tour/tour-friends-1920.webp 1920w" sizes="(max-width: 680px) calc(100vw - 40px), 540px" width="1280" height="651" alt="OmniTrackr friends interface for optional media recommendations and shared collections" loading="lazy" decoding="async">
+            <figcaption><h3>4. Add people only when they add context</h3><p>Friends and public reviews are optional. They help you remember who recommended what, but your library and private notes work fine without them.</p></figcaption>
           </figure>
         </div>
       </section>
 
       <section class="public-section first-session" aria-labelledby="first-session-heading">
-        <h2 id="first-session-heading">Make Your First Ten Minutes Count</h2>
-        <p>A useful library starts with a deliberate sample, not a giant import. Use the new-library prompt to choose the media type you care about most, then make three records that test the workflow.</p>
+        <h2 id="first-session-heading">Your first ten minutes</h2>
+        <p>Skip the giant import for now and start with a handful of entries. Use the new-library prompt to pick the media type you care about most, then add three records to see how the tracker fits you.</p>
         <ol>
           <li>Add one favorite and write a sentence about why it stayed with you.</li>
           <li>Add one unfinished title and give it an honest status instead of letting it disappear into a vague backlog.</li>
           <li>Add one likely next pick, then use a rating, note, or private collection after you finish it.</li>
         </ol>
-        <p><a href="/#landing-auth">Create a free library</a> when you are ready, or visit the <a href="/demo">fictional demo library</a> to see a cross-media example first.</p>
+        <p><a href="/#signup">Create a free library</a> when you are ready, or visit the <a href="/demo">fictional demo library</a> to see a cross-media example first.</p>
       </section>
 
       <section class="public-section" aria-labelledby="decision-heading">
-        <h2 id="decision-heading">Choose Without Making It a Project</h2>
-        <p>A good media library should reduce decisions, not create a larger menu to manage. Keep a short Next Up queue for the titles that matter most, then let a private daily pick surface one unfinished option when you simply want to start something.</p>
-        <p>The distinction is intentional. Your queue is the plan you make for yourself; the daily pick is a gentle tie-breaker when several options sound fine. It never changes a title's status, rating, note, or visibility. Open the suggestion if it fits, try another if it does not, or ignore it entirely.</p>
-        <p>This works especially well across media types. A movie can be the right choice for one evening, while a book, album, or game may fit a quieter hour. One library gives you a place to compare those possibilities without opening six separate apps.</p>
+        <h2 id="decision-heading">Picking what to start next</h2>
+        <p>A long library can make it harder to choose. Keep a short Next Up queue for the titles you most want to get to, and when you just want to start something, let the private daily pick show you one unfinished option.</p>
+        <p>The two do different jobs. Your queue is the plan you made; the daily pick is a tie-breaker for when several options sound fine. It never changes a title's status, rating, note, or visibility. Open the suggestion if it fits, ask for another if it doesn't, or ignore it.</p>
+        <p>This helps most when you track several media types. A movie might suit one evening, and a book, album, or game might suit a quieter hour. With everything in one library you can weigh them against each other without opening six separate apps.</p>
       </section>
 
       <section class="public-section" aria-labelledby="hub-heading">
-        <h2 id="hub-heading">Start Here</h2>
+        <h2 id="hub-heading">Start here</h2>
         <div class="hub-grid">
           <a class="hub-card" href="/demo"><h3>Demo Library</h3><p>See a sample cross-media library before creating an account.</p></a>
           <a class="hub-card" href="/faq"><h3>FAQ</h3><p>Get answers about categories, privacy, public reviews, exports, friend visibility, and ads.</p></a>
@@ -147,32 +146,36 @@
           <a class="hub-card" href="/game-tracker"><h3>Game Tracker</h3><p>Organize game backlogs, played status, genres, ratings, and reviews.</p></a>
           <a class="hub-card" href="/music-tracker"><h3>Music Tracker</h3><p>Track albums, artists, genres, listened status, ratings, and reviews.</p></a>
           <a class="hub-card" href="/book-tracker"><h3>Book Tracker</h3><p>Manage reading lists, authors, genres, read status, ratings, and book notes.</p></a>
+          <a class="hub-card" href="/manga-tracker"><h3>Manga Tracker</h3><p>Track manga, manhwa, and webtoons by series, volume, and chapter, with ratings and reviews.</p></a>
+          <a class="hub-card" href="/podcast-tracker"><h3>Podcast Tracker</h3><p>Keep the shows you follow, the episode you are on, and the series worth recommending.</p></a>
+          <a class="hub-card" href="/audiobook-tracker"><h3>Audiobook Tracker</h3><p>Log who narrated each audiobook, how long it ran, and the chapter you reached.</p></a>
+          <a class="hub-card" href="/binge-calculator"><h3>Binge Calculator</h3><p>Work out how many hours a show, anime or book series takes and when you'll finish at your pace.</p></a>
           <a class="hub-card" href="/media-statistics"><h3>Media Statistics</h3><p>Use ratings, completion, review coverage, years, genres, and category insights.</p></a>
           <a class="hub-card" href="/export-import-guide"><h3>Export &amp; Import</h3><p>Keep your media library portable with JSON backups and import workflows.</p></a>
           <a class="hub-card" href="/tracking-templates"><h3>Tracking Templates</h3><p>Use field templates, rating scales, review prompts, and backlog cleanup steps.</p></a>
-          <a class="hub-card" href="/review-guidelines"><h3>Review Guidelines</h3><p>Write useful public reviews with prompts, examples, privacy tips, and quality checks.</p></a>
+          <a class="hub-card" href="/review-guidelines"><h3>Review Guidelines</h3><p>Write public reviews other people can use, with prompts, examples, privacy tips, and a pre-publish check.</p></a>
           <a class="hub-card" href="/guides"><h3>How-To Guides</h3><p>Learn account setup, tracking, reviews, privacy, friends, imports, and exports.</p></a>
         </div>
       </section>
 
       <section class="public-section" aria-labelledby="why-heading">
-        <h2 id="why-heading">Worked Example: Turn a Scattered List Into a Shortlist</h2>
-        <p>Imagine three fictional entries: a film a friend recommended, an anime you paused halfway through, and a book you finished but never rated. They need different next actions. Treating all three as an undifferentiated backlog hides the reason each record matters.</p>
+        <h2 id="why-heading">Worked example: turn a scattered list into a shortlist</h2>
+        <p>Imagine three fictional entries: a film a friend recommended, an anime you paused halfway through, and a book you finished but never rated. Each one needs something different from you next. Lump them into one backlog and you lose track of why each is there.</p>
         <h3>The recommended film: preserve the reason</h3>
-        <p>Keep completion unchecked and the rating blank. Write “Recommended for the restrained humor; save for a quiet evening.” Put it in Next Up only if you actually expect to choose it soon. A recommendation is a possibility, not an obligation.</p>
+        <p>Keep completion unchecked and the rating blank. Write “Recommended for the restrained humor; save for a quiet evening.” Put it in Next Up only if you expect to pick it soon. You don't owe anyone a watch just because they recommended it.</p>
         <h3>The paused anime: preserve the stopping point</h3>
-        <p>Write a precise note such as “Stopped after episode 6; return when the season is finished.” Leave Watched unchecked. A stopping point is more useful than a low rating written only because you have not finished. If you no longer want to return, remove it from the shortlist while keeping the library record and note.</p>
+        <p>Write a precise note such as “Stopped after episode 6; return when the season is finished.” Leave Watched unchecked. Knowing where you stopped helps more than a low rating given only because you haven't finished. If you no longer want to return, remove it from the shortlist while keeping the library record and note.</p>
         <h3>The finished book: preserve the reaction</h3>
-        <p>Mark Read and leave the rating blank if you cannot remember your reaction confidently. A note such as “Finished on holiday; liked the alternating viewpoints, but cannot recall the ending clearly” is more honest than assigning a score to fill a gap. Private notes can be incomplete; public recommendations need enough context to help someone else.</p>
-        <p>The result is one likely next pick, one paused record with a return condition, and one piece of history. You can use this approach with any tracker or a notebook. In OmniTrackr, use Edit for the note and Next up for the shortlist; the <a href="/guides#tracking-heading">how-to guide</a> explains the controls.</p>
+        <p>Mark Read and leave the rating blank if you cannot remember your reaction confidently. A note such as “Finished on holiday; liked the alternating viewpoints, but cannot recall the ending clearly” is more honest than a score made up to fill the field. Private notes can be incomplete; a public recommendation needs enough context for someone else to act on it.</p>
+        <p>You end up with one likely next pick, one paused show with a note on when to go back, and one finished book on record. This works in any tracker, or in a notebook. In OmniTrackr, use Edit for the note and Next up for the shortlist; the <a href="/guides#tracking-heading">how-to guide</a> explains the controls.</p>
       </section>
 
       <section class="public-section" aria-labelledby="choose-heading">
-        <h2 id="choose-heading">Choose a Workflow</h2>
+        <h2 id="choose-heading">Choose a workflow</h2>
         <h3>Use a category guide when one media type is the problem</h3>
-        <p>If your movie watchlist is messy, start with the movie tracker guide. If seasonal anime or game backlogs are the issue, use the category-specific pages. Those guides explain the fields and habits that matter for each format.</p>
+        <p>If your movie watchlist is messy, start with the movie tracker guide. If seasonal anime or game backlogs are the issue, use those category pages. Each one covers the fields and habits that fit that format.</p>
         <h3>Use the statistics and export guides when the library is already growing</h3>
-        <p>Once a library has enough entries, the next questions are about patterns and portability. The statistics guide explains how to interpret completion, rating, and review coverage. The export and import guide explains how to keep a backup instead of trusting memory or a single browser session.</p>
+        <p>After a few months of tracking, you'll start wondering what the numbers say and how to keep a copy. The statistics guide explains how to read completion, rating, and review coverage. The export and import guide shows how to keep a backup file so your history doesn't depend on memory or one browser session.</p>
         <ul class="hub-list">
           <li>For new visitors: start with the demo library, FAQ, and use cases.</li>
           <li>For people comparing tools: read the tracker comparison page.</li>
@@ -181,22 +184,22 @@
       </section>
 
       <section class="public-section" aria-labelledby="audit-heading">
-        <h2 id="audit-heading">A Monthly Media Library Audit</h2>
-        <p>When a personal library grows, the best next step is often a small audit rather than a new feature. Start by checking which items have no status, which finished items have no rating, and which favorites deserve a review while the memory is still fresh. Then remove or mark items you no longer intend to finish.</p>
-        <p>OmniTrackr's categories make this easier because each media type can keep the fields that matter while still living in one account. A movie watchlist, an anime seasonal backlog, a game backlog, and a reading list can all be reviewed together without forcing them into the same spreadsheet shape.</p>
+        <h2 id="audit-heading">A monthly library audit</h2>
+        <p>Once a library gets big, a short cleanup once a month helps more than any new feature. Start by checking which items have no status, which finished items have no rating, and which favorites deserve a review while the memory is still fresh. Then remove or mark items you no longer intend to finish.</p>
+        <p>OmniTrackr's categories make this easier: each media type keeps its own fields, and they all live in one account. You can go through a movie watchlist, a seasonal anime backlog, a game backlog, and a reading list in one sitting without forcing them into the same spreadsheet columns.</p>
       </section>
 
       <section class="public-section" aria-labelledby="starter-plan-heading">
-        <h2 id="starter-plan-heading">A Starter Plan for New Libraries</h2>
-        <p>Use the three-record exercise above before committing to a larger move. Can you find the paused item, explain why the next pick is there, and tell a finished item from an unrated one? If not, simplify the labels and notes before adding more history. There is no minimum library size you need to reach.</p>
-        <p>If your records already live in another tool, keep that original intact. Preview a small CSV sample in Import Studio, compare the resulting records, and expand only when the mapping makes sense. Start with the <a href="/export-import-guide">migration guide</a> rather than retyping a large list.</p>
-        <p>If the missing piece is inspiration rather than organization, <a href="/discover">browse curated Discover trails</a>. Read why an item fits the theme, then choose one that suits your time and mood. You do not need to complete every item in a collection, and browsing does not require an account.</p>
+        <h2 id="starter-plan-heading">A starter plan for new libraries</h2>
+        <p>Try the three-record exercise above before you move a big list over. Can you find the paused item, explain why the next pick is there, and tell a finished item from an unrated one? If not, simplify the labels and notes before adding more history. There is no minimum library size you need to reach.</p>
+        <p>If your records already live in another tool, keep that original intact. Preview a small CSV sample in Import Studio, check the records it creates, and import the rest once the columns map correctly. Before retyping a long list by hand, read the <a href="/switch">switching guide</a> for your old service and the <a href="/export-import-guide">migration guide</a>.</p>
+        <p>If your list is organized and you just need ideas, <a href="/discover">browse curated Discover trails</a>. Read why an item fits the theme, then choose one that suits your time and mood. You do not need to complete every item in a collection, and browsing does not require an account.</p>
       </section>
 
       <section class="public-section" aria-labelledby="quality-heading">
-        <h2 id="quality-heading">What Good Tracking Content Includes</h2>
-        <p>Useful tracking is more than a title list. A strong entry usually answers three questions: what is it, what is its status, and why does it matter to you? Ratings, reviews, categories, cover art, privacy settings, and export support all serve those questions.</p>
-        <p>For public pages and public reviews, OmniTrackr favors original context over copied descriptions. The goal is to help visitors understand real tracking decisions before creating an account, and to help users publish reviews that add their own experience instead of repeating a plot summary.</p>
+        <h2 id="quality-heading">What a good entry includes</h2>
+        <p>A list of titles only gets you so far. A good entry tells you what the thing is, where you are with it, and why you added it. Ratings, reviews, categories, cover art, privacy settings, and exports are all there to answer those questions.</p>
+        <p>On public pages and in public reviews, OmniTrackr asks for your own words over copied descriptions. These guides show real tracking decisions so you know what you're signing up for, and the review guidelines push you to write about your own experience instead of retelling the plot.</p>
       </section>
     </main>
   </div>

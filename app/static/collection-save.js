@@ -16,7 +16,7 @@
   const list = get('Items');
   const all = get('All');
   const none = get('None');
-  const categories = new Set(['movies', 'tv-shows', 'anime', 'video-games', 'music', 'books']);
+  const categories = new Set(['movies', 'tv-shows', 'anime', 'video-games', 'music', 'books', 'manga', 'podcasts', 'audiobooks']);
   const validId = value => Number.isInteger(value) && value > 0 && value <= 2147483647;
   let version = null;
   let items = [];

@@ -1,0 +1,76 @@
+/* "If you liked" guides. Builds on discover.css (hero, guide-*, pick, caveat, editorial). */
+.yl-threads { margin: 40px 0 48px; }
+.yl-threads ol { counter-reset: yl; display: grid; gap: 16px; grid-template-columns: repeat(3, minmax(0, 1fr)); list-style: none; margin: 20px 0 0; padding: 0; }
+.yl-threads li {
+  background: var(--site-surface);
+  border: 1px solid var(--site-border);
+  border-radius: 16px;
+  counter-increment: yl;
+  padding: 20px 22px;
+}
+.yl-threads li::before { color: var(--site-teal); content: "0" counter(yl); display: block; font-size: .78rem; font-weight: 800; letter-spacing: .1em; margin-bottom: 8px; }
+.yl-threads strong { color: #fff; display: block; font-size: 1.05rem; margin-bottom: 6px; }
+.yl-threads span { color: #c3c8dd; font-size: .95rem; }
+.yl-section-intro { color: #c3c8dd; max-width: 780px; }
+.yl-picks { gap: 22px; margin-top: 26px; }
+.yl-pick { scroll-margin-top: 90px; }
+.yl-pick__head { align-items: flex-start; display: flex; gap: 18px; margin-bottom: 14px; }
+.yl-pick__art { aspect-ratio: 2 / 3; border-radius: 10px; flex: 0 0 72px; height: auto; object-fit: cover; width: 72px; }
+.yl-pick h3 { color: #fff; font-family: Poppins, Inter, sans-serif; font-size: 1.45rem; line-height: 1.3; margin: 0 0 6px; }
+.yl-pick__match { color: #a7f3d0 !important; font-size: .88rem; margin: 0; }
+.yl-pick__why { color: #eef0fa !important; font-size: 1.04rem; }
+.yl-pick__actions { align-items: center; display: flex; flex-wrap: wrap; gap: 10px 18px; margin-top: 18px; }
+.yl-save { min-height: 44px; }
+.yl-save .yl-when-on { display: none; }
+.yl-save[aria-pressed="true"] { background: #14b8a6; color: #06211f !important; }
+.yl-save[aria-pressed="true"] .yl-when-on { display: inline; }
+.yl-save[aria-pressed="true"] .yl-when-off { display: none; }
+.yl-pick__link { font-size: .92rem; }
+.yl-pick__status { font-size: .9rem; margin: 10px 0 0; min-height: 1em; }
+.yl-bar {
+  align-items: center;
+  background: #15172b;
+  border: 1px solid var(--site-border-strong);
+  border-radius: 16px;
+  bottom: 16px;
+  box-shadow: 0 12px 40px rgba(0, 0, 0, .45);
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px 18px;
+  justify-content: space-between;
+  margin: 24px 0;
+  padding: 14px 18px;
+  position: sticky;
+  z-index: 5;
+}
+.yl-bar[hidden] { display: none; }
+.yl-bar__count { color: #e6e9f5; margin: 0; }
+.yl-start { margin-top: 40px; }
+.yl-start p + p { margin-top: 12px; }
+.yl-method p { max-width: 800px; }
+.yl-group { margin: 0 0 40px; }
+.yl-group h2 { font-size: 1.3rem; margin: 0 0 16px; }
+.yl-cards { display: grid; gap: 14px; grid-template-columns: repeat(2, minmax(0, 1fr)); list-style: none; margin: 0; padding: 0; }
+.yl-card {
+  align-items: center;
+  background: var(--site-surface);
+  border: 1px solid var(--site-border);
+  border-radius: 16px;
+  color: inherit !important;
+  display: flex;
+  gap: 16px;
+  min-height: 100%;
+  padding: 14px 16px;
+  text-decoration: none;
+}
+.yl-card:hover { background: var(--site-surface-2); }
+.yl-card__art { flex: 0 0 56px; }
+.yl-card__art img { aspect-ratio: 2 / 3; border-radius: 8px; display: block; height: auto; object-fit: cover; width: 56px; }
+.yl-card__initial { align-items: center; aspect-ratio: 2 / 3; background: rgba(124, 58, 237, .35); border-radius: 8px; color: #fff; display: flex; font-size: 1.4rem; font-weight: 800; justify-content: center; width: 56px; }
+.yl-card__text strong { color: #fff; display: block; font-size: 1.05rem; margin-bottom: 4px; }
+.yl-card__text span { color: #c3c8dd; font-size: .9rem; }
+@media (max-width: 760px) {
+  .yl-threads ol, .yl-cards { grid-template-columns: 1fr; }
+  .yl-pick__art { flex-basis: 60px; width: 60px; }
+}
+.yl-why p + p { margin-top: 12px; }

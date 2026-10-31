@@ -26,11 +26,9 @@
   <meta name="twitter:description" content="See a fictional OmniTrackr library with example media records, reviews, statuses, and privacy decisions.">
   <meta name="twitter:image" content="https://omnitrackr.xyz/omnitrackr_vortex.png">
   <meta name="twitter:image:alt" content="OmniTrackr sample media library">
-  <link rel="preconnect" href="https://fonts.googleapis.com">
-  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@700;800&family=Inter:wght@400;500;600&display=swap"
-    rel="stylesheet">
-  <link rel="stylesheet" href="/styles.css">
+  <link rel="preload" href="/static/fonts/poppins-700-latin.woff2" as="font" type="font/woff2" crossorigin>
+  <link rel="preload" href="/static/fonts/poppins-800-latin.woff2" as="font" type="font/woff2" crossorigin>
+  <link rel="stylesheet" href="/static/fonts.css?v=20261009-fonts-1">
   <style>
     body { min-height: 100vh; padding: 20px; }
     .privacy-wrapper { max-width: 1080px; margin: 0 auto; }
@@ -59,7 +57,7 @@
     "@context": "https://schema.org",
     "@type": "Article",
     "headline": "Sample Media Library",
-    "description": "A fictional OmniTrackr sample media library showing tracking decisions across movies, TV, anime, games, music, and books.",
+    "description": "A fictional OmniTrackr sample media library showing tracking decisions across movies, TV, anime, games, music, books, manga, podcasts, and audiobooks.",
     "url": "https://omnitrackr.xyz/sample-library",
     "author": { "@type": "Organization", "name": "OmniTrackr" },
     "publisher": { "@type": "Organization", "name": "OmniTrackr", "url": "https://omnitrackr.xyz" },
@@ -82,7 +80,7 @@
     ]
   }
   </script>
-  <link rel="stylesheet" href="/static/public-reader.css?v=20260928-site-2">
+  <link rel="stylesheet" href="/static/public-reader.css?v=20261029-reader-3">
 </head>
 
 <body class="public-reader site">
@@ -99,24 +97,24 @@
       <details class="reader-contents">
         <summary>On this page</summary>
         <nav aria-label="On this page">
-          <a href="#why-sample-heading">Why a Sample Library Helps</a>
-          <a href="#records-heading">Example Records</a>
-          <a href="#workflow-heading">A Weekly Cleanup Workflow</a>
-          <a href="#privacy-heading">Privacy Choices in the Sample</a>
-          <a href="#stats-heading">What Statistics Would Show</a>
-          <a href="#next-heading">What to Try Next</a>
+          <a href="#why-sample-heading">Why look at a sample library</a>
+          <a href="#records-heading">Example records</a>
+          <a href="#workflow-heading">A weekly cleanup</a>
+          <a href="#privacy-heading">Privacy choices in the sample</a>
+          <a href="#stats-heading">What statistics would show</a>
+          <a href="#next-heading">What to try next</a>
         </nav>
       </details>
 
 
       <section class="privacy-section" aria-labelledby="why-sample-heading">
-        <h2 id="why-sample-heading">Why a Sample Library Helps</h2>
-        <p>This is a fictional example, not a copy of a user account and not a live feed of private data. It shows how someone might organize movies, TV shows, anime, games, albums, and books. Use it to decide which details would help you remember your own media, then try the controls in the <a href="/demo">interactive demo</a>.</p>
-        <p>The fictional library below favors practical decisions over perfect cataloging. A useful tracker should answer ordinary questions: what am I watching now, what did I finish, what do I want to revisit, which notes are private, and which reviews are polished enough to share? Those details are what separate a living media library from a thin list of titles.</p>
+        <h2 id="why-sample-heading">Why look at a sample library</h2>
+        <p>Everything on this page is made up. It isn't copied from a user account or pulled from anyone's private data. It shows how someone might organize movies, TV shows, anime, games, albums, and books. Use it to decide which details would help you remember your own media, then try the controls in the <a href="/demo">interactive demo</a>.</p>
+        <p>The library below doesn't try to catalog everything perfectly. It's set up to answer everyday questions: what am I watching now, what did I finish, what do I want to go back to, which notes are private, and which reviews am I happy to share? A plain list of titles can't answer most of those.</p>
       </section>
 
       <section class="privacy-section" aria-labelledby="records-heading">
-        <h2 id="records-heading">Example Records</h2>
+        <h2 id="records-heading">Example records</h2>
         <div class="sample-grid">
           <article class="sample-card">
             <p class="sample-label">Movie</p>
@@ -158,27 +156,27 @@
       </section>
 
       <section class="privacy-section" aria-labelledby="workflow-heading">
-        <h2 id="workflow-heading">A Weekly Cleanup Workflow</h2>
+        <h2 id="workflow-heading">A weekly cleanup</h2>
         <p>Once a week, this reader checks unfinished items and decides what still sounds appealing. They update a show's last watched episode, change a book's checkpoint to the last chapter read, and mark a finished album Listened. “Paused,” “planned,” and “playing” describe their intentions; they are not extra completion states in the app. A short private review or checkpoint reminder can hold that context.</p>
-        <p>Clear progress is useful when starting a show or book again: it removes only the checkpoint and its reminder. The title, completion choice, rating, and review stay in place. Before a larger cleanup, the reader exports a JSON backup, which includes private checkpoints and reminders, and stores it somewhere private.</p>
-        <p>The cleanup also checks review quality. Short private notes are fine for memory, but public reviews should contain enough context to help someone else. Instead of posting "good" or "boring," the user expands public notes with what worked, what audience might enjoy it, and whether the rating reflects craft, personal mood, or rewatch value. That makes the public review feed more useful for visitors and keeps the private library honest for the account owner.</p>
+        <p>Use Clear progress when you start a show or book over: it removes only the checkpoint and its reminder. The title, completion choice, rating, and review stay in place. Before a larger cleanup, the reader exports a JSON backup, which includes private checkpoints and reminders, and stores it somewhere private.</p>
+        <p>The cleanup is also a chance to reread reviews. Short private notes are fine as reminders, but a public review needs enough context for someone else to use it. Instead of posting "good" or "boring," the reader adds what worked, who might enjoy it, and whether the rating is about craft, their mood at the time, or rewatch value. Visitors get better reviews in the public feed, and the reader's private notes stay as rough as they like.</p>
       </section>
 
       <section class="privacy-section" aria-labelledby="privacy-heading">
-        <h2 id="privacy-heading">Privacy Choices in the Sample</h2>
-        <p>In this sample, movie and album reviews are published because they are polished and spoiler-safe. The TV, game, and book reviews are not published to public review pages; keeping their categories private also prevents friends from reading those notes. Episode, page, and chapter checkpoints and their reminders always stay private; publishing a review does not publish a checkpoint.</p>
+        <h2 id="privacy-heading">Privacy choices in the sample</h2>
+        <p>In this sample, the movie and album reviews are published because they're finished and free of spoilers. The TV, game, and book reviews are not published to public review pages; keeping their categories private also prevents friends from reading those notes. Episode, page, and chapter checkpoints and their reminders always stay private; publishing a review does not publish a checkpoint.</p>
         <p>Friend visibility can be adjusted by category separately from public review choices. Letting friends see TV shows does not reveal episode checkpoints or their reminders. Copying a public collection or saving a reviewed title also does not copy the author's personal progress.</p>
       </section>
 
       <section class="privacy-section" aria-labelledby="stats-heading">
-        <h2 id="stats-heading">What Statistics Would Show</h2>
+        <h2 id="stats-heading">What statistics would show</h2>
         <p>With these six records, completion statistics count one watched movie and one listened album: two finished titles and four unfinished. A checkpoint at episode 4 or chapter 9 does not increase the completion count. Ratings show reactions, while review coverage shows which titles have a written note or review. A checkpoint reminder stays separate from review coverage.</p>
-        <p>This is why OmniTrackr keeps media types together. A spreadsheet can count entries, but a focused app can make the routine easier: add the item, update the status, write a note, decide whether it is public, and let the dashboard summarize the pattern over time.</p>
+        <p>This is why OmniTrackr keeps media types together. A spreadsheet can count entries too, but an app built for this makes the routine quicker: add the item, update the status, write a note, decide whether it is public, and let the dashboard summarize the pattern over time.</p>
       </section>
 
       <section class="privacy-section" aria-labelledby="next-heading">
-        <h2 id="next-heading">What to Try Next</h2>
-        <p>If this example matches the kind of library you want to build, start with the <a href="/demo">demo</a>, then read the <a href="/tracking-templates">tracking templates</a> for rating scales and cleanup prompts. The <a href="/review-guidelines">review guidelines</a> explain how to turn quick notes into useful public reviews, while the <a href="/media-tracking">tracking hub</a> links to category-specific guides for movies, TV, anime, games, music, books, statistics, and export.</p>
+        <h2 id="next-heading">What to try next</h2>
+        <p>If this example matches the kind of library you want to build, start with the <a href="/demo">demo</a>, then read the <a href="/tracking-templates">tracking templates</a> for rating scales and cleanup prompts. The <a href="/review-guidelines">review guidelines</a> explain how to turn quick notes into public reviews, and the <a href="/media-tracking">tracking hub</a> links to category-specific guides for movies, TV, anime, games, music, books, statistics, and export.</p>
       </section>
 
 </main>
