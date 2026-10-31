@@ -13,7 +13,7 @@ from fastapi import APIRouter, Depends, HTTPException, Request, Response
 from fastapi.responses import RedirectResponse
 from sqlalchemy.orm import Session
 
-from .. import auth, funnel, models, supporters, year_in_review
+from .. import auth, funnel, models, supporters, year_in_review, year_so_far
 from ..auth import AUTH_COOKIE_NAME
 from ..csp import strict_html_response
 from ..dependencies import get_current_user, get_db
@@ -100,6 +100,13 @@ def recap_season(response: Response, user: models.User = Depends(get_current_use
     response.headers["Cache-Control"] = "private, no-store"
     year = year_in_review.season_year()
     return {"year": year, "url": f"/year-in-review/{year}" if year else None}
+
+
+@router.get("/api/year-in-review-so-far")
+def recap_so_far(response: Response, user: models.User = Depends(get_current_user), db: Session = Depends(get_db)):
+    """The member's year so far for the November dashboard card; {"year": null} the rest of the year."""
+    response.headers["Cache-Control"] = "private, no-store"
+    return year_so_far.summary(db, user) or {"year": None}
 
 
 @router.put("/api/year-in-review/{year}/share")
@@ -588,6 +595,9 @@ def recap_page(year: int, request: Request, db: Session = Depends(get_db)):
         return RedirectResponse("/#login", status_code=302)
     _valid_year(year)
     funnel.record("recap_opened", request)
+    source = year_so_far.SOURCES.get(request.query_params.get("from") or "")
+    if source:
+        funnel.record(source, request)
     recap = year_in_review.build(db, user, year)
     share = year_in_review.get_share(db, user.id, year)
     state = _share_payload(share)

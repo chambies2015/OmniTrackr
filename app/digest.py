@@ -305,18 +305,46 @@ def _badge_section(badge: dict | None, base: str) -> tuple[str, list[str]]:
 
 
 def recap_line(db: Session, user_id: int, today: date) -> dict | None:
-    """In December and January, the member's Year in Review when they finished something that year."""
-    from . import year_in_review
+    """In December and January, the member's Year in Review when they finished something that year.
+
+    In November, their year so far instead (see year_so_far), marked with ``so_far``."""
+    from . import year_in_review, year_so_far
     year = year_in_review.season_year(today)
     if year is None:
-        return None
+        if year_so_far.active_year(today) is None:
+            return None
+        user = db.get(models.User, user_id)
+        so_far = year_so_far.summary(db, user, today) if user is not None else None
+        if not so_far:
+            return None
+        return {"year": so_far["year"], "finished": so_far["finished"], "so_far": True,
+                "headline": year_so_far.headline(so_far), "hint": so_far["hint"],
+                "since": so_far["since"], "url": year_so_far.link(so_far["year"], "email")}
     finished = sum(year_in_review.finished_counts(db, user_id, year).values())
     return {"year": year, "finished": finished} if finished else None
+
+
+def _so_far_section(recap: dict, base: str) -> tuple[str, list[str]]:
+    """November: the year so far, one thing still in reach, and when the full recap opens."""
+    year = int(recap["year"])
+    url = f"{base}{recap['url']}"
+    headline = recap["headline"]
+    if recap.get("since"):
+        headline = f"Since {recap['since']}: {headline[0].lower()}{headline[1:]}"
+    lines = [headline, recap["hint"], f"Your full {year} recap opens on December 1. Until then you can watch it fill up."]
+    paragraphs = "".join(f'<p style="color:#3b3557;font-size:14px;line-height:1.6;margin:0 0 6px">{escape(line)}</p>'
+                         for line in lines)
+    html = (f'<h2 style="font-size:17px;color:#1f1640;margin:24px 0 8px">Your {year} so far</h2>'
+            f'{paragraphs}'
+            f'<p style="margin:8px 0 0"><a href="{escape(url, quote=True)}" style="color:#6d28d9;font-weight:700">See your year so far</a></p>')
+    return html, [f"Your {year} so far: " + " ".join(lines) + f" {url}", ""]
 
 
 def _recap_section(recap: dict | None, base: str) -> tuple[str, list[str]]:
     if not recap:
         return "", []
+    if recap.get("so_far"):
+        return _so_far_section(recap, base)
     year, finished = int(recap["year"]), int(recap["finished"])
     url = f"{base}/year-in-review/{year}#story"
     line = (f"You finished {finished} title{'s' if finished != 1 else ''} in {year}. Your recap is ready to play "
