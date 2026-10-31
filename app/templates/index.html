@@ -78,6 +78,7 @@
   <link rel="stylesheet" href="/static/app-nav.css?v=20261028-simplify-1">
   <link rel="stylesheet" href="/static/auth-forms.css?v=20261030-passkeys-1">
   <link rel="stylesheet" href="/static/account-settings.css?v=20261030-passkeys-1">
+  <link rel="stylesheet" href="/static/year-so-far.css?v=20261101-so-far-1">
   <link rel="stylesheet" href="/static/dashboard-home.css?v=20261028-tonight-1">
   <link rel="stylesheet" href="/static/dashboard-2026.css?v=20261030-design-1">
   <link rel="stylesheet" href="/static/a11y.css?v=20261027-a11y-speed-1">
@@ -483,6 +484,30 @@
         <p>Tap through what you finished, your top rated titles, your longest streak and your type for the year, then post it to your story.</p>
       </div>
       <a class="action-btn" id="yearInReviewBannerLink" href="/year-in-review">Play your year</a>
+    </section>
+
+    <section id="yearSoFar" class="year-so-far" aria-labelledby="yearSoFarTitle" hidden>
+      <div class="year-so-far__head">
+        <div>
+          <p class="year-so-far__eyebrow">Year in Review preview</p>
+          <h2 id="yearSoFarTitle">Your year so far</h2>
+        </div>
+        <button id="yearSoFarDismiss" type="button" class="year-so-far__dismiss">Hide until December</button>
+      </div>
+      <dl class="year-so-far__stats">
+        <div class="year-so-far__stat"><dt id="yearSoFarFinishedLabel">titles finished</dt><dd id="yearSoFarFinished"></dd></div>
+        <div class="year-so-far__stat" id="yearSoFarHoursTile" hidden><dt id="yearSoFarHoursLabel">hours</dt><dd id="yearSoFarHours"></dd></div>
+        <div class="year-so-far__stat" id="yearSoFarTasteTile" hidden><dt id="yearSoFarTasteLabel">top genre</dt><dd id="yearSoFarTaste"></dd></div>
+      </dl>
+      <div class="year-so-far__meter-row">
+        <div id="yearSoFarMeter" class="year-so-far__meter" role="progressbar" aria-label="How much of the year has gone" aria-valuemin="0" aria-valuemax="100" hidden><span id="yearSoFarMeterFill"></span></div>
+        <span id="yearSoFarDaysLeft" class="year-so-far__days"></span>
+      </div>
+      <p id="yearSoFarHint" class="year-so-far__hint"></p>
+      <div class="year-so-far__foot">
+        <p id="yearSoFarNote" class="year-so-far__note"></p>
+        <a class="year-so-far__link" id="yearSoFarLink" href="/year-in-review">See it so far</a>
+      </div>
     </section>
 
     <section id="libraryLaunchpad" class="library-launchpad" aria-labelledby="libraryLaunchpadTitle" hidden>
@@ -2252,7 +2277,7 @@
     </form>
   </dialog>
   <script src="./credentials.js"></script>
-  <script src="./auth.js?v=20261030-start-1"></script>
+  <script src="./auth.js?v=20261101-so-far-1"></script>
   <script src="/static/import-studio.js?v=20261030-audiobooks-1"></script>
   <script src="/static/progress.js?v=20261030-audiobooks-1"></script>
   <script src="/static/episodes.js?v=20261031-episodes-2"></script>
@@ -2277,7 +2302,7 @@
   <script src="/static/friends-feed.js?v=20261030-audiobooks-1"></script>
   <script src="/static/follows.js?v=20261029-follows-1"></script>
   <script src="/static/push.js?v=20261031-push-4" defer></script>
-  <script src="/static/year-in-review-entry.js?v=20261019-story-1" defer></script>
+  <script src="/static/year-in-review-entry.js?v=20261101-so-far-1" defer></script>
   <script src="/static/guest-list.js?v=20261031-browse-1"></script>
   <script src="/static/taste-quiz.js?v=20261030-audiobooks-1" defer></script>
   <script src="/static/taste-compare.js?v=20261030-compare-1" defer></script>
