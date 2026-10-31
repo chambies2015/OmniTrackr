@@ -72,6 +72,8 @@ TITLES = {
     "challenge_complete": "Challenge complete",
     "badge_earned": "New badge",
     "release_day": "Out today",
+    "episode_today": "New episode out",
+    "away_nudge": "Still on your list",
     "review_helpful": "Your review helped someone",
     "shared_list_added": "You're on a shared list",
     "shared_list_joined": "Someone joined your shared list",
@@ -97,6 +99,8 @@ TITLES = {
 TOPICS = (
     ("releases", "Out today", "Release days for titles, new seasons and sequels you track.", True,
      ("release_day",)),
+    ("episodes", "New episodes", "The moment a new episode of a show or anime you're watching is out.", True,
+     ("episode_today",)),
     ("clubs", "Watch club picks", "A new pick on your shared lists, and a nudge two days before it's due.", True,
      ("club_pick", "club_due_soon", "shared_list_added")),
     ("recommendations", "Friend recommendations", "When a friend sends you something, or answers when you ask.", True,
@@ -114,6 +118,9 @@ TOPICS = (
      ("memory",)),
     ("followers", "New followers", "When someone starts following your public profile.", False,
      ("new_follower",)),
+    ("reminders", "When you've been away", "After a week without a visit, one reminder of what's waiting for you. "
+     "Never more than one every two weeks, and it stops if you don't come back.", True,
+     ("away_nudge",)),
 )
 TOPIC_KEYS = tuple(topic[0] for topic in TOPICS)
 TOPIC_FOR_TYPE = {kind: topic[0] for topic in TOPICS for kind in topic[4]}
@@ -413,7 +420,39 @@ def save_settings(db: Session, user_id: int, topics: Optional[dict] = None, quie
     return pref
 
 
+def members_wanting(db: Session, kind: str) -> list[int]:
+    """Active members with at least one device that gets this kind of notification pushed."""
+    rows = (db.query(models.PushSubscription.user_id, models.PushPreference)
+            .join(models.User, models.User.id == models.PushSubscription.user_id)
+            .outerjoin(models.PushPreference, models.PushPreference.user_id == models.PushSubscription.user_id)
+            .filter(models.User.is_active == True)  # noqa: E712
+            .distinct().all())
+    return sorted({user_id for user_id, pref in rows if wants(pref, kind)})
+
+
 # ---------------------------------------------------------------- sending
+
+def record_sent(kind: str, count: int) -> bool:
+    """Count pushes that reached a push service in the daily traffic counters (kind "push"). Never raises.
+
+    Anonymous totals per notification type, so Site stats can show whether these
+    go out at all and which kinds members get.
+    """
+    if count <= 0:
+        return False
+    try:
+        from .site_traffic import RECORDER
+        if not RECORDER.enabled:
+            return False
+        day = datetime.utcnow().date()
+        key = f"sent_{kind}" if kind and re.match(r"^[a-z_]{1,40}$", kind) else "sent_other"
+        with RECORDER._lock:
+            RECORDER._pending[(day, "push", key)] += count
+            RECORDER._events += count
+        return True
+    except Exception:
+        return False
+
 
 def safe_link(link: Optional[str]) -> str:
     """Only same-site paths open from a notification."""
@@ -512,7 +551,9 @@ def deliver(db: Session, messages: list[tuple[int, str, str, Optional[str]]],
                     pref.held_since = quiet_started_at(pref, now)
                 stats["held"] += 1
                 continue
+            sent_before = stats["sent"]
             _send_to(db, http, key, devices[user_id], payload_for(kind, message, link), stats)
+            record_sent(kind, stats["sent"] - sent_before)
         db.commit()
     finally:
         if owns_client:
@@ -567,7 +608,9 @@ def send_held(db: Session, http: Optional[httpx.Client] = None, now: Optional[da
             unread = [item for item in unread if wants(pref, item.type or "") and item.type != "push_enabled"]
             if not unread:
                 continue
+            sent_before = stats["sent"]
             _send_to(db, http, key, devices[pref.user_id], held_payload(unread), stats)
+            record_sent("held", stats["sent"] - sent_before)
             stats["members"] += 1
         db.commit()
     finally:
@@ -611,8 +654,8 @@ FIRST_CHECK_DELAY_SECONDS = 240
 
 
 def _hourly_jobs(session_factory) -> dict:
-    """Catch-ups after quiet hours, club finish-by nudges and On this day (which reach the bell too)."""
-    from . import clubs, memories
+    """Catch-ups after quiet hours, club finish-by nudges, On this day (which reach the bell too) and away reminders."""
+    from . import clubs, memories, push_nudges
     db = session_factory()
     try:
         nudged = clubs.send_due_reminders(db)
@@ -623,7 +666,13 @@ def _hourly_jobs(session_factory) -> dict:
             db.rollback()
             logger.exception("On this day pushes failed")
             remembered = 0
-        return {"club_reminders": nudged, "caught_up": held["members"], "memories": remembered}
+        try:
+            away = push_nudges.send_nudges(db)["sent"]
+        except Exception:
+            db.rollback()
+            logger.exception("Away reminders failed")
+            away = 0
+        return {"club_reminders": nudged, "caught_up": held["members"], "memories": remembered, "away": away}
     finally:
         db.close()
 
@@ -636,7 +685,7 @@ async def push_loop(app) -> None:
     while True:
         try:
             stats = await asyncio.to_thread(_hourly_jobs, SessionLocal)
-            if stats["club_reminders"] or stats["caught_up"] or stats["memories"]:
+            if any(stats.values()):
                 logger.info("Push catch-up and club reminders: %s", stats)
         except asyncio.CancelledError:
             raise

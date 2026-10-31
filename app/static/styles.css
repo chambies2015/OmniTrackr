@@ -5276,6 +5276,60 @@ body.dark-mode .stat-item {
   display: none;
 }
 
+/* The same box and switches inside Settings > Notifications. */
+.account-push {
+  border-top: 0;
+  border: 1px solid rgba(102, 126, 234, 0.25);
+  border-radius: 12px;
+  padding: 12px 14px;
+}
+
+.account-push-settings {
+  max-height: none;
+  margin: 10px 0 0;
+  padding: 0;
+}
+
+.account-push-settings .push-settings__title {
+  margin-top: 0;
+}
+
+/* The dialog styles every label as a block; these rows keep the checkbox beside the text. */
+.modal-content .account-push-settings .push-settings__row {
+  display: flex;
+  margin-bottom: 0;
+  font-weight: inherit;
+}
+
+.episode-dialog__push {
+  margin-bottom: 10px;
+}
+
+.episode-dialog__push {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 4px 8px;
+}
+
+.episode-dialog__push-btn {
+  margin: 0;
+  padding: 2px 0;
+  border: 0;
+  background: none;
+  color: var(--primary);
+  font: inherit;
+  font-weight: 600;
+  text-decoration: underline;
+  text-underline-offset: 3px;
+  cursor: pointer;
+}
+
+.episode-dialog__push-btn:disabled {
+  opacity: 0.6;
+  cursor: progress;
+}
+
 .notification-dropdown.push-settings-open {
   max-height: min(660px, calc(100vh - 100px));
 }

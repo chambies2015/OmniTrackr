@@ -252,6 +252,14 @@ Passkeys (optional; sign-in with a fingerprint, face or device PIN works out of 
 | `PASSKEY_RP_ID` | Optional. The domain passkeys are tied to. Defaults to the site's host without `www.` (`omnitrackr.xyz`), so one passkey works on both `omnitrackr.xyz` and `www.omnitrackr.xyz`. Changing it later invalidates every passkey members have made. |
 | `PASSKEY_ORIGINS` | Optional. Extra allowed origins, comma separated, such as a staging host. The site's own `https://` hosts (from `APP_URL` and `SITE_URL`) are always allowed. |
 
+Phone and browser notifications (Web Push; nothing to set up, members turn them on per device from the bell or Settings):
+
+| Variable | Purpose |
+| --- | --- |
+| `VAPID_PRIVATE_KEY` | Optional. The site's push signing key, as a PEM or a base64url P-256 scalar. When unset, a key is made on first use and kept in the `web_push_keys` table, which is all one server needs. Browsers tie every subscription to this key, so once members have turned notifications on it must not change. |
+| `VAPID_SUBJECT` | Optional. A `mailto:` or `https://` address push services can contact about the sender. Defaults to `mailto:` + `MAIL_FROM`. |
+| `WEB_PUSH` | Optional. `off` stops all pushes (the bell keeps working). |
+
 External metadata:
 
 | Variable | Purpose |

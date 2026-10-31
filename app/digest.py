@@ -946,6 +946,13 @@ async def digest_loop(app) -> None:
                     print(f"Release day alerts: {alerts}")
             except Exception as error:  # Never blocks the weekly email.
                 print(f"Release day alerts failed: {error}")
+            try:
+                from .episode_alerts import send_due_alerts as send_due_episode_alerts
+                episodes = await asyncio.to_thread(send_due_episode_alerts, SessionLocal)
+                if episodes["members"]:
+                    print(f"New episode alerts: {episodes}")
+            except Exception as error:
+                print(f"New episode alerts failed: {error}")
             stats = await send_due_digests(SessionLocal, client)
             if stats["sent"] or stats["failed"]:
                 print(f"Weekly emails: {stats}")

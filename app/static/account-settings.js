@@ -1,7 +1,7 @@
-// Settings dialog: the section menu, links like /#settings-privacy, a short
-// "Saved" note that stays in view while the page scrolls, and the button that
-// hands phone notifications over to the bell menu. Saving itself stays in
-// dashboard/account.js and the scripts that own each section.
+// Settings dialog: the section menu, links like /#settings-privacy, and a short
+// "Saved" note that stays in view while the page scrolls. Saving itself stays in
+// dashboard/account.js and the scripts that own each section (push.js fills the
+// phone notifications panel).
 (function () {
   const $ = id => document.getElementById(id);
   const GROUPS = ['profile', 'signin', 'privacy', 'notifications', 'data', 'membership', 'danger'];
@@ -105,21 +105,6 @@
     });
   }
 
-  function openBellSettings() {
-    if (typeof window.closeAccountModal === 'function') window.closeAccountModal();
-    // Wait for this click to finish, or the bell's "click outside" rule closes it again.
-    setTimeout(() => {
-      const dropdown = $('notificationDropdown');
-      if (dropdown && dropdown.style.display !== 'block' && typeof window.toggleNotificationDropdown === 'function') {
-        window.toggleNotificationDropdown();
-      }
-      const more = $('pushSettingsBtn');
-      if (more && !more.hidden && more.getAttribute('aria-expanded') !== 'true') more.click();
-      const target = more && !more.hidden ? more : $('pushOptInBtn') || $('notificationBell');
-      if (target && typeof target.focus === 'function') target.focus();
-    }, 0);
-  }
-
   async function openFromHash(attempt = 0) {
     const key = groupFromHash(window.location.hash);
     if (!key) return;
@@ -144,9 +129,7 @@
       if (link) {
         event.preventDefault();
         showGroup(link.dataset.settingsLink);
-        return;
       }
-      if (event.target.closest('[data-settings-open-bell]')) openBellSettings();
     });
     watchScroll();
     watchMessages();

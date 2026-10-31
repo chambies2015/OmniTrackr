@@ -170,6 +170,8 @@ def test_overview_growth_counts_invites_supporters_email_and_takes(authenticated
     assert [row["place"] for row in growth["weekly_email"]["opted_in_by_place"]] == [
         "the sign-up form", "the start page", "first-week steps", "the library home", "Account settings", "a link in an email"]
     assert growth["takes"] == {"asked": 1, "answered": 1}
+    assert growth["push"] == {"members": 0, "devices": 0, "new_devices": 0, "reached_7d": 0, "sent": 0,
+                              "sent_by_kind": [], "away_reminders": 0}
     # Counts only: no tokens or Ko-fi details anywhere, and no usernames in the growth block.
     assert "growthinvite" not in response.text and "growth-2" not in response.text
     assert "growthfriend" not in str(growth)
@@ -424,3 +426,26 @@ def test_overview_splits_people_from_all_requests(authenticated_client, admin_en
 def test_site_stats_page_renders_sources_as_text_only():
     script = (ROOT / "app" / "static" / "site-stats.js").read_text(encoding="utf-8")
     assert "innerHTML" not in script and "insertAdjacentHTML" not in script and "outerHTML" not in script
+
+
+def test_overview_growth_counts_devices_and_pushes_sent(authenticated_client, admin_env, db_session):
+    from datetime import datetime
+    admin_env.setenv("ADMIN_USERNAMES", "testuser")
+    user = db_session.query(models.User).filter_by(username="testuser").one()
+    now = datetime.utcnow()
+    db_session.add_all([
+        models.PushSubscription(user_id=user.id, endpoint="https://fcm.googleapis.com/fcm/send/one", p256dh="p", auth="a",
+                                last_success_at=now - timedelta(days=1)),
+        models.PushSubscription(user_id=user.id, endpoint="https://fcm.googleapis.com/fcm/send/two", p256dh="p", auth="a",
+                                created_at=now - timedelta(days=60)),
+        models.SiteTrafficDaily(day=now.date(), kind="push", key="sent_episode_today", count=5),
+        models.SiteTrafficDaily(day=now.date(), kind="push", key="sent_release_day", count=2),
+        models.SiteTrafficDaily(day=(now - timedelta(days=45)).date(), kind="push", key="sent_club_pick", count=9),
+        models.PushNudge(user_id=user.id, kind="away_nudge", sent_at=now - timedelta(days=2)),
+    ])
+    db_session.commit()
+    growth = authenticated_client.get("/api/site-stats/overview?days=30").json()["growth"]
+    assert growth["push"] == {"members": 1, "devices": 2, "new_devices": 1, "reached_7d": 1, "sent": 7,
+                              "sent_by_kind": [{"kind": "New episode out", "count": 5}, {"kind": "Out today", "count": 2}],
+                              "away_reminders": 1}
+    assert "fcm.googleapis.com" not in str(growth)

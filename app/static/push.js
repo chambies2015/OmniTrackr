@@ -1,5 +1,6 @@
-// Dashboard: turn phone/desktop notifications on or off for this device, from the bell,
-// and choose which kinds are pushed and when to keep quiet.
+// Dashboard: turn phone/desktop notifications on or off for this device, from the bell
+// or from Settings > Notifications, and choose which kinds are pushed and when to keep quiet.
+// Both places show the same state; a change in one shows in the other.
 // Server text is only ever set as textContent.
 (function () {
   'use strict';
@@ -7,6 +8,15 @@
   const $ = id => document.getElementById(id);
   const apiBase = () => (typeof API_BASE === 'string' ? API_BASE : '');
   let busy = false;
+  let lastState = null;
+
+  // The bell's box, and the panel in Settings > Notifications (which shows the switches straight away).
+  function mounts() {
+    return [
+      { box: $('pushOptIn'), text: $('pushOptInText'), button: $('pushOptInBtn'), form: $('pushSettings'), inline: false },
+      { box: $('accountPush'), text: $('accountPushText'), button: $('accountPushBtn'), form: $('accountPushSettings'), inline: true },
+    ].filter(mount => mount.box && mount.text && mount.button);
+  }
 
   function supported() {
     return window.isSecureContext && 'serviceWorker' in navigator && 'PushManager' in window && 'Notification' in window;
@@ -75,35 +85,47 @@
     return reg ? reg.pushManager.getSubscription() : null;
   }
 
+  const COPY = {
+    off: ['Get these on this device too, even when OmniTrackr is closed.', 'Turn on'],
+    on: ['Notifications are on for this device.', 'Turn off'],
+    blocked: ['Notifications are blocked for OmniTrackr in this browser’s settings.', ''],
+    install: ['On iPhone and iPad, add OmniTrackr to your Home Screen to get notifications.', 'Show me how'],
+    // Only the Settings panel says this; the bell stays quiet about what a browser can't do.
+    unsupported: ['This browser can’t show notifications from websites. Chrome, Edge, Firefox and Safari 16.4 or later can.', ''],
+  };
+
   function render(state, message) {
-    const box = $('pushOptIn');
-    const text = $('pushOptInText');
-    const button = $('pushOptInBtn');
-    if (!box || !text || !button) return;
-    const copy = {
-      off: ['Get these on this device too, even when OmniTrackr is closed.', 'Turn on'],
-      on: ['Notifications are on for this device.', 'Turn off'],
-      blocked: ['Notifications are blocked for OmniTrackr in this browser’s settings.', ''],
-      install: ['On iPhone and iPad, add OmniTrackr to your Home Screen to get notifications.', 'Show me how'],
-    }[state];
+    lastState = state;
     const more = $('pushSettingsBtn');
     if (more) more.hidden = state !== 'on';
     if (state !== 'on') closeSettings();
-    if (!copy) {
-      box.hidden = true;
-      return;
-    }
-    box.hidden = false;
-    box.dataset.state = state;
-    text.textContent = message || copy[0];
-    button.textContent = copy[1];
-    button.hidden = !copy[1];
-    button.disabled = false;
+    mounts().forEach(mount => {
+      const copy = COPY[state];
+      if (!copy || (state === 'unsupported' && !mount.inline)) {
+        mount.box.hidden = true;
+        if (mount.inline && mount.form) mount.form.hidden = true;
+        return;
+      }
+      mount.box.hidden = false;
+      mount.box.dataset.state = state;
+      mount.text.textContent = message || copy[0];
+      mount.button.textContent = copy[1];
+      mount.button.hidden = !copy[1];
+      mount.button.disabled = false;
+      if (mount.inline && mount.form) {
+        if (state === 'on') showInline(mount.form);
+        else mount.form.hidden = true;
+      }
+    });
+  }
+
+  function state() {
+    return lastState;
   }
 
   async function refresh() {
     if (!signedIn()) return render(null);
-    if (!supported()) return render(iosBrowser() && !standalone() ? 'install' : null);
+    if (!supported()) return render(iosBrowser() && !standalone() ? 'install' : 'unsupported');
     if (Notification.permission === 'denied') return render('blocked');
     try {
       const subscription = await currentSubscription();
@@ -238,9 +260,26 @@
     ]));
     form.appendChild(make('p', { className: 'push-settings__foot' }, [
       make('span', { text: 'The bell still lists everything. ' }),
-      make('span', { id: 'pushSettingsStatus', className: 'push-settings__status', role: 'status' }),
+      make('span', { className: 'push-settings__status', role: 'status' }),
     ]));
     syncHours(form);
+  }
+
+  // Settings > Notifications shows the switches as soon as this device is on, no extra tap.
+  const shownInline = new WeakSet();
+
+  async function showInline(form) {
+    if (shownInline.has(form)) {
+      form.hidden = false;
+      return;
+    }
+    try {
+      buildSettings(form, await api('/notifications/push/settings'));
+      shownInline.add(form);
+      form.hidden = false;
+    } catch (error) {
+      form.hidden = true;
+    }
   }
 
   function syncHours(form) {
@@ -262,24 +301,31 @@
     return body;
   }
 
-  function setStatus(message) {
-    const status = $('pushSettingsStatus');
+  function setStatus(form, message) {
+    const status = form.querySelector('.push-settings__status');
     if (status) status.textContent = message;
   }
 
   let saving = Promise.resolve();
 
-  function saveSettings() {
-    const form = $('pushSettings');
+  function saveSettings(form) {
+    form = form || $('pushSettings');
     if (!form) return saving;
     syncHours(form);
     const body = JSON.stringify(readSettings(form));
-    setStatus('Saving…');
-    // One save at a time, in the order the switches were flipped.
+    setStatus(form, 'Saving…');
+    // One save at a time, in the order the switches were flipped. The other panel
+    // (bell or Settings) is rebuilt from the server the next time it opens.
     saving = saving.then(() => api('/notifications/push/settings', { method: 'PUT', body }))
-      .then(() => setStatus('Saved.'))
-      .catch(() => setStatus('That didn’t save. Please try again.'));
+      .then(() => { setStatus(form, 'Saved.'); forgetOtherForms(form); })
+      .catch(() => setStatus(form, 'That didn’t save. Please try again.'));
     return saving;
+  }
+
+  function forgetOtherForms(saved) {
+    mounts().forEach(mount => {
+      if (mount.form && mount.form !== saved) shownInline.delete(mount.form);
+    });
   }
 
   function closeSettings() {
@@ -319,12 +365,39 @@
   }
 
   document.addEventListener('change', event => {
-    if (event.target.closest && event.target.closest('#pushSettings')) saveSettings();
+    const form = event.target.closest && (event.target.closest('#pushSettings') || event.target.closest('#accountPushSettings'));
+    if (form) saveSettings(form);
   });
+
+  // Turn this device on from anywhere (the episode guide offers it). Resolves to the new state.
+  async function turnOnFromPrompt() {
+    if (busy) return lastState;
+    if (lastState === null) await refresh();
+    if (lastState === 'install') {
+      const dialog = $('installAppDialog');
+      if (dialog && typeof dialog.showModal === 'function') dialog.showModal();
+      return lastState;
+    }
+    if (lastState !== 'off') return lastState;
+    busy = true;
+    try {
+      await turnOn();
+    } catch (error) {
+      render('off');
+    } finally {
+      busy = false;
+    }
+    return lastState;
+  }
 
   document.addEventListener('click', async event => {
     if (event.target.closest && event.target.closest('#notificationBell')) {
       closeSettings();
+      refresh();
+      return;
+    }
+    // Settings opens from the account button or a /#settings-notifications link; show this device's state there.
+    if (event.target.closest && (event.target.closest('#userDisplay') || event.target.closest('[data-settings-link]'))) {
       refresh();
       return;
     }
@@ -334,11 +407,11 @@
       openSettings();
       return;
     }
-    const button = event.target.closest && event.target.closest('#pushOptInBtn');
+    const button = event.target.closest && (event.target.closest('#pushOptInBtn') || event.target.closest('#accountPushBtn'));
     if (!button || busy) return;
     event.preventDefault();
     event.stopPropagation();
-    const state = $('pushOptIn') && $('pushOptIn').dataset.state;
+    const state = lastState;
     if (state === 'install') {
       const dialog = $('installAppDialog');
       if (dialog && typeof dialog.showModal === 'function') dialog.showModal();
@@ -357,8 +430,22 @@
     }
   });
 
-  window.omniPush = { refresh, forgetDevice, openSettings, saveSettings };
+  // Settings can open without a click (a /#settings-notifications link); fill the panel whenever it appears.
+  function watchSettings() {
+    const modal = $('accountModal');
+    if (!modal || typeof MutationObserver !== 'function') return;
+    new MutationObserver(() => {
+      if (modal.style && modal.style.display && modal.style.display !== 'none') refresh();
+    }).observe(modal, { attributes: true, attributeFilter: ['style'] });
+  }
 
-  if (document.readyState === 'complete') sync();
-  else window.addEventListener('load', sync);
+  function start() {
+    watchSettings();
+    return sync();
+  }
+
+  window.omniPush = { refresh, forgetDevice, openSettings, saveSettings, state, turnOn: turnOnFromPrompt };
+
+  if (document.readyState === 'complete') start();
+  else window.addEventListener('load', start);
 })();
