@@ -59,8 +59,8 @@ def page(title, description, path, content, *, indexable=True, structured_data=N
 
 
 DISCOVER_DESCRIPTION = (
-    "Editorial trails that connect movies, TV, anime, games, music and books through one shared idea, "
-    "with why each pick fits, a fair caveat and a source. Free to read, no account needed."
+    "Trails that link movies, TV, anime, games, music and books through one shared idea, "
+    "with why each pick fits, a fair caveat and a source. Free to read."
 )
 
 

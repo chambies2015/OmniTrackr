@@ -295,6 +295,15 @@ body.site .site-finder__field input:focus-visible { outline: none; }
 }
 
 /* Editorial picks shown where a member-content directory is still empty. */
+/* Sign-up prompt above the footer on section hubs (site_chrome.join_prompt). */
+.site-join { align-items: center; background: linear-gradient(135deg, rgba(139, 92, 246, .14), rgba(45, 212, 191, .08)); border: 1px solid var(--site-border); border-radius: var(--site-radius); box-sizing: border-box; display: flex; flex-wrap: wrap; gap: var(--space-4, 16px) var(--space-6, 32px); justify-content: space-between; margin: 40px auto 48px; max-width: calc(var(--site-wrap) - 48px); padding: 28px 32px; width: calc(100% - 48px); }
+.site-join[hidden] { display: none; }
+/* Guides can be light; outside .reader-shell the dark tokens apply, so the band keeps its own dark surface there. */
+.public-reader .site-join { background: linear-gradient(135deg, #1e1745, #0f1d26); border-color: transparent; }
+.site-join h2 { color: var(--site-text); font: 700 1.3rem/1.25 var(--site-display); margin: 0 0 6px; }
+.site-join p { color: var(--site-soft); line-height: 1.55; margin: 0; max-width: 62ch; }
+.site-join__actions { display: flex; flex-wrap: wrap; gap: 10px; }
+@media (max-width: 640px) { .site-join { margin: 28px auto 36px; padding: 22px 20px; width: calc(100% - 32px); } .site-join__actions { width: 100%; } .site-join__actions .site-btn { flex: 1 1 auto; } }
 .site-picks { grid-column: 1 / -1; margin: 8px 0 32px; text-align: left; }
 .site-picks h2 { color: var(--site-text); font: 700 1.35rem/1.25 var(--site-display); margin: 0 0 8px; }
 .site-picks > p { color: var(--site-soft); line-height: 1.6; margin: 0 0 18px; max-width: 70ch; }

@@ -188,11 +188,11 @@ def _apply_category_review_context(page: str, category: Optional[str]) -> str:
     context = CATEGORY_REVIEW_CONTEXT[category]
     category_url = f"{SITE_URL}/reviews?category={category}"
     page = page.replace(
-        "<title>Public Media Reviews for Movies, Shows, Games, Music & Books - OmniTrackr</title>",
+        "<title>Movie, TV, anime and game reviews by members | OmniTrackr</title>",
         f"<title>{_escape(context['title'])}</title>",
     )
     page = page.replace(
-        '<meta name="description" content="Read public OmniTrackr reviews for movies, TV shows, anime, video games, music, books, manga, podcasts, and audiobooks. Discover ratings and recommendations from media fans.">',
+        '<meta name="description" content="Ratings and reviews by OmniTrackr members for movies, TV shows, anime, games, books, music, manga, podcasts and audiobooks.">',
         f'<meta name="description" content="{_escape(context["description"])}">',
     )
     page = page.replace(

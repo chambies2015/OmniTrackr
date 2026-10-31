@@ -761,7 +761,7 @@ class TestSecurityMiddleware:
             "/demo": "OmniTrackr Demo",
             "/media-tracking": "Media Tracking Hub",
             "/roadmap": "OmniTrackr Roadmap",
-            "/reviews": "Public Media Reviews",
+            "/reviews": "reviews by members",
             "/reviews?category=movie": "Movie Reviews",
             "/reviews?category=tv_show": "TV Show Reviews",
             "/reviews?category=anime": "Anime Reviews",

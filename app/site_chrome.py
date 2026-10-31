@@ -15,9 +15,9 @@ import re
 from datetime import date
 from html import escape
 
-SITE_CSS_VERSION = "20261030-design-1"
+SITE_CSS_VERSION = "20261031-join-1"
 SITE_JS_VERSION = "20261028-nav-1"
-SITE_NAV_JS_VERSION = "20261030-errors-1"
+SITE_NAV_JS_VERSION = "20261031-join-1"
 # Pages holding this marker (the demo) skip site-nav.js, which reads the stored
 # sign-in hint and calls the title search API; their search button stays a link.
 SANDBOX_MARKER = "<!--SITE_SANDBOX-->"
@@ -131,6 +131,62 @@ FOOTER_GROUPS = (
 )
 # The legal links also sit on their own line under the columns, where people look for them.
 FOOTER_LEGAL = (("Privacy", "/privacy"), ("Terms", "/terms"), ("Ads & affiliates", "/advertising"), ("Contact", "/contact"))
+
+# A short sign-up prompt above the footer for signed-out readers of the section
+# hubs most visitors arrive on from search. Pages that already ask in their own
+# words (any "/#signup" link of their own) are skipped. nav key -> (heading, text).
+_RELEASES_JOIN = ("Hear about it on release day",
+                  "Track a movie, show, anime or game from this list and OmniTrackr tells you the day it comes out, "
+                  "along with new seasons and sequels of what you already follow. Free, and your library stays private.")
+_PICKS_JOIN = ("Keep the ones that catch your eye",
+               "Save picks to a free OmniTrackr library, then mark them finished and rate them as you go. "
+               "Your list stays private unless you share it.")
+JOIN_PROMPTS = {
+    "release-radar": _RELEASES_JOIN,
+    "new-this-week": _RELEASES_JOIN,
+    "discover": _PICKS_JOIN,
+    "best-of": _PICKS_JOIN,
+    "in-order": ("Keep your place in the series",
+                 "Add a franchise to a free OmniTrackr library and tick off each film, book or game as you finish it. "
+                 "Your list stays private unless you share it."),
+    "if-you-liked": _PICKS_JOIN,
+    "guides": ("Try it with your own list",
+               "Start a free library and bring your ratings over from Letterboxd, Goodreads, MyAnimeList and others, "
+               "or add titles one at a time."),
+}
+
+
+def join_prompt(key: str) -> str:
+    heading, text = JOIN_PROMPTS[key]
+    return (
+        '<section class="site-join" data-site-join data-guest-only aria-labelledby="site-join-heading">'
+        f'<div><h2 id="site-join-heading">{escape(heading)}</h2><p>{escape(text)}</p></div>'
+        '<div class="site-join__actions"><a class="site-btn site-btn--primary site-btn--md" href="/#signup">Create a free account</a>'
+        '<a class="site-btn site-btn--ghost site-btn--md" href="/demo">Try the demo first</a></div>'
+        '</section>'
+    )
+
+
+JOIN_MARKER = re.compile(r"<!--SITE_JOIN:([a-z-]+)-->")
+
+
+def fill_join_prompt(html: str) -> str:
+    """Swap the join marker for the prompt, unless the page already asks visitors to sign up.
+
+    Runs on the finished page (html_finish), because several routers add their
+    own content, including their own sign-up sections, after the header and
+    footer are applied. Sign-up links in the header and footer don't count.
+    """
+    marker = JOIN_MARKER.search(html)
+    if not marker:
+        return html
+    body_start = html.find("</header>")
+    footer_start = html.find('<footer class="site-footer"')
+    body = html[body_start if body_start != -1 else 0: footer_start if footer_start != -1 else len(html)]
+    key = marker.group(1)
+    prompt = join_prompt(key) if key in JOIN_PROMPTS and 'href="/#signup"' not in body else ""
+    return JOIN_MARKER.sub("", html.replace(marker.group(0), prompt, 1))
+
 
 NAV_MARKER = re.compile(r"<!--SITE_NAV:([a-z-]*)-->")
 FOOTER_MARKER = "<!--SITE_FOOTER-->"
@@ -282,6 +338,11 @@ def apply_site_chrome(html: str, *, login_action: bool = False, member: bool = F
     """Replace the nav/footer markers; leaves pages without markers untouched."""
     if "<!--SITE_" not in html:
         return html
+    nav = NAV_MARKER.search(html)
+    key = nav.group(1) if nav else ""
+    if key in JOIN_PROMPTS and not member and FOOTER_MARKER in html:
+        # Filled in (or dropped) once the page is complete: see fill_join_prompt.
+        html = html.replace(FOOTER_MARKER, f"<!--SITE_JOIN:{key}-->" + FOOTER_MARKER, 1)
     html = NAV_MARKER.sub(lambda m: site_nav(m.group(1), login_action=login_action, member=member), html, count=1)
     html = html.replace(FOOTER_MARKER, site_footer(), 1)
     # Match the tag itself: review text quoting the path must not stop the stylesheet loading.

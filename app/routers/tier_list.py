@@ -20,8 +20,8 @@ router = APIRouter(tags=["tier-list"])
 CSS_VERSION = "20261015-tier-1"
 JS_VERSION = "20261015-tier-1"
 GUEST_LIST_JS = "/static/guest-list.js?v=20261031-browse-1"
-DESCRIPTION = ("Free tier list maker for movies, TV shows, anime, video games, books and albums. Start from a ready-made "
-               "set or search any title, drag it from S to D, and save the finished list as an image. No account needed.")
+DESCRIPTION = ("Free tier list maker for movies, TV, anime, games, books and albums. Start from a ready-made set or "
+               "search any title, rank it S to D, save it as an image.")
 MAX_REDIRECTS = 3
 # The image proxy shares the outgoing connection pool with Google sign-in, Release Radar and
 # the metadata lookups. Capping it keeps a burst of poster requests (one export asks for up to
