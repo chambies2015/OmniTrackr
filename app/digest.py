@@ -186,7 +186,7 @@ def _spotlight_section(review: dict | None, base: str) -> tuple[str, list[str]]:
         '<div style="border-left:3px solid #7c3aed;padding:2px 0 2px 14px">'
         f'<a href="{escape(url, quote=True)}" style="color:#1f1640;font-weight:700;text-decoration:none;font-size:15px">{escape(review.get("title") or "")}</a>'
         f'<div style="color:#3b3557;font-size:14px;line-height:1.6;margin-top:4px">{escape(excerpt)}</div>'
-        f'<div style="color:#8a86a3;font-size:13px;margin-top:6px">by {escape(review.get("username") or "a member")} · '
+        f'<div style="color:#6f6a8a;font-size:13px;margin-top:6px">by {escape(review.get("username") or "a member")} · '
         f'<a href="{escape(url, quote=True)}" style="color:#6d28d9">Read the review</a></div></div>'
     )
     return html, ["Review of the week:", f"{review.get('title')} by {review.get('username')}: {excerpt}", url, ""]
@@ -701,7 +701,7 @@ def build_digest(username: str, report: dict, unsubscribe_url: str, spotlight: d
         f'<p style="margin:26px 0 8px"><a href="{escape(base, quote=True)}/release-radar" '
         'style="background:#7c3aed;color:#fff;padding:12px 20px;border-radius:999px;text-decoration:none;font-weight:700">'
         'Open Release Radar</a></p>'
-        '<p style="color:#8a86a3;font-size:12px;margin-top:24px">You get this because you turned on the weekly email in OmniTrackr. '
+        '<p style="color:#6f6a8a;font-size:12px;margin-top:24px">You get this because you turned on the weekly email in OmniTrackr. '
         f'<a href="{escape(unsubscribe_url, quote=True)}" style="color:#6d28d9">Unsubscribe</a> any time with one click.</p>'
         '</div></div></body></html>'
     )

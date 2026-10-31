@@ -264,6 +264,11 @@ test('adding a passkey sends the password for a challenge, then what the device 
   assert.equal(created.children.length, 1);
   assert.equal(s.$('passkeyBadge').textContent, '1 passkey');
   assert.match(s.$('passkeySuccess').textContent, /Work laptop is ready/);
+  // Screen readers hear the outcome, and each row's buttons say which passkey they act on.
+  assert.equal(s.$('passkeySuccess').attrs.role, 'status');
+  const actions = created.children[0].children[2];
+  assert.deepEqual(actions.children.map(button => [button.textContent, button.attrs['aria-label']]),
+    [['Rename', 'Rename Work laptop'], ['Remove', 'Remove Work laptop']]);
   assert.equal(s.$('passkeyAddPassword').value, '');
   assert.equal(api.state.passkeys.length, 1);
 });

@@ -376,7 +376,7 @@ def build_email(step: Step, username: str, library_total: int, progress: dict, u
         f'<p style="margin:26px 0 8px"><a href="{escape(_link("/"), quote=True)}" '
         'style="background:#7c3aed;color:#fff;padding:12px 20px;border-radius:999px;text-decoration:none;font-weight:700">'
         'Open my library</a></p>'
-        '<p style="color:#8a86a3;font-size:12px;line-height:1.5;margin-top:24px">You’re getting this because you joined '
+        '<p style="color:#6f6a8a;font-size:12px;line-height:1.5;margin-top:24px">You’re getting this because you joined '
         f'OmniTrackr this week. {escape(count_line)} '
         f'<a href="{escape(unsubscribe_url, quote=True)}" style="color:#6d28d9">Unsubscribe from product updates</a> '
         'with one click, or switch off “Occasional news” under Email in Account Settings.</p>'
