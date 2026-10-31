@@ -238,7 +238,7 @@ def weekly_preview(request: Request, user=Depends(get_current_user), db: Session
         else:
             banner = PREVIEW_BANNER.format(heading="This is what your weekly email would look like.",
                                            note="Quiet weeks are skipped.", verb="on")
-        html = html.replace("<html>", f"<html><head><title>{escape(subject)}</title></head>", 1)
+        html = html.replace("<html>", f'<html lang="en"><head><title>{escape(subject)}</title></head>', 1)
         html = html.replace('<div style="max-width:560px;margin:0 auto;padding:24px">', banner +
                             '<div style="max-width:560px;margin:0 auto;padding:24px">', 1)
         from fastapi.responses import HTMLResponse

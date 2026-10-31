@@ -232,7 +232,7 @@ def build_email(username: str, library_count: int, matches: list[dict], unsubscr
         f'<p style="margin:26px 0 8px"><a href="{escape(link("/"), quote=True)}" '
         'style="background:#7c3aed;color:#fff;padding:12px 20px;border-radius:999px;text-decoration:none;font-weight:700">'
         'Open my library</a></p>'
-        '<p style="color:#8a86a3;font-size:12px;line-height:1.5;margin-top:24px">You’re getting this one-time update because you have an '
+        '<p style="color:#6f6a8a;font-size:12px;line-height:1.5;margin-top:24px">You’re getting this one-time update because you have an '
         'OmniTrackr account. We don’t send newsletters unless you turn one on. '
         f'<a href="{escape(unsubscribe_url, quote=True)}" style="color:#6d28d9">Unsubscribe from product updates</a> with one click.</p>'
         '</div></div></body></html>'

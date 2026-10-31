@@ -304,7 +304,7 @@ def build_email(username: str, library_total: int, waiting: list[dict], matches:
         f'<p style="margin:26px 0 8px"><a href="{escape(_link("/"), quote=True)}" '
         'style="background:#7c3aed;color:#fff;padding:12px 20px;border-radius:999px;text-decoration:none;font-weight:700">'
         'Open my library</a></p>'
-        '<p style="color:#8a86a3;font-size:12px;line-height:1.5;margin-top:24px">You’re getting this because you have an '
+        '<p style="color:#6f6a8a;font-size:12px;line-height:1.5;margin-top:24px">You’re getting this because you have an '
         'OmniTrackr account and haven’t visited in a while. We send one of these at most every two months, and stop after two '
         'if you don’t come back. '
         f'<a href="{escape(unsubscribe_url, quote=True)}" style="color:#6d28d9">Unsubscribe from product updates</a> with one click.</p>'

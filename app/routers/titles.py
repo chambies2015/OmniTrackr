@@ -27,7 +27,7 @@ from ..site_chrome import apply_site_chrome, editorial_picks, message_page, view
 
 router = APIRouter(tags=["titles"])
 SITE_URL = os.getenv("SITE_URL", "https://omnitrackr.xyz").rstrip("/")
-CSS_VERSION = "20261031-quick-answers-1"
+CSS_VERSION = "20261031-sweep-1"
 JS_VERSION = "20261025-title-refresh-1"
 SCHEMA_TYPES = {"movie": "Movie", "tv": "TVSeries", "anime": "TVSeries", "game": "VideoGame", "album": "MusicAlbum", "book": "Book",
                 "manga": "Book", "podcast": "PodcastSeries", "audiobook": "Audiobook"}

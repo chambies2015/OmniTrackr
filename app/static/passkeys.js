@@ -241,6 +241,8 @@
     });
     const target = kind === 'error' ? error : success;
     if (target && text) {
+      // Screen readers hear the result without the focus moving off the form.
+      if (typeof target.setAttribute === 'function') target.setAttribute('role', kind === 'error' ? 'alert' : 'status');
       target.textContent = text;
       target.style.display = 'block';
     }
@@ -385,12 +387,15 @@
       if (item.backed_up) meta.push('Synced across your devices');
       body.appendChild(el('span', 'passkeys__meta', meta.filter(Boolean).join(' · ')));
       const actions = el('div', 'passkeys__actions');
+      // Every row has the same two buttons; the name says which passkey each one is for.
       const renameButton = el('button', 'two-factor__link', 'Rename');
       renameButton.type = 'button';
       renameButton.dataset.passkeyRename = String(item.id);
+      renameButton.setAttribute('aria-label', `Rename ${item.name}`);
       const removeButton = el('button', 'two-factor__link passkeys__remove', 'Remove');
       removeButton.type = 'button';
       removeButton.dataset.passkeyRemove = String(item.id);
+      removeButton.setAttribute('aria-label', `Remove ${item.name}`);
       actions.append(renameButton, removeButton);
       li.append(icon, body, actions);
       if (openEditor && openEditor.id === item.id) li.appendChild(editor(item));
@@ -521,6 +526,13 @@
         openEditor = { id: Number(target.dataset.passkeyRemove), kind: 'remove' };
         say();
         renderList();
+        // The question ("Remove X?") is read out, and Keep it is one Tab away from Remove passkey.
+        const form = $('passkeyList') && typeof $('passkeyList').querySelector === 'function'
+          ? $('passkeyList').querySelector('.passkeys__editor') : null;
+        if (form && typeof form.focus === 'function') {
+          form.tabIndex = -1;
+          form.focus({ preventScroll: true });
+        }
       } else if (target.dataset.passkeyCancel) {
         openEditor = null;
         renderList();

@@ -18,6 +18,8 @@
     });
     const target = kind === 'error' ? error : success;
     if (target && text) {
+      // Screen readers hear the result without the focus moving off the form.
+      if (typeof target.setAttribute === 'function') target.setAttribute('role', kind === 'error' ? 'alert' : 'status');
       target.textContent = text;
       target.style.display = 'block';
     }
@@ -46,6 +48,17 @@
     root.querySelectorAll('[data-two-factor-panel]').forEach(panel => {
       panel.hidden = panel.dataset.twoFactorPanel !== name;
     });
+  }
+
+  // Keyboard and screen reader users land on the panel that just appeared instead of
+  // staying on a button that is now hidden.
+  function focusPanel(name) {
+    const root = section();
+    const panel = root && typeof root.querySelector === 'function'
+      ? root.querySelector(`[data-two-factor-panel="${name}"]`) : null;
+    if (!panel || typeof panel.focus !== 'function') return;
+    panel.tabIndex = -1;
+    panel.focus({ preventScroll: true });
   }
 
   function formatDate(iso) {
@@ -168,6 +181,7 @@
       clearInputs();
       showCodes(result.recovery_codes || []);
       say('success', 'Two-factor sign-in is on. Save your recovery codes before you close this.');
+      focusPanel('codes');
     } catch (error) {
       say('error', error.message);
     } finally {
