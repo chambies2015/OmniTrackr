@@ -35,6 +35,7 @@ class UserCreate(UserBase):
     """Schema for user registration."""
     password: str = Field(..., min_length=6, max_length=128, description="User password (min 6 characters)")
     invite: Optional[str] = Field(None, max_length=64, description="Friend invite token from a /join link")
+    weekly_email: bool = Field(False, description="Ticked the weekly email box on the sign-up form")
 
 
 class UserLogin(BaseModel):
@@ -100,6 +101,41 @@ class TwoFactorCode(BaseModel):
     """Confirming setup, or a change that needs a fresh code (plus the password when there is one)."""
     code: str = Field(..., min_length=1, max_length=32)
     password: str = Field("", max_length=128)
+
+
+class PasskeyPassword(BaseModel):
+    """Adding or removing a passkey asks for the current password (none for Google-only accounts)."""
+    password: str = Field("", max_length=128)
+
+
+class PasskeyCredential(BaseModel):
+    """What navigator.credentials.create() or .get() returned, as base64url strings."""
+    id: str = Field(..., min_length=1, max_length=2048)
+    rawId: Optional[str] = Field(None, max_length=2048)
+    type: str = Field("public-key", max_length=32)
+    response: dict = Field(default_factory=dict)
+    authenticatorAttachment: Optional[str] = Field(None, max_length=32)
+
+    @field_validator("response")
+    @classmethod
+    def _small_enough(cls, value):
+        # Responses are a few KB; anything bigger is not a browser talking.
+        if sum(len(str(k)) + len(str(v)) for k, v in value.items()) > 256 * 1024:
+            raise ValueError("The passkey response is too large.")
+        return value
+
+
+class PasskeyRegistration(BaseModel):
+    name: str = Field("", max_length=60)
+    credential: PasskeyCredential
+
+
+class PasskeyRemove(PasskeyPassword):
+    pass
+
+
+class PasskeyRename(BaseModel):
+    name: str = Field(..., min_length=1, max_length=60)
 
 
 class AccountDeactivate(BaseModel):

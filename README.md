@@ -245,6 +245,13 @@ Sign in with Google (optional; the button stays hidden until both are set):
 | `GOOGLE_CLIENT_SECRET` | That client's secret. |
 | `GOOGLE_REDIRECT_URI` | Optional. Defaults to `APP_URL` + `/auth/google/callback`; add exactly this address under "Authorized redirect URIs". |
 
+Passkeys (optional; sign-in with a fingerprint, face or device PIN works out of the box on the site's own domain):
+
+| Variable | Purpose |
+| --- | --- |
+| `PASSKEY_RP_ID` | Optional. The domain passkeys are tied to. Defaults to the site's host without `www.` (`omnitrackr.xyz`), so one passkey works on both `omnitrackr.xyz` and `www.omnitrackr.xyz`. Changing it later invalidates every passkey members have made. |
+| `PASSKEY_ORIGINS` | Optional. Extra allowed origins, comma separated, such as a staging host. The site's own `https://` hosts (from `APP_URL` and `SITE_URL`) are always allowed. |
+
 External metadata:
 
 | Variable | Purpose |

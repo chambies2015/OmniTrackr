@@ -304,6 +304,62 @@ body.dark-mode :is(.auth-container, .account-settings) {
   width: 18px;
 }
 
+.auth-check--weekly {
+  align-items: flex-start;
+  line-height: 1.45;
+  margin: 2px 0 14px;
+}
+
+.auth-check--weekly input {
+  margin-top: 2px;
+}
+
 #twoFactorForm > .auth-toggle + .auth-toggle {
   margin-top: 8px;
+}
+
+/* "Log in with a passkey": a quiet second button under Log in. Hidden until
+   passkeys.js finds navigator.credentials, so older browsers never see it. */
+.auth-form .auth-passkey,
+.lp .lp-auth__card .auth-form .auth-passkey {
+  align-items: center;
+  background: transparent;
+  border: 1px solid var(--auth-track);
+  border-radius: 12px;
+  box-shadow: none;
+  color: var(--auth-link);
+  cursor: pointer;
+  display: flex;
+  filter: none;
+  font: 600 .98rem Inter, sans-serif;
+  gap: 10px;
+  justify-content: center;
+  margin: 10px 0 0;
+  min-height: 48px;
+  padding: 12px 16px;
+  transform: none;
+  transition: background-color .15s ease, border-color .15s ease;
+  width: 100%;
+}
+
+.auth-form .auth-passkey:hover,
+.lp .lp-auth__card .auth-form .auth-passkey:hover {
+  background: color-mix(in srgb, var(--auth-link) 10%, transparent);
+  border-color: var(--auth-link);
+  box-shadow: none;
+  filter: none;
+}
+
+.auth-form .auth-passkey:focus-visible,
+.lp .lp-auth__card .auth-form .auth-passkey:focus-visible {
+  box-shadow: var(--ring, 0 0 0 3px rgba(139, 92, 246, .45));
+  outline: none;
+}
+
+.auth-form .auth-passkey[hidden] {
+  display: none;
+}
+
+.auth-passkey__icon {
+  flex: none;
 }

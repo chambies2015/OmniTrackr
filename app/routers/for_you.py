@@ -1,6 +1,7 @@
 """Starter picks, "Coming up for you", and the opt-in weekly email."""
 from __future__ import annotations
 
+from datetime import datetime
 from typing import Literal
 from html import escape
 
@@ -88,6 +89,7 @@ def _email_state(db: Session, user_id: int) -> dict:
 class EmailPreference(BaseModel):
     enabled: bool | None = None
     updates: bool | None = None  # occasional product news and come-back check-ins
+    source: Literal["start", "first_week", "dashboard", "account"] | None = None  # which prompt was used (counted anonymously)
 
 
 @router.get("/api/for-you/email")
@@ -103,12 +105,12 @@ def set_email_preference(preference: EmailPreference, request: Request, response
     if preference.enabled:
         if not user.is_verified:
             raise HTTPException(400, "Verify your email address first, then turn on the weekly email.")
-        digest.subscribe(db, user.id)
+        digest.subscribe(db, user.id, source=preference.source)
         # Fetch this member's episode dates now, so the first email can list them.
         from ..episode_calendar import queue_member
         queue_member(request.app, user.id)
     elif preference.enabled is False:
-        digest.unsubscribe_user(db, user.id)
+        digest.unsubscribe_user(db, user.id, source=preference.source)
     if preference.updates is not None:
         from ..announcements import opt_in, opt_out
         (opt_in if preference.updates else opt_out)(db, user.id)
@@ -194,10 +196,57 @@ def weekly_subscribe(token: str = Query("", max_length=300), db: Session = Depen
     if user is None:
         return _weekly_page("Weekly email", "This link has expired",
                             "Turn on the weekly email from the \u201cComing up for you\u201d card in your library instead.")
-    digest.subscribe(db, user.id)
+    digest.subscribe(db, user.id, source="email_link")
     return _weekly_page("Weekly email", "You're subscribed",
                         "Your first weekly email arrives within a day if something you track is coming up. "
                         "You can turn it off any time from any email or from your library.")
+
+
+# ---------------------------------------------------------------- the member's own preview
+
+PREVIEW_BANNER = (
+    '<div style="max-width:560px;margin:0 auto;padding:18px 24px 0;font-family:Arial,Helvetica,sans-serif">'
+    '<div style="background:#fff7ed;border:1px solid #fdba74;border-radius:12px;padding:12px 16px;color:#7c2d12;font-size:14px;line-height:1.5">'
+    '<strong>{heading}</strong> {note} Nothing has been sent. '
+    '<a href="/#settings-notifications" style="color:#9a3412">Turn the weekly email {verb} in Account settings</a>.</div></div>'
+)
+
+
+@router.get("/email/weekly/preview", include_in_schema=False)
+def weekly_preview(request: Request, user=Depends(get_current_user), db: Session = Depends(get_db)):
+    """What this week's email would say for the signed-in member, shown in the browser."""
+    now = datetime.utcnow()
+    subscribed = digest.subscription_for(db, user.id) is not None
+    try:
+        built = digest.compose(db, user, now, client=_client(request), quiet_ok=False,
+                               unsubscribe_url=f"{digest.app_url()}/#settings-notifications")
+    except Exception:
+        db.rollback()
+        built = None
+    if built is None or built is digest.QUIET_WEEK:
+        page = message_page("Weekly email", "Nothing to show yet",
+                            "The weekly email is built from your library: new episodes of shows you track, upcoming "
+                            "seasons, sequels and releases, what your friends added, and what's next in your queue. "
+                            "Save a few titles and come back to see yours.",
+                            eyebrow="Weekly email", actions=(("Open my library", "/"), ("Account settings", "/#settings-notifications")))
+        response = strict_html_response(page)
+    else:
+        subject, html, _text = built
+        if subscribed:
+            banner = PREVIEW_BANNER.format(heading="This is your next weekly email.",
+                                           note="It goes out when something here is new.", verb="off")
+        else:
+            banner = PREVIEW_BANNER.format(heading="This is what your weekly email would look like.",
+                                           note="Quiet weeks are skipped.", verb="on")
+        html = html.replace("<html>", f"<html><head><title>{escape(subject)}</title></head>", 1)
+        html = html.replace('<div style="max-width:560px;margin:0 auto;padding:24px">', banner +
+                            '<div style="max-width:560px;margin:0 auto;padding:24px">', 1)
+        from fastapi.responses import HTMLResponse
+        response = HTMLResponse(html)  # the email's own inline styles, so the same CSP as the owner previews
+        response.headers["Content-Security-Policy"] = "default-src 'none'; img-src https: data:; style-src 'unsafe-inline'; frame-ancestors 'none'"
+    response.headers["Cache-Control"] = "no-store"
+    response.headers["X-Robots-Tag"] = "noindex, nofollow"
+    return response
 
 
 # ---------------------------------------------------------------- product update emails

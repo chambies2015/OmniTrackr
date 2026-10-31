@@ -582,6 +582,10 @@ for route in auth.router.routes:
             bind_rate_limited_endpoint(route, limiter.limit("5/minute")(route.endpoint))
         elif route.path == "/auth/login/two-factor" and 'POST' in route.methods:
             bind_rate_limited_endpoint(route, limiter.limit("10/minute")(route.endpoint))
+        elif route.path == "/auth/passkey/options" and 'POST' in route.methods:
+            bind_rate_limited_endpoint(route, limiter.limit("20/minute")(route.endpoint))
+        elif route.path == "/auth/passkey/login" and 'POST' in route.methods:
+            bind_rate_limited_endpoint(route, limiter.limit("10/minute")(route.endpoint))
         elif route.path in ("/auth/google/start", "/auth/google/callback") and 'GET' in route.methods:
             bind_rate_limited_endpoint(route, limiter.limit("20/minute")(route.endpoint))
 
@@ -604,6 +608,12 @@ for route in two_factor_router.router.routes:
     if "POST" in getattr(route, "methods", set()):
         bind_rate_limited_endpoint(route, limiter.limit("10/minute")(route.endpoint))
 app.include_router(two_factor_router.router)
+# Passkey settings check the password (or take a credential the browser made), so the same limit applies.
+from .routers import passkeys as passkeys_router
+for route in passkeys_router.router.routes:
+    if "POST" in getattr(route, "methods", set()):
+        bind_rate_limited_endpoint(route, limiter.limit("10/minute")(route.endpoint))
+app.include_router(passkeys_router.router)
 # Each request notifies (and can push to) the receiver, so a script can't send one to every member.
 for route in friends.router.routes:
     if getattr(route, "path", None) == "/friends/request" and "POST" in getattr(route, "methods", set()):

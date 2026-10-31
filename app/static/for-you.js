@@ -80,7 +80,7 @@
 
   async function setWeekly(enabled) {
     const response = await fetch(`${apiBase()}/api/for-you/email`, fetchOptions({
-      method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ enabled }),
+      method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ enabled, source: 'dashboard' }),
     }));
     const data = await response.json().catch(() => ({}));
     if (!response.ok) throw new Error(data.detail || 'Could not update the weekly email. Please try again.');
@@ -301,7 +301,7 @@
     toggle.disabled = true;
     try {
       const response = await fetch(`${apiBase()}/api/for-you/email`, fetchOptions({
-        method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ enabled: toggle.checked }),
+        method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ enabled: toggle.checked, source: 'dashboard' }),
       }));
       const data = await response.json().catch(() => ({}));
       if (!response.ok) {

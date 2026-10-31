@@ -1774,3 +1774,27 @@ class MemberStart(Base):
     reached_five_at = Column(DateTime, nullable=True)
     next_step_at = Column(DateTime, nullable=True)
     skipped_at = Column(DateTime, nullable=True)
+
+
+class UserPasskey(Base):
+    """A passkey (WebAuthn credential) a member can log in with (Oct 2026).
+
+    A new table only; members without a row log in exactly as before. We keep the
+    public key and credential id the browser handed us, a counter that must only
+    go up for hardware keys, and the flags that say whether the passkey is synced
+    (backed up) across the member's devices. See app/passkeys.py.
+    """
+    __tablename__ = "user_passkeys"
+
+    id = Column(Integer, primary_key=True, index=True)
+    user_id = Column(Integer, ForeignKey("users.id", ondelete="CASCADE"), nullable=False, index=True)
+    credential_id = Column(String(1400), nullable=False, unique=True, index=True)
+    public_key = Column(Text, nullable=False)
+    sign_count = Column(Integer, nullable=False, default=0)
+    name = Column(String(60), nullable=False, default="Passkey")
+    transports = Column(Text, nullable=True)
+    aaguid = Column(String(36), nullable=True)
+    backup_eligible = Column(Boolean, nullable=False, default=False)
+    backed_up = Column(Boolean, nullable=False, default=False)
+    created_at = Column(DateTime, nullable=False, default=datetime.utcnow)
+    last_used_at = Column(DateTime, nullable=True)

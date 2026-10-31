@@ -12,7 +12,7 @@ from sqlalchemy.orm import Session
 
 from .. import crud, schemas, models, auth, email as email_utils, return_prompt as return_prompt_tokens
 from ..dependencies import get_db
-from .. import funnel, google_signin, start_flow, two_factor, visits
+from .. import funnel, google_signin, passkeys, start_flow, two_factor, visits
 from ..signup_rules import email_problem, email_taken, username_problem, username_taken
 
 router = APIRouter(prefix="/auth", tags=["auth"])
@@ -65,6 +65,15 @@ async def register(
         except Exception as e:  # An invite never blocks sign-up.
             db.rollback()
             print(f"Failed to record friend invite: {e}")
+    if user.weekly_email:
+        # The box on the sign-up form. Nothing is sent until the address is verified
+        # (the weekly sender skips unverified accounts), so this only records the choice.
+        try:
+            from .. import digest
+            digest.subscribe(db, db_user.id, source="signup")
+        except Exception as e:
+            db.rollback()
+            print(f"Failed to turn on the weekly email at sign-up: {e}")
     
     try:
         await email_utils.send_verification_email(user.email, user.username, verification_token)
@@ -271,6 +280,62 @@ def login_two_factor(payload: schemas.TwoFactorLogin, request: Request, db: Sess
     if payload.remember_device:
         two_factor.set_device_cookie(response, user, row)
     two_factor.clear_challenge_cookie(response)
+    return response
+
+
+# ---------------------------------------------------------------- passkeys
+
+PASSKEY_NO_STORE = {"Cache-Control": "no-store, no-cache, must-revalidate, max-age=0", "Pragma": "no-cache", "Expires": "0"}
+
+
+@router.post("/passkey/options")
+def passkey_login_options(request: Request):
+    """A fresh challenge for navigator.credentials.get(); the browser picks the passkey."""
+    challenge = passkeys.new_challenge()
+    response = JSONResponse(passkeys.login_options(challenge, passkeys.rp_id(request)), headers=PASSKEY_NO_STORE)
+    passkeys.set_challenge_cookie(response, passkeys.challenge_cookie_value("get", challenge), passkeys.LOGIN_COOKIE_PATH)
+    return response
+
+
+@router.post("/passkey/login", response_model=schemas.Token)
+def passkey_login(payload: schemas.PasskeyCredential, request: Request, db: Session = Depends(get_db)):
+    """Sign in with a passkey. It was made with a fingerprint, face or PIN, so no code step follows."""
+    challenge = passkeys.read_challenge(request.cookies.get(passkeys.CHALLENGE_COOKIE), "get")
+    if challenge is None:
+        raise HTTPException(status_code=401, detail="That passkey prompt timed out. Try again.")
+    client_ip = request.client.host if request.client else "unknown"
+    credential_id = passkeys.canonical_credential_id(payload.id)
+    row = passkeys.find_by_credential_id(db, credential_id) if credential_id else None
+    if row is None:
+        print(f"SECURITY: Unknown passkey offered - IP: {client_ip}")
+        raise HTTPException(status_code=401, detail="We don't know that passkey. It may have been removed from the account. Log in with your password, then add it again in Settings.")
+    user = crud.get_user_by_id_auth(db, row.user_id)
+    if user is None:
+        raise HTTPException(status_code=401, detail="We don't know that passkey. Log in with your password instead.")
+    now_utc = datetime.now(timezone.utc).replace(tzinfo=None)
+    if user.locked_until and user.locked_until > now_utc:
+        remaining_minutes = max(1, int((user.locked_until - now_utc).total_seconds() / 60) + 1)
+        raise HTTPException(status_code=423, detail=f"Account is locked due to too many failed login attempts. Try again in {remaining_minutes} minutes.")
+    if not user.is_active:
+        raise HTTPException(status_code=403, detail="Account is deactivated. Log in with your password to reactivate it.")
+    if not user.is_verified:
+        raise HTTPException(status_code=403, detail="Please verify your email address before logging in. Check your inbox for the verification link.")
+    try:
+        result = passkeys.verify_assertion(row, payload.model_dump(), challenge,
+                                           passkeys.rp_id(request), passkeys.expected_origins(request))
+    except passkeys.PasskeyError as problem:
+        print(f"SECURITY: Passkey sign-in refused - User id: {user.id}, IP: {client_ip}, Reason: {problem}")
+        raise HTTPException(status_code=401, detail=str(problem))
+
+    row.sign_count = result["sign_count"]
+    row.backed_up = result["backed_up"]
+    row.backup_eligible = result["backup_eligible"]
+    row.last_used_at = now_utc
+    user.failed_login_attempts = 0
+    user.locked_until = None
+    db.commit()
+    response = _finish_login(user, request, db, now_utc, {"signed_in_with": "passkey"})
+    passkeys.clear_challenge_cookie(response, passkeys.LOGIN_COOKIE_PATH)
     return response
 
 

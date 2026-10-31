@@ -390,7 +390,7 @@
       button.type = 'button';
       button.addEventListener('click', async () => {
         button.disabled = true;
-        const { ok, data } = await request('/api/for-you/email', { method: 'PUT', body: JSON.stringify({ enabled: true }) })
+        const { ok, data } = await request('/api/for-you/email', { method: 'PUT', body: JSON.stringify({ enabled: true, source: 'start' }) })
           .catch(() => ({ ok: false, data: {} }));
         if (!ok) {
           button.disabled = false;

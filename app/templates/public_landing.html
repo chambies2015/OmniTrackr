@@ -19,7 +19,7 @@
   <link rel="stylesheet" href="/static/fonts.css?v=20261009-fonts-1">
   <link rel="stylesheet" href="/static/public-legacy.css?v=20261030-audiobooks-1">
   <link rel="stylesheet" href="/static/public-landing.css?v=20261030-hero-search-1">
-  <link rel="stylesheet" href="/static/auth-forms.css?v=20261030-2fa-1">
+  <link rel="stylesheet" href="/static/auth-forms.css?v=20261030-passkeys-1">
   <meta property="og:type" content="website">
   <meta property="og:url" content="https://omnitrackr.xyz/">
   <meta property="og:title" content="OmniTrackr: every movie, show, game and book in one library">
@@ -358,7 +358,7 @@
           <form id="loginFormElement" novalidate>
             <div class="auth-field">
               <label class="auth-field__label" for="loginUsername">Username or email</label>
-              <input type="text" id="loginUsername" autocomplete="username" autocapitalize="none" spellcheck="false" required aria-describedby="loginUsernameError">
+              <input type="text" id="loginUsername" autocomplete="username webauthn" autocapitalize="none" spellcheck="false" required aria-describedby="loginUsernameError">
               <p class="auth-field__error" id="loginUsernameError" hidden></p>
             </div>
             <div class="auth-field">
@@ -367,6 +367,7 @@
               <p class="auth-field__error" id="loginPasswordError" hidden></p>
             </div>
             <button type="submit" class="auth-submit">Log in</button>
+            <button type="button" class="auth-passkey" id="passkeyLoginButton" hidden><svg class="auth-passkey__icon" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="8" r="4"/><path d="M4 21v-1a6 6 0 0 1 9-5.2"/><circle cx="18" cy="16" r="2.5"/><path d="M18 18.5V22l1.5-1 1.5 1v-3.5"/></svg><span>Log in with a passkey</span></button>
           </form>
           <div id="resendVerificationContainer" class="auth-resend">
             <p>Didn't get the verification email? We can send a new link.</p>
@@ -399,6 +400,7 @@
               <p class="auth-strength" id="registerPasswordStrength" hidden><span class="auth-strength__bar" aria-hidden="true"><span></span></span><span class="auth-strength__text"></span></p>
               <p class="auth-field__error" id="registerPasswordError" hidden></p>
             </div>
+            <label class="auth-check auth-check--weekly" for="registerWeekly"><input type="checkbox" id="registerWeekly"> <span>Email me once a week when something I track has a new episode or release. Quiet weeks are skipped, and one click turns it off.</span></label>
             <button type="submit" class="auth-submit">Create free account</button>
             <p class="auth-fineprint">Free for good, and your library stays private until you share it. Signing up means you agree to the <a href="/terms">terms</a> and <a href="/privacy">privacy policy</a>.</p>
           </form>
@@ -464,6 +466,7 @@
   <script src="/credentials.js"></script>
   <script src="/auth.js?v=20261030-start-1"></script>
   <script src="/static/public-landing.js?v=20261030-hero-search-1" defer></script>
+  <script src="/static/passkeys.js?v=20261030-passkeys-1" defer></script>
   <script src="/static/guest-list.js?v=20261031-browse-1" defer></script>
   <script src="/static/title-search.js?v=20261030-hero-search-2" defer></script>
 </body>
