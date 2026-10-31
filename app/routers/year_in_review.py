@@ -13,11 +13,12 @@ from fastapi import APIRouter, Depends, HTTPException, Request, Response
 from fastapi.responses import RedirectResponse
 from sqlalchemy.orm import Session
 
-from .. import auth, models, supporters, year_in_review
+from .. import auth, funnel, models, supporters, year_in_review
 from ..auth import AUTH_COOKIE_NAME
 from ..csp import strict_html_response
 from ..dependencies import get_current_user, get_db
 from ..site_chrome import apply_site_chrome
+from ..year_in_review import CLASSIC_AGE
 from .profiles import _CardCache, _fit, _font
 
 router = APIRouter(tags=["year-in-review"])
@@ -30,6 +31,7 @@ FIRST_TRACKED_NOTE = {
 }
 _CARDS = _CardCache(size=96)
 STORY_JS_VERSION = "20261019-story-1"
+CSS_VERSION = "20261031-recap-2"
 CREATOR_NOUNS = {"movies": "movie", "music": "album", "books": "book", "manga": "series", "podcasts": "podcast", "audiobooks": "audiobook"}
 SHELF_NOUNS = {"movies": ("movie", "movies"), "tv-shows": ("show", "shows"), "anime": ("anime", "anime"),
                "video-games": ("game", "games"), "music": ("album", "albums"), "books": ("book", "books"),
@@ -43,6 +45,10 @@ def _e(value) -> str:
 
 def _rating(value) -> str:
     return "" if value is None else f"{float(value):g}"
+
+
+def _hours(value) -> str:
+    return f"{float(value or 0):g}"
 
 
 def _plural(count: int, word: str, plural: Optional[str] = None) -> str:
@@ -101,8 +107,11 @@ def share_recap(year: int, request: Request, response: Response, user: models.Us
     """Publish (or refresh) the member's snapshot. The link stays the same across refreshes."""
     response.headers["Cache-Control"] = "private, no-store"
     _valid_year(year)
+    first_time = year_in_review.get_share(db, user.id, year) is None
     share = year_in_review.save_share(db, user, year)
     _CARDS.clear_user(user.id)
+    if first_time:
+        funnel.record("recap_link_created", request)
     return _share_payload(share)
 
 
@@ -134,6 +143,9 @@ def own_story(year: int, request: Request, user: models.User = Depends(get_curre
 
 def _stat_tiles(recap: dict, *, private: bool) -> str:
     tiles = [(recap.get("finished_total", 0), "finished")]
+    spent = recap.get("time")
+    if spent and spent.get("hours"):
+        tiles.append((f"~{spent['hours']:,}", "hours, give or take"))
     if recap.get("moments_total"):
         tiles.append((recap["moments_total"], "journal moments"))
     if recap.get("added_total"):
@@ -175,6 +187,16 @@ def _highlights(recap: dict) -> str:
     if ratings:
         bits.append(f'<div class="recap-highlight"><span>Rating style</span><strong>{_e(ratings["style"])}</strong>'
                     f'<small>{_e(_rating(ratings["average"]))}/10 average over {_e(_plural(ratings["count"], "rating"))}</small></div>')
+    genres = recap.get("genres") or []
+    if genres:
+        rest = ", then " + ", ".join(g["name"] for g in genres[1:3]) if len(genres) > 1 else ""
+        bits.append(f'<div class="recap-highlight"><span>Top genre</span><strong>{_e(genres[0]["name"])}</strong>'
+                    f'<small>{_e(_plural(genres[0]["count"], "title"))}{_e(rest)}</small></div>')
+    releases = recap.get("releases")
+    if releases and releases["oldest"]["age"] >= 1:
+        oldest = releases["oldest"]
+        bits.append(f'<div class="recap-highlight"><span>Oldest finish</span><strong>{_e(oldest["title"])}</strong>'
+                    f'<small>{_e(oldest["label"])} · {_e(oldest["year"])}, {_e(_plural(oldest["age"], "year"))} old</small></div>')
     return f'<div class="recap-highlights">{"".join(bits)}</div>' if bits else ""
 
 
@@ -194,6 +216,68 @@ def _badges(recap: dict) -> str:
                     f'<small>{_e(row["tier_name"])}</small></li>' for row in rows)
     return (f'<section class="title-section" aria-labelledby="recap-badges"><h2 id="recap-badges">Badges earned this year</h2>'
             f'<ul class="recap-badges">{items}</ul></section>')
+
+
+def _time_section(recap: dict) -> str:
+    spent = recap.get("time")
+    if not spent or not spent.get("hours"):
+        return ""
+    tiles = "".join(
+        f'<div class="profile-stat"><strong>{_e(_hours(row["hours"]))}</strong><span>{_e(row["label"])}</span>'
+        f'<small>hours {_e(row["verb"])}</small></div>'
+        for row in spent.get("shelves", [])[:6])
+    line = f'<p class="recap-time__line">{_e(spent["line"])}</p>' if spent.get("line") else ""
+    total = f"{spent['hours']:,}"
+    return (f'<section class="title-section recap-time" aria-labelledby="recap-time"><h2 id="recap-time">'
+            f'About {_e(total)} hours this year</h2>{line}'
+            f'<div class="profile-stats">{tiles}</div>'
+            '<p class="title-sources">Estimated from running times, episode counts and page counts, counting only what '
+            'you finished this year. Time spent under Statistics shows how each shelf is counted.</p></section>')
+
+
+def _genres_section(recap: dict) -> str:
+    genres = recap.get("genres") or []
+    if not genres:
+        return ""
+    items = "".join(f'<li><strong>{_e(g["name"])}</strong><small>{_e(_plural(g["count"], "title"))}</small></li>' for g in genres)
+    return (f'<section class="title-section" aria-labelledby="recap-genres"><h2 id="recap-genres">Genres you kept coming back to</h2>'
+            f'<ul class="recap-chips">{items}</ul></section>')
+
+
+def _releases_section(recap: dict) -> str:
+    releases = recap.get("releases")
+    if not releases or releases["dated"] < 2:
+        return ""
+    year = recap.get("year")
+    new, dated, classics = releases["new"], releases["dated"], releases["classics"]
+    if not new:
+        lead = (f"Nothing you finished came out in {year}. You were catching up: the average title was "
+                f"{_plural(releases['average_age'], 'year')} old"
+                + (f", and {classics} came out {CLASSIC_AGE} or more years ago." if classics else "."))
+    elif new >= dated / 2:
+        lead = f"You kept up with the new stuff: {new} of your {_plural(dated, 'dated finish', 'dated finishes')} came out in {year}."
+    elif classics >= dated / 2:
+        lead = f"You spent the year catching up: {classics} of your {_plural(dated, 'dated finish', 'dated finishes')} came out {CLASSIC_AGE} or more years ago."
+    else:
+        lead = f"A mix of new and old: {new} of your {_plural(dated, 'dated finish', 'dated finishes')} came out in {year}, and the average one was {_plural(releases['average_age'], 'year')} old."
+    tiles = [(new, f"released in {year}"), (dated - new - classics, f"from the last {CLASSIC_AGE} years"), (classics, f"{CLASSIC_AGE}+ years old")]
+    html = "".join(f'<div class="profile-stat"><strong>{_e(n)}</strong><span>{_e(label)}</span></div>' for n, label in tiles if n)
+    return (f'<section class="title-section" aria-labelledby="recap-releases"><h2 id="recap-releases">New or catching up?</h2>'
+            f'<p class="recap-lead">{_e(lead)}</p><div class="profile-stats">{html}</div></section>')
+
+
+def _friends_section(recap: dict) -> str:
+    friends = recap.get("friends")
+    if not friends or not friends.get("matches"):
+        return ""
+    items = "".join(
+        f'<li><strong>{_e(m["username"])}</strong><span>{_e(_plural(m["count"], "title"))} you both finished</span>'
+        f'<small>{_e(", ".join(m["titles"]))}{" and more" if m["count"] > len(m["titles"]) else ""}</small></li>'
+        for m in friends["matches"])
+    return (f'<section class="title-section" aria-labelledby="recap-friends"><h2 id="recap-friends">Friends on the same page</h2>'
+            f'<p class="recap-lead">Out of {_e(_plural(friends["checked"], "friend"))}, these finished the same titles as you this year. '
+            'Only you can see this part.</p>'
+            f'<ol class="recap-friends">{items}</ol></section>')
 
 
 def _goals(recap: dict) -> str:
@@ -260,10 +344,14 @@ def _body(recap: dict, *, private: bool) -> str:
         f'<div class="recap-stats">{_stat_tiles(recap, private=private)}</div>',
         _persona(recap),
         _highlights(recap),
+        _time_section(recap),
+        _genres_section(recap),
         _goals(recap),
         _badges(recap),
         _title_list(recap.get("top_rated", []), "Highest rated finishes", "recap-top"),
         _title_list(recap.get("favorites", []), "Marked as favorites", "recap-favorites"),
+        _releases_section(recap),
+        _friends_section(recap) if private else "",
         _categories(recap),
         _months(recap),
     ]
@@ -297,6 +385,13 @@ def story_slides(recap: dict, name: str, *, closing: str) -> list[str]:
     if top and len(shelves) > 1:
         share = round(100 * top["finished"] / finished) if finished else 0
         slides.append(_slide("top", "Your most finished shelf", top["label"], f"{share}% of everything you finished."))
+    spent = recap.get("time")
+    if spent and spent.get("hours"):
+        shelves = spent.get("shelves", [])[:4]
+        chips = "".join(f'<li><b>{_e(_hours(row["hours"]))}</b> {_e(SHELF_NOUNS.get(row["category"], ("title", "titles"))[1])}</li>'
+                        for row in shelves)
+        slides.append(_slide("time", "Time well spent", f"~{spent['hours']:,} hours",
+                             spent.get("line") or "", f'<ul class="recap-slide__chips">{chips}</ul>' if len(shelves) > 1 else ""))
     busiest = recap.get("busiest_month")
     counts = recap.get("months") or []
     if busiest and any(counts):
@@ -318,6 +413,22 @@ def story_slides(recap: dict, name: str, *, closing: str) -> list[str]:
         slides.append(_slide("rated", "Your highest rated finish", rated[0]["title"],
                              f'{rated[0]["label"]} · {_rating(rated[0]["rating"])}/10',
                              f'<ol class="recap-slide__list" start="2">{rows}</ol>' if rows else ""))
+    genres = recap.get("genres") or []
+    if genres:
+        chips = "".join(f'<li>{_e(g["name"])} <small>{_e(g["count"])}</small></li>' for g in genres[1:5])
+        slides.append(_slide("genres", "Your top genre", genres[0]["name"],
+                             f'{_plural(genres[0]["count"], "finish", "finishes")} this year.',
+                             f'<ul class="recap-slide__chips">{chips}</ul>' if chips else ""))
+    releases = recap.get("releases")
+    if releases and releases["dated"] >= 2:
+        oldest = releases["oldest"]
+        if releases["new"]:
+            big, line = f'{releases["new"]} of {releases["dated"]}', f'of your finishes came out in {year}. '
+        else:
+            big, line = "All catch-ups", f'Nothing you finished came out in {year}. '
+        if oldest["age"] >= 1:
+            line += f'The oldest: {oldest["title"]} ({oldest["year"]}).'
+        slides.append(_slide("releases", "New or catching up?", big, line.strip()))
     ratings = recap.get("ratings")
     if ratings:
         tens = f' {_plural(ratings["tens"], "perfect ten")}.' if ratings.get("tens") else ""
@@ -393,7 +504,7 @@ def _page(*, title: str, description: str, canonical: str, card_url: str, eyebro
   <link rel="stylesheet" href="/static/fonts.css?v=20261009-fonts-1">
   <link rel="stylesheet" href="/static/title-page.css?v={TITLE_CSS_VERSION}">
   <link rel="stylesheet" href="/static/profile-page.css?v=20261030-audiobooks-1">
-  <link rel="stylesheet" href="/static/year-in-review.css?v={STORY_JS_VERSION}">
+  <link rel="stylesheet" href="/static/year-in-review.css?v={CSS_VERSION}">
   {scripts}
 </head>
 <body class="site title-page profile-page recap-page">
@@ -476,6 +587,7 @@ def recap_page(year: int, request: Request, db: Session = Depends(get_db)):
     if user is None:
         return RedirectResponse("/#login", status_code=302)
     _valid_year(year)
+    funnel.record("recap_opened", request)
     recap = year_in_review.build(db, user, year)
     share = year_in_review.get_share(db, user.id, year)
     state = _share_payload(share)
@@ -534,20 +646,22 @@ def shared_recap(token: str, request: Request, db: Session = Depends(get_db)):
     recap = year_in_review.snapshot(share)
     name = share.owner.username
     signed_in = bool(request.cookies.get(AUTH_COOKIE_NAME))
+    if not signed_in:
+        funnel.record("recap_link_opened", request)
     canonical = SITE_URL + year_in_review.share_path(share)
     cta = (f'<section class="profile-cta site-card"><div><h2>See your own {share.year} in review</h2>'
            '<p>Yours is ready on OmniTrackr, built from what you finished this year.</p></div>'
            f'<a class="site-btn site-btn--primary" href="/year-in-review/{share.year}">Open my recap</a></section>'
            if signed_in else
            f'<section class="profile-cta site-card"><div><h2>Make your own {share.year} in review</h2>'
-           '<p>OmniTrackr is a free tracker for movies, shows, anime, games, music and books. '
+           '<p>OmniTrackr is a free tracker for movies, shows, anime, games, albums, books, manga, podcasts and audiobooks. '
            'Log what you finish and get a recap like this one every December.</p></div>'
            '<a class="site-btn site-btn--primary" href="/#signup">Start tracking free</a></section>')
     action = (f'<a class="site-btn site-btn--primary" href="/year-in-review/{share.year}">Open my recap</a>' if signed_in
               else '<a class="site-btn site-btn--primary" href="/#signup">Start tracking free</a>')
     closing = (f'<p class="recap-slide__eyebrow">Your turn</p><p class="recap-slide__big">What did your {share.year} look like?</p>'
-               '<p class="recap-slide__line">OmniTrackr is free. Track movies, shows, anime, games, music and books, '
-               'and get a recap like this one every December.</p>'
+               '<p class="recap-slide__line">OmniTrackr is free. Track movies, shows, anime, games, albums, books, manga, '
+               'podcasts and audiobooks, and get a recap like this one every December.</p>'
                f'<p class="recap-slide__actions">{action}'
                f'<button type="button" class="site-btn site-btn--ghost" data-share data-share-title="{_e(name)}\'s {share.year} in review">Share this recap</button>'
                '<button type="button" class="site-btn site-btn--ghost" data-story-close>See the full recap</button></p>')
@@ -609,6 +723,9 @@ def render_card(username: str, recap: dict) -> bytes:
     draw.text((84, 140), _fit(draw, username, name_font, width - 168), font=name_font, fill=(245, 243, 255))
 
     stats = [(str(recap.get("finished_total", 0)), "finished")]
+    spent = recap.get("time")
+    if spent and spent.get("hours"):
+        stats.append((f"~{spent['hours']:,}", "hours"))
     top = recap.get("top_category")
     if top:
         stats.append((top["label"], "most finished"))
@@ -632,6 +749,8 @@ def render_card(username: str, recap: dict) -> bytes:
     if recap.get("top_rated"):
         picks = " · ".join(f'{row["title"]} ({_rating(row["rating"])})' for row in recap["top_rated"][:3])
         lines.append("Top rated: " + picks)
+    if recap.get("genres"):
+        lines.append("Top genres: " + " · ".join(g["name"] for g in recap["genres"][:3]))
     if recap.get("favorites"):
         lines.append("Favorites: " + " · ".join(row["title"] for row in recap["favorites"][:3]))
     if not lines and recap.get("first_finish"):
@@ -716,9 +835,15 @@ def render_story(username: str, recap: dict) -> bytes:
     y += 360
 
     tiles = []
+    spent = recap.get("time")
+    if spent and spent.get("hours"):
+        tiles.append(("Hours, give or take", f"~{spent['hours']:,}"))
     top = recap.get("top_category")
     if top:
         tiles.append(("Most finished", top["label"]))
+    genres = recap.get("genres") or []
+    if genres:
+        tiles.append(("Top genre", genres[0]["name"]))
     busiest = recap.get("busiest_month")
     if busiest:
         tiles.append(("Busiest month", busiest["month"]))
