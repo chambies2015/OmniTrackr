@@ -24,7 +24,7 @@ router = APIRouter(tags=["start"])
 CSS_VERSION = "20261030-start-1"
 JS_VERSION = "20261030-start-1"
 # The same scripts the dashboard uses to move titles saved before sign-up into the library.
-IMPORT_SCRIPTS = ("/static/guest-list.js?v=20261030-start-1", "/static/taste-quiz.js?v=20261030-start-1",
+IMPORT_SCRIPTS = ("/static/guest-list.js?v=20261031-browse-1", "/static/taste-quiz.js?v=20261030-start-1",
                   "/static/taste-compare.js?v=20261030-start-1")
 UNDO_WINDOW = timedelta(minutes=30)
 SECURE_COOKIE = auth.ENVIRONMENT == "production"

@@ -26,7 +26,7 @@ from .discover import page
 router = APIRouter(tags=["taste-quiz"])
 CSS_VERSION = "20261027-taste-quiz-1"
 JS_VERSION = "20261030-audiobooks-1"
-GUEST_LIST_JS = "/static/guest-list.js?v=20261030-audiobooks-1"
+GUEST_LIST_JS = "/static/guest-list.js?v=20261031-browse-1"
 DESCRIPTION = ("Tap through 24 well-known movies, shows, anime and games, mark what you've seen and loved, "
                "and start OmniTrackr with a filled-in library and picks chosen for you.")
 

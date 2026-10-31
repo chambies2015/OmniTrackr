@@ -6,7 +6,7 @@
 
   const KEY = 'omnitrackr_guest_list';
   const MAX = 30;
-  const KINDS = new Set(['movie', 'tv', 'anime', 'game', 'album', 'book']);
+  const KINDS = new Set(['movie', 'tv', 'anime', 'game', 'album', 'book', 'manga', 'podcast', 'audiobook']);
   const SLUG = /^[a-z0-9-]{1,130}$/;
   const LOADERS = ['loadMovies', 'loadTVShows', 'loadAnime', 'loadVideoGames', 'loadMusic', 'loadBooks', 'loadManga', 'loadPodcasts', 'loadAudiobooks'];
 

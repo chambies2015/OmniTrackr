@@ -217,7 +217,8 @@ function renderLibraryEmptyState(table, state) {
     box.className = 'library-empty';
     box.innerHTML = '<span class="library-empty__art" aria-hidden="true"></span>'
       + '<h3 class="library-empty__title"></h3><p class="library-empty__text"></p>'
-      + '<button type="button" class="library-empty__action"></button>';
+      + '<button type="button" class="library-empty__action"></button>'
+      + '<a class="library-empty__browse" hidden></a>';
     box.querySelector('button').addEventListener('click', () => {
       if (panel.dataset.libraryState === 'error') {
         panel.querySelector('.library-utility[id^="load"]')?.click();
@@ -248,6 +249,15 @@ function renderLibraryEmptyState(table, state) {
   box.querySelector('.library-empty__title').textContent = title;
   box.querySelector('.library-empty__text').textContent = text;
   box.querySelector('.library-empty__action').textContent = action;
+  // The three newest trackers have browse shelves to start a library from.
+  const browse = box.querySelector('.library-empty__browse');
+  const shelf = { mangaTable: ['/browse/manga', 'Or browse manga worth starting →'],
+    podcastTable: ['/browse/podcasts', 'Or browse podcasts worth subscribing to →'],
+    audiobookTable: ['/browse/audiobooks', 'Or browse audiobooks worth the listen →'] }[table.id];
+  if (browse) {
+    browse.hidden = !(shelf && state === 'empty');
+    if (shelf) { browse.href = shelf[0]; browse.textContent = shelf[1]; }
+  }
 }
 
 async function fetchLibraryPage(url) {

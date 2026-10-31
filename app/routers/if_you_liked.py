@@ -22,7 +22,7 @@ from .discover import page
 router = APIRouter(tags=["if-you-liked"])
 CSS_VERSION = "20261016-liked-1"
 JS_VERSION = "20261016-liked-1"
-GUEST_LIST_JS = "/static/guest-list.js?v=20261030-audiobooks-1"
+GUEST_LIST_JS = "/static/guest-list.js?v=20261031-browse-1"
 SITE = "https://omnitrackr.xyz"
 FIRST_PUBLISHED = "2026-10-16"
 HUB_TITLE = "If you liked it: what to watch, play and read next"

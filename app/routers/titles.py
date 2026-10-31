@@ -1035,7 +1035,7 @@ def render(group, summary: dict, metadata: Optional[dict], indexable: bool, sign
   <link rel="stylesheet" href="/static/discussions.css?v=20261028-discussions-1">
   <script src="/static/share.js?v=20261004-share-1" defer></script>
   <script src="/static/review_report.js?v=20261020-title-reviews-1" defer></script>
-  {'' if signed_in else '<script src="/static/guest-list.js?v=20261030-audiobooks-1" defer></script>'}
+  {'' if signed_in else '<script src="/static/guest-list.js?v=20261031-browse-1" defer></script>'}
   {f'<link rel="stylesheet" href="/static/friend-recs.css?v={FRIEND_RECS_VERSION}"><script src="/static/friend-recs.js?v={FRIEND_RECS_VERSION}" defer></script>' if signed_in else ''}
   {ad_loader}
   {_json_ld(group, summary, metadata, canonical, image, faq)}
@@ -1332,11 +1332,18 @@ def import_guest_list(
             # An entry saved from an "In order" guide that no member tracks yet.
             from .. import in_order
             curated = in_order.find(item.kind, item.slug)
+        browsed = None
         if group is None and curated is None:
+            # A manga, podcast or audiobook saved from a browse shelf (or its chart).
+            from .. import browse
+            browsed = browse.find(item.kind, item.slug)
+        if group is None and curated is None and browsed is None:
             missing += 1
             continue
         if group is not None:
             state, record = add_group_to_library(db, user, group)
+        elif browsed is not None:
+            state, record = browse.add_to_library(db, user, browsed[0], browsed[1])
         else:
             # A Pick for me suggestion no member tracks yet: copy the editors' title, year and creator.
             state, record = pick.add_to_library(db, user, curated)
@@ -1438,6 +1445,12 @@ def _titles_index_page(db: Session) -> tuple[str, bool]:
             "Titles appear here as members track them. Meanwhile, these OmniTrackr guides compare picks across "
             "every medium and explain who each one suits.",
         ))
+    # Manga, podcasts and audiobooks are new and thinly tracked; their browse shelves fill the gap.
+    sections.append('<section class="title-section" aria-labelledby="browse-heading"><div class="title-section__head">'
+                    '<h2 id="browse-heading">Starting a new shelf?</h2></div>'
+                    '<p class="title-section__lead">Three formats have hand-picked shelves to begin from: '
+                    '<a href="/browse/manga">manga worth starting</a>, <a href="/browse/podcasts">podcasts worth subscribing to</a> '
+                    'and <a href="/browse/audiobooks">audiobooks worth the listen</a>, each with the current chart from the source the tracker searches.</p></section>')
     # The directory itself is mostly links; it's only worth indexing once enough titles have member reviews.
     index_directory = len(title_pages.reviewed_titles(db)) >= 8
     robots = "index, follow" if index_directory else "noindex, follow"

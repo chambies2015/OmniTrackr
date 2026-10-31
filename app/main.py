@@ -32,6 +32,7 @@ from .site_traffic import RECORDER as TRAFFIC_RECORDER, SiteTrafficMiddleware
 from . import digest as digest_emails
 from . import funnel, start_flow
 from .dependencies import get_db, get_current_user, get_optional_current_user
+from .routers import browse as browse_router
 from .routers import (
     auth,
     account,
@@ -80,6 +81,8 @@ async def lifespan(application: FastAPI):
     """Own pooled network resources and lightweight startup maintenance."""
     from . import editorial_collections, release_radar as radar_data
     radar_data.bind_event_loop(asyncio.get_running_loop())
+    from . import browse as browse_data
+    browse_data.bind_event_loop(asyncio.get_running_loop())
     application.state.external_api_client = httpx.AsyncClient(
         timeout=httpx.Timeout(12.0, connect=5.0),
         limits=httpx.Limits(max_connections=20, max_keepalive_connections=10),
@@ -678,6 +681,7 @@ for route in collections.router.routes:
 app.include_router(collections.router)
 app.include_router(discover.router)
 app.include_router(release_radar.router)
+app.include_router(browse_router.router)
 for route in export_import.router.routes:
     if getattr(route, "path", None) in ("/import/", "/import/file/"):
         bind_rate_limited_endpoint(route, limiter.limit("10/hour")(route.endpoint))

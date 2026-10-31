@@ -109,8 +109,10 @@ def _strip_html(text: Optional[str]) -> str:
 
 
 def _norm(text: str) -> str:
-    # "Pokémon" and "Pokemon", "Fast & Furious" and "Fast and Furious" are the same title.
-    text = unicodedata.normalize("NFKD", text or "").encode("ascii", "ignore").decode("ascii")
+    # "Pokémon" and "Pokemon", "Fast & Furious" and "Fast and Furious" are the same title,
+    # and so are "O'Brien" and Apple's curly "O’Brien" (NFKD would drop the curly one).
+    text = (text or "").replace("\u2019", "'").replace("\u2018", "'")
+    text = unicodedata.normalize("NFKD", text).encode("ascii", "ignore").decode("ascii")
     text = re.sub(r"\s&\s", " and ", text.casefold())
     return " ".join(re.sub(r"[^\w\s]", " ", text).split())
 

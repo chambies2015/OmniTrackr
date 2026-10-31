@@ -289,6 +289,11 @@ def _database_parts(db: Session) -> list[str]:
     
     from ..discover_catalog import published_editions
     sitemap_parts.append(f"<url><loc>{base_url}/discover</loc><changefreq>weekly</changefreq><priority>0.8</priority></url>")
+    # Browse shelves: written pages with a live chart on top (see app/browse.py).
+    from .. import browse
+    sitemap_parts.append(f"<url><loc>{base_url}{browse.path()}</loc><changefreq>weekly</changefreq><priority>0.7</priority></url>")
+    for browse_kind in browse.KINDS:
+        sitemap_parts.append(f"<url><loc>{base_url}{browse.path(browse_kind)}</loc><changefreq>daily</changefreq><priority>0.8</priority></url>")
     for slug, edition in published_editions().items():
         sitemap_parts.append(
             f"<url><loc>{base_url}/discover/monthly/{slug}</loc>"

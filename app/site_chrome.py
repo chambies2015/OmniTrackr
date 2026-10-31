@@ -33,6 +33,7 @@ NAV_MENUS = (
         ("best-of", "Best of 2026", "/best-of", "The year's standouts, with why each one earned it"),
         ("release-radar", "Release Radar", "/release-radar", "Out this week and coming soon"),
         ("titles", "Popular & trending", "/titles", "Most tracked, trending now and top rated"),
+        ("browse", "Browse shelves", "/browse", "Manga, podcasts and audiobooks to start with"),
     )),
     ("play", "Play", (
         ("daily", "Daily puzzle", "/daily", "One new guessing game every day"),
