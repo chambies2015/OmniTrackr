@@ -17,8 +17,8 @@ This file does the WebAuthn checks itself with the `cryptography` package that
 is already installed: a small CBOR reader, the authenticator data layout, COSE
 public keys (ES256, RS256 and Ed25519) and the signature over
 authenticatorData + sha256(clientDataJSON). Attestation statements are not
-checked, which is the usual choice for a consumer site: we trust the device the
-member chose, not its manufacturer certificate.
+checked, which is the usual choice for a consumer site: the member picked the
+device, and its manufacturer certificate adds nothing for them.
 
 Settings (both optional):
   PASSKEY_RP_ID    the relying party id, normally the bare domain (omnitrackr.xyz).
@@ -86,11 +86,11 @@ def b64url(data: bytes) -> str:
 
 def unb64url(text, what: str = "response") -> bytes:
     if not isinstance(text, str) or not text or len(text) > MAX_FIELD_BYTES:
-        raise PasskeyError(f"The passkey {what} was missing or malformed.")
+        raise PasskeyError(f"The passkey {what} was missing or we couldn't read it.")
     try:
         return base64.urlsafe_b64decode(text + "=" * (-len(text) % 4))
     except (ValueError, binascii.Error):
-        raise PasskeyError(f"The passkey {what} was missing or malformed.")
+        raise PasskeyError(f"The passkey {what} was missing or we couldn't read it.")
 
 
 def canonical_credential_id(text) -> Optional[str]:
@@ -204,7 +204,7 @@ _CBOR_MAX_ITEMS = 10_000
 
 def _cbor_item(data: bytes, pos: int, depth: int = 0):
     if depth > 16 or pos >= len(data):
-        raise PasskeyError("The passkey response was malformed.")
+        raise PasskeyError("We couldn't read what your device sent. Try again.")
     initial = data[pos]
     major, info = initial >> 5, initial & 0x1F
     pos += 1
@@ -213,11 +213,11 @@ def _cbor_item(data: bytes, pos: int, depth: int = 0):
     elif info in (24, 25, 26, 27):
         width = 1 << (info - 24)
         if pos + width > len(data):
-            raise PasskeyError("The passkey response was malformed.")
+            raise PasskeyError("We couldn't read what your device sent. Try again.")
         argument = int.from_bytes(data[pos:pos + width], "big")
         pos += width
     else:
-        raise PasskeyError("The passkey response was malformed.")  # indefinite lengths aren't used here
+        raise PasskeyError("We couldn't read what your device sent. Try again.")  # indefinite lengths aren't used here
 
     if major == 0:
         return argument, pos
@@ -226,17 +226,17 @@ def _cbor_item(data: bytes, pos: int, depth: int = 0):
     if major in (2, 3):
         end = pos + argument
         if argument > len(data) or end > len(data):
-            raise PasskeyError("The passkey response was malformed.")
+            raise PasskeyError("We couldn't read what your device sent. Try again.")
         chunk = bytes(data[pos:end])
         if major == 3:
             try:
                 return chunk.decode("utf-8"), end
             except UnicodeDecodeError:
-                raise PasskeyError("The passkey response was malformed.")
+                raise PasskeyError("We couldn't read what your device sent. Try again.")
         return chunk, end
     if major == 4:
         if argument > _CBOR_MAX_ITEMS:
-            raise PasskeyError("The passkey response was malformed.")
+            raise PasskeyError("We couldn't read what your device sent. Try again.")
         items = []
         for _ in range(argument):
             item, pos = _cbor_item(data, pos, depth + 1)
@@ -244,13 +244,13 @@ def _cbor_item(data: bytes, pos: int, depth: int = 0):
         return items, pos
     if major == 5:
         if argument > _CBOR_MAX_ITEMS:
-            raise PasskeyError("The passkey response was malformed.")
+            raise PasskeyError("We couldn't read what your device sent. Try again.")
         mapping = {}
         for _ in range(argument):
             key, pos = _cbor_item(data, pos, depth + 1)
             value, pos = _cbor_item(data, pos, depth + 1)
             if not isinstance(key, (int, str, bytes)):
-                raise PasskeyError("The passkey response was malformed.")
+                raise PasskeyError("We couldn't read what your device sent. Try again.")
             mapping[key] = value
         return mapping, pos
     if major == 7:
@@ -260,7 +260,7 @@ def _cbor_item(data: bytes, pos: int, depth: int = 0):
             return True, pos
         if info in (22, 23):
             return None, pos
-    raise PasskeyError("The passkey response was malformed.")
+    raise PasskeyError("We couldn't read what your device sent. Try again.")
 
 
 def cbor_decode(data: bytes):
@@ -272,7 +272,7 @@ def cbor_decode(data: bytes):
 
 def parse_authenticator_data(raw: bytes, *, need_credential: bool) -> dict:
     if len(raw) < 37:
-        raise PasskeyError("The passkey response was malformed.")
+        raise PasskeyError("We couldn't read what your device sent. Try again.")
     flags = raw[32]
     out = {
         "rp_id_hash": bytes(raw[:32]),
@@ -288,13 +288,13 @@ def parse_authenticator_data(raw: bytes, *, need_credential: bool) -> dict:
     pos = 37
     if flags & FLAG_ATTESTED_CREDENTIAL:
         if len(raw) < pos + 18:
-            raise PasskeyError("The passkey response was malformed.")
+            raise PasskeyError("We couldn't read what your device sent. Try again.")
         out["aaguid"] = str(uuid.UUID(bytes=bytes(raw[pos:pos + 16])))
         pos += 16
         length = int.from_bytes(raw[pos:pos + 2], "big")
         pos += 2
         if length < 16 or length > 1023 or len(raw) < pos + length:
-            raise PasskeyError("The passkey response was malformed.")
+            raise PasskeyError("We couldn't read what your device sent. Try again.")
         out["credential_id"] = bytes(raw[pos:pos + length])
         pos += length
         _, consumed = cbor_decode(raw[pos:])
@@ -351,9 +351,9 @@ def _client_data(raw: bytes, expected_type: str, challenge: bytes, origins: set[
     try:
         data = json.loads(raw.decode("utf-8"))
     except (UnicodeDecodeError, ValueError):
-        raise PasskeyError("The passkey response was malformed.")
+        raise PasskeyError("We couldn't read what your device sent. Try again.")
     if not isinstance(data, dict) or data.get("type") != expected_type:
-        raise PasskeyError("The passkey response was malformed.")
+        raise PasskeyError("We couldn't read what your device sent. Try again.")
     got = data.get("challenge")
     if not isinstance(got, str) or not hmac.compare_digest(unb64url(got, "challenge"), challenge):
         raise PasskeyError("That passkey prompt expired. Try again.")
@@ -381,19 +381,19 @@ def _transports(value) -> list[str]:
 def verify_registration(credential: dict, challenge: bytes, rp: str, origins: set[str]) -> dict:
     """Check a navigator.credentials.create() result; returns what to store."""
     if not isinstance(credential, dict) or credential.get("type", "public-key") != "public-key":
-        raise PasskeyError("The passkey response was malformed.")
+        raise PasskeyError("We couldn't read what your device sent. Try again.")
     response = credential.get("response") if isinstance(credential.get("response"), dict) else {}
     client_raw = unb64url(response.get("clientDataJSON"), "response")
     _client_data(client_raw, "webauthn.create", challenge, origins)
     attestation, _ = cbor_decode(unb64url(response.get("attestationObject"), "response"))
     if not isinstance(attestation, dict) or not isinstance(attestation.get("authData"), bytes):
-        raise PasskeyError("The passkey response was malformed.")
+        raise PasskeyError("We couldn't read what your device sent. Try again.")
     auth_data = parse_authenticator_data(attestation["authData"], need_credential=True)
     _check_rp(auth_data, rp)
     credential_id = auth_data["credential_id"]
     for field in ("rawId", "id"):
         if credential.get(field) is not None and unb64url(credential.get(field), "id") != credential_id:
-            raise PasskeyError("The passkey response was malformed.")
+            raise PasskeyError("We couldn't read what your device sent. Try again.")
     load_public_key(auth_data["public_key"])  # a key type we can check later, or an error now
     return {
         "credential_id": b64url(credential_id),
@@ -409,7 +409,7 @@ def verify_registration(credential: dict, challenge: bytes, rp: str, origins: se
 def verify_assertion(row: models.UserPasskey, credential: dict, challenge: bytes, rp: str, origins: set[str]) -> dict:
     """Check a navigator.credentials.get() result against a stored passkey."""
     if not isinstance(credential, dict) or credential.get("type", "public-key") != "public-key":
-        raise PasskeyError("The passkey response was malformed.")
+        raise PasskeyError("We couldn't read what your device sent. Try again.")
     response = credential.get("response") if isinstance(credential.get("response"), dict) else {}
     client_raw = unb64url(response.get("clientDataJSON"), "response")
     _client_data(client_raw, "webauthn.get", challenge, origins)

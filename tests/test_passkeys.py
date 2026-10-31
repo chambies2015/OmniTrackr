@@ -236,7 +236,7 @@ def test_names_are_cleaned_or_suggested(authenticated_client):
     ("own address", {"origin": "https://evil.example"}),
     ("fingerprint", {"uv": False}),
     ("expired", {"challenge": passkeys.b64url(b"z" * 32)}),
-    ("malformed", {"client_type": "webauthn.get"}),
+    ("couldn't read", {"client_type": "webauthn.get"}),
 ])
 def test_registration_refuses_the_wrong_site_origin_verification_or_challenge(authenticated_client, db_session, problem, kwargs):
     _, response = _add(authenticated_client, **kwargs)

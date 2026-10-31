@@ -111,7 +111,7 @@
     switch (error.name) {
       case 'NotAllowedError':
       case 'AbortError':
-        return '';  // Cancelled, or the prompt timed out. Nothing to apologise for.
+        return '';  // Cancelled, or the prompt timed out. Not an error worth a message.
       case 'InvalidStateError':
         return 'This device already has a passkey for your account. Use that one, or remove it in Settings first.';
       case 'SecurityError':
@@ -459,7 +459,7 @@
       say('success', `${added} is ready. Next time, choose "Log in with a passkey" on the log-in page, or pick it from the username box.`);
     } catch (error) {
       const text = explain(error, "Couldn't add that passkey. Try again, or try another device.");
-      say('error', text || 'No passkey was made. You can try again whenever you like.');
+      say('error', text || 'No passkey was made.');
     } finally {
       done();
     }
