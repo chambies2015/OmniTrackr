@@ -6018,6 +6018,8 @@ body.dark-mode .for-you-item__add.is-added { color: #5eead4; }
 .weekly-invite__text { color: var(--fg); flex: 1 1 280px; font-size: 0.92rem; line-height: 1.5; margin: 0; }
 .weekly-invite__actions { align-items: center; display: flex; gap: 10px; }
 .weekly-invite__no { background: transparent; border: 0; color: var(--fg); cursor: pointer; font-size: 0.85rem; opacity: 0.7; padding: 6px; }
+.weekly-invite__preview { color: var(--fg); font-size: 0.85rem; padding: 6px 2px; text-decoration: underline; text-underline-offset: 3px; }
+.weekly-invite__preview:hover, .weekly-invite__preview:focus-visible { opacity: 0.8; }
 .weekly-invite__no:hover { opacity: 1; text-decoration: underline; }
 @media (max-width: 600px) {
   .for-you-card { padding: 16px; }

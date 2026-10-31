@@ -578,10 +578,14 @@ function setupUsernameSuggestion() {
 
 async function register(email, username, password) {
     const invite = getFriendInvite();
+    const weeklyBox = document.getElementById('registerWeekly');
+    const payload = { email, username, password };
+    if (invite) payload.invite = invite;
+    if (weeklyBox && weeklyBox.checked) payload.weekly_email = true;
     const response = await fetch(`${AUTH_API_BASE}/auth/register`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(invite ? { email, username, password, invite } : { email, username, password })
+        body: JSON.stringify(payload)
     });
 
     if (!response.ok) {

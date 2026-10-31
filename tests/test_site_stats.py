@@ -165,7 +165,10 @@ def test_overview_growth_counts_invites_supporters_email_and_takes(authenticated
     growth = response.json()["growth"]
     assert growth["invites"] == {"links": 1, "new_links": 1, "signups": 2, "friends_made": 1, "awaiting_verification": 1}
     assert growth["supporters"] == {"active": 1, "monthly": 1, "all_time": 2, "new": 1, "payments": 2, "unlinked_payments": 1}
-    assert growth["weekly_email"] == {"subscribers": 1, "new": 1}
+    assert growth["weekly_email"]["subscribers"] == 1 and growth["weekly_email"]["new"] == 1
+    assert growth["weekly_email"]["opted_out"] == 0 and growth["weekly_email"]["emailed"] == 0
+    assert [row["place"] for row in growth["weekly_email"]["opted_in_by_place"]] == [
+        "the sign-up form", "the start page", "first-week steps", "the library home", "Account settings", "a link in an email"]
     assert growth["takes"] == {"asked": 1, "answered": 1}
     # Counts only: no tokens or Ko-fi details anywhere, and no usernames in the growth block.
     assert "growthinvite" not in response.text and "growth-2" not in response.text

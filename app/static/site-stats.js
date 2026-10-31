@@ -488,6 +488,11 @@
       growthEmail: [
         { label: 'Subscribers (now)', count: email.subscribers },
         { label: 'New opt-ins', count: email.new },
+        ...(email.opted_in_by_place || []).filter(item => item.count).map(item => ({ label: `Turned on from ${item.place}`, count: item.count })),
+        { label: 'Turned off', count: email.opted_out || 0 },
+        ...(email.opted_out_by_place || []).filter(item => item.count).map(item => ({ label: `Turned off from ${item.place}`, count: item.count })),
+        { label: 'Members sent one', count: email.emailed || 0 },
+        { label: 'Members sent one in the last 7 days (now)', count: email.emailed_7d || 0 },
       ],
       growthCalendar: [
         { label: 'Members with a private calendar (now)', count: calendar.feeds || 0 },

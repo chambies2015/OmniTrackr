@@ -35,6 +35,7 @@ class UserCreate(UserBase):
     """Schema for user registration."""
     password: str = Field(..., min_length=6, max_length=128, description="User password (min 6 characters)")
     invite: Optional[str] = Field(None, max_length=64, description="Friend invite token from a /join link")
+    weekly_email: bool = Field(False, description="Ticked the weekly email box on the sign-up form")
 
 
 class UserLogin(BaseModel):
