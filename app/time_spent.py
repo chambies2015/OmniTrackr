@@ -219,10 +219,13 @@ def visible_categories(user: models.User) -> list[str]:
 
 
 def estimate(db: Session, user: models.User, categories: Optional[list[str]] = None,
-             today: Optional[date] = None) -> dict:
-    """Minutes per category, all time and this year, with how many titles used typical lengths."""
+             today: Optional[date] = None, year: Optional[int] = None) -> dict:
+    """Minutes per category, all time and this year, with how many titles used typical lengths.
+
+    ``year`` picks which calendar year the "this year" figures cover; it defaults to today's.
+    """
     categories = [c for c in (categories if categories is not None else list(CATEGORIES)) if c in CATEGORIES]
-    year = (today or date.today()).year
+    year = year or (today or date.today()).year
     _, finished = year_in_review._finishes(db, user.id, year, categories)
     finished_this_year = {(row["category"], row["item_id"]) for row in finished.values() if row.get("item_id")}
 
