@@ -47,6 +47,20 @@ CREATORS = {
     "podcasts": (models.Podcast, "host", "host"),
     "audiobooks": (models.Audiobook, "author", "author"),
 }
+# Library category -> title-page kind, for reading the shared title_metadata cache.
+KINDS = {"movies": "movie", "tv-shows": "tv", "anime": "anime", "video-games": "game", "music": "album",
+         "books": "book", "manga": "manga", "podcasts": "podcast", "audiobooks": "audiobook"}
+# Shelves whose rows carry a genre the member typed or imported.
+GENRE_FIELDS = {"video-games": "genres", "music": "genre", "books": "genre", "manga": "genre",
+                "podcasts": "genre", "audiobooks": "genre"}
+TOP_GENRES_LIMIT = 5
+MAX_GENRE_LENGTH = 40
+CLASSIC_AGE = 20          # a finish released this many years ago or more counts as a classic
+MIN_RELEASE_YEAR = 1850
+FRIENDS_LIMIT = 3         # friends shown on the private recap
+FRIENDS_CHECKED_MAX = 40  # friends compared; two queries each
+FRIEND_TITLES_LIMIT = 3
+MIN_HOURS = 1
 # Persona when one shelf is most of the year's finishes: (name, line with {n} finishes)
 SHELF_PERSONAS = {
     "movies": ("The Movie Night Regular", "{n} movies finished. The couch knows your shape by now."),
@@ -217,9 +231,14 @@ def build(db: Session, user: models.User, year: int, *, public: bool = False) ->
     recap["ratings"] = _rating_style(ordered)
     recap["top_creator"] = _top_creator(db, user.id, ordered)
     recap["badges"] = _badges(db, user, year, public)
+    items = _library_items(db, user.id, ordered)
+    recap["genres"] = _genres(db, ordered, items)
+    recap["releases"] = _release_mix(year, ordered, items)
+    recap["time"] = _time(db, user, year, visible)
     recap["persona"] = persona(recap)
     if not public:
         recap["reflections_total"] = sum(1 for entry in entries if (entry.note or "").strip())
+        recap["friends"] = _friends(db, user, year, finished, visible)
     return recap
 
 
@@ -310,6 +329,165 @@ def _badges(db: Session, user: models.User, year: int, public: bool) -> list[dic
     return out
 
 
+def _library_items(db: Session, user_id: int, ordered: list[dict]) -> dict[tuple, object]:
+    """The member's own library rows behind this year's finishes, keyed (category, item id). One query per shelf."""
+    found: dict[tuple, object] = {}
+    for category, (model, *_rest) in CATEGORIES.items():
+        ids = [row["item_id"] for row in ordered if row["category"] == category and (row.get("item_id") or 0) > 0]
+        if not ids:
+            continue
+        for item in db.query(model).filter(model.user_id == user_id, model.id.in_(ids)).all():
+            found[(category, item.id)] = item
+    return found
+
+
+def _split_genres(value) -> list[str]:
+    if not isinstance(value, str):
+        return []
+    out = []
+    for part in value.replace("/", ",").replace(";", ",").replace("|", ",").split(","):
+        name = " ".join(part.split()).strip(" .")
+        if 1 < len(name) <= MAX_GENRE_LENGTH:
+            out.append(name)
+    return out
+
+
+def _cached_genres(db: Session, keys: list[str]) -> dict[str, list[str]]:
+    """Genres a title page already looked up, from the shared cache. Only read, never fetched."""
+    import json
+
+    keys = list(dict.fromkeys(keys))
+    found: dict[str, list[str]] = {}
+    for start in range(0, len(keys), 500):
+        try:
+            rows = db.query(models.TitleMetadata.key, models.TitleMetadata.data).filter(
+                models.TitleMetadata.key.in_(keys[start:start + 500]),
+                models.TitleMetadata.status == "ok",
+            ).all()
+        except Exception:
+            db.rollback()
+            return found
+        for key, data in rows:
+            try:
+                parsed = json.loads(data) if data else None
+            except ValueError:
+                continue
+            genres = (parsed or {}).get("genres") if isinstance(parsed, dict) else None
+            if isinstance(genres, list):
+                found[key] = [g for g in genres if isinstance(g, str) and 1 < len(g) <= MAX_GENRE_LENGTH]
+    return found
+
+
+def _genres(db: Session, ordered: list[dict], items: dict[tuple, object]) -> list[dict]:
+    """The genres behind this year's finishes, each title counted once per genre. Empty when nothing is tagged."""
+    from . import title_metadata, title_pages
+
+    keys = {}
+    for (category, item_id), item in items.items():
+        kind = KINDS[category]
+        keys[(category, item_id)] = title_metadata.cache_key(kind, title_pages.normalize(item.title or ""),
+                                                             title_pages.item_year(kind, item))
+    cached = _cached_genres(db, list(keys.values())) if keys else {}
+    tally: dict[str, dict] = {}
+    for row in ordered:
+        key = (row["category"], row.get("item_id"))
+        item = items.get(key)
+        if item is None:
+            continue
+        names = _split_genres(getattr(item, GENRE_FIELDS.get(row["category"], ""), None))
+        names += cached.get(keys[key], [])
+        seen = set()
+        for name in names:
+            slug = name.casefold()
+            if slug in seen:
+                continue
+            seen.add(slug)
+            entry = tally.setdefault(slug, {"name": name, "count": 0})
+            entry["count"] += 1
+    ranked = sorted(tally.values(), key=lambda entry: (-entry["count"], entry["name"].casefold()))
+    return ranked[:TOP_GENRES_LIMIT]
+
+
+def _release_mix(year: int, ordered: list[dict], items: dict[tuple, object]) -> Optional[dict]:
+    """How many finishes came out this year, how many are classics, and the oldest one. None without release years."""
+    from . import title_pages
+
+    dated = []
+    for row in ordered:
+        item = items.get((row["category"], row.get("item_id")))
+        if item is None:
+            continue
+        released = title_pages.item_year(KINDS[row["category"]], item)
+        if isinstance(released, int) and MIN_RELEASE_YEAR <= released <= year + 1:
+            dated.append((released, row))
+    if not dated:
+        return None
+    labels = {key: CATEGORIES[key][1] for key in CATEGORIES}
+    oldest_year, oldest = min(dated, key=lambda pair: (pair[0], pair[1]["finished_at"]))
+    return {
+        "dated": len(dated),
+        "new": sum(1 for released, _ in dated if released >= year),
+        "classics": sum(1 for released, _ in dated if year - released >= CLASSIC_AGE),
+        "oldest": {"title": oldest["title"], "year": oldest_year, "label": labels[oldest["category"]],
+                   "age": year - oldest_year},
+        "average_age": round(sum(year - released for released, _ in dated) / len(dated)),
+    }
+
+
+def _time(db: Session, user: models.User, year: int, visible: list[str]) -> Optional[dict]:
+    """Estimated hours behind this year's finishes, from Time Spent. Optional: never breaks the recap."""
+    from . import time_spent
+    try:
+        estimate = time_spent.estimate(db, user, categories=visible, year=year)
+    except Exception:
+        db.rollback()
+        return None
+    minutes = estimate.get("year_minutes") or 0
+    if minutes < MIN_HOURS * 60:
+        return None
+    shelves = sorted((row for row in estimate.get("categories", []) if row.get("year_minutes")),
+                     key=lambda row: -row["year_minutes"])
+    return {
+        "hours": int(round(minutes / 60)),
+        "days": round(minutes / 60 / 24, 1),
+        "line": time_spent.comparison(minutes),
+        "shelves": [{"category": row["category"], "label": row["label"], "verb": row["verb"],
+                     "hours": round(row["year_minutes"] / 60, 1)} for row in shelves],
+        "estimated": True,
+    }
+
+
+def _friends(db: Session, user: models.User, year: int, finished: dict, visible: list[str]) -> Optional[dict]:
+    """Friends who finished the same titles this year. Private to the member; shelves a friend keeps private are skipped."""
+    from .crud import friends as friend_crud
+    try:
+        friends = [f for f in friend_crud.get_friends(db, user.id) if f.id != user.id][:FRIENDS_CHECKED_MAX]
+    except Exception:
+        db.rollback()
+        return None
+    if not friends:
+        return None
+    mine: dict[tuple, dict] = {}
+    for row in sorted(finished.values(), key=lambda row: row["finished_at"]):
+        mine.setdefault((row["category"], " ".join((row["title"] or "").casefold().split())), row)
+    matches = []
+    for friend in friends:
+        shared = [key for key in visible if not getattr(friend, CATEGORIES[key][4], False)]
+        if not shared:
+            continue
+        _, theirs = _finishes(db, friend.id, year, shared)
+        common = [mine[key] for key in (
+            (row["category"], " ".join((row["title"] or "").casefold().split())) for row in theirs.values()
+        ) if key in mine]
+        if not common:
+            continue
+        common.sort(key=lambda row: row["finished_at"])
+        matches.append({"username": friend.username, "count": len(common),
+                        "titles": [row["title"] for row in common[:FRIEND_TITLES_LIMIT]]})
+    matches.sort(key=lambda match: (-match["count"], match["username"].casefold()))
+    return {"checked": len(friends), "matches": matches[:FRIENDS_LIMIT]}
+
+
 def persona(recap: dict) -> Optional[dict]:
     """A one-line label for the year, picked from the recap's own numbers. None for a quiet year."""
     finished = recap.get("finished_total") or 0
@@ -323,6 +501,10 @@ def persona(recap: dict) -> Optional[dict]:
     if top and top["finished"] / finished >= 0.6:
         name, line = SHELF_PERSONAS[top["category"]]
         return {"key": top["category"], "name": name, "line": line.format(n=top["finished"])}
+    releases = recap.get("releases") or {}
+    if releases.get("dated", 0) >= PERSONA_MIN_FINISHES and releases["classics"] / releases["dated"] >= 0.5:
+        return {"key": "time-traveler", "name": "The Time Traveler",
+                "line": f"{releases['classics']} of your {releases['dated']} dated finishes came out {CLASSIC_AGE} or more years ago. New releases can wait."}
     if (recap.get("longest_streak") or 0) >= 7:
         return {"key": "regular", "name": "The Regular",
                 "line": f"Your longest run was {recap['longest_streak']} days in a row with something logged."}

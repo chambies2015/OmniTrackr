@@ -126,3 +126,20 @@ html.recap-story-open, html.recap-story-open body { overflow: hidden; }
 @media (prefers-reduced-motion: reduce) {
   .recap-slide, .recap-slide.is-active > * { animation: none !important; transition: none; }
 }
+
+/* Hours, genres, release mix and friends (added October 31, 2026) */
+.recap-lead { color: var(--site-muted); line-height: 1.6; margin: 0 0 14px; }
+.recap-time__line { color: var(--site-soft); line-height: 1.6; margin: 0 0 14px; }
+.recap-time .title-sources { margin-top: 12px; }
+.recap-chips { display: flex; flex-wrap: wrap; gap: 8px; list-style: none; margin: 0; padding: 0; }
+.recap-chips li { align-items: baseline; background: var(--site-surface); border: 1px solid var(--site-border); border-radius: var(--radius-pill, 999px); display: inline-flex; gap: 8px; padding: 8px 14px; }
+.recap-chips li:first-child { background: linear-gradient(160deg, rgba(124, 58, 237, .28), var(--site-surface)); border-color: var(--site-border-strong); }
+.recap-chips small { color: var(--site-muted); }
+.recap-friends { display: grid; gap: 8px; list-style: none; margin: 0; padding: 0; }
+.recap-friends li { background: var(--site-surface); border: 1px solid var(--site-border); border-radius: var(--radius-md, 14px); display: grid; gap: 2px; padding: 12px 16px; }
+.recap-friends strong { overflow-wrap: anywhere; }
+.recap-friends span { color: var(--site-teal-soft); font-size: .9rem; font-weight: 600; }
+.recap-friends small { color: var(--site-muted); overflow-wrap: anywhere; }
+.recap-slide--time { --slide-a: #0369a1; }
+.recap-slide--genres { --slide-a: #9d174d; }
+.recap-slide--releases { --slide-a: #4d7c0f; }
