@@ -78,6 +78,7 @@
   <link rel="stylesheet" href="/static/app-nav.css?v=20261028-simplify-1">
   <link rel="stylesheet" href="/static/auth-forms.css?v=20261030-passkeys-1">
   <link rel="stylesheet" href="/static/account-settings.css?v=20261030-passkeys-1">
+  <link rel="stylesheet" href="/static/year-so-far.css?v=20261101-so-far-1">
   <link rel="stylesheet" href="/static/dashboard-home.css?v=20261028-tonight-1">
   <link rel="stylesheet" href="/static/dashboard-2026.css?v=20261030-design-1">
   <link rel="stylesheet" href="/static/a11y.css?v=20261027-a11y-speed-1">
@@ -483,6 +484,30 @@
         <p>Tap through what you finished, your top rated titles, your longest streak and your type for the year, then post it to your story.</p>
       </div>
       <a class="action-btn" id="yearInReviewBannerLink" href="/year-in-review">Play your year</a>
+    </section>
+
+    <section id="yearSoFar" class="year-so-far" aria-labelledby="yearSoFarTitle" hidden>
+      <div class="year-so-far__head">
+        <div>
+          <p class="year-so-far__eyebrow">Year in Review preview</p>
+          <h2 id="yearSoFarTitle">Your year so far</h2>
+        </div>
+        <button id="yearSoFarDismiss" type="button" class="year-so-far__dismiss">Hide until December</button>
+      </div>
+      <dl class="year-so-far__stats">
+        <div class="year-so-far__stat"><dt id="yearSoFarFinishedLabel">titles finished</dt><dd id="yearSoFarFinished"></dd></div>
+        <div class="year-so-far__stat" id="yearSoFarHoursTile" hidden><dt id="yearSoFarHoursLabel">hours</dt><dd id="yearSoFarHours"></dd></div>
+        <div class="year-so-far__stat" id="yearSoFarTasteTile" hidden><dt id="yearSoFarTasteLabel">top genre</dt><dd id="yearSoFarTaste"></dd></div>
+      </dl>
+      <div class="year-so-far__meter-row">
+        <div id="yearSoFarMeter" class="year-so-far__meter" role="progressbar" aria-label="How much of the year has gone" aria-valuemin="0" aria-valuemax="100" hidden><span id="yearSoFarMeterFill"></span></div>
+        <span id="yearSoFarDaysLeft" class="year-so-far__days"></span>
+      </div>
+      <p id="yearSoFarHint" class="year-so-far__hint"></p>
+      <div class="year-so-far__foot">
+        <p id="yearSoFarNote" class="year-so-far__note"></p>
+        <a class="year-so-far__link" id="yearSoFarLink" href="/year-in-review">See it so far</a>
+      </div>
     </section>
 
     <section id="libraryLaunchpad" class="library-launchpad" aria-labelledby="libraryLaunchpadTitle" hidden>
@@ -2252,8 +2277,8 @@
     </form>
   </dialog>
   <script src="./credentials.js"></script>
-  <script src="./auth.js?v=20261030-start-1"></script>
-  <script src="/static/import-studio.js?v=20261030-audiobooks-1"></script>
+  <script src="./auth.js?v=20261101-so-far-1"></script>
+  <script src="/static/import-studio.js?v=20261031-sources-1"></script>
   <script src="/static/progress.js?v=20261030-audiobooks-1"></script>
   <script src="/static/episodes.js?v=20261031-episodes-2"></script>
   <script src="./app.js"></script>
@@ -2277,7 +2302,7 @@
   <script src="/static/friends-feed.js?v=20261030-audiobooks-1"></script>
   <script src="/static/follows.js?v=20261029-follows-1"></script>
   <script src="/static/push.js?v=20261031-push-4" defer></script>
-  <script src="/static/year-in-review-entry.js?v=20261019-story-1" defer></script>
+  <script src="/static/year-in-review-entry.js?v=20261101-so-far-1" defer></script>
   <script src="/static/guest-list.js?v=20261031-browse-1"></script>
   <script src="/static/taste-quiz.js?v=20261030-audiobooks-1" defer></script>
   <script src="/static/taste-compare.js?v=20261030-compare-1" defer></script>
@@ -2901,7 +2926,7 @@
         <div class="account-section import-studio" id="importStudio">
           <div class="import-studio__eyebrow">Bring your history with you</div>
           <h4>Import Studio</h4>
-          <p class="info-text">Bring your history from Letterboxd, IMDb, Goodreads, The StoryGraph, MyAnimeList, AniList, Kitsu, Trakt, or any spreadsheet. Upload the export file as it comes, ZIP included, and preview it before anything is saved. Existing records are never overwritten: matches and repeated rows are skipped.</p>
+          <p class="info-text">Bring your history from Letterboxd, IMDb, Goodreads, The StoryGraph, MyAnimeList, AniList, Kitsu, Trakt, Spotify, Rate Your Music, Libib, your podcast app, or any spreadsheet. Upload the export file as it comes, ZIP included, and preview it before anything is saved. Existing records are never overwritten: matches and repeated rows are skipped.</p>
           <div class="import-studio__sources" aria-label="Where to find your export">
             <a href="/switch#letterboxd-heading" target="_blank" rel="noopener noreferrer">Letterboxd ZIP</a>
             <a href="/switch#imdb-heading" target="_blank" rel="noopener noreferrer">IMDb CSV</a>
@@ -2909,6 +2934,10 @@
             <a href="/switch#storygraph-heading" target="_blank" rel="noopener noreferrer">StoryGraph CSV</a>
             <a href="/switch#mal-heading" target="_blank" rel="noopener noreferrer">MyAnimeList / Kitsu XML</a>
             <a href="/switch#trakt-heading" target="_blank" rel="noopener noreferrer">Trakt ZIP or JSON</a>
+            <a href="/switch/spotify" target="_blank" rel="noopener noreferrer">Spotify ZIP or JSON</a>
+            <a href="/switch/podcast-apps" target="_blank" rel="noopener noreferrer">Podcast app OPML</a>
+            <a href="/switch/rate-your-music" target="_blank" rel="noopener noreferrer">Rate Your Music CSV</a>
+            <a href="/switch/libib" target="_blank" rel="noopener noreferrer">Libib CSV</a>
           </div>
           <form id="importStudioForm" data-submit-action="preview-library-import">
             <div class="import-studio__controls">
@@ -2922,6 +2951,10 @@
                   <option value="storygraph">The StoryGraph CSV</option>
                   <option value="myanimelist">MyAnimeList or Kitsu XML / CSV</option>
                   <option value="trakt">Trakt ZIP or JSON</option>
+                  <option value="spotify">Spotify account data ZIP or YourLibrary.json</option>
+                  <option value="opml">Podcast app subscriptions (OPML)</option>
+                  <option value="rateyourmusic">Rate Your Music CSV</option>
+                  <option value="libib">Libib CSV</option>
                   <option value="anilist">AniList (fetched by username)</option>
                   <option value="steam" id="importStudioSteamOption" hidden disabled>Steam (fetched by profile)</option>
                   <option value="generic">Generic CSV / spreadsheet</option>
@@ -2943,8 +2976,8 @@
                 </select>
               </label>
               <label class="import-studio__file-label">
-                <span>Export file (CSV, ZIP, XML or JSON) · up to 5 MB / 5,000 titles</span>
-                <input id="importStudioFile" type="file" accept=".csv,.tsv,.zip,.xml,.gz,.json,text/csv,text/tab-separated-values,application/zip,application/json,text/xml" required data-change-action="import-studio-file">
+                <span>Export file (CSV, ZIP, XML, OPML or JSON) · up to 5 MB / 5,000 titles</span>
+                <input id="importStudioFile" type="file" accept=".csv,.tsv,.zip,.xml,.gz,.json,.opml,text/csv,text/tab-separated-values,application/zip,application/json,text/xml,text/x-opml" required data-change-action="import-studio-file">
               </label>
             </div>
 

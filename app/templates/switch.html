@@ -4,10 +4,10 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <meta name="description" content="Move your ratings from Letterboxd, IMDb, Goodreads, The StoryGraph, MyAnimeList, AniList, Kitsu, or Trakt into OmniTrackr. Where each export lives, what transfers, how ratings convert, and what to check afterward.">
+  <meta name="description" content="Move your history from Letterboxd, IMDb, Goodreads, The StoryGraph, MyAnimeList, AniList, Kitsu, Trakt, Steam, Spotify, Rate Your Music, Libib or your podcast app into OmniTrackr. Where each export lives, what transfers and how ratings convert.">
   <meta name="robots" content="index, follow, max-image-preview:large">
   <meta name="author" content="OmniTrackr">
-  <title>Switch to OmniTrackr - Import Letterboxd, IMDb, Goodreads, MyAnimeList, AniList and Trakt</title>
+  <title>Switch to OmniTrackr - Import Letterboxd, IMDb, Goodreads, MyAnimeList, Trakt, Spotify and more</title>
   <link rel="canonical" href="https://omnitrackr.xyz/switch">
   <link rel="icon" type="image/x-icon" href="/omnitrackr_favicon.ico">
   <meta property="og:type" content="article">
@@ -49,6 +49,7 @@
     .switch-cta p { flex: 1 1 260px; margin: 0; color: var(--fg-secondary); }
     .switch-cta a { display: inline-flex; align-items: center; min-height: 44px; padding: 10px 18px; border-radius: 999px; background: var(--primary); color: #fff; font-weight: 700; text-decoration: none; }
     .switch-cta a:focus-visible { outline: 3px solid var(--fg); outline-offset: 3px; }
+.public-reader .reader-shell .switch-cta a, .public-reader .reader-shell .switch-cta a:hover { color: #fff; text-decoration: none; }
     .back-link { display: inline-block; margin-bottom: 30px; color: var(--primary); text-decoration: none; font-weight: 500; }
   </style>
   <script type="application/ld+json">
@@ -57,7 +58,7 @@
     "@type": "HowTo",
     "name": "Move your media history to OmniTrackr",
     "description": "Export your ratings from Letterboxd, IMDb, Goodreads, The StoryGraph, MyAnimeList, AniList, Kitsu, or Trakt and preview them in OmniTrackr's Import Studio before saving.",
-    "dateModified": "2026-10-29",
+    "dateModified": "2026-10-31",
     "inLanguage": "en-US",
     "mainEntityOfPage": "https://omnitrackr.xyz/switch",
     "publisher": { "@type": "Organization", "name": "OmniTrackr", "url": "https://omnitrackr.xyz" },
@@ -92,6 +93,11 @@
         <a href="#anilist-heading">AniList</a>
         <a href="#trakt-heading">Trakt</a>
         <a href="#steam-heading">Steam</a>
+<a href="#spotify-heading">Spotify</a>
+<a href="#podcasts-heading">Podcast apps</a>
+<a href="#rym-heading">Rate Your Music</a>
+<a href="#libib-heading">Libib</a>
+<a href="#guides-heading">One guide per service</a>
         <a href="#other-heading">Other services</a>
         <a href="#after-heading">After importing</a>
       </nav>
@@ -124,7 +130,11 @@
               <tr><th scope="row">AniList</th><td>Anime, manga on the manga shelf, light novels as books</td><td>Read on a 10-point scale, decimals kept</td><td>Status is completed or rewatching</td></tr>
               <tr><th scope="row">Trakt</th><td>Movies and TV shows</td><td>Already out of 10</td><td>A movie was watched or rated; a show had every aired episode watched, or was rated</td></tr>
               <tr><th scope="row">Steam</th><td>Games, with your hours played</td><td>Steam has no ratings, so games arrive unrated</td><td>You played it for at least the time you choose (one hour unless you change it)</td></tr>
-              <tr><th scope="row">A spreadsheet</th><td>Any of the nine categories</td><td>Read as out of 10</td><td>Your completion column says so</td></tr>
+              <tr><th scope="row">Spotify</th><td>Albums, and podcasts you follow</td><td>Spotify has no ratings, so albums arrive unrated</td><td>You saved the album, or liked three or more of its songs</td></tr>
+<tr><th scope="row">A podcast app (OPML)</th><td>Podcasts</td><td>Subscription files have no ratings</td><td>Never; shows arrive as ones you are still following</td></tr>
+<tr><th scope="row">Rate Your Music</th><td>Albums</td><td>Already out of 10: four and a half stars is 9/10</td><td>You rated it, or own it</td></tr>
+<tr><th scope="row">Libib</th><td>Books, movies, music, and games, by item type</td><td>Stars doubled: 4 becomes 8/10</td><td>Status is completed or a completed date exists</td></tr>
+<tr><th scope="row">A spreadsheet</th><td>Any of the nine categories</td><td>Read as out of 10</td><td>Your completion column says so</td></tr>
             </tbody>
           </table>
         </div>
@@ -152,7 +162,8 @@
           <li><strong>The director becomes the movie's director.</strong> Season and episode totals are not in IMDb's file, so you can add them later if you want progress tracking.</li>
         </ul>
         <p>Importing the ratings file and then the watchlist is safe. A title that appears in both files is created once, from whichever file you import first.</p>
-      </section>
+      <p class="switch-more"><a href="/switch/imdb">The full IMDb guide</a> has the field-by-field details and common questions.</p>
+</section>
 
       <section class="content-section" aria-labelledby="letterboxd-heading">
         <h2 id="letterboxd-heading">From Letterboxd</h2>
@@ -164,7 +175,8 @@
         </ol>
         <p>A film you logged in your diary, rated, reviewed, or marked watched arrives watched. Your current rating wins over older diary ratings, and your latest review text arrives as a private note. Films that are only on your watchlist arrive unwatched, ready for Next Up. Each dated diary entry also lands in your private Journal on the day you logged it, with rewatches marked as rewatches, so your diary calendar and Year in Review start with your real history. Entries in the archive's deleted folder, likes, lists, and tags stay on Letterboxd.</p>
         <p>You can still upload a single CSV from the archive. A file named <code>watchlist.csv</code> keeps its films unwatched.</p>
-      </section>
+      <p class="switch-more"><a href="/switch/letterboxd">The full Letterboxd guide</a> has the field-by-field details and common questions.</p>
+</section>
 
       <section class="content-section" aria-labelledby="goodreads-heading">
         <h2 id="goodreads-heading">From Goodreads</h2>
@@ -174,7 +186,8 @@
           <li>Preview <code>goodreads_library_export.csv</code> in the Import Studio.</li>
         </ol>
         <p>Title, author, publication year, your star rating, and your review come across, with stars doubled so 4 stars becomes 8/10. A book on your <code>read</code> shelf, or with a read date, is marked read. Books on to-read or currently-reading stay unread. Custom shelves and the dates themselves are not imported.</p>
-      </section>
+      <p class="switch-more"><a href="/switch/goodreads">The full Goodreads guide</a> has the field-by-field details and common questions.</p>
+</section>
 
       <section class="content-section" aria-labelledby="storygraph-heading">
         <h2 id="storygraph-heading">From The StoryGraph</h2>
@@ -186,7 +199,8 @@
         </ol>
         <p>Only books with a <code>read</code> status are marked read. To-read, currently reading, paused, and did-not-finish books arrive unread, so they stay visible as unfinished. Your written review becomes a private note.</p>
         <p>The StoryGraph's file has no publication year, so imported books have no year until you add one. It also means a book you already track with a year is still matched as a duplicate, because books are matched on title and author. Moods, pace, content warnings, and tags are not imported.</p>
-      </section>
+      <p class="switch-more"><a href="/switch/storygraph">The full The StoryGraph guide</a> has the field-by-field details and common questions.</p>
+</section>
 
       <section class="content-section" aria-labelledby="mal-heading">
         <h2 id="mal-heading">From MyAnimeList</h2>
@@ -197,7 +211,8 @@
         </ol>
         <p>Scores already use a ten-point scale and stay as they are. A completed status marks the series watched, or the manga read. Manga arrives on the Manga shelf, with your chapter and volume counts. Your comments become a private note. The episode count describes the whole series; it does not set the episode you are on, so set your place after importing.</p>
         <p>The XML file has no release years. A title you already track is still recognized as a duplicate, because a title with no year matches the same title in your library whatever its year. Older CSV conversions of a MyAnimeList list still work too.</p>
-      </section>
+      <p class="switch-more"><a href="/switch/myanimelist">The full MyAnimeList and Kitsu guide</a> has the field-by-field details and common questions.</p>
+</section>
 
       <section class="content-section" aria-labelledby="anilist-heading">
         <h2 id="anilist-heading">From AniList</h2>
@@ -208,7 +223,8 @@
           <li><strong>Completed and rewatching mean finished.</strong> Planning, watching, paused, and dropped titles arrive unfinished.</li>
           <li><strong>Manga and one-shots arrive on the Manga shelf and light novels arrive as books,</strong> and your AniList notes become private notes. English titles are used where AniList has one.</li>
         </ul>
-      </section>
+      <p class="switch-more"><a href="/switch/anilist">The full AniList guide</a> has the field-by-field details and common questions.</p>
+</section>
 
       <section class="content-section" aria-labelledby="trakt-heading">
         <h2 id="trakt-heading">From Trakt</h2>
@@ -222,7 +238,8 @@
           <li><strong>Shows count as finished only when they are.</strong> A show is marked watched when you rated it or when every aired episode is in your history. Shows you are partway through arrive unfinished.</li>
           <li><strong>Your watchlist arrives unwatched.</strong> Collections and custom lists are left out, since owning a copy or listing a title is not the same as watching it. Episode and season ratings are not imported.</li>
         </ul>
-      </section>
+      <p class="switch-more"><a href="/switch/trakt">The full Trakt guide</a> has the field-by-field details and common questions.</p>
+</section>
 
       <section class="content-section" aria-labelledby="steam-heading">
         <h2 id="steam-heading">From Steam</h2>
@@ -238,9 +255,55 @@
           <li><strong>Importing again is safe.</strong> Games you already track keep their entry, rating and review, and only their hours are refreshed. Run it again every so often to keep the hours current.</li>
           <li><strong>What Steam doesn't share.</strong> Steam has no ratings, reviews or completion dates, so those stay blank until you add them. Free games appear only if you've played them.</li>
         </ul>
-      </section>
+      <p class="switch-more"><a href="/switch/steam">The full Steam guide</a> has the field-by-field details and common questions.</p>
+</section>
 
-      <section class="content-section" aria-labelledby="other-heading">
+      <section class="content-section" aria-labelledby="spotify-heading">
+<h2 id="spotify-heading">From Spotify</h2>
+<p>Spotify will send you a copy of your library if you ask. In your account's privacy settings, request <strong>Account data</strong> (not the extended streaming history) and upload the ZIP that arrives, or just the <code>YourLibrary.json</code> file inside it.</p>
+<p>Saved albums arrive as listened. So does any album you've liked three or more songs from, since by then you know it. Podcasts you follow land on the Podcasts shelf with their publisher as host, still in progress. Single songs and playlists stay on Spotify, and albums arrive without a year because the file doesn't include one.</p>
+<p class="switch-more"><a href="/switch/spotify">The full Spotify guide</a> covers the request step by step.</p>
+</section>
+
+<section class="content-section" aria-labelledby="podcasts-heading">
+<h2 id="podcasts-heading">From a podcast app</h2>
+<p>Pocket Casts, Overcast, AntennaPod, Castro, Podcast Addict and most other apps can export your subscriptions as an OPML file. Upload it as it is, whether it ends in <code>.opml</code> or <code>.xml</code>, and each show becomes a podcast in your library. Folders are ignored but the shows inside them come across, and the episode lists in Overcast's detailed export are skipped.</p>
+<p>Apple Podcasts on iPhone has no subscription export at the time of writing, so add those shows by search.</p>
+<p class="switch-more"><a href="/switch/podcast-apps">The podcast app guide</a> says where each app keeps its export.</p>
+</section>
+
+<section class="content-section" aria-labelledby="rym-heading">
+<h2 id="rym-heading">From Rate Your Music</h2>
+<p>Rate Your Music can export your catalog as a CSV from your profile. Ratings in that file are already whole numbers out of 10, so they arrive unchanged. An album you rated, or own without rating, arrives listened; wishlist albums arrive unheard. Your review becomes a private note, and the ampersands RYM escapes in names are turned back into plain text.</p>
+<p class="switch-more"><a href="/switch/rate-your-music">The Rate Your Music guide</a> lists what stays behind.</p>
+</section>
+
+<section class="content-section" aria-labelledby="libib-heading">
+<h2 id="libib-heading">From Libib</h2>
+<p>Libib catalogs books, films, music and games, and each library exports as one CSV. Every row's item type decides its shelf, star ratings are doubled, and a completed status or completed date marks it finished. Films show an unknown director, because Libib lists a film's cast as its creators. Board games and other types aren't tracked here and are listed as needing attention.</p>
+<p class="switch-more"><a href="/switch/libib">The Libib guide</a> covers several libraries at once.</p>
+</section>
+
+<section class="content-section" aria-labelledby="guides-heading">
+<h2 id="guides-heading">One guide per service</h2>
+<p>Each service has its own page with the export steps, a field-by-field table and the questions people ask most.</p>
+<ul class="switch-guides">
+<li><a href="/switch/letterboxd">Switch from Letterboxd</a></li>
+<li><a href="/switch/imdb">Switch from IMDb</a></li>
+<li><a href="/switch/goodreads">Switch from Goodreads</a></li>
+<li><a href="/switch/storygraph">Switch from The StoryGraph</a></li>
+<li><a href="/switch/myanimelist">Switch from MyAnimeList or Kitsu</a></li>
+<li><a href="/switch/anilist">Switch from AniList</a></li>
+<li><a href="/switch/trakt">Switch from Trakt</a></li>
+<li><a href="/switch/steam">Import your Steam library</a></li>
+<li><a href="/switch/spotify">Import from Spotify</a></li>
+<li><a href="/switch/podcast-apps">Import from a podcast app</a></li>
+<li><a href="/switch/rate-your-music">Switch from Rate Your Music</a></li>
+<li><a href="/switch/libib">Switch from Libib</a></li>
+</ul>
+</section>
+
+<section class="content-section" aria-labelledby="other-heading">
         <h2 id="other-heading">From a spreadsheet, or anything else</h2>
         <p>If your history lives somewhere else, get it into a CSV and choose <strong>Generic CSV / spreadsheet</strong> in the Import Studio. Pick one category for the whole file, or add a <code>category</code> column for a mixed library.</p>
         <p>If your columns have personal names like "Thing" or "My verdict", open the mapping panel and pair them with OmniTrackr's fields. A generic rating is read as out of ten, so double five-star scores before importing. The <a href="/tracking-templates">tracking templates</a> give you a ready layout for each category, and the <a href="/export-import-guide">export and import guide</a> walks through worked examples with expected results.</p>
