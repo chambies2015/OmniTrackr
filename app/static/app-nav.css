@@ -74,13 +74,16 @@
   }
   .app-dock__add:active { transform: scale(.96); }
 
-  /* The bar takes over these toolbar buttons; the bell and avatar stay on top. */
-  body.has-app-dock .account-toolbar :is(#showFriendsSidebar, #toggleMode, #logoutBtn, #siteStatsLink, #installAppBtn) { display: none !important; }
-  body.has-app-dock .account-toolbar { justify-content: flex-end; }
+  /* The bar takes over these toolbar buttons; the bell and avatar stay on top.
+     These header rules also apply from the first paint for a signed-in visit
+     (html.authenticated, set by preauth.js), so the header doesn't jump when
+     app-nav.js runs. app-nav.js sets .app-dock-off if the bar ends up hidden. */
+  :is(body.has-app-dock, html.authenticated body.app-shell:not(.app-dock-off)) .account-toolbar :is(#showFriendsSidebar, #toggleMode, #logoutBtn, #siteStatsLink, #installAppBtn) { display: none !important; }
+  :is(body.has-app-dock, html.authenticated body.app-shell:not(.app-dock-off)) .account-toolbar { justify-content: flex-end; }
   /* "Your space" tabs live in the sheet; the media row stays for quick switching. */
-  body.has-app-dock .tabs .library-nav__group--tools { display: none; }
+  :is(body.has-app-dock, html.authenticated body.app-shell:not(.app-dock-off)) .tabs .library-nav__group--tools { display: none; }
   /* The header button repeats the bar's Add button. */
-  body.has-app-dock .header .quick-capture-trigger { display: none; }
+  :is(body.has-app-dock, html.authenticated body.app-shell:not(.app-dock-off)) .header .quick-capture-trigger { display: none; }
 
   /* Keep page-level toasts and floating bars above the dock. */
   body.has-app-dock .guest-import-toast { bottom: calc(92px + env(safe-area-inset-bottom, 0px)); }
@@ -248,5 +251,5 @@
 }
 /* On phones the More sheet carries the same links. */
 @media (max-width: 760px) {
-  body.has-app-dock .app-explore { display: none; }
+  :is(body.has-app-dock, html.authenticated body.app-shell:not(.app-dock-off)) .app-explore { display: none; }
 }

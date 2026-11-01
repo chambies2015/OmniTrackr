@@ -44,6 +44,7 @@
   function syncVisibility() {
     const shown = getComputedStyle(main).display !== 'none';
     document.body.classList.toggle('has-app-dock', shown);
+    document.body.classList.toggle('app-dock-off', !shown);
     dock.hidden = !shown;
   }
 

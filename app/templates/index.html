@@ -75,12 +75,12 @@
   <link rel="stylesheet" href="/static/friend-recs.css?v=20261024-friend-recs-1">
   <link rel="stylesheet" href="/static/friends-feed.css?v=20261025-friends-feed-1">
   <link rel="stylesheet" href="/static/follows.css?v=20261029-follows-1">
-  <link rel="stylesheet" href="/static/app-nav.css?v=20261028-simplify-1">
+  <link rel="stylesheet" href="/static/app-nav.css?v=20261101-speed-1">
   <link rel="stylesheet" href="/static/auth-forms.css?v=20261030-passkeys-1">
   <link rel="stylesheet" href="/static/account-settings.css?v=20261030-passkeys-1">
   <link rel="stylesheet" href="/static/year-so-far.css?v=20261101-so-far-1">
   <link rel="stylesheet" href="/static/dashboard-home.css?v=20261028-tonight-1">
-  <link rel="stylesheet" href="/static/dashboard-2026.css?v=20261030-design-1">
+  <link rel="stylesheet" href="/static/dashboard-2026.css?v=20261101-speed-1">
   <link rel="stylesheet" href="/static/a11y.css?v=20261027-a11y-speed-1">
   <script src="./preauth.js?v=20261010-audit-preauth-1"></script>
   <style>
@@ -88,6 +88,17 @@
     html.authenticated #mainContainer,
     html.authenticated #mainFooter{display:block}
     html.dashboard-settling :is(.home-board,#movies-tab,#mainFooter){visibility:hidden}
+    .dashboard-skeleton{display:none}
+    .dashboard-skeleton-anchor{position:relative;height:0}
+    html.authenticated .dashboard-skeleton{display:grid;gap:12px;position:absolute;inset:4px 0 auto;z-index:5;opacity:0;pointer-events:none;transition:opacity .2s}
+    html.authenticated.dashboard-settling .dashboard-skeleton{opacity:1}
+    .dashboard-skeleton__card,.dashboard-skeleton__tile{border-radius:18px;border:1px solid var(--border,rgba(127,127,160,.2));background:linear-gradient(100deg,var(--card-bg,#16132c) 30%,var(--surface-hover,#221c42) 50%,var(--card-bg,#16132c) 70%) 0 0/300% 100%}
+    html.dashboard-settling :is(.dashboard-skeleton__card,.dashboard-skeleton__tile){animation:dashboard-skeleton 1.4s ease-in-out infinite}
+    .dashboard-skeleton__card{height:150px}
+    .dashboard-skeleton__row{display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:12px}
+    .dashboard-skeleton__tile{height:96px}
+    @keyframes dashboard-skeleton{from{background-position:100% 0}to{background-position:0 0}}
+    @media (prefers-reduced-motion:reduce){html.dashboard-settling :is(.dashboard-skeleton__card,.dashboard-skeleton__tile){animation:none}}
   </style>
 
   <!-- JSON-LD Structured Data -->
@@ -437,6 +448,19 @@
     </nav>
 
     <p id="libraryNavigationStatus" role="status" aria-live="polite" aria-atomic="true" hidden></p>
+
+    <!-- Placeholder shapes while the home cards load (shown only during dashboard-settling).
+         The anchor has no height and sits above the cards, so the shapes cover them until they are ready
+         and removing the shapes moves nothing. -->
+    <div class="dashboard-skeleton-anchor" aria-hidden="true">
+      <div class="dashboard-skeleton">
+        <div class="dashboard-skeleton__card"></div>
+        <div class="dashboard-skeleton__row">
+          <div class="dashboard-skeleton__tile"></div>
+          <div class="dashboard-skeleton__tile"></div>
+        </div>
+      </div>
+    </div>
 
     <section id="friendRecs" class="friend-recs" aria-labelledby="friendRecsTitle" hidden>
       <div class="friend-recs__header">
@@ -2284,7 +2308,7 @@
   <script src="./app.js"></script>
   <script src="/static/library-tags.js?v=20261030-audiobooks-notices-1"></script>
   <script src="/static/title-origins.js?v=20261030-audiobooks-notices-1"></script>
-  <script src="/static/for-you.js?v=20261030-audiobooks-1"></script>
+  <script src="/static/for-you.js?v=20261101-speed-1"></script>
   <script src="/static/title-links.js?v=20261030-audiobooks-1"></script>
   <script src="/static/public-profile.js?v=20261030-compare-1"></script>
   <script src="/static/supporter.js?v=20261030-claim-1"></script>
@@ -2306,7 +2330,7 @@
   <script src="/static/guest-list.js?v=20261031-browse-1"></script>
   <script src="/static/taste-quiz.js?v=20261030-audiobooks-1" defer></script>
   <script src="/static/taste-compare.js?v=20261030-compare-1" defer></script>
-  <script src="/static/app-nav.js?v=20261030-audiobooks-1" defer></script>
+  <script src="/static/app-nav.js?v=20261101-speed-1" defer></script>
 
   <!-- Account Modal -->
   <div id="accountModal" class="modal-overlay" style="display: none;">

@@ -59,6 +59,12 @@ function setup(storedContext = null) {
     refreshLibraryPulse: () => { context.pulseRefreshes = (context.pulseRefreshes || 0) + 1; },
   });
   vm.runInContext(returnDeckSource, context);
+  // Startup decision cards are tracked so the library waits for them (home.js).
+  context.trackDashboardLayoutRefresh = request => {
+    context.trackedCalls = (context.trackedCalls || 0) + 1;
+    context.scheduledDecisionRefresh = Promise.resolve(request);
+    return context.scheduledDecisionRefresh;
+  };
   context.scheduleLibraryLaunchpadRefresh = () => {
     context.scheduleCalls = (context.scheduleCalls || 0) + 1;
     context.refreshLibraryPulse();
@@ -157,10 +163,6 @@ test('eligible startup suppresses fallback cards while the deck is pending and a
     }
     return Promise.resolve({ ok: true });
   };
-  context.scheduleLibraryLaunchpadRefresh = () => {
-    context.scheduledDecisionRefresh = context.refreshDashboardDecisionCards();
-  };
-
   const bootstrap = context.bootstrapReturnDeck();
   assert.equal(await context.refreshDashboardDecisionCards(), false);
   assert.equal(context.todayRefreshes || 0, 0);
@@ -189,14 +191,29 @@ test('eligible startup suppresses fallback cards while the deck is pending and a
 
 test('ineligible startup requests each fallback card exactly once', async () => {
   const { context } = setup(activeContext());
-  context.scheduleLibraryLaunchpadRefresh = () => {
-    context.scheduledDecisionRefresh = context.refreshDashboardDecisionCards();
-  };
-
   assert.equal(await context.bootstrapReturnDeck(), false);
   assert.equal(await context.scheduledDecisionRefresh, true);
   assert.equal(context.todayRefreshes, 1);
   assert.equal(context.pulseRefreshes, 1);
+});
+
+test('without a waiting deck, today\'s cards load alongside the visit ping, once', async () => {
+  const { context, requests } = setup();
+  let finishVisit;
+  context.authenticatedFetch = (url, options = {}) => {
+    requests.push({ url, options });
+    if (url === '/account/visit') return new Promise(resolve => { finishVisit = resolve; });
+    return Promise.resolve({ ok: true, json: async () => ({ eligible: false }) });
+  };
+  const bootstrap = context.bootstrapReturnDeck();
+  assert.equal(context.todayRefreshes, 1, 'today\'s pick does not wait for the visit ping');
+  assert.equal(context.pulseRefreshes, 1);
+  while (!finishVisit) await new Promise(resolve => setImmediate(resolve));
+  finishVisit({ ok: true, json: async () => ({ return_prompt: { eligible: false } }) });
+  await bootstrap;
+  assert.equal(context.todayRefreshes, 1, 'no second request once the ping is back');
+  assert.equal(context.pulseRefreshes, 1);
+  assert.equal(context.trackedCalls, 1);
 });
 
 test('a visit after days away on an open session stores the deck context', async () => {

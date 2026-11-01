@@ -249,3 +249,13 @@ body.app-shell .modal-content .quick-capture-search-field input[type="search"]:i
 
 /* Native selects match the text fields beside them. */
 body.app-shell :is(.card, .modal-content) select { cursor: pointer; }
+
+/* Connection bar (dashboard/connection.js): a thin strip at the top while offline. */
+.connection-bar {
+  position: fixed; inset: 0 0 auto; z-index: 1200;
+  padding: calc(6px + env(safe-area-inset-top, 0px)) var(--space-4, 16px) 6px;
+  font-size: var(--text-sm, 14px); font-weight: 600; text-align: center;
+  color: #fff; background: #3b3556; box-shadow: 0 2px 10px rgb(0 0 0 / .25);
+}
+.connection-bar[hidden] { display: none; }
+.connection-bar[data-tone="online"] { background: #1f7a4d; }

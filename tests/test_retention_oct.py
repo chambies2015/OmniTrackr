@@ -246,7 +246,8 @@ def test_manifest_and_worker(client):
 def test_worker_never_caches_pages_or_api():
     source = Path("app/static/sw.js").read_text(encoding="utf-8")
     assert "request.mode === 'navigate'" in source and "pageWithOfflineFallback" in source
-    assert "url.pathname.startsWith('/static/') && url.searchParams.has('v')" in source
+    assert "if (!url.searchParams.has('v')) return false;" in source
+    assert "url.pathname.startsWith('/static/') || VERSIONED_ROOT_FILES.has(url.pathname)" in source
     assert "/api/" not in source.split("self.addEventListener('fetch'")[1].replace("/api/ calls", "")
 
 

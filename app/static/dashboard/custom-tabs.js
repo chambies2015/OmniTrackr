@@ -1,20 +1,5 @@
 let customTabs = [];
 let customTabFieldCounter = 0;
-const getAuthTokenValue = () => (typeof getToken === 'function' ? getToken() : localStorage.getItem('omnitrackr_token'));
-const hasStoredAuth = () => (typeof isAuthenticated === 'function' ? isAuthenticated() : !!getAuthTokenValue() || !!localStorage.getItem('omnitrackr_user'));
-const authFetchOptions = (options = {}) => {
-  const token = getAuthTokenValue();
-  const headers = { ...(options.headers || {}) };
-  if (token) {
-    headers.Authorization = `Bearer ${token}`;
-  }
-  return {
-    ...options,
-    credentials: options.credentials || 'same-origin',
-    headers
-  };
-};
-
 async function loadCustomTabs() {
   try {
     if (!hasStoredAuth()) return;

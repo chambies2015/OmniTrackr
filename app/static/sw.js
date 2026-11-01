@@ -1,18 +1,28 @@
 /* OmniTrackr service worker.
  *
  * Deliberately small:
- *  - Versioned files under /static/ (the ones loaded with ?v=) are cached after
- *    first use, so repeat visits and the installed app open faster.
+ *  - Versioned files (anything under /static/ loaded with ?v=, plus the root
+ *    /app.js and /auth.js) and the self-hosted fonts are cached
+ *    after first use, so repeat visits and the installed app open faster. When a
+ *    new version of a file is cached, older versions of that same file are
+ *    dropped, so the cache holds what the pages use today.
  *  - Pages always come from the network. Library pages are private, so no HTML
  *    is stored; when the network is down the visitor sees /offline instead.
+ *    Navigation preload starts that network request while the worker boots,
+ *    which on phones saves the worker's start-up time on every page open.
  *  - API calls, sign-in and everything else are never touched.
  *  - Push messages show a notification; tapping it opens that page.
  */
-const VERSION = '20261010-push-1';
-const STATIC_CACHE = `omnitrackr-static-${VERSION}`;
+const VERSION = '20261101-speed-1';
+// The static cache keeps its old name on purpose: renaming it would make every
+// member download every file again after this update.
+const STATIC_CACHE = 'omnitrackr-static-20261010-push-1';
 const OFFLINE_CACHE = `omnitrackr-offline-${VERSION}`;
 const OFFLINE_URL = '/offline';
-const MAX_STATIC_ENTRIES = 80;
+// The dashboard alone uses about 80 files, so leave room for the public pages too.
+const MAX_STATIC_ENTRIES = 220;
+// Root scripts the server already marks immutable when they carry ?v=.
+const VERSIONED_ROOT_FILES = new Set(['/app.js', '/auth.js']);
 
 self.addEventListener('install', event => {
   event.waitUntil(
@@ -28,14 +38,25 @@ self.addEventListener('activate', event => {
       .then(keys => Promise.all(keys
         .filter(key => key.startsWith('omnitrackr-') && key !== STATIC_CACHE && key !== OFFLINE_CACHE)
         .map(key => caches.delete(key))))
+      .then(() => (self.registration.navigationPreload
+        ? self.registration.navigationPreload.enable().catch(() => {})
+        : undefined))
       .then(() => self.clients.claim())
   );
 });
 
-async function trimCache(cache) {
+async function trimCache(cache, keep) {
   const keys = await cache.keys();
-  for (let index = 0; index < keys.length - MAX_STATIC_ENTRIES; index += 1) {
-    await cache.delete(keys[index]);
+  // Older versions of the file just stored are never requested again.
+  const keepUrl = new URL(keep.url);
+  const stale = keys.filter(key => {
+    const url = new URL(key.url);
+    return url.pathname === keepUrl.pathname && url.search !== keepUrl.search;
+  });
+  await Promise.all(stale.map(key => cache.delete(key)));
+  const rest = keys.filter(key => !stale.includes(key));
+  for (let index = 0; index < rest.length - MAX_STATIC_ENTRIES; index += 1) {
+    await cache.delete(rest[index]);
   }
 }
 
@@ -45,18 +66,26 @@ async function staticFirst(request) {
   if (cached) return cached;
   const response = await fetch(request);
   if (response.ok && response.type === 'basic') {
-    cache.put(request, response.clone()).then(() => trimCache(cache)).catch(() => {});
+    cache.put(request, response.clone()).then(() => trimCache(cache, request)).catch(() => {});
   }
   return response;
 }
 
-async function pageWithOfflineFallback(request) {
+async function pageWithOfflineFallback(event) {
   try {
-    return await fetch(request);
+    const preloaded = await event.preloadResponse;
+    if (preloaded) return preloaded;
+    return await fetch(event.request);
   } catch (error) {
     const cache = await caches.open(OFFLINE_CACHE);
     return (await cache.match(OFFLINE_URL)) || Response.error();
   }
+}
+
+function cacheable(url) {
+  if (url.pathname.startsWith('/static/fonts/')) return true;
+  if (!url.searchParams.has('v')) return false;
+  return url.pathname.startsWith('/static/') || VERSIONED_ROOT_FILES.has(url.pathname);
 }
 
 self.addEventListener('fetch', event => {
@@ -66,11 +95,11 @@ self.addEventListener('fetch', event => {
   if (url.origin !== self.location.origin) return;
 
   if (request.mode === 'navigate') {
-    event.respondWith(pageWithOfflineFallback(request));
+    event.respondWith(pageWithOfflineFallback(event));
     return;
   }
-  // Only versioned static files: their content never changes for a given ?v=.
-  if (url.pathname.startsWith('/static/') && url.searchParams.has('v')) {
+  // Only versioned files and fonts: their content never changes for a given URL.
+  if (cacheable(url)) {
     event.respondWith(staticFirst(request));
   }
 });

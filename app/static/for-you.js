@@ -456,13 +456,17 @@
     const request = ++state.request;
     if (!$('starterPicks') || !$('comingUp')) return;
     try {
+      // Both requests start together; on a phone, asking one after the other added
+      // a full round trip before the card could appear.
+      const picksRequest = starterDismissed() ? null : getJson('/api/for-you/starter-picks');
+      if (picksRequest) picksRequest.catch(() => {});
       const comingUp = await getJson('/api/for-you/coming-up');
       if (request !== state.request) return;
       state.email = comingUp.email || {};
       let starterShown = false;
       // Starter picks count every category; coming-up counts only radar ones, so ask separately.
-      if (!starterDismissed()) {
-        const picks = await getJson('/api/for-you/starter-picks');
+      if (picksRequest) {
+        const picks = await picksRequest;
         if (request !== state.request) return;
         if (Number(picks.library_total || 0) < STARTER_GOAL) {
           renderStarter(picks);
