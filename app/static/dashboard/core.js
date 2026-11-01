@@ -1,6 +1,32 @@
 const isLocal = (location.protocol === 'file:' || location.origin === 'null' || location.origin === '');
 const API_BASE = isLocal ? 'http://127.0.0.1:8000' : '';
 
+// Auth helpers shared by every dashboard module. They are function declarations,
+// not const arrow functions, so code that runs while the bundle is still being
+// evaluated (the first library load, the visit-day ping) can call them too.
+function getAuthTokenValue() {
+  return typeof getToken === 'function' ? getToken() : localStorage.getItem('omnitrackr_token');
+}
+
+function hasStoredAuth() {
+  return typeof isAuthenticated === 'function'
+    ? isAuthenticated()
+    : !!getAuthTokenValue() || !!localStorage.getItem('omnitrackr_user');
+}
+
+function authFetchOptions(options = {}) {
+  const token = getAuthTokenValue();
+  const headers = { ...(options.headers || {}) };
+  if (token) {
+    headers.Authorization = `Bearer ${token}`;
+  }
+  return {
+    ...options,
+    credentials: options.credentials || 'same-origin',
+    headers
+  };
+}
+
 let editingRowId = null;
 let editingRowElement = null;
 let currentTab = 'movies';

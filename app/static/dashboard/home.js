@@ -413,6 +413,10 @@ async function refreshReturnDeck() {
 
 async function refreshDashboardDecisionCards() {
   if (!returnDeckBootstrapComplete || returnDeckActive || returnDeckPending) return false;
+  return loadDashboardDecisionCards();
+}
+
+function loadDashboardDecisionCards() {
   if (decisionCardsRefreshPromise) return decisionCardsRefreshPromise;
   decisionCardsRefreshPromise = Promise.all([
     refreshLibraryPulse(),
@@ -456,12 +460,18 @@ async function recordVisitDay() {
 }
 
 async function bootstrapReturnDeck() {
+  // Most visits have no return prompt waiting, so today's cards load right away
+  // instead of after the visit-day ping. If that ping finds the member was away
+  // a while, the Welcome Back Deck still replaces them (renderReturnDeck hides both).
+  const cardsAlreadyLoading = !getReturnPromptContext() && hasStoredAuth()
+    ? trackDashboardLayoutRefresh(loadDashboardDecisionCards())
+    : null;
   try {
     await recordVisitDay();
     return await refreshReturnDeck();
   } finally {
     returnDeckBootstrapComplete = true;
-    scheduleLibraryLaunchpadRefresh(true);
+    if (!cardsAlreadyLoading) trackDashboardLayoutRefresh(refreshDashboardDecisionCards());
   }
 }
 
@@ -1414,6 +1424,7 @@ async function refreshLibraryPulse(shouldContinue = () => true) {
 const dashboardLayoutRefreshes = new Set();
 let scheduledDashboardLayoutRefresh = null;
 let firstDashboardLayoutBatchRan = false;
+let firstDashboardLayoutBatchWaiting = false;
 
 function waitForDashboardLayoutRefreshes() {
   // Initial producers have settled: capture their running and scheduled batches
@@ -1431,26 +1442,50 @@ function scheduleLibraryLaunchpadRefresh(refreshDecisionCards = true) {
     batch.promise.then(() => dashboardLayoutRefreshes.delete(batch.promise));
   }
   window.clearTimeout(launchpadRefreshTimer);
-  launchpadRefreshTimer = window.setTimeout(() => {
-    const batch = scheduledDashboardLayoutRefresh;
-    scheduledDashboardLayoutRefresh = null;
-    const shouldRefreshDecisionCards = launchpadDecisionRefreshRequested;
-    launchpadDecisionRefreshRequested = false;
-    const launchpadRequest = refreshLibraryLaunchpad();
-    const queueRequest = refreshNextUpQueue();
-    // The first batch reuses the cards auth.js just requested; later ones fetch fresh.
-    const cardRequests = (!firstDashboardLayoutBatchRan && window.dashboardHomeCards) || [
-      window.refreshYearGoals?.(),
-      window.refreshMonthlyChallenge?.(),
-      window.refreshSeasonCard?.(),
-      window.refreshBadges?.(),
-      window.refreshOnThisDay?.(),
-    ];
-    firstDashboardLayoutBatchRan = true;
-    window.dashboardHomeCards = null;
-    if (shouldRefreshDecisionCards) refreshDashboardDecisionCards();
-    Promise.allSettled([launchpadRequest, queueRequest, decisionCardsRefreshPromise, ...cardRequests]).then(batch.resolve);
-  }, 250);
+  // The first batch runs as soon as auth.js has asked for the home cards (it does
+  // that when the page finishes parsing), so the library is not held back for a
+  // fixed delay. Later batches wait a moment to merge back-to-back changes.
+  if (!firstDashboardLayoutBatchRan && document.readyState === 'loading') {
+    if (!firstDashboardLayoutBatchWaiting) {
+      firstDashboardLayoutBatchWaiting = true;
+      document.addEventListener('DOMContentLoaded', () => {
+        window.clearTimeout(launchpadRefreshTimer);
+        launchpadRefreshTimer = window.setTimeout(runDashboardLayoutBatch, 0);
+      }, { once: true });
+    }
+    return;
+  }
+  launchpadRefreshTimer = window.setTimeout(runDashboardLayoutBatch, firstDashboardLayoutBatchRan ? 250 : 0);
+}
+
+function runDashboardLayoutBatch() {
+  const batch = scheduledDashboardLayoutRefresh;
+  if (!batch) return;
+  scheduledDashboardLayoutRefresh = null;
+  const shouldRefreshDecisionCards = launchpadDecisionRefreshRequested;
+  launchpadDecisionRefreshRequested = false;
+  const launchpadRequest = refreshLibraryLaunchpad();
+  const queueRequest = refreshNextUpQueue();
+  // The first batch reuses the cards auth.js just requested; later ones fetch fresh.
+  const cardRequests = (!firstDashboardLayoutBatchRan && window.dashboardHomeCards) || [
+    window.refreshYearGoals?.(),
+    window.refreshMonthlyChallenge?.(),
+    window.refreshSeasonCard?.(),
+    window.refreshBadges?.(),
+    window.refreshOnThisDay?.(),
+  ];
+  firstDashboardLayoutBatchRan = true;
+  window.dashboardHomeCards = null;
+  if (shouldRefreshDecisionCards) refreshDashboardDecisionCards();
+  Promise.allSettled([launchpadRequest, queueRequest, decisionCardsRefreshPromise, ...cardRequests]).then(batch.resolve);
+}
+
+// Startup work that has to finish before the library is revealed, outside a batch.
+function trackDashboardLayoutRefresh(request) {
+  const tracked = Promise.resolve(request).catch(() => false);
+  dashboardLayoutRefreshes.add(tracked);
+  tracked.then(() => dashboardLayoutRefreshes.delete(tracked));
+  return tracked;
 }
 
 const loadMovieLibrary = loadMovies;
@@ -1459,9 +1494,10 @@ loadMovies = async function (...args) {
   enhanceLibraryCards('movieTable');
   if (!libraryPages.get('movies')?.browseOnly) {
     invalidateLibrarySearchIndex();
-    const refreshDecisionCards = !initialMovieLibraryLoad;
-    initialMovieLibraryLoad = false;
-    scheduleLibraryLaunchpadRefresh(refreshDecisionCards);
+    // The first page is covered by the startup batch below; refreshing again here
+    // used to ask for every home card a second time on each visit.
+    if (initialMovieLibraryLoad) initialMovieLibraryLoad = false;
+    else scheduleLibraryLaunchpadRefresh(true);
   }
   return result;
 };

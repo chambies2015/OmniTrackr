@@ -1,7 +1,7 @@
 """Dashboard script bundle.
 
 The signed-in dashboard script lives in app/static/dashboard/ as a few modules
-(notices, a11y, core, library, account, social, home, custom-tabs) plus lazy chunks under
+(notices, a11y, core, library, account, social, home, custom-tabs, connection) plus lazy chunks under
 dashboard/lazy/. Rarely used features (statistics, friend profiles, collections,
 the custom tab manager and so on) are left out of the first download and
 fetched when first used, or quietly once the page is idle.
@@ -35,6 +35,7 @@ EAGER_MODULES = (
     "social.js",
     "home.js",
     "custom-tabs.js",
+    "connection.js",
 )
 
 # Chunk name -> lazy files, loaded together and executed in this order.
