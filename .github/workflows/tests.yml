@@ -42,6 +42,28 @@ jobs:
         python -m pytest tests/ -v --tb=short --strict-markers --disable-warnings
       continue-on-error: false
 
+  dependency-audit:
+    name: Check dependencies for known vulnerabilities
+    runs-on: ubuntu-latest
+
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+
+    - name: Set up Python
+      uses: actions/setup-python@v5
+      with:
+        python-version: '3.12'
+        cache: 'pip'
+
+    # Dependabot only watches main, so a vulnerable pin on a monthly branch
+    # isn't flagged until the month is merged. This catches it on the PR.
+    - name: Run pip-audit
+      run: |
+        python -m pip install --upgrade pip
+        pip install pip-audit
+        pip-audit -r requirements.txt --progress-spinner off
+
   browser-tests:
     name: Browser behavior tests
     runs-on: ubuntu-latest
