@@ -4,6 +4,7 @@ from datetime import datetime, timedelta, timezone
 import pytest
 
 from app import daily, editorial_index, site_chrome, title_search
+from app import new_releases
 from app.discover_catalog import published_editions
 from app.best_of_guides import GUIDES as BEST_OF_GUIDES
 from app.discover_guides import GUIDES as DISCOVER_GUIDES
@@ -36,7 +37,7 @@ def header(html):
 
 def test_editorial_index_lists_every_guide_newest_first():
     pieces = editorial_index.entries()
-    assert len(pieces) == len(DISCOVER_GUIDES) + len(LIKED_GUIDES) + len(ORDER_GUIDES) + len(published_editions()) + len(SEASONS) + len(BEST_OF_GUIDES)  # + monthly editions, seasonal hubs, best-of lists
+    assert len(pieces) == len(DISCOVER_GUIDES) + len(LIKED_GUIDES) + len(ORDER_GUIDES) + len(published_editions()) + len(SEASONS) + len(BEST_OF_GUIDES) + len(new_releases.published())  # + monthly editions, seasonal hubs, best-of lists, release guides
     dates = [piece["updated"] for piece in pieces]
     assert dates == sorted(dates, reverse=True)
     latest = editorial_index.latest(6)

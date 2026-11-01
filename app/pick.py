@@ -2,8 +2,10 @@
 
 The pool is the editors' own writing that already ships with the site: the
 Discover trails, the monthly editions, the starter public collections, the
-"If you liked..." guides, the seasonal hubs and the best-of-the-year lists. Every
-pick carries the reason it was chosen, so the page never shows a bare title.
+"If you liked..." guides, the seasonal hubs, the best-of-the-year lists and the
+release guides. Every pick carries the reason it was chosen, so the page never
+shows a bare title. A release guide pick can be saved before it comes out, but
+it is only suggested once its release date has passed (``out``).
 Nothing here reads or reveals anyone's library; the only database reads are the
 cached title index (for artwork and title page links) and the editors' public
 collection links.
@@ -36,7 +38,7 @@ _pool: Optional[list[dict]] = None
 _pool_editions: tuple = ()
 
 
-def _entry(kind: str, title: str, year, creator, why: str, caveat, source_label: str, source_url) -> dict:
+def _entry(kind: str, title: str, year, creator, why: str, caveat, source_label: str, source_url, out=None) -> dict:
     year = year if isinstance(year, int) and not isinstance(year, bool) and 1800 <= year <= 2100 else None
     slug = title_pages.title_slug(title, year)
     return {
@@ -45,6 +47,7 @@ def _entry(kind: str, title: str, year, creator, why: str, caveat, source_label:
         "title": title, "year": year, "creator": creator or None,
         "why": why, "caveat": caveat or None,
         "source_label": source_label, "source_url": source_url,
+        "out": out,
     }
 
 
@@ -87,17 +90,28 @@ def _build() -> list[dict]:
     from .best_of import pool_sources as best_of_sources
     for item, label, url in best_of_sources():
         keep(_entry(item["kind"], item["title"], item["year"], item["creator"], item["why"], item["caveat"], label, url))
+    from .new_releases import pool_sources as release_sources
+    for item, label, url in release_sources():
+        keep(_entry(item["kind"], item["title"], item["year"], item["creator"], item["why"], item["caveat"], label, url,
+                    out=item["date"]))
     order = {kind: index for index, kind in enumerate(KIND_ORDER)}
     return sorted(found.values(), key=lambda e: (order[e["kind"]], e["title"].casefold()))
 
 
 def pool() -> list[dict]:
-    """Every curated pick, built from the editorial content in code once per set of published editions."""
+    """Every curated pick, built from the editorial content in code once per set of published editions and guides."""
     global _pool, _pool_editions
-    editions = tuple(published_editions())
+    from .new_releases import published as published_release_guides
+    editions = (tuple(published_editions()), tuple(published_release_guides()))
     if _pool is None or _pool_editions != editions:
         _pool, _pool_editions = _build(), editions
     return _pool
+
+
+def is_available(entry: dict, today: Optional[date] = None) -> bool:
+    """False for a release guide pick that hasn't come out yet (it can be saved, but isn't suggested)."""
+    out = entry.get("out")
+    return not out or out <= (today or datetime.utcnow().date()).isoformat()
 
 
 def find(kind: str, slug: str) -> Optional[dict]:
@@ -112,8 +126,9 @@ def find_id(pick_id: str) -> Optional[dict]:
     return find(kind, slug) if kind in title_pages.KINDS else None
 
 
-def candidates(kind: Optional[str] = None) -> list[dict]:
-    return [entry for entry in pool() if kind is None or entry["kind"] == kind]
+def candidates(kind: Optional[str] = None, today: Optional[date] = None) -> list[dict]:
+    """Picks that can be suggested now: every pool entry that is already out."""
+    return [entry for entry in pool() if (kind is None or entry["kind"] == kind) and is_available(entry, today)]
 
 
 def choose(kind: Optional[str] = None, exclude=(), rng: Optional[random.Random] = None) -> Optional[dict]:
@@ -127,7 +142,7 @@ def choose(kind: Optional[str] = None, exclude=(), rng: Optional[random.Random] 
 
 def of_the_day(day: Optional[date] = None) -> dict:
     """The same pick for everyone on a given day (the page's starting suggestion)."""
-    entries = pool()
+    entries = candidates(today=day)
     day = day or date.today()
     return entries[zlib.crc32(day.isoformat().encode("ascii")) % len(entries)]
 

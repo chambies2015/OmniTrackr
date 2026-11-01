@@ -957,6 +957,8 @@ app.include_router(if_you_liked_router.router)
 
 from .routers import best_of as best_of_router
 app.include_router(best_of_router.router)
+from .routers import new_releases as new_releases_router
+app.include_router(new_releases_router.router)
 
 from .routers import tonight as tonight_router
 rate_limited_tonight_create = limiter.limit("10/minute")(tonight_router.create_poll)
