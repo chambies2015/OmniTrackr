@@ -25,6 +25,7 @@ HUBS = {
     "/if-you-liked": "If you liked",
     "/in-order": "Franchises in order",
     "/best-of": "Best of the year",
+    "/new-releases": "Release guides",
     "/daily": "OmniTrackr Daily",
     "/new-this-week/archive": "New this week",
     "/collections/explore": "Public lists",

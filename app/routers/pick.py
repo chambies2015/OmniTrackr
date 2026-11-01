@@ -101,7 +101,7 @@ def _pool_section(details: dict, collection_links: dict) -> str:
             )
         groups.append(f'<section class="pf-pool__group"><h3>{_e(pick.FORMAT_LABELS[kind])} <span>({len(entries)})</span></h3>'
                       f'<ul>{"".join(items)}</ul></section>')
-    total = len(pick.pool())
+    total = len(pick.candidates())
     return (f'<section id="pick-pool" class="pf-pool" aria-labelledby="pfPoolHeading"><p class="eyebrow">THE WHOLE POOL</p>'
             f'<h2 id="pfPoolHeading">Every title we might pick ({total})</h2>'
             '<p>Prefer to browse? These are all the titles Pick for me draws from, grouped by format. Each one comes from a '
@@ -111,7 +111,7 @@ def _pool_section(details: dict, collection_links: dict) -> str:
 
 def _pool_rows(details: dict, collection_links: dict) -> list[dict]:
     rows = []
-    for entry in pick.pool():
+    for entry in pick.candidates():
         detail = details.get(entry["id"], {})
         rows.append({
             "id": entry["id"], "kind": entry["kind"], "slug": entry["slug"], "label": entry["label"],
