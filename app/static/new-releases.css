@@ -1,0 +1,20 @@
+/* Release guides (/new-releases). Builds on discover.css, if-you-liked.css and best-of.css. */
+.nr-count { color: #c3c8dd; margin: 0 0 28px; }
+.nr-section { margin-top: 44px; }
+.nr-section .yl-section-intro p + p { margin-top: 10px; }
+.nr-when {
+  background: rgba(124, 92, 255, .18);
+  border: 1px solid rgba(124, 92, 255, .55);
+  border-radius: 999px;
+  color: #fff;
+  display: inline-block;
+  font-size: .78rem;
+  font-weight: 700;
+  margin-right: 6px;
+  padding: 2px 10px;
+}
+.nr-when--out { background: rgba(20, 184, 166, .18); border-color: rgba(20, 184, 166, .6); }
+.nr-first { border-left: 2px solid var(--site-violet); color: #d7dbee; padding: 2px 0 2px 14px; }
+.nr-first strong { color: #fff; }
+.nr-first a { margin-left: 4px; }
+.nr-card__label { color: #a7f3d0 !important; font-size: .78rem; font-weight: 700; letter-spacing: .04em; text-transform: uppercase; }

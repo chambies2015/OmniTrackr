@@ -373,6 +373,17 @@ def _notes_html(notes: list[str]) -> str:
 # Pages
 # ---------------------------------------------------------------------------
 
+def _guide_note() -> str:
+    """A pointer from the full calendar to the hand-written release guide for this month, if one is live."""
+    from .. import new_releases
+    slug = new_releases.current()
+    if not slug:
+        return ""
+    guide = new_releases.GUIDES[slug]
+    return (f'<p class="radar-hero__roundup">Want our picks? <a href="{escape(new_releases.path(slug), quote=True)}">'
+            f'{escape(guide["name"])}</a> goes through the releases we would plan around, format by format.</p>')
+
+
 @router.get("/release-radar")
 async def radar_hub(request: Request, db: Session = Depends(get_db)):
     today = _today()
@@ -461,6 +472,7 @@ async def radar_hub(request: Request, db: Session = Depends(get_db)):
         'Spot something you want to see, play or finish, and track it in one click.</p>'
         + (f'<p class="radar-hero__summary">{escape(summary)}</p>' if summary else "")
         + '<p class="radar-hero__roundup">Looking back instead? <a href="/new-this-week/archive">Every weekly roundup</a></p>'
+        + _guide_note()
         + '</header>' + _category_tabs(None) + strip_html + _calendar_box(None) + tracked_html + "".join(sections) + _about_section(None)
     )
     indexable = total >= MIN_INDEXABLE_ITEMS
