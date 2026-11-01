@@ -3,6 +3,7 @@ from __future__ import annotations
 
 import csv
 import hashlib
+import html
 import io
 import math
 import re
@@ -13,12 +14,47 @@ from typing import Any, Iterable
 from pydantic import ValidationError
 from sqlalchemy.orm import Session
 
-from . import models, schemas
+from . import game_playtime, import_formats, models, schemas, steam
 
 
 MAX_IMPORT_BYTES = 5 * 1024 * 1024
 MAX_IMPORT_ROWS = 5000
-SUPPORTED_SOURCES = {"auto", "letterboxd", "goodreads", "myanimelist", "generic"}
+SUPPORTED_SOURCES = {"auto", "letterboxd", "goodreads", "myanimelist", "imdb", "storygraph", "trakt", "anilist", "steam",
+                     "spotify", "opml", "rateyourmusic", "libib", "generic"}
+SOURCE_LABELS = {
+    "letterboxd": "Letterboxd", "goodreads": "Goodreads", "myanimelist": "MyAnimeList",
+    "imdb": "IMDb", "storygraph": "The StoryGraph", "trakt": "Trakt", "anilist": "AniList", "steam": "Steam",
+    "spotify": "Spotify", "opml": "podcast app (OPML)", "rateyourmusic": "Rate Your Music", "libib": "Libib",
+    "generic": "Generic CSV / spreadsheet",
+}
+# Placeholders the importers use when an export has no creator; they match any creator.
+UNKNOWN_CREATORS = {"", "unknown director", "unknown artist", "unknown author"}
+# IMDb "Title Type" values, compared with spaces and punctuation removed so both the
+# current export ("TV Mini Series") and the older one ("tvMiniSeries") are understood.
+IMDB_TITLE_TYPES = {
+    "movie": "movies", "tvmovie": "movies", "short": "movies", "tvshort": "movies",
+    "tvspecial": "movies", "video": "movies",
+    "tvseries": "tv-shows", "tvminiseries": "tv-shows",
+    "videogame": "video-games",
+}
+IMDB_SKIPPED_TYPES = {
+    "tvepisode": "IMDb episode ratings aren't imported. Add the series instead.",
+    "podcastepisode": "IMDb podcast entries aren't a supported category.",
+    "podcastseries": "IMDb podcast entries aren't a supported category.",
+    "musicvideo": "IMDb music videos aren't a supported category.",
+}
+STORYGRAPH_FINISHED = {"read"}
+# Sources whose export is never a spreadsheet, with what to choose instead.
+FILE_ONLY_SOURCES = {
+    "spotify": "Spotify's library comes as YourLibrary.json or the ZIP it arrives in. Choose that file instead.",
+    "opml": "Podcast apps export subscriptions as an OPML file. Choose the .opml or .xml file instead.",
+}
+# Libib's item types, and the statuses it gives a finished item.
+LIBIB_TYPES = {"book": "books", "books": "books", "movie": "movies", "movies": "movies",
+               "music": "music", "videogame": "video-games", "videogames": "video-games", "game": "video-games"}
+LIBIB_FINISHED = {"completed", "complete", "finished"}
+# Rate Your Music's ownership codes: n none, o owned, u used to own, w wishlist, d digital.
+RYM_WISHLIST = {"w"}
 CATEGORY_ALIASES = {
     "movie": "movies", "movies": "movies", "film": "movies", "films": "movies",
     "tv": "tv-shows", "show": "tv-shows", "shows": "tv-shows", "tv show": "tv-shows",
@@ -28,19 +64,25 @@ CATEGORY_ALIASES = {
     "video games": "video-games", "video-game": "video-games", "video-games": "video-games",
     "music": "music", "album": "music", "albums": "music",
     "book": "books", "books": "books",
+    "manga": "manga", "manhwa": "manga", "manhua": "manga", "webtoon": "manga", "webtoons": "manga",
+    "podcast": "podcasts", "podcasts": "podcasts",
+    "audiobook": "audiobooks", "audiobooks": "audiobooks", "audio book": "audiobooks",
 }
 CATEGORY_LABELS = {
     "movies": "Movies", "tv-shows": "TV Shows", "anime": "Anime",
     "video-games": "Video Games", "music": "Music", "books": "Books",
+    "manga": "Manga", "podcasts": "Podcasts", "audiobooks": "Audiobooks",
 }
 MODEL_BY_CATEGORY = {
     "movies": models.Movie, "tv-shows": models.TVShow, "anime": models.Anime,
     "video-games": models.VideoGame, "music": models.Music, "books": models.Book,
+    "manga": models.Manga, "podcasts": models.Podcast, "audiobooks": models.Audiobook,
 }
 SCHEMA_BY_CATEGORY = {
     "movies": schemas.MovieCreate, "tv-shows": schemas.TVShowCreate,
     "anime": schemas.AnimeCreate, "video-games": schemas.VideoGameCreate,
     "music": schemas.MusicCreate, "books": schemas.BookCreate,
+    "manga": schemas.MangaCreate, "podcasts": schemas.PodcastCreate, "audiobooks": schemas.AudiobookCreate,
 }
 
 
@@ -51,11 +93,16 @@ class ParsedRow:
     title: str
     data: dict[str, Any] | None
     error: str | None = None
+    # Facts kept beside the library record, such as Steam minutes played.
+    extra: dict[str, Any] | None = None
 
 
-def fingerprint(content: bytes, source: str = "", category: str = "", mapping_json: str = "") -> str:
+def fingerprint(content: bytes, source: str = "", category: str = "", mapping_json: str = "", filename: str = "") -> str:
     """Bind confirmation to both the file bytes and the selected interpretation."""
     options = f"\0{source}\0{category}\0{mapping_json}".encode("utf-8")
+    if filename:
+        # A file's name can change how it is read (a Letterboxd watchlist.csv).
+        options += f"\0{filename}".encode("utf-8")
     return hashlib.sha256(content + options).hexdigest()
 
 
@@ -106,13 +153,34 @@ def _optional_integer(value: str, field: str) -> int | None:
     return int(number)
 
 
-def _rating(value: str, five_point: bool = False) -> float | None:
+def _optional_hours(value: str) -> float | None:
+    """Audiobook length as hours ("11.5") or a runtime ("11:30" or "11h 30m")."""
+    value = _clean(value).lower()
+    if not value:
+        return None
+    match = re.fullmatch(r"(\d+)\s*(?::|h(?:ours?|rs?)?\s*)\s*(\d+)?\s*(?:m(?:in(?:utes?|s)?)?)?", value)
+    if match and (":" in value or "h" in value):
+        hours = int(match.group(1)) + int(match.group(2) or 0) / 60
+    else:
+        try:
+            hours = float(value)
+        except ValueError:
+            raise ValueError("Length must be hours, like 11.5 or 11:30.") from None
+    if not math.isfinite(hours) or hours < 0 or hours > 1000:
+        raise ValueError("Length must be between 0 and 1000 hours.")
+    return round(hours, 2)
+
+
+def _rating(value: str, five_point: bool = False, zero_is_unrated: bool = False) -> float | None:
     if not value:
         return None
     try:
         rating = float(value)
     except (TypeError, ValueError):
         raise ValueError("Rating must be a number.") from None
+    # Goodreads, StoryGraph and MyAnimeList export 0 for titles the member never rated.
+    if zero_is_unrated and rating == 0:
+        return None
     maximum = 5 if five_point else 10
     if not math.isfinite(rating) or not 0 <= rating <= maximum:
         raise ValueError(f"Rating must be between 0 and {maximum}.")
@@ -151,6 +219,14 @@ def _detect_source(headers: set[str]) -> str:
         return "goodreads"
     if "series_title" in headers and ({"my_score", "my_status"} & headers):
         return "myanimelist"
+    if {"const", "title_type"}.issubset(headers) and "title" in headers:
+        return "imdb"
+    if {"title", "authors", "read_status"}.issubset(headers):
+        return "storygraph"
+    if {"rym_album", "title", "rating"}.issubset(headers):
+        return "rateyourmusic"
+    if {"item_type", "title"}.issubset(headers) and ({"ean_isbn13", "upc_isbn10", "creators"} & headers):
+        return "libib"
     if "title" in headers or "name" in headers:
         return "generic"
     raise ValueError("Could not find a title column or recognize this export format.")
@@ -172,12 +248,15 @@ def _read_csv(content: bytes) -> tuple[list[dict[str, str]], set[str]]:
     reader = csv.DictReader(io.StringIO(text), dialect=dialect)
     if not reader.fieldnames:
         raise ValueError("The CSV file does not contain a header row.")
+    rows = []
     try:
-        rows = [_normalized_row(row) for row in reader]
+        for row in reader:
+            # Stop at the cap: a file of millions of one-letter rows fits in 5 MB.
+            if len(rows) >= MAX_IMPORT_ROWS:
+                raise ValueError(f"Imports are limited to {MAX_IMPORT_ROWS:,} rows at a time.")
+            rows.append(_normalized_row(row))
     except csv.Error as exc:
         raise ValueError("The CSV could not be read. Check its quoting and column lengths.") from exc
-    if len(rows) > MAX_IMPORT_ROWS:
-        raise ValueError(f"Imports are limited to {MAX_IMPORT_ROWS:,} rows at a time.")
     return rows, {_header(name) for name in reader.fieldnames}
 
 
@@ -202,7 +281,7 @@ def _generic_row(row: dict[str, str], category_override: str | None, mapping: di
     year = _integer(field("year", "year", "release year", "year published", "original publication year")) if category != "video-games" else None
     rating = _rating(field("rating", "rating", "score", "my rating"))
     review = field("review", "review", "notes", "note", "my review") or None
-    completion_field = {"video-games": "played", "music": "listened", "books": "read"}.get(category, "watched")
+    completion_field = {"video-games": "played", "music": "listened", "books": "read", "manga": "read", "podcasts": "listened", "audiobooks": "listened"}.get(category, "watched")
     completed = _truthy(field("status", "completed", completion_field, "status", "finished", "watched", "read", "played", "listened"))
     common = {"title": title, "rating": rating, "review": review, "review_public": False}
     if category == "movies":
@@ -216,48 +295,190 @@ def _generic_row(row: dict[str, str], category_override: str | None, mapping: di
         data = {**common, "release_date": _date(release), "genres": field("genre", "genres", "genre") or None, "played": completed}
     elif category == "music":
         data = {**common, "artist": field("creator", "artist", "creator") or "Unknown artist", "year": year, "genre": field("genre", "genre", "genres") or None, "listened": completed}
+    elif category == "manga":
+        data = {**common, "author": field("creator", "author", "mangaka", "creator") or None, "year": year,
+                "genre": field("genre", "genre", "genres") or None,
+                "volumes": _optional_integer(_first(row, "volumes"), "Volumes"),
+                "chapters": _optional_integer(_first(row, "chapters"), "Chapters"), "read": completed}
+    elif category == "podcasts":
+        data = {**common, "host": field("creator", "host", "creator", "author", "publisher") or None, "year": year,
+                "genre": field("genre", "genre", "genres") or None,
+                "episodes": _optional_integer(_first(row, "episodes"), "Episodes"), "listened": completed}
+    elif category == "audiobooks":
+        data = {**common, "author": field("creator", "author", "creator", "writer") or None, "year": year,
+                "narrator": field("narrator", "narrator", "narrated by", "read by") or None,
+                "genre": field("genre", "genre", "genres") or None,
+                "length_hours": _optional_hours(_first(row, "length_hours", "hours", "length")), "listened": completed}
     else:
         data = {**common, "author": field("creator", "author", "creator") or "Unknown author", "year": year, "genre": field("genre", "genre", "genres") or None, "read": completed}
     return category, data
 
 
-def _source_row(source: str, row: dict[str, str], category_override: str | None, mapping: dict[str, str]) -> tuple[str, dict[str, Any]]:
+def _imdb_row(row: dict[str, str], mapping: dict[str, str]) -> tuple[str, dict[str, Any]]:
+    """IMDb ratings, watchlist and list exports share one layout across movies, TV and games."""
+    def field(target: str, *aliases: str) -> str:
+        return _field(row, mapping, target, *aliases)
+
+    title = field("title", "title")
+    if not title:
+        raise ValueError("Title is required.")
+    raw_type = field("category", "title type")
+    kind = re.sub(r"[^a-z]", "", raw_type.lower())
+    if kind in IMDB_SKIPPED_TYPES:
+        raise ValueError(IMDB_SKIPPED_TYPES[kind])
+    category = IMDB_TITLE_TYPES.get(kind) or CATEGORY_ALIASES.get(_clean(raw_type).lower())
+    if not category:
+        raise ValueError(f"IMDb title type \"{raw_type or 'blank'}\" isn't a supported category.")
+    rating = _rating(field("rating", "your rating"))
+    # A rated title has been seen; watchlist and list rows without a rating stay unfinished.
+    completed = _truthy(field("status")) if "status" in mapping else rating is not None or bool(_first(row, "date rated"))
+    review = field("review", "description") or None
+    common = {"title": title, "rating": rating, "review": review, "review_public": False}
+    if category == "video-games":
+        release = field("release_date", "release date") or ("" if "release_date" in mapping else field("year", "year"))
+        return category, {**common, "release_date": _date(release), "genres": field("genre", "genres") or None, "played": completed}
+    year = _integer(field("year", "year"))
+    if category == "movies":
+        return category, {**common, "director": field("creator", "directors", "director") or "Unknown director",
+                          "year": year, "watched": completed}
+    return category, {**common, "year": year, "seasons": None, "episodes": None, "watched": completed}
+
+
+def _rym_row(row: dict[str, str], mapping: dict[str, str]) -> tuple[str, dict[str, Any]]:
+    """A Rate Your Music catalog export: one album per row, ratings already out of 10."""
+    def field(target: str, *aliases: str) -> str:
+        return html.unescape(_field(row, mapping, target, *aliases))
+
+    title = field("title", "title")
+    if not title:
+        raise ValueError("Title is required.")
+    # Solo artists are split into first and last names; bands put the whole name in Last Name.
+    artist = field("creator", "artist") or " ".join(
+        part for part in (html.unescape(_first(row, "first name")), html.unescape(_first(row, "last name"))) if part)
+    rating = _rating(field("rating", "rating"), zero_is_unrated=True)
+    if "status" in mapping:
+        completed = _truthy(field("status"))
+    else:
+        # Rated means heard. An unrated album you own counts too; the wishlist does not.
+        ownership = _clean(_first(row, "ownership")).lower()
+        completed = rating is not None or ownership not in RYM_WISHLIST | {"", "n"}
+    return "music", {
+        "title": title, "artist": artist or "Unknown artist",
+        "year": _integer(field("year", "release date", "release_date", "year")),
+        "genre": field("genre", "genre") or None,
+        "rating": rating, "listened": completed,
+        "review": field("review", "review") or None, "review_public": False,
+    }
+
+
+def _loose_date(value: str) -> datetime | None:
+    """A full date when the export has one, else January 1 of the year it names, else nothing."""
+    if not value:
+        return None
+    try:
+        return _date(value)
+    except ValueError:
+        found = re.search(r"\b(1[5-9]\d\d|2\d\d\d)\b", value)
+        return datetime(int(found.group(1)), 1, 1) if found else None
+
+
+def _libib_row(row: dict[str, str], mapping: dict[str, str]) -> tuple[str, dict[str, Any]]:
+    """A Libib library export, which mixes books, films, music and games in one file."""
+    def field(target: str, *aliases: str) -> str:
+        return _field(row, mapping, target, *aliases)
+
+    title = field("title", "title")
+    if not title:
+        raise ValueError("Title is required.")
+    raw_type = field("category", "item type")
+    category = LIBIB_TYPES.get(re.sub(r"[^a-z]", "", raw_type.lower())) or CATEGORY_ALIASES.get(_clean(raw_type).lower())
+    if not category:
+        raise ValueError(f"Libib item type \"{raw_type or 'blank'}\" isn't a supported category.")
+    named = " ".join(part for part in (_first(row, "first name"), _first(row, "last name")) if part)
+    creator = field("creator", "creators") or named
+    # Libib lists several creators in one cell; the first is the main author or artist.
+    creator = (named or creator.split(",")[0]).strip() if creator else ""
+    completed = (_truthy(field("status")) if "status" in mapping else
+                 _clean(_first(row, "status")).lower() in LIBIB_FINISHED or bool(_first(row, "completed")))
+    rating = _rating(field("rating", "rating"), five_point=True, zero_is_unrated=True)
+    review = field("review", "review", "notes") or None
+    common = {"title": title, "rating": rating, "review": review, "review_public": False}
+    published = _loose_date(field("release_date", "publish date"))
+    year = _integer(field("year", "year")) if "year" in mapping else (published.year if published else 0)
+    if category == "video-games":
+        return category, {**common, "release_date": published, "genres": None, "played": completed}
+    if category == "movies":
+        # Libib's creators for a film are usually cast, so the director is left for you to add.
+        return category, {**common, "director": "Unknown director", "year": year, "watched": completed}
+    if category == "music":
+        return category, {**common, "artist": creator or "Unknown artist", "year": year, "genre": None, "listened": completed}
+    return category, {**common, "author": creator or "Unknown author", "year": year, "genre": None, "read": completed}
+
+
+def _source_row(source: str, row: dict[str, str], category_override: str | None, mapping: dict[str, str],
+                watchlist: bool = False) -> tuple[str, dict[str, Any]]:
     if source == "generic":
         return _generic_row(row, category_override, mapping)
-    # Keep supported source adapters' existing mapping behavior without mutating
-    # the original row or letting one mapping overwrite another one's source.
-    row = {**row, **{target: row[source_name] for target, source_name in mapping.items()}}
+    if source == "rateyourmusic":
+        return _rym_row(row, mapping)
+    if source == "libib":
+        return _libib_row(row, mapping)
+    def field(target: str, *aliases: str) -> str:
+        return _field(row, mapping, target, *aliases)
+
     if source == "letterboxd":
-        title = _first(row, "name")
+        title = field("title", "name")
         if not title:
             raise ValueError("Name is required.")
+        completed = (_truthy(field("status")) if "status" in mapping else
+                     not watchlist and not (_first(row, "position") and not _first(row, "date", "watched date")))
         return "movies", {
-            "title": title, "director": "Unknown director", "year": _integer(_first(row, "year")),
-            "rating": _rating(_first(row, "rating"), five_point=True),
-            "watched": False if _first(row, "position") and not _first(row, "date", "watched date") else True,
-            "review": None, "review_public": False,
+            "title": title, "director": field("creator", "director") or "Unknown director",
+            "year": _integer(field("year", "year")),
+            "rating": _rating(field("rating", "rating"), five_point=True),
+            "watched": completed,
+            "review": field("review", "review", "notes") or None, "review_public": False,
         }
     if source == "goodreads":
-        title = _first(row, "title")
+        title = field("title", "title")
         if not title:
             raise ValueError("Title is required.")
+        completed = (_truthy(field("status")) if "status" in mapping else
+                     _completed_status(_first(row, "exclusive shelf")) or bool(_first(row, "date read")))
         return "books", {
-            "title": title, "author": _first(row, "author", "author l-f") or "Unknown author",
-            "year": _integer(_first(row, "year published", "original publication year")),
-            "genre": None, "rating": _rating(_first(row, "my rating"), five_point=True),
-            "read": _completed_status(_first(row, "exclusive shelf")) or bool(_first(row, "date read")),
-            "review": _first(row, "my review") or None, "review_public": False,
+            "title": title, "author": field("creator", "author", "author l-f") or "Unknown author",
+            "year": _integer(field("year", "year published", "original publication year")),
+            "genre": field("genre", "genre", "genres") or None,
+            "rating": _rating(field("rating", "my rating"), five_point=True, zero_is_unrated=True),
+            "read": completed,
+            "review": field("review", "my review") or None, "review_public": False,
         }
-    title = _first(row, "series title")
+    if source == "imdb":
+        return _imdb_row(row, mapping)
+    if source == "storygraph":
+        title = field("title", "title")
+        if not title:
+            raise ValueError("Title is required.")
+        completed = (_truthy(field("status")) if "status" in mapping else
+                     _clean(_first(row, "read status")).lower() in STORYGRAPH_FINISHED)
+        return "books", {
+            "title": title, "author": field("creator", "authors", "author") or "Unknown author",
+            "year": _integer(field("year", "year", "year published")),
+            "genre": field("genre", "genre", "genres") or None,
+            "rating": _rating(field("rating", "star rating"), five_point=True, zero_is_unrated=True),
+            "read": completed,
+            "review": field("review", "review") or None, "review_public": False,
+        }
+    title = field("title", "series title")
     if not title:
         raise ValueError("Series title is required.")
-    start = _first(row, "series start")
     return "anime", {
-        "title": title, "year": _integer(start), "seasons": None,
-        "episodes": _optional_integer(_first(row, "series episodes"), "Episodes"),
-        "rating": _rating(_first(row, "my score")),
-        "watched": _completed_status(_first(row, "my status")),
-        "review": _first(row, "my comments", "comments") or None,
+        "title": title, "year": _integer(field("year", "series start")),
+        "seasons": _optional_integer(field("seasons", "seasons"), "Seasons"),
+        "episodes": _optional_integer(field("episodes", "series episodes"), "Episodes"),
+        "rating": _rating(field("rating", "my score"), zero_is_unrated=True),
+        "watched": _truthy(field("status", "my status")),
+        "review": field("review", "my comments", "comments") or None,
         "review_public": False,
     }
 
@@ -267,10 +488,13 @@ def parse_csv(
     requested_source: str = "auto",
     generic_category: str | None = None,
     column_mapping: dict[str, str] | None = None,
+    filename: str = "",
 ) -> tuple[str, list[ParsedRow]]:
     source = _clean(requested_source).lower() or "auto"
     if source not in SUPPORTED_SOURCES:
         raise ValueError("Unsupported import source.")
+    if import_formats.is_structured(content, filename):
+        return _parse_structured(content, filename, source)
     category_override = None
     if generic_category:
         category_override = CATEGORY_ALIASES.get(_clean(generic_category).lower())
@@ -293,20 +517,53 @@ def parse_csv(
             raise ValueError("Mapped CSV columns were not found: " + ", ".join(sorted(missing)) + ".")
         headers.update(normalized_mapping.keys())
     detected = _detect_source(headers) if source == "auto" else source
+    if detected in FILE_ONLY_SOURCES:
+        raise ValueError(FILE_ONLY_SOURCES[detected])
+    watchlist = detected == "letterboxd" and import_formats.letterboxd_csv_name(filename) == "watchlist.csv"
     parsed: list[ParsedRow] = []
     for number, row in enumerate(rows, start=2):
         try:
-            category, data = _source_row(detected, row, category_override, normalized_mapping)
+            category, data = _source_row(detected, row, category_override, normalized_mapping, watchlist)
             validated = SCHEMA_BY_CATEGORY[category](**data)
             parsed.append(ParsedRow(number, category, validated.title, validated.model_dump()))
         except ValueError as exc:
             title = _field(row, normalized_mapping, "title", "title", "name", "series title") or f"Row {number}"
-            if isinstance(exc, ValidationError):
-                message = "; ".join(f"{'.'.join(str(part) for part in error['loc'])}: {error['msg']}" for error in exc.errors())
-            else:
-                message = str(exc)
-            parsed.append(ParsedRow(number, None, title, None, message))
+            parsed.append(ParsedRow(number, None, title, None, _error_message(exc)))
     return detected, parsed
+
+
+def _parse_structured(content: bytes, filename: str, source: str) -> tuple[str, list[ParsedRow]]:
+    """Read a ZIP, XML or JSON export; its layout decides the source and categories."""
+    if len(content) > MAX_IMPORT_BYTES:
+        raise ValueError("Import files must be 5 MB or smaller.")
+    detected, rows = import_formats.read_structured(content, filename)
+    if source not in {"auto", "generic", detected}:
+        raise ValueError(f"This file looks like a {SOURCE_LABELS[detected]} export. Choose {SOURCE_LABELS[detected]} or Detect automatically.")
+    if not rows:
+        raise ValueError(f"No titles were found in this {SOURCE_LABELS[detected]} export.")
+    if len(rows) > MAX_IMPORT_ROWS:
+        raise ValueError(f"Imports are limited to {MAX_IMPORT_ROWS:,} titles at a time.")
+    parsed: list[ParsedRow] = []
+    for number, row in enumerate(rows, start=1):
+        try:
+            category, data = _generic_row(row, None, {})
+            extra = None
+            if row.get("steam_appid"):
+                appid = int(row["steam_appid"])
+                data["cover_art_url"] = steam.cover_url(appid)
+                extra = {"source": "steam", "external_id": str(appid), "minutes": int(row.get("steam_minutes") or 0),
+                         "store_url": steam.store_url(appid)}
+            validated = SCHEMA_BY_CATEGORY[category](**data)
+            parsed.append(ParsedRow(number, category, validated.title, validated.model_dump(), extra=extra))
+        except ValueError as exc:
+            parsed.append(ParsedRow(number, None, row.get("title") or f"Entry {number}", None, _error_message(exc)))
+    return detected, parsed
+
+
+def _error_message(exc: ValueError) -> str:
+    if isinstance(exc, ValidationError):
+        return "; ".join(f"{'.'.join(str(part) for part in error['loc'])}: {error['msg']}" for error in exc.errors())
+    return str(exc)
 
 
 def _identity(category: str, data: dict[str, Any]) -> tuple[Any, ...]:
@@ -320,11 +577,43 @@ def _identity(category: str, data: dict[str, Any]) -> tuple[Any, ...]:
         return title, release.year if release else 0
     if category == "music":
         return title, _clean(data.get("artist")).casefold()
+    if category == "manga":
+        return title, _clean(data.get("author")).casefold()
+    if category == "podcasts":
+        return title, _clean(data.get("host")).casefold()
+    if category == "audiobooks":
+        return title, _clean(data.get("author")).casefold()
     return title, _clean(data.get("author")).casefold()
 
 
-def _existing_identities(db: Session, user_id: int) -> dict[str, set[tuple[Any, ...]]]:
-    existing: dict[str, set[tuple[Any, ...]]] = {category: set() for category in MODEL_BY_CATEGORY}
+def _unknown(identity: tuple[Any, ...]) -> bool:
+    """A blank year or placeholder creator can't tell two same-titled entries apart."""
+    second = identity[1]
+    return second == 0 if isinstance(second, int) else second in UNKNOWN_CREATORS
+
+
+class _Identities:
+    """Known entries per category; an entry missing its year or creator matches any same title."""
+
+    def __init__(self) -> None:
+        self.exact: set[tuple[Any, ...]] = set()
+        self.by_title: dict[str, set[Any]] = {}
+
+    def add(self, identity: tuple[Any, ...]) -> None:
+        self.exact.add(identity)
+        self.by_title.setdefault(identity[0], set()).add(identity[1])
+
+    def __contains__(self, identity: tuple[Any, ...]) -> bool:
+        if identity in self.exact:
+            return True
+        seconds = self.by_title.get(identity[0])
+        if not seconds:
+            return False
+        return _unknown(identity) or any(_unknown((identity[0], second)) for second in seconds)
+
+
+def _existing_identities(db: Session, user_id: int) -> dict[str, _Identities]:
+    existing = {category: _Identities() for category in MODEL_BY_CATEGORY}
     for category, model in MODEL_BY_CATEGORY.items():
         for item in db.query(model).filter(model.user_id == user_id).all():
             data = {column.name: getattr(item, column.name) for column in model.__table__.columns}
@@ -334,26 +623,34 @@ def _existing_identities(db: Session, user_id: int) -> dict[str, set[tuple[Any, 
 
 def classify_rows(db: Session, user_id: int, rows: Iterable[ParsedRow]) -> list[dict[str, Any]]:
     identities = _existing_identities(db, user_id)
+    # Before the manga shelf, AniList and MyAnimeList manga were filed under Books.
+    # Re-importing those lists must not list the same series twice.
+    shelved_books = identities["books"].by_title
     classified: list[dict[str, Any]] = []
     for row in rows:
         if row.error or not row.category or not row.data:
             classified.append({"row": row.row, "category": None, "title": row.title, "status": "invalid", "reason": row.error})
             continue
         identity = _identity(row.category, row.data)
+        if row.category == "manga" and identity[0] in shelved_books:
+            classified.append({"row": row.row, "category": row.category, "title": row.title, "status": "duplicate", "reason": "Already on your Books shelf from an earlier import.", "data": row.data})
+            continue
         if identity in identities[row.category]:
-            classified.append({"row": row.row, "category": row.category, "title": row.title, "status": "duplicate", "reason": "Already in this library or repeated in the file.", "data": row.data})
+            classified.append({"row": row.row, "category": row.category, "title": row.title, "status": "duplicate", "reason": "Already in this library or repeated in the file.", "data": row.data, "extra": row.extra})
             continue
         identities[row.category].add(identity)
-        classified.append({"row": row.row, "category": row.category, "title": row.title, "status": "ready", "reason": None, "data": row.data})
+        classified.append({"row": row.row, "category": row.category, "title": row.title, "status": "ready", "reason": None, "data": row.data, "extra": row.extra})
     return classified
 
 
-def _preview_values(data: dict[str, Any] | None) -> dict[str, Any] | None:
+def _preview_values(data: dict[str, Any] | None, extra: dict[str, Any] | None = None) -> dict[str, Any] | None:
     """Describe the CSV candidate, never the stored record it might duplicate."""
     if data is None:
         return None
     release = data.get("release_date")
     return {
+        "playtime_minutes": (extra or {}).get("minutes"),
+        "store_url": (extra or {}).get("store_url"),
         "creator": data.get("director") or data.get("artist") or data.get("author"),
         "year": data.get("year") if "year" in data else release.year if release else None,
         "release_date": release.date().isoformat() if release else None,
@@ -383,7 +680,8 @@ def summarize(
     filtered = [item for item in classified if status_filter == "all" or item["status"] == status_filter]
     offset = min(offset, len(filtered))
     preview = [
-        {**{key: value for key, value in item.items() if key != "data"}, "values": _preview_values(item.get("data"))}
+        {**{key: value for key, value in item.items() if key not in ("data", "extra")},
+         "values": _preview_values(item.get("data"), item.get("extra"))}
         for item in filtered[offset:offset + limit]
     ]
     return {
@@ -398,10 +696,15 @@ def summarize(
 def apply_classified(db: Session, user_id: int, classified: list[dict[str, Any]]) -> dict[str, Any]:
     created = {category: 0 for category in MODEL_BY_CATEGORY}
     ready = [item for item in classified if item["status"] == "ready"]
+    added = []
     try:
         for item in ready:
-            db.add(MODEL_BY_CATEGORY[item["category"]](**item["data"], user_id=user_id))
+            record = MODEL_BY_CATEGORY[item["category"]](**item["data"], user_id=user_id)
+            db.add(record)
+            added.append((item, record))
             created[item["category"]] += 1
+        playtime_count = game_playtime.save_from_import(
+            db, user_id, added, [item for item in classified if item["status"] == "duplicate"])
         db.commit()
     except Exception:
         db.rollback()
@@ -409,4 +712,5 @@ def apply_classified(db: Session, user_id: int, classified: list[dict[str, Any]]
     return {
         "created_count": len(ready), "duplicate_count": sum(item["status"] == "duplicate" for item in classified),
         "invalid_count": sum(item["status"] == "invalid" for item in classified), "by_category": created,
+        "playtime_count": playtime_count,
     }

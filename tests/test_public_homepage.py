@@ -36,8 +36,9 @@ def test_homepage_keeps_auth_and_navigation_contracts(client):
         assert required in ids, required
     assert sum(1 for tag, _ in tags if tag == "h1") == 1
     assert any(a.get("data-action") == "show-register-form" for _, a in tags)
-    menu = html[html.index('<details class="site-menu">'):html.index("</details>")]
-    for href in ("/release-radar", "/discover", "/reviews", "/collections/explore", "/guides", "/faq"):
+    start = html.index('<details class="site-menu">')
+    menu = html[start:html.index("</details>", start)]
+    for href in ("/discover", "/in-order", "/if-you-liked", "/daily", "/release-radar", "/guides"):
         assert f'href="{href}"' in menu
     assert 'data-action="show-login-form"' in menu
 
@@ -102,7 +103,7 @@ def test_homepage_survives_a_broken_strip(client, monkeypatch):
     monkeypatch.setattr(radar_routes, "home_strip_html", boom)
     response = client.get("/")
     assert response.status_code == 200
-    assert "Remember more than" in response.text and "provider exploded" not in response.text
+    assert "One library." in response.text and "provider exploded" not in response.text
 
 
 def test_landing_assets_are_versioned(client):
@@ -111,3 +112,54 @@ def test_landing_assets_are_versioned(client):
     assert re.search(r'/static/public-landing\.js\?v=[\w-]+', html)
     css = client.get("/static/public-landing.css").text
     assert "prefers-reduced-motion" in css and "body.lp" in css
+
+
+def test_homepage_tours_member_features_and_free_tools(client):
+    html = client.get("/").text
+    tour = html[html.index('id="features"'):html.index('lp-tryout')]
+    for heading in ("diary of every watch", "Your year as a story", "Badges in bronze", "Lists you build with friends",
+                    "Compare your taste", "Rank anything from S to D", "Goals and monthly challenges", "Bring your history"):
+        assert heading in tour, heading
+    assert 'style="' not in tour  # the strict CSP blocks inline styles
+    tryout = html[html.index('lp-tryout'):]
+    tryout = tryout[:tryout.index("</section>")]
+    for href in ("/daily", "/tier-list", "/in-order", "/if-you-liked", "/pick", "/release-radar", "/reviews"):
+        assert f'href="{href}"' in tryout, href
+    assert re.search(r'href="/(halloween|holidays)"', tryout)
+    assert "<!--" not in tryout
+
+
+def test_season_tile_follows_the_calendar(monkeypatch):
+    from datetime import date, datetime as real_datetime
+    from app import main
+
+    class Frozen(real_datetime):
+        today_value = date(2026, 10, 22)
+
+        @classmethod
+        def utcnow(cls):
+            return real_datetime.combine(cls.today_value, real_datetime.min.time())
+
+    monkeypatch.setattr("datetime.datetime", Frozen)
+    for day, path in ((date(2026, 10, 22), "/halloween"), (date(2026, 12, 1), "/holidays"), (date(2026, 3, 1), "/halloween")):
+        Frozen.today_value = day
+        assert f'href="{path}"' in main.season_link_html(), day
+
+
+def test_hero_proof_waits_for_real_numbers():
+    from app import landing_proof
+    assert landing_proof.hero_proof_html({"members": 12, "titles": 900}) == ""
+    line = landing_proof.hero_proof_html({"members": 230, "titles": 4120})
+    assert "<strong>200+</strong> members" in line and "<strong>4,000+</strong> titles" in line
+    assert "titles" not in landing_proof.hero_proof_html({"members": 60, "titles": 40})
+
+
+def test_share_image_is_served_at_its_declared_size(client):
+    html = client.get("/").text
+    assert '<meta property="og:image" content="https://omnitrackr.xyz/static/og/home-1200x630.png">' in html
+    assert '<meta name="twitter:image"' in html
+    response = client.get("/static/og/home-1200x630.png")
+    assert response.status_code == 200 and response.content[:8] == b"\x89PNG\r\n\x1a\n"
+    from io import BytesIO
+    from PIL import Image
+    assert Image.open(BytesIO(response.content)).size == (1200, 630)

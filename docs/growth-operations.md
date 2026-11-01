@@ -24,6 +24,25 @@ schema addition is deployed; historical visits are not inferred or backfilled.
 The moderator response excludes email addresses, media titles, searches, review
 text, private notes, and page histories.
 
+## Homepage search to guest list
+
+The anonymous homepage hero has a search box (`app/title_search.py`,
+`app/static/title-search.js`). `GET /api/titles/search?q=` is public, rate
+limited to 60 a minute per visitor, cacheable for five minutes, and never calls
+an external API. It searches an in-memory index, rebuilt at most every 10
+minutes, of titles in members' shareable categories (the same titles that have
+a `/titles` page). Results carry public details only: kind, title, year, slug
+and a safe image URL, never member counts or ids. Every query word must start a
+title word; exact and leading matches rank first, then titles more members track.
+
+Choosing a result adds it to the existing browser-only guest list, so the hero,
+the "Start your list" tiles and the sticky save bar stay in sync. The slug
+round-trips through `title_pages.find`, so `POST /api/guest-list/import` moves
+it into the new library after sign-up. A search with no match offers sign-up,
+since a member's own search covers the external catalogs. Searching reports the
+anonymous `title_search_used` guest moment to Site stats once per page view. No
+schema change.
+
 ## Public collection to private library
 
 Public collection pages link to `/collections/public/{id}/save`. The standalone,
@@ -442,6 +461,29 @@ in this environment; SQLite tests establish retry, isolation, and rollback
 behavior. No production database, existing account data, or schema was changed,
 and nothing was deployed.
 
+## Steam library import
+
+Steam has no export file, so the Import Studio fetches a member's games from the
+Steam Web API on the server and hands them to the browser as an ordinary import
+file. Preview, duplicate checks and confirmation work as for any other source.
+Hours played are kept in `game_playtimes` and used by Time spent.
+
+To turn it on:
+
+1. Sign in to Steam with the account that will own the key and open
+   https://steamcommunity.com/dev/apikey. Steam asks for a domain: enter
+   `omnitrackr.xyz`. The key is free. The account needs to have spent at least
+   $5 on Steam, which is Steam's rule for API keys.
+2. In Render, open the web service, then Environment, and add
+   `STEAM_WEB_API_KEY` with the key as its value. Save, and let Render redeploy.
+3. Sign in to OmniTrackr and open Account Settings, then Import Studio. The
+   "Games on Steam?" box should now show. Try it with a public profile.
+
+Without the variable the Steam box and the Steam format option stay hidden, and
+`/import-studio/steam/library/` answers 503. The key never leaves the server.
+Each fetch makes up to three calls to Steam and is limited to six a minute per
+visitor; Steam allows 100,000 calls a day per key.
+
 ## Cohesive library appearance
 
 The September 24, 2026 visual refresh gives the application a shared violet and
@@ -656,3 +698,58 @@ Amazon Associates disclosure, `rel="sponsored"`, and a new tab. Discover trails
 stay affiliate-free because they promise informational source links.
 
 Local preview with fixtures (no network): `python -m tests.manual_release_radar_preview`.
+
+## Release calendars
+
+Release Radar dates can be subscribed to from any calendar app
+(`app/release_calendar.py`, `app/routers/calendar.py`). Feeds are plain
+iCalendar with all-day events, a stable UID per title (so a moved date updates
+in place) and a 12-hour refresh hint. They are built only from Release Radar's
+cache, so a calendar app polling them never triggers an outside API call
+beyond the radar's normal refresh; a cold section waits a few seconds once,
+then serves a valid empty calendar with a five-minute cache.
+
+Public feeds need no account: `/calendar/release-radar.ics` (the 15 most
+followed titles per section and period) and `/calendar/release-radar/{movies,tv,anime,games}.ics`
+(the whole section). Each Release Radar page has a box with Google Calendar,
+Apple Calendar (webcal), Outlook and "Copy address" links, plus a link that
+invites guests to sign up for a private calendar. Clicks are counted as the
+anonymous funnel event `calendar_subscribe_clicked`.
+
+A member's private feed lists only releases connected to their library (the
+same matching as "Coming up for you" and release day alerts) from two weeks
+back to four months ahead. It is turned on from "Add to my calendar" on the
+"Coming up for you" card. The address is `/calendar/u/feed-{token}.ics`,
+where the token is random and stored in the new `calendar_feeds` table; there
+is no "/" right before the token so the bot filter's path scan never trips on
+it. "Get a new address" swaps the token and "Turn off" deletes the row, so an
+old address returns 404 at once, as does the feed of a deactivated account.
+Events carry titles, dates and a Release Radar link only, never ratings,
+notes, usernames or emails. `last_fetched_at` is written at most every six
+hours and only feeds the Site stats count of calendars refreshed in the last
+seven days.
+
+Schema: one new table (`calendar_feeds`), created by `create_all`. No existing
+table or row changes.
+
+## Pick for me (/pick)
+
+A public "can't decide" page that suggests one title at a time. The pool
+(`app/pick.py`) is built from editorial writing already in code: Discover
+trails, monthly editions and the editors' starter collections, de-duplicated by
+format and title. Nothing reads members' libraries except the cached title
+search index, used only for artwork and to link picks that already have a
+title page (so the page never links to a 404).
+
+Picking happens in the browser from the pool embedded in the page; without
+JavaScript the format form reloads `/pick?format=...`. `/pick` is indexable and
+in the sitemap; `?format=` and shared `?pick=` links are noindex.
+
+Visitors save a pick to the guest list. `POST /api/guest-list/import` now
+falls back to the curated pool when no member tracks that title yet. Members
+use `POST /api/pick/add` (30/minute), which reuses a title they already have
+(case-insensitive) and otherwise creates an unfinished, unrated record with
+only the title, year and creator. No schema change.
+
+Site stats rows: "Pick for me suggestion asked for" and "Pick for me suggestion
+saved to a list or library".

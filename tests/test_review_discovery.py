@@ -159,6 +159,11 @@ def test_directory_requires_standalone_content_before_indexing(client, db_sessio
     assert item.title in thin.text
     item.review = STANDALONE
     db_session.commit()
+    lonely = client.get("/reviews")  # one standalone review is not yet a directory worth indexing
+    assert lonely.headers["x-robots-tag"] == "noindex, follow"
+    add_review(db_session, author, title="Second Story")
+    add_review(db_session, author, title="Third Story")
+    db_session.commit()
     qualified = client.get("/reviews")
     assert '<meta name="robots" content="index, follow, max-image-preview:large">' in qualified.text
     assert "x-robots-tag" not in qualified.headers
@@ -181,7 +186,9 @@ def test_feed_uses_joined_queries_without_per_review_lookups(client, db_session,
         assert len(client.get("/api/public/review-feed", params={"limit": 40}).json()["reviews"]) == 40
     finally:
         event.remove(db_session.bind, "before_cursor_execute", capture)
-    assert len(queries) == 6
+    # Includes one batched supporter-badge lookup and one batched spoiler-flag lookup for the whole page,
+    # plus one query per category on the page that loads its rows (the scan reads only the columns it checks).
+    assert len(queries) == 12
 
 
 @pytest.mark.parametrize("params", [{"q": "x" * 101}, {"limit": 41}, {"offset": -1}, {"category": "unknown"}])
@@ -216,6 +223,10 @@ def test_save_copies_only_public_metadata_and_repeated_saves_reuse(client, db_se
         "video_game": {"release_date": datetime(2024, 1, 2), "genres": "Adventure", "rawg_link": "https://example.test/private-metadata", "played": True},
         "music": {"artist": "Artist", "year": 2024, "genre": "Unexposed genre", "listened": True},
         "book": {"author": "Author", "year": 2024, "genre": "Unexposed genre", "read": True},
+        "manga": {"author": "Mangaka", "year": 2024, "genre": "Unexposed genre", "volumes": 3, "read": True},
+        "podcast": {"host": "Host", "year": 2024, "genre": "Unexposed genre", "episodes": 40, "listened": True},
+        "audiobook": {"author": "Author", "narrator": "Narrator", "year": 2024, "genre": "Unexposed genre",
+                      "length_hours": 9.5, "listened": True},
     }[category]
     source = add_review(db_session, author, category, **fields)
     db_session.commit()
@@ -237,9 +248,9 @@ def test_save_copies_only_public_metadata_and_repeated_saves_reuse(client, db_se
     assert item.rating is None and item.review is None and item.review_public is False
     for field in reviews.PUBLIC_METADATA_FIELDS[category]:
         assert getattr(item, field) == getattr(source, field)
-    completion = {"movie": "watched", "tv_show": "watched", "anime": "watched", "video_game": "played", "music": "listened", "book": "read"}[category]
+    completion = {"movie": "watched", "tv_show": "watched", "anime": "watched", "video_game": "played", "music": "listened", "book": "read", "manga": "read", "podcast": "listened", "audiobook": "listened"}[category]
     assert getattr(item, completion) is False
-    if category in {"book", "music"}:
+    if category in {"book", "music", "audiobook"}:
         assert item.genre is None
     if category == "video_game":
         assert item.rawg_link is None
@@ -343,3 +354,26 @@ def test_community_review_is_saveable_without_linking_to_unavailable_detail(clie
     assert f'href="/reviews/{item.id}/save?category=movie"' in page
     assert client.get(f"/reviews/{item.id}/save?category=movie").status_code == 200
     assert 'data-review-report="true"' in page
+
+
+def test_review_ads_need_substantial_writing(client, db_session, members):
+    author, _ = members
+    short = add_review(db_session, author, title="Short Standalone")
+    long_text = STANDALONE + " " + " ".join([
+        "The second viewing made the structure clearer, especially how each quiet scene sets up a later payoff.",
+        "Its supporting cast is strong, and the editing gives every argument room to breathe before cutting away.",
+        "I noticed new details in the background of the apartment scenes, which made the world feel even richer.",
+        "If you liked slow, observant dramas with a hopeful streak, this is an easy one to recommend to friends.",
+        "The cinematography favors patient wide shots, and the color palette shifts gently as the seasons change.",
+        "By the last scene I cared about every member of the family, which is rare for a film this restrained.",
+    ])
+    long = add_review(db_session, author, title="Long Standalone", text=long_text)
+    db_session.commit()
+    short_page = client.get(f"/reviews/{short.id}?category=movie")
+    # Too short to carry its own page: it still loads, but without ads and outside search.
+    assert short_page.status_code == 200
+    assert '<meta name="robots" content="noindex, follow">' in short_page.text
+    assert "/static/ad-loader.js" not in short_page.text
+    long_page = client.get(f"/reviews/{long.id}?category=movie")
+    assert '<meta name="robots" content="index, follow, max-image-preview:large">' in long_page.text
+    assert "/static/ad-loader.js" in long_page.text

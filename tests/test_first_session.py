@@ -79,6 +79,12 @@ def test_demo_is_sample_only_even_when_a_member_is_signed_in(authenticated_clien
     site_js = client.get(site_scripts[0]).text
     assert 'fetch(' not in site_js and 'Storage' not in site_js and 'XMLHttpRequest' not in site_js
     scripts.sources.remove(site_scripts[0])
+    # The page-view report sends only the page path to /api/visit and stores nothing.
+    visit_scripts = [src for src in scripts.sources if urlsplit(src).path == '/static/visit.js']
+    assert len(visit_scripts) == 1
+    visit_js = client.get(visit_scripts[0]).text
+    assert "'/api/visit'" in visit_js and 'Storage' not in visit_js and 'XMLHttpRequest' not in visit_js
+    scripts.sources.remove(visit_scripts[0])
     assert len(scripts.sources) == 1
     assert urlsplit(scripts.sources[0]).path == '/static/demo.js'
     script_response = client.get(scripts.sources[0])

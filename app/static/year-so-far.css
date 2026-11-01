@@ -1,0 +1,126 @@
+/* Dashboard, November only: your year so far, a preview of Year in Review.
+   Violet into teal like the December banner, but a card rather than a banner so the
+   numbers carry it. Colours come from the app-theme tokens. */
+.year-so-far {
+  background:
+    radial-gradient(circle at 100% 0%, color-mix(in srgb, var(--teal) 16%, transparent), transparent 46%),
+    linear-gradient(125deg, color-mix(in srgb, var(--accent-solid) 14%, var(--card-bg)), var(--card-bg) 70%);
+  border: 1px solid color-mix(in srgb, var(--accent-solid) 38%, var(--border));
+  border-radius: var(--radius-lg, 18px);
+  box-shadow: var(--shadow-sm);
+  color: var(--fg);
+  margin: 0 0 var(--space-5, 20px);
+  padding: var(--space-5, 20px) var(--space-6, 24px);
+}
+.year-so-far[hidden] { display: none; }
+.year-so-far__head { align-items: flex-start; display: flex; gap: var(--space-3, 12px); justify-content: space-between; }
+.year-so-far__eyebrow {
+  color: var(--primary);
+  font-size: var(--text-xs, .75rem);
+  font-weight: 800;
+  letter-spacing: .08em;
+  margin: 0 0 4px;
+  text-transform: uppercase;
+}
+.year-so-far h2 { font-family: var(--font-display); font-size: var(--text-2xl, 1.5rem); line-height: 1.2; margin: 0; }
+.year-so-far__dismiss {
+  background: none;
+  border: 0;
+  color: var(--fg-secondary);
+  cursor: pointer;
+  flex-shrink: 0;
+  font: inherit;
+  font-size: var(--text-sm, .8125rem);
+  min-height: 44px;
+  padding: 4px 0;
+  text-decoration: underline;
+}
+.year-so-far__dismiss:hover { color: var(--fg); }
+.year-so-far__dismiss:focus-visible { border-radius: var(--radius-sm, 8px); box-shadow: var(--ring); outline: none; }
+
+.year-so-far__stats {
+  display: grid;
+  gap: var(--space-3, 12px);
+  grid-template-columns: repeat(auto-fit, minmax(130px, 1fr));
+  margin: var(--space-4, 16px) 0;
+}
+.year-so-far__stat {
+  background: color-mix(in srgb, var(--card-bg) 72%, transparent);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md, 12px);
+  display: flex;
+  flex-direction: column-reverse;
+  justify-content: flex-end;
+  min-width: 0;
+  padding: var(--space-3, 12px) var(--space-4, 16px);
+}
+.year-so-far__stat[hidden] { display: none; }
+.year-so-far__stat dd {
+  font-family: var(--font-display);
+  font-size: var(--text-3xl, 2rem);
+  font-weight: 800;
+  letter-spacing: -.01em;
+  line-height: 1.1;
+  margin: 0;
+  overflow-wrap: anywhere;
+}
+#yearSoFarTasteTile dd { font-size: var(--text-xl, 1.25rem); padding-top: 6px; }
+.year-so-far__stat dt { color: var(--fg-secondary); font-size: var(--text-sm, .8125rem); font-weight: 600; margin-top: 4px; }
+
+.year-so-far__meter-row { align-items: center; display: flex; gap: var(--space-3, 12px); }
+.year-so-far__meter {
+  background: color-mix(in srgb, var(--fg) 10%, transparent);
+  border-radius: var(--radius-pill, 999px);
+  flex: 1;
+  height: 8px;
+  overflow: hidden;
+}
+.year-so-far__meter[hidden] { display: none; }
+.year-so-far__meter span {
+  background: linear-gradient(90deg, var(--accent-solid), var(--teal));
+  border-radius: inherit;
+  display: block;
+  height: 100%;
+  transition: width var(--dur, .2s) var(--ease, ease);
+}
+.year-so-far__days { color: var(--fg-secondary); flex-shrink: 0; font-size: var(--text-sm, .8125rem); font-weight: 700; }
+
+.year-so-far__hint { font-size: var(--text-lg, 1rem); font-weight: 600; line-height: 1.45; margin: var(--space-4, 16px) 0 0; }
+.year-so-far__hint:empty { display: none; }
+.year-so-far__foot {
+  align-items: center;
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-3, 12px) var(--space-5, 20px);
+  justify-content: space-between;
+  margin-top: var(--space-4, 16px);
+}
+.year-so-far__note { color: var(--fg-secondary); flex: 1 1 260px; font-size: var(--text-md, .875rem); line-height: 1.5; margin: 0; }
+.year-so-far__link {
+  align-items: center;
+  background: var(--accent-solid);
+  border-radius: var(--radius-pill, 999px);
+  color: var(--on-accent);
+  display: inline-flex;
+  font-weight: 700;
+  min-height: var(--control-md, 40px);
+  padding: 0 var(--space-5, 20px);
+  text-decoration: none;
+  transition: filter var(--dur-fast, .12s) var(--ease, ease);
+}
+.year-so-far__link:hover { filter: brightness(.94); }
+body.dark-mode .year-so-far__link:hover { filter: brightness(1.12); }
+.year-so-far__link:focus-visible { box-shadow: var(--ring); outline: none; }
+
+@media (max-width: 560px) {
+  .year-so-far { padding: var(--space-4, 16px); }
+  .year-so-far__head { flex-direction: column; gap: 0; }
+  .year-so-far__dismiss { min-height: 32px; }
+  .year-so-far__stats { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .year-so-far__stat:last-child:nth-child(odd) { grid-column: 1 / -1; }
+  .year-so-far__stat dd { font-size: var(--text-2xl, 1.5rem); }
+  .year-so-far__link { justify-content: center; text-align: center; width: 100%; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .year-so-far__meter span { transition: none; }
+}

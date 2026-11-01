@@ -1,0 +1,174 @@
+/* Seasonal hubs (/halloween, /holidays). Builds on discover.css and if-you-liked.css.
+   Each season sets its colors on [data-season-theme]; the layout is shared. */
+.sn-hub {
+  --sn-accent: #2dd4bf;
+  --sn-accent-soft: #99f6e4;
+  --sn-accent-ink: #06211f;
+  --sn-glow: rgba(45, 212, 191, .18);
+}
+.sn-hub[data-season-theme="halloween"] {
+  --sn-accent: #fb923c;
+  --sn-accent-soft: #fed7aa;
+  --sn-accent-ink: #1c0a02;
+  --sn-glow: rgba(249, 115, 22, .22);
+}
+
+.sn-hub[data-season-theme="holiday"] {
+  --sn-accent: #fbbf24;
+  --sn-accent-soft: #fde68a;
+  --sn-accent-ink: #1f1300;
+  --sn-glow: rgba(251, 191, 36, .18);
+  --sn-berry: #f87171;
+  --sn-pine: #22c55e;
+}
+
+.sn-hub .eyebrow { color: var(--sn-accent); }
+.sn-hub .caveat { border-left-color: var(--sn-accent); }
+.sn-hub .guide-jump a:focus-visible, .sn-hub .button:focus-visible, .sn-faq__item summary:focus-visible {
+  outline: 3px solid var(--sn-accent);
+  outline-offset: 3px;
+}
+
+/* Hero: a low moon behind the headline. */
+.sn-hero { position: relative; }
+.sn-hero > * { position: relative; z-index: 1; }
+.sn-hero__moon {
+  background: radial-gradient(circle at 34% 34%, #fff7ed 0, #fed7aa 30%, #fb923c 72%, #c2410c 100%);
+  border-radius: 50%;
+  box-shadow: 0 0 90px 10px rgba(249, 115, 22, .28);
+  height: 180px;
+  opacity: .32;
+  pointer-events: none;
+  position: absolute;
+  right: 4%;
+  top: 60px;
+  width: 180px;
+  z-index: 0;
+}
+.sn-hub:not([data-season-theme="halloween"]):not([data-season-theme="holiday"]) .sn-hero__moon { display: none; }
+
+/* Holiday hero: the same corner holds a wreath of lights, with a light fall of snow across the header. */
+.sn-hub[data-season-theme="holiday"] .sn-hero__moon {
+  background:
+    radial-gradient(circle at 50% 8%, #fde68a 0 5px, transparent 6px),
+    radial-gradient(circle at 92% 50%, #f87171 0 5px, transparent 6px),
+    radial-gradient(circle at 50% 92%, #fde68a 0 5px, transparent 6px),
+    radial-gradient(circle at 8% 50%, #f87171 0 5px, transparent 6px),
+    radial-gradient(circle at 21% 21%, #fde68a 0 4px, transparent 5px),
+    radial-gradient(circle at 79% 21%, #f87171 0 4px, transparent 5px),
+    radial-gradient(circle at 79% 79%, #fde68a 0 4px, transparent 5px),
+    radial-gradient(circle at 21% 79%, #f87171 0 4px, transparent 5px),
+    radial-gradient(circle, transparent 0 52%, #15803d 53%, #166534 66%, #14532d 70%, transparent 71%);
+  box-shadow: none;
+  filter: drop-shadow(0 0 22px rgba(251, 191, 36, .35));
+  opacity: .4;
+}
+.sn-hub[data-season-theme="holiday"] .sn-hero::before {
+  background-image:
+    radial-gradient(circle at 23% 31%, rgba(255, 255, 255, .6) 0 1.5px, transparent 2.5px),
+    radial-gradient(circle at 71% 64%, rgba(255, 255, 255, .4) 0 1px, transparent 2px),
+    radial-gradient(circle at 48% 12%, rgba(255, 255, 255, .5) 0 2px, transparent 3px),
+    radial-gradient(circle at 86% 83%, rgba(255, 255, 255, .3) 0 1px, transparent 2px);
+  background-size: 137px 149px, 89px 103px, 211px 197px, 61px 71px;
+  content: "";
+  inset: 0;
+  -webkit-mask-image: linear-gradient(to bottom, #000 0, transparent 85%);
+  mask-image: linear-gradient(to bottom, #000 0, transparent 85%);
+  opacity: .5;
+  pointer-events: none;
+  position: absolute;
+  z-index: 0;
+}
+
+/* Fright meter: five marks, filled up to the level. */
+.sn-fright { align-items: center; color: #e7e3f7; display: flex; flex-wrap: wrap; font-size: .88rem; gap: 6px 10px; margin: 2px 0 0; }
+.sn-fright__marks { display: inline-flex; gap: 4px; }
+.sn-fright__mark { background: rgba(255, 255, 255, .14); border-radius: 50% 50% 45% 45%; display: inline-block; height: 12px; width: 12px; }
+.sn-fright__mark--on { background: var(--sn-accent); box-shadow: 0 0 8px var(--sn-glow); }
+.sn-fright--5 .sn-fright__mark--on { background: #f43f5e; }
+.sn-hub[data-season-theme="holiday"] .sn-fright__mark { border-radius: 50%; }
+.sn-hub[data-season-theme="holiday"] .sn-fright__mark--on:nth-child(even) { background: var(--sn-berry); }
+.sn-hub[data-season-theme="holiday"] .sn-fright--5 .sn-fright__mark--on { background: var(--sn-accent); box-shadow: 0 0 10px rgba(251, 191, 36, .55); }
+.sn-hub[data-season-theme="holiday"] .sn-fright--5 .sn-fright__mark--on:nth-child(even) { background: var(--sn-berry); box-shadow: 0 0 10px rgba(248, 113, 113, .55); }
+
+.sn-scale { margin: 36px 0 44px; }
+.sn-scale__list { display: grid; gap: 10px; grid-template-columns: repeat(5, minmax(0, 1fr)); list-style: none; margin: 18px 0 0; padding: 0; }
+.sn-scale__list li { background: var(--site-surface); border: 1px solid var(--site-border); border-radius: 14px; padding: 14px 16px; }
+.sn-scale__list .sn-fright { flex-direction: column; align-items: flex-start; font-weight: 700; }
+.sn-scale__text { color: #c3c8dd; display: block; font-size: .88rem; margin-top: 8px; }
+
+/* Progress (members only, filled by seasonal.js). */
+.sn-progress { background: linear-gradient(120deg, var(--sn-glow), var(--site-surface)); border: 1px solid var(--site-border-strong); border-radius: 18px; margin: 8px 0 28px; padding: 20px 22px; }
+.sn-progress[hidden] { display: none; }
+.sn-progress h2 { font-size: 1.3rem; margin: 0 0 12px; }
+.sn-meter { background: rgba(255, 255, 255, .1); border-radius: 999px; height: 10px; overflow: hidden; }
+.sn-meter__fill { background: var(--sn-accent); border-radius: inherit; display: block; height: 100%; transition: width .4s ease; width: 0; }
+.sn-progress__text { color: #d9def0; margin: 10px 0 0; }
+
+/* Shelves and picks. */
+.sn-shelf { margin: 56px 0 0; scroll-margin-top: 80px; }
+.sn-shelf__head { border-top: 1px solid var(--site-border); padding-top: 32px; }
+.sn-shelf__head h2 { font-size: clamp(1.8rem, 3.6vw, 2.5rem); margin: 0; }
+.sn-shelf__tagline { color: var(--sn-accent-soft); font-size: 1.08rem; margin: 6px 0 14px; }
+.sn-shelf__intro { max-width: 800px; }
+.sn-shelf__intro p { color: #d7dbee; }
+.sn-shelf__intro p + p { margin-top: 10px; }
+.sn-shelf__all { margin-top: 16px; min-height: 44px; }
+.sn-shelf__status { font-size: .92rem; margin: 10px 0 0; min-height: 1em; }
+.button--ghost { background: transparent !important; border: 1px solid var(--sn-accent) !important; color: var(--sn-accent-soft) !important; }
+.button--ghost:hover { background: var(--sn-glow) !important; }
+.sn-picks { display: grid; gap: 20px; grid-template-columns: repeat(2, minmax(0, 1fr)); margin-top: 26px; }
+.sn-pick { display: flex; flex-direction: column; min-width: 0; scroll-margin-top: 90px; }
+.sn-pick__head { align-items: flex-start; display: flex; gap: 16px; margin-bottom: 12px; }
+.sn-pick__art { aspect-ratio: 2 / 3; border-radius: 10px; flex: 0 0 72px; height: auto; object-fit: cover; width: 72px; }
+.sn-pick__art--letter {
+  align-items: center;
+  background: linear-gradient(160deg, rgba(249, 115, 22, .35), rgba(88, 28, 135, .55));
+  color: #fff;
+  display: flex;
+  font-family: var(--site-display);
+  font-size: 1.7rem;
+  font-weight: 800;
+  justify-content: center;
+}
+.sn-hub[data-season-theme="holiday"] .sn-pick__art--letter { background: linear-gradient(160deg, rgba(220, 38, 38, .45), rgba(21, 128, 61, .55)); }
+.sn-hub:not([data-season-theme="halloween"]):not([data-season-theme="holiday"]) .sn-pick__art--letter { background: rgba(124, 58, 237, .35); }
+.sn-pick .eyebrow { margin-bottom: 6px; }
+.sn-pick h3 { color: #fff; font-family: var(--site-display); font-size: 1.35rem; line-height: 1.3; margin: 0 0 6px; }
+.sn-pick__time { color: #c3c8dd !important; font-size: .88rem; margin: 6px 0 0; }
+.sn-pick__why { color: #eef0fa !important; }
+.sn-pick__actions { align-items: center; display: flex; flex-wrap: wrap; gap: 10px 18px; margin-top: auto; padding-top: 14px; }
+.sn-save { min-height: 44px; }
+.sn-save .sn-when-on { display: none; }
+.sn-save[aria-pressed="true"] { background: var(--sn-accent); color: var(--sn-accent-ink) !important; }
+.sn-save[aria-pressed="true"] .sn-when-on { display: inline; }
+.sn-save[aria-pressed="true"] .sn-when-off { display: none; }
+.sn-pick__owned { background: rgba(255, 255, 255, .08); border-radius: 999px; color: var(--sn-accent-soft); font-size: .86rem; font-weight: 700; padding: 6px 12px; }
+.sn-pick__owned[hidden] { display: none; }
+.sn-pick--done .sn-pick__owned { background: var(--sn-accent); color: var(--sn-accent-ink); }
+.sn-pick__link { font-size: .92rem; }
+.sn-pick__status { font-size: .9rem; margin: 8px 0 0; min-height: 1em; }
+
+/* Plan your night and questions. */
+.sn-plan, .sn-faq { margin-top: 56px; }
+.sn-nights { display: grid; gap: 14px; grid-template-columns: repeat(2, minmax(0, 1fr)); list-style: none; margin: 18px 0 0; padding: 0; }
+.sn-nights li { background: var(--site-surface); border: 1px solid var(--site-border); border-radius: 14px; padding: 16px 18px; }
+.sn-nights h3 { color: var(--sn-accent-soft); font-size: 1.05rem; margin: 0 0 6px; }
+.sn-nights p { margin: 0; }
+.sn-faq__item { border-top: 1px solid var(--site-border); padding: 4px 0; }
+.sn-faq__item:last-child { border-bottom: 1px solid var(--site-border); }
+.sn-faq__item summary { cursor: pointer; font-weight: 700; min-height: 44px; padding: 12px 0; }
+.sn-faq__item p { margin: 0 0 14px; }
+
+@media (max-width: 900px) {
+  .sn-scale__list { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .sn-picks, .sn-nights { grid-template-columns: 1fr; }
+  .sn-hero__moon { height: 110px; opacity: .22; top: 24px; width: 110px; }
+}
+@media (max-width: 520px) {
+  .sn-scale__list { grid-template-columns: 1fr; }
+  .sn-pick__art { flex-basis: 56px; width: 56px; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .sn-meter__fill { transition: none; }
+}

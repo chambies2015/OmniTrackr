@@ -7,9 +7,10 @@ from sqlalchemy.orm import Session
 from sqlalchemy import and_, case, func, or_
 from sqlalchemy.exc import IntegrityError
 
-from .. import crud, schemas, models, return_prompt as return_prompt_tokens
+from .. import crud, episodes, schemas, models, return_prompt as return_prompt_tokens
 from ..dependencies import get_db, get_current_user
 from ..tasteprint import build_tasteprint
+from ..time_spent import estimate as estimate_time_spent
 from ..progress import get_checkpoint_map, serialize_checkpoint
 
 router = APIRouter(prefix="/statistics", tags=["statistics"])
@@ -21,11 +22,14 @@ LIBRARY_CATEGORIES = [
     {"key": "video-games", "label": "Game", "model": models.VideoGame, "done": models.VideoGame.played, "status_label": "Not played"},
     {"key": "music", "label": "Album", "model": models.Music, "done": models.Music.listened, "status_label": "Not listened"},
     {"key": "books", "label": "Book", "model": models.Book, "done": models.Book.read, "status_label": "Not read"},
+    {"key": "manga", "label": "Manga", "model": models.Manga, "done": models.Manga.read, "status_label": "Not read"},
+    {"key": "podcasts", "label": "Podcast", "model": models.Podcast, "done": models.Podcast.listened, "status_label": "Not listened"},
+    {"key": "audiobooks", "label": "Audiobook", "model": models.Audiobook, "done": models.Audiobook.listened, "status_label": "Not finished"},
 ]
 
 
 @router.get("/tasteprint/", response_model=dict)
-async def get_tasteprint(
+def get_tasteprint(
     response: Response,
     categories: str | None = Query(None, max_length=120),
     current_user: models.User = Depends(get_current_user),
@@ -106,7 +110,7 @@ def _resolve_queue_pulse_items(
         for queue_item in queue_items
         if (queue_item.category, queue_item.item_id) in resolved
     ]
-    if any(item["category"] in {"tv-shows", "anime", "books"} for item in result):
+    if any(item["category"] in {"tv-shows", "anime", "books", "manga", "podcasts", "audiobooks"} for item in result):
         _attach_progress(result, checkpoints if checkpoints is not None else get_checkpoint_map(db, user_id))
     return result
 
@@ -131,7 +135,7 @@ def _library_item_count(db: Session, user_id: int) -> int:
 
 
 @router.get("/today/", response_model=dict)
-async def get_todays_pick(
+def get_todays_pick(
     response: Response,
     offset: int = Query(0, ge=0, le=2147483647),
     category: str | None = Query(None, max_length=20),
@@ -161,6 +165,7 @@ async def get_todays_pick(
 
     if queued:
         choice = queued[offset % len(queued)]
+        episodes.attach(db, current_user.id, [choice])
         choice["reason"] = f"#{(offset % len(queued)) + 1} in your private Next Up queue"
         choice["source"] = "next_up"
         return {"pick": choice, "candidate_count": len(queued)}
@@ -177,15 +182,27 @@ async def get_todays_pick(
         return {"pick": None, "candidate_count": 0}
 
     choice = candidates[(datetime.now(timezone.utc).date().toordinal() + current_user.id + offset) % len(candidates)]
-    if choice["category"] in {"tv-shows", "anime", "books"}:
+    if choice["category"] in {"tv-shows", "anime", "books", "manga", "podcasts", "audiobooks"}:
         _attach_progress([choice], get_checkpoint_map(db, current_user.id))
+        episodes.attach(db, current_user.id, [choice])
     choice["reason"] = "A small, unfinished choice from your private library"
     choice["source"] = "library"
     return {"pick": choice, "candidate_count": len(candidates)}
 
 
+@router.get("/time-spent/", response_model=dict)
+def get_time_spent(
+    response: Response,
+    current_user: models.User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+):
+    """Estimated hours across the member's whole library, private categories included."""
+    response.headers["Cache-Control"] = "private, no-store"
+    return estimate_time_spent(db, current_user)
+
+
 @router.get("/", response_model=schemas.StatisticsDashboard)
-async def get_statistics_dashboard(
+def get_statistics_dashboard(
     current_user: models.User = Depends(get_current_user),
     db: Session = Depends(get_db)
 ):
@@ -205,7 +222,7 @@ async def get_statistics_dashboard(
 
 
 @router.get("/insights/", response_model=dict)
-async def get_library_insights(
+def get_library_insights(
     current_user: models.User = Depends(get_current_user),
     db: Session = Depends(get_db)
 ):
@@ -247,6 +264,24 @@ async def get_library_insights(
             "label": "Books",
             "model": models.Book,
             "done_field": models.Book.read,
+        },
+        {
+            "key": "manga",
+            "label": "Manga",
+            "model": models.Manga,
+            "done_field": models.Manga.read,
+        },
+        {
+            "key": "podcasts",
+            "label": "Podcasts",
+            "model": models.Podcast,
+            "done_field": models.Podcast.listened,
+        },
+        {
+            "key": "audiobooks",
+            "label": "Audiobooks",
+            "model": models.Audiobook,
+            "done_field": models.Audiobook.listened,
         },
     ]
 
@@ -318,7 +353,7 @@ async def get_library_insights(
 
 
 @router.get("/pulse/", response_model=dict)
-async def get_library_pulse(
+def get_library_pulse(
     current_user: models.User = Depends(get_current_user),
     db: Session = Depends(get_db)
 ):
@@ -339,7 +374,7 @@ async def get_library_pulse(
             model.user_id == current_user.id,
             category["done"] == False,
         )
-        if category["key"] in {"tv-shows", "anime", "books"}:
+        if category["key"] in {"tv-shows", "anime", "books", "manga", "podcasts", "audiobooks"}:
             checkpoint = models.ProgressCheckpoint
             query = query.outerjoin(checkpoint, and_(
                 checkpoint.user_id == current_user.id,
@@ -383,17 +418,44 @@ async def get_library_pulse(
     continue_items = [entry[2] for entry in progressed_items] + continue_items
     _attach_progress(continue_items, checkpoints)
     _attach_progress(reflection_items, checkpoints)
+    continue_items = continue_items[:6]
+    episodes.attach(db, current_user.id, continue_items + next_up_items)
 
     return {
-        "continue_items": continue_items[:6],
+        "continue_items": continue_items,
         "reflection_items": reflection_items[:6],
         "next_up_items": next_up_items,
         "generated_at": datetime.now().isoformat(),
     }
 
 
+def _released_while_away(request: Request, db: Session, user_id: int, days_away: int) -> list[dict]:
+    """Release Radar titles connected to the member's library that came out while they were away."""
+    try:
+        from datetime import date as _date
+        from ..for_you import coming_up, radar_pool
+        from .. import release_radar
+        today = release_radar.today_utc()
+        pool = radar_pool(today, getattr(request.app.state, "external_api_client", None))
+        if not pool:
+            return []  # No Release Radar data cached yet; skip the library lookups.
+        start = today - timedelta(days=max(days_away, 7))
+        released = []
+        for card in coming_up(db, user_id, today=today, pool=pool)["matches"]:
+            try:
+                day = _date.fromisoformat(card.get("date") or "")
+            except ValueError:
+                continue
+            if start <= day <= today:
+                released.append({"title": card["title"], "label": card["label"], "date": card["date"],
+                                 "url": card["url"], "reason": card.get("reason")})
+        return released[:3]
+    except Exception:
+        return []  # Optional; the deck works without it.
+
+
 @router.get("/return-deck/", response_model=dict)
-async def get_return_deck(
+def get_return_deck(
     response: Response,
     request: Request,
     days_away: int | None = Query(None, ge=3, le=90),
@@ -415,8 +477,8 @@ async def get_return_deck(
     if library_item_count < 5:
         return {"eligible": False, "library_item_count": library_item_count}
 
-    today = await get_todays_pick(Response(), 0, None, current_user, db)
-    pulse = await get_library_pulse(current_user, db)
+    today = get_todays_pick(Response(), 0, None, current_user, db)
+    pulse = get_library_pulse(current_user, db)
     primary = today.get("pick")
     alternatives = [
         item for item in pulse["continue_items"]
@@ -458,6 +520,7 @@ async def get_return_deck(
         "eligible": True,
         "library_item_count": library_item_count,
         "days_away": days_away,
+        "released_while_away": _released_while_away(request, db, current_user.id, days_away),
         "primary": primary,
         "alternative": alternatives[0] if alternatives else None,
         "reflection": reflection_items[0] if reflection_items else None,
@@ -471,7 +534,7 @@ async def get_return_deck(
 
 
 @router.post("/return-deck/engagement", response_model=dict)
-async def record_return_deck_engagement(
+def record_return_deck_engagement(
     payload: schemas.ReturnPromptEngagement,
     request: Request,
     current_user: models.User = Depends(get_current_user),
@@ -528,7 +591,7 @@ async def record_return_deck_engagement(
 
 
 @router.get("/watch/", response_model=schemas.WatchStatistics)
-async def get_watch_statistics(
+def get_watch_statistics(
     current_user: models.User = Depends(get_current_user),
     db: Session = Depends(get_db)
 ):
@@ -538,7 +601,7 @@ async def get_watch_statistics(
 
 
 @router.get("/ratings/", response_model=schemas.RatingStatistics)
-async def get_rating_statistics(
+def get_rating_statistics(
     current_user: models.User = Depends(get_current_user),
     db: Session = Depends(get_db)
 ):
@@ -548,7 +611,7 @@ async def get_rating_statistics(
 
 
 @router.get("/years/", response_model=schemas.YearStatistics)
-async def get_year_statistics(
+def get_year_statistics(
     current_user: models.User = Depends(get_current_user),
     db: Session = Depends(get_db)
 ):
@@ -558,7 +621,7 @@ async def get_year_statistics(
 
 
 @router.get("/directors/", response_model=schemas.DirectorStatistics)
-async def get_director_statistics(
+def get_director_statistics(
     current_user: models.User = Depends(get_current_user),
     db: Session = Depends(get_db)
 ):
@@ -568,7 +631,7 @@ async def get_director_statistics(
 
 
 @router.get("/movies/", response_model=schemas.MovieStatistics)
-async def get_movie_statistics(
+def get_movie_statistics(
     current_user: models.User = Depends(get_current_user),
     db: Session = Depends(get_db)
 ):
@@ -583,7 +646,7 @@ async def get_movie_statistics(
 
 
 @router.get("/tv-shows/", response_model=schemas.TVShowStatistics)
-async def get_tv_show_statistics(
+def get_tv_show_statistics(
     current_user: models.User = Depends(get_current_user),
     db: Session = Depends(get_db)
 ):
@@ -598,7 +661,7 @@ async def get_tv_show_statistics(
 
 
 @router.get("/anime/", response_model=schemas.AnimeStatistics)
-async def get_anime_statistics(
+def get_anime_statistics(
     current_user: models.User = Depends(get_current_user),
     db: Session = Depends(get_db)
 ):
@@ -613,7 +676,7 @@ async def get_anime_statistics(
 
 
 @router.get("/video-games/", response_model=schemas.VideoGameStatistics)
-async def get_video_game_statistics(
+def get_video_game_statistics(
     current_user: models.User = Depends(get_current_user),
     db: Session = Depends(get_db)
 ):
@@ -628,7 +691,7 @@ async def get_video_game_statistics(
 
 
 @router.get("/music/", response_model=schemas.MusicStatistics)
-async def get_music_statistics(
+def get_music_statistics(
     current_user: models.User = Depends(get_current_user),
     db: Session = Depends(get_db)
 ):
@@ -642,7 +705,7 @@ async def get_music_statistics(
 
 
 @router.get("/books/", response_model=schemas.BookStatistics)
-async def get_books_statistics(
+def get_books_statistics(
     current_user: models.User = Depends(get_current_user),
     db: Session = Depends(get_db)
 ):
@@ -652,4 +715,57 @@ async def get_books_statistics(
         watch_stats=schemas.CategoryWatchStatistics(**stats["watch_stats"]),
         rating_stats=schemas.CategoryRatingStatistics(**stats["rating_stats"]),
         year_stats=schemas.CategoryYearStatistics(**stats["year_stats"])
+    )
+
+
+@router.get("/manga/", response_model=schemas.MangaStatistics)
+def get_manga_statistics(
+    current_user: models.User = Depends(get_current_user),
+    db: Session = Depends(get_db)
+):
+    """Get manga-specific statistics"""
+    stats = crud.get_manga_statistics(db, current_user.id)
+    return schemas.MangaStatistics(
+        watch_stats=schemas.CategoryWatchStatistics(**stats["watch_stats"]),
+        rating_stats=schemas.CategoryRatingStatistics(**stats["rating_stats"]),
+        year_stats=schemas.CategoryYearStatistics(**stats["year_stats"]),
+        genre_stats=schemas.GenreStatistics(**stats["genre_stats"]),
+        total_volumes=stats["total_volumes"],
+        total_chapters=stats["total_chapters"],
+        volumes_read=stats["volumes_read"],
+        chapters_read=stats["chapters_read"],
+    )
+
+
+@router.get("/podcasts/", response_model=schemas.PodcastStatistics)
+def get_podcast_statistics(
+    current_user: models.User = Depends(get_current_user),
+    db: Session = Depends(get_db)
+):
+    """Get podcast-specific statistics"""
+    stats = crud.get_podcast_statistics(db, current_user.id)
+    return schemas.PodcastStatistics(
+        watch_stats=schemas.CategoryWatchStatistics(**stats["watch_stats"]),
+        rating_stats=schemas.CategoryRatingStatistics(**stats["rating_stats"]),
+        year_stats=schemas.CategoryYearStatistics(**stats["year_stats"]),
+        genre_stats=schemas.GenreStatistics(**stats["genre_stats"]),
+        total_episodes=stats["total_episodes"],
+        episodes_listened=stats["episodes_listened"],
+    )
+
+
+@router.get("/audiobooks/", response_model=schemas.AudiobookStatistics)
+def get_audiobook_statistics(
+    current_user: models.User = Depends(get_current_user),
+    db: Session = Depends(get_db)
+):
+    """Get audiobook-specific statistics"""
+    stats = crud.get_audiobook_statistics(db, current_user.id)
+    return schemas.AudiobookStatistics(
+        watch_stats=schemas.CategoryWatchStatistics(**stats["watch_stats"]),
+        rating_stats=schemas.CategoryRatingStatistics(**stats["rating_stats"]),
+        year_stats=schemas.CategoryYearStatistics(**stats["year_stats"]),
+        genre_stats=schemas.GenreStatistics(**stats["genre_stats"]),
+        total_hours=stats["total_hours"],
+        hours_listened=stats["hours_listened"],
     )

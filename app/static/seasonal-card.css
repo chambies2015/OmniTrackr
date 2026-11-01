@@ -1,0 +1,84 @@
+/* Dashboard: the seasonal hub card. Each season sets its colors on [data-season-theme]. */
+.season-card {
+  --season-accent: #0f766e;
+  --season-glow: rgba(20, 184, 166, .12);
+  background: linear-gradient(120deg, var(--season-glow), var(--card-bg));
+  border: 1px solid var(--season-accent);
+  border-radius: 14px;
+  margin: 0 0 18px;
+  overflow: hidden;
+  padding: 18px 20px;
+  position: relative;
+}
+.season-card[data-season-theme="halloween"] { --season-accent: #c2410c; --season-glow: rgba(249, 115, 22, .14); }
+body.dark-mode .season-card[data-season-theme="halloween"] { --season-accent: #fb923c; --season-glow: rgba(249, 115, 22, .16); }
+.season-card[data-season-theme="holiday"] { --season-accent: #b91c1c; --season-glow: rgba(21, 128, 61, .12); }
+body.dark-mode .season-card[data-season-theme="holiday"] { --season-accent: #fbbf24; --season-glow: rgba(34, 197, 94, .14); }
+.season-card[hidden] { display: none; }
+.season-card[data-season-theme="halloween"]::after {
+  background: radial-gradient(circle at 34% 34%, #fff7ed 0, #fed7aa 30%, #fb923c 72%, #c2410c 100%);
+  box-shadow: 0 0 50px 6px rgba(249, 115, 22, .3);
+  border-radius: 50%;
+  content: "";
+  height: 96px;
+  opacity: .22;
+  pointer-events: none;
+  position: absolute;
+  right: -20px;
+  top: -28px;
+  width: 96px;
+}
+.season-card[data-season-theme="holiday"]::after {
+  background:
+    radial-gradient(circle at 50% 10%, #fbbf24 0 4px, transparent 5px),
+    radial-gradient(circle at 90% 50%, #ef4444 0 4px, transparent 5px),
+    radial-gradient(circle at 50% 90%, #fbbf24 0 4px, transparent 5px),
+    radial-gradient(circle at 10% 50%, #ef4444 0 4px, transparent 5px),
+    radial-gradient(circle, transparent 0 50%, #15803d 51%, #166534 68%, transparent 69%);
+  border-radius: 50%;
+  content: "";
+  height: 96px;
+  opacity: .32;
+  pointer-events: none;
+  position: absolute;
+  right: -18px;
+  top: -26px;
+  width: 96px;
+}
+.season-card > * { position: relative; z-index: 1; }
+.season-card__eyebrow { color: var(--season-accent); font-size: .75rem; font-weight: 800; letter-spacing: .08em; margin: 0 0 5px; text-transform: uppercase; }
+.season-card h2 { color: var(--fg); font-family: 'Poppins', sans-serif; font-size: 1.32rem; margin: 0; }
+.season-card__summary { color: var(--fg-secondary, var(--fg)); margin: 6px 0 0; }
+.season-card__shelves { display: grid; gap: 8px; grid-template-columns: repeat(4, minmax(0, 1fr)); margin: 14px 0; }
+.season-card__shelf {
+  background: var(--card-bg);
+  border: 1px solid var(--border, rgba(127, 127, 127, .28));
+  border-radius: 10px;
+  color: var(--fg);
+  display: block;
+  min-height: 44px;
+  padding: 10px 12px;
+  text-decoration: none;
+}
+.season-card__shelf:hover, .season-card__shelf:focus-visible { border-color: var(--season-accent); }
+.season-card__shelf strong { display: block; font-size: .95rem; }
+.season-card__shelf span { color: var(--fg-secondary, var(--fg)); display: block; font-size: .82rem; margin-top: 2px; }
+.season-card__actions { align-items: center; display: flex; flex-wrap: wrap; gap: 10px 16px; }
+.season-card__open {
+  align-items: center;
+  background: var(--season-accent);
+  border-radius: 8px;
+  color: #fff;
+  display: inline-flex;
+  font-weight: 700;
+  min-height: 44px;
+  padding: 0 16px;
+  text-decoration: none;
+}
+body.dark-mode .season-card[data-season-theme="halloween"] .season-card__open { color: #1c0a02; }
+body.dark-mode .season-card[data-season-theme="holiday"] .season-card__open { color: #1f1300; }
+.season-card__open:hover, .season-card__open:focus-visible { filter: brightness(1.08); }
+.season-card__dismiss { background: none; border: 0; color: var(--fg-secondary, var(--fg)); cursor: pointer; font: inherit; min-height: 44px; padding: 0 4px; text-decoration: underline; }
+@media (max-width: 760px) {
+  .season-card__shelves { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+}

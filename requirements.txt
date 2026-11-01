@@ -2,6 +2,12 @@ fastapi==0.141.1
 uvicorn[standard]==0.53.0
 sqlalchemy==2.0.53
 pydantic==2.13.5
+# Security floors for packages FastAPI/uvicorn pull in (see the October dependency check)
+starlette>=1.6.0
+h11>=0.16.0
+anyio>=4.14.2
+idna>=3.15
+pydantic-settings>=2.14.2
 
 # PostgreSQL
 psycopg2-binary==2.9.10
@@ -10,7 +16,11 @@ psycopg2-binary==2.9.10
 PyJWT==2.15.0
 cryptography==50.0.1
 bcrypt==4.2.1
+# QR codes for two-factor setup (pure Python, SVG output)
+qrcode==8.2
 python-multipart==0.0.31
+# Reads uploaded XML exports (MyAnimeList lists, podcast OPML) without entity expansion
+defusedxml==0.7.1
 
 # Environment variables
 python-dotenv==1.2.2
@@ -26,7 +36,7 @@ httpx==0.28.1
 pytest-cov==6.0.0
 
 # Image processing
-Pillow==12.3.0
+Pillow==13.0.0
 
 # Rate limiting
 slowapi==0.1.9

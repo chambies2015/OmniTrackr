@@ -5,7 +5,10 @@ from html import unescape
 from html.parser import HTMLParser
 from urllib.parse import parse_qs, urlsplit
 from app import models
-from app.discover_catalog import MONTHLY_EDITIONS, TRAILS
+from app.discover_catalog import MONTHLY_EDITIONS, TRAILS, published_editions
+
+# Editions written ahead of their month have no page until their date (Oct 27, 2026).
+LIVE_EDITIONS = published_editions()
 from app.discover_guides import GUIDES
 from app.routers.collections import CATEGORIES
 
@@ -22,7 +25,7 @@ class DiscoverElements(HTMLParser):
 
 def test_guest_save_links_return_to_the_exact_trail(client):
     paths = ['/discover/' + slug for slug in TRAILS]
-    paths += ['/discover/monthly/' + slug for slug in MONTHLY_EDITIONS]
+    paths += ['/discover/monthly/' + slug for slug in LIVE_EDITIONS]
     for path in paths:
         elements = DiscoverElements(client.get(path).text).elements
         signin = next(attrs for tag, attrs in elements if attrs.get('id') == 'signin')
@@ -65,7 +68,9 @@ def test_catalog_is_balanced_and_complete():
         assert len({item['category'] for item in items}) == len(items)
         assert all(item['why'] and item['caveat'] and item['source'] for item in items)
         all_categories.update(item['category'] for item in items)
-    assert all_categories == set(CATEGORIES)
+    # Trails and monthly editions are written for the six original formats; manga, podcasts and audiobooks came later.
+    editorial = set(CATEGORIES) - {"manga", "podcasts", "audiobooks"}
+    assert all_categories == editorial
     assert len(MONTHLY_EDITIONS) >= 2
     assert [edition['published_date'] for edition in MONTHLY_EDITIONS.values()] == sorted(
         edition['published_date'] for edition in MONTHLY_EDITIONS.values()
@@ -73,7 +78,7 @@ def test_catalog_is_balanced_and_complete():
     for edition in MONTHLY_EDITIONS.values():
         date.fromisoformat(edition['published_date'])
         assert len(edition['items']) == 6
-        assert {item['category'] for item in edition['items']} == set(CATEGORIES)
+        assert {item['category'] for item in edition['items']} == editorial
         assert edition['essay_title'] and edition['essay'] and edition['published'] and edition['published_date']
         assert all(
             item['why'] and item['caveat'] and item['source'].startswith('https://')
@@ -84,12 +89,12 @@ def test_catalog_is_balanced_and_complete():
 def test_public_content_and_auth(client, db_session):
     index = client.get('/discover').text
     assert 'Follow your curiosity' in index
-    for edition in MONTHLY_EDITIONS.values():
+    for edition in LIVE_EDITIONS.values():
         assert edition['name'] in unescape(index)
-    latest = next(reversed(MONTHLY_EDITIONS.values()))
+    latest = next(reversed(LIVE_EDITIONS.values()))
     assert all(
         unescape(index).index(latest['name']) < unescape(index).index(edition['name'])
-        for edition in list(MONTHLY_EDITIONS.values())[:-1]
+        for edition in list(LIVE_EDITIONS.values())[:-1]
     )
     for slug, trail in TRAILS.items():
         page = client.get('/discover/' + slug)
@@ -98,7 +103,7 @@ def test_public_content_and_auth(client, db_session):
         assert trail['items'][0]['why'] in unescape(page.text)
         assert client.get(f'/api/discover/{slug}/preview').status_code == 401
         assert client.post(f'/api/discover/{slug}/save', json={'keys':[trail['items'][0]['key']]}).status_code == 401
-    for slug, edition in MONTHLY_EDITIONS.items():
+    for slug, edition in LIVE_EDITIONS.items():
         page = client.get('/discover/monthly/' + slug)
         assert page.status_code == 200
         assert edition['essay_title'] in unescape(page.text)
@@ -118,11 +123,11 @@ def test_public_content_and_auth(client, db_session):
             assert trail_page.headers['x-robots-tag'] == 'noindex, follow'
             assert '<meta name="robots" content="noindex, follow">' in trail_page.text
             assert f'/discover/{slug}' not in sitemap
-    for slug in MONTHLY_EDITIONS:
+    for slug in LIVE_EDITIONS:
         assert f'/discover/monthly/{slug}' in sitemap
 
 
-@pytest.mark.parametrize('slug', list(MONTHLY_EDITIONS))
+@pytest.mark.parametrize('slug', list(LIVE_EDITIONS))
 def test_monthly_edition_save_is_private_and_idempotent(authenticated_client, db_session, slug):
     user = db_session.query(models.User).first()
     edition = MONTHLY_EDITIONS[slug]

@@ -77,7 +77,7 @@ class TestAffiliateLinks:
 
     def test_advertising_policy_discloses_affiliates(self, client):
         text = client.get("/advertising").text
-        assert "Affiliate Links" in text and "Amazon Associate" in text
+        assert "Affiliate links" in text and "Amazon Associate" in text
 
 
 class TestVortexAssets:

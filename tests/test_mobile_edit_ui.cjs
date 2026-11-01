@@ -2,7 +2,7 @@ const { test } = require('node:test');
 const assert = require('node:assert/strict');
 const vm = require('node:vm');
 const fs = require('node:fs');
-const source = fs.readFileSync(require('node:path').join(__dirname, '../app/static/app.js'), 'utf8');
+const source = require('./helpers/dashboard_source.cjs');
 
 for (const [name, prefix] of [['TV', 'tv'], ['Anime', 'anime']]) {
   test(`${name} edit preserves IMDb and puts privacy and save actions in the correct cells`, () => {

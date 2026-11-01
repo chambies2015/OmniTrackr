@@ -26,11 +26,9 @@
   <meta name="twitter:description" content="Track series, seasons, episode progress, ratings, reviews, and TV statistics with OmniTrackr.">
   <meta name="twitter:image" content="https://omnitrackr.xyz/omnitrackr_vortex.png">
   <meta name="twitter:image:alt" content="OmniTrackr TV tracker">
-  <link rel="preconnect" href="https://fonts.googleapis.com">
-  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@700;800&family=Inter:wght@400;500;600&display=swap"
-    rel="stylesheet">
-  <link rel="stylesheet" href="/styles.css">
+  <link rel="preload" href="/static/fonts/poppins-700-latin.woff2" as="font" type="font/woff2" crossorigin>
+  <link rel="preload" href="/static/fonts/poppins-800-latin.woff2" as="font" type="font/woff2" crossorigin>
+  <link rel="stylesheet" href="/static/fonts.css?v=20261009-fonts-1">
   <style>
     body { min-height: 100vh; padding: 20px; }
     .privacy-wrapper { max-width: 1040px; margin: 0 auto; }
@@ -62,7 +60,7 @@
     "inLanguage": "en-US"
   }
   </script>
-  <link rel="stylesheet" href="/static/public-reader.css?v=20260928-site-2">
+  <link rel="stylesheet" href="/static/public-reader.css?v=20261029-reader-3">
 </head>
 
 <body class="public-reader site">
@@ -74,72 +72,71 @@
 
       <header class="privacy-header">
         <h1>TV Show Tracker</h1>
-        <p>Track series, seasons, episode progress, ratings, reviews, and viewing patterns in one media dashboard.</p>
+        <p>Track series, seasons, episode progress, ratings, and reviews, and see your viewing patterns next to the rest of your media.</p>
       </header>
       <details class="reader-contents">
         <summary>On this page</summary>
         <nav aria-label="On this page">
-          <a href="#why-heading">Why TV Shows Need Their Own Tracking Workflow</a>
-          <a href="#workflow-heading">A Practical TV Tracking Workflow</a>
-          <a href="#season-heading">Seasons, Paused Shows, and Finales</a>
-          <a href="#reviews-heading">What Makes a Useful TV Review?</a>
-          <a href="#stats-heading">Using TV Statistics</a>
-          <a href="#privacy-heading">Privacy and Friend Sharing</a>
-          <a href="#related-heading">Related Pages</a>
+          <a href="#why-heading">Why TV shows are harder to track</a>
+          <a href="#workflow-heading">A simple TV tracking routine</a>
+          <a href="#season-heading">Seasons, paused shows, and finales</a>
+          <a href="#reviews-heading">What goes into a good TV review?</a>
+          <a href="#stats-heading">Using TV statistics</a>
+          <a href="#privacy-heading">Privacy and friend sharing</a>
+          <a href="#related-heading">Related pages</a>
         </nav>
       </details>
 
 
       <section class="privacy-section" aria-labelledby="why-heading">
-        <h2 id="why-heading">Why TV Shows Need Their Own Tracking Workflow</h2>
-        <p>TV is harder to track than a single movie because progress is ongoing. A series can have multiple seasons, uneven release schedules, long breaks, spin-offs, and unfinished arcs. Streaming services remember some activity, but only inside their own catalog. OmniTrackr gives you a place to record the show itself, the year, season and episode counts, rating, watched status, and review notes without depending on one streaming platform.</p>
-        <p>This is useful for people who rotate between prestige dramas, comfort sitcoms, documentaries, reality shows, anime-adjacent series, and recommendations from friends. A central tracker helps you remember what you finished, what you paused, and what deserves a revisit later.</p>
+        <h2 id="why-heading">Why TV shows are harder to track</h2>
+        <p>TV is harder to track than a single movie because progress is ongoing. A series can have multiple seasons, uneven release schedules, long breaks, spin-offs, and unfinished arcs. Streaming services remember some activity, but only inside their own catalog. In OmniTrackr you record the show itself, the year, season and episode counts, rating, watched status, and review notes, and none of it depends on which service you watched on.</p>
+        <p>That helps if you rotate between prestige dramas, comfort sitcoms, documentaries, reality shows, anime-adjacent series, and whatever friends keep telling you to watch. With everything in one list, you can see what you finished, what you paused, and what you meant to go back to.</p>
       </section>
 
       <section class="privacy-section" aria-labelledby="workflow-heading">
-        <h2 id="workflow-heading">A Practical TV Tracking Workflow</h2>
+        <h2 id="workflow-heading">A simple TV tracking routine</h2>
         <ol>
           <li>Add the show when you start it or when a friend recommends it.</li>
           <li>Record the year and basic season or episode count when available.</li>
           <li>Choose <strong>Update progress</strong> on a saved show and record the last episode you watched, with a season if you know it.</li>
           <li>Keep Watched unchecked until you finish the show. Saving an episode checkpoint does not mark it watched.</li>
-          <li>Rate the series after a meaningful sample, not necessarily after one episode.</li>
+          <li>Rate the series once you've seen enough of it. One episode usually isn't enough.</li>
           <li>Write a short review when you finish a season or decide to stop watching.</li>
         </ol>
-        <p>This workflow keeps the list useful without asking you to log every single viewing session. For many viewers, tracking the show and broad progress is enough to prevent forgotten series and half-finished watchlists.</p>
+        <p>You don't have to log every viewing session. For most people, tracking the show and roughly where they are in it is enough to stop series from getting forgotten halfway through.</p>
         <p>For example, after episode 4 of season 2, choose Update progress, enter episode 4 and season 2, and save. The checkpoint records the last episode finished, so episode 5 is next. Use season 0 for specials, or leave season blank when a show uses continuous numbering.</p>
         <p>The optional Private reminder can hold a short cue such as “Next: the station reunion; watch with Sam.” It stays separate from the review. Clear progress removes the checkpoint and its reminder without changing Watched, your rating, or your review. Try these controls in the <a href="/demo">interactive demo</a>.</p>
       </section>
 
       <section class="privacy-section" aria-labelledby="season-heading">
-        <h2 id="season-heading">Seasons, Paused Shows, and Finales</h2>
-        <p>TV lists often fail because they treat every unfinished show the same way. A paused show, a dropped show, a weekly release, and a completed series all need different follow-up decisions. OmniTrackr keeps the workflow simple, but users can use status, season counts, episode counts, ratings, and notes to separate shows that are truly active from shows that are waiting for the right time.</p>
-        <p>Finales deserve special context. A show can have brilliant early seasons and a weak ending, or a slow start that pays off later. Capturing that shape helps your rating mean more and makes public reviews more useful to people deciding whether a long series is worth the investment.</p>
+        <h2 id="season-heading">Seasons, paused shows, and finales</h2>
+        <p>TV lists get messy when every unfinished show looks the same. A paused show, a dropped show, a weekly release, and a completed series each need a different next step. OmniTrackr doesn't add extra statuses for this, but you can use watched status, season counts, episode counts, ratings, and notes to tell the shows you're actively watching apart from the ones waiting for the right time.</p>
+        <p>Finales are worth a note. A show can have brilliant early seasons and a weak ending, or a slow start that pays off later. If you write that down, your rating makes more sense later, and a public review tells readers whether a long series is worth several seasons of their time.</p>
       </section>
 
       <section class="privacy-section" aria-labelledby="reviews-heading">
-        <h2 id="reviews-heading">What Makes a Useful TV Review?</h2>
-        <p>A strong TV review usually mentions more than whether the ending worked. Consider notes about pacing, character arcs, episode consistency, season structure, production quality, and whether the show rewards long-term attention. If the first season is excellent but later seasons drift, your review can preserve that nuance better than a single rating.</p>
-        <p>OmniTrackr also supports public reviews when users choose to share them. Public TV reviews are most helpful when they explain who the show is for: binge watchers, weekly viewers, background comfort viewers, genre fans, or people looking for something short.</p>
-        <p>For spoiler-sensitive shows, useful reviews can describe the experience without giving away the twist. Mention whether the mystery is satisfying, whether the weekly release pace helped, and whether the show rewards close attention. That gives readers value without replacing the show itself.</p>
+        <h2 id="reviews-heading">What goes into a good TV review?</h2>
+        <p>A good TV review usually covers more than whether the ending worked. You might note pacing, character arcs, how consistent the episodes are, season structure, production quality, and whether the show pays off over the long run. If the first season is excellent and later seasons drift, a review can say so. A single rating can't.</p>
+        <p>You can also make a review public if you want to share it. Public TV reviews help most when they say who the show is for: binge watchers, weekly viewers, people who want something on in the background, genre fans, or people looking for something short.</p>
+        <p>For spoiler-sensitive shows, describe what watching it was like without giving away the twist. Say whether the mystery pays off, whether the weekly release pace helped, and whether you need to pay close attention. Readers get what they need to decide, and the show is still unspoiled when they start it.</p>
       </section>
 
       <section class="privacy-section" aria-labelledby="stats-heading">
-        <h2 id="stats-heading">Using TV Statistics</h2>
-        <p>Over time, TV tracking can show whether you finish more shows than you start, which years or genres dominate your list, and whether your ratings are stricter for long series than short ones. These patterns help with better recommendations. If your highest ratings usually go to limited series, that is useful information. If you rarely finish long-running shows, your backlog strategy should probably change.</p>
+        <h2 id="stats-heading">Using TV statistics</h2>
+        <p>Over time, TV tracking can show whether you finish more shows than you start, which years or genres dominate your list, and whether your ratings are stricter for long series than short ones. That helps when you pick what to start next. If your highest ratings usually go to limited series, start more limited series. If you rarely finish long-running shows, think twice before adding another one with eight seasons.</p>
       </section>
 
       <section class="privacy-section" aria-labelledby="privacy-heading">
-        <h2 id="privacy-heading">Privacy and Friend Sharing</h2>
+        <h2 id="privacy-heading">Privacy and friend sharing</h2>
         <p>TV lists can be social without being fully public. Category privacy controls decide whether friends can see your TV library; each review has its own public-sharing choice. Episode checkpoints and their reminders stay private even when you share the category or publish a review.</p>
         <p>Checkpoints are included in JSON backups. Keep those files private because they can contain personal reminders. See the <a href="/export-import-guide">backup guide</a> before restoring a library.</p>
       </section>
 
       <section class="privacy-section" aria-labelledby="related-heading">
-        <h2 id="related-heading">Related Pages</h2>
+        <h2 id="related-heading">Related pages</h2>
         <p>Compare OmniTrackr with other tracking options on the <a href="/compare">media tracker comparison page</a>, read broader workflows on <a href="/use-cases">media tracking use cases</a>, or review setup steps in the <a href="/guides">OmniTrackr guides</a>.</p>
       </section>
-
 </main>
   </div>
   <!--SITE_FOOTER-->

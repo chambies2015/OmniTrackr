@@ -1,0 +1,199 @@
+/* Library covers and the optional Shelf layout (its toggle lives at the end of
+   dashboard/library.js). Builds on library-theme.css; rows, edit mode and row
+   handlers are unchanged. */
+body.app-shell { --shelf-hue: 262deg; }
+body.app-shell #tvShowTable { --shelf-hue: 172deg; }
+body.app-shell #animeTable { --shelf-hue: 330deg; }
+body.app-shell #videoGameTable { --shelf-hue: 217deg; }
+body.app-shell #musicTable { --shelf-hue: 38deg; }
+body.app-shell #bookTable { --shelf-hue: 152deg; }
+body.app-shell #mangaTable { --shelf-hue: 350deg; }
+body.app-shell #podcastTable { --shelf-hue: 199deg; }
+body.app-shell #audiobookTable { --shelf-hue: 84deg; }
+body.app-shell .library-table td[data-card-field="cover"] { --cover-hue: calc(var(--shelf-hue) + var(--cover-shift, 0) * 1deg); }
+
+/* A coverless title gets a lettered tile in a shade of its library's colour. */
+body.app-shell .library-table td[data-card-field="cover"][data-initial]:not([data-initial=""]):empty::after {
+  content: attr(data-initial);
+  border-color: hsl(var(--cover-hue) 70% 65% / .35);
+  background:
+    radial-gradient(120% 80% at 20% 0%, hsl(var(--cover-hue) 75% 62% / .5), transparent 70%),
+    linear-gradient(160deg, hsl(var(--cover-hue) 70% 55% / .24), hsl(var(--cover-hue) 70% 45% / .08));
+  color: var(--fg);
+  font: 700 1.5rem/1 'Poppins', var(--font-family, sans-serif);
+}
+
+/* Header labels never break mid-word ("Watche d"). */
+body.app-shell :is(#movieTable, #tvShowTable, #animeTable, #videoGameTable, #musicTable, #bookTable, #mangaTable, #podcastTable, #audiobookTable).library-table thead th { overflow-wrap: normal; word-break: normal; hyphens: none; }
+
+/* Layout toggle beside the library count. */
+body.app-shell .library-heading__tools { align-items: center; display: flex; gap: 10px; }
+body.app-shell .library-view-toggle {
+  background: var(--surface-muted);
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  display: inline-flex;
+  gap: 2px;
+  padding: 3px;
+}
+body.app-shell .library-view-toggle button {
+  background: transparent;
+  border: 0;
+  border-radius: 999px;
+  box-shadow: none;
+  color: var(--fg-secondary);
+  cursor: pointer;
+  font: inherit;
+  font-size: .78rem;
+  font-weight: 600;
+  min-height: 30px;
+  padding: 4px 14px;
+  transform: none;
+}
+body.app-shell .library-view-toggle button:hover { color: var(--fg); background: var(--surface-hover); }
+body.app-shell .library-view-toggle button[aria-pressed="true"] { background: var(--accent-soft); color: var(--primary); }
+body.app-shell .library-view-toggle button:focus-visible { outline: 2px solid var(--primary); outline-offset: 2px; }
+@media (max-width: 1024px) {
+  body.app-shell .library-view-toggle { display: none; }
+}
+
+/* Shelf: the same rows as a wall of covers on wide screens. */
+@media (min-width: 1025px) {
+  body.app-shell.library-view-shelf .library-table-wrap { background: transparent; border: 0; border-radius: 0; overflow: visible; }
+  body.app-shell.library-view-shelf table.mobile-library.library-table { display: block; width: 100%; }
+  body.app-shell.library-view-shelf .mobile-library thead { clip-path: inset(50%); height: 1px; overflow: hidden; position: absolute; width: 1px; }
+  body.app-shell.library-view-shelf .mobile-library tbody {
+    display: grid;
+    gap: 18px;
+    grid-template-columns: repeat(auto-fill, minmax(176px, 1fr));
+    padding: 0;
+  }
+  body.app-shell.library-view-shelf .mobile-library.library-table tbody tr {
+    align-content: start;
+    background: var(--card-bg);
+    border: 1px solid var(--border);
+    border-radius: 14px;
+    display: grid;
+    gap: 8px 10px;
+    grid-template-columns: minmax(0, 1fr) auto;
+    padding: 10px 10px 12px;
+    transition: border-color .15s ease, transform .15s ease, box-shadow .15s ease;
+  }
+  body.app-shell.library-view-shelf .mobile-library.library-table tbody tr:hover {
+    background: var(--card-bg);
+    border-color: hsl(var(--shelf-hue) 70% 65% / .55);
+    box-shadow: 0 14px 34px rgba(0, 0, 0, .28);
+    transform: translateY(-2px);
+  }
+  body.app-shell.library-view-shelf :is(#movieTable, #tvShowTable, #animeTable, #videoGameTable, #musicTable, #bookTable, #mangaTable, #podcastTable, #audiobookTable).mobile-library tbody tr td.library-cell {
+    border: 0;
+    min-width: 0;
+    overflow-wrap: anywhere;
+    padding: 0;
+    position: static;
+    text-align: left;
+    white-space: normal;
+    width: auto;
+  }
+  body.app-shell.library-view-shelf .mobile-library td[data-card-field="cover"] { grid-column: 1 / -1; }
+  body.app-shell.library-view-shelf .mobile-library td[data-card-field="cover"] img {
+    aspect-ratio: 2 / 3;
+    border-radius: 10px;
+    height: auto !important;
+    margin: 0;
+    max-height: none !important;
+    width: 100% !important;
+  }
+  body.app-shell.library-view-shelf .mobile-library.library-table td[data-card-field="cover"][data-initial]:empty::after,
+  body.app-shell.library-view-shelf .mobile-library td[data-card-field="cover"]:empty::after {
+    aspect-ratio: 2 / 3;
+    border-radius: 10px;
+    font-size: 3.2rem;
+    height: auto;
+    margin: 0;
+    width: 100%;
+  }
+  body.app-shell.library-view-shelf #musicTable.mobile-library td[data-card-field="cover"] :is(img),
+  body.app-shell.library-view-shelf #musicTable.mobile-library td[data-card-field="cover"]:empty::after { aspect-ratio: 1; height: auto; }
+  body.app-shell.library-view-shelf .mobile-library td[data-card-field="title"] {
+    -webkit-box-orient: vertical;
+    -webkit-line-clamp: 2;
+    color: var(--fg);
+    display: -webkit-box;
+    font-size: .95rem;
+    grid-column: 1 / -1;
+    line-height: 1.35;
+    overflow: hidden;
+  }
+  body.app-shell.library-view-shelf .mobile-library td[data-card-field="rating"] { align-self: center; font-size: .85rem; grid-column: 1; }
+  body.app-shell.library-view-shelf .mobile-library td[data-card-field="rating"]:empty::after { color: var(--fg-secondary); content: 'Not rated'; font-size: .8rem; font-weight: 500; }
+  body.app-shell.library-view-shelf .mobile-library td[data-card-field="status"] { align-self: center; grid-column: 2; }
+  body.app-shell.library-view-shelf .mobile-library td[data-card-field="detail"] { display: none; font-size: .8rem; grid-column: 1 / -1; }
+  body.app-shell.library-view-shelf .mobile-library td[data-card-field="detail"]::before {
+    color: var(--fg-secondary);
+    content: attr(data-label);
+    display: block;
+    font-size: .68rem;
+    font-weight: 600;
+    letter-spacing: .04em;
+    margin-bottom: 2px;
+    text-transform: uppercase;
+  }
+  body.app-shell.library-view-shelf .mobile-library tr.card-expanded td[data-card-field="detail"] { display: block; }
+  body.app-shell.library-view-shelf .mobile-library td[data-card-field="actions"] {
+    border-top: 1px solid var(--border);
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
+    grid-column: 1 / -1;
+    padding-top: 10px !important;
+  }
+  body.app-shell.library-view-shelf .mobile-library td[data-card-field="actions"] .row-actions { display: flex; flex: 1 1 100%; }
+  body.app-shell.library-view-shelf .mobile-library td[data-card-field="actions"] .row-actions > * { flex: 1 1 0; }
+  body.app-shell.library-view-shelf .mobile-library td[data-card-field="actions"] .row-actions > button.action-btn { margin: 0; min-height: 34px; width: auto; }
+  body.app-shell.library-view-shelf .mobile-library .library-card-details {
+    background: transparent;
+    border: 0;
+    color: var(--primary);
+    cursor: pointer;
+    display: inline-block;
+    flex: 1 1 100%;
+    font: inherit;
+    font-size: .78rem;
+    font-weight: 600;
+    min-height: 30px;
+    padding: 4px 0 0;
+    text-align: center;
+  }
+  body.app-shell.library-view-shelf .mobile-library .library-card-details:hover { text-decoration: underline; }
+
+  /* Editing opens the card across the shelf so every field has room. */
+  body.app-shell.library-view-shelf .mobile-library.library-table tbody tr:has(input, textarea, select) {
+    grid-column: 1 / -1;
+    grid-template-columns: 150px repeat(3, minmax(0, 1fr));
+    padding: 18px;
+    transform: none;
+  }
+  body.app-shell.library-view-shelf .mobile-library tr:has(input, textarea, select) td[data-card-field="cover"] { grid-column: 1; grid-row: 1 / span 4; }
+  body.app-shell.library-view-shelf .mobile-library tr:has(input, textarea, select) td[data-card-field="title"] { -webkit-line-clamp: unset; display: block; grid-column: 2 / -1; overflow: visible; }
+  body.app-shell.library-view-shelf .mobile-library tr:has(input, textarea, select) td:is([data-card-field="rating"], [data-card-field="status"], [data-card-field="detail"]) { display: block; grid-column: auto; }
+  body.app-shell.library-view-shelf .mobile-library tr:has(input, textarea, select) td:is([data-card-field="rating"], [data-card-field="status"])::before {
+    color: var(--fg-secondary);
+    content: attr(data-label);
+    display: block;
+    font-size: .68rem;
+    font-weight: 600;
+    letter-spacing: .04em;
+    margin-bottom: 2px;
+    text-transform: uppercase;
+  }
+  body.app-shell.library-view-shelf .mobile-library tr:has(input, textarea, select) td[data-label="Review"] { grid-column: 2 / -1; }
+  body.app-shell.library-view-shelf .mobile-library tr:has(input, textarea, select) td[data-card-field="actions"] { grid-column: 1 / -1; }
+  body.app-shell.library-view-shelf .mobile-library tr:has(input, textarea, select) td[data-card-field="actions"] button.action-btn { flex: 0 0 auto; min-height: 40px; width: 110px; }
+  body.app-shell.library-view-shelf .mobile-library tr:has(input, textarea, select) .library-card-details { display: none; }
+  body.app-shell.library-view-shelf .mobile-library td.library-cell :is(input:not([type="checkbox"]), textarea, select) { box-sizing: border-box; min-width: 0; width: 100%; }
+}
+@media (min-width: 1025px) and (prefers-reduced-motion: reduce) {
+  body.app-shell.library-view-shelf .mobile-library.library-table tbody tr { transition: none; }
+  body.app-shell.library-view-shelf .mobile-library.library-table tbody tr:hover { transform: none; }
+}

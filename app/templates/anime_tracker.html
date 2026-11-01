@@ -20,10 +20,9 @@
   <meta name="twitter:card" content="summary">
   <meta name="twitter:title" content="Anime Tracker">
   <meta name="twitter:description" content="Track anime series, seasonal watchlists, stalled shows, ratings, reviews, privacy, and anime statistics with OmniTrackr.">
-  <link rel="preconnect" href="https://fonts.googleapis.com">
-  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@700;800&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="/styles.css">
+  <link rel="preload" href="/static/fonts/poppins-700-latin.woff2" as="font" type="font/woff2" crossorigin>
+  <link rel="preload" href="/static/fonts/poppins-800-latin.woff2" as="font" type="font/woff2" crossorigin>
+  <link rel="stylesheet" href="/static/fonts.css?v=20261009-fonts-1">
   <style>
     body { min-height: 100vh; padding: 20px; }
     .content-wrapper { max-width: 1040px; margin: 0 auto; }
@@ -51,7 +50,7 @@
     "inLanguage": "en-US"
   }
   </script>
-  <link rel="stylesheet" href="/static/public-reader.css?v=20260928-site-2">
+  <link rel="stylesheet" href="/static/public-reader.css?v=20261029-reader-3">
 </head>
 
 <body class="public-reader site">
@@ -67,26 +66,26 @@
       <details class="reader-contents">
         <summary>On this page</summary>
         <nav aria-label="On this page">
-          <a href="#why-heading">Why Anime Tracking Gets Complicated</a>
-          <a href="#workflow-heading">A Useful Anime Tracking Workflow</a>
-          <a href="#seasonal-heading">Seasonal Anime and Stalled Shows</a>
-          <a href="#review-heading">Writing Better Anime Reviews</a>
-          <a href="#stats-heading">Anime Statistics and Backlog Cleanup</a>
-          <a href="#privacy-heading">Privacy and Public Anime Reviews</a>
-          <a href="#related-heading">Related Pages</a>
+          <a href="#why-heading">Why anime tracking gets complicated</a>
+          <a href="#workflow-heading">A light anime tracking routine</a>
+          <a href="#seasonal-heading">Seasonal anime and stalled shows</a>
+          <a href="#review-heading">Writing better anime reviews</a>
+          <a href="#stats-heading">Anime statistics and backlog cleanup</a>
+          <a href="#privacy-heading">Privacy and public anime reviews</a>
+          <a href="#related-heading">Related pages</a>
         </nav>
       </details>
 
 
       <section class="content-section" aria-labelledby="why-heading">
-        <h2 id="why-heading">Why Anime Tracking Gets Complicated</h2>
-        <p>Anime watching often happens across seasons, platforms, recommendations, and long gaps. A show might start as a seasonal watch, pause after three episodes, continue months later, or turn into a favorite after a slow first arc. A simple streaming queue rarely captures that context.</p>
-        <p>OmniTrackr treats anime as its own category while still keeping it connected to movies, TV shows, games, music, and books. That helps when your entertainment habits cross formats. A seasonal anime can sit beside a film, a game backlog, and a book without forcing you into separate apps for every interest.</p>
-        <p>Anime also has unusual tracking problems: cour splits, sequel seasons, movies that continue a series, long-running shows, remakes, and recommendations that depend heavily on genre familiarity. A useful tracker gives you enough structure to remember what happened without making every episode feel like a data-entry chore.</p>
+        <h2 id="why-heading">Why anime tracking gets complicated</h2>
+        <p>Anime watching often happens across seasons, platforms, recommendations, and long gaps. A show might start as a seasonal watch, pause after three episodes, continue months later, or turn into a favorite after a slow first arc. A streaming queue won't remember any of that.</p>
+        <p>OmniTrackr treats anime as its own category while still keeping it connected to movies, TV shows, games, music, books, manga, podcasts, and audiobooks. So if you also watch films, play games, and read, a seasonal anime sits in the same library as all of that, and you don't need a separate app for each.</p>
+        <p>Anime also has unusual tracking problems: cour splits, sequel seasons, movies that continue a series, long-running shows, remakes, and recommendations that depend heavily on genre familiarity. You want enough detail to remember where you were, but logging every episode shouldn't feel like data entry.</p>
       </section>
 
       <section class="content-section" aria-labelledby="workflow-heading">
-        <h2 id="workflow-heading">A Useful Anime Tracking Workflow</h2>
+        <h2 id="workflow-heading">A light anime tracking routine</h2>
         <ol>
           <li>Add shows when you plan to watch them, not only after finishing.</li>
           <li>Record year, seasons, and episode count when available so different releases are easier to identify.</li>
@@ -95,12 +94,12 @@
           <li>Rate after you have seen enough to judge the characters, pacing, animation, and ending.</li>
           <li>Write review notes about tone, adaptation quality, arcs, comfort-watch value, or who would enjoy it.</li>
         </ol>
-        <p>This workflow is intentionally lightweight. The goal is to keep enough context to make better watch decisions without turning anime tracking into homework.</p>
+        <p>That's all on purpose. Save enough to decide what to watch next and leave it there. Tracking anime shouldn't feel like homework.</p>
       </section>
 
       <section class="content-section" aria-labelledby="seasonal-heading">
-        <h2 id="seasonal-heading">Seasonal Anime and Stalled Shows</h2>
-        <p>Seasonal anime is easy to start and easy to lose track of. A show may look promising after one episode, sit untouched for weeks, then either become a favorite or quietly fall off the list. Tracking status gives those half-finished decisions a place to live.</p>
+        <h2 id="seasonal-heading">Seasonal anime and stalled shows</h2>
+        <p>Seasonal anime is easy to start and easy to lose track of. A show may look promising after one episode, sit untouched for weeks, then either become a favorite or drop off the list without you noticing. Tracking where you stopped means you can make that call on purpose.</p>
         <ul>
           <li><strong>Plan to watch:</strong> save the title and leave Watched unchecked. There is no separate planned-status selector.</li>
           <li><strong>In progress:</strong> save your last watched episode with Update progress. For a continuously numbered series, leave season blank; for a special, season 0 is available.</li>
@@ -111,26 +110,26 @@
       </section>
 
       <section class="content-section" aria-labelledby="review-heading">
-        <h2 id="review-heading">Writing Better Anime Reviews</h2>
-        <p>Anime reviews are most helpful when they explain the viewing experience. Mention whether the show is slow, episodic, emotionally heavy, action-focused, relaxing, visually inventive, or dependent on prior genre familiarity. If the ending changes your opinion of the whole series, that belongs in the note.</p>
-        <p>For public reviews, avoid only listing plot points. A useful public anime review helps another viewer decide whether the show fits their mood, patience, and tolerance for certain tropes or pacing styles.</p>
-        <p>Timing matters too. Some anime should not be rated after one episode, while others make their style clear immediately. If a late arc, ending, animation change, or adaptation choice changes your opinion, update the review instead of leaving the first impression as the final word.</p>
+        <h2 id="review-heading">Writing better anime reviews</h2>
+        <p>The best anime reviews say what watching the show is like. Mention whether the show is slow, episodic, emotionally heavy, action-focused, relaxing, visually inventive, or dependent on prior genre familiarity. If the ending changes your opinion of the whole series, that belongs in the note.</p>
+        <p>In a public review, don't just list plot points. Tell another viewer whether the show fits their mood, how much patience it asks for, and which tropes or pacing choices might put them off.</p>
+        <p>When you rate also makes a difference. Some anime shouldn't be rated after one episode, while others make their style clear immediately. If a late arc, ending, animation change, or adaptation choice changes your opinion, update the review instead of leaving the first impression as the final word.</p>
       </section>
 
       <section class="content-section" aria-labelledby="stats-heading">
-        <h2 id="stats-heading">Anime Statistics and Backlog Cleanup</h2>
-        <p>Anime statistics can show how many shows you start versus finish, whether your ratings cluster around certain years, and whether seasonal watching is filling your backlog faster than you clear it. Those insights make it easier to drop shows that no longer fit and focus on the ones you actually want to finish.</p>
-        <p>Statistics become more useful when anime lives beside the rest of your media. You can compare whether anime is your highest-rated category, whether it has the most unfinished entries, and whether review coverage is lower than it is for movies, books, games, or music.</p>
+        <h2 id="stats-heading">Anime statistics and backlog cleanup</h2>
+        <p>Anime statistics can show how many shows you start versus finish, whether your ratings cluster around certain years, and whether seasonal watching is filling your backlog faster than you clear it. Seeing that makes it easier to drop shows that no longer fit and spend your time on the ones you want to finish.</p>
+        <p>Statistics say more when anime sits beside the rest of your media. You can compare whether anime is your highest-rated category, whether it has the most unfinished entries, and whether review coverage is lower than it is for movies, books, games, or music.</p>
       </section>
 
       <section class="content-section" aria-labelledby="privacy-heading">
-        <h2 id="privacy-heading">Privacy and Public Anime Reviews</h2>
+        <h2 id="privacy-heading">Privacy and public anime reviews</h2>
         <p>Not every anime note needs to be public. Private notes can include spoilers, unfinished thoughts, personal context, or messy reactions. Public anime reviews should be written for someone deciding whether to start the show, continue past a slow opening, or avoid something that does not fit their taste.</p>
-        <p>OmniTrackr lets users choose which reviews are public. Episode checkpoints and their reminders always stay private, including when friends can view the anime category or a review is public. They are included in JSON backups, so keep exported files private. Practice with the anime sample in the <a href="/demo">demo</a> before changing your own library.</p>
+        <p>OmniTrackr lets you choose which reviews are public. Episode checkpoints and their reminders always stay private, including when friends can view the anime category or a review is public. They are included in JSON backups, so keep exported files private. Practice with the anime sample in the <a href="/demo">demo</a> before changing your own library.</p>
       </section>
 
       <section class="content-section" aria-labelledby="related-heading">
-        <h2 id="related-heading">Related Pages</h2>
+        <h2 id="related-heading">Related pages</h2>
         <p>For more workflows, visit the <a href="/media-tracking">media tracking hub</a>, read the <a href="/tv-show-tracker">TV show tracker guide</a>, learn about <a href="/media-statistics">media statistics</a>, use the <a href="/review-guidelines">review guidelines</a>, or browse <a href="/reviews">public reviews</a>.</p>
       </section>
     </main>

@@ -236,6 +236,15 @@ class TestSEOEndpoints:
         assert response.status_code == 200
         assert movie.id is not None
         assert book.id is not None
+        # One standalone review is not yet a listing worth indexing.
+        assert "/reviews?category=movie" not in content
+        assert "/reviews</loc>" not in content
+        for n in (2, 3):
+            crud.create_movie(db_session, user.id, MovieCreate(
+                title=f"Sitemap Category Movie {n}", director="Category Director", year=2026,
+                review=movie.review, review_public=True))
+        db_session.commit()
+        content = client.get("/sitemap.xml").text
         assert "/reviews?category=movie" in content
         assert "/reviews</loc>" in content
         assert "/reviews?category=book" not in content
@@ -273,7 +282,13 @@ class TestSEOEndpoints:
                     "This standalone review gives search visitors enough context to understand the movie before "
                     "clicking into the app. It covers the setup, the pacing, the emotional tone, the kind of viewer "
                     "who would enjoy it, how the rating was earned, and whether it feels worth revisiting later. "
-                    "That additional detail makes the review page more useful than a short personal note."
+                    "That additional detail makes the review page more useful than a short personal note. "
+                    "The opening act sets up the family conflict quickly, then slows down to let the lead actor "
+                    "show doubt without explaining it. The middle stretch drags for ten minutes or so, mostly "
+                    "because one subplot about a rival never pays off. The score is sparse and works best in the "
+                    "night scenes, where it carries the tension the script leaves unsaid. I watched it twice, "
+                    "and the second time the final scene landed harder because the small early details made sense. "
+                    "It is a good pick for a quiet evening with someone who likes slow dramas."
                 ),
                 review_public=True,
             ),
@@ -295,12 +310,13 @@ class TestSEOEndpoints:
         for path in (
             "/about", "/faq", "/guides", "/export-import-guide",
             "/review-guidelines", "/sample-library", "/demo", "/media-tracking",
+            "/compare", "/use-cases",
+            "/tv-show-tracker", "/game-tracker", "/movie-tracker",
+            "/anime-tracker", "/book-tracker", "/music-tracker",
         ):
             assert path in content
         for path in (
-            "/compare", "/use-cases", "/changelog", "/site-map",
-            "/tv-show-tracker", "/game-tracker", "/movie-tracker",
-            "/anime-tracker", "/book-tracker", "/music-tracker",
+            "/changelog", "/site-map",
             "/media-statistics", "/media-tracker-checklist",
             "/tracking-templates", "/roadmap",
         ):
@@ -455,13 +471,13 @@ class TestSEOEndpoints:
         content = response.text
         assert "- Media tracker setup checklist: https://omnitrackr.xyz/media-tracker-checklist" in content
         assert "- Sample library: https://omnitrackr.xyz/sample-library" in content
-        assert "- Content Quality Policy: https://omnitrackr.xyz/content-quality" in content
+        assert "- Editorial Standards: https://omnitrackr.xyz/content-quality" in content
         assert "- HTML Site Map: https://omnitrackr.xyz/site-map" in content
         assert "a demo library at https://omnitrackr.xyz/demo" in content
         assert "a sample media library at https://omnitrackr.xyz/sample-library" in content
         assert "https://omnitrackr.xyz/media-tracker-checklist" in content
         assert "a human-readable site map at https://omnitrackr.xyz/site-map" in content
-        assert "content quality standards at https://omnitrackr.xyz/content-quality" in content
+        assert "editorial standards at https://omnitrackr.xyz/content-quality" in content
         assert "## Quality and Advertising Boundaries" in content
         assert "private authenticated app shell" in content
         assert "standalone review detail pages require longer review text" in content
@@ -535,10 +551,18 @@ class TestSecurityMiddleware:
             response = client.get(path)
             assert response.status_code == 200
             csp = response.headers["Content-Security-Policy"]
-            assert "'unsafe-inline'" not in csp
             assert "'nonce-" in csp
             assert ' nonce="' in response.text
             assert ' style="' not in response.text
+            if '<script src="/static/ad-loader.js"' in response.text:
+                # Google's supported AdSense CSP: nonce + 'strict-dynamic'; the
+                # 'unsafe-inline' and https: fallbacks are ignored by CSP3 browsers.
+                script_src = next(d for d in csp.split(";") if d.strip().startswith("script-src"))
+                assert "'strict-dynamic'" in script_src
+                scripts = re.findall(r"<script\b[^>]*>", response.text, flags=re.IGNORECASE)
+                assert scripts and all(" nonce=" in tag for tag in scripts)
+            else:
+                assert "'unsafe-inline'" not in csp
 
     def test_root_script_csp_uses_nonce_without_unsafe_inline(self, client):
         """The dashboard should not need unsafe-inline in CSP."""
@@ -670,12 +694,8 @@ class TestSecurityMiddleware:
     def test_supporting_public_utility_pages_are_useful_but_noindexed(self, client):
         """Legal and support pages remain useful without becoming search inventory."""
         utility_paths = [
-            "/privacy",
             "/advertising",
-            "/content-quality",
             "/site-map",
-            "/terms",
-            "/contact",
         ]
 
         for path in utility_paths:
@@ -695,15 +715,7 @@ class TestSecurityMiddleware:
     def test_overlapping_guides_remain_accessible_but_outside_search_inventory(self, client):
         """Consolidated guides should keep working for visitors and internal links."""
         supporting_paths = [
-            "/compare",
-            "/use-cases",
             "/changelog",
-            "/tv-show-tracker",
-            "/game-tracker",
-            "/movie-tracker",
-            "/anime-tracker",
-            "/book-tracker",
-            "/music-tracker",
             "/media-statistics",
             "/media-tracker-checklist",
             "/tracking-templates",
@@ -727,7 +739,7 @@ class TestSecurityMiddleware:
             "/": "Free Media Tracker",
             "/about": "Free Media Tracking App",
             "/advertising": "Advertising Policy",
-            "/content-quality": "Content Quality Policy",
+            "/content-quality": "Editorial Standards",
             "/site-map": "Site Map",
             "/faq": "OmniTrackr FAQ",
             "/guides": "Track Media, Reviews, Stats",
@@ -749,7 +761,7 @@ class TestSecurityMiddleware:
             "/demo": "OmniTrackr Demo",
             "/media-tracking": "Media Tracking Hub",
             "/roadmap": "OmniTrackr Roadmap",
-            "/reviews": "Public Media Reviews",
+            "/reviews": "reviews by members",
             "/reviews?category=movie": "Movie Reviews",
             "/reviews?category=tv_show": "TV Show Reviews",
             "/reviews?category=anime": "Anime Reviews",
@@ -810,7 +822,8 @@ class TestSecurityMiddleware:
             else:
                 assert expected_hrefs.issubset(hrefs)
             if path != "/demo":
-                assert re.search(r'class="public-site-nav__cta[^"]*" href="/#landing-auth"', response.text)
+                # "Start tracking" opens the sign-up form; "Log in" keeps #landing-auth.
+                assert re.search(r'class="public-site-nav__cta[^"]*" href="/#signup"', response.text)
 
     def test_public_pages_do_not_render_mojibake_text(self, client):
         """Public pages should not show broken UTF-8 artifacts to visitors or reviewers."""
@@ -844,18 +857,18 @@ class TestSecurityMiddleware:
                 target_response = client.get(target)
                 assert target_response.status_code < 400, f"{page} links to broken internal URL {href}"
 
-    def test_about_page_explains_user_control_and_maintenance(self, client):
+    def test_about_page_explains_who_runs_it_and_how_it_is_paid_for(self, client):
         """About page should show trust and maintenance signals for visitors."""
         response = client.get("/about")
 
         assert response.status_code == 200
         content = response.text
-        assert "What Is OmniTrackr?" in content
-        assert "Built Around User Control" in content
-        assert "A Maintained Live App" in content
-        assert "private tracking separate from public discovery" in content
-        assert "Data portability is part of the product philosophy" in content
-        assert "not a static landing page or a placeholder project" in content
+        assert "What OmniTrackr is" in content
+        assert "What you can read without an account" in content
+        assert "Who runs it" in content
+        assert "How it is paid for" in content
+        assert "Your library stays yours" in content
+        assert "reviewed by the site owner before it is published" in content
         hrefs = extract_hrefs(content)
         assert "/guides" in hrefs
         assert "/compare" in hrefs
@@ -868,17 +881,17 @@ class TestSecurityMiddleware:
 
         assert response.status_code == 200
         content = response.text
-        assert "Worked Example: Turn a Scattered List Into a Shortlist" in content
+        assert "Worked example: turn a scattered list into a shortlist" in content
         assert "search engines a clearer map" not in content
         assert "Add ten favorites, ten unfinished items" not in content
         assert '/guides#tracking-heading' in content
         assert '/discover' in extract_hrefs(content)
-        assert "Choose a Workflow" in content
-        assert "A Monthly Media Library Audit" in content
-        assert "What Good Tracking Content Includes" in content
-        assert "A Visual Tour of the Tracker" in content
-        assert "Make Your First Ten Minutes Count" in content
-        assert "original context over copied descriptions" in content
+        assert "Choose a workflow" in content
+        assert "A monthly library audit" in content
+        assert "What a good entry includes" in content
+        assert "A visual tour of the tracker" in content
+        assert "Your first ten minutes" in content
+        assert "your own words over copied descriptions" in content
         assert content.count('loading="lazy" decoding="async"') >= 4
         hrefs = extract_hrefs(content)
         for path in (
@@ -900,11 +913,11 @@ class TestSecurityMiddleware:
 
         assert response.status_code == 200
         content = response.text
-        assert "Why Track Movies Outside a Streaming App?" in content
-        assert "A Practical Movie Tracking Workflow" in content
-        assert "Watchlists, Rewatches, and Recommendations" in content
-        assert "What Makes a Movie Review Useful?" in content
-        assert "Privacy for Movie Lists and Reviews" in content
+        assert "Why track movies outside a streaming app?" in content
+        assert "A simple movie tracking routine" in content
+        assert "Watchlists, rewatches, and recommendations" in content
+        assert "What makes a movie review worth reading?" in content
+        assert "Privacy for movie lists and reviews" in content
         assert "spoiler sensitivity" in content
         hrefs = extract_hrefs(content)
         assert "/media-tracking" in hrefs
@@ -918,10 +931,10 @@ class TestSecurityMiddleware:
 
         assert response.status_code == 200
         content = response.text
-        assert "Why TV Shows Need Their Own Tracking Workflow" in content
-        assert "Seasons, Paused Shows, and Finales" in content
-        assert "What Makes a Useful TV Review?" in content
-        assert "Privacy and Friend Sharing" in content
+        assert "Why TV shows are harder to track" in content
+        assert "Seasons, paused shows, and finales" in content
+        assert "What goes into a good TV review?" in content
+        assert "Privacy and friend sharing" in content
         assert "spoiler-sensitive shows" in content
         hrefs = extract_hrefs(content)
         assert "/compare" in hrefs
@@ -934,11 +947,11 @@ class TestSecurityMiddleware:
 
         assert response.status_code == 200
         content = response.text
-        assert "Why Track Video Games?" in content
-        assert "A Better Backlog Workflow" in content
-        assert "Completion, Platforms, and Play Style" in content
-        assert "What to Put in a Game Review" in content
-        assert "Sharing a Game Library" in content
+        assert "Why track video games?" in content
+        assert "A better way to handle the backlog" in content
+        assert "Completion, platforms, and play style" in content
+        assert "What to put in a game review" in content
+        assert "Sharing a game library" in content
         assert "completionists, casual sessions, co-op groups" in content
         hrefs = extract_hrefs(content)
         assert "/tv-show-tracker" in hrefs
@@ -980,12 +993,12 @@ class TestSecurityMiddleware:
         assert response.status_code == 200
         content = response.text
         assert "Media Tracker Setup Checklist" in content
-        assert "Why Start With a Checklist?" in content
-        assert "Choose Your Active Categories" in content
-        assert "Define Your Rating Scale" in content
-        assert "Add a Starter Library" in content
-        assert "Separate Private Notes From Public Reviews" in content
-        assert "First-Week Cleanup Checklist" in content
+        assert "Why start with a checklist?" in content
+        assert "Choose your active categories" in content
+        assert "Define your rating scale" in content
+        assert "Add a starter library" in content
+        assert "Keep private notes and public reviews apart" in content
+        assert "First-week cleanup checklist" in content
         assert '"@type": "HowTo"' in content
         hrefs = extract_hrefs(content)
         assert "/media-tracking" in hrefs
@@ -1000,11 +1013,11 @@ class TestSecurityMiddleware:
         assert response.status_code == 200
         content = response.text
         assert "Media Tracking Templates" in content
-        assert "Rating Scale Template" in content
-        assert "Category Field Templates" in content
-        assert "Review Prompt Template" in content
-        assert "Backlog Cleanup Template" in content
-        assert "Privacy and Sharing Template" in content
+        assert "Rating scale template" in content
+        assert "Category field templates" in content
+        assert "Review prompt template" in content
+        assert "Backlog cleanup template" in content
+        assert "Privacy and sharing template" in content
         assert '"@type": "HowTo"' in content
         hrefs = extract_hrefs(content)
         assert "/demo" in hrefs
@@ -1019,13 +1032,13 @@ class TestSecurityMiddleware:
         assert response.status_code == 200
         content = response.text
         assert "Media Review Guidelines" in content
-        assert "What Makes a Review Useful?" in content
-        assert "Simple Review Prompt" in content
-        assert "Category-Specific Review Angles" in content
-        assert "Private Notes vs Public Reviews" in content
-        assert "Before and After Examples" in content
-        assert "Quality Checklist Before Publishing" in content
-        assert "Public review quality also helps OmniTrackr avoid becoming a thin review directory" in content
+        assert "What makes a review worth reading?" in content
+        assert "A simple review prompt" in content
+        assert "What to cover for each category" in content
+        assert "Private notes vs public reviews" in content
+        assert "Before and after examples" in content
+        assert "Checklist before publishing" in content
+        assert "a stranger can decide whether a movie, show, anime, game, album or book is for them" in content
         assert '"@type": "HowTo"' in content
         hrefs = extract_hrefs(content)
         assert "/reviews" in hrefs
@@ -1040,12 +1053,12 @@ class TestSecurityMiddleware:
         assert response.status_code == 200
         content = response.text
         assert "Sample Media Library" in content
-        assert "Why a Sample Library Helps" in content
-        assert "Example Records" in content
-        assert "A Weekly Cleanup Workflow" in content
-        assert "Privacy Choices in the Sample" in content
-        assert "What Statistics Would Show" in content
-        assert "not a copy of a user account" in content
+        assert "Why look at a sample library" in content
+        assert "Example records" in content
+        assert "A weekly cleanup" in content
+        assert "Privacy choices in the sample" in content
+        assert "What statistics would show" in content
+        assert "copied from a user account" in content
         assert "Signal Harbor" in content
         assert '"@type": "ItemList"' in content
         hrefs = extract_hrefs(content)
@@ -1081,12 +1094,12 @@ class TestSecurityMiddleware:
 
         assert response.status_code == 200
         content = response.text
-        assert "Recently Shipped" in content
-        assert "Public Guide Library" in content
-        assert "Automated Review Quality and Safety" in content
-        assert "Ad and Privacy Transparency" in content
-        assert "Security and SEO Cleanup" in content
-        assert "Stability and Release Guardrails" in content
+        assert "Recently shipped" in content
+        assert "Public guide library" in content
+        assert "Automated review quality and safety" in content
+        assert "Ad and privacy transparency" in content
+        assert "Security and SEO cleanup" in content
+        assert "Stability and release guardrails" in content
         assert "should not require destructive migrations" in content
         assert "Recent verification covers account flows" in content
         assert "not a promise that every idea will ship" in content
@@ -1126,11 +1139,11 @@ class TestSecurityMiddleware:
 
         assert response.status_code == 200
         content = response.text
-        assert "Why Data Portability Matters" in content
-        assert "What an Export Includes" in content
-        assert "How Import Helps" in content
-        assert "What to Remember About Backups" in content
-        assert "Why This Matters for Choosing a Tracker" in content
+        assert "Why you should be able to take your data with you" in content
+        assert "What an export includes" in content
+        assert "Two ways in: migration and restore" in content
+        assert "What to remember about backups" in content
+        assert "What to look for when choosing a tracker" in content
         assert "JSON files are readable data files" in content
         assert "public-review flags" in content
         hrefs = extract_hrefs(content)
@@ -1146,11 +1159,11 @@ class TestSecurityMiddleware:
 
         assert response.status_code == 200
         content = response.text
-        assert "Why Statistics Matter in a Media Tracker" in content
-        assert "Category-Specific Insights" in content
-        assert "Using Review Coverage" in content
-        assert "Privacy and Sharing" in content
-        assert "A practical monthly cleanup" in content
+        assert "What statistics add to a media tracker" in content
+        assert "Category-specific insights" in content
+        assert "Using review coverage" in content
+        assert "Privacy and sharing" in content
+        assert "A monthly cleanup can be short" in content
         assert "Public review counts are separate from private notes" in content
         hrefs = extract_hrefs(content)
         assert "/demo" in hrefs
@@ -1165,11 +1178,11 @@ class TestSecurityMiddleware:
 
         assert response.status_code == 200
         content = response.text
-        assert "Why Track Music in a Media Library?" in content
-        assert "Albums, Artists, and Relisten Notes" in content
-        assert "Writing Music Reviews That Help Later" in content
-        assert "Music Statistics and Taste Patterns" in content
-        assert "Privacy, Sharing, and Recommendations" in content
+        assert "Why track music in a media library?" in content
+        assert "Albums, artists, and relisten notes" in content
+        assert "Writing music reviews you'll want to reread" in content
+        assert "Music statistics and taste patterns" in content
+        assert "Privacy, sharing, and recommendations" in content
         assert "Use ratings after a few listens" in content
         hrefs = extract_hrefs(content)
         assert "/media-tracking" in hrefs
@@ -1184,13 +1197,13 @@ class TestSecurityMiddleware:
 
         assert response.status_code == 200
         content = response.text
-        assert "Why Anime Tracking Gets Complicated" in content
-        assert "Seasonal Anime and Stalled Shows" in content
-        assert "Writing Better Anime Reviews" in content
-        assert "Anime Statistics and Backlog Cleanup" in content
-        assert "Privacy and Public Anime Reviews" in content
+        assert "Why anime tracking gets complicated" in content
+        assert "Seasonal anime and stalled shows" in content
+        assert "Writing better anime reviews" in content
+        assert "Anime statistics and backlog cleanup" in content
+        assert "Privacy and public anime reviews" in content
         assert "Stalled or dropped" in content
-        assert "Timing matters too" in content
+        assert "When you rate also makes a difference" in content
         hrefs = extract_hrefs(content)
         assert "/media-tracking" in hrefs
         assert "/tv-show-tracker" in hrefs
@@ -1204,11 +1217,11 @@ class TestSecurityMiddleware:
 
         assert response.status_code == 200
         content = response.text
-        assert "A Reading List Workflow That Stays Useful" in content
-        assert "Formats, Editions, and Rereads" in content
-        assert "What Makes a Book Review Helpful?" in content
-        assert "Book Statistics and Reading Patterns" in content
-        assert "Privacy and Public Book Notes" in content
+        assert "A reading list you'll keep up with" in content
+        assert "Formats, editions, and rereads" in content
+        assert "What makes a book review helpful?" in content
+        assert "Book statistics and reading patterns" in content
+        assert "Privacy and public book notes" in content
         assert "audiobook narrator" in content
         assert "Private notes can be rough reminders" in content
         hrefs = extract_hrefs(content)
@@ -1228,7 +1241,7 @@ class TestSecurityMiddleware:
         assert "Recent Security and Quality Improvements" in content
         assert "Recent Content Improvements" in content
         assert "Release Verification" in content
-        assert '"dateModified": "2026-09-24"' in content
+        assert '"dateModified": "2026-10-17"' in content
         assert "September 2026: Activation and Trust Baseline" in content
         assert "existing launchpad, Weekly playback, Library pulse, and moderator insights" in content
         assert "public reviews API default to favor substantial reviews" in content
@@ -1249,9 +1262,9 @@ class TestSecurityMiddleware:
 
         assert response.status_code == 200
         content = response.text
-        assert "Support Channels" in content
-        assert "Report Issues" in content
-        assert "Privacy and Data Requests" in content
+        assert "Support channels" in content
+        assert "Report issues" in content
+        assert "Privacy and data requests" in content
         assert "Please do not send passwords" in content
         assert "Before requesting deletion" in content
         hrefs = extract_hrefs(content)
@@ -1304,11 +1317,11 @@ class TestSecurityMiddleware:
 
         assert response.status_code == 200
         content = response.text
-        assert "Your media history, in one place" in content
+        assert "Free media tracker" in content
         visible = re.sub(r"<[^>]+>", "", content)
-        assert "Remember more than the title." in visible
+        assert "Every movie, show, game and book. One library." in visible
         assert "From recommendation to a memory you can revisit" in content
-        assert "One good pick can lead somewhere new." in content
+        assert "Things to try right now" in content
         assert "A few honest answers" in content
         hrefs = extract_hrefs(content)
         assert "/guides" in hrefs
@@ -1344,7 +1357,7 @@ class TestSecurityMiddleware:
         response = client.get("/privacy")
         assert response.status_code == 200
         content = response.text
-        assert "Google Ads and Advertising Cookies" in content
+        assert "Google ads and advertising cookies" in content
         assert "cookies, web beacons, IP addresses" in content
         hrefs = extract_hrefs(content)
         assert "/advertising" in hrefs
@@ -1362,13 +1375,13 @@ class TestSecurityMiddleware:
         assert response.status_code == 200
         content = response.text
         assert "Advertising Policy" in content
-        assert "public content pages" in content
+        assert "selected public pages" in content
         assert "No deceptive placement" in content
         assert "Light by default" in content
         assert "Ads should not be placed inside private account forms" in content
-        assert "The mixed landing and authenticated app shell are also kept out of the ad-loader allowlist" in content
-        assert "How Placements Are Reviewed" in content
-        assert "Public pages should remain readable when ads are unavailable" in content
+        assert "Signed-in members don't see ads anywhere on the site" in content
+        assert "How placements are reviewed" in content
+        assert "Public pages should stay readable when ads are unavailable" in content
         assert "Google-certified consent management platform" in content
         assert "Google does not treat CMP certification as a guarantee of full legal compliance" in content
         hrefs = extract_hrefs(content)
@@ -1382,45 +1395,42 @@ class TestSecurityMiddleware:
         assert ("https", "support.google.com", "/adsense/answer/13554116") in href_parts
         assert ("https", "adssettings.google.com", "/") in href_parts
 
-    def test_content_quality_policy_explains_originality_and_review_standards(self, client):
-        """Content quality policy should explain how OmniTrackr avoids thin public content."""
+    def test_editorial_standards_explain_how_guides_are_written_and_reviews_are_kept_useful(self, client):
+        """The editorial standards page tells readers how guides are made and what member reviews need."""
         response = client.get("/content-quality")
 
         assert response.status_code == 200
         content = response.text
-        assert "Content Quality Policy" in content
-        assert "Original Public Content Standards" in content
-        assert "Public Review Quality" in content
-        assert "User-Generated Content Safeguards" in content
-        assert "Content OmniTrackr Should Avoid" in content
-        assert "Maintenance and Review Process" in content
-        assert '"dateModified": "2026-09-24"' in content
-        assert "scraped summaries, or generic filler" in content
-        assert "Public review pages for empty reviews, one-word notes, or private account data" in content
-        assert "Reviews that contain obvious URLs, email addresses, phone-number-like contact details, or promotional phrases" in content
-        assert "Review directory pages stay ad-free" in content
-        assert "without exposing review text or reporter identity" in content
-        assert "Machine-readable files such as ads.txt, sellers.json, llms.txt, and the AI summary endpoint" in content
-        assert "Thin pages should be improved, noindexed, or removed from public discovery" in content
+        assert "Editorial Standards" in content
+        for heading in ("Who writes the guides", "How facts are checked", "How picks are chosen", "Spoilers",
+                        "Corrections and updates", "Member reviews and collections", "What we do not publish"):
+            assert heading in content, heading
+        assert '"dateModified": "2026-10-17"' in content
+        assert "the site owner reads and reviews each one before it is published" in content
+        assert "No studio, publisher, platform or advertiser pays to appear in a guide" in content
+        assert "Reviews that contain links, email addresses, phone numbers or promotional wording" in content
+        assert "Plot summaries, reviews or descriptions copied from other sites or databases" in content
         hrefs = extract_hrefs(content)
         assert "/sample-library" in hrefs
         assert "/review-guidelines" in hrefs
         assert "/advertising" in hrefs
+        assert "/contact" in hrefs
 
-    def test_site_map_groups_public_pages_for_reviewers_and_crawlers(self, client):
+    def test_site_map_groups_public_pages_for_readers(self, client):
         """HTML site map should expose the full public content inventory with context."""
         response = client.get("/site-map")
 
         assert response.status_code == 200
         content = response.text
         assert "OmniTrackr Site Map" in content
-        assert '"dateModified": "2026-07-05"' in content
-        assert "Core Product Pages" in content
-        assert "Category Tracker Guides" in content
-        assert "Workflows, Reviews, and Comparisons" in content
-        assert "Trust, Policies, and Support" in content
-        assert "A human-readable directory for visitors, reviewers, and crawlers" in content
-        assert "Pages that are only useful for authenticated app actions or developer tooling should stay out of public search inventory" in content
+        assert '"dateModified": "2026-10-17"' in content
+        assert "Guides to read" in content
+        assert "Play and explore" in content
+        assert "Core product pages" in content
+        assert "Category tracker guides" in content
+        assert "Workflows, reviews, and comparisons" in content
+        assert "Policies and support" in content
+        assert "starting with the guides you can read without an account" in content
         hrefs = extract_hrefs(content)
         for path in (
             "/media-tracking",
@@ -1613,3 +1623,42 @@ class TestRootEndpoint:
         assert response.headers["cache-control"] == "private, no-store"
         assert "Cookie" in response.headers["vary"]
 
+
+
+def test_trust_pages_are_indexable_but_stay_out_of_sitemap(client):
+    """Privacy, terms, and contact should not hide the site's identity from crawlers."""
+    sitemap = client.get("/sitemap.xml").text
+    for path in ("/privacy", "/terms", "/contact"):
+        response = client.get(path)
+        assert response.status_code == 200
+        assert "x-robots-tag" not in response.headers
+        assert "noindex" not in " ".join(parse_page_quality(response.text).robots_contents).lower()
+        assert f"/{path.strip('/')}</loc>" not in sitemap
+        assert "/static/ad-loader.js" not in response.text
+
+
+def test_empty_member_directories_offer_editorial_picks(client):
+    """Empty directories should read as content, not as a site under construction."""
+    for path in ("/collections/explore", "/titles", "/reviews"):
+        html = client.get(path).text
+        assert 'class="site-picks"' in html, path
+        assert 'href="/discover/one-evening-well-spent"' in html, path
+        assert "opening soon" not in html and "being curated" not in html, path
+    filtered = client.get("/collections/explore?q=nothing-matches").text
+    assert "No collections found" in filtered and 'class="site-picks"' not in filtered
+
+
+def test_ad_csp_nonces_every_script_only_when_loader_present():
+    from app.csp import nonce_html_response
+
+    plain = nonce_html_response('<html><head><script src="/static/x.js"></script></head></html>')
+    assert "'strict-dynamic'" not in plain.headers["Content-Security-Policy"]
+    assert b'<script src="/static/x.js">' in plain.body
+
+    ad = nonce_html_response(
+        '<html><head><script src="/static/x.js"></script>'
+        '<script src="/static/ad-loader.js" defer></script></head></html>'
+    )
+    csp = ad.headers["Content-Security-Policy"]
+    assert "'strict-dynamic'" in csp and "frame-src https:" in csp and "object-src 'none'" in csp
+    assert ad.body.count(b" nonce=") == 2

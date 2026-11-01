@@ -8,6 +8,10 @@ Access comes from environment variables so it never lives in the database:
 Variable names are matched case-insensitively because hosting dashboards make
 it easy to type `collection_moderator_usernames`, and Linux environment
 variables are case-sensitive.
+
+The usernames themselves must match exactly, capitals included. Usernames are
+only unique as typed ("Dan" and "DAN" can both exist), so a case-insensitive
+match would hand owner access to anyone who registers a capitalised copy.
 """
 from __future__ import annotations
 
@@ -25,7 +29,7 @@ def _usernames(*names: str) -> set[str]:
     found: set[str] = set()
     for name in names:
         for raw in _env_values(name):
-            found.update(part.strip().lower() for part in raw.split(",") if part.strip())
+            found.update(part.strip() for part in raw.split(",") if part.strip())
     return found
 
 
@@ -40,4 +44,9 @@ def admin_usernames() -> set[str]:
 
 def is_site_admin(user) -> bool:
     username = getattr(user, "username", None)
-    return bool(username) and username.lower() in admin_usernames()
+    return bool(username) and username in admin_usernames()
+
+
+def is_moderator(user) -> bool:
+    username = getattr(user, "username", None)
+    return bool(username) and username in moderator_usernames()

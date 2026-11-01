@@ -3,10 +3,11 @@ Friends endpoints for the OmniTrackr API.
 """
 from datetime import datetime
 from typing import List
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, Depends, HTTPException, Request
 from sqlalchemy.orm import Session, joinedload
-from sqlalchemy import and_, or_
+from sqlalchemy import and_, func, or_
 
+from ..integer_bounds import PositiveDatabaseId
 from .. import crud, schemas, models
 from ..dependencies import get_db, get_current_user
 
@@ -14,15 +15,22 @@ router = APIRouter(prefix="/friends", tags=["friends"])
 
 
 @router.post("/request", response_model=schemas.FriendRequestResponse)
-async def send_friend_request(
+def send_friend_request(
     request_data: schemas.FriendRequestCreate,
+    request: Request,
     current_user: models.User = Depends(get_current_user),
     db: Session = Depends(get_db)
 ):
     """Send a friend request to another user by username."""
     # Find the receiver by username
     receiver = crud.get_user_by_username(db, request_data.receiver_username)
-    if not receiver:
+    if receiver is None:
+        # Usernames are unique regardless of case, so "Alice" should find "alice".
+        matches = db.query(models.User).filter(
+            func.lower(models.User.username) == (request_data.receiver_username or "").strip().lower()
+        ).limit(2).all()
+        receiver = matches[0] if len(matches) == 1 else None
+    if not receiver or not receiver.is_active:
         raise HTTPException(status_code=404, detail="User not found")
     
     if receiver.id == current_user.id:
@@ -38,7 +46,7 @@ async def send_friend_request(
 
 
 @router.get("/requests", response_model=dict)
-async def get_friend_requests(
+def get_friend_requests(
     current_user: models.User = Depends(get_current_user),
     db: Session = Depends(get_db)
 ):
@@ -52,8 +60,8 @@ async def get_friend_requests(
 
 
 @router.post("/requests/{request_id}/accept", response_model=schemas.FriendRequestResponse)
-async def accept_friend_request(
-    request_id: int,
+def accept_friend_request(
+    request_id: PositiveDatabaseId,
     current_user: models.User = Depends(get_current_user),
     db: Session = Depends(get_db)
 ):
@@ -69,8 +77,8 @@ async def accept_friend_request(
 
 
 @router.post("/requests/{request_id}/deny", response_model=schemas.FriendRequestResponse)
-async def deny_friend_request(
-    request_id: int,
+def deny_friend_request(
+    request_id: PositiveDatabaseId,
     current_user: models.User = Depends(get_current_user),
     db: Session = Depends(get_db)
 ):
@@ -86,8 +94,8 @@ async def deny_friend_request(
 
 
 @router.delete("/requests/{request_id}", response_model=dict)
-async def cancel_friend_request(
-    request_id: int,
+def cancel_friend_request(
+    request_id: PositiveDatabaseId,
     current_user: models.User = Depends(get_current_user),
     db: Session = Depends(get_db)
 ):
@@ -102,7 +110,7 @@ async def cancel_friend_request(
 
 
 @router.get("", response_model=List[schemas.FriendshipResponse])
-async def get_friends(
+def get_friends(
     current_user: models.User = Depends(get_current_user),
     db: Session = Depends(get_db)
 ):
@@ -128,8 +136,8 @@ async def get_friends(
 
 
 @router.delete("/{friend_id}", response_model=dict)
-async def unfriend_user(
-    friend_id: int,
+def unfriend_user(
+    friend_id: PositiveDatabaseId,
     current_user: models.User = Depends(get_current_user),
     db: Session = Depends(get_db)
 ):
@@ -141,8 +149,8 @@ async def unfriend_user(
 
 
 @router.get("/{friend_id}/profile", response_model=schemas.FriendProfileSummary)
-async def get_friend_profile(
-    friend_id: int,
+def get_friend_profile(
+    friend_id: PositiveDatabaseId,
     current_user: models.User = Depends(get_current_user),
     db: Session = Depends(get_db)
 ):
@@ -159,8 +167,8 @@ async def get_friend_profile(
 
 
 @router.get("/{friend_id}/movies", response_model=schemas.FriendMoviesResponse)
-async def get_friend_movies(
-    friend_id: int,
+def get_friend_movies(
+    friend_id: PositiveDatabaseId,
     current_user: models.User = Depends(get_current_user),
     db: Session = Depends(get_db)
 ):
@@ -182,8 +190,8 @@ async def get_friend_movies(
 
 
 @router.get("/{friend_id}/tv-shows", response_model=schemas.FriendTVShowsResponse)
-async def get_friend_tv_shows(
-    friend_id: int,
+def get_friend_tv_shows(
+    friend_id: PositiveDatabaseId,
     current_user: models.User = Depends(get_current_user),
     db: Session = Depends(get_db)
 ):
@@ -205,8 +213,8 @@ async def get_friend_tv_shows(
 
 
 @router.get("/{friend_id}/anime", response_model=schemas.FriendAnimeResponse)
-async def get_friend_anime(
-    friend_id: int,
+def get_friend_anime(
+    friend_id: PositiveDatabaseId,
     current_user: models.User = Depends(get_current_user),
     db: Session = Depends(get_db)
 ):
@@ -228,8 +236,8 @@ async def get_friend_anime(
 
 
 @router.get("/{friend_id}/video-games", response_model=schemas.FriendVideoGamesResponse)
-async def get_friend_video_games(
-    friend_id: int,
+def get_friend_video_games(
+    friend_id: PositiveDatabaseId,
     current_user: models.User = Depends(get_current_user),
     db: Session = Depends(get_db)
 ):
@@ -251,8 +259,8 @@ async def get_friend_video_games(
 
 
 @router.get("/{friend_id}/music", response_model=schemas.FriendMusicResponse)
-async def get_friend_music(
-    friend_id: int,
+def get_friend_music(
+    friend_id: PositiveDatabaseId,
     current_user: models.User = Depends(get_current_user),
     db: Session = Depends(get_db)
 ):
@@ -270,8 +278,8 @@ async def get_friend_music(
 
 
 @router.get("/{friend_id}/books", response_model=schemas.FriendBooksResponse)
-async def get_friend_books(
-    friend_id: int,
+def get_friend_books(
+    friend_id: PositiveDatabaseId,
     current_user: models.User = Depends(get_current_user),
     db: Session = Depends(get_db)
 ):
@@ -288,9 +296,66 @@ async def get_friend_books(
     return schemas.FriendBooksResponse(books=books, count=len(books))
 
 
+@router.get("/{friend_id}/manga", response_model=schemas.FriendMangaResponse)
+def get_friend_manga(
+    friend_id: PositiveDatabaseId,
+    current_user: models.User = Depends(get_current_user),
+    db: Session = Depends(get_db)
+):
+    """Get friend's manga list (if not private, requires friendship)."""
+    if not crud.are_friends(db, current_user.id, friend_id):
+        raise HTTPException(status_code=403, detail="You are not friends with this user")
+
+    manga = crud.get_friend_manga(db, friend_id)
+    if manga is None:
+        if crud.get_user_by_id(db, friend_id) is None:
+            raise HTTPException(status_code=404, detail="Friend not found")
+        raise HTTPException(status_code=403, detail="This user has made their manga private")
+
+    return schemas.FriendMangaResponse(manga=manga, count=len(manga))
+
+
+@router.get("/{friend_id}/podcasts", response_model=schemas.FriendPodcastsResponse)
+def get_friend_podcasts(
+    friend_id: PositiveDatabaseId,
+    current_user: models.User = Depends(get_current_user),
+    db: Session = Depends(get_db)
+):
+    """Get friend's podcast list (if not private, requires friendship)."""
+    if not crud.are_friends(db, current_user.id, friend_id):
+        raise HTTPException(status_code=403, detail="You are not friends with this user")
+
+    podcasts = crud.get_friend_podcasts(db, friend_id)
+    if podcasts is None:
+        if crud.get_user_by_id(db, friend_id) is None:
+            raise HTTPException(status_code=404, detail="Friend not found")
+        raise HTTPException(status_code=403, detail="This user has made their podcasts private")
+
+    return schemas.FriendPodcastsResponse(podcasts=podcasts, count=len(podcasts))
+
+
+@router.get("/{friend_id}/audiobooks", response_model=schemas.FriendAudiobooksResponse)
+def get_friend_audiobooks(
+    friend_id: PositiveDatabaseId,
+    current_user: models.User = Depends(get_current_user),
+    db: Session = Depends(get_db)
+):
+    """Get friend's audiobook list (if not private, requires friendship)."""
+    if not crud.are_friends(db, current_user.id, friend_id):
+        raise HTTPException(status_code=403, detail="You are not friends with this user")
+
+    audiobooks = crud.get_friend_audiobooks(db, friend_id)
+    if audiobooks is None:
+        if crud.get_user_by_id(db, friend_id) is None:
+            raise HTTPException(status_code=404, detail="Friend not found")
+        raise HTTPException(status_code=403, detail="This user has made their audiobooks private")
+
+    return schemas.FriendAudiobooksResponse(audiobooks=audiobooks, count=len(audiobooks))
+
+
 @router.get("/{friend_id}/statistics", response_model=schemas.FriendStatisticsResponse)
-async def get_friend_statistics(
-    friend_id: int,
+def get_friend_statistics(
+    friend_id: PositiveDatabaseId,
     current_user: models.User = Depends(get_current_user),
     db: Session = Depends(get_db)
 ):

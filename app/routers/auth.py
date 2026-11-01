@@ -4,14 +4,16 @@ Authentication endpoints for the OmniTrackr API.
 import os
 import secrets
 from datetime import datetime, timedelta, timezone
-from fastapi import APIRouter, Depends, HTTPException, status, Request
+from fastapi import APIRouter, Depends, HTTPException, status, Request, Response
 from fastapi.security import OAuth2PasswordRequestForm
 from fastapi.encoders import jsonable_encoder
-from fastapi.responses import JSONResponse
+from fastapi.responses import JSONResponse, RedirectResponse
 from sqlalchemy.orm import Session
 
 from .. import crud, schemas, models, auth, email as email_utils, return_prompt as return_prompt_tokens
 from ..dependencies import get_db
+from .. import funnel, google_signin, passkeys, start_flow, two_factor, visits
+from ..signup_rules import email_problem, email_taken, username_problem, username_taken
 
 router = APIRouter(prefix="/auth", tags=["auth"])
 
@@ -22,34 +24,69 @@ router = APIRouter(prefix="/auth", tags=["auth"])
 async def register(
     user: schemas.UserCreate,
     request: Request,
+    response: Response,
     db: Session = Depends(get_db)
 ):
     """Register a new user and send verification email."""
-    
-    is_valid, error_msg = auth.validate_password_strength(user.password)
+    funnel.record("signup_submitted", request)
+    user.email = user.email.strip()
+
+    problem = username_problem(user.username)
+    if problem:
+        funnel.record("signup_rejected_username_invalid", request)
+        raise HTTPException(status_code=400, detail=problem)
+
+    problem = email_problem(user.email)
+    if problem:
+        funnel.record("signup_rejected_email_invalid", request)
+        raise HTTPException(status_code=400, detail=problem)
+
+    is_valid, error_msg = auth.validate_password_strength(user.password, user.username, user.email)
     if not is_valid:
+        funnel.record("signup_rejected_password", request)
         raise HTTPException(status_code=400, detail=error_msg)
     
-    if crud.get_user_by_email(db, user.email):
-        raise HTTPException(status_code=400, detail="Email already registered")
-    if crud.get_user_by_username(db, user.username):
-        raise HTTPException(status_code=400, detail="Username already taken")
+    if email_taken(db, user.email):
+        funnel.record("signup_rejected_email_taken", request)
+        raise HTTPException(status_code=400, detail="Email already registered. Log in, or reset your password if you forgot it.")
+    if username_taken(db, user.username):
+        funnel.record("signup_rejected_username_taken", request)
+        raise HTTPException(status_code=400, detail="Username already taken. Try adding a number or a word.")
     
     verification_token = email_utils.generate_verification_token(user.email)
     
     hashed_password = auth.get_password_hash(user.password)
     db_user = crud.create_user(db, user, hashed_password, verification_token)
+    funnel.record("signup_created", request)
+    if user.invite:
+        try:
+            from .. import friend_invites
+            friend_invites.record_signup(db, user.invite, db_user)
+        except Exception as e:  # An invite never blocks sign-up.
+            db.rollback()
+            print(f"Failed to record friend invite: {e}")
+    if user.weekly_email:
+        # The box on the sign-up form. Nothing is sent until the address is verified
+        # (the weekly sender skips unverified accounts), so this only records the choice.
+        try:
+            from .. import digest
+            digest.subscribe(db, db_user.id, source="signup")
+        except Exception as e:
+            db.rollback()
+            print(f"Failed to turn on the weekly email at sign-up: {e}")
     
     try:
         await email_utils.send_verification_email(user.email, user.username, verification_token)
     except Exception as e:
+        funnel.record("signup_email_failed", request)
         print(f"Failed to send verification email: {e}")
-    
+
+    auth.set_pending_signup_cookie(response, db_user.id)
     return db_user
 
 
 @router.post("/login", response_model=schemas.Token)
-async def login(
+def login(
     form_data: OAuth2PasswordRequestForm = Depends(),
     request: Request = None,
     db: Session = Depends(get_db)
@@ -95,9 +132,16 @@ async def login(
             headers={"WWW-Authenticate": "Bearer"},
         )
     
-    user.failed_login_attempts = 0
-    user.locked_until = None
-    db.commit()
+    needs_code = two_factor.code_needed(db, request, user)
+    if needs_code:
+        # Wrong codes count toward the same lockout, so a right password must not wipe them.
+        if user.locked_until and user.locked_until > now_utc:
+            remaining_minutes = max(1, int((user.locked_until - now_utc).total_seconds() / 60) + 1)
+            raise HTTPException(status_code=423, detail=f"Too many wrong codes. Try again in {remaining_minutes} minutes.")
+    else:
+        user.failed_login_attempts = 0
+        user.locked_until = None
+        db.commit()
     
     if not user.is_active:
         if user.deactivated_at:
@@ -123,16 +167,38 @@ async def login(
             )
     
     if not user.is_verified:
+        funnel.record("login_blocked_unverified", request)
         raise HTTPException(
             status_code=403,
             detail="Please verify your email address before logging in. Check your inbox for the verification link.",
             headers={"WWW-Authenticate": "Bearer"},
         )
 
+    if needs_code:
+        # The password was right; the session waits for the authenticator code.
+        response = JSONResponse(
+            content={"two_factor_required": True},
+            headers={"Cache-Control": "no-store, no-cache, must-revalidate, max-age=0", "Pragma": "no-cache", "Expires": "0"},
+        )
+        two_factor.set_challenge_cookie(response, two_factor.new_challenge(user, "password"))
+        return response
+
+    return _finish_login(user, request, db, now_utc)
+
+
+def _finish_login(user: models.User, request: Request, db: Session, now_utc: datetime, extra: dict | None = None):
+    """Record the sign-in and hand out the session (after the password, and the code when one is needed)."""
     # Derive the optional return moment before replacing the previous successful
     # login timestamp. The context is returned to this browser only and is not
     # stored as a page/session history.
     previous_login_at = user.last_login_at
+    if user.last_seen_on is not None:
+        # A visit on a still-open session counts as being here too.
+        seen_at = datetime.combine(user.last_seen_on, datetime.min.time())
+        if previous_login_at is None or seen_at > previous_login_at:
+            previous_login_at = seen_at
+    funnel.record_first_login(user, request)
+    first_visit = start_flow.wants_start(user)
     days_away = None
     if previous_login_at:
         days_away = max(0, (now_utc - previous_login_at).days)
@@ -150,6 +216,7 @@ async def login(
     # No page history, media titles, searches, or session-by-session event log is stored.
     user.last_login_at = now_utc
     user.login_count = (user.login_count or 0) + 1
+    visits.mark_login(user, now_utc)
     db.commit()
     
     access_token = auth.create_user_access_token(user)
@@ -160,7 +227,7 @@ async def login(
         return_prompt=return_prompt,
     )
     response = JSONResponse(
-        content=jsonable_encoder(token_response),
+        content={**jsonable_encoder(token_response), **(extra or {})},
         headers={
             "Cache-Control": "no-store, no-cache, must-revalidate, max-age=0",
             "Pragma": "no-cache",
@@ -168,6 +235,107 @@ async def login(
         }
     )
     auth.set_auth_cookie(response, access_token)
+    if first_visit:
+        start_flow.set_cookie(response, auth.ENVIRONMENT == "production")
+    return response
+
+
+@router.post("/login/two-factor", response_model=schemas.Token)
+def login_two_factor(payload: schemas.TwoFactorLogin, request: Request, db: Session = Depends(get_db)):
+    """Second sign-in step: the code from the authenticator app, or a recovery code."""
+    challenge = two_factor.read_challenge(request.cookies.get(two_factor.CHALLENGE_COOKIE))
+    expired = HTTPException(status_code=401, detail="That sign-in timed out. Log in again to get a new code prompt.")
+    if challenge is None:
+        raise expired
+    user = crud.get_user_by_id_auth(db, challenge["uid"])
+    if (user is None or not user.is_active or not user.is_verified
+            or not secrets.compare_digest(challenge["pv"], auth.password_fingerprint(user.hashed_password))):
+        raise expired
+    row = two_factor.enabled_for(db, user)
+    now_utc = datetime.now(timezone.utc).replace(tzinfo=None)
+    if row is None:
+        # Two-factor was switched off after the password step; the password was already checked.
+        return _finish_login(user, request, db, now_utc)
+
+    if user.locked_until and user.locked_until > now_utc:
+        remaining_minutes = max(1, int((user.locked_until - now_utc).total_seconds() / 60) + 1)
+        raise HTTPException(status_code=423, detail=f"Too many wrong codes. Try again in {remaining_minutes} minutes.")
+
+    used = two_factor.check_code(row, payload.code)
+    if used is None:
+        # Wrong codes share the password lockout: five in a row pauses sign-in for 15 minutes.
+        user.failed_login_attempts = (user.failed_login_attempts or 0) + 1
+        if user.failed_login_attempts >= 5:
+            user.locked_until = now_utc + timedelta(minutes=15)
+        db.commit()
+        client_ip = request.client.host if request.client else "unknown"
+        print(f"SECURITY: Wrong two-factor code - User id: {user.id}, IP: {client_ip}, Attempts: {user.failed_login_attempts}")
+        raise HTTPException(status_code=401, detail="That code didn't work. Codes change every 30 seconds, so try the newest one.")
+
+    user.failed_login_attempts = 0
+    user.locked_until = None
+    db.commit()
+    extra = {"recovery_codes_left": two_factor.recovery_codes_left(row)} if used == "recovery" else None
+    response = _finish_login(user, request, db, now_utc, extra)
+    if payload.remember_device:
+        two_factor.set_device_cookie(response, user, row)
+    two_factor.clear_challenge_cookie(response)
+    return response
+
+
+# ---------------------------------------------------------------- passkeys
+
+PASSKEY_NO_STORE = {"Cache-Control": "no-store, no-cache, must-revalidate, max-age=0", "Pragma": "no-cache", "Expires": "0"}
+
+
+@router.post("/passkey/options")
+def passkey_login_options(request: Request):
+    """A fresh challenge for navigator.credentials.get(); the browser picks the passkey."""
+    challenge = passkeys.new_challenge()
+    response = JSONResponse(passkeys.login_options(challenge, passkeys.rp_id(request)), headers=PASSKEY_NO_STORE)
+    passkeys.set_challenge_cookie(response, passkeys.challenge_cookie_value("get", challenge), passkeys.LOGIN_COOKIE_PATH)
+    return response
+
+
+@router.post("/passkey/login", response_model=schemas.Token)
+def passkey_login(payload: schemas.PasskeyCredential, request: Request, db: Session = Depends(get_db)):
+    """Sign in with a passkey. It was made with a fingerprint, face or PIN, so no code step follows."""
+    challenge = passkeys.read_challenge(request.cookies.get(passkeys.CHALLENGE_COOKIE), "get")
+    if challenge is None:
+        raise HTTPException(status_code=401, detail="That passkey prompt timed out. Try again.")
+    client_ip = request.client.host if request.client else "unknown"
+    credential_id = passkeys.canonical_credential_id(payload.id)
+    row = passkeys.find_by_credential_id(db, credential_id) if credential_id else None
+    if row is None:
+        print(f"SECURITY: Unknown passkey offered - IP: {client_ip}")
+        raise HTTPException(status_code=401, detail="We don't know that passkey. It may have been removed from the account. Log in with your password, then add it again in Settings.")
+    user = crud.get_user_by_id_auth(db, row.user_id)
+    if user is None:
+        raise HTTPException(status_code=401, detail="We don't know that passkey. Log in with your password instead.")
+    now_utc = datetime.now(timezone.utc).replace(tzinfo=None)
+    if user.locked_until and user.locked_until > now_utc:
+        remaining_minutes = max(1, int((user.locked_until - now_utc).total_seconds() / 60) + 1)
+        raise HTTPException(status_code=423, detail=f"Account is locked due to too many failed login attempts. Try again in {remaining_minutes} minutes.")
+    if not user.is_active:
+        raise HTTPException(status_code=403, detail="Account is deactivated. Log in with your password to reactivate it.")
+    if not user.is_verified:
+        raise HTTPException(status_code=403, detail="Please verify your email address before logging in. Check your inbox for the verification link.")
+    try:
+        result = passkeys.verify_assertion(row, payload.model_dump(), challenge,
+                                           passkeys.rp_id(request), passkeys.expected_origins(request))
+    except passkeys.PasskeyError as problem:
+        print(f"SECURITY: Passkey sign-in refused - User id: {user.id}, IP: {client_ip}, Reason: {problem}")
+        raise HTTPException(status_code=401, detail=str(problem))
+
+    row.sign_count = result["sign_count"]
+    row.backed_up = result["backed_up"]
+    row.backup_eligible = result["backup_eligible"]
+    row.last_used_at = now_utc
+    user.failed_login_attempts = 0
+    user.locked_until = None
+    db.commit()
+    response = _finish_login(user, request, db, now_utc, {"signed_in_with": "passkey"})
+    passkeys.clear_challenge_cookie(response, passkeys.LOGIN_COOKIE_PATH)
     return response
 
 
@@ -192,13 +360,37 @@ async def logout():
     return response
 
 
+def _sign_in_after_verification(request: Request, user: models.User, db: Session, message: str):
+    """Open the new account in the browser that created it (see auth.PENDING_SIGNUP_COOKIE)."""
+    pending = auth.pending_signup_user_id(request.cookies.get(auth.PENDING_SIGNUP_COOKIE)) if request else None
+    if pending != user.id or not user.is_active:
+        # A different browser (often the mail app's): log in as usual, with the email filled in.
+        return {"message": message, "signed_in": False, "login_hint": user.email}
+    funnel.record_first_login(user, request)
+    first_visit = start_flow.wants_start(user)
+    user.last_login_at = datetime.now(timezone.utc).replace(tzinfo=None)
+    user.login_count = (user.login_count or 0) + 1
+    visits.mark_login(user, user.last_login_at)
+    db.commit()
+    db.refresh(user)
+    response = JSONResponse(
+        content={"message": message, "signed_in": True,
+                 "user": jsonable_encoder(schemas.User.model_validate(user))},
+        headers={"Cache-Control": "no-store, no-cache, must-revalidate, max-age=0", "Pragma": "no-cache", "Expires": "0"},
+    )
+    auth.set_auth_cookie(response, auth.create_user_access_token(user))
+    auth.clear_pending_signup_cookie(response)
+    if first_visit:
+        start_flow.set_cookie(response, auth.ENVIRONMENT == "production")
+    return response
+
+
 @router.get("/verify-email")
-async def verify_email(token: str, db: Session = Depends(get_db)):
+def verify_email(token: str, request: Request = None, db: Session = Depends(get_db)):
     """Verify user email with token (handles both initial verification and email change)."""
     # First, try regular email verification (most common case)
     try:
-        email = email_utils.verify_token(token, max_age=3600)  # 1 hour expiration
-        # This is a regular email verification token
+        email = email_utils.verify_token(token, max_age=email_utils.VERIFICATION_MAX_AGE)
         user = crud.get_user_by_email(db, email)
         if not user:
             raise HTTPException(status_code=404, detail="User not found")
@@ -206,20 +398,30 @@ async def verify_email(token: str, db: Session = Depends(get_db)):
         if user.is_verified:
             return {"message": "Email already verified"}
         
-        # Mark user as verified
+        if not user.verification_token or not secrets.compare_digest(user.verification_token, token):
+            raise HTTPException(status_code=400, detail="This verification link was replaced. Request a new verification email.")
+
+        funnel.record("email_verified")
         user.is_verified = True
         user.verification_token = None
         db.commit()
         db.refresh(user)
-        
-        return {"message": "Email verified successfully! You can now use all features."}
+        try:
+            from .. import friend_invites
+            friend_invites.complete_signup(db, user)
+        except Exception as e:  # Friendship from an invite is a bonus; verification already succeeded.
+            db.rollback()
+            print(f"Failed to complete friend invite: {e}")
+        from .. import supporters
+        supporters.link_after_verification(db, user)  # Ko-fi payments made before the account existed
+
+        return _sign_in_after_verification(request, user, db, "Email verified successfully! You can now use all features.")
     except HTTPException:
         raise
     except Exception:
         # Not a regular email verification token, try email change token
         try:
             old_email, new_email = email_utils.verify_email_change_token(token, max_age=3600)
-            # This is an email change verification
             user = crud.get_user_by_email(db, old_email)
             if not user:
                 raise HTTPException(status_code=404, detail="User not found")
@@ -262,7 +464,8 @@ async def verify_email(token: str, db: Session = Depends(get_db)):
             raise
         except Exception:
             # Neither token type worked
-            raise HTTPException(status_code=400, detail="Invalid or expired verification token")
+            funnel.record("verification_link_expired")
+            raise HTTPException(status_code=400, detail="This verification link has expired or was already used. Log in with your email to get a new one.")
 
 
 @router.post("/resend-verification")
@@ -283,7 +486,7 @@ async def resend_verification_email(
     if user.is_verified:
         return {"message": "Email is already verified. You can log in."}
     
-    # Generate new verification token
+    funnel.record("verification_resent", request)
     verification_token = email_utils.generate_verification_token(user.email)
     user.verification_token = verification_token
     db.commit()
@@ -301,7 +504,6 @@ async def resend_verification_email(
         # Still return success message for security (don't reveal email wasn't sent)
         return {"message": "If that email is registered and unverified, a verification email has been sent."}
     
-    # Send verification email (async, non-blocking)
     email_sent = False
     try:
         await email_utils.send_verification_email(user.email, user.username, verification_token)
@@ -356,7 +558,7 @@ async def request_password_reset(
 
 
 @router.post("/reset-password")
-async def reset_password(payload: schemas.PasswordReset, db: Session = Depends(get_db)):
+def reset_password(payload: schemas.PasswordReset, request: Request, db: Session = Depends(get_db)):
     """Reset password with valid token."""
     token = payload.token
     new_password = payload.new_password
@@ -377,18 +579,19 @@ async def reset_password(payload: schemas.PasswordReset, db: Session = Depends(g
     if not user.reset_token:
         raise HTTPException(status_code=400, detail="Invalid reset token")
     
-    if user.reset_token.startswith("$2"):
+    if user.reset_token.startswith(("$2", "sha256$")):
         if not auth.verify_token_hash(token, user.reset_token):
             raise HTTPException(status_code=400, detail="Invalid reset token")
     else:
         if not secrets.compare_digest(user.reset_token, token):
             raise HTTPException(status_code=400, detail="Invalid reset token")
     
-    is_valid, error_msg = auth.validate_password_strength(new_password)
+    is_valid, error_msg = auth.validate_password_strength(new_password, user.username, user.email)
     if not is_valid:
         raise HTTPException(status_code=400, detail=error_msg)
     
     user.hashed_password = auth.get_password_hash(new_password)
+    user.password_set = True
     user.reset_token = None
     user.reset_token_expires = None
     db.commit()
@@ -398,12 +601,12 @@ async def reset_password(payload: schemas.PasswordReset, db: Session = Depends(g
 
 
 @router.post("/reactivate", response_model=schemas.User)
-async def reactivate_account_public(
+def reactivate_account_public(
     reactivate: schemas.AccountReactivate,
+    request: Request,
     db: Session = Depends(get_db)
 ):
     """Reactivate a deactivated account via public endpoint (within 90-day window)."""
-    # Find user by username or email
     user = None
     if reactivate.username:
         user = crud.get_user_by_username(db, reactivate.username)
@@ -414,29 +617,32 @@ async def reactivate_account_public(
     else:
         raise HTTPException(status_code=400, detail="Username or email is required")
     
+    invalid = HTTPException(status_code=401, detail="Invalid credentials or account not found")
     if not user:
-        # Don't reveal if account exists for security
-        raise HTTPException(
-            status_code=401,
-            detail="Invalid credentials or account not found"
-        )
-    
-    # Verify password
+        raise invalid
+
+    # Shares the login lockout, so this endpoint can't be used to keep guessing a password.
+    now_utc = datetime.now(timezone.utc).replace(tzinfo=None)
+    if user.locked_until and user.locked_until > now_utc:
+        raise invalid
     if not auth.verify_password(reactivate.password, user.hashed_password):
-        raise HTTPException(
-            status_code=401,
-            detail="Invalid credentials or account not found"
-        )
+        user.failed_login_attempts = (user.failed_login_attempts or 0) + 1
+        if user.failed_login_attempts >= 5:
+            user.locked_until = now_utc + timedelta(minutes=15)
+        db.commit()
+        raise invalid
+    # With two-factor on, wrong codes share this counter; only a right code clears it.
+    if (user.failed_login_attempts or user.locked_until) and two_factor.enabled_for(db, user) is None:
+        user.failed_login_attempts = 0
+        user.locked_until = None
+        db.commit()
     
-    # Check if account is already active
     if user.is_active:
         raise HTTPException(status_code=400, detail="Account is already active")
     
-    # Check if account was deactivated
     if not user.deactivated_at:
         raise HTTPException(status_code=400, detail="Account was not deactivated")
     
-    # Reactivate account
     try:
         reactivated_user = crud.reactivate_user(db, user.id)
         if reactivated_user is None:
@@ -445,3 +651,125 @@ async def reactivate_account_public(
     except ValueError as e:
         raise HTTPException(status_code=400, detail=str(e))
 
+
+
+# ---------------------------------------------------------------- Sign in with Google
+
+def _google_redirect(location: str) -> RedirectResponse:
+    response = RedirectResponse(location, status_code=303)
+    response.headers["Cache-Control"] = "no-store"
+    response.headers["Referrer-Policy"] = "no-referrer"
+    return response
+
+
+def _google_failure(code: str) -> RedirectResponse:
+    response = _google_redirect(f"/?google_error={code}#landing-auth")
+    response.delete_cookie(key=google_signin.STATE_COOKIE, path=google_signin.STATE_COOKIE_PATH,
+                           samesite="lax", secure=auth.ENVIRONMENT == "production", httponly=True)
+    return response
+
+
+@router.get("/google/start", include_in_schema=False)
+async def google_start(request: Request, invite: str | None = None):
+    """Send the visitor to Google's account chooser (only when the owner configured it)."""
+    if not google_signin.configured():
+        return _google_failure("unavailable")
+    if request.headers.get("sec-fetch-user") == "?1":
+        # Only a click in a browser sends this; link checkers and scanners that
+        # follow the button's URL don't, and used to make up most of this count.
+        funnel.record("google_signin_started", request)
+    state, cookie_value = google_signin.new_state(google_signin.valid_invite(invite),
+                                                  google_signin.redirect_uri(request))
+    response = _google_redirect(google_signin.authorize_url(state))
+    response.set_cookie(
+        key=google_signin.STATE_COOKIE,
+        value=cookie_value,
+        max_age=google_signin.STATE_MAX_AGE_SECONDS,
+        httponly=True,
+        secure=auth.ENVIRONMENT == "production",
+        samesite="lax",
+        path=google_signin.STATE_COOKIE_PATH,
+    )
+    return response
+
+
+@router.get("/google/callback", include_in_schema=False)
+async def google_callback(
+    request: Request,
+    code: str | None = None,
+    state: str | None = None,
+    error: str | None = None,
+    db: Session = Depends(get_db),
+):
+    """Finish Sign in with Google: check the state, read Google's answer, then sign in."""
+    if not google_signin.configured():
+        return _google_failure("unavailable")
+    try:
+        saved = google_signin.read_state(request.cookies.get(google_signin.STATE_COOKIE))
+        if not state or len(state) > 256 or not secrets.compare_digest(state, saved["state"]):
+            raise google_signin.SignInError("expired")
+        if error:
+            raise google_signin.SignInError("cancelled" if error == "access_denied" else "failed")
+        if not code or len(code) > 2048:
+            raise google_signin.SignInError("failed")
+        client = getattr(request.app.state, "external_api_client", None)
+        id_token = await google_signin.exchange_code(code, client, saved["redirect_uri"])
+        profile = google_signin.read_id_token(id_token, saved["nonce"])
+        user, outcome = google_signin.find_or_create_user(db, profile)
+    except google_signin.SignInError as problem:
+        if problem.code != "cancelled":
+            funnel.record("google_signin_failed", request)
+        return _google_failure(problem.code)
+
+    if outcome in ("created", "linked"):
+        from .. import supporters
+        supporters.link_after_verification(db, user)  # a Google account proves the email, so waiting Ko-fi payments link
+
+    if outcome == "created":
+        funnel.record("signup_created", request)
+        funnel.record("google_account_created", request)
+        if saved.get("invite"):
+            try:
+                from .. import friend_invites
+                if friend_invites.record_signup(db, saved["invite"], user):
+                    friend_invites.complete_signup(db, user)
+            except Exception as e:  # An invite never blocks sign-up.
+                db.rollback()
+                print(f"Failed to record friend invite: {e}")
+    elif outcome == "linked":
+        funnel.record("google_account_linked", request)
+        try:
+            from .. import friend_invites
+            friend_invites.complete_signup(db, user)  # Finishes an invite left waiting on verification.
+        except Exception as e:
+            db.rollback()
+            print(f"Failed to complete friend invite: {e}")
+    else:
+        funnel.record("google_signin", request)
+
+    if two_factor.code_needed(db, request, user):
+        # Google vouched for the email; this account also wants its authenticator code.
+        response = _google_redirect("/?two_factor=1#landing-auth")
+        two_factor.set_challenge_cookie(response, two_factor.new_challenge(user, "google"))
+        response.delete_cookie(key=google_signin.STATE_COOKIE, path=google_signin.STATE_COOKIE_PATH,
+                               samesite="lax", secure=auth.ENVIRONMENT == "production", httponly=True)
+        return response
+
+    funnel.record_first_login(user, request)
+    first_visit = start_flow.wants_start(user)
+    user.last_login_at = datetime.now(timezone.utc).replace(tzinfo=None)
+    user.login_count = (user.login_count or 0) + 1
+    visits.mark_login(user, user.last_login_at)
+    user.failed_login_attempts = 0
+    user.locked_until = None
+    db.commit()
+    db.refresh(user)
+
+    target = "/?signed_in=google&new=1" if outcome == "created" else "/?signed_in=google"
+    response = _google_redirect(target)
+    auth.set_auth_cookie(response, auth.create_user_access_token(user))
+    if first_visit:
+        start_flow.set_cookie(response, auth.ENVIRONMENT == "production")
+    response.delete_cookie(key=google_signin.STATE_COOKIE, path=google_signin.STATE_COOKIE_PATH,
+                           samesite="lax", secure=auth.ENVIRONMENT == "production", httponly=True)
+    return response

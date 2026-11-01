@@ -1,0 +1,255 @@
+/* Phone navigation for the signed-in dashboard (app-nav.js): a bottom bar and a
+   "More" sheet. Colors come from the dashboard theme, so light mode follows. */
+
+.app-dock, .app-dock[hidden] { display: none; }
+
+@media (max-width: 760px) {
+  body.app-shell.has-app-dock { padding-bottom: calc(76px + env(safe-area-inset-bottom, 0px)); }
+
+  body.has-app-dock .app-dock {
+    align-items: stretch;
+    -webkit-backdrop-filter: blur(18px) saturate(150%);
+    backdrop-filter: blur(18px) saturate(150%);
+    background: color-mix(in srgb, var(--card-bg, #191f2c) 88%, transparent);
+    border-top: 1px solid var(--border, rgba(255, 255, 255, .1));
+    bottom: 0;
+    box-shadow: 0 -12px 32px rgba(0, 0, 0, .22);
+    display: grid;
+    grid-template-columns: repeat(5, minmax(0, 1fr));
+    left: 0;
+    padding: 6px 6px calc(6px + env(safe-area-inset-bottom, 0px));
+    position: fixed;
+    right: 0;
+    z-index: 900;
+  }
+
+  .app-dock__item {
+    align-items: center;
+    background: none;
+    border: 0;
+    border-radius: 14px;
+    color: var(--fg-secondary, #a3abc2);
+    cursor: pointer;
+    display: flex;
+    flex-direction: column;
+    font: 600 .7rem/1 Inter, system-ui, sans-serif;
+    gap: 4px;
+    justify-content: center;
+    min-height: 54px;
+    padding: 6px 2px;
+    position: relative;
+    -webkit-tap-highlight-color: transparent;
+  }
+  .app-dock__item[aria-current="page"] { color: var(--primary, #baa9fb); }
+  .app-dock__item[aria-current="page"]::before {
+    background: var(--primary, #baa9fb);
+    border-radius: 0 0 3px 3px;
+    content: "";
+    height: 3px;
+    left: 30%;
+    position: absolute;
+    right: 30%;
+    top: -6px;
+  }
+  .app-dock__item:active { background: var(--surface-hover, rgba(255, 255, 255, .06)); }
+  .app-dock__dot { background: #2dd4bf; border: 2px solid var(--card-bg, #191f2c); border-radius: 50%; height: 10px; position: absolute; right: calc(50% - 16px); top: 6px; width: 10px; }
+  .app-dock__dot[hidden] { display: none; }
+
+  .app-dock__add {
+    align-items: center;
+    align-self: center;
+    background: linear-gradient(135deg, #8b5cf6, #a855f7);
+    border: 0;
+    border-radius: 18px;
+    box-shadow: 0 10px 24px rgba(139, 92, 246, .45), inset 0 1px 0 rgba(255, 255, 255, .25);
+    color: #fff;
+    cursor: pointer;
+    display: flex;
+    height: 52px;
+    justify-content: center;
+    justify-self: center;
+    margin-top: -18px;
+    width: 52px;
+    -webkit-tap-highlight-color: transparent;
+  }
+  .app-dock__add:active { transform: scale(.96); }
+
+  /* The bar takes over these toolbar buttons; the bell and avatar stay on top.
+     These header rules also apply from the first paint for a signed-in visit
+     (html.authenticated, set by preauth.js), so the header doesn't jump when
+     app-nav.js runs. app-nav.js sets .app-dock-off if the bar ends up hidden. */
+  :is(body.has-app-dock, html.authenticated body.app-shell:not(.app-dock-off)) .account-toolbar :is(#showFriendsSidebar, #toggleMode, #logoutBtn, #siteStatsLink, #installAppBtn) { display: none !important; }
+  :is(body.has-app-dock, html.authenticated body.app-shell:not(.app-dock-off)) .account-toolbar { justify-content: flex-end; }
+  /* "Your space" tabs live in the sheet; the media row stays for quick switching. */
+  :is(body.has-app-dock, html.authenticated body.app-shell:not(.app-dock-off)) .tabs .library-nav__group--tools { display: none; }
+  /* The header button repeats the bar's Add button. */
+  :is(body.has-app-dock, html.authenticated body.app-shell:not(.app-dock-off)) .header .quick-capture-trigger { display: none; }
+
+  /* Keep page-level toasts and floating bars above the dock. */
+  body.has-app-dock .guest-import-toast { bottom: calc(92px + env(safe-area-inset-bottom, 0px)); }
+}
+
+/* ---------- More sheet ---------- */
+.app-sheet {
+  background: transparent;
+  border: 0;
+  color: var(--fg, #eef1f8);
+  margin: auto auto 0;
+  max-height: 88vh;
+  max-height: 88dvh;
+  max-width: 560px;
+  padding: 0;
+  width: 100%;
+}
+.app-sheet::backdrop { background: rgba(4, 6, 12, .55); -webkit-backdrop-filter: blur(3px); backdrop-filter: blur(3px); }
+.app-sheet[open] { animation: app-sheet-up .22s cubic-bezier(.2, .8, .2, 1); }
+@keyframes app-sheet-up { from { transform: translateY(40px); opacity: .4; } to { transform: none; opacity: 1; } }
+.app-sheet__inner {
+  background: var(--card-bg, #191f2c);
+  border: 1px solid var(--border, rgba(255, 255, 255, .1));
+  border-bottom: 0;
+  border-radius: 24px 24px 0 0;
+  box-shadow: 0 -20px 60px rgba(0, 0, 0, .4);
+  display: grid;
+  gap: 18px;
+  max-height: 88vh;
+  max-height: 88dvh;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  padding: 10px 18px calc(18px + env(safe-area-inset-bottom, 0px));
+}
+.app-sheet__grabber { background: var(--border, rgba(255, 255, 255, .2)); border-radius: 3px; height: 5px; justify-self: center; width: 40px; }
+.app-sheet h3 { color: var(--fg-secondary, #a3abc2); font: 700 .7rem/1 Inter, system-ui, sans-serif; letter-spacing: .14em; margin: 0 0 10px; text-transform: uppercase; }
+.app-sheet section[hidden] { display: none; }
+
+.app-sheet__profile {
+  align-items: center;
+  background: var(--surface-hover, rgba(255, 255, 255, .05));
+  border: 1px solid var(--border, rgba(255, 255, 255, .1));
+  border-radius: 18px;
+  color: inherit;
+  cursor: pointer;
+  display: flex;
+  gap: 14px;
+  padding: 12px 14px;
+  text-align: left;
+}
+.app-sheet__profile > span { display: grid; gap: 3px; }
+.app-sheet__profile strong { font-size: 1rem; }
+.app-sheet__profile span span { color: var(--fg-secondary, #a3abc2); font-size: .84rem; }
+.app-sheet__avatar { border-radius: 50%; height: 44px; object-fit: cover; width: 44px; }
+
+.app-sheet__tabs { display: grid; gap: 8px; grid-template-columns: repeat(auto-fill, minmax(140px, 1fr)); }
+.app-sheet__tab {
+  background: var(--bg, #10141d);
+  border: 1px solid var(--border, rgba(255, 255, 255, .1));
+  border-radius: 14px;
+  color: var(--fg, #eef1f8);
+  cursor: pointer;
+  font: 600 .92rem Inter, system-ui, sans-serif;
+  min-height: 46px;
+  overflow: hidden;
+  padding: 0 14px;
+  text-align: left;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.app-sheet__tab[aria-current="page"] { background: var(--accent-soft, rgba(139, 92, 246, .16)); border-color: var(--primary, #baa9fb); color: var(--primary, #baa9fb); }
+
+.app-sheet__group + .app-sheet__group { margin-top: 8px; }
+.app-sheet__group h4 { color: var(--fg-secondary, #a4aec2); font: 600 .74rem/1 Inter, system-ui, sans-serif; letter-spacing: .06em; margin: 6px 10px 4px; text-transform: uppercase; }
+.app-sheet__links { display: grid; gap: 2px 12px; grid-template-columns: repeat(2, minmax(0, 1fr)); }
+.app-sheet__links a { align-items: center; border-radius: 10px; color: var(--fg, #eef1f8); display: flex; font-size: .94rem; min-height: 44px; padding: 0 10px; text-decoration: none; }
+.app-sheet__links a:hover, .app-sheet__links a:focus-visible { background: var(--surface-hover, rgba(255, 255, 255, .06)); }
+
+.app-sheet__account { border-top: 1px solid var(--border, rgba(255, 255, 255, .1)); display: grid; padding-top: 10px; }
+.app-sheet__row {
+  align-items: center;
+  background: none;
+  border: 0;
+  border-radius: 12px;
+  color: var(--fg, #eef1f8);
+  cursor: pointer;
+  display: flex;
+  font: 500 .96rem Inter, system-ui, sans-serif;
+  gap: 14px;
+  min-height: 48px;
+  padding: 0 10px;
+  text-align: left;
+}
+.app-sheet__row[hidden] { display: none; }
+.app-sheet__row svg { color: var(--fg-secondary, #a3abc2); flex: none; }
+.app-sheet__row:hover { background: var(--surface-hover, rgba(255, 255, 255, .06)); }
+.app-sheet__row[data-click-target="logoutBtn"] { color: #f87171; }
+.app-sheet__row[data-click-target="logoutBtn"] svg { color: currentColor; }
+.app-sheet__close {
+  background: var(--surface-hover, rgba(255, 255, 255, .06));
+  border: 1px solid var(--border, rgba(255, 255, 255, .1));
+  border-radius: 14px;
+  color: var(--fg, #eef1f8);
+  cursor: pointer;
+  font: 600 .95rem Inter, system-ui, sans-serif;
+  min-height: 48px;
+}
+.app-sheet :is(button, a):focus-visible { outline: 3px solid var(--primary, #baa9fb); outline-offset: 2px; }
+
+@media (min-width: 761px) {
+  .app-sheet { margin: auto; }
+  .app-sheet__inner { border-bottom: 1px solid var(--border, rgba(255, 255, 255, .1)); border-radius: 24px; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .app-sheet[open] { animation: none; }
+}
+
+/* ---------- Explore menu (dashboard header, wider screens) ----------
+   Built from site_chrome.NAV_MENUS, so it always matches the public header. */
+.header__actions { align-items: center; display: flex; gap: 10px; justify-content: flex-end; }
+.app-explore { position: relative; }
+.app-explore > summary {
+  align-items: center;
+  border: 1px solid var(--border, rgba(255, 255, 255, .12));
+  border-radius: 10px;
+  color: var(--fg, #eef1f8);
+  cursor: pointer;
+  display: inline-flex;
+  font: 600 .9rem Inter, system-ui, sans-serif;
+  gap: 7px;
+  list-style: none;
+  min-height: 46px;
+  padding: 0 14px;
+}
+.app-explore > summary::-webkit-details-marker { display: none; }
+.app-explore > summary:hover, .app-explore[open] > summary { background: var(--surface-hover, rgba(255, 255, 255, .06)); }
+.app-explore[open] .site-dd__chev { transform: rotate(180deg); }
+.app-explore__panel {
+  background: var(--card-bg, #191f2c);
+  border: 1px solid var(--border, rgba(255, 255, 255, .12));
+  border-radius: 16px;
+  box-shadow: var(--shadow-lg, 0 24px 70px #00000066);
+  display: grid;
+  gap: 4px 18px;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  padding: 16px;
+  position: absolute;
+  right: 0;
+  top: calc(100% + 8px);
+  width: min(760px, calc(100vw - 48px));
+  z-index: 60;
+}
+.app-explore__group { display: grid; align-content: start; }
+.app-explore__group p { color: var(--fg-secondary, #a4aec2); font: 600 .72rem/1 Inter, system-ui, sans-serif; letter-spacing: .06em; margin: 4px 10px 8px; text-transform: uppercase; }
+.app-explore__group a { border-radius: 8px; color: var(--fg, #eef1f8); font-size: .9rem; padding: 8px 10px; text-decoration: none; }
+.app-explore__group a:hover, .app-explore__group a:focus-visible { background: var(--surface-hover, rgba(255, 255, 255, .06)); color: var(--primary, #baa9fb); }
+@media (max-width: 960px) {
+  .app-explore__panel { grid-template-columns: repeat(2, minmax(0, 1fr)); width: min(440px, calc(100vw - 48px)); }
+}
+@media (max-width: 1100px) {
+  .app-explore > summary > span { display: none; }
+}
+@media (max-width: 768px) {
+  .header .header__actions { grid-column: 2; grid-row: 1; }
+}
+/* On phones the More sheet carries the same links. */
+@media (max-width: 760px) {
+  :is(body.has-app-dock, html.authenticated body.app-shell:not(.app-dock-off)) .app-explore { display: none; }
+}

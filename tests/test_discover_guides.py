@@ -8,12 +8,14 @@ from xml.etree import ElementTree
 
 import pytest
 
-from app.discover_catalog import MONTHLY_EDITIONS, TRAILS
+from app.discover_catalog import MONTHLY_EDITIONS, TRAILS, published_editions
 from app.discover_guides import GUIDES
 
 
 PROMOTED_TRAILS = {
     "one-evening-well-spent", "finding-your-feet", "beautifully-strange-worlds",
+    "notice-the-details", "small-adventures", "clever-mysteries", "found-family",
+    "weather-and-windows", "make-something", "distant-futures",
 }
 SITEMAP_NS = {"sm": "http://www.sitemaps.org/schemas/sitemap/0.9"}
 
@@ -182,7 +184,7 @@ def test_sitemap_has_exact_promoted_trails_and_preserves_monthly_editions(client
     discover_paths = {urlsplit(url).path for url in entries if urlsplit(url).path.startswith("/discover")}
     assert discover_paths == {
         "/discover", *{f"/discover/{slug}" for slug in PROMOTED_TRAILS},
-        *{f"/discover/monthly/{slug}" for slug in MONTHLY_EDITIONS},
+        *{f"/discover/monthly/{slug}" for slug in published_editions()},
     }
     for slug, guide in GUIDES.items():
         entry = entries[f"https://omnitrackr.xyz/discover/{slug}"]
@@ -193,15 +195,15 @@ def test_sitemap_has_exact_promoted_trails_and_preserves_monthly_editions(client
         assert response.headers["x-robots-tag"] == "noindex, follow"
         assert any(attrs.get("name") == "robots" and attrs["content"] == "noindex, follow" for attrs in page.attrs("meta"))
         assert not page.articles
-    for slug in MONTHLY_EDITIONS:
+    for slug in published_editions():
         response = client.get(f"/discover/monthly/{slug}")
         assert "noindex" not in response.headers.get("x-robots-tag", "")
         page = GuidePage(response.text)
-        assert MONTHLY_EDITIONS[slug]["essay"] in page.visible_text
+        assert published_editions()[slug]["essay"] in page.visible_text
         entry = entries[f"https://omnitrackr.xyz/discover/monthly/{slug}"]
-        assert entry.findtext("sm:lastmod", namespaces=SITEMAP_NS) == MONTHLY_EDITIONS[slug]["published_date"]
+        assert entry.findtext("sm:lastmod", namespaces=SITEMAP_NS) == published_editions()[slug]["published_date"]
         article = page.articles[0]
-        assert article["datePublished"] == MONTHLY_EDITIONS[slug]["published_date"]
+        assert article["datePublished"] == published_editions()[slug]["published_date"]
         assert article["mainEntityOfPage"] == f"https://omnitrackr.xyz/discover/monthly/{slug}"
 
 

@@ -4,13 +4,129 @@ Handles schema migrations and table creation.
 """
 from sqlalchemy import inspect, text
 
-from . import database
+from . import database, models
 from .database import engine
+
+
+MEDIA_TABLES = {
+    "movies": models.Movie, "tv_shows": models.TVShow, "anime": models.Anime,
+    "video_games": models.VideoGame, "music": models.Music, "books": models.Book,
+}
+
+
+class MigrationIntegrityError(RuntimeError):
+    """An ambiguous or interrupted schema upgrade needs explicit recovery."""
+
+
+def _restore_interrupted_sqlite_review_tables():
+    """Restore the original table only for the prior rebuild's empty destination."""
+    if engine.dialect.name != "sqlite":
+        return
+    tables = set(inspect(engine).get_table_names())
+    candidates = [table for table in MEDIA_TABLES if table + "_old" in tables]
+    if not candidates:
+        return
+    with engine.connect() as conn:
+        try:
+            # sqlite3's legacy transaction mode does not begin transactions for
+            # DDL. An explicit transaction makes the drop/rename recoverable.
+            conn.exec_driver_sql("BEGIN IMMEDIATE")
+            for table in candidates:
+                old = table + "_old"
+                if table not in tables:
+                    raise MigrationIntegrityError(f"Cannot safely restore {old}: its replacement is missing")
+                inspector = inspect(conn)
+                source = {column["name"]: column for column in inspector.get_columns(old)}
+                target = {column["name"]: column for column in inspector.get_columns(table)}
+                expected = set(MEDIA_TABLES[table].__table__.columns.keys())
+                # The interrupted rebuild predates nullable added-at tracking.
+                # Restore its complete source first; the normal column upgrade
+                # below then leaves those historical dates unknown.
+                required = expected - {"added_at"}
+                recognized = (
+                    required <= source.keys()
+                    and set(target) - {"added_at"} in (required, required - {"review_public"})
+                    and all(
+                        "added_at" not in columns
+                        or (columns["added_at"]["nullable"]
+                            and str(columns["added_at"]["type"]).upper() in {"DATETIME", "TIMESTAMP"})
+                        for columns in (source, target)
+                    )
+                    and "TEXT" not in str(source["review"]["type"]).upper()
+                    and "TEXT" in str(target["review"]["type"]).upper()
+                )
+                if not recognized:
+                    raise MigrationIntegrityError(f"Cannot safely restore {old}: unrecognized interrupted schema")
+                if conn.exec_driver_sql(f'SELECT 1 FROM "{table}" LIMIT 1').first() is not None:
+                    raise MigrationIntegrityError(f"Cannot safely restore {old}: replacement {table} has rows; ownership and ID conflicts require explicit recovery")
+                if conn.exec_driver_sql("SELECT 1 FROM sqlite_schema WHERE type='trigger' AND tbl_name=? LIMIT 1", (table,)).first():
+                    raise MigrationIntegrityError(f"Cannot safely restore {old}: replacement {table} has triggers")
+                conn.exec_driver_sql(f'DROP TABLE "{table}"')
+                # SQLite updates inbound FK and trigger references that the
+                # original rename had redirected to the *_old table.
+                conn.exec_driver_sql(f'ALTER TABLE "{old}" RENAME TO "{table}"')
+            conn.commit()
+        except Exception as exc:
+            conn.rollback()
+            if isinstance(exc, MigrationIntegrityError):
+                raise
+            raise MigrationIntegrityError("Interrupted media-table restoration rolled back") from exc
+    for table in candidates:
+        print(f"Restored {table} from an interrupted review migration")
+
+
+def _migrate_legacy_tv_columns():
+    inspector = inspect(engine)
+    if not inspector.has_table("tv_shows"):
+        return
+    columns = {column["name"] for column in inspector.get_columns("tv_shows")}
+    if not {"creator", "year_started"} <= columns:
+        return
+    with engine.connect() as conn:
+        try:
+            if engine.dialect.name == "sqlite":
+                conn.exec_driver_sql("BEGIN IMMEDIATE")
+            if "year" in columns:
+                raise MigrationIntegrityError("Legacy TV table contains both year and year_started; explicit recovery is required")
+            if "user_id" not in columns:
+                if conn.execute(text("SELECT 1 FROM tv_shows LIMIT 1")).first() is not None:
+                    raise MigrationIntegrityError("Legacy TV rows have no user_id; explicit ownership assignment is required")
+                conn.execute(text("ALTER TABLE tv_shows ADD COLUMN user_id INTEGER NOT NULL REFERENCES users(id)"))
+                conn.execute(text("CREATE INDEX IF NOT EXISTS ix_tv_shows_user_id ON tv_shows(user_id)"))
+            # Renaming one column preserves every other column, FK, index,
+            # privacy flag and nullable value instead of copying a short list.
+            conn.execute(text("ALTER TABLE tv_shows RENAME COLUMN year_started TO year"))
+            conn.commit()
+        except Exception as exc:
+            conn.rollback()
+            if isinstance(exc, MigrationIntegrityError):
+                raise
+            raise MigrationIntegrityError("Legacy TV column migration rolled back") from exc
+    print("Renamed legacy tv_shows.year_started to year")
+
+
+def _migrate_review_column_types():
+    # SQLite VARCHAR and TEXT both have TEXT affinity, with no VARCHAR length
+    # restriction. Rebuilding a legacy table changes no storage behavior and
+    # risks losing columns, indexes and references, so leave it intact.
+    if engine.dialect.name == "sqlite":
+        return
+    for table in MEDIA_TABLES:
+        inspector = inspect(engine)
+        if not inspector.has_table(table):
+            continue
+        review = next((column for column in inspector.get_columns(table) if column["name"] == "review"), None)
+        if review and "TEXT" not in str(review["type"]).upper():
+            with engine.begin() as conn:
+                conn.execute(text(f'ALTER TABLE "{table}" ALTER COLUMN review TYPE TEXT'))
+            print(f"Migrated {table}.review to TEXT")
 
 
 def run_migrations():
     """Run all database migrations."""
     try:
+        _restore_interrupted_sqlite_review_tables()
+        _migrate_legacy_tv_columns()
         inspector = inspect(engine)
 
         if inspector.has_table("users"):
@@ -119,6 +235,36 @@ def run_migrations():
                     conn.execute(text("ALTER TABLE users ADD COLUMN books_visible BOOLEAN DEFAULT TRUE"))
                     conn.commit()
                     print("Added books_visible column to users table")
+            if "manga_private" not in user_columns:
+                with engine.connect() as conn:
+                    conn.execute(text("ALTER TABLE users ADD COLUMN manga_private BOOLEAN NOT NULL DEFAULT FALSE"))
+                    conn.commit()
+                    print("Added manga_private column to users table")
+            if "manga_visible" not in user_columns:
+                with engine.connect() as conn:
+                    conn.execute(text("ALTER TABLE users ADD COLUMN manga_visible BOOLEAN NOT NULL DEFAULT TRUE"))
+                    conn.commit()
+                    print("Added manga_visible column to users table")
+            if "podcasts_private" not in user_columns:
+                with engine.connect() as conn:
+                    conn.execute(text("ALTER TABLE users ADD COLUMN podcasts_private BOOLEAN NOT NULL DEFAULT FALSE"))
+                    conn.commit()
+                    print("Added podcasts_private column to users table")
+            if "podcasts_visible" not in user_columns:
+                with engine.connect() as conn:
+                    conn.execute(text("ALTER TABLE users ADD COLUMN podcasts_visible BOOLEAN NOT NULL DEFAULT TRUE"))
+                    conn.commit()
+                    print("Added podcasts_visible column to users table")
+            if "audiobooks_private" not in user_columns:
+                with engine.connect() as conn:
+                    conn.execute(text("ALTER TABLE users ADD COLUMN audiobooks_private BOOLEAN NOT NULL DEFAULT FALSE"))
+                    conn.commit()
+                    print("Added audiobooks_private column to users table")
+            if "audiobooks_visible" not in user_columns:
+                with engine.connect() as conn:
+                    conn.execute(text("ALTER TABLE users ADD COLUMN audiobooks_visible BOOLEAN NOT NULL DEFAULT TRUE"))
+                    conn.commit()
+                    print("Added audiobooks_visible column to users table")
             if "profile_picture_url" not in user_columns:
                 with engine.connect() as conn:
                     conn.execute(text("ALTER TABLE users ADD COLUMN profile_picture_url VARCHAR"))
@@ -158,6 +304,30 @@ def run_migrations():
                     conn.execute(text("UPDATE users SET login_count = 0 WHERE login_count IS NULL"))
                     conn.commit()
                     print("Added login_count column to users table")
+            if "last_seen_on" not in user_columns:
+                with engine.connect() as conn:
+                    conn.execute(text("ALTER TABLE users ADD COLUMN last_seen_on DATE"))
+                    conn.commit()
+                    print("Added last_seen_on column to users table")
+            if "visit_days" not in user_columns:
+                with engine.connect() as conn:
+                    conn.execute(text("ALTER TABLE users ADD COLUMN visit_days INTEGER DEFAULT 0"))
+                    conn.execute(text("UPDATE users SET visit_days = 0 WHERE visit_days IS NULL"))
+                    conn.commit()
+                    print("Added visit_days column to users table")
+            if "google_sub" not in user_columns:
+                with engine.connect() as conn:
+                    conn.execute(text("ALTER TABLE users ADD COLUMN google_sub VARCHAR"))
+                    conn.commit()
+                    print("Added google_sub column to users table")
+            if "password_set" not in user_columns:
+                with engine.connect() as conn:
+                    conn.execute(text("ALTER TABLE users ADD COLUMN password_set BOOLEAN"))
+                    conn.commit()
+                    print("Added password_set column to users table")
+            with engine.connect() as conn:
+                conn.execute(text("CREATE UNIQUE INDEX IF NOT EXISTS ix_users_google_sub ON users(google_sub)"))
+                conn.commit()
             if database.DATABASE_URL.startswith("postgresql"):
                 with engine.connect() as conn:
                     conn.execute(text("CREATE INDEX IF NOT EXISTS ix_users_username ON users(username)"))
@@ -213,13 +383,13 @@ def run_migrations():
                     conn.commit()
                     print("Added curator_note column to collection_items table")
 
-        review_public_columns_added = False
+        review_public_columns_added = set()
 
         if inspector.has_table("movies"):
             existing_columns = {col["name"] for col in inspector.get_columns("movies")}
             if "review" not in existing_columns:
                 with engine.connect() as conn:
-                    conn.execute(text("ALTER TABLE movies ADD COLUMN review VARCHAR"))
+                    conn.execute(text("ALTER TABLE movies ADD COLUMN review TEXT"))
                     conn.commit()
             if "poster_url" not in existing_columns:
                 with engine.connect() as conn:
@@ -230,7 +400,7 @@ def run_migrations():
                     conn.execute(text("ALTER TABLE movies ADD COLUMN review_public BOOLEAN DEFAULT FALSE"))
                     conn.commit()
                     print("Added review_public column to movies table")
-                review_public_columns_added = True
+                review_public_columns_added.add("movies")
             
             rating_column = next((col for col in inspector.get_columns("movies") if col["name"] == "rating"), None)
             if rating_column:
@@ -248,60 +418,29 @@ def run_migrations():
         if inspector.has_table("tv_shows"):
             tv_columns = {col["name"] for col in inspector.get_columns("tv_shows")}
 
-            if "creator" in tv_columns and "year_started" in tv_columns:
+            if "poster_url" not in tv_columns:
                 with engine.connect() as conn:
-                    conn.execute(text("CREATE TABLE tv_shows_backup AS SELECT * FROM tv_shows"))
-
-                    conn.execute(text("DROP TABLE tv_shows"))
-
-                    conn.execute(text("""
-                        CREATE TABLE tv_shows (
-                            id INTEGER PRIMARY KEY,
-                            title VARCHAR,
-                            year INTEGER,
-                            seasons INTEGER,
-                            episodes INTEGER,
-                            rating FLOAT,
-                            watched BOOLEAN DEFAULT 0,
-                            review VARCHAR,
-                            poster_url VARCHAR
-                        )
-                    """))
-
-                    conn.execute(text("""
-                        INSERT INTO tv_shows (id, title, year, seasons, episodes, rating, watched, review, poster_url)
-                        SELECT id, title, year_started, seasons, episodes, rating, watched, review, NULL
-                        FROM tv_shows_backup
-                    """))
-
-                    conn.execute(text("DROP TABLE tv_shows_backup"))
-
+                    conn.execute(text("ALTER TABLE tv_shows ADD COLUMN poster_url VARCHAR"))
                     conn.commit()
-                    print("Successfully migrated tv_shows table to new schema")
-            else:
-                if "poster_url" not in tv_columns:
-                    with engine.connect() as conn:
-                        conn.execute(text("ALTER TABLE tv_shows ADD COLUMN poster_url VARCHAR"))
-                        conn.commit()
-                if "review_public" not in tv_columns:
-                    with engine.connect() as conn:
-                        conn.execute(text("ALTER TABLE tv_shows ADD COLUMN review_public BOOLEAN DEFAULT FALSE"))
-                        conn.commit()
-                        print("Added review_public column to tv_shows table")
-                    review_public_columns_added = True
-                
-                rating_column = next((col for col in inspector.get_columns("tv_shows") if col["name"] == "rating"), None)
-                if rating_column:
-                    if database.DATABASE_URL.startswith("postgresql"):
-                        col_type = str(rating_column.get("type", "")).upper()
-                        if "INT" in col_type and "FLOAT" not in col_type and "NUMERIC" not in col_type and "REAL" not in col_type:
-                            try:
-                                with engine.connect() as conn:
-                                    conn.execute(text("ALTER TABLE tv_shows ALTER COLUMN rating TYPE FLOAT USING rating::float"))
-                                    conn.commit()
-                                    print("Converted tv_shows.rating column from INTEGER to FLOAT")
-                            except Exception as e:
-                                print(f"Note: Could not convert tv_shows.rating column type (may already be correct): {e}")
+            if "review_public" not in tv_columns:
+                with engine.connect() as conn:
+                    conn.execute(text("ALTER TABLE tv_shows ADD COLUMN review_public BOOLEAN DEFAULT FALSE"))
+                    conn.commit()
+                    print("Added review_public column to tv_shows table")
+                review_public_columns_added.add("tv_shows")
+
+            rating_column = next((col for col in inspector.get_columns("tv_shows") if col["name"] == "rating"), None)
+            if rating_column:
+                if database.DATABASE_URL.startswith("postgresql"):
+                    col_type = str(rating_column.get("type", "")).upper()
+                    if "INT" in col_type and "FLOAT" not in col_type and "NUMERIC" not in col_type and "REAL" not in col_type:
+                        try:
+                            with engine.connect() as conn:
+                                conn.execute(text("ALTER TABLE tv_shows ALTER COLUMN rating TYPE FLOAT USING rating::float"))
+                                conn.commit()
+                                print("Converted tv_shows.rating column from INTEGER to FLOAT")
+                        except Exception as e:
+                            print(f"Note: Could not convert tv_shows.rating column type (may already be correct): {e}")
 
         if not inspector.has_table("anime"):
             print("Anime table will be created by Base.metadata.create_all")
@@ -317,7 +456,7 @@ def run_migrations():
                     conn.execute(text("ALTER TABLE anime ADD COLUMN review_public BOOLEAN DEFAULT FALSE"))
                     conn.commit()
                     print("Added review_public column to anime table")
-                review_public_columns_added = True
+                review_public_columns_added.add("anime")
             
             rating_column = next((col for col in inspector.get_columns("anime") if col["name"] == "rating"), None)
             if rating_column:
@@ -361,7 +500,7 @@ def run_migrations():
                     conn.execute(text("ALTER TABLE video_games ADD COLUMN review_public BOOLEAN DEFAULT FALSE"))
                     conn.commit()
                     print("Added review_public column to video_games table")
-                review_public_columns_added = True
+                review_public_columns_added.add("video_games")
             rating_column = next((col for col in inspector.get_columns("video_games") if col["name"] == "rating"), None)
             if rating_column:
                 if database.DATABASE_URL.startswith("postgresql"):
@@ -389,7 +528,7 @@ def run_migrations():
                     conn.execute(text("ALTER TABLE music ADD COLUMN review_public BOOLEAN DEFAULT FALSE"))
                     conn.commit()
                     print("Added review_public column to music table")
-                review_public_columns_added = True
+                review_public_columns_added.add("music")
             rating_column = next((col for col in inspector.get_columns("music") if col["name"] == "rating"), None)
             if rating_column:
                 if database.DATABASE_URL.startswith("postgresql"):
@@ -417,7 +556,7 @@ def run_migrations():
                     conn.execute(text("ALTER TABLE books ADD COLUMN review_public BOOLEAN DEFAULT FALSE"))
                     conn.commit()
                     print("Added review_public column to books table")
-                review_public_columns_added = True
+                review_public_columns_added.add("books")
             rating_column = next((col for col in inspector.get_columns("books") if col["name"] == "rating"), None)
             if rating_column:
                 if database.DATABASE_URL.startswith("postgresql"):
@@ -433,41 +572,30 @@ def run_migrations():
 
         if review_public_columns_added and inspector.has_table("users"):
             try:
-                with engine.connect() as conn:
-                    conn.execute(text("""
-                        UPDATE movies SET review_public = TRUE WHERE user_id IN
-                        (SELECT id FROM users WHERE reviews_public = TRUE)
-                        AND review IS NOT NULL AND review != ''
-                    """))
-                    conn.execute(text("""
-                        UPDATE tv_shows SET review_public = TRUE WHERE user_id IN
-                        (SELECT id FROM users WHERE reviews_public = TRUE)
-                        AND review IS NOT NULL AND review != ''
-                    """))
-                    conn.execute(text("""
-                        UPDATE anime SET review_public = TRUE WHERE user_id IN
-                        (SELECT id FROM users WHERE reviews_public = TRUE)
-                        AND review IS NOT NULL AND review != ''
-                    """))
-                    conn.execute(text("""
-                        UPDATE video_games SET review_public = TRUE WHERE user_id IN
-                        (SELECT id FROM users WHERE reviews_public = TRUE)
-                        AND review IS NOT NULL AND review != ''
-                    """))
-                    conn.execute(text("""
-                        UPDATE music SET review_public = TRUE WHERE user_id IN
-                        (SELECT id FROM users WHERE reviews_public = TRUE)
-                        AND review IS NOT NULL AND review != ''
-                    """))
-                    conn.execute(text("""
-                        UPDATE books SET review_public = TRUE WHERE user_id IN
-                        (SELECT id FROM users WHERE reviews_public = TRUE)
-                        AND review IS NOT NULL AND review != ''
-                    """))
-                    conn.commit()
-                    print("Backfilled review_public for legacy public reviews")
+                with engine.begin() as conn:
+                    # Existing per-item false flags are an explicit privacy
+                    # choice. Only initialize a column added in this run.
+                    for table in sorted(review_public_columns_added):
+                        conn.execute(text(f"""
+                            UPDATE "{table}" SET review_public = TRUE WHERE user_id IN
+                            (SELECT id FROM users WHERE reviews_public = TRUE)
+                            AND review IS NOT NULL AND review != ''
+                        """))
+                print("Backfilled review_public for legacy public reviews")
             except Exception as e:
                 print(f"Note: Could not backfill review_public values: {e}")
+
+        # Responses now require a boolean. Old API writes could store NULL,
+        # which public pages already treated as private, so keep it private.
+        try:
+            with engine.begin() as conn:
+                for table in ("movies", "tv_shows", "anime", "video_games", "music", "books", "manga", "podcasts", "audiobooks"):
+                    if inspector.has_table(table) and "review_public" in {
+                        col["name"] for col in inspect(engine).get_columns(table)
+                    }:
+                        conn.execute(text(f'UPDATE "{table}" SET review_public = FALSE WHERE review_public IS NULL'))
+        except Exception as e:
+            print(f"Note: Could not clear empty review_public values: {e}")
 
         if not inspector.has_table("friend_requests"):
             with engine.connect() as conn:
@@ -671,121 +799,7 @@ def run_migrations():
                 conn.commit()
                 print("Created custom_tab_items table")
 
-        if inspector.has_table("movies"):
-            movie_columns = {col["name"]: col["type"] for col in inspector.get_columns("movies")}
-            if "review" in movie_columns and "TEXT" not in str(movie_columns["review"]).upper():
-                with engine.connect() as conn:
-                    if database.DATABASE_URL.startswith("sqlite"):
-                        conn.execute(text("ALTER TABLE movies RENAME TO movies_old"))
-                        conn.execute(text("""
-                            CREATE TABLE movies (
-                                id INTEGER PRIMARY KEY AUTOINCREMENT,
-                                title VARCHAR,
-                                director VARCHAR,
-                                year INTEGER,
-                                rating FLOAT,
-                                watched BOOLEAN DEFAULT 0,
-                                review TEXT,
-                                poster_url VARCHAR,
-                                user_id INTEGER NOT NULL REFERENCES users(id)
-                            )
-                        """))
-                        conn.execute(text("CREATE INDEX ix_movies_user_id ON movies(user_id)"))
-                        conn.execute(text("CREATE INDEX ix_movies_title ON movies(title)"))
-                        conn.execute(text("CREATE INDEX ix_movies_director ON movies(director)"))
-                        conn.execute(text("INSERT INTO movies SELECT * FROM movies_old"))
-                        conn.execute(text("DROP TABLE movies_old"))
-                    else:
-                        conn.execute(text("ALTER TABLE movies ALTER COLUMN review TYPE TEXT"))
-                    conn.commit()
-                    print("Migrated movies.review to TEXT")
-
-        if inspector.has_table("tv_shows"):
-            tv_columns = {col["name"]: col["type"] for col in inspector.get_columns("tv_shows")}
-            if "review" in tv_columns and "TEXT" not in str(tv_columns["review"]).upper():
-                with engine.connect() as conn:
-                    if database.DATABASE_URL.startswith("sqlite"):
-                        conn.execute(text("ALTER TABLE tv_shows RENAME TO tv_shows_old"))
-                        conn.execute(text("""
-                            CREATE TABLE tv_shows (
-                                id INTEGER PRIMARY KEY AUTOINCREMENT,
-                                title VARCHAR,
-                                year INTEGER,
-                                seasons INTEGER,
-                                episodes INTEGER,
-                                rating FLOAT,
-                                watched BOOLEAN DEFAULT 0,
-                                review TEXT,
-                                poster_url VARCHAR,
-                                user_id INTEGER NOT NULL REFERENCES users(id)
-                            )
-                        """))
-                        conn.execute(text("CREATE INDEX ix_tv_shows_user_id ON tv_shows(user_id)"))
-                        conn.execute(text("CREATE INDEX ix_tv_shows_title ON tv_shows(title)"))
-                        conn.execute(text("INSERT INTO tv_shows SELECT * FROM tv_shows_old"))
-                        conn.execute(text("DROP TABLE tv_shows_old"))
-                    else:
-                        conn.execute(text("ALTER TABLE tv_shows ALTER COLUMN review TYPE TEXT"))
-                    conn.commit()
-                    print("Migrated tv_shows.review to TEXT")
-
-        if inspector.has_table("anime"):
-            anime_columns = {col["name"]: col["type"] for col in inspector.get_columns("anime")}
-            if "review" in anime_columns and "TEXT" not in str(anime_columns["review"]).upper():
-                with engine.connect() as conn:
-                    if database.DATABASE_URL.startswith("sqlite"):
-                        conn.execute(text("ALTER TABLE anime RENAME TO anime_old"))
-                        conn.execute(text("""
-                            CREATE TABLE anime (
-                                id INTEGER PRIMARY KEY AUTOINCREMENT,
-                                title VARCHAR,
-                                year INTEGER,
-                                seasons INTEGER,
-                                episodes INTEGER,
-                                rating FLOAT,
-                                watched BOOLEAN DEFAULT 0,
-                                review TEXT,
-                                poster_url VARCHAR,
-                                user_id INTEGER NOT NULL REFERENCES users(id)
-                            )
-                        """))
-                        conn.execute(text("CREATE INDEX ix_anime_user_id ON anime(user_id)"))
-                        conn.execute(text("CREATE INDEX ix_anime_title ON anime(title)"))
-                        conn.execute(text("INSERT INTO anime SELECT * FROM anime_old"))
-                        conn.execute(text("DROP TABLE anime_old"))
-                    else:
-                        conn.execute(text("ALTER TABLE anime ALTER COLUMN review TYPE TEXT"))
-                    conn.commit()
-                    print("Migrated anime.review to TEXT")
-
-        if inspector.has_table("video_games"):
-            vg_columns = {col["name"]: col["type"] for col in inspector.get_columns("video_games")}
-            if "review" in vg_columns and "TEXT" not in str(vg_columns["review"]).upper():
-                with engine.connect() as conn:
-                    if database.DATABASE_URL.startswith("sqlite"):
-                        conn.execute(text("ALTER TABLE video_games RENAME TO video_games_old"))
-                        conn.execute(text("""
-                            CREATE TABLE video_games (
-                                id INTEGER PRIMARY KEY AUTOINCREMENT,
-                                title VARCHAR,
-                                release_date TIMESTAMP,
-                                genres VARCHAR,
-                                rating FLOAT,
-                                played BOOLEAN DEFAULT 0,
-                                review TEXT,
-                                cover_art_url VARCHAR,
-                                rawg_link VARCHAR,
-                                user_id INTEGER NOT NULL REFERENCES users(id)
-                            )
-                        """))
-                        conn.execute(text("CREATE INDEX ix_video_games_user_id ON video_games(user_id)"))
-                        conn.execute(text("CREATE INDEX ix_video_games_title ON video_games(title)"))
-                        conn.execute(text("INSERT INTO video_games SELECT * FROM video_games_old"))
-                        conn.execute(text("DROP TABLE video_games_old"))
-                    else:
-                        conn.execute(text("ALTER TABLE video_games ALTER COLUMN review TYPE TEXT"))
-                    conn.commit()
-                    print("Migrated video_games.review to TEXT")
+        _migrate_review_column_types()
 
         if inspector.has_table("activity_entries"):
             with engine.connect() as conn:
@@ -795,7 +809,296 @@ def run_migrations():
                 ))
                 conn.commit()
 
+    except MigrationIntegrityError:
+        # A partially restored/ambiguous library must not serve an empty or
+        # conflicting replacement while hiding the source under another name.
+        raise
     except Exception as e:
         print(f"Migration warning: {e}")
         pass
 
+    add_library_added_at_columns()
+    add_notification_link_column()
+    add_supporter_wall_column()
+    add_supporter_banner_column()
+    add_membership_columns()
+    add_public_diary_column()
+    add_taste_match_link_column()
+    add_calendar_episodes_column()
+    add_lookup_indexes()
+    add_kofi_matching_columns()
+    fold_unreadable_traffic_sources()
+
+
+def add_notification_link_column():
+    """Add a nullable link column to notifications. Existing rows keep NULL (no link)."""
+    try:
+        inspector = inspect(engine)
+        if not inspector.has_table("notifications"):
+            return
+        if "link" in {col["name"] for col in inspector.get_columns("notifications")}:
+            return
+        with engine.connect() as conn:
+            conn.execute(text("ALTER TABLE notifications ADD COLUMN link VARCHAR"))
+            conn.commit()
+            print("Added link column to notifications table")
+    except Exception as e:
+        print(f"Migration warning (notification link): {e}")
+
+
+def add_supporter_wall_column():
+    """Add the opt-in supporter wall flag. Existing supporters start off the wall (FALSE)."""
+    try:
+        inspector = inspect(engine)
+        if not inspector.has_table("supporters"):
+            return
+        if "on_wall" in {col["name"] for col in inspector.get_columns("supporters")}:
+            return
+        with engine.connect() as conn:
+            conn.execute(text("ALTER TABLE supporters ADD COLUMN on_wall BOOLEAN NOT NULL DEFAULT FALSE"))
+            conn.commit()
+            print("Added on_wall column to supporters table")
+    except Exception as e:
+        print(f"Migration warning (supporter wall): {e}")
+
+
+def add_supporter_banner_column():
+    """Add the optional profile banner. Existing supporters start with none (NULL), so profiles look the same."""
+    try:
+        inspector = inspect(engine)
+        if not inspector.has_table("supporters"):
+            return
+        if "banner" in {col["name"] for col in inspector.get_columns("supporters")}:
+            return
+        with engine.connect() as conn:
+            conn.execute(text("ALTER TABLE supporters ADD COLUMN banner VARCHAR(24)"))
+            conn.commit()
+            print("Added banner column to supporters table")
+    except Exception as e:
+        print(f"Migration warning (supporter banner): {e}")
+
+
+def add_membership_columns():
+    """Add Ko-fi membership tiers. Every new column is nullable or defaults off, so nothing changes for anyone.
+
+    Supporters already marked monthly keep membership extras until their current perks run out
+    (member_until = active_until); their next membership payment sets the real tier.
+    """
+    try:
+        inspector = inspect(engine)
+        with engine.connect() as conn:
+            if inspector.has_table("kofi_payments"):
+                if "tier_name" not in {col["name"] for col in inspector.get_columns("kofi_payments")}:
+                    conn.execute(text("ALTER TABLE kofi_payments ADD COLUMN tier_name VARCHAR(40)"))
+                    print("Added tier_name column to kofi_payments table")
+            if inspector.has_table("supporters"):
+                columns = {col["name"] for col in inspector.get_columns("supporters")}
+                if "tier" not in columns:
+                    conn.execute(text("ALTER TABLE supporters ADD COLUMN tier VARCHAR(24)"))
+                if "banner_motion" not in columns:
+                    conn.execute(text("ALTER TABLE supporters ADD COLUMN banner_motion BOOLEAN NOT NULL DEFAULT FALSE"))
+                if "member_until" not in columns:
+                    conn.execute(text("ALTER TABLE supporters ADD COLUMN member_until TIMESTAMP"))
+                    conn.execute(text("UPDATE supporters SET member_until = active_until WHERE monthly = TRUE"))
+                    print("Added membership columns to supporters table")
+            conn.commit()
+    except Exception as e:
+        print(f"Migration warning (memberships): {e}")
+
+
+def add_public_diary_column():
+    """Add the opt-in public diary flag. Existing profiles start with it off (FALSE), so they look the same."""
+    try:
+        inspector = inspect(engine)
+        if not inspector.has_table("public_profiles"):
+            return
+        if "show_diary" in {col["name"] for col in inspector.get_columns("public_profiles")}:
+            return
+        with engine.connect() as conn:
+            conn.execute(text("ALTER TABLE public_profiles ADD COLUMN show_diary BOOLEAN NOT NULL DEFAULT FALSE"))
+            conn.commit()
+            print("Added show_diary column to public_profiles table")
+    except Exception as e:
+        print(f"Migration warning (public diary): {e}")
+
+
+def add_taste_match_link_column():
+    """Add the opt-in compare-tastes link flag. Existing profiles start with it off (FALSE), so nothing new is shared."""
+    try:
+        inspector = inspect(engine)
+        if not inspector.has_table("public_profiles"):
+            return
+        if "show_taste_match" in {col["name"] for col in inspector.get_columns("public_profiles")}:
+            return
+        with engine.connect() as conn:
+            conn.execute(text("ALTER TABLE public_profiles ADD COLUMN show_taste_match BOOLEAN NOT NULL DEFAULT FALSE"))
+            conn.commit()
+            print("Added show_taste_match column to public_profiles table")
+    except Exception as e:
+        print(f"Migration warning (taste match link): {e}")
+
+
+LIBRARY_TABLES = ("movies", "tv_shows", "anime", "video_games", "music", "books", "manga", "podcasts", "audiobooks")
+
+
+def add_library_added_at_columns():
+    """Add a nullable added_at column to each library table.
+
+    Existing rows keep NULL: their real add date was never recorded, so nothing
+    is backfilled. New rows get a timestamp from the model default.
+    """
+    try:
+        inspector = inspect(engine)
+        for table in LIBRARY_TABLES:
+            if not inspector.has_table(table):
+                continue
+            columns = {col["name"] for col in inspector.get_columns(table)}
+            if "added_at" in columns:
+                continue
+            with engine.connect() as conn:
+                conn.execute(text(f"ALTER TABLE {table} ADD COLUMN added_at TIMESTAMP"))
+                conn.commit()
+                print(f"Added added_at column to {table} table")
+    except Exception as e:
+        print(f"Migration warning (added_at): {e}")
+
+
+
+def add_calendar_episodes_column():
+    """Add the weekly-episodes switch to private calendars.
+
+    Existing feeds get FALSE so the calendars people already subscribed to keep
+    showing exactly what they did; new feeds get TRUE from the model default.
+    """
+    try:
+        inspector = inspect(engine)
+        if not inspector.has_table("calendar_feeds"):
+            return
+        if "include_episodes" in {col["name"] for col in inspector.get_columns("calendar_feeds")}:
+            return
+        with engine.connect() as conn:
+            conn.execute(text("ALTER TABLE calendar_feeds ADD COLUMN include_episodes BOOLEAN NOT NULL DEFAULT FALSE"))
+            conn.commit()
+            print("Added include_episodes column to calendar_feeds table")
+    except Exception as e:
+        print(f"Migration warning (calendar episodes): {e}")
+
+
+# (table, creator column) for the "More by" lists on title pages.
+CREATOR_COLUMNS = (("movies", "director"), ("music", "artist"), ("books", "author"),
+                   ("manga", "author"), ("podcasts", "host"), ("audiobooks", "author"))
+
+
+def add_lookup_indexes():
+    """Indexes for two lookups that read whole library tables (Oct 28 speed pass).
+
+    * Public reviews: the review feed, sitemap and profiles only ever want rows with
+      review_public set, a few percent of each table. A partial index covers just those.
+    * "More by this director/author" matches lower(trim(creator)); an index on that
+      expression turns a full table read into a lookup.
+
+    Indexes only: no table or row changes. IF NOT EXISTS makes each one run once.
+    """
+    try:
+        inspector = inspect(engine)
+        statements = []
+        for table in LIBRARY_TABLES:
+            if inspector.has_table(table):
+                statements.append(f"CREATE INDEX IF NOT EXISTS ix_{table}_public_reviews "
+                                  f"ON {table} (user_id) WHERE review_public = TRUE")
+        for table, column in CREATOR_COLUMNS:
+            if inspector.has_table(table):
+                statements.append(f"CREATE INDEX IF NOT EXISTS ix_{table}_{column}_lookup "
+                                  f"ON {table} (lower(trim({column})))")
+        for statement in statements:
+            with engine.connect() as conn:
+                conn.execute(text(statement))
+                conn.commit()
+    except Exception as e:
+        print(f"Migration warning (lookup indexes): {e}")
+
+
+KOFI_MATCHING_COLUMNS = (
+    ("email_key", "VARCHAR(64)"),
+    ("transaction_hash", "VARCHAR(64)"),
+    ("test", "BOOLEAN NOT NULL DEFAULT FALSE"),
+    ("dismissed_at", "TIMESTAMP"),
+    ("claimed_by", "INTEGER REFERENCES users(id) ON DELETE SET NULL"),
+    ("claimed_at", "TIMESTAMP"),
+)
+
+
+def add_kofi_matching_columns():
+    """Add the Oct 30 Ko-fi matching columns. All nullable or FALSE, so every recorded payment stays as it was.
+
+    Older payments have no email_key or transaction_hash; they still match by the exact
+    email hash they always had.
+    """
+    try:
+        inspector = inspect(engine)
+        if not inspector.has_table("kofi_payments"):
+            return
+        columns = {col["name"] for col in inspector.get_columns("kofi_payments")}
+        with engine.connect() as conn:
+            for name, kind in KOFI_MATCHING_COLUMNS:
+                if name not in columns:
+                    conn.execute(text(f"ALTER TABLE kofi_payments ADD COLUMN {name} {kind}"))
+                    print(f"Added {name} column to kofi_payments table")
+            conn.execute(text("CREATE INDEX IF NOT EXISTS ix_kofi_payments_email_key ON kofi_payments (email_key)"))
+            conn.execute(text("CREATE INDEX IF NOT EXISTS ix_kofi_payments_transaction_hash ON kofi_payments (transaction_hash)"))
+            conn.commit()
+    except Exception as e:
+        print(f"Migration warning (Ko-fi matching): {e}")
+
+
+# Characters that never appear in a campaign tag or a referring host, only in what
+# scanners put into utm_source (script tags, event handlers, quotes).
+UNREADABLE_SOURCE_CHARS = frozenset('<>"\'`&;/\\=(){}')
+
+
+def unreadable_traffic_source(key: str, bad_tag: str) -> bool:
+    """True for a stored source label written before utm_source was checked on the way in."""
+    if key in (bad_tag, "(direct)"):
+        return False
+    return any(ch in UNREADABLE_SOURCE_CHARS for ch in key)
+
+
+def fold_unreadable_traffic_sources():
+    """Fold source labels that scanners wrote into Site stats under the one "(unreadable tag)" row.
+
+    Since Oct 30 2026 a utm_source that isn't a plain word is counted under that label as it
+    arrives (site_traffic.SAFE_TAG). Rows from before then still carry the raw text, for example
+    a script tag that a scanner put in the address. The Site stats page prints every label as
+    text, so they were never a risk there, but a stored probe string has no business staying in
+    the database. Visit counts are kept: a label's count moves to the "(unreadable tag)" row for
+    the same day.
+    """
+    try:
+        from .site_traffic import BAD_TAG
+        inspector = inspect(engine)
+        if not inspector.has_table("site_traffic_daily"):
+            return
+        folded = 0
+        with engine.connect() as conn:
+            rows = conn.execute(text(
+                "SELECT id, day, kind, key, count FROM site_traffic_daily WHERE kind IN ('source', 'human_source')"
+            )).fetchall()
+            for row in rows:
+                if not unreadable_traffic_source(row.key or "", BAD_TAG):
+                    continue
+                existing = conn.execute(text(
+                    "SELECT id FROM site_traffic_daily WHERE day = :day AND kind = :kind AND key = :key AND id != :id"
+                ), {"day": row.day, "kind": row.kind, "key": BAD_TAG, "id": row.id}).first()
+                if existing is None:
+                    conn.execute(text("UPDATE site_traffic_daily SET key = :key WHERE id = :id"),
+                                 {"key": BAD_TAG, "id": row.id})
+                else:
+                    conn.execute(text("UPDATE site_traffic_daily SET count = count + :count WHERE id = :target"),
+                                 {"count": int(row.count or 0), "target": existing.id})
+                    conn.execute(text("DELETE FROM site_traffic_daily WHERE id = :id"), {"id": row.id})
+                folded += 1
+            conn.commit()
+        if folded:
+            print(f"Folded {folded} unreadable traffic source label(s) into {BAD_TAG!r}")
+    except Exception as e:
+        print(f"Migration warning (traffic sources): {e}")

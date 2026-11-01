@@ -9,14 +9,16 @@ from pathlib import Path
 from typing import Optional
 
 from fastapi import APIRouter, Depends, HTTPException, Request, Response
+from starlette.concurrency import run_in_threadpool
 from pydantic import BaseModel, Field
 from sqlalchemy import func
 from sqlalchemy.orm import Session
 
 from .. import affiliate, models
+from .. import release_calendar
 from .. import release_radar as radar
 from ..csp import strict_html_response
-from ..site_chrome import apply_site_chrome
+from ..site_chrome import apply_site_chrome, view_switch
 from ..dependencies import get_current_user, get_db
 
 router = APIRouter()
@@ -68,9 +70,11 @@ def _category_path(category: str, window: Optional[radar.Window] = None) -> str:
 
 
 def _render(title: str, description: str, canonical: str, content: str, *, indexable: bool,
-            structured: Optional[dict] = None, ads: bool = False, refresh: bool = False) -> Response:
-    html = apply_site_chrome((Path(__file__).parents[1] / "templates" / "release_radar.html").read_text(encoding="utf-8"))
-    extra_head = '<meta name="google-adsense-account" content="ca-pub-7271682066779719">'
+            structured: Optional[dict] = None, ads: bool = False, refresh: bool = False, head: str = "",
+            nav: str = "release-radar") -> Response:
+    html = apply_site_chrome((Path(__file__).parents[1] / "templates" / "release_radar.html").read_text(encoding="utf-8")
+                             .replace("<!--SITE_NAV:release-radar-->", f"<!--SITE_NAV:{nav}-->", 1))
+    extra_head = '<meta name="google-adsense-account" content="ca-pub-7271682066779719">' + head
     if refresh:
         extra_head += '<meta http-equiv="refresh" content="45">'
     structured_html = ""
@@ -123,6 +127,34 @@ def library_counts(db: Session, category: str, items: list[dict]) -> dict[str, i
             for i in items if (i["save"].get("title") or "").strip().lower() in by_title}
 
 
+def title_page_paths(db: Session, items: list[dict], counts: dict[str, int]) -> dict[str, str]:
+    """{release key: title page path} for releases already in a member's library.
+
+    Only titles members track can have a title page, so the lookup is limited to
+    those. Linking the cards gives Google a path from the Release Radar pages to the
+    title pages, the same way the weekly roundups already do.
+    """
+    from .. import title_pages
+    from .weekly_roundup import _release_slug
+    wanted: dict[str, dict[str, str]] = {}
+    for item in items:
+        if counts.get(item["key"]):
+            try:
+                kind, slug = _release_slug(item)
+            except (KeyError, TypeError, ValueError):
+                continue
+            wanted.setdefault(kind, {})[item["key"]] = slug
+    found = {}
+    for kind, by_key in wanted.items():
+        try:
+            paths = title_pages.paths_many(db, kind, set(by_key.values()))
+        except Exception:
+            db.rollback()
+            continue
+        found.update({key: paths[slug] for key, slug in by_key.items() if slug in paths})
+    return found
+
+
 # ---------------------------------------------------------------------------
 # HTML fragments
 # ---------------------------------------------------------------------------
@@ -131,12 +163,13 @@ def _signin_href(path: str) -> str:
     return f"/?next={path}#landing-auth"
 
 
-def render_card(item: dict, count: int, return_path: str, *, compact: bool = False) -> str:
+def render_card(item: dict, count: int, return_path: str, *, compact: bool = False, trackable: bool = True,
+                title_path: str = "") -> str:
     category = item["category"]
     key = escape(item["key"], quote=True)
     title = escape(item["title"])
     art = (
-        f'<img src="{escape(item["image"], quote=True)}" alt="" loading="lazy" decoding="async" referrerpolicy="no-referrer">'
+        f'<img src="{escape(item["image"], quote=True)}" alt="" width="200" height="300" loading="lazy" decoding="async" referrerpolicy="no-referrer">'
         if item.get("image") else f'<span class="radar-card__initial" aria-hidden="true">{escape(item["title"][:1].upper())}</span>'
     )
     when = (
@@ -160,9 +193,12 @@ def render_card(item: dict, count: int, return_path: str, *, compact: bool = Fal
     buy = affiliate.links_html(category, item["title"], creator)
     search = " ".join([item["title"], item.get("alt_title", ""), *item["genres"], *item["platforms"], *item["details"]])
     add = (
-        f'<a class="radar-add" data-radar-add="{key}" href="{escape(_signin_href(return_path), quote=True)}">'
+        f'<a class="radar-add" data-radar-add="{key}" rel="nofollow" href="{escape(_signin_href(return_path), quote=True)}">'
         f'<span aria-hidden="true">+</span> Track this<span class="visually-hidden"> {title}</span></a>'
-    )
+    ) if trackable else ""
+    if title_path:
+        add += f'<a class="radar-title-link" href="{escape(title_path, quote=True)}">Title page<span class="visually-hidden">: {title}</span></a>'
+
     return (
         f'<article class="radar-card{" radar-card--compact" if compact else ""}" id="item-{key}" data-key="{key}" '
         f'data-category="{category}" data-window="{escape(item.get("window", ""), quote=True)}" data-genres="{escape("|".join(item["genres"]), quote=True)}" '
@@ -171,6 +207,45 @@ def render_card(item: dict, count: int, return_path: str, *, compact: bool = Fal
         f'<p class="radar-card__date">{when}{note}</p><h3 class="radar-card__title">{title}</h3>{alt}{details}{platforms}'
         f'<ul class="radar-chips" aria-label="Tags">{chips}</ul>{community}'
         f'<div class="radar-card__actions">{add}{source}{buy}</div></div></article>'
+    )
+
+
+CALENDAR_WHAT = {
+    "all": "the most followed new movies, TV premieres, anime and games",
+    "movies": "every new movie on this radar",
+    "tv": "every TV premiere and new season on this radar",
+    "anime": "every show in this anime season and the next",
+    "games": "every game release on this radar",
+}
+
+
+def _calendar_box(category: Optional[str]) -> str:
+    """Subscribe-in-your-calendar links for this section (or the highlights on the overview)."""
+    feed = category or "all"
+    name = release_calendar.FEED_NAMES[feed]
+    links = release_calendar.subscribe_links(release_calendar.public_feed_path(feed), name)
+    what = CALENDAR_WHAT[feed]
+
+    def button(label: str, href: str, kind: str, primary: bool = False) -> str:
+        extra = ' target="_blank" rel="noopener nofollow"' if href.startswith("https://") and kind != "file" else ' rel="nofollow"'
+        cls = "radar-calendar__btn" + (" radar-calendar__btn--primary" if primary else "")
+        return f'<a class="{cls}" href="{escape(href, quote=True)}" data-calendar-link="{kind}"{extra}>{escape(label)}</a>'
+
+    return (
+        '<section class="radar-calendar" aria-labelledby="radar-calendar-title">'
+        '<div class="radar-calendar__text"><h2 id="radar-calendar-title">Put these dates in your calendar</h2>'
+        f'<p>Subscribe once and {escape(what)} will appear in the calendar you already use. '
+        'New dates and changes arrive on their own. No account needed.</p></div>'
+        '<div class="radar-calendar__actions">'
+        + button("Google Calendar", links["google"], "google", primary=True)
+        + button("Apple Calendar", links["webcal"], "apple")
+        + button("Outlook", links["outlook"], "outlook")
+        + f'<button type="button" class="radar-calendar__btn" data-calendar-copy="{escape(links["url"], quote=True)}" hidden>Copy address</button>'
+        + f'<noscript>{button("Calendar address", links["url"], "file")}</noscript>'
+        + '</div><p class="radar-calendar__member">Only want releases connected to what you track? '
+        f'<a href="{escape(_signin_href("/release-radar"), quote=True)}" rel="nofollow" data-calendar-member>Members get a private calendar of their own</a>, '
+        'built from their library: new seasons, sequels, release days and, if they like, every new episode of the shows they\'re watching.</p>'
+        '<p class="radar-calendar__status" role="status" aria-live="polite" data-calendar-status></p></section>'
     )
 
 
@@ -278,7 +353,8 @@ def _about_section(category: Optional[str]) -> str:
         'The notes above each list are calculated from that data, so they change as schedules change.</p>'
         '<p><strong>Tracking</strong> adds a title to your private library as unfinished and places it in a private '
         '<em>Release Radar</em> collection. Nothing is shared, rated, or reviewed until you choose to. If you already have the title, '
-        'we reuse your entry instead of creating a duplicate.</p>'
+        'we reuse your entry instead of creating a duplicate. On release day you get a notification in OmniTrackr that it is out, '
+        'and the same goes for new seasons and sequels of anything already in your library.</p>'
         '<p><strong>Dates move.</strong> Games slip, streaming drops change, and some films open in limited release first. '
         'Each card links to its source so you can double-check before you plan a night around it.</p>'
         f'<ul class="radar-sources">{source_list}</ul>'
@@ -297,13 +373,25 @@ def _notes_html(notes: list[str]) -> str:
 # Pages
 # ---------------------------------------------------------------------------
 
+def _guide_note() -> str:
+    """A pointer from the full calendar to the hand-written release guide for this month, if one is live."""
+    from .. import new_releases
+    slug = new_releases.current()
+    if not slug:
+        return ""
+    guide = new_releases.GUIDES[slug]
+    return (f'<p class="radar-hero__roundup">Want our picks? <a href="{escape(new_releases.path(slug), quote=True)}">'
+            f'{escape(guide["name"])}</a> goes through the releases we would plan around, format by format.</p>')
+
+
 @router.get("/release-radar")
 async def radar_hub(request: Request, db: Session = Depends(get_db)):
     today = _today()
     windows = {c: radar.featured_window(c, today) for c in radar.CATEGORY_ORDER}
     entries = dict(zip(windows, await asyncio.gather(*(radar.CACHE.get(_client(request), w) for w in windows.values()))))
     items_by_category = {c: (entries[c] or {}).get("items", []) for c in radar.CATEGORY_ORDER}
-    counts = {c: library_counts(db, c, items) for c, items in items_by_category.items()}
+    # Database reads run in the threadpool, never on the event loop (see dependencies.get_current_user).
+    counts = await run_in_threadpool(lambda: {c: library_counts(db, c, items) for c, items in items_by_category.items()})
     total = sum(len(items) for items in items_by_category.values())
 
     # The two-week strip can straddle a month or season boundary: add the
@@ -321,10 +409,14 @@ async def radar_hub(request: Request, db: Session = Depends(get_db)):
             # Warm the next period in the background so the strip fills in.
             radar.CACHE.warm(_client(request), other)
     soon = [i for items in strip_pool.values() for i in radar.upcoming_within(items, today, 14)]
-    extra_counts = {c: library_counts(db, c, [i for i in soon if i["category"] == c and i["key"] not in counts[c]])
-                    for c in radar.CATEGORY_ORDER}
+    extra_counts = await run_in_threadpool(lambda: {
+        c: library_counts(db, c, [i for i in soon if i["category"] == c and i["key"] not in counts[c]])
+        for c in radar.CATEGORY_ORDER})
     for c in radar.CATEGORY_ORDER:
         counts[c].update(extra_counts[c])
+    links = await run_in_threadpool(lambda: title_page_paths(
+        db, [i for items in strip_pool.values() for i in items],
+        {key: n for c in radar.CATEGORY_ORDER for key, n in counts[c].items()}))
     # Keep the two-week strip varied: at most five per category.
     per_category: dict[str, int] = {}
     strip = []
@@ -342,7 +434,8 @@ async def radar_hub(request: Request, db: Session = Depends(get_db)):
         upcoming = [i for i in items if not i["date"] or i["date"] >= today.isoformat()] or items
         top = sorted(upcoming, key=lambda i: -i["popularity"])[:6]
         top.sort(key=lambda i: (i["date"] or "9999", -i["popularity"]))
-        cards = "".join(render_card(i, counts[category].get(i["key"], 0), "/release-radar", compact=True) for i in top)
+        cards = "".join(render_card(i, counts[category].get(i["key"], 0), "/release-radar", compact=True,
+                                    title_path=links.get(i["key"], "")) for i in top)
         status = _status_message(entries[category], category) if not items else ""
         sections.append(
             f'<section class="radar-section" aria-labelledby="radar-{category}"><div class="radar-section__head">'
@@ -358,7 +451,7 @@ async def radar_hub(request: Request, db: Session = Depends(get_db)):
     tracked_html = ""
     if most_tracked:
         rows = "".join(
-            f'<li><a href="/release-radar/{i["category"]}#item-{escape(i["key"], quote=True)}">{escape(i["title"])}</a>'
+            f'<li><a href="{radar.item_path(i)}#item-{escape(i["key"], quote=True)}">{escape(i["title"])}</a>'
             f' <span class="muted">{escape(radar.CATEGORY_SINGULAR[i["category"]])} · {count} {"library" if count == 1 else "libraries"}</span></li>'
             for count, i in most_tracked
         )
@@ -366,26 +459,29 @@ async def radar_hub(request: Request, db: Session = Depends(get_db)):
 
     strip_html = ""
     if strip:
-        strip_cards = "".join(render_card(i, counts[i["category"]].get(i["key"], 0), "/release-radar", compact=True) for i in strip)
+        strip_cards = "".join(render_card(i, counts[i["category"]].get(i["key"], 0), "/release-radar", compact=True,
+                                          title_path=links.get(i["key"], "")) for i in strip)
         strip_html = (f'<section class="radar-section radar-section--soon" aria-labelledby="radar-soon"><div class="radar-section__head">'
                       f'<h2 id="radar-soon">Out in the next two weeks</h2></div><div class="radar-grid">{strip_cards}</div></section>')
 
     summary = " · ".join(f"{len(items_by_category[c])} {SUMMARY_LABELS[c]}" for c in radar.CATEGORY_ORDER if items_by_category[c])
     content = (
-        '<header class="hero radar-hero"><p class="eyebrow">Release Radar · updated every few hours</p>'
+        '<header class="hero radar-hero">' + view_switch("releases", "release-radar") + '<p class="eyebrow">Release Radar · updated every few hours</p>'
         '<h1>What is coming out, all in one place.</h1>'
         '<p>New movies, TV premieres, the current anime season and upcoming games, side by side. '
         'Spot something you want to see, play or finish, and track it in one click.</p>'
         + (f'<p class="radar-hero__summary">{escape(summary)}</p>' if summary else "")
-        + '</header>' + _category_tabs(None) + strip_html + tracked_html + "".join(sections) + _about_section(None)
+        + '<p class="radar-hero__roundup">Looking back instead? <a href="/new-this-week/archive">Every weekly roundup</a></p>'
+        + _guide_note()
+        + '</header>' + _category_tabs(None) + strip_html + _calendar_box(None) + tracked_html + "".join(sections) + _about_section(None)
     )
     indexable = total >= MIN_INDEXABLE_ITEMS
-    title = f"Release Radar: new movies, TV, anime and games for {windows['movies'].label}"
+    title = f"{windows['movies'].label} releases: movies, TV, anime and games"
     description = "Upcoming movie releases, TV premieres, this season's anime and new video games in one calendar, with one-click tracking."
     structured = _structured(title, "/release-radar", strip or [i for c in radar.CATEGORY_ORDER for i in items_by_category[c][:6]])
     warming = any(entries[c] is None for c in radar.CATEGORY_ORDER)
     return _render(title, description, "/release-radar", content, indexable=indexable, structured=structured,
-                   ads=total >= AD_ELIGIBLE_MIN_ITEMS, refresh=warming)
+                   ads=radar.RADAR_ADS and total >= AD_ELIGIBLE_MIN_ITEMS, refresh=warming)
 
 
 @router.get("/release-radar/jump")
@@ -402,17 +498,21 @@ def radar_jump(to: str = ""):
 async def _category_page(request: Request, db: Session, category: str, window: radar.Window):
     entry = await radar.CACHE.get(_client(request), window)
     items = (entry or {}).get("items", [])
-    counts = library_counts(db, category, items)
+    counts = await run_in_threadpool(library_counts, db, category, items)
+    links = await run_in_threadpool(title_page_paths, db, items, counts)
     canonical = _category_path(category, window)
     return_path = canonical
     notes = radar.radar_notes(category, items, window)
     groups = "".join(
         f'<section class="radar-week" aria-label="{escape(label, quote=True)}"><h2 class="radar-week__title">{escape(label)}</h2>'
-        f'<div class="radar-grid">{"".join(render_card(i, counts.get(i["key"], 0), return_path) for i in group)}</div></section>'
+        f'<div class="radar-grid">{"".join(render_card(i, counts.get(i["key"], 0), return_path, title_path=links.get(i["key"], "")) for i in group)}</div></section>'
         for label, group in _group_by_week(items)
     )
     title = SEO_TITLES[category].format(label=window.label)
-    description = (f"{len(items) or 'Every'} {SUMMARY_LABELS[category]} for {window.label}, "
+    # Naming a few real titles makes the search snippet match what people actually look up.
+    highlights = [item["title"] for item in items[:3] if (item.get("title") or "").strip()]
+    including = f", including {', '.join(highlights[:-1])} and {highlights[-1]}" if len(highlights) >= 2 else ""
+    description = (f"{len(items) or 'Every'} {SUMMARY_LABELS[category]} for {window.label}{including}, "
                    "with dates, details and one-click tracking in OmniTrackr.")
     content = (
         f'<header class="hero radar-hero radar-hero--{category}"><p class="eyebrow">Release Radar · {escape(window.label)}</p>'
@@ -420,15 +520,16 @@ async def _category_page(request: Request, db: Session, category: str, window: r
         + _category_tabs(category) + _window_nav(category, window)
         + _status_message(entry, category)
         + _notes_html(notes)
+        + _calendar_box(category)
         + (_filters(category, items) if items else "")
         + f'<div id="radar-list" data-radar-category="{category}" data-radar-window="{window.slug}">{groups}</div>'
         + '<p id="radar-empty" class="trail-empty" hidden>Nothing matches those filters. Try another genre or clear the search.</p>'
         + _about_section(category)
     )
-    indexable = len(items) >= MIN_INDEXABLE_ITEMS
+    indexable = radar.INDEX_CATEGORY_PAGES and len(items) >= MIN_INDEXABLE_ITEMS
     return _render(title, description, canonical, content, indexable=indexable,
                    structured=_structured(title, canonical, items) if items else None,
-                   ads=len(items) >= AD_ELIGIBLE_MIN_ITEMS, refresh=entry is None)
+                   ads=radar.RADAR_ADS and len(items) >= AD_ELIGIBLE_MIN_ITEMS, refresh=entry is None)
 
 
 @router.get("/release-radar/{category}")
@@ -593,10 +694,10 @@ def home_strip_html(client=None, today: Optional[date] = None) -> str:
     labels = {"movies": "Movie", "tv": "TV", "anime": "Anime", "games": "Game"}
     cards = []
     for item in items:
-        art = (f'<img src="{escape(item["image"], quote=True)}" alt="" loading="lazy" decoding="async" referrerpolicy="no-referrer">'
+        art = (f'<img src="{escape(item["image"], quote=True)}" alt="" width="200" height="300" loading="lazy" decoding="async" referrerpolicy="no-referrer">'
                if item.get("image") else f'<span class="lp-radar-card__initial" aria-hidden="true">{escape(item["title"][:1].upper())}</span>')
         cards.append(
-            f'<li><a class="lp-radar-card" href="/release-radar/{item["category"]}#item-{escape(item["key"], quote=True)}">'
+            f'<li><a class="lp-radar-card" href="{radar.item_path(item)}#item-{escape(item["key"], quote=True)}">'
             f'<span class="lp-radar-card__art">{art}<span class="lp-radar-card__type">{labels[item["category"]]}</span></span>'
             f'<span class="lp-radar-card__date"><time datetime="{item["date"]}">{_format_day(item["date"])}</time></span>'
             f'<span class="lp-radar-card__title">{escape(item["title"])}</span></a></li>'
@@ -605,6 +706,7 @@ def home_strip_html(client=None, today: Optional[date] = None) -> str:
         '<section class="lp-section lp-radar" aria-labelledby="lp-radar-title"><div class="lp-wrap">'
         '<div class="lp-section-head lp-section-head--row"><div><p class="lp-eyebrow">Release Radar · updated every few hours</p>'
         '<h2 id="lp-radar-title">Coming out soon</h2></div>'
-        '<a class="lp-link-arrow" href="/release-radar">See everything coming out <span aria-hidden="true">→</span></a></div>'
+        '<span class="lp-radar-links"><a class="lp-link-arrow" href="/new-this-week">New this week <span aria-hidden="true">→</span></a>'
+        '<a class="lp-link-arrow" href="/release-radar">See everything coming out <span aria-hidden="true">→</span></a></span></div>'
         f'<ul class="lp-radar-rail">{"".join(cards)}</ul></div></section>'
     )

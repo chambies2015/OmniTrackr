@@ -11,13 +11,13 @@ class TestActivityJournal:
         assert 'data-switch-tab="activity"' in page.text
         assert 'id="activity-tab"' in page.text
         assert 'data-submit-action="create-activity"' in page.text
-        assert "No public profile · No ads" in page.text
+        assert "Private by default · No ads" in page.text
         assert "/activity" not in authenticated_client.get("/sitemap.xml").text
 
     def test_manual_entry_weekly_recap_and_delete_preserve_library(
         self, authenticated_client, db_session, test_movie_data
     ):
-        movie = authenticated_client.post("/movies/", json=test_movie_data).json()
+        movie = authenticated_client.post("/movies/", json={**test_movie_data, "watched": False}).json()
         created = authenticated_client.post(
             "/activity/",
             json={
@@ -93,7 +93,7 @@ class TestActivityJournal:
     def test_filters_validation_auth_and_ownership(
         self, authenticated_client, db_session, test_movie_data
     ):
-        movie = authenticated_client.post("/movies/", json=test_movie_data).json()
+        movie = authenticated_client.post("/movies/", json={**test_movie_data, "watched": False}).json()
         assert authenticated_client.post(
             "/activity/", json={"category": "books", "item_id": movie["id"], "action": "started"}
         ).status_code == 404
@@ -106,7 +106,7 @@ class TestActivityJournal:
                 "occurred_at": (datetime.utcnow() + timedelta(days=1)).isoformat(),
             },
         ).status_code == 422
-        assert authenticated_client.get("/activity/?category=podcasts").status_code == 422
+        assert authenticated_client.get("/activity/?category=comics").status_code == 422
         assert db_session.query(models.ActivityEntry).count() == 0
 
     def test_journal_requires_authentication(self, client):
@@ -119,7 +119,7 @@ class TestActivityJournal:
     def test_export_is_versioned_and_old_imports_remain_valid(
         self, authenticated_client, test_movie_data
     ):
-        movie = authenticated_client.post("/movies/", json=test_movie_data).json()
+        movie = authenticated_client.post("/movies/", json={**test_movie_data, "watched": False}).json()
         authenticated_client.post(
             "/activity/",
             json={"category": "movies", "item_id": movie["id"], "action": "revisited"},

@@ -5,7 +5,7 @@
 /* Gallery */
 .gallery-hero h1 { max-width: 800px; }
 .gallery-hero .site-wrap > p:not(.site-eyebrow) { margin-bottom: 26px; }
-.gallery-filter { backdrop-filter: blur(12px); background: rgba(20, 17, 42, .72); border: 1px solid var(--site-border-strong); border-radius: 20px; display: grid; gap: 12px; grid-template-columns: minmax(0, 1fr) minmax(180px, .35fr) auto; max-width: 900px; padding: 14px; }
+.gallery-filter { backdrop-filter: blur(12px); background: rgba(20, 17, 42, .72); border: 1px solid var(--site-border-strong); border-radius: 20px; display: grid; gap: 12px; grid-template-columns: minmax(0, 1fr) minmax(160px, .3fr) minmax(150px, .28fr) auto; max-width: 980px; padding: 14px; }
 .gallery-filter input, .gallery-filter select { box-sizing: border-box; margin: 0; min-height: 50px; width: 100%; background: rgba(11, 10, 24, .8); border: 1px solid var(--site-border-strong); border-radius: 12px; color: var(--site-text); font: 1rem var(--site-font); height: 50px; padding: 0 14px; }
 .gallery-filter button { background: linear-gradient(135deg, var(--site-violet), var(--site-violet-2)); border: 0; border-radius: 999px; box-shadow: 0 10px 26px rgba(139, 92, 246, .35); color: #fff; cursor: pointer; font: 600 1rem var(--site-font); height: 50px; padding: 0 24px; }
 .gallery-body { padding-bottom: 64px; padding-top: 32px; }
@@ -66,3 +66,15 @@
   .collection-entry > img { display: none; }
 }
 @media (prefers-reduced-motion: reduce) { .collection-tile { transition: none; } }
+.collection-entry h2 a { color: var(--site-text) !important; text-decoration: none; }
+.collection-entry h2 a:hover { color: var(--site-violet-soft) !important; text-decoration: underline; }
+.share-metrics .share-button { margin-left: auto; min-height: 32px; padding: 0 14px; }
+
+/* Curator credit and related collections */
+.share-byline { color: var(--site-muted); font-size: .92rem; margin: -6px 0 16px; }
+.share-byline a, .collection-tile__curator a { font-weight: 600; }
+.collection-tile__curator { display: block; margin-top: 2px; }
+.related-collections { border-top: 1px solid var(--site-border); margin-top: 36px; padding-top: 28px; }
+.related-collections h2 { color: var(--site-text); font: 700 1.4rem var(--site-display); margin: 0 0 16px; }
+.related-collections__more { margin: 16px 0 0; }
+.related-collections__more a { font-weight: 700; text-decoration: none; }

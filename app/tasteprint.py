@@ -18,6 +18,9 @@ CATEGORIES = (
     {"key": "video-games", "label": "Video Games", "model": models.VideoGame, "done": "played", "year": "release_date", "creator": None, "private": "video_games_private", "visible": "video_games_visible"},
     {"key": "music", "label": "Music", "model": models.Music, "done": "listened", "year": "year", "creator": "artist", "private": "music_private", "visible": "music_visible"},
     {"key": "books", "label": "Books", "model": models.Book, "done": "read", "year": "year", "creator": "author", "private": "books_private", "visible": "books_visible"},
+    {"key": "manga", "label": "Manga", "model": models.Manga, "done": "read", "year": "year", "creator": "author", "private": "manga_private", "visible": "manga_visible"},
+    {"key": "podcasts", "label": "Podcasts", "model": models.Podcast, "done": "listened", "year": "year", "creator": "host", "private": "podcasts_private", "visible": "podcasts_visible"},
+    {"key": "audiobooks", "label": "Audiobooks", "model": models.Audiobook, "done": "listened", "year": "year", "creator": "author", "private": "audiobooks_private", "visible": "audiobooks_visible"},
 )
 CATEGORY_BY_KEY = {category["key"]: category for category in CATEGORIES}
 MIN_ITEMS = 10
@@ -135,13 +138,13 @@ def build_tasteprint(db: Session, user: models.User, category_value: str | None)
             detail = f"Your scores use the scale broadly, averaging {average:.1f}/10."
         elif average >= 8.2:
             value = "Enthusiastic curator"
-            detail = f"Your rated picks average {average:.1f}/10—you tend to keep what works for you."
+            detail = f"Your rated picks average {average:.1f}/10, so most of what you rate is something you liked."
         elif average < 6.8:
             value = "Discerning rater"
-            detail = f"Your {len(ratings)} ratings average {average:.1f}/10, with praise earned carefully."
+            detail = f"Your {len(ratings)} ratings average {average:.1f}/10, so a high score from you means something."
         else:
             value = "Measured rater"
-            detail = f"Your ratings cluster around a considered {average:.1f}/10 average."
+            detail = f"Most of your ratings sit near your {average:.1f}/10 average."
         insights.append(_insight("rating", "Rating personality", value, detail, len(ratings)))
 
     decade_records: dict[int, list[dict[str, Any]]] = defaultdict(list)

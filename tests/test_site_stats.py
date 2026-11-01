@@ -5,7 +5,7 @@ from pathlib import Path
 import pytest
 from starlette.requests import Request
 
-from app import admin_access, models, site_traffic
+from app import admin_access, dashboard_assets, models, site_traffic
 from app.site_traffic import TrafficRecorder, classify_device, should_count, traffic_source
 from tests.conftest import TestingSessionLocal
 
@@ -38,13 +38,24 @@ def admin_env(monkeypatch):
 def test_admin_list_reads_both_variables_case_insensitively(admin_env):
     admin_env.setenv("collection_moderator_usernames", "Dan ")
     admin_env.setenv("ADMIN_USERNAMES", "owner,  second")
-    assert admin_access.admin_usernames() == {"dan", "owner", "second"}
+    assert admin_access.admin_usernames() == {"Dan", "owner", "second"}
 
     class User:
-        username = "DAN"
-    assert admin_access.is_site_admin(User())
+        username = "Dan"
+    assert admin_access.is_site_admin(User()) and admin_access.is_moderator(User())
     User.username = "someone"
     assert not admin_access.is_site_admin(User())
+
+
+@pytest.mark.parametrize("lookalike", ["DAN", "dan", "dAn", "Dan ", " Dan"])
+def test_capitalised_copies_of_the_owner_name_are_not_admins(admin_env, lookalike):
+    """Usernames are unique only as typed, so admin matching must be exact."""
+    admin_env.setenv("ADMIN_USERNAMES", "Dan")
+
+    class User:
+        username = lookalike
+    assert not admin_access.is_site_admin(User())
+    assert not admin_access.is_moderator(User())
 
 
 def test_no_admins_by_default(admin_env):
@@ -66,6 +77,8 @@ def test_page_shell_is_public_but_noindex_and_holds_no_data(client):
     assert "/static/site-stats.js" in response.text
     assert "Content-Security-Policy" in response.headers
     assert "testuser" not in response.text
+    # The Ko-fi linking card is an empty shell too; payments load from the admin-only API.
+    assert 'id="kofiCard"' in response.text and 'id="kofiList"></ul>' in response.text
 
 
 def test_overview_requires_login(client):
@@ -118,6 +131,50 @@ def test_overview_for_admin_has_every_section(authenticated_client, admin_env, d
     assert any(item["name"].startswith("OMDb") for item in data["system"]["integrations"])
     # Aggregates only: no emails or password material anywhere in the payload.
     assert "@example.com" not in response.text and "hashed_password" not in response.text
+
+
+def test_overview_growth_counts_invites_supporters_email_and_takes(authenticated_client, admin_env, db_session):
+    from datetime import datetime
+    admin_env.setenv("ADMIN_USERNAMES", "testuser")
+    user = db_session.query(models.User).filter_by(username="testuser").one()
+    friend = models.User(username="growthfriend", email="growthfriend@example.com", hashed_password="x", is_verified=True)
+    waiting = models.User(username="growthwaiting", email="growthwaiting@example.com", hashed_password="x")
+    db_session.add_all([friend, waiting])
+    db_session.flush()
+    now = datetime.utcnow()
+    old = now - timedelta(days=60)
+    take = models.TakeRequest(asker_id=user.id, kind="movie", slug="heat-1995", title="Heat", token="growthtake",
+                              expires_at=now + timedelta(days=30))
+    db_session.add_all([
+        models.FriendInvite(user_id=user.id, token="growthinvite"),
+        models.FriendInviteSignup(inviter_id=user.id, invitee_id=friend.id, completed_at=now),
+        models.FriendInviteSignup(inviter_id=user.id, invitee_id=waiting.id),
+        models.Supporter(user_id=user.id, since=now, active_until=now + timedelta(days=30), monthly=True),
+        models.Supporter(user_id=friend.id, since=old, active_until=old + timedelta(days=30)),
+        models.KofiPayment(message_id="growth-1", kind="Donation", user_id=user.id),
+        models.KofiPayment(message_id="growth-2", kind="Donation"),
+        models.EmailDigestSubscription(user_id=user.id, token="growthdigest"),
+        take,
+    ])
+    db_session.flush()
+    db_session.add(models.TakeResponse(request_id=take.id, responder_id=friend.id))
+    db_session.commit()
+
+    response = authenticated_client.get("/api/site-stats/overview?days=30")
+    assert response.status_code == 200
+    growth = response.json()["growth"]
+    assert growth["invites"] == {"links": 1, "new_links": 1, "signups": 2, "friends_made": 1, "awaiting_verification": 1}
+    assert growth["supporters"] == {"active": 1, "monthly": 1, "all_time": 2, "new": 1, "payments": 2, "unlinked_payments": 1}
+    assert growth["weekly_email"]["subscribers"] == 1 and growth["weekly_email"]["new"] == 1
+    assert growth["weekly_email"]["opted_out"] == 0 and growth["weekly_email"]["emailed"] == 0
+    assert [row["place"] for row in growth["weekly_email"]["opted_in_by_place"]] == [
+        "the sign-up form", "the start page", "first-week steps", "the library home", "Account settings", "a link in an email"]
+    assert growth["takes"] == {"asked": 1, "answered": 1}
+    assert growth["push"] == {"members": 0, "devices": 0, "new_devices": 0, "reached_7d": 0, "sent": 0,
+                              "sent_by_kind": [], "away_reminders": 0}
+    # Counts only: no tokens or Ko-fi details anywhere, and no usernames in the growth block.
+    assert "growthinvite" not in response.text and "growth-2" not in response.text
+    assert "growthfriend" not in str(growth)
 
 
 @pytest.mark.parametrize("days", [3, 91])
@@ -249,7 +306,7 @@ def test_traffic_table_is_new_and_separate():
 
 def test_dashboard_link_is_hidden_until_the_server_confirms_admin():
     index = (ROOT / "app" / "templates" / "index.html").read_text(encoding="utf-8")
-    app_js = (ROOT / "app" / "static" / "app.js").read_text(encoding="utf-8")
+    app_js = dashboard_assets.full_source()
     auth_js = (ROOT / "app" / "static" / "auth.js").read_text(encoding="utf-8")
     assert '<a id="siteStatsLink" class="site-stats-link" href="/site-stats" hidden>' in index
     assert "/api/site-stats/access" in app_js
@@ -260,3 +317,135 @@ def test_dashboard_link_is_hidden_until_the_server_confirms_admin():
 def test_site_stats_paths_are_not_blocked_by_the_bot_filter(client):
     # The bot filter blocks anything containing "/admin", so the page lives at /site-stats.
     assert client.get("/site-stats").status_code == 200
+
+
+# ---------------------------------------------------------------- likely people
+
+def test_scanner_tags_are_not_stored_as_written():
+    payload = "'>\"></script><svg/onload=confirm('xsss-utm_source18')>"
+    assert traffic_source(make_request("/", query=f"utm_source={payload}")) == site_traffic.BAD_TAG
+    assert site_traffic.source_for("Ko-fi Newsletter", "") == "ko-fi newsletter"
+    assert site_traffic.source_for("", "https://www.reddit.com/r/movies") == "reddit.com"
+
+
+def test_page_reports_count_people_and_skip_bots_reloads_and_crawlers(db_session, monkeypatch):
+    recorder = TrafficRecorder(session_factory=TestingSessionLocal)
+    recorder.enabled = True
+    now = [1000.0]
+    monkeypatch.setattr(site_traffic.time, "monotonic", lambda: now[0])
+    same_site = {"Sec-Fetch-Site": "same-origin"}
+    assert recorder.record_person(make_request("/api/visit", method="POST", headers=same_site), "/", "", "Reddit")
+    assert not recorder.record_person(make_request("/api/visit", method="POST", headers=same_site), "/", "", "")  # reload
+    now[0] += site_traffic.HUMAN_REPEAT_SECONDS + 1
+    assert recorder.record_person(make_request("/api/visit", method="POST", headers=same_site), "/", "", "")
+    assert recorder.record_person(make_request("/api/visit", method="POST"), "/reviews/", "https://omnitrackr.xyz/", "")
+    # Not people: a bot, another site posting in, a Googlebot address, odd paths.
+    assert not recorder.record_person(make_request("/api/visit", method="POST", headers={"User-Agent": "HeadlessChrome/120"}), "/faq")
+    assert not recorder.record_person(make_request("/api/visit", method="POST", headers={"Sec-Fetch-Site": "cross-site"}), "/faq")
+    assert not recorder.record_person(make_request("/api/visit", method="POST", client=("66.249.66.1", 1)), "/faq")
+    assert not recorder.record_person(make_request("/api/visit", method="POST", headers={"True-Client-IP": "66.249.66.1"}), "/faq")
+    for path in ("faq", "//evil.example/x", "/api/x", "/static/site.css"):
+        assert not recorder.record_person(make_request("/api/visit", method="POST", client=("198.51.100.7", 1)), path)
+    recorder.flush()
+    db_session.expire_all()
+    rows = {(row.kind, row.key): row.count for row in db_session.query(models.SiteTrafficDaily).all()}
+    assert rows[("human_total", "views")] == 3 and rows[("human_total", "visitors")] == 1
+    assert rows[("human_page", "/")] == 2 and rows[("human_page", "/reviews")] == 1
+    assert rows[("human_source", "reddit")] == 1 and rows[("human_source", "(direct)")] == 1
+    assert rows[("human_device", "desktop")] == 3 and rows[("human_audience", "guest")] == 3
+    assert rows[("funnel", "landing_seen")] == 1  # once per person per day
+    # The all-requests counters are untouched by page reports.
+    assert ("total", "views") not in rows
+    assert not any("198.51" in key or "Mozilla" in key for _, key in rows)
+
+
+def test_one_person_cannot_flood_the_people_counts(monkeypatch):
+    recorder = TrafficRecorder()
+    recorder.enabled = True
+    clock = [0.0]
+    monkeypatch.setattr(site_traffic.time, "monotonic", lambda: clock[0])
+    counted = 0
+    for index in range(site_traffic.HUMAN_MAX_VIEWS_PER_DAY + 20):
+        clock[0] += 1
+        counted += recorder.record_person(make_request("/api/visit", method="POST"), f"/titles/movie/x-{index}")
+    assert counted == site_traffic.HUMAN_MAX_VIEWS_PER_DAY
+
+
+def test_members_on_the_homepage_are_not_counted_as_landing_visitors():
+    recorder = TrafficRecorder()
+    recorder.enabled = True
+    assert recorder.record_person(make_request("/api/visit", method="POST", cookies={"omnitrackr_session": "x"}), "/")
+    assert not any(key == "landing_seen" for (_, kind, key) in recorder._pending if kind == "funnel")
+    assert any(kind == "human_audience" and key == "member" for (_, kind, key) in recorder._pending)
+
+
+def test_visit_endpoint_feeds_the_recorder_and_never_fails(client, monkeypatch):
+    recorder = TrafficRecorder(session_factory=TestingSessionLocal)
+    recorder.enabled = True
+    monkeypatch.setattr(site_traffic, "RECORDER", recorder)
+    from app.routers import site_stats
+    monkeypatch.setattr(site_stats, "RECORDER", recorder)
+    headers = {"User-Agent": BROWSER_UA}
+    assert client.post("/api/visit", json={"path": "/reviews", "referrer": "", "utm": ""}, headers=headers).status_code == 204
+    assert client.post("/api/visit", json={"path": "x" * 400}, headers=headers).status_code == 422
+    assert client.post("/api/visit", json={"path": "/faq"}, headers={"User-Agent": "curl/8"}).status_code == 204
+    pages = {key for (_, kind, key) in recorder._pending if kind == "human_page"}
+    assert pages == {"/reviews"}
+
+
+def test_public_pages_and_the_dashboard_load_the_visit_report(client):
+    assert '/static/visit.js?v=' in client.get("/").text
+    assert '/static/visit.js?v=' in client.get("/faq").text
+    assert '/static/visit.js?v=' in (ROOT / "app" / "templates" / "index.html").read_text(encoding="utf-8")
+    script = (ROOT / "app" / "static" / "visit.js").read_text(encoding="utf-8")
+    assert "navigator.webdriver" in script and "visibilityState" in script and "/api/visit" in script
+
+
+def test_overview_splits_people_from_all_requests(authenticated_client, admin_env, db_session):
+    admin_env.setenv("ADMIN_USERNAMES", "testuser")
+    today = date.today()
+    db_session.add_all([
+        models.SiteTrafficDaily(day=today, kind="total", key="views", count=500),
+        models.SiteTrafficDaily(day=today, kind="total", key="visitors", count=400),
+        models.SiteTrafficDaily(day=today, kind="source", key="(direct)", count=380),
+        models.SiteTrafficDaily(day=today, kind="human_total", key="views", count=30),
+        models.SiteTrafficDaily(day=today, kind="human_total", key="visitors", count=12),
+        models.SiteTrafficDaily(day=today, kind="human_source", key="google.com", count=9),
+        models.SiteTrafficDaily(day=today, kind="human_page", key="/", count=20),
+    ])
+    db_session.commit()
+    traffic = authenticated_client.get("/api/site-stats/overview?days=30").json()["traffic"]
+    assert traffic["totals"] == {"views": 500, "visitors": 400}  # all requests, as before
+    assert traffic["sources"] == [{"key": "(direct)", "count": 380}]
+    human = traffic["human"]
+    assert human["totals"] == {"views": 30, "visitors": 12} and human["tracking_since"] == today.isoformat()
+    assert human["sources"] == [{"key": "google.com", "count": 9}] and human["top_pages"] == [{"key": "/", "count": 20}]
+    assert len(human["series"]) == 30
+
+
+def test_site_stats_page_renders_sources_as_text_only():
+    script = (ROOT / "app" / "static" / "site-stats.js").read_text(encoding="utf-8")
+    assert "innerHTML" not in script and "insertAdjacentHTML" not in script and "outerHTML" not in script
+
+
+def test_overview_growth_counts_devices_and_pushes_sent(authenticated_client, admin_env, db_session):
+    from datetime import datetime
+    admin_env.setenv("ADMIN_USERNAMES", "testuser")
+    user = db_session.query(models.User).filter_by(username="testuser").one()
+    now = datetime.utcnow()
+    db_session.add_all([
+        models.PushSubscription(user_id=user.id, endpoint="https://fcm.googleapis.com/fcm/send/one", p256dh="p", auth="a",
+                                last_success_at=now - timedelta(days=1)),
+        models.PushSubscription(user_id=user.id, endpoint="https://fcm.googleapis.com/fcm/send/two", p256dh="p", auth="a",
+                                created_at=now - timedelta(days=60)),
+        models.SiteTrafficDaily(day=now.date(), kind="push", key="sent_episode_today", count=5),
+        models.SiteTrafficDaily(day=now.date(), kind="push", key="sent_release_day", count=2),
+        models.SiteTrafficDaily(day=(now - timedelta(days=45)).date(), kind="push", key="sent_club_pick", count=9),
+        models.PushNudge(user_id=user.id, kind="away_nudge", sent_at=now - timedelta(days=2)),
+    ])
+    db_session.commit()
+    growth = authenticated_client.get("/api/site-stats/overview?days=30").json()["growth"]
+    assert growth["push"] == {"members": 1, "devices": 2, "new_devices": 1, "reached_7d": 1, "sent": 7,
+                              "sent_by_kind": [{"kind": "New episode out", "count": 5}, {"kind": "Out today", "count": 2}],
+                              "away_reminders": 1}
+    assert "fcm.googleapis.com" not in str(growth)

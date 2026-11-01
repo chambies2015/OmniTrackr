@@ -1,0 +1,750 @@
+/* Settings dialog: a section menu beside one scrolling column of cards on wide
+   screens, a sideways menu above the column on phones. Colors come from the
+   app theme (app-theme.css), so light and dark both work. */
+
+body.app-shell .account-modal.account-settings {
+  display: flex;
+  flex-direction: column;
+  height: min(880px, calc(100dvh - 48px));
+  max-height: none;
+  max-width: 1080px;
+  overflow: hidden;
+  overflow: clip; /* a jump to a section must scroll the column, never push the header away */
+  width: min(1080px, calc(100vw - 32px));
+}
+
+body.app-shell .account-settings .modal-header {
+  flex: none;
+}
+
+body.app-shell .account-settings__layout {
+  display: grid;
+  flex: 1;
+  grid-template-columns: 220px minmax(0, 1fr);
+  min-height: 0;
+  padding: 0;
+  position: relative;
+}
+
+/* Section menu */
+.account-nav {
+  background: var(--surface-muted);
+  border-right: 1px solid var(--border);
+  overflow-y: auto;
+  padding: 18px 12px;
+}
+
+.account-nav__list {
+  display: grid;
+  gap: 2px;
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+
+.account-nav__link {
+  border-radius: 10px;
+  color: var(--fg-secondary);
+  display: block;
+  font-size: .94rem;
+  font-weight: 600;
+  padding: 10px 12px;
+  text-decoration: none;
+  white-space: nowrap;
+}
+
+.account-nav__link:hover {
+  background: var(--surface-hover, var(--surface-muted));
+  color: var(--fg);
+}
+
+.account-nav__link[aria-current="true"] {
+  background: var(--accent-soft);
+  color: var(--primary);
+}
+
+.account-nav__link[href="#settings-danger"] {
+  color: var(--danger);
+}
+
+.account-nav__link:focus-visible {
+  outline: 3px solid var(--primary);
+  outline-offset: 1px;
+}
+
+/* The column of settings */
+.account-settings__panels {
+  overflow-y: auto;
+  position: relative;
+  overscroll-behavior: contain;
+  padding: 4px 32px 96px;
+}
+
+.account-group {
+  padding-top: 26px;
+}
+
+.account-group:focus {
+  outline: none;
+}
+
+.account-group + .account-group {
+  border-top: 1px solid var(--border);
+  margin-top: 14px;
+}
+
+.account-group__header {
+  margin-bottom: 16px;
+}
+
+body.app-shell .account-group__title {
+  color: var(--fg);
+  font-size: 1.35rem;
+  letter-spacing: -.02em;
+  margin: 0;
+}
+
+.account-group__intro {
+  color: var(--fg-secondary);
+  font-size: .95rem;
+  line-height: 1.5;
+  margin: 4px 0 0;
+}
+
+.account-group--danger .account-group__title {
+  color: var(--danger);
+}
+
+/* Each setting is a card. These replace the old divider lines between sections. */
+body.app-shell .account-settings .account-section {
+  background: var(--card-bg);
+  border: 1px solid var(--border);
+  border-radius: 14px;
+  margin: 0 0 14px;
+  padding: 20px 22px;
+}
+
+body.app-shell .account-settings .account-section:last-child {
+  margin-bottom: 0;
+}
+
+body.app-shell .account-settings .account-section h4 {
+  color: var(--fg);
+  font-size: 1.05rem;
+  letter-spacing: -.01em;
+  margin: 0 0 12px;
+}
+
+body.app-shell .account-settings .account-section h5 {
+  color: var(--fg);
+  font-size: .98rem;
+  margin: 0 0 4px;
+}
+
+body.app-shell .account-settings .info-text {
+  color: var(--fg-secondary);
+  opacity: 1;
+}
+
+body.app-shell .account-settings .account-section form {
+  gap: 14px;
+}
+
+.account-field {
+  display: grid;
+  gap: 6px;
+  min-width: 0;
+}
+
+.account-field[hidden] {
+  display: none;
+}
+
+.account-field__label {
+  color: var(--fg);
+  font-size: .92rem;
+  font-weight: 600;
+}
+
+/* Older dialog rules give every label and box its own margins; the grid gap does that here. */
+body.app-shell .account-settings .account-field :is(label, input, .auth-password) {
+  margin: 0;
+}
+
+.account-field__hint {
+  color: var(--fg-secondary);
+  font-size: .84rem;
+  line-height: 1.45;
+  margin: 0;
+}
+
+.account-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+}
+
+body.app-shell .account-settings .account-section form .action-btn {
+  align-self: flex-start;
+}
+
+/* Account summary as a definition list */
+body.app-shell .account-settings .account-info {
+  display: grid;
+  gap: 10px;
+  grid-template-columns: repeat(auto-fit, minmax(210px, 1fr));
+  margin: 0;
+}
+
+body.app-shell .account-settings .info-item {
+  align-items: flex-start;
+  border: 1px solid var(--border);
+  flex-direction: column;
+  gap: 2px;
+  justify-content: flex-start;
+  padding: 12px 14px;
+}
+
+body.app-shell .account-settings .info-label {
+  color: var(--fg-secondary);
+  font-size: .8rem;
+  font-weight: 600;
+  letter-spacing: .02em;
+  opacity: 1;
+  text-transform: uppercase;
+}
+
+body.app-shell .account-settings .info-value {
+  margin: 0;
+  overflow-wrap: anywhere;
+}
+
+.account-picture {
+  align-items: center;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 20px;
+}
+
+body.app-shell .account-settings .profile-picture-preview {
+  margin: 0;
+}
+
+body.app-shell .account-settings .profile-picture-preview-img {
+  height: 96px;
+  width: 96px;
+}
+
+.account-picture form {
+  flex: 1;
+  min-width: 220px;
+}
+
+/* Switches: two columns where there's room */
+.account-toggle-grid {
+  display: grid;
+  gap: 8px;
+  grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+}
+
+body.app-shell .account-settings .privacy-toggle-item {
+  margin: 0 0 8px;
+}
+
+body.app-shell .account-settings .toggle-note {
+  font-size: .85rem;
+  margin: 4px 2px 10px;
+}
+
+body.app-shell .account-settings .toggle-note a {
+  color: var(--accent, inherit);
+}
+
+.account-toggle-grid .privacy-toggle-item,
+body.app-shell .account-settings .account-toggle-grid .privacy-toggle-item {
+  margin: 0;
+}
+
+body.app-shell .account-settings .toggle-label {
+  align-items: center;
+  border: 1px solid var(--border);
+  display: flex;
+  justify-content: space-between;
+  border-radius: 12px;
+  gap: 16px;
+  min-height: 52px;
+  padding: 10px 14px;
+}
+
+.toggle-label__text {
+  display: grid;
+  gap: 2px;
+}
+
+.toggle-label__hint {
+  color: var(--fg-secondary);
+  font-size: .84rem;
+  font-weight: 400;
+  line-height: 1.4;
+}
+
+body.app-shell .account-settings .toggle-container {
+  flex: none;
+}
+
+body.app-shell .account-settings .toggle-switch:focus-visible {
+  outline: 3px solid var(--primary);
+  outline-offset: 2px;
+}
+
+/* Supporter: say plainly what's free and what the tiers add */
+.account-honest {
+  background: var(--teal-soft, var(--surface-muted));
+  border-radius: 10px;
+  color: var(--fg);
+  font-size: .92rem;
+  line-height: 1.5;
+  margin: 0 0 14px;
+  padding: 10px 14px;
+}
+
+.supporter-tiers {
+  display: grid;
+  gap: 10px;
+  grid-template-columns: repeat(auto-fit, minmax(190px, 1fr));
+  list-style: none;
+  margin: 0 0 16px;
+  padding: 0;
+}
+
+.supporter-tiers:empty {
+  display: none;
+}
+
+.supporter-tier {
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  display: grid;
+  gap: 4px;
+  padding: 12px 14px;
+  position: relative;
+}
+
+.supporter-tier strong {
+  color: var(--fg);
+  font-size: .98rem;
+}
+
+.supporter-tier__price {
+  color: var(--primary);
+  font-size: .9rem;
+  font-weight: 700;
+}
+
+.supporter-tier__perks {
+  color: var(--fg-secondary);
+  font-size: .85rem;
+  line-height: 1.45;
+}
+
+.supporter-tier--current {
+  background: var(--accent-soft);
+  border-color: var(--primary);
+}
+
+.supporter-tier__current {
+  background: var(--accent-solid);
+  border-radius: 999px;
+  color: var(--card-bg);
+  font-size: .72rem;
+  font-weight: 700;
+  justify-self: start;
+  margin-top: 4px;
+  padding: 2px 8px;
+}
+
+/* "Saved" note pinned to the bottom of the column */
+.account-toast {
+  background: var(--fg);
+  border-radius: 999px;
+  bottom: 18px;
+  box-shadow: 0 10px 30px rgba(0, 0, 0, .25);
+  color: var(--card-bg);
+  font-size: .92rem;
+  font-weight: 600;
+  left: calc(220px + (100% - 220px) / 2);
+  margin: 0;
+  max-width: min(520px, calc(100% - 260px));
+  padding: 10px 18px;
+  position: absolute;
+  text-align: center;
+  transform: translateX(-50%);
+  z-index: 3;
+}
+
+.account-toast::before {
+  content: "✓ ";
+}
+
+.account-toast[hidden] {
+  display: none;
+}
+
+@media (max-width: 860px) {
+  body.app-shell .account-modal.account-settings {
+    border-radius: 14px;
+    height: calc(100dvh - 20px);
+    max-width: none;
+    width: calc(100vw - 20px);
+  }
+
+  body.app-shell .account-settings__layout {
+    grid-template-columns: minmax(0, 1fr);
+    grid-template-rows: auto minmax(0, 1fr);
+  }
+
+  .account-nav {
+    border-bottom: 1px solid var(--border);
+    border-right: 0;
+    overflow-x: auto;
+    overflow-y: hidden;
+    padding: 10px 12px;
+    scrollbar-width: none;
+  }
+
+  .account-nav::-webkit-scrollbar {
+    display: none;
+  }
+
+  .account-nav__list {
+    display: flex;
+    gap: 6px;
+  }
+
+  .account-nav__link {
+    border: 1px solid var(--border);
+    border-radius: 999px;
+    font-size: .88rem;
+    padding: 8px 14px;
+  }
+
+  .account-settings__panels {
+    padding: 0 14px 96px;
+  }
+
+  body.app-shell .account-settings .account-section {
+    padding: 16px;
+  }
+
+  .account-toast {
+    left: 50%;
+    max-width: calc(100% - 32px);
+  }
+}
+
+@media (max-width: 420px) {
+  .account-picture {
+    align-items: flex-start;
+    flex-direction: column;
+  }
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  .account-settings__panels {
+    scroll-behavior: smooth;
+  }
+}
+
+/* Two-factor sign-in */
+.two-factor [hidden] {
+  display: none !important;
+}
+
+.two-factor__head {
+  align-items: center;
+  display: flex;
+  gap: 10px;
+  justify-content: space-between;
+  margin-bottom: 8px;
+}
+
+body.app-shell .account-settings .two-factor__head h4 {
+  margin: 0;
+}
+
+.two-factor__badge {
+  background: var(--surface-muted);
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  color: var(--fg-secondary);
+  font-size: .78rem;
+  font-weight: 700;
+  letter-spacing: .02em;
+  padding: 3px 10px;
+}
+
+.two-factor__badge.is-on {
+  background: var(--teal-soft);
+  border-color: transparent;
+  color: var(--teal);
+}
+
+.two-factor__panel {
+  display: grid;
+  gap: 14px;
+  margin-top: 14px;
+}
+
+.two-factor__steps {
+  display: grid;
+  gap: 18px;
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+
+.two-factor__steps li {
+  display: grid;
+  gap: 10px;
+  justify-items: start;
+}
+
+.two-factor__step-title {
+  color: var(--fg);
+  font-size: .95rem;
+  font-weight: 600;
+  margin: 0;
+}
+
+.two-factor__qr {
+  background: #ffffff;
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  height: 184px;
+  padding: 8px;
+  width: 184px;
+}
+
+.two-factor__manual summary {
+  color: var(--primary);
+  cursor: pointer;
+  font-size: .9rem;
+  font-weight: 600;
+}
+
+.two-factor__manual[open] {
+  display: grid;
+  gap: 8px;
+}
+
+body.app-shell .account-settings .two-factor__manual p {
+  line-height: 1.45;
+  margin: 0;
+}
+
+.two-factor__key {
+  background: var(--surface-muted);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  color: var(--fg);
+  font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+  font-size: .95rem;
+  letter-spacing: .06em;
+  padding: 8px 10px;
+  display: block;
+  justify-self: start;
+  user-select: all;
+  word-break: break-all;
+}
+
+body.app-shell .account-settings input.two-factor__code {
+  font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+  font-size: 1.15rem;
+  letter-spacing: .14em;
+  max-width: 16ch;
+}
+
+#twoFactorManageForm {
+  display: grid;
+  gap: 14px;
+}
+
+body.app-shell .account-settings #twoFactorEnableForm input.two-factor__code {
+  max-width: 16ch;
+}
+
+body.app-shell .account-settings #twoFactorManageForm input.two-factor__code {
+  max-width: 22ch;
+}
+
+.two-factor__codes {
+  background: var(--surface-muted);
+  border: 1px dashed var(--border);
+  border-radius: 12px;
+  columns: 2;
+  column-gap: 24px;
+  font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+  font-size: 1rem;
+  letter-spacing: .04em;
+  margin: 0;
+  padding: 14px 18px 14px 40px;
+}
+
+.two-factor__codes li {
+  color: var(--fg);
+  padding: 3px 0;
+  user-select: all;
+}
+
+.two-factor__summary {
+  color: var(--fg);
+  margin: 0;
+}
+
+.two-factor__summary.is-warning {
+  color: var(--danger);
+}
+
+body.app-shell .account-settings button.action-btn.two-factor__quiet {
+  background: transparent;
+  border-color: var(--border);
+  color: var(--fg);
+}
+
+body.app-shell .account-settings button.action-btn.two-factor__quiet:hover {
+  background: var(--surface-hover);
+}
+
+.two-factor__link {
+  background: none;
+  border: 0;
+  color: var(--primary);
+  cursor: pointer;
+  font: inherit;
+  font-weight: 600;
+  padding: 0;
+  text-decoration: underline;
+}
+
+.two-factor__forget {
+  border-top: 1px solid var(--border);
+  padding-top: 12px;
+}
+
+@media (max-width: 520px) {
+  .two-factor__codes {
+    columns: 1;
+  }
+}
+
+/* Passkeys */
+.passkeys [hidden] {
+  display: none !important;
+}
+
+.passkeys__list {
+  display: grid;
+  gap: 10px;
+  list-style: none;
+  margin: 0 0 16px;
+  padding: 0;
+}
+
+.passkeys__item {
+  align-items: center;
+  background: var(--surface-muted);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md, 12px);
+  display: grid;
+  gap: 6px 12px;
+  grid-template-columns: auto minmax(0, 1fr) auto;
+  padding: 12px 14px;
+}
+
+.passkeys__icon {
+  align-items: center;
+  background: var(--card-bg);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm, 8px);
+  color: var(--primary);
+  display: flex;
+  height: 38px;
+  justify-content: center;
+  width: 38px;
+}
+
+.passkeys__body {
+  display: grid;
+  gap: 2px;
+  min-width: 0;
+}
+
+.passkeys__name {
+  color: var(--fg);
+  font-size: .98rem;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.passkeys__meta {
+  color: var(--fg-secondary);
+  font-size: .82rem;
+  line-height: 1.4;
+}
+
+.passkeys__actions {
+  display: flex;
+  gap: 14px;
+}
+
+.passkeys__actions .two-factor__link {
+  text-decoration: none;
+}
+
+.passkeys__actions .two-factor__link:hover {
+  text-decoration: underline;
+}
+
+.passkeys__remove {
+  color: var(--danger);
+}
+
+.passkeys__editor {
+  border-top: 1px solid var(--border);
+  display: grid;
+  gap: 12px;
+  grid-column: 1 / -1;
+  margin-top: 6px;
+  padding-top: 12px;
+}
+
+.passkeys__editor-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+}
+
+.passkeys__add {
+  display: grid;
+  gap: 14px;
+}
+
+.passkeys__optional {
+  color: var(--fg-secondary);
+  font-weight: 400;
+}
+
+@media (max-width: 520px) {
+  .passkeys__item {
+    grid-template-columns: auto minmax(0, 1fr);
+  }
+
+  .passkeys__actions {
+    grid-column: 2;
+  }
+}
+
+.passkeys__empty {
+  margin: 0 0 14px;
+}

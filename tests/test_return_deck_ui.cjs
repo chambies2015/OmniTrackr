@@ -5,7 +5,7 @@ const fs = require('node:fs');
 const path = require('node:path');
 const vm = require('node:vm');
 
-const source = fs.readFileSync(path.join(__dirname, '../app/static/app.js'), 'utf8');
+const source = require('./helpers/dashboard_source.cjs');
 const returnDeckSource = source.slice(
   source.indexOf("const LAUNCHPAD_DISMISS_KEY"),
   source.indexOf('function isLibraryLaunchpadDismissed'),
@@ -59,6 +59,12 @@ function setup(storedContext = null) {
     refreshLibraryPulse: () => { context.pulseRefreshes = (context.pulseRefreshes || 0) + 1; },
   });
   vm.runInContext(returnDeckSource, context);
+  // Startup decision cards are tracked so the library waits for them (home.js).
+  context.trackDashboardLayoutRefresh = request => {
+    context.trackedCalls = (context.trackedCalls || 0) + 1;
+    context.scheduledDecisionRefresh = Promise.resolve(request);
+    return context.scheduledDecisionRefresh;
+  };
   context.scheduleLibraryLaunchpadRefresh = () => {
     context.scheduleCalls = (context.scheduleCalls || 0) + 1;
     context.refreshLibraryPulse();
@@ -157,15 +163,15 @@ test('eligible startup suppresses fallback cards while the deck is pending and a
     }
     return Promise.resolve({ ok: true });
   };
-  context.scheduleLibraryLaunchpadRefresh = () => {
-    context.scheduledDecisionRefresh = context.refreshDashboardDecisionCards();
-  };
-
   const bootstrap = context.bootstrapReturnDeck();
   assert.equal(await context.refreshDashboardDecisionCards(), false);
   assert.equal(context.todayRefreshes || 0, 0);
   assert.equal(context.pulseRefreshes || 0, 0);
 
+  // The visit day is recorded first, then the deck is requested.
+  while (!resolveDeck) await new Promise(resolve => setImmediate(resolve));
+  assert.equal(await context.refreshDashboardDecisionCards(), false);
+  assert.equal(context.todayRefreshes || 0, 0);
   resolveDeck({
     ok: true,
     json: async () => ({
@@ -185,12 +191,61 @@ test('eligible startup suppresses fallback cards while the deck is pending and a
 
 test('ineligible startup requests each fallback card exactly once', async () => {
   const { context } = setup(activeContext());
-  context.scheduleLibraryLaunchpadRefresh = () => {
-    context.scheduledDecisionRefresh = context.refreshDashboardDecisionCards();
-  };
-
   assert.equal(await context.bootstrapReturnDeck(), false);
   assert.equal(await context.scheduledDecisionRefresh, true);
   assert.equal(context.todayRefreshes, 1);
   assert.equal(context.pulseRefreshes, 1);
+});
+
+test('without a waiting deck, today\'s cards load alongside the visit ping, once', async () => {
+  const { context, requests } = setup();
+  let finishVisit;
+  context.authenticatedFetch = (url, options = {}) => {
+    requests.push({ url, options });
+    if (url === '/account/visit') return new Promise(resolve => { finishVisit = resolve; });
+    return Promise.resolve({ ok: true, json: async () => ({ eligible: false }) });
+  };
+  const bootstrap = context.bootstrapReturnDeck();
+  assert.equal(context.todayRefreshes, 1, 'today\'s pick does not wait for the visit ping');
+  assert.equal(context.pulseRefreshes, 1);
+  while (!finishVisit) await new Promise(resolve => setImmediate(resolve));
+  finishVisit({ ok: true, json: async () => ({ return_prompt: { eligible: false } }) });
+  await bootstrap;
+  assert.equal(context.todayRefreshes, 1, 'no second request once the ping is back');
+  assert.equal(context.pulseRefreshes, 1);
+  assert.equal(context.trackedCalls, 1);
+});
+
+test('a visit after days away on an open session stores the deck context', async () => {
+  const { context, requests, storage } = setup();
+  context.authenticatedFetch = async (url, options = {}) => {
+    requests.push({ url, options });
+    if (url === '/account/visit') {
+      return {
+        ok: true,
+        json: async () => ({ return_prompt: { eligible: true, days_away: 12, engagement_token: 'signed-return-token-that-is-long-enough' } }),
+      };
+    }
+    return { ok: true, json: async () => ({ eligible: false, library_item_count: 0 }) };
+  };
+  await context.bootstrapReturnDeck();
+  assert.equal(requests[0].url, '/account/visit');
+  assert.equal(requests[0].options.method, 'POST');
+  assert.ok(requests.some(request => request.url.includes('/return-deck/?days_away=12')));
+  assert.equal(storage.has('omnitrackr_return_prompt'), false); // ineligible deck clears it again
+});
+
+test('a visit never replaces a deck context from the log-in', async () => {
+  const prompt = activeContext({ days_away: 5 });
+  const { context, requests } = setup(prompt);
+  context.authenticatedFetch = async (url, options = {}) => {
+    requests.push({ url, options });
+    if (url === '/account/visit') {
+      return { ok: true, json: async () => ({ return_prompt: { eligible: true, days_away: 30, engagement_token: 'another-signed-token-that-is-long-enough' } }) };
+    }
+    return { ok: true, json: async () => ({ eligible: false, library_item_count: 0 }) };
+  };
+  await context.bootstrapReturnDeck();
+  const deck = requests.find(request => request.url.includes('/return-deck/?'));
+  assert.match(deck.url, /days_away=5/);
 });

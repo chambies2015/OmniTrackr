@@ -2,6 +2,16 @@
 Pytest configuration and fixtures for OmniTrackr tests.
 """
 import os
+# Application imports create/migrate their configured database before dependency
+# overrides are installed. Keep both startup and fixtures isolated from .env.
+os.environ["PYTHON_DOTENV_DISABLED"] = "1"
+os.environ["DATABASE_URL"] = "sqlite://"
+os.environ["SECRET_KEY"] = "omnitrackr-tests-only-secret-key-32-bytes"
+os.environ["ENVIRONMENT"] = "development"
+os.environ["MAIL_USERNAME"] = ""
+os.environ["MAIL_PASSWORD"] = ""
+os.environ["DIGEST_EMAILS"] = "false"
+os.environ["ANNOUNCEMENT_EMAILS"] = "false"
 os.environ["TESTING"] = "true"  # Disable rate limiting in tests
 os.environ.setdefault("RELEASE_RADAR_CACHE_DIR", "")  # No on-disk Release Radar cache in tests
 
@@ -39,6 +49,21 @@ def offline_release_radar(monkeypatch):
     for category in release_radar.CATEGORY_ORDER:
         monkeypatch.setitem(release_radar.PROVIDERS, category, offline)
     monkeypatch.setattr(release_radar, "CACHE", release_radar.RadarCache(None))
+
+
+@pytest.fixture(autouse=True)
+def fresh_title_charts():
+    """Member charts and the title slug index live per process; each test starts from its own database."""
+    from app import memories, title_charts, title_pages, trending
+    title_charts.clear_cache()
+    trending.clear_cache()
+    title_pages.SLUG_INDEX.clear()
+    memories.clear_push_marks()
+    yield
+    title_charts.clear_cache()
+    trending.clear_cache()
+    title_pages.SLUG_INDEX.clear()
+    memories.clear_push_marks()
 
 
 @pytest.fixture(scope="function")
@@ -103,6 +128,8 @@ def authenticated_client(client, test_user_data, db_session):
     )
     assert login_response.status_code == 200
     token = login_response.json()["access_token"]
+    # A first log-in sends new accounts to /start once; most tests want the dashboard itself.
+    client.cookies.delete("omnitrackr_start")
     
     # Set authorization header for all requests
     client.headers = {"Authorization": f"Bearer {token}"}
