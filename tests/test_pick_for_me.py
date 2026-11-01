@@ -27,7 +27,7 @@ def test_pool_is_built_from_the_editorial_writing_with_one_entry_per_title():
         assert entry["why"].strip() and entry["source_label"].strip()
         assert entry["id"] == f"{entry['kind']}/{entry['slug']}"
         assert entry["slug"] == title_pages.title_slug(entry["title"], entry["year"])
-        assert entry["source_url"] is None or entry["source_url"].startswith(("/discover/", "/if-you-liked/", "/halloween#", "/holidays#", "/best-of/"))
+        assert entry["source_url"] is None or entry["source_url"].startswith(("/discover/", "/if-you-liked/", "/halloween#", "/holidays#", "/best-of/", "/new-releases/"))
     arrival = pick.find("movie", "arrival-2016")
     assert arrival and arrival["creator"] == "Denis Villeneuve" and arrival["source_url"] == "/discover/distant-futures"
     assert pick.find_id("movie/arrival-2016") is arrival
@@ -56,7 +56,8 @@ def test_public_page_is_indexable_and_complete_without_scripts(client):
     assert 'action="/pick" method="get"' in html and 'name="format"' in html
     assert 'id="pickCard"' in html and "Save to my list" in html and "data-guest-bar" in html
     assert "How to choose when everything sounds good" in html and "Where these picks come from" in html
-    assert f"Every title we might pick ({len(pick.pool())})" in html
+    # Release guide picks that are not out yet can be saved but are not suggested.
+    assert f"Every title we might pick ({len(pick.candidates())})" in html
     assert "/static/pick-for-me.js?v=" in html and "/static/guest-list.js?v=" in html
     assert "Cookie" in response.headers["vary"]
 
@@ -77,7 +78,7 @@ def test_pool_endpoint_serves_every_pick_with_public_details_only(client):
     assert response.status_code == 200
     assert response.headers["cache-control"] == "public, max-age=600"
     picks = response.json()["picks"]
-    assert len(picks) == len(pick.pool())
+    assert len(picks) == len(pick.candidates())
     arrival = next(row for row in picks if row["id"] == "movie/arrival-2016")
     assert set(arrival) == {"id", "kind", "slug", "label", "title", "year", "creator", "why", "caveat", "source",
                             "sourceUrl", "url", "image"}

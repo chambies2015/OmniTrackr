@@ -148,7 +148,8 @@ def guide_content(slug: str, entry: dict, details: dict, signed_in: bool) -> str
         parts.append(f'<section id="coming" class="editorial bo-coming" aria-labelledby="coming-heading">'
                      f'<h2 id="coming-heading">Still to come in {year}</h2>{_paragraphs(entry["coming"])}'
                      '<p>Want to know what is out this week? <a href="/release-radar">Release Radar</a> lists new movies, '
-                     'TV premieres, the anime season and upcoming games.</p></section>')
+                     'TV premieres, the anime season and upcoming games, and our <a href="/new-releases">release guides</a> '
+                     'pick the ones worth planning around.</p></section>')
     parts.extend([
         '<section id="where-to-start" class="editorial yl-start"><h2>Where to start</h2>', _paragraphs(entry["start"]),
         f'<p>Members who track what they finish get their own year in review each December, with the titles they rated '

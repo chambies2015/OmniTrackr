@@ -347,6 +347,17 @@ def _database_parts(db: Session) -> list[str]:
             f"<lastmod>{guide['reviewed']}</lastmod>"
             "<changefreq>weekly</changefreq><priority>0.75</priority></url>"
         )
+    # Release guides: hand-written picks from a month's (or a season's) new releases, live from their publish date.
+    from .. import new_releases
+    release_guides = new_releases.published()
+    if release_guides:
+        sitemap_parts.append(f"<url><loc>{base_url}{new_releases.BASE_PATH}</loc><changefreq>weekly</changefreq><priority>0.75</priority></url>")
+    for slug, guide in release_guides.items():
+        sitemap_parts.append(
+            f"<url><loc>{base_url}{new_releases.path(slug)}</loc>"
+            f"<lastmod>{guide['reviewed']}</lastmod>"
+            "<changefreq>weekly</changefreq><priority>0.75</priority></url>"
+        )
     # "Switch from X" guides: one hand-written page per service the Import Studio reads.
     from .. import switch_guides
     for slug, guide in switch_guides.GUIDES.items():

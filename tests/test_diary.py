@@ -72,11 +72,15 @@ def test_month_view_numbers_rewatches_and_leaves_other_moments_out(authenticated
 def test_month_view_uses_the_members_local_day(authenticated_client, db_session):
     user = owner(db_session)
     film = movie(db_session, user)
-    log(db_session, user, film, "completed", this_month(2, 3))  # 03:00 UTC is still the 1st in New York.
-    eastern = authenticated_client.get("/activity/diary/?tz_offset_minutes=300").json()
-    assert list(eastern["days"]) == [this_month(1).date().isoformat()]
-    utc = authenticated_client.get("/activity/diary/").json()
-    assert list(utc["days"]) == [this_month(2).date().isoformat()]
+    # Uses last month so the test doesn't depend on today's date: early on the 1st (UTC)
+    # New York is still in the previous month, and the 2nd hasn't happened yet.
+    last = this_month(1) - timedelta(days=1)
+    month = last.strftime("%Y-%m")
+    log(db_session, user, film, "completed", datetime(last.year, last.month, 2, 3))  # 03:00 UTC is still the 1st in New York.
+    eastern = authenticated_client.get(f"/activity/diary/?month={month}&tz_offset_minutes=300").json()
+    assert list(eastern["days"]) == [f"{month}-01"]
+    utc = authenticated_client.get(f"/activity/diary/?month={month}").json()
+    assert list(utc["days"]) == [f"{month}-02"]
 
 
 def test_month_view_rejects_bad_months_and_caps_the_future(authenticated_client):

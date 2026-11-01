@@ -17,10 +17,11 @@ def test_editions_publish_on_their_date():
 def test_an_edition_before_its_date_has_no_page_or_links(client, monkeypatch):
     monkeypatch.setitem(NOVEMBER, "published_date", "2999-01-01")
     assert client.get("/discover/monthly/november-2026").status_code == 404
-    assert "november-2026" not in client.get("/sitemap.xml").text
+    # Other November pages (the challenge, the release guide) can be live; only the edition must stay hidden.
+    assert "/discover/monthly/november-2026" not in client.get("/sitemap.xml").text
     assert NOVEMBER["name"] not in client.get("/discover").text
-    assert "november-2026" not in client.get("/").text
-    assert all("november-2026" not in (entry["source_url"] or "") for entry in pick.pool())
+    assert "/discover/monthly/november-2026" not in client.get("/").text
+    assert all("/discover/monthly/november-2026" not in (entry["source_url"] or "") for entry in pick.pool())
 
 
 def test_an_edition_on_its_date_is_live_everywhere(client, monkeypatch):
