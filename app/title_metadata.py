@@ -98,6 +98,16 @@ def _https(url) -> Optional[str]:
     return None
 
 
+def _minutes(number: float, unit) -> str:
+    """A Wikidata duration as "N min". Albums are often stored in seconds (OK Computer: 3201)."""
+    unit = str(unit or "")
+    if unit.endswith("/Q11574"):
+        number /= 60
+    elif unit.endswith("/Q25235"):
+        number *= 60
+    return f"{round(number)} min"
+
+
 def _strip_html(text: Optional[str]) -> str:
     if not text:
         return ""
@@ -304,7 +314,7 @@ async def wikidata_facts(client, category: str, qid: str) -> dict:
                     number = float(value["amount"])
                 except ValueError:
                     continue
-                values.append(f"{int(number)} min" if kind == "minutes" else str(int(number)))
+                values.append(_minutes(number, value.get("unit")) if kind == "minutes" else str(int(number)))
         if values:
             raw_facts.append((label, kind, values))
 
