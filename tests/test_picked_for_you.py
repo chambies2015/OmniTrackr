@@ -52,6 +52,8 @@ def test_pick_ids_round_trip():
     assert picked_for_you.pick_id("movie", "arrival", 2016) == "movie/arrival-2016"
     assert picked_for_you.parse_pick_id("movie/arrival-2016") == ("movie", "arrival", 2016)
     assert picked_for_you.parse_pick_id("tv/severance") == ("tv", "severance", None)
+    assert picked_for_you.parse_pick_id("movie/blade-runner-2049-2017") == ("movie", "blade-runner-2049", 2017)
+    assert picked_for_you.parse_pick_id("movie/" + "a-" * 69 + "a") == ("movie", "a-" * 69 + "a", None)
     assert picked_for_you.parse_pick_id("blog/arrival") is None
     assert picked_for_you.parse_pick_id("movie/../etc") is None
 

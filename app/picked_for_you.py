@@ -99,9 +99,10 @@ def parse_pick_id(value: str) -> Optional[tuple[str, str, Optional[int]]]:
     kind, _, rest = (value or "").partition("/")
     if kind not in title_pages.KINDS or not rest or len(rest) > 140 or not re.fullmatch(r"[a-z0-9-]+", rest):
         return None
-    match = re.fullmatch(r"(.+)-(\d{4})", rest)
-    if match:
-        return kind, match.group(1), int(match.group(2))
+    # Split off the year with plain string checks rather than a backtracking pattern.
+    base, _, year = rest.rpartition("-")
+    if base and len(year) == 4 and year.isdigit():
+        return kind, base, int(year)
     return kind, rest, None
 
 
