@@ -536,7 +536,11 @@ def _parse_structured(content: bytes, filename: str, source: str) -> tuple[str, 
     """Read a ZIP, XML or JSON export; its layout decides the source and categories."""
     if len(content) > MAX_IMPORT_BYTES:
         raise ValueError("Import files must be 5 MB or smaller.")
-    detected, rows = import_formats.read_structured(content, filename)
+    try:
+        detected, rows = import_formats.read_structured(content, filename)
+    except RecursionError as exc:
+        # json.loads gives up on arrays nested thousands deep; that is a broken file, not a server error.
+        raise ValueError("This file is nested too deeply to be an export.") from exc
     if source not in {"auto", "generic", detected}:
         raise ValueError(f"This file looks like a {SOURCE_LABELS[detected]} export. Choose {SOURCE_LABELS[detected]} or Detect automatically.")
     if not rows:

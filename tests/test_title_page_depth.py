@@ -127,7 +127,9 @@ def test_partial_results_are_checked_again_sooner(db_session):
     assert title_metadata.cached(db_session, "anime:y:2020")[1] is True
 
 
-def test_misses_from_the_old_matcher_get_one_more_look(db_session):
+def test_misses_from_the_old_matcher_get_one_more_look(db_session, monkeypatch):
+    # Pinned near today: with the real Oct 31 date the where: miss also ran past its 3-day window after Nov 3.
+    monkeypatch.setattr(title_metadata, "MATCHER_UPDATED", datetime.utcnow() - timedelta(hours=2))
     title_metadata.store(db_session, "anime:dan da dan:2024", None, "miss")
     title_metadata.store(db_session, "where:movie:dune:2021", None, "miss")
     for row in db_session.query(models.TitleMetadata):

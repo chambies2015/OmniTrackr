@@ -63,6 +63,17 @@
         <p>See what has changed in your library and which new controls are available. Each update explains what you can do and how it affects your existing tracking.</p>
       </section>
 
+      <section class="privacy-section" aria-labelledby="security-nov3-2026-heading">
+        <h2 id="security-nov3-2026-heading">November 3, 2026: Security, speed and accessibility check of the latest imports and phone work</h2>
+        <p>We went over everything added since the last check: the Spotify, podcast app, Rate Your Music and Libib imports, your year so far, new-episode notifications and away reminders, the bigger Year in Review, the release guides and the phone speed work. We tried broken and oversized files, looked for pages that show one member's data to another, timed every page with a large library and ran an accessibility scanner over the new pages in light and dark mode. Nothing leaked; these are the fixes.</p>
+        <ul>
+          <li>Reading a large import file could take the server a couple of seconds, and everyone else's pages waited while it did. Imports and backup restores now run alongside other requests.</li>
+          <li>A file with thousands of nested brackets made the Import Studio and backup restore fail with a server error. It now says the file can't be read.</li>
+          <li>In dark mode, the sign-up button on the switching guides was white text on pale lilac and hard to read. It is now a deeper violet.</li>
+          <li>Screen readers now hear your username on the account button, how many unread notifications the bell holds, and the "You're offline" message when your signal drops.</li>
+        </ul>
+      </section>
+
       <section class="privacy-section" aria-labelledby="phone-speed-2026-heading">
         <h2 id="phone-speed-2026-heading">November 1, 2026: A quicker dashboard on phones</h2>
         <p>We timed the signed-in dashboard on a mid-range phone over a slow mobile connection and fixed what was holding it up.</p>
