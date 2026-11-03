@@ -128,8 +128,8 @@ def test_partial_results_are_checked_again_sooner(db_session):
 
 
 def test_misses_from_the_old_matcher_get_one_more_look(db_session, monkeypatch):
-    # Pinned near today: with the real Oct 31 date the where: miss also ran past its 3-day window after Nov 3.
-    monkeypatch.setattr(title_metadata, "MATCHER_UPDATED", datetime.utcnow() - timedelta(hours=2))
+    # Pin the matcher date to yesterday so the where-to-watch row is still inside its 3-day miss window.
+    monkeypatch.setattr(title_metadata, "MATCHER_UPDATED", datetime.utcnow() - timedelta(days=1))
     title_metadata.store(db_session, "anime:dan da dan:2024", None, "miss")
     title_metadata.store(db_session, "where:movie:dune:2021", None, "miss")
     for row in db_session.query(models.TitleMetadata):
