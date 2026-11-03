@@ -1,4 +1,4 @@
-/* "Where to watch / play" dialog opened from a library row's More menu. */
+/* "Where to watch / play / listen / read" dialog opened from a library row's More menu. */
 .where-dialog__body { margin-top: 16px; }
 .where-dialog__group { margin-top: 16px; }
 .where-dialog__group:first-child { margin-top: 0; }
@@ -10,3 +10,7 @@ a.where-dialog__provider:hover, a.where-dialog__provider:focus-visible { border-
 .where-dialog__provider img { width: 28px; height: 28px; border-radius: 7px; }
 .where-dialog .where-dialog__more { display: inline-block; margin-top: 18px; color: #9ae2c6; font-weight: 600; }
 .where-dialog__note { margin: 14px 0 0; font-size: .8rem; }
+.where-dialog__search { margin-top: 18px; }
+.where-dialog__search h3 { margin: 0 0 6px; color: #bacfce; font-size: .76rem; font-weight: 700; letter-spacing: .08em; text-transform: uppercase; }
+.where-dialog__search ul { display: flex; flex-wrap: wrap; gap: 4px 16px; margin: 0; padding: 0; list-style: none; }
+.where-dialog__search a { display: inline-block; padding: 6px 0; color: #9ae2c6; font-weight: 600; }
