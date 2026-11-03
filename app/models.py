@@ -1832,3 +1832,20 @@ class UserPasskey(Base):
     backed_up = Column(Boolean, nullable=False, default=False)
     created_at = Column(DateTime, nullable=False, default=datetime.utcnow)
     last_used_at = Column(DateTime, nullable=True)
+
+
+class ForYouDismissal(Base):
+    """A title a member marked "Not for me" in their For you picks, so it stops coming back.
+
+    Keyed by the pick id ("movie/interstellar-2014"); touches nothing in the library.
+    """
+    __tablename__ = "for_you_dismissals"
+
+    id = Column(Integer, primary_key=True, index=True)
+    user_id = Column(Integer, ForeignKey("users.id", ondelete="CASCADE"), nullable=False, index=True)
+    title_key = Column(String(160), nullable=False)
+    created_at = Column(DateTime, nullable=False, default=datetime.utcnow)
+
+    __table_args__ = (
+        UniqueConstraint("user_id", "title_key", name="uq_for_you_dismissal"),
+    )
