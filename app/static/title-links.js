@@ -51,8 +51,17 @@
     return privacy;
   }
 
-  // Where to watch (or play): a "More" menu entry that asks the server, so it works for private libraries too.
-  const WHERE_KINDS = { movie: 'watch', tv: 'watch', anime: 'watch', game: 'play' };
+  // Where to watch, play, listen or read: a "More" menu entry that asks the server, so it works for private libraries too.
+  const WHERE_KINDS = {
+    movie: 'watch', tv: 'watch', anime: 'watch', game: 'play',
+    album: 'listen', podcast: 'listen', audiobook: 'listen', book: 'read', manga: 'read',
+  };
+  const WHERE_EMPTY = {
+    watch: 'We could not find streaming services for this title yet.',
+    play: 'We could not find stores for this game yet.',
+    listen: 'We could not find listening services for this title yet.',
+    read: 'We could not find places to read this yet.',
+  };
   let whereDialog = null;
 
   function el(tag, className, text) {
@@ -95,46 +104,65 @@
     return day.toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric', timeZone: 'UTC' });
   }
 
+  function whereGroup(label, providers, rel) {
+    const section = el('div', 'where-dialog__group');
+    section.appendChild(el('h3', '', label));
+    const list = el('ul');
+    providers.forEach(provider => {
+      const item = el('li');
+      const url = safeUrl(provider.url);
+      const chip = el(url ? 'a' : 'span', 'where-dialog__provider');
+      if (url) { chip.href = url; chip.target = '_blank'; chip.rel = rel; }
+      const logo = safeUrl(provider.logo);
+      if (logo) {
+        const img = el('img');
+        img.src = logo; img.alt = ''; img.width = 28; img.height = 28;
+        chip.appendChild(img);
+      }
+      chip.appendChild(el('span', '', provider.name));
+      item.appendChild(chip);
+      list.appendChild(item);
+    });
+    section.appendChild(list);
+    return section;
+  }
+
   function renderWhere(body, data, kind) {
     body.replaceChildren();
     const groups = Array.isArray(data.groups) ? data.groups : [];
     if (!groups.length) {
-      body.appendChild(el('p', 'progress-dialog__hint',
-        kind === 'game' ? 'We could not find stores for this game yet.' : 'We could not find streaming services for this title yet.'));
+      body.appendChild(el('p', 'progress-dialog__hint', WHERE_EMPTY[WHERE_KINDS[kind]] || WHERE_EMPTY.watch));
     }
-    groups.forEach(group => {
-      const section = el('div', 'where-dialog__group');
-      section.appendChild(el('h3', '', group.label));
-      const list = el('ul');
-      (group.providers || []).forEach(provider => {
-        const item = el('li');
-        const url = safeUrl(provider.url);
-        const chip = el(url ? 'a' : 'span', 'where-dialog__provider');
-        if (url) { chip.href = url; chip.target = '_blank'; chip.rel = 'noopener nofollow'; }
-        const logo = safeUrl(provider.logo);
-        if (logo) {
-          const img = el('img');
-          img.src = logo; img.alt = ''; img.width = 28; img.height = 28;
-          chip.appendChild(img);
-        }
-        chip.appendChild(el('span', '', provider.name));
-        item.appendChild(chip);
-        list.appendChild(item);
-      });
-      section.appendChild(list);
-      body.appendChild(section);
-    });
+    groups.forEach(group => body.appendChild(whereGroup(group.label, group.providers || [], 'noopener nofollow')));
+    const buy = Array.isArray(data.buy) ? data.buy.filter(link => safeUrl(link.url)) : [];
+    if (buy.length) body.appendChild(whereGroup('Buy a copy', buy, 'sponsored noopener'));
     const more = safeUrl(data.more);
     if (more) {
       const link = el('a', 'where-dialog__more', 'Compare every service ↗');
       link.href = more; link.target = '_blank'; link.rel = 'noopener nofollow';
       body.appendChild(link);
     }
+    const searches = Array.isArray(data.searches) ? data.searches.filter(link => safeUrl(link.url)) : [];
+    if (searches.length) {
+      const section = el('div', 'where-dialog__search');
+      section.appendChild(el('h3', '', 'Search other services'));
+      const list = el('ul');
+      searches.forEach(search => {
+        const item = el('li');
+        const link = el('a', '', `${search.name} ↗`);
+        link.href = safeUrl(search.url); link.target = '_blank'; link.rel = 'noopener nofollow';
+        item.appendChild(link);
+        list.appendChild(item);
+      });
+      section.appendChild(list);
+      body.appendChild(section);
+    }
     const notes = [];
     if (data.region && groups.length) notes.push(`Showing ${data.region} availability, checked ${prettyDate(data.fetched)}.`);
     const credits = (data.credits || []).map(credit => credit.name).filter(Boolean);
     if (credits.length) notes.push(`Data from ${credits.join(', ')}.`);
     if (data.tmdb_notice) notes.push('This product uses the TMDB API but is not endorsed or certified by TMDB.');
+    if (buy.length && data.disclosure) notes.push(String(data.disclosure));
     if (notes.length) body.appendChild(el('p', 'progress-dialog__hint where-dialog__note', notes.join(' ')));
   }
 

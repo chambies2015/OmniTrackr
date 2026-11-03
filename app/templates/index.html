@@ -63,7 +63,7 @@
   <link rel="stylesheet" href="/static/library-tags.css?v=20261028-tags-1">
   <link rel="stylesheet" href="/static/title-origins.css?v=20261029-origins-1">
   <link rel="stylesheet" href="/static/dialog-theme.css?v=20261030-design-1">
-  <link rel="stylesheet" href="/static/where-to-watch.css?v=20261026-where-to-watch-1">
+  <link rel="stylesheet" href="/static/where-to-watch.css?v=20261103-where-2">
   <link rel="stylesheet" href="/static/taste-match.css?v=20261016-taste-match-1">
   <link rel="stylesheet" href="/static/supporter.css?v=20261030-claim-1">
   <link rel="stylesheet" href="/static/profile-banners.css?v=20261028-members-1">
@@ -342,8 +342,8 @@
     <span>Friends</span>
   </button>
   <button id="toggleMode" class="toggle-btn" aria-label="Toggle between dark and light mode">Light Mode</button>
-  <button id="notificationBell" class="notification-bell" aria-label="View notifications">
-    🔔
+  <button id="notificationBell" class="notification-bell" type="button" aria-label="View notifications">
+    <span aria-hidden="true">🔔</span>
     <span id="notificationDot" class="notification-dot" style="display: none;"></span>
   </button>
   <div id="notificationDropdown" class="notification-dropdown" style="display: none;">
@@ -363,10 +363,10 @@
       <form id="pushSettings" class="push-settings" aria-label="Notification settings" hidden></form>
     </div>
   </div>
-  <button id="userDisplay" class="user-display-btn" role="button" aria-label="Open account settings">
-    <img id="userProfilePicture" class="user-profile-picture" src="/static/default-avatar.svg" alt="Profile"
+  <button id="userDisplay" class="user-display-btn" type="button">
+    <img id="userProfilePicture" class="user-profile-picture" src="/static/default-avatar.svg" alt=""
       data-fallback-src="/static/default-avatar.svg">
-    <span id="userDisplayText"></span>
+    <span class="sr-only">Account settings, </span><span id="userDisplayText"></span>
   </button>
   <a id="siteStatsLink" class="site-stats-link" href="/site-stats" hidden>Site stats</a>
   <button type="button" id="installAppBtn" class="site-stats-link install-app-btn" hidden>Install app</button>
@@ -2353,7 +2353,7 @@
   <script src="/static/title-origins.js?v=20261030-audiobooks-notices-1"></script>
   <script src="/static/picked-for-you.js?v=20261103-picks-1"></script>
   <script src="/static/for-you.js?v=20261103-picks-1"></script>
-  <script src="/static/title-links.js?v=20261030-audiobooks-1"></script>
+  <script src="/static/title-links.js?v=20261103-where-1"></script>
   <script src="/static/public-profile.js?v=20261030-compare-1"></script>
   <script src="/static/supporter.js?v=20261030-claim-1"></script>
   <script src="/static/account-settings.js?v=20261031-account-2" defer></script>
