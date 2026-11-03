@@ -127,16 +127,17 @@ def test_partial_results_are_checked_again_sooner(db_session):
     assert title_metadata.cached(db_session, "anime:y:2020")[1] is True
 
 
-def test_misses_from_the_old_matcher_get_one_more_look(db_session):
+def test_misses_from_the_old_matcher_get_one_more_look(db_session, monkeypatch):
+    # Pin the matcher date to yesterday so the where-to-watch row is still inside its 3-day miss window.
+    monkeypatch.setattr(title_metadata, "MATCHER_UPDATED", datetime.utcnow() - timedelta(days=1))
     title_metadata.store(db_session, "anime:dan da dan:2024", None, "miss")
     title_metadata.store(db_session, "where:movie:dune:2021", None, "miss")
     for row in db_session.query(models.TitleMetadata):
         row.fetched_at = title_metadata.MATCHER_UPDATED - timedelta(hours=1)
     db_session.commit()
     assert title_metadata.cached(db_session, "anime:dan da dan:2024")[1] is False
-    # Where-to-watch answers didn't change; they keep their own schedule. (A wide window keeps
-    # this true however long after MATCHER_UPDATED the test runs.)
-    assert title_metadata.cached(db_session, "where:movie:dune:2021", {"miss": timedelta(days=3650), "error": timedelta(hours=6)})[1] is True
+    # Where-to-watch answers didn't change; they keep their own schedule.
+    assert title_metadata.cached(db_session, "where:movie:dune:2021", {"miss": timedelta(days=3), "error": timedelta(hours=6)})[1] is True
 
 
 def test_site_stats_counts_title_facts_without_where_to_watch(authenticated_client, db_session, monkeypatch):
