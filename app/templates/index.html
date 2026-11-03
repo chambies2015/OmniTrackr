@@ -79,6 +79,7 @@
   <link rel="stylesheet" href="/static/auth-forms.css?v=20261030-passkeys-1">
   <link rel="stylesheet" href="/static/account-settings.css?v=20261030-passkeys-1">
   <link rel="stylesheet" href="/static/year-so-far.css?v=20261101-so-far-1">
+  <link rel="stylesheet" href="/static/picked-for-you.css?v=20261103-picks-1">
   <link rel="stylesheet" href="/static/dashboard-home.css?v=20261028-tonight-1">
   <link rel="stylesheet" href="/static/dashboard-2026.css?v=20261101-speed-1">
   <link rel="stylesheet" href="/static/a11y.css?v=20261027-a11y-speed-1">
@@ -436,6 +437,7 @@
       </div>
       <div class="library-nav__group library-nav__group--tools" role="group" aria-label="Personal tools and custom libraries">
         <span class="library-nav__label" aria-hidden="true">Your space</span>
+        <button class="tab" data-switch-tab="for-you">For you</button>
         <button class="tab" data-switch-tab="friends-feed">Friends feed<span id="friendsFeedDot" class="ffeed-dot" hidden><span class="sr-only"> (new updates)</span></span></button>
         <button class="tab" data-switch-tab="activity">Journal</button>
         <button class="tab" data-switch-tab="recommendations">Postcards</button>
@@ -647,6 +649,21 @@
             </div>
           </div>
           <div id="nextUpQueueItems" class="next-up-queue__items" aria-live="polite"></div>
+        </section>
+
+        <section id="picksTeaser" class="for-you-card picks-teaser" aria-labelledby="picksTeaserTitle" hidden>
+          <div class="for-you-card__head">
+            <div>
+              <p class="for-you-card__eyebrow">From members with your taste</p>
+              <h2 id="picksTeaserTitle">Picked for you</h2>
+              <p class="for-you-card__summary">Titles you haven't saved yet, chosen from what you rate highly.</p>
+            </div>
+            <div class="for-you-card__side">
+              <button type="button" class="action-btn" data-switch-tab="for-you">See all picks</button>
+              <button type="button" id="picksTeaserHide" class="for-you-card__dismiss">Hide from home</button>
+            </div>
+          </div>
+          <div id="picksTeaserList" class="for-you-grid for-you-grid--wide"></div>
         </section>
 
         <section id="comingUp" class="for-you-card coming-up" aria-labelledby="comingUpTitle" hidden>
@@ -1599,6 +1616,32 @@
     </div>
 
     <!-- Friends Feed Tab Content -->
+    <!-- For you: picks from other members' libraries (picked-for-you.js) -->
+    <div id="for-you-tab" class="tab-content">
+      <section class="picks-hero" aria-labelledby="picksHeading">
+        <div>
+          <p class="picks-hero__eyebrow">Picked from members' libraries</p>
+          <h2 id="picksHeading">For you</h2>
+          <p id="picksSummary" class="picks-hero__summary"></p>
+        </div>
+        <div class="picks-hero__links">
+          <a href="/pick">Pick for me</a>
+          <a href="/trending">Trending</a>
+          <button type="button" id="picksRefresh" class="picks-hero__refresh">Refresh picks</button>
+        </div>
+      </section>
+      <div id="picksFilters" class="picks-filters" role="group" aria-label="Show picks for" hidden></div>
+      <div id="picksRows" class="picks-rows" hidden></div>
+      <section class="picks-all" aria-labelledby="picksAllTitle">
+        <h3 id="picksAllTitle" class="picks-all__title">Picks for you</h3>
+        <div id="picksGrid" class="picks-grid" aria-live="polite"></div>
+      </section>
+      <p id="picksStatus" class="picks-status" role="status" aria-live="polite"></p>
+      <div id="picksGuides" class="picks-guides" hidden></div>
+      <p class="picks-note">Picks are worked out from libraries only: what members track, finish and rate. Categories other members keep private are never used, and nobody else sees what you were shown or hid.</p>
+      <div id="picksUndo" class="picks-undo" role="status" hidden></div>
+    </div>
+
     <div id="friends-feed-tab" class="tab-content">
       <section class="ffeed" aria-labelledby="friendsFeedTitle">
         <header class="ffeed__head">
@@ -2308,7 +2351,8 @@
   <script src="./app.js"></script>
   <script src="/static/library-tags.js?v=20261030-audiobooks-notices-1"></script>
   <script src="/static/title-origins.js?v=20261030-audiobooks-notices-1"></script>
-  <script src="/static/for-you.js?v=20261101-speed-1"></script>
+  <script src="/static/picked-for-you.js?v=20261103-picks-1"></script>
+  <script src="/static/for-you.js?v=20261103-picks-1"></script>
   <script src="/static/title-links.js?v=20261103-where-1"></script>
   <script src="/static/public-profile.js?v=20261030-compare-1"></script>
   <script src="/static/supporter.js?v=20261030-claim-1"></script>

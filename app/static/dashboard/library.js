@@ -55,6 +55,8 @@ function switchTab(tabName) {
     window.OmniFollowing?.load();
   } else if (tabName === 'activity') {
     loadActivityJournal();
+  } else if (tabName === 'for-you') {
+    window.OmniPicks?.load();
   } else if (tabName === 'recommendations') {
     loadRecommendationPostcards();
   } else if (tabName === 'collections') {
