@@ -77,6 +77,9 @@ async function updateNotificationCount() {
       const data = await response.json();
       window.setAppIconBadge?.(data.count);
       const notificationDot = document.getElementById('notificationDot');
+      const bell = document.getElementById('notificationBell');
+      // The red number is only drawn, so the button's name carries it for screen readers.
+      if (bell) bell.setAttribute('aria-label', data.count > 0 ? `View notifications, ${data.count} unread` : 'View notifications');
 
       if (!notificationDot) {
         console.warn('Notification dot element not found');
