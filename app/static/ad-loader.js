@@ -15,6 +15,8 @@
       /^\/titles\/(movie|tv|anime|game|album|book)\/[a-z0-9-]{1,130}$/.test(window.location.pathname) ||
       /^\/if-you-liked\/[a-z0-9-]{1,80}$/.test(window.location.pathname) ||
       /^\/in-order\/[a-z0-9-]{1,80}$/.test(window.location.pathname) ||
+      /^\/best-of\/\d{4}\/[a-z-]{2,20}$/.test(window.location.pathname) ||
+      /^\/new-releases\/[a-z0-9-]{1,60}$/.test(window.location.pathname) ||
       /^\/halloween$/.test(window.location.pathname) ||
       /^\/holidays$/.test(window.location.pathname) ||
       /^\/holidays\/gifts$/.test(window.location.pathname) ||

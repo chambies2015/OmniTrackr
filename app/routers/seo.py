@@ -15,6 +15,7 @@ from sqlalchemy import and_, func
 from .. import models, release_radar
 from ..dependencies import get_db
 from ..discover_guides import GUIDES
+from .. import review_quality
 from ..review_quality import AD_MIN_REVIEW_WORDS, MIN_INDEXED_LISTING_REVIEWS, evaluate_public_review, word_count
 from .collections import _approval_is_current, _media_lookup_for_collections
 from .reviews import _current_state_hides_review
@@ -125,7 +126,7 @@ def _database_parts(db: Session) -> list[str]:
             ).limit(200).all()
             ready_count = len(visible_search_ready(category, category_candidates))
             search_ready_total += ready_count
-            if ready_count >= MIN_INDEXED_LISTING_REVIEWS:
+            if ready_count >= review_quality.MIN_INDEXED_CATEGORY_REVIEWS:
                 sitemap_parts.append(f"""  <url>
     <loc>{base_url}/reviews?category={category}</loc>
     <lastmod>{today}</lastmod>
@@ -312,12 +313,13 @@ def _database_parts(db: Session) -> list[str]:
             f"<lastmod>{challenges.CHALLENGES[month]['published']}</lastmod>"
             "<changefreq>monthly</changefreq><priority>0.7</priority></url>"
         )
-    # OmniTrackr Daily: the archive and each finished puzzle (today's answer stays off the sitemap).
+    # OmniTrackr Daily: the archive, and each finished puzzle only if past puzzles are indexed
+    # (daily.INDEX_PAST_PUZZLES). Today's answer always stays off the sitemap.
     from .. import daily
     daily_numbers = daily.archive_numbers()
     if daily_numbers:
         sitemap_parts.append(f"<url><loc>{base_url}/daily/archive</loc><changefreq>daily</changefreq><priority>0.6</priority></url>")
-    for number in daily_numbers:
+    for number in (daily_numbers if daily.INDEX_PAST_PUZZLES else []):
         sitemap_parts.append(
             f"<url><loc>{base_url}/daily/{number}</loc><lastmod>{daily.date_for(number).isoformat()}</lastmod>"
             "<changefreq>yearly</changefreq><priority>0.5</priority></url>"

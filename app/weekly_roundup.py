@@ -38,6 +38,12 @@ MIN_INDEX_CATEGORIES = 3
 MIN_INDEX_WORDS = 220
 # Release lists carry no ads (see release_radar.RADAR_ADS); the roundups follow the same rule.
 ROUNDUP_ADS = False
+# Every roundup is built from the Release Radar feeds, with a write-up assembled from counts. That is
+# generated text, the kind Google's thin-content and scaled-content policies describe, so since
+# November 4, 2026 the roundups stay readable and linked but out of search and the sitemap, like the
+# Release Radar category pages (release_radar.INDEX_CATEGORY_PAGES). The thresholds below still
+# apply if this is ever switched back on.
+INDEX_ROUNDUPS = False
 PER_CATEGORY = {"movies": 24, "tv": 30, "anime": 20, "games": 20}
 MEMBER_MIN = title_pages.RECENT_MIN_MEMBERS  # Never name a title only one member finished.
 RATING_MIN = title_pages.MIN_RATINGS_SHOWN
@@ -598,7 +604,7 @@ def writeup_words(payload: dict, previous: Optional[dict] = None, when: str = "p
 
 
 def is_indexable(payload: Optional[dict], monday: date, today: Optional[date] = None, previous: Optional[dict] = None) -> bool:
-    if not payload or status(monday, today) == "future":
+    if not INDEX_ROUNDUPS or not payload or status(monday, today) == "future":
         return False
     return (total_releases(payload) >= MIN_INDEX_RELEASES
             and category_count(payload) >= MIN_INDEX_CATEGORIES

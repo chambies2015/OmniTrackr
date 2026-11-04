@@ -22,6 +22,7 @@ from ..site_chrome import apply_site_chrome, view_switch
 from ..dependencies import get_current_user, get_db
 
 router = APIRouter()
+SHOP_LINK_CATEGORIES = {"movies", "games"}
 
 CATEGORY_MODELS = {
     "movies": models.Movie,
@@ -190,7 +191,9 @@ def render_card(item: dict, count: int, return_path: str, *, compact: bool = Fal
         if item.get("source_url") else ""
     )
     creator = (item["save"].get("director") or "") if category == "movies" else ""
-    buy = affiliate.links_html(category, item["title"], creator)
+    # A TV or anime premiere is an episode on a channel or service, not something to buy, so a
+    # shop link there is noise next to every card. Films and games can be pre-ordered or bought.
+    buy = affiliate.links_html(category, item["title"], creator) if category in SHOP_LINK_CATEGORIES else ""
     search = " ".join([item["title"], item.get("alt_title", ""), *item["genres"], *item["platforms"], *item["details"]])
     add = (
         f'<a class="radar-add" data-radar-add="{key}" rel="nofollow" href="{escape(_signin_href(return_path), quote=True)}">'

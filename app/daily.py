@@ -19,6 +19,11 @@ from . import title_pages
 from .daily_puzzles import PUZZLES
 
 EPOCH = date(2026, 10, 15)
+# A past puzzle page is about 300 words: six clues and a three-sentence note. One more joins every
+# day, so left in search they would become hundreds of short pages built from one template. Since
+# November 4, 2026 they stay playable and linked from the archive but carry noindex and stay out of
+# the sitemap; /daily and /daily/archive are the indexed pages.
+INDEX_PAST_PUZZLES = False
 MAX_GUESSES = 6
 GUESS_MAX_CHARS = 120
 KIND_ARTICLE = {"movie": "a movie", "tv": "a TV show", "anime": "an anime", "game": "a video game",
